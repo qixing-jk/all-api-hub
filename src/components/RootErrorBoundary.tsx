@@ -1,7 +1,8 @@
-import { AlertTriangle, ExternalLink, RefreshCw } from "lucide-react"
+import { AlertTriangle, RefreshCw } from "lucide-react"
 import { Component, type ErrorInfo, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Button } from "~/components/ui/button"
 import { createLogger } from "~/utils/core/logger"
 import { getFeedbackDestinationUrls } from "~/utils/navigation/feedbackLinks"
@@ -84,7 +85,9 @@ function RootErrorFallback({
           <Button
             asChild
             variant="outline"
-            leftIcon={<ExternalLink className="size-4" aria-hidden="true" />}
+            leftIcon={
+              <WorkflowTransitionIcon className="size-4" aria-hidden="true" />
+            }
           >
             <a
               href={

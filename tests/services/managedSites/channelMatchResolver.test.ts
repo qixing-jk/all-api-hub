@@ -23,6 +23,79 @@ const managedConfig = {
 }
 
 describe("resolveManagedSiteChannelMatch", () => {
+  it("uses migrated resource duplicate candidates when the feature path is available", async () => {
+    const resourceBackedChannel = buildManagedSiteChannel({
+      id: 64,
+      key: "sk-resource",
+      base_url: "https://api.example.com/v1",
+      models: "gpt-4o",
+      name: "Resource duplicate",
+    })
+    const searchChannel = vi.fn().mockResolvedValue({
+      items: [],
+      total: 0,
+      type_counts: {},
+    })
+    const searchResourceDuplicateChannels = vi.fn().mockResolvedValue({
+      items: [resourceBackedChannel],
+      total: 1,
+      type_counts: {},
+    })
+    const service = createManagedSiteServiceStub({
+      searchChannel,
+      searchResourceDuplicateChannels,
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com/v1",
+      models: ["gpt-4o"],
+      key: "sk-resource",
+    })
+
+    expect(searchResourceDuplicateChannels).toHaveBeenCalledWith(
+      managedConfig,
+      {
+        accountBaseUrl: "https://api.example.com",
+      },
+    )
+    expect(searchChannel).not.toHaveBeenCalled()
+    expect(getManagedSiteChannelExactMatch(result)?.id).toBe(64)
+  })
+
+  it("keeps the legacy channel search fallback when the resource duplicate path is unavailable", async () => {
+    const legacyChannel = buildManagedSiteChannel({
+      id: 65,
+      key: "sk-legacy",
+      base_url: "https://api.example.com/v1",
+      models: "gpt-4o",
+      name: "Legacy duplicate",
+    })
+    const searchChannel = vi.fn().mockResolvedValue({
+      items: [legacyChannel],
+      total: 1,
+      type_counts: {},
+    })
+    const service = createManagedSiteServiceStub({
+      searchChannel,
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com/v1",
+      models: ["gpt-4o"],
+      key: "sk-legacy",
+    })
+
+    expect(searchChannel).toHaveBeenCalledWith(
+      managedConfig,
+      "https://api.example.com",
+    )
+    expect(getManagedSiteChannelExactMatch(result)?.id).toBe(65)
+  })
+
   it("skips candidate key hydration when a local exact match is already available", async () => {
     const hydrateComparableChannelKeys = vi.fn().mockResolvedValue([])
     const service = createManagedSiteServiceStub({

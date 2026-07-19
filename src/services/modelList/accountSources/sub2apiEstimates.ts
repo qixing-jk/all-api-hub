@@ -19,6 +19,7 @@ import {
   loadModelPriceTable,
   type ModelPriceTable,
 } from "~/services/modelPricing/modelPriceTable"
+import type { ModelDescriptor } from "~/services/models/modelDescriptor"
 import { isAbortError } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 
@@ -42,7 +43,7 @@ interface ResolveSub2ApiKeyGroupParams {
 }
 
 interface ApplySub2ApiPriceEstimatesParams {
-  modelIds: string[]
+  models: readonly ModelDescriptor[]
   group: ResolvedSub2ApiPriceGroup | null
   groupRates: Record<string, number>
   priceTable: ModelPriceTable
@@ -63,8 +64,7 @@ interface LoadSub2ApiEstimatedPricingResponseParams {
   account: Sub2ApiEstimateAccount
   selectedToken: ApiToken
   resolvedKey: string
-  runtimeModelIds: string[]
-  fallbackResponse: PricingResponse
+  runtimeModels: readonly ModelDescriptor[]
   abortSignal?: AbortSignal
 }
 
@@ -189,60 +189,27 @@ export function resolveSub2ApiKeyGroupForPriceEstimation(
   return findSingleGroupByName(groups, params.selectedToken.group)
 }
 
-const normalizeModelIds = (modelIds: string[]): string[] =>
-  Array.from(
-    new Set(
-      modelIds
-        .map((modelId) => modelId.trim())
-        .filter((modelId) => modelId.length > 0),
-    ),
-  )
-
-const createUnavailableModel = (
-  modelId: string,
-  reason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS],
-): ModelPricing => ({
-  model_name: modelId,
-  quota_type: 0,
-  model_ratio: 0,
-  model_price: 0,
-  price_metadata: {
-    source: MODEL_PRICE_SOURCE_KINDS.NONE,
-    precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
-    unavailable_reason: reason,
-  },
-  completion_ratio: 1,
-  enable_groups: [],
-  supported_endpoint_types: [],
-})
-
 const hasFinitePrice = (value: number | undefined): value is number =>
   typeof value === "number" && Number.isFinite(value)
 
 const createEstimatedModel = (
-  modelId: string,
+  model: ModelPricing,
   group: ResolvedSub2ApiPriceGroup,
   effectiveRate: number,
   priceTable: ModelPriceTable,
 ): ModelPricing => {
-  const officialPrice = priceTable.models[modelId]
+  const officialPrice = priceTable.models[model.model_name]
   const input = toFiniteNumber(officialPrice?.input)
   const output = toFiniteNumber(officialPrice?.output)
   const cacheRead = toFiniteNumber(officialPrice?.cache_read)
   const cacheWrite = toFiniteNumber(officialPrice?.cache_write)
 
   if (!hasFinitePrice(input) || !hasFinitePrice(output)) {
-    return createUnavailableModel(
-      modelId,
-      MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING,
-    )
+    return model
   }
 
   return {
-    model_name: modelId,
-    quota_type: 0,
-    model_ratio: 0,
-    model_price: 0,
+    ...model,
     token_price_usd_per_million: {
       ...(hasFinitePrice(input) ? { input: input * effectiveRate } : {}),
       ...(hasFinitePrice(output) ? { output: output * effectiveRate } : {}),
@@ -272,34 +239,24 @@ const createEstimatedModel = (
 export function applySub2ApiPriceEstimates(
   params: ApplySub2ApiPriceEstimatesParams,
 ): PricingResponse {
-  const modelIds = normalizeModelIds(params.modelIds)
-
   if (!params.group) {
-    return {
-      success: true,
-      group_ratio: {},
-      usable_group: {},
-      model_list_source: {
-        kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
-        provider: SITE_TYPES.SUB2API,
-        supportsRuntimeModelList: true,
-        supportsPricing: false,
-      },
-      data: modelIds.map((modelId) =>
-        createUnavailableModel(
-          modelId,
-          MODEL_UNAVAILABLE_PRICE_REASONS.KEY_GROUP_UNKNOWN,
-        ),
-      ),
-    }
+    return buildSub2ApiRuntimePricingResponse(
+      params.models,
+      MODEL_UNAVAILABLE_PRICE_REASONS.KEY_GROUP_UNKNOWN,
+    )
   }
 
   const group = params.group
   const groupRates = parseSub2ApiGroupRates(params.groupRates, "sub2api-rates")
   const effectiveRate =
     groupRates[group.groupId] ?? toSafeRateMultiplier(group.rate_multiplier)
+  const response = buildSub2ApiRuntimePricingResponse(
+    params.models,
+    MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING,
+  )
 
   return {
+    ...response,
     success: true,
     group_ratio: {
       [group.groupName]: effectiveRate,
@@ -313,8 +270,8 @@ export function applySub2ApiPriceEstimates(
       supportsRuntimeModelList: true,
       supportsPricing: true,
     },
-    data: modelIds.map((modelId) =>
-      createEstimatedModel(modelId, group, effectiveRate, params.priceTable),
+    data: response.data.map((model) =>
+      createEstimatedModel(model, group, effectiveRate, params.priceTable),
     ),
   }
 }
@@ -324,11 +281,11 @@ export function applySub2ApiPriceEstimates(
  * but no JWT/group pricing estimate has been applied yet.
  */
 export function buildSub2ApiRuntimePricingResponse(
-  modelIds: string[],
+  models: readonly ModelDescriptor[],
   unavailableReason: (typeof MODEL_UNAVAILABLE_PRICE_REASONS)[keyof typeof MODEL_UNAVAILABLE_PRICE_REASONS] = MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
 ): PricingResponse {
   return buildModelListCatalogPricingResponse({
-    modelIds,
+    models,
     unavailableReason,
     source: {
       kind: MODEL_LIST_SOURCE_KINDS.SUB2API_RUNTIME_KEY,
@@ -366,7 +323,7 @@ export const loadSub2ApiEstimatedPricingResponse = async (
   params: LoadSub2ApiEstimatedPricingResponseParams,
 ): Promise<PricingResponse> => {
   if (!hasSub2ApiDashboardAuth(params.account)) {
-    return params.fallbackResponse
+    return buildSub2ApiRuntimePricingResponse(params.runtimeModels)
   }
 
   try {
@@ -387,7 +344,7 @@ export const loadSub2ApiEstimatedPricingResponse = async (
     })
 
     return applySub2ApiPriceEstimates({
-      modelIds: params.runtimeModelIds,
+      models: params.runtimeModels,
       group,
       groupRates,
       priceTable,
@@ -398,7 +355,7 @@ export const loadSub2ApiEstimatedPricingResponse = async (
     }
 
     return buildSub2ApiRuntimePricingResponse(
-      params.runtimeModelIds,
+      params.runtimeModels,
       MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
     )
   }

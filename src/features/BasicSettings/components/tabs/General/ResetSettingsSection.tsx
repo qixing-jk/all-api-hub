@@ -82,9 +82,8 @@ export default function ResetSettingsSection() {
           name: t("danger.resetAllSettings"),
         })}
         cancelLabel={t("common:actions.cancel")}
-        confirmLabel={
-          isResetting ? t("common:status.resetting") : t("danger.resetSettings")
-        }
+        confirmLabel={t("danger.resetSettings")}
+        workingLabel={t("common:status.resetting")}
         onConfirm={() => {
           void handleResetConfirm()
         }}

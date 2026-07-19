@@ -15,9 +15,10 @@ import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/p
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 
-import type { AutoCheckinProvider } from "./index"
+import type { AutoCheckinProvider, AutoCheckinProviderContext } from "./index"
 
 type CheckinResult = AutoCheckinProviderResult
 
@@ -28,7 +29,13 @@ const ENDPOINT = "/api/user/check_in"
  * @param account - The site account to check in
  * @returns Check-in result with status and message
  */
-async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
+async function checkinVeloera(
+  account: SiteAccount,
+  context?: AutoCheckinProviderContext,
+): Promise<CheckinResult> {
+  const tempWindowRequestSource = normalizeTempWindowRequestSource(
+    context?.tempWindowRequestSource,
+  )
   const { site_url, account_info, authType } = account
 
   try {
@@ -43,6 +50,7 @@ async function checkinVeloera(account: SiteAccount): Promise<CheckinResult> {
           userId: account_info.id,
           accessToken: account_info.access_token,
         },
+        tempWindowRequestSource,
       },
       {
         endpoint: ENDPOINT,

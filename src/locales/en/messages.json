@@ -18,7 +18,7 @@
     "forbidden": "Access denied. Please confirm whether the website firewall is blocking the request",
     "loginThisSite": "Login to this site",
     "networkError": "Network connection failed, please check your network connection and try again",
-    "notFound": "Resource not found. Please confirm whether the site address entered is correct",
+    "notFound": "Could not auto-detect this site. Check that the address is correct, or log in to the target site and try again.",
     "notLoggedIn": "You are not logged in to the current site, or the login information has expired. Cannot auto-add. Please check the help documentation or click to login first",
     "serverError": "Server error. Please try again later",
     "timeout": "Auto-detection timeout, please try adding manually",

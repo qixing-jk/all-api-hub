@@ -303,9 +303,11 @@
     },
     "kiloCode": {
       "actions": {
-        "copyApiConfigs": "Copiar apiConfigs",
+        "copyKiloV7Provider": "Copiar configuración del proveedor",
+        "copyLegacyApiConfigs": "Copiar apiConfigs heredado",
         "createDefaultToken": "Crear token predeterminado",
-        "downloadSettings": "Descargar ajustes"
+        "downloadKiloV7Settings": "Descargar ajustes de Kilo 7.x",
+        "downloadLegacySettings": "Descargar ajustes heredados"
       },
       "description": "Genera perfiles de proveedor de Kilo Code / Roo Code desde tus sitios y tokens seleccionados.",
       "descriptions": {
@@ -314,24 +316,24 @@
         "selectedSites": "Sitios seleccionados: {{sites}}, claves seleccionadas: {{keys}}."
       },
       "help": {
-        "afterExportDescription": "Elige una de las siguientes opciones:",
-        "afterExportTitle": "Después de exportar: cómo usarlo",
-        "importDescription": "Haz clic en “Descargar ajustes” para guardar {{filename}} y luego impórtalo en Kilo Code. La importación es incremental: agrega proveedores y no elimina tus proveedores existentes (las entradas con el mismo nombre pueden actualizarse).",
-        "importTitle": "2) Importar archivo (Descargar ajustes)",
-        "manualDescription": "Haz clic en \"Copiar apiConfigs\", busca providerProfiles.apiConfigs en las configuraciones de exportación de Kilo Code / Roo Code y pegalas ahi.",
-        "manualTitle": "1) Manual (Copiar apiConfigs)",
+        "kiloV7CopyInstructions": "Si necesitas mantener la configuración manualmente, haz clic en “Copiar configuración del proveedor” y combina el contenido copiado con el campo provider de nivel superior del JSON de ajustes.",
+        "kiloV7DownloadInstructions": "Haz clic en “Descargar ajustes de Kilo 7.x”. Luego, en Kilo Code, haz clic en el engranaje para abrir Ajustes, ve a About Kilo Code → Import, selecciona el archivo kilo-settings.json descargado, revisa el contenido que se importará y guarda los cambios.",
+        "legacyCopyInstructions": "Haz clic en “Copiar apiConfigs heredado” y pega el contenido en providerProfiles.apiConfigs de los ajustes de Roo Code o Kilo Code 5.x.",
+        "legacyDownloadInstructions": "Si necesitas un archivo de ajustes completo, haz clic en “Descargar ajustes heredados” para obtener kilo-code-settings.json e impórtalo mediante la función de importación de ajustes de la versión correspondiente.",
         "perSiteDescription": "Selecciona sitios para cargar tokens automáticamente. El primer token queda preseleccionado y puedes seleccionar varios tokens por sitio.",
-        "perSiteTitle": "Exportación por sitio"
+        "perSiteTitle": "Exportación por sitio",
+        "usageTitle": "Cómo usarlo"
       },
       "labels": {
         "currentApiConfigName": "Perfil actual",
+        "exportTarget": "Destino de exportación",
         "modelId": "Model ID",
         "selectedSites": "Sitios seleccionados",
         "selectedTokens": "Tokens seleccionados"
       },
       "messages": {
         "accountNotFound": "Cuenta no encontrada.",
-        "copiedApiConfigs": "apiConfigs copiado al portapapeles",
+        "copiedExportConfig": "Configuración de exportación copiada al portapapeles",
         "copyFailed": "Error al copiar",
         "createTokenBlockedFallback": "La creación de token fue bloqueada. Revisa la política del sitio e inténtalo de nuevo.",
         "createTokenFailed": "No se pudo crear el token.",
@@ -357,6 +359,10 @@
         "modelId": "Buscar o ingresar Model ID",
         "selectSites": "Seleccionar sitios",
         "selectTokens": "Seleccionar tokens"
+      },
+      "targets": {
+        "kiloV7": "Kilo Code 7.x",
+        "legacy": "Roo Code / Kilo Code 5.x (heredado)"
       },
       "title": "Exportar JSON de Kilo Code",
       "warning": {

@@ -36,11 +36,12 @@ type DoneHubDataResult<T> = {
 
 type DoneHubChannelInfo = Partial<ManagedSiteChannel["channel_info"]>
 
-type DoneHubChannelRaw = Partial<
+export type DoneHubChannelRaw = Partial<
   Omit<ManagedSiteChannel, "channel_info"> & {
     channel_info?: DoneHubChannelInfo
   }
->
+> &
+  Record<string, unknown>
 
 type DoneHubUserGroupRaw = {
   symbol?: string
@@ -74,7 +75,9 @@ const toNumberOrZero = (value: unknown): number => {
 /**
  * Normalize DoneHub channel payloads to match New API's `ManagedSiteChannel`.
  */
-const normalizeChannel = (raw: DoneHubChannelRaw): ManagedSiteChannel => {
+export const normalizeDoneHubChannel = (
+  raw: DoneHubChannelRaw,
+): ManagedSiteChannel => {
   const rawInfo = raw.channel_info
   const channelInfo = rawInfo
     ? {
@@ -159,7 +162,9 @@ export async function searchChannel(
       throw new ApiError("Failed to search channels", undefined, endpoint)
     }
 
-    const items = (result.data as DoneHubChannelRaw[]).map(normalizeChannel)
+    const items = (result.data as DoneHubChannelRaw[]).map(
+      normalizeDoneHubChannel,
+    )
     const typeCounts: Record<string, number> = {}
     for (const channel of items) {
       const key = String(channel.type)
@@ -304,7 +309,7 @@ export async function listAllChannels(
       }
 
       const items = Array.isArray(result?.data)
-        ? (result.data as DoneHubChannelRaw[]).map(normalizeChannel)
+        ? (result.data as DoneHubChannelRaw[]).map(normalizeDoneHubChannel)
         : []
 
       return {
@@ -341,13 +346,27 @@ export async function fetchChannel(
   channelId: number,
   options?: Pick<RequestInit, "signal">,
 ): Promise<ManagedSiteChannel> {
+  return normalizeDoneHubChannel(
+    await fetchChannelRaw(request, channelId, options),
+  )
+}
+
+/**
+ * Fetch a single DoneHub channel detail payload without normalizing away
+ * DoneHub-native fields needed for full-object update requests.
+ */
+export async function fetchChannelRaw(
+  request: ApiServiceRequest,
+  channelId: number,
+  options?: Pick<RequestInit, "signal">,
+): Promise<DoneHubChannelRaw> {
   const endpoint = `${DONE_HUB_CHANNEL_ENDPOINT}${channelId}`
   const result = await fetchApiData<unknown>(request, {
     endpoint,
     options,
   })
 
-  return normalizeChannel(result as DoneHubChannelRaw)
+  return result as DoneHubChannelRaw
 }
 
 /**

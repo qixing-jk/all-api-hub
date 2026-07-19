@@ -526,11 +526,7 @@ const _openLanguageRequestPage = async () => {
 const _openSiteSupportRequestPage = async (
   context?: SiteSupportRequestContext,
 ) => {
-  await createActiveTab(
-    context
-      ? getSiteSupportRequestUrl(context)
-      : getFeedbackDestinationUrls().siteSupportRequest,
-  )
+  await createActiveTab(getSiteSupportRequestUrl(context))
 }
 
 /**
@@ -577,6 +573,14 @@ const _openApiCredentialProfilesPage = (
  * @param accountId Optional account id to prefill.
  */
 const _openKeysPage = async (accountId?: string) => {
+  const targetHash = `#${MENU_ITEM_IDS.KEYS}`
+  const searchParams = accountId ? { accountId } : undefined
+
+  if (isOnOptionsPage()) {
+    pushWithinOptionsPage(targetHash, searchParams)
+    return
+  }
+
   const baseUrl = getExtensionURL("options.html")
   const url = new URL(baseUrl)
 
@@ -584,7 +588,7 @@ const _openKeysPage = async (accountId?: string) => {
     url.searchParams.set("accountId", accountId)
   }
 
-  url.hash = MENU_ITEM_IDS.KEYS
+  url.hash = targetHash
   await createActiveTab(url.toString())
 }
 
@@ -603,6 +607,22 @@ type ModelManagementNavigationTarget =
  * Opens the Models page, optionally pre-selecting an account or stored profile.
  */
 const _openModelsPage = async (target?: ModelManagementNavigationTarget) => {
+  const targetHash = `#${MENU_ITEM_IDS.MODELS}`
+  const searchParams =
+    typeof target === "string"
+      ? { accountId: target }
+      : target
+        ? {
+            accountId: target.accountId,
+            profileId: target.profileId,
+          }
+        : undefined
+
+  if (isOnOptionsPage()) {
+    pushWithinOptionsPage(targetHash, searchParams)
+    return
+  }
+
   const baseUrl = getExtensionURL("options.html")
   const url = new URL(baseUrl)
 
@@ -618,7 +638,7 @@ const _openModelsPage = async (target?: ModelManagementNavigationTarget) => {
     }
   }
 
-  url.hash = MENU_ITEM_IDS.MODELS
+  url.hash = targetHash
   await createActiveTab(url.toString())
 }
 

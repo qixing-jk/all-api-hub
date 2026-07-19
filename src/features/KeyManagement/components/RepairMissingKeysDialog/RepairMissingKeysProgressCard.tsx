@@ -80,10 +80,11 @@ export function RepairMissingKeysProgressCard({
                   variant="outline"
                   size="sm"
                   onClick={onCancelAudit}
-                  disabled={isCancelling}
                   loading={isCancelling}
                 >
-                  {t("keyManagement:repairMissingKeys.actions.cancel")}
+                  {isCancelling
+                    ? t("common:status.cancelling")
+                    : t("keyManagement:repairMissingKeys.actions.cancel")}
                 </Button>
               ) : (
                 <Button
@@ -91,10 +92,11 @@ export function RepairMissingKeysProgressCard({
                   variant="outline"
                   size="sm"
                   onClick={onStartAudit}
-                  disabled={isStarting}
                   loading={isStarting}
                 >
-                  {t("keyManagement:repairMissingKeys.actions.rerun")}
+                  {isStarting
+                    ? t("common:status.starting")
+                    : t("keyManagement:repairMissingKeys.actions.rerun")}
                 </Button>
               )}
             </div>

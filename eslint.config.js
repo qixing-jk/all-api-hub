@@ -74,6 +74,30 @@ const newApiAdapterLegacyApiServiceImportPattern = {
   message:
     "New API adapters may import ~/services/apiService/newApiFamily only. Do not depend on the legacy apiService facade or other apiService modules.",
 }
+const workflowTransitionIconRestrictedImports = [
+  {
+    name: "lucide-react",
+    importNames: ["ExternalLink"],
+    message:
+      "Use `~/components/icons/WorkflowTransitionIcon` for arrow-up-right workflow/link affordances so the app keeps a single transition glyph.",
+  },
+  {
+    name: "@heroicons/react/24/outline",
+    importNames: ["ArrowTopRightOnSquareIcon"],
+    message:
+      "Use `~/components/icons/WorkflowTransitionIcon` for arrow-up-right workflow/link affordances so the app keeps a single transition glyph.",
+  },
+]
+
+function restrictedImports(...patterns) {
+  return [
+    "error",
+    {
+      paths: workflowTransitionIconRestrictedImports,
+      ...(patterns.length > 0 ? { patterns } : {}),
+    },
+  ]
+}
 
 export default defineConfig([
   {
@@ -212,19 +236,16 @@ export default defineConfig([
   {
     files: [srcJsFamilyFilePattern],
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [optionsPageImportRestrictionPattern],
-        },
-      ],
+      "no-restricted-imports": restrictedImports(
+        optionsPageImportRestrictionPattern,
+      ),
     },
   },
   // Allow options entrypoint code to depend on options pages.
   {
     files: ["src/entrypoints/options/**/*.{js,cjs,mjs,jsx,ts,tsx}"],
     rules: {
-      "no-restricted-imports": "off",
+      "no-restricted-imports": restrictedImports(),
     },
   },
   // Guardrails: migrated New API adapters depend on the newApiFamily bridge,
@@ -232,15 +253,10 @@ export default defineConfig([
   {
     files: ["src/services/apiAdapters/newApi/**/*.{js,cjs,mjs,jsx,ts,tsx}"],
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            optionsPageImportRestrictionPattern,
-            newApiAdapterLegacyApiServiceImportPattern,
-          ],
-        },
-      ],
+      "no-restricted-imports": restrictedImports(
+        optionsPageImportRestrictionPattern,
+        newApiAdapterLegacyApiServiceImportPattern,
+      ),
     },
   },
   // Guardrails: keep direct backend-specific apiService imports behind adapters
@@ -256,12 +272,9 @@ export default defineConfig([
       "src/features/BasicSettings/components/tabs/ManagedSite/**/*.{js,cjs,mjs,jsx,ts,tsx}",
     ],
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [apiServiceBackendImplementationImportPattern],
-        },
-      ],
+      "no-restricted-imports": restrictedImports(
+        apiServiceBackendImplementationImportPattern,
+      ),
     },
   },
   // Guardrails: account-mainline product flows must not import the legacy apiService facade.
@@ -278,39 +291,29 @@ export default defineConfig([
       "src/services/accounts/**/*.{js,cjs,mjs,jsx,ts,tsx}",
     ],
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            apiServiceBackendImplementationImportPattern,
-            accountSiteMainlineApiServiceFacadeImportPattern,
-          ],
-        },
-      ],
+      "no-restricted-imports": restrictedImports(
+        apiServiceBackendImplementationImportPattern,
+        accountSiteMainlineApiServiceFacadeImportPattern,
+      ),
     },
   },
   // Guardrails: AI API protocol modules must not depend on account-site apiService internals.
   {
     files: ["src/services/aiApi/**/*.{js,cjs,mjs,jsx,ts,tsx}"],
     rules: {
-      "no-restricted-imports": [
-        "error",
+      "no-restricted-imports": restrictedImports(
+        optionsPageImportRestrictionPattern,
         {
-          patterns: [
-            optionsPageImportRestrictionPattern,
-            {
-              group: [
-                "~/services/apiService/**",
-                "../apiService/**",
-                "../../apiService/**",
-                "../../../apiService/**",
-              ],
-              message:
-                "AI API protocol modules must not depend on the account-site apiService layer. Use ~/services/apiTransport/** for shared transport code.",
-            },
+          group: [
+            "~/services/apiService/**",
+            "../apiService/**",
+            "../../apiService/**",
+            "../../../apiService/**",
           ],
+          message:
+            "AI API protocol modules must not depend on the account-site apiService layer. Use ~/services/apiTransport/** for shared transport code.",
         },
-      ],
+      ),
     },
   },
   { rules },

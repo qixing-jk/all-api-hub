@@ -42,7 +42,6 @@
   "allBillingModes": "所有计费方式",
   "allGroups": "所有分组",
   "allProviders": "所有厂商",
-  "availableGroups": "可用分组",
   "batchVerify": {
     "actions": {
       "open": "批量测试",
@@ -103,6 +102,7 @@
     "tooltip": "清空当前筛选，切换到所有账号，并按同模型最低价优先排序。"
   },
   "copyAllNames": "复制所有模型名称",
+  "currentUsableGroups": "当前账号可用分组",
   "description": "查看和管理可用的AI模型",
   "detailedPricing": "详细定价",
   "displayOptions": "显示选项:",
@@ -115,7 +115,9 @@
     "description": "当前模型目录通过账号密钥回退加载，仅支持模型发现与验证。点击刷新数据会重新尝试账号接口。",
     "title": "账号密钥回退目录"
   },
+  "groupRatio": "分组倍率：",
   "groupRatioTooltip": "{{group}} 分组倍率: {{ratio}}x",
+  "groupRatioUnavailable": "分组倍率不可用",
   "groupSelectionHint": "留空表示所有分组；价格排序会在已选分组范围内自动取最优价",
   "input": "输入:",
   "input1MTokens": "输入(1M tokens)",
@@ -163,9 +165,48 @@
     "modelNamesCopied": "模型名称已复制",
     "siteUrlCopied": "站点 URL 已复制"
   },
+  "modelCapabilityFilter": {
+    "coverageHint": "当前列表中有 {{count}} 个模型暂无能力说明，选择能力筛选时会先跳过。",
+    "descriptions": {
+      "attachment": "支持上传附件作为输入上下文。",
+      "audioInput": "支持音频输入。",
+      "audioOutput": "支持音频输出。",
+      "imageInput": "支持上传图片进行识别、分析或视觉理解。",
+      "imageOutput": "支持直接生成图片输出。",
+      "pdf": "支持 PDF 文档输入。",
+      "reasoning": "支持显式推理或思考过程。",
+      "structuredOutput": "支持结构化输出或 JSON Schema 约束。",
+      "toolCall": "支持工具调用或函数调用。",
+      "videoInput": "支持视频输入。",
+      "videoOutput": "支持视频输出。"
+    },
+    "groups": {
+      "capabilities": "能力:",
+      "input": "输入:",
+      "output": "输出:"
+    },
+    "label": "模型能力",
+    "options": {
+      "all": "全部能力",
+      "attachment": "附件",
+      "audioInput": "音频输入",
+      "audioOutput": "音频输出",
+      "imageInput": "图片理解",
+      "imageOutput": "图片生成",
+      "pdf": "PDF",
+      "reasoning": "思考",
+      "structuredOutput": "结构化输出",
+      "toolCall": "工具调用",
+      "videoInput": "视频输入",
+      "videoOutput": "视频输出"
+    },
+    "selectionHint": "选择多个能力时，模型需要同时满足所有条件。"
+  },
+  "modelRatio": "模型倍率：",
   "noMatchingModels": "没有找到匹配的模型",
   "noSourcesDescription": "请先添加站点账号或 API 凭据，然后查看模型列表。",
   "noSourcesTitle": "暂无可用数据源",
+  "noUsableGroupsForModel": "当前账号没有可用于此模型的分组。",
   "optimalGroup": "最优组: {{group}}",
   "optimalGroupLowestPriceWithinAccountFilters": "已在当前账号分组筛选范围内自动选择最优组: {{group}}；且在相同计费模式下价格最低",
   "optimalGroupLowestPriceWithinBillingMode": "已在当前筛选分组范围内自动选择最优组: {{group}}；且在相同计费模式下价格最低",
@@ -184,9 +225,10 @@
   },
   "providerTabs": {
     "scrollLeft": "向左滚动厂商标签",
-    "scrollRight": "向右滚动厂商标签"
+    "scrollRight": "向右滚动厂商标签",
+    "unclassified": "未分类",
+    "unclassifiedDescription": "无法识别模型厂商；这并不表示该模型不可用。"
   },
-  "ratio": "倍率:",
   "realAmount": "真实充值金额",
   "refreshData": "刷新数据",
   "runtimeKeyFallbackSourceNotice": {
@@ -199,6 +241,7 @@
   "selectSourceToContinue": "请先在上方选择一个数据源，然后查看模型列表。",
   "showing": "显示 {{count}} 个模型",
   "showRatio": "显示倍率",
+  "siteSupportedGroups": "站点支持的分组",
   "sortBy": "排序方式",
   "sortOptions": {
     "default": "默认顺序",
@@ -255,6 +298,7 @@
   "totalModels": "总计 {{count}} 个模型",
   "unavailable": "不可用",
   "unavailablePriceReasons": {
+    "groupRatioUnavailable": "价格不可用，因为当前可用分组没有分组倍率。",
     "keyGroupUnknown": "价格不可用，因为无法解析此密钥的 Sub2API 分组。",
     "modelListOnly": "此密钥可使用这些模型，但价格不可用。",
     "officialPriceMissing": "此模型不在价格表中。",

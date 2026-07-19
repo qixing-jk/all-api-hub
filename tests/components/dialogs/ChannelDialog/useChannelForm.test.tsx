@@ -3,16 +3,21 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CHANNEL_DIALOG_MUTATION_RESULTS } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
-import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
+import {
+  useChannelForm,
+  type ChannelResourceEditContext,
+} from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import { DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS } from "~/constants/claudeCodeHub"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import type {
+  ChannelFormData,
   CreateChannelPayload,
   ManagedSiteChannel,
 } from "~/types/managedSite"
+import type { ManagedUpstreamResourceDetail } from "~/types/managedUpstreamResource"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
@@ -495,6 +500,599 @@ describe("useChannelForm", () => {
       result: CHANNEL_DIALOG_MUTATION_RESULTS.Failure,
       siteType: SITE_TYPES.NEW_API,
     })
+  })
+
+  it("waits for resource detail before allowing a resource-backed update", async () => {
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const preventDefault = vi.fn()
+    const channel = buildManagedSiteChannel({
+      id: 32,
+      name: "List Name",
+      key: "sk-********",
+    })
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://managed.example.com",
+          resourceId: "32",
+        },
+        displayName: "Detail Name",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: buildManagedSiteChannel({
+        id: 32,
+        name: "Detail Name",
+        key: "sk-********",
+        model_mapping: '{"gpt-4o":"mapped-gpt-4o"}',
+      }),
+    } as const
+    let resolveDetail: (value: typeof detail) => void = () => {}
+    const getDetail = vi.fn(
+      () =>
+        new Promise<typeof detail>((resolve) => {
+          resolveDetail = resolve
+        }),
+    )
+    const update = vi.fn().mockResolvedValue({
+      success: true,
+      message: "",
+      data: null,
+    })
+    const prepareEditDraft = vi.fn(
+      (): ChannelFormData => ({
+        name: "Detail Name",
+        type: ChannelType.OpenAI,
+        key: "sk-********",
+        base_url: "https://source.example.com",
+        models: ["gpt-4o"],
+        groups: ["default"],
+        priority: 0,
+        weight: 0,
+        status: 1,
+      }),
+    )
+    const describeFields = vi.fn(() => [
+      { name: "name", label: "Name", type: "text" as const, required: true },
+    ])
+    const config = {
+      baseUrl: "https://managed.example.com",
+      adminToken: "admin-token",
+      userId: "1",
+    }
+    const resourceEdit = {
+      config,
+      ref: detail.summary.ref,
+      capabilities: {
+        items: {
+          getDetail,
+          update,
+        },
+        drafts: {
+          prepareEditDraft,
+          describeFields,
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    }
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose,
+        onSuccess,
+        resourceEdit,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(getDetail).toHaveBeenCalledWith(config, detail.summary.ref)
+    })
+    expect(result.current.isFormValid).toBe(false)
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault,
+      } as unknown as FormEvent)
+    })
+
+    expect(update).not.toHaveBeenCalled()
+    expect(mockUpdateChannel).not.toHaveBeenCalled()
+
+    await act(async () => {
+      resolveDetail(detail)
+    })
+
+    await waitFor(() => {
+      expect(result.current.formData.name).toBe("Detail Name")
+      expect(result.current.isFormValid).toBe(true)
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault,
+      } as unknown as FormEvent)
+    })
+
+    expect(update).toHaveBeenCalledWith(
+      config,
+      detail,
+      expect.objectContaining({
+        name: "Detail Name",
+        key: "sk-********",
+      }),
+    )
+    expect(mockUpdateChannel).not.toHaveBeenCalled()
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        message: "managedSiteChannels:toasts.channelUpdated",
+      }),
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("invalidates loaded resource detail when the resource edit ref changes", async () => {
+    const preventDefault = vi.fn()
+    const channel = buildManagedSiteChannel({
+      id: 32,
+      name: "List Name",
+      key: "sk-********",
+    })
+    const firstDetail: ManagedUpstreamResourceDetail<ManagedSiteChannel> = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://managed.example.com",
+          resourceId: "32",
+        },
+        displayName: "First Detail",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: buildManagedSiteChannel({
+        id: 32,
+        name: "First Detail",
+        key: "sk-********",
+      }),
+    }
+    const secondRef = {
+      managedSiteType: SITE_TYPES.NEW_API,
+      scopeKey: "https://managed.example.com",
+      resourceId: "33",
+    } as const
+    let resolveSecondDetail: (value: typeof firstDetail) => void = () => {}
+    const getDetail = vi
+      .fn()
+      .mockResolvedValueOnce(firstDetail)
+      .mockImplementationOnce(
+        () =>
+          new Promise<typeof firstDetail>((resolve) => {
+            resolveSecondDetail = resolve
+          }),
+      )
+    const update = vi.fn().mockResolvedValue({
+      success: true,
+      message: "",
+      data: null,
+    })
+    const resourceEdit: ChannelResourceEditContext = {
+      config: {
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      },
+      ref: firstDetail.summary.ref,
+      capabilities: {
+        items: {
+          getDetail,
+          update,
+        },
+        drafts: {
+          prepareEditDraft: vi.fn(
+            (): ChannelFormData => ({
+              name: "Detail",
+              type: ChannelType.OpenAI,
+              key: "sk-********",
+              base_url: "https://source.example.com",
+              models: ["gpt-4o"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            }),
+          ),
+          describeFields: vi.fn(() => [
+            { name: "name", label: "Name", type: "text" as const },
+          ]),
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    }
+
+    const { result, rerender } = renderHook(
+      ({ edit }) =>
+        useChannelForm({
+          mode: DIALOG_MODES.EDIT,
+          channel,
+          isOpen: true,
+          onClose: vi.fn(),
+          resourceEdit: edit,
+        }),
+      {
+        initialProps: { edit: resourceEdit },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.isResourceEditReady).toBe(true)
+    })
+
+    rerender({
+      edit: {
+        ...resourceEdit,
+        ref: secondRef,
+      },
+    })
+
+    expect(result.current.isResourceEditReady).toBe(false)
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault,
+      } as unknown as FormEvent)
+    })
+
+    expect(update).not.toHaveBeenCalled()
+
+    await act(async () => {
+      resolveSecondDetail({
+        ...firstDetail,
+        summary: {
+          ...firstDetail.summary,
+          ref: secondRef,
+          displayName: "Second Detail",
+        },
+      })
+    })
+
+    await waitFor(() => {
+      expect(result.current.isResourceEditReady).toBe(true)
+    })
+  })
+
+  it("lets resource-backed Claude Code Hub edits submit empty visible models when resource validation allows it", async () => {
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      messagesKey: "claudecodehub",
+      checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
+      getConfig: mockGetConfig,
+      buildChannelPayload: mockBuildChannelPayload,
+      createChannel: mockCreateChannel,
+      updateChannel: mockUpdateChannel,
+    } as any)
+
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const preventDefault = vi.fn()
+    const channel = buildManagedSiteChannel({
+      id: 34,
+      type: "claude",
+      key: "sk-********",
+      name: "Prefix Provider",
+      base_url: "https://source.example.com",
+      models: "",
+    })
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+          scopeKey: "https://managed.example.com",
+          resourceId: "34",
+        },
+        displayName: "Prefix Provider",
+        nativeKind: "provider",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: {
+        id: 34,
+        name: "Prefix Provider",
+        allowedModels: [{ matchType: "prefix", pattern: "claude-" }],
+      },
+    } as const
+    const update = vi.fn().mockResolvedValue({
+      success: true,
+      message: "",
+      data: null,
+    })
+    const validateDraft = vi.fn(() => ({ valid: true, errors: [] }))
+    const resourceEdit = {
+      config: {
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+      },
+      ref: detail.summary.ref,
+      capabilities: {
+        items: {
+          getDetail: vi.fn().mockResolvedValue(detail),
+          update,
+        },
+        drafts: {
+          prepareEditDraft: vi.fn(
+            (): ChannelFormData & {
+              _claudeCodeHubNativeAllowedModels: Array<{
+                matchType: "prefix"
+                pattern: string
+              }>
+            } => ({
+              name: "Prefix Provider",
+              type: "claude",
+              key: "sk-********",
+              base_url: "https://source.example.com",
+              models: [],
+              groups: ["default"],
+              priority: 0,
+              weight: 1,
+              status: 1,
+              _claudeCodeHubNativeAllowedModels: [
+                { matchType: "prefix", pattern: "claude-" },
+              ],
+            }),
+          ),
+          describeFields: vi.fn(() => [
+            { name: "models", label: "Models", type: "multi_select" as const },
+          ]),
+          validateDraft,
+        },
+      },
+    }
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose,
+        onSuccess,
+        resourceEdit,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.formData.models).toEqual([])
+      expect(result.current.isFormValid).toBe(true)
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault,
+      } as unknown as FormEvent)
+    })
+
+    expect(validateDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Prefix Provider",
+        models: [],
+      }),
+    )
+    expect(update).toHaveBeenCalledWith(
+      resourceEdit.config,
+      detail,
+      expect.objectContaining({
+        name: "Prefix Provider",
+        models: [],
+      }),
+    )
+    expect(mockUpdateChannel).not.toHaveBeenCalled()
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalledWith(
+      "channelDialog:validation.modelsRequired",
+    )
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        message: "managedSiteChannels:toasts.channelUpdated",
+      }),
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("marks resource-backed edits invalid when adapter draft validation fails", async () => {
+    const preventDefault = vi.fn()
+    const channel = buildManagedSiteChannel({
+      id: 35,
+      name: "Invalid Resource Channel",
+      key: "sk-********",
+      models: "",
+    })
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://managed.example.com",
+          resourceId: "35",
+        },
+        displayName: "Invalid Resource Channel",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: channel,
+    } as const
+    const update = vi.fn()
+    const validateDraft = vi.fn(() => ({
+      valid: false,
+      errors: [{ field: "models", message: "At least one model is required" }],
+    }))
+    const resourceEdit = {
+      config: {
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+      },
+      ref: detail.summary.ref,
+      capabilities: {
+        items: {
+          getDetail: vi.fn().mockResolvedValue(detail),
+          update,
+        },
+        drafts: {
+          prepareEditDraft: vi.fn(
+            (): ChannelFormData => ({
+              name: "Invalid Resource Channel",
+              type: ChannelType.OpenAI,
+              key: "sk-********",
+              base_url: "https://source.example.com",
+              models: [],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            }),
+          ),
+          describeFields: vi.fn(() => [
+            { name: "models", label: "Models", type: "multi_select" as const },
+          ]),
+          validateDraft,
+        },
+      },
+    }
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose: vi.fn(),
+        resourceEdit,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.formData.models).toEqual([])
+      expect(result.current.isFormValid).toBe(false)
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault,
+      } as unknown as FormEvent)
+    })
+
+    expect(validateDraft).toHaveBeenCalledWith(
+      expect.objectContaining({
+        models: [],
+      }),
+    )
+    expect(update).not.toHaveBeenCalled()
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      "At least one model is required",
+    )
+  })
+
+  it("exposes resource detail load errors and retries the detail request", async () => {
+    const channel = buildManagedSiteChannel({
+      id: 33,
+      name: "List Name",
+      key: "sk-********",
+    })
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://managed.example.com",
+          resourceId: "33",
+        },
+        displayName: "Retried Detail",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: buildManagedSiteChannel({
+        id: 33,
+        name: "Retried Detail",
+        key: "sk-********",
+      }),
+    } as const
+    const getDetail = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("detail unavailable"))
+      .mockResolvedValueOnce(detail)
+    const prepareEditDraft = vi.fn(
+      (): ChannelFormData => ({
+        name: "Retried Detail",
+        type: ChannelType.OpenAI,
+        key: "sk-********",
+        base_url: "https://source.example.com",
+        models: ["gpt-4o"],
+        groups: ["default"],
+        priority: 0,
+        weight: 0,
+        status: 1,
+      }),
+    )
+    const describeFields = vi.fn(() => [
+      { name: "name", label: "Name", type: "text" as const, required: true },
+    ])
+    const config = {
+      baseUrl: "https://managed.example.com",
+      adminToken: "admin-token",
+      userId: "1",
+    }
+    const resourceEdit = {
+      config,
+      ref: detail.summary.ref,
+      capabilities: {
+        items: {
+          getDetail,
+          update: vi.fn(),
+        },
+        drafts: {
+          prepareEditDraft,
+          describeFields,
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    }
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose: vi.fn(),
+        resourceEdit,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.resourceEditLoadError?.message).toBe(
+        "detail unavailable",
+      )
+    })
+    expect(result.current.isResourceEditReady).toBe(false)
+    expect(getDetail).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      result.current.retryResourceEditLoad()
+    })
+
+    await waitFor(() => {
+      expect(result.current.formData.name).toBe("Retried Detail")
+      expect(result.current.resourceEditLoadError).toBeNull()
+      expect(result.current.isResourceEditReady).toBe(true)
+    })
+    expect(getDetail).toHaveBeenCalledTimes(2)
   })
 
   it("does not require a real provider key when editing a Claude Code Hub channel", async () => {

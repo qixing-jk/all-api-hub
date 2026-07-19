@@ -21,6 +21,21 @@
     "cny": "CNY",
     "usd": "USD"
   },
+  "datePicker": {
+    "in1Year": "+1 año",
+    "in30Days": "+30 días",
+    "in7Days": "+7 días",
+    "in90Days": "+90 días",
+    "naturalInput": {
+      "invalid": "Ingresa una fecha reconocible, como YYYY-MM-DD o in 7 days",
+      "label": "Ingresar fecha",
+      "openCalendar": "Abrir calendario",
+      "placeholder": "Prueba in 7 days, tomorrow o 2026-08-01",
+      "preview": "Se establecerá en: {{date}}"
+    },
+    "noExpiration": "Sin vencimiento",
+    "placeholder": "Seleccionar fecha"
+  },
   "labels": {
     "apiKey": "Clave API",
     "notAvailable": "N/D",
@@ -40,20 +55,30 @@
     "translationDescription": "Si estás usando traducción automática, desactívala para esta página o cambia al idioma que necesitas en la configuración de la extensión."
   },
   "status": {
+    "applying": "Aplicando...",
     "cancelled": "Cancelado",
+    "cancelling": "Cancelando...",
+    "checking": "Comprobando...",
     "configurationRequired": "Configuración requerida",
+    "copying": "Copiando...",
     "creating": "Creando...",
+    "deleting": "Eliminando...",
     "disabled": "Deshabilitado",
+    "disabling": "Deshabilitando...",
     "enabled": "Habilitado",
+    "enabling": "Habilitando...",
     "error": "Error",
     "exporting": "Exportando...",
     "failed": "Falló",
     "importing": "Importando...",
     "loading": "Cargando...",
+    "opening": "Abriendo...",
     "processing": "Procesando...",
     "refreshing": "Actualizando...",
     "resetting": "Restableciendo...",
+    "retrying": "Reintentando...",
     "saving": "Guardando...",
+    "starting": "Iniciando...",
     "success": "Correcto",
     "testing": "Probando...",
     "updating": "Actualizando...",

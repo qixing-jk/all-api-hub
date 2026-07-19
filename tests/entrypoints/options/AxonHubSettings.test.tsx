@@ -97,98 +97,90 @@ vi.mock("~/components/SettingSection", () => ({
   ),
 }))
 
-vi.mock("~/components/ui", () => ({
-  Button: ({
-    children,
-    disabled,
-    onClick,
-  }: {
-    children: ReactNode
-    disabled?: boolean
-    onClick?: () => void
-  }) => (
-    <button disabled={disabled} onClick={() => onClick?.()}>
-      {children}
-    </button>
-  ),
-  Card: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  CardItem: ({
-    description,
-    rightContent,
-    title,
-  }: {
-    description?: ReactNode
-    rightContent?: ReactNode
-    title?: ReactNode
-  }) => (
-    <div>
-      {title ? <div>{title}</div> : null}
-      {description ? <div>{description}</div> : null}
-      {rightContent}
-    </div>
-  ),
-  CardList: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  IconButton: ({
-    children,
-    onClick,
-    "aria-label": ariaLabel,
-  }: {
-    children: ReactNode
-    onClick?: () => void
-    "aria-label"?: string
-  }) => (
-    <button aria-label={ariaLabel} onClick={() => onClick?.()}>
-      {children}
-    </button>
-  ),
-  Input: ({
-    onBlur,
-    onChange,
-    placeholder,
-    rightIcon,
-    revealable,
-    revealLabels,
-    type,
-    value,
-  }: {
-    onBlur?: (event: { target: { value: string } }) => void
-    onChange?: (event: { target: { value: string } }) => void
-    placeholder?: string
-    rightIcon?: ReactNode
-    revealable?: boolean
-    revealLabels?: { show: string; hide: string }
-    type?: string
-    value?: string
-  }) => {
-    const [isRevealed, setIsRevealed] = useState(false)
-    const inputType =
-      revealable && type === "password" && isRevealed ? "text" : type
+vi.mock("~/components/ui", async (importOriginal) => {
+  const original = await importOriginal<typeof import("~/components/ui")>()
 
-    return (
+  return {
+    ...original,
+    Card: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    CardItem: ({
+      description,
+      rightContent,
+      title,
+    }: {
+      description?: ReactNode
+      rightContent?: ReactNode
+      title?: ReactNode
+    }) => (
       <div>
-        <input
-          aria-label={placeholder ?? type ?? "input"}
-          type={inputType}
-          value={value}
-          onBlur={(event) =>
-            onBlur?.({ target: { value: event.currentTarget.value } })
-          }
-          onChange={(event) =>
-            onChange?.({ target: { value: event.currentTarget.value } })
-          }
-        />
-        {revealable && type === "password" ? (
-          <button
-            type="button"
-            aria-label={isRevealed ? revealLabels?.hide : revealLabels?.show}
-            onClick={() => setIsRevealed((current) => !current)}
-          />
-        ) : null}
-        {rightIcon}
+        {title ? <div>{title}</div> : null}
+        {description ? <div>{description}</div> : null}
+        {rightContent}
       </div>
-    )
-  },
-}))
+    ),
+    CardList: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    IconButton: ({
+      children,
+      onClick,
+      "aria-label": ariaLabel,
+    }: {
+      children: ReactNode
+      onClick?: () => void
+      "aria-label"?: string
+    }) => (
+      <button aria-label={ariaLabel} onClick={() => onClick?.()}>
+        {children}
+      </button>
+    ),
+    Input: ({
+      onBlur,
+      onChange,
+      placeholder,
+      rightIcon,
+      revealable,
+      revealLabels,
+      type,
+      value,
+    }: {
+      onBlur?: (event: { target: { value: string } }) => void
+      onChange?: (event: { target: { value: string } }) => void
+      placeholder?: string
+      rightIcon?: ReactNode
+      revealable?: boolean
+      revealLabels?: { show: string; hide: string }
+      type?: string
+      value?: string
+    }) => {
+      const [isRevealed, setIsRevealed] = useState(false)
+      const inputType =
+        revealable && type === "password" && isRevealed ? "text" : type
+
+      return (
+        <div>
+          <input
+            aria-label={placeholder ?? type ?? "input"}
+            type={inputType}
+            value={value}
+            onBlur={(event) =>
+              onBlur?.({ target: { value: event.currentTarget.value } })
+            }
+            onChange={(event) =>
+              onChange?.({ target: { value: event.currentTarget.value } })
+            }
+          />
+          {revealable && type === "password" ? (
+            <button
+              type="button"
+              aria-label={isRevealed ? revealLabels?.hide : revealLabels?.show}
+              onClick={() => setIsRevealed((current) => !current)}
+            />
+          ) : null}
+          {rightIcon}
+        </div>
+      )
+    },
+  }
+})
 
 const mockedSignIn = signIn as ReturnType<typeof vi.fn>
 const mockedShowUpdateToast = showUpdateToast as ReturnType<typeof vi.fn>
@@ -376,7 +368,7 @@ describe("AxonHubSettings", () => {
     expect(mockUpdateAxonHubConfig).not.toHaveBeenCalled()
   })
 
-  it("validates trimmed credentials, disables the button in flight, and saves on success", async () => {
+  it("exposes only validation as busy, suppresses duplicate clicks, and restores on success", async () => {
     const deferredSignIn = createDeferred<{ accessToken: string }>()
     mockedSignIn.mockReturnValue(deferredSignIn.promise)
 
@@ -414,11 +406,17 @@ describe("AxonHubSettings", () => {
         password: "validated-password",
       })
     })
+    const validatingButton = screen.getByRole("button", {
+      name: "settings:axonHub.validation.validating",
+    })
+    expect(validatingButton).toBeDisabled()
+    expect(validatingButton).toHaveAttribute("aria-busy", "true")
     expect(
-      screen.getByRole("button", {
-        name: "settings:axonHub.validation.validating",
-      }),
-    ).toBeDisabled()
+      screen.getByRole("button", { name: "common:actions.reset" }),
+    ).not.toHaveAttribute("aria-busy")
+
+    fireEvent.click(validatingButton)
+    expect(mockedSignIn).toHaveBeenCalledTimes(1)
 
     deferredSignIn.resolve({ accessToken: "token" })
 
@@ -437,6 +435,12 @@ describe("AxonHubSettings", () => {
         "settings:axonHub.validation.success",
       )
     })
+
+    const restoredButton = screen.getByRole("button", {
+      name: "settings:axonHub.validation.validate",
+    })
+    expect(restoredButton).toBeEnabled()
+    expect(restoredButton).not.toHaveAttribute("aria-busy")
   })
 
   it("surfaces sign-in failures without overwriting saved config", async () => {

@@ -1975,7 +1975,7 @@ describe("BatchVerifyModelsDialog", () => {
     ).toBeGreaterThan(0)
   })
 
-  it("runs profile-backed models with the profile api type and without account tokens", async () => {
+  it("keeps the profile protocol independent of the row's resolved vendor", async () => {
     mockRunApiVerificationProbe.mockResolvedValueOnce({
       id: "text-generation",
       status: "pass",
@@ -1985,9 +1985,17 @@ describe("BatchVerifyModelsDialog", () => {
 
     renderDialog([
       {
-        key: "profile:profile-1:model:claude-3-5-sonnet",
-        modelId: "claude-3-5-sonnet",
+        key: "profile:profile-1:model:gpt-4o",
+        modelId: "gpt-4o",
         enableGroups: [],
+        resolvedVendor: {
+          state: "resolved",
+          kind: "known",
+          key: "known:openai",
+          knownId: "openai",
+          label: "OpenAI",
+          source: "curated-rule",
+        },
         source: {
           kind: "profile",
           profile: {
@@ -2002,7 +2010,7 @@ describe("BatchVerifyModelsDialog", () => {
     ])
 
     const row = await screen.findByTestId(
-      getBatchVerifyRowTestId("profile:profile-1:model:claude-3-5-sonnet"),
+      getBatchVerifyRowTestId("profile:profile-1:model:gpt-4o"),
     )
     const sourceBadge = row.querySelector(
       '[data-slot="badge"][title="https://anthropic.example.com"]',
@@ -2025,7 +2033,7 @@ describe("BatchVerifyModelsDialog", () => {
           baseUrl: "https://anthropic.example.com",
           apiKey: "profile-secret",
           apiType: API_TYPES.ANTHROPIC,
-          modelId: "claude-3-5-sonnet",
+          modelId: "gpt-4o",
           tokenMeta: undefined,
           probeId: "text-generation",
           abortSignal: expect.any(AbortSignal),
@@ -2039,7 +2047,7 @@ describe("BatchVerifyModelsDialog", () => {
           target: {
             kind: "profile-model",
             profileId: "profile-1",
-            modelId: "claude-3-5-sonnet",
+            modelId: "gpt-4o",
           },
         }),
       )

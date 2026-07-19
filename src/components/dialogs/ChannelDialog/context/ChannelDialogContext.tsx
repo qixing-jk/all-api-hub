@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react"
 
+import type { ChannelResourceEditContext } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 import type { ApiToken, DisplaySiteData } from "~/types"
@@ -47,6 +48,7 @@ interface ChannelDialogState {
     | null
   onSuccessCallback?: (result: any) => void
   onMutationOutcome?: ChannelDialogMutationOutcomeHandler | null
+  resourceEdit?: ChannelResourceEditContext | null
 }
 
 interface DuplicateChannelWarningState {
@@ -80,6 +82,7 @@ interface ChannelDialogContextValue {
     }) => Promise<void>
     onSuccess?: (result: any) => void
     onMutationOutcome?: ChannelDialogMutationOutcomeHandler
+    resourceEdit?: ChannelResourceEditContext | null
   }) => void
   closeDialog: () => void
   handleSuccess: (result: any) => void
@@ -152,6 +155,7 @@ export function ChannelDialogProvider({
       }) => Promise<void>
       onSuccess?: (result: any) => void
       onMutationOutcome?: ChannelDialogMutationOutcomeHandler
+      resourceEdit?: ChannelResourceEditContext | null
     }) => {
       setState({
         isOpen: true,
@@ -165,6 +169,7 @@ export function ChannelDialogProvider({
         onRequestRealKey: config.onRequestRealKey ?? null,
         onSuccessCallback: config.onSuccess,
         onMutationOutcome: config.onMutationOutcome ?? null,
+        resourceEdit: config.resourceEdit ?? null,
       })
     },
     [],

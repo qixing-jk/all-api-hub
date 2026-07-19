@@ -1,33 +1,56 @@
-import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
-import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
-import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import {
+  MANAGED_RESOURCE_FAILURE_CODES,
+  ManagedResourceError,
+  type ManagedResourceRef,
+  type ResourceOperationOptions,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
+import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import {
+  executeManagedSiteMigrationCore,
+  prepareManagedSiteMigrationPreviewCore,
+} from "~/services/managedSites/channelMigrationCanonicalOrchestrator"
+import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
+import {
+  toCanonicalMigrationSelectionFromLegacyAxonRow,
+  toCanonicalMigrationSourceFromLegacyChannel,
+  toCanonicalTargetPreparationFromLegacyDraft,
+  toLegacyChannelFormDataProjection,
+  toLegacyMigrationWarningCodes,
+} from "~/services/managedSites/channelMigrationLegacyFacade"
 import {
   getManagedSiteServiceForType,
   type ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
+import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
+import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import {
-  buildOctopusBaseUrl,
-  mapChannelTypeToOctopusOutboundType,
-  mapOctopusOutboundTypeToChannelType,
-} from "~/services/managedSites/providers/octopus"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+  resolveManagedSiteRuntimeConfigForType,
+  type ManagedSiteRuntimeConfigValue,
+} from "~/services/managedSites/runtimeConfig"
 import { needsManagedSiteChannelKeyResolution } from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
-  MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
-  MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES,
   type ManagedSiteChannelMigrationBlockedReasonCode,
   type ManagedSiteChannelMigrationExecutionItem,
   type ManagedSiteChannelMigrationExecutionResult,
-  type ManagedSiteChannelMigrationItemWarningCode,
   type ManagedSiteChannelMigrationPreview,
   type ManagedSiteChannelMigrationPreviewItem,
 } from "~/types/managedSiteMigration"
+import {
+  MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
+  type ManagedSiteMigrationCanonicalExecutionResult,
+  type ManagedSiteMigrationCanonicalPreview,
+  type ManagedSiteMigrationCanonicalPreviewItem,
+  type ManagedSiteMigrationSelection,
+  type ManagedSiteMigrationSource,
+  type ManagedSiteMigrationTargetPreparation,
+} from "~/types/managedSiteMigrationCapability"
+import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
-import { normalizeList } from "~/utils/core/string"
 
 interface PrepareManagedSiteChannelMigrationPreviewParams {
   preferences: UserPreferences
@@ -44,389 +67,159 @@ interface ExecuteManagedSiteChannelMigrationParams {
   preview: ManagedSiteChannelMigrationPreview
 }
 
-interface SourceKeyResolutionResult {
-  key: string | null
-  blockingReasonCode?: ManagedSiteChannelMigrationBlockedReasonCode
-  blockingMessage?: string
-}
+type SourceKeyResolutionResult =
+  | {
+      key: string
+      blockingReasonCode?: never
+      blockingMessage?: never
+    }
+  | {
+      key: null
+      blockingReasonCode: ManagedSiteChannelMigrationBlockedReasonCode
+      blockingMessage?: string
+    }
 
-const parseDelimitedValues = (value: string | null | undefined) =>
-  normalizeList(value?.split(",") ?? [])
+type ChannelMigrationResourceCapabilities = ManagedUpstreamResourcesCapability<
+  ManagedSiteRuntimeConfigValue,
+  unknown,
+  ChannelFormData
+>
 
-const areStringArraysEqual = (left: string[], right: string[]): boolean =>
-  left.length === right.length &&
-  left.every((item, index) => item === right[index])
+const migrationBlockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
+const migrationFailures = MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES
+const migrationUncertaintyWarning =
+  "Target creation may have succeeded. Verify the target before retrying."
+const migrationBlockingFallbacks = {
+  [migrationBlockers.SOURCE_KEY_MISSING]:
+    "The source credential is unavailable. Verify source access and try again.",
+  [migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED]:
+    "The source credential could not be resolved. Verify source access and try again.",
+  [migrationBlockers.TARGET_DRAFT_PREPARATION_FAILED]:
+    "The target channel could not be prepared. Review channel models and target configuration, then retry.",
+} satisfies Record<ManagedSiteChannelMigrationBlockedReasonCode, string>
 
-const hasMeaningfulValue = (value: string | null | undefined) =>
-  Boolean(value?.trim())
+const getMigrationBlockingFallback = (
+  reasonCode: ManagedSiteChannelMigrationBlockedReasonCode,
+): string => migrationBlockingFallbacks[reasonCode]
 
-const hasMultiKeyState = (channel: ManagedSiteChannel) =>
-  Boolean(
-    channel.channel_info?.is_multi_key ||
-      (channel.channel_info?.multi_key_size ?? 0) > 0 ||
-      channel.channel_info?.multi_key_status_list?.length ||
-      channel.channel_info?.multi_key_mode,
-  )
+const normalizeResourceScopeKey = (baseUrl: string): string => {
+  const trimmed = baseUrl.trim()
 
-const PREVIEW_BUILD_CONCURRENCY = 5
-
-const AXON_HUB_TO_SHARED_CHANNEL_TYPE: Partial<Record<string, ChannelType>> = {
-  [AXON_HUB_CHANNEL_TYPE.OPENAI]: ChannelType.OpenAI,
-  [AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES]: ChannelType.OpenAI,
-  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC]: ChannelType.Anthropic,
-  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS]: ChannelType.Anthropic,
-  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP]: ChannelType.Anthropic,
-  [AXON_HUB_CHANNEL_TYPE.CLAUDECODE]: ChannelType.Anthropic,
-  [AXON_HUB_CHANNEL_TYPE.GEMINI_OPENAI]: ChannelType.Gemini,
-  [AXON_HUB_CHANNEL_TYPE.GEMINI]: ChannelType.Gemini,
-  [AXON_HUB_CHANNEL_TYPE.GEMINI_VERTEX]: ChannelType.Gemini,
-  [AXON_HUB_CHANNEL_TYPE.DEEPSEEK]: ChannelType.DeepSeek,
-  [AXON_HUB_CHANNEL_TYPE.DEEPSEEK_ANTHROPIC]: ChannelType.DeepSeek,
-  [AXON_HUB_CHANNEL_TYPE.OPENROUTER]: ChannelType.OpenRouter,
-  [AXON_HUB_CHANNEL_TYPE.XAI]: ChannelType.Xai,
-  [AXON_HUB_CHANNEL_TYPE.SILICONFLOW]: ChannelType.SiliconFlow,
-  [AXON_HUB_CHANNEL_TYPE.VOLCENGINE]: ChannelType.VolcEngine,
-  [AXON_HUB_CHANNEL_TYPE.OLLAMA]: ChannelType.Ollama,
-  [AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT]: ChannelType.OpenAI,
-  [AXON_HUB_CHANNEL_TYPE.NANOGPT]: ChannelType.OpenAI,
-}
-
-const SHARED_TO_AXON_HUB_CHANNEL_TYPE: Partial<Record<ChannelType, string>> = {
-  [ChannelType.Unknown]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  [ChannelType.OpenAI]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  [ChannelType.Azure]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  [ChannelType.OpenAIMax]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  [ChannelType.OhMyGPT]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  [ChannelType.Custom]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  [ChannelType.AILS]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  [ChannelType.AIProxy]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  [ChannelType.API2GPT]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  [ChannelType.AIGC2D]: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  [ChannelType.Anthropic]: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
-  [ChannelType.OpenRouter]: AXON_HUB_CHANNEL_TYPE.OPENROUTER,
-  [ChannelType.Gemini]: AXON_HUB_CHANNEL_TYPE.GEMINI,
-  [ChannelType.VertexAi]: AXON_HUB_CHANNEL_TYPE.GEMINI,
-  [ChannelType.SiliconFlow]: AXON_HUB_CHANNEL_TYPE.SILICONFLOW,
-  [ChannelType.DeepSeek]: AXON_HUB_CHANNEL_TYPE.DEEPSEEK,
-  [ChannelType.VolcEngine]: AXON_HUB_CHANNEL_TYPE.VOLCENGINE,
-  [ChannelType.Xai]: AXON_HUB_CHANNEL_TYPE.XAI,
-  [ChannelType.Ollama]: AXON_HUB_CHANNEL_TYPE.OLLAMA,
-}
-
-const CLAUDE_CODE_HUB_TO_SHARED_CHANNEL_TYPE: Partial<
-  Record<string, ChannelType>
-> = {
-  [CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE]: ChannelType.OpenAI,
-  [CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX]: ChannelType.OpenAI,
-  [CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE]: ChannelType.Anthropic,
-  [CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI]: ChannelType.Gemini,
-}
-
-const SHARED_TO_CLAUDE_CODE_HUB_PROVIDER_TYPE: Partial<
-  Record<ChannelType, string>
-> = {
-  [ChannelType.Unknown]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.OpenAI]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.Azure]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.OpenAIMax]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.OhMyGPT]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.Custom]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.AILS]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.AIProxy]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.API2GPT]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.AIGC2D]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.Anthropic]: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
-  [ChannelType.OpenRouter]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.Gemini]: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
-  [ChannelType.VertexAi]: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
-  [ChannelType.SiliconFlow]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.DeepSeek]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.VolcEngine]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.Xai]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-  [ChannelType.Ollama]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-}
-
-const getSafeClaudeCodeHubWeight = (weight?: number) => {
-  const numericWeight = Number(weight ?? 1)
-  if (!Number.isFinite(numericWeight)) {
-    return 1
+  try {
+    return new URL(trimmed).origin
+  } catch {
+    return trimmed.replace(/\/+$/, "")
   }
-
-  return Math.max(1, Math.trunc(numericWeight))
 }
 
-const mapWithConcurrency = async <TItem, TResult>(
-  items: TItem[],
-  concurrency: number,
-  mapper: (item: TItem, index: number) => Promise<TResult>,
-): Promise<TResult[]> => {
-  if (items.length === 0) {
-    return []
-  }
-
-  const results = new Array<TResult>(items.length)
-  let nextIndex = 0
-
-  const workers = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    async () => {
-      while (true) {
-        const index = nextIndex
-        nextIndex += 1
-
-        if (index >= items.length) {
-          return
-        }
-
-        results[index] = await mapper(items[index], index)
-      }
-    },
-  )
-
-  await Promise.all(workers)
-
-  return results
+type LegacyChannelWithNativeResourceRef = ManagedSiteChannel & {
+  resourceRef?: ManagedResourceRef
 }
 
-const getSharedChannelType = (
-  sourceSiteType: ManagedSiteType,
-  channel: ManagedSiteChannel,
-): ChannelType => {
-  const numericChannelType =
-    typeof channel.type === "number"
-      ? channel.type
-      : sourceSiteType === SITE_TYPES.AXON_HUB
-        ? AXON_HUB_TO_SHARED_CHANNEL_TYPE[channel.type] ?? ChannelType.OpenAI
-        : sourceSiteType === SITE_TYPES.CLAUDE_CODE_HUB
-          ? CLAUDE_CODE_HUB_TO_SHARED_CHANNEL_TYPE[channel.type] ??
-            ChannelType.OpenAI
-          : ChannelType.OpenAI
-
-  if (sourceSiteType === SITE_TYPES.OCTOPUS) {
-    return mapOctopusOutboundTypeToChannelType(numericChannelType)
-  }
-
-  return numericChannelType as ChannelType
-}
-
-const getTargetChannelType = (
-  sourceSiteType: ManagedSiteType,
-  targetSiteType: ManagedSiteType,
-  channel: ManagedSiteChannel,
-) => {
-  const sharedType = getSharedChannelType(sourceSiteType, channel)
-
-  if (targetSiteType === SITE_TYPES.OCTOPUS) {
-    return mapChannelTypeToOctopusOutboundType(sharedType)
-  }
-
-  if (targetSiteType === SITE_TYPES.AXON_HUB) {
-    // AxonHub rejects New API numeric channel types. Unknown or unsupported
-    // shared types fall back to OpenAI-compatible with a preview remap warning.
-    return (
-      SHARED_TO_AXON_HUB_CHANNEL_TYPE[sharedType] ??
-      AXON_HUB_CHANNEL_TYPE.OPENAI
-    )
-  }
-
-  if (targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    // Claude Code Hub uses string provider types. Source types that cannot be
-    // represented exactly fall back to OpenAI-compatible and receive a preview
-    // remap warning before the create payload is built.
-    return (
-      SHARED_TO_CLAUDE_CODE_HUB_PROVIDER_TYPE[sharedType] ??
-      CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE
-    )
-  }
-
-  return sharedType
-}
-
-const collectItemWarningCodes = (params: {
+const toCanonicalMigrationSelectionFromLegacyChannel = (params: {
   sourceSiteType: ManagedSiteType
-  targetSiteType: ManagedSiteType
-  channel: ManagedSiteChannel
-}): ManagedSiteChannelMigrationItemWarningCode[] => {
-  const { sourceSiteType, targetSiteType, channel } = params
-  const warnings = new Set<ManagedSiteChannelMigrationItemWarningCode>()
-
-  if (hasMeaningfulValue(channel.model_mapping)) {
-    warnings.add(
-      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_MODEL_MAPPING,
-    )
+  channel: LegacyChannelWithNativeResourceRef
+  scopeKey?: string
+}): ManagedSiteMigrationSelection => {
+  if (params.sourceSiteType === SITE_TYPES.AXON_HUB) {
+    return toCanonicalMigrationSelectionFromLegacyAxonRow(params)
   }
-
-  if (hasMeaningfulValue(channel.status_code_mapping)) {
-    warnings.add(
-      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_STATUS_CODE_MAPPING,
-    )
-  }
-
-  if (
-    hasMeaningfulValue(channel.setting) ||
-    hasMeaningfulValue(channel.settings)
-  ) {
-    warnings.add(
-      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_ADVANCED_SETTINGS,
-    )
-  }
-
-  if (hasMultiKeyState(channel)) {
-    warnings.add(
-      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_MULTI_KEY_STATE,
-    )
-  }
-
-  if (sourceSiteType !== targetSiteType) {
-    if (
-      sourceSiteType === SITE_TYPES.OCTOPUS ||
-      targetSiteType === SITE_TYPES.OCTOPUS ||
-      targetSiteType === SITE_TYPES.AXON_HUB ||
-      targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB ||
-      ((sourceSiteType === SITE_TYPES.AXON_HUB ||
-        sourceSiteType === SITE_TYPES.CLAUDE_CODE_HUB) &&
-        typeof channel.type === "string")
-    ) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
-      )
-    }
-  }
-
-  if (targetSiteType === SITE_TYPES.OCTOPUS) {
-    const normalizedBaseUrl = buildOctopusBaseUrl(channel.base_url ?? "")
-    if ((channel.base_url ?? "").trim() !== normalizedBaseUrl) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_NORMALIZES_BASE_URL,
-      )
-    }
-
-    const groups = parseDelimitedValues(channel.group)
-    if (groups.length !== 1 || groups[0] !== DEFAULT_CHANNEL_FIELDS.groups[0]) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
-      )
-    }
-
-    if ((channel.priority ?? DEFAULT_CHANNEL_FIELDS.priority) !== 0) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_PRIORITY,
-      )
-    }
-
-    if ((channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight) !== 0) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_WEIGHT,
-      )
-    }
-
-    if (![1, 2].includes(channel.status ?? DEFAULT_CHANNEL_FIELDS.status)) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
-      )
-    }
-  }
-
-  if (targetSiteType === SITE_TYPES.AXON_HUB) {
-    const sourceGroups = parseDelimitedValues(channel.group)
-    const emittedGroups = [...DEFAULT_CHANNEL_FIELDS.groups]
-    if (!areStringArraysEqual(sourceGroups, emittedGroups)) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
-      )
-    }
-
-    if ((channel.priority ?? DEFAULT_CHANNEL_FIELDS.priority) !== 0) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_PRIORITY,
-      )
-    }
-
-    if (![1, 2].includes(channel.status ?? DEFAULT_CHANNEL_FIELDS.status)) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
-      )
-    }
-  }
-
-  if (targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    const sourceGroups = parseDelimitedValues(channel.group)
-    const emittedGroups =
-      sourceGroups.length > 0
-        ? [sourceGroups[0]]
-        : [DEFAULT_CHANNEL_FIELDS.groups[0]]
-    if (!areStringArraysEqual(sourceGroups, emittedGroups)) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
-      )
-    }
-
-    const sourceWeight = channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight
-    if (getSafeClaudeCodeHubWeight(sourceWeight) !== sourceWeight) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_WEIGHT,
-      )
-    }
-
-    if (![1, 2].includes(channel.status ?? DEFAULT_CHANNEL_FIELDS.status)) {
-      warnings.add(
-        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
-      )
-    }
-  }
-
-  return Array.from(warnings)
-}
-
-const buildDraftFromSourceChannel = (params: {
-  sourceSiteType: ManagedSiteType
-  targetSiteType: ManagedSiteType
-  channel: ManagedSiteChannel
-  key: string
-}): ChannelFormData => {
-  const { sourceSiteType, targetSiteType, channel, key } = params
-  const groups = parseDelimitedValues(channel.group)
-  const models = parseDelimitedValues(channel.models)
-  const sourceStatus = channel.status ?? DEFAULT_CHANNEL_FIELDS.status
-  const targetStatus =
-    targetSiteType === SITE_TYPES.OCTOPUS ||
-    targetSiteType === SITE_TYPES.AXON_HUB ||
-    targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB
-      ? sourceStatus === 1
-        ? 1
-        : 2
-      : sourceStatus
 
   return {
-    name: channel.name?.trim() || `Channel #${channel.id}`,
-    type: getTargetChannelType(sourceSiteType, targetSiteType, channel),
-    key: key.trim(),
-    base_url:
-      targetSiteType === SITE_TYPES.OCTOPUS
-        ? buildOctopusBaseUrl(channel.base_url ?? "")
-        : (channel.base_url ?? "").trim(),
-    models,
-    groups:
-      targetSiteType === SITE_TYPES.OCTOPUS ||
-      targetSiteType === SITE_TYPES.AXON_HUB
-        ? [...DEFAULT_CHANNEL_FIELDS.groups]
-        : targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB
-          ? [groups[0] ?? DEFAULT_CHANNEL_FIELDS.groups[0]]
-          : groups.length > 0
-            ? groups
-            : [...DEFAULT_CHANNEL_FIELDS.groups],
-    priority:
-      targetSiteType === SITE_TYPES.OCTOPUS ||
-      targetSiteType === SITE_TYPES.AXON_HUB
-        ? DEFAULT_CHANNEL_FIELDS.priority
-        : channel.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
-    weight:
-      targetSiteType === SITE_TYPES.OCTOPUS
-        ? DEFAULT_CHANNEL_FIELDS.weight
-        : targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB
-          ? getSafeClaudeCodeHubWeight(channel.weight)
-          : channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
-    status: targetStatus,
+    selectionId: String(params.channel.id),
+    displayName: params.channel.name,
+    ref: params.channel.resourceRef ?? {
+      siteType: params.sourceSiteType,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+      scopeKey: params.scopeKey ?? "",
+      resourceId: String(params.channel.id),
+    },
+  }
+}
+
+const resolveChannelMigrationResourceCapabilities = (
+  siteType: ManagedSiteType,
+): ChannelMigrationResourceCapabilities | null => {
+  const resolution = resolveManagedUpstreamResourceFeatureCapabilities(
+    siteType,
+    MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
+  )
+
+  if (!resolution.supported) {
+    return null
+  }
+
+  return resolution.capabilities as ChannelMigrationResourceCapabilities
+}
+
+const buildManagedUpstreamResourceRefForChannel = (params: {
+  siteType: ManagedSiteType
+  config: ManagedSiteRuntimeConfigValue
+  channelId: number
+}) =>
+  createManagedUpstreamResourceRef({
+    managedSiteType: params.siteType,
+    scopeKey: normalizeResourceScopeKey(params.config.baseUrl),
+    resourceId: params.channelId,
+  })
+
+const resolveSourceChannelKeyFromResources = async (params: {
+  preferences: UserPreferences
+  sourceSiteType: ManagedSiteType
+  channel: ManagedSiteChannel
+}): Promise<SourceKeyResolutionResult | null> => {
+  const resources = resolveChannelMigrationResourceCapabilities(
+    params.sourceSiteType,
+  )
+
+  if (!resources?.secrets?.revealSecret) {
+    return null
+  }
+
+  const sourceRuntimeConfig = resolveManagedSiteRuntimeConfigForType(
+    params.preferences,
+    params.sourceSiteType,
+  )
+  if (!sourceRuntimeConfig) {
+    return {
+      key: null,
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+      blockingMessage: "Source managed-site configuration is missing.",
+    }
+  }
+
+  try {
+    const result = await resources.secrets.revealSecret(
+      sourceRuntimeConfig.config,
+      buildManagedUpstreamResourceRefForChannel({
+        siteType: params.sourceSiteType,
+        config: sourceRuntimeConfig.config,
+        channelId: params.channel.id,
+      }),
+    )
+
+    if (
+      result.status === "available" &&
+      !needsManagedSiteChannelKeyResolution(result.secret)
+    ) {
+      return { key: result.secret.trim() }
+    }
+
+    return {
+      key: null,
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+      blockingMessage:
+        result.status === "available" ? undefined : result.message,
+    }
+  } catch (error) {
+    return {
+      key: null,
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+      blockingMessage: getErrorMessage(error),
+    }
   }
 }
 
@@ -459,6 +252,15 @@ const resolveSourceChannelKey = async (params: {
     ) {
       return { key: rawProviderKey }
     }
+  }
+
+  const resourceKeyResolution = await resolveSourceChannelKeyFromResources({
+    preferences,
+    sourceSiteType,
+    channel,
+  })
+  if (resourceKeyResolution) {
+    return resourceKeyResolution
   }
 
   if (sourceSiteType === SITE_TYPES.NEW_API) {
@@ -544,113 +346,176 @@ const resolveSourceChannelKey = async (params: {
   }
 }
 
-const buildBlockedPreviewItem = (params: {
-  channel: ManagedSiteChannel
-  sourceSiteType: ManagedSiteType
+const createTargetChannelForMigration = async (params: {
   targetSiteType: ManagedSiteType
-  blockingReasonCode?: ManagedSiteChannelMigrationBlockedReasonCode
-  blockingMessage?: string
-}): ManagedSiteChannelMigrationPreviewItem => ({
-  channelId: params.channel.id,
-  channelName: params.channel.name,
-  sourceChannel: params.channel,
-  draft: null,
-  status: "blocked",
-  warningCodes: collectItemWarningCodes({
-    sourceSiteType: params.sourceSiteType,
-    targetSiteType: params.targetSiteType,
-    channel: params.channel,
-  }),
-  blockingReasonCode: params.blockingReasonCode,
-  blockingMessage: params.blockingMessage,
-})
-
-/**
- * Resolves the final preview row, including any source-key hydration required
- * before a target channel can be created safely.
- */
-async function buildPreviewItem(
-  params: PrepareManagedSiteChannelMigrationPreviewParams & {
-    channel: ManagedSiteChannel
-  },
-): Promise<ManagedSiteChannelMigrationPreviewItem> {
-  const { channel, sourceSiteType, targetSiteType } = params
-
-  const keyResolution = await resolveSourceChannelKey({
-    preferences: params.preferences,
-    sourceSiteType,
-    channel,
-    resolveNewApiSourceKey: params.resolveNewApiSourceKey,
-  })
-
-  if (!keyResolution.key) {
-    return buildBlockedPreviewItem({
-      channel,
-      sourceSiteType,
-      targetSiteType,
-      blockingReasonCode: keyResolution.blockingReasonCode,
-      blockingMessage: keyResolution.blockingMessage,
-    })
-  }
-
-  return {
-    channelId: channel.id,
-    channelName: channel.name,
-    sourceChannel: channel,
-    draft: buildDraftFromSourceChannel({
-      sourceSiteType,
-      targetSiteType,
-      channel,
-      key: keyResolution.key,
-    }),
-    status: "ready",
-    warningCodes: collectItemWarningCodes({
-      sourceSiteType,
-      targetSiteType,
-      channel,
-    }),
-  }
-}
-
-const buildExecutionFailureItem = (
-  item: ManagedSiteChannelMigrationPreviewItem,
-  params: {
-    skipped: boolean
-    fallbackError?: string
-  },
-): ManagedSiteChannelMigrationExecutionItem => ({
-  channelId: item.channelId,
-  channelName: item.channelName,
-  success: false,
-  skipped: params.skipped,
-  blockingReasonCode: item.blockingReasonCode,
-  error: item.blockingMessage || params.fallbackError,
-})
-
-/**
- * Converts a target-config failure into per-channel execution results so the UI
- * can still show which rows were blocked versus which ready rows failed.
- */
-const buildCreateFailureResults = (
-  preview: ManagedSiteChannelMigrationPreview,
-  message: string,
-): ManagedSiteChannelMigrationExecutionResult => {
-  const items: ManagedSiteChannelMigrationExecutionItem[] = preview.items.map(
-    (item) =>
-      buildExecutionFailureItem(item, {
-        skipped: item.status !== "ready",
-        fallbackError: message,
-      }),
+  targetService: ManagedSiteService
+  targetConfig: ManagedSiteRuntimeConfigValue
+  draft: ChannelFormData
+}) => {
+  const targetResources = resolveChannelMigrationResourceCapabilities(
+    params.targetSiteType,
   )
 
-  return {
-    totalSelected: preview.totalCount,
-    attemptedCount: 0,
-    createdCount: 0,
-    failedCount: preview.readyCount,
-    skippedCount: preview.blockedCount,
-    items,
+  if (!targetResources) {
+    const payload = params.targetService.buildChannelPayload(params.draft)
+    return await params.targetService.createChannel(
+      params.targetConfig,
+      payload,
+    )
   }
+
+  return await targetResources.items.create(params.targetConfig, params.draft)
+}
+
+const buildLegacyTargetPreparationFromCanonicalSource = async (params: {
+  selection: ManagedSiteMigrationSelection
+  source: ManagedSiteMigrationSource
+  targetSiteType: ManagedSiteType
+  legacyStatus?: ChannelFormData["status"]
+  onPreparedPreviewDraft?: (draft: Omit<ChannelFormData, "key">) => void
+}): Promise<ManagedSiteMigrationTargetPreparation> => {
+  const resources = resolveChannelMigrationResourceCapabilities(
+    params.targetSiteType,
+  )
+  return await toCanonicalTargetPreparationFromLegacyDraft({
+    source: params.source,
+    targetSiteType: params.targetSiteType,
+    displayName: params.selection.displayName,
+    selectionId: params.selection.selectionId,
+    legacyStatus: params.legacyStatus,
+    preparePreviewDraft: async (draft) => {
+      const preparedDraft = resources
+        ? await resources.drafts.prepareImportDraft({
+            source: draft as ChannelFormData,
+          })
+        : draft
+      const { key: _credential, ...secretFreeDraft } = preparedDraft as
+        | ChannelFormData
+        | (Omit<ChannelFormData, "key"> & { key?: string })
+      params.onPreparedPreviewDraft?.(secretFreeDraft)
+      return secretFreeDraft
+    },
+  })
+}
+
+const withSelectionDisplayName = (
+  selection: ManagedSiteMigrationSelection,
+  target: ManagedSiteMigrationTargetPreparation,
+): ManagedSiteMigrationTargetPreparation =>
+  target.projection.name.trim()
+    ? target
+    : {
+        ...target,
+        projection: {
+          ...target.projection,
+          name:
+            selection.displayName.trim() || `Channel #${selection.selectionId}`,
+        },
+      }
+
+/** Builds a secret-free migration preview from canonical resource selections. */
+export async function prepareManagedSiteMigrationPreview(params: {
+  sourceSiteType: ManagedSiteType
+  targetSiteType: ManagedSiteType
+  selections: readonly ManagedSiteMigrationSelection[]
+  options?: ResourceOperationOptions
+}): Promise<ManagedSiteMigrationCanonicalPreview> {
+  const sourceCapability = resolveManagedSiteMigrationCapability(
+    params.sourceSiteType,
+  )?.source
+  const targetCapability = resolveManagedSiteMigrationCapability(
+    params.targetSiteType,
+  )?.target
+  return await prepareManagedSiteMigrationPreviewCore({
+    sourceSiteType: params.sourceSiteType,
+    targetSiteType: params.targetSiteType,
+    selections: params.selections,
+    signal: params.options?.signal,
+    sourceFailureReasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
+    targetFailureReasonCode: migrationBlockers.TARGET_DRAFT_PREPARATION_FAILED,
+    getReadyWarningCodes: (source, target) =>
+      toLegacyMigrationWarningCodes({
+        lossSignals: source.lossSignals,
+        adjustments: target.adjustments,
+      }),
+    prepareSource: (selection) =>
+      sourceCapability
+        ? sourceCapability.prepare(selection, params.options)
+        : Promise.resolve({
+            status: "blocked",
+            reasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
+          }),
+    prepareTarget: (selection, source) =>
+      targetCapability
+        ? targetCapability
+            .prepare(source, params.options)
+            .then((target) => withSelectionDisplayName(selection, target))
+        : buildLegacyTargetPreparationFromCanonicalSource({
+            selection,
+            source,
+            targetSiteType: params.targetSiteType,
+          }),
+  })
+}
+
+const isUncertainMigrationError = (error: unknown) =>
+  error instanceof ManagedResourceError &&
+  error.failure.code === MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain
+
+/** Executes canonical migration rows without retaining credentials or commands. */
+export async function executeManagedSiteMigration(params: {
+  preview: ManagedSiteMigrationCanonicalPreview
+  options?: ResourceOperationOptions
+}): Promise<ManagedSiteMigrationCanonicalExecutionResult> {
+  const { preview } = params
+  const sourceCapability = resolveManagedSiteMigrationCapability(
+    preview.sourceSiteType,
+  )?.source
+  const targetCapability = resolveManagedSiteMigrationCapability(
+    preview.targetSiteType,
+  )?.target
+  const legacyTargetService = targetCapability
+    ? null
+    : getManagedSiteServiceForType(preview.targetSiteType)
+  const legacyTargetConfig = legacyTargetService
+    ? await legacyTargetService.getConfig()
+    : null
+
+  return await executeManagedSiteMigrationCore({
+    preview,
+    targetAvailable: Boolean(targetCapability || legacyTargetConfig),
+    signal: params.options?.signal,
+    sourceFailureReasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
+    isMutationStateUncertain: isUncertainMigrationError,
+    resolveCredential: (selection) =>
+      sourceCapability
+        ? sourceCapability.resolveCredential(selection, params.options)
+        : Promise.resolve({
+            status: "blocked",
+            reasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
+          }),
+    create: async (command) => {
+      if (targetCapability) {
+        return await targetCapability.create(command, params.options)
+      }
+      const response = await createTargetChannelForMigration({
+        targetSiteType: preview.targetSiteType,
+        targetService: legacyTargetService!,
+        targetConfig: legacyTargetConfig!,
+        draft: toLegacyChannelFormDataProjection({
+          source: command.source,
+          target: command.projection,
+          credential: command.credential,
+        }),
+      })
+      return response.success
+        ? { status: "created" }
+        : {
+            status: "failed",
+            failureCode: migrationFailures.TargetRejected,
+          }
+    },
+  })
 }
 
 /**
@@ -660,31 +525,154 @@ const buildCreateFailureResults = (
 export async function prepareManagedSiteChannelMigrationPreview(
   params: PrepareManagedSiteChannelMigrationPreviewParams,
 ): Promise<ManagedSiteChannelMigrationPreview> {
-  const items = await mapWithConcurrency(
-    params.channels,
-    PREVIEW_BUILD_CONCURRENCY,
-    (channel) =>
-      buildPreviewItem({
-        ...params,
-        channel,
-      }),
+  const sourceCapability = resolveManagedSiteMigrationCapability(
+    params.sourceSiteType,
+  )?.source
+  const targetCapability = resolveManagedSiteMigrationCapability(
+    params.targetSiteType,
+  )?.target
+  const sourceScopeKey = normalizeResourceScopeKey(
+    resolveManagedSiteRuntimeConfigForType(
+      params.preferences,
+      params.sourceSiteType,
+    )?.config.baseUrl ?? "",
   )
-
-  const readyCount = items.filter((item) => item.status === "ready").length
-  const blockedCount = items.length - readyCount
-
-  return {
+  const selections = params.channels.map((channel) =>
+    toCanonicalMigrationSelectionFromLegacyChannel({
+      sourceSiteType: params.sourceSiteType,
+      channel,
+      scopeKey: sourceScopeKey,
+    }),
+  )
+  const channelsBySelectionId = new Map(
+    selections.map((selection, index) => [
+      selection.selectionId,
+      params.channels[index],
+    ]),
+  )
+  const credentials = new Map<string, string>()
+  const blockingMessages = new Map<string, string>()
+  const preparedDrafts = new Map<string, Omit<ChannelFormData, "key">>()
+  const getChannel = (selection: ManagedSiteMigrationSelection) =>
+    channelsBySelectionId.get(selection.selectionId)!
+  const getWarnings = (selection: ManagedSiteMigrationSelection) =>
+    toLegacyMigrationWarningCodes({
+      sourceSiteType: params.sourceSiteType,
+      targetSiteType: params.targetSiteType,
+      channel: getChannel(selection),
+    })
+  const canonicalPreview = await prepareManagedSiteMigrationPreviewCore({
     sourceSiteType: params.sourceSiteType,
     targetSiteType: params.targetSiteType,
-    generalWarningCodes: [
-      MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.CREATE_ONLY,
-      MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.NO_DEDUPE_OR_SYNC,
-      MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES.NO_ROLLBACK,
-    ],
+    selections,
+    sourceFailureReasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
+    targetFailureReasonCode: migrationBlockers.TARGET_DRAFT_PREPARATION_FAILED,
+    getReadyWarningCodes: (source, target) =>
+      toLegacyMigrationWarningCodes({
+        lossSignals: source.lossSignals,
+        adjustments: target.adjustments,
+      }),
+    getBlockedWarningCodes: getWarnings,
+    prepareSource: async (selection) => {
+      if (sourceCapability) {
+        return await sourceCapability.prepare(selection)
+      }
+      const channel = getChannel(selection)
+      const resolution = await resolveSourceChannelKey({
+        preferences: params.preferences,
+        sourceSiteType: params.sourceSiteType,
+        channel,
+        resolveNewApiSourceKey: params.resolveNewApiSourceKey,
+      })
+      if (resolution.key === null) {
+        if (resolution.blockingMessage) {
+          blockingMessages.set(
+            selection.selectionId,
+            resolution.blockingMessage,
+          )
+        }
+        return {
+          status: "blocked",
+          reasonCode: resolution.blockingReasonCode,
+        }
+      }
+      credentials.set(selection.selectionId, resolution.key)
+      return {
+        status: "ready",
+        source: toCanonicalMigrationSourceFromLegacyChannel({
+          sourceSiteType: params.sourceSiteType,
+          channel,
+        }),
+      }
+    },
+    prepareTarget: async (selection, source) => {
+      try {
+        if (targetCapability) {
+          const target = await targetCapability.prepare(source)
+          const preparedTarget = withSelectionDisplayName(selection, target)
+          const { key: _credential, ...draft } =
+            toLegacyChannelFormDataProjection({
+              source,
+              target: preparedTarget,
+              credential: "",
+            })
+          preparedDrafts.set(selection.selectionId, draft)
+          return preparedTarget
+        }
+        return await buildLegacyTargetPreparationFromCanonicalSource({
+          selection,
+          source,
+          targetSiteType: params.targetSiteType,
+          legacyStatus: sourceCapability
+            ? undefined
+            : getChannel(selection).status,
+          onPreparedPreviewDraft: (draft) =>
+            preparedDrafts.set(selection.selectionId, draft),
+        })
+      } catch (error) {
+        blockingMessages.set(selection.selectionId, getErrorMessage(error))
+        throw error
+      }
+    },
+  })
+  const items: ManagedSiteChannelMigrationPreviewItem[] =
+    canonicalPreview.items.map((item) => {
+      const channel = getChannel(item.selection)
+      if (item.status === "blocked") {
+        return {
+          channelId: channel.id,
+          channelName: channel.name,
+          sourceChannel: channel,
+          draft: null,
+          status: "blocked",
+          warningCodes: [...item.warningCodes],
+          blockingReasonCode: item.blockingReasonCode,
+          blockingMessage:
+            blockingMessages.get(item.selection.selectionId)?.trim() ||
+            getMigrationBlockingFallback(item.blockingReasonCode),
+        }
+      }
+      return {
+        channelId: channel.id,
+        channelName: channel.name,
+        sourceChannel: channel,
+        draft: {
+          ...preparedDrafts.get(item.selection.selectionId)!,
+          key: credentials.get(item.selection.selectionId) ?? "",
+        },
+        status: "ready",
+        warningCodes: [...item.warningCodes],
+        canonicalPreparation: {
+          selection: item.selection,
+          source: item.source,
+          target: item.target,
+        },
+      }
+    })
+  return {
+    ...canonicalPreview,
+    generalWarningCodes: [...canonicalPreview.generalWarningCodes],
     items,
-    totalCount: items.length,
-    readyCount,
-    blockedCount,
   }
 }
 
@@ -696,78 +684,194 @@ export async function executeManagedSiteChannelMigration(
   params: ExecuteManagedSiteChannelMigrationParams,
 ): Promise<ManagedSiteChannelMigrationExecutionResult> {
   const { preview } = params
-  const targetService: ManagedSiteService = getManagedSiteServiceForType(
+  const sourceCapability = resolveManagedSiteMigrationCapability(
+    preview.sourceSiteType,
+  )?.source
+  const targetCapability = resolveManagedSiteMigrationCapability(
     preview.targetSiteType,
+  )?.target
+  const canonicalItems = await Promise.all(
+    preview.items.map(
+      async (item): Promise<ManagedSiteMigrationCanonicalPreviewItem> => {
+        const selection =
+          item.canonicalPreparation?.selection ??
+          toCanonicalMigrationSelectionFromLegacyChannel({
+            sourceSiteType: preview.sourceSiteType,
+            channel: item.sourceChannel,
+          })
+        if (item.status !== "ready" || !item.draft) {
+          return {
+            selection,
+            status: "blocked",
+            warningCodes: item.warningCodes,
+            blockingReasonCode:
+              item.blockingReasonCode ?? migrationBlockers.SOURCE_KEY_MISSING,
+          }
+        }
+        const source =
+          item.canonicalPreparation?.source ??
+          toCanonicalMigrationSourceFromLegacyChannel({
+            sourceSiteType: preview.sourceSiteType,
+            channel: item.sourceChannel,
+          })
+        return {
+          selection,
+          status: "ready",
+          warningCodes: item.warningCodes,
+          source,
+          target:
+            item.canonicalPreparation?.target ??
+            (await toCanonicalTargetPreparationFromLegacyDraft({
+              source,
+              draft: item.draft,
+            })),
+        }
+      },
+    ),
   )
-  const targetConfig = await targetService.getConfig()
-
-  if (!targetConfig) {
-    return buildCreateFailureResults(
-      preview,
-      "Target managed-site configuration is missing.",
-    )
+  const canonicalPreview: ManagedSiteMigrationCanonicalPreview = {
+    sourceSiteType: preview.sourceSiteType,
+    targetSiteType: preview.targetSiteType,
+    generalWarningCodes: preview.generalWarningCodes,
+    items: canonicalItems,
+    totalCount: preview.totalCount,
+    readyCount: preview.readyCount,
+    blockedCount: preview.blockedCount,
   }
-
-  const items: ManagedSiteChannelMigrationExecutionItem[] = []
-  let attemptedCount = 0
-  let createdCount = 0
-  let failedCount = 0
-  let skippedCount = 0
-
-  for (const item of preview.items) {
-    if (item.status !== "ready" || !item.draft) {
-      skippedCount += 1
-      items.push(
-        buildExecutionFailureItem(item, {
-          skipped: true,
-        }),
+  const legacyItemsBySelectionId = new Map(
+    canonicalItems.map((item, index) => [
+      item.selection.selectionId,
+      preview.items[index],
+    ]),
+  )
+  const readyItemsBySource = new Map(
+    canonicalItems.flatMap((item) =>
+      item.status === "ready"
+        ? [
+            [
+              item.source,
+              {
+                canonical: item,
+                legacy: legacyItemsBySelectionId.get(
+                  item.selection.selectionId,
+                )!,
+              },
+            ] as const,
+          ]
+        : [],
+    ),
+  )
+  const targetService: ManagedSiteService | null = targetCapability
+    ? null
+    : getManagedSiteServiceForType(preview.targetSiteType)
+  const targetConfig = targetService ? await targetService.getConfig() : null
+  const errors = new Map<string, string>()
+  if (!targetCapability && !targetConfig) {
+    canonicalItems
+      .filter((item) => item.status === "ready")
+      .forEach((item) =>
+        errors.set(
+          item.selection.selectionId,
+          "Target managed-site configuration is missing.",
+        ),
       )
-      continue
-    }
-
-    attemptedCount += 1
-
-    try {
-      const payload = targetService.buildChannelPayload(item.draft)
-      const response = await targetService.createChannel(targetConfig, payload)
-
-      if (!response.success) {
-        failedCount += 1
-        items.push({
-          channelId: item.channelId,
-          channelName: item.channelName,
-          success: false,
-          skipped: false,
-          error: response.message || "Unknown error",
-        })
-        continue
-      }
-
-      createdCount += 1
-      items.push({
-        channelId: item.channelId,
-        channelName: item.channelName,
-        success: true,
-        skipped: false,
-      })
-    } catch (error) {
-      failedCount += 1
-      items.push({
-        channelId: item.channelId,
-        channelName: item.channelName,
-        success: false,
-        skipped: false,
-        error: getErrorMessage(error),
-      })
-    }
   }
-
+  const canonicalResult = await executeManagedSiteMigrationCore({
+    preview: canonicalPreview,
+    targetAvailable: Boolean(targetCapability || targetConfig),
+    sourceFailureReasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
+    isMutationStateUncertain: isUncertainMigrationError,
+    resolveCredential: (selection) =>
+      sourceCapability
+        ? sourceCapability.resolveCredential(selection)
+        : Promise.resolve({
+            status: "ready",
+            credential: legacyItemsBySelectionId.get(selection.selectionId)!
+              .draft!.key,
+          }),
+    create: async (command) => {
+      const targetItem = readyItemsBySource.get(command.source)!
+      try {
+        if (targetCapability) {
+          const result = await targetCapability.create(command)
+          if (result.status === "failed") {
+            errors.set(
+              targetItem.canonical.selection.selectionId,
+              "Target channel creation failed.",
+            )
+          }
+          return result
+        }
+        const executionDraft = toLegacyChannelFormDataProjection({
+          source: command.source,
+          target: targetItem.canonical.target,
+          credential: command.credential,
+        })
+        const response = await createTargetChannelForMigration({
+          targetSiteType: preview.targetSiteType,
+          targetService: targetService!,
+          targetConfig: targetConfig!,
+          draft: {
+            ...executionDraft,
+            ...targetItem.legacy.draft!,
+            key: executionDraft.key,
+          },
+        })
+        if (!response.success) {
+          errors.set(
+            targetItem.canonical.selection.selectionId,
+            response.message || "Unknown error",
+          )
+          return {
+            status: "failed",
+            failureCode: migrationFailures.TargetRejected,
+          }
+        }
+        return { status: "created" }
+      } catch (error) {
+        errors.set(
+          targetItem.canonical.selection.selectionId,
+          getErrorMessage(error),
+        )
+        throw error
+      }
+    },
+  })
+  const items: ManagedSiteChannelMigrationExecutionItem[] =
+    canonicalResult.items.map((result) => {
+      const legacyItem = legacyItemsBySelectionId.get(result.selectionId)!
+      if (result.status === "created") {
+        return {
+          channelId: legacyItem.channelId,
+          channelName: legacyItem.channelName,
+          success: true,
+          skipped: false,
+        }
+      }
+      return {
+        channelId: legacyItem.channelId,
+        channelName: legacyItem.channelName,
+        success: false,
+        skipped: result.status === "skipped",
+        blockingReasonCode:
+          result.status === "skipped"
+            ? result.blockingReasonCode
+            : legacyItem.blockingReasonCode,
+        error:
+          result.status === "skipped"
+            ? legacyItem.blockingMessage?.trim() ||
+              getMigrationBlockingFallback(result.blockingReasonCode)
+            : result.status === "uncertain"
+              ? migrationUncertaintyWarning
+              : errors.get(result.selectionId)?.trim() || "Unknown error",
+      }
+    })
   return {
     totalSelected: preview.totalCount,
-    attemptedCount,
-    createdCount,
-    failedCount,
-    skippedCount,
+    attemptedCount: canonicalResult.attemptedCount,
+    createdCount: items.filter((item) => item.success).length,
+    failedCount: items.filter((item) => !item.success && !item.skipped).length,
+    skippedCount: items.filter((item) => item.skipped).length,
     items,
   }
 }

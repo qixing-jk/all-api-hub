@@ -9,8 +9,9 @@ import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/p
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
-import type { AutoCheckinProvider } from "./index"
+import type { AutoCheckinProvider, AutoCheckinProviderContext } from "./index"
 
 export type AnyrouterCheckInParams = {
   id?: string
@@ -40,7 +41,11 @@ function isAnyrouterAlreadyCheckedMessage(message: string): boolean {
 
 const checkinAnyRouter = async (
   account: SiteAccount | AnyrouterCheckInParams,
+  context?: AutoCheckinProviderContext,
 ): Promise<AutoCheckinProviderResult> => {
+  const tempWindowRequestSource = normalizeTempWindowRequestSource(
+    context?.tempWindowRequestSource,
+  )
   const { site_url, account_info } = account
   const cookieAuthSessionCookie = isSiteAccount(account)
     ? account.cookieAuth?.sessionCookie
@@ -61,6 +66,7 @@ const checkinAnyRouter = async (
           authType: AuthTypeEnum.Cookie,
           userId: account_info.id,
         },
+        tempWindowRequestSource,
       },
       {
         endpoint: "/api/user/sign_in",

@@ -35,14 +35,6 @@ vi.mock("~/services/models/modelMetadata", () => ({
   modelMetadataService: {
     initialize: vi.fn().mockResolvedValue(undefined),
     findStandardModelName: MOCKED_METADATA.findStandardModelNameMock,
-    findVendorByPattern: (modelName: string) => {
-      const lower = modelName.toLowerCase()
-      if (/^gpt/.test(lower)) return "OpenAI"
-      if (/^claude/.test(lower)) return "Anthropic"
-      if (/^deepseek/.test(lower)) return "DeepSeek"
-      return null
-    },
-    getVendorRules: () => [],
     getCacheInfo: () => ({
       isLoaded: true,
       modelCount: MOCKED_METADATA.modelCount,
@@ -83,7 +75,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
 
   it("should skip standard models already present in actual models", () => {
     const standardModels = ["gpt-4o", "gpt-4o-mini"]
-    const actualModels = ["gpt-4o", "openai/gpt-4o-mini-20240718"]
+    const actualModels = ["gpt-4o", "openai/gpt-4o-mini"]
 
     const mapping = ModelRedirectService.generateModelMappingForChannel(
       standardModels,
@@ -91,7 +83,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     )
 
     expect(mapping).toEqual({
-      "gpt-4o-mini": "openai/gpt-4o-mini-20240718",
+      "gpt-4o-mini": "openai/gpt-4o-mini",
     })
   })
 
@@ -120,6 +112,67 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     expect(mapping).toEqual({})
   })
 
+  it.each([
+    ["dashed", "model-a-2025-01-01", "model-a-2025-02-02"],
+    ["compact", "model-a-20250101", "model-a-20250202"],
+  ])(
+    "preserves %s dated model identities before normalization",
+    (_format, standardModel, actualModel) => {
+      expect(
+        ModelRedirectService.generateModelMappingForChannel(
+          [standardModel],
+          [actualModel],
+        ),
+      ).toEqual({})
+    },
+  )
+
+  it.each([
+    ["model-a-2025-01-01", "model-a-2025-01-01"],
+    ["model-a-20250101", "model-a-20250101"],
+    ["model-a", "model-a-2025-01-01"],
+    ["model-a-20250101", "model-a"],
+  ])(
+    "does not redirect exact or one-sided dated identities (%s, %s)",
+    (standardModel, actualModel) => {
+      expect(
+        ModelRedirectService.generateModelMappingForChannel(
+          [standardModel],
+          [actualModel],
+        ),
+      ).toEqual({})
+    },
+  )
+
+  it.each([
+    ["dashed actual", "model-a", "vendor/model-a-2025-01-01:free"],
+    ["compact actual", "model-a", "vendor/model-a-20250101:free"],
+    ["dashed standard", "vendor/model-a-2025-01-01:free", "model-a"],
+    ["compact standard", "vendor/model-a-20250101:free", "model-a"],
+  ])(
+    "preserves decorated %s dated identities before normalization",
+    (_scenario, standardModel, actualModel) => {
+      expect(
+        ModelRedirectService.generateModelMappingForChannel(
+          [standardModel],
+          [actualModel],
+        ),
+      ).toEqual({})
+    },
+  )
+
+  it.each([
+    ["vendor/model-a-2025-01-01:free"],
+    ["vendor/model-a-20250101:free"],
+  ])(
+    "keeps an identical decorated dated raw model as an exact match",
+    (model) => {
+      expect(
+        ModelRedirectService.generateModelMappingForChannel([model], [model]),
+      ).toEqual({})
+    },
+  )
+
   it("treats hyphen-separated and dot-separated model versions as equivalent", () => {
     const standardModels = ["claude-sonnet-4-5"]
     const actualModels = ["claude-4.5-sonnet"]
@@ -141,13 +194,13 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     expect(mapping).toEqual({})
   })
 
-  it("maps the matching minor version when both are present (Claude)", () => {
+  it("does not alias dated candidates even when one version token matches", () => {
     const mapping = ModelRedirectService.generateModelMappingForChannel(
       ["claude-4.5-sonnet"],
       ["claude-sonnet-4-6-20260101", "claude-sonnet-4-5-20250929"],
     )
 
-    expect(mapping["claude-4.5-sonnet"]).toBe("claude-sonnet-4-5-20250929")
+    expect(mapping).toEqual({})
   })
 
   it("does not map across versions (OpenAI)", () => {
@@ -175,6 +228,20 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     )
 
     expect(mapping["gemini-2.5-pro"]).toBe("gemini-2-5-pro")
+  })
+
+  it("tries the next normalized candidate after an incompatible version", () => {
+    MOCKED_METADATA.findStandardModelNameMock.mockReturnValue({
+      standardName: "shared-model",
+      vendorName: "Example",
+    })
+
+    const mapping = ModelRedirectService.generateModelMappingForChannel(
+      ["model-a-1"],
+      ["model-a-2", "model-1-a"],
+    )
+
+    expect(mapping).toEqual({ "model-a-1": "model-1-a" })
   })
 
   it("should not downgrade/upgrade versions even if metadata mis-normalizes (Claude)", () => {

@@ -8,7 +8,10 @@ import {
 import { isVoApiV2AuthExpiredError } from "~/services/apiService/voapiV2/parsing"
 import { resyncVoApiV2AuthToken } from "~/services/apiService/voapiV2/tokenResync"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers"
+import type {
+  AutoCheckinProvider,
+  AutoCheckinProviderContext,
+} from "~/services/checkin/autoCheckin/providers"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   resolveProviderErrorResult,
@@ -16,8 +19,13 @@ import {
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
+import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
-const createRequest = (account: SiteAccount): ApiServiceRequest => ({
+const createRequest = (
+  account: SiteAccount,
+  tempWindowRequestSource: TempWindowRequestSource,
+): ApiServiceRequest => ({
   baseUrl: account.site_url,
   accountId: account.id,
   auth: {
@@ -25,6 +33,7 @@ const createRequest = (account: SiteAccount): ApiServiceRequest => ({
     accessToken: account.account_info.access_token,
     userId: account.account_info.id,
   },
+  tempWindowRequestSource,
 })
 
 const isVoApiV2Account = (account: SiteAccount): boolean =>
@@ -91,7 +100,13 @@ export const voApiV2Provider: AutoCheckinProvider = {
         account.account_info?.access_token,
     )
   },
-  async checkIn(account): Promise<AutoCheckinProviderResult> {
+  async checkIn(
+    account,
+    context?: AutoCheckinProviderContext,
+  ): Promise<AutoCheckinProviderResult> {
+    const tempWindowRequestSource = normalizeTempWindowRequestSource(
+      context?.tempWindowRequestSource,
+    )
     try {
       if (!this.canCheckIn(account as SiteAccount)) {
         return {
@@ -101,7 +116,7 @@ export const voApiV2Provider: AutoCheckinProvider = {
       }
 
       const siteAccount = account as SiteAccount
-      const request = createRequest(siteAccount)
+      const request = createRequest(siteAccount, tempWindowRequestSource)
       try {
         return await runCheckIn(request)
       } catch (error) {
@@ -109,7 +124,10 @@ export const voApiV2Provider: AutoCheckinProvider = {
           throw error
         }
 
-        const resynced = await resyncVoApiV2AuthToken(siteAccount.site_url)
+        const resynced = await resyncVoApiV2AuthToken(
+          siteAccount.site_url,
+          tempWindowRequestSource,
+        )
         if (!resynced) {
           throw error
         }

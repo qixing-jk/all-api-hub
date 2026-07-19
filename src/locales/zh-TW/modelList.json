@@ -42,7 +42,6 @@
   "allBillingModes": "所有計費方式",
   "allGroups": "所有分組",
   "allProviders": "所有廠商",
-  "availableGroups": "可用分組",
   "batchVerify": {
     "actions": {
       "open": "批量測試",
@@ -103,6 +102,7 @@
     "tooltip": "清空目前篩選，切換到所有帳號，並按同模型最低價優先排序。"
   },
   "copyAllNames": "複製所有模型名稱",
+  "currentUsableGroups": "當前帳號可用分組",
   "description": "檢視和管理可用的AI模型",
   "detailedPricing": "詳細定價",
   "displayOptions": "顯示選項:",
@@ -115,7 +115,9 @@
     "description": "目前模型目錄是透過帳號金鑰回退載入，僅支援模型發現與驗證。點擊重新整理資料會重新嘗試帳號介面。",
     "title": "帳號金鑰回退目錄"
   },
+  "groupRatio": "分組倍率：",
   "groupRatioTooltip": "{{group}} 分組倍率: {{ratio}}x",
+  "groupRatioUnavailable": "分組倍率不可用",
   "groupSelectionHint": "留空表示所有分組；價格排序會在已選分組範圍內自動取最優價",
   "input": "輸入:",
   "input1MTokens": "輸入(1M tokens)",
@@ -163,9 +165,49 @@
     "modelNamesCopied": "模型名稱已複製",
     "siteUrlCopied": "站點 URL 已複製"
   },
+  "modelCapabilityFilter": {
+    "coverageHint_one": "目前列表中有 {{count}} 個模型暫無能力說明，選擇能力篩選時會先略過。",
+    "coverageHint_other": "目前列表中有 {{count}} 個模型暫無能力說明，選擇能力篩選時會先略過。",
+    "descriptions": {
+      "attachment": "支援上傳附件作為輸入上下文。",
+      "audioInput": "支援音訊輸入。",
+      "audioOutput": "支援音訊輸出。",
+      "imageInput": "支援上傳圖片進行辨識、分析或視覺理解。",
+      "imageOutput": "支援直接生成圖片輸出。",
+      "pdf": "支援 PDF 文件輸入。",
+      "reasoning": "支援明確推理或思考過程。",
+      "structuredOutput": "支援結構化輸出或 JSON Schema 約束。",
+      "toolCall": "支援工具呼叫或函式呼叫。",
+      "videoInput": "支援影片輸入。",
+      "videoOutput": "支援影片輸出。"
+    },
+    "groups": {
+      "capabilities": "能力:",
+      "input": "輸入:",
+      "output": "輸出:"
+    },
+    "label": "模型能力",
+    "options": {
+      "all": "全部能力",
+      "attachment": "附件",
+      "audioInput": "音訊輸入",
+      "audioOutput": "音訊輸出",
+      "imageInput": "圖片理解",
+      "imageOutput": "圖片生成",
+      "pdf": "PDF",
+      "reasoning": "思考",
+      "structuredOutput": "結構化輸出",
+      "toolCall": "工具呼叫",
+      "videoInput": "影片輸入",
+      "videoOutput": "影片輸出"
+    },
+    "selectionHint": "選擇多個能力時，模型需要同時符合所有條件。"
+  },
+  "modelRatio": "模型倍率：",
   "noMatchingModels": "沒有找到匹配的模型",
   "noSourcesDescription": "請先新增站點帳號或 API 憑據，然後查看模型列表。",
   "noSourcesTitle": "暫無可用資料來源",
+  "noUsableGroupsForModel": "當前帳號沒有可用於此模型的分組。",
   "optimalGroup": "最優組: {{group}}",
   "optimalGroupLowestPriceWithinAccountFilters": "已在目前帳號分組篩選範圍內自動選擇最優組: {{group}}；且在相同計費模式下價格最低",
   "optimalGroupLowestPriceWithinBillingMode": "已在目前篩選分組範圍內自動選擇最優組: {{group}}；且在相同計費模式下價格最低",
@@ -184,9 +226,10 @@
   },
   "providerTabs": {
     "scrollLeft": "向左滾動廠商標籤",
-    "scrollRight": "向右滾動廠商標籤"
+    "scrollRight": "向右滾動廠商標籤",
+    "unclassified": "未分類",
+    "unclassifiedDescription": "無法識別模型供應商；這不表示該模型無法使用。"
   },
-  "ratio": "倍率:",
   "realAmount": "真實充值金額",
   "refreshData": "重新整理資料",
   "runtimeKeyFallbackSourceNotice": {
@@ -199,6 +242,7 @@
   "selectSourceToContinue": "請先在上方選擇一個資料來源，然後查看模型列表。",
   "showing_other": "顯示 {{count}} 個模型",
   "showRatio": "顯示倍率",
+  "siteSupportedGroups": "站點支援的分組",
   "sortBy": "排序方式",
   "sortOptions": {
     "default": "預設順序",
@@ -255,6 +299,7 @@
   "totalModels_other": "總計 {{count}} 個模型",
   "unavailable": "不可用",
   "unavailablePriceReasons": {
+    "groupRatioUnavailable": "價格不可用，因為目前可用分組沒有分組倍率。",
     "keyGroupUnknown": "價格不可用，因為無法解析此金鑰的 Sub2API 分組。",
     "modelListOnly": "此金鑰可使用這些模型，但價格不可用。",
     "officialPriceMissing": "此模型不在價格表中。",

@@ -1,13 +1,13 @@
 import {
   ArrowDownTrayIcon,
   ArrowPathIcon,
-  ArrowTopRightOnSquareIcon,
   CloudArrowDownIcon,
 } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { RELEASE_UPDATE_STATUS_PANEL_TEST_IDS } from "~/components/ReleaseUpdateStatusPanel.testIds"
 import { BodySmall, Button, Card, CardItem, CardList } from "~/components/ui"
 import { useReleaseUpdateStatus } from "~/contexts/ReleaseUpdateStatusContext"
@@ -218,7 +218,7 @@ export function ReleaseUpdateStatusPanel() {
       <ArrowDownTrayIcon className="h-4 w-4" />
     )
   ) : (
-    <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+    <WorkflowTransitionIcon className="h-4 w-4" />
   )
 
   const handleCheckNow = async () => {
@@ -293,7 +293,9 @@ export function ReleaseUpdateStatusPanel() {
                   RELEASE_UPDATE_STATUS_PANEL_TEST_IDS.checkNowButton
                 }
               >
-                {t("settings:releaseUpdate.checkNow")}
+                {isChecking
+                  ? t("common:status.checking")
+                  : t("settings:releaseUpdate.checkNow")}
               </Button>
               {isStoreUpdateReady ? (
                 <Button

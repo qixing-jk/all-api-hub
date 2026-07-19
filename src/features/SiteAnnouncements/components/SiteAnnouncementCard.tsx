@@ -3,12 +3,12 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
   Inbox,
 } from "lucide-react"
 import { type KeyboardEvent, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Badge, Button, Card } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { cn } from "~/lib/utils"
@@ -146,7 +146,7 @@ export function SiteAnnouncementCard({
                       aria-label={t("actions.viewSource")}
                       onClick={(event) => event.stopPropagation()}
                     >
-                      <ExternalLink className="h-5 w-5" />
+                      <WorkflowTransitionIcon className="h-5 w-5" />
                     </a>
                   </Button>
                   {!expanded && !record.read && (
@@ -223,7 +223,7 @@ export function SiteAnnouncementCard({
                   asChild
                   size="sm"
                   variant="outline"
-                  leftIcon={<ExternalLink className="h-4 w-4" />}
+                  leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
                   analyticsAction={
                     PRODUCT_ANALYTICS_ACTION_IDS.OpenAnnouncementSource
                   }
@@ -274,7 +274,7 @@ export function SiteAnnouncementCard({
                 size="sm"
                 variant="ghost"
                 className="h-7 text-xs text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-400/10"
-                leftIcon={<ExternalLink className="h-3.5 w-3.5" />}
+                leftIcon={<WorkflowTransitionIcon className="h-3.5 w-3.5" />}
                 analyticsAction={
                   PRODUCT_ANALYTICS_ACTION_IDS.OpenAnnouncementSource
                 }

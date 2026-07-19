@@ -41,6 +41,7 @@ const logger = createLogger("CompactMultiSelect")
 export interface CompactMultiSelectOption {
   value: string
   label: string
+  count?: number
   disabled?: boolean
 }
 
@@ -95,6 +96,22 @@ export interface CompactMultiSelectProps
    */
   inputTestId?: string
 }
+
+const getOptionAccessibleLabel = (option: CompactMultiSelectOption) =>
+  typeof option.count === "number"
+    ? `${option.label} ${option.count}`
+    : option.label
+
+const OptionCountBadge = ({ count }: { count?: number }) =>
+  typeof count === "number" ? (
+    <Badge
+      variant="secondary"
+      size="sm"
+      className="ml-auto shrink-0 tabular-nums"
+    >
+      {count}
+    </Badge>
+  ) : null
 
 /**
  * CompactMultiSelect
@@ -521,8 +538,10 @@ export function CompactMultiSelect({
                   key={item.value}
                   value={item}
                   disabled={disabled || Boolean(item.disabled)}
+                  aria-label={getOptionAccessibleLabel(item)}
                 >
-                  <span className="truncate">{item.label}</span>
+                  <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  <OptionCountBadge count={item.count} />
                 </ComboboxItem>
               )}
             </ComboboxList>
@@ -667,6 +686,7 @@ export function CompactMultiSelect({
                         value={option.value}
                         keywords={[option.label]}
                         disabled={isOptionDisabled}
+                        aria-label={getOptionAccessibleLabel(option)}
                         onSelect={() => toggleValue(option.value)}
                       >
                         <CheckIcon
@@ -675,7 +695,10 @@ export function CompactMultiSelect({
                             isSelected ? "opacity-100" : "opacity-0",
                           )}
                         />
-                        <span className="truncate">{option.label}</span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {option.label}
+                        </span>
+                        <OptionCountBadge count={option.count} />
                       </CommandItem>
                     )
                   })}

@@ -1,11 +1,8 @@
-import {
-  ArrowTopRightOnSquareIcon,
-  ClockIcon,
-  MegaphoneIcon,
-} from "@heroicons/react/24/outline"
+import { ClockIcon, MegaphoneIcon } from "@heroicons/react/24/outline"
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
@@ -140,7 +137,7 @@ export default function SiteAnnouncementNotificationSettings() {
           <CardItem
             id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE}
             icon={
-              <ArrowTopRightOnSquareIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+              <WorkflowTransitionIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
             }
             title={t("siteAnnouncementNotifications.page.title")}
             description={t("siteAnnouncementNotifications.page.description", {

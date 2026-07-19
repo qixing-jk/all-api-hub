@@ -22,7 +22,11 @@ import {
 } from "~/services/managedSites/tokenChannelStatus"
 import type { AccountToken } from "~/types"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
-import { openModelsPage, pushWithinOptionsPage } from "~/utils/navigation"
+import {
+  openModelsPage,
+  pushWithinOptionsPage,
+  replaceWithinOptionsPage,
+} from "~/utils/navigation"
 
 import { AccountSelectorPanel } from "./components/AccountSelectorPanel"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"
@@ -219,6 +223,17 @@ export default function KeyManagement(props: {
     void openModelsPage(selectedAccount)
   }, [selectedAccount])
 
+  const handleSelectedAccountChange = useCallback(
+    (accountId: string) => {
+      setSelectedAccount(accountId)
+      replaceWithinOptionsPage(
+        `#${MENU_ITEM_IDS.KEYS}`,
+        accountId ? { accountId } : undefined,
+      )
+    },
+    [setSelectedAccount],
+  )
+
   const handleRequestAccountSelection = useCallback(() => {
     const selectorTrigger = accountSelectorTriggerRef.current
 
@@ -375,7 +390,7 @@ export default function KeyManagement(props: {
 
       <AccountSelectorPanel
         selectedAccount={selectedAccount}
-        setSelectedAccount={setSelectedAccount}
+        setSelectedAccount={handleSelectedAccountChange}
         displayData={displayData}
         selectorOpen={isAccountSelectorOpen}
         onSelectorOpenChange={setIsAccountSelectorOpen}

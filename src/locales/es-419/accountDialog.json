@@ -6,10 +6,11 @@
     "configToManagedSite": "Guardar y configurar en {{managedSite}}",
     "configuring": "Configurando...",
     "confirmAdd": "Confirmar agregado",
-    "helpDocument": "Documento de ayuda",
+    "helpDocument": "Guía de solución",
+    "openApiCredentialProfiles": "Abrir credenciales API",
     "reloadCurrentPage": "Recargar página actual",
     "reloadExtensionAndRetry": "Recargar extensión y reintentar",
-    "reportUnsupportedSite": "Reportar sitio no compatible",
+    "reportUnsupportedSite": "Solicitar compatibilidad",
     "saveAccount": "Guardar cuenta",
     "saveChanges": "Guardar cambios",
     "workflow": {
@@ -30,6 +31,15 @@
     "description": "{{accountName}} se guardó. Las claves de API de AIHubMix solo se muestran una vez después de crearlas, así que asegúrate de poder copiar y guardar la clave completa ahora.",
     "title": "¿Crear una clave predeterminada de AIHubMix?",
     "warningTitle": "La clave completa se muestra solo una vez"
+  },
+  "apiCredentialFallback": {
+    "apiCredentials": {
+      "description": "Si ahora solo necesitas guardar claves y hacer llamadas API, usa primero la ruta más ligera de credenciales API. Cuando haya soporte para cuentas, agrega una cuenta web para check-ins, actualización de saldo y sincronización del dashboard."
+    },
+    "siteSupport": {
+      "description": "Si la detección sigue fallando después de revisar la guía, es posible que el sitio aún no esté soportado o que esta página no admita la detección automática."
+    },
+    "title": "¿Aún no se reconoce? Prueba estas alternativas"
   },
   "bookmarkImportBatch": {
     "action": "Importación por lotes desde marcadores",

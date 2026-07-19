@@ -23,7 +23,7 @@
 **[⚡ 快速上手](https://all-api-hub.qixing1217.top/get-started.html) | [🌐 支持站点](https://all-api-hub.qixing1217.top/supported-sites.html) | [🔌 集成工具](https://all-api-hub.qixing1217.top/supported-export-tools.html) | [📜 更新日志](https://all-api-hub.qixing1217.top/changelog.html)**
 
 <p align="center">
-  <a href="https://linux.do/t/topic/1001042">
+  <a href="https://linux.do/t/topic/2395800">
     <img alt="Linux.do 主题帖" src="https://img.shields.io/badge/Linux.do-主题帖-faa511?logo=linux&logoColor=white" />
   </a>
   <a href="./resources/wechat_group.png">
@@ -190,12 +190,12 @@ GitHub Stable 和 Nightly 属于手动安装通道，不会自动更新；可 St
 <hr>
 
 <div>
-  <a href="https://www.right.codes/register?aff=690a8be5">
+  <a href="https://www.aicodemirror.com/register?invitecode=7IQNR8">
     <img src="resources/partners/aicodemirror.png" alt="AICodeMirror" width="128" align="left" hspace="10" vspace="4">
   </a>
   <p>
     感谢 AICodeMirror 赞助了本项目！AICodeMirror 提供 Claude Code / Codex / Gemini CLI 官方高稳定中转服务，支持企业级高并发、极速开票、7×24 专属技术支持。Claude Code / Codex / Gemini 官方渠道低至 3.8 / 0.2 / 0.9 折，充值更有折上折！AICodeMirror
-    为 All API Hub 的用户提供了特别福利：通过<a href="https://www.right.codes/register?aff=690a8be5">此链接</a>注册，可享受首充 8 折，企业客户最高可享 7.5 折！
+    为 All API Hub 的用户提供了特别福利：通过<a href="https://www.aicodemirror.com/register?invitecode=7IQNR8">此链接</a>注册，可享受首充 8 折，企业客户最高可享 7.5 折！
   </p>
 </div>
 
@@ -332,7 +332,7 @@ All API Hub 基于 GNU Affero General Public License v3.0（AGPL-3.0）开源。
 ## 🙏 致谢
 
 - 感谢 [@AngleNaris](https://github.com/AngleNaris) 设计了项目 Logo 🎨
-- 感谢 [Linux.do 社区](https://linux.do) 提供的反馈、测试和传播支持，尤其是 [All-API-Hub 主题帖](https://linux.do/t/topic/1001042) 中持续的讨论与建议
+- 感谢 [Linux.do 社区](https://linux.do) 提供的反馈、测试和传播支持，尤其是 [All-API-Hub 主题帖](https://linux.do/t/topic/2395800) 中持续的讨论与建议
 - [WXT](https://wxt.dev) - 现代化的浏览器扩展开发框架
 
 <div align="center">

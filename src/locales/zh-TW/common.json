@@ -21,6 +21,21 @@
     "cny": "人民幣",
     "usd": "美元"
   },
+  "datePicker": {
+    "in1Year": "+1 年",
+    "in30Days": "+30 天",
+    "in7Days": "+7 天",
+    "in90Days": "+90 天",
+    "naturalInput": {
+      "invalid": "無法辨識日期，請輸入 YYYY-MM-DD、7天後或明天",
+      "label": "輸入日期",
+      "openCalendar": "開啟日曆",
+      "placeholder": "例如：7天後、明天、2026-08-01",
+      "preview": "將設定為：{{date}}"
+    },
+    "noExpiration": "不過期",
+    "placeholder": "選擇日期"
+  },
   "labels": {
     "apiKey": "API Key",
     "notAvailable": "N/A",
@@ -40,20 +55,30 @@
     "translationDescription": "如果你正在使用瀏覽器自動翻譯，請關閉此頁面的自動翻譯，或在擴充功能設定中切換到需要的語言。"
   },
   "status": {
+    "applying": "套用中...",
     "cancelled": "已取消",
+    "cancelling": "取消中...",
+    "checking": "檢查中...",
     "configurationRequired": "缺少配置",
+    "copying": "複製中...",
     "creating": "建立中...",
+    "deleting": "刪除中...",
     "disabled": "已禁用",
+    "disabling": "停用中...",
     "enabled": "已啟用",
+    "enabling": "啟用中...",
     "error": "錯誤",
     "exporting": "匯出中...",
     "failed": "失敗",
     "importing": "匯入中...",
     "loading": "載入中...",
+    "opening": "開啟中...",
     "processing": "處理中...",
     "refreshing": "重新整理中...",
     "resetting": "重置中...",
+    "retrying": "重試中...",
     "saving": "儲存中...",
+    "starting": "啟動中...",
     "success": "成功",
     "testing": "測試中...",
     "updating": "更新中...",

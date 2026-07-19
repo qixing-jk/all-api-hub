@@ -17,6 +17,7 @@ import {
   MODEL_UNAVAILABLE_PRICE_REASONS,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
+import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"
 
 import { loadAccountRuntimeKeyFallbackPricingResponseFromToken } from "./runtimeKeyFallbackTestUtils"
@@ -128,6 +129,12 @@ const TOKEN = {
   unlimited_quota: true,
   used_quota: 0,
   models: "",
+} as const
+
+const PUBLISHER_EVIDENCE = {
+  kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+  name: "Example Publisher",
+  externalId: "publisher-1",
 } as const
 
 const createSub2ApiModelCatalogAdapter = (
@@ -472,13 +479,16 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     })
   })
 
-  it("loads Sub2API selected-key runtime models as model-list-only rows", async () => {
+  it("preserves Sub2API evidence when estimate fetching fails", async () => {
     resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
       ...TOKEN,
       key: "sk-real-sub2api-secret",
     })
     fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
-      "example-runtime-model",
+      {
+        id: "example-runtime-model",
+        vendorEvidence: PUBLISHER_EVIDENCE,
+      },
     ])
 
     const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
@@ -536,6 +546,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     expect(result.data).toEqual([
       expect.objectContaining({
         model_name: "example-runtime-model",
+        vendorEvidence: PUBLISHER_EVIDENCE,
         price_metadata: {
           source: MODEL_PRICE_SOURCE_KINDS.NONE,
           precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
@@ -546,13 +557,13 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     ])
   })
 
-  it("loads SharedChat Codex runtime models without Sub2API price semantics", async () => {
+  it("forwards catalog evidence without deriving it from the account site type", async () => {
     getSiteTypeCapabilitiesMock.mockReturnValueOnce(
       createModelCatalogAdapter(SITE_TYPES.SHAREDCHAT),
     )
     fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
-      " gpt-5.5 ",
-      "gpt-5.4-mini",
+      { id: " gpt-5.5 ", vendorEvidence: PUBLISHER_EVIDENCE },
+      { id: "gpt-5.4-mini" },
     ])
 
     const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
@@ -591,6 +602,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     expect(result.data).toEqual([
       expect.objectContaining({
         model_name: "gpt-5.5",
+        vendorEvidence: PUBLISHER_EVIDENCE,
         price_metadata: {
           source: MODEL_PRICE_SOURCE_KINDS.NONE,
           precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
@@ -622,7 +634,9 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       },
     )
 
-    fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce(["claude-sonnet-4"])
+    fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
+      { id: "claude-sonnet-4" },
+    ])
 
     const result = await loadAccountRuntimeKeyFallbackPricingResponse({
       account: {
@@ -679,7 +693,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       key: "sk-real-sub2api-secret",
     })
     fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
-      "example-runtime-model",
+      { id: "example-runtime-model" },
     ])
     fetchSub2ApiAvailableGroupsMock.mockResolvedValueOnce([])
     fetchSub2ApiGroupRatesMock.mockResolvedValueOnce({})
@@ -715,14 +729,17 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     expect(loadModelPriceTableMock).toHaveBeenCalledWith(abortController.signal)
   })
 
-  it("adds estimated Sub2API prices when dashboard group and price-table data are available", async () => {
+  it("preserves Sub2API evidence when official-rate estimation succeeds", async () => {
     resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
       ...TOKEN,
       key: "sk-real-sub2api-secret",
     })
     fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
-      "example-priced-model",
-      "example-unpriced-model",
+      {
+        id: "example-priced-model",
+        vendorEvidence: PUBLISHER_EVIDENCE,
+      },
+      { id: "example-unpriced-model" },
     ])
     fetchSub2ApiAvailableGroupsMock.mockResolvedValueOnce([
       { id: 9, name: "vip", rate_multiplier: 1.5 },
@@ -770,6 +787,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     expect(result.data).toEqual([
       expect.objectContaining({
         model_name: "example-priced-model",
+        vendorEvidence: PUBLISHER_EVIDENCE,
         token_price_usd_per_million: {
           input: 4,
           output: 12,
@@ -792,13 +810,16 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     ])
   })
 
-  it("keeps Sub2API runtime rows without pricing when dashboard auth is unavailable", async () => {
+  it("preserves Sub2API evidence when dashboard authentication is missing", async () => {
     resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
       ...TOKEN,
       key: "sk-real-sub2api-secret",
     })
     fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
-      "example-runtime-model",
+      {
+        id: "example-runtime-model",
+        vendorEvidence: PUBLISHER_EVIDENCE,
+      },
     ])
 
     const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
@@ -824,6 +845,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
     expect(result.data).toEqual([
       expect.objectContaining({
         model_name: "example-runtime-model",
+        vendorEvidence: PUBLISHER_EVIDENCE,
         price_metadata: expect.objectContaining({
           unavailable_reason: MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
         }),
@@ -1065,7 +1087,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken", () => {
       key: "sk-real-sub2api-secret",
     })
     fetchSub2ApiRuntimeModelsMock.mockResolvedValueOnce([
-      "example-runtime-model",
+      { id: "example-runtime-model" },
     ])
     const abortError = new DOMException("Aborted", "AbortError")
     fetchSub2ApiAvailableGroupsMock.mockImplementationOnce(() => {

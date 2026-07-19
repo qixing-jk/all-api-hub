@@ -26,12 +26,24 @@ import {
   MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES,
 } from "~/types/managedSiteMigration"
 import {
+  act,
   fireEvent,
   render,
   screen,
   waitFor,
   within,
 } from "~~/tests/test-utils/render"
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
 
 const {
   mockPreparePreview,
@@ -76,93 +88,89 @@ vi.mock("~/components/Tooltip", () => ({
   ),
 }))
 
-vi.mock("~/components/ui", () => ({
-  Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-  Button: ({
-    children,
-    onClick,
-    disabled,
-  }: {
-    children: ReactNode
-    onClick?: () => void
-    disabled?: boolean
-  }) => (
-    <button disabled={disabled} onClick={() => onClick?.()}>
-      {children}
-    </button>
-  ),
-  CollapsibleSection: ({
-    title,
-    children,
-  }: {
-    title: ReactNode
-    children: ReactNode
-  }) => (
-    <section>
-      <div>{title}</div>
-      <div>{children}</div>
-    </section>
-  ),
-  DestructiveConfirmDialog: ({
-    isOpen,
-    title,
-    description,
-    onClose,
-    onConfirm,
-    cancelLabel,
-    confirmLabel,
-  }: {
-    isOpen: boolean
-    title: ReactNode
-    description?: ReactNode
-    onClose: () => void
-    onConfirm: () => void
-    cancelLabel: ReactNode
-    confirmLabel: ReactNode
-  }) =>
-    isOpen ? (
-      <div role="alertdialog">
+vi.mock("~/components/ui", async () => {
+  const { Button } = await import("~/components/ui/button")
+
+  return {
+    Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+    Button,
+    CollapsibleSection: ({
+      title,
+      children,
+    }: {
+      title: ReactNode
+      children: ReactNode
+    }) => (
+      <section>
         <div>{title}</div>
-        <div>{description}</div>
-        <button onClick={onClose}>{cancelLabel}</button>
-        <button onClick={onConfirm}>{confirmLabel}</button>
-      </div>
-    ) : null,
-  Modal: ({
-    isOpen,
-    header,
-    children,
-    footer,
-    onClose,
-  }: {
-    isOpen: boolean
-    header?: ReactNode
-    children: ReactNode
-    footer?: ReactNode
-    onClose: () => void
-  }) =>
-    isOpen ? (
-      <div role="dialog">
-        {header}
-        <button onClick={onClose}>modal-close</button>
-        {children}
-        {footer}
-      </div>
-    ) : null,
-  Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  SelectContent: ({ children }: { children: ReactNode }) => (
-    <div>{children}</div>
-  ),
-  SelectItem: ({ children, value }: { children: ReactNode; value: string }) => (
-    <div data-value={value}>{children}</div>
-  ),
-  SelectTrigger: ({ children }: { children: ReactNode }) => (
-    <div>{children}</div>
-  ),
-  SelectValue: ({ placeholder }: { placeholder?: string }) => (
-    <div>{placeholder}</div>
-  ),
-}))
+        <div>{children}</div>
+      </section>
+    ),
+    DestructiveConfirmDialog: ({
+      isOpen,
+      title,
+      description,
+      onClose,
+      onConfirm,
+      cancelLabel,
+      confirmLabel,
+    }: {
+      isOpen: boolean
+      title: ReactNode
+      description?: ReactNode
+      onClose: () => void
+      onConfirm: () => void
+      cancelLabel: ReactNode
+      confirmLabel: ReactNode
+    }) =>
+      isOpen ? (
+        <div role="alertdialog">
+          <div>{title}</div>
+          <div>{description}</div>
+          <button onClick={onClose}>{cancelLabel}</button>
+          <button onClick={onConfirm}>{confirmLabel}</button>
+        </div>
+      ) : null,
+    Modal: ({
+      isOpen,
+      header,
+      children,
+      footer,
+      onClose,
+    }: {
+      isOpen: boolean
+      header?: ReactNode
+      children: ReactNode
+      footer?: ReactNode
+      onClose: () => void
+    }) =>
+      isOpen ? (
+        <div role="dialog">
+          {header}
+          <button onClick={onClose}>modal-close</button>
+          {children}
+          {footer}
+        </div>
+      ) : null,
+    Select: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    SelectContent: ({ children }: { children: ReactNode }) => (
+      <div>{children}</div>
+    ),
+    SelectItem: ({
+      children,
+      value,
+    }: {
+      children: ReactNode
+      value: string
+    }) => <div data-value={value}>{children}</div>,
+    SelectTrigger: ({ children }: { children: ReactNode }) => (
+      <div>{children}</div>
+    ),
+    SelectValue: ({ placeholder }: { placeholder?: string }) => (
+      <div>{placeholder}</div>
+    ),
+  }
+})
 
 const mockedPreparePreview =
   prepareManagedSiteChannelMigrationPreview as unknown as ReturnType<
@@ -291,6 +299,271 @@ describe("ManagedSiteChannelMigrationDialog", () => {
         },
       ],
     })
+  })
+
+  it("distinguishes automatic target previews from manual refresh loading", async () => {
+    const initialPreview = createDeferred<typeof previewPayload>()
+    const targetPreview = createDeferred<typeof previewPayload>()
+    const manualPreview = createDeferred<typeof previewPayload>()
+    mockedPreparePreview
+      .mockReturnValueOnce(initialPreview.promise)
+      .mockReturnValueOnce(targetPreview.promise)
+      .mockReturnValueOnce(manualPreview.promise)
+    const preferences = {} as any
+
+    const { rerender } = render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={preferences}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={availableTargets}
+      />,
+    )
+
+    const automaticallyLockedStart = await screen.findByRole("button", {
+      name: "managedSiteChannels:migration.actions.start",
+    })
+    expect(automaticallyLockedStart).toBeDisabled()
+    expect(automaticallyLockedStart).not.toHaveAttribute("aria-busy")
+    const automaticallyLockedRefresh = screen.getByRole("button", {
+      name: "managedSiteChannels:migration.actions.refreshPreview",
+    })
+    expect(automaticallyLockedRefresh).toBeDisabled()
+    expect(automaticallyLockedRefresh).not.toHaveAttribute("aria-busy")
+
+    await act(async () => {
+      initialPreview.resolve(previewPayload)
+      await initialPreview.promise
+    })
+    expect(
+      await screen.findByText(
+        "managedSiteChannels:migration.preview.status.ready",
+      ),
+    ).toBeInTheDocument()
+
+    rerender(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={preferences}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={
+          [{ siteType: SITE_TYPES.OCTOPUS, label: "Octopus" }] as any
+        }
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockedPreparePreview).toHaveBeenCalledTimes(2)
+    })
+    const targetLockedStart = screen.getByRole("button", {
+      name: "managedSiteChannels:migration.actions.start",
+    })
+    expect(targetLockedStart).toBeDisabled()
+    expect(targetLockedStart).not.toHaveAttribute("aria-busy")
+    const targetLockedRefresh = screen.getByRole("button", {
+      name: "managedSiteChannels:migration.actions.refreshPreview",
+    })
+    expect(targetLockedRefresh).toBeDisabled()
+    expect(targetLockedRefresh).not.toHaveAttribute("aria-busy")
+
+    await act(async () => {
+      targetPreview.resolve(previewPayload)
+      await targetPreview.promise
+    })
+    const idleRefresh = await screen.findByRole("button", {
+      name: "managedSiteChannels:migration.actions.refreshPreview",
+    })
+    fireEvent.click(idleRefresh)
+
+    const manuallyBusyRefresh = screen.queryByRole("button", {
+      name: "managedSiteChannels:migration.preview.loading",
+    })
+    const manualRefreshState = manuallyBusyRefresh
+      ? {
+          ariaBusy: manuallyBusyRefresh.getAttribute("aria-busy"),
+          disabled: manuallyBusyRefresh.hasAttribute("disabled"),
+        }
+      : null
+    const manualLoadingLabelCount = screen.queryAllByText(
+      "managedSiteChannels:migration.preview.loading",
+    ).length
+    const manuallyLockedStart = screen.getByRole("button", {
+      name: "managedSiteChannels:migration.actions.start",
+    })
+    const manualStartState = {
+      ariaBusy: manuallyLockedStart.getAttribute("aria-busy"),
+      disabled: manuallyLockedStart.hasAttribute("disabled"),
+    }
+    if (manuallyBusyRefresh) fireEvent.click(manuallyBusyRefresh)
+
+    await act(async () => {
+      manualPreview.resolve(previewPayload)
+      await manualPreview.promise
+    })
+    expect(manualRefreshState).toEqual({ ariaBusy: "true", disabled: true })
+    expect(manualLoadingLabelCount).toBe(1)
+    expect(manualStartState).toEqual({ ariaBusy: null, disabled: true })
+    expect(mockedPreparePreview).toHaveBeenCalledTimes(3)
+    expect(
+      await screen.findByRole("button", {
+        name: "managedSiteChannels:migration.actions.refreshPreview",
+      }),
+    ).toBeEnabled()
+  })
+
+  it("prepares one preview when preferences and derived targets change together", async () => {
+    const refreshedPreview = createDeferred<typeof previewPayload>()
+    const initialPreferences = {} as any
+    const nextPreferences = { newApiBaseUrl: "https://example.invalid" } as any
+    mockedPreparePreview
+      .mockResolvedValueOnce(previewPayload)
+      .mockReturnValue(refreshedPreview.promise)
+
+    const { rerender } = render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={initialPreferences}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={availableTargets}
+      />,
+    )
+
+    await screen.findByText(
+      "managedSiteChannels:migration.preview.status.ready",
+    )
+    expect(mockedPreparePreview).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={nextPreferences}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={[...availableTargets] as any}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockedPreparePreview.mock.calls.length).toBeGreaterThan(1)
+    })
+    await act(async () => {
+      refreshedPreview.resolve(previewPayload)
+      await refreshedPreview.promise
+    })
+
+    expect(mockedPreparePreview).toHaveBeenCalledTimes(2)
+    expect(mockedPreparePreview).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        preferences: nextPreferences,
+        targetSiteType: "done-hub",
+      }),
+    )
+  })
+
+  it("prepares only the replacement when the selected target becomes unavailable", async () => {
+    const replacementPreview = createDeferred<typeof previewPayload>()
+    const nextPreferences = { newApiBaseUrl: "https://example.invalid" } as any
+    mockedPreparePreview.mockResolvedValueOnce(previewPayload)
+
+    const { rerender } = render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={[{ siteType: "done-hub", label: "DoneHub" }] as any}
+      />,
+    )
+
+    await screen.findByText(
+      "managedSiteChannels:migration.preview.status.ready",
+    )
+    mockedPreparePreview.mockReset()
+    mockedPreparePreview.mockReturnValue(replacementPreview.promise)
+
+    rerender(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={nextPreferences}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={
+          [{ siteType: SITE_TYPES.OCTOPUS, label: "Octopus" }] as any
+        }
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockedPreparePreview.mock.calls.length).toBeGreaterThan(0)
+    })
+    await act(async () => {
+      replacementPreview.resolve(previewPayload)
+      await replacementPreview.promise
+    })
+
+    expect(mockedPreparePreview).toHaveBeenCalledTimes(1)
+    expect(mockedPreparePreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferences: nextPreferences,
+        targetSiteType: SITE_TYPES.OCTOPUS,
+      }),
+    )
+  })
+
+  it("does not prepare or remain loading when all targets become unavailable", async () => {
+    const obsoletePreview = createDeferred<typeof previewPayload>()
+    const nextPreferences = { newApiBaseUrl: "https://example.invalid" } as any
+    mockedPreparePreview.mockResolvedValueOnce(previewPayload)
+
+    const { rerender } = render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={[{ siteType: "done-hub", label: "DoneHub" }] as any}
+      />,
+    )
+
+    await screen.findByText(
+      "managedSiteChannels:migration.preview.status.ready",
+    )
+    mockedPreparePreview.mockReset()
+    mockedPreparePreview.mockReturnValue(obsoletePreview.promise)
+
+    rerender(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={nextPreferences}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={[]}
+      />,
+    )
+
+    await screen.findByText("managedSiteChannels:migration.target.unselected")
+    const obsoleteRequestCount = mockedPreparePreview.mock.calls.length
+    const hasStuckLoadingStatus = Boolean(
+      screen.queryByText("managedSiteChannels:migration.preview.loading"),
+    )
+    await act(async () => {
+      obsoletePreview.resolve(previewPayload)
+      await obsoletePreview.promise
+    })
+
+    expect(obsoleteRequestCount).toBe(0)
+    expect(hasStuckLoadingStatus).toBe(false)
   })
 
   it("loads the preview on open and renders ready, blocked, and warning details", async () => {
@@ -453,10 +726,51 @@ describe("ManagedSiteChannelMigrationDialog", () => {
     expect(screen.getByText("future-provider")).toBeInTheDocument()
   })
 
-  it("shows preview errors and allows refreshing the preview", async () => {
+  it("renders target draft preparation blockers with channel wording", async () => {
+    mockedPreparePreview.mockResolvedValueOnce({
+      ...previewPayload,
+      readyCount: 0,
+      blockedCount: 1,
+      totalCount: 1,
+      items: [
+        {
+          ...previewPayload.items[0],
+          status: "blocked",
+          draft: null,
+          blockingReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+          blockingMessage: "Target draft failed",
+          warningCodes: [],
+        },
+      ],
+    })
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={availableTargets}
+      />,
+    )
+
+    expect(
+      await screen.findAllByText(
+        "managedSiteChannels:migration.blockedReasons.targetDraftPreparationFailed",
+      ),
+    ).not.toHaveLength(0)
+    expect(screen.getAllByText("Target draft failed").length).toBeGreaterThan(0)
+  })
+
+  it("restores manual preview refresh after rejection and allows retry", async () => {
+    const failedManualRefresh = createDeferred<typeof previewPayload>()
+    const successfulRetry = createDeferred<typeof previewPayload>()
     mockedPreparePreview
       .mockRejectedValueOnce(new Error("preview failed"))
-      .mockResolvedValueOnce(previewPayload)
+      .mockReturnValueOnce(failedManualRefresh.promise)
+      .mockReturnValueOnce(successfulRetry.promise)
 
     render(
       <ManagedSiteChannelMigrationDialog
@@ -481,15 +795,111 @@ describe("ManagedSiteChannelMigrationDialog", () => {
       }),
     )
 
-    await waitFor(() => {
-      expect(mockedPreparePreview).toHaveBeenCalledTimes(2)
+    const busyRefresh = screen.queryByRole("button", {
+      name: "managedSiteChannels:migration.preview.loading",
     })
+    const busyRefreshState = busyRefresh
+      ? {
+          ariaBusy: busyRefresh.getAttribute("aria-busy"),
+          disabled: busyRefresh.hasAttribute("disabled"),
+        }
+      : null
+    if (busyRefresh) fireEvent.click(busyRefresh)
+
+    await act(async () => {
+      failedManualRefresh.reject(new Error("manual refresh failed"))
+      await failedManualRefresh.promise.catch(() => undefined)
+    })
+    const restoredRefresh = await screen.findByRole("button", {
+      name: "managedSiteChannels:migration.actions.refreshPreview",
+    })
+    const restoredRefreshState = {
+      ariaBusy: restoredRefresh.getAttribute("aria-busy"),
+      disabled: restoredRefresh.hasAttribute("disabled"),
+    }
+    fireEvent.click(restoredRefresh)
+    await waitFor(() => {
+      expect(mockedPreparePreview).toHaveBeenCalledTimes(3)
+    })
+
+    await act(async () => {
+      successfulRetry.resolve(previewPayload)
+      await successfulRetry.promise
+    })
+
+    expect(busyRefreshState).toEqual({ ariaBusy: "true", disabled: true })
+    expect(mockedPreparePreview).toHaveBeenCalledTimes(3)
+    expect(restoredRefreshState).toEqual({ ariaBusy: null, disabled: false })
 
     expect(
       await screen.findByText(
         "managedSiteChannels:migration.preview.status.ready",
       ),
     ).toBeInTheDocument()
+  })
+
+  it("hands confirmed execution loading to the stable start control", async () => {
+    const execution =
+      createDeferred<
+        Awaited<ReturnType<typeof executeManagedSiteChannelMigration>>
+      >()
+    mockedExecuteMigration.mockReturnValueOnce(execution.promise)
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={availableTargets}
+      />,
+    )
+
+    await screen.findByText(
+      "managedSiteChannels:migration.preview.status.ready",
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.actions.start",
+      }),
+    )
+    const confirmation = await screen.findByRole("alertdialog")
+    fireEvent.click(
+      within(confirmation).getByRole("button", {
+        name: "managedSiteChannels:migration.confirm.confirm",
+      }),
+    )
+
+    expect(screen.queryByRole("alertdialog")).toBeNull()
+    const runningStart = screen.getByRole("button", {
+      name: "managedSiteChannels:migration.actions.running",
+    })
+    const runningStartState = {
+      ariaBusy: runningStart.getAttribute("aria-busy"),
+      disabled: runningStart.hasAttribute("disabled"),
+    }
+    const lockedCancel = screen.getByRole("button", {
+      name: "managedSiteChannels:migration.actions.cancel",
+    })
+    const lockedCancelState = {
+      ariaBusy: lockedCancel.getAttribute("aria-busy"),
+      disabled: lockedCancel.hasAttribute("disabled"),
+    }
+    fireEvent.click(runningStart)
+
+    await act(async () => {
+      execution.reject(new Error("execution failed"))
+      await execution.promise.catch(() => undefined)
+    })
+
+    const restoredStart = await screen.findByRole("button", {
+      name: "managedSiteChannels:migration.actions.start",
+    })
+    expect(runningStartState).toEqual({ ariaBusy: "true", disabled: true })
+    expect(lockedCancelState).toEqual({ ariaBusy: null, disabled: true })
+    expect(mockedExecuteMigration).toHaveBeenCalledTimes(1)
+    expect(restoredStart).not.toHaveAttribute("aria-busy")
   })
 
   it("executes the confirmed migration and renders execution results", async () => {

@@ -8,6 +8,7 @@ import {
 } from "~/services/apiService/anyrouter"
 import { SiteHealthStatus } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const {
   mockDetermineHealthStatus,
@@ -58,6 +59,9 @@ vi.mock("~/utils/i18n/core", () => ({
 }))
 
 describe("AnyRouter API service", () => {
+  const backgroundProviderContext = {
+    tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+  }
   const baseRequest = {
     baseUrl: "https://anyrouter.example.com",
     auth: {
@@ -123,11 +127,14 @@ describe("AnyRouter API service", () => {
       }),
     ).resolves.toBe(true)
 
-    expect(mockCheckIn).toHaveBeenCalledWith({
-      site_url: "https://anyrouter.example.com",
-      id: undefined,
-      account_info: { id: 42 },
-    })
+    expect(mockCheckIn).toHaveBeenCalledWith(
+      {
+        site_url: "https://anyrouter.example.com",
+        id: undefined,
+        account_info: { id: 42 },
+      },
+      backgroundProviderContext,
+    )
   })
 
   it("passes request account identity to the AnyRouter check-in provider", async () => {
@@ -143,12 +150,46 @@ describe("AnyRouter API service", () => {
       }),
     ).resolves.toBe(true)
 
-    expect(mockCheckIn).toHaveBeenCalledWith({
-      site_url: "https://anyrouter.example.com",
-      id: "stored-account-id",
-      cookieAuthSessionCookie: "stored-session-cookie",
-      account_info: { id: 42 },
+    expect(mockCheckIn).toHaveBeenCalledWith(
+      {
+        site_url: "https://anyrouter.example.com",
+        id: "stored-account-id",
+        cookieAuthSessionCookie: "stored-session-cookie",
+        account_info: { id: 42 },
+      },
+      backgroundProviderContext,
+    )
+  })
+
+  it("passes the Popup request source to the AnyRouter check-in provider", async () => {
+    mockCheckIn.mockResolvedValueOnce({
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
     })
+
+    await fetchCheckInStatus({
+      ...baseRequest,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    })
+
+    expect(mockCheckIn).toHaveBeenCalledWith(expect.any(Object), {
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    })
+  })
+
+  it("normalizes invalid AnyRouter request sources to Background", async () => {
+    mockCheckIn.mockResolvedValueOnce({
+      status: CHECKIN_RESULT_STATUS.SUCCESS,
+    })
+
+    await fetchCheckInStatus({
+      ...baseRequest,
+      tempWindowRequestSource: "invalid-source",
+    })
+
+    expect(mockCheckIn).toHaveBeenCalledWith(
+      expect.any(Object),
+      backgroundProviderContext,
+    )
   })
 
   it("maps provider check-in statuses into the account-facing boolean", async () => {
@@ -163,16 +204,24 @@ describe("AnyRouter API service", () => {
     await expect(fetchCheckInStatus(baseRequest)).resolves.toBe(true)
     await expect(fetchCheckInStatus(baseRequest)).resolves.toBe(false)
 
-    expect(mockCheckIn).toHaveBeenNthCalledWith(1, {
-      site_url: "https://anyrouter.example.com",
-      id: undefined,
-      account_info: { id: 42 },
-    })
-    expect(mockCheckIn).toHaveBeenNthCalledWith(2, {
-      site_url: "https://anyrouter.example.com",
-      id: undefined,
-      account_info: { id: 42 },
-    })
+    expect(mockCheckIn).toHaveBeenNthCalledWith(
+      1,
+      {
+        site_url: "https://anyrouter.example.com",
+        id: undefined,
+        account_info: { id: 42 },
+      },
+      backgroundProviderContext,
+    )
+    expect(mockCheckIn).toHaveBeenNthCalledWith(
+      2,
+      {
+        site_url: "https://anyrouter.example.com",
+        id: undefined,
+        account_info: { id: 42 },
+      },
+      backgroundProviderContext,
+    )
   })
 
   it("treats provider failures as unsupported check-in detection", async () => {

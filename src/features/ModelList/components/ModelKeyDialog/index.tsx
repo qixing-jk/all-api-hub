@@ -16,6 +16,7 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { normalizeGroupNames } from "~/features/ModelList/groupNormalization"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { OneTimeApiKeyDialog } from "~/features/TokenProvisioning/components/OneTimeApiKeyDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
@@ -60,9 +61,6 @@ const analyticsResultByCreateResult: Record<
   skipped: PRODUCT_ANALYTICS_RESULTS.Skipped,
 }
 
-const normalizeModelGroup = (group: unknown) =>
-  typeof group === "string" ? group.trim() : ""
-
 /**
  * Builds a compact label that disambiguates same-named keys across groups.
  */
@@ -82,15 +80,11 @@ function getCompatibleRuntimeKeyLabel(runtimeKey: AccountRuntimeKey) {
  * Builds the group choices available to the model-compatible key creation flow.
  */
 function buildCreateGroupOptions(modelEnableGroups?: readonly string[]) {
-  const options = Array.from(
-    new Set(
-      (modelEnableGroups ?? [])
-        .map(normalizeModelGroup)
-        .filter((group) => group.length > 0),
-    ),
-  )
+  if (modelEnableGroups === undefined) {
+    return [DEFAULT_MODEL_GROUP]
+  }
 
-  return options.length > 0 ? options : [DEFAULT_MODEL_GROUP]
+  return normalizeGroupNames(modelEnableGroups)
 }
 
 /**
@@ -132,11 +126,13 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     () => buildCreateGroupOptions(modelEnableGroups),
     [modelEnableGroups],
   )
+  const hasStrictEmptyGroupScope =
+    modelEnableGroups !== undefined && createGroupOptions.length === 0
 
   const requiresCreateGroupSelection = createGroupOptions.length > 1
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || hasStrictEmptyGroupScope) {
       setCreateGroup("")
       setIsAddTokenDialogOpen(false)
       return
@@ -153,7 +149,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
 
       return ""
     })
-  }, [createGroupOptions, isOpen])
+  }, [createGroupOptions, hasStrictEmptyGroupScope, isOpen])
 
   const {
     compatibleRuntimeKeys,
@@ -202,7 +198,10 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     selectedRuntimeKeyId,
   ])
 
-  const handleOpenAddTokenDialog = () => setIsAddTokenDialogOpen(true)
+  const handleOpenAddTokenDialog = () => {
+    if (hasStrictEmptyGroupScope) return
+    setIsAddTokenDialogOpen(true)
+  }
   const handleCloseAddTokenDialog = () => setIsAddTokenDialogOpen(false)
   const handleTokenCreated = async (createdToken?: ApiToken) => {
     await refreshRuntimeKeysAfterCreate(createdToken)
@@ -234,6 +233,8 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     })
   }
   const handleCreateCompatibleKey = async (group: string) => {
+    if (hasStrictEmptyGroupScope) return
+
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateCompatibleModelKey,
@@ -330,7 +331,9 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         surfaceId={keyDialogSurface}
       >
         <div className="space-y-4">
-          {!canCreateToken && ineligibleDescription ? (
+          {!hasStrictEmptyGroupScope &&
+          !canCreateToken &&
+          ineligibleDescription ? (
             <Alert
               variant="info"
               title={t("modelList:keyDialog.createDisabledTitle")}
@@ -347,95 +350,108 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
           ) : null}
 
           {compatibleRuntimeKeys.length === 0 ? (
-            <div className="space-y-4">
-              <EmptyState
-                icon={<KeyIcon className="h-12 w-12" />}
-                title={t("modelList:keyDialog.noCompatibleTitle", { modelId })}
-                description={t("modelList:keyDialog.noCompatibleDescription")}
+            hasStrictEmptyGroupScope ? (
+              <Alert
+                variant="info"
+                title={t("modelList:keyDialog.createDisabledTitle")}
+                description={t("modelList:noUsableGroupsForModel")}
               />
+            ) : (
+              <div className="space-y-4">
+                <EmptyState
+                  icon={<KeyIcon className="h-12 w-12" />}
+                  title={t("modelList:keyDialog.noCompatibleTitle", {
+                    modelId,
+                  })}
+                  description={t("modelList:keyDialog.noCompatibleDescription")}
+                />
 
-              <div className="space-y-3">
-                <div>
-                  <label
-                    htmlFor={createGroupSelectId}
-                    className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
-                  >
-                    {t("modelList:keyDialog.createGroupLabel")}
-                  </label>
-                  <div className="mt-2">
-                    {requiresCreateGroupSelection ? (
-                      <Select
-                        value={createGroup}
-                        onValueChange={setCreateGroup}
-                        disabled={!canCreateToken}
-                      >
-                        <SelectTrigger
-                          id={createGroupSelectId}
-                          aria-label={t("modelList:keyDialog.createGroupLabel")}
+                <div className="space-y-3">
+                  <div>
+                    <label
+                      htmlFor={createGroupSelectId}
+                      className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+                    >
+                      {t("modelList:keyDialog.createGroupLabel")}
+                    </label>
+                    <div className="mt-2">
+                      {requiresCreateGroupSelection ? (
+                        <Select
+                          value={createGroup}
+                          onValueChange={setCreateGroup}
+                          disabled={!canCreateToken}
                         >
-                          <SelectValue
-                            placeholder={t(
-                              "modelList:keyDialog.createGroupPlaceholder",
+                          <SelectTrigger
+                            id={createGroupSelectId}
+                            aria-label={t(
+                              "modelList:keyDialog.createGroupLabel",
                             )}
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {createGroupOptions.map((group) => (
-                            <SelectItem key={group} value={group}>
-                              {group}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <div
-                        id={createGroupSelectId}
-                        className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary flex h-9 items-center rounded-md border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-700"
-                      >
-                        {createGroupOptions[0]}
-                      </div>
-                    )}
+                          >
+                            <SelectValue
+                              placeholder={t(
+                                "modelList:keyDialog.createGroupPlaceholder",
+                              )}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {createGroupOptions.map((group) => (
+                              <SelectItem key={group} value={group}>
+                                {group}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div
+                          id={createGroupSelectId}
+                          className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary flex h-9 items-center rounded-md border border-gray-200 bg-gray-50 px-3 text-sm font-medium text-gray-700"
+                        >
+                          {createGroupOptions[0]}
+                        </div>
+                      )}
+                    </div>
+                    <p className="dark:text-dark-text-tertiary mt-2 text-sm text-gray-500">
+                      {requiresCreateGroupSelection
+                        ? t("modelList:keyDialog.createGroupHint")
+                        : t("modelList:keyDialog.createGroupAutoSelectedHint")}
+                    </p>
                   </div>
-                  <p className="dark:text-dark-text-tertiary mt-2 text-sm text-gray-500">
-                    {requiresCreateGroupSelection
-                      ? t("modelList:keyDialog.createGroupHint")
-                      : t("modelList:keyDialog.createGroupAutoSelectedHint")}
-                  </p>
-                </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => {
-                      void handleCreateCompatibleKey(
-                        createGroup || createGroupOptions[0],
-                      )
-                    }}
-                    disabled={
-                      !canCreateToken ||
-                      isCreating ||
-                      (requiresCreateGroupSelection && !createGroup)
-                    }
-                    loading={isCreating}
-                    variant="default"
-                    leftIcon={<PlusIcon className="h-4 w-4" />}
-                  >
-                    {t("modelList:keyDialog.createKey")}
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => {
+                        void handleCreateCompatibleKey(
+                          createGroup || createGroupOptions[0],
+                        )
+                      }}
+                      disabled={
+                        !canCreateToken ||
+                        (requiresCreateGroupSelection && !createGroup)
+                      }
+                      loading={isCreating}
+                      variant="default"
+                      leftIcon={<PlusIcon className="h-4 w-4" />}
+                    >
+                      {isCreating
+                        ? t("common:status.creating")
+                        : t("modelList:keyDialog.createKey")}
+                    </Button>
 
-                  <Button
-                    onClick={handleOpenAddTokenDialog}
-                    variant="secondary"
-                    disabled={!canCreateToken}
-                    data-testid={MODEL_LIST_TEST_IDS.createCustomKeyButton}
-                    analyticsAction={
-                      PRODUCT_ANALYTICS_ACTION_IDS.CreateCustomModelKey
-                    }
-                  >
-                    {t("modelList:keyDialog.createCustomKey")}
-                  </Button>
+                    <Button
+                      onClick={handleOpenAddTokenDialog}
+                      variant="secondary"
+                      disabled={!canCreateToken}
+                      data-testid={MODEL_LIST_TEST_IDS.createCustomKeyButton}
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.CreateCustomModelKey
+                      }
+                    >
+                      {t("modelList:keyDialog.createCustomKey")}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )
           ) : (
             <div className="space-y-4">
               <div>
@@ -491,7 +507,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                 <Button
                   onClick={handleOpenAddTokenDialog}
                   variant="secondary"
-                  disabled={!canCreateToken}
+                  disabled={!canCreateToken || hasStrictEmptyGroupScope}
                   data-testid={MODEL_LIST_TEST_IDS.createCustomKeyButton}
                   analyticsAction={
                     PRODUCT_ANALYTICS_ACTION_IDS.CreateCustomModelKey
@@ -519,7 +535,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         {renderContent()}
       </Modal>
       <AddTokenDialog
-        isOpen={isAddTokenDialogOpen}
+        isOpen={isAddTokenDialogOpen && !hasStrictEmptyGroupScope}
         onClose={handleCloseAddTokenDialog}
         availableAccounts={[account]}
         preSelectedAccountId={account.id}

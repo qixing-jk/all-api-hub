@@ -1,3 +1,7 @@
+.vp-hero-image {
+  max-height: 180px;
+}
+
 .readme-sponsor {
   display: flex;
   align-items: center;
@@ -87,6 +91,10 @@
 }
 
 @media (max-width: 640px) {
+  .vp-hero-image {
+    max-height: 140px;
+  }
+
   .readme-sponsor,
   .sponsor-item {
     flex-direction: column;

@@ -45,7 +45,7 @@ export function PermissionOnboardingDialog({
   onClose,
   reason,
 }: PermissionOnboardingDialogProps) {
-  const { t } = useTranslation("settings")
+  const { t } = useTranslation(["settings", "common"])
   const [isRequesting, setIsRequesting] = useState(false)
 
   const hasOptionalPermissions = OPTIONAL_PERMISSIONS.length > 0
@@ -132,7 +132,9 @@ export function PermissionOnboardingDialog({
         disabled={isAnyPending}
         className="h-auto min-h-9 w-full py-2 text-center whitespace-normal"
       >
-        {t("permissionsOnboarding.actions.allowAll")}
+        {isRequesting
+          ? t("common:status.applying")
+          : t("permissionsOnboarding.actions.allowAll")}
       </Button>
       <Button
         variant="outline"
@@ -289,16 +291,14 @@ export function PermissionOnboardingDialog({
                       onClick={() =>
                         void handleToggle(permission.id, !permission.granted)
                       }
-                      disabled={
-                        isRequesting ||
-                        permission.pending ||
-                        permission.granted === null
-                      }
+                      disabled={isRequesting || permission.granted === null}
                       loading={permission.pending}
                     >
-                      {permission.granted
-                        ? t("permissions.actions.remove")
-                        : t("permissions.actions.allow")}
+                      {permission.pending
+                        ? t("common:status.applying")
+                        : permission.granted
+                          ? t("permissions.actions.remove")
+                          : t("permissions.actions.allow")}
                     </Button>
                   </div>
                 ),

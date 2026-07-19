@@ -6,6 +6,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
 import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
 import { RedemptionAssistMessageTypes } from "~/services/redemption/redemptionAssistMessaging"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 type RuntimeMessageListener = (
   request: any,
@@ -451,9 +452,107 @@ describe("setupRuntimeMessageListeners additional routing", () => {
       const result = listener(request, sender, sendResponse)
 
       expect(result).toBe(true)
-      expect(expected).toHaveBeenLastCalledWith(request, sendResponse)
+      expect(expected).toHaveBeenLastCalledWith(
+        request.action === RuntimeActionIds.TempWindowCheckinPageAction
+          ? {
+              ...request,
+              tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+            }
+          : request,
+        sendResponse,
+      )
     }
   })
+
+  it.each([
+    {
+      action: RuntimeActionIds.AutoDetectSite,
+      handler: mocks.handleAutoDetectSite,
+      fields: { url: "https://example.invalid/account" },
+    },
+    {
+      action: RuntimeActionIds.TempWindowFetch,
+      handler: mocks.handleTempWindowFetch,
+      fields: {
+        originUrl: "https://example.invalid",
+        fetchUrl: "https://example.invalid/api/models",
+      },
+    },
+    {
+      action: RuntimeActionIds.TempWindowTurnstileFetch,
+      handler: mocks.handleTempWindowTurnstileFetch,
+      fields: {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/checkin",
+        fetchUrl: "https://example.invalid/api/checkin",
+      },
+    },
+    {
+      action: RuntimeActionIds.TempWindowCheckinPageAction,
+      handler: mocks.handleTempWindowCheckinPageAction,
+      fields: {
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/console/personal",
+        siteType: "new-api",
+        expectedUserId: "target-user",
+      },
+    },
+    {
+      action: RuntimeActionIds.TempWindowGetRenderedTitle,
+      handler: mocks.handleTempWindowGetRenderedTitle,
+      fields: { originUrl: "https://example.invalid" },
+    },
+  ])(
+    "normalizes source and boolean overrides for $action runtime requests",
+    async ({ action, handler, fields }) => {
+      const listener = await loadListener()
+      const sendResponse = vi.fn()
+
+      listener(
+        {
+          action,
+          ...fields,
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          suppressMinimize: "true",
+        },
+        {},
+        sendResponse,
+      )
+      let normalizedRequest = handler.mock.calls.at(-1)?.[0]
+      expect(normalizedRequest).toMatchObject({
+        action,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
+      expect(normalizedRequest).not.toHaveProperty("suppressMinimize")
+
+      listener({ action, ...fields, suppressMinimize: true }, {}, sendResponse)
+      normalizedRequest = handler.mock.calls.at(-1)?.[0]
+      expect(normalizedRequest).toMatchObject({
+        action,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        suppressMinimize: true,
+      })
+
+      listener(
+        {
+          action,
+          ...fields,
+          tempWindowRequestSource: "untrusted",
+          suppressMinimize: false,
+        },
+        {},
+        sendResponse,
+      )
+      expect(handler).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          action,
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          suppressMinimize: false,
+        }),
+        sendResponse,
+      )
+    },
+  )
 
   it("does not route typed Redemption Assist RPCs through the raw runtime listener", async () => {
     const listener = await loadListener()

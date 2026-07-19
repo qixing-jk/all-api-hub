@@ -9,14 +9,15 @@ import {
   type ModelListVerificationResultFilter,
 } from "~/features/ModelList/verificationResultFilters"
 import {
-  MODEL_PROVIDER_FILTER_VALUES,
-  type ModelProviderFilterValue,
-} from "~/services/models/utils/modelProviders"
+  MODEL_VENDOR_FILTER_VALUES,
+  type ModelVendorFilterValue,
+} from "~/services/models/modelVendor"
 
 import {
   MODEL_LIST_BILLING_MODES,
   type ModelListBillingMode,
 } from "../billingModes"
+import type { ModelCapabilitySelectionValue } from "../modelCapabilityFilters"
 
 /**
  * Manages view state for the model list page.
@@ -28,7 +29,10 @@ export function useModelListState() {
   const [selectedSourceValue, setSelectedSourceValue] = useState("") // 当前选中的数据源
   const [searchTerm, setSearchTerm] = useState("") // 搜索关键词
   const [selectedProvider, setSelectedProvider] =
-    useState<ModelProviderFilterValue>(MODEL_PROVIDER_FILTER_VALUES.ALL) // 当前选中的模型提供商
+    useState<ModelVendorFilterValue>(MODEL_VENDOR_FILTER_VALUES.All) // 当前选中的模型提供商
+  const [selectedModelCapabilities, setSelectedModelCapabilities] = useState<
+    ModelCapabilitySelectionValue[]
+  >([])
   const [sortMode, setSortMode] = useState<ModelListSortMode>(
     MODEL_LIST_SORT_MODES.DEFAULT,
   )
@@ -58,6 +62,8 @@ export function useModelListState() {
     setSearchTerm,
     selectedProvider,
     setSelectedProvider,
+    selectedModelCapabilities,
+    setSelectedModelCapabilities,
     sortMode,
     setSortMode,
     selectedBillingMode,

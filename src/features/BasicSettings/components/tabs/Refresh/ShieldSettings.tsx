@@ -19,6 +19,7 @@ import {
   Switch,
   WorkflowTransitionButton,
 } from "~/components/ui"
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   getProtectionBypassUiVariant,
@@ -70,14 +71,13 @@ export default function ShieldSettings() {
   const shieldOptions = tempWindowFallback.useInOptions
   const shieldAutoRefresh = tempWindowFallback.useForAutoRefresh
   const shieldManualRefresh = tempWindowFallback.useForManualRefresh
-  const shieldTempContextMode =
-    tempWindowFallback.tempContextMode ?? "composite"
+  const shieldTempContextMode = tempWindowFallback.tempContextMode
 
   const disableShieldUI = !canUseTempWindowFallback
   const shieldMethodHint =
-    shieldTempContextMode === "window"
+    shieldTempContextMode === TEMP_CONTEXT_MODES.Window
       ? t("refresh.shieldMethodHintWindow")
-      : shieldTempContextMode === "composite"
+      : shieldTempContextMode === TEMP_CONTEXT_MODES.Composite
         ? t("refresh.shieldMethodHintComposite")
         : t("refresh.shieldMethodHintTab")
 
@@ -145,7 +145,7 @@ export default function ShieldSettings() {
                   <Button
                     size="sm"
                     variant={
-                      shieldTempContextMode === "composite"
+                      shieldTempContextMode === TEMP_CONTEXT_MODES.Composite
                         ? "default"
                         : "outline"
                     }
@@ -155,7 +155,9 @@ export default function ShieldSettings() {
                       (isFirefoxEnv && !canUseTempWindowFallback)
                     }
                     onClick={() =>
-                      updateTempWindowFallback({ tempContextMode: "composite" })
+                      updateTempWindowFallback({
+                        tempContextMode: TEMP_CONTEXT_MODES.Composite,
+                      })
                     }
                     leftIcon={
                       <StarIcon className="h-4 w-4 text-amber-500 dark:text-amber-400" />
@@ -167,11 +169,15 @@ export default function ShieldSettings() {
                   <Button
                     size="sm"
                     variant={
-                      shieldTempContextMode === "tab" ? "default" : "outline"
+                      shieldTempContextMode === TEMP_CONTEXT_MODES.Tab
+                        ? "default"
+                        : "outline"
                     }
                     disabled={disableShieldUI || !shieldEnabled}
                     onClick={() =>
-                      updateTempWindowFallback({ tempContextMode: "tab" })
+                      updateTempWindowFallback({
+                        tempContextMode: TEMP_CONTEXT_MODES.Tab,
+                      })
                     }
                     className={responsiveButtonGroupItemClassName}
                   >
@@ -180,7 +186,9 @@ export default function ShieldSettings() {
                   <Button
                     size="sm"
                     variant={
-                      shieldTempContextMode === "window" ? "default" : "outline"
+                      shieldTempContextMode === TEMP_CONTEXT_MODES.Window
+                        ? "default"
+                        : "outline"
                     }
                     disabled={
                       disableShieldUI ||
@@ -188,7 +196,9 @@ export default function ShieldSettings() {
                       (isFirefoxEnv && !canUseTempWindowFallback)
                     }
                     onClick={() =>
-                      updateTempWindowFallback({ tempContextMode: "window" })
+                      updateTempWindowFallback({
+                        tempContextMode: TEMP_CONTEXT_MODES.Window,
+                      })
                     }
                     className={responsiveButtonGroupItemClassName}
                   >

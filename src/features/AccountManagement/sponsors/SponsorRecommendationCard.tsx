@@ -1,8 +1,9 @@
 import type { TFunction } from "i18next"
-import { Bookmark, ExternalLink, Plus } from "lucide-react"
+import { Bookmark, Plus } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Badge, IconButton } from "~/components/ui"
 import {
   SPONSOR_RECOMMENDATION_ACTION_KINDS,
@@ -128,7 +129,9 @@ function renderMainActionIcon(actionKind: SponsorMainActionKind) {
       )
     case SPONSOR_MAIN_ACTION_KINDS.VisitProvider:
     default:
-      return <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+      return (
+        <WorkflowTransitionIcon aria-hidden="true" className="h-3.5 w-3.5" />
+      )
   }
 }
 

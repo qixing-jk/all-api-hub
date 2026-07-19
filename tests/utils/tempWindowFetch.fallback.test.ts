@@ -3,7 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
-import type { TempWindowFallbackContext } from "~/types/tempWindowFetch"
+import {
+  TEMP_WINDOW_REQUEST_SOURCES,
+  type TempWindowFallbackContext,
+} from "~/types/tempWindowFetch"
 import {
   canUseTempWindowFetch,
   executeWithTempWindowFallback,
@@ -17,11 +20,13 @@ import {
 const mocks = vi.hoisted(() => ({
   sendRuntimeMessageMock: vi.fn(),
   handleTempWindowFetchMock: vi.fn(),
+  handleTempWindowCheckinPageActionMock: vi.fn(),
   handleTempWindowTurnstileFetchMock: vi.fn(),
   handleTempWindowGetRenderedTitleMock: vi.fn(),
   hasCookieInterceptorPermissionsMock: vi.fn(),
   getPreferencesMock: vi.fn(),
   isExtensionBackgroundMock: vi.fn(),
+  isExtensionOptionsMock: vi.fn(),
   isExtensionPopupMock: vi.fn(),
   isExtensionSidePanelMock: vi.fn(),
   isProtectionBypassFirefoxEnvMock: vi.fn(),
@@ -49,6 +54,8 @@ vi.mock("~/utils/browser/browserApi", () => ({
 
 vi.mock("~/entrypoints/background/tempWindowPool", () => ({
   handleTempWindowFetch: mocks.handleTempWindowFetchMock,
+  handleTempWindowCheckinPageAction:
+    mocks.handleTempWindowCheckinPageActionMock,
   handleTempWindowTurnstileFetch: mocks.handleTempWindowTurnstileFetchMock,
   handleTempWindowGetRenderedTitle: mocks.handleTempWindowGetRenderedTitleMock,
 }))
@@ -69,6 +76,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 
 vi.mock("~/utils/browser/index", () => ({
   isExtensionBackground: mocks.isExtensionBackgroundMock,
+  isExtensionOptions: mocks.isExtensionOptionsMock,
   isExtensionPopup: mocks.isExtensionPopupMock,
   isExtensionSidePanel: mocks.isExtensionSidePanelMock,
 }))
@@ -132,6 +140,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       tempWindowFallback: buildTempWindowPreferences(),
     })
     mocks.isExtensionBackgroundMock.mockReturnValue(false)
+    mocks.isExtensionOptionsMock.mockReturnValue(false)
     mocks.isExtensionPopupMock.mockReturnValue(false)
     mocks.isExtensionSidePanelMock.mockReturnValue(false)
     mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(false)
@@ -245,6 +254,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
       fetchOptions: { method: "POST" },
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       suppressMinimize: true,
     })
   })
@@ -288,6 +298,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       action: RuntimeActionIds.TempWindowFetch,
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       suppressMinimize: false,
     })
   })
@@ -306,6 +317,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       pageUrl: "https://example.com/checkin",
       fetchUrl: "https://example.com/api/checkin",
       fetchOptions: { method: "POST" },
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       suppressMinimize: false,
     })
 
@@ -320,6 +332,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       pageUrl: "https://example.com/checkin",
       fetchUrl: "https://example.com/api/checkin",
       fetchOptions: { method: "POST" },
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       suppressMinimize: false,
     })
   })
@@ -368,6 +381,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       originUrl: "https://example.com",
       pageUrl: "https://example.com/checkin",
       fetchUrl: "https://example.com/api/checkin",
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       suppressMinimize: false,
     })
   })
@@ -386,6 +400,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       siteType: "new-api",
       expectedUserId: "target-user",
       requestId: "req-native-runtime",
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       suppressMinimize: true,
     })
 
@@ -396,6 +411,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       siteType: "new-api",
       expectedUserId: "target-user",
       requestId: "req-native-runtime",
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       suppressMinimize: true,
     })
     expect(response.reason).toBe("identity_mismatch")
@@ -420,9 +436,114 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith({
       action: RuntimeActionIds.TempWindowGetRenderedTitle,
       originUrl: "https://example.com",
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       suppressMinimize: true,
     })
   })
+
+  it("prefers the propagated popup source when fallback executes in background", async () => {
+    mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
+
+    await expect(
+      getTempWindowFallbackBlockStatus({
+        preferences: buildTempWindowPreferences(),
+        isBackground: true,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+    ).resolves.toEqual({
+      kind: "not_applicable",
+      code: null,
+      reason: "firefox_popup_unsupported",
+    })
+  })
+
+  it("returns structured failures without dispatching Firefox popup requests", async () => {
+    mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
+    const popupSource = {
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    }
+
+    await expect(
+      tempWindowFetch({
+        originUrl: "https://example.invalid",
+        fetchUrl: "https://example.invalid/api/models",
+        ...popupSource,
+      }),
+    ).resolves.toMatchObject({ success: false, error: expect.any(String) })
+    await expect(
+      tempWindowTurnstileFetch({
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/checkin",
+        fetchUrl: "https://example.invalid/api/checkin",
+        ...popupSource,
+      }),
+    ).resolves.toMatchObject({
+      success: false,
+      error: expect.any(String),
+      turnstile: { status: "error", hasTurnstile: false },
+    })
+    await expect(
+      tempWindowTriggerCheckinPageAction({
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/console/personal",
+        siteType: "new-api",
+        expectedUserId: "target-user",
+        ...popupSource,
+      }),
+    ).resolves.toMatchObject({
+      success: false,
+      reason: "trigger_failed",
+      error: expect.any(String),
+    })
+    await expect(
+      tempWindowGetRenderedTitle({
+        originUrl: "https://example.invalid",
+        ...popupSource,
+      }),
+    ).resolves.toMatchObject({ success: false, error: expect.any(String) })
+
+    expect(mocks.sendRuntimeMessageMock).not.toHaveBeenCalled()
+    expect(mocks.handleTempWindowFetchMock).not.toHaveBeenCalled()
+    expect(mocks.handleTempWindowTurnstileFetchMock).not.toHaveBeenCalled()
+    expect(mocks.handleTempWindowCheckinPageActionMock).not.toHaveBeenCalled()
+    expect(mocks.handleTempWindowGetRenderedTitleMock).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      source: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      suppressMinimize: false,
+    },
+    {
+      source: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      suppressMinimize: true,
+    },
+  ])(
+    "uses $source source policy for generic fallback",
+    async ({ source, suppressMinimize }) => {
+      mocks.sendRuntimeMessageMock.mockResolvedValue({
+        success: true,
+        status: 200,
+        data: { success: true, data: { ok: true }, message: "ok" },
+      })
+
+      await executeWithTempWindowFallback(
+        buildContext({
+          forceTempWindow: true,
+          tempWindowRequestSource: source,
+        }),
+        async () => ({ success: true, data: { ok: false }, message: "direct" }),
+      )
+
+      expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: RuntimeActionIds.TempWindowFetch,
+          tempWindowRequestSource: source,
+          suppressMinimize,
+        }),
+      )
+    },
+  )
 
   it("rethrows non-ApiError failures without attempting temp-window fallback", async () => {
     const networkError = new TypeError("socket hang up")
@@ -487,7 +608,8 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
         fetchUrl: "https://example.com/api/models",
         requestId: "uuid:temp-fetch-https://example.com/api/models",
         responseType: "json",
-        suppressMinimize: true,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        suppressMinimize: false,
         accountId: "acct-1",
         authType: AuthTypeEnum.Cookie,
         cookieAuthSessionCookie: "session=abc",

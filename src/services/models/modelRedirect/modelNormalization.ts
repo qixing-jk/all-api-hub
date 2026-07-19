@@ -1,33 +1,34 @@
 import { modelMetadataService } from "~/services/models/modelMetadata"
+import { resolveCuratedModelVendor } from "~/services/models/modelVendor"
 import { removeDateSuffix } from "~/services/models/utils/modelName"
+
+/**
+ * Extracts the undecorated model identity while retaining any date suffix.
+ */
+export function extractCoreModelIdentity(modelName: string): string {
+  let coreIdentity = modelName
+
+  // 提取真实模型名，提取最后一个/到结尾的内容
+  const lastSlashIndex = coreIdentity.lastIndexOf("/")
+  if (lastSlashIndex !== -1) {
+    coreIdentity = coreIdentity.slice(lastSlashIndex + 1)
+  }
+
+  // 移除冒号后缀（常见的:free等非模型信息后缀）
+  const colonIndex = coreIdentity.indexOf(":")
+  if (colonIndex !== -1) {
+    coreIdentity = coreIdentity.slice(0, colonIndex)
+  }
+
+  return coreIdentity
+}
 
 /**
  * Normalizes a raw model identifier to its core name by stripping known
  * vendor prefixes, path segments, non-model suffixes and date components.
  */
 export function extractActualModel(modelName: string) {
-  let actualModel = modelName
-
-  // 处理特殊前缀（如 BigModel/GLM-4.5 → GLM-4.5）
-  const specialPrefix = "BigModel/"
-  if (actualModel.startsWith(specialPrefix)) {
-    actualModel = actualModel.slice(specialPrefix.length)
-  }
-
-  // 提取真实模型名，提取最后一个/到结尾的内容
-  const lastSlashIndex = actualModel.lastIndexOf("/")
-  if (lastSlashIndex !== -1) {
-    actualModel = actualModel.slice(lastSlashIndex + 1)
-  }
-
-  // 移除冒号后缀（常见的:free等非模型信息后缀）
-  const colonIndex = actualModel.indexOf(":")
-  if (colonIndex !== -1) {
-    actualModel = actualModel.slice(0, colonIndex)
-  }
-
-  // 移除日期后缀
-  return removeDateSuffix(actualModel)
+  return removeDateSuffix(extractCoreModelIdentity(modelName))
 }
 
 export const renameModel = (
@@ -90,16 +91,9 @@ export const renameModel = (
   }
 
   if (includeVendor) {
-    // 未找到标准化名称，使用传统逻辑识别厂商
-    let vendor = ""
-    const fallbackVendor = modelMetadataService.findVendorByPattern(actualModel)
-    if (fallbackVendor) {
-      vendor = fallbackVendor
-    }
-
-    if (vendor) {
-      // 组合最终名称
-      return `${vendor}/${actualModel}`
+    const fallbackVendor = resolveCuratedModelVendor(actualModel)
+    if (fallbackVendor.state === "candidate") {
+      return `${fallbackVendor.labelCandidate}/${actualModel}`
     }
   }
 

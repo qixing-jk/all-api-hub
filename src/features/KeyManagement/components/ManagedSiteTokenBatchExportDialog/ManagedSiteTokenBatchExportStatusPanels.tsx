@@ -8,6 +8,8 @@ interface ManagedSiteTokenBatchExportStatusPanelsProps {
   previewError: string | null
   executionError: string | null
   isLoadingPreview: boolean
+  isManualPreviewRefresh: boolean
+  showPreviewLoadingStatus: boolean
   isRunning: boolean
   onRefreshPreview: () => void
 }
@@ -20,6 +22,8 @@ export function ManagedSiteTokenBatchExportStatusPanels({
   previewError,
   executionError,
   isLoadingPreview,
+  isManualPreviewRefresh,
+  showPreviewLoadingStatus,
   isRunning,
   onRefreshPreview,
 }: ManagedSiteTokenBatchExportStatusPanelsProps) {
@@ -37,10 +41,15 @@ export function ManagedSiteTokenBatchExportStatusPanels({
             size="sm"
             variant="outline"
             leftIcon={<RefreshCcw className="h-4 w-4" />}
+            loading={isManualPreviewRefresh}
             disabled={isLoadingPreview || isRunning}
             onClick={onRefreshPreview}
           >
-            {t("keyManagement:batchManagedSiteExport.actions.refreshPreview")}
+            {isManualPreviewRefresh
+              ? t("keyManagement:batchManagedSiteExport.preview.loading")
+              : t(
+                  "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+                )}
           </Button>
         </div>
       ) : null}
@@ -53,7 +62,7 @@ export function ManagedSiteTokenBatchExportStatusPanels({
         </div>
       ) : null}
 
-      {isLoadingPreview ? (
+      {isLoadingPreview && showPreviewLoadingStatus ? (
         <div className="text-muted-foreground rounded-md border p-3 text-sm">
           <div className="flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />

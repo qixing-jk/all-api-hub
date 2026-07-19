@@ -18,7 +18,7 @@ export function CookieAuthPermissionRecommendation({
   isRequestingCookieAuthPermissions = false,
   onRequestCookieAuthPermissions,
 }: CookieAuthPermissionRecommendationProps) {
-  const { t } = useTranslation("accountDialog")
+  const { t } = useTranslation(["accountDialog", "common"])
   const shouldShowAction =
     cookieAuthPermissionsGranted === false && !!onRequestCookieAuthPermissions
 
@@ -41,12 +41,13 @@ export function CookieAuthPermissionRecommendation({
           variant="outline"
           size="sm"
           loading={isRequestingCookieAuthPermissions}
-          disabled={isRequestingCookieAuthPermissions}
           onClick={onRequestCookieAuthPermissions}
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton}
           leftIcon={<ShieldCheck className="h-4 w-4" />}
         >
-          {t("form.cookiePermissionEnableCookieAuth")}
+          {isRequestingCookieAuthPermissions
+            ? t("common:status.applying")
+            : t("form.cookiePermissionEnableCookieAuth")}
         </Button>
       </div>
     </Alert>

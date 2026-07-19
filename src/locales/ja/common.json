@@ -21,6 +21,21 @@
     "cny": "CNY",
     "usd": "USD"
   },
+  "datePicker": {
+    "in1Year": "+1 年",
+    "in30Days": "+30 日",
+    "in7Days": "+7 日",
+    "in90Days": "+90 日",
+    "naturalInput": {
+      "invalid": "YYYY-MM-DD または in 7 days のような認識可能な日付を入力してください",
+      "label": "日付を入力",
+      "openCalendar": "カレンダーを開く",
+      "placeholder": "例: in 7 days、tomorrow、2026-08-01",
+      "preview": "設定予定: {{date}}"
+    },
+    "noExpiration": "期限なし",
+    "placeholder": "日付を選択"
+  },
   "labels": {
     "apiKey": "API キー",
     "notAvailable": "N/A",
@@ -40,20 +55,30 @@
     "translationDescription": "ブラウザーの自動翻訳を使用している場合は、このページの自動翻訳をオフにするか、拡張機能の設定で必要な言語に切り替えてください。"
   },
   "status": {
+    "applying": "適用中...",
     "cancelled": "キャンセル済み",
+    "cancelling": "キャンセル中...",
+    "checking": "確認中...",
     "configurationRequired": "設定が必要です",
+    "copying": "コピー中...",
     "creating": "作成中...",
+    "deleting": "削除中...",
     "disabled": "無効",
+    "disabling": "無効化中...",
     "enabled": "有効",
+    "enabling": "有効化中...",
     "error": "エラー",
     "exporting": "エクスポート中...",
     "failed": "失敗",
     "importing": "インポート中...",
     "loading": "読み込み中...",
+    "opening": "開いています...",
     "processing": "処理中...",
     "refreshing": "更新中...",
     "resetting": "リセット中...",
+    "retrying": "再試行中...",
     "saving": "保存中...",
+    "starting": "開始中...",
     "success": "成功",
     "testing": "テスト中...",
     "updating": "更新中...",

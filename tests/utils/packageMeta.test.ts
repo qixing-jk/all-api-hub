@@ -176,6 +176,15 @@ describe("packageMeta", () => {
     })
 
     it("prefills site-support request destinations with site context", () => {
+      vi.spyOn(
+        (globalThis as any).browser.runtime,
+        "getManifest",
+      ).mockReturnValue({
+        manifest_version: 3,
+        version: "3.49.1",
+        optional_permissions: [],
+      })
+
       const destination = getSiteSupportRequestUrl({
         siteUrl: "https://relay.example.com/console?token=redacted",
         errorType: AutoDetectErrorType.NOT_FOUND,
@@ -196,6 +205,7 @@ describe("packageMeta", () => {
       )
       expect(url.searchParams.get("failure-type")).toBe("notFound")
       expect(url.searchParams.get("failure-message")).toBe("Auto-detect failed")
+      expect(url.searchParams.get("extension-version")).toBe("3.49.1")
     })
   })
 })

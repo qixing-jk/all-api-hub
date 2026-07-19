@@ -30,6 +30,8 @@ import {
 } from "~/services/apiService/aihubmix"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
+import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
+import { resolveModelVendorCandidate } from "~/services/models/modelVendor"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -1197,6 +1199,11 @@ describe("apiService AIHubMix", () => {
           model_name: "gemini-3.5-flash",
           model_description: "Fast Gemini model",
           owner_by: "Google",
+          vendorEvidence: {
+            kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+            name: "Google",
+            externalId: "8",
+          },
           model_price: 0,
           quota_type: 0,
           enable_groups: [],
@@ -1216,6 +1223,41 @@ describe("apiService AIHubMix", () => {
       outputCNY: 63,
     })
     expect(legacyModelsCalled).toBe(false)
+  })
+
+  it("prefers a non-empty developer name over developer and routing owner metadata", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: [
+            {
+              model_id: "precedence-model",
+              developer_name: " Example Primary Publisher ",
+              developer: "Example Secondary Publisher",
+              owner_by: "Example Router",
+              developer_id: "primary-publisher-id",
+            },
+          ],
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: [{ model: "precedence-model" }],
+        }),
+      ),
+    )
+
+    const result = await fetchModelPricing(baseRequest)
+
+    expect(result.data[0].vendorEvidence).toEqual({
+      kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+      name: "Example Primary Publisher",
+      externalId: "primary-publisher-id",
+    })
   })
 
   it("falls back from /api/user/available_models to /call/usr/avail_mdls for user-scoped AIHubMix models", async () => {
@@ -1414,6 +1456,64 @@ describe("apiService AIHubMix", () => {
     })
   })
 
+  it("keeps the public ID-only catalog shape evidence-free for downstream curated fallback", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: [
+            {
+              model_id: "gpt-4o",
+              desc: "Public catalog model",
+              developer_id: 1,
+              endpoints: ["chat"],
+              pricing: { input: 2.5, output: 10 },
+            },
+          ],
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json(
+          { success: false, message: "removed", data: [] },
+          { status: 404 },
+        ),
+      ),
+      http.get("https://aihubmix.com/call/usr/avail_mdls", () =>
+        HttpResponse.json(
+          { success: false, message: "not authenticated", data: [] },
+          { status: 401 },
+        ),
+      ),
+    )
+
+    const result = await fetchModelPricing(baseRequest)
+    const [model] = result.data
+
+    expect(result.model_list_source).toMatchObject({
+      kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+      provider: SITE_TYPES.AIHUBMIX,
+    })
+    expect(model).toMatchObject({
+      model_name: "gpt-4o",
+      model_description: "Public catalog model",
+      owner_by: "1",
+      supported_endpoint_types: ["chat"],
+      token_price_usd_per_million: { input: 2.5, output: 10 },
+    })
+    expect(model).not.toHaveProperty("vendorEvidence")
+    expect(
+      resolveModelVendorCandidate(
+        { id: model.model_name, vendorEvidence: model.vendorEvidence },
+        { state: "unmatched" },
+      ),
+    ).toMatchObject({
+      state: "candidate",
+      knownId: "openai",
+      source: "curated-rule",
+    })
+  })
+
   it("uses catalog fallback metadata when both user scope payloads are malformed", async () => {
     server.use(
       http.get("https://aihubmix.com/api/v1/models", () =>
@@ -1511,7 +1611,7 @@ describe("apiService AIHubMix", () => {
     })
   })
 
-  it("maps catalog description fallbacks, owner fallbacks, and comma-separated endpoints", async () => {
+  it("maps catalog metadata into publisher and routing evidence without promoting standalone developer ids", async () => {
     server.use(
       http.get("https://aihubmix.com/api/v1/models", () =>
         HttpResponse.json({
@@ -1521,16 +1621,28 @@ describe("apiService AIHubMix", () => {
             {
               model_id: "catalog-with-description",
               description: "Description fallback",
-              developer: "Developer fallback",
+              developer_name: " ",
+              developer: " Developer fallback ",
+              developer_id: "opaque-developer-id",
               endpoints: " chat, embeddings , ",
             },
             {
               model_id: "catalog-with-owner",
-              owner_by: "Owner fallback",
+              owner_by: " Owner fallback ",
+              developer_id: 99,
             },
             {
               model_id: "catalog-with-developer-id",
               developer_id: 12,
+            },
+            {
+              model_id: "catalog-with-string-developer-id",
+              developer_id: "opaque-only",
+            },
+            {
+              model_id: "catalog-with-invalid-developer-id",
+              developer_name: "Valid Developer",
+              developer_id: { invalid: true },
             },
           ],
         }),
@@ -1543,29 +1655,58 @@ describe("apiService AIHubMix", () => {
             { model: "catalog-with-description" },
             { model: "catalog-with-owner" },
             { model: "catalog-with-developer-id" },
+            { model: "catalog-with-string-developer-id" },
+            { model: "catalog-with-invalid-developer-id" },
           ],
         }),
       ),
     )
 
-    await expect(fetchModelPricing(baseRequest)).resolves.toMatchObject({
+    const result = await fetchModelPricing(baseRequest)
+
+    expect(result).toMatchObject({
       data: [
         {
           model_name: "catalog-with-description",
           model_description: "Description fallback",
-          owner_by: "Developer fallback",
+          owner_by: " ",
+          vendorEvidence: {
+            kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+            name: "Developer fallback",
+            externalId: "opaque-developer-id",
+          },
           supported_endpoint_types: ["chat", "embeddings"],
         },
         {
           model_name: "catalog-with-owner",
-          owner_by: "Owner fallback",
+          owner_by: " Owner fallback ",
+          vendorEvidence: {
+            kind: MODEL_VENDOR_EVIDENCE_KINDS.RoutingProvider,
+            name: "Owner fallback",
+          },
         },
         {
           model_name: "catalog-with-developer-id",
           owner_by: "12",
         },
+        {
+          model_name: "catalog-with-string-developer-id",
+          owner_by: "opaque-only",
+        },
+        {
+          model_name: "catalog-with-invalid-developer-id",
+          owner_by: "Valid Developer",
+          vendorEvidence: {
+            kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+            name: "Valid Developer",
+          },
+        },
       ],
     })
+    expect(result.data[1].vendorEvidence).not.toHaveProperty("externalId")
+    expect(result.data[2]).not.toHaveProperty("vendorEvidence")
+    expect(result.data[3]).not.toHaveProperty("vendorEvidence")
+    expect(result.data[4].vendorEvidence).not.toHaveProperty("externalId")
   })
 
   it("normalizes nested catalog string model values", async () => {

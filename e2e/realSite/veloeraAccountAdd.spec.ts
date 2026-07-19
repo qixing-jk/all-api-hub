@@ -10,7 +10,12 @@ import {
   realSiteAccountUsageChecks,
   runRealSiteAccountFixtureUsageChecks,
 } from "~~/e2e/utils/realSite/accountUsage"
-import { runCompatibleRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/compatibleAccountSaveFlow"
+import { createCompatibleRealSiteAccountFixturePreparer } from "~~/e2e/utils/realSite/compatibleAccountSaveFlow"
+import {
+  createReusedRealSiteAccountFixturePreparer,
+  createSharedRealSiteAccountFixtureCache,
+  resolveSharedRealSiteAccountFixture,
+} from "~~/e2e/utils/realSite/sharedAccountFixture"
 import {
   getVeloeraRealSiteSkipReason,
   loginToRealVeloeraSite,
@@ -18,6 +23,8 @@ import {
 } from "~~/e2e/utils/realSite/veloera"
 
 test.describe("real-site E2E: Veloera account add flow", () => {
+  const sharedAccountCache = createSharedRealSiteAccountFixtureCache()
+
   test.beforeEach(async ({ context, page }) => {
     await forceExtensionLanguage(page, "en")
     await stubLlmMetadataIndex(context)
@@ -59,25 +66,27 @@ test.describe("real-site E2E: Veloera account add flow", () => {
       })
 
       const accountFixture =
-        await test.step("save account from real site auto-detect", async () => {
-          const sitePage = await context.newPage()
-          try {
-            return await runCompatibleRealSiteAccountSaveFlow({
-              page,
-              extensionId,
-              serviceWorker,
-              sitePage,
-              config,
-              siteType: SITE_TYPES.VELOERA,
-              expectedDetectedSiteType: SITE_TYPES.VELOERA,
-              login: loginToRealVeloeraSite,
-            })
-          } finally {
-            if (!sitePage.isClosed()) {
-              await sitePage.close()
-            }
-          }
-        })
+        await test.step("save or reuse account from real site auto-detect", async () =>
+          await resolveSharedRealSiteAccountFixture({
+            cache: sharedAccountCache,
+            serviceWorker,
+            prepareReusedAccountFixture:
+              createReusedRealSiteAccountFixturePreparer({
+                page,
+                extensionId,
+              }),
+            prepareAccountFixture:
+              createCompatibleRealSiteAccountFixturePreparer({
+                context,
+                page,
+                extensionId,
+                serviceWorker,
+                config,
+                siteType: SITE_TYPES.VELOERA,
+                expectedDetectedSiteType: SITE_TYPES.VELOERA,
+                login: loginToRealVeloeraSite,
+              }),
+          }))
       await runRealSiteAccountFixtureUsageChecks(
         {
           testInfo,

@@ -255,15 +255,14 @@ export default function ResultsTable({
                                 size="sm"
                                 variant="secondary"
                                 loading={retryingAccountId === result.accountId}
-                                disabled={
-                                  retryingAccountId === result.accountId
-                                }
                                 onClick={() => onRetryAccount(result.accountId)}
                                 leftIcon={
                                   <ArrowPathIcon className="h-3.5 w-3.5" />
                                 }
                               >
-                                {t("execution.actions.retryAccount")}
+                                {retryingAccountId === result.accountId
+                                  ? t("common:status.retrying")
+                                  : t("execution.actions.retryAccount")}
                               </Button>
                             )}
                           {onOpenManualSignIn &&
@@ -274,9 +273,6 @@ export default function ResultsTable({
                                 loading={
                                   openingManualAccountId === result.accountId
                                 }
-                                disabled={
-                                  openingManualAccountId === result.accountId
-                                }
                                 onClick={() =>
                                   onOpenManualSignIn(result.accountId)
                                 }
@@ -284,7 +280,9 @@ export default function ResultsTable({
                                   <WorkflowTransitionIcon className="h-3.5 w-3.5" />
                                 }
                               >
-                                {t("execution.actions.openManual")}
+                                {openingManualAccountId === result.accountId
+                                  ? t("common:status.opening")
+                                  : t("execution.actions.openManual")}
                               </Button>
                             )}
                           {onOpenExternalCheckIn && canOpenExternalCheckIn && (
@@ -295,10 +293,6 @@ export default function ResultsTable({
                                 openingExternalCheckInAccountId ===
                                 result.accountId
                               }
-                              disabled={
-                                openingExternalCheckInAccountId ===
-                                result.accountId
-                              }
                               onClick={() =>
                                 onOpenExternalCheckIn(result.accountId)
                               }
@@ -306,7 +300,10 @@ export default function ResultsTable({
                                 <CalendarDaysIcon className="h-3.5 w-3.5" />
                               }
                             >
-                              {t("execution.actions.openExternal")}
+                              {openingExternalCheckInAccountId ===
+                              result.accountId
+                                ? t("common:status.opening")
+                                : t("execution.actions.openExternal")}
                             </Button>
                           )}
                         </ProductAnalyticsScope>
@@ -320,13 +317,14 @@ export default function ResultsTable({
                               size="sm"
                               variant="warning"
                               loading={disablingAccountId === result.accountId}
-                              disabled={disablingAccountId === result.accountId}
                               onClick={() => onDisableAccount(result.accountId)}
                               leftIcon={
                                 <NoSymbolIcon className="h-3.5 w-3.5" />
                               }
                             >
-                              {t("account:actions.disableAccount")}
+                              {disablingAccountId === result.accountId
+                                ? t("common:status.disabling")
+                                : t("account:actions.disableAccount")}
                             </Button>
                           )}
                           {onDeleteAccount && isFailedResult && (
@@ -334,11 +332,12 @@ export default function ResultsTable({
                               size="sm"
                               variant="destructive"
                               loading={deletingAccountId === result.accountId}
-                              disabled={deletingAccountId === result.accountId}
                               onClick={() => onDeleteAccount(result.accountId)}
                               leftIcon={<TrashIcon className="h-3.5 w-3.5" />}
                             >
-                              {t("account:actions.delete")}
+                              {deletingAccountId === result.accountId
+                                ? t("common:status.deleting")
+                                : t("account:actions.delete")}
                             </Button>
                           )}
                           {onOpenAccountSite && (
@@ -346,7 +345,6 @@ export default function ResultsTable({
                               size="sm"
                               variant="outline"
                               loading={isOpeningSite}
-                              disabled={isOpeningSite}
                               onClick={() =>
                                 onOpenAccountSite(result.accountId)
                               }
@@ -354,7 +352,9 @@ export default function ResultsTable({
                                 <WorkflowTransitionIcon className="h-3.5 w-3.5" />
                               }
                             >
-                              {t("execution.actions.openSite")}
+                              {isOpeningSite
+                                ? t("common:status.opening")
+                                : t("execution.actions.openSite")}
                             </Button>
                           )}
                         </ProductAnalyticsScope>

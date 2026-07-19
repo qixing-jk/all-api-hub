@@ -221,7 +221,7 @@ export default function OctopusSettings() {
                 variant="outline"
                 size="sm"
                 onClick={handleValidateConfig}
-                disabled={isValidating}
+                loading={isValidating}
               >
                 {isValidating
                   ? t("octopus.validation.validating")

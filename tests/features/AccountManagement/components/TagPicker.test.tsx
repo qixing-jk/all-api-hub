@@ -5,6 +5,17 @@ import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import type { Tag } from "~/types"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
+
 describe("TagPicker", () => {
   it("supports ArrowUp/ArrowDown navigation and Enter to toggle a tag", async () => {
     const user = userEvent.setup()
@@ -210,6 +221,64 @@ describe("TagPicker", () => {
     })
   })
 
+  it("marks only tag creation busy and suppresses duplicate creation", async () => {
+    const user = userEvent.setup()
+    const deferred = createDeferred<Tag>()
+    const onCreateTag = vi.fn(() => deferred.promise)
+
+    render(
+      <TagPicker
+        tags={[{ id: "t1", name: "Work", createdAt: 1, updatedAt: 1 }]}
+        selectedTagIds={[]}
+        onSelectedTagIdsChange={vi.fn()}
+        onCreateTag={onCreateTag}
+        onRenameTag={vi.fn()}
+        onDeleteTag={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsPlaceholder",
+      }),
+    )
+    await user.type(
+      screen.getByPlaceholderText("accountDialog:form.tagsSearchPlaceholder"),
+      "Wor",
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:form.tagsCreate",
+      }),
+    )
+
+    const createButton = screen.getByRole("button", {
+      name: "common:status.creating",
+    })
+    expect(createButton).toBeDisabled()
+    expect(createButton).toHaveAttribute("aria-busy", "true")
+    await user.click(createButton)
+    expect(onCreateTag).toHaveBeenCalledTimes(1)
+
+    const renameButton = screen.getByRole("button", {
+      name: "accountDialog:form.tagsRename",
+    })
+    expect(renameButton).toBeDisabled()
+    expect(renameButton).not.toHaveAttribute("aria-busy")
+
+    deferred.resolve({
+      id: "t-new",
+      name: "Wor",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: "common:status.creating" }),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it("does not duplicate the selection when create resolves to an already-selected tag id", async () => {
     const user = userEvent.setup()
 
@@ -381,6 +450,55 @@ describe("TagPicker", () => {
     expect(onRenameTag).toHaveBeenCalledWith("t1", "Renamed")
   })
 
+  it("marks only the current tag rename busy and restores it after rejection", async () => {
+    const user = userEvent.setup()
+    const deferred = createDeferred<Tag>()
+    const onRenameTag = vi.fn(() => deferred.promise)
+
+    render(
+      <TagPicker
+        tags={[
+          { id: "t1", name: "Work", createdAt: 1, updatedAt: 1 },
+          { id: "t2", name: "Personal", createdAt: 1, updatedAt: 1 },
+        ]}
+        selectedTagIds={[]}
+        onSelectedTagIdsChange={vi.fn()}
+        onCreateTag={vi.fn()}
+        onRenameTag={onRenameTag}
+        onDeleteTag={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsPlaceholder",
+      }),
+    )
+    await user.click(
+      screen.getAllByLabelText("accountDialog:form.tagsRename")[0],
+    )
+    const input = screen.getByDisplayValue("Work")
+    await user.clear(input)
+    await user.type(input, "Renamed")
+    await user.click(screen.getByLabelText("accountDialog:form.tagsRenameSave"))
+
+    const saveButton = screen.getByRole("button", {
+      name: "common:status.saving",
+    })
+    expect(saveButton).toBeDisabled()
+    expect(saveButton).toHaveAttribute("aria-busy", "true")
+    const otherRenameButton = screen.getByLabelText(
+      "accountDialog:form.tagsRename",
+    )
+    expect(otherRenameButton).toBeDisabled()
+    expect(otherRenameButton).not.toHaveAttribute("aria-busy")
+
+    deferred.reject(new Error("rename failed"))
+    expect(
+      await screen.findByLabelText("accountDialog:form.tagsRenameSave"),
+    ).toBeEnabled()
+  })
+
   it("keeps inline rename pending when the edited name normalizes to empty", async () => {
     const user = userEvent.setup()
 
@@ -462,5 +580,66 @@ describe("TagPicker", () => {
       expect(onDeleteTag).toHaveBeenCalledWith("t1")
       expect(onSelectedTagIdsChange).toHaveBeenCalledWith([])
     })
+  })
+
+  it("marks only the current tag deletion busy and permits retry after failure", async () => {
+    const user = userEvent.setup()
+    const firstAttempt = createDeferred<{ updatedAccounts: number }>()
+    const onDeleteTag = vi
+      .fn()
+      .mockImplementationOnce(() => firstAttempt.promise)
+      .mockResolvedValueOnce({ updatedAccounts: 0 })
+
+    render(
+      <TagPicker
+        tags={[{ id: "t1", name: "Work", createdAt: 1, updatedAt: 1 }]}
+        selectedTagIds={[]}
+        onSelectedTagIdsChange={vi.fn()}
+        onCreateTag={vi.fn()}
+        onRenameTag={vi.fn()}
+        onDeleteTag={onDeleteTag}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsPlaceholder",
+      }),
+    )
+    await user.click(screen.getByLabelText("accountDialog:form.tagsDelete"))
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:form.tagsDeleteConfirm",
+      }),
+    )
+
+    const deleteButton = screen.getByRole("button", {
+      name: "common:status.deleting",
+    })
+    expect(deleteButton).toBeDisabled()
+    expect(deleteButton).toHaveAttribute("aria-busy", "true")
+    await user.click(deleteButton)
+    expect(onDeleteTag).toHaveBeenCalledTimes(1)
+
+    firstAttempt.reject(new Error("delete failed"))
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: "common:status.deleting" }),
+      ).not.toBeInTheDocument()
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:form.tagsPlaceholder",
+      }),
+    )
+    await user.click(screen.getByLabelText("accountDialog:form.tagsDelete"))
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:form.tagsDeleteConfirm",
+      }),
+    )
+
+    await waitFor(() => expect(onDeleteTag).toHaveBeenCalledTimes(2))
   })
 })

@@ -1,6 +1,6 @@
 import { ArrowPathIcon } from "@heroicons/react/24/outline"
 import { Cpu, KeyRound } from "lucide-react"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
@@ -22,17 +22,16 @@ import {
   type BatchVerifyModelItem,
 } from "~/features/ModelList/batchVerification"
 import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
   MODEL_MANAGEMENT_SOURCE_KINDS,
+  resolveModelManagementSource,
   type ModelManagementItemSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
   canCreateAccountApiTokens,
   canListAccountRuntimeKeys,
 } from "~/services/accounts/keyProductCapabilities"
-import {
-  getAllProviders,
-  MODEL_PROVIDER_FILTER_VALUES,
-} from "~/services/models/utils/modelProviders"
+import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -48,7 +47,11 @@ import {
 } from "~/services/verification/verificationResultHistory"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { openKeysPage, pushWithinOptionsPage } from "~/utils/navigation"
+import {
+  openKeysPage,
+  pushWithinOptionsPage,
+  replaceWithinOptionsPage,
+} from "~/utils/navigation"
 
 import { sortModelListAccounts } from "./accountOrdering"
 import { AccountSelector } from "./components/AccountSelector"
@@ -92,6 +95,7 @@ export default function ModelList(props: {
     "modelList",
     "account",
     "apiCredentialProfiles",
+    "common",
   ])
   const [isSourceSelectorOpen, setIsSourceSelectorOpen] = useState(false)
   const sourceSelectorTriggerRef = useRef<HTMLButtonElement>(null)
@@ -106,12 +110,13 @@ export default function ModelList(props: {
     setSelectedSourceValue,
     searchTerm,
     setSearchTerm,
-    selectedProvider,
     setSelectedProvider,
     sortMode,
     setSortMode,
     selectedBillingMode,
     setSelectedBillingMode,
+    selectedModelCapabilities,
+    setSelectedModelCapabilities,
     selectedGroups,
     setSelectedGroups,
     allAccountsExcludedGroupsByAccountId,
@@ -140,31 +145,34 @@ export default function ModelList(props: {
 
     filteredModels,
     accountSummaryCountsByAccountId,
-    allProvidersFilteredCount,
+    vendorCatalog,
+    unclassifiedVendorCount,
+    effectiveSelectedVendor,
+    shouldRepairSelectedVendor,
+    allVendorsFilteredCount,
     getFilteredModels,
     getFilteredResultCount,
     availableGroups,
+    singleSourceGroupRatios,
     availableAccountGroupsByAccountId,
     availableAccountGroupOptionsByAccountId,
+    supportsModelCapabilityFilter,
+    modelCapabilityMetadataCoverage,
 
     // Operations
     loadPricingData,
-    getProviderFilteredCount,
     accountQueryStates,
     allAccountsFilterAccountIds,
     setAllAccountsFilterAccountIds,
   } = useModelListData(routeParams)
 
-  const providers = getAllProviders()
   const hasAnySources = accounts.length > 0 || profiles.length > 0
 
-  const sortedProviders = useMemo(
-    () =>
-      [...providers].sort(
-        (a, b) => getProviderFilteredCount(b) - getProviderFilteredCount(a),
-      ),
-    [providers, getProviderFilteredCount],
-  )
+  useEffect(() => {
+    if (!shouldRepairSelectedVendor) return
+    setSelectedProvider(MODEL_VENDOR_FILTER_VALUES.All)
+  }, [setSelectedProvider, shouldRepairSelectedVendor])
+
   const sortedAccounts = useMemo(
     () =>
       sortModelListAccounts({
@@ -175,13 +183,35 @@ export default function ModelList(props: {
     [accountQueryStates, accountSummaryCountsByAccountId, accounts],
   )
 
+  const handleSelectedSourceValueChange = useCallback(
+    (sourceValue: string) => {
+      setSelectedSourceValue(sourceValue)
+
+      const source = resolveModelManagementSource({
+        value: sourceValue,
+        accounts,
+        profiles,
+      })
+      const searchParams =
+        source?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+          ? { accountId: source.account.id }
+          : source?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+            ? { profileId: source.profile.id }
+            : source?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
+              ? { accountId: ALL_ACCOUNTS_SOURCE_VALUE }
+              : undefined
+
+      replaceWithinOptionsPage(`#${MENU_ITEM_IDS.MODELS}`, searchParams)
+    },
+    [accounts, profiles, setSelectedSourceValue],
+  )
+
   const handleGroupClick = (group: string) => {
     setSelectedGroups([group])
   }
 
   const isAllAccountsScope =
     selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-  const displaySelectedGroups = isAllAccountsScope ? [] : selectedGroups
   const modelDisplayGroupSelectionScope = isAllAccountsScope
     ? MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
     : MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE
@@ -245,7 +275,7 @@ export default function ModelList(props: {
   const modelVerificationTargets = useMemo(() => {
     return filteredModels.reduce<ApiVerificationHistoryTarget[]>(
       (acc, item) => {
-        const source = item.source as ModelManagementItemSource
+        const source = item.source
         const modelId = item.model.model_name?.trim()
         if (!modelId) return acc
 
@@ -455,9 +485,7 @@ export default function ModelList(props: {
       showRealPrice={showRealPrice}
       showRatioColumn={showRatioColumn}
       showEndpointTypes={showEndpointTypes}
-      selectedGroups={displaySelectedGroups}
       handleGroupClick={handleGroupClick}
-      availableGroups={availableGroups}
       groupSelectionScope={modelDisplayGroupSelectionScope}
       isGroupSelectionInteractive={isModelGroupSelectionInteractive}
       displayCapabilities={sourceCapabilities}
@@ -510,14 +538,13 @@ export default function ModelList(props: {
               <Button
                 onClick={loadPricingData}
                 variant="secondary"
-                leftIcon={!isLoading && <ArrowPathIcon className="h-4 w-4" />}
+                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
                 loading={isLoading}
-                disabled={isLoading}
                 analyticsAction={
                   PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelPricingData
                 }
               >
-                {t("refreshData")}
+                {isLoading ? t("common:status.refreshing") : t("refreshData")}
               </Button>
             </ProductAnalyticsScope>
           ) : undefined
@@ -525,7 +552,7 @@ export default function ModelList(props: {
       />
       <AccountSelector
         selectedSourceValue={selectedSourceValue}
-        setSelectedSourceValue={setSelectedSourceValue}
+        setSelectedSourceValue={handleSelectedSourceValueChange}
         accounts={sortedAccounts}
         profiles={profiles}
         showAllAccountsGroupFilter={isAllAccountsScope}
@@ -693,17 +720,21 @@ export default function ModelList(props: {
             selectedSource={selectedSource}
             sourceCapabilities={sourceCapabilities}
             selectedSourceValue={selectedSourceValue}
-            setSelectedSourceValue={setSelectedSourceValue}
+            setSelectedSourceValue={handleSelectedSourceValueChange}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             sortMode={sortMode}
             setSortMode={setSortMode}
             selectedBillingMode={selectedBillingMode}
             setSelectedBillingMode={setSelectedBillingMode}
+            supportsModelCapabilityFilter={supportsModelCapabilityFilter}
+            modelCapabilityMetadataCoverage={modelCapabilityMetadataCoverage}
+            selectedModelCapabilities={selectedModelCapabilities}
+            setSelectedModelCapabilities={setSelectedModelCapabilities}
             selectedGroups={selectedGroups}
             setSelectedGroups={setSelectedGroups}
             availableGroups={availableGroups}
-            pricingData={pricingData}
+            singleSourceGroupRatios={singleSourceGroupRatios}
             showRealPrice={showRealPrice}
             setShowRealPrice={setShowRealPrice}
             showRatioColumn={showRatioColumn}
@@ -721,20 +752,25 @@ export default function ModelList(props: {
           />
 
           <ProviderTabs
-            providers={sortedProviders}
-            selectedProvider={selectedProvider}
+            vendorCatalog={vendorCatalog}
+            effectiveSelectedVendor={effectiveSelectedVendor}
             setSelectedProvider={setSelectedProvider}
-            allProvidersFilteredCount={allProvidersFilteredCount}
-            getProviderFilteredCount={getProviderFilteredCount}
+            allVendorsFilteredCount={allVendorsFilteredCount}
+            unclassifiedVendorCount={unclassifiedVendorCount}
           >
-            <TabsContent value={MODEL_PROVIDER_FILTER_VALUES.ALL}>
+            <TabsContent value={MODEL_VENDOR_FILTER_VALUES.All}>
               {renderModelDisplay()}
             </TabsContent>
-            {providers.map((provider) => (
-              <TabsContent key={provider} value={provider}>
+            {vendorCatalog.map((vendor) => (
+              <TabsContent key={vendor.key} value={vendor.key}>
                 {renderModelDisplay()}
               </TabsContent>
             ))}
+            {unclassifiedVendorCount > 0 && (
+              <TabsContent value={MODEL_VENDOR_FILTER_VALUES.Unclassified}>
+                {renderModelDisplay()}
+              </TabsContent>
+            )}
           </ProviderTabs>
 
           <Footer showPricingNote={sourceCapabilities.supportsPricing} />

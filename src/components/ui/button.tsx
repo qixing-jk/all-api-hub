@@ -7,8 +7,14 @@ import { useProductAnalyticsActionTracking } from "~/hooks/useProductAnalyticsAc
 import { cn } from "~/lib/utils"
 import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnalytics/actionConfig"
 
+type SlottedChildProps = React.AriaAttributes & {
+  disabled?: boolean
+  onClick?: React.MouseEventHandler<HTMLElement>
+  tabIndex?: number
+}
+
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
@@ -68,6 +74,7 @@ function Button({
   analyticsAction,
   onClick,
   disabled,
+  "aria-busy": ariaBusy,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
@@ -99,14 +106,34 @@ function Button({
       size={resolvedSpinnerSize}
       variant={resolvedSpinnerVariant}
       {...restSpinnerProps}
+      aria-hidden="true"
     />
   ) : (
     leftIcon
   )
+  const resolvedChildren =
+    asChild && isDisabled && React.isValidElement<SlottedChildProps>(children)
+      ? React.cloneElement(children, {
+          ...(loading ? { "aria-busy": true } : {}),
+          "aria-disabled": true,
+          ...(children.type === "button" ? { disabled: true } : {}),
+          onClick: (event) => {
+            event.preventDefault()
+            event.stopPropagation()
+          },
+          tabIndex: -1,
+        })
+      : children
   const handleClick: React.MouseEventHandler<HTMLButtonElement> = (event) => {
+    if (isDisabled) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+
     onClick?.(event)
 
-    if (event.defaultPrevented || isDisabled || !analyticsAction) {
+    if (event.defaultPrevented || !analyticsAction) {
       return
     }
 
@@ -117,12 +144,13 @@ function Button({
     <Comp
       data-slot="button"
       className={cn(buttonVariants({ variant, size, bleed, className }))}
-      disabled={isDisabled}
+      disabled={asChild ? undefined : isDisabled}
       onClick={handleClick}
       {...props}
+      aria-busy={loading ? true : ariaBusy}
     >
       {resolvedLeftIcon && <span>{resolvedLeftIcon}</span>}
-      <Slot.Slottable>{children}</Slot.Slottable>
+      <Slot.Slottable>{resolvedChildren}</Slot.Slottable>
       {rightIcon && <span>{rightIcon}</span>}
     </Comp>
   )

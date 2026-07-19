@@ -40,6 +40,13 @@ const mockResolveDisplayAccountTokenForSecret = vi.fn()
 const mockFetchOpenAICompatibleModels = vi.fn()
 const mockImportToClaudeCodeRouter = vi.fn()
 const mockShowResultToast = vi.fn()
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+  return { promise, resolve }
+}
 const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
   vi.hoisted(() => ({
     startProductAnalyticsActionMock: vi.fn(),
@@ -104,10 +111,15 @@ describe("ClaudeCodeRouterImportDialog", () => {
   it("prefills provider fields, refetches models for edited endpoints, and submits trimmed values", async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
+    const importDeferred = createDeferred<{
+      success: boolean
+      message: string
+    }>()
 
     mockFetchOpenAICompatibleModels
       .mockResolvedValueOnce([{ id: "z-model" }, { id: "" }, { id: "a-model" }])
       .mockResolvedValueOnce([{ id: "edited-model" }])
+    mockImportToClaudeCodeRouter.mockReturnValueOnce(importDeferred.promise)
 
     render(
       <ClaudeCodeRouterImportDialog
@@ -180,6 +192,20 @@ describe("ClaudeCodeRouterImportDialog", () => {
       screen.getByRole("button", { name: "common:actions.import" }),
     )
 
+    const submittingButton = screen.getByRole("button", {
+      name: "common:status.importing",
+    })
+    expect(submittingButton).toHaveAttribute("aria-busy", "true")
+    expect(submittingButton).toBeDisabled()
+    const cancelButton = screen.getByRole("button", {
+      name: "common:actions.cancel",
+    })
+    expect(cancelButton).not.toHaveAttribute("aria-busy")
+    expect(cancelButton).toBeEnabled()
+
+    await user.click(submittingButton)
+    expect(mockImportToClaudeCodeRouter).toHaveBeenCalledTimes(1)
+
     await waitFor(() => {
       expect(mockImportToClaudeCodeRouter).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -194,13 +220,17 @@ describe("ClaudeCodeRouterImportDialog", () => {
       )
     })
 
-    expect(mockShowResultToast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: true,
-        message: "ok",
-      }),
-    )
-    expect(onClose).toHaveBeenCalledTimes(1)
+    importDeferred.resolve({ success: true, message: "ok" })
+
+    await waitFor(() => {
+      expect(mockShowResultToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          message: "ok",
+        }),
+      )
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
   })
 
   it("clears model suggestions when the provider endpoint becomes blank", async () => {

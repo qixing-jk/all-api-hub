@@ -46,7 +46,6 @@
   "allBillingModes": "Todos los modos de facturación",
   "allGroups": "Todos los grupos",
   "allProviders": "Todos los proveedores",
-  "availableGroups": "Grupos disponibles",
   "batchVerify": {
     "actions": {
       "open": "Prueba por lotes",
@@ -115,6 +114,7 @@
     "tooltip": "Borra los filtros actuales, cambia a todas las cuentas y ordena cada modelo por el precio más bajo."
   },
   "copyAllNames": "Copiar todos los nombres de modelos",
+  "currentUsableGroups": "Grupos utilizables por la cuenta actual",
   "description": "Ver y administrar modelos de IA disponibles",
   "detailedPricing": "Precios detallados",
   "displayOptions": "Opciones de visualización:",
@@ -127,7 +127,9 @@
     "description": "Este catálogo se carga actualmente mediante una alternativa con clave de cuenta, por lo que solo admite descubrimiento y verificación de modelos. Actualizar datos reintentará la ruta directa de la cuenta.",
     "title": "Catálogo alternativo con clave de cuenta"
   },
+  "groupRatio": "Proporción del grupo:",
   "groupRatioTooltip": "Proporción del grupo {{group}}: {{ratio}}x",
+  "groupRatioUnavailable": "Multiplicador de grupo no disponible",
   "groupSelectionHint": "Deja esto vacío para comparar entre todos los grupos; el ordenamiento por precio usa el mejor precio dentro del conjunto de grupos seleccionado",
   "input": "Entrada:",
   "input1MTokens": "Entrada (1M tokens)",
@@ -175,9 +177,50 @@
     "modelNamesCopied": "Nombres de modelos copiados",
     "siteUrlCopied": "URL del sitio copiada"
   },
+  "modelCapabilityFilter": {
+    "coverageHint_one": "{{count}} modelo de esta lista aún no tiene detalles de capacidades, por eso los filtros de capacidades lo omiten.",
+    "coverageHint_many": "{{count}} modelos de esta lista aún no tienen detalles de capacidades, por eso los filtros de capacidades los omiten.",
+    "coverageHint_other": "{{count}} modelos de esta lista aún no tienen detalles de capacidades, por eso los filtros de capacidades los omiten.",
+    "descriptions": {
+      "attachment": "Admite adjuntos cargados como contexto de entrada.",
+      "audioInput": "Admite entrada de audio.",
+      "audioOutput": "Admite salida de audio.",
+      "imageInput": "Admite imágenes cargadas para reconocimiento, análisis o comprensión visual.",
+      "imageOutput": "Admite generar imágenes directamente como salida del modelo.",
+      "pdf": "Admite entrada de documentos PDF.",
+      "reasoning": "Admite razonamiento explícito o pasos de pensamiento.",
+      "structuredOutput": "Admite salida estructurada o restricciones de esquema JSON.",
+      "toolCall": "Admite llamadas a herramientas o funciones.",
+      "videoInput": "Admite entrada de video.",
+      "videoOutput": "Admite salida de video."
+    },
+    "groups": {
+      "capabilities": "Capacidades:",
+      "input": "Entrada:",
+      "output": "Salida:"
+    },
+    "label": "Capacidades del modelo",
+    "options": {
+      "all": "Todas las capacidades",
+      "attachment": "Adjuntos",
+      "audioInput": "Entrada de audio",
+      "audioOutput": "Salida de audio",
+      "imageInput": "Entrada de imagen",
+      "imageOutput": "Generación de imagen",
+      "pdf": "PDF",
+      "reasoning": "Razonamiento",
+      "structuredOutput": "Salida estructurada",
+      "toolCall": "Llamada a herramientas",
+      "videoInput": "Entrada de video",
+      "videoOutput": "Salida de video"
+    },
+    "selectionHint": "Cuando se seleccionan varias capacidades, los modelos deben coincidir con todas las capacidades seleccionadas."
+  },
+  "modelRatio": "Proporción del modelo:",
   "noMatchingModels": "No se encontraron modelos coincidentes",
   "noSourcesDescription": "Agrega una cuenta de sitio o una credencial de API antes de ver la lista de modelos.",
   "noSourcesTitle": "Aún no hay fuentes de modelos",
+  "noUsableGroupsForModel": "Esta cuenta no tiene ningún grupo utilizable para este modelo.",
   "optimalGroup": "Mejor grupo: {{group}}",
   "optimalGroupLowestPriceWithinAccountFilters": "Mejor grupo dentro del filtro actual de grupos de cuenta: {{group}}. Esta fila también tiene el precio más bajo dentro del mismo modo de facturación.",
   "optimalGroupLowestPriceWithinBillingMode": "Mejor grupo dentro de los grupos seleccionados: {{group}}. Esta fila también tiene el precio más bajo dentro del mismo modo de facturación.",
@@ -195,10 +238,11 @@
     "title": "Catálogo de modelos respaldado por perfil"
   },
   "providerTabs": {
-    "scrollLeft": "Desplazar pestañas de proveedor a la izquierda",
-    "scrollRight": "Desplazar pestañas de proveedor a la derecha"
+    "scrollLeft": "Desplazar pestañas de fabricante a la izquierda",
+    "scrollRight": "Desplazar pestañas de fabricante a la derecha",
+    "unclassified": "Sin clasificar",
+    "unclassifiedDescription": "No se pudo identificar el proveedor; esto no significa que el modelo no esté disponible."
   },
-  "ratio": "Proporción:",
   "realAmount": "Monto real de recarga",
   "refreshData": "Actualizar datos",
   "runtimeKeyFallbackSourceNotice": {
@@ -213,6 +257,7 @@
   "showing_many": "Mostrando {{count}} modelos",
   "showing_other": "Mostrando {{count}} modelos",
   "showRatio": "Mostrar proporción",
+  "siteSupportedGroups": "Grupos compatibles con el sitio",
   "sortBy": "Ordenar por",
   "sortOptions": {
     "default": "Orden predeterminado",
@@ -271,6 +316,7 @@
   "totalModels_other": "Total {{count}} modelos",
   "unavailable": "No disponible",
   "unavailablePriceReasons": {
+    "groupRatioUnavailable": "El precio no está disponible porque este grupo utilizable no tiene multiplicador.",
     "keyGroupUnknown": "Los precios no están disponibles porque no se pudo resolver el grupo de Sub2API de esta clave.",
     "modelListOnly": "Los modelos están disponibles para esta clave. Los precios no están disponibles.",
     "officialPriceMissing": "Este modelo no está en la tabla de precios.",

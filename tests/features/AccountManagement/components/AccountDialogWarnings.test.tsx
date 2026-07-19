@@ -12,9 +12,11 @@ const { openLoginTabMock, reloadCurrentTabMock } = vi.hoisted(() => ({
   reloadCurrentTabMock: vi.fn(),
 }))
 
-const { openSiteSupportRequestPageMock } = vi.hoisted(() => ({
-  openSiteSupportRequestPageMock: vi.fn(),
-}))
+const { openApiCredentialProfilesPageMock, openSiteSupportRequestPageMock } =
+  vi.hoisted(() => ({
+    openApiCredentialProfilesPageMock: vi.fn(),
+    openSiteSupportRequestPageMock: vi.fn(),
+  }))
 
 vi.mock("~/services/accounts/utils/autoDetectUtils", async () => {
   const actual = await vi.importActual<
@@ -45,6 +47,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 
   return {
     ...actual,
+    openApiCredentialProfilesPage: openApiCredentialProfilesPageMock,
     openSiteSupportRequestPage: openSiteSupportRequestPageMock,
   }
 })
@@ -53,6 +56,7 @@ describe("AccountDialog warnings", () => {
   beforeEach(() => {
     openLoginTabMock.mockReset()
     reloadCurrentTabMock.mockReset()
+    openApiCredentialProfilesPageMock.mockReset()
     openSiteSupportRequestPageMock.mockReset()
     ;(browser.tabs as any).create = vi.fn()
   })
@@ -224,6 +228,57 @@ describe("AccountDialog warnings", () => {
       errorType: AutoDetectErrorType.NOT_FOUND,
       errorMessage: "Site was not recognized",
     })
+  })
+
+  it("guides users to API credential profiles after detection failures with a site URL", () => {
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.INVALID_RESPONSE,
+          message: "Unexpected site response",
+        }}
+        siteUrl="https://relay.example.com/console"
+      />,
+    )
+
+    expect(
+      screen.getByText("apiCredentialFallback.siteSupport.description"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("apiCredentialFallback.apiCredentials.description"),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "actions.openApiCredentialProfiles",
+      }),
+    )
+
+    expect(openApiCredentialProfilesPageMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("prefers a custom API credential profiles handler when provided", () => {
+    const onApiCredentialProfilesClick = vi.fn()
+
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.INVALID_RESPONSE,
+          message: "Unexpected site response",
+        }}
+        siteUrl="https://relay.example.com/console"
+        onApiCredentialProfilesClick={onApiCredentialProfilesClick}
+      />,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "actions.openApiCredentialProfiles",
+      }),
+    )
+
+    expect(onApiCredentialProfilesClick).toHaveBeenCalledTimes(1)
+    expect(openApiCredentialProfilesPageMock).not.toHaveBeenCalled()
   })
 
   it("renders the exact-match duplicate warning for numeric user ids and stringifies missing usernames", () => {

@@ -107,6 +107,11 @@ import {
   hasValidManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
 import {
+  isManagedSiteFeatureResourceSliceEnabled,
+  MANAGED_UPSTREAM_RESOURCE_FEATURES,
+} from "~/services/managedSites/managedUpstreamResourceMigration"
+import { resolveManagedUpstreamResourceCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
+import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteMessagesKeyFromSiteType,
   getManagedSiteTargetOptions,
@@ -130,6 +135,10 @@ import {
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
+import {
+  createManagedUpstreamResourceRef,
+  normalizeManagedUpstreamResourceScopeKey,
+} from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
 import {
   navigateWithinOptionsPage,
@@ -215,7 +224,13 @@ export function upsertChannelRow(rows: ChannelRow[], channel: ChannelRow) {
     return [channel, ...rows]
   }
 
-  return rows.map((row, index) => (index === existingIndex ? channel : row))
+  const existing = rows[existingIndex]
+  const nextChannel =
+    channel.resourceRef || !existing.resourceRef
+      ? channel
+      : { ...channel, resourceRef: existing.resourceRef }
+
+  return rows.map((row, index) => (index === existingIndex ? nextChannel : row))
 }
 
 /**
@@ -266,6 +281,68 @@ function getManagedSiteChannelStatusFilterLabel(t: TFunction, value: string) {
     default:
       return t("managedSiteChannels:statusLabels.unknown")
   }
+}
+
+const getManagedUpstreamResourceId = (
+  managedSiteType: ManagedSiteType,
+  channel: ChannelRow,
+) => {
+  if (managedSiteType === SITE_TYPES.AXON_HUB) {
+    const nativeId = (
+      channel as ChannelRow & { _axonHubData?: { id?: string | number } }
+    )._axonHubData?.id
+    if (nativeId !== undefined && nativeId !== null) {
+      return nativeId
+    }
+  }
+
+  return channel.id
+}
+
+export const attachChannelFilterResourceRef = (params: {
+  channel: ChannelRow
+  managedSiteType: ManagedSiteType
+  baseUrl: string
+}): ChannelRow => {
+  const { channel, managedSiteType, baseUrl } = params
+  const scopeKey = normalizeManagedUpstreamResourceScopeKey(baseUrl)
+
+  if (!scopeKey) {
+    return channel
+  }
+
+  return {
+    ...channel,
+    resourceRef: createManagedUpstreamResourceRef({
+      managedSiteType,
+      scopeKey,
+      resourceId: getManagedUpstreamResourceId(managedSiteType, channel),
+    }),
+  }
+}
+
+const attachChannelFilterResourceRefs = (params: {
+  channels: ChannelRow[]
+  managedSiteType: ManagedSiteType
+  baseUrl: string
+}): ChannelRow[] => {
+  const { channels, managedSiteType, baseUrl } = params
+  const isEnabled = isManagedSiteFeatureResourceSliceEnabled(
+    managedSiteType,
+    MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelFilters,
+  )
+
+  if (!isEnabled) {
+    return channels
+  }
+
+  return channels.map((channel) =>
+    attachChannelFilterResourceRef({
+      channel,
+      managedSiteType,
+      baseUrl,
+    }),
+  )
 }
 
 /**
@@ -341,6 +418,8 @@ export default function ManagedSiteChannels({
   const [isMigrationMode, setIsMigrationMode] = useState(false)
   const searchInputRef = useRef<HTMLInputElement | null>(null)
   const activeRefreshRef = useRef<ActiveRefresh | null>(null)
+  const channelFilterResourceScopeBaseUrlRef = useRef("")
+  const editOpenGenerationRef = useRef(0)
   const refreshAnalyticsCompletionRef =
     useRef<RefreshAnalyticsCompletion | null>(null)
   const verification = useNewApiManagedVerification()
@@ -421,7 +500,14 @@ export default function ManagedSiteChannels({
         const response = await service.listChannels(config, {
           signal: refreshAbortController.signal,
         })
-        const items = response.items ?? []
+        const resourceScopeBaseUrl = String(
+          (config as { baseUrl?: string }).baseUrl ?? "",
+        )
+        const items = attachChannelFilterResourceRefs({
+          channels: response.items ?? [],
+          managedSiteType,
+          baseUrl: resourceScopeBaseUrl,
+        })
         if (
           activeRefreshRef.current !== activeRefresh ||
           refreshAbortController.signal.aborted
@@ -436,6 +522,7 @@ export default function ManagedSiteChannels({
           return
         }
 
+        channelFilterResourceScopeBaseUrlRef.current = resourceScopeBaseUrl
         setChannels(items)
         completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
@@ -479,7 +566,7 @@ export default function ManagedSiteChannels({
         }
       }
     },
-    [isConfigMissing, managedSiteAnalyticsType, t],
+    [isConfigMissing, managedSiteAnalyticsType, managedSiteType, t],
   )
 
   const cancelRefresh = useCallback(() => {
@@ -504,6 +591,8 @@ export default function ManagedSiteChannels({
   }, [managedSiteAnalyticsType])
 
   useLayoutEffect(() => {
+    editOpenGenerationRef.current += 1
+    channelFilterResourceScopeBaseUrlRef.current = ""
     setChannels([])
     setError(null)
   }, [managedSiteType])
@@ -546,7 +635,18 @@ export default function ManagedSiteChannels({
     }
   }, [refreshChannels, refreshKey])
 
+  const attachMutationChannelResourceRef = useCallback(
+    (channel: ChannelRow) =>
+      attachChannelFilterResourceRefs({
+        channels: [channel],
+        managedSiteType,
+        baseUrl: channelFilterResourceScopeBaseUrlRef.current,
+      })[0] ?? channel,
+    [managedSiteType],
+  )
+
   const handleOpenCreateDialog = useCallback(() => {
+    editOpenGenerationRef.current += 1
     openWithCustom({
       mode: undefined,
       onMutationOutcome: (outcome) => {
@@ -573,25 +673,37 @@ export default function ManagedSiteChannels({
       onSuccess: (response) => {
         toast.success(t("toasts.channelSaved"))
         if (isChannelRowLike(response?.data)) {
-          setChannels((prev) => upsertChannelRow(prev, response.data))
+          const channel = attachMutationChannelResourceRef(response.data)
+          setChannels((prev) => upsertChannelRow(prev, channel))
         } else {
           void refreshChannels()
         }
       },
     })
-  }, [managedSiteAnalyticsType, openWithCustom, refreshChannels, t])
+  }, [
+    attachMutationChannelResourceRef,
+    managedSiteAnalyticsType,
+    openWithCustom,
+    refreshChannels,
+    t,
+  ])
 
   const openChannelDialogForMode = useCallback(
     (channel: ChannelRow, mode: DialogMode) => {
+      const openGeneration = ++editOpenGenerationRef.current
       const groups =
         channel.group?.split(",").map((value) => value.trim()) ?? []
       const models =
         channel.models?.split(",").map((value) => value.trim()) ?? []
+      const resourceResolution =
+        mode === DIALOG_MODES.EDIT
+          ? resolveManagedUpstreamResourceCapabilities(managedSiteType)
+          : null
       const shouldOfferRealKeyLoading =
         needsManagedSiteChannelKeyResolution(channel.key) &&
         (isNewApiManagedSite || supportsDetailBackedRealKeyLoading)
 
-      openWithCustom({
+      const dialogOptions: Parameters<typeof openWithCustom>[0] = {
         mode,
         channel,
         initialValues: {
@@ -639,9 +751,45 @@ export default function ManagedSiteChannels({
                     )
                   }
 
+                  if (
+                    resourceResolution?.supported &&
+                    resourceResolution.capabilities.secrets?.revealSecret
+                  ) {
+                    const resourceRef = createManagedUpstreamResourceRef({
+                      managedSiteType,
+                      scopeKey: normalizeManagedUpstreamResourceScopeKey(
+                        String((config as { baseUrl?: string }).baseUrl ?? ""),
+                      ),
+                      resourceId: getManagedUpstreamResourceId(
+                        managedSiteType,
+                        channel,
+                      ),
+                    })
+                    const result =
+                      await resourceResolution.capabilities.secrets.revealSecret(
+                        config,
+                        resourceRef,
+                      )
+                    if (result.status === "available") {
+                      setKey(result.secret)
+                      return
+                    }
+
+                    const revealFailureMessage =
+                      result.message ??
+                      (result.status === "masked"
+                        ? t("managedSiteChannels:toasts.revealKeyMasked")
+                        : result.status === "unsupported"
+                          ? t("managedSiteChannels:toasts.revealKeyUnsupported")
+                          : t(
+                              "managedSiteChannels:toasts.revealKeyUnavailable",
+                            ))
+                    throw new Error(revealFailureMessage)
+                  }
+
                   if (!service.fetchChannelSecretKey) {
                     throw new Error(
-                      "Channel key loading is not supported for this managed site",
+                      t("managedSiteChannels:toasts.revealKeyUnsupported"),
                     )
                   }
 
@@ -668,7 +816,10 @@ export default function ManagedSiteChannels({
             ? (response) => {
                 toast.success(t("toasts.channelUpdated"))
                 if (isChannelRowLike(response?.data)) {
-                  setChannels((prev) => upsertChannelRow(prev, response.data))
+                  const updatedChannel = attachMutationChannelResourceRef(
+                    response.data,
+                  )
+                  setChannels((prev) => upsertChannelRow(prev, updatedChannel))
                 } else {
                   void refreshChannels()
                 }
@@ -700,10 +851,54 @@ export default function ManagedSiteChannels({
                 })
               }
             : undefined,
-      })
+      }
+
+      if (resourceResolution?.supported) {
+        void (async () => {
+          try {
+            const service = await getManagedSiteService()
+            const config = await service.getConfig()
+            if (!config) {
+              throw new Error(
+                getManagedSiteConfigMissingMessage(t, service.messagesKey),
+              )
+            }
+            if (editOpenGenerationRef.current !== openGeneration) {
+              return
+            }
+
+            await openWithCustom({
+              ...dialogOptions,
+              resourceEdit: {
+                config,
+                ref: createManagedUpstreamResourceRef({
+                  managedSiteType,
+                  scopeKey: normalizeManagedUpstreamResourceScopeKey(
+                    String((config as { baseUrl?: string }).baseUrl ?? ""),
+                  ),
+                  resourceId: getManagedUpstreamResourceId(
+                    managedSiteType,
+                    channel,
+                  ),
+                }),
+                capabilities: resourceResolution.capabilities,
+              },
+            })
+          } catch (error) {
+            if (editOpenGenerationRef.current === openGeneration) {
+              toast.error(getErrorMessage(error))
+            }
+          }
+        })()
+        return
+      }
+
+      void openWithCustom(dialogOptions)
     },
     [
+      attachMutationChannelResourceRef,
       isNewApiManagedSite,
+      managedSiteType,
       managedSiteAnalyticsType,
       newApiBaseUrl,
       newApiPassword,
@@ -1405,6 +1600,7 @@ export default function ManagedSiteChannels({
                 <>
                   <Button
                     variant="outline"
+                    aria-busy={isLoading}
                     data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton}
                     {...{
                       [MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE]: isLoading
@@ -1932,6 +2128,7 @@ export default function ManagedSiteChannels({
         description={t("dialog.deleteDescription")}
         cancelLabel={t("dialog.cancel")}
         confirmLabel={t("dialog.confirm")}
+        workingLabel={t("common:status.deleting")}
         confirmButtonTestId={
           MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton
         }

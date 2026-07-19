@@ -9,6 +9,7 @@ import {
   resolveAccountBrowserSession,
 } from "~/services/accountBrowserSession"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const {
   mockGetAllTabs,
@@ -392,6 +393,41 @@ describe("account browser-session reader", () => {
         requestId: expect.stringMatching(/^test-session-/),
       }),
     )
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        tempWindowRequestSource: expect.anything(),
+      }),
+    )
+  })
+
+  it("passes popup temp-window source and the explicit minimize override without persisting either", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "11",
+        user: { username: "temp-user" },
+        accessToken: "temp-token",
+      },
+    })
+
+    const session = await resolveAccountBrowserSession({
+      baseUrl: "https://example.invalid",
+      siteType: SITE_TYPES.SUB2API,
+      useTempWindow: true,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      suppressMinimize: false,
+    })
+
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AutoDetectSite,
+        url: "https://example.invalid",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        suppressMinimize: false,
+      }),
+    )
+    expect(session).not.toHaveProperty("tempWindowRequestSource")
+    expect(session).not.toHaveProperty("suppressMinimize")
   })
 
   it("notifies callers about temp-window read errors without throwing", async () => {

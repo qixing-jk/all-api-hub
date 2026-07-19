@@ -86,6 +86,24 @@ describe("AllAccountsGroupFilterMenu", () => {
     expect(onExcludedGroupsChange).not.toHaveBeenCalled()
   })
 
+  it("renders unpriced groups without inventing a 1x ratio", async () => {
+    const user = userEvent.setup()
+    renderMenu({
+      availableAccountGroupOptionsByAccountId: {
+        "account-1": [{ name: "vip" }, { name: "default", ratio: 1 }],
+      },
+    })
+
+    await openAccountGroupFilterMenu(user)
+    await user.click(getAccountSection("Primary Account").getByRole("combobox"))
+
+    expect(await screen.findByRole("option", { name: "vip" })).toBeVisible()
+    expect(screen.getByRole("option", { name: "default (1x)" })).toBeVisible()
+    expect(
+      screen.queryByRole("option", { name: "vip (1x)" }),
+    ).not.toBeInTheDocument()
+  })
+
   it("sets excluded groups when a selected group is removed from an account", async () => {
     const user = userEvent.setup()
     const { onExcludedGroupsChange } = renderMenu()

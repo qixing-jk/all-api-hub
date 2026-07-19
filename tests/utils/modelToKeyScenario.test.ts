@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { runModelListCatalogScenario } from "~~/e2e/scenarios/modelListCatalog"
 import { runModelToKeyManagementScenario } from "~~/e2e/scenarios/modelToKeyManagement"
 import { expectPermissionOnboardingHidden } from "~~/e2e/utils/extensionState"
@@ -20,7 +21,6 @@ const mocks = vi.hoisted(() => ({
     toBe: vi.fn(),
   })),
   runModelListCatalogScenario: vi.fn(),
-  waitForExtensionPage: vi.fn(),
   deleteTokenFromKeyManagementPage: vi.fn(),
   expectPermissionOnboardingHidden: vi.fn(),
   waitForExtensionRoot: vi.fn(),
@@ -32,10 +32,6 @@ vi.mock("~~/e2e/fixtures/extensionTest", () => ({
 
 vi.mock("~~/e2e/scenarios/modelListCatalog", () => ({
   runModelListCatalogScenario: mocks.runModelListCatalogScenario,
-}))
-
-vi.mock("~~/e2e/utils/commonUserFlows", () => ({
-  waitForExtensionPage: mocks.waitForExtensionPage,
 }))
 
 vi.mock("~~/e2e/utils/accountLifecycle", () => ({
@@ -53,24 +49,16 @@ vi.mock("~~/e2e/utils/lazyLoading", () => ({
 describe("model-to-key E2E scenario", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.expect.mockImplementation((_locator?: unknown) => ({
-      toBeVisible: vi.fn().mockResolvedValue(undefined),
-      toHaveCount: vi.fn().mockResolvedValue(undefined),
-      toHaveValue: vi.fn().mockResolvedValue(undefined),
-      toHaveURL: vi.fn().mockResolvedValue(undefined),
-      toBe: vi.fn(),
-    }))
+    mocks.expect.mockImplementation(createE2eAssertions)
   })
 
   it("creates a model-scoped key from an account model catalog and opens Key Management", async () => {
-    const modelPage = createModelPage()
-    const keysPage = createKeysPage()
+    const page = createModelToKeyPage()
 
-    vi.mocked(runModelListCatalogScenario).mockResolvedValue(modelPage)
-    vi.mocked(mocks.waitForExtensionPage).mockResolvedValue(keysPage)
+    vi.mocked(runModelListCatalogScenario).mockResolvedValue(page)
 
-    await runModelToKeyManagementScenario({
-      page: {} as any,
+    const result = await runModelToKeyManagementScenario({
+      page,
       extensionId: "extension-id",
       accountId: "account-1",
       modelId: "gpt-model-key-mini",
@@ -81,48 +69,36 @@ describe("model-to-key E2E scenario", () => {
     })
 
     expect(runModelListCatalogScenario).toHaveBeenCalledWith({
-      page: {},
+      page,
       extensionId: "extension-id",
       source: { accountId: "account-1" },
       expectations: undefined,
     })
-    expect(mocks.waitForExtensionPage).toHaveBeenCalledWith(
-      "browser-context",
-      expect.objectContaining({
-        extensionId: "extension-id",
-        hash: "#keys",
-        reuseExistingPage: false,
-        searchParams: { accountId: "account-1" },
-      }),
+    expect(result).toBe(page)
+    expect(page.url()).toBe(
+      "chrome-extension://extension-id/options.html?accountId=account-1#keys",
     )
-    expect(waitForExtensionRoot).toHaveBeenCalledWith(keysPage)
-    expect(expectPermissionOnboardingHidden).toHaveBeenCalledWith(keysPage)
+    expect(waitForExtensionRoot).toHaveBeenCalledWith(page)
+    expect(expectPermissionOnboardingHidden).toHaveBeenCalledWith(page)
   })
 
   it("uses the first visible catalog model when no model id is configured", async () => {
-    const modelPage = createModelPage({
+    const page = createModelToKeyPage({
       inferredTokenName: "model gpt-visible-real-site-model",
-    })
-    const keysPage = createKeysPage({
       createdTokenName: "model gpt-visible-real-site-model",
-      url: vi.fn(
-        () =>
-          "chrome-extension://extension-id/options.html?accountId=account-1#keys",
-      ),
     })
 
-    vi.mocked(runModelListCatalogScenario).mockResolvedValue(modelPage)
-    vi.mocked(mocks.waitForExtensionPage).mockResolvedValue(keysPage)
+    vi.mocked(runModelListCatalogScenario).mockResolvedValue(page)
 
     await runModelToKeyManagementScenario({
-      page: {} as any,
+      page,
       extensionId: "extension-id",
       accountId: "account-1",
       cleanupCreatedKey: true,
     })
 
     expect(mocks.deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
-      page: keysPage,
+      page,
       token: {
         id: "created-token-id",
         name: "model gpt-visible-real-site-model",
@@ -131,26 +107,23 @@ describe("model-to-key E2E scenario", () => {
   })
 
   it("cleans up the actual Key Management token row when the backend normalizes the submitted name", async () => {
-    const modelPage = createModelPage({
+    const page = createModelToKeyPage({
       inferredTokenName: "model [official]claude-opus",
       selectedCompatibleKeyName: "model 【official】claude-opus",
-    })
-    const keysPage = createKeysPage({
       createdTokenName: "model 【official】claude-opus",
     })
 
-    vi.mocked(runModelListCatalogScenario).mockResolvedValue(modelPage)
-    vi.mocked(mocks.waitForExtensionPage).mockResolvedValue(keysPage)
+    vi.mocked(runModelListCatalogScenario).mockResolvedValue(page)
 
     await runModelToKeyManagementScenario({
-      page: {} as any,
+      page,
       extensionId: "extension-id",
       accountId: "account-1",
       cleanupCreatedKey: true,
     })
 
     expect(mocks.deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
-      page: keysPage,
+      page,
       token: {
         id: "created-token-id",
         name: "model 【official】claude-opus",
@@ -159,16 +132,14 @@ describe("model-to-key E2E scenario", () => {
   })
 
   it("ignores the compatible key select placeholder when resolving the created Key Management token", async () => {
-    const modelPage = createModelPage({
+    const page = createModelToKeyPage({
       selectedCompatibleKeyName: "Select a key",
     })
-    const keysPage = createKeysPage()
 
-    vi.mocked(runModelListCatalogScenario).mockResolvedValue(modelPage)
-    vi.mocked(mocks.waitForExtensionPage).mockResolvedValue(keysPage)
+    vi.mocked(runModelListCatalogScenario).mockResolvedValue(page)
 
     await runModelToKeyManagementScenario({
-      page: {} as any,
+      page,
       extensionId: "extension-id",
       accountId: "account-1",
       modelId: "gpt-model-key-mini",
@@ -176,38 +147,38 @@ describe("model-to-key E2E scenario", () => {
       cleanupCreatedKey: true,
     })
 
-    expect(keysPage.getByRole).toHaveBeenCalledWith("heading", {
+    expect(page.getByRole).toHaveBeenCalledWith("heading", {
       name: "model gpt-model-key-mini",
       exact: true,
     })
-    expect(keysPage.getByRole).not.toHaveBeenCalledWith("heading", {
+    expect(page.getByRole).not.toHaveBeenCalledWith("heading", {
       name: "Select a key",
       exact: true,
     })
   })
 
   it("still verifies the model key dialog leaves the empty state when the compatible key select shows a placeholder", async () => {
-    const modelPage = createModelPage({
+    const page = createModelToKeyPage({
       selectedCompatibleKeyName: "Select a key",
     })
-    const keysPage = createKeysPage()
 
-    vi.mocked(runModelListCatalogScenario).mockResolvedValue(modelPage)
-    vi.mocked(mocks.waitForExtensionPage).mockResolvedValue(keysPage)
+    vi.mocked(runModelListCatalogScenario).mockResolvedValue(page)
 
     await runModelToKeyManagementScenario({
-      page: {} as any,
+      page,
       extensionId: "extension-id",
       accountId: "account-1",
       modelId: "gpt-model-key-mini",
       createdKeyName: "model gpt-model-key-mini",
     })
 
-    expect(modelPage.keyDialog.getByText).toHaveBeenCalledWith(
+    expect(page.keyDialog.getByText).toHaveBeenCalledWith(
       "No compatible keys for gpt-model-key-mini",
     )
-    const keyDialogGetByTextCalls = modelPage.keyDialog.getByText.mock
-      .calls as [string, ...unknown[]][]
+    const keyDialogGetByTextCalls = page.keyDialog.getByText.mock.calls as [
+      string,
+      ...unknown[],
+    ][]
     expect(
       keyDialogGetByTextCalls.filter(
         ([text]) => text === "No compatible keys for gpt-model-key-mini",
@@ -216,14 +187,12 @@ describe("model-to-key E2E scenario", () => {
   })
 
   it("cleans up the created key when cleanup is enabled", async () => {
-    const modelPage = createModelPage()
-    const keysPage = createKeysPage()
+    const page = createModelToKeyPage()
 
-    vi.mocked(runModelListCatalogScenario).mockResolvedValue(modelPage)
-    vi.mocked(mocks.waitForExtensionPage).mockResolvedValue(keysPage)
+    vi.mocked(runModelListCatalogScenario).mockResolvedValue(page)
 
     await runModelToKeyManagementScenario({
-      page: {} as any,
+      page,
       extensionId: "extension-id",
       accountId: "account-1",
       modelId: "gpt-model-key-mini",
@@ -232,7 +201,7 @@ describe("model-to-key E2E scenario", () => {
     })
 
     expect(mocks.deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
-      page: keysPage,
+      page,
       token: {
         id: "created-token-id",
         name: "model gpt-model-key-mini",
@@ -242,8 +211,7 @@ describe("model-to-key E2E scenario", () => {
 
   it("cleans up the created key when post-creation verification fails", async () => {
     const error = new Error("post-create verification failed")
-    const modelPage = createModelPage()
-    const keysPage = createKeysPage({
+    const page = createModelToKeyPage({
       tokenRowGetByText: vi.fn((text: string) => {
         if (text === "vip") {
           throw error
@@ -255,12 +223,11 @@ describe("model-to-key E2E scenario", () => {
       }),
     })
 
-    vi.mocked(runModelListCatalogScenario).mockResolvedValue(modelPage)
-    vi.mocked(mocks.waitForExtensionPage).mockResolvedValue(keysPage)
+    vi.mocked(runModelListCatalogScenario).mockResolvedValue(page)
 
     await expect(
       runModelToKeyManagementScenario({
-        page: {} as any,
+        page,
         extensionId: "extension-id",
         accountId: "account-1",
         modelId: "gpt-model-key-mini",
@@ -271,7 +238,7 @@ describe("model-to-key E2E scenario", () => {
     ).rejects.toThrow(error)
 
     expect(mocks.deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
-      page: keysPage,
+      page,
       token: {
         id: "created-token-id",
         name: "model gpt-model-key-mini",
@@ -281,15 +248,13 @@ describe("model-to-key E2E scenario", () => {
 
   it("resolves the token row during cleanup when verification fails before recording it", async () => {
     const error = new Error("prepare failed")
-    const modelPage = createModelPage()
-    const keysPage = createKeysPage()
+    const page = createModelToKeyPage()
 
-    vi.mocked(runModelListCatalogScenario).mockResolvedValue(modelPage)
-    vi.mocked(mocks.waitForExtensionPage).mockResolvedValue(keysPage)
+    vi.mocked(runModelListCatalogScenario).mockResolvedValue(page)
 
     await expect(
       runModelToKeyManagementScenario({
-        page: {} as any,
+        page,
         extensionId: "extension-id",
         accountId: "account-1",
         modelId: "gpt-model-key-mini",
@@ -300,7 +265,7 @@ describe("model-to-key E2E scenario", () => {
     ).rejects.toThrow(error)
 
     expect(mocks.deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
-      page: keysPage,
+      page,
       token: {
         id: "created-token-id",
         name: "model gpt-model-key-mini",
@@ -309,17 +274,15 @@ describe("model-to-key E2E scenario", () => {
   })
 
   it("does not fall back to name-only cleanup when the created token row cannot be resolved", async () => {
-    const modelPage = createModelPage()
-    const keysPage = createKeysPage({
+    const page = createModelToKeyPage({
       tokenRowsCountError: new Error("no token rows"),
     })
 
-    vi.mocked(runModelListCatalogScenario).mockResolvedValue(modelPage)
-    vi.mocked(mocks.waitForExtensionPage).mockResolvedValue(keysPage)
+    vi.mocked(runModelListCatalogScenario).mockResolvedValue(page)
 
     await expect(
       runModelToKeyManagementScenario({
-        page: {} as any,
+        page,
         extensionId: "extension-id",
         accountId: "account-1",
         modelId: "gpt-model-key-mini",
@@ -385,12 +348,36 @@ describe("real-site model-to-key config", () => {
   })
 })
 
-function createModelPage(
+function createE2eAssertions(locator?: unknown) {
+  return {
+    toBeVisible: vi.fn().mockResolvedValue(undefined),
+    toHaveCount: vi.fn().mockResolvedValue(undefined),
+    toHaveValue: vi.fn().mockResolvedValue(undefined),
+    toHaveURL: vi.fn(async (matcher: unknown) => {
+      if (typeof matcher !== "function") return
+
+      const url = (locator as { url?: () => string } | undefined)?.url?.()
+      if (!url || !(matcher as (url: URL) => boolean)(new URL(url))) {
+        throw new Error(`Expected page URL to match, received ${url ?? "none"}`)
+      }
+    }),
+    toBe: vi.fn((expected: unknown) => {
+      expect(locator).toBe(expected)
+    }),
+  }
+}
+
+function createModelToKeyPage(
   options: {
     inferredTokenName?: string
     selectedCompatibleKeyName?: string
+    createdTokenName?: string
+    tokenRowGetByText?: (text: string) => unknown
+    tokenRowsCountError?: Error
   } = {},
 ) {
+  let currentUrl =
+    "chrome-extension://extension-id/options.html?accountId=account-1#models"
   const tokenNameInput = {
     inputValue: vi
       .fn()
@@ -410,6 +397,12 @@ function createModelPage(
     })),
     toString: () => "add key dialog",
   }
+  const openKeyManagementButton = {
+    click: vi.fn(async () => {
+      currentUrl =
+        "chrome-extension://extension-id/options.html?accountId=account-1#keys"
+    }),
+  }
   const keyDialog = {
     getByRole: vi.fn(() => ({
       innerText: vi
@@ -419,51 +412,35 @@ function createModelPage(
     getByText: vi.fn(() => ({
       toString: () => "model key dialog text",
     })),
-    getByTestId: vi.fn((testId: string) => ({
-      click: vi.fn().mockResolvedValue(undefined),
-      testId,
-    })),
-    toString: () => "model key dialog",
-  }
-
-  return {
-    keyDialog,
-    context: vi.fn(() => "browser-context"),
     getByTestId: vi.fn((testId: string) => {
-      if (testId === MODEL_LIST_TEST_IDS.modelKeyDialog) return keyDialog
-      if (testId === "key-management-add-token-dialog") return addKeyDialog
+      if (testId === MODEL_LIST_TEST_IDS.openKeyManagementButton) {
+        return openKeyManagementButton
+      }
 
       return {
-        first: vi.fn(() => ({
-          click: vi.fn().mockResolvedValue(undefined),
-          testId,
-        })),
         click: vi.fn().mockResolvedValue(undefined),
         testId,
       }
     }),
-  } as any
-}
-
-function createKeysPage(overrides: Record<string, unknown> = {}) {
-  const createdTokenName =
-    typeof overrides.createdTokenName === "string"
-      ? overrides.createdTokenName
-      : "model gpt-model-key-mini"
+    toString: () => "model key dialog",
+  }
   const tokenHeading = {
-    innerText: vi.fn().mockResolvedValue(createdTokenName),
+    innerText: vi
+      .fn()
+      .mockResolvedValue(
+        options.createdTokenName ?? "model gpt-model-key-mini",
+      ),
     toString: () => "created token heading",
   }
   const tokenRow = {
     getAttribute: vi
       .fn()
       .mockResolvedValue("key-management-token-row-created-token-id"),
-    getByText:
-      typeof overrides.tokenRowGetByText === "function"
-        ? overrides.tokenRowGetByText
-        : vi.fn(() => ({
-            toString: () => "created token row text",
-          })),
+    getByText: options.tokenRowGetByText
+      ? vi.fn(options.tokenRowGetByText)
+      : vi.fn(() => ({
+          toString: () => "created token row text",
+        })),
     locator: vi.fn(() => ({
       first: vi.fn(() => tokenHeading),
     })),
@@ -475,33 +452,39 @@ function createKeysPage(overrides: Record<string, unknown> = {}) {
     toString: () => "created token rows",
   }
 
-  if (overrides.tokenRowsCountError instanceof Error) {
+  if (options.tokenRowsCountError) {
     mocks.expect.mockImplementation((locator?: unknown) => {
+      const assertions = createE2eAssertions(locator)
       if (locator === tokenRows) {
         return {
-          toHaveCount: vi.fn().mockRejectedValue(overrides.tokenRowsCountError),
-          toBeVisible: vi.fn().mockResolvedValue(undefined),
-          toHaveValue: vi.fn().mockResolvedValue(undefined),
-          toHaveURL: vi.fn().mockResolvedValue(undefined),
-          toBe: vi.fn(),
+          ...assertions,
+          toHaveCount: vi.fn().mockRejectedValue(options.tokenRowsCountError),
         }
       }
 
-      return {
-        toBeVisible: vi.fn().mockResolvedValue(undefined),
-        toHaveCount: vi.fn().mockResolvedValue(undefined),
-        toHaveValue: vi.fn().mockResolvedValue(undefined),
-        toHaveURL: vi.fn().mockResolvedValue(undefined),
-        toBe: vi.fn(),
-      }
+      return assertions
     })
   }
 
   return {
-    url: vi.fn(
-      () =>
-        "chrome-extension://extension-id/options.html?accountId=account-1#keys",
-    ),
+    keyDialog,
+    context: vi.fn(() => "browser-context"),
+    url: vi.fn(() => currentUrl),
+    getByTestId: vi.fn((testId: string) => {
+      if (testId === MODEL_LIST_TEST_IDS.modelKeyDialog) return keyDialog
+      if (testId === TOKEN_PROVISIONING_TEST_IDS.addTokenDialog) {
+        return addKeyDialog
+      }
+
+      return {
+        first: vi.fn(() => ({
+          click: vi.fn().mockResolvedValue(undefined),
+          testId,
+        })),
+        click: vi.fn().mockResolvedValue(undefined),
+        testId,
+      }
+    }),
     getByRole: vi.fn(() => ({
       toString: () => "created key heading",
     })),
@@ -509,10 +492,5 @@ function createKeysPage(overrides: Record<string, unknown> = {}) {
       toString: () => "keys page text",
     })),
     locator: vi.fn(() => tokenRows),
-    ...Object.fromEntries(
-      Object.entries(overrides).filter(
-        ([key]) => key !== "tokenRowsCountError" && key !== "tokenRowGetByText",
-      ),
-    ),
   } as any
 }

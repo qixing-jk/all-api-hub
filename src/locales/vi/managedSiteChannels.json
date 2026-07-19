@@ -112,7 +112,8 @@
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "Thiếu khóa kênh nguồn, hiện không thể di chuyển.",
-      "sourceKeyResolutionFailed": "Không thể lấy khóa kênh nguồn. Nếu bạn vừa hoàn tất xác thực, hãy làm mới bản xem trước và thử lại."
+      "sourceKeyResolutionFailed": "Không thể lấy khóa kênh nguồn. Nếu bạn vừa hoàn tất xác thực, hãy làm mới bản xem trước và thử lại.",
+      "targetDraftPreparationFailed": "Không thể chuẩn bị bản nháp kênh đích. Hãy kiểm tra thông tin kênh, làm mới bản xem trước rồi thử lại."
     },
     "confirm": {
       "confirm": "Xác nhận di chuyển",
@@ -221,6 +222,9 @@
     "channelsDeleted_other": "Đã xóa {{count}} kênh",
     "channelUpdated": "Đã cập nhật kênh",
     "revealKeyFailed": "Tải key của kênh thật thất bại: {{error}}",
+    "revealKeyMasked": "Key của kênh vẫn đang bị che",
+    "revealKeyUnavailable": "Không thể lấy key của kênh",
+    "revealKeyUnsupported": "Trang được quản lý này không hỗ trợ hiển thị key của kênh",
     "someDeletesFailed_other": "Xóa {{count}} kênh thất bại: {{error}}",
     "syncCompleted": "Đồng bộ mô hình hoàn tất ({{success}}/{{total}})",
     "syncFailed": "Đồng bộ mô hình thất bại: {{error}}"

@@ -93,11 +93,11 @@ If you are looking for stable, efficient, and highly compatible AI relay service
   <hr>
 
   <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://www.right.codes/register?aff=690a8be5">
+    <a class="sponsor-logo" href="https://www.aicodemirror.com/register?invitecode=7IQNR8">
       <img src="../../../resources/partners/aicodemirror.png" alt="AICodeMirror">
     </a>
     <p>
-      <strong>AICodeMirror</strong> provides official high-stability relay services for Claude Code / Codex / Gemini CLI, with enterprise-grade concurrency, fast invoicing, and 24/7 dedicated technical support. Claude Code / Codex / Gemini official channels are available from 38% / 2% / 9% of the original price, with extra discounts on top-ups. Register via <a href="https://www.right.codes/register?aff=690a8be5">this link</a> to enjoy <strong>20% off your first top-up</strong>, and enterprise customers can get up to 25% off.
+      <strong>AICodeMirror</strong> provides official high-stability relay services for Claude Code / Codex / Gemini CLI, with enterprise-grade concurrency, fast invoicing, and 24/7 dedicated technical support. Claude Code / Codex / Gemini official channels are available from 38% / 2% / 9% of the original price, with extra discounts on top-ups. Register via <a href="https://www.aicodemirror.com/register?invitecode=7IQNR8">this link</a> to enjoy <strong>20% off your first top-up</strong>, and enterprise customers can get up to 25% off.
     </p>
   </section>
 

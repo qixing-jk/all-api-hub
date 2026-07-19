@@ -49,6 +49,7 @@ import {
   pushWithinOptionsPage,
   replaceWithinOptionsPage,
 } from "~/utils/navigation"
+import { getSiteSupportRequestUrl } from "~/utils/navigation/feedbackLinks"
 
 const OPTIONS_PAGE_URL = "http://localhost:3000/options.html"
 
@@ -128,6 +129,7 @@ const mockedFocusTab = vi.mocked(focusTabApi)
 const mockedGetExtensionURL = vi.mocked(getExtensionURL)
 const mockedHasWindowsAPI = vi.mocked(hasWindowsAPI)
 const mockedOpenSidePanel = vi.mocked(openSidePanelApi)
+const mockedGetSiteSupportRequestUrl = vi.mocked(getSiteSupportRequestUrl)
 
 const getMockedRouteResolver = async () => {
   const { resolveAccountSiteRouteUrl } = await import(
@@ -166,6 +168,19 @@ describe("navigation utilities", () => {
       `${baseUrl}?accountId=123#keys`,
       true,
     )
+  })
+
+  it("openKeysPage should push within the current options tab", async () => {
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#models`)
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+
+    await openKeysPage("123")
+
+    expect(pushStateSpy).toHaveBeenCalledTimes(1)
+    expect(window.location.href).toBe(`${OPTIONS_PAGE_URL}?accountId=123#keys`)
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+
+    pushStateSpy.mockRestore()
   })
 
   it("openKeysPage should close popup after dispatching navigation", async () => {
@@ -248,6 +263,21 @@ describe("navigation utilities", () => {
     expect(closeSpy).toHaveBeenCalledTimes(1)
 
     closeSpy.mockRestore()
+  })
+
+  it("openModelsPage should push within the current options tab", async () => {
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#keys`)
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+
+    await openModelsPage({ profileId: "profile-7" })
+
+    expect(pushStateSpy).toHaveBeenCalledTimes(1)
+    expect(window.location.href).toBe(
+      `${OPTIONS_PAGE_URL}?profileId=profile-7#models`,
+    )
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+
+    pushStateSpy.mockRestore()
   })
 
   it("openAutoCheckinPage should omit undefined params and close popup", async () => {
@@ -1017,6 +1047,16 @@ describe("navigation utilities", () => {
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
       "https://custom.example/redeem",
+      true,
+    )
+  })
+
+  it("opens the site-support request through the prefill builder even without site context", async () => {
+    await openSiteSupportRequestPage()
+
+    expect(mockedGetSiteSupportRequestUrl).toHaveBeenCalledWith(undefined)
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://feedback.example/site-support",
       true,
     )
   })

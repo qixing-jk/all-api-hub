@@ -112,7 +112,8 @@
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "La clave del canal de origen no está disponible, por lo que este canal aún no se puede migrar.",
-      "sourceKeyResolutionFailed": "No se pudo cargar la clave del canal de origen. Si acabas de completar la verificación, actualiza la vista previa e inténtalo de nuevo."
+      "sourceKeyResolutionFailed": "No se pudo cargar la clave del canal de origen. Si acabas de completar la verificación, actualiza la vista previa e inténtalo de nuevo.",
+      "targetDraftPreparationFailed": "No se pudo preparar el borrador del canal de destino. Revisa los detalles del canal, actualiza la vista previa e inténtalo de nuevo."
     },
     "confirm": {
       "confirm": "Confirmar migración",
@@ -223,6 +224,9 @@
     "channelsDeleted_other": "{{count}} canales eliminados",
     "channelUpdated": "Canal actualizado",
     "revealKeyFailed": "No se pudo cargar la clave real del canal: {{error}}",
+    "revealKeyMasked": "La clave del canal sigue oculta",
+    "revealKeyUnavailable": "La clave del canal no está disponible",
+    "revealKeyUnsupported": "Este sitio administrado no permite revelar claves de canal",
     "someDeletesFailed_one": "No se pudo eliminar {{count}} canal: {{error}}",
     "someDeletesFailed_many": "No se pudieron eliminar {{count}} canales: {{error}}",
     "someDeletesFailed_other": "No se pudieron eliminar {{count}} canales: {{error}}",

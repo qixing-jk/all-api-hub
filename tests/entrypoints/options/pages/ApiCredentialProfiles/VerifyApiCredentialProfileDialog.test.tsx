@@ -271,6 +271,198 @@ describe("VerifyApiCredentialProfileDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("marks only the full suite busy and suppresses duplicate suite runs", async () => {
+    const user = userEvent.setup()
+    const deferredProbe = createDeferred<{
+      id: string
+      status: "pass"
+      latencyMs: number
+      summary: string
+    }>()
+    mockRunApiVerificationProbe
+      .mockReturnValueOnce(deferredProbe.promise)
+      .mockImplementation(async (params: { probeId: string }) => ({
+        id: params.probeId,
+        status: "pass",
+        latencyMs: 1,
+        summary: "OK",
+      }))
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "profile-1",
+          name: "Example profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://api.example.invalid",
+          apiKey: "example-api-key",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    const suiteButton = await screen.findByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.run",
+    })
+    await user.click(suiteButton)
+
+    await waitFor(() => {
+      expect(suiteButton).toHaveAccessibleName(
+        "aiApiVerification:verifyDialog.actions.running",
+      )
+    })
+    const runningSuiteButton = suiteButton
+    expect(runningSuiteButton).toBeDisabled()
+    expect(runningSuiteButton).toHaveAttribute("aria-busy", "true")
+
+    for (const probeButton of screen.getAllByTestId(
+      API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton,
+    )) {
+      expect(probeButton).toBeDisabled()
+      expect(probeButton).not.toHaveAttribute("aria-busy")
+    }
+    expect(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.close",
+      }),
+    ).not.toHaveAttribute("aria-busy")
+
+    await user.click(runningSuiteButton)
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+
+    deferredProbe.resolve({
+      id: "models",
+      status: "pass",
+      latencyMs: 1,
+      summary: "OK",
+    })
+
+    await waitFor(() => {
+      const restoredButton = screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.run",
+      })
+      expect(restoredButton).toBeEnabled()
+      expect(restoredButton).not.toHaveAttribute("aria-busy")
+    })
+  })
+
+  it("marks only the initiating probe busy through rejected execution and persistence", async () => {
+    const user = userEvent.setup()
+    const deferredProbe = createDeferred<never>()
+    const persistDeferred =
+      createDeferred<
+        Awaited<
+          ReturnType<
+            typeof verificationResultHistoryStorage.upsertLatestSummary
+          >
+        >
+      >()
+    vi.spyOn(
+      verificationResultHistoryStorage,
+      "upsertLatestSummary",
+    ).mockImplementationOnce(() => persistDeferred.promise)
+    mockRunApiVerificationProbe.mockResolvedValue({
+      id: "models",
+      status: "pass",
+      latencyMs: 1,
+      summary: "OK",
+    })
+    mockRunApiVerificationProbe.mockReturnValueOnce(deferredProbe.promise)
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "profile-1",
+          name: "Example profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://api.example.invalid",
+          apiKey: "example-api-key",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId="model-1"
+      />,
+    )
+
+    const initiatingProbe = await screen.findByTestId(
+      getApiCredentialProfileVerifyProbeTestId("models"),
+    )
+    const siblingProbe = await screen.findByTestId(
+      getApiCredentialProfileVerifyProbeTestId("text-generation"),
+    )
+    const initiatingButton = within(initiatingProbe).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+    const siblingButton = within(siblingProbe).getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.runOne",
+    })
+    const suiteButton = screen.getByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.run",
+    })
+
+    await user.click(initiatingButton)
+
+    await waitFor(() => {
+      expect(initiatingButton).toHaveAccessibleName(
+        "aiApiVerification:verifyDialog.actions.running",
+      )
+    })
+    expect(initiatingButton).toBeDisabled()
+    expect(initiatingButton).toHaveAttribute("aria-busy", "true")
+    expect(siblingButton).toBeDisabled()
+    expect(siblingButton).toHaveAccessibleName(
+      "aiApiVerification:verifyDialog.actions.runOne",
+    )
+    expect(siblingButton).not.toHaveAttribute("aria-busy")
+    expect(suiteButton).toBeDisabled()
+    expect(suiteButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(initiatingButton)
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+
+    deferredProbe.reject(new Error("probe failed"))
+
+    await waitFor(() => {
+      expect(
+        verificationResultHistoryStorage.upsertLatestSummary,
+      ).toHaveBeenCalledTimes(1)
+    })
+    expect(initiatingButton).toHaveAccessibleName(
+      "aiApiVerification:verifyDialog.actions.running",
+    )
+    expect(initiatingButton).toHaveAttribute("aria-busy", "true")
+
+    persistDeferred.reject(new Error("persist failed"))
+
+    await waitFor(() => {
+      expect(initiatingButton).toHaveAccessibleName(
+        "aiApiVerification:verifyDialog.actions.retry",
+      )
+      expect(initiatingButton).toBeEnabled()
+      expect(initiatingButton).not.toHaveAttribute("aria-busy")
+      expect(siblingButton).toBeEnabled()
+    })
+
+    await user.click(initiatingButton)
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2)
+      expect(initiatingButton).toHaveAccessibleName(
+        "aiApiVerification:verifyDialog.actions.retry",
+      )
+      expect(initiatingButton).toBeEnabled()
+      expect(initiatingButton).not.toHaveAttribute("aria-busy")
+    })
+  })
+
   it("auto-fetches model ids on open", async () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
       "ada-1",
@@ -619,6 +811,39 @@ describe("VerifyApiCredentialProfileDialog", () => {
     })
   })
 
+  it("keeps the saved profile apiType when the fetched model belongs to another vendor", async () => {
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
+      "claude-3-5-sonnet",
+    ])
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    expect(await screen.findByText("claude-3-5-sonnet")).toBeVisible()
+    expect(
+      screen.getByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.model",
+      }),
+    ).toHaveTextContent("claude-3-5-sonnet")
+    expect(getApiTypeSelect()).toHaveValue(API_TYPES.OPENAI_COMPATIBLE)
+    expect(mockFetchAnthropicModelIds).not.toHaveBeenCalled()
+  })
+
   it("allows temporarily switching apiType for profile verification", async () => {
     const user = userEvent.setup()
 
@@ -663,6 +888,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
         }),
       ),
     )
+    expect(getApiTypeSelect()).toHaveValue(API_TYPES.OPENAI_COMPATIBLE)
 
     await selectApiTypeOption(user)
 

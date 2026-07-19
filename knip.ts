@@ -34,6 +34,9 @@ const config: KnipConfig = {
     "*.{js,mjs,ts}",
   ],
   ignoreDependencies: [
+    // @lobehub/ui 5 requires this compatible peer provider, while application
+    // code consumes the Lobe stack only through @lobehub/icons.
+    "@lobehub/fluent-emoji",
     // Ambient extension/browser types are consumed globally by TypeScript.
     "@types/chrome",
     "@types/firefox-webext-browser",

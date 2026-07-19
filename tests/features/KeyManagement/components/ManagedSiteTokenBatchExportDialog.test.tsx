@@ -1,6 +1,6 @@
 import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
+import type { ComponentProps, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -26,7 +26,18 @@ import {
   buildApiToken,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
 
 const {
   mockAllowDisabledVerificationButtonClicks,
@@ -164,6 +175,7 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/components/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/components/ui")>()
+  const ActualButton = actual.Button
 
   return {
     ...actual,
@@ -171,32 +183,25 @@ vi.mock("~/components/ui", async (importOriginal) => {
     Button: ({
       children,
       disabled,
-      onClick,
-      type = "button",
-    }: {
-      children: ReactNode
-      disabled?: boolean
-      onClick?: () => void
-      type?: "button" | "submit" | "reset"
-    }) => {
+      ...props
+    }: ComponentProps<typeof ActualButton>) => {
       const isVerificationButton =
         children ===
           "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh" ||
         children === "keyManagement:batchManagedSiteExport.actions.verifying"
 
       return (
-        <button
-          type={type}
+        <ActualButton
+          {...props}
           disabled={
             isVerificationButton &&
             mockAllowDisabledVerificationButtonClicks.current
               ? false
               : disabled
           }
-          onClick={onClick}
         >
           {children}
-        </button>
+        </ActualButton>
       )
     },
     Checkbox: ({
@@ -533,11 +538,99 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     )
   })
 
-  it("shows preview load errors and retries preview preparation", async () => {
+  it("keeps automatic preview loading off the stable start control", async () => {
+    const automaticPreview =
+      createDeferred<ManagedSiteTokenBatchExportPreview>()
+    mockPreparePreview.mockReturnValueOnce(automaticPreview.promise)
+
+    renderDialog()
+
+    const startButton = await screen.findByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.start",
+    })
+    expect(startButton).toBeDisabled()
+    expect(startButton).not.toHaveAttribute("aria-busy")
+
+    await act(async () => {
+      automaticPreview.resolve(preview)
+      await automaticPreview.promise
+    })
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+  })
+
+  it("assigns manual preview loading only to the visible refresh control", async () => {
     const user = userEvent.setup()
+    const manualPreview = createDeferred<ManagedSiteTokenBatchExportPreview>()
+    mockPreparePreview
+      .mockResolvedValueOnce(preview)
+      .mockReturnValueOnce(manualPreview.promise)
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+      }),
+    )
+
+    const busyRefresh = screen.queryByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.preview.loading",
+    })
+    const busyRefreshState = busyRefresh
+      ? {
+          ariaBusy: busyRefresh.getAttribute("aria-busy"),
+          disabled: busyRefresh.hasAttribute("disabled"),
+        }
+      : null
+    const loadingLabelCount = screen.queryAllByText(
+      "keyManagement:batchManagedSiteExport.preview.loading",
+    ).length
+    const lockedStart = screen.getByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.start",
+    })
+    const lockedStartState = {
+      ariaBusy: lockedStart.getAttribute("aria-busy"),
+      disabled: lockedStart.hasAttribute("disabled"),
+    }
+    if (busyRefresh) await user.click(busyRefresh)
+
+    await act(async () => {
+      manualPreview.resolve(preview)
+      await manualPreview.promise
+    })
+    expect(busyRefreshState).toEqual({ ariaBusy: "true", disabled: true })
+    expect(loadingLabelCount).toBe(1)
+    expect(lockedStartState).toEqual({ ariaBusy: null, disabled: true })
+    expect(mockPreparePreview).toHaveBeenCalledTimes(2)
+    expect(
+      await screen.findByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+      }),
+    ).toBeEnabled()
+  })
+
+  it("restores rejected manual preview refresh and allows a second retry", async () => {
+    const user = userEvent.setup()
+    const failedManualRefresh =
+      createDeferred<ManagedSiteTokenBatchExportPreview>()
+    const successfulRetry = createDeferred<ManagedSiteTokenBatchExportPreview>()
+    let busyErrorActionAtPreviewBoundary = false
+    let loadingOwnerCountAtPreviewBoundary = 0
     mockPreparePreview
       .mockRejectedValueOnce(new Error("preview failed"))
-      .mockResolvedValueOnce(preview)
+      .mockImplementationOnce(() => {
+        busyErrorActionAtPreviewBoundary = Boolean(
+          screen.queryByRole("button", {
+            name: "keyManagement:batchManagedSiteExport.preview.loading",
+          }),
+        )
+        loadingOwnerCountAtPreviewBoundary = screen.queryAllByText(
+          "keyManagement:batchManagedSiteExport.preview.loading",
+        ).length
+        return failedManualRefresh.promise
+      })
+      .mockReturnValueOnce(successfulRetry.promise)
 
     renderDialog()
 
@@ -556,7 +649,96 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockPreparePreview).toHaveBeenCalledTimes(2)
     })
+    await act(async () => {
+      failedManualRefresh.reject(new Error("manual refresh failed"))
+      await failedManualRefresh.promise.catch(() => undefined)
+    })
+
+    const restoredRefresh = await screen.findByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+    })
+    expect(restoredRefresh).toBeEnabled()
+    expect(restoredRefresh).not.toHaveAttribute("aria-busy")
+    await user.click(restoredRefresh)
+    await waitFor(() => {
+      expect(mockPreparePreview).toHaveBeenCalledTimes(3)
+    })
+    const retryLoadingButton = screen.queryByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.preview.loading",
+    })
+    const hasRetryLoadingStatus = screen.queryByText(
+      "keyManagement:batchManagedSiteExport.preview.loading",
+    )
+
+    await act(async () => {
+      successfulRetry.resolve(preview)
+      await successfulRetry.promise
+    })
+    expect(busyErrorActionAtPreviewBoundary).toBe(false)
+    expect(loadingOwnerCountAtPreviewBoundary).toBe(1)
+    expect(retryLoadingButton).toBeNull()
+    expect(hasRetryLoadingStatus).not.toBeNull()
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+  })
+
+  it("hands confirmed execution loading to the stable start control", async () => {
+    const user = userEvent.setup()
+    const execution =
+      createDeferred<Awaited<ReturnType<typeof mockExecuteBatchExport>>>()
+    mockPreparePreview.mockResolvedValueOnce(preview)
+    mockExecuteBatchExport.mockReturnValueOnce(execution.promise)
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    const confirmation = screen.getByRole("dialog", {
+      name: "keyManagement:batchManagedSiteExport.confirm.title",
+    })
+    await user.click(
+      within(confirmation).getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+
+    expect(
+      screen.queryByRole("dialog", {
+        name: "keyManagement:batchManagedSiteExport.confirm.title",
+      }),
+    ).toBeNull()
+    const runningStart = screen.getByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.running",
+    })
+    const runningStartState = {
+      ariaBusy: runningStart.getAttribute("aria-busy"),
+      disabled: runningStart.hasAttribute("disabled"),
+    }
+    const lockedCancel = screen.getByRole("button", {
+      name: "common:actions.cancel",
+    })
+    const lockedCancelState = {
+      ariaBusy: lockedCancel.getAttribute("aria-busy"),
+      disabled: lockedCancel.hasAttribute("disabled"),
+    }
+    await user.click(runningStart)
+
+    await act(async () => {
+      execution.reject(new Error("execute failed"))
+      await execution.promise.catch(() => undefined)
+    })
+
+    const restoredStart = await screen.findByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.start",
+    })
+    expect(runningStartState).toEqual({ ariaBusy: "true", disabled: true })
+    expect(lockedCancelState).toEqual({ ariaBusy: null, disabled: true })
+    expect(mockExecuteBatchExport).toHaveBeenCalledTimes(1)
+    expect(restoredStart).toBeEnabled()
+    expect(restoredStart).not.toHaveAttribute("aria-busy")
   })
 
   it("resets transient state when the dialog closes and lets the confirm dialog cancel cleanly", async () => {
@@ -910,6 +1092,71 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     )
     expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledTimes(2)
     expect(mockPreparePreview).toHaveBeenCalledTimes(1)
+  })
+
+  it("marks only the active verification row busy and restores sibling actions after settlement", async () => {
+    const user = userEvent.setup()
+    const deferredVerification = createDeferred<boolean>()
+    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
+      ...preview,
+      totalCount: 2,
+      readyCount: 0,
+      warningCount: 2,
+      skippedCount: 0,
+      blockedCount: 0,
+      items: [
+        buildRecoverablePreviewItem(preview.items[0], {
+          id: 7,
+          name: "Potential channel",
+        }),
+        buildRecoverablePreviewItem(preview.items[1], {
+          id: 8,
+          name: "Second potential channel",
+        }),
+      ],
+    }
+    mockPreparePreview.mockResolvedValueOnce(recoverablePreview)
+    mockLoadNewApiChannelKeyWithVerification.mockReturnValueOnce(
+      deferredVerification.promise,
+    )
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    const [firstVerifyButton] = screen.getAllByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+    })
+    await user.click(firstVerifyButton!)
+
+    const verifyingButton = screen.getByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.verifying",
+    })
+    const siblingVerifyButton = screen.getByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+    })
+    expect(verifyingButton).toHaveAttribute("aria-busy", "true")
+    expect(verifyingButton).toBeDisabled()
+    expect(siblingVerifyButton).toBeDisabled()
+    expect(siblingVerifyButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(verifyingButton)
+    expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledTimes(1)
+
+    deferredVerification.resolve(false)
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+        }),
+      ).toHaveLength(2)
+    })
+    for (const button of screen.getAllByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+    })) {
+      expect(button).toBeEnabled()
+      expect(button).not.toHaveAttribute("aria-busy")
+    }
   })
 
   it("removes verified skipped rows from execution selection using the current preview item", async () => {

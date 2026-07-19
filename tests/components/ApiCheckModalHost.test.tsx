@@ -100,6 +100,17 @@ vi.mock("react-hot-toast/headless", () => ({
   },
 }))
 
+vi.mock("~/components/ui/DatePicker", () => ({
+  DatePicker: ({ id, value, onChange, disabled }: any) => (
+    <input
+      id={id}
+      value={value ?? ""}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  ),
+}))
+
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/browserApi")>()
@@ -3224,6 +3235,7 @@ describe("ApiCheckModalHost", () => {
 
   it("saves credentials to API profiles", async () => {
     const user = userEvent.setup()
+    const saveDeferred = createDeferred<any>()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       async (type: any, message: any) => {
         if (type === WebAiApiCheckMessageTypes.FetchModels) {
@@ -3241,13 +3253,7 @@ describe("ApiCheckModalHost", () => {
           }
         }
         if (type === WebAiApiCheckMessageTypes.SaveProfile) {
-          return {
-            success: true,
-            profileId: "p-1",
-            name: "proxy.example.com",
-            apiType: message.apiType,
-            baseUrl: "https://proxy.example.com/api",
-          }
+          return saveDeferred.promise
         }
         return { success: false }
       },
@@ -3283,6 +3289,25 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(saveButton)
 
+    const savingButton = screen.getByRole("button", {
+      name: "webAiApiCheck:modal.actions.saving",
+    })
+    expect(savingButton).toHaveAttribute("aria-busy", "true")
+    expect(savingButton).toBeDisabled()
+    const testButton = screen.getByRole("button", {
+      name: "webAiApiCheck:modal.actions.test",
+    })
+    expect(testButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(savingButton)
+    expect(
+      vi
+        .mocked(sendWebAiApiCheckMessage)
+        .mock.calls.filter(
+          ([type]) => type === WebAiApiCheckMessageTypes.SaveProfile,
+        ),
+    ).toHaveLength(1)
+
     await waitFor(() => {
       expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.SaveProfile, {
         apiType: "openai-compatible",
@@ -3290,6 +3315,24 @@ describe("ApiCheckModalHost", () => {
         apiKey: "sk-test-secret-fixture",
         pageUrl: "https://example.com",
       })
+    })
+
+    await act(async () => {
+      saveDeferred.resolve({
+        success: true,
+        profileId: "p-1",
+        name: "proxy.example.com",
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api",
+      })
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", {
+          name: "webAiApiCheck:modal.actions.saving",
+        }),
+      ).not.toBeInTheDocument()
     })
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
@@ -3690,6 +3733,10 @@ describe("ApiCheckModalHost", () => {
 
   it("ignores impossible calendar dates when preparing profile metadata", () => {
     expect(parseDateInputValue("2026-02-31")).toBeNull()
+  })
+
+  it("rejects expanded-year calendar dates when preparing profile metadata", () => {
+    expect(parseDateInputValue("202607-01-01")).toBeNull()
   })
 
   it("clears stale global tags before reloading them on modal open", async () => {

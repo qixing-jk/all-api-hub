@@ -16,6 +16,7 @@ import {
 } from "~/services/core/storageKeys"
 import { USAGE_HISTORY_STORAGE_KEYS } from "~/services/history/usageHistory/constants"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
+import { MODEL_METADATA_URL } from "~/services/models/modelMetadata/constants"
 import { SITE_ANNOUNCEMENTS_STORE_SCHEMA_VERSION } from "~/services/siteAnnouncements/constants"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import {
@@ -147,14 +148,12 @@ export async function forceExtensionLanguage(page: Page, language = "en") {
  * refreshes do not reach the network during these user-flow specs.
  */
 export async function stubLlmMetadataIndex(context: BrowserContext) {
-  await context.route(
-    "https://llm-metadata.pages.dev/api/index.json",
-    (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({ models: [] }),
-      }),
+  await context.route(MODEL_METADATA_URL, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ models: [] }),
+    }),
   )
   await stubSponsorRemoteCatalog(context)
 }

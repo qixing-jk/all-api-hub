@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import type { ModelVendorEvidence } from "~/services/models/modelDescriptor"
 
 export type PerCallPrice = number | { input: number; output: number }
 
@@ -6,6 +7,7 @@ export type PerCallPrice = number | { input: number; output: number }
 // payloads into this shape before Model List consumes it.
 export interface ModelPricing {
   model_name: string
+  vendorEvidence?: ModelVendorEvidence
   model_description?: string
   quota_type: number // 0 = token billing, 1 = per-call billing
   model_ratio: number
@@ -56,6 +58,8 @@ export type ModelPricePrecisionKind =
 
 export const MODEL_UNAVAILABLE_PRICE_REASONS = {
   MODEL_LIST_ONLY: "model-list-only",
+  NO_USABLE_GROUP: "no-usable-group",
+  GROUP_RATIO_UNAVAILABLE: "group-ratio-unavailable",
   KEY_GROUP_UNKNOWN: "key-group-unknown",
   OFFICIAL_PRICE_MISSING: "official-price-missing",
   PRICING_SOURCE_UNAVAILABLE: "pricing-source-unavailable",
@@ -94,6 +98,6 @@ export interface PricingResponse {
   data: ModelPricing[]
   group_ratio: Record<string, number>
   success: boolean
-  usable_group: Record<string, string>
+  usable_group: Record<string, unknown>
   model_list_source?: ModelListSourceInfo
 }

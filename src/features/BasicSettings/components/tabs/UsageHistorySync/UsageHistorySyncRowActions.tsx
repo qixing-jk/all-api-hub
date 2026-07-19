@@ -1,7 +1,8 @@
 import { Ellipsis } from "lucide-react"
+import { useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/components/ui"
+import { IconButton } from "~/components/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,23 +25,39 @@ export default function UsageHistorySyncRowActions({
   onSync,
 }: UsageHistorySyncRowActionsProps) {
   const { t } = useTranslation("usageAnalytics")
+  const [isActionPending, setIsActionPending] = useState(false)
+  const isActionPendingRef = useRef(false)
+
+  const handleSync = async () => {
+    if (isActionPendingRef.current) return
+
+    isActionPendingRef.current = true
+    setIsActionPending(true)
+    try {
+      await onSync(accountId)
+    } finally {
+      isActionPendingRef.current = false
+      setIsActionPending(false)
+    }
+  }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          size="icon"
+        <IconButton
+          size="default"
           variant="ghost"
           className="h-8 w-8"
           aria-label={t("syncTab.table.rowActions")}
           disabled={isSyncing}
+          loading={isActionPending}
         >
           <Ellipsis className="h-4 w-4" />
-        </Button>
+        </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
         <DropdownMenuItem
-          onClick={() => void onSync(accountId)}
+          onClick={() => void handleSync()}
           disabled={isSyncing}
         >
           {isSyncing

@@ -34,8 +34,13 @@ export function useApiCheckModalShell(isOpen: boolean) {
     if (!isOpen) return
 
     const stopKeyboardShortcut = (event: KeyboardEvent) => {
+      if (event.key === "Escape") return
       const target = event.target
-      if (target instanceof Node && dialogRef.current?.contains(target)) {
+      if (
+        target instanceof Node &&
+        (dialogRef.current?.contains(target) ||
+          popoverPortalContainer?.contains(target))
+      ) {
         event.stopImmediatePropagation()
       }
     }
@@ -80,7 +85,7 @@ export function useApiCheckModalShell(isOpen: boolean) {
       backdrop?.removeEventListener("wheel", stopBackgroundWheel)
       scrollContainer?.removeEventListener("wheel", stopWheel)
     }
-  }, [isOpen])
+  }, [isOpen, popoverPortalContainer])
 
   return {
     popoverPortalContainer,

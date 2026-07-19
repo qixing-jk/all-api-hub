@@ -82,7 +82,7 @@ export default function SiteAnnouncementsPage({
   routeParams,
   refreshKey,
 }: SiteAnnouncementsPageProps) {
-  const { t } = useTranslation("siteAnnouncements")
+  const { t } = useTranslation(["siteAnnouncements", "common"])
   const { siteAnnouncementNotifications } = useUserPreferencesContext()
   const [records, setRecords] = useState<SiteAnnouncementRecord[]>([])
   const [status, setStatus] = useState<SiteAnnouncementSiteState[]>([])
@@ -480,7 +480,7 @@ export default function SiteAnnouncementsPage({
               }
               leftIcon={<RefreshCcw className="h-4 w-4" />}
             >
-              {t("actions.checkNow")}
+              {isChecking ? t("common:status.checking") : t("actions.checkNow")}
             </Button>
           </ProductAnalyticsScope>
         }
@@ -517,6 +517,7 @@ export default function SiteAnnouncementsPage({
           title={loadError}
           action={{
             label: t("actions.checkNow"),
+            loadingLabel: t("common:status.checking"),
             onClick: () =>
               void handleCheckNow(
                 PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsEmptyState,
@@ -567,6 +568,9 @@ export default function SiteAnnouncementsPage({
               label: showNoAccountsSetup
                 ? t("empty.addAccount")
                 : t("actions.checkNow"),
+              loadingLabel: showNoAccountsSetup
+                ? undefined
+                : t("common:status.checking"),
               onClick: showNoAccountsSetup
                 ? handleOpenAccountManagement
                 : () =>

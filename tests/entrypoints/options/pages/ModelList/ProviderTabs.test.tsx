@@ -2,11 +2,15 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TabsContent } from "~/components/ui"
-import { ProviderTabs } from "~/features/ModelList/components/ProviderTabs"
 import {
-  MODEL_PROVIDER_FILTER_VALUES,
-  type ModelProviderFilterValue,
-} from "~/services/models/utils/modelProviders"
+  getProviderFilterAnalyticsResultCount,
+  ProviderTabs,
+} from "~/features/ModelList/components/ProviderTabs"
+import type { ModelVendorCatalogEntry } from "~/services/models/modelMetadata/types"
+import {
+  MODEL_VENDOR_FILTER_VALUES,
+  type ModelVendorFilterValue,
+} from "~/services/models/modelVendor"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -16,7 +20,13 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({
   trackProductAnalyticsActionCompletedMock: vi.fn(),
@@ -27,59 +37,139 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     trackProductAnalyticsActionCompletedMock(...args),
 }))
 
-const createProviders = () => ["OpenAI", "Claude", "Gemini"] as any
+vi.mock("@heroicons/react/24/outline", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@heroicons/react/24/outline")>()
+  const CpuChipIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" data-publisher-icon="generic" {...props} />
+  )
+
+  return { ...actual, CpuChipIcon }
+})
+
+vi.mock("lucide-react", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("lucide-react")>()
+  const createIcon = (name: string) =>
+    function FilterIcon(props: React.SVGProps<SVGSVGElement>) {
+      return <svg role="img" data-filter-icon={name} {...props} />
+    }
+
+  return {
+    ...actual,
+    CircleHelp: createIcon("unknown-vendor"),
+    LayoutGrid: createIcon("all-vendors"),
+  }
+})
+
+vi.mock("@lobehub/icons/es/Google/components/Color", () => ({
+  default: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" data-publisher-icon="Google-color" {...props} />
+  ),
+}))
+
+vi.mock("@lobehub/icons/es/Google/components/Mono", () => ({
+  default: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" data-publisher-icon="Google-mono" {...props} />
+  ),
+}))
+
+vi.mock("@lobehub/icons/es/OpenAI/components/Mono", () => ({
+  default: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" data-publisher-icon="OpenAI-mono" {...props} />
+  ),
+}))
+
+vi.mock("@lobehub/icons/es/Anthropic/components/Mono", () => ({
+  default: (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" data-publisher-icon="Anthropic-mono" {...props} />
+  ),
+}))
+
+type CountedVendor = ModelVendorCatalogEntry & { count: number }
+
+const VENDOR_CATALOG: CountedVendor[] = [
+  {
+    kind: "known",
+    key: "known:openai",
+    knownId: "openai",
+    label: "OpenAI",
+    count: 2,
+  },
+  {
+    kind: "known",
+    key: "known:anthropic",
+    knownId: "anthropic",
+    label: "Anthropic",
+    count: 1,
+  },
+  {
+    kind: "custom",
+    key: "custom:example%20lab",
+    label: "Example Lab",
+    count: 1,
+  },
+]
+const GOOGLE_VENDOR: CountedVendor = {
+  kind: "known",
+  key: "known:google",
+  knownId: "google",
+  label: "Google",
+  count: 1,
+}
 const TABLIST_CLIENT_WIDTH_PX = 100
 const TABLIST_SCROLL_WIDTH_PX = 300
 const BASE_FILTERED_MODELS_COUNT = 10
-const PROVIDER_FILTERED_MODELS_COUNT = 1
-const DEFAULT_PROVIDER_COUNTS = {
-  OpenAI: 2,
-  Claude: 1,
-  Gemini: 1,
-} as const
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
 const renderProviderTabs = ({
-  providerCounts = DEFAULT_PROVIDER_COUNTS,
-  selectedProvider = MODEL_PROVIDER_FILTER_VALUES.ALL,
-  allProvidersFilteredCount = BASE_FILTERED_MODELS_COUNT,
+  vendorCatalog = VENDOR_CATALOG,
+  effectiveSelectedVendor = MODEL_VENDOR_FILTER_VALUES.All,
+  allVendorsFilteredCount = BASE_FILTERED_MODELS_COUNT,
+  unclassifiedVendorCount = 0,
   setSelectedProvider = vi.fn(),
 }: {
-  providerCounts?: Record<string, number>
-  selectedProvider?: ModelProviderFilterValue
-  allProvidersFilteredCount?: number
+  vendorCatalog?: CountedVendor[]
+  effectiveSelectedVendor?: ModelVendorFilterValue
+  allVendorsFilteredCount?: number
+  unclassifiedVendorCount?: number
   setSelectedProvider?: ReturnType<typeof vi.fn>
 } = {}) => {
-  render(
+  const createElement = (catalog: CountedVendor[]) => (
     <ProviderTabs
-      providers={createProviders()}
-      selectedProvider={selectedProvider}
+      vendorCatalog={catalog}
+      effectiveSelectedVendor={effectiveSelectedVendor}
       setSelectedProvider={setSelectedProvider}
-      allProvidersFilteredCount={allProvidersFilteredCount}
-      getProviderFilteredCount={(provider) => providerCounts[provider] ?? 0}
+      allVendorsFilteredCount={allVendorsFilteredCount}
+      unclassifiedVendorCount={unclassifiedVendorCount}
     >
-      <TabsContent value={MODEL_PROVIDER_FILTER_VALUES.ALL}>All</TabsContent>
-      <TabsContent value="OpenAI">OpenAI</TabsContent>
-      <TabsContent value="Claude">Claude</TabsContent>
-      <TabsContent value="Gemini">Gemini</TabsContent>
-    </ProviderTabs>,
+      <TabsContent value={MODEL_VENDOR_FILTER_VALUES.All}>All</TabsContent>
+      {catalog.map((vendor) => (
+        <TabsContent key={vendor.key} value={vendor.key}>
+          {vendor.label}
+        </TabsContent>
+      ))}
+      {unclassifiedVendorCount > 0 && (
+        <TabsContent value={MODEL_VENDOR_FILTER_VALUES.Unclassified}>
+          Unclassified
+        </TabsContent>
+      )}
+    </ProviderTabs>
   )
+  const renderResult = render(createElement(vendorCatalog))
 
-  return { setSelectedProvider }
+  return {
+    setSelectedProvider,
+    rerenderVendorCatalog: (nextCatalog: CountedVendor[]) =>
+      renderResult.rerender(createElement(nextCatalog)),
+  }
 }
 
 describe("ProviderTabs scroll arrows", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
   it("enables right arrow when tab list overflows", async () => {
-    renderProviderTabs({
-      providerCounts: {
-        OpenAI: PROVIDER_FILTERED_MODELS_COUNT,
-        Claude: PROVIDER_FILTERED_MODELS_COUNT,
-        Gemini: PROVIDER_FILTERED_MODELS_COUNT,
-      },
-    })
+    renderProviderTabs()
 
     const tabList = await screen.findByRole("tablist")
     Object.defineProperty(tabList, "clientWidth", {
@@ -108,13 +198,8 @@ describe("ProviderTabs scroll arrows", () => {
   })
 
   it("scrolls the tab list when clicking arrows", async () => {
-    renderProviderTabs({
-      providerCounts: {
-        OpenAI: PROVIDER_FILTERED_MODELS_COUNT,
-        Claude: PROVIDER_FILTERED_MODELS_COUNT,
-        Gemini: PROVIDER_FILTERED_MODELS_COUNT,
-      },
-    })
+    const user = userEvent.setup()
+    renderProviderTabs()
 
     const tabList = await screen.findByRole("tablist")
     Object.defineProperty(tabList, "clientWidth", {
@@ -143,7 +228,7 @@ describe("ProviderTabs scroll arrows", () => {
       "modelList:providerTabs.scrollRight",
     )
     await waitFor(() => expect(rightArrow).toBeEnabled())
-    fireEvent.click(rightArrow)
+    await user.click(rightArrow)
 
     expect(scrollBy).toHaveBeenCalled()
     const callArg = scrollBy.mock.calls[0]?.[0]
@@ -154,45 +239,199 @@ describe("ProviderTabs scroll arrows", () => {
     )
     expect(callArg.left).toBeGreaterThan(0)
   })
+
+  it("refreshes arrow availability when same-length dynamic labels change overflow", async () => {
+    let scrollWidth = TABLIST_CLIENT_WIDTH_PX
+    const shortCatalog: CountedVendor[] = [
+      {
+        kind: "custom",
+        key: "custom:example%20lab",
+        label: "Lab",
+        count: 1,
+      },
+    ]
+    const longCatalog: CountedVendor[] = [
+      {
+        ...shortCatalog[0],
+        label: "Example Vendor With A Much Longer Dynamic Label",
+      },
+    ]
+    const { rerenderVendorCatalog } = renderProviderTabs({
+      vendorCatalog: shortCatalog,
+    })
+    const tabList = await screen.findByRole("tablist")
+    Object.defineProperties(tabList, {
+      clientWidth: {
+        configurable: true,
+        get: () => TABLIST_CLIENT_WIDTH_PX,
+      },
+      scrollWidth: {
+        configurable: true,
+        get: () => scrollWidth,
+      },
+      scrollLeft: {
+        configurable: true,
+        writable: true,
+        value: 0,
+      },
+    })
+    const rightArrow = screen.getByRole("button", {
+      name: "modelList:providerTabs.scrollRight",
+    })
+
+    expect(rightArrow).toBeDisabled()
+
+    scrollWidth = TABLIST_SCROLL_WIDTH_PX
+    rerenderVendorCatalog(longCatalog)
+    await waitFor(() => expect(rightArrow).toBeEnabled())
+
+    scrollWidth = TABLIST_CLIENT_WIDTH_PX
+    rerenderVendorCatalog(shortCatalog)
+    await waitFor(() => expect(rightArrow).toBeDisabled())
+  })
 })
 
 describe("ProviderTabs selection", () => {
-  it("filters out zero-count providers and falls back to the all tab when the selected provider is unavailable", async () => {
+  it("reports zero analytics results for a stale vendor absent from the catalog", () => {
+    expect(
+      getProviderFilterAnalyticsResultCount(
+        "custom:missing-vendor",
+        VENDOR_CATALOG,
+        BASE_FILTERED_MODELS_COUNT,
+        0,
+      ),
+    ).toBe(0)
+  })
+
+  it("renders namespaced dynamic vendor labels, counts, and the effective selection", async () => {
+    const vendorCatalog = [GOOGLE_VENDOR, ...VENDOR_CATALOG]
+
     renderProviderTabs({
-      selectedProvider: "Claude",
-      allProvidersFilteredCount: 3,
-      providerCounts: {
-        OpenAI: 2,
-        Claude: 0,
-        Gemini: 1,
-      },
+      vendorCatalog,
+      effectiveSelectedVendor: "custom:example%20lab",
+      allVendorsFilteredCount: 4,
     })
 
     const allProvidersTab = await screen.findByRole("tab", {
-      name: /allProviders.*\(3\)/,
+      name: /allProviders.*\(4\)/,
     })
-    const openAiTab = screen.getByRole("tab", {
-      name: /OpenAI \(2\)/,
+    const customVendorTab = screen.getByRole("tab", {
+      name: /Example Lab \(1\)/,
     })
 
-    expect(screen.queryByRole("tab", { name: /Claude/ })).toBeNull()
-    expect(screen.getByRole("tablist")).toHaveAttribute(
-      "data-slot",
-      "tabs-list",
-    )
-    expect(allProvidersTab).toHaveAttribute("aria-selected", "true")
-    expect(allProvidersTab).toHaveAttribute("data-state", "active")
-    expect(openAiTab).toHaveAttribute("aria-selected", "false")
-    expect(openAiTab).toHaveAttribute("data-state", "inactive")
+    expect(allProvidersTab).toHaveAttribute("aria-selected", "false")
+    expect(customVendorTab).toHaveAttribute("aria-selected", "true")
+    expect(
+      screen.queryByRole("tab", { name: /unclassified/i }),
+    ).not.toBeInTheDocument()
+
+    const orderedTabs = screen.getAllByRole("tab")
+    expect(orderedTabs).toEqual([
+      allProvidersTab,
+      screen.getByRole("tab", { name: /Google \(1\)/ }),
+      screen.getByRole("tab", { name: /OpenAI \(2\)/ }),
+      screen.getByRole("tab", { name: /Anthropic \(1\)/ }),
+      customVendorTab,
+    ])
+
+    const decorativeIcons = screen.getAllByRole("img", { hidden: true })
+    expect(decorativeIcons).toHaveLength(5)
+    expect(
+      within(allProvidersTab).getByRole("img", { hidden: true }),
+    ).toHaveAttribute("data-filter-icon", "all-vendors")
+    expect(
+      within(screen.getByRole("tab", { name: /Google \(1\)/ })).getByRole(
+        "img",
+        { hidden: true },
+      ),
+    ).toHaveAttribute("data-publisher-icon", "Google-color")
+    expect(
+      within(screen.getByRole("tab", { name: /OpenAI \(2\)/ })).getByRole(
+        "img",
+        { hidden: true },
+      ),
+    ).toHaveAttribute("data-publisher-icon", "OpenAI-mono")
+    expect(
+      within(screen.getByRole("tab", { name: /Anthropic \(1\)/ })).getByRole(
+        "img",
+        { hidden: true },
+      ),
+    ).toHaveAttribute("data-publisher-icon", "Anthropic-mono")
+    expect(
+      within(customVendorTab).getByRole("img", { hidden: true }),
+    ).toHaveAttribute("data-publisher-icon", "generic")
+    for (const icon of decorativeIcons) {
+      expect(icon).toHaveAttribute("aria-hidden", "true")
+    }
+    expect(screen.queryAllByRole("img")).toHaveLength(0)
+    expect(screen.queryByText(/https?:\/\//)).not.toBeInTheDocument()
   })
 
-  it("selects a provider tab and reports the chosen provider", async () => {
+  it("renders the unclassified tab after every vendor with a distinct unknown presentation and explanatory copy", async () => {
+    renderProviderTabs({
+      effectiveSelectedVendor: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+      allVendorsFilteredCount: 6,
+      unclassifiedVendorCount: 2,
+    })
+
+    const unclassifiedTab = await screen.findByRole("tab", {
+      name: /unclassified.*\(2\)/i,
+    })
+    expect(unclassifiedTab).toHaveAttribute("aria-selected", "true")
+    expect(unclassifiedTab).toHaveAttribute(
+      "title",
+      "modelList:providerTabs.unclassifiedDescription",
+    )
+    expect(screen.getAllByRole("tab").at(-1)).toBe(unclassifiedTab)
+
+    const allProvidersTab = screen.getByRole("tab", {
+      name: /allProviders.*\(6\)/,
+    })
+    expect(
+      within(allProvidersTab).getByRole("img", { hidden: true }),
+    ).toHaveAttribute("data-filter-icon", "all-vendors")
+    expect(
+      within(unclassifiedTab).getByRole("img", { hidden: true }),
+    ).toHaveAttribute("data-filter-icon", "unknown-vendor")
+  })
+
+  it("reuses provider-filter analytics with the unclassified result count", async () => {
+    const user = userEvent.setup()
+    const { setSelectedProvider } = renderProviderTabs({
+      unclassifiedVendorCount: 3,
+    })
+
+    await user.click(
+      await screen.findByRole("tab", { name: /unclassified.*\(3\)/i }),
+    )
+
+    expect(setSelectedProvider).toHaveBeenCalledWith(
+      MODEL_VENDOR_FILTER_VALUES.Unclassified,
+    )
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter,
+        filterCount: 1,
+        resultCount: 3,
+      },
+    })
+  })
+
+  it("selects a vendor tab and reports the namespaced key", async () => {
     const user = userEvent.setup()
     const { setSelectedProvider } = renderProviderTabs()
 
-    await user.click(await screen.findByRole("tab", { name: /Claude \(1\)/ }))
+    await user.click(
+      await screen.findByRole("tab", { name: /Anthropic \(1\)/ }),
+    )
 
-    expect(setSelectedProvider).toHaveBeenCalledWith("Claude")
+    expect(setSelectedProvider).toHaveBeenCalledWith("known:anthropic")
     expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
@@ -208,10 +447,10 @@ describe("ProviderTabs selection", () => {
     })
   })
 
-  it("keeps a provider tab selected when a non-all provider is active and lets users switch back to all", async () => {
+  it("keeps a vendor tab selected and lets users switch back to all", async () => {
     const user = userEvent.setup()
     const { setSelectedProvider } = renderProviderTabs({
-      selectedProvider: "OpenAI",
+      effectiveSelectedVendor: "known:openai",
     })
 
     const allProvidersTab = await screen.findByRole("tab", {
@@ -222,14 +461,27 @@ describe("ProviderTabs selection", () => {
     })
 
     expect(openAiTab).toHaveAttribute("aria-selected", "true")
-    expect(openAiTab).toHaveAttribute("data-state", "active")
     expect(allProvidersTab).toHaveAttribute("aria-selected", "false")
-    expect(allProvidersTab).toHaveAttribute("data-state", "inactive")
 
     await user.click(allProvidersTab)
 
     expect(setSelectedProvider).toHaveBeenCalledWith(
-      MODEL_PROVIDER_FILTER_VALUES.ALL,
+      MODEL_VENDOR_FILTER_VALUES.All,
     )
+  })
+
+  it("preserves Radix arrow-key selection semantics", async () => {
+    const user = userEvent.setup()
+    const { setSelectedProvider } = renderProviderTabs()
+    const allVendorsTab = await screen.findByRole("tab", {
+      name: /allProviders.*\(10\)/,
+    })
+
+    await user.click(allVendorsTab)
+    setSelectedProvider.mockClear()
+    await user.keyboard("{ArrowRight}")
+
+    expect(screen.getByRole("tab", { name: /OpenAI \(2\)/ })).toHaveFocus()
+    expect(setSelectedProvider).toHaveBeenCalledWith("known:openai")
   })
 })

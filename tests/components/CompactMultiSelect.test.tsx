@@ -89,6 +89,26 @@ describe("CompactMultiSelect", () => {
     expect(onChange).toHaveBeenCalledWith(["id-alpha"])
   })
 
+  it("shows option counts in chips display mode", async () => {
+    const user = userEvent.setup()
+
+    renderCompact(
+      <CompactMultiSelect
+        displayMode="chips"
+        options={[{ value: "id-alpha", label: "Alpha", count: 3 }]}
+        selected={[]}
+        onChange={vi.fn()}
+        placeholder="Pick"
+      />,
+    )
+
+    await user.click(await screen.findByPlaceholderText("Pick"))
+
+    expect(screen.getByRole("option", { name: "Alpha 3" })).toHaveTextContent(
+      "3",
+    )
+  })
+
   it("copies chip text when the selected chip label is clicked", async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
@@ -479,6 +499,30 @@ describe("CompactMultiSelect", () => {
     await user.click(screen.getByRole("option", { name: "Alpha" }))
 
     expect(onChange).toHaveBeenCalledWith([])
+  })
+
+  it("renders option counts without adding them to the selected summary", async () => {
+    const user = userEvent.setup()
+
+    renderCompact(
+      <CompactMultiSelect
+        displayMode="summary"
+        options={[
+          { value: "alpha", label: "Alpha", count: 12 },
+          { value: "beta", label: "Beta", count: 0 },
+        ]}
+        selected={["alpha"]}
+        onChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("combobox")).toHaveTextContent("Alpha")
+    expect(screen.getByRole("combobox")).not.toHaveTextContent("12")
+
+    await user.click(screen.getByRole("combobox"))
+
+    expect(screen.getByRole("option", { name: "Alpha 12" })).toBeInTheDocument()
+    expect(screen.getByRole("option", { name: "Beta 0" })).toBeInTheDocument()
   })
 
   it("keeps duplicate custom batches as a no-op and clears the search term", async () => {

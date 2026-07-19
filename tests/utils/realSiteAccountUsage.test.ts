@@ -252,6 +252,62 @@ describe("real-site account usage adapters", () => {
     expect(cleanup).toHaveBeenCalledOnce()
   })
 
+  it("raises the timeout only for real-site account checks that perform remote writes", async () => {
+    vi.mocked(maybeRunRealSiteModelToKeyScenario).mockResolvedValue(undefined)
+    vi.mocked(verifyAccountModelCatalogUsage).mockResolvedValue(undefined)
+    const testInfo = {
+      annotations: [],
+      timeout: 60_000,
+      setTimeout: vi.fn(),
+    } as any
+
+    await runRealSiteAccountFixtureUsageChecks(
+      {
+        testInfo,
+        page,
+        extensionId: "extension-id",
+        serviceWorker,
+        account,
+        label: "New API",
+      },
+      [
+        realSiteAccountUsageChecks.modelToKey({ envPrefix: "NEW_API" }),
+        realSiteAccountUsageChecks.modelCatalog(),
+      ],
+    )
+
+    expect(testInfo.setTimeout).toHaveBeenCalledOnce()
+    expect(testInfo.setTimeout).toHaveBeenCalledWith(120_000)
+  })
+
+  it("sums timeout budgets when multiple real-site remote-write checks run together", async () => {
+    vi.mocked(verifyAccountKeyLifecycleUsage).mockResolvedValue(undefined)
+    vi.mocked(maybeRunRealSiteModelToKeyScenario).mockResolvedValue(undefined)
+    const testInfo = {
+      annotations: [],
+      timeout: 60_000,
+      setTimeout: vi.fn(),
+    } as any
+
+    await runRealSiteAccountFixtureUsageChecks(
+      {
+        testInfo,
+        page,
+        extensionId: "extension-id",
+        serviceWorker,
+        account,
+        label: "New API",
+      },
+      [
+        realSiteAccountUsageChecks.keyLifecycle(),
+        realSiteAccountUsageChecks.modelToKey({ envPrefix: "NEW_API" }),
+      ],
+    )
+
+    expect(testInfo.setTimeout).toHaveBeenCalledOnce()
+    expect(testInfo.setTimeout).toHaveBeenCalledWith(240_000)
+  })
+
   it("verifies key-to-profile usage from the popup and closes the popup page", async () => {
     const popupPage = {
       close: vi.fn().mockResolvedValue(undefined),

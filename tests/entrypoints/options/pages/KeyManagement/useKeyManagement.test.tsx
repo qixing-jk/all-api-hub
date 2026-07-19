@@ -3923,6 +3923,122 @@ describe("useKeyManagement enabled account filtering", () => {
     await waitFor(() => expect(fetchAccountTokens).toHaveBeenCalledTimes(1))
   })
 
+  it("waits for enabled accounts before selecting a routed account", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "hydrated-route-acc",
+      name: "Hydrated Route Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({ enabledDisplayData: [] } as any)
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([])
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+
+    const { result, rerender } = renderHook(
+      () => useKeyManagement({ accountId: account.id }),
+      {
+        wrapper: createWrapper(),
+      },
+    )
+
+    expect(result.current.selectedAccount).toBe("")
+    expect(fetchAccountTokens).not.toHaveBeenCalled()
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    rerender()
+
+    await waitFor(() => expect(result.current.selectedAccount).toBe(account.id))
+    await waitFor(() => expect(fetchAccountTokens).toHaveBeenCalledTimes(1))
+  })
+
+  it("restores all-accounts selection from routeParams.accountId", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "route-acc",
+      name: "Route Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([])
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+
+    const { result } = renderHook(
+      () =>
+        useKeyManagement({
+          accountId: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+        }),
+      {
+        wrapper: createWrapper(),
+      },
+    )
+
+    await waitFor(() =>
+      expect(result.current.selectedAccount).toBe(
+        KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      ),
+    )
+    await waitFor(() => expect(fetchAccountTokens).toHaveBeenCalledTimes(1))
+  })
+
+  it.each([
+    ["an empty route", {}],
+    ["an invalid account route", { accountId: "missing-account" }],
+  ] satisfies Array<[string, Record<string, string>]>)(
+    "clears the selected account when a controlled route changes to %s",
+    async (_label, nextRouteParams) => {
+      const mockedUseAccountData = vi.mocked(useAccountData)
+      const account = createDisplayAccount({
+        id: "route-acc",
+        name: "Route Account",
+      })
+
+      mockedUseAccountData.mockReturnValue({
+        enabledDisplayData: [account],
+      } as any)
+
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+        createAdapterWithKeyManagement({
+          fetchTokens: vi.fn().mockResolvedValue([]),
+        }) as any,
+      )
+
+      const { result, rerender } = renderHook(
+        ({ routeParams }: { routeParams: Record<string, string> }) =>
+          useKeyManagement(routeParams),
+        {
+          initialProps: {
+            routeParams: {
+              accountId: account.id,
+            } as Record<string, string>,
+          },
+          wrapper: createWrapper(),
+        },
+      )
+
+      await waitFor(() =>
+        expect(result.current.selectedAccount).toBe(account.id),
+      )
+
+      rerender({ routeParams: nextRouteParams })
+
+      await waitFor(() => expect(result.current.selectedAccount).toBe(""))
+    },
+  )
+
   it("clears all-accounts selection when enabled accounts disappear", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
     const account = createDisplayAccount({

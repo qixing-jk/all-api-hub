@@ -1,6 +1,156 @@
 import { describe, expect, it } from "vitest"
 
-import { buildKiloCodeApiConfigs } from "~/services/integrations/kiloCodeExport"
+import {
+  buildKiloCodeApiConfigs,
+  buildKiloCodeV7SettingsFile,
+  KILO_CODE_EXPORT_FILENAMES,
+  KILO_CODE_EXPORT_TARGETS,
+} from "~/services/integrations/kiloCodeExport"
+
+const v7Selection = {
+  accountId: "account-a",
+  siteName: "Example",
+  baseUrl: "https://api.example.invalid",
+  tokenId: 7,
+  tokenName: "Default",
+  tokenKey: "example-key",
+  modelId: "example-model",
+}
+
+describe("buildKiloCodeV7SettingsFile", () => {
+  it("builds a Kilo Code 7.x provider and selects its model", () => {
+    const result = buildKiloCodeV7SettingsFile({
+      selections: [v7Selection],
+      now: () => new Date("2026-07-13T00:00:00.000Z"),
+    })
+    const providerId = Object.keys(result.provider)[0]
+
+    expect(result).toEqual({
+      _meta: {
+        version: 1,
+        exportedAt: "2026-07-13T00:00:00.000Z",
+      },
+      provider: {
+        [providerId]: {
+          npm: "@ai-sdk/openai-compatible",
+          models: {
+            "example-model": { name: "example-model" },
+          },
+          options: {
+            apiKey: "example-key",
+            baseURL: "https://api.example.invalid/v1",
+          },
+        },
+      },
+      model: `${providerId}/example-model`,
+    })
+  })
+
+  it("exposes the supported export targets", () => {
+    expect(KILO_CODE_EXPORT_TARGETS).toEqual({
+      KiloV7: "kilo-v7",
+      Legacy: "legacy",
+    })
+    expect(KILO_CODE_EXPORT_FILENAMES).toEqual({
+      KiloV7: "kilo-settings.json",
+      Legacy: "kilo-code-settings.json",
+    })
+  })
+
+  it("keeps the provider ID stable when only the secret changes", () => {
+    const first = buildKiloCodeV7SettingsFile({ selections: [v7Selection] })
+    const second = buildKiloCodeV7SettingsFile({
+      selections: [{ ...v7Selection, tokenKey: "rotated-example-key" }],
+    })
+
+    expect(Object.keys(first.provider)[0]).toBe(Object.keys(second.provider)[0])
+  })
+
+  it("hashes non-BMP provider identities by Unicode character", () => {
+    const result = buildKiloCodeV7SettingsFile({
+      selections: [{ ...v7Selection, accountId: "account-😀" }],
+    })
+
+    expect(Object.keys(result.provider)).toEqual(["example-default-f58ad972"])
+  })
+
+  it("falls back to a settings-safe provider label for non-Latin names", () => {
+    const result = buildKiloCodeV7SettingsFile({
+      selections: [
+        {
+          ...v7Selection,
+          siteName: "示例",
+          tokenName: "默认",
+        },
+      ],
+    })
+
+    expect(Object.keys(result.provider)[0]).toMatch(/^provider-[a-f0-9]{8}$/)
+  })
+
+  it("creates unique, settings-safe provider IDs", () => {
+    const result = buildKiloCodeV7SettingsFile({
+      selections: [
+        v7Selection,
+        {
+          ...v7Selection,
+          accountId: "account-b",
+          siteName: "Second Example",
+          tokenId: 8,
+        },
+      ],
+    })
+    const providerIds = Object.keys(result.provider)
+
+    expect(new Set(providerIds)).toHaveLength(2)
+    expect(providerIds).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^[a-z0-9][a-z0-9-]*$/),
+        expect.stringMatching(/^[a-z0-9][a-z0-9-]*$/),
+      ]),
+    )
+  })
+
+  it("rejects an empty selection", () => {
+    expect(() => buildKiloCodeV7SettingsFile({ selections: [] })).toThrow(
+      "Select at least one runtime key",
+    )
+  })
+
+  it.each([
+    ["blank token key", { tokenKey: "  " }],
+    ["blank model ID", { modelId: "  " }],
+    ["invalid base URL", { baseUrl: "not-a-url" }],
+    ["non-HTTP base URL", { baseUrl: "ftp://api.example.invalid" }],
+  ])("rejects %s", (_name, overrides) => {
+    expect(() =>
+      buildKiloCodeV7SettingsFile({
+        selections: [{ ...v7Selection, ...overrides }],
+      }),
+    ).toThrow()
+  })
+
+  it("rejects duplicate generated provider IDs", () => {
+    expect(() =>
+      buildKiloCodeV7SettingsFile({
+        selections: [
+          v7Selection,
+          { ...v7Selection, accountId: "account-b", tokenId: 8 },
+        ],
+        generateProviderId: () => "duplicate-provider",
+      }),
+    ).toThrow("Kilo Code provider IDs must be unique")
+  })
+
+  it("rejects generated provider IDs that are not settings-safe", () => {
+    expect(() =>
+      buildKiloCodeV7SettingsFile({
+        selections: [v7Selection],
+        generateProviderId: () => "Unsafe Provider",
+      }),
+    ).toThrow("Kilo Code provider IDs must be settings-safe")
+  })
+})
 
 describe("buildKiloCodeApiConfigs", () => {
   it("normalizes openAiBaseUrl to end with /v1 without duplicating segments", () => {

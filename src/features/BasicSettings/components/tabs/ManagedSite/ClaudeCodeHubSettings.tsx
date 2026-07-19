@@ -181,7 +181,7 @@ export default function ClaudeCodeHubSettings() {
                 variant="outline"
                 size="sm"
                 onClick={handleValidateConfig}
-                disabled={isValidating}
+                loading={isValidating}
               >
                 {isValidating
                   ? t("claudeCodeHub.validation.validating")

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -25,6 +25,14 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: trackStartedMock,
 }))
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+  return { promise, resolve }
+}
+
 describe("RedemptionBatchResultToast", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -36,6 +44,13 @@ describe("RedemptionBatchResultToast", () => {
 
   it("tracks fixed analytics metadata for closing and retrying batch results", async () => {
     const user = userEvent.setup()
+    const retryDeferred = createDeferred<{
+      code: string
+      preview: string
+      success: boolean
+      message: string
+    }>()
+    const onRetry = vi.fn().mockReturnValue(retryDeferred.promise)
 
     render(
       <RedemptionBatchResultToast
@@ -46,13 +61,14 @@ describe("RedemptionBatchResultToast", () => {
             success: false,
             message: "Failed",
           },
+          {
+            code: "code-b",
+            preview: "BB**",
+            success: false,
+            message: "Failed",
+          },
         ]}
-        onRetry={vi.fn().mockResolvedValue({
-          code: "code-a",
-          preview: "AA**",
-          success: true,
-          message: "Redeemed",
-        })}
+        onRetry={onRetry}
         onClose={vi.fn()}
       />,
     )
@@ -60,9 +76,39 @@ describe("RedemptionBatchResultToast", () => {
     await user.click(
       screen.getByRole("button", { name: "common:actions.close" }),
     )
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.retry" }),
-    )
+    const [firstRetryButton] = screen.getAllByRole("button", {
+      name: "common:actions.retry",
+    })
+    await user.click(firstRetryButton)
+
+    const retryingButton = screen.getByRole("button", {
+      name: "common:status.retrying",
+    })
+    expect(retryingButton).toHaveAttribute("aria-busy", "true")
+    expect(retryingButton).toBeDisabled()
+    const siblingRetryButton = screen.getByRole("button", {
+      name: "common:actions.retry",
+    })
+    expect(siblingRetryButton).toBeDisabled()
+    expect(siblingRetryButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(retryingButton)
+    expect(onRetry).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      retryDeferred.resolve({
+        code: "code-a",
+        preview: "AA**",
+        success: true,
+        message: "Redeemed",
+      })
+    })
+
+    await waitFor(() => {
+      expect(completeActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+    })
 
     expect(trackStartedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
@@ -78,9 +124,6 @@ describe("RedemptionBatchResultToast", () => {
         PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionBatchResultToast,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
     })
-    expect(completeActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Success,
-    )
   })
 
   it("tracks failed retry completion using a structured category without leaking raw code", async () => {

@@ -1,7 +1,17 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import { ApiCredentialProfileListItem } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileListItem"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import enApiCredentialProfiles from "~/locales/en/apiCredentialProfiles.json"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -10,42 +20,8 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
-
-vi.mock("react-i18next", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-i18next")>()
-
-  return {
-    ...actual,
-    useTranslation: () => ({
-      t: (key: string, options?: { count?: number; date?: string }) => {
-        if (key === "common:quota.unlimited") return "Unlimited"
-        if (key === "apiCredentialProfiles:telemetry.notProvided") {
-          return "Not provided"
-        }
-        if (key === "apiCredentialProfiles:telemetry.modelCount") {
-          return `${options?.count ?? 0} models`
-        }
-        if (key === "account:healthStatus.warning") return "Warning"
-        if (key === "account:healthStatus.healthy") return "Healthy"
-        if (key === "apiCredentialProfiles:telemetry.health") return "Health"
-        if (key === "apiCredentialProfiles:telemetry.actions.refresh") {
-          return "Refresh telemetry"
-        }
-        if (key === "apiCredentialProfiles:telemetry.refreshing") {
-          return "Refreshing telemetry"
-        }
-        if (key === "apiCredentialProfiles:list.expirationStatus.active") {
-          return `apiCredentialProfiles:list.expirationStatus.active ${options?.date}`
-        }
-        if (key === "apiCredentialProfiles:list.expirationStatus.expired") {
-          return `apiCredentialProfiles:list.expirationStatus.expired ${options?.date}`
-        }
-        return key
-      },
-    }),
-  }
-})
 
 vi.mock(
   "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary",
@@ -80,7 +56,8 @@ vi.mock("~/components/icons/ManagedSiteIcon", () => ({
   ManagedSiteIcon: () => <span data-testid="managed-site-icon" />,
 }))
 
-vi.mock("~/components/ui", async () => {
+vi.mock("~/components/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/components/ui")>()
   const { useProductAnalyticsScope } = await import(
     "~/contexts/ProductAnalyticsScopeContext"
   )
@@ -89,6 +66,7 @@ vi.mock("~/components/ui", async () => {
   )
 
   return {
+    ...actual,
     Badge: ({ children }: any) => <span>{children}</span>,
     Card: ({ children }: any) => <div>{children}</div>,
     CardContent: ({ children }: any) => <div>{children}</div>,
@@ -197,6 +175,37 @@ function renderListItem(
 }
 
 describe("ApiCredentialProfileListItem", () => {
+  beforeAll(() => {
+    testI18n.addResource(
+      "en",
+      "apiCredentialProfiles",
+      "list.expirationStatus.active",
+      enApiCredentialProfiles.list.expirationStatus.active,
+    )
+    testI18n.addResource(
+      "en",
+      "apiCredentialProfiles",
+      "list.expirationStatus.expired",
+      enApiCredentialProfiles.list.expirationStatus.expired,
+    )
+    testI18n.addResource(
+      "en",
+      "apiCredentialProfiles",
+      "telemetry.modelCount_one",
+      enApiCredentialProfiles.telemetry.modelCount_one,
+    )
+    testI18n.addResource(
+      "en",
+      "apiCredentialProfiles",
+      "telemetry.modelCount_other",
+      enApiCredentialProfiles.telemetry.modelCount_other,
+    )
+  })
+
+  afterAll(() => {
+    testI18n.removeResourceBundle("en", "apiCredentialProfiles")
+  })
+
   afterEach(() => {
     vi.useRealTimers()
   })
@@ -265,7 +274,11 @@ describe("ApiCredentialProfileListItem", () => {
     const onRefreshTelemetry = vi.fn()
     renderListItem(buildProfile(), { onRefreshTelemetry })
 
-    fireEvent.click(screen.getByRole("button", { name: "Refresh telemetry" }))
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.actions.refresh",
+      }),
+    )
 
     expect(onRefreshTelemetry).toHaveBeenCalledWith(
       expect.objectContaining({ id: "profile-1" }),
@@ -277,15 +290,15 @@ describe("ApiCredentialProfileListItem", () => {
 
     expect(
       screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
-    ).toHaveTextContent("Unlimited")
+    ).toHaveTextContent("common:quota.unlimited")
     expect(
       screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayUsage),
-    ).toHaveTextContent("Not provided")
+    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
     expect(
       screen.getByTestId(
         API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayRequests,
       ),
-    ).toHaveTextContent("Not provided")
+    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
   })
 
   it("shows expiration as a status badge and keeps audit timestamps separate", () => {
@@ -306,9 +319,9 @@ describe("ApiCredentialProfileListItem", () => {
 
     expect(
       screen.getByText(
-        `apiCredentialProfiles:list.expirationStatus.active ${new Date(
-          expiresAt,
-        ).toLocaleDateString()}`,
+        testI18n.t("apiCredentialProfiles:list.expirationStatus.active", {
+          date: new Date(expiresAt).toLocaleDateString(),
+        }),
       ),
     ).toBeInTheDocument()
     expect(
@@ -332,9 +345,9 @@ describe("ApiCredentialProfileListItem", () => {
 
     expect(
       screen.getByText(
-        `apiCredentialProfiles:list.expirationStatus.expired ${new Date(
-          expiredAt,
-        ).toLocaleDateString()}`,
+        testI18n.t("apiCredentialProfiles:list.expirationStatus.expired", {
+          date: new Date(expiredAt).toLocaleDateString(),
+        }),
       ),
     ).toBeInTheDocument()
 
@@ -382,7 +395,7 @@ describe("ApiCredentialProfileListItem", () => {
 
     expect(
       screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
-    ).toHaveTextContent("Not provided")
+    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
   })
 
   it("uses not provided fallbacks for model-only refreshed snapshots", () => {
@@ -400,18 +413,20 @@ describe("ApiCredentialProfileListItem", () => {
 
     expect(
       screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
-    ).toHaveTextContent("Not provided")
+    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
     expect(
       screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayUsage),
-    ).toHaveTextContent("Not provided")
+    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
     expect(
       screen.getByTestId(
         API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayRequests,
       ),
-    ).toHaveTextContent("Not provided")
+    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
     expect(
       screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryModels),
-    ).toHaveTextContent("2 models")
+    ).toHaveTextContent(
+      testI18n.t("apiCredentialProfiles:telemetry.modelCount", { count: 2 }),
+    )
   })
 
   it("renders dash fallbacks when telemetry has never been refreshed", () => {
@@ -448,7 +463,9 @@ describe("ApiCredentialProfileListItem", () => {
     )
 
     expect(
-      screen.getByLabelText("Health: Warning: quota is low"),
+      screen.getByLabelText(
+        "apiCredentialProfiles:telemetry.health: account:healthStatus.warning: quota is low",
+      ),
     ).toHaveAttribute("role", "img")
   })
 
@@ -457,7 +474,11 @@ describe("ApiCredentialProfileListItem", () => {
 
     const { rerender } = renderListItem(buildProfile(), { onRefreshTelemetry })
 
-    fireEvent.click(screen.getByRole("button", { name: "Refresh telemetry" }))
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.actions.refresh",
+      }),
+    )
 
     expect(onRefreshTelemetry).toHaveBeenCalledWith(
       expect.objectContaining({ id: "profile-1" }),
@@ -487,8 +508,68 @@ describe("ApiCredentialProfileListItem", () => {
     )
 
     expect(
-      screen.getByRole("button", { name: "Refresh telemetry" }),
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.refreshing",
+      }),
     ).toBeDisabled()
-    expect(screen.getByText("Refreshing telemetry")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.refreshing",
+      }),
+    ).toHaveAttribute("aria-busy", "true")
+    expect(
+      screen.getByText("apiCredentialProfiles:telemetry.refreshing"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.verifyApi",
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.verifyApi",
+      }),
+    ).not.toHaveAttribute("aria-busy")
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.refreshing",
+      }),
+    )
+    expect(onRefreshTelemetry).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <ApiCredentialProfileListItem
+        profile={buildProfile()}
+        verificationSummary={null}
+        tagNames={[]}
+        visibleKeys={new Set()}
+        toggleKeyVisibility={vi.fn()}
+        onCopyBaseUrl={vi.fn()}
+        onCopyApiKey={vi.fn()}
+        onCopyBundle={vi.fn()}
+        onOpenModelManagement={vi.fn()}
+        onVerify={vi.fn()}
+        onVerifyCliSupport={vi.fn()}
+        onRefreshTelemetry={onRefreshTelemetry}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onExport={vi.fn()}
+        isTelemetryRefreshing={false}
+        managedSiteType="new-api"
+        managedSiteLabel="New API"
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.actions.refresh",
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.actions.refresh",
+      }),
+    ).not.toHaveAttribute("aria-busy")
   })
 })

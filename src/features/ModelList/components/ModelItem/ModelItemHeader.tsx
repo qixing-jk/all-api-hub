@@ -10,9 +10,10 @@ import { useTranslation } from "react-i18next"
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
 import { Badge, BadgeAdornment, IconButton } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { ModelVendorMark } from "~/features/ModelList/components/ModelVendorMark"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
+import type { ResolvedModelVendor } from "~/services/models/modelMetadata/types"
 import { getBillingModeText } from "~/services/models/utils/modelPricing"
-import { getProviderConfig } from "~/services/models/utils/modelProviders"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -25,6 +26,7 @@ import { MODEL_LIST_TEST_IDS } from "../../testIds"
 
 interface ModelItemHeaderProps {
   model: ModelPricing
+  resolvedVendor: ResolvedModelVendor
   isAvailableForUser: boolean
   handleCopyModelName: () => void
   showPricingMetadata: boolean
@@ -46,6 +48,7 @@ const rowActionsSurface =
 
 export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   model,
+  resolvedVendor,
   isAvailableForUser,
   handleCopyModelName,
   showPricingMetadata,
@@ -57,8 +60,6 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   trailingContent,
 }) => {
   const { t } = useTranslation(["modelList", "aiApiVerification"])
-  const providerConfig = getProviderConfig(model.model_name)
-  const IconComponent = providerConfig.icon
 
   const getBillingVariant = (quotaType: number) => {
     if (quotaType === 2) return "default"
@@ -69,13 +70,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
     <div className="min-w-0 flex-1 space-y-1.5">
       <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
         <div className="flex min-w-0 flex-[1_1_10rem] items-center gap-2 sm:gap-3">
-          <div
-            className={`shrink-0 rounded-lg p-1.5 ${providerConfig.bgColor}`}
-          >
-            <IconComponent
-              className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${providerConfig.color}`}
-            />
-          </div>
+          <ModelVendorMark vendor={resolvedVendor} variant="badge" />
 
           <h3
             className={`min-w-0 flex-1 truncate text-sm font-semibold sm:text-base md:text-lg ${

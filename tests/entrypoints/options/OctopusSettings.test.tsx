@@ -99,98 +99,90 @@ vi.mock("~/components/SettingSection", () => ({
   ),
 }))
 
-vi.mock("~/components/ui", () => ({
-  Button: ({
-    children,
-    onClick,
-    disabled,
-  }: {
-    children: ReactNode
-    onClick?: () => void
-    disabled?: boolean
-  }) => (
-    <button disabled={disabled} onClick={() => onClick?.()}>
-      {children}
-    </button>
-  ),
-  Card: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  CardItem: ({
-    title,
-    description,
-    rightContent,
-  }: {
-    title?: ReactNode
-    description?: ReactNode
-    rightContent?: ReactNode
-  }) => (
-    <div>
-      {title ? <div>{title}</div> : null}
-      {description ? <div>{description}</div> : null}
-      {rightContent}
-    </div>
-  ),
-  CardList: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  IconButton: ({
-    children,
-    onClick,
-    "aria-label": ariaLabel,
-  }: {
-    children: ReactNode
-    onClick?: () => void
-    "aria-label"?: string
-  }) => (
-    <button aria-label={ariaLabel} onClick={() => onClick?.()}>
-      {children}
-    </button>
-  ),
-  Input: ({
-    value,
-    placeholder,
-    type,
-    onChange,
-    onBlur,
-    rightIcon,
-    revealable,
-    revealLabels,
-  }: {
-    value?: string
-    placeholder?: string
-    type?: string
-    onChange?: (event: { target: { value: string } }) => void
-    onBlur?: (event: { target: { value: string } }) => void
-    rightIcon?: ReactNode
-    revealable?: boolean
-    revealLabels?: { show: string; hide: string }
-  }) => {
-    const [isRevealed, setIsRevealed] = useState(false)
-    const inputType =
-      revealable && type === "password" && isRevealed ? "text" : type
+vi.mock("~/components/ui", async (importOriginal) => {
+  const original = await importOriginal<typeof import("~/components/ui")>()
 
-    return (
+  return {
+    ...original,
+    Card: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    CardItem: ({
+      title,
+      description,
+      rightContent,
+    }: {
+      title?: ReactNode
+      description?: ReactNode
+      rightContent?: ReactNode
+    }) => (
       <div>
-        <input
-          aria-label={placeholder ?? type ?? "input"}
-          type={inputType}
-          value={value}
-          onChange={(event) =>
-            onChange?.({ target: { value: event.currentTarget.value } })
-          }
-          onBlur={(event) =>
-            onBlur?.({ target: { value: event.currentTarget.value } })
-          }
-        />
-        {revealable && type === "password" ? (
-          <button
-            type="button"
-            aria-label={isRevealed ? revealLabels?.hide : revealLabels?.show}
-            onClick={() => setIsRevealed((current) => !current)}
-          />
-        ) : null}
-        {rightIcon}
+        {title ? <div>{title}</div> : null}
+        {description ? <div>{description}</div> : null}
+        {rightContent}
       </div>
-    )
-  },
-}))
+    ),
+    CardList: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+    IconButton: ({
+      children,
+      onClick,
+      "aria-label": ariaLabel,
+    }: {
+      children: ReactNode
+      onClick?: () => void
+      "aria-label"?: string
+    }) => (
+      <button aria-label={ariaLabel} onClick={() => onClick?.()}>
+        {children}
+      </button>
+    ),
+    Input: ({
+      value,
+      placeholder,
+      type,
+      onChange,
+      onBlur,
+      rightIcon,
+      revealable,
+      revealLabels,
+    }: {
+      value?: string
+      placeholder?: string
+      type?: string
+      onChange?: (event: { target: { value: string } }) => void
+      onBlur?: (event: { target: { value: string } }) => void
+      rightIcon?: ReactNode
+      revealable?: boolean
+      revealLabels?: { show: string; hide: string }
+    }) => {
+      const [isRevealed, setIsRevealed] = useState(false)
+      const inputType =
+        revealable && type === "password" && isRevealed ? "text" : type
+
+      return (
+        <div>
+          <input
+            aria-label={placeholder ?? type ?? "input"}
+            type={inputType}
+            value={value}
+            onChange={(event) =>
+              onChange?.({ target: { value: event.currentTarget.value } })
+            }
+            onBlur={(event) =>
+              onBlur?.({ target: { value: event.currentTarget.value } })
+            }
+          />
+          {revealable && type === "password" ? (
+            <button
+              type="button"
+              aria-label={isRevealed ? revealLabels?.hide : revealLabels?.show}
+              onClick={() => setIsRevealed((current) => !current)}
+            />
+          ) : null}
+          {rightIcon}
+        </div>
+      )
+    },
+  }
+})
 
 const mockedValidateConfig = octopusAuthManager.validateConfig as ReturnType<
   typeof vi.fn
@@ -411,7 +403,7 @@ describe("OctopusSettings", () => {
     expect(mockUpdateOctopusConfig).not.toHaveBeenCalled()
   })
 
-  it("validates trimmed config, disables the button in flight, and persists successful values", async () => {
+  it("exposes only validation as busy, suppresses duplicate clicks, and restores on success", async () => {
     const deferredValidation = createDeferred<{ success: boolean }>()
     mockedValidateConfig.mockReturnValue(deferredValidation.promise)
 
@@ -450,11 +442,17 @@ describe("OctopusSettings", () => {
       })
     })
 
+    const validatingButton = screen.getByRole("button", {
+      name: "settings:octopus.validation.validating",
+    })
+    expect(validatingButton).toBeDisabled()
+    expect(validatingButton).toHaveAttribute("aria-busy", "true")
     expect(
-      screen.getByRole("button", {
-        name: "settings:octopus.validation.validating",
-      }),
-    ).toBeDisabled()
+      screen.getByRole("button", { name: "common:actions.reset" }),
+    ).not.toHaveAttribute("aria-busy")
+
+    fireEvent.click(validatingButton)
+    expect(mockedValidateConfig).toHaveBeenCalledTimes(1)
     expect(
       screen.getByLabelText("settings:octopus.fields.baseUrlPlaceholder"),
     ).toHaveValue("https://validated.example.com")
@@ -484,11 +482,11 @@ describe("OctopusSettings", () => {
     })
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", {
-          name: "settings:octopus.validation.validate",
-        }),
-      ).not.toBeDisabled()
+      const restoredButton = screen.getByRole("button", {
+        name: "settings:octopus.validation.validate",
+      })
+      expect(restoredButton).toBeEnabled()
+      expect(restoredButton).not.toHaveAttribute("aria-busy")
     })
   })
 

@@ -3,19 +3,30 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
+import { KiloCodeExportGuidance } from "~/components/KiloCodeExportGuidance"
 import {
   Alert,
   Button,
   FormField,
   Modal,
   SearchableSelect,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import {
   buildKiloCodeApiConfigs,
-  buildKiloCodeSettingsFile,
+  KILO_CODE_EXPORT_TARGET_OPTIONS,
+  KILO_CODE_EXPORT_TARGETS,
+  type KiloCodeExportTarget,
+  type KiloCodeExportTuple,
 } from "~/services/integrations/kiloCodeExport"
+import { getKiloCodeExportAnalyticsTarget } from "~/services/integrations/kiloCodeExportAnalytics"
+import { buildKiloCodeExportOutput } from "~/services/integrations/kiloCodeExportPolicy"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -61,8 +72,9 @@ export function KiloCodeProfileExportDialog({
     { value: string; label: string }[]
   >([])
   const [isLoadingModels, setIsLoadingModels] = useState(false)
-
-  const filename = "kilo-code-settings.json"
+  const [exportTarget, setExportTarget] = useState<KiloCodeExportTarget>(
+    KILO_CODE_EXPORT_TARGETS.KiloV7,
+  )
 
   useEffect(() => {
     if (!isOpen) return
@@ -70,6 +82,7 @@ export function KiloCodeProfileExportDialog({
     setModelId("")
     setModelOptions([])
     setIsLoadingModels(true)
+    setExportTarget(KILO_CODE_EXPORT_TARGETS.KiloV7)
 
     let isMounted = true
     void (async () => {
@@ -105,34 +118,35 @@ export function KiloCodeProfileExportDialog({
     }
   }, [isOpen, profile.apiKey, profile.baseUrl])
 
-  const { apiConfigs, currentApiConfigName } = useMemo(() => {
+  const { exportTuple, currentApiConfigName } = useMemo(() => {
     const selectedModelId = modelId.trim() || undefined
+    const exportTuple: KiloCodeExportTuple = {
+      accountId: profile.id,
+      siteName: profile.name,
+      baseUrl: profile.baseUrl,
+      tokenId: 0,
+      tokenName: t("common:labels.apiKey"),
+      tokenKey: profile.apiKey,
+      modelId: selectedModelId,
+    }
 
-    const { apiConfigs, profileNames } = buildKiloCodeApiConfigs({
-      selections: [
-        {
-          accountId: profile.id,
-          siteName: profile.name,
-          baseUrl: profile.baseUrl,
-          tokenId: 0,
-          tokenName: t("common:labels.apiKey"),
-          tokenKey: profile.apiKey,
-          modelId: selectedModelId,
-        },
-      ],
+    const { profileNames } = buildKiloCodeApiConfigs({
+      selections: [exportTuple],
     })
 
     return {
-      apiConfigs,
+      exportTuple,
       currentApiConfigName: profileNames[0] ?? "",
     }
   }, [modelId, profile.apiKey, profile.baseUrl, profile.id, profile.name, t])
 
   const canExport = Boolean(currentApiConfigName && modelId.trim())
+  const isKiloV7Target = exportTarget === KILO_CODE_EXPORT_TARGETS.KiloV7
   const exportInsights = {
-    itemCount: Object.keys(apiConfigs).length,
+    itemCount: 1,
     modelCount: modelId.trim() ? 1 : 0,
     selectedCount: 1,
+    kiloCodeExportTarget: getKiloCodeExportAnalyticsTarget(exportTarget),
   }
 
   const handleCopyApiConfigs = async () => {
@@ -148,10 +162,17 @@ export function KiloCodeProfileExportDialog({
     })
 
     try {
-      await navigator.clipboard.writeText(JSON.stringify(apiConfigs, null, 2))
-      toast.success(t("ui:dialog.kiloCode.messages.copiedApiConfigs"))
+      const output = buildKiloCodeExportOutput({
+        target: exportTarget,
+        selections: [exportTuple],
+        currentLegacyProfileName: currentApiConfigName,
+      })
+      await navigator.clipboard.writeText(
+        JSON.stringify(output.copyPayload, null, 2),
+      )
+      toast.success(t("ui:dialog.kiloCode.messages.copiedExportConfig"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-        insights: exportInsights,
+        insights: { ...exportInsights, itemCount: output.itemCount },
       })
     } catch {
       toast.error(t("ui:dialog.kiloCode.messages.copyFailed"))
@@ -177,24 +198,25 @@ export function KiloCodeProfileExportDialog({
     let link: HTMLAnchorElement | null = null
 
     try {
-      const payload = buildKiloCodeSettingsFile({
-        currentApiConfigName,
-        apiConfigs,
+      const output = buildKiloCodeExportOutput({
+        target: exportTarget,
+        selections: [exportTuple],
+        currentLegacyProfileName: currentApiConfigName,
       })
 
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      const blob = new Blob([JSON.stringify(output.downloadPayload, null, 2)], {
         type: "application/json",
       })
       url = URL.createObjectURL(blob)
       link = document.createElement("a")
       link.href = url
-      link.download = filename
+      link.download = output.filename
       document.body.appendChild(link)
       link.click()
 
       toast.success(t("ui:dialog.kiloCode.messages.downloadedSettings"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-        insights: exportInsights,
+        insights: { ...exportInsights, itemCount: output.itemCount },
       })
     } catch (error) {
       logger.error("Failed to download Kilo Code settings file", error)
@@ -249,14 +271,18 @@ export function KiloCodeProfileExportDialog({
               onClick={handleCopyApiConfigs}
               disabled={!canExport}
             >
-              {t("ui:dialog.kiloCode.actions.copyApiConfigs")}
+              {isKiloV7Target
+                ? t("ui:dialog.kiloCode.actions.copyKiloV7Provider")
+                : t("ui:dialog.kiloCode.actions.copyLegacyApiConfigs")}
             </Button>
             <Button
               type="button"
               onClick={handleDownloadSettings}
               disabled={!canExport}
             >
-              {t("ui:dialog.kiloCode.actions.downloadSettings")}
+              {isKiloV7Target
+                ? t("ui:dialog.kiloCode.actions.downloadKiloV7Settings")
+                : t("ui:dialog.kiloCode.actions.downloadLegacySettings")}
             </Button>
           </div>
         </ProductAnalyticsScope>
@@ -270,6 +296,33 @@ export function KiloCodeProfileExportDialog({
             description={t("ui:dialog.kiloCode.messages.noModelsDescription")}
           />
         )}
+
+        <FormField
+          label={t("ui:dialog.kiloCode.labels.exportTarget")}
+          htmlFor="kilo-code-export-target"
+        >
+          <Select
+            value={exportTarget}
+            onValueChange={(value) => {
+              const target = KILO_CODE_EXPORT_TARGET_OPTIONS.find(
+                (candidate) => candidate === value,
+              )
+              if (target) setExportTarget(target)
+            }}
+          >
+            <SelectTrigger id="kilo-code-export-target">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={KILO_CODE_EXPORT_TARGETS.KiloV7}>
+                {t("ui:dialog.kiloCode.targets.kiloV7")}
+              </SelectItem>
+              <SelectItem value={KILO_CODE_EXPORT_TARGETS.Legacy}>
+                {t("ui:dialog.kiloCode.targets.legacy")}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </FormField>
 
         <FormField
           label={t("ui:dialog.kiloCode.labels.modelId")}
@@ -288,6 +341,8 @@ export function KiloCodeProfileExportDialog({
             disabled={isLoadingModels}
           />
         </FormField>
+
+        <KiloCodeExportGuidance target={exportTarget} />
 
         <Alert
           variant="warning"

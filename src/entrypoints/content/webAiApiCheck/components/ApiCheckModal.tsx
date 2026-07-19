@@ -8,6 +8,7 @@ import type {
 
 import {
   Button,
+  DatePicker,
   FormField,
   IconButton,
   Input,
@@ -15,12 +16,12 @@ import {
   SearchableSelect,
   Textarea,
 } from "~/components/ui"
-import { inputVariants } from "~/components/ui/input"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/components/ui/collapsible"
+import { inputVariants } from "~/components/ui/input"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { cn } from "~/lib/utils"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
@@ -309,14 +310,38 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                       description={t("webAiApiCheck:modal.hints.expiresAt")}
                       htmlFor="api-check-expires-at"
                     >
-                      <Input
+                      <DatePicker
                         id="api-check-expires-at"
-                        type="date"
                         value={view.expiresAtInput}
-                        onChange={(e) =>
-                          actions.setExpiresAtInput(e.target.value)
-                        }
+                        onChange={actions.setExpiresAtInput}
+                        labels={{
+                          trigger: t("webAiApiCheck:modal.fields.expiresAt"),
+                          placeholder: t("common:datePicker.placeholder"),
+                          noExpiration: t("common:datePicker.noExpiration"),
+                          in7Days: t("common:datePicker.in7Days"),
+                          in30Days: t("common:datePicker.in30Days"),
+                          in90Days: t("common:datePicker.in90Days"),
+                          in1Year: t("common:datePicker.in1Year"),
+                          naturalInput: {
+                            invalid: t(
+                              "common:datePicker.naturalInput.invalid",
+                            ),
+                            label: t("common:datePicker.naturalInput.label"),
+                            openCalendar: t(
+                              "common:datePicker.naturalInput.openCalendar",
+                            ),
+                            placeholder: t(
+                              "common:datePicker.naturalInput.placeholder",
+                            ),
+                            preview: t(
+                              "common:datePicker.naturalInput.preview",
+                            ),
+                          },
+                        }}
+                        locale={view.datePickerLocale}
+                        portalContainer={view.popoverPortalContainer}
                         disabled={view.isSavingProfile}
+                        naturalInput
                       />
                     </FormField>
 
@@ -387,6 +412,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   data-testid={WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton}
                   onClick={actions.saveProfile}
                   disabled={!view.canSaveProfile}
+                  loading={view.isSavingProfile}
                 >
                   {view.isSavingProfile
                     ? t("webAiApiCheck:modal.actions.saving")

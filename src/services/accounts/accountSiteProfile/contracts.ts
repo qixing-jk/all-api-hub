@@ -73,6 +73,14 @@ export const ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES = {
 export type AccountSiteModelListDisplayCapabilitySource =
   (typeof ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES)[keyof typeof ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES]
 
+export const ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS = {
+  ACCOUNT_OR_RUNTIME_KEY: "account-or-runtime-key",
+  NOT_APPLICABLE: "not-applicable",
+} as const
+
+export type AccountSiteModelListGroupSemantics =
+  (typeof ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS)[keyof typeof ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS]
+
 export type AccountSiteUrlProfile = {
   recognizedHostnames: readonly string[]
   storageOrigin?: string
@@ -113,6 +121,7 @@ export type AccountSiteModelListProfile = {
   dashboardEstimateLoader: AccountSiteModelListDashboardEstimateLoader
   statusScope: AccountSiteModelListStatusScope
   displayCapabilitiesSource: AccountSiteModelListDisplayCapabilitySource
+  groupSemantics: AccountSiteModelListGroupSemantics
 }
 
 export type AccountSiteProductProfile = {

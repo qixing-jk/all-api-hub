@@ -498,11 +498,8 @@ export function ClearModelRedirectMappingsDialog({
         })}
         warningTitle={t("bulkClear.confirm.warningTitle")}
         cancelLabel={t("bulkClear.actions.cancel")}
-        confirmLabel={
-          isClearing
-            ? t("bulkClear.status.clearing")
-            : t("bulkClear.actions.confirm")
-        }
+        confirmLabel={t("bulkClear.actions.confirm")}
+        workingLabel={t("bulkClear.status.clearing")}
         confirmButtonTestId={
           BASIC_SETTINGS_TEST_IDS.managedSiteModelRedirectBulkClearConfirmButton
         }

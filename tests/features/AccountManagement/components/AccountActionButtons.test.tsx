@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -17,21 +20,43 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
+  MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
+  MANAGED_UPSTREAM_RESOURCE_STATUSES,
+  type ManagedUpstreamResourceSummary,
+} from "~/types/managedUpstreamResource"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render } from "~~/tests/test-utils/render"
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
+
 const {
   mockHandleSetAccountDisabled,
+  mockHandleRefreshAccount,
   mockTogglePinAccount,
   fetchAccountTokensMock,
   getManagedSiteServiceMock,
+  openKeysPageMock,
   openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPageMock,
+  openModelsPageMock,
   sendRuntimeMessageMock,
   loadAccountDataMock,
   exportShareSnapshotWithToastMock,
   userPreferencesContextValue,
   accountDataContextValue,
+  accountActionsContextValue,
   toastDismissMock,
   toastLoadingMock,
   toastSuccessMock,
@@ -44,13 +69,18 @@ const {
   completeProductAnalyticsActionMock,
   resolveProductAnalyticsErrorCategoryFromErrorMock,
   resolveDisplayAccountRuntimeKeySecretMock,
+  resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+  getCurrentTempWindowRequestSourceMock,
 } = vi.hoisted(() => ({
   mockHandleSetAccountDisabled: vi.fn(),
+  mockHandleRefreshAccount: vi.fn(),
   mockTogglePinAccount: vi.fn(),
   fetchAccountTokensMock: vi.fn(),
   getManagedSiteServiceMock: vi.fn(),
+  openKeysPageMock: vi.fn(),
   openManagedSiteChannelsForChannelMock: vi.fn(),
   openManagedSiteChannelsPageMock: vi.fn(),
+  openModelsPageMock: vi.fn(),
   sendRuntimeMessageMock: vi.fn(),
   loadAccountDataMock: vi.fn(),
   exportShareSnapshotWithToastMock: vi.fn(),
@@ -72,6 +102,9 @@ const {
     isPinFeatureEnabled: false,
     loadAccountData: vi.fn(),
   },
+  accountActionsContextValue: {
+    refreshingAccountId: null as string | null,
+  },
   toastDismissMock: vi.fn(),
   toastLoadingMock: vi.fn(),
   toastSuccessMock: vi.fn(),
@@ -84,6 +117,12 @@ const {
   completeProductAnalyticsActionMock: vi.fn(),
   resolveProductAnalyticsErrorCategoryFromErrorMock: vi.fn(),
   resolveDisplayAccountRuntimeKeySecretMock: vi.fn(),
+  resolveManagedUpstreamResourceFeatureCapabilitiesMock: vi.fn(),
+  getCurrentTempWindowRequestSourceMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
+  getCurrentTempWindowRequestSource: getCurrentTempWindowRequestSourceMock,
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -99,6 +138,11 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteService: getManagedSiteServiceMock,
   hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
+}))
+
+vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
+  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -125,8 +169,8 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
 
 vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
   useAccountActionsContext: () => ({
-    refreshingAccountId: null,
-    handleRefreshAccount: vi.fn(),
+    refreshingAccountId: accountActionsContextValue.refreshingAccountId,
+    handleRefreshAccount: mockHandleRefreshAccount,
     handleSetAccountDisabled: mockHandleSetAccountDisabled,
   }),
 }))
@@ -147,10 +191,10 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 }))
 
 vi.mock("~/utils/navigation", () => ({
-  openKeysPage: vi.fn(),
+  openKeysPage: openKeysPageMock,
   openManagedSiteChannelsForChannel: openManagedSiteChannelsForChannelMock,
   openManagedSiteChannelsPage: openManagedSiteChannelsPageMock,
-  openModelsPage: vi.fn(),
+  openModelsPage: openModelsPageMock,
   openRedeemPage: vi.fn(),
   openUsagePage: vi.fn(),
 }))
@@ -235,6 +279,9 @@ vi.mock(
 
 describe("AccountActionButtons", () => {
   beforeEach(() => {
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
     Object.defineProperty(window.navigator, "clipboard", {
       configurable: true,
       value: {
@@ -259,7 +306,17 @@ describe("AccountActionButtons", () => {
     resolveDisplayAccountRuntimeKeySecretMock.mockImplementation(
       async (_account: unknown, runtimeKey: unknown) => runtimeKey,
     )
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockImplementation(
+      (siteType, feature) => ({
+        supported: false,
+        siteType,
+        feature,
+        reason: "feature-slice-disabled",
+      }),
+    )
     exportShareSnapshotWithToastMock.mockResolvedValue(undefined)
+    mockHandleRefreshAccount.mockResolvedValue(undefined)
+    accountActionsContextValue.refreshingAccountId = null
   })
 
   afterEach(() => {
@@ -274,6 +331,82 @@ describe("AccountActionButtons", () => {
     } as Partial<UserPreferences>
     userPreferencesContextValue.showTodayCashflow = true
     hasValidManagedSiteConfigMock.mockReturnValue(true)
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReset()
+    accountActionsContextValue.refreshingAccountId = null
+  })
+
+  it("shows local menu refresh as busy and restores it after completion", async () => {
+    const deferredRefresh = createDeferred<void>()
+    mockHandleRefreshAccount.mockReturnValueOnce(deferredRefresh.promise)
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-local-refresh",
+          disabled: false,
+          name: "Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      screen.getByRole("menuitem", { name: "account:actions.refresh" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const pendingRefresh = screen.getByRole("menuitem", {
+      name: "common:status.refreshing",
+    })
+    expect(pendingRefresh).toBeDisabled()
+    expect(pendingRefresh).toHaveAttribute("aria-busy", "true")
+    await user.click(pendingRefresh)
+    expect(mockHandleRefreshAccount).toHaveBeenCalledTimes(1)
+
+    deferredRefresh.resolve()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("menuitem", { name: "account:actions.refresh" }),
+      ).toBeEnabled()
+    })
+    expect(
+      screen.getByRole("menuitem", { name: "account:actions.refresh" }),
+    ).not.toHaveAttribute("aria-busy")
+  })
+
+  it("locks externally refreshed accounts without announcing local menu work", async () => {
+    accountActionsContextValue.refreshingAccountId = "acc-external-refresh"
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-external-refresh",
+          disabled: false,
+          name: "Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const refreshMenuItem = screen.getByRole("menuitem", {
+      name: "account:actions.refresh",
+    })
+    expect(refreshMenuItem).toBeDisabled()
+    expect(refreshMenuItem).not.toHaveAttribute("aria-busy")
   })
 
   it("tracks controlled analytics for primary account action buttons", async () => {
@@ -421,6 +554,58 @@ describe("AccountActionButtons", () => {
       })
     })
   })
+
+  it.each([
+    {
+      testId: ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem,
+      getOpenPageMock: () => openKeysPageMock,
+      destination: "key management",
+    },
+    {
+      testId: ACCOUNT_MANAGEMENT_TEST_IDS.rowModelManagementMenuItem,
+      getOpenPageMock: () => openModelsPageMock,
+      destination: "model management",
+    },
+  ])(
+    "closes the account action menu before starting $destination navigation",
+    async ({ testId, getOpenPageMock }) => {
+      const user = userEvent.setup()
+      const site = buildDisplaySiteData({
+        id: "acc-in-page-navigation",
+        disabled: false,
+        name: "In-page Navigation Site",
+      })
+      let menuExpandedWhenNavigationStarted: string | null = null
+
+      render(
+        <AccountActionButtons
+          site={site}
+          onCopyKey={vi.fn()}
+          onDeleteAccount={vi.fn()}
+        />,
+      )
+
+      const moreActionsButton = screen.getByRole("button", {
+        name: "common:actions.more",
+      })
+      const openPageMock = getOpenPageMock()
+      openPageMock.mockImplementation(() => {
+        menuExpandedWhenNavigationStarted =
+          moreActionsButton.getAttribute("aria-expanded")
+      })
+
+      await user.click(moreActionsButton)
+      const menu = await screen.findByRole("menu")
+      const navigationButton = within(menu).getByTestId(testId)
+
+      await user.click(navigationButton)
+
+      await waitFor(() => {
+        expect(openPageMock).toHaveBeenCalledWith(site.id)
+      })
+      expect(menuExpandedWhenNavigationStarted).toBe("false")
+    },
+  )
 
   it("does not track analytics for disabled account action menu entries", async () => {
     userPreferencesContextValue.preferences = {
@@ -714,6 +899,45 @@ describe("AccountActionButtons", () => {
         },
       },
     )
+  })
+
+  it("keeps the smart-copy action busy and suppresses duplicate token probes until rejection settles", async () => {
+    const deferredTokens = createDeferred<Array<{ key: string }>>()
+    fetchAccountTokensMock.mockReturnValueOnce(deferredTokens.promise)
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-pending-copy",
+          disabled: false,
+          name: "Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    const copyButton = screen.getByRole("button", {
+      name: "account:actions.copyKey",
+    })
+    await user.click(copyButton)
+
+    expect(copyButton).toHaveAttribute("aria-busy", "true")
+    expect(copyButton).toBeDisabled()
+    await user.click(copyButton)
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+
+    deferredTokens.reject(new Error("token probe failed"))
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "account:actions.copyKey" }),
+      ).toBeEnabled()
+    })
+    expect(
+      screen.getByRole("button", { name: "account:actions.copyKey" }),
+    ).not.toHaveAttribute("aria-busy")
   })
 
   it("shows a fetch-info error when the token probe returns a non-array payload", async () => {
@@ -1018,7 +1242,7 @@ describe("AccountActionButtons", () => {
     })
   })
 
-  it("sends a targeted autoCheckin:runNow payload when Quick check-in is clicked", async () => {
+  it("captures the popup source for a targeted Quick check-in request", async () => {
     toastLoadingMock.mockReturnValue("toast-quick-checkin")
     sendRuntimeMessageMock
       .mockResolvedValueOnce({ success: true })
@@ -1063,13 +1287,14 @@ describe("AccountActionButtons", () => {
       "autoCheckin:messages.loading.running",
     )
     await waitFor(() => {
-      expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(
-        1,
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith(
         AutoCheckinMessageTypes.RunNow,
-        { accountIds: ["acc-5"] },
+        {
+          accountIds: ["acc-5"],
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        },
       )
-      expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(
-        2,
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith(
         AutoCheckinMessageTypes.GetStatus,
         undefined,
       )
@@ -1094,6 +1319,17 @@ describe("AccountActionButtons", () => {
         },
       )
     })
+    expect(getCurrentTempWindowRequestSourceMock).toHaveBeenCalledTimes(1)
+    expect(
+      sendRuntimeMessageMock.mock.calls.filter(
+        ([type]) => type === AutoCheckinMessageTypes.RunNow,
+      ),
+    ).toHaveLength(1)
+    expect(
+      sendRuntimeMessageMock.mock.calls.filter(
+        ([type]) => type === AutoCheckinMessageTypes.GetStatus,
+      ),
+    ).toHaveLength(1)
   })
 
   it("shows a failure toast when quick check-in finishes without a per-account result", async () => {
@@ -1751,6 +1987,190 @@ describe("AccountActionButtons", () => {
     expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
   })
 
+  it("uses legacy channel search for account shortcut locate when token status resources are not feature-gated", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-legacy" }])
+
+    const staleResourceSearch = vi
+      .fn()
+      .mockRejectedValue(new Error("stale duplicate-matching resource path"))
+    const managedService = {
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn().mockResolvedValue({
+        base_url: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "sk-legacy",
+      }),
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 321,
+            name: "Legacy Managed Channel",
+            base_url: "https://api.example.com",
+            models: "gpt-4",
+            key: "sk-legacy",
+          },
+        ],
+        total: 1,
+        type_counts: {},
+      }),
+      searchResourceDuplicateChannels: staleResourceSearch,
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-6-legacy",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(321)
+    })
+    expect(staleResourceSearch).not.toHaveBeenCalled()
+    expect(managedService.searchChannel).toHaveBeenCalledWith(
+      expect.any(Object),
+      "https://api.example.com",
+    )
+    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+  })
+
+  it("uses resource-backed channel candidates for account shortcut locate when feature-gated", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-resource" }])
+
+    const resourceSummary = buildResourceSummary({
+      id: 654,
+      name: "Resource Managed Channel",
+      baseUrl: "https://api.example.com",
+      models: ["gpt-4"],
+    })
+    const resources: ManagedUpstreamResourcesCapability = {
+      items: {
+        list: vi.fn(),
+        search: vi.fn().mockResolvedValue({
+          items: [resourceSummary],
+          total: 1,
+        }),
+        getDetail: vi.fn().mockResolvedValue({
+          summary: resourceSummary,
+          native: {
+            id: 654,
+            name: "Resource Managed Channel",
+            base_url: "https://api.example.com",
+            models: "gpt-4",
+            key: "sk-resource",
+          },
+        }),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
+      drafts: {
+        prepareImportDraft: vi.fn(),
+        prepareEditDraft: vi.fn(),
+        describeFields: vi.fn(),
+        validateDraft: vi.fn(),
+      },
+    }
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.NEW_API,
+      feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenChannelStatus,
+      capabilities: resources,
+    })
+    const managedService = {
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn().mockResolvedValue({
+        base_url: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "sk-resource",
+      }),
+      searchChannel: vi
+        .fn()
+        .mockRejectedValue(new Error("legacy search should not run")),
+      searchResourceDuplicateChannels: vi
+        .fn()
+        .mockRejectedValue(new Error("stale duplicate-matching resource path")),
+    }
+
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-6-resource",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(654)
+    })
+    expect(
+      managedService.searchResourceDuplicateChannels,
+    ).not.toHaveBeenCalled()
+    expect(managedService.searchChannel).not.toHaveBeenCalled()
+    expect(resources.items.search).toHaveBeenCalledWith(
+      expect.any(Object),
+      "https://api.example.com",
+    )
+    expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+  })
+
   it("uses a secondary exact-model explanation when the account key is blank", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ key: "" }])
 
@@ -2305,4 +2725,29 @@ describe("AccountActionButtons", () => {
     })
     expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
   })
+})
+
+const buildResourceSummary = ({
+  id,
+  name,
+  baseUrl,
+  models,
+}: {
+  id: number
+  name: string
+  baseUrl: string
+  models: string[]
+}): ManagedUpstreamResourceSummary => ({
+  ref: {
+    managedSiteType: SITE_TYPES.NEW_API,
+    scopeKey: "https://admin.example",
+    resourceId: String(id),
+  },
+  displayName: name,
+  nativeKind: MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS.Channel,
+  status: MANAGED_UPSTREAM_RESOURCE_STATUSES.Enabled,
+  endpointLabel: baseUrl,
+  modelPreview: models,
+  secretState: MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Available,
+  capabilities: {},
 })

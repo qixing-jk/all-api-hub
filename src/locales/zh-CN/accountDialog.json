@@ -6,10 +6,11 @@
     "configToManagedSite": "保存并配置到 {{managedSite}}",
     "configuring": "配置中...",
     "confirmAdd": "确认添加",
-    "helpDocument": "帮助文档",
+    "helpDocument": "排查指南",
+    "openApiCredentialProfiles": "前往 API 凭据库",
     "reloadCurrentPage": "刷新当前页面",
     "reloadExtensionAndRetry": "重新加载扩展后重试",
-    "reportUnsupportedSite": "反馈未适配站点",
+    "reportUnsupportedSite": "申请站点适配",
     "saveAccount": "保存账号",
     "saveChanges": "保存更改",
     "workflow": {
@@ -30,6 +31,15 @@
     "description": "{{accountName}} 已保存。AIHubMix API 密钥创建后只会显示一次，请确认你现在可以立即复制并保存完整密钥。",
     "title": "创建 AIHubMix 默认密钥？",
     "warningTitle": "完整密钥只显示一次"
+  },
+  "apiCredentialFallback": {
+    "apiCredentials": {
+      "description": "如果当前只需保存密钥并进行 API 调用，可以先用更轻量的 API 凭据库。账号适配后，再添加网页账号使用签到、余额刷新和控制台同步。"
+    },
+    "siteSupport": {
+      "description": "如果对照排查指南后仍无法识别，可能是当前站点暂未适配，或该页面暂不支持自动识别。"
+    },
+    "title": "仍无法识别？尝试以下备选方案"
   },
   "bookmarkImportBatch": {
     "action": "从书签批量导入",

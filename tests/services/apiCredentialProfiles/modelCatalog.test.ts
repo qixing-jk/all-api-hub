@@ -120,7 +120,7 @@ describe("modelCatalog", () => {
     ).rejects.toThrow("Unsupported apiType")
   })
 
-  it("normalizes, filters, and de-duplicates raw model ids when building profile catalogs", () => {
+  it("normalizes profile ids before assembling descriptor-backed pricing rows", () => {
     expect(
       normalizeApiCredentialModelIds([
         " gpt-4o ",

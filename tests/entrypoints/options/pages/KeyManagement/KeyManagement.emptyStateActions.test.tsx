@@ -16,6 +16,7 @@ const {
   tokenListPropsSpy,
   useKeyManagementMock,
   pushWithinOptionsPageMock,
+  replaceWithinOptionsPageMock,
   openModelsPageMock,
   mockedUseUserPreferencesContext,
   addTokenDialogPropsSpy,
@@ -26,6 +27,7 @@ const {
   tokenListPropsSpy: vi.fn(),
   useKeyManagementMock: vi.fn(),
   pushWithinOptionsPageMock: vi.fn(),
+  replaceWithinOptionsPageMock: vi.fn(),
   openModelsPageMock: vi.fn(),
   mockedUseUserPreferencesContext: vi.fn(),
   addTokenDialogPropsSpy: vi.fn(),
@@ -49,6 +51,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
   return {
     ...actual,
     pushWithinOptionsPage: pushWithinOptionsPageMock,
+    replaceWithinOptionsPage: replaceWithinOptionsPageMock,
     openModelsPage: openModelsPageMock,
   }
 })
@@ -106,13 +109,33 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 })
 
 vi.mock("~/features/KeyManagement/components/AccountSelectorPanel", () => {
-  function MockAccountSelectorPanel(props: { selectorOpen?: boolean }) {
-    const { selectorOpen } = props
+  function MockAccountSelectorPanel(props: {
+    selectorOpen?: boolean
+    setSelectedAccount: (value: string) => void
+  }) {
+    const { selectorOpen, setSelectedAccount } = props
 
     return (
-      <button type="button" role="combobox" aria-expanded={selectorOpen}>
-        Mock account selector
-      </button>
+      <div>
+        <button type="button" role="combobox" aria-expanded={selectorOpen}>
+          Mock account selector
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedAccount("selected-account")}
+        >
+          select-account
+        </button>
+        <button
+          type="button"
+          onClick={() => setSelectedAccount(KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE)}
+        >
+          select-all-accounts
+        </button>
+        <button type="button" onClick={() => setSelectedAccount("")}>
+          clear-account
+        </button>
+      </div>
     )
   }
 
@@ -230,6 +253,7 @@ describe("KeyManagement empty-state actions", () => {
     tokenListPropsSpy.mockReset()
     useKeyManagementMock.mockReset()
     pushWithinOptionsPageMock.mockReset()
+    replaceWithinOptionsPageMock.mockReset()
     openModelsPageMock.mockReset()
     addTokenDialogPropsSpy.mockReset()
     accountSummaryBarPropsSpy.mockReset()
@@ -334,6 +358,35 @@ describe("KeyManagement empty-state actions", () => {
 
     expect(openModelsPageMock).toHaveBeenCalledWith(account.id)
   })
+
+  it.each([
+    ["select-account", "selected-account", { accountId: "selected-account" }],
+    [
+      "select-all-accounts",
+      KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      { accountId: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE },
+    ],
+    ["clear-account", "", undefined],
+  ])(
+    "replaces the key-management route when the user chooses %s",
+    async (buttonName, selectedValue, expectedParams) => {
+      const user = userEvent.setup()
+      const setSelectedAccount = vi.fn()
+      useKeyManagementMock.mockReturnValue(
+        createHookResult({ setSelectedAccount }),
+      )
+
+      render(<KeyManagement />)
+
+      await user.click(await screen.findByRole("button", { name: buttonName }))
+
+      expect(setSelectedAccount).toHaveBeenCalledWith(selectedValue)
+      expect(replaceWithinOptionsPageMock).toHaveBeenCalledWith(
+        "#keys",
+        expectedParams,
+      )
+    },
+  )
 
   it("does not show the model-list title shortcut while viewing all accounts", async () => {
     const account = createAccount({

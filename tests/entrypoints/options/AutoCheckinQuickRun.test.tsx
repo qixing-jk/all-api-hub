@@ -13,7 +13,19 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
 
 const {
   startProductAnalyticsActionMock,
@@ -21,12 +33,18 @@ const {
   trackProductAnalyticsActionStartedMock,
   sendAutoCheckinMessageMock,
   pushWithinOptionsPageMock,
+  getCurrentTempWindowRequestSourceMock,
 } = vi.hoisted(() => ({
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
   sendAutoCheckinMessageMock: vi.fn(),
   pushWithinOptionsPageMock: vi.fn(),
+  getCurrentTempWindowRequestSourceMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
+  getCurrentTempWindowRequestSource: getCurrentTempWindowRequestSourceMock,
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -70,6 +88,16 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
   }
 })
 
+vi.mock("~/utils/core/environment", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/core/environment")>()
+
+  return {
+    ...actual,
+    isDevelopmentMode: () => true,
+  }
+})
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.clearAllMocks()
@@ -77,6 +105,9 @@ afterEach(() => {
 
 describe("AutoCheckin quick run", () => {
   beforeEach(() => {
+    getCurrentTempWindowRequestSourceMock.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
@@ -199,7 +230,7 @@ describe("AutoCheckin quick run", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("auto-triggers runNow when routeParams.runNow is present", async () => {
+  it("captures the popup source when routeParams.runNow triggers a run", async () => {
     const navigation = await import("~/utils/navigation")
     const navigateWithinOptionsPageSpy = vi
       .spyOn(navigation, "navigateWithinOptionsPage")
@@ -242,8 +273,16 @@ describe("AutoCheckin quick run", () => {
     )
     expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
       AutoCheckinMessageTypes.RunNow,
-      {},
+      {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
     )
+    expect(getCurrentTempWindowRequestSourceMock).toHaveBeenCalledTimes(1)
+    expect(
+      sendAutoCheckinMessageMock.mock.calls.filter(
+        ([type]) => type === AutoCheckinMessageTypes.RunNow,
+      ),
+    ).toHaveLength(1)
     expect(navigateWithinOptionsPageSpy).toHaveBeenCalled()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
@@ -327,5 +366,150 @@ describe("AutoCheckin quick run", () => {
         },
       },
     )
+  })
+
+  it.each([
+    {
+      actionName: "autoCheckin:execution.debug.evaluateUiOpenPretrigger",
+      expectedRequest: {
+        dryRun: true,
+        debug: true,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+    },
+    {
+      actionName: "autoCheckin:execution.debug.triggerUiOpenPretrigger",
+      expectedRequest: {
+        requestId: expect.any(String),
+        debug: true,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      },
+    },
+  ])(
+    "passes the popup source through $actionName",
+    async ({ actionName, expectedRequest }) => {
+      const user = userEvent.setup()
+
+      sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+        if (type === AutoCheckinMessageTypes.GetStatus) {
+          return { success: true, data: { perAccount: {} } }
+        }
+        if (type === AutoCheckinMessageTypes.PretriggerDailyOnUiOpen) {
+          return { success: true, eligible: true, started: false }
+        }
+        return { success: true }
+      })
+
+      render(<AutoCheckin routeParams={{}} />)
+
+      await user.click(
+        await screen.findByRole("button", {
+          name: actionName,
+        }),
+      )
+
+      await waitFor(() => {
+        expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
+          AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
+          expectedRequest,
+        )
+      })
+    },
+  )
+
+  it("keeps run now busy through rejection cleanup and permits retry", async () => {
+    const user = userEvent.setup()
+    const firstAttempt = createDeferred<{ success: boolean }>()
+    let runNowAttempts = 0
+
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus) {
+        return { success: true, data: { perAccount: {} } }
+      }
+      if (type === AutoCheckinMessageTypes.RunNow) {
+        runNowAttempts += 1
+        if (runNowAttempts === 1) return await firstAttempt.promise
+        return { success: true }
+      }
+      return { success: true }
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.runNow",
+      }),
+    )
+
+    const pendingButton = screen.getByRole("button", {
+      name: "autoCheckin:messages.loading.running",
+    })
+    expect(pendingButton).toBeDisabled()
+    expect(pendingButton).toHaveAttribute("aria-busy", "true")
+    const refreshButton = screen.getByRole("button", {
+      name: "autoCheckin:execution.refresh",
+    })
+    expect(refreshButton).toBeDisabled()
+    expect(refreshButton).not.toHaveAttribute("aria-busy")
+    await user.click(pendingButton)
+    expect(runNowAttempts).toBe(1)
+
+    firstAttempt.reject(new Error("run failed"))
+    const restoredButton = await screen.findByRole("button", {
+      name: "autoCheckin:execution.runNow",
+    })
+    expect(restoredButton).toBeEnabled()
+
+    await user.click(restoredButton)
+    await waitFor(() => expect(runNowAttempts).toBe(2))
+  })
+
+  it("keeps the initiating debug action busy while locking debug siblings", async () => {
+    const user = userEvent.setup()
+    const firstAttempt = createDeferred<{ success: boolean }>()
+    let debugAttempts = 0
+
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus) {
+        return { success: true, data: { perAccount: {} } }
+      }
+      if (type === AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow) {
+        debugAttempts += 1
+        if (debugAttempts === 1) return await firstAttempt.promise
+        return { success: true }
+      }
+      return { success: true }
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.debug.triggerDailyAlarmNow",
+      }),
+    )
+
+    const pendingButton = screen.getByRole("button", {
+      name: "autoCheckin:messages.loading.triggeringDailyAlarm",
+    })
+    expect(pendingButton).toBeDisabled()
+    expect(pendingButton).toHaveAttribute("aria-busy", "true")
+    const retryAlarmButton = screen.getByRole("button", {
+      name: "autoCheckin:execution.debug.triggerRetryAlarmNow",
+    })
+    expect(retryAlarmButton).toBeDisabled()
+    expect(retryAlarmButton).not.toHaveAttribute("aria-busy")
+    await user.click(pendingButton)
+    expect(debugAttempts).toBe(1)
+
+    firstAttempt.reject(new Error("debug failed"))
+    const restoredButton = await screen.findByRole("button", {
+      name: "autoCheckin:execution.debug.triggerDailyAlarmNow",
+    })
+    expect(restoredButton).toBeEnabled()
+
+    await user.click(restoredButton)
+    await waitFor(() => expect(debugAttempts).toBe(2))
   })
 })

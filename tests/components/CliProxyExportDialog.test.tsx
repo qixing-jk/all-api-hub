@@ -44,6 +44,13 @@ const mockFetchOpenAICompatibleModelIds = vi.fn()
 const mockImportToCliProxy = vi.fn()
 const mockShowResultToast = vi.fn()
 const mockResolveDisplayAccountTokenForSecret = vi.fn()
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+  return { promise, resolve }
+}
 const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
   vi.hoisted(() => ({
     startProductAnalyticsActionMock: vi.fn(),
@@ -210,7 +217,12 @@ describe("CliProxyExportDialog", () => {
 
   it("preselects Codex for OpenAI hints, loads suggestions, and submits the selected provider type", async () => {
     const user = userEvent.setup()
+    const importDeferred = createDeferred<{
+      success: boolean
+      message: string
+    }>()
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4.1"])
+    mockImportToCliProxy.mockReturnValueOnce(importDeferred.promise)
 
     render(
       <CliProxyExportDialog
@@ -257,6 +269,20 @@ describe("CliProxyExportDialog", () => {
       screen.getByRole("button", { name: "common:actions.import" }),
     )
 
+    const submittingButton = screen.getByRole("button", {
+      name: "common:status.importing",
+    })
+    expect(submittingButton).toHaveAttribute("aria-busy", "true")
+    expect(submittingButton).toBeDisabled()
+    const cancelButton = screen.getByRole("button", {
+      name: "common:actions.cancel",
+    })
+    expect(cancelButton).not.toHaveAttribute("aria-busy")
+    expect(cancelButton).toBeEnabled()
+
+    await user.click(submittingButton)
+    expect(mockImportToCliProxy).toHaveBeenCalledTimes(1)
+
     await waitFor(() => {
       expect(mockImportToCliProxy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -264,6 +290,14 @@ describe("CliProxyExportDialog", () => {
           providerType: CLI_PROXY_PROVIDER_TYPES.CODEX_API_KEY,
           providerBaseUrl: "https://api.openai.com",
         }),
+      )
+    })
+
+    importDeferred.resolve({ success: true, message: "ok" })
+
+    await waitFor(() => {
+      expect(mockShowResultToast).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, message: "ok" }),
       )
     })
   })

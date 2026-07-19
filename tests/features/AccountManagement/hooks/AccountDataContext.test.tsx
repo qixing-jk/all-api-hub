@@ -20,6 +20,7 @@ import type { SearchResult } from "~/services/search/accountSearch"
 import type { DisplaySiteData } from "~/types"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 import { SortingCriteriaType } from "~/types/sorting"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 type MockIndexedAccountSearchEntry = {
@@ -71,6 +72,7 @@ const {
   mockBuildAccountSearchIndex,
   mockSearchAccountSearchIndex,
   mockUpdateSortConfig,
+  mockGetCurrentTempWindowRequestSource,
 } = vi.hoisted(() => ({
   mockLogger: {
     debug: vi.fn(),
@@ -157,6 +159,7 @@ const {
     (accounts: MockIndexedAccountSearchEntry[], query: string) => SearchResult[]
   >(() => []),
   mockUpdateSortConfig: vi.fn(),
+  mockGetCurrentTempWindowRequestSource: vi.fn(),
 }))
 
 const mockUserPreferencesContext = vi.hoisted(() => ({
@@ -233,6 +236,17 @@ vi.mock("~/utils/core/logger", () => ({
   createLogger: () => mockLogger,
 }))
 
+vi.mock("~/utils/browser/tempWindowRequestSource", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/utils/browser/tempWindowRequestSource")
+    >()
+  return {
+    ...actual,
+    getCurrentTempWindowRequestSource: mockGetCurrentTempWindowRequestSource,
+  }
+})
+
 vi.mock("~/utils/browser/browserApi", () => ({
   getActiveTabs: mockGetActiveTabs,
   getAllTabs: mockGetAllTabs,
@@ -271,6 +285,9 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockGetCurrentTempWindowRequestSource.mockReturnValue(
+    TEMP_WINDOW_REQUEST_SOURCES.Background,
+  )
 
   mockUserPreferencesContext.current = {
     currencyType: "USD",
@@ -1742,6 +1759,9 @@ describe("AccountDataContext current tab detection", () => {
 
 describe("AccountDataContext refresh orchestration", () => {
   it("refreshes data on demand, exposes the pending state, and stores the returned sync time", async () => {
+    mockGetCurrentTempWindowRequestSource.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
     let resolveRefresh!: (value: any) => void
     const refreshPromise = new Promise((resolve) => {
       resolveRefresh = resolve
@@ -1779,10 +1799,16 @@ describe("AccountDataContext refresh orchestration", () => {
       expect(getLatestCtx().lastUpdateTime?.getTime()).toBe(1_710_123_456_789)
     })
 
-    expect(mockRefreshAllAccounts).toHaveBeenCalledWith(true)
+    expect(mockRefreshAllAccounts).toHaveBeenCalledWith(true, {
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    })
+    expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
   })
 
   it("refreshes disabled accounts on demand and stores the returned sync time", async () => {
+    mockGetCurrentTempWindowRequestSource.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
     let resolveRefresh!: (value: any) => void
     const refreshPromise = new Promise((resolve) => {
       resolveRefresh = resolve
@@ -1813,7 +1839,10 @@ describe("AccountDataContext refresh orchestration", () => {
       expect(getLatestCtx().lastUpdateTime?.getTime()).toBe(1_720_123_456_789)
     })
 
-    expect(mockRefreshDisabledAccounts).toHaveBeenCalledWith(true)
+    expect(mockRefreshDisabledAccounts).toHaveBeenCalledWith(true, {
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    })
+    expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
   })
 
   it("reloads account data after disabled-account refresh failures and clears the refreshing state", async () => {
@@ -1899,7 +1928,9 @@ describe("AccountDataContext refresh orchestration", () => {
 
     await waitFor(() => {
       expect(mockToastPromise).toHaveBeenCalledTimes(1)
-      expect(mockRefreshAllAccounts).toHaveBeenCalledWith(false)
+      expect(mockRefreshAllAccounts).toHaveBeenCalledWith(false, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      })
     })
 
     const [, toastOptions] = mockToastPromise.mock.calls[0]

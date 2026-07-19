@@ -218,6 +218,18 @@ describe("ReleaseUpdateStatusPanel", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("shows checking copy and disables check-now while a check is pending", () => {
+    mockHookState({ status: buildStatus(), isChecking: true })
+
+    renderSubject()
+
+    const checkNowButton = screen.getByRole("button", {
+      name: "common:status.checking",
+    })
+    expect(checkNowButton).toBeDisabled()
+    expect(checkNowButton).toHaveAttribute("aria-busy", "true")
+  })
+
   it("shows a direct download action when a newer version is available", () => {
     mockHook(
       buildStatus({

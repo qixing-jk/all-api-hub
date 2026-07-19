@@ -19,6 +19,7 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 // Verifies account action flows through the public context API, including
 // refresh, enable/disable, copy URL, custom check-in state, and external
@@ -35,6 +36,7 @@ const {
   mockLoggerError,
   mockStartProductAnalyticsAction,
   mockCompleteProductAnalyticsAction,
+  mockGetCurrentTempWindowRequestSource,
 } = vi.hoisted(() => ({
   mockLoadAccountData: vi.fn(),
   mockSendExternalCheckInMessage: vi.fn(),
@@ -51,6 +53,7 @@ const {
   mockLoggerError: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
+  mockGetCurrentTempWindowRequestSource: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -101,6 +104,17 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
     ...actual,
     startProductAnalyticsAction: (...args: unknown[]) =>
       mockStartProductAnalyticsAction(...args),
+  }
+})
+
+vi.mock("~/utils/browser/tempWindowRequestSource", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/utils/browser/tempWindowRequestSource")
+    >()
+  return {
+    ...actual,
+    getCurrentTempWindowRequestSource: mockGetCurrentTempWindowRequestSource,
   }
 })
 
@@ -169,6 +183,9 @@ const renderContext = async () => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockGetCurrentTempWindowRequestSource.mockReturnValue(
+    TEMP_WINDOW_REQUEST_SOURCES.Background,
+  )
   mockToast.promise.mockImplementation(
     async (promise: Promise<unknown>) => promise,
   )
@@ -385,6 +402,9 @@ describe("AccountActionsContext", () => {
   })
 
   it("refreshes enabled accounts, exposes the in-flight id, and skips concurrent refreshes", async () => {
+    mockGetCurrentTempWindowRequestSource.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
     const { getContext } = await renderContext()
     let resolveRefresh: ((value: { refreshed: boolean }) => void) | undefined
     const refreshResult = new Promise<{ refreshed: boolean }>((resolve) => {
@@ -409,7 +429,10 @@ describe("AccountActionsContext", () => {
     })
 
     expect(mockRefreshAccount).toHaveBeenCalledTimes(1)
-    expect(mockRefreshAccount).toHaveBeenCalledWith("refresh-1", false)
+    expect(mockRefreshAccount).toHaveBeenCalledWith("refresh-1", false, {
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    })
+    expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
 
     const refreshToastPromise = mockToast.promise.mock.calls[0]?.[0]
     const toastConfig = mockToast.promise.mock.calls[0]?.[1]

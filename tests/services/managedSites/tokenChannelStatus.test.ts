@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
+import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import {
   getManagedSiteTokenChannelStatus,
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
@@ -14,6 +16,12 @@ import {
   resolveManagedSiteTokenChannelStatusWithVerifiedKey,
 } from "~/services/managedSites/tokenChannelStatus"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
+import {
+  MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS,
+  MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
+  MANAGED_UPSTREAM_RESOURCE_STATUSES,
+  type ManagedUpstreamResourceSummary,
+} from "~/types/managedUpstreamResource"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -66,9 +74,20 @@ const { hasNewApiAuthenticatedBrowserSessionMock } = vi.hoisted(() => ({
   hasNewApiAuthenticatedBrowserSessionMock: vi.fn(),
 }))
 
+const { resolveManagedUpstreamResourceFeatureCapabilitiesMock } = vi.hoisted(
+  () => ({
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock: vi.fn(),
+  }),
+)
+
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
   resolveDisplayAccountTokenForSecret: (...args: unknown[]) =>
     resolveDisplayAccountTokenForSecretMock(...args),
+}))
+
+vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
+  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
 }))
 
 vi.mock("~/services/managedSites/providers/newApi", async (importOriginal) => {
@@ -292,6 +311,15 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
     hasNewApiAuthenticatedBrowserSessionMock.mockReset()
     hasNewApiAuthenticatedBrowserSessionMock.mockResolvedValue(false)
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReset()
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockImplementation(
+      (siteType, feature) => ({
+        supported: false,
+        siteType,
+        feature,
+        reason: "feature-slice-disabled",
+      }),
+    )
   })
 
   it("returns added when an exact comparable channel match exists", async () => {
@@ -603,6 +631,137 @@ describe("getManagedSiteTokenChannelStatus", () => {
           },
           similarityScore: 1,
         },
+      },
+    })
+  })
+
+  it("uses legacy channel search when token channel status resource matching is not feature-gated", async () => {
+    const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
+    const token = buildApiToken({ key: "test-token-key" })
+    const staleResourceSearch = vi
+      .fn()
+      .mockRejectedValue(new Error("stale duplicate-matching resource path"))
+    const searchChannel = vi.fn().mockResolvedValue({
+      items: [
+        buildManagedSiteChannel({
+          id: 12,
+          name: "Legacy Channel 12",
+          base_url: "https://api.example.com",
+          models: "gpt-4o",
+          key: "test-token-key",
+        }),
+      ],
+      total: 1,
+      type_counts: {},
+    })
+    const service = createManagedSiteServiceStub({
+      searchChannel,
+      searchResourceDuplicateChannels: staleResourceSearch,
+    })
+
+    const result = await getManagedSiteTokenChannelStatus({
+      account,
+      token,
+      service,
+    })
+
+    expect(staleResourceSearch).not.toHaveBeenCalled()
+    expect(searchChannel).toHaveBeenCalledWith(
+      expect.any(Object),
+      "https://api.example.com",
+    )
+    expect(result).toMatchObject({
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
+      matchedChannel: {
+        id: 12,
+        name: "Legacy Channel 12",
+      },
+    })
+  })
+
+  it("uses resource-backed channel candidates when token channel status is feature-gated", async () => {
+    const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
+    const token = buildApiToken({ key: "test-token-key" })
+    const resourceChannel = buildManagedSiteChannel({
+      id: 88,
+      name: "Resource Channel 88",
+      base_url: "https://api.example.com",
+      models: "gpt-4o",
+      key: "test-token-key",
+    })
+    const resourceSummary = buildResourceSummary({
+      id: resourceChannel.id,
+      name: resourceChannel.name,
+      baseUrl: resourceChannel.base_url,
+      models: ["gpt-4o"],
+    })
+    const resources: ManagedUpstreamResourcesCapability = {
+      items: {
+        list: vi.fn(),
+        search: vi.fn().mockResolvedValue({
+          items: [resourceSummary],
+          total: 1,
+        }),
+        getDetail: vi.fn().mockResolvedValue({
+          summary: resourceSummary,
+          native: resourceChannel,
+        }),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
+      drafts: {
+        prepareImportDraft: vi.fn(),
+        prepareEditDraft: vi.fn(),
+        describeFields: vi.fn(),
+        validateDraft: vi.fn(),
+      },
+    }
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.NEW_API,
+      feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenChannelStatus,
+      capabilities: resources,
+    })
+    const legacySearch = vi
+      .fn()
+      .mockRejectedValue(new Error("legacy channel search should not run"))
+    const staleResourceSearch = vi
+      .fn()
+      .mockRejectedValue(new Error("stale duplicate-matching resource path"))
+    const service = createManagedSiteServiceStub({
+      searchChannel: legacySearch,
+      searchResourceDuplicateChannels: staleResourceSearch,
+    })
+
+    const result = await getManagedSiteTokenChannelStatus({
+      account,
+      token,
+      service,
+    })
+
+    expect(
+      resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+    ).toHaveBeenCalledWith(
+      SITE_TYPES.NEW_API,
+      MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenChannelStatus,
+    )
+    expect(staleResourceSearch).not.toHaveBeenCalled()
+    expect(legacySearch).not.toHaveBeenCalled()
+    expect(resources.items.search).toHaveBeenCalledWith(
+      expect.any(Object),
+      "https://api.example.com",
+    )
+    expect(resources.items.getDetail).toHaveBeenCalledWith(expect.any(Object), {
+      managedSiteType: SITE_TYPES.NEW_API,
+      scopeKey: "https://managed.example",
+      resourceId: "88",
+    })
+    expect(result).toMatchObject({
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
+      matchedChannel: {
+        id: 88,
+        name: "Resource Channel 88",
       },
     })
   })
@@ -1012,4 +1171,29 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
     expect(result).not.toHaveProperty("recovery")
   })
+})
+
+const buildResourceSummary = ({
+  id,
+  name,
+  baseUrl,
+  models,
+}: {
+  id: number
+  name: string
+  baseUrl: string
+  models: string[]
+}): ManagedUpstreamResourceSummary => ({
+  ref: {
+    managedSiteType: SITE_TYPES.NEW_API,
+    scopeKey: "https://managed.example",
+    resourceId: String(id),
+  },
+  displayName: name,
+  nativeKind: MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS.Channel,
+  status: MANAGED_UPSTREAM_RESOURCE_STATUSES.Enabled,
+  endpointLabel: baseUrl,
+  modelPreview: models,
+  secretState: MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Available,
+  capabilities: {},
 })

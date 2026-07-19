@@ -4,14 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Tabs } from "~/components/ui"
 import ModelList from "~/entrypoints/options/pages/ModelList"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
+import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
 import {
   createAccountSource,
   createAllAccountsSource,
   createProfileSource,
+  MODEL_LIST_GROUP_SEMANTICS,
   toAihubmixCatalogFallbackCapabilities,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS } from "~/features/ModelList/verificationResultFilters"
+import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -26,21 +30,11 @@ const mockUseModelListData = vi.fn()
 const mockSetAllAccountsFilterAccountIds = vi.fn()
 const mockAccountSelector = vi.fn()
 const mockTrackProductAnalyticsActionStarted = vi.fn()
+const mockTrackProductAnalyticsActionCompleted = vi.fn()
 
 vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
   useModelListData: (...args: any[]) => mockUseModelListData(...args),
 }))
-
-vi.mock("~/services/models/utils/modelProviders", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/models/utils/modelProviders")
-    >()
-  return {
-    ...actual,
-    getAllProviders: () => ["provider-a"],
-  }
-})
 
 vi.mock("~/services/verification/verificationResultHistory", () => ({
   createAccountModelVerificationHistoryTarget: vi.fn(() => "account-target"),
@@ -55,6 +49,8 @@ vi.mock("~/services/verification/verificationResultHistory", () => ({
 vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: (...args: any[]) =>
     mockTrackProductAnalyticsActionStarted(...args),
+  trackProductAnalyticsActionCompleted: (...args: any[]) =>
+    mockTrackProductAnalyticsActionCompleted(...args),
 }))
 
 const ACCOUNT = {
@@ -91,6 +87,46 @@ const PROFILE = {
 const ACCOUNT_SOURCE = createAccountSource(ACCOUNT)
 const ALL_ACCOUNTS_SOURCE = createAllAccountsSource()
 const PROFILE_SOURCE = createProfileSource(PROFILE)
+
+type ModelItemFixture = {
+  model: { enable_groups?: string[] }
+  source: Pick<CalculatedModelItem["source"], "groupSemantics">
+  effectiveGroup?: string
+}
+
+function withGroupContexts<T extends ModelItemFixture>(
+  fixture: T,
+): T & Pick<CalculatedModelItem, "groupContext" | "activeGroupContext"> {
+  const isGroupAware =
+    fixture.source.groupSemantics !== MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE
+  const supportedGroups =
+    fixture.model.enable_groups ?? (isGroupAware ? ["default"] : [])
+  const usableGroups = isGroupAware ? supportedGroups : []
+  const activeUsableGroups = isGroupAware ? usableGroups : []
+  const activePriceableGroups = isGroupAware ? usableGroups : []
+  const actionGroups =
+    fixture.effectiveGroup &&
+    activeUsableGroups.includes(fixture.effectiveGroup)
+      ? [fixture.effectiveGroup]
+      : activeUsableGroups
+
+  return {
+    ...fixture,
+    groupContext: {
+      accessState: isGroupAware
+        ? MODEL_GROUP_ACCESS_STATES.KNOWN
+        : MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+      supportedGroups,
+      usableGroups,
+      priceableGroups: usableGroups,
+    },
+    activeGroupContext: {
+      activeUsableGroups,
+      activePriceableGroups,
+      actionGroups,
+    },
+  }
+}
 
 vi.mock("~/features/ModelList/components/AccountSelector", () => ({
   AccountSelector: (props: any) => {
@@ -167,17 +203,24 @@ vi.mock("~/features/ModelList/components/Footer", () => ({
 }))
 
 vi.mock("~/features/ModelList/components/ProviderTabs", () => ({
-  ProviderTabs: ({ children }: any) => <Tabs value="all">{children}</Tabs>,
+  ProviderTabs: ({ children, effectiveSelectedVendor }: any) => (
+    <Tabs value={effectiveSelectedVendor}>{children}</Tabs>
+  ),
 }))
 
 vi.mock("~/features/ModelList/components/ModelDisplay", () => ({
   ModelDisplay: ({
+    models,
     onVerifyModel,
     onVerifyCliSupport,
     onOpenModelKeyDialog,
     onFilterAccount,
   }: any) => (
     <div>
+      <div>
+        Visible models:
+        {models.map((item: any) => item.model.model_name).join(",")}
+      </div>
       <button
         type="button"
         onClick={() => onVerifyModel(ACCOUNT_SOURCE, "gpt-4")}
@@ -295,8 +338,11 @@ function buildState(overrides: Record<string, any> = {}) {
     setSelectedSourceValue: vi.fn(),
     searchTerm: "",
     setSearchTerm: vi.fn(),
-    selectedProvider: "all",
+    selectedProvider: MODEL_VENDOR_FILTER_VALUES.All,
     setSelectedProvider: vi.fn(),
+    effectiveSelectedVendor: MODEL_VENDOR_FILTER_VALUES.All,
+    shouldRepairSelectedVendor: false,
+    vendorCatalog: [],
     sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
     setSortMode: vi.fn(),
     selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
@@ -337,12 +383,14 @@ function buildState(overrides: Record<string, any> = {}) {
     availableGroups: [],
 
     loadPricingData: vi.fn(),
-    getProviderFilteredCount: vi.fn(() => 0),
+    allVendorsFilteredCount: 1,
     accountQueryStates: [],
     allAccountsFilterAccountIds: [],
     setAllAccountsFilterAccountIds: mockSetAllAccountsFilterAccountIds,
     ...overrides,
   }
+  state.filteredModels = state.filteredModels.map(withGroupContexts)
+  state.baseFilteredModels = state.baseFilteredModels.map(withGroupContexts)
   state.getFilteredModels ??= vi.fn(() => state.filteredModels)
 
   return state
@@ -354,6 +402,72 @@ describe("ModelList page flows", () => {
     mockSetAllAccountsFilterAccountIds.mockReset()
     mockUseModelListData.mockReset()
     mockTrackProductAnalyticsActionStarted.mockReset()
+    mockTrackProductAnalyticsActionCompleted.mockReset()
+  })
+
+  it("uses all-vendor rows immediately and repairs a vanished stored vendor without analytics", async () => {
+    const setSelectedProvider = vi.fn()
+    const openAiVendor = {
+      kind: "known",
+      key: "known:openai",
+      knownId: "openai",
+      label: "OpenAI",
+      count: 1,
+    }
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedProvider: "known:openai",
+        setSelectedProvider,
+        effectiveSelectedVendor: "known:openai",
+        vendorCatalog: [openAiVendor],
+        filteredModels: [
+          {
+            model: { model_name: "gpt-4" },
+            source: ACCOUNT_SOURCE,
+          },
+        ],
+      }),
+    )
+
+    const { rerender } = render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    expect(await screen.findByText("Visible models:gpt-4")).toBeVisible()
+
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedProvider: "known:openai",
+        setSelectedProvider,
+        effectiveSelectedVendor: MODEL_VENDOR_FILTER_VALUES.All,
+        shouldRepairSelectedVendor: true,
+        vendorCatalog: [
+          {
+            kind: "known",
+            key: "known:anthropic",
+            knownId: "anthropic",
+            label: "Anthropic",
+            count: 1,
+          },
+        ],
+        filteredModels: [
+          {
+            model: { model_name: "claude-3-5-sonnet" },
+            source: ACCOUNT_SOURCE,
+          },
+        ],
+      }),
+    )
+    rerender(<ModelList />)
+
+    expect(
+      await screen.findByText("Visible models:claude-3-5-sonnet"),
+    ).toBeVisible()
+    expect(screen.queryByText("Visible models:gpt-4")).not.toBeInTheDocument()
+    expect(setSelectedProvider).toHaveBeenCalledWith(
+      MODEL_VENDOR_FILTER_VALUES.All,
+    )
+    expect(mockTrackProductAnalyticsActionCompleted).not.toHaveBeenCalled()
   })
 
   it("renders the status indicator when a source is selected but model data is still missing", async () => {
@@ -874,7 +988,7 @@ describe("ModelList page flows", () => {
     })
 
     expect(
-      await screen.findByRole("button", { name: /modelList:refreshData/i }),
+      await screen.findByRole("button", { name: "common:status.refreshing" }),
     ).toBeDisabled()
   })
 

@@ -54,17 +54,6 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/models/utils/modelProviders", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/models/utils/modelProviders")
-    >()
-  return {
-    ...actual,
-    getAllProviders: () => [],
-  }
-})
-
 const ACCOUNT = {
   id: "acc-1",
   name: "Example",
@@ -109,8 +98,11 @@ vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
     setSelectedSourceValue: vi.fn(),
     searchTerm: "",
     setSearchTerm: vi.fn(),
-    selectedProvider: "all",
+    selectedProvider: "filter:all",
     setSelectedProvider: vi.fn(),
+    effectiveSelectedVendor: "filter:all",
+    shouldRepairSelectedVendor: false,
+    vendorCatalog: [],
     selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
     setSelectedBillingMode: vi.fn(),
     selectedGroups: [],
@@ -137,7 +129,7 @@ vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
     availableGroups: [],
 
     loadPricingData: vi.fn(),
-    getProviderFilteredCount: vi.fn(() => 0),
+    allVendorsFilteredCount: 0,
     accountQueryStates: [],
     allAccountsFilterAccountIds: [],
     setAllAccountsFilterAccountIds: vi.fn(),
@@ -174,7 +166,9 @@ vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
 vi.mock("~/features/ModelList/components/ProviderTabs", async () => {
   const { Tabs } = await import("~/components/ui")
   return {
-    ProviderTabs: ({ children }: any) => <Tabs value="all">{children}</Tabs>,
+    ProviderTabs: ({ children }: any) => (
+      <Tabs value="filter:all">{children}</Tabs>
+    ),
   }
 })
 

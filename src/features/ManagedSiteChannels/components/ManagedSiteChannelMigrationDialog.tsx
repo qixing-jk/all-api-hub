@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next"
 import { ArrowRightLeft, Loader2, RefreshCcw } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
@@ -20,6 +20,10 @@ import { AxonHubChannelTypeNames } from "~/constants/axonHub"
 import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
 import { ChannelTypeNames, type ChannelType } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
+import {
+  PREVIEW_LOAD_ORIGINS,
+  type PreviewLoadOrigin,
+} from "~/constants/previewLoadOrigin"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   executeManagedSiteChannelMigration,
@@ -148,6 +152,10 @@ const getBlockedReasonText = (
   switch (code) {
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING:
       return t("managedSiteChannels:migration.blockedReasons.sourceKeyMissing")
+    case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED:
+      return t(
+        "managedSiteChannels:migration.blockedReasons.targetDraftPreparationFailed",
+      )
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED:
     default:
       return t(
@@ -301,11 +309,16 @@ export function ManagedSiteChannelMigrationDialog({
     useState<ManagedSiteChannelMigrationPreview | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [isLoadingPreview, setIsLoadingPreview] = useState(false)
+  const [previewLoadOrigin, setPreviewLoadOrigin] =
+    useState<PreviewLoadOrigin>(null)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [executionResult, setExecutionResult] =
     useState<ManagedSiteChannelMigrationExecutionResult | null>(null)
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0)
+  const pendingPreviewLoadOriginRef = useRef<PreviewLoadOrigin>(null)
+  const isManualPreviewRefresh =
+    previewLoadOrigin === PREVIEW_LOAD_ORIGINS.MANUAL
 
   const selectedCount = channels.length
   const selectedTarget = useMemo(
@@ -314,6 +327,7 @@ export function ManagedSiteChannelMigrationDialog({
       null,
     [availableTargets, targetSiteType],
   )
+  const isSelectedTargetAvailable = Boolean(selectedTarget)
 
   useEffect(() => {
     if (!isOpen) {
@@ -321,36 +335,51 @@ export function ManagedSiteChannelMigrationDialog({
       setPreview(null)
       setPreviewError(null)
       setIsLoadingPreview(false)
+      setPreviewLoadOrigin(null)
       setIsConfirmOpen(false)
       setIsRunning(false)
       setExecutionResult(null)
       setPreviewRefreshKey(0)
+      pendingPreviewLoadOriginRef.current = null
       return
     }
 
-    setTargetSiteType((current) => {
-      if (
-        current &&
-        availableTargets.some((target) => target.siteType === current)
-      ) {
-        return current
-      }
+    const nextTargetSiteType = availableTargets.some(
+      (target) => target.siteType === targetSiteType,
+    )
+      ? targetSiteType
+      : availableTargets[0]?.siteType ?? ""
 
-      return availableTargets[0]?.siteType ?? ""
-    })
+    if (nextTargetSiteType === targetSiteType) return
+
     setPreview(null)
     setPreviewError(null)
     setExecutionResult(null)
-    setPreviewRefreshKey(0)
-  }, [availableTargets, isOpen])
+    if (nextTargetSiteType) {
+      pendingPreviewLoadOriginRef.current = PREVIEW_LOAD_ORIGINS.AUTOMATIC
+      setPreviewLoadOrigin(PREVIEW_LOAD_ORIGINS.AUTOMATIC)
+    } else {
+      pendingPreviewLoadOriginRef.current = null
+      setPreviewLoadOrigin(null)
+      setIsLoadingPreview(false)
+    }
+    setTargetSiteType(nextTargetSiteType)
+  }, [availableTargets, isOpen, targetSiteType])
 
   useEffect(() => {
-    if (!isOpen || !targetSiteType) {
+    if (!isOpen || !targetSiteType || !isSelectedTargetAvailable) {
+      pendingPreviewLoadOriginRef.current = null
+      setIsLoadingPreview(false)
+      setPreviewLoadOrigin(null)
       return
     }
 
     let cancelled = false
+    const requestOrigin =
+      pendingPreviewLoadOriginRef.current ?? PREVIEW_LOAD_ORIGINS.AUTOMATIC
+    pendingPreviewLoadOriginRef.current = null
 
+    setPreviewLoadOrigin(requestOrigin)
     setPreview(null)
     setPreviewError(null)
     setIsLoadingPreview(true)
@@ -373,6 +402,7 @@ export function ManagedSiteChannelMigrationDialog({
       } finally {
         if (!cancelled) {
           setIsLoadingPreview(false)
+          setPreviewLoadOrigin(null)
         }
       }
     })()
@@ -383,6 +413,7 @@ export function ManagedSiteChannelMigrationDialog({
   }, [
     channels,
     isOpen,
+    isSelectedTargetAvailable,
     preferences,
     previewRefreshKey,
     resolveNewApiSourceKey,
@@ -396,9 +427,22 @@ export function ManagedSiteChannelMigrationDialog({
   }
 
   const handleRefreshPreview = () => {
-    if (isLoadingPreview || isRunning) return
+    if (isLoadingPreview || pendingPreviewLoadOriginRef.current || isRunning) {
+      return
+    }
+    pendingPreviewLoadOriginRef.current = PREVIEW_LOAD_ORIGINS.MANUAL
+    setPreviewLoadOrigin(PREVIEW_LOAD_ORIGINS.MANUAL)
+    setIsLoadingPreview(true)
     setExecutionResult(null)
     setPreviewRefreshKey((value) => value + 1)
+  }
+
+  const handleTargetSiteTypeChange = (nextTargetSiteType: string) => {
+    if (nextTargetSiteType === targetSiteType) return
+    pendingPreviewLoadOriginRef.current = PREVIEW_LOAD_ORIGINS.AUTOMATIC
+    setPreviewLoadOrigin(PREVIEW_LOAD_ORIGINS.AUTOMATIC)
+    setIsLoadingPreview(true)
+    setTargetSiteType(nextTargetSiteType)
   }
 
   const handleConfirm = async () => {
@@ -498,16 +542,10 @@ export function ManagedSiteChannelMigrationDialog({
         </Button>
         <Button
           type="button"
-          leftIcon={
-            isLoadingPreview || isRunning ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <ArrowRightLeft className="h-4 w-4" />
-            )
-          }
+          leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+          loading={isRunning}
           disabled={
             isLoadingPreview ||
-            isRunning ||
             !preview ||
             preview.readyCount === 0 ||
             Boolean(previewError)
@@ -558,7 +596,7 @@ export function ManagedSiteChannelMigrationDialog({
               </div>
               <Select
                 value={targetSiteType}
-                onValueChange={setTargetSiteType}
+                onValueChange={handleTargetSiteTypeChange}
                 disabled={
                   isLoadingPreview ||
                   isRunning ||
@@ -589,6 +627,7 @@ export function ManagedSiteChannelMigrationDialog({
               type="button"
               variant="outline"
               leftIcon={<RefreshCcw className="h-4 w-4" />}
+              loading={isManualPreviewRefresh}
               disabled={
                 !targetSiteType ||
                 isLoadingPreview ||
@@ -597,7 +636,9 @@ export function ManagedSiteChannelMigrationDialog({
               }
               onClick={handleRefreshPreview}
             >
-              {t("managedSiteChannels:migration.actions.refreshPreview")}
+              {isManualPreviewRefresh
+                ? t("managedSiteChannels:migration.preview.loading")
+                : t("managedSiteChannels:migration.actions.refreshPreview")}
             </Button>
           </div>
 
@@ -630,7 +671,7 @@ export function ManagedSiteChannelMigrationDialog({
             </div>
           )}
 
-          {!previewError && isLoadingPreview && (
+          {!previewError && isLoadingPreview && !isManualPreviewRefresh && (
             <div className="text-muted-foreground rounded-md border p-3 text-sm">
               <div className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -954,6 +995,7 @@ export function ManagedSiteChannelMigrationDialog({
         warningTitle={t("managedSiteChannels:migration.confirm.warningTitle")}
         cancelLabel={t("managedSiteChannels:migration.actions.cancel")}
         confirmLabel={t("managedSiteChannels:migration.confirm.confirm")}
+        workingLabel={t("managedSiteChannels:migration.actions.running")}
         onConfirm={() => {
           void handleConfirm()
         }}

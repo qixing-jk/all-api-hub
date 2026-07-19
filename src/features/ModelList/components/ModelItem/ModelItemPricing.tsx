@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { Badge } from "~/components/ui"
 import {
   formatGroupLabelFromRatios,
-  resolveGroupRatio,
+  resolveKnownGroupRatio,
 } from "~/features/ModelList/groupLabels"
 import {
   MODEL_LIST_GROUP_SELECTION_SCOPES,
@@ -49,6 +49,20 @@ interface PriceMetaBadgeViewModel {
   variant: "success" | "secondary"
 }
 
+interface PriceAvailabilityContext {
+  effectiveGroup?: string
+  groupRatios: Record<string, number>
+}
+
+/** Returns whether direct token prices still depend on an estimated group rate. */
+function usesEstimatedDirectTokenPrice(model: ModelPricing): boolean {
+  return (
+    model.price_metadata?.source ===
+      MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE &&
+    model.price_metadata?.precision === MODEL_PRICE_PRECISION_KINDS.ESTIMATED
+  )
+}
+
 /**
  * Maps unavailable-price metadata to local model-list copy.
  */
@@ -61,6 +75,10 @@ export function getUnavailablePriceReasonText(
       return t("unavailablePriceReasons.modelListOnly")
     case MODEL_UNAVAILABLE_PRICE_REASONS.KEY_GROUP_UNKNOWN:
       return t("unavailablePriceReasons.keyGroupUnknown")
+    case MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP:
+      return t("noUsableGroupsForModel")
+    case MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE:
+      return t("unavailablePriceReasons.groupRatioUnavailable")
     case MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING:
       return t("unavailablePriceReasons.officialPriceMissing")
     case MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE:
@@ -75,21 +93,34 @@ export function getUnavailablePriceReasonText(
 export function resolveUnavailablePriceReason(
   model: ModelPricing,
   calculatedPrice: CalculatedPrice,
+  context?: PriceAvailabilityContext,
 ): ModelUnavailablePriceReason | undefined {
-  if (
-    !isModelPriceUnavailable(model) &&
-    calculatedPrice.priceAvailability !== "unavailable"
-  ) {
-    return undefined
-  }
-
-  return (
+  const sourceUnavailableReason =
     model.price_metadata?.unavailable_reason ??
     (calculatedPrice.priceAvailability === "unavailable"
       ? calculatedPrice.unavailableReason
-      : undefined) ??
-    MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE
-  )
+      : undefined)
+
+  if (
+    isModelPriceUnavailable(model) ||
+    calculatedPrice.priceAvailability === "unavailable"
+  ) {
+    return (
+      sourceUnavailableReason ??
+      MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE
+    )
+  }
+
+  if (
+    context?.effectiveGroup &&
+    usesEstimatedDirectTokenPrice(model) &&
+    resolveKnownGroupRatio(context.effectiveGroup, context.groupRatios) ===
+      undefined
+  ) {
+    return MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE
+  }
+
+  return undefined
 }
 
 /**
@@ -154,17 +185,21 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   const unavailableReason = resolveUnavailablePriceReason(
     model,
     calculatedPrice,
+    { effectiveGroup, groupRatios },
   )
   const tokenBillingType = isTokenBillingType(model.quota_type)
   const perCallPrice = calculatedPrice.perCallPrice
   const estimatedPriceUsesDirectTokenPrice =
-    model.price_metadata?.source ===
-      MODEL_PRICE_SOURCE_KINDS.OFFICIAL_RATE_ESTIMATE &&
-    model.price_metadata?.precision === MODEL_PRICE_PRECISION_KINDS.ESTIMATED
+    usesEstimatedDirectTokenPrice(model)
+  const showsEffectiveGroupRatio =
+    estimatedPriceUsesDirectTokenPrice && Boolean(effectiveGroup)
   const displayRatio =
-    estimatedPriceUsesDirectTokenPrice && effectiveGroup
-      ? resolveGroupRatio(effectiveGroup, groupRatios)
+    showsEffectiveGroupRatio && effectiveGroup
+      ? resolveKnownGroupRatio(effectiveGroup, groupRatios)
       : model.model_ratio
+  const ratioLabel = showsEffectiveGroupRatio
+    ? t("groupRatio")
+    : t("modelRatio")
   const effectiveGroupLabel = effectiveGroup
     ? formatGroupLabelFromRatios(effectiveGroup, groupRatios)
     : undefined
@@ -263,7 +298,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
               {showRatioColumn && (
                 <>
                   <span className="dark:text-dark-text-tertiary text-xs whitespace-nowrap text-gray-500 sm:text-sm">
-                    {t("ratio")}
+                    {ratioLabel}
                   </span>
                   <span
                     className={`text-xs font-medium sm:text-sm ${

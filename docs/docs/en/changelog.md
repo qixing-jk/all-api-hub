@@ -8,6 +8,29 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 3.52.0
+- **New Features:**
+  - Site Announcements: When newer New API-compatible sites publish multiple system announcements or additional notes at once, the extension can now retrieve them together, making site notices easier to review. See [Site Announcements](./site-announcements.md).
+  - Model List: Added model-capability filters for images, audio, video, PDF, reasoning, tool calling, structured output, and more, with matching capability badges shown on model rows, making it easier to find models suited to a specific task. See [Model List](./model-list.md).
+  - API Credential Library: Expiration dates are now easier to enter. Choose from a calendar or common durations, or type `tomorrow`, `in 7 days`, or a specific date instead of adjusting year, month, and day one field at a time in the browser date control. The same options are available when saving credentials from Web AI API verification results. See [API Credential Library](./api-credential-profiles.md) and [Web AI API Sniffing and Verification](./web-ai-api-check.md).
+  - Kilo Code Export: Added support for `Kilo Code 7.x`, whose configuration format is incompatible with earlier versions. Selected API credentials or site keys can be downloaded as a settings file ready to import, or the corresponding configuration can be copied when existing settings need to be preserved. The existing Roo Code / Kilo Code 5.x export options remain available. See [Quick Export Site Configuration](./quick-export.md).
+- **Experience Optimizations:**
+  - Key Creation: New keys now receive a recommended name automatically. If the name has not been edited manually, changing the group also updates it, reducing cleanup after creation. See [Key Management](./key-management.md).
+  - Add Account: When auto-detect fails, the extension now provides a troubleshooting guide and clear next steps. If the site is not supported yet, you can request support or save its `Base URL + API Key` to the API Credential Library and continue using it there. See [Account Management](./account-management.md), [Auto-detection Troubleshooting Guide](./auto-detect.md), and [API Credential Library](./api-credential-profiles.md).
+- **Bug Fixes:**
+  - New API Bulk Import: Key-check results are now more reliable at identifying matching channels and keys, reducing the large number of duplicate channels that could be created by repeated imports. If some preview items still cannot be confirmed, use `Verify and refresh preview` for an additional check. See [Key Management](./key-management.md) and [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - WebDAV: Existing backups can now be overwritten correctly when the backup folder uses Chinese or other non-English characters, reducing sync failures caused by folder names. See [WebDAV Backup and Auto Sync](./webdav-sync.md).
+  - Browser Compatibility: A key fix targets the known issue in 360 Extreme Browser when "Open a new tab after closing the last tab" is enabled: blank windows could remain after account auto-detection or check-in finished. Related task pages now close correctly when their work is complete.
+  - Add and Edit Forms: Using a dropdown, date picker, or combobox in account, API credential, key, and similar forms no longer closes the entire dialog by mistake. Pressing `Esc` now closes the currently expanded selection first.
+  - Version Updates: When a store-installed extension detects a newer GitHub release that has not yet reached the browser store, it now clearly shows `GitHub has a newer release, but the store update is not ready yet` instead of incorrectly suggesting an immediate upgrade. See [Installation Channels and Updates](./extension-update-install.md).
+
+**Location Hints:**
+- Credential expiration date: Enter it when adding or editing a credential under "Settings → API Credential Library"; it is also available when saving a credential from the Web AI API verification dialog.
+- Kilo Code 7.x export: Open a Kilo Code export action under "Settings → API Credential Library" or "Settings → Key Management", then select `Kilo Code 7.x`.
+- Model capability filters and badges: View them in the filter area and model rows under "Settings → Model List".
+- Site Announcements: View them under "Settings → Site Announcements"; automatic retrieval and notifications can still be managed in settings.
+- Alternatives after account detection fails: Shown after adding an account and using auto-detect under "Settings → Account Management".
+
 ## 3.51.0
 - **New Features:**
   - Data Import/Export: Before importing a backup, you can choose add, replace, or skip separately for `Accounts and bookmarks`, `API Credential Library`, `Channel configurations`, and `User settings`. When migrating data from another device, accounts and credentials are appended by default while current device settings are kept, instead of replacing everything at once. See [Data Import/Export](./data-management.md) and [WebDAV Backup and Auto Sync](./webdav-sync.md).

@@ -29,16 +29,18 @@ import {
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type TempWindowHealthStatusCode,
 } from "~/types/tempWindow"
-import type {
-  TempWindowCheckinPageAction,
-  TempWindowCheckinPageActionParams,
-  TempWindowFallbackAllowlist,
-  TempWindowFallbackContext,
-  TempWindowFetch,
-  TempWindowFetchParams,
-  TempWindowRenderedTitleResponse,
-  TempWindowTurnstileFetch,
-  TempWindowTurnstileFetchParams,
+import {
+  TEMP_WINDOW_REQUEST_SOURCES,
+  type TempWindowCheckinPageAction,
+  type TempWindowCheckinPageActionParams,
+  type TempWindowFallbackAllowlist,
+  type TempWindowFallbackContext,
+  type TempWindowFetch,
+  type TempWindowFetchParams,
+  type TempWindowRenderedTitleParams,
+  type TempWindowRenderedTitleResponse,
+  type TempWindowTurnstileFetch,
+  type TempWindowTurnstileFetchParams,
 } from "~/types/tempWindowFetch"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { OPTIONS_PAGE_URL } from "~/utils/browser/extensionPageUrls"
@@ -49,6 +51,10 @@ import {
 } from "~/utils/browser/index"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
+import {
+  normalizeTempWindowRequestSource,
+  resolveTempWindowRequestPolicy,
+} from "~/utils/browser/tempWindowRequestSource"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
@@ -56,6 +62,8 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to temp window fetch helpers and fallback behavior.
  */
 const logger = createLogger("TempWindowFetch")
+const FIREFOX_POPUP_TEMP_WINDOW_UNSUPPORTED_ERROR =
+  "Temporary-window operations are unavailable from the Firefox popup"
 
 /**
  * Type guard to validate the shape of a temp window rendered title response.
@@ -126,18 +134,35 @@ export async function getTempWindowFallbackBlockStatus(
     inPopup?: boolean
     inSidePanel?: boolean
     inOptions?: boolean
+    tempWindowRequestSource?: unknown
   } = {},
 ): Promise<TempWindowFallbackBlockStatus> {
   const preferences: TempWindowFallbackPreferences = {
     ...(DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences),
     ...(params.preferences ?? {}),
   }
-  const isBackground = params.isBackground ?? isExtensionBackground()
-  let inPopup = params.inPopup ?? false
-  let inSidePanel = params.inSidePanel ?? false
-  let inOptions = params.inOptions ?? false
+  const source =
+    params.tempWindowRequestSource === undefined
+      ? undefined
+      : normalizeTempWindowRequestSource(params.tempWindowRequestSource)
+  const isBackground =
+    source === undefined
+      ? params.isBackground ?? isExtensionBackground()
+      : source === TEMP_WINDOW_REQUEST_SOURCES.Background
+  let inPopup =
+    source === undefined
+      ? params.inPopup ?? false
+      : source === TEMP_WINDOW_REQUEST_SOURCES.Popup
+  let inSidePanel =
+    source === undefined
+      ? params.inSidePanel ?? false
+      : source === TEMP_WINDOW_REQUEST_SOURCES.Sidepanel
+  let inOptions =
+    source === undefined
+      ? params.inOptions ?? false
+      : source === TEMP_WINDOW_REQUEST_SOURCES.Options
 
-  if (!isBackground) {
+  if (source === undefined && !isBackground) {
     try {
       if (params.inPopup === undefined && isExtensionPopup()) {
         inPopup = true
@@ -157,7 +182,11 @@ export async function getTempWindowFallbackBlockStatus(
     }
   }
 
-  if (!isBackground && inPopup && isProtectionBypassFirefoxEnv()) {
+  if (
+    inPopup &&
+    (source !== undefined || !isBackground) &&
+    isProtectionBypassFirefoxEnv()
+  ) {
     return {
       kind: "not_applicable",
       code: null,
@@ -240,14 +269,25 @@ export async function getTempWindowFallbackBlockStatus(
 export async function tempWindowFetch(
   params: TempWindowFetchParams,
 ): Promise<TempWindowFetch> {
-  const suppressMinimize = params.suppressMinimize ?? isExtensionPopup()
+  const policy = resolveTempWindowRequestPolicy({
+    tempWindowRequestSource: params.tempWindowRequestSource,
+    suppressMinimize: params.suppressMinimize,
+  })
+
+  if (policy.blockedReason) {
+    return {
+      success: false,
+      error: FIREFOX_POPUP_TEMP_WINDOW_UNSUPPORTED_ERROR,
+    }
+  }
 
   const payload: TempWindowFetchParams = {
     ...params,
     ...(params.fetchOptions
       ? { fetchOptions: normalizeRequestInitForMessage(params.fetchOptions) }
       : {}),
-    suppressMinimize,
+    tempWindowRequestSource: policy.tempWindowRequestSource,
+    suppressMinimize: policy.suppressMinimize,
   }
 
   // Make sure works normally in all contexts, including background
@@ -289,14 +329,26 @@ export async function tempWindowFetch(
 export async function tempWindowTurnstileFetch(
   params: TempWindowTurnstileFetchParams,
 ): Promise<TempWindowTurnstileFetch> {
-  const suppressMinimize = params.suppressMinimize ?? isExtensionPopup()
+  const policy = resolveTempWindowRequestPolicy({
+    tempWindowRequestSource: params.tempWindowRequestSource,
+    suppressMinimize: params.suppressMinimize,
+  })
+
+  if (policy.blockedReason) {
+    return {
+      success: false,
+      error: FIREFOX_POPUP_TEMP_WINDOW_UNSUPPORTED_ERROR,
+      turnstile: { status: "error", hasTurnstile: false },
+    }
+  }
 
   const payload: TempWindowTurnstileFetchParams = {
     ...params,
     ...(params.fetchOptions
       ? { fetchOptions: normalizeRequestInitForMessage(params.fetchOptions) }
       : {}),
-    suppressMinimize,
+    tempWindowRequestSource: policy.tempWindowRequestSource,
+    suppressMinimize: policy.suppressMinimize,
   }
 
   // Make sure works normally in all contexts, including background
@@ -341,11 +393,23 @@ export async function tempWindowTurnstileFetch(
 export async function tempWindowTriggerCheckinPageAction(
   params: TempWindowCheckinPageActionParams,
 ): Promise<TempWindowCheckinPageAction> {
-  const suppressMinimize = params.suppressMinimize ?? isExtensionPopup()
+  const policy = resolveTempWindowRequestPolicy({
+    tempWindowRequestSource: params.tempWindowRequestSource,
+    suppressMinimize: params.suppressMinimize,
+  })
+
+  if (policy.blockedReason) {
+    return {
+      success: false,
+      reason: "trigger_failed",
+      error: FIREFOX_POPUP_TEMP_WINDOW_UNSUPPORTED_ERROR,
+    }
+  }
 
   const payload: TempWindowCheckinPageActionParams = {
     ...params,
-    suppressMinimize,
+    tempWindowRequestSource: policy.tempWindowRequestSource,
+    suppressMinimize: policy.suppressMinimize,
   }
 
   if (isExtensionBackground()) {
@@ -385,15 +449,26 @@ export async function tempWindowTriggerCheckinPageAction(
 /**
  * Reads the rendered document.title via the temp window flow.
  */
-export async function tempWindowGetRenderedTitle(params: {
-  originUrl: string
-  requestId?: string
-  suppressMinimize?: boolean
-}): Promise<TempWindowRenderedTitleResponse> {
+export async function tempWindowGetRenderedTitle(
+  params: TempWindowRenderedTitleParams,
+): Promise<TempWindowRenderedTitleResponse> {
+  const policy = resolveTempWindowRequestPolicy({
+    tempWindowRequestSource: params.tempWindowRequestSource,
+    suppressMinimize: params.suppressMinimize,
+  })
+
+  if (policy.blockedReason) {
+    return {
+      success: false,
+      error: FIREFOX_POPUP_TEMP_WINDOW_UNSUPPORTED_ERROR,
+    }
+  }
+
   const payload = {
     action: RuntimeActionIds.TempWindowGetRenderedTitle,
     ...params,
-    suppressMinimize: params.suppressMinimize ?? isExtensionPopup(),
+    tempWindowRequestSource: policy.tempWindowRequestSource,
+    suppressMinimize: policy.suppressMinimize,
   }
 
   // Make sure works normally in all contexts, including background
@@ -616,16 +691,15 @@ async function shouldUseTempWindowFallback(
     return false
   }
 
-  try {
-    if (isProtectionBypassFirefoxEnv() && isExtensionPopup()) {
-      logSkipTempWindowFallback(
-        "Running in Firefox popup; temp window fallback is forcibly disabled to avoid closing the popup.",
-        context,
-      )
-      return false
-    }
-  } catch {
-    // ignore environment detection errors
+  const policy = resolveTempWindowRequestPolicy({
+    tempWindowRequestSource: context.tempWindowRequestSource,
+  })
+  if (policy.blockedReason) {
+    logSkipTempWindowFallback(
+      "Running in Firefox popup; temp window fallback is forcibly disabled to avoid closing the popup.",
+      context,
+    )
+    return false
   }
 
   let prefsFallback: TempWindowFallbackPreferences | undefined
@@ -641,6 +715,7 @@ async function shouldUseTempWindowFallback(
 
   const blockStatus = await getTempWindowFallbackBlockStatus({
     preferences: prefsFallback,
+    tempWindowRequestSource: context.tempWindowRequestSource,
   })
 
   if (blockStatus.kind === "available") {
@@ -732,14 +807,13 @@ async function fetchViaTempWindow<T>(
   }
 
   const requestId = safeRandomUUID(`temp-fetch-${context.url}`)
-  const suppressMinimize = true
   const payload: TempWindowFetchParams = {
     originUrl: context.baseUrl,
     fetchUrl: context.url,
     fetchOptions,
     requestId,
     responseType,
-    suppressMinimize,
+    tempWindowRequestSource: context.tempWindowRequestSource,
     accountId: context.accountId,
     authType: context.authType,
     cookieAuthSessionCookie: context.cookieAuthSessionCookie,

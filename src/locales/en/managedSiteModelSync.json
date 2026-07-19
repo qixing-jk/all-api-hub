@@ -4,7 +4,10 @@
     "actions": {
       "refresh": "Refresh Results",
       "retryFailed": "Retry Failed Only",
+      "retryingFailed": "Retrying failed...",
       "runAll": "Run All",
+      "runningAll": "Running all...",
+      "runningSelected": "Running selected...",
       "runSelected": "Run Selected"
     },
     "empty": {

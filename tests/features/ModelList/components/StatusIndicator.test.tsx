@@ -1,25 +1,17 @@
-import { render, screen } from "@testing-library/react"
+import { render as rtlRender, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import type { ReactElement } from "react"
+import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { StatusIndicator } from "~/features/ModelList/components/StatusIndicator"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import { testI18n } from "~~/tests/test-utils/i18n"
 
 const { openSiteSupportRequestPageMock } = vi.hoisted(() => ({
   openSiteSupportRequestPageMock: vi.fn(),
 }))
-
-vi.mock("react-i18next", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-i18next")>()
-
-  return {
-    ...actual,
-    useTranslation: () => ({
-      t: (key: string) => key,
-    }),
-  }
-})
 
 vi.mock("~/utils/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/navigation")>()
@@ -53,6 +45,14 @@ const ACCOUNT_SOURCE = {
   },
 } as any
 
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <I18nextProvider i18n={testI18n}>{children}</I18nextProvider>
+    ),
+  })
+}
+
 describe("StatusIndicator", () => {
   beforeEach(() => {
     openSiteSupportRequestPageMock.mockReset()
@@ -76,22 +76,23 @@ describe("StatusIndicator", () => {
     )
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "status.unsupportedSourceTitle",
+      "modelList:status.unsupportedSourceTitle",
     )
     expect(
-      screen.getByText("status.unsupportedSourceDescription"),
+      screen.getByText("modelList:status.unsupportedSourceDescription"),
     ).toBeVisible()
 
     await user.click(
       screen.getByRole("button", {
-        name: "status.requestSiteSupport",
+        name: "modelList:status.requestSiteSupport",
       }),
     )
 
     expect(openSiteSupportRequestPageMock).toHaveBeenCalledWith({
       siteUrl: "https://example.invalid",
       errorType: "model_list_unsupported",
-      errorMessage: "status.unsupportedSourceSupportRequestErrorMessage",
+      errorMessage:
+        "modelList:status.unsupportedSourceSupportRequestErrorMessage",
     })
   })
 })

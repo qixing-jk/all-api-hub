@@ -1,3 +1,8 @@
+import {
+  ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
+  getAccountSiteModelListProfile,
+  type AccountSiteModelListGroupSemantics,
+} from "~/services/accounts/accountSiteProfile"
 import type { ModelListSourceInfo } from "~/services/modelList/pricingModel"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
@@ -7,6 +12,11 @@ export const MODEL_MANAGEMENT_SOURCE_KINDS = {
   ACCOUNT: "account",
   PROFILE: "profile",
 } as const
+
+export const MODEL_LIST_GROUP_SEMANTICS =
+  ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS
+
+export type ModelListGroupSemantics = AccountSiteModelListGroupSemantics
 
 export const NO_MODEL_MANAGEMENT_SOURCE_VALUE = ""
 export const ALL_ACCOUNTS_SOURCE_VALUE = "all"
@@ -33,18 +43,21 @@ export type ModelManagementSource =
       kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
       value: typeof ALL_ACCOUNTS_SOURCE_VALUE
       capabilities: ModelManagementSourceCapabilities
+      groupSemantics: ModelListGroupSemantics
     }
   | {
       kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
       value: string
       account: DisplaySiteData
       capabilities: ModelManagementSourceCapabilities
+      groupSemantics: ModelListGroupSemantics
     }
   | {
       kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
       value: string
       profile: ApiCredentialProfile
       capabilities: ModelManagementSourceCapabilities
+      groupSemantics: ModelListGroupSemantics
     }
 
 export type ModelManagementAccountSource = Extract<
@@ -286,6 +299,7 @@ export function createAllAccountsSource(): ModelManagementSource {
     kind: MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
     value: ALL_ACCOUNTS_SOURCE_VALUE,
     capabilities: ALL_ACCOUNTS_SOURCE_CAPABILITIES,
+    groupSemantics: MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
   }
 }
 
@@ -300,6 +314,8 @@ export function createAccountSource(
     value: toAccountSourceValue(account.id),
     account,
     capabilities: ACCOUNT_SOURCE_CAPABILITIES,
+    groupSemantics: getAccountSiteModelListProfile(account.siteType)
+      .groupSemantics,
   }
 }
 
@@ -314,6 +330,7 @@ export function createProfileSource(
     value: toProfileSourceValue(profile.id),
     profile,
     capabilities: PROFILE_SOURCE_CAPABILITIES,
+    groupSemantics: MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
   }
 }
 

@@ -11,7 +11,6 @@ import {
   type ModelListCatalogExpectations,
 } from "~~/e2e/scenarios/modelListCatalog"
 import { deleteTokenFromKeyManagementPage } from "~~/e2e/utils/accountLifecycle"
-import { waitForExtensionPage } from "~~/e2e/utils/commonUserFlows"
 import { expectPermissionOnboardingHidden } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
@@ -185,19 +184,18 @@ export async function runModelToKeyManagementScenario(
     await expect(keyDialog.getByText(createdCompatibleKeyLabel)).toBeVisible()
   }
 
-  const keysPagePromise = waitForExtensionPage(page.context(), {
-    extensionId: params.extensionId,
-    path: OPTIONS_PAGE_PATH,
-    hash: `#${MENU_ITEM_IDS.KEYS}`,
-    searchParams: { accountId: params.accountId },
-    reuseExistingPage: false,
-  })
-
   await keyDialog
     .getByTestId(MODEL_LIST_TEST_IDS.openKeyManagementButton)
     .click()
 
-  const keysPage = await keysPagePromise
+  await expect(page).toHaveURL((url) => {
+    return (
+      url.pathname === `/${OPTIONS_PAGE_PATH}` &&
+      url.hash === `#${MENU_ITEM_IDS.KEYS}` &&
+      url.searchParams.get("accountId") === params.accountId
+    )
+  })
+  const keysPage = page
 
   try {
     await params.prepareKeyManagementPage?.(keysPage)

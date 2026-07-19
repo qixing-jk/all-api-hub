@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixModelPricing } from "~/services/apiAdapters/aihubmix/modelPricing"
 import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/modelPricing"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
+import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"
 
 const {
@@ -67,7 +68,7 @@ describe("apiAdapter modelPricing", () => {
 
     const modelPricing = createNewApiModelPricing(SITE_TYPES.NEW_API)
 
-    await expect(modelPricing.fetchPricing(request)).resolves.toBe(
+    await expect(modelPricing.fetchPricing(request)).resolves.toEqual(
       pricingResponse,
     )
 
@@ -92,10 +93,23 @@ describe("apiAdapter modelPricing", () => {
   )
 
   it("delegates AIHubMix model pricing to the AIHubMix helper", async () => {
-    mockAihubmixFetchModelPricing.mockResolvedValueOnce(pricingResponse)
+    const aihubmixPricingResponse: PricingResponse = {
+      ...pricingResponse,
+      data: [
+        {
+          ...pricingResponse.data[0],
+          vendorEvidence: {
+            kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+            name: "Example Publisher",
+            externalId: "opaque-developer-id",
+          },
+        },
+      ],
+    }
+    mockAihubmixFetchModelPricing.mockResolvedValueOnce(aihubmixPricingResponse)
 
     await expect(aihubmixModelPricing.fetchPricing(request)).resolves.toBe(
-      pricingResponse,
+      aihubmixPricingResponse,
     )
 
     expect(mockAihubmixFetchModelPricing).toHaveBeenCalledOnce()

@@ -124,7 +124,6 @@ export function SettingSection({
               onClick={handleResetConfirm}
               variant="destructive"
               loading={isResetting}
-              disabled={isResetting}
             >
               {isResetting
                 ? t("common:status.resetting")

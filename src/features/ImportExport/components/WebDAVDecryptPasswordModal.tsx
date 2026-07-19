@@ -87,9 +87,10 @@ export function WebDAVDecryptPasswordModal({
             size="sm"
             onClick={onDecryptAndImport}
             loading={decrypting}
-            disabled={decrypting}
           >
-            {t("webdav.encryption.decryptAction")}
+            {decrypting
+              ? t("common:status.processing")
+              : t("webdav.encryption.decryptAction")}
           </Button>
         </div>
       }

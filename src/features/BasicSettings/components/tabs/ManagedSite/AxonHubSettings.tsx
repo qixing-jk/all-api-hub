@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { signIn } from "~/services/apiService/axonHub"
@@ -136,7 +137,7 @@ export default function AxonHubSettings() {
 
   return (
     <SettingSection
-      id="axonhub"
+      id={SETTINGS_ANCHORS.AXON_HUB}
       title={t("axonHub.title")}
       description={t("axonHub.description")}
       onReset={resetAxonHubConfig}
@@ -217,7 +218,7 @@ export default function AxonHubSettings() {
                 variant="outline"
                 size="sm"
                 onClick={handleValidateConfig}
-                disabled={isValidating}
+                loading={isValidating}
               >
                 {isValidating
                   ? t("axonHub.validation.validating")

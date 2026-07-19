@@ -4,7 +4,10 @@
     "actions": {
       "refresh": "Làm mới kết quả",
       "retryFailed": "Chỉ thử lại mục thất bại",
+      "retryingFailed": "Đang thử lại mục thất bại...",
       "runAll": "Chạy tất cả",
+      "runningAll": "Đang chạy tất cả...",
+      "runningSelected": "Đang chạy mục đã chọn...",
       "runSelected": "Chạy mục đã chọn"
     },
     "empty": {

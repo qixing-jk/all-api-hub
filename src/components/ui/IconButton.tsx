@@ -55,20 +55,21 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       className,
       variant,
       size,
-      loading,
+      loading = false,
       children,
       disabled,
       disableAutoTitle,
       analyticsAction,
       onClick,
+      "aria-busy": ariaBusy,
       ...props
     },
     ref,
   ) => {
-    const isDisabled = disabled || loading
+    const isDisabled = Boolean(disabled || loading)
     const analytics = useProductAnalyticsActionTracking({
       analyticsAction,
-      disabled: Boolean(isDisabled),
+      disabled: isDisabled,
     })
     const trackingProps = analytics.getActionTrackingProps()
 
@@ -89,6 +90,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         disabled={isDisabled}
         onClick={handleClick}
         {...props}
+        aria-busy={loading ? true : ariaBusy}
         title={
           disableAutoTitle ? props.title : props.title ?? props["aria-label"]
         }
@@ -99,6 +101,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
+            aria-hidden="true"
           >
             <circle
               className="opacity-25"

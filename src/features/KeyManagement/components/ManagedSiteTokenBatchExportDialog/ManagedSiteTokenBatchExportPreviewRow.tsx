@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { Loader2, RefreshCcw } from "lucide-react"
+import { RefreshCcw } from "lucide-react"
 import { useId } from "react"
 
 import { ManagedSiteChannelAssessmentSignalsRow } from "~/components/ManagedSiteChannelAssessmentSignals"
@@ -100,13 +100,8 @@ export function ManagedSiteTokenBatchExportPreviewRow({
       type="button"
       size="sm"
       variant="outline"
-      leftIcon={
-        isCurrentItemVerifying ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <RefreshCcw className="h-4 w-4" />
-        )
-      }
+      loading={isCurrentItemVerifying}
+      leftIcon={<RefreshCcw className="h-4 w-4" />}
       disabled={
         isLoadingPreview ||
         isRunning ||

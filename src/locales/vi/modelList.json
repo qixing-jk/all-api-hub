@@ -42,7 +42,6 @@
   "allBillingModes": "Tất cả phương thức tính phí",
   "allGroups": "Tất cả các nhóm",
   "allProviders": "Tất cả nhà cung cấp",
-  "availableGroups": "Nhóm khả dụng",
   "batchVerify": {
     "actions": {
       "open": "Kiểm tra hàng loạt",
@@ -103,6 +102,7 @@
     "tooltip": "Xóa bộ lọc hiện tại, chuyển sang tất cả tài khoản và ưu tiên giá thấp nhất cho cùng mô hình."
   },
   "copyAllNames": "Sao chép tất cả tên mô hình",
+  "currentUsableGroups": "Nhóm tài khoản hiện tại có thể dùng",
   "description": "Xem và quản lý các mô hình AI khả dụng",
   "detailedPricing": "Định giá chi tiết",
   "displayOptions": "Tùy chọn hiển thị:",
@@ -115,7 +115,9 @@
     "description": "Thư mục mô hình hiện tại được tải dự phòng thông qua khóa tài khoản, chỉ hỗ trợ phát hiện và xác minh mô hình. Nhấp vào làm mới dữ liệu sẽ thử lại API của tài khoản.",
     "title": "Thư mục dự phòng khóa tài khoản"
   },
+  "groupRatio": "Hệ số nhóm:",
   "groupRatioTooltip": "Tỷ lệ nhóm {{group}}: {{ratio}}x",
+  "groupRatioUnavailable": "Không có hệ số nhóm",
   "groupSelectionHint": "Để trống biểu thị tất cả các nhóm; việc sắp xếp giá sẽ tự động lấy mức giá tốt nhất trong phạm vi các nhóm đã chọn",
   "input": "Đầu vào:",
   "input1MTokens": "Đầu vào (1M tokens)",
@@ -163,9 +165,49 @@
     "modelNamesCopied": "Đã sao chép tên các mô hình",
     "siteUrlCopied": "Đã sao chép URL trang"
   },
+  "modelCapabilityFilter": {
+    "coverageHint_one": "{{count}} mô hình trong danh sách này chưa có mô tả năng lực, nên bộ lọc năng lực sẽ tạm bỏ qua mô hình này.",
+    "coverageHint_other": "{{count}} mô hình trong danh sách này chưa có mô tả năng lực, nên bộ lọc năng lực sẽ tạm bỏ qua chúng.",
+    "descriptions": {
+      "attachment": "Hỗ trợ tệp đính kèm đã tải lên làm ngữ cảnh đầu vào.",
+      "audioInput": "Hỗ trợ đầu vào âm thanh.",
+      "audioOutput": "Hỗ trợ đầu ra âm thanh.",
+      "imageInput": "Hỗ trợ tải hình ảnh lên để nhận dạng, phân tích hoặc hiểu thị giác.",
+      "imageOutput": "Hỗ trợ tạo hình ảnh trực tiếp dưới dạng đầu ra của mô hình.",
+      "pdf": "Hỗ trợ đầu vào tài liệu PDF.",
+      "reasoning": "Hỗ trợ suy luận rõ ràng hoặc các bước suy nghĩ.",
+      "structuredOutput": "Hỗ trợ đầu ra có cấu trúc hoặc ràng buộc JSON Schema.",
+      "toolCall": "Hỗ trợ gọi công cụ hoặc gọi hàm.",
+      "videoInput": "Hỗ trợ đầu vào video.",
+      "videoOutput": "Hỗ trợ đầu ra video."
+    },
+    "groups": {
+      "capabilities": "Năng lực:",
+      "input": "Đầu vào:",
+      "output": "Đầu ra:"
+    },
+    "label": "Năng lực mô hình",
+    "options": {
+      "all": "Tất cả năng lực",
+      "attachment": "Tệp đính kèm",
+      "audioInput": "Đầu vào âm thanh",
+      "audioOutput": "Đầu ra âm thanh",
+      "imageInput": "Đầu vào hình ảnh",
+      "imageOutput": "Tạo hình ảnh",
+      "pdf": "PDF",
+      "reasoning": "Suy luận",
+      "structuredOutput": "Đầu ra có cấu trúc",
+      "toolCall": "Gọi công cụ",
+      "videoInput": "Đầu vào video",
+      "videoOutput": "Đầu ra video"
+    },
+    "selectionHint": "Khi chọn nhiều năng lực, mô hình phải khớp với tất cả năng lực đã chọn."
+  },
+  "modelRatio": "Hệ số mô hình:",
   "noMatchingModels": "Không tìm thấy mô hình nào phù hợp",
   "noSourcesDescription": "Vui lòng thêm tài khoản trang web hoặc thông tin xác thực API trước, sau đó xem danh sách mô hình.",
   "noSourcesTitle": "Hiện chưa có nguồn dữ liệu khả dụng",
+  "noUsableGroupsForModel": "Tài khoản này hiện không có nhóm dùng được cho mô hình này.",
   "optimalGroup": "Nhóm tối ưu: {{group}}",
   "optimalGroupLowestPriceWithinAccountFilters": "Đã tự động chọn nhóm tối ưu trong phạm vi bộ lọc nhóm tài khoản hiện tại: {{group}}; và có mức giá thấp nhất trong cùng phương thức tính phí",
   "optimalGroupLowestPriceWithinBillingMode": "Đã tự động chọn nhóm tối ưu trong phạm vi các nhóm được lọc hiện tại: {{group}}; và có mức giá thấp nhất trong cùng phương thức tính phí",
@@ -183,10 +225,11 @@
     "title": "Thư mục mô hình thông tin xác thực API"
   },
   "providerTabs": {
-    "scrollLeft": "Cuộn thẻ nhà cung cấp sang trái",
-    "scrollRight": "Cuộn thẻ nhà cung cấp sang phải"
+    "scrollLeft": "Cuộn thẻ hãng sang trái",
+    "scrollRight": "Cuộn thẻ hãng sang phải",
+    "unclassified": "Chưa phân loại",
+    "unclassifiedDescription": "Không thể xác định nhà cung cấp; điều này không có nghĩa là mô hình không khả dụng."
   },
-  "ratio": "Tỷ lệ:",
   "realAmount": "Số tiền nạp thực tế",
   "refreshData": "Làm mới dữ liệu",
   "runtimeKeyFallbackSourceNotice": {
@@ -199,6 +242,7 @@
   "selectSourceToContinue": "Vui lòng chọn một nguồn dữ liệu ở trên trước, sau đó xem danh sách mô hình.",
   "showing_other": "Đang hiển thị {{count}} mô hình",
   "showRatio": "Hiển thị tỷ lệ",
+  "siteSupportedGroups": "Nhóm được trang hỗ trợ",
   "sortBy": "Sắp xếp theo",
   "sortOptions": {
     "default": "Thứ tự mặc định",
@@ -255,6 +299,7 @@
   "totalModels_other": "Tổng cộng {{count}} mô hình",
   "unavailable": "Không khả dụng",
   "unavailablePriceReasons": {
+    "groupRatioUnavailable": "Không thể hiển thị giá vì nhóm dùng được này không có hệ số.",
     "keyGroupUnknown": "Không có giá vì không thể xác định nhóm Sub2API của khóa này.",
     "modelListOnly": "Các mô hình này khả dụng cho khóa này. Không có dữ liệu giá.",
     "officialPriceMissing": "Mô hình này không có trong bảng giá.",

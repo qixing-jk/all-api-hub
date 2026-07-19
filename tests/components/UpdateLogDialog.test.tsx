@@ -19,6 +19,14 @@ const { toastErrorMock } = vi.hoisted(() => ({
   toastErrorMock: vi.fn(),
 }))
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+  return { promise, resolve }
+}
+
 vi.mock("react-hot-toast", () => ({
   default: {
     error: toastErrorMock,
@@ -36,17 +44,13 @@ describe("UpdateLogDialog", () => {
   it("toggles the open-changelog-on-update preference from the dialog", async () => {
     const preferences = buildUserPreferences({ openChangelogOnUpdate: true })
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(preferences)
+    const disableDeferred = createDeferred<PreferenceWriteResult>()
+    const enableDeferred = createDeferred<PreferenceWriteResult>()
 
     const updateSpy = vi
       .spyOn(userPreferences, "updateOpenChangelogOnUpdate")
-      .mockImplementation(async (enabled) => ({
-        ok: true,
-        preferences: {
-          ...preferences,
-          openChangelogOnUpdate: enabled,
-          lastUpdated: preferences.lastUpdated + 1,
-        },
-      }))
+      .mockReturnValueOnce(disableDeferred.promise)
+      .mockReturnValueOnce(enableDeferred.promise)
 
     render(<UpdateLogDialog isOpen onClose={() => {}} version="2.39.0" />)
 
@@ -60,8 +64,33 @@ describe("UpdateLogDialog", () => {
 
     fireEvent.click(toggleButton)
 
+    expect(toggleButton).toHaveAccessibleName("common:status.disabling")
+    expect(toggleButton).toHaveAttribute("aria-busy", "true")
+    expect(toggleButton).toBeDisabled()
+    const closeButton = screen.getByTestId(
+      UPDATE_LOG_DIALOG_TEST_IDS.closeButton,
+    )
+    const openFullChangelogButton = screen.getByTestId(
+      UPDATE_LOG_DIALOG_TEST_IDS.openFullChangelogButton,
+    )
+    expect(closeButton).not.toHaveAttribute("aria-busy")
+    expect(openFullChangelogButton).not.toHaveAttribute("aria-busy")
+
+    fireEvent.click(toggleButton)
     await waitFor(() => {
       expect(updateSpy).toHaveBeenCalledWith(false)
+    })
+    expect(updateSpy).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      disableDeferred.resolve({
+        ok: true,
+        preferences: {
+          ...preferences,
+          openChangelogOnUpdate: false,
+          lastUpdated: preferences.lastUpdated + 1,
+        },
+      })
     })
 
     await waitFor(() => {
@@ -72,8 +101,27 @@ describe("UpdateLogDialog", () => {
 
     fireEvent.click(toggleButton)
 
+    expect(toggleButton).toHaveAccessibleName("common:status.enabling")
+    expect(toggleButton).toHaveAttribute("aria-busy", "true")
+    expect(toggleButton).toBeDisabled()
+    expect(closeButton).not.toHaveAttribute("aria-busy")
+    expect(openFullChangelogButton).not.toHaveAttribute("aria-busy")
+
+    fireEvent.click(toggleButton)
     await waitFor(() => {
       expect(updateSpy).toHaveBeenCalledWith(true)
+    })
+    expect(updateSpy).toHaveBeenCalledTimes(2)
+
+    await act(async () => {
+      enableDeferred.resolve({
+        ok: true,
+        preferences: {
+          ...preferences,
+          openChangelogOnUpdate: true,
+          lastUpdated: preferences.lastUpdated + 2,
+        },
+      })
     })
 
     await waitFor(() => {

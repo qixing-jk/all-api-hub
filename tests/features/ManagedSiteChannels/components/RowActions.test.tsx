@@ -1,3 +1,4 @@
+import { fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -10,31 +11,22 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { NewApiChannel } from "~/types/newApi"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const createDeferred = () => {
+  let resolve!: () => void
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+
+  return { promise, resolve }
+}
 
 const mockTrackProductAnalyticsActionStarted = vi.fn()
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: (...args: unknown[]) =>
     mockTrackProductAnalyticsActionStarted(...args),
-}))
-
-vi.mock("~/components/ui/button", () => ({
-  Button: ({
-    "aria-label": ariaLabel,
-    children,
-    disabled,
-    onClick,
-  }: {
-    "aria-label"?: string
-    children: ReactNode
-    disabled?: boolean
-    onClick?: () => void
-  }) => (
-    <button aria-label={ariaLabel} disabled={disabled} onClick={onClick}>
-      {children}
-    </button>
-  ),
 }))
 
 vi.mock("~/components/ui/dropdown-menu", () => ({
@@ -121,7 +113,7 @@ const setup = (props: Partial<Parameters<typeof RowActions>[0]> = {}) => {
     onView: vi.fn(),
     onMigrate: vi.fn(),
     onDelete: vi.fn(),
-    onSync: vi.fn(),
+    onSync: vi.fn().mockResolvedValue(undefined),
     onOpenSync: vi.fn(),
     onFilters: vi.fn(),
     canMigrate: true,
@@ -200,6 +192,26 @@ describe("ManagedSiteChannels RowActions", () => {
     expect(screen.queryByRole("menuitem", { name: labels.sync })).toBeNull()
   })
 
+  it("does not coerce string native ids for edit and delete row actions", async () => {
+    const user = userEvent.setup()
+    const nativeIdChannel = {
+      ...channel,
+      id: "gid://axonhub/Channel/native-string-id" as unknown as number,
+    }
+    const props = setup({
+      channel: nativeIdChannel,
+      showNewApiOnlyActions: false,
+    })
+
+    await user.click(screen.getByRole("menuitem", { name: labels.edit }))
+    await user.click(screen.getByRole("menuitem", { name: labels.delete }))
+
+    expect(props.onEdit).toHaveBeenCalledWith(nativeIdChannel)
+    expect(props.onDelete).toHaveBeenCalledWith([
+      "gid://axonhub/Channel/native-string-id",
+    ])
+  })
+
   it("renders migration actions and disables migration without targets", async () => {
     const user = userEvent.setup()
     const props = setup({
@@ -216,5 +228,36 @@ describe("ManagedSiteChannels RowActions", () => {
     expect(props.onView).toHaveBeenCalledWith(channel)
     expect(props.onMigrate).not.toHaveBeenCalled()
     expectRowActionTracked(PRODUCT_ANALYTICS_ACTION_IDS.ViewManagedSiteChannel)
+  })
+
+  it("keeps an externally syncing row locked without announcing local work", () => {
+    setup({ isSyncing: true })
+
+    const trigger = screen.getByRole("button", { name: labels.trigger })
+    expect(trigger).toBeDisabled()
+    expect(trigger).not.toHaveAttribute("aria-busy")
+  })
+
+  it("marks only locally initiated sync as busy and suppresses duplicate syncs", async () => {
+    const deferredSync = createDeferred()
+    const onSync = vi.fn(() => deferredSync.promise)
+    setup({ onSync })
+
+    const syncItem = screen.getByRole("menuitem", { name: labels.sync })
+    fireEvent.click(syncItem)
+    fireEvent.click(syncItem)
+
+    const trigger = screen.getByRole("button", { name: labels.trigger })
+    expect(onSync).toHaveBeenCalledTimes(1)
+    expect(trigger).toBeDisabled()
+    expect(trigger).toHaveAttribute("aria-busy", "true")
+    expect(trigger).toHaveAccessibleName(labels.trigger)
+
+    deferredSync.resolve()
+
+    await waitFor(() => {
+      expect(trigger).toBeEnabled()
+    })
+    expect(trigger).not.toHaveAttribute("aria-busy")
   })
 })

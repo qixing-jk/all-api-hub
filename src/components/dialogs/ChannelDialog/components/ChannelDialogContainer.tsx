@@ -38,6 +38,7 @@ export function ChannelDialogContainer() {
         onRequestRealKey={state.onRequestRealKey ?? undefined}
         onSuccess={handleSuccess}
         onMutationOutcome={state.onMutationOutcome ?? undefined}
+        resourceEdit={state.resourceEdit ?? null}
       />
       {defaultTokenQuickCreateDialog.account &&
       defaultTokenQuickCreatePrefill ? (

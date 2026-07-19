@@ -5,6 +5,7 @@ import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
 import { ApiError } from "~/services/apiTransport/errors"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
@@ -124,7 +125,7 @@ describe("newApiProvider", () => {
   })
 
   describe("checkIn", () => {
-    it("uses native page check-in for narrow dynamic signature failures", async () => {
+    it("preserves the popup source through native page check-in and status polling", async () => {
       const { fetchApi, fetchApiData } = await import(
         "~/services/apiTransport/request"
       )
@@ -157,7 +158,9 @@ describe("newApiProvider", () => {
         stats: { checked_in_today: true },
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await newApiProvider.checkIn(mockAccount, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
 
       expect(result).toEqual({
         status: "already_checked",
@@ -168,9 +171,11 @@ describe("newApiProvider", () => {
       })
       expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
         accountId: "test-id",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
       expect(vi.mocked(fetchApiData).mock.calls[0]?.[0]).toMatchObject({
         accountId: "test-id",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
       expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -181,6 +186,7 @@ describe("newApiProvider", () => {
           accountId: "test-id",
           authType: AuthTypeEnum.AccessToken,
           trigger: { kind: "checkinButton" },
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
         }),
       )
       expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
@@ -549,7 +555,9 @@ describe("newApiProvider", () => {
     })
 
     it("does not add native page identity matching to Turnstile replay failures", async () => {
-      const { fetchApi } = await import("~/services/apiTransport/request")
+      const { fetchApi, fetchApiData } = await import(
+        "~/services/apiTransport/request"
+      )
       const { tempWindowTriggerCheckinPageAction, tempWindowTurnstileFetch } =
         await import("~/utils/browser/tempWindowFetch")
       const { isAllowedIncognitoAccess } = await import(
@@ -567,6 +575,9 @@ describe("newApiProvider", () => {
         error: "Turnstile token not available",
         turnstile: { status: "timeout", hasTurnstile: true },
       })
+      vi.mocked(fetchApiData).mockResolvedValueOnce({
+        stats: { checked_in_today: false },
+      } as any)
 
       const result = await newApiProvider.checkIn(mockAccount)
 
@@ -630,7 +641,6 @@ describe("newApiProvider", () => {
         message: "",
         data: { checkin_date: "2026-01-01", quota_awarded: 1 },
       })
-
       const result = await newApiProvider.checkIn(mockAccount)
 
       expect(result).toEqual({
@@ -638,6 +648,9 @@ describe("newApiProvider", () => {
         rawMessage: undefined,
         messageKey: "autoCheckin:providerFallback.checkinSuccessful",
         data: { checkin_date: "2026-01-01", quota_awarded: 1 },
+      })
+      expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       })
     })
 
@@ -1178,7 +1191,7 @@ describe("newApiProvider", () => {
       })
     })
 
-    it("falls back to the normal temp context when an incognito-first Turnstile attempt cannot obtain a token", async () => {
+    it("preserves the popup source across preferred and fallback Turnstile attempts", async () => {
       const { fetchApi, fetchApiData } = await import(
         "~/services/apiTransport/request"
       )
@@ -1220,18 +1233,34 @@ describe("newApiProvider", () => {
 
       vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(true)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await newApiProvider.checkIn(mockAccount, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
 
       expect(result.status).toBe("success")
       expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(2)
       expect(tempWindowTurnstileFetch).toHaveBeenNthCalledWith(
         1,
-        expect.objectContaining({ useIncognito: true }),
+        expect.objectContaining({
+          useIncognito: true,
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        }),
       )
       expect(tempWindowTurnstileFetch).toHaveBeenNthCalledWith(
         2,
-        expect.not.objectContaining({ useIncognito: true }),
+        expect.objectContaining({
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        }),
       )
+      expect(
+        vi.mocked(tempWindowTurnstileFetch).mock.calls[1]?.[0].useIncognito,
+      ).toBeUndefined()
+      expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
+      expect(vi.mocked(fetchApiData).mock.calls[0]?.[0]).toMatchObject({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
     })
 
     it("falls back to manual verification when the incognito retry still cannot complete the assisted request", async () => {

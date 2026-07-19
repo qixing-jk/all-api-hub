@@ -3,6 +3,10 @@ import { Storage } from "@plasmohq/storage"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
+  TEMP_CONTEXT_MODES,
+  type TempContextMode,
+} from "~/constants/tempContextMode"
+import {
   STORAGE_LOCKS,
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
@@ -114,7 +118,7 @@ export interface TempWindowFallbackPreferences {
    * - "window": Open a popup window
    * - "composite": Open temporary tabs inside a shared window
    */
-  tempContextMode: "tab" | "window" | "composite"
+  tempContextMode: TempContextMode
 }
 
 export interface TempWindowFallbackReminderPreferences {
@@ -623,7 +627,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     useInOptions: true,
     useForAutoRefresh: true,
     useForManualRefresh: true,
-    tempContextMode: "composite",
+    tempContextMode: TEMP_CONTEXT_MODES.Composite,
   },
   tempWindowFallbackReminder: {
     dismissed: false,

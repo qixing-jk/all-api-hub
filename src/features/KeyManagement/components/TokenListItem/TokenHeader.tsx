@@ -953,7 +953,9 @@ export function TokenHeader({
                 loading={isManagedSiteVerificationRetrying}
                 onClick={handleManagedSiteVerificationRetryClick}
               >
-                {t("managedSiteStatus.actions.verifyNow")}
+                {isManagedSiteVerificationRetrying
+                  ? t("common:status.checking")
+                  : t("managedSiteStatus.actions.verifyNow")}
               </Button>
             ) : null}
             {shouldShowManagedSiteSettingsAction ? (

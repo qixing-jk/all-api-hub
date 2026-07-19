@@ -88,7 +88,9 @@ export default function PopupInterruptionHintBanner({
               loading={isApplying}
               leftIcon={<PanelRightOpen className="h-3.5 w-3.5" />}
             >
-              {t("popupInterruption.actions.useSidepanel")}
+              {isApplying
+                ? t("common:status.applying")
+                : t("popupInterruption.actions.useSidepanel")}
             </Button>
             <Button
               type="button"

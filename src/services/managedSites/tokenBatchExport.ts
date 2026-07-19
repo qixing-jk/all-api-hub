@@ -6,6 +6,7 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
+import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
   getManagedSiteChannelExactMatch,
   getRecoverableManagedSiteChannelCandidate,
@@ -18,11 +19,16 @@ import {
   type ManagedSiteConfig,
   type ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
+import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
+import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import {
   createManagedSiteOperationContext,
   type ManagedSiteOperationContext,
 } from "~/services/managedSites/operationContext"
-import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
+import {
+  normalizeManagedSiteChannelBaseUrl,
+  searchManagedUpstreamResourceChannelsForDuplicateMatching,
+} from "~/services/managedSites/utils/channelMatching"
 import {
   collectManagedConfigSecrets,
   hasUsableManagedSiteChannelKey,
@@ -56,6 +62,12 @@ const logger = createLogger("ManagedSiteTokenBatchExport")
 
 const TOKEN_BATCH_EXPORT_CONCURRENCY = 4
 const FALLBACK_BLOCKING_MESSAGE = "Failed to prepare this key for batch import"
+
+type TokenBatchExportResourceCapabilities = ManagedUpstreamResourcesCapability<
+  ManagedSiteConfig,
+  unknown,
+  ChannelFormData
+>
 
 const mapWithConcurrency = async <TItem, TResult>(
   items: TItem[],
@@ -152,6 +164,44 @@ const uniqueWarningCodes = (
 const isExactVerificationUnavailable = (
   resolution: Awaited<ReturnType<typeof resolveManagedSiteChannelMatch>>,
 ) => resolution.url.matched && !resolution.key.comparable
+
+const resolveTokenBatchExportResourceCapabilities = (
+  siteType: ManagedSiteService["siteType"],
+): TokenBatchExportResourceCapabilities | null => {
+  const resolution = resolveManagedUpstreamResourceFeatureCapabilities(
+    siteType,
+    MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport,
+  )
+
+  if (!resolution.supported) {
+    return null
+  }
+
+  return resolution.capabilities as TokenBatchExportResourceCapabilities
+}
+
+const buildTokenBatchExportChannelMatchService = (params: {
+  service: ManagedSiteService
+}): ManagedSiteService => {
+  const matchService: ManagedSiteService = { ...params.service }
+  delete matchService.searchResourceDuplicateChannels
+
+  const resources = resolveTokenBatchExportResourceCapabilities(
+    params.service.siteType,
+  )
+  if (!resources) {
+    return matchService
+  }
+
+  matchService.searchResourceDuplicateChannels = async (config, searchParams) =>
+    await searchManagedUpstreamResourceChannelsForDuplicateMatching({
+      resources,
+      config,
+      accountBaseUrl: searchParams.accountBaseUrl,
+    })
+
+  return matchService
+}
 
 const getDraftBlockedReason = (
   service: ManagedSiteService,
@@ -317,7 +367,7 @@ const preparePreviewItem = async (params: {
 
     const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(draft.base_url)
     const resolution = await resolveManagedSiteChannelMatch({
-      service,
+      service: buildTokenBatchExportChannelMatchService({ service }),
       managedConfig,
       accountBaseUrl: searchBaseUrl,
       models: draft.models,

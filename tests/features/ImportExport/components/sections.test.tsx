@@ -327,8 +327,11 @@ describe("ImportExport section components", () => {
     ).toBeDisabled()
     expect(
       screen.getByRole("button", {
-        name: /importExport:webdav\.encryption\.decryptAction/,
+        name: "common:status.processing",
       }),
     ).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "common:status.processing" }),
+    ).toHaveAttribute("aria-busy", "true")
   })
 })

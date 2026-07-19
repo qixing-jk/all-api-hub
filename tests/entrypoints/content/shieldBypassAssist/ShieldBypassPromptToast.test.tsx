@@ -82,6 +82,55 @@ describe("ShieldBypassPromptToast", () => {
     expect(document.title).toBe("Host Changed Title")
   })
 
+  it("yields the document title after two corrections when the host keeps restoring its title", async () => {
+    document.title = "Host Owned Title"
+
+    const titleElement = document.querySelector("title")
+    expect(titleElement).not.toBeNull()
+
+    let hostRestoreCount = 0
+    const hostObserver = new MutationObserver(() => {
+      if (document.title.startsWith("Shield Mode") && hostRestoreCount < 5) {
+        hostRestoreCount += 1
+        document.title = "Host Owned Title"
+      }
+    })
+    hostObserver.observe(titleElement!, { childList: true, subtree: true })
+
+    try {
+      const { unmount } = render(
+        <ShieldBypassPromptToast
+          onDismiss={vi.fn()}
+          onOpenSettings={vi.fn()}
+        />,
+      )
+
+      await waitFor(() => {
+        expect(hostRestoreCount).toBeGreaterThan(0)
+      })
+
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+
+      expect(hostRestoreCount).toBe(3)
+      expect(document.title).toBe("Host Owned Title")
+
+      hostObserver.disconnect()
+      await new Promise((resolve) => window.setTimeout(resolve, 1100))
+
+      expect(document.title).toBe("Host Owned Title")
+      expect(screen.getByText("Shield Prompt")).toBeVisible()
+      expect(
+        screen.getByRole("button", { name: "Open settings" }),
+      ).toBeEnabled()
+
+      unmount()
+
+      expect(document.title).toBe("Host Owned Title")
+    } finally {
+      hostObserver.disconnect()
+    }
+  })
+
   it("normalizes an already-prefixed title and wires the dismiss/settings actions", async () => {
     const user = userEvent.setup()
     const onDismiss = vi.fn()
@@ -130,7 +179,7 @@ describe("ShieldBypassPromptToast", () => {
     expect(document.title).toBe("Existing Title")
   })
 
-  it("uses the prefix alone when the page starts without a title and leaves it unchanged on cleanup", async () => {
+  it("uses the prefix alone when the page starts without a title and restores the empty title on cleanup", async () => {
     document.title = ""
 
     const { unmount } = render(
@@ -143,7 +192,7 @@ describe("ShieldBypassPromptToast", () => {
 
     unmount()
 
-    expect(document.title).toBe("Shield Mode")
+    expect(document.title).toBe("")
   })
 
   it("does not modify the document title when the translated prefix is blank", async () => {

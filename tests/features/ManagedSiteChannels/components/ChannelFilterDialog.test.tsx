@@ -17,6 +17,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -209,6 +210,12 @@ const sampleChannel = {
   type: "midjourney",
 } as any
 
+const sampleResourceRef = createManagedUpstreamResourceRef({
+  managedSiteType: "axonhub",
+  scopeKey: "https://admin.example.invalid",
+  resourceId: "provider/native-id",
+})
+
 describe("ChannelFilterDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -273,6 +280,60 @@ describe("ChannelFilterDialog", () => {
     expect(screen.getByTestId("probe-rules-supported")).toHaveTextContent(
       "false",
     )
+  })
+
+  it("passes resource identity from the channel row when available", async () => {
+    const resourceChannel = {
+      ...sampleChannel,
+      resourceRef: sampleResourceRef,
+    }
+
+    render(
+      <ChannelFilterDialog
+        channel={resourceChannel}
+        open={true}
+        onClose={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(mockedFetchChannelFilters).toHaveBeenCalledWith({
+        channelId: 42,
+        resourceRef: sampleResourceRef,
+      })
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "view-json" }))
+    fireEvent.change(screen.getByLabelText("json-text"), {
+      target: {
+        value: JSON.stringify([
+          {
+            name: "Allow GPT",
+            pattern: "gpt",
+          },
+        ]),
+      },
+    })
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.save",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockedSaveChannelFilters).toHaveBeenCalledWith(
+        {
+          channelId: 42,
+          resourceRef: sampleResourceRef,
+        },
+        [
+          expect.objectContaining({
+            name: "Allow GPT",
+            pattern: "gpt",
+          }),
+        ],
+      )
+    })
   })
 
   it("shows an error toast and closes when filters fail to load", async () => {

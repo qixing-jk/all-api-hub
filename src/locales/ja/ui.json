@@ -288,9 +288,11 @@
     },
     "kiloCode": {
       "actions": {
-        "copyApiConfigs": "apiConfigs をコピー",
+        "copyKiloV7Provider": "プロバイダー設定をコピー",
+        "copyLegacyApiConfigs": "旧形式の apiConfigs をコピー",
         "createDefaultToken": "既定トークンを作成",
-        "downloadSettings": "設定をダウンロード"
+        "downloadKiloV7Settings": "Kilo 7.x 設定をダウンロード",
+        "downloadLegacySettings": "旧形式の設定をダウンロード"
       },
       "description": "選択したサイトとトークンから Kilo Code / Roo Code のプロバイダープロファイルを生成します。",
       "descriptions": {
@@ -299,24 +301,24 @@
         "selectedSites": "選択したサイト: {{sites}}、選択したキー: {{keys}}。"
       },
       "help": {
-        "afterExportDescription": "次のいずれかを選択してください:",
-        "afterExportTitle": "エクスポート後の使い方",
-        "importDescription": "「設定をダウンロード」をクリックして {{filename}} を保存し、Kilo Code にインポートしてください。インポートは加算方式で、既存プロバイダーを削除しません（同名エントリは更新される場合があります）。",
-        "importTitle": "2) ファイルをインポート（設定をダウンロード）",
-        "manualDescription": "「apiConfigs をコピー」をクリックし、Kilo Code / Roo Code のエクスポート設定にある providerProfiles.apiConfigs を探して貼り付けてください。",
-        "manualTitle": "1) 手動（apiConfigs をコピー）",
+        "kiloV7CopyInstructions": "設定を手動で管理する場合は、「プロバイダー設定をコピー」をクリックし、コピーした内容を設定 JSON のトップレベルにある provider フィールドへマージします。",
+        "kiloV7DownloadInstructions": "「Kilo 7.x 設定をダウンロード」をクリックします。次に Kilo Code で歯車アイコンをクリックして設定を開き、About Kilo Code → Import に移動します。ダウンロードした kilo-settings.json を選択し、インポート内容を確認してから保存します。",
+        "legacyCopyInstructions": "「旧形式の apiConfigs をコピー」をクリックし、内容を Roo Code または Kilo Code 5.x の設定にある providerProfiles.apiConfigs へ貼り付けます。",
+        "legacyDownloadInstructions": "完全な設定ファイルが必要な場合は、「旧形式の設定をダウンロード」をクリックして kilo-code-settings.json を取得し、該当バージョンの設定インポート機能からインポートします。",
         "perSiteDescription": "サイトを選択してトークンを自動読み込みします。最初のトークンが事前選択され、サイトごとに複数トークンを選択できます。",
-        "perSiteTitle": "サイト別エクスポート"
+        "perSiteTitle": "サイト別エクスポート",
+        "usageTitle": "使用方法"
       },
       "labels": {
         "currentApiConfigName": "現在のプロファイル",
+        "exportTarget": "エクスポート先",
         "modelId": "モデル ID",
         "selectedSites": "選択したサイト",
         "selectedTokens": "選択したトークン"
       },
       "messages": {
         "accountNotFound": "アカウントが見つかりません。",
-        "copiedApiConfigs": "apiConfigs をクリップボードにコピーしました",
+        "copiedExportConfig": "エクスポート設定をクリップボードにコピーしました",
         "copyFailed": "コピーに失敗しました",
         "createTokenBlockedFallback": "トークンの作成がブロックされました。サイトポリシーを確認してから再試行してください。",
         "createTokenFailed": "トークンの作成に失敗しました。",
@@ -340,6 +342,10 @@
         "modelId": "モデル ID を検索または入力",
         "selectSites": "サイトを選択",
         "selectTokens": "トークンを選択"
+      },
+      "targets": {
+        "kiloV7": "Kilo Code 7.x",
+        "legacy": "Roo Code / Kilo Code 5.x（旧形式）"
       },
       "title": "Kilo Code JSON をエクスポート",
       "warning": {

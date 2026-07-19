@@ -6,7 +6,11 @@ import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 export type AccountRefreshSupportRequest = Pick<
   ApiServiceRequest,
-  "baseUrl" | "auth" | "accountId" | "cookieAuthSessionCookie"
+  | "baseUrl"
+  | "auth"
+  | "accountId"
+  | "cookieAuthSessionCookie"
+  | "tempWindowRequestSource"
 >
 
 export type AccountRefreshRequest = ApiServiceAccountRequest

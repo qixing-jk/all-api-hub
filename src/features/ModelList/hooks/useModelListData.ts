@@ -1,13 +1,20 @@
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
 import { useAccountData } from "~/hooks/useAccountData"
+import { modelMetadataService } from "~/services/models/modelMetadata"
+import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 
 import {
   isAihubmixCatalogFallbackPricing,
   isAihubmixModelListPricing,
 } from "../aihubmixModelList"
 import {
+  repairAllAccountGroupExclusions,
+  repairSelectedGroups,
+} from "../groupSelectionState"
+import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
   deriveModelListSourceCapabilities,
   EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
   isProfileSourceValue,
@@ -28,6 +35,25 @@ import { useModelListState } from "./useModelListState"
 
 const ROUTE_SOURCE_PENDING = Symbol("route-source-pending")
 
+/** Resolves account routing after profile-route precedence has been settled. */
+function resolveRouteAccountSourceValue(
+  requestedAccountId: string | undefined,
+  accounts: readonly { id: string }[],
+): string {
+  if (requestedAccountId === ALL_ACCOUNTS_SOURCE_VALUE) {
+    return accounts.length > 0
+      ? ALL_ACCOUNTS_SOURCE_VALUE
+      : NO_MODEL_MANAGEMENT_SOURCE_VALUE
+  }
+
+  const matchedAccount = requestedAccountId
+    ? accounts.find((account) => account.id === requestedAccountId)
+    : null
+  return matchedAccount
+    ? toAccountSourceValue(matchedAccount.id)
+    : NO_MODEL_MANAGEMENT_SOURCE_VALUE
+}
+
 /**
  * Aggregates model list state, data loading, and filtering in one hook.
  * Route-driven source selection lives here so it can wait for profile storage
@@ -35,6 +61,7 @@ const ROUTE_SOURCE_PENDING = Symbol("route-source-pending")
  * @returns Combined account data, UI state, model data, and filtered results.
  */
 export function useModelListData(routeParams?: Record<string, string>) {
+  const isRouteControlled = routeParams !== undefined
   // Single source of account data
   const { enabledDisplayData } = useAccountData()
   const accounts = useMemo(() => enabledDisplayData || [], [enabledDisplayData])
@@ -47,10 +74,12 @@ export function useModelListData(routeParams?: Record<string, string>) {
     setSelectedSourceValue,
     selectedBillingMode,
     selectedGroups,
+    setSelectedGroups,
     allAccountsExcludedGroupsByAccountId,
     setAllAccountsExcludedGroupsByAccountId,
     searchTerm,
     selectedProvider,
+    selectedModelCapabilities,
     sortMode,
     setSortMode,
     showRealPrice,
@@ -76,24 +105,17 @@ export function useModelListData(routeParams?: Record<string, string>) {
         return ROUTE_SOURCE_PENDING
       }
 
-      const matchedAccount = requestedAccountId
-        ? accounts.find((account) => account.id === requestedAccountId)
-        : null
-      return matchedAccount
-        ? toAccountSourceValue(matchedAccount.id)
-        : NO_MODEL_MANAGEMENT_SOURCE_VALUE
+      return resolveRouteAccountSourceValue(requestedAccountId, accounts)
     }
 
     if (requestedAccountId) {
-      const matchedAccount = accounts.find(
-        (account) => account.id === requestedAccountId,
-      )
-      return matchedAccount ? toAccountSourceValue(matchedAccount.id) : null
+      return resolveRouteAccountSourceValue(requestedAccountId, accounts)
     }
 
-    return null
+    return isRouteControlled ? NO_MODEL_MANAGEMENT_SOURCE_VALUE : null
   }, [
     accounts,
+    isRouteControlled,
     profiles,
     profilesLoading,
     routeParams?.accountId,
@@ -180,6 +202,30 @@ export function useModelListData(routeParams?: Record<string, string>) {
     selectedSource,
     accounts,
   })
+  const [modelMetadata, setModelMetadata] = useState<ModelMetadata[]>([])
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadModelMetadata = async () => {
+      try {
+        await modelMetadataService.initialize()
+        if (isMounted) {
+          setModelMetadata(modelMetadataService.getAllMetadata())
+        }
+      } catch {
+        if (isMounted) {
+          setModelMetadata([])
+        }
+      }
+    }
+
+    void loadModelMetadata()
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const isFallbackCatalogActive = modelData.accountFallback?.isActive === true
   const isSelectedAccountAihubmixCatalogFallback =
@@ -261,10 +307,69 @@ export function useModelListData(routeParams?: Record<string, string>) {
     allAccountsExcludedGroupsByAccountId,
     searchTerm,
     selectedProvider,
+    selectedModelCapabilities,
+    modelMetadata,
     sortMode,
     showRealPrice,
     accountFilterAccountIds: allAccountsFilterAccountIds,
   })
+
+  useEffect(() => {
+    if (modelData.isLoading) return
+    if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) return
+    if (!modelData.pricingData) return
+    if (!modelData.hasAuthoritativePricingData) return
+    if (!filteredData.isGroupAccessAuthoritative) return
+
+    setSelectedGroups((current) =>
+      repairSelectedGroups(current, filteredData.availableGroups),
+    )
+  }, [
+    filteredData.availableGroups,
+    filteredData.isGroupAccessAuthoritative,
+    modelData.isLoading,
+    modelData.hasAuthoritativePricingData,
+    modelData.pricingData,
+    selectedSource?.kind,
+    selectedSource?.value,
+    setSelectedGroups,
+  ])
+
+  useEffect(() => {
+    if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
+      return
+    }
+
+    const safelySettledAccountIds = new Set(
+      modelData.accountQueryStates
+        .filter(
+          (queryState) =>
+            !queryState.isLoading &&
+            queryState.hasData &&
+            !queryState.hasError &&
+            filteredData.authoritativeGroupAccessByAccountId[
+              queryState.account.id
+            ] === true,
+        )
+        .map((queryState) => queryState.account.id),
+    )
+    if (safelySettledAccountIds.size === 0) return
+
+    setAllAccountsExcludedGroupsByAccountId((current) =>
+      repairAllAccountGroupExclusions({
+        current,
+        availableByAccountId: filteredData.availableAccountGroupsByAccountId,
+        settledAccountIds: safelySettledAccountIds,
+      }),
+    )
+  }, [
+    filteredData.availableAccountGroupsByAccountId,
+    filteredData.authoritativeGroupAccessByAccountId,
+    modelData.accountQueryStates,
+    selectedSource?.kind,
+    selectedSource?.value,
+    setAllAccountsExcludedGroupsByAccountId,
+  ])
 
   return {
     accounts,

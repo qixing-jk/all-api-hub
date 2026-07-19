@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
@@ -81,7 +82,7 @@ describe("wongGongyiProvider", () => {
   })
 
   describe("checkIn", () => {
-    it("returns already_checked when POST indicates checked_in true", async () => {
+    it("propagates the popup source when POST indicates checked_in true", async () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       const mockedFetchApi = vi.mocked(fetchApi)
 
@@ -91,10 +92,13 @@ describe("wongGongyiProvider", () => {
         data: { enabled: true, checked_in: true },
       })
 
-      const result = await wongGongyiProvider.checkIn(mockAccount)
+      const result = await wongGongyiProvider.checkIn(mockAccount, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
       expect(result.status).toBe("already_checked")
       expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
         accountId: "test-id",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
       expect(result.messageKey).toBe(
         "autoCheckin:providerFallback.alreadyCheckedToday",
@@ -113,6 +117,9 @@ describe("wongGongyiProvider", () => {
 
       const result = await wongGongyiProvider.checkIn(mockAccount)
       expect(result.status).toBe("already_checked")
+      expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      })
     })
 
     it("returns failed when POST indicates enabled false", async () => {

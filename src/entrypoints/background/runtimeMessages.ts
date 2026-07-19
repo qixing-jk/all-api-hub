@@ -34,6 +34,7 @@ import {
   hasCookieReadPermissionForUrl,
 } from "~/utils/browser/cookieHelper"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
+import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import {
@@ -56,6 +57,28 @@ import {
  * Unified logger scoped to background runtime message routing.
  */
 const logger = createLogger("RuntimeMessages")
+
+/** Normalizes untrusted temp-window presentation metadata at the runtime boundary. */
+function normalizeTempWindowRuntimeRequest<
+  T extends Record<string, unknown> & {
+    suppressMinimize?: unknown
+    tempWindowRequestSource?: unknown
+  },
+>(request: T) {
+  const normalizedRequest = Object.assign({}, request, {
+    tempWindowRequestSource: normalizeTempWindowRequestSource(
+      request.tempWindowRequestSource,
+    ),
+  })
+
+  if (typeof request.suppressMinimize === "boolean") {
+    normalizedRequest.suppressMinimize = request.suppressMinimize
+  } else {
+    delete normalizedRequest.suppressMinimize
+  }
+
+  return normalizedRequest
+}
 
 /**
  * Resolves the browser cookie store that should be used for a cookie import request.
@@ -164,27 +187,42 @@ export function setupRuntimeMessageListeners() {
       }
 
       if (request.action === RuntimeActionIds.AutoDetectSite) {
-        void handleAutoDetectSite(request, sendResponse)
+        void handleAutoDetectSite(
+          normalizeTempWindowRuntimeRequest(request),
+          sendResponse,
+        )
         return true
       }
 
       if (request.action === RuntimeActionIds.TempWindowFetch) {
-        void handleTempWindowFetch(request, sendResponse)
+        void handleTempWindowFetch(
+          normalizeTempWindowRuntimeRequest(request),
+          sendResponse,
+        )
         return true
       }
 
       if (request.action === RuntimeActionIds.TempWindowTurnstileFetch) {
-        void handleTempWindowTurnstileFetch(request, sendResponse)
+        void handleTempWindowTurnstileFetch(
+          normalizeTempWindowRuntimeRequest(request),
+          sendResponse,
+        )
         return true
       }
 
       if (request.action === RuntimeActionIds.TempWindowCheckinPageAction) {
-        void handleTempWindowCheckinPageAction(request, sendResponse)
+        void handleTempWindowCheckinPageAction(
+          normalizeTempWindowRuntimeRequest(request),
+          sendResponse,
+        )
         return true
       }
 
       if (request.action === RuntimeActionIds.TempWindowGetRenderedTitle) {
-        void handleTempWindowGetRenderedTitle(request, sendResponse)
+        void handleTempWindowGetRenderedTitle(
+          normalizeTempWindowRuntimeRequest(request),
+          sendResponse,
+        )
         return true
       }
 

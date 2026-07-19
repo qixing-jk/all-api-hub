@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { Virtuoso } from "react-virtuoso"
 
 import { EmptyState } from "~/components/ui"
-import { UI_CONSTANTS } from "~/constants/ui"
+import { resolveAccountExchangeRate } from "~/features/ModelList/accountExchangeRate"
 import {
   MODEL_LIST_GROUP_SELECTION_SCOPES,
   type ModelListGroupSelectionScope,
@@ -55,9 +55,7 @@ interface ModelDisplayProps {
   showRealPrice: boolean
   showRatioColumn: boolean
   showEndpointTypes: boolean
-  selectedGroups: string[]
   handleGroupClick: (group: string) => void
-  availableGroups: string[]
   groupSelectionScope?: ModelListGroupSelectionScope
   isGroupSelectionInteractive?: boolean
   displayCapabilities?: ModelManagementSourceCapabilities
@@ -105,9 +103,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
     showRealPrice,
     showRatioColumn,
     showEndpointTypes,
-    selectedGroups,
     handleGroupClick,
-    availableGroups,
     groupSelectionScope = MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE,
     isGroupSelectionInteractive = true,
     displayCapabilities,
@@ -168,15 +164,12 @@ export function ModelDisplay(props: ModelDisplayProps) {
         style={{ height: "100%" }}
         itemContent={(_index, item) => {
           const itemKey = getModelItemKey(item)
-          const sourceForModel = item.source as ModelManagementItemSource
+          const sourceForModel = item.source
           const accountForModel =
             sourceForModel.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
               ? sourceForModel.account
               : undefined
-          const exchangeRate =
-            accountForModel && accountForModel.balance?.USD > 0
-              ? accountForModel.balance.CNY / accountForModel.balance.USD
-              : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+          const exchangeRate = resolveAccountExchangeRate(accountForModel)
           const modelId = item.model.model_name
           const historyTarget =
             sourceForModel.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
@@ -197,17 +190,18 @@ export function ModelDisplay(props: ModelDisplayProps) {
           return (
             <ModelItem
               model={item.model}
+              resolvedVendor={item.resolvedVendor}
+              modelMetadata={item.modelMetadata}
               calculatedPrice={item.calculatedPrice}
               exchangeRate={exchangeRate}
               showRealPrice={showRealPrice}
               showRatioColumn={showRatioColumn}
               showEndpointTypes={showEndpointTypes}
               groupRatios={item.groupRatios}
+              groupContext={item.groupContext}
+              activeGroupContext={item.activeGroupContext}
               effectiveGroup={item.effectiveGroup}
-              selectedGroups={selectedGroups}
               onGroupClick={handleGroupClick}
-              availableGroups={availableGroups}
-              isAllGroupsMode={selectedGroups.length === 0}
               isLowestPrice={item.isLowestPrice}
               showsOptimalGroup={item.hasAutoSelectedGroup}
               groupSelectionScope={groupSelectionScope}

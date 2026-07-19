@@ -338,9 +338,7 @@ const ImportSection = ({
             <Button
               id="import-backup-action"
               onClick={handleImport}
-              disabled={
-                isImporting || !validation?.valid || !hasSelectedImportSection
-              }
+              disabled={!validation?.valid || !hasSelectedImportSection}
               loading={isImporting}
               variant="default"
               bleed

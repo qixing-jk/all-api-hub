@@ -10,12 +10,14 @@ import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSessio
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import { AuthTypeEnum } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const {
   mockFetchUserInfo,
   mockGetActiveOrAllTabs,
   mockGetActiveTabs,
   mockGetAccountSiteType,
+  mockGetCurrentTempWindowRequestSource,
   mockgetSiteTypeCapabilities,
   mockIsMessageReceiverUnavailableError,
   mockReadAccountBrowserSessionFromTab,
@@ -25,6 +27,7 @@ const {
   mockGetActiveOrAllTabs: vi.fn(),
   mockGetActiveTabs: vi.fn(),
   mockGetAccountSiteType: vi.fn(),
+  mockGetCurrentTempWindowRequestSource: vi.fn(),
   mockgetSiteTypeCapabilities: vi.fn(),
   mockIsMessageReceiverUnavailableError: vi.fn(),
   mockReadAccountBrowserSessionFromTab: vi.fn(),
@@ -62,6 +65,10 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
+vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
+  getCurrentTempWindowRequestSource: mockGetCurrentTempWindowRequestSource,
+}))
+
 describe("autoDetectSmart", () => {
   const browserAny = globalThis.browser as any
   const originalRuntime = browserAny.runtime
@@ -85,6 +92,9 @@ describe("autoDetectSmart", () => {
     }
 
     mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.NEW_API)
+    mockGetCurrentTempWindowRequestSource.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+    )
     mockGetActiveOrAllTabs.mockResolvedValue([])
     mockGetActiveTabs.mockResolvedValue([])
     mockIsMessageReceiverUnavailableError.mockReturnValue(false)
@@ -623,44 +633,94 @@ describe("autoDetectSmart", () => {
       action: expect.any(String),
       requestId: expect.any(String),
       url: "https://aihubmix.com",
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
     })
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
-  it("suppresses temp-window minimization when background detection starts from the extension popup", async () => {
-    ;(globalThis as any).window = {
-      location: {
-        href: "chrome-extension://extension-id/popup.html",
-      },
-    }
-    mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.AIHUBMIX)
+  it("captures popup temp-window source once and propagates it through background and API fallback", async () => {
+    mockGetCurrentTempWindowRequestSource
+      .mockReturnValueOnce(TEMP_WINDOW_REQUEST_SOURCES.Popup)
+      .mockReturnValue(TEMP_WINDOW_REQUEST_SOURCES.Background)
     mockGetActiveOrAllTabs.mockResolvedValue([
       {
         id: 2,
         active: true,
-        url: "https://console.aihubmix.com/statistics",
+        url: "https://other.example.invalid/statistics",
       },
     ])
-    mockSendRuntimeMessage.mockResolvedValue({
-      success: true,
-      data: {
-        userId: "7",
-        user: { id: 7, username: "aihubmix-user" },
-        accessToken: "console-session-token",
-        siteTypeHint: SITE_TYPES.AIHUBMIX,
-      },
-    })
+    mockSendRuntimeMessage.mockResolvedValue(null)
 
-    const result = await autoDetectSmart("https://aihubmix.com")
+    const result = await autoDetectSmart("https://example.invalid")
 
     expect(result.success).toBe(true)
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
       action: expect.any(String),
       requestId: expect.any(String),
-      url: "https://aihubmix.com",
-      suppressMinimize: true,
+      url: "https://example.invalid",
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    })
+    expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
+    expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      baseUrl: "https://example.invalid",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+      },
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
     })
   })
+
+  it.each([
+    ["missing", undefined],
+    ["blank", "   "],
+  ])(
+    "uses API fallback for a successful background result with a %s user id and preserves Popup source",
+    async (_label, userId) => {
+      mockGetCurrentTempWindowRequestSource
+        .mockReturnValueOnce(TEMP_WINDOW_REQUEST_SOURCES.Popup)
+        .mockReturnValue(TEMP_WINDOW_REQUEST_SOURCES.Background)
+      mockGetActiveOrAllTabs.mockResolvedValue([
+        {
+          id: 3,
+          active: true,
+          url: "https://other.example.invalid/statistics",
+        },
+      ])
+      mockSendRuntimeMessage.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId,
+          user: { username: "background-user-without-id" },
+        },
+      })
+      mockFetchUserInfo.mockResolvedValueOnce({
+        id: 31,
+        username: "api-fallback-user",
+      })
+
+      const result = await autoDetectSmart("https://example.invalid")
+
+      expect(result).toMatchObject({
+        success: true,
+        data: {
+          userId: "31",
+          user: {
+            id: 31,
+            username: "api-fallback-user",
+          },
+          siteType: SITE_TYPES.NEW_API,
+        },
+      })
+      expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
+      expect(mockFetchUserInfo).toHaveBeenCalledWith({
+        baseUrl: "https://example.invalid",
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+        },
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
+    },
+  )
 
   it("uses current-tab detection for AIHubMix when the active tab is the API origin", async () => {
     mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.AIHUBMIX)
@@ -818,6 +878,7 @@ describe("autoDetectSmart", () => {
       action: expect.any(String),
       requestId: expect.any(String),
       url: "https://example.com/console",
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       useIncognito: true,
       cookieStoreId: "1-incognito",
     })
@@ -861,6 +922,7 @@ describe("autoDetectSmart", () => {
       action: expect.any(String),
       requestId: expect.any(String),
       url: "https://example.com/console",
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       useIncognito: true,
       cookieStoreId: "1-incognito",
     })
@@ -901,21 +963,24 @@ describe("autoDetectSmart", () => {
     expect(result.data).not.toHaveProperty("fetchContext")
   })
 
-  it("falls back to direct detection when background auto-detect throws", async () => {
+  it("preserves popup temp-window source when background auto-detect throws", async () => {
+    mockGetCurrentTempWindowRequestSource
+      .mockReturnValueOnce(TEMP_WINDOW_REQUEST_SOURCES.Popup)
+      .mockReturnValue(TEMP_WINDOW_REQUEST_SOURCES.Background)
     mockGetActiveOrAllTabs.mockResolvedValue([
       {
         id: 23,
         active: true,
-        url: "https://different.example.com/home",
+        url: "https://different.example.invalid/home",
       },
     ])
     mockSendRuntimeMessage.mockRejectedValueOnce(new Error("runtime failed"))
     mockFetchUserInfo.mockResolvedValueOnce({
       id: 23,
-      username: "direct-after-runtime-throw",
+      username: "api-after-runtime-throw",
     })
 
-    const result = await autoDetectSmart("https://example.com/console")
+    const result = await autoDetectSmart("https://example.invalid/console")
 
     expect(result).toMatchObject({
       success: true,
@@ -923,14 +988,22 @@ describe("autoDetectSmart", () => {
         userId: "23",
         user: {
           id: 23,
-          username: "direct-after-runtime-throw",
+          username: "api-after-runtime-throw",
         },
         siteType: SITE_TYPES.NEW_API,
         accessToken: undefined,
         sub2apiAuth: undefined,
       },
     })
+    expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
     expect(mockFetchUserInfo).toHaveBeenCalledTimes(1)
+    expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      baseUrl: "https://example.invalid/console",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+      },
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    })
   })
 
   it("falls back to direct detection when API fallback after background data miss throws", async () => {
@@ -1020,6 +1093,7 @@ describe("autoDetectSmart", () => {
         incognito: true,
         cookieStoreId: "1-incognito",
       },
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
     })
   })
 

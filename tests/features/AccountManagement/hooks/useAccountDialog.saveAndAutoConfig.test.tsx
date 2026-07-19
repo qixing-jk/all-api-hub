@@ -35,6 +35,7 @@ import {
   type ApiToken,
   type DisplaySiteData,
 } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -51,6 +52,7 @@ const {
   mockSendRuntimeMessage,
   mockStartProductAnalyticsAction,
   mockCompleteProductAnalyticsAction,
+  mockGetCurrentTempWindowRequestSource,
 } = vi.hoisted(() => ({
   mockToast: vi.fn(),
   mockValidateAndSaveAccount: vi.fn(),
@@ -64,6 +66,7 @@ const {
   mockSendRuntimeMessage: vi.fn().mockResolvedValue(undefined),
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
+  mockGetCurrentTempWindowRequestSource: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => {
@@ -159,10 +162,24 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: mockStartProductAnalyticsAction,
 }))
 
+vi.mock("~/utils/browser/tempWindowRequestSource", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/utils/browser/tempWindowRequestSource")
+    >()
+  return {
+    ...actual,
+    getCurrentTempWindowRequestSource: mockGetCurrentTempWindowRequestSource,
+  }
+})
+
 describe("useAccountDialog save and auto-config flows", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     vi.restoreAllMocks()
+    mockGetCurrentTempWindowRequestSource.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+    )
     await accountStorage.clearAllData()
     mockValidateAndSaveAccount.mockResolvedValue({
       success: true,
@@ -308,6 +325,87 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.setters.setSiteType(SITE_TYPES.NEW_API)
     })
   }
+
+  it("preserves the save surface for the scheduled post-save refresh", async () => {
+    mockGetCurrentTempWindowRequestSource.mockReturnValue(
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await waitFor(() => {
+      expect(accountStorage.refreshAccount).toHaveBeenCalledWith(
+        "saved-account-id",
+        true,
+        { tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup },
+      )
+    })
+    expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
+  })
+
+  it("captures the current surface again when the warning refresh action is clicked", async () => {
+    mockGetCurrentTempWindowRequestSource
+      .mockReturnValueOnce(TEMP_WINDOW_REQUEST_SOURCES.Options)
+      .mockReturnValueOnce(TEMP_WINDOW_REQUEST_SOURCES.Popup)
+    mockValidateAndSaveAccount.mockResolvedValueOnce({
+      success: true,
+      accountId: "saved-account-id",
+      message: "Account saved, but latest metrics are placeholders.",
+      feedbackLevel: "warning",
+    })
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    const warningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
+      | ((toastInstance: any) => any)
+      | undefined
+    const warningElement = warningRenderer?.({
+      id: "warning-toast-id",
+      type: "custom",
+      visible: true,
+      dismissed: false,
+      height: 0,
+      ariaProps: { role: "status", "aria-live": "polite" },
+      message: "",
+      createdAt: Date.now(),
+      pauseDuration: 0,
+      position: "bottom-center",
+    } as any)
+
+    await act(async () => {
+      await warningElement?.props.action.onClick()
+    })
+
+    expect(accountStorage.refreshAccount).toHaveBeenNthCalledWith(
+      1,
+      "saved-account-id",
+      true,
+      { tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options },
+    )
+    expect(accountStorage.refreshAccount).toHaveBeenNthCalledWith(
+      2,
+      "saved-account-id",
+      true,
+      { tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup },
+    )
+    expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(2)
+  })
 
   it("shows managed-site setup guidance before saving when auto-config prerequisites are missing", async () => {
     mockGetManagedSiteConfig.mockResolvedValue(null)
@@ -462,7 +560,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       },
     )
     await waitFor(() => {
-      expect(refreshSpy).toHaveBeenCalledWith("saved-account-id", true)
+      expect(refreshSpy).toHaveBeenCalledWith("saved-account-id", true, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      })
     })
   })
 
@@ -522,6 +622,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(accountStorage.refreshAccount).toHaveBeenCalledWith(
         "saved-account-id",
         true,
+        {
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        },
       )
     })
     expect(onPostSaveAccountRefresh).not.toHaveBeenCalled()
@@ -613,6 +716,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(accountStorage.refreshAccount).toHaveBeenCalledWith(
         "saved-account-id",
         true,
+        {
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        },
       )
     })
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()

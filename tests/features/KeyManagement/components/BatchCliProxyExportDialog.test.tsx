@@ -20,6 +20,17 @@ import {
   createToken,
 } from "~~/tests/utils/keyManagementFactories"
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
+
 const mockResolveDisplayAccountTokenForSecret = vi.fn()
 const mockImportToCliProxy = vi.fn()
 const mockShowResultToast = vi.fn()
@@ -127,6 +138,58 @@ describe("BatchCliProxyExportDialog", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
+  })
+
+  it("marks only Start busy, suppresses duplicate runs, and restores actions after settlement", async () => {
+    const user = userEvent.setup()
+    const deferredImport = createDeferred<{
+      success: boolean
+      message: string
+    }>()
+    mockImportToCliProxy.mockReturnValueOnce(deferredImport.promise)
+
+    render(
+      <BatchCliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        items={[createAccountTokenEntry(token1)]}
+      />,
+    )
+
+    const startButton = await screen.findByRole("button", {
+      name: "keyManagement:batchCliProxyExport.actions.start",
+    })
+    await user.click(startButton)
+
+    const runningButton = screen.getByRole("button", {
+      name: "keyManagement:batchCliProxyExport.actions.running",
+    })
+    const cancelButton = screen.getByRole("button", {
+      name: "common:actions.cancel",
+    })
+    expect(runningButton).toHaveAttribute("aria-busy", "true")
+    expect(runningButton).toBeDisabled()
+    expect(cancelButton).toBeDisabled()
+    expect(cancelButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(runningButton)
+    expect(mockImportToCliProxy).toHaveBeenCalledTimes(1)
+
+    deferredImport.resolve({ success: true, message: "ok" })
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "keyManagement:batchCliProxyExport.actions.start",
+        }),
+      ).toBeEnabled()
+    })
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:batchCliProxyExport.actions.start",
+      }),
+    ).not.toHaveAttribute("aria-busy")
+    expect(cancelButton).toBeEnabled()
   })
 
   it("imports each selected token to CLIProxyAPI with shared policy and per-token defaults", async () => {

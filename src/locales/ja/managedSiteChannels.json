@@ -112,7 +112,8 @@
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "元チャネルのキーが取得できないため、このチャネルはまだ移行できません。",
-      "sourceKeyResolutionFailed": "元チャネルのキーを読み込めませんでした。確認が完了した直後であれば、プレビューを更新して再試行してください。"
+      "sourceKeyResolutionFailed": "元チャネルのキーを読み込めませんでした。確認が完了した直後であれば、プレビューを更新して再試行してください。",
+      "targetDraftPreparationFailed": "移行先チャネルの下書きを準備できませんでした。チャネル情報を確認し、プレビューを更新して再試行してください。"
     },
     "confirm": {
       "confirm": "移行を確認",
@@ -221,6 +222,9 @@
     "channelsDeleted_other": "{{count}} 個のチャネルを削除しました",
     "channelUpdated": "チャネルを更新しました",
     "revealKeyFailed": "実際のチャネルキーの読み込みに失敗しました: {{error}}",
+    "revealKeyMasked": "チャネルキーはまだマスクされています",
+    "revealKeyUnavailable": "チャネルキーを取得できません",
+    "revealKeyUnsupported": "この管理対象サイトではチャネルキーを表示できません",
     "someDeletesFailed_other": "{{count}} 個のチャネル削除に失敗しました: {{error}}",
     "syncCompleted": "モデル同期が完了しました ({{success}}/{{total}})",
     "syncFailed": "モデル同期に失敗しました: {{error}}"

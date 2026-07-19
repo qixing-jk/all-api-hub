@@ -2,20 +2,22 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
+import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCodeExport"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { expectKiloCodeUsageGuidance } from "~~/tests/test-utils/kiloCodeExportGuidance"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
-const mockBuildKiloCodeApiConfigs = vi.fn()
-const mockBuildKiloCodeSettingsFile = vi.fn()
+const mockBuildKiloCodeExportOutput = vi.fn()
 const toastSuccessMock = vi.fn()
 const toastErrorMock = vi.fn()
 const completeProductAnalyticsActionMock = vi.fn()
@@ -26,11 +28,9 @@ vi.mock("~/services/aiApi/openaiCompatible", () => ({
     mockFetchOpenAICompatibleModelIds(...args),
 }))
 
-vi.mock("~/services/integrations/kiloCodeExport", () => ({
-  buildKiloCodeApiConfigs: (...args: any[]) =>
-    mockBuildKiloCodeApiConfigs(...args),
-  buildKiloCodeSettingsFile: (...args: any[]) =>
-    mockBuildKiloCodeSettingsFile(...args),
+vi.mock("~/services/integrations/kiloCodeExportPolicy", () => ({
+  buildKiloCodeExportOutput: (...args: any[]) =>
+    mockBuildKiloCodeExportOutput(...args),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -72,8 +72,7 @@ const PROFILE = {
 describe("KiloCodeProfileExportDialog", () => {
   beforeEach(() => {
     mockFetchOpenAICompatibleModelIds.mockReset()
-    mockBuildKiloCodeApiConfigs.mockReset()
-    mockBuildKiloCodeSettingsFile.mockReset()
+    mockBuildKiloCodeExportOutput.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     completeProductAnalyticsActionMock.mockReset()
@@ -82,21 +81,24 @@ describe("KiloCodeProfileExportDialog", () => {
       complete: completeProductAnalyticsActionMock,
     })
 
-    mockBuildKiloCodeApiConfigs.mockImplementation(({ selections }: any) => ({
-      apiConfigs: [
-        {
-          name: "cfg-name",
-          modelId: selections[0]?.modelId,
-          baseUrl: selections[0]?.baseUrl,
-        },
-      ],
-      profileNames: ["cfg-name"],
-    }))
-    mockBuildKiloCodeSettingsFile.mockImplementation(
-      ({ currentApiConfigName, apiConfigs }: any) => ({
-        currentApiConfigName,
-        apiConfigs,
-      }),
+    mockBuildKiloCodeExportOutput.mockImplementation(
+      ({ target, selections }: any) =>
+        target === KILO_CODE_EXPORT_TARGETS.KiloV7
+          ? {
+              filename: "kilo-settings.json",
+              copyPayload: { v7: selections[0]?.modelId },
+              downloadPayload: { format: "v7", model: selections[0]?.modelId },
+              itemCount: 1,
+            }
+          : {
+              filename: "kilo-code-settings.json",
+              copyPayload: { legacy: selections[0]?.modelId },
+              downloadPayload: {
+                format: "legacy",
+                model: selections[0]?.modelId,
+              },
+              itemCount: 1,
+            },
     )
   })
 
@@ -127,21 +129,8 @@ describe("KiloCodeProfileExportDialog", () => {
       })
     })
 
-    await waitFor(() => {
-      expect(mockBuildKiloCodeApiConfigs).toHaveBeenCalledWith(
-        expect.objectContaining({
-          selections: [
-            expect.objectContaining({
-              accountId: "profile-1",
-              modelId: "a-model",
-            }),
-          ],
-        }),
-      )
-    })
-
     const copyButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
     })
     expect(copyButton).toBeEnabled()
 
@@ -153,14 +142,35 @@ describe("KiloCodeProfileExportDialog", () => {
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledTimes(1)
     })
-    expect(writeText.mock.calls[0]?.[0]).toContain('"modelId": "a-model"')
+    expect(mockBuildKiloCodeExportOutput).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        target: KILO_CODE_EXPORT_TARGETS.KiloV7,
+        selections: [
+          expect.objectContaining({
+            accountId: "profile-1",
+            modelId: "a-model",
+          }),
+        ],
+      }),
+    )
+    expect(writeText).toHaveBeenCalledWith(
+      JSON.stringify({ v7: "a-model" }, null, 2),
+    )
     expect(toastSuccessMock).toHaveBeenCalledWith(
-      "ui:dialog.kiloCode.messages.copiedApiConfigs",
+      "ui:dialog.kiloCode.messages.copiedExportConfig",
     )
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
-        { insights: { itemCount: 1, modelCount: 1, selectedCount: 1 } },
+        {
+          insights: {
+            itemCount: 1,
+            modelCount: 1,
+            selectedCount: 1,
+            kiloCodeExportTarget:
+              PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7,
+          },
+        },
       )
     })
   })
@@ -181,12 +191,12 @@ describe("KiloCodeProfileExportDialog", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole("button", {
-        name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+        name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
       }),
     ).toBeDisabled()
     expect(
       screen.getByRole("button", {
-        name: "ui:dialog.kiloCode.actions.downloadSettings",
+        name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
       }),
     ).toBeDisabled()
   })
@@ -207,7 +217,7 @@ describe("KiloCodeProfileExportDialog", () => {
     )
 
     const copyButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.copyApiConfigs",
+      name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
     })
     await waitFor(() => expect(copyButton).toBeEnabled())
 
@@ -225,7 +235,13 @@ describe("KiloCodeProfileExportDialog", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: { itemCount: 1, modelCount: 1, selectedCount: 1 },
+        insights: {
+          itemCount: 1,
+          modelCount: 1,
+          selectedCount: 1,
+          kiloCodeExportTarget:
+            PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7,
+        },
       },
     )
   })
@@ -253,9 +269,18 @@ describe("KiloCodeProfileExportDialog", () => {
     )
 
     const downloadButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.downloadSettings",
+      name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
     })
     await waitFor(() => expect(downloadButton).toBeEnabled())
+
+    const targetSelect = await screen.findByRole("combobox", {
+      name: "ui:dialog.kiloCode.labels.exportTarget",
+    })
+    expect(targetSelect).toHaveTextContent("ui:dialog.kiloCode.targets.kiloV7")
+    expectKiloCodeUsageGuidance(KILO_CODE_EXPORT_TARGETS.KiloV7)
+    expect(
+      screen.queryByText("ui:dialog.kiloCode.help.kiloV7Description"),
+    ).not.toBeInTheDocument()
 
     await user.click(downloadButton)
 
@@ -263,15 +288,22 @@ describe("KiloCodeProfileExportDialog", () => {
       PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialSettingsFile,
     )
     await waitFor(() => {
-      expect(mockBuildKiloCodeSettingsFile).toHaveBeenCalledWith({
-        currentApiConfigName: "cfg-name",
-        apiConfigs: [
-          expect.objectContaining({
-            modelId: "gpt-4o-mini",
-          }),
-        ],
-      })
+      expect(mockBuildKiloCodeExportOutput).toHaveBeenCalledWith(
+        expect.objectContaining({ target: KILO_CODE_EXPORT_TARGETS.KiloV7 }),
+      )
     })
+    const link = document.querySelector('a[download="kilo-settings.json"]')
+    expect(link).not.toBeInTheDocument()
+    expect(createObjectURLSpy.mock.calls[0]?.[0]).toBeInstanceOf(Blob)
+    const blobPayload = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result ?? ""))
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(createObjectURLSpy.mock.calls[0]![0] as Blob)
+    })
+    expect(blobPayload).toBe(
+      JSON.stringify({ format: "v7", model: "gpt-4o-mini" }, null, 2),
+    )
     expect(createObjectURLSpy).toHaveBeenCalledTimes(1)
     expect(clickSpy).toHaveBeenCalledTimes(1)
     expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:test")
@@ -281,15 +313,126 @@ describe("KiloCodeProfileExportDialog", () => {
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
-        { insights: { itemCount: 1, modelCount: 1, selectedCount: 1 } },
+        {
+          insights: {
+            itemCount: 1,
+            modelCount: 1,
+            selectedCount: 1,
+            kiloCodeExportTarget:
+              PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7,
+          },
+        },
       )
+    })
+  })
+
+  it("switches to legacy output for copy and download without refetching models", async () => {
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:legacy")
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {})
+    let downloadedFilename = ""
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloadedFilename = this.download
+    })
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4o-mini"])
+
+    const { rerender } = render(
+      <KiloCodeProfileExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={PROFILE}
+      />,
+    )
+
+    const targetSelect = await screen.findByRole("combobox", {
+      name: "ui:dialog.kiloCode.labels.exportTarget",
+    })
+    await user.click(targetSelect)
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
+    await user.click(
+      await screen.findByRole("option", {
+        name: "ui:dialog.kiloCode.targets.legacy",
+      }),
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.kiloCode.actions.copyLegacyApiConfigs",
+      }),
+    )
+    expect(writeText).toHaveBeenCalledWith(
+      JSON.stringify({ legacy: "gpt-4o-mini" }, null, 2),
+    )
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "ui:dialog.kiloCode.messages.copiedExportConfig",
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.kiloCode.actions.downloadLegacySettings",
+      }),
+    )
+
+    expect(mockBuildKiloCodeExportOutput).toHaveBeenLastCalledWith(
+      expect.objectContaining({ target: KILO_CODE_EXPORT_TARGETS.Legacy }),
+    )
+    expect(downloadedFilename).toBe("kilo-code-settings.json")
+    expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(1)
+    expectKiloCodeUsageGuidance(KILO_CODE_EXPORT_TARGETS.Legacy)
+    expect(
+      screen.queryByText("ui:dialog.kiloCode.help.legacyDescription"),
+    ).not.toBeInTheDocument()
+    expect(completeProductAnalyticsActionMock).toHaveBeenLastCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: expect.objectContaining({
+          kiloCodeExportTarget:
+            PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.Legacy,
+        }),
+      },
+    )
+
+    rerender(
+      <KiloCodeProfileExportDialog
+        isOpen={false}
+        onClose={() => {}}
+        profile={PROFILE}
+      />,
+    )
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4o-mini"])
+    rerender(
+      <KiloCodeProfileExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={PROFILE}
+      />,
+    )
+    await waitFor(() => {
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(2)
+    })
+    expect(
+      screen.getByRole("combobox", {
+        name: "ui:dialog.kiloCode.labels.exportTarget",
+      }),
+    ).toHaveTextContent("ui:dialog.kiloCode.targets.kiloV7")
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
+        }),
+      ).toBeEnabled()
     })
   })
 
   it("shows a download-failed toast when building the settings file throws", async () => {
     const user = userEvent.setup()
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce(["gpt-4o-mini"])
-    mockBuildKiloCodeSettingsFile.mockImplementationOnce(() => {
+    mockBuildKiloCodeExportOutput.mockImplementationOnce(() => {
       throw new Error("disk blocked")
     })
 
@@ -302,7 +445,7 @@ describe("KiloCodeProfileExportDialog", () => {
     )
 
     const downloadButton = await screen.findByRole("button", {
-      name: "ui:dialog.kiloCode.actions.downloadSettings",
+      name: "ui:dialog.kiloCode.actions.downloadKiloV7Settings",
     })
     await waitFor(() => expect(downloadButton).toBeEnabled())
 
@@ -320,7 +463,13 @@ describe("KiloCodeProfileExportDialog", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: { itemCount: 1, modelCount: 1, selectedCount: 1 },
+        insights: {
+          itemCount: 1,
+          modelCount: 1,
+          selectedCount: 1,
+          kiloCodeExportTarget:
+            PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS.KiloV7,
+        },
       },
     )
   })

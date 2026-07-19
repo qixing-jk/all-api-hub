@@ -5,7 +5,7 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
-import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "~/features/ModelList/groupSelectionScopes"
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
 import { createAccountTokenModelListSourceIdentity } from "~/features/ModelList/modelManagementSources"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
@@ -77,6 +77,7 @@ vi.mock("react-i18next", async (importOriginal) => {
 vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
   ModelItemHeader: ({
     model,
+    resolvedVendor,
     trailingContent,
     onOpenKeyDialog,
     onVerifyApi,
@@ -84,6 +85,7 @@ vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
     groupSummary,
   }: {
     model: { model_name: string }
+    resolvedVendor: { state: string; label?: string }
     trailingContent?: React.ReactNode
     onOpenKeyDialog?: () => void
     onVerifyApi?: () => void
@@ -96,6 +98,9 @@ vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
   }) => (
     <div>
       {model.model_name}
+      <span role="status" aria-label="resolved vendor">
+        {resolvedVendor.state === "resolved" ? resolvedVendor.label : "Unknown"}
+      </span>
       {groupSummary ? (
         <span title={groupSummary.title}>
           {groupSummary.label}
@@ -201,14 +206,24 @@ function createDefaultProps() {
 
   return {
     model,
+    resolvedVendor: { state: "unknown" } as const,
     calculatedPrice,
     exchangeRate: 7,
     showRealPrice: false,
     showRatioColumn: false,
     showEndpointTypes: false,
     groupRatios: {},
-    selectedGroups: [],
-    availableGroups: [],
+    groupContext: {
+      accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+      supportedGroups: ["vip"],
+      usableGroups: ["vip"],
+      priceableGroups: [],
+    },
+    activeGroupContext: {
+      activeUsableGroups: ["vip"],
+      activePriceableGroups: [],
+      actionGroups: ["vip"],
+    },
     source: {
       kind: "account",
       account: {
@@ -236,30 +251,73 @@ describe("ModelItem", () => {
     vi.unstubAllEnvs()
   })
 
-  it("falls back to the default group label when an unavailable model has no selected or effective group", () => {
-    render(<ModelItem {...createDefaultProps()} />)
-
-    expect(
-      screen.getByText("clickSwitchGroup:default (1x)"),
-    ).toBeInTheDocument()
-    expect(screen.getByText("availableGroups: vip (1x)")).toBeInTheDocument()
-  })
-
-  it("does not mark rows as unavailable in all-accounts scope when account-level filtering already resolved eligibility", () => {
+  it("passes the supplied resolved vendor to the row header unchanged", () => {
     render(
       <ModelItem
         {...createDefaultProps()}
-        groupSelectionScope={MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS}
-        isGroupSelectionInteractive={false}
+        resolvedVendor={{
+          state: "resolved",
+          kind: "known",
+          key: "known:anthropic",
+          knownId: "anthropic",
+          label: "Anthropic",
+          source: "publisher-evidence",
+        }}
       />,
     )
 
     expect(
-      screen.queryByText("clickSwitchGroup:default (1x)"),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByText("availableGroups: vip (1x)"),
-    ).not.toBeInTheDocument()
+      screen.getByRole("status", { name: "resolved vendor" }),
+    ).toHaveTextContent("Anthropic")
+  })
+
+  it("shows local no-usable guidance for known-empty group access", () => {
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        model={{ ...props.model, enable_groups: ["vip", "default"] }}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+          supportedGroups: ["vip", "default"],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+      />,
+    )
+
+    expect(screen.getByText("noUsableGroupsForModel")).toBeInTheDocument()
+    expect(screen.queryByText(/^clickSwitchGroup:/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/^availableGroups:/)).not.toBeInTheDocument()
+  })
+
+  it("preserves unknown catalog rows without showing no-usable guidance", () => {
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.UNKNOWN,
+          supportedGroups: ["vip"],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+      />,
+    )
+
+    expect(screen.queryByText("noUsableGroupsForModel")).not.toBeInTheDocument()
   })
 
   it("renders token-scoped account labels from source identity", () => {
@@ -289,24 +347,59 @@ describe("ModelItem", () => {
         {...props}
         model={{
           ...props.model,
-          enable_groups: ["default", "vip", "private"],
+          enable_groups: ["vip", "default"],
         }}
         groupRatios={{
           default: 1,
-          vip: 2,
-          private: 3,
         }}
-        selectedGroups={[]}
-        availableGroups={["default", "vip", "private"]}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+          supportedGroups: ["vip", "default"],
+          usableGroups: ["default"],
+          priceableGroups: ["default"],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: ["default"],
+          activePriceableGroups: ["default"],
+          actionGroups: ["default"],
+        }}
       />,
     )
 
-    const groupSummary = screen.getByText("default (1x)+2")
+    const groupSummary = screen.getByText("default (1x)")
     expect(groupSummary).toHaveAttribute(
       "title",
-      "availableGroups: default (1x), vip (2x), private (3x)",
+      "currentUsableGroups: default (1x)",
     )
+    expect(screen.queryByText("vip (1x)")).not.toBeInTheDocument()
     expect(screen.queryByText("available")).not.toBeInTheDocument()
+  })
+
+  it("summarizes additional usable groups in the row header", () => {
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        groupRatios={{ default: 1, vip: 2 }}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+          supportedGroups: ["default", "vip"],
+          usableGroups: ["default", "vip"],
+          priceableGroups: ["default", "vip"],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: ["default", "vip"],
+          activePriceableGroups: ["default", "vip"],
+          actionGroups: ["default", "vip"],
+        }}
+      />,
+    )
+
+    expect(screen.getByText("default (1x)+1")).toHaveAttribute(
+      "title",
+      "currentUsableGroups: default (1x), vip (2x)",
+    )
   })
 
   it("suppresses the ratio column when either the row or display capabilities do not support ratios", () => {
@@ -411,7 +504,7 @@ describe("ModelItem", () => {
     )
   })
 
-  it("omits empty model group context from account verification actions", async () => {
+  it("passes an exact empty restriction for known-empty account actions", async () => {
     const user = userEvent.setup()
     const onOpenModelKeyDialog = vi.fn()
     const onVerifyModel = vi.fn()
@@ -442,8 +535,17 @@ describe("ModelItem", () => {
           supportsBatchCredentialVerification: true,
           supportsCliVerification: false,
         }}
-        selectedGroups={[]}
-        availableGroups={[]}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+          supportedGroups: [],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
         onOpenModelKeyDialog={onOpenModelKeyDialog}
         onVerifyModel={onVerifyModel}
       />,
@@ -455,13 +557,167 @@ describe("ModelItem", () => {
     expect(onOpenModelKeyDialog).toHaveBeenCalledWith(
       props.source.account,
       props.model.model_name,
-      undefined,
+      [],
     )
     expect(onVerifyModel).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "account" }),
       props.model.model_name,
+      [],
+    )
+  })
+
+  it("passes no group restriction for not-applicable profile verification", async () => {
+    const user = userEvent.setup()
+    const onVerifyModel = vi.fn()
+    const props = createDefaultProps()
+    const profileSource = {
+      kind: "profile",
+      profile: {
+        id: "profile-1",
+        name: "Example profile",
+        baseUrl: "https://profile.example.invalid",
+      },
+      capabilities: {
+        ...props.source.capabilities,
+        supportsGroupFiltering: false,
+        supportsCredentialVerification: true,
+      },
+    } as any
+
+    render(
+      <ModelItem
+        {...props}
+        source={profileSource}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+          supportedGroups: ["vip"],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+        onVerifyModel={onVerifyModel}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "verify-api" }))
+
+    expect(onVerifyModel).toHaveBeenCalledWith(
+      profileSource,
+      props.model.model_name,
       undefined,
     )
+    expect(screen.queryByTestId("expand-button")).not.toBeInTheDocument()
+  })
+
+  it("keeps account actions disabled when source capabilities disallow them", () => {
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+          supportedGroups: [],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+        onOpenModelKeyDialog={vi.fn()}
+        onVerifyModel={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "key" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "verify-api" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    {
+      name: "endpoint details",
+      props: {
+        showEndpointTypes: true,
+        displayCapabilities: {
+          supportsPricing: false,
+          supportsRatioDisplay: true,
+          supportsGroupFiltering: true,
+          supportsAccountSummary: true,
+          supportsTokenCompatibility: true,
+          supportsCredentialVerification: true,
+          supportsBatchCredentialVerification: true,
+          supportsCliVerification: true,
+        },
+      },
+    },
+    {
+      name: "detailed token pricing",
+      props: {},
+    },
+  ])(
+    "allows not-applicable account rows to expand for $name",
+    async ({ props }) => {
+      const user = userEvent.setup()
+
+      render(
+        <ModelItem
+          {...createDefaultProps()}
+          {...props}
+          groupContext={{
+            accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+            supportedGroups: [],
+            usableGroups: [],
+            priceableGroups: [],
+          }}
+          activeGroupContext={{
+            activeUsableGroups: [],
+            activePriceableGroups: [],
+            actionGroups: [],
+          }}
+        />,
+      )
+
+      await user.click(screen.getByTestId("expand-button"))
+
+      expect(screen.getByTestId("model-details")).toBeInTheDocument()
+    },
+  )
+
+  it("guides unavailable active selections to a usable group", () => {
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        groupRatios={{ vip: 2 }}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+          supportedGroups: ["vip"],
+          usableGroups: ["vip"],
+          priceableGroups: ["vip"],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+      />,
+    )
+
+    expect(screen.getByText("clickSwitchGroup:vip (2x)")).toBeInTheDocument()
+    expect(
+      screen.getByText("currentUsableGroups", { exact: false }),
+    ).toHaveTextContent("currentUsableGroups: vip (2x)")
   })
 
   it("uses internal expansion state when expansion props are omitted", async () => {
@@ -491,6 +747,46 @@ describe("ModelItem", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       }),
     )
+  })
+
+  it("hides orphaned details when an expanded row becomes catalog-only", async () => {
+    const user = userEvent.setup()
+    const props = createDefaultProps()
+    const catalogOnlyDisplayCapabilities = {
+      ...props.source.capabilities,
+      supportsPricing: false,
+      supportsRatioDisplay: false,
+      supportsGroupFiltering: false,
+      supportsAccountSummary: false,
+    }
+    const { rerender } = render(
+      <ModelItem {...props} showEndpointTypes={true} />,
+    )
+
+    await user.click(screen.getByTestId("expand-button"))
+    expect(screen.getByTestId("model-details")).toBeInTheDocument()
+
+    rerender(
+      <ModelItem
+        {...props}
+        showEndpointTypes={true}
+        displayCapabilities={catalogOnlyDisplayCapabilities}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+          supportedGroups: [],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+      />,
+    )
+
+    expect(screen.queryByTestId("expand-button")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("model-details")).not.toBeInTheDocument()
   })
 
   it("keeps source controls in the header trailing area", async () => {

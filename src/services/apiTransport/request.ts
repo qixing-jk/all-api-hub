@@ -573,6 +573,7 @@ const _fetchApi = async <T>(
     fetchOptions,
     onlyData,
     responseType,
+    tempWindowRequestSource: request.tempWindowRequestSource,
     tempWindowFallback: options.tempWindowFallback,
     accountId,
     authType: resolvedAuth.authType,

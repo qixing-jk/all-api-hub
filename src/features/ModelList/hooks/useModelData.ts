@@ -132,6 +132,7 @@ interface UseModelDataReturn {
   pricingData: PricingResponse | null
   pricingContexts: AccountPricingContext[]
   isLoading: boolean
+  hasAuthoritativePricingData: boolean
   dataFormatError: boolean
   unsupportedSource: boolean
   accountQueryStates: AccountQueryState[]
@@ -1161,6 +1162,11 @@ function useSingleAccountModelData(params: {
   const isFallbackCatalogActive = Boolean(
     scopedFallbackPricingData && !query.data,
   )
+  const hasAuthoritativePricingData =
+    (query.isSuccess && !query.isFetching && Boolean(query.data)) ||
+    (isFallbackCatalogActive &&
+      !scopedIsLoadingFallbackCatalog &&
+      !scopedFallbackCatalogLoadErrorMessage)
   const unsupportedSource = Boolean(
     query.isError &&
       isUnsupportedModelPricingError(query.error) &&
@@ -1244,6 +1250,7 @@ function useSingleAccountModelData(params: {
     pricingData,
     pricingContexts,
     isLoading: query.isFetching || scopedIsLoadingFallbackCatalog,
+    hasAuthoritativePricingData,
     dataFormatError,
     unsupportedSource,
     accountQueryStates: [],
@@ -1505,6 +1512,7 @@ function useAllAccountsModelData(
     pricingData: null,
     pricingContexts,
     isLoading,
+    hasAuthoritativePricingData: false,
     dataFormatError,
     unsupportedSource: false,
     accountQueryStates,
@@ -1630,6 +1638,8 @@ function useProfileModelData(
     pricingData: query.data ?? null,
     pricingContexts: [],
     isLoading: query.isFetching,
+    hasAuthoritativePricingData:
+      query.isSuccess && !query.isFetching && Boolean(query.data),
     dataFormatError: false,
     unsupportedSource: false,
     accountQueryStates: [],

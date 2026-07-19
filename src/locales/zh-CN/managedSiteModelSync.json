@@ -4,7 +4,10 @@
     "actions": {
       "refresh": "刷新结果",
       "retryFailed": "仅重试失败项",
+      "retryingFailed": "失败项重试中...",
       "runAll": "执行全部",
+      "runningAll": "全部执行中...",
+      "runningSelected": "所选项执行中...",
       "runSelected": "执行所选"
     },
     "empty": {

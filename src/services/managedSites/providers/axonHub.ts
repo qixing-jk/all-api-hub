@@ -369,7 +369,7 @@ export function buildChannelPayload(
       name: input.name,
       type: input.type,
       key: input.credentials.apiKeys?.[0] ?? "",
-      base_url: input.baseURL,
+      base_url: input.baseURL ?? "",
       models: input.supportedModels.join(","),
       groups: [],
       priority: 0,

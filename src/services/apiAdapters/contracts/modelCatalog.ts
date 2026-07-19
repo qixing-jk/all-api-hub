@@ -1,4 +1,5 @@
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { ModelDescriptor } from "~/services/models/modelDescriptor"
 
 export type ModelCatalogRequest = ApiServiceRequest & {
   auth: ApiServiceRequest["auth"] & {
@@ -7,5 +8,5 @@ export type ModelCatalogRequest = ApiServiceRequest & {
 }
 
 export type ModelCatalogCapability = {
-  fetchModels(request: ModelCatalogRequest): Promise<string[]>
+  fetchModels(request: ModelCatalogRequest): Promise<ModelDescriptor[]>
 }

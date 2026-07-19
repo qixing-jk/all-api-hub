@@ -1,6 +1,11 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 
 import type { ChannelFormData, ManagedSiteChannel } from "./managedSite"
+import type {
+  ManagedSiteMigrationSelection,
+  ManagedSiteMigrationSource,
+  ManagedSiteMigrationTargetPreparation,
+} from "./managedSiteMigrationCapability"
 
 export const MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES = {
   CREATE_ONLY: "create-only",
@@ -30,10 +35,17 @@ export type ManagedSiteChannelMigrationItemWarningCode =
 export const MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES = {
   SOURCE_KEY_MISSING: "source-key-missing",
   SOURCE_KEY_RESOLUTION_FAILED: "source-key-resolution-failed",
+  TARGET_DRAFT_PREPARATION_FAILED: "target-draft-preparation-failed",
 } as const
 
 export type ManagedSiteChannelMigrationBlockedReasonCode =
   (typeof MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES)[keyof typeof MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES]
+
+export type ManagedSiteMigrationCanonicalPreparation = {
+  selection: ManagedSiteMigrationSelection
+  source: ManagedSiteMigrationSource
+  target: ManagedSiteMigrationTargetPreparation
+}
 
 export interface ManagedSiteChannelMigrationPreviewItem {
   channelId: number
@@ -44,6 +56,7 @@ export interface ManagedSiteChannelMigrationPreviewItem {
   warningCodes: ManagedSiteChannelMigrationItemWarningCode[]
   blockingReasonCode?: ManagedSiteChannelMigrationBlockedReasonCode
   blockingMessage?: string
+  canonicalPreparation?: ManagedSiteMigrationCanonicalPreparation
 }
 
 export interface ManagedSiteChannelMigrationPreview {

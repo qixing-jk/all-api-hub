@@ -6,10 +6,11 @@
     "configToManagedSite": "保存して {{managedSite}} に設定",
     "configuring": "設定中...",
     "confirmAdd": "追加を確認",
-    "helpDocument": "ヘルプドキュメント",
+    "helpDocument": "トラブルシューティング",
+    "openApiCredentialProfiles": "API 資格情報を開く",
     "reloadCurrentPage": "現在のページを再読み込み",
     "reloadExtensionAndRetry": "拡張機能を再読み込みして再試行",
-    "reportUnsupportedSite": "未対応サイトを報告",
+    "reportUnsupportedSite": "サイト対応を申請",
     "saveAccount": "アカウントを保存",
     "saveChanges": "変更を保存",
     "workflow": {
@@ -30,6 +31,15 @@
     "description": "{{accountName}} は保存されました。AIHubMix API キーは作成直後に一度だけ表示されるため、今すぐ完全なキーをコピーして保存できることを確認してください。",
     "title": "AIHubMix の既定キーを作成しますか？",
     "warningTitle": "完全なキーは一度だけ表示されます"
+  },
+  "apiCredentialFallback": {
+    "apiCredentials": {
+      "description": "現時点でキーの保存と API 呼び出しだけが必要なら、より軽量な API 資格情報を先に利用できます。アカウント対応後に、チェックイン、残高更新、ダッシュボード同期用の Web アカウントを追加してください。"
+    },
+    "siteSupport": {
+      "description": "トラブルシューティングガイドを確認しても検出できない場合、このサイトがまだ対応していないか、このページが自動検出に対応していない可能性があります。"
+    },
+    "title": "まだ検出できませんか？代替方法をお試しください"
   },
   "bookmarkImportBatch": {
     "action": "ブックマークから一括インポート",

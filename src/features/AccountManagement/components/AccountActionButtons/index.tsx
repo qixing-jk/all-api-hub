@@ -54,6 +54,7 @@ import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
+import { buildTokenChannelStatusChannelMatchService } from "~/services/managedSites/tokenChannelStatus"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
   collectManagedConfigSecrets,
@@ -82,6 +83,7 @@ import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapsh
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { DisplaySiteData } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showWarningToast } from "~/utils/core/toastHelpers"
@@ -271,6 +273,8 @@ export default function AccountActionButtons({
   } = useAccountDataContext()
   const { openEditAccount } = useDialogStateContext()
   const [isCheckingTokens, setIsCheckingTokens] = useState(false)
+  const [isRefreshMenuPending, setIsRefreshMenuPending] = useState(false)
+  const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false)
 
   const isAccountDisabled = site.disabled === true
   const isQuickCheckinEligible =
@@ -402,12 +406,18 @@ export default function AccountActionButtons({
   }
 
   // Navigation functions for secondary menu items
+  const navigateAfterClosingMoreActions = (navigate: () => void) => {
+    setIsMoreActionsOpen(false)
+    // Let Radix release its scroll lock before the options route unmounts it.
+    window.requestAnimationFrame(navigate)
+  }
+
   const handleNavigateToKeyManagement = () => {
-    openKeysPage(site.id)
+    navigateAfterClosingMoreActions(() => openKeysPage(site.id))
   }
 
   const handleNavigateToModelManagement = () => {
-    openModelsPage(site.id)
+    navigateAfterClosingMoreActions(() => openModelsPage(site.id))
   }
 
   const handleNavigateToUsageManagement = () => {
@@ -518,7 +528,7 @@ export default function AccountActionButtons({
       }
 
       const resolution = await resolveManagedSiteChannelMatch({
-        service,
+        service: buildTokenChannelStatusChannelMatchService({ service }),
         managedConfig,
         accountBaseUrl: searchBaseUrl,
         models: formData.models,
@@ -561,8 +571,15 @@ export default function AccountActionButtons({
     onCopyKey(site)
   }
 
-  const handleRefreshLocal = () => {
-    handleRefreshAccount(site)
+  const handleRefreshLocal = async () => {
+    if (isRefreshMenuPending) return
+
+    setIsRefreshMenuPending(true)
+    try {
+      await handleRefreshAccount(site)
+    } finally {
+      setIsRefreshMenuPending(false)
+    }
   }
 
   const handleDeleteLocal = () => {
@@ -688,10 +705,12 @@ export default function AccountActionButtons({
     try {
       toastId = toast.loading(t("autoCheckin:messages.loading.running"))
 
+      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
       const response = await sendAutoCheckinMessage(
         AutoCheckinMessageTypes.RunNow,
         {
           accountIds: [site.id],
+          tempWindowRequestSource,
         },
       )
 
@@ -816,7 +835,8 @@ export default function AccountActionButtons({
           variant="ghost"
           size="sm"
           className="touch-manipulation"
-          disabled={isCheckingTokens || isAccountDisabled}
+          loading={isCheckingTokens}
+          disabled={isAccountDisabled}
           aria-label={t("actions.copyKey")}
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyKeyButton}
           title={t("actions.copyKey")}
@@ -842,7 +862,10 @@ export default function AccountActionButtons({
         </IconButton>
 
         {/* Secondary Level - Dropdown menu */}
-        <DropdownMenu>
+        <DropdownMenu
+          open={isMoreActionsOpen}
+          onOpenChange={setIsMoreActionsOpen}
+        >
           <DropdownMenuTrigger asChild>
             <IconButton
               variant="ghost"
@@ -982,6 +1005,8 @@ export default function AccountActionButtons({
                   onClick={handleRefreshLocal}
                   icon={ArrowPathIcon}
                   label={t("actions.refresh")}
+                  loading={isRefreshMenuPending}
+                  loadingLabel={t("common:status.refreshing")}
                   disabled={refreshingAccountId === site.id}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem}
                 />

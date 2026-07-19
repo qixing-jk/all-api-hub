@@ -13,7 +13,10 @@ import type {
   WongCheckinStatusData,
 } from "~/services/apiService/wong"
 import { fetchApi } from "~/services/apiTransport/request"
-import type { AutoCheckinProvider } from "~/services/checkin/autoCheckin/providers/index"
+import type {
+  AutoCheckinProvider,
+  AutoCheckinProviderContext,
+} from "~/services/checkin/autoCheckin/providers/index"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
@@ -26,6 +29,8 @@ import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/p
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
+import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
 /**
  * WONG daily check-in endpoint.
@@ -40,6 +45,7 @@ const ENDPOINT = AUTO_CHECKIN_USER_CHECKIN_ENDPOINT
  */
 async function performCheckin(
   account: SiteAccount,
+  tempWindowRequestSource: TempWindowRequestSource,
 ): Promise<WongCheckinApiResponse> {
   const { site_url, account_info } = account
 
@@ -53,6 +59,7 @@ async function performCheckin(
         userId: account_info.id,
         accessToken: account_info.access_token,
       },
+      tempWindowRequestSource,
     },
     {
       endpoint: ENDPOINT,
@@ -70,9 +77,16 @@ async function performCheckin(
  */
 async function checkinWongGongyi(
   account: SiteAccount,
+  context?: AutoCheckinProviderContext,
 ): Promise<AutoCheckinProviderResult> {
+  const tempWindowRequestSource = normalizeTempWindowRequestSource(
+    context?.tempWindowRequestSource,
+  )
   try {
-    const checkinResponse = await performCheckin(account)
+    const checkinResponse = await performCheckin(
+      account,
+      tempWindowRequestSource,
+    )
     const responseMessage = normalizeCheckinMessage(checkinResponse.message)
 
     if (checkinResponse.data?.enabled === false) {

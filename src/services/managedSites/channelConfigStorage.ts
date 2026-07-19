@@ -1,5 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
+import { isManagedSiteType, SITE_TYPES } from "~/constants/siteType"
 import {
   ChannelConfigMessageTypes,
   onChannelConfigMessage,
@@ -8,14 +9,25 @@ import {
   type ChannelConfigUpsertFiltersRequest,
   type ChannelConfigUpsertFiltersResponse,
 } from "~/services/managedSites/channelConfigMessaging"
+import {
+  isManagedSiteFeatureResourceSliceEnabled,
+  MANAGED_UPSTREAM_RESOURCE_FEATURES,
+} from "~/services/managedSites/managedUpstreamResourceMigration"
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import {
   createDefaultChannelConfig,
+  createDefaultChannelResourceConfig,
   type ChannelConfig,
   type ChannelConfigMap,
   type ChannelModelFilterSettings,
+  type ChannelResourceConfig,
+  type ChannelResourceConfigMap,
 } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import {
+  getManagedUpstreamResourceRefKey,
+  type ManagedUpstreamResourceRef,
+} from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -29,7 +41,82 @@ const logger = createLogger("ChannelConfigStorage")
 
 const STORAGE_KEYS = {
   CHANNEL_CONFIGS: "channel_configs",
+  CHANNEL_RESOURCE_CONFIGS: "channel_resource_configs",
 } as const
+
+const CHANNEL_CONFIG_MIRROR_RESOURCE_SITE_TYPES = new Set<string>([
+  SITE_TYPES.NEW_API,
+  SITE_TYPES.VELOERA,
+  SITE_TYPES.DONE_HUB,
+])
+
+/**
+ * Parses a positive numeric channel id from runtime or storage inputs.
+ */
+function toValidChannelId(value: unknown): number | null {
+  const channelId = Number(value)
+  return Number.isFinite(channelId) && channelId > 0 ? channelId : null
+}
+
+/**
+ * Validates resource refs accepted at the channel-config runtime boundary.
+ */
+function isManagedUpstreamResourceRef(
+  value: unknown,
+): value is ManagedUpstreamResourceRef {
+  if (!value || typeof value !== "object") {
+    return false
+  }
+
+  const ref = value as Partial<ManagedUpstreamResourceRef>
+  return (
+    isManagedSiteType(ref.managedSiteType) &&
+    typeof ref.scopeKey === "string" &&
+    ref.scopeKey.trim().length > 0 &&
+    typeof ref.resourceId === "string" &&
+    ref.resourceId.trim().length > 0 &&
+    isManagedSiteFeatureResourceSliceEnabled(
+      ref.managedSiteType,
+      MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelConfigStorage,
+    )
+  )
+}
+
+/**
+ * Keeps channel-shaped resource writes compatible with legacy numeric readers.
+ */
+function shouldMirrorResourceConfigToChannelConfig(
+  resourceRef: ManagedUpstreamResourceRef,
+  channelId: number,
+): boolean {
+  return (
+    CHANNEL_CONFIG_MIRROR_RESOURCE_SITE_TYPES.has(
+      resourceRef.managedSiteType,
+    ) && resourceRef.resourceId === String(channelId)
+  )
+}
+
+/**
+ * Projects channel-shaped resource configs for legacy numeric readers.
+ */
+function toMirroredChannelConfig(
+  config: ChannelResourceConfig,
+): ChannelConfig | null {
+  const channelId = toValidChannelId(config.channelId)
+  if (
+    channelId === null ||
+    !shouldMirrorResourceConfigToChannelConfig(config.resourceRef, channelId)
+  ) {
+    return null
+  }
+
+  return {
+    channelId,
+    modelFilterSettings: config.modelFilterSettings,
+    createdAt: config.createdAt,
+    updatedAt: config.updatedAt,
+  }
+}
 
 class ChannelConfigStorage {
   private storage: Storage
@@ -45,9 +132,31 @@ class ChannelConfigStorage {
       const stored = (await this.storage.get(STORAGE_KEYS.CHANNEL_CONFIGS)) as
         | ChannelConfigMap
         | undefined
-      return stored ?? {}
+      const resourceConfigs = await this.getAllResourceConfigs()
+      const merged: ChannelConfigMap = { ...(stored ?? {}) }
+
+      for (const resourceConfig of Object.values(resourceConfigs)) {
+        const mirrored = toMirroredChannelConfig(resourceConfig)
+        if (mirrored) {
+          merged[mirrored.channelId] = mirrored
+        }
+      }
+
+      return merged
     } catch (error) {
       logger.error("Failed to load configs", error)
+      return {}
+    }
+  }
+
+  async getAllResourceConfigs(): Promise<ChannelResourceConfigMap> {
+    try {
+      const stored = (await this.storage.get(
+        STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+      )) as ChannelResourceConfigMap | undefined
+      return stored ?? {}
+    } catch (error) {
+      logger.error("Failed to load resource configs", error)
       return {}
     }
   }
@@ -55,6 +164,29 @@ class ChannelConfigStorage {
   async getConfig(channelId: number): Promise<ChannelConfig> {
     const configs = await this.getAllConfigs()
     return configs[channelId] ?? createDefaultChannelConfig(channelId)
+  }
+
+  async getConfigByResourceRef(
+    resourceRef: ManagedUpstreamResourceRef,
+    fallbackChannelId?: number,
+  ): Promise<ChannelResourceConfig> {
+    const configs = await this.getAllResourceConfigs()
+    const resourceKey = getManagedUpstreamResourceRefKey(resourceRef)
+    const config = configs[resourceKey]
+    if (config) {
+      return config
+    }
+
+    const channelId = toValidChannelId(fallbackChannelId)
+    if (channelId !== null) {
+      const channelConfig = await this.getConfig(channelId)
+      return {
+        ...channelConfig,
+        resourceRef,
+      }
+    }
+
+    return createDefaultChannelResourceConfig(resourceRef)
   }
 
   async saveConfig(config: ChannelConfig): Promise<boolean> {
@@ -71,6 +203,25 @@ class ChannelConfigStorage {
       return true
     } catch (error) {
       logger.error("Failed to save config", error)
+      return false
+    }
+  }
+
+  async saveResourceConfig(config: ChannelResourceConfig): Promise<boolean> {
+    try {
+      const configs = await this.getAllResourceConfigs()
+      const resourceKey = getManagedUpstreamResourceRefKey(config.resourceRef)
+      const next: ChannelResourceConfigMap = {
+        ...configs,
+        [resourceKey]: {
+          ...config,
+          updatedAt: Date.now(),
+        },
+      }
+      await this.storage.set(STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS, next)
+      return true
+    } catch (error) {
+      logger.error("Failed to save resource config", error)
       return false
     }
   }
@@ -108,6 +259,61 @@ class ChannelConfigStorage {
     }
 
     return this.saveConfig(updated)
+  }
+
+  async upsertResourceFilters(
+    resourceRef: ManagedUpstreamResourceRef,
+    rules: ChannelModelFilterRule[],
+    fallbackChannelId?: number,
+  ): Promise<boolean> {
+    const timestamp = Date.now()
+    const channelId = toValidChannelId(fallbackChannelId)
+    const current = await this.getConfigByResourceRef(
+      resourceRef,
+      channelId ?? undefined,
+    )
+    const previousSettings =
+      current.modelFilterSettings ??
+      createDefaultChannelResourceConfig(resourceRef, channelId ?? undefined)
+        .modelFilterSettings
+
+    const updated: ChannelResourceConfig = {
+      ...current,
+      resourceRef,
+      ...(channelId !== null ? { channelId } : {}),
+      modelFilterSettings: {
+        ...previousSettings,
+        rules,
+        updatedAt: timestamp,
+      },
+      updatedAt: timestamp,
+      createdAt: current.createdAt || timestamp,
+    }
+
+    const resourceSaved = await this.saveResourceConfig(updated)
+    if (!resourceSaved) {
+      return false
+    }
+
+    if (
+      channelId === null ||
+      !shouldMirrorResourceConfigToChannelConfig(resourceRef, channelId)
+    ) {
+      return true
+    }
+
+    const mirrorSaved = await this.upsertFilters(channelId, rules)
+    if (!mirrorSaved) {
+      logger.warn(
+        "Failed to mirror resource config to numeric channel config",
+        {
+          channelId,
+          resourceRef,
+        },
+      )
+    }
+
+    return true
   }
 }
 
@@ -156,8 +362,28 @@ export async function resolveChannelConfigGetMessage(
   request: ChannelConfigGetRequest,
 ): Promise<ChannelConfigGetResponse> {
   try {
-    const channelId = Number(request.channelId)
-    if (!Number.isFinite(channelId) || channelId <= 0) {
+    const channelId = toValidChannelId(request.channelId)
+    if (
+      !request.resourceRef &&
+      request.channelId !== undefined &&
+      channelId === null
+    ) {
+      throw new Error("channelId is required")
+    }
+
+    if (request.resourceRef) {
+      if (!isManagedUpstreamResourceRef(request.resourceRef)) {
+        throw new Error("resourceRef is invalid")
+      }
+
+      const config = await channelConfigStorage.getConfigByResourceRef(
+        request.resourceRef,
+        channelId ?? undefined,
+      )
+      return { success: true, data: config }
+    }
+
+    if (channelId === null) {
       throw new Error("channelId is required")
     }
 
@@ -176,19 +402,35 @@ export async function resolveChannelConfigUpsertFiltersMessage(
   request: ChannelConfigUpsertFiltersRequest,
 ): Promise<ChannelConfigUpsertFiltersResponse> {
   try {
-    const channelId = Number(request.channelId)
-    if (!Number.isFinite(channelId) || channelId <= 0) {
+    const channelId = toValidChannelId(request.channelId)
+    if (
+      !request.resourceRef &&
+      request.channelId !== undefined &&
+      channelId === null
+    ) {
       throw new Error("channelId is required")
     }
 
     const normalizedFilters = normalizeFilters(request.filters ?? [])
-    const success = await channelConfigStorage.upsertFilters(
-      channelId,
-      normalizedFilters,
-    )
+    const success = request.resourceRef
+      ? isManagedUpstreamResourceRef(request.resourceRef)
+        ? await channelConfigStorage.upsertResourceFilters(
+            request.resourceRef,
+            normalizedFilters,
+            channelId ?? undefined,
+          )
+        : false
+      : channelId !== null
+        ? await channelConfigStorage.upsertFilters(channelId, normalizedFilters)
+        : false
 
     if (!success) {
-      throw new Error("Failed to save channel filters")
+      throw new Error(
+        request.resourceRef &&
+        !isManagedUpstreamResourceRef(request.resourceRef)
+          ? "resourceRef is invalid"
+          : "Failed to save channel filters",
+      )
     }
 
     return { success: true, data: normalizedFilters }

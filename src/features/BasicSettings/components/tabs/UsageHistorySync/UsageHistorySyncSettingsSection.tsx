@@ -172,19 +172,23 @@ export default function UsageHistorySyncSettingsSection({
               variant="secondary"
               size="sm"
               onClick={() => void onSyncNow()}
-              disabled={isSyncingAll}
+              loading={isSyncingAll}
             >
-              {t("actions.syncNow")}
+              {isSyncingAll
+                ? t("messages.loading.syncing")
+                : t("actions.syncNow")}
             </Button>
             <Button
               id="usage-history-sync-refresh-status"
               variant="outline"
               size="sm"
               onClick={() => void onRefreshStatus()}
-              disabled={isLoading || isSyncingAll}
+              disabled={isSyncingAll}
               loading={isLoading}
             >
-              {t("syncTab.actions.refreshStatus")}
+              {isLoading
+                ? t("common:status.refreshing")
+                : t("syncTab.actions.refreshStatus")}
             </Button>
           </div>
         </CardContent>

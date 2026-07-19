@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { resyncSub2ApiAuthToken } from "~/services/apiService/sub2api/tokenResync"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const { mockResolveAccountBrowserSession } = vi.hoisted(() => ({
   mockResolveAccountBrowserSession: vi.fn(),
@@ -45,6 +46,27 @@ describe("Sub2API token re-sync", () => {
         useTempWindow: true,
         requestIdPrefix: "sub2api-token-resync",
         isUsableSession: expect.any(Function),
+      }),
+    )
+    expect(mockResolveAccountBrowserSession).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        tempWindowRequestSource: expect.anything(),
+      }),
+    )
+  })
+
+  it("passes popup source to the browser-session reader", async () => {
+    mockResolveAccountBrowserSession.mockResolvedValueOnce(null)
+
+    await resyncSub2ApiAuthToken(
+      "https://example.invalid",
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
+
+    expect(mockResolveAccountBrowserSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://example.invalid",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       }),
     )
   })

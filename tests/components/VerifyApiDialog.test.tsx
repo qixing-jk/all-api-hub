@@ -190,6 +190,50 @@ describe("VerifyApiDialog", () => {
     await verificationResultHistoryStorage.clearAllData()
   })
 
+  it.each([
+    ["claude-3-5-sonnet", "aiApiVerification:verifyDialog.apiTypes.anthropic"],
+    ["gemini-2.5-flash", "aiApiVerification:verifyDialog.apiTypes.google"],
+  ])(
+    "keeps AUTO protocol initialization for %s",
+    async (initialModelId, expectedApiTypeLabel) => {
+      mockFetchAccountTokens.mockResolvedValueOnce([])
+
+      render(
+        <VerifyApiDialog
+          isOpen={true}
+          onClose={() => {}}
+          account={{
+            id: "a1",
+            name: "Account",
+            username: "u",
+            balance: { USD: 0, CNY: 0 },
+            todayConsumption: { USD: 0, CNY: 0 },
+            todayIncome: { USD: 0, CNY: 0 },
+            todayTokens: { upload: 0, download: 0 },
+            health: { status: "healthy" as any },
+            siteType: SITE_TYPES.NEW_API,
+            baseUrl: "https://example.invalid",
+            token: "t",
+            userId: "1",
+            authType: "access_token" as any,
+            checkIn: { enableDetection: false } as any,
+          }}
+          initialModelId={initialModelId}
+        />,
+      )
+
+      const apiTypeLabel = await screen.findByText(
+        "aiApiVerification:verifyDialog.meta.apiType",
+      )
+      const apiTypeField = apiTypeLabel.parentElement
+
+      expect(apiTypeField).not.toBeNull()
+      expect(within(apiTypeField!).getByRole("combobox")).toHaveTextContent(
+        expectedApiTypeLabel,
+      )
+    },
+  )
+
   it("renders probe items before running", async () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       {

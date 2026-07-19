@@ -4,6 +4,7 @@ import {
   transformModelPricing,
   transformUserGroup,
 } from "~/services/apiService/oneHub/transform"
+import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 
 describe("OneHub data transformers", () => {
   describe("transformModelPricing", () => {
@@ -33,6 +34,10 @@ describe("OneHub data transformers", () => {
       expect(item.model_ratio).toBe(1)
       expect(item.model_price).toEqual({ input: 10, output: 20 })
       expect(item.owner_by).toBe("openai")
+      expect(item.vendorEvidence).toEqual({
+        kind: MODEL_VENDOR_EVIDENCE_KINDS.RoutingProvider,
+        name: "openai",
+      })
       expect(item.completion_ratio).toBe(2)
       expect(item.enable_groups).toEqual(["default"])
       expect(item.supported_endpoint_types).toEqual([])
@@ -62,13 +67,39 @@ describe("OneHub data transformers", () => {
       expect(item.enable_groups).toEqual(["vip", "pro"])
       expect(item.quota_type).toBe(1)
       expect(item.owner_by).toBe("")
+      expect(item).not.toHaveProperty("vendorEvidence")
+    })
+
+    it("trims non-empty routing ownership evidence while preserving the legacy field", () => {
+      const input = {
+        "example-model": {
+          groups: [],
+          owned_by: " Example Router ",
+          price: {
+            model: "example-model",
+            type: "tokens",
+            channel_type: 7,
+            input: 1,
+            output: 2,
+            locked: false,
+          },
+        },
+      }
+
+      const [item] = transformModelPricing(input as any).data
+
+      expect(item.owner_by).toBe(" Example Router ")
+      expect(item.vendorEvidence).toEqual({
+        kind: MODEL_VENDOR_EVIDENCE_KINDS.RoutingProvider,
+        name: "Example Router",
+      })
     })
 
     it("should compute group_ratio and usable_group from userGroupMap with default ratio fallback", () => {
       const input = {}
       const userGroupMap = {
         group1: { id: 1, symbol: "G1", name: "Group 1", ratio: 2 },
-        group2: { id: 2, symbol: "G2", name: "Group 2", ratio: 0 as any },
+        group2: { id: 2, symbol: "G2", name: "Group 2", ratio: 0 },
         group3: { id: 3, symbol: "G3", name: "Group 3" } as any,
       }
 
@@ -76,7 +107,7 @@ describe("OneHub data transformers", () => {
 
       expect(result.group_ratio).toEqual({
         group1: 2,
-        group2: 1,
+        group2: 0,
         group3: 1,
       })
       expect(result.usable_group).toEqual({
@@ -85,6 +116,25 @@ describe("OneHub data transformers", () => {
         group3: "Group 3",
       })
     })
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+      "uses the default group ratio for non-finite value %s",
+      (ratio) => {
+        const result = transformModelPricing(
+          {},
+          {
+            invalid: {
+              id: 1,
+              symbol: "invalid",
+              name: "Invalid group",
+              ratio,
+            },
+          },
+        )
+
+        expect(result.group_ratio).toEqual({ invalid: 1 })
+      },
+    )
   })
 
   describe("transformUserGroup", () => {

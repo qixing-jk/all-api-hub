@@ -28,6 +28,7 @@ interface ManagedSiteTokenBatchExportPreviewListProps {
   modelOptions: CompactMultiSelectOption[]
   executionResult: ManagedSiteTokenBatchExportExecutionResult | null
   isLoadingPreview: boolean
+  isManualPreviewRefresh: boolean
   isRunning: boolean
   verifyingItemId: string | null
   isVerificationDialogOpen: boolean
@@ -55,6 +56,7 @@ export function ManagedSiteTokenBatchExportPreviewList({
   modelOptions,
   executionResult,
   isLoadingPreview,
+  isManualPreviewRefresh,
   isRunning,
   verifyingItemId,
   isVerificationDialogOpen,
@@ -99,10 +101,15 @@ export function ManagedSiteTokenBatchExportPreviewList({
             size="sm"
             variant="outline"
             leftIcon={<RefreshCcw className="h-4 w-4" />}
+            loading={isManualPreviewRefresh}
             disabled={isLoadingPreview || isRunning || isVerificationPending}
             onClick={onRefreshPreview}
           >
-            {t("keyManagement:batchManagedSiteExport.actions.refreshPreview")}
+            {isManualPreviewRefresh
+              ? t("keyManagement:batchManagedSiteExport.preview.loading")
+              : t(
+                  "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+                )}
           </Button>
         </div>
       ) : null}

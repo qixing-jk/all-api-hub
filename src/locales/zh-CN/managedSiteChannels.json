@@ -112,7 +112,8 @@
     "betaBadge": "Beta",
     "blockedReasons": {
       "sourceKeyMissing": "缺少源渠道密钥，当前无法迁移。",
-      "sourceKeyResolutionFailed": "无法获取源渠道密钥。若刚完成验证，请刷新预览后重试。"
+      "sourceKeyResolutionFailed": "无法获取源渠道密钥。若刚完成验证，请刷新预览后重试。",
+      "targetDraftPreparationFailed": "无法准备目标渠道草稿。请检查渠道信息并刷新预览后重试。"
     },
     "confirm": {
       "confirm": "确认迁移",
@@ -221,6 +222,9 @@
     "channelsDeleted": "已删除 {{count}} 个渠道",
     "channelUpdated": "渠道已更新",
     "revealKeyFailed": "加载真实渠道 key 失败：{{error}}",
+    "revealKeyMasked": "渠道 key 仍处于遮罩状态",
+    "revealKeyUnavailable": "渠道 key 不可用",
+    "revealKeyUnsupported": "当前托管站点不支持显示渠道 key",
     "someDeletesFailed": "删除 {{count}} 个渠道失败：{{error}}",
     "syncCompleted": "模型同步完成（{{success}}/{{total}}）",
     "syncFailed": "模型同步失败：{{error}}"

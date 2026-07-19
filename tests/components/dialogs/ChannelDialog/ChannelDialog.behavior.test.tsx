@@ -1,15 +1,28 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render as rtlRender, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { MouseEvent, ReactNode } from "react"
+import type { MouseEvent, ReactElement, ReactNode } from "react"
 import toast from "react-hot-toast"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { I18nextProvider } from "react-i18next"
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import { ChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
+import enChannelDialog from "~/locales/en/channelDialog.json"
+import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
+import { testI18n } from "~~/tests/test-utils/i18n"
 
 const {
   channelFormScenario,
@@ -17,6 +30,7 @@ const {
   handleTypeChangeMock,
   mockUserPreferences,
   requestDuplicateChannelWarningMock,
+  retryResourceEditLoadMock,
   updateFieldMock,
 } = vi.hoisted(() => ({
   channelFormScenario: {
@@ -35,6 +49,9 @@ const {
     isSaving: false,
     isLoadingGroups: false,
     isLoadingModels: false,
+    isResourceEditLoading: false,
+    isResourceEditReady: true,
+    resourceEditLoadError: null as Error | null,
     availableGroups: [{ label: "default", value: "default" }],
     availableModels: [
       { label: "gpt-4", value: "gpt-4" },
@@ -57,6 +74,7 @@ const {
     newApiTotpSecret: "",
   },
   requestDuplicateChannelWarningMock: vi.fn(),
+  retryResourceEditLoadMock: vi.fn(),
   updateFieldMock: vi.fn(),
 }))
 
@@ -81,6 +99,9 @@ const resetChannelFormScenario = () => {
   channelFormScenario.isSaving = false
   channelFormScenario.isLoadingGroups = false
   channelFormScenario.isLoadingModels = false
+  channelFormScenario.isResourceEditLoading = false
+  channelFormScenario.isResourceEditReady = true
+  channelFormScenario.resourceEditLoadError = null
   channelFormScenario.availableGroups = [{ label: "default", value: "default" }]
   channelFormScenario.availableModels = [
     { label: "gpt-4", value: "gpt-4" },
@@ -95,13 +116,6 @@ vi.mock("react-hot-toast", () => ({
   default: {
     error: vi.fn(),
   },
-}))
-
-vi.mock("react-i18next", () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: Record<string, unknown>) =>
-      options?.error ? `${key}:${String(options.error)}` : key,
-  }),
 }))
 
 vi.mock(
@@ -163,6 +177,10 @@ vi.mock("~/components/dialogs/ChannelDialog/hooks/useChannelForm", async () => {
         isSaving: channelFormScenario.isSaving,
         isLoadingGroups: channelFormScenario.isLoadingGroups,
         isLoadingModels: channelFormScenario.isLoadingModels,
+        isResourceEditLoading: channelFormScenario.isResourceEditLoading,
+        isResourceEditReady: channelFormScenario.isResourceEditReady,
+        resourceEditLoadError: channelFormScenario.resourceEditLoadError,
+        retryResourceEditLoad: retryResourceEditLoadMock,
         availableGroups: channelFormScenario.availableGroups,
         availableModels: channelFormScenario.availableModels,
         isKeyFieldRequired: channelFormScenario.isKeyFieldRequired,
@@ -192,15 +210,22 @@ vi.mock("~/components/ui", async () => {
   const Button = ({
     children,
     disabled,
+    loading,
     onClick,
     type = "button",
   }: {
     children: ReactNode
     disabled?: boolean
+    loading?: boolean
     onClick?: (event: MouseEvent<HTMLButtonElement>) => void
     type?: "button" | "submit"
   }) => (
-    <button disabled={disabled} onClick={onClick} type={type}>
+    <button
+      aria-busy={loading ? true : undefined}
+      disabled={disabled || loading}
+      onClick={onClick}
+      type={type}
+    >
       {children}
     </button>
   )
@@ -275,6 +300,7 @@ vi.mock("~/components/ui", async () => {
       rightIcon,
       type = "text",
       value = "",
+      ...inputProps
     }: {
       disabled?: boolean
       id?: string
@@ -290,6 +316,7 @@ vi.mock("~/components/ui", async () => {
       rightIcon?: ReactNode
       type?: string
       value?: number | string
+      "data-testid"?: string
     }) => {
       const inputType =
         revealable && type === "password" && revealed ? "text" : type
@@ -297,6 +324,7 @@ vi.mock("~/components/ui", async () => {
       return (
         <div>
           <input
+            {...inputProps}
             disabled={disabled}
             id={id}
             min={min}
@@ -427,7 +455,35 @@ vi.mock("~/services/managedSites/providers/newApiSession", () => ({
   isNewApiVerifiedSessionActive: vi.fn(() => false),
 }))
 
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <I18nextProvider i18n={testI18n}>{children}</I18nextProvider>
+    ),
+  })
+}
+
 describe("ChannelDialog behavior", () => {
+  beforeAll(() => {
+    testI18n.addResource(
+      "en",
+      "channelDialog",
+      "messages.loadRealKeyFailed",
+      enChannelDialog.messages.loadRealKeyFailed,
+    )
+    testI18n.addResource(
+      "en",
+      "managedSiteChannels",
+      "alerts.loadError.description",
+      enManagedSiteChannels.alerts.loadError.description,
+    )
+  })
+
+  afterAll(() => {
+    testI18n.removeResourceBundle("en", "channelDialog")
+    testI18n.removeResourceBundle("en", "managedSiteChannels")
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     resetChannelFormScenario()
@@ -474,6 +530,16 @@ describe("ChannelDialog behavior", () => {
         name: "channelDialog:actions.loadingRealKey",
       }),
     ).toBeDisabled()
+    const loadingButton = screen.getByRole("button", {
+      name: "channelDialog:actions.loadingRealKey",
+    })
+    expect(loadingButton).toHaveAttribute("aria-busy", "true")
+    expect(
+      screen.getByRole("button", { name: "modal-close" }),
+    ).not.toHaveAttribute("aria-busy")
+
+    await user.click(loadingButton)
+    expect(onRequestRealKey).toHaveBeenCalledTimes(1)
 
     resolveRequest?.()
 
@@ -584,6 +650,138 @@ describe("ChannelDialog behavior", () => {
         name: "channelDialog:actions.inverse",
       }),
     ).toBeDisabled()
+  })
+
+  it("disables submit while a resource-backed edit is loading detail", () => {
+    channelFormScenario.isResourceEditLoading = true
+    channelFormScenario.isResourceEditReady = false
+
+    render(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        resourceEdit={{} as never}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "channelDialog:actions.update",
+      }),
+    ).toBeDisabled()
+  })
+
+  it("locks resource-backed edit fields while channel detail is loading", async () => {
+    const user = userEvent.setup()
+    channelFormScenario.isResourceEditLoading = true
+    channelFormScenario.isResourceEditReady = false
+
+    render(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        resourceEdit={{} as never}
+      />,
+    )
+
+    const nameInput = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
+    expect(nameInput).toBeDisabled()
+    expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)).toBeDisabled()
+    expect(
+      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.baseUrlInput),
+    ).toBeDisabled()
+    expect(screen.getByTestId("models-disabled")).toHaveTextContent("true")
+    expect(screen.getByTestId("groups-disabled")).toHaveTextContent("true")
+    expect(
+      screen.getByRole("button", {
+        name: "channelDialog:actions.selectAll",
+      }),
+    ).toBeDisabled()
+
+    await user.type(nameInput, " stale")
+
+    expect(updateFieldMock).not.toHaveBeenCalledWith(
+      "name",
+      expect.stringContaining("stale"),
+    )
+  })
+
+  it("shows a channel load error with retry for resource-backed edits", async () => {
+    const user = userEvent.setup()
+    let resolveRetry: (() => void) | undefined
+    retryResourceEditLoadMock.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveRetry = resolve
+      }),
+    )
+    channelFormScenario.isResourceEditReady = false
+    channelFormScenario.resourceEditLoadError = new Error("detail unavailable")
+    const resourceEdit = {} as never
+
+    const { rerender } = render(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        resourceEdit={resourceEdit}
+      />,
+    )
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "managedSiteChannels:alerts.loadError.title",
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent("detail unavailable")
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "common:actions.retry",
+      }),
+    )
+
+    expect(retryResourceEditLoadMock).toHaveBeenCalledTimes(1)
+
+    channelFormScenario.isResourceEditLoading = true
+    channelFormScenario.resourceEditLoadError = null
+    rerender(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        resourceEdit={resourceEdit}
+      />,
+    )
+
+    const retryingButton = screen.getByRole("button", {
+      name: "common:status.retrying",
+    })
+    expect(retryingButton).toHaveAttribute("aria-busy", "true")
+    expect(retryingButton).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "modal-close" }),
+    ).not.toHaveAttribute("aria-busy")
+    expect(
+      screen.getByRole("button", { name: "channelDialog:actions.update" }),
+    ).not.toHaveAttribute("aria-busy")
+
+    await user.click(retryingButton)
+    expect(retryResourceEditLoadMock).toHaveBeenCalledTimes(1)
+
+    resolveRetry?.()
+    channelFormScenario.isResourceEditLoading = false
+    channelFormScenario.isResourceEditReady = true
+    channelFormScenario.resourceEditLoadError = null
+    rerender(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        resourceEdit={resourceEdit}
+      />,
+    )
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
   it("applies inverse, select-all, and clear actions to the selected models", async () => {

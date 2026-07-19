@@ -50,9 +50,8 @@ export function RuntimeKeyList({
       ...(onCreateDefaultKey
         ? [
             {
-              label: isCreating
-                ? t("dialog.copyKey.creatingKey")
-                : t("dialog.copyKey.createKey"),
+              label: t("dialog.copyKey.createKey"),
+              loadingLabel: t("dialog.copyKey.creatingKey"),
               onClick: onCreateDefaultKey,
               icon: <PlusIcon className="h-4 w-4" />,
               disabled: !canCreateDefaultKey || isCreating,

@@ -281,7 +281,12 @@ const readAccountBrowserSessionFromTempWindow = async (
       action: RuntimeActionIds.AutoDetectSite,
       url: options.baseUrl,
       requestId: `${options.requestIdPrefix ?? "account-browser-session"}-${Date.now()}`,
-      ...(options.suppressMinimize ? { suppressMinimize: true } : {}),
+      ...(options.tempWindowRequestSource
+        ? { tempWindowRequestSource: options.tempWindowRequestSource }
+        : {}),
+      ...(typeof options.suppressMinimize === "boolean"
+        ? { suppressMinimize: options.suppressMinimize }
+        : {}),
       ...(options.currentTab?.incognito === true ? { useIncognito: true } : {}),
     })
 

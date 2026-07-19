@@ -1,27 +1,30 @@
-import { render, screen, within } from "@testing-library/react"
+import { render as rtlRender, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
+import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  MODEL_GROUP_ACCESS_STATES,
+  type ActiveModelGroupContext,
+  type ModelGroupContext,
+} from "~/features/ModelList/groupContext"
+import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
 import ModelList from "~/features/ModelList/ModelList"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+} from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
+import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
+import { testI18n } from "~~/tests/test-utils/i18n"
 
-const { mockUseModelListData, openKeysPageMock } = vi.hoisted(() => ({
-  mockUseModelListData: vi.fn(),
-  openKeysPageMock: vi.fn(),
-}))
-
-vi.mock("react-i18next", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-i18next")>()
-
-  return {
-    ...actual,
-    useTranslation: () => ({
-      t: (key: string) => key,
-    }),
-  }
-})
+const { mockUseModelListData, openKeysPageMock, replaceWithinOptionsPageMock } =
+  vi.hoisted(() => ({
+    mockUseModelListData: vi.fn(),
+    openKeysPageMock: vi.fn(),
+    replaceWithinOptionsPageMock: vi.fn(),
+  }))
 
 vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
   useModelListData: (...args: unknown[]) => mockUseModelListData(...args),
@@ -33,6 +36,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
   return {
     ...actual,
     openKeysPage: openKeysPageMock,
+    replaceWithinOptionsPage: replaceWithinOptionsPageMock,
   }
 })
 
@@ -52,7 +56,35 @@ vi.mock(
 )
 
 vi.mock("~/features/ModelList/components/AccountSelector", () => ({
-  AccountSelector: () => <div data-testid="account-selector" />,
+  AccountSelector: ({
+    setSelectedSourceValue,
+  }: {
+    setSelectedSourceValue: (value: string) => void
+  }) => (
+    <div data-testid="account-selector">
+      <button
+        type="button"
+        onClick={() => setSelectedSourceValue("account:account-1")}
+      >
+        select-account-source
+      </button>
+      <button
+        type="button"
+        onClick={() => setSelectedSourceValue("profile:profile-1")}
+      >
+        select-profile-source
+      </button>
+      <button
+        type="button"
+        onClick={() => setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)}
+      >
+        select-all-sources
+      </button>
+      <button type="button" onClick={() => setSelectedSourceValue("")}>
+        clear-source
+      </button>
+    </div>
+  ),
 }))
 
 vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
@@ -108,8 +140,14 @@ vi.mock("~/features/ModelList/components/ProviderTabs", async () => {
   const { Tabs } = await import("~/components/ui")
 
   return {
-    ProviderTabs: ({ children }: { children: ReactNode }) => (
-      <Tabs value="all">
+    ProviderTabs: ({
+      children,
+      effectiveSelectedVendor,
+    }: {
+      children: ReactNode
+      effectiveSelectedVendor: string
+    }) => (
+      <Tabs value={effectiveSelectedVendor}>
         <div data-testid="provider-tabs">{children}</div>
       </Tabs>
     ),
@@ -122,8 +160,10 @@ vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
 
 vi.mock("~/features/ModelList/components/ModelDisplay", () => ({
   ModelDisplay: ({
+    models,
     onVerifyModel,
   }: {
+    models?: Array<{ model: { model_name: string } }>
     onVerifyModel?: (...args: any[]) => void
   }) => (
     <button
@@ -131,6 +171,9 @@ vi.mock("~/features/ModelList/components/ModelDisplay", () => ({
       onClick={() => onVerifyModel?.(ACCOUNT_SOURCE, "gpt-test", ["vip"])}
     >
       open-api-verification
+      {models?.map(({ model }) => (
+        <span key={model.model_name}>{model.model_name}</span>
+      ))}
     </button>
   ),
 }))
@@ -188,6 +231,14 @@ vi.mock("~/features/ModelList/components/ModelKeyDialog", () => ({
   ),
 }))
 
+function render(ui: ReactElement) {
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <I18nextProvider i18n={testI18n}>{children}</I18nextProvider>
+    ),
+  })
+}
+
 const ACCOUNT = {
   id: "account-1",
   name: "Account One",
@@ -222,6 +273,41 @@ const ACCOUNT_SOURCE = {
   capabilities: CAPABILITIES,
 } as any
 
+const PROFILE = {
+  id: "profile-1",
+  name: "Reusable Key",
+  apiType: "openai-compatible",
+  baseUrl: "https://profile.example.com",
+  apiKey: "sk-example",
+  tagIds: [],
+  notes: "",
+  createdAt: 1,
+  updatedAt: 1,
+} as any
+
+function withKnownGroupContexts<T extends object>(
+  fixture: T,
+  groups = ["default"],
+): T & Pick<CalculatedModelItem, "groupContext" | "activeGroupContext"> {
+  const { effectiveGroup } = fixture as { effectiveGroup?: string }
+  const groupContext: ModelGroupContext = {
+    accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+    supportedGroups: groups,
+    usableGroups: groups,
+    priceableGroups: groups,
+  }
+  const activeGroupContext: ActiveModelGroupContext = {
+    activeUsableGroups: groups,
+    activePriceableGroups: groups,
+    actionGroups:
+      effectiveGroup && groups.includes(effectiveGroup)
+        ? [effectiveGroup]
+        : groups,
+  }
+
+  return { ...fixture, groupContext, activeGroupContext }
+}
+
 function createModelListData() {
   return {
     accounts: [ACCOUNT],
@@ -233,14 +319,19 @@ function createModelListData() {
     setSelectedSourceValue: vi.fn(),
     searchTerm: "",
     setSearchTerm: vi.fn(),
-    selectedProvider: "all",
+    selectedProvider: "filter:all",
     setSelectedProvider: vi.fn(),
+    effectiveSelectedVendor: "filter:all",
+    shouldRepairSelectedVendor: false,
+    vendorCatalog: [],
     sortMode: "default",
     setSortMode: vi.fn(),
     selectedBillingMode: "all",
     setSelectedBillingMode: vi.fn(),
     selectedGroups: ["vip"],
     setSelectedGroups: vi.fn(),
+    selectedVerificationResults: ["pass", "fail", "unverified"],
+    setSelectedVerificationResults: vi.fn(),
     allAccountsExcludedGroupsByAccountId: {},
     setAllAccountsExcludedGroupsByAccountId: vi.fn(),
     showRealPrice: false,
@@ -274,14 +365,14 @@ function createModelListData() {
     isFallbackCatalogActive: false,
     isAihubmixCatalogFallbackActive: false,
     filteredModels: [],
+    unclassifiedVendorCount: 0,
     accountSummaryCountsByAccountId: new Map(),
-    allProvidersFilteredCount: 1,
+    allVendorsFilteredCount: 1,
     getFilteredResultCount: vi.fn(() => 1),
     availableGroups: ["vip"],
     availableAccountGroupsByAccountId: {},
     availableAccountGroupOptionsByAccountId: {},
     loadPricingData: vi.fn(),
-    getProviderFilteredCount: vi.fn(() => 1),
     accountQueryStates: [],
     allAccountsFilterAccountIds: [],
     setAllAccountsFilterAccountIds: vi.fn(),
@@ -308,6 +399,38 @@ describe("ModelList", () => {
     expect(openKeysPageMock).toHaveBeenCalledWith(ACCOUNT.id)
   })
 
+  it.each([
+    ["select-account-source", "account:account-1", { accountId: ACCOUNT.id }],
+    ["select-profile-source", "profile:profile-1", { profileId: PROFILE.id }],
+    [
+      "select-all-sources",
+      ALL_ACCOUNTS_SOURCE_VALUE,
+      { accountId: ALL_ACCOUNTS_SOURCE_VALUE },
+    ],
+    ["clear-source", "", undefined],
+  ])(
+    "replaces the model-list route when the user chooses %s",
+    async (buttonName, selectedValue, expectedParams) => {
+      const user = userEvent.setup()
+      const setSelectedSourceValue = vi.fn()
+      mockUseModelListData.mockReturnValue({
+        ...createModelListData(),
+        profiles: [PROFILE],
+        setSelectedSourceValue,
+      })
+
+      render(<ModelList />)
+
+      await user.click(screen.getByRole("button", { name: buttonName }))
+
+      expect(setSelectedSourceValue).toHaveBeenCalledWith(selectedValue)
+      expect(replaceWithinOptionsPageMock).toHaveBeenCalledWith(
+        "#models",
+        expectedParams,
+      )
+    },
+  )
+
   it("does not show the key-management title shortcut for non-account sources", () => {
     mockUseModelListData.mockReturnValue({
       ...createModelListData(),
@@ -329,6 +452,24 @@ describe("ModelList", () => {
         screen.getByTestId(MODEL_LIST_TEST_IDS.titleActions),
       ).queryByTestId(MODEL_LIST_TEST_IDS.openSelectedAccountKeysButton),
     ).not.toBeInTheDocument()
+  })
+
+  it("renders unclassified model content in the effective unclassified tab panel", () => {
+    mockUseModelListData.mockReturnValue({
+      ...createModelListData(),
+      effectiveSelectedVendor: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+      unclassifiedVendorCount: 1,
+      filteredModels: [
+        withKnownGroupContexts({
+          model: { model_name: "unclassified-model" },
+          source: ACCOUNT_SOURCE,
+        }),
+      ],
+    })
+
+    render(<ModelList />)
+
+    expect(screen.getByText("unclassified-model")).toBeInTheDocument()
   })
 
   it("opens the model key dialog from an incompatible API verification token state", async () => {
@@ -370,20 +511,21 @@ describe("ModelList", () => {
       const matchingModelName =
         filters?.searchTerm === "target" ? "gpt-target" : "gpt-other"
       return [
-        {
-          model: {
-            model_name: matchingModelName,
-            quota_type: 0,
-            model_ratio: 1,
-            model_price: 0,
-            completion_ratio: 1,
-            enable_groups: ["vip"],
-            supported_endpoint_types: [],
+        withKnownGroupContexts(
+          {
+            model: {
+              model_name: matchingModelName,
+              quota_type: 0,
+              model_ratio: 1,
+              model_price: 0,
+              completion_ratio: 1,
+              enable_groups: ["vip"],
+              supported_endpoint_types: [],
+            },
+            source: ACCOUNT_SOURCE,
           },
-          source: ACCOUNT_SOURCE,
-          calculatedPrice: {},
-          groupRatios: {},
-        },
+          ["vip"],
+        ),
       ]
     })
 

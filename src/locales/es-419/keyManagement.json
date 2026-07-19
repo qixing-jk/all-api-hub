@@ -15,7 +15,7 @@
     "enable": "Habilitar",
     "expandAll": "Expandir todo",
     "exportToCCSwitch": "Exportar a CC Switch",
-    "exportToKiloCode": "Exportar a Kilo Code",
+    "exportToKiloCode": "Exportar configuración de Kilo Code",
     "hideKey": "Ocultar clave",
     "importToClaudeCodeRouter": "Importar a Claude Code Router",
     "importToCliProxy": "Importar a CLIProxyAPI",

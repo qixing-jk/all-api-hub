@@ -14,10 +14,6 @@ vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
   useModelListData: (...args: unknown[]) => mockUseModelListData(...args),
 }))
 
-vi.mock("~/services/models/utils/modelProviders", () => ({
-  getAllProviders: () => [],
-}))
-
 vi.mock("~/services/verification/verificationResultHistory", () => ({
   createAccountModelVerificationHistoryTarget: vi.fn(() => "account-target"),
   createProfileModelVerificationHistoryTarget: vi.fn(() => "profile-target"),
@@ -124,8 +120,11 @@ function buildState(overrides: Record<string, unknown> = {}) {
     setSelectedSourceValue: vi.fn(),
     searchTerm: "",
     setSearchTerm: vi.fn(),
-    selectedProvider: "all",
+    selectedProvider: "filter:all",
     setSelectedProvider: vi.fn(),
+    effectiveSelectedVendor: "filter:all",
+    shouldRepairSelectedVendor: false,
+    vendorCatalog: [],
     selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
     setSelectedBillingMode: vi.fn(),
     selectedGroups: [],
@@ -150,7 +149,7 @@ function buildState(overrides: Record<string, unknown> = {}) {
     baseFilteredModels: [],
     availableGroups: [],
     loadPricingData: vi.fn(),
-    getProviderFilteredCount: vi.fn(() => 0),
+    allVendorsFilteredCount: 0,
     accountQueryStates: [],
     allAccountsFilterAccountIds: [],
     setAllAccountsFilterAccountIds: vi.fn(),

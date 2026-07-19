@@ -94,11 +94,11 @@
   <hr>
 
   <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://www.right.codes/register?aff=690a8be5">
+    <a class="sponsor-logo" href="https://www.aicodemirror.com/register?invitecode=7IQNR8">
       <img src="../../resources/partners/aicodemirror.png" alt="AICodeMirror">
     </a>
     <p>
-      <strong>AICodeMirror</strong> 提供 Claude Code / Codex / Gemini CLI 官方高稳定中转服务，支持企业级高并发、极速开票、7×24 专属技术支持。Claude Code / Codex / Gemini 官方渠道低至 3.8 / 0.2 / 0.9 折，充值更有折上折。通过<a href="https://www.right.codes/register?aff=690a8be5">此链接</a>注册，可享受首充 <strong>8 折优惠</strong>，企业客户最高可享 7.5 折。
+      <strong>AICodeMirror</strong> 提供 Claude Code / Codex / Gemini CLI 官方高稳定中转服务，支持企业级高并发、极速开票、7×24 专属技术支持。Claude Code / Codex / Gemini 官方渠道低至 3.8 / 0.2 / 0.9 折，充值更有折上折。通过<a href="https://www.aicodemirror.com/register?invitecode=7IQNR8">此链接</a>注册，可享受首充 <strong>8 折优惠</strong>，企业客户最高可享 7.5 折。
     </p>
   </section>
 

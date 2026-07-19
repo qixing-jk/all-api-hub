@@ -254,6 +254,7 @@ const hashStringForCache = (value: string) => {
  * @returns State, derived data, and handlers for token management UI.
  */
 export function useKeyManagement(routeParams?: Record<string, string>) {
+  const isRouteControlled = routeParams !== undefined
   const { t } = useTranslation(["keyManagement", "messages"])
   const { enabledDisplayData } = useAccountData()
   const {
@@ -1213,15 +1214,25 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   }, [accountById, allAccountsFilterAccountIds, selectedAccount])
 
   useEffect(() => {
-    if (routeParams?.accountId && enabledDisplayData.length > 0) {
-      const accountExists = enabledDisplayData.some(
-        (acc) => acc.id === routeParams.accountId,
-      )
-      if (accountExists) {
-        setSelectedAccount(routeParams.accountId)
-      }
+    if (!isRouteControlled) {
+      return
     }
-  }, [routeParams?.accountId, enabledDisplayData])
+
+    const requestedAccountId = routeParams?.accountId?.trim()
+    if (!requestedAccountId) {
+      setSelectedAccount("")
+      return
+    }
+
+    if (enabledDisplayData.length === 0) {
+      return
+    }
+
+    const accountExists =
+      requestedAccountId === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE ||
+      enabledDisplayData.some((acc) => acc.id === requestedAccountId)
+    setSelectedAccount(accountExists ? requestedAccountId : "")
+  }, [routeParams?.accountId, enabledDisplayData, isRouteControlled])
 
   useEffect(() => {
     if (selectedAccount) {

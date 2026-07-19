@@ -1,8 +1,4 @@
-import {
-  ArrowPathIcon,
-  EyeIcon,
-  EyeSlashIcon,
-} from "@heroicons/react/24/outline"
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
@@ -68,13 +64,10 @@ export function KeyDisplay({
               ? t("actions.hideKey")
               : t("actions.showKey")
           }
-          aria-busy={isKeyVisibilityLoading}
-          disabled={isKeyVisibilityLoading}
+          loading={isKeyVisibilityLoading}
           className="shrink-0"
         >
-          {isKeyVisibilityLoading ? (
-            <ArrowPathIcon className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
-          ) : visibleKeys.has(tokenIdentityKey) ? (
+          {visibleKeys.has(tokenIdentityKey) ? (
             <EyeSlashIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           ) : (
             <EyeIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

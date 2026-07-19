@@ -3,8 +3,15 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
 import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
 import {
+  getModelCapabilityBadges,
+  matchesModelCapabilityFilters,
+  MODEL_CAPABILITY_FILTER_VALUES,
+} from "~/features/ModelList/modelCapabilityFilters"
+import {
+  createAccountRuntimeKeyModelListSourceIdentity,
   createAccountSource,
   createAccountTokenModelListSourceIdentity,
   createAllAccountsSource,
@@ -20,7 +27,9 @@ import {
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
-import { MODEL_PROVIDER_FILTER_VALUES } from "~/services/models/utils/modelProviders"
+import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
+import type { ModelMetadata } from "~/services/models/modelMetadata/types"
+import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -61,17 +70,24 @@ const createPricingModel = (
 const createPricingResponse = (
   models: Array<string | Partial<PricingResponse["data"][number]>>,
   overrides: Partial<PricingResponse> = {},
-): PricingResponse => ({
-  data: models.map((model) =>
-    typeof model === "string"
-      ? createPricingModel({ model_name: model })
-      : createPricingModel(model),
-  ),
-  group_ratio: {},
-  success: true,
-  usable_group: {},
-  ...overrides,
-})
+): PricingResponse => {
+  const groupRatio = overrides.group_ratio ?? { default: 1 }
+  const usableGroup =
+    overrides.usable_group ??
+    Object.fromEntries(Object.keys(groupRatio).map((group) => [group, group]))
+
+  return {
+    data: models.map((model) =>
+      typeof model === "string"
+        ? createPricingModel({ model_name: model })
+        : createPricingModel(model),
+    ),
+    group_ratio: groupRatio,
+    success: true,
+    usable_group: usableGroup,
+    ...overrides,
+  }
+}
 
 function renderUseFilteredModels(
   initialOverrides: Partial<Parameters<typeof useFilteredModels>[0]> = {},
@@ -85,7 +101,9 @@ function renderUseFilteredModels(
         selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
         selectedGroups: [],
         searchTerm: "",
-        selectedProvider: MODEL_PROVIDER_FILTER_VALUES.ALL,
+        selectedProvider: MODEL_VENDOR_FILTER_VALUES.All,
+        selectedModelCapabilities: [],
+        modelMetadata: [],
         sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
         showRealPrice: false,
         ...overrides,
@@ -97,6 +115,29 @@ function renderUseFilteredModels(
 }
 
 describe("useFilteredModels", () => {
+  it("returns no rows or vendor catalog without pricing and a selected source", async () => {
+    const { result } = renderUseFilteredModels()
+
+    await waitFor(() => expect(result.current.filteredModels).toEqual([]))
+
+    expect(result.current.baseFilteredModels).toEqual([])
+    expect(result.current.vendorCatalog).toEqual([])
+    expect(result.current.unclassifiedVendorCount).toBe(0)
+  })
+
+  it("does not reuse single-source pricing for an all-accounts source without contexts", async () => {
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(["gpt-4o-mini"]),
+      pricingContexts: [],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toEqual([]))
+
+    expect(result.current.vendorCatalog).toEqual([])
+    expect(result.current.allVendorsFilteredCount).toBe(0)
+  })
+
   it("preserves profile-backed items when an account filter is active", async () => {
     const profileSource = createProfileSource({
       id: "profile-1",
@@ -120,6 +161,19 @@ describe("useFilteredModels", () => {
 
     expect(result.current.filteredModels).toHaveLength(1)
     expect(result.current.filteredModels[0]?.source.kind).toBe("profile")
+    expect(result.current.filteredModels[0]).toMatchObject({
+      groupContext: {
+        accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+        usableGroups: [],
+        priceableGroups: [],
+      },
+      activeGroupContext: {
+        activeUsableGroups: [],
+        activePriceableGroups: [],
+        actionGroups: [],
+      },
+      effectiveGroup: undefined,
+    })
   })
 
   it("ignores stale account filters outside the all-accounts source", async () => {
@@ -144,7 +198,7 @@ describe("useFilteredModels", () => {
     expect(result.current.accountSummaryCountsByAccountId.size).toBe(0)
   })
 
-  it("computes provider counts from the account-filtered model set", async () => {
+  it("computes vendor counts from the account-filtered model set", async () => {
     const accountA = createDisplayAccount({
       id: "account-a",
       name: "Account A",
@@ -176,10 +230,23 @@ describe("useFilteredModels", () => {
     await waitFor(() => expect(result.current).not.toBeNull())
 
     expect(result.current.filteredModels).toHaveLength(2)
-    expect(result.current.allProvidersFilteredCount).toBe(2)
-    expect(result.current.getProviderFilteredCount("OpenAI")).toBe(1)
-    expect(result.current.getProviderFilteredCount("Claude")).toBe(1)
-    expect(result.current.getProviderFilteredCount("Gemini")).toBe(0)
+    expect(result.current.allVendorsFilteredCount).toBe(2)
+    expect(result.current.vendorCatalog).toEqual([
+      {
+        kind: "known",
+        key: "known:anthropic",
+        knownId: "anthropic",
+        label: "Anthropic",
+        count: 1,
+      },
+      {
+        kind: "known",
+        key: "known:openai",
+        knownId: "openai",
+        label: "OpenAI",
+        count: 1,
+      },
+    ])
   })
 
   it("keeps rows from every selected account when multiple account filters are active", async () => {
@@ -263,15 +330,14 @@ describe("useFilteredModels", () => {
         ],
         {
           group_ratio: { vip: 2, "": 5 },
+          usable_group: { vip: "vip" },
         },
       ),
       selectedSource: source,
       selectedGroups: ["vip"],
     })
 
-    await waitFor(() =>
-      expect(result.current.availableGroups).toEqual(["vip", "default"]),
-    )
+    await waitFor(() => expect(result.current.availableGroups).toEqual(["vip"]))
 
     expect(result.current.baseFilteredModels).toHaveLength(1)
     expect(result.current.filteredModels).toHaveLength(1)
@@ -289,7 +355,7 @@ describe("useFilteredModels", () => {
     })
   })
 
-  it("searches model descriptions before applying provider filters", async () => {
+  it("searches model descriptions before applying vendor filters", async () => {
     const account = createDisplayAccount({
       id: "account-search",
       balance: { USD: 5, CNY: 35 },
@@ -315,7 +381,7 @@ describe("useFilteredModels", () => {
       selectedSource: createAccountSource(account),
       selectedGroups: [],
       searchTerm: "batch",
-      selectedProvider: "Claude",
+      selectedProvider: "known:anthropic",
     })
 
     await waitFor(() =>
@@ -328,8 +394,10 @@ describe("useFilteredModels", () => {
     expect(
       result.current.filteredModels.map((item) => item.model.model_name),
     ).toEqual(["claude-3-5-sonnet"])
-    expect(result.current.getProviderFilteredCount("Claude")).toBe(1)
-    expect(result.current.getProviderFilteredCount("Gemini")).toBe(1)
+    expect(result.current.vendorCatalog).toEqual([
+      expect.objectContaining({ key: "known:anthropic", count: 1 }),
+      expect.objectContaining({ key: "known:google", count: 1 }),
+    ])
   })
 
   it("estimates filtered models and counts from pending filters", async () => {
@@ -357,7 +425,7 @@ describe("useFilteredModels", () => {
         },
       ]),
       selectedSource: createAccountSource(account),
-      selectedProvider: "Claude",
+      selectedProvider: "known:anthropic",
     })
 
     await waitFor(() =>
@@ -374,6 +442,683 @@ describe("useFilteredModels", () => {
     expect(result.current.getFilteredResultCount({ searchTerm: "batch" })).toBe(
       1,
     )
+  })
+
+  it("keeps pending-filter estimates scoped to unclassified rows", async () => {
+    const account = createDisplayAccount({
+      id: "account-unclassified-estimate",
+    })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        {
+          model_name: "gpt-4o-mini",
+          model_description: "Batch known model",
+        },
+        {
+          model_name: "unclassified-batch-model",
+          model_description: "Batch unresolved model",
+        },
+        {
+          model_name: "other-unclassified-model",
+          model_description: "Other unresolved model",
+        },
+      ]),
+      selectedSource: createAccountSource(account),
+      selectedProvider: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(
+      result.current
+        .getFilteredModels({ searchTerm: "batch" })
+        .map((item) => item.model.model_name),
+    ).toEqual(["unclassified-batch-model"])
+    expect(result.current.getFilteredResultCount({ searchTerm: "batch" })).toBe(
+      1,
+    )
+  })
+
+  it("resolves vendors for direct-pricing rows and preserves row alignment", async () => {
+    const account = createDisplayAccount({ id: "account-direct-vendors" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        {
+          model_name: "example-direct-a",
+          vendorEvidence: {
+            kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+            name: "Example Lab",
+          },
+        },
+        { model_name: "unclassified-direct" },
+        {
+          model_name: "example-direct-b",
+          vendorEvidence: {
+            kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+            name: "Other Lab",
+          },
+        },
+      ]),
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() =>
+      expect(result.current.baseFilteredModels).toHaveLength(3),
+    )
+
+    expect(
+      result.current.baseFilteredModels.map((item) => [
+        item.model.model_name,
+        item.resolvedVendor.state === "resolved"
+          ? item.resolvedVendor.label
+          : "Unknown",
+      ]),
+    ).toEqual([
+      ["example-direct-a", "Example Lab"],
+      ["unclassified-direct", "Unknown"],
+      ["example-direct-b", "Other Lab"],
+    ])
+  })
+
+  it("classifies reported fallback model ids and filters them by the aligned vendor", async () => {
+    const account = createDisplayAccount({ id: "account-curated-vendors" })
+    const pricingData = createPricingResponse([
+      "codex-auto-review",
+      "LongCat-Flash-Lite",
+      "alibaba/qwen3.5-flash",
+    ])
+    const selectedSource = createAccountSource(account)
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData,
+      selectedSource,
+      modelMetadata: [],
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(3))
+
+    for (const [modelId, key, label] of [
+      ["codex-auto-review", "known:openai", "OpenAI"],
+      ["LongCat-Flash-Lite", "known:meituan", "Meituan"],
+      ["alibaba/qwen3.5-flash", "known:alibaba", "Alibaba"],
+    ] as const) {
+      expect(
+        result.current.baseFilteredModels.find(
+          (item) => item.model.model_name === modelId,
+        )?.resolvedVendor,
+      ).toMatchObject({ state: "resolved", key, label })
+      expect(result.current.vendorCatalog).toContainEqual(
+        expect.objectContaining({ key, label, count: 1 }),
+      )
+    }
+    expect(result.current.vendorCatalog).toHaveLength(3)
+
+    rerender({
+      pricingData,
+      selectedSource,
+      selectedProvider: "known:meituan",
+      modelMetadata: [],
+    })
+
+    expect(result.current.effectiveSelectedVendor).toBe("known:meituan")
+    expect(result.current.filteredModels).toHaveLength(1)
+    expect(result.current.filteredModels[0]?.model.model_name).toBe(
+      "LongCat-Flash-Lite",
+    )
+  })
+
+  it("resolves vendors for catalog-only rows without requiring pricing", async () => {
+    const account = createDisplayAccount({ id: "account-catalog-vendors" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "example-catalog-model",
+            vendorEvidence: {
+              kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+              name: "Catalog Lab",
+            },
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.NONE,
+              precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+              unavailable_reason:
+                MODEL_UNAVAILABLE_PRICE_REASONS.MODEL_LIST_ONLY,
+            },
+          },
+        ],
+        {
+          model_list_source: {
+            kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+            supportsPricing: false,
+          },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    expect(result.current.filteredModels[0]?.resolvedVendor).toMatchObject({
+      state: "resolved",
+      kind: "custom",
+      label: "Catalog Lab",
+    })
+  })
+
+  it("keeps publisher evidence authoritative when metadata arrives later", async () => {
+    const account = createDisplayAccount({ id: "account-publisher-vendor" })
+    const pricingData = createPricingResponse([
+      {
+        model_name: "example-late-metadata",
+        vendorEvidence: {
+          kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+          name: "Publisher Lab",
+        },
+      },
+    ])
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData,
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+    rerender({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      modelMetadata: [
+        {
+          id: "openai/example-late-metadata",
+          name: "Example Late Metadata",
+          provider_id: "openai",
+        },
+      ],
+    })
+
+    expect(result.current.filteredModels[0]?.resolvedVendor).toMatchObject({
+      state: "resolved",
+      kind: "custom",
+      label: "Publisher Lab",
+      source: "publisher-evidence",
+    })
+  })
+
+  it("derives a counted catalog after account, group, search, capability, and billing filters", async () => {
+    const accountA = createDisplayAccount({ id: "vendor-filter-account-a" })
+    const accountB = createDisplayAccount({ id: "vendor-filter-account-b" })
+    const publisher = (name: string) => ({
+      kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+      name,
+    })
+    const metadata = (
+      id: string,
+      providerId: string,
+      reasoning: boolean,
+    ): ModelMetadata => ({
+      id: `${providerId}/${id}`,
+      name: id,
+      provider_id: providerId,
+      capabilities: { reasoning },
+    })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: accountA,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "account-a-model",
+                vendorEvidence: publisher("Account A Lab"),
+                enable_groups: ["vip"],
+              },
+            ],
+            {
+              group_ratio: { vip: 1 },
+              usable_group: { vip: "vip" },
+            },
+          ),
+        },
+        {
+          account: accountB,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "wrong-group-model",
+                model_description: "target",
+                vendorEvidence: publisher("Wrong Group Lab"),
+                enable_groups: ["default"],
+              },
+              {
+                model_name: "wrong-search-model",
+                model_description: "other",
+                vendorEvidence: publisher("Wrong Search Lab"),
+                enable_groups: ["vip"],
+              },
+              {
+                model_name: "wrong-capability-model",
+                model_description: "target",
+                vendorEvidence: publisher("Wrong Capability Lab"),
+                enable_groups: ["vip"],
+              },
+              {
+                model_name: "wrong-billing-model",
+                model_description: "target",
+                vendorEvidence: publisher("Wrong Billing Lab"),
+                enable_groups: ["vip"],
+                quota_type: 0,
+              },
+              {
+                model_name: "selected-model",
+                model_description: "target",
+                vendorEvidence: publisher("Selected Lab"),
+                enable_groups: ["vip"],
+                quota_type: 1,
+              },
+            ],
+            { group_ratio: { default: 1, vip: 1 } },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      accountFilterAccountIds: [accountB.id],
+      selectedGroups: ["vip"],
+      searchTerm: "target",
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.REASONING],
+      selectedBillingMode: MODEL_LIST_BILLING_MODES.PER_CALL,
+      modelMetadata: [
+        metadata("wrong-capability-model", "example-capability", false),
+        metadata("wrong-billing-model", "example-billing", true),
+        metadata("selected-model", "example-selected", true),
+      ],
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    expect(result.current.vendorCatalog).toEqual([
+      expect.objectContaining({
+        key: "custom:selected%20lab",
+        label: "Selected Lab",
+        count: 1,
+      }),
+    ])
+    expect(result.current.allVendorsFilteredCount).toBe(1)
+  })
+
+  it("clamps a missing stored vendor for the same render while leaving storage repair to the caller", async () => {
+    const account = createDisplayAccount({ id: "account-stale-vendor" })
+    const pricingData = createPricingResponse([
+      "gpt-4o-mini",
+      "claude-3-5-sonnet",
+    ])
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      selectedProvider: "known:openai",
+    })
+
+    await waitFor(() =>
+      expect(result.current.filteredModels[0]?.model.model_name).toBe(
+        "gpt-4o-mini",
+      ),
+    )
+    rerender({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      selectedProvider: "known:openai",
+      searchTerm: "claude",
+    })
+
+    expect(result.current.effectiveSelectedVendor).toBe(
+      MODEL_VENDOR_FILTER_VALUES.All,
+    )
+    expect(result.current.shouldRepairSelectedVendor).toBe(true)
+    expect(
+      result.current.filteredModels.map((item) => item.model.model_name),
+    ).toEqual(["claude-3-5-sonnet"])
+  })
+
+  it("counts unclassified rows from the same base-filtered model set", async () => {
+    const account = createDisplayAccount({ id: "account-unclassified-count" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        "gpt-4o-mini",
+        "unclassified-model",
+        "another-unclassified-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      searchTerm: "unclassified",
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(result.current.unclassifiedVendorCount).toBe(2)
+    expect(result.current.allVendorsFilteredCount).toBe(2)
+    expect(result.current.vendorCatalog).toEqual([])
+  })
+
+  it("filters the model list to unresolved vendor rows", async () => {
+    const account = createDisplayAccount({ id: "account-unclassified-filter" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(["gpt-4o-mini", "unclassified-model"]),
+      selectedSource: createAccountSource(account),
+      selectedProvider: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    expect(result.current.effectiveSelectedVendor).toBe(
+      MODEL_VENDOR_FILTER_VALUES.Unclassified,
+    )
+    expect(result.current.filteredModels[0]?.model.model_name).toBe(
+      "unclassified-model",
+    )
+  })
+
+  it("clamps an unclassified selection when base filters remove every unresolved row", async () => {
+    const account = createDisplayAccount({ id: "account-unclassified-stale" })
+    const pricingData = createPricingResponse([
+      "gpt-4o-mini",
+      "unclassified-model",
+    ])
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      selectedProvider: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+    })
+
+    await waitFor(() =>
+      expect(result.current.effectiveSelectedVendor).toBe(
+        MODEL_VENDOR_FILTER_VALUES.Unclassified,
+      ),
+    )
+    rerender({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      selectedProvider: MODEL_VENDOR_FILTER_VALUES.Unclassified,
+      searchTerm: "gpt",
+    })
+
+    expect(result.current.effectiveSelectedVendor).toBe(
+      MODEL_VENDOR_FILTER_VALUES.All,
+    )
+    expect(result.current.shouldRepairSelectedVendor).toBe(true)
+    expect(result.current.unclassifiedVendorCount).toBe(0)
+    expect(result.current.filteredModels[0]?.model.model_name).toBe(
+      "gpt-4o-mini",
+    )
+  })
+
+  it("excludes unknown vendors and sorts counted catalog entries by count then key", async () => {
+    const account = createDisplayAccount({ id: "account-vendor-order" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        "gpt-4o-mini",
+        "claude-3-5-sonnet",
+        "gpt-4.1-mini",
+        "unclassified-model",
+      ]),
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(4))
+
+    expect(
+      result.current.vendorCatalog.map(({ key, count }) => ({ key, count })),
+    ).toEqual([
+      { key: "known:openai", count: 2 },
+      { key: "known:anthropic", count: 1 },
+    ])
+  })
+
+  it("filters models by explicit metadata capabilities and modalities", async () => {
+    const account = createDisplayAccount({
+      id: "account-model-capability-filter",
+      balance: { USD: 5, CNY: 35 },
+    })
+    const modelMetadata: ModelMetadata[] = [
+      {
+        id: "openai/gpt-4o",
+        name: "GPT-4o",
+        provider_id: "openai",
+        capabilities: {
+          reasoning: false,
+          toolCall: true,
+        },
+        modalities: {
+          input: ["text", "image"],
+          output: ["text"],
+        },
+      },
+      {
+        id: "deepseek/deepseek-reasoner",
+        name: "DeepSeek Reasoner",
+        provider_id: "deepseek",
+        capabilities: {
+          reasoning: true,
+          toolCall: false,
+        },
+        modalities: {
+          input: ["text"],
+          output: ["text"],
+        },
+      },
+      {
+        id: "openai/gpt-image-1",
+        name: "GPT Image 1",
+        provider_id: "openai",
+        modalities: {
+          input: ["text"],
+          output: ["image"],
+        },
+      },
+      {
+        id: "example/media-model",
+        name: "Media Model",
+        provider_id: "example",
+        modalities: {
+          input: ["text", "audio", "video"],
+          output: ["text", "audio", "video"],
+        },
+      },
+    ]
+
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        "gpt-4o",
+        "gpt-image-1",
+        "deepseek-reasoner",
+        "media-model",
+        "unknown-audio-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      modelMetadata,
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT],
+    })
+
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["gpt-4o"]),
+    )
+
+    rerender({
+      pricingData: createPricingResponse([
+        "gpt-4o",
+        "gpt-image-1",
+        "deepseek-reasoner",
+        "media-model",
+        "unknown-audio-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      modelMetadata,
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.REASONING],
+    })
+
+    expect(
+      result.current.filteredModels.map((item) => item.model.model_name),
+    ).toEqual(["deepseek-reasoner"])
+    expect(
+      result.current
+        .getFilteredModels({
+          selectedModelCapabilities: [
+            MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT,
+            MODEL_CAPABILITY_FILTER_VALUES.TOOL_CALL,
+          ],
+        })
+        .map((item) => item.model.model_name),
+    ).toEqual(["gpt-4o"])
+    expect(
+      result.current
+        .getFilteredModels({
+          selectedModelCapabilities: [
+            MODEL_CAPABILITY_FILTER_VALUES.IMAGE_OUTPUT,
+          ],
+        })
+        .map((item) => item.model.model_name),
+    ).toEqual(["gpt-image-1"])
+    expect(
+      result.current
+        .getFilteredModels({
+          selectedModelCapabilities: [
+            MODEL_CAPABILITY_FILTER_VALUES.AUDIO_OUTPUT,
+            MODEL_CAPABILITY_FILTER_VALUES.VIDEO_INPUT,
+          ],
+        })
+        .map((item) => item.model.model_name),
+    ).toEqual(["media-model"])
+  })
+
+  it("skips ambiguous bare aliases while preserving exact provider identities", async () => {
+    const metadata: ModelMetadata[] = [
+      {
+        id: "provider-a/shared-model",
+        name: "Shared Model A",
+        provider_id: "provider-a",
+        capabilities: { toolCall: true },
+      },
+      {
+        id: "provider-b/shared-model",
+        name: "Shared Model B",
+        provider_id: "provider-b",
+        capabilities: { toolCall: false },
+      },
+    ]
+    const account = createDisplayAccount({
+      id: "account-ambiguous-model-metadata",
+      balance: { USD: 5, CNY: 35 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        "shared-model",
+        "provider-a/shared-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      modelMetadata: metadata,
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.TOOL_CALL],
+    })
+
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["provider-a/shared-model"]),
+    )
+  })
+
+  it("matches every model when no capability filters are selected", () => {
+    expect(
+      matchesModelCapabilityFilters({
+        metadata: undefined,
+        filters: [],
+      }),
+    ).toBe(true)
+  })
+
+  it("returns no capability badges when metadata is missing", () => {
+    expect(getModelCapabilityBadges()).toEqual([])
+  })
+
+  it("reports capability metadata coverage before applying capability filters", async () => {
+    const account = createDisplayAccount({
+      id: "account-model-capability-coverage",
+      balance: { USD: 5, CNY: 35 },
+    })
+    const modelMetadata: ModelMetadata[] = [
+      {
+        id: "openai/gpt-4o",
+        name: "GPT-4o",
+        provider_id: "openai",
+        modalities: {
+          input: ["text", "image"],
+          output: ["text"],
+        },
+      },
+      {
+        id: "anthropic/claude-sonnet-4-5",
+        name: "Claude Sonnet 4.5",
+        provider_id: "anthropic",
+        capabilities: {
+          reasoning: true,
+        },
+        modalities: {
+          input: ["text"],
+          output: ["text"],
+        },
+      },
+    ]
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        "gpt-4o",
+        "claude-4.5-sonnet-20250929",
+        "unknown-custom-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      modelMetadata,
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT],
+    })
+
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["gpt-4o"]),
+    )
+
+    expect(result.current.modelCapabilityMetadataCoverage).toEqual({
+      matched: 2,
+      total: 3,
+      unmatched: 1,
+    })
+    expect(
+      result.current
+        .getFilteredModels({
+          selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.REASONING],
+        })
+        .map((item) => item.model.model_name),
+    ).toEqual(["claude-4.5-sonnet-20250929"])
+  })
+
+  it("does not apply capability filters when capability metadata is unavailable", async () => {
+    const account = createDisplayAccount({
+      id: "account-missing-model-capability-metadata",
+      balance: { USD: 5, CNY: 35 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        "gpt-4o",
+        "deepseek-reasoner",
+        "unknown-audio-model",
+      ]),
+      selectedSource: createAccountSource(account),
+      modelMetadata: [],
+      selectedModelCapabilities: [MODEL_CAPABILITY_FILTER_VALUES.IMAGE_INPUT],
+    })
+
+    await waitFor(() =>
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["gpt-4o", "deepseek-reasoner", "unknown-audio-model"]),
+    )
+    expect(result.current.supportsModelCapabilityFilter).toBe(false)
   })
 
   it("skips malformed account pricing payloads while keeping valid account models and groups", async () => {
@@ -410,7 +1155,7 @@ describe("useFilteredModels", () => {
       ],
       selectedSource: createAllAccountsSource(),
       selectedGroups: [],
-      selectedProvider: "Gemini",
+      selectedProvider: "known:google",
     })
 
     await waitFor(() => {
@@ -429,10 +1174,12 @@ describe("useFilteredModels", () => {
       throw new Error("Expected a valid account-backed filtered model")
     }
     expect(filteredSource.account.id).toBe("account-valid")
-    expect(result.current.getProviderFilteredCount("Gemini")).toBe(1)
+    expect(result.current.vendorCatalog).toEqual([
+      expect.objectContaining({ key: "known:google", count: 1 }),
+    ])
   })
 
-  it("returns no groups or models when single-account pricing metadata omits group ratios", async () => {
+  it("keeps authoritative known-empty single-account rows unavailable", async () => {
     const account = createDisplayAccount({
       id: "account-missing-group-ratio",
       balance: { USD: 0, CNY: 70 },
@@ -449,7 +1196,8 @@ describe("useFilteredModels", () => {
           },
         ],
         {
-          group_ratio: undefined as any,
+          group_ratio: {},
+          usable_group: {},
         },
       ),
       selectedSource: createAccountSource(account),
@@ -460,8 +1208,71 @@ describe("useFilteredModels", () => {
       expect(result.current.availableGroups).toEqual([])
     })
 
-    expect(result.current.filteredModels).toEqual([])
-    expect(result.current.baseFilteredModels).toEqual([])
+    expect(result.current.filteredModels).toHaveLength(1)
+    expect(result.current.filteredModels[0]).toMatchObject({
+      calculatedPrice: {
+        priceAvailability: "unavailable",
+        unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
+      },
+      groupContext: {
+        accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+        usableGroups: [],
+        priceableGroups: [],
+      },
+      activeGroupContext: {
+        activeUsableGroups: [],
+        activePriceableGroups: [],
+        actionGroups: [],
+      },
+    })
+    expect(result.current.baseFilteredModels).toHaveLength(1)
+  })
+
+  it("keeps authoritative known-empty all-account rows unavailable", async () => {
+    const account = createDisplayAccount({
+      id: "account-missing-all-groups",
+      balance: { USD: 0, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "ungrouped-model",
+                model_ratio: 1,
+                completion_ratio: 1,
+                enable_groups: [],
+              },
+            ],
+            {
+              group_ratio: {},
+              usable_group: {},
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      showRealPrice: true,
+    })
+
+    await waitFor(() => {
+      expect(result.current.filteredModels).toHaveLength(1)
+    })
+
+    expect(result.current.filteredModels[0]).toMatchObject({
+      calculatedPrice: {
+        priceAvailability: "unavailable",
+        unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
+      },
+      effectiveGroup: undefined,
+      groupContext: {
+        accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+        usableGroups: [],
+      },
+    })
   })
 
   it("keeps account contexts usable when all-accounts pricing metadata omits group ratios", async () => {
@@ -504,7 +1315,7 @@ describe("useFilteredModels", () => {
       "account-context-missing-group-ratio": ["default"],
     })
     expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
-      "account-context-missing-group-ratio": [{ name: "default", ratio: 1 }],
+      "account-context-missing-group-ratio": [{ name: "default" }],
     })
   })
 
@@ -593,6 +1404,14 @@ describe("useFilteredModels", () => {
       },
     )
     expect(result.current.filteredModels[0]?.effectiveGroup).toBeUndefined()
+    expect(result.current.filteredModels[0]?.groupContext.accessState).toBe(
+      MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+    )
+    expect(result.current.filteredModels[0]?.activeGroupContext).toEqual({
+      activeUsableGroups: [],
+      activePriceableGroups: [],
+      actionGroups: [],
+    })
   })
 
   it("downgrades only AIHubMix catalog fallback rows in all-accounts mode", async () => {
@@ -1002,6 +1821,37 @@ describe("useFilteredModels", () => {
         ),
       ).toEqual(["alpha row", "beta row"])
     })
+  })
+
+  it("uses code-point order when equal-price groups tie", async () => {
+    const account = createDisplayAccount({
+      id: "account-equal-group-price",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "shared-model",
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: ["a", "B"],
+          },
+        ],
+        {
+          group_ratio: { a: 1, B: 1 },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      showRealPrice: true,
+    })
+
+    await waitFor(() => {
+      expect(result.current.filteredModels).toHaveLength(1)
+    })
+
+    expect(result.current.filteredModels[0]?.effectiveGroup).toBe("B")
   })
 
   it("falls back to model-name ordering when prices and groups tie", async () => {
@@ -2349,6 +3199,597 @@ describe("useFilteredModels", () => {
       expect(
         result.current.filteredModels.map((item) => item.model.model_name),
       ).toEqual(["example-runtime-token-model", "example-runtime-call-model"])
+    })
+  })
+
+  it("derives single-account row groups from viewer-usable groups", async () => {
+    const account = createDisplayAccount({ id: "account-viewer-groups" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [{ model_name: "shared-model", enable_groups: ["vip", "default"] }],
+        {
+          group_ratio: { default: 1 },
+          usable_group: { default: "default" },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    const row = result.current.filteredModels[0]
+    expect(result.current.availableGroups).toEqual(["default"])
+    expect(row.groupContext).toEqual({
+      accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+      supportedGroups: ["vip", "default"],
+      usableGroups: ["default"],
+      priceableGroups: ["default"],
+    })
+    expect(row.activeGroupContext).toEqual({
+      activeUsableGroups: ["default"],
+      activePriceableGroups: ["default"],
+      actionGroups: ["default"],
+    })
+    expect(row.effectiveGroup).toBe("default")
+  })
+
+  it("keeps a selected usable group visible when its ratio is unavailable", async () => {
+    const account = createDisplayAccount({ id: "account-unpriced-vip" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "shared-model",
+            model_ratio: 1,
+            enable_groups: ["default", "vip"],
+          },
+        ],
+        {
+          group_ratio: { default: 1 },
+          usable_group: { default: "default", vip: "vip" },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      selectedGroups: ["vip"],
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    const row = result.current.filteredModels[0]
+    expect(row.calculatedPrice).toEqual({
+      priceAvailability: "unavailable",
+      unavailableReason:
+        MODEL_UNAVAILABLE_PRICE_REASONS.GROUP_RATIO_UNAVAILABLE,
+    })
+    expect(row.effectiveGroup).toBeUndefined()
+    expect(row.activeGroupContext).toEqual({
+      activeUsableGroups: ["vip"],
+      activePriceableGroups: [],
+      actionGroups: ["vip"],
+    })
+  })
+
+  it("keeps known-empty direct account rows visible without group options", async () => {
+    const account = createDisplayAccount({ id: "account-known-empty" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [{ model_name: "shared-model", enable_groups: ["default"] }],
+        { group_ratio: {}, usable_group: {} },
+      ),
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    const row = result.current.filteredModels[0]
+    expect(result.current.availableGroups).toEqual([])
+    expect(row.groupContext.accessState).toBe(MODEL_GROUP_ACCESS_STATES.KNOWN)
+    expect(row.activeGroupContext.activeUsableGroups).toEqual([])
+    expect(row.calculatedPrice).toEqual({
+      priceAvailability: "unavailable",
+      unavailableReason: MODEL_UNAVAILABLE_PRICE_REASONS.NO_USABLE_GROUP,
+    })
+  })
+
+  it("omits globally supported-only groups from all-account controls", async () => {
+    const account = createDisplayAccount({ id: "account-supported-only" })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                enable_groups: ["default", "vip"],
+              },
+            ],
+            {
+              group_ratio: { default: 1 },
+              usable_group: { default: "default" },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    expect(result.current.availableAccountGroupsByAccountId).toEqual({
+      "account-supported-only": ["default"],
+    })
+    expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
+      "account-supported-only": [{ name: "default", ratio: 1 }],
+    })
+  })
+
+  it("keeps group pricing isolated across account rows", async () => {
+    const accountA = createDisplayAccount({ id: "account-isolated-a" })
+    const accountB = createDisplayAccount({ id: "account-isolated-b" })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: accountA,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                model_ratio: 1,
+                enable_groups: ["default", "vip"],
+              },
+            ],
+            {
+              group_ratio: { default: 1, vip: 0.1 },
+              usable_group: { default: "default" },
+            },
+          ),
+        },
+        {
+          account: accountB,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                model_ratio: 1,
+                enable_groups: ["team"],
+              },
+            ],
+            {
+              group_ratio: { team: 0.5 },
+              usable_group: { team: "team" },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(
+      result.current.filteredModels.map((row) => ({
+        accountId:
+          row.source.kind === "account" ? row.source.account.id : "profile",
+        effectiveGroup: row.effectiveGroup,
+        supportedGroups: row.groupContext.supportedGroups,
+        usableGroups: row.groupContext.usableGroups,
+        isLowestPrice: row.isLowestPrice,
+      })),
+    ).toEqual([
+      {
+        accountId: "account-isolated-b",
+        effectiveGroup: "team",
+        supportedGroups: ["team"],
+        usableGroups: ["team"],
+        isLowestPrice: true,
+      },
+      {
+        accountId: "account-isolated-a",
+        effectiveGroup: "default",
+        supportedGroups: ["default", "vip"],
+        usableGroups: ["default"],
+        isLowestPrice: false,
+      },
+    ])
+  })
+
+  it("normalizes group keys once for row pricing and account options", async () => {
+    const account = createDisplayAccount({ id: "account-normalized-group" })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                model_ratio: 1,
+                enable_groups: ["vip"],
+              },
+            ],
+            {
+              group_ratio: { " vip ": 0.5 },
+              usable_group: { " vip ": true },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    const row = result.current.filteredModels[0]
+    expect(row.groupRatios).toEqual({ vip: 0.5 })
+    expect(row.groupContext.priceableGroups).toEqual(["vip"])
+    expect(row.effectiveGroup).toBe("vip")
+    expect(row.calculatedPrice).toMatchObject({
+      priceAvailability: "available",
+      inputUSD: 1,
+    })
+    expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
+      "account-normalized-group": [{ name: "vip", ratio: 0.5 }],
+    })
+  })
+
+  it("exposes normalized single-source ratios for group filter labels", async () => {
+    const account = createDisplayAccount({ id: "account-normalized-filter" })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "shared-model",
+            enable_groups: [" vip "],
+          },
+        ],
+        {
+          group_ratio: { " vip ": 0.5 },
+          usable_group: { " vip ": true },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => {
+      expect(result.current.availableGroups).toEqual(["vip"])
+    })
+    expect(result.current.singleSourceGroupRatios).toEqual({ vip: 0.5 })
+    expect(result.current.filteredModels[0]?.groupRatios).toEqual({ vip: 0.5 })
+  })
+
+  it("projects production-shape account context facts without losing source identity", async () => {
+    const account = createDisplayAccount({ id: "account-production-shape" })
+    const pricing = createPricingResponse(
+      [{ model_name: "shared-model", enable_groups: [" vip "] }],
+      {
+        group_ratio: { " vip ": 0.5 },
+        usable_group: { " vip ": true },
+      },
+    )
+    const sourceIdentity = createAccountRuntimeKeyModelListSourceIdentity({
+      accountId: account.id,
+      runtimeKeyId: "runtime-key-17",
+      runtimeKeyName: "Example runtime key",
+    })
+    const { result } = renderUseFilteredModels({
+      pricingData: pricing,
+      pricingContexts: [{ account, pricing, sourceIdentity }],
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    expect(result.current.filteredModels[0]).toMatchObject({
+      sourceIdentity,
+      groupRatios: { vip: 0.5 },
+      effectiveGroup: "vip",
+    })
+    expect(result.current.isGroupAccessAuthoritative).toBe(true)
+    expect(result.current.singleSourceGroupRatios).toEqual({ vip: 0.5 })
+    expect(result.current.availableGroups).toEqual(["vip"])
+  })
+
+  it("projects only matching account contexts and treats multiple matches conservatively", async () => {
+    const account = createDisplayAccount({ id: "account-selected-context" })
+    const otherAccount = createDisplayAccount({ id: "account-other-context" })
+    const selectedPricing = createPricingResponse(
+      [{ model_name: "selected-model", enable_groups: ["vip"] }],
+      { group_ratio: { vip: 0.5 }, usable_group: { vip: true } },
+    )
+    const otherPricing = createPricingResponse(
+      [{ model_name: "other-model", enable_groups: ["team"] }],
+      {
+        group_ratio: {},
+        usable_group: {},
+        model_list_source: {
+          kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+          supportsPricing: false,
+        },
+      },
+    )
+    const { result, rerender } = renderUseFilteredModels({
+      pricingData: selectedPricing,
+      pricingContexts: [
+        { account: otherAccount, pricing: otherPricing },
+        { account, pricing: selectedPricing },
+      ],
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => {
+      expect(result.current.isGroupAccessAuthoritative).toBe(true)
+    })
+    expect(result.current.singleSourceGroupRatios).toEqual({ vip: 0.5 })
+
+    rerender({
+      pricingData: selectedPricing,
+      pricingContexts: [
+        { account, pricing: selectedPricing },
+        {
+          account,
+          pricing: createPricingResponse(
+            [{ model_name: "unknown-model", enable_groups: ["vip"] }],
+            {
+              group_ratio: { team: 0.8 },
+              usable_group: {},
+              model_list_source: {
+                kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+                supportsPricing: false,
+              },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAccountSource(account),
+    })
+
+    await waitFor(() => {
+      expect(result.current.isGroupAccessAuthoritative).toBe(false)
+    })
+    expect(result.current.singleSourceGroupRatios).toEqual({})
+  })
+
+  it("omits an account group ratio when source-scoped rows disagree", async () => {
+    const account = createDisplayAccount({ id: "account-ratio-conflict" })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: account.id,
+            tokenId: 1,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "priced-vip", enable_groups: ["vip"] }],
+            {
+              group_ratio: { vip: 0.5 },
+              usable_group: { vip: "vip" },
+            },
+          ),
+        },
+        {
+          account,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: account.id,
+            tokenId: 2,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "unpriced-vip", enable_groups: ["vip"] }],
+            { group_ratio: {}, usable_group: { vip: "vip" } },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
+      "account-ratio-conflict": [{ name: "vip" }],
+    })
+  })
+
+  it("omits an account group ratio when finite source ratios conflict", async () => {
+    const account = createDisplayAccount({
+      id: "account-finite-ratio-conflict",
+    })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: account.id,
+            tokenId: 3,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "vip-half", enable_groups: ["vip"] }],
+            {
+              group_ratio: { vip: 0.5 },
+              usable_group: { vip: "vip" },
+            },
+          ),
+        },
+        {
+          account,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: account.id,
+            tokenId: 4,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "vip-four-fifths", enable_groups: ["vip"] }],
+            {
+              group_ratio: { vip: 0.8 },
+              usable_group: { vip: "vip" },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
+      "account-finite-ratio-conflict": [{ name: "vip" }],
+    })
+  })
+
+  it.each([
+    {
+      name: "known viewer groups",
+      source: createAccountSource(
+        createDisplayAccount({ id: "authority-known" }),
+      ),
+      pricing: createPricingResponse(
+        [{ model_name: "known-model", enable_groups: ["vip"] }],
+        { group_ratio: { vip: 1 }, usable_group: { vip: "vip" } },
+      ),
+      expected: true,
+    },
+    {
+      name: "compatible priced fallback groups",
+      source: createAccountSource(
+        createDisplayAccount({ id: "authority-compatible" }),
+      ),
+      pricing: createPricingResponse(
+        [{ model_name: "compatible-model", enable_groups: ["vip"] }],
+        { group_ratio: { vip: 1 }, usable_group: {} },
+      ),
+      expected: true,
+    },
+    {
+      name: "unknown catalog groups",
+      source: createAccountSource(
+        createDisplayAccount({ id: "authority-unknown" }),
+      ),
+      pricing: createPricingResponse(
+        [{ model_name: "unknown-model", enable_groups: ["vip"] }],
+        {
+          group_ratio: {},
+          usable_group: {},
+          model_list_source: {
+            kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+            supportsPricing: false,
+          },
+        },
+      ),
+      expected: false,
+    },
+    {
+      name: "not-applicable profile groups",
+      source: createProfileSource({
+        id: "authority-profile",
+        name: "Authority profile",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://profile.example.invalid/v1",
+        apiKey: "example-key",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      }),
+      pricing: createPricingResponse(
+        [{ model_name: "profile-model", enable_groups: ["vip"] }],
+        {
+          group_ratio: {},
+          usable_group: {},
+          model_list_source: {
+            kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+            supportsPricing: false,
+          },
+        },
+      ),
+      expected: true,
+    },
+    {
+      name: "empty direct response",
+      source: createAccountSource(
+        createDisplayAccount({ id: "authority-empty-direct" }),
+      ),
+      pricing: createPricingResponse([], {
+        group_ratio: {},
+        usable_group: {},
+      }),
+      expected: true,
+    },
+    {
+      name: "empty unsupported catalog response",
+      source: createAccountSource(
+        createDisplayAccount({ id: "authority-empty-catalog" }),
+      ),
+      pricing: createPricingResponse([], {
+        group_ratio: {},
+        usable_group: {},
+        model_list_source: {
+          kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+          supportsPricing: false,
+        },
+      }),
+      expected: false,
+    },
+  ])("reports group-access authority for $name", async (testCase) => {
+    const { result } = renderUseFilteredModels({
+      pricingData: testCase.pricing,
+      selectedSource: testCase.source,
+    })
+
+    await waitFor(() => {
+      expect(result.current.isGroupAccessAuthoritative).toBe(testCase.expected)
+    })
+  })
+
+  it("requires every pricing context for an account to have authoritative group access", async () => {
+    const mixedAccount = createDisplayAccount({ id: "authority-mixed" })
+    const knownAccount = createDisplayAccount({ id: "authority-known-only" })
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: mixedAccount,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: mixedAccount.id,
+            tokenId: 1,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "known-context", enable_groups: ["vip"] }],
+            { group_ratio: { vip: 1 }, usable_group: { vip: "vip" } },
+          ),
+        },
+        {
+          account: mixedAccount,
+          sourceIdentity: createAccountTokenModelListSourceIdentity({
+            accountId: mixedAccount.id,
+            tokenId: 2,
+          }),
+          pricing: createPricingResponse(
+            [{ model_name: "unknown-context", enable_groups: ["vip"] }],
+            {
+              group_ratio: {},
+              usable_group: {},
+              model_list_source: {
+                kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+                supportsPricing: false,
+              },
+            },
+          ),
+        },
+        {
+          account: knownAccount,
+          pricing: createPricingResponse(
+            [{ model_name: "known-only-context", enable_groups: ["vip"] }],
+            { group_ratio: { vip: 1 }, usable_group: { vip: "vip" } },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => {
+      expect(result.current.authoritativeGroupAccessByAccountId).toEqual({
+        "authority-mixed": false,
+        "authority-known-only": true,
+      })
     })
   })
 })

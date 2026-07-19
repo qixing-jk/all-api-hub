@@ -159,12 +159,7 @@ export function StatusIndicator({
               <Button
                 variant="secondary"
                 onClick={accountFallback.loadRuntimeKeys}
-                loading={accountFallback.isLoadingRuntimeKeys}
-                leftIcon={
-                  !accountFallback.isLoadingRuntimeKeys && (
-                    <ArrowPathIcon className="h-4 w-4" />
-                  )
-                }
+                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
               >
                 {t("status.fallback.reloadKeys")}
               </Button>
@@ -194,13 +189,11 @@ export function StatusIndicator({
                 variant="secondary"
                 onClick={accountFallback.loadRuntimeKeys}
                 loading={accountFallback.isLoadingRuntimeKeys}
-                leftIcon={
-                  !accountFallback.isLoadingRuntimeKeys && (
-                    <ArrowPathIcon className="h-4 w-4" />
-                  )
-                }
+                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
               >
-                {t("status.fallback.reloadKeys")}
+                {accountFallback.isLoadingRuntimeKeys
+                  ? t("status.fallback.loadingKeys")
+                  : t("status.fallback.reloadKeys")}
               </Button>
             </div>
           </Alert>
@@ -269,22 +262,22 @@ export function StatusIndicator({
                 loading={accountFallback.isLoadingCatalog}
                 disabled={!canLoadWithSelectedKey}
               >
-                {accountFallback.catalogLoadErrorMessage
-                  ? t("status.fallback.retryLoadWithKey")
-                  : t("status.fallback.loadWithKey")}
+                {accountFallback.isLoadingCatalog
+                  ? t("status.loading")
+                  : accountFallback.catalogLoadErrorMessage
+                    ? t("status.fallback.retryLoadWithKey")
+                    : t("status.fallback.loadWithKey")}
               </Button>
               <Button
                 variant="secondary"
                 onClick={accountFallback.loadRuntimeKeys}
                 loading={accountFallback.isLoadingRuntimeKeys}
                 disabled={accountFallback.isLoadingCatalog}
-                leftIcon={
-                  !accountFallback.isLoadingRuntimeKeys && (
-                    <ArrowPathIcon className="h-4 w-4" />
-                  )
-                }
+                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
               >
-                {t("status.fallback.reloadKeys")}
+                {accountFallback.isLoadingRuntimeKeys
+                  ? t("status.fallback.loadingKeys")
+                  : t("status.fallback.reloadKeys")}
               </Button>
             </div>
           </div>

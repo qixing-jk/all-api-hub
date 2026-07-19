@@ -4,7 +4,10 @@
     "actions": {
       "refresh": "結果を更新",
       "retryFailed": "失敗分のみ再試行",
+      "retryingFailed": "失敗項目を再試行中...",
       "runAll": "すべて実行",
+      "runningAll": "すべて実行中...",
+      "runningSelected": "選択項目を実行中...",
       "runSelected": "選択分を実行"
     },
     "empty": {

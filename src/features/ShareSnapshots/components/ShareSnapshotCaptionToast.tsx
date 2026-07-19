@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState } from "react"
 
+import { Button } from "~/components/ui/button"
 import { SHARE_SNAPSHOT_TEST_IDS } from "~/features/ShareSnapshots/testIds"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -15,6 +16,7 @@ export const ShareSnapshotCaptionToast = ({
   caption,
   hint,
   copyLabel,
+  copyingLabel,
   closeLabel,
   onCopy,
   onClose,
@@ -22,6 +24,7 @@ export const ShareSnapshotCaptionToast = ({
   caption: string
   hint: string
   copyLabel: string
+  copyingLabel: string
   closeLabel: string
   onCopy: () => Promise<void>
   onClose: () => void
@@ -76,14 +79,15 @@ export const ShareSnapshotCaptionToast = ({
         </div>
       ) : null}
       <div className="flex items-center justify-end gap-2">
-        <button
+        <Button
           type="button"
-          className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary rounded-md bg-gray-900 px-3 py-1.5 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+          size="sm"
+          className="dark:bg-dark-bg-tertiary dark:text-dark-text-primary h-auto bg-gray-900 px-3 py-1.5 text-xs text-white"
           onClick={handleCopy}
-          disabled={isCopying}
+          loading={isCopying}
         >
-          {copyLabel}
-        </button>
+          {isCopying ? copyingLabel : copyLabel}
+        </Button>
         <button
           type="button"
           className="dark:text-dark-text-secondary rounded-md px-3 py-1.5 text-xs text-gray-600"

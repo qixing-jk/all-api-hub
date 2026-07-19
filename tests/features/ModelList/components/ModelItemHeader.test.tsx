@@ -32,12 +32,28 @@ vi.mock(
   }),
 )
 
-vi.mock("~/services/models/utils/modelProviders", () => ({
-  getProviderConfig: () => ({
-    icon: (props: React.SVGProps<SVGSVGElement>) => <svg {...props} />,
-    bgColor: "bg-slate-100",
-    color: "text-slate-700",
-  }),
+vi.mock("@heroicons/react/24/outline", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@heroicons/react/24/outline")>()
+  const CpuChipIcon = (props: React.SVGProps<SVGSVGElement>) => (
+    <svg role="img" data-publisher-icon="generic" {...props} />
+  )
+
+  return { ...actual, CpuChipIcon }
+})
+
+vi.mock("@lobehub/icons/es/Anthropic/components/Mono", () => ({
+  default: ({
+    size,
+    ...props
+  }: React.SVGProps<SVGSVGElement> & { size?: string | number }) => (
+    <svg
+      role="img"
+      data-publisher-icon="Anthropic-mono"
+      data-size={size}
+      {...props}
+    />
+  ),
 }))
 
 vi.mock("~/services/models/utils/modelPricing", async (importOriginal) => {
@@ -85,6 +101,7 @@ vi.mock("~/components/ui", async (importOriginal) => {
 function renderModelItemHeader(quotaType: number) {
   render(
     <ModelItemHeader
+      resolvedVendor={{ state: "unknown" }}
       model={
         {
           model_name: "per-call-model",
@@ -99,9 +116,47 @@ function renderModelItemHeader(quotaType: number) {
 }
 
 describe("ModelItemHeader", () => {
+  it("uses the supplied resolved vendor instead of reclassifying the model name", () => {
+    const resolvedVendor = {
+      state: "resolved",
+      kind: "known",
+      key: "known:anthropic",
+      knownId: "anthropic",
+      label: "Anthropic",
+      source: "publisher-evidence",
+    } as const
+
+    render(
+      <ModelItemHeader
+        resolvedVendor={resolvedVendor}
+        model={{ model_name: "gpt-4o-mini", quota_type: 0 } as any}
+        isAvailableForUser={true}
+        handleCopyModelName={vi.fn()}
+        showPricingMetadata={false}
+      />,
+    )
+
+    const heading = screen.getByRole("heading", { name: "gpt-4o-mini" })
+    expect(heading).toBeVisible()
+    const decorativeIcon = screen.getByRole("img", { hidden: true })
+    expect(decorativeIcon).toHaveAttribute(
+      "data-publisher-icon",
+      "Anthropic-mono",
+    )
+    expect(decorativeIcon).toHaveAttribute("data-size", "16")
+    expect(decorativeIcon).toHaveAttribute("aria-hidden", "true")
+    const badgeSurface = decorativeIcon.closest(
+      '[data-slot="model-vendor-badge"]',
+    )
+    expect(badgeSurface).toHaveClass("rounded-full")
+    expect(badgeSurface?.parentElement).toBe(heading.parentElement)
+    expect(screen.queryAllByRole("img")).toHaveLength(0)
+  })
+
   it("declares controlled analytics metadata for row action buttons", () => {
     render(
       <ModelItemHeader
+        resolvedVendor={{ state: "unknown" }}
         model={
           {
             model_name: "gpt-private-model",
@@ -178,6 +233,7 @@ describe("ModelItemHeader", () => {
   it("renders available groups as neutral metadata instead of availability status", () => {
     render(
       <ModelItemHeader
+        resolvedVendor={{ state: "unknown" }}
         model={
           {
             model_name: "gpt-private-model",
@@ -221,6 +277,7 @@ describe("ModelItemHeader", () => {
   it("omits the count adornment for single-group summaries", () => {
     render(
       <ModelItemHeader
+        resolvedVendor={{ state: "unknown" }}
         model={
           {
             model_name: "gpt-private-model",

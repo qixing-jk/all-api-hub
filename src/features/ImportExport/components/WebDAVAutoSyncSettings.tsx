@@ -427,7 +427,6 @@ export default function WebDAVAutoSyncSettings() {
             <Button
               id={WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings}
               onClick={handleSaveSettings}
-              disabled={savingSettings}
               loading={savingSettings}
               variant="default"
               size="sm"
@@ -441,7 +440,6 @@ export default function WebDAVAutoSyncSettings() {
             <Button
               id={WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow}
               onClick={handleSyncNow}
-              disabled={syncing || isSyncing}
               loading={syncing || isSyncing}
               variant="success"
               size="sm"

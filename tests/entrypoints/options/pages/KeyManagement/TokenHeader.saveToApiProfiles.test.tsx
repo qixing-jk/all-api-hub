@@ -990,9 +990,8 @@ describe("TokenHeader save to API profiles", () => {
 
     expect(onManagedSiteVerificationRetry).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(retryButton).toBeDisabled())
-    expect(
-      screen.getByRole("status", { name: "common:status.loading" }),
-    ).toBeInTheDocument()
+    expect(retryButton).toHaveAccessibleName("common:status.checking")
+    expect(retryButton).toHaveAttribute("aria-busy", "true")
 
     await user.click(retryButton)
     expect(onManagedSiteVerificationRetry).toHaveBeenCalledTimes(1)

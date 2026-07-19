@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
@@ -74,7 +75,7 @@ describe("veloeraProvider", () => {
   })
 
   describe("checkIn", () => {
-    it("returns the fallback success message key when the backend omits a message", async () => {
+    it("propagates the popup source when the backend omits a message", async () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       vi.mocked(fetchApi).mockResolvedValueOnce({
         success: true,
@@ -82,7 +83,9 @@ describe("veloeraProvider", () => {
         message: "",
       })
 
-      const result = await veloeraProvider.checkIn(mockAccount)
+      const result = await veloeraProvider.checkIn(mockAccount, {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      })
 
       expect(result).toEqual({
         status: "success",
@@ -92,6 +95,7 @@ describe("veloeraProvider", () => {
       })
       expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
         accountId: "test-id",
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       })
     })
 
@@ -105,6 +109,9 @@ describe("veloeraProvider", () => {
 
       const result = await veloeraProvider.checkIn(mockAccount)
       expect(result.status).toBe("success")
+      expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      })
     })
 
     it("returns already_checked when already checked in", async () => {

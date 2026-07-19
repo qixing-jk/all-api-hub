@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   getAccountSiteApiRouter,
   ACCOUNT_SITE_TYPE_VALUES as LEGACY_ACCOUNT_SITE_TYPE_VALUES,
@@ -270,6 +271,66 @@ describe("account site definition registry", () => {
       expect(getAccountSiteDefinition(siteType)?.scopes).toContain(
         ACCOUNT_SITE_DEFINITION_SCOPES.Managed,
       )
+    }
+  })
+
+  it("gives every managed site an explicit managed-resource policy", () => {
+    for (const siteType of MANAGED_SITE_TYPES) {
+      expect(getAccountSiteDefinition(siteType)?.managedResource).toMatchObject(
+        {
+          mode: "legacy-channel",
+          primaryKind: "channel",
+          settingsTarget: { tabId: "managedSite" },
+        },
+      )
+    }
+  })
+
+  it("keeps AxonHub on the legacy channel path until UI cutover", () => {
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource,
+    ).toMatchObject({
+      mode: "legacy-channel",
+      primaryKind: "channel",
+      settingsTarget: {
+        tabId: "managedSite",
+        anchor: SETTINGS_ANCHORS.AXON_HUB,
+      },
+      actions: ["create", "delete-selected", "migrate"],
+    })
+  })
+
+  it("returns defensive managed-resource policy copies", () => {
+    const first = getAccountSiteDefinition(SITE_TYPES.AXON_HUB)!
+    const mutableDetailFields = first.managedResource!
+      .detailFieldIds as string[]
+    first.managedResource!.settingsTarget.anchor = "changed"
+    mutableDetailFields[0] = "changed"
+
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource
+        ?.settingsTarget,
+    ).toEqual({
+      tabId: "managedSite",
+      anchor: SETTINGS_ANCHORS.AXON_HUB,
+    })
+    expect(
+      getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource
+        ?.detailFieldIds[0],
+    ).toBe("name")
+  })
+
+  it("keeps managed-resource field and action policy values unique", () => {
+    for (const siteType of MANAGED_SITE_TYPES) {
+      const policy = getAccountSiteDefinition(siteType)?.managedResource
+
+      expect(new Set(policy?.tableFieldIds).size).toBe(
+        policy?.tableFieldIds.length,
+      )
+      expect(new Set(policy?.detailFieldIds).size).toBe(
+        policy?.detailFieldIds.length,
+      )
+      expect(new Set(policy?.actions).size).toBe(policy?.actions.length)
     }
   })
 

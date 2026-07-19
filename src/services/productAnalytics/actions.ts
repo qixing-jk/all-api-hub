@@ -15,6 +15,7 @@ import {
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsFailureReason,
   type ProductAnalyticsFailureStage,
+  type ProductAnalyticsKiloCodeExportTarget,
   type ProductAnalyticsManagedSiteType,
   type ProductAnalyticsModeId,
   type ProductAnalyticsRequestedAuthMode,
@@ -77,6 +78,7 @@ export type ProductAnalyticsActionInsights = {
   staleResponseIgnored?: boolean
   backgroundExecution?: boolean
   currentTabMatched?: boolean
+  kiloCodeExportTarget?: ProductAnalyticsKiloCodeExportTarget
   itemCount?: number
   selectedCount?: number
   successCount?: number
@@ -365,6 +367,9 @@ function mapProductAnalyticsActionInsights(
       : {}),
     ...(typeof insights.currentTabMatched === "boolean"
       ? { current_tab_matched: insights.currentTabMatched }
+      : {}),
+    ...(insights.kiloCodeExportTarget
+      ? { kilo_code_export_target: insights.kiloCodeExportTarget }
       : {}),
     ...(typeof insights.itemCount === "number"
       ? { item_count: insights.itemCount }

@@ -21,6 +21,21 @@
     "cny": "Nhân dân tệ",
     "usd": "Đô la Mỹ"
   },
+  "datePicker": {
+    "in1Year": "+1 năm",
+    "in30Days": "+30 ngày",
+    "in7Days": "+7 ngày",
+    "in90Days": "+90 ngày",
+    "naturalInput": {
+      "invalid": "Nhập ngày có thể nhận dạng, như YYYY-MM-DD hoặc in 7 days",
+      "label": "Nhập ngày",
+      "openCalendar": "Mở lịch",
+      "placeholder": "Ví dụ: in 7 days, tomorrow, hoặc 2026-08-01",
+      "preview": "Sẽ đặt thành: {{date}}"
+    },
+    "noExpiration": "Không hết hạn",
+    "placeholder": "Chọn ngày"
+  },
   "labels": {
     "apiKey": "API Key",
     "notAvailable": "N/A",
@@ -40,20 +55,30 @@
     "translationDescription": "Nếu bạn đang dùng tính năng tự động dịch của trình duyệt, hãy tắt tự động dịch cho trang này hoặc chuyển sang ngôn ngữ bạn cần trong cài đặt tiện ích."
   },
   "status": {
+    "applying": "Đang áp dụng...",
     "cancelled": "Đã hủy",
+    "cancelling": "Đang hủy...",
+    "checking": "Đang kiểm tra...",
     "configurationRequired": "Yêu cầu cấu hình",
+    "copying": "Đang sao chép...",
     "creating": "Đang tạo...",
+    "deleting": "Đang xóa...",
     "disabled": "Đã vô hiệu hóa",
+    "disabling": "Đang vô hiệu hóa...",
     "enabled": "Đã kích hoạt",
+    "enabling": "Đang bật...",
     "error": "Lỗi",
     "exporting": "Đang xuất...",
     "failed": "Thất bại",
     "importing": "Đang nhập...",
     "loading": "Đang tải...",
+    "opening": "Đang mở...",
     "processing": "Đang xử lý...",
     "refreshing": "Đang làm mới...",
     "resetting": "Đang đặt lại...",
+    "retrying": "Đang thử lại...",
     "saving": "Đang lưu...",
+    "starting": "Đang bắt đầu...",
     "success": "Thành công",
     "testing": "Đang kiểm tra...",
     "updating": "Đang cập nhật...",

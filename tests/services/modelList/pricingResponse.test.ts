@@ -11,6 +11,7 @@ import {
   buildModelListCatalogPricingResponse,
   normalizeModelListModelIds,
 } from "~/services/modelList/pricingResponse"
+import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 
 describe("modelList pricingResponse", () => {
   it("normalizes, filters, and de-duplicates raw model ids", () => {
@@ -28,7 +29,17 @@ describe("modelList pricingResponse", () => {
 
   it("builds a profile catalog response by default", () => {
     const response = buildModelListCatalogPricingResponse({
-      modelIds: [" gpt-4o ", "gpt-4o", "claude-3-haiku"],
+      models: [
+        {
+          id: " gpt-4o ",
+          vendorEvidence: {
+            kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+            name: " Example Publisher ",
+          },
+        },
+        { id: "gpt-4o" },
+        { id: "claude-3-haiku" },
+      ],
     })
 
     expect(response).toMatchObject({
@@ -43,6 +54,10 @@ describe("modelList pricingResponse", () => {
     expect(response.data).toEqual([
       expect.objectContaining({
         model_name: "gpt-4o",
+        vendorEvidence: {
+          kind: MODEL_VENDOR_EVIDENCE_KINDS.Publisher,
+          name: "Example Publisher",
+        },
         price_metadata: {
           source: MODEL_PRICE_SOURCE_KINDS.NONE,
           precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
@@ -55,7 +70,7 @@ describe("modelList pricingResponse", () => {
 
   it("allows runtime catalog source metadata and unavailable reason overrides", () => {
     const response = buildModelListCatalogPricingResponse({
-      modelIds: ["runtime-model"],
+      models: [{ id: "runtime-model" }],
       unavailableReason:
         MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE,
       source: {

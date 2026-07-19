@@ -130,7 +130,7 @@ export default function AccountForm({
   onAuthTypeChange,
   onCheckInChange,
 }: AccountFormProps) {
-  const { t } = useTranslation("accountDialog")
+  const { t } = useTranslation(["accountDialog", "common"])
   const {
     authType,
     siteName,
@@ -337,7 +337,6 @@ export default function AccountForm({
                       variant="outline"
                       size="sm"
                       onClick={onImportSub2apiSession}
-                      disabled={isImportingSub2apiSession}
                       loading={isImportingSub2apiSession}
                       className="w-full"
                       data-testid={
@@ -345,7 +344,9 @@ export default function AccountForm({
                       }
                       leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}
                     >
-                      {t("form.sub2apiImportRefreshToken")}
+                      {isImportingSub2apiSession
+                        ? t("common:status.importing")
+                        : t("form.sub2apiImportRefreshToken")}
                     </Button>
                     <Input
                       type="password"
@@ -405,10 +406,10 @@ export default function AccountForm({
                 variant="outline"
                 size="sm"
                 onClick={onImportCookieAuthSessionCookie}
-                disabled={isImportingCookies}
+                loading={isImportingCookies}
+                leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}
                 className="w-full"
               >
-                <ArrowDownTrayIcon className="mr-2 h-4 w-4" />
                 {isImportingCookies
                   ? t("messages.importCookiesLoading")
                   : t("form.importCookieAuthSessionCookie")}

@@ -21,6 +21,7 @@ describe("ShareSnapshotCaptionToast", () => {
         caption="hello"
         hint="hint"
         copyLabel="Copy"
+        copyingLabel="Copying..."
         closeLabel="Close"
         onCopy={onCopy}
         onClose={vi.fn()}
@@ -33,6 +34,11 @@ describe("ShareSnapshotCaptionToast", () => {
     await user.click(copyButton)
     expect(onCopy).toHaveBeenCalledTimes(1)
     expect(copyButton).toBeDisabled()
+    expect(copyButton).toHaveAttribute("aria-busy", "true")
+    expect(copyButton).toHaveAccessibleName("Copying...")
+    const closeButton = screen.getByRole("button", { name: "Close" })
+    expect(closeButton).toBeEnabled()
+    expect(closeButton).not.toHaveAttribute("aria-busy")
 
     await user.click(copyButton)
     expect(onCopy).toHaveBeenCalledTimes(1)
@@ -42,6 +48,7 @@ describe("ShareSnapshotCaptionToast", () => {
     await waitFor(() => {
       expect(copyButton).not.toBeDisabled()
     })
+    expect(copyButton).not.toHaveAttribute("aria-busy")
   })
 
   it("surfaces errors when onCopy rejects", async () => {
@@ -53,6 +60,7 @@ describe("ShareSnapshotCaptionToast", () => {
         caption="hello"
         hint="hint"
         copyLabel="Copy"
+        copyingLabel="Copying..."
         closeLabel="Close"
         onCopy={onCopy}
         onClose={vi.fn()}
@@ -64,5 +72,8 @@ describe("ShareSnapshotCaptionToast", () => {
     expect(onCopy).toHaveBeenCalledTimes(1)
     expect(await screen.findByText("copy denied")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Copy" })).not.toBeDisabled()
+    expect(screen.getByRole("button", { name: "Copy" })).not.toHaveAttribute(
+      "aria-busy",
+    )
   })
 })

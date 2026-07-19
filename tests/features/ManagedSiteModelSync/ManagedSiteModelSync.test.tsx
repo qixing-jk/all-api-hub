@@ -129,8 +129,10 @@ vi.mock("~/components/ui", async (importOriginal) => {
       analyticsAction,
       children,
       leftIcon,
-      loading: _loading,
+      loading,
       rightIcon,
+      disabled,
+      "aria-busy": ariaBusy,
       ...props
     }: any) => (
       <button
@@ -140,6 +142,8 @@ vi.mock("~/components/ui", async (importOriginal) => {
             ? `${analyticsAction.featureId}:${analyticsAction.actionId}:${analyticsAction.surfaceId}:${analyticsAction.entrypoint}`
             : undefined
         }
+        disabled={disabled || loading}
+        aria-busy={loading ? true : ariaBusy}
         {...props}
       >
         {leftIcon}
@@ -172,6 +176,39 @@ vi.mock("~/components/ui", async (importOriginal) => {
 
 function render(ui: ReactNode) {
   return rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
+
+function createExecution(channelName: string, channelId: number) {
+  return {
+    items: [
+      {
+        channelId,
+        channelName,
+        ok: true,
+        attempts: 1,
+        finishedAt: 1_700_000_005_000,
+      },
+    ],
+    statistics: {
+      total: 1,
+      successCount: 1,
+      failureCount: 0,
+      durationMs: 1000,
+      startedAt: 1_700_000_004_000,
+      endedAt: 1_700_000_005_000,
+    },
+  }
 }
 
 const actionBarAnalyticsContext = (actionId: string) => ({
@@ -342,6 +379,327 @@ describe("ManagedSiteModelSync page", () => {
     expect(toast.success).toHaveBeenCalled()
   })
 
+  it.each([
+    {
+      messageType: ModelSyncMessageTypes.TriggerAll,
+      pendingName: "managedSiteModelSync:execution.actions.runningAll",
+      startName: "managedSiteModelSync:execution.actions.runAll",
+    },
+    {
+      messageType: ModelSyncMessageTypes.TriggerSelected,
+      pendingName: "managedSiteModelSync:execution.actions.runningSelected",
+      startName: "managedSiteModelSync:execution.actions.runSelected (1)",
+    },
+    {
+      messageType: ModelSyncMessageTypes.TriggerFailedOnly,
+      pendingName: "managedSiteModelSync:execution.actions.retryingFailed",
+      startName: "managedSiteModelSync:execution.actions.retryFailed",
+    },
+  ])(
+    "keeps $messageType busy through rejection cleanup and permits retry",
+    async ({ messageType, pendingName, startName }) => {
+      const deferred = createDeferred<{ success: boolean }>()
+      const originalImplementation =
+        mockSendRuntimeMessage.getMockImplementation()!
+      let actionAttempts = 0
+
+      mockSendRuntimeMessage.mockImplementation(
+        async (type: string, data?: any) => {
+          if (type === messageType) {
+            actionAttempts += 1
+            if (actionAttempts === 1) return await deferred.promise
+          }
+          return await originalImplementation(type, data)
+        },
+      )
+
+      render(<ManagedSiteModelSync />)
+      expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+      if (messageType === ModelSyncMessageTypes.TriggerSelected) {
+        fireEvent.click(screen.getAllByRole("checkbox")[1])
+      }
+
+      fireEvent.click(screen.getByRole("button", { name: startName }))
+
+      const pendingButton = screen.getByRole("button", { name: pendingName })
+      expect(pendingButton).toBeDisabled()
+      expect(pendingButton).toHaveAttribute("aria-busy", "true")
+      const refreshButton = screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.refresh",
+      })
+      expect(refreshButton).toBeDisabled()
+      expect(refreshButton).not.toHaveAttribute("aria-busy")
+      fireEvent.click(pendingButton)
+      expect(actionAttempts).toBe(1)
+
+      deferred.reject(new Error("sync failed"))
+      const restoredButton = await screen.findByRole("button", {
+        name: startName,
+      })
+      expect(restoredButton).toBeEnabled()
+
+      fireEvent.click(restoredButton)
+      await waitFor(() => expect(actionAttempts).toBe(2))
+    },
+  )
+
+  it("locks row sync controls while a bulk action promise is pending", async () => {
+    const deferred = createDeferred<{ success: boolean }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.TriggerAll) {
+          return await deferred.promise
+        }
+        return await originalImplementation(type, data)
+      },
+    )
+
+    render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    const runAllButton = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.actions.runAll",
+    })
+    const rowSyncButtons = screen.getAllByRole("button", {
+      name: "managedSiteModelSync:execution.table.syncChannel",
+    })
+    act(() => {
+      runAllButton.click()
+      rowSyncButtons[0].click()
+    })
+
+    const pendingRunAll = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.actions.runningAll",
+    })
+    expect(pendingRunAll).toHaveAttribute("aria-busy", "true")
+
+    expect(rowSyncButtons).toHaveLength(2)
+    for (const rowSyncButton of rowSyncButtons) {
+      expect(rowSyncButton).toBeDisabled()
+      expect(rowSyncButton).not.toHaveAttribute("aria-busy")
+    }
+    expect(
+      mockSendRuntimeMessage.mock.calls.filter(
+        ([type]) => type === ModelSyncMessageTypes.TriggerSelected,
+      ),
+    ).toHaveLength(0)
+
+    deferred.reject(new Error("bulk sync failed"))
+    expect(
+      await screen.findByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runAll",
+      }),
+    ).toBeEnabled()
+  })
+
+  it("locks bulk and manual controls while a row action promise is pending", async () => {
+    const historyDeferred = createDeferred<{ success: boolean }>()
+    const manualDeferred = createDeferred<{ success: boolean }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (
+          type === ModelSyncMessageTypes.TriggerSelected &&
+          data?.channelIds?.[0] === 101
+        ) {
+          return await historyDeferred.promise
+        }
+        if (
+          type === ModelSyncMessageTypes.TriggerSelected &&
+          data?.channelIds?.[0] === 201
+        ) {
+          return await manualDeferred.promise
+        }
+        return await originalImplementation(type, data)
+      },
+    )
+
+    const { unmount } = render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    const alphaRow = screen.getByText("Alpha#101").closest("tr")
+    expect(alphaRow).toBeTruthy()
+    fireEvent.click(within(alphaRow!).getByRole("checkbox"))
+
+    const activeRowSync = within(alphaRow!).getByRole("button", {
+      name: "managedSiteModelSync:execution.table.syncChannel",
+    })
+    const lockedBulkButtons = [
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runAll",
+      }),
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runSelected (1)",
+      }),
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.retryFailed",
+      }),
+    ]
+    act(() => {
+      activeRowSync.click()
+      for (const lockedBulkButton of lockedBulkButtons) {
+        lockedBulkButton.click()
+      }
+    })
+
+    expect(activeRowSync).toBeDisabled()
+    expect(activeRowSync).toHaveAttribute("aria-busy", "true")
+
+    const betaRow = screen.getByText("Beta#102").closest("tr")
+    expect(betaRow).toBeTruthy()
+    const lockedSiblingRowSync = within(betaRow!).getByRole("button", {
+      name: "managedSiteModelSync:execution.table.syncChannel",
+    })
+    expect(lockedSiblingRowSync).toBeDisabled()
+    expect(lockedSiblingRowSync).not.toHaveAttribute("aria-busy")
+
+    for (const lockedBulkButton of lockedBulkButtons) {
+      expect(lockedBulkButton).toBeDisabled()
+      expect(lockedBulkButton).not.toHaveAttribute("aria-busy")
+    }
+
+    expect(
+      mockSendRuntimeMessage.mock.calls.filter(
+        ([type]) =>
+          type === ModelSyncMessageTypes.TriggerAll ||
+          type === ModelSyncMessageTypes.TriggerFailedOnly,
+      ),
+    ).toHaveLength(0)
+    expect(
+      mockSendRuntimeMessage.mock.calls.filter(
+        ([type]) => type === ModelSyncMessageTypes.TriggerSelected,
+      ),
+    ).toHaveLength(1)
+
+    historyDeferred.reject(new Error("history row sync failed"))
+    expect(
+      await screen.findByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runAll",
+      }),
+    ).toBeEnabled()
+    unmount()
+
+    render(<ManagedSiteModelSync routeParams={{ tab: "manual" }} />)
+    expect(await screen.findByText("Manual Alpha#201")).toBeInTheDocument()
+    const manualAlphaRow = screen.getByText("Manual Alpha#201").closest("tr")
+    expect(manualAlphaRow).toBeTruthy()
+    fireEvent.click(within(manualAlphaRow!).getByRole("checkbox"))
+    fireEvent.click(
+      within(manualAlphaRow!).getByRole("button", {
+        name: "managedSiteModelSync:execution.table.syncChannel",
+      }),
+    )
+
+    const lockedManualRunSelected = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.actions.runSelected (1)",
+    })
+    const lockedManualRefresh = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.actions.refresh",
+    })
+    for (const lockedManualButton of [
+      lockedManualRunSelected,
+      lockedManualRefresh,
+    ]) {
+      expect(lockedManualButton).toBeDisabled()
+      expect(lockedManualButton).not.toHaveAttribute("aria-busy")
+      fireEvent.click(lockedManualButton)
+    }
+
+    expect(
+      mockSendRuntimeMessage.mock.calls.filter(
+        ([type]) => type === ModelSyncMessageTypes.TriggerSelected,
+      ),
+    ).toHaveLength(2)
+
+    manualDeferred.reject(new Error("manual row sync failed"))
+    expect(
+      await screen.findByRole("button", {
+        name: "managedSiteModelSync:execution.actions.refresh",
+      }),
+    ).toBeEnabled()
+  })
+
+  it("keeps a row action locked until its promise settles after non-running progress", async () => {
+    const deferred = createDeferred<{ success: boolean }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    const addListener = vi.spyOn(browser.runtime.onMessage, "addListener")
+
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (
+          type === ModelSyncMessageTypes.TriggerSelected &&
+          data?.channelIds?.[0] === 101
+        ) {
+          return await deferred.promise
+        }
+        return await originalImplementation(type, data)
+      },
+    )
+
+    render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    const listener = addListener.mock.calls.at(-1)?.[0] as (
+      message: any,
+    ) => void
+    expect(listener).toBeTypeOf("function")
+
+    const alphaRow = screen.getByText("Alpha#101").closest("tr")
+    expect(alphaRow).toBeTruthy()
+    fireEvent.click(
+      within(alphaRow!).getByRole("button", {
+        name: "managedSiteModelSync:execution.table.syncChannel",
+      }),
+    )
+
+    act(() => {
+      listener({
+        type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+        payload: { isRunning: true, completed: 0, total: 1, failed: 0 },
+      })
+    })
+    act(() => {
+      listener({
+        type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+        payload: { isRunning: false, completed: 1, total: 1, failed: 0 },
+      })
+    })
+
+    const activeRowSync = within(alphaRow!).getByRole("button", {
+      name: "managedSiteModelSync:execution.table.syncChannel",
+    })
+    expect(activeRowSync).toBeDisabled()
+    expect(activeRowSync).toHaveAttribute("aria-busy", "true")
+
+    const betaRow = screen.getByText("Beta#102").closest("tr")
+    expect(betaRow).toBeTruthy()
+    const lockedSiblingRowSync = within(betaRow!).getByRole("button", {
+      name: "managedSiteModelSync:execution.table.syncChannel",
+    })
+    expect(lockedSiblingRowSync).toBeDisabled()
+    expect(lockedSiblingRowSync).not.toHaveAttribute("aria-busy")
+
+    const lockedRunAll = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.actions.runAll",
+    })
+    expect(lockedRunAll).toBeDisabled()
+    expect(lockedRunAll).not.toHaveAttribute("aria-busy")
+
+    deferred.reject(new Error("row sync failed"))
+    expect(
+      await screen.findByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runAll",
+      }),
+    ).toBeEnabled()
+  })
+
   it("opens managed-site model sync settings from the title shortcut", async () => {
     render(<ManagedSiteModelSync />)
 
@@ -502,6 +860,58 @@ describe("ManagedSiteModelSync page", () => {
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
   })
 
+  it("locks actions without attributing background reloads to manual refresh", async () => {
+    const backgroundReload = createDeferred<{ success: boolean; data: any }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    const addListener = vi.spyOn(browser.runtime.onMessage, "addListener")
+    let lastExecutionCalls = 0
+
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.GetLastExecution) {
+          lastExecutionCalls += 1
+          if (lastExecutionCalls === 2) return await backgroundReload.promise
+        }
+
+        return await originalImplementation(type, data)
+      },
+    )
+
+    render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    const listener = addListener.mock.calls.at(-1)?.[0] as (
+      message: any,
+    ) => void
+    expect(listener).toBeTypeOf("function")
+
+    act(() => {
+      listener({
+        type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+        payload: { isRunning: false, completed: 2, total: 2, failed: 0 },
+      })
+    })
+    await waitFor(() => expect(lastExecutionCalls).toBe(2))
+
+    const refreshButton = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.actions.refresh",
+    })
+    expect(refreshButton).toBeDisabled()
+    expect(refreshButton).not.toHaveAttribute("aria-busy")
+
+    const runAllButton = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.actions.runAll",
+    })
+    expect(runAllButton).toBeDisabled()
+    expect(runAllButton).not.toHaveAttribute("aria-busy")
+
+    backgroundReload.resolve(
+      await originalImplementation(ModelSyncMessageTypes.GetLastExecution),
+    )
+    await waitFor(() => expect(refreshButton).toBeEnabled())
+  })
+
   it("keeps the current history snapshot rendered while a manual refresh is loading", async () => {
     let lastExecutionCalls = 0
     let resolveRefresh:
@@ -636,6 +1046,392 @@ describe("ManagedSiteModelSync page", () => {
         },
       }),
     )
+  })
+
+  it("keeps manual refresh busy until every refresh request settles", async () => {
+    const executionRefresh = createDeferred<{ success: boolean; data: any }>()
+    const progressRefresh = createDeferred<{ success: boolean; data: any }>()
+    const nextRunRefresh = createDeferred<{ success: boolean; data: any }>()
+    const preferencesRefresh = createDeferred<{
+      success: boolean
+      data: any
+    }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    const refreshedExecution = await originalImplementation(
+      ModelSyncMessageTypes.GetLastExecution,
+    )
+    const attempts = new Map<string, number>()
+
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        const attempt = (attempts.get(type) ?? 0) + 1
+        attempts.set(type, attempt)
+
+        if (attempt > 1) {
+          if (type === ModelSyncMessageTypes.GetLastExecution) {
+            return await executionRefresh.promise
+          }
+          if (type === ModelSyncMessageTypes.GetProgress) {
+            return await progressRefresh.promise
+          }
+          if (type === ModelSyncMessageTypes.GetNextRun) {
+            return await nextRunRefresh.promise
+          }
+          if (type === ModelSyncMessageTypes.GetPreferences) {
+            return await preferencesRefresh.promise
+          }
+        }
+
+        return await originalImplementation(type, data)
+      },
+    )
+
+    const user = userEvent.setup()
+    render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.refresh",
+      }),
+    )
+
+    const refreshingButton = screen.getByRole("button", {
+      name: "common:status.refreshing",
+    })
+    expect(refreshingButton).toBeDisabled()
+    expect(refreshingButton).toHaveAttribute("aria-busy", "true")
+
+    executionRefresh.resolve(refreshedExecution)
+    await waitFor(() =>
+      expect(attempts.get(ModelSyncMessageTypes.GetPreferences)).toBe(2),
+    )
+
+    expect(
+      screen.getByRole("button", { name: "common:status.refreshing" }),
+    ).toHaveAttribute("aria-busy", "true")
+
+    progressRefresh.resolve({
+      success: true,
+      data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+    })
+    nextRunRefresh.resolve({
+      success: true,
+      data: { nextScheduledAt: "2026-03-28T10:00:00.000Z" },
+    })
+
+    expect(
+      screen.getByRole("button", { name: "common:status.refreshing" }),
+    ).toHaveAttribute("aria-busy", "true")
+
+    preferencesRefresh.resolve({
+      success: true,
+      data: { enableSync: true, intervalMs: 2 * 60 * 60 * 1000 },
+    })
+
+    const restoredRefresh = await screen.findByRole("button", {
+      name: "managedSiteModelSync:execution.actions.refresh",
+    })
+    expect(restoredRefresh).toBeEnabled()
+  })
+
+  it("keeps actions locked when a background reload outlives manual refresh", async () => {
+    const manualExecution = createDeferred<{ success: boolean; data: any }>()
+    const backgroundExecution = createDeferred<{
+      success: boolean
+      data: any
+    }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    const refreshedExecution = await originalImplementation(
+      ModelSyncMessageTypes.GetLastExecution,
+    )
+    const addListener = vi.spyOn(browser.runtime.onMessage, "addListener")
+    let lastExecutionCalls = 0
+
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.GetLastExecution) {
+          lastExecutionCalls += 1
+          if (lastExecutionCalls === 2) return await manualExecution.promise
+          if (lastExecutionCalls === 3) return await backgroundExecution.promise
+        }
+
+        return await originalImplementation(type, data)
+      },
+    )
+
+    const user = userEvent.setup()
+    render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.refresh",
+      }),
+    )
+    expect(
+      screen.getByRole("button", { name: "common:status.refreshing" }),
+    ).toHaveAttribute("aria-busy", "true")
+
+    const listener = addListener.mock.calls.at(-1)?.[0] as (
+      message: any,
+    ) => void
+    expect(listener).toBeTypeOf("function")
+    act(() => {
+      listener({
+        type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+        payload: { isRunning: false, completed: 2, total: 2, failed: 0 },
+      })
+    })
+    await waitFor(() => expect(lastExecutionCalls).toBe(3))
+
+    manualExecution.resolve(refreshedExecution)
+
+    const idleRefresh = await screen.findByRole("button", {
+      name: "managedSiteModelSync:execution.actions.refresh",
+    })
+    expect(idleRefresh).toBeDisabled()
+    expect(idleRefresh).not.toHaveAttribute("aria-busy")
+
+    backgroundExecution.resolve(refreshedExecution)
+    await waitFor(() => expect(idleRefresh).toBeEnabled())
+  })
+
+  it("keeps the newest execution when same-context reloads resolve out of order", async () => {
+    const manualRefresh = createDeferred<{ success: boolean; data: any }>()
+    const runtimeReload = createDeferred<{ success: boolean; data: any }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    const addListener = vi.spyOn(browser.runtime.onMessage, "addListener")
+    let lastExecutionCalls = 0
+
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.GetLastExecution) {
+          lastExecutionCalls += 1
+          if (lastExecutionCalls === 2) return await manualRefresh.promise
+          if (lastExecutionCalls === 3) return await runtimeReload.promise
+        }
+
+        return await originalImplementation(type, data)
+      },
+    )
+
+    const user = userEvent.setup()
+    render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.refresh",
+      }),
+    )
+    await waitFor(() => expect(lastExecutionCalls).toBe(2))
+
+    const listener = addListener.mock.calls.at(-1)?.[0] as (
+      message: any,
+    ) => void
+    act(() => {
+      listener({
+        type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+        payload: { isRunning: false, completed: 1, total: 1, failed: 0 },
+      })
+    })
+    await waitFor(() => expect(lastExecutionCalls).toBe(3))
+
+    runtimeReload.resolve({
+      success: true,
+      data: createExecution("Newest", 301),
+    })
+    expect(await screen.findByText("Newest#301")).toBeInTheDocument()
+
+    manualRefresh.resolve({
+      success: true,
+      data: createExecution("Stale", 302),
+    })
+
+    const refreshButton = await screen.findByRole("button", {
+      name: "managedSiteModelSync:execution.actions.refresh",
+    })
+    expect(refreshButton).toBeEnabled()
+    expect(screen.getByText("Newest#301")).toBeInTheDocument()
+    expect(screen.queryByText("Stale#302")).not.toBeInTheDocument()
+  })
+
+  it("ignores an old execution response after the managed-site context changes", async () => {
+    const oldContextLoad = createDeferred<{ success: boolean; data: any }>()
+    const newContextLoad = createDeferred<{ success: boolean; data: any }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    let lastExecutionCalls = 0
+    let context = {
+      preferences: {
+        managedSiteType: "new-api",
+        newApi: {
+          baseUrl: "https://admin.example",
+          adminToken: "token",
+          userId: "1",
+        },
+        veloera: {
+          baseUrl: "https://veloera.example",
+          adminToken: "token",
+          userId: "2",
+        },
+      },
+      managedSiteType: "new-api",
+    }
+
+    mockUseUserPreferencesContext.mockImplementation(() => context)
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.GetLastExecution) {
+          lastExecutionCalls += 1
+          if (lastExecutionCalls === 1) return await oldContextLoad.promise
+          if (lastExecutionCalls === 2) return await newContextLoad.promise
+        }
+
+        return await originalImplementation(type, data)
+      },
+    )
+
+    const view = render(<ManagedSiteModelSync />)
+    await waitFor(() => expect(lastExecutionCalls).toBe(1))
+
+    context = {
+      ...context,
+      preferences: {
+        ...context.preferences,
+        managedSiteType: "Veloera",
+      },
+      managedSiteType: "Veloera",
+    }
+    view.rerender(
+      <I18nextProvider i18n={testI18n}>
+        <ManagedSiteModelSync />
+      </I18nextProvider>,
+    )
+    await waitFor(() => expect(lastExecutionCalls).toBe(2))
+
+    newContextLoad.resolve({
+      success: true,
+      data: createExecution("New Context", 401),
+    })
+    expect(await screen.findByText("New Context#401")).toBeInTheDocument()
+
+    await act(async () => {
+      oldContextLoad.resolve({
+        success: true,
+        data: createExecution("Old Context", 402),
+      })
+      await oldContextLoad.promise
+    })
+
+    expect(screen.queryByText("Old Context#402")).not.toBeInTheDocument()
+    expect(screen.getByText("New Context#401")).toBeInTheDocument()
+  })
+
+  it("keeps a new-context sync locked when the old-context sync settles", async () => {
+    const oldContextSync = createDeferred<{ success: boolean; data: any }>()
+    const newContextSync = createDeferred<{ success: boolean; data: any }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    let triggerAllCalls = 0
+    let lastExecutionCalls = 0
+    let context = {
+      preferences: {
+        managedSiteType: "new-api",
+        newApi: {
+          baseUrl: "https://admin.example",
+          adminToken: "token",
+          userId: "1",
+        },
+        veloera: {
+          baseUrl: "https://veloera.example",
+          adminToken: "token",
+          userId: "2",
+        },
+      },
+      managedSiteType: "new-api",
+    }
+
+    mockUseUserPreferencesContext.mockImplementation(() => context)
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.TriggerAll) {
+          triggerAllCalls += 1
+          return await (triggerAllCalls === 1
+            ? oldContextSync.promise
+            : newContextSync.promise)
+        }
+        if (type === ModelSyncMessageTypes.GetLastExecution) {
+          lastExecutionCalls += 1
+          if (lastExecutionCalls === 2) {
+            return {
+              success: true,
+              data: createExecution("New Context", 501),
+            }
+          }
+        }
+
+        return await originalImplementation(type, data)
+      },
+    )
+
+    const user = userEvent.setup()
+    const view = render(<ManagedSiteModelSync />)
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runAll",
+      }),
+    )
+    await waitFor(() => expect(triggerAllCalls).toBe(1))
+
+    context = {
+      ...context,
+      preferences: {
+        ...context.preferences,
+        managedSiteType: "Veloera",
+      },
+      managedSiteType: "Veloera",
+    }
+    view.rerender(
+      <I18nextProvider i18n={testI18n}>
+        <ManagedSiteModelSync />
+      </I18nextProvider>,
+    )
+    expect(await screen.findByText("New Context#501")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runAll",
+      }),
+    )
+    await waitFor(() => expect(triggerAllCalls).toBe(2))
+
+    await act(async () => {
+      oldContextSync.resolve({
+        success: true,
+        data: createExecution("Old Sync", 502),
+      })
+      await oldContextSync.promise
+    })
+
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runningAll",
+      }),
+    ).toHaveAttribute("aria-busy", "true")
+    expect(screen.queryByText("Old Sync#502")).not.toBeInTheDocument()
+
+    newContextSync.resolve({
+      success: true,
+      data: createExecution("New Sync", 503),
+    })
+    expect(await screen.findByText("New Sync#503")).toBeInTheDocument()
   })
 
   it("uses a warning toast when run-all completes with failed channels still present", async () => {
@@ -1539,6 +2335,128 @@ describe("ManagedSiteModelSync page", () => {
         name: "managedSiteModelSync:execution.actions.runSelected (0)",
       }),
     ).toBeDisabled()
+  })
+
+  it("keeps manual run-selected busy through rejection cleanup and permits retry", async () => {
+    const deferred = createDeferred<{ success: boolean }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    let actionAttempts = 0
+
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.TriggerSelected) {
+          actionAttempts += 1
+          if (actionAttempts === 1) return await deferred.promise
+        }
+        return await originalImplementation(type, data)
+      },
+    )
+
+    render(<ManagedSiteModelSync routeParams={{ tab: "manual" }} />)
+
+    expect(await screen.findByText("Manual Alpha#201")).toBeInTheDocument()
+    const manualAlphaRow = screen.getByText("Manual Alpha#201").closest("tr")
+    expect(manualAlphaRow).toBeTruthy()
+    fireEvent.click(within(manualAlphaRow!).getByRole("checkbox"))
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runSelected (1)",
+      }),
+    )
+
+    const pendingButton = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.actions.runningSelected",
+    })
+    expect(pendingButton).toBeDisabled()
+    expect(pendingButton).toHaveAttribute("aria-busy", "true")
+    const refreshButton = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.actions.refresh",
+    })
+    expect(refreshButton).toBeDisabled()
+    expect(refreshButton).not.toHaveAttribute("aria-busy")
+    fireEvent.click(pendingButton)
+    expect(actionAttempts).toBe(1)
+
+    deferred.reject(new Error("manual sync failed"))
+    const restoredButton = await screen.findByRole("button", {
+      name: "managedSiteModelSync:execution.actions.runSelected (1)",
+    })
+    expect(restoredButton).toBeEnabled()
+
+    fireEvent.click(restoredButton)
+    await waitFor(() => expect(actionAttempts).toBe(2))
+  })
+
+  it("distinguishes automatic channel loading from manual toolbar refresh", async () => {
+    const automaticLoad = createDeferred<{ success: boolean; data: any }>()
+    const manualRefresh = createDeferred<{ success: boolean; data: any }>()
+    const originalImplementation =
+      mockSendRuntimeMessage.getMockImplementation()!
+    let channelLoadAttempts = 0
+
+    mockSendRuntimeMessage.mockImplementation(
+      async (type: string, data?: any) => {
+        if (type === ModelSyncMessageTypes.ListChannels) {
+          channelLoadAttempts += 1
+          if (channelLoadAttempts === 1) return await automaticLoad.promise
+          if (channelLoadAttempts === 2) return await manualRefresh.promise
+        }
+        return await originalImplementation(type, data)
+      },
+    )
+
+    render(<ManagedSiteModelSync routeParams={{ tab: "manual" }} />)
+
+    const automaticallyLockedRefresh = await screen.findByRole("button", {
+      name: "managedSiteModelSync:execution.actions.refresh",
+    })
+    expect(automaticallyLockedRefresh).toBeDisabled()
+    expect(automaticallyLockedRefresh).not.toHaveAttribute("aria-busy")
+
+    automaticLoad.resolve({
+      success: true,
+      data: { items: [{ id: 201, name: "Manual Alpha" }] },
+    })
+    expect(await screen.findByText("Manual Alpha#201")).toBeInTheDocument()
+    const manualAlphaRow = screen.getByText("Manual Alpha#201").closest("tr")
+    expect(manualAlphaRow).toBeTruthy()
+    fireEvent.click(within(manualAlphaRow!).getByRole("checkbox"))
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.refresh",
+      }),
+    )
+
+    const manuallyBusyRefresh = screen.getByRole("button", {
+      name: "common:status.refreshing",
+    })
+    expect(manuallyBusyRefresh).toBeDisabled()
+    expect(manuallyBusyRefresh).toHaveAttribute("aria-busy", "true")
+    const lockedRunSelected = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.actions.runSelected (1)",
+    })
+    expect(lockedRunSelected).toBeDisabled()
+    expect(lockedRunSelected).not.toHaveAttribute("aria-busy")
+    fireEvent.click(lockedRunSelected)
+    expect(
+      mockSendRuntimeMessage.mock.calls.filter(
+        ([type]) => type === ModelSyncMessageTypes.TriggerSelected,
+      ),
+    ).toHaveLength(0)
+    fireEvent.click(manuallyBusyRefresh)
+    expect(channelLoadAttempts).toBe(2)
+
+    manualRefresh.reject(new Error("refresh failed"))
+    const restoredRefresh = await screen.findByRole("button", {
+      name: "managedSiteModelSync:execution.actions.refresh",
+    })
+    expect(restoredRefresh).toBeEnabled()
+
+    fireEvent.click(restoredRefresh)
+    await waitFor(() => expect(channelLoadAttempts).toBe(3))
   })
 
   it("declares manual empty-state reload analytics metadata", async () => {

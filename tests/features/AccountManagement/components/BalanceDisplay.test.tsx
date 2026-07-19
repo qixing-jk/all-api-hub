@@ -6,7 +6,18 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import BalanceDisplay from "~/features/AccountManagement/components/AccountList/BalanceDisplay"
 import { getDisplayMoneyValue } from "~/utils/core/money"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
 
 const {
   mockUseAccountActionsContext,
@@ -401,11 +412,85 @@ describe("BalanceDisplay", () => {
 
     const balanceNode = screen.getByTitle("account:list.balance.refreshBalance")
     expect(balanceNode).toHaveClass("animate-pulse", "opacity-60")
+    expect(balanceNode).toBeDisabled()
+    expect(balanceNode).not.toHaveAttribute("aria-busy")
+    expect(
+      screen.getByRole("button", {
+        name: "account:list.balance.refreshCashflow",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: "account:list.balance.refreshCashflow",
+      }),
+    ).not.toHaveAttribute("aria-busy")
 
     await user.click(balanceNode)
 
     expect(handleRefreshAccount).not.toHaveBeenCalled()
   })
+
+  it.each([
+    "account:list.balance.refreshBalance",
+    "account:list.balance.refreshCashflow",
+    "account:list.balance.refreshIncome",
+  ])(
+    "marks only %s busy and restores every metric after a rejected refresh",
+    async (initiatorName) => {
+      const user = userEvent.setup()
+      const site = buildDisplaySiteData({
+        balance: { USD: 18, CNY: 126 },
+        todayConsumption: { USD: 1, CNY: 7 },
+        todayIncome: { USD: 2, CNY: 14 },
+      })
+      const deferredRefresh = createDeferred<void>()
+      const handleRefreshAccount = vi.fn(() => deferredRefresh.promise)
+
+      mockUseAccountActionsContext.mockReturnValue({
+        handleRefreshAccount,
+        refreshingAccountId: null,
+      })
+
+      render(<BalanceDisplay site={site} />)
+
+      const balanceButton = screen.getByRole("button", {
+        name: "account:list.balance.refreshBalance",
+      })
+      const cashflowButton = screen.getByRole("button", {
+        name: "account:list.balance.refreshCashflow",
+      })
+      const incomeButton = screen.getByRole("button", {
+        name: "account:list.balance.refreshIncome",
+      })
+
+      const buttons = [balanceButton, cashflowButton, incomeButton]
+      const initiator = screen.getByRole("button", { name: initiatorName })
+      const siblings = buttons.filter((button) => button !== initiator)
+
+      await user.click(initiator)
+
+      expect(initiator).toHaveAttribute("aria-busy", "true")
+      expect(initiator).toBeDisabled()
+      for (const sibling of siblings) {
+        expect(sibling).toBeDisabled()
+        expect(sibling).not.toHaveAttribute("aria-busy")
+      }
+
+      await user.click(initiator)
+      await user.click(siblings[0])
+      expect(handleRefreshAccount).toHaveBeenCalledTimes(1)
+
+      deferredRefresh.reject(new Error("refresh failed"))
+
+      await waitFor(() => {
+        expect(initiator).toBeEnabled()
+      })
+      for (const button of buttons) {
+        expect(button).toBeEnabled()
+        expect(button).not.toHaveAttribute("aria-busy")
+      }
+    },
+  )
 
   it("renders static values on the first paint and hides today cashflow when that preference is disabled", () => {
     const site = buildDisplaySiteData({

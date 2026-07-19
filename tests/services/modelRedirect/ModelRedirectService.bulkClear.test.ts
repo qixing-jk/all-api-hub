@@ -4,6 +4,12 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 
+const { resolveManagedUpstreamResourceFeatureCapabilitiesMock } = vi.hoisted(
+  () => ({
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock: vi.fn(),
+  }),
+)
+
 const listChannelsMock = vi.fn()
 const updateChannelModelMappingMock = vi.fn()
 
@@ -17,6 +23,11 @@ vi.mock("~/services/models/modelSync", () => {
     ModelSyncService: ModelSyncServiceMock,
   }
 })
+
+vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
+  resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock(...args),
+}))
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
@@ -39,6 +50,12 @@ const mockedUserPreferences = userPreferences as unknown as {
 describe("ModelRedirectService.clearChannelModelMappings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
+      supported: false,
+      siteType: SITE_TYPES.NEW_API,
+      feature: "modelRedirect",
+      reason: "feature-slice-disabled",
+    })
     mockedUserPreferences.getPreferences.mockResolvedValue({
       managedSiteType: SITE_TYPES.NEW_API,
       newApi: {
@@ -123,6 +140,81 @@ describe("ModelRedirectService.clearChannelModelMappings", () => {
     expect(updateChannelModelMappingMock).not.toHaveBeenCalledWith(
       expect.objectContaining({ id: 1 }),
       {},
+    )
+  })
+
+  it("uses resource detail drafts for clear writes when the resource feature is supported", async () => {
+    const channel = {
+      id: 1,
+      name: "c1",
+      models: "a,b",
+      model_mapping: '{"gpt-4o":"openai/gpt-4o"}',
+    }
+    listChannelsMock.mockResolvedValue({
+      items: [channel],
+    })
+
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://example.com",
+          resourceId: "1",
+        },
+      },
+      native: {
+        ...channel,
+        key: "sk-real-key",
+      },
+    }
+    const resources = {
+      items: {
+        list: vi.fn().mockResolvedValue({
+          items: [detail.summary],
+          total: 1,
+        }),
+        getDetail: vi.fn().mockResolvedValue(detail),
+        update: vi.fn().mockResolvedValue({ success: true }),
+      },
+      drafts: {
+        prepareEditDraft: vi.fn().mockReturnValue({
+          name: "c1",
+          type: 1,
+          key: "sk-real-key",
+          base_url: "https://upstream.example.invalid",
+          models: ["a", "b"],
+          groups: [],
+          priority: 0,
+          weight: 1,
+          status: 1,
+        }),
+      },
+    }
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.NEW_API,
+      feature: "modelRedirect",
+      capabilities: resources,
+    })
+
+    const result = await ModelRedirectService.clearChannelModelMappings([1])
+
+    expect(result.success).toBe(true)
+    expect(result.clearedChannels).toBe(1)
+    expect(updateChannelModelMappingMock).not.toHaveBeenCalled()
+    expect(resources.items.update).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://example.com" }),
+      expect.objectContaining({
+        native: expect.objectContaining({
+          model_mapping: "{}",
+          models: "a,b",
+          key: "sk-real-key",
+        }),
+      }),
+      expect.objectContaining({
+        models: ["a", "b"],
+        key: "sk-real-key",
+      }),
     )
   })
 

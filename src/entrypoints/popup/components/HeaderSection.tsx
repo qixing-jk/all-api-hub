@@ -4,7 +4,7 @@ import {
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline"
 import { PanelRightClose } from "lucide-react"
-import { useCallback } from "react"
+import { useCallback, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -64,6 +64,7 @@ export default function HeaderSection({
 }) {
   const { t, i18n } = useTranslation(["ui", "account", "common"])
   const { isRefreshing, handleRefresh } = useAccountDataContext()
+  const [isManualRefreshPending, setIsManualRefreshPending] = useState(false)
   const inSidePanel = isExtensionSidePanel()
   const sidePanelSupported = getSidePanelSupport().supported
   const entrypoint = inSidePanel
@@ -74,12 +75,15 @@ export default function HeaderSection({
     : PRODUCT_ANALYTICS_SURFACE_IDS.PopupHeader
 
   const handleGlobalRefresh = useCallback(async () => {
+    if (isRefreshing || isManualRefreshPending) return
+
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshPopupAccounts,
       surfaceId: headerSurface,
       entrypoint,
     })
+    setIsManualRefreshPending(true)
 
     try {
       const result = await toast.promise(handleRefresh(true), {
@@ -135,8 +139,17 @@ export default function HeaderSection({
           error,
         }),
       })
+    } finally {
+      setIsManualRefreshPending(false)
     }
-  }, [entrypoint, handleRefresh, headerSurface, t])
+  }, [
+    entrypoint,
+    handleRefresh,
+    headerSurface,
+    isManualRefreshPending,
+    isRefreshing,
+    t,
+  ])
 
   const openFullPageLabel =
     activeView === "bookmarks"
@@ -219,15 +232,14 @@ export default function HeaderSection({
               <Tooltip content={t("common:actions.refresh")}>
                 <IconButton
                   onClick={handleGlobalRefresh}
+                  loading={isManualRefreshPending}
                   disabled={isRefreshing}
                   variant="outline"
                   size="sm"
                   aria-label={t("common:actions.refresh")}
                   className="touch-manipulation"
                 >
-                  <ArrowPathIcon
-                    className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-                  />
+                  <ArrowPathIcon className="h-4 w-4" />
                 </IconButton>
               </Tooltip>
             )}

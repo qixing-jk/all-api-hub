@@ -99,7 +99,7 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken routing", () => 
   })
 
   it("returns runtime model-only rows when a token-scoped route has no dashboard estimate loader", async () => {
-    fetchRuntimeModelsMock.mockResolvedValueOnce(["runtime-only-model"])
+    fetchRuntimeModelsMock.mockResolvedValueOnce([{ id: "runtime-only-model" }])
 
     const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
       account: {
@@ -155,7 +155,9 @@ describe("loadAccountRuntimeKeyFallbackPricingResponseFromToken routing", () => 
   })
 
   it("accepts the legacy minimal account shape for token fallback callers", async () => {
-    fetchRuntimeModelsMock.mockResolvedValueOnce(["legacy-minimal-model"])
+    fetchRuntimeModelsMock.mockResolvedValueOnce([
+      { id: "legacy-minimal-model" },
+    ])
 
     const result = await loadAccountRuntimeKeyFallbackPricingResponseFromToken({
       account: {

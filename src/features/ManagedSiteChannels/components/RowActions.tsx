@@ -1,6 +1,7 @@
 import { Ellipsis } from "lucide-react"
+import { useRef, useState } from "react"
 
-import { Button } from "~/components/ui/button"
+import { IconButton } from "~/components/ui"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +26,7 @@ interface RowActionsProps {
   onView: (channel: ChannelRow) => void
   onMigrate: (channel: ChannelRow) => void
   onDelete: (ids: number[]) => void
-  onSync: (channelIds: number[]) => void
+  onSync: (channelIds: number[]) => Promise<void>
   onOpenSync: (channelId: number) => Promise<void>
   onFilters: (channel: ChannelRow) => void
   canMigrate: boolean
@@ -74,18 +75,36 @@ export default function RowActions({
   labels,
   testIds,
 }: RowActionsProps) {
+  const [isActionPending, setIsActionPending] = useState(false)
+  const isActionPendingRef = useRef(false)
+
+  const handleSync = async () => {
+    if (isActionPendingRef.current) return
+
+    isActionPendingRef.current = true
+    setIsActionPending(true)
+    try {
+      await onSync([channel.id])
+    } finally {
+      isActionPendingRef.current = false
+      setIsActionPending(false)
+    }
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          size="icon"
+        <IconButton
+          size="default"
           variant="ghost"
           className="h-8 w-8"
           aria-label={labels.trigger}
           data-testid={testIds?.trigger}
+          disabled={isSyncing}
+          loading={isActionPending}
         >
           <Ellipsis className="h-4 w-4" />
-        </Button>
+        </IconButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
         {showMigrationAction ? (
@@ -151,7 +170,7 @@ export default function RowActions({
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    onSync([channel.id])
+                    void handleSync()
                   }}
                   disabled={isSyncing}
                 >

@@ -18,6 +18,7 @@ import {
   PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS,
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_PAGE_IDS,
@@ -456,6 +457,54 @@ describe("product analytics privacy filtering", () => {
       target_state: PRODUCT_ANALYTICS_TARGET_STATES.Enabled,
       telemetry_source: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
       usage_data_present: true,
+    })
+  })
+
+  it.each(Object.values(PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS))(
+    "keeps the controlled Kilo export target %s on action completion",
+    (kiloCodeExportTarget) => {
+      const sanitized = sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.ImportBackupData,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+          kilo_code_export_target: kiloCodeExportTarget,
+          item_count: 2,
+        },
+      )
+
+      expect(sanitized).toEqual({
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.ImportBackupData,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        kilo_code_export_target: kiloCodeExportTarget,
+        item_count: 2,
+      })
+    },
+  )
+
+  it("drops an arbitrary Kilo export target", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.ImportBackupData,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        kilo_code_export_target: "private-export-target",
+        item_count: 2,
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.ImportBackupData,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      item_count: 2,
     })
   })
 

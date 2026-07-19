@@ -22,6 +22,17 @@ vi.mock("~/features/AccountManagement/components/TagPicker", () => ({
   TagPicker: () => <div data-testid="tag-picker" />,
 }))
 
+vi.mock("~/components/ui/DatePicker", () => ({
+  DatePicker: ({ id, value, onChange, disabled }: any) => (
+    <input
+      id={id}
+      value={value ?? ""}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  ),
+}))
+
 vi.mock("~/components/ui/Dialog/Modal", () => ({
   Modal: ({
     children,
@@ -365,6 +376,51 @@ describe("ApiCredentialProfileDialog", () => {
     expect(screen.getByDisplayValue("data.total.used")).toHaveValue(
       "data.total.used",
     )
+  })
+
+  it("rejects expanded-year profile expiration values when saving", async () => {
+    const { onSave } = renderDialog()
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.name",
+      ),
+      {
+        target: { value: "Expanded year profile" },
+      },
+    )
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.baseUrl",
+      ),
+      {
+        target: { value: "https://expanded.example.com" },
+      },
+    )
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.apiKey",
+      ),
+      {
+        target: { value: "sk-expanded" },
+      },
+    )
+    fireEvent.change(
+      screen.getByLabelText("apiCredentialProfiles:dialog.fields.expiresAt"),
+      {
+        target: { value: "202607-01-01" },
+      },
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          expiresAt: null,
+        }),
+      )
+    })
   })
 
   it("tracks saving an edited profile", async () => {

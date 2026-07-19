@@ -8,9 +8,11 @@ import type {
   AutoCheckinRunSummary,
   AutoCheckinStatus,
 } from "~/types/autoCheckin"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 export interface AutoCheckinRunNowRequest {
   accountIds?: string[]
+  tempWindowRequestSource?: TempWindowRequestSource
 }
 
 export interface AutoCheckinDebugScheduleDailyAlarmForTodayRequest {
@@ -21,6 +23,7 @@ export interface AutoCheckinPretriggerDailyOnUiOpenRequest {
   requestId?: string
   dryRun?: boolean
   debug?: boolean
+  tempWindowRequestSource?: TempWindowRequestSource
 }
 
 type AutoCheckinPretriggerDailyOnUiOpenResponse =
@@ -41,6 +44,7 @@ type AutoCheckinPretriggerDailyOnUiOpenResponse =
 
 interface AutoCheckinRetryAccountRequest {
   accountId?: string
+  tempWindowRequestSource?: TempWindowRequestSource
 }
 
 export interface AutoCheckinGetAccountInfoRequest {

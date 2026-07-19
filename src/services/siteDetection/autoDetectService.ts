@@ -33,13 +33,14 @@ import {
 } from "~/services/apiTransport/type"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import {
   getActiveOrAllTabs,
   getBrowserApiCapabilities,
   isMessageReceiverUnavailableError,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
-import { isExtensionPopup } from "~/utils/browser/index"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -256,6 +257,7 @@ async function getUserDataViaAPI(
   url: string,
   siteType: AccountSiteType,
   fetchContext?: AutoDetectFetchContext,
+  tempWindowRequestSource?: TempWindowRequestSource,
 ): Promise<UserDataResult | null> {
   try {
     if (fetchContext) {
@@ -281,6 +283,7 @@ async function getUserDataViaAPI(
         authType: AuthTypeEnum.Cookie,
       },
       ...(fetchContext ? { fetchContext } : {}),
+      ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
     })
     const userId = normalizeAccountIdentity(userInfo?.id)
     if (!userInfo || !userId) {
@@ -365,6 +368,8 @@ async function getUserDataViaBackground(
   siteType: AccountSiteType,
   fetchContext?: AutoDetectFetchContext,
 ): Promise<UserDataResult | null> {
+  const tempWindowRequestSource = getCurrentTempWindowRequestSource()
+
   try {
     const requestId = `auto-detect-${Date.now()}`
     logger.debug("Background auto-detect request prepared", {
@@ -375,13 +380,11 @@ async function getUserDataViaBackground(
       fetchContext: summarizeApiServiceFetchContext(fetchContext),
     })
 
-    const shouldSuppressMinimize = isExtensionPopup()
-
     const response = await sendRuntimeMessage({
       action: RuntimeActionIds.AutoDetectSite,
       url: url,
       requestId: requestId,
-      ...(shouldSuppressMinimize ? { suppressMinimize: true } : {}),
+      tempWindowRequestSource,
       ...(fetchContext?.incognito === true ? { useIncognito: true } : {}),
       ...(fetchContext?.cookieStoreId
         ? { cookieStoreId: fetchContext.cookieStoreId }
@@ -401,7 +404,12 @@ async function getUserDataViaBackground(
           fetchContext: summarizeApiServiceFetchContext(fetchContext),
         },
       )
-      return await getUserDataViaAPI(url, siteType, fetchContext)
+      return await getUserDataViaAPI(
+        url,
+        siteType,
+        fetchContext,
+        tempWindowRequestSource,
+      )
     }
 
     logger.debug("Background auto-detect returned user data", {
@@ -419,7 +427,12 @@ async function getUserDataViaBackground(
         siteType,
         requestId,
       })
-      return await getUserDataViaAPI(url, siteType, fetchContext)
+      return await getUserDataViaAPI(
+        url,
+        siteType,
+        fetchContext,
+        tempWindowRequestSource,
+      )
     }
 
     return {
@@ -437,7 +450,12 @@ async function getUserDataViaBackground(
       fetchContext: summarizeApiServiceFetchContext(fetchContext),
       error: getErrorMessage(error),
     })
-    return null
+    return await getUserDataViaAPI(
+      url,
+      siteType,
+      fetchContext,
+      tempWindowRequestSource,
+    )
   }
 }
 

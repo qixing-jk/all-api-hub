@@ -28,8 +28,8 @@ describe("sub2ApiModelCatalog", () => {
     }
 
     await expect(sub2ApiModelCatalog.fetchModels(request)).resolves.toEqual([
-      "example-model-a",
-      "example-model-b",
+      { id: "example-model-a" },
+      { id: "example-model-b" },
     ])
     expect(fetchSub2ApiRuntimeModelsMock).toHaveBeenCalledWith(request)
   })

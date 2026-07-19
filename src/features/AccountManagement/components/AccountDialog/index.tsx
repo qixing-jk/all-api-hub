@@ -204,6 +204,11 @@ export default function AccountDialog({
       })
     : undefined
 
+  const handleOpenApiCredentialProfilesFromDetectFailure = () => {
+    void openApiCredentialProfilesPage()
+    handlers.handleClose()
+  }
+
   return (
     <>
       <Modal
@@ -245,6 +250,9 @@ export default function AccountDialog({
                 error={state.detectionError}
                 siteUrl={state.url}
                 siteType={state.siteType}
+                onApiCredentialProfilesClick={
+                  handleOpenApiCredentialProfilesFromDetectFailure
+                }
               />
             )}
 

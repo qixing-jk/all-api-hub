@@ -1,4 +1,5 @@
 import type { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import { getExtensionVersion } from "~/utils/browser/browserApi"
 import { getDocsCommunityUrl } from "~/utils/navigation/docsLinks"
 import { getRepository } from "~/utils/navigation/packageMeta"
 
@@ -94,6 +95,10 @@ export const getSiteSupportRequestUrl = (
   }
   if (context.errorMessage) {
     url.searchParams.set("failure-message", context.errorMessage)
+  }
+  const extensionVersion = getExtensionVersion("").trim()
+  if (extensionVersion) {
+    url.searchParams.set("extension-version", extensionVersion)
   }
 
   return url.toString()

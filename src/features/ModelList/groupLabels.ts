@@ -1,10 +1,10 @@
-/** Falls back to 1x when a group ratio is missing or invalid. */
-export function resolveGroupRatio(
+/** Returns a finite group ratio when the source provides one. */
+export function resolveKnownGroupRatio(
   group: string,
   groupRatios: Record<string, number>,
 ) {
   const ratio = groupRatios[group]
-  return typeof ratio === "number" && Number.isFinite(ratio) ? ratio : 1
+  return typeof ratio === "number" && Number.isFinite(ratio) ? ratio : undefined
 }
 
 /** Formats a group name with its ratio for consistent UI display. */
@@ -17,5 +17,6 @@ export function formatGroupLabelFromRatios(
   group: string,
   groupRatios: Record<string, number>,
 ) {
-  return formatGroupLabel(group, resolveGroupRatio(group, groupRatios))
+  const ratio = resolveKnownGroupRatio(group, groupRatios)
+  return ratio === undefined ? group : formatGroupLabel(group, ratio)
 }

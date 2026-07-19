@@ -86,6 +86,45 @@ describe("IconButton", () => {
     ).not.toHaveAttribute("title")
   })
 
+  it("preserves its accessible identity and disables interaction while loading", () => {
+    const onClick = vi.fn()
+
+    render(
+      <IconButton
+        aria-label="Refresh profiles"
+        aria-busy={false}
+        loading
+        onClick={onClick}
+      >
+        <span data-testid="refresh-icon" />
+      </IconButton>,
+    )
+
+    const button = screen.getByRole("button", { name: "Refresh profiles" })
+
+    expect(button).toHaveAttribute("title", "Refresh profiles")
+    expect(button).toHaveAttribute("aria-busy", "true")
+    expect(button).toBeDisabled()
+    expect(screen.queryByTestId("refresh-icon")).not.toBeInTheDocument()
+    expect(button.querySelector("svg")).toHaveAttribute("aria-hidden", "true")
+
+    fireEvent.click(button)
+
+    expect(onClick).not.toHaveBeenCalled()
+  })
+
+  it("preserves an explicit aria-busy value when not loading", () => {
+    render(
+      <IconButton aria-label="Refresh profiles" aria-busy="true">
+        <span />
+      </IconButton>,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Refresh profiles" }),
+    ).toHaveAttribute("aria-busy", "true")
+  })
+
   it("tracks controlled analytics action without reading button content", () => {
     const onClick = vi.fn()
 

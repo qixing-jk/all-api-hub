@@ -83,11 +83,15 @@ export function ManagedSiteTokenBatchExportDialog({
             previewError={dialog.previewError}
             executionError={dialog.executionError}
             isLoadingPreview={dialog.isLoadingPreview}
+            isManualPreviewRefresh={dialog.isManualPreviewRefresh}
+            showPreviewLoadingStatus={
+              !dialog.isManualPreviewRefresh || !dialog.preview
+            }
             isRunning={dialog.isRunning}
-            onRefreshPreview={dialog.actions.refreshPreview}
+            onRefreshPreview={dialog.actions.retryPreview}
           />
 
-          {dialog.preview ? (
+          {dialog.preview && !dialog.previewError ? (
             <ManagedSiteTokenBatchExportPreviewList
               t={t}
               preview={dialog.preview}
@@ -96,6 +100,7 @@ export function ManagedSiteTokenBatchExportDialog({
               modelOptions={dialog.modelOptions}
               executionResult={dialog.executionResult}
               isLoadingPreview={dialog.isLoadingPreview}
+              isManualPreviewRefresh={dialog.isManualPreviewRefresh}
               isRunning={dialog.isRunning}
               verifyingItemId={dialog.verifyingItemId}
               isVerificationDialogOpen={verificationState.isOpen}
@@ -121,6 +126,7 @@ export function ManagedSiteTokenBatchExportDialog({
           },
         )}
         confirmLabel={t("keyManagement:batchManagedSiteExport.actions.start")}
+        workingLabel={t("keyManagement:batchManagedSiteExport.actions.running")}
         cancelLabel={t("common:actions.cancel")}
         isWorking={dialog.isRunning}
       />

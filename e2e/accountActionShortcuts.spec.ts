@@ -20,7 +20,6 @@ import {
   seedStoredAccounts,
   stubLlmMetadataIndex,
   stubNewApiSiteRoutes,
-  waitForExtensionPage,
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
@@ -275,49 +274,36 @@ test("opens per-account key and model management from the row menu", async ({
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  const keysPagePromise = waitForExtensionPage(context, {
-    extensionId,
-    path: OPTIONS_PAGE_PATH,
-    hash: `#${MENU_ITEM_IDS.KEYS}`,
-    searchParams: { accountId: "shortcut-account" },
-  })
-
   await openAccountActionsMenu(page, "Shortcut Account")
   await page
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem)
     .click()
 
-  const keysPage = await keysPagePromise
-  installExtensionPageGuards(keysPage)
-  await waitForExtensionRoot(keysPage)
-  await expect(keysPage).toHaveURL(
+  await expect(page).toHaveURL(
     /options\.html\?accountId=shortcut-account#keys$/,
   )
-  await keysPage.close()
+  await waitForExtensionRoot(page)
 
-  await page.bringToFront()
-
-  const modelsPagePromise = waitForExtensionPage(context, {
-    extensionId,
-    path: OPTIONS_PAGE_PATH,
-    hash: `#${MENU_ITEM_IDS.MODELS}`,
-    searchParams: { accountId: "shortcut-account" },
-  })
+  await page.goBack()
+  await expect(page).toHaveURL(
+    new RegExp(`options\\.html#${MENU_ITEM_IDS.ACCOUNT}$`, "u"),
+  )
+  await expect(
+    page.getByTestId(getAccountManagementListItemTestId("shortcut-account")),
+  ).toBeVisible()
 
   await openAccountActionsMenu(page, "Shortcut Account")
   await page
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowModelManagementMenuItem)
     .click()
 
-  const modelsPage = await modelsPagePromise
-  installExtensionPageGuards(modelsPage)
-  await waitForExtensionRoot(modelsPage)
+  await expect(page).toHaveURL(
+    /options\.html\?accountId=shortcut-account#models$/,
+  )
+  await waitForExtensionRoot(page)
 
-  const targetUrl = new URL(modelsPage.url())
-  expect(targetUrl.hash).toBe(`#${MENU_ITEM_IDS.MODELS}`)
-  expect(targetUrl.searchParams.get("accountId")).toBe("shortcut-account")
   await expect(
-    modelsPage.getByRole("heading", { name: "gpt-shortcut" }),
+    page.getByRole("heading", { name: "gpt-shortcut" }),
   ).toBeVisible()
 })
 

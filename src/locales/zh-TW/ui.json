@@ -288,9 +288,11 @@
     },
     "kiloCode": {
       "actions": {
-        "copyApiConfigs": "複製 apiConfigs",
+        "copyKiloV7Provider": "複製 provider 設定",
+        "copyLegacyApiConfigs": "複製舊版 apiConfigs",
         "createDefaultToken": "建立預設金鑰",
-        "downloadSettings": "下載設定"
+        "downloadKiloV7Settings": "下載 Kilo 7.x 設定",
+        "downloadLegacySettings": "下載舊版設定"
       },
       "description": "根據選中的站點和金鑰生成 Kilo Code / Roo Code 的 providerProfiles 配置。",
       "descriptions": {
@@ -299,24 +301,24 @@
         "selectedSites": "已選站點：{{sites}}，已選金鑰：{{keys}}。"
       },
       "help": {
-        "afterExportDescription": "推薦兩種方式：",
-        "afterExportTitle": "匯出後怎麼用",
-        "importDescription": "點擊“下載設定”儲存 {{filename}}，再在 Kilo Code 中匯入。匯入是增量新增 provider：不會清空/刪除你已有的 provider（同名條目可能會被更新）。",
-        "importTitle": "方式二：匯入檔案（下載設定）",
-        "manualDescription": "點擊“複製 apiConfigs”，在 Kilo Code / Roo Code 的匯出配置中找到 providerProfiles.apiConfigs 並貼上進去。",
-        "manualTitle": "方式一：手動貼上（複製 apiConfigs）",
+        "kiloV7CopyInstructions": "如需手動維護設定，可點擊「複製 provider 設定」，將複製的內容合併到設定 JSON 頂層的 provider 欄位。",
+        "kiloV7DownloadInstructions": "點擊「下載 Kilo 7.x 設定」。然後在 Kilo Code 中點擊齒輪開啟設定，進入 About Kilo Code → Import，選擇下載的 kilo-settings.json，確認匯入內容後儲存。",
+        "legacyCopyInstructions": "點擊「複製舊版 apiConfigs」，將內容貼到 Roo Code 或 Kilo Code 5.x 設定的 providerProfiles.apiConfigs 中。",
+        "legacyDownloadInstructions": "如需完整設定檔，可點擊「下載舊版設定」取得 kilo-code-settings.json，並透過對應版本的設定匯入功能匯入。",
         "perSiteDescription": "選擇要匯出的站點後將自動載入金鑰，並預設選擇第一個金鑰（每個站點支援多選）。",
-        "perSiteTitle": "按站點匯出"
+        "perSiteTitle": "按站點匯出",
+        "usageTitle": "使用方法"
       },
       "labels": {
         "currentApiConfigName": "當前配置",
+        "exportTarget": "匯出目標",
         "modelId": "模型 ID",
         "selectedSites": "已選擇的站點",
         "selectedTokens": "已選擇的金鑰"
       },
       "messages": {
         "accountNotFound": "未找到帳號。",
-        "copiedApiConfigs": "已複製 apiConfigs",
+        "copiedExportConfig": "已將匯出設定複製到剪貼簿",
         "copyFailed": "複製失敗",
         "createTokenBlockedFallback": "金鑰建立被阻止。請檢查站點策略後再試一次。",
         "createTokenFailed": "建立金鑰失敗。",
@@ -340,6 +342,10 @@
         "modelId": "搜尋或輸入模型 ID",
         "selectSites": "請選擇站點",
         "selectTokens": "請選擇金鑰"
+      },
+      "targets": {
+        "kiloV7": "Kilo Code 7.x",
+        "legacy": "Roo Code / Kilo Code 5.x（舊版）"
       },
       "title": "匯出 Kilo Code JSON",
       "warning": {

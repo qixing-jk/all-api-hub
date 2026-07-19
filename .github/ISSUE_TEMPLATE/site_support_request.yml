@@ -23,6 +23,13 @@ body:
     validations:
       required: true
 
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension version / 扩展版本
+      description: If this was opened from the extension, this should be filled with your installed version. Store releases may be out of sync, so this helps us tell whether the latest version may already support the site. / 如果从扩展内打开，这里应已填写您当时安装的版本。各商店发布版本可能不同，这有助于判断最新版是否可能已经支持该站点。
+      placeholder: 3.49.1
+
   - type: dropdown
     id: site-operation-model
     attributes:

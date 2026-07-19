@@ -33,7 +33,7 @@ export function OneTimeApiKeyDialog({
   autoCopy = true,
   saveAction,
 }: OneTimeApiKeyDialogProps) {
-  const { t } = useTranslation("keyManagement")
+  const { t } = useTranslation(["keyManagement", "common"])
   const keyInputId = useId()
   const [copied, setCopied] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -113,10 +113,11 @@ export function OneTimeApiKeyDialog({
               type="button"
               onClick={() => void handleSave()}
               loading={isSaving}
-              disabled={isSaving}
               data-testid={TOKEN_PROVISIONING_TEST_IDS.oneTimeKeySaveButton}
             >
-              {saveAction.label ?? t("actions.saveToApiProfiles")}
+              {isSaving
+                ? t("common:status.saving")
+                : saveAction.label ?? t("actions.saveToApiProfiles")}
             </Button>
           ) : null}
           <Button

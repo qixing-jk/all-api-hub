@@ -278,6 +278,11 @@ Use validation as progressive gates:
 
 - When a helper explicitly accepts a translation function, type it as `TFunction` from `i18next`. Do not hand-write signatures like `(key: string, options?: any) => string` or `ReturnType<typeof useTranslation>["t"]` unless a narrower type is intentionally required.
 
+### Translation Keys and Fallbacks
+
+- Prefer literal translation keys. Finite, typed key selection is allowed when `i18next-cli` can statically enumerate every possible key; verify changes with `pnpm run i18n:extract:ci`. For runtime-selected keys, constrain values to an owned key family and handle unknown values explicitly; never pass raw user or backend text directly to `t`.
+- Keep canonical UI copy in locale resources and synchronized across supported locales. Use i18next `defaultValue` only when a missing key is expected by contract and the fallback is intentional; do not use it to conceal a missing locale resource or avoid synchronizing ordinary application copy.
+
 ### Plurals and Count Semantics
 
 - When a visible phrase depends on `count` for grammar or wording, prefer a proper pluralized translation (`t(key, { count })`, ICU/message-format equivalent, or explicit plural key family) so the locale controls the full rendered phrase.
@@ -286,6 +291,7 @@ Use validation as progressive gates:
 
 ### Extraction Workflow
 
+- When legitimate runtime keys cannot be enumerated from executable source, preserve the narrowest key family with `extract.preservePatterns` or an extractor plugin. Do not add no-op helpers, unreachable branches, dummy `t(...)` calls, or extraction-only comments solely to retain keys.
 - After running `pnpm run i18n:extract`, inspect the locale diff before proceeding. Confirm the intended new keys are still present and no required keys were removed as "unused" by the extractor.
 - If `i18n:extract` removes keys you expected to keep, fix the source usage or extractor configuration instead of re-adding locale JSON by hand. In this repo, prefer direct extractable calls such as `t("ns:key")` over wrapper names like `translate("ns:key")` unless the wrapper is explicitly configured in `i18next.config.ts`.
 - After changing translation keys, locale JSON, or any UI code that adds new `t(...)` usages, run `pnpm run i18n:extract:ci` and ensure it reports no unexpected updates before handoff.

@@ -462,8 +462,13 @@ class ModelSyncScheduler {
     // Initialize service (for non-Octopus sites)
     const service = await this.createService()
 
+    const modelRedirectConfig =
+      prefs.modelRedirect ?? DEFAULT_MODEL_REDIRECT_PREFERENCES
+
     // List channels
-    const channelListResponse = await service.listChannels()
+    const channelListResponse = await service.listChannels({
+      preferResourceBacked: !modelRedirectConfig.enabled,
+    })
     const allChannels = channelListResponse.items
 
     // Filter channels if specific IDs provided
@@ -478,9 +483,6 @@ class ModelSyncScheduler {
       throw new Error(getManagedSiteNoChannelsToSyncMessage(t, messagesKey))
     }
 
-    // Placeholder for model redirect config, will generate after sync if enabled
-    const modelRedirectConfig =
-      prefs.modelRedirect ?? DEFAULT_MODEL_REDIRECT_PREFERENCES
     const standardModels =
       modelRedirectConfig.standardModels.length > 0
         ? modelRedirectConfig.standardModels

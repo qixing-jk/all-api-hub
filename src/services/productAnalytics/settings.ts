@@ -1,5 +1,6 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { SITE_TYPES } from "~/constants/siteType"
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import {
   DEFAULT_PREFERENCES,
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
@@ -97,10 +98,14 @@ function getUsageHistoryScheduleMode(mode: string | undefined) {
 }
 
 function getTempWindowMode(
-  mode: TempWindowFallbackPreferences["tempContextMode"] | undefined,
+  mode: TempWindowFallbackPreferences["tempContextMode"],
 ): ProductAnalyticsModeId {
-  if (mode === "window") return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow
-  if (mode === "tab") return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeTab
+  if (mode === TEMP_CONTEXT_MODES.Window) {
+    return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow
+  }
+  if (mode === TEMP_CONTEXT_MODES.Tab) {
+    return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeTab
+  }
   return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeComposite
 }
 

@@ -31,6 +31,7 @@ import type { ChannelRow } from "../types"
 import {
   fetchChannelFilters,
   saveChannelFilters,
+  type ChannelFilterStorageIdentity,
 } from "../utils/channelFilters"
 
 interface ChannelFilterDialogProps {
@@ -65,6 +66,22 @@ function moveFilterById(
 }
 
 /**
+ * Builds the storage identity used when channel filters have a resource ref.
+ */
+function getChannelFilterStorageIdentity(
+  channel: ChannelRow,
+): ChannelFilterStorageIdentity {
+  if (channel.resourceRef) {
+    return {
+      channelId: channel.id,
+      resourceRef: channel.resourceRef,
+    }
+  }
+
+  return channel.id
+}
+
+/**
  * Dialog for editing channel model filters via visual builder or raw JSON input.
  */
 export default function ChannelFilterDialog({
@@ -91,7 +108,9 @@ export default function ChannelFilterDialog({
     if (!channel) return
     setIsLoading(true)
     try {
-      const loadedFilters = await fetchChannelFilters(channel.id)
+      const loadedFilters = await fetchChannelFilters(
+        getChannelFilterStorageIdentity(channel),
+      )
       setFilters(loadedFilters)
       try {
         setJsonText(JSON.stringify(loadedFilters, null, 2))
@@ -326,7 +345,10 @@ export default function ChannelFilterDialog({
           idPrefix: "channel-filter",
         },
       )
-      await saveChannelFilters(channel.id, payload)
+      await saveChannelFilters(
+        getChannelFilterStorageIdentity(channel),
+        payload,
+      )
       setFilters(payload)
       try {
         setJsonText(JSON.stringify(payload, null, 2))
@@ -382,8 +404,8 @@ export default function ChannelFilterDialog({
           >
             {t("filters.actions.cancel")}
           </Button>
-          <Button onClick={handleSave} disabled={isSaving} loading={isSaving}>
-            {t("filters.actions.save")}
+          <Button onClick={handleSave} loading={isSaving}>
+            {isSaving ? t("common:status.saving") : t("filters.actions.save")}
           </Button>
         </div>
       }

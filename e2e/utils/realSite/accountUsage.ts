@@ -47,6 +47,8 @@ type RealSiteAccountUsagePlanContext = RealSiteAccountUsageContext & {
 type RealSiteAccountUsageCheck =
   AccountUsagePlanCheck<RealSiteAccountUsagePlanContext>
 
+const REAL_SITE_ACCOUNT_REMOTE_WRITE_TIMEOUT_MS = 120_000
+
 type ApiProfilePopupModelsProbeExpectation = {
   expectedStatus?: "pass" | "fail" | "handled"
   expectedSummaryText?: string
@@ -205,6 +207,7 @@ export const realSiteAccountUsageChecks = {
   keyLifecycle(): RealSiteAccountUsageCheck {
     return {
       name: "create and delete an account API key",
+      timeoutMs: REAL_SITE_ACCOUNT_REMOTE_WRITE_TIMEOUT_MS,
       run: async (context) => {
         await verifyRealSiteAccountKeyLifecycleUsage(context)
       },
@@ -220,6 +223,7 @@ export const realSiteAccountUsageChecks = {
   ): RealSiteAccountUsageCheck {
     return {
       name: "create an account key, save it to API profiles, and verify it from the popup",
+      timeoutMs: REAL_SITE_ACCOUNT_REMOTE_WRITE_TIMEOUT_MS,
       run: async (context) => {
         await verifyRealSiteApiProfilePopupModelsUsage({
           ...context,
@@ -279,6 +283,7 @@ export const realSiteAccountUsageChecks = {
   }): RealSiteAccountUsageCheck {
     return {
       name: "create a key from the model catalog",
+      timeoutMs: REAL_SITE_ACCOUNT_REMOTE_WRITE_TIMEOUT_MS,
       run: async (context) => {
         await maybeVerifyRealSiteModelToKeyUsage({
           ...context,
@@ -294,6 +299,14 @@ export async function runRealSiteAccountFixtureUsageChecks(
   context: RealSiteAccountUsagePlanContext,
   checks: readonly RealSiteAccountUsageCheck[],
 ) {
+  const timeoutMs = checks.reduce(
+    (total, check) => total + (check.timeoutMs ?? 0),
+    0,
+  )
+  if (timeoutMs > context.testInfo.timeout) {
+    context.testInfo.setTimeout(timeoutMs)
+  }
+
   await runAccountFixtureUsagePlan(context, checks, {
     step: async (name, run) => {
       await test.step(name, run)

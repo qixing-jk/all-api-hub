@@ -135,6 +135,8 @@ function NotificationChannelActions({
   onToggle,
   onTest,
 }: NotificationChannelActionsProps) {
+  const { t: commonT } = useTranslation("common")
+
   return (
     <div className="flex items-center gap-4">
       <Button
@@ -147,7 +149,7 @@ function NotificationChannelActions({
         data-testid={testButtonTestId}
         onClick={onTest}
       >
-        {testLabel}
+        {loading ? commonT("status.testing") : testLabel}
       </Button>
       <Separator orientation="vertical" className="h-4" />
       <Switch checked={checked} disabled={disabled} onChange={onToggle} />
@@ -198,7 +200,7 @@ function getTaskDescription(
  * General settings section for background scheduled-task system notifications.
  */
 export default function TaskNotificationSettings() {
-  const { i18n, t } = useTranslation("settings")
+  const { i18n, t } = useTranslation(["settings", "common"])
   const {
     siteAnnouncementNotifications,
     taskNotifications,
@@ -713,7 +715,9 @@ export default function TaskNotificationSettings() {
                       }
                       onClick={() => void handleRequestPermission()}
                     >
-                      {t("taskNotifications.permission.request")}
+                      {isRequestingPermission
+                        ? t("common:status.applying")
+                        : t("taskNotifications.permission.request")}
                     </Button>
                   )}
                   {permissionGranted !== null && (

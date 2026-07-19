@@ -21,6 +21,8 @@ import {
   recordShieldBypassSettingsVisited,
 } from "~/services/productAnalytics/shieldBypassSummary"
 
+const MAX_TITLE_CORRECTIONS = 2
+
 /** Removes a previously applied prefix from a title string. */
 function stripPrefixedTitle(title: string, prefix: string) {
   const trimmed = title.trim()
@@ -48,7 +50,7 @@ function usePrefixedDocumentTitle(prefix: string) {
     let applying = false
 
     const apply = () => {
-      if (disposed || applying) return
+      if (disposed || applying) return false
       applying = true
       try {
         const current = typeof document.title === "string" ? document.title : ""
@@ -56,7 +58,9 @@ function usePrefixedDocumentTitle(prefix: string) {
         const next = base ? `${normalizedPrefix} · ${base}` : normalizedPrefix
         if (document.title !== next) {
           document.title = next
+          return true
         }
+        return false
       } finally {
         applying = false
       }
@@ -65,27 +69,28 @@ function usePrefixedDocumentTitle(prefix: string) {
     apply()
 
     const titleEl = document.querySelector("title")
-    const observer = new MutationObserver(() => apply())
+    let correctionCount = 0
+    const observer = new MutationObserver(() => {
+      if (apply()) {
+        correctionCount += 1
+        if (correctionCount >= MAX_TITLE_CORRECTIONS) {
+          observer.disconnect()
+        }
+      }
+    })
     if (titleEl) {
       observer.observe(titleEl, { childList: true, subtree: true })
-    } else {
-      observer.observe(document.documentElement, {
-        childList: true,
-        subtree: true,
-      })
     }
-
-    const interval = window.setInterval(apply, 1000)
 
     return () => {
       disposed = true
       observer.disconnect()
-      window.clearInterval(interval)
 
       try {
         const current = typeof document.title === "string" ? document.title : ""
-        const base = stripPrefixedTitle(current || "", normalizedPrefix).trim()
-        if (base && document.title !== base) {
+        const stripped = stripPrefixedTitle(current || "", normalizedPrefix)
+        const base = stripped.trim()
+        if (stripped !== current && document.title !== base) {
           document.title = base
         }
       } catch {
