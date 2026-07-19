@@ -6,8 +6,6 @@ import {
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeDefaultModelSelection,
   type KiloCodeExportFilename,
-  type KiloCodeExportTarget,
-  type KiloCodeExportTuple,
   type KiloCodeLegacySelection,
   type KiloCodeSettingsFile,
   type KiloCodeV7ProviderSelection,
@@ -16,7 +14,7 @@ import {
 import { prepareKiloCodeV7Catalog } from "~/services/integrations/kiloCodeV7Catalog"
 
 // Kilo MAX_IMPORT_SIZE source: https://github.com/Kilo-Org/kilocode/blob/3cb82a0907f888749435c1d208e56d8365747df2/packages/kilo-vscode/webview-ui/src/components/settings/settings-io.ts
-export const KILO_CODE_SETTINGS_MAX_IMPORT_BYTES = 1_048_576
+const KILO_CODE_SETTINGS_MAX_IMPORT_BYTES = 1_048_576
 
 /** Report whether a serialized settings file exceeds Kilo's import limit. */
 export function isKiloCodeSettingsFileTooLarge(byteLength: number) {
@@ -36,21 +34,9 @@ interface BuildKiloCodeLegacyExportOutputOptions {
   currentLegacyProfileName: string
 }
 
-/**
- * Compatibility input for the two dialogs that still share a tuple and target.
- * @deprecated Remove after Tasks 5 and 6 migrate both dialogs to discriminated inputs.
- */
-interface DeprecatedBuildKiloCodeExportOutputOptions {
-  target: KiloCodeExportTarget
-  selections: KiloCodeExportTuple[]
-  currentLegacyProfileName: string
-  now?: () => Date
-}
-
-export type BuildKiloCodeExportOutputOptions =
+type BuildKiloCodeExportOutputOptions =
   | BuildKiloCodeV7ExportOutputOptions
   | BuildKiloCodeLegacyExportOutputOptions
-  | DeprecatedBuildKiloCodeExportOutputOptions
 
 interface KiloCodeExportOutputBase {
   filename: KiloCodeExportFilename
@@ -96,63 +82,22 @@ function buildDownloadMetadata(
   }
 }
 
-/** Convert the pre-Task-5/6 dialog tuple to the canonical V7 policy input. */
-function prepareDeprecatedDialogV7Input(
-  options: DeprecatedBuildKiloCodeExportOutputOptions,
-): {
-  selections: KiloCodeV7ProviderSelection[]
-  defaultModel: KiloCodeDefaultModelSelection
-} {
-  const modelIds = options.selections.map((selection) => {
-    const modelId = selection.modelId?.trim()
-    if (!modelId) throw new Error("Model ID cannot be blank")
-    return modelId
-  })
-  const selections = options.selections.map((selection, index) => ({
-    ...selection,
-    selectionId: `legacy-v7-selection-${index}`,
-    discoveredModelIds: [modelIds[index]!],
-  }))
-
-  return {
-    selections,
-    defaultModel: {
-      selectionId: "legacy-v7-selection-0",
-      modelId: modelIds[0] ?? "",
-    },
-  }
-}
-
 export function buildKiloCodeExportOutput(
   options: BuildKiloCodeV7ExportOutputOptions,
 ): KiloCodeV7ExportOutput
 export function buildKiloCodeExportOutput(
   options: BuildKiloCodeLegacyExportOutputOptions,
 ): KiloCodeLegacyExportOutput
-/**
- * Build output for the temporary dialog tuple or a discriminated option union.
- * @deprecated Remove this overload after Tasks 5 and 6 migrate both dialogs.
- */
-export function buildKiloCodeExportOutput(
-  options: BuildKiloCodeExportOutputOptions,
-): KiloCodeExportOutput
 /** Build the target-specific copy and download payloads for Kilo Code export. */
 export function buildKiloCodeExportOutput(
   options: BuildKiloCodeExportOutputOptions,
 ): KiloCodeExportOutput {
   if (options.target === KILO_CODE_EXPORT_TARGETS.KiloV7) {
-    const canonicalInput =
-      "defaultModel" in options
-        ? options
-        : {
-            ...prepareDeprecatedDialogV7Input(options),
-            now: options.now,
-          }
-    const catalog = prepareKiloCodeV7Catalog(canonicalInput.selections)
+    const catalog = prepareKiloCodeV7Catalog(options.selections)
     const downloadPayload = buildKiloCodeV7SettingsFile({
       catalog,
-      defaultModel: canonicalInput.defaultModel,
-      now: canonicalInput.now,
+      defaultModel: options.defaultModel,
+      now: options.now,
     })
 
     return {
@@ -195,5 +140,5 @@ export function buildKiloCodeExportOutput(
     }
   }
 
-  return assertNeverTarget(options.target)
+  return assertNeverTarget((options as unknown as { target: never }).target)
 }

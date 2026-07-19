@@ -6,8 +6,6 @@ import {
   KILO_CODE_EXPORT_FILENAMES,
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeDefaultModelSelection,
-  type KiloCodeExportTuple,
-  type KiloCodeLegacySelection,
 } from "~/services/integrations/kiloCodeExport"
 import { prepareKiloCodeV7Catalog } from "~/services/integrations/kiloCodeV7Catalog"
 
@@ -266,26 +264,5 @@ describe("buildKiloCodeApiConfigs", () => {
     })
 
     expect(apiConfigs["Example - Default"].openAiModelId).toBe("gpt-4o-mini")
-  })
-
-  it("preserves explicit legacy model omission during tuple compatibility", () => {
-    const compatibilitySelection: KiloCodeExportTuple &
-      KiloCodeLegacySelection = {
-      accountId: "a",
-      siteName: "Example",
-      baseUrl: "https://api.example.invalid",
-      tokenId: 1,
-      tokenName: "Default",
-      tokenKey: "example-key",
-      legacyModelId: "  ",
-      modelId: "compatibility-model",
-    }
-
-    const { apiConfigs } = buildKiloCodeApiConfigs({
-      selections: [compatibilitySelection],
-      generateId: (name) => `id-${name}`,
-    })
-
-    expect(apiConfigs["Example - Default"]).not.toHaveProperty("openAiModelId")
   })
 })

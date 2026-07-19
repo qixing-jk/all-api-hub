@@ -314,6 +314,7 @@
       "labels": {
         "currentApiConfigName": "現在のプロファイル",
         "defaultModel": "既定のモデル",
+        "defaultProvider": "既定のプロバイダー",
         "exportTarget": "エクスポート先",
         "legacyModelId": "モデル ID",
         "modelId": "モデル ID",
@@ -341,8 +342,10 @@
         "nothingToExportTitle": "エクスポート対象がありません",
         "noTokensDescription": "トークンが作成されるまで、このサイトはスキップされます。",
         "noTokensTitle": "利用可能なトークンがありません",
+        "settingsFileTooLargeMultiple": "このファイルは Kilo Code のインポート上限を超えています。プロバイダーを減らすか、設定をコピーして手動で統合してください。",
         "settingsFileTooLargeSingle": "このファイルは Kilo Code のインポート上限を超えています。設定をコピーして手動で統合してください。",
-        "tokenCreated": "トークンを作成しました"
+        "tokenCreated": "トークンを作成しました",
+        "v7ProviderModelsRequired": "モデル ID を入力するか、モデル検出を再試行するか、このプロバイダーの選択を解除してください。"
       },
       "placeholders": {
         "currentApiConfigName": "現在のプロファイルを選択",

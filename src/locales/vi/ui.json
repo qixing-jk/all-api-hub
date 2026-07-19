@@ -314,6 +314,7 @@
       "labels": {
         "currentApiConfigName": "Cấu hình hiện tại",
         "defaultModel": "Mô hình mặc định",
+        "defaultProvider": "Nhà cung cấp mặc định",
         "exportTarget": "Đích xuất",
         "legacyModelId": "ID mô hình",
         "modelId": "ID mô hình",
@@ -341,8 +342,10 @@
         "nothingToExportTitle": "Không có nội dung để xuất",
         "noTokensDescription": "Trang web này sẽ bị bỏ qua cho đến khi tạo API Key.",
         "noTokensTitle": "Chưa có API Key",
+        "settingsFileTooLargeMultiple": "Tệp này vượt quá giới hạn nhập của Kilo Code. Hãy chọn ít nhà cung cấp hơn hoặc sao chép cấu hình và hợp nhất thủ công.",
         "settingsFileTooLargeSingle": "Tệp này vượt quá giới hạn nhập của Kilo Code. Hãy sao chép cấu hình và hợp nhất thủ công.",
-        "tokenCreated": "Tạo API Key thành công"
+        "tokenCreated": "Tạo API Key thành công",
+        "v7ProviderModelsRequired": "Hãy nhập ID mô hình, thử tìm mô hình lại hoặc bỏ chọn nhà cung cấp này."
       },
       "placeholders": {
         "currentApiConfigName": "Vui lòng chọn cấu hình hiện tại",

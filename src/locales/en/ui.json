@@ -320,6 +320,7 @@
       "labels": {
         "currentApiConfigName": "Current profile",
         "defaultModel": "Default model",
+        "defaultProvider": "Default provider",
         "exportTarget": "Export target",
         "legacyModelId": "Model ID",
         "modelId": "Model ID",
@@ -348,8 +349,10 @@
         "nothingToExportTitle": "Nothing to export",
         "noTokensDescription": "This site will be skipped until a token is created.",
         "noTokensTitle": "No tokens available",
+        "settingsFileTooLargeMultiple": "This file is too large for Kilo Code import. Select fewer providers, or copy the configuration and merge it manually.",
         "settingsFileTooLargeSingle": "This file is too large for Kilo Code import. Copy the configuration and merge it manually.",
-        "tokenCreated": "Token created"
+        "tokenCreated": "Token created",
+        "v7ProviderModelsRequired": "Enter a model ID, retry discovery, or deselect this provider."
       },
       "placeholders": {
         "currentApiConfigName": "Select current profile",

@@ -3,14 +3,12 @@ import { describe, expect, it } from "vitest"
 import {
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeExportTarget,
-  type KiloCodeExportTuple,
   type KiloCodeLegacySelection,
   type KiloCodeV7ProviderSelection,
 } from "~/services/integrations/kiloCodeExport"
 import {
   buildKiloCodeExportOutput,
   isKiloCodeSettingsFileTooLarge,
-  type BuildKiloCodeExportOutputOptions,
 } from "~/services/integrations/kiloCodeExportPolicy"
 
 const v7DefaultModelId = "模型-b 🚀"
@@ -103,68 +101,6 @@ describe("buildKiloCodeExportOutput", () => {
     expect(isKiloCodeSettingsFileTooLarge(1_048_577)).toBe(true)
   })
 
-  it("keeps the temporary V7 dialog tuple at the policy edge until Tasks 5 and 6", () => {
-    const target: KiloCodeExportTarget = KILO_CODE_EXPORT_TARGETS.KiloV7
-    const selection: KiloCodeExportTuple = {
-      accountId: "account-example",
-      siteName: "Example",
-      baseUrl: "https://api.example.invalid",
-      tokenId: 7,
-      tokenName: "Default",
-      tokenKey: "example-key",
-      modelId: "example-model",
-    }
-    const options: BuildKiloCodeExportOutputOptions = {
-      target,
-      selections: [selection],
-      currentLegacyProfileName: "Example - Default",
-    }
-
-    const output = buildKiloCodeExportOutput(options)
-
-    expect(output.target).toBe(KILO_CODE_EXPORT_TARGETS.KiloV7)
-    if (output.target !== KILO_CODE_EXPORT_TARGETS.KiloV7) {
-      throw new Error("Expected a Kilo Code V7 output")
-    }
-    expect(output.copyPayload).toEqual({
-      provider: output.downloadPayload.provider,
-      model: output.downloadPayload.model,
-    })
-  })
-
-  it("keeps the temporary legacy dialog tuple at the policy edge until Tasks 5 and 6", () => {
-    const target: KiloCodeExportTarget = KILO_CODE_EXPORT_TARGETS.Legacy
-    const selection: KiloCodeExportTuple = {
-      accountId: "account-example",
-      siteName: "Example",
-      baseUrl: "https://api.example.invalid",
-      tokenId: 7,
-      tokenName: "Default",
-      tokenKey: "example-key",
-      modelId: "compatibility-model",
-    }
-    const options: BuildKiloCodeExportOutputOptions = {
-      target,
-      selections: [selection],
-      currentLegacyProfileName: "Example - Default",
-    }
-
-    const output = buildKiloCodeExportOutput(options)
-
-    expect(output.target).toBe(KILO_CODE_EXPORT_TARGETS.Legacy)
-    if (output.target !== KILO_CODE_EXPORT_TARGETS.Legacy) {
-      throw new Error("Expected a legacy Kilo Code output")
-    }
-    expect(output.copyPayload).toEqual(
-      output.downloadPayload.providerProfiles.apiConfigs,
-    )
-    expect(output.copyPayload).toMatchObject({
-      "Example - Default": {
-        openAiModelId: "compatibility-model",
-      },
-    })
-  })
-
   it.each(["", "   "])(
     "rejects an invalid legacy current profile name: %j",
     (currentLegacyProfileName) => {
@@ -179,8 +115,15 @@ describe("buildKiloCodeExportOutput", () => {
   )
 
   it("rejects an unsupported runtime export target", () => {
+    const buildWithRuntimeTarget =
+      buildKiloCodeExportOutput as unknown as (options: {
+        target: KiloCodeExportTarget
+        selections: KiloCodeLegacySelection[]
+        currentLegacyProfileName: string
+      }) => unknown
+
     expect(() =>
-      buildKiloCodeExportOutput({
+      buildWithRuntimeTarget({
         target: "unsupported" as KiloCodeExportTarget,
         selections: [legacySelection],
         currentLegacyProfileName: "Example - Default",

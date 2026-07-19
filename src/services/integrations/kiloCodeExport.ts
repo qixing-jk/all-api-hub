@@ -2,7 +2,6 @@ import { buildUniqueKiloCodeProviderNames } from "~/services/integrations/kiloCo
 import type {
   KiloCodeDefaultModelSelection,
   KiloCodeLegacySelection,
-  KiloCodeRuntimeKeyExportInput,
   PreparedKiloCodeV7Catalog,
 } from "~/services/integrations/kiloCodeV7Catalog"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -14,7 +13,6 @@ export type {
   KiloCodeRuntimeKeyExportInput,
   KiloCodeV7ProviderSelection,
   PreparedKiloCodeV7Catalog,
-  PreparedKiloCodeV7Provider,
 } from "~/services/integrations/kiloCodeV7Catalog"
 
 export const KILO_CODE_EXPORT_TARGETS = {
@@ -86,18 +84,6 @@ interface BuildPreparedKiloCodeV7SettingsOptions {
   catalog: PreparedKiloCodeV7Catalog
   defaultModel: KiloCodeDefaultModelSelection
   now?: () => Date
-}
-
-/**
- * Compatibility input for the current dialogs and legacy builder.
- * @deprecated Remove after Tasks 5 and 6 migrate both dialogs to the
- * target-specific V7 and legacy contracts.
- */
-export interface KiloCodeExportTuple extends KiloCodeRuntimeKeyExportInput {
-  /**
-   * Upstream model id to export for this API key.
-   */
-  modelId?: string
 }
 
 /**
@@ -188,19 +174,9 @@ function getBaseProfileName(tuple: KiloCodeLegacySelection) {
   return `${siteName} - ${tokenLabel}`
 }
 
-/** Read the target-specific legacy model or the temporary shared-tuple field. */
+/** Read the target-specific legacy model. */
 function getLegacyModelId(selection: KiloCodeLegacySelection) {
-  if (selection.legacyModelId !== undefined) {
-    return selection.legacyModelId.trim() || undefined
-  }
-
-  // Remove with KiloCodeExportTuple after Tasks 5 and 6 migrate both dialogs.
-  const compatibilitySelection = selection as KiloCodeLegacySelection & {
-    modelId?: unknown
-  }
-  return typeof compatibilitySelection.modelId === "string"
-    ? compatibilitySelection.modelId.trim()
-    : undefined
+  return selection.legacyModelId?.trim() || undefined
 }
 
 /**

@@ -329,6 +329,7 @@
       "labels": {
         "currentApiConfigName": "Perfil actual",
         "defaultModel": "Modelo predeterminado",
+        "defaultProvider": "Proveedor predeterminado",
         "exportTarget": "Destino de exportación",
         "legacyModelId": "ID del modelo",
         "modelId": "Model ID",
@@ -358,8 +359,10 @@
         "nothingToExportTitle": "Nada para exportar",
         "noTokensDescription": "Este sitio se omitirá hasta que se cree un token.",
         "noTokensTitle": "No hay tokens disponibles",
+        "settingsFileTooLargeMultiple": "Este archivo supera el límite de importación de Kilo Code. Selecciona menos proveedores o copia la configuración y combínala manualmente.",
         "settingsFileTooLargeSingle": "Este archivo supera el límite de importación de Kilo Code. Copia la configuración y combínala manualmente.",
-        "tokenCreated": "Token creado"
+        "tokenCreated": "Token creado",
+        "v7ProviderModelsRequired": "Ingresa un ID de modelo, reintenta la detección o deselecciona este proveedor."
       },
       "placeholders": {
         "currentApiConfigName": "Seleccionar perfil actual",

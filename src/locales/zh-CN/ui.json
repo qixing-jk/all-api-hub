@@ -311,6 +311,7 @@
       "labels": {
         "currentApiConfigName": "当前配置",
         "defaultModel": "默认模型",
+        "defaultProvider": "默认供应商",
         "exportTarget": "导出目标",
         "legacyModelId": "模型 ID",
         "modelId": "模型 ID",
@@ -338,8 +339,10 @@
         "nothingToExportTitle": "无可导出的内容",
         "noTokensDescription": "该站点将被跳过，直到创建密钥。",
         "noTokensTitle": "暂无密钥",
+        "settingsFileTooLargeMultiple": "此文件超过 Kilo Code 的导入大小限制。请选择更少的供应商，或复制配置并手动合并。",
         "settingsFileTooLargeSingle": "此文件超过 Kilo Code 的导入大小限制。请复制配置并手动合并。",
-        "tokenCreated": "密钥创建成功"
+        "tokenCreated": "密钥创建成功",
+        "v7ProviderModelsRequired": "请输入模型 ID、重试获取模型，或取消选择此供应商。"
       },
       "placeholders": {
         "currentApiConfigName": "请选择当前配置",

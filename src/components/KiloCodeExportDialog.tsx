@@ -32,21 +32,14 @@ import {
   requireDisplayAccountKeyManagement,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
-import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import {
   buildKiloCodeApiConfigs,
   KILO_CODE_EXPORT_FILENAMES,
   KILO_CODE_EXPORT_TARGET_OPTIONS,
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeExportTarget,
-  type KiloCodeExportTuple,
 } from "~/services/integrations/kiloCodeExport"
 import { getKiloCodeExportAnalyticsTarget } from "~/services/integrations/kiloCodeExportAnalytics"
-import {
-  buildKiloCodeExportOutput,
-  type BuildKiloCodeExportOutputOptions,
-  type KiloCodeExportOutput,
-} from "~/services/integrations/kiloCodeExportPolicy"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -58,10 +51,19 @@ import {
 } from "~/services/productAnalytics/contracts"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
-import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
+import {
+  resolveKiloCodeAccountExportOutput,
+  type KiloCodeAccountExportSelection,
+} from "./kiloCodeAccountExport"
+import { KiloCodeDefaultModelSelect } from "./KiloCodeDefaultModelSelect"
 import { KiloCodeExportGuidance } from "./KiloCodeExportGuidance"
+import { KILO_CODE_EXPORT_TEST_IDS } from "./kiloCodeExportTestIds"
 import { pickNewestKiloCodeToken } from "./kiloCodeTokenSelection"
+import {
+  KILO_CODE_ACCOUNT_MODEL_STATUSES,
+  useKiloCodeAccountModelDiscovery,
+} from "./useKiloCodeAccountModelDiscovery"
 
 const kiloCodeAccountExportAnalyticsContext = {
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -110,15 +112,6 @@ interface TokenInventoryState {
 type DefaultTokenCreateContext = {
   siteId: string
   allowedGroups: string[]
-}
-
-type ModelLoadStatus =
-  (typeof KILO_CODE_INVENTORY_STATUSES)[keyof typeof KILO_CODE_INVENTORY_STATUSES]
-
-interface ModelInventoryState {
-  status: ModelLoadStatus
-  modelIds: string[]
-  errorMessage?: string
 }
 
 /**
@@ -184,23 +177,12 @@ export function KiloCodeExportDialog({
   const [defaultTokenCreateContext, setDefaultTokenCreateContext] =
     useState<DefaultTokenCreateContext | null>(null)
 
-  const [modelInventories, setModelInventories] = useState<
-    Record<string, ModelInventoryState>
-  >({})
-  const [selectedModelIdByToken, setSelectedModelIdByToken] = useState<
-    Record<string, string>
-  >({})
-
-  /**
-   * Prevents duplicate model fetches when selection effects fire in quick succession.
-   */
-  const modelLoadsInFlightRef = useRef<Set<string>>(new Set())
+  const [isDownloadTooLarge, setIsDownloadTooLarge] = useState(false)
   const initialSelectionAppliedRef = useRef(false)
-  const isDialogActiveRef = useRef(false)
-
-  useEffect(() => {
-    isDialogActiveRef.current = isOpen
-  }, [isOpen])
+  const pendingRetrySelectionIdRef = useRef<string | undefined>(undefined)
+  const pendingRemoveSelectionIdRef = useRef<string | undefined>(undefined)
+  const retryButtonRefs = useRef(new Map<string, HTMLButtonElement>())
+  const modelSelectorRefs = useRef(new Map<string, HTMLButtonElement>())
 
   useEffect(() => {
     if (isOpen) return
@@ -211,9 +193,11 @@ export function KiloCodeExportDialog({
     setTokenInventories({})
     setIsCreatingToken({})
     setDefaultTokenCreateContext(null)
-    setModelInventories({})
-    setSelectedModelIdByToken({})
-    modelLoadsInFlightRef.current.clear()
+    setIsDownloadTooLarge(false)
+    pendingRetrySelectionIdRef.current = undefined
+    pendingRemoveSelectionIdRef.current = undefined
+    retryButtonRefs.current.clear()
+    modelSelectorRefs.current.clear()
     initialSelectionAppliedRef.current = false
   }, [isOpen])
 
@@ -258,18 +242,6 @@ export function KiloCodeExportDialog({
       )
     },
     [tokenInventories],
-  )
-
-  const getModelInventory = useCallback(
-    (tokenSelectionKey: string): ModelInventoryState => {
-      return (
-        modelInventories[tokenSelectionKey] ?? {
-          status: KILO_CODE_INVENTORY_STATUSES.Idle,
-          modelIds: [],
-        }
-      )
-    },
-    [modelInventories],
   )
 
   const loadTokensForSite = useCallback(
@@ -349,74 +321,6 @@ export function KiloCodeExportDialog({
       }
     },
     [displayById, t],
-  )
-
-  const loadModelsForToken = useCallback(
-    async (siteId: string, token: ApiToken) => {
-      const site = displayById.get(siteId)
-      if (!site) return
-
-      const tokenSelectionKey = getTokenSelectionKey(siteId, token.id)
-      if (modelLoadsInFlightRef.current.has(tokenSelectionKey)) return
-
-      const existingStatus = modelInventories[tokenSelectionKey]?.status
-      if (existingStatus === KILO_CODE_INVENTORY_STATUSES.Loaded) return
-
-      modelLoadsInFlightRef.current.add(tokenSelectionKey)
-
-      setModelInventories((prev) => ({
-        ...prev,
-        [tokenSelectionKey]: {
-          status: KILO_CODE_INVENTORY_STATUSES.Loading,
-          modelIds: prev[tokenSelectionKey]?.modelIds ?? [],
-          errorMessage: undefined,
-        },
-      }))
-
-      try {
-        const resolvedToken = await resolveExportTokenForSecret(site, token)
-        const modelIds = await fetchOpenAICompatibleModelIds({
-          baseUrl: stripTrailingOpenAIV1(site.baseUrl),
-          apiKey: resolvedToken.key,
-        })
-
-        const normalized = modelIds
-          .map((item) => (typeof item === "string" ? item.trim() : ""))
-          .filter(Boolean)
-
-        if (!isDialogActiveRef.current) return
-
-        setModelInventories((prev) => ({
-          ...prev,
-          [tokenSelectionKey]: {
-            status: KILO_CODE_INVENTORY_STATUSES.Loaded,
-            modelIds: normalized,
-            errorMessage: undefined,
-          },
-        }))
-
-        // UX: default to the first upstream model for this API key unless the user already chose something.
-        setSelectedModelIdByToken((prev) => {
-          if (prev[tokenSelectionKey] !== undefined) return prev
-          if (!normalized.length) return prev
-          return { ...prev, [tokenSelectionKey]: normalized[0] }
-        })
-      } catch {
-        if (!isDialogActiveRef.current) return
-
-        setModelInventories((prev) => ({
-          ...prev,
-          [tokenSelectionKey]: {
-            status: KILO_CODE_INVENTORY_STATUSES.Error,
-            modelIds: prev[tokenSelectionKey]?.modelIds ?? [],
-            errorMessage: t("ui:dialog.kiloCode.messages.loadModelsFailed"),
-          },
-        }))
-      } finally {
-        modelLoadsInFlightRef.current.delete(tokenSelectionKey)
-      }
-    },
-    [displayById, modelInventories, t],
   )
 
   const createDefaultTokenForSite = async (siteId: string) => {
@@ -559,135 +463,114 @@ export function KiloCodeExportDialog({
     }
   }, [isOpen, loadTokensForSite, selectedSiteIds, tokenInventories])
 
-  useEffect(() => {
-    if (!isOpen) return
-    if (selectedSiteIds.length === 0) return
+  const accountExportSelections = useMemo<
+    KiloCodeAccountExportSelection[]
+  >(() => {
+    const selections: KiloCodeAccountExportSelection[] = []
 
     for (const siteId of selectedSiteIds) {
-      const inventory = tokenInventories[siteId]
-      if (
-        !inventory ||
-        inventory.status !== KILO_CODE_INVENTORY_STATUSES.Loaded
-      )
-        continue
-
       const tokenIds = selectedTokenIdsBySite[siteId] ?? []
-      for (const tokenId of tokenIds) {
+      if (tokenIds.length === 0) continue
+
+      const site = displayById.get(siteId)
+      if (!site) continue
+
+      const inventory = getTokenInventory(siteId)
+      const uniqueTokenIds = Array.from(new Set(tokenIds))
+      for (const tokenId of uniqueTokenIds) {
         const token = inventory.tokens.find(
           (candidate) => `${candidate.id}` === tokenId,
         )
         if (!token) continue
 
-        const tokenSelectionKey = getTokenSelectionKey(siteId, token.id)
-        const modelStatus =
-          modelInventories[tokenSelectionKey]?.status ??
-          KILO_CODE_INVENTORY_STATUSES.Idle
-        if (modelStatus === KILO_CODE_INVENTORY_STATUSES.Idle) {
-          void loadModelsForToken(siteId, token)
-        }
+        const selectionId = getTokenSelectionKey(siteId, token.id)
+        const tokenName = getTokenLabel(token, t("common:labels.token"))
+        const siteName = getSiteDisplayName(site)
+
+        selections.push({
+          selectionId,
+          site,
+          token,
+          providerName: `${siteName} - ${tokenName}`,
+          runtimeKey: {
+            accountId: siteId,
+            siteName,
+            baseUrl: site.baseUrl,
+            tokenId: token.id,
+            tokenName,
+            tokenKey: token.key,
+          },
+        })
       }
     }
+
+    return selections
   }, [
+    displayById,
+    getTokenInventory,
+    selectedSiteIds,
+    selectedTokenIdsBySite,
+    t,
+  ])
+
+  const {
+    getModelInventory,
+    invalidSelection,
+    legacySelections,
+    loadModels,
+    preparedCatalog,
+    removeV7ManualModel,
+    selectLegacyModel,
+    selectV7DefaultModel,
+    selectV7DefaultProvider,
+    selectV7ManualModel,
+    v7DefaultModel,
+    v7Selections,
+  } = useKiloCodeAccountModelDiscovery({
     isOpen,
-    loadModelsForToken,
-    modelInventories,
-    selectedSiteIds,
-    selectedTokenIdsBySite,
-    tokenInventories,
-  ])
+    selections: accountExportSelections,
+  })
 
-  const exportSelections: KiloCodeExportTuple[] = useMemo(() => {
-    if (!displayData.length) return []
+  const v7SelectionById = useMemo(
+    () =>
+      new Map(
+        v7Selections.map((selection) => [selection.selectionId, selection]),
+      ),
+    [v7Selections],
+  )
+  const legacySelectionById = useMemo(
+    () =>
+      new Map(
+        legacySelections.map((selection) => [selection.selectionId, selection]),
+      ),
+    [legacySelections],
+  )
+  const secretSourcesBySelectionId = useMemo(
+    () =>
+      new Map(
+        accountExportSelections.map((selection) => [
+          selection.selectionId,
+          { site: selection.site, token: selection.token },
+        ]),
+      ),
+    [accountExportSelections],
+  )
+  const exportSelectionSignature = useMemo(
+    () =>
+      accountExportSelections
+        .map((selection) => selection.selectionId)
+        .sort()
+        .join("\u0000"),
+    [accountExportSelections],
+  )
 
-    const selections: KiloCodeExportTuple[] = []
-
-    for (const siteId of selectedSiteIds) {
-      const tokenIds = selectedTokenIdsBySite[siteId] ?? []
-      if (tokenIds.length === 0) continue
-
-      const site = displayById.get(siteId)
-      if (!site) continue
-
-      const inventory = getTokenInventory(siteId)
-      const uniqueTokenIds = Array.from(new Set(tokenIds))
-      for (const tokenId of uniqueTokenIds) {
-        const token = inventory.tokens.find(
-          (candidate) => `${candidate.id}` === tokenId,
-        )
-        if (!token) continue
-
-        const tokenSelectionKey = getTokenSelectionKey(siteId, token.id)
-
-        selections.push({
-          accountId: siteId,
-          siteName: site.name || site.baseUrl,
-          baseUrl: site.baseUrl,
-          tokenId: token.id,
-          tokenName: token.name,
-          tokenKey: token.key,
-          modelId: selectedModelIdByToken[tokenSelectionKey],
-        })
-      }
-    }
-
-    return selections
-  }, [
-    displayData.length,
-    displayById,
-    getTokenInventory,
-    selectedSiteIds,
-    selectedModelIdByToken,
-    selectedTokenIdsBySite,
-  ])
-
-  const { profileNames } = useMemo(() => {
-    return buildKiloCodeApiConfigs({
-      selections: exportSelections,
-    })
-  }, [exportSelections])
-
-  const buildResolvedExportSelections = useCallback(async () => {
-    const selections: KiloCodeExportTuple[] = []
-
-    for (const siteId of selectedSiteIds) {
-      const tokenIds = selectedTokenIdsBySite[siteId] ?? []
-      if (tokenIds.length === 0) continue
-
-      const site = displayById.get(siteId)
-      if (!site) continue
-
-      const inventory = getTokenInventory(siteId)
-      const uniqueTokenIds = Array.from(new Set(tokenIds))
-
-      for (const tokenId of uniqueTokenIds) {
-        const token = inventory.tokens.find(
-          (candidate) => `${candidate.id}` === tokenId,
-        )
-        if (!token) continue
-
-        const resolvedToken = await resolveExportTokenForSecret(site, token)
-        const tokenSelectionKey = getTokenSelectionKey(siteId, token.id)
-
-        selections.push({
-          accountId: siteId,
-          siteName: site.name || site.baseUrl,
-          baseUrl: site.baseUrl,
-          tokenId: token.id,
-          tokenName: token.name,
-          tokenKey: resolvedToken.key,
-          modelId: selectedModelIdByToken[tokenSelectionKey],
-        })
-      }
-    }
-
-    return selections
-  }, [
-    displayById,
-    getTokenInventory,
-    selectedModelIdByToken,
-    selectedSiteIds,
-    selectedTokenIdsBySite,
-  ])
+  useEffect(() => {
+    setIsDownloadTooLarge(false)
+  }, [exportSelectionSignature])
+  const { profileNames } = useMemo(
+    () => buildKiloCodeApiConfigs({ selections: legacySelections }),
+    [legacySelections],
+  )
 
   useEffect(() => {
     if (profileNames.length === 0) {
@@ -699,33 +582,133 @@ export function KiloCodeExportDialog({
     }
   }, [currentApiConfigName, profileNames])
 
-  const missingModelIdCount = useMemo(() => {
-    return exportSelections.filter((tuple) => !tuple.modelId?.trim()).length
-  }, [exportSelections])
-
-  const hasExportableProfiles = profileNames.length > 0
-  const canExport = hasExportableProfiles && missingModelIdCount === 0
   const effectiveCurrentApiConfigName =
     currentApiConfigName || profileNames[0] || ""
+  const isKiloV7Export = exportTarget === KILO_CODE_EXPORT_TARGETS.KiloV7
+  const missingModelIdCount = isKiloV7Export
+    ? v7Selections.filter(
+        (selection) =>
+          !selection.discoveredModelIds.length &&
+          !selection.manualModelId?.trim(),
+      ).length
+    : legacySelections.filter((selection) => !selection.legacyModelId?.trim())
+        .length
+  const hasExportableProfiles =
+    accountExportSelections.length > 0 &&
+    v7Selections.length === accountExportSelections.length &&
+    legacySelections.length === accountExportSelections.length
+  const canExportV7 = Boolean(
+    hasExportableProfiles &&
+      !invalidSelection &&
+      preparedCatalog?.providers.length === v7Selections.length &&
+      v7DefaultModel,
+  )
+  const canExportLegacy = Boolean(
+    hasExportableProfiles &&
+      !invalidSelection &&
+      effectiveCurrentApiConfigName &&
+      legacySelections.every((selection) => selection.legacyModelId?.trim()),
+  )
+  const canExport = isKiloV7Export ? canExportV7 : canExportLegacy
   const legacyFilename = KILO_CODE_EXPORT_FILENAMES.Legacy
   const selectionSummary = t("ui:dialog.kiloCode.descriptions.selectedSites", {
     sites: selectedSiteIds.length,
-    keys: exportSelections.length,
+    keys: accountExportSelections.length,
   })
   const exportInsights = {
-    itemCount: exportSelections.length,
-    modelCount: exportSelections.filter((tuple) => tuple.modelId?.trim())
-      .length,
+    itemCount: accountExportSelections.length,
+    modelCount: isKiloV7Export
+      ? preparedCatalog?.modelCount ?? 0
+      : legacySelections.filter((selection) => selection.legacyModelId?.trim())
+          .length,
     selectedCount: selectedSiteIds.length,
     kiloCodeExportTarget: getKiloCodeExportAnalyticsTarget(exportTarget),
   }
-  const isKiloV7Export = exportTarget === KILO_CODE_EXPORT_TARGETS.KiloV7
+  const defaultProviderOptions =
+    preparedCatalog?.providers.map((provider) => ({
+      value: provider.selectionId,
+      label: provider.providerName,
+    })) ?? []
+  const selectedDefaultProvider = preparedCatalog?.providers.find(
+    (provider) => provider.selectionId === v7DefaultModel?.selectionId,
+  )
   const copyActionLabel = isKiloV7Export
     ? t("ui:dialog.kiloCode.actions.copyKiloV7Provider")
     : t("ui:dialog.kiloCode.actions.copyLegacyApiConfigs")
   const downloadActionLabel = isKiloV7Export
     ? t("ui:dialog.kiloCode.actions.downloadKiloV7Settings")
     : t("ui:dialog.kiloCode.actions.downloadLegacySettings")
+  const modelStatusSignature = accountExportSelections
+    .map(
+      (selection) =>
+        `${selection.selectionId}:${getModelInventory(selection.selectionId).status}`,
+    )
+    .join("|")
+
+  useEffect(() => {
+    const selectionId = pendingRetrySelectionIdRef.current
+    if (!selectionId) return
+    const status = getModelInventory(selectionId).status
+    if (status === KILO_CODE_ACCOUNT_MODEL_STATUSES.Loading) return
+
+    pendingRetrySelectionIdRef.current = undefined
+    if (status === KILO_CODE_ACCOUNT_MODEL_STATUSES.Error) {
+      retryButtonRefs.current.get(selectionId)?.focus()
+      return
+    }
+    modelSelectorRefs.current.get(selectionId)?.focus()
+  }, [getModelInventory, modelStatusSignature])
+
+  useEffect(() => {
+    const selectionId = pendingRemoveSelectionIdRef.current
+    if (!selectionId || v7SelectionById.get(selectionId)?.manualModelId?.trim())
+      return
+    pendingRemoveSelectionIdRef.current = undefined
+    modelSelectorRefs.current.get(selectionId)?.focus()
+  }, [v7SelectionById])
+
+  const buildCurrentExportOutput = useCallback(() => {
+    if (isKiloV7Export) {
+      if (!v7DefaultModel) {
+        throw new Error("A valid V7 default model is required")
+      }
+      return resolveKiloCodeAccountExportOutput({
+        target: KILO_CODE_EXPORT_TARGETS.KiloV7,
+        selections: v7Selections,
+        secretSourcesBySelectionId,
+        defaultModel: v7DefaultModel,
+        resolveToken: resolveExportTokenForSecret,
+      })
+    }
+
+    return resolveKiloCodeAccountExportOutput({
+      target: KILO_CODE_EXPORT_TARGETS.Legacy,
+      selections: legacySelections,
+      secretSourcesBySelectionId,
+      currentLegacyProfileName: effectiveCurrentApiConfigName,
+      resolveToken: resolveExportTokenForSecret,
+    })
+  }, [
+    effectiveCurrentApiConfigName,
+    isKiloV7Export,
+    legacySelections,
+    secretSourcesBySelectionId,
+    v7DefaultModel,
+    v7Selections,
+  ])
+
+  const handleRetryModels = (selectionId: string) => {
+    pendingRetrySelectionIdRef.current = selectionId
+    setIsDownloadTooLarge(false)
+    void loadModels(selectionId)
+  }
+
+  const handleRemoveManualModel = (selectionId: string) => {
+    pendingRemoveSelectionIdRef.current = selectionId
+    removeV7ManualModel(selectionId)
+    setIsDownloadTooLarge(false)
+  }
+
   const handleCopyApiConfigs = async () => {
     if (!canExport) return
 
@@ -734,25 +717,24 @@ export function KiloCodeExportDialog({
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyKiloCodeAccountExportConfig,
     })
 
+    let actionInsights = exportInsights
     try {
       if (typeof navigator === "undefined") {
         throw new Error(t("ui:dialog.kiloCode.messages.copyFailed"))
       }
 
-      const resolvedSelections = await buildResolvedExportSelections()
-      const outputOptions: BuildKiloCodeExportOutputOptions = {
-        target: exportTarget,
-        selections: resolvedSelections,
-        currentLegacyProfileName: effectiveCurrentApiConfigName,
+      const output = await buildCurrentExportOutput()
+      actionInsights = {
+        ...exportInsights,
+        itemCount: output.itemCount,
+        modelCount: output.modelCount,
       }
-      const output: KiloCodeExportOutput =
-        buildKiloCodeExportOutput(outputOptions)
       await navigator.clipboard.writeText(
         JSON.stringify(output.copyPayload, null, 2),
       )
       toast.success(t("ui:dialog.kiloCode.messages.copiedExportConfig"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-        insights: exportInsights,
+        insights: actionInsights,
       })
     } catch (error) {
       toast.error(
@@ -760,7 +742,7 @@ export function KiloCodeExportDialog({
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: exportInsights,
+        insights: actionInsights,
       })
     }
   }
@@ -775,16 +757,27 @@ export function KiloCodeExportDialog({
 
     let url: string | null = null
     let link: HTMLAnchorElement | null = null
+    let actionInsights = exportInsights
+    setIsDownloadTooLarge(false)
 
     try {
-      const resolvedSelections = await buildResolvedExportSelections()
-      const output = buildKiloCodeExportOutput({
-        target: exportTarget,
-        selections: resolvedSelections,
-        currentLegacyProfileName: effectiveCurrentApiConfigName,
-      })
+      const output = await buildCurrentExportOutput()
+      actionInsights = {
+        ...exportInsights,
+        itemCount: output.itemCount,
+        modelCount: output.modelCount,
+      }
 
-      const blob = new Blob([JSON.stringify(output.downloadPayload, null, 2)], {
+      if (output.isDownloadTooLarge) {
+        setIsDownloadTooLarge(true)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: actionInsights,
+        })
+        return
+      }
+
+      const blob = new Blob([output.downloadJson], {
         type: "application/json",
       })
       url = URL.createObjectURL(blob)
@@ -796,7 +789,7 @@ export function KiloCodeExportDialog({
 
       toast.success(t("ui:dialog.kiloCode.messages.downloadedSettings"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-        insights: exportInsights,
+        insights: actionInsights,
       })
     } catch (error) {
       toast.error(
@@ -804,7 +797,7 @@ export function KiloCodeExportDialog({
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: exportInsights,
+        insights: actionInsights,
       })
     } finally {
       if (link && document.body.contains(link)) {
@@ -985,38 +978,41 @@ export function KiloCodeExportDialog({
                   {inventory.tokens
                     .filter((token) => selectedTokenIds.includes(`${token.id}`))
                     .map((token) => {
-                      const tokenSelectionKey = getTokenSelectionKey(
-                        siteId,
-                        token.id,
+                      const selectionId = getTokenSelectionKey(siteId, token.id)
+                      const selection = accountExportSelections.find(
+                        (candidate) => candidate.selectionId === selectionId,
                       )
-                      const modelInventory =
-                        getModelInventory(tokenSelectionKey)
-                      const selectedModelId =
-                        selectedModelIdByToken[tokenSelectionKey] ?? ""
+                      if (!selection) return null
+
+                      const modelInventory = getModelInventory(selectionId)
                       const isModelInventoryIdle =
                         modelInventory.status ===
-                        KILO_CODE_INVENTORY_STATUSES.Idle
+                        KILO_CODE_ACCOUNT_MODEL_STATUSES.Idle
                       const isModelInventoryLoading =
                         modelInventory.status ===
-                        KILO_CODE_INVENTORY_STATUSES.Loading
+                        KILO_CODE_ACCOUNT_MODEL_STATUSES.Loading
                       const isModelInventoryLoaded =
                         modelInventory.status ===
-                        KILO_CODE_INVENTORY_STATUSES.Loaded
+                        KILO_CODE_ACCOUNT_MODEL_STATUSES.Loaded
                       const isModelInventoryError =
                         modelInventory.status ===
-                        KILO_CODE_INVENTORY_STATUSES.Error
-
-                      const modelOptions = Array.from(
-                        new Set(
-                          modelInventory.modelIds
-                            .map((id) =>
-                              typeof id === "string" ? id.trim() : "",
-                            )
-                            .filter(Boolean),
-                        ),
+                        KILO_CODE_ACCOUNT_MODEL_STATUSES.Error
+                      const showRetry =
+                        isModelInventoryError ||
+                        (isModelInventoryLoaded &&
+                          modelInventory.modelIds.length === 0)
+                      const modelOptions = modelInventory.modelIds.map(
+                        (id) => ({
+                          value: id,
+                          label: id,
+                        }),
                       )
-                        .sort((a, b) => a.localeCompare(b))
-                        .map((id) => ({ value: id, label: id }))
+                      const manualModelId =
+                        v7SelectionById.get(selectionId)?.manualModelId ?? ""
+                      const selectedModelId = isKiloV7Export
+                        ? manualModelId
+                        : legacySelectionById.get(selectionId)?.legacyModelId ??
+                          ""
 
                       const statusBadge = isModelInventoryError ? (
                         <Badge variant="danger" size="sm">
@@ -1037,7 +1033,12 @@ export function KiloCodeExportDialog({
                       )
 
                       return (
-                        <div key={tokenSelectionKey} className="space-y-1">
+                        <div
+                          key={selectionId}
+                          role="group"
+                          aria-label={selection.providerName}
+                          className="space-y-2"
+                        >
                           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                             <div className="flex min-w-0 flex-1 items-center gap-2">
                               <div
@@ -1050,28 +1051,62 @@ export function KiloCodeExportDialog({
                                 {getTokenLabel(token, t("common:labels.token"))}
                               </div>
                               {statusBadge}
+                              {isModelInventoryLoaded && (
+                                <Badge variant="secondary" size="sm">
+                                  {modelInventory.modelIds.length}
+                                </Badge>
+                              )}
                             </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              {isModelInventoryError && (
+                            <div className="flex w-full min-w-0 flex-col items-stretch gap-2 sm:w-auto sm:shrink-0 sm:flex-row sm:items-center">
+                              {showRetry && (
                                 <Button
+                                  ref={(element) => {
+                                    if (element) {
+                                      retryButtonRefs.current.set(
+                                        selectionId,
+                                        element,
+                                      )
+                                    } else {
+                                      retryButtonRefs.current.delete(
+                                        selectionId,
+                                      )
+                                    }
+                                  }}
                                   size="sm"
                                   type="button"
                                   variant="secondary"
-                                  onClick={() =>
-                                    loadModelsForToken(siteId, token)
-                                  }
+                                  onClick={() => handleRetryModels(selectionId)}
                                 >
-                                  {t("common:actions.retry")}
+                                  {t("ui:dialog.kiloCode.actions.retryModels")}
                                 </Button>
                               )}
-                              <div className="w-full min-w-[220px] sm:w-[280px]">
+                              <div className="w-full min-w-0 sm:w-[280px]">
                                 <SearchableSelect
+                                  ref={(element) => {
+                                    if (element) {
+                                      modelSelectorRefs.current.set(
+                                        selectionId,
+                                        element,
+                                      )
+                                    } else {
+                                      modelSelectorRefs.current.delete(
+                                        selectionId,
+                                      )
+                                    }
+                                  }}
+                                  aria-label={`${selection.providerName} ${t(
+                                    isKiloV7Export
+                                      ? "ui:dialog.kiloCode.labels.modelId"
+                                      : "ui:dialog.kiloCode.labels.legacyModelId",
+                                  )}`}
                                   value={selectedModelId}
                                   onChange={(value) => {
-                                    setSelectedModelIdByToken((prev) => ({
-                                      ...prev,
-                                      [tokenSelectionKey]: value,
-                                    }))
+                                    if (isKiloV7Export) {
+                                      selectV7ManualModel(selectionId, value)
+                                    } else {
+                                      selectLegacyModel(selectionId, value)
+                                    }
+                                    setIsDownloadTooLarge(false)
                                   }}
                                   placeholder={
                                     isModelInventoryLoading ||
@@ -1090,21 +1125,42 @@ export function KiloCodeExportDialog({
 
                           {isModelInventoryError && (
                             <div className="text-sm text-red-700 dark:text-red-300">
-                              {modelInventory.errorMessage ||
-                                t(
-                                  "ui:dialog.kiloCode.messages.loadModelsFailed",
-                                )}
+                              {t(
+                                "ui:dialog.kiloCode.messages.loadModelsFailed",
+                              )}
                             </div>
                           )}
 
-                          {isModelInventoryLoaded &&
-                            modelInventory.modelIds.length === 0 && (
-                              <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
+                          {showRetry && isKiloV7Export && (
+                            <div className="dark:text-dark-text-tertiary text-sm text-gray-500">
+                              {t(
+                                "ui:dialog.kiloCode.messages.v7ProviderModelsRequired",
+                              )}
+                            </div>
+                          )}
+
+                          {isKiloV7Export && manualModelId.trim() && (
+                            <div className="dark:border-dark-bg-tertiary flex min-w-0 items-center justify-between gap-3 rounded-md border border-gray-200 px-3 py-2 text-sm">
+                              <span className="min-w-0 flex-1 break-all">
+                                {manualModelId}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                data-testid={
+                                  KILO_CODE_EXPORT_TEST_IDS.removeManualModel
+                                }
+                                onClick={() =>
+                                  handleRemoveManualModel(selectionId)
+                                }
+                              >
                                 {t(
-                                  "ui:dialog.kiloCode.messages.noModelsDescription",
+                                  "ui:dialog.kiloCode.actions.removeManualModel",
                                 )}
-                              </div>
-                            )}
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       )
                     })}
@@ -1172,6 +1228,7 @@ export function KiloCodeExportDialog({
           description={selectionSummary}
         >
           <CompactMultiSelect
+            aria-label={t("ui:dialog.kiloCode.labels.selectedSites")}
             options={siteOptions}
             selected={selectedSiteIds}
             onChange={setSelectedSiteIds}
@@ -1197,7 +1254,10 @@ export function KiloCodeExportDialog({
               const target = KILO_CODE_EXPORT_TARGET_OPTIONS.find(
                 (candidate) => candidate === value,
               )
-              if (target) setExportTarget(target)
+              if (target) {
+                setExportTarget(target)
+                setIsDownloadTooLarge(false)
+              }
             }}
           >
             <SelectTrigger id="kilo-code-account-export-target">
@@ -1213,6 +1273,43 @@ export function KiloCodeExportDialog({
             </SelectContent>
           </Select>
         </FormField>
+
+        {isKiloV7Export && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField
+              label={t("ui:dialog.kiloCode.labels.defaultProvider")}
+              htmlFor="kilo-code-account-default-provider"
+            >
+              <SearchableSelect
+                id="kilo-code-account-default-provider"
+                aria-label={t("ui:dialog.kiloCode.labels.defaultProvider")}
+                data-testid={KILO_CODE_EXPORT_TEST_IDS.defaultProvider}
+                value={v7DefaultModel?.selectionId ?? ""}
+                options={defaultProviderOptions}
+                onChange={(selectionId) => {
+                  selectV7DefaultProvider(selectionId)
+                  setIsDownloadTooLarge(false)
+                }}
+                placeholder={t("ui:dialog.kiloCode.labels.defaultProvider")}
+                disabled={!preparedCatalog}
+              />
+            </FormField>
+
+            <FormField label={t("ui:dialog.kiloCode.labels.defaultModel")}>
+              <KiloCodeDefaultModelSelect
+                aria-label={t("ui:dialog.kiloCode.labels.defaultModel")}
+                value={v7DefaultModel?.modelId ?? ""}
+                modelIds={selectedDefaultProvider?.modelIds ?? []}
+                onChange={(modelId) => {
+                  selectV7DefaultModel(modelId)
+                  setIsDownloadTooLarge(false)
+                }}
+                placeholder={t("ui:dialog.kiloCode.placeholders.modelId")}
+                disabled={!selectedDefaultProvider}
+              />
+            </FormField>
+          </div>
+        )}
 
         {!isKiloV7Export && (
           <FormField
@@ -1245,6 +1342,23 @@ export function KiloCodeExportDialog({
               </SelectContent>
             </Select>
           </FormField>
+        )}
+
+        {invalidSelection && hasExportableProfiles && (
+          <Alert
+            variant="destructive"
+            title={t("ui:dialog.kiloCode.messages.invalidProfile")}
+          />
+        )}
+
+        {isDownloadTooLarge && (
+          <Alert
+            variant="warning"
+            title={t("ui:dialog.kiloCode.warning.title")}
+            description={t(
+              "ui:dialog.kiloCode.messages.settingsFileTooLargeMultiple",
+            )}
+          />
         )}
 
         {hasExportableProfiles && missingModelIdCount > 0 && (
