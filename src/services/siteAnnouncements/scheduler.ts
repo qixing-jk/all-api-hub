@@ -13,6 +13,7 @@ import type {
   SiteAnnouncementProvider,
   SiteAnnouncementProviderRequest,
   SiteAnnouncementRecord,
+  SiteAnnouncementRecordInput,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import {
@@ -82,7 +83,7 @@ function createRecordInput(params: {
   request: SiteAnnouncementProviderRequest
   siteKey: string
   announcement: SiteAnnouncement
-}): Omit<SiteAnnouncementRecord, "id" | "firstSeenAt" | "lastSeenAt" | "read"> {
+}): SiteAnnouncementRecordInput {
   const title = normalizeAnnouncementText(params.announcement.title)
   const content = normalizeAnnouncementText(params.announcement.content)
   const fingerprint =
@@ -107,6 +108,7 @@ function createRecordInput(params: {
     content,
     createdAt: params.announcement.createdAt,
     updatedAt: params.announcement.updatedAt,
+    readAt: params.announcement.readAt,
     fingerprint,
   }
 }

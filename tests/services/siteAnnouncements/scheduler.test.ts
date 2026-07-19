@@ -615,6 +615,104 @@ describe("siteAnnouncementScheduler", () => {
     }
   })
 
+  it("preserves provider read state without notifying", async () => {
+    providerFetchMock.mockResolvedValue({
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      siteKey: "notice:new-api:https://example.com",
+      status: "success",
+      announcements: [
+        {
+          title: "Already read",
+          content: "Provider-owned read state",
+          readAt: 1234,
+        },
+      ],
+    })
+    getEnabledAccountsMock.mockResolvedValue([createAccount()])
+
+    const response = await resolveSiteAnnouncementsCheckNowMessage({})
+
+    expect(response).toMatchObject({
+      success: true,
+      data: { created: 0, notified: 0 },
+    })
+    expect(notifySiteAnnouncementsMock).not.toHaveBeenCalled()
+    expect(await siteAnnouncementStorage.listRecords()).toEqual([
+      expect.objectContaining({ read: true, readAt: 1234 }),
+    ])
+  })
+
+  it.each([
+    [undefined, 1234],
+    [1234, undefined],
+  ])(
+    "does not notify duplicate provider fingerprints in either read ordering (%s, %s)",
+    async (firstReadAt, secondReadAt) => {
+      providerFetchMock.mockResolvedValue({
+        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        siteKey: "notice:new-api:https://example.com",
+        status: "success",
+        announcements: [
+          {
+            title: "B representative",
+            content: "B body",
+            fingerprint: "scheduler-duplicate-order",
+            readAt: firstReadAt,
+          },
+          {
+            title: "A representative",
+            content: "A body",
+            fingerprint: "scheduler-duplicate-order",
+            readAt: secondReadAt,
+          },
+        ],
+      })
+      getEnabledAccountsMock.mockResolvedValue([createAccount()])
+
+      const response = await resolveSiteAnnouncementsCheckNowMessage({})
+
+      expect(response).toMatchObject({
+        success: true,
+        data: { created: 0, notified: 0 },
+      })
+      expect(notifySiteAnnouncementsMock).not.toHaveBeenCalled()
+      expect(await siteAnnouncementStorage.listRecords()).toEqual([
+        expect.objectContaining({
+          title: "A representative",
+          content: "A body",
+          read: true,
+          readAt: 1234,
+        }),
+      ])
+    },
+  )
+
+  it("does not recreate evicted announcements after marking the site read", async () => {
+    const announcements = Array.from({ length: 101 }, (_, index) => ({
+      title: `Notice ${index}`,
+      content: `Body ${index}`,
+      fingerprint: `scheduler-mark-all-${index}`,
+    }))
+    providerFetchMock.mockResolvedValue({
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      siteKey: "notice:new-api:https://example.com",
+      status: "success",
+      announcements,
+    })
+    getEnabledAccountsMock.mockResolvedValue([createAccount()])
+
+    await resolveSiteAnnouncementsCheckNowMessage({})
+    await siteAnnouncementStorage.markAllRead(
+      "notice:new-api:https://example.com",
+    )
+    const secondResponse = await resolveSiteAnnouncementsCheckNowMessage({})
+
+    expect(secondResponse).toMatchObject({
+      success: true,
+      data: { created: 0, notified: 0 },
+    })
+  })
+
   it("uses the stored-account API context for provider requests", async () => {
     providerFetchMock.mockResolvedValue({
       providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api,

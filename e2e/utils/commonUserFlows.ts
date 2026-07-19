@@ -379,6 +379,7 @@ export async function seedSiteAnnouncementsStore(
     {
       schemaVersion: SITE_ANNOUNCEMENTS_STORE_SCHEMA_VERSION,
       sites,
+      identityLedger: {},
     } satisfies SiteAnnouncementStoreState,
   )
 }

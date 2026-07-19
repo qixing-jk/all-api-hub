@@ -122,6 +122,11 @@ export interface SiteAnnouncementRecord {
   readAt?: number
 }
 
+export type SiteAnnouncementRecordInput = Omit<
+  SiteAnnouncementRecord,
+  "id" | "firstSeenAt" | "lastSeenAt" | "read"
+>
+
 export interface SiteAnnouncementSiteState {
   siteKey: string
   siteName: string
@@ -137,9 +142,16 @@ export interface SiteAnnouncementSiteState {
   records: SiteAnnouncementRecord[]
 }
 
+export interface SiteAnnouncementIdentityMarker {
+  firstSeenAt: number
+  lastSeenAt: number
+  readAt?: number
+}
+
 export interface SiteAnnouncementStoreState {
-  schemaVersion: 1
+  schemaVersion: 2
   sites: Record<string, SiteAnnouncementSiteState>
+  identityLedger: Record<string, Record<string, SiteAnnouncementIdentityMarker>>
 }
 
 export interface SiteAnnouncementCheckResult {
