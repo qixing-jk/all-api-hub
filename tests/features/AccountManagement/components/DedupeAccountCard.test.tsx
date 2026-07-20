@@ -111,6 +111,50 @@ describe("DedupeAccountCard today statistics", () => {
     expect(tokensDetail).toHaveTextContent("654321098")
   })
 
+  it("keeps the summed token value when token coverage is partial", async () => {
+    const account = buildSiteAccount({
+      account_info: {
+        ...buildSiteAccount().account_info,
+        today_prompt_tokens: 765432109,
+        today_completion_tokens: 654321098,
+        todayStatsAvailability: {
+          consumption: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          requests: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+          tokens: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+            reason: ACCOUNT_TODAY_METRIC_REASONS.PageLimit,
+          },
+          income: { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete },
+        },
+      },
+    })
+
+    render(
+      <DedupeAccountCard
+        account={account}
+        group={{
+          groupId: "group-1",
+          keepAccountId: account.id,
+          recommendedKeepAccountId: account.id,
+          hasManualOverride: false,
+        }}
+        accountLabelById={new Map([[account.id, "Account"]])}
+        pinnedAccountIds={[]}
+        detailsOpenByAccountId={{ [account.id]: true }}
+        isWorking={false}
+        t={t}
+        onKeepChange={vi.fn()}
+        onToggleDetails={vi.fn()}
+      />,
+    )
+
+    const tokenValue = await screen.findByText(/1419753207/)
+    expect(tokenValue).toHaveTextContent("1419753207")
+    expect(tokenValue).toHaveTextContent(
+      "account:todayMetricAvailability.partial",
+    )
+  })
+
   it("shows pending refresh for each legacy today metric", async () => {
     const account = buildSiteAccount({
       account_info: {

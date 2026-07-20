@@ -53,6 +53,7 @@ const {
   mockRefreshAccountData,
   markAccountDisabledInStatusMock,
   markAccountsDisabledInStatusMock,
+  mockLoggerError,
   pruneStatusForAccountIdsMock,
   mockResolveAccountBrowserSession,
 } = vi.hoisted(() => ({
@@ -62,6 +63,7 @@ const {
   mockRefreshAccountData: vi.fn(),
   markAccountDisabledInStatusMock: vi.fn(),
   markAccountsDisabledInStatusMock: vi.fn(),
+  mockLoggerError: vi.fn(),
   pruneStatusForAccountIdsMock: vi.fn(),
   mockResolveAccountBrowserSession: vi.fn(),
 }))
@@ -113,6 +115,19 @@ vi.mock("~/services/checkin/autoCheckin/storage", () => ({
     pruneStatusForAccountIds: pruneStatusForAccountIdsMock,
   },
 }))
+
+vi.mock("~/utils/core/logger", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/core/logger")>()
+  return {
+    ...actual,
+    createLogger: vi.fn(() => ({
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: mockLoggerError,
+    })),
+  }
+})
 
 const seedStorage = (
   accounts: SiteAccount[],
@@ -210,6 +225,7 @@ describe("accountStorage core behaviors", () => {
     mockResolveAccountBrowserSession.mockResolvedValue(null)
     markAccountDisabledInStatusMock.mockReset()
     markAccountsDisabledInStatusMock.mockReset()
+    mockLoggerError.mockReset()
     pruneStatusForAccountIdsMock.mockReset()
     markAccountDisabledInStatusMock.mockResolvedValue(true)
     markAccountsDisabledInStatusMock.mockResolvedValue(true)
@@ -356,9 +372,23 @@ describe("accountStorage core behaviors", () => {
     const [genericDisplay, aihubmixDisplay] =
       accountStorage.convertToDisplayData([generic, aihubmix])
 
-    expect(genericDisplay.todayStatsAvailability.consumption).toEqual({
-      status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
-      reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+    expect(genericDisplay.todayStatsAvailability).toEqual({
+      consumption: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+      },
+      requests: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+      },
+      tokens: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+      },
+      income: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+        reason: ACCOUNT_TODAY_METRIC_REASONS.LegacyUnclassified,
+      },
     })
     expect(aihubmixDisplay.todayStatsAvailability).toEqual({
       consumption: {
@@ -1573,6 +1603,57 @@ describe("accountStorage core behaviors", () => {
       eligibleCount: 0,
       legacyUnclassifiedCount: 0,
     })
+  })
+
+  it("returns an empty aggregate and logs when enabled-account loading fails", async () => {
+    const error = new Error("enabled account read failed")
+    const enabledAccountsSpy = vi
+      .spyOn(accountStorage, "getEnabledAccounts")
+      .mockRejectedValue(error)
+
+    try {
+      await expect(accountStorage.getAccountStats()).resolves.toEqual({
+        total_quota: 0,
+        today_total_consumption: 0,
+        today_total_requests: 0,
+        today_total_prompt_tokens: 0,
+        today_total_completion_tokens: 0,
+        today_total_income: 0,
+        todayStatsCoverage: {
+          consumption: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            completeCount: 0,
+            partialCount: 0,
+            eligibleCount: 0,
+            legacyUnclassifiedCount: 0,
+          },
+          requests: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            completeCount: 0,
+            partialCount: 0,
+            eligibleCount: 0,
+            legacyUnclassifiedCount: 0,
+          },
+          tokens: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            completeCount: 0,
+            partialCount: 0,
+            eligibleCount: 0,
+            legacyUnclassifiedCount: 0,
+          },
+          income: {
+            status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+            completeCount: 0,
+            partialCount: 0,
+            eligibleCount: 0,
+            legacyUnclassifiedCount: 0,
+          },
+        },
+      })
+      expect(mockLoggerError).toHaveBeenCalledWith("计算统计信息失败", error)
+    } finally {
+      enabledAccountsSpy.mockRestore()
+    }
   })
 
   it("checkUrlExists should match accounts by origin and ignore paths", async () => {

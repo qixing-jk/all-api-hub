@@ -551,6 +551,42 @@ describe("createDynamicSortComparator", () => {
       // When isCheckedInToday is undefined, it should be treated as 1 (not needing check-in)
       expect(comparator(account2, account1)).toBeLessThan(0)
     })
+
+    it("treats a nonblank custom check-in URL without status as needing check-in", () => {
+      const customCheckIn = createDisplaySiteData({
+        id: "custom-check-in",
+        checkIn: {
+          enableDetection: false,
+          customCheckIn: { url: " https://checkin.example.invalid " },
+        },
+      })
+      const whitespaceUrl = createDisplaySiteData({
+        id: "whitespace-url",
+        checkIn: {
+          enableDetection: false,
+          customCheckIn: { url: "   " },
+        },
+      })
+      const comparator = createDynamicSortComparator(
+        {
+          ...DEFAULT_SORTING_PRIORITY_CONFIG,
+          criteria: [
+            {
+              id: SortingCriteriaType.CHECK_IN_REQUIREMENT,
+              enabled: true,
+              priority: 0,
+            },
+          ],
+        },
+        null,
+        "name",
+        "USD",
+        "asc",
+      )
+
+      expect(comparator(customCheckIn, whitespaceUrl)).toBeLessThan(0)
+      expect(comparator(whitespaceUrl, customCheckIn)).toBeGreaterThan(0)
+    })
   })
 
   describe("CUSTOM_CHECK_IN_URL criterion", () => {
@@ -1115,6 +1151,16 @@ describe("createDynamicSortComparator", () => {
             },
           }),
         })
+        const anotherUnavailable = createDisplaySiteData({
+          id: "another-unavailable",
+          todayConsumption: { USD: 123, CNY: 861 },
+          todayStatsAvailability: buildCompleteTodayStatsAvailability({
+            consumption: {
+              status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+              reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+            },
+          }),
+        })
         const matchingPartial = createDisplaySiteData({
           ...partial,
           id: "matching-partial",
@@ -1140,6 +1186,7 @@ describe("createDynamicSortComparator", () => {
         expect(comparator(partial, complete)).toBeGreaterThan(0)
         expect(comparator(complete, unavailable)).toBeLessThan(0)
         expect(comparator(unavailable, complete)).toBeGreaterThan(0)
+        expect(comparator(unavailable, anotherUnavailable)).toBe(0)
         expect(comparator(partial, matchingPartial)).toBe(0)
       },
     )

@@ -11,7 +11,7 @@ import {
 import { getDisplayMoneyValue } from "~/utils/core/money"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const createDeferred = <T,>() => {
   let resolve!: (value: T) => void
@@ -159,6 +159,36 @@ describe("BalanceDisplay", () => {
     await user.click(balanceNode)
 
     expect(handleRefreshAccount).toHaveBeenCalledWith(updatedSite, true)
+  })
+
+  it("animates an initial-load balance update slowly from zero", () => {
+    const site = buildDisplaySiteData({
+      balance: { USD: 25.25, CNY: 176.75 },
+    })
+    const updatedSite = buildDisplaySiteData({
+      ...site,
+      balance: { USD: 30.25, CNY: 211.75 },
+    })
+    mockUseAccountDataContext.mockReturnValue({
+      isInitialLoad: true,
+      prevBalances: {
+        [site.id]: { USD: 25.25, CNY: 176.75 },
+      },
+    })
+
+    const { rerender } = render(<BalanceDisplay site={site} />)
+    expect(screen.queryByTestId("countup")).toBeNull()
+
+    rerender(<BalanceDisplay site={updatedSite} />)
+
+    const balanceValue = within(
+      screen.getByTitle("account:list.balance.refreshBalance"),
+    ).getByTestId("countup")
+    expect(balanceValue).toHaveAttribute("data-start", "0")
+    expect(balanceValue).toHaveAttribute(
+      "data-duration",
+      String(UI_CONSTANTS.ANIMATION.SLOW_DURATION),
+    )
   })
 
   it("qualifies partial daily values without hiding their refresh actions", async () => {

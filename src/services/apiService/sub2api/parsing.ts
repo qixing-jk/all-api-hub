@@ -12,6 +12,7 @@ import {
   type AccountTodayStatsAvailability,
   type ApiToken,
 } from "~/types"
+import { toOptionalFiniteNumber } from "~/utils/core/number"
 import { t } from "~/utils/i18n/core"
 
 import type {
@@ -94,14 +95,6 @@ const toFiniteNumberOrZero = (value: unknown): number => {
     return Number.isFinite(parsed) ? parsed : 0
   }
   return 0
-}
-
-const toOptionalFiniteNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value !== "string" || !value.trim()) return undefined
-
-  const parsed = Number(value.trim())
-  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 const toFiniteIntegerOrNull = (value: unknown): number | null => {

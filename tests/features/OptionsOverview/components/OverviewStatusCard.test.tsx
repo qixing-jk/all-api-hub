@@ -59,6 +59,40 @@ describe("OverviewStatusSummary", () => {
     })
   })
 
+  it("renders complete coverage without a qualifier or coverage tooltip", () => {
+    const item: OptionsOverviewStatusCard = {
+      id: OPTIONS_OVERVIEW_STATUS_CARD_IDS.todayUsage,
+      value: "5",
+      severity: "success",
+      target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
+      coverage: {
+        status: ACCOUNT_TODAY_METRIC_STATUSES.Complete,
+        completeCount: 1,
+        partialCount: 0,
+        eligibleCount: 1,
+        legacyUnclassifiedCount: 0,
+      },
+    }
+    const t = ((key: string) => key) as TFunction
+
+    render(
+      <OverviewStatusSummary items={[item]} t={t} onNavigate={vi.fn()} />,
+      {
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    const statusButton = screen.getByRole("button", {
+      name: /optionsOverview:status\.todayUsage\.label.*5/,
+    })
+    expect(statusButton).not.toHaveAccessibleName(/todayMetricAvailability/)
+    expect(statusButton).not.toHaveTextContent(
+      "optionsOverview:todayMetricAvailability.includesPendingRefresh",
+    )
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+  })
+
   it.each([
     {
       status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,

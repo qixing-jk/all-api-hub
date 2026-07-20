@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
@@ -159,6 +159,25 @@ describe("Tooltip", () => {
       "Second details",
     )
     expect(screen.getAllByRole("tooltip")).toHaveLength(1)
+  })
+
+  it("closes after focus leaves without a related target", async () => {
+    const user = userEvent.setup()
+    render(
+      <Tooltip content="Partial coverage">
+        <button type="button">Metric value</button>
+      </Tooltip>,
+    )
+
+    await user.tab()
+    const anchor = screen.getByRole("button", { name: "Metric value" })
+    expect(await screen.findByRole("tooltip")).toBeVisible()
+
+    act(() => anchor.blur())
+
+    await waitFor(() => {
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+    })
   })
 
   it("keeps a rich tooltip open while focus moves from its trigger to an action", async () => {

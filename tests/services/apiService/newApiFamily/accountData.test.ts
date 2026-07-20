@@ -398,7 +398,37 @@ describe("newApiFamily accountData", () => {
     )
   })
 
+  it("preserves page-limit classification when paginated rows include invalid metrics", async () => {
+    mockFetchApiData
+      .mockRejectedValueOnce(new Error("stat unavailable"))
+      .mockResolvedValueOnce({
+        items: [
+          { quota: 10, prompt_tokens: 2, completion_tokens: 3 },
+          {
+            quota: "invalid",
+            prompt_tokens: "invalid",
+            completion_tokens: "invalid",
+          },
+        ],
+        total: 99,
+      })
+      .mockResolvedValueOnce({ items: [], total: 99 })
+
+    await expect(fetchTodayUsage(baseRequest)).resolves.toMatchObject({
+      today_quota_consumption: 10,
+      today_prompt_tokens: 2,
+      today_completion_tokens: 3,
+      today_requests_count: 2,
+      todayStatsAvailability: {
+        consumption: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
+        requests: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
+        tokens: partial(ACCOUNT_TODAY_METRIC_REASONS.PageLimit),
+      },
+    })
+  })
+
   it.each([
+    ["null payload", null],
     ["missing items", { total: 0 }],
     ["null items", { items: null, total: 0 }],
     ["non-array items", { items: "not-an-array", total: 0 }],

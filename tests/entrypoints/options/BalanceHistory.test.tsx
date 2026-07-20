@@ -430,6 +430,12 @@ describe("BalanceHistory options page", () => {
       today_quota_consumption: 4,
       expectedValue: 4,
     },
+    {
+      metric: "net",
+      today_income: 3,
+      today_quota_consumption: 1,
+      expectedValue: 2,
+    },
   ] as const)(
     "renders a per-account $metric trend when only that metric is available",
     async ({
@@ -500,17 +506,17 @@ describe("BalanceHistory options page", () => {
               instance.setOption.mock.calls.map((call: any) => call[0]),
             )
 
-          expect(
-            options.some((option: any) =>
-              option?.series?.some?.(
-                (series: any) =>
-                  series?.type === "line" &&
-                  series.data?.some?.(
-                    (value: unknown) => value === expectedValue,
-                  ),
-              ),
-            ),
-          ).toBe(true)
+          const metricOption = options.find(
+            (option: any) =>
+              typeof option?.yAxis?.name === "string" &&
+              option.yAxis.name.startsWith(`balanceHistory:metrics.${metric}`),
+          )
+          const accountMetricSeries = metricOption?.series?.find?.(
+            (series: any) =>
+              series?.type === "line" && series?.name === "Site A",
+          )
+
+          expect(accountMetricSeries?.data).toContain(expectedValue)
         })
       } finally {
         dateNowSpy.mockRestore()

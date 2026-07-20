@@ -391,6 +391,35 @@ describe("apiService sub2api parsing", () => {
     })
   })
 
+  it("rejects token availability when both Sub2API token totals are invalid", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        total_requests: 2,
+        total_input_tokens: "invalid",
+        total_output_tokens: undefined,
+        total_actual_cost: 0.25,
+      },
+    } as any)
+
+    await expect(
+      fetchTodayUsage({
+        baseUrl: "https://sub2.example.invalid",
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+      } as any),
+    ).resolves.toMatchObject({
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      todayStatsAvailability: {
+        tokens: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Unavailable,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.InvalidPayload,
+        },
+      },
+    })
+  })
+
   it("parseSub2ApiKey normalizes quota, dates, group aliases, and fallback user ids", () => {
     const token = parseSub2ApiKey(
       {

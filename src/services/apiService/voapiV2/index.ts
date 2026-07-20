@@ -22,6 +22,8 @@ import {
   type ApiToken,
   type CheckInConfig,
 } from "~/types"
+import { createLogger } from "~/utils/core/logger"
+import { toOptionalFiniteNumber } from "~/utils/core/number"
 import { t } from "~/utils/i18n/core"
 
 import {
@@ -43,6 +45,8 @@ import {
   type VoApiV2KeyTemplate,
   type VoApiV2UserInfo,
 } from "./type"
+
+const logger = createLogger("ApiService.VoAPIV2")
 
 const DEFAULT_KEYS_PAGE = 1
 const DEFAULT_KEYS_PAGE_SIZE = 10
@@ -87,14 +91,6 @@ const buildTodayStatisticsEndpoint = () => {
   end.setHours(23, 59, 59, 999)
 
   return `${VOAPI_V2_ENDPOINTS.DashboardStatistics}?t=h&s=${start.getTime()}&e=${end.getTime()}`
-}
-
-const toOptionalFiniteNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value !== "string" || !value.trim()) return undefined
-
-  const parsed = Number(value.trim())
-  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 const completeAvailability = (): AccountTodayMetricAvailability => ({
@@ -365,7 +361,10 @@ export async function fetchVoApiV2AccountData(
           { cache: "no-store" },
         )
           .then((data) => ({ kind: "success" as const, data }))
-          .catch(() => ({ kind: "failed" as const }))
+          .catch((error: unknown) => {
+            logger.warn("Failed to fetch VoAPI v2 dashboard statistics", error)
+            return { kind: "failed" as const }
+          })
       : Promise.resolve({ kind: "skipped" as const })
   const checkedInTodayPromise = resolvedCheckIn.enableDetection
     ? fetchVoApiV2CheckedInToday(request)

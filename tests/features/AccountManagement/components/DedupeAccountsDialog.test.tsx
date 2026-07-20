@@ -343,21 +343,43 @@ describe("DedupeAccountsDialog", () => {
     const detailButtons = await screen.findAllByRole("button", {
       name: "ui:dialog.dedupeAccounts.detailsToggle.show",
     })
-    await user.click(detailButtons[0])
+    const partialDetailsId = "dedupe-account-details-acc-keep"
+    const partialDetailsButton = detailButtons.find(
+      (button) => button.getAttribute("aria-controls") === partialDetailsId,
+    )
+    expect(partialDetailsButton).toBeDefined()
+    await user.click(partialDetailsButton!)
 
-    const partialDetail = screen
-      .getByText("ui:dialog.dedupeAccounts.details.todayConsumption")
-      .closest("div")
-    expect(partialDetail).toHaveTextContent("123")
-    expect(partialDetail).toHaveTextContent(
+    const partialDetails = document.getElementById(partialDetailsId)
+    expect(partialDetails).not.toBeNull()
+    expect(
+      within(partialDetails!).getByText(
+        "ui:dialog.dedupeAccounts.details.todayConsumption",
+      ),
+    ).toBeInTheDocument()
+    expect(partialDetails).toHaveTextContent("123")
+    expect(partialDetails).toHaveTextContent(
       "account:todayMetricAvailability.partial",
     )
 
-    await user.click(detailButtons[1])
-    const refreshDetails = screen.getAllByText(
-      "account:todayMetricAvailability.pendingRefresh",
+    const refreshDetailsId = "dedupe-account-details-acc-del"
+    const refreshDetailsButton = detailButtons.find(
+      (button) => button.getAttribute("aria-controls") === refreshDetailsId,
     )
-    expect(refreshDetails.length).toBeGreaterThan(0)
-    expect(refreshDetails[0].parentElement).not.toHaveTextContent("—")
+    expect(refreshDetailsButton).toBeDefined()
+    await user.click(refreshDetailsButton!)
+
+    const refreshDetails = document.getElementById(refreshDetailsId)
+    expect(refreshDetails).not.toBeNull()
+    const refreshValues = within(refreshDetails!).getAllByLabelText(
+      "account:todayMetricAvailability.pendingRefreshHelp",
+    )
+    expect(refreshValues.length).toBeGreaterThan(0)
+    refreshValues.forEach((refreshValue) => {
+      expect(refreshValue).toHaveTextContent(
+        "account:todayMetricAvailability.pendingRefresh",
+      )
+      expect(refreshValue).not.toHaveTextContent("—")
+    })
   })
 })

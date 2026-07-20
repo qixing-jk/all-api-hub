@@ -236,7 +236,7 @@
   "title": "Account Management",
   "todayMetricAvailability": {
     "clickToRefresh": "Click to refresh",
-    "coverage": "Complete {{complete}} · partial {{partial}} · eligible {{eligible}}",
+    "coverage": "Complete {{complete}} · Partial {{partial}} · Eligible {{eligible}}",
     "coverageWithRefresh": "Complete {{complete}} · Partial {{partial}} · Refresh needed {{refresh}} · Eligible {{eligible}}",
     "includesPendingRefresh": "Includes pending refresh",
     "partial": "Partial daily statistic",

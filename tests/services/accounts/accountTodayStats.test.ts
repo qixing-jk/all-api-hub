@@ -194,6 +194,15 @@ describe("accountTodayStats", () => {
       expect(normalized).toEqual(fallback)
       expect(normalized).not.toBe(fallback)
     })
+
+    it("fails an absent metric with a malformed fallback closed", () => {
+      expect(
+        normalizeAccountTodayMetricAvailability(undefined, {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
+        }),
+      ).toEqual(LEGACY_UNAVAILABLE)
+    })
   })
 
   it("normalizes and clones every nested availability group independently", () => {

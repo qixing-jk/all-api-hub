@@ -227,7 +227,7 @@
   "todayMetricAvailability": {
     "clickToRefresh": "クリックして更新",
     "coverage": "完全 {{complete}}・一部 {{partial}}・対象 {{eligible}}",
-    "coverageWithRefresh": "完全 {{complete}} · 一部 {{partial}} · 更新待ち {{refresh}} · 対象 {{eligible}}",
+    "coverageWithRefresh": "完全 {{complete}}・一部 {{partial}}・更新待ち {{refresh}}・対象 {{eligible}}",
     "includesPendingRefresh": "更新待ちを含む",
     "partial": "一部の日次統計",
     "pendingRefresh": "更新待ち",

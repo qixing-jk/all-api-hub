@@ -26,12 +26,22 @@ import {
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
 
-const { mockResyncVoApiV2AuthToken } = vi.hoisted(() => ({
+const { mockLoggerWarn, mockResyncVoApiV2AuthToken } = vi.hoisted(() => ({
+  mockLoggerWarn: vi.fn(),
   mockResyncVoApiV2AuthToken: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/voapiV2/tokenResync", () => ({
   resyncVoApiV2AuthToken: mockResyncVoApiV2AuthToken,
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: vi.fn(() => ({
+    debug: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: mockLoggerWarn,
+  })),
 }))
 
 const createVoApiV2Request = (): ApiServiceAccountRequest => ({
@@ -61,6 +71,7 @@ const tokenRequest: CreateTokenRequest = {
 describe("apiService VoAPI v2", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    mockLoggerWarn.mockReset()
     mockResyncVoApiV2AuthToken.mockReset()
     mockResyncVoApiV2AuthToken.mockResolvedValue(null)
     server.resetHandlers()
@@ -292,6 +303,10 @@ describe("apiService VoAPI v2", () => {
         reason: ACCOUNT_TODAY_METRIC_REASONS.RequestFailed,
       },
     })
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "Failed to fetch VoAPI v2 dashboard statistics",
+      expect.any(Error),
+    )
   })
 
   it("preserves existing check-in status when VoAPI v2 status detection fails", async () => {

@@ -1,6 +1,5 @@
 import type { TFunction } from "i18next"
 import { BarChart3 } from "lucide-react"
-import type { ReactNode } from "react"
 
 import Tooltip from "~/components/Tooltip"
 import { Card, WorkflowTransitionButton } from "~/components/ui"
@@ -198,7 +197,7 @@ function AvailabilityAwareValue({
   coverage,
   t,
 }: {
-  value: ReactNode
+  value: string | null
   coverage: AccountMetricCoverage
   t: TFunction
 }) {
@@ -253,11 +252,7 @@ function AvailabilityAwareValue({
     return (
       <Tooltip content={coverageLabel} wrapperClassName="min-w-0 justify-start">
         <span
-          aria-label={[
-            getAccessibleValue(value),
-            qualifier ?? partialLabel,
-            coverageLabel,
-          ]
+          aria-label={[value, qualifier ?? partialLabel, coverageLabel]
             .filter(Boolean)
             .join(". ")}
           className="cursor-help rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
@@ -275,13 +270,6 @@ function AvailabilityAwareValue({
   }
 
   return value
-}
-
-/** Returns primitive rendered values for accessible-name composition. */
-function getAccessibleValue(value: ReactNode): string | undefined {
-  return typeof value === "string" || typeof value === "number"
-    ? String(value)
-    : undefined
 }
 
 /**

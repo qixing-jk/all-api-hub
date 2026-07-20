@@ -206,7 +206,7 @@
   },
   "title": "Resumen",
   "todayMetricAvailability": {
-    "coverage": "Completos {{complete}} · parciales {{partial}} · aptos {{eligible}}",
+    "coverage": "Completas {{complete}} · Parciales {{partial}} · Elegibles {{eligible}}",
     "coverageWithRefresh": "Completas {{complete}} · Parciales {{partial}} · Requieren actualización {{refresh}} · Elegibles {{eligible}}",
     "includesPendingRefresh": "Incluye actualizaciones pendientes",
     "partial": "Estadística diaria parcial",

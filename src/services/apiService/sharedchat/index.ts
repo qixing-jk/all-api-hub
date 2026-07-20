@@ -14,6 +14,7 @@ import {
   ACCOUNT_TODAY_METRIC_STATUSES,
   type AccountTodayMetricAvailability,
 } from "~/types"
+import { toOptionalFiniteNumber } from "~/utils/core/number"
 import { t } from "~/utils/i18n/core"
 
 import {
@@ -109,15 +110,6 @@ const toFiniteNumber = (value: unknown, fallback = 0): number => {
     if (Number.isFinite(parsed)) return parsed
   }
   return fallback
-}
-
-const toOptionalFiniteNumber = (value: unknown): number | undefined => {
-  if (typeof value === "number" && Number.isFinite(value)) return value
-  if (typeof value === "string" && value.trim() !== "") {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed)) return parsed
-  }
-  return undefined
 }
 
 const toOptionalString = (value: unknown): string | undefined =>

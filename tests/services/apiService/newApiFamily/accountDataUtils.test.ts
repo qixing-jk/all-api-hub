@@ -241,6 +241,13 @@ describe("New API family account data utilities", () => {
   })
 
   describe("aggregateIncomeData", () => {
+    it("rejects non-record rows and unparseable content", () => {
+      const result = aggregateIncomeData([null, { content: "unparseable" }], 7)
+
+      expect(result.today_income).toBe(0)
+      expect(result.coverage).toEqual({ validCount: 0, invalidCount: 2 })
+    })
+
     it("keeps an explicit zero quota instead of falling back to content", () => {
       const result = aggregateIncomeData([{ quota: 0, content: "$100" }], 7)
 

@@ -1250,6 +1250,51 @@ describe("AccountList", () => {
     ).toBeInTheDocument()
   })
 
+  it("uses ordinary coverage copy for filtered partial totals without legacy accounts", async () => {
+    const user = userEvent.setup()
+    const partialAccount = buildDisplaySiteData({
+      id: "partial",
+      name: "Partial Account",
+      todayConsumption: { USD: 4, CNY: 28 },
+      todayStatsAvailability: buildCompleteTodayStatsAvailability({
+        consumption: {
+          status: ACCOUNT_TODAY_METRIC_STATUSES.Partial,
+          reason: ACCOUNT_TODAY_METRIC_REASONS.PageLimit,
+        },
+      }),
+    })
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [partialAccount],
+        displayData: [partialAccount],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
+    render(<AccountList />)
+    await user.click(
+      screen.getByRole("button", { name: "common:status.enabled" }),
+    )
+
+    const consumptionSummary = screen.getByText(
+      "account:filteredTotals.consumption",
+      { exact: false },
+    )
+    expect(consumptionSummary).toHaveTextContent("USD 4.00 / CNY 28.00")
+    expect(
+      within(consumptionSummary).getByText(
+        "account:todayMetricAvailability.coverage",
+      ),
+    ).toBeInTheDocument()
+    expect(consumptionSummary).not.toHaveTextContent(
+      "account:todayMetricAvailability.includesPendingRefresh",
+    )
+    expect(consumptionSummary).not.toHaveTextContent(
+      "account:todayMetricAvailability.coverageWithRefresh",
+    )
+  })
+
   it("identifies legacy accounts in filtered partial and unavailable totals", async () => {
     const user = userEvent.setup()
     const partialAccount = buildDisplaySiteData({
