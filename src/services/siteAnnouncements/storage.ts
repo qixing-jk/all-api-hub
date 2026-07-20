@@ -382,12 +382,15 @@ class SiteAnnouncementStorage {
       async () => {
         const store = await this.getStoreOrThrow()
         const { changed, result } = await mutation(store)
+        const previousIdentityLedger = serializeIdentityLedger(
+          store.identityLedger,
+        )
         const prunedIdentityLedger = pruneIdentityLedger(store.identityLedger, {
           identitiesPerSite: SITE_ANNOUNCEMENTS_LIMITS.identitiesPerSite,
           identitiesTotal: SITE_ANNOUNCEMENTS_LIMITS.identitiesTotal,
         })
         const pruningChanged =
-          serializeIdentityLedger(store.identityLedger) !==
+          previousIdentityLedger !==
           serializeIdentityLedger(prunedIdentityLedger)
         if (changed || pruningChanged) {
           store.identityLedger = prunedIdentityLedger
@@ -594,7 +597,7 @@ class SiteAnnouncementStorage {
         if (record && !record.read) {
           const now = Date.now()
           const digest = await digestAnnouncementFingerprint(record.fingerprint)
-          const markers = (store.identityLedger[record.siteKey] ??= {})
+          const markers = (store.identityLedger[site.siteKey] ??= {})
           const marker = (markers[digest] ??= {
             firstSeenAt: record.firstSeenAt,
             lastSeenAt: record.lastSeenAt,
@@ -613,6 +616,7 @@ class SiteAnnouncementStorage {
     return await this.mutateStore(async (store) => {
       const now = Date.now()
       let changedCount = 0
+      let recordSyncChanged = false
       const selectedSiteKeys = siteKey
         ? [siteKey]
         : Object.keys(store.identityLedger)
@@ -650,13 +654,18 @@ class SiteAnnouncementStorage {
         ).filter(([, marker]) => marker.readAt !== undefined)) {
           const record = recordsByDigest.get(digest)
           if (record) {
+            recordSyncChanged ||=
+              !record.read || record.readAt !== marker.readAt
             record.read = true
             record.readAt = marker.readAt
           }
         }
       }
 
-      return { changed: changedCount > 0, result: changedCount }
+      return {
+        changed: changedCount > 0 || recordSyncChanged,
+        result: changedCount,
+      }
     })
   }
 
