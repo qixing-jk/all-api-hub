@@ -66,6 +66,29 @@ describe("runInviteLinkCopyWorkflow", () => {
     )
   })
 
+  it("returns cancelled immediately when the parent signal is already aborted", async () => {
+    const controller = new AbortController()
+    controller.abort()
+
+    const result = await runInviteLinkCopyWorkflow({
+      accounts: [buildAccount("already-cancelled")],
+      format: "raw",
+      signal: controller.signal,
+    })
+
+    expect(result).toEqual({
+      result: INVITE_LINK_COPY_RESULTS.Cancelled,
+      selectedCount: 1,
+      itemCount: 1,
+      successCount: 0,
+      failureCount: 0,
+      unsupportedCount: 0,
+      skippedCount: 0,
+    })
+    expect(fetchDisplayAccountInviteLinkMock).not.toHaveBeenCalled()
+    expect(clipboardWriteTextMock).not.toHaveBeenCalled()
+  })
+
   it("starts all supported account fetches without a client concurrency cap", async () => {
     const releases: Array<() => void> = []
     fetchDisplayAccountInviteLinkMock.mockImplementation(
