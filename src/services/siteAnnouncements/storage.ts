@@ -74,54 +74,28 @@ function compareRecordsNewestFirst(
   )
 }
 
-/** Compares identity ledgers without depending on object insertion order. */
-function areIdentityLedgersEqual(
-  left: SiteAnnouncementStoreState["identityLedger"],
-  right: SiteAnnouncementStoreState["identityLedger"],
+/** Serializes identity ledgers without depending on object insertion order. */
+function serializeIdentityLedger(
+  ledger: SiteAnnouncementStoreState["identityLedger"],
 ) {
-  const leftSiteKeys = Object.keys(left).sort(compareStringsOrdinal)
-  const rightSiteKeys = Object.keys(right).sort(compareStringsOrdinal)
-  if (leftSiteKeys.length !== rightSiteKeys.length) {
-    return false
-  }
-
-  for (let index = 0; index < leftSiteKeys.length; index += 1) {
-    const siteKey = leftSiteKeys[index]
-    if (siteKey !== rightSiteKeys[index]) {
-      return false
-    }
-
-    const leftMarkers = left[siteKey] ?? {}
-    const rightMarkers = right[siteKey] ?? {}
-    const leftDigests = Object.keys(leftMarkers).sort(compareStringsOrdinal)
-    const rightDigests = Object.keys(rightMarkers).sort(compareStringsOrdinal)
-    if (leftDigests.length !== rightDigests.length) {
-      return false
-    }
-
-    for (
-      let digestIndex = 0;
-      digestIndex < leftDigests.length;
-      digestIndex += 1
-    ) {
-      const digest = leftDigests[digestIndex]
-      if (digest !== rightDigests[digestIndex]) {
-        return false
-      }
-
-      const leftMarker = leftMarkers[digest]
-      const rightMarker = rightMarkers[digest]
-      if (
-        leftMarker.firstSeenAt !== rightMarker.firstSeenAt ||
-        leftMarker.lastSeenAt !== rightMarker.lastSeenAt ||
-        leftMarker.readAt !== rightMarker.readAt
-      ) {
-        return false
-      }
-    }
-  }
-
-  return true
+  return JSON.stringify(
+    Object.entries(ledger)
+      .flatMap(([siteKey, markers]) =>
+        Object.entries(markers).map(([digest, marker]) => [
+          siteKey,
+          digest,
+          marker.firstSeenAt,
+          marker.lastSeenAt,
+          marker.readAt,
+        ]),
+      )
+      .sort((left, right) =>
+        compareStringsOrdinal(
+          `${left[0]}\0${left[1]}`,
+          `${right[0]}\0${right[1]}`,
+        ),
+      ),
+  )
 }
 
 /**
@@ -412,10 +386,9 @@ class SiteAnnouncementStorage {
           identitiesPerSite: SITE_ANNOUNCEMENTS_LIMITS.identitiesPerSite,
           identitiesTotal: SITE_ANNOUNCEMENTS_LIMITS.identitiesTotal,
         })
-        const pruningChanged = !areIdentityLedgersEqual(
-          store.identityLedger,
-          prunedIdentityLedger,
-        )
+        const pruningChanged =
+          serializeIdentityLedger(store.identityLedger) !==
+          serializeIdentityLedger(prunedIdentityLedger)
         if (changed || pruningChanged) {
           store.identityLedger = prunedIdentityLedger
           if (!(await this.setStore(store))) {
@@ -512,18 +485,6 @@ class SiteAnnouncementStorage {
         const existing = records.find(
           (record) => record.fingerprint === input.fingerprint,
         )
-        const marker = markers[digest]
-
-        if (!marker && existing) {
-          markers[digest] = {
-            firstSeenAt: existing.firstSeenAt,
-            lastSeenAt: existing.lastSeenAt,
-            readAt: existing.read
-              ? existing.readAt ?? existing.lastSeenAt
-              : undefined,
-          }
-        }
-
         const knownMarker = markers[digest]
         if (knownMarker) {
           knownMarker.lastSeenAt = Math.max(knownMarker.lastSeenAt, now)
@@ -686,10 +647,7 @@ class SiteAnnouncementStorage {
         )
         for (const [digest, marker] of Object.entries(
           store.identityLedger[selectedSiteKey] ?? {},
-        )) {
-          if (marker.readAt === undefined) {
-            continue
-          }
+        ).filter(([, marker]) => marker.readAt !== undefined)) {
           const record = recordsByDigest.get(digest)
           if (record) {
             record.read = true

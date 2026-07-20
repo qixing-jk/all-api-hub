@@ -129,11 +129,52 @@ describe("siteAnnouncementStorage", () => {
   })
 
   it.each([
-    [undefined, 1234],
-    [1234, undefined],
+    {
+      firstTitle: "B representative",
+      firstContent: "B body",
+      firstReadAt: undefined,
+      secondTitle: "A representative",
+      secondContent: "A body",
+      secondReadAt: 1234,
+      expectedTitle: "A representative",
+      expectedContent: "A body",
+      expectedReadAt: 1234,
+    },
+    {
+      firstTitle: "B representative",
+      firstContent: "B body",
+      firstReadAt: 1234,
+      secondTitle: "A representative",
+      secondContent: "A body",
+      secondReadAt: undefined,
+      expectedTitle: "A representative",
+      expectedContent: "A body",
+      expectedReadAt: 1234,
+    },
+    {
+      firstTitle: "A representative",
+      firstContent: "A body",
+      firstReadAt: 1234,
+      secondTitle: "B representative",
+      secondContent: "B body",
+      secondReadAt: 5678,
+      expectedTitle: "A representative",
+      expectedContent: "A body",
+      expectedReadAt: 5678,
+    },
   ])(
-    "coalesces duplicate fingerprints independent of provider read ordering (%s, %s)",
-    async (firstReadAt, secondReadAt) => {
+    "coalesces duplicate fingerprints independent of provider read ordering",
+    async ({
+      firstTitle,
+      firstContent,
+      firstReadAt,
+      secondTitle,
+      secondContent,
+      secondReadAt,
+      expectedTitle,
+      expectedContent,
+      expectedReadAt,
+    }) => {
       const siteKey = "notice:new-api:https://example.invalid"
       const site = {
         siteKey,
@@ -159,14 +200,14 @@ describe("siteAnnouncementStorage", () => {
         records: [
           {
             ...baseRecord,
-            title: "B representative",
-            content: "B body",
+            title: firstTitle,
+            content: firstContent,
             readAt: firstReadAt ?? undefined,
           },
           {
             ...baseRecord,
-            title: "A representative",
-            content: "A body",
+            title: secondTitle,
+            content: secondContent,
             readAt: secondReadAt ?? undefined,
           },
         ],
@@ -176,10 +217,10 @@ describe("siteAnnouncementStorage", () => {
       expect(created).toEqual([])
       await expect(siteAnnouncementStorage.listRecords()).resolves.toEqual([
         expect.objectContaining({
-          title: "A representative",
-          content: "A body",
+          title: expectedTitle,
+          content: expectedContent,
           read: true,
-          readAt: 1234,
+          readAt: expectedReadAt,
         }),
       ])
     },
@@ -340,6 +381,67 @@ describe("siteAnnouncementStorage", () => {
         readAt: 1234,
       }),
     ])
+  })
+
+  it("imports provider read state onto a known unread identity marker", async () => {
+    const siteKey = "notice:new-api:https://example.invalid"
+    const site = {
+      siteKey,
+      siteName: "Example",
+      siteType: "new-api" as const,
+      baseUrl: "https://example.invalid",
+      accountId: "account-1",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      status: SITE_ANNOUNCEMENT_STATUS.Success,
+    }
+    const record = {
+      siteKey,
+      siteName: "Example",
+      siteType: "new-api" as const,
+      baseUrl: "https://example.invalid",
+      accountId: "account-1",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      title: "Notice",
+      content: "Body",
+      fingerprint: "provider-read-import",
+    }
+    const digest = await digestAnnouncementFingerprint(record.fingerprint)
+
+    await expect(
+      siteAnnouncementStorage.upsertDiscoveredRecords({
+        site,
+        records: [record],
+        now: 100,
+      }),
+    ).resolves.toHaveLength(1)
+    await expect(
+      siteAnnouncementStorage.upsertDiscoveredRecords({
+        site,
+        records: [{ ...record, readAt: 300 }],
+        now: 200,
+      }),
+    ).resolves.toHaveLength(0)
+
+    await expect(siteAnnouncementStorage.listRecords()).resolves.toEqual([
+      expect.objectContaining({
+        fingerprint: record.fingerprint,
+        read: true,
+        readAt: 300,
+        lastSeenAt: 200,
+      }),
+    ])
+    await expect(siteAnnouncementStorage.getStore()).resolves.toEqual(
+      expect.objectContaining({
+        identityLedger: expect.objectContaining({
+          [siteKey]: expect.objectContaining({
+            [digest]: expect.objectContaining({
+              readAt: 300,
+              lastSeenAt: 200,
+            }),
+          }),
+        }),
+      }),
+    )
   })
 
   it("keeps an older supplied timestamp from moving marker state backward", async () => {
@@ -756,6 +858,32 @@ describe("siteAnnouncementStorage", () => {
     expect(store.sites.valid).toMatchObject({
       lastCheckedAt: 200,
       lastSuccessAt: 150,
+    })
+  })
+
+  it("drops a malformed schema-v2 identity ledger root while retaining valid sites", async () => {
+    vi.spyOn(getSiteAnnouncementStorageBackend(), "get").mockResolvedValueOnce({
+      schemaVersion: 2,
+      sites: {
+        valid: {
+          siteName: "Valid",
+          siteType: "new-api",
+          baseUrl: "https://example.invalid",
+          accountId: "account-1",
+          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          status: SITE_ANNOUNCEMENT_STATUS.Success,
+          records: [],
+        },
+      },
+      identityLedger: "malformed",
+    })
+
+    const store = await siteAnnouncementStorage.getStore()
+
+    expect(store.identityLedger).toEqual({ valid: {} })
+    expect(store.sites.valid).toMatchObject({
+      siteName: "Valid",
+      status: SITE_ANNOUNCEMENT_STATUS.Success,
     })
   })
 
