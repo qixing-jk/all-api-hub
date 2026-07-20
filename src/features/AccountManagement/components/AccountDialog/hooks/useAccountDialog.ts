@@ -544,6 +544,17 @@ export function useAccountDialog({
     },
     [updateDraft],
   )
+  const applyAuthDefaultForUrl = useCallback(
+    (siteUrl: string) => {
+      if (hasExplicitAuthTypeRef.current) return
+
+      updateDraft((prev) => ({
+        ...prev,
+        authType: resolveDefaultAccountAuthType({ siteUrl }),
+      }))
+    },
+    [updateDraft],
+  )
   const setCookieAuthSessionCookie = useCallback(
     (value: string) => {
       updateDraft((prev) => ({ ...prev, cookieAuthSessionCookie: value }))
@@ -1161,7 +1172,15 @@ export function useAccountDialog({
 
     hasConsumedAutoFillCurrentSiteUrlRef.current = true
     setUrl(currentTabUrl)
-  }, [autoFillCurrentSiteUrlOnAccountAdd, currentTabUrl, isOpen, mode, url])
+    applyAuthDefaultForUrl(currentTabUrl)
+  }, [
+    applyAuthDefaultForUrl,
+    autoFillCurrentSiteUrlOnAccountAdd,
+    currentTabUrl,
+    isOpen,
+    mode,
+    url,
+  ])
 
   useEffect(() => {
     // 打开 popup 时立即检测一次
@@ -1223,13 +1242,8 @@ export function useAccountDialog({
         const urlObj = new URL(newUrl)
         const baseUrl = `${urlObj.protocol}//${urlObj.host}`
         setUrl(baseUrl)
-        if (shouldApplyAuthDefault && !hasExplicitAuthTypeRef.current) {
-          updateDraft((prev) => ({
-            ...prev,
-            authType: resolveDefaultAccountAuthType({
-              siteUrl: baseUrl,
-            }),
-          }))
+        if (shouldApplyAuthDefault) {
+          applyAuthDefaultForUrl(baseUrl)
         }
       } catch (error) {
         logger.warn("Failed to normalize URL input", { error, url: newUrl })

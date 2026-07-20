@@ -685,7 +685,7 @@ describe("useAccountDialog current tab detection", () => {
     tabsQueryMock.mockResolvedValue([
       {
         id: 8,
-        url: "https://prefill.example.com/dashboard?x=1",
+        url: "https://anyrouter.top/console",
       },
     ])
 
@@ -701,11 +701,55 @@ describe("useAccountDialog current tab detection", () => {
     })
 
     await waitFor(() => {
-      expect(result.current.state.currentTabUrl).toBe(
-        "https://prefill.example.com",
-      )
-      expect(result.current.state.url).toBe("https://prefill.example.com")
+      expect(result.current.state.currentTabUrl).toBe("https://anyrouter.top")
+      expect(result.current.state.url).toBe("https://anyrouter.top")
+      expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
     })
+  })
+
+  it("preserves an explicitly selected auth type during current-tab url prefill", async () => {
+    mockUserPreferencesContext.current = {
+      ...mockUserPreferencesContext.current,
+      autoFillCurrentSiteUrlOnAccountAdd: true,
+    }
+
+    const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
+      typeof vi.fn
+    >
+    let resolveTabs: ((value: any[]) => void) | null = null
+    tabsQueryMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveTabs = resolve
+        }),
+    )
+
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setAuthType(AuthTypeEnum.AccessToken)
+      resolveTabs?.([
+        {
+          id: 13,
+          url: "https://anyrouter.top/console",
+        },
+      ])
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe("https://anyrouter.top")
+      expect(result.current.state.url).toBe("https://anyrouter.top")
+    })
+    expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
   })
 
   it("keeps the url field empty when the setting is disabled", async () => {
