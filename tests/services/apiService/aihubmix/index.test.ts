@@ -177,6 +177,26 @@ describe("apiService AIHubMix", () => {
     )
   })
 
+  it("disables caching when fetching the invite link", async () => {
+    let requestCache: RequestCache | undefined
+    server.use(
+      http.get("https://aihubmix.com/api/user/self", ({ request }) => {
+        requestCache = request.cache
+
+        return HttpResponse.json({
+          success: true,
+          data: { aff_code: "invite-code" },
+        })
+      }),
+    )
+
+    const { fetchInviteLink } = await import("~/services/apiService/aihubmix")
+
+    await fetchInviteLink(baseRequest)
+
+    expect(requestCache).toBe("no-store")
+  })
+
   it("forwards invite-link cancellation to the native request", async () => {
     const abortController = new AbortController()
     let receivedSignal: AbortSignal | null | undefined

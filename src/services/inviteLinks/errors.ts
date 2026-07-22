@@ -106,8 +106,10 @@ const getApiErrorReason = (
   return undefined
 }
 
-/** Normalizes provider and transport failures at the invite-link boundary. */
-export function normalizeInviteLinkError(error: unknown): InviteLinkError {
+const normalizeInviteLinkErrorWithSeenCauses = (
+  error: unknown,
+  seenCauses: WeakSet<Error>,
+): InviteLinkError => {
   if (error instanceof InviteLinkError) return error
 
   if (error instanceof ApiError) {
@@ -123,14 +125,24 @@ export function normalizeInviteLinkError(error: unknown): InviteLinkError {
       return new InviteLinkError(INVITE_LINK_FAILURE_REASONS.Network, error)
     }
 
+    if (seenCauses.has(error)) {
+      return new InviteLinkError(INVITE_LINK_FAILURE_REASONS.Unknown, error)
+    }
+    seenCauses.add(error)
+
     const nestedCause = (error as Error & { cause?: unknown }).cause
     if (nestedCause && nestedCause !== error) {
       return new InviteLinkError(
-        normalizeInviteLinkError(nestedCause).reason,
+        normalizeInviteLinkErrorWithSeenCauses(nestedCause, seenCauses).reason,
         error,
       )
     }
   }
 
   return new InviteLinkError(INVITE_LINK_FAILURE_REASONS.Unknown, error)
+}
+
+/** Normalizes provider and transport failures at the invite-link boundary. */
+export function normalizeInviteLinkError(error: unknown): InviteLinkError {
+  return normalizeInviteLinkErrorWithSeenCauses(error, new WeakSet())
 }

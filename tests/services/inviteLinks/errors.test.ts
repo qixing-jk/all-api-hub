@@ -79,6 +79,18 @@ describe("normalizeInviteLinkError", () => {
     expect(normalizeInviteLinkError(error)).toBe(error)
   })
 
+  it("falls back to unknown for circular cause chains", () => {
+    const firstError = new Error("first") as Error & { cause?: unknown }
+    const secondError = new Error("second") as Error & { cause?: unknown }
+    firstError.cause = secondError
+    secondError.cause = firstError
+
+    expect(normalizeInviteLinkError(firstError)).toMatchObject({
+      reason: INVITE_LINK_FAILURE_REASONS.Unknown,
+      cause: firstError,
+    })
+  })
+
   it("falls back to unknown without exposing the original message as a category", () => {
     const error = new Error("deployment-specific backend detail")
 

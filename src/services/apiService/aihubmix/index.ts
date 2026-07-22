@@ -664,7 +664,7 @@ export async function fetchInviteLink(
   const userInfo = await fetchAIHubMixData<unknown>(
     request,
     AIHUBMIX_API_USER_SELF_ENDPOINT,
-    { signal: request.abortSignal },
+    { cache: "no-store", signal: request.abortSignal },
   )
   if (!userInfo || typeof userInfo !== "object" || Array.isArray(userInfo)) {
     throw new InviteLinkError(INVITE_LINK_FAILURE_REASONS.InviteDataMissing)
