@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.53.0](https://github.com/qixing-jk/all-api-hub/compare/v3.52.0...v3.53.0) (2026-07-22)
+
+
+### Features
+
+* **accounts:** expand affiliate invite-link support ([#1203](https://github.com/qixing-jk/all-api-hub/issues/1203)) ([24df684](https://github.com/qixing-jk/all-api-hub/commit/24df684713b16256283bc0d0d884508bee6174f8))
+* **cc-switch:** support Grok CLI and Hermes exports ([#1204](https://github.com/qixing-jk/all-api-hub/issues/1204)) ([6236dca](https://github.com/qixing-jk/all-api-hub/commit/6236dca3547318d3d3c0409648ebfaef9cf9e78a))
+* **kilocode:** improve V7 provider exports ([#1194](https://github.com/qixing-jk/all-api-hub/issues/1194)) ([3c1f6ed](https://github.com/qixing-jk/all-api-hub/commit/3c1f6edfabf95d5817bf39ce7e84a79f65ea0627))
+* **model-list:** classify and display model vendors ([#1184](https://github.com/qixing-jk/all-api-hub/issues/1184)) ([a1ef3e9](https://github.com/qixing-jk/all-api-hub/commit/a1ef3e960880a3cd56caaef147cbb440c8c95260))
+* **options:** preserve key and model selections in history ([#1174](https://github.com/qixing-jk/all-api-hub/issues/1174)) ([6f84e64](https://github.com/qixing-jk/all-api-hub/commit/6f84e640f7b1685535a0b543dc1739ed1ea49fdb))
+
+
+### Bug Fixes
+
+* **account-dialog:** apply auth default to automatic URL prefill ([#1197](https://github.com/qixing-jk/all-api-hub/issues/1197)) ([c5d9b49](https://github.com/qixing-jk/all-api-hub/commit/c5d9b493e09598a2d913b078064f29aaff8ae369))
+* **accounts:** represent today statistics availability ([#1195](https://github.com/qixing-jk/all-api-hub/issues/1195)) ([0653c22](https://github.com/qixing-jk/all-api-hub/commit/0653c2269afc2ed2cf0ea7f630eb9d0b15984f7e))
+* **content:** prevent temporary title feedback loops ([#1180](https://github.com/qixing-jk/all-api-hub/issues/1180)) ([9093d67](https://github.com/qixing-jk/all-api-hub/commit/9093d6722855f079b1837b1bd7f7ff3358c80e18))
+* **model-list:** correct account-scoped group semantics ([#1188](https://github.com/qixing-jk/all-api-hub/issues/1188)) ([93e335c](https://github.com/qixing-jk/all-api-hub/commit/93e335c4de652886d73f70dadf11a816673abaa4))
+* **site-announcements:** preserve read state beyond content cache ([#1196](https://github.com/qixing-jk/all-api-hub/issues/1196)) ([9667fcd](https://github.com/qixing-jk/all-api-hub/commit/9667fcd66d2183962bef80a600b534638ee4b74f))
+* **temp-window:** preserve source context across background flows ([#1183](https://github.com/qixing-jk/all-api-hub/issues/1183)) ([a522c08](https://github.com/qixing-jk/all-api-hub/commit/a522c082b260068287b452ee3c1660f0a4bf4891))
+
 ## [3.52.0](https://github.com/qixing-jk/all-api-hub/compare/v3.51.0...v3.52.0) (2026-07-13)
 
 
