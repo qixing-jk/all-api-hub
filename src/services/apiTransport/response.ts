@@ -1,4 +1,4 @@
-import { ApiError } from "~/services/apiTransport/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { t } from "~/utils/i18n/core"
 
 /**
@@ -28,16 +28,31 @@ export function extractDataFromApiResponseBody<T>(
   const invalidResponseMessage = t("messages:errors.api.invalidResponseFormat")
 
   if (!body || typeof body !== "object") {
-    throw new ApiError(invalidResponseMessage, undefined, endpoint)
+    throw new ApiError(
+      invalidResponseMessage,
+      undefined,
+      endpoint,
+      API_ERROR_CODES.JSON_PARSE_ERROR,
+    )
   }
 
   if (body.success === false) {
     const message = body.message || invalidResponseMessage
-    throw new ApiError(message, undefined, endpoint)
+    throw new ApiError(
+      message,
+      undefined,
+      endpoint,
+      API_ERROR_CODES.BUSINESS_ERROR,
+    )
   }
 
   if (!("data" in body) || body.data === undefined) {
-    throw new ApiError(invalidResponseMessage, undefined, endpoint)
+    throw new ApiError(
+      invalidResponseMessage,
+      undefined,
+      endpoint,
+      API_ERROR_CODES.JSON_PARSE_ERROR,
+    )
   }
 
   return body.data as T

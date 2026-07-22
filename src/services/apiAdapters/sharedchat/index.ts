@@ -4,6 +4,7 @@ import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/site
 import { sharedChatAccountCompletion } from "./accountCompletion"
 import { sharedChatAccountData } from "./accountData"
 import { sharedChatAccountRefresh } from "./accountRefresh"
+import { sharedChatInviteLink } from "./inviteLink"
 import { sharedChatModelCatalog } from "./modelCatalog"
 import { sharedChatServiceCredential } from "./serviceCredential"
 
@@ -16,5 +17,6 @@ export const sharedChatCapabilities: SiteTypeCapabilities = {
     refresh: sharedChatAccountRefresh,
     modelCatalog: sharedChatModelCatalog,
     serviceCredential: sharedChatServiceCredential,
+    inviteLink: sharedChatInviteLink,
   },
 }

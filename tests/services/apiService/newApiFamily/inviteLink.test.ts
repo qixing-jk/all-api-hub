@@ -4,6 +4,7 @@ import {
   buildInviteLink,
   defaultInviteLinkImplementation,
 } from "~/services/apiService/newApiFamily/default/inviteLink"
+import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import { AuthTypeEnum } from "~/types"
 
 const { fetchApiDataMock, loggerErrorMock } = vi.hoisted(() => ({
@@ -59,7 +60,9 @@ describe("newApiFamily inviteLink", () => {
 
     await expect(
       defaultInviteLinkImplementation.fetchInviteLink(request),
-    ).rejects.toThrow("invite_link_code_missing")
+    ).rejects.toMatchObject({
+      reason: INVITE_LINK_FAILURE_REASONS.InviteDataMissing,
+    })
     expect(loggerErrorMock).toHaveBeenCalledWith(
       "获取邀请链接失败",
       expect.any(Error),

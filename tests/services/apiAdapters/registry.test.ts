@@ -206,6 +206,7 @@ describe("apiAdapters registry", () => {
     expect(capabilities.account?.modelCatalog).toEqual({
       fetchModels: expect.any(Function),
     })
+    expectInviteLinkCapability(capabilities)
     expect(capabilities.site?.notice).toBeUndefined()
   })
 
@@ -219,6 +220,7 @@ describe("apiAdapters registry", () => {
     expectAccountDataCapability(capabilities)
     expectAccountBootstrapCapability(capabilities)
     expectAccountCompletionCapability(capabilities)
+    expectInviteLinkCapability(capabilities)
     expectKeyManagementCapability(capabilities)
     expectTokenProvisioningCapability(capabilities)
     expectAccountRefreshCapability(capabilities)
@@ -245,6 +247,7 @@ describe("apiAdapters registry", () => {
     expectTokenProvisioningCapability(capabilities)
     expectAccountRefreshCapability(capabilities)
     expectModelPricingCapability(capabilities)
+    expectInviteLinkCapability(capabilities)
     expect(capabilities.account?.announcements).toBeUndefined()
     expect(capabilities.account?.modelCatalog).toBeUndefined()
     expect(capabilities.account?.redemption).toBeUndefined()
@@ -270,6 +273,7 @@ describe("apiAdapters registry", () => {
     expect(capabilities.account?.modelCatalog).toEqual({
       fetchModels: expect.any(Function),
     })
+    expectInviteLinkCapability(capabilities)
     expect(capabilities.account?.keyManagement).toBeUndefined()
     expect(capabilities.account?.tokenProvisioning).toBeUndefined()
     expect(capabilities.account?.modelPricing).toBeUndefined()

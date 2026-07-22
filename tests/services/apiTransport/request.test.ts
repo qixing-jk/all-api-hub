@@ -1922,12 +1922,21 @@ describe("apiTransport request helpers", () => {
 
     expect(() =>
       extractDataFromApiResponseBody(null, "/api/invalid"),
-    ).toThrowError(ApiError)
-    expect(() =>
+    ).toThrowError(
+      expect.objectContaining({ code: ApiErrorCodes.JSON_PARSE_ERROR }),
+    )
+
+    let businessError: unknown
+    try {
       extractDataFromApiResponseBody(
         { success: false, data: null, message: "" },
         "/api/invalid",
-      ),
-    ).toThrowError(ApiError)
+      )
+    } catch (error) {
+      businessError = error
+    }
+    expect(businessError).toMatchObject({
+      code: ApiErrorCodes.BUSINESS_ERROR,
+    })
   })
 })

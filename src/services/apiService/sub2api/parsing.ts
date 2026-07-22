@@ -34,7 +34,12 @@ const getInvalidResponseMessage = () =>
   t("messages:errors.api.invalidResponseFormat")
 
 const createInvalidResponseError = (endpoint: string) =>
-  new ApiError(getInvalidResponseMessage(), undefined, endpoint)
+  new ApiError(
+    getInvalidResponseMessage(),
+    undefined,
+    endpoint,
+    API_ERROR_CODES.JSON_PARSE_ERROR,
+  )
 
 const toObjectRecord = <T extends object>(
   value: unknown,
@@ -268,11 +273,11 @@ export const parseSub2ApiEnvelope = <T>(
   const envelope = toObjectRecord<Partial<Sub2ApiEnvelope<T>>>(body, endpoint)
 
   if (typeof envelope.code !== "number") {
-    throw new ApiError(invalidResponseMessage, undefined, endpoint)
+    throw createInvalidResponseError(endpoint)
   }
 
   if (typeof envelope.message !== "string") {
-    throw new ApiError(invalidResponseMessage, undefined, endpoint)
+    throw createInvalidResponseError(endpoint)
   }
 
   if (envelope.code !== 0) {
@@ -288,7 +293,7 @@ export const parseSub2ApiEnvelope = <T>(
   }
 
   if (envelope.data === undefined && !options?.allowMissingData) {
-    throw new ApiError(invalidResponseMessage, undefined, endpoint)
+    throw createInvalidResponseError(endpoint)
   }
 
   return envelope.data as T

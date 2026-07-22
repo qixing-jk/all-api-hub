@@ -1,6 +1,7 @@
 export const VOAPI_V2_ENDPOINTS = {
   UserInfo: "/api/user/info",
   DashboardStatistics: "/api/dash/statistics",
+  InviteInfo: "/api/user/invite-info",
   Keys: "/api/keys",
   KeyTemplate: "/api/keys/template",
   CheckInTemplate: "/api/check_in/template",
@@ -47,6 +48,10 @@ export type VoApiV2DashboardStatistics = {
     errors?: number
     maxRpm?: number
   }
+}
+
+export type VoApiV2InviteInfo = {
+  url?: unknown
 }
 
 export type VoApiV2Key = {

@@ -26,6 +26,8 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import { AuthTypeEnum } from "~/types"
 
 type ExpectAccountRuntimeKeyFetcher = (
@@ -320,6 +322,23 @@ describe("fetchDisplayAccountTokens", () => {
     })
   })
 
+  it("normalizes provider failures at the display-account invite-link boundary", async () => {
+    const providerError = new ApiError(
+      "Session expired",
+      401,
+      "/api/user/aff",
+      API_ERROR_CODES.HTTP_401,
+    )
+    fetchInviteLink.mockRejectedValueOnce(providerError)
+
+    await expect(
+      fetchDisplayAccountInviteLink(ACCOUNT as any),
+    ).rejects.toMatchObject({
+      reason: INVITE_LINK_FAILURE_REASONS.AuthenticationRequired,
+      cause: providerError,
+    })
+  })
+
   it("forwards invite-link cancellation through the API request context", async () => {
     const controller = new AbortController()
     fetchInviteLink.mockResolvedValueOnce(
@@ -355,6 +374,24 @@ describe("fetchDisplayAccountTokens", () => {
         }),
       }),
     )
+  })
+
+  it("keeps provider business rejections out of the user-facing message", async () => {
+    const providerError = new ApiError(
+      "deployment-specific policy detail",
+      403,
+      "/api/user/aff",
+      API_ERROR_CODES.BUSINESS_ERROR,
+    )
+    fetchInviteLink.mockRejectedValueOnce(providerError)
+
+    await expect(
+      fetchDisplayAccountInviteLink(ACCOUNT as any),
+    ).rejects.toMatchObject({
+      message: INVITE_LINK_FAILURE_REASONS.ProviderRejected,
+      reason: INVITE_LINK_FAILURE_REASONS.ProviderRejected,
+      cause: providerError,
+    })
   })
 
   it("rejects display account snapshots without a stable id", () => {

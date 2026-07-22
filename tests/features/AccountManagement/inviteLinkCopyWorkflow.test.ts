@@ -4,6 +4,10 @@ import {
   INVITE_LINK_COPY_RESULTS,
   runInviteLinkCopyWorkflow,
 } from "~/features/AccountManagement/inviteLinkCopyWorkflow"
+import {
+  INVITE_LINK_FAILURE_REASONS,
+  InviteLinkError,
+} from "~/services/inviteLinks/errors"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 const {
@@ -141,7 +145,7 @@ describe("runInviteLinkCopyWorkflow", () => {
 
   it("returns exact failure counts when every supported fetch fails", async () => {
     fetchDisplayAccountInviteLinkMock.mockRejectedValue(
-      new Error("Invite link unavailable"),
+      new InviteLinkError(INVITE_LINK_FAILURE_REASONS.FeatureDisabled),
     )
 
     const result = await runInviteLinkCopyWorkflow({
@@ -155,6 +159,9 @@ describe("runInviteLinkCopyWorkflow", () => {
       itemCount: 2,
       successCount: 0,
       failureCount: 2,
+      failureReasonCounts: {
+        [INVITE_LINK_FAILURE_REASONS.FeatureDisabled]: 2,
+      },
       unsupportedCount: 0,
       skippedCount: 0,
     })
@@ -168,7 +175,9 @@ describe("runInviteLinkCopyWorkflow", () => {
     fetchDisplayAccountInviteLinkMock.mockImplementation(
       async (account: { id: string }) => {
         if (account.id === "failed") {
-          throw new Error("Invite link unavailable")
+          throw new InviteLinkError(
+            INVITE_LINK_FAILURE_REASONS.AuthenticationRequired,
+          )
         }
         return `https://invite.example.invalid/${account.id}`
       },
@@ -195,6 +204,9 @@ describe("runInviteLinkCopyWorkflow", () => {
       itemCount: 2,
       successCount: 1,
       failureCount: 1,
+      failureReasonCounts: {
+        [INVITE_LINK_FAILURE_REASONS.AuthenticationRequired]: 1,
+      },
       unsupportedCount: 1,
       skippedCount: 1,
     })

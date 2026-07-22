@@ -5,6 +5,7 @@ import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
 import { sub2ApiAccountCompletion } from "./accountCompletion"
 import { sub2ApiAccountData } from "./accountData"
 import { sub2ApiAccountRefresh } from "./accountRefresh"
+import { sub2ApiInviteLink } from "./inviteLink"
 import { sub2ApiKeyManagement } from "./keyManagement"
 import { sub2ApiModelCatalog } from "./modelCatalog"
 import { sub2ApiSiteAnnouncements } from "./siteAnnouncements"
@@ -19,6 +20,7 @@ export const sub2ApiCapabilities: SiteTypeCapabilities = {
     data: sub2ApiAccountData,
     bootstrap: sub2ApiAccountBootstrap,
     completion: sub2ApiAccountCompletion,
+    inviteLink: sub2ApiInviteLink,
     keyManagement: sub2ApiKeyManagement,
     tokenProvisioning: sub2ApiTokenProvisioning,
     refresh: sub2ApiAccountRefresh,

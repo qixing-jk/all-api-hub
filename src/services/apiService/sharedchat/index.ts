@@ -3,12 +3,17 @@ import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
+import { SHAREDCHAT_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import type { UserInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import {
+  INVITE_LINK_FAILURE_REASONS,
+  InviteLinkError,
+} from "~/services/inviteLinks/errors"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -19,6 +24,7 @@ import { t } from "~/utils/i18n/core"
 
 import {
   SHAREDCHAT_CODEX_BASE_URL,
+  SHAREDCHAT_CODEX_INVITE_OVERVIEW_ENDPOINT,
   SHAREDCHAT_CODEX_QUOTA_ENDPOINT,
   SHAREDCHAT_CODEX_RESET_KEY_ENDPOINT,
   SHAREDCHAT_GETME_ENDPOINT,
@@ -91,6 +97,10 @@ type SharedChatResetKeyPayload = {
   newKey?: unknown
 }
 
+type SharedChatInviteOverviewPayload = {
+  inviteUrl?: unknown
+}
+
 const buildCodexServiceCredential = (params: {
   key: string
   isAuthenticated: boolean
@@ -132,6 +142,7 @@ const extractSharedChatData = <T>(
       t("messages:errors.api.invalidResponseFormat"),
       undefined,
       endpoint,
+      API_ERROR_CODES.JSON_PARSE_ERROR,
     )
   }
 
@@ -150,6 +161,7 @@ const extractSharedChatData = <T>(
       t("messages:errors.api.invalidResponseFormat"),
       undefined,
       endpoint,
+      API_ERROR_CODES.JSON_PARSE_ERROR,
     )
   }
 
@@ -353,6 +365,41 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
       access_token: accessToken,
     },
   }
+}
+
+/**
+ * Fetch the invite URL supplied by SharedChat's authenticated Codex dashboard.
+ * The deployed UI consumes `data.inviteUrl` from this endpoint and pins its
+ * path, query, and hash to the current SharedChat origin.
+ * https://new.sharedchat.cc/frontend-api/vibe-code/codex/invite/overview?page=1&pageSize=1
+ */
+export async function fetchInviteLink(
+  request: ApiServiceRequest,
+): Promise<string> {
+  const data = await fetchSharedChatData<SharedChatInviteOverviewPayload>(
+    request,
+    SHAREDCHAT_CODEX_INVITE_OVERVIEW_ENDPOINT,
+  )
+  const inviteUrl = toOptionalString(data?.inviteUrl)
+
+  if (!inviteUrl) {
+    throw new InviteLinkError(INVITE_LINK_FAILURE_REASONS.InviteDataMissing)
+  }
+
+  let sourceUrl: URL
+  try {
+    sourceUrl = new URL(inviteUrl, SHAREDCHAT_WEB_ORIGIN)
+  } catch (error) {
+    throw new InviteLinkError(
+      INVITE_LINK_FAILURE_REASONS.InvalidResponse,
+      error,
+    )
+  }
+  const targetUrl = new URL(SHAREDCHAT_WEB_ORIGIN)
+  targetUrl.pathname = sourceUrl.pathname
+  targetUrl.search = sourceUrl.search
+  targetUrl.hash = sourceUrl.hash
+  return targetUrl.toString()
 }
 
 /**

@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw"
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
@@ -29,6 +29,7 @@ import {
   validateAccountConnection,
 } from "~/services/apiService/aihubmix"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import { MODEL_LIST_SOURCE_KINDS } from "~/services/modelList/pricingModel"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { resolveModelVendorCandidate } from "~/services/models/modelVendor"
@@ -145,6 +146,143 @@ describe("apiService AIHubMix", () => {
     expect(second.todayStatsAvailability!.consumption).not.toBe(
       first.todayStatsAvailability!.consumption,
     )
+  })
+
+  it("builds the vendor invite URL from the saved-account user response", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/user/self", ({ request }) => {
+        expect(request.headers.get("Authorization")).toBe("system-access-token")
+        expect(request.headers.get("Cookie")).toBeNull()
+
+        return HttpResponse.json({
+          success: true,
+          data: {
+            username: "invite-user",
+            aff_code: "  invite-code  ",
+          },
+        })
+      }),
+    )
+
+    const apiService = (await import(
+      "~/services/apiService/aihubmix"
+    )) as Record<string, unknown>
+    const fetchInviteLink = apiService.fetchInviteLink as
+      | ((request: typeof baseRequest) => Promise<string>)
+      | undefined
+
+    expect(fetchInviteLink).toEqual(expect.any(Function))
+    await expect(fetchInviteLink!(baseRequest)).resolves.toBe(
+      "https://aihubmix.com/?aff=invite-code",
+    )
+  })
+
+  it("forwards invite-link cancellation to the native request", async () => {
+    const abortController = new AbortController()
+    let receivedSignal: AbortSignal | null | undefined
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce((_input, options) => {
+        receivedSignal = options?.signal
+
+        return new Promise<Response>((resolve, reject) => {
+          options?.signal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+          queueMicrotask(() =>
+            resolve(
+              HttpResponse.json({
+                success: true,
+                data: { aff_code: "invite-code" },
+              }),
+            ),
+          )
+        })
+      })
+
+    try {
+      const apiService = (await import(
+        "~/services/apiService/aihubmix"
+      )) as Record<string, unknown>
+      const fetchInviteLink = apiService.fetchInviteLink as
+        | ((
+            request: typeof baseRequest & { abortSignal: AbortSignal },
+          ) => Promise<string>)
+        | undefined
+      const inviteLinkPromise = fetchInviteLink!({
+        ...baseRequest,
+        abortSignal: abortController.signal,
+      })
+
+      abortController.abort()
+
+      await expect(inviteLinkPromise).rejects.toMatchObject({
+        name: "AbortError",
+      })
+      expect(receivedSignal).toBe(abortController.signal)
+    } finally {
+      fetchSpy.mockRestore()
+    }
+  })
+
+  it.each([
+    {
+      caseName: "null data",
+      response: { success: true, data: null },
+    },
+    {
+      caseName: "missing data",
+      response: { success: true },
+    },
+    {
+      caseName: "array data",
+      response: { success: true, data: [] },
+    },
+    {
+      caseName: "non-string code",
+      response: { success: true, data: { aff_code: 42 } },
+    },
+    {
+      caseName: "blank code",
+      response: { success: true, data: { aff_code: "   " } },
+    },
+  ])(
+    "rejects malformed AIHubMix invitation payloads: $caseName",
+    async ({ response }) => {
+      server.use(
+        http.get("https://aihubmix.com/api/user/self", () =>
+          HttpResponse.json(response),
+        ),
+      )
+
+      const apiService = (await import(
+        "~/services/apiService/aihubmix"
+      )) as Record<string, unknown>
+      const fetchInviteLink = apiService.fetchInviteLink as
+        | ((request: typeof baseRequest) => Promise<string>)
+        | undefined
+
+      expect(fetchInviteLink).toEqual(expect.any(Function))
+      await expect(fetchInviteLink!(baseRequest)).rejects.toMatchObject({
+        reason: INVITE_LINK_FAILURE_REASONS.InviteDataMissing,
+      })
+    },
+  )
+
+  it("classifies malformed AIHubMix envelopes as invalid responses", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/user/self", () =>
+        HttpResponse.json(null),
+      ),
+    )
+
+    const { fetchInviteLink } = await import("~/services/apiService/aihubmix")
+
+    await expect(fetchInviteLink(baseRequest)).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+    })
   })
 
   it("normalizes invalid numbers, empty access tokens, and direct data bodies", async () => {

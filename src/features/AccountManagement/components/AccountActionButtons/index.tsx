@@ -33,6 +33,11 @@ import { useAccountActionsContext } from "~/features/AccountManagement/hooks/Acc
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import {
+  getInviteLinkFailureAnalyticsCategory,
+  getInviteLinkFailureMessage,
+  getPrimaryInviteLinkFailureReason,
+} from "~/features/AccountManagement/inviteLinkCopyFeedback"
+import {
   INVITE_LINK_COPY_RESULTS,
   runInviteLinkCopyWorkflow,
 } from "~/features/AccountManagement/inviteLinkCopyWorkflow"
@@ -764,12 +769,24 @@ export default function AccountActionButtons({
         return
       }
 
-      toast.error(t("actions.copyInviteLinkFailed"))
+      if (result.result === INVITE_LINK_COPY_RESULTS.Unsupported) {
+        toast.error(t("actions.copyInviteLinkUnsupported"))
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+        })
+        return
+      }
+
+      const failureReason = getPrimaryInviteLinkFailureReason(
+        result.failureReasonCounts,
+      )
+      toast.error(
+        t("actions.copyInviteLinkFailedWithReason", {
+          reason: getInviteLinkFailureMessage(t, failureReason),
+        }),
+      )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory:
-          result.result === INVITE_LINK_COPY_RESULTS.Unsupported
-            ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
-            : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: getInviteLinkFailureAnalyticsCategory(failureReason),
       })
     } catch (error) {
       toast.error(t("actions.copyInviteLinkFailed"))

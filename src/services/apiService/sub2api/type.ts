@@ -6,6 +6,8 @@
  */
 
 export const SUB2API_AUTH_ME_ENDPOINT = "/api/v1/auth/me"
+export const SUB2API_PUBLIC_SETTINGS_ENDPOINT = "/api/v1/settings/public"
+export const SUB2API_AFFILIATE_ENDPOINT = "/api/v1/user/aff"
 export const SUB2API_KEYS_ENDPOINT = "/api/v1/keys"
 export const SUB2API_ANNOUNCEMENTS_ENDPOINT = "/api/v1/announcements"
 export const SUB2API_AVAILABLE_GROUPS_ENDPOINT = "/api/v1/groups/available"
@@ -46,6 +48,14 @@ export type Sub2ApiAuthMeData = {
 }
 
 export type Sub2ApiAuthMeResponse = Sub2ApiEnvelope<Sub2ApiAuthMeData>
+
+export type Sub2ApiPublicSettingsData = {
+  affiliate_enabled?: boolean | null
+}
+
+export type Sub2ApiAffiliateData = {
+  aff_code?: string | null
+}
 
 export type Sub2ApiGroupData = {
   id: IntLike

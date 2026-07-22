@@ -9,7 +9,8 @@ import {
   fetchUserInfo,
   rotateCodexServiceCredential,
 } from "~/services/apiService/sharedchat"
-import { ApiError } from "~/services/apiTransport/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -64,6 +65,138 @@ describe("apiService SharedChat", () => {
         username: "Example User",
         access_token: "user-token-redacted",
       }),
+    })
+  })
+
+  it("uses the backend invite route while pinning it to the SharedChat origin", async () => {
+    server.use(
+      http.get(
+        "https://new.sharedchat.cc/frontend-api/vibe-code/codex/invite/overview",
+        ({ request }) => {
+          const url = new URL(request.url)
+          expect(url.searchParams.get("page")).toBe("1")
+          expect(url.searchParams.get("pageSize")).toBe("1")
+
+          return HttpResponse.json({
+            code: 1,
+            msg: "success",
+            data: {
+              inviteCode: "invite-code",
+              inviteUrl:
+                "https://legacy.example.invalid/list/#/register?i=invite-code",
+            },
+          })
+        },
+      ),
+    )
+
+    const apiService = (await import(
+      "~/services/apiService/sharedchat"
+    )) as Record<string, unknown>
+    const fetchInviteLink = apiService.fetchInviteLink as
+      | ((request: typeof baseRequest) => Promise<string>)
+      | undefined
+
+    expect(fetchInviteLink).toEqual(expect.any(Function))
+    await expect(fetchInviteLink!(baseRequest)).resolves.toBe(
+      "https://new.sharedchat.cc/list/#/register?i=invite-code",
+    )
+  })
+
+  it("keeps double-slash invite paths on the SharedChat origin", async () => {
+    server.use(
+      http.get(
+        "https://new.sharedchat.cc/frontend-api/vibe-code/codex/invite/overview",
+        () =>
+          HttpResponse.json({
+            code: 1,
+            msg: "success",
+            data: {
+              inviteUrl:
+                "https://legacy.example.invalid//evil.example.invalid/register?i=invite-code#step",
+            },
+          }),
+      ),
+    )
+
+    const apiService = (await import(
+      "~/services/apiService/sharedchat"
+    )) as Record<string, unknown>
+    const fetchInviteLink = apiService.fetchInviteLink as
+      | ((request: typeof baseRequest) => Promise<string>)
+      | undefined
+
+    expect(fetchInviteLink).toEqual(expect.any(Function))
+    const result = await fetchInviteLink!(baseRequest)
+    const resultUrl = new URL(result)
+
+    expect(resultUrl.origin).toBe("https://new.sharedchat.cc")
+    expect(resultUrl.pathname).toBe("//evil.example.invalid/register")
+    expect(resultUrl.search).toBe("?i=invite-code")
+    expect(resultUrl.hash).toBe("#step")
+  })
+
+  it("rejects blank SharedChat invite URLs instead of synthesizing one", async () => {
+    server.use(
+      http.get(
+        "https://new.sharedchat.cc/frontend-api/vibe-code/codex/invite/overview",
+        () =>
+          HttpResponse.json({
+            code: 1,
+            msg: "success",
+            data: {
+              inviteCode: "invite-code",
+              inviteUrl: "   ",
+            },
+          }),
+      ),
+    )
+
+    const apiService = (await import(
+      "~/services/apiService/sharedchat"
+    )) as Record<string, unknown>
+    const fetchInviteLink = apiService.fetchInviteLink as
+      | ((request: typeof baseRequest) => Promise<string>)
+      | undefined
+
+    expect(fetchInviteLink).toEqual(expect.any(Function))
+    await expect(fetchInviteLink!(baseRequest)).rejects.toMatchObject({
+      reason: INVITE_LINK_FAILURE_REASONS.InviteDataMissing,
+    })
+  })
+
+  it("classifies malformed SharedChat invite URLs as invalid responses", async () => {
+    server.use(
+      http.get(
+        "https://new.sharedchat.cc/frontend-api/vibe-code/codex/invite/overview",
+        () =>
+          HttpResponse.json({
+            code: 1,
+            msg: "success",
+            data: { inviteUrl: "http://[" },
+          }),
+      ),
+    )
+
+    const { fetchInviteLink } = await import("~/services/apiService/sharedchat")
+
+    await expect(fetchInviteLink(baseRequest)).rejects.toMatchObject({
+      reason: INVITE_LINK_FAILURE_REASONS.InvalidResponse,
+    })
+  })
+
+  it("classifies malformed SharedChat envelopes as invalid responses", async () => {
+    server.use(
+      http.get(
+        "https://new.sharedchat.cc/frontend-api/vibe-code/codex/invite/overview",
+        () => HttpResponse.json(null),
+      ),
+    )
+
+    const { fetchInviteLink } = await import("~/services/apiService/sharedchat")
+
+    await expect(fetchInviteLink(baseRequest)).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
     })
   })
 

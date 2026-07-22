@@ -5,6 +5,7 @@ import { aihubmixAccountBootstrap } from "./accountBootstrap"
 import { aihubmixAccountCompletion } from "./accountCompletion"
 import { aihubmixAccountData } from "./accountData"
 import { aihubmixAccountRefresh } from "./accountRefresh"
+import { aihubmixInviteLink } from "./inviteLink"
 import { aihubmixKeyManagement } from "./keyManagement"
 import { aihubmixModelPricing } from "./modelPricing"
 import { aihubmixTokenProvisioning } from "./tokenProvisioning"
@@ -20,5 +21,6 @@ export const aihubmixCapabilities: SiteTypeCapabilities = {
     tokenProvisioning: aihubmixTokenProvisioning,
     refresh: aihubmixAccountRefresh,
     modelPricing: aihubmixModelPricing,
+    inviteLink: aihubmixInviteLink,
   },
 }

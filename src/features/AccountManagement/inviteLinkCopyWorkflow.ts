@@ -2,6 +2,10 @@ import {
   canFetchDisplayAccountInviteLink,
   fetchDisplayAccountInviteLink,
 } from "~/services/accounts/utils/apiServiceRequest"
+import {
+  normalizeInviteLinkError,
+  type InviteLinkFailureReasonCounts,
+} from "~/services/inviteLinks/errors"
 import type { DisplaySiteData } from "~/types"
 
 export const INVITE_LINK_COPY_RESULTS = {
@@ -27,6 +31,10 @@ interface InviteLinkFetchSuccess {
   inviteLink: string
 }
 
+interface InviteLinkFetchFailure {
+  reason: ReturnType<typeof normalizeInviteLinkError>["reason"]
+}
+
 /** Fetches invite links concurrently while preserving account order. */
 async function fetchInviteLinks({
   accounts,
@@ -34,7 +42,7 @@ async function fetchInviteLinks({
 }: {
   accounts: DisplaySiteData[]
   signal?: AbortSignal
-}): Promise<Array<InviteLinkFetchSuccess | null>> {
+}): Promise<Array<InviteLinkFetchSuccess | InviteLinkFetchFailure>> {
   return Promise.all(
     accounts.map(async (account) => {
       try {
@@ -44,8 +52,10 @@ async function fetchInviteLinks({
             abortSignal: signal,
           }),
         }
-      } catch {
-        return null
+      } catch (error) {
+        return {
+          reason: normalizeInviteLinkError(error).reason,
+        }
       }
     }),
   )
@@ -58,6 +68,7 @@ interface InviteLinkCopyWorkflowResult {
   itemCount: number
   successCount: number
   failureCount: number
+  failureReasonCounts?: InviteLinkFailureReasonCounts
   unsupportedCount: number
   skippedCount: number
 }
@@ -116,10 +127,18 @@ export async function runInviteLinkCopyWorkflow({
   }
 
   const successes = fetchResults.filter(
-    (result): result is InviteLinkFetchSuccess => result !== null,
+    (result): result is InviteLinkFetchSuccess => "inviteLink" in result,
   )
+  const failureReasonCounts =
+    fetchResults.reduce<InviteLinkFailureReasonCounts>((counts, result) => {
+      if ("reason" in result) {
+        counts[result.reason] = (counts[result.reason] ?? 0) + 1
+      }
+      return counts
+    }, {})
   const successCount = successes.length
   const failureCount = supportedAccounts.length - successCount
+  const failureDetails = failureCount > 0 ? { failureReasonCounts } : undefined
   const payload = successes
     .map(({ account, inviteLink }) => {
       if (format === "raw") return inviteLink
@@ -138,6 +157,7 @@ export async function runInviteLinkCopyWorkflow({
       result: INVITE_LINK_COPY_RESULTS.Failure,
       successCount,
       failureCount,
+      ...failureDetails,
     }
   }
 
@@ -170,6 +190,7 @@ export async function runInviteLinkCopyWorkflow({
       payload,
       successCount,
       failureCount,
+      ...failureDetails,
     }
   }
 
@@ -180,6 +201,7 @@ export async function runInviteLinkCopyWorkflow({
       payload,
       successCount,
       failureCount,
+      ...failureDetails,
     }
   }
 
@@ -196,5 +218,6 @@ export async function runInviteLinkCopyWorkflow({
     payload,
     successCount,
     failureCount,
+    ...failureDetails,
   }
 }

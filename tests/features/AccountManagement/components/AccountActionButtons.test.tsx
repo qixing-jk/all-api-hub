@@ -7,6 +7,7 @@ import AccountActionButtons from "~/features/AccountManagement/components/Accoun
 import * as inviteLinkCopyWorkflow from "~/features/AccountManagement/inviteLinkCopyWorkflow"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
@@ -520,6 +521,7 @@ describe("AccountActionButtons", () => {
       itemCount: 0,
       failureCount: 0,
       unsupportedCount: 1,
+      toastKey: "account:actions.copyInviteLinkUnsupported",
     },
     {
       analyticsErrorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
@@ -527,6 +529,7 @@ describe("AccountActionButtons", () => {
       itemCount: 1,
       failureCount: 1,
       unsupportedCount: 0,
+      toastKey: "account:actions.copyInviteLinkFailedWithReason",
     },
   ])(
     "shows failure feedback and tracks $analyticsErrorCategory for the $result invite-link result",
@@ -535,6 +538,7 @@ describe("AccountActionButtons", () => {
       failureCount,
       itemCount,
       result,
+      toastKey,
       unsupportedCount,
     }) => {
       vi.spyOn(
@@ -553,9 +557,7 @@ describe("AccountActionButtons", () => {
       await copyInviteLinkFromRowMenu(`invite-${result}`)
 
       await waitFor(() => {
-        expect(toastErrorMock).toHaveBeenCalledWith(
-          "account:actions.copyInviteLinkFailed",
-        )
+        expect(toastErrorMock).toHaveBeenCalledWith(toastKey)
       })
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
@@ -563,6 +565,36 @@ describe("AccountActionButtons", () => {
       )
     },
   )
+
+  it("shows an actionable reason when invite links are disabled by the site", async () => {
+    vi.spyOn(
+      inviteLinkCopyWorkflow,
+      "runInviteLinkCopyWorkflow",
+    ).mockResolvedValueOnce({
+      result: inviteLinkCopyWorkflow.INVITE_LINK_COPY_RESULTS.Failure,
+      selectedCount: 1,
+      itemCount: 1,
+      successCount: 0,
+      failureCount: 1,
+      failureReasonCounts: {
+        [INVITE_LINK_FAILURE_REASONS.FeatureDisabled]: 1,
+      },
+      unsupportedCount: 0,
+      skippedCount: 0,
+    })
+
+    await copyInviteLinkFromRowMenu("invite-feature-disabled")
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "account:actions.copyInviteLinkFailedWithReason",
+      )
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported },
+    )
+  })
 
   it("shows fallback feedback when the invite-link workflow rejects unexpectedly", async () => {
     const workflowError = new Error("Invite-link workflow failed")

@@ -12,6 +12,7 @@ import {
   fetchAccountTokens,
   fetchCheckInStatus,
   fetchCurrentUser,
+  fetchInviteLink,
   fetchSiteStatus,
   fetchSub2ApiAnnouncements,
   fetchSub2ApiRuntimeModels,
@@ -46,6 +47,7 @@ import type {
 } from "~/services/apiService/sub2api/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
+import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -1390,6 +1392,207 @@ describe("apiService sub2api exported operations", () => {
     allow_ips: "",
     group: "default",
     ...overrides,
+  })
+
+  it("checks the public flag before fetching and encoding the affiliate code", async () => {
+    vi.mocked(fetchApi)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { affiliate_enabled: true },
+      } as any)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { aff_code: "  code/with spaces?  " },
+      } as any)
+
+    await expect(
+      fetchInviteLink({
+        ...baseRequest,
+        baseUrl: "https://sub2.example.invalid/console",
+      } as any),
+    ).resolves.toBe(
+      "https://sub2.example.invalid/register?aff=code%2Fwith%20spaces%3F",
+    )
+
+    expect(vi.mocked(fetchApi)).toHaveBeenCalledTimes(2)
+    const publicSettingsRequest = vi.mocked(fetchApi).mock.calls[0]?.[0]
+    expect(publicSettingsRequest?.baseUrl).toBe(
+      "https://sub2.example.invalid/console",
+    )
+    expect(publicSettingsRequest?.auth).toEqual({
+      authType: AuthTypeEnum.None,
+    })
+    expect((vi.mocked(fetchApi).mock.calls[0]?.[1] as any)?.endpoint).toBe(
+      "/api/v1/settings/public",
+    )
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0]).toMatchObject({
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "jwt-token",
+      },
+    })
+    expect((vi.mocked(fetchApi).mock.calls[1]?.[1] as any)?.endpoint).toBe(
+      "/api/v1/user/aff",
+    )
+  })
+
+  it.each([
+    ["missing data", { code: 0, message: "ok" }],
+    ["null data", { code: 0, message: "ok", data: null }],
+    ["array data", { code: 0, message: "ok", data: [] }],
+    ["missing flag", { code: 0, message: "ok", data: {} }],
+    [
+      "non-boolean flag",
+      { code: 0, message: "ok", data: { affiliate_enabled: "true" } },
+    ],
+  ])(
+    "rejects affiliate links for %s without calling the authenticated endpoint",
+    async (_label, publicSettingsEnvelope) => {
+      vi.mocked(fetchApi).mockResolvedValueOnce(publicSettingsEnvelope as any)
+
+      await expect(
+        fetchInviteLink({
+          ...baseRequest,
+          baseUrl: "https://sub2.example.invalid",
+        } as any),
+      ).rejects.toMatchObject({
+        reason: INVITE_LINK_FAILURE_REASONS.InvalidResponse,
+      })
+
+      expect(vi.mocked(fetchApi)).toHaveBeenCalledTimes(1)
+      expect((vi.mocked(fetchApi).mock.calls[0]?.[1] as any)?.endpoint).toBe(
+        "/api/v1/settings/public",
+      )
+    },
+  )
+
+  it("classifies an explicitly disabled affiliate feature", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: { affiliate_enabled: false },
+    } as any)
+
+    await expect(
+      fetchInviteLink({
+        ...baseRequest,
+        baseUrl: "https://sub2.example.invalid",
+      } as any),
+    ).rejects.toMatchObject({
+      reason: INVITE_LINK_FAILURE_REASONS.FeatureDisabled,
+    })
+
+    expect(vi.mocked(fetchApi)).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves public-settings business errors", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({
+      code: 41,
+      message: "public settings unavailable",
+    } as any)
+
+    await expect(
+      fetchInviteLink({
+        ...baseRequest,
+        baseUrl: "https://sub2.example.invalid",
+      } as any),
+    ).rejects.toMatchObject({
+      message: "public settings unavailable",
+      code: API_ERROR_CODES.BUSINESS_ERROR,
+    })
+    expect(vi.mocked(fetchApi)).toHaveBeenCalledTimes(1)
+  })
+
+  it("classifies malformed public-settings envelopes as invalid responses", async () => {
+    vi.mocked(fetchApi).mockResolvedValueOnce({ message: "ok" } as any)
+
+    await expect(
+      fetchInviteLink({
+        ...baseRequest,
+        baseUrl: "https://sub2.example.invalid",
+      } as any),
+    ).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+    })
+    expect(vi.mocked(fetchApi)).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ["missing data", { code: 0, message: "ok" }],
+    ["null data", { code: 0, message: "ok", data: null }],
+    ["array data", { code: 0, message: "ok", data: [] }],
+    ["missing code", { code: 0, message: "ok", data: {} }],
+    ["non-string code", { code: 0, message: "ok", data: { aff_code: 7 } }],
+    ["blank code", { code: 0, message: "ok", data: { aff_code: "   " } }],
+  ])("rejects %s from the affiliate endpoint", async (_label, affEnvelope) => {
+    vi.mocked(fetchApi)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { affiliate_enabled: true },
+      } as any)
+      .mockResolvedValueOnce(affEnvelope as any)
+
+    await expect(
+      fetchInviteLink({
+        ...baseRequest,
+        baseUrl: "https://sub2.example.invalid",
+      } as any),
+    ).rejects.toMatchObject({
+      reason: INVITE_LINK_FAILURE_REASONS.InviteDataMissing,
+    })
+
+    expect(vi.mocked(fetchApi)).toHaveBeenCalledTimes(2)
+  })
+
+  it("preserves authenticated affiliate business errors", async () => {
+    vi.mocked(fetchApi)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { affiliate_enabled: true },
+      } as any)
+      .mockResolvedValueOnce({
+        code: 42,
+        message: "affiliate unavailable",
+      } as any)
+
+    await expect(
+      fetchInviteLink({
+        ...baseRequest,
+        baseUrl: "https://sub2.example.invalid",
+      } as any),
+    ).rejects.toMatchObject({
+      message: "affiliate unavailable",
+      code: API_ERROR_CODES.BUSINESS_ERROR,
+    })
+    expect(vi.mocked(fetchApi)).toHaveBeenCalledTimes(2)
+  })
+
+  it("preserves authenticated affiliate auth errors", async () => {
+    vi.mocked(fetchApi)
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { affiliate_enabled: true },
+      } as any)
+      .mockRejectedValueOnce(
+        new ApiError("Unauthorized", 401, "/api/v1/user/aff"),
+      )
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce(null)
+
+    await expect(
+      fetchInviteLink({
+        ...baseRequest,
+        baseUrl: "https://sub2.example.invalid",
+      } as any),
+    ).rejects.toMatchObject({
+      code: API_ERROR_CODES.HTTP_401,
+      endpoint: "/api/v1/user/aff",
+    })
+    expect(vi.mocked(fetchApi)).toHaveBeenCalledTimes(2)
   })
 
   it("rejects fetchCurrentUser when the JWT access token is blank", async () => {

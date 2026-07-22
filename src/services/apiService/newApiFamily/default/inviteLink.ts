@@ -1,5 +1,9 @@
 import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import {
+  INVITE_LINK_FAILURE_REASONS,
+  InviteLinkError,
+} from "~/services/inviteLinks/errors"
 import { createLogger } from "~/utils/core/logger"
 
 const INVITE_CODE_ENDPOINT = "/api/user/aff"
@@ -27,7 +31,7 @@ export const defaultInviteLinkImplementation: InviteLinkImplementation = {
       })
 
       if (typeof inviteCode !== "string" || inviteCode.trim().length === 0) {
-        throw new Error("invite_link_code_missing")
+        throw new InviteLinkError(INVITE_LINK_FAILURE_REASONS.InviteDataMissing)
       }
 
       return buildInviteLink(request.baseUrl, inviteCode)

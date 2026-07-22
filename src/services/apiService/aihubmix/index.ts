@@ -33,6 +33,10 @@ import type {
   ApiServiceRequest,
 } from "~/services/apiTransport/type"
 import {
+  INVITE_LINK_FAILURE_REASONS,
+  InviteLinkError,
+} from "~/services/inviteLinks/errors"
+import {
   MODEL_LIST_SOURCE_KINDS,
   type ModelPricing,
   type PricingResponse,
@@ -100,6 +104,7 @@ const createAIHubMixTodayStatsAvailability =
 type AIHubMixUserInfo = {
   username: string
   display_name: string
+  aff_code?: string | null
   access_token?: string | null
   quota?: number | string
   used_quota?: number | string
@@ -182,6 +187,7 @@ const extractAIHubMixData = <T>(body: unknown, endpoint: string): T => {
       t("messages:errors.api.invalidResponseFormat"),
       undefined,
       endpoint,
+      API_ERROR_CODES.JSON_PARSE_ERROR,
     )
   }
 
@@ -644,6 +650,37 @@ export async function fetchAccountQuota(
     AIHUBMIX_API_USER_SELF_ENDPOINT,
   )
   return toFiniteNumber(userInfo.quota)
+}
+
+/**
+ * Fetch the AIHubMix invitation code with the saved account access token.
+ * The official current-user endpoint returns `aff_code`, and the deployed
+ * console copies it as `https://aihubmix.com/?aff=<code>`.
+ * https://docs.aihubmix.com/en/api/CliEndpoints/get-self
+ */
+export async function fetchInviteLink(
+  request: ApiServiceRequest,
+): Promise<string> {
+  const userInfo = await fetchAIHubMixData<unknown>(
+    request,
+    AIHUBMIX_API_USER_SELF_ENDPOINT,
+    { signal: request.abortSignal },
+  )
+  if (!userInfo || typeof userInfo !== "object" || Array.isArray(userInfo)) {
+    throw new InviteLinkError(INVITE_LINK_FAILURE_REASONS.InviteDataMissing)
+  }
+
+  const inviteCodeValue = (userInfo as Partial<AIHubMixUserInfo>).aff_code
+  const inviteCode =
+    typeof inviteCodeValue === "string" ? inviteCodeValue.trim() : ""
+
+  if (!inviteCode) {
+    throw new InviteLinkError(INVITE_LINK_FAILURE_REASONS.InviteDataMissing)
+  }
+
+  const inviteUrl = new URL(AIHUBMIX_API_ORIGIN)
+  inviteUrl.searchParams.set("aff", inviteCode)
+  return inviteUrl.toString()
 }
 
 /**

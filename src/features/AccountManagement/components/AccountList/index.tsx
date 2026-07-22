@@ -37,6 +37,11 @@ import {
   type SearchResultWithHighlight,
 } from "~/features/AccountManagement/hooks/useAccountSearch"
 import {
+  getInviteLinkFailureAnalyticsCategory,
+  getInviteLinkFailureSummary,
+  getPrimaryInviteLinkFailureReason,
+} from "~/features/AccountManagement/inviteLinkCopyFeedback"
+import {
   INVITE_LINK_COPY_RESULTS,
   runInviteLinkCopyWorkflow,
 } from "~/features/AccountManagement/inviteLinkCopyWorkflow"
@@ -886,7 +891,17 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
           insights,
         })
-        toast.error(t("account:bulk.copyInviteLinksClipboardFailed"))
+        const hasOtherOutcomes =
+          result.failureCount > 0 ||
+          result.unsupportedCount > 0 ||
+          result.skippedCount > 0
+        toast.error(
+          hasOtherOutcomes
+            ? t("account:bulk.copyInviteLinksClipboardFailedWithReasons", {
+                reasonSummary: getInviteLinkFailureSummary(t, result),
+              })
+            : t("account:bulk.copyInviteLinksClipboardFailed"),
+        )
         return
       }
 
@@ -900,16 +915,27 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       }
 
       if (result.result === INVITE_LINK_COPY_RESULTS.Failure) {
+        const primaryFailureReason = getPrimaryInviteLinkFailureReason(
+          result.failureReasonCounts,
+        )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          errorCategory:
+            getInviteLinkFailureAnalyticsCategory(primaryFailureReason),
           insights,
         })
-        toast.error(t("account:bulk.copyInviteLinksFailed"))
+        toast.error(
+          t("account:bulk.copyInviteLinksFailedWithReasons", {
+            reasonSummary: getInviteLinkFailureSummary(t, result),
+          }),
+        )
         return
       }
 
       const isPartial =
         result.result === INVITE_LINK_COPY_RESULTS.PartialSuccess
+      const primaryFailureReason = getPrimaryInviteLinkFailureReason(
+        result.failureReasonCounts,
+      )
       tracker.complete(
         isPartial
           ? PRODUCT_ANALYTICS_RESULTS.Failure
@@ -919,7 +945,9 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
             ? {
                 errorCategory:
                   result.failureCount > 0
-                    ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+                    ? getInviteLinkFailureAnalyticsCategory(
+                        primaryFailureReason,
+                      )
                     : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
               }
             : {}),
@@ -942,9 +970,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
             })
           : t("account:bulk.copyInviteLinksPartialSuccess", {
               successCount: result.successCount,
-              failureCount: result.failureCount,
-              unsupportedCount: result.unsupportedCount,
-              skippedCount: result.skippedCount,
+              reasonSummary: getInviteLinkFailureSummary(t, result),
             }),
       )
     } catch {

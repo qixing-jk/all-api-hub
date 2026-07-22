@@ -10,6 +10,10 @@ import {
   getAccountManagementSelectionCheckboxTestId,
 } from "~/features/AccountManagement/testIds"
 import {
+  INVITE_LINK_FAILURE_REASONS,
+  InviteLinkError,
+} from "~/services/inviteLinks/errors"
+import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -521,6 +525,12 @@ async function renderBulkInviteLinkSelection(
   )
 
   const user = userEvent.setup()
+  Object.defineProperty(navigator, "clipboard", {
+    configurable: true,
+    get: () => ({
+      writeText: clipboardWriteTextMock,
+    }),
+  })
   const renderResult = render(<AccountList />)
 
   await user.click(screen.getByRole("button", { name: "account:bulk.manage" }))
@@ -2190,7 +2200,7 @@ describe("AccountList", () => {
       baseUrl: "https://invite-fail-b.example.com",
     })
     fetchDisplayAccountInviteLinkMock.mockRejectedValue(
-      new Error("invite link unavailable"),
+      new InviteLinkError(INVITE_LINK_FAILURE_REASONS.FeatureDisabled),
     )
 
     mockUseAccountDataContext.mockReturnValue(
@@ -2225,7 +2235,7 @@ describe("AccountList", () => {
       expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(2)
       expect(clipboardWriteTextMock).not.toHaveBeenCalled()
       expect(toastErrorMock).toHaveBeenCalledWith(
-        "account:bulk.copyInviteLinksFailed",
+        "account:bulk.copyInviteLinksFailedWithReasons",
       )
       expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
@@ -2233,7 +2243,7 @@ describe("AccountList", () => {
         surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
         insights: {
           itemCount: 2,
           selectedCount: 2,
@@ -2369,6 +2379,75 @@ describe("AccountList", () => {
           ACCOUNT_MANAGEMENT_TEST_IDS.inviteLinkManualCopyTextarea,
         ),
       ).not.toBeInTheDocument()
+    })
+  })
+
+  it("keeps categorized failures visible when partial results require manual copy", async () => {
+    const successfulAccount = buildDisplaySiteData({
+      id: "invite-manual-success",
+      name: "Invite Manual Success",
+      disabled: false,
+      siteType: "new-api",
+      baseUrl: "https://invite-manual-success.example.invalid",
+    })
+    const failedAccount = buildDisplaySiteData({
+      id: "invite-manual-failure",
+      name: "Invite Manual Failure",
+      disabled: false,
+      siteType: "new-api",
+      baseUrl: "https://invite-manual-failure.example.invalid",
+    })
+    fetchDisplayAccountInviteLinkMock.mockImplementation(
+      async (account: { id: string; baseUrl: string }) => {
+        if (account.id === failedAccount.id) {
+          throw new InviteLinkError(
+            INVITE_LINK_FAILURE_REASONS.AuthenticationRequired,
+          )
+        }
+        return `${account.baseUrl}/register?aff=${account.id}`
+      },
+    )
+    clipboardWriteTextMock.mockRejectedValueOnce(
+      new DOMException("Clipboard access denied", "NotAllowedError"),
+    )
+
+    const { copyInviteLinks } = await renderBulkInviteLinkSelection([
+      successfulAccount,
+      failedAccount,
+    ])
+
+    await copyInviteLinks()
+
+    await waitFor(() => {
+      expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(2)
+      expect(clipboardWriteTextMock).toHaveBeenCalledWith(
+        "Invite Manual Success: https://invite-manual-success.example.invalid/register?aff=invite-manual-success",
+      )
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "account:bulk.copyInviteLinksClipboardFailedWithReasons",
+      )
+    })
+    expect(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.inviteLinkManualCopyTextarea,
+      ),
+    ).toHaveValue(
+      "Invite Manual Success: https://invite-manual-success.example.invalid/register?aff=invite-manual-success",
+    )
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopySelectedAccountInviteLinks,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+      insights: {
+        itemCount: 2,
+        selectedCount: 2,
+        successCount: 1,
+        failureCount: 1,
+        skippedCount: 0,
+      },
     })
   })
 })

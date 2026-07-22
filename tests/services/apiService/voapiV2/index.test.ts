@@ -6,6 +6,7 @@ import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvision
 import {
   createVoApiV2Token,
   deleteVoApiV2Token,
+  fetchInviteLink,
   fetchSupportCheckIn,
   fetchVoApiV2AccountData,
   fetchVoApiV2AvailableModels,
@@ -17,6 +18,8 @@ import {
   submitVoApiV2CheckIn,
   updateVoApiV2Token,
 } from "~/services/apiService/voapiV2"
+import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -75,6 +78,85 @@ describe("apiService VoAPI v2", () => {
     mockResyncVoApiV2AuthToken.mockReset()
     mockResyncVoApiV2AuthToken.mockResolvedValue(null)
     server.resetHandlers()
+  })
+
+  it("fetches the canonical invite URL with raw dashboard authorization", async () => {
+    server.use(
+      http.get(
+        "https://example.invalid/api/user/invite-info",
+        ({ request }) => {
+          expect(request.headers.get("authorization")).toBe(
+            "example-dashboard-token",
+          )
+          return HttpResponse.json({
+            code: 0,
+            data: {
+              url: "  https://invite.example.invalid/join?code=canonical  ",
+            },
+          })
+        },
+      ),
+    )
+
+    await expect(fetchInviteLink(createVoApiV2Request())).resolves.toBe(
+      "https://invite.example.invalid/join?code=canonical",
+    )
+  })
+
+  it.each([
+    ["missing", {}],
+    ["blank", { url: "   " }],
+    ["non-string", { url: 42 }],
+  ])("rejects a %s invite URL", async (_case, data) => {
+    server.use(
+      http.get("https://example.invalid/api/user/invite-info", () =>
+        HttpResponse.json({ code: 0, data }),
+      ),
+    )
+
+    await expect(fetchInviteLink(createVoApiV2Request())).rejects.toMatchObject(
+      {
+        reason: INVITE_LINK_FAILURE_REASONS.InviteDataMissing,
+      },
+    )
+  })
+
+  it("preserves VoAPI v2 invite endpoint business errors", async () => {
+    server.use(
+      http.get("https://example.invalid/api/user/invite-info", () =>
+        HttpResponse.json({
+          code: 403,
+          data: null,
+          msg: "Invite feature requires Pro",
+        }),
+      ),
+    )
+
+    await expect(fetchInviteLink(createVoApiV2Request())).rejects.toMatchObject(
+      {
+        message: "Invite feature requires Pro",
+        endpoint: "/api/user/invite-info",
+        code: API_ERROR_CODES.BUSINESS_ERROR,
+      },
+    )
+  })
+
+  it("classifies an expired VoAPI v2 invite session", async () => {
+    server.use(
+      http.get("https://example.invalid/api/user/invite-info", () =>
+        HttpResponse.json({
+          code: 2,
+          data: null,
+          msg: "Auth expire",
+        }),
+      ),
+    )
+
+    await expect(fetchInviteLink(createVoApiV2Request())).rejects.toMatchObject(
+      {
+        reason: INVITE_LINK_FAILURE_REASONS.AuthenticationRequired,
+      },
+    )
   })
 
   it("fetches account data with raw authorization and today statistics", async () => {

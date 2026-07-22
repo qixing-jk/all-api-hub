@@ -25,6 +25,7 @@ import type { TokenProvisioningCapability } from "~/services/apiAdapters/contrac
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { normalizeInviteLinkError } from "~/services/inviteLinks/errors"
 import {
   AuthTypeEnum,
   type ApiToken,
@@ -350,14 +351,21 @@ export async function fetchDisplayAccountInviteLink(
   account: DisplayAccountApiSnapshot,
   options: { abortSignal?: AbortSignal } = {},
 ): Promise<string> {
-  const { inviteLink, request } = createDisplayAccountApiContext(account)
-  const inviteLinkRequest = options.abortSignal
-    ? { ...request, abortSignal: options.abortSignal }
-    : request
+  try {
+    const { inviteLink, request } = createDisplayAccountApiContext(account)
+    const inviteLinkRequest = options.abortSignal
+      ? { ...request, abortSignal: options.abortSignal }
+      : request
 
-  return requireDisplayAccountInviteLink(account, inviteLink).fetchInviteLink({
-    request: inviteLinkRequest,
-  })
+    return await requireDisplayAccountInviteLink(
+      account,
+      inviteLink,
+    ).fetchInviteLink({
+      request: inviteLinkRequest,
+    })
+  } catch (error) {
+    throw normalizeInviteLinkError(error)
+  }
 }
 
 export interface ResolveDisplayAccountTokenForSecretOptions {
