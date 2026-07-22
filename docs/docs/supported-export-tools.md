@@ -7,7 +7,7 @@
 | 产品 | 官方描述 | 官方链接 |
 |------|----------|----------|
 | Cherry Studio | AI 生产力工作室，提供智能对话、自主代理和 300+ 助手，统一接入前沿大模型。 | [官网](https://www.cherry-ai.com/) / [GitHub](https://github.com/CherryHQ/cherry-studio) |
-| CC Switch | 面向 Claude Code、Codex、OpenCode、openclaw 与 Gemini CLI 的跨平台桌面一体化助手。 | [GitHub](https://github.com/farion1231/cc-switch) |
+| CC Switch | 面向 Claude Code、Codex、Gemini CLI、Grok CLI、Hermes、OpenCode 与 OpenClaw 的跨平台桌面一体化助手。 | [GitHub](https://github.com/farion1231/cc-switch) |
 | Kilo Code | Kilo 是一体化的 Agentic Engineering 平台。 | [官网](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode) |
 | Roo Code | Roo Code 让一整支 AI 开发团队直接驻留在你的代码编辑器里。 | [官网](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
 | CLIProxyAPI | 将 Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow 封装为兼容 OpenAI / Gemini / Claude / Codex 的 API 服务。 | [文档](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |

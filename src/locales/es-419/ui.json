@@ -81,6 +81,8 @@
         "claude": "Claude",
         "codex": "Codex",
         "gemini": "Gemini",
+        "grokbuild": "Grok CLI",
+        "hermes": "Hermes",
         "openclaw": "OpenClaw",
         "opencode": "OpenCode"
       },
@@ -100,6 +102,7 @@
         "none": "Sin modelo predeterminado"
       },
       "notices": {
+        "hermes": "CC Switch importa Hermes con el protocolo Chat Completions. Durante la exportación, el nombre del proveedor se convierte en un identificador válido que solo contiene letras minúsculas, números y guiones. Para usar otro formato, como Anthropic Messages o Codex Responses, ajústalo en CC Switch después de importar.",
         "openclaw": "CC Switch actualmente no admite configurar formatos de API del servicio de IA OpenClaw mediante importación externa. Ajústalo en CC Switch después de importar si es necesario.",
         "opencode": "CC Switch actualmente no admite configurar formatos de API del servicio de IA OpenCode mediante importación externa. Ajústalo en CC Switch después de importar si es necesario."
       },

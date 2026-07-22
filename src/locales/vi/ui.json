@@ -74,6 +74,8 @@
         "claude": "Claude",
         "codex": "Codex",
         "gemini": "Gemini",
+        "grokbuild": "Grok CLI",
+        "hermes": "Hermes",
         "openclaw": "OpenClaw",
         "opencode": "OpenCode"
       },
@@ -93,6 +95,7 @@
         "none": "Không đặt mô hình mặc định"
       },
       "notices": {
+        "hermes": "CC Switch nhập Hermes bằng giao thức Chat Completions. Khi xuất, tên nhà cung cấp được chuyển thành mã định danh hợp lệ chỉ gồm chữ thường, chữ số và dấu gạch nối. Để sử dụng định dạng khác như Anthropic Messages hoặc Codex Responses, hãy điều chỉnh trong CC Switch sau khi nhập.",
         "openclaw": "CC Switch hiện không hỗ trợ định dạng API của dịch vụ OpenClaw AI thông qua nhập bên ngoài; nếu cần, vui lòng điều chỉnh thủ công trong CC Switch sau khi nhập.",
         "opencode": "CC Switch hiện không hỗ trợ định dạng API của dịch vụ OpenCode AI thông qua nhập bên ngoài; nếu cần, vui lòng điều chỉnh thủ công trong CC Switch sau khi nhập."
       },

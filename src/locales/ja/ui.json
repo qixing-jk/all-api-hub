@@ -74,6 +74,8 @@
         "claude": "Claude",
         "codex": "Codex",
         "gemini": "Gemini",
+        "grokbuild": "Grok CLI",
+        "hermes": "Hermes",
         "openclaw": "OpenClaw",
         "opencode": "OpenCode"
       },
@@ -93,6 +95,7 @@
         "none": "既定モデルなし"
       },
       "notices": {
+        "hermes": "CC Switch は Hermes を Chat Completions プロトコルとしてインポートします。エクスポート時に、プロバイダー名は小文字、数字、ハイフンのみの有効な識別子に変換されます。Anthropic Messages や Codex Responses など別の形式を使用する場合は、インポート後に CC Switch 側で調整してください。",
         "openclaw": "CC Switch は現在、外部インポート経由で OpenClaw AI サービス API 形式を設定できません。必要に応じて、インポート後に CC Switch 側で調整してください。",
         "opencode": "CC Switch は現在、外部インポート経由で OpenCode AI サービス API 形式を設定できません。必要に応じて、インポート後に CC Switch 側で調整してください。"
       },

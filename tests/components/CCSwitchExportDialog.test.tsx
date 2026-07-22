@@ -250,6 +250,10 @@ describe("CCSwitchExportDialog", () => {
       appLabel: "ui:dialog.ccswitch.appOptions.openclaw",
       notice: "ui:dialog.ccswitch.notices.openclaw",
     },
+    {
+      appLabel: "ui:dialog.ccswitch.appOptions.hermes",
+      notice: "ui:dialog.ccswitch.notices.hermes",
+    },
   ])(
     "shows the protocol limitation notice for $appLabel",
     async ({ appLabel, notice }) => {
@@ -287,6 +291,51 @@ describe("CCSwitchExportDialog", () => {
         "aria-describedby",
         "ccswitch-app-limitation",
       )
+    },
+  )
+
+  it.each([
+    {
+      app: "grokbuild",
+      appLabel: "ui:dialog.ccswitch.appOptions.grokbuild",
+    },
+    {
+      app: "hermes",
+      appLabel: "ui:dialog.ccswitch.appOptions.hermes",
+    },
+  ] as const)(
+    "submits the selected $app CC Switch app",
+    async ({ app, appLabel }) => {
+      const user = userEvent.setup()
+      mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+      render(
+        <CCSwitchExportDialog
+          isOpen={true}
+          onClose={() => {}}
+          account={
+            { id: "acc", name: "Example", baseUrl: "https://x.test" } as any
+          }
+          token={{ id: "tok", key: "sk-test" } as any}
+        />,
+      )
+
+      const appSelect = await screen.findByLabelText(
+        "ui:dialog.ccswitch.fields.app",
+      )
+      await user.click(appSelect)
+      await user.click(await screen.findByRole("option", { name: appLabel }))
+      await user.click(
+        screen.getByRole("button", {
+          name: "ui:dialog.ccswitch.actions.export",
+        }),
+      )
+
+      await waitFor(() => {
+        expect(mockOpenInCCSwitch).toHaveBeenCalledWith(
+          expect.objectContaining({ app }),
+        )
+      })
     },
   )
 

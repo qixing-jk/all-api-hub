@@ -71,6 +71,8 @@
         "claude": "Claude",
         "codex": "Codex",
         "gemini": "Gemini",
+        "grokbuild": "Grok CLI",
+        "hermes": "Hermes",
         "openclaw": "OpenClaw",
         "opencode": "OpenCode"
       },
@@ -90,6 +92,7 @@
         "none": "不设置默认模型"
       },
       "notices": {
+        "hermes": "CC Switch 会将 Hermes 导入为 Chat Completions 协议。导出时，供应商名称会转换为只含小写字母、数字和连字符的合法标识；如需 Anthropic Messages、Codex Responses 等其他格式，请在导入后到 CC Switch 中调整。",
         "openclaw": "CC Switch 当前不支持通过外部导入的方式配置 OpenClaw AI 服务的 API 接口格式；如有需要，请在导入后到 CC Switch 中手动调整。",
         "opencode": "CC Switch 当前不支持通过外部导入的方式配置 OpenCode AI 服务的 API 接口格式；如有需要，请在导入后到 CC Switch 中手动调整。"
       },

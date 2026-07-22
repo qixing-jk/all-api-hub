@@ -74,6 +74,10 @@ const getCCSwitchAppLabel = (t: TFunction, app: CCSwitchApp) => {
       return t("ui:dialog.ccswitch.appOptions.codex")
     case "gemini":
       return t("ui:dialog.ccswitch.appOptions.gemini")
+    case "grokbuild":
+      return t("ui:dialog.ccswitch.appOptions.grokbuild")
+    case "hermes":
+      return t("ui:dialog.ccswitch.appOptions.hermes")
     case "opencode":
       return t("ui:dialog.ccswitch.appOptions.opencode")
     case "openclaw":
@@ -83,6 +87,8 @@ const getCCSwitchAppLabel = (t: TFunction, app: CCSwitchApp) => {
 
 const getCCSwitchLimitationNotice = (t: TFunction, app: CCSwitchApp) => {
   switch (app) {
+    case "hermes":
+      return t("ui:dialog.ccswitch.notices.hermes")
     case "opencode":
       return t("ui:dialog.ccswitch.notices.opencode")
     case "openclaw":

@@ -17,10 +17,18 @@ export const CCSWITCH_APPS = [
   "claude",
   "codex",
   "gemini",
+  "grokbuild",
+  "hermes",
   "opencode",
   "openclaw",
 ] as const
 export type CCSwitchApp = (typeof CCSWITCH_APPS)[number]
+
+// CC Switch's Hermes importer fixes api_mode to chat_completions and derives
+// the provider ID from name, while ProviderForm requires ^[a-z0-9]+(-[a-z0-9]+)*$.
+// Sources: src-tauri/src/deeplink/{provider.rs,mod.rs},
+// src/components/providers/forms/ProviderForm.tsx
+// https://github.com/farion1231/cc-switch
 
 /**
  * Minimal payload required by CC Switch deeplink import protocol.
@@ -74,6 +82,18 @@ function generateCCSwitchURL(payload: CCSwitchDeeplinkPayload) {
   return `ccswitch://v1/import?${params.toString()}`
 }
 
+const toHermesProviderSlug = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+
+const normalizeHermesProviderName = (name: string, endpoint: string) =>
+  toHermesProviderSlug(name) ||
+  toHermesProviderSlug(new URL(endpoint).hostname) ||
+  "provider"
+
 /**
  * Attempt to open the CC Switch desktop client via deeplink.
  * Validates inputs, normalizes URLs, and surfaces toast feedback.
@@ -121,9 +141,13 @@ export function openInCCSwitch(options: OpenInCCSwitchOptions) {
     return false
   }
 
+  const providerName = name?.trim() || account.name
   const deeplink = generateCCSwitchURL({
     app,
-    name: name?.trim() || account.name,
+    name:
+      app === "hermes"
+        ? normalizeHermesProviderName(providerName, normalizedEndpoint)
+        : providerName,
     homepage,
     endpoint: normalizedEndpoint,
     apiKey: token.key,
