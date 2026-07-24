@@ -44,6 +44,9 @@ interface InviteLinkFetchFailure {
   reason: ReturnType<typeof normalizeInviteLinkError>["reason"]
 }
 
+const isPositiveFiniteTimeout = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value > 0
+
 /** Fetches one invite link and settles even when an adapter ignores abort. */
 async function fetchInviteLink({
   account,
@@ -56,10 +59,7 @@ async function fetchInviteLink({
   batchSignal?: AbortSignal
   requestTimeoutMs?: number
 }): Promise<string> {
-  const hasRequestTimeout =
-    typeof requestTimeoutMs === "number" &&
-    Number.isFinite(requestTimeoutMs) &&
-    requestTimeoutMs > 0
+  const hasRequestTimeout = isPositiveFiniteTimeout(requestTimeoutMs)
 
   const sourceSignals = [signal, batchSignal].filter(
     (sourceSignal): sourceSignal is AbortSignal => sourceSignal !== undefined,
@@ -131,10 +131,7 @@ async function fetchInviteLinks({
   requestTimeoutMs?: number
   batchTimeoutMs?: number
 }): Promise<Array<InviteLinkFetchSuccess | InviteLinkFetchFailure>> {
-  const hasBatchTimeout =
-    typeof batchTimeoutMs === "number" &&
-    Number.isFinite(batchTimeoutMs) &&
-    batchTimeoutMs > 0
+  const hasBatchTimeout = isPositiveFiniteTimeout(batchTimeoutMs)
   const batchController = hasBatchTimeout ? new AbortController() : undefined
   const batchTimeoutId = batchController
     ? setTimeout(() => {

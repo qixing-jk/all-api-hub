@@ -5,6 +5,7 @@ import {
   INVITE_LINK_COPY_RESULTS,
   runInviteLinkCopyWorkflow,
 } from "~/features/AccountManagement/inviteLinkCopyWorkflow"
+import { createSiteRequestLimiter } from "~/services/apiTransport/siteRequestLimiter"
 import {
   INVITE_LINK_FAILURE_REASONS,
   InviteLinkError,
@@ -118,6 +119,68 @@ describe("runInviteLinkCopyWorkflow", () => {
     releases.splice(0).forEach((release) => release())
 
     await copyPromise
+  })
+
+  it("counts site-limiter queue time toward each request deadline", async () => {
+    vi.useFakeTimers()
+    const limiter = createSiteRequestLimiter({
+      maxConcurrentPerSite: 1,
+      requestsPerMinute: 60_000,
+      burst: 1,
+    })
+    const startedAccountIds: string[] = []
+    let releaseFirst: (() => void) | undefined
+    fetchDisplayAccountInviteLinkMock.mockImplementation(
+      (account: { id: string }, options: { abortSignal?: AbortSignal }) =>
+        limiter(
+          "https://shared.example.invalid",
+          async () => {
+            startedAccountIds.push(account.id)
+            if (account.id === "first") {
+              await new Promise<void>((resolve) => {
+                releaseFirst = resolve
+              })
+            }
+            return `https://invite.example.invalid/${account.id}`
+          },
+          options.abortSignal,
+        ),
+    )
+
+    try {
+      const copyPromise = runInviteLinkCopyWorkflow({
+        accounts: [buildAccount("first"), buildAccount("queued")],
+        format: "raw",
+        requestTimeoutMs: 1_000,
+      })
+
+      await vi.advanceTimersByTimeAsync(0)
+      expect(startedAccountIds).toEqual(["first"])
+
+      await vi.advanceTimersByTimeAsync(1_000)
+
+      await expect(copyPromise).resolves.toEqual({
+        result: INVITE_LINK_COPY_RESULTS.Failure,
+        selectedCount: 2,
+        itemCount: 2,
+        successCount: 0,
+        failureCount: 2,
+        failureReasonCounts: {
+          [INVITE_LINK_FAILURE_REASONS.Timeout]: 2,
+        },
+        unsupportedCount: 0,
+        skippedCount: 0,
+      })
+      expect(startedAccountIds).toEqual(["first"])
+
+      releaseFirst?.()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(startedAccountIds).toEqual(["first"])
+    } finally {
+      releaseFirst?.()
+      vi.clearAllTimers()
+      vi.useRealTimers()
+    }
   })
 
   it("preserves account order when concurrent fetches finish out of order", async () => {
