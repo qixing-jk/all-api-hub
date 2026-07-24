@@ -3,6 +3,8 @@ import {
   fetchDisplayAccountInviteLink,
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
+  INVITE_LINK_FAILURE_REASONS,
+  InviteLinkError,
   normalizeInviteLinkError,
   type InviteLinkFailureReasonCounts,
 } from "~/services/inviteLinks/errors"
@@ -17,6 +19,12 @@ export const INVITE_LINK_COPY_RESULTS = {
   Cancelled: "cancelled",
 } as const
 
+export const BULK_INVITE_LINK_COPY_POLICY = {
+  maxConcurrency: 4,
+  requestTimeoutMs: 8_000,
+  batchTimeoutMs: 20_000,
+} as const
+
 type InviteLinkCopyResult =
   (typeof INVITE_LINK_COPY_RESULTS)[keyof typeof INVITE_LINK_COPY_RESULTS]
 
@@ -24,6 +32,9 @@ interface RunInviteLinkCopyWorkflowOptions {
   accounts: DisplaySiteData[]
   format: "raw" | "labeled"
   signal?: AbortSignal
+  maxConcurrency?: number
+  requestTimeoutMs?: number
+  batchTimeoutMs?: number
 }
 
 interface InviteLinkFetchSuccess {
@@ -35,30 +46,170 @@ interface InviteLinkFetchFailure {
   reason: ReturnType<typeof normalizeInviteLinkError>["reason"]
 }
 
-/** Fetches invite links concurrently while preserving account order. */
+/** Fetches one invite link and settles even when an adapter ignores abort. */
+async function fetchInviteLink({
+  account,
+  signal,
+  batchSignal,
+  requestTimeoutMs,
+}: {
+  account: DisplaySiteData
+  signal?: AbortSignal
+  batchSignal?: AbortSignal
+  requestTimeoutMs?: number
+}): Promise<string> {
+  const hasRequestTimeout =
+    typeof requestTimeoutMs === "number" &&
+    Number.isFinite(requestTimeoutMs) &&
+    requestTimeoutMs > 0
+
+  const sourceSignals = [signal, batchSignal].filter(
+    (sourceSignal): sourceSignal is AbortSignal => sourceSignal !== undefined,
+  )
+
+  if (!hasRequestTimeout && sourceSignals.length === 0) {
+    return fetchDisplayAccountInviteLink(account, {
+      abortSignal: undefined,
+    })
+  }
+
+  const controller = new AbortController()
+  const signalCleanups: Array<() => void> = []
+  const cleanupSourceSignals = () => {
+    signalCleanups.forEach((cleanup) => cleanup())
+    signalCleanups.length = 0
+  }
+  for (const sourceSignal of sourceSignals) {
+    const relayAbort = () => {
+      if (!controller.signal.aborted) {
+        controller.abort(sourceSignal.reason)
+      }
+    }
+
+    if (sourceSignal.aborted) {
+      relayAbort()
+      break
+    }
+
+    sourceSignal.addEventListener("abort", relayAbort, { once: true })
+    signalCleanups.push(() => {
+      sourceSignal.removeEventListener("abort", relayAbort)
+    })
+  }
+
+  if (controller.signal.aborted) {
+    cleanupSourceSignals()
+    throw controller.signal.reason
+  }
+
+  const timeoutId = hasRequestTimeout
+    ? setTimeout(() => {
+        controller.abort(
+          new InviteLinkError(INVITE_LINK_FAILURE_REASONS.Timeout),
+        )
+      }, requestTimeoutMs)
+    : undefined
+  let rejectOnAbort: (() => void) | undefined
+  const abortPromise = new Promise<never>((_resolve, reject) => {
+    rejectOnAbort = () => reject(controller.signal.reason)
+    controller.signal.addEventListener("abort", rejectOnAbort, { once: true })
+  })
+
+  try {
+    return await Promise.race([
+      fetchDisplayAccountInviteLink(account, {
+        abortSignal: controller.signal,
+      }),
+      abortPromise,
+    ])
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId)
+    cleanupSourceSignals()
+    if (rejectOnAbort) {
+      controller.signal.removeEventListener("abort", rejectOnAbort)
+    }
+  }
+}
+
+/** Fetches invite links with optional concurrency limiting while preserving order. */
 async function fetchInviteLinks({
   accounts,
   signal,
+  maxConcurrency,
+  requestTimeoutMs,
+  batchTimeoutMs,
 }: {
   accounts: DisplaySiteData[]
   signal?: AbortSignal
+  maxConcurrency?: number
+  requestTimeoutMs?: number
+  batchTimeoutMs?: number
 }): Promise<Array<InviteLinkFetchSuccess | InviteLinkFetchFailure>> {
-  return Promise.all(
-    accounts.map(async (account) => {
+  const results = new Array<InviteLinkFetchSuccess | InviteLinkFetchFailure>(
+    accounts.length,
+  )
+  const requestedConcurrency =
+    typeof maxConcurrency === "number" &&
+    Number.isFinite(maxConcurrency) &&
+    maxConcurrency > 0
+      ? Math.floor(maxConcurrency)
+      : accounts.length
+  const workerCount = Math.min(accounts.length, requestedConcurrency)
+  const hasBatchTimeout =
+    typeof batchTimeoutMs === "number" &&
+    Number.isFinite(batchTimeoutMs) &&
+    batchTimeoutMs > 0
+  const batchController = hasBatchTimeout ? new AbortController() : undefined
+  const batchTimeoutId = batchController
+    ? setTimeout(() => {
+        batchController.abort(
+          new InviteLinkError(INVITE_LINK_FAILURE_REASONS.Timeout),
+        )
+      }, batchTimeoutMs)
+    : undefined
+  let nextAccountIndex = 0
+
+  const fetchNext = async () => {
+    while (nextAccountIndex < accounts.length) {
+      if (signal?.aborted || batchController?.signal.aborted) return
+
+      const accountIndex = nextAccountIndex
+      nextAccountIndex += 1
+      const account = accounts[accountIndex]
+
       try {
-        return {
+        results[accountIndex] = {
           account,
-          inviteLink: await fetchDisplayAccountInviteLink(account, {
-            abortSignal: signal,
+          inviteLink: await fetchInviteLink({
+            account,
+            signal,
+            batchSignal: batchController?.signal,
+            requestTimeoutMs,
           }),
         }
       } catch (error) {
-        return {
+        results[accountIndex] = {
           reason: normalizeInviteLinkError(error).reason,
         }
       }
-    }),
-  )
+    }
+  }
+
+  try {
+    await Promise.all(Array.from({ length: workerCount }, () => fetchNext()))
+  } finally {
+    if (batchTimeoutId !== undefined) clearTimeout(batchTimeoutId)
+  }
+
+  for (let accountIndex = 0; accountIndex < results.length; accountIndex += 1) {
+    if (!results[accountIndex]) {
+      results[accountIndex] = {
+        reason: INVITE_LINK_FAILURE_REASONS.Timeout,
+      }
+    }
+  }
+
+  return results
 }
 
 interface InviteLinkCopyWorkflowResult {
@@ -80,6 +231,9 @@ export async function runInviteLinkCopyWorkflow({
   accounts,
   format,
   signal,
+  maxConcurrency,
+  requestTimeoutMs,
+  batchTimeoutMs,
 }: RunInviteLinkCopyWorkflowOptions): Promise<InviteLinkCopyWorkflowResult> {
   const enabledAccounts = accounts.filter(
     (account) => account.disabled !== true,
@@ -115,6 +269,9 @@ export async function runInviteLinkCopyWorkflow({
   const fetchResults = await fetchInviteLinks({
     accounts: supportedAccounts,
     signal,
+    maxConcurrency,
+    requestTimeoutMs,
+    batchTimeoutMs,
   })
 
   if (signal?.aborted) {

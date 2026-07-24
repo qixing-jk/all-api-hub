@@ -42,6 +42,7 @@ import {
   getPrimaryInviteLinkFailureReason,
 } from "~/features/AccountManagement/inviteLinkCopyFeedback"
 import {
+  BULK_INVITE_LINK_COPY_POLICY,
   INVITE_LINK_COPY_RESULTS,
   runInviteLinkCopyWorkflow,
 } from "~/features/AccountManagement/inviteLinkCopyWorkflow"
@@ -871,6 +872,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         accounts: selectedAccounts,
         format: "labeled",
         signal: controller.signal,
+        ...BULK_INVITE_LINK_COPY_POLICY,
       })
       const insights = {
         itemCount: result.itemCount,

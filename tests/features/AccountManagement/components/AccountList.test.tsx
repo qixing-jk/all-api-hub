@@ -1810,6 +1810,10 @@ describe("AccountList", () => {
 
   it("copies invite links for supported selected accounts", async () => {
     const user = userEvent.setup()
+    const workflowSpy = vi.spyOn(
+      inviteLinkCopyWorkflow,
+      "runInviteLinkCopyWorkflow",
+    )
     const inviteA = buildDisplaySiteData({
       id: "invite-a",
       name: "Invite A",
@@ -1862,6 +1866,13 @@ describe("AccountList", () => {
       expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledWith(
         expect.objectContaining({ id: "invite-b" }),
         expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
+      )
+      expect(workflowSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          maxConcurrency: 4,
+          requestTimeoutMs: 8_000,
+          batchTimeoutMs: 20_000,
+        }),
       )
       expect(toastSuccessMock).toHaveBeenCalledWith(
         "account:bulk.copyInviteLinksSuccess",
