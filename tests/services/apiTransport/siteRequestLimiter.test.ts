@@ -131,6 +131,130 @@ describe("createSiteRequestLimiter", () => {
     ])
   })
 
+  it("removes queued aborted work without running it or consuming a token", async () => {
+    const limiter = createSiteRequestLimiter({
+      maxConcurrentPerSite: 1,
+      requestsPerMinute: 60,
+      burst: 1,
+    })
+    const abortController = new AbortController()
+    const events: string[] = []
+    let releaseFirst: (() => void) | undefined
+
+    const first = limiter("site-a", async () => {
+      events.push("first:start")
+      await new Promise<void>((resolve) => {
+        releaseFirst = resolve
+      })
+      events.push("first:end")
+    })
+    const secondTask = vi.fn(async () => {
+      events.push("second:start")
+    })
+    const second = limiter("site-a", secondTask, abortController.signal)
+    let secondOutcome: unknown = "pending"
+    const captureSecondOutcome = second.then(
+      () => {
+        secondOutcome = "resolved"
+      },
+      (error) => {
+        secondOutcome = error
+      },
+    )
+    const third = limiter("site-a", async () => {
+      events.push("third:start")
+    })
+
+    await flushMicrotasks()
+    abortController.abort()
+    await flushMicrotasks()
+    releaseFirst?.()
+    await first
+
+    vi.advanceTimersByTime(999)
+    await flushMicrotasks()
+    expect(events).toEqual(["first:start", "first:end"])
+
+    vi.advanceTimersByTime(1)
+    await flushMicrotasks()
+
+    expect(secondOutcome).toBe(abortController.signal.reason)
+    expect(secondTask).not.toHaveBeenCalled()
+    expect(events).toEqual(["first:start", "first:end", "third:start"])
+    await third
+    await captureSecondOutcome
+  })
+
+  it("does not start work admitted with an already aborted signal", async () => {
+    const limiter = createSiteRequestLimiter({
+      maxConcurrentPerSite: 1,
+      requestsPerMinute: 60,
+      burst: 1,
+    })
+    const abortController = new AbortController()
+    const task = vi.fn(async () => "unexpected")
+    abortController.abort()
+
+    await expect(limiter("site-a", task, abortController.signal)).rejects.toBe(
+      abortController.signal.reason,
+    )
+    expect(task).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it("does not start disabled limiter work with an already aborted signal", async () => {
+    const limiter = createSiteRequestLimiter({
+      enabled: false,
+      maxConcurrentPerSite: 1,
+      requestsPerMinute: 60,
+      burst: 1,
+    })
+    const abortController = new AbortController()
+    const task = vi.fn(async () => "unexpected")
+    abortController.abort()
+
+    await expect(limiter("site-a", task, abortController.signal)).rejects.toBe(
+      abortController.signal.reason,
+    )
+    expect(task).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it("keeps an acquired task active and detaches its queue abort listener", async () => {
+    const limiter = createSiteRequestLimiter({
+      maxConcurrentPerSite: 1,
+      requestsPerMinute: 60,
+      burst: 1,
+    })
+    const abortController = new AbortController()
+    const removeEventListener = vi.spyOn(
+      abortController.signal,
+      "removeEventListener",
+    )
+    let releaseTask: (() => void) | undefined
+
+    const task = limiter(
+      "site-a",
+      async () => {
+        await new Promise<void>((resolve) => {
+          releaseTask = resolve
+        })
+        return "done"
+      },
+      abortController.signal,
+    )
+
+    await flushMicrotasks()
+    abortController.abort()
+    releaseTask?.()
+
+    await expect(task).resolves.toBe("done")
+    expect(removeEventListener).toHaveBeenCalledWith(
+      "abort",
+      expect.any(Function),
+    )
+  })
+
   it("does not block different site keys", async () => {
     const limiter = createSiteRequestLimiter({
       maxConcurrentPerSite: 1,

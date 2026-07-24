@@ -28,6 +28,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiData } from "~/services/apiTransport/request"
+import { withSiteApiRequestLimit } from "~/services/apiTransport/siteRequestLimiter"
 import type {
   ApiResponse,
   ApiServiceRequest,
@@ -661,10 +662,15 @@ export async function fetchAccountQuota(
 export async function fetchInviteLink(
   request: ApiServiceRequest,
 ): Promise<string> {
-  const userInfo = await fetchAIHubMixData<unknown>(
-    request,
-    AIHUBMIX_API_USER_SELF_ENDPOINT,
-    { cache: "no-store", signal: request.abortSignal },
+  const userInfo = await withSiteApiRequestLimit(
+    AIHUBMIX_API_ORIGIN,
+    async () =>
+      await fetchAIHubMixData<unknown>(
+        request,
+        AIHUBMIX_API_USER_SELF_ENDPOINT,
+        { cache: "no-store", signal: request.abortSignal },
+      ),
+    request.abortSignal,
   )
   if (!userInfo || typeof userInfo !== "object" || Array.isArray(userInfo)) {
     throw new InviteLinkError(INVITE_LINK_FAILURE_REASONS.InviteDataMissing)

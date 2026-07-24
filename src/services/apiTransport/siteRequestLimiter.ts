@@ -11,6 +11,8 @@ type QueueItem = {
   task: () => Promise<unknown>
   resolve: (value: unknown) => void
   reject: (reason?: unknown) => void
+  signal?: AbortSignal
+  abortListener?: () => void
 }
 
 type SiteLimiterState = {
@@ -29,6 +31,16 @@ const SITE_API_REQUEST_LIMITS = {
 } as const satisfies SiteRequestLimiterConfig
 
 const IDLE_STATE_TTL_MS = 5 * 60 * 1000
+
+const getAbortReason = (signal: AbortSignal): unknown =>
+  signal.reason ?? new DOMException("The operation was aborted", "AbortError")
+
+const detachAbortListener = (item: QueueItem): void => {
+  if (!item.signal || !item.abortListener) return
+
+  item.signal.removeEventListener("abort", item.abortListener)
+  item.abortListener = undefined
+}
 
 /**
  * Resolve a numeric limiter config field and reject NaN/Infinity early.
@@ -96,8 +108,14 @@ export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
   const states = new Map<string, SiteLimiterState>()
 
   if (!enabled || requestsPerMinute <= 0) {
-    return async <T>(_key: string, task: () => Promise<T>): Promise<T> =>
-      await task()
+    return async <T>(
+      _key: string,
+      task: () => Promise<T>,
+      signal?: AbortSignal,
+    ): Promise<T> => {
+      if (signal?.aborted) throw getAbortReason(signal)
+      return await task()
+    }
   }
 
   const refillTokens = (state: SiteLimiterState) => {
@@ -172,10 +190,12 @@ export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
         return
       }
 
-      state.tokens -= 1
-      const item = state.queue.shift()
-      if (!item) continue
+      // Abort dispatch is synchronous: queued handlers remove their item before
+      // this turn, and this turn detaches the handler before starting the task.
+      const item = state.queue.shift()!
+      detachAbortListener(item)
 
+      state.tokens -= 1
       state.activeCount += 1
       void Promise.resolve()
         .then(item.task)
@@ -190,17 +210,36 @@ export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
     scheduleCleanup(key, state)
   }
 
-  return async <T>(key: string, task: () => Promise<T>): Promise<T> => {
+  return async <T>(
+    key: string,
+    task: () => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> => {
+    if (signal?.aborted) throw getAbortReason(signal)
     if (!key) return await task()
 
     const state = getState(key)
 
     return await new Promise<T>((resolve, reject) => {
-      state.queue.push({
+      const item: QueueItem = {
         task: async () => await task(),
         resolve: (value) => resolve(value as T),
         reject,
-      })
+        signal,
+      }
+
+      if (signal) {
+        item.abortListener = () => {
+          const queueIndex = state.queue.indexOf(item)
+          state.queue.splice(queueIndex, 1)
+          detachAbortListener(item)
+          reject(getAbortReason(signal))
+          schedule(key, state)
+        }
+        signal.addEventListener("abort", item.abortListener, { once: true })
+      }
+
+      state.queue.push(item)
       schedule(key, state)
     })
   }
@@ -217,6 +256,7 @@ const productionSiteRequestLimiter = createSiteRequestLimiter({
 export async function withSiteApiRequestLimit<T>(
   key: string,
   task: () => Promise<T>,
+  signal?: AbortSignal,
 ): Promise<T> {
-  return await productionSiteRequestLimiter(key, task)
+  return await productionSiteRequestLimiter(key, task, signal)
 }

@@ -20,7 +20,6 @@ export const INVITE_LINK_COPY_RESULTS = {
 } as const
 
 export const BULK_INVITE_LINK_COPY_POLICY = {
-  maxConcurrency: 4,
   requestTimeoutMs: 8_000,
   batchTimeoutMs: 20_000,
 } as const
@@ -32,7 +31,6 @@ interface RunInviteLinkCopyWorkflowOptions {
   accounts: DisplaySiteData[]
   format: "raw" | "labeled"
   signal?: AbortSignal
-  maxConcurrency?: number
   requestTimeoutMs?: number
   batchTimeoutMs?: number
 }
@@ -79,27 +77,23 @@ async function fetchInviteLink({
     signalCleanups.forEach((cleanup) => cleanup())
     signalCleanups.length = 0
   }
+  let rejectOnAbort!: () => void
+  const abortPromise = new Promise<never>((_resolve, reject) => {
+    rejectOnAbort = () => reject(controller.signal.reason)
+    controller.signal.addEventListener("abort", rejectOnAbort, { once: true })
+  })
+
+  // The parent is checked before this batch starts and adapter calls are
+  // deferred below, so every source listener is attached before abort can race.
   for (const sourceSignal of sourceSignals) {
     const relayAbort = () => {
-      if (!controller.signal.aborted) {
-        controller.abort(sourceSignal.reason)
-      }
-    }
-
-    if (sourceSignal.aborted) {
-      relayAbort()
-      break
+      controller.abort(sourceSignal.reason)
     }
 
     sourceSignal.addEventListener("abort", relayAbort, { once: true })
     signalCleanups.push(() => {
       sourceSignal.removeEventListener("abort", relayAbort)
     })
-  }
-
-  if (controller.signal.aborted) {
-    cleanupSourceSignals()
-    throw controller.signal.reason
   }
 
   const timeoutId = hasRequestTimeout
@@ -109,52 +103,34 @@ async function fetchInviteLink({
         )
       }, requestTimeoutMs)
     : undefined
-  let rejectOnAbort: (() => void) | undefined
-  const abortPromise = new Promise<never>((_resolve, reject) => {
-    rejectOnAbort = () => reject(controller.signal.reason)
-    controller.signal.addEventListener("abort", rejectOnAbort, { once: true })
+  const fetchPromise = Promise.resolve().then(() => {
+    controller.signal.throwIfAborted()
+    return fetchDisplayAccountInviteLink(account, {
+      abortSignal: controller.signal,
+    })
   })
 
   try {
-    return await Promise.race([
-      fetchDisplayAccountInviteLink(account, {
-        abortSignal: controller.signal,
-      }),
-      abortPromise,
-    ])
+    return await Promise.race([fetchPromise, abortPromise])
   } finally {
     if (timeoutId !== undefined) clearTimeout(timeoutId)
     cleanupSourceSignals()
-    if (rejectOnAbort) {
-      controller.signal.removeEventListener("abort", rejectOnAbort)
-    }
+    controller.signal.removeEventListener("abort", rejectOnAbort)
   }
 }
 
-/** Fetches invite links with optional concurrency limiting while preserving order. */
+/** Fetches invite links concurrently while preserving account order. */
 async function fetchInviteLinks({
   accounts,
   signal,
-  maxConcurrency,
   requestTimeoutMs,
   batchTimeoutMs,
 }: {
   accounts: DisplaySiteData[]
   signal?: AbortSignal
-  maxConcurrency?: number
   requestTimeoutMs?: number
   batchTimeoutMs?: number
 }): Promise<Array<InviteLinkFetchSuccess | InviteLinkFetchFailure>> {
-  const results = new Array<InviteLinkFetchSuccess | InviteLinkFetchFailure>(
-    accounts.length,
-  )
-  const requestedConcurrency =
-    typeof maxConcurrency === "number" &&
-    Number.isFinite(maxConcurrency) &&
-    maxConcurrency > 0
-      ? Math.floor(maxConcurrency)
-      : accounts.length
-  const workerCount = Math.min(accounts.length, requestedConcurrency)
   const hasBatchTimeout =
     typeof batchTimeoutMs === "number" &&
     Number.isFinite(batchTimeoutMs) &&
@@ -167,49 +143,29 @@ async function fetchInviteLinks({
         )
       }, batchTimeoutMs)
     : undefined
-  let nextAccountIndex = 0
-
-  const fetchNext = async () => {
-    while (nextAccountIndex < accounts.length) {
-      if (signal?.aborted || batchController?.signal.aborted) return
-
-      const accountIndex = nextAccountIndex
-      nextAccountIndex += 1
-      const account = accounts[accountIndex]
-
-      try {
-        results[accountIndex] = {
-          account,
-          inviteLink: await fetchInviteLink({
-            account,
-            signal,
-            batchSignal: batchController?.signal,
-            requestTimeoutMs,
-          }),
-        }
-      } catch (error) {
-        results[accountIndex] = {
-          reason: normalizeInviteLinkError(error).reason,
-        }
-      }
-    }
-  }
-
   try {
-    await Promise.all(Array.from({ length: workerCount }, () => fetchNext()))
+    return await Promise.all(
+      accounts.map(async (account) => {
+        try {
+          return {
+            account,
+            inviteLink: await fetchInviteLink({
+              account,
+              signal,
+              batchSignal: batchController?.signal,
+              requestTimeoutMs,
+            }),
+          }
+        } catch (error) {
+          return {
+            reason: normalizeInviteLinkError(error).reason,
+          }
+        }
+      }),
+    )
   } finally {
     if (batchTimeoutId !== undefined) clearTimeout(batchTimeoutId)
   }
-
-  for (let accountIndex = 0; accountIndex < results.length; accountIndex += 1) {
-    if (!results[accountIndex]) {
-      results[accountIndex] = {
-        reason: INVITE_LINK_FAILURE_REASONS.Timeout,
-      }
-    }
-  }
-
-  return results
 }
 
 interface InviteLinkCopyWorkflowResult {
@@ -231,7 +187,6 @@ export async function runInviteLinkCopyWorkflow({
   accounts,
   format,
   signal,
-  maxConcurrency,
   requestTimeoutMs,
   batchTimeoutMs,
 }: RunInviteLinkCopyWorkflowOptions): Promise<InviteLinkCopyWorkflowResult> {
@@ -269,7 +224,6 @@ export async function runInviteLinkCopyWorkflow({
   const fetchResults = await fetchInviteLinks({
     accounts: supportedAccounts,
     signal,
-    maxConcurrency,
     requestTimeoutMs,
     batchTimeoutMs,
   })

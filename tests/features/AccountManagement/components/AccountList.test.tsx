@@ -1869,11 +1869,11 @@ describe("AccountList", () => {
       )
       expect(workflowSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          maxConcurrency: 4,
           requestTimeoutMs: 8_000,
           batchTimeoutMs: 20_000,
         }),
       )
+      expect(workflowSpy.mock.calls[0][0]).not.toHaveProperty("maxConcurrency")
       expect(toastSuccessMock).toHaveBeenCalledWith(
         "account:bulk.copyInviteLinksSuccess",
       )

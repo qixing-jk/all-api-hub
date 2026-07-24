@@ -41,6 +41,27 @@ import {
 } from "~/types"
 import { server } from "~~/tests/msw/server"
 
+const { mockWithSiteApiRequestLimit } = vi.hoisted(() => ({
+  mockWithSiteApiRequestLimit: vi.fn(
+    async (_key: string, task: () => Promise<unknown>, _signal?: AbortSignal) =>
+      await task(),
+  ),
+}))
+
+vi.mock(
+  "~/services/apiTransport/siteRequestLimiter",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiTransport/siteRequestLimiter")
+      >()
+    return {
+      ...actual,
+      withSiteApiRequestLimit: mockWithSiteApiRequestLimit,
+    }
+  },
+)
+
 const baseRequest = {
   baseUrl: "https://aihubmix.com",
   auth: {
@@ -69,6 +90,14 @@ const tokenRequest: CreateTokenRequest = {
 describe("apiService AIHubMix", () => {
   beforeEach(() => {
     server.resetHandlers()
+    mockWithSiteApiRequestLimit.mockClear()
+    mockWithSiteApiRequestLimit.mockImplementation(
+      async (
+        _key: string,
+        task: () => Promise<unknown>,
+        _signal?: AbortSignal,
+      ) => await task(),
+    )
   })
 
   it("uses the app default exchange rate because AIHubMix exposes no site rate field", () => {
@@ -195,6 +224,31 @@ describe("apiService AIHubMix", () => {
     await fetchInviteLink(baseRequest)
 
     expect(requestCache).toBe("no-store")
+  })
+
+  it("admits the raw invite-link request through the site limiter once", async () => {
+    const abortController = new AbortController()
+    server.use(
+      http.get("https://aihubmix.com/api/user/self", () =>
+        HttpResponse.json({
+          success: true,
+          data: { aff_code: "invite-code" },
+        }),
+      ),
+    )
+    const { fetchInviteLink } = await import("~/services/apiService/aihubmix")
+
+    await fetchInviteLink({
+      ...baseRequest,
+      abortSignal: abortController.signal,
+    })
+
+    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledTimes(1)
+    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+      "https://aihubmix.com",
+      expect.any(Function),
+      abortController.signal,
+    )
   })
 
   it("forwards invite-link cancellation to the native request", async () => {

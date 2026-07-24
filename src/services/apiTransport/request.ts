@@ -642,7 +642,11 @@ const _fetchApi = async <T>(
 
   const siteRequestLimitKey = resolveSiteRequestLimitKey(baseUrl)
 
-  return await withSiteApiRequestLimit(siteRequestLimitKey, executeRequest)
+  return await withSiteApiRequestLimit(
+    siteRequestLimitKey,
+    executeRequest,
+    fetchOptions.signal ?? undefined,
+  )
 }
 
 /**

@@ -3,6 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
+  ApiError,
+  API_ERROR_CODES as ApiErrorCodes,
+} from "~/services/apiTransport/errors"
+import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
+import {
+  extractDataFromApiResponseBody,
+  isHttpUrl,
+} from "~/services/apiTransport/response"
+import {
   API_AUTH_TOKEN_MODES,
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
 } from "~/services/apiTransport/type"
@@ -13,13 +22,6 @@ import {
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
 import { server } from "~~/tests/msw/server"
-
-let fetchApiData: typeof import("~/services/apiTransport/request").fetchApiData
-let fetchApi: typeof import("~/services/apiTransport/request").fetchApi
-let extractDataFromApiResponseBody: typeof import("~/services/apiTransport/response").extractDataFromApiResponseBody
-let isHttpUrl: typeof import("~/services/apiTransport/response").isHttpUrl
-let ApiError: typeof import("~/services/apiTransport/errors").ApiError
-let ApiErrorCodes: typeof import("~/services/apiTransport/errors").API_ERROR_CODES
 
 const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
   () => {
@@ -32,7 +34,8 @@ const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
 
 const { mockWithSiteApiRequestLimit } = vi.hoisted(() => {
   const mockWithSiteApiRequestLimit = vi.fn(
-    async (_key: string, task: () => Promise<unknown>) => await task(),
+    async (_key: string, task: () => Promise<unknown>, _signal?: AbortSignal) =>
+      await task(),
   )
 
   return { mockWithSiteApiRequestLimit }
@@ -156,27 +159,6 @@ async function expectTempWindowDisabledFallback(
 }
 
 describe("apiTransport request helpers", () => {
-  beforeEach(async () => {
-    // Ensure we always use the real implementations even if other tests mock these modules.
-    const request = await vi.importActual<
-      typeof import("~/services/apiTransport/request")
-    >("~/services/apiTransport/request")
-    fetchApiData = request.fetchApiData
-    fetchApi = request.fetchApi
-
-    const response = await vi.importActual<
-      typeof import("~/services/apiTransport/response")
-    >("~/services/apiTransport/response")
-    extractDataFromApiResponseBody = response.extractDataFromApiResponseBody
-    isHttpUrl = response.isHttpUrl
-
-    const errors = await vi.importActual<
-      typeof import("~/services/apiTransport/errors")
-    >("~/services/apiTransport/errors")
-    ApiError = errors.ApiError
-    ApiErrorCodes = errors.API_ERROR_CODES
-  })
-
   beforeEach(() => {
     vi.restoreAllMocks()
     server.resetHandlers()
@@ -184,7 +166,11 @@ describe("apiTransport request helpers", () => {
     mockHasCookieInterceptorPermissions.mockReset()
     mockGetPreferences.mockReset()
     mockWithSiteApiRequestLimit.mockImplementation(
-      async (_key: string, task: () => Promise<unknown>) => await task(),
+      async (
+        _key: string,
+        task: () => Promise<unknown>,
+        _signal?: AbortSignal,
+      ) => await task(),
     )
     mockHasCookieInterceptorPermissions.mockResolvedValue(true)
     mockGetPreferences.mockResolvedValue({
@@ -407,8 +393,67 @@ describe("apiTransport request helpers", () => {
     expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
       "https://example.com",
       expect.any(Function),
+      undefined,
     )
   })
+
+  it.each([
+    {
+      caseName: "request abort signal",
+      createSignals: () => {
+        const requestController = new AbortController()
+        return {
+          requestSignal: requestController.signal,
+          optionsSignal: undefined,
+          expectedSignal: requestController.signal,
+        }
+      },
+    },
+    {
+      caseName: "RequestInit signal override",
+      createSignals: () => {
+        const requestController = new AbortController()
+        const optionsController = new AbortController()
+        return {
+          requestSignal: requestController.signal,
+          optionsSignal: optionsController.signal,
+          expectedSignal: optionsController.signal,
+        }
+      },
+    },
+  ])(
+    "fetchApiData passes the effective $caseName to site limiter admission",
+    async ({ createSignals }) => {
+      const { requestSignal, optionsSignal, expectedSignal } = createSignals()
+      server.use(
+        http.get(/^https:\/\/example\.invalid\/base\//, () =>
+          HttpResponse.json({
+            success: true,
+            data: { ok: true },
+            message: "ok",
+          }),
+        ),
+      )
+
+      await fetchApiData(
+        {
+          baseUrl: "https://example.invalid/base/",
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          abortSignal: requestSignal,
+        },
+        {
+          endpoint: "/api/user/self",
+          options: { signal: optionsSignal },
+        },
+      )
+
+      expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+        "https://example.invalid",
+        expect.any(Function),
+        expectedSignal,
+      )
+    },
+  )
 
   it("fetchApiData uses the same site limiter key for different paths on the same origin", async () => {
     server.use(
@@ -1814,6 +1859,7 @@ describe("apiTransport request helpers", () => {
       expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
         "https://example.com",
         expect.any(Function),
+        undefined,
       )
 
       if (shouldRateLimit) {
