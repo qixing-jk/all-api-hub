@@ -668,6 +668,7 @@ export async function fetchInviteLink(
 ): Promise<string> {
   const userInfo = await withSiteApiRequestLimit(
     resolveSiteRequestLimitKey(AIHUBMIX_API_ORIGIN),
+    // Keep timeout setup inside this callback so limiter queue wait is excluded.
     async () =>
       await runAbortableTask(
         async (signal) =>
