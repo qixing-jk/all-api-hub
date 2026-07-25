@@ -31,7 +31,14 @@ describe("runAbortableTask", () => {
     expect(task).not.toHaveBeenCalled()
   })
 
-  it.each([undefined, 0, -1])(
+  it.each([
+    undefined,
+    0,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ])(
     "uses the fast path without arming a timer for timeoutMs=%s",
     async (timeoutMs) => {
       vi.useFakeTimers()
@@ -59,6 +66,7 @@ describe("runAbortableTask", () => {
     const firstController = new AbortController()
     const secondController = new AbortController()
     const secondReason = new DOMException("Second cancelled", "AbortError")
+    const firstReason = new DOMException("First cancelled", "AbortError")
     let receivedSignal: AbortSignal | undefined
     const task = vi.fn(
       (signal?: AbortSignal) =>
@@ -73,10 +81,11 @@ describe("runAbortableTask", () => {
     const rejection = expect(result).rejects.toBe(secondReason)
     await Promise.resolve()
     secondController.abort(secondReason)
+    firstController.abort(firstReason)
 
     await rejection
     expect(receivedSignal?.reason).toBe(secondReason)
-    expect(firstController.signal.aborted).toBe(false)
+    expect(firstController.signal.reason).toBe(firstReason)
   })
 
   it("settles at the timeout when work ignores the composed signal", async () => {
