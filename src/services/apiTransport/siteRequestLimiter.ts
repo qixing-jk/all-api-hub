@@ -1,4 +1,5 @@
 import { isTestMode } from "~/utils/core/environment"
+import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 type SiteRequestLimiterConfig = {
   enabled?: boolean
@@ -31,6 +32,14 @@ const SITE_API_REQUEST_LIMITS = {
 } as const satisfies SiteRequestLimiterConfig
 
 const IDLE_STATE_TTL_MS = 5 * 60 * 1000
+
+/** Resolves the canonical site origin used by process-local request limiting. */
+export function resolveSiteRequestLimitKey(baseUrl: string): string {
+  return normalizeUrlForOriginKey(baseUrl, {
+    lowerCase: true,
+    stripTrailingSlashes: true,
+  })
+}
 
 const getAbortReason = (signal: AbortSignal): unknown =>
   signal.reason ?? new DOMException("The operation was aborted", "AbortError")
@@ -231,6 +240,8 @@ export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
       if (signal) {
         item.abortListener = () => {
           const queueIndex = state.queue.indexOf(item)
+          if (queueIndex < 0) return
+
           state.queue.splice(queueIndex, 1)
           detachAbortListener(item)
           reject(getAbortReason(signal))

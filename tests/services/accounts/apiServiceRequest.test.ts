@@ -339,7 +339,7 @@ describe("fetchDisplayAccountTokens", () => {
     })
   })
 
-  it("forwards invite-link cancellation through the API request context", async () => {
+  it("forwards invite-link request controls through the API request context", async () => {
     const controller = new AbortController()
     fetchInviteLink.mockResolvedValueOnce(
       "https://example.com/register?aff=invite-code",
@@ -347,12 +347,14 @@ describe("fetchDisplayAccountTokens", () => {
 
     await fetchDisplayAccountInviteLink(ACCOUNT as any, {
       abortSignal: controller.signal,
+      requestTimeoutMs: 1_000,
     })
 
     expect(fetchInviteLink).toHaveBeenCalledWith({
       request: expect.objectContaining({
         ...REQUEST,
         abortSignal: controller.signal,
+        requestTimeoutMs: 1_000,
       }),
     })
   })

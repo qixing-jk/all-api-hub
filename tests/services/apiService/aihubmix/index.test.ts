@@ -251,6 +251,73 @@ describe("apiService AIHubMix", () => {
     )
   })
 
+  it("starts the native invite-link timeout after site-limiter dispatch", async () => {
+    vi.useFakeTimers()
+    const abortController = new AbortController()
+    let dispatchRequest: (() => void) | undefined
+    let receivedSignal: AbortSignal | null | undefined
+    let requestError: unknown
+    let requestSettled: Promise<void> | undefined
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation((_input, options) => {
+        receivedSignal = options?.signal
+
+        return new Promise<Response>((_resolve, reject) => {
+          options?.signal?.addEventListener(
+            "abort",
+            () => reject(options.signal?.reason),
+            { once: true },
+          )
+        })
+      })
+
+    mockWithSiteApiRequestLimit.mockImplementation(
+      async (_key: string, task: () => Promise<unknown>) =>
+        await new Promise<unknown>((resolve, reject) => {
+          dispatchRequest = () => {
+            dispatchRequest = undefined
+            void task().then(resolve, reject)
+          }
+        }),
+    )
+
+    try {
+      const { fetchInviteLink } = await import("~/services/apiService/aihubmix")
+      requestSettled = fetchInviteLink({
+        ...baseRequest,
+        abortSignal: abortController.signal,
+        requestTimeoutMs: 1_000,
+      }).then(
+        () => undefined,
+        (error) => {
+          requestError = error
+        },
+      )
+
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(fetchSpy).not.toHaveBeenCalled()
+
+      dispatchRequest?.()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(999)
+      expect(receivedSignal?.aborted).toBe(false)
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(receivedSignal?.aborted).toBe(true)
+      await requestSettled
+      expect(requestError).toMatchObject({ name: "TimeoutError" })
+    } finally {
+      dispatchRequest?.()
+      abortController.abort()
+      await requestSettled
+      fetchSpy.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
   it("forwards invite-link cancellation to the native request", async () => {
     const abortController = new AbortController()
     let receivedSignal: AbortSignal | null | undefined
@@ -259,19 +326,11 @@ describe("apiService AIHubMix", () => {
       .mockImplementationOnce((_input, options) => {
         receivedSignal = options?.signal
 
-        return new Promise<Response>((resolve, reject) => {
+        return new Promise<Response>((_resolve, reject) => {
           options?.signal?.addEventListener(
             "abort",
             () => reject(new DOMException("Aborted", "AbortError")),
             { once: true },
-          )
-          queueMicrotask(() =>
-            resolve(
-              HttpResponse.json({
-                success: true,
-                data: { aff_code: "invite-code" },
-              }),
-            ),
           )
         })
       })
@@ -290,6 +349,9 @@ describe("apiService AIHubMix", () => {
         abortSignal: abortController.signal,
       })
 
+      await vi.waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledTimes(1)
+      })
       abortController.abort()
 
       await expect(inviteLinkPromise).rejects.toMatchObject({

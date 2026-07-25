@@ -98,15 +98,19 @@ vi.mock("~/services/apiTransport/minIntervalLimiter", () => ({
   createMinIntervalLimiter: mockCreateMinIntervalLimiter,
 }))
 
-vi.mock("~/services/apiTransport/siteRequestLimiter", () => ({
-  SITE_API_REQUEST_LIMITS: {
-    maxConcurrentPerSite: 2,
-    requestsPerMinute: 18,
-    burst: 4,
+vi.mock(
+  "~/services/apiTransport/siteRequestLimiter",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiTransport/siteRequestLimiter")
+      >()
+    return {
+      ...actual,
+      withSiteApiRequestLimit: mockWithSiteApiRequestLimit,
+    }
   },
-  createSiteRequestLimiter: vi.fn(),
-  withSiteApiRequestLimit: mockWithSiteApiRequestLimit,
-}))
+)
 
 vi.mock("~/utils/browser/protectionBypass", () => ({
   isProtectionBypassFirefoxEnv: mockIsProtectionBypassFirefoxEnv,
@@ -454,6 +458,75 @@ describe("apiTransport request helpers", () => {
       )
     },
   )
+
+  it("starts a request timeout only after site-limiter dispatch", async () => {
+    vi.useFakeTimers()
+    const abortController = new AbortController()
+    let dispatchRequest: (() => void) | undefined
+    let receivedSignal: AbortSignal | undefined
+    let requestError: unknown
+    let requestSettled: Promise<void> | undefined
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation((_input, options) => {
+        receivedSignal = options?.signal ?? undefined
+
+        return new Promise<Response>((_resolve, reject) => {
+          options?.signal?.addEventListener(
+            "abort",
+            () => reject(options.signal?.reason),
+            { once: true },
+          )
+        })
+      })
+
+    mockWithSiteApiRequestLimit.mockImplementation(
+      async (_key: string, task: () => Promise<unknown>) =>
+        await new Promise<unknown>((resolve, reject) => {
+          dispatchRequest = () => {
+            void task().then(resolve, reject)
+          }
+        }),
+    )
+
+    try {
+      const request = fetchApiData(
+        {
+          baseUrl: "https://example.invalid/base/",
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          abortSignal: abortController.signal,
+          requestTimeoutMs: 1_000,
+        },
+        { endpoint: "/api/user/self" },
+      )
+      requestSettled = request.then(
+        () => undefined,
+        (error) => {
+          requestError = error
+        },
+      )
+
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(fetchSpy).not.toHaveBeenCalled()
+
+      dispatchRequest?.()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(999)
+      expect(receivedSignal?.aborted).toBe(false)
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(receivedSignal?.aborted).toBe(true)
+      await requestSettled
+      expect(requestError).toMatchObject({ name: "TimeoutError" })
+    } finally {
+      abortController.abort()
+      await requestSettled
+      fetchSpy.mockRestore()
+      vi.useRealTimers()
+    }
+  })
 
   it("fetchApiData uses the same site limiter key for different paths on the same origin", async () => {
     server.use(

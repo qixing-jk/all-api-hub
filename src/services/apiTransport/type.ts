@@ -94,6 +94,8 @@ export interface ApiTransportRequest {
   data?: Record<string, any>
   accountId?: string
   abortSignal?: AbortSignal
+  /** Maximum dispatched request duration; limiter queue time is excluded. */
+  requestTimeoutMs?: number
   cookieAuthSessionCookie?: string
   fetchContext?: ApiTransportFetchContext
   /** Originating extension surface for temporary-window presentation policy. */

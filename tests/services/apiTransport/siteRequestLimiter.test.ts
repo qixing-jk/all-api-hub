@@ -255,6 +255,56 @@ describe("createSiteRequestLimiter", () => {
     )
   })
 
+  it("does not remove queued work when an acquired item's stale abort listener fires", async () => {
+    const limiter = createSiteRequestLimiter({
+      maxConcurrentPerSite: 1,
+      requestsPerMinute: 600,
+      burst: 10,
+    })
+    const firstController = new AbortController()
+    const secondController = new AbortController()
+    vi.spyOn(firstController.signal, "removeEventListener").mockImplementation(
+      () => {},
+    )
+    let releaseFirst: (() => void) | undefined
+    const firstTask = vi.fn(
+      async () =>
+        await new Promise<string>((resolve) => {
+          releaseFirst = () => resolve("first")
+        }),
+    )
+    const secondTask = vi.fn(async () => "second")
+
+    const first = limiter("site-a", firstTask, firstController.signal)
+    const firstOutcome = first.then(
+      (value) => ({ status: "fulfilled", value }) as const,
+      (reason) => ({ status: "rejected", reason }) as const,
+    )
+    const second = limiter("site-a", secondTask, secondController.signal)
+
+    try {
+      await flushMicrotasks()
+      expect(firstTask).toHaveBeenCalledTimes(1)
+      expect(secondTask).not.toHaveBeenCalled()
+
+      firstController.abort()
+      releaseFirst?.()
+      const settledFirst = await firstOutcome
+      await flushMicrotasks()
+
+      expect(settledFirst).toEqual({
+        status: "fulfilled",
+        value: "first",
+      })
+      expect(secondTask).toHaveBeenCalledTimes(1)
+      await expect(second).resolves.toBe("second")
+    } finally {
+      releaseFirst?.()
+      secondController.abort()
+      await Promise.allSettled([first, second])
+    }
+  })
+
   it("does not block different site keys", async () => {
     const limiter = createSiteRequestLimiter({
       maxConcurrentPerSite: 1,

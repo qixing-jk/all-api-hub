@@ -1,4 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import {
@@ -8,7 +9,10 @@ import {
 } from "~/services/apiTransport/errors"
 import { createMinIntervalLimiter } from "~/services/apiTransport/minIntervalLimiter"
 import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"
-import { withSiteApiRequestLimit } from "~/services/apiTransport/siteRequestLimiter"
+import {
+  resolveSiteRequestLimitKey,
+  withSiteApiRequestLimit,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type {
   ApiAuthTokenMode,
   ApiResponse,
@@ -163,16 +167,6 @@ function isLogApiEndpoint(endpoint: string | undefined): boolean {
  */
 function resolveLogRateLimitKey(baseUrl: string): string {
   return normalizeUrlForOriginKey(baseUrl, { stripTrailingSlashes: true })
-}
-
-/**
- * Extract the canonical site origin used for process-local API request limiting.
- */
-function resolveSiteRequestLimitKey(baseUrl: string): string {
-  return normalizeUrlForOriginKey(baseUrl, {
-    lowerCase: true,
-    stripTrailingSlashes: true,
-  })
 }
 
 /**
@@ -597,44 +591,56 @@ const _fetchApi = async <T>(
     )
   }
 
-  const executeRequest = async () => {
-    const fallback = async () =>
-      await executeWithTempWindowFallback(context, async () => {
-        if (onlyData) {
-          return await apiRequestData<T>(
+  const executeRequest = async () =>
+    await runAbortableTask(
+      async (signal) => {
+        const dispatchedFetchOptions = { ...fetchOptions, signal }
+        const dispatchedContext = {
+          ...context,
+          fetchOptions: dispatchedFetchOptions,
+        }
+        const fallback = async () =>
+          await executeWithTempWindowFallback(dispatchedContext, async () => {
+            if (onlyData) {
+              return await apiRequestData<T>(
+                url,
+                dispatchedFetchOptions,
+                options.endpoint,
+                responseType,
+              )
+            }
+            const response = await apiRequest<T>(
+              url,
+              dispatchedFetchOptions,
+              options.endpoint,
+              responseType,
+            )
+
+            if (responseType === "json") {
+              return response as ApiResponse<T>
+            }
+
+            return response as T
+          })
+
+        return await executeWithCurrentTabContentPreference<T>(
+          {
+            request,
             url,
-            fetchOptions,
-            options.endpoint,
+            endpoint: options.endpoint,
+            fetchOptions: dispatchedFetchOptions,
+            onlyData,
             responseType,
-          )
-        }
-        const response = await apiRequest<T>(
-          url,
-          fetchOptions,
-          options.endpoint,
-          responseType,
+            options,
+          },
+          fallback,
         )
-
-        if (responseType === "json") {
-          return response as ApiResponse<T>
-        }
-
-        return response as T
-      })
-
-    return await executeWithCurrentTabContentPreference<T>(
-      {
-        request,
-        url,
-        endpoint: options.endpoint,
-        fetchOptions,
-        onlyData,
-        responseType,
-        options,
       },
-      fallback,
+      {
+        signals: [fetchOptions.signal ?? undefined],
+        timeoutMs: request.requestTimeoutMs,
+      },
     )
-  }
 
   if (request.bypassSiteRequestLimit) {
     return await executeRequest()

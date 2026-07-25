@@ -26,9 +26,13 @@ import type {
   SiteStatusInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiData } from "~/services/apiTransport/request"
-import { withSiteApiRequestLimit } from "~/services/apiTransport/siteRequestLimiter"
+import {
+  resolveSiteRequestLimitKey,
+  withSiteApiRequestLimit,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type {
   ApiResponse,
   ApiServiceRequest,
@@ -663,12 +667,19 @@ export async function fetchInviteLink(
   request: ApiServiceRequest,
 ): Promise<string> {
   const userInfo = await withSiteApiRequestLimit(
-    AIHUBMIX_API_ORIGIN,
+    resolveSiteRequestLimitKey(AIHUBMIX_API_ORIGIN),
     async () =>
-      await fetchAIHubMixData<unknown>(
-        request,
-        AIHUBMIX_API_USER_SELF_ENDPOINT,
-        { cache: "no-store", signal: request.abortSignal },
+      await runAbortableTask(
+        async (signal) =>
+          await fetchAIHubMixData<unknown>(
+            request,
+            AIHUBMIX_API_USER_SELF_ENDPOINT,
+            { cache: "no-store", signal },
+          ),
+        {
+          signals: [request.abortSignal],
+          timeoutMs: request.requestTimeoutMs,
+        },
       ),
     request.abortSignal,
   )
