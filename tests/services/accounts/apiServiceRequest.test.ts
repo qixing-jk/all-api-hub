@@ -1,4 +1,12 @@
-import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -178,6 +186,10 @@ describe("fetchDisplayAccountTokens", () => {
     mockGetAccountById.mockReset()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it("types runtime key loading as account runtime keys only", () => {
     expectTypeOf(
       fetchDisplayAccountRuntimeKeys,
@@ -353,10 +365,75 @@ describe("fetchDisplayAccountTokens", () => {
     expect(fetchInviteLink).toHaveBeenCalledWith({
       request: expect.objectContaining({
         ...REQUEST,
-        abortSignal: controller.signal,
+        abortSignal: expect.any(AbortSignal),
+        abortDeadline: expect.objectContaining({
+          signal: expect.any(AbortSignal),
+          start: expect.any(Function),
+        }),
         requestTimeoutMs: 1_000,
       }),
     })
+  })
+
+  it("uses one invite-link deadline starting at the first provider dispatch", async () => {
+    vi.useFakeTimers()
+    const controller = new AbortController()
+    let dispatchRequest: (() => void) | undefined
+    let receivedSignal: AbortSignal | undefined
+    let requestError: unknown
+
+    fetchInviteLink.mockImplementationOnce(
+      async ({ request }: { request: Record<string, any> }) => {
+        await new Promise<void>((resolve) => {
+          dispatchRequest = () => {
+            dispatchRequest = undefined
+            resolve()
+          }
+        })
+        request.abortDeadline.start()
+        receivedSignal = request.abortSignal
+        await new Promise<void>((resolve) => setTimeout(resolve, 900))
+        request.abortDeadline.start()
+
+        return await new Promise<string>((_resolve, reject) => {
+          request.abortSignal.addEventListener(
+            "abort",
+            () => reject(request.abortSignal.reason),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    const requestSettled = fetchDisplayAccountInviteLink(ACCOUNT as any, {
+      abortSignal: controller.signal,
+      requestTimeoutMs: 1_000,
+    }).then(
+      () => undefined,
+      (error) => {
+        requestError = error
+      },
+    )
+
+    try {
+      await vi.advanceTimersByTimeAsync(5_000)
+      expect(receivedSignal).toBeUndefined()
+
+      dispatchRequest?.()
+      await vi.advanceTimersByTimeAsync(999)
+      expect(receivedSignal?.aborted).toBe(false)
+
+      await vi.advanceTimersByTimeAsync(1)
+      await requestSettled
+      expect(receivedSignal?.aborted).toBe(true)
+      expect(requestError).toMatchObject({
+        reason: INVITE_LINK_FAILURE_REASONS.Timeout,
+      })
+    } finally {
+      dispatchRequest?.()
+      controller.abort()
+      await requestSettled
+    }
   })
 
   it("keeps cookie-auth sessions in request auth for display snapshots", () => {

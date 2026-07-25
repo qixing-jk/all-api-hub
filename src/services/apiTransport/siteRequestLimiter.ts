@@ -9,11 +9,18 @@ type SiteRequestLimiterConfig = {
 }
 
 type QueueItem = {
-  task: () => Promise<unknown>
+  task: () => SiteRequestLease<unknown>
   resolve: (value: unknown) => void
   reject: (reason?: unknown) => void
   signal?: AbortSignal
   abortListener?: () => void
+}
+
+type SiteRequestLease<T> = {
+  /** Caller-facing result, which may settle before the underlying work. */
+  result: Promise<T>
+  /** Underlying completion that owns the acquired concurrency slot. */
+  completion: Promise<unknown>
 }
 
 type SiteLimiterState = {
@@ -102,7 +109,7 @@ function resolveNonNegativeNumber(
  * Defaults are chosen to stay below New API's dashboard/web default of
  * 60 requests / 180 seconds while still allowing a small local burst.
  */
-export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
+function createSiteRequestLeaseLimiterCore(config: SiteRequestLimiterConfig) {
   const enabled = config.enabled !== false
   const maxConcurrentPerSite = resolvePositiveInteger(
     config,
@@ -116,14 +123,22 @@ export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
   const refillRatePerMs = requestsPerMinute / 60_000
   const states = new Map<string, SiteLimiterState>()
 
+  const runWithoutLimit = async <T>(
+    task: () => SiteRequestLease<T>,
+  ): Promise<T> => {
+    const lease = task()
+    void Promise.resolve(lease.completion).catch(() => undefined)
+    return await lease.result
+  }
+
   if (!enabled || requestsPerMinute <= 0) {
     return async <T>(
       _key: string,
-      task: () => Promise<T>,
+      task: () => SiteRequestLease<T>,
       signal?: AbortSignal,
     ): Promise<T> => {
       if (signal?.aborted) throw getAbortReason(signal)
-      return await task()
+      return await runWithoutLimit(task)
     }
   }
 
@@ -208,7 +223,13 @@ export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
       state.activeCount += 1
       void Promise.resolve()
         .then(item.task)
-        .then(item.resolve, item.reject)
+        .then((lease) => {
+          void lease.result.then(item.resolve, item.reject)
+          return Promise.resolve(lease.completion).then(
+            () => undefined,
+            () => undefined,
+          )
+        }, item.reject)
         .finally(() => {
           state.activeCount -= 1
           schedule(key, state)
@@ -221,17 +242,17 @@ export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
 
   return async <T>(
     key: string,
-    task: () => Promise<T>,
+    task: () => SiteRequestLease<T>,
     signal?: AbortSignal,
   ): Promise<T> => {
     if (signal?.aborted) throw getAbortReason(signal)
-    if (!key) return await task()
+    if (!key) return await runWithoutLimit(task)
 
     const state = getState(key)
 
     return await new Promise<T>((resolve, reject) => {
       const item: QueueItem = {
-        task: async () => await task(),
+        task: () => task() as SiteRequestLease<unknown>,
         resolve: (value) => resolve(value as T),
         reject,
         signal,
@@ -256,10 +277,55 @@ export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
   }
 }
 
-const productionSiteRequestLimiter = createSiteRequestLimiter({
+/**
+ * Creates a limiter whose caller result and slot-owning completion may settle
+ * independently.
+ */
+export function createSiteRequestLeaseLimiter(
+  config: SiteRequestLimiterConfig,
+) {
+  return createSiteRequestLeaseLimiterCore(config)
+}
+
+const wrapLeaseLimiterForTasks =
+  (limiter: ReturnType<typeof createSiteRequestLeaseLimiterCore>) =>
+  async <T>(
+    key: string,
+    task: () => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> =>
+    await limiter(
+      key,
+      () => {
+        let result: Promise<T>
+        try {
+          result = Promise.resolve(task())
+        } catch (error) {
+          result = Promise.reject(error)
+        }
+        return {
+          result,
+          completion: result.then(
+            () => undefined,
+            () => undefined,
+          ),
+        }
+      },
+      signal,
+    )
+
+/** Creates a limiter that retains its slot until each task promise settles. */
+export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
+  return wrapLeaseLimiterForTasks(createSiteRequestLeaseLimiterCore(config))
+}
+
+const productionSiteRequestLeaseLimiter = createSiteRequestLeaseLimiterCore({
   ...SITE_API_REQUEST_LIMITS,
   enabled: !isTestMode(),
 })
+const productionSiteRequestLimiter = wrapLeaseLimiterForTasks(
+  productionSiteRequestLeaseLimiter,
+)
 
 /**
  * Runs a site API request through the process-local per-site limiter.
@@ -270,4 +336,16 @@ export async function withSiteApiRequestLimit<T>(
   signal?: AbortSignal,
 ): Promise<T> {
   return await productionSiteRequestLimiter(key, task, signal)
+}
+
+/**
+ * Runs a request through the limiter while retaining its slot until the
+ * supplied underlying completion settles.
+ */
+export async function withSiteApiRequestLease<T>(
+  key: string,
+  task: () => SiteRequestLease<T>,
+  signal?: AbortSignal,
+): Promise<T> {
+  return await productionSiteRequestLeaseLimiter(key, task, signal)
 }

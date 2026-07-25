@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { runAbortableTask } from "~/services/apiTransport/abortableTask"
+import {
+  composeAbortSignals,
+  createDeferredAbortDeadline,
+  runAbortableTask,
+  startAbortableTask,
+} from "~/services/apiTransport/abortableTask"
 
 describe("runAbortableTask", () => {
   afterEach(() => {
@@ -106,6 +111,129 @@ describe("runAbortableTask", () => {
 
     await rejection
     expect(receivedSignal?.aborted).toBe(true)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it("reports timeout before signal-ignoring work actually completes", async () => {
+    vi.useFakeTimers()
+    let completeTask: ((value: string) => void) | undefined
+    const execution = startAbortableTask(
+      () =>
+        new Promise<string>((resolve) => {
+          completeTask = resolve
+        }),
+      { timeoutMs: 1_000 },
+    )
+    let completionSettled = false
+    void execution.completion.then(() => {
+      completionSettled = true
+    })
+    const rejection = expect(execution.result).rejects.toMatchObject({
+      name: "TimeoutError",
+    })
+
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    await rejection
+    expect(completionSettled).toBe(false)
+
+    completeTask?.("late result")
+    await execution.completion
+    expect(completionSettled).toBe(true)
+  })
+
+  it("waits for completion and consumes a late task rejection after timeout", async () => {
+    vi.useFakeTimers()
+    const lateError = new Error("late failure")
+    let rejectTask: ((reason: unknown) => void) | undefined
+    const execution = startAbortableTask(
+      () =>
+        new Promise<never>((_resolve, reject) => {
+          rejectTask = reject
+        }),
+      { timeoutMs: 1_000 },
+    )
+    const timeoutRejection = expect(execution.result).rejects.toMatchObject({
+      name: "TimeoutError",
+    })
+    let completionSettled = false
+    void execution.completion.then(() => {
+      completionSettled = true
+    })
+
+    await vi.advanceTimersByTimeAsync(1_000)
+    await timeoutRejection
+    expect(completionSettled).toBe(false)
+
+    rejectTask?.(lateError)
+    await execution.completion
+    expect(completionSettled).toBe(true)
+  })
+
+  it("starts a deferred deadline once without resetting its timeout", async () => {
+    vi.useFakeTimers()
+    const deadline = createDeferredAbortDeadline(1_000)
+
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(deadline.signal.aborted).toBe(false)
+
+    deadline.start()
+    await vi.advanceTimersByTimeAsync(900)
+    deadline.start()
+    await vi.advanceTimersByTimeAsync(99)
+    expect(deadline.signal.aborted).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(deadline.signal.reason).toMatchObject({ name: "TimeoutError" })
+    deadline.dispose()
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it("composes queue cancellation without starting a deferred deadline", async () => {
+    vi.useFakeTimers()
+    const externalController = new AbortController()
+    const deadline = createDeferredAbortDeadline(1_000)
+    const removeExternalListener = vi.spyOn(
+      externalController.signal,
+      "removeEventListener",
+    )
+    const removeDeadlineListener = vi.spyOn(
+      deadline.signal,
+      "removeEventListener",
+    )
+    const composed = composeAbortSignals([
+      externalController.signal,
+      deadline.signal,
+    ])
+
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(composed.signal?.aborted).toBe(false)
+
+    deadline.start()
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(composed.signal?.reason).toMatchObject({ name: "TimeoutError" })
+
+    composed.dispose()
+    deadline.dispose()
+    expect(removeExternalListener).toHaveBeenCalledWith(
+      "abort",
+      expect.any(Function),
+    )
+    expect(removeDeadlineListener).toHaveBeenCalledWith(
+      "abort",
+      expect.any(Function),
+    )
+  })
+
+  it("disposes a deferred deadline before it aborts", async () => {
+    vi.useFakeTimers()
+    const deadline = createDeferredAbortDeadline(1_000)
+
+    deadline.start()
+    deadline.dispose()
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    expect(deadline.signal.aborted).toBe(false)
     expect(vi.getTimerCount()).toBe(0)
   })
 })

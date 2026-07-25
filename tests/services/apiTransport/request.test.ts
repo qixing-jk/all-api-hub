@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import {
   ApiError,
   API_ERROR_CODES as ApiErrorCodes,
@@ -34,8 +35,10 @@ const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
 
 const { mockWithSiteApiRequestLimit } = vi.hoisted(() => {
   const mockWithSiteApiRequestLimit = vi.fn(
-    async (_key: string, task: () => Promise<unknown>, _signal?: AbortSignal) =>
-      await task(),
+    async (_key: string, task: () => any, _signal?: AbortSignal) => {
+      const dispatched = task()
+      return await (dispatched?.result ?? dispatched)
+    },
   )
 
   return { mockWithSiteApiRequestLimit }
@@ -108,6 +111,7 @@ vi.mock(
     return {
       ...actual,
       withSiteApiRequestLimit: mockWithSiteApiRequestLimit,
+      withSiteApiRequestLease: mockWithSiteApiRequestLimit,
     }
   },
 )
@@ -170,11 +174,10 @@ describe("apiTransport request helpers", () => {
     mockHasCookieInterceptorPermissions.mockReset()
     mockGetPreferences.mockReset()
     mockWithSiteApiRequestLimit.mockImplementation(
-      async (
-        _key: string,
-        task: () => Promise<unknown>,
-        _signal?: AbortSignal,
-      ) => await task(),
+      async (_key: string, task: () => any, _signal?: AbortSignal) => {
+        const dispatched = task()
+        return await (dispatched?.result ?? dispatched)
+      },
     )
     mockHasCookieInterceptorPermissions.mockResolvedValue(true)
     mockGetPreferences.mockResolvedValue({
@@ -463,30 +466,64 @@ describe("apiTransport request helpers", () => {
     vi.useFakeTimers()
     const abortController = new AbortController()
     let dispatchRequest: (() => void) | undefined
+    let completeFetch: (() => void) | undefined
+    let underlyingCompletion: Promise<unknown> | undefined
+    let underlyingCompleted = false
     let receivedSignal: AbortSignal | undefined
     let requestError: unknown
     let requestSettled: Promise<void> | undefined
+    let runDispatchedTask: (() => void) | undefined
+    let dispatchRequested = false
+    let resolveLimiter!: (value: unknown) => void
+    let forceRejectLimiter!: (reason?: unknown) => void
+    const limiterResult = new Promise<unknown>((resolve, reject) => {
+      resolveLimiter = resolve
+      forceRejectLimiter = reject
+    })
+    void limiterResult.catch(() => undefined)
+    const dispatchOrQueueRequest = () => {
+      dispatchRequested = true
+      runDispatchedTask?.()
+    }
+    dispatchRequest = dispatchOrQueueRequest
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation((_input, options) => {
         receivedSignal = options?.signal ?? undefined
 
-        return new Promise<Response>((_resolve, reject) => {
-          options?.signal?.addEventListener(
-            "abort",
-            () => reject(options.signal?.reason),
-            { once: true },
-          )
+        return new Promise<Response>((resolve) => {
+          completeFetch = () =>
+            resolve(
+              new Response(
+                JSON.stringify({
+                  success: true,
+                  data: { ok: true },
+                  message: "ok",
+                }),
+                { headers: { "content-type": "application/json" } },
+              ),
+            )
         })
       })
 
     mockWithSiteApiRequestLimit.mockImplementation(
-      async (_key: string, task: () => Promise<unknown>) =>
-        await new Promise<unknown>((resolve, reject) => {
-          dispatchRequest = () => {
-            void task().then(resolve, reject)
-          }
-        }),
+      async (_key: string, task: () => any) => {
+        runDispatchedTask = () => {
+          runDispatchedTask = undefined
+          dispatchRequest = undefined
+          const dispatched = task()
+          underlyingCompletion = dispatched?.completion
+          void underlyingCompletion?.then(() => {
+            underlyingCompleted = true
+          })
+          void (dispatched?.result ?? dispatched).then(
+            resolveLimiter,
+            forceRejectLimiter,
+          )
+        }
+        if (dispatchRequested) runDispatchedTask()
+        return await limiterResult
+      },
     )
 
     try {
@@ -520,12 +557,123 @@ describe("apiTransport request helpers", () => {
       expect(receivedSignal?.aborted).toBe(true)
       await requestSettled
       expect(requestError).toMatchObject({ name: "TimeoutError" })
+      expect(underlyingCompleted).toBe(false)
+
+      completeFetch?.()
+      await underlyingCompletion
+      expect(underlyingCompleted).toBe(true)
     } finally {
       abortController.abort()
-      await requestSettled
+      forceRejectLimiter(new DOMException("Test cleanup", "AbortError"))
+      await vi.advanceTimersByTimeAsync(0)
+      completeFetch?.()
+      await underlyingCompletion
       fetchSpy.mockRestore()
       vi.useRealTimers()
     }
+  })
+
+  it("starts a shared deadline when the limiter dispatches the request", async () => {
+    const abortController = new AbortController()
+    const start = vi.fn()
+    server.use(
+      http.get("https://example.invalid/base/api/user/self", () =>
+        HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "ok",
+        }),
+      ),
+    )
+
+    await fetchApiData(
+      {
+        baseUrl: "https://example.invalid/base/",
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        abortSignal: abortController.signal,
+        abortDeadline: {
+          signal: abortController.signal,
+          start,
+          dispose: vi.fn(),
+        },
+      },
+      { endpoint: "/api/user/self" },
+    )
+
+    expect(start).toHaveBeenCalledTimes(1)
+  })
+
+  it("aborts a dispatched request when only its shared deadline expires", async () => {
+    vi.useFakeTimers()
+    const abortDeadline = createDeferredAbortDeadline(1_000)
+    let receivedSignal: AbortSignal | undefined
+    let settleFetch: (() => void) | undefined
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation((_input, options) => {
+        receivedSignal = options?.signal ?? undefined
+        return new Promise<Response>((resolve, reject) => {
+          settleFetch = () => resolve(new Response("late response"))
+          receivedSignal?.addEventListener(
+            "abort",
+            () => reject(receivedSignal?.reason),
+            { once: true },
+          )
+        })
+      })
+
+    try {
+      const request = fetchApiData(
+        {
+          baseUrl: "https://example.invalid/base/",
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          abortDeadline,
+        },
+        { endpoint: "/api/user/self" },
+      )
+      void request.catch(() => undefined)
+
+      await vi.advanceTimersByTimeAsync(0)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+      expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+        "https://example.invalid",
+        expect.any(Function),
+        abortDeadline.signal,
+      )
+
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(receivedSignal?.aborted).toBe(true)
+      await expect(request).rejects.toMatchObject({ name: "TimeoutError" })
+    } finally {
+      abortDeadline.dispose()
+      settleFetch?.()
+      fetchSpy.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
+  it("does not start a shared deadline for a pre-aborted dispatch", async () => {
+    const abortController = new AbortController()
+    const start = vi.fn()
+    abortController.abort(new DOMException("Cancelled", "AbortError"))
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: "https://example.invalid/base/",
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          abortSignal: abortController.signal,
+          abortDeadline: {
+            signal: abortController.signal,
+            start,
+            dispose: vi.fn(),
+          },
+        },
+        { endpoint: "/api/user/self" },
+      ),
+    ).rejects.toBe(abortController.signal.reason)
+
+    expect(start).not.toHaveBeenCalled()
   })
 
   it("fetchApiData uses the same site limiter key for different paths on the same origin", async () => {

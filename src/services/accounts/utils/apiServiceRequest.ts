@@ -24,6 +24,10 @@ import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/site
 import type { TokenProvisioningCapability } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
+import {
+  createDeferredAbortDeadline,
+  runAbortableTask,
+} from "~/services/apiTransport/abortableTask"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { normalizeInviteLinkError } from "~/services/inviteLinks/errors"
 import {
@@ -354,24 +358,39 @@ export async function fetchDisplayAccountInviteLink(
     requestTimeoutMs?: number
   } = {},
 ): Promise<string> {
+  const abortDeadline =
+    typeof options.requestTimeoutMs === "number" &&
+    Number.isFinite(options.requestTimeoutMs) &&
+    options.requestTimeoutMs > 0
+      ? createDeferredAbortDeadline(options.requestTimeoutMs)
+      : undefined
+
   try {
     const { inviteLink, request } = createDisplayAccountApiContext(account)
-    const inviteLinkRequest = {
-      ...request,
-      ...(options.abortSignal ? { abortSignal: options.abortSignal } : {}),
-      ...(options.requestTimeoutMs !== undefined
-        ? { requestTimeoutMs: options.requestTimeoutMs }
-        : {}),
-    }
+    return await runAbortableTask(
+      async (signal) => {
+        const inviteLinkRequest = {
+          ...request,
+          ...(signal ? { abortSignal: signal } : {}),
+          ...(options.requestTimeoutMs !== undefined
+            ? { requestTimeoutMs: options.requestTimeoutMs }
+            : {}),
+          ...(abortDeadline ? { abortDeadline } : {}),
+        }
 
-    return await requireDisplayAccountInviteLink(
-      account,
-      inviteLink,
-    ).fetchInviteLink({
-      request: inviteLinkRequest,
-    })
+        return await requireDisplayAccountInviteLink(
+          account,
+          inviteLink,
+        ).fetchInviteLink({
+          request: inviteLinkRequest,
+        })
+      },
+      { signals: [options.abortSignal, abortDeadline?.signal] },
+    )
   } catch (error) {
     throw normalizeInviteLinkError(error)
+  } finally {
+    abortDeadline?.dispose()
   }
 }
 

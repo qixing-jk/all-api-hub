@@ -1,5 +1,8 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { runAbortableTask } from "~/services/apiTransport/abortableTask"
+import {
+  composeAbortSignals,
+  startAbortableTask,
+} from "~/services/apiTransport/abortableTask"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import {
@@ -11,7 +14,7 @@ import { createMinIntervalLimiter } from "~/services/apiTransport/minIntervalLim
 import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"
 import {
   resolveSiteRequestLimitKey,
-  withSiteApiRequestLimit,
+  withSiteApiRequestLease,
 } from "~/services/apiTransport/siteRequestLimiter"
 import type {
   ApiAuthTokenMode,
@@ -591,9 +594,10 @@ const _fetchApi = async <T>(
     )
   }
 
-  const executeRequest = async () =>
-    await runAbortableTask(
+  const startRequest = () => {
+    return startAbortableTask(
       async (signal) => {
+        request.abortDeadline?.start()
         const dispatchedFetchOptions = { ...fetchOptions, signal }
         const dispatchedContext = {
           ...context,
@@ -637,22 +641,34 @@ const _fetchApi = async <T>(
         )
       },
       {
-        signals: [fetchOptions.signal ?? undefined],
-        timeoutMs: request.requestTimeoutMs,
+        signals: [
+          fetchOptions.signal ?? undefined,
+          request.abortDeadline?.signal,
+        ],
+        timeoutMs: request.abortDeadline ? undefined : request.requestTimeoutMs,
       },
     )
+  }
 
   if (request.bypassSiteRequestLimit) {
-    return await executeRequest()
+    return await startRequest().result
   }
 
   const siteRequestLimitKey = resolveSiteRequestLimitKey(baseUrl)
-
-  return await withSiteApiRequestLimit(
-    siteRequestLimitKey,
-    executeRequest,
+  const admissionAbort = composeAbortSignals([
     fetchOptions.signal ?? undefined,
-  )
+    request.abortDeadline?.signal,
+  ])
+
+  try {
+    return await withSiteApiRequestLease(
+      siteRequestLimitKey,
+      startRequest,
+      admissionAbort.signal,
+    )
+  } finally {
+    admissionAbort.dispose()
+  }
 }
 
 /**

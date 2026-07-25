@@ -1,3 +1,4 @@
+import type { DeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import { AuthTypeEnum } from "~/types"
 import type {
   TempWindowFallbackAllowlist,
@@ -96,6 +97,8 @@ export interface ApiTransportRequest {
   abortSignal?: AbortSignal
   /** Maximum dispatched request duration; limiter queue time is excluded. */
   requestTimeoutMs?: number
+  /** Shared process-local deadline for one higher-level account operation. */
+  abortDeadline?: DeferredAbortDeadline
   cookieAuthSessionCookie?: string
   fetchContext?: ApiTransportFetchContext
   /** Originating extension surface for temporary-window presentation policy. */
