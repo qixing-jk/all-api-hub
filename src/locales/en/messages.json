@@ -147,6 +147,7 @@
     "updateFailed": "Failed to update account"
   },
   "sub2api": {
+    "checkinUnsupported": "This Sub2API site does not expose a check-in endpoint.",
     "createRequiresAvailableGroup": "This account has no group available for key creation. Check the account's available groups and try again.",
     "groupMissing": "Sub2API group '{{group}}' is no longer available. Refresh the group list and try again.",
     "loginRequired": "Please log in to the Sub2API dashboard first (so the extension can read auth_token/auth_user from localStorage) and try again.",

@@ -231,6 +231,22 @@ export default function AutoCheckinSettings() {
             }
           />
 
+          {/* Sub2API check-in opt-in */}
+          <CardItem
+            id="auto-checkin-sub2api-enable"
+            title={t("autoCheckin:settings.sub2apiEnabled")}
+            description={t("autoCheckin:settings.sub2apiEnabledDesc")}
+            rightContent={
+              <Switch
+                checked={preferences.sub2apiEnabled}
+                onChange={(checked) =>
+                  savePreferences({ sub2apiEnabled: checked })
+                }
+                disabled={isSaving}
+              />
+            }
+          />
+
           {/* Time Window Start */}
           <CardItem
             id="auto-checkin-window-start"

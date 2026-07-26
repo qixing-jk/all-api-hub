@@ -97,6 +97,7 @@ describe("AutoCheckinSettings", () => {
     globalEnabled: true,
     pretriggerDailyOnUiOpen: true,
     notifyUiOnCompletion: true,
+    sub2apiEnabled: false,
     windowStart: "08:00",
     windowEnd: "10:00",
     scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,

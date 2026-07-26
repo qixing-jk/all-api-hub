@@ -147,6 +147,7 @@
     "updateFailed": "No se pudo actualizar la cuenta"
   },
   "sub2api": {
+    "checkinUnsupported": "Este sitio de Sub2API no expone un endpoint de registro diario.",
     "createRequiresAvailableGroup": "Esta cuenta no tiene ningún grupo disponible para crear claves. Revisa los grupos disponibles de la cuenta y vuelve a intentarlo.",
     "groupMissing": "El grupo de Sub2API '{{group}}' ya no está disponible. Actualiza la lista de grupos y vuelve a intentarlo.",
     "loginRequired": "Primero inicia sesión en el panel de Sub2API (para que la extensión pueda leer auth_token/auth_user desde localStorage) y vuelve a intentarlo.",

@@ -152,6 +152,7 @@ describe("settings product analytics snapshots", () => {
         globalEnabled: true,
         pretriggerDailyOnUiOpen: true,
         notifyUiOnCompletion: false,
+        sub2apiEnabled: false,
         windowStart: "08:00",
         windowEnd: "12:00",
         scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,

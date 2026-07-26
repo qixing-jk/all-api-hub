@@ -12,6 +12,7 @@ describe("AutoCheckin StatusCard scheduling labels", () => {
     globalEnabled: true,
     pretriggerDailyOnUiOpen: true,
     notifyUiOnCompletion: true,
+    sub2apiEnabled: false,
     windowStart: "09:00",
     windowEnd: "18:00",
     scheduleMode: "random",

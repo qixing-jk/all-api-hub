@@ -122,6 +122,7 @@
     "nativePageStatusUnconfirmed": "Đã bấm thao tác điểm danh trên trang, nhưng chưa xác nhận được trạng thái của tài khoản mục tiêu. Vui lòng mở trang điểm danh để kiểm tra thủ công: {{checkInUrl}}",
     "nativePageTargetNotFound": "Không tìm thấy nút điểm danh trên trang. Vui lòng mở trang điểm danh và hoàn tất thủ công: {{checkInUrl}}",
     "nativePageTriggerFailed": "Không thể kích hoạt thao tác điểm danh trên trang. Vui lòng mở trang điểm danh và hoàn tất thủ công: {{checkInUrl}}",
+    "sub2apiDisabled": "Điểm danh Sub2API đang tắt. Hãy bật trong Cài đặt cơ bản → Điểm danh và đổi thưởng.",
     "turnstileIncognitoAccessRequired": "Cần cho phép tiện ích mở rộng chạy ở chế độ ẩn danh để nhận Turnstile Token trên trang ẩn danh (kịch bản nhiều tài khoản). Vui lòng bật \"Cho phép chạy ở chế độ ẩn danh\" trong trang quản lý tiện ích mở rộng và thử lại; hoặc mở trang điểm danh theo cách thủ công để hoàn tất xác minh: {{checkInUrl}}",
     "turnstileManualRequired": "Cần hoàn tất xác minh Cloudflare Turnstile, vui lòng mở trang điểm danh để hoàn tất xác minh: {{checkInUrl}}",
     "unknownError": "Đã xảy ra lỗi không xác định"
@@ -148,6 +149,8 @@
     "scheduleModeDeterministic": "Thời gian cố định",
     "scheduleModeRandom": "Ngẫu nhiên",
     "scheduleModeTitle": "Chế độ kế hoạch",
+    "sub2apiEnabled": "Bật điểm danh Sub2API",
+    "sub2apiEnabledDesc": "Bản gốc Sub2API không cung cấp endpoint điểm danh; chỉ một số bản triển khai và fork hỗ trợ. Bật tùy chọn này để phát hiện và chạy điểm danh cho tài khoản Sub2API.",
     "title": "Điểm danh tự động",
     "viewExecution": "Xem lịch sử điểm danh",
     "viewExecutionButton": "Mở hồ sơ",

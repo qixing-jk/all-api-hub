@@ -147,6 +147,7 @@
     "updateFailed": "Cập nhật tài khoản thất bại"
   },
   "sub2api": {
+    "checkinUnsupported": "Trang Sub2API này không cung cấp endpoint điểm danh.",
     "createRequiresAvailableGroup": "Tài khoản hiện tại không có nhóm khả dụng để tạo khóa, vui lòng kiểm tra tình trạng nhóm của tài khoản trước khi thử lại.",
     "groupMissing": "Nhóm Sub2API \"{{group}}\" không còn khả dụng. Vui lòng làm mới danh sách nhóm rồi thử lại.",
     "loginRequired": "Vui lòng đăng nhập vào bảng điều khiển Sub2API (tiện ích sẽ đọc auth_token/auth_user để nhập phiên) rồi thử lại.",

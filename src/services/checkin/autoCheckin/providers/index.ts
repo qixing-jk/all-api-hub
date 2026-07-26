@@ -6,6 +6,7 @@ import type { SiteAccount } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 import { AnyrouterCheckInParams, anyrouterProvider } from "./anyrouter"
+import { sub2ApiProvider } from "./sub2api"
 import { veloeraProvider } from "./veloera"
 import { wongGongyiProvider } from "./wong"
 
@@ -34,6 +35,7 @@ const providers: Record<string, AutoCheckinProvider> = {
   [SITE_TYPES.WONG_GONGYI]: wongGongyiProvider,
   [SITE_TYPES.NEW_API]: newApiProvider,
   [SITE_TYPES.VO_API_V2]: voApiV2Provider,
+  [SITE_TYPES.SUB2API]: sub2ApiProvider,
 }
 
 /**

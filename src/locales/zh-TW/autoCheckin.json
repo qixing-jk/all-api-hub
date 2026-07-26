@@ -122,6 +122,7 @@
     "nativePageStatusUnconfirmed": "已點擊頁面簽到操作，但未確認目標帳號完成簽到。請開啟簽到頁面手動確認：{{checkInUrl}}",
     "nativePageTargetNotFound": "未在頁面上找到簽到按鈕。請開啟簽到頁面手動完成簽到：{{checkInUrl}}",
     "nativePageTriggerFailed": "無法觸發頁面簽到操作。請開啟簽到頁面手動完成簽到：{{checkInUrl}}",
+    "sub2apiDisabled": "Sub2API 簽到未啟用，請先在「基本設定 → 簽到與兌換」中開啟。",
     "turnstileIncognitoAccessRequired": "需要允許擴充套件在無痕模式執行，才能在無痕頁面獲取 Turnstile Token（多帳號場景）。請在擴充套件管理頁開啟“允許在無痕模式執行”後重試；或手動開啟簽到頁面完成驗證：{{checkInUrl}}",
     "turnstileManualRequired": "需要完成 Cloudflare Turnstile 驗證，請開啟簽到頁面完成驗證：{{checkInUrl}}",
     "unknownError": "發生未知錯誤"
@@ -148,6 +149,8 @@
     "scheduleModeDeterministic": "固定時間",
     "scheduleModeRandom": "隨機",
     "scheduleModeTitle": "計劃模式",
+    "sub2apiEnabled": "啟用 Sub2API 簽到",
+    "sub2apiEnabledDesc": "Sub2API 上游主線未提供簽到介面，僅部分站點或分支支援。開啟後才會偵測並執行 Sub2API 帳號的簽到。",
     "title": "自動簽到",
     "viewExecution": "檢視簽到歷史",
     "viewExecutionButton": "開啟記錄",

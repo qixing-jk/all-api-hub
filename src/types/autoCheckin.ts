@@ -322,6 +322,16 @@ export interface AutoCheckinPreferences {
    * auto check-in execution so open UI surfaces can refresh the affected accounts immediately.
    */
   notifyUiOnCompletion: boolean
+
+  /**
+   * Opt-in for Sub2API daily check-in.
+   *
+   * Source: https://github.com/Wei-Shaw/sub2api
+   * Upstream mainline registers no check-in route; only some deployments/forks
+   * serve `/api/v1/redeem/checkin` (or the older `/api/v1/check-in`). Default
+   * off so unsupported deployments are never probed.
+   */
+  sub2apiEnabled: boolean
   windowStart: string // HH:mm format (e.g., "09:00")
   windowEnd: string // HH:mm format (e.g., "18:00")
   scheduleMode: AutoCheckinScheduleMode

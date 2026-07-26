@@ -126,6 +126,7 @@
     "nativePageStatusUnconfirmed": "Se hizo clic en la acción de check-in de la página, pero no se confirmó el estado de la cuenta de destino. Abre la página de check-in y revisa manualmente: {{checkInUrl}}",
     "nativePageTargetNotFound": "No se pudo encontrar el botón de check-in en la página. Abre la página de check-in y completa el check-in manualmente: {{checkInUrl}}",
     "nativePageTriggerFailed": "No se pudo activar la acción de check-in de la página. Abre la página de check-in y completa el check-in manualmente: {{checkInUrl}}",
+    "sub2apiDisabled": "El registro diario de Sub2API está desactivado. Actívalo en Configuración básica → Registro y canje.",
     "turnstileIncognitoAccessRequired": "La extensión debe tener permiso para ejecutarse en ventanas de incógnito/privadas para obtener el token de Turnstile en una ventana temporal privada (escenario multi-cuenta). Habilita \"Permitir en incógnito\" para esta extensión y reintenta, o abre la página de check-in para completar la verificación: {{checkInUrl}}",
     "turnstileManualRequired": "Se requiere verificación de Cloudflare Turnstile. Abre la página de check-in para completar la verificación: {{checkInUrl}}",
     "unknownError": "Ocurrió un error desconocido"
@@ -152,6 +153,8 @@
     "scheduleModeDeterministic": "Determinista",
     "scheduleModeRandom": "Aleatorio",
     "scheduleModeTitle": "Modo de programación",
+    "sub2apiEnabled": "Activar el registro diario de Sub2API",
+    "sub2apiEnabledDesc": "El proyecto original de Sub2API no incluye un endpoint de registro diario; solo algunos despliegues y forks lo ofrecen. Actívalo para detectar y ejecutar el registro de las cuentas de Sub2API.",
     "title": "Check-in automático",
     "viewExecution": "Historial de check-in automático",
     "viewExecutionButton": "Abrir resultados",

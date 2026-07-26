@@ -14,6 +14,7 @@ export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
   checkinSuccessful: "autoCheckin:providerFallback.checkinSuccessful",
   checkinFailed: "autoCheckin:providerFallback.checkinFailed",
   endpointNotSupported: "autoCheckin:providerFallback.endpointNotSupported",
+  sub2apiDisabled: "autoCheckin:providerFallback.sub2apiDisabled",
   unknownError: "autoCheckin:providerFallback.unknownError",
 } as const
 

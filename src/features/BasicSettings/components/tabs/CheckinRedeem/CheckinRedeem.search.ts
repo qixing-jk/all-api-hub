@@ -40,6 +40,22 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
+    "control:auto-checkin-sub2api-enable",
+    "checkinRedeem",
+    "auto-checkin-sub2api-enable",
+    "autoCheckin:settings.sub2apiEnabled",
+    578,
+    {
+      descriptionKey: "autoCheckin:settings.sub2apiEnabledDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.checkinRedeem",
+        "autoCheckin:settings.title",
+      ],
+      keywords: ["sub2api", "auto checkin", "check-in"],
+    },
+  ),
+  buildControlDefinition(
     "control:auto-checkin-window-start",
     "checkinRedeem",
     "auto-checkin-window-start",

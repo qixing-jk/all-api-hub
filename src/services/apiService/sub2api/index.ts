@@ -26,9 +26,11 @@ import type {
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { extractDefaultExchangeRate as extractNewApiFamilyDefaultExchangeRate } from "~/services/apiService/newApiFamily/default/accountBootstrap"
+import { resolveCheckInSiteStatus } from "~/services/apiService/newApiFamily/default/accountData"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { isSub2ApiCheckinEnabled } from "~/services/checkin/sub2apiCheckinPreference"
 import {
   INVITE_LINK_FAILURE_REASONS,
   InviteLinkError,
@@ -46,6 +48,14 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 import { getSub2ApiAuthSession, type Sub2ApiAuthSession } from "./authSession"
+import {
+  isSub2ApiAlreadyCheckedError,
+  isSub2ApiMissingRouteError,
+  parseSub2ApiCheckinPayload,
+  SUB2API_CHECKIN_ROUTES,
+  type Sub2ApiCheckinPayload,
+  type Sub2ApiCheckinRoute,
+} from "./checkin"
 import {
   buildSub2ApiUserGroups,
   extractSub2ApiKeyItems,
@@ -876,12 +886,31 @@ const createAccountData = (
   checkIn,
 })
 
-const createDisabledCheckInConfig = (
+/**
+ * Resolve the check-in config reported back for a Sub2API account.
+ *
+ * `enableDetection` itself is owned by the shared support probe in
+ * `accountStorage` (`fetchCheckInSupport`), so it is passed through untouched
+ * once the global Sub2API opt-in is on. While the opt-in is off, detection stays
+ * force-disabled and no check-in request is made.
+ */
+const resolveSub2ApiCheckInConfig = async (
+  request: ApiServiceRequest,
   checkIn: CheckInConfig,
-): CheckInConfig => ({
-  ...checkIn,
-  enableDetection: false,
-})
+): Promise<CheckInConfig> => {
+  if (!(await isSub2ApiCheckinEnabled())) {
+    return { ...checkIn, enableDetection: false }
+  }
+
+  const canCheckIn = checkIn.enableDetection
+    ? await fetchCheckInStatus(request)
+    : undefined
+
+  return {
+    ...checkIn,
+    siteStatus: resolveCheckInSiteStatus(checkIn, canCheckIn),
+  }
+}
 
 const createLoginRequiredHealthStatus = () => ({
   status: SiteHealthStatus.Warning,
@@ -1161,14 +1190,17 @@ export async function getOrCreateAccessToken(
 
 /**
  * Sub2API does not expose the One-API-style public `/api/status` endpoint.
- * Return a synthetic status payload so shared callers can skip that request and
- * still treat built-in check-in as unsupported.
+ * Return a synthetic status payload so shared callers can skip that request.
+ *
+ * `checkin_enabled` mirrors the user's global Sub2API check-in opt-in rather
+ * than a deployment capability: the actual route probe lives in
+ * `fetchSupportCheckIn`, which only runs once the opt-in is on.
  */
 export async function fetchSiteStatus(
   _request: ApiServiceRequest,
 ): Promise<SiteStatusInfo> {
   return {
-    checkin_enabled: false,
+    checkin_enabled: await isSub2ApiCheckinEnabled(),
   }
 }
 
@@ -1178,22 +1210,178 @@ export async function fetchSiteStatus(
  */
 export const extractDefaultExchangeRate = extractNewApiFamilyDefaultExchangeRate
 
-/**
- * Sub2API does not support the extension's built-in check-in flow.
- */
-export async function fetchSupportCheckIn(
-  _request: ApiServiceRequest,
-): Promise<boolean | undefined> {
-  return false
+type Sub2ApiCheckinProbe = {
+  route: Sub2ApiCheckinRoute
+  payload: Sub2ApiCheckinPayload
 }
 
 /**
- * Sub2API check-in is unsupported; always return undefined.
+ * Execute a Sub2API endpoint with full JWT handling and return the raw envelope.
+ *
+ * Check-in responses are interpreted by heuristics in `./checkin` rather than
+ * `parseSub2ApiEnvelope`, because a repeated check-in is reported as a non-zero
+ * envelope code (or HTTP 409) that must not surface as a hard failure.
+ */
+const fetchSub2ApiRawBody = async (
+  request: ApiServiceRequest,
+  endpoint: string,
+  options: RequestInit,
+): Promise<unknown> =>
+  executeAuthenticatedSub2ApiRequest(request, endpoint, (authRequest) =>
+    fetchApi<unknown>(authRequest, { endpoint, options }, true),
+  )
+
+/**
+ * Probe the candidate check-in routes and return the first one this deployment
+ * actually serves, or null when none of them exist.
+ */
+const probeSub2ApiCheckinStatus = async (
+  request: ApiServiceRequest,
+): Promise<Sub2ApiCheckinProbe | null> => {
+  for (const route of SUB2API_CHECKIN_ROUTES) {
+    try {
+      const body = await fetchSub2ApiRawBody(request, route.statusEndpoint, {
+        method: "GET",
+        cache: "no-store",
+      })
+
+      return { route, payload: parseSub2ApiCheckinPayload(body) }
+    } catch (error) {
+      if (isSub2ApiMissingRouteError(error)) {
+        continue
+      }
+
+      // An "already checked in" answer still proves the route exists.
+      if (isSub2ApiAlreadyCheckedError(error)) {
+        return {
+          route,
+          payload: {
+            isCheckedInToday: true,
+            reward: "",
+            message: getSafeErrorMessage(error),
+          },
+        }
+      }
+
+      throw error
+    }
+  }
+
+  return null
+}
+
+const createCheckinUnsupportedError = () =>
+  new ApiError(
+    t("messages:sub2api.checkinUnsupported"),
+    404,
+    SUB2API_CHECKIN_ROUTES[0].statusEndpoint,
+    API_ERROR_CODES.HTTP_OTHER,
+  )
+
+/**
+ * Detect whether this Sub2API deployment serves a daily check-in route.
+ *
+ * Returns `false` while the global opt-in is off so no probe request is sent,
+ * and `undefined` when the probe itself failed for an unrelated reason (network,
+ * auth) so callers do not permanently mark the account as unsupported.
+ */
+export async function fetchSupportCheckIn(
+  request: ApiServiceRequest,
+): Promise<boolean | undefined> {
+  if (!(await isSub2ApiCheckinEnabled())) {
+    return false
+  }
+
+  try {
+    return (await probeSub2ApiCheckinStatus(request)) !== null
+  } catch (error) {
+    logger.warn("Failed to probe Sub2API check-in support", {
+      accountId: request.accountId,
+      error: getSafeErrorMessage(error),
+    })
+    return undefined
+  }
+}
+
+/**
+ * Resolve whether the account can still check in today.
+ *
+ * Returns `canCheckIn` (not `isCheckedInToday`) to match the shared New
+ * API-family contract consumed by `resolveCheckInSiteStatus`, and `undefined`
+ * when the status cannot be read.
  */
 export async function fetchCheckInStatus(
-  _request: ApiServiceRequest,
+  request: ApiServiceRequest,
 ): Promise<boolean | undefined> {
-  return undefined
+  if (!(await isSub2ApiCheckinEnabled())) {
+    return undefined
+  }
+
+  try {
+    const probe = await probeSub2ApiCheckinStatus(request)
+    return probe ? !probe.payload.isCheckedInToday : undefined
+  } catch (error) {
+    logger.warn("Failed to read Sub2API check-in status", {
+      accountId: request.accountId,
+      error: getSafeErrorMessage(error),
+    })
+    return undefined
+  }
+}
+
+interface Sub2ApiCheckinOutcome {
+  alreadyChecked: boolean
+  reward: string
+  message: string
+}
+
+/**
+ * Perform a Sub2API daily check-in.
+ *
+ * Throws an `ApiError` with status 404 when the deployment serves no check-in
+ * route, so callers can map it to the shared "endpoint not supported" copy.
+ */
+export async function performSub2ApiCheckin(
+  request: ApiServiceRequest,
+): Promise<Sub2ApiCheckinOutcome> {
+  const probe = await probeSub2ApiCheckinStatus(request)
+
+  if (!probe) {
+    throw createCheckinUnsupportedError()
+  }
+
+  if (probe.payload.isCheckedInToday) {
+    return {
+      alreadyChecked: true,
+      reward: probe.payload.reward,
+      message: probe.payload.message,
+    }
+  }
+
+  try {
+    const body = await fetchSub2ApiRawBody(
+      request,
+      probe.route.checkinEndpoint,
+      { method: "POST", body: JSON.stringify({}) },
+    )
+    const payload = parseSub2ApiCheckinPayload(body)
+
+    return {
+      alreadyChecked: payload.isCheckedInToday,
+      reward: payload.reward,
+      message: payload.message,
+    }
+  } catch (error) {
+    if (isSub2ApiAlreadyCheckedError(error)) {
+      return {
+        alreadyChecked: true,
+        reward: "",
+        message: getSafeErrorMessage(error),
+      }
+    }
+
+    throw error
+  }
 }
 
 const ZERO_TODAY_USAGE_DATA: TodayUsageData = {
@@ -1251,13 +1439,13 @@ export async function fetchTodayIncome(
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
-  const checkIn: CheckInConfig = {
-    ...(request.checkIn ?? { enableDetection: false }),
-    enableDetection: false,
-  }
-
-  const { currentUser, todayUsage } =
-    await fetchCurrentUserAndTodayUsage(request)
+  const [checkIn, { currentUser, todayUsage }] = await Promise.all([
+    resolveSub2ApiCheckInConfig(
+      request,
+      request.checkIn ?? { enableDetection: false },
+    ),
+    fetchCurrentUserAndTodayUsage(request),
+  ])
 
   return createAccountData(currentUser, checkIn, todayUsage)
 }
@@ -1268,7 +1456,8 @@ export async function fetchAccountData(
 export async function refreshAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<RefreshAccountResult> {
-  const checkIn = createDisabledCheckInConfig(
+  const checkIn = await resolveSub2ApiCheckInConfig(
+    request,
     request.checkIn ?? { enableDetection: false },
   )
   let hydratedRequest: HydratedSub2ApiAuth<ApiServiceAccountRequest> | null =

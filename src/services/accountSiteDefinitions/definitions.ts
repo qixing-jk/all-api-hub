@@ -189,7 +189,9 @@ const ACCOUNT_SITE_DEFINITIONS = [
         defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
         defaultAuthHostnames: [],
         supportsCookieAuth: false,
-        supportsBuiltInCheckInDetection: false,
+        // Daily check-in is fork-only upstream, so the capability is exposed
+        // here and gated at runtime by the global Sub2API check-in opt-in.
+        supportsBuiltInCheckInDetection: true,
       },
       authSession: {
         kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,

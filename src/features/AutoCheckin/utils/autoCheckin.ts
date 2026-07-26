@@ -26,6 +26,8 @@ export function translateAutoCheckinMessageKey(
         "autoCheckin:providerFallback.endpointNotSupported",
         messageParams,
       )
+    case "autoCheckin:providerFallback.sub2apiDisabled":
+      return t("autoCheckin:providerFallback.sub2apiDisabled", messageParams)
     case "autoCheckin:providerFallback.nativePageIdentityMismatch":
       return t(
         "autoCheckin:providerFallback.nativePageIdentityMismatch",

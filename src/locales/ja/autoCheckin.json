@@ -122,6 +122,7 @@
     "nativePageStatusUnconfirmed": "ページ上のチェックイン操作はクリックされましたが、対象アカウントの状態を確認できませんでした。チェックインページを開いて手動で確認してください: {{checkInUrl}}",
     "nativePageTargetNotFound": "ページ上でチェックインボタンが見つかりませんでした。チェックインページを開いて手動で完了してください: {{checkInUrl}}",
     "nativePageTriggerFailed": "ページ上のチェックイン操作を実行できませんでした。チェックインページを開いて手動で完了してください: {{checkInUrl}}",
+    "sub2apiDisabled": "Sub2API のチェックインが無効です。「基本設定 → チェックインと交換」で有効にしてください。",
     "turnstileIncognitoAccessRequired": "プライベート一時ウィンドウで Turnstile トークンを取得するには、拡張機能のシークレット / プライベートウィンドウ実行を許可する必要があります（複数アカウントの場面）。この拡張機能の「シークレットモードでの実行を許可」を有効にして再試行するか、チェックインページを開いて認証を完了してください: {{checkInUrl}}",
     "turnstileManualRequired": "Cloudflare Turnstile 認証が必要です。チェックインページを開いて認証を完了してください: {{checkInUrl}}",
     "unknownError": "不明なエラーが発生しました"
@@ -148,6 +149,8 @@
     "scheduleModeDeterministic": "固定",
     "scheduleModeRandom": "ランダム",
     "scheduleModeTitle": "スケジュールモード",
+    "sub2apiEnabled": "Sub2API のチェックインを有効化",
+    "sub2apiEnabledDesc": "Sub2API の本家にはチェックイン用のエンドポイントがなく、一部のデプロイやフォークのみが対応しています。有効にすると Sub2API アカウントのチェックインを検出して実行します。",
     "title": "自動チェックイン",
     "viewExecution": "自動チェックイン履歴",
     "viewExecutionButton": "結果を開く",
