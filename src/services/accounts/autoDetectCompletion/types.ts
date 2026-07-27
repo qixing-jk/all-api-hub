@@ -3,6 +3,7 @@ import type {
   AutoDetectFailureReason,
 } from "~/constants/autoDetect"
 import type { AccountSiteType } from "~/constants/siteType"
+import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { AuthTypeEnum, CheckInConfig, Sub2ApiAuthConfig } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -15,6 +16,7 @@ export interface DetectedAccountIdentity {
   }
   siteType: AccountSiteType
   accessToken?: string
+  transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
   fetchContext?: ApiServiceFetchContext
 }

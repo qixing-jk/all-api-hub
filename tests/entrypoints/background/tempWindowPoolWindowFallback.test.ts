@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -1297,6 +1298,69 @@ describe("tempWindowPool window fallback", () => {
 
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeTabMock).toHaveBeenCalledWith(508)
+  })
+
+  it("projects transient dashboard auth from the temp context", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 509 })
+    const defaultSendMessage = sendMessageMock.getMockImplementation() as
+      | ((tabId: number, message: { action: string }) => unknown)
+      | undefined
+    sendMessageMock.mockImplementation(async (tabId, message) => {
+      if (message.action === RuntimeActionIds.ContentGetUserFromLocalStorage) {
+        return {
+          success: true,
+          data: {
+            userId: "user-2",
+            user: "example-user",
+            transientAuth: {
+              kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+              token: "placeholder-background-token",
+              expiresAt: 2_000_000_000,
+              sessionId: "placeholder-background-session",
+              origin: "https://dashboard.example.invalid",
+            },
+          },
+        }
+      }
+
+      return defaultSendMessage?.(tabId, message)
+    })
+
+    const { handleAutoDetectSite } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleAutoDetectSite(
+      {
+        url: "https://dashboard.example.invalid/account",
+        requestId: "req-auto-detect-transient-auth",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        siteType: "new-api",
+        userId: "user-2",
+        user: "example-user",
+        accessToken: undefined,
+        sub2apiAuth: undefined,
+        siteTypeHint: undefined,
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "placeholder-background-token",
+          expiresAt: 2_000_000_000,
+          sessionId: "placeholder-background-session",
+          origin: "https://dashboard.example.invalid",
+        },
+      },
+    })
   })
 
   it("uses an incognito temp context for incognito auto-detect requests", async () => {

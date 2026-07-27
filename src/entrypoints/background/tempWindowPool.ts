@@ -1960,6 +1960,7 @@ async function getSiteDataFromTab(
       userId: userResponse.data?.userId,
       user: userResponse.data?.user,
       accessToken: userResponse.data?.accessToken,
+      transientAuth: userResponse.data?.transientAuth,
       sub2apiAuth: userResponse.data?.sub2apiAuth,
       siteTypeHint: userResponse.data?.siteTypeHint,
     }

@@ -7,6 +7,7 @@ import {
 } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
+import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import { AuthTypeEnum } from "~/types"
@@ -128,38 +129,54 @@ describe("autoDetectSmart", () => {
       {
         id: 1,
         active: true,
-        url: "https://example.com/dashboard",
+        url: "https://example.invalid/dashboard",
       },
     ])
     mockGetActiveTabs.mockResolvedValue([{ id: 1 }])
     mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
       source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       siteType: SITE_TYPES.NEW_API,
-      siteTypeHint: SITE_TYPES.VELOERA,
+      siteTypeHint: SITE_TYPES.NEW_API,
       userId: "12",
       user: { id: 12, username: "alice" },
       accessToken: "current-tab-token",
+      transientAuth: {
+        kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+        token: "placeholder-current-tab-token",
+        expiresAt: 2_000_000_000,
+        sessionId: "placeholder-current-tab-session",
+        origin: "https://example.invalid",
+      },
       fetchContext: {
         kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
         tabId: 1,
-        origin: "https://example.com",
+        origin: "https://example.invalid",
       },
     })
 
-    const result = await autoDetectSmart("https://example.com/api/user/self")
+    const result = await autoDetectSmart(
+      "https://example.invalid/api/user/self",
+    )
 
     expect(result).toMatchObject({
       success: true,
       data: {
         userId: "12",
         user: { id: 12, username: "alice" },
-        siteType: SITE_TYPES.VELOERA,
+        siteType: SITE_TYPES.NEW_API,
         accessToken: "current-tab-token",
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "placeholder-current-tab-token",
+          expiresAt: 2_000_000_000,
+          sessionId: "placeholder-current-tab-session",
+          origin: "https://example.invalid",
+        },
         sub2apiAuth: undefined,
         fetchContext: {
           kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 1,
-          origin: "https://example.com",
+          origin: "https://example.invalid",
         },
       },
     })
@@ -242,6 +259,13 @@ describe("autoDetectSmart", () => {
       siteType: SITE_TYPES.NEW_API,
       userId: "12",
       user: { id: 12, username: "alice" },
+      transientAuth: {
+        kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+        token: "placeholder-private-token",
+        expiresAt: 2_000_000_000,
+        sessionId: "placeholder-private-session",
+        origin: "https://example.com",
+      },
       fetchContext: {
         kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
         tabId: 101,
@@ -260,6 +284,13 @@ describe("autoDetectSmart", () => {
       currentTabMatched: true,
       siteType: SITE_TYPES.NEW_API,
     })
+    expect(JSON.stringify(result.autoDetectContext)).not.toContain(
+      "placeholder-private-token",
+    )
+    expect(JSON.stringify(result.autoDetectContext)).not.toContain(
+      "placeholder-private-session",
+    )
+    expect(result.autoDetectContext).not.toHaveProperty("transientAuth")
   })
 
   it("keeps incognito current-tab context on API fallback when content user data is missing", async () => {
@@ -813,7 +844,7 @@ describe("autoDetectSmart", () => {
       {
         id: 10,
         active: true,
-        url: "https://other.example.com/profile",
+        url: "https://other.example.invalid/profile",
       },
     ])
     mockSendRuntimeMessage.mockResolvedValue({
@@ -822,11 +853,18 @@ describe("autoDetectSmart", () => {
         userId: "88",
         user: { id: 88, username: "background-user" },
         accessToken: "background-token",
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "placeholder-background-token",
+          expiresAt: 2_000_000_000,
+          sessionId: "placeholder-background-session",
+          origin: "HTTPS://EXAMPLE.INVALID:443/",
+        },
         siteTypeHint: SITE_TYPES.NEW_API,
       },
     })
 
-    const result = await autoDetectSmart("https://example.com/console")
+    const result = await autoDetectSmart("https://example.invalid/console")
 
     expect(result).toMatchObject({
       success: true,
@@ -835,10 +873,55 @@ describe("autoDetectSmart", () => {
         user: { id: 88, username: "background-user" },
         siteType: SITE_TYPES.NEW_API,
         accessToken: "background-token",
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "placeholder-background-token",
+          expiresAt: 2_000_000_000,
+          sessionId: "placeholder-background-session",
+          origin: "https://example.invalid",
+        },
         sub2apiAuth: undefined,
       },
     })
     expect(result.data).not.toHaveProperty("fetchContext")
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
+  it("drops malformed transient auth from a background response while preserving identity", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 11,
+        active: true,
+        url: "https://other.example.invalid/profile",
+      },
+    ])
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "89",
+        user: { id: 89, username: "background-user" },
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "   ",
+          expiresAt: 2_000_000_000,
+          sessionId: "placeholder-background-session",
+          origin: "https://example.invalid",
+        },
+        siteTypeHint: SITE_TYPES.NEW_API,
+      },
+    })
+
+    const result = await autoDetectSmart("https://example.invalid/console")
+
+    expect(result).toMatchObject({
+      success: true,
+      data: {
+        userId: "89",
+        user: { id: 89, username: "background-user" },
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+    expect(result.data).not.toHaveProperty("transientAuth")
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
@@ -961,6 +1044,7 @@ describe("autoDetectSmart", () => {
       },
     })
     expect(result.data).not.toHaveProperty("fetchContext")
+    expect(result.data).not.toHaveProperty("transientAuth")
   })
 
   it("preserves popup temp-window source when background auto-detect throws", async () => {

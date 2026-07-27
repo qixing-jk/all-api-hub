@@ -8,6 +8,7 @@ import {
   readAccountBrowserSessionFromTab,
   resolveAccountBrowserSession,
 } from "~/services/accountBrowserSession"
+import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
@@ -94,6 +95,154 @@ describe("account browser-session reader", () => {
       siteType: SITE_TYPES.SUB2API,
     })
   })
+
+  it("normalizes a valid transient dashboard auth payload", async () => {
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "user-42",
+        user: { username: "example-user" },
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: " placeholder-token ",
+          expiresAt: 2_000_000_000,
+          sessionId: " placeholder-session ",
+          origin: " HTTPS://DASHBOARD.EXAMPLE.INVALID:443/ ",
+          untrusted: "drop-me",
+        },
+      },
+    })
+
+    const session = await readAccountBrowserSessionFromTab({
+      tabId: 13,
+      baseUrl: "https://dashboard.example.invalid/account",
+      siteType: SITE_TYPES.NEW_API,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+    })
+
+    expect(session).toEqual({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.NEW_API,
+      userId: "user-42",
+      user: { username: "example-user" },
+      transientAuth: {
+        kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+        token: "placeholder-token",
+        expiresAt: 2_000_000_000,
+        sessionId: "placeholder-session",
+        origin: "https://dashboard.example.invalid",
+      },
+    })
+  })
+
+  it.each([
+    ["an unknown kind", { kind: "unknown_kind" }],
+    ["a blank token", { token: "   " }],
+    ["a blank session id", { sessionId: "   " }],
+    ["a mismatched origin", { origin: "https://other.example.invalid" }],
+    ["a non-finite expiry", { expiresAt: Number.POSITIVE_INFINITY }],
+  ])(
+    "drops transient dashboard auth with %s while preserving identity",
+    async (_label, override) => {
+      mockSendTabMessage.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "user-42",
+          user: { username: "example-user" },
+          transientAuth: {
+            kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+            token: "placeholder-token",
+            expiresAt: 2_000_000_000,
+            sessionId: "placeholder-session",
+            origin: "https://dashboard.example.invalid",
+            ...override,
+          },
+        },
+      })
+
+      const session = await readAccountBrowserSessionFromTab({
+        tabId: 14,
+        baseUrl: "https://dashboard.example.invalid",
+        siteType: SITE_TYPES.NEW_API,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      })
+
+      expect(session).toEqual(
+        expect.objectContaining({
+          userId: "user-42",
+          user: { username: "example-user" },
+        }),
+      )
+      expect(session).not.toHaveProperty("transientAuth")
+    },
+  )
+
+  it("drops transient dashboard auth for non-New API sites while preserving identity", async () => {
+    mockSendTabMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "user-42",
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "placeholder-token",
+          expiresAt: 2_000_000_000,
+          sessionId: "placeholder-session",
+          origin: "https://dashboard.example.invalid",
+        },
+      },
+    })
+
+    const session = await readAccountBrowserSessionFromTab({
+      tabId: 15,
+      baseUrl: "https://dashboard.example.invalid/account",
+      siteType: SITE_TYPES.VELOERA,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+    })
+
+    expect(session).toEqual(
+      expect.objectContaining({
+        userId: "user-42",
+        siteType: SITE_TYPES.VELOERA,
+      }),
+    )
+    expect(session).not.toHaveProperty("transientAuth")
+  })
+
+  it.each(["kind", "token", "expiresAt", "sessionId", "origin"])(
+    "drops transient dashboard auth when %s is inherited",
+    async (inheritedField) => {
+      const fields: Record<string, unknown> = {
+        kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+        token: "placeholder-token",
+        expiresAt: 2_000_000_000,
+        sessionId: "placeholder-session",
+        origin: "https://dashboard.example.invalid",
+      }
+      const transientAuth = Object.assign(
+        Object.create({ [inheritedField]: fields[inheritedField] }),
+        Object.fromEntries(
+          Object.entries(fields).filter(([field]) => field !== inheritedField),
+        ),
+      )
+      mockSendTabMessage.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "user-42",
+          transientAuth,
+        },
+      })
+
+      const session = await readAccountBrowserSessionFromTab({
+        tabId: 16,
+        baseUrl: "https://dashboard.example.invalid/account",
+        siteType: SITE_TYPES.NEW_API,
+        source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      })
+
+      expect(session).toEqual(expect.objectContaining({ userId: "user-42" }))
+      expect(session).not.toHaveProperty("transientAuth")
+    },
+  )
 
   it("returns null for failed or unusable tab responses", async () => {
     mockSendTabMessage
