@@ -7,11 +7,11 @@ import {
   startAbortableTask,
 } from "~/services/apiTransport/abortableTask"
 
-describe("runAbortableTask", () => {
-  afterEach(() => {
-    vi.useRealTimers()
-  })
+afterEach(() => {
+  vi.useRealTimers()
+})
 
+describe("runAbortableTask", () => {
   it("does not execute work when a source signal is already aborted", async () => {
     const controller = new AbortController()
     const reason = new DOMException("Cancelled", "AbortError")
@@ -113,6 +113,33 @@ describe("runAbortableTask", () => {
     expect(receivedSignal?.aborted).toBe(true)
     expect(vi.getTimerCount()).toBe(0)
   })
+})
+
+describe("startAbortableTask", () => {
+  it("settles completion without starting work for a pre-aborted signal", async () => {
+    const controller = new AbortController()
+    const reason = new DOMException("Cancelled", "AbortError")
+    const task = vi.fn(async () => "unexpected")
+    controller.abort(reason)
+
+    const execution = startAbortableTask(task, {
+      signals: [controller.signal],
+    })
+
+    await expect(execution.result).rejects.toBe(reason)
+    await expect(execution.completion).resolves.toBeUndefined()
+    expect(task).not.toHaveBeenCalled()
+  })
+
+  it("settles completion after a synchronous fast-path failure", async () => {
+    const taskError = new Error("synchronous failure")
+    const execution = startAbortableTask(() => {
+      throw taskError
+    })
+
+    await expect(execution.result).rejects.toBe(taskError)
+    await expect(execution.completion).resolves.toBeUndefined()
+  })
 
   it("reports timeout before signal-ignoring work actually completes", async () => {
     vi.useFakeTimers()
@@ -169,6 +196,27 @@ describe("runAbortableTask", () => {
     await execution.completion
     expect(completionSettled).toBe(true)
   })
+})
+
+describe("createDeferredAbortDeadline", () => {
+  it.each([
+    undefined,
+    0,
+    -1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ])("does not arm a timer for timeoutMs=%s", async (timeoutMs) => {
+    vi.useFakeTimers()
+    const deadline = createDeferredAbortDeadline(timeoutMs)
+
+    deadline.start()
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    expect(deadline.signal.aborted).toBe(false)
+    expect(vi.getTimerCount()).toBe(0)
+    deadline.dispose()
+  })
 
   it("starts a deferred deadline once without resetting its timeout", async () => {
     vi.useFakeTimers()
@@ -189,6 +237,20 @@ describe("runAbortableTask", () => {
     expect(vi.getTimerCount()).toBe(0)
   })
 
+  it("disposes a deferred deadline before it aborts", async () => {
+    vi.useFakeTimers()
+    const deadline = createDeferredAbortDeadline(1_000)
+
+    deadline.start()
+    deadline.dispose()
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    expect(deadline.signal.aborted).toBe(false)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+})
+
+describe("composeAbortSignals", () => {
   it("composes queue cancellation without starting a deferred deadline", async () => {
     vi.useFakeTimers()
     const externalController = new AbortController()
@@ -225,15 +287,32 @@ describe("runAbortableTask", () => {
     )
   })
 
-  it("disposes a deferred deadline before it aborts", async () => {
-    vi.useFakeTimers()
-    const deadline = createDeferredAbortDeadline(1_000)
+  it("immediately relays the first pre-aborted source and cleans earlier listeners", () => {
+    const liveController = new AbortController()
+    const firstAbortedController = new AbortController()
+    const laterAbortedController = new AbortController()
+    const firstReason = new DOMException("First cancelled", "AbortError")
+    const laterReason = new DOMException("Later cancelled", "AbortError")
+    const removeLiveListener = vi.spyOn(
+      liveController.signal,
+      "removeEventListener",
+    )
+    firstAbortedController.abort(firstReason)
+    laterAbortedController.abort(laterReason)
 
-    deadline.start()
-    deadline.dispose()
-    await vi.advanceTimersByTimeAsync(1_000)
+    const composed = composeAbortSignals([
+      liveController.signal,
+      firstAbortedController.signal,
+      laterAbortedController.signal,
+    ])
 
-    expect(deadline.signal.aborted).toBe(false)
-    expect(vi.getTimerCount()).toBe(0)
+    expect(composed.signal?.aborted).toBe(true)
+    expect(composed.signal?.reason).toBe(firstReason)
+
+    composed.dispose()
+    expect(removeLiveListener).toHaveBeenCalledWith(
+      "abort",
+      expect.any(Function),
+    )
   })
 })

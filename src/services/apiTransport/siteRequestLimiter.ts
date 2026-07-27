@@ -104,12 +104,15 @@ function resolveNonNegativeNumber(
 }
 
 /**
- * Creates a per-site FIFO token-bucket limiter.
+ * Creates a per-site FIFO token-bucket limiter. Each lease retains its
+ * concurrency slot until completion, even if its caller result settles first.
  *
  * Defaults are chosen to stay below New API's dashboard/web default of
  * 60 requests / 180 seconds while still allowing a small local burst.
  */
-function createSiteRequestLeaseLimiterCore(config: SiteRequestLimiterConfig) {
+export function createSiteRequestLeaseLimiter(
+  config: SiteRequestLimiterConfig,
+) {
   const enabled = config.enabled !== false
   const maxConcurrentPerSite = resolvePositiveInteger(
     config,
@@ -277,18 +280,8 @@ function createSiteRequestLeaseLimiterCore(config: SiteRequestLimiterConfig) {
   }
 }
 
-/**
- * Creates a limiter whose caller result and slot-owning completion may settle
- * independently.
- */
-export function createSiteRequestLeaseLimiter(
-  config: SiteRequestLimiterConfig,
-) {
-  return createSiteRequestLeaseLimiterCore(config)
-}
-
 const wrapLeaseLimiterForTasks =
-  (limiter: ReturnType<typeof createSiteRequestLeaseLimiterCore>) =>
+  (limiter: ReturnType<typeof createSiteRequestLeaseLimiter>) =>
   async <T>(
     key: string,
     task: () => Promise<T>,
@@ -316,10 +309,10 @@ const wrapLeaseLimiterForTasks =
 
 /** Creates a limiter that retains its slot until each task promise settles. */
 export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
-  return wrapLeaseLimiterForTasks(createSiteRequestLeaseLimiterCore(config))
+  return wrapLeaseLimiterForTasks(createSiteRequestLeaseLimiter(config))
 }
 
-const productionSiteRequestLeaseLimiter = createSiteRequestLeaseLimiterCore({
+const productionSiteRequestLeaseLimiter = createSiteRequestLeaseLimiter({
   ...SITE_API_REQUEST_LIMITS,
   enabled: !isTestMode(),
 })

@@ -30,6 +30,35 @@ const isPositiveFiniteTimeout = (value: unknown): value is number =>
 const createTimeoutError = (timeoutMs: number): DOMException =>
   new DOMException(`Request timed out after ${timeoutMs}ms`, "TimeoutError")
 
+const relayAbortsInto = (
+  controller: AbortController,
+  sourceSignals: readonly AbortSignal[],
+): (() => void) => {
+  const cleanups: Array<() => void> = []
+
+  for (const sourceSignal of sourceSignals) {
+    const relayAbort = () => {
+      if (!controller.signal.aborted) {
+        controller.abort(getAbortReason(sourceSignal))
+      }
+    }
+
+    if (sourceSignal.aborted) {
+      relayAbort()
+      break
+    }
+
+    sourceSignal.addEventListener("abort", relayAbort, { once: true })
+    cleanups.push(() => {
+      sourceSignal.removeEventListener("abort", relayAbort)
+    })
+  }
+
+  return () => {
+    cleanups.forEach((cleanup) => cleanup())
+  }
+}
+
 /**
  * Combines cancellation sources for queue admission without starting any
  * deferred deadline. Call dispose once admission has settled.
@@ -52,31 +81,11 @@ export function composeAbortSignals(
   }
 
   const controller = new AbortController()
-  const cleanups: Array<() => void> = []
-
-  for (const sourceSignal of sourceSignals) {
-    const relayAbort = () => {
-      if (!controller.signal.aborted) {
-        controller.abort(getAbortReason(sourceSignal))
-      }
-    }
-
-    if (sourceSignal.aborted) {
-      relayAbort()
-      break
-    }
-
-    sourceSignal.addEventListener("abort", relayAbort, { once: true })
-    cleanups.push(() => {
-      sourceSignal.removeEventListener("abort", relayAbort)
-    })
-  }
+  const dispose = relayAbortsInto(controller, sourceSignals)
 
   return {
     signal: controller.signal,
-    dispose: () => {
-      cleanups.forEach((cleanup) => cleanup())
-    },
+    dispose,
   }
 }
 
@@ -137,10 +146,7 @@ export function startAbortableTask<T>(
       const result = Promise.reject<T>(getAbortReason(signal))
       return {
         result,
-        completion: result.then(
-          () => undefined,
-          () => undefined,
-        ),
+        completion: result.then<void, void>(undefined, () => undefined),
       }
     }
   }
@@ -170,27 +176,9 @@ export function startAbortableTask<T>(
       ? new AbortController()
       : undefined
   const effectiveSignal = controller?.signal ?? sourceSignals[0]
-  const cleanups: Array<() => void> = []
-
-  if (controller) {
-    for (const sourceSignal of sourceSignals) {
-      const relayAbort = () => {
-        if (!controller.signal.aborted) {
-          controller.abort(getAbortReason(sourceSignal))
-        }
-      }
-
-      sourceSignal.addEventListener("abort", relayAbort, { once: true })
-      cleanups.push(() => {
-        sourceSignal.removeEventListener("abort", relayAbort)
-      })
-
-      if (sourceSignal.aborted) {
-        relayAbort()
-        break
-      }
-    }
-  }
+  const disposeRelays = controller
+    ? relayAbortsInto(controller, sourceSignals)
+    : () => {}
 
   const timeoutId =
     timeoutMs !== undefined
@@ -213,7 +201,7 @@ export function startAbortableTask<T>(
   const result = Promise.race([taskPromise, abortPromise]).finally(() => {
     if (timeoutId !== undefined) clearTimeout(timeoutId)
     effectiveSignal.removeEventListener("abort", rejectOnAbort)
-    cleanups.forEach((cleanup) => cleanup())
+    disposeRelays()
   })
 
   return {

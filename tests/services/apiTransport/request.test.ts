@@ -23,6 +23,7 @@ import {
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
 import { server } from "~~/tests/msw/server"
+import { runMockSiteRequestTask } from "~~/tests/test-utils/siteRequestLease"
 
 const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
   () => {
@@ -34,12 +35,7 @@ const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
 )
 
 const { mockWithSiteApiRequestLimit } = vi.hoisted(() => {
-  const mockWithSiteApiRequestLimit = vi.fn(
-    async (_key: string, task: () => any, _signal?: AbortSignal) => {
-      const dispatched = task()
-      return await (dispatched?.result ?? dispatched)
-    },
-  )
+  const mockWithSiteApiRequestLimit = vi.fn()
 
   return { mockWithSiteApiRequestLimit }
 })
@@ -174,10 +170,8 @@ describe("apiTransport request helpers", () => {
     mockHasCookieInterceptorPermissions.mockReset()
     mockGetPreferences.mockReset()
     mockWithSiteApiRequestLimit.mockImplementation(
-      async (_key: string, task: () => any, _signal?: AbortSignal) => {
-        const dispatched = task()
-        return await (dispatched?.result ?? dispatched)
-      },
+      async (_key: string, task: () => any, _signal?: AbortSignal) =>
+        await runMockSiteRequestTask(task),
     )
     mockHasCookieInterceptorPermissions.mockResolvedValue(true)
     mockGetPreferences.mockResolvedValue({

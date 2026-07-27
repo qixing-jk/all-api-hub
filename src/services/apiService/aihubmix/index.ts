@@ -679,6 +679,7 @@ export async function fetchInviteLink(
     userInfo = await withSiteApiRequestLease(
       resolveSiteRequestLimitKey(AIHUBMIX_API_ORIGIN),
       () => {
+        // Keep the deadline inside limiter dispatch so queue wait is not charged.
         return startAbortableTask(
           async (signal) => {
             request.abortDeadline?.start()

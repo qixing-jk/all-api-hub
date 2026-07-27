@@ -41,14 +41,10 @@ import {
   AuthTypeEnum,
 } from "~/types"
 import { server } from "~~/tests/msw/server"
+import { runMockSiteRequestTask } from "~~/tests/test-utils/siteRequestLease"
 
 const { mockWithSiteApiRequestLimit } = vi.hoisted(() => ({
-  mockWithSiteApiRequestLimit: vi.fn(
-    async (_key: string, task: () => any, _signal?: AbortSignal) => {
-      const dispatched = task()
-      return await (dispatched?.result ?? dispatched)
-    },
-  ),
+  mockWithSiteApiRequestLimit: vi.fn(),
 }))
 
 vi.mock(
@@ -96,10 +92,8 @@ describe("apiService AIHubMix", () => {
     server.resetHandlers()
     mockWithSiteApiRequestLimit.mockClear()
     mockWithSiteApiRequestLimit.mockImplementation(
-      async (_key: string, task: () => any, _signal?: AbortSignal) => {
-        const dispatched = task()
-        return await (dispatched?.result ?? dispatched)
-      },
+      async (_key: string, task: () => any, _signal?: AbortSignal) =>
+        await runMockSiteRequestTask(task),
     )
   })
 
