@@ -130,6 +130,19 @@
     "corsError": "Đây có thể là vấn đề cấu hình CORS. Vui lòng kiểm tra cấu hình danh sách trắng CORS trong phần cài đặt Octopus.",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
+  "openrouter": {
+    "bootstrap": {
+      "cancelled_before_create": "Đã hủy tạo khóa OpenRouter trước khi có khóa nào được tạo.",
+      "cancelledAfterCreate": "Khóa đã được tạo trong khi đang chờ hủy. Hãy kiểm tra bên dưới rồi lưu hoặc thu hồi.",
+      "failed": "Không thể xác nhận việc tạo khóa OpenRouter. Hãy nhập khóa thủ công hoặc kiểm tra Management Keys.",
+      "invalid_origin": "Việc tạo khóa OpenRouter yêu cầu trang OpenRouter chính thức.",
+      "logged_out": "Hãy đăng nhập OpenRouter rồi thử nhận dạng tự động lại.",
+      "mutationUnconfirmed": "OpenRouter có thể đã tạo khóa nhưng không gửi được kết quả. Hãy kiểm tra Management Keys trước khi thử lại.",
+      "page_changed": "Hãy giữ trang Management Keys của OpenRouter mở rồi thử nhận dạng tự động lại.",
+      "timeout": "Tạo khóa OpenRouter đã hết thời gian chờ. Hãy kiểm tra Management Keys trước khi thử lại.",
+      "validationFailed": "OpenRouter đã tạo khóa nhưng không thể xác thực. Hãy dán khóa bên dưới hoặc thu hồi trong Management Keys."
+    }
+  },
   "operations": {
     "detection": {
       "failed": "Phát hiện tự động thất bại, vui lòng nhập thông tin thủ công hoặc đảm bảo đã đăng nhập vào trang web mục tiêu",

@@ -130,6 +130,19 @@
     "corsError": "Esto puede deberse a la configuración de CORS. Revisa la lista de permitidos de CORS en la configuración de Octopus.",
     "noChannelsToSync": "No hay canales para sincronizar"
   },
+  "openrouter": {
+    "bootstrap": {
+      "cancelled_before_create": "La creación de la clave de OpenRouter se canceló antes de crear nada.",
+      "cancelledAfterCreate": "La clave se creó mientras se cancelaba la operación. Revísala abajo y guárdala o revócala.",
+      "failed": "No se pudo confirmar la creación de la clave de OpenRouter. Ingresa una clave manualmente o revisa las claves de administración.",
+      "invalid_origin": "La creación de claves de OpenRouter requiere la página canónica de OpenRouter.",
+      "logged_out": "Inicia sesión en OpenRouter y vuelve a intentar la detección automática.",
+      "mutationUnconfirmed": "Es posible que OpenRouter haya creado una clave, pero no se recibió el resultado. Revisa las claves de administración antes de volver a intentarlo.",
+      "page_changed": "Mantén abierta la página de claves de administración de OpenRouter y vuelve a intentar la detección automática.",
+      "timeout": "La creación de la clave de OpenRouter agotó el tiempo de espera. Revisa las claves de administración antes de volver a intentarlo.",
+      "validationFailed": "OpenRouter creó una clave, pero no se pudo validar. Pégala abajo o revócala desde las claves de administración."
+    }
+  },
   "operations": {
     "detection": {
       "failed": "La detección automática falló; ingresa la información manualmente o asegúrate de haber iniciado sesión en el sitio de destino",

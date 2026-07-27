@@ -255,6 +255,25 @@ describe("apiAdapters registry", () => {
     expect(capabilities.managedSites).toBeUndefined()
   })
 
+  it("keeps OpenRouter provisioning outside generic account capabilities", () => {
+    const capabilities = getSiteTypeCapabilities(SITE_TYPES.OPENROUTER)
+
+    expect(capabilities).toMatchObject({
+      siteType: SITE_TYPES.OPENROUTER,
+      family: ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter,
+    })
+    expect(Object.keys(capabilities.account ?? {}).sort()).toEqual([
+      "data",
+      "refresh",
+    ])
+    expect(capabilities.account?.bootstrap).toBeUndefined()
+    expect(capabilities.account?.completion).toBeUndefined()
+    expect(capabilities.account).not.toHaveProperty("credential")
+    expect(capabilities.account?.data?.fetchData).toBeTypeOf("function")
+    expect(capabilities.account?.refresh?.refreshAccount).toBeTypeOf("function")
+    expect(capabilities.managedSites).toBeUndefined()
+  })
+
   it("returns SharedChat account data and service credential capabilities without token CRUD", () => {
     const capabilities = getSiteTypeCapabilities(SITE_TYPES.SHAREDCHAT)
 

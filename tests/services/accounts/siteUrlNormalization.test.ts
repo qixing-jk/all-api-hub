@@ -9,8 +9,25 @@ import {
   normalizeAccountSiteUrlForOriginKey,
   normalizeAccountSiteUrlForStorage,
 } from "~/services/accounts/utils/siteUrlNormalization"
+import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 
 describe("siteUrlNormalization", () => {
+  it.each([
+    ["https://openrouter.ai", true],
+    [" https://openrouter.ai/settings/management-keys ", true],
+    ["https://openrouter.ai:443/settings/management-keys", true],
+    ["http://openrouter.ai", false],
+    ["https://openrouter.ai:8443", false],
+    ["https://www.openrouter.ai", false],
+    ["https://api.openrouter.ai", false],
+    ["blob:https://openrouter.ai/openrouter-object-placeholder", false],
+    ["not a valid url", false],
+    ["", false],
+    ["   ", false],
+  ])("recognizes canonical OpenRouter URL %s", (value, expected) => {
+    expect(isCanonicalOpenRouterUrl(value)).toBe(expected)
+  })
+
   it("recognizes supported AIHubMix hostnames", () => {
     expect(isAIHubMixSiteUrl("aihubmix.com")).toBe(true)
     expect(isAIHubMixSiteUrl("https://www.aihubmix.com/statistics")).toBe(true)
@@ -96,5 +113,26 @@ describe("siteUrlNormalization", () => {
         url: " https://example.com/path ",
       }),
     ).toBe("https://example.com/path")
+  })
+
+  it("canonicalizes OpenRouter account origins", () => {
+    expect(
+      normalizeAccountSiteUrlForStorage({
+        siteType: SITE_TYPES.OPENROUTER,
+        url: "https://openrouter.ai/settings/management-keys",
+      }),
+    ).toBe("https://openrouter.ai")
+    expect(
+      normalizeAccountSiteUrlForOriginKey({
+        siteType: SITE_TYPES.OPENROUTER,
+        url: "https://openrouter.ai/api/v1/key",
+      }),
+    ).toBe("https://openrouter.ai")
+    expect(
+      normalizeAccountSiteUrlForDuplicateCheck({
+        siteType: SITE_TYPES.OPENROUTER,
+        url: "https://openrouter.ai/settings/management-keys",
+      }),
+    ).toBe("https://openrouter.ai")
   })
 })

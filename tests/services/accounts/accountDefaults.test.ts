@@ -158,6 +158,19 @@ describe("accountDefaults", () => {
   })
 
   describe("normalizeSiteAccount", () => {
+    it("drops legacy identity provenance from persisted account info", () => {
+      const legacy = createSiteAccount({
+        account_info: {
+          ...createSiteAccount().account_info,
+          identity_scope: "local",
+        } as unknown as SiteAccount["account_info"],
+      })
+
+      expect(normalizeSiteAccount(legacy).account_info).not.toHaveProperty(
+        "identity_scope",
+      )
+    })
+
     it("preserves legacy numeric statistics without inventing availability", () => {
       const legacy = createSiteAccount({
         account_info: {
@@ -258,6 +271,18 @@ describe("accountDefaults", () => {
       expect(normalized.notes).toBe("hello")
       expect(normalized.updated_at).toBe(456)
       expect(normalized.user_updated_at).toBe(123)
+    })
+
+    it("preserves known legacy auth modes independently of current site policy", () => {
+      const normalized = normalizeSiteAccount(
+        createSiteAccount({
+          site_type: SITE_TYPES.SHAREDCHAT,
+          authType: AuthTypeEnum.AccessToken,
+        }),
+      )
+
+      expect(normalized.site_type).toBe(SITE_TYPES.SHAREDCHAT)
+      expect(normalized.authType).toBe(AuthTypeEnum.AccessToken)
     })
 
     it("canonicalizes AIHubMix accounts to the console web origin", () => {

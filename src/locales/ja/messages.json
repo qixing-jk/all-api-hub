@@ -130,6 +130,19 @@
     "corsError": "これは CORS 設定が原因の可能性があります。Octopus 設定の CORS ホワイトリストを確認してください。",
     "noChannelsToSync": "同期するチャネルがありません"
   },
+  "openrouter": {
+    "bootstrap": {
+      "cancelled_before_create": "OpenRouter のキー作成は、作成前にキャンセルされました。",
+      "cancelledAfterCreate": "キャンセル中にキーが作成されました。下で確認し、保存または失効させてください。",
+      "failed": "OpenRouter キーの作成を確認できませんでした。キーを手動で入力するか、管理キーを確認してください。",
+      "invalid_origin": "OpenRouter キーの作成には正規の OpenRouter ページが必要です。",
+      "logged_out": "OpenRouter にログインしてから、自動検出をもう一度お試しください。",
+      "mutationUnconfirmed": "OpenRouter でキーが作成された可能性がありますが、結果を受け取れませんでした。再試行前に管理キーを確認してください。",
+      "page_changed": "OpenRouter の管理キーのページを開いたまま、自動検出をもう一度お試しください。",
+      "timeout": "OpenRouter キーの作成がタイムアウトしました。再試行前に管理キーを確認してください。",
+      "validationFailed": "OpenRouter でキーは作成されましたが、検証に失敗しました。下に貼り付けるか、管理キーから失効させてください。"
+    }
+  },
   "operations": {
     "detection": {
       "failed": "自動検出に失敗しました。情報を手動入力するか、対象サイトにログインしていることを確認してください",

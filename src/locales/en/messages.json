@@ -130,6 +130,19 @@
     "corsError": "This may be caused by CORS configuration. Please check the CORS whitelist setting in Octopus settings.",
     "noChannelsToSync": "No channels to sync"
   },
+  "openrouter": {
+    "bootstrap": {
+      "cancelled_before_create": "OpenRouter key creation was cancelled before anything was created.",
+      "cancelledAfterCreate": "The key was created while cancellation was pending. Review it below and save or revoke it.",
+      "failed": "OpenRouter key creation could not be confirmed. Enter a key manually or review Management Keys.",
+      "invalid_origin": "OpenRouter key creation requires the canonical OpenRouter page.",
+      "logged_out": "Sign in to OpenRouter, then try auto-detect again.",
+      "mutationUnconfirmed": "OpenRouter may have created a key, but the result was not delivered. Review Management Keys before trying again.",
+      "page_changed": "Keep the OpenRouter Management Keys page open, then try auto-detect again.",
+      "timeout": "OpenRouter key creation timed out. Review Management Keys before trying again.",
+      "validationFailed": "OpenRouter created a key, but validation failed. Paste it below or revoke it from Management Keys."
+    }
+  },
   "operations": {
     "detection": {
       "failed": "Auto-detection failed, please enter information manually or ensure you are logged in to the target site",

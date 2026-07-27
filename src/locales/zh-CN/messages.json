@@ -130,6 +130,19 @@
     "corsError": "这可能是 CORS 配置问题。请在 Octopus 设置中检查 CORS 白名单配置。",
     "noChannelsToSync": "没有可同步的渠道"
   },
+  "openrouter": {
+    "bootstrap": {
+      "cancelled_before_create": "OpenRouter 密钥创建已在创建前取消。",
+      "cancelledAfterCreate": "取消操作等待期间密钥已创建。请在下方检查，然后保存或撤销。",
+      "failed": "无法确认 OpenRouter 密钥是否创建成功。请手动输入密钥，或检查管理密钥。",
+      "invalid_origin": "创建 OpenRouter 密钥需要打开规范的 OpenRouter 页面。",
+      "logged_out": "请先登录 OpenRouter，然后重试自动识别。",
+      "mutationUnconfirmed": "OpenRouter 可能已创建密钥，但结果未能返回。请在重试前检查管理密钥。",
+      "page_changed": "请保持 OpenRouter 管理密钥页面打开，然后重试自动识别。",
+      "timeout": "OpenRouter 密钥创建超时。请在重试前检查管理密钥。",
+      "validationFailed": "OpenRouter 已创建密钥，但验证失败。请在下方粘贴，或从管理密钥中撤销。"
+    }
+  },
   "operations": {
     "detection": {
       "failed": "自动检测失败，请手动输入信息或确保已在目标站点登录",

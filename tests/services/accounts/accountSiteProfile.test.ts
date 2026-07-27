@@ -88,6 +88,15 @@ describe("accountSiteProfile", () => {
     )
   })
 
+  it("keeps OpenRouter identity as ordinary optional account metadata", () => {
+    expect(
+      getAccountSiteProductProfile(SITE_TYPES.OPENROUTER).identity,
+    ).toEqual({
+      usernameRequired: false,
+      storedUserIdentityFields: [],
+    })
+  })
+
   it("resolves Sub2API saved-account product rules", () => {
     const profile = getAccountSiteProductProfile(SITE_TYPES.SUB2API)
 
@@ -517,6 +526,12 @@ describe("accountSiteProfile", () => {
     expect(accountSiteProfileApi).toHaveProperty("getAccountSiteProductProfile")
     expect(accountSiteProfileApi).toHaveProperty(
       "ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS",
+    )
+    expect(accountSiteProfileApi).not.toHaveProperty(
+      "ACCOUNT_SITE_IDENTITY_PRESENTATIONS",
+    )
+    expect(accountSiteProfileApi).not.toHaveProperty(
+      "ACCOUNT_SITE_IDENTITY_INPUTS",
     )
   })
 })

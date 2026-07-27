@@ -35,6 +35,8 @@ import {
   getAccountSiteTypeValues,
   getManagedSiteTypeValues,
   MANAGED_SITE_TYPES,
+  OPENROUTER_HOSTNAMES,
+  OPENROUTER_WEB_ORIGIN,
   SHAREDCHAT_HOSTNAMES,
   SITE_TYPES,
   type AccountSiteDefinition,
@@ -74,6 +76,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.SUB2API
   | typeof SITE_TYPES.AIHUBMIX
   | typeof SITE_TYPES.SHAREDCHAT
+  | typeof SITE_TYPES.OPENROUTER
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
@@ -232,6 +235,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.SUB2API,
       SITE_TYPES.AIHUBMIX,
       SITE_TYPES.SHAREDCHAT,
+      SITE_TYPES.OPENROUTER,
       SITE_TYPES.UNKNOWN,
     ])
   })
@@ -354,6 +358,45 @@ describe("account site definition registry", () => {
     expect(getAccountSiteDefinition(SITE_TYPES.OCTOPUS)?.adapterFamily).toBe(
       ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     )
+    expect(getAccountSiteDefinition(SITE_TYPES.OPENROUTER)).toMatchObject({
+      scopes: [ACCOUNT_SITE_DEFINITION_SCOPES.Account],
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter,
+      readiness: {
+        modelList: {
+          expectedRoute: ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.Unsupported,
+        },
+      },
+    })
+  })
+
+  it("defines OpenRouter account-only access-token policy and canonical origins", () => {
+    const definition = getAccountSiteDefinition(SITE_TYPES.OPENROUTER)
+    const profile = getAccountSiteProductProfile(SITE_TYPES.OPENROUTER)
+
+    expect(definition?.onboarding?.routes?.adminCredentialsPath).toBe(
+      "/settings/management-keys",
+    )
+    expect(profile.auth).toMatchObject({
+      allowedAuthTypes: [AuthTypeEnum.AccessToken],
+      defaultAuthType: AuthTypeEnum.AccessToken,
+      defaultAuthHostnames: [],
+      supportsCookieAuth: false,
+      supportsBuiltInCheckInDetection: false,
+    })
+    expect(profile.identity).toMatchObject({
+      usernameRequired: false,
+      storedUserIdentityFields: [],
+    })
+    expect(profile.identity).not.toHaveProperty("input")
+    expect(profile.identity).not.toHaveProperty("presentation")
+    expect(profile.identity).not.toHaveProperty("scope")
+    expect(profile.identity).not.toHaveProperty("fallbackScope")
+    expect(profile.urls).toMatchObject({
+      storageOrigin: OPENROUTER_WEB_ORIGIN,
+      duplicateOrigin: OPENROUTER_WEB_ORIGIN,
+      recognizedHostnames: OPENROUTER_HOSTNAMES,
+    })
+    expect(profile.modelList.directPricing).toBe("unsupported")
   })
 
   it("defines VoAPI v2 before old VoAPI with account-only policy", () => {

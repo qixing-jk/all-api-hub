@@ -36,6 +36,7 @@ const collectedRequests = {
   aihubmixAccount: 0,
   sharedChatUsage: 0,
   voApiV2Stats: 0,
+  openRouterCredits: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -243,6 +244,27 @@ const producerFixturesByFamily = {
       expect(collectedRequests.sharedChatUsage).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter]: {
+    baseUrl: "https://mirror.example.invalid",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://openrouter.ai/api/v1/credits", () => {
+        collectedRequests.openRouterCredits += 1
+        return HttpResponse.json({
+          data: { total_credits: 10, total_usage: 2 },
+        })
+      }),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.openRouterCredits).toBe(snapshotCount)
+    },
+  },
 } satisfies Record<ProducerFamily, ProducerFixture>
 
 const getProducerFixture = (siteType: AccountSiteType): ProducerFixture => {
@@ -278,6 +300,7 @@ describe("AccountData availability producer conformance", () => {
       aihubmixAccount: 0,
       sharedChatUsage: 0,
       voApiV2Stats: 0,
+      openRouterCredits: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(

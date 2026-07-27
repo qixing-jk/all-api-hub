@@ -18,6 +18,7 @@ export const SITE_TYPES = {
   CLAUDE_CODE_HUB: "claude-code-hub",
   AIHUBMIX: "AIHubMix",
   SHAREDCHAT: "sharedchat",
+  OPENROUTER: "openrouter",
   UNKNOWN: "unknown",
 } as const
 
@@ -34,3 +35,19 @@ export const AIHUBMIX_HOSTNAMES = [
 
 export const SHAREDCHAT_HOSTNAMES = ["new.sharedchat.cc"] as const
 export const SHAREDCHAT_WEB_ORIGIN = "https://new.sharedchat.cc"
+
+export const OPENROUTER_HOSTNAMES = ["openrouter.ai"] as const
+export const OPENROUTER_WEB_ORIGIN = "https://openrouter.ai"
+export const OPENROUTER_API_BASE_URL = `${OPENROUTER_WEB_ORIGIN}/api/v1`
+
+/** Returns whether the supplied URL belongs to the canonical OpenRouter origin. */
+export function isCanonicalOpenRouterUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value.trim())
+    return (
+      parsed.protocol === "https:" && parsed.origin === OPENROUTER_WEB_ORIGIN
+    )
+  } catch {
+    return false
+  }
+}
