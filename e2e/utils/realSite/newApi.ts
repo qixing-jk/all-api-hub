@@ -61,5 +61,6 @@ export async function loginToRealNewApiSite(
   return await loginToCompatibleApiRealSite(page, config, {
     label: NEW_API_LABEL,
     envPrefix: NEW_API_ENV_PREFIX,
+    authBundle: true,
   })
 }

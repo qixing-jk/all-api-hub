@@ -17,6 +17,7 @@ type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
 
 type RealSiteAccountSaveLoginResult = void | {
   prepareDetectedDialog?: (dialog: AccountAddDialog) => Promise<void>
+  cleanupDetectableSite?: () => Promise<void>
 }
 
 const REAL_SITE_ACCOUNT_DETECTION_CONSOLE_ERROR_PATTERNS = [

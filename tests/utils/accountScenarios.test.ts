@@ -114,6 +114,81 @@ describe("account E2E scenarios", () => {
     expect(cleanup).toHaveBeenCalledOnce()
   })
 
+  it("runs dynamic, environment, and page cleanup in order after saving", async () => {
+    const events: string[] = []
+    const sitePage = {
+      close: vi.fn().mockImplementation(async () => {
+        events.push("page")
+      }),
+    } as any
+
+    vi.mocked(saveAutoDetectedAccountFromApp).mockImplementation(async () => {
+      events.push("save")
+      return {
+        accountId: "account-1",
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: "https://panel.example.invalid",
+      }
+    })
+
+    await runAccountAutoDetectScenario({
+      extensionId: "extension-id",
+      extensionPage: {} as any,
+      baseUrl: "https://panel.example.invalid",
+      siteType: SITE_TYPES.NEW_API,
+      getServiceWorker: vi.fn().mockResolvedValue({} as any),
+      openSitePage: vi.fn().mockResolvedValue(sitePage),
+      prepareDetectableSite: vi.fn().mockResolvedValue({
+        cleanupDetectableSite: async () => {
+          events.push("dynamic")
+        },
+      }),
+      cleanup: async () => {
+        events.push("environment")
+      },
+    })
+
+    expect(events).toEqual(["save", "dynamic", "environment", "page"])
+  })
+
+  it("runs dynamic cleanup after a failed save and preserves both failures", async () => {
+    const events: string[] = []
+    const primaryError = new Error("save failed")
+    const cleanupError = new Error("dynamic cleanup failed")
+    const sitePage = {
+      close: vi.fn().mockImplementation(async () => {
+        events.push("page")
+      }),
+    } as any
+
+    vi.mocked(saveAutoDetectedAccountFromApp).mockImplementation(async () => {
+      events.push("save")
+      throw primaryError
+    })
+
+    await expect(
+      runAccountAutoDetectScenario({
+        extensionId: "extension-id",
+        extensionPage: {} as any,
+        baseUrl: "https://panel.example.invalid",
+        siteType: SITE_TYPES.NEW_API,
+        getServiceWorker: vi.fn().mockResolvedValue({} as any),
+        openSitePage: vi.fn().mockResolvedValue(sitePage),
+        prepareDetectableSite: vi.fn().mockResolvedValue({
+          cleanupDetectableSite: async () => {
+            events.push("dynamic")
+            throw cleanupError
+          },
+        }),
+        cleanup: async () => {
+          events.push("environment")
+        },
+      }),
+    ).rejects.toMatchObject({ errors: [primaryError, cleanupError] })
+
+    expect(events).toEqual(["save", "dynamic", "environment", "page"])
+  })
+
   it("uses an existing fixture for key lifecycle without auto-detecting an account", async () => {
     const extensionPage = {} as any
     const keyPage = {} as any
