@@ -49,6 +49,18 @@ describe("OpenRouter Management Key background action", () => {
       throw new Error(`Unexpected action: ${message.action}`)
     })
 
+  const recordDispatchOutcomes = (
+    markDispatched: (requestId: string) => boolean,
+  ) => {
+    const outcomes: boolean[] = []
+    return {
+      outcomes,
+      mark: (requestId: string) => {
+        outcomes.push(markDispatched(requestId))
+      },
+    }
+  }
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.resetModules()
@@ -784,10 +796,11 @@ describe("OpenRouter Management Key background action", () => {
       } = await import(
         "~/entrypoints/background/openrouter/managementKeyAction"
       )
+      const dispatch = recordDispatchOutcomes(
+        markTempWindowOpenRouterManagementKeyDispatched,
+      )
       mockPageResponder((message) => {
-        expect(
-          markTempWindowOpenRouterManagementKeyDispatched(message.requestId),
-        ).toBe(true)
+        dispatch.mark(message.requestId)
         return {
           requestId: message.requestId,
           operation: "create",
@@ -806,6 +819,7 @@ describe("OpenRouter Management Key background action", () => {
       await settleReadiness()
       await pending
 
+      expect(dispatch.outcomes).toEqual([true])
       expect(response).toHaveBeenCalledWith(
         expect.objectContaining({ mutationState: pageFields.mutationState }),
       )
@@ -820,10 +834,11 @@ describe("OpenRouter Management Key background action", () => {
       handleTempWindowOpenRouterManagementKeyAction,
       markTempWindowOpenRouterManagementKeyDispatched,
     } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    const dispatch = recordDispatchOutcomes(
+      markTempWindowOpenRouterManagementKeyDispatched,
+    )
     mockPageResponder((message) => {
-      expect(
-        markTempWindowOpenRouterManagementKeyDispatched(message.requestId),
-      ).toBe(true)
+      dispatch.mark(message.requestId)
       return {
         requestId: message.requestId,
         operation: "create",
@@ -844,6 +859,7 @@ describe("OpenRouter Management Key background action", () => {
     await settleReadiness()
     await pending
 
+    expect(dispatch.outcomes).toEqual([true])
     expect(sendResponse).toHaveBeenCalledWith({
       requestId: "request-oversized-secret",
       operation: "create",
@@ -1107,12 +1123,11 @@ describe("OpenRouter Management Key background action", () => {
     const action = await import(
       "~/entrypoints/background/openrouter/managementKeyAction"
     )
+    const dispatch = recordDispatchOutcomes(
+      action.markTempWindowOpenRouterManagementKeyDispatched,
+    )
     mockPageResponder((message) => {
-      expect(
-        action.markTempWindowOpenRouterManagementKeyDispatched(
-          message.requestId,
-        ),
-      ).toBe(true)
+      dispatch.mark(message.requestId)
       if (message.requestId === "request-summary-created") {
         return {
           requestId: message.requestId,
@@ -1166,6 +1181,7 @@ describe("OpenRouter Management Key background action", () => {
     await settleReadiness()
     await unconfirmedPending
 
+    expect(dispatch.outcomes).toEqual([true, true])
     const summaries = [
       action.cancelTempWindowOpenRouterManagementKeyAction(
         "request-summary-not-dispatched",
@@ -1339,10 +1355,11 @@ describe("OpenRouter Management Key background action", () => {
     removeTabOrWindowMock.mockRejectedValue(
       new Error("persistent close failure"),
     )
+    const dispatch = recordDispatchOutcomes(
+      markTempWindowOpenRouterManagementKeyDispatched,
+    )
     mockPageResponder((message) => {
-      expect(
-        markTempWindowOpenRouterManagementKeyDispatched(message.requestId),
-      ).toBe(true)
+      dispatch.mark(message.requestId)
       return {
         requestId: message.requestId,
         operation: "create",
@@ -1364,6 +1381,7 @@ describe("OpenRouter Management Key background action", () => {
     await settleReadiness()
     await pending
 
+    expect(dispatch.outcomes).toEqual([true])
     expect(response).toHaveBeenCalledWith(
       expect.objectContaining({ mutationState: "created" }),
     )

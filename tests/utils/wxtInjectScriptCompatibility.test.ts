@@ -29,12 +29,11 @@ describe("WXT injectScript Firefox MV2 compatibility", () => {
       },
       documentElement: null,
     } as unknown as Document
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        text: vi.fn().mockResolvedValue("window.__exampleInjected = true"),
-      }),
-    )
+    const responseText = vi
+      .fn()
+      .mockResolvedValue("window.__exampleInjected = true")
+    const fetchMock = vi.fn().mockResolvedValue({ text: responseText })
+    vi.stubGlobal("fetch", fetchMock)
     vi.stubGlobal("document", documentFixture)
 
     const outcome = await Promise.race([
@@ -45,5 +44,10 @@ describe("WXT injectScript Firefox MV2 compatibility", () => {
     ])
 
     expect(outcome).toBe("resolved")
+    expect(fetchMock).toHaveBeenCalledWith(
+      "moz-extension://example/openrouter-clerk-session.js",
+    )
+    expect(script.text).toBe("window.__exampleInjected = true")
+    expect(documentFixture.head.append).toHaveBeenCalledWith(script)
   })
 })
