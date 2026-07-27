@@ -202,6 +202,7 @@ Treat telemetry and settings discoverability as related release-readiness checks
 
 - Add brief inline comments or short code-block comments when non-obvious intent, invariants, edge cases, or protocol/browser constraints need clarification; do not narrate obvious code.
 - For user-visible success/error feedback, do not rely solely on backend `message` fields; provide a local fallback when responses may be empty, unstable, or not suitable for direct display.
+- Treat private user-facing errors, local logs, and telemetry as different disclosure boundaries. Preserve useful upstream `code` and `message` by default in errors shown only to the affected user, and explicitly map only known opaque or unhelpful errors. Local logs may retain useful diagnostic context after redacting tokens, API keys, cookies, refresh/session secrets, credentials, and full authentication payloads. Telemetry and external reports must not include raw backend messages or secrets.
 
 ### Validation Strategy
 
