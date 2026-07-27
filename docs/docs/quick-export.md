@@ -14,7 +14,7 @@
 | Claude Code Router | 调用 Router 接口创建/更新 Provider | 需在「设置 → Claude Code Router 设置」填写 Base URL 与管理 API Key |
 | Kilo Code / Roo Code | 生成 `apiConfigs` 片段或下载 `settings` JSON 供导入 | 导入为增量添加，不会清空你已有的 provider；导出时需为每个密钥选择上游模型 ID |
 
-### 自建后台
+### 自建后台/管理面板
 
 如果你自己也搭了 AI 中转或聚合后台，All API Hub 还可以把当前站点直接导入到你选中的后台目标里，作为「渠道」管理。
 

@@ -42,13 +42,6 @@
 | Octopus | 面向个人的 LLM API 聚合服务。 | [GitHub](https://github.com/bestruirui/octopus) |
 | AxonHub | 开源 AI Gateway，可通过任意 SDK 调用 100+ LLM，内置故障切换、负载均衡、成本控制与全链路追踪。 | [官网](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
 
-::: tip AxonHub 渠道迁移说明
-AxonHub 走独立的 GraphQL 后台联动，目前在「自建站点管理」中可配置并参与渠道导入；但渠道迁移暂不支持以 AxonHub 作为目标/源站点，相关入口会自动隐藏。
-:::
-
-::: warning 关于 Claude Code Hub
-All API Hub 当前并不内置 `Claude Code Hub` 托管站点联动。如果你看到的资料中提到该后台，说明其可能来自旧版计划或第三方扩展；如确有需求，欢迎在 [GitHub Discussions](https://github.com/qixing-jk/all-api-hub/discussions) 反馈。
-:::
 
 ## 相关文档
 
