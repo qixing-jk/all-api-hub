@@ -79,7 +79,15 @@ type StubNewApiSiteRoutesOptions = {
   pricingModels?: ModelPricing[]
   initialTokens?: ApiToken[]
   groups?: Record<string, { desc: string; ratio: number }>
+  dashboardAuthMode?: "legacy" | "auth-bundle"
 }
+
+export const E2E_NEW_API_RC22_AUTH = {
+  dashboardToken: "dashboard-jwt",
+  managementPat: "management-pat",
+  refreshCookie: "new-api-refresh=refresh-cookie",
+  sessionId: "rc22-session",
+} as const
 
 /** Scenario-specific console-error patterns that should not fail the test. */
 export type ExtensionPageGuardOptions = {
@@ -601,6 +609,8 @@ export async function stubNewApiSiteRoutes(
     default: { desc: "Default", ratio: 1 },
     vip: { desc: "VIP", ratio: 1.5 },
   }
+  const usesAuthBundle = options.dashboardAuthMode === "auth-bundle"
+  let dashboardSessionActive = usesAuthBundle
 
   let nextTokenId =
     Math.max(0, ...(options.initialTokens ?? []).map((token) => token.id)) + 1
@@ -616,6 +626,13 @@ export async function stubNewApiSiteRoutes(
       await route.fulfill({
         status: 200,
         contentType: "text/html",
+        ...(usesAuthBundle
+          ? {
+              headers: {
+                "set-cookie": `${E2E_NEW_API_RC22_AUTH.refreshCookie}; HttpOnly; Secure; SameSite=Lax; Path=/`,
+              },
+            }
+          : {}),
         body: `<!doctype html><html><head><title>${title}</title></head><body>${systemName}</body></html>`,
       })
       return
@@ -640,7 +657,124 @@ export async function stubNewApiSiteRoutes(
       return
     }
 
+    if (
+      usesAuthBundle &&
+      method === "POST" &&
+      url.pathname === "/api/user/auth/refresh"
+    ) {
+      const hasRefreshCookie = request
+        .headers()
+        ["cookie"]?.includes(E2E_NEW_API_RC22_AUTH.refreshCookie)
+
+      if (!dashboardSessionActive || !hasRefreshCookie) {
+        await route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: false,
+            code: "AUTH_REQUIRED",
+            message: "Dashboard session is unavailable",
+          }),
+        })
+        return
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: {
+            access_token: E2E_NEW_API_RC22_AUTH.dashboardToken,
+            token_type: "Bearer",
+            access_expires_at: Math.floor(Date.now() / 1000) + 900,
+            user: {
+              id: userId,
+              username,
+              quota: accountQuota,
+            },
+            session: {
+              sid: E2E_NEW_API_RC22_AUTH.sessionId,
+              current: true,
+            },
+          },
+        }),
+      })
+      return
+    }
+
+    if (
+      usesAuthBundle &&
+      method === "POST" &&
+      url.pathname === "/api/user/auth/logout"
+    ) {
+      const headers = request.headers()
+      const isOwnedSession =
+        dashboardSessionActive &&
+        headers["authorization"] ===
+          `Bearer ${E2E_NEW_API_RC22_AUTH.dashboardToken}` &&
+        headers["x-auth-session"] === E2E_NEW_API_RC22_AUTH.sessionId &&
+        headers["origin"] === origin
+
+      if (!isOwnedSession) {
+        await route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: false,
+            code: "AUTH_REQUIRED",
+            message: "Dashboard session is unavailable",
+          }),
+        })
+        return
+      }
+
+      dashboardSessionActive = false
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true, message: "logged out" }),
+      })
+      return
+    }
+
     if (method === "GET" && url.pathname === "/api/user/self") {
+      if (usesAuthBundle) {
+        const authorization = request.headers()["authorization"]
+        const isDashboardRequest =
+          dashboardSessionActive &&
+          authorization === `Bearer ${E2E_NEW_API_RC22_AUTH.dashboardToken}`
+        const isPatRequest = authorization === `Bearer ${accessToken}`
+
+        if (!isDashboardRequest && !isPatRequest) {
+          await route.fulfill({
+            status: 401,
+            contentType: "application/json",
+            body: JSON.stringify({
+              success: false,
+              message: "Authentication required",
+            }),
+          })
+          return
+        }
+
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            message: "ok",
+            data: {
+              id: userId,
+              username,
+              ...(isPatRequest ? { access_token: accessToken } : {}),
+              quota: accountQuota,
+            },
+          }),
+        })
+        return
+      }
+
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -658,6 +792,39 @@ export async function stubNewApiSiteRoutes(
       return
     }
 
+    if (
+      usesAuthBundle &&
+      method === "GET" &&
+      url.pathname === "/api/user/token"
+    ) {
+      const isDashboardRequest =
+        dashboardSessionActive &&
+        request.headers()["authorization"] ===
+          `Bearer ${E2E_NEW_API_RC22_AUTH.dashboardToken}`
+
+      await route.fulfill(
+        isDashboardRequest
+          ? {
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify({
+                success: true,
+                message: "ok",
+                data: accessToken,
+              }),
+            }
+          : {
+              status: 401,
+              contentType: "application/json",
+              body: JSON.stringify({
+                success: false,
+                message: "Dashboard authentication required",
+              }),
+            },
+      )
+      return
+    }
+
     if (method === "GET" && url.pathname === "/api/status") {
       await route.fulfill({
         status: 200,
@@ -670,6 +837,21 @@ export async function stubNewApiSiteRoutes(
             price: exchangeRate,
             checkin_enabled: false,
           },
+        }),
+      })
+      return
+    }
+
+    if (
+      usesAuthBundle &&
+      request.headers()["authorization"] !== `Bearer ${accessToken}`
+    ) {
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: false,
+          message: "Management PAT required",
         }),
       })
       return

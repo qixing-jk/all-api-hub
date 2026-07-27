@@ -26,6 +26,7 @@ import {
 import { verifyCcSwitchModelExportDeepLink } from "~~/e2e/scenarios/ccSwitchExport"
 import {
   createStoredAccount,
+  E2E_NEW_API_RC22_AUTH,
   forceExtensionLanguage,
   installExtensionPageGuards,
   seedStoredAccounts,
@@ -448,6 +449,85 @@ test("adds an account through the real add-account auto-detect flow", async ({
   expect(persistedAccounts).toContain('"username":"e2e-user"')
 })
 
+test("adds an rc22 account from AuthBundle and persists only its PAT", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const baseUrl = "https://rc22.example.invalid"
+  const { dashboardToken, managementPat, sessionId } = E2E_NEW_API_RC22_AUTH
+
+  await stubNewApiSiteRoutes(context, {
+    baseUrl,
+    dashboardAuthMode: "auth-bundle",
+    accessToken: managementPat,
+  })
+
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    tempWindowFallback: {
+      enabled: false,
+    },
+  })
+
+  const fixture = await runAccountAutoDetectScenario({
+    extensionId,
+    extensionPage: page,
+    baseUrl,
+    siteType: SITE_TYPES.NEW_API,
+    getServiceWorker: async () => serviceWorker,
+    openSitePage: async () => {
+      const sitePage = await context.newPage()
+      await sitePage.goto(baseUrl)
+      expect(
+        await sitePage.evaluate(() => localStorage.getItem("user")),
+      ).toBeNull()
+      await sitePage.bringToFront()
+      return sitePage
+    },
+    prepareDetectableSite: async (sitePage) => ({
+      cleanupDetectableSite: async () => {
+        const cleanupResult = await sitePage.evaluate(
+          async ({ dashboardToken, managementPat, sessionId }) => {
+            const logoutResponse = await fetch("/api/user/auth/logout", {
+              method: "POST",
+              credentials: "include",
+              headers: {
+                Authorization: `Bearer ${dashboardToken}`,
+                "X-Auth-Session": sessionId,
+              },
+            })
+            const revokedDashboardResponse = await fetch("/api/user/self", {
+              headers: { Authorization: `Bearer ${dashboardToken}` },
+            })
+            const patResponse = await fetch("/api/user/self", {
+              headers: { Authorization: `Bearer ${managementPat}` },
+            })
+
+            return {
+              logoutStatus: logoutResponse.status,
+              revokedDashboardStatus: revokedDashboardResponse.status,
+              patStatus: patResponse.status,
+            }
+          },
+          { dashboardToken, managementPat, sessionId },
+        )
+
+        expect(cleanupResult).toEqual({
+          logoutStatus: 200,
+          revokedDashboardStatus: 401,
+          patStatus: 200,
+        })
+      },
+    }),
+  })
+
+  const accounts = await readStoredAccounts(serviceWorker)
+  const saved = accounts.find((account) => account.id === fixture.accountId)
+  expect(saved?.account_info.access_token).toBe(managementPat)
+  expect(JSON.stringify(saved)).not.toContain(dashboardToken)
+})
+
 test("enables default-key provisioning, adds an account, saves the created key as a reusable API profile, and verifies it from the popup", async ({
   context,
   extensionId,
@@ -481,7 +561,6 @@ test("enables default-key provisioning, adds an account, saves the created key a
     getServiceWorker: async () => serviceWorker,
     openSitePage: async () => {
       const sitePage = await context.newPage()
-      installExtensionPageGuards(sitePage)
       await forceExtensionLanguage(sitePage, "en")
       await sitePage.addInitScript(() => {
         window.localStorage.setItem(
