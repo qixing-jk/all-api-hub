@@ -2,7 +2,7 @@
 home: true
 title: "Homepage"
 heroImage: "/512.png"
-heroText: "All API Hub - AI Aggregation Relay Manager"
+heroText: "All API Hub - Your All-in-One AI Asset Manager"
 tagline: "Open-source browser extension to unify the management of third-party AI aggregation relays and self-built New APIs: automatically identify accounts, compare model prices, verify API/CLI compatibility, synchronize models and channels, and support cross-platform and encrypted WebDAV backups."
 actions:
   - text: "Get Started"
@@ -26,72 +26,229 @@ actions:
     type: "secondary"
 
 features:
-  - title: "Intelligent Site Identification"
-    details: "Paste the site address after logging in to add an account, automatically identifying the site name, recharge ratio, and other information; manual entry is supported if identification fails, and duplicate additions will be prompted."
-  - title: "Multi-Account Overview"
-    details: "Consolidate multiple sites and accounts into a single panel for a clear overview of balances, usage, and health status, with support for automatic refreshing."
-  - title: "Independent API Credential Archive"
-    details: "Allows separate saving of baseUrl and API Key, independent of site accounts. Filter by tags and reuse for model viewing, API validation, and status statistics."
-  - title: "Model and Price Comparison"
-    details: "Not only view the model list but also filter by source, billing method, group, and account to compare prices, ratios, and actual costs, highlighting the lowest price or optimal group."
-  - title: "Model and API Validation"
-    details: "Supports model availability validation, batch validation, Token compatibility judgment, and CLI compatibility checks, suitable for troubleshooting 'site available but tool unavailable' issues."
-  - title: "Usage Analysis and Latency Troubleshooting"
-    details: "Filter and compare usage, costs, model distribution, and trends by site, account, Token, and date. Provides heatmap, latency, and slow request views to aid troubleshooting."
-  - title: "Automatic Check-in and Redemption Jump"
-    details: "Centrally identifies sites that support check-ins and manages their status, supporting automatic check-ins, custom check-in URLs, and redirection to recharge/redemption pages."
-  - title: "Quick Export Integration"
-    details: "One-click export to CherryStudio, CC Switch, CLIProxyAPI, Claude Code Router, Kilo Code, and the currently selected self-hosted site."
-  - title: "Self-built Site Backend Linkage"
-    details: "Supports backend linkage for self-built New API, DoneHub, Veloera, Octopus, and AxonHub instances."
-  - title: "WebDAV Backup and Synchronization"
-    details: "Supports JSON import/export, automatic WebDAV synchronization, selective synchronization, and backup encryption for cross-device and multi-browser migration."
-  - title: "Cloudflare Anti-Bot Assistant"
-    details: "Automatically pops up an assistance window when encountering a Cloudflare challenge; continues with the original identification, refresh, or check-in process after verification."
-  - title: "Full Platform Support"
-    details: "Compatible with Chrome, Edge, Firefox, Safari, and mobile/phone browsers such as Mobile Edge, Firefox for Android, Kiwi, etc., with dark mode adaptation."
-  - title: "Privacy First"
-    details: "Defaults to local-first storage with no telemetry data collection; access to corresponding services only occurs when configuring WebDAV or external interfaces."
+  - title: "📦 Unified Asset Dashboard"
+    details: "Consolidate multiple sites and accounts into a single panel for a clear overview of balances, usage, and health status, with smart site identification."
+  - title: "🏷️ API Credential Library"
+    details: "Save Base URL + API Key without a site account for quick copying, API verification, model lookup, and balance/usage checks."
+  - title: "💰 Model Price Comparison"
+    details: "Compare actual costs across different sites, automatically identify the best group, and find the most cost-effective path."
+  - title: "✅ In-depth API Validation"
+    details: "Batch test model availability, Token compatibility, and CLI proxy connectivity to troubleshoot integration issues."
+  - title: "📈 Detailed Usage Analytics"
+    details: "Analyze usage and costs by date, account, and model. Includes heatmaps, latency views, and slow request analysis."
+  - title: "📅 Auto Check-in Assistant"
+    details: "Centrally manage check-ins for supported sites. Includes automatic scheduled check-ins and custom URL jumps."
+  - title: "🚀 Fast Ecosystem Integration"
+    details: "Instant sync to CherryStudio, CC Switch, Kilo Code, or push accounts directly to your self-hosted management backend."
+  - title: "🛠️ Self-hosted Site Linkage"
+    details: "Deeply adapted for New API, AxonHub, Claude Code Hub, and more, enabling channel management and model sync."
+  - title: "🔒 Privacy & Secure Sync"
+    details: "Local-first storage with encrypted WebDAV sync. Includes a Cloudflare assistant to handle bot challenges automatically."
 
 footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 ---
 
 ## Introduction
 
-In the current AI ecosystem, there are an increasing number of aggregation relay sites and self-built panels based on the New API series. Managing balances, usage, model prices, and API key availability for various sites simultaneously is often scattered and time-consuming.
+In the AI era, many of us keep multiple relay-site accounts to save money or try different models. Managing them quickly becomes painful: balances are scattered, pricing is messy, and daily manual check-ins are easy to miss.
 
-All API Hub, as a browser extension, can automatically identify accounts on these sites and provide one-click access to view balances, usage, model prices, manage models and keys, and perform automatic check-ins. It also offers independent API credential management and provides backend linkage and channel-related tools for self-built New API, DoneHub, Veloera, Octopus, and AxonHub. Currently, it supports accounts from relay sites based on the following projects:
+**All API Hub is built to solve those problems.** It is your AI asset center, making management simpler, clearer, and more automated.
 
-- [one-api](https://github.com/songquanpeng/one-api)
-- [new-api](https://github.com/QuantumNous/new-api)
-- [Veloera](https://github.com/Veloera/Veloera)
-- [one-hub](https://github.com/MartialBE/one-hub)
-- [done-hub](https://github.com/deanxv/done-hub)
-- [AxonHub](https://github.com/looplj/axonhub)
-- [Sub2API](https://github.com/Wei-Shaw/sub2api)
-- [AnyRouter](https://anyrouter.top)
-- WONG Public Welfare Site
-- Neo-API (Closed-source)
-- Super-API (Closed-source)
-- RIX_API (Closed-source, basic functionality supported)
-- VoAPI (Closed-source, older versions supported)
+## 🎯 Use Cases
 
-If you are using the extension on macOS via Safari, please refer to the [Safari Installation Guide](./safari-install.md) first. Safari requires installation via Xcode, which differs from the store installation or unpacked loading methods for Chrome/Edge/Firefox.
+### 👤 I am a regular AI user (recommended for beginners)
 
-If you use browsers such as QQ Browser, 360 Secure Browser, 360 Speed Browser, Cheetah Browser, Brave, Vivaldi, Opera, etc., please refer to the [QQ / 360 and Other Browsers Installation Guide](./other-browser-install.md).
+- **How do I start?**: [Download and install the extension](./get-started.md) -> [Add my first account](./get-started.md#add-site)
+- **I want to save money**: [Earn credits with auto check-in](./auto-checkin.md) -> [Compare model prices across sites](./model-list.md)
+- **I want less manual work**: [See asset changes at a glance](./balance-history.md) -> [Sync accounts to other AI tools](./get-started.md#quick-export-sites)
+
+### 🛠️ I am an advanced user (Key collector)
+
+- **Key management**: [Save standalone URL+Key pairs to the API Credential Library](./api-credential-profiles.md)
+- **Availability testing**: [Batch verify API and CLI compatibility](./web-ai-api-check.md)
+- **Cross-device sync**: [Configure encrypted WebDAV backup](./webdav-sync.md)
+
+### 👑 I am a site admin (operator area)
+
+- **Efficiency tools**: [Manage channels inside the extension](./self-hosted-site-management.md) -> [Batch sync models](./managed-site-model-sync.md)
+- **Configuration optimization**: [Set up model redirection](./model-redirect.md)
+- **Security safeguards**: [Handle 2FA / OTP verification](./new-api-security-verification.md)
+
+## 🧩 Supported Site Architectures
+
+No matter which architecture you use, there is a good chance we support it:
+
+- **Account-site compatible architectures**: One API, New API, Veloera, One-Hub, Done-Hub, Sub2API, and more.
+- **Specialized account platforms and compatible implementations**: AIHubMix, AnyRouter, Neo-API, Super-API, v-api, and more.
+- **Self-hosted admin backends**: New API, Veloera, Done-Hub, [Octopus](https://github.com/bestruirui/octopus), AxonHub, Claude Code Hub, and more, for channel management, migration, and partial model sync.
+
+> If you use Safari on macOS, read the [Safari Installation Guide](./safari-install.md) first.
+> If you use QQ Browser, 360 Browser, Brave, Vivaldi, Opera, or similar browsers, read the [Other Browser Installation Guide](./other-browser-install.md).
+> To learn why the store version may be behind GitHub Releases, or how to check updates manually, read [Installation Channels and Updates](./extension-update-install.md).
 
 <a id="community"></a>
-## 💬 Community Communication
+## 💬 Community
 
-If you want to communicate faster about usage issues, troubleshoot configurations, or share compatible sites, we recommend using the following community channels:
+Have questions or want to share useful sites? Join the community:
 
-- [GitHub Discussions](https://github.com/qixing-jk/all-api-hub/discussions): Suitable for organizing issues, accumulating experience, and long-term discussions.
-- [Discord Community](https://discord.gg/RmFXZ577ZQ): For multi-language users, with diverse features, suitable for discussions and troubleshooting.
-- [Telegram Group](https://t.me/qixing_chat): Suitable for fast communication among multi-language users.
-- WeChat Group: Scan the QR code below to join the Chinese communication group.
+- [GitHub Discussions](https://github.com/qixing-jk/all-api-hub/discussions)
+- [Discord Community](https://discord.gg/RmFXZ577ZQ)
+- [Telegram Group](https://t.me/qixing_chat)
+- [QQ Group](https://qm.qq.com/q/ebSCy31Phe)
+- **WeChat Group**: Scan the QR code below to join the Chinese group.
 
 <img
   src="../../../resources/wechat_group.png"
   alt="All API Hub WeChat Group QR Code"
   style="width: min(280px, 100%);"
 />
+
+<a id="sponsors"></a>
+## ❤️ Sponsors
+
+<div class="readme-sponsor readme-sponsor-featured">
+  <p class="readme-sponsor-banner">
+    <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">
+      <img src="../../../resources/partners/volcengine_en.jpg" alt="Dola Seed on BytePlus ModelArk">
+    </a>
+  </p>
+  <p class="readme-sponsor-copy">
+    Thanks to Dola Seed for sponsoring this project! Dola Seed 2.0 is a full-modal general large model independently developed by ByteDance for the global market. Built on a unified multimodal architecture, it supports joint understanding and generation of text, images, audio, and video. It natively enables agent collaboration, with strong reasoning, long-task execution, tool integration, and coding capabilities. It is widely applicable to smart cockpits, personal assistants, education, customer support, marketing, retail, and other scenarios. It excels in multimodal perception, end-to-end complex task delivery, stable interaction, and data security, and is readily accessible and deployable via the ModelArk platform. Register via <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">this link</a> to get 500,000 tokens of free inference quota per model.<a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html"> >>中国大陆地区的开发者请点击这里</a>
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://s.qiniu.com/qE3eai">
+      <img src="../../../resources/partners/qiniu.png" alt="Qiniu Cloud AI">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    Thanks to Qiniu Cloud AI for sponsoring this project! Qiniu Cloud AI is Qiniu Cloud's enterprise MaaS platform, offering one-stop access to 150+ mainstream models worldwide with compatibility across major provider protocols and full-modal capabilities for text, image, audio, video, and file processing. Enterprise users can claim 12 million free tokens via <a href="https://s.qiniu.com/qE3eai">this link</a>, with referral rewards up to tens of billions of tokens.
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4">
+      <img src="../../../resources/partners/fennoai.jpg" alt="Fenno.ai">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    Thanks to Fenno.ai for sponsoring this project! Fenno.ai is a stable and efficient API relay provider focused on Codex relay service, compatible with OpenAI and Anthropic protocols and flexible enough for Codex, Claude Code, OpenCode, and other coding tools. All API Hub users can subscribe to the 9.9 RMB / $150-equivalent Coding Plan through <a href="https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4">this link</a>, and referrals can earn up to 20% rewards.
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://www.packyapi.com/register?aff=all-api-hub">
+      <img src="../../../resources/partners/packycode.png" alt="PackyCode">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    Thanks to PackyCode for sponsoring this project! PackyCode is a reliable and efficient API relay service provider, offering relay services for Claude Code, Codex,
+    Gemini, and more. PackyCode provides special discounts for our software users: register using
+    <a href="https://www.packyapi.com/register?aff=all-api-hub">this link</a> and enter the "all-api-hub" promo code during first recharge to get 10% off (<a href="./sponsor-guides/packycode.md">setup guide</a>).
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://ai.centos.hk">
+      <img class="readme-sponsor-logo-small" src="../../../resources/partners/xingchen.png" alt="Xingchen AI">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    Thanks to Xingchen AI for sponsoring this project. Xingchen AI is a stable and efficient API relay provider offering services for Claude Code, Codex, Gemini, and more. It supports 1:1 top-ups, provides invoices, and offers Claude at as low as 40% of the standard price. You can learn more and start using it through <a href="https://ai.centos.hk">this link</a> (<a href="./sponsor-guides/xingchen.md">setup guide</a>).
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">
+      <img src="../../../resources/partners/atlas-cloud-logo-display.svg" alt="Atlas Cloud">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    Thanks to Atlas Cloud for sponsoring this project! Atlas Cloud is a full-modal AI inference platform that gives developers one API for video generation, image
+    generation, and LLM access across 300+ curated models. Check out Atlas Cloud's new coding plan promotion for more budget-friendly API access:
+    <a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">this link</a>.
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://sui-xiang.com/">
+      <img src="../../../resources/partners/suixiang.jpg" alt="Suixiang AI Relay">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    Thanks to Suixiang AI Relay for sponsoring this project! Suixiang AI Relay is a reliable and efficient API relay service provider for Claude, Codex, Gemini, and more. It focuses on privacy, transparency, fast support, no data resale, and no model dilution. New accounts can receive ¥0.5 in daily check-in test credits, with 1:1 top-ups, pay-as-you-go billing, redundant routes, cross-region disaster recovery, automatic failover, uninterrupted long-lived SSE streams, and 99.9% availability. Learn more through <a href="https://sui-xiang.com/">this link</a>.
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://www.aicodemirror.com/register?invitecode=7IQNR8">
+      <img src="../../../resources/partners/aicodemirror.png" alt="AICodeMirror">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    Thanks to AICodeMirror for sponsoring this project! AICodeMirror provides official high-stability relay services for Claude Code / Codex / Gemini CLI, with enterprise-grade concurrency, fast invoicing, and 24/7 dedicated technical support. Claude Code / Codex / Gemini official channels are available from 38% / 2% / 9% of the original price, with extra discounts on top-ups. AICodeMirror offers special benefits for All API Hub users: register via <a href="https://www.aicodemirror.com/register?invitecode=7IQNR8">this link</a> to enjoy 20% off your first top-up, and enterprise customers can get up to 25% off.
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://runapi.co/register?aff=cvDm">
+      <img class="readme-sponsor-logo-small" src="../../../resources/partners/runapi.jpg" alt="RunAPI">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    Thanks to RunAPI for sponsoring this project! RunAPI is a stable and efficient alternative to API OpenRouter. With one API Key, you can access over 150 mainstream models including OpenAI, Claude, Gemini, DeepSeek, and Grok, at prices as low as 10% of the original. It is extremely stable and seamlessly compatible with tools like Claude Code and OpenClaw. RunAPI offers exclusive benefits for All API Hub users: register using <a href="https://runapi.co/register?aff=cvDm">this link</a> and contact the RunAPI administrator to receive a ¥7 free credit (<a href="./sponsor-guides/runapi.md">setup guide</a>).
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://unity2.ai/register?ref=9NjKJ86j&source=allapihub">
+      <img src="../../../resources/partners/unity2ai.jpg" alt="Unity2.ai">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    Thanks to Unity2.ai for sponsoring this project! Unity2.ai is a high-performance AI model API relay platform for individual developers, teams, and enterprises. It has long served leading enterprise customers in China, handles more than 30 billion tokens per day, and supports 5,000 RPM-level high concurrency. It supports balance billing, first top-up bonuses, bundled subscriptions, enterprise invoicing, and dedicated onboarding. Register via <a href="https://unity2.ai/register?ref=9NjKJ86j&source=allapihub">this link</a> to receive $2 in balance, then join the official group for another $10, up to $12 in free credits.
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">
+      <img src="../../../resources/partners/infistar.png" alt="Infistar.ai">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    Thanks to Infistar.ai for sponsoring this project! Concerned about diluted models, reduced model intelligence, or opaque pricing? Every model offered by Infistar.ai is verified through real API calls. Supply comes from official APIs and official account pools, with load balancing across more than 10,000 supply routes to ensure low latency and peak-hour stability. It covers mainstream models including ChatGPT, Claude, Gemini, Grok, GLM, DeepSeek, Kimi, Qwen, and MiniMax, with full-modal capabilities spanning text, video, images, embeddings, reranking, and more. Pricing and usage are transparent and easy to review, with models available from 10% of official prices. All API Hub users can register and try it through <a href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">the dedicated link</a>.
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">

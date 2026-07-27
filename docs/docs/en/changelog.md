@@ -8,6 +8,444 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 3.53.0
+- **New Features:**
+  - Invitation Links: You can now copy invitation links directly from an individual account menu or batch selection on supported sites. Clear reasons are shown if a site has not enabled invitations or if retrieval fails, and already retrieved links are preserved during batch copying.
+  - Model List: Models are now categorized by provider with matching icons, making it more intuitive to filter and find models from a specific provider. Unrecognized models are grouped under `Uncategorized` without affecting normal viewing or usage. See [Model List](./model-list.md).
+  - CC Switch Export: When exporting with CC Switch, you can now select `Grok CLI` and `Hermes` without needing to prepare the corresponding configurations manually. See [Supported Export Tools and Integration Targets](./supported-export-tools.md).
+  - Kilo Code Export: `Kilo Code 7.x` now allows selecting and exporting multiple providers and models at once, as well as setting a default provider and model. The existing export options for Kilo Code 5.x and Roo Code remain available. See [Supported Export Tools and Integration Targets](./supported-export-tools.md).
+- **Experience Optimizations:**
+  - Settings Navigation: Navigating from accounts or API credentials to Key Management or Model List no longer requires leaving the settings page. Using browser forward and back buttons restores previously selected accounts, credentials, or the all-accounts view.
+  - Interactive Feedback: Added processing indicators for common actions like saving settings, automatic check-in, model sync, and export configuration to prevent duplicate clicks and operation conflicts.
+- **Bug Fixes:**
+  - Today's Usage: Sites that do not provide usage statistics are no longer mistakenly calculated as `0`, making it clear whether data is complete and avoiding confusion over actual usage.
+  - Add Account: When `Auto-fill Current Page URL` is enabled, newly added accounts automatically apply the site's default authentication method without overwriting an authentication method manually selected by the user. See [Account Management](./account-management.md).
+  - Model List: Filtering, price comparison, verification, and key actions now list only groups actually available for the current account, and correctly display real group multipliers such as `0x`. See [Model List](./model-list.md).
+  - Site Announcements: Fixed an issue where read announcements became unread again or triggered duplicate notifications after restarting the browser or checking again.
+  - Account Detection: Fixed an issue where automatically detecting and importing accounts on certain sites could open a blank window or freeze the browser, ensuring detection prompts remain usable. See [Auto-detection Troubleshooting Guide](./auto-detect.md).
+  - Popup Operations: Starting account detection, check-in, refresh, or validation from the extension popup no longer causes the task page to be minimized unexpectedly.
+
+::: warning Browser Compatibility Adjustment
+The minimum required version for desktop Firefox has been updated to **104** (Firefox for Android remains at **120**). Users on desktop Firefox versions below 104 should update their browser promptly to ensure the extension functions properly.
+:::
+
+**Location Hints:**
+- Copy invitation link: Open the action menu for an individual account or select multiple accounts to use bulk actions under "Settings → Account Management".
+- CC Switch export: Select the CC Switch export action under "Settings → Account Management", "Settings → API Credential Library", or "Settings → Key Management".
+- Kilo Code export: Select the Kilo Code export action under "Settings → Account Management", "Settings → API Credential Library", or "Settings → Key Management".
+- Model provider filter: View provider tabs at the top and in each model row under "Settings → Model List".
+
+## 3.52.0
+- **New Features:**
+  - Site Announcements: When newer New API-compatible sites publish multiple system announcements or additional notes at once, the extension can now retrieve them together, making site notices easier to review. See [Site Announcements](./site-announcements.md).
+  - Model List: Added model-capability filters for images, audio, video, PDF, reasoning, tool calling, structured output, and more, with matching capability badges shown on model rows, making it easier to find models suited to a specific task. See [Model List](./model-list.md).
+  - API Credential Library: Expiration dates are now easier to enter. Choose from a calendar or common durations, or type `tomorrow`, `in 7 days`, or a specific date instead of adjusting year, month, and day one field at a time in the browser date control. The same options are available when saving credentials from Web AI API verification results. See [API Credential Library](./api-credential-profiles.md) and [Web AI API Sniffing and Verification](./web-ai-api-check.md).
+  - Kilo Code Export: Added support for `Kilo Code 7.x`, whose configuration format is incompatible with earlier versions. Selected API credentials or site keys can be downloaded as a settings file ready to import, or the corresponding configuration can be copied when existing settings need to be preserved. The existing Roo Code / Kilo Code 5.x export options remain available. See [Quick Export Site Configuration](./quick-export.md).
+- **Experience Optimizations:**
+  - Key Creation: New keys now receive a recommended name automatically. If the name has not been edited manually, changing the group also updates it, reducing cleanup after creation. See [Key Management](./key-management.md).
+  - Add Account: When auto-detect fails, the extension now provides a troubleshooting guide and clear next steps. If the site is not supported yet, you can request support or save its `Base URL + API Key` to the API Credential Library and continue using it there. See [Account Management](./account-management.md), [Auto-detection Troubleshooting Guide](./auto-detect.md), and [API Credential Library](./api-credential-profiles.md).
+- **Bug Fixes:**
+  - New API Bulk Import: Key-check results are now more reliable at identifying matching channels and keys, reducing the large number of duplicate channels that could be created by repeated imports. If some preview items still cannot be confirmed, use `Verify and refresh preview` for an additional check. See [Key Management](./key-management.md) and [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - WebDAV: Existing backups can now be overwritten correctly when the backup folder uses Chinese or other non-English characters, reducing sync failures caused by folder names. See [WebDAV Backup and Auto Sync](./webdav-sync.md).
+  - Browser Compatibility: A key fix targets the known issue in 360 Extreme Browser when "Open a new tab after closing the last tab" is enabled: blank windows could remain after account auto-detection or check-in finished. Related task pages now close correctly when their work is complete.
+  - Add and Edit Forms: Using a dropdown, date picker, or combobox in account, API credential, key, and similar forms no longer closes the entire dialog by mistake. Pressing `Esc` now closes the currently expanded selection first.
+  - Version Updates: When a store-installed extension detects a newer GitHub release that has not yet reached the browser store, it now clearly shows `GitHub has a newer release, but the store update is not ready yet` instead of incorrectly suggesting an immediate upgrade. See [Installation Channels and Updates](./extension-update-install.md).
+
+**Location Hints:**
+- Credential expiration date: Enter it when adding or editing a credential under "Settings → API Credential Library"; it is also available when saving a credential from the Web AI API verification dialog.
+- Kilo Code 7.x export: Open a Kilo Code export action under "Settings → API Credential Library" or "Settings → Key Management", then select `Kilo Code 7.x`.
+- Model capability filters and badges: View them in the filter area and model rows under "Settings → Model List".
+- Site Announcements: View them under "Settings → Site Announcements"; automatic retrieval and notifications can still be managed in settings.
+- Alternatives after account detection fails: Shown after adding an account and using auto-detect under "Settings → Account Management".
+
+## 3.51.0
+- **New Features:**
+  - Data Import/Export: Before importing a backup, you can choose add, replace, or skip separately for `Accounts and bookmarks`, `API Credential Library`, `Channel configurations`, and `User settings`. When migrating data from another device, accounts and credentials are appended by default while current device settings are kept, instead of replacing everything at once. See [Data Import/Export](./data-management.md) and [WebDAV Backup and Auto Sync](./webdav-sync.md).
+  - `SharedChat`: Supports account detection, Codex balance/usage refresh, and copying, verifying, rotating, saving, or exporting Codex service credentials in Key Management. See [Account Management](./account-management.md), [Key Management](./key-management.md), and [API Credential Library](./api-credential-profiles.md).
+  - New `VoAPI`: Supports account detection, balance/usage refresh, built-in check-in, and key management. See [Account Management](./account-management.md), [Automatic Check-in](./auto-checkin.md), and [Key Management](./key-management.md).
+  - `Sub2API`: Account refresh now includes today's request count, token usage, and cost statistics, so daily usage can be checked without returning to the site backend. See [Account Management](./account-management.md) and [Usage Analytics](./usage-analytics.md).
+  - External Check-in: Configured external check-in links can now be opened in bulk from check-in run results, or from a single account result row. By default, accounts already marked as externally checked in today are skipped. See [Automatic Check-in](./auto-checkin.md).
+  - Languages: Added `Spanish (Latin America)`, which is selected automatically when Spanish is the browser's preferred language.
+- **Experience Optimizations:**
+  - Self-hosted Site Management: Channel refresh can now be stopped mid-run, so large channel lists, slow backends, or a wrong site selection no longer require waiting for the current refresh to finish. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - Self-hosted Site Management: The channel list now distinguishes `No channels` from `No matching results`, making it clearer whether the site has no channels or the current search/status filters are too narrow. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - Key Management and Model List: For read-only service credentials, or when the current site does not support creating keys, updating keys, or reading models, the page now explains the available capabilities and provides a feedback entry point. See [Key Management](./key-management.md) and [Model List](./model-list.md).
+- **Bug Fixes:**
+  - Self-hosted Site Management: Adapted to the newer New API channel status interface, so enabling or disabling channels stays in sync with the backend more reliably.
+  - Self-hosted Site Management: Adapted to the newer New API channel edit interface. When no new channel key is entered, the existing key is kept to avoid accidental clearing or save failures.
+  - API Requests: When a site clearly returns business errors such as unauthorized access or insufficient quota, the extension now shows the error directly instead of opening an unnecessary temporary verification window.
+  - Temporary windows: Temporary windows used for check-in or verification now enable download blocking before opening the target page, reducing the risk of accidental downloads.
+  - Automatic Check-in: Daily bulk check-in now processes accounts in batches, reducing failures or unstable results caused by too much concurrency when many accounts are eligible.
+  - Automatic Check-in: New API-compatible sites that clearly do not have the current check-in endpoint are now treated as `unsupported` instead of repeatedly trying temporary windows or showing a generic failure.
+
+**Location Hints:**
+- Import content selection: Under "Settings → Import/Export", choose a backup file or paste JSON, then select add, replace, or skip for each import section.
+- External check-in: Use the bulk action on "Settings → Automatic Check-in", or click `External check-in` in a supported account result row. Ctrl/Cmd opens all, and Shift opens in a new window.
+- `SharedChat` / new `VoAPI`: Add the account under "Settings → Account Management" and run auto detection; key-related capabilities appear under "Settings → Key Management".
+- New API channel editing and channel refresh: Applies in the channel list and channel edit flow under "Settings → Self-hosted Site Management".
+
+## 3.50.0
+- **New Features:**
+  - Account Management: You can now scan browser bookmarks and batch-import account sites. Choose the bookmark folder to scan, then review importable, duplicate, and failed sites in one place instead of adding each account manually. See [Account Management](./account-management.md) and [Bookmark Management](./bookmark-management.md).
+  - Account List: Each account row now shows its `Site type`, making it easier to confirm which compatible site family an account belongs to and to use site-type filtering in mixed setups. See [Account Management](./account-management.md).
+- **Experience Optimizations:**
+  - Account Management: Sites that support built-in check-in status now check and show today's status during account refresh automatically, without a separate status-detection switch in the form. Joining daily automatic check-in is still controlled by its own switch. See [Account Management](./account-management.md) and [Automatic Check-in](./auto-checkin.md).
+- **Bug Fixes:**
+  - `AIHubMix`: Add and edit account flows no longer show built-in check-in status or daily automatic check-in controls when they do not apply, reducing confusion about whether the extension can check in for `AIHubMix` directly. See [Account Management](./account-management.md) and [Automatic Check-in](./auto-checkin.md).
+  - API Credential Library: Exporting standalone credentials to `CC Switch`, `CLIProxyAPI`, `Kilo Code`, or `Claude Code Router` no longer mistakenly depends on account context. Credentials with only `Base URL + API Key` can also be exported or imported correctly. See [API Credential Library](./api-credential-profiles.md) and [Quick Export Site Configuration](./quick-export.md).
+  - Settings: Fixed cases where quick repeated preference saves could be overwritten by stale state, fail unexpectedly, or show unclear failure copy. If settings changed elsewhere, the page now asks you to confirm before saving again.
+  - Self-hosted Site Management: Channel changes now stay in sync more reliably after saving on real sites. `AxonHub` re-reads the channel list after creating, editing, or deleting a channel so later refresh and locate actions do not keep using stale cache; `Octopus` updates created and edited channels in the extension's unified format, reducing cases where the list, status, or follow-up actions still look like old data after a successful save. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+
+**Location Hints:**
+- Bookmark batch import: Click `Batch import from bookmarks` under "Settings → Account Management", or open it from the add-account dialog.
+- Account site type: Check account rows and the site-type filter under "Settings → Account Management".
+- API credential export: Select a credential under "Settings → API Credential Library" and use the target export action.
+- Permission onboarding: Bookmark import requests bookmark permission in the import flow; update-time optional permission prompts appear under "Settings → Overview".
+
+## 3.49.1
+- **Bug Fixes:**
+  - Account auto detection: More `Sub2API` relay sites that changed their page branding or appearance can now be recognized as `Sub2API`, reducing cases where adding an account ends up as an unknown site or another compatible type. See [Account Management](./account-management.md) and [Auto Detect Troubleshooting Guide](./auto-detect.md).
+  - Search and selection controls: Searchable dropdowns and multi-selects no longer crash when option names contain quotes, backslashes, plus signs, or similar special characters. They still search by the displayed label and select the correct item.
+
+**Location Hints:**
+- `Sub2API` auto detection: Applies when adding an account under "Settings → Account Management" and clicking `Auto Detect`.
+- Search and selection control fix: Applies automatically in searchable dropdowns for models, groups, sites, and similar options.
+
+## 3.49.0
+- **New Features:**
+  - Web AI API Sniffing and Verification: The test dialog now remembers recently used `Base URL` values, so you can choose from suggestions next time instead of pasting them repeatedly. See [Web AI API Sniffing and Verification](./web-ai-api-check.md).
+  - Web AI API Sniffing and Verification: When you copy a Key from a web page or chat, common extra spaces, separators, hidden characters, and similar noise are handled automatically, reducing manual cleanup. See [Web AI API Sniffing and Verification](./web-ai-api-check.md).
+  - Web AI API Sniffing and Verification: Added `API Key Cleanup Rules`, so you can add your own cleanup rules for fixed extra text and get a warning when a rule is invalid. See [Web AI API Sniffing and Verification](./web-ai-api-check.md).
+  - Web AI API Sniffing and Verification: Before saving a temporary test Key to the `API Credential Library`, you can now add tags, notes, and an expiration date directly, so there is less cleanup after saving. See [Web AI API Sniffing and Verification](./web-ai-api-check.md) and [API Credential Library](./api-credential-profiles.md).
+  - Web AI API Sniffing and Verification: Test results completed before saving are carried into the new credential, so you do not need to re-run the same test immediately after saving. See [Web AI API Sniffing and Verification](./web-ai-api-check.md) and [API Credential Library](./api-credential-profiles.md).
+  - API Credential Library: Credentials can now record an `Expiration Date`, making it easier to see which Keys are long-term, close to expiring, or already expired. See [API Credential Library](./api-credential-profiles.md).
+  - Key Management: Each key card can now check API availability and CLI compatibility directly, without copying the Key to another page first. See [Key Management](./key-management.md).
+  - Settings: `Click extension icon` can now open the `Options page` by default, making the browser toolbar a direct entry point for users who often work in the full settings view.
+- **Experience Optimizations:**
+  - Automatic Check-in: For some New API-compatible sites that need a web page to complete check-in, the extension will keep trying when it can. If it cannot finish, it now explains the reason more clearly. See [Automatic Check-in](./auto-checkin.md).
+  - Verification flows: Long-running model-list batch verification, API checks, and CLI compatibility checks can now be stopped. Completed results are kept, and unfinished items are marked as stopped.
+  - Key Management: `Key coverage check` can be cancelled midway, and you can review the previous check result before deciding whether to run it again. See [Key Management](./key-management.md).
+  - Key Management: When repairing missing keys, automatically created key names can be tidied to match the current group, with the result showing whether the rename succeeded. See [Key Management](./key-management.md).
+  - Key Management: Sub2API-related key coverage checks now make skipped reasons and available repair entry points easier to understand. See [Key Management](./key-management.md).
+  - Account Management: When adding or editing an account, authentication-method help and check-in detection descriptions are clearer, making it easier to distinguish "check status during refresh" from "actually perform check-in." See [Account Management](./account-management.md).
+- **Bug Fixes:**
+  - Web AI API Sniffing and Verification: Editing copied content without finding new credentials no longer clears the filled `Base URL` / `API Key`; if only one value is found, the other one is kept. See [Web AI API Sniffing and Verification](./web-ai-api-check.md).
+  - Account and model key creation: Default keys now use a more suitable name based on the selected group, and Keys created from Model List no longer carry unwanted model limits. See [Account Management](./account-management.md), [Key Management](./key-management.md), and [Model List](./model-list.md).
+  - Settings Search: Pressing `Home` / `End` in the search box now moves the text cursor normally, making search terms easier to edit.
+
+**Location Hints:**
+- Web AI API Sniffing and Verification: Select text on a web page and use the context menu, or trigger automatic detection on a whitelisted page. Related switches and `API Key Cleanup Rules` are under `AI API Test` in `Settings` on the left navigation of the extension settings page.
+- API Credential Library expiration date: Fill it when adding or editing a credential under `API Credential Library` on the left navigation of the extension settings page.
+- Key verification and key coverage check: Use them from key cards and the top check entry under `Key Management` on the left navigation of the extension settings page.
+- Default target for clicking the extension icon: Choose it under `Settings → General → Click extension icon` on the left navigation of the extension settings page.
+- Temporary-page assisted automatic check-in: Applies automatically when running manual or automatic check-in for supported accounts. The global switch is under `Automatic Check-in` on the left navigation of the extension settings page.
+
+## 3.48.0
+- **New Features:**
+  - Key Management: You can now batch-save selected keys into the `API Credential Library`. This turns keys already organized on a site into reusable `Base URL + API Key` credentials, so you do not need to re-enter them one by one when copying, verifying, viewing models, or exporting them to other tools. See [Key Management](./key-management.md) and [API Credential Library](./api-credential-profiles.md).
+  - Model List: Added filtering by latest verification result and sorting by verification duration, making it easier to revisit failed models, find models that have not been verified yet, or prioritize slower models. Batch verification applies to the currently filtered list. See [Model List](./model-list.md).
+  - Managed Site Model Sync: Added `Max processing time per channel`. If a single channel takes too long to return results, it is marked as failed and sync continues with the remaining channels, preventing a full sync from being blocked by a few slow channels. See [Managed Site Model Sync](./managed-site-model-sync.md).
+  - Version Update Check: Chrome / Edge store-version checks now compare both the latest stable GitHub release and browser store update status. If the browser has a store update ready, you can click `Reload to update` to apply the new version. See [Installation Channels and Updates](./extension-update-install.md).
+- **Experience Optimizations:**
+  - Web AI API Sniffing and Verification: After the page identifies `Base URL + API Key`, the verification dialog now shows the extracted `API Key` by default, making it easier to confirm the detected value before saving it to the `API Credential Library`. See [Web AI API Sniffing and Verification](./web-ai-api-check.md).
+  - Web AI API Sniffing and Verification: You can stop an individual check or the whole group during testing, so services that do not respond for a long time no longer force you to wait for the entire verification run before handling other credentials. See [Web AI API Sniffing and Verification](./web-ai-api-check.md).
+  - Managed Site Model Sync: Running progress refreshes more promptly. When automatic sync is disabled, the page now explains that only manual sync will run and provides a shortcut to automatic sync settings, reducing confusion about whether sync is running. See [Managed Site Model Sync](./managed-site-model-sync.md).
+  - API Credential Library: When there are no credentials yet, the empty state now suggests saving existing site keys from Key Management and provides a shortcut, making the first credential setup easier to start. See [API Credential Library](./api-credential-profiles.md).
+  - Settings navigation: The former "Basic Settings" entry is now named "Settings" and moved into the "System" group. Basic preferences, AI API Test, notifications, and related options remain on the same settings page; only the entry name and location now better match their role.
+  - Docs and community: Added a QQ group entry and expanded installation-channel guidance, sponsor usage guides, and recommended-site information, making it easier to find update instructions, community support, or API service references.
+- **Bug Fixes:**
+  - WebDAV: Directory-style WebDAV URLs are now tested as directories, reducing cases where a usable directory was incorrectly reported as a failed connection. Direct `.json` backup file URLs are still tested as file URLs. See [WebDAV Backup and Automatic Synchronization](./webdav-sync.md).
+  - Key Management: When multiple `Cookie authentication` accounts exist under the same site, the key list now preserves each account's own session information, reducing cases where key loading uses another account's login session. See [Key Management](./key-management.md).
+  - Account Management: After adding or editing an account, refreshed balance, usage, and sync time now update in the account list and already-open account pages, reducing cases where saved accounts still show old data until a manual refresh. See [Account Management](./account-management.md).
+  - Managed Site Model Sync: Channel loading or sync request failures no longer show strange English keys or code-like messages. Errors now fall back to readable localized text. See [Managed Site Model Sync](./managed-site-model-sync.md).
+
+**Location Hints:**
+- Batch-save keys: Select multiple keys under "Settings → Key Management".
+- Model verification filters, verification-duration sorting, and batch verification: Use them under "Settings → Model List".
+- Max processing time per channel, automatic sync guidance, and sync progress: Check them under "Settings → Self-Hosted Site Management → Model Sync Settings" and on the model sync page.
+- Store-version update checks: Click `Check now` in the version and update area under "Settings → About".
+- Web AI API Sniffing and Verification: Use it after a web page identifies `Base URL + API Key` and opens the verification dialog. Related switches are in the `AI API Test` tab under the left-side `Settings` entry.
+- Post-save account refresh: Applies automatically after adding or editing an account under "Settings → Account Management".
+- WebDAV connection testing: Use it under `WebDAV Settings` in "Settings → Import / Export".
+
+## 3.47.0
+- **New Features:**
+  - `Sub2API` Model List: You can now view available models and estimated prices for `Sub2API` accounts in Model List. If an account has multiple API keys, you can also see which models each key can use. See [Model List](./model-list.md).
+  - Model List: Added a `Compare Prices` shortcut that switches to a low-price comparison view, helping you compare model prices across accounts and keys faster. See [Model List](./model-list.md).
+  - Model List / Key Management: You can now jump from a model to the matching account's keys, and from Key Management back to that account's model list. See [Model List](./model-list.md) and [Key Management](./key-management.md).
+- **Experience Optimizations:**
+  - Account Management: When adding or editing an account, the account is saved first and balance / usage refresh continues afterward. If the site responds slowly, you no longer need to keep waiting in the save dialog. See [Account Management](./account-management.md).
+  - Model List: Model groups and usable keys are shown more clearly. Keys with the same name also show their group, reducing the chance of selecting the wrong key.
+  - Crash Recovery: If a page error may be related to browser auto-translation, the extension now guides you to language feedback first; other errors still use the regular issue feedback path, making it easier to choose the right entry.
+- **Bug Fixes:**
+  - Account Management: Sites that use mixed letter-and-number user IDs can now be saved and edited normally, instead of failing because the user ID is not purely numeric. See [Account Management](./account-management.md).
+  - Model List: Single-model verification now prefers a key that actually fits the model. If no usable key exists, the extension prompts you to add a model key first. See [Model List](./model-list.md).
+  - Model List: Model verification failures now explain the reason more clearly, reducing cases where you only see a failure without knowing whether to check the account, model, or key. See [Model List](./model-list.md).
+
+**Location Hints:**
+- `Sub2API` model viewing, price comparison, and model verification: Use them under "Settings → Model List".
+- Account model / key jumps: Use them after selecting a single account in "Settings → Model List" or "Settings → Key Management".
+- Text user IDs and background refresh: They apply when adding or editing accounts under "Settings → Account Management".
+- Crash recovery guidance: Shown automatically after an extension page crashes.
+
+## 3.46.0
+- **New Features:**
+  - Key Management: Added a group key audit that checks whether each account group has a usable key, creates missing keys for supported sites, and lists keys whose groups are no longer available so you can review and delete them in one place. See [Key Management](./key-management.md).
+  - Key Management: You can now batch import selected keys into `CLIProxyAPI`, with per-key results shown during the import. See [CLIProxyAPI Integration](./cliproxyapi-integration.md).
+  - Feedback and languages: The feedback menu, About page, and first-time language selection flow now include a "Request a language" entry, making it easier to ask for missing languages or translation improvements.
+- **Experience Optimizations:**
+  - Auto Detect: If the extension popup closes during account auto detection, the extension now suggests continuing in the popup or switching to the side panel to finish adding the account, reducing confusion after an interrupted detection flow. See [Auto Detect Troubleshooting Guide](./auto-detect.md).
+  - Multilingual display: Extension pages now keep the page language marker aligned with the current UI language, reducing browser auto-translation misjudgments. If a page still cannot display correctly, it provides a reload entry and suggests switching the extension language or disabling browser auto-translation before retrying.
+  - Key Management: When managed-site administrator information is not configured, related checks now explain that the setup is optional and send you to a more accurate settings destination.
+- **Bug Fixes:**
+  - Model List: Restored per-row actions in the "All accounts" view, including key creation, single API verification, CLI verification, copying the site URL, and opening the site. See [Model List](./model-list.md).
+  - Model List: Batch verification results now show the source account and site, making it easier to identify which site or account is unavailable. See [Model List](./model-list.md).
+  - `Sub2API`: After creating a key, the list now refreshes automatically; after a successful deletion, the key is removed from the local list immediately, reducing manual refreshes and repeated checks.
+  - WebDAV: Temporary files used during backup uploads no longer start with a dot, reducing upload failures caused by server-side security policies blocking temporary-file writes. See [WebDAV Backup and Auto Sync](./webdav-sync.md).
+  - WebDAV: Connection tests, uploads, and downloads now save the current form changes first; directory URLs are also tested as directories, reducing cases where a valid configuration appears to fail testing. See [WebDAV Backup and Auto Sync](./webdav-sync.md).
+
+**Location Hints:**
+- Group key audit and batch import: Use them under "Settings → Key Management".
+- `CLIProxyAPI` connection settings: Enter the management API URL and management key under "Settings → CLIProxyAPI".
+- Language requests: Submit them from the `Feedback` menu in the extension popup or settings page title bar, from "Settings → About", or during first-time language selection.
+- Auto-detect interruption hint: Check it after starting auto detection while adding an account from the extension popup.
+- WebDAV settings: Test, upload, or download under `WebDAV Settings` in "Settings → Import / Export".
+
+## 3.45.0
+- **New Features:**
+  - Product reminders: The extension popup and settings page now include an important-reminders entry for risk notices, service changes, and usage suggestions.
+  - Account Management: The account list now includes `Clear sort`, so field sorting can be reset to the default display order in one action. See [Account Management](./account-management.md) and [Sorting Priority Settings](./sorting-priority.md).
+- **Experience Optimizations:**
+  - Changelog: After an upgrade, the changelog now opens automatically only when the current version has a matching release note, avoiding incorrect changelog opens for rollback, pre-release, or unpublished-note versions.
+  - Account Management: When a site is already open in the browser, its matching account is shown higher in the list, making the account related to the current page easier to find. See [Account Management](./account-management.md).
+- **Bug Fixes:**
+  - Popups and dialogs: Fixed operation toasts that could appear twice while a dialog was open. Success / failure prompts for actions such as adding accounts and saving settings are no longer duplicated.
+
+**Location Hints:**
+- Product reminders: Check the extension popup title bar, settings page title bar, or "Settings → Overview".
+- Account sorting: Use sorting and `Clear sort` in the "Settings → Account Management" list header; detailed sorting rules can be adjusted under "Settings → General → Sorting Priority".
+- Changelog auto-open: Control it under "Settings → General → Changelog".
+
+## 3.44.0
+- **New Features:**
+  - Settings Overview: The settings page now includes an `Overview` workbench that brings together accounts, API credentials, today's usage, items that need attention, automated tasks, and configuration status, with direct jumps to the pages that need action.
+- **Experience Optimizations:**
+  - Permission Onboarding: Optional permission explanations and grant entry points are now handled by `Overview`; when the extension needs new optional permissions, it explains the purpose of Cookies, web request observation, notifications, and related permissions in one place. See [Permission Management (Optional Permissions)](./permissions.md).
+  - API Credential Library: The add-credential button is now consistently labeled `Save API Key`, better matching the `Base URL + API Key`-only use case. See [API Credential Library](./api-credential-profiles.md).
+  - Extension Popup: Statistics on the `API Key` page now wrap on narrow screens, so balance, today's usage, and related metrics no longer crowd each other.
+- **Bug Fixes:**
+  - WebDAV: Compatible with China Science and Technology Cloud (CSTCloud) overwrite-move failures. The extension now retries replacing the official backup file, reducing upload failures during manual sync or auto sync. See [WebDAV Backup and Auto Sync](./webdav-sync.md).
+  - Older Browser Compatibility: Fixed runtime messages that might not receive responses, improving compatibility for cross-entry tasks such as Auto Check-in, Model Sync, WebDAV Auto Sync, notifications, and in-page detection.
+
+**Location Hints:**
+- Settings Overview: Open "Settings" to enter `Overview` by default.
+- Permission Onboarding: After upgrading, if new optional permissions are needed, check the prompt under "Settings → Overview"; you can also view the full permission status under "Settings → Permission Management".
+- API Credential Library: Click `Save API Key` under "Settings → API Credential Library".
+- WebDAV Sync: Use `WebDAV Settings` and auto-sync actions under "Settings → Import / Export".
+
+## 3.43.0
+- **Experience Optimizations:**
+  - AIHubMix: After adding an account, the extension now checks whether tokens already exist first. If tokens are present, it no longer shows the default key creation prompt; if none exist, it still prompts you to create one and displays the one-time full key. See [Account Management](./account-management.md).
+  - Auto Detect: When detecting certain AIHubMix page URLs from the extension popup, temporary-window minimization no longer causes the popup to close, making detection more stable. See [Auto Detect Troubleshooting Guide](./auto-detect.md).
+- **Bug Fixes:**
+  - AIHubMix: Compatible with cases where the site no longer returns the original numeric ID. The account is saved with an available text identifier instead, so adding, syncing, import / export, duplicate detection, pinning, and related flows no longer fail because the numeric ID is missing. See [Account Management](./account-management.md).
+  - Account Management: Fixed cookie import potentially using the wrong browser cookie environment when adding a `Cookie Authentication` account from an incognito window or a Firefox container tab.
+  - Account Management: Fixed `Use current page`-related prefill sometimes keeping a stale title or URL after fast tab switches, unavailable tabs, or non-webpage addresses.
+  - AIHubMix: Fixed inconsistent duplicate-account warnings and current-site detection across `aihubmix.com`, `www.aihubmix.com`, and `console.aihubmix.com`.
+  - In-page extension UI: Fixed in-page extension interfaces still showing Chinese after switching the extension language.
+  - Cookie Authentication: When multiple accounts on the same site use `Cookie Authentication`, refresh, detection, and related operations now use the Cookie for the current account more accurately.
+  - Model List: After creating a model-compatible key, the dialog now waits for the new key to appear in the site response, reducing cases where it still says no compatible key exists or cannot continue copying / managing the key. See [Model List](./model-list.md).
+
+**Location Hints:**
+- AIHubMix account saving, cookie import, and current-page prefill: Add an account under "Settings → Account Management".
+- AIHubMix default key prompt: Add an `AIHubMix` account with "Automatically create a default token after adding an account" enabled.
+- Auto-detect temporary window: Trigger auto detect from the extension popup after entering a site.
+- Model-compatible keys: Create or copy a key for a model under "Settings → Model List".
+
+## 3.42.0
+- **New Features:**
+  - Web AI API Check: Improved automatic detection of `Base URL` and `API Key` from web page content. When multiple candidates are found, you can choose the pair to verify, and the confirmation prompt can open settings or submit issue feedback directly. See [Web AI API Sniffing and Verification](./web-ai-api-check.md).
+  - API Credential Profiles: One-time API keys can now be saved directly to `API Credential Profiles` from the dialog, reducing the need to copy them and create a profile manually. See [API Credential Profiles](./api-credential-profiles.md).
+- **Experience Optimizations:**
+  - Account Management: When adding an account, the default authentication method is selected more accurately from the site URL. AnyRouter accounts now default to `Cookie Authentication`. See [Account Management](./account-management.md).
+  - Account Management: When `Cookie Authentication` is selected, the form now explains the required permission and provides a grant entry point, reducing trips back and forth to the settings page. See [Account Management](./account-management.md).
+  - Account Management: The duplicate-account warning now includes **`Don't remind me again and continue`**, so you can continue the current add flow and disable future duplicate warnings in one step.
+  - Auto Detect: When detection takes too long, the prompt can reload the extension and let you retry directly. See [Auto Detect Troubleshooting Guide](./auto-detect.md).
+  - Settings Search: Added searchable entries for notification channels, Import / Export, WebDAV auto sync, and related settings. Results now distinguish between page sections and specific controls, making settings easier to locate.
+  - Redemption Assistant: Selected text is now detected after mouse or touch release, making redemption-code capture on web pages more stable.
+  - Web AI API Check: Selected text is now detected after mouse or touch release, making API configuration capture on web pages more stable.
+- **Bug Fixes:**
+  - WebDAV: Backup uploads now write to a temporary file first and verify it before replacing the official backup. If a remote backup is corrupted, you will be prompted to rebuild it from the current device, reducing data risk from interrupted syncs or damaged backups. See [WebDAV Backup and Auto Sync](./webdav-sync.md).
+  - New API: Fixed login, check-in, redemption, usage, and related page shortcuts opening the wrong route on sites that use customized theme paths.
+  - Key Management: Deleting a key now uses an explicit destructive confirmation dialog, reducing accidental deletion risk.
+
+**Location Hints:**
+- Web AI API Check: Select or copy `Base URL + API Key` on a web page and check the confirmation prompt. Related switches are under "Settings → Basic Settings → Web AI API Check".
+- One-time API key saving: Use `Save to API Credential Profiles` from dialogs for adding accounts, creating keys, viewing model keys, or copying one-time keys.
+- Cookie multi-account permission: Add an account under "Settings → Account Management" and select `Cookie Authentication`.
+- Settings Search: Use the search box at the top of the settings page, or press `Ctrl+K` / `Cmd+K`.
+- WebDAV fixes and rebuild: Use `WebDAV Settings` and sync actions under "Settings → Import / Export".
+
+## 3.41.1
+- **Bug Fixes:**
+  - Account Management: Fixed the first add-account auto-detect flow not carrying detected check-in detection and auto check-in settings into the form. You can now confirm whether the account supports check-in, and whether it will join auto check-in, before saving. See [Account Management](./account-management.md).
+  - Auto Check-in: Fixed `Quick Check-in` from an account menu being skipped when global auto check-in is disabled. Manual per-account check-ins now run independently from the background schedule switch. See [Auto Check-in](./auto-checkin.md).
+  - Auto Check-in: Improved Turnstile handling for New API access-token accounts. The assisted flow now tries an incognito temporary window first and falls back to a normal temporary window when needed, reducing failures caused by mixed login states across multiple accounts.
+
+**Location Hints:**
+- Add-account check-in settings: Use auto-detect while adding an account under "Settings → Account Management".
+- `Quick Check-in` and Turnstile results: Check "Settings → Auto Check-in" or the account action menu.
+
+## 3.41.0
+- **New Features:**
+  - AIHubMix: `AIHubMix` accounts can now view available models and prices in Model List, with prices shown from the site's returned per-1M-token rates. When the account-specific model scope cannot be confirmed, a catalog-scope notice is shown so you do not mistake every catalog model as available to the account. See [Model List](./model-list.md).
+  - Balance History: Added an optional, off-by-default "Estimated Today's Income" feature. The popup and Balance History can now show site-reported income separately from income estimated from balance changes. See [Balance History](./balance-history.md).
+  - Account Management: The add/edit account form now includes an **`Exclude from Today's Income`** switch. Specific accounts can be excluded from today's income totals in the popup, account list, and shared overview without affecting refresh, check-in, or account display. See [Account Management](./account-management.md).
+- **Experience Optimizations:**
+  - Add Account: Improved the first-step input experience. Authentication method and site URL now adapt to the available width: narrow screens choose the authentication method first and then fill in the site URL, while wider screens keep them side by side, making the add-account flow less cramped.
+  - Auto Check-in: When a result fails because Turnstile, PoW, or another web verification step is required, the results table now suggests opening the site and completing verification before retrying, reducing confusion from raw error messages. See [Auto Check-in](./auto-checkin.md).
+- **Bug Fixes:**
+  - WebDAV: Fixed an issue where deleted accounts or bookmarks could reappear from an older backup after merged sync. Deletion records now participate in later sync merges. See [WebDAV Backup and Auto Sync](./webdav-sync.md).
+
+**Location Hints:**
+- AIHubMix Model List: Open "Settings → Model List" and select an `AIHubMix` account as the data source.
+- Estimated Today's Income: Enable it under "Settings → Basic Settings → Balance History", then view it in the popup and "Settings → Balance History".
+- `Exclude from Today's Income`: Available in the balance statistics section of the add/edit account dialog under "Settings → Account Management".
+- Auto Check-in Verification Hint: View it in failed account rows in the Auto Check-in execution results list.
+- WebDAV Sync: Use it from `WebDAV Settings` and sync actions under "Settings → Import / Export".
+
+## 3.40.0
+::: warning Site Announcement Auto Polling Is Off by Default
+Starting in this version, background auto polling for Site Announcements is opt-in: the extension will not proactively visit sites linked to your saved accounts on a schedule unless you explicitly enable it. Existing users will also be migrated to the disabled state after upgrading. You can still click **`Check Now`** manually on the Site Announcements page. To keep scheduled background polling, re-enable it under "Settings → General → Site Announcements" and adjust the polling interval as needed.
+:::
+
+- **New Features:**
+  - Site Announcements: Added a custom background polling interval from `15` to `1440` minutes, so you can control how often site announcements are checked. See [Site Announcements](./site-announcements.md).
+  - Settings Shortcuts: Added title-adjacent settings buttons to standalone pages such as Account Management, Auto Check-in, Balance History, Self-Hosted Site Channels, Model Sync, Site Announcements, and Usage Analytics, so you can jump directly to the related setting.
+- **Experience Optimizations:**
+  - Site Announcements: The site filter is now searchable and sorted by announcement count, with counts shown in the list, making the right site easier to find when many accounts are configured.
+  - Site Announcements: Page descriptions, empty states, and title actions now point directly to automatic polling settings, making the next step clearer when polling is off.
+  - Self-Hosted Site Management: Backend configuration is now passed by site type, reducing the risk of using the wrong configuration when switching between self-hosted backends, and sensitive configuration is better protected in diagnostics.
+- **Bug Fixes:**
+  - Site Announcements: Fixed polling cooldown alignment after browser alarm restoration, so background checks follow the configured interval more accurately.
+  - Site Announcements: **`Check Now`** now respects the current filter scope and is disabled while data is loading or when filters have no results, avoiding unnecessary checks for unrelated sites.
+  - Site Announcements: Fixed announcement titles with inline HTML being truncated or displayed incorrectly.
+  - Settings Search: Corrected the Usage Sync interval search target so search results jump to the actual sync interval setting.
+
+**Location Hints:**
+- Site Announcements: Open "Settings → Site Announcements" to view, manually check, and filter announcements.
+- Site Announcement Auto Polling: Open "Settings → General → Site Announcements" to enable or disable polling and set the interval.
+- Page Settings Shortcuts: Use the gear button next to titles on supported standalone pages.
+- Usage Sync Interval: Search for "Usage sync interval" in settings search, or open "Settings → Usage Analytics".
+
+## 3.39.0
+- **New Features:**
+  - Site Support: Added `v-api` site type support. Accounts can now be detected and managed according to this site's compatibility rules. See [Supported Sites](./supported-sites.md).
+  - Site Feedback: Added a "Site Support Request" flow. When auto-detection fails, you can submit feedback with the site URL and error details, and specify the capabilities you want supported, such as balance, keys, models, check-in, or redemption.
+  - Interface Language: Added Vietnamese UI support. You can now select `Tiếng Việt` in the language switcher.
+  - `Claude Code Hub`: Supports searching provider lists and revealing the real `Key`, making provider management and import-status troubleshooting more complete. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+- **Experience Optimizations:**
+  - `API Credential Library`: Unified UI wording such as "Save API Key" and "API Credential Library", making it clearer that this area is for saving `Base URL + API Key` combinations for copying, verification, model lookup, and export.
+  - Settings Navigation: Settings pages are now grouped by General, API, Automation, Insights, Site Management, and System, with adjusted entry order in the settings page and popup so common pages are easier to locate.
+  - Settings Page: Improved the layout of controls such as language, theme, currency, default tab, and task notifications on small screens.
+  - Key Management: Improved token card layout on narrow mobile screens, making key information easier to read and copy.
+- **Bug Fixes:**
+  - Hosted Sites: Improved duplicate channel checks and key matching accuracy, reducing false matches when real `Key` values are hidden or there are many candidate channels.
+  - `sk-` Prefix: Copying, display, and matching now normalize optional `sk-` prefixes only for site types that support that semantics. Other sites keep their original key format, reducing false matches caused by format differences.
+
+**Location Hints:**
+- `v-api` Accounts: Add or auto-detect accounts under "Settings → Account Management".
+- Site Support Feedback: Submit it from the auto-detection failure prompt or the top feedback menu.
+- Vietnamese: Select `VI / Tiếng Việt` from the language switcher on any page.
+- `API Credential Library`: Use it from the extension popup or "Settings → API Credential Library".
+- `Claude Code Hub`: Configure and manage it under "Settings → Self-Hosted Site Management".
+
+## 3.38.0
+- **New Features:**
+  - AIHubMix: Added `AIHubMix` site support. You can detect and manage AIHubMix accounts, with support for one-time key display, account URL normalization, and the correct sign-in entry. See [Supported Sites](./supported-sites.md).
+  - Account Management: Added a foreground token confirmation flow after saving an account. After saving, you can continue creating an API Token, confirming a one-time key, selecting groups, and configuring hosted-site setup, reducing unclear outcomes when background auto-configuration fails.
+  - Site Announcements: Added a site announcement center with background polling for new announcements, notification reminders, manual checks, mark-as-read actions, and per-site announcement viewing. See [Site Announcements](./site-announcements.md).
+  - Task Notifications: Added Telegram, Webhook, Feishu, WeCom, DingTalk, and ntfy notification channels. You can configure different delivery methods for auto check-in, sync, and other tasks, and send test notifications. See [Task Notifications](./task-notifications.md).
+  - Webhook Notifications: Webhook URLs now support template variables such as title, message, task, status, and counts, making it easier to integrate services like Bark that rely on URL parameters.
+  - Product Experience Analytics: Added privacy-friendly product analytics foundations to help understand usage of core features and improve future experiences.
+- **Experience Optimizations:**
+  - Notification Settings: Task notification settings are now grouped under a dedicated entry, with clearer setup guidance, test feedback, and error messages for each channel.
+  - WebDAV: Improved status messages for manual upload, import, sync, and settings save actions, making results more compact and easier to understand.
+  - WebDAV: Added clearer draft-save guidance, reducing confusion about whether unsaved configuration has taken effect.
+  - Add/Edit Account: Auto-detection actions remain available even when the manual form is currently invalid, making it easier to switch to the current login state to complete account details.
+- **Bug Fixes:**
+  - Auto Detection: Fixed request context handling in incognito and current-tab scenarios, improving auto-detection stability.
+  - Content Page: The API check overlay no longer triggers page shortcuts, reducing accidental actions on the target page.
+  - WebDAV: Fixed error handling when reading an empty backup before upload.
+  - WebDAV: Fixed an issue where manual upload, import, and similar actions could stop working after clicking "Sync Now".
+
+**Location Hints:**
+- AIHubMix Accounts: Add or auto-detect accounts under "Settings → Account Management".
+- AIHubMix One-Time Key: After saving an AIHubMix account, follow the dialog to create, view, and copy the key.
+- Site Announcements: View them under "Settings → Site Announcements", or receive new announcement reminders through background notifications.
+- Task Notifications: Configure Browser, Telegram, Webhook, Feishu, WeCom, DingTalk, and ntfy channels under "Settings → General → Notifications".
+- Webhook URL Templates: Fill in and test them in the Webhook notification channel settings.
+- WebDAV Sync: In `WebDAV Settings` and related manual actions under "Settings → Import/Export".
+
+## 3.37.0
+- **New Features:**
+  - Settings Page: Added global settings search. You can search pages, settings tabs, and individual settings from the top search box or with `Ctrl+K` / `Cmd+K`; recently visited items are also remembered so configuration is easier to find.
+  - Notifications: Added completion notifications for background scheduled tasks. You can control Auto Check-in, `WebDAV` Auto Sync, Model Sync, Usage History Sync, and Balance History Capture separately, and send a test notification to confirm the permission is working.
+  - Model Sync: Channel filter rules now support verification probe-based matching, so models can be synced to channels based on capabilities such as text generation, tool calling, web search, and structured output.
+  - Bookmarks: When adding a bookmark, you can fill in the current page title and URL with one click, making it easier to save site consoles, docs, or admin pages.
+- **Experience Optimizations:**
+  - Account Management: The add/edit account form is now split into sections for site information, account authentication, tags and notes, check-in configuration, and balance statistics. On small screens, sections can be collapsed to make long forms easier to complete.
+  - Settings Navigation: On desktop, extra settings tabs are automatically collected into a "More" menu, reducing horizontal scrolling and making tabs easier to find.
+  - Settings Search: On mobile, the search entry expands after scrolling, making it easier to find settings on small screens.
+  - Model Sync: Channel filter rules can now be reordered, making it easier to control matching priority when multiple rules are combined.
+  - Multi-select Controls: Multi-select chips support copying text, and large option sets collapse into a bulk action entry to avoid overcrowding rule-editing and similar screens.
+- **Bug Fixes:**
+  - Channel Management: After starting Model Sync from the channel list, successfully synced channels now immediately refresh their model lists, so you no longer need to manually refresh the page to see the latest results.
+  - Auto Detection: Improved site type detection based on login-state error messages and made fallback from background detection to direct detection more stable, reducing cases where compatible sites are incorrectly detected as unknown.
+
+**Location Hints:**
+- Settings Search: In the top search box on the settings page, or use `Ctrl+K` / `Cmd+K` to open it.
+- Task Notifications: In "Settings → General → Notifications" and "Settings → Permission Management".
+- Model Sync Filter Rules: In the global channel filter rules under "Settings → Self-Hosted Site Management → Model Sync Settings", and in per-channel filter rules under "Settings → Channel Management".
+- Bookmark Current Page Fill: In the add bookmark dialog under "Settings → Site Bookmarks".
+- Account Form Sections: In the add or edit account dialog under "Settings → Account Management".
+
+## 3.36.0
+- **New Features:**
+  - Account Management: Added a "One-Click Refresh" function for disabled accounts, making it easier to quickly check if accounts have become available again.
+  - Key Management: Supports filtering and group selection for multiple accounts, organizing keys more efficiently.
+  - Key Management: When batch exporting keys to hosted site channels, you can now directly edit the model list, reducing the need for manual modifications after export.
+  - Channel Migration: Added migration support for `AxonHub` and `Claude Code Hub` sites, simplifying cross-site synchronization.
+  - UI Optimization: Added a quick feedback entry in the header of the options page, allowing you to quickly go to GitHub to submit an Issue.
+- **Experience Optimizations:**
+  - Internationalization: Improved localized translations for details such as region tags and telemetry mode tags.
+  - UI Display: Increased the maximum display height for dialog result lists and preview lists, providing clearer viewing of long lists.
+- **Bug Fixes:**
+  - UI Interaction: Fixed an issue where the indeterminate (uncertain) state of checkboxes was not correctly preserved during batch selection.
+
+**Location Hints:**
+- Disabled Account Refresh: In "Settings → Account Management", for disabled account entries.
+- Key Batch Export and Filtering: In "Settings → Key Management".
+- Feedback Entry: In the Header area at the top of the options page.
+
+## 3.35.0
+- **New Features:**
+  - Hosted Sites: Added `AxonHub` integration settings. You can configure `Base URL`, administrator email, and password within the extension. After verifying the connection, you can directly read, create, edit, and delete AxonHub channels, and import existing accounts/keys as AxonHub channels, and use them as sources or targets in channel migration.
+  - Hosted Sites: Added `Claude Code Hub` integration settings. You can configure `Base URL` and administrator token to directly manage the `Provider` list. It also supports importing existing accounts/keys as Claude Code Hub providers, reducing duplicate entries across multiple backends.
+- **Bug Fixes:**
+  - Import/Export: After importing a backup containing preference settings, the settings state will now be immediately refreshed, and the interface language from the backup will be applied. This reduces instances where old settings or languages are still displayed after import, requiring a manual page reload.
+  - Account Management: The descriptions and actual behavior of the `Prioritize Current Login Account` and `Match Open Tabs` sorting/matching rules have been aligned. When you search for an account using a full URL, tab title, or current page related content, relevant accounts are more likely to be correctly identified and ranked higher.
+
+::: tip Scope of Use
+`Claude Code Hub` currently does not support `Channel Migration`, `Model Sync`, `Model Redirect`, or full key viewing; `AxonHub` currently does not support `Model Sync` and `Model Redirect` and other New API exclusive operations.
+:::
+
+**Location Hints:**
+- `AxonHub` / `Claude Code Hub` Integration Settings and Verification: In "Settings → Basic Settings → Self-Hosted Site Management".
+- `AxonHub` Channel Management, `Claude Code Hub` Provider Management, and Import to Target Backend: In "Settings → Channel Management" and related import processes.
+- Preference Backup Import: In "Settings → Import/Export".
+- Account Sorting Priority and Account Search: In "Settings → Account Management".
+
 ## 3.34.0
 - **New Features:**
   - Model List: Added price comparison capabilities, allowing filtering by billing method, sorting by price, and in the "All Accounts" view, supporting "cheapest first for the same model" to find low-priced models more directly with multiple accounts.
@@ -255,7 +693,7 @@ This page records major updates for general users (feature changes / experience 
   - Key Management: Added an `All Accounts` view, aggregating keys by account group for easier cross-account searching and copying.
   - Model Redirect: Added a `Clear Model Redirect Mappings` batch operation, allowing you to select by channel and confirm a quick reset of `model_mapping` (irreversible).
 - **Experience Optimizations:**
-  - New API Channel Management: URLs in the channel list are now clickable and search experience has been optimized.
+  - Self-Hosted Site Management: URLs in the channel list are now clickable and search experience has been optimized.
 - **Bug Fixes:**
   - Channel Management: Fixed an issue with inaccurate prompt copy for `Priority` in the channel dialog.
   - Model Redirect: Automatic mapping generation now includes a "version guard" to prevent cross-version mismatches.
@@ -418,7 +856,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 
 ## 3.11.0
 - **New Features:**
-  - New API Channel Management: Added "Duplicate Channel" reminder. When a duplicate/similar channel is detected, a warning dialog will pop up, allowing you to choose to continue creation or cancel (no longer blocking creation with error toasts).
+  - Self-Hosted Site Management: Added "Duplicate Channel" reminder. When a duplicate/similar channel is detected, a warning dialog will pop up, allowing you to choose to continue creation or cancel (no longer blocking creation with error toasts).
 - **Bug Fixes:**
   - Account Management: Fixed layout overflow issues caused by excessively long text in site names, now automatically truncated.
 
@@ -582,26 +1020,26 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Added validation information for refresh interval settings.
   - Fixed development dependency issues.
 
-## 3.32.0
+## 2.32.0
 - **New Features:**
   - Model redirects are now smarter, supporting version numbers represented by hyphens and dots.
   - Added the ability to redeem directly through the right-click menu after selecting text.
   - Automatic check-in is enabled by default, and the check-in time window has been extended.
 
-## 3.31.0
+## 2.31.0
 - **New Features:**
   - Enhanced Cookie isolation for temporary windows, improving security.
   - Check-in operations can now be quickly performed within the popup.
   - The Redemption Assistant now includes a URL whitelist feature, giving you better control over which websites can use it.
 
-## 3.30.0
+## 2.30.0
 - **New Features:**
   - Added check-in support for Wong sites.
   - Added check-in support for AnyRouter sites.
   - Optimized detection capabilities for Cloudflare challenge pages.
   - WebDAV backups now support encryption, and recovery includes a decryption retry popup. Your WebDAV configuration will be preserved.
 
-## 3.29.0
+## 2.29.0
 - **New Features:**
   - Integrated Claude Code Router.
 - **Bug Fixes:**
@@ -609,7 +1047,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Optimized the centering of blank status content in Firefox.
   - Migrated the Switch component to a custom implementation for improved compatibility and stability.
 
-## 3.28.0
+## 2.28.0
 - **New Features:**
   - Introduced the "Hosted Site" service, laying the groundwork for future site integrations.
   - Added support for Veloera sites.
@@ -617,7 +1055,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Optimized translation text and removed redundant fallback strings.
 
-## 3.27.0
+## 2.27.0
 - **New Features:**
   - Account health status now includes more detailed codes to help you understand specific issues.
   - Temporary window bypass feature now includes a health status indicator.
@@ -629,7 +1067,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Performance Optimizations:**
   - Improved the performance of the sorting function.
 
-## 3.26.0
+## 2.26.0
 - **New Features:**
   - Added a model pricing cache service to speed up data loading.
   - Added an account overview bar at the top of the model list for quick viewing.
@@ -639,7 +1077,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Added a customizable loading animation (spinner) property to the button component.
 
-## 3.25.0
+## 2.25.0
 - **New Features:**
   - Added a new user guide card when the account list is empty.
   - When the pin/manual sort feature is disabled, related UI elements will be automatically hidden.
@@ -647,7 +1085,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Fixed an issue where the tag array could be empty when updating an account.
 
-## 3.24.0
+## 2.24.0
 - **New Features:**
   - Updated application description and about page content.
   - Extension name now includes a subtitle.
@@ -656,18 +1094,18 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Removed extraneous periods from the end of JSON strings.
 
-## 3.23.0
+## 2.23.0
 - **New Features:**
   - Enhanced account tagging functionality.
   - Temporary window bypass feature now supports more intelligent judgment based on error codes.
 
-## 3.22.0
+## 2.22.0
 - **New Features:**
   - Account management now includes a tagging feature for classifying accounts.
   - The Redemption Assistant popup UI now supports lazy loading and fixes issues that could cause website style conflicts.
   - Added global channel filters and JSON editing mode.
 
-## 3.21.0
+## 2.21.0
 - **New Features:**
   - Integrated CLIProxyAPI and related settings.
 - **Bug Fixes:**
@@ -675,7 +1113,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Simplified and fixed the temporary window capture logic.
   - Restored parsing of search parameters in URL query strings.
 
-## 3.20.0
+## 2.20.0
 - **New Features:**
   - Added permission guidance upon first installation for easier understanding of required permissions.
   - Cookie interceptor headers can now be controlled via optional permissions, improving cross-browser compatibility.
@@ -684,7 +1122,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Redemption amount conversion coefficients now use constants for improved accuracy.
   - Limited the Cookie interceptor to use only in Firefox browsers.
 
-## 3.19.0
+## 2.19.0
 - **New Features:**
   - Added loading status and prompts during the redemption process.
   - Removed clipboard reading functionality from the Redemption Assistant.
@@ -694,7 +1132,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Resolved intermittent "Unable to establish connection" errors.
   - Prevented race conditions during the destruction of temporary window pools.
 
-## 3.18.0
+## 2.18.0
 - **New Features:**
   - Added protection settings for the temporary window bypass feature.
   - Added documentation for the Redemption Assistant feature.
@@ -704,17 +1142,17 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Fixed path issues with Tailwind CSS files.
 
-## 3.17.0
+## 2.17.0
 - **New Features:**
   - Added an automatic pop-up prompt for one-click redemption.
   - Unified the data format for import/export and WebDAV backups using a V2 versioning scheme for improved compatibility and stability.
 
-## 3.16.0
+## 2.16.0
 - **New Features:**
   - Added a warning prompt when creating accounts on Firefox desktop.
   - API model synchronization now supports a channel filtering system.
 
-## 3.15.0
+## 2.15.0
 - **New Features:**
   - The MultiSelect component now supports parsing comma-separated strings.
 - **Bug Fixes:**
@@ -722,7 +1160,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Performance Optimizations:**
   - Optimized upstream model caching logic.
 
-## 3.14.0
+## 2.14.0
 - **New Features:**
   - Site metadata is now automatically detected during refresh.
   - When automatic check-in fails, retry and manual check-in options are now available.
@@ -731,65 +1169,65 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Fixed the default behavior issue with the `autoCheckInEnabled` flag.
 
-## 3.13.0
+## 2.13.0
 - **New Features:**
-  - Added "New API Channel Management" functionality.
+  - Added "Self-Hosted Site Management" functionality.
   - Added a "Warning" button style.
   - Introduced Radix UI components and Tanstack Table for improved interface aesthetics and functionality.
 - **Bug Fixes:**
   - Fixed incorrect display and sorting of model counts in the channel table.
 
-## 3.12.1
+## 2.12.1
 - **Bug Fixes:**
   - Fixed unnecessary reloading of channels when manually selecting tabs.
   - The "New API Model Sync" option is now hidden in the sidebar when the configuration is invalid.
 
-## 3.12.0
+## 2.12.0
 - **New Features:**
   - "New API Model Sync" now includes an allowlist filtering feature for models.
   - The sidebar now supports collapsing/expanding with smooth animations.
 
-## 3.11.0
+## 2.11.0
 - **New Features:**
   - Account management functionality has been enhanced with search and navigation optimizations.
   - Added CC Switch export functionality.
 - **Bug Fixes:**
   - Fixed logical errors in automatic check-in status.
 
-## 3.10.0
+## 2.10.0
 - **New Features:**
   - Browser messages now support exponential backoff retry mechanisms for improved communication stability.
   - Model synchronization now includes a manual execution tab and supports channel selection.
 - **Bug Fixes:**
   - Ensured that missing fields in user preferences are populated with default values.
 
-## 3.9.0
+## 2.9.0
 - **New Features:**
   - Added Cloudflare challenge detection and automatic temporary window bypass attempts when encountering protection.
   - Introduced a temporary context management system.
 
-## 3.8.1
+## 2.8.1
 - **Bug Fixes:**
   - Model names now support date suffix patterns like "month-day" and "month_day".
   - Optimized the positioning and accessibility of dropdown menus in multi-select components.
 
-## 3.8.0
+## 2.8.0
 - **New Features:**
   - Added fault tolerance mechanisms for partial account updates.
   - Account information can now be saved even if data retrieval fails during manual account addition.
   - The settings page now includes a "Settings Section" feature, allowing settings to be reset by section.
 
-## 3.7.1
+## 2.7.1
 - **Bug Fixes:**
   - Fixed an issue where redirected models were not appearing in the model list during API sync.
 
-## 3.7.0
+## 2.7.0
 - **New Features:**
   - The account dialog can now dynamically update site data for new accounts.
 - **Bug Fixes:**
   - Hidden the password visibility button in Edge/IE browsers.
 
-## 3.6.1
+## 2.6.1
 - **Important Update (Internal):**
   - User preferences like `newApiModelSync`, `autoCheckin`, and `modelRedirect` are now mandatory to ensure completeness of default configurations.
 - **Bug Fixes:**
@@ -798,7 +1236,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Corrected the sorting logic for check-in requirements.
   - Prevented unnecessary WebDAV configuration resets during configuration migration.
 
-## 3.6.0
+## 2.6.0
 - **New Features:**
   - The user interface for "New API Channel Import" has been optimized, supporting key switching and batch model selection.
   - Model mapping now uses a multi-stage standardization process for improved accuracy.
@@ -806,18 +1244,18 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Model name standardization is now consistent with the Veloera backend and preserves hyphens.
   - Resolved browser storage quota issues and improved model matching.
 
-## 3.5.0
+## 2.5.0
 - **New Features:**
   - Added support for the Neo-API site type.
 - **Bug Fixes:**
   - Fixed Base64 encoding issues when generating CherryStudio URLs.
   - Removed redundant account fetching and token verification from the channel dialog for improved efficiency.
 
-## 3.4.1
+## 2.4.1
 - **Bug Fixes:**
   - Ensured that the settings page always opens in a new tab.
 
-## 3.4.0
+## 2.4.0
 - **New Features:**
   - The auto-import feature now integrates the "New API Channel" dialog.
   - Added basic support for RIX_API.
@@ -826,20 +1264,20 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Optimized the retry mechanism and added user feedback.
   - Optimized the performance of the multi-select component with a large number of selections.
 
-## 3.3.0
+## 2.3.0
 - **New Features:**
   - Added account pinning and unpinning functionality, with pinned accounts prioritized in sorting.
 - **Bug Fixes:**
   - Reduced the size of the pin icon and fixed configuration migration version issues.
   - Optimized sorting configuration by increasing the priority of the current site condition.
 
-## 3.2.1
+## 2.2.1
 - **Bug Fixes:**
   - Removed the `isDetected` check for the auto-configuration button.
   - Ensured that the account detection correctly refreshes when displayed data changes.
   - Fixed an issue where Access Tokens were no longer required for Cookie authentication types.
 
-## 3.2.0
+## 2.2.0
 - **New Features:**
   - The Automatic Check-in feature now includes a results/history interface and optimized default settings and user experience.
   - Implemented daily site automatic check-in, supporting time window settings and status display.
@@ -847,14 +1285,14 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Fixed case sensitivity issues in automatic check-in status detection.
   - Handled edge cases in check-in time window calculations.
 
-## 3.1.0
+## 2.1.0
 - **New Features:**
   - The account list now includes username search and highlighting functionality.
 - **Bug Fixes:**
   - Added configuration validation warnings when API settings are missing.
   - "New API" functionality now includes configuration validation assistance and internationalized error messages.
 
-## 3.0.0
+## 2.0.0
 - **New Features:**
   - The "New API Model Sync" filter bar now includes execution statistics.
   - Each row in the results table now includes a sync operation button.

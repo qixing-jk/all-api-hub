@@ -11,7 +11,7 @@
   - Automatically calculates the most suitable correspondences based on the `models` list reported by channels and a set of "standard model lists."
   - Supports incremental merging by channel, preserving your manually configured mappings.
 - **Use in Conjunction with Model Synchronization and Channel Management**
-  - Typically used with **New API Model List Synchronization** and **New API Channel Management**:
+  - Typically used with **Managed Site Model Synchronization** and **Self-Hosted Site Management**:
     - Model Synchronization is responsible for pulling the upstream available model list into New API.
     - Model Redirect is responsible for aligning these models to a set of "standard models."
 
@@ -105,6 +105,6 @@
 
 ## Related Documentation
 
-- [New API Model List Synchronization](./new-api-model-sync.md)
-- [New API Channel Management](./new-api-channel-management.md)
+- [Managed Site Model Synchronization](./managed-site-model-sync.md)
+- [Self-Hosted Site Management](./self-hosted-site-management.md)
 - [Quick Export Site Configuration](./quick-export.md)

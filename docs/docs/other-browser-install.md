@@ -1,13 +1,15 @@
-# QQ / 360 等浏览器安装指南
+# 其他浏览器安装指南
 
 本文档介绍如何在 QQ 浏览器、360 安全浏览器、360 极速浏览器、猎豹浏览器、Brave、Vivaldi、Opera 等浏览器中安装 All API Hub 扩展。
 
-这些浏览器大多基于 Chromium 内核，因此通常可以使用 GitHub Release 中的 Chrome 版本压缩包，通过“加载已解压的扩展程序”完成安装。
+这些浏览器大多基于 Chromium 内核，但可用安装方式并不完全一样。能从浏览器商店或 Chrome Web Store 安装时，优先使用商店版本；只有商店入口不可用、组织策略限制，或需要临时验证 GitHub 版本时，再使用 GitHub Release 中的 Chrome 版本压缩包手动加载。
 
 ## 先看区别
 
 - Chrome / Edge / Firefox 用户：优先使用对应商店版本，更新更省心。
-- QQ 浏览器、360 系浏览器、猎豹浏览器、Brave、Vivaldi、Opera 等用户：通常没有单独商店版本，建议从 GitHub Release 下载 Chrome 版本压缩包，然后通过“加载已解压的扩展程序”安装。
+- Brave / Vivaldi 用户：优先尝试从 Chrome Web Store 安装；这些浏览器官方说明支持 Chrome Web Store 扩展。
+- Opera 用户：Opera 有自己的 Opera Add-ons 商店，但 All API Hub 当前没有单独上架到 Opera Add-ons；可优先尝试 Chrome Web Store，如果你的 Opera 版本或策略不允许，再使用 GitHub 手动加载。
+- QQ 浏览器、360 系浏览器、猎豹浏览器等用户：如果浏览器自带扩展中心没有 All API Hub，通常使用 GitHub Chrome 压缩包，通过“加载已解压的扩展程序”安装。
 - Safari 用户：安装方式不同，需要通过 Xcode 或 Safari 专用包处理，请查看 [Safari 扩展安装指南](./safari-install.md)。
 - 移动端浏览器：不同浏览器对扩展能力支持差异较大，移动端说明请查看 [常见问题中的移动端使用](./faq.md#mobile-browser-support)。
 
@@ -17,18 +19,26 @@
 
 ## 适用浏览器
 
-| 浏览器 | 扩展管理页入口 | 安装提示 |
-|--------|----------------|----------|
-| QQ 浏览器 | `qqbrowser://extensions`，不可用时尝试 `chrome://extensions/` | 开启开发者模式后加载解压目录；入口可能在扩展管理或应用中心里，详见 [QQ 浏览器安装](#qq-browser)。 |
-| 360 安全浏览器 / 360 极速浏览器 | `chrome://extensions/`，或菜单中的扩展 / 插件管理 | 先确认目标网页使用极速模式，再加载解压目录；安全策略可能会拦截直接拖拽安装，详见 [360 系浏览器安装](#browser-360)。 |
-| 猎豹浏览器 | `liebao://extensions/` | 开启开发者模式后加载解压目录；如果弹出主页 / 标签页变更提示，优先保持当前设置，详见 [猎豹浏览器安装](#liebao-browser)。 |
-| Brave / Vivaldi / Opera | `brave://extensions/`、`vivaldi://extensions/`、`opera://extensions/` | 这些浏览器通常保留开发者模式和加载已解压入口，可按 [其他桌面浏览器通用流程](#desktop-browser-common-flow) 安装。 |
-| 星愿 / 百分 / Cent Browser 等 | 优先尝试 `chrome://extensions/` | 如果扩展管理页能开启开发者模式并加载已解压目录，通常可以尝试；否则建议换用 Chrome / Edge / Firefox。 |
-| 移动端 Kiwi / Edge 等 | 以浏览器实际扩展入口为准 | 移动端限制更多，支持情况随浏览器版本变化；如果找不到外部扩展安装入口，建议改用桌面浏览器。 |
+| 浏览器 | 优先安装方式 | 备选安装方式 | 更新方式 |
+|--------|--------------|--------------|----------|
+| Brave | [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | GitHub Chrome 压缩包，进入 `brave://extensions/` 手动加载 | 商店版自动更新；手动版需重新下载 |
+| Vivaldi | [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | GitHub Chrome 压缩包，进入 `vivaldi://extensions/` 手动加载 | 商店版自动更新；手动版需重新下载 |
+| Opera | [Chrome Web Store](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo)；Opera Add-ons 当前没有本项目上架入口 | GitHub Chrome 压缩包，进入 `opera://extensions/` 手动加载 | Chrome Web Store 版本通常由浏览器 / 商店机制更新；手动版需重新下载 |
+| QQ 浏览器 | 浏览器内置扩展中心若能找到本项目则优先使用 | `qqbrowser://extensions`，不可用时尝试 `chrome://extensions/`，开启开发者模式后加载解压目录 | 取决于安装来源；手动版需重新下载 |
+| 360 安全浏览器 / 360 极速浏览器 | 浏览器内置扩展 / 应用中心若能找到本项目则优先使用 | `chrome://extensions/`，或菜单中的扩展 / 插件管理，开启开发者模式后加载解压目录 | 取决于安装来源；手动版需重新下载 |
+| 猎豹浏览器 | 浏览器内置扩展中心若能找到本项目则优先使用 | `liebao://extensions/`，开启开发者模式后加载解压目录 | 取决于安装来源；手动版需重新下载 |
+| 星愿 / 百分 / Cent Browser 等 | 如果浏览器支持 Chrome Web Store，可先尝试商店安装 | 优先尝试 `chrome://extensions/` 手动加载解压目录 | 取决于安装来源；手动版需重新下载 |
+| 移动端 Kiwi / Edge 等 | 以浏览器实际扩展入口为准 | 参考 [移动端 FAQ](./faq.md#mobile-browser-support) | 取决于浏览器支持情况 |
 
-如果某个浏览器的扩展管理页没有“开发者模式”或“加载已解压的扩展程序”，说明当前版本可能不支持手动安装外部扩展。此时建议换用 Chrome、Edge、Firefox，或安装对应浏览器的完整版 / 桌面版后再试。
+如果某个浏览器既不能使用商店安装，也没有“开发者模式”或“加载已解压的扩展程序”，说明当前版本可能不支持安装外部扩展。此时建议换用 Chrome、Edge、Firefox，或安装对应浏览器的完整版 / 桌面版后再试。
 
-## 准备安装包
+::: tip 商店入口和本项目上架状态不是一回事
+某个浏览器有自己的扩展商店，不代表 All API Hub 已经在该商店上架。例如 Opera 有 Opera Add-ons，但当前请优先使用 Chrome Web Store 或 GitHub 手动包。
+:::
+
+## 准备 GitHub 手动安装包
+
+如果你可以直接从 Chrome Web Store、Edge Add-ons 或 Firefox Add-ons 安装，不需要执行本节步骤。下面只适用于需要手动加载的浏览器。
 
 1. 打开 [最新版本 Release](https://github.com/qixing-jk/all-api-hub/releases/latest)。
 2. 在附件中下载 Chrome 版本压缩包：
@@ -52,9 +62,9 @@ all-api-hub-3.32.0-chrome.zip
 
 <a id="desktop-browser-common-flow"></a>
 
-## 其他桌面浏览器通用流程
+## 其他桌面浏览器手动加载流程
 
-适用于大多数支持 Chrome 扩展的桌面浏览器。
+适用于无法使用商店版本、但仍支持加载 Chrome 扩展目录的桌面浏览器。
 
 1. 打开浏览器扩展管理页。
    - 优先尝试在地址栏输入 `chrome://extensions/`
@@ -163,7 +173,13 @@ liebao://extensions/
 
 ## Brave / Vivaldi / Opera 安装
 
-这些浏览器通常保留了 Chromium 的扩展管理页，只是内部地址不同：
+这些浏览器通常可以使用 Chrome Web Store。建议先在对应浏览器中打开 [All API Hub 的 Chrome Web Store 页面](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) 并尝试安装。
+
+- Brave 官方支持从 Chrome Web Store 安装扩展。
+- Vivaldi 官方支持安装 Chrome Web Store 扩展；如果按钮没有出现，请检查 Vivaldi 的 Google Extensions / Web Store 相关设置。
+- Opera 有自己的 Opera Add-ons，也支持安装 Chrome 扩展；All API Hub 当前没有单独上架 Opera Add-ons，因此优先使用 Chrome Web Store。
+
+如果商店安装失败，再使用下面的扩展管理页手动加载 GitHub Chrome 压缩包：
 
 | 浏览器 | 扩展管理页 |
 |--------|------------|
@@ -172,11 +188,13 @@ liebao://extensions/
 | Opera | `opera://extensions/` |
 | 其他 Chromium 浏览器 | 优先尝试 `chrome://extensions/` |
 
-进入扩展管理页后，按 [其他桌面浏览器通用流程](#desktop-browser-common-flow) 开启开发者模式并加载解压目录即可。
+进入扩展管理页后，按 [其他桌面浏览器手动加载流程](#desktop-browser-common-flow) 开启开发者模式并加载解压目录即可。
+
+<a id="update-extension"></a>
 
 ## 更新扩展
 
-手动加载版本不会自动更新。更新时请按下面流程处理：
+手动加载版本不会自动更新。关于商店版、GitHub Stable 和 Nightly 的区别，请先查看 [安装渠道与更新说明](./extension-update-install.md)。手动加载版本更新时请按下面流程处理：
 
 1. 打开 [最新版本 Release](https://github.com/qixing-jk/all-api-hub/releases/latest)。
 2. 下载新的 `all-api-hub-<version>-chrome.zip`。
@@ -200,7 +218,7 @@ liebao://extensions/
 
 ### 应该下载 Chrome 包还是 Firefox / Safari 包？
 
-QQ 浏览器、360 系浏览器、猎豹浏览器、Brave、Vivaldi、Opera 等浏览器应下载：
+需要手动加载的 Chromium 浏览器应下载：
 
 ```text
 all-api-hub-<version>-chrome.zip
@@ -229,14 +247,17 @@ all-api-hub-<version>-chrome.zip
 
 - [开始使用](./get-started.md)
 - [常见问题](./faq.md)
+- [安装渠道与更新说明](./extension-update-install.md)
 - [权限管理（可选权限）](./permissions.md)
 - [Safari 扩展安装指南](./safari-install.md)
 
 ## 参考资源
 
 - [Microsoft Edge 官方文档：本地加载扩展（Chrome 扩展通用流程参考）](https://learn.microsoft.com/microsoft-edge/extensions-chromium/getting-started/extension-sideloading)
+- [Brave 帮助中心：从 Chrome Web Store 安装扩展](https://support.brave.com/hc/en-us/articles/360017909112-How-can-I-add-extensions-to-Brave-)
+- [Vivaldi 帮助中心：在 Vivaldi 中使用扩展](https://help.vivaldi.com/desktop/appearance-customization/extensions)
+- [Opera 官方博客：在 Opera 中使用 Chrome 扩展](https://blogs.opera.com/tips-and-tricks/2021/10/using-addons-from-chrome-in-opera)
 - [360 安全浏览器帮助中心：扩展应用](https://browser.360.cn/se/help/extension.html)
-- [zTab 文档：猎豹浏览器扩展安装示例](https://docs.ztab.ink/browser-extension/liebao.html)
 
 ---
 

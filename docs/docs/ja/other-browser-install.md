@@ -1,13 +1,15 @@
-# QQ / 360 等ブラウザへのインストールガイド
+# その他のブラウザへのインストールガイド
 
 この記事では、QQブラウザ、360セーフブラウザ、360エクストリームブラウザ、チーターブラウザ、Brave、Vivaldi、OperaなどのブラウザにAll API Hub拡張機能をインストールする方法を説明します。
 
-これらのブラウザの多くはChromiumベースであるため、通常はGitHub ReleaseからChrome版の圧縮ファイルをダウンロードし、「展開された拡張機能を読み込む」ことでインストールできます。
+これらのブラウザの多くは Chromium ベースですが、利用できるインストール方法は同じではありません。ブラウザストアまたは Chrome ウェブストアからインストールできる場合は、まずストア版を使ってください。ストア経路が使えない場合、組織ポリシーで制限されている場合、または一時的に GitHub 版を確認したい場合だけ、GitHub Releases の Chrome パッケージを手動読み込みします。
 
 ## まず違いを確認
 
 - Chrome / Edge / Firefoxユーザー：各ストア版を優先して使用してください。更新がより簡単です。
-- QQブラウザ、360系ブラウザ、チーターブラウザ、Brave、Vivaldi、Operaなどのユーザー：通常、個別のストア版はありません。GitHub ReleaseからChrome版の圧縮ファイルをダウンロードし、「展開された拡張機能を読み込む」でインストールすることをお勧めします。
+- Brave / Vivaldi ユーザー：まず Chrome ウェブストアからのインストールを試してください。これらのブラウザは公式に Chrome ウェブストア拡張機能をサポートしています。
+- Opera ユーザー：Opera には Opera Add-ons がありますが、All API Hub は現在 Opera Add-ons には単独掲載されていません。まず Chrome ウェブストアを試し、Opera のバージョンやポリシーで利用できない場合に GitHub 手動パッケージを使ってください。
+- QQブラウザ、360系ブラウザ、チーターブラウザなどのユーザー：ブラウザ内蔵の拡張機能センターで All API Hub が見つからない場合は、GitHub の Chrome パッケージを使い、「展開された拡張機能を読み込む」でインストールします。
 - Safariユーザー：インストール方法が異なります。XcodeまたはSafari専用パッケージで処理する必要があります。[Safari拡張機能インストールガイド](./safari-install.md)を確認してください。
 - モバイルブラウザ：ブラウザによって拡張機能のサポート状況が大きく異なります。モバイル版については、[FAQのモバイルブラウザサポート](./faq.md#mobile-browser-support)を確認してください。
 
@@ -17,18 +19,26 @@
 
 ## 対象ブラウザ
 
-| ブラウザ | 拡張機能管理ページ入口 | インストールヒント |
-|---|---|---|
-| QQブラウザ | `qqbrowser://extensions`、利用できない場合は `chrome://extensions/` を試す | 開発者モードを有効にしてから解凍ディレクトリを読み込みます。入口は拡張機能管理またはアプリセンター内にある場合があります。[QQブラウザのインストール](#qq-browser)を参照してください。 |
-| 360セーフブラウザ / 360エクストリームブラウザ | `chrome://extensions/`、またはメニュー内の拡張機能 / プラグイン管理 | まず対象ウェブページがエクストリームモードを使用していることを確認してから、解凍ディレクトリを読み込みます。セキュリティポリシーにより、直接ドラッグアンドドロップでのインストールがブロックされる場合があります。[360系ブラウザのインストール](#browser-360)を参照してください。 |
-| チーターブラウザ | `liebao://extensions/` | 開発者モードを有効にしてから解凍ディレクトリを読み込みます。ホームページ / タブの変更に関するプロンプトが表示された場合は、現在の設定を優先して保持してください。[チーターブラウザのインストール](#liebao-browser)を参照してください。 |
-| Brave / Vivaldi / Opera | `brave://extensions/`、`vivaldi://extensions/`、`opera://extensions/` | これらのブラウザは通常、開発者モードと展開された拡張機能を読み込む入口を保持しています。[その他のデスクトップブラウザの一般的な手順](#desktop-browser-common-flow)に従ってインストールできます。 |
-| 星愿 / 百分 / Cent Browser など | `chrome://extensions/` を優先して試す | 拡張機能管理ページで開発者モードを有効にし、解凍ディレクトリを読み込むことができる場合は、通常試すことができます。それ以外の場合は、Chrome / Edge / Firefoxの使用をお勧めします。 |
-| モバイル版 Kiwi / Edge など | ブラウザの実際の拡張機能入口による | モバイル版は制限が多く、サポート状況はブラウザのバージョンによって変化します。外部拡張機能のインストール入口が見つからない場合は、デスクトップブラウザの使用をお勧めします。 |
+| ブラウザ | 優先インストール方法 | 代替インストール方法 | 更新方法 |
+|---|---|---|---|
+| Brave | [Chrome ウェブストア](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | GitHub Chrome パッケージを `brave://extensions/` から手動読み込み | ストア版は自動更新。手動版は再ダウンロードが必要 |
+| Vivaldi | [Chrome ウェブストア](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | GitHub Chrome パッケージを `vivaldi://extensions/` から手動読み込み | ストア版は自動更新。手動版は再ダウンロードが必要 |
+| Opera | [Chrome ウェブストア](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo)。All API Hub は現在 Opera Add-ons には掲載されていません | GitHub Chrome パッケージを `opera://extensions/` から手動読み込み | Chrome ウェブストア版は通常、ブラウザ / ストアの仕組みで更新されます。手動版は再ダウンロードが必要 |
+| QQブラウザ | 内蔵拡張機能センターで All API Hub が見つかる場合はそちらを優先 | `qqbrowser://extensions`、利用できない場合は `chrome://extensions/` で開発者モードを有効にして解凍ディレクトリを読み込み | インストール元による。手動版は再ダウンロードが必要 |
+| 360セーフブラウザ / 360エクストリームブラウザ | 内蔵拡張機能 / アプリセンターで All API Hub が見つかる場合はそちらを優先 | `chrome://extensions/`、またはメニュー内の拡張機能 / プラグイン管理で開発者モードを有効にして解凍ディレクトリを読み込み | インストール元による。手動版は再ダウンロードが必要 |
+| チーターブラウザ | 内蔵拡張機能センターで All API Hub が見つかる場合はそちらを優先 | `liebao://extensions/` で開発者モードを有効にして解凍ディレクトリを読み込み | インストール元による。手動版は再ダウンロードが必要 |
+| 星愿 / 百分 / Cent Browser など | Chrome ウェブストアに対応している場合は、まずストアを試す | `chrome://extensions/` から手動で解凍ディレクトリを読み込み | インストール元による。手動版は再ダウンロードが必要 |
+| モバイル版 Kiwi / Edge など | ブラウザの実際の拡張機能入口による | [FAQ のモバイルブラウザサポート](./faq.md#mobile-browser-support)を参照 | ブラウザの対応状況による |
 
-ブラウザの拡張機能管理ページに「開発者モード」または「展開された拡張機能を読み込む」がない場合、現在のバージョンでは手動での外部拡張機能のインストールがサポートされていない可能性があります。この場合は、Chrome、Edge、Firefoxへの切り替え、または対応するブラウザのフルバージョン/デスクトップ版のインストールを試すことをお勧めします。
+ブラウザがストアインストールに対応しておらず、「開発者モード」または「展開された拡張機能を読み込む」もない場合、現在のバージョンでは外部拡張機能のインストールがサポートされていない可能性があります。この場合は Chrome、Edge、Firefox に切り替えるか、対応するブラウザのフルバージョン / デスクトップ版を試してください。
 
-## インストールパッケージの準備
+::: tip ストアの有無と All API Hub の掲載状況は別です
+ブラウザに独自の拡張機能ストアがあっても、All API Hub がそのストアに掲載されているとは限りません。たとえば Opera には Opera Add-ons がありますが、現在は Chrome ウェブストアまたは GitHub 手動パッケージを使ってください。
+:::
+
+## GitHub 手動インストールパッケージの準備
+
+Chrome ウェブストア、Edge Add-ons、Firefox Add-ons から直接インストールできる場合、この手順は不要です。以下は手動読み込みが必要なブラウザ向けです。
 
 1. [最新リリースバージョン](https://github.com/qixing-jk/all-api-hub/releases/latest)を開きます。
 2. 添付ファイルからChrome版の圧縮ファイルをダウンロードします：
@@ -52,9 +62,9 @@ all-api-hub-3.32.0-chrome.zip
 
 <a id="desktop-browser-common-flow"></a>
 
-## その他のデスクトップブラウザの一般的な手順
+## その他のデスクトップブラウザでの手動読み込み手順
 
-Chrome拡張機能をサポートするほとんどのデスクトップブラウザに適用されます。
+ストア版を使えないものの、Chrome 拡張機能ディレクトリの読み込みには対応しているデスクトップブラウザ向けです。
 
 1. ブラウザの拡張機能管理ページを開きます。
    - アドレスバーに `chrome://extensions/` と入力して試してください。
@@ -163,7 +173,13 @@ liebao://extensions/
 
 ## Brave / Vivaldi / Opera のインストール
 
-これらのブラウザは通常、Chromiumの拡張機能管理ページを保持していますが、内部アドレスが異なります：
+これらのブラウザは通常 Chrome ウェブストアを利用できます。まず対象ブラウザで [All API Hub の Chrome ウェブストアページ](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) を開き、インストールを試してください。
+
+- Brave は公式に Chrome ウェブストアからの拡張機能インストールをサポートしています。
+- Vivaldi は公式に Chrome ウェブストア拡張機能をサポートしています。インストールボタンが表示されない場合は、Vivaldi の Google Extensions / Web Store 関連設定を確認してください。
+- Opera には Opera Add-ons があり、Chrome 拡張機能にも対応しています。All API Hub は現在 Opera Add-ons には単独掲載されていないため、まず Chrome ウェブストアを使ってください。
+
+ストアインストールに失敗した場合は、以下の拡張機能管理ページから GitHub Chrome パッケージを手動読み込みします：
 
 | ブラウザ | 拡張機能管理ページ |
 |---|---|
@@ -172,11 +188,13 @@ liebao://extensions/
 | Opera | `opera://extensions/` |
 | その他のChromiumブラウザ | `chrome://extensions/` を優先して試してください |
 
-拡張機能管理ページにアクセスしたら、[その他のデスクトップブラウザの一般的な手順](#desktop-browser-common-flow)に従って開発者モードを有効にし、解凍したディレクトリを読み込んでください。
+拡張機能管理ページにアクセスしたら、[手動読み込み手順](#desktop-browser-common-flow)に従って開発者モードを有効にし、解凍したディレクトリを読み込んでください。
+
+<a id="update-extension"></a>
 
 ## 拡張機能の更新
 
-手動で読み込んだバージョンは自動更新されません。更新時は以下の手順に従ってください：
+手動で読み込んだバージョンは自動更新されません。ストア版、GitHub Stable、Nightly の違いについては、先に [インストール方法と更新について](./extension-update-install.md) を確認してください。手動で読み込んだバージョンを更新する場合は、以下の手順に従ってください：
 
 1. [最新リリースバージョン](https://github.com/qixing-jk/all-api-hub/releases/latest)を開きます。
 2. 新しい `all-api-hub-<version>-chrome.zip` をダウンロードします。
@@ -200,7 +218,7 @@ liebao://extensions/
 
 ### ChromeパッケージとFirefox / Safariパッケージのどちらをダウンロードすべきですか？
 
-QQブラウザ、360系ブラウザ、チーターブラウザ、Brave、Vivaldi、Operaなどのブラウザは以下をダウンロードする必要があります：
+手動読み込みが必要な Chromium ブラウザでは、以下をダウンロードしてください：
 
 ```text
 all-api-hub-<version>-chrome.zip
@@ -229,14 +247,17 @@ Firefoxの`.xpi` / Firefoxパッケージや、SafariのXcodeバンドルはダ�
 
 - [はじめに](./get-started.md)
 - [よくある質問](./faq.md)
+- [インストール方法と更新について](./extension-update-install.md)
 - [権限管理（オプション権限）](./permissions.md)
 - [Safari拡張機能インストールガイド](./safari-install.md)
 
 ## 参考資料
 
 - [Microsoft Edge公式ドキュメント：ローカルでの拡張機能の読み込み（Chrome拡張機能の一般的な手順の参考）](https://learn.microsoft.com/microsoft-edge/extensions-chromium/getting-started/extension-sideloading)
+- [Brave ヘルプセンター：Chrome ウェブストアから拡張機能をインストールする](https://support.brave.com/hc/en-us/articles/360017909112-How-can-I-add-extensions-to-Brave-)
+- [Vivaldi ヘルプ：Vivaldi で拡張機能を使う](https://help.vivaldi.com/desktop/appearance-customization/extensions)
+- [Opera 公式ブログ：Opera で Chrome 拡張機能を使う](https://blogs.opera.com/tips-and-tricks/2021/10/using-addons-from-chrome-in-opera)
 - [360セーフブラウザヘルプセンター：拡張機能アプリケーション](https://browser.360.cn/se/help/extension.html)
-- [zTabドキュメント：チーターブラウザ拡張機能インストール例](https://docs.ztab.ink/browser-extension/liebao.html)
 
 ---
 

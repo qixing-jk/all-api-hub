@@ -78,5 +78,5 @@
 ## Related Documentation
 
 -   [Quick Export Site Configuration](./quick-export.md)
--   [New API Channel Management](./new-api-channel-management.md)
--   [New API Model List Synchronization](./new-api-model-sync.md)
+-   [Self-Hosted Site Management](./self-hosted-site-management.md)
+-   [Managed Site Model Synchronization](./managed-site-model-sync.md)

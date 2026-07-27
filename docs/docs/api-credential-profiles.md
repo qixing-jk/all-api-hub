@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # API 凭证档案
 
 > 独立于站点账号保存 `baseUrl + API Key` 组合，可脱离站点单独管理第三方 API 凭证，支持标签筛选和复用。
@@ -81,3 +82,190 @@ API 凭证档案会包含在：
 - [数据导入导出](./data-management.md)
 - [WebDAV 备份与自动同步](./webdav-sync.md)
 - [分享快照](./share-snapshots.md)
+=======
+# API 凭据库
+
+> 适合“没有站点账号、只有 `Base URL + API Key`”的场景。你可以把常用 API Key 集中保存起来，用于快速复制、验证接口、查看模型与余额/用量，而不必先创建完整站点账号。
+
+## 适合什么场景
+
+- 你手里只有第三方平台给出的 `Base URL` 和 `API Key`，但没有对应站点控制台账号。
+- 你想把常用接口配置集中保存，避免在多个客户端、CLI 工具之间来回复制。
+- 你需要先验证某个 Key 是否可用、是否兼容 CLI，再决定是否导入到下游工具。
+- 你希望把同一套接口配置直接用于模型查看、接口验证或导出流程。
+
+## 功能概览
+
+- **凭据库管理**：保存名称、`Base URL`、API Key、标签和备注，不依赖站点账号。
+- **搜索与筛选**：支持按名称、`Base URL`、标签、备注以及 API 类型筛选。
+- **健康与用量概览**：可查看余额、今日用量、今日请求数、可用模型数量、最近刷新时间和健康状态。
+- **接口验证**：支持验证 API 是否可用，也支持单独验证 CLI 兼容性。
+- **模型联动**：可直接在模型列表中打开当前凭证，查看模型目录和验证结果。
+- **快捷导出**：支持导出到 CherryStudio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router，以及当前配置的自建托管站点。
+
+## 进入方式
+
+1. 打开插件设置页。
+2. 在左侧菜单进入 **`API 凭据库`**。
+3. 点击右上角 **`保存 API Key`**。
+
+如果你已经在 `密钥管理` 中拿到了某个上游站点的 Key，也可以先在那里验证或整理，再把它保存到 `API 凭据库` 中，后续使用会更方便。
+
+::: tip 寻找优质 API 接口？
+如果你需要稳定且支持 CLI 的 API 接口来填充你的凭据库，可以尝试我们的合作伙伴：
+
+- [火山引擎方舟 Coding-Plan](https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html)：Lite 套餐 9.9 元/月起，并有邀请返利及首单优惠。
+- [七牛云AI](https://s.qiniu.com/qE3eai)：企业级大模型 MaaS 平台，一站式调用全球 150+ 主流模型，企业用户可免费领 1200 万 Token。
+- [Fenno.ai](https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4)：稳定、高效的 Codex 中转服务商，兼容 OpenAI 及 Anthropic 协议，可接入 Codex、Claude Code、OpenCode 等编程工具，All API Hub 用户可订阅 9.9 元 / 150 刀额度的 Coding Plan。
+- [PackyCode](https://www.packyapi.com/register?aff=all-api-hub)：注册并充值时填写 `all-api-hub` 优惠码可享 9 折。[使用教程](./sponsor-guides/packycode.md)
+- [星辰AI](https://ai.centos.hk)：充值比例 1:1，可开发票；Claude 低至 4 折。[使用教程](./sponsor-guides/xingchen.md)
+- [Atlas Cloud](https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub)：一个 AI API 访问 300+ 精选视频、图像和 LLM 模型，新 Coding Plan 提供更高性价比的 API 访问。
+- [AICodeMirror](https://www.aicodemirror.com/register?invitecode=7IQNR8)：提供 Claude Code / Codex / Gemini CLI 官方高稳定中转服务，通过此链接注册可享首充 8 折，企业客户最高可享 7.5 折。
+- [RunAPI](https://runapi.co/register?aff=cvDm)：注册并联系 RunAPI 管理员可领取 ￥7 免费额度。[使用教程](./sponsor-guides/runapi.md)
+- [Unity2.ai](https://unity2.ai/register?ref=9NjKJ86j&source=allapihub)：面向个人开发者、团队和企业的高性能 AI 模型 API 中转平台，支持 5000 RPM 级高并发；通过此链接注册可领取 $2 余额，加入官方群再送 $10，最高可领 $12 免费额度。
+- [随想AI中转站](https://sui-xiang.com/)：提供 Claude、Codex、Gemini 等 API 中继服务，按量付费，支持每日签到测试额度、多线路冗余和自动故障切换。
+- [Infistar.ai](https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link)：在售模型均经真实调用验真，通过超 10000 条官方 API 与官方号池供应链路负载均衡，覆盖文本、视频、图片、嵌入、重排等全模态能力，价格与用量透明，模型低至官方价的 10%。
+:::
+
+## 如何添加凭证
+
+### 基础字段
+
+| 字段 | 说明 |
+|------|------|
+| 名称 | 便于区分不同用途，例如“公司中转站只读 Key” |
+| Base URL | 接口基础地址，保存时会自动规范化 |
+| 密钥 | 对应的 API Key |
+| 标签 | 可选；和账号、书签共用全局标签体系 |
+| 备注 | 可记录来源、用途、模型限制等信息 |
+
+### API 类型
+
+当前支持按 API 类型分类和验证，常见类型包括：
+
+- `OpenAI Compatible`
+- `OpenAI`
+- `Anthropic`
+- `Google`
+
+如果你临时用另一种 API 类型做验证，界面会明确提示这只是本次验证的临时覆盖，不会改写已保存的凭证类型。
+
+## 余额与用量概览
+
+每张凭证卡片都可以显示一个轻量遥测概览，常见指标包括：
+
+- 余额
+- 今日用量
+- 今日请求数
+- 今日 Tokens
+- 可用模型数量
+- 最近刷新时间
+- 健康状态与最近一次错误
+
+### 查询方式
+
+你可以为每个凭证选择余额/用量的查询方式：
+
+- **自动探测**：按内置顺序尝试兼容方式。
+- **NewAPI Token**：适合兼容 New API 的 token 用量查询。
+- **OpenAI Billing**：适合标准 OpenAI Billing 查询。
+- **Sub2API**：适合 Sub2API 风格接口。
+- **自定义只读查询**：适合站点有自定义只读查询接口。
+- `禁用`：不查询余额与用量，只保留凭证本身。
+
+### 详细遥测指标
+
+开启遥测后，插件会尝试获取以下指标：
+- **实时余额**
+- **今日花费**
+- **今日请求数**
+- **今日 Prompt/Completion Tokens**
+- **总已用/总赠送/总可用额度**
+- **过期时间**
+
+### 自定义只读查询
+
+如果自动方式不适配当前站点，可改用自定义只读查询：
+
+1. 选择 **`自定义只读查询`**。
+2. 填写查询地址（必须与 `Base URL` 同源，支持 `/usage` 这种根相对路径）。
+3. **配置字段映射**：支持为上述所有遥测指标配置 JSON Path。
+   - JSON Path 采用点分隔形式，例如 `data.today_total_tokens`。
+   - 插件会自动解析并将其转换为统一的展示格式。
+
+## 稳定性与频率限制
+
+为了保护你的账号不被上游站点判定为异常调用，All API Hub 内置了**智能频率限制器**：
+
+- **并发控制**：默认限制对单个站点的并发请求数为 2。
+- **速率控制**：限制对单个站点的请求速率约为每分钟 18 次（支持小规模突发）。
+- **自动排队**：当刷新多个账号或执行批量验证时，超出限制的请求会自动进入排队序列，避免触发 429 Too Many Requests 错误。
+
+> 💡 **说明**：该限制主要针对插件后台的刷新和验证动作，不影响你通过其他工具（如 CherryStudio）直接调用接口的性能。
+
+## 常用操作
+
+### 1. 验证接口
+
+点击卡片上的 **`验证接口`**，可以确认：
+
+- 当前 Key 是否还能调用
+- 模型列表是否可获取
+- 返回是否符合预期 API 类型
+
+适合在更换 Key、切换网络或排查“客户端连不上，但站点似乎还活着”的情况时使用。
+
+### 2. 验证 CLI 兼容性
+
+点击 **`验证 CLI 兼容性`**，可单独测试：
+
+- 当前接口是否适合 CLI 工具
+- 模型 ID 是否可用于 CLI 场景
+- 是否存在“网页能调，CLI 不能调”的兼容性差异
+
+### 3. 在模型管理中打开
+
+点击 **`在模型管理中打开`** 后，模型列表页会直接把当前 API 凭据当作数据源。这样你不需要先创建站点账号，也能查看模型目录、验证模型可用性。
+
+### 4. 快捷导出
+
+支持从单个凭证直接导出到：
+
+- CherryStudio
+- CC Switch
+- Kilo Code
+- CLIProxyAPI
+- Claude Code Router
+- 当前自建托管站点
+
+导出到 Kilo Code 7.x 时，当前凭据会成为一个名称易读的 `provider`，其中包含从接口发现并规范化的全部模型 ID，以及为该 `provider` 手动输入并保留的模型 ID。被包含在导出中并不保证每个模型都适用于所有工作流；导出前只需选择默认 `model`。旧版 Roo Code / Kilo Code 5.x 格式仍是每个配置一个模型，并将复制内容合并到 `providerProfiles.apiConfigs`。
+
+当前 `provider` 可选择 OpenAI Compatible、OpenAI Responses 或 Anthropic Messages 协议，默认使用 OpenAI Compatible。协议只改变导出的 AI SDK provider 包；模型列表仍沿用 All API Hub 现有的加载结果，选择 Anthropic Messages 也不会跳过或减少模型。
+
+Kilo Code 7.x 的文件导入、`{ provider, model }` 手动合并方式、文件大小恢复操作和 API 密钥编辑框显示限制，请参阅[支持的导出工具与集成目标](./supported-export-tools.md)。
+
+如果你主要是“管理一堆上游接口配置，然后分发到多个下游工具”，`API 凭据库` 会比完整账号管理更直接。
+
+## 使用建议
+
+- **命名带用途**：例如“OpenAI 只读测试 Key”“公司中转站 Claude 专用 Key”，后期筛选会更清晰。
+- **把标签当分组**：例如 `工作`、`个人`、`生产`、`测试`、`临时`。
+- **先验证再导出**：这样能避免把失效 Key 批量导入到多个客户端。
+- **备注写限制条件**：例如“仅支持 Anthropic”“余额展示不准”“仅内网可用”。
+
+## 常见问题
+
+| 问题 | 说明 |
+|------|------|
+| 只保存了凭证，为什么没有余额数据？ | 当前查询方式可能不适配该站点，或站点没有提供对应只读接口；可尝试切换查询方式或使用自定义只读查询。 |
+| 模型相关验证为什么要求模型 ID？ | 某些 CLI 兼容性检查和模型调用验证必须指定模型，界面会尽量自动获取建议模型，也可以手动填写。 |
+| 可以替代账号管理吗？ | 不能完全替代。`API 凭据库` 更适合保存和使用独立 API Key，并用于接口验证、模型查看和导出；账号管理仍负责站点识别、余额刷新、签到、用量同步等账号级能力。 |
+| API 凭据库会参与备份吗？ | 会。它属于共享数据的一部分，可随数据导入导出和 WebDAV 选择性同步一起迁移。 |
+
+## 相关文档
+
+- [快速导出站点配置](./quick-export.md)
+- [支持的导出工具与集成目标](./supported-export-tools.md)
+- [CLIProxyAPI 集成](./cliproxyapi-integration.md)
+- [数据导入导出](./data-management.md)
+>>>>>>> main

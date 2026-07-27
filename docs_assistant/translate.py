@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 # 配置
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = Path(__file__).parent.parent / 'docs/docs'
+DOCS_REPO_PREFIX = DOCS_DIR.relative_to(REPO_ROOT).as_posix()
 LANGUAGES = {
     'en': {
         'name': 'English',
@@ -86,6 +87,23 @@ OUTER_CODE_FENCE_PATTERN = re.compile(
 )
 
 
+def is_translation_relative_path(path_str: str) -> bool:
+    """Return True when the docs-relative path is inside a translated language directory."""
+    return any(path_str == lang or path_str.startswith(f'{lang}/') for lang in LANGUAGES)
+
+
+def is_translated_doc_repo_path(repo_path: str) -> bool:
+    """Return True when the repository-relative path points at a translated Markdown doc."""
+    if not repo_path.endswith('.md'):
+        return False
+
+    prefix = f'{DOCS_REPO_PREFIX}/'
+    if not repo_path.startswith(prefix):
+        return False
+
+    return is_translation_relative_path(repo_path[len(prefix):])
+
+
 def get_translation_prompt(target_language: str, content: str) -> str:
     """构建翻译提示词"""
     prompt = f"""你是一个专业的技术文档翻译专家。请将以下 Markdown 格式的技术文档从中文翻译为{LANGUAGES[target_language]['native_name']}。
@@ -113,13 +131,14 @@ def get_translation_prompt(target_language: str, content: str) -> str:
 
 术语表（不要放在翻译内容中）：
 
-| 中文 | English | 说明 | Description |
-|------|---------|------|-------------|
-| 倍率 | Ratio | 用于计算价格的乘数因子 | Multiplier factor used for price calculation |
-| 令牌 | Token | API访问凭证，也指模型处理的文本单元 | API access credentials or text units processed by models |
-| 渠道 | Channel | API服务提供商的接入通道 | Access channel for API service providers |
-| 分组 | Group | 用户或令牌的分类，影响价格倍率 | Classification of users or tokens, affecting price ratios |
-| 额度 | Quota | 用户可用的服务额度 | Available service quota for users |
+| 中文 | English | 日本語 | 说明 |
+|------|---------|--------|------|
+| API 凭据库 | API Credential Library | API 認証情報庫 | 保存独立 Base URL + API Key 的功能名称 |
+| 倍率 | Ratio | 倍率 | 用于计算价格的乘数因子 |
+| 令牌 | Token | トークン | API访问凭证，也指模型处理的文本单元 |
+| 渠道 | Channel | チャネル | API服务提供商的接入通道 |
+| 分组 | Group | グループ | 用户或令牌的分类，影响价格倍率 |
+| 额度 | Quota | クォータ | 用户可用的服务额度 |
 
 请直接返回翻译后的内容，不要添加任何解释或说明。
 
@@ -164,13 +183,14 @@ def get_incremental_translation_prompt(
 
 术语表（不要放在翻译内容中）：
 
-| 中文 | English | 说明 | Description |
-|------|---------|------|-------------|
-| 倍率 | Ratio | 用于计算价格的乘数因子 | Multiplier factor used for price calculation |
-| 令牌 | Token | API访问凭证，也指模型处理的文本单元 | API access credentials or text units processed by models |
-| 渠道 | Channel | API服务提供商的接入通道 | Access channel for API service providers |
-| 分组 | Group | 用户或令牌的分类，影响价格倍率 | Classification of users or tokens, affecting price ratios |
-| 额度 | Quota | 用户可用的服务额度 | Available service quota for users |
+| 中文 | English | 日本語 | 说明 |
+|------|---------|--------|------|
+| API 凭据库 | API Credential Library | API 認証情報庫 | 保存独立 Base URL + API Key 的功能名称 |
+| 倍率 | Ratio | 倍率 | 用于计算价格的乘数因子 |
+| 令牌 | Token | トークン | API访问凭证，也指模型处理的文本单元 |
+| 渠道 | Channel | チャネル | API服务提供商的接入通道 |
+| 分组 | Group | グループ | 用户或令牌的分类，影响价格倍率 |
+| 额度 | Quota | クォータ | 用户可用的服务额度 |
 
 输入一：最新中文源文
 <latest_source_markdown>
@@ -532,15 +552,6 @@ def translate_file(source_file: Path, file_index: int = 0, total_files: int = 0,
     if manual_translations is None:
         manual_translations = set()
     
-    # 检查当前文件是否有对应的手动翻译
-    has_manual_translation = False
-    for lang_code, lang_info in LANGUAGES.items():
-        target_file = DOCS_DIR / lang_info['dir'] / rel_path
-        if str(target_file) in manual_translations:
-            has_manual_translation = True
-            logger.info(f"{prefix}📝 检测到手动翻译: {target_file}")
-            break
-    
     translated_count = 0
     skipped_count = 0
     source_diff = get_source_diff(source_file)
@@ -562,7 +573,8 @@ def translate_file(source_file: Path, file_index: int = 0, total_files: int = 0,
             )
             
             # 检查是否有手动翻译
-            if str(target_file) in manual_translations:
+            target_repo_path = get_repo_relative_posix_path(target_file)
+            if target_repo_path in manual_translations:
                 logger.info(f"{prefix}⏭️  跳过 {lang_info['native_name']}翻译（检测到手动翻译）")
                 skipped_count += 1
                 continue
@@ -614,7 +626,17 @@ def detect_manual_translations():
     try:
         # 获取当前提交中修改的文件列表
         result = subprocess.run(
-            ['git', 'diff', '--name-only', TRANSLATE_DIFF_BASE, TRANSLATE_DIFF_HEAD],
+            [
+                'git',
+                'diff',
+                '--name-only',
+                '--diff-filter=AMR',
+                '--find-renames',
+                TRANSLATE_DIFF_BASE,
+                TRANSLATE_DIFF_HEAD,
+                '--',
+                DOCS_REPO_PREFIX,
+            ],
             capture_output=True,
             text=True,
             cwd=REPO_ROOT
@@ -623,9 +645,10 @@ def detect_manual_translations():
         if result.returncode == 0:
             changed_files = result.stdout.strip().split('\n')
             for file_path in changed_files:
-                if file_path and ('/en/' in file_path or '/ja/' in file_path):
-                    manual_translations.add(file_path)
-                    logger.info(f"检测到手动翻译文件: {file_path}")
+                normalized_path = file_path.strip()
+                if normalized_path and is_translated_doc_repo_path(normalized_path):
+                    manual_translations.add(normalized_path)
+                    logger.info(f"检测到手动翻译文件: {normalized_path}")
         
     except Exception as e:
         logger.warning(f"检测手动翻译时出错: {str(e)}")
@@ -643,18 +666,23 @@ def main():
     
     for file_arg in sys.argv[1:]:
         file_path = Path(file_arg).resolve()  # 转换为绝对路径
-        
-        # 跳过英文和日文目录
-        if '/en/' in str(file_path) or '/ja/' in str(file_path):
-            logger.info(f"跳过已翻译文件: {file_path}")
-            continue
-        
+
         if not file_path.exists():
             logger.warning(f"文件不存在，跳过: {file_path}")
             continue
         
         if file_path.suffix != '.md':
             logger.warning(f"不是 Markdown 文件，跳过: {file_path}")
+            continue
+
+        try:
+            rel_path = file_path.relative_to(DOCS_DIR).as_posix()
+        except ValueError:
+            logger.warning(f"文件不在 docs 目录中，跳过: {file_path}")
+            continue
+
+        if is_translation_relative_path(rel_path):
+            logger.info(f"跳过已翻译文件: {file_path}")
             continue
         
         files_to_translate.append(file_path)

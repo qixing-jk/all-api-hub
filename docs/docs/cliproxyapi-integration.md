@@ -78,5 +78,5 @@
 ## 相关文档
 
 - [快速导出站点配置](./quick-export.md)
-- [New API 渠道管理](./new-api-channel-management.md)
-- [New API 模型列表同步](./new-api-model-sync.md)
+- [自建站点管理](./self-hosted-site-management.md)
+- [自建站点模型同步](./managed-site-model-sync.md)

@@ -42,7 +42,7 @@ AnyRouter 是魔改版的中转站，不支持标准的 Access Token 方式。
 因为 AnyRouter 对 API 进行了修改，某些功能可能无法正常使用。如遇到问题，建议联系站点管理员。
 :::
 
-### Sub2API（JWT 站点）怎么添加？
+### Sub2API 站点怎么添加？
 
 Sub2API 站点常见特征：控制台接口在 `/api/v1/*`，并使用 **短期 JWT**（`auth_token`）+ **refresh token（会轮转）** 的登录态。控制台会把登录信息写入 localStorage：
 
@@ -117,23 +117,13 @@ Sub2API 站点常见特征：控制台接口在 `/api/v1/*`，并使用 **短期
 
 1. **查询Issue**：前往 [GitHub Issues](https://github.com/qixing-jk/all-api-hub/issues) 搜索是否有相同问题
 2. **使用最新版本**：
-   - 商店版本更新较慢，建议使用 GitHub Release 版本
-   - 或直接使用 main 分支的开发版本
+   - 大多数用户建议优先使用商店版，等待浏览器商店自动更新
+   - 如果修复尚未上架商店、你的浏览器无法安装商店版或 Chrome Web Store 兼容版本，可临时从 GitHub Releases 手动安装
+   - GitHub Stable、Nightly 或 main 分支开发版适合临时验证和协助测试，手动安装后不会自动更新；你可以 Star / Watch 仓库来接收新版本通知，更多区别请查看 [安装渠道与更新说明](./extension-update-install.md)
 
 ### 如何获取最新版本？
 
-插件在多个平台发布，更新速度有差异：
-
-| 平台 | 更新速度          | 版本获取 |
-|------|---------------|---------|
-| **GitHub Releases** | ⚡ 最快          | [前往下载](https://github.com/qixing-jk/all-api-hub/releases) |
-| **Chrome Web Store** | 🐌 较慢（3-5天审核） | [前往安装](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) |
-| **Edge Add-ons** | 🐌 较慢（3-5天审核） | [前往安装](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) |
-| **Firefox Add-ons** | ⚡ 快（几个小时审核）   | [前往安装](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) |
-
-::: tip 建议
-如果遇到已修复的Bug，建议从 GitHub Releases 下载最新版本手动安装。QQ 浏览器、360 系浏览器、猎豹浏览器、Brave、Vivaldi、Opera 等浏览器可参考 [QQ / 360 等浏览器安装指南](./other-browser-install.md)。
-:::
+插件在多个平台发布，Chrome、Edge、Firefox 用户建议优先使用对应商店版本；Brave、Vivaldi、Opera 等 Chromium 浏览器通常也可以先尝试 Chrome Web Store。如果你想确认当前是否有新版本、为什么商店版可能晚于 GitHub Release、或需要手动安装 GitHub 包，请查看 [安装渠道与更新说明](./extension-update-install.md)。
 
 ## ⚙️ 功能使用问题
 
@@ -249,7 +239,7 @@ WebDAV 备份可以帮你在多设备间同步数据：
 刷新间隔过短可能导致频繁请求，建议不低于60秒。
 :::
 
-### 如何使用余额历史（Balance History）？
+### 如何使用余额历史？
 
 余额历史用于长期查看账号余额变化与每日收支趋势。启用后会在本地记录**按天聚合的快照**并用图表展示。
 
@@ -288,7 +278,7 @@ WebDAV 备份可以帮你在多设备间同步数据：
 
 插件支持在移动端 / 手机端浏览器中使用，例如手机 `Edge`、`Firefox for Android`、`Kiwi` 等，实际可用性取决于浏览器本身对扩展能力的支持情况。
 
-如果你使用的是 QQ 浏览器、360 系浏览器、猎豹浏览器或其他支持 Chrome 扩展的桌面浏览器，请查看 [QQ / 360 等浏览器安装指南](./other-browser-install.md)。
+如果你使用的是 QQ 浏览器、360 系浏览器、猎豹浏览器、Brave、Vivaldi、Opera 或其他支持 Chrome 扩展的桌面浏览器，请查看 [其他浏览器安装指南](./other-browser-install.md)。
 
 ### 移动端使用建议
 
@@ -296,13 +286,26 @@ WebDAV 备份可以帮你在多设备间同步数据：
 2. **调整过盾助手设置**：如果站点经常触发过盾，可以在"设置" → "过盾助手"中调整触发条件，例如增加触发阈值或关闭某些触发条件，以减少过盾弹窗的频率。
 3. **配置 WebDAV 同步**：在电脑和手机间同步数据
 
+## 🛠️ 进阶与开发者工具
+
+### 什么是网格渐变调试工具？
+
+**网格渐变调试工具** 是插件内置的开发者工具，用于调试和预览 [分享快照](./share-snapshot.md) 功能的动态背景。
+
+- **功能**：你可以手动调整种子值、调色盘索引和布局索引，实时预览不同组合下的视觉效果。
+- **进入方式**：在浏览器地址栏输入插件的选项页地址并附带 `#mesh-gradient-lab` 锚点即可进入（例如：`chrome-extension://<id>/options.html#mesh-gradient-lab`）。
+
+::: info 说明
+该工具主要面向开发者或对视觉定制感兴趣的高级用户，普通用户日常使用无需关注。
+:::
+
 ## 🔒 数据安全
 
 ### 数据存储在哪里？
 
-- **本地存储**：所有数据保存在浏览器本地存储中
-- **完全离线**：插件核心功能无需联网
-- **不上传数据**：不会向任何第三方服务器上传数据
+- **默认本地存储**：账号、Key 与站点配置默认保存在浏览器本地
+- **按需联网**：刷新余额、调用站点接口、启用 WebDAV 备份/同步或开启匿名产品统计时，才会按对应功能发起网络请求
+- **敏感数据保护**：除非你主动启用 WebDAV 备份/同步，否则账号与 Key 不会上传到外部存储；匿名产品统计不会收集 API Key、Cookie、账号 URL、余额、请求内容或用户输入
 
 ### 数据会丢失吗？
 
@@ -358,7 +361,7 @@ WebDAV 备份可以帮你在多设备间同步数据：
 ## 📚 相关文档
 
 - [使用教程](./get-started.md)
-- [QQ / 360 等浏览器安装指南](./other-browser-install.md)
+- [其他浏览器安装指南](./other-browser-install.md)
 - [GitHub 仓库](https://github.com/qixing-jk/all-api-hub)
 - [问题反馈](https://github.com/qixing-jk/all-api-hub/issues)
 - [更新日志](./changelog.md)

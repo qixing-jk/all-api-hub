@@ -20,7 +20,7 @@
 
 - **IP Quality**: If verification fails continuously, you need to change your network or temporarily relax protection on the site side; the default timeout is 20 seconds.
 - **Pop-up Permissions**: Please allow the browser to pop up windows, otherwise the plugin cannot create temporary tabs.
-- **Repeated Challenges**: If 429 is frequently triggered, you can lower the rate or enable a model whitelist in New API Channel Management to reduce invalid requests.
+- **Repeated Challenges**: If 429 is frequently triggered, you can lower the rate or enable a model whitelist in Self-Hosted Site Management to reduce invalid requests.
 
 ## Common Issues
 
@@ -33,7 +33,6 @@
 
 ## Related Documents
 
-- [Cloudflare Protection and Temporary Window Degradation (Quick Start)](./get-started.md#cloudflare-window-downgrade)
 - [Quick Site Export](./quick-export.md)
-- [New API Channel Management](./new-api-channel-management.md)
+- [Self-Hosted Site Management](./self-hosted-site-management.md)
 - [Permission Management (Optional Permissions)](./permissions.md)

@@ -24,11 +24,11 @@
 | Veloera | このプロジェクトはメンテナンスを停止しました。 | [GitHub](https://github.com/Veloera/Veloera) |
 | Octopus | 個人向けの LLM API 集約サービス。 | [GitHub](https://github.com/bestruirui/octopus) |
 | AxonHub | オープンソース AI Gateway。任意の SDK を介して 100 以上の LLM を呼び出すことができ、フェイルオーバー、ロードバランシング、コスト管理、およびエンドツーエンドの追跡が組み込まれています。 | [公式サイト](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
+| Claude Code Hub | チーム向けのマルチベンダー AI API プロキシおよび運用プラットフォーム。Claude、OpenAI Compatible、Codex、Gemini への統一アクセスを提供し、弾力的なスケジューリング、監視、価格設定をサポートします。 | [GitHub](https://github.com/ding113/claude-code-hub) |
 
 ## 関連ドキュメント
 
 - [サポートされているサイトリスト](./supported-sites.md)
 - [サイト設定のエクスポートを迅速化](./quick-export.md)
 - [CLIProxyAPI の統合](./cliproxyapi-integration.md)
-- [New API チャネル管理](./new-api-channel-management.md)
-- [Octopus チャネル管理](./octopus-channel-management.md)
+- [セルフホスト型サイト管理](./self-hosted-site-management.md)

@@ -42,7 +42,7 @@ AnyRouter is a modified proxy site and does not support the standard Access Toke
 Because AnyRouter has modified the API, some features may not work correctly. If you encounter problems, it is recommended to contact the site administrator.
 :::
 
-### How to add Sub2API (JWT sites)?
+### How to add Sub2API sites?
 
 Common characteristics of Sub2API sites: the console interface is at `/api/v1/*`, and uses **short-term JWT** (`auth_token`) + **refresh token (rotates)** for login status. The console writes login information to localStorage:
 
@@ -117,22 +117,24 @@ Common incompatibility scenarios:
 
 1. **Check Issues**: Go to [GitHub Issues](https://github.com/qixing-jk/all-api-hub/issues) to search for similar problems.
 2. **Use the Latest Version**:
-   - Store versions are updated slowly; it is recommended to use the GitHub Release version.
-   - Or use the development version from the main branch directly.
+   - Most users should stay on the store build and let the browser update it automatically.
+   - If a fix has not reached the store yet, or you cannot install the store build, you can temporarily install it from GitHub Releases.
+   - GitHub Stable, Nightly, and main-branch builds are for temporary verification and testing. Manual installations do not auto-update. You can Star / Watch the repository to receive new version notifications. For the differences between these channels, see [Installation Channels and Updates](./extension-update-install.md).
 
 ### How to get the latest version?
 
-The plugin is released on multiple platforms, with varying update speeds:
+The plugin is released on multiple platforms. Prefer the official store that matches your browser:
 
 | Platform             | Update Speed                               | Version Acquisition                                                              |
 |----------------------|--------------------------------------------|----------------------------------------------------------------------------------|
-| **GitHub Releases**  | ⚡ Fastest                                  | [Download Here](https://github.com/qixing-jk/all-api-hub/releases)               |
-| **Chrome Web Store** | 🐌 Slower (3-5 days review)                | [Install Here](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) |
-| **Edge Add-ons**     | 🐌 Slower (3-5 days review)                | [Install Here](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) |
+| **Chrome Web Store** | Automatic updates after review             | [Install Here](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) |
+| **Edge Add-ons**     | Automatic updates after review             | [Install Here](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) |
 | **Firefox Add-ons**  | ⚡ Fast (a few hours review)                | [Install Here](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) |
+| **GitHub Stable**    | Fastest published build, manual install    | [Download Here](https://github.com/qixing-jk/all-api-hub/releases/latest) |
+| **Nightly pre-release** | Fastest access to in-progress changes, may be unstable | [Download Here](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) |
 
 ::: tip Recommendation
-If you encounter a bug that has been fixed, it is recommended to download the latest version from GitHub Releases and install it manually. For browsers like QQ Browser, 360 Series Browsers, Cheetah Browser, Brave, Vivaldi, Opera, etc., please refer to the [QQ / 360 and Other Browser Installation Guide](./other-browser-install.md).
+Chrome, Edge, and Firefox users should prioritize the matching store build. Brave, Vivaldi, and Opera users can usually try Chrome Web Store first. If you want to check whether a new version is available, understand why the store version may be behind GitHub Releases, or manually install a GitHub package, see [Installation Channels and Updates](./extension-update-install.md). Use GitHub Releases only when a fix has not reached the store yet, you cannot install the store build or Chrome Web Store compatible build, or you use a browser that needs manual loading, such as QQ Browser, 360 Series Browsers, or Cheetah Browser. These manual installations do not auto-update. You can Star / Watch the repository to receive new version notifications, and see the [Other Browser Installation Guide](./other-browser-install.md) for those browsers.
 :::
 
 ## ⚙️ Feature Usage Issues
@@ -288,7 +290,7 @@ Balance History is used to view account balance changes and daily income/expendi
 
 The plugin supports use in mobile browsers such as mobile `Edge`, `Firefox for Android`, `Kiwi`, etc. Actual usability depends on the browser's support for extension capabilities.
 
-If you are using QQ Browser, 360 Series Browsers, Cheetah Browser, or other desktop browsers that support Chrome extensions, please refer to the [QQ / 360 and Other Browser Installation Guide](./other-browser-install.md).
+If you are using QQ Browser, 360 Series Browsers, Cheetah Browser, Brave, Vivaldi, Opera, or another desktop browser that supports Chrome extensions, please refer to the [Other Browser Installation Guide](./other-browser-install.md).
 
 ### Mobile Usage Recommendations
 
@@ -296,13 +298,26 @@ If you are using QQ Browser, 360 Series Browsers, Cheetah Browser, or other desk
 2. **Adjust Anti-Bot Helper Settings**: If the site frequently triggers anti-bot measures, you can adjust the trigger conditions in "Settings" → "Anti-Bot Helper", such as increasing the trigger threshold or disabling certain trigger conditions, to reduce the frequency of anti-bot pop-ups.
 3. **Configure WebDAV Synchronization**: Synchronize data between your computer and phone.
 
+## 🛠️ Advanced & Developer Tools
+
+### What is the Mesh Gradient Debugging Tool?
+
+The **Mesh Gradient Debugging Tool** is a built-in developer tool for debugging and previewing the dynamic backgrounds in the [Share Snapshot](./share-snapshot.md) feature.
+
+- **Functionality**: You can manually adjust the Seed, Palette Index, and Layout Index to preview visual effects under different combinations in real-time.
+- **How to Access**: Enter the extension's options page URL in the browser address bar and append the `#mesh-gradient-lab` anchor (e.g., `chrome-extension://<id>/options.html#mesh-gradient-lab`).
+
+::: info Note
+This tool is primarily intended for developers or advanced users interested in visual customization. Ordinary users do not need to worry about it for daily use.
+:::
+
 ## 🔒 Data Security
 
 ### Where is the data stored?
 
-- **Local Storage**: All data is stored in the browser's local storage.
-- **Completely Offline**: The core functionality of the plugin does not require an internet connection.
-- **No Data Upload**: Data is not uploaded to any third-party servers.
+- **Local by default**: Accounts, keys, and site configuration are stored in the browser by default.
+- **Network access when needed**: Network requests are made only for the relevant feature, such as refreshing balances, calling site APIs, using WebDAV backup or sync, or sending enabled anonymous product analytics.
+- **Sensitive data protection**: Unless you enable WebDAV backup or sync, account data and keys are not uploaded to external storage. Anonymous product analytics do not collect API keys, cookies, account URLs, balances, request content, or user input.
 
 ### Will the data be lost?
 
@@ -358,7 +373,7 @@ See details: [CONTRIBUTING.md](https://github.com/qixing-jk/all-api-hub/blob/mai
 ## 📚 Related Documentation
 
 - [Tutorial](./get-started.md)
-- [QQ / 360 and Other Browser Installation Guide](./other-browser-install.md)
+- [Other Browser Installation Guide](./other-browser-install.md)
 - [GitHub Repository](https://github.com/qixing-jk/all-api-hub)
 - [Feedback](https://github.com/qixing-jk/all-api-hub/issues)
 - [Changelog](./changelog.md)

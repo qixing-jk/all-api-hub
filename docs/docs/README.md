@@ -2,10 +2,10 @@
 home: true
 title: "首页"
 heroImage: "/512.png"
-heroText: "All API Hub - AI 聚合中转站管理器"
+heroText: "All API Hub - 你的全能 AI 资产管家"
 tagline: "开源浏览器插件，统一管理第三方 AI 聚合中转站与自建 New API：自动识别账号、比对模型价格、验证 API/CLI 兼容性、同步模型与渠道，并支持跨平台与加密 WebDAV 备份"
 actions:
-  - text: "开始使用"
+  - text: "🚀 开始使用"
     link: "./get-started.html"
     type: "primary"
 
@@ -26,72 +26,225 @@ actions:
     type: "secondary"
 
 features:
-  - title: "智能站点识别"
-    details: "登录后粘贴站点地址即可添加账号，自动识别站点名称、充值比例等信息；识别失败可手动补录，并会提示重复添加。"
-  - title: "多账号总览"
-    details: "把多个站点与账号集中在一个面板里，余额、用量与健康状态一眼看清，并支持自动刷新。"
-  - title: "独立 API 凭证档案"
-    details: "可脱离站点账号单独保存 baseUrl 与 API Key，按标签筛选，并复用到模型查看、接口验证和状态统计。"
-  - title: "模型与价格比对"
-    details: "不仅能看模型列表，还支持按来源、计费方式、分组和账号筛选，对比价格、倍率与实际成本，并标出最低价或最优组。"
-  - title: "模型与接口验证"
-    details: "支持模型可用性验证、批量验证、Token 兼容性判断，以及 CLI 兼容性检查，适合排查“站点可用但工具不可用”的问题。"
-  - title: "用量分析与延迟排查"
-    details: "按站点、账号、Token、日期筛选与对比用量、花费、模型分布和趋势，并提供热力图、延迟与慢请求视图辅助排查。"
-  - title: "自动签到与兑换跳转"
-    details: "集中识别支持签到的站点并处理签到状态，支持自动签到、自定义签到 URL 与充值 / 兑换页跳转。"
-  - title: "快速导出集成"
-    details: "一键导出到 CherryStudio、CC Switch、CLIProxyAPI、Claude Code Router、Kilo Code，以及当前选择的自建托管站点。"
-  - title: "自建站点后台联动"
-    details: "支持对自建 New API、DoneHub、Veloera、Octopus 与 AxonHub 实例进行后台联动。"
-  - title: "WebDAV 备份与同步"
-    details: "支持 JSON 导入导出、WebDAV 自动同步、选择性同步与备份加密，实现跨设备与多浏览器迁移。"
-  - title: "Cloudflare 过盾助手"
-    details: "遇到 Cloudflare 挑战时自动弹出协助窗口，验证完成后继续原有识别、刷新或签到流程。"
-  - title: "全平台支持"
-    details: "兼容 Chrome、Edge、Firefox、Safari 与移动端 / 手机端浏览器，例如手机 Edge、Firefox for Android、Kiwi 等，适配深色模式。"
-  - title: "隐私优先"
-    details: "默认本地优先存储，无遥测数据收集；只有在你配置 WebDAV 或外部接口时，才会访问对应服务。"
+  - title: "📦 资产统一看板"
+    details: "把多个站点与账号集中在一个面板里，余额、用量与健康状态一眼看清，支持智能识别地址自动添加。"
+  - title: "🏷️ API 凭据库"
+    details: "无需账号，直接保存 Base URL + API Key，用于快速复制、验证接口、查看模型与余额/用量。"
+  - title: "💰 模型价格比对"
+    details: "跨站对比各模型实际折合单价，自动锁定当前最优分组，助你寻找最实惠的调用路径。"
+  - title: "✅ 深度接口验证"
+    details: "批量测试模型可用性、Token 兼容性及 CLI 代理连通性，轻松排查“站点能通、工具报错”的问题。"
+  - title: "📈 用量深度统计"
+    details: "按日期、账号、模型多维分析用量与花费，提供热力图、延迟视图与慢请求分析。"
+  - title: "📅 自动签到辅助"
+    details: "集中识别并处理支持签到的站点，支持定时自动签到、自定义 URL 与充值/兑换页面跳转。"
+  - title: "🚀 极速生态集成"
+    details: "一键同步到 CherryStudio、CC Switch、Kilo Code 等，或直接将账号推送到自建管理后台。"
+  - title: "🛠️ 自建站点联动"
+    details: "深度适配 New API、AxonHub、Claude Code Hub 等，实现渠道管理、模型同步与重定向。"
+  - title: "🔒 隐私与安全同步"
+    details: "默认本地存储，支持加密 WebDAV 自动同步与备份，遇到 Cloudflare 挑战时可自动协助过盾。"
 
 footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 ---
 
 ## 介绍
 
-现在 AI 生态里有越来越多基于 New API 系列的聚合中转站和自建面板，要同时管理各站点的余额、用量、模型价格和 API 密钥可用性，往往既分散又费时。
+在 AI 时代，为了省钱或体验不同模型，我们往往拥有多个中转站账号。但管理起来却很头疼：余额分散、价格混乱、每天手动签到太累...
 
-All API Hub 作为浏览器插件，可以自动识别这些站点的账号，并一键查看余额、用量、模型价格、管理模型与密钥、执行自动签到，还支持独立 API 凭证管理，以及为自建 New API、DoneHub、Veloera、Octopus 与 AxonHub 提供后台联动和渠道相关工具。当前已支持基于以下项目的中转站账号：
+**All API Hub 为解决这些问题而生。** 它是你的 AI 资产中心，让管理变得简单、直观且自动化。
 
-- [one-api](https://github.com/songquanpeng/one-api)
-- [new-api](https://github.com/QuantumNous/new-api)
-- [Veloera](https://github.com/Veloera/Veloera)
-- [one-hub](https://github.com/MartialBE/one-hub)
-- [done-hub](https://github.com/deanxv/done-hub)
-- [AxonHub](https://github.com/looplj/axonhub)
-- [Sub2API](https://github.com/Wei-Shaw/sub2api)
-- [AnyRouter](https://anyrouter.top)
-- WONG公益站
-- Neo-API（闭源）
-- Super-API（闭源）
-- RIX_API（闭源，基本功能支持）
-- VoAPI（闭源，老版本支持）
+## 🎯 你的使用场景
 
-如果你在 macOS 上通过 Safari 使用扩展，请先查看 [Safari 安装指南](./safari-install.md)。Safari 需要通过 Xcode 安装，和 Chrome / Edge / Firefox 的商店安装或解压加载方式不同。
+### 👤 我是普通 AI 用户 (新手推荐)
+- **我该怎么用？**：[下载并安装扩展](./get-started.md) -> [添加第一个账号](./get-started.md#add-site)
+- **我想省钱**：[自动签到获取额度](./auto-checkin.md) -> [跨站模型价格比对](./model-list.md)
+- **我想更省事**：[资产变动一眼看清](./balance-history.md) -> [同步账号到其它 AI 工具](./get-started.md#quick-export-sites)
 
-如果你使用 QQ 浏览器、360 安全浏览器、360 极速浏览器、猎豹浏览器、Brave、Vivaldi、Opera 等浏览器，请查看 [QQ / 360 等浏览器安装指南](./other-browser-install.md)。
+### 🛠️ 我是进阶玩家 (Key 收藏家)
+- **密钥管理**：[将独立 URL+Key 保存到 API 凭据库](./api-credential-profiles.md)
+- **可用性测试**：[批量验证接口与 CLI 兼容性](./web-ai-api-check.md)
+- **跨端同步**：[配置 WebDAV 加密备份](./webdav-sync.md)
+
+### 👑 我是站点管理员 (站长专区)
+- **效率工具**：[在插件内直接管理渠道](./self-hosted-site-management.md) -> [批量同步模型](./managed-site-model-sync.md)
+- **配置优化**：[设置模型重定向](./model-redirect.md)
+- **安全保障**：[处理 2FA / OTP 验证](./new-api-security-verification.md)
+
+## 🧩 支持的系统架构
+
+不论你用的是哪种架构，我们基本都支持：
+- **账号站点兼容架构**：One API, New API, Veloera, One-Hub, Done-Hub, Sub2API 等。
+- **特色账号平台与兼容实现**：AIHubMix, AnyRouter, Neo-API, Super-API, v-api 等。
+- **自建管理后台**：New API, Veloera, Done-Hub, Octopus, AxonHub, Claude Code Hub 等，用于渠道管理、迁移和部分模型同步。
+
+> 如果你在 macOS 上使用 Safari，请先查看 [Safari 安装指南](./safari-install.md)。
+> 如果你使用 QQ/360/Brave/Vivaldi/Opera 等浏览器，请查看 [其他浏览器安装指南](./other-browser-install.md)。
+> 如果你想了解商店版为什么会晚于 GitHub Release、如何手动检查更新，请查看 [安装渠道与更新说明](./extension-update-install.md)。
 
 <a id="community"></a>
 ## 💬 社区交流
 
-如果你想更快地交流使用问题、排查配置、分享兼容站点，推荐使用下面这些社区渠道：
+遇到问题？想分享好用的站点？加入我们的社区：
 
-- [GitHub Discussions](https://github.com/qixing-jk/all-api-hub/discussions)：适合整理问题、沉淀经验和长期讨论。
-- [Discord 社区](https://discord.gg/RmFXZ577ZQ)：面向多语言用户，功能多样，适合讨论和问题排查。
-- [Telegram 群](https://t.me/qixing_chat)：适合多语言用户快速交流。
-- 微信群：扫描下方二维码加入中文交流群。
+- [GitHub Discussions](https://github.com/qixing-jk/all-api-hub/discussions)
+- [Discord 社区](https://discord.gg/RmFXZ577ZQ)
+- [Telegram 群](https://t.me/qixing_chat)
+- [QQ 群](https://qm.qq.com/q/ebSCy31Phe)
+- **微信群**：扫描下方二维码加入中文群。
 
 <img
   src="../../resources/wechat_group.png"
   alt="All API Hub 微信群二维码"
   style="width: min(280px, 100%);"
 />
+
+<a id="sponsors"></a>
+## ❤️ 赞助商
+
+<div class="readme-sponsor readme-sponsor-featured">
+  <p class="readme-sponsor-banner">
+    <a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">
+      <img src="../../resources/partners/volcengine.png" alt="火山引擎方舟 Coding-Plan">
+    </a>
+  </p>
+  <p class="readme-sponsor-copy">
+    <strong>火山引擎方舟 Coding-Plan</strong> 是字节跳动推出的开发者生产力计划。Lite 套餐仅需 <strong>9.9 元/月</strong>，即可使用豆包、DeepSeek、GLM 等主流模型，适配 Cursor、Claude Code、Windsurf 等 IDE 工具，并提供模型自动切换体验。现在通过<a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">活动链接</a>加入，还可享受好友邀请返利及首单优惠。
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://s.qiniu.com/qE3eai">
+      <img src="../../resources/partners/qiniu.png" alt="七牛云AI">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    感谢七牛云AI赞助了本项目！七牛云AI 是七牛云（02567.HK）旗下企业级大模型 MaaS 平台，一站式调用全球 150+ 主流模型，兼容全球主流模型厂商协议，覆盖文本、图像、音频、视频、文件处理等全模态处理能力，服务超过 169 万企业及开发者用户。企业用户可通过<a href="https://s.qiniu.com/qE3eai">此链接</a>免费领取 1200 万 Token，邀请好友最高可得百亿 Token。
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4">
+      <img src="../../resources/partners/fennoai.jpg" alt="Fenno.ai">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    感谢 Fenno.ai 赞助了本项目！Fenno.ai 是一家稳定、高效的 API 中转服务商，目前主要提供 Codex 中转服务，兼容 OpenAI 及 Anthropic 协议，可灵活接入 Codex、Claude Code、OpenCode 等主流编程工具，并支持企业级高吞吐调用、国内及海外主体公对公结算和开票。Fenno.ai 为 All API Hub 用户提供专属福利：通过<a href="https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4">此链接</a>即可订阅 9.9 元 / 150 刀额度的 Coding Plan，邀请好友最高可享 20% 奖励。
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://www.packyapi.com/register?aff=all-api-hub">
+      <img src="../../resources/partners/packycode.png" alt="PackyCode">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    感谢 PackyCode 赞助了本项目！PackyCode 是一家稳定、高效的API中转服务商，提供 Claude Code、Codex、Gemini 等多种中转服务。PackyCode
+    为本软件的用户提供了特别优惠，使用<a href="https://www.packyapi.com/register?aff=all-api-hub">此链接</a>注册并在充值时填写"all-api-hub"优惠码，首次充值可以享受9折优惠（<a href="./sponsor-guides/packycode.md">使用教程</a>）！
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://ai.centos.hk">
+      <img class="readme-sponsor-logo-small" src="../../resources/partners/xingchen.png" alt="星辰AI">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    感谢星辰AI赞助了本项目！星辰AI是一家稳定、高效的 API 中转服务商，提供 Claude Code、Codex、Gemini 等多种中转服务。充值比例 1:1，可开发票；Claude 低至 4 折。欢迎通过<a href="https://ai.centos.hk">此链接</a>了解和使用（<a href="./sponsor-guides/xingchen.md">使用教程</a>）。
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">
+      <img src="../../resources/partners/atlas-cloud-logo-display.svg" alt="Atlas Cloud">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    感谢 Atlas Cloud 赞助了本项目！Atlas Cloud 是全模态 AI 推理平台，开发者只需接入一个 AI API，即可统一访问视频生成、图像生成和 LLM
+    API，覆盖 300+ 精选模型。Atlas Cloud 新推出 Coding Plan 优惠，适合需要更高性价比 API 访问的开发者，欢迎通过<a href="https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub">此链接</a>了解。
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://sui-xiang.com/">
+      <img src="../../resources/partners/suixiang.jpg" alt="随想AI中转站">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    感谢随想AI中转站对本项目的赞助！随想AI中转站 是一家可靠高效的 API 中继服务提供商，提供 Claude、Codex、Gemini 等的中继服务。注重隐私的中转站无数据倒卖无模型掺水，隐私，透明，极速售后。新账户注册每日签到就送 0.5 元测试额度，充值额度 1:1，无需订阅，按量付费。多线路冗余、跨区域容灾、自动故障切换，长链路 SSE 不中断。99.9% 可用性，关键调用从不掉队。欢迎通过<a href="https://sui-xiang.com/">此链接</a>了解和使用。
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://www.aicodemirror.com/register?invitecode=7IQNR8">
+      <img src="../../resources/partners/aicodemirror.png" alt="AICodeMirror">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    感谢 AICodeMirror 赞助了本项目！AICodeMirror 提供 Claude Code / Codex / Gemini CLI 官方高稳定中转服务，支持企业级高并发、极速开票、7×24 专属技术支持。Claude Code / Codex / Gemini 官方渠道低至 3.8 / 0.2 / 0.9 折，充值更有折上折！AICodeMirror
+    为 All API Hub 的用户提供了特别福利：通过<a href="https://www.aicodemirror.com/register?invitecode=7IQNR8">此链接</a>注册，可享受首充 8 折，企业客户最高可享 7.5 折！
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://runapi.co/register?aff=cvDm">
+      <img class="readme-sponsor-logo-small" src="../../resources/partners/runapi.jpg" alt="RunAPI">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    感谢 RunAPI 赞助了本项目！RunAPI 是高效稳定的 API OpenRouter 平替平台，一个 API Key 即可访问 OpenAI、Claude、Gemini、DeepSeek、Grok 等 150+ 主流模型，低至 1 折，极其稳定，可以无缝兼容 Claude Code、OpenClaw 等工具。RunAPI
+    为 All API Hub 的用户提供专属福利：使用<a href="https://runapi.co/register?aff=cvDm">此链接</a>注册并联系 RunAPI 管理员，即可领取 ￥7 的免费额度（<a href="./sponsor-guides/runapi.md">使用教程</a>）。
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://unity2.ai/register?ref=9NjKJ86j&source=allapihub">
+      <img src="../../resources/partners/unity2ai.jpg" alt="Unity2.ai">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    感谢 Unity2.ai 赞助了本项目！Unity2.ai 是面向个人开发者、团队和企业的高性能 AI 模型 API 中转平台，长期服务国内头部企业，日均承载超 300 亿 token 调用，支持 5000 RPM 级高并发。支持余额计费、首充赠额、组合订阅、企业开票和专属对接。通过<a href="https://unity2.ai/register?ref=9NjKJ86j&source=allapihub">此链接</a>注册可领取 $2 余额，加入官方群再送 $10 余额，最高可领 $12 免费额度。
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">
+      <img src="../../resources/partners/infistar.png" alt="Infistar.ai">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    感谢 Infistar.ai 赞助了本项目！担心模型掺水、降智或价格不透明？Infistar.ai 在售模型均经过真实调用验真，供给来自官方 API 与官方号池，超 10000 条供应链路进行负载均衡，保证时延和峰时稳定性。覆盖 ChatGPT、Claude、Gemini、Grok、GLM、DeepSeek、Kimi、Qwen、MiniMax 等国内外主流模型，覆盖文本、视频、图片、嵌入、重排等全模态能力，价格与用量透明清晰可查，模型低至官方价的 10%。All API Hub 用户可通过<a href="https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link">专属入口</a>注册体验。
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">

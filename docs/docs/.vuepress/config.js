@@ -18,7 +18,7 @@ export default defineUserConfig({
   locales: {
     '/': {
       lang: 'zh-CN',
-      title: 'All API Hub - 中转站管理器',
+      title: 'All API Hub - 你的全能 AI 资产管家',
       description: '一个开源的浏览器插件，旨在优化管理New API等AI中转站账号的体验。用户可以轻松集中管理和查看账户余额、模型及密钥，并自动添加新站点',
     },
     '/en/': {
@@ -43,8 +43,8 @@ export default defineUserConfig({
         navbar: [
           "/",
           "/get-started",
-          "/changelog",
           "/faq",
+<<<<<<< HEAD
           {
             text: '专题指南',
             children: [
@@ -74,7 +74,92 @@ export default defineUserConfig({
               { text: 'LDOH 站点查询', link: '/ldoh-site-lookup' }
             ]
           }
+=======
+          "/changelog"
+>>>>>>> main
         ],
+        sidebar: [
+          {
+            text: '🚀 快速上手',
+            collapsible: true,
+            children: [
+              '/get-started',
+              '/permissions',
+              '/extension-update-install',
+              '/safari-install',
+              '/other-browser-install',
+            ]
+          },
+          {
+            text: '🔑 账号与凭证',
+            collapsible: true,
+            children: [
+              '/account-management',
+              '/api-credential-profiles',
+              '/key-management',
+              '/bookmark-management',
+              '/sorting-priority',
+            ]
+          },
+          {
+            text: '📊 统计与看板',
+            collapsible: true,
+            children: [
+              '/balance-history',
+              '/usage-analytics',
+              '/share-snapshot',
+              '/model-list',
+              '/auto-refresh',
+            ]
+          },
+          {
+            text: '🤖 自动化助手',
+            collapsible: true,
+            children: [
+              '/auto-checkin',
+              '/site-announcements',
+              '/task-notifications',
+              '/redemption-assist',
+              '/web-ai-api-check',
+              '/cloudflare-helper',
+            ]
+          },
+          {
+            text: '🔌 生态与集成',
+            collapsible: true,
+            children: [
+              '/supported-sites',
+              '/sponsor-guides',
+              '/ldoh-site-lookup',
+              '/supported-export-tools',
+              '/quick-export',
+              '/cliproxyapi-integration',
+            ]
+          },
+          {
+            text: '🛠️ 站长管理工具',
+            collapsible: true,
+            children: [
+              '/managed-site-model-sync',
+              '/self-hosted-site-management',
+              '/model-redirect',
+              '/new-api-security-verification',
+            ]
+          },
+          {
+            text: '🛡️ 数据隐私与支持',
+            collapsible: true,
+            children: [
+              '/data-management',
+              '/webdav-sync',
+              '/privacy',
+              '/auto-detect',
+              '/developer-tools',
+              '/faq',
+            ]
+          },
+          '/changelog'
+        ]
       },
       '/en/': {
         selectLanguageText: 'Languages',
@@ -82,8 +167,8 @@ export default defineUserConfig({
         navbar: [
           "/en/",
           "/en/get-started",
-          "/en/changelog",
           "/en/faq",
+<<<<<<< HEAD
           {
             text: 'Guides',
             children: [
@@ -113,7 +198,92 @@ export default defineUserConfig({
               { text: 'LDOH Site Lookup', link: '/en/ldoh-site-lookup' }
             ]
           }
+=======
+          "/en/changelog"
+>>>>>>> main
         ],
+        sidebar: [
+          {
+            text: '🚀 Getting Started',
+            collapsible: true,
+            children: [
+              '/en/get-started',
+              '/en/permissions',
+              '/en/extension-update-install',
+              '/en/safari-install',
+              '/en/other-browser-install',
+            ]
+          },
+          {
+            text: '🔑 Accounts & Credentials',
+            collapsible: true,
+            children: [
+              '/en/account-management',
+              '/en/api-credential-profiles',
+              '/en/key-management',
+              '/en/bookmark-management',
+              '/en/sorting-priority',
+            ]
+          },
+          {
+            text: '📊 Analytics & Dashboard',
+            collapsible: true,
+            children: [
+              '/en/balance-history',
+              '/en/usage-analytics',
+              '/en/share-snapshot',
+              '/en/model-list',
+              '/en/auto-refresh',
+            ]
+          },
+          {
+            text: '🤖 Automation Helpers',
+            collapsible: true,
+            children: [
+              '/en/auto-checkin',
+              '/en/site-announcements',
+              '/en/task-notifications',
+              '/en/redemption-assist',
+              '/en/web-ai-api-check',
+              '/en/cloudflare-helper',
+            ]
+          },
+          {
+            text: '🔌 Ecosystem & Integrations',
+            collapsible: true,
+            children: [
+              '/en/supported-sites',
+              '/en/sponsor-guides',
+              '/en/ldoh-site-lookup',
+              '/en/supported-export-tools',
+              '/en/quick-export',
+              '/en/cliproxyapi-integration',
+            ]
+          },
+          {
+            text: '🛠️ Admin Management',
+            collapsible: true,
+            children: [
+              '/en/managed-site-model-sync',
+              '/en/self-hosted-site-management',
+              '/en/model-redirect',
+              '/en/new-api-security-verification',
+            ]
+          },
+          {
+            text: '🛡️ Data & Support',
+            collapsible: true,
+            children: [
+              '/en/data-management',
+              '/en/webdav-sync',
+              '/en/privacy',
+              '/en/auto-detect',
+              '/en/developer-tools',
+              '/en/faq',
+            ]
+          },
+          '/en/changelog'
+        ]
       },
       '/ja/': {
         selectLanguageText: '言語選択',
@@ -121,8 +291,8 @@ export default defineUserConfig({
         navbar: [
           "/ja/",
           "/ja/get-started",
-          "/ja/changelog",
           "/ja/faq",
+<<<<<<< HEAD
           {
             text: '機能ガイド',
             children: [
@@ -152,7 +322,92 @@ export default defineUserConfig({
               { text: 'LDOH サイト検索', link: '/ja/ldoh-site-lookup' }
             ]
           }
+=======
+          "/ja/changelog"
+>>>>>>> main
         ],
+        sidebar: [
+          {
+            text: '🚀 導入ガイド',
+            collapsible: true,
+            children: [
+              '/ja/get-started',
+              '/ja/permissions',
+              '/ja/extension-update-install',
+              '/ja/safari-install',
+              '/ja/other-browser-install',
+            ]
+          },
+          {
+            text: '🔑 アカウントと認証情報',
+            collapsible: true,
+            children: [
+              '/ja/account-management',
+              '/ja/api-credential-profiles',
+              '/ja/key-management',
+              '/ja/bookmark-management',
+              '/ja/sorting-priority',
+            ]
+          },
+          {
+            text: '📊 統計とダッシュボード',
+            collapsible: true,
+            children: [
+              '/ja/balance-history',
+              '/ja/usage-analytics',
+              '/ja/share-snapshot',
+              '/ja/model-list',
+              '/ja/auto-refresh',
+            ]
+          },
+          {
+            text: '🤖 自動化アシスタント',
+            collapsible: true,
+            children: [
+              '/ja/auto-checkin',
+              '/ja/site-announcements',
+              '/ja/task-notifications',
+              '/ja/redemption-assist',
+              '/ja/web-ai-api-check',
+              '/ja/cloudflare-helper',
+            ]
+          },
+          {
+            text: '🔌 エコシステムと連携',
+            collapsible: true,
+            children: [
+              '/ja/supported-sites',
+              '/ja/sponsor-guides',
+              '/ja/ldoh-site-lookup',
+              '/ja/supported-export-tools',
+              '/ja/quick-export',
+              '/ja/cliproxyapi-integration',
+            ]
+          },
+          {
+            text: '🛠️ 管理者向けツール',
+            collapsible: true,
+            children: [
+              '/ja/managed-site-model-sync',
+              '/ja/self-hosted-site-management',
+              '/ja/model-redirect',
+              '/ja/new-api-security-verification',
+            ]
+          },
+          {
+            text: '🛡️ データとサポート',
+            collapsible: true,
+            children: [
+              '/ja/data-management',
+              '/ja/webdav-sync',
+              '/ja/privacy',
+              '/ja/auto-detect',
+              '/ja/developer-tools',
+              '/ja/faq',
+            ]
+          },
+          '/ja/changelog'
+        ]
       }
     }
   }),

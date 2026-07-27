@@ -20,7 +20,7 @@
 
 - **IP 质量**：若连续无法通过，需要更换网络或在站点侧临时放宽防护；默认超时时间为 20 秒。
 - **弹窗权限**：请允许浏览器弹出窗口，否则插件无法创建临时标签页。
-- **重复挑战**：若频繁触发 429，可在 New API 渠道管理中调低速率或启用模型白名单，减少无效请求。
+- **重复挑战**：若频繁触发 429，可在 自建站点管理中调低速率或启用模型白名单，减少无效请求。
 
 ## 常见问题
 
@@ -33,7 +33,6 @@
 
 ## 相关文档
 
-- [Cloudflare 防护与临时窗口降级（快速上手）](./get-started.md#cloudflare-window-downgrade)
 - [快速导出站点](./quick-export.md)
-- [New API 渠道管理](./new-api-channel-management.md)
+- [自建站点管理](./self-hosted-site-management.md)
 - [权限管理（可选权限）](./permissions.md)

@@ -7,6 +7,7 @@
 import os
 import sys
 import logging
+import tempfile
 from pathlib import Path
 
 # 配置日志
@@ -17,8 +18,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 配置
-DOCS_DIR = Path(__file__).parent.parent / 'docs'
+DOCS_DIR = Path(__file__).parent.parent / 'docs/docs'
 TARGET_LANGUAGES = ['en', 'ja']
+OUTPUT_FILE = Path(
+    os.environ.get('MISSING_FILES_OUTPUT', Path(tempfile.gettempdir()) / 'missing_files.txt')
+)
 
 
 def find_source_files():
@@ -28,7 +32,7 @@ def find_source_files():
     for md_file in DOCS_DIR.rglob('*.md'):
         # 跳过翻译目录
         rel_path = md_file.relative_to(DOCS_DIR)
-        if any(str(rel_path).startswith(f"{lang}/") for lang in TARGET_LANGUAGES):
+        if rel_path.parts and rel_path.parts[0] in TARGET_LANGUAGES:
             continue
         
         # 跳过 .gitkeep 等非文档文件
@@ -104,13 +108,11 @@ def save_missing_files(missing_files: list):
         logger.info("\n✅ 所有文档都已翻译完成！")
         return
     
-    output_file = Path('/tmp/missing_files.txt')
-    
-    with open(output_file, 'w', encoding='utf-8') as f:
+    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         for file_path in missing_files:
             f.write(f"{file_path}\n")
     
-    logger.info(f"\n💾 已保存缺失文件列表到: {output_file}")
+    logger.info(f"\n💾 已保存缺失文件列表到: {OUTPUT_FILE}")
 
 
 def main():

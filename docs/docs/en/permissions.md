@@ -64,7 +64,7 @@ On the permission management page, you can see:
 
 ## Privacy and Security Statement
 
--   The plugin runs **completely offline** by default; all account and site configurations are stored locally in the browser.
+-   Account and site configurations are stored locally in the browser by default; features such as balance refresh, site API access, WebDAV backup or sync, and anonymous product analytics make the necessary network requests according to your settings.
 -   Optional permissions are only enabled under the following conditions:
     -   You explicitly click "Allow" on the permission management page;
     -   The browser displays a permission request dialog and you confirm it.

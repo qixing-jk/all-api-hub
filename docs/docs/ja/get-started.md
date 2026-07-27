@@ -1,232 +1,131 @@
 # はじめに
 
-New API などの AI 中継ステーションアカウントの管理体験を最適化するために設計された、オープンソースのブラウザ拡張機能です。ユーザーは、アカウント残高、モデル、キーを一元的に管理・表示し、新しいサイトを自動的に追加できます。原則として、ブラウザが拡張機能をサポートしていれば、通常はモバイルデバイスでも使用できます。
+わずか数分で、AIアセットのインテリジェント管理の旅を始めましょう。All API Hub は、残高の自動同期、毎日のチェックイン、および一般的なAIツールへのワンクリック統合を支援します。
 
-## 1. ダウンロード
+## 1. プラグインのインストール
 
-### チャネルバージョンの比較
+最適な体験（自動更新を含む）を得るために、**各ブラウザの公式ストアからのインストールを強くお勧めします**。
 
 | チャネル | ダウンロードリンク | 現在のバージョン | ユーザー数 |
 |---|---|---|---|
 | Chrome ウェブストア | [Chrome ウェブストア](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | [![Chrome version](https://img.shields.io/chrome-web-store/v/lapnciffpekdengooeolaienkeoilfeo?label=Chrome&logo=googlechrome&style=flat)](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) | [![Chrome Web Store Users](https://img.shields.io/chrome-web-store/users/lapnciffpekdengooeolaienkeoilfeo?label=Chrome%20Users)](https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo) |
 | Edge ウェブストア | [Edge ウェブストア](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) | [![Edge version](https://img.shields.io/badge/dynamic/json?label=Edge&prefix=v&query=%24.version&url=https%3A%2F%2Fmicrosoftedge.microsoft.com%2Faddons%2Fgetproductdetailsbycrxid%2Fpcokpjaffghgipcgjhapgdpeddlhblaa&logo=microsoftedge&style=flat)](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) | [![Edge Add-ons Users](https://img.shields.io/badge/dynamic/json?label=Edge%20Users&query=$.activeInstallCount&url=https://microsoftedge.microsoft.com/addons/getproductdetailsbycrxid/pcokpjaffghgipcgjhapgdpeddlhblaa)](https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa) |
 | Firefox ウェブストア | [Firefox ウェブストア](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) | [![Firefox version](https://img.shields.io/amo/v/%7Bbc73541a-133d-4b50-b261-36ea20df0d24%7D?label=Firefox&logo=firefoxbrowser&style=flat)](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) | [![Mozilla Add-on Users](https://img.shields.io/amo/users/%7Bbc73541a-133d-4b50-b261-36ea20df0d24%7D?label=Firefox%20Users)](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) |
-| GitHub Releases | [すべてのリリースを見る](https://github.com/qixing-jk/all-api-hub/releases) | [![GitHub version](https://img.shields.io/github/v/release/qixing-jk/all-api-hub?label=GitHub&logo=github&style=flat)](https://github.com/qixing-jk/all-api-hub/releases/latest) | [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/qixing-jk/all-api-hub/total?label=Total%20Downloads)](https://github.com/qixing-jk/all-api-hub/releases) |
-
-::: tip ストア版と Release 版の違い
-- デフォルトではストア版の使用を推奨します。
-- ストア版はほとんどのユーザーに適しており、インストールが簡単で、通常は自動更新されます。
-- Release 版は手動でダウンロード、解凍し、更新後に再度手動でインストールまたは再読み込みする必要があります。
-- 新しいバージョンをより早く取得したい、手動で修正を確認したい、または拡張パッケージをロードする必要がある場合にのみ、Release 版を検討してください。
-
-モバイル / スマートフォンでの補足説明：
-- 原則として、ブラウザが拡張機能をサポートしていれば、通常は使用できます。例: `Edge`、`Firefox for Android`、`Kiwi` など。
-- 詳細については、[よくある質問のモバイルデバイスでの使用](./faq.md#mobile-browser-support) を参照してください。
-:::
 
 <details>
-<summary>Release タイプ選択</summary>
+<summary>📦 手動インストール、Safari、またはモバイルデバイスが必要ですか？（クリックして展開）</summary>
 
-まずバージョンタイプを選択し、対応するアタッチメントをダウンロードしてください：
-
-| タイプ | 推奨されるシナリオ | ダウンロードリンク | 特徴 |
-|---|---|---|---|
-| 正式版 Stable | 日常使用、初回インストール、安定性優先 | [最新の正式版をダウンロード](https://github.com/qixing-jk/all-api-hub/releases/latest) | 正式リリースバージョンに対応しており、リリースノートがより充実しており、安定性が高いです。 |
-| Nightly プレリリース | 新機能/修正をいち早く取得したい、または問題の検証に協力したい | [Nightly をダウンロード](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) | `main` の最新コミットから自動生成されるため、更新が最も速い一方、十分に検証されていない変更を含む場合があります。添付ファイル名には通常 `nightly` が含まれます。 |
-
-::: tip 選択方法
-- どちらを選択すべきか不明な場合は、まず正式版 Stable を選択してください。
-- 特定の修正が含まれているか確認したい場合、または問題のフィードバックに協力したい場合は、Nightly を選択してください。
-- ストア版は通常、審査の遅延により 1～3 日遅れます。GitHub の正式版は一般的に早く、Nightly は最も速いですが、リスクも高くなります。
-:::
+- **GitHub Stable**：ストア版または Chrome ウェブストア互換版をインストールできない場合、または公開済みの修正を一時的に手動インストールしたい場合は、[GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases) から正式版をダウンロードできます。手動インストール版はストア版のように自動更新されません。新しいバージョンの通知を受け取るには、リポジトリを Star / Watch してください。
+- **Nightly プレリリース**：新機能を早く試してテストに協力したいユーザー向けです。ストアの安定版より不安定な場合があります。Nightly も手動インストール経路で、自動更新されません。
+- **Safari (Mac)**：Xcode を介してインストールする必要があります。詳細は [Safari インストールガイド](./safari-install.md) を参照してください。
+- **QQ / 360 / Brave / Vivaldi / Opera など**：Chromium 系ブラウザでもインストール経路は異なります。Brave、Vivaldi、Opera は通常まず Chrome ウェブストアを試せます。ストア経路を使えない場合は手動読み込みを使ってください。詳細は [その他のブラウザへのインストールガイド](./other-browser-install.md) を参照してください。
+- **モバイルデバイス**：Edge モバイル版、Firefox Android、Kiwi などに対応しています。詳細は [モバイル FAQ](./faq.md#mobile-browser-support) を参照してください。
 
 </details>
 
-### Safari ブラウザのインストール
+<a id="add-site"></a>
+## 2. 最初のアカウントを追加する
 
-Safari は、Chrome、Edge、Firefox のようにストアから直接インストールしたり、解凍して読み込んだりすることはできません。Xcode を介してインストールする必要があります。完全な手順については、[Safari インストールガイド](./safari-install.md) を参照してください。
+これは、プラグインを使用する上で最も重要なステップです。**「自動認識」機能の使用を強くお勧めします**。これは、QR コードでログインするのと同じくらい簡単です。
 
-推奨されるインストール方法：
+### 2.1 自動認識（推奨）
 
-1. GitHub Release から `all-api-hub-<version>-safari-xcode-bundle.zip` をダウンロードし、解凍後に Xcode プロジェクトを直接開いて実行します。
-
-高度な使い方：
-
-1. ソースコードからビルド：`pnpm install` -> `pnpm run build:safari` -> `xcrun safari-web-extension-converter .output/safari-mv2/` -> Xcode で実行します。
-
-::: warning Safari ダウンロードに関する注意事項
-`all-api-hub-<version>-safari-xcode-bundle.zip` をダウンロードしてください。`all-api-hub-<version>-safari.zip` を単独でダウンロードしないでください。前者には、直接開くことができる Xcode プロジェクトと実行に必要なファイルが含まれており、通常のインストールプロセスに適しています。
+::: tip ステップ 1
+まず、ブラウザで AI 中継ステーションのウェブサイトを開き、ログインしてください。
 :::
 
-正式な署名を行い、TestFlight / App Store で配布する場合は、通常 Apple Developer Program アカウントも必要です。それ以外の場合は、一般的にローカルデバッグまたは自己使用に適しています。
+1. ブラウザの右上にあるプラグインアイコンをクリックして、メインページを開きます。
+2. **`アカウントを追加`** をクリックします。
+3. 表示されるダイアログボックスに、サイトの URL を入力します。
+4. **`自動認識`** をクリックします。
+5. 情報に誤りがないことを確認したら、**`追加を確定`** をクリックします。
 
-### QQ / 360 などブラウザのインストール
+::: tip アカウントをまだ持っていませんか？
+安定していて効率的かつ互換性の高い AI プロキシサービスをお探しなら、次のパートナーをお試しください。
 
-QQ ブラウザ、360 セキュア ブラウザ、360 スピード ブラウザ、Cheetah ブラウザ、Brave、Vivaldi、Opera などのブラウザを使用している場合は、GitHub Release の Chrome バージョンの圧縮パッケージをダウンロードし、[QQ / 360 などブラウザのインストールガイド](./other-browser-install.md) を参照して解凍・ロードしてください。
-
-## 2. サポートされているサイト
-
-以下のプロジェクトに基づいてデプロイされた中継ステーションをサポートしています：
-- [one-api](https://github.com/songquanpeng/one-api)
-- [new-api](https://github.com/QuantumNous/new-api)
-- [Veloera](https://github.com/Veloera/Veloera)
-- [one-hub](https://github.com/MartialBE/one-hub)
-- [done-hub](https://github.com/deanxv/done-hub)
-- [AxonHub](https://github.com/looplj/axonhub)
-- WONG公益站
-- [Sub2API](https://github.com/Wei-Shaw/sub2api)
-- [AnyRouter](https://anyrouter.top)
-- [VoAPI](https://github.com/VoAPI/VoAPI)
-- [Super-API](https://github.com/SuperAI-Api/Super-API)
-- Neo-API
-- RIX_API（基本機能サポート）
-
-互換性のあるサイトの完全なリストについては、[サポートされているサイトとシステムタイプ](./supported-sites.md) を参照してください。
-
-::: warning
-サイトが二次開発され、一部の重要なインターフェース（例: `/api/user`）が変更された場合、拡張機能はこのサイトを正常に追加できない可能性があります。
+- [Dola Seed on BytePlus ModelArk](https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub)：BytePlus ModelArk から登録すると、各モデルにつき 500,000 トークン分の無料推論枠を受け取れます。
+- [Qiniu Cloud AI](https://s.qiniu.com/qE3eai)：150 以上の主要グローバルモデルへ一括アクセスできる企業向け MaaS プラットフォームです。企業ユーザーは 1,200 万トークンの無料枠を受け取れます。
+- [Fenno.ai](https://api.fenno.ai/register?redirect=/purchase?tab=subscription%26group=16&aff=VS3FMCGW4XK4)：OpenAI と Anthropic プロトコルに対応した、安定性と効率性の高い Codex 中継サービスです。Codex、Claude Code、OpenCode などの開発ツールに接続でき、All API Hub ユーザーは 9.9 元 / 150 ドル相当の Coding Plan を利用できます。
+- [PackyCode](https://www.packyapi.com/register?aff=all-api-hub)：チャージ時に `all-api-hub` クーポンコードを入力すると 10% オフになります。[設定ガイド](./sponsor-guides/packycode.md)
+- [Xingchen AI](https://ai.centos.hk)：1:1 のチャージ比率、請求書対応、Claude は通常価格の 40% 程度から利用できます。[設定ガイド](./sponsor-guides/xingchen.md)
+- [Atlas Cloud](https://www.atlascloud.ai/console/coding-plan?utm_source=github&utm_medium=link&utm_campaign=all-api-hub)：1 つの AI API で 300 以上の厳選された動画、画像、LLM モデルを利用でき、新しい Coding Plan プロモーションでより手頃に API へアクセスできます。
+- [AICodeMirror](https://www.aicodemirror.com/register?invitecode=7IQNR8)：Claude Code / Codex / Gemini CLI 向けの公式高安定中継サービスです。このリンクから登録すると初回チャージが 20% オフになり、エンタープライズ顧客は最大 25% オフを受けられます。
+- [RunAPI](https://runapi.co/register?aff=cvDm)：登録後に RunAPI 管理者へ連絡すると ￥7 の無料クレジットを受け取れます。[設定ガイド](./sponsor-guides/runapi.md)
+- [Unity2.ai](https://unity2.ai/register?ref=9NjKJ86j&source=allapihub)：開発者、チーム、企業向けの高性能 AI モデル API 中継プラットフォームで、5,000 RPM 級の高同時実行に対応します。このリンクから登録すると $2 の残高を受け取れます。公式グループに参加するとさらに $10、最大 $12 の無料枠を受け取れます。
+- [Suixiang AI Relay](https://sui-xiang.com/)：Claude、Codex、Gemini などの API 中継サービスを提供し、従量課金、毎日のチェックインによるテストクレジット、複数回線冗長、自動フェイルオーバーに対応します。
+- [Infistar.ai](https://infistar.ai/register?aff=ALLAPIHUB&ref_source=link)：提供モデルはすべて実際の呼び出しで検証済みです。10,000 本を超える公式 API と公式アカウントプールの供給経路を負荷分散し、テキスト、動画、画像、埋め込み、リランキングなどのフルモーダル機能、透明な料金と利用量、公式価格の 10% からの価格を提供します。
 :::
 
-## 3. サイトの追加
-
-::: info ヒント
-拡張機能の自動認識機能がログイン情報を読み取り、アカウント情報を取得できるように、必ず事前にブラウザで対象ウェブサイトにログインしてください。
-:::
-
-### 3.1 自動認識による追加
-
-1. 拡張機能のメインページを開き、「`新規アカウント`」をクリックします。
-
-![新規アカウント](../static/image/add-account-btn.png)
-
-2. 中継ステーションのアドレスを入力し、「`自動認識`」をクリックします。
-
-![自動認識](../static/image/add-account-dialog-btn.png)
-
-3. 自動認識が正しいことを確認したら、「`追加を確定`」をクリックします。
-
-::: info ヒント
-拡張機能は、アカウントのさまざまな情報を自動的に認識します。例：
-- ユーザー名
-- ユーザー ID
-- [アクセス トークン](#manual-addition)
-- チャージ金額の倍率
-:::
-
-> 対象サイトで Cloudflare 5 秒ルールが有効になっている場合、拡張機能は自動的に独立したウィンドウを表示して、ルール通過を支援します。通過後、認識プロセスを続行できます。
-> IP の品質が低い場合やその他の理由で、タイムアウト前にポップアップウィンドウで手動でルールを通過させる必要がある場合があります。
-
-### 3.2 Cloudflare ルール通過アシスタントの概要
-
-- Cloudflare 5 秒ルールが認識された場合、拡張機能は自動的に一時ウィンドウを起動して検証を完了します。チャレンジに手動介入が必要な場合は、ポップアップウィンドウで検証をクリックしてください。
-- 検証が完了すると、元のプロセスに戻り、アクセス トークンとサイト情報の取得を続行します。
-- 詳細については、[Cloudflare 保護と一時ウィンドウのダウングレード](#cloudflare-window-downgrade) を参照してください。
+> **盾越えのヒント**：サイトに Cloudflare 認証（5 秒ルール）がある場合、プラグインは自動的にウィンドウを表示して盾越えを支援します。認証が完了すると、自動的に認識を続行します。
 
 <a id="manual-addition"></a>
-### 3.3 手動追加
+### 2.2 手動追加（代替）
 
-::: info ヒント
-自動認識が成功しなかった場合は、サイトアカウントを手動で入力して追加できます。事前に以下の情報を取得する必要があります。（各サイトの UI は異なる場合があるため、ご自身で探してください。）
+自動認識がうまくいかない場合や、正確に制御したい場合は、手動で入力できます：
+- **ユーザー名 / ID**：サイトに表示される名前。
+- **アクセス トークン (Access Token)**：通常、サイトの「設定」または「トークン」ページで見つけることができます。
+- **モード選択**：デフォルトでは `Access Token` モードを推奨します。
+
+---
+
+## 3. サポートされているサイトタイプ
+
+どのアーキテクチャを使っていても、高い確率で対応しています：
+- **アカウントサイト互換アーキテクチャ**：One API, New API, Veloera, One-Hub, Done-Hub, Sub2API など。
+- **特色あるアカウントプラットフォームと互換実装**：AIHubMix, AnyRouter, Neo-API, Super-API, v-api など。
+- **セルフホスト型管理バックエンド**：New API, Veloera, Done-Hub, [Octopus](https://github.com/bestruirui/octopus), AxonHub, Claude Code Hub など。チャネル管理、移行、一部のモデル同期に利用できます。
+
+::: tip 互換性に関するヒント
+アカウントサイト互換アーキテクチャで構築された中継サイトは、通常アカウントとして追加できます。AxonHub、Octopus、Claude Code Hub などは主にセルフホスト型管理バックエンドとして利用します。完全な互換性リストについては、[サポートされているサイトとシステムタイプ](./supported-sites.md) を参照してください。
 :::
-![ユーザー情報](../static/image/site-user-info.png)
-
-対象サイトがカスタマイズ版（例: AnyRouter）の場合は、アカウントを追加する際に手動で **Cookie モード** に切り替えてから、自動認識または手動入力を実行してください。厳格な保護が施されたサイトに遭遇した場合は、Cloudflare ルール通過アシスタントと組み合わせて使用することもできます。詳細は [よくある質問](./faq.md#anyrouter-error) を参照してください。
 
 <a id="quick-export-sites"></a>
 ## 4. クイックエクスポートと統合
 
-この拡張機能は、追加されたサイトの API 設定をローカルクライアント、CLI ツール、およびセルフホスト型サイトにエクスポートすることをサポートしており、`Base URL`、キー、モデル設定の繰り返し入力を削減します。現在の完全なリストについては、[サポートされているエクスポートツールと統合ターゲット](./supported-export-tools.md) を参照してください。
+アカウントを追加した後、これらの設定をワンクリックで他の AI ツールに「プッシュ」でき、手動でのコピー＆ペーストは不要になります。
 
-### 4.1 設定
+1. **`キー管理`** ページに移動します。
+2. エクスポートしたいキーを見つけ、メニューから **`CherryStudio にエクスポート`**、**`CC Switch にエクスポート`** などを選択します。
+3. AI クライアントが自動的に起動し、設定が完了します。
 
-エクスポート/統合機能を使用する前に、ターゲットタイプに応じて対応する設定を完了してください：
+> 完全なリストについては、[サポートされているエクスポートツールと統合ターゲット](./supported-export-tools.md) を参照してください。
 
-- **CherryStudio / CC Switch**：Deeplink を介してインポートを呼び出せるように、ターゲットクライアントを起動したままにします。
-- **Kilo Code / Roo Code**：各キーに対応するモデル ID を事前に確認することをお勧めします。
-- **CLIProxyAPI / Claude Code Router**：基本設定に対応する管理アドレスと認証情報を入力します。
-- **セルフホスト型サイト（New API / DoneHub / Veloera / Octopus / AxonHub）**：`設定 -> 基本設定 -> セルフホスト型サイト管理` でバックエンド設定を完了します。
+---
 
-### 4.2 エクスポートプロセス
+## 5. コア機能の詳細ガイド
 
-1. **キー管理に移動**：拡張機能の **キー管理** ページで、エクスポートしたいサイトに対応する API キーを見つけます。
-2. **対応する操作をクリック**：キー操作メニューで、「**CherryStudio にエクスポート**」、「**CC Switch にエクスポート**」、「**Kilo Code JSON にエクスポート**」、「**CLIProxyAPI にインポート**」、「**Claude Code Router にインポート**」、または「**現在のセルフホスト型サイトにインポート**」を選択します。
-3. **自動処理**：
-   * **CherryStudio / CC Switch の場合**：拡張機能は、ターゲットアプリケーションの Deeplink プロトコルに従って、サイト情報と API キーを自動的に渡します。
-   * **Kilo Code / Roo Code の場合**：拡張機能は、コピーまたはダウンロード可能な設定 JSON を生成し、手動インポートを容易にします。
-   * **CLIProxyAPI / Claude Code Router / セルフホスト型サイトの場合**：拡張機能は、対応する管理インターフェースを呼び出して、Provider / Channel を作成または更新します。
+### 📊 アセットダッシュボードと統計
+- **[アセット概要とリアルタイム更新](./auto-refresh.md)**：複数サイトの残高、使用量、健全状態を一元管理。
+- **[残高履歴](./balance-history.md)**：資産の変動トレンドを直感的に表示。
+- **[使用量統計分析](./usage-analytics.md)**：消費量、モデル分布、遅延を多角的に分析。
 
-これらの統合機能により、同じアップストリームサイトを複数のダウンストリームツールまたはバックエンドシステムに同期でき、手動での繰り返し貼り付けが不要になります。
+### 🔑 キー管理とクイック統合
+- **[トークン管理](./key-management.md)**：サイトのトークンを一元管理し、ワンクリックで補完可能。
+- **[API 認証情報庫](./api-credential-profiles.md)**：アカウントなしで `Base URL + API Key` を保存し、コピー、検証、モデル確認に使えます。
+- **[Web API スニッフィング](./web-ai-api-check.md)**：Web ページ内で API 設定を迅速に識別・テスト。
 
-## 5. 機能概要
+### ⚡ 自動化と情報追跡
+- **[自動チェックインフロー](./auto-checkin.md)**：すべてのサイトのチェックインを毎日自動的に実行。
+- **[サイト公告](./site-announcements.md)**：保存済みサイトの公告をバックグラウンドで取得し、メンテナンス、モデル変更、価格調整などの情報をまとめて確認。
+- **[引き換えアシスタント](./redemption-assist.md)**：Web ページ上の引き換えコードを自動認識し、ワンクリックで取得。
+- **[ブックマーク整理](./bookmark-management.md)**：コンソール、ドキュメント、チャージ入口を一元管理。
 
-### 5.1 自動リフレッシュとヘルスステータス
+### 🛡️ 安定性とセキュリティ保護
+- **[Cloudflare 盾越えアシスタント](./cloudflare-helper.md)**：検証を支援し、リフレッシュやチェックインの中断を防ぎます。
+- **[WebDAV 同期と暗号化](./webdav-sync.md)**：クロスデバイスでの暗号化バックアップをサポートし、データを失わないようにします。
 
-- **設定 → 自動リフレッシュ** を開くと、アカウントデータの定期的なリフレッシュを有効にできます。デフォルトの間隔は 6 分（360 秒）で、最短 60 秒までサポートします。
-- **「拡張機能を開いたときに自動リフレッシュ」** にチェックを入れると、ポップアップウィンドウを開いたときにデータを同期できます。
-- **「ヘルスステータスを表示」** を有効にすると、アカウントカードにヘルスステータスインジケーター（正常/警告/エラー/不明）が表示されます。
+### 🔔 通知チャネル
+- **[タスク通知](./task-notifications.md)**：**`設定 → 一般 → 通知`** で有効化し、ブラウザシステム通知、Telegram Bot、Feishu Bot、DingTalk Bot、WeCom Bot、ntfy、汎用 Webhook でバックグラウンドタスクの結果通知を受け取れます。
 
-### 5.2 チェックイン検出
+### 🛠️ セルフホスト型サイト運用ツール
+- **[セルフホスト型サイト管理](./self-hosted-site-management.md)**：プラグイン内で直接チャネルの追加、削除、変更、クエリを実行。
+- **[モデル同期とリダイレクト](./managed-site-model-sync.md)**：アップストリームモデルを一括同期し、マッピングロジックを設定。
 
-- アカウント情報で **「チェックイン検出を有効にする」** にチェックを入れると、サイトのチェックインステータスを追跡できます。
-- **カスタムチェックイン URL** と **カスタムチャージ URL** を設定して、カスタマイズされたサイトに対応できます。
-- チェックインが必要なアカウントはリストに表示され、クリックするとチェックインページにジャンプします。
+---
 
-### 5.3 WebDAV バックアップとマルチデバイス同期
+## 6. その他の説明
 
-- **設定 → WebDAV バックアップ** に移動し、WebDAV アドレス、ユーザー名、パスワードを設定します。
-- 同期ポリシー（マージ/アップロードのみ/ダウンロードのみ）を選択し、自動同期間隔を設定できます。
-- JSON のインポート/エクスポートと組み合わせて、二重バックアップを実現することをお勧めします。
-
-### 5.4 ソート優先度
-
-- **設定 → ソート優先度設定** でアカウントのソートロジックを調整します。
-- 現在のサイト、ヘルスステータス、チェックイン要件、カスタムフィールドなどの条件を組み合わせて並べ替えることができます。
-- ドラッグアンドドロップで優先度を調整し、不要なソートルールはいつでも無効にできます。
-
-### 5.5 データインポート/エクスポート
-
-- **設定 → データとバックアップ** の「インポートとエクスポート」セクションで、現在のすべてのアカウント設定を JSON にワンクリックでエクスポートできます。
-- 旧バージョンまたは他のデバイスからエクスポートされたデータをインポートして、迅速な移行または復元を容易にできます。
-
-### 5.6 New API モデルリスト同期
-
-New API モデルリスト同期機能の詳細については、[New API モデルリスト同期](./new-api-model-sync.md) を参照してください。
-
-### 5.7 New API チャネル管理（Beta）
-
-拡張機能内で直接チャネルを作成/編集/削除し、モデルホワイトリストと単一チャネル同期デバッグと組み合わせることで、New API バックエンドへの往復回数を大幅に削減できます。詳細な操作と注意事項については、[New API チャネル管理](./new-api-channel-management.md) を参照してください。
-
-<a id="cloudflare-window-downgrade"></a>
-### 5.8 Cloudflare 保護と一時ウィンドウのダウングレード
-
-- Cloudflare によってブロックされた（一般的なステータスコード 401/403/429）認識または API 呼び出しは、自動的に一時ウィンドウに切り替えて再試行され、ターゲットドメインの Cookie が保持されます。通常、手動操作は不要です。原理については、[Cloudflare ルール通過アシスタント](./cloudflare-helper.md) を参照してください。
-- 人間による検証が必要なシナリオに遭遇した場合は、表示されるアシスタントウィンドウでチャレンジを完了してください。頻繁に失敗する場合は、ネットワークを変更するか、リクエスト頻度を下げることを試みてください。
-
-## 6. 詳細ドキュメント
-
-- [サポートされているエクスポートツールと統合ターゲット](./supported-export-tools.md)
-- [サポートされているサイトとシステムタイプ](./supported-sites.md)
-- [Safari インストールガイド](./safari-install.md)
-- [QQ / 360 などブラウザのインストールガイド](./other-browser-install.md)
-- [Cloudflare ルール通過アシスタント](./cloudflare-helper.md)
-- [サイト設定のクイックエクスポート](./quick-export.md)
-- [自動リフレッシュとリアルタイムデータ](./auto-refresh.md)
-- [自動チェックインとチェックイン監視](./auto-checkin.md)
-- [WebDAV バックアップと自動同期](./webdav-sync.md)
+- [よくある質問 FAQ](./faq.md)
+- [更新ログ](./changelog.md)
+- [権限説明](./permissions.md)
 - [データ管理](./data-management.md)
-- [New API モデルリスト同期](./new-api-model-sync.md)
-- [New API チャネル管理](./new-api-channel-management.md)
-- [CLIProxyAPI 統合](./cliproxyapi-integration.md)
-- [モデルリダイレクト](./model-redirect.md)
-- [ソート優先度設定](./sorting-priority.md)
-- [権限管理（オプション権限）](./permissions.md)
-
-## 7. よくある質問とサポート
-
-- より詳細な [よくある質問](./faq.md) を参照して、認証方法、AnyRouter の適合性、機能使用のヒントなどを確認してください。
-- 問題が発生した場合や新機能が必要な場合は、[GitHub Issues](https://github.com/qixing-jk/all-api-hub/issues) でフィードバックをお寄せください。
-- 過去の更新については、[更新ログ](./changelog.md) を参照してください。
-
-::: tip 次のステップ
-基本設定が完了したら、自動リフレッシュ、チェックイン検出、または WebDAV 同期を設定して、より完全な使用体験を得ることができます。
-:::

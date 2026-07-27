@@ -9,10 +9,14 @@
     "pnpm": ">=10"
   },
   "scripts": {
-    "docs:dev": "vuepress dev docs",
-    "docs:clean-dev": "vuepress dev docs --clean-cache",
-    "docs:build": "vuepress build docs",
-    "docs:check": "pnpm run docs:build",
+    "docs:dev": "pnpm run docs:generate-changelog-index && vuepress dev docs",
+    "docs:clean-dev": "pnpm run docs:generate-changelog-index && vuepress dev docs --clean-cache",
+    "docs:build": "pnpm run docs:generate-changelog-index && vuepress build docs",
+    "docs:check-links": "node scripts/check-doc-links.mjs",
+    "docs:generate-changelog-index": "node scripts/changelog-index.mjs",
+    "docs:check-changelog-index": "node scripts/changelog-index.mjs --check",
+    "docs:test": "node --test scripts/*.test.mjs",
+    "docs:check": "pnpm run docs:test && pnpm run docs:check-links && pnpm run docs:build",
     "docs:update-package": "pnpm dlx vp-update"
   },
   "devDependencies": {
