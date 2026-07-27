@@ -19,16 +19,6 @@ vi.mock(
   () => mocks.pageContract,
 )
 
-vi.mock(
-  "~/entrypoints/content/messageHandlers/openrouter/managementKeyPage",
-  () => mocks.pageContract,
-)
-
-vi.mock(
-  "~/entrypoints/content/messageHandlers/openrouter/clerkSessionProtocol",
-  () => mocks.pageContract,
-)
-
 vi.mock("~/entrypoints/background/tempWindowPool", () => ({
   tempWindowBackgroundRuntime: {
     run: async (_url: string, _options: unknown, task: () => Promise<void>) =>

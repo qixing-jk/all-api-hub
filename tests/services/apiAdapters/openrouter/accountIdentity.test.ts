@@ -85,6 +85,12 @@ describe("resolveOpenRouterBootstrapIdentity", () => {
     expect(result.username).toBe("")
     expect(result.userId).toMatch(/^openrouter:/)
   })
+})
+
+describe("resolveOpenRouterAccountUserId", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
 
   it("uses normalized editable identity before credential defaults", () => {
     expect(

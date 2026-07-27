@@ -74,6 +74,7 @@ function request(correlationId = "clerk-correlation-example") {
 describe("OpenRouter Clerk session protocol", () => {
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   it("normalizes the Clerk user id and applies the display-name priority", () => {
@@ -478,5 +479,27 @@ describe("OpenRouter Clerk session protocol", () => {
     setupOpenRouterClerkSessionBridge(environment)
 
     expect(fixture.windowFixture.addEventListener).toHaveBeenCalledTimes(1)
+  })
+
+  it("reads the live Clerk user through the default bridge environment", async () => {
+    const fixture = createWindowFixture()
+    const liveWindow = Object.assign(fixture.windowFixture, {
+      Clerk: {
+        user: { id: "user_example", username: "Example User" },
+      },
+    })
+    vi.stubGlobal("window", liveWindow)
+
+    setupOpenRouterClerkSessionBridge()
+    fixture.emit(request("default-environment-correlation"))
+    await vi.waitFor(() => expect(fixture.postMessage).toHaveBeenCalledOnce())
+
+    expect(fixture.postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        correlationId: "default-environment-correlation",
+        identity: { userId: "user_example", username: "Example User" },
+      }),
+      OPENROUTER_MANAGEMENT_KEYS_ORIGIN,
+    )
   })
 })

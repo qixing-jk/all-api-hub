@@ -580,6 +580,14 @@ export function useOpenRouterAccountOnboarding() {
         provisioningSettlement,
       ])
 
+      // A bounded close must release this hook even when the underlying
+      // provisioning and cancellation operations never settle. The closed ID
+      // still isolates any late result from a subsequently opened session.
+      if (activeRef.current === active) {
+        activeRef.current = null
+        closeRequestedRef.current = false
+      }
+
       if (provisioning.status === "fulfilled") {
         hasKnownNotDispatchedEvidence =
           provisioning.value.kind === "bootstrap_failure" &&

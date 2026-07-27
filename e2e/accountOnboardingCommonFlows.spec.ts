@@ -18,6 +18,7 @@ import {
   getCopyKeyDialogRuntimeKeyItemTestId,
 } from "~/features/AccountManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import enMessages from "~/locales/en/messages.json" with { type: "json" }
 import { buildAccountTokenRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -768,6 +769,12 @@ test("OpenRouter auto-detect bootstrap shows manual fallback while logged out", 
   extensionId,
   page,
 }) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    tempWindowFallback: {
+      enabled: false,
+    },
+  })
   const openRouterFixture = await stubOpenRouterManagementKeyRoutes(
     context,
     "logged_out",
@@ -786,13 +793,17 @@ test("OpenRouter auto-detect bootstrap shows manual fallback while logged out", 
     .fill(OPENROUTER_WEB_ORIGIN)
   await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
 
-  await expect(
-    page.getByText("Sign in to OpenRouter, then try auto-detect again."),
-  ).toBeVisible({
+  const loggedOutGuidance = dialog.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage,
+  )
+  await expect(loggedOutGuidance).toBeVisible({
     timeout:
       OPENROUTER_MANAGEMENT_KEY_TRANSPORT_TIMEOUT_MS +
       OPENROUTER_MANAGEMENT_KEY_TRANSPORT_MARGIN_MS,
   })
+  await expect(loggedOutGuidance).toHaveText(
+    enMessages.openrouter.bootstrap.logged_out,
+  )
   await expect(
     dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger),
   ).toHaveAttribute("data-site-type", SITE_TYPES.OPENROUTER)

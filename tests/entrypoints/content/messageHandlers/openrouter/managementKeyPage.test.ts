@@ -64,6 +64,27 @@ describe("OpenRouter Management Key page automation", () => {
   afterEach(() => {
     document.body.innerHTML = ""
     vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it("uses the live page environment and accepts dispatch by default", async () => {
+    installCreateFlow()
+    vi.stubGlobal("window", {
+      location: {
+        origin: OPENROUTER_MANAGEMENT_KEYS_ORIGIN,
+        pathname: OPENROUTER_MANAGEMENT_KEYS_PATH,
+      },
+    })
+
+    await expect(
+      performOpenRouterManagementKeyPageAction({
+        requestId: "request-default-environment",
+        operation: { kind: "create", label: "extension-request-example" },
+      }),
+    ).resolves.toMatchObject({
+      mutationState: "created",
+      accessToken: "sk-or-test-secret",
+    })
   })
 
   it("submits the exact caller label once and returns the one-time secret", async () => {
@@ -186,6 +207,70 @@ describe("OpenRouter Management Key page automation", () => {
       })
     },
   )
+
+  it.each([
+    [{ requestId: "request-missing-operation" }, "request-missing-operation"],
+    [{ requestId: 42, operation: { kind: "create", label: "label" } }, ""],
+  ])("normalizes malformed page requests", async (request, requestId) => {
+    await expect(
+      performOpenRouterManagementKeyPageAction(
+        request as any,
+        pageEnvironment(),
+      ),
+    ).resolves.toEqual({
+      requestId,
+      operation: "create",
+      mutationState: "not_dispatched",
+      attemptOutcome: "page_changed",
+      label: "",
+    })
+  })
+
+  it("fails closed when New Key never opens an eligible dialog", async () => {
+    vi.useFakeTimers()
+    document.body.innerHTML = "<main><button>New Key</button></main>"
+    const action = performOpenRouterManagementKeyPageAction(
+      {
+        requestId: "request-missing-dialog",
+        operation: { kind: "create", label: "extension-request-example" },
+      },
+      pageEnvironment(),
+    )
+    await vi.advanceTimersByTimeAsync(OPENROUTER_MANAGEMENT_KEY_PAGE_TIMEOUT_MS)
+
+    await expect(action).resolves.toMatchObject({
+      mutationState: "not_dispatched",
+      attemptOutcome: "page_changed",
+    })
+  })
+
+  it("fails closed when the create control never becomes enabled", async () => {
+    vi.useFakeTimers()
+    document.body.innerHTML = "<main><button>New Key</button></main>"
+    document.querySelector("button")?.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `<div role="dialog" data-open>
+          <label for="name">Name</label>
+          <input id="name" />
+          <button disabled data-disabled>Continue</button>
+        </div>`,
+      )
+    })
+    const action = performOpenRouterManagementKeyPageAction(
+      {
+        requestId: "request-create-disabled",
+        operation: { kind: "create", label: "extension-request-example" },
+      },
+      pageEnvironment(),
+    )
+    await vi.advanceTimersByTimeAsync(OPENROUTER_MANAGEMENT_KEY_PAGE_TIMEOUT_MS)
+
+    await expect(action).resolves.toMatchObject({
+      mutationState: "not_dispatched",
+      attemptOutcome: "page_changed",
+    })
+  })
 
   it("fails closed when main contains multiple New Key controls", async () => {
     vi.useFakeTimers()
@@ -685,6 +770,82 @@ describe("OpenRouter Management Key page automation", () => {
     expect(document.body.textContent).not.toContain("sk-or-test-secret")
   })
 
+  it("does not click Create when the dispatch marker throws", async () => {
+    installCreateFlow()
+
+    const result = await performOpenRouterManagementKeyPageAction(
+      {
+        requestId: "request-marker-throws",
+        operation: { kind: "create", label: "extension-request-example" },
+      },
+      pageEnvironment(),
+      () => {
+        throw new Error("marker unavailable")
+      },
+    )
+
+    expect(result).toMatchObject({
+      mutationState: "not_dispatched",
+      attemptOutcome: "failed",
+    })
+    expect(document.body.textContent).not.toContain("sk-or-test-secret")
+  })
+
+  it("fails closed when another disabled submit appears after dispatch", async () => {
+    installCreateFlow()
+
+    const result = await performOpenRouterManagementKeyPageAction(
+      {
+        requestId: "request-competing-submit",
+        operation: { kind: "create", label: "extension-request-example" },
+      },
+      pageEnvironment(),
+      () => {
+        document
+          .querySelector('[role="dialog"]')
+          ?.insertAdjacentHTML(
+            "beforeend",
+            "<button disabled data-disabled>Another submit</button>",
+          )
+        return true
+      },
+    )
+
+    expect(result).toMatchObject({
+      mutationState: "dispatched_unconfirmed",
+      attemptOutcome: "failed",
+    })
+  })
+
+  it("fails closed when create reveals multiple fresh secrets", async () => {
+    installCreateFlow()
+
+    const result = await performOpenRouterManagementKeyPageAction(
+      {
+        requestId: "request-ambiguous-created-secret",
+        operation: { kind: "create", label: "extension-request-example" },
+      },
+      pageEnvironment(),
+      () => {
+        document
+          .querySelector('[role="dialog"] button')
+          ?.addEventListener("click", () => {
+            document.body.insertAdjacentHTML(
+              "beforeend",
+              '<div role="dialog" data-open><code>sk-or-second-secret</code></div>',
+            )
+          })
+        return true
+      },
+    )
+
+    expect(result).toMatchObject({
+      mutationState: "dispatched_unconfirmed",
+      attemptOutcome: "failed",
+    })
+    expect(result).not.toHaveProperty("accessToken")
+  })
+
   it("does not click Create when the dispatch marker stalls until the deadline", async () => {
     vi.useFakeTimers()
     installCreateFlow()
@@ -755,6 +916,24 @@ describe("OpenRouter Management Key page automation", () => {
       },
       pageEnvironment(),
       vi.fn(),
+    )
+    await vi.advanceTimersByTimeAsync(OPENROUTER_MANAGEMENT_KEY_PAGE_TIMEOUT_MS)
+
+    await expect(action).resolves.toMatchObject({
+      mutationState: "not_dispatched",
+      attemptOutcome: "timeout",
+    })
+  })
+
+  it("ignores a malformed sign-in link instead of classifying logout", async () => {
+    vi.useFakeTimers()
+    document.body.innerHTML = '<a href="http://[">Account</a>'
+    const action = performOpenRouterManagementKeyPageAction(
+      {
+        requestId: "request-malformed-login-link",
+        operation: { kind: "create", label: "extension-request-example" },
+      },
+      pageEnvironment(),
     )
     await vi.advanceTimersByTimeAsync(OPENROUTER_MANAGEMENT_KEY_PAGE_TIMEOUT_MS)
 

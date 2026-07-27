@@ -27,6 +27,7 @@ const {
   mockIsExtensionPopup,
   mockStartPopupCriticalFlow,
   mockCompletePopupCriticalFlow,
+  mockLoggerWarn,
 } = vi.hoisted(() => ({
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
@@ -38,6 +39,16 @@ const {
   mockIsExtensionPopup: vi.fn(),
   mockStartPopupCriticalFlow: vi.fn(),
   mockCompletePopupCriticalFlow: vi.fn(),
+  mockLoggerWarn: vi.fn(),
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: mockLoggerWarn,
+    error: vi.fn(),
+  }),
 }))
 
 vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
@@ -117,6 +128,39 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 })
 
 describe("useAccountDialog OpenRouter behavior", () => {
+  const getLatestValidateAndSaveAccountCall = () => {
+    const args = mockValidateAndSaveAccount.mock.calls.at(-1)
+    if (!args) throw new Error("Expected validateAndSaveAccount to be called")
+    const [
+      url,
+      siteName,
+      username,
+      accessToken,
+      userId,
+      exchangeRate,
+      notes,
+      tagIds,
+      checkInConfig,
+      siteType,
+      authType,
+      cookieAuthSessionCookie,
+    ] = args
+    return {
+      url,
+      siteName,
+      username,
+      accessToken,
+      userId,
+      exchangeRate,
+      notes,
+      tagIds,
+      checkInConfig,
+      siteType,
+      authType,
+      cookieAuthSessionCookie,
+    }
+  }
+
   beforeEach(async () => {
     vi.restoreAllMocks()
     mockStartProductAnalyticsAction.mockReset()
@@ -129,6 +173,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
     mockIsExtensionPopup.mockReset()
     mockStartPopupCriticalFlow.mockReset()
     mockCompletePopupCriticalFlow.mockReset()
+    mockLoggerWarn.mockReset()
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
     })
@@ -347,12 +392,10 @@ describe("useAccountDialog OpenRouter behavior", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(mockValidateAndSaveAccount.mock.calls.at(-1)?.[9]).toBe(
-      SITE_TYPES.OPENROUTER,
-    )
-    expect(mockValidateAndSaveAccount.mock.calls.at(-1)?.[10]).toBe(
-      AuthTypeEnum.AccessToken,
-    )
+    expect(getLatestValidateAndSaveAccountCall()).toMatchObject({
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+    })
   })
 
   it("fills editable bootstrap identity and saves explicit edits", async () => {
@@ -379,11 +422,11 @@ describe("useAccountDialog OpenRouter behavior", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(mockValidateAndSaveAccount.mock.calls.at(-1)?.slice(2, 5)).toEqual([
-      "Edited User",
-      "management-key-placeholder",
-      "user-edited-placeholder",
-    ])
+    expect(getLatestValidateAndSaveAccountCall()).toMatchObject({
+      username: "Edited User",
+      accessToken: "management-key-placeholder",
+      userId: "user-edited-placeholder",
+    })
   })
 
   it("saves the exact completed credential without recovery guidance", async () => {
@@ -1065,7 +1108,7 @@ describe("useAccountDialog OpenRouter behavior", () => {
     await act(async () => {
       await result.current.handlers.handleSaveAccount()
     })
-    expect(mockValidateAndSaveAccount.mock.calls.at(-1)?.[4]).toBe("")
+    expect(getLatestValidateAndSaveAccountCall().userId).toBe("")
   })
 
   it("selects the canonical URL and default name while preserving an edited name", async () => {
@@ -1308,30 +1351,11 @@ describe("useAccountDialog OpenRouter behavior", () => {
     await act(() => {
       result.current.setters.setSiteName("Renamed")
     })
-    let savePromise!: Promise<unknown>
-    act(() => {
-      savePromise = result.current.handlers.handleSaveAccount()
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
     })
-    const warningObserver = waitFor(
-      () => {
-        expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
-      },
-      { timeout: 500 },
-    )
-      .then(() => "warned" as const)
-      .catch(() => "no-warning" as const)
-    const outcome = await Promise.race([
-      savePromise.then(() => "saved" as const),
-      warningObserver,
-    ])
-    if (outcome === "warned") {
-      await act(async () => {
-        result.current.handlers.handleDuplicateAccountWarningCancel()
-        await savePromise
-      })
-    }
 
-    expect(outcome).toBe("saved")
+    expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
     await expect(
       accountStorage.getAccountById(currentId),
     ).resolves.toMatchObject({
@@ -1465,6 +1489,110 @@ describe("useAccountDialog OpenRouter behavior", () => {
     await waitFor(() => {
       expect(onPostSaveAccountRefresh).toHaveBeenCalled()
     })
+  })
+
+  it("still closes when OpenRouter close reconciliation rejects", async () => {
+    const secretSentinel = "sk-or-close-secret-sentinel"
+    mockAutoDetectAccount.mockReturnValue(new Promise(() => {}))
+    const onClose = vi.fn()
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose,
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () => {
+      result.current.handlers.handleUrlChange("https://openrouter.ai")
+    })
+    act(() => {
+      void result.current.handlers.handleAutoDetect()
+    })
+    await waitFor(() => expect(mockAutoDetectAccount).toHaveBeenCalledOnce())
+    mockCancelAccountAutoDetect.mockImplementationOnce(() => {
+      throw new Error(`close reconciliation unavailable: ${secretSentinel}`)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleClose()
+    })
+
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "OpenRouter onboarding close handling failed",
+      {
+        siteType: SITE_TYPES.OPENROUTER,
+        status: "reconciliation_failed",
+        category: "onboarding_close",
+      },
+    )
+    expect(
+      JSON.stringify(mockLoggerWarn.mock.calls, (_key, value) =>
+        value instanceof Error
+          ? { message: value.message, stack: value.stack }
+          : value,
+      ),
+    ).not.toContain(secretSentinel)
+  })
+
+  it("continues saving when exact-credential duplicate storage lookup fails", async () => {
+    const secretSentinel = "sk-or-storage-secret-sentinel"
+    vi.spyOn(accountStorage, "getAllAccountsOrThrow").mockRejectedValueOnce(
+      new Error(`temporary storage read failure: ${secretSentinel}`),
+    )
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/key`, () =>
+        HttpResponse.json({ data: { is_management_key: true } }),
+      ),
+      http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
+        HttpResponse.json({ data: { total_credits: 1, total_usage: 0 } }),
+      ),
+    )
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    await act(async () => {
+      result.current.setters.setSiteType(SITE_TYPES.OPENROUTER)
+      result.current.setters.setAccessToken("new-management-key")
+      result.current.setters.setExchangeRate("7")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "Exact-credential duplicate lookup failed; continuing without warning",
+      {
+        siteType: SITE_TYPES.OPENROUTER,
+        status: "storage_lookup_failed",
+        category: "duplicate_check",
+      },
+    )
+    expect(
+      JSON.stringify(mockLoggerWarn.mock.calls, (_key, value) =>
+        value instanceof Error
+          ? { message: value.message, stack: value.stack }
+          : value,
+      ),
+    ).not.toContain(secretSentinel)
+    await expect(accountStorage.getAllAccounts()).resolves.toEqual([
+      expect.objectContaining({
+        site_type: SITE_TYPES.OPENROUTER,
+        account_info: expect.objectContaining({
+          access_token: "new-management-key",
+        }),
+      }),
+    ])
   })
 
   it("validates and directly saves a changed management key", async () => {

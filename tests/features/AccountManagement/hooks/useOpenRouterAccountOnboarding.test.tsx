@@ -613,6 +613,28 @@ describe("useOpenRouterAccountOnboarding", () => {
     expect(mockOnboardOpenRouterAccount).not.toHaveBeenCalled()
   })
 
+  it("cancels before dispatch when the start callback changes URL context", async () => {
+    const { result, onDetected, onManualFallback, onCredentialCreated } =
+      await renderController()
+    const admission = result.current.tryPrepareForStart()!
+
+    await expect(
+      result.current.startPrepared({
+        preparation: admission.preparation,
+        onStarted: () =>
+          result.current.notifyUrlChange("https://example.invalid"),
+        onDetected,
+        onManualFallback,
+        onCredentialCreated,
+      }),
+    ).resolves.toEqual({
+      status: "cancelled_before_dispatch",
+      success: false,
+    })
+
+    expect(mockOnboardOpenRouterAccount).not.toHaveBeenCalled()
+  })
+
   it("consumes a preparation before a concurrent second start", async () => {
     const firstProviderResult =
       createDeferred<ReturnType<typeof createPreDispatchFailure>>()
@@ -741,6 +763,28 @@ describe("useOpenRouterAccountOnboarding", () => {
     )
   })
 
+  it("ignores a transport rejection after the URL context changes", async () => {
+    const deferred = createDeferred<ReturnType<typeof createCompletedResult>>()
+    mockOnboardOpenRouterAccount.mockReturnValueOnce(deferred.promise)
+    const { result, onManualFallback, start } = await renderController()
+    let startPromise!: ReturnType<typeof start>
+
+    act(() => {
+      startPromise = start("stale-rejection-request-placeholder")
+      result.current.notifyUrlChange("https://example.invalid")
+    })
+    await act(async () => {
+      deferred.reject(new Error("late transport failure"))
+      await expect(startPromise).resolves.toEqual({
+        status: "ignored",
+        success: false,
+      })
+    })
+
+    expect(onManualFallback).not.toHaveBeenCalled()
+    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+  })
+
   it("isolates a completed result after the URL context changes", async () => {
     const deferred = createDeferred<ReturnType<typeof createCompletedResult>>()
     mockOnboardOpenRouterAccount.mockReturnValueOnce(deferred.promise)
@@ -789,6 +833,33 @@ describe("useOpenRouterAccountOnboarding", () => {
     })
 
     expect(onManualFallback).not.toHaveBeenCalled()
+    expect(result.current.recovery).toBeNull()
+    expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+  })
+
+  it("isolates created recovery evidence after the site context changes", async () => {
+    const deferred = createDeferred<ReturnType<typeof createRecoveryResult>>()
+    mockOnboardOpenRouterAccount.mockReturnValueOnce(deferred.promise)
+    const { result, onManualFallback, onCredentialCreated, start } =
+      await renderController()
+    let startPromise!: ReturnType<typeof start>
+
+    act(() => {
+      startPromise = start("created-stale-request-placeholder")
+      result.current.notifySiteChange(SITE_TYPES.NEW_API)
+    })
+    await act(async () => {
+      deferred.resolve(
+        createRecoveryResult({
+          requestId: "created-stale-request-placeholder",
+          mutationState: OPENROUTER_BOOTSTRAP_MUTATION_STATES.Created,
+        }),
+      )
+      await startPromise
+    })
+
+    expect(onManualFallback).not.toHaveBeenCalled()
+    expect(onCredentialCreated).not.toHaveBeenCalled()
     expect(result.current.recovery).toBeNull()
     expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
   })
@@ -1032,6 +1103,42 @@ describe("useOpenRouterAccountOnboarding", () => {
         await vi.advanceTimersByTimeAsync(1_000)
       })
       expect(mockShowWarningToast).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("releases the active run after both close settlements miss the deadline", async () => {
+    const { result, start } = await renderController()
+    vi.useFakeTimers()
+    try {
+      mockOnboardOpenRouterAccount.mockReturnValueOnce(new Promise(() => {}))
+      mockCancelOpenRouterAccountProvisioning.mockReturnValueOnce(
+        new Promise(() => {}),
+      )
+      act(() => {
+        void start("close-timeout-request-placeholder")
+      })
+
+      let closePromise!: Promise<void>
+      act(() => {
+        closePromise = result.current.beforeClose()
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(
+          OPENROUTER_BOOTSTRAP_CANCEL_TIMEOUT_MS,
+        )
+        await closePromise
+      })
+
+      act(() => {
+        result.current.resetSession({
+          url: "https://openrouter.ai",
+          siteType: SITE_TYPES.UNKNOWN,
+          credential: "",
+        })
+      })
+      expect(result.current.tryPrepareForStart()).not.toBeNull()
     } finally {
       vi.useRealTimers()
     }

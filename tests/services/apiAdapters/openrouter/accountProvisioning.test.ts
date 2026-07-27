@@ -33,7 +33,7 @@ const tempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Options
 
 describe("OpenRouter account provisioning", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
   })
 
   it("owns the canonical onboarding result mapping in the provider module", async () => {
@@ -78,12 +78,20 @@ describe("OpenRouter account provisioning", () => {
       "messages:openrouter.bootstrap.page_changed",
     ],
     [
+      OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.InvalidOrigin,
+      "messages:openrouter.bootstrap.invalid_origin",
+    ],
+    [
       OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.Timeout,
       "messages:openrouter.bootstrap.timeout",
     ],
     [
       OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.CancelledBeforeCreate,
       "messages:openrouter.bootstrap.cancelled_before_create",
+    ],
+    [
+      OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.Failed,
+      "messages:openrouter.bootstrap.failed",
     ],
   ])(
     "maps the %s pre-dispatch outcome through the provider onboarding seam",
@@ -368,7 +376,6 @@ describe("OpenRouter account provisioning", () => {
       attemptOutcome: OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.Success,
       accessToken: "sk-or-setup-recovery-placeholder",
     })
-    const originalAbortController = globalThis.AbortController
     vi.stubGlobal(
       "AbortController",
       class {
@@ -389,7 +396,7 @@ describe("OpenRouter account provisioning", () => {
         },
       })
     } finally {
-      vi.stubGlobal("AbortController", originalAbortController)
+      vi.unstubAllGlobals()
     }
   })
 
@@ -508,6 +515,14 @@ describe("OpenRouter account provisioning", () => {
       label: "recognizable-label",
     })
     expect(cancelManagementKey).toHaveBeenCalledWith("request-cancel")
+  })
+
+  it("does not dispatch cancellation without a request id", async () => {
+    await expect(cancelOpenRouterAccountProvisioning("   ")).resolves.toEqual({
+      requestId: "",
+      certainty: "unknown",
+    })
+    expect(cancelManagementKey).not.toHaveBeenCalled()
   })
 
   it("uses the same normalized request ID for create and cancel", async () => {

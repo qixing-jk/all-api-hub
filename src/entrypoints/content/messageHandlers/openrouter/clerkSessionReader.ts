@@ -13,7 +13,7 @@ import {
 import {
   OPENROUTER_MANAGEMENT_KEYS_ORIGIN,
   OPENROUTER_MANAGEMENT_KEYS_PATH,
-} from "~/entrypoints/content/messageHandlers/openrouter/managementKeyPage"
+} from "~/services/apiAdapters/openrouter/managementKeyPageContract"
 import type { OpenRouterClerkSessionIdentity } from "~/services/apiAdapters/openrouter/types"
 
 export const OPENROUTER_CLERK_SESSION_CROSS_WORLD_MARGIN_MS = 500

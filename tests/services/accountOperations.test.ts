@@ -100,7 +100,11 @@ describe("accountOperations", () => {
           undefined,
           { deferDataRefresh: true },
         ),
-      ).rejects.toThrow("storage unavailable")
+      ).resolves.toEqual({
+        success: false,
+        message: "messages:errors.validation.updateAccountFailed",
+      })
+      expect(mockValidateManagementKey).not.toHaveBeenCalled()
       expect(mockUpdateAccount).not.toHaveBeenCalled()
     })
 

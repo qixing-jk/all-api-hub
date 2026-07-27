@@ -162,6 +162,30 @@ describe("AccountDialog ActionButtons", () => {
     expect(props.onAutoDetect).toHaveBeenCalledTimes(1)
   })
 
+  it("shows the multiline pending label while re-detecting OpenRouter", async () => {
+    const props = createProps()
+    props.mode = DIALOG_MODES.EDIT
+    props.isDetecting = true
+
+    render(
+      <ActionButtons
+        {...props}
+        autoDetectPresentation={{
+          idleLabel: "accountDialog:mode.createOpenRouterManagementKey",
+          pendingLabel: "accountDialog:mode.creatingOpenRouterManagementKey",
+          reDetectLabel: "accountDialog:mode.createOpenRouterManagementKey",
+          multiline: true,
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:mode.creatingOpenRouterManagementKey",
+      }),
+    ).toBeDisabled()
+  })
+
   it("shows add-mode auto-config and save actions, and wires the auto-config handler", async () => {
     const user = userEvent.setup()
     const props = createProps()

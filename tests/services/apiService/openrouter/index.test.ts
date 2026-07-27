@@ -1,6 +1,14 @@
 import i18n from "i18next"
 import { http, HttpResponse } from "msw"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
@@ -30,7 +38,23 @@ const baseRequest = {
 }
 
 describe("apiService OpenRouter", () => {
+  beforeAll(() => {
+    i18n.addResourceBundle(
+      "en",
+      "account",
+      {
+        healthStatus: {
+          apiError: "API error",
+          httpError: "HTTP {{statusCode}}: {{message}}",
+          unknownError: "Unknown error",
+        },
+      },
+      true,
+      true,
+    )
+  })
   beforeEach(() => server.resetHandlers())
+  afterEach(() => vi.restoreAllMocks())
 
   it("validates management keys against the canonical key endpoint", async () => {
     let capturedRequest: Request | undefined
@@ -174,6 +198,7 @@ describe("apiService OpenRouter", () => {
   )
 
   it.each([
+    { data: null },
     { data: {} },
     { data: { is_management_key: "true" } },
     { data: { is_management_key: null } },
@@ -261,6 +286,21 @@ describe("apiService OpenRouter", () => {
     await expect(fetchAccountData(baseRequest)).rejects.toBeInstanceOf(ApiError)
   })
 
+  it("rejects finite credits whose remaining balance calculation overflows", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
+        HttpResponse.json({
+          data: {
+            total_credits: Number.MAX_VALUE,
+            total_usage: -Number.MAX_VALUE,
+          },
+        }),
+      ),
+    )
+
+    await expect(fetchAccountData(baseRequest)).rejects.toBeInstanceOf(ApiError)
+  })
+
   it.each([401, 403, 429])("preserves HTTP %i errors", async (status) => {
     server.use(
       http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
@@ -299,19 +339,6 @@ describe("apiService OpenRouter", () => {
   it.each([401, 403, 429])(
     "sanitizes sensitive backend messages for refresh HTTP %i failures",
     async (status) => {
-      i18n.addResourceBundle(
-        "en",
-        "account",
-        {
-          healthStatus: {
-            apiError: "API error",
-            httpError: "HTTP {{statusCode}}: {{message}}",
-            unknownError: "Unknown error",
-          },
-        },
-        true,
-        true,
-      )
       const sensitiveMessage = "management-key-secret-backend-message"
       server.use(
         http.get(`${OPENROUTER_API_BASE_URL}/credits`, () =>
@@ -326,6 +353,39 @@ describe("apiService OpenRouter", () => {
       expect(result.healthStatus.message).not.toContain(sensitiveMessage)
     },
   )
+
+  it("sanitizes fetch failure details while preserving network health", async () => {
+    const privateDiagnostic = "private-fetch-diagnostic"
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(
+      new TypeError(`fetch failed: ${privateDiagnostic}`),
+    )
+
+    const result = await refreshAccountData(baseRequest)
+
+    expect(result).toMatchObject({
+      success: false,
+      healthStatus: { status: SiteHealthStatus.Error },
+    })
+    expect(result.healthStatus.message).not.toContain(privateDiagnostic)
+  })
+
+  it("replaces unknown refresh failures with controlled local copy", async () => {
+    const privateDiagnostic = "private-unknown-diagnostic"
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(
+      new Error(privateDiagnostic),
+    )
+
+    const result = await refreshAccountData(baseRequest)
+
+    expect(result).toMatchObject({
+      success: false,
+      healthStatus: {
+        status: SiteHealthStatus.Unknown,
+        message: "Unknown error",
+      },
+    })
+    expect(result.healthStatus.message).not.toContain(privateDiagnostic)
+  })
 
   it("pins account requests to the OpenRouter API origin", async () => {
     let seenUrl = ""

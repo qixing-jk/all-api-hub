@@ -3,9 +3,11 @@ import {
   OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES,
   OPENROUTER_BOOTSTRAP_MUTATION_STATES,
   OPENROUTER_BOOTSTRAP_VALIDATION_TIMEOUT_MS,
+  type OpenRouterBootstrapNotDispatchedAttemptOutcome,
 } from "~/constants/openRouterBootstrap"
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { OPENROUTER_DISPLAY_NAME } from "~/services/accountSiteDefinitions/identifiers"
 import { validateManagementKey } from "~/services/apiService/openrouter"
 import { AuthTypeEnum } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
@@ -170,7 +172,7 @@ export async function provisionOpenRouterAccount(
         status: "completed",
         data: {
           username: identity.username,
-          siteName: "OpenRouter",
+          siteName: OPENROUTER_DISPLAY_NAME,
           accessToken: created.accessToken,
           userId: identity.userId,
           exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
@@ -238,7 +240,7 @@ export async function onboardOpenRouterAccount(
 
 /** Returns localized recovery guidance for a pre-dispatch creation failure. */
 function getOpenRouterBootstrapFailureMessage(
-  outcome: import("~/constants/openRouterBootstrap").OpenRouterBootstrapNotDispatchedAttemptOutcome,
+  outcome: OpenRouterBootstrapNotDispatchedAttemptOutcome,
 ) {
   switch (outcome) {
     case OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.LoggedOut:

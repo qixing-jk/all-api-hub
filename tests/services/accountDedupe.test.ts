@@ -60,7 +60,7 @@ describe("scanDuplicateAccounts", () => {
     )
   })
 
-  it("does not normalize OpenRouter credentials before comparing them", () => {
+  it("normalizes stored OpenRouter credential whitespace before grouping", () => {
     const accountA = buildSiteAccount({
       id: "or-a",
       site_type: SITE_TYPES.OPENROUTER,
@@ -85,7 +85,8 @@ describe("scanDuplicateAccounts", () => {
       strategy: "keepMostRecentlyUpdated",
     })
 
-    expect(result.groups).toHaveLength(0)
+    expect(result.groups).toHaveLength(1)
+    expect(result.groups[0].accounts).toEqual([accountA, accountB])
     expect(result.unscannable).toEqual([])
   })
 
@@ -308,7 +309,7 @@ describe("scanDuplicateAccounts", () => {
     const account = buildSiteAccount({
       id: "existing",
       site_type: SITE_TYPES.OPENROUTER,
-      account_info: { access_token: " management-key " } as any,
+      account_info: { access_token: "different-management-key" } as any,
     })
 
     expect(
@@ -318,6 +319,22 @@ describe("scanDuplicateAccounts", () => {
         accessToken: "management-key",
       }),
     ).toBeUndefined()
+  })
+
+  it("normalizes stored credential whitespace before finding a duplicate", () => {
+    const account = buildSiteAccount({
+      id: "existing",
+      site_type: SITE_TYPES.OPENROUTER,
+      account_info: { access_token: " management-key " } as any,
+    })
+
+    expect(
+      findExactCredentialDuplicateAccountId({
+        accounts: [account],
+        siteType: SITE_TYPES.OPENROUTER,
+        accessToken: "management-key",
+      }),
+    ).toBe("existing")
   })
 
   it("normalizes a draft credential before matching canonical storage", () => {
@@ -334,6 +351,25 @@ describe("scanDuplicateAccounts", () => {
         accessToken: " management-key ",
       }),
     ).toBe("existing")
+  })
+
+  it("returns the lowest account id when several exact credential duplicates exist", () => {
+    const accounts = ["duplicate-z", "duplicate-a"].map((id) =>
+      buildSiteAccount({
+        id,
+        site_type: SITE_TYPES.OPENROUTER,
+        site_url: "https://provider.example.invalid",
+        account_info: { access_token: "same-management-key" } as any,
+      }),
+    )
+
+    expect(
+      findExactCredentialDuplicateAccountId({
+        accounts,
+        siteType: SITE_TYPES.OPENROUTER,
+        accessToken: "same-management-key",
+      }),
+    ).toBe("duplicate-a")
   })
 
   it("treats scheme-less site URLs as scannable origins", () => {
@@ -550,6 +586,47 @@ describe("scanDuplicateAccounts", () => {
     })
     expect(result.groups[0].accounts).toEqual([accountA, duplicateA])
     expect(result.unscannable).toEqual([])
+  })
+
+  it("orders same-origin user duplicate groups by their normalized user id", () => {
+    const accounts = [
+      ["user-b-1", "user-b"],
+      ["user-b-2", "user-b"],
+      ["user-a-1", "user-a"],
+      ["user-a-2", "user-a"],
+    ].map(([id, userId]) =>
+      buildSiteAccount({
+        id,
+        site_url: "https://provider.example.invalid",
+        account_info: { id: userId } as any,
+      }),
+    )
+
+    const result = scanDuplicateAccounts({
+      accounts,
+      strategy: "keepPinned",
+    })
+
+    expect(result.groups.map((group) => group.key)).toMatchObject([
+      { reason: "same_origin_user", userId: "user-a" },
+      { reason: "same_origin_user", userId: "user-b" },
+    ])
+  })
+
+  it("marks accounts without a credential or usable user id as unscannable", () => {
+    const missingIdentity = buildSiteAccount({
+      id: "missing-identity",
+      site_url: "https://provider.example.invalid",
+      account_info: { id: "   " } as any,
+    })
+
+    const result = scanDuplicateAccounts({
+      accounts: [missingIdentity],
+      strategy: "keepPinned",
+    })
+
+    expect(result.groups).toEqual([])
+    expect(result.unscannable).toEqual([missingIdentity])
   })
 
   it("skips accounts with invalid URLs as unscannable", () => {

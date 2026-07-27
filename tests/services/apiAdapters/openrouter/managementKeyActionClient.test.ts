@@ -9,8 +9,15 @@ import {
 import { OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH } from "~/services/apiAdapters/openrouter/managementKeySecret"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
-const { sendRuntimeMessageMock } = vi.hoisted(() => ({
-  sendRuntimeMessageMock: vi.fn(),
+const { isProtectionBypassFirefoxEnvMock, sendRuntimeMessageMock } = vi.hoisted(
+  () => ({
+    isProtectionBypassFirefoxEnvMock: vi.fn(() => false),
+    sendRuntimeMessageMock: vi.fn(),
+  }),
+)
+
+vi.mock("~/utils/browser/protectionBypass", () => ({
+  isProtectionBypassFirefoxEnv: isProtectionBypassFirefoxEnvMock,
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -22,6 +29,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 describe("OpenRouter Management Key action client", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    isProtectionBypassFirefoxEnvMock.mockReturnValue(false)
   })
 
   it("routes create through the runtime message boundary", async () => {
@@ -47,6 +55,25 @@ describe("OpenRouter Management Key action client", () => {
       suppressMinimize: false,
     })
     expect(response).toMatchObject({ mutationState: "created" })
+  })
+
+  it("fails closed without runtime dispatch for a Firefox popup request", async () => {
+    isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
+
+    await expect(
+      tempWindowOpenRouterManagementKeyAction({
+        requestId: "request-firefox-popup",
+        operation: { kind: "create", label: "extension-request-popup" },
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+    ).resolves.toEqual({
+      requestId: "request-firefox-popup",
+      operation: "create",
+      mutationState: "not_dispatched",
+      attemptOutcome: "failed",
+      label: "extension-request-popup",
+    })
+    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
   })
 
   it("routes cancellation through the runtime message boundary by opaque request ID only", async () => {

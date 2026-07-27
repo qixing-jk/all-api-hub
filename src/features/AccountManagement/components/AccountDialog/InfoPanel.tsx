@@ -30,6 +30,7 @@ interface InfoPanelProps {
  * @param props.mode Dialog mode used to determine copy and icon visuals.
  * @param props.phase Current dialog phase determining whether the form is shown.
  * @param props.formSource Source that led the dialog into form mode.
+ * @param props.autoDetectPresentation Optional site-specific detection copy.
  */
 export default function InfoPanel({
   mode,

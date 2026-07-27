@@ -299,6 +299,7 @@ describe("WebDAVSettings", () => {
   it("describes optional encryption and plaintext uploads in every app locale", () => {
     const resources = [
       {
+        locale: "en",
         resource: enImportExport,
         optional: /Optional/i,
         disabled: /encryption is disabled/i,
@@ -310,6 +311,7 @@ describe("WebDAVSettings", () => {
         plaintext: /plaintext/i,
       },
       {
+        locale: "es-419",
         resource: es419ImportExport,
         optional: /Opcional/i,
         disabled: /cifrado está desactivado/i,
@@ -322,6 +324,7 @@ describe("WebDAVSettings", () => {
         plaintext: /texto sin formato/i,
       },
       {
+        locale: "ja",
         resource: jaImportExport,
         optional: /任意/,
         disabled: /暗号化を無効にすると/,
@@ -333,6 +336,7 @@ describe("WebDAVSettings", () => {
         plaintext: /平文/,
       },
       {
+        locale: "vi",
         resource: viImportExport,
         optional: /Tùy chọn/i,
         disabled: /Khi tắt mã hóa/i,
@@ -344,6 +348,7 @@ describe("WebDAVSettings", () => {
         plaintext: /văn bản thuần túy/i,
       },
       {
+        locale: "zh-CN",
         resource: zhCnImportExport,
         optional: /可选/,
         disabled: /关闭加密后/,
@@ -354,6 +359,7 @@ describe("WebDAVSettings", () => {
         plaintext: /明文/,
       },
       {
+        locale: "zh-TW",
         resource: zhTwImportExport,
         optional: /可選/,
         disabled: /關閉加密後/,
@@ -367,6 +373,7 @@ describe("WebDAVSettings", () => {
 
     resources.forEach(
       ({
+        locale,
         resource,
         optional,
         disabled,
@@ -377,14 +384,14 @@ describe("WebDAVSettings", () => {
         plaintext,
       }) => {
         const description = resource.webdav.encryption.enableDesc
-        expect(description.length).toBeGreaterThan(20)
-        expect(description).toMatch(optional)
-        expect(description).toMatch(disabled)
-        expect(description).toMatch(credentials)
-        expect(description).toMatch(guidance)
-        expect(description).not.toMatch(providerSpecificForbidden)
-        expect(description).toMatch(uploadedBackupWithCredentials)
-        expect(description).toMatch(plaintext)
+        expect(description.length, locale).toBeGreaterThan(20)
+        expect(description, locale).toMatch(optional)
+        expect(description, locale).toMatch(disabled)
+        expect(description, locale).toMatch(credentials)
+        expect(description, locale).toMatch(guidance)
+        expect(description, locale).not.toMatch(providerSpecificForbidden)
+        expect(description, locale).toMatch(uploadedBackupWithCredentials)
+        expect(description, locale).toMatch(plaintext)
       },
     )
   })

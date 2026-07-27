@@ -14,10 +14,12 @@ import {
 import { SPONSOR_CATALOG_SCHEMA_VERSION } from "~/features/AccountManagement/sponsors/constants"
 import type { SponsorRecommendation } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import enAccountDialog from "~/locales/en/accountDialog.json"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { AuthTypeEnum } from "~/types"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -479,6 +481,27 @@ describe("AccountDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("presents canonical OpenRouter detection as Management Key creation", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.url = "https://openrouter.ai/settings/management-keys"
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:mode.createOpenRouterManagementKey",
+      }),
+    ).toBeEnabled()
+  })
+
   it("renders the account form after entering the account-form phase", async () => {
     mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
     mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
@@ -533,26 +556,41 @@ describe("AccountDialog", () => {
       requiresManualRecovery: true,
     }
 
-    render(
-      <AccountDialog
-        isOpen={true}
-        onClose={vi.fn()}
-        mode={DIALOG_MODES.ADD}
-        onSuccess={vi.fn()}
-        onError={vi.fn()}
-      />,
+    testI18n.addResource(
+      "en",
+      "accountDialog",
+      "openrouterBootstrapRecovery.label",
+      enAccountDialog.openrouterBootstrapRecovery.label,
     )
 
-    expect(
-      await screen.findByText(
-        "accountDialog:openrouterBootstrapRecovery.label",
-      ),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        "accountDialog:openrouterBootstrapRecovery.manualRevocation",
-      ),
-    ).toBeInTheDocument()
+    try {
+      render(
+        <AccountDialog
+          isOpen={true}
+          onClose={vi.fn()}
+          mode={DIALOG_MODES.ADD}
+          onSuccess={vi.fn()}
+          onError={vi.fn()}
+        />,
+      )
+
+      expect(await screen.findByText("Review the created key")).toBeVisible()
+      expect(
+        screen.getByText(
+          enAccountDialog.openrouterBootstrapRecovery.label.replace(
+            "{{label}}",
+            "OpenRouter extension created-recovery-request-placeholder",
+          ),
+        ),
+      ).toBeVisible()
+      expect(
+        screen.getByText(
+          "accountDialog:openrouterBootstrapRecovery.manualRevocation",
+        ),
+      ).toBeInTheDocument()
+    } finally {
+      testI18n.removeResourceBundle("en", "accountDialog")
+    }
   })
 
   it("shows manual guidance without manufacturing a missing recognizable label", async () => {
@@ -704,6 +742,10 @@ describe("AccountDialog", () => {
         onError={vi.fn()}
       />,
     )
+
+    expect(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage),
+    ).toHaveTextContent("Detection returned unexpected data")
 
     await user.click(
       screen.getByRole("button", {

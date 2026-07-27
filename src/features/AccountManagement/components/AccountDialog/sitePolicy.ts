@@ -4,6 +4,7 @@ import {
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   getAccountSiteProductProfile,
 } from "~/services/accounts/accountSiteProfile"
+import { OPENROUTER_DISPLAY_NAME } from "~/services/accountSiteDefinitions/identifiers"
 import { OPENROUTER_WEB_ORIGIN } from "~/services/accountSiteDefinitions/siteTypes"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 
@@ -59,9 +60,9 @@ const ACCOUNT_DIALOG_SITE_OVERRIDES: Partial<
   Record<AccountSiteType, AccountDialogSiteOverride>
 > = {
   [SITE_TYPES.OPENROUTER]: {
-    siteTypeLabel: "OpenRouter",
+    siteTypeLabel: OPENROUTER_DISPLAY_NAME,
     canonicalSiteUrl: OPENROUTER_WEB_ORIGIN,
-    defaultSiteName: "OpenRouter",
+    defaultSiteName: OPENROUTER_DISPLAY_NAME,
     lockSiteUrl: true,
     forceAccessTokenAuth: true,
     requireUserId: false,

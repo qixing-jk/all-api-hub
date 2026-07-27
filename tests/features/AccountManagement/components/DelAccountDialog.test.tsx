@@ -1,6 +1,14 @@
 import { render as rtlRender } from "@testing-library/react"
 import { I18nextProvider } from "react-i18next"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import enUi from "~/locales/en/ui.json"
@@ -28,8 +36,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 }))
 
 describe("DelAccountDialog", () => {
-  beforeEach(() => {
-    deleteAccountMock.mockReset()
+  beforeAll(() => {
     testI18n.addResource(
       "en",
       "ui",
@@ -38,8 +45,12 @@ describe("DelAccountDialog", () => {
     )
   })
 
-  afterEach(() => {
+  afterAll(() => {
     testI18n.removeResourceBundle("en", "ui")
+  })
+
+  beforeEach(() => {
+    deleteAccountMock.mockReset()
   })
 
   it("uses the generic local account deletion confirmation for OpenRouter", () => {

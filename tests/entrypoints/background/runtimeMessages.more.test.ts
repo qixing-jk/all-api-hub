@@ -664,6 +664,31 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     )
   })
 
+  it("rejects malformed OpenRouter action operations at the runtime boundary", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+
+    listener(
+      {
+        action: RuntimeActionIds.TempWindowOpenRouterManagementKeyAction,
+        requestId: "request-malformed-operation",
+        operation: { kind: "delete", label: "ignored-label" },
+      },
+      {},
+      sendResponse,
+    )
+
+    expect(
+      mocks.handleTempWindowOpenRouterManagementKeyAction,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "request-malformed-operation",
+        operation: undefined,
+      }),
+      sendResponse,
+    )
+  })
+
   it("normalizes malformed OpenRouter control-message request IDs", async () => {
     mocks.cancelTempWindowOpenRouterManagementKeyAction.mockReturnValue({
       requestId: "",
@@ -685,6 +710,9 @@ describe("setupRuntimeMessageListeners additional routing", () => {
       requestId: "",
       certainty: "unknown",
     })
+    expect(
+      mocks.cancelTempWindowOpenRouterManagementKeyAction,
+    ).toHaveBeenCalledWith("")
 
     sendResponse.mockClear()
     listener(
@@ -699,6 +727,9 @@ describe("setupRuntimeMessageListeners additional routing", () => {
       requestId: "",
       marked: false,
     })
+    expect(
+      mocks.markTempWindowOpenRouterManagementKeyDispatched,
+    ).toHaveBeenCalledWith("")
   })
 
   it("does not route typed Redemption Assist RPCs through the raw runtime listener", async () => {

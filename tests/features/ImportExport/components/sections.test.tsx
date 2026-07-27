@@ -68,6 +68,7 @@ describe("ImportExport section components", () => {
   it("describes plaintext manual account and full exports in every app locale", () => {
     const resources = [
       {
+        locale: "en",
         resource: enImportExport,
         credentials: /saved (?:account )?credentials/i,
         guidance: /store (?:the |exported )?files? securely/i,
@@ -75,6 +76,7 @@ describe("ImportExport section components", () => {
         plaintext: /plaintext/i,
       },
       {
+        locale: "es-419",
         resource: es419ImportExport,
         credentials: /credenciales guardadas/i,
         guidance: /guarda (?:el archivo|los archivos) de forma segura/i,
@@ -83,6 +85,7 @@ describe("ImportExport section components", () => {
         plaintext: /texto sin formato/i,
       },
       {
+        locale: "ja",
         resource: jaImportExport,
         credentials: /保存済み.*認証情報/,
         guidance: /ファイルは安全に保管/,
@@ -90,6 +93,7 @@ describe("ImportExport section components", () => {
         plaintext: /平文/,
       },
       {
+        locale: "vi",
         resource: viImportExport,
         credentials: /thông tin xác thực.*đã lưu/i,
         guidance: /lưu tệp an toàn/i,
@@ -97,6 +101,7 @@ describe("ImportExport section components", () => {
         plaintext: /văn bản thuần túy/i,
       },
       {
+        locale: "zh-CN",
         resource: zhCnImportExport,
         credentials: /已保存的.*凭据/,
         guidance: /妥善保管(?:导出)?文件/,
@@ -104,6 +109,7 @@ describe("ImportExport section components", () => {
         plaintext: /明文/,
       },
       {
+        locale: "zh-TW",
         resource: zhTwImportExport,
         credentials: /已儲存的.*憑證/,
         guidance: /妥善保管(?:匯出)?檔案/,
@@ -113,6 +119,7 @@ describe("ImportExport section components", () => {
     ]
     resources.forEach(
       ({
+        locale,
         resource,
         credentials,
         guidance,
@@ -124,11 +131,11 @@ describe("ImportExport section components", () => {
           resource.export.fullBackupDescription,
         ]
         descriptions.forEach((description) => {
-          expect(description.length).toBeGreaterThan(20)
-          expect(description).toMatch(credentials)
-          expect(description).toMatch(guidance)
-          expect(description).not.toMatch(providerSpecificForbidden)
-          expect(description).toMatch(plaintext)
+          expect(description.length, locale).toBeGreaterThan(20)
+          expect(description, locale).toMatch(credentials)
+          expect(description, locale).toMatch(guidance)
+          expect(description, locale).not.toMatch(providerSpecificForbidden)
+          expect(description, locale).toMatch(plaintext)
         })
       },
     )

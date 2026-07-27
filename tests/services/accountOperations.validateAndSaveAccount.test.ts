@@ -7,6 +7,7 @@ import {
   validateAndUpdateAccount,
 } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   DEFAULT_PREFERENCES,
@@ -564,6 +565,11 @@ describe("accountOperations validateAndSaveAccount", () => {
 
   it.each([
     {
+      label: "non-management key",
+      error: new OpenRouterManagementKeyRequiredError(),
+      expectedMessage: "messages:openrouter.managementKeyRequired",
+    },
+    {
       label: "rate limiting",
       error: new ApiError(
         "openrouter-key-429-private-sentinel",
@@ -981,6 +987,35 @@ describe("accountOperations validateAndSaveAccount", () => {
     expect(saved?.account_info).not.toHaveProperty("identity_scope")
   })
 
+  it("normalizes ordinary account identity when adding an account", async () => {
+    const result = await validateAndSaveAccount(
+      "https://api.example.invalid",
+      "Example",
+      "user",
+      "token",
+      "  ordinary-id  ",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    await expect(
+      accountStorage.getAccountById(result.accountId!),
+    ).resolves.toMatchObject({
+      account_info: { id: "ordinary-id" },
+    })
+  })
+
   it("prefers entered OpenRouter identity over the validated creator on add", async () => {
     validateManagementKeyMock.mockResolvedValue({ userId: "validated-creator" })
 
@@ -1185,15 +1220,16 @@ describe("accountOperations validateAndSaveAccount", () => {
         success: false,
         message: "messages:errors.validation.incompleteAccountInfo",
       })
-      expect(
-        (await accountStorage.getAllAccountsOrThrow()).map(
-          (account) => account.authType,
-        ),
-      ).toEqual(
-        operation === "add"
-          ? [AuthTypeEnum.AccessToken]
-          : [AuthTypeEnum.AccessToken],
-      )
+      const storedAccounts = await accountStorage.getAllAccountsOrThrow()
+      expect(storedAccounts).toHaveLength(1)
+      expect(storedAccounts[0]).toMatchObject({
+        id: existingAccountId,
+        authType: AuthTypeEnum.AccessToken,
+        account_info: {
+          id: "openrouter:existing",
+          access_token: "old-key",
+        },
+      })
     },
   )
 
@@ -1244,6 +1280,108 @@ describe("accountOperations validateAndSaveAccount", () => {
         id: "ordinary-id",
         access_token: "ordinary-token",
       },
+    })
+  })
+
+  it("returns a controlled failure when an OpenRouter edit account is missing", async () => {
+    await expect(
+      validateAndUpdateAccount(
+        "missing-account",
+        "https://openrouter.ai",
+        "OpenRouter",
+        "",
+        "management-key-placeholder",
+        "editable-id",
+        "7",
+        "",
+        [],
+        CHECK_IN_DISABLED,
+        SITE_TYPES.OPENROUTER,
+        AuthTypeEnum.AccessToken,
+        "",
+        undefined,
+        false,
+        false,
+        undefined,
+        { deferDataRefresh: true },
+      ),
+    ).resolves.toEqual({
+      success: false,
+      message: "messages:errors.validation.updateAccountFailed",
+    })
+    expect(validateManagementKeyMock).not.toHaveBeenCalled()
+  })
+
+  it("returns a controlled failure when OpenRouter account lookup fails", async () => {
+    const storageError = new Error("private-storage-diagnostic")
+    vi.spyOn(accountStorage, "getAllAccountsOrThrow").mockRejectedValueOnce(
+      storageError,
+    )
+
+    await expect(
+      validateAndUpdateAccount(
+        "stored-account",
+        "https://openrouter.ai",
+        "OpenRouter",
+        "",
+        "management-key-placeholder",
+        "editable-id",
+        "7",
+        "",
+        [],
+        CHECK_IN_DISABLED,
+        SITE_TYPES.OPENROUTER,
+        AuthTypeEnum.AccessToken,
+        "",
+        undefined,
+        false,
+        false,
+        undefined,
+        { deferDataRefresh: true },
+      ),
+    ).resolves.toEqual({
+      success: false,
+      message: "messages:errors.validation.updateAccountFailed",
+    })
+    expect(validateManagementKeyMock).not.toHaveBeenCalled()
+    expect(loggerMock.error).toHaveBeenCalledWith(
+      "Failed to load account for update",
+      { siteType: SITE_TYPES.OPENROUTER, status: "load_failed" },
+    )
+    expect(JSON.stringify(loggerMock.error.mock.calls)).not.toContain(
+      storageError.message,
+    )
+  })
+
+  it("normalizes ordinary account identity when updating an account", async () => {
+    const accountId = await addStoredAccountForLogTest(SITE_TYPES.NEW_API)
+
+    const result = await validateAndUpdateAccount(
+      accountId,
+      "https://api.example.invalid",
+      "Example",
+      "user",
+      "token",
+      "  updated-ordinary-id  ",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    await expect(
+      accountStorage.getAccountById(accountId),
+    ).resolves.toMatchObject({
+      account_info: { id: "updated-ordinary-id" },
     })
   })
 

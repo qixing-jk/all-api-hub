@@ -16,6 +16,7 @@ const {
   getLocalStorageHandlerMock,
   getUserHandlerMock,
   loggerMocks,
+  openRouterManagementKeyHandlerMock,
   performTempFetchHandlerMock,
   sendRuntimeMessageMock,
   shieldBypassHandlerMock,
@@ -35,6 +36,7 @@ const {
     info: vi.fn(),
     warn: vi.fn(),
   },
+  openRouterManagementKeyHandlerMock: vi.fn(() => "openrouter-management-key"),
   performTempFetchHandlerMock: vi.fn(() => "temp-fetch"),
   sendRuntimeMessageMock: vi.fn(),
   shieldBypassHandlerMock: vi.fn(() => "shield"),
@@ -63,6 +65,7 @@ vi.mock("~/entrypoints/content/messageHandlers/handlers", () => ({
   handleGetLocalStorage: getLocalStorageHandlerMock,
   handleGetRenderedTitle: getRenderedTitleHandlerMock,
   handleGetUserFromLocalStorage: getUserHandlerMock,
+  handleOpenRouterManagementKeyAction: openRouterManagementKeyHandlerMock,
   handlePerformTempWindowFetch: performTempFetchHandlerMock,
   handleShowShieldBypassUi: shieldBypassHandlerMock,
   handleTriggerCheckinPageAction: triggerCheckinHandlerMock,
@@ -365,6 +368,13 @@ describe("cloudflare guard utilities and handlers", () => {
         sendResponse,
       ),
     ).toBe("shield")
+    expect(
+      listener(
+        { action: RuntimeActionIds.ContentOpenRouterManagementKeyAction },
+        null,
+        sendResponse,
+      ),
+    ).toBe("openrouter-management-key")
     expect(
       listener({ action: "unknown-action" }, null, sendResponse),
     ).toBeUndefined()

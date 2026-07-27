@@ -4,6 +4,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
 import { setupAccountKeyRepairMessagingListeners } from "~/services/accounts/accountKeyAutoProvisioning"
 import { setupAutoRefreshMessagingListeners } from "~/services/accounts/autoRefreshService"
+import type { OpenRouterManagementKeyOperation } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
 import { setupAutoCheckinMessagingListeners } from "~/services/checkin/autoCheckin/scheduler"
 import { setupExternalCheckInMessagingListeners } from "~/services/checkin/externalCheckInService"
 import {
@@ -63,6 +64,18 @@ import {
  */
 const logger = createLogger("RuntimeMessages")
 
+/** Accepts only the page mutation operation supported by this runtime route. */
+function normalizeOpenRouterManagementKeyOperation(
+  value: unknown,
+): OpenRouterManagementKeyOperation | undefined {
+  if (!value || typeof value !== "object") return undefined
+  const operation = value as Record<string, unknown>
+  if (operation.kind !== "create" || typeof operation.label !== "string") {
+    return undefined
+  }
+  return { kind: "create", label: operation.label }
+}
+
 /** Normalizes untrusted temp-window presentation metadata at the runtime boundary. */
 function normalizeTempWindowRuntimeRequest<
   T extends Record<string, unknown> & {
@@ -73,21 +86,10 @@ function normalizeTempWindowRuntimeRequest<
   if (
     request.action === RuntimeActionIds.TempWindowOpenRouterManagementKeyAction
   ) {
-    const operation = request.operation
-    const normalizedOperation =
-      operation && typeof operation === "object"
-        ? (operation as Record<string, unknown>).kind === "create" &&
-          typeof (operation as Record<string, unknown>).label === "string"
-          ? {
-              kind: "create" as const,
-              label: (operation as Record<string, unknown>).label,
-            }
-          : undefined
-        : undefined
     return {
       action: request.action,
       requestId: request.requestId,
-      operation: normalizedOperation,
+      operation: normalizeOpenRouterManagementKeyOperation(request.operation),
       tempWindowRequestSource: normalizeTempWindowRequestSource(
         request.tempWindowRequestSource,
       ),

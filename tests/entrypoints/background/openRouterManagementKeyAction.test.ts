@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES,
+  OPENROUTER_BOOTSTRAP_MUTATION_STATES,
   OPENROUTER_MANAGEMENT_KEY_PAGE_TIMEOUT_MS,
   OPENROUTER_MANAGEMENT_KEY_TRANSPORT_MARGIN_MS,
   OPENROUTER_MANAGEMENT_KEY_TRANSPORT_TIMEOUT_MS,
@@ -9,6 +11,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH } from "~/services/apiAdapters/openrouter/managementKeySecret"
 
 const originalBrowser = (globalThis as any).browser
+const EXPECTED_TRACKED_OPENROUTER_ACTION_IDS = 128
 
 async function settleReadiness() {
   await Promise.resolve()
@@ -25,6 +28,27 @@ describe("OpenRouter Management Key background action", () => {
   let removeTempWindowDownloadBlockRuleMock: ReturnType<typeof vi.fn>
   let updateTabMock: ReturnType<typeof vi.fn>
 
+  const mockPageResponder = (
+    onAction: (message: any) => unknown | Promise<unknown>,
+  ) =>
+    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
+      if (
+        message.action === RuntimeActionIds.ContentCheckCapGuard ||
+        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
+      ) {
+        return { success: true, passed: true }
+      }
+      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi) {
+        return undefined
+      }
+      if (
+        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
+      ) {
+        return await onAction(message)
+      }
+      throw new Error(`Unexpected action: ${message.action}`)
+    })
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.resetModules()
@@ -33,29 +57,15 @@ describe("OpenRouter Management Key background action", () => {
     applyTempWindowDownloadBlockRuleMock = vi.fn().mockResolvedValue(2901)
     removeTempWindowDownloadBlockRuleMock = vi.fn().mockResolvedValue(undefined)
     updateTabMock = vi.fn().mockResolvedValue(undefined)
-    sendMessageMock = vi.fn(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      ) {
-        return { success: true, passed: true }
-      }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      ) {
-        return {
-          requestId: message.requestId,
-          operation: "create",
-          mutationState: "created",
-          attemptOutcome: "success",
-          accessToken: "sk-or-test-secret",
-          label: message.operation.label,
-        }
-      }
-      throw new Error(`Unexpected action: ${message.action}`)
-    })
+    sendMessageMock = vi.fn()
+    mockPageResponder((message) => ({
+      requestId: message.requestId,
+      operation: "create",
+      mutationState: "created",
+      attemptOutcome: "success",
+      accessToken: "sk-or-test-secret",
+      label: message.operation.label,
+    }))
     ;(globalThis as any).browser = {
       runtime: {
         getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
@@ -145,20 +155,7 @@ describe("OpenRouter Management Key background action", () => {
       markTempWindowOpenRouterManagementKeyDispatched,
     } = await import("~/entrypoints/background/openrouter/managementKeyAction")
     let resolvePage: ((value: unknown) => void) | undefined
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      )
-        return { success: true, passed: true }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      )
-        return await new Promise((resolve) => (resolvePage = resolve))
-      throw new Error(`Unexpected action: ${message.action}`)
-    })
+    mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const sendResponse = vi.fn()
     const pending = handleTempWindowOpenRouterManagementKeyAction(
       {
@@ -204,7 +201,7 @@ describe("OpenRouter Management Key background action", () => {
     )
   })
 
-  it("rejects caller origin overrides before opening a context", async () => {
+  it("rejects caller-controlled action fields as a request failure", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
       "~/entrypoints/background/openrouter/managementKeyAction"
     )
@@ -221,7 +218,7 @@ describe("OpenRouter Management Key background action", () => {
     expect(sendResponse).toHaveBeenCalledWith(
       expect.objectContaining({
         mutationState: "not_dispatched",
-        attemptOutcome: "invalid_origin",
+        attemptOutcome: "failed",
       }),
     )
   })
@@ -275,6 +272,93 @@ describe("OpenRouter Management Key background action", () => {
     })
   })
 
+  it("bounds pre-cancelled request IDs and admits the oldest after eviction", async () => {
+    const action = await import(
+      "~/entrypoints/background/openrouter/managementKeyAction"
+    )
+
+    for (
+      let index = 0;
+      index <= EXPECTED_TRACKED_OPENROUTER_ACTION_IDS;
+      index += 1
+    ) {
+      expect(
+        action.cancelTempWindowOpenRouterManagementKeyAction(
+          `request-pre-cancel-bound-${index}`,
+        ),
+      ).toMatchObject({ certainty: "unknown", cancellationAccepted: true })
+    }
+
+    const oldestResponse = vi.fn()
+    const secondOldestResponse = vi.fn()
+    const newestResponse = vi.fn()
+    const oldest = action.handleTempWindowOpenRouterManagementKeyAction(
+      {
+        requestId: "request-pre-cancel-bound-0",
+        operation: { kind: "create", label: "oldest-request" },
+      },
+      oldestResponse,
+    )
+    await settleReadiness()
+    await oldest
+    const secondOldest = action.handleTempWindowOpenRouterManagementKeyAction(
+      {
+        requestId: "request-pre-cancel-bound-1",
+        operation: { kind: "create", label: "second-oldest-request" },
+      },
+      secondOldestResponse,
+    )
+    await secondOldest
+    const newest = action.handleTempWindowOpenRouterManagementKeyAction(
+      {
+        requestId: `request-pre-cancel-bound-${EXPECTED_TRACKED_OPENROUTER_ACTION_IDS}`,
+        operation: { kind: "create", label: "newest-request" },
+      },
+      newestResponse,
+    )
+    await newest
+
+    expect(oldestResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mutationState: "not_dispatched",
+        attemptOutcome: "failed",
+      }),
+    )
+    expect(secondOldestResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mutationState: "not_dispatched",
+        attemptOutcome: "cancelled_before_create",
+      }),
+    )
+    expect(newestResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mutationState: "not_dispatched",
+        attemptOutcome: "cancelled_before_create",
+      }),
+    )
+  })
+
+  it("normalizes malformed action requests before scheduling", async () => {
+    const { handleTempWindowOpenRouterManagementKeyAction } = await import(
+      "~/entrypoints/background/openrouter/managementKeyAction"
+    )
+    const response = vi.fn()
+
+    await handleTempWindowOpenRouterManagementKeyAction(
+      { requestId: "request-malformed-action" } as any,
+      response,
+    )
+
+    expect(response).toHaveBeenCalledWith({
+      requestId: "request-malformed-action",
+      operation: "create",
+      mutationState: "not_dispatched",
+      attemptOutcome: "failed",
+      label: "",
+    })
+    expect(createTabMock).not.toHaveBeenCalled()
+  })
+
   it("omits cancellation acceptance and mutation evidence for malformed IDs", async () => {
     const { cancelTempWindowOpenRouterManagementKeyAction } = await import(
       "~/entrypoints/background/openrouter/managementKeyAction"
@@ -293,23 +377,7 @@ describe("OpenRouter Management Key background action", () => {
       markTempWindowOpenRouterManagementKeyDispatched,
     } = await import("~/entrypoints/background/openrouter/managementKeyAction")
     let resolvePage: ((value: unknown) => void) | undefined
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      )
-        return { success: true, passed: true }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      ) {
-        return await new Promise((resolve) => {
-          resolvePage = resolve
-        })
-      }
-      throw new Error(`Unexpected action: ${message.action}`)
-    })
+    mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const sendResponse = vi.fn()
     const pending = handleTempWindowOpenRouterManagementKeyAction(
       {
@@ -383,20 +451,7 @@ describe("OpenRouter Management Key background action", () => {
       handleTempWindowOpenRouterManagementKeyAction,
       markTempWindowOpenRouterManagementKeyDispatched,
     } = await import("~/entrypoints/background/openrouter/managementKeyAction")
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      )
-        return { success: true, passed: true }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      )
-        return await new Promise(() => {})
-      throw new Error(`Unexpected action: ${message.action}`)
-    })
+    mockPageResponder(() => new Promise(() => {}))
     const sendResponse = vi.fn()
     const pending = handleTempWindowOpenRouterManagementKeyAction(
       {
@@ -437,20 +492,7 @@ describe("OpenRouter Management Key background action", () => {
       "~/entrypoints/background/openrouter/managementKeyAction"
     )
     let resolvePage: ((value: unknown) => void) | undefined
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      )
-        return { success: true, passed: true }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      )
-        return await new Promise((resolve) => (resolvePage = resolve))
-      throw new Error(`Unexpected action: ${message.action}`)
-    })
+    mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const sendResponse = vi.fn()
     const pending = handleTempWindowOpenRouterManagementKeyAction(
       {
@@ -526,25 +568,85 @@ describe("OpenRouter Management Key background action", () => {
     expect(removeTabOrWindowMock).toHaveBeenCalled()
   })
 
+  it("does not mutate when cancellation wins during navigation", async () => {
+    const {
+      cancelTempWindowOpenRouterManagementKeyAction,
+      handleTempWindowOpenRouterManagementKeyAction,
+    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    let resolveNavigation: (() => void) | undefined
+    updateTabMock.mockImplementationOnce(
+      () => new Promise<void>((resolve) => (resolveNavigation = resolve)),
+    )
+    const response = vi.fn()
+    const pending = handleTempWindowOpenRouterManagementKeyAction(
+      {
+        requestId: "request-cancel-during-navigation",
+        operation: { kind: "create", label: "extension-request-example" },
+      },
+      response,
+    )
+    await settleReadiness()
+    await vi.waitFor(() => expect(updateTabMock).toHaveBeenCalled())
+
+    expect(
+      cancelTempWindowOpenRouterManagementKeyAction(
+        "request-cancel-during-navigation",
+      ),
+    ).toMatchObject({
+      certainty: "known",
+      mutationState: "not_dispatched",
+    })
+    resolveNavigation?.()
+    await settleReadiness()
+    await pending
+
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({ attemptOutcome: "cancelled_before_create" }),
+    )
+    expect(sendMessageMock).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentOpenRouterManagementKeyAction,
+      }),
+    )
+  })
+
+  it.each(["not a valid URL", "https://example.invalid/private"])(
+    "rejects an inspected tab outside the canonical origin: %s",
+    async (url) => {
+      ;(globalThis as any).browser.tabs.get.mockResolvedValue({
+        status: "complete",
+        url,
+      })
+      const { handleTempWindowOpenRouterManagementKeyAction } = await import(
+        "~/entrypoints/background/openrouter/managementKeyAction"
+      )
+      const response = vi.fn()
+      const pending = handleTempWindowOpenRouterManagementKeyAction(
+        {
+          requestId: `request-invalid-inspected-origin-${url}`,
+          operation: { kind: "create", label: "extension-request-example" },
+        },
+        response,
+      )
+      await settleReadiness()
+      await pending
+
+      expect(response).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mutationState: "not_dispatched",
+          attemptOutcome: "invalid_origin",
+        }),
+      )
+    },
+  )
+
   it("rejects a duplicate in-flight request ID without a second mutation", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
       "~/entrypoints/background/openrouter/managementKeyAction"
     )
     let resolvePage: ((value: unknown) => void) | undefined
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      )
-        return { success: true, passed: true }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      )
-        return await new Promise((resolve) => (resolvePage = resolve))
-      throw new Error(`Unexpected action: ${message.action}`)
-    })
+    mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const firstResponse = vi.fn()
     const secondResponse = vi.fn()
     const first = handleTempWindowOpenRouterManagementKeyAction(
@@ -599,27 +701,14 @@ describe("OpenRouter Management Key background action", () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
       "~/entrypoints/background/openrouter/managementKeyAction"
     )
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      )
-        return { success: true, passed: true }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      )
-        return {
-          requestId: "other-request",
-          operation: "create",
-          mutationState: "created",
-          attemptOutcome: "success",
-          accessToken: "sk-or-private-secret",
-          label: "other-label",
-        }
-      throw new Error(`Unexpected action: ${message.action}`)
-    })
+    mockPageResponder(() => ({
+      requestId: "other-request",
+      operation: "create",
+      mutationState: "created",
+      attemptOutcome: "success",
+      accessToken: "sk-or-private-secret",
+      label: "other-label",
+    }))
     const sendResponse = vi.fn()
     const pending = handleTempWindowOpenRouterManagementKeyAction(
       {
@@ -643,6 +732,86 @@ describe("OpenRouter Management Key background action", () => {
     )
   })
 
+  it.each([
+    { operation: "delete", label: "extension-request-example" },
+    { operation: "create", label: "different-label" },
+  ])(
+    "rejects a page result with mismatched operation metadata",
+    async (fields) => {
+      const { handleTempWindowOpenRouterManagementKeyAction } = await import(
+        "~/entrypoints/background/openrouter/managementKeyAction"
+      )
+      mockPageResponder((message) => ({
+        requestId: message.requestId,
+        operation: fields.operation,
+        mutationState: "not_dispatched",
+        attemptOutcome: "failed",
+        label: fields.label,
+      }))
+      const response = vi.fn()
+      const pending = handleTempWindowOpenRouterManagementKeyAction(
+        {
+          requestId: `request-metadata-${fields.operation}-${fields.label}`,
+          operation: { kind: "create", label: "extension-request-example" },
+        },
+        response,
+      )
+      await settleReadiness()
+      await pending
+
+      expect(response).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mutationState: "not_dispatched",
+          attemptOutcome: "failed",
+        }),
+      )
+    },
+  )
+
+  it.each([
+    {
+      mutationState: "created",
+      attemptOutcome: "cancelled_after_create",
+      accessToken: "sk-or-cancelled-after-create",
+    },
+    { mutationState: "dispatched_unconfirmed", attemptOutcome: "timeout" },
+  ])(
+    "accepts a marked $mutationState page result with $attemptOutcome",
+    async (pageFields) => {
+      const {
+        handleTempWindowOpenRouterManagementKeyAction,
+        markTempWindowOpenRouterManagementKeyDispatched,
+      } = await import(
+        "~/entrypoints/background/openrouter/managementKeyAction"
+      )
+      mockPageResponder((message) => {
+        expect(
+          markTempWindowOpenRouterManagementKeyDispatched(message.requestId),
+        ).toBe(true)
+        return {
+          requestId: message.requestId,
+          operation: "create",
+          label: message.operation.label,
+          ...pageFields,
+        }
+      })
+      const response = vi.fn()
+      const pending = handleTempWindowOpenRouterManagementKeyAction(
+        {
+          requestId: `request-marked-${pageFields.mutationState}`,
+          operation: { kind: "create", label: "extension-request-example" },
+        },
+        response,
+      )
+      await settleReadiness()
+      await pending
+
+      expect(response).toHaveBeenCalledWith(
+        expect.objectContaining({ mutationState: pageFields.mutationState }),
+      )
+    },
+  )
+
   it("does not forward an oversized page secret after create dispatch", async () => {
     const oversizedSecret = `sk-or-${"a".repeat(
       OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH - "sk-or-".length + 1,
@@ -651,30 +820,18 @@ describe("OpenRouter Management Key background action", () => {
       handleTempWindowOpenRouterManagementKeyAction,
       markTempWindowOpenRouterManagementKeyDispatched,
     } = await import("~/entrypoints/background/openrouter/managementKeyAction")
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      )
-        return { success: true, passed: true }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      ) {
-        expect(
-          markTempWindowOpenRouterManagementKeyDispatched(message.requestId),
-        ).toBe(true)
-        return {
-          requestId: message.requestId,
-          operation: "create",
-          mutationState: "created",
-          attemptOutcome: "success",
-          accessToken: oversizedSecret,
-          label: message.operation.label,
-        }
+    mockPageResponder((message) => {
+      expect(
+        markTempWindowOpenRouterManagementKeyDispatched(message.requestId),
+      ).toBe(true)
+      return {
+        requestId: message.requestId,
+        operation: "create",
+        mutationState: "created",
+        attemptOutcome: "success",
+        accessToken: oversizedSecret,
+        label: message.operation.label,
       }
-      throw new Error(`Unexpected action: ${message.action}`)
     })
     const sendResponse = vi.fn()
     const pending = handleTempWindowOpenRouterManagementKeyAction(
@@ -715,28 +872,12 @@ describe("OpenRouter Management Key background action", () => {
       const { handleTempWindowOpenRouterManagementKeyAction } = await import(
         "~/entrypoints/background/openrouter/managementKeyAction"
       )
-      sendMessageMock.mockImplementation(
-        async (_tabId: number, message: any) => {
-          if (
-            message.action === RuntimeActionIds.ContentCheckCapGuard ||
-            message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-          )
-            return { success: true, passed: true }
-          if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-            return undefined
-          if (
-            message.action ===
-            RuntimeActionIds.ContentOpenRouterManagementKeyAction
-          )
-            return {
-              requestId: message.requestId,
-              operation: "create",
-              label: message.operation.label,
-              ...pageFields,
-            }
-          throw new Error(`Unexpected action: ${message.action}`)
-        },
-      )
+      mockPageResponder((message) => ({
+        requestId: message.requestId,
+        operation: "create",
+        label: message.operation.label,
+        ...pageFields,
+      }))
       const response = vi.fn()
       const pending = handleTempWindowOpenRouterManagementKeyAction(
         {
@@ -786,20 +927,7 @@ describe("OpenRouter Management Key background action", () => {
       markTempWindowOpenRouterManagementKeyDispatched,
     } = await import("~/entrypoints/background/openrouter/managementKeyAction")
     let resolvePage: ((value: unknown) => void) | undefined
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      )
-        return { success: true, passed: true }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      )
-        return await new Promise((resolve) => (resolvePage = resolve))
-      throw new Error(`Unexpected action: ${message.action}`)
-    })
+    mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const response = vi.fn()
     const pending = handleTempWindowOpenRouterManagementKeyAction(
       {
@@ -931,20 +1059,7 @@ describe("OpenRouter Management Key background action", () => {
       markTempWindowOpenRouterManagementKeyDispatched,
     } = await import("~/entrypoints/background/openrouter/managementKeyAction")
     let resolvePage: ((value: unknown) => void) | undefined
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      )
-        return { success: true, passed: true }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      )
-        return await new Promise((resolve) => (resolvePage = resolve))
-      throw new Error(`Unexpected action: ${message.action}`)
-    })
+    mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const response = vi.fn()
     const pending = handleTempWindowOpenRouterManagementKeyAction(
       {
@@ -992,47 +1107,34 @@ describe("OpenRouter Management Key background action", () => {
     const action = await import(
       "~/entrypoints/background/openrouter/managementKeyAction"
     )
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      ) {
-        return { success: true, passed: true }
-      }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      ) {
-        expect(
-          action.markTempWindowOpenRouterManagementKeyDispatched(
-            message.requestId,
-          ),
-        ).toBe(true)
-        if (message.requestId === "request-summary-created") {
-          return {
-            requestId: message.requestId,
-            operation: "create",
-            mutationState: "created",
-            attemptOutcome: "success",
-            accessToken: "sk-or-private-summary-secret",
-            label: message.operation.label,
-            sessionIdentity: {
-              userId: "private-user-placeholder",
-              username: "Private User",
-            },
-          }
-        }
+    mockPageResponder((message) => {
+      expect(
+        action.markTempWindowOpenRouterManagementKeyDispatched(
+          message.requestId,
+        ),
+      ).toBe(true)
+      if (message.requestId === "request-summary-created") {
         return {
           requestId: message.requestId,
           operation: "create",
-          mutationState: "dispatched_unconfirmed",
-          attemptOutcome: "timeout",
+          mutationState: "created",
+          attemptOutcome: "success",
+          accessToken: "sk-or-private-summary-secret",
           label: message.operation.label,
-          accessToken: "sk-or-private-unconfirmed-secret",
+          sessionIdentity: {
+            userId: "private-user-placeholder",
+            username: "Private User",
+          },
         }
       }
-      throw new Error(`Unexpected action: ${message.action}`)
+      return {
+        requestId: message.requestId,
+        operation: "create",
+        mutationState: "dispatched_unconfirmed",
+        attemptOutcome: "timeout",
+        label: message.operation.label,
+        accessToken: "sk-or-private-unconfirmed-secret",
+      }
     })
 
     const notDispatchedResponse = vi.fn()
@@ -1111,7 +1213,11 @@ describe("OpenRouter Management Key background action", () => {
       "~/entrypoints/background/openrouter/managementKeyAction"
     )
 
-    for (let index = 0; index <= 128; index += 1) {
+    for (
+      let index = 0;
+      index <= EXPECTED_TRACKED_OPENROUTER_ACTION_IDS;
+      index += 1
+    ) {
       const requestId = `request-summary-bound-${index}`
       expect(
         action.cancelTempWindowOpenRouterManagementKeyAction(requestId),
@@ -1140,10 +1246,20 @@ describe("OpenRouter Management Key background action", () => {
     })
     expect(
       action.cancelTempWindowOpenRouterManagementKeyAction(
-        "request-summary-bound-128",
+        "request-summary-bound-1",
       ),
     ).toEqual({
-      requestId: "request-summary-bound-128",
+      requestId: "request-summary-bound-1",
+      certainty: "known",
+      cancellationAccepted: false,
+      mutationState: "not_dispatched",
+    })
+    expect(
+      action.cancelTempWindowOpenRouterManagementKeyAction(
+        `request-summary-bound-${EXPECTED_TRACKED_OPENROUTER_ACTION_IDS}`,
+      ),
+    ).toEqual({
+      requestId: `request-summary-bound-${EXPECTED_TRACKED_OPENROUTER_ACTION_IDS}`,
       certainty: "known",
       cancellationAccepted: false,
       mutationState: "not_dispatched",
@@ -1160,21 +1276,7 @@ describe("OpenRouter Management Key background action", () => {
       markTempWindowOpenRouterManagementKeyDispatched,
     } = await import("~/entrypoints/background/openrouter/managementKeyAction")
     let resolvePage: ((value: unknown) => void) | undefined
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      )
-        return { success: true, passed: true }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      ) {
-        return await new Promise((resolve) => (resolvePage = resolve))
-      }
-      throw new Error(`Unexpected action: ${message.action}`)
-    })
+    mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const response = vi.fn()
     const requestId = `request-invalid-identity-${JSON.stringify(
       sessionIdentity,
@@ -1237,31 +1339,18 @@ describe("OpenRouter Management Key background action", () => {
     removeTabOrWindowMock.mockRejectedValue(
       new Error("persistent close failure"),
     )
-    sendMessageMock.mockImplementation(async (_tabId: number, message: any) => {
-      if (
-        message.action === RuntimeActionIds.ContentCheckCapGuard ||
-        message.action === RuntimeActionIds.ContentCheckCloudflareGuard
-      ) {
-        return { success: true, passed: true }
+    mockPageResponder((message) => {
+      expect(
+        markTempWindowOpenRouterManagementKeyDispatched(message.requestId),
+      ).toBe(true)
+      return {
+        requestId: message.requestId,
+        operation: "create",
+        mutationState: "created",
+        attemptOutcome: "success",
+        accessToken: "sk-or-test-secret",
+        label: message.operation.label,
       }
-      if (message.action === RuntimeActionIds.ContentShowShieldBypassUi)
-        return undefined
-      if (
-        message.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
-      ) {
-        expect(
-          markTempWindowOpenRouterManagementKeyDispatched(message.requestId),
-        ).toBe(true)
-        return {
-          requestId: message.requestId,
-          operation: "create",
-          mutationState: "created",
-          attemptOutcome: "success",
-          accessToken: "sk-or-test-secret",
-          label: message.operation.label,
-        }
-      }
-      throw new Error(`Unexpected action: ${message.action}`)
     })
     const response = vi.fn()
     const pending = handleTempWindowOpenRouterManagementKeyAction(
@@ -1289,5 +1378,33 @@ describe("OpenRouter Management Key background action", () => {
     expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
     expect(applyTempWindowDownloadBlockRuleMock).toHaveBeenCalledTimes(1)
     expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("settles with a pre-dispatch failure when the temp runtime rejects", async () => {
+    vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
+      tempWindowBackgroundRuntime: {
+        run: vi.fn().mockRejectedValue(new Error("runtime unavailable")),
+      },
+    }))
+    const { handleTempWindowOpenRouterManagementKeyAction } = await import(
+      "~/entrypoints/background/openrouter/managementKeyAction"
+    )
+    const response = vi.fn()
+
+    await handleTempWindowOpenRouterManagementKeyAction(
+      {
+        requestId: "request-runtime-rejection",
+        operation: { kind: "create", label: "extension-request-example" },
+      },
+      response,
+    )
+
+    expect(response).toHaveBeenCalledWith({
+      requestId: "request-runtime-rejection",
+      operation: "create",
+      mutationState: OPENROUTER_BOOTSTRAP_MUTATION_STATES.NotDispatched,
+      attemptOutcome: OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.Failed,
+      label: "extension-request-example",
+    })
   })
 })

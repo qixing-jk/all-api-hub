@@ -6,6 +6,7 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   siteUrlInput: "account-management-site-url-input",
   authTypeTrigger: "account-management-auth-type-trigger",
   autoDetectButton: "account-management-auto-detect-button",
+  autoDetectErrorMessage: "account-management-auto-detect-error-message",
   manualAddButton: "account-management-manual-add-button",
   autoConfigButton: "account-management-auto-config-button",
   siteNameInput: "account-management-site-name-input",

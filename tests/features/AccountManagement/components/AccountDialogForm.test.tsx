@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountForm from "~/features/AccountManagement/components/AccountDialog/AccountForm"
@@ -8,6 +8,7 @@ import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/c
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import enAccountDialog from "~/locales/en/accountDialog.json"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
@@ -46,6 +47,10 @@ vi.mock("~/utils/core/formatters", () => ({
 describe("AccountDialog AccountForm", () => {
   beforeEach(() => {
     mediaQueryState.isSmallScreen = false
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   const createCheckIn = (
@@ -199,20 +204,32 @@ describe("AccountDialog AccountForm", () => {
   ])(
     "describes locked %s authentication using its display name",
     async (siteType, siteTypeLabel) => {
-      const translationSpy = vi.spyOn(testI18n, "t")
       const props = createProps()
       props.draft.siteType = siteType
-
-      render(<AccountForm {...withSitePolicy(props)} />)
-
-      expect(
-        await screen.findByLabelText("accountDialog:siteInfo.authMethod"),
-      ).toBeDisabled()
-      expect(translationSpy).toHaveBeenCalledWith(
+      testI18n.addResource(
+        "en",
+        "accountDialog",
         "siteInfo.authMethodSelectedForSite",
-        expect.objectContaining({ siteType: siteTypeLabel }),
+        enAccountDialog.siteInfo.authMethodSelectedForSite,
       )
-      translationSpy.mockRestore()
+
+      try {
+        render(<AccountForm {...withSitePolicy(props)} />)
+
+        expect(
+          await screen.findByLabelText("accountDialog:siteInfo.authMethod"),
+        ).toBeDisabled()
+        expect(
+          screen.getByText(
+            enAccountDialog.siteInfo.authMethodSelectedForSite.replace(
+              "{{siteType}}",
+              siteTypeLabel,
+            ),
+          ),
+        ).toBeInTheDocument()
+      } finally {
+        testI18n.removeResourceBundle("en", "accountDialog")
+      }
     },
   )
 

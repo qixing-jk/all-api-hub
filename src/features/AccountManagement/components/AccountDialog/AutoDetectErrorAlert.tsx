@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Alert, Button } from "~/components/ui"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import {
   AutoDetectErrorType,
   openLoginTab,
@@ -79,7 +80,10 @@ export default function AutoDetectErrorAlert({
     <div className="mb-4 space-y-3">
       <Alert variant="warning">
         <div className="flex flex-wrap items-start gap-3">
-          <p className="min-w-0 flex-1 text-sm leading-relaxed">
+          <p
+            className="min-w-0 flex-1 text-sm leading-relaxed"
+            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage}
+          >
             {error.message}
           </p>
 

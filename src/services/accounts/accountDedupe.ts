@@ -144,8 +144,8 @@ function getOwnedCredentialKey(account: SiteAccount): string | undefined {
   if (account.site_type !== SITE_TYPES.OPENROUTER) {
     return undefined
   }
-  const credential = account.account_info.access_token
-  return credential?.trim() ? credential : undefined
+  const credential = account.account_info.access_token?.trim()
+  return credential || undefined
 }
 
 /** Finds an exact local-credential duplicate without exposing account data. */

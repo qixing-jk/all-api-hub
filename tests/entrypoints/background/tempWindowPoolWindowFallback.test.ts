@@ -615,10 +615,9 @@ describe("tempWindowPool window fallback", () => {
       "https://example.invalid/settings/other",
       "req-origin-lock-holder",
     )
-    for (let index = 0; index < 10; index += 1) {
-      await Promise.resolve()
-    }
-    expect(tabsGetMock).toHaveBeenCalledTimes(tabsGetCallCountBeforeLock + 1)
+    await vi.waitFor(() =>
+      expect(tabsGetMock).toHaveBeenCalledTimes(tabsGetCallCountBeforeLock + 1),
+    )
 
     const release = context.release({ forceClose: true })
     const closeResponse = vi.fn()
@@ -627,12 +626,12 @@ describe("tempWindowPool window fallback", () => {
       closeResponse,
     )
 
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(closeResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "messages:background.windowNotFound",
-    })
+    await vi.waitFor(() =>
+      expect(closeResponse).toHaveBeenCalledWith({
+        success: false,
+        error: "messages:background.windowNotFound",
+      }),
+    )
 
     lockHeld.resolve({ id: 605, status: "complete" } as browser.tabs.Tab)
     await Promise.all([competingAcquire, release, duplicateClose])

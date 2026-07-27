@@ -190,12 +190,6 @@ export function cancelTempWindowOpenRouterManagementKeyAction(
       cancellationAccepted: true,
     }
   }
-  if (state.settled) {
-    return {
-      requestId,
-      certainty: OPENROUTER_BOOTSTRAP_CANCELLATION_CERTAINTIES.Unknown,
-    }
-  }
   state.cancelRequested = true
   const cancellationResult: TempWindowOpenRouterManagementKeyCancelResult =
     state.createDispatched
@@ -261,7 +255,7 @@ async function executeTempWindowOpenRouterManagementKeyAction(
       state,
       buildOpenRouterCreateFailure(
         state,
-        OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.InvalidOrigin,
+        OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.Failed,
       ),
     )
     return
@@ -290,31 +284,13 @@ async function executeTempWindowOpenRouterManagementKeyAction(
       await releaseOpenRouterAction(state)
       return
     }
-    if (state.settled || state.cancelRequested) {
-      await settleOpenRouterManagementKeyAction(
-        state,
-        buildOpenRouterCreateFailure(
-          state,
-          OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.CancelledBeforeCreate,
-        ),
-      )
-      return
-    }
     await context.navigate(OPENROUTER_MANAGEMENT_KEYS_URL, {
       requestId: request.requestId,
       origin: OPENROUTER_MANAGEMENT_KEYS_ORIGIN,
     })
-    if (state.settled || state.cancelRequested) {
-      await settleOpenRouterManagementKeyAction(
-        state,
-        buildOpenRouterCreateFailure(
-          state,
-          OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.CancelledBeforeCreate,
-        ),
-      )
-      return
-    }
+    if (state.settled) return
     const tab = await context.inspect()
+    if (state.settled) return
     if (
       !tab?.url ||
       normalizeOrigin(tab.url) !== OPENROUTER_MANAGEMENT_KEYS_ORIGIN
@@ -328,17 +304,6 @@ async function executeTempWindowOpenRouterManagementKeyAction(
       )
       return
     }
-    if (state.cancelRequested) {
-      await settleOpenRouterManagementKeyAction(
-        state,
-        buildOpenRouterCreateFailure(
-          state,
-          OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.CancelledBeforeCreate,
-        ),
-      )
-      return
-    }
-
     let deadline: ReturnType<typeof setTimeout> | undefined
     const pageResult = (await Promise.race([
       sendTabMessageWithRetry<TempWindowOpenRouterManagementKeyActionResult>(

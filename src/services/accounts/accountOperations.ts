@@ -309,13 +309,7 @@ function getOpenRouterSafeErrorMessage(
 }
 
 /** Maps credential validation failures to stable user-facing copy. */
-function getCredentialValidationMessage(
-  siteType: AccountSiteType,
-  error: unknown,
-): string {
-  if (siteType !== SITE_TYPES.OPENROUTER) {
-    return getErrorMessage(error) || t("messages:errors.unknown")
-  }
+function getCredentialValidationMessage(error: unknown): string {
   return getOpenRouterSafeErrorMessage(
     error,
     t("messages:openrouter.networkFallback"),
@@ -825,7 +819,7 @@ export async function validateAndSaveAccount(
     })
     return {
       success: false,
-      message: getCredentialValidationMessage(normalizedSiteType, error),
+      message: getCredentialValidationMessage(error),
     }
   }
   const productProfile = getAccountSiteProductProfile(normalizedSiteType)
@@ -835,7 +829,7 @@ export async function validateAndSaveAccount(
           enteredUserId: userId,
           creatorUserId: credentialValidation.userId,
         })
-      : normalizeAccountIdentity(userId) ?? ""
+      : normalizeAccountIdentity(userId)!
   const resolvedUsername = username.trim()
   const requestAccountIdentity = normalizeAccountIdentity(userId) ?? ""
 
@@ -1247,11 +1241,34 @@ export async function validateAndUpdateAccount(
   let existingAccountInfo: SiteAccount["account_info"] | undefined
   let existingAccountSiteType: SiteAccount["site_type"] | undefined
   if (isOpenRouter) {
-    const existingAccount = (await accountStorage.getAllAccountsOrThrow()).find(
-      (account) => account.id === accountId,
-    )
+    let existingAccount: SiteAccount | undefined
+    try {
+      existingAccount = (await accountStorage.getAllAccountsOrThrow()).find(
+        (account) => account.id === accountId,
+      )
+    } catch {
+      logger.error("Failed to load account for update", {
+        siteType: normalizedSiteType,
+        status: "load_failed",
+      })
+      return {
+        success: false,
+        message: t("messages:errors.validation.updateAccountFailed", {
+          error: "",
+        }),
+      }
+    }
     if (!existingAccount) {
-      throw new Error(`Account not found: ${accountId}`)
+      logger.warn("Account update failed: account not found", {
+        siteType: normalizedSiteType,
+        status: "not_found",
+      })
+      return {
+        success: false,
+        message: t("messages:errors.validation.updateAccountFailed", {
+          error: "",
+        }),
+      }
     }
     existingAccountInfo = existingAccount.account_info
     existingAccountSiteType = existingAccount.site_type
@@ -1276,7 +1293,7 @@ export async function validateAndUpdateAccount(
     })
     return {
       success: false,
-      message: getCredentialValidationMessage(normalizedSiteType, error),
+      message: getCredentialValidationMessage(error),
     }
   }
   const accountIdentity = isOpenRouter
@@ -1285,7 +1302,7 @@ export async function validateAndUpdateAccount(
         creatorUserId: credentialValidation.userId,
         existingUserId: existingAccountInfo?.id,
       })
-    : normalizeAccountIdentity(userId) ?? ""
+    : normalizeAccountIdentity(userId)!
   const resolvedUsername = username.trim()
 
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)

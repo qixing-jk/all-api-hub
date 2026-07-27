@@ -377,6 +377,36 @@ describe("OpenRouter Management Key content handler", () => {
     )
   })
 
+  it("keeps a thrown page failure unconfirmed after dispatch", async () => {
+    pageActionMock.mockImplementation(
+      async (_request, _environment, onDispatch) => {
+        await onDispatch()
+        throw new Error("private backend detail")
+      },
+    )
+    const sendResponse = vi.fn()
+
+    handleOpenRouterManagementKeyAction(
+      {
+        requestId: "request-dispatched-failure",
+        operation: { kind: "create", label: "extension-request-example" },
+      },
+      sendResponse,
+    )
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledTimes(1))
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      requestId: "request-dispatched-failure",
+      operation: "create",
+      mutationState: "dispatched_unconfirmed",
+      attemptOutcome: "failed",
+      label: "extension-request-example",
+    })
+    expect(JSON.stringify(sendResponse.mock.calls)).not.toContain(
+      "private backend detail",
+    )
+  })
+
   it("returns a rejected dispatch marker to the page action", async () => {
     sendRuntimeMessageMock.mockResolvedValue({
       requestId: "request-marker-rejected",

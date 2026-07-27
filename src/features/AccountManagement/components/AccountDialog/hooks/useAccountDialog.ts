@@ -751,7 +751,20 @@ export function useAccountDialog({
       return true
     }
 
-    const accounts = await accountStorage.getAllAccountsOrThrow()
+    let accounts: Awaited<ReturnType<typeof accountStorage.getAllAccounts>>
+    try {
+      accounts = await accountStorage.getAllAccountsOrThrow()
+    } catch {
+      logger.warn(
+        "Exact-credential duplicate lookup failed; continuing without warning",
+        {
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "storage_lookup_failed",
+          category: "duplicate_check",
+        },
+      )
+      return true
+    }
     const duplicateId = findExactCredentialDuplicateAccountId({
       accounts,
       siteType: SITE_TYPES.OPENROUTER,
@@ -1399,7 +1412,15 @@ export function useAccountDialog({
   const handleClose = useCallback(async () => {
     if (isCloseTransitionStartedRef.current) return
     isCloseTransitionStartedRef.current = true
-    await beforeOpenRouterOnboardingClose()
+    try {
+      await beforeOpenRouterOnboardingClose()
+    } catch {
+      logger.warn("OpenRouter onboarding close handling failed", {
+        siteType: SITE_TYPES.OPENROUTER,
+        status: "reconciliation_failed",
+        category: "onboarding_close",
+      })
+    }
     handleDuplicateAccountWarningCancel()
     cancelPendingDuplicateAccountWarning()
     completePendingAihubmixPostSaveSuccess()

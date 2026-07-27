@@ -1,16 +1,21 @@
 import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import SiteInfoInput from "~/features/AccountManagement/components/AccountDialog/SiteInfoInput"
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import enAccountDialog from "~/locales/en/accountDialog.json"
 import { AuthTypeEnum } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 describe("AccountDialog SiteInfoInput", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   type AddModeSiteInfoInputProps = Extract<
     ComponentProps<typeof SiteInfoInput>,
     { showAuthTypeSelector: true }
@@ -265,25 +270,37 @@ describe("AccountDialog SiteInfoInput", () => {
   ])(
     "keeps the entry auth selector locked with %s-specific guidance",
     async (siteType, siteTypeLabel) => {
-      const translationSpy = vi.spyOn(testI18n, "t")
       const props = createAddModeProps()
       props.testSiteType = siteType
-
-      render(<SiteInfoInput {...withSitePolicy(props)} />)
-
-      expect(
-        await screen.findByLabelText("accountDialog:siteInfo.authMethod"),
-      ).toBeDisabled()
-      expect(translationSpy).toHaveBeenCalledWith(
+      testI18n.addResource(
+        "en",
+        "accountDialog",
         "siteInfo.authMethodSelectedForSite",
-        expect.objectContaining({ siteType: siteTypeLabel }),
+        enAccountDialog.siteInfo.authMethodSelectedForSite,
       )
-      if (siteType === SITE_TYPES.SUB2API) {
+
+      try {
+        render(<SiteInfoInput {...withSitePolicy(props)} />)
+
         expect(
-          screen.getByText("accountDialog:siteInfo.sub2apiHint"),
+          await screen.findByLabelText("accountDialog:siteInfo.authMethod"),
+        ).toBeDisabled()
+        expect(
+          screen.getByRole("button", {
+            name: enAccountDialog.siteInfo.authMethodSelectedForSite.replace(
+              "{{siteType}}",
+              siteTypeLabel,
+            ),
+          }),
         ).toBeInTheDocument()
+        if (siteType === SITE_TYPES.SUB2API) {
+          expect(
+            screen.getByText("accountDialog:siteInfo.sub2apiHint"),
+          ).toBeInTheDocument()
+        }
+      } finally {
+        testI18n.removeResourceBundle("en", "accountDialog")
       }
-      translationSpy.mockRestore()
     },
   )
 

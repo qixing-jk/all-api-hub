@@ -111,6 +111,12 @@ describe("product analytics action helpers", () => {
           fallback_used: true,
         }),
       )
+      const [, payload] = trackMock.mock.lastCall!
+      expect(payload).not.toHaveProperty("access_token")
+      expect(payload).not.toHaveProperty("accessToken")
+      expect(payload).not.toHaveProperty("label")
+      expect(payload).not.toHaveProperty("secret")
+      expect(payload).not.toHaveProperty("token")
     },
   )
 

@@ -17,6 +17,14 @@ import {
   OPENROUTER_MANAGEMENT_KEYS_PATH,
 } from "~/entrypoints/content/messageHandlers/openrouter/managementKeyPage"
 
+const { injectScriptMock } = vi.hoisted(() => ({
+  injectScriptMock: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock("wxt/utils/inject-script", () => ({
+  injectScript: injectScriptMock,
+}))
+
 type MessageListener = (event: MessageEvent) => void
 type MessageEventOverrides = {
   origin?: string
@@ -97,6 +105,7 @@ describe("OpenRouter Clerk session reader", () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   it("exposes the isolated-world reader entrypoint", () => {
@@ -251,6 +260,50 @@ describe("OpenRouter Clerk session reader", () => {
     await expect(readIdentity()).resolves.toBeUndefined()
     expect(injectScript).not.toHaveBeenCalled()
     expect(window.windowFixture.addEventListener).not.toHaveBeenCalled()
+  })
+
+  it("returns undefined when correlation generation returns an invalid id", async () => {
+    const fixture = createWindowFixture()
+    const readIdentity = createOpenRouterClerkSessionReader({
+      window: fixture.windowFixture as unknown as Window,
+      injectScript: vi.fn().mockResolvedValue(undefined),
+      createCorrelationId: () => "",
+    })
+
+    await expect(readIdentity()).resolves.toBeUndefined()
+    expect(fixture.windowFixture.addEventListener).not.toHaveBeenCalled()
+  })
+
+  it("uses the live window, script injector, and random id by default", async () => {
+    const fixture = createWindowFixture()
+    fixture.setOnPostMessage((message) => {
+      const correlationId = (message as { correlationId: string }).correlationId
+      fixture.emit(
+        response(correlationId, {
+          userId: "user_example",
+          username: "Example User",
+        }),
+      )
+    })
+    vi.stubGlobal("window", fixture.windowFixture)
+    vi.stubGlobal("crypto", {
+      getRandomValues: vi.fn((bytes: Uint8Array) => {
+        bytes.fill(1)
+        return bytes
+      }),
+    })
+
+    await expect(readOpenRouterClerkSessionIdentity()).resolves.toEqual({
+      userId: "user_example",
+      username: "Example User",
+    })
+    expect(injectScriptMock).toHaveBeenCalledOnce()
+    expect(fixture.windowFixture.postMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        correlationId: "01010101010101010101010101010101",
+      }),
+      OPENROUTER_MANAGEMENT_KEYS_ORIGIN,
+    )
   })
 
   it("ignores responses with the wrong source, origin, or correlation", async () => {

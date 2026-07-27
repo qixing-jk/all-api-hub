@@ -37,6 +37,7 @@ export const SHAREDCHAT_HOSTNAMES = ["new.sharedchat.cc"] as const
 export const SHAREDCHAT_WEB_ORIGIN = "https://new.sharedchat.cc"
 
 export const OPENROUTER_HOSTNAMES = ["openrouter.ai"] as const
+export const OPENROUTER_DISPLAY_NAME = "OpenRouter"
 export const OPENROUTER_WEB_ORIGIN = "https://openrouter.ai"
 export const OPENROUTER_API_BASE_URL = `${OPENROUTER_WEB_ORIGIN}/api/v1`
 

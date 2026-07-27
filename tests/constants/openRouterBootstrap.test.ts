@@ -135,9 +135,9 @@ describe("OpenRouter bootstrap constants", () => {
     expectTypeOf<
       Completed["provisioning"]["mutationState"]
     >().toEqualTypeOf<"created">()
-    expectTypeOf<
-      keyof Completed["provisioning"]
-    >().not.toEqualTypeOf<"remoteCredentialId">()
+    expectTypeOf<Completed["provisioning"]>().not.toHaveProperty(
+      "remoteCredentialId",
+    )
     expectTypeOf<Failed["mutationState"]>().toEqualTypeOf<"not_dispatched">()
     expectTypeOf<
       ValidationRecovery["attemptOutcome"]

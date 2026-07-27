@@ -2710,12 +2710,8 @@ export const tempWindowBackgroundRuntime = {
         meta: { requestId: string; origin: string },
       ) => navigateTempContextToPage(context, targetUrl, meta),
       inspect: () => getTempContextTabSnapshot(context.tabId),
-      release: (
-        releaseOptions: {
-          forceClose?: boolean
-          reason?: string
-        } = {},
-      ) => releaseTempContext(requestId, releaseOptions),
+      release: (releaseOptions: TempContextReleaseOptions = {}) =>
+        releaseTempContext(requestId, releaseOptions),
     }
   },
 }
