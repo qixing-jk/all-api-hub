@@ -59,6 +59,19 @@ const { mockIsProtectionBypassFirefoxEnv } = vi.hoisted(() => ({
   mockIsProtectionBypassFirefoxEnv: vi.fn(() => true),
 }))
 
+const { mockLoggerDebug } = vi.hoisted(() => ({
+  mockLoggerDebug: vi.fn(),
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: mockLoggerDebug,
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  }),
+}))
+
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/browserApi")>()
@@ -897,6 +910,52 @@ describe("apiTransport request helpers", () => {
     ).resolves.toEqual({ ok: true })
 
     expect(mockSendTabMessageWithRetry).toHaveBeenCalledTimes(1)
+  })
+
+  it("redacts the request access token from current-tab fallback diagnostics", async () => {
+    const dashboardBearer = "dashboard-bearer-sensitive-example"
+    mockSendTabMessageWithRetry.mockResolvedValueOnce({
+      success: false,
+      status: 503,
+      error: `safe diagnostic: Authorization: Bearer ${dashboardBearer}`,
+    })
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "direct",
+        }),
+      ),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: dashboardBearer,
+          },
+          fetchContext: {
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(mockLoggerDebug).toHaveBeenCalledWith(
+      "Current-tab content fetch failed; falling back",
+      expect.objectContaining({
+        error: expect.stringContaining("safe diagnostic"),
+      }),
+    )
+    const serializedLoggerArguments = JSON.stringify(mockLoggerDebug.mock.calls)
+    expect(serializedLoggerArguments).not.toContain(dashboardBearer)
+    expect(serializedLoggerArguments).toContain("Bearer [REDACTED]")
   })
 
   it("fetchApiData preserves the popup temp window source through fallback context", async () => {

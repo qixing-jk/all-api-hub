@@ -63,6 +63,16 @@ interface ContentFetchResponse<T> {
   code?: ApiErrorCode
 }
 
+/** Redacts the exact request credential before emitting transport diagnostics. */
+function getSafeTransportErrorMessage(
+  error: unknown,
+  requestAccessToken: string | undefined,
+): string {
+  const message = getErrorMessage(error)
+  if (!requestAccessToken?.trim()) return message
+  return message.split(requestAccessToken).join("[REDACTED]")
+}
+
 const logger = createLogger("ApiTransportRequest")
 
 interface BackendErrorDetails {
@@ -392,7 +402,10 @@ async function executeWithCurrentTabContentPreference<T>(
     logger.debug("Current-tab content fetch failed; falling back", {
       endpoint: context.endpoint,
       url: context.url,
-      error: getErrorMessage(error),
+      error: getSafeTransportErrorMessage(
+        error,
+        context.request.auth.accessToken,
+      ),
     })
     // Keep current-tab fallback behavior aligned with temp-window fallback for
     // now. If mutating-request replay becomes a real issue, handle it in the

@@ -546,7 +546,8 @@ export function matchesTempWindowFallbackAllowlist(
 }
 
 /**
- * Allows 401 fallback only for cookie-auth requests that can replay a stored account cookie.
+ * Matches the default 401 fallback for cookie-auth requests that can replay a
+ * stored account cookie. Explicit request allowlists are handled separately.
  */
 function isCookieAuthUnauthorizedFallback(
   error: ApiError,
@@ -656,10 +657,15 @@ async function shouldUseTempWindowFallback(
     return false
   }
 
-  if (
-    !matchesTempWindowFallbackAllowlist(error, context.tempWindowFallback) &&
-    !isCookieAuthUnauthorizedFallback(error, context)
-  ) {
+  const matchesAllowlist = matchesTempWindowFallbackAllowlist(
+    error,
+    context.tempWindowFallback,
+  )
+  const matchesDefaultCookieAuthFallback =
+    typeof context.tempWindowFallback === "undefined" &&
+    isCookieAuthUnauthorizedFallback(error, context)
+
+  if (!matchesAllowlist && !matchesDefaultCookieAuthFallback) {
     logSkipTempWindowFallback(
       "Error does not match any temp window fallback codes or statuses.",
       context,

@@ -708,7 +708,33 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     )
   })
 
-  it("falls back on 401 cookie-auth failures even when a request has a custom fallback allowlist", async () => {
+  it("does not fall back on cookie-auth 401 when an explicit empty allowlist is provided", async () => {
+    const error = new ApiError(
+      "current browser session is unauthorized",
+      401,
+      "/api/models",
+      API_ERROR_CODES.HTTP_401,
+    )
+
+    await expect(
+      executeWithTempWindowFallback(
+        buildContext({
+          onlyData: true,
+          accountId: "acct-1",
+          authType: AuthTypeEnum.Cookie,
+          cookieAuthSessionCookie: "session=stored-account",
+          tempWindowFallback: { statusCodes: [], codes: [] },
+        }),
+        async () => {
+          throw error
+        },
+      ),
+    ).rejects.toBe(error)
+
+    expect(mocks.sendRuntimeMessageMock).not.toHaveBeenCalled()
+  })
+
+  it("honors an explicit cookie-auth 401 allowlist", async () => {
     mocks.sendRuntimeMessageMock.mockResolvedValue({
       success: true,
       status: 200,
@@ -725,10 +751,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
         accountId: "acct-1",
         authType: AuthTypeEnum.Cookie,
         cookieAuthSessionCookie: "session=stored-account",
-        tempWindowFallback: {
-          statusCodes: [429],
-          codes: [API_ERROR_CODES.HTTP_429],
-        },
+        tempWindowFallback: { statusCodes: [401], codes: [] },
       }),
       async () => {
         throw new ApiError(
@@ -741,14 +764,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     )
 
     expect(result).toEqual({ account: "stored-cookie" })
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.TempWindowFetch,
-        accountId: "acct-1",
-        authType: AuthTypeEnum.Cookie,
-        cookieAuthSessionCookie: "session=stored-account",
-      }),
-    )
+    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledOnce()
   })
 
   it("does not fall back on 401 token-auth failures", async () => {
