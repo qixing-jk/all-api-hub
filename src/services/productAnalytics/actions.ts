@@ -1,3 +1,4 @@
+import type { OpenRouterBootstrapAttemptOutcome } from "~/constants/openRouterBootstrap"
 import { createLogger } from "~/utils/core/logger"
 
 import { API_ERROR_CODES } from "../apiTransport/errors"
@@ -63,6 +64,7 @@ export type ProductAnalyticsActionInsights = {
   failureStage?: ProductAnalyticsFailureStage
   failureReason?: ProductAnalyticsFailureReason
   accountAutoDetectFailureReason?: ProductAnalyticsAccountAutoDetectFailureReason
+  accountAutoDetectAttemptOutcome?: OpenRouterBootstrapAttemptOutcome
   autoDetectStrategy?: ProductAnalyticsAccountAutoDetectStrategy
   requestedAuthMode?: ProductAnalyticsRequestedAuthMode
   siteType?: ProductAnalyticsSiteType
@@ -323,6 +325,12 @@ function mapProductAnalyticsActionInsights(
       ? {
           account_auto_detect_failure_reason:
             insights.accountAutoDetectFailureReason,
+        }
+      : {}),
+    ...(insights.accountAutoDetectAttemptOutcome
+      ? {
+          account_auto_detect_attempt_outcome:
+            insights.accountAutoDetectAttemptOutcome,
         }
       : {}),
     ...(insights.autoDetectStrategy

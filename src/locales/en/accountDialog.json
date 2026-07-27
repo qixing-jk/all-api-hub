@@ -79,6 +79,9 @@
     "notes": "Notes",
     "notesPlaceholder": "Optional, enter notes",
     "openRedeemWithCheckIn": "Also open redeem page when using external check-in",
+    "openrouterManagementKey": "OpenRouter Management Key",
+    "openrouterManagementKeyGuidance": "Create a new Management Key on OpenRouter's Management Keys page and copy it immediately, then paste it here. Existing Management Keys cannot be revealed again.",
+    "openrouterManagementKeyGuidanceTitle": "Use an OpenRouter management key",
     "showAccessToken": "Show Access Token",
     "showRefreshToken": "Show Refresh Token",
     "siteName": "Site Name",
@@ -123,6 +126,8 @@
     "manualAdd": "Manual Add",
     "manualInfo": "Manually fill in the account information. The account will be saved securely in local storage",
     "openLdohSiteList": "Open LDOH site list",
+    "openrouterBootstrap": "Create an OpenRouter Management Key",
+    "openrouterBootstrapInfo": "This action creates a new Management Key in OpenRouter, then uses it to detect and fill in the account details.",
     "reDetectInfo": "If the site information changes, it is recommended to click the 'Re-detect' button (you need to log in to the target site first by yourself)"
   },
   "messages": {
@@ -152,9 +157,17 @@
   },
   "mode": {
     "autoDetect": "Auto Detect",
+    "createOpenRouterManagementKey": "Create OpenRouter Management Key & Detect",
+    "creatingOpenRouterManagementKey": "Creating OpenRouter Management Key...",
     "detecting": "Detecting...",
     "manualAdd": "Manual Add",
     "reDetect": "Re-detect"
+  },
+  "openrouterBootstrapRecovery": {
+    "label": "Recognizable label: {{label}}",
+    "manualReview": "A Management Key with this label may exist in OpenRouter.",
+    "manualRevocation": "Review Management Keys and delete the labeled key manually if you do not need it.",
+    "title": "OpenRouter key creation needs your attention"
   },
   "sections": {
     "accountAuth": {
@@ -178,6 +191,7 @@
     "alreadyAdded": "Account(s) already exist for this site",
     "authMethod": "Authentication Method",
     "authMethodPlaceholder": "Authentication method",
+    "authMethodSelectedForSite": "The authentication method was selected automatically based on {{siteType}} requirements.",
     "authType": {
       "accessToken": "Access Token Authentication",
       "cookieAuth": "Cookie Authentication"
@@ -187,7 +201,6 @@
     "currentSite": "Current Site",
     "editNow": "Edit Now",
     "siteUrl": "Site URL",
-    "sub2apiAuthOnly": "Sub2API only supports Access Token authentication (JWT)",
     "sub2apiHint": "Sub2API uses short-term JWTs. When they expire, the extension will automatically try to obtain a new JWT using a temporary window (requires being logged in on the site). With \"Plugin Hosted Session\" enabled, each account can automatically refresh and renew authentication independently in the background, supporting multiple accounts on the same site.",
     "unknown": "Unable to get",
     "useCurrent": "Use Current Site"

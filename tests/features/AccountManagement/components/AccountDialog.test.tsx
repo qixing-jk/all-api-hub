@@ -67,6 +67,7 @@ const {
     isFormValid: true,
     isAutoConfiguring: false,
     detectionError: null,
+    openRouterBootstrapRecovery: null,
     isDetected: false,
     siteType: "unknown",
     authType: "access_token",
@@ -208,6 +209,7 @@ function resetMockState() {
     isFormValid: true,
     isAutoConfiguring: false,
     detectionError: null,
+    openRouterBootstrapRecovery: null,
     isDetected: false,
     siteType: emptyDraft.siteType,
     authType: AuthTypeEnum.AccessToken,
@@ -494,6 +496,90 @@ describe("AccountDialog", () => {
     expect(
       await screen.findByTestId("account-management-site-name-input"),
     ).toBeInTheDocument()
+  })
+
+  it("does not show manual guidance for completed OpenRouter provisioning", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+    mockState.openRouterBootstrapRecovery = null
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    await screen.findByTestId("account-management-site-name-input")
+    expect(
+      screen.queryByText("accountDialog:openrouterBootstrapRecovery.title"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "accountDialog:openrouterBootstrapRecovery.manualRevocation",
+      ),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows the recognizable label and manual guidance for created-key recovery", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+    mockState.openRouterBootstrapRecovery = {
+      message: "Review the created key",
+      label: "OpenRouter extension created-recovery-request-placeholder",
+      requiresManualRecovery: true,
+    }
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      await screen.findByText(
+        "accountDialog:openrouterBootstrapRecovery.label",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "accountDialog:openrouterBootstrapRecovery.manualRevocation",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("shows manual guidance without manufacturing a missing recognizable label", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+    mockState.openRouterBootstrapRecovery = {
+      requiresManualRecovery: true,
+    }
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      await screen.findByText(
+        "accountDialog:openrouterBootstrapRecovery.manualRevocation",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("accountDialog:openrouterBootstrapRecovery.label"),
+    ).not.toBeInTheDocument()
   })
 
   it("does not show the entry auth selector in edit mode", async () => {

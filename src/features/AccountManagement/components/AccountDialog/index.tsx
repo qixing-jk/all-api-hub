@@ -2,6 +2,7 @@ import { InformationCircleIcon } from "@heroicons/react/24/outline"
 import { useEffect, useState, type ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
+import { Alert } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { AIHUBMIX_API_ORIGIN } from "~/constants/siteType"
@@ -17,6 +18,7 @@ import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDial
 import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 import { OneTimeApiKeyDialog } from "~/features/TokenProvisioning/components/OneTimeApiKeyDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import {
@@ -104,6 +106,7 @@ export default function AccountDialog({
     e.preventDefault()
     try {
       const result = await handlers.handleSaveAccount()
+      if (!result) return
       if (!handlers.shouldDeferAccountSaveSuccess(result)) {
         onSuccess(result)
       }
@@ -148,6 +151,21 @@ export default function AccountDialog({
     onRequestCookieAuthPermissions: handlers.handleRequestCookieAuthPermissions,
   }
   const currentSitePolicy = getAccountDialogSitePolicy(state.siteType)
+  const isOpenRouterBootstrap = isCanonicalOpenRouterUrl(state.url)
+  const autoDetectPresentation = isOpenRouterBootstrap
+    ? {
+        action: {
+          idleLabel: tAccountDialog("mode.createOpenRouterManagementKey"),
+          pendingLabel: tAccountDialog("mode.creatingOpenRouterManagementKey"),
+          reDetectLabel: tAccountDialog("mode.createOpenRouterManagementKey"),
+          multiline: true,
+        },
+        info: {
+          title: tAccountDialog("infoPanel.openrouterBootstrap"),
+          description: tAccountDialog("infoPanel.openrouterBootstrapInfo"),
+        },
+      }
+    : undefined
   const dialogTitle =
     mode === DIALOG_MODES.ADD
       ? tAccountDialog("title.add")
@@ -209,6 +227,14 @@ export default function AccountDialog({
     handlers.handleClose()
   }
 
+  const openRouterRecovery = state.openRouterBootstrapRecovery
+  const showOpenRouterManualRevocation = Boolean(
+    openRouterRecovery?.requiresManualRecovery,
+  )
+  const showOpenRouterRecovery = Boolean(
+    openRouterRecovery?.message || showOpenRouterManualRevocation,
+  )
+
   return (
     <>
       <Modal
@@ -222,6 +248,7 @@ export default function AccountDialog({
           <ActionButtons
             mode={mode}
             url={state.url}
+            autoDetectPresentation={autoDetectPresentation?.action}
             phase={state.phase}
             formSource={state.formSource}
             isDetecting={state.isDetecting}
@@ -254,6 +281,38 @@ export default function AccountDialog({
                   handleOpenApiCredentialProfilesFromDetectFailure
                 }
               />
+            )}
+
+            {openRouterRecovery && showOpenRouterRecovery && (
+              <Alert
+                variant="warning"
+                title={tAccountDialog("openrouterBootstrapRecovery.title")}
+                tabIndex={-1}
+                aria-live="assertive"
+                aria-atomic="true"
+              >
+                <div className="space-y-2 text-sm leading-relaxed">
+                  {openRouterRecovery.message && (
+                    <p>{openRouterRecovery.message}</p>
+                  )}
+                  {showOpenRouterManualRevocation && (
+                    <>
+                      {openRouterRecovery.label && (
+                        <p>
+                          {tAccountDialog("openrouterBootstrapRecovery.label", {
+                            label: openRouterRecovery.label,
+                          })}
+                        </p>
+                      )}
+                      <p>
+                        {tAccountDialog(
+                          "openrouterBootstrapRecovery.manualRevocation",
+                        )}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </Alert>
             )}
 
             {state.isDetecting && state.isDetectingSlow && (
@@ -387,6 +446,7 @@ export default function AccountDialog({
           mode={mode}
           phase={state.phase}
           formSource={state.formSource}
+          autoDetectPresentation={autoDetectPresentation?.info}
         />
       </Modal>
 

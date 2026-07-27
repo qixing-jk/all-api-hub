@@ -18,6 +18,10 @@ interface InfoPanelProps {
   mode: DialogMode
   phase: AccountDialogPhase
   formSource: AccountDialogFormSource
+  autoDetectPresentation?: {
+    title: string
+    description: string
+  }
 }
 
 /**
@@ -27,7 +31,12 @@ interface InfoPanelProps {
  * @param props.phase Current dialog phase determining whether the form is shown.
  * @param props.formSource Source that led the dialog into form mode.
  */
-export default function InfoPanel({ mode, phase, formSource }: InfoPanelProps) {
+export default function InfoPanel({
+  mode,
+  phase,
+  formSource,
+  autoDetectPresentation,
+}: InfoPanelProps) {
   const { t } = useTranslation("accountDialog")
   const isAddMode = mode === DIALOG_MODES.ADD
   const isDetected = formSource === ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
@@ -45,6 +54,7 @@ export default function InfoPanel({ mode, phase, formSource }: InfoPanelProps) {
     if (isAddMode) {
       if (isDetected) return t("infoPanel.confirmation")
       if (isManualForm) return t("infoPanel.manualAdd")
+      if (autoDetectPresentation) return autoDetectPresentation.title
       return t("infoPanel.autoDetect")
     }
     return t("infoPanel.editInfo")
@@ -54,6 +64,7 @@ export default function InfoPanel({ mode, phase, formSource }: InfoPanelProps) {
     if (isAddMode) {
       if (isDetected) return t("infoPanel.confirmAddInfo")
       if (isManualForm) return t("infoPanel.manualInfo")
+      if (autoDetectPresentation) return autoDetectPresentation.description
       return t("infoPanel.autoDetectInfo")
     }
     return (

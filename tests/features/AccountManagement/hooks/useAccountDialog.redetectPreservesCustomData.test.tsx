@@ -42,11 +42,17 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   }),
 }))
 
-vi.mock("~/services/productAnalytics/actions", () => ({
-  startProductAnalyticsAction: vi.fn(() => ({
-    complete: vi.fn(),
-  })),
-}))
+vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/actions")>()
+
+  return {
+    ...actual,
+    startProductAnalyticsAction: vi.fn(() => ({
+      complete: vi.fn(),
+    })),
+  }
+})
 
 vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
   const actual =
@@ -553,6 +559,7 @@ describe("useAccountDialog re-detect preservation", () => {
         userId: "12",
         siteName: "Detected Cookie Site",
         siteType: "new-api",
+        checkIn: { enableDetection: false },
         fetchContext: {
           kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 101,
@@ -680,6 +687,7 @@ describe("useAccountDialog re-detect preservation", () => {
         siteType: SITE_TYPES.AIHUBMIX,
         authType: AuthTypeEnum.AccessToken,
         exchangeRate: 7,
+        checkIn: { enableDetection: false },
       },
     })
 
@@ -729,6 +737,7 @@ describe("useAccountDialog re-detect preservation", () => {
         siteName: "Detected Cookie Site",
         siteType: "new-api",
         exchangeRate: 7,
+        checkIn: { enableDetection: false },
       },
     })
 

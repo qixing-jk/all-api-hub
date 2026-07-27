@@ -4,6 +4,7 @@ import {
   AUTO_DETECT_FETCH_CONTEXT_KINDS,
   AUTO_DETECT_STRATEGIES,
 } from "~/constants/autoDetect"
+import { OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES } from "~/constants/openRouterBootstrap"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -43,6 +44,32 @@ import { sanitizeProductAnalyticsEvent } from "~/services/productAnalytics/priva
 import { AuthTypeEnum } from "~/types"
 
 describe("product analytics privacy filtering", () => {
+  it.each(Object.values(OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES))(
+    "allows the controlled OpenRouter attempt outcome %s and no secret context",
+    (attemptOutcome) => {
+      const sanitized = sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          account_auto_detect_attempt_outcome: attemptOutcome,
+          requestId: "request-secret",
+          accessToken: "token-secret",
+          label: "label-secret",
+          url: "https://private.example",
+        },
+      )
+
+      expect(sanitized).toEqual({
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        account_auto_detect_attempt_outcome: attemptOutcome,
+      })
+    },
+  )
+
   it("keeps whitelisted PageViewed properties and strips unknown keys", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.PageViewed,

@@ -1,4 +1,5 @@
 import { SUPPORTED_UI_LANGUAGES } from "~/constants"
+import { OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES } from "~/constants/openRouterBootstrap"
 import {
   CURRENCY_TYPES,
   DASHBOARD_TAB_TYPES,
@@ -90,6 +91,7 @@ const EVENT_ALLOWED_KEYS = {
     "failure_stage",
     "failure_reason",
     "account_auto_detect_failure_reason",
+    "account_auto_detect_attempt_outcome",
     "auto_detect_strategy",
     "requested_auth_mode",
     "site_type",
@@ -519,6 +521,9 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   account_auto_detect_failure_reason: Object.values(
     PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
   ),
+  account_auto_detect_attempt_outcome: Object.values(
+    OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES,
+  ),
   auto_detect_strategy: Object.values(
     PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_STRATEGIES,
   ),
@@ -572,6 +577,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
 const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "account_count",
   "account_auto_detect_failure_reason",
+  "account_auto_detect_attempt_outcome",
   "account_auto_refresh_enabled",
   "account_auto_refresh_interval_minutes",
   "account_auto_refresh_min_interval_seconds",

@@ -1,12 +1,21 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
 import { aihubmixAccountBootstrap } from "~/services/apiAdapters/aihubmix/accountBootstrap"
-import { ACCOUNT_BOOTSTRAP_ROUTE_KINDS } from "~/services/apiAdapters/contracts/accountBootstrap"
+import {
+  ACCOUNT_BOOTSTRAP_ROUTE_KINDS,
+  type AccessTokenInfo,
+  type AccountBootstrapCapability,
+  type AccountBootstrapRouteKind,
+  type AccountBootstrapRouteTarget,
+  type SiteStatusInfo,
+  type UserInfo,
+} from "~/services/apiAdapters/contracts/accountBootstrap"
 import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/accountBootstrap"
 import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountBootstrap"
 import { voApiV2AccountBootstrap } from "~/services/apiAdapters/voapiV2/accountBootstrap"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 const {
@@ -95,6 +104,28 @@ const siteStatus = { system_name: "Example Portal", checkin_enabled: true }
 describe("account bootstrap adapters", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("keeps the bootstrap capability as six flat required operations", () => {
+    expectTypeOf<AccountBootstrapCapability>().toEqualTypeOf<{
+      fetchUserInfo(request: ApiServiceRequest): Promise<UserInfo>
+      getOrCreateAccessToken(
+        request: ApiServiceRequest,
+      ): Promise<AccessTokenInfo>
+      fetchSiteStatus(
+        request: ApiServiceRequest,
+      ): Promise<SiteStatusInfo | null>
+      fetchCheckInSupport(
+        request: ApiServiceRequest,
+      ): Promise<boolean | undefined>
+      extractDefaultExchangeRate(
+        siteStatus: SiteStatusInfo | null,
+      ): number | null
+      resolveRoutePath(
+        target: AccountBootstrapRouteTarget,
+        route: AccountBootstrapRouteKind,
+      ): Promise<string>
+    }>()
   })
 
   it("delegates New API-family bootstrap operations to the family implementation", async () => {

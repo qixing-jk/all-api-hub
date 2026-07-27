@@ -79,6 +79,9 @@
     "notes": "Notas",
     "notesPlaceholder": "Opcional, ingresa notas",
     "openRedeemWithCheckIn": "Abrir también la página de canje al usar check-in externo",
+    "openrouterManagementKey": "Clave de administración de OpenRouter",
+    "openrouterManagementKeyGuidance": "Crea una nueva clave de administración en la página Management Keys de OpenRouter y cópiala de inmediato; luego pégala aquí. Las claves de administración existentes no se pueden volver a mostrar.",
+    "openrouterManagementKeyGuidanceTitle": "Usa una clave de administración de OpenRouter",
     "showAccessToken": "Mostrar Access Token",
     "showRefreshToken": "Mostrar Refresh Token",
     "siteName": "Nombre del sitio",
@@ -124,6 +127,8 @@
     "manualAdd": "Agregado manual",
     "manualInfo": "Completa manualmente la información de la cuenta. La cuenta se guardará de forma segura en el almacenamiento local",
     "openLdohSiteList": "Abrir lista de sitios LDOH",
+    "openrouterBootstrap": "Crear una clave de administración de OpenRouter",
+    "openrouterBootstrapInfo": "Esta acción crea una nueva clave de administración en OpenRouter y luego la usa para detectar y completar los datos de la cuenta.",
     "reDetectInfo": "Si cambia la información del sitio, se recomienda hacer clic en el botón 'Volver a detectar' (debes iniciar sesión por tu cuenta en el sitio de destino primero)"
   },
   "messages": {
@@ -153,9 +158,17 @@
   },
   "mode": {
     "autoDetect": "Detección automática",
+    "createOpenRouterManagementKey": "Crear clave de administración de OpenRouter y detectar",
+    "creatingOpenRouterManagementKey": "Creando clave de administración de OpenRouter...",
     "detecting": "Detectando...",
     "manualAdd": "Agregado manual",
     "reDetect": "Volver a detectar"
+  },
+  "openrouterBootstrapRecovery": {
+    "label": "Etiqueta reconocible: {{label}}",
+    "manualReview": "Es posible que exista una clave de administración con esta etiqueta en OpenRouter.",
+    "manualRevocation": "Revisa las claves de administración y elimina manualmente la clave etiquetada si no la necesitas.",
+    "title": "La creación de la clave de OpenRouter requiere tu atención"
   },
   "sections": {
     "accountAuth": {
@@ -179,6 +192,7 @@
     "alreadyAdded": "Ya existen cuentas para este sitio",
     "authMethod": "Método de autenticación",
     "authMethodPlaceholder": "Método de autenticación",
+    "authMethodSelectedForSite": "El método de autenticación se seleccionó automáticamente según los requisitos de {{siteType}}.",
     "authType": {
       "accessToken": "Autenticación con Access Token",
       "cookieAuth": "Autenticación con Cookie"
@@ -188,7 +202,6 @@
     "currentSite": "Sitio actual",
     "editNow": "Editar ahora",
     "siteUrl": "URL del sitio",
-    "sub2apiAuthOnly": "Sub2API solo admite autenticación con Access Token (JWT)",
     "sub2apiHint": "Sub2API usa JWTs de corta duración. Cuando vencen, la extensión intentará obtener automáticamente un JWT nuevo mediante una ventana temporal (requiere que tengas sesión iniciada en el sitio). Con \"Sesión alojada por el plugin\" habilitada, cada cuenta puede actualizar y renovar la autenticación automáticamente en segundo plano de forma independiente, admitiendo varias cuentas en el mismo sitio.",
     "unknown": "No se puede obtener",
     "useCurrent": "Usar sitio actual"

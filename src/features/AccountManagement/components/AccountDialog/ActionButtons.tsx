@@ -26,6 +26,12 @@ import {
 interface ActionButtonsProps {
   mode: DialogMode
   url: string
+  autoDetectPresentation?: {
+    idleLabel: string
+    pendingLabel: string
+    reDetectLabel?: string
+    multiline?: boolean
+  }
   phase: AccountDialogPhase
   formSource: AccountDialogFormSource
   isDetecting: boolean
@@ -47,6 +53,7 @@ interface ActionButtonsProps {
 export default function ActionButtons({
   mode,
   url,
+  autoDetectPresentation,
   phase,
   formSource,
   isDetecting,
@@ -102,6 +109,9 @@ export default function ActionButtons({
   const autoConfigLoadingLabel =
     autoConfigLoadingLabelByStep[accountPostSaveWorkflowStep] ??
     t("accountDialog:actions.configuring")
+  const autoDetectLabel = isDetecting
+    ? autoDetectPresentation?.pendingLabel ?? t("accountDialog:mode.detecting")
+    : autoDetectPresentation?.idleLabel ?? t("accountDialog:mode.autoDetect")
 
   if (shouldShowAddDetectionActions) {
     return (
@@ -112,16 +122,18 @@ export default function ActionButtons({
           disabled={!url.trim()}
           loading={isDetecting}
           bleed
-          className="flex-1"
+          className={
+            autoDetectPresentation?.multiline
+              ? "h-auto min-h-9 flex-1 whitespace-normal"
+              : "flex-1"
+          }
           variant="default"
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton}
           leftIcon={
             !isDetecting ? <SparklesIcon className="h-4 w-4" /> : undefined
           }
         >
-          {isDetecting
-            ? t("accountDialog:mode.detecting")
-            : t("accountDialog:mode.autoDetect")}
+          {autoDetectLabel}
         </Button>
         <Button
           type="button"
@@ -152,15 +164,20 @@ export default function ActionButtons({
           disabled={!url.trim()}
           loading={isDetecting}
           bleed
-          className="flex-1"
+          className={
+            autoDetectPresentation?.multiline
+              ? "h-auto min-h-9 flex-1 whitespace-normal"
+              : "flex-1"
+          }
           variant="warning"
           leftIcon={
             !isDetecting ? <SparklesIcon className="h-4 w-4" /> : undefined
           }
         >
           {isDetecting
-            ? t("accountDialog:mode.detecting")
-            : t("accountDialog:mode.reDetect")}
+            ? autoDetectLabel
+            : autoDetectPresentation?.reDetectLabel ??
+              t("accountDialog:mode.reDetect")}
         </Button>
       )}
 

@@ -9,6 +9,7 @@ import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/comp
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
 const mediaQueryState = {
@@ -122,6 +123,99 @@ describe("AccountDialog AccountForm", () => {
     ),
   })
 
+  it("presents optional editable identity with the protected OpenRouter management key", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.OPENROUTER
+    props.draft.siteName = "OpenRouter"
+    props.draft.username = ""
+    props.draft.userId = ""
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByText("accountDialog:form.openrouterManagementKey"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:form.openrouterManagementKeyGuidance"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
+    ).toHaveValue("secret-token")
+    const usernameInput = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput,
+    )
+    const userIdInput = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput,
+    )
+    expect(usernameInput).not.toBeRequired()
+    expect(userIdInput).not.toBeRequired()
+    expect(
+      screen.getByText("accountDialog:form.username").closest("label"),
+    ).not.toHaveTextContent("*")
+    expect(
+      screen.getByText("accountDialog:form.userId").closest("label"),
+    ).not.toHaveTextContent("*")
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:form.showAccessToken",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("hides manual OpenRouter guidance after detection fills the management key", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.OPENROUTER
+    props.isDetected = true
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByText("accountDialog:form.openrouterManagementKey"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("accountDialog:form.openrouterManagementKeyGuidance"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps manual OpenRouter guidance when detection has no credential", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.OPENROUTER
+    props.draft.accessToken = ""
+    props.isDetected = true
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByText(
+        "accountDialog:form.openrouterManagementKeyGuidance",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it.each([
+    [SITE_TYPES.OPENROUTER, "OpenRouter"],
+    [SITE_TYPES.SUB2API, "Sub2API"],
+    [SITE_TYPES.AIHUBMIX, "AIHubMix"],
+  ])(
+    "describes locked %s authentication using its display name",
+    async (siteType, siteTypeLabel) => {
+      const translationSpy = vi.spyOn(testI18n, "t")
+      const props = createProps()
+      props.draft.siteType = siteType
+
+      render(<AccountForm {...withSitePolicy(props)} />)
+
+      expect(
+        await screen.findByLabelText("accountDialog:siteInfo.authMethod"),
+      ).toBeDisabled()
+      expect(translationSpy).toHaveBeenCalledWith(
+        "siteInfo.authMethodSelectedForSite",
+        expect.objectContaining({ siteType: siteTypeLabel }),
+      )
+      translationSpy.mockRestore()
+    },
+  )
+
   it("renders the desktop sections in the expected order and groups auth fields together", async () => {
     const props = createProps()
 
@@ -215,6 +309,16 @@ describe("AccountDialog AccountForm", () => {
       "placeholder",
       "accountDialog:form.userId",
     )
+    expect(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput),
+    ).toBeRequired()
+    expect(newApiUserIdInput).toBeRequired()
+    expect(
+      screen.getByText("accountDialog:form.username").closest("label"),
+    ).toHaveTextContent("*")
+    expect(
+      screen.getByText("accountDialog:form.userId").closest("label"),
+    ).toHaveTextContent("*")
 
     props.draft.siteType = SITE_TYPES.AIHUBMIX
     props.draft.userId = "aihubmix-user"

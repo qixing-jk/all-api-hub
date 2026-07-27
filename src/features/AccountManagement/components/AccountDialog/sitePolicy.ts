@@ -4,12 +4,17 @@ import {
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   getAccountSiteProductProfile,
 } from "~/services/accounts/accountSiteProfile"
+import { OPENROUTER_WEB_ORIGIN } from "~/services/accountSiteDefinitions/siteTypes"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 
 /**
  * Describes site-specific account-dialog behavior that must stay pure and UI-free.
  */
 export interface AccountDialogSitePolicy {
+  siteTypeLabel: string
+  canonicalSiteUrl?: string
+  defaultSiteName?: string
+  lockSiteUrl: boolean
   forceAccessTokenAuth: boolean
   allowCookieAuthSession: boolean
   allowCookieAutoImport: boolean
@@ -17,32 +22,58 @@ export interface AccountDialogSitePolicy {
   allowSub2ApiRefreshTokenState: boolean
   openSub2ApiTokenDialogPostSave: boolean
   deferSuccessForOneTimeKeyPostSaveFlow: boolean
+  requireUsername: boolean
+  requireUserId: boolean
 }
 
-type AccountDialogWorkflowPolicy = Pick<
-  AccountDialogSitePolicy,
+type AccountDialogSiteOverrideKey =
+  | "siteTypeLabel"
+  | "canonicalSiteUrl"
+  | "defaultSiteName"
+  | "lockSiteUrl"
   | "forceAccessTokenAuth"
   | "openSub2ApiTokenDialogPostSave"
   | "deferSuccessForOneTimeKeyPostSaveFlow"
+  | "requireUsername"
+  | "requireUserId"
+
+type AccountDialogSiteOverride = Partial<
+  Pick<AccountDialogSitePolicy, AccountDialogSiteOverrideKey>
 >
 
-const DEFAULT_ACCOUNT_DIALOG_WORKFLOW_POLICY: AccountDialogWorkflowPolicy = {
+const DEFAULT_ACCOUNT_DIALOG_SITE_OVERRIDE_VALUES = {
+  canonicalSiteUrl: undefined,
+  defaultSiteName: undefined,
+  lockSiteUrl: false,
   forceAccessTokenAuth: false,
   openSub2ApiTokenDialogPostSave: false,
   deferSuccessForOneTimeKeyPostSaveFlow: false,
-}
+  requireUsername: true,
+  requireUserId: true,
+} satisfies Omit<
+  Pick<AccountDialogSitePolicy, AccountDialogSiteOverrideKey>,
+  "siteTypeLabel"
+>
 
-const ACCOUNT_DIALOG_SITE_POLICIES: Partial<
-  Record<AccountSiteType, AccountDialogWorkflowPolicy>
+const ACCOUNT_DIALOG_SITE_OVERRIDES: Partial<
+  Record<AccountSiteType, AccountDialogSiteOverride>
 > = {
+  [SITE_TYPES.OPENROUTER]: {
+    siteTypeLabel: "OpenRouter",
+    canonicalSiteUrl: OPENROUTER_WEB_ORIGIN,
+    defaultSiteName: "OpenRouter",
+    lockSiteUrl: true,
+    forceAccessTokenAuth: true,
+    requireUserId: false,
+  },
   [SITE_TYPES.SUB2API]: {
+    siteTypeLabel: "Sub2API",
     forceAccessTokenAuth: true,
     openSub2ApiTokenDialogPostSave: true,
-    deferSuccessForOneTimeKeyPostSaveFlow: false,
   },
   [SITE_TYPES.AIHUBMIX]: {
+    siteTypeLabel: "AIHubMix",
     forceAccessTokenAuth: true,
-    openSub2ApiTokenDialogPostSave: false,
     deferSuccessForOneTimeKeyPostSaveFlow: true,
   },
 }
@@ -54,12 +85,12 @@ export function getAccountDialogSitePolicy(
   siteType: AccountSiteType,
 ): AccountDialogSitePolicy {
   const productProfile = getAccountSiteProductProfile(siteType)
-  const workflowPolicy =
-    ACCOUNT_DIALOG_SITE_POLICIES[siteType] ??
-    DEFAULT_ACCOUNT_DIALOG_WORKFLOW_POLICY
+  const siteOverride = ACCOUNT_DIALOG_SITE_OVERRIDES[siteType]
 
   return {
-    ...workflowPolicy,
+    siteTypeLabel: siteType,
+    ...DEFAULT_ACCOUNT_DIALOG_SITE_OVERRIDE_VALUES,
+    requireUsername: productProfile.identity.usernameRequired,
     allowCookieAuthSession: productProfile.auth.supportsCookieAuth,
     allowCookieAutoImport: productProfile.auth.supportsCookieAuth,
     allowBuiltInCheckInDetection:
@@ -67,6 +98,7 @@ export function getAccountDialogSitePolicy(
     allowSub2ApiRefreshTokenState:
       productProfile.supplementalAuth.kind ===
       ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
+    ...siteOverride,
   }
 }
 
