@@ -531,6 +531,31 @@ describe("compatible real-site login", () => {
     },
   )
 
+  it("sanitizes auth refresh transport failures", async () => {
+    const transportDetails = "must-not-leak-transport-details"
+    const post = vi.fn().mockRejectedValue(new Error(transportDetails))
+    const { page, evaluate, waitForFunction } = createPage(post)
+
+    let caught: unknown
+    try {
+      await loginToRealNewApiSite(page, config)
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toMatchObject({
+      message: "Real New API auth session refresh request failed.",
+    })
+    expect((caught as Error).message).not.toContain(transportDetails)
+    expect(evaluate).not.toHaveBeenCalled()
+    expect(waitForFunction).not.toHaveBeenCalled()
+    expect(post).toHaveBeenCalledTimes(1)
+    expect(post).toHaveBeenCalledWith(AUTH_REFRESH_URL, {
+      failOnStatusCode: false,
+      headers: { Origin: ORIGIN },
+    })
+  })
+
   it("sanitizes owned-session cleanup failures", async () => {
     const post = vi
       .fn()

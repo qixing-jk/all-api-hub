@@ -22,6 +22,8 @@ const DEFAULT_LOGIN_API_PATH = "/api/user/login"
 const DEFAULT_LOGIN_2FA_API_PATH = "/api/user/login/2fa"
 const AUTH_REFRESH_PATH = "/api/user/auth/refresh"
 const AUTH_LOGOUT_PATH = "/api/user/auth/logout"
+const SECURITY_VERIFICATION_BODY_PATTERN =
+  /verify you are human|performing security verification|cloudflare/iu
 const AUTH_BUNDLE_MARKER_FIELDS = [
   "access_token",
   "token_type",
@@ -299,7 +301,7 @@ async function tryLoginToCompatibleApiRealSiteViaApi(
       })
       let responseText = await response.text()
       let responseStatus = response.status()
-      let responseOk = response.ok()
+      const responseOk = response.ok()
       let payload = extractCompatibleApiPayload(safeParseJson(responseText))
       const loginPayload = payload as CompatibleApiLoginApiPayload | null
 
@@ -324,7 +326,6 @@ async function tryLoginToCompatibleApiRealSiteViaApi(
         }
         responseText = twoFactorResponse.responseText
         responseStatus = twoFactorResponse.status
-        responseOk = twoFactorResponse.ok
         payload = extractCompatibleApiPayload(safeParseJson(responseText))
       } else if (!responseOk) {
         if (options.authBundle && isTerminalAuthBundleStatus(responseStatus)) {
@@ -345,7 +346,7 @@ async function tryLoginToCompatibleApiRealSiteViaApi(
       }
 
       const parsedPayload = parseCompatibleLoginPayload(payload, payloadMode)
-      if (options.authBundle && responseOk) {
+      if (options.authBundle) {
         if (parsedPayload?.kind === "authBundle") {
           return createAuthBundleLoginResult(
             page,
@@ -881,11 +882,7 @@ function buildCompatibleApiLoginApiErrorMessage(
 ) {
   const normalizedText = responseText.trim()
 
-  if (
-    /verify you are human|performing security verification|cloudflare/iu.test(
-      normalizedText,
-    )
-  ) {
+  if (SECURITY_VERIFICATION_BODY_PATTERN.test(normalizedText)) {
     return `${options.label} login API at ${loginApiUrl} is blocked by a security verification page (HTTP ${status}).`
   }
 
@@ -915,11 +912,7 @@ function buildCompatibleApiAttemptErrorMessage(
     )
   }
 
-  if (
-    /verify you are human|performing security verification|cloudflare/iu.test(
-      responseText,
-    )
-  ) {
+  if (SECURITY_VERIFICATION_BODY_PATTERN.test(responseText)) {
     return `${options.label} login API at ${loginApiUrl} is blocked by a security verification page (HTTP ${status}).`
   }
 
@@ -936,7 +929,5 @@ async function looksLikeSecurityVerificationPage(page: Page) {
     .locator("body")
     .textContent()
     .catch(() => "")
-  return /verify you are human|performing security verification|cloudflare/iu.test(
-    bodyText ?? "",
-  )
+  return SECURITY_VERIFICATION_BODY_PATTERN.test(bodyText ?? "")
 }

@@ -621,6 +621,10 @@ export async function stubNewApiSiteRoutes(
     const request = route.request()
     const url = new URL(request.url())
     const method = request.method()
+    const isDashboardAuthorized =
+      dashboardSessionActive &&
+      request.headers()["authorization"] ===
+        `Bearer ${E2E_NEW_API_RC22_AUTH.dashboardToken}`
 
     if (method === "GET" && url.pathname === "/") {
       await route.fulfill({
@@ -710,9 +714,7 @@ export async function stubNewApiSiteRoutes(
     ) {
       const headers = request.headers()
       const isOwnedSession =
-        dashboardSessionActive &&
-        headers["authorization"] ===
-          `Bearer ${E2E_NEW_API_RC22_AUTH.dashboardToken}` &&
+        isDashboardAuthorized &&
         headers["x-auth-session"] === E2E_NEW_API_RC22_AUTH.sessionId &&
         headers["origin"] === origin
 
@@ -741,12 +743,9 @@ export async function stubNewApiSiteRoutes(
     if (method === "GET" && url.pathname === "/api/user/self") {
       if (usesAuthBundle) {
         const authorization = request.headers()["authorization"]
-        const isDashboardRequest =
-          dashboardSessionActive &&
-          authorization === `Bearer ${E2E_NEW_API_RC22_AUTH.dashboardToken}`
         const isPatRequest = authorization === `Bearer ${accessToken}`
 
-        if (!isDashboardRequest && !isPatRequest) {
+        if (!isDashboardAuthorized && !isPatRequest) {
           await route.fulfill({
             status: 401,
             contentType: "application/json",
@@ -797,13 +796,8 @@ export async function stubNewApiSiteRoutes(
       method === "GET" &&
       url.pathname === "/api/user/token"
     ) {
-      const isDashboardRequest =
-        dashboardSessionActive &&
-        request.headers()["authorization"] ===
-          `Bearer ${E2E_NEW_API_RC22_AUTH.dashboardToken}`
-
       await route.fulfill(
-        isDashboardRequest
+        isDashboardAuthorized
           ? {
               status: 200,
               contentType: "application/json",

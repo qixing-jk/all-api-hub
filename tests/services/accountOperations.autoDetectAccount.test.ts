@@ -62,6 +62,26 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
+function snapshotOwnProperties(
+  value: unknown,
+  seen = new WeakSet<object>(),
+): unknown {
+  if (!value || typeof value !== "object") return value
+  if (seen.has(value)) return "[Circular]"
+  seen.add(value)
+
+  return Object.fromEntries(
+    Reflect.ownKeys(value).map((key) => {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key)
+      const propertyValue =
+        descriptor && "value" in descriptor
+          ? snapshotOwnProperties(descriptor.value, seen)
+          : "[Accessor]"
+      return [String(key), propertyValue]
+    }),
+  )
+}
+
 vi.mock("~/services/apiAdapters/newApi/accountBootstrap", () => ({
   createNewApiAccountBootstrap: mockCreateNewApiAccountBootstrap,
 }))
@@ -436,8 +456,9 @@ describe("accountOperations autoDetectAccount", () => {
         message: "New API dashboard authentication could not be exchanged",
       },
     })
-    expect(String(logError.cause)).not.toContain(dashboardToken)
-    expect(String(logError.cause)).not.toContain(reflectedMessage)
+    const serializedLogError = JSON.stringify(snapshotOwnProperties(logError))
+    expect(serializedLogError).not.toContain(dashboardToken)
+    expect(serializedLogError).not.toContain(reflectedMessage)
   })
 
   it("preserves privacy-safe auto-detect metadata in failure responses", async () => {

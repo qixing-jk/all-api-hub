@@ -139,6 +139,7 @@ describe("account browser-session reader", () => {
     ["an unknown kind", { kind: "unknown_kind" }],
     ["a blank token", { token: "   " }],
     ["a blank session id", { sessionId: "   " }],
+    ["a malformed origin", { origin: "not a valid URL" }],
     ["a mismatched origin", { origin: "https://other.example.invalid" }],
     ["a non-finite expiry", { expiresAt: Number.POSITIVE_INFINITY }],
   ])(

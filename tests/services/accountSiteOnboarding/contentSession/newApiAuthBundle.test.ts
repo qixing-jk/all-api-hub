@@ -223,6 +223,51 @@ describe("newApiAuthBundleContentSessionExtractor", () => {
     ).rejects.toEqual(new Error("New API session refresh failed (500)"))
   })
 
+  it("falls back to status details when a controlled error response is not JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: vi.fn().mockRejectedValue(new SyntaxError("invalid JSON")),
+      }),
+    )
+
+    await expect(
+      newApiAuthBundleContentSessionExtractor.extract({
+        siteTypeHint: SITE_TYPES.NEW_API,
+      }),
+    ).rejects.toEqual(new Error("New API session refresh failed (401)"))
+  })
+
+  it.each([
+    ["only a code", { code: "AUTH_REQUIRED" }, "AUTH_REQUIRED"],
+    [
+      "only a message",
+      { message: "Session unavailable" },
+      "Session unavailable",
+    ],
+    [
+      "no public fields",
+      { success: false },
+      "New API session refresh failed (409)",
+    ],
+  ])(
+    "keeps useful upstream diagnostics for a controlled response with %s",
+    async (_description, body, expectedMessage) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(createResponse(body, 409)),
+      )
+
+      await expect(
+        newApiAuthBundleContentSessionExtractor.extract({
+          siteTypeHint: SITE_TYPES.NEW_API,
+        }),
+      ).rejects.toEqual(new Error(expectedMessage))
+    },
+  )
+
   it.each([404, 405])(
     "returns null for legacy-compatible HTTP %i responses",
     async (status) => {
