@@ -12,6 +12,7 @@ import {
   AUTO_DETECT_FAILURE_REASONS,
   AutoDetectErrorType,
 } from "~/services/accounts/utils/autoDetectUtils"
+import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -25,6 +26,7 @@ const {
   mockFetchSharedChatUserInfo,
   mockCreateNewApiAccountBootstrap,
   mockGetOrCreateAccessToken,
+  mockLoggerError,
 } = vi.hoisted(() => ({
   mockAutoDetectSmart: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
@@ -35,10 +37,20 @@ const {
   mockFetchSharedChatUserInfo: vi.fn(),
   mockCreateNewApiAccountBootstrap: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
+  mockLoggerError: vi.fn(),
 }))
 
 vi.mock("~/services/siteDetection/autoDetectService", () => ({
   autoDetectSmart: mockAutoDetectSmart,
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    error: mockLoggerError,
+    info: vi.fn(),
+    warn: vi.fn(),
+  }),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -105,7 +117,16 @@ const browserFetchContext = () => ({
 
 describe("accountOperations autoDetectAccount", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockAutoDetectSmart.mockReset()
+    mockSendRuntimeMessage.mockReset()
+    mockFetchSiteStatus.mockReset()
+    mockFetchSupportCheckIn.mockReset()
+    mockExtractDefaultExchangeRate.mockReset()
+    mockFetchUserInfo.mockReset()
+    mockFetchSharedChatUserInfo.mockReset()
+    mockCreateNewApiAccountBootstrap.mockReset()
+    mockGetOrCreateAccessToken.mockReset()
+    mockLoggerError.mockReset()
     mockCreateNewApiAccountBootstrap.mockReturnValue({
       extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
       fetchCheckInSupport: mockFetchSupportCheckIn,
@@ -322,6 +343,101 @@ describe("accountOperations autoDetectAccount", () => {
       ...autoDetectContext,
       siteType: SITE_TYPES.NEW_API,
     })
+  })
+
+  it("returns only the management PAT from rc22 dashboard completion", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "42",
+        siteType: SITE_TYPES.NEW_API,
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "dashboard-jwt",
+          expiresAt: 4_102_444_800,
+          sessionId: "session-example",
+          origin: "https://panel.example.invalid",
+        },
+        fetchContext: currentTabFetchContext("https://panel.example.invalid"),
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "rc22-user",
+      access_token: "management-pat",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "rc22 portal",
+      checkin_enabled: false,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://panel.example.invalid",
+      AuthTypeEnum.Cookie,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      accessToken: "management-pat",
+      authType: AuthTypeEnum.AccessToken,
+    })
+    expect(result.data).not.toHaveProperty("transientAuth")
+    expect(JSON.stringify(result.data)).not.toContain("dashboard-jwt")
+  })
+
+  it("does not expose or log reflected rc22 dashboard credentials", async () => {
+    const dashboardToken = "dashboard-jwt-sensitive-example"
+    const reflectedMessage = `upstream reflected ${dashboardToken}`
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "42",
+        siteType: SITE_TYPES.NEW_API,
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: dashboardToken,
+          expiresAt: 4_102_444_800,
+          sessionId: "session-example",
+          origin: "https://panel.example.invalid",
+        },
+      },
+    })
+    mockGetOrCreateAccessToken.mockRejectedValueOnce(
+      new Error(reflectedMessage),
+    )
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "rc22 portal",
+      checkin_enabled: false,
+    })
+
+    const result = await autoDetectAccount(
+      "https://panel.example.invalid",
+      AuthTypeEnum.Cookie,
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      detailedError: expect.objectContaining({
+        type: AutoDetectErrorType.UNKNOWN,
+      }),
+    })
+    expect(JSON.stringify(result)).not.toContain(dashboardToken)
+    expect(JSON.stringify(result)).not.toContain(reflectedMessage)
+    expect(mockLoggerError).toHaveBeenCalledTimes(1)
+    const [logMessage, logError] = mockLoggerError.mock.calls[0]
+    expect(String(logMessage)).not.toContain(dashboardToken)
+    expect(String(logMessage)).not.toContain(reflectedMessage)
+    expect(logError).toMatchObject({
+      message: "New API dashboard authentication could not be exchanged",
+      cause: {
+        message: "New API dashboard authentication could not be exchanged",
+      },
+    })
+    expect(String(logError.cause)).not.toContain(dashboardToken)
+    expect(String(logError.cause)).not.toContain(reflectedMessage)
   })
 
   it("preserves privacy-safe auto-detect metadata in failure responses", async () => {

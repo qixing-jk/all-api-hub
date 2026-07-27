@@ -7,8 +7,10 @@ import {
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
+import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/accountCompletion"
 import { newApiAccountCompletion } from "~/services/apiAdapters/newApi/accountCompletion"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -94,7 +96,18 @@ const helpers = {
 
 describe("newApiAccountCompletion", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockCreateNewApiAccountBootstrap.mockReset()
+    mockExtractDefaultExchangeRate.mockReset()
+    mockFetchCheckInSupport.mockReset()
+    mockFetchSiteStatus.mockReset()
+    mockFetchUserInfo.mockReset()
+    mockGetOrCreateAccessToken.mockReset()
+    createServiceRequest.mockClear()
+    fetchSiteName.mockClear()
+    createCompletionError.mockClear()
+    trimString.mockClear()
+    createInitialCheckInConfig.mockClear()
+    handleCheckInSupportFetchFailure.mockClear()
     mockCreateNewApiAccountBootstrap.mockReturnValue({
       extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
       fetchCheckInSupport: mockFetchCheckInSupport,
@@ -181,6 +194,291 @@ describe("newApiAccountCompletion", () => {
         },
       },
     })
+  })
+
+  it("uses the rc22 dashboard bearer to get or create the persisted PAT", async () => {
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "  rc22-user  ",
+      access_token: "  management-pat  ",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "  rc22 portal  ",
+      checkin_enabled: false,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await newApiAccountCompletion.complete(
+      {
+        url: "https://panel.example.invalid/settings",
+        requestedAuthType: AuthTypeEnum.Cookie,
+        detected: {
+          userId: "42",
+          siteType: SITE_TYPES.NEW_API,
+          transientAuth: {
+            kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+            token: "dashboard-jwt",
+            expiresAt: 4_102_444_800,
+            sessionId: "session-example",
+            origin: "https://panel.example.invalid",
+          },
+        },
+        context: {
+          fetchContext: currentTabFetchContext,
+        },
+      },
+      helpers,
+    )
+
+    expect(mockCreateNewApiAccountBootstrap).toHaveBeenCalledWith(
+      SITE_TYPES.NEW_API,
+      {
+        accessTokenCreationPolicy: {
+          currentTabTransport: "disabled",
+          tempWindowFallback: { statusCodes: [], codes: [] },
+        },
+      },
+    )
+    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      baseUrl: "https://panel.example.invalid/settings",
+      fetchContext: currentTabFetchContext,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "dashboard-jwt",
+      },
+    })
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+    expect(result).toMatchObject({
+      username: "rc22-user",
+      accessToken: "management-pat",
+      authType: AuthTypeEnum.AccessToken,
+    })
+    expect(result).not.toHaveProperty("transientAuth")
+    expect(JSON.stringify(result)).not.toContain("dashboard-jwt")
+  })
+
+  it.each([
+    [
+      "expired",
+      {
+        expiresAt: 1,
+        origin: "https://panel.example.invalid",
+      },
+    ],
+    [
+      "bound to another origin",
+      {
+        expiresAt: 4_102_444_800,
+        origin: "https://other.example.invalid",
+      },
+    ],
+  ])(
+    "rejects %s rc22 dashboard auth before token bootstrap",
+    async (_case, transientAuthOverrides) => {
+      await expect(
+        newApiAccountCompletion.complete(
+          {
+            url: "https://panel.example.invalid",
+            requestedAuthType: AuthTypeEnum.Cookie,
+            detected: {
+              userId: "42",
+              siteType: SITE_TYPES.NEW_API,
+              transientAuth: {
+                kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+                token: "dashboard-jwt",
+                sessionId: "session-example",
+                ...transientAuthOverrides,
+              },
+            },
+            context: {},
+          },
+          helpers,
+        ),
+      ).rejects.toMatchObject({
+        reason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      })
+
+      expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+      expect(mockFetchUserInfo).not.toHaveBeenCalled()
+      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    },
+  )
+
+  it("rejects rc22 dashboard auth that expires within the completion margin", async () => {
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(2_000_000_000_000)
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "rc22-user",
+      access_token: "management-pat",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "rc22 portal",
+      checkin_enabled: false,
+    })
+
+    try {
+      await expect(
+        newApiAccountCompletion.complete(
+          {
+            url: "https://panel.example.invalid",
+            requestedAuthType: AuthTypeEnum.Cookie,
+            detected: {
+              userId: "42",
+              siteType: SITE_TYPES.NEW_API,
+              transientAuth: {
+                kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+                token: "dashboard-jwt",
+                expiresAt: 2_000_000_030,
+                sessionId: "session-example",
+                origin: "https://panel.example.invalid",
+              },
+            },
+            context: {},
+          },
+          helpers,
+        ),
+      ).rejects.toMatchObject({
+        reason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      })
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+
+    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+  })
+
+  it("sanitizes rc22 bootstrap failures before creating the completion error", async () => {
+    const dashboardToken = "dashboard-jwt-sensitive-example"
+    const reflectedMessage = `upstream reflected ${dashboardToken}`
+    mockGetOrCreateAccessToken.mockRejectedValueOnce(
+      new ApiError(
+        reflectedMessage,
+        503,
+        "/api/user/token",
+        API_ERROR_CODES.HTTP_OTHER,
+      ),
+    )
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "rc22 portal",
+      checkin_enabled: false,
+    })
+
+    const error = await newApiAccountCompletion
+      .complete(
+        {
+          url: "https://panel.example.invalid",
+          requestedAuthType: AuthTypeEnum.Cookie,
+          detected: {
+            userId: "42",
+            siteType: SITE_TYPES.NEW_API,
+            transientAuth: {
+              kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+              token: dashboardToken,
+              expiresAt: 4_102_444_800,
+              sessionId: "session-example",
+              origin: "https://panel.example.invalid",
+            },
+          },
+          context: {},
+        },
+        helpers,
+      )
+      .catch((cause: unknown) => cause)
+
+    expect(error).toBeInstanceOf(AutoDetectCompletionError)
+    const completionError = error as AutoDetectCompletionError
+    expect(completionError).toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      message: "New API dashboard authentication could not be exchanged",
+      cause: {
+        name: "ApiError",
+        message: "New API dashboard authentication could not be exchanged",
+        statusCode: 503,
+        endpoint: "/api/user/token",
+        code: API_ERROR_CODES.HTTP_OTHER,
+      },
+    })
+    expect(completionError.cause).toBeInstanceOf(Error)
+    expect(String(completionError.cause)).not.toContain(dashboardToken)
+    expect(String(completionError.cause)).not.toContain(reflectedMessage)
+  })
+
+  it("classifies an invalid rc22 target URL without retaining parser details", async () => {
+    const error = await newApiAccountCompletion
+      .complete(
+        {
+          url: "not a valid URL",
+          requestedAuthType: AuthTypeEnum.Cookie,
+          detected: {
+            userId: "42",
+            siteType: SITE_TYPES.NEW_API,
+            transientAuth: {
+              kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+              token: "dashboard-jwt",
+              expiresAt: 4_102_444_800,
+              sessionId: "session-example",
+              origin: "https://panel.example.invalid",
+            },
+          },
+          context: {},
+        },
+        helpers,
+      )
+      .catch((cause: unknown) => cause)
+
+    expect(error).toBeInstanceOf(AutoDetectCompletionError)
+    const completionError = error as AutoDetectCompletionError
+    expect(completionError).toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
+      message: "New API dashboard authentication is invalid",
+      cause: {
+        message: "New API dashboard authentication is invalid",
+      },
+    })
+    expect(String(completionError.cause)).not.toContain("not a valid URL")
+    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+    expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+  })
+
+  it("ignores dashboard transient auth for other New API-family variants", async () => {
+    mockFetchUserInfo.mockResolvedValueOnce({
+      username: "legacy-family-user",
+      access_token: "legacy-visible-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Legacy Family Portal",
+      checkin_enabled: false,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await newApiAccountCompletion.complete(
+      {
+        url: "https://family.example.invalid",
+        requestedAuthType: AuthTypeEnum.Cookie,
+        detected: {
+          userId: "43",
+          siteType: SITE_TYPES.VELOERA,
+          transientAuth: {
+            kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+            token: "dashboard-jwt",
+            expiresAt: 4_102_444_800,
+            sessionId: "session-example",
+            origin: "https://family.example.invalid",
+          },
+        },
+        context: {},
+      },
+      helpers,
+    )
+
+    expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      baseUrl: "https://family.example.invalid",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: "43",
+      },
+    })
+    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+    expect(result.authType).toBe(AuthTypeEnum.Cookie)
   })
 
   it("completes cookie accounts with support probing and default exchange rate", async () => {

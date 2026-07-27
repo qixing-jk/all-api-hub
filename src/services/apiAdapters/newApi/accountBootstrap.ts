@@ -9,6 +9,12 @@ import { resolveStaticAccountRoutePath } from "../accountRoutes"
 type AccountBootstrapImplementation =
   typeof accountBootstrap.defaultAccountBootstrapImplementation
 
+interface NewApiAccountBootstrapOptions {
+  accessTokenCreationPolicy?: Parameters<
+    typeof accountBootstrap.getOrCreateAccessToken
+  >[1]
+}
+
 const accountBootstrapOverrides: Partial<
   Record<AccountSiteType, Partial<AccountBootstrapImplementation>>
 > = {
@@ -25,6 +31,7 @@ const accountBootstrapOverrides: Partial<
  */
 export function createNewApiAccountBootstrap(
   siteType: AccountSiteType,
+  options?: NewApiAccountBootstrapOptions,
 ): AccountBootstrapCapability {
   const implementation = {
     ...accountBootstrap.defaultAccountBootstrapImplementation,
@@ -34,7 +41,12 @@ export function createNewApiAccountBootstrap(
   return {
     fetchUserInfo: (request) => implementation.fetchUserInfo(request),
     getOrCreateAccessToken: (request) =>
-      implementation.getOrCreateAccessToken(request),
+      options?.accessTokenCreationPolicy
+        ? implementation.getOrCreateAccessToken(
+            request,
+            options.accessTokenCreationPolicy,
+          )
+        : implementation.getOrCreateAccessToken(request),
     fetchSiteStatus: (request) => implementation.fetchSiteStatus(request),
     fetchCheckInSupport: (request) =>
       implementation.fetchSupportCheckIn(request),
