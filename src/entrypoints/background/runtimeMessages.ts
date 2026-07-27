@@ -44,6 +44,11 @@ import {
 
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
 import {
+  cancelTempWindowOpenRouterManagementKeyAction,
+  handleTempWindowOpenRouterManagementKeyAction,
+  markTempWindowOpenRouterManagementKeyDispatched,
+} from "./openrouter/managementKeyAction"
+import {
   handleAutoDetectSite,
   handleCloseTempWindow,
   handleOpenTempWindow,
@@ -65,6 +70,32 @@ function normalizeTempWindowRuntimeRequest<
     tempWindowRequestSource?: unknown
   },
 >(request: T) {
+  if (
+    request.action === RuntimeActionIds.TempWindowOpenRouterManagementKeyAction
+  ) {
+    const operation = request.operation
+    const normalizedOperation =
+      operation && typeof operation === "object"
+        ? (operation as Record<string, unknown>).kind === "create" &&
+          typeof (operation as Record<string, unknown>).label === "string"
+          ? {
+              kind: "create" as const,
+              label: (operation as Record<string, unknown>).label,
+            }
+          : undefined
+        : undefined
+    return {
+      action: request.action,
+      requestId: request.requestId,
+      operation: normalizedOperation,
+      tempWindowRequestSource: normalizeTempWindowRequestSource(
+        request.tempWindowRequestSource,
+      ),
+      ...(typeof request.suppressMinimize === "boolean"
+        ? { suppressMinimize: request.suppressMinimize }
+        : {}),
+    }
+  }
   const normalizedRequest = Object.assign({}, request, {
     tempWindowRequestSource: normalizeTempWindowRequestSource(
       request.tempWindowRequestSource,
@@ -215,6 +246,39 @@ export function setupRuntimeMessageListeners() {
           normalizeTempWindowRuntimeRequest(request),
           sendResponse,
         )
+        return true
+      }
+
+      if (
+        request.action ===
+        RuntimeActionIds.TempWindowOpenRouterManagementKeyAction
+      ) {
+        void handleTempWindowOpenRouterManagementKeyAction(
+          normalizeTempWindowRuntimeRequest(request),
+          sendResponse,
+        )
+        return true
+      }
+
+      if (
+        request.action ===
+        RuntimeActionIds.TempWindowCancelOpenRouterManagementKeyAction
+      ) {
+        const requestId =
+          typeof request.requestId === "string" ? request.requestId : ""
+        sendResponse(cancelTempWindowOpenRouterManagementKeyAction(requestId))
+        return true
+      }
+
+      if (
+        request.action ===
+        RuntimeActionIds.TempWindowOpenRouterManagementKeyDispatched
+      ) {
+        const requestId =
+          typeof request.requestId === "string" ? request.requestId : ""
+        const marked =
+          markTempWindowOpenRouterManagementKeyDispatched(requestId)
+        sendResponse({ requestId, marked })
         return true
       }
 
