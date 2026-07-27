@@ -1,6 +1,6 @@
 # 快速导出站点配置
 
-> 将已录入的聚合中转站账号或「API 凭证」，一键同步到 CherryStudio、CC Switch、CLIProxyAPI、Claude Code Router、Kilo Code / Roo Code 等下游工具，或导入到你自建的 New API、DoneHub、Veloera、Octopus、AxonHub 后台，避免重复输入 Base URL、密钥与模型列表。
+> 把已录入的中转站账号或「API 凭证」导出到 CherryStudio、CC Switch、CLIProxyAPI、Claude Code Router、Kilo Code / Roo Code 等工具，或导入到你自建的 New API、DoneHub、Veloera、Octopus、AxonHub 后台，省去重复填写 Base URL、密钥与模型列表的麻烦。
 
 ## 支持目标
 
@@ -14,9 +14,9 @@
 | Claude Code Router | 调用 Router 接口创建/更新 Provider | 需在「设置 → Claude Code Router 设置」填写 Base URL 与管理 API Key |
 | Kilo Code / Roo Code | 生成 `apiConfigs` 片段或下载 `settings` JSON 供导入 | 导入为增量添加，不会清空你已有的 provider；导出时需为每个密钥选择上游模型 ID |
 
-### 自建后台 / 管理面板
+### 自建后台
 
-如果自己也搭了 AI 中转或聚合后台，All API Hub 还可以把当前站点直接导入到你选中的后台目标里，作为「渠道」管理。
+如果你自己也搭了 AI 中转或聚合后台，All API Hub 还可以把当前站点直接导入到你选中的后台目标里，作为「渠道」管理。
 
 | 目标 | 说明 | 相关文档 |
 |------|------|----------|
@@ -30,14 +30,14 @@
 导入到自建后台前，需在「设置 → 自建站点管理」中选中目标托管站点类型，并填写「基础 URL / 用户 ID / 管理员凭据」等信息。若配置不完整，渠道对话框会提示缺少配置并提供跳转入口。
 :::
 
-## 前置准备
+## 导出前的准备
 
-1. **可导出的站点或凭证**：
-   - 从「密钥管理」导出：先完成账号识别，确保密钥列表中存在可导出的 API。
-   - 从「API 凭证」导出：即使没有站点账号，只要有 `Base URL` + `API Key` 也可直接导出。
-2. **客户端类目标前置配置**：
+1. **确认可导出的内容**：
+   - 从「密钥管理」导出：先完成账号识别，确保密钥列表中有可导出的 API。
+   - 从「API 凭证」导出：即使没有站点账号，只要有 `Base URL` + `API Key` 也能直接导出。
+2. **客户端类目标的提前准备**：
    - CherryStudio / CC Switch：需保持对应桌面端或浏览器扩展可用。
-   - CLIProxyAPI：在「设置 → CLIProxyAPI 设置」填写管理地址、管理密钥；可在保存后执行「连接检测」。
+   - CLIProxyAPI：在「设置 → CLIProxyAPI 设置」填写管理地址、管理密钥；保存后可执行「连接检测」。
    - Claude Code Router：在「设置 → Claude Code Router 设置」填写 Router Base URL 与管理 API Key。
 3. **模型列表**：若需导出带模型白名单的渠道，可在「New API 模型同步」中预先筛选模型；导出 Kilo Code / Roo Code 时也需为每个密钥选择上游模型 ID。
 
@@ -45,8 +45,8 @@
 
 1. 打开插件 → **密钥管理**（或 **API 凭证**），在站点/凭证卡片中点击 **「导出」**。
 2. 选择目标类型：`CherryStudio` / `CC Switch` / `CLIProxyAPI` / `Claude Code Router` / `Kilo Code`，或导入到自建后台。
-3. 根据目标完成必要操作：
-   - **CherryStudio**：浏览器提示是否打开桌面客户端，确认后自动完成填充。
+3. 根据目标完成操作：
+   - **CherryStudio**：浏览器会提示是否打开桌面客户端，确认后自动完成填充。
    - **CC Switch**：选择上游应用并确认后，浏览器唤起 CC Switch 导入；`OpenCode` / `OpenClaw` 导入后仍需在 CC Switch 内调整 API 格式。
    - **CLIProxyAPI**：保存管理地址后可执行「连接检测」，确认连通后再导入 Provider。
    - **Claude Code Router**：在 Router 中自动创建/更新对应 Provider。
@@ -64,7 +64,7 @@
 | 模型列表 | 来自站点能力探测或 New API 模型同步结果 |
 | 充值比例 | 用于 CherryStudio / CC Switch 的折算展示 |
 | 分组 / 优先级 | 针对 New API，默认设置为 `default` 组与优先级 0，可在导出面板手动调整 |
-| 备注（Token Name） | 导出时会保留 token 备注，便于在多个工具之间迁移与区分 |
+| 备注（Token Name） | 导出时会保留 token 备注，方便在多个工具之间迁移与区分 |
 
 ## 常见问题
 
