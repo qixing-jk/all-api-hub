@@ -141,7 +141,12 @@
       "page_changed": "请保持 OpenRouter 管理密钥页面打开，然后重试自动识别。",
       "timeout": "OpenRouter 密钥创建超时。请在重试前检查管理密钥。",
       "validationFailed": "OpenRouter 已创建密钥，但验证失败。请在下方粘贴，或从管理密钥中撤销。"
-    }
+    },
+    "credentialInvalid": "此 OpenRouter 管理密钥无效或已撤销。",
+    "malformedResponse": "OpenRouter 返回了意外响应，请稍后重试。",
+    "managementKeyRequired": "请在 OpenRouter 中新建管理密钥并立即复制。现有管理密钥的明文无法再次显示。",
+    "networkFallback": "无法连接 OpenRouter。请检查网络连接后重试。",
+    "permissionDenied": "此 OpenRouter 管理密钥没有读取账号余额的权限。"
   },
   "operations": {
     "detection": {

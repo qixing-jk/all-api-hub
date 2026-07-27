@@ -141,7 +141,12 @@
       "page_changed": "請保持 OpenRouter 管理金鑰頁面開啟，然後重試自動識別。",
       "timeout": "OpenRouter 金鑰建立逾時。請在重試前檢查管理金鑰。",
       "validationFailed": "OpenRouter 已建立金鑰，但驗證失敗。請在下方貼上，或從管理金鑰中撤銷。"
-    }
+    },
+    "credentialInvalid": "此 OpenRouter 管理金鑰無效或已撤銷。",
+    "malformedResponse": "OpenRouter 回傳了非預期的回應，請稍後再試。",
+    "managementKeyRequired": "請在 OpenRouter 中建立新的管理金鑰並立即複製。現有管理金鑰的明文無法再次顯示。",
+    "networkFallback": "無法連線至 OpenRouter。請檢查網路連線後再試。",
+    "permissionDenied": "此 OpenRouter 管理金鑰沒有讀取帳號餘額的權限。"
   },
   "operations": {
     "detection": {

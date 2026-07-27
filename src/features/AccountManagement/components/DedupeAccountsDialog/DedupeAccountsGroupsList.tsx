@@ -113,9 +113,11 @@ function DedupeAccountsGroupCard({
     >
       <legend className="sr-only">
         {group.key.origin} ·{" "}
-        {t("ui:dialog.dedupeAccounts.userId", {
-          userId: group.key.userId,
-        })}
+        {group.key.reason === "same_credential"
+          ? t("ui:dialog.dedupeAccounts.sameCredential")
+          : t("ui:dialog.dedupeAccounts.userId", {
+              userId: group.key.userId,
+            })}
       </legend>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
@@ -123,9 +125,11 @@ function DedupeAccountsGroupCard({
             {group.key.origin}
           </div>
           <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-            {t("ui:dialog.dedupeAccounts.userId", {
-              userId: group.key.userId,
-            })}
+            {group.key.reason === "same_credential"
+              ? t("ui:dialog.dedupeAccounts.sameCredential")
+              : t("ui:dialog.dedupeAccounts.userId", {
+                  userId: group.key.userId,
+                })}
           </div>
         </div>
         <Badge variant="danger">
@@ -142,7 +146,7 @@ function DedupeAccountsGroupCard({
           <DedupeAccountCard
             key={account.id}
             account={account}
-            group={group}
+            group={{ ...group, reason: group.key.reason }}
             accountLabelById={accountLabelById}
             pinnedAccountIds={pinnedAccountIds}
             detailsOpenByAccountId={detailsOpenByAccountId}

@@ -255,6 +255,7 @@
       "manualPickHint": "各セットで保持するアカウントを手動で選べます。手動選択は保持戦略より優先されます。",
       "previewDelete": "削除をプレビュー",
       "recommended": "推奨",
+      "sameCredential": "同じ管理キー",
       "strategy": {
         "keepEnabled": "有効なものを保持（存在する場合）",
         "keepMostRecentlyUpdated": "最後に更新されたものを保持",

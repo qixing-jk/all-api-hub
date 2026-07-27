@@ -50,15 +50,16 @@ export function DedupeAccountsConfirmDetails({
             .join(", ")
 
           return (
-            <div
-              key={`confirm:${group.key.origin}::${group.key.userId}`}
-              className="space-y-1"
-            >
+            <div key={`confirm:${group.key.id}`} className="space-y-1">
               <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
                 {group.key.origin} ·{" "}
-                {t("ui:dialog.dedupeAccounts.userId", {
-                  userId: group.key.userId,
-                })}
+                {group.key.reason === "same_credential"
+                  ? `${group.key.siteType} · ${t(
+                      "ui:dialog.dedupeAccounts.sameCredential",
+                    )}`
+                  : t("ui:dialog.dedupeAccounts.userId", {
+                      userId: group.key.userId,
+                    })}
               </div>
               <div className="text-sm">
                 <span className="font-medium">

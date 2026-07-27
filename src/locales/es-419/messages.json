@@ -141,7 +141,12 @@
       "page_changed": "Mantén abierta la página de claves de administración de OpenRouter y vuelve a intentar la detección automática.",
       "timeout": "La creación de la clave de OpenRouter agotó el tiempo de espera. Revisa las claves de administración antes de volver a intentarlo.",
       "validationFailed": "OpenRouter creó una clave, pero no se pudo validar. Pégala abajo o revócala desde las claves de administración."
-    }
+    },
+    "credentialInvalid": "La clave de administración de OpenRouter no es válida o fue revocada.",
+    "malformedResponse": "OpenRouter devolvió una respuesta inesperada. Inténtalo más tarde.",
+    "managementKeyRequired": "Crea una nueva clave de administración en OpenRouter y cópiala de inmediato. Las claves de administración existentes no se pueden volver a mostrar.",
+    "networkFallback": "No se pudo conectar con OpenRouter. Revisa tu conexión y vuelve a intentarlo.",
+    "permissionDenied": "Esta clave de administración de OpenRouter no tiene permiso para leer los créditos de la cuenta."
   },
   "operations": {
     "detection": {

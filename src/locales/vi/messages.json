@@ -141,7 +141,12 @@
       "page_changed": "Hãy giữ trang Management Keys của OpenRouter mở rồi thử nhận dạng tự động lại.",
       "timeout": "Tạo khóa OpenRouter đã hết thời gian chờ. Hãy kiểm tra Management Keys trước khi thử lại.",
       "validationFailed": "OpenRouter đã tạo khóa nhưng không thể xác thực. Hãy dán khóa bên dưới hoặc thu hồi trong Management Keys."
-    }
+    },
+    "credentialInvalid": "Khóa quản lý OpenRouter không hợp lệ hoặc đã bị thu hồi.",
+    "malformedResponse": "OpenRouter trả về phản hồi không đúng định dạng. Hãy thử lại sau.",
+    "managementKeyRequired": "Hãy tạo một Management Key mới trong OpenRouter và sao chép ngay. Không thể hiển thị lại bản rõ của Management Key đã có.",
+    "networkFallback": "Không thể kết nối OpenRouter. Hãy kiểm tra kết nối rồi thử lại.",
+    "permissionDenied": "Khóa quản lý OpenRouter này không có quyền đọc tín dụng tài khoản."
   },
   "operations": {
     "detection": {

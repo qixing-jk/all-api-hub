@@ -141,7 +141,12 @@
       "page_changed": "OpenRouter の管理キーのページを開いたまま、自動検出をもう一度お試しください。",
       "timeout": "OpenRouter キーの作成がタイムアウトしました。再試行前に管理キーを確認してください。",
       "validationFailed": "OpenRouter でキーは作成されましたが、検証に失敗しました。下に貼り付けるか、管理キーから失効させてください。"
-    }
+    },
+    "credentialInvalid": "OpenRouter 管理キーが無効か、取り消されています。",
+    "malformedResponse": "OpenRouter から予期しない応答が返されました。後でもう一度お試しください。",
+    "managementKeyRequired": "OpenRouter で新しい管理キーを作成し、すぐにコピーしてください。既存の管理キーの平文は再表示できません。",
+    "networkFallback": "OpenRouter に接続できませんでした。接続を確認して、もう一度お試しください。",
+    "permissionDenied": "この OpenRouter 管理キーにはアカウント残高を読み取る権限がありません。"
   },
   "operations": {
     "detection": {

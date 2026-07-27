@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
+import { scanDuplicateAccounts } from "~/services/accounts/accountDedupe"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -142,6 +143,54 @@ describe("DedupeAccountsDialog", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
+  })
+
+  it("receives secret-free same-credential metadata with original records", () => {
+    const openRouterAccounts = [
+      buildSiteAccount({
+        id: "or-a",
+        site_name: "OpenRouter A",
+        site_url: "https://openrouter.ai",
+        site_type: "openrouter",
+        account_info: {
+          ...buildSiteAccount().account_info,
+          id: "",
+          username: "",
+          access_token: "management-key-placeholder",
+        },
+      }),
+      buildSiteAccount({
+        id: "or-b",
+        site_name: "OpenRouter B",
+        site_url: "https://openrouter.ai/settings",
+        site_type: "openrouter",
+        account_info: {
+          ...buildSiteAccount().account_info,
+          id: "",
+          username: "",
+          access_token: "management-key-placeholder",
+        },
+      }),
+    ]
+    const result = scanDuplicateAccounts({
+      accounts: openRouterAccounts,
+      strategy: "keepPinned",
+    })
+    expect(result.groups).toMatchObject([
+      {
+        key: {
+          origin: "https://openrouter.ai",
+          siteType: "openrouter",
+          reason: "same_credential",
+        },
+        accounts: openRouterAccounts,
+      },
+    ])
+    expect(result.groups[0].accounts[0]).toBe(openRouterAccounts[0])
+    expect(result.groups[0].accounts[1]).toBe(openRouterAccounts[1])
+    expect(JSON.stringify(result.groups[0].key)).not.toContain(
+      "management-key-placeholder",
+    )
   })
 
   it("runs scan and deletes duplicates after preview confirmation", async () => {

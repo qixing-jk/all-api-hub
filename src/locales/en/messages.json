@@ -141,7 +141,12 @@
       "page_changed": "Keep the OpenRouter Management Keys page open, then try auto-detect again.",
       "timeout": "OpenRouter key creation timed out. Review Management Keys before trying again.",
       "validationFailed": "OpenRouter created a key, but validation failed. Paste it below or revoke it from Management Keys."
-    }
+    },
+    "credentialInvalid": "This OpenRouter management key is invalid or revoked.",
+    "malformedResponse": "OpenRouter returned an unexpected response. Try again later.",
+    "managementKeyRequired": "Create a new Management Key in OpenRouter and copy it immediately. Existing Management Keys cannot be revealed again.",
+    "networkFallback": "Could not connect to OpenRouter. Check your connection and try again.",
+    "permissionDenied": "This OpenRouter management key does not have permission to read account credits."
   },
   "operations": {
     "detection": {

@@ -52,6 +52,7 @@ import {
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
+import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import {
@@ -61,7 +62,18 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
   type TokenProvisioningBlockReason,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
+import { resolveOpenRouterAccountUserId } from "~/services/apiAdapters/openrouter/accountIdentity"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  validateManagementKey,
+  type OpenRouterManagementKeyValidation,
+} from "~/services/apiService/openrouter"
+import {
+  OPENROUTER_CREDITS_ENDPOINT,
+  OPENROUTER_KEY_ENDPOINT,
+} from "~/services/apiService/openrouter/constants"
+import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -77,8 +89,8 @@ import {
   type Sub2ApiAuthConfig,
 } from "~/types"
 import type {
+  AccountAutoDetectResponse,
   AccountSaveResponse,
-  AccountValidationResponse,
 } from "~/types/serviceResponse"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
@@ -169,6 +181,30 @@ function getAutoDetectCompletionDetailedError(
   }
 }
 
+/** Builds an OpenRouter failure response from controlled local copy only. */
+function getControlledOpenRouterFailure(
+  message: string,
+  reason: AutoDetectFailureReason,
+) {
+  return {
+    message,
+    detailedError: {
+      ...getAutoDetectCompletionDetailedError(message, reason, message),
+      message,
+    },
+  }
+}
+
+/** Returns local manual-entry guidance without exposing OpenRouter detection details. */
+function getOpenRouterReadOnlyDetectionFailure(
+  reason: AutoDetectFailureReason,
+) {
+  return getControlledOpenRouterFailure(
+    t("messages:openrouter.managementKeyRequired"),
+    reason,
+  )
+}
+
 /**
  * Create a localized timeout error for manual account data fetching.
  * @param timeoutMs Timeout threshold in milliseconds.
@@ -224,6 +260,91 @@ const requireAccountDataCapability = (
   return accountData
 }
 
+/** Validates OpenRouter Management Keys before persistence. */
+async function validateOpenRouterManagementKeyIfRequired(params: {
+  siteType: AccountSiteType
+  accessToken: string
+  shouldValidate: boolean
+}): Promise<OpenRouterManagementKeyValidation> {
+  if (params.siteType !== SITE_TYPES.OPENROUTER || !params.shouldValidate) {
+    return {}
+  }
+
+  return validateManagementKey({ accessToken: params.accessToken.trim() })
+}
+
+/** Maps OpenRouter failures to controlled local copy without losing typed classification. */
+function getOpenRouterSafeErrorMessage(
+  error: unknown,
+  unknownFallback: string,
+): string {
+  if (error instanceof OpenRouterManagementKeyRequiredError) {
+    return t("messages:openrouter.managementKeyRequired")
+  }
+  if (error instanceof ApiError) {
+    if (error.code === API_ERROR_CODES.HTTP_401) {
+      return t("messages:openrouter.credentialInvalid")
+    }
+    if (error.code === API_ERROR_CODES.HTTP_403) {
+      return t("messages:openrouter.permissionDenied")
+    }
+    if (error.code === API_ERROR_CODES.NETWORK_ERROR) {
+      return t("messages:openrouter.networkFallback")
+    }
+    const hasOpenRouterResponseEndpoint =
+      error.endpoint === OPENROUTER_KEY_ENDPOINT ||
+      error.endpoint === OPENROUTER_CREDITS_ENDPOINT
+    const hasExplicitMalformedResponseCode =
+      error.code === API_ERROR_CODES.CONTENT_TYPE_MISMATCH ||
+      error.code === API_ERROR_CODES.JSON_PARSE_ERROR
+    const isLocalStructureValidationError =
+      hasOpenRouterResponseEndpoint &&
+      error.code == null &&
+      error.statusCode == null
+    if (hasExplicitMalformedResponseCode || isLocalStructureValidationError) {
+      return t("messages:openrouter.malformedResponse")
+    }
+  }
+  return unknownFallback
+}
+
+/** Maps credential validation failures to stable user-facing copy. */
+function getCredentialValidationMessage(
+  siteType: AccountSiteType,
+  error: unknown,
+): string {
+  if (siteType !== SITE_TYPES.OPENROUTER) {
+    return getErrorMessage(error) || t("messages:errors.unknown")
+  }
+  return getOpenRouterSafeErrorMessage(
+    error,
+    t("messages:openrouter.networkFallback"),
+  )
+}
+
+/** Keeps ordinary health diagnostics while protecting OpenRouter persisted state. */
+function getAccountHealthFailureReason(
+  siteType: AccountSiteType,
+  error: unknown,
+): string {
+  if (siteType !== SITE_TYPES.OPENROUTER) {
+    return getErrorMessage(error)
+  }
+  return getOpenRouterSafeErrorMessage(
+    error,
+    t("account:healthStatus.unknownError"),
+  )
+}
+
+/** Keeps ordinary diagnostics while protecting sensitive OpenRouter details. */
+function getAccountOperationLogDetails(
+  siteType: AccountSiteType,
+  ordinaryDetails: unknown,
+  safeDetails: Record<string, unknown>,
+): unknown {
+  return siteType === SITE_TYPES.OPENROUTER ? safeDetails : ordinaryDetails
+}
+
 /**
  * Parses a manual balance in USD from a string value and converts it to quota
  * units.
@@ -257,15 +378,18 @@ export function parseManualQuotaFromUsd(
 export async function autoDetectAccount(
   url: string,
   authType: AuthTypeEnum,
-): Promise<AccountValidationResponse> {
+): Promise<AccountAutoDetectResponse> {
   if (!url.trim()) {
     return {
+      kind: "detected",
       success: false,
       message: t("messages:errors.validation.urlRequired"),
     }
   }
 
   let autoDetectContext: AutoDetectAnalyticsContext | undefined
+  const normalizedUrl = url.trim()
+  const isCanonicalOpenRouter = isCanonicalOpenRouterUrl(normalizedUrl)
 
   try {
     try {
@@ -274,10 +398,18 @@ export async function autoDetectAccount(
         url: url.trim(),
       })
     } catch (error) {
-      logger.warn("Failed to track cookie interceptor url", {
-        url: url.trim(),
-        error: getErrorMessage(error),
-      })
+      logger.warn(
+        "Failed to track cookie interceptor url",
+        isCanonicalOpenRouter
+          ? {
+              siteType: SITE_TYPES.OPENROUTER,
+              status: "tracking_failed",
+            }
+          : {
+              url: normalizedUrl,
+              error: getErrorMessage(error),
+            },
+      )
     }
 
     // 使用智能自动识别服务
@@ -285,19 +417,32 @@ export async function autoDetectAccount(
     autoDetectContext = detectResult.autoDetectContext
 
     if (!detectResult.success || !detectResult.data) {
+      const autoDetectFailureReason =
+        getAutoDetectFailureReasonByErrorCode(detectResult.errorCode) ??
+        AUTO_DETECT_FAILURE_REASONS.UserDataMissing
+
+      if (isCanonicalOpenRouter) {
+        return {
+          kind: "detected",
+          success: false,
+          ...getOpenRouterReadOnlyDetectionFailure(autoDetectFailureReason),
+          autoDetectContext,
+          autoDetectFailureReason,
+        }
+      }
+
       const errorMsg =
         detectResult.error || t("messages:operations.detection.failed")
       const detailedError =
         getAutoDetectErrorByCode(detectResult.errorCode) ??
         analyzeAutoDetectError(errorMsg)
       return {
+        kind: "detected",
         success: false,
         message: detailedError.message || errorMsg,
         detailedError,
         autoDetectContext,
-        autoDetectFailureReason:
-          getAutoDetectFailureReasonByErrorCode(detectResult.errorCode) ??
-          AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+        autoDetectFailureReason,
       }
     }
 
@@ -309,6 +454,7 @@ export async function autoDetectAccount(
 
     if (!userId) {
       return {
+        kind: "detected",
         success: false,
         message: t("messages:operations.detection.getUserIdFailedDetailed"),
         detailedError: {
@@ -328,13 +474,33 @@ export async function autoDetectAccount(
     })
 
     return {
+      kind: "detected",
       success: true,
       message: t("accountDialog:messages.autoDetectSuccess"),
       data: completed,
     }
   } catch (error) {
-    const errorMessage = getErrorMessage(error)
     const autoDetectFailureReason = getAutoDetectCompletionFailureReason(error)
+
+    if (isCanonicalOpenRouter) {
+      const failure = getOpenRouterReadOnlyDetectionFailure(
+        autoDetectFailureReason,
+      )
+      logger.error("OpenRouter account detection failed", {
+        siteType: SITE_TYPES.OPENROUTER,
+        status: "failed",
+        reason: autoDetectFailureReason,
+      })
+      return {
+        kind: "detected",
+        success: false,
+        ...failure,
+        autoDetectContext,
+        autoDetectFailureReason,
+      }
+    }
+
+    const errorMessage = getErrorMessage(error)
     const message = getAutoDetectCompletionFailureMessage(
       autoDetectFailureReason,
       errorMessage,
@@ -349,6 +515,7 @@ export async function autoDetectAccount(
       message,
     )
     return {
+      kind: "detected",
       success: false,
       message,
       detailedError,
@@ -397,8 +564,10 @@ export function isValidAccount({
 
   return (
     !!siteName.trim() &&
+    (authType === AuthTypeEnum.None ||
+      profile.auth.allowedAuthTypes.includes(authType)) &&
     (!profile.identity.usernameRequired || !!username.trim()) &&
-    !!userId.trim() &&
+    (normalizedSiteType === SITE_TYPES.OPENROUTER || !!userId.trim()) &&
     isValidExchangeRate(exchangeRate) &&
     (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim()) &&
     (authType !== AuthTypeEnum.Cookie || !!cookieAuthSessionCookie?.trim())
@@ -642,7 +811,33 @@ export async function validateAndSaveAccount(
     }
   }
 
-  const accountIdentity = normalizeAccountIdentity(userId) ?? ""
+  let credentialValidation: OpenRouterManagementKeyValidation
+  try {
+    credentialValidation = await validateOpenRouterManagementKeyIfRequired({
+      siteType: normalizedSiteType,
+      accessToken,
+      shouldValidate: true,
+    })
+  } catch (error) {
+    logger.warn("Account credential validation failed", {
+      siteType: normalizedSiteType,
+      status: "rejected",
+    })
+    return {
+      success: false,
+      message: getCredentialValidationMessage(normalizedSiteType, error),
+    }
+  }
+  const productProfile = getAccountSiteProductProfile(normalizedSiteType)
+  const accountIdentity =
+    normalizedSiteType === SITE_TYPES.OPENROUTER
+      ? resolveOpenRouterAccountUserId({
+          enteredUserId: userId,
+          creatorUserId: credentialValidation.userId,
+        })
+      : normalizeAccountIdentity(userId) ?? ""
+  const resolvedUsername = username.trim()
+  const requestAccountIdentity = normalizeAccountIdentity(userId) ?? ""
 
   let shouldAutoProvisionKeyOnAccountAdd =
     DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ?? false
@@ -655,7 +850,9 @@ export async function validateAndSaveAccount(
   } catch (error) {
     logger.warn(
       "Failed to read user preferences; falling back to defaults",
-      error,
+      getAccountOperationLogDetails(normalizedSiteType, error, {
+        status: "fallback",
+      }),
     )
   }
 
@@ -700,7 +897,7 @@ export async function validateAndSaveAccount(
       account_info: {
         id: accountIdentity,
         access_token: accessToken.trim(),
-        username: username.trim(),
+        username: resolvedUsername,
         quota: manualQuota ?? 0,
         today_prompt_tokens: 0,
         today_completion_tokens: 0,
@@ -708,20 +905,28 @@ export async function validateAndSaveAccount(
         today_requests_count: 0,
         today_income: 0,
         todayStatsAvailability:
-          getAccountSiteProductProfile(normalizedSiteType).metrics
-            .deferredTodayStatsAvailability,
+          productProfile.metrics.deferredTodayStatsAvailability,
       },
       last_sync_time: Date.now(),
     }
 
     try {
       const accountId = await accountStorage.addAccount(accountData)
-      logger.info("Account saved before deferred data refresh", {
-        accountId,
-        siteName: siteName.trim(),
-        siteType: normalizedSiteType,
-      })
-
+      logger.info(
+        "Account saved before deferred data refresh",
+        getAccountOperationLogDetails(
+          normalizedSiteType,
+          {
+            accountId,
+            siteName: siteName.trim(),
+            siteType: normalizedSiteType,
+          },
+          {
+            siteType: normalizedSiteType,
+            status: "saved_before_deferred_refresh",
+          },
+        ),
+      )
       if (!options.skipAutoProvisionKeyOnAccountAdd) {
         void autoProvisionKeyOnAccountAdd(
           accountId,
@@ -736,7 +941,13 @@ export async function validateAndSaveAccount(
         feedbackLevel: "success",
       }
     } catch (saveError) {
-      logger.error("Failed to save account", saveError)
+      logger.error(
+        "Failed to save account",
+        getAccountOperationLogDetails(normalizedSiteType, saveError, {
+          siteType: normalizedSiteType,
+          status: "persist_failed",
+        }),
+      )
       const errorMessage = getErrorMessage(saveError)
       return {
         success: false,
@@ -749,12 +960,23 @@ export async function validateAndSaveAccount(
 
   try {
     // 获取账号余额和今日使用情况
-    logger.debug("Fetching account data for new account", {
-      baseUrl: requestBaseUrl,
-      siteType: normalizedSiteType,
-      authType,
-      userId: accountIdentity,
-    })
+    logger.debug(
+      "Fetching account data for new account",
+      getAccountOperationLogDetails(
+        normalizedSiteType,
+        {
+          baseUrl: requestBaseUrl,
+          siteType: normalizedSiteType,
+          authType,
+          userId: requestAccountIdentity,
+        },
+        {
+          authType,
+          siteType: normalizedSiteType,
+          status: "fetching",
+        },
+      ),
+    )
     const accountDataCapability = requireAccountDataCapability(
       normalizedSiteType,
       getSiteTypeCapabilities(normalizedSiteType).account?.data,
@@ -768,7 +990,7 @@ export async function validateAndSaveAccount(
         includeTodayCashflow,
         auth: {
           authType,
-          userId: accountIdentity,
+          userId: requestAccountIdentity,
           accessToken: accessToken.trim(),
           cookie:
             authType === AuthTypeEnum.Cookie
@@ -807,7 +1029,7 @@ export async function validateAndSaveAccount(
       account_info: {
         id: accountIdentity,
         access_token: accessToken.trim(),
-        username: username.trim(),
+        username: resolvedUsername,
         quota: manualQuota ?? freshAccountData.quota,
         today_prompt_tokens: freshAccountData.today_prompt_tokens,
         today_completion_tokens: freshAccountData.today_completion_tokens,
@@ -823,12 +1045,21 @@ export async function validateAndSaveAccount(
     }
 
     const accountId = await accountStorage.addAccount(accountData)
-    logger.info("Account saved with data refresh", {
-      accountId,
-      siteName: siteName.trim(),
-      siteType: normalizedSiteType,
-    })
-
+    logger.info(
+      "Account saved with data refresh",
+      getAccountOperationLogDetails(
+        normalizedSiteType,
+        {
+          accountId,
+          siteName: siteName.trim(),
+          siteType: normalizedSiteType,
+        },
+        {
+          siteType: normalizedSiteType,
+          status: "saved_with_refresh",
+        },
+      ),
+    )
     if (!options.skipAutoProvisionKeyOnAccountAdd) {
       void autoProvisionKeyOnAccountAdd(
         accountId,
@@ -844,7 +1075,13 @@ export async function validateAndSaveAccount(
     }
   } catch (error) {
     // FALLBACK: 即使获取数据失败也要保存配置
-    logger.warn("Data fetch failed; saving configuration only", error)
+    logger.warn(
+      "Data fetch failed; saving configuration only",
+      getAccountOperationLogDetails(normalizedSiteType, error, {
+        siteType: normalizedSiteType,
+        status: "fallback",
+      }),
+    )
 
     const partialAccountData: Omit<
       SiteAccount,
@@ -869,12 +1106,12 @@ export async function validateAndSaveAccount(
       checkIn: checkInConfig,
       health: {
         status: SiteHealthStatus.Warning,
-        reason: getErrorMessage(error),
+        reason: getAccountHealthFailureReason(normalizedSiteType, error),
       },
       account_info: {
         id: accountIdentity,
         access_token: accessToken.trim(),
-        username: username.trim(),
+        username: resolvedUsername,
         quota: manualQuota ?? 0,
         today_prompt_tokens: 0,
         today_completion_tokens: 0,
@@ -882,8 +1119,7 @@ export async function validateAndSaveAccount(
         today_requests_count: 0,
         today_income: 0,
         todayStatsAvailability:
-          getAccountSiteProductProfile(normalizedSiteType).metrics
-            .deferredTodayStatsAvailability,
+          productProfile.metrics.deferredTodayStatsAvailability,
       },
       last_sync_time: Date.now(),
     }
@@ -891,11 +1127,21 @@ export async function validateAndSaveAccount(
     // Try to save partial account data
     try {
       const accountId = await accountStorage.addAccount(partialAccountData)
-      logger.warn("Account saved without data refresh", {
-        accountId,
-        siteName: siteName.trim(),
-        siteType,
-      })
+      logger.warn(
+        "Account saved without data refresh",
+        getAccountOperationLogDetails(
+          normalizedSiteType,
+          {
+            accountId,
+            siteName: siteName.trim(),
+            siteType,
+          },
+          {
+            siteType: normalizedSiteType,
+            status: "saved_without_data_refresh",
+          },
+        ),
+      )
 
       if (!options.skipAutoProvisionKeyOnAccountAdd) {
         void autoProvisionKeyOnAccountAdd(
@@ -911,7 +1157,13 @@ export async function validateAndSaveAccount(
         feedbackLevel: "warning",
       }
     } catch (saveError) {
-      logger.error("Failed to save account", saveError)
+      logger.error(
+        "Failed to save account",
+        getAccountOperationLogDetails(normalizedSiteType, saveError, {
+          siteType: normalizedSiteType,
+          status: "persist_failed",
+        }),
+      )
       const errorMessage = getErrorMessage(saveError)
       return {
         success: false,
@@ -991,7 +1243,50 @@ export async function validateAndUpdateAccount(
     }
   }
 
-  const accountIdentity = normalizeAccountIdentity(userId) ?? ""
+  const isOpenRouter = normalizedSiteType === SITE_TYPES.OPENROUTER
+  let existingAccountInfo: SiteAccount["account_info"] | undefined
+  let existingAccountSiteType: SiteAccount["site_type"] | undefined
+  if (isOpenRouter) {
+    const existingAccount = (await accountStorage.getAllAccountsOrThrow()).find(
+      (account) => account.id === accountId,
+    )
+    if (!existingAccount) {
+      throw new Error(`Account not found: ${accountId}`)
+    }
+    existingAccountInfo = existingAccount.account_info
+    existingAccountSiteType = existingAccount.site_type
+  }
+  const requestAccountIdentity = normalizeAccountIdentity(userId) ?? ""
+
+  const normalizedAccessToken = accessToken.trim()
+  const existingAccessToken = existingAccountInfo?.access_token?.trim() ?? ""
+  let credentialValidation: OpenRouterManagementKeyValidation
+  try {
+    credentialValidation = await validateOpenRouterManagementKeyIfRequired({
+      siteType: normalizedSiteType,
+      accessToken: normalizedAccessToken,
+      shouldValidate:
+        existingAccountSiteType !== SITE_TYPES.OPENROUTER ||
+        normalizedAccessToken !== existingAccessToken,
+    })
+  } catch (error) {
+    logger.warn("Account credential validation failed", {
+      siteType: normalizedSiteType,
+      status: "rejected",
+    })
+    return {
+      success: false,
+      message: getCredentialValidationMessage(normalizedSiteType, error),
+    }
+  }
+  const accountIdentity = isOpenRouter
+    ? resolveOpenRouterAccountUserId({
+        enteredUserId: userId,
+        creatorUserId: credentialValidation.userId,
+        existingUserId: existingAccountInfo?.id,
+      })
+    : normalizeAccountIdentity(userId) ?? ""
+  const resolvedUsername = username.trim()
 
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)
   const normalizedManualBalanceUsd =
@@ -1028,8 +1323,8 @@ export async function validateAndUpdateAccount(
       checkIn: checkInConfig,
       account_info: {
         id: accountIdentity,
-        access_token: accessToken.trim(),
-        username: username.trim(),
+        access_token: normalizedAccessToken,
+        username: resolvedUsername,
         ...(manualQuota === undefined ? {} : { quota: manualQuota }),
       },
     }
@@ -1047,11 +1342,21 @@ export async function validateAndUpdateAccount(
       }
     }
 
-    logger.info("Account updated before deferred data refresh", {
-      accountId,
-      siteName: siteName.trim(),
-      siteType: normalizedSiteType,
-    })
+    logger.info(
+      "Account updated before deferred data refresh",
+      getAccountOperationLogDetails(
+        normalizedSiteType,
+        {
+          accountId,
+          siteName: siteName.trim(),
+          siteType: normalizedSiteType,
+        },
+        {
+          siteType: normalizedSiteType,
+          status: "updated_before_deferred_refresh",
+        },
+      ),
+    )
 
     return {
       success: true,
@@ -1063,13 +1368,24 @@ export async function validateAndUpdateAccount(
 
   try {
     // 获取账号余额和今日使用情况
-    logger.debug("Fetching account data for update", {
-      accountId,
-      baseUrl: requestBaseUrl,
-      siteType: normalizedSiteType,
-      authType,
-      userId: accountIdentity,
-    })
+    logger.debug(
+      "Fetching account data for update",
+      getAccountOperationLogDetails(
+        normalizedSiteType,
+        {
+          accountId,
+          baseUrl: requestBaseUrl,
+          siteType: normalizedSiteType,
+          authType,
+          userId: requestAccountIdentity,
+        },
+        {
+          authType,
+          siteType: normalizedSiteType,
+          status: "fetching",
+        },
+      ),
+    )
     const includeTodayCashflow =
       (await userPreferences.getPreferences()).showTodayCashflow ?? true
     const accountData = requireAccountDataCapability(
@@ -1084,7 +1400,7 @@ export async function validateAndUpdateAccount(
       includeTodayCashflow,
       auth: {
         authType,
-        userId: accountIdentity,
+        userId: requestAccountIdentity,
         accessToken: accessToken.trim(),
         cookie:
           authType === AuthTypeEnum.Cookie
@@ -1114,8 +1430,8 @@ export async function validateAndUpdateAccount(
       checkIn: freshAccountData.checkIn,
       account_info: {
         id: accountIdentity,
-        access_token: accessToken.trim(),
-        username: username.trim(),
+        access_token: normalizedAccessToken,
+        username: resolvedUsername,
         quota: manualQuota ?? freshAccountData.quota,
         today_prompt_tokens: freshAccountData.today_prompt_tokens,
         today_completion_tokens: freshAccountData.today_completion_tokens,
@@ -1142,11 +1458,21 @@ export async function validateAndUpdateAccount(
       }
     }
 
-    logger.info("Account updated with data refresh", {
-      accountId,
-      siteName: siteName.trim(),
-      siteType,
-    })
+    logger.info(
+      "Account updated with data refresh",
+      getAccountOperationLogDetails(
+        normalizedSiteType,
+        {
+          accountId,
+          siteName: siteName.trim(),
+          siteType,
+        },
+        {
+          siteType: normalizedSiteType,
+          status: "updated_with_refresh",
+        },
+      ),
+    )
 
     return {
       success: true,
@@ -1156,7 +1482,13 @@ export async function validateAndUpdateAccount(
     }
   } catch (error) {
     // FALLBACK: 即使获取数据失败也要保存配置
-    logger.warn("Data fetch failed; saving configuration only", error)
+    logger.warn(
+      "Data fetch failed; saving configuration only",
+      getAccountOperationLogDetails(normalizedSiteType, error, {
+        siteType: normalizedSiteType,
+        status: "fallback",
+      }),
+    )
 
     const partialUpdateData = {
       site_name: siteName.trim(),
@@ -1177,12 +1509,12 @@ export async function validateAndUpdateAccount(
       checkIn: checkInConfig,
       health: {
         status: SiteHealthStatus.Warning,
-        reason: getErrorMessage(error),
+        reason: getAccountHealthFailureReason(normalizedSiteType, error),
       },
       account_info: {
         id: accountIdentity,
-        access_token: accessToken.trim(),
-        username: username.trim(),
+        access_token: normalizedAccessToken,
+        username: resolvedUsername,
         ...(manualQuota === undefined ? {} : { quota: manualQuota }),
       },
       last_sync_time: Date.now(),

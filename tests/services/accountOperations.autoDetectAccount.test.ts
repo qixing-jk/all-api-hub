@@ -15,6 +15,7 @@ import {
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const {
   mockAutoDetectSmart,
@@ -26,7 +27,9 @@ const {
   mockFetchSharedChatUserInfo,
   mockCreateNewApiAccountBootstrap,
   mockGetOrCreateAccessToken,
-  mockLoggerError,
+  mockOpenRouterPageAction,
+  loggerMock,
+  otherLoggerMock,
 } = vi.hoisted(() => ({
   mockAutoDetectSmart: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
@@ -37,7 +40,19 @@ const {
   mockFetchSharedChatUserInfo: vi.fn(),
   mockCreateNewApiAccountBootstrap: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
-  mockLoggerError: vi.fn(),
+  mockOpenRouterPageAction: vi.fn(),
+  loggerMock: {
+    debug: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  },
+  otherLoggerMock: {
+    debug: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  },
 }))
 
 vi.mock("~/services/siteDetection/autoDetectService", () => ({
@@ -45,12 +60,8 @@ vi.mock("~/services/siteDetection/autoDetectService", () => ({
 }))
 
 vi.mock("~/utils/core/logger", () => ({
-  createLogger: () => ({
-    debug: vi.fn(),
-    error: mockLoggerError,
-    info: vi.fn(),
-    warn: vi.fn(),
-  }),
+  createLogger: (scope: string) =>
+    scope === "AccountOperations" ? loggerMock : otherLoggerMock,
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -82,28 +93,33 @@ function snapshotOwnProperties(
   )
 }
 
+vi.mock("~/services/apiAdapters/openrouter/managementKeyActionClient", () => ({
+  tempWindowOpenRouterManagementKeyAction: mockOpenRouterPageAction,
+  cancelTempWindowOpenRouterManagementKeyAction: vi.fn(),
+}))
+
 vi.mock("~/services/apiAdapters/newApi/accountBootstrap", () => ({
   createNewApiAccountBootstrap: mockCreateNewApiAccountBootstrap,
 }))
 
 vi.mock("~/services/apiAdapters/sub2api/accountBootstrap", () => ({
   sub2ApiAccountBootstrap: {
-    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
-    fetchCheckInSupport: mockFetchSupportCheckIn,
-    fetchSiteStatus: mockFetchSiteStatus,
     fetchUserInfo: mockFetchUserInfo,
     getOrCreateAccessToken: mockGetOrCreateAccessToken,
+    fetchSiteStatus: mockFetchSiteStatus,
+    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+    fetchCheckInSupport: mockFetchSupportCheckIn,
     resolveRoutePath: vi.fn(),
   },
 }))
 
 vi.mock("~/services/apiAdapters/aihubmix/accountBootstrap", () => ({
   aihubmixAccountBootstrap: {
-    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
-    fetchCheckInSupport: mockFetchSupportCheckIn,
-    fetchSiteStatus: mockFetchSiteStatus,
     fetchUserInfo: mockFetchUserInfo,
     getOrCreateAccessToken: mockGetOrCreateAccessToken,
+    fetchSiteStatus: mockFetchSiteStatus,
+    extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+    fetchCheckInSupport: mockFetchSupportCheckIn,
     resolveRoutePath: vi.fn(),
   },
 }))
@@ -135,8 +151,28 @@ const browserFetchContext = () => ({
   cookieStoreId: "firefox-container-2",
 })
 
+const serializeLoggerCalls = () =>
+  JSON.stringify(
+    [loggerMock, otherLoggerMock].flatMap((logger) =>
+      [logger.debug, logger.error, logger.info, logger.warn].flatMap((method) =>
+        method.mock.calls.map((args) =>
+          args.map((value) =>
+            value instanceof Error
+              ? {
+                  name: value.name,
+                  message: value.message,
+                  stack: value.stack,
+                }
+              : value,
+          ),
+        ),
+      ),
+    ),
+  )
+
 describe("accountOperations autoDetectAccount", () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     mockAutoDetectSmart.mockReset()
     mockSendRuntimeMessage.mockReset()
     mockFetchSiteStatus.mockReset()
@@ -146,21 +182,215 @@ describe("accountOperations autoDetectAccount", () => {
     mockFetchSharedChatUserInfo.mockReset()
     mockCreateNewApiAccountBootstrap.mockReset()
     mockGetOrCreateAccessToken.mockReset()
-    mockLoggerError.mockReset()
+    mockOpenRouterPageAction.mockReset()
     mockCreateNewApiAccountBootstrap.mockReturnValue({
-      extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
-      fetchCheckInSupport: mockFetchSupportCheckIn,
-      fetchSiteStatus: mockFetchSiteStatus,
       fetchUserInfo: mockFetchUserInfo,
       getOrCreateAccessToken: mockGetOrCreateAccessToken,
+      fetchSiteStatus: mockFetchSiteStatus,
+      extractDefaultExchangeRate: mockExtractDefaultExchangeRate,
+      fetchCheckInSupport: mockFetchSupportCheckIn,
       resolveRoutePath: vi.fn(),
     })
+  })
+
+  it("keeps generic auto-detect detected-only when a legacy caller passes provider options", async () => {
+    const privateError = "openrouter-detected-only-private-sentinel"
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      error: privateError,
+    })
+
+    const callWithLegacyOptions = autoDetectAccount as unknown as (
+      url: string,
+      authType: AuthTypeEnum,
+      options: {
+        requestId: string
+        allowOpenRouterBootstrap: boolean
+        tempWindowRequestSource: (typeof TEMP_WINDOW_REQUEST_SOURCES)[keyof typeof TEMP_WINDOW_REQUEST_SOURCES]
+      },
+    ) => ReturnType<typeof autoDetectAccount>
+    const result = await callWithLegacyOptions(
+      "https://openrouter.ai",
+      AuthTypeEnum.AccessToken,
+      {
+        requestId: "openrouter-request-placeholder",
+        allowOpenRouterBootstrap: true,
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+      },
+    )
+
+    expect(result).toMatchObject({
+      kind: "detected",
+      success: false,
+      message: "messages:openrouter.managementKeyRequired",
+    })
+    expect(mockAutoDetectSmart).toHaveBeenCalledOnce()
+    expect(mockOpenRouterPageAction).not.toHaveBeenCalled()
+  })
+
+  it("keeps canonical OpenRouter detection read-only without explicit bootstrap permission", async () => {
+    const privateError = "openrouter-read-only-detection-private-sentinel"
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      error: privateError,
+    })
+
+    const result = await autoDetectAccount(
+      "https://openrouter.ai",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result).toMatchObject({
+      kind: "detected",
+      success: false,
+      message: "messages:openrouter.managementKeyRequired",
+      detailedError: {
+        type: AutoDetectErrorType.UNKNOWN,
+        message: "messages:openrouter.managementKeyRequired",
+      },
+      autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+    })
+    expect(JSON.stringify(result)).not.toContain(privateError)
+    expect(mockAutoDetectSmart).toHaveBeenCalledTimes(1)
+    expect(mockOpenRouterPageAction).not.toHaveBeenCalled()
+  })
+
+  it("sanitizes canonical OpenRouter cookie-interceptor tracking failures", async () => {
+    const privateUrl = "https://openrouter.ai/private-path?secret=canary"
+    const privateError = "openrouter-cookie-interceptor-private-sentinel"
+    mockSendRuntimeMessage.mockRejectedValueOnce(new Error(privateError))
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      error: "No logged-in account data",
+    })
+
+    await autoDetectAccount(privateUrl, AuthTypeEnum.AccessToken)
+
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      "Failed to track cookie interceptor url",
+      {
+        siteType: SITE_TYPES.OPENROUTER,
+        status: "tracking_failed",
+      },
+    )
+    const serializedLogs = serializeLoggerCalls()
+    expect(serializedLogs).not.toContain(privateUrl)
+    expect(serializedLogs).not.toContain(privateError)
+  })
+
+  it("sanitizes canonical OpenRouter auto-detect exceptions", async () => {
+    const privateError = "openrouter-auto-detect-private-sentinel"
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockRejectedValueOnce(new Error(privateError))
+
+    const result = await autoDetectAccount(
+      "https://openrouter.ai",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result).toMatchObject({
+      kind: "detected",
+      success: false,
+      message: "messages:openrouter.managementKeyRequired",
+      detailedError: {
+        type: AutoDetectErrorType.UNKNOWN,
+        message: "messages:openrouter.managementKeyRequired",
+      },
+      autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
+    })
+    expect(loggerMock.error).toHaveBeenCalledWith(
+      "OpenRouter account detection failed",
+      {
+        siteType: SITE_TYPES.OPENROUTER,
+        status: "failed",
+        reason: AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
+      },
+    )
+    expect(serializeLoggerCalls()).not.toContain(privateError)
+    expect(JSON.stringify(result)).not.toContain(privateError)
+  })
+
+  it("preserves ordinary cookie and auto-detect failure diagnostics", async () => {
+    const privateUrl = "https://ordinary.example.invalid/private-path"
+    const trackingError = "ordinary-cookie-tracking-sentinel"
+    const detectionError = "ordinary-auto-detect-sentinel"
+    mockSendRuntimeMessage.mockRejectedValueOnce(new Error(trackingError))
+    mockAutoDetectSmart.mockRejectedValueOnce(new Error(detectionError))
+
+    const result = await autoDetectAccount(privateUrl, AuthTypeEnum.AccessToken)
+
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      "Failed to track cookie interceptor url",
+      {
+        url: privateUrl,
+        error: trackingError,
+      },
+    )
+    expect(loggerMock.error).toHaveBeenCalledWith(
+      "messages:autodetect.failed",
+      expect.objectContaining({ message: detectionError }),
+    )
+    expect(result).toMatchObject({
+      kind: "detected",
+      success: false,
+      message: "accountDialog:messages.autoDetectFailed",
+      detailedError: {
+        type: AutoDetectErrorType.UNKNOWN,
+        message: "messages:autodetect.failed",
+      },
+      autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UnexpectedException,
+    })
+    const serializedLogs = serializeLoggerCalls()
+    expect(serializedLogs).toContain(privateUrl)
+    expect(serializedLogs).toContain(trackingError)
+    expect(serializedLogs).toContain(detectionError)
+  })
+
+  it("does not bootstrap an alternate-port OpenRouter URL", async () => {
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      error: "No logged-in account data",
+    })
+
+    try {
+      const result = await autoDetectAccount(
+        "https://openrouter.ai:8443/settings/management-keys",
+        AuthTypeEnum.AccessToken,
+      )
+
+      expect(result).toMatchObject({ kind: "detected", success: false })
+      expect(mockAutoDetectSmart).toHaveBeenCalledTimes(1)
+      expect(mockOpenRouterPageAction).not.toHaveBeenCalled()
+    } finally {
+      mockAutoDetectSmart.mockReset()
+    }
+  })
+
+  it("does not bootstrap a blob URL that inherits the OpenRouter origin", async () => {
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      error: "No logged-in account data",
+    })
+
+    try {
+      const result = await autoDetectAccount(
+        "blob:https://openrouter.ai/openrouter-object-placeholder",
+        AuthTypeEnum.AccessToken,
+      )
+
+      expect(result).toMatchObject({ kind: "detected", success: false })
+      expect(mockAutoDetectSmart).toHaveBeenCalledTimes(1)
+      expect(mockOpenRouterPageAction).not.toHaveBeenCalled()
+    } finally {
+      mockAutoDetectSmart.mockReset()
+    }
   })
 
   it("returns a validation error when the URL is blank", async () => {
     const result = await autoDetectAccount("   ", AuthTypeEnum.AccessToken)
 
     expect(result).toEqual({
+      kind: "detected",
       success: false,
       message: "messages:errors.validation.urlRequired",
     })
@@ -446,8 +676,8 @@ describe("accountOperations autoDetectAccount", () => {
     })
     expect(JSON.stringify(result)).not.toContain(dashboardToken)
     expect(JSON.stringify(result)).not.toContain(reflectedMessage)
-    expect(mockLoggerError).toHaveBeenCalledTimes(1)
-    const [logMessage, logError] = mockLoggerError.mock.calls[0]
+    expect(loggerMock.error).toHaveBeenCalledTimes(1)
+    const [logMessage, logError] = loggerMock.error.mock.calls[0]
     expect(String(logMessage)).not.toContain(dashboardToken)
     expect(String(logMessage)).not.toContain(reflectedMessage)
     expect(logError).toMatchObject({
