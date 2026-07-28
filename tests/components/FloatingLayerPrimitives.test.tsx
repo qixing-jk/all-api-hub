@@ -211,7 +211,6 @@ describe("floating layer primitives inside dialogs", () => {
   })
 
   it("requests Modal close when clicking the visual backdrop around the panel", async () => {
-    const user = userEvent.setup()
     const onClose = vi.fn()
 
     render(
@@ -225,7 +224,8 @@ describe("floating layer primitives inside dialogs", () => {
     const positioner = document.querySelector('[data-slot="modal-positioner"]')
     expect(positioner).toBeInTheDocument()
 
-    await user.click(positioner as HTMLElement)
+    fireEvent.pointerDown(positioner as HTMLElement)
+    fireEvent.click(positioner as HTMLElement, { detail: 1 })
 
     expect(onClose).toHaveBeenCalledTimes(1)
   })
