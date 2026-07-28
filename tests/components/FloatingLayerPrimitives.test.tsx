@@ -249,6 +249,27 @@ describe("floating layer primitives inside dialogs", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it("clears backdrop pointer origin when the pointer is canceled", async () => {
+    const onClose = vi.fn()
+
+    render(
+      <Modal isOpen={true} onClose={onClose}>
+        <button type="button">Inside modal</button>
+      </Modal>,
+    )
+
+    await screen.findByRole("dialog")
+
+    const positioner = document.querySelector('[data-slot="modal-positioner"]')
+    expect(positioner).toBeInTheDocument()
+
+    fireEvent.pointerDown(positioner as HTMLElement)
+    fireEvent.pointerCancel(positioner as HTMLElement)
+    fireEvent.click(positioner as HTMLElement, { detail: 1 })
+
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it("keeps Modal open when a pointer drag starts inside the panel", async () => {
     const onClose = vi.fn()
 
