@@ -1,38 +1,10 @@
 import {
-  ColumnDef,
   ColumnFiltersState,
-  flexRender,
-  getCoreRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   PaginationState,
-  Row,
   SortingState,
-  useReactTable,
   VisibilityState,
-  type Cell,
-  type CellContext,
-  type HeaderGroup,
 } from "@tanstack/react-table"
 import type { TFunction } from "i18next"
-import {
-  ArrowRightLeft,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  CircleX,
-  Columns3,
-  Filter,
-  Layers,
-  ListFilter,
-  Loader2,
-  Plus,
-  RefreshCcw,
-  Trash2,
-} from "lucide-react"
 import {
   useCallback,
   useEffect,
@@ -45,63 +17,17 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
-import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
-import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
-import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
-import { PageHeader } from "~/components/PageHeader"
-import {
-  Badge,
-  DestructiveConfirmDialog,
-  ExternalUrlText,
-  Input,
-} from "~/components/ui"
-import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
-import { Button } from "~/components/ui/button"
-import { Checkbox } from "~/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu"
-import { Label } from "~/components/ui/label"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "~/components/ui/popover"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select"
-import { Spinner } from "~/components/ui/spinner"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table"
 import { AxonHubChannelTypeNames } from "~/constants/axonHub"
 import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
-import { Z_INDEX } from "~/constants/designTokens"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelTypeNames } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { SITE_TYPES } from "~/constants/siteType"
-import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import { cn } from "~/lib/utils"
 import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
@@ -113,6 +39,7 @@ import {
 import { resolveManagedUpstreamResourceCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import {
   getManagedSiteConfigMissingMessage,
+  getManagedSiteLabel,
   getManagedSiteMessagesKeyFromSiteType,
   getManagedSiteTargetOptions,
   needsManagedSiteChannelKeyResolution,
@@ -121,6 +48,7 @@ import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import {
   startProductAnalyticsAction,
   trackProductAnalyticsActionCompleted,
+  trackProductAnalyticsActionStarted,
   type ProductAnalyticsActionContext,
 } from "~/services/productAnalytics/actions"
 import {
@@ -140,37 +68,86 @@ import {
   normalizeManagedUpstreamResourceScopeKey,
 } from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
+import { showUpdateToast } from "~/utils/core/toastHelpers"
 import {
   navigateWithinOptionsPage,
   openManagedSiteModelSyncForChannel,
+  openSettingsTab,
 } from "~/utils/navigation"
 
 import ChannelFilterDialog from "./components/ChannelFilterDialog"
 import { ManagedSiteChannelMigrationDialog } from "./components/ManagedSiteChannelMigrationDialog"
-import RowActions from "./components/RowActions"
-import StatusBadge from "./components/StatusBadge"
+import type { RowActionsLabels } from "./components/RowActions"
 import {
-  getManagedSiteChannelRowActionsButtonTestId,
-  getManagedSiteChannelRowDeleteActionTestId,
-  getManagedSiteChannelRowEditActionTestId,
-  getManagedSiteChannelRowSelectTestId,
-  getManagedSiteChannelRowTestId,
-  MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
-  MANAGED_SITE_CHANNELS_REFRESH_STATES,
-  MANAGED_SITE_CHANNELS_TEST_IDS,
-} from "./testIds"
-import type { ChannelRow, CheckboxState, RowActionsLabels } from "./types"
-import {
-  channelIdFilterFn,
-  multiColumnFilterFn,
-  statusFilterFn,
-} from "./utils/filterFns"
+  LegacyManagedResourceBulkDeleteController,
+  type LegacyManagedResourceDeleteResult,
+  type LegacyManagedResourceDeleteTarget,
+} from "./controllers/legacyManagedResourceBulkDeleteController"
+import type {
+  ManagedChannelsCallbacks,
+  ManagedChannelsCapabilities,
+  ManagedChannelsColumn,
+  ManagedChannelsLabels,
+  ManagedChannelsPresentationState,
+  ManagedChannelsRowViewModel,
+} from "./presentation/contracts"
+import { ManagedSiteChannelsView } from "./presentation/ManagedSiteChannelsView"
+import type { ChannelRow } from "./types"
 
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const channelsToolbarSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar
 const channelsRowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
+
+const MANAGED_SITE_TYPE_OPTIONS: ManagedSiteType[] = [
+  SITE_TYPES.NEW_API,
+  SITE_TYPES.DONE_HUB,
+  SITE_TYPES.VELOERA,
+  SITE_TYPES.OCTOPUS,
+  SITE_TYPES.AXON_HUB,
+  SITE_TYPES.CLAUDE_CODE_HUB,
+]
+
+const normalizeRouteQuery = (
+  query: Readonly<Record<string, string | undefined>>,
+) =>
+  Object.fromEntries(
+    Object.entries(query).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined,
+    ),
+  )
+
+const areRouteQueriesEqual = (
+  left: Readonly<Record<string, string>>,
+  right: Readonly<Record<string, string>>,
+) => {
+  const leftEntries = Object.entries(left)
+  return (
+    leftEntries.length === Object.keys(right).length &&
+    leftEntries.every(([key, value]) => right[key] === value)
+  )
+}
+
+const trackManagedSiteChannelAction = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+  surfaceId: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS],
+) => {
+  void trackProductAnalyticsActionStarted({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+    actionId,
+    surfaceId,
+    entrypoint: optionsEntrypoint,
+  })
+}
+
+const trackManagedSiteChannelRowAction = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+) => trackManagedSiteChannelAction(actionId, channelsRowActionsSurface)
+
+const trackManagedSiteChannelToolbarAction = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+) => trackManagedSiteChannelAction(actionId, channelsToolbarSurface)
 
 type RefreshAnalyticsCompletion = {
   complete: ReturnType<typeof startProductAnalyticsAction>["complete"]
@@ -240,30 +217,6 @@ export function upsertChannelRow(rows: ChannelRow[], channel: ChannelRow) {
 interface ManagedSiteChannelsProps {
   refreshKey?: number
   routeParams?: Record<string, string>
-}
-
-/**
- * Resolve the localized label for a hideable managed-site channel table column.
- */
-function getManagedSiteChannelColumnLabel(t: TFunction, columnId: string) {
-  switch (columnId) {
-    case "id":
-      return t("managedSiteChannels:table.columns.id")
-    case "type":
-      return t("managedSiteChannels:table.columns.type")
-    case "models":
-      return t("managedSiteChannels:table.columns.models")
-    case "group":
-      return t("managedSiteChannels:table.columns.group")
-    case "status":
-      return t("managedSiteChannels:table.columns.status")
-    case "priority":
-      return t("managedSiteChannels:table.columns.priority")
-    case "weight":
-      return t("managedSiteChannels:table.columns.weight")
-    default:
-      return columnId
-  }
 }
 
 /**
@@ -366,6 +319,7 @@ export default function ManagedSiteChannels({
     newApiUsername,
     newApiPassword,
     newApiTotpSecret,
+    updateManagedSiteType,
   } = useUserPreferencesContext()
   const isOctopus = managedSiteType === SITE_TYPES.OCTOPUS
   const isAxonHub = managedSiteType === SITE_TYPES.AXON_HUB
@@ -404,7 +358,16 @@ export default function ManagedSiteChannels({
     { id: "id", desc: true },
   ])
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
-  const [pendingDeleteIds, setPendingDeleteIds] = useState<number[]>([])
+  const [bulkDeleteController] = useState(
+    () => new LegacyManagedResourceBulkDeleteController(),
+  )
+  const [pendingDeleteTargets, setPendingDeleteTargets] = useState<
+    LegacyManagedResourceDeleteTarget[]
+  >([])
+  const [deleteResults, setDeleteResults] = useState<
+    LegacyManagedResourceDeleteResult[]
+  >([])
+  const [deleteRequiresRefresh, setDeleteRequiresRefresh] = useState(false)
   const [pendingDeleteAnalyticsContext, setPendingDeleteAnalyticsContext] =
     useState<ProductAnalyticsActionContext | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -416,9 +379,9 @@ export default function ManagedSiteChannels({
   const [migrationChannels, setMigrationChannels] = useState<ChannelRow[]>([])
   const [isMigrationDialogOpen, setIsMigrationDialogOpen] = useState(false)
   const [isMigrationMode, setIsMigrationMode] = useState(false)
-  const searchInputRef = useRef<HTMLInputElement | null>(null)
   const activeRefreshRef = useRef<ActiveRefresh | null>(null)
   const channelFilterResourceScopeBaseUrlRef = useRef("")
+  const deleteScopeGenerationRef = useRef(0)
   const editOpenGenerationRef = useRef(0)
   const refreshAnalyticsCompletionRef =
     useRef<RefreshAnalyticsCompletion | null>(null)
@@ -472,7 +435,7 @@ export default function ManagedSiteChannels({
             managedSiteType: managedSiteAnalyticsType,
           },
         })
-        return
+        return false
       }
 
       if (activeRefreshRef.current) {
@@ -519,17 +482,28 @@ export default function ManagedSiteChannels({
               managedSiteType: managedSiteAnalyticsType,
             },
           })
-          return
+          return false
         }
 
         channelFilterResourceScopeBaseUrlRef.current = resourceScopeBaseUrl
         setChannels(items)
+        const acceptedRowKeys = new Set(items.map((item) => String(item.id)))
+        setRowSelection((current) =>
+          Object.fromEntries(
+            Object.entries(current).filter(([rowKey]) =>
+              acceptedRowKeys.has(rowKey),
+            ),
+          ),
+        )
         completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             itemCount: items.length,
             managedSiteType: managedSiteAnalyticsType,
           },
         })
+        bulkDeleteController.markRefreshAccepted()
+        setDeleteRequiresRefresh(false)
+        return true
       } catch (err) {
         if (refreshAbortController.signal.aborted) {
           completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
@@ -541,7 +515,7 @@ export default function ManagedSiteChannels({
               managedSiteType: managedSiteAnalyticsType,
             },
           })
-          return
+          return false
         }
 
         const message = getErrorMessage(err)
@@ -553,6 +527,7 @@ export default function ManagedSiteChannels({
             managedSiteType: managedSiteAnalyticsType,
           },
         })
+        return false
       } finally {
         if (activeRefreshRef.current === activeRefresh) {
           activeRefreshRef.current = null
@@ -566,7 +541,13 @@ export default function ManagedSiteChannels({
         }
       }
     },
-    [isConfigMissing, managedSiteAnalyticsType, managedSiteType, t],
+    [
+      bulkDeleteController,
+      isConfigMissing,
+      managedSiteAnalyticsType,
+      managedSiteType,
+      t,
+    ],
   )
 
   const cancelRefresh = useCallback(() => {
@@ -618,16 +599,25 @@ export default function ManagedSiteChannels({
   }, [isAxonHub, isOctopus])
 
   useEffect(() => {
+    deleteScopeGenerationRef.current += 1
     setColumnFilters([])
     setRowSelection({})
-    setPendingDeleteIds([])
+    bulkDeleteController.invalidate()
+    setPendingDeleteTargets([])
+    setDeleteResults([])
+    setDeleteRequiresRefresh(false)
+    setIsDeleting(false)
     setIsDeleteDialogOpen(false)
     setFilterDialogChannel(null)
     setIsFilterDialogOpen(false)
     setMigrationChannels([])
     setIsMigrationDialogOpen(false)
     setIsMigrationMode(false)
-  }, [managedSiteType])
+    return () => {
+      deleteScopeGenerationRef.current += 1
+      bulkDeleteController.invalidate()
+    }
+  }, [bulkDeleteController, managedSiteType])
 
   useEffect(() => {
     if (refreshKey) {
@@ -928,44 +918,60 @@ export default function ManagedSiteChannels({
   )
 
   const scheduleDelete = useCallback(
-    (ids: number[], analyticsContext: ProductAnalyticsActionContext) => {
-      if (!ids.length) return
-      setPendingDeleteIds(ids)
+    (
+      targets: LegacyManagedResourceDeleteTarget[],
+      analyticsContext: ProductAnalyticsActionContext,
+    ) => {
+      if (!bulkDeleteController.schedule(targets)) return
+      setPendingDeleteTargets(bulkDeleteController.getPendingTargets())
+      setDeleteResults([])
       setPendingDeleteAnalyticsContext(analyticsContext)
       setIsDeleteDialogOpen(true)
     },
-    [],
+    [bulkDeleteController],
   )
 
   const handleDelete = useCallback(async () => {
-    if (!pendingDeleteIds.length) return
+    if (!pendingDeleteTargets.length || deleteRequiresRefresh) return
+    const selectedCount = pendingDeleteTargets.length
     const tracker = pendingDeleteAnalyticsContext
       ? startProductAnalyticsAction(pendingDeleteAnalyticsContext)
       : null
+    const deleteScopeGeneration = deleteScopeGenerationRef.current
+    const isCurrentDeleteScope = () =>
+      deleteScopeGenerationRef.current === deleteScopeGeneration
+    let shouldFinalizeDelete = false
     setIsDeleting(true)
     try {
-      const service = await getManagedSiteService()
-      const config = await service.getConfig()
-      if (!config) {
-        throw new Error(
-          getManagedSiteConfigMissingMessage(t, service.messagesKey),
-        )
-      }
+      const execution = await bulkDeleteController.execute({
+        resolveDelete: async () => {
+          const service = await getManagedSiteService()
+          const config = await service.getConfig()
+          if (!config) {
+            throw new Error(
+              getManagedSiteConfigMissingMessage(t, service.messagesKey),
+            )
+          }
 
-      const results = await Promise.allSettled(
-        pendingDeleteIds.map((id) => service.deleteChannel(config, id)),
-      )
-
-      const successIds: number[] = []
-      const failedResults: PromiseRejectedResult[] = []
-
-      results.forEach((result, index) => {
-        if (result.status === "fulfilled") {
-          successIds.push(pendingDeleteIds[index])
-        } else {
-          failedResults.push(result)
-        }
+          return (target) => service.deleteChannel(config, target.channelId)
+        },
+        refresh: () => refreshChannels(),
       })
+      if (!execution || !isCurrentDeleteScope()) return
+      shouldFinalizeDelete = true
+
+      setDeleteResults(execution.results)
+      setDeleteRequiresRefresh(execution.requiresRefresh)
+
+      const successfulOutcomes = execution.outcomes.filter(
+        (outcome) => outcome.result.status === "success",
+      )
+      const failedOutcomes = execution.outcomes.filter(
+        (outcome) => outcome.result.status !== "success",
+      )
+      const successIds = successfulOutcomes.map(
+        (outcome) => outcome.target.channelId,
+      )
 
       if (successIds.length > 0) {
         setChannels((prev) =>
@@ -979,57 +985,66 @@ export default function ManagedSiteChannels({
         )
       }
 
-      if (failedResults.length > 0) {
-        const firstError = failedResults[0].reason
+      if (failedOutcomes.length > 0) {
+        const firstError =
+          failedOutcomes.find((outcome) => outcome.reason)?.reason ??
+          execution.failure
         toast.error(
-          failedResults.length === 1
+          failedOutcomes.length === 1
             ? getErrorMessage(firstError)
             : t("toasts.someDeletesFailed", {
-                count: failedResults.length,
+                count: failedOutcomes.length,
                 error: getErrorMessage(firstError),
               }),
         )
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
-            itemCount: pendingDeleteIds.length,
-            selectedCount: pendingDeleteIds.length,
+            itemCount: selectedCount,
+            selectedCount,
             successCount: successIds.length,
-            failureCount: failedResults.length,
+            failureCount: failedOutcomes.length,
             managedSiteType: managedSiteAnalyticsType,
           },
         })
       } else {
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
-            itemCount: pendingDeleteIds.length,
-            selectedCount: pendingDeleteIds.length,
+            itemCount: selectedCount,
+            selectedCount,
             successCount: successIds.length,
-            failureCount: failedResults.length,
+            failureCount: 0,
             managedSiteType: managedSiteAnalyticsType,
           },
         })
       }
     } catch (err) {
+      if (!isCurrentDeleteScope()) return
+      shouldFinalizeDelete = true
       toast.error(getErrorMessage(err))
       tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
-          itemCount: pendingDeleteIds.length,
-          selectedCount: pendingDeleteIds.length,
+          itemCount: selectedCount,
+          selectedCount,
           managedSiteType: managedSiteAnalyticsType,
         },
       })
     } finally {
-      setIsDeleting(false)
-      setIsDeleteDialogOpen(false)
-      setPendingDeleteIds([])
-      setPendingDeleteAnalyticsContext(null)
+      if (shouldFinalizeDelete && isCurrentDeleteScope()) {
+        setIsDeleting(false)
+        setIsDeleteDialogOpen(false)
+        setPendingDeleteTargets([])
+        setPendingDeleteAnalyticsContext(null)
+      }
     }
   }, [
+    bulkDeleteController,
+    deleteRequiresRefresh,
     managedSiteAnalyticsType,
     pendingDeleteAnalyticsContext,
-    pendingDeleteIds,
+    pendingDeleteTargets,
+    refreshChannels,
     t,
   ])
 
@@ -1239,914 +1254,715 @@ export default function ManagedSiteChannels({
     ],
   )
 
-  const columns = useMemo<ColumnDef<ChannelRow, unknown>[]>(
+  const setControlledFilter = useCallback(
+    (id: "id" | "name" | "status", value: string | string[] | undefined) => {
+      setColumnFilters((current) => {
+        const next = current.filter((filter) => filter.id !== id)
+        if (
+          value === undefined ||
+          value === "" ||
+          (Array.isArray(value) && value.length === 0)
+        ) {
+          return next
+        }
+        return [...next, { id, value }]
+      })
+    },
+    [],
+  )
+
+  const searchValue =
+    (columnFilters.find((filter) => filter.id === "name")?.value as string) ??
+    ""
+  const channelIdFilterValue =
+    (columnFilters.find((filter) => filter.id === "id")?.value as string) ?? ""
+  const selectedStatuses = useMemo(
+    () =>
+      (columnFilters.find((filter) => filter.id === "status")?.value as
+        | string[]
+        | undefined) ?? [],
+    [columnFilters],
+  )
+
+  useEffect(() => {
+    const channelIdParam = routeParams?.channelId?.trim()
+    if (channelIdParam) {
+      setControlledFilter("id", channelIdParam)
+      setControlledFilter("name", channelIdParam)
+      setPagination((current) => ({ ...current, pageIndex: 0 }))
+      return
+    }
+
+    setControlledFilter("id", undefined)
+    setControlledFilter("name", routeParams?.search?.trim() || undefined)
+    setPagination((current) => ({ ...current, pageIndex: 0 }))
+  }, [routeParams?.channelId, routeParams?.search, setControlledFilter])
+
+  const managedSiteChannelsHash = `#${MENU_ITEM_IDS.MANAGED_SITE_CHANNELS}`
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setControlledFilter("name", value || undefined)
+      setControlledFilter("id", undefined)
+      setPagination((current) => ({ ...current, pageIndex: 0 }))
+    },
+    [setControlledFilter],
+  )
+  const handleReplaceRouteQuery = useCallback(
+    (query: Record<string, string | undefined>) => {
+      const nextQuery = normalizeRouteQuery(query)
+      const currentQuery = normalizeRouteQuery(routeParams ?? {})
+      if (areRouteQueriesEqual(nextQuery, currentQuery)) return
+      navigateWithinOptionsPage(managedSiteChannelsHash, nextQuery)
+    },
+    [managedSiteChannelsHash, routeParams],
+  )
+
+  const channelRowsByKey = useMemo(
+    () => new Map(channels.map((channel) => [String(channel.id), channel])),
+    [channels],
+  )
+  const resolveRows = useCallback(
+    (rowKeys: string[]) =>
+      rowKeys
+        .map((rowKey) => channelRowsByKey.get(rowKey))
+        .filter((channel): channel is ChannelRow => Boolean(channel)),
+    [channelRowsByKey],
+  )
+
+  const typeNames = useMemo(
+    () =>
+      (isOctopus
+        ? OctopusOutboundTypeNames
+        : isAxonHub
+          ? AxonHubChannelTypeNames
+          : isClaudeCodeHub
+            ? ClaudeCodeHubProviderTypeNames
+            : ChannelTypeNames) as Record<string | number, string>,
+    [isAxonHub, isClaudeCodeHub, isOctopus],
+  )
+
+  const presentationRows = useMemo<ManagedChannelsRowViewModel[]>(
+    () =>
+      channels.map((channel) => {
+        const groups = channel.group?.split(",").filter(Boolean) ?? []
+        const modelCount =
+          channel.models?.split(",").filter(Boolean).length ?? 0
+        const rawType = channel.type
+        const typeLabel =
+          typeNames[rawType] ?? String(rawType ?? t("statusLabels.unknown"))
+        const statusValue = String(channel.status ?? 0)
+        const statusTone =
+          channel.status === 1
+            ? "success"
+            : channel.status === 2
+              ? "warning"
+              : channel.status === 3
+                ? "danger"
+                : "default"
+
+        return {
+          rowKey: String(channel.id),
+          testToken: channel.name,
+          displayIdentifier: String(channel.id),
+          displayIdentifierSort: channel.id,
+          name: channel.name,
+          baseURL: channel.base_url,
+          searchText: `${channel.id} ${channel.name} ${channel.base_url} ${groups.join(" ")}`,
+          cells: {
+            type: {
+              kind: "text",
+              value: typeLabel,
+              sortValue: String(rawType ?? ""),
+              missing: rawType === undefined || rawType === null,
+            },
+            models: {
+              kind: "text",
+              value: String(modelCount),
+              sortValue: modelCount,
+            },
+            group: {
+              kind: "groups",
+              values: groups,
+              sortValue: groups.join(","),
+              missing: groups.length === 0,
+            },
+            status: {
+              kind: "status",
+              value: getManagedSiteChannelStatusFilterLabel(t, statusValue),
+              sortValue: statusValue,
+              tone: statusTone,
+            },
+            priority: {
+              kind: "text",
+              value: String(channel.priority ?? ""),
+              sortValue: channel.priority ?? 0,
+              missing:
+                channel.priority === undefined || channel.priority === null,
+            },
+            weight: {
+              kind: "text",
+              value: String(channel.weight ?? ""),
+              sortValue: channel.weight ?? 0,
+              missing: channel.weight === undefined || channel.weight === null,
+            },
+          },
+          capabilities: {
+            canEdit: true,
+            canView: true,
+            canDelete: true,
+            canMigrate: hasMigrationTargets,
+            canSync: supportsNewApiOnlyChannelActions,
+            canOpenSync: supportsNewApiOnlyChannelActions,
+            canFilter: supportsNewApiOnlyChannelActions,
+          },
+          isSyncing: syncingIds.has(channel.id),
+        }
+      }),
+    [
+      channels,
+      hasMigrationTargets,
+      supportsNewApiOnlyChannelActions,
+      syncingIds,
+      t,
+      typeNames,
+    ],
+  )
+
+  const filteredPresentationRows = useMemo(
+    () =>
+      presentationRows.filter((row) => {
+        if (
+          channelIdFilterValue.trim() &&
+          row.displayIdentifier !== channelIdFilterValue.trim()
+        ) {
+          return false
+        }
+        if (
+          selectedStatuses.length &&
+          !selectedStatuses.includes(String(row.cells.status.sortValue))
+        ) {
+          return false
+        }
+        const term = searchValue.toLowerCase().trim()
+        if (!term) return true
+        const groups =
+          row.cells.group.kind === "groups"
+            ? row.cells.group.values.join(" ")
+            : row.cells.group.value
+        return `${row.displayIdentifier} ${row.name} ${row.baseURL} ${groups}`
+          .toLowerCase()
+          .includes(term)
+      }),
+    [channelIdFilterValue, presentationRows, searchValue, selectedStatuses],
+  )
+
+  const columnLabels = useMemo(
+    () => ({
+      id: t("table.columns.id"),
+      name: t("table.columns.name"),
+      type: t("table.columns.type"),
+      models: t("table.columns.models"),
+      group: t("table.columns.group"),
+      status: t("table.columns.status"),
+      priority: t("table.columns.priority"),
+      weight: t("table.columns.weight"),
+    }),
+    [t],
+  )
+
+  const presentationColumns = useMemo<ManagedChannelsColumn[]>(
     () => [
       {
         id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={
-              table.getIsAllPageRowsSelected() ||
-              (table.getIsSomePageRowsSelected() && "indeterminate")
-            }
-            onCheckedChange={(value: CheckboxState) =>
-              table.toggleAllPageRowsSelected(!!value)
-            }
-            aria-label={t("table.selectAll")}
-          />
-        ),
-        cell: ({ row }: { row: Row<ChannelRow> }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value: CheckboxState) =>
-              row.toggleSelected(!!value)
-            }
-            aria-label={t("table.selectRow")}
-            data-testid={getManagedSiteChannelRowSelectTestId(
-              row.original.name,
-            )}
-          />
-        ),
-        size: 16,
-        enableSorting: false,
-        enableHiding: false,
+        label: "",
+        renderer: "select",
+        canHide: false,
+        defaultVisible: true,
+        visible: true,
+        extension: { kind: "legacy-common" },
       },
       {
-        accessorKey: "id",
-        header: t("table.columns.id"),
-        cell: ({ row }: { row: Row<ChannelRow> }) => (
-          <span className="font-mono text-sm">{row.original.id}</span>
-        ),
-        filterFn: channelIdFilterFn,
+        id: "id",
+        label: columnLabels.id,
+        renderer: "identifier",
+        accessor: { kind: "displayIdentifier" },
+        canHide: true,
+        defaultVisible: true,
+        visible: columnVisibility.id !== false,
+        sort: {
+          accessor: { kind: "displayIdentifierSort" },
+          defaultDirection: "desc",
+          missing: "last",
+        },
         size: 40,
+        extension: { kind: "legacy-common" },
       },
       {
-        accessorKey: "name",
-        header: t("table.columns.name"),
-        cell: ({ row }: { row: Row<ChannelRow> }) => (
-          <div>
-            <div className="leading-tight font-medium">{row.original.name}</div>
-            <div className="text-muted-foreground truncate text-xs">
-              <ExternalUrlText
-                value={row.original.base_url}
-                className="truncate"
-              />
-            </div>
-          </div>
-        ),
-        filterFn: multiColumnFilterFn,
-        enableHiding: false,
+        id: "name",
+        label: columnLabels.name,
+        renderer: "channel",
+        accessor: { kind: "name" },
+        canHide: false,
+        defaultVisible: true,
+        visible: true,
+        sort: {
+          accessor: { kind: "name" },
+          defaultDirection: "asc",
+          missing: "last",
+        },
         size: 300,
+        extension: { kind: "legacy-common" },
       },
-      {
-        accessorKey: "type",
-        header: t("table.columns.type"),
-        cell: ({ row }: { row: Row<ChannelRow> }) => {
-          const typeNames = (
-            isOctopus
-              ? OctopusOutboundTypeNames
-              : isAxonHub
-                ? AxonHubChannelTypeNames
-                : isClaudeCodeHub
-                  ? ClaudeCodeHubProviderTypeNames
-                  : ChannelTypeNames
-          ) as Record<string | number, string>
-          const rawType = row.original.type
-          return typeNames[rawType] ?? String(rawType ?? "Unknown")
+      ...(["type", "models", "group"] as const).map((id) => ({
+        id,
+        label: columnLabels[id],
+        renderer: "value" as const,
+        accessor: { kind: "cell" as const, key: id },
+        canHide: true,
+        defaultVisible: true,
+        visible: columnVisibility[id] !== false,
+        sort: {
+          accessor: { kind: "cellSortValue" as const, key: id },
+          defaultDirection: "asc" as const,
+          missing: "last" as const,
         },
         size: 90,
-      },
+        cellClassName: id === "models" ? "text-sm font-medium" : undefined,
+        extension: { kind: "legacy-common" as const },
+      })),
       {
-        accessorKey: "models",
-        accessorFn: (row: ChannelRow) =>
-          row.models?.split(",").filter(Boolean).length ?? 0,
-        header: t("table.columns.models"),
-        cell: ({ row, getValue }: CellContext<ChannelRow, unknown>) => {
-          const modelCount = Number(getValue())
-          return (
-            <span className="text-sm font-medium">
-              {modelCount ??
-                row.original.models?.split(",").filter(Boolean).length ??
-                0}
-            </span>
-          )
+        id: "status",
+        label: columnLabels.status,
+        renderer: "value",
+        accessor: { kind: "cell", key: "status" },
+        canHide: true,
+        defaultVisible: true,
+        visible: columnVisibility.status !== false,
+        sort: {
+          accessor: { kind: "cellSortValue", key: "status" },
+          defaultDirection: "asc",
+          missing: "last",
         },
+        facet: { kind: "status" },
         size: 90,
+        extension: { kind: "legacy-common" },
       },
-      {
-        accessorKey: "group",
-        header: t("table.columns.group"),
-        cell: ({ row }: { row: Row<ChannelRow> }) => {
-          const groups = row.original.group?.split(",").filter(Boolean) ?? []
-          if (!groups.length)
-            return <span className="text-muted-foreground">—</span>
-          return (
-            <div className="text-muted-foreground flex flex-wrap gap-1 text-xs">
-              {groups.slice(0, 3).map((group: string) => (
-                <span key={group} className="rounded border px-1 py-0.5">
-                  {group}
-                </span>
-              ))}
-              {groups.length > 3 && <span>+{groups.length - 3}</span>}
-            </div>
-          )
+      ...(["priority", "weight"] as const).map((id) => ({
+        id,
+        label: columnLabels[id],
+        renderer: "value" as const,
+        accessor: { kind: "cell" as const, key: id },
+        canHide: true,
+        defaultVisible: true,
+        visible: columnVisibility[id] !== false,
+        sort: {
+          accessor: { kind: "cellSortValue" as const, key: id },
+          defaultDirection: "asc" as const,
+          missing: "last" as const,
         },
-        size: 90,
-      },
-      {
-        accessorKey: "status",
-        header: t("table.columns.status"),
-        filterFn: statusFilterFn,
-        cell: ({ row }: { row: Row<ChannelRow> }) => (
-          <StatusBadge status={row.original.status} />
-        ),
-        size: 90,
-      },
-      {
-        accessorKey: "priority",
-        header: t("table.columns.priority"),
-        cell: ({ row }: { row: Row<ChannelRow> }) => row.original.priority,
         size: 60,
-      },
-      {
-        accessorKey: "weight",
-        header: t("table.columns.weight"),
-        cell: ({ row }: { row: Row<ChannelRow> }) => row.original.weight,
-        size: 60,
-      },
+        extension: { kind: "legacy-common" as const },
+      })),
       {
         id: "actions",
-        header: () => (
-          <span className="sr-only">{t("table.columns.actions")}</span>
-        ),
-        cell: ({ row }: { row: Row<ChannelRow> }) => (
-          <RowActions
-            channel={row.original}
-            onEdit={handleOpenEditDialog}
-            onView={handleOpenViewDialog}
-            onMigrate={handleOpenSingleChannelMigration}
-            onDelete={(ids) =>
-              scheduleDelete(ids, {
-                featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-                actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel,
-                surfaceId: channelsRowActionsSurface,
-                entrypoint: optionsEntrypoint,
-              })
-            }
-            onSync={(channelIds) =>
-              handleSyncChannels(channelIds, {
-                featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-                actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncManagedSiteChannel,
-                surfaceId: channelsRowActionsSurface,
-                entrypoint: optionsEntrypoint,
-              })
-            }
-            onOpenSync={openManagedSiteModelSyncForChannel}
-            onFilters={handleOpenFilterDialog}
-            canMigrate={hasMigrationTargets}
-            showMigrationAction={isMigrationMode}
-            showNewApiOnlyActions={supportsNewApiOnlyChannelActions}
-            isSyncing={syncingIds.has(row.original.id)}
-            labels={rowActionLabels}
-            testIds={{
-              trigger: getManagedSiteChannelRowActionsButtonTestId(
-                row.original.name,
-              ),
-              edit: getManagedSiteChannelRowEditActionTestId(row.original.name),
-              delete: getManagedSiteChannelRowDeleteActionTestId(
-                row.original.name,
-              ),
-            }}
-          />
-        ),
+        label: t("table.columns.actions"),
+        renderer: "actions",
+        canHide: false,
+        defaultVisible: true,
+        visible: true,
         size: 60,
-        enableSorting: false,
-        enableHiding: false,
+        extension: { kind: "legacy-common" },
       },
     ],
+    [columnLabels, columnVisibility, t],
+  )
+
+  const presentationLabels = useMemo<ManagedChannelsLabels>(
+    () => ({
+      searchPlaceholder: t("toolbar.searchPlaceholder"),
+      clearSearch: t("toolbar.clearSearch"),
+      refresh: t("toolbar.refresh"),
+      cancelRefresh: t("toolbar.cancelRefresh"),
+      status: t("toolbar.status"),
+      statusLabel: t("filter.statusLabel"),
+      columns: t("toolbar.columns"),
+      toggleColumns: t("toolbar.toggleColumns"),
+      migrateSelected: t("toolbar.migrateSelected"),
+      migrateFiltered: t("toolbar.migrateFiltered"),
+      deleteSelected: t("toolbar.deleteSelected"),
+      syncSelected: t("toolbar.syncSelected"),
+      addChannel: t("toolbar.addChannel"),
+      loading: t("table.loading"),
+      emptyFiltered: t("table.emptyFiltered"),
+      emptyNoChannels: t("table.emptyNoChannels"),
+      rowsPerPage: t("table.rowsPerPage"),
+      paginationSummary: t("table.paginationSummary", {
+        start: filteredPresentationRows.length
+          ? pagination.pageIndex * pagination.pageSize + 1
+          : 0,
+        end: Math.min(
+          (pagination.pageIndex + 1) * pagination.pageSize,
+          filteredPresentationRows.length,
+        ),
+        total: filteredPresentationRows.length,
+      }),
+      noEntries: t("table.noEntries"),
+      paginationPrev: t("table.paginationPrev"),
+      paginationNext: t("table.paginationNext"),
+      selectAll: t("table.selectAll"),
+      selectRow: t("table.selectRow"),
+      statusLabels: Object.fromEntries(
+        ["0", "1", "2", "3"].map((value) => [
+          value,
+          getManagedSiteChannelStatusFilterLabel(t, value),
+        ]),
+      ),
+      settings: t("common:labels.settings"),
+      configurationRequired: t("common:status.configurationRequired"),
+      goToSettings: t("common:actions.goToSettings"),
+      deleteTitle: t("dialog.deleteTitle"),
+      deleteTitlePlural: t("dialog.deleteTitlePlural"),
+      deleteDescription: t("dialog.deleteDescription"),
+      deleteCancel: t("dialog.cancel"),
+      deleteConfirm: t("dialog.confirm"),
+      deleting: t("common:status.deleting"),
+      deleteResultsTitle: t("dialog.deleteResultsTitle"),
+      deleteRefreshRequired: t("dialog.deleteRefreshRequired"),
+      deleteRefreshAction: t("dialog.deleteRefreshAction"),
+      deleteResultStatusLabels: {
+        success: t("dialog.deleteResultStatus.success"),
+        failed: t("dialog.deleteResultStatus.failed"),
+        uncertain: t("dialog.deleteResultStatus.uncertain"),
+      },
+      migrationBeta: t("migration.betaBadge"),
+      enterMigrationMode: t("toolbar.enterMigrationMode"),
+      exitMigrationMode: t("toolbar.exitMigrationMode"),
+      rowActions: rowActionLabels,
+    }),
     [
-      handleOpenEditDialog,
-      handleOpenFilterDialog,
-      handleOpenSingleChannelMigration,
-      handleOpenViewDialog,
-      handleSyncChannels,
-      hasMigrationTargets,
-      isAxonHub,
-      isClaudeCodeHub,
-      isMigrationMode,
-      isOctopus,
+      filteredPresentationRows.length,
+      pagination.pageIndex,
+      pagination.pageSize,
       rowActionLabels,
-      scheduleDelete,
-      supportsNewApiOnlyChannelActions,
-      syncingIds,
       t,
     ],
   )
 
-  const table = useReactTable({
-    data: channels,
-    columns,
-    state: {
+  const presentationState = useMemo<ManagedChannelsPresentationState>(
+    () => ({
+      rows: presentationRows,
+      routeQuery: normalizeRouteQuery(routeParams ?? {}),
+      siteTypeValue: managedSiteType,
+      siteTypeOptions: MANAGED_SITE_TYPE_OPTIONS.map((siteType) => ({
+        value: siteType,
+        label: getManagedSiteLabel(t, siteType),
+      })),
+      selectedRowKeys: rowSelection,
       sorting,
-      columnFilters,
-      columnVisibility,
+      searchValue,
+      channelIdFilterValue,
+      statusFilterValues: selectedStatuses,
       pagination,
+      total: filteredPresentationRows.length,
+      isLoading,
+      isRefreshing: isLoading,
+      failure: error
+        ? {
+            category: t("alerts.loadError.title"),
+            message: t("alerts.loadError.description", { error }),
+          }
+        : null,
+      isConfigurationMissing: isConfigMissing,
+      migrationMode: isMigrationMode,
+      columns: presentationColumns,
+      deleteState: {
+        isOpen: isDeleteDialogOpen,
+        isWorking: isDeleting,
+        rowKeys: pendingDeleteTargets.map((target) => target.rowKey),
+        results: deleteResults,
+        requiresRefresh: deleteRequiresRefresh,
+      },
+    }),
+    [
+      channelIdFilterValue,
+      deleteRequiresRefresh,
+      deleteResults,
+      error,
+      filteredPresentationRows.length,
+      isConfigMissing,
+      isDeleteDialogOpen,
+      isDeleting,
+      isLoading,
+      isMigrationMode,
+      managedSiteType,
+      pagination,
+      pendingDeleteTargets,
+      presentationColumns,
+      presentationRows,
       rowSelection,
-    },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
-    onPaginationChange: setPagination,
-    onRowSelectionChange: setRowSelection,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getFacetedUniqueValues: getFacetedUniqueValues(),
-    enableSortingRemoval: false,
-    getRowId: (row) => String(row.id),
-  })
+      routeParams,
+      searchValue,
+      selectedStatuses,
+      sorting,
+      t,
+    ],
+  )
 
-  useEffect(() => {
-    const channelIdParam = routeParams?.channelId?.trim()
-    const idColumn = table.getColumn("id")
-    const nameColumn = table.getColumn("name")
+  const presentationCapabilities = useMemo<ManagedChannelsCapabilities>(
+    () => ({
+      canCreate: true,
+      canRefresh: true,
+      canDeleteSelected: true,
+      canSyncSelected: supportsNewApiOnlyChannelActions,
+      canToggleMigration:
+        supportsChannelMigration && (hasMigrationTargets || isMigrationMode),
+      canMigrateSelected: hasMigrationTargets,
+      canMigrateFiltered: hasMigrationTargets,
+      showNewApiOnlyActions: supportsNewApiOnlyChannelActions,
+      hasMigrationTargets,
+    }),
+    [
+      hasMigrationTargets,
+      isMigrationMode,
+      supportsChannelMigration,
+      supportsNewApiOnlyChannelActions,
+    ],
+  )
 
-    if (channelIdParam) {
-      const currentIdFilter = (idColumn?.getFilterValue() as string) ?? ""
-      const currentSearchFilter = (nameColumn?.getFilterValue() as string) ?? ""
-      let didChange = false
-
-      if (currentIdFilter !== channelIdParam) {
-        idColumn?.setFilterValue(channelIdParam)
-        didChange = true
-      }
-
-      if (currentSearchFilter !== channelIdParam) {
-        nameColumn?.setFilterValue(channelIdParam)
-        didChange = true
-      }
-
-      if (didChange) {
-        setPagination((prev) => ({ ...prev, pageIndex: 0 }))
-      }
-      return
-    }
-
-    const searchParam = routeParams?.search?.trim()
-    const currentIdFilter = (idColumn?.getFilterValue() as string) ?? ""
-    const currentSearchFilter = (nameColumn?.getFilterValue() as string) ?? ""
-    const nextSearchFilter = searchParam ?? ""
-
-    if (currentIdFilter) {
-      idColumn?.setFilterValue(undefined)
-    }
-
-    if (currentSearchFilter !== nextSearchFilter) {
-      nameColumn?.setFilterValue(nextSearchFilter || undefined)
-      setPagination((prev) => ({ ...prev, pageIndex: 0 }))
-    }
-  }, [routeParams?.channelId, routeParams?.search, table])
-
-  const statusColumn = table.getColumn("status")
-  const uniqueStatusValues = useMemo(() => {
-    if (!statusColumn) return []
-    const facetedValues = statusColumn.getFacetedUniqueValues()
-    return Array.from(facetedValues.keys())
-      .map((key) => String(key))
-      .sort((a, b) => Number(a) - Number(b))
-  }, [statusColumn])
-
-  const statusCounts = useMemo(() => {
-    if (!statusColumn) return new Map<string, number>()
-    const facetedValues = statusColumn.getFacetedUniqueValues()
-    const map = new Map<string, number>()
-    facetedValues.forEach((count, key) => {
-      map.set(String(key), count)
-    })
-    return map
-  }, [statusColumn])
-
-  const selectedStatuses = useMemo(() => {
-    if (!statusColumn) return []
-    return (statusColumn.getFilterValue() as string[]) ?? []
-  }, [statusColumn])
-
-  const selectedRows = table.getSelectedRowModel().rows
-  const filteredRows = table.getFilteredRowModel().rows
-  const selectedCount = selectedRows.length
-  const filteredCount = filteredRows.length
-  const searchValue =
-    (table.getColumn("name")?.getFilterValue() as string) ?? ""
-  const channelIdFilterValue =
-    (table.getColumn("id")?.getFilterValue() as string) ?? ""
-  const emptyTableMessage =
-    searchValue.trim() || channelIdFilterValue.trim() || selectedStatuses.length
-      ? t("table.emptyFiltered")
-      : t("table.emptyNoChannels")
-  const rowsPerPageOptions = [10, 25, 50, 100]
-  const managedSiteChannelsHash = `#${MENU_ITEM_IDS.MANAGED_SITE_CHANNELS}`
-
-  const handleSearchChange = (value: string) => {
-    table.getColumn("name")?.setFilterValue(value || undefined)
-    table.getColumn("id")?.setFilterValue(undefined)
-    setPagination((prev) => ({ ...prev, pageIndex: 0 }))
-
-    if (value === (routeParams?.search ?? "") && !routeParams?.channelId) {
-      return
-    }
-
-    navigateWithinOptionsPage(
-      managedSiteChannelsHash,
-      value ? { search: value } : {},
-    )
-  }
-
-  const handleStatusChange = (checked: CheckboxState, value: string) => {
-    const filterValue = statusColumn?.getFilterValue() as string[]
-    const next = filterValue ? [...filterValue] : []
-    if (checked === true) {
-      next.push(value)
-    } else {
-      const index = next.indexOf(value)
-      if (index > -1) next.splice(index, 1)
-    }
-    statusColumn?.setFilterValue(next.length ? next : undefined)
-  }
-
-  const isInitialLoading =
-    isLoading && channels.length === 0 && !error && !isConfigMissing
+  const presentationCallbacks = useMemo<ManagedChannelsCallbacks>(
+    () => ({
+      onRefresh: () => {
+        if (isLoading) {
+          cancelRefresh()
+          return
+        }
+        void refreshChannels({
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteChannels,
+          surfaceId: channelsToolbarSurface,
+          entrypoint: optionsEntrypoint,
+        })
+      },
+      onSearchChange: handleSearchChange,
+      onReplaceRouteQuery: handleReplaceRouteQuery,
+      onSettings: () => {
+        void openSettingsTab("managedSite", {
+          anchor: "managed-site-selector",
+          preserveHistory: true,
+        })
+      },
+      onConfigurationRequired: () => {
+        void openSettingsTab("managedSite", { preserveHistory: true })
+      },
+      onSiteTypeChange: async (value) => {
+        const siteType = value as ManagedSiteType
+        if (siteType === managedSiteType) return
+        const writeResult = await updateManagedSiteType(siteType)
+        showUpdateToast(writeResult, t("settings:managedSite.siteTypeLabel"))
+      },
+      onChannelIdFilterChange: (value) =>
+        setControlledFilter("id", value || undefined),
+      onStatusFilterChange: (values) => {
+        setControlledFilter("status", values.length ? values : undefined)
+        setPagination((current) => ({ ...current, pageIndex: 0 }))
+      },
+      onSortingChange: setSorting,
+      onColumnVisibilityChange: (next) =>
+        setColumnVisibility((current) => ({ ...current, ...next })),
+      onPaginationChange: setPagination,
+      onSelectedRowKeysChange: setRowSelection,
+      onCreate: () => {
+        trackManagedSiteChannelToolbarAction(
+          PRODUCT_ANALYTICS_ACTION_IDS.CreateManagedSiteChannel,
+        )
+        handleOpenCreateDialog()
+      },
+      onToggleMigrationMode: () => {
+        trackManagedSiteChannelToolbarAction(
+          PRODUCT_ANALYTICS_ACTION_IDS.ToggleManagedSiteChannelMigrationMode,
+        )
+        handleToggleMigrationMode()
+      },
+      onMigrateSelected: (rowKeys) => {
+        trackManagedSiteChannelToolbarAction(
+          PRODUCT_ANALYTICS_ACTION_IDS.OpenSelectedManagedSiteChannelMigration,
+        )
+        openMigrationDialog(resolveRows(rowKeys))
+      },
+      onMigrateFiltered: (rowKeys) => {
+        trackManagedSiteChannelToolbarAction(
+          PRODUCT_ANALYTICS_ACTION_IDS.OpenFilteredManagedSiteChannelMigration,
+        )
+        openMigrationDialog(resolveRows(rowKeys))
+      },
+      onEdit: (rowKey) => {
+        const channel = channelRowsByKey.get(rowKey)
+        if (!channel) return
+        handleOpenEditDialog(channel)
+        trackManagedSiteChannelRowAction(
+          PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteChannel,
+        )
+      },
+      onView: (rowKey) => {
+        const channel = channelRowsByKey.get(rowKey)
+        if (!channel) return
+        handleOpenViewDialog(channel)
+        trackManagedSiteChannelRowAction(
+          PRODUCT_ANALYTICS_ACTION_IDS.ViewManagedSiteChannel,
+        )
+      },
+      onMigrate: (rowKey) => {
+        const channel = channelRowsByKey.get(rowKey)
+        if (!channel) return
+        handleOpenSingleChannelMigration(channel)
+        trackManagedSiteChannelRowAction(
+          PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelMigration,
+        )
+      },
+      onDelete: (rowKey) => {
+        const channel = channelRowsByKey.get(rowKey)
+        if (!channel) return
+        scheduleDelete(
+          [
+            {
+              rowKey,
+              channelId: channel.id,
+              displayLabel: channel.name,
+            },
+          ],
+          {
+            featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+            actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel,
+            surfaceId: channelsRowActionsSurface,
+            entrypoint: optionsEntrypoint,
+          },
+        )
+      },
+      onSync: async (rowKey) => {
+        const channel = channelRowsByKey.get(rowKey)
+        if (!channel) return
+        await handleSyncChannels([channel.id], {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncManagedSiteChannel,
+          surfaceId: channelsRowActionsSurface,
+          entrypoint: optionsEntrypoint,
+        })
+      },
+      onOpenSync: async (rowKey) => {
+        const channel = channelRowsByKey.get(rowKey)
+        if (!channel) return
+        trackManagedSiteChannelRowAction(
+          PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelModelSync,
+        )
+        await openManagedSiteModelSyncForChannel(channel.id)
+      },
+      onFilters: (rowKey) => {
+        const channel = channelRowsByKey.get(rowKey)
+        if (!channel) return
+        handleOpenFilterDialog(channel)
+        trackManagedSiteChannelRowAction(
+          PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelFilters,
+        )
+      },
+      onDeleteSelected: () => {
+        const selected = resolveRows(
+          Object.keys(rowSelection).filter((rowKey) => rowSelection[rowKey]),
+        )
+        scheduleDelete(
+          selected.map((channel) => ({
+            rowKey: String(channel.id),
+            channelId: channel.id,
+            displayLabel: channel.name,
+          })),
+          {
+            featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.DeleteSelectedManagedSiteChannels,
+            surfaceId: channelsToolbarSurface,
+            entrypoint: optionsEntrypoint,
+          },
+        )
+      },
+      onSyncSelected: async (rowKeys) => {
+        await handleSyncChannels(
+          resolveRows(rowKeys).map((channel) => channel.id),
+          {
+            featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteChannels,
+            surfaceId: channelsToolbarSurface,
+            entrypoint: optionsEntrypoint,
+          },
+        )
+      },
+      onDeleteConfirm: () => {
+        void handleDelete()
+      },
+      onDeleteCancel: () => {
+        if (isDeleting) return
+        bulkDeleteController.cancel()
+        setIsDeleteDialogOpen(false)
+        setPendingDeleteTargets([])
+        setPendingDeleteAnalyticsContext(null)
+      },
+    }),
+    [
+      cancelRefresh,
+      bulkDeleteController,
+      channelRowsByKey,
+      handleDelete,
+      handleOpenCreateDialog,
+      handleOpenEditDialog,
+      handleOpenFilterDialog,
+      handleOpenSingleChannelMigration,
+      handleOpenViewDialog,
+      handleSearchChange,
+      handleReplaceRouteQuery,
+      handleSyncChannels,
+      handleToggleMigrationMode,
+      isDeleting,
+      isLoading,
+      managedSiteType,
+      openMigrationDialog,
+      refreshChannels,
+      resolveRows,
+      rowSelection,
+      scheduleDelete,
+      setControlledFilter,
+      t,
+      updateManagedSiteType,
+    ],
+  )
 
   return (
-    <div className="space-y-6 p-6">
-      <PageHeader
-        icon={Layers}
+    <>
+      <ManagedSiteChannelsView
+        state={presentationState}
+        capabilities={presentationCapabilities}
+        callbacks={presentationCallbacks}
+        labels={presentationLabels}
         title={t("title")}
-        titleActions={
-          <OptionsPageSettingsTitleAction
-            tabId="managedSite"
-            anchor="managed-site-selector"
+        description={t("description")}
+        configurationMissingDescription={getManagedSiteConfigMissingMessage(
+          t,
+          getManagedSiteMessagesKeyFromSiteType(managedSiteType),
+        )}
+        siteTypeLabel={t("settings:managedSite.siteTypeLabel")}
+        filterDialog={
+          <ChannelFilterDialog
+            channel={filterDialogChannel}
+            open={isFilterDialogOpen}
+            onClose={handleCloseFilterDialog}
           />
         }
-        description={t("description")}
-        actions={
-          <>
-            {!isConfigMissing && (
-              <ProductAnalyticsScope
-                entrypoint={optionsEntrypoint}
-                featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels}
-                surfaceId={channelsToolbarSurface}
-              >
-                <>
-                  <Button
-                    variant="outline"
-                    aria-busy={isLoading}
-                    data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton}
-                    {...{
-                      [MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE]: isLoading
-                        ? MANAGED_SITE_CHANNELS_REFRESH_STATES.Loading
-                        : MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
-                    }}
-                    onClick={() => {
-                      if (isLoading) {
-                        cancelRefresh()
-                        return
-                      }
-
-                      void refreshChannels({
-                        featureId:
-                          PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-                        actionId:
-                          PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteChannels,
-                        surfaceId: channelsToolbarSurface,
-                        entrypoint: optionsEntrypoint,
-                      })
-                    }}
-                    leftIcon={
-                      isLoading ? (
-                        <Spinner
-                          aria-hidden="true"
-                          size="sm"
-                          variant="primary"
-                        />
-                      ) : (
-                        <RefreshCcw className="h-4 w-4" />
-                      )
-                    }
-                  >
-                    {isLoading
-                      ? t("toolbar.cancelRefresh")
-                      : t("toolbar.refresh")}
-                  </Button>
-                  {supportsChannelMigration &&
-                  (hasMigrationTargets || isMigrationMode) ? (
-                    <Button
-                      variant={isMigrationMode ? "default" : "outline"}
-                      onClick={handleToggleMigrationMode}
-                      leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-                      analyticsAction={
-                        PRODUCT_ANALYTICS_ACTION_IDS.ToggleManagedSiteChannelMigrationMode
-                      }
-                    >
-                      <span>
-                        {isMigrationMode
-                          ? t("toolbar.exitMigrationMode")
-                          : t("toolbar.enterMigrationMode")}
-                      </span>
-                      <Badge variant="warning" size="sm" className="shrink-0">
-                        {t("migration.betaBadge")}
-                      </Badge>
-                    </Button>
-                  ) : null}
-                </>
-              </ProductAnalyticsScope>
-            )}
-            <ManagedSiteTypeSwitcher
-              ariaLabel={t("settings:managedSite.siteTypeLabel")}
-              hideWhenSingleOption
-              size="sm"
-              triggerClassName="w-auto min-w-[172px]"
-            />
-          </>
-        }
-      />
-
-      {isConfigMissing ? (
-        <ManagedSiteConfigRequiredState
-          description={getManagedSiteConfigMissingMessage(
-            t,
-            getManagedSiteMessagesKeyFromSiteType(managedSiteType),
-          )}
-        />
-      ) : (
-        <>
-          {error && (
-            <Alert variant="destructive">
-              <AlertTitle>{t("alerts.loadError.title")}</AlertTitle>
-              <AlertDescription>
-                {t("alerts.loadError.description", { error })}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Responsive toolbar: search input takes its own row on small screens, buttons wrap in a 2-column grid. */}
-          <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-            <div className="relative w-full md:max-w-sm">
-              <Input
-                ref={searchInputRef}
-                value={searchValue}
-                onChange={(event) => handleSearchChange(event.target.value)}
-                placeholder={t("toolbar.searchPlaceholder")}
-                className="ps-9"
-                data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.searchInput}
-              />
-              <ListFilter className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-              {searchValue && (
-                <button
-                  type="button"
-                  aria-label={t("toolbar.clearSearch")}
-                  className="text-muted-foreground/80 absolute top-1/2 right-2 -translate-y-1/2"
-                  onClick={() => {
-                    handleSearchChange("")
-                    searchInputRef.current?.focus()
-                  }}
-                >
-                  <CircleX className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 md:flex md:flex-1 md:items-center md:gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    leftIcon={<Filter className="h-4 w-4" />}
-                  >
-                    {t("toolbar.status")}
-                    {selectedStatuses.length > 0 && (
-                      <span className="text-muted-foreground ml-2 text-xs">
-                        ({selectedStatuses.length})
-                      </span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64" align="start">
-                  <div className="space-y-2">
-                    <p className="text-muted-foreground text-xs font-medium">
-                      {t("filter.statusLabel")}
-                    </p>
-                    <div className="space-y-2">
-                      {uniqueStatusValues.map((value) => (
-                        <div
-                          key={value}
-                          className="flex items-center justify-between gap-2"
-                        >
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              id={`status-${value}`}
-                              checked={selectedStatuses.includes(value)}
-                              onCheckedChange={(checked: CheckboxState) =>
-                                handleStatusChange(checked, value)
-                              }
-                            />
-                            <Label
-                              htmlFor={`status-${value}`}
-                              className="text-sm font-normal"
-                            >
-                              {getManagedSiteChannelStatusFilterLabel(t, value)}
-                            </Label>
-                          </div>
-                          <span className="text-muted-foreground text-xs">
-                            {statusCounts.get(value) ?? 0}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    leftIcon={<Columns3 className="h-4 w-4" />}
-                  >
-                    {t("toolbar.columns")}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuLabel>
-                    {t("toolbar.toggleColumns")}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {table
-                    .getAllLeafColumns()
-                    .filter((column) => column.getCanHide())
-                    .map((column) => (
-                      <DropdownMenuCheckboxItem
-                        key={column.id}
-                        className="capitalize"
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(value: CheckboxState) =>
-                          column.toggleVisibility(!!value)
-                        }
-                        onSelect={(event: Event) => event.preventDefault()}
-                      >
-                        {getManagedSiteChannelColumnLabel(t, column.id)}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <ProductAnalyticsScope
-                entrypoint={optionsEntrypoint}
-                featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels}
-                surfaceId={channelsToolbarSurface}
-              >
-                <div className="col-span-2 grid grid-cols-2 gap-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-2">
-                  {isMigrationMode && hasMigrationTargets && (
-                    <Button
-                      variant="outline"
-                      disabled={!selectedCount}
-                      onClick={() =>
-                        openMigrationDialog(
-                          selectedRows.map((row) => row.original),
-                        )
-                      }
-                      leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-                      analyticsAction={
-                        PRODUCT_ANALYTICS_ACTION_IDS.OpenSelectedManagedSiteChannelMigration
-                      }
-                    >
-                      {t("toolbar.migrateSelected")}
-                    </Button>
-                  )}
-                  {isMigrationMode && hasMigrationTargets && (
-                    <Button
-                      variant="outline"
-                      disabled={!filteredCount}
-                      onClick={() =>
-                        openMigrationDialog(
-                          filteredRows.map((row) => row.original),
-                        )
-                      }
-                      leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-                      analyticsAction={
-                        PRODUCT_ANALYTICS_ACTION_IDS.OpenFilteredManagedSiteChannelMigration
-                      }
-                    >
-                      {t("toolbar.migrateFiltered")}
-                    </Button>
-                  )}
-                  {!isMigrationMode && (
-                    <Button
-                      variant="outline"
-                      disabled={!selectedCount}
-                      data-testid={
-                        MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton
-                      }
-                      onClick={() =>
-                        scheduleDelete(
-                          selectedRows.map((row) => row.original.id),
-                          {
-                            featureId:
-                              PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-                            actionId:
-                              PRODUCT_ANALYTICS_ACTION_IDS.DeleteSelectedManagedSiteChannels,
-                            surfaceId: channelsToolbarSurface,
-                            entrypoint: optionsEntrypoint,
-                          },
-                        )
-                      }
-                      leftIcon={<Trash2 className="h-4 w-4" />}
-                    >
-                      {t("toolbar.deleteSelected")}
-                    </Button>
-                  )}
-                  {!isMigrationMode && supportsNewApiOnlyChannelActions && (
-                    <Button
-                      variant="outline"
-                      disabled={!selectedCount}
-                      onClick={() =>
-                        handleSyncChannels(
-                          selectedRows.map((row) => row.original.id),
-                          {
-                            featureId:
-                              PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-                            actionId:
-                              PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteChannels,
-                            surfaceId: channelsToolbarSurface,
-                            entrypoint: optionsEntrypoint,
-                          },
-                        )
-                      }
-                      leftIcon={<RefreshCcw className="h-4 w-4" />}
-                    >
-                      {t("toolbar.syncSelected")}
-                    </Button>
-                  )}
-                  {!isMigrationMode && (
-                    <Button
-                      onClick={handleOpenCreateDialog}
-                      leftIcon={<Plus className="h-4 w-4" />}
-                      data-testid={
-                        MANAGED_SITE_CHANNELS_TEST_IDS.addChannelButton
-                      }
-                      analyticsAction={
-                        PRODUCT_ANALYTICS_ACTION_IDS.CreateManagedSiteChannel
-                      }
-                    >
-                      {t("toolbar.addChannel")}
-                    </Button>
-                  )}
-                </div>
-              </ProductAnalyticsScope>
-            </div>
-          </div>
-
-          <div className="border-border bg-background overflow-hidden rounded-lg border">
-            <Table>
-              <TableHeader>
-                {table
-                  .getHeaderGroups()
-                  .map((headerGroup: HeaderGroup<ChannelRow>) => (
-                    <TableRow
-                      key={headerGroup.id}
-                      className="hover:bg-transparent"
-                    >
-                      {headerGroup.headers.map((header) => (
-                        <TableHead
-                          key={header.id}
-                          className={cn(
-                            header.column.id === "actions" &&
-                              cn(
-                                "bg-background sticky right-0 border-l",
-                                Z_INDEX.tableStickyHeader,
-                              ),
-                          )}
-                          style={{ width: header.getSize() }}
-                        >
-                          {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                            <button
-                              type="button"
-                              className="flex w-full items-center gap-2"
-                              onClick={header.column.getToggleSortingHandler()}
-                            >
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext(),
-                              )}
-                              {header.column.getIsSorted() === "asc" && (
-                                <ChevronUp className="h-3.5 w-3.5 opacity-60" />
-                              )}
-                              {header.column.getIsSorted() === "desc" && (
-                                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                              )}
-                            </button>
-                          ) : (
-                            flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )
-                          )}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-              </TableHeader>
-              <TableBody>
-                {isInitialLoading ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-32 text-center"
-                    >
-                      <div className="text-muted-foreground flex items-center justify-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        {t("table.loading")}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : table.getRowModel().rows.length ? (
-                  table.getRowModel().rows.map((row: Row<ChannelRow>) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
-                      data-testid={getManagedSiteChannelRowTestId(
-                        row.original.name,
-                      )}
-                      data-channel-name={row.original.name}
-                      className="group align-middle"
-                    >
-                      {row
-                        .getVisibleCells()
-                        .map((cell: Cell<ChannelRow, unknown>) => (
-                          <TableCell
-                            key={cell.id}
-                            data-state={
-                              cell.column.id === "actions" &&
-                              row.getIsSelected()
-                                ? "selected"
-                                : undefined
-                            }
-                            className={cn(
-                              "py-3",
-                              cell.column.id === "actions" &&
-                                cn(
-                                  "bg-background group-hover:bg-muted/50 data-[state=selected]:bg-muted sticky right-0 border-l",
-                                  Z_INDEX.tableStickyCell,
-                                ),
-                            )}
-                          >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext(),
-                            )}
-                          </TableCell>
-                        ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-32 text-center"
-                    >
-                      <div className="text-muted-foreground text-sm">
-                        {emptyTableMessage}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="rows-per-page" className="text-xs font-medium">
-                {t("table.rowsPerPage")}
-              </Label>
-              <Select
-                value={String(table.getState().pagination.pageSize)}
-                onValueChange={(value: string) =>
-                  table.setPageSize(Number(value))
-                }
-              >
-                <SelectTrigger
-                  id="rows-per-page"
-                  size="sm"
-                  aria-label={t("table.rowsPerPage")}
-                  className="w-[110px]"
-                >
-                  <SelectValue placeholder={t("table.rowsPerPage") ?? ""} />
-                </SelectTrigger>
-                <SelectContent>
-                  {rowsPerPageOptions.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="text-muted-foreground ml-auto">
-              {table.getRowCount() ? (
-                <span
-                  data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary}
-                  data-start={
-                    table.getState().pagination.pageIndex *
-                      table.getState().pagination.pageSize +
-                    1
-                  }
-                  data-end={Math.min(
-                    (table.getState().pagination.pageIndex + 1) *
-                      table.getState().pagination.pageSize,
-                    table.getRowCount(),
-                  )}
-                  data-total={table.getRowCount()}
-                >
-                  {t("table.paginationSummary", {
-                    start:
-                      table.getState().pagination.pageIndex *
-                        table.getState().pagination.pageSize +
-                      1,
-                    end: Math.min(
-                      (table.getState().pagination.pageIndex + 1) *
-                        table.getState().pagination.pageSize,
-                      table.getRowCount(),
-                    ),
-                    total: table.getRowCount(),
-                  })}
-                </span>
-              ) : (
-                <span>{t("table.noEntries")}</span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-                aria-label={t("table.paginationPrev")}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-                aria-label={t("table.paginationNext")}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
-
-      <DestructiveConfirmDialog
-        isOpen={isDeleteDialogOpen}
-        onClose={() => {
-          if (!isDeleting) {
-            setIsDeleteDialogOpen(false)
-            setPendingDeleteIds([])
-            setPendingDeleteAnalyticsContext(null)
-          }
-        }}
-        title={
-          pendingDeleteIds.length > 1
-            ? t("dialog.deleteTitlePlural")
-            : t("dialog.deleteTitle")
-        }
-        description={t("dialog.deleteDescription")}
-        cancelLabel={t("dialog.cancel")}
-        confirmLabel={t("dialog.confirm")}
-        workingLabel={t("common:status.deleting")}
-        confirmButtonTestId={
-          MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton
-        }
-        onConfirm={() => {
-          void handleDelete()
-        }}
-        isWorking={isDeleting}
-      />
-
-      <ChannelFilterDialog
-        channel={filterDialogChannel}
-        open={isFilterDialogOpen}
-        onClose={handleCloseFilterDialog}
       />
 
       <ManagedSiteChannelMigrationDialog
         isOpen={isMigrationDialogOpen}
         onClose={handleCloseMigrationDialog}
+        onRecoverUncertainResult={async () => {
+          return await refreshChannels()
+        }}
         channels={migrationChannels}
         preferences={preferences}
         sourceSiteType={managedSiteType}
@@ -2171,6 +1987,6 @@ export default function ManagedSiteChannels({
         onOpenSite={verification.openBaseUrl}
         onUpdateRequestConfig={verification.patchRequestConfig}
       />
-    </div>
+    </>
   )
 }

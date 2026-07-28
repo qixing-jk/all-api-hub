@@ -10,6 +10,14 @@
     "cancel": "Hủy",
     "confirm": "Xóa",
     "deleteDescription": "Hành động này không thể hoàn tác, cấu hình đã chọn sẽ bị xóa vĩnh viễn.",
+    "deleteRefreshAction": "Làm mới danh sách kênh",
+    "deleteRefreshRequired": "Một số kết quả xóa chưa xác định. Hãy làm mới danh sách kênh trước khi xóa lại.",
+    "deleteResultStatus": {
+      "failed": "Thất bại",
+      "success": "Đã xóa",
+      "uncertain": "Chưa xác định"
+    },
+    "deleteResultsTitle": "Kết quả xóa",
     "deleteTitle": "Xóa kênh?",
     "deleteTitlePlural": "Xóa các kênh này?"
   },
@@ -100,6 +108,7 @@
     "actions": {
       "cancel": "Hủy",
       "close": "Đóng",
+      "refreshChannels": "Làm mới danh sách kênh",
       "refreshPreview": "Làm mới bản xem trước",
       "running": "Đang di chuyển…",
       "start": "Bắt đầu di chuyển"
@@ -159,12 +168,14 @@
       "summary": "Kết quả xem trước: {{ready}} kênh sẵn sàng, {{blocked}} kênh bị chặn, tổng cộng {{total}} kênh."
     },
     "results": {
+      "refreshRequired": "Một số kết quả tạo chưa xác định. Hãy làm mới danh sách kênh trước khi đóng.",
       "status": {
         "failed": "Thất bại",
         "skipped": "Đã bỏ qua",
-        "success": "Đã tạo"
+        "success": "Đã tạo",
+        "uncertain": "Chưa xác định"
       },
-      "summary": "Kết quả di chuyển: Thành công {{created}}, Thất bại {{failed}}, Bỏ qua {{skipped}}, tổng cộng {{total}}.",
+      "summary": "Kết quả di chuyển: Thành công {{created}}, Thất bại {{failed}}, Bỏ qua {{skipped}}, Chưa xác định {{uncertain}}, tổng cộng {{total}}.",
       "title": "Kết quả di chuyển"
     },
     "target": {

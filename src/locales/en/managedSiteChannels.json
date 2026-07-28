@@ -10,6 +10,14 @@
     "cancel": "Cancel",
     "confirm": "Delete",
     "deleteDescription": "This action cannot be undone. The selected channels will be removed permanently.",
+    "deleteRefreshAction": "Refresh channels",
+    "deleteRefreshRequired": "Some delete results are uncertain. Refresh the channel list before deleting again.",
+    "deleteResultStatus": {
+      "failed": "Failed",
+      "success": "Deleted",
+      "uncertain": "Uncertain"
+    },
+    "deleteResultsTitle": "Delete results",
     "deleteTitle": "Delete channel?",
     "deleteTitlePlural": "Delete channels?"
   },
@@ -100,6 +108,7 @@
     "actions": {
       "cancel": "Cancel",
       "close": "Close",
+      "refreshChannels": "Refresh channel list",
       "refreshPreview": "Refresh preview",
       "running": "Migrating...",
       "start": "Start migration"
@@ -159,12 +168,14 @@
       "summary": "Preview: {{ready}} ready, {{blocked}} blocked, {{total}} selected."
     },
     "results": {
+      "refreshRequired": "Some creation results are uncertain. Refresh the channel list before closing.",
       "status": {
         "failed": "Failed",
         "skipped": "Skipped",
-        "success": "Created"
+        "success": "Created",
+        "uncertain": "Uncertain"
       },
-      "summary": "Results: {{created}} created, {{failed}} failed, {{skipped}} skipped, {{total}} total.",
+      "summary": "Results: {{created}} created, {{failed}} failed, {{skipped}} skipped, {{uncertain}} uncertain, {{total}} total.",
       "title": "Migration results"
     },
     "target": {

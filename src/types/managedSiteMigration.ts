@@ -74,6 +74,7 @@ export interface ManagedSiteChannelMigrationExecutionItem {
   channelName: string
   success: boolean
   skipped: boolean
+  uncertain?: boolean
   blockingReasonCode?: ManagedSiteChannelMigrationBlockedReasonCode
   error?: string
 }
@@ -84,5 +85,6 @@ export interface ManagedSiteChannelMigrationExecutionResult {
   createdCount: number
   failedCount: number
   skippedCount: number
+  uncertainCount?: number
   items: ManagedSiteChannelMigrationExecutionItem[]
 }

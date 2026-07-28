@@ -2817,6 +2817,10 @@ describe("channelMigration", () => {
         error: "Missing key",
       },
     ])
+    expect(result.items[0]).not.toHaveProperty("error")
+    expect(result.items[0]).not.toHaveProperty("uncertain")
+    expect(result.items[0]).not.toHaveProperty("blockingReasonCode")
+    expect(result.items[1]).not.toHaveProperty("uncertain")
   })
 
   it("creates AxonHub targets through the managed-site service and keeps failures per row", async () => {
@@ -2908,20 +2912,25 @@ describe("channelMigration", () => {
       createdCount: 1,
       failedCount: 1,
       skippedCount: 0,
-      items: [
-        {
-          channelId: 61,
-          success: false,
-          skipped: false,
-          error: "AxonHub rejected channel",
-        },
-        {
-          channelId: 62,
-          success: true,
-          skipped: false,
-        },
-      ],
+      uncertainCount: 0,
     })
+    expect(result.items).toEqual([
+      {
+        channelId: 61,
+        channelName: "Rejected",
+        success: false,
+        skipped: false,
+        error: "AxonHub rejected channel",
+      },
+      {
+        channelId: 62,
+        channelName: "Ready",
+        success: true,
+        skipped: false,
+      },
+    ])
+    expect(result.items[0]).not.toHaveProperty("uncertain")
+    expect(result.items[0]).not.toHaveProperty("blockingReasonCode")
   })
 
   it("creates feature-gated target resources without using legacy channel payloads", async () => {
@@ -3403,20 +3412,25 @@ describe("channelMigration", () => {
       createdCount: 1,
       failedCount: 1,
       skippedCount: 0,
-      items: [
-        {
-          channelId: 71,
-          success: false,
-          skipped: false,
-          error: "Claude Code Hub rejected provider",
-        },
-        {
-          channelId: 72,
-          success: true,
-          skipped: false,
-        },
-      ],
+      uncertainCount: 0,
     })
+    expect(result.items).toEqual([
+      {
+        channelId: 71,
+        channelName: "Rejected",
+        success: false,
+        skipped: false,
+        error: "Claude Code Hub rejected provider",
+      },
+      {
+        channelId: 72,
+        channelName: "Ready",
+        success: true,
+        skipped: false,
+      },
+    ])
+    expect(result.items[0]).not.toHaveProperty("uncertain")
+    expect(result.items[0]).not.toHaveProperty("blockingReasonCode")
   })
 
   it("preserves blocker details when execution fails before creating target channels", async () => {
@@ -4128,18 +4142,22 @@ describe("channelMigration", () => {
     expect(result).toMatchObject({
       attemptedCount: 1,
       createdCount: 0,
-      failedCount: 1,
+      failedCount: 0,
       skippedCount: 0,
-      items: [
-        {
-          channelId: 311,
-          success: false,
-          skipped: false,
-          error:
-            "Target creation may have succeeded. Verify the target before retrying.",
-        },
-      ],
+      uncertainCount: 1,
     })
+    expect(result.items).toEqual([
+      {
+        channelId: 311,
+        channelName: "Alpha",
+        success: false,
+        skipped: false,
+        uncertain: true,
+        error:
+          "Target creation may have succeeded. Verify the target before retrying.",
+      },
+    ])
+    expect(result.items[0]).not.toHaveProperty("blockingReasonCode")
   })
 
   it("reports thrown target uncertainty with verify-before-retry guidance", async () => {
@@ -4177,18 +4195,22 @@ describe("channelMigration", () => {
     expect(result).toMatchObject({
       attemptedCount: 1,
       createdCount: 0,
-      failedCount: 1,
+      failedCount: 0,
       skippedCount: 0,
-      items: [
-        {
-          channelId: 311_1,
-          success: false,
-          skipped: false,
-          error:
-            "Target creation may have succeeded. Verify the target before retrying.",
-        },
-      ],
+      uncertainCount: 1,
     })
+    expect(result.items).toEqual([
+      {
+        channelId: 311_1,
+        channelName: "Alpha",
+        success: false,
+        skipped: false,
+        uncertain: true,
+        error:
+          "Target creation may have succeeded. Verify the target before retrying.",
+      },
+    ])
+    expect(result.items[0]).not.toHaveProperty("blockingReasonCode")
   })
 
   it("preserves string selection identity and order across native preparation", async () => {

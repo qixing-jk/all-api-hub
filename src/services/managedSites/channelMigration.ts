@@ -848,30 +848,46 @@ export async function executeManagedSiteChannelMigration(
           skipped: false,
         }
       }
+
+      if (result.status === "skipped") {
+        return {
+          channelId: legacyItem.channelId,
+          channelName: legacyItem.channelName,
+          success: false,
+          skipped: true,
+          blockingReasonCode: result.blockingReasonCode,
+          error:
+            legacyItem.blockingMessage?.trim() ||
+            getMigrationBlockingFallback(result.blockingReasonCode),
+        }
+      }
+
+      if (result.status === "uncertain") {
+        return {
+          channelId: legacyItem.channelId,
+          channelName: legacyItem.channelName,
+          success: false,
+          skipped: false,
+          uncertain: true,
+          error: migrationUncertaintyWarning,
+        }
+      }
+
       return {
         channelId: legacyItem.channelId,
         channelName: legacyItem.channelName,
         success: false,
-        skipped: result.status === "skipped",
-        blockingReasonCode:
-          result.status === "skipped"
-            ? result.blockingReasonCode
-            : legacyItem.blockingReasonCode,
-        error:
-          result.status === "skipped"
-            ? legacyItem.blockingMessage?.trim() ||
-              getMigrationBlockingFallback(result.blockingReasonCode)
-            : result.status === "uncertain"
-              ? migrationUncertaintyWarning
-              : errors.get(result.selectionId)?.trim() || "Unknown error",
+        skipped: false,
+        error: errors.get(result.selectionId)?.trim() || "Unknown error",
       }
     })
   return {
-    totalSelected: preview.totalCount,
+    totalSelected: canonicalResult.totalSelected,
     attemptedCount: canonicalResult.attemptedCount,
-    createdCount: items.filter((item) => item.success).length,
-    failedCount: items.filter((item) => !item.success && !item.skipped).length,
-    skippedCount: items.filter((item) => item.skipped).length,
+    createdCount: canonicalResult.createdCount,
+    failedCount: canonicalResult.failedCount,
+    skippedCount: canonicalResult.skippedCount,
+    uncertainCount: canonicalResult.uncertainCount,
     items,
   }
 }

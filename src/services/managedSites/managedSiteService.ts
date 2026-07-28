@@ -1,5 +1,6 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type {
+  ManagedSiteChannelDeleteResponse,
   ManagedSiteChannelDraftRequestOptions,
   ManagedSiteChannelRequestOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
@@ -66,7 +67,7 @@ export interface ManagedSiteService<
   deleteChannel(
     config: TConfig,
     channelId: number,
-  ): Promise<ApiResponse<unknown>>
+  ): Promise<ManagedSiteChannelDeleteResponse>
 
   checkValidConfig(): Promise<boolean>
   getConfig(): Promise<TConfig | null>

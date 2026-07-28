@@ -9,6 +9,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 }))
 
 const buildCapabilities = (overrides?: {
+  deleteChannel?: (config: unknown, channelId: number) => Promise<unknown>
   list?: false | ((config: unknown, options?: unknown) => Promise<unknown>)
   search?: (config: unknown, keyword: string) => Promise<unknown>
 }) => ({
@@ -28,7 +29,7 @@ const buildCapabilities = (overrides?: {
           }),
       create: vi.fn(),
       update: vi.fn(),
-      delete: vi.fn(),
+      delete: overrides?.deleteChannel ?? vi.fn(),
     },
     config: {
       checkValid: vi.fn(),
@@ -135,5 +136,35 @@ describe("managed site service facade", () => {
       type_counts: {},
     })
     expect(search).toHaveBeenCalledWith(config, "")
+  })
+
+  it("preserves controlled delete certainty across the service facade", async () => {
+    const deleteChannel = vi.fn().mockResolvedValue({
+      success: false,
+      data: null,
+      message: "transport unavailable",
+      certainty: "uncertain",
+    })
+    mockGetSiteTypeCapabilities.mockReturnValue(
+      buildCapabilities({ deleteChannel }),
+    )
+
+    const { getManagedSiteServiceForType } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+    const service = getManagedSiteServiceForType(SITE_TYPES.AXON_HUB)
+    const config = {
+      baseUrl: "https://managed.example.invalid",
+      email: "admin@example.invalid",
+      password: "password",
+    }
+
+    await expect(service.deleteChannel(config, 7)).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "transport unavailable",
+      certainty: "uncertain",
+    })
+    expect(deleteChannel).toHaveBeenCalledWith(config, 7)
   })
 })

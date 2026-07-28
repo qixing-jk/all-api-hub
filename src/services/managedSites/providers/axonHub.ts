@@ -5,11 +5,15 @@ import {
 } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import type { ManagedSiteChannelRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import type {
+  ManagedSiteChannelDeleteResponse,
+  ManagedSiteChannelRequestOptions,
+} from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import * as axonHubApi from "~/services/apiService/axonHub"
 import type { ApiResponse } from "~/services/apiTransport/type"
 import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { getManagedSiteDeleteCertainty } from "~/services/managedSites/mutationCertainty"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
@@ -281,12 +285,22 @@ export async function updateChannel(
 export async function deleteChannel(
   config: AxonHubConfig,
   channelId: number,
-): Promise<ApiResponse<unknown>> {
+): Promise<ManagedSiteChannelDeleteResponse> {
+  let graphqlId: string
   try {
-    const graphqlId = await axonHubApi.resolveAxonHubGraphqlIdForMutation(
+    graphqlId = await axonHubApi.resolveAxonHubGraphqlIdForMutation(
       config,
       channelId,
     )
+  } catch (error) {
+    return {
+      success: false,
+      data: null,
+      message: getErrorMessage(error) || "Failed to resolve AxonHub channel",
+    }
+  }
+
+  try {
     const deleted = await axonHubApi.deleteAxonHubChannel(config, graphqlId)
     return {
       success: deleted,
@@ -298,6 +312,7 @@ export async function deleteChannel(
       success: false,
       data: null,
       message: getErrorMessage(error) || "Failed to delete AxonHub channel",
+      ...getManagedSiteDeleteCertainty(error),
     }
   }
 }

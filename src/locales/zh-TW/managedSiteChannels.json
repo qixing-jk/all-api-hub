@@ -10,6 +10,14 @@
     "cancel": "取消",
     "confirm": "刪除",
     "deleteDescription": "此操作無法撤銷，所選配置將被永久刪除。",
+    "deleteRefreshAction": "重新整理渠道清單",
+    "deleteRefreshRequired": "部分刪除結果的狀態不確定。請先重新整理渠道清單，再繼續刪除。",
+    "deleteResultStatus": {
+      "failed": "失敗",
+      "success": "已刪除",
+      "uncertain": "狀態不確定"
+    },
+    "deleteResultsTitle": "刪除結果",
     "deleteTitle": "刪除渠道？",
     "deleteTitlePlural": "刪除這些渠道？"
   },
@@ -100,6 +108,7 @@
     "actions": {
       "cancel": "取消",
       "close": "關閉",
+      "refreshChannels": "重新整理渠道清單",
       "refreshPreview": "重新整理預覽",
       "running": "遷移中…",
       "start": "開始遷移"
@@ -159,12 +168,14 @@
       "summary": "預覽結果：{{ready}} 個可遷移，{{blocked}} 個已阻止，共 {{total}} 個渠道。"
     },
     "results": {
+      "refreshRequired": "部分建立結果的狀態不確定。請重新整理渠道清單後再關閉。",
       "status": {
         "failed": "失敗",
         "skipped": "已跳過",
-        "success": "已建立"
+        "success": "已建立",
+        "uncertain": "狀態不確定"
       },
-      "summary": "遷移結果：成功 {{created}} 個，失敗 {{failed}} 個，跳過 {{skipped}} 個，共 {{total}} 個。",
+      "summary": "遷移結果：成功 {{created}} 個，失敗 {{failed}} 個，跳過 {{skipped}} 個，狀態不確定 {{uncertain}} 個，共 {{total}} 個。",
       "title": "遷移結果"
     },
     "target": {

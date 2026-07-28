@@ -24,6 +24,7 @@ import {
 } from "~/features/ManagedSiteChannels/testIds"
 import type { ChannelRow } from "~/features/ManagedSiteChannels/types"
 import { fetchChannelFilters } from "~/features/ManagedSiteChannels/utils/channelFilters"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   getManagedSiteService,
   getManagedSiteServiceForType,
@@ -180,6 +181,16 @@ const waitForChannelsRefreshIdle = () =>
     },
     { timeout: 3000 },
   )
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+  return { promise, reject, resolve }
+}
 
 const rowActionMenuItemNames = [
   "managedSiteChannels:table.rowActions.edit",
@@ -1243,6 +1254,11 @@ describe("ManagedSiteChannels", () => {
     const { rerender } = render(<ManagedSiteChannels refreshKey={0} />)
 
     await waitForRowText("Alpha")
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "managedSiteChannels:table.selectRow",
+      }),
+    )
 
     await user.click(
       screen.getByRole("button", {
@@ -1262,10 +1278,16 @@ describe("ManagedSiteChannels", () => {
     })
 
     resolveSecondRefresh?.({
-      items: [{ id: 3, name: "Gamma", base_url: "https://gamma.example" }],
+      items: [
+        {
+          id: 1,
+          name: "Alpha current",
+          base_url: "https://alpha.example",
+        },
+      ],
     })
 
-    await waitForRowText("Gamma")
+    await waitForRowText("Alpha current")
 
     resolveFirstRefresh?.({
       items: [{ id: 2, name: "Beta", base_url: "https://beta.example" }],
@@ -1273,7 +1295,12 @@ describe("ManagedSiteChannels", () => {
 
     await waitFor(() => {
       expect(screen.queryByText("Beta")).not.toBeInTheDocument()
-      expect(screen.getByText("Gamma")).toBeInTheDocument()
+      expect(screen.getByText("Alpha current")).toBeInTheDocument()
+      expect(
+        screen.getByRole("checkbox", {
+          name: "managedSiteChannels:table.selectRow",
+        }),
+      ).toBeChecked()
     })
     expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
@@ -2384,7 +2411,7 @@ describe("ManagedSiteChannels", () => {
     expect(getDetail).not.toHaveBeenCalled()
   })
 
-  it("keeps row selection attached to the same channel after refreshed rows reorder", async () => {
+  it("keeps row selection attached to the same channel after an accepted refresh renames and reorders rows", async () => {
     const user = userEvent.setup()
     let resolveRefresh: ((value: { items: any[] }) => void) | undefined
 
@@ -2435,14 +2462,18 @@ describe("ManagedSiteChannels", () => {
 
     resolveRefresh?.({
       items: [
-        { id: 2, name: "Beta", base_url: "https://beta.example" },
+        {
+          id: 2,
+          name: "Renamed Beta",
+          base_url: "https://beta.example",
+        },
         { id: 3, name: "Gamma", base_url: "https://gamma.example" },
       ],
     })
 
     await waitForRowText("Gamma")
 
-    const refreshedBetaRow = screen.getByText("Beta").closest("tr")
+    const refreshedBetaRow = screen.getByText("Renamed Beta").closest("tr")
     const gammaRow = screen.getByText("Gamma").closest("tr")
     expect(refreshedBetaRow).toBeTruthy()
     expect(gammaRow).toBeTruthy()
@@ -2454,6 +2485,63 @@ describe("ManagedSiteChannels", () => {
     ).toBeChecked()
     expect(
       within(gammaRow!).getByRole("checkbox", {
+        name: "managedSiteChannels:table.selectRow",
+      }),
+    ).not.toBeChecked()
+  })
+
+  it("clears disappeared row selections only after an accepted refresh", async () => {
+    const user = userEvent.setup()
+    const service = mockChannels([])
+    service.listChannels
+      .mockResolvedValueOnce(
+        buildChannelListData([
+          { id: 1, name: "Alpha", base_url: "https://alpha.example" },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildChannelListData([
+          { id: 2, name: "Beta", base_url: "https://beta.example" },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        buildChannelListData([
+          { id: 1, name: "Alpha returned", base_url: "https://alpha.example" },
+        ]),
+      )
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+    await waitForChannelsRefreshIdle()
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "managedSiteChannels:table.selectRow",
+      }),
+    )
+    expect(
+      screen.getByRole("checkbox", {
+        name: "managedSiteChannels:table.selectRow",
+      }),
+    ).toBeChecked()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.refresh",
+      }),
+    )
+    await waitForRowText("Beta")
+    await waitForChannelsRefreshIdle()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.refresh",
+      }),
+    )
+    await waitForRowText("Alpha returned")
+
+    expect(
+      screen.getByRole("checkbox", {
         name: "managedSiteChannels:table.selectRow",
       }),
     ).not.toBeChecked()
@@ -2542,7 +2630,11 @@ describe("ManagedSiteChannels", () => {
   it("updates the options URL search param when the search input changes", async () => {
     mockChannels([{ id: 1, name: "Alpha", base_url: "https://example.com" }])
 
-    render(<ManagedSiteChannels routeParams={{}} />)
+    render(
+      <ManagedSiteChannels
+        routeParams={{ channelId: "1", nativeView: "compact" }}
+      />,
+    )
 
     await waitForRowText("Alpha")
 
@@ -2552,7 +2644,7 @@ describe("ManagedSiteChannels", () => {
     await waitFor(() => {
       expect(navigateWithinOptionsPage).toHaveBeenCalledWith(
         "#managedSiteChannels",
-        { search: "foo" },
+        { nativeView: "compact", search: "foo" },
       )
     })
   })
@@ -3018,7 +3110,9 @@ describe("ManagedSiteChannels", () => {
     })
 
     await waitFor(() => {
-      expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
+      expect(
+        within(screen.getByRole("table")).queryByText("Alpha"),
+      ).not.toBeInTheDocument()
     })
 
     expect(toast.success).toHaveBeenCalledWith(
@@ -3110,10 +3204,14 @@ describe("ManagedSiteChannels", () => {
     })
 
     await waitFor(() => {
-      expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
+      expect(
+        within(screen.getByRole("table")).queryByText("Alpha"),
+      ).not.toBeInTheDocument()
     })
 
-    expect(screen.getByText("Beta")).toBeInTheDocument()
+    expect(
+      within(screen.getByRole("table")).getByText("Beta"),
+    ).toBeInTheDocument()
     expect(toast.success).toHaveBeenCalledWith(
       "managedSiteChannels:toasts.channelDeleted",
     )
@@ -3134,6 +3232,291 @@ describe("ManagedSiteChannels", () => {
           successCount: 1,
         },
       },
+    )
+  })
+
+  it("runs ordered bulk deletes with limit four, refreshes once, and blocks uncertain replay until recovery", async () => {
+    const user = userEvent.setup()
+    const channels = [
+      { id: 1, name: "Alpha", base_url: "https://alpha.example", key: "a" },
+      { id: 2, name: "Beta", base_url: "https://beta.example", key: "b" },
+      { id: 3, name: "Gamma", base_url: "https://gamma.example", key: "c" },
+      { id: 4, name: "Delta", base_url: "https://delta.example", key: "d" },
+      {
+        id: 5,
+        name: "Epsilon",
+        base_url: "https://epsilon.example",
+        key: "e",
+      },
+      { id: 6, name: "Zeta", base_url: "https://zeta.example", key: "f" },
+    ]
+    const service = mockChannels(channels)
+    service.listChannels
+      .mockResolvedValueOnce(buildChannelListData(channels))
+      .mockRejectedValueOnce(new Error("post-delete refresh failed"))
+      .mockResolvedValueOnce(
+        buildChannelListData(
+          channels.filter((channel) => ![1, 4].includes(channel.id)),
+        ),
+      )
+
+    const deleteDeferreds = new Map<
+      number,
+      ReturnType<typeof createDeferred<{ success: boolean }>>
+    >()
+    service.deleteChannel = vi.fn((_config: unknown, channelId: number) => {
+      const deferred = createDeferred<{ success: boolean }>()
+      deleteDeferreds.set(channelId, deferred)
+      return deferred.promise
+    })
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Zeta")
+    await waitForChannelsRefreshIdle()
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "managedSiteChannels:table.selectAll",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.deleteSelected",
+      }),
+    )
+    const confirmDialog = await screen.findByRole("dialog")
+    await user.click(
+      within(confirmDialog).getByRole("button", {
+        name: "managedSiteChannels:dialog.confirm",
+      }),
+    )
+
+    await waitFor(() => expect(service.deleteChannel).toHaveBeenCalledTimes(4))
+    expect(Array.from(deleteDeferreds.keys())).toEqual([1, 2, 3, 4])
+
+    await act(async () => {
+      deleteDeferreds.get(4)?.resolve({ success: true })
+    })
+    await waitFor(() => expect(service.deleteChannel).toHaveBeenCalledTimes(5))
+    await act(async () => {
+      deleteDeferreds.get(1)?.resolve({ success: true })
+    })
+    await waitFor(() => expect(service.deleteChannel).toHaveBeenCalledTimes(6))
+
+    await act(async () => {
+      deleteDeferreds
+        .get(2)
+        ?.reject(
+          new ApiError(
+            "backend rejected",
+            400,
+            "/api/channel/2",
+            API_ERROR_CODES.BUSINESS_ERROR,
+          ),
+        )
+      deleteDeferreds.get(3)?.reject(new TypeError("Failed to fetch"))
+      deleteDeferreds.get(5)?.reject(new DOMException("Aborted", "AbortError"))
+      deleteDeferreds.get(6)?.reject(new Error("validation failed"))
+    })
+
+    const resultRegion = await screen.findByRole("status", {
+      name: "managedSiteChannels:dialog.deleteResultsTitle",
+    })
+    expect(
+      within(resultRegion)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent),
+    ).toEqual([
+      "AlphamanagedSiteChannels:dialog.deleteResultStatus.success",
+      "BetamanagedSiteChannels:dialog.deleteResultStatus.failed",
+      "GammamanagedSiteChannels:dialog.deleteResultStatus.uncertain",
+      "DeltamanagedSiteChannels:dialog.deleteResultStatus.success",
+      "EpsilonmanagedSiteChannels:dialog.deleteResultStatus.uncertain",
+      "ZetamanagedSiteChannels:dialog.deleteResultStatus.failed",
+    ])
+    expect(service.listChannels).toHaveBeenCalledTimes(2)
+    expect(
+      within(resultRegion).getByText(
+        "managedSiteChannels:dialog.deleteRefreshRequired",
+      ),
+    ).toBeVisible()
+
+    const betaRow = within(screen.getByRole("table"))
+      .getByText("Beta")
+      .closest("tr")
+    expect(betaRow).toBeTruthy()
+    await openRowActionsMenu(betaRow!, user)
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.delete",
+      }),
+    ).toBeNull()
+    await user.keyboard("{Escape}")
+
+    await user.click(
+      within(resultRegion).getByRole("button", {
+        name: "managedSiteChannels:dialog.deleteRefreshAction",
+      }),
+    )
+    await waitFor(() => expect(service.listChannels).toHaveBeenCalledTimes(3))
+    await waitForChannelsRefreshIdle()
+    expect(
+      screen.queryByText("managedSiteChannels:dialog.deleteRefreshRequired"),
+    ).toBeNull()
+
+    const recoveredBetaRow = within(screen.getByRole("table"))
+      .getByText("Beta")
+      .closest("tr")
+    expect(recoveredBetaRow).toBeTruthy()
+    await openRowActionsMenu(recoveredBetaRow!, user)
+    expect(
+      screen.getByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.delete",
+      }),
+    ).toBeVisible()
+  })
+
+  it("does not let an old delete execution refresh or update a newly selected site", async () => {
+    const user = userEvent.setup()
+    let currentManagedSiteType: ManagedSiteType = SITE_TYPES.NEW_API
+    let currentPreferences = buildPreferences({
+      managedSiteType: currentManagedSiteType,
+      withMigrationTarget: true,
+    })
+    const deletion = createDeferred<{ success: boolean }>()
+    const oldService = {
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        adminToken: "token",
+        userId: "1",
+      }),
+      listChannels: vi.fn().mockResolvedValue(
+        buildChannelListData([
+          {
+            id: 1,
+            name: "Alpha",
+            base_url: "https://alpha.example.invalid",
+          },
+        ]),
+      ),
+      deleteChannel: vi.fn().mockReturnValue(deletion.promise),
+    } as any
+    const newService = {
+      siteType: SITE_TYPES.DONE_HUB,
+      messagesKey: "donehub",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://donehub.example",
+        adminToken: "token",
+        userId: "9",
+      }),
+      listChannels: vi.fn().mockResolvedValue(
+        buildChannelListData([
+          {
+            id: 2,
+            name: "Beta",
+            base_url: "https://beta.example.invalid",
+          },
+        ]),
+      ),
+    } as any
+
+    vi.mocked(useUserPreferencesContext).mockImplementation(
+      () =>
+        ({
+          preferences: currentPreferences,
+          managedSiteType: currentManagedSiteType,
+          newApiBaseUrl: currentPreferences.newApi.baseUrl,
+          newApiUserId: currentPreferences.newApi.userId,
+          newApiUsername: currentPreferences.newApi.username,
+          newApiPassword: currentPreferences.newApi.password,
+          newApiTotpSecret: currentPreferences.newApi.totpSecret,
+          updateManagedSiteType: vi.fn().mockResolvedValue(true),
+        }) as any,
+    )
+    vi.mocked(getManagedSiteService).mockImplementation(async () =>
+      currentManagedSiteType === SITE_TYPES.DONE_HUB ? newService : oldService,
+    )
+
+    const { rerender } = render(<ManagedSiteChannels />)
+    await waitForRowText("Alpha")
+    const alphaRow = screen.getByText("Alpha").closest("tr")
+    expect(alphaRow).toBeTruthy()
+    await openRowActionsMenu(alphaRow!, user)
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.delete",
+      }),
+    )
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "managedSiteChannels:dialog.confirm",
+      }),
+    )
+    await waitFor(() => expect(oldService.deleteChannel).toHaveBeenCalled())
+
+    currentManagedSiteType = SITE_TYPES.DONE_HUB
+    currentPreferences = buildPreferences({
+      managedSiteType: currentManagedSiteType,
+      withMigrationTarget: true,
+    })
+    rerender(<ManagedSiteChannels />)
+    await waitForRowText("Beta")
+
+    await act(async () => {
+      deletion.resolve({ success: true })
+      await deletion.promise
+    })
+
+    await waitFor(() => {
+      expect(oldService.listChannels).toHaveBeenCalledTimes(1)
+      expect(newService.listChannels).toHaveBeenCalledTimes(1)
+      expect(screen.getByText("Beta")).toBeInTheDocument()
+    })
+    expect(toast.success).not.toHaveBeenCalledWith(
+      "managedSiteChannels:toasts.channelDeleted",
+    )
+  })
+
+  it("does not refresh or publish delete results after unmount", async () => {
+    const user = userEvent.setup()
+    const deletion = createDeferred<{ success: boolean }>()
+    const service = mockChannels([
+      {
+        id: 1,
+        name: "Alpha",
+        base_url: "https://alpha.example.invalid",
+      },
+    ])
+    service.deleteChannel = vi.fn().mockReturnValue(deletion.promise)
+
+    const { unmount } = render(<ManagedSiteChannels />)
+    await waitForRowText("Alpha")
+    const alphaRow = screen.getByText("Alpha").closest("tr")
+    expect(alphaRow).toBeTruthy()
+    await openRowActionsMenu(alphaRow!, user)
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.delete",
+      }),
+    )
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "managedSiteChannels:dialog.confirm",
+      }),
+    )
+    await waitFor(() => expect(service.deleteChannel).toHaveBeenCalled())
+
+    unmount()
+    await act(async () => {
+      deletion.resolve({ success: true })
+      await deletion.promise
+    })
+
+    expect(service.listChannels).toHaveBeenCalledTimes(1)
+    expect(toast.success).not.toHaveBeenCalledWith(
+      "managedSiteChannels:toasts.channelDeleted",
     )
   })
 
@@ -4090,6 +4473,8 @@ describe("ManagedSiteChannels", () => {
       expect(toast.error).toHaveBeenCalledWith("messages:newapi.configMissing")
     })
     expect(deleteChannel).not.toHaveBeenCalled()
-    expect(screen.getByText("Alpha")).toBeInTheDocument()
+    expect(
+      within(screen.getByRole("table")).getByText("Alpha"),
+    ).toBeInTheDocument()
   })
 })

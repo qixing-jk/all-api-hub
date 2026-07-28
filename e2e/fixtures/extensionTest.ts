@@ -26,7 +26,18 @@ export const test = base.extend<ExtensionFixtures>({
     await run(extensionDir)
   },
 
-  context: async ({ extensionDir }, run, testInfo) => {
+  context: async (
+    {
+      contextOptions,
+      deviceScaleFactor,
+      extensionDir,
+      locale,
+      timezoneId,
+      viewport,
+    },
+    run,
+    testInfo,
+  ) => {
     const headless = testInfo.project.use.headless ?? true
     const reusableUserDataDir = process.env.AAH_E2E_USER_DATA_DIR
       ? path.resolve(process.cwd(), process.env.AAH_E2E_USER_DATA_DIR)
@@ -51,10 +62,14 @@ export const test = base.extend<ExtensionFixtures>({
       | undefined
 
     try {
-      context = await chromium.launchPersistentContext(
-        userDataDir,
-        launchOptions,
-      )
+      context = await chromium.launchPersistentContext(userDataDir, {
+        ...contextOptions,
+        ...launchOptions,
+        deviceScaleFactor,
+        locale,
+        timezoneId,
+        viewport,
+      })
       await stubSponsorRemoteCatalog(context)
 
       await run(context)

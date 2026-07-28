@@ -10,6 +10,14 @@
     "cancel": "Cancelar",
     "confirm": "Eliminar",
     "deleteDescription": "Esta acción no se puede deshacer. Los canales seleccionados se eliminarán permanentemente.",
+    "deleteRefreshAction": "Actualizar canales",
+    "deleteRefreshRequired": "Algunos resultados de eliminación son inciertos. Actualiza la lista de canales antes de volver a eliminar.",
+    "deleteResultStatus": {
+      "failed": "Falló",
+      "success": "Eliminado",
+      "uncertain": "Incierto"
+    },
+    "deleteResultsTitle": "Resultados de eliminación",
     "deleteTitle": "¿Eliminar canal?",
     "deleteTitlePlural": "¿Eliminar canales?"
   },
@@ -100,6 +108,7 @@
     "actions": {
       "cancel": "Cancelar",
       "close": "Cerrar",
+      "refreshChannels": "Actualizar lista de canales",
       "refreshPreview": "Actualizar vista previa",
       "running": "Migrando...",
       "start": "Iniciar migración"
@@ -159,12 +168,14 @@
       "summary": "Vista previa: {{ready}} listos, {{blocked}} bloqueados, {{total}} seleccionados."
     },
     "results": {
+      "refreshRequired": "Algunos resultados de creación son inciertos. Actualiza la lista de canales antes de cerrar.",
       "status": {
         "failed": "Falló",
         "skipped": "Omitido",
-        "success": "Creado"
+        "success": "Creado",
+        "uncertain": "Incierto"
       },
-      "summary": "Resultados: {{created}} creados, {{failed}} fallidos, {{skipped}} omitidos, {{total}} en total.",
+      "summary": "Resultados: {{created}} creados, {{failed}} fallidos, {{skipped}} omitidos, {{uncertain}} inciertos, {{total}} en total.",
       "title": "Resultados de migración"
     },
     "target": {

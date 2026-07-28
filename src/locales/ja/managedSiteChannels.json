@@ -10,6 +10,14 @@
     "cancel": "キャンセル",
     "confirm": "削除",
     "deleteDescription": "この操作は元に戻せません。選択したチャネルは完全に削除されます。",
+    "deleteRefreshAction": "チャネル一覧を更新",
+    "deleteRefreshRequired": "削除結果が不明な項目があります。再度削除する前にチャネル一覧を更新してください。",
+    "deleteResultStatus": {
+      "failed": "失敗",
+      "success": "削除済み",
+      "uncertain": "状態不明"
+    },
+    "deleteResultsTitle": "削除結果",
     "deleteTitle": "チャネルを削除しますか？",
     "deleteTitlePlural": "チャネルを削除しますか？"
   },
@@ -100,6 +108,7 @@
     "actions": {
       "cancel": "キャンセル",
       "close": "閉じる",
+      "refreshChannels": "チャネル一覧を更新",
       "refreshPreview": "プレビューを再読み込み",
       "running": "移行中...",
       "start": "移行を開始"
@@ -159,12 +168,14 @@
       "summary": "プレビュー: 移行可能 {{ready}} 件、ブロック {{blocked}} 件、合計 {{total}} 件。"
     },
     "results": {
+      "refreshRequired": "作成結果が不明な項目があります。閉じる前にチャネル一覧を更新してください。",
       "status": {
         "failed": "失敗",
         "skipped": "スキップ",
-        "success": "作成済み"
+        "success": "作成済み",
+        "uncertain": "状態不明"
       },
-      "summary": "結果: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件、合計 {{total}} 件。",
+      "summary": "結果: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件、状態不明 {{uncertain}} 件、合計 {{total}} 件。",
       "title": "移行結果"
     },
     "target": {

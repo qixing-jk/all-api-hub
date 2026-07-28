@@ -9,58 +9,57 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
-import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
-  type ProductAnalyticsActionId,
-} from "~/services/productAnalytics/contracts"
 
-import type { ChannelRow, RowActionsLabels } from "../types"
+export type RowActionsLabels = {
+  trigger: string
+  edit: string
+  view: string
+  migrate: string
+  sync: string
+  syncing: string
+  openSync: string
+  filters: string
+  delete: string
+}
 
-interface RowActionsProps {
-  channel: ChannelRow
-  onEdit: (channel: ChannelRow) => void
-  onView: (channel: ChannelRow) => void
-  onMigrate: (channel: ChannelRow) => void
-  onDelete: (ids: number[]) => void
-  onSync: (channelIds: number[]) => Promise<void>
-  onOpenSync: (channelId: number) => Promise<void>
-  onFilters: (channel: ChannelRow) => void
-  canMigrate: boolean
+export type RowActionsProps = {
+  rowKey: string
+  displayName: string
+  capabilities: {
+    canEdit?: boolean
+    canView?: boolean
+    canDelete?: boolean
+    canMigrate?: boolean
+    canSync?: boolean
+    canOpenSync?: boolean
+    canFilter?: boolean
+  }
   showMigrationAction: boolean
-  showNewApiOnlyActions?: boolean
+  showNewApiOnlyActions: boolean
   isSyncing: boolean
+  onEdit?: (rowKey: string) => void
+  onView?: (rowKey: string) => void
+  onMigrate?: (rowKey: string) => void
+  onDelete?: (rowKey: string) => void
+  onSync?: (rowKey: string) => Promise<void>
+  onOpenSync?: (rowKey: string) => Promise<void>
+  onFilters?: (rowKey: string) => void
   labels: RowActionsLabels
-  testIds?: {
+  testIds: {
     trigger: string
     edit: string
     delete: string
   }
 }
 
-const trackManagedSiteChannelRowAction = (
-  actionId: ProductAnalyticsActionId,
-) => {
-  void trackProductAnalyticsActionStarted({
-    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-    actionId,
-    surfaceId:
-      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
-    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-  })
-}
-
-/**
- * Dropdown actions available for each channel row.
- * - Migration mode renders view + migrate.
- * - Standard mode renders edit + delete, with filters/sync controls gated by
- *   `showNewApiOnlyActions`.
- */
+/** Pure row-action presentation. Domain resolution and analytics stay upstream. */
 export default function RowActions({
-  channel,
+  rowKey,
+  displayName,
+  capabilities,
+  showMigrationAction,
+  showNewApiOnlyActions,
+  isSyncing,
   onEdit,
   onView,
   onMigrate,
@@ -68,10 +67,6 @@ export default function RowActions({
   onSync,
   onOpenSync,
   onFilters,
-  canMigrate,
-  showMigrationAction,
-  showNewApiOnlyActions = true,
-  isSyncing,
   labels,
   testIds,
 }: RowActionsProps) {
@@ -79,17 +74,25 @@ export default function RowActions({
   const isActionPendingRef = useRef(false)
 
   const handleSync = async () => {
-    if (isActionPendingRef.current) return
+    if (!onSync || isActionPendingRef.current) return
 
     isActionPendingRef.current = true
     setIsActionPending(true)
     try {
-      await onSync([channel.id])
+      await onSync(rowKey)
     } finally {
       isActionPendingRef.current = false
       setIsActionPending(false)
     }
   }
+
+  const canView = capabilities.canView && onView
+  const canMigrate = capabilities.canMigrate && onMigrate
+  const canEdit = capabilities.canEdit && onEdit
+  const canFilter = capabilities.canFilter && onFilters
+  const canOpenSync = capabilities.canOpenSync && onOpenSync
+  const canSync = capabilities.canSync && onSync
+  const canDelete = capabilities.canDelete && onDelete
 
   return (
     <DropdownMenu>
@@ -99,95 +102,74 @@ export default function RowActions({
           variant="ghost"
           className="h-8 w-8"
           aria-label={labels.trigger}
-          data-testid={testIds?.trigger}
+          title={displayName}
+          data-testid={testIds.trigger}
           disabled={isSyncing}
           loading={isActionPending}
         >
           <Ellipsis className="h-4 w-4" />
         </IconButton>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
+      <DropdownMenuContent align="end">
         {showMigrationAction ? (
           <>
-            <DropdownMenuItem
-              onClick={() => {
-                onView(channel)
-                trackManagedSiteChannelRowAction(
-                  PRODUCT_ANALYTICS_ACTION_IDS.ViewManagedSiteChannel,
-                )
-              }}
-            >
-              {labels.view}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => {
-                onMigrate(channel)
-                trackManagedSiteChannelRowAction(
-                  PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelMigration,
-                )
-              }}
-              disabled={!canMigrate}
-            >
-              {labels.migrate}
-            </DropdownMenuItem>
+            {canView ? (
+              <DropdownMenuItem onClick={() => onView(rowKey)}>
+                {labels.view}
+              </DropdownMenuItem>
+            ) : null}
+            {canView && canMigrate ? <DropdownMenuSeparator /> : null}
+            {canMigrate ? (
+              <DropdownMenuItem onClick={() => onMigrate(rowKey)}>
+                {labels.migrate}
+              </DropdownMenuItem>
+            ) : null}
           </>
         ) : (
           <>
-            <DropdownMenuItem
-              data-testid={testIds?.edit}
-              onClick={() => {
-                onEdit(channel)
-                trackManagedSiteChannelRowAction(
-                  PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteChannel,
-                )
-              }}
-            >
-              {labels.edit}
-            </DropdownMenuItem>
-            {showNewApiOnlyActions ? (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => {
-                    onFilters(channel)
-                    trackManagedSiteChannelRowAction(
-                      PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelFilters,
-                    )
-                  }}
-                >
-                  {labels.filters}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    void onOpenSync(channel.id)
-                    trackManagedSiteChannelRowAction(
-                      PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelModelSync,
-                    )
-                  }}
-                >
-                  {labels.openSync}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    void handleSync()
-                  }}
-                  disabled={isSyncing}
-                >
-                  {isSyncing ? labels.syncing : labels.sync}
-                </DropdownMenuItem>
-              </>
+            {canEdit ? (
+              <DropdownMenuItem
+                data-testid={testIds.edit}
+                onClick={() => onEdit(rowKey)}
+              >
+                {labels.edit}
+              </DropdownMenuItem>
             ) : null}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              data-testid={testIds?.delete}
-              className="text-destructive focus:text-destructive"
-              onClick={() => {
-                onDelete([channel.id])
-              }}
-            >
-              {labels.delete}
-            </DropdownMenuItem>
+            {showNewApiOnlyActions &&
+            (canFilter || canOpenSync || canSync) &&
+            canEdit ? (
+              <DropdownMenuSeparator />
+            ) : null}
+            {showNewApiOnlyActions && canFilter ? (
+              <DropdownMenuItem onClick={() => onFilters(rowKey)}>
+                {labels.filters}
+              </DropdownMenuItem>
+            ) : null}
+            {showNewApiOnlyActions && canOpenSync ? (
+              <DropdownMenuItem onClick={() => void onOpenSync(rowKey)}>
+                {labels.openSync}
+              </DropdownMenuItem>
+            ) : null}
+            {showNewApiOnlyActions && canSync ? (
+              <DropdownMenuItem
+                onClick={() => void handleSync()}
+                disabled={isSyncing}
+              >
+                {isSyncing ? labels.syncing : labels.sync}
+              </DropdownMenuItem>
+            ) : null}
+            {canDelete && (canEdit || canFilter || canOpenSync || canSync) ? (
+              <DropdownMenuSeparator />
+            ) : null}
+            {canDelete ? (
+              <DropdownMenuItem
+                data-testid={testIds.delete}
+                className="text-destructive focus:text-destructive"
+                onClick={() => onDelete(rowKey)}
+              >
+                {labels.delete}
+              </DropdownMenuItem>
+            ) : null}
           </>
         )}
       </DropdownMenuContent>

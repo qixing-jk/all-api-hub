@@ -864,6 +864,14 @@ describe("ChannelDialog behavior", () => {
         name: "channelDialog:actions.loadRealKey",
       }),
     ).toBeNull()
+    expect(screen.queryByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)).toBeNull()
+    expect(screen.getByLabelText("Alpha")).toHaveTextContent(
+      "channelDialog:fields.baseUrl.label",
+    )
+    expect(screen.getByLabelText("Alpha")).toHaveTextContent(
+      "https://upstream.example.com",
+    )
+    expect(screen.getByLabelText("Alpha")).not.toHaveTextContent("sk-masked")
 
     const form = container.querySelector("form")
     expect(form).toBeTruthy()

@@ -6,6 +6,7 @@ import {
   DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS,
 } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -642,6 +643,23 @@ describe("Claude Code Hub managed-site provider", () => {
         success: false,
         data: null,
         message: "delete failed",
+      },
+    )
+
+    mockDeleteProvider.mockRejectedValueOnce(
+      new ApiError(
+        "network unavailable",
+        undefined,
+        "/api/provider/21",
+        API_ERROR_CODES.NETWORK_ERROR,
+      ),
+    )
+    await expect(deleteChannel(passedClaudeCodeHubConfig, 21)).resolves.toEqual(
+      {
+        success: false,
+        data: null,
+        message: "network unavailable",
+        certainty: "uncertain",
       },
     )
   })
