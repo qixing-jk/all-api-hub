@@ -34,6 +34,8 @@ import {
   getAccountSiteProductProfileOverride,
   getAccountSiteTypeValues,
   getManagedSiteTypeValues,
+  MANAGED_RESOURCE_KINDS,
+  MANAGED_RESOURCE_MODES,
   MANAGED_SITE_TYPES,
   OPENROUTER_HOSTNAMES,
   OPENROUTER_WEB_ORIGIN,
@@ -49,6 +51,7 @@ import {
   SITE_TYPE_DEFINITIONS,
 } from "~/services/accountSiteDefinitions/definitions"
 import type { SiteType } from "~/services/accountSiteDefinitions/identifiers"
+import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { MODEL_LIST_ACCOUNT_SOURCE_ROUTES } from "~/services/modelList/accountSources/readiness"
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_TODAY_METRIC_REASONS } from "~/types/accountTodayStats"
@@ -279,29 +282,49 @@ describe("account site definition registry", () => {
     }
   })
 
-  it("gives every managed site an explicit managed-resource policy", () => {
+  it("keeps every managed-resource mode explicit in the static definitions", () => {
+    const expectedModes = new Map<ManagedSiteType, string>([
+      [SITE_TYPES.NEW_API, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.VELOERA, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.DONE_HUB, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.OCTOPUS, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.AXON_HUB, MANAGED_RESOURCE_MODES.NativeResource],
+      [SITE_TYPES.CLAUDE_CODE_HUB, MANAGED_RESOURCE_MODES.LegacyChannel],
+    ])
+
     for (const siteType of MANAGED_SITE_TYPES) {
       expect(getAccountSiteDefinition(siteType)?.managedResource).toMatchObject(
         {
-          mode: "legacy-channel",
-          primaryKind: "channel",
+          mode: expectedModes.get(siteType),
+          primaryKind: MANAGED_RESOURCE_KINDS.Channel,
           settingsTarget: { tabId: "managedSite" },
         },
       )
     }
   })
 
-  it("keeps AxonHub on the legacy channel path until UI cutover", () => {
-    expect(
-      getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource,
-    ).toMatchObject({
-      mode: "legacy-channel",
-      primaryKind: "channel",
+  it("switches AxonHub to the registered native channel path", () => {
+    const policy = getAccountSiteDefinition(
+      SITE_TYPES.AXON_HUB,
+    )?.managedResource
+
+    expect(policy).toMatchObject({
+      mode: MANAGED_RESOURCE_MODES.NativeResource,
+      primaryKind: MANAGED_RESOURCE_KINDS.Channel,
       settingsTarget: {
         tabId: "managedSite",
         anchor: SETTINGS_ANCHORS.AXON_HUB,
       },
       actions: ["create", "delete-selected", "migrate"],
+    })
+    expect(
+      getManagedResourceRegistration(
+        SITE_TYPES.AXON_HUB,
+        MANAGED_RESOURCE_KINDS.Channel,
+      ),
+    ).toMatchObject({
+      siteType: SITE_TYPES.AXON_HUB,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
     })
   })
 

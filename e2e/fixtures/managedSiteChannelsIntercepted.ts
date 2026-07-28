@@ -1,6 +1,7 @@
 import type { BrowserContext, Page, Route } from "@playwright/test"
 
 import { ChannelType } from "~/constants"
+import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -14,6 +15,11 @@ import { getServiceWorker } from "~~/e2e/utils/extensionState"
 const INTERCEPTED_MANAGED_SITE_ORIGIN = "https://managed.example.invalid"
 const INTERCEPTED_MANAGED_SITE_TARGET_ORIGIN =
   "https://managed-target.example.invalid"
+const INTERCEPTED_AXON_HUB_ORIGIN = "https://axonhub.example.invalid"
+
+const AXON_HUB_PRIMARY_ID = "gid://axonhub/Channel/opaque-primary"
+const AXON_HUB_SECONDARY_ID = "gid://axonhub/Channel/opaque-secondary"
+const AXON_HUB_NEXT_CURSOR = "axonhub-cursor-page-2"
 
 const channel = (overrides: Partial<ManagedSiteChannel>): ManagedSiteChannel =>
   ({
@@ -45,11 +51,144 @@ const interceptedManagedSiteChannels = [
   }),
 ]
 
+let interceptedAxonHubPrimaryName = "Example primary"
+let interceptedAxonHubPrimaryTags = ["fixture-tag"]
+let interceptedAxonHubUpdateVariables: Record<string, unknown> | null = null
+let interceptedAxonHubListRequestCount = 0
+
+const axonHubSummary = (params: {
+  id: string
+  name: string
+  tags: readonly string[]
+  baseURL: string
+  supportedModels: readonly string[]
+}) => ({
+  id: params.id,
+  type: "openai",
+  baseURL: params.baseURL,
+  name: params.name,
+  status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+  tags: [...params.tags],
+  supportedModels: [...params.supportedModels],
+})
+
+const axonHubSettings = () => ({
+  extraModelPrefix: null,
+  modelMappings: [],
+  autoTrimedModelPrefixes: [],
+  hideOriginalModels: null,
+  hideMappedModels: null,
+  lowercaseModelId: null,
+  proxy: { type: "URL", url: null, username: null, password: null },
+  transformOptions: {
+    forceArrayInstructions: false,
+    forceArrayInputs: false,
+    replaceDeveloperRoleWithSystem: false,
+    reasoningEffortMapping: null,
+  },
+  headerOverrideOperations: [],
+  bodyOverrideOperations: [],
+  passThroughUserAgent: null,
+  passThroughBody: null,
+  rateLimit: {
+    rpm: null,
+    tpm: null,
+    maxConcurrent: null,
+    queueSize: null,
+    queueTimeoutMs: null,
+  },
+  retryableStatusCodes: [],
+  retryableErrorPatterns: [],
+  providerQuota: { opencodeGo: { workspaceId: null, authCookie: null } },
+})
+
+const axonHubDetail = (params: {
+  id: string
+  name: string
+  tags: readonly string[]
+  baseURL: string
+  supportedModels: readonly string[]
+}) => ({
+  __typename: "Channel",
+  id: params.id,
+  createdAt: "2026-07-20T00:00:00Z",
+  updatedAt: "2026-07-20T00:00:00Z",
+  type: "openai",
+  baseURL: params.baseURL,
+  name: params.name,
+  status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+  policies: { stream: null },
+  credentials: {
+    apiKey: null,
+    apiKeys: ["sk-axonhub-fixture"],
+    gcp: null,
+    oauth: null,
+  },
+  supportedModels: [...params.supportedModels],
+  autoSyncSupportedModels: false,
+  autoSyncModelPattern: null,
+  manualModels: [...params.supportedModels],
+  tags: [...params.tags],
+  defaultTestModel: params.supportedModels[0] ?? "model-alpha",
+  settings: axonHubSettings(),
+  orderingWeight: 0,
+  errorMessage: null,
+  remark: null,
+  endpoints: null,
+  disabledAPIKeys: null,
+})
+
+function getAxonHubPrimarySummary() {
+  return axonHubSummary({
+    id: AXON_HUB_PRIMARY_ID,
+    name: interceptedAxonHubPrimaryName,
+    tags: interceptedAxonHubPrimaryTags,
+    baseURL: "https://upstream.example.invalid/v1",
+    supportedModels: ["model-alpha"],
+  })
+}
+
+function getAxonHubSecondarySummary() {
+  return axonHubSummary({
+    id: AXON_HUB_SECONDARY_ID,
+    name: "Example secondary",
+    tags: ["secondary-tag"],
+    baseURL: "https://secondary.example.invalid/v1",
+    supportedModels: ["model-beta"],
+  })
+}
+
+function getAxonHubPrimaryDetail() {
+  return axonHubDetail({
+    id: AXON_HUB_PRIMARY_ID,
+    name: interceptedAxonHubPrimaryName,
+    tags: interceptedAxonHubPrimaryTags,
+    baseURL: "https://upstream.example.invalid/v1",
+    supportedModels: ["model-alpha"],
+  })
+}
+
+export function getInterceptedAxonHubUpdateVariables() {
+  return interceptedAxonHubUpdateVariables
+}
+
+export function getInterceptedAxonHubListRequestCount() {
+  return interceptedAxonHubListRequestCount
+}
+
 async function fulfill(route: Route, body: unknown) {
   await route.fulfill({
     status: 200,
     contentType: "application/json",
     body: JSON.stringify(body),
+  })
+}
+
+async function fulfillGraphQLError(route: Route, message: string) {
+  await route.fulfill({
+    status: 400,
+    contentType: "application/json",
+    body: JSON.stringify({ errors: [{ message }] }),
   })
 }
 
@@ -86,6 +225,115 @@ async function installManagedSiteChannelsIntercepts(context: BrowserContext) {
   )
 }
 
+async function installAxonHubIntercepts(context: BrowserContext) {
+  interceptedAxonHubPrimaryName = "Example primary"
+  interceptedAxonHubPrimaryTags = ["fixture-tag"]
+  interceptedAxonHubUpdateVariables = null
+  interceptedAxonHubListRequestCount = 0
+
+  await context.route(`${INTERCEPTED_AXON_HUB_ORIGIN}/**`, async (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname === "/admin/auth/signin") {
+      await fulfill(route, { token: "axonhub-fixture-session" })
+      return
+    }
+
+    if (url.pathname !== "/admin/graphql") {
+      await route.fulfill({ status: 404, body: "fixture route not configured" })
+      return
+    }
+
+    const body = JSON.parse(route.request().postData() ?? "{}") as {
+      query?: string
+      variables?: Record<string, unknown>
+    }
+    const query = body.query ?? ""
+
+    if (query.includes("query ListAxonHubChannelPage")) {
+      interceptedAxonHubListRequestCount += 1
+      const input = body.variables?.input as
+        | { after?: string | null }
+        | undefined
+      const after = input?.after
+      if (
+        after !== undefined &&
+        after !== null &&
+        after !== AXON_HUB_NEXT_CURSOR
+      ) {
+        await fulfillGraphQLError(route, "Unsupported fixture page cursor.")
+        return
+      }
+      const isSecondPage = after === AXON_HUB_NEXT_CURSOR
+      await fulfill(route, {
+        data: {
+          queryChannels: {
+            edges: [
+              {
+                node: isSecondPage
+                  ? getAxonHubSecondarySummary()
+                  : getAxonHubPrimarySummary(),
+                cursor: isSecondPage ? "axonhub-edge-2" : "axonhub-edge-1",
+              },
+            ],
+            pageInfo: {
+              hasNextPage: !isSecondPage,
+              endCursor: isSecondPage ? null : AXON_HUB_NEXT_CURSOR,
+            },
+            totalCount: 2,
+          },
+        },
+      })
+      return
+    }
+
+    if (query.includes("query GetAxonHubChannel")) {
+      const id = body.variables?.id
+      if (id !== AXON_HUB_PRIMARY_ID && id !== AXON_HUB_SECONDARY_ID) {
+        await fulfillGraphQLError(route, "Unknown fixture channel ID.")
+        return
+      }
+      await fulfill(route, {
+        data: {
+          node:
+            id === AXON_HUB_PRIMARY_ID
+              ? getAxonHubPrimaryDetail()
+              : axonHubDetail({
+                  id: AXON_HUB_SECONDARY_ID,
+                  name: "Example secondary",
+                  tags: ["secondary-tag"],
+                  baseURL: "https://secondary.example.invalid/v1",
+                  supportedModels: ["model-beta"],
+                }),
+        },
+      })
+      return
+    }
+
+    if (query.includes("mutation UpdateChannel(")) {
+      interceptedAxonHubUpdateVariables = body.variables ?? null
+      const input = (body.variables?.input ?? {}) as {
+        name?: string
+        tags?: string[]
+      }
+      if (typeof input.name === "string") {
+        interceptedAxonHubPrimaryName = input.name
+      }
+      if (Array.isArray(input.tags)) {
+        interceptedAxonHubPrimaryTags = input.tags
+      }
+      await fulfill(route, {
+        data: { updateChannel: getAxonHubPrimaryDetail() },
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: 400,
+      body: "unexpected AxonHub GraphQL operation",
+    })
+  })
+}
+
 export async function openInterceptedManagedSiteChannels(params: {
   context: BrowserContext
   page: Page
@@ -102,6 +350,34 @@ export async function openInterceptedManagedSiteChannels(params: {
       username: "",
       password: "",
       totpSecret: "",
+    },
+    doneHub: {
+      baseUrl: INTERCEPTED_MANAGED_SITE_TARGET_ORIGIN,
+      adminToken: "fixture-target-admin-token",
+      userId: "9",
+    },
+  })
+
+  const url = new URL(
+    `chrome-extension://${params.extensionId}/${OPTIONS_PAGE_PATH}`,
+  )
+  url.hash = MENU_ITEM_IDS.MANAGED_SITE_CHANNELS
+  await params.page.goto(url.toString())
+}
+
+export async function openInterceptedAxonHubManagedSiteChannels(params: {
+  context: BrowserContext
+  page: Page
+  extensionId: string
+}) {
+  await forceExtensionLanguage(params.page, "en")
+  await installAxonHubIntercepts(params.context)
+  await seedUserPreferences(await getServiceWorker(params.context), {
+    managedSiteType: SITE_TYPES.AXON_HUB,
+    axonHub: {
+      baseUrl: INTERCEPTED_AXON_HUB_ORIGIN,
+      email: "admin@example.invalid",
+      password: "fixture-password",
     },
     doneHub: {
       baseUrl: INTERCEPTED_MANAGED_SITE_TARGET_ORIGIN,

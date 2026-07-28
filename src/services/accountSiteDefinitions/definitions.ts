@@ -450,6 +450,7 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
+      mode: MANAGED_RESOURCE_MODES.NativeResource,
       tableFieldIds: AXON_HUB_TABLE_FIELD_IDS,
       detailFieldIds: AXON_HUB_EDITABLE_FIELD_IDS,
       actions: [

@@ -563,6 +563,32 @@ describe("ManagedSiteChannelsRoute", () => {
     })
   })
 
+  it("routes the production AxonHub definition through native controllers", () => {
+    installNativeControllers()
+    configureNativePreferences(SITE_TYPES.AXON_HUB)
+
+    render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.AXON_HUB}
+        routeParams={{ nativeView: "compact" }}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+
+    expect(
+      definitionRegistry.getAccountSiteDefinition(SITE_TYPES.AXON_HUB)
+        ?.managedResource?.mode,
+    ).toBe(MANAGED_RESOURCE_MODES.NativeResource)
+    expect(
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton),
+    ).toBeVisible()
+    expect(legacyRender).not.toHaveBeenCalled()
+    expect(useListController).toHaveBeenCalled()
+    expect(
+      screen.getByText("managedSiteChannels:resourceDescription"),
+    ).toBeVisible()
+  })
+
   it.each([
     [
       MANAGED_RESOURCE_FAILURE_CODES.AuthenticationFailed,
@@ -593,6 +619,27 @@ describe("ManagedSiteChannelsRoute", () => {
     const alert = screen.getByRole("alert")
     expect(alert).toHaveTextContent(`${keyPrefix}.title`)
     expect(alert).toHaveTextContent(`${keyPrefix}.description`)
+  })
+
+  it("maps confirmed native saves to the existing localized success toast", () => {
+    installNativeControllers()
+    configureNativePreferences(SITE_TYPES.AXON_HUB)
+
+    render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.AXON_HUB}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+
+    const mutationOptions = useMutationController.mock.calls.at(-1)?.[0]
+    mutationOptions?.onMutationSuccess("create")
+    mutationOptions?.onMutationSuccess("edit")
+
+    expect(toastSuccess.mock.calls).toEqual([
+      ["managedSiteChannels:toasts.channelSaved"],
+      ["managedSiteChannels:toasts.channelUpdated"],
+    ])
   })
 
   it("keeps the shared legacy and native route surfaces structurally aligned", () => {

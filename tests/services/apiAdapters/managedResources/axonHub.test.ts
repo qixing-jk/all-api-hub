@@ -2143,7 +2143,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     ).toBeNull()
   })
 
-  it("keeps registration present while the production rollout remains legacy", () => {
+  it("keeps registration presence and native rollout mode explicit", () => {
     expect(
       getManagedResourceRegistration(
         SITE_TYPES.AXON_HUB,
@@ -2154,7 +2154,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       accountSiteDefinitionRegistry.getAccountSiteDefinition(
         SITE_TYPES.AXON_HUB,
       )?.managedResource?.mode,
-    ).toBe(MANAGED_RESOURCE_MODES.LegacyChannel)
+    ).toBe(MANAGED_RESOURCE_MODES.NativeResource)
   })
 
   it("has a registration for every definition currently marked native-resource", () => {
