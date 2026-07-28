@@ -79,6 +79,7 @@ describe("managedResourcePresentation", () => {
     const mapper = createManagedResourcePresentationMapper()
     const facts = {
       ...createManagedResourceFacts("secret-id"),
+      displayName: "Safe display name",
       fields: [
         { fieldId: "backendMessage", kind: "text", value: "private" } as const,
         { fieldId: "key", kind: "secret", state: "available" } as const,
