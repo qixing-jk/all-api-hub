@@ -1,6 +1,6 @@
 import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
-import { ReactNode, useRef, type MouseEvent } from "react"
+import { ReactNode, useRef, type MouseEvent, type PointerEvent } from "react"
 
 import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
@@ -73,10 +73,29 @@ export function Modal({
   size = "md",
 }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null)
+  const backdropPointerDownTargetRef = useRef<HTMLDivElement | null>(null)
+
+  const handleBackdropPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    backdropPointerDownTargetRef.current =
+      event.target === event.currentTarget ? event.currentTarget : null
+  }
 
   const handleBackdropClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (event.target !== event.currentTarget || !closeOnBackdropClick) return
-    onClose()
+    const pointerDownTarget = backdropPointerDownTargetRef.current
+    // Keep programmatic and assistive click dismissal compatible even though
+    // those clicks do not have a preceding pointer event.
+    const isNonPointerClick = pointerDownTarget === null && event.detail === 0
+    const shouldClose =
+      closeOnBackdropClick &&
+      event.target === event.currentTarget &&
+      (pointerDownTarget === event.currentTarget || isNonPointerClick)
+
+    backdropPointerDownTargetRef.current = null
+    if (shouldClose) onClose()
+  }
+
+  const handleBackdropPointerCancel = () => {
+    backdropPointerDownTargetRef.current = null
   }
 
   const shouldCloseOnEscape = () => {
@@ -109,6 +128,8 @@ export function Modal({
             "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 bg-black/30 backdrop-blur-sm",
             Z_INDEX.modal,
           )}
+          onPointerDown={handleBackdropPointerDown}
+          onPointerCancel={handleBackdropPointerCancel}
           onClick={handleBackdropClick}
         />
 
@@ -137,6 +158,8 @@ export function Modal({
             <div
               className="flex items-center justify-center p-4"
               data-slot="modal-positioner"
+              onPointerDown={handleBackdropPointerDown}
+              onPointerCancel={handleBackdropPointerCancel}
               onClick={handleBackdropClick}
             >
               <div

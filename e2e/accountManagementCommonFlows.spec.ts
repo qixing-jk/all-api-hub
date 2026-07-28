@@ -147,6 +147,49 @@ test.beforeEach(async ({ context, page }) => {
   await stubLlmMetadataIndex(context)
 })
 
+test("keeps the add account dialog open when text selection ends over its backdrop", async ({
+  extensionId,
+  page,
+}) => {
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
+
+  const panel = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+  const positioner = page.locator('[data-slot="modal-positioner"]')
+  const heading = panel.getByRole("heading", { name: "Add Account" })
+  await expect(panel).toBeVisible()
+  await expect(positioner).toBeVisible()
+  await expect(heading).toBeVisible()
+
+  const [headingBox, panelBox, positionerBox] = await Promise.all([
+    heading.boundingBox(),
+    panel.boundingBox(),
+    positioner.boundingBox(),
+  ])
+  if (!headingBox || !panelBox || !positionerBox) {
+    throw new Error("Could not resolve add account dialog geometry")
+  }
+
+  await page.mouse.move(
+    headingBox.x + headingBox.width / 2,
+    headingBox.y + headingBox.height / 2,
+  )
+  await page.mouse.down()
+  await page.mouse.move(
+    Math.max(positionerBox.x + 1, panelBox.x - 8),
+    headingBox.y + headingBox.height / 2,
+    { steps: 10 },
+  )
+  await page.mouse.up()
+
+  await expect(panel).toBeVisible()
+})
+
 test("disables and re-enables a stored account from account management", async ({
   context,
   extensionId,
