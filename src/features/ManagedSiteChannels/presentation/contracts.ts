@@ -86,6 +86,7 @@ export type ManagedChannelsPagination = { pageIndex: number; pageSize: number }
 export type ManagedChannelsFailureState = {
   message: string
   category?: string
+  variant?: "destructive" | "warning"
 }
 
 export type ManagedChannelsDeleteState = {
@@ -272,6 +273,10 @@ export type ManagedSiteMigrationPreviewState = {
 
 export type ManagedSiteMigrationResult = {
   summary: string
+  /** Uncertain work requires a fresh target read before the dialog can close. */
+  refreshRequired?: boolean
+  /** Settled results never offer replay from the stale preview. */
+  canReplay?: false
   items: Array<{
     rowKey: string
     displayIdentifier: string
@@ -319,7 +324,7 @@ export type ManagedSiteMigrationCallbacks = {
   onTargetChange: (target: string) => void
   onRefreshPreview: () => void
   onRecoverRefreshRequired: () => void | Promise<void>
-  onConfirm: () => void
+  onConfirm: () => void | Promise<void>
   onClose: () => void
   onOpenConfirmation: () => void
   onCloseConfirmation: () => void

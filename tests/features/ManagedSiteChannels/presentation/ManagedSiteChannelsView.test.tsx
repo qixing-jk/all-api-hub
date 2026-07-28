@@ -366,18 +366,22 @@ describe("ManagedSiteChannelsView", () => {
 
   it("routes the controlled configuration recovery action", async () => {
     const user = userEvent.setup()
-    const onConfigurationRequired = vi.fn()
+    const onRefresh = vi.fn()
     render(
       <ManagedSiteChannelsView
         {...commonProps}
         state={createState({ isConfigurationMissing: true })}
-        callbacks={createCallbacks({ onConfigurationRequired })}
+        callbacks={createCallbacks({ onRefresh })}
       />,
     )
 
-    expect(screen.getByText("Configuration required")).toBeVisible()
-    await user.click(screen.getByRole("button", { name: "Go to settings" }))
-    expect(onConfigurationRequired).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByText("common:status.configurationRequired"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(onRefresh).toHaveBeenCalledTimes(1)
   })
 
   it("keeps toolbar order and common columns while emitting opaque row keys", async () => {

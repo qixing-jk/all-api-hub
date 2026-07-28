@@ -5,6 +5,7 @@ import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedSiteChannelMigrationDialog } from "~/features/ManagedSiteChannels/components/ManagedSiteChannelMigrationDialog"
+import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import {
   executeManagedSiteChannelMigration,
   prepareManagedSiteChannelMigrationPreview,
@@ -762,6 +763,52 @@ describe("ManagedSiteChannelMigrationDialog", () => {
       ),
     ).not.toHaveLength(0)
     expect(screen.getAllByText("Target draft failed").length).toBeGreaterThan(0)
+  })
+
+  it("renders unsupported source type recovery without credential guidance", async () => {
+    mockedPreparePreview.mockResolvedValueOnce({
+      ...previewPayload,
+      readyCount: 0,
+      blockedCount: 1,
+      totalCount: 1,
+      items: [
+        {
+          ...previewPayload.items[0],
+          status: "blocked",
+          draft: null,
+          blockingReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_TYPE_UNSUPPORTED,
+          blockingMessage:
+            "The source channel type is not supported for migration. Choose a supported channel or migrate it manually.",
+          warningCodes: [],
+        },
+      ],
+    })
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.AXON_HUB}
+        availableTargets={availableTargets}
+      />,
+    )
+
+    expect(
+      await screen.findAllByText(
+        "managedSiteChannels:migration.blockedReasons.sourceTypeUnsupported",
+      ),
+    ).not.toHaveLength(0)
+    expect(
+      enManagedSiteChannels.migration.blockedReasons.sourceTypeUnsupported,
+    ).toBe(
+      "This source channel type is not supported for migration. Choose a supported channel or migrate it manually.",
+    )
+    expect(
+      enManagedSiteChannels.migration.blockedReasons.sourceTypeUnsupported,
+    ).not.toMatch(/key|credential/i)
   })
 
   it("restores manual preview refresh after rejection and allows retry", async () => {

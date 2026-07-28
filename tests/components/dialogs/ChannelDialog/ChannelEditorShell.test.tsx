@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { ChannelEditorShell } from "~/components/dialogs/ChannelDialog/components/ChannelEditorShell"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 
 describe("ChannelEditorShell", () => {
   it("preserves modal close and submit semantics", async () => {
@@ -28,6 +29,8 @@ describe("ChannelEditorShell", () => {
     )
 
     const submit = screen.getByTestId("channel-submit")
+    expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.header)).toBeVisible()
+    expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.footer)).toBeVisible()
     expect(submit).toHaveAccessibleName("Create")
     expect(screen.getByText("Create channel")).toHaveClass(
       "dark:text-dark-text-primary",

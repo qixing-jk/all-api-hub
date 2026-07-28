@@ -33,12 +33,51 @@ export const MANAGED_RESOURCE_FIELD_ISSUE_CODES = {
   InconsistentValue: "inconsistent_value",
 } as const
 
+export const MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS = {
+  MultipleCredentials: "multiple_credentials",
+} as const
+
+export type ResourceSecretReplacementBlockReason =
+  (typeof MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS)[keyof typeof MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS]
+
 export type ManagedResourceRef = {
   siteType: ManagedSiteType
   kind: ManagedResourceKind
   scopeKey: string
   resourceId: string
 }
+
+/** Validates an untrusted public resource ref before any adapter capability access. */
+export const isManagedResourceRef = (
+  value: unknown,
+): value is ManagedResourceRef => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false
+  }
+  const candidate = value as Record<string, unknown>
+  return (
+    typeof candidate.siteType === "string" &&
+    typeof candidate.kind === "string" &&
+    typeof candidate.scopeKey === "string" &&
+    candidate.scopeKey.length > 0 &&
+    candidate.scopeKey.length <= 2048 &&
+    typeof candidate.resourceId === "string" &&
+    candidate.resourceId.length > 0 &&
+    candidate.resourceId.length <= 512
+  )
+}
+
+/** Validates a public ref against the operation-owned identity and optional scope. */
+export const isManagedResourceRefFor = (
+  value: unknown,
+  expected: Pick<ManagedResourceRef, "siteType" | "kind"> & {
+    scopeKey?: string
+  },
+): value is ManagedResourceRef =>
+  isManagedResourceRef(value) &&
+  value.siteType === expected.siteType &&
+  value.kind === expected.kind &&
+  (expected.scopeKey === undefined || value.scopeKey === expected.scopeKey)
 
 export type ResourceOperationOptions = { signal?: AbortSignal }
 
@@ -53,6 +92,8 @@ export type ResourceDisplayFacts = {
   displayName: string
   status: "enabled" | "disabled" | "archived" | "auto-disabled" | "unknown"
   fields: readonly ResourceDisplayFact[]
+  /** Safe, non-rendered values used by the shared local search index. */
+  searchValues?: readonly string[]
   actions: { canUpdate: boolean; canDelete: boolean }
 }
 
@@ -107,7 +148,7 @@ type ResourceFieldDescriptorBase = {
 
 export type ResourceFieldDescriptor =
   | (ResourceFieldDescriptorBase & { type: "text" })
-  | (ResourceFieldDescriptorBase & { type: "textarea"; rows?: number })
+  | (ResourceFieldDescriptorBase & { type: "textarea" })
   | (ResourceFieldDescriptorBase & {
       type: "number"
       min?: number
@@ -126,6 +167,8 @@ export type ResourceFieldDescriptor =
   | (ResourceFieldDescriptorBase & {
       type: "secret"
       secretState: ResourceSecretState
+      canReplace: boolean
+      replacementBlockReason?: ResourceSecretReplacementBlockReason
       allowClear: boolean
     })
 
@@ -145,6 +188,11 @@ export interface ResourceEditor {
   readonly fields: readonly ResourceFieldDescriptor[]
   readonly initialValues: EditableResourceProjection
   validate(values: EditableResourceProjection): ResourceValidationResult
+  /** Optionally loads a saved secret into the editor's field-local input state. */
+  loadSecret?: (
+    fieldId: string,
+    options?: ResourceOperationOptions,
+  ) => Promise<string>
   submit(
     values: EditableResourceProjection,
     options?: ResourceOperationOptions,
@@ -152,7 +200,12 @@ export interface ResourceEditor {
 }
 
 export interface ManagedResourceWorkspace {
-  readonly supportsSearch: boolean
+  readonly capabilities: {
+    canSearch: boolean
+    canCreate: boolean
+    canUpdate: boolean
+    canDelete: boolean
+  }
   list(
     query?: ResourceListQuery,
     options?: ResourceOperationOptions,

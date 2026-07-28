@@ -21,6 +21,8 @@ interface ModalProps {
   floatingContent?: ReactNode
   panelClassName?: string
   panelTestId?: string
+  headerTestId?: string
+  footerTestId?: string
   showCloseButton?: boolean
   closeOnEsc?: boolean
   closeOnBackdropClick?: boolean
@@ -67,6 +69,8 @@ export function Modal({
   floatingContent,
   panelClassName,
   panelTestId,
+  headerTestId,
+  footerTestId,
   showCloseButton = true,
   closeOnEsc = true,
   closeOnBackdropClick = true,
@@ -179,7 +183,10 @@ export function Modal({
                 )}
 
                 {header && (
-                  <div className="dark:border-dark-bg-tertiary shrink-0 border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
+                  <div
+                    data-testid={headerTestId}
+                    className="dark:border-dark-bg-tertiary shrink-0 border-b border-gray-100 px-4 py-3 sm:px-6 sm:py-4"
+                  >
                     <div className="flex items-start justify-between">
                       {header}
                     </div>
@@ -191,7 +198,10 @@ export function Modal({
                 </div>
 
                 {footer && (
-                  <div className="dark:border-dark-bg-tertiary shrink-0 border-t border-gray-100 px-4 py-3 sm:px-6 sm:py-4">
+                  <div
+                    data-testid={footerTestId}
+                    className="dark:border-dark-bg-tertiary shrink-0 border-t border-gray-100 px-4 py-3 sm:px-6 sm:py-4"
+                  >
                     {footer}
                   </div>
                 )}

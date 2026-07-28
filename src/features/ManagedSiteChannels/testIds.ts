@@ -2,6 +2,8 @@ export const MANAGED_SITE_CHANNELS_TEST_IDS = {
   addChannelButton: "managed-site-channels-add-channel-button",
   refreshButton: "managed-site-channels-refresh-button",
   migrationModeButton: "managed-site-channels-migration-mode-button",
+  migrationControls: "managed-site-channels-migration-controls",
+  migrationComparison: "managed-site-channels-migration-comparison",
   searchInput: "managed-site-channels-search-input",
   paginationSummary: "managed-site-channels-pagination-summary",
   deleteChannelConfirmButton: "managed-site-channels-delete-confirm-button",

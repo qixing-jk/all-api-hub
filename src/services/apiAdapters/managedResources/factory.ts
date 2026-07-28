@@ -1,6 +1,7 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
 import {
+  isManagedResourceRefFor,
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type EditableResourceProjection,
@@ -33,6 +34,10 @@ export type NativeResourceEditorDefinition<TCommand> = {
   initialValues: EditableResourceProjection
   validate(values: EditableResourceProjection): ResourceValidationResult
   buildCommand(values: EditableResourceProjection): TCommand
+  loadSecret?: (
+    fieldId: string,
+    options?: ResourceOperationOptions,
+  ) => Promise<string>
 }
 
 export type NativeResourceKindDefinition<
@@ -46,7 +51,7 @@ export type NativeResourceKindDefinition<
 > = {
   siteType: ManagedSiteType
   kind: ManagedResourceKind
-  supportsSearch: boolean
+  capabilities?: Partial<ManagedResourceWorkspace["capabilities"]>
   openConfig(options?: ResourceOperationOptions): Promise<TConfig>
   scopeKey(config: TConfig): string
   encodeLocator(locator: TLocator): string
@@ -73,6 +78,7 @@ export type NativeResourceKindDefinition<
     config: TConfig,
     detail: TDetail,
   ): NativeResourceEditorDefinition<TUpdateCommand>
+  sanitizeEditDetail?(detail: TDetail): TDetail
   create(
     config: TConfig,
     command: TCreateCommand,
@@ -158,6 +164,14 @@ const assertValidFacts = (
     throw unexpectedDefinitionOutput()
   }
 
+  if (
+    facts.searchValues !== undefined &&
+    (!Array.isArray(facts.searchValues) ||
+      facts.searchValues.some((value) => typeof value !== "string"))
+  ) {
+    throw unexpectedDefinitionOutput()
+  }
+
   const fieldIds = new Set<string>()
   for (const field of facts.fields) {
     if (fieldIds.has(field.fieldId)) throw unexpectedDefinitionOutput()
@@ -200,6 +214,13 @@ export function defineNativeResourceKind<
       mapOperationFailure(async () => {
         const config = await definition.openConfig(options)
         const scopeKey = definition.scopeKey(config)
+        if (
+          typeof scopeKey !== "string" ||
+          scopeKey.length === 0 ||
+          scopeKey.length > 2048
+        ) {
+          throw unexpectedDefinitionOutput()
+        }
 
         const createRef = (locator: TLocator): ManagedResourceRef => {
           const resourceId = definition.encodeLocator(locator)
@@ -214,23 +235,11 @@ export function defineNativeResourceKind<
 
         const decodeRef = (candidate: unknown) => {
           if (
-            typeof candidate !== "object" ||
-            candidate === null ||
-            Array.isArray(candidate)
-          ) {
-            throw invalidPublicInput()
-          }
-
-          const ref = candidate as Record<string, unknown>
-          const { siteType, kind, scopeKey: refScopeKey, resourceId } = ref
-          if (
-            typeof siteType !== "string" ||
-            siteType !== definition.siteType ||
-            typeof kind !== "string" ||
-            kind !== definition.kind ||
-            typeof refScopeKey !== "string" ||
-            refScopeKey !== scopeKey ||
-            !isValidResourceId(resourceId)
+            !isManagedResourceRefFor(candidate, {
+              siteType: definition.siteType,
+              kind: definition.kind,
+              scopeKey,
+            })
           ) {
             throw invalidPublicInput()
           }
@@ -239,7 +248,7 @@ export function defineNativeResourceKind<
             siteType: definition.siteType,
             kind: definition.kind,
             scopeKey,
-            resourceId,
+            resourceId: candidate.resourceId,
           }
           return {
             ref: canonicalRef,
@@ -348,27 +357,51 @@ export function defineNativeResourceKind<
             fields: editorDefinition.fields,
             initialValues: editorDefinition.initialValues,
             validate,
+            ...(editorDefinition.loadSecret
+              ? {
+                  loadSecret: (
+                    fieldId: string,
+                    loadOptions?: ResourceOperationOptions,
+                  ) =>
+                    mapOperationFailure(
+                      () => editorDefinition.loadSecret!(fieldId, loadOptions),
+                      mapFailure,
+                    ),
+                }
+              : {}),
             submit,
           }
         }
 
+        const capabilities: ManagedResourceWorkspace["capabilities"] = {
+          canSearch: definition.capabilities?.canSearch ?? false,
+          canCreate: definition.capabilities?.canCreate ?? true,
+          canUpdate: definition.capabilities?.canUpdate ?? true,
+          canDelete: definition.capabilities?.canDelete ?? true,
+        }
+        const rejectUnsupported = () => Promise.reject(invalidPublicInput())
         const workspace: ManagedResourceWorkspace = {
-          supportsSearch: definition.supportsSearch,
+          capabilities,
           list: (query, listOptions) =>
-            mapOperationFailure(async () => {
-              const page = await definition.list(config, query, listOptions)
-              const items = page.items.map((item) => {
-                const ref = createRef(definition.locatorFromListItem(item))
-                return assertValidFacts(definition.toListFacts(item, ref), ref)
-              })
-              return {
-                items,
-                ...(page.total === undefined ? {} : { total: page.total }),
-                ...(page.nextCursor === undefined
-                  ? {}
-                  : { nextCursor: page.nextCursor }),
-              }
-            }, mapFailure),
+            query?.search && !capabilities.canSearch
+              ? rejectUnsupported()
+              : mapOperationFailure(async () => {
+                  const page = await definition.list(config, query, listOptions)
+                  const items = page.items.map((item) => {
+                    const ref = createRef(definition.locatorFromListItem(item))
+                    return assertValidFacts(
+                      definition.toListFacts(item, ref),
+                      ref,
+                    )
+                  })
+                  return {
+                    items,
+                    ...(page.total === undefined ? {} : { total: page.total }),
+                    ...(page.nextCursor === undefined
+                      ? {}
+                      : { nextCursor: page.nextCursor }),
+                  }
+                }, mapFailure),
           get: (ref, getOptions) =>
             mapOperationFailure(async () => {
               const { ref: canonicalRef, detail } = await readDetail(
@@ -381,55 +414,80 @@ export function defineNativeResourceKind<
               )
             }, mapFailure),
           openCreateEditor: (editorOptions) =>
-            mapOperationFailure(async () => {
-              const editorDefinition = await definition.createEditor(
-                config,
-                editorOptions,
-              )
-              return createEditor(
-                editorDefinition,
-                (command, submitOptions) =>
-                  definition.create(config, command, submitOptions),
-                projectCreatedDetail,
-              )
-            }, mapFailure),
+            !capabilities.canCreate
+              ? rejectUnsupported()
+              : mapOperationFailure(async () => {
+                  const editorDefinition = await definition.createEditor(
+                    config,
+                    editorOptions,
+                  )
+                  return createEditor(
+                    editorDefinition,
+                    (command, submitOptions) =>
+                      definition.create(config, command, submitOptions),
+                    projectCreatedDetail,
+                  )
+                }, mapFailure),
           openEditEditor: (ref, editorOptions) =>
-            mapOperationFailure(async () => {
-              const { ref: canonicalRef, detail } = await readDetail(
-                ref,
-                editorOptions,
-              )
-              const editorDefinition = definition.editEditor(config, detail)
-              return createEditor(
-                editorDefinition,
-                (command, submitOptions) =>
-                  definition.update(config, detail, command, submitOptions),
-                (updatedDetail) =>
-                  projectDetailAtRef(updatedDetail, canonicalRef),
-              )
-            }, mapFailure),
+            !capabilities.canUpdate
+              ? rejectUnsupported()
+              : mapOperationFailure(async () => {
+                  const { ref: canonicalRef, detail } = await readDetail(
+                    ref,
+                    editorOptions,
+                  )
+                  const editorDetail = definition.sanitizeEditDetail
+                    ? definition.sanitizeEditDetail(detail)
+                    : detail
+                  assertDetailIdentity(editorDetail, canonicalRef)
+                  const editorDefinition = definition.editEditor(
+                    config,
+                    editorDetail,
+                  )
+                  return createEditor(
+                    editorDefinition,
+                    async (command, submitOptions) => {
+                      const { detail: latestDetail } = await readDetail(
+                        canonicalRef,
+                        submitOptions,
+                      )
+                      return definition.update(
+                        config,
+                        latestDetail,
+                        command,
+                        submitOptions,
+                      )
+                    },
+                    (updatedDetail) =>
+                      projectDetailAtRef(updatedDetail, canonicalRef),
+                  )
+                }, mapFailure),
           delete: (ref, deleteOptions) =>
-            mapOperationFailure(async () => {
-              const { locator } = decodeRef(ref)
-              try {
-                await mapOperationFailure(
-                  () =>
-                    toPublicMutation(
-                      () => definition.delete(config, locator, deleteOptions),
+            !capabilities.canDelete
+              ? rejectUnsupported()
+              : mapOperationFailure(async () => {
+                  const { locator } = decodeRef(ref)
+                  try {
+                    await mapOperationFailure(
+                      () =>
+                        toPublicMutation(
+                          () =>
+                            definition.delete(config, locator, deleteOptions),
+                          mapFailure,
+                        ),
                       mapFailure,
-                    ),
-                  mapFailure,
-                )
-              } catch (error) {
-                if (
-                  error instanceof ManagedResourceError &&
-                  error.failure.code === MANAGED_RESOURCE_FAILURE_CODES.NotFound
-                ) {
-                  return
-                }
-                throw error
-              }
-            }, mapFailure),
+                    )
+                  } catch (error) {
+                    if (
+                      error instanceof ManagedResourceError &&
+                      error.failure.code ===
+                        MANAGED_RESOURCE_FAILURE_CODES.NotFound
+                    ) {
+                      return
+                    }
+                    throw error
+                  }
+                }, mapFailure),
         }
 
         return workspace

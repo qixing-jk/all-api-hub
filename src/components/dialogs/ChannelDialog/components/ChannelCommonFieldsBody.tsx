@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next"
+import type { ReactNode } from "react"
 
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
@@ -69,6 +70,483 @@ export type ChannelCommonFieldsBodyProps = {
   onStatusChange: (status: string) => void
 }
 
+const fieldDescriptionIds = (
+  ...ids: Array<string | undefined>
+): string | undefined => {
+  const definedIds = ids.filter((id): id is string => Boolean(id))
+  return definedIds.length > 0 ? definedIds.join(" ") : undefined
+}
+
+/** Renders shared field help or an accessible validation message. */
+function ChannelFieldMessage({
+  id,
+  children,
+  tone = "muted",
+}: {
+  id: string
+  children: ReactNode
+  tone?: "muted" | "error"
+}) {
+  return (
+    <p
+      id={id}
+      role={tone === "error" ? "alert" : undefined}
+      className={
+        tone === "error"
+          ? "mt-1 text-xs text-red-600 dark:text-red-400"
+          : "dark:text-dark-text-secondary mt-1 text-xs text-gray-500"
+      }
+    >
+      {children}
+    </p>
+  )
+}
+
+/** Shared name control used by legacy and resource-native channel binders. */
+export function ChannelNameField({
+  t,
+  value,
+  onChange,
+  disabled,
+  readOnly = false,
+  required = false,
+  errorMessage,
+}: {
+  t: TFunction
+  value: string
+  onChange: (value: string) => void
+  disabled: boolean
+  readOnly?: boolean
+  required?: boolean
+  errorMessage?: string
+}) {
+  const errorId = errorMessage ? "channel-name-error" : undefined
+  return (
+    <div>
+      <Label htmlFor="channel-name" required={required}>
+        {t("channelDialog:fields.name.label")}
+      </Label>
+      <Input
+        id="channel-name"
+        data-testid={CHANNEL_DIALOG_TEST_IDS.nameInput}
+        type="text"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={t("channelDialog:fields.name.placeholder")}
+        disabled={disabled}
+        readOnly={readOnly}
+        required={required}
+        aria-invalid={Boolean(errorMessage)}
+        aria-describedby={errorId}
+      />
+      {errorMessage && errorId ? (
+        <ChannelFieldMessage id={errorId} tone="error">
+          {errorMessage}
+        </ChannelFieldMessage>
+      ) : null}
+    </div>
+  )
+}
+
+/** Shared type control used by legacy and resource-native channel binders. */
+export function ChannelTypeField({
+  t,
+  value,
+  options,
+  onChange,
+  disabled,
+  required = false,
+  showUnknownStringType = false,
+  errorMessage,
+}: {
+  t: TFunction
+  value: string
+  options: readonly ChannelCommonFieldsOption[]
+  onChange: (value: string) => void
+  disabled: boolean
+  required?: boolean
+  showUnknownStringType?: boolean
+  errorMessage?: string
+}) {
+  const hintId = "channel-type-hint"
+  const errorId = errorMessage ? "channel-type-error" : undefined
+  return (
+    <div>
+      <Label htmlFor="channel-type" required={required}>
+        {t("channelDialog:fields.type.label")}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={onChange}
+        disabled={disabled}
+        required={required}
+      >
+        <SelectTrigger
+          id="channel-type"
+          data-testid={CHANNEL_DIALOG_TEST_IDS.typeSelect}
+          aria-invalid={Boolean(errorMessage)}
+          aria-describedby={fieldDescriptionIds(hintId, errorId)}
+        >
+          <SelectValue
+            placeholder={t("channelDialog:fields.type.placeholder")}
+          />
+        </SelectTrigger>
+        <SelectContent>
+          {showUnknownStringType ? (
+            <SelectItem value={value}>{value}</SelectItem>
+          ) : null}
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <ChannelFieldMessage id={hintId}>
+        {t("channelDialog:fields.type.hint")}
+      </ChannelFieldMessage>
+      {errorMessage && errorId ? (
+        <ChannelFieldMessage id={errorId} tone="error">
+          {errorMessage}
+        </ChannelFieldMessage>
+      ) : null}
+    </div>
+  )
+}
+
+/** Shared secret control that accepts only the binder-provided safe input value. */
+export function ChannelSecretField({
+  t,
+  value,
+  onChange,
+  disabled,
+  readOnly = false,
+  required = false,
+  revealed,
+  onRevealedChange,
+  placeholder,
+  description,
+  errorMessage,
+  canLoadRealKey = false,
+  isLoadingRealKey = false,
+  onLoadRealKey,
+  onCancelLoadRealKey,
+  loadRealKeyLabel,
+  loadingRealKeyLabel,
+  cancelLoadRealKeyLabel,
+  realKeyHint,
+  actions,
+}: {
+  t: TFunction
+  value: string
+  onChange: (value: string) => void
+  disabled: boolean
+  readOnly?: boolean
+  required?: boolean
+  revealed: boolean
+  onRevealedChange: (revealed: boolean) => void
+  placeholder?: string
+  description?: ReactNode
+  errorMessage?: string
+  canLoadRealKey?: boolean
+  isLoadingRealKey?: boolean
+  onLoadRealKey?: () => void
+  onCancelLoadRealKey?: () => void
+  loadRealKeyLabel?: string
+  loadingRealKeyLabel?: string
+  cancelLoadRealKeyLabel?: string
+  realKeyHint?: string
+  actions?: ReactNode
+}) {
+  const descriptionId = description ? "channel-key-description" : undefined
+  const errorId = errorMessage ? "channel-key-error" : undefined
+  return (
+    <div>
+      <Label htmlFor="channel-key" required={required}>
+        {t("channelDialog:fields.key.label")}
+      </Label>
+      <Input
+        id="channel-key"
+        data-testid={CHANNEL_DIALOG_TEST_IDS.keyInput}
+        type="password"
+        revealable
+        revealed={revealed}
+        onRevealedChange={onRevealedChange}
+        revealLabels={{
+          show: t("channelDialog:actions.showKey"),
+          hide: t("channelDialog:actions.hideKey"),
+        }}
+        value={value}
+        autoComplete="new-password"
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder ?? t("channelDialog:fields.key.placeholder")}
+        disabled={disabled}
+        readOnly={readOnly}
+        required={required}
+        aria-invalid={Boolean(errorMessage)}
+        aria-describedby={fieldDescriptionIds(descriptionId, errorId)}
+      />
+      {description && descriptionId ? (
+        <ChannelFieldMessage id={descriptionId}>
+          {description}
+        </ChannelFieldMessage>
+      ) : null}
+      {errorMessage && errorId ? (
+        <ChannelFieldMessage id={errorId} tone="error">
+          {errorMessage}
+        </ChannelFieldMessage>
+      ) : null}
+      {canLoadRealKey ? (
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <p className="dark:text-dark-text-secondary text-xs text-gray-500">
+            {realKeyHint ?? t("channelDialog:fields.key.realKeyHint")}
+          </p>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={onLoadRealKey}
+              disabled={disabled}
+              loading={isLoadingRealKey}
+            >
+              {isLoadingRealKey
+                ? loadingRealKeyLabel ??
+                  t("channelDialog:actions.loadingRealKey")
+                : loadRealKeyLabel ?? t("channelDialog:actions.loadRealKey")}
+            </Button>
+            {isLoadingRealKey && onCancelLoadRealKey ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={onCancelLoadRealKey}
+              >
+                {cancelLoadRealKeyLabel ?? t("common:actions.cancel")}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+      {actions ? (
+        <div className="mt-2 flex flex-wrap gap-2">{actions}</div>
+      ) : null}
+    </div>
+  )
+}
+
+/** Shared base URL control used by legacy and resource-native channel binders. */
+export function ChannelBaseUrlField({
+  t,
+  value,
+  onChange,
+  disabled,
+  readOnly = false,
+  required = false,
+  errorMessage,
+}: {
+  t: TFunction
+  value: string
+  onChange: (value: string) => void
+  disabled: boolean
+  readOnly?: boolean
+  required?: boolean
+  errorMessage?: string
+}) {
+  const errorId = errorMessage ? "channel-base-url-error" : undefined
+  return (
+    <div>
+      <Label htmlFor="channel-base-url" required={required}>
+        {t("channelDialog:fields.baseUrl.label")}
+      </Label>
+      <Input
+        id="channel-base-url"
+        data-testid={CHANNEL_DIALOG_TEST_IDS.baseUrlInput}
+        type="url"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={t("channelDialog:fields.baseUrl.placeholder")}
+        disabled={disabled}
+        readOnly={readOnly}
+        required={required}
+        aria-invalid={Boolean(errorMessage)}
+        aria-describedby={errorId}
+      />
+      {errorMessage && errorId ? (
+        <ChannelFieldMessage id={errorId} tone="error">
+          {errorMessage}
+        </ChannelFieldMessage>
+      ) : null}
+    </div>
+  )
+}
+
+/** Shared models control used by legacy and resource-native channel binders. */
+export function ChannelModelsField({
+  t,
+  options,
+  selected,
+  onChange,
+  disabled,
+  isLoading = false,
+  showPrefillWarning = false,
+  onSelectAll,
+  onInverse,
+  onDeselectAll,
+  errorMessage,
+  required = false,
+  description,
+}: {
+  t: TFunction
+  options: readonly ChannelCommonFieldsOption[]
+  selected: string[]
+  onChange: (models: string[]) => void
+  disabled: boolean
+  isLoading?: boolean
+  showPrefillWarning?: boolean
+  onSelectAll?: () => void
+  onInverse?: () => void
+  onDeselectAll?: () => void
+  errorMessage?: string
+  required?: boolean
+  description?: ReactNode
+}) {
+  const showBulkActions = Boolean(onSelectAll && onInverse && onDeselectAll)
+  const descriptionId = "channel-models-description"
+  const errorId = errorMessage ? "channel-models-error" : undefined
+  return (
+    <div role="group" aria-label={t("channelDialog:fields.models.label")}>
+      <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <Label className="mb-0" required={required}>
+          {t("channelDialog:fields.models.label")}
+        </Label>
+        {showBulkActions ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSelectAll}
+              disabled={disabled || isLoading || options.length === 0}
+              type="button"
+            >
+              {t("channelDialog:actions.selectAll")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onInverse}
+              disabled={disabled || isLoading || options.length === 0}
+              type="button"
+            >
+              {t("channelDialog:actions.inverse")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onDeselectAll}
+              disabled={disabled || isLoading || selected.length === 0}
+              type="button"
+            >
+              {t("channelDialog:actions.deselectAll")}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      {showPrefillWarning ? (
+        <Alert
+          variant="warning"
+          title={t("channelDialog:warnings.modelsPrefillFailed.title")}
+          description={t(
+            "channelDialog:warnings.modelsPrefillFailed.description",
+          )}
+          className="mb-3"
+        />
+      ) : null}
+      <CompactMultiSelect
+        options={[...options]}
+        selected={selected}
+        onChange={onChange}
+        size="default"
+        inputTestId={CHANNEL_DIALOG_TEST_IDS.modelsInput}
+        placeholder={
+          isLoading
+            ? t("channelDialog:fields.models.loading")
+            : t("channelDialog:fields.models.placeholder")
+        }
+        disabled={disabled || isLoading}
+        allowCustom
+        aria-label={t("channelDialog:fields.models.label")}
+        aria-invalid={Boolean(errorMessage)}
+        aria-describedby={fieldDescriptionIds(descriptionId, errorId)}
+        aria-required={required}
+      />
+      <ChannelFieldMessage id={descriptionId}>
+        {description ?? t("channelDialog:fields.models.hint")}
+      </ChannelFieldMessage>
+      {errorMessage ? (
+        <ChannelFieldMessage id="channel-models-error" tone="error">
+          {errorMessage}
+        </ChannelFieldMessage>
+      ) : null}
+    </div>
+  )
+}
+
+/** Shared status control used by legacy and resource-native channel binders. */
+export function ChannelStatusField({
+  t,
+  value,
+  options,
+  onChange,
+  disabled,
+  errorMessage,
+  required = false,
+}: {
+  t: TFunction
+  value: string
+  options: readonly ChannelCommonFieldsOption[]
+  onChange: (value: string) => void
+  disabled: boolean
+  errorMessage?: string
+  required?: boolean
+}) {
+  const errorId = errorMessage ? "channel-status-error" : undefined
+  return (
+    <div>
+      <Label htmlFor="channel-status" required={required}>
+        {t("channelDialog:fields.status.label")}
+      </Label>
+      <Select
+        value={value}
+        onValueChange={onChange}
+        disabled={disabled}
+        required={required}
+      >
+        <SelectTrigger
+          id="channel-status"
+          data-testid={CHANNEL_DIALOG_TEST_IDS.statusSelect}
+          aria-invalid={Boolean(errorMessage)}
+          aria-describedby={errorId}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {errorMessage && errorId ? (
+        <ChannelFieldMessage id={errorId} tone="error">
+          {errorMessage}
+        </ChannelFieldMessage>
+      ) : null}
+    </div>
+  )
+}
+
 /** Controlled presentation for fields shared by channel create/edit/detail. */
 export function ChannelCommonFieldsBody({
   t,
@@ -109,195 +587,61 @@ export function ChannelCommonFieldsBody({
 }: ChannelCommonFieldsBodyProps) {
   return (
     <>
-      <div>
-        <Label htmlFor="channel-name" required={!isViewMode}>
-          {t("channelDialog:fields.name.label")}
-        </Label>
-        <Input
-          id="channel-name"
-          data-testid={CHANNEL_DIALOG_TEST_IDS.nameInput}
-          type="text"
-          value={values.name}
-          onChange={(event) => onNameChange(event.target.value)}
-          placeholder={t("channelDialog:fields.name.placeholder")}
-          disabled={isInteractionDisabled}
-          readOnly={isViewMode}
-          required={!isViewMode}
-        />
-      </div>
+      <ChannelNameField
+        t={t}
+        value={values.name}
+        onChange={onNameChange}
+        disabled={isInteractionDisabled}
+        readOnly={isViewMode}
+        required={!isViewMode}
+      />
 
-      <div>
-        <Label htmlFor="channel-type" required={!isViewMode}>
-          {t("channelDialog:fields.type.label")}
-        </Label>
-        <Select
-          value={values.type}
-          onValueChange={onTypeChange}
-          disabled={isInteractionDisabled || !isAddMode}
-          required={!isViewMode}
-        >
-          <SelectTrigger id="channel-type">
-            <SelectValue
-              placeholder={t("channelDialog:fields.type.placeholder")}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {showUnknownStringType ? (
-              <SelectItem value={values.type}>{values.type}</SelectItem>
-            ) : null}
-            {channelTypeOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-          {t("channelDialog:fields.type.hint")}
-        </p>
-      </div>
+      <ChannelTypeField
+        t={t}
+        value={values.type}
+        options={channelTypeOptions}
+        onChange={onTypeChange}
+        disabled={isInteractionDisabled || !isAddMode}
+        required={!isViewMode}
+        showUnknownStringType={showUnknownStringType}
+      />
 
-      <div>
-        <Label htmlFor="channel-key" required={!isViewMode && isKeyRequired}>
-          {t("channelDialog:fields.key.label")}
-        </Label>
-        <Input
-          id="channel-key"
-          data-testid={CHANNEL_DIALOG_TEST_IDS.keyInput}
-          type="password"
-          revealable
-          revealed={isKeyRevealed}
-          onRevealedChange={onKeyRevealedChange}
-          revealLabels={{
-            show: t("channelDialog:actions.showKey"),
-            hide: t("channelDialog:actions.hideKey"),
-          }}
-          value={values.key}
-          onChange={(event) => onKeyChange(event.target.value)}
-          placeholder={t("channelDialog:fields.key.placeholder")}
-          disabled={isInteractionDisabled}
-          readOnly={isViewMode}
-          required={!isViewMode && isKeyRequired}
-        />
-        {canLoadRealKey ? (
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <p className="dark:text-dark-text-secondary text-xs text-gray-500">
-              {t("channelDialog:fields.key.realKeyHint")}
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={onLoadRealKey}
-              disabled={isInteractionDisabled}
-              loading={isLoadingRealKey}
-            >
-              {isLoadingRealKey
-                ? t("channelDialog:actions.loadingRealKey")
-                : t("channelDialog:actions.loadRealKey")}
-            </Button>
-          </div>
-        ) : null}
-      </div>
+      <ChannelSecretField
+        t={t}
+        value={values.key}
+        onChange={onKeyChange}
+        disabled={isInteractionDisabled}
+        readOnly={isViewMode}
+        required={!isViewMode && isKeyRequired}
+        revealed={isKeyRevealed}
+        onRevealedChange={onKeyRevealedChange}
+        canLoadRealKey={canLoadRealKey}
+        isLoadingRealKey={isLoadingRealKey}
+        onLoadRealKey={onLoadRealKey}
+      />
 
-      <div>
-        <Label
-          htmlFor="channel-base-url"
-          required={!isViewMode && isBaseURLRequired}
-        >
-          {t("channelDialog:fields.baseUrl.label")}
-        </Label>
-        <Input
-          id="channel-base-url"
-          data-testid={CHANNEL_DIALOG_TEST_IDS.baseUrlInput}
-          type="url"
-          value={values.baseURL}
-          onChange={(event) => onBaseURLChange(event.target.value)}
-          placeholder={t("channelDialog:fields.baseUrl.placeholder")}
-          disabled={isInteractionDisabled}
-          readOnly={isViewMode}
-          required={!isViewMode && isBaseURLRequired}
-        />
-      </div>
+      <ChannelBaseUrlField
+        t={t}
+        value={values.baseURL}
+        onChange={onBaseURLChange}
+        disabled={isInteractionDisabled}
+        readOnly={isViewMode}
+        required={!isViewMode && isBaseURLRequired}
+      />
 
       {showGenericModelsField ? (
-        <div>
-          <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <Label className="mb-0">
-              {t("channelDialog:fields.models.label")}
-            </Label>
-            {!isViewMode ? (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onSelectAllModels}
-                  disabled={
-                    isInteractionDisabled ||
-                    isLoadingModels ||
-                    availableModels.length === 0
-                  }
-                  type="button"
-                >
-                  {t("channelDialog:actions.selectAll")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onInverseModels}
-                  disabled={
-                    isInteractionDisabled ||
-                    isLoadingModels ||
-                    availableModels.length === 0
-                  }
-                  type="button"
-                >
-                  {t("channelDialog:actions.inverse")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onDeselectAllModels}
-                  disabled={
-                    isInteractionDisabled ||
-                    isLoadingModels ||
-                    values.models.length === 0
-                  }
-                  type="button"
-                >
-                  {t("channelDialog:actions.deselectAll")}
-                </Button>
-              </div>
-            ) : null}
-          </div>
-          {showModelPrefillWarning ? (
-            <Alert
-              variant="warning"
-              title={t("channelDialog:warnings.modelsPrefillFailed.title")}
-              description={t(
-                "channelDialog:warnings.modelsPrefillFailed.description",
-              )}
-              className="mb-3"
-            />
-          ) : null}
-          <CompactMultiSelect
-            options={availableModels}
-            selected={values.models}
-            onChange={onModelsChange}
-            size="default"
-            inputTestId={CHANNEL_DIALOG_TEST_IDS.modelsInput}
-            placeholder={
-              isLoadingModels
-                ? t("channelDialog:fields.models.loading")
-                : t("channelDialog:fields.models.placeholder")
-            }
-            disabled={isViewMode || isInteractionDisabled || isLoadingModels}
-            allowCustom
-          />
-          <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-            {t("channelDialog:fields.models.hint")}
-          </p>
-        </div>
+        <ChannelModelsField
+          t={t}
+          options={availableModels}
+          selected={values.models}
+          onChange={onModelsChange}
+          disabled={isViewMode || isInteractionDisabled}
+          isLoading={isLoadingModels}
+          showPrefillWarning={showModelPrefillWarning}
+          onSelectAll={isViewMode ? undefined : onSelectAllModels}
+          onInverse={isViewMode ? undefined : onInverseModels}
+          onDeselectAll={isViewMode ? undefined : onDeselectAllModels}
+        />
       ) : null}
 
       {showGroupsField ? (
@@ -372,27 +716,13 @@ export function ChannelCommonFieldsBody({
             </>
           ) : null}
 
-          <div>
-            <Label htmlFor="channel-status">
-              {t("channelDialog:fields.status.label")}
-            </Label>
-            <Select
-              value={values.status}
-              onValueChange={onStatusChange}
-              disabled={isViewMode || isInteractionDisabled}
-            >
-              <SelectTrigger id="channel-status">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <ChannelStatusField
+            t={t}
+            value={values.status}
+            options={statusOptions}
+            onChange={onStatusChange}
+            disabled={isViewMode || isInteractionDisabled}
+          />
         </div>
       </details>
     </>

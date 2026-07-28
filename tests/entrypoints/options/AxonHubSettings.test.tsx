@@ -133,18 +133,20 @@ vi.mock("~/components/ui", async (importOriginal) => {
       </button>
     ),
     Input: ({
+      "aria-label": ariaLabel,
+      id,
       onBlur,
       onChange,
-      placeholder,
       rightIcon,
       revealable,
       revealLabels,
       type,
       value,
     }: {
+      "aria-label"?: string
+      id?: string
       onBlur?: (event: { target: { value: string } }) => void
       onChange?: (event: { target: { value: string } }) => void
-      placeholder?: string
       rightIcon?: ReactNode
       revealable?: boolean
       revealLabels?: { show: string; hide: string }
@@ -158,7 +160,8 @@ vi.mock("~/components/ui", async (importOriginal) => {
       return (
         <div>
           <input
-            aria-label={placeholder ?? type ?? "input"}
+            id={id}
+            aria-label={ariaLabel}
             type={inputType}
             value={value}
             onBlur={(event) =>
@@ -222,6 +225,24 @@ describe("AxonHubSettings", () => {
     mockedUseUserPreferencesContext.mockReturnValue(createContextValue())
   })
 
+  it("gives every connection field its visible setting name", () => {
+    render(<AxonHubSettings />)
+
+    expect(
+      screen.getByRole("textbox", {
+        name: "settings:axonHub.fields.baseUrlLabel",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("textbox", {
+        name: "settings:axonHub.fields.emailLabel",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByLabelText("settings:axonHub.fields.passwordLabel"),
+    ).toHaveAttribute("type", "password")
+  })
+
   it("trims persisted field updates, skips unchanged values, and resets", async () => {
     render(<AxonHubSettings />)
 
@@ -231,7 +252,7 @@ describe("AxonHubSettings", () => {
     ).toBeInTheDocument()
 
     const baseUrlInput = screen.getByLabelText(
-      "settings:axonHub.fields.baseUrlPlaceholder",
+      "settings:axonHub.fields.baseUrlLabel",
     )
     fireEvent.change(baseUrlInput, {
       target: { value: "  https://new-axonhub.example  " },
@@ -252,14 +273,14 @@ describe("AxonHubSettings", () => {
     )
 
     const emailInput = screen.getByLabelText(
-      "settings:axonHub.fields.emailPlaceholder",
+      "settings:axonHub.fields.emailLabel",
     )
     fireEvent.change(emailInput, { target: { value: "  admin@example.com  " } })
     fireEvent.blur(emailInput)
     expect(mockUpdateAxonHubEmail).not.toHaveBeenCalled()
 
     const passwordInput = screen.getByLabelText(
-      "settings:axonHub.fields.passwordPlaceholder",
+      "settings:axonHub.fields.passwordLabel",
     )
     fireEvent.change(passwordInput, { target: { value: "next-password" } })
     fireEvent.blur(passwordInput)
@@ -286,7 +307,7 @@ describe("AxonHubSettings", () => {
     const { rerender } = render(<AxonHubSettings />)
 
     const passwordInput = screen.getByLabelText(
-      "settings:axonHub.fields.passwordPlaceholder",
+      "settings:axonHub.fields.passwordLabel",
     )
     expect(passwordInput).toHaveAttribute("type", "password")
 
@@ -308,13 +329,13 @@ describe("AxonHubSettings", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByLabelText("settings:axonHub.fields.baseUrlPlaceholder"),
+        screen.getByLabelText("settings:axonHub.fields.baseUrlLabel"),
       ).toHaveValue("https://updated.example")
       expect(
-        screen.getByLabelText("settings:axonHub.fields.emailPlaceholder"),
+        screen.getByLabelText("settings:axonHub.fields.emailLabel"),
       ).toHaveValue("updated@example.com")
       expect(
-        screen.getByLabelText("settings:axonHub.fields.passwordPlaceholder"),
+        screen.getByLabelText("settings:axonHub.fields.passwordLabel"),
       ).toHaveValue("updated-password")
     })
   })
@@ -323,7 +344,7 @@ describe("AxonHubSettings", () => {
     render(<AxonHubSettings />)
 
     const emailInput = screen.getByLabelText(
-      "settings:axonHub.fields.emailPlaceholder",
+      "settings:axonHub.fields.emailLabel",
     )
     fireEvent.change(emailInput, {
       target: { value: "  updated-admin@example.com  " },
@@ -375,19 +396,19 @@ describe("AxonHubSettings", () => {
     render(<AxonHubSettings />)
 
     fireEvent.change(
-      screen.getByLabelText("settings:axonHub.fields.baseUrlPlaceholder"),
+      screen.getByLabelText("settings:axonHub.fields.baseUrlLabel"),
       {
         target: { value: "  https://validated.example  " },
       },
     )
     fireEvent.change(
-      screen.getByLabelText("settings:axonHub.fields.emailPlaceholder"),
+      screen.getByLabelText("settings:axonHub.fields.emailLabel"),
       {
         target: { value: "  validated@example.com  " },
       },
     )
     fireEvent.change(
-      screen.getByLabelText("settings:axonHub.fields.passwordPlaceholder"),
+      screen.getByLabelText("settings:axonHub.fields.passwordLabel"),
       {
         target: { value: "validated-password" },
       },

@@ -1,8 +1,36 @@
 {
   "alerts": {
+    "authenticationFailed": {
+      "description": "Se rechazaron las credenciales guardadas de AxonHub. Abre los ajustes, actualízalas y luego actualiza la lista de canales.",
+      "title": "Vuelve a iniciar sesión en AxonHub"
+    },
+    "editorLoadError": {
+      "description": "No se pudo cargar el formulario del canal. Actualiza la lista de canales y vuelve a intentarlo.",
+      "title": "No se pudo abrir el editor del canal"
+    },
+    "editorSaveError": {
+      "description": "Tus cambios no se guardaron. Vuelve a intentarlo.",
+      "title": "No se pudo guardar el canal"
+    },
     "loadError": {
       "description": "{{error}}",
       "title": "No se pudieron cargar los canales"
+    },
+    "partialMutation": {
+      "description": "Es posible que algunos campos se hayan guardado, pero no se pudo confirmar el estado. Actualiza la lista de canales y revisa el canal antes de volver a intentarlo.",
+      "title": "La actualización del canal requiere revisión"
+    },
+    "permissionDenied": {
+      "description": "Esta cuenta de AxonHub no puede administrar canales. Usa una cuenta de administrador o actualiza sus permisos y luego vuelve a actualizar.",
+      "title": "Acceso a AxonHub denegado"
+    },
+    "savedRefreshError": {
+      "description": "El canal se guardó, pero no se pudo cargar la lista más reciente. Actualiza la lista de canales antes de hacer más cambios.",
+      "title": "Canal guardado; es necesario actualizar"
+    },
+    "unavailable": {
+      "description": "No se pudo acceder a AxonHub. Comprueba el servidor y la red y luego actualiza la lista de canales.",
+      "title": "AxonHub no está disponible"
     }
   },
   "description": "Busca, edita, elimina y sincroniza manualmente canales conectados a tu sitio administrado.",
@@ -20,6 +48,115 @@
     "deleteResultsTitle": "Resultados de eliminación",
     "deleteTitle": "¿Eliminar canal?",
     "deleteTitlePlural": "¿Eliminar canales?"
+  },
+  "editor": {
+    "fields": {
+      "autoSyncModelPattern": {
+        "help": "Sincroniza solo los modelos que coincidan. Añade el prefijo (?i) para ignorar mayúsculas y minúsculas; déjalo vacío para sincronizar todos los modelos.",
+        "invalid": "Ingresa un patrón de filtro de modelos válido.",
+        "label": "Patrón de filtro de modelos",
+        "placeholder": "Por ejemplo, (?i)^model-example"
+      },
+      "autoSyncSupportedModels": {
+        "help": "AxonHub actualiza los canales habilitados desde la API del proveedor con la frecuencia configurada en los ajustes del sistema de AxonHub.",
+        "label": "Sincronizar automáticamente los modelos compatibles"
+      },
+      "defaultTestModel": {
+        "help": "Se usa para probar la conexión de este canal. Selecciona uno de los modelos compatibles.",
+        "label": "Modelo de prueba predeterminado",
+        "placeholder": "Selecciona un modelo configurado"
+      },
+      "extraModelPrefix": {
+        "help": "Configura prefijos adicionales para permitir el acceso a este canal con nombres de modelo prefijados. Por ejemplo, con el prefijo 'deepseek', tanto 'deepseek/deepseek-chat' como 'deepseek-chat' pueden acceder al canal.",
+        "label": "Prefijo adicional de modelo",
+        "placeholder": "p. ej., deepseek"
+      },
+      "orderingWeight": {
+        "help": "Los valores más altos tienen preferencia cuando AxonHub selecciona un canal; los valores iguales tienen la misma prioridad.",
+        "label": "Peso de ordenación"
+      },
+      "remark": {
+        "help": "Añade notas u observaciones sobre este canal como referencia.",
+        "label": "Nota",
+        "placeholder": "Escribe una nota u observación para este canal..."
+      },
+      "supportedModels": {
+        "help": "Escribe o pega nombres de modelos. Los modelos añadidos aquí se conservan durante la sincronización automática."
+      },
+      "tags": {
+        "help": "Añade etiquetas para clasificar y filtrar canales. Pulsa Intro para añadir una etiqueta. También puedes pegar varias etiquetas separadas por comas o saltos de línea.",
+        "label": "Etiquetas",
+        "placeholder": "Añadir etiquetas..."
+      }
+    },
+    "options": {
+      "channelType": {
+        "anthropic": "Anthropic",
+        "anthropicAws": "Anthropic en AWS",
+        "anthropicGcp": "Anthropic en Google Cloud",
+        "claudeCode": "Claude Code",
+        "deepseek": "DeepSeek",
+        "deepseekAnthropic": "DeepSeek Anthropic",
+        "gemini": "Gemini",
+        "geminiOpenai": "Gemini OpenAI",
+        "geminiVertex": "Gemini Vertex",
+        "githubCopilot": "GitHub Copilot",
+        "nanogpt": "NanoGPT",
+        "ollama": "Ollama",
+        "openai": "OpenAI",
+        "openaiResponses": "OpenAI Responses",
+        "openrouter": "OpenRouter",
+        "siliconflow": "SiliconFlow",
+        "unsupported": "Tipo de canal no compatible",
+        "volcengine": "Volcengine",
+        "xai": "xAI"
+      },
+      "status": {
+        "archived": "Archivado",
+        "disabled": "Deshabilitado",
+        "enabled": "Habilitado",
+        "unknown": "Desconocido"
+      },
+      "unknown": "Opción desconocida"
+    },
+    "secret": {
+      "actions": {
+        "clear": "Quitar la credencial guardada",
+        "restore": "Conservar la credencial guardada",
+        "retry": "Reintentar"
+      },
+      "createHint": "Ingresa una credencial para el nuevo canal.",
+      "keepExistingHint": "Deja este campo en blanco para conservar sin cambios la credencial guardada.",
+      "loadError": "No se pudo cargar la credencial guardada.",
+      "loading": "Cargando la credencial guardada...",
+      "placeholder": "Ingresa una credencial",
+      "replacementBlocked": {
+        "multipleCredentials": "Este canal tiene varias claves de API. Administra sus claves en AxonHub."
+      },
+      "replacementDisabled": "Este tipo de credencial no se puede reemplazar aquí.",
+      "state": {
+        "available": "Hay una credencial guardada disponible.",
+        "masked": "Hay una credencial enmascarada guardada.",
+        "permissionHidden": "La credencial guardada está oculta por permisos.",
+        "unavailable": "No hay ninguna credencial disponible para mostrar."
+      }
+    },
+    "sections": {
+      "advanced": "Opciones avanzadas",
+      "basic": "Información básica",
+      "connection": "Conexión y credenciales",
+      "metadata": "Metadatos",
+      "models": "Modelos",
+      "routing": "Enrutamiento",
+      "sync": "Sincronización de modelos"
+    },
+    "validation": {
+      "inconsistentValue": "Este valor entra en conflicto con otro campo.",
+      "invalidValue": "Ingresa un valor válido.",
+      "outOfRange": "Ingresa un valor dentro del rango permitido.",
+      "required": "Este campo es obligatorio.",
+      "unsupportedOption": "Esta opción no es compatible."
+    }
   },
   "filter": {
     "statusLabel": "Filtrar por estado"
@@ -122,6 +259,7 @@
     "blockedReasons": {
       "sourceKeyMissing": "La clave del canal de origen no está disponible, por lo que este canal aún no se puede migrar.",
       "sourceKeyResolutionFailed": "No se pudo cargar la clave del canal de origen. Si acabas de completar la verificación, actualiza la vista previa e inténtalo de nuevo.",
+      "sourceTypeUnsupported": "Este tipo de canal de origen no es compatible con la migración. Elige un canal compatible o migra el canal manualmente.",
       "targetDraftPreparationFailed": "No se pudo preparar el borrador del canal de destino. Revisa los detalles del canal, actualiza la vista previa e inténtalo de nuevo."
     },
     "confirm": {
@@ -187,6 +325,7 @@
     },
     "title": "Migrar canales"
   },
+  "resourceDescription": "Busca, crea, edita y elimina canales conectados a este sitio administrado.",
   "statusLabels": {
     "autoDisabled": "Deshabilitado automáticamente",
     "enabled": "Habilitado",

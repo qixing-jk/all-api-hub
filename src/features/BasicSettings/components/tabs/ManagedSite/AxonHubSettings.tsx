@@ -150,6 +150,8 @@ export default function AxonHubSettings() {
             description={t("axonHub.fields.baseUrlDesc")}
             rightContent={
               <Input
+                id="axonhub-base-url-input"
+                aria-label={t("axonHub.fields.baseUrlLabel")}
                 type="text"
                 value={localConfig.baseUrl}
                 onChange={(event) =>
@@ -170,6 +172,8 @@ export default function AxonHubSettings() {
             description={t("axonHub.fields.emailDesc")}
             rightContent={
               <Input
+                id="axonhub-email-input"
+                aria-label={t("axonHub.fields.emailLabel")}
                 type="email"
                 value={localConfig.email}
                 onChange={(event) =>
@@ -190,6 +194,8 @@ export default function AxonHubSettings() {
             description={t("axonHub.fields.passwordDesc")}
             rightContent={
               <Input
+                id="axonhub-password-input"
+                aria-label={t("axonHub.fields.passwordLabel")}
                 type="password"
                 revealable
                 revealLabels={{

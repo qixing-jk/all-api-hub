@@ -1,5 +1,6 @@
 import type { FormEvent, ReactNode } from "react"
 
+import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { Button, Modal } from "~/components/ui"
 
 /** Shared modal and form shell for legacy and resource-native channel editors. */
@@ -16,6 +17,7 @@ export function ChannelEditorShell({
   showSubmit = true,
   isSubmitDisabled = false,
   isSubmitting = false,
+  noValidate = false,
 }: {
   isOpen: boolean
   title: string
@@ -29,6 +31,7 @@ export function ChannelEditorShell({
   showSubmit?: boolean
   isSubmitDisabled?: boolean
   isSubmitting?: boolean
+  noValidate?: boolean
 }) {
   const handleClose = () => {
     if (isSubmitting) return
@@ -72,15 +75,23 @@ export function ChannelEditorShell({
   return (
     <Modal
       isOpen={isOpen}
+      title={title}
       onClose={handleClose}
       closeOnBackdropClick={!isSubmitting}
       closeOnEsc={!isSubmitting}
       showCloseButton={!isSubmitting}
       size="lg"
+      headerTestId={CHANNEL_DIALOG_TEST_IDS.header}
+      footerTestId={CHANNEL_DIALOG_TEST_IDS.footer}
       header={header}
       footer={footer}
     >
-      <form id="channel-editor-form" onSubmit={onSubmit} className="space-y-4">
+      <form
+        id="channel-editor-form"
+        onSubmit={onSubmit}
+        noValidate={noValidate}
+        className="space-y-4"
+      >
         {children}
       </form>
     </Modal>

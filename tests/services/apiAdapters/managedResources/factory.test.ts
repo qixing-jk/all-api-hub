@@ -110,7 +110,7 @@ const createHarness = (overrides: Partial<TestDefinition> = {}) => {
   const definition: TestDefinition = {
     siteType: SITE_TYPES.AXON_HUB,
     kind: MANAGED_RESOURCE_KINDS.Channel,
-    supportsSearch: true,
+    capabilities: { canSearch: true },
     openConfig: vi.fn<TestDefinition["openConfig"]>(async () => ({
       scope: "scope-a",
     })),
@@ -249,7 +249,13 @@ describe("defineNativeResourceKind", () => {
     const workspace: ManagedResourceWorkspace = await publicRegistration.open()
     const editor: ResourceEditor = await workspace.openEditEditor(toRef())
 
-    expect(workspace.supportsSearch).toBe(true)
+    expect(workspace).not.toHaveProperty("supportsSearch")
+    expect(workspace.capabilities).toEqual({
+      canSearch: true,
+      canCreate: true,
+      canUpdate: true,
+      canDelete: true,
+    })
     expect(workspace).not.toHaveProperty("config")
     expect(editor.initialValues).toEqual({
       name: TEST_DETAIL.name,
@@ -257,6 +263,162 @@ describe("defineNativeResourceKind", () => {
     })
     expect(editor).not.toHaveProperty("detail")
     expect(editor).not.toHaveProperty("secret")
+  })
+
+  it("sanitizes edit details before creating or retaining editor mutation closures", async () => {
+    const rawSecret = "native-only-secret"
+    const sanitizedSecret = "controlled-secret-state"
+    const latestSecret = "latest-authoritative-secret"
+    const initialDetail = {
+      ...TEST_DETAIL,
+      secret: rawSecret,
+      settings: { ...TEST_DETAIL.settings, hidden: "nested-native-secret" },
+    }
+    const latestDetail = {
+      ...TEST_DETAIL,
+      secret: latestSecret,
+      settings: { ...TEST_DETAIL.settings, hidden: "latest-nested-secret" },
+    }
+    const editEditor = vi.fn<TestDefinition["editEditor"]>(
+      (_config, detail) => {
+        expect(detail.secret).toBe(sanitizedSecret)
+        expect(detail.settings.hidden).toBe("safe-editor-setting")
+        return {
+          fields: [{ fieldId: "name", type: "text" }],
+          initialValues: { name: detail.name },
+          validate: () => ({ valid: true }),
+          buildCommand: (values) => ({
+            name: String(values.name),
+            visible: detail.settings.visible,
+          }),
+        }
+      },
+    )
+    const update = vi.fn<TestDefinition["update"]>(async (_config, detail) => {
+      expect(detail.secret).toBe(latestSecret)
+      expect(detail.settings.hidden).toBe("latest-nested-secret")
+      return {
+        certainty: "applied",
+        value: { ...detail, name: "Renamed" },
+      }
+    })
+    const get = vi
+      .fn<TestDefinition["get"]>()
+      .mockResolvedValueOnce(initialDetail)
+      .mockResolvedValueOnce(latestDetail)
+    const { registration } = createHarness({
+      get,
+      editEditor,
+      update,
+      sanitizeEditDetail: (detail) => ({
+        ...detail,
+        secret: sanitizedSecret,
+        settings: {
+          visible: detail.settings.visible,
+          hidden: "safe-editor-setting",
+        },
+      }),
+    })
+
+    const editor = await (await registration.open()).openEditEditor(toRef())
+    await editor.submit({ name: "Renamed" })
+
+    expect(editEditor).toHaveBeenCalledOnce()
+    expect(get).toHaveBeenCalledTimes(2)
+    expect(update).toHaveBeenCalledOnce()
+    expect(editor).not.toHaveProperty("secret")
+  })
+
+  it("keeps an editor reusable when the fresh authoritative read fails before dispatch", async () => {
+    const get = vi
+      .fn<TestDefinition["get"]>()
+      .mockResolvedValueOnce(TEST_DETAIL)
+      .mockRejectedValueOnce("denied")
+      .mockResolvedValueOnce(TEST_DETAIL)
+    const update = vi.fn<TestDefinition["update"]>(
+      async (_config, detail, command) => ({
+        certainty: "applied",
+        value: { ...detail, name: command.name },
+      }),
+    )
+    const { registration } = createHarness({ get, update })
+    const editor = await (await registration.open()).openEditEditor(toRef())
+
+    expect(
+      (
+        await captureManagedError(
+          editor.submit({ name: "First attempt", visible: "shown" }),
+        )
+      ).failure.code,
+    ).toBe(MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied)
+    await expect(
+      editor.submit({ name: "Recovered", visible: "shown" }),
+    ).resolves.toMatchObject({ displayName: "Recovered" })
+
+    expect(get).toHaveBeenCalledTimes(3)
+    expect(update).toHaveBeenCalledOnce()
+  })
+
+  it("closes an editor when the resource disappears during the fresh authoritative read", async () => {
+    const get = vi
+      .fn<TestDefinition["get"]>()
+      .mockResolvedValueOnce(TEST_DETAIL)
+      .mockRejectedValueOnce("not-found")
+    const update = vi.fn<TestDefinition["update"]>()
+    const { registration } = createHarness({ get, update })
+    const editor = await (await registration.open()).openEditEditor(toRef())
+
+    expect(
+      (
+        await captureManagedError(
+          editor.submit({ name: "Missing", visible: "shown" }),
+        )
+      ).failure.code,
+    ).toBe(MANAGED_RESOURCE_FAILURE_CODES.NotFound)
+    expect(
+      (
+        await captureManagedError(
+          editor.submit({ name: "Do not replay", visible: "shown" }),
+        )
+      ).failure.code,
+    ).toBe(MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed)
+
+    expect(get).toHaveBeenCalledTimes(2)
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it("normalizes disabled operation capabilities and rejects crafted calls", async () => {
+    const { definition, registration } = createHarness({
+      capabilities: {
+        canSearch: false,
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+      },
+    })
+    const workspace = await registration.open()
+
+    expect(workspace.capabilities).toEqual({
+      canSearch: false,
+      canCreate: false,
+      canUpdate: false,
+      canDelete: false,
+    })
+    expect(workspace).not.toHaveProperty("supportsSearch")
+    for (const action of [
+      workspace.list({ search: "crafted" }),
+      workspace.openCreateEditor(),
+      workspace.openEditEditor(toRef()),
+      workspace.delete(toRef()),
+    ]) {
+      expect((await captureManagedError(action)).failure.code).toBe(
+        MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+      )
+    }
+    expect(definition.list).not.toHaveBeenCalled()
+    expect(definition.createEditor).not.toHaveBeenCalled()
+    expect(definition.get).not.toHaveBeenCalled()
+    expect(definition.delete).not.toHaveBeenCalled()
   })
 
   it("supports an opaque nonnumeric resource id and cursor page without a total", async () => {
@@ -284,6 +446,21 @@ describe("defineNativeResourceKind", () => {
     expect(page).not.toHaveProperty("total")
     expect(page.items[0].ref.resourceId).toContain("opaque%3Aid%2Falpha")
   })
+
+  it.each(["", "s".repeat(2049), 42])(
+    "rejects an invalid definition scope %p after evaluating it once",
+    async (scopeKey) => {
+      const { definition, registration } = createHarness({
+        scopeKey: vi.fn(() => scopeKey as string),
+      })
+
+      const error = await captureManagedError(registration.open())
+
+      expect(error.failure.code).toBe(MANAGED_RESOURCE_FAILURE_CODES.Unexpected)
+      expect(definition.scopeKey).toHaveBeenCalledOnce()
+      expect(definition.list).not.toHaveBeenCalled()
+    },
+  )
 
   it("rejects empty or over-512-character resource ids before native access", async () => {
     const { definition, registration } = createHarness()
@@ -749,6 +926,24 @@ describe("defineNativeResourceKind", () => {
       (
         await captureManagedError(
           (await duplicateDetail.registration.open()).get(toRef()),
+        )
+      ).failure.code,
+    ).toBe(MANAGED_RESOURCE_FAILURE_CODES.Unexpected)
+
+    const unsafeSearchValues = createHarness({
+      toListFacts: vi.fn<TestDefinition["toListFacts"]>((item, ref) => ({
+        ref,
+        displayName: item.name,
+        status: "enabled",
+        fields: [],
+        searchValues: ["safe-model", 42] as never,
+        actions: { canUpdate: true, canDelete: true },
+      })),
+    })
+    expect(
+      (
+        await captureManagedError(
+          (await unsafeSearchValues.registration.open()).list(),
         )
       ).failure.code,
     ).toBe(MANAGED_RESOURCE_FAILURE_CODES.Unexpected)

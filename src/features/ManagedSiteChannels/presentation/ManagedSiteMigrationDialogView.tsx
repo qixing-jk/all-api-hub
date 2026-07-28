@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 
 import type {
   ManagedSiteMigrationCallbacks,
@@ -90,8 +91,9 @@ export function ManagedSiteMigrationDialogView({
   refreshRequired = false,
   callbacks,
 }: ManagedSiteMigrationDialogViewProps) {
+  const requiresRefresh = refreshRequired || result?.refreshRequired === true
   const handleClose = () => {
-    if (isRunning || isRecoveryRunning || refreshRequired) return
+    if (isRunning || isRecoveryRunning || requiresRefresh) return
     callbacks.onClose()
   }
   const canStart = Boolean(
@@ -99,12 +101,12 @@ export function ManagedSiteMigrationDialogView({
   )
 
   const footer = result ? (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-muted-foreground text-sm">
         {labels.footerSummary}
       </div>
-      <div className="flex items-center gap-2">
-        {refreshRequired ? (
+      <div className="flex w-full justify-end gap-2 sm:w-auto">
+        {requiresRefresh ? (
           <Button
             type="button"
             variant="outline"
@@ -115,17 +117,21 @@ export function ManagedSiteMigrationDialogView({
             {labels.refreshRequiredAction ?? labels.refreshPreview}
           </Button>
         ) : null}
-        <Button type="button" onClick={handleClose}>
+        <Button
+          type="button"
+          onClick={handleClose}
+          disabled={isRunning || isRecoveryRunning || requiresRefresh}
+        >
           {labels.close}
         </Button>
       </div>
     </div>
   ) : (
-    <div className="flex items-center justify-between gap-3">
+    <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-muted-foreground text-sm">
         {labels.footerSummary}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex w-full justify-end gap-2 sm:w-auto">
         <Button
           type="button"
           variant="outline"
@@ -153,10 +159,10 @@ export function ManagedSiteMigrationDialogView({
         isOpen={isOpen}
         onClose={handleClose}
         closeOnBackdropClick={
-          !isRunning && !isRecoveryRunning && !refreshRequired
+          !isRunning && !isRecoveryRunning && !requiresRefresh
         }
-        closeOnEsc={!isRunning && !isRecoveryRunning && !refreshRequired}
-        showCloseButton={!isRunning && !isRecoveryRunning && !refreshRequired}
+        closeOnEsc={!isRunning && !isRecoveryRunning && !requiresRefresh}
+        showCloseButton={!isRunning && !isRecoveryRunning && !requiresRefresh}
         size="lg"
         header={
           <div className="space-y-1">
@@ -174,7 +180,10 @@ export function ManagedSiteMigrationDialogView({
         footer={footer}
       >
         <div className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+          <div
+            data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.migrationControls}
+            className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
+          >
             <div className="space-y-2">
               <div className="text-sm font-medium">{labels.targetLabel}</div>
               <Select
@@ -237,7 +246,7 @@ export function ManagedSiteMigrationDialogView({
             </div>
           </div>
 
-          {refreshRequired && labels.refreshRequired ? (
+          {requiresRefresh && labels.refreshRequired ? (
             <div role="alert" className="rounded-md border p-3 text-sm">
               {labels.refreshRequired}
             </div>
@@ -352,7 +361,12 @@ export function ManagedSiteMigrationDialogView({
                       panelClassName="mt-3 space-y-3 border-0 bg-transparent p-0"
                     >
                       <div className="space-y-3">
-                        <div className="overflow-hidden rounded-md border">
+                        <div
+                          data-testid={
+                            MANAGED_SITE_CHANNELS_TEST_IDS.migrationComparison
+                          }
+                          className="overflow-hidden rounded-md border"
+                        >
                           <div className="bg-border grid gap-px md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
                             <div className="bg-muted/50 px-3 py-2 text-[11px] font-medium uppercase">
                               {labels.fieldLabel}

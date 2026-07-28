@@ -1,11 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  AXON_HUB_CHANNEL_FIELD_IDS,
   AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
+  AXON_HUB_EDITABLE_FIELD_IDS,
+  AXON_HUB_TABLE_FIELD_IDS,
 } from "~/constants/axonHub"
 import { ChannelType } from "~/constants/managedSite"
 import { isManagedSiteType, SITE_TYPES } from "~/constants/siteType"
+import {
+  getManagedResourceFieldPolicy,
+  resolveManagedResourceFieldPolicy,
+  type ManagedResourceEditorMode,
+} from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
+import { createManagedResourcePresentationMapper } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
 import {
   MANAGED_RESOURCE_KINDS,
   MANAGED_RESOURCE_MODES,
@@ -16,9 +25,11 @@ import {
   ManagedResourceError,
   type EditableResourceProjection,
   type ManagedResourceRef,
+  type ResourceEditor,
+  type ResourceSecretState,
+  type SecretEditIntent,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
-  AXON_HUB_EDITABLE_FIELD_IDS,
   axonHubManagedResourceRegistration,
   AxonHubNativeError,
   openAxonHubNativeResourceOperations,
@@ -29,7 +40,7 @@ import * as axonHubNativeResources from "~/services/apiAdapters/managedResources
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import type { AxonHubChannel } from "~/types/axonHub"
+import type { AxonHubChannel, AxonHubUpdateChannelInput } from "~/types/axonHub"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
@@ -160,6 +171,121 @@ const buildDetailChannel = (
   ...overrides,
 })
 
+const updateFieldCases: readonly {
+  fieldId: (typeof AXON_HUB_EDITABLE_FIELD_IDS)[number]
+  detailOverrides?: Partial<AxonHubChannel>
+  value: EditableResourceProjection[string]
+  expectedInput: AxonHubUpdateChannelInput
+}[] = [
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.NAME,
+    value: "Renamed channel",
+    expectedInput: { name: "Renamed channel" },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
+    value: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+    expectedInput: { type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
+    value: " https://updated.example.invalid ",
+    expectedInput: { baseURL: "https://updated.example.invalid" },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+    value: { kind: "replace", value: " replacement-secret " },
+    expectedInput: { credentials: { apiKeys: ["replacement-secret"] } },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
+    detailOverrides: { manualModels: [] },
+    value: [" model-a ", "model-b"],
+    expectedInput: { supportedModels: ["model-a", "model-b"] },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
+    detailOverrides: {
+      supportedModels: ["model-a", "manual-model", "manual-two"],
+    },
+    value: [" manual-model ", "manual-two"],
+    expectedInput: { manualModels: ["manual-model", "manual-two"] },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
+    detailOverrides: {
+      supportedModels: ["model-a", "model-b"],
+      manualModels: [],
+    },
+    value: "model-b",
+    expectedInput: { defaultTestModel: "model-b" },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
+    value: false,
+    expectedInput: { autoSyncSupportedModels: false },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
+    value: " updated-* ",
+    expectedInput: { autoSyncModelPattern: "updated-*" },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TAGS,
+    value: [" secondary ", "fallback"],
+    expectedInput: { tags: ["secondary", "fallback"] },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT,
+    value: 9,
+    expectedInput: { orderingWeight: 9 },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.REMARK,
+    value: " Updated remark ",
+    expectedInput: { remark: "Updated remark" },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+    value: "",
+    expectedInput: {
+      settings: { ...pinnedSettings, extraModelPrefix: "" },
+    },
+  },
+]
+
+const emptyFieldCases: readonly {
+  fieldId: (typeof AXON_HUB_EDITABLE_FIELD_IDS)[number]
+  value: EditableResourceProjection[string]
+  expectedInput: AxonHubUpdateChannelInput
+}[] = [
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
+    value: "",
+    expectedInput: { clearBaseURL: true },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
+    value: [],
+    expectedInput: { clearManualModels: true },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
+    value: "",
+    expectedInput: { clearAutoSyncModelPattern: true },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TAGS,
+    value: [],
+    expectedInput: { tags: [] },
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.REMARK,
+    value: "",
+    expectedInput: { clearRemark: true },
+  },
+]
+
 const refFor = (channel = buildDetailChannel()): ManagedResourceRef => ({
   siteType: SITE_TYPES.AXON_HUB,
   kind: MANAGED_RESOURCE_KINDS.Channel,
@@ -194,6 +320,31 @@ const expectFailureCode = async (promise: Promise<unknown>, code: string) => {
 }
 
 const openWorkspace = () => axonHubManagedResourceRegistration.open()
+
+const expectEditorMatchesFieldPolicy = (
+  editor: ResourceEditor,
+  mode: ManagedResourceEditorMode,
+) => {
+  const policy = getManagedResourceFieldPolicy(
+    SITE_TYPES.AXON_HUB,
+    MANAGED_RESOURCE_KINDS.Channel,
+    mode,
+  )
+  expect(policy).toBeDefined()
+  const resolved = resolveManagedResourceFieldPolicy(editor.fields, policy!)
+  expect(
+    new Set(resolved.fields.map(({ presentation }) => presentation.fieldId)),
+  ).toEqual(
+    new Set(
+      AXON_HUB_EDITABLE_FIELD_IDS.filter(
+        (fieldId) => fieldId !== AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
+      ),
+    ),
+  )
+  for (const { descriptor, presentation } of resolved.fields) {
+    expect(presentation.renderer).toBe(descriptor.type)
+  }
+}
 
 const buildMigrationCreateCommand = async (source = buildMigrationSource()) => {
   const preparation =
@@ -249,7 +400,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(mocks.signIn).toHaveBeenCalledWith(config, {
       signal: controller.signal,
     })
-    expect(workspace.supportsSearch).toBe(true)
+    expect(workspace.capabilities.canSearch).toBe(true)
     const operations: AxonHubNativeResourceOperations =
       await openAxonHubNativeResourceOperations()
     expect(operations).toMatchObject({
@@ -350,6 +501,7 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     const workspace = await openWorkspace()
     const editor = await workspace.openCreateEditor()
+    expectEditorMatchesFieldPolicy(editor, "create")
     const spoofedValues = { ...editor.initialValues }
     Object.defineProperty(spoofedValues, "name", {
       get() {
@@ -390,33 +542,211 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(JSON.stringify([page, detail])).not.toContain("proxy-password")
   })
 
-  it("maps all fourteen approved fields to safe detail facts", async () => {
+  it("counts unique supported and manual models in the native table facts", async () => {
+    const listChannel = buildListChannel({
+      supportedModels: [" model-a ", "model-a", ""],
+      manualModels: ["manual-model", " model-a ", " manual-model "],
+    })
+    mocks.listPage.mockResolvedValueOnce({ items: [listChannel], total: 1 })
+    const workspace = await openWorkspace()
+
+    const page = await workspace.list()
+
+    expect(page.items[0]?.fields).toContainEqual({
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
+      kind: "number",
+      value: 2,
+    })
+
+    const row = createManagedResourcePresentationMapper().map(page.items[0]!)
+    expect(row.searchText).toContain("manual-model")
+    expect(row.cells.supportedModels).toEqual({
+      kind: "text",
+      value: "2",
+      sortValue: 2,
+    })
+  })
+
+  it("maps all fourteen approved fields to exact safe detail facts", async () => {
     const workspace = await openWorkspace()
     const detail = await workspace.get(refFor())
 
+    expect(detail.fields).toEqual([
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.NAME,
+        kind: "text",
+        value: "Example channel",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
+        kind: "text",
+        value: AXON_HUB_CHANNEL_TYPE.OPENAI,
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
+        kind: "text",
+        value: "https://gateway.example.invalid",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.STATUS,
+        kind: "text",
+        value: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+        kind: "secret",
+        state: "available",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
+        kind: "list",
+        value: ["model-a"],
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
+        kind: "list",
+        value: ["manual-model"],
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
+        kind: "text",
+        value: "model-a",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
+        kind: "boolean",
+        value: true,
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
+        kind: "text",
+        value: "model-*",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TAGS,
+        kind: "list",
+        value: ["primary"],
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT,
+        kind: "number",
+        value: 7,
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.REMARK,
+        kind: "text",
+        value: "Example remark",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+        kind: "text",
+        value: "old-prefix",
+      },
+    ])
     expect(detail.fields.map((field) => field.fieldId)).toEqual(
       AXON_HUB_EDITABLE_FIELD_IDS,
     )
-    expect(new Set(detail.fields.map((field) => field.fieldId)).size).toBe(14)
-    expect(
-      detail.fields.every((field) =>
-        ["text", "number", "boolean", "list", "secret"].includes(field.kind),
-      ),
-    ).toBe(true)
+  })
+
+  it("normalizes nullable AxonHub detail values to safe display defaults", async () => {
+    const nullableDetail = buildDetailChannel({
+      baseURL: null,
+      credentials: null,
+      supportedModels: null,
+      manualModels: null,
+      defaultTestModel: null,
+      autoSyncSupportedModels: null,
+      autoSyncModelPattern: null,
+      tags: null,
+      orderingWeight: null,
+      remark: null,
+      settings: null,
+    })
+    mocks.getChannel.mockResolvedValue(nullableDetail)
+    const workspace = await openWorkspace()
+    const detail = await workspace.get(refFor(nullableDetail))
+
+    expect(detail.fields).toEqual([
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.NAME,
+        kind: "text",
+        value: "Example channel",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
+        kind: "text",
+        value: AXON_HUB_CHANNEL_TYPE.OPENAI,
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
+        kind: "text",
+        value: "",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.STATUS,
+        kind: "text",
+        value: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+        kind: "secret",
+        state: "permission-hidden",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
+        kind: "list",
+        value: [],
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
+        kind: "list",
+        value: [],
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
+        kind: "text",
+        value: "",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
+        kind: "boolean",
+        value: false,
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
+        kind: "text",
+        value: "",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TAGS,
+        kind: "list",
+        value: [],
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT,
+        kind: "number",
+        value: 0,
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.REMARK,
+        kind: "text",
+        value: "",
+      },
+      {
+        fieldId: AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+        kind: "text",
+        value: "",
+      },
+    ])
   })
 
   it("returns only the definition-selected safe fact subset from list", async () => {
     const workspace = await openWorkspace()
     const page = await workspace.list()
 
-    expect(page.items[0]?.fields.map((field) => field.fieldId)).toEqual([
-      "name",
-      "type",
-      "baseURL",
-      "status",
-      "supportedModels",
-      "tags",
-    ])
+    expect(page.items[0]?.fields.map((field) => field.fieldId)).toEqual(
+      AXON_HUB_TABLE_FIELD_IDS,
+    )
   })
 
   it("falls back to no list fields when the site definition is unavailable", async () => {
@@ -434,7 +764,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     }
   })
 
-  it("searches across all AxonHub pages when supportsSearch is true", async () => {
+  it("searches across all AxonHub pages when canSearch is true", async () => {
     mocks.listPage.mockImplementation(async (_config, input) => {
       if (!input.cursor) {
         return {
@@ -584,19 +914,57 @@ describe("AxonHub native managed-resource Adapter", () => {
       AXON_HUB_CHANNEL_TYPE.NANOGPT,
       AXON_HUB_CHANNEL_TYPE.OLLAMA,
     ])
+    const keyField = editor.fields.find((field) => field.fieldId === "key")
+    expect(keyField).toMatchObject({
+      type: "secret",
+      secretState: "unavailable",
+      canReplace: true,
+      allowClear: false,
+    })
+    const remarkField = editor.fields.find(
+      (field) => field.fieldId === "remark",
+    )
+    expect(remarkField).toMatchObject({ type: "textarea" })
+    expect(remarkField).not.toHaveProperty("rows")
+    for (const field of editor.fields) {
+      expect(field).not.toHaveProperty("section")
+      expect(field).not.toHaveProperty("order")
+      expect(field).not.toHaveProperty("label")
+      expect(field).not.toHaveProperty("labelKey")
+      expect(field).not.toHaveProperty("renderer")
+    }
 
-    for (const type of [AXON_HUB_CHANNEL_TYPE.CLAUDECODE, "future_oauth"]) {
+    const regularDetail = buildDetailChannel()
+    mocks.getChannel.mockResolvedValueOnce(regularDetail)
+    const regularEditor = await workspace.openEditEditor(refFor(regularDetail))
+    expectEditorMatchesFieldPolicy(regularEditor, "edit")
+
+    for (const type of [
+      AXON_HUB_CHANNEL_TYPE.CLAUDECODE,
+      AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT,
+      AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS,
+      AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP,
+      "future_oauth",
+    ]) {
       const specialDetail = buildDetailChannel({ type })
       mocks.getChannel.mockResolvedValueOnce(specialDetail)
       const specialEditor = await workspace.openEditEditor(
         refFor(specialDetail),
       )
+      expectEditorMatchesFieldPolicy(specialEditor, "edit")
       const specialTypeField = specialEditor.fields.find(
         (field) => field.fieldId === "type",
       )
       expect(specialTypeField).toMatchObject({
         type: "select",
         options: [{ value: type }],
+      })
+      expect(
+        specialEditor.fields.find((field) => field.fieldId === "key"),
+      ).toMatchObject({
+        type: "secret",
+        canReplace: false,
+        allowClear: false,
       })
       expect(
         specialEditor.validate({
@@ -617,7 +985,25 @@ describe("AxonHub native managed-resource Adapter", () => {
           { fieldId: "key", code: "unsupported_option" },
         ]),
       })
+      await expect(
+        specialEditor.submit({
+          ...specialEditor.initialValues,
+          type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+          key: { kind: "replace", value: "replacement-secret" },
+        }),
+      ).rejects.toMatchObject({
+        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+      })
+      await expect(
+        specialEditor.submit({
+          ...specialEditor.initialValues,
+          key: { kind: "clear" },
+        }),
+      ).rejects.toMatchObject({
+        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+      })
     }
+    expect(mocks.updateChannel).not.toHaveBeenCalled()
   })
 
   it("keeps archived distinct from disabled", async () => {
@@ -641,24 +1027,250 @@ describe("AxonHub native managed-resource Adapter", () => {
   })
 
   it("omits unchanged unavailable permission-hidden and masked credentials", async () => {
-    const credentialShapes = [undefined, null, { apiKeys: ["sk-****masked"] }]
+    const credentialShapes: Array<{
+      credentials: AxonHubChannel["credentials"]
+      secretState: ResourceSecretState
+    }> = [
+      {
+        credentials: { apiKeys: ["saved-secret-value"] },
+        secretState: "available",
+      },
+      { credentials: undefined, secretState: "unavailable" },
+      { credentials: null, secretState: "permission-hidden" },
+      {
+        credentials: { apiKeys: ["sk-****masked"] },
+        secretState: "masked",
+      },
+    ]
 
-    for (const credentials of credentialShapes) {
+    for (const { credentials, secretState } of credentialShapes) {
       const detail = buildDetailChannel({ credentials })
       mocks.getChannel.mockResolvedValueOnce(detail)
       mocks.updateChannel.mockResolvedValueOnce({ ...detail, name: "Renamed" })
       const workspace = await openWorkspace()
       const editor = await workspace.openEditEditor(refFor(detail))
+      expect(
+        editor.fields.find((field) => field.fieldId === "key"),
+      ).toMatchObject({
+        type: "secret",
+        secretState,
+        canReplace: secretState !== "permission-hidden",
+        allowClear: false,
+      })
       await editor.submit({ ...editor.initialValues, name: "Renamed" })
     }
 
-    for (const call of mocks.updateChannel.mock.calls.slice(-3)) {
+    for (const call of mocks.updateChannel.mock.calls.slice(-4)) {
       expect(call[2]).not.toHaveProperty("credentials")
     }
   })
 
+  it("fails closed for regular channels with multiple API keys", async () => {
+    const detail = buildDetailChannel({
+      credentials: {
+        apiKeys: [" first-secret ", "", "second-secret"],
+        apiKey: " legacy-secret ",
+      },
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    mocks.updateChannel.mockResolvedValue({ ...detail, name: "Renamed" })
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(detail))
+    const keyField = editor.fields.find(
+      (field) => field.fieldId === AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+    )
+
+    expect(keyField).toMatchObject({
+      type: "secret",
+      canReplace: false,
+      replacementBlockReason: "multiple_credentials",
+    })
+    expect(editor.loadSecret).toBeUndefined()
+
+    for (const intent of [
+      { kind: "replace", value: "replacement-secret" },
+      { kind: "clear" },
+    ] satisfies SecretEditIntent[]) {
+      expect(editor.validate({ ...editor.initialValues, key: intent })).toEqual(
+        {
+          valid: false,
+          issues: [
+            {
+              fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+              code: "unsupported_option",
+            },
+          ],
+        },
+      )
+      await expect(
+        editor.submit({ ...editor.initialValues, key: intent }),
+      ).rejects.toMatchObject({
+        failure: {
+          code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+          fieldIssues: [
+            {
+              fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+              code: "unsupported_option",
+            },
+          ],
+        },
+      })
+    }
+
+    await editor.submit({ ...editor.initialValues, name: "Renamed" })
+    expect(mocks.updateChannel.mock.calls.at(-1)?.[2]).toEqual({
+      name: "Renamed",
+    })
+    expect(mocks.updateChannel).toHaveBeenCalledOnce()
+  })
+
+  it("blocks a credential replacement when latest detail becomes multi-key", async () => {
+    const openingDetail = buildDetailChannel({
+      credentials: { apiKeys: ["single-secret"] },
+    })
+    const latestDetail = buildDetailChannel({
+      credentials: { apiKeys: ["first-secret", "second-secret"] },
+    })
+    mocks.getChannel
+      .mockResolvedValueOnce(openingDetail)
+      .mockResolvedValueOnce(latestDetail)
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(openingDetail))
+
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        key: { kind: "replace", value: "replacement-secret" },
+      }),
+    ).rejects.toMatchObject({
+      failure: {
+        code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+        fieldIssues: [
+          {
+            fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+            code: "unsupported_option",
+          },
+        ],
+      },
+    })
+    expect(mocks.updateChannel).not.toHaveBeenCalled()
+  })
+
+  it("keeps required descriptor metadata aligned with create and edit validation", async () => {
+    const workspace = await openWorkspace()
+    const createEditor = await workspace.openCreateEditor()
+    const detail = buildDetailChannel()
+    mocks.getChannel.mockResolvedValueOnce(detail)
+    const editEditor = await workspace.openEditEditor(refFor(detail))
+
+    const descriptor = (editor: ResourceEditor, fieldId: string) =>
+      editor.fields.find((field) => field.fieldId === fieldId)
+
+    expect(
+      descriptor(createEditor, AXON_HUB_CHANNEL_FIELD_IDS.KEY),
+    ).toMatchObject({ type: "secret", required: true })
+    expect(
+      descriptor(editEditor, AXON_HUB_CHANNEL_FIELD_IDS.KEY),
+    ).toMatchObject({ type: "secret", required: false })
+    expect(
+      descriptor(createEditor, AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS),
+    ).toMatchObject({ type: "multi-select", required: true })
+    expect(
+      descriptor(editEditor, AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS),
+    ).toMatchObject({ type: "multi-select", required: true })
+  })
+
+  it.each([
+    { label: "OAuth", type: "codex" },
+    { label: "AWS", type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS },
+    { label: "GCP", type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP },
+    { label: "unknown", type: "future_credential_type" },
+  ])(
+    "rejects crafted type and permission-hidden credential mutations for $label channels",
+    async ({ type }) => {
+      const detail = buildDetailChannel({ credentials: null, type })
+      mocks.getChannel.mockResolvedValue(detail)
+      const workspace = await openWorkspace()
+      const editor = await workspace.openEditEditor(refFor(detail))
+
+      expect(
+        editor.fields.find((field) => field.fieldId === "key"),
+      ).toMatchObject({
+        type: "secret",
+        secretState: "permission-hidden",
+        canReplace: false,
+        allowClear: false,
+      })
+
+      const craftedProjections: EditableResourceProjection[] = [
+        {
+          ...editor.initialValues,
+          type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+        },
+        {
+          ...editor.initialValues,
+          key: { kind: "replace", value: "replacement-secret" },
+        },
+        {
+          ...editor.initialValues,
+          key: { kind: "clear" },
+        },
+      ]
+
+      for (const projection of craftedProjections) {
+        await expect(editor.submit(projection)).rejects.toMatchObject({
+          failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+        })
+      }
+
+      expect(mocks.updateChannel).not.toHaveBeenCalled()
+      expect(mocks.updateStatus).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    {
+      inheritedProperty: "kind",
+      createIntent: () =>
+        Object.assign(Object.create({ kind: "replace" }), {
+          value: "prototype-secret",
+        }),
+    },
+    {
+      inheritedProperty: "value",
+      createIntent: () =>
+        Object.assign(Object.create({ value: "prototype-secret" }), {
+          kind: "replace",
+        }),
+    },
+  ])(
+    "rejects a crafted secret intent with inherited $inheritedProperty",
+    async ({ createIntent }) => {
+      const workspace = await openWorkspace()
+      const editor = await workspace.openCreateEditor()
+      const values: EditableResourceProjection = {
+        ...editor.initialValues,
+        name: "Created channel",
+        supportedModels: ["model-a"],
+        defaultTestModel: "model-a",
+        key: createIntent() as never,
+      }
+
+      expect(editor.validate(values)).toEqual({
+        valid: false,
+        issues: expect.arrayContaining([
+          { fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY, code: "required" },
+        ]),
+      })
+      await expect(editor.submit(values)).rejects.toMatchObject({
+        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+      })
+      expect(mocks.createChannel).not.toHaveBeenCalled()
+    },
+  )
+
   it("emits a replacement credential only for explicit replace intent", async () => {
-    const detail = buildDetailChannel({ credentials: null })
+    const detail = buildDetailChannel({ credentials: undefined })
     mocks.getChannel.mockResolvedValue(detail)
     mocks.updateChannel.mockResolvedValue({
       ...detail,
@@ -666,6 +1278,13 @@ describe("AxonHub native managed-resource Adapter", () => {
     })
     const workspace = await openWorkspace()
     const editor = await workspace.openEditEditor(refFor(detail))
+    expect(
+      editor.fields.find((field) => field.fieldId === "key"),
+    ).toMatchObject({
+      type: "secret",
+      secretState: "unavailable",
+      canReplace: true,
+    })
 
     await editor.submit({
       ...editor.initialValues,
@@ -680,45 +1299,182 @@ describe("AxonHub native managed-resource Adapter", () => {
     )
   })
 
-  it("emits only changed top-level fields and verified clear flags", async () => {
-    const detail = buildDetailChannel()
+  it("rejects crafted credential intents for a permission-hidden regular channel", async () => {
+    const detail = buildDetailChannel({
+      credentials: null,
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+    })
     mocks.getChannel.mockResolvedValue(detail)
-    mocks.updateChannel.mockResolvedValue({ ...detail, name: "Renamed" })
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(detail))
+
+    expect(
+      editor.fields.find((field) => field.fieldId === "key"),
+    ).toMatchObject({
+      type: "secret",
+      secretState: "permission-hidden",
+      canReplace: false,
+      allowClear: false,
+    })
+
+    for (const intent of [
+      { kind: "replace", value: "replacement-secret" },
+      { kind: "clear" },
+    ] satisfies SecretEditIntent[]) {
+      await expect(
+        editor.submit({ ...editor.initialValues, key: intent }),
+      ).rejects.toMatchObject({
+        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+      })
+    }
+
+    expect(mocks.updateChannel).not.toHaveBeenCalled()
+    expect(mocks.updateStatus).not.toHaveBeenCalled()
+  })
+
+  it.each(updateFieldCases)(
+    "maps $fieldId update according to the pinned field matrix",
+    async ({ fieldId, detailOverrides, value, expectedInput }) => {
+      const detail = buildDetailChannel(detailOverrides)
+      mocks.getChannel.mockResolvedValue(detail)
+      mocks.updateChannel.mockResolvedValue(detail)
+      const workspace = await openWorkspace()
+      const editor = await workspace.openEditEditor(refFor(detail))
+
+      await editor.submit({
+        ...editor.initialValues,
+        [fieldId]: value,
+      })
+
+      const updateInput = mocks.updateChannel.mock.calls.at(-1)?.[2]
+      expect(updateInput).toEqual(expectedInput)
+      if (fieldId === AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX) {
+        expect(updateInput).not.toHaveProperty("clearSettings")
+      }
+    },
+  )
+
+  it("routes status-only updates through the dedicated status mutation", async () => {
+    const detail = buildDetailChannel({
+      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    mocks.updateStatus.mockResolvedValue({
+      ...detail,
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+    })
     const workspace = await openWorkspace()
     const editor = await workspace.openEditEditor(refFor(detail))
 
     await editor.submit({
       ...editor.initialValues,
-      name: "Renamed",
-      baseURL: "",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+    })
+
+    expect(mocks.updateChannel).not.toHaveBeenCalled()
+    expect(mocks.updateStatus).toHaveBeenCalledWith(
+      config,
+      detail.id,
+      AXON_HUB_CHANNEL_STATUS.ENABLED,
+      undefined,
+    )
+  })
+
+  it("reveals an available regular credential only through an explicit editor load", async () => {
+    const detail = buildDetailChannel({
+      credentials: { apiKeys: ["saved-secret-value"] },
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(detail))
+
+    expect(editor.initialValues.key).toEqual({ kind: "unchanged" })
+    expect(editor.loadSecret).toBeTypeOf("function")
+    await expect(
+      editor.loadSecret?.(AXON_HUB_CHANNEL_FIELD_IDS.KEY),
+    ).resolves.toBe("saved-secret-value")
+    expect(editor.initialValues.key).toEqual({ kind: "unchanged" })
+    expect(mocks.getChannel).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    { credentials: undefined, type: AXON_HUB_CHANNEL_TYPE.OPENAI },
+    { credentials: null, type: AXON_HUB_CHANNEL_TYPE.OPENAI },
+    {
+      credentials: { apiKeys: ["sk-****masked"] },
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+    },
+    {
+      credentials: { apiKeys: ["saved-secret-value"] },
+      type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP,
+    },
+  ] satisfies Array<Pick<AxonHubChannel, "credentials" | "type">>)(
+    "does not expose a credential loader for non-revealable detail %#",
+    async (overrides) => {
+      const detail = buildDetailChannel(overrides)
+      mocks.getChannel.mockResolvedValue(detail)
+      const workspace = await openWorkspace()
+      const editor = await workspace.openEditEditor(refFor(detail))
+
+      expect(editor.loadSecret).toBeUndefined()
+      expect(JSON.stringify(editor.initialValues)).not.toContain(
+        "saved-secret-value",
+      )
+    },
+  )
+
+  it("does not send status in the ordinary patch and reports partial status failure", async () => {
+    const detail = buildDetailChannel({
       status: AXON_HUB_CHANNEL_STATUS.DISABLED,
-      supportedModels: ["model-a", "model-b"],
-      manualModels: [],
-      autoSyncModelPattern: "",
-      tags: [],
-      orderingWeight: 9,
-      remark: "",
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    mocks.updateChannel.mockResolvedValue({ ...detail, name: "Renamed" })
+    mocks.updateStatus.mockRejectedValueOnce(
+      new mocks.RequestError("unavailable", "dispatched"),
+    )
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(detail))
+
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        name: "Renamed",
+        status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain },
     })
 
     expect(mocks.updateChannel).toHaveBeenCalledWith(
       config,
       detail.id,
-      {
-        name: "Renamed",
-        clearBaseURL: true,
-        status: AXON_HUB_CHANNEL_STATUS.DISABLED,
-        supportedModels: ["model-a", "model-b"],
-        clearManualModels: true,
-        clearAutoSyncModelPattern: true,
-        clearTags: true,
-        orderingWeight: 9,
-        clearRemark: true,
-      },
+      { name: "Renamed" },
       undefined,
     )
-    expect(mocks.updateStatus).not.toHaveBeenCalled()
+    expect(mocks.updateStatus).toHaveBeenCalledOnce()
+  })
 
-    const whitespaceDetail = buildDetailChannel({
+  it.each(emptyFieldCases)(
+    "maps empty $fieldId to its verified empty-value behavior",
+    async ({ fieldId, value, expectedInput }) => {
+      const detail = buildDetailChannel()
+      mocks.getChannel.mockResolvedValue(detail)
+      mocks.updateChannel.mockResolvedValue(detail)
+      const workspace = await openWorkspace()
+      const editor = await workspace.openEditEditor(refFor(detail))
+
+      await editor.submit({
+        ...editor.initialValues,
+        [fieldId]: value,
+      })
+
+      expect(mocks.updateChannel.mock.calls.at(-1)?.[2]).toEqual(expectedInput)
+    },
+  )
+
+  it("omits every normalized field when the edited values are unchanged", async () => {
+    const detail = buildDetailChannel({
       name: "  Padded channel  ",
       baseURL: "  https://gateway.example.invalid  ",
       supportedModels: ["  model-a  "],
@@ -729,14 +1485,12 @@ describe("AxonHub native managed-resource Adapter", () => {
       remark: "  Example remark  ",
       settings: { ...pinnedSettings, extraModelPrefix: "  old-prefix  " },
     })
-    mocks.getChannel.mockResolvedValue(whitespaceDetail)
-    mocks.updateChannel.mockResolvedValue(whitespaceDetail)
-    const whitespaceWorkspace = await openWorkspace()
-    const whitespaceEditor = await whitespaceWorkspace.openEditEditor(
-      refFor(whitespaceDetail),
-    )
+    mocks.getChannel.mockResolvedValue(detail)
+    mocks.updateChannel.mockResolvedValue(detail)
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(detail))
 
-    await whitespaceEditor.submit(whitespaceEditor.initialValues)
+    await editor.submit(editor.initialValues)
 
     expect(mocks.updateChannel.mock.calls.at(-1)?.[2]).toEqual({})
   })
@@ -766,6 +1520,72 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(detail).toEqual(original)
   })
 
+  it("keeps nested settings secrets out of the editor and merges the update into a fresh detail", async () => {
+    const openingDetail = buildDetailChannel({
+      settings: {
+        ...structuredClone(pinnedSettings),
+        proxy: {
+          ...pinnedSettings.proxy,
+          password: "opening-proxy-secret",
+        },
+        providerQuota: {
+          opencodeGo: {
+            workspaceId: "opening-workspace",
+            authCookie: "opening-auth-cookie",
+          },
+        },
+      },
+    })
+    const latestDetail = buildDetailChannel({
+      settings: {
+        ...structuredClone(pinnedSettings),
+        hideOriginalModels: false,
+        proxy: {
+          ...pinnedSettings.proxy,
+          password: "latest-proxy-secret",
+        },
+        providerQuota: {
+          opencodeGo: {
+            workspaceId: "latest-workspace",
+            authCookie: "latest-auth-cookie",
+          },
+        },
+      },
+    })
+    mocks.getChannel
+      .mockResolvedValueOnce(openingDetail)
+      .mockResolvedValueOnce(latestDetail)
+    mocks.updateChannel.mockResolvedValue({
+      ...latestDetail,
+      settings: { ...latestDetail.settings, extraModelPrefix: "new-prefix" },
+    })
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(openingDetail))
+
+    const publicEditor = JSON.stringify({
+      fields: editor.fields,
+      initialValues: editor.initialValues,
+    })
+    expect(publicEditor).not.toContain("opening-proxy-secret")
+    expect(publicEditor).not.toContain("opening-auth-cookie")
+
+    await editor.submit({
+      ...editor.initialValues,
+      extraModelPrefix: "new-prefix",
+    })
+
+    expect(mocks.getChannel).toHaveBeenCalledTimes(2)
+    expect(mocks.updateChannel.mock.calls.at(-1)?.[2]).toEqual({
+      settings: { ...latestDetail.settings, extraModelPrefix: "new-prefix" },
+    })
+    expect(
+      JSON.stringify(mocks.updateChannel.mock.calls.at(-1)?.[2]),
+    ).not.toContain("opening-proxy-secret")
+    expect(
+      JSON.stringify(mocks.updateChannel.mock.calls.at(-1)?.[2]),
+    ).not.toContain("opening-auth-cookie")
+  })
+
   it("validates supported manual and default-model invariants", async () => {
     const workspace = await openWorkspace()
     const editor = await workspace.openCreateEditor()
@@ -776,7 +1596,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       baseURL: "https://gateway.example.invalid",
       key: { kind: "replace", value: "replacement-secret" },
       supportedModels: ["model-a"],
-      manualModels: ["manual-model"],
+      manualModels: ["model-a"],
       defaultTestModel: "model-a",
     }
 
@@ -819,6 +1639,15 @@ describe("AxonHub native managed-resource Adapter", () => {
         { fieldId: "orderingWeight", code: "invalid_value" },
       ]),
     })
+    expect(editor.validate({ ...validBase, orderingWeight: 101 })).toEqual({
+      valid: false,
+      issues: expect.arrayContaining([
+        { fieldId: "orderingWeight", code: "out_of_range" },
+      ]),
+    })
+    expect(
+      editor.fields.find(({ fieldId }) => fieldId === "orderingWeight"),
+    ).toMatchObject({ min: 0, max: 100, step: 1 })
     expect(mocks.createChannel).not.toHaveBeenCalled()
     expect(
       editor.validate({
@@ -832,6 +1661,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       issues: expect.arrayContaining([
         { fieldId: "supportedModels", code: "invalid_value" },
         { fieldId: "manualModels", code: "invalid_value" },
+        { fieldId: "manualModels", code: "inconsistent_value" },
         { fieldId: "defaultTestModel", code: "inconsistent_value" },
       ]),
     })
@@ -895,6 +1725,184 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(
       futureStatusEditor.validate(futureStatusEditor.initialValues),
     ).toEqual({ valid: true })
+
+    const legacyDetail = buildDetailChannel({
+      supportedModels: undefined,
+      manualModels: undefined,
+      defaultTestModel: undefined,
+    })
+    mocks.getChannel.mockResolvedValueOnce(legacyDetail)
+    const legacyEditor = await workspace.openEditEditor(refFor(legacyDetail))
+    expect(
+      legacyEditor.validate({
+        ...legacyEditor.initialValues,
+        status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+      }),
+    ).toEqual({ valid: true })
+
+    const inconsistentLegacyDetail = buildDetailChannel({
+      supportedModels: ["supported-model"],
+      manualModels: ["manual-only"],
+      defaultTestModel: "manual-only",
+    })
+    mocks.getChannel.mockResolvedValueOnce(inconsistentLegacyDetail)
+    const inconsistentLegacyEditor = await workspace.openEditEditor(
+      refFor(inconsistentLegacyDetail),
+    )
+    expect(
+      inconsistentLegacyEditor.validate({
+        ...inconsistentLegacyEditor.initialValues,
+        defaultTestModel: "supported-model",
+      }),
+    ).toEqual({ valid: true })
+  })
+
+  it.each([
+    AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT,
+    AXON_HUB_CHANNEL_TYPE.CLAUDECODE,
+  ])("rejects auto-sync edits for provider-managed type %s", async (type) => {
+    const detail = buildDetailChannel({
+      type,
+      autoSyncSupportedModels: false,
+      autoSyncModelPattern: "legacy-*",
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    const editor = await (await openWorkspace()).openEditEditor(refFor(detail))
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        autoSyncSupportedModels: true,
+      }),
+    ).toEqual({
+      valid: false,
+      issues: [
+        {
+          fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
+          code: "unsupported_option",
+        },
+      ],
+    })
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        autoSyncModelPattern: "updated-*",
+      }),
+    ).toEqual({
+      valid: false,
+      issues: [
+        {
+          fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
+          code: "unsupported_option",
+        },
+      ],
+    })
+  })
+
+  it("validates the model filter pattern only while automatic sync is enabled", async () => {
+    const workspace = await openWorkspace()
+    const editor = await workspace.openCreateEditor()
+    const validBase: EditableResourceProjection = {
+      ...editor.initialValues,
+      name: "Created channel",
+      key: { kind: "replace", value: "replacement-secret" },
+      supportedModels: ["model-example-a"],
+      manualModels: ["model-example-a"],
+      defaultTestModel: "model-example-a",
+      autoSyncSupportedModels: true,
+    }
+
+    for (const pattern of [
+      "model-example",
+      "*",
+      "(?i)^model-example",
+      "(?ii)^model-example",
+      "",
+    ]) {
+      expect(
+        editor.validate({ ...validBase, autoSyncModelPattern: pattern }),
+      ).toEqual({ valid: true })
+    }
+    expect(
+      editor.validate({
+        ...validBase,
+        autoSyncModelPattern: "[model-example",
+      }),
+    ).toEqual({
+      valid: false,
+      issues: [
+        {
+          fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
+          code: "invalid_value",
+        },
+      ],
+    })
+    expect(
+      editor.validate({
+        ...validBase,
+        autoSyncModelPattern: "(?im)^model-example",
+      }),
+    ).toEqual({
+      valid: false,
+      issues: [
+        {
+          fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
+          code: "invalid_value",
+        },
+      ],
+    })
+
+    const detail = buildDetailChannel({
+      autoSyncSupportedModels: false,
+      autoSyncModelPattern: "[model-example",
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    const editEditor = await workspace.openEditEditor(refFor(detail))
+
+    expect(
+      editEditor.validate({
+        ...editEditor.initialValues,
+        name: "Renamed channel",
+      }),
+    ).toEqual({ valid: true })
+  })
+
+  it("submits an unrelated legacy-detail rename without synthesizing model fields", async () => {
+    const legacyDetail = buildDetailChannel({
+      supportedModels: undefined,
+      manualModels: undefined,
+      defaultTestModel: undefined,
+    })
+    mocks.getChannel.mockResolvedValue(legacyDetail)
+    mocks.updateChannel.mockResolvedValue({
+      ...legacyDetail,
+      name: "Legacy renamed",
+    })
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(legacyDetail))
+
+    await editor.submit({
+      ...editor.initialValues,
+      name: "Legacy renamed",
+    })
+
+    expect(mocks.updateChannel).toHaveBeenCalledWith(
+      config,
+      legacyDetail.id,
+      { name: "Legacy renamed" },
+      undefined,
+    )
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        manualModels: ["manual-model"],
+      }),
+    ).toEqual({
+      valid: false,
+      issues: expect.arrayContaining([
+        { fieldId: "supportedModels", code: "required" },
+        { fieldId: "defaultTestModel", code: "required" },
+      ]),
+    })
   })
 
   it("keeps baseURL optional for native creation", async () => {
@@ -924,6 +1932,55 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     expect(mocks.createChannel).toHaveBeenCalledOnce()
     expect(mocks.createChannel.mock.calls[0]?.[1]).not.toHaveProperty("baseURL")
+  })
+
+  it("maps every approved editable field to the pinned create input", async () => {
+    const created = buildDetailChannel({
+      id: "created-complete-id",
+      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+    })
+    mocks.createChannel.mockResolvedValue(created)
+    const workspace = await openWorkspace()
+    const editor = await workspace.openCreateEditor()
+
+    await editor.submit({
+      ...editor.initialValues,
+      name: "Created channel",
+      type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+      baseURL: "https://upstream.example.invalid",
+      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+      key: { kind: "replace", value: " replacement-secret " },
+      supportedModels: [" model-a ", "model-b", "manual-model"],
+      manualModels: ["manual-model"],
+      defaultTestModel: "model-a",
+      autoSyncSupportedModels: true,
+      autoSyncModelPattern: "model-*",
+      tags: ["primary"],
+      orderingWeight: 7,
+      remark: "Example channel",
+      extraModelPrefix: "vendor/",
+    })
+
+    expect(mocks.createChannel).toHaveBeenCalledWith(
+      config,
+      {
+        type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+        name: "Created channel",
+        baseURL: "https://upstream.example.invalid",
+        credentials: { apiKeys: ["replacement-secret"] },
+        supportedModels: ["model-a", "model-b", "manual-model"],
+        manualModels: ["manual-model"],
+        autoSyncSupportedModels: true,
+        autoSyncModelPattern: "model-*",
+        tags: ["primary"],
+        defaultTestModel: "model-a",
+        settings: { extraModelPrefix: "vendor/" },
+        orderingWeight: 7,
+        remark: "Example channel",
+      },
+      undefined,
+    )
+    expect(mocks.updateStatus).not.toHaveBeenCalled()
   })
 
   it("maps create rejection and applies the requested enabled status", async () => {
@@ -963,26 +2020,6 @@ describe("AxonHub native managed-resource Adapter", () => {
       AXON_HUB_CHANNEL_STATUS.ENABLED,
       undefined,
     )
-  })
-
-  it("submits changed default-model and auto-sync settings", async () => {
-    const detail = buildDetailChannel()
-    mocks.getChannel.mockResolvedValue(detail)
-    const workspace = await openWorkspace()
-    const editor = await workspace.openEditEditor(refFor(detail))
-
-    await editor.submit({
-      ...editor.initialValues,
-      supportedModels: ["model-a", "model-b"],
-      defaultTestModel: "model-b",
-      autoSyncSupportedModels: false,
-    })
-
-    expect(mocks.updateChannel.mock.calls.at(-1)?.[2]).toMatchObject({
-      supportedModels: ["model-a", "model-b"],
-      defaultTestModel: "model-b",
-      autoSyncSupportedModels: false,
-    })
   })
 
   it("maps create plus failed status follow-up to mutation_state_uncertain without replay", async () => {
@@ -1106,7 +2143,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     ).toBeNull()
   })
 
-  it("does not treat registration presence as native rollout mode", () => {
+  it("keeps registration present while the production rollout remains legacy", () => {
     expect(
       getManagedResourceRegistration(
         SITE_TYPES.AXON_HUB,
@@ -1550,12 +2587,24 @@ describe("AxonHub native managed-resource Adapter", () => {
   })
 
   it.each([
-    AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS,
-    AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP,
-    "future-structured-type",
+    {
+      type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS,
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    },
+    {
+      type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP,
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    },
+    {
+      type: "future-structured-type",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_TYPE_UNSUPPORTED,
+    },
   ])(
-    "blocks non-regular native type %s even when apiKeys look usable",
-    async (type) => {
+    "blocks non-regular native type $type even when apiKeys look usable",
+    async ({ type, reasonCode }) => {
       mocks.getChannel.mockResolvedValue(
         buildDetailChannel({
           type,
@@ -1569,8 +2618,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       }
       const expected = {
         status: "blocked",
-        reasonCode:
-          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+        reasonCode,
       }
 
       await expect(

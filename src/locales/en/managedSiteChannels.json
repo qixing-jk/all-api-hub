@@ -1,8 +1,36 @@
 {
   "alerts": {
+    "authenticationFailed": {
+      "description": "The saved AxonHub credentials were rejected. Open settings, update them, then refresh the channel list.",
+      "title": "Sign in to AxonHub again"
+    },
+    "editorLoadError": {
+      "description": "The channel form could not be loaded. Refresh the channel list and try again.",
+      "title": "Unable to open channel editor"
+    },
+    "editorSaveError": {
+      "description": "Your changes were not saved. Try again.",
+      "title": "Unable to save channel"
+    },
     "loadError": {
       "description": "{{error}}",
       "title": "Unable to load channels"
+    },
+    "partialMutation": {
+      "description": "Some fields may have been saved, but the status could not be confirmed. Refresh the channel list and review the channel before retrying.",
+      "title": "Channel update needs review"
+    },
+    "permissionDenied": {
+      "description": "This AxonHub account cannot manage channels. Use an administrator account or update its permissions, then refresh.",
+      "title": "AxonHub access denied"
+    },
+    "savedRefreshError": {
+      "description": "The channel was saved, but the latest list could not be loaded. Refresh the channel list before making more changes.",
+      "title": "Channel saved, refresh needed"
+    },
+    "unavailable": {
+      "description": "AxonHub could not be reached. Check the server and network, then refresh the channel list.",
+      "title": "AxonHub is unavailable"
     }
   },
   "description": "Search, edit, delete, and manually sync channels connected to your managed site.",
@@ -20,6 +48,115 @@
     "deleteResultsTitle": "Delete results",
     "deleteTitle": "Delete channel?",
     "deleteTitlePlural": "Delete channels?"
+  },
+  "editor": {
+    "fields": {
+      "autoSyncModelPattern": {
+        "help": "Only sync matching models. Prefix with (?i) to ignore case; leave empty to sync all models.",
+        "invalid": "Enter a valid model filter pattern.",
+        "label": "Model filter pattern",
+        "placeholder": "For example, (?i)^model-example"
+      },
+      "autoSyncSupportedModels": {
+        "help": "AxonHub updates enabled channels from the provider API at the frequency configured in AxonHub system settings.",
+        "label": "Automatically sync supported models"
+      },
+      "defaultTestModel": {
+        "help": "Used to test this channel connection. Choose one of the supported models.",
+        "label": "Default test model",
+        "placeholder": "Select a configured model"
+      },
+      "extraModelPrefix": {
+        "help": "Configure extra model prefixes to allow access to this channel using prefixed model names. For example, with the prefix 'deepseek', both 'deepseek/deepseek-chat' and 'deepseek-chat' can access this channel.",
+        "label": "Extra model prefix",
+        "placeholder": "e.g., deepseek"
+      },
+      "orderingWeight": {
+        "help": "Higher values are preferred when AxonHub selects a channel; equal values have equal ordering priority.",
+        "label": "Ordering weight"
+      },
+      "remark": {
+        "help": "Add notes or remarks about this channel for reference.",
+        "label": "Remark",
+        "placeholder": "Enter a note or remark for this channel..."
+      },
+      "supportedModels": {
+        "help": "Type or paste model names. Models added here are kept during automatic model sync."
+      },
+      "tags": {
+        "help": "Add tags to categorize and filter channels. Press Enter to add a tag. You can also paste comma- or line-separated tags.",
+        "label": "Tags",
+        "placeholder": "Add tags..."
+      }
+    },
+    "options": {
+      "channelType": {
+        "anthropic": "Anthropic",
+        "anthropicAws": "Anthropic on AWS",
+        "anthropicGcp": "Anthropic on Google Cloud",
+        "claudeCode": "Claude Code",
+        "deepseek": "DeepSeek",
+        "deepseekAnthropic": "DeepSeek Anthropic",
+        "gemini": "Gemini",
+        "geminiOpenai": "Gemini OpenAI",
+        "geminiVertex": "Gemini Vertex",
+        "githubCopilot": "GitHub Copilot",
+        "nanogpt": "NanoGPT",
+        "ollama": "Ollama",
+        "openai": "OpenAI",
+        "openaiResponses": "OpenAI Responses",
+        "openrouter": "OpenRouter",
+        "siliconflow": "SiliconFlow",
+        "unsupported": "Unsupported channel type",
+        "volcengine": "Volcengine",
+        "xai": "xAI"
+      },
+      "status": {
+        "archived": "Archived",
+        "disabled": "Disabled",
+        "enabled": "Enabled",
+        "unknown": "Unknown"
+      },
+      "unknown": "Unknown option"
+    },
+    "secret": {
+      "actions": {
+        "clear": "Remove saved credential",
+        "restore": "Keep saved credential",
+        "retry": "Retry"
+      },
+      "createHint": "Enter a credential for the new channel.",
+      "keepExistingHint": "Leave this field blank to keep the saved credential unchanged.",
+      "loadError": "The saved credential could not be loaded.",
+      "loading": "Loading the saved credential...",
+      "placeholder": "Enter a credential",
+      "replacementBlocked": {
+        "multipleCredentials": "This channel has multiple API keys. Manage its keys in AxonHub."
+      },
+      "replacementDisabled": "This credential type cannot be replaced here.",
+      "state": {
+        "available": "A saved credential is available.",
+        "masked": "A masked credential is saved.",
+        "permissionHidden": "The saved credential is hidden by permissions.",
+        "unavailable": "No credential is available to display."
+      }
+    },
+    "sections": {
+      "advanced": "Advanced",
+      "basic": "Basic",
+      "connection": "Connection",
+      "metadata": "Metadata",
+      "models": "Models",
+      "routing": "Routing",
+      "sync": "Model sync"
+    },
+    "validation": {
+      "inconsistentValue": "This value conflicts with another field.",
+      "invalidValue": "Enter a valid value.",
+      "outOfRange": "Enter a value in the allowed range.",
+      "required": "This field is required.",
+      "unsupportedOption": "This option is not supported."
+    }
   },
   "filter": {
     "statusLabel": "Filter by status"
@@ -122,6 +259,7 @@
     "blockedReasons": {
       "sourceKeyMissing": "The source channel key is unavailable, so this channel cannot be migrated yet.",
       "sourceKeyResolutionFailed": "The source channel key could not be loaded. If you just completed verification, refresh the preview and try again.",
+      "sourceTypeUnsupported": "This source channel type is not supported for migration. Choose a supported channel or migrate it manually.",
       "targetDraftPreparationFailed": "The target channel draft could not be prepared. Review the channel details, refresh the preview, and try again."
     },
     "confirm": {
@@ -187,6 +325,7 @@
     },
     "title": "Migrate channels"
   },
+  "resourceDescription": "Search, create, edit, and delete channels connected to this managed site.",
   "statusLabels": {
     "autoDisabled": "Auto Disabled",
     "enabled": "Enabled",

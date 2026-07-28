@@ -41,16 +41,41 @@ const CHANNEL_TYPE_TO_AXON_HUB: Readonly<
   [ChannelType.Ollama]: AXON_HUB_CHANNEL_TYPE.OLLAMA,
 }
 
-/** Maps an AxonHub-native channel type into the shared migration type. */
-export function mapAxonHubChannelTypeToChannelType(type: string): ChannelType {
+type AxonHubChannelTypeMapping<T> =
+  | { status: "mapped"; value: T }
+  | { status: "unsupported" }
+
+/** Strictly maps an AxonHub-native channel type into the shared migration type. */
+export function mapAxonHubChannelTypeToChannelTypeStrict(
+  type: string,
+): AxonHubChannelTypeMapping<ChannelType> {
   return isAxonHubChannelType(type)
-    ? AXON_HUB_TO_CHANNEL_TYPE[type]
-    : ChannelType.OpenAI
+    ? { status: "mapped", value: AXON_HUB_TO_CHANNEL_TYPE[type] }
+    : { status: "unsupported" }
 }
 
-/** Maps a shared migration type into the closest AxonHub-native type. */
+/** Strictly maps a supported shared migration type into an AxonHub-native type. */
+export function mapChannelTypeToAxonHubChannelTypeStrict(
+  type: ChannelType,
+): AxonHubChannelTypeMapping<AxonHubChannelType> {
+  const mappedType = CHANNEL_TYPE_TO_AXON_HUB[type]
+  return mappedType === undefined
+    ? { status: "unsupported" }
+    : { status: "mapped", value: mappedType }
+}
+
+/** Maps an AxonHub-native channel type using the legacy OpenAI fallback. */
+export function mapAxonHubChannelTypeToChannelType(type: string): ChannelType {
+  const mappedType = mapAxonHubChannelTypeToChannelTypeStrict(type)
+  return mappedType.status === "mapped" ? mappedType.value : ChannelType.OpenAI
+}
+
+/** Maps a shared channel type using the legacy AxonHub OpenAI fallback. */
 export function mapChannelTypeToAxonHubChannelType(
   type: ChannelType,
 ): AxonHubChannelType {
-  return CHANNEL_TYPE_TO_AXON_HUB[type] ?? AXON_HUB_CHANNEL_TYPE.OPENAI
+  const mappedType = mapChannelTypeToAxonHubChannelTypeStrict(type)
+  return mappedType.status === "mapped"
+    ? mappedType.value
+    : AXON_HUB_CHANNEL_TYPE.OPENAI
 }

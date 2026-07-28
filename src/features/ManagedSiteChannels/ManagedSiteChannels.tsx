@@ -215,8 +215,10 @@ export function upsertChannelRow(rows: ChannelRow[], channel: ChannelRow) {
  * Fetches channel data, exposes filtering tools, and handles CRUD operations.
  */
 interface ManagedSiteChannelsProps {
+  siteType?: ManagedSiteType
   refreshKey?: number
   routeParams?: Record<string, string>
+  onReplaceRouteQuery?: (query: Record<string, string | undefined>) => void
 }
 
 /**
@@ -302,8 +304,10 @@ const attachChannelFilterResourceRefs = (params: {
  * Render the managed site channels page with data loading, filtering, and actions.
  */
 export default function ManagedSiteChannels({
+  siteType,
   refreshKey,
   routeParams,
+  onReplaceRouteQuery,
 }: ManagedSiteChannelsProps) {
   const { t } = useTranslation([
     "managedSiteChannels",
@@ -313,7 +317,7 @@ export default function ManagedSiteChannels({
   ])
   const {
     preferences,
-    managedSiteType,
+    managedSiteType: contextManagedSiteType,
     newApiBaseUrl,
     newApiUserId,
     newApiUsername,
@@ -321,6 +325,7 @@ export default function ManagedSiteChannels({
     newApiTotpSecret,
     updateManagedSiteType,
   } = useUserPreferencesContext()
+  const managedSiteType = siteType ?? contextManagedSiteType
   const isOctopus = managedSiteType === SITE_TYPES.OCTOPUS
   const isAxonHub = managedSiteType === SITE_TYPES.AXON_HUB
   const isClaudeCodeHub = managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB
@@ -1312,9 +1317,13 @@ export default function ManagedSiteChannels({
       const nextQuery = normalizeRouteQuery(query)
       const currentQuery = normalizeRouteQuery(routeParams ?? {})
       if (areRouteQueriesEqual(nextQuery, currentQuery)) return
+      if (onReplaceRouteQuery) {
+        onReplaceRouteQuery(nextQuery)
+        return
+      }
       navigateWithinOptionsPage(managedSiteChannelsHash, nextQuery)
     },
-    [managedSiteChannelsHash, routeParams],
+    [managedSiteChannelsHash, onReplaceRouteQuery, routeParams],
   )
 
   const channelRowsByKey = useMemo(

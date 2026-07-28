@@ -1,4 +1,3 @@
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline"
 import {
   getCoreRowModel,
   getFacetedUniqueValues,
@@ -27,13 +26,12 @@ import {
 } from "lucide-react"
 import { useMemo, useRef, type ReactNode } from "react"
 
-import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
+import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
 import { PageHeader } from "~/components/PageHeader"
 import Tooltip from "~/components/Tooltip"
 import {
   Badge,
   DestructiveConfirmDialog,
-  EmptyState,
   ExternalUrlText,
   IconButton,
   Input,
@@ -96,6 +94,10 @@ type ManagedSiteChannelsViewProps = {
   title: string
   description: string
   configurationMissingDescription: string
+  configurationSettingsTarget?: {
+    tabId: "managedSite"
+    anchor?: string
+  }
   siteTypeLabel: string
   filterDialog?: ReactNode
 }
@@ -201,6 +203,7 @@ export function ManagedSiteChannelsView({
   title,
   description,
   configurationMissingDescription,
+  configurationSettingsTarget,
   siteTypeLabel,
   filterDialog,
 }: ManagedSiteChannelsViewProps) {
@@ -577,24 +580,16 @@ export function ManagedSiteChannelsView({
       />
 
       {state.isConfigurationMissing ? (
-        <EmptyState
-          icon={
-            <ExclamationTriangleIcon className="h-12 w-12 text-yellow-500" />
-          }
-          title={labels.configurationRequired}
+        <ManagedSiteConfigRequiredState
           description={configurationMissingDescription}
-          action={{
-            label: labels.goToSettings,
-            rightIcon: (
-              <WorkflowTransitionIcon className="h-4 w-4" aria-hidden />
-            ),
-            onClick: callbacks.onConfigurationRequired,
-          }}
+          settingsTarget={configurationSettingsTarget}
+          onRetry={callbacks.onRefresh}
+          isRetrying={state.isRefreshing}
         />
       ) : (
         <>
           {state.failure ? (
-            <Alert variant="destructive">
+            <Alert variant={state.failure.variant ?? "destructive"}>
               <AlertTitle>{state.failure.category}</AlertTitle>
               <AlertDescription>{state.failure.message}</AlertDescription>
             </Alert>

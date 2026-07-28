@@ -8,6 +8,7 @@ import type {
   ManagedSiteMigrationLabels,
 } from "~/features/ManagedSiteChannels/presentation/contracts"
 import { ManagedSiteMigrationDialogView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteMigrationDialogView"
+import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 
 const labels: ManagedSiteMigrationLabels = {
   title: "Migrate channels",
@@ -87,6 +88,64 @@ const createCallbacks = (
 })
 
 describe("ManagedSiteMigrationDialogView", () => {
+  it("uses responsive migration footer layouts for preview and result", () => {
+    const props = {
+      isOpen: true,
+      selectedTarget: "target",
+      targets: [{ value: "target", label: "Target example" }],
+      preview: {
+        sourceLabel: "Source example",
+        targetLabel: "Target example",
+        isLoading: false,
+        isManualLoading: false,
+        error: null,
+        readyCount: 1,
+        blockedCount: 0,
+        totalCount: 1,
+        generalWarnings: [],
+        rows: [],
+      },
+      labels,
+      callbacks: createCallbacks(),
+      isConfirmationOpen: false,
+    }
+    const { rerender } = render(<ManagedSiteMigrationDialogView {...props} />)
+
+    expect(screen.getByText(labels.footerSummary).parentElement).toHaveClass(
+      "flex",
+      "flex-col",
+      "items-stretch",
+      "gap-3",
+      "sm:flex-row",
+      "sm:items-center",
+      "sm:justify-between",
+    )
+    expect(
+      screen.getByRole("button", { name: labels.start }).parentElement,
+    ).toHaveClass("flex", "w-full", "justify-end", "gap-2", "sm:w-auto")
+
+    rerender(
+      <ManagedSiteMigrationDialogView
+        {...props}
+        preview={null}
+        result={{ summary: "1 created", items: [] }}
+      />,
+    )
+
+    expect(screen.getByText(labels.footerSummary).parentElement).toHaveClass(
+      "flex",
+      "flex-col",
+      "items-stretch",
+      "gap-3",
+      "sm:flex-row",
+      "sm:items-center",
+      "sm:justify-between",
+    )
+    expect(
+      screen.getByRole("button", { name: labels.close }).parentElement,
+    ).toHaveClass("flex", "w-full", "justify-end", "gap-2", "sm:w-auto")
+  })
+
   it("renders seven ordered comparisons and uses controlled confirmation", async () => {
     const user = userEvent.setup()
     const onConfirm = vi.fn()
@@ -135,6 +194,12 @@ describe("ManagedSiteMigrationDialogView", () => {
     }
     const { rerender } = render(<ManagedSiteMigrationDialogView {...props} />)
 
+    expect(
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.migrationControls),
+    ).toBeVisible()
+    expect(
+      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.migrationComparison),
+    ).toBeVisible()
     const blockedSection = screen
       .getByText("Example blocked")
       .closest("section")
@@ -226,8 +291,7 @@ describe("ManagedSiteMigrationDialogView", () => {
 
     expect(screen.getAllByText("1 created, 1 failed").length).toBeGreaterThan(0)
     expect(screen.getByText("Rejected")).toBeVisible()
-    await user.click(screen.getByRole("button", { name: "Close" }))
-    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole("button", { name: "Close" })).toBeDisabled()
     expect(
       screen.getByText("Refresh the channel list before closing."),
     ).toBeVisible()
@@ -241,6 +305,88 @@ describe("ManagedSiteMigrationDialogView", () => {
 
     await user.click(screen.getByRole("button", { name: "Refresh channels" }))
     expect(onRecoverRefreshRequired).toHaveBeenCalledTimes(1)
+  })
+
+  it("honors refresh-required and no-replay controls carried by the result", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const onRecoverRefreshRequired = vi.fn()
+    render(
+      <ManagedSiteMigrationDialogView
+        isOpen
+        selectedTarget="target"
+        targets={[{ value: "target", label: "Target example" }]}
+        preview={null}
+        result={{
+          summary: "1 uncertain",
+          refreshRequired: true,
+          canReplay: false,
+          items: [
+            {
+              rowKey: "opaque:uncertain",
+              displayIdentifier: "opaque:uncertain",
+              name: "Uncertain example",
+              status: "uncertain",
+              statusLabel: "Uncertain",
+              message: "Verify the target and refresh before continuing.",
+            },
+          ],
+        }}
+        labels={{ ...labels, footerSummary: "1 uncertain" }}
+        isConfirmationOpen={false}
+        callbacks={createCallbacks({ onClose, onRecoverRefreshRequired })}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "Start migration" }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Close" })).toBeDisabled()
+
+    await user.click(screen.getByRole("button", { name: "Refresh channels" }))
+    expect(onRecoverRefreshRequired).toHaveBeenCalledOnce()
+  })
+
+  it("keeps normal failed and skipped results closable", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(
+      <ManagedSiteMigrationDialogView
+        isOpen
+        selectedTarget="target"
+        targets={[{ value: "target", label: "Target example" }]}
+        preview={null}
+        result={{
+          summary: "1 failed, 1 skipped",
+          refreshRequired: false,
+          canReplay: false,
+          items: [
+            {
+              rowKey: "opaque:failed",
+              displayIdentifier: "opaque:failed",
+              name: "Failed example",
+              status: "failed",
+              statusLabel: "Failed",
+            },
+            {
+              rowKey: "opaque:skipped",
+              displayIdentifier: "opaque:skipped",
+              name: "Skipped example",
+              status: "skipped",
+              statusLabel: "Skipped",
+            },
+          ],
+        }}
+        labels={{ ...labels, footerSummary: "1 failed, 1 skipped" }}
+        isConfirmationOpen={false}
+        callbacks={createCallbacks({ onClose })}
+      />,
+    )
+
+    const close = screen.getByRole("button", { name: "Close" })
+    expect(close).toBeEnabled()
+    await user.click(close)
+    expect(onClose).toHaveBeenCalledOnce()
   })
 
   it("preserves the migration error dark-theme panel contract", () => {

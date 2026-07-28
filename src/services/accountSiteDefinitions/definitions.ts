@@ -1,3 +1,7 @@
+import {
+  AXON_HUB_EDITABLE_FIELD_IDS,
+  AXON_HUB_TABLE_FIELD_IDS,
+} from "~/constants/axonHub"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES,
@@ -446,30 +450,8 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
-      tableFieldIds: [
-        "name",
-        "type",
-        "baseURL",
-        "status",
-        "supportedModels",
-        "tags",
-      ],
-      detailFieldIds: [
-        "name",
-        "type",
-        "baseURL",
-        "status",
-        "key",
-        "supportedModels",
-        "manualModels",
-        "defaultTestModel",
-        "autoSyncSupportedModels",
-        "autoSyncModelPattern",
-        "tags",
-        "orderingWeight",
-        "remark",
-        "extraModelPrefix",
-      ],
+      tableFieldIds: AXON_HUB_TABLE_FIELD_IDS,
+      detailFieldIds: AXON_HUB_EDITABLE_FIELD_IDS,
       actions: [
         MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
         MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,

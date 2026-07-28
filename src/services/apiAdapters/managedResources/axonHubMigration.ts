@@ -1,23 +1,35 @@
-import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
+import {
+  AXON_HUB_CHANNEL_STATUS,
+  type AxonHubChannelType,
+} from "~/constants/axonHub"
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
+  isManagedResourceRefFor,
+  type ResourceOperationOptions,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
   AxonHubNativeError,
+  getAxonHubCredentialCandidates,
   isRegularAxonHubChannelType,
   openAxonHubNativeResourceOperations,
   type AxonHubNativeFailure,
 } from "~/services/apiAdapters/managedResources/axonHub"
 import {
-  mapAxonHubChannelTypeToChannelType,
-  mapChannelTypeToAxonHubChannelType,
+  mapAxonHubChannelTypeToChannelTypeStrict,
+  mapChannelTypeToAxonHubChannelTypeStrict,
 } from "~/services/apiAdapters/managedResources/axonHubChannelType"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import type { AxonHubChannel, AxonHubCreateChannelInput } from "~/types/axonHub"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
   type ManagedSiteMigrationCapability,
   type ManagedSiteMigrationConfirmedFailureCode,
+  type ManagedSiteMigrationSelection,
   type ManagedSiteMigrationSource,
 } from "~/types/managedSiteMigrationCapability"
 import { normalizeList } from "~/utils/core/string"
@@ -25,13 +37,12 @@ import { normalizeList } from "~/utils/core/string"
 const blockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
 const failures = MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES
 
-const getCredentialCandidates = (channel: AxonHubChannel): string[] =>
-  [
-    ...(channel.credentials?.apiKeys ?? []),
-    ...(channel.credentials?.apiKey ? [channel.credentials.apiKey] : []),
-  ]
-    .map((key) => key.trim())
-    .filter(Boolean)
+class AxonHubUnsupportedMigrationTypeError extends Error {
+  constructor() {
+    super("AxonHub migration does not support this channel type.")
+    this.name = "AxonHubUnsupportedMigrationTypeError"
+  }
+}
 
 const inspectCredential = (channel: AxonHubChannel) => {
   if (channel.credentials === null) {
@@ -40,7 +51,7 @@ const inspectCredential = (channel: AxonHubChannel) => {
   if (!isRegularAxonHubChannelType(String(channel.type))) {
     return { state: "unavailable" as const }
   }
-  const candidates = getCredentialCandidates(channel)
+  const candidates = getAxonHubCredentialCandidates(channel)
   const credential = candidates.find(hasUsableApiTokenKey)
   if (credential) return { state: "available" as const, credential }
   return candidates.length > 0
@@ -55,6 +66,18 @@ const credentialBlocker = (
     ? blockers.SOURCE_KEY_RESOLUTION_FAILED
     : blockers.SOURCE_KEY_MISSING
 
+const inspectMigrationSourceType = (channel: AxonHubChannel) => {
+  const resourceType = mapAxonHubChannelTypeToChannelTypeStrict(
+    String(channel.type),
+  )
+  return resourceType.status === "mapped"
+    ? resourceType
+    : {
+        status: "blocked" as const,
+        reasonCode: blockers.SOURCE_TYPE_UNSUPPORTED,
+      }
+}
+
 const hasAdvancedSettings = (channel: AxonHubChannel): boolean =>
   Boolean(
     (channel.settings && Object.keys(channel.settings).length > 0) ||
@@ -68,9 +91,10 @@ const hasAdvancedSettings = (channel: AxonHubChannel): boolean =>
 
 const toCanonicalSource = (
   channel: AxonHubChannel,
+  resourceType: ManagedSiteMigrationSource["resourceType"],
 ): ManagedSiteMigrationSource => ({
   sourceSiteType: SITE_TYPES.AXON_HUB,
-  resourceType: mapAxonHubChannelTypeToChannelType(String(channel.type)),
+  resourceType,
   baseUrl: channel.baseURL?.trim() ?? "",
   models: normalizeList([
     ...(channel.supportedModels ?? []),
@@ -89,7 +113,7 @@ const toCanonicalSource = (
     hasModelMapping: Boolean(channel.settings?.modelMappings?.length),
     hasStatusCodeMapping: false,
     hasAdvancedSettings: hasAdvancedSettings(channel),
-    hasMultiKeyState: getCredentialCandidates(channel).length > 1,
+    hasMultiKeyState: getAxonHubCredentialCandidates(channel).length > 1,
   },
 })
 
@@ -136,6 +160,53 @@ const withNormalizedAxonHubAbort = async <T>(
   }
 }
 
+const normalizeScopeKey = (baseUrl: string): string =>
+  new URL(baseUrl.trim()).origin
+
+const throwIfSelectionValidationAborted = (signal?: AbortSignal) => {
+  if (signal?.aborted) {
+    throw signal.reason ?? new DOMException("Aborted", "AbortError")
+  }
+}
+
+const createAxonHubSelectionValidationContext = async (
+  options?: ResourceOperationOptions,
+) => {
+  throwIfSelectionValidationAborted(options?.signal)
+  let expectedScopeKey: string | null = null
+  try {
+    const preferences = await userPreferences.getPreferences()
+    throwIfSelectionValidationAborted(options?.signal)
+    const resolved = resolveManagedSiteRuntimeConfigForType(
+      preferences,
+      SITE_TYPES.AXON_HUB,
+    )
+    expectedScopeKey = resolved
+      ? normalizeScopeKey(resolved.config.baseUrl)
+      : null
+  } catch {
+    throwIfSelectionValidationAborted(options?.signal)
+    expectedScopeKey = null
+  }
+  return {
+    isValid: (selection: ManagedSiteMigrationSelection) =>
+      expectedScopeKey !== null &&
+      isManagedResourceRefFor(selection.ref, {
+        siteType: SITE_TYPES.AXON_HUB,
+        kind: MANAGED_RESOURCE_KINDS.Channel,
+        scopeKey: expectedScopeKey,
+      }),
+  }
+}
+
+const validateAxonHubMigrationSelection = async (
+  selection: ManagedSiteMigrationSelection,
+  options?: ResourceOperationOptions,
+): Promise<boolean> => {
+  const context = await createAxonHubSelectionValidationContext(options)
+  return context.isValid(selection)
+}
+
 /**
  * AxonHub beta5 regular channels use apiKeys and a separate status mutation.
  * Source: https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/frontend/src/features/channels/data/schema.ts
@@ -143,11 +214,20 @@ const withNormalizedAxonHubAbort = async <T>(
 export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapability =
   {
     source: {
+      createSelectionValidationContext: createAxonHubSelectionValidationContext,
       prepare: async (selection, options) => {
+        if (!(await validateAxonHubMigrationSelection(selection, options))) {
+          return {
+            status: "blocked",
+            reasonCode: blockers.SOURCE_KEY_RESOLUTION_FAILED,
+          }
+        }
         const detail = await withNormalizedAxonHubAbort(async () => {
           const operations = await openAxonHubNativeResourceOperations(options)
           return await operations.get(selection.ref, options)
         })
+        const resourceType = inspectMigrationSourceType(detail)
+        if (resourceType.status === "blocked") return resourceType
         const credential = inspectCredential(detail)
         if (credential.state !== "available") {
           return {
@@ -155,13 +235,24 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             reasonCode: credentialBlocker(credential.state),
           }
         }
-        return { status: "ready", source: toCanonicalSource(detail) }
+        return {
+          status: "ready",
+          source: toCanonicalSource(detail, resourceType.value),
+        }
       },
       resolveCredential: async (selection, options) => {
+        if (!(await validateAxonHubMigrationSelection(selection, options))) {
+          return {
+            status: "blocked",
+            reasonCode: blockers.SOURCE_KEY_RESOLUTION_FAILED,
+          }
+        }
         const detail = await withNormalizedAxonHubAbort(async () => {
           const operations = await openAxonHubNativeResourceOperations(options)
           return await operations.get(selection.ref, options)
         })
+        const resourceType = inspectMigrationSourceType(detail)
+        if (resourceType.status === "blocked") return resourceType
         const credential = inspectCredential(detail)
         if (credential.state !== "available") {
           return {
@@ -178,13 +269,18 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
         if (models.length === 0) {
           throw new Error("AxonHub migration requires at least one model.")
         }
-        const type = mapChannelTypeToAxonHubChannelType(source.resourceType)
+        const type = mapChannelTypeToAxonHubChannelTypeStrict(
+          source.resourceType,
+        )
+        if (type.status === "unsupported") {
+          throw new AxonHubUnsupportedMigrationTypeError()
+        }
         const groups = [...DEFAULT_CHANNEL_FIELDS.groups]
         const priority = DEFAULT_CHANNEL_FIELDS.priority
         return {
           projection: {
             name: "",
-            type,
+            type: type.value,
             baseUrl: source.baseUrl,
             models,
             groups,
@@ -193,7 +289,7 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             status: source.status === "enabled" ? 1 : 2,
           },
           adjustments: {
-            remappedType: String(type) !== String(source.resourceType),
+            remappedType: String(type.value) !== String(source.resourceType),
             normalizedBaseUrl: false,
             forcedDefaultGroup:
               groups.length !== source.groups.length ||
@@ -206,11 +302,32 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
       },
       create: async (command, options) => {
         const baseURL = command.projection.baseUrl.trim()
+        const projectionType = command.projection.type
+        let nativeType: AxonHubChannelType
+        if (typeof projectionType === "string") {
+          if (
+            mapAxonHubChannelTypeToChannelTypeStrict(projectionType).status ===
+            "unsupported"
+          ) {
+            return {
+              status: "failed",
+              failureCode: failures.TargetRejected,
+            }
+          }
+          nativeType = projectionType as AxonHubChannelType
+        } else {
+          const mappedType =
+            mapChannelTypeToAxonHubChannelTypeStrict(projectionType)
+          if (mappedType.status === "unsupported") {
+            return {
+              status: "failed",
+              failureCode: failures.TargetRejected,
+            }
+          }
+          nativeType = mappedType.value
+        }
         const input: AxonHubCreateChannelInput = {
-          type:
-            typeof command.projection.type === "string"
-              ? command.projection.type
-              : mapChannelTypeToAxonHubChannelType(command.source.resourceType),
+          type: nativeType,
           name: command.projection.name.trim(),
           ...(baseURL ? { baseURL } : {}),
           credentials: { apiKeys: [command.credential.trim()] },

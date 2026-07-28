@@ -90,12 +90,12 @@
     "title": "AxonHub 整合設定",
     "validation": {
       "corsFailed": "AxonHub 配置驗證失敗：{{error}}。這通常表示新的 AxonHub 實例尚未允許擴充套件的瀏覽器來源。請調整 AxonHub 服務端 CORS 配置，將 AXONHUB_SERVER_CORS_ALLOWED_ORIGINS 設為 \"*\"，或允許擴充套件 / 瀏覽器來源後重試。",
-      "description": "測試信箱和密碼是否可以登入 AxonHub 管理端 GraphQL",
+      "description": "驗證 AxonHub 管理員憑據；僅在登入成功後儲存此配置。",
       "failed": "AxonHub 配置驗證失敗：{{error}}",
       "missingFields": "請填寫所有必填欄位",
-      "success": "AxonHub 配置驗證成功",
-      "title": "驗證配置",
-      "validate": "驗證配置",
+      "success": "AxonHub 配置已驗證並儲存",
+      "title": "驗證並儲存配置",
+      "validate": "驗證並儲存",
       "validating": "驗證中..."
     }
   },

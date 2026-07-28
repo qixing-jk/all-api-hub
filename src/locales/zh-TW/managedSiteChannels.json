@@ -1,8 +1,36 @@
 {
   "alerts": {
+    "authenticationFailed": {
+      "description": "已儲存的 AxonHub 憑證遭拒。請開啟設定更新憑證，然後重新整理渠道清單。",
+      "title": "請重新登入 AxonHub"
+    },
+    "editorLoadError": {
+      "description": "無法載入渠道表單。請重新整理渠道列表後重試。",
+      "title": "無法開啟渠道編輯器"
+    },
+    "editorSaveError": {
+      "description": "你的變更尚未儲存，請重試。",
+      "title": "無法儲存渠道"
+    },
     "loadError": {
       "description": "{{error}}",
       "title": "無法載入渠道"
+    },
+    "partialMutation": {
+      "description": "部分欄位可能已儲存，但渠道狀態尚未確認。請重新整理渠道列表並核對渠道後再重試。",
+      "title": "渠道更新需要核對"
+    },
+    "permissionDenied": {
+      "description": "目前的 AxonHub 帳號無權管理渠道。請改用管理員帳號或調整權限，然後重新整理。",
+      "title": "AxonHub 拒絕存取"
+    },
+    "savedRefreshError": {
+      "description": "渠道已儲存，但無法載入最新列表。請先重新整理渠道列表，再進行其他變更。",
+      "title": "渠道已儲存，需要重新整理"
+    },
+    "unavailable": {
+      "description": "無法連線至 AxonHub。請檢查伺服器和網路，然後重新整理渠道清單。",
+      "title": "AxonHub 暫時無法使用"
     }
   },
   "description": "在此搜尋、編輯、刪除或手動同步與你的託管站點相連的所有渠道。",
@@ -20,6 +48,115 @@
     "deleteResultsTitle": "刪除結果",
     "deleteTitle": "刪除渠道？",
     "deleteTitlePlural": "刪除這些渠道？"
+  },
+  "editor": {
+    "fields": {
+      "autoSyncModelPattern": {
+        "help": "僅同步符合此規則的模型；使用 (?i) 前綴可忽略大小寫，留空則同步所有模型。",
+        "invalid": "請輸入有效的模型篩選規則。",
+        "label": "模型篩選規則",
+        "placeholder": "例如 (?i)^model-example"
+      },
+      "autoSyncSupportedModels": {
+        "help": "AxonHub 會依其系統設定的頻率，從供應商 API 更新已啟用渠道的模型清單。",
+        "label": "自動同步支援的模型"
+      },
+      "defaultTestModel": {
+        "help": "用於測試此渠道的連線，請從支援的模型中選擇。",
+        "label": "預設測試模型",
+        "placeholder": "選擇已設定的模型"
+      },
+      "extraModelPrefix": {
+        "help": "設定額外的模型前綴，允許使用帶前綴的模型名稱存取此渠道。例如：設定前綴為 'deepseek'，則 'deepseek/deepseek-chat' 和 'deepseek-chat' 都可以存取此渠道。",
+        "label": "額外模型前綴",
+        "placeholder": "例如：deepseek"
+      },
+      "orderingWeight": {
+        "help": "AxonHub 選擇渠道時會優先使用較大的值；相同值具有相同的排序優先順序。",
+        "label": "排序權重"
+      },
+      "remark": {
+        "help": "新增關於此渠道的備註或說明以供參考。",
+        "label": "備註",
+        "placeholder": "為此渠道輸入備註或說明..."
+      },
+      "supportedModels": {
+        "help": "輸入或貼上模型名稱。在此新增的模型會在自動同步時保留。"
+      },
+      "tags": {
+        "help": "新增標籤來分類和篩選渠道。按 Enter 鍵新增標籤，也可貼上以逗號或換行分隔的多個標籤。",
+        "label": "標籤",
+        "placeholder": "新增標籤..."
+      }
+    },
+    "options": {
+      "channelType": {
+        "anthropic": "Anthropic",
+        "anthropicAws": "AWS Anthropic",
+        "anthropicGcp": "Google Cloud Anthropic",
+        "claudeCode": "Claude Code",
+        "deepseek": "DeepSeek",
+        "deepseekAnthropic": "DeepSeek Anthropic",
+        "gemini": "Gemini",
+        "geminiOpenai": "Gemini OpenAI",
+        "geminiVertex": "Gemini Vertex",
+        "githubCopilot": "GitHub Copilot",
+        "nanogpt": "NanoGPT",
+        "ollama": "Ollama",
+        "openai": "OpenAI",
+        "openaiResponses": "OpenAI Responses",
+        "openrouter": "OpenRouter",
+        "siliconflow": "SiliconFlow",
+        "unsupported": "不支援的渠道類型",
+        "volcengine": "Volcengine",
+        "xai": "xAI"
+      },
+      "status": {
+        "archived": "已封存",
+        "disabled": "已停用",
+        "enabled": "已啟用",
+        "unknown": "未知"
+      },
+      "unknown": "未知選項"
+    },
+    "secret": {
+      "actions": {
+        "clear": "移除已儲存憑據",
+        "restore": "保留已儲存憑據",
+        "retry": "重試"
+      },
+      "createHint": "輸入新頻道的憑據。",
+      "keepExistingHint": "將此欄位留空可保留已儲存的憑據，不作變更。",
+      "loadError": "無法載入已儲存憑據。",
+      "loading": "正在載入已儲存的憑據…",
+      "placeholder": "輸入憑據",
+      "replacementBlocked": {
+        "multipleCredentials": "此頻道有多個 API 金鑰。請在 AxonHub 中管理這些金鑰。"
+      },
+      "replacementDisabled": "此憑據類型無法在此處替換。",
+      "state": {
+        "available": "已有可用的憑據。",
+        "masked": "已儲存遮罩憑據。",
+        "permissionHidden": "已儲存憑據因權限限制而不可見。",
+        "unavailable": "暫無可顯示的憑據。"
+      }
+    },
+    "sections": {
+      "advanced": "進階",
+      "basic": "基本資訊",
+      "connection": "連線與憑據",
+      "metadata": "中繼資料",
+      "models": "模型",
+      "routing": "路由",
+      "sync": "模型同步"
+    },
+    "validation": {
+      "inconsistentValue": "此值與其他欄位衝突。",
+      "invalidValue": "請輸入有效值。",
+      "outOfRange": "請輸入允許範圍內的值。",
+      "required": "此欄位為必填。",
+      "unsupportedOption": "不支援此選項。"
+    }
   },
   "filter": {
     "statusLabel": "按狀態篩選"
@@ -122,6 +259,7 @@
     "blockedReasons": {
       "sourceKeyMissing": "缺少來源渠道金鑰，目前無法遷移此渠道。",
       "sourceKeyResolutionFailed": "無法取得來源渠道金鑰。若剛完成驗證，請重新整理預覽後再試。",
+      "sourceTypeUnsupported": "此來源渠道類型暫不支援遷移。請選擇受支援的渠道，或手動遷移。",
       "targetDraftPreparationFailed": "無法準備目標渠道草稿。請檢查渠道資訊並重新整理預覽後再試。"
     },
     "confirm": {
@@ -187,6 +325,7 @@
     },
     "title": "遷移渠道"
   },
+  "resourceDescription": "搜尋、建立、編輯和刪除與此託管站點相連的渠道。",
   "statusLabels": {
     "autoDisabled": "自動禁用",
     "enabled": "啟用",
