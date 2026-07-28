@@ -365,15 +365,25 @@ describe("useManagedResourceMigrationController", () => {
       onClose,
       prepareMigration,
     })
-    const { result } = renderHook(() =>
-      useManagedResourceMigrationController(options),
+    const { result, rerender } = renderHook(
+      (props: ReturnType<typeof buildOptions>) =>
+        useManagedResourceMigrationController(props),
+      { initialProps: options },
     )
     await waitFor(() => expect(prepareMigration).toHaveBeenCalledOnce())
 
     act(() => result.current.callbacks.onClose())
+    rerender({ ...options, isOpen: false })
 
     await waitFor(() => expect(signal.aborted).toBe(true))
     expect(onClose).toHaveBeenCalledOnce()
+    expect(result.current).toMatchObject({
+      preview: null,
+      result: null,
+      isConfirmationOpen: false,
+      isRunning: false,
+      isRecoveryRunning: false,
+    })
     await act(async () => {
       late.resolve(buildPreview(prepareMigration.mock.calls[0]![0].selections))
       await late.promise
@@ -678,6 +688,47 @@ describe("useManagedResourceMigrationController", () => {
     expect(result.current.result?.items[0]?.status).toBe("uncertain")
   })
 
+  it("falls back when the selected target disappears and clears it without targets", async () => {
+    const prepareMigration = vi.fn(
+      async ({
+        selections,
+        targetSiteType,
+      }: {
+        selections: readonly ManagedSiteMigrationSelection[]
+        targetSiteType: ManagedSiteType
+      }) => buildPreview(selections, targetSiteType),
+    )
+    const options = buildOptions({
+      prepareMigration,
+      targets: [
+        { value: SITE_TYPES.NEW_API, label: "New API" },
+        { value: SITE_TYPES.AXON_HUB, label: "AxonHub" },
+      ],
+    })
+    const { result, rerender } = renderHook(
+      (props: ReturnType<typeof buildOptions>) =>
+        useManagedResourceMigrationController(props),
+      { initialProps: options },
+    )
+    await waitFor(() => expect(result.current.preview?.readyCount).toBe(2))
+
+    act(() => result.current.callbacks.onTargetChange(SITE_TYPES.AXON_HUB))
+    await waitFor(() =>
+      expect(result.current.selectedTarget).toBe(SITE_TYPES.AXON_HUB),
+    )
+
+    rerender({
+      ...options,
+      targets: [{ value: SITE_TYPES.NEW_API, label: "New API" }],
+    })
+    await waitFor(() =>
+      expect(result.current.selectedTarget).toBe(SITE_TYPES.NEW_API),
+    )
+
+    rerender({ ...options, targets: [] })
+    await waitFor(() => expect(result.current.selectedTarget).toBe(""))
+  })
+
   it("treats selecting the pending target again as a no-op", async () => {
     const pending = deferred<ManagedSiteMigrationCanonicalPreview>()
     let signal!: AbortSignal
@@ -713,6 +764,79 @@ describe("useManagedResourceMigrationController", () => {
     expect(result.current.preview?.readyCount).toBe(2)
     expect(result.current.preview?.isLoading).toBe(false)
     expect(prepareMigration).toHaveBeenCalledOnce()
+  })
+
+  it("marks a manual replacement preview as loading until it settles", async () => {
+    const replacement = deferred<ManagedSiteMigrationCanonicalPreview>()
+    const selection: ManagedSiteMigrationSelection = {
+      selectionId: "opaque::first",
+      displayName: "First example",
+      ref: createRef("resource-secret-first"),
+    }
+    const baseRefreshedPreview = buildPreview([selection])
+    const baseRefreshedItem = baseRefreshedPreview.items[0]
+    if (!baseRefreshedItem || baseRefreshedItem.status !== "ready") {
+      throw new Error("Expected one ready refreshed preview item")
+    }
+    const refreshedPreview: ManagedSiteMigrationCanonicalPreview = {
+      ...baseRefreshedPreview,
+      items: [
+        {
+          ...baseRefreshedItem,
+          target: {
+            ...baseRefreshedItem.target,
+            projection: {
+              ...baseRefreshedItem.target.projection,
+              baseUrl: "https://refreshed-target.example.invalid",
+            },
+          },
+        },
+      ],
+    }
+    const prepareMigration = vi
+      .fn()
+      .mockImplementationOnce(
+        ({
+          selections,
+          targetSiteType,
+        }: {
+          selections: readonly ManagedSiteMigrationSelection[]
+          targetSiteType: ManagedSiteType
+        }) => Promise.resolve(buildPreview(selections, targetSiteType)),
+      )
+      .mockImplementationOnce(() => replacement.promise)
+    const options = buildOptions({
+      prepareMigration,
+      selectedRowKeys: ["opaque::first"],
+    })
+    const { result } = renderHook(() =>
+      useManagedResourceMigrationController(options),
+    )
+    await waitFor(() => expect(result.current.preview?.readyCount).toBe(1))
+
+    act(() => result.current.callbacks.onRefreshPreview())
+
+    await waitFor(() =>
+      expect(result.current.preview?.isManualLoading).toBe(true),
+    )
+    expect(result.current.preview).toMatchObject({
+      rows: [],
+      totalCount: 1,
+      isLoading: true,
+      isManualLoading: true,
+    })
+
+    await act(async () => {
+      replacement.resolve(refreshedPreview)
+      await replacement.promise
+    })
+
+    expect(result.current.preview?.isManualLoading).toBe(false)
+    expect(
+      result.current.preview?.rows[0]?.comparisons.find(
+        ({ id }) => id === "baseUrl",
+      )?.target,
+    ).toBe("https://refreshed-target.example.invalid")
   })
 
   it("contains a synchronous prepare throw as one controlled preview failure", async () => {
@@ -1151,7 +1275,10 @@ describe("useManagedResourceMigrationController", () => {
 
   it("keeps settled results visible and requires recovery when post-execution refresh fails", async () => {
     const analytics = createAnalytics()
-    const refresh = vi.fn(async () => false)
+    const refresh = vi
+      .fn<() => Promise<boolean>>()
+      .mockRejectedValueOnce(new Error("refresh-sensitive-error"))
+      .mockResolvedValueOnce(true)
     const executeMigration = vi.fn(async () =>
       executionResult([
         {
@@ -1180,6 +1307,10 @@ describe("useManagedResourceMigrationController", () => {
     await waitFor(() => expect(result.current.preview?.readyCount).toBe(1))
 
     act(() => result.current.callbacks.onOpenConfirmation())
+    expect(result.current.isConfirmationOpen).toBe(true)
+    act(() => result.current.callbacks.onCloseConfirmation())
+    expect(result.current.isConfirmationOpen).toBe(false)
+    act(() => result.current.callbacks.onOpenConfirmation())
     await act(async () => result.current.callbacks.onConfirm())
 
     expect(result.current.result?.items[0]?.status).toBe("success")
@@ -1191,6 +1322,15 @@ describe("useManagedResourceMigrationController", () => {
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
         }),
       }),
+    )
+
+    await act(async () => result.current.callbacks.onRecoverRefreshRequired())
+
+    expect(result.current.result?.items[0]?.status).toBe("success")
+    expect(result.current.refreshRequired).toBe(false)
+    expect(result.current.isRecoveryRunning).toBe(false)
+    expect(JSON.stringify(result.current)).not.toContain(
+      "refresh-sensitive-error",
     )
   })
 

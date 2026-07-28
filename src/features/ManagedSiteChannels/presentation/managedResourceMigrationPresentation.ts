@@ -34,6 +34,38 @@ type ManagedResourceMigrationPresentationOptions = {
   getSiteLabel: (siteType: ManagedSiteType) => string
 }
 
+type ManagedSiteMigrationResultCounts = {
+  created: number
+  failed: number
+  skipped: number
+  uncertain: number
+  total: number
+}
+
+/** Composes independently pluralized migration metrics into one locale-owned summary. */
+export const formatManagedSiteMigrationResultSummary = (
+  t: TFunction,
+  counts: ManagedSiteMigrationResultCounts,
+) =>
+  t("managedSiteChannels:migration.results.summary", {
+    created: t("managedSiteChannels:migration.results.summaryMetrics.created", {
+      count: counts.created,
+    }),
+    failed: t("managedSiteChannels:migration.results.summaryMetrics.failed", {
+      count: counts.failed,
+    }),
+    skipped: t("managedSiteChannels:migration.results.summaryMetrics.skipped", {
+      count: counts.skipped,
+    }),
+    uncertain: t(
+      "managedSiteChannels:migration.results.summaryMetrics.uncertain",
+      { count: counts.uncertain },
+    ),
+    total: t("managedSiteChannels:migration.results.summaryMetrics.total", {
+      count: counts.total,
+    }),
+  })
+
 const comparisonFieldIds = [
   "baseUrl",
   "type",
@@ -323,7 +355,7 @@ export function mapManagedResourceMigrationExecutionResult(
   options: Pick<ManagedResourceMigrationPresentationOptions, "t">,
 ): ManagedSiteMigrationResult {
   return {
-    summary: options.t("managedSiteChannels:migration.results.summary", {
+    summary: formatManagedSiteMigrationResultSummary(options.t, {
       created: result.createdCount,
       failed: result.failedCount,
       skipped: result.skippedCount,

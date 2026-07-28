@@ -313,7 +313,19 @@
         "success": "Created",
         "uncertain": "Uncertain"
       },
-      "summary": "Results: {{created}} created, {{failed}} failed, {{skipped}} skipped, {{uncertain}} uncertain, {{total}} total.",
+      "summary": "Results: {{created}}, {{failed}}, {{skipped}}, {{uncertain}}, {{total}}.",
+      "summaryMetrics": {
+        "created_one": "{{count}} created",
+        "created_other": "{{count}} created",
+        "failed_one": "{{count}} failed",
+        "failed_other": "{{count}} failed",
+        "skipped_one": "{{count}} skipped",
+        "skipped_other": "{{count}} skipped",
+        "total_one": "{{count}} total",
+        "total_other": "{{count}} total",
+        "uncertain_one": "{{count}} uncertain",
+        "uncertain_other": "{{count}} uncertain"
+      },
       "title": "Migration results"
     },
     "target": {

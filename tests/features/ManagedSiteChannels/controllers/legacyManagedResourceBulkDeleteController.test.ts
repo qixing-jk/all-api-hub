@@ -219,6 +219,7 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
         refresh: vi.fn().mockResolvedValue(true),
       }),
     ).toBeNull()
+    expect(controller.schedule(targets.slice(1, 2))).toBe(false)
 
     deletion.resolve({ success: true, message: "ok" })
     await executionPromise

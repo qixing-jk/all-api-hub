@@ -197,13 +197,11 @@ describe("ManagedSiteMigrationDialogView", () => {
     expect(
       screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.migrationControls),
     ).toBeVisible()
-    expect(
-      screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.migrationComparison),
-    ).toBeVisible()
-    const blockedSection = screen
-      .getByText("Example blocked")
-      .closest("section")
-    const comparisonLabels = within(blockedSection ?? document.body)
+    const blockedComparison = screen.getByTestId(
+      MANAGED_SITE_CHANNELS_TEST_IDS.migrationComparison,
+    )
+    expect(blockedComparison).toBeVisible()
+    const comparisonLabels = within(blockedComparison)
       .getAllByText(/Base URL|Type|Models|Groups|Priority|Weight|Status/)
       .map((element) => element.textContent)
     expect(comparisonLabels).toEqual([

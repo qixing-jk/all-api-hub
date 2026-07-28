@@ -125,13 +125,13 @@
         "restore": "保存済み認証情報を保持",
         "retry": "再試行"
       },
-      "createHint": "新しいチャンネルの認証情報を入力してください。",
+      "createHint": "新しいチャネルの認証情報を入力してください。",
       "keepExistingHint": "保存済みの認証情報を変更しない場合は、このフィールドを空欄のままにしてください。",
       "loadError": "保存済み認証情報を読み込めませんでした。",
       "loading": "保存済みの認証情報を読み込んでいます…",
       "placeholder": "認証情報を入力",
       "replacementBlocked": {
-        "multipleCredentials": "このチャンネルには複数の API キーがあります。キーは AxonHub で管理してください。"
+        "multipleCredentials": "このチャネルには複数の API キーがあります。キーは AxonHub で管理してください。"
       },
       "replacementDisabled": "この認証情報の種類はここでは置き換えられません。",
       "state": {
@@ -313,7 +313,19 @@
         "success": "作成済み",
         "uncertain": "状態不明"
       },
-      "summary": "結果: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件、状態不明 {{uncertain}} 件、合計 {{total}} 件。",
+      "summary": "結果: {{created}}、{{failed}}、{{skipped}}、{{uncertain}}、{{total}}。",
+      "summaryMetrics": {
+        "created_one": "作成 {{count}} 件",
+        "created_other": "作成 {{count}} 件",
+        "failed_one": "失敗 {{count}} 件",
+        "failed_other": "失敗 {{count}} 件",
+        "skipped_one": "スキップ {{count}} 件",
+        "skipped_other": "スキップ {{count}} 件",
+        "total_one": "合計 {{count}} 件",
+        "total_other": "合計 {{count}} 件",
+        "uncertain_one": "状態不明 {{count}} 件",
+        "uncertain_other": "状態不明 {{count}} 件"
+      },
       "title": "移行結果"
     },
     "target": {

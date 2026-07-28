@@ -150,6 +150,7 @@ export function useManagedResourceListController({
     setWorkspace(null)
     setAcceptedRows([])
     setSelectedRowKeys({})
+    setStatusFilter([])
     setPageIndex(0)
   }, [mapper, scopeIdentity])
 
@@ -207,12 +208,6 @@ export function useManagedResourceListController({
               ),
             ),
           )
-          setPageIndex((currentPage) =>
-            Math.min(
-              currentPage,
-              Math.max(0, Math.ceil(nextRows.length / pageSize) - 1),
-            ),
-          )
         }
         analyticsCompletion?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: { itemCount: nextRows.length },
@@ -244,14 +239,7 @@ export function useManagedResourceListController({
         }
       }
     },
-    [
-      analytics,
-      mapper,
-      normalizedSearch,
-      onUnsupportedSearch,
-      pageSize,
-      registration,
-    ],
+    [analytics, mapper, normalizedSearch, onUnsupportedSearch, registration],
   )
 
   const refresh = useCallback(() => collect(true, "reconcile"), [collect])
@@ -295,6 +283,14 @@ export function useManagedResourceListController({
         )
       })
     : acceptedRows
+  useEffect(() => {
+    setPageIndex((currentPage) =>
+      Math.min(
+        currentPage,
+        Math.max(0, Math.ceil(allRows.length / pageSize) - 1),
+      ),
+    )
+  }, [allRows.length, pageSize])
   const rows = allRows.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize)
   const capabilities = workspace?.capabilities ?? {
     canSearch: false,

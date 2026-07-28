@@ -344,16 +344,6 @@ describe("managed resource field policy", () => {
     )!
 
     for (const value of Object.values(AXON_HUB_CHANNEL_TYPE)) {
-      if (
-        [
-          AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS,
-          AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP,
-          AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT,
-          AXON_HUB_CHANNEL_TYPE.CLAUDECODE,
-        ].includes(value as never)
-      ) {
-        continue
-      }
       const label = getManagedResourceFieldOptionLabel(
         typeField,
         value,

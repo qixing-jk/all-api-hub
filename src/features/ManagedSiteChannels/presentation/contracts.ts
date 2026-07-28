@@ -316,7 +316,7 @@ export type ManagedSiteMigrationLabels = {
   confirmationWarningTitle: string
   confirmationConfirm: string
   missingValue: string
-  refreshRequired?: string
+  refreshRequired: string
   refreshRequiredAction?: string
 }
 

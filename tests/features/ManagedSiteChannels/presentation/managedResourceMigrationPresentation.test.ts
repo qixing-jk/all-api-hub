@@ -1,4 +1,4 @@
-import type { TFunction } from "i18next"
+import { createInstance, type TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
@@ -8,6 +8,12 @@ import {
   mapManagedResourceMigrationExecutionResult,
   mapManagedResourceMigrationPreview,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceMigrationPresentation"
+import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
+import es419ManagedSiteChannels from "~/locales/es-419/managedSiteChannels.json"
+import jaManagedSiteChannels from "~/locales/ja/managedSiteChannels.json"
+import viManagedSiteChannels from "~/locales/vi/managedSiteChannels.json"
+import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
+import zhTwManagedSiteChannels from "~/locales/zh-TW/managedSiteChannels.json"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
@@ -39,10 +45,24 @@ const translations: Record<string, string> = {
   "managedSiteChannels:migration.generalWarnings.noRollback": "No rollback",
   "managedSiteChannels:migration.itemWarnings.dropsAdvancedSettings":
     "Drops advanced settings",
+  "managedSiteChannels:migration.itemWarnings.dropsModelMapping":
+    "Drops model mapping",
+  "managedSiteChannels:migration.itemWarnings.dropsStatusCodeMapping":
+    "Drops status mapping",
+  "managedSiteChannels:migration.itemWarnings.dropsMultiKeyState":
+    "Drops multiple keys",
   "managedSiteChannels:migration.itemWarnings.targetRemapsChannelType":
     "Target remaps type",
+  "managedSiteChannels:migration.itemWarnings.targetNormalizesBaseUrl":
+    "Target normalizes Base URL",
+  "managedSiteChannels:migration.itemWarnings.targetForcesDefaultGroup":
+    "Target forces default group",
   "managedSiteChannels:migration.itemWarnings.targetIgnoresPriority":
     "Target ignores priority",
+  "managedSiteChannels:migration.itemWarnings.targetIgnoresWeight":
+    "Target ignores weight",
+  "managedSiteChannels:migration.itemWarnings.targetSimplifiesStatus":
+    "Target simplifies status",
   "managedSiteChannels:migration.blockedReasons.sourceKeyMissing":
     "Source credential unavailable",
   "managedSiteChannels:migration.blockedReasons.sourceKeyResolutionFailed":
@@ -61,6 +81,10 @@ const translations: Record<string, string> = {
 
 const t = ((key: string | string[], options?: Record<string, unknown>) => {
   const normalizedKey = Array.isArray(key) ? key[0] : key
+  const summaryMetric = normalizedKey.match(
+    /^managedSiteChannels:migration\.results\.summaryMetrics\.(created|failed|skipped|uncertain|total)$/,
+  )?.[1]
+  if (summaryMetric) return `${options?.count} ${summaryMetric}`
   if (normalizedKey === "managedSiteChannels:migration.results.summary") {
     return `${options?.created}/${options?.failed}/${options?.skipped}/${options?.uncertain}/${options?.total}`
   }
@@ -237,6 +261,107 @@ describe("managedResourceMigrationPresentation", () => {
     )
   })
 
+  it("maps every controlled warning, blocker, type, and status fallback without leaking malformed codes", () => {
+    const malformedWarning = "backend-warning-secret"
+    const allWarnings = [
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_MODEL_MAPPING,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_STATUS_CODE_MAPPING,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_ADVANCED_SETTINGS,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.DROPS_MULTI_KEY_STATE,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_NORMALIZES_BASE_URL,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_PRIORITY,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_WEIGHT,
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
+      malformedWarning,
+    ]
+    const readyItem = preview.items[0]
+    const matrix = {
+      ...preview,
+      generalWarningCodes: [
+        ...preview.generalWarningCodes,
+        "backend-general-warning-secret",
+      ],
+      items: [
+        {
+          ...readyItem,
+          source: buildSource({
+            resourceType: "future-provider" as unknown as ChannelType,
+            status: "disabled",
+          }),
+          warningCodes: allWarnings,
+        },
+        {
+          ...readyItem,
+          selection: {
+            ...readyItem.selection,
+            selectionId: "opaque:unknown-status",
+            displayName: "Unknown status",
+          },
+          source: buildSource({ status: "other" }),
+          warningCodes: [],
+        },
+        {
+          ...preview.items[1],
+          blockingReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED,
+        },
+        {
+          ...preview.items[1],
+          selection: {
+            ...preview.items[1].selection,
+            selectionId: "opaque:source-resolution",
+            displayName: "Source resolution",
+          },
+          blockingReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+        },
+      ],
+      totalCount: 4,
+      readyCount: 2,
+      blockedCount: 2,
+    } as unknown as ManagedSiteMigrationCanonicalPreview
+
+    const mapped = mapManagedResourceMigrationPreview(matrix, {
+      t,
+      getSiteLabel: String,
+    })
+
+    expect(mapped.generalWarnings).toEqual(["No rollback", "Create only"])
+    expect(mapped.rows[0].warningText).toEqual([
+      "Drops model mapping",
+      "Drops status mapping",
+      "Drops advanced settings",
+      "Drops multiple keys",
+      "Target remaps type",
+      "Target normalizes Base URL",
+      "Target forces default group",
+      "Target ignores priority",
+      "Target ignores weight",
+      "Target simplifies status",
+    ])
+    expect(
+      mapped.rows
+        .slice(0, 2)
+        .map((row) =>
+          Object.fromEntries(
+            row.comparisons
+              .filter(({ id }) => id === "type" || id === "status")
+              .map(({ id, source }) => [id, source]),
+          ),
+        ),
+    ).toEqual([
+      { type: "Unsupported type", status: "Disabled" },
+      { type: "Anthropic", status: "Unknown" },
+    ])
+    expect(mapped.rows.slice(2).map((row) => row.blockedReason)).toEqual([
+      "Target preparation failed",
+      "Source access could not be verified",
+    ])
+    expect(JSON.stringify(mapped)).not.toMatch(/backend-.*-secret/)
+  })
+
   it("uses a controlled blocked fallback for malformed runtime reason codes", () => {
     const unsafePreview = {
       ...preview,
@@ -302,7 +427,9 @@ describe("managedResourceMigrationPresentation", () => {
 
     const mapped = mapManagedResourceMigrationExecutionResult(result, { t })
 
-    expect(mapped.summary).toBe("1/1/1/1/4")
+    expect(mapped.summary).toBe(
+      "1 created/1 failed/1 skipped/1 uncertain/4 total",
+    )
     expect(
       mapped.items.map(({ rowKey, displayIdentifier, status }) => [
         rowKey,
@@ -330,5 +457,81 @@ describe("managedResourceMigrationPresentation", () => {
     expect(JSON.stringify(mapped)).not.toMatch(
       /target_rejected|mutation_state_uncertain|credential|command|native ref/i,
     )
+  })
+
+  it("uses independently pluralized Spanish metrics for mixed result counts", async () => {
+    const i18n = createInstance()
+    await i18n.init({
+      lng: "es-419",
+      fallbackLng: false,
+      resources: {
+        "es-419": { managedSiteChannels: es419ManagedSiteChannels },
+      },
+    })
+    const baseResult: ManagedSiteMigrationCanonicalExecutionResult = {
+      totalSelected: 6,
+      attemptedCount: 6,
+      createdCount: 1,
+      failedCount: 2,
+      skippedCount: 1,
+      uncertainCount: 2,
+      items: [],
+    }
+
+    expect(
+      mapManagedResourceMigrationExecutionResult(baseResult, {
+        t: i18n.getFixedT("es-419", "managedSiteChannels"),
+      }).summary,
+    ).toBe(
+      "Resultados: 1 creado, 2 fallidos, 1 omitido, 2 inciertos, 6 en total.",
+    )
+    expect(
+      mapManagedResourceMigrationExecutionResult(
+        {
+          ...baseResult,
+          createdCount: 2,
+          failedCount: 1,
+          skippedCount: 2,
+          uncertainCount: 1,
+        },
+        { t: i18n.getFixedT("es-419", "managedSiteChannels") },
+      ).summary,
+    ).toBe(
+      "Resultados: 2 creados, 1 fallido, 2 omitidos, 1 incierto, 6 en total.",
+    )
+  })
+
+  it.each([
+    ["en", enManagedSiteChannels],
+    ["es-419", es419ManagedSiteChannels],
+    ["ja", jaManagedSiteChannels],
+    ["vi", viManagedSiteChannels],
+    ["zh-CN", zhCnManagedSiteChannels],
+    ["zh-TW", zhTwManagedSiteChannels],
+  ])("resolves plural summary metrics in %s", async (language, resource) => {
+    const i18n = createInstance()
+    await i18n.init({
+      lng: language,
+      fallbackLng: false,
+      resources: { [language]: { managedSiteChannels: resource } },
+    })
+
+    const summary = mapManagedResourceMigrationExecutionResult(
+      {
+        totalSelected: 6,
+        attemptedCount: 6,
+        createdCount: 1,
+        failedCount: 2,
+        skippedCount: 1,
+        uncertainCount: 2,
+        items: [],
+      },
+      { t: i18n.getFixedT(language, "managedSiteChannels") },
+    ).summary
+
+    expect(summary).toContain("1")
+    expect(summary).toContain("2")
+    expect(summary).toContain("6")
+    expect(summary).not.toContain("summaryMetrics")
   })
 })

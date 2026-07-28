@@ -158,7 +158,7 @@ describe("useManagedResourceListController", () => {
       late.resolve({ items: [createManagedResourceFacts("late")] }),
     )
     expect(analytics.complete).toHaveBeenCalledTimes(2)
-    expect(result.current.rows[0]?.name).toBe("Example resource")
+    expect(result.current.rows[0]?.name).toBe("Example resource fresh")
   })
 
   it("maps refresh failures to controlled analytics without backend details", async () => {
@@ -523,6 +523,47 @@ describe("useManagedResourceListController", () => {
     })
   })
 
+  it("clears the status filter when the deployment scope changes", async () => {
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({
+        items: [
+          {
+            ...createManagedResourceFacts("first", "First deployment"),
+            status: "disabled" as const,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        items: [createManagedResourceFacts("second", "Second deployment")],
+      })
+    const value = registration(async () =>
+      createManagedResourceWorkspace({ list }),
+    )
+    const { result, rerender } = renderHook(
+      ({ scopeKey }) =>
+        useManagedResourceListController({ registration: value, scopeKey }),
+      {
+        initialProps: {
+          scopeKey: "https://first-workspace.example.invalid",
+        },
+      },
+    )
+
+    await waitFor(() => expect(result.current.totalRows).toBe(1))
+    act(() => result.current.setStatusFilter(["disabled"]))
+    expect(result.current.statusFilter).toEqual(["disabled"])
+
+    rerender({ scopeKey: "https://second-workspace.example.invalid" })
+
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.statusFilter).toEqual([])
+    expect(result.current.rows.map((row) => row.name)).toEqual([
+      "Second deployment",
+    ])
+  })
+
   it("signals unsupported search without dispatching a list request", async () => {
     const onUnsupportedSearch = vi.fn()
     const workspace = createManagedResourceWorkspace({
@@ -602,7 +643,7 @@ describe("useManagedResourceListController", () => {
     await act(async () =>
       late.resolve({ items: [createManagedResourceFacts("late", "Late")] }),
     )
-    expect(result.current.rows[0]?.name).toBe("Example resource")
+    expect(result.current.rows[0]?.name).toBe("Example resource accepted")
   })
 
   it("does not let a cancelled generation finish loading for its replacement", async () => {
@@ -801,9 +842,66 @@ describe("useManagedResourceListController", () => {
     await waitFor(() => expect(result.current.totalRows).toBe(2))
     act(() => result.current.setStatusFilter(["disabled"]))
     expect(result.current.rows.map((row) => row.name)).toEqual([
-      "Example resource",
+      "Example resource two",
     ])
     expect(result.current.totalRows).toBe(1)
+  })
+
+  it("clamps pagination to filtered rows without refetching", async () => {
+    const list = vi.fn(async () => ({
+      items: [
+        createManagedResourceFacts("one", "Enabled one"),
+        createManagedResourceFacts("two", "Enabled two"),
+        {
+          ...createManagedResourceFacts("three", "Disabled three"),
+          status: "disabled" as const,
+        },
+      ],
+    }))
+    const value = registration(async () =>
+      createManagedResourceWorkspace({ list }),
+    )
+    const { result } = renderHook(() =>
+      useManagedResourceListController({ registration: value, pageSize: 1 }),
+    )
+    await waitFor(() => expect(result.current.totalRows).toBe(3))
+    act(() => result.current.setPageIndex(2))
+
+    act(() => result.current.setStatusFilter(["disabled"]))
+
+    await waitFor(() => expect(result.current.pageIndex).toBe(0))
+    expect(result.current.rows.map((row) => row.name)).toEqual([
+      "Disabled three",
+    ])
+    expect(list).toHaveBeenCalledOnce()
+  })
+
+  it("clamps pagination when page size changes without refetching", async () => {
+    const list = vi.fn(async () => ({
+      items: [
+        createManagedResourceFacts("one", "First resource"),
+        createManagedResourceFacts("two", "Second resource"),
+        createManagedResourceFacts("three", "Third resource"),
+      ],
+    }))
+    const value = registration(async () =>
+      createManagedResourceWorkspace({ list }),
+    )
+    const { result, rerender } = renderHook(
+      ({ pageSize }) =>
+        useManagedResourceListController({ registration: value, pageSize }),
+      { initialProps: { pageSize: 1 } },
+    )
+    await waitFor(() => expect(result.current.totalRows).toBe(3))
+    act(() => result.current.setPageIndex(2))
+
+    rerender({ pageSize: 2 })
+
+    await waitFor(() => expect(result.current.pageIndex).toBe(1))
+    expect(result.current.rows.map((row) => row.name)).toEqual([
+      "Third resource",
+    ])
+    expect(list).toHaveBeenCalledOnce()
   })
 })
 
@@ -2050,5 +2148,53 @@ describe("useManagedResourceMutationController", () => {
         },
       },
     )
+  })
+
+  it("does not let a stale delete completion release a newer delete session", async () => {
+    const oldDeletion = deferred<void>()
+    const newDeletion = deferred<void>()
+    const oldWorkspace = createManagedResourceWorkspace({
+      delete: vi.fn(() => oldDeletion.promise),
+    })
+    const newWorkspace = createManagedResourceWorkspace({
+      delete: vi.fn(() => newDeletion.promise),
+    })
+    const refresh = vi.fn(async () => true)
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useManagedResourceMutationController({
+          workspace,
+          refresh,
+          resolveRef: () => EXAMPLE_MANAGED_RESOURCE_REF,
+        }),
+      { initialProps: { workspace: oldWorkspace } },
+    )
+    let oldExecution!: ReturnType<typeof result.current.bulkDelete>
+    act(() => {
+      oldExecution = result.current.bulkDelete(["old-row"])
+    })
+    await waitFor(() => expect(oldWorkspace.delete).toHaveBeenCalledOnce())
+
+    rerender({ workspace: newWorkspace })
+    let newExecution!: ReturnType<typeof result.current.bulkDelete>
+    act(() => {
+      newExecution = result.current.bulkDelete(["new-row"])
+    })
+    await waitFor(() => expect(newWorkspace.delete).toHaveBeenCalledOnce())
+
+    await act(async () => {
+      oldDeletion.resolve()
+      await oldExecution
+    })
+    await act(async () => result.current.openCreate())
+
+    expect(newWorkspace.openCreateEditor).not.toHaveBeenCalled()
+
+    await act(async () => {
+      newDeletion.resolve()
+      await newExecution
+    })
+    await act(async () => result.current.openCreate())
+    expect(newWorkspace.openCreateEditor).toHaveBeenCalledOnce()
   })
 })

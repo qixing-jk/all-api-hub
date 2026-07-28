@@ -313,7 +313,14 @@
         "success": "已创建",
         "uncertain": "状态不确定"
       },
-      "summary": "迁移结果：成功 {{created}} 个，失败 {{failed}} 个，跳过 {{skipped}} 个，状态不确定 {{uncertain}} 个，共 {{total}} 个。",
+      "summary": "迁移结果：{{created}}，{{failed}}，{{skipped}}，{{uncertain}}，{{total}}。",
+      "summaryMetrics": {
+        "created": "成功 {{count}} 个",
+        "failed": "失败 {{count}} 个",
+        "skipped": "跳过 {{count}} 个",
+        "total": "共 {{count}} 个",
+        "uncertain": "状态不确定 {{count}} 个"
+      },
       "title": "迁移结果"
     },
     "target": {

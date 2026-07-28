@@ -95,7 +95,7 @@
       "missingFields": "Vui lòng điền tất cả trường bắt buộc",
       "success": "Đã xác minh và lưu cấu hình AxonHub thành công",
       "title": "Xác minh và lưu cấu hình",
-      "validate": "Xác minh và lưu cấu hình",
+      "validate": "Xác minh và lưu",
       "validating": "Đang xác minh..."
     }
   },

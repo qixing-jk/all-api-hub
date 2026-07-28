@@ -1398,6 +1398,40 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(mocks.getChannel).toHaveBeenCalledTimes(2)
   })
 
+  it("fails closed when a credential becomes unavailable before explicit load", async () => {
+    const openingDetail = buildDetailChannel({
+      credentials: { apiKeys: ["opening-secret-value"] },
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+    })
+    const freshDetail = buildDetailChannel({
+      credentials: { apiKeys: ["sk-****masked"] },
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+    })
+    mocks.getChannel
+      .mockResolvedValueOnce(openingDetail)
+      .mockResolvedValueOnce(freshDetail)
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(openingDetail))
+
+    expect(editor.loadSecret).toBeTypeOf("function")
+    await expect(editor.loadSecret?.("name")).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+    const unavailableFailure = await editor
+      .loadSecret?.(AXON_HUB_CHANNEL_FIELD_IDS.KEY)
+      .catch((failure) => failure)
+
+    expect(unavailableFailure).toBeInstanceOf(ManagedResourceError)
+    expect((unavailableFailure as ManagedResourceError).failure).toEqual({
+      code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+    })
+    expect(JSON.stringify(unavailableFailure)).not.toContain(
+      "opening-secret-value",
+    )
+    expect(JSON.stringify(unavailableFailure)).not.toContain("sk-****masked")
+    expect(mocks.getChannel).toHaveBeenCalledTimes(2)
+  })
+
   it.each([
     { credentials: undefined, type: AXON_HUB_CHANNEL_TYPE.OPENAI },
     { credentials: null, type: AXON_HUB_CHANNEL_TYPE.OPENAI },
@@ -1796,6 +1830,34 @@ describe("AxonHub native managed-resource Adapter", () => {
         },
       ],
     })
+  })
+
+  it("rejects crafted provider-managed create auto-sync before dispatch", async () => {
+    const editor = await (await openWorkspace()).openCreateEditor()
+    const craftedValues: EditableResourceProjection = {
+      ...editor.initialValues,
+      name: "Crafted channel",
+      type: AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT,
+      key: { kind: "replace", value: "replacement-secret" },
+      supportedModels: ["model-example"],
+      manualModels: ["model-example"],
+      defaultTestModel: "model-example",
+      autoSyncSupportedModels: true,
+    }
+
+    expect(editor.validate(craftedValues)).toEqual({
+      valid: false,
+      issues: [
+        {
+          fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
+          code: "unsupported_option",
+        },
+      ],
+    })
+    await expect(editor.submit(craftedValues)).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    expect(mocks.createChannel).not.toHaveBeenCalled()
   })
 
   it("validates the model filter pattern only while automatic sync is enabled", async () => {

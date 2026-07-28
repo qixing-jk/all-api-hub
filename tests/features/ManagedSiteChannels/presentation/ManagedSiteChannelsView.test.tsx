@@ -752,4 +752,62 @@ describe("ManagedSiteChannelsView", () => {
     await user.click(screen.getByRole("checkbox", { name: "Enabled" }))
     expect(onStatusFilterChange).toHaveBeenCalledWith(["1"])
   })
+
+  it("orders mixed status facets and labels unmapped values accessibly", async () => {
+    const user = userEvent.setup()
+    const statusRows = [
+      "10",
+      "enabled",
+      "2",
+      "future-status",
+      "auto-disabled",
+    ].map((status, index) => ({
+      ...rows[0],
+      rowKey: `opaque:status-${status}`,
+      testToken: `Status ${index}`,
+      name: `Status ${index}`,
+      cells: {
+        ...rows[0].cells,
+        status: {
+          kind: "status" as const,
+          value: status,
+          sortValue: status,
+          tone: "default" as const,
+        },
+      },
+    }))
+
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        labels={{
+          ...labels,
+          statusLabels: {
+            "2": "Two",
+            "10": "Ten",
+            "auto-disabled": "Auto disabled",
+            enabled: "Enabled",
+          },
+        }}
+        state={createState({ rows: statusRows, total: statusRows.length })}
+        callbacks={createCallbacks()}
+      />,
+    )
+
+    await user.click(screen.getAllByRole("button", { name: "Status" })[0])
+    const facetCheckboxes = screen
+      .getAllByRole("checkbox")
+      .filter((checkbox) => checkbox.id.startsWith("status-"))
+
+    expect(facetCheckboxes.map((checkbox) => checkbox.id)).toEqual([
+      "status-2",
+      "status-10",
+      "status-auto-disabled",
+      "status-enabled",
+      "status-future-status",
+    ])
+    expect(
+      screen.getByRole("checkbox", { name: "future-status" }),
+    ).toBeVisible()
+  })
 })

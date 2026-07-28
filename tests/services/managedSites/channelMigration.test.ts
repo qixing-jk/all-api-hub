@@ -4795,6 +4795,45 @@ describe("channelMigration", () => {
     expect(create).toHaveBeenCalledOnce()
   })
 
+  it("propagates selection-validation cancellation before resolving credentials or creating", async () => {
+    const { executeManagedSiteMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const abortError = Object.assign(new Error("validation cancelled"), {
+      name: "AbortError",
+    })
+    const createSelectionValidationContext = vi.fn(async () => {
+      throw abortError
+    })
+    const resolveCredential = vi.fn()
+    const create = vi.fn()
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.NEW_API
+        ? {
+            source: {
+              createSelectionValidationContext,
+              prepare: vi.fn(),
+              resolveCredential,
+            },
+          }
+        : siteType === SITE_TYPES.DONE_HUB
+          ? { target: { prepare: vi.fn(), create } }
+          : null,
+    )
+
+    await expect(
+      executeManagedSiteMigration({
+        preview: buildCanonicalPreview([
+          buildMigrationSelection("cancelled-context"),
+        ]),
+        options: { signal: new AbortController().signal },
+      }),
+    ).rejects.toBe(abortError)
+
+    expect(resolveCredential).not.toHaveBeenCalled()
+    expect(create).not.toHaveBeenCalled()
+  })
+
   it("does not resolve credentials or create for an all-invalid crafted preview", async () => {
     const { executeManagedSiteMigration } = await import(
       "~/services/managedSites/channelMigration"

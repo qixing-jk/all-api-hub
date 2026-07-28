@@ -591,9 +591,11 @@ export function useManagedResourceMutationController({
             deletePromise.current = undefined
           if (activeDeleteAnalytics.current === analyticsCompletion)
             activeDeleteAnalytics.current = undefined
-          endMutationSession("delete")
-          if (sessionPhase.current === "delete-execution")
-            sessionPhase.current = "idle"
+          if (currentGeneration === deleteGeneration.current) {
+            endMutationSession("delete")
+            if (sessionPhase.current === "delete-execution")
+              sessionPhase.current = "idle"
+          }
         })
       deletePromise.current = execution
       return execution

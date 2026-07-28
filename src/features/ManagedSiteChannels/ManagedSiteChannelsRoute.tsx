@@ -392,8 +392,10 @@ function NativeManagedSiteChannels({
   const config = getManagedSiteAdminConfigForType(preferences, siteType)
   const latestRouteParams = useRef(routeParams)
   const latestTranslate = useRef(t)
-  latestRouteParams.current = routeParams
-  latestTranslate.current = t
+  useEffect(() => {
+    latestRouteParams.current = routeParams
+    latestTranslate.current = t
+  }, [routeParams, t])
   const resolveLabel = useCallback(
     ((key: string) => latestTranslate.current(key)) as TFunction,
     [],
@@ -492,11 +494,11 @@ function NativeManagedSiteChannels({
           mutation.editorMode,
         )
       : undefined
+  const editorValidation = mutation.editor?.validate(editorValues) ?? null
   const liveEditorValidation =
-    mutation.editor &&
     mutation.editorFailure?.code ===
-      MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed
-      ? mutation.editor.validate(editorValues)
+    MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed
+      ? editorValidation
       : null
   const editorFieldIssues = liveEditorValidation
     ? liveEditorValidation.valid
@@ -747,6 +749,7 @@ function NativeManagedSiteChannels({
           closeLabel={t("common:actions.cancel")}
           submitTestId={CHANNEL_DIALOG_TEST_IDS.submitButton}
           isSubmitting={mutation.isSaving}
+          isSubmitDisabled={editorValidation?.valid === false}
           noValidate
         >
           {mutation.editorFeedback?.kind === "save-failed" &&

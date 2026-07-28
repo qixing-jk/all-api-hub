@@ -18,7 +18,7 @@ export const EXAMPLE_MANAGED_RESOURCE_REF: ManagedResourceRef = {
 
 export const createManagedResourceFacts = (
   resourceId = "opaque-resource-id",
-  displayName = "Example resource",
+  displayName = `Example resource ${resourceId}`,
 ): ResourceDisplayFacts => ({
   ref: { ...EXAMPLE_MANAGED_RESOURCE_REF, resourceId },
   displayName,

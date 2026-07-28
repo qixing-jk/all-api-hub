@@ -52,6 +52,7 @@ import type {
   ManagedSiteMigrationPreviewState,
   ManagedSiteMigrationResult,
 } from "../presentation/contracts"
+import { formatManagedSiteMigrationResultSummary } from "../presentation/managedResourceMigrationPresentation"
 import { ManagedSiteMigrationDialogView } from "../presentation/ManagedSiteMigrationDialogView"
 import type { ChannelRow } from "../types"
 
@@ -293,6 +294,10 @@ export function ManagedSiteChannelMigrationDialog({
     [availableTargets, targetSiteType],
   )
   const isSelectedTargetAvailable = Boolean(selectedTarget)
+  const requiresUncertainResultRecovery = Boolean(
+    onRecoverUncertainResult &&
+      executionResult?.items.some((item) => item.uncertain),
+  )
 
   useEffect(() => {
     if (!isOpen) {
@@ -389,11 +394,7 @@ export function ManagedSiteChannelMigrationDialog({
   ])
 
   const handleClose = () => {
-    if (
-      isRunning ||
-      isRecovering ||
-      Boolean(executionResult?.items.some((item) => item.uncertain))
-    ) {
+    if (isRunning || isRecovering || requiresUncertainResultRecovery) {
       return
     }
     onClose()
@@ -633,7 +634,7 @@ export function ManagedSiteChannelMigrationDialog({
     () =>
       executionResult
         ? {
-            summary: t("managedSiteChannels:migration.results.summary", {
+            summary: formatManagedSiteMigrationResultSummary(t, {
               created: executionResult.createdCount,
               failed: executionResult.failedCount,
               skipped: executionResult.skippedCount,
@@ -699,7 +700,7 @@ export function ManagedSiteChannelMigrationDialog({
       start: t("managedSiteChannels:migration.actions.start"),
       running: t("managedSiteChannels:migration.actions.running"),
       footerSummary: executionResult
-        ? t("managedSiteChannels:migration.results.summary", {
+        ? formatManagedSiteMigrationResultSummary(t, {
             created: executionResult.createdCount,
             failed: executionResult.failedCount,
             skipped: executionResult.skippedCount,
@@ -752,9 +753,7 @@ export function ManagedSiteChannelMigrationDialog({
       isConfirmationOpen={isConfirmOpen}
       isRunning={isRunning}
       isRecoveryRunning={isRecovering}
-      refreshRequired={Boolean(
-        executionResult?.items.some((item) => item.uncertain),
-      )}
+      refreshRequired={requiresUncertainResultRecovery}
       callbacks={{
         onTargetChange: handleTargetSiteTypeChange,
         onRefreshPreview: handleRefreshPreview,

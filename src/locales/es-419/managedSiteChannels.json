@@ -313,7 +313,24 @@
         "success": "Creado",
         "uncertain": "Incierto"
       },
-      "summary": "Resultados: {{created}} creados, {{failed}} fallidos, {{skipped}} omitidos, {{uncertain}} inciertos, {{total}} en total.",
+      "summary": "Resultados: {{created}}, {{failed}}, {{skipped}}, {{uncertain}}, {{total}}.",
+      "summaryMetrics": {
+        "created_one": "{{count}} creado",
+        "created_many": "{{count}} creados",
+        "created_other": "{{count}} creados",
+        "failed_one": "{{count}} fallido",
+        "failed_many": "{{count}} fallidos",
+        "failed_other": "{{count}} fallidos",
+        "skipped_one": "{{count}} omitido",
+        "skipped_many": "{{count}} omitidos",
+        "skipped_other": "{{count}} omitidos",
+        "total_one": "{{count}} en total",
+        "total_many": "{{count}} en total",
+        "total_other": "{{count}} en total",
+        "uncertain_one": "{{count}} incierto",
+        "uncertain_many": "{{count}} inciertos",
+        "uncertain_other": "{{count}} inciertos"
+      },
       "title": "Resultados de migración"
     },
     "target": {

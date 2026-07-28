@@ -21,6 +21,7 @@ import { ManagedSiteChannelsRoute } from "~/features/ManagedSiteChannels/Managed
 import type {
   ManagedChannelsCallbacks,
   ManagedChannelsLabels,
+  ManagedChannelsRowViewModel,
   ManagedSiteMigrationCallbacks,
   ManagedSiteMigrationLabels,
 } from "~/features/ManagedSiteChannels/presentation/contracts"
@@ -976,14 +977,14 @@ describe("ManagedSiteChannelsRoute", () => {
   })
 
   it("renders a numeric model count and retains the row for a manual-only local search", () => {
-    const modelCountRow = {
+    const modelCountRow: ManagedChannelsRowViewModel = {
       ...nativeRow,
       searchText: `${nativeRow.searchText} manual-only-model`,
       cells: {
         ...nativeRow.cells,
         supportedModels: {
-          kind: "number" as const,
-          value: 2,
+          kind: "text",
+          value: "2",
           sortValue: 2,
         },
       },
@@ -1302,7 +1303,7 @@ describe("ManagedSiteChannelsRoute", () => {
     rerender(
       <ManagedSiteChannelsRoute
         siteType={SITE_TYPES.CLAUDE_CODE_HUB}
-        routeParams={{ nativeView: "compact" }}
+        routeParams={{ nativeView: "expanded", search: "query" }}
         onReplaceRouteQuery={onReplaceRouteQuery}
       />,
     )
@@ -1312,6 +1313,12 @@ describe("ManagedSiteChannelsRoute", () => {
       firstOptions.onUnsupportedSearch,
     )
     expect(secondOptions.resolveLabel).toBe(firstOptions.resolveLabel)
+
+    secondOptions.onUnsupportedSearch()
+    expect(onReplaceRouteQuery).toHaveBeenCalledWith({
+      nativeView: "expanded",
+      search: undefined,
+    })
   })
 
   it("paginates the complete native collection exactly once", () => {
@@ -1481,6 +1488,30 @@ describe("ManagedSiteChannelsRoute", () => {
   it("forwards native values to controller validation and submits final values", async () => {
     const user = userEvent.setup()
     const submit = vi.fn()
+    const validate = vi.fn((values: EditableResourceProjection) => {
+      const key = values[AXON_HUB_CHANNEL_FIELD_IDS.KEY]
+      const supportedModels =
+        values[AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]
+      return values[AXON_HUB_CHANNEL_FIELD_IDS.NAME] &&
+        values[AXON_HUB_CHANNEL_FIELD_IDS.TYPE] &&
+        key &&
+        typeof key === "object" &&
+        "kind" in key &&
+        key.kind === "replace" &&
+        Array.isArray(supportedModels) &&
+        supportedModels.length > 0 &&
+        values[AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL]
+        ? ({ valid: true } as const)
+        : ({
+            valid: false,
+            issues: [
+              {
+                fieldId: AXON_HUB_CHANNEL_FIELD_IDS.NAME,
+                code: "required",
+              },
+            ],
+          } as const)
+    })
     const editor = createManagedResourceEditor({
       fields: [
         {
@@ -1522,6 +1553,7 @@ describe("ManagedSiteChannelsRoute", () => {
         supportedModels: [],
         defaultTestModel: "",
       },
+      validate,
     })
     getFieldPolicy.mockReturnValue({
       fields: [
@@ -1583,17 +1615,11 @@ describe("ManagedSiteChannelsRoute", () => {
     const submitButton = screen.getByTestId(
       CHANNEL_DIALOG_TEST_IDS.submitButton,
     )
-    expect(submitButton).toBeEnabled()
+    expect(submitButton).toBeDisabled()
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
-
-    await user.click(submitButton)
-    expect(submit).toHaveBeenCalledWith({
-      name: "",
-      type: "",
-      key: { kind: "unchanged" },
-      supportedModels: [],
-      defaultTestModel: "",
-    })
+    expect(
+      screen.queryByText("managedSiteChannels:editor.validation.required"),
+    ).not.toBeInTheDocument()
 
     await user.type(
       screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput),
@@ -1618,6 +1644,13 @@ describe("ManagedSiteChannelsRoute", () => {
     await user.click(submitButton)
 
     expect(submit).toHaveBeenCalledWith({
+      name: "Example channel",
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+      key: { kind: "replace", value: "example-key" },
+      supportedModels: ["model-example"],
+      defaultTestModel: "model-example",
+    })
+    expect(validate).toHaveBeenLastCalledWith({
       name: "Example channel",
       type: AXON_HUB_CHANNEL_TYPE.OPENAI,
       key: { kind: "replace", value: "example-key" },

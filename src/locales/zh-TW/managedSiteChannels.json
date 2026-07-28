@@ -313,7 +313,19 @@
         "success": "已建立",
         "uncertain": "狀態不確定"
       },
-      "summary": "遷移結果：成功 {{created}} 個，失敗 {{failed}} 個，跳過 {{skipped}} 個，狀態不確定 {{uncertain}} 個，共 {{total}} 個。",
+      "summary": "遷移結果：{{created}}，{{failed}}，{{skipped}}，{{uncertain}}，{{total}}。",
+      "summaryMetrics": {
+        "created_one": "成功 {{count}} 個",
+        "created_other": "成功 {{count}} 個",
+        "failed_one": "失敗 {{count}} 個",
+        "failed_other": "失敗 {{count}} 個",
+        "skipped_one": "跳過 {{count}} 個",
+        "skipped_other": "跳過 {{count}} 個",
+        "total_one": "共 {{count}} 個",
+        "total_other": "共 {{count}} 個",
+        "uncertain_one": "狀態不確定 {{count}} 個",
+        "uncertain_other": "狀態不確定 {{count}} 個"
+      },
       "title": "遷移結果"
     },
     "target": {

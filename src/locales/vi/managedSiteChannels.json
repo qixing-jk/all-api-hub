@@ -313,7 +313,19 @@
         "success": "Đã tạo",
         "uncertain": "Chưa xác định"
       },
-      "summary": "Kết quả di chuyển: Thành công {{created}}, Thất bại {{failed}}, Bỏ qua {{skipped}}, Chưa xác định {{uncertain}}, tổng cộng {{total}}.",
+      "summary": "Kết quả di chuyển: {{created}}, {{failed}}, {{skipped}}, {{uncertain}}, {{total}}.",
+      "summaryMetrics": {
+        "created_one": "Thành công {{count}}",
+        "created_other": "Thành công {{count}}",
+        "failed_one": "Thất bại {{count}}",
+        "failed_other": "Thất bại {{count}}",
+        "skipped_one": "Bỏ qua {{count}}",
+        "skipped_other": "Bỏ qua {{count}}",
+        "total_one": "tổng cộng {{count}}",
+        "total_other": "tổng cộng {{count}}",
+        "uncertain_one": "Chưa xác định {{count}}",
+        "uncertain_other": "Chưa xác định {{count}}"
+      },
       "title": "Kết quả di chuyển"
     },
     "target": {

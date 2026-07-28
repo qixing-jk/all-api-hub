@@ -993,9 +993,9 @@ commit before remote handoff.
 
 - [ ] **Step 2: Run the status tests and verify RED.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/services/apiAdapters/managedResources/axonHub.test.ts --testNamePattern "status|partially"
-```
+~~~
 
 Expected: the new assertions fail because native update currently sends status
 only through `updateChannel`.
@@ -1010,9 +1010,9 @@ only through `updateChannel`.
   numeric trimmed, non-empty, de-duplicated union count and the table renders a
   number rather than model badges.
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/services/apiService/axonHub/index.test.ts tests/features/ManagedSiteChannels/presentation/ManagedSiteChannelsView.test.tsx --testNamePattern "model|Models"
-```
+~~~
 
 Expected: RED because the summary currently selects only `supportedModels` and
 the presenter treats it as a list.
@@ -1028,9 +1028,9 @@ the presenter treats it as a list.
   and a subsequent user edit emits `replace`. Keep masked, permission-hidden,
   unavailable, and structured credentials blank.
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.test.tsx tests/services/apiAdapters/managedResources/axonHub.test.ts --testNamePattern "saved key|credential|secret"
-```
+~~~
 
 Expected: RED because native edit currently exposes only secret state.
 
@@ -1054,9 +1054,9 @@ Expected: RED because native edit currently exposes only secret state.
   design spec's field contract. Stage only Task D files, run
   `pnpm run validate:staged` and `pnpm run validate:push`, then commit:
 
-```powershell
+~~~powershell
 git commit -m "fix(axonhub): restore native channel parity semantics"
-```
+~~~
 
 ### Task E: Match AxonHub's native model-form experience
 
@@ -1074,7 +1074,7 @@ git commit -m "fix(axonhub): restore native channel parity semantics"
   the test descriptor for `defaultTestModel` to a select with empty static
   options, then assert the approved frontend-owned presentation contract:
 
-```ts
+~~~ts
 expect(defaultTestModelField).toMatchObject({
   renderer: "select",
   optionSourceFieldIds: [
@@ -1106,13 +1106,13 @@ expect(patternField.visibleWhen?.({
 expect(patternField.visibleWhen?.({
   [AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS]: true,
 })).toBe(true)
-```
+~~~
 
 - [ ] **Step 2: Run the policy test and verify RED.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy.test.ts
-```
+~~~
 
   Expected: FAIL because the default test model descriptor/policy is still
   text-only and the presentation policy does not yet define dependent options,
@@ -1121,12 +1121,12 @@ pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/managedReso
 - [ ] **Step 3: Implement the smallest validated presentation contract.** Add
   these optional properties to `ManagedResourceFieldPresentation`:
 
-```ts
+~~~ts
 placeholderKey?: string
 optionSourceFieldIds?: readonly string[]
 autoSelectFirstOption?: boolean
 issueLabelKeys?: Partial<Record<ResourceFieldIssue["code"], string>>
-```
+~~~
 
   Import `ResourceFieldIssue` as a type. In `assertModePolicy`, reject
   `optionSourceFieldIds` unless the renderer is `select`, reject an empty or
@@ -1140,16 +1140,16 @@ issueLabelKeys?: Partial<Record<ResourceFieldIssue["code"], string>>
   sync switch its help key. Give the pattern its help, placeholder, controlled
   invalid-message key, and this visibility predicate:
 
-```ts
+~~~ts
 visibleWhen: (values) =>
   values[AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS] === true
-```
+~~~
 
 - [ ] **Step 4: Run the policy test and verify GREEN.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy.test.ts
-```
+~~~
 
   Expected: PASS, including renderer compatibility and policy metadata.
 
@@ -1157,7 +1157,7 @@ pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/managedReso
   tests.** In `ManagedResourceEditorBody.test.tsx`, use reserved model ids such
   as `model-example-a` and `model-example-b`. Cover these observable rules:
 
-```ts
+~~~ts
 expect(
   screen.getByRole("combobox", { name: /Default test model/ }),
 ).toBeVisible()
@@ -1167,7 +1167,7 @@ await user.click(
 expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(
   ["model-example-a", "model-example-b"],
 )
-```
+~~~
 
   Supply duplicates across supported/manual models and prove they collapse to
   one option. Prove a new empty default selects the first candidate, removing
@@ -1182,9 +1182,9 @@ expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqua
 
 - [ ] **Step 6: Run the component test and verify RED.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.test.tsx --testNamePattern "default test model|automatic model sync|model filter"
-```
+~~~
 
   Expected: FAIL because the control is still a text input, select options are
   not derived, and the pattern is always visible without help or placeholder.
@@ -1194,7 +1194,7 @@ pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedReso
   with the configured projection lists, trims values, removes empty strings,
   and de-duplicates without reordering:
 
-```ts
+~~~ts
 const resolveSelectOptionValues = (
   descriptor: Extract<ResourceFieldDescriptor, { type: "select" }>,
   presentation: ManagedResourceFieldPresentation,
@@ -1208,7 +1208,7 @@ const resolveSelectOptionValues = (
       ),
     ].map((value) => value.trim()).filter(Boolean)),
   )
-```
+~~~
 
   Use the resolved values for every select. Keep existing translated enum
   labels for descriptor-owned options; dependent values render their literal
@@ -1225,9 +1225,9 @@ const resolveSelectOptionValues = (
 
 - [ ] **Step 8: Run the component and policy tests and verify GREEN.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.test.tsx tests/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy.test.ts
-```
+~~~
 
   Expected: PASS with no React update-loop, act, duplicate-key, or accessibility
   warnings.
@@ -1253,7 +1253,7 @@ pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedReso
   Use the following localized values for the remaining four files; do not
   leave English fallback text or expose GraphQL field names:
 
-```jsonc
+~~~jsonc
 // src/locales/zh-TW/managedSiteChannels.json
 {
   "defaultTestModel": {
@@ -1272,9 +1272,9 @@ pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedReso
     "invalid": "請輸入有效的模型篩選規則。"
   }
 }
-```
+~~~
 
-```jsonc
+~~~jsonc
 // src/locales/ja/managedSiteChannels.json
 {
   "defaultTestModel": {
@@ -1293,9 +1293,9 @@ pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedReso
     "invalid": "有効なモデルフィルターパターンを入力してください。"
   }
 }
-```
+~~~
 
-```jsonc
+~~~jsonc
 // src/locales/es-419/managedSiteChannels.json
 {
   "defaultTestModel": {
@@ -1314,9 +1314,9 @@ pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedReso
     "invalid": "Ingresa un patrón de filtro de modelos válido."
   }
 }
-```
+~~~
 
-```jsonc
+~~~jsonc
 // src/locales/vi/managedSiteChannels.json
 {
   "defaultTestModel": {
@@ -1335,7 +1335,7 @@ pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedReso
     "invalid": "Nhập mẫu lọc mô hình hợp lệ."
   }
 }
-```
+~~~
 
   Run the policy test again and verify GREEN; the existing English and
   Simplified Chinese objects must contain the same keys as the four snippets.
@@ -1346,21 +1346,21 @@ pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedReso
   `(?i)^model-example`, and an empty pattern validate. Assert `[model-example`
   returns exactly this controlled issue:
 
-```ts
+~~~ts
 {
   fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
   code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
 }
-```
+~~~
 
   Disable automatic sync with the same malformed saved pattern and assert
   validation does not block an unrelated edit.
 
 - [ ] **Step 11: Run the Adapter test and verify RED.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/services/apiAdapters/managedResources/axonHub.test.ts --testNamePattern "model filter pattern"
-```
+~~~
 
   Expected: FAIL because `validateValues` does not validate
   `autoSyncModelPattern`.
@@ -1371,7 +1371,7 @@ pnpm exec vitest run tests/services/apiAdapters/managedResources/axonHub.test.ts
   `frontend/src/features/channels/utils/pattern.ts`. Mirror its UI-supported
   contract:
 
-```ts
+~~~ts
 const AXON_HUB_MODEL_PATTERN_REGEX_CHARS = /[*?+[\]{}()^$.|\\]/
 
 const isValidAxonHubModelPattern = (pattern: string) => {
@@ -1387,7 +1387,7 @@ const isValidAxonHubModelPattern = (pattern: string) => {
     return false
   }
 }
-```
+~~~
 
   In `validateValues`, read the switch and trimmed pattern. Add
   `InvalidValue` for `AUTO_SYNC_MODEL_PATTERN` only when automatic sync is
@@ -1396,11 +1396,11 @@ const isValidAxonHubModelPattern = (pattern: string) => {
 
 - [ ] **Step 13: Run all focused tests, locale extraction, and related tests.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy.test.ts tests/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.test.tsx tests/services/apiAdapters/managedResources/axonHub.test.ts
 pnpm exec vitest related --run src/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy.ts src/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.tsx src/services/apiAdapters/managedResources/axonHub.ts
 pnpm run i18n:extract:ci
-```
+~~~
 
   Expected: PASS, locale extraction leaves the worktree unchanged, and no
   unrelated historical test is weakened.
@@ -1411,12 +1411,12 @@ pnpm run i18n:extract:ci
   added, hidden patterns are preserved, and analytics receives no model or
   pattern values. Stage only Task E files, then run:
 
-```powershell
+~~~powershell
 pnpm run validate:staged
 pnpm run validate:push
 git diff --cached --check
 git status --short
-```
+~~~
 
   Expected: all checks pass; the staged diff contains only Task E code, tests,
   and locales. The design and plan updates were committed before implementation
@@ -1424,9 +1424,9 @@ git status --short
 
 - [ ] **Step 15: Commit the form experience correction.**
 
-```powershell
+~~~powershell
 git commit -m "fix(axonhub): improve native model form guidance"
-```
+~~~
 
 ## Post-cutover release-blocker corrections
 
@@ -1459,7 +1459,7 @@ Implemented as part of the final AxonHub native cutover slice.
 
 - [ ] **Step 1: Write adapter regression tests for a multi-key detail.** Build a regular AxonHub detail with two non-empty values across `credentials.apiKeys`/legacy `credentials.apiKey`. Assert that the secret descriptor is not replaceable, carries `multiple_credentials`, exposes no `loadSecret`, rejects crafted `replace` and `clear` intents with `unsupported_option`, permits an unrelated rename with `unchanged`, and never sends `credentials` for that rename.
 
-```ts
+~~~ts
 expect(secretField).toMatchObject({
   canReplace: false,
   replacementBlockReason: "multiple_credentials",
@@ -1469,7 +1469,7 @@ expect(editor.validate({ ...editor.initialValues, key: { kind: "replace", value:
   valid: false,
   issues: [{ fieldId: "key", code: "unsupported_option" }],
 })
-```
+~~~
 
 - [ ] **Step 2: Write the latest-detail race regression.** Open the editor from a single-key detail, return a two-key detail when submission refreshes authoritative state, submit a replacement, and assert `updateAxonHubChannel` is never dispatched.
 
@@ -1477,22 +1477,22 @@ expect(editor.validate({ ...editor.initialValues, key: { kind: "replace", value:
 
 - [ ] **Step 4: Run the focused tests and verify RED.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/services/apiAdapters/managedResources/axonHub.test.ts tests/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.test.tsx --testNamePattern "multiple API keys|multi-key credential"
-```
+~~~
 
 Expected: FAIL because the adapter currently loses key count, exposes the first key, and emits a one-element replacement array.
 
 - [ ] **Step 5: Add the controlled descriptor reason.** Export the runtime constant and derived type, then add the optional field only to the secret descriptor branch.
 
-```ts
+~~~ts
 export const MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS = {
   MultipleCredentials: "multiple_credentials",
 } as const
 
 export type ResourceSecretReplacementBlockReason =
   (typeof MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS)[keyof typeof MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS]
-```
+~~~
 
 - [ ] **Step 6: Centralize AxonHub credential metadata.** Normalize trimmed candidates once, store `{ state, candidateCount }` with sanitized editor detail, and make `canReplaceCredential`, descriptor construction, validation, command construction, and loader exposure use the same metadata. Treat more than one non-empty candidate as non-replaceable while leaving other fields editable.
 
@@ -1502,20 +1502,20 @@ export type ResourceSecretReplacementBlockReason =
 
 - [ ] **Step 9: Run focused and locale validation, then verify GREEN.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/services/apiAdapters/managedResources/axonHub.test.ts tests/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.test.tsx --testNamePattern "multiple API keys|multi-key credential"
 pnpm run i18n:extract:ci
-```
+~~~
 
 Expected: PASS; locale extraction produces no diff; single-key replacement and unchanged multi-key edits remain covered.
 
 - [ ] **Step 10: Commit the isolated safety fix after review.**
 
-```powershell
+~~~powershell
 git add src/services/apiAdapters/contracts/managedResourceNative.ts src/services/apiAdapters/managedResources/axonHub.ts src/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.tsx src/locales/en/managedSiteChannels.json src/locales/es-419/managedSiteChannels.json src/locales/ja/managedSiteChannels.json src/locales/vi/managedSiteChannels.json src/locales/zh-CN/managedSiteChannels.json src/locales/zh-TW/managedSiteChannels.json docs/superpowers/specs/2026-07-16-managed-site-resource-native-extension-design.md tests/services/apiAdapters/managedResources/axonHub.test.ts tests/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.test.tsx
 pnpm run validate:staged
 git commit -m "fix(axonhub): protect multi-key channel credentials"
-```
+~~~
 
 ### Task G: Distinguish Editor Failures and Restore Fresh-Read Recovery
 
@@ -1537,12 +1537,12 @@ Implemented as part of the final AxonHub native cutover slice.
 
 - [ ] **Step 1: Write controller feedback tests.** Cover create/edit open rejection, a confirmed save rejection that retains the editor, an uncertain save that closes it, and a confirmed save followed by a rejected refresh. Assert a discriminated feedback kind instead of inferring operation context from `ResourceFailure.code`.
 
-```ts
+~~~ts
 expect(result.current.editorFeedback).toEqual({
   kind: "saved-refresh-failed",
 })
 expect(result.current.deleteState.requiresFreshRead).toBe(true)
-```
+~~~
 
 - [ ] **Step 2: Write recovery tests.** After `saved-refresh-failed`, make the next refresh succeed through `recoverFreshRead()` and assert both the replay lock and feedback clear. Preserve feedback when recovery fails.
 
@@ -1550,9 +1550,9 @@ expect(result.current.deleteState.requiresFreshRead).toBe(true)
 
 - [ ] **Step 4: Run controller and route tests and verify RED.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/controllers/useManagedResourceControllers.test.tsx tests/features/ManagedSiteChannels/ManagedSiteChannelsRoute.test.tsx --testNamePattern "editor feedback|saved.*refresh|open.*failure|save.*failure"
-```
+~~~
 
 Expected: FAIL because `editorFailure` has no operation context, ordinary open failures are hidden, and toolbar refresh does not clear the controller lock.
 
@@ -1564,7 +1564,7 @@ Expected: FAIL because `editorFailure` has no operation context, ordinary open f
 
 - [ ] **Step 8: Add locale copy in all six locales.** Add shape-aligned keys:
 
-```json
+~~~json
 {
   "alerts": {
     "editorLoadError": {
@@ -1581,22 +1581,22 @@ Expected: FAIL because `editorFailure` has no operation context, ordinary open f
     }
   }
 }
-```
+~~~
 
 - [ ] **Step 9: Run focused and locale validation, then verify GREEN.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/controllers/useManagedResourceControllers.test.tsx tests/features/ManagedSiteChannels/ManagedSiteChannelsRoute.test.tsx
 pnpm run i18n:extract:ci
-```
+~~~
 
 - [ ] **Step 10: Commit the feedback/recovery slice after review.**
 
-```powershell
+~~~powershell
 git add src/features/ManagedSiteChannels/controllers/useManagedResourceMutationController.ts src/features/ManagedSiteChannels/ManagedSiteChannelsRoute.tsx src/features/ManagedSiteChannels/presentation/contracts.ts src/features/ManagedSiteChannels/presentation/ManagedSiteChannelsView.tsx src/locales/en/managedSiteChannels.json src/locales/es-419/managedSiteChannels.json src/locales/ja/managedSiteChannels.json src/locales/vi/managedSiteChannels.json src/locales/zh-CN/managedSiteChannels.json src/locales/zh-TW/managedSiteChannels.json tests/features/ManagedSiteChannels/controllers/useManagedResourceControllers.test.tsx tests/features/ManagedSiteChannels/ManagedSiteChannelsRoute.test.tsx
 pnpm run validate:staged
 git commit -m "fix(channels): clarify native editor recovery"
-```
+~~~
 
 ### Task H: Make Credential Intent and Loading Visible
 
@@ -1620,9 +1620,9 @@ Implemented as part of the final AxonHub native cutover slice.
 
 - [ ] **Step 3: Run the presentation test and verify RED.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.test.tsx --testNamePattern "credential.*create|keep.*credential|loading.*credential"
-```
+~~~
 
 Expected: FAIL because the body cannot distinguish create/edit and does not track pending secret loads.
 
@@ -1636,18 +1636,18 @@ Expected: FAIL because the body cannot distinguish create/edit and does not trac
 
 - [ ] **Step 8: Run focused and locale validation, then verify GREEN.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.test.tsx
 pnpm run i18n:extract:ci
-```
+~~~
 
 - [ ] **Step 9: Commit the credential UX slice after review.**
 
-```powershell
+~~~powershell
 git add src/features/ManagedSiteChannels/ManagedSiteChannelsRoute.tsx src/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.tsx src/services/apiAdapters/contracts/managedResourceNative.ts src/locales/en/managedSiteChannels.json src/locales/es-419/managedSiteChannels.json src/locales/ja/managedSiteChannels.json src/locales/vi/managedSiteChannels.json src/locales/zh-CN/managedSiteChannels.json src/locales/zh-TW/managedSiteChannels.json tests/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.test.tsx
 pnpm run validate:staged
 git commit -m "fix(channels): explain native credential state"
-```
+~~~
 
 ### Task I: Gate Invalid Native Forms and Repair the Mobile Migration Footer
 
@@ -1667,9 +1667,9 @@ final submit-feedback behavior.
 
 - [ ] **Step 3: Run route and migration tests and verify RED.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/ManagedSiteChannelsRoute.test.tsx tests/features/ManagedSiteChannels/presentation/ManagedSiteMigrationDialogView.test.tsx --testNamePattern "native.*submit|migration.*footer"
-```
+~~~
 
 Expected: FAIL because the route does not pass `isSubmitDisabled`, and both footer branches force one horizontal row.
 
@@ -1679,26 +1679,26 @@ Expected: FAIL because the route does not pass `isSubmitDisabled`, and both foot
 
 - [ ] **Step 6: Run focused and related tests, then verify GREEN.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/features/ManagedSiteChannels/ManagedSiteChannelsRoute.test.tsx tests/features/ManagedSiteChannels/presentation/ManagedSiteMigrationDialogView.test.tsx
 pnpm exec vitest related --run src/features/ManagedSiteChannels/ManagedSiteChannelsRoute.tsx src/features/ManagedSiteChannels/presentation/ManagedSiteMigrationDialogView.tsx
-```
+~~~
 
 - [ ] **Step 7: Run the existing browser path.** Reuse the mobile legacy scenario because it opens the shared 390 px migration dialog, and reuse the AxonHub desktop scenario because it proves the native route uses the same view. Do not add a second E2E state matrix.
 
-```powershell
+~~~powershell
 pnpm exec playwright test e2e/managedSiteChannelsParity.spec.ts --project=chromium --grep "runs the AxonHub native edit and migration preview through the shared UI|keeps common toolbar controls usable" --reporter=line --timeout=60000
-```
+~~~
 
 Expected: both scenarios PASS in Chromium at their configured desktop and mobile viewports.
 
 - [ ] **Step 8: Commit the validation/layout slice after review.**
 
-```powershell
+~~~powershell
 git add src/features/ManagedSiteChannels/ManagedSiteChannelsRoute.tsx src/features/ManagedSiteChannels/presentation/ManagedSiteMigrationDialogView.tsx tests/features/ManagedSiteChannels/ManagedSiteChannelsRoute.test.tsx tests/features/ManagedSiteChannels/presentation/ManagedSiteMigrationDialogView.test.tsx
 pnpm run validate:staged
 git commit -m "fix(channels): tighten native form feedback"
-```
+~~~
 
 ### Task J: Integrated Review and Branch Validation
 
@@ -1709,10 +1709,10 @@ Completed across the Task F-I commits and their final integrated validation.
 
 - [ ] **Step 1: Run the complete focused regression set.**
 
-```powershell
+~~~powershell
 pnpm exec vitest run tests/services/apiAdapters/managedResources/axonHub.test.ts tests/features/ManagedSiteChannels/controllers/useManagedResourceControllers.test.tsx tests/features/ManagedSiteChannels/ManagedSiteChannelsRoute.test.tsx tests/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody.test.tsx tests/features/ManagedSiteChannels/presentation/ManagedSiteMigrationDialogView.test.tsx
 pnpm run i18n:extract:ci
-```
+~~~
 
 Expected: 5 test files pass; locale extraction leaves the worktree unchanged.
 
@@ -1720,12 +1720,12 @@ Expected: 5 test files pass; locale extraction leaves the worktree unchanged.
 
 - [ ] **Step 3: Run commit and push-equivalent gates.** Stage only remaining task-scoped files before `validate:staged`; then run the broader gate because the change touches shared contracts, exports, controller state, locale extraction, and adapter runtime behavior.
 
-```powershell
+~~~powershell
 pnpm run validate:staged
 pnpm run validate:push
 git diff --check origin/main...HEAD
 git status --short
-```
+~~~
 
 Expected: all commands exit 0 and the status is clean.
 

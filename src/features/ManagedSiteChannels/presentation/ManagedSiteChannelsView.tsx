@@ -459,7 +459,15 @@ export function ManagedSiteChannelsView({
   const statusCounts = statusColumn?.getFacetedUniqueValues()
   const uniqueStatusValues = Array.from(statusCounts?.keys() ?? [])
     .map(String)
-    .sort((a, b) => Number(a) - Number(b))
+    .sort((a, b) => {
+      const numericA = Number(a)
+      const numericB = Number(b)
+      const isNumericA = a.trim() !== "" && Number.isFinite(numericA)
+      const isNumericB = b.trim() !== "" && Number.isFinite(numericB)
+      if (isNumericA && isNumericB) return numericA - numericB
+      if (isNumericA !== isNumericB) return isNumericA ? -1 : 1
+      return a.localeCompare(b)
+    })
   const selectedRows = table.getSelectedRowModel().rows
   const filteredRows = table.getFilteredRowModel().rows
   const selectedCount = selectedRows.length
@@ -722,7 +730,7 @@ export function ManagedSiteChannelsView({
                               htmlFor={`status-${value}`}
                               className="text-sm font-normal"
                             >
-                              {labels.statusLabels[value]}
+                              {labels.statusLabels[value] ?? value}
                             </Label>
                           </div>
                           <span className="text-muted-foreground text-xs">
