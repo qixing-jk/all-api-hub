@@ -1,10 +1,20 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
+import { runCompatibleRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/compatibleAccountSaveFlow"
 import {
   loginToCompatibleApiRealSite,
   type CompatibleApiRealSiteConfig,
 } from "~~/e2e/utils/realSite/compatibleApi"
 import { loginToRealNewApiSite } from "~~/e2e/utils/realSite/newApi"
+
+const mocks = vi.hoisted(() => ({
+  saveAutoDetectedAccountFromApp: vi.fn(),
+}))
+
+vi.mock("~~/e2e/utils/accountLifecycle", () => ({
+  saveAutoDetectedAccountFromApp: mocks.saveAutoDetectedAccountFromApp,
+}))
 
 const ORIGIN = "https://panel.example.invalid"
 const AUTH_REFRESH_URL = `${ORIGIN}/api/user/auth/refresh`
@@ -69,6 +79,7 @@ function createPage(
         post,
         get: vi.fn(),
       },
+      close: vi.fn().mockResolvedValue(undefined),
     } as any,
     evaluate,
     waitForFunction,
@@ -183,6 +194,50 @@ describe("compatible real-site login", () => {
         "X-Auth-Session": "session-id-placeholder",
       },
     })
+  })
+
+  it("logs out the fresh owned session once when downstream account saving fails", async () => {
+    const saveError = new Error("account save failed")
+    const post = vi
+      .fn()
+      .mockResolvedValueOnce(createResponse(401, { code: "AUTH_UNAUTHORIZED" }))
+      .mockResolvedValueOnce(createResponse(200, createAuthBundle()))
+      .mockResolvedValueOnce(createResponse(200, { success: true }))
+    const { page: sitePage } = createPage(post)
+
+    mocks.saveAutoDetectedAccountFromApp.mockRejectedValueOnce(saveError)
+
+    await expect(
+      runCompatibleRealSiteAccountSaveFlow({
+        page: { on: vi.fn() } as any,
+        extensionId: "extension-id",
+        serviceWorker: {} as any,
+        sitePage,
+        config,
+        siteType: SITE_TYPES.NEW_API,
+        login: loginToRealNewApiSite,
+      }),
+    ).rejects.toBe(saveError)
+
+    expect(post.mock.calls.filter(([url]) => url === AUTH_LOGOUT_URL)).toEqual([
+      [
+        AUTH_LOGOUT_URL,
+        {
+          failOnStatusCode: false,
+          headers: {
+            Origin: ORIGIN,
+            Authorization: "Bearer access-token-placeholder",
+            "X-Auth-Session": "session-id-placeholder",
+          },
+        },
+      ],
+    ])
+    expect(
+      post.mock.calls.some(([url]) =>
+        String(url).includes("/api/user/sessions/revoke-others"),
+      ),
+    ).toBe(false)
+    expect(sitePage.close).toHaveBeenCalledOnce()
   })
 
   it("uses the successful 2FA AuthBundle response as the login result", async () => {
