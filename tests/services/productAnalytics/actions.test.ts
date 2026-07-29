@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES } from "~/constants/openRouterBootstrap"
 import {
   PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
   PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FETCH_CONTEXT_KINDS,
@@ -82,6 +83,46 @@ describe("product analytics action helpers", () => {
         surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       },
+    )
+  })
+
+  it.each(Object.values(OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES))(
+    "maps OpenRouter attempt outcome %s without secret fields",
+    async (attemptOutcome) => {
+      const { trackProductAnalyticsActionCompleted } = await import(
+        "~/services/productAnalytics/actions"
+      )
+
+      await trackProductAnalyticsActionCompleted({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        insights: {
+          accountAutoDetectAttemptOutcome: attemptOutcome,
+          fallbackUsed: true,
+        },
+      })
+
+      expect(trackMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        expect.objectContaining({
+          account_auto_detect_attempt_outcome: attemptOutcome,
+          fallback_used: true,
+        }),
+      )
+      const [, payload] = trackMock.mock.lastCall!
+      expect(payload).not.toHaveProperty("access_token")
+      expect(payload).not.toHaveProperty("accessToken")
+      expect(payload).not.toHaveProperty("label")
+      expect(payload).not.toHaveProperty("secret")
+      expect(payload).not.toHaveProperty("token")
+    },
+  )
+
+  it("does not expose an OpenRouter cleanup analytics action", () => {
+    expect(PRODUCT_ANALYTICS_ACTION_IDS).not.toHaveProperty(
+      "OpenRouterBootstrapCleanup",
     )
   })
 

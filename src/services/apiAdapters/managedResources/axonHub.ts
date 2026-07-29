@@ -1,6 +1,9 @@
 import {
+  AXON_HUB_CHANNEL_FIELD_IDS,
   AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
+  isAxonHubModelAutoSyncSupported,
+  type AxonHubChannelFieldId,
   type AxonHubChannelStatus,
 } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -8,8 +11,11 @@ import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contra
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
+  MANAGED_RESOURCE_FAILURE_CODES,
   MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   MANAGED_RESOURCE_FIELD_TYPES,
+  MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS,
+  ManagedResourceError,
   type EditableResourceProjection,
   type ManagedResourceRef,
   type ResourceDisplayFact,
@@ -19,6 +25,7 @@ import {
   type ResourceFieldIssue,
   type ResourceListQuery,
   type ResourceOperationOptions,
+  type ResourceSecretReplacementBlockReason,
   type ResourceSecretState,
   type ResourceValidationResult,
   type SecretEditIntent,
@@ -48,23 +55,6 @@ import type {
   AxonHubUpdateChannelInput,
 } from "~/types/axonHub"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
-
-export const AXON_HUB_EDITABLE_FIELD_IDS = [
-  "name",
-  "type",
-  "baseURL",
-  "status",
-  "key",
-  "supportedModels",
-  "manualModels",
-  "defaultTestModel",
-  "autoSyncSupportedModels",
-  "autoSyncModelPattern",
-  "tags",
-  "orderingWeight",
-  "remark",
-  "extraModelPrefix",
-] as const
 
 export type AxonHubNativeFailure = {
   code:
@@ -102,6 +92,10 @@ export interface AxonHubNativeResourceOperations {
     ref: ManagedResourceRef,
     options?: ResourceOperationOptions,
   ): Promise<AxonHubChannel>
+  loadSecret(
+    ref: ManagedResourceRef,
+    options?: ResourceOperationOptions,
+  ): Promise<string>
   create(
     input: AxonHubCreateChannelInput,
     desiredStatus: AxonHubChannelStatus,
@@ -146,6 +140,15 @@ const REGULAR_AXON_HUB_CHANNEL_TYPES = [
 const REGULAR_AXON_HUB_CHANNEL_TYPE_SET = new Set<string>(
   REGULAR_AXON_HUB_CHANNEL_TYPES,
 )
+
+const editorCredentialStates = new WeakMap<
+  AxonHubChannel,
+  ResourceSecretState
+>()
+const editorCredentialReplacementBlockReasons = new WeakMap<
+  AxonHubChannel,
+  ResourceSecretReplacementBlockReason
+>()
 
 /** Returns whether AxonHub represents this channel with regular API-key credentials. */
 export const isRegularAxonHubChannelType = (type: string): boolean =>
@@ -378,6 +381,21 @@ export async function openAxonHubNativeResourceOperations(
         ),
       )
     },
+    loadSecret: async (ref, operationOptions) => {
+      assertRef(ref)
+      const detail = await callRead(() =>
+        getAxonHubChannel(
+          config,
+          ref.resourceId,
+          requestOptions(operationOptions),
+        ),
+      )
+      const credential = getAxonHubCredentialKey(detail)
+      if (!isRegularAxonHubChannelType(String(detail.type)) || !credential) {
+        throw createNativeFailure("unavailable")
+      }
+      return credential
+    },
     create: async (input, desiredStatus, operationOptions) => {
       let created: AxonHubChannel
       try {
@@ -409,19 +427,55 @@ export async function openAxonHubNativeResourceOperations(
         return { certainty: "partially-applied" }
       }
     },
+    // AxonHub beta5 ignores status in UpdateChannel; status changes require
+    // UpdateChannelStatus. Source: https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/internal/server/biz/channel.go
     update: async (detail, input, operationOptions) => {
-      try {
-        return {
-          certainty: "applied",
-          value: await updateAxonHubChannel(
+      const { status, ...ordinaryInput } = input
+      const statusChanged = status !== undefined && status !== detail.status
+      const mergedOrdinaryInput = ordinaryInput.settings
+        ? {
+            ...ordinaryInput,
+            settings: {
+              ...(detail.settings ?? {}),
+              ...ordinaryInput.settings,
+            },
+          }
+        : ordinaryInput
+      const hasOrdinaryPatch =
+        Object.keys(mergedOrdinaryInput).length > 0 || status === undefined
+      let updated = detail
+
+      if (hasOrdinaryPatch) {
+        try {
+          updated = await updateAxonHubChannel(
             config,
             detail.id,
-            input,
+            mergedOrdinaryInput,
             requestOptions(operationOptions),
-          ),
+          )
+        } catch (error) {
+          return mutationFailure(error)
         }
-      } catch (error) {
-        return mutationFailure(error)
+      }
+
+      if (statusChanged) {
+        try {
+          await updateAxonHubChannelStatus(
+            config,
+            detail.id,
+            status,
+            requestOptions(operationOptions),
+          )
+        } catch (error) {
+          return hasOrdinaryPatch
+            ? { certainty: "partially-applied" }
+            : mutationFailure(error)
+        }
+      }
+
+      return {
+        certainty: "applied",
+        value: statusChanged ? { ...updated, status } : updated,
       }
     },
     delete: async (ref, operationOptions) => {
@@ -460,6 +514,7 @@ const searchableValues = (channel: AxonHubChannel) => [
   channel.baseURL ?? "",
   String(channel.status),
   ...(channel.supportedModels ?? []),
+  ...(channel.manualModels ?? []),
   ...(channel.tags ?? []),
 ]
 
@@ -478,59 +533,152 @@ const toStatus = (status: string): ResourceDisplayFacts["status"] => {
   }
 }
 
+export const getAxonHubCredentialCandidates = (
+  channel: AxonHubChannel,
+): string[] =>
+  [...(channel.credentials?.apiKeys ?? []), channel.credentials?.apiKey]
+    .filter((key): key is string => typeof key === "string")
+    .map((key) => key.trim())
+    .filter(Boolean)
+
+const getCredentialReplacementBlockReason = (
+  channel: AxonHubChannel,
+): ResourceSecretReplacementBlockReason | undefined =>
+  editorCredentialReplacementBlockReasons.get(channel) ??
+  (getAxonHubCredentialCandidates(channel).length > 1
+    ? MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS.MultipleCredentials
+    : undefined)
+
 const getCredentialState = (channel: AxonHubChannel): ResourceSecretState => {
+  const editorState = editorCredentialStates.get(channel)
+  if (editorState) return editorState
   if (channel.credentials === null) return "permission-hidden"
-  const keys = [
-    ...(channel.credentials?.apiKeys ?? []),
-    ...(channel.credentials?.apiKey ? [channel.credentials.apiKey] : []),
-  ].map((key) => key.trim())
+  const keys = getAxonHubCredentialCandidates(channel)
   if (keys.some(hasUsableApiTokenKey)) return "available"
-  if (keys.some(Boolean)) return "masked"
+  if (keys.length) return "masked"
   return "unavailable"
 }
+
+const sanitizeAxonHubEditorDetail = (
+  detail: AxonHubChannel,
+): AxonHubChannel => {
+  const credentialState = getCredentialState(detail)
+  const credentialReplacementBlockReason =
+    getCredentialReplacementBlockReason(detail)
+  const sanitized: AxonHubChannel = {
+    id: detail.id,
+    name: detail.name,
+    type: detail.type,
+    status: detail.status,
+    baseURL: detail.baseURL,
+    credentials: undefined,
+    supportedModels: detail.supportedModels,
+    manualModels: detail.manualModels,
+    autoSyncSupportedModels: detail.autoSyncSupportedModels,
+    autoSyncModelPattern: detail.autoSyncModelPattern,
+    tags: detail.tags,
+    defaultTestModel: detail.defaultTestModel,
+    orderingWeight: detail.orderingWeight,
+    remark: detail.remark,
+    settings: detail.settings
+      ? { extraModelPrefix: detail.settings.extraModelPrefix }
+      : undefined,
+  }
+  editorCredentialStates.set(sanitized, credentialState)
+  if (credentialReplacementBlockReason) {
+    editorCredentialReplacementBlockReasons.set(
+      sanitized,
+      credentialReplacementBlockReason,
+    )
+  }
+  return sanitized
+}
+
+const getAxonHubCredentialKey = (channel: AxonHubChannel) => {
+  if (
+    getCredentialState(channel) !== "available" ||
+    getCredentialReplacementBlockReason(channel)
+  ) {
+    return undefined
+  }
+  return getAxonHubCredentialCandidates(channel).find(hasUsableApiTokenKey)
+}
+
+const canReplaceCredential = (channel: AxonHubChannel) =>
+  isRegularAxonHubChannelType(String(channel.type)) &&
+  getCredentialState(channel) !== "permission-hidden" &&
+  getCredentialReplacementBlockReason(channel) === undefined
 
 const detailFacts = (
   channel: AxonHubChannel,
 ): readonly ResourceDisplayFact[] => [
-  { fieldId: "name", kind: "text", value: channel.name },
-  { fieldId: "type", kind: "text", value: String(channel.type) },
-  { fieldId: "baseURL", kind: "text", value: channel.baseURL ?? "" },
-  { fieldId: "status", kind: "text", value: String(channel.status) },
-  { fieldId: "key", kind: "secret", state: getCredentialState(channel) },
   {
-    fieldId: "supportedModels",
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.NAME,
+    kind: "text",
+    value: channel.name,
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
+    kind: "text",
+    value: String(channel.type),
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
+    kind: "text",
+    value: channel.baseURL ?? "",
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.STATUS,
+    kind: "text",
+    value: String(channel.status),
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+    kind: "secret",
+    state: getCredentialState(channel),
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
     kind: "list",
     value: channel.supportedModels ?? [],
   },
   {
-    fieldId: "manualModels",
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
     kind: "list",
     value: channel.manualModels ?? [],
   },
   {
-    fieldId: "defaultTestModel",
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
     kind: "text",
     value: channel.defaultTestModel ?? "",
   },
   {
-    fieldId: "autoSyncSupportedModels",
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
     kind: "boolean",
     value: channel.autoSyncSupportedModels ?? false,
   },
   {
-    fieldId: "autoSyncModelPattern",
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
     kind: "text",
     value: channel.autoSyncModelPattern ?? "",
   },
-  { fieldId: "tags", kind: "list", value: channel.tags ?? [] },
   {
-    fieldId: "orderingWeight",
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TAGS,
+    kind: "list",
+    value: channel.tags ?? [],
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT,
     kind: "number",
     value: channel.orderingWeight ?? 0,
   },
-  { fieldId: "remark", kind: "text", value: channel.remark ?? "" },
   {
-    fieldId: "extraModelPrefix",
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.REMARK,
+    kind: "text",
+    value: channel.remark ?? "",
+  },
+  {
+    fieldId: AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
     kind: "text",
     value: channel.settings?.extraModelPrefix ?? "",
   },
@@ -540,6 +688,7 @@ const toFacts = (
   channel: AxonHubChannel,
   ref: ManagedResourceRef,
   fields: readonly ResourceDisplayFact[],
+  searchValues?: readonly string[],
 ): ResourceDisplayFacts => {
   const status = toStatus(channel.status)
   const supportedState = status !== "unknown"
@@ -548,6 +697,7 @@ const toFacts = (
     displayName: channel.name,
     status,
     fields,
+    ...(searchValues?.length ? { searchValues } : {}),
     actions: { canUpdate: supportedState, canDelete: supportedState },
   }
 }
@@ -557,27 +707,57 @@ const toListFacts = (channel: AxonHubChannel, ref: ManagedResourceRef) => {
     getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource
       ?.tableFieldIds ?? [],
   )
+  const modelNames = Array.from(
+    new Set(
+      [...(channel.supportedModels ?? []), ...(channel.manualModels ?? [])]
+        .map((model) => model.trim())
+        .filter(Boolean),
+    ),
+  )
   return toFacts(
     channel,
     ref,
-    detailFacts(channel).filter((fact) => selectedFieldIds.has(fact.fieldId)),
+    detailFacts(channel)
+      .filter((fact) => selectedFieldIds.has(fact.fieldId))
+      .map((fact) =>
+        fact.fieldId === AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS
+          ? ({
+              fieldId: fact.fieldId,
+              kind: "number",
+              value: modelNames.length,
+            } satisfies ResourceDisplayFact)
+          : fact,
+      ),
+    modelNames,
   )
 }
 
-const readString = (values: EditableResourceProjection, fieldId: string) => {
+const readString = (
+  values: EditableResourceProjection,
+  fieldId: AxonHubChannelFieldId,
+) => {
   const value = values[fieldId]
   return typeof value === "string" ? value.trim() : ""
 }
 
-const readBoolean = (values: EditableResourceProjection, fieldId: string) =>
-  values[fieldId] === true
+const readBoolean = (
+  values: EditableResourceProjection,
+  fieldId: AxonHubChannelFieldId,
+) => values[fieldId] === true
 
-const readNumber = (values: EditableResourceProjection, fieldId: string) => {
+const readNumber = (
+  values: EditableResourceProjection,
+  fieldId: AxonHubChannelFieldId,
+) => {
   const value = values[fieldId]
-  return typeof value === "number" && Number.isFinite(value) ? value : 0
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  return value === "" ? Number.NaN : 0
 }
 
-const readList = (values: EditableResourceProjection, fieldId: string) => {
+const readList = (
+  values: EditableResourceProjection,
+  fieldId: AxonHubChannelFieldId,
+) => {
   const value = values[fieldId]
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
@@ -587,12 +767,22 @@ const readList = (values: EditableResourceProjection, fieldId: string) => {
 const readSecretIntent = (
   values: EditableResourceProjection,
 ): SecretEditIntent => {
-  const value = values.key
-  if (typeof value === "object" && value !== null && "kind" in value) {
-    if (value.kind === "unchanged") return { kind: "unchanged" }
-    if (value.kind === "clear") return { kind: "clear" }
-    if (value.kind === "replace" && typeof value.value === "string") {
-      return { kind: "replace", value: value.value }
+  const value = values[AXON_HUB_CHANNEL_FIELD_IDS.KEY]
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.prototype.hasOwnProperty.call(value, "kind")
+  ) {
+    const candidate = value as Record<PropertyKey, unknown>
+    if (candidate.kind === "unchanged") return { kind: "unchanged" }
+    if (candidate.kind === "clear") return { kind: "clear" }
+    if (
+      candidate.kind === "replace" &&
+      Object.prototype.hasOwnProperty.call(candidate, "value") &&
+      typeof candidate.value === "string"
+    ) {
+      return { kind: "replace", value: candidate.value }
     }
   }
   return { kind: "unchanged" }
@@ -618,32 +808,100 @@ const isHttpUrl = (value: string) => {
   }
 }
 
+const AXON_HUB_MODEL_PATTERN_REGEX_CHARS = /[*?+[\]{}()^$.|\\]/
+const AXON_HUB_INLINE_MODEL_PATTERN_MODIFIER = /^\(\?([a-z]+)\)/
+
+// Source: https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/frontend/src/features/channels/utils/pattern.ts
+const isValidAxonHubModelPattern = (pattern: string) => {
+  if (!pattern || pattern === "*") return true
+
+  const inlineModifier = pattern.match(AXON_HUB_INLINE_MODEL_PATTERN_MODIFIER)
+  const modifiers = new Set(inlineModifier?.[1] ?? [])
+  if ([...modifiers].some((modifier) => modifier !== "i")) return false
+
+  const caseInsensitive = modifiers.has("i")
+  const body = inlineModifier
+    ? pattern.slice(inlineModifier[0].length)
+    : pattern
+  if (!AXON_HUB_MODEL_PATTERN_REGEX_CHARS.test(body)) return true
+
+  const normalizedBody = body.replace(/^\^/, "").replace(/\$$/, "")
+  try {
+    new RegExp(`^(?:${normalizedBody})$`, caseInsensitive ? "i" : "")
+    return true
+  } catch {
+    return false
+  }
+}
+
 const validateValues = (
   values: EditableResourceProjection,
-  context: { create: boolean; detail?: AxonHubChannel },
+  context: {
+    create: boolean
+    detail?: AxonHubChannel
+    baseline?: EditableResourceProjection
+  },
 ): ResourceValidationResult => {
   const issues: ResourceFieldIssue[] = []
-  const name = readString(values, "name")
-  const type = readString(values, "type")
-  const baseURL = readString(values, "baseURL")
-  const supportedModels = readList(values, "supportedModels")
-  const manualModels = readList(values, "manualModels")
-  const defaultTestModel = readString(values, "defaultTestModel")
+  const name = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.NAME)
+  const type = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.TYPE)
+  const baseURL = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL)
+  const supportedModels = readList(
+    values,
+    AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
+  )
+  const manualModels = readList(
+    values,
+    AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
+  )
+  const defaultTestModel = readString(
+    values,
+    AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
+  )
+  const autoSyncSupportedModels = readBoolean(
+    values,
+    AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
+  )
+  const autoSyncModelPattern = readString(
+    values,
+    AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
+  ).trim()
   const secretIntent = readSecretIntent(values)
-  const status = readString(values, "status")
+  const status = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.STATUS)
   const specialCredentialType = context.detail
     ? !REGULAR_AXON_HUB_CHANNEL_TYPE_SET.has(String(context.detail.type))
     : false
+  const credentialMutationForbidden = context.detail
+    ? !canReplaceCredential(context.detail)
+    : false
+  // beta5 disables model auto-sync for provider-managed credential types.
+  // Source: https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/frontend/src/features/channels/components/channels-action-dialog.tsx
+  const autoSyncSupported = isAxonHubModelAutoSyncSupported(type)
+  const baseline = context.baseline
+  const modelListInputsChanged = baseline
+    ? [
+        AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
+        AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
+      ].some((fieldId) => fieldChanged(values, baseline, fieldId))
+    : true
+  const modelInputsChanged =
+    modelListInputsChanged ||
+    !baseline ||
+    fieldChanged(
+      values,
+      baseline,
+      AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
+    )
 
   if (!name) {
     issues.push({
-      fieldId: "name",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.NAME,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
     })
   }
   if (!type) {
     issues.push({
-      fieldId: "type",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
     })
   } else if (
@@ -651,13 +909,13 @@ const validateValues = (
     (specialCredentialType && type !== context.detail?.type)
   ) {
     issues.push({
-      fieldId: "type",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
     })
   }
   if (baseURL && !isHttpUrl(baseURL)) {
     issues.push({
-      fieldId: "baseURL",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
     })
   }
@@ -666,10 +924,10 @@ const validateValues = (
       (secretIntent.kind !== "replace" || !secretIntent.value.trim())) ||
     secretIntent.kind === "clear" ||
     (secretIntent.kind === "replace" && !secretIntent.value.trim()) ||
-    (specialCredentialType && secretIntent.kind !== "unchanged")
+    (credentialMutationForbidden && secretIntent.kind !== "unchanged")
   ) {
     issues.push({
-      fieldId: "key",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
       code: context.create
         ? MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required
         : MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
@@ -677,37 +935,78 @@ const validateValues = (
   }
   if (hasInvalidListValues(supportedModels)) {
     issues.push({
-      fieldId: "supportedModels",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
     })
   }
-  if (supportedModels.length === 0) {
+  if (modelInputsChanged && supportedModels.length === 0) {
     issues.push({
-      fieldId: "supportedModels",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
     })
   }
   if (hasInvalidListValues(manualModels)) {
     issues.push({
-      fieldId: "manualModels",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
     })
   }
-  if (!defaultTestModel) {
+  // AxonHub beta5 keeps manual model provenance as a subset of supportedModels;
+  // the native editor mirrors custom additions into both lists. Source:
+  // https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/frontend/src/features/channels/components/channels-action-dialog.tsx
+  if (
+    modelListInputsChanged &&
+    normalizeList(manualModels).some(
+      (model) => !new Set(normalizeList(supportedModels)).has(model),
+    )
+  ) {
     issues.push({
-      fieldId: "defaultTestModel",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
+      code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InconsistentValue,
+    })
+  }
+  if (modelInputsChanged && !defaultTestModel) {
+    issues.push({
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
     })
   } else if (
+    modelInputsChanged &&
     defaultTestModel &&
-    !new Set([
-      ...normalizeList(supportedModels),
-      ...normalizeList(manualModels),
-    ]).has(defaultTestModel)
+    !new Set(normalizeList(supportedModels)).has(defaultTestModel)
   ) {
     issues.push({
-      fieldId: "defaultTestModel",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InconsistentValue,
+    })
+  }
+  if (
+    !autoSyncSupported &&
+    baseline &&
+    (fieldChanged(
+      values,
+      baseline,
+      AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
+    ) ||
+      fieldChanged(
+        values,
+        baseline,
+        AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
+      ))
+  ) {
+    issues.push({
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
+      code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
+    })
+  }
+  if (
+    autoSyncSupported &&
+    autoSyncSupportedModels &&
+    !isValidAxonHubModelPattern(autoSyncModelPattern)
+  ) {
+    issues.push({
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
+      code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
     })
   }
   const supportedStatuses = context.create
@@ -720,15 +1019,23 @@ const validateValues = (
       ]
   if (!supportedStatuses.includes(status)) {
     issues.push({
-      fieldId: "status",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.STATUS,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
     })
   }
-  const orderingWeight = values.orderingWeight
+  const orderingWeight = values[AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT]
   if (!Number.isInteger(orderingWeight)) {
     issues.push({
-      fieldId: "orderingWeight",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT,
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
+    })
+  } else if (
+    typeof orderingWeight === "number" &&
+    (orderingWeight < 0 || orderingWeight > 100)
+  ) {
+    issues.push({
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT,
+      code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.OutOfRange,
     })
   }
 
@@ -746,6 +1053,10 @@ const createFieldDescriptors = (
       ? [{ value: String(detail.type) }]
       : REGULAR_AXON_HUB_CHANNEL_TYPES.map((value) => ({ value }))
   const currentStatus = detail ? String(detail.status) : undefined
+  const secretState = detail ? getCredentialState(detail) : "unavailable"
+  const replacementBlockReason = detail
+    ? getCredentialReplacementBlockReason(detail)
+    : undefined
   const statusValues = detail
     ? [
         AXON_HUB_CHANNEL_STATUS.ENABLED,
@@ -761,139 +1072,172 @@ const createFieldDescriptors = (
     : [AXON_HUB_CHANNEL_STATUS.ENABLED, AXON_HUB_CHANNEL_STATUS.DISABLED]
   return [
     {
-      fieldId: "name",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.NAME,
       type: MANAGED_RESOURCE_FIELD_TYPES.Text,
       required: true,
     },
     {
-      fieldId: "type",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
       type: MANAGED_RESOURCE_FIELD_TYPES.Select,
       required: true,
       options: typeOptions,
     },
     {
-      fieldId: "baseURL",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
       type: MANAGED_RESOURCE_FIELD_TYPES.Text,
     },
     {
-      fieldId: "status",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.STATUS,
       type: MANAGED_RESOURCE_FIELD_TYPES.Select,
       required: true,
       options: statusValues.map((value) => ({ value })),
     },
     {
-      fieldId: "key",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
       type: MANAGED_RESOURCE_FIELD_TYPES.Secret,
-      secretState: detail ? getCredentialState(detail) : "unavailable",
+      required: detail === undefined,
+      secretState,
+      canReplace: detail ? canReplaceCredential(detail) : true,
+      ...(replacementBlockReason ? { replacementBlockReason } : {}),
       allowClear: false,
     },
     {
-      fieldId: "supportedModels",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
       type: MANAGED_RESOURCE_FIELD_TYPES.MultiSelect,
-      options: [],
-    },
-    {
-      fieldId: "manualModels",
-      type: MANAGED_RESOURCE_FIELD_TYPES.MultiSelect,
-      options: [],
-    },
-    {
-      fieldId: "defaultTestModel",
-      type: MANAGED_RESOURCE_FIELD_TYPES.Text,
       required: true,
+      options: [],
     },
     {
-      fieldId: "autoSyncSupportedModels",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS,
+      type: MANAGED_RESOURCE_FIELD_TYPES.MultiSelect,
+      options: [],
+    },
+    {
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
+      type: MANAGED_RESOURCE_FIELD_TYPES.Select,
+      required: true,
+      options: [],
+    },
+    {
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
       type: MANAGED_RESOURCE_FIELD_TYPES.Boolean,
     },
     {
-      fieldId: "autoSyncModelPattern",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
       type: MANAGED_RESOURCE_FIELD_TYPES.Text,
     },
     {
-      fieldId: "tags",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TAGS,
       type: MANAGED_RESOURCE_FIELD_TYPES.MultiSelect,
       options: [],
     },
     {
-      fieldId: "orderingWeight",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT,
       type: MANAGED_RESOURCE_FIELD_TYPES.Number,
+      min: 0,
+      max: 100,
       step: 1,
     },
     {
-      fieldId: "remark",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.REMARK,
       type: MANAGED_RESOURCE_FIELD_TYPES.Textarea,
-      rows: 3,
     },
     {
-      fieldId: "extraModelPrefix",
+      fieldId: AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
       type: MANAGED_RESOURCE_FIELD_TYPES.Text,
     },
   ]
 }
 
 const createInitialValues = (): EditableResourceProjection => ({
-  name: "",
-  type: AXON_HUB_CHANNEL_TYPE.OPENAI,
-  baseURL: "",
-  status: AXON_HUB_CHANNEL_STATUS.DISABLED,
-  key: { kind: "unchanged" },
-  supportedModels: [],
-  manualModels: [],
-  defaultTestModel: "",
-  autoSyncSupportedModels: false,
-  autoSyncModelPattern: "",
-  tags: [],
-  orderingWeight: 0,
-  remark: "",
-  extraModelPrefix: "",
+  [AXON_HUB_CHANNEL_FIELD_IDS.NAME]: "",
+  [AXON_HUB_CHANNEL_FIELD_IDS.TYPE]: AXON_HUB_CHANNEL_TYPE.OPENAI,
+  [AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL]: "",
+  [AXON_HUB_CHANNEL_FIELD_IDS.STATUS]: AXON_HUB_CHANNEL_STATUS.DISABLED,
+  [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: { kind: "unchanged" },
+  [AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]: [],
+  [AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS]: [],
+  [AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL]: "",
+  [AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS]: false,
+  [AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN]: "",
+  [AXON_HUB_CHANNEL_FIELD_IDS.TAGS]: [],
+  [AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT]: 0,
+  [AXON_HUB_CHANNEL_FIELD_IDS.REMARK]: "",
+  [AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX]: "",
 })
 
 const editInitialValues = (
   detail: AxonHubChannel,
 ): EditableResourceProjection => ({
-  name: detail.name,
-  type: String(detail.type),
-  baseURL: detail.baseURL ?? "",
-  status: String(detail.status),
-  key: { kind: "unchanged" },
-  supportedModels: [...(detail.supportedModels ?? [])],
-  manualModels: [...(detail.manualModels ?? [])],
-  defaultTestModel: detail.defaultTestModel ?? "",
-  autoSyncSupportedModels: detail.autoSyncSupportedModels ?? false,
-  autoSyncModelPattern: detail.autoSyncModelPattern ?? "",
-  tags: [...(detail.tags ?? [])],
-  orderingWeight: detail.orderingWeight ?? 0,
-  remark: detail.remark ?? "",
-  extraModelPrefix: detail.settings?.extraModelPrefix ?? "",
+  [AXON_HUB_CHANNEL_FIELD_IDS.NAME]: detail.name,
+  [AXON_HUB_CHANNEL_FIELD_IDS.TYPE]: String(detail.type),
+  [AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL]: detail.baseURL ?? "",
+  [AXON_HUB_CHANNEL_FIELD_IDS.STATUS]: String(detail.status),
+  [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: { kind: "unchanged" },
+  [AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]: [
+    ...(detail.supportedModels ?? []),
+  ],
+  [AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS]: [...(detail.manualModels ?? [])],
+  [AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL]:
+    detail.defaultTestModel ?? "",
+  [AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS]:
+    detail.autoSyncSupportedModels ?? false,
+  [AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN]:
+    detail.autoSyncModelPattern ?? "",
+  [AXON_HUB_CHANNEL_FIELD_IDS.TAGS]: [...(detail.tags ?? [])],
+  [AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT]: detail.orderingWeight ?? 0,
+  [AXON_HUB_CHANNEL_FIELD_IDS.REMARK]: detail.remark ?? "",
+  [AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX]:
+    detail.settings?.extraModelPrefix ?? "",
 })
 
 const buildCreateCommand = (
   values: EditableResourceProjection,
 ): AxonHubCreateCommand => {
-  const baseURL = readString(values, "baseURL")
+  const baseURL = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL)
   const secret = readSecretIntent(values)
   const credential = secret.kind === "replace" ? secret.value.trim() : ""
-  const extraModelPrefix = readString(values, "extraModelPrefix")
+  const extraModelPrefix = readString(
+    values,
+    AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+  )
   return {
     desiredStatus:
-      readString(values, "status") === AXON_HUB_CHANNEL_STATUS.ENABLED
+      readString(values, AXON_HUB_CHANNEL_FIELD_IDS.STATUS) ===
+      AXON_HUB_CHANNEL_STATUS.ENABLED
         ? AXON_HUB_CHANNEL_STATUS.ENABLED
         : AXON_HUB_CHANNEL_STATUS.DISABLED,
     input: {
-      type: readString(values, "type"),
-      name: readString(values, "name"),
+      type: readString(values, AXON_HUB_CHANNEL_FIELD_IDS.TYPE),
+      name: readString(values, AXON_HUB_CHANNEL_FIELD_IDS.NAME),
       ...(baseURL ? { baseURL } : {}),
       credentials: { apiKeys: [credential] },
-      supportedModels: normalizeList(readList(values, "supportedModels")),
-      manualModels: normalizeList(readList(values, "manualModels")),
-      autoSyncSupportedModels: readBoolean(values, "autoSyncSupportedModels"),
-      autoSyncModelPattern: readString(values, "autoSyncModelPattern") || null,
-      tags: normalizeList(readList(values, "tags")),
-      defaultTestModel: readString(values, "defaultTestModel"),
+      supportedModels: normalizeList(
+        readList(values, AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS),
+      ),
+      manualModels: normalizeList(
+        readList(values, AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS),
+      ),
+      autoSyncSupportedModels: readBoolean(
+        values,
+        AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
+      ),
+      autoSyncModelPattern:
+        readString(
+          values,
+          AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
+        ) || null,
+      tags: normalizeList(readList(values, AXON_HUB_CHANNEL_FIELD_IDS.TAGS)),
+      defaultTestModel: readString(
+        values,
+        AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
+      ),
       settings: { extraModelPrefix },
-      orderingWeight: readNumber(values, "orderingWeight"),
-      remark: readString(values, "remark") || null,
+      orderingWeight: readNumber(
+        values,
+        AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT,
+      ),
+      remark: readString(values, AXON_HUB_CHANNEL_FIELD_IDS.REMARK) || null,
     },
   }
 }
@@ -905,7 +1249,7 @@ const arraysEqual = (first: readonly string[], second: readonly string[]) =>
 const fieldChanged = (
   values: EditableResourceProjection,
   baseline: EditableResourceProjection,
-  fieldId: string,
+  fieldId: AxonHubChannelFieldId,
 ) => {
   const value = values[fieldId]
   const initialValue = baseline[fieldId]
@@ -919,7 +1263,10 @@ const addNullableTextDiff = (
   input: AxonHubUpdateChannelInput,
   values: EditableResourceProjection,
   baseline: EditableResourceProjection,
-  fieldId: "baseURL" | "autoSyncModelPattern" | "remark",
+  fieldId:
+    | typeof AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL
+    | typeof AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN
+    | typeof AXON_HUB_CHANNEL_FIELD_IDS.REMARK,
   clearField: "clearBaseURL" | "clearAutoSyncModelPattern" | "clearRemark",
 ) => {
   if (!fieldChanged(values, baseline, fieldId)) return
@@ -934,62 +1281,118 @@ const buildUpdateCommand = (
   values: EditableResourceProjection,
 ): AxonHubUpdateChannelInput => {
   const input: AxonHubUpdateChannelInput = {}
-  const name = readString(values, "name")
-  const type = readString(values, "type")
-  const status = readString(values, "status")
-  if (fieldChanged(values, baseline, "name")) input.name = name
-  if (fieldChanged(values, baseline, "type")) input.type = type
-  if (fieldChanged(values, baseline, "status")) input.status = status
+  const name = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.NAME)
+  const type = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.TYPE)
+  const status = readString(values, AXON_HUB_CHANNEL_FIELD_IDS.STATUS)
+  if (fieldChanged(values, baseline, AXON_HUB_CHANNEL_FIELD_IDS.NAME)) {
+    input.name = name
+  }
+  if (fieldChanged(values, baseline, AXON_HUB_CHANNEL_FIELD_IDS.TYPE)) {
+    input.type = type
+  }
+  if (fieldChanged(values, baseline, AXON_HUB_CHANNEL_FIELD_IDS.STATUS)) {
+    input.status = status
+  }
 
-  addNullableTextDiff(input, values, baseline, "baseURL", "clearBaseURL")
   addNullableTextDiff(
     input,
     values,
     baseline,
-    "autoSyncModelPattern",
+    AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
+    "clearBaseURL",
+  )
+  addNullableTextDiff(
+    input,
+    values,
+    baseline,
+    AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_MODEL_PATTERN,
     "clearAutoSyncModelPattern",
   )
-  addNullableTextDiff(input, values, baseline, "remark", "clearRemark")
+  addNullableTextDiff(
+    input,
+    values,
+    baseline,
+    AXON_HUB_CHANNEL_FIELD_IDS.REMARK,
+    "clearRemark",
+  )
 
   const secret = readSecretIntent(values)
-  if (secret.kind === "replace") {
+  if (secret.kind === "replace" && canReplaceCredential(detail)) {
     input.credentials = { apiKeys: [secret.value.trim()] }
   }
 
-  const supportedModels = normalizeList(readList(values, "supportedModels"))
-  if (fieldChanged(values, baseline, "supportedModels")) {
+  const supportedModels = normalizeList(
+    readList(values, AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS),
+  )
+  if (
+    fieldChanged(values, baseline, AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS)
+  ) {
     input.supportedModels = supportedModels
   }
-  const manualModels = normalizeList(readList(values, "manualModels"))
-  if (fieldChanged(values, baseline, "manualModels")) {
+  const manualModels = normalizeList(
+    readList(values, AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS),
+  )
+  if (
+    fieldChanged(values, baseline, AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS)
+  ) {
     if (manualModels.length) input.manualModels = manualModels
     else input.clearManualModels = true
   }
-  const tags = normalizeList(readList(values, "tags"))
-  if (fieldChanged(values, baseline, "tags")) {
-    if (tags.length) input.tags = tags
-    else input.clearTags = true
+  const tags = normalizeList(readList(values, AXON_HUB_CHANNEL_FIELD_IDS.TAGS))
+  if (fieldChanged(values, baseline, AXON_HUB_CHANNEL_FIELD_IDS.TAGS)) {
+    // AxonHub's custom update service applies non-nil tags (including []) but
+    // ignores generated clearTags: https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/internal/server/biz/channel.go#L680-L692
+    input.tags = tags
   }
 
-  const defaultTestModel = readString(values, "defaultTestModel")
-  if (fieldChanged(values, baseline, "defaultTestModel")) {
+  const defaultTestModel = readString(
+    values,
+    AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
+  )
+  if (
+    fieldChanged(
+      values,
+      baseline,
+      AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL,
+    )
+  ) {
     input.defaultTestModel = defaultTestModel
   }
-  const autoSyncSupportedModels = readBoolean(values, "autoSyncSupportedModels")
-  if (fieldChanged(values, baseline, "autoSyncSupportedModels")) {
+  const autoSyncSupportedModels = readBoolean(
+    values,
+    AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
+  )
+  if (
+    fieldChanged(
+      values,
+      baseline,
+      AXON_HUB_CHANNEL_FIELD_IDS.AUTO_SYNC_SUPPORTED_MODELS,
+    )
+  ) {
     input.autoSyncSupportedModels = autoSyncSupportedModels
   }
-  const orderingWeight = readNumber(values, "orderingWeight")
-  if (fieldChanged(values, baseline, "orderingWeight")) {
+  const orderingWeight = readNumber(
+    values,
+    AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT,
+  )
+  if (
+    fieldChanged(values, baseline, AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT)
+  ) {
     input.orderingWeight = orderingWeight
   }
 
-  const extraModelPrefix = readString(values, "extraModelPrefix")
-  if (fieldChanged(values, baseline, "extraModelPrefix")) {
-    input.settings = {
-      ...(detail.settings ?? {}),
-      extraModelPrefix,
-    }
+  const extraModelPrefix = readString(
+    values,
+    AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+  )
+  if (
+    fieldChanged(
+      values,
+      baseline,
+      AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX,
+    )
+  ) {
+    input.settings = { extraModelPrefix }
   }
   return input
 }
@@ -1004,13 +1407,20 @@ const createEditor =
 
 const editEditor = (
   detail: AxonHubChannel,
+  loadSecret?: NativeResourceEditorDefinition<AxonHubUpdateChannelInput>["loadSecret"],
 ): NativeResourceEditorDefinition<AxonHubUpdateChannelInput> => {
   const initialValues = editInitialValues(detail)
   return {
     fields: createFieldDescriptors(detail),
     initialValues,
-    validate: (values) => validateValues(values, { create: false, detail }),
+    validate: (values) =>
+      validateValues(values, {
+        create: false,
+        detail,
+        baseline: initialValues,
+      }),
     buildCommand: (values) => buildUpdateCommand(detail, initialValues, values),
+    ...(loadSecret ? { loadSecret } : {}),
   }
 }
 
@@ -1027,7 +1437,12 @@ const mapFailure = (error: unknown): ResourceFailure => {
 const axonHubNativeDefinition = {
   siteType: SITE_TYPES.AXON_HUB,
   kind: MANAGED_RESOURCE_KINDS.Channel,
-  supportsSearch: true,
+  capabilities: {
+    canSearch: true,
+    canCreate: true,
+    canUpdate: true,
+    canDelete: true,
+  },
   openConfig: openAxonHubNativeResourceOperations,
   scopeKey: (operations: AxonHubNativeResourceOperations) =>
     operations.scopeKey,
@@ -1059,9 +1474,30 @@ const axonHubNativeDefinition = {
     toFacts(detail, ref, detailFacts(detail)),
   createEditor: async () => createEditor(),
   editEditor: (
-    _operations: AxonHubNativeResourceOperations,
+    operations: AxonHubNativeResourceOperations,
     detail: AxonHubChannel,
-  ) => editEditor(detail),
+  ) => {
+    const resourceId = detail.id
+    const loadSecret =
+      getCredentialState(detail) === "available" && canReplaceCredential(detail)
+        ? (fieldId: string, options?: ResourceOperationOptions) => {
+            if (fieldId !== AXON_HUB_CHANNEL_FIELD_IDS.KEY) {
+              throw createNativeFailure("unexpected")
+            }
+            return operations.loadSecret(
+              {
+                siteType: SITE_TYPES.AXON_HUB,
+                kind: MANAGED_RESOURCE_KINDS.Channel,
+                scopeKey: operations.scopeKey,
+                resourceId,
+              },
+              options,
+            )
+          }
+        : undefined
+    return editEditor(detail, loadSecret)
+  },
+  sanitizeEditDetail: sanitizeAxonHubEditorDetail,
   create: (
     operations: AxonHubNativeResourceOperations,
     command: AxonHubCreateCommand,
@@ -1072,7 +1508,27 @@ const axonHubNativeDefinition = {
     detail: AxonHubChannel,
     command: AxonHubUpdateChannelInput,
     options?: ResourceOperationOptions,
-  ) => operations.update(detail, command, options),
+  ) => {
+    // UpdateChannelInput.credentials.apiKeys is replacement data, so a scalar
+    // editor must not overwrite multiple keys in the authoritative detail.
+    // Source: https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/internal/server/gql/ent.graphql#L5993
+    if (
+      command.credentials !== undefined &&
+      getCredentialReplacementBlockReason(detail) ===
+        MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS.MultipleCredentials
+    ) {
+      throw new ManagedResourceError({
+        code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+        fieldIssues: [
+          {
+            fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+            code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
+          },
+        ],
+      })
+    }
+    return operations.update(detail, command, options)
+  },
   delete: (
     operations: AxonHubNativeResourceOperations,
     locator: string,

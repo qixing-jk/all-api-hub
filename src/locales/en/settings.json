@@ -90,12 +90,12 @@
     "title": "AxonHub Integration Settings",
     "validation": {
       "corsFailed": "AxonHub validation failed: {{error}}. This usually means the AxonHub instance has not allowed the extension's browser origin yet. Update AXONHUB_SERVER_CORS_ALLOWED_ORIGINS to allow the trusted browser / extension origin, and use \"*\" only as a short-lived local development fallback, then retry.",
-      "description": "Test whether the email and password can sign in to AxonHub admin GraphQL",
+      "description": "Validate the AxonHub admin credentials. This configuration is saved only after sign-in succeeds.",
       "failed": "AxonHub validation failed: {{error}}",
       "missingFields": "Please fill in all required fields",
-      "success": "AxonHub configuration validated successfully",
-      "title": "Validate Configuration",
-      "validate": "Validate",
+      "success": "AxonHub configuration validated and saved successfully",
+      "title": "Validate and save configuration",
+      "validate": "Validate and save",
       "validating": "Validating..."
     }
   },

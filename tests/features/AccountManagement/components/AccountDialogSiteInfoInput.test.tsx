@@ -1,15 +1,21 @@
 import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import SiteInfoInput from "~/features/AccountManagement/components/AccountDialog/SiteInfoInput"
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import enAccountDialog from "~/locales/en/accountDialog.json"
 import { AuthTypeEnum } from "~/types"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 describe("AccountDialog SiteInfoInput", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   type AddModeSiteInfoInputProps = Extract<
     ComponentProps<typeof SiteInfoInput>,
     { showAuthTypeSelector: true }
@@ -49,6 +55,21 @@ describe("AccountDialog SiteInfoInput", () => {
       ),
     }
   }
+
+  it("shows the canonical OpenRouter URL as locked without a clear action", async () => {
+    const props = createAddModeProps()
+    props.url = "https://openrouter.ai"
+    props.testSiteType = SITE_TYPES.OPENROUTER
+
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByLabelText("accountDialog:siteInfo.siteUrl"),
+    ).toBeDisabled()
+    expect(
+      screen.queryByRole("button", { name: "common:actions.clear" }),
+    ).not.toBeInTheDocument()
+  })
 
   it("propagates URL edits, clears the field, and reuses the current tab URL", async () => {
     const user = userEvent.setup()
@@ -242,24 +263,46 @@ describe("AccountDialog SiteInfoInput", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("keeps the entry auth selector visible but locked for add-mode Sub2API", async () => {
-    const props = createAddModeProps()
-    props.testSiteType = SITE_TYPES.SUB2API
+  it.each([
+    [SITE_TYPES.OPENROUTER, "OpenRouter"],
+    [SITE_TYPES.SUB2API, "Sub2API"],
+    [SITE_TYPES.AIHUBMIX, "AIHubMix"],
+  ])(
+    "keeps the entry auth selector locked with %s-specific guidance",
+    async (siteType, siteTypeLabel) => {
+      const props = createAddModeProps()
+      props.testSiteType = siteType
+      testI18n.addResource(
+        "en",
+        "accountDialog",
+        "siteInfo.authMethodSelectedForSite",
+        enAccountDialog.siteInfo.authMethodSelectedForSite,
+      )
 
-    render(<SiteInfoInput {...withSitePolicy(props)} />)
+      try {
+        render(<SiteInfoInput {...withSitePolicy(props)} />)
 
-    expect(
-      await screen.findByText("accountDialog:siteInfo.sub2apiHint"),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByLabelText("accountDialog:siteInfo.authMethod"),
-    ).toBeDisabled()
-    expect(
-      screen.getByRole("button", {
-        name: "accountDialog:siteInfo.sub2apiAuthOnly",
-      }),
-    ).toBeInTheDocument()
-  })
+        expect(
+          await screen.findByLabelText("accountDialog:siteInfo.authMethod"),
+        ).toBeDisabled()
+        expect(
+          screen.getByRole("button", {
+            name: enAccountDialog.siteInfo.authMethodSelectedForSite.replace(
+              "{{siteType}}",
+              siteTypeLabel,
+            ),
+          }),
+        ).toBeInTheDocument()
+        if (siteType === SITE_TYPES.SUB2API) {
+          expect(
+            screen.getByText("accountDialog:siteInfo.sub2apiHint"),
+          ).toBeInTheDocument()
+        }
+      } finally {
+        testI18n.removeResourceBundle("en", "accountDialog")
+      }
+    },
+  )
 
   it("shows the current-login warning and forwards edit requests for the detected account", async () => {
     const user = userEvent.setup()

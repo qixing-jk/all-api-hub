@@ -198,10 +198,15 @@ Treat telemetry and settings discoverability as related release-readiness checks
 - Before handoff for non-trivial code changes, inspect the task-scoped diff for repeated logic, duplicated runtime literals, weak fallback propagation, oversized components or functions, and missed reuse of existing helpers or components. Fix low-risk issues inside the touched scope; if cleanup would broaden scope or change behavior, report it as follow-up instead of silently leaving it.
 - For non-trivial implementation work, include a maintainability decision in the final handoff: what was reused, what was extracted or centralized, and what was intentionally left because it would exceed task scope.
 
-### Comments and User Feedback
+### User-Facing Errors and Disclosure
+
+- For user-visible success/error feedback, do not rely solely on backend `message` fields; provide a local fallback when responses may be empty, unstable, or not suitable for direct display.
+- In errors shown only to the affected user, preserve useful upstream `code` and `message` by default. Do not replace safe diagnostic detail with generic localized copy merely because it exposes backend or deployment information; explicitly map only known opaque or unhelpful errors.
+- Treat private user-facing errors, local logs, and telemetry or external reports as separate disclosure boundaries. Private UI and local logs may retain useful diagnostic context after redacting tokens, API keys, cookies, refresh/session secrets, credentials, authentication payloads, and authentication headers. Telemetry and external reports must not include raw backend messages or secrets.
+
+### Comments
 
 - Add brief inline comments or short code-block comments when non-obvious intent, invariants, edge cases, or protocol/browser constraints need clarification; do not narrate obvious code.
-- For user-visible success/error feedback, do not rely solely on backend `message` fields; provide a local fallback when responses may be empty, unstable, or not suitable for direct display.
 
 ### Validation Strategy
 

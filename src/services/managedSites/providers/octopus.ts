@@ -5,9 +5,11 @@
 import { ChannelType } from "~/constants"
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import type { ManagedSiteChannelDeleteResponse } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import * as octopusApi from "~/services/apiService/octopus"
 import type { ApiResponse } from "~/services/apiTransport/type"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { getManagedSiteDeleteCertainty } from "~/services/managedSites/mutationCertainty"
 import { getNumericChannelType } from "~/services/managedSites/utils/channelType"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
@@ -315,7 +317,7 @@ export async function updateChannel(
 export async function deleteChannel(
   config: OctopusConfig,
   channelId: number,
-): Promise<ApiResponse<unknown>> {
+): Promise<ManagedSiteChannelDeleteResponse> {
   try {
     const result = await octopusApi.deleteChannel(config, channelId)
     return {
@@ -328,6 +330,7 @@ export async function deleteChannel(
       success: false,
       data: null,
       message: getErrorMessage(error) || "Failed to delete channel",
+      ...getManagedSiteDeleteCertainty(error),
     }
   }
 }

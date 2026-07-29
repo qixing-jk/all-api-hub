@@ -252,6 +252,7 @@
       "manualPickHint": "你可以在每组中手动选择要保留的账号（手动选择会覆盖保留策略）。",
       "previewDelete": "预览删除",
       "recommended": "推荐",
+      "sameCredential": "相同管理密钥",
       "strategy": {
         "keepEnabled": "优先保留启用（如有）",
         "keepMostRecentlyUpdated": "优先保留最近更新",

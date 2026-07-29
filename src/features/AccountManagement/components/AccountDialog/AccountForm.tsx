@@ -44,10 +44,13 @@ const ACCOUNT_FORM_SITE_TYPE_OPTIONS = ACCOUNT_SITE_TYPES.filter(
 
 type AccountFormPresentationSitePolicy = Pick<
   AccountDialogSitePolicy,
+  | "siteTypeLabel"
   | "forceAccessTokenAuth"
   | "allowCookieAuthSession"
   | "allowBuiltInCheckInDetection"
   | "allowSub2ApiRefreshTokenState"
+  | "requireUsername"
+  | "requireUserId"
 >
 
 interface AccountFormProps {
@@ -155,6 +158,7 @@ export default function AccountForm({
   const canUseBuiltInCheckInDetection = sitePolicy.allowBuiltInCheckInDetection
   const showBuiltInAutoCheckIn = canUseBuiltInCheckInDetection
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
+  const isOpenRouterManagementKey = siteType === SITE_TYPES.OPENROUTER
 
   return (
     <div className="space-y-3">
@@ -212,7 +216,9 @@ export default function AccountForm({
           label={t("siteInfo.authMethod")}
           description={
             isAuthTypeLocked
-              ? t("siteInfo.sub2apiAuthOnly")
+              ? t("siteInfo.authMethodSelectedForSite", {
+                  siteType: sitePolicy.siteTypeLabel,
+                })
               : t("siteInfo.cookieWarning")
           }
         >
@@ -248,7 +254,10 @@ export default function AccountForm({
           </Select>
         </FormField>
 
-        <FormField label={t("form.username")} required>
+        <FormField
+          label={t("form.username")}
+          required={sitePolicy.requireUsername}
+        >
           <Input
             type="text"
             value={username}
@@ -256,11 +265,11 @@ export default function AccountForm({
             placeholder={t("form.username")}
             leftIcon={<UserIcon className="h-5 w-5" />}
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput}
-            required
+            required={sitePolicy.requireUsername}
           />
         </FormField>
 
-        <FormField label={t("form.userId")} required>
+        <FormField label={t("form.userId")} required={sitePolicy.requireUserId}>
           <Input
             // Compatible account sites may expose alphanumeric user IDs. Reference: https://github.com/qixing-jk/all-api-hub/issues/964
             type="text"
@@ -270,29 +279,50 @@ export default function AccountForm({
             placeholder={t("form.userId")}
             leftIcon={<span className="font-mono text-sm">#</span>}
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput}
-            required
+            required={sitePolicy.requireUserId}
           />
         </FormField>
 
         {authType === AuthTypeEnum.AccessToken && (
-          <FormField label={t("form.accessToken")} required>
-            <Input
-              type="password"
-              revealable
-              revealed={showAccessToken}
-              onRevealedChange={onShowAccessTokenChange}
-              revealLabels={{
-                show: t("form.showAccessToken"),
-                hide: t("form.hideAccessToken"),
-              }}
-              value={accessToken}
-              onChange={(e) => onAccessTokenChange(e.target.value)}
-              placeholder={t("form.accessToken")}
-              leftIcon={<KeyIcon className="h-5 w-5" />}
-              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput}
+          <>
+            <FormField
+              label={
+                isOpenRouterManagementKey
+                  ? t("form.openrouterManagementKey")
+                  : t("form.accessToken")
+              }
               required
-            />
-          </FormField>
+            >
+              <Input
+                type="password"
+                revealable
+                revealed={showAccessToken}
+                onRevealedChange={onShowAccessTokenChange}
+                revealLabels={{
+                  show: t("form.showAccessToken"),
+                  hide: t("form.hideAccessToken"),
+                }}
+                value={accessToken}
+                onChange={(e) => onAccessTokenChange(e.target.value)}
+                placeholder={
+                  isOpenRouterManagementKey
+                    ? t("form.openrouterManagementKey")
+                    : t("form.accessToken")
+                }
+                leftIcon={<KeyIcon className="h-5 w-5" />}
+                data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput}
+                required
+              />
+            </FormField>
+            {isOpenRouterManagementKey &&
+              (!isDetected || accessToken.trim().length === 0) && (
+                <Alert
+                  variant="info"
+                  title={t("form.openrouterManagementKeyGuidanceTitle")}
+                  description={t("form.openrouterManagementKeyGuidance")}
+                />
+              )}
+          </>
         )}
 
         {canUseSub2ApiRefreshToken && (

@@ -121,6 +121,7 @@ describe("tempWindowPool open/close handlers", () => {
     await handleCloseTempWindow({ requestId: "req-window" }, closeResponse)
 
     expect(removeWindowMock).toHaveBeenCalledWith(801)
+    expect(removeWindowMock).toHaveBeenCalledTimes(1)
     expect(removeTabOrWindowMock).not.toHaveBeenCalled()
     expect(closeResponse).toHaveBeenCalledWith({ success: true })
   })
@@ -881,6 +882,31 @@ describe("tempWindowPool open/close handlers", () => {
       error: "messages:background.windowNotFound",
     })
     expect(removeTabOrWindowMock).not.toHaveBeenCalled()
+  })
+
+  it("removes a tab by tabs.remove even when its ID collides with a window ID", async () => {
+    tempContextMode = TEMP_CONTEXT_MODES.Tab
+    createTabMock.mockResolvedValueOnce({ id: 901 })
+
+    const { handleCloseTempWindow, handleOpenTempWindow } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+    await handleOpenTempWindow(
+      {
+        requestId: "req-tab-window-id-collision",
+        url: "https://example.com/tab-window-id-collision",
+      },
+      vi.fn(),
+    )
+
+    await handleCloseTempWindow(
+      { requestId: "req-tab-window-id-collision" },
+      vi.fn(),
+    )
+
+    expect(removeTabMock).toHaveBeenCalledWith(901)
+    expect(removeWindowMock).not.toHaveBeenCalledWith(901)
+    expect(removeTabOrWindowMock).not.toHaveBeenCalledWith(901)
   })
 
   it("drops tracked composite-tab mappings when the browser reports the temp tab was closed", async () => {

@@ -6,6 +6,47 @@ import { LDOH_ORIGIN } from "~/services/integrations/ldohSiteLookup/constants"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 describe("AccountDialog InfoPanel", () => {
+  it("describes the canonical OpenRouter action as remote Management Key creation", async () => {
+    render(
+      <InfoPanel
+        mode={DIALOG_MODES.ADD}
+        phase="site-input"
+        formSource="manual"
+        autoDetectPresentation={{
+          title: "accountDialog:infoPanel.openrouterBootstrap",
+          description: "accountDialog:infoPanel.openrouterBootstrapInfo",
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByText("accountDialog:infoPanel.openrouterBootstrap"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:infoPanel.openrouterBootstrapInfo"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("accountDialog:infoPanel.autoDetectInfo"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps ordinary site auto-detect copy unchanged", async () => {
+    render(
+      <InfoPanel
+        mode={DIALOG_MODES.ADD}
+        phase="site-input"
+        formSource="manual"
+      />,
+    )
+
+    expect(
+      await screen.findByText("accountDialog:infoPanel.autoDetect"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:infoPanel.autoDetectInfo"),
+    ).toBeInTheDocument()
+  })
+
   it("opens LDOH site list in add mode", async () => {
     const createSpy = vi
       .spyOn(browser.tabs, "create")

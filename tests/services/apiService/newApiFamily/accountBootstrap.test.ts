@@ -44,7 +44,7 @@ describe("newApiFamily accountBootstrap", () => {
   }
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockFetchApiData.mockReset()
   })
 
   it("fetchUserInfo returns the normalized public shape", async () => {
@@ -90,6 +90,22 @@ describe("newApiFamily accountBootstrap", () => {
     })
   })
 
+  it("createAccessToken applies an explicit no-replay transport policy", async () => {
+    mockFetchApiData.mockResolvedValueOnce("new-token")
+
+    await expect(
+      createAccessToken(request, {
+        currentTabTransport: "disabled",
+        tempWindowFallback: { statusCodes: [], codes: [] },
+      }),
+    ).resolves.toBe("new-token")
+    expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      endpoint: "/api/user/token",
+      currentTabTransport: "disabled",
+      tempWindowFallback: { statusCodes: [], codes: [] },
+    })
+  })
+
   it("getOrCreateAccessToken reuses the existing token when present", async () => {
     mockFetchApiData.mockResolvedValueOnce({
       id: 1,
@@ -119,6 +135,31 @@ describe("newApiFamily accountBootstrap", () => {
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
       endpoint: "/api/user/token",
+    })
+  })
+
+  it("getOrCreateAccessToken forwards an explicit no-replay policy when creating a token", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        id: 1,
+        username: "alice",
+        access_token: "",
+      })
+      .mockResolvedValueOnce("generated-token")
+
+    await expect(
+      getOrCreateAccessToken(request, {
+        currentTabTransport: "disabled",
+        tempWindowFallback: { statusCodes: [], codes: [] },
+      }),
+    ).resolves.toEqual({
+      username: "alice",
+      access_token: "generated-token",
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      endpoint: "/api/user/token",
+      currentTabTransport: "disabled",
+      tempWindowFallback: { statusCodes: [], codes: [] },
     })
   })
 

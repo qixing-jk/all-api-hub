@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -22,11 +23,13 @@ const {
   trackProductAnalyticsActionCompletedMock,
   recordTempWindowFetchResultMock,
   recordTempWindowTurnstileFetchResultMock,
+  loggerErrorMock,
   loggerWarnMock,
 } = vi.hoisted(() => ({
   trackProductAnalyticsActionCompletedMock: vi.fn(),
   recordTempWindowFetchResultMock: vi.fn(),
   recordTempWindowTurnstileFetchResultMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
   loggerWarnMock: vi.fn(),
 }))
 
@@ -44,7 +47,7 @@ vi.mock("~/services/productAnalytics/shieldBypassSummary", () => ({
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({
     debug: vi.fn(),
-    error: vi.fn(),
+    error: loggerErrorMock,
     warn: loggerWarnMock,
   }),
 }))
@@ -170,6 +173,7 @@ describe("tempWindowPool window fallback", () => {
     trackProductAnalyticsActionCompletedMock.mockReset()
     recordTempWindowFetchResultMock.mockReset()
     recordTempWindowTurnstileFetchResultMock.mockReset()
+    loggerErrorMock.mockReset()
     loggerWarnMock.mockReset()
 
     vi.useFakeTimers()
@@ -422,10 +426,16 @@ describe("tempWindowPool window fallback", () => {
     expect(removeTabMock).toHaveBeenCalledWith(101)
   })
 
-  it("cleans up a successful popup temp-context fetch after the quiet idle timeout", async () => {
+  it("finalizes a popup context after one failed removal so the next request creates a fresh context", async () => {
     tempContextMode = "window"
-    createWindowMock.mockResolvedValueOnce({ id: 111 })
-    tabsQueryMock.mockResolvedValueOnce([{ id: 112 }])
+    createWindowMock
+      .mockResolvedValueOnce({ id: 111 })
+      .mockResolvedValueOnce({ id: 113 })
+    tabsQueryMock
+      .mockResolvedValueOnce([{ id: 112 }])
+      .mockResolvedValueOnce([{ id: 114 }])
+    applyTempWindowDownloadBlockRuleMock.mockResolvedValueOnce(2_000_112)
+    removeWindowMock.mockRejectedValueOnce(new Error("transient close failure"))
 
     const { handleTempWindowFetch } = await import(
       "~/entrypoints/background/tempWindowPool"
@@ -454,9 +464,38 @@ describe("tempWindowPool window fallback", () => {
       },
     })
 
-    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(2500)
     expect(removeWindowMock).toHaveBeenCalledWith(111)
+    expect(removeWindowMock).toHaveBeenCalledTimes(1)
     expect(removeTabMock).not.toHaveBeenCalledWith(112)
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      "Failed to remove temp context",
+      expect.any(Error),
+    )
+    expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledTimes(1)
+    expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledWith(
+      2_000_112,
+    )
+
+    const secondResponse = vi.fn()
+    const secondRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/window-after-failed-close",
+        fetchOptions: { method: "GET" },
+        requestId: "req-window-after-failed-close",
+      },
+      secondResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await secondRequest
+
+    expect(secondResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true }),
+    )
+    expect(createWindowMock).toHaveBeenCalledTimes(2)
+    expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledTimes(1)
   })
 
   it("installs and removes a temp-context download block rule for the owned tab", async () => {
@@ -517,6 +556,85 @@ describe("tempWindowPool window fallback", () => {
       2_000_601,
     )
     expect(removeTabMock).toHaveBeenCalledWith(601)
+  })
+
+  it("does not remove the browser handle when download-rule cleanup fails", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 604 })
+    applyTempWindowDownloadBlockRuleMock.mockResolvedValueOnce(2_000_604)
+    removeTempWindowDownloadBlockRuleMock.mockRejectedValueOnce(
+      new Error("download-rule cleanup failed"),
+    )
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const request = handleTempWindowFetch(
+      {
+        originUrl: "https://example.invalid",
+        fetchUrl: "https://example.invalid/api/test",
+        fetchOptions: { method: "GET" },
+        requestId: "req-download-block-cleanup-failure",
+      },
+      vi.fn(),
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+    await vi.advanceTimersByTimeAsync(2500)
+
+    expect(removeTempWindowDownloadBlockRuleMock).toHaveBeenCalledWith(
+      2_000_604,
+    )
+    expect(removeTabMock).not.toHaveBeenCalledWith(604)
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      "Failed to destroy context from pool",
+      expect.objectContaining({ contextId: 604, tabId: 604 }),
+    )
+  })
+
+  it("drops force-close ownership before waiting for the origin lock", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 605 })
+
+    const { handleCloseTempWindow, tempWindowBackgroundRuntime } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+    const contextPending = tempWindowBackgroundRuntime.acquire(
+      "https://example.invalid/settings/management-keys",
+      "req-force-close-owner",
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    const context = await contextPending
+
+    const lockHeld = createDeferred<browser.tabs.Tab>()
+    tabsGetMock.mockReturnValueOnce(lockHeld.promise)
+    const tabsGetCallCountBeforeLock = tabsGetMock.mock.calls.length
+    const competingAcquire = tempWindowBackgroundRuntime.acquire(
+      "https://example.invalid/settings/other",
+      "req-origin-lock-holder",
+    )
+    await vi.waitFor(() =>
+      expect(tabsGetMock).toHaveBeenCalledTimes(tabsGetCallCountBeforeLock + 1),
+    )
+
+    const release = context.release({ forceClose: true })
+    const closeResponse = vi.fn()
+    const duplicateClose = handleCloseTempWindow(
+      { requestId: "req-force-close-owner" },
+      closeResponse,
+    )
+
+    await vi.waitFor(() =>
+      expect(closeResponse).toHaveBeenCalledWith({
+        success: false,
+        error: "messages:background.windowNotFound",
+      }),
+    )
+
+    lockHeld.resolve({ id: 605, status: "complete" } as browser.tabs.Tab)
+    await Promise.all([competingAcquire, release, duplicateClose])
   })
 
   it("installs and removes a Firefox temp-context download block rule for the owned tab", async () => {
@@ -1297,6 +1415,69 @@ describe("tempWindowPool window fallback", () => {
 
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeTabMock).toHaveBeenCalledWith(508)
+  })
+
+  it("projects transient dashboard auth from the temp context", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 509 })
+    const defaultSendMessage = sendMessageMock.getMockImplementation() as
+      | ((tabId: number, message: { action: string }) => unknown)
+      | undefined
+    sendMessageMock.mockImplementation(async (tabId, message) => {
+      if (message.action === RuntimeActionIds.ContentGetUserFromLocalStorage) {
+        return {
+          success: true,
+          data: {
+            userId: "user-2",
+            user: "example-user",
+            transientAuth: {
+              kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+              token: "placeholder-background-token",
+              expiresAt: 2_000_000_000,
+              sessionId: "placeholder-background-session",
+              origin: "https://dashboard.example.invalid",
+            },
+          },
+        }
+      }
+
+      return defaultSendMessage?.(tabId, message)
+    })
+
+    const { handleAutoDetectSite } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleAutoDetectSite(
+      {
+        url: "https://dashboard.example.invalid/account",
+        requestId: "req-auto-detect-transient-auth",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        siteType: "new-api",
+        userId: "user-2",
+        user: "example-user",
+        accessToken: undefined,
+        sub2apiAuth: undefined,
+        siteTypeHint: undefined,
+        transientAuth: {
+          kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+          token: "placeholder-background-token",
+          expiresAt: 2_000_000_000,
+          sessionId: "placeholder-background-session",
+          origin: "https://dashboard.example.invalid",
+        },
+      },
+    })
   })
 
   it("uses an incognito temp context for incognito auto-detect requests", async () => {

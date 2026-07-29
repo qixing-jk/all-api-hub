@@ -1,11 +1,12 @@
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
-  mapAxonHubChannelTypeToChannelType,
-  mapChannelTypeToAxonHubChannelType,
+  mapAxonHubChannelTypeToChannelTypeStrict,
+  mapChannelTypeToAxonHubChannelTypeStrict,
 } from "~/services/apiAdapters/managedResources/axonHubChannelType"
 import {
   buildOctopusBaseUrl,
@@ -64,6 +65,20 @@ const CLAUDE_CODE_HUB_TO_SHARED_CHANNEL_TYPE: Partial<
   [CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI]: ChannelType.Gemini,
 }
 
+const mapAxonHubChannelTypeWithLegacyOpenAiFallback = (
+  type: string,
+): ChannelType => {
+  const mappedType = mapAxonHubChannelTypeToChannelTypeStrict(type)
+  return mappedType.status === "mapped" ? mappedType.value : ChannelType.OpenAI
+}
+
+const mapChannelTypeToAxonHubWithLegacyOpenAiFallback = (type: ChannelType) => {
+  const mappedType = mapChannelTypeToAxonHubChannelTypeStrict(type)
+  return mappedType.status === "mapped"
+    ? mappedType.value
+    : AXON_HUB_CHANNEL_TYPE.OPENAI
+}
+
 const getSharedChannelType = (
   sourceSiteType: ManagedSiteType,
   channel: ManagedSiteChannel,
@@ -72,7 +87,7 @@ const getSharedChannelType = (
     typeof channel.type === "number"
       ? channel.type
       : sourceSiteType === SITE_TYPES.AXON_HUB
-        ? mapAxonHubChannelTypeToChannelType(channel.type)
+        ? mapAxonHubChannelTypeWithLegacyOpenAiFallback(channel.type)
         : sourceSiteType === SITE_TYPES.CLAUDE_CODE_HUB
           ? CLAUDE_CODE_HUB_TO_SHARED_CHANNEL_TYPE[channel.type] ??
             ChannelType.OpenAI
@@ -98,7 +113,7 @@ const getLegacyTargetType = (
     return mapChannelTypeToOctopusOutboundType(resourceType)
   }
   if (targetSiteType === SITE_TYPES.AXON_HUB) {
-    return mapChannelTypeToAxonHubChannelType(resourceType)
+    return mapChannelTypeToAxonHubWithLegacyOpenAiFallback(resourceType)
   }
   if (targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     return (

@@ -35,6 +35,7 @@ export type ManagedSiteChannelMigrationItemWarningCode =
 export const MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES = {
   SOURCE_KEY_MISSING: "source-key-missing",
   SOURCE_KEY_RESOLUTION_FAILED: "source-key-resolution-failed",
+  SOURCE_TYPE_UNSUPPORTED: "source-type-unsupported",
   TARGET_DRAFT_PREPARATION_FAILED: "target-draft-preparation-failed",
 } as const
 
@@ -74,6 +75,7 @@ export interface ManagedSiteChannelMigrationExecutionItem {
   channelName: string
   success: boolean
   skipped: boolean
+  uncertain?: boolean
   blockingReasonCode?: ManagedSiteChannelMigrationBlockedReasonCode
   error?: string
 }
@@ -84,5 +86,6 @@ export interface ManagedSiteChannelMigrationExecutionResult {
   createdCount: number
   failedCount: number
   skippedCount: number
+  uncertainCount?: number
   items: ManagedSiteChannelMigrationExecutionItem[]
 }

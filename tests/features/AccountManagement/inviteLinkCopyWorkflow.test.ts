@@ -5,6 +5,7 @@ import {
   INVITE_LINK_COPY_RESULTS,
   runInviteLinkCopyWorkflow,
 } from "~/features/AccountManagement/inviteLinkCopyWorkflow"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { createSiteRequestLimiter } from "~/services/apiTransport/siteRequestLimiter"
 import {
   INVITE_LINK_FAILURE_REASONS,
@@ -121,7 +122,7 @@ describe("runInviteLinkCopyWorkflow", () => {
     await copyPromise
   })
 
-  it("counts site-limiter queue time toward each request deadline", async () => {
+  it("forwards request deadlines without expiring site-limiter queue time", async () => {
     vi.useFakeTimers()
     const limiter = createSiteRequestLimiter({
       maxConcurrentPerSite: 1,
@@ -131,7 +132,13 @@ describe("runInviteLinkCopyWorkflow", () => {
     const startedAccountIds: string[] = []
     let releaseFirst: (() => void) | undefined
     fetchDisplayAccountInviteLinkMock.mockImplementation(
-      (account: { id: string }, options: { abortSignal?: AbortSignal }) =>
+      (
+        account: { id: string },
+        options: {
+          abortSignal?: AbortSignal
+          requestTimeoutMs?: number
+        },
+      ) =>
         limiter(
           "https://shared.example.invalid",
           async () => {
@@ -158,24 +165,34 @@ describe("runInviteLinkCopyWorkflow", () => {
       expect(startedAccountIds).toEqual(["first"])
 
       await vi.advanceTimersByTimeAsync(1_000)
-
-      await expect(copyPromise).resolves.toEqual({
-        result: INVITE_LINK_COPY_RESULTS.Failure,
-        selectedCount: 2,
-        itemCount: 2,
-        successCount: 0,
-        failureCount: 2,
-        failureReasonCounts: {
-          [INVITE_LINK_FAILURE_REASONS.Timeout]: 2,
-        },
-        unsupportedCount: 0,
-        skippedCount: 0,
-      })
       expect(startedAccountIds).toEqual(["first"])
+      expect(fetchDisplayAccountInviteLinkMock).toHaveBeenCalledTimes(2)
+      expect(fetchDisplayAccountInviteLinkMock).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ id: "first" }),
+        expect.objectContaining({ requestTimeoutMs: 1_000 }),
+      )
+      expect(fetchDisplayAccountInviteLinkMock).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ id: "queued" }),
+        expect.objectContaining({ requestTimeoutMs: 1_000 }),
+      )
 
       releaseFirst?.()
       await vi.advanceTimersByTimeAsync(0)
-      expect(startedAccountIds).toEqual(["first"])
+      expect(startedAccountIds).toEqual(["first", "queued"])
+
+      await expect(copyPromise).resolves.toEqual({
+        result: INVITE_LINK_COPY_RESULTS.Success,
+        payload:
+          "https://invite.example.invalid/first\nhttps://invite.example.invalid/queued",
+        selectedCount: 2,
+        itemCount: 2,
+        successCount: 2,
+        failureCount: 0,
+        unsupportedCount: 0,
+        skippedCount: 0,
+      })
     } finally {
       releaseFirst?.()
       vi.clearAllTimers()
@@ -469,14 +486,27 @@ describe("runInviteLinkCopyWorkflow", () => {
     vi.useFakeTimers()
     let resolveSlowFetch: ((value: string) => void) | undefined
     fetchDisplayAccountInviteLinkMock.mockImplementation(
-      (account: { id: string }) => {
-        if (account.id === "slow") {
-          return new Promise<string>((resolve) => {
-            resolveSlowFetch = resolve
-          })
-        }
-        return Promise.resolve(`https://invite.example.invalid/${account.id}`)
-      },
+      (
+        account: { id: string },
+        options: {
+          abortSignal?: AbortSignal
+          requestTimeoutMs?: number
+        },
+      ) =>
+        runAbortableTask(
+          async () => {
+            if (account.id === "slow") {
+              return await new Promise<string>((resolve) => {
+                resolveSlowFetch = resolve
+              })
+            }
+            return `https://invite.example.invalid/${account.id}`
+          },
+          {
+            signals: [options.abortSignal],
+            timeoutMs: options.requestTimeoutMs,
+          },
+        ),
     )
 
     try {

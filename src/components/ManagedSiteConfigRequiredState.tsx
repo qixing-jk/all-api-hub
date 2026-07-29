@@ -8,6 +8,12 @@ import { openSettingsTab } from "~/utils/navigation"
 interface ManagedSiteConfigRequiredStateProps {
   description: string
   className?: string
+  settingsTarget?: {
+    tabId: "managedSite"
+    anchor?: string
+  }
+  onRetry?: () => void
+  isRetrying?: boolean
 }
 
 /**
@@ -17,6 +23,9 @@ interface ManagedSiteConfigRequiredStateProps {
 export default function ManagedSiteConfigRequiredState({
   description,
   className,
+  settingsTarget = { tabId: "managedSite" },
+  onRetry,
+  isRetrying = false,
 }: ManagedSiteConfigRequiredStateProps) {
   const { t } = useTranslation("common")
 
@@ -26,13 +35,32 @@ export default function ManagedSiteConfigRequiredState({
       icon={<ExclamationTriangleIcon className="h-12 w-12 text-yellow-500" />}
       title={t("status.configurationRequired")}
       description={description}
-      action={{
-        label: t("actions.goToSettings"),
-        rightIcon: <WorkflowTransitionIcon className="h-4 w-4" aria-hidden />,
-        onClick: () => {
-          void openSettingsTab("managedSite", { preserveHistory: true })
+      actions={[
+        ...(onRetry
+          ? [
+              {
+                label: t("actions.retry"),
+                loadingLabel: t("status.retrying"),
+                onClick: onRetry,
+                loading: isRetrying,
+                disabled: isRetrying,
+              },
+            ]
+          : []),
+        {
+          label: t("actions.goToSettings"),
+          variant: "outline" as const,
+          rightIcon: <WorkflowTransitionIcon className="h-4 w-4" aria-hidden />,
+          onClick: () => {
+            void openSettingsTab(settingsTarget.tabId, {
+              ...(settingsTarget.anchor
+                ? { anchor: settingsTarget.anchor }
+                : {}),
+              preserveHistory: true,
+            })
+          },
         },
-      }}
+      ]}
     />
   )
 }

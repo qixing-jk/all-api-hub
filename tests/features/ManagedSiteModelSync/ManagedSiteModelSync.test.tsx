@@ -151,26 +151,31 @@ vi.mock("~/components/ui", async (importOriginal) => {
         {rightIcon}
       </button>
     ),
-    EmptyState: ({ title, description, action, icon }: any) => (
-      <div>
-        {icon}
-        <div>{title}</div>
-        <div>{description}</div>
-        {action ? (
-          <button
-            type="button"
-            onClick={action.onClick}
-            data-analytics-action={
-              action.analyticsAction
-                ? `${action.analyticsAction.featureId}:${action.analyticsAction.actionId}:${action.analyticsAction.surfaceId}:${action.analyticsAction.entrypoint}`
-                : undefined
-            }
-          >
-            {action.label}
-          </button>
-        ) : null}
-      </div>
-    ),
+    EmptyState: ({ title, description, action, actions, icon }: any) => {
+      const resolvedActions = actions ?? (action ? [action] : [])
+
+      return (
+        <div>
+          {icon}
+          <div>{title}</div>
+          <div>{description}</div>
+          {resolvedActions.map((resolvedAction: any, index: number) => (
+            <button
+              key={`${resolvedAction.label}-${index}`}
+              type="button"
+              onClick={resolvedAction.onClick}
+              data-analytics-action={
+                resolvedAction.analyticsAction
+                  ? `${resolvedAction.analyticsAction.featureId}:${resolvedAction.analyticsAction.actionId}:${resolvedAction.analyticsAction.surfaceId}:${resolvedAction.analyticsAction.entrypoint}`
+                  : undefined
+              }
+            >
+              {resolvedAction.label}
+            </button>
+          ))}
+        </div>
+      )
+    },
   }
 })
 

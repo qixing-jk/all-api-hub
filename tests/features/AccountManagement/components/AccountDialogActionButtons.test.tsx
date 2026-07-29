@@ -53,6 +53,51 @@ describe("AccountDialog ActionButtons", () => {
     expect(props.onShowManualForm).not.toHaveBeenCalled()
   })
 
+  it("names the canonical OpenRouter action as a Management Key creation", async () => {
+    const props = createProps()
+    props.url = "https://openrouter.ai"
+    props.phase = "site-input"
+
+    render(
+      <ActionButtons
+        {...props}
+        autoDetectPresentation={{
+          idleLabel: "accountDialog:mode.createOpenRouterManagementKey",
+          pendingLabel: "accountDialog:mode.creatingOpenRouterManagementKey",
+          reDetectLabel: "accountDialog:mode.createOpenRouterManagementKey",
+          multiline: true,
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:mode.createOpenRouterManagementKey",
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.queryByRole("button", { name: "accountDialog:mode.autoDetect" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps the ordinary site action named Auto Detect", async () => {
+    const props = createProps()
+    props.phase = "site-input"
+
+    render(<ActionButtons {...props} />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:mode.autoDetect",
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:mode.createOpenRouterManagementKey",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   it("keeps the manual add action available while auto-detect is already running", async () => {
     const user = userEvent.setup()
     const props = createProps()
@@ -115,6 +160,30 @@ describe("AccountDialog ActionButtons", () => {
 
     expect(props.onClose).toHaveBeenCalledTimes(1)
     expect(props.onAutoDetect).toHaveBeenCalledTimes(1)
+  })
+
+  it("shows the multiline pending label while re-detecting OpenRouter", async () => {
+    const props = createProps()
+    props.mode = DIALOG_MODES.EDIT
+    props.isDetecting = true
+
+    render(
+      <ActionButtons
+        {...props}
+        autoDetectPresentation={{
+          idleLabel: "accountDialog:mode.createOpenRouterManagementKey",
+          pendingLabel: "accountDialog:mode.creatingOpenRouterManagementKey",
+          reDetectLabel: "accountDialog:mode.createOpenRouterManagementKey",
+          multiline: true,
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:mode.creatingOpenRouterManagementKey",
+      }),
+    ).toBeDisabled()
   })
 
   it("shows add-mode auto-config and save actions, and wires the auto-config handler", async () => {

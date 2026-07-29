@@ -39,6 +39,12 @@ export interface AccountValidationResponse
   autoDetectContext?: AutoDetectAnalyticsContext
 }
 
+export type AccountAutoDetectDetectedResponse = AccountValidationResponse & {
+  kind: "detected"
+}
+
+export type AccountAutoDetectResponse = AccountAutoDetectDetectedResponse
+
 /**
  * Response for account save/update operations
  */

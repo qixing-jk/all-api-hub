@@ -1,8 +1,36 @@
 {
   "alerts": {
+    "authenticationFailed": {
+      "description": "保存されている AxonHub の認証情報が拒否されました。設定を開いて更新し、チャネル一覧を再読み込みしてください。",
+      "title": "AxonHub に再度サインインしてください"
+    },
+    "editorLoadError": {
+      "description": "チャネルフォームを読み込めませんでした。チャネル一覧を更新してから再試行してください。",
+      "title": "チャネルエディターを開けません"
+    },
+    "editorSaveError": {
+      "description": "変更は保存されませんでした。もう一度お試しください。",
+      "title": "チャネルを保存できません"
+    },
     "loadError": {
       "description": "{{error}}",
       "title": "チャネルを読み込めません"
+    },
+    "partialMutation": {
+      "description": "一部の項目は保存された可能性がありますが、ステータスを確認できませんでした。チャネル一覧を更新して内容を確認してから再試行してください。",
+      "title": "チャネル更新の確認が必要です"
+    },
+    "permissionDenied": {
+      "description": "この AxonHub アカウントではチャネルを管理できません。管理者アカウントを使用するか権限を更新してから、再読み込みしてください。",
+      "title": "AxonHub へのアクセスが拒否されました"
+    },
+    "savedRefreshError": {
+      "description": "チャネルは保存されましたが、最新の一覧を読み込めませんでした。さらに変更する前にチャネル一覧を更新してください。",
+      "title": "チャネルを保存しました。更新が必要です"
+    },
+    "unavailable": {
+      "description": "AxonHub に接続できませんでした。サーバーとネットワークを確認してから、チャネル一覧を再読み込みしてください。",
+      "title": "AxonHub を利用できません"
     }
   },
   "description": "管理対象サイトに接続されたチャネルを検索、編集、削除し、手動同期できます。",
@@ -10,8 +38,125 @@
     "cancel": "キャンセル",
     "confirm": "削除",
     "deleteDescription": "この操作は元に戻せません。選択したチャネルは完全に削除されます。",
+    "deleteRefreshAction": "チャネル一覧を更新",
+    "deleteRefreshRequired": "削除結果が不明な項目があります。再度削除する前にチャネル一覧を更新してください。",
+    "deleteResultStatus": {
+      "failed": "失敗",
+      "success": "削除済み",
+      "uncertain": "状態不明"
+    },
+    "deleteResultsTitle": "削除結果",
     "deleteTitle": "チャネルを削除しますか？",
     "deleteTitlePlural": "チャネルを削除しますか？"
+  },
+  "editor": {
+    "fields": {
+      "autoSyncModelPattern": {
+        "help": "このパターンに一致するモデルだけを同期します。大文字と小文字を区別しない場合は先頭に (?i) を付け、すべて同期する場合は空欄にします。",
+        "invalid": "有効なモデルフィルターパターンを入力してください。",
+        "label": "モデルフィルターパターン",
+        "placeholder": "例: (?i)^model-example"
+      },
+      "autoSyncSupportedModels": {
+        "help": "AxonHub はシステム設定で指定された頻度で、プロバイダー API から有効なチャネルのモデル一覧を更新します。",
+        "label": "対応モデルを自動同期"
+      },
+      "defaultTestModel": {
+        "help": "このチャネルの接続テストに使用します。対応モデルから選択してください。",
+        "label": "既定のテストモデル",
+        "placeholder": "設定済みモデルを選択"
+      },
+      "extraModelPrefix": {
+        "help": "モデル名に追加のプレフィックスを付けて、このチャネルにアクセスできるようにします。たとえばプレフィックスを 'deepseek' にすると、'deepseek/deepseek-chat' と 'deepseek-chat' の両方でこのチャネルにアクセスできます。",
+        "label": "追加モデルプレフィックス",
+        "placeholder": "例: deepseek"
+      },
+      "orderingWeight": {
+        "help": "AxonHub がチャネルを選択するときは値が大きいほど優先され、同じ値は同じ優先順位になります。",
+        "label": "並び順の重み"
+      },
+      "remark": {
+        "help": "参照用に、このチャネルについてのメモや備考を追加します。",
+        "label": "備考",
+        "placeholder": "このチャネルのメモや備考を入力..."
+      },
+      "supportedModels": {
+        "help": "モデル名を入力または貼り付けます。ここで追加したモデルは自動同期でも保持されます。"
+      },
+      "tags": {
+        "help": "タグを追加してチャネルを分類、絞り込みできます。Enter キーでタグを追加します。カンマまたは改行区切りのタグを貼り付けて一括追加することもできます。",
+        "label": "タグ",
+        "placeholder": "タグを追加..."
+      }
+    },
+    "options": {
+      "channelType": {
+        "anthropic": "Anthropic",
+        "anthropicAws": "AWS の Anthropic",
+        "anthropicGcp": "Google Cloud の Anthropic",
+        "claudeCode": "Claude Code",
+        "deepseek": "DeepSeek",
+        "deepseekAnthropic": "DeepSeek Anthropic",
+        "gemini": "Gemini",
+        "geminiOpenai": "Gemini OpenAI",
+        "geminiVertex": "Gemini Vertex",
+        "githubCopilot": "GitHub Copilot",
+        "nanogpt": "NanoGPT",
+        "ollama": "Ollama",
+        "openai": "OpenAI",
+        "openaiResponses": "OpenAI Responses",
+        "openrouter": "OpenRouter",
+        "siliconflow": "SiliconFlow",
+        "unsupported": "未対応のチャネル種別",
+        "volcengine": "Volcengine",
+        "xai": "xAI"
+      },
+      "status": {
+        "archived": "アーカイブ済み",
+        "disabled": "無効",
+        "enabled": "有効",
+        "unknown": "不明"
+      },
+      "unknown": "不明な選択肢"
+    },
+    "secret": {
+      "actions": {
+        "clear": "保存済み認証情報を削除",
+        "restore": "保存済み認証情報を保持",
+        "retry": "再試行"
+      },
+      "createHint": "新しいチャネルの認証情報を入力してください。",
+      "keepExistingHint": "保存済みの認証情報を変更しない場合は、このフィールドを空欄のままにしてください。",
+      "loadError": "保存済み認証情報を読み込めませんでした。",
+      "loading": "保存済みの認証情報を読み込んでいます…",
+      "placeholder": "認証情報を入力",
+      "replacementBlocked": {
+        "multipleCredentials": "このチャネルには複数の API キーがあります。キーは AxonHub で管理してください。"
+      },
+      "replacementDisabled": "この認証情報の種類はここでは置き換えられません。",
+      "state": {
+        "available": "保存済みの認証情報があります。",
+        "masked": "マスクされた認証情報が保存されています。",
+        "permissionHidden": "保存済み認証情報は権限により非表示です。",
+        "unavailable": "表示できる認証情報がありません。"
+      }
+    },
+    "sections": {
+      "advanced": "詳細設定",
+      "basic": "基本情報",
+      "connection": "接続と認証情報",
+      "metadata": "メタデータ",
+      "models": "モデル",
+      "routing": "ルーティング",
+      "sync": "モデル同期"
+    },
+    "validation": {
+      "inconsistentValue": "この値は別の項目と矛盾しています。",
+      "invalidValue": "有効な値を入力してください。",
+      "outOfRange": "許可された範囲内の値を入力してください。",
+      "required": "この項目は必須です。",
+      "unsupportedOption": "この選択肢はサポートされていません。"
+    }
   },
   "filter": {
     "statusLabel": "状態で絞り込む"
@@ -100,6 +245,7 @@
     "actions": {
       "cancel": "キャンセル",
       "close": "閉じる",
+      "refreshChannels": "チャネル一覧を更新",
       "refreshPreview": "プレビューを再読み込み",
       "running": "移行中...",
       "start": "移行を開始"
@@ -113,6 +259,7 @@
     "blockedReasons": {
       "sourceKeyMissing": "元チャネルのキーが取得できないため、このチャネルはまだ移行できません。",
       "sourceKeyResolutionFailed": "元チャネルのキーを読み込めませんでした。確認が完了した直後であれば、プレビューを更新して再試行してください。",
+      "sourceTypeUnsupported": "この移行では元チャネルの種類がサポートされていません。対応するチャネルを選ぶか、手動で移行してください。",
       "targetDraftPreparationFailed": "移行先チャネルの下書きを準備できませんでした。チャネル情報を確認し、プレビューを更新して再試行してください。"
     },
     "confirm": {
@@ -159,12 +306,26 @@
       "summary": "プレビュー: 移行可能 {{ready}} 件、ブロック {{blocked}} 件、合計 {{total}} 件。"
     },
     "results": {
+      "refreshRequired": "作成結果が不明な項目があります。閉じる前にチャネル一覧を更新してください。",
       "status": {
         "failed": "失敗",
         "skipped": "スキップ",
-        "success": "作成済み"
+        "success": "作成済み",
+        "uncertain": "状態不明"
       },
-      "summary": "結果: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件、合計 {{total}} 件。",
+      "summary": "結果: {{created}}、{{failed}}、{{skipped}}、{{uncertain}}、{{total}}。",
+      "summaryMetrics": {
+        "created_one": "作成 {{count}} 件",
+        "created_other": "作成 {{count}} 件",
+        "failed_one": "失敗 {{count}} 件",
+        "failed_other": "失敗 {{count}} 件",
+        "skipped_one": "スキップ {{count}} 件",
+        "skipped_other": "スキップ {{count}} 件",
+        "total_one": "合計 {{count}} 件",
+        "total_other": "合計 {{count}} 件",
+        "uncertain_one": "状態不明 {{count}} 件",
+        "uncertain_other": "状態不明 {{count}} 件"
+      },
       "title": "移行結果"
     },
     "target": {
@@ -176,6 +337,7 @@
     },
     "title": "チャネル移行"
   },
+  "resourceDescription": "この管理対象サイトに接続されたチャネルを検索、作成、編集、削除できます。",
   "statusLabels": {
     "autoDisabled": "自動無効",
     "enabled": "有効",

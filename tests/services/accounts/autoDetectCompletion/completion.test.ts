@@ -157,6 +157,8 @@ describe("auto-detect completion", () => {
       fetchContext,
       autoDetectContext,
     })
+    expect(result).not.toHaveProperty("mode")
+    expect(result).not.toHaveProperty("status")
   })
 
   it("drops malformed current-tab context before adapter completion", async () => {

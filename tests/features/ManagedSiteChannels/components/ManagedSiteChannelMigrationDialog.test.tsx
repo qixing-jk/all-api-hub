@@ -5,6 +5,7 @@ import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedSiteChannelMigrationDialog } from "~/features/ManagedSiteChannels/components/ManagedSiteChannelMigrationDialog"
+import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import {
   executeManagedSiteChannelMigration,
   prepareManagedSiteChannelMigrationPreview,
@@ -764,6 +765,52 @@ describe("ManagedSiteChannelMigrationDialog", () => {
     expect(screen.getAllByText("Target draft failed").length).toBeGreaterThan(0)
   })
 
+  it("renders unsupported source type recovery without credential guidance", async () => {
+    mockedPreparePreview.mockResolvedValueOnce({
+      ...previewPayload,
+      readyCount: 0,
+      blockedCount: 1,
+      totalCount: 1,
+      items: [
+        {
+          ...previewPayload.items[0],
+          status: "blocked",
+          draft: null,
+          blockingReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_TYPE_UNSUPPORTED,
+          blockingMessage:
+            "The source channel type is not supported for migration. Choose a supported channel or migrate it manually.",
+          warningCodes: [],
+        },
+      ],
+    })
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.AXON_HUB}
+        availableTargets={availableTargets}
+      />,
+    )
+
+    expect(
+      await screen.findAllByText(
+        "managedSiteChannels:migration.blockedReasons.sourceTypeUnsupported",
+      ),
+    ).not.toHaveLength(0)
+    expect(
+      enManagedSiteChannels.migration.blockedReasons.sourceTypeUnsupported,
+    ).toBe(
+      "This source channel type is not supported for migration. Choose a supported channel or migrate it manually.",
+    )
+    expect(
+      enManagedSiteChannels.migration.blockedReasons.sourceTypeUnsupported,
+    ).not.toMatch(/key|credential/i)
+  })
+
   it("restores manual preview refresh after rejection and allows retry", async () => {
     const failedManualRefresh = createDeferred<typeof previewPayload>()
     const successfulRetry = createDeferred<typeof previewPayload>()
@@ -954,6 +1001,214 @@ describe("ManagedSiteChannelMigrationDialog", () => {
     expect(
       screen.getByText("managedSiteChannels:migration.results.status.failed"),
     ).toBeInTheDocument()
+  })
+
+  it("preserves uncertain results and requires a controlled refresh before close without replay", async () => {
+    const onClose = vi.fn()
+    const onRecoverUncertainResult = vi.fn().mockResolvedValue(true)
+    mockedExecuteMigration.mockResolvedValueOnce({
+      createdCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      uncertainCount: 1,
+      totalSelected: 1,
+      items: [
+        {
+          channelId: 1,
+          channelName: "Alpha",
+          success: false,
+          skipped: false,
+          uncertain: true,
+          error: "Creation may have completed.",
+        },
+      ],
+    })
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen
+        onClose={onClose}
+        onRecoverUncertainResult={onRecoverUncertainResult}
+        channels={channels.slice(0, 1)}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={availableTargets}
+      />,
+    )
+
+    await screen.findByText(
+      "managedSiteChannels:migration.preview.status.ready",
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.actions.start",
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.confirm.confirm",
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        "managedSiteChannels:migration.results.status.uncertain",
+      ),
+    ).toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.actions.close",
+      }),
+    )
+    expect(onClose).not.toHaveBeenCalled()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.actions.refreshChannels",
+      }),
+    )
+    await waitFor(() => {
+      expect(onRecoverUncertainResult).toHaveBeenCalledTimes(1)
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
+    expect(mockedExecuteMigration).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ["rejects the refreshed snapshot", vi.fn().mockResolvedValue(false)],
+    [
+      "aborts the refresh",
+      vi.fn().mockRejectedValue(new DOMException("Aborted", "AbortError")),
+    ],
+  ])(
+    "keeps uncertain results open without replay when recovery %s",
+    async (_case, onRecoverUncertainResult) => {
+      const onClose = vi.fn()
+      mockedExecuteMigration.mockResolvedValueOnce({
+        createdCount: 0,
+        failedCount: 0,
+        skippedCount: 0,
+        uncertainCount: 1,
+        totalSelected: 1,
+        items: [
+          {
+            channelId: 1,
+            channelName: "Alpha",
+            success: false,
+            skipped: false,
+            uncertain: true,
+            error: "Creation may have completed.",
+          },
+        ],
+      })
+
+      render(
+        <ManagedSiteChannelMigrationDialog
+          isOpen
+          onClose={onClose}
+          onRecoverUncertainResult={onRecoverUncertainResult}
+          channels={channels.slice(0, 1)}
+          preferences={{} as any}
+          sourceSiteType={SITE_TYPES.NEW_API}
+          availableTargets={availableTargets}
+        />,
+      )
+
+      await screen.findByText(
+        "managedSiteChannels:migration.preview.status.ready",
+      )
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "managedSiteChannels:migration.actions.start",
+        }),
+      )
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "managedSiteChannels:migration.confirm.confirm",
+        }),
+      )
+      await screen.findByText(
+        "managedSiteChannels:migration.results.status.uncertain",
+      )
+
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "managedSiteChannels:migration.actions.refreshChannels",
+        }),
+      )
+
+      await waitFor(() => {
+        expect(onRecoverUncertainResult).toHaveBeenCalledTimes(1)
+      })
+      expect(onClose).not.toHaveBeenCalled()
+      expect(mockedExecuteMigration).toHaveBeenCalledTimes(1)
+      expect(
+        screen.getByText(
+          "managedSiteChannels:migration.results.status.uncertain",
+        ),
+      ).toBeInTheDocument()
+    },
+  )
+
+  it("keeps uncertain results dismissible when no recovery callback is available", async () => {
+    const onClose = vi.fn()
+    mockedExecuteMigration.mockResolvedValueOnce({
+      createdCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      uncertainCount: 1,
+      totalSelected: 1,
+      items: [
+        {
+          channelId: 1,
+          channelName: "Alpha",
+          success: false,
+          skipped: false,
+          uncertain: true,
+          error: "Creation may have completed.",
+        },
+      ],
+    })
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen
+        onClose={onClose}
+        channels={channels.slice(0, 1)}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={availableTargets}
+      />,
+    )
+
+    await screen.findByText(
+      "managedSiteChannels:migration.preview.status.ready",
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.actions.start",
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.confirm.confirm",
+      }),
+    )
+    await screen.findByText(
+      "managedSiteChannels:migration.results.status.uncertain",
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: "managedSiteChannels:migration.actions.refreshChannels",
+      }),
+    ).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.actions.close",
+      }),
+    )
+    expect(onClose).toHaveBeenCalledOnce()
   })
 
   it("tracks confirmed migration execution success with aggregate-only insights", async () => {

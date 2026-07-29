@@ -5,6 +5,7 @@ import {
 } from "~/services/accountSiteOnboarding/metadata"
 
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
+import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
 import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
 import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
 import { voApiV2ContentSessionExtractor } from "./contentSession/voapiV2"
@@ -39,6 +40,7 @@ export function getContentSessionExtractors(): readonly ContentSessionExtractor[
     sub2ApiContentSessionExtractor,
     sharedChatContentSessionExtractor,
     voApiV2ContentSessionExtractor,
+    newApiAuthBundleContentSessionExtractor,
     compatibleUserContentSessionExtractor,
   ]
 }

@@ -11,6 +11,7 @@ import {
 import { createLogger } from "~/utils/core/logger"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 
+import { normalizeContentSessionTransientAuth } from "./transientAuth"
 import type {
   AccountBrowserSession,
   AccountBrowserSessionFetchContext,
@@ -95,6 +96,7 @@ const normalizeSessionData = (
   data: unknown,
   options: {
     source: AccountBrowserSession["source"]
+    baseUrl: string
     siteType: AccountBrowserSession["siteType"]
     fetchContext?: AccountBrowserSessionFetchContext
   },
@@ -107,6 +109,7 @@ const normalizeSessionData = (
     accessToken?: unknown
     siteTypeHint?: unknown
     siteType?: unknown
+    transientAuth?: unknown
     sub2apiAuth?: unknown
     fetchContext?: unknown
   }
@@ -127,6 +130,13 @@ const normalizeSessionData = (
       ? payload.siteType
       : undefined
   const sub2apiAuth = normalizeSub2ApiAuth(payload.sub2apiAuth)
+  const transientAuth = normalizeContentSessionTransientAuth(
+    payload.transientAuth,
+    {
+      baseUrl: options.baseUrl,
+      siteType: options.siteType,
+    },
+  )
   const fetchContext =
     options.fetchContext ?? normalizeFetchContext(payload.fetchContext)
 
@@ -137,6 +147,7 @@ const normalizeSessionData = (
     userId,
     user,
     ...(accessToken ? { accessToken } : {}),
+    ...(transientAuth ? { transientAuth } : {}),
     ...(sub2apiAuth ? { sub2apiAuth } : {}),
     ...(fetchContext ? { fetchContext } : {}),
   }
@@ -159,6 +170,7 @@ export async function readAccountBrowserSessionFromTab(
 
     return normalizeSessionData(response.data, {
       source: options.source,
+      baseUrl: options.baseUrl,
       siteType: options.siteType,
       fetchContext: options.fetchContext,
     })
@@ -294,6 +306,7 @@ const readAccountBrowserSessionFromTempWindow = async (
 
     return normalizeSessionData(response.data, {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      baseUrl: options.baseUrl,
       siteType: options.siteType,
     })
   } catch (error) {

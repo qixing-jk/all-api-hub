@@ -28,10 +28,12 @@ import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 
 type SiteInfoInputPresentationSitePolicy = Pick<
   AccountDialogSitePolicy,
+  | "siteTypeLabel"
   | "forceAccessTokenAuth"
   | "allowCookieAuthSession"
   | "allowBuiltInCheckInDetection"
   | "allowSub2ApiRefreshTokenState"
+  | "lockSiteUrl"
 >
 
 interface SiteInfoInputBaseProps {
@@ -98,13 +100,16 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
   const canUseCookieAuth = props.sitePolicy.allowCookieAuthSession
   const canUseSub2ApiRefreshToken =
     props.sitePolicy.allowSub2ApiRefreshTokenState
+  const isSiteUrlLocked = isDetected || props.sitePolicy.lockSiteUrl
   const shouldShowCookiePermissionRecommendation =
     !isDetected &&
     canUseCookieAuth &&
     props.showAuthTypeSelector === true &&
     props.authType === AuthTypeEnum.Cookie
   const authTypeHelpText = isAuthTypeLocked
-    ? t("siteInfo.sub2apiAuthOnly")
+    ? t("siteInfo.authMethodSelectedForSite", {
+        siteType: props.sitePolicy.siteTypeLabel,
+      })
     : t("siteInfo.cookieWarning")
 
   const handleEditClick = () => {
@@ -196,10 +201,12 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                 value={url}
                 onChange={(e) => onUrlChange(e.target.value)}
                 placeholder="https://example.com"
-                disabled={isDetected}
+                disabled={isSiteUrlLocked}
                 data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput}
-                onClear={onClearUrl}
-                clearButtonLabel={t("common:actions.clear")}
+                onClear={isSiteUrlLocked ? undefined : onClearUrl}
+                clearButtonLabel={
+                  isSiteUrlLocked ? undefined : t("common:actions.clear")
+                }
               />
             </div>
           </div>
@@ -219,10 +226,12 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
               value={url}
               onChange={(e) => onUrlChange(e.target.value)}
               placeholder="https://example.com"
-              disabled={isDetected}
+              disabled={isSiteUrlLocked}
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput}
-              onClear={onClearUrl}
-              clearButtonLabel={t("common:actions.clear")}
+              onClear={isSiteUrlLocked ? undefined : onClearUrl}
+              clearButtonLabel={
+                isSiteUrlLocked ? undefined : t("common:actions.clear")
+              }
             />
           </div>
         </>

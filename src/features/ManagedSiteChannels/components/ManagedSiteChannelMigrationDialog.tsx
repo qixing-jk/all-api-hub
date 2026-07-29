@@ -1,21 +1,7 @@
 import type { TFunction } from "i18next"
-import { ArrowRightLeft, Loader2, RefreshCcw } from "lucide-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import Tooltip from "~/components/Tooltip"
-import {
-  Badge,
-  Button,
-  CollapsibleSection,
-  DestructiveConfirmDialog,
-  Modal,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui"
 import { AxonHubChannelTypeNames } from "~/constants/axonHub"
 import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
 import { ChannelTypeNames, type ChannelType } from "~/constants/managedSite"
@@ -60,11 +46,20 @@ import {
 } from "~/types/managedSiteMigration"
 import { getErrorMessage } from "~/utils/core/error"
 
+import type {
+  ManagedSiteMigrationLabels,
+  ManagedSiteMigrationPreviewRow,
+  ManagedSiteMigrationPreviewState,
+  ManagedSiteMigrationResult,
+} from "../presentation/contracts"
+import { formatManagedSiteMigrationResultSummary } from "../presentation/managedResourceMigrationPresentation"
+import { ManagedSiteMigrationDialogView } from "../presentation/ManagedSiteMigrationDialogView"
 import type { ChannelRow } from "../types"
 
 interface ManagedSiteChannelMigrationDialogProps {
   isOpen: boolean
   onClose: () => void
+  onRecoverUncertainResult?: () => Promise<boolean>
   channels: ChannelRow[]
   preferences: UserPreferences
   sourceSiteType: ManagedSiteTargetOption["siteType"]
@@ -152,6 +147,10 @@ const getBlockedReasonText = (
   switch (code) {
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING:
       return t("managedSiteChannels:migration.blockedReasons.sourceKeyMissing")
+    case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_TYPE_UNSUPPORTED:
+      return t(
+        "managedSiteChannels:migration.blockedReasons.sourceTypeUnsupported",
+      )
     case MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.TARGET_DRAFT_PREPARATION_FAILED:
       return t(
         "managedSiteChannels:migration.blockedReasons.targetDraftPreparationFailed",
@@ -179,6 +178,13 @@ const getExecutionBadge = (
     return {
       text: t("managedSiteChannels:migration.results.status.skipped"),
       variant: "secondary" as const,
+    }
+  }
+
+  if (item.uncertain) {
+    return {
+      text: t("managedSiteChannels:migration.results.status.uncertain"),
+      variant: "warning" as const,
     }
   }
 
@@ -243,49 +249,6 @@ const formatDelimitedValues = (value: string | null | undefined) => {
 const formatArrayValues = (items: string[] | null | undefined) =>
   items && items.length > 0 ? items.join(", ") : "—"
 
-const SCROLLABLE_RESULT_LIST_CLASS =
-  "max-h-[60vh] space-y-3 overflow-y-auto rounded-md border p-3 md:max-h-[min(70vh,48rem)]"
-
-/**
- * Render a single source-to-target field comparison row in the migration preview.
- */
-function PreviewComparisonRow({
-  label,
-  sourceValue,
-  targetValue,
-}: {
-  label: string
-  sourceValue: string
-  targetValue: string
-}) {
-  return (
-    <div className="bg-border grid gap-px md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="bg-muted/50 px-3 py-2 text-[11px] font-medium uppercase">
-        {label}
-      </div>
-      <div className="bg-background px-3 py-2 text-sm break-words">
-        {sourceValue}
-      </div>
-      <div className="bg-background px-3 py-2 text-sm break-words">
-        {targetValue}
-      </div>
-    </div>
-  )
-}
-
-/**
- * Render the warning list shown inside tooltip popovers in the migration dialog.
- */
-function WarningTooltipContent({ items }: { items: string[] }) {
-  return (
-    <ul className="max-w-sm list-disc space-y-1 pl-4 text-left">
-      {items.map((item) => (
-        <li key={item}>{item}</li>
-      ))}
-    </ul>
-  )
-}
-
 /**
  * Modal flow for selecting a managed-site migration target, reviewing the
  * create-only preview, and showing per-channel execution results.
@@ -293,6 +256,7 @@ function WarningTooltipContent({ items }: { items: string[] }) {
 export function ManagedSiteChannelMigrationDialog({
   isOpen,
   onClose,
+  onRecoverUncertainResult,
   channels,
   preferences,
   sourceSiteType,
@@ -313,6 +277,8 @@ export function ManagedSiteChannelMigrationDialog({
     useState<PreviewLoadOrigin>(null)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
+  const [isRecovering, setIsRecovering] = useState(false)
+  const recoveryInFlightRef = useRef(false)
   const [executionResult, setExecutionResult] =
     useState<ManagedSiteChannelMigrationExecutionResult | null>(null)
   const [previewRefreshKey, setPreviewRefreshKey] = useState(0)
@@ -328,6 +294,10 @@ export function ManagedSiteChannelMigrationDialog({
     [availableTargets, targetSiteType],
   )
   const isSelectedTargetAvailable = Boolean(selectedTarget)
+  const requiresUncertainResultRecovery = Boolean(
+    onRecoverUncertainResult &&
+      executionResult?.items.some((item) => item.uncertain),
+  )
 
   useEffect(() => {
     if (!isOpen) {
@@ -338,6 +308,8 @@ export function ManagedSiteChannelMigrationDialog({
       setPreviewLoadOrigin(null)
       setIsConfirmOpen(false)
       setIsRunning(false)
+      setIsRecovering(false)
+      recoveryInFlightRef.current = false
       setExecutionResult(null)
       setPreviewRefreshKey(0)
       pendingPreviewLoadOriginRef.current = null
@@ -422,8 +394,29 @@ export function ManagedSiteChannelMigrationDialog({
   ])
 
   const handleClose = () => {
-    if (isRunning) return
+    if (isRunning || isRecovering || requiresUncertainResultRecovery) {
+      return
+    }
     onClose()
+  }
+
+  const handleRecoverUncertainResult = async () => {
+    if (isRunning || recoveryInFlightRef.current || !onRecoverUncertainResult) {
+      return
+    }
+    recoveryInFlightRef.current = true
+    setIsRecovering(true)
+    try {
+      const refreshAccepted = await onRecoverUncertainResult()
+      if (refreshAccepted) {
+        onClose()
+      }
+    } catch {
+      // Keep uncertain results visible until a controlled refresh is accepted.
+    } finally {
+      recoveryInFlightRef.current = false
+      setIsRecovering(false)
+    }
   }
 
   const handleRefreshPreview = () => {
@@ -474,7 +467,7 @@ export function ManagedSiteChannelMigrationDialog({
           itemCount: result.totalSelected,
           selectedCount: result.totalSelected,
           successCount: result.createdCount,
-          failureCount: result.failedCount,
+          failureCount: result.failedCount + (result.uncertainCount ?? 0),
           sourceManagedSiteType,
           targetManagedSiteType,
           readyCount: preview.readyCount,
@@ -504,24 +497,217 @@ export function ManagedSiteChannelMigrationDialog({
     }
   }
 
-  const footer = executionResult ? (
-    <div className="flex items-center justify-between gap-3">
-      <div className="text-muted-foreground text-sm">
-        {t("managedSiteChannels:migration.results.summary", {
-          created: executionResult.createdCount,
-          failed: executionResult.failedCount,
-          skipped: executionResult.skippedCount,
-          total: executionResult.totalSelected,
-        })}
-      </div>
-      <Button type="button" onClick={handleClose}>
-        {t("managedSiteChannels:migration.actions.close")}
-      </Button>
-    </div>
-  ) : (
-    <div className="flex items-center justify-between gap-3">
-      <div className="text-muted-foreground text-sm">
-        {preview
+  const presentationPreview = useMemo<ManagedSiteMigrationPreviewState>(
+    () => ({
+      sourceLabel: getManagedSiteLabel(t, sourceSiteType),
+      targetLabel: selectedTarget
+        ? getManagedSiteLabel(t, selectedTarget.siteType)
+        : undefined,
+      rows:
+        preview?.items.map((item) => {
+          const comparisonStatus = (
+            source: string,
+            target: string,
+          ): "same" | "changed" | "unsupported" =>
+            !item.draft ? "unsupported" : source === target ? "same" : "changed"
+          const baseURLSource = item.sourceChannel.base_url?.trim() || "—"
+          const baseURLTarget = item.draft?.base_url.trim() || "—"
+          const typeSource = getChannelTypeText(
+            sourceSiteType,
+            item.sourceChannel.type,
+          )
+          const typeTarget = item.draft
+            ? getChannelTypeText(preview.targetSiteType, item.draft.type)
+            : "—"
+          const modelsSource = formatDelimitedValues(item.sourceChannel.models)
+          const modelsTarget = item.draft
+            ? formatArrayValues(item.draft.models)
+            : "—"
+          const groupsSource = formatDelimitedValues(item.sourceChannel.group)
+          const groupsTarget = item.draft
+            ? formatArrayValues(item.draft.groups)
+            : "—"
+          const prioritySource = String(item.sourceChannel.priority ?? 0)
+          const priorityTarget = item.draft ? String(item.draft.priority) : "—"
+          const weightSource = String(item.sourceChannel.weight ?? 0)
+          const weightTarget = item.draft ? String(item.draft.weight) : "—"
+          const statusSource = getStatusText(t, item.sourceChannel.status)
+          const statusTarget = item.draft
+            ? getStatusText(t, item.draft.status)
+            : t("managedSiteChannels:migration.preview.status.blocked")
+
+          return {
+            rowKey: String(item.channelId),
+            displayIdentifier: String(item.channelId),
+            name: item.channelName,
+            baseURL: item.sourceChannel.base_url || "",
+            status: item.status,
+            comparisons: [
+              {
+                id: "baseUrl",
+                label: t("channelDialog:fields.baseUrl.label"),
+                source: baseURLSource,
+                target: baseURLTarget,
+                status: comparisonStatus(baseURLSource, baseURLTarget),
+              },
+              {
+                id: "type",
+                label: t("channelDialog:fields.type.label"),
+                source: typeSource,
+                target: typeTarget,
+                status: comparisonStatus(typeSource, typeTarget),
+              },
+              {
+                id: "models",
+                label: t("channelDialog:fields.models.label"),
+                source: modelsSource,
+                target: modelsTarget,
+                status: comparisonStatus(modelsSource, modelsTarget),
+              },
+              {
+                id: "groups",
+                label: t("channelDialog:fields.groups.label"),
+                source: groupsSource,
+                target: groupsTarget,
+                status: comparisonStatus(groupsSource, groupsTarget),
+              },
+              {
+                id: "priority",
+                label: t("channelDialog:fields.priority.label"),
+                source: prioritySource,
+                target: priorityTarget,
+                status: comparisonStatus(prioritySource, priorityTarget),
+              },
+              {
+                id: "weight",
+                label: t("channelDialog:fields.weight.label"),
+                source: weightSource,
+                target: weightTarget,
+                status: comparisonStatus(weightSource, weightTarget),
+              },
+              {
+                id: "status",
+                label: t("channelDialog:fields.status.label"),
+                source: statusSource,
+                target: statusTarget,
+                status: comparisonStatus(statusSource, statusTarget),
+              },
+            ] as ManagedSiteMigrationPreviewRow["comparisons"],
+            warningText: item.warningCodes.map((warningCode) =>
+              getItemWarningText(t, warningCode),
+            ),
+            blockedReason:
+              item.status === "blocked"
+                ? getBlockedReasonText(t, item.blockingReasonCode)
+                : undefined,
+            blockedMessage: item.blockingMessage,
+          }
+        }) ?? [],
+      generalWarnings:
+        preview?.generalWarningCodes.map((code) =>
+          getGeneralWarningText(t, code),
+        ) ?? [],
+      readyCount: preview?.readyCount ?? 0,
+      blockedCount: preview?.blockedCount ?? 0,
+      totalCount: preview?.totalCount ?? selectedCount,
+      isLoading: isLoadingPreview,
+      isManualLoading: isManualPreviewRefresh,
+      error: previewError
+        ? t("managedSiteChannels:migration.preview.loadFailed", {
+            error: previewError,
+          })
+        : null,
+    }),
+    [
+      isLoadingPreview,
+      isManualPreviewRefresh,
+      preview,
+      previewError,
+      selectedCount,
+      selectedTarget,
+      sourceSiteType,
+      t,
+    ],
+  )
+
+  const presentationResult = useMemo<ManagedSiteMigrationResult | null>(
+    () =>
+      executionResult
+        ? {
+            summary: formatManagedSiteMigrationResultSummary(t, {
+              created: executionResult.createdCount,
+              failed: executionResult.failedCount,
+              skipped: executionResult.skippedCount,
+              uncertain: executionResult.uncertainCount ?? 0,
+              total: executionResult.totalSelected,
+            }),
+            items: executionResult.items.map((item) => {
+              const badge = getExecutionBadge(t, item)
+              return {
+                rowKey: String(item.channelId),
+                displayIdentifier: String(item.channelId),
+                name: item.channelName,
+                status: item.success
+                  ? "success"
+                  : item.skipped
+                    ? "skipped"
+                    : item.uncertain
+                      ? "uncertain"
+                      : "failed",
+                statusLabel: badge.text,
+                message: item.error,
+              }
+            }),
+          }
+        : null,
+    [executionResult, t],
+  )
+
+  const presentationLabels = useMemo<ManagedSiteMigrationLabels>(
+    () => ({
+      title: t("managedSiteChannels:migration.title"),
+      beta: t("managedSiteChannels:migration.betaBadge"),
+      description: t("managedSiteChannels:migration.description", {
+        selectedCount,
+      }),
+      targetLabel: t("managedSiteChannels:migration.target.label"),
+      targetPlaceholder: t("managedSiteChannels:migration.target.placeholder"),
+      sourceLabel: t("managedSiteChannels:migration.target.sourceLabel"),
+      destinationLabel: t(
+        "managedSiteChannels:migration.target.destinationLabel",
+      ),
+      unselectedTarget: t("managedSiteChannels:migration.target.unselected"),
+      refreshPreview: t("managedSiteChannels:migration.actions.refreshPreview"),
+      loadingPreview: t("managedSiteChannels:migration.preview.loading"),
+      generalWarningsTitle: t(
+        "managedSiteChannels:migration.generalWarnings.title",
+      ),
+      generalWarningsSummary: t(
+        "managedSiteChannels:migration.generalWarnings.compactSummary",
+      ),
+      limitsLabel: t(
+        "managedSiteChannels:migration.preview.badges.limitsLabel",
+      ),
+      warningsLabel: t(
+        "managedSiteChannels:migration.preview.badges.warningsLabel",
+      ),
+      ready: t("managedSiteChannels:migration.preview.status.ready"),
+      blocked: t("managedSiteChannels:migration.preview.status.blocked"),
+      fieldLabel: t("managedSiteChannels:migration.preview.compare.fieldLabel"),
+      resultsTitle: t("managedSiteChannels:migration.results.title"),
+      close: t("managedSiteChannels:migration.actions.close"),
+      cancel: t("managedSiteChannels:migration.actions.cancel"),
+      start: t("managedSiteChannels:migration.actions.start"),
+      running: t("managedSiteChannels:migration.actions.running"),
+      footerSummary: executionResult
+        ? formatManagedSiteMigrationResultSummary(t, {
+            created: executionResult.createdCount,
+            failed: executionResult.failedCount,
+            skipped: executionResult.skippedCount,
+            uncertain: executionResult.uncertainCount ?? 0,
+            total: executionResult.totalSelected,
+          })
+        : preview
           ? t("managedSiteChannels:migration.preview.summary", {
               ready: preview.readyCount,
               blocked: preview.blockedCount,
@@ -529,478 +715,56 @@ export function ManagedSiteChannelMigrationDialog({
             })
           : t("managedSiteChannels:migration.preview.selectedCount", {
               selectedCount,
-            })}
-      </div>
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleClose}
-          disabled={isRunning}
-        >
-          {t("managedSiteChannels:migration.actions.cancel")}
-        </Button>
-        <Button
-          type="button"
-          leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-          loading={isRunning}
-          disabled={
-            isLoadingPreview ||
-            !preview ||
-            preview.readyCount === 0 ||
-            Boolean(previewError)
-          }
-          onClick={() => setIsConfirmOpen(true)}
-        >
-          {isRunning
-            ? t("managedSiteChannels:migration.actions.running")
-            : t("managedSiteChannels:migration.actions.start")}
-        </Button>
-      </div>
-    </div>
+            }),
+      confirmationTitle: t("managedSiteChannels:migration.confirm.title"),
+      confirmationDescription: t(
+        "managedSiteChannels:migration.confirm.description",
+        {
+          ready: preview?.readyCount ?? 0,
+          total: preview?.totalCount ?? 0,
+        },
+      ),
+      confirmationWarningTitle: t(
+        "managedSiteChannels:migration.confirm.warningTitle",
+      ),
+      confirmationConfirm: t("managedSiteChannels:migration.confirm.confirm"),
+      missingValue: "—",
+      refreshRequired: t(
+        "managedSiteChannels:migration.results.refreshRequired",
+      ),
+      refreshRequiredAction: t(
+        "managedSiteChannels:migration.actions.refreshChannels",
+      ),
+    }),
+    [executionResult, preview, selectedCount, t],
   )
 
   return (
-    <>
-      <Modal
-        isOpen={isOpen}
-        onClose={handleClose}
-        closeOnBackdropClick={!isRunning}
-        closeOnEsc={!isRunning}
-        showCloseButton={!isRunning}
-        size="lg"
-        header={
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="text-base font-semibold">
-                {t("managedSiteChannels:migration.title")}
-              </div>
-              <Badge variant="warning" size="sm" className="shrink-0">
-                {t("managedSiteChannels:migration.betaBadge")}
-              </Badge>
-            </div>
-            <div className="text-muted-foreground text-sm">
-              {t("managedSiteChannels:migration.description", {
-                selectedCount,
-              })}
-            </div>
-          </div>
-        }
-        footer={footer}
-      >
-        <div className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-            <div className="space-y-2">
-              <div className="text-sm font-medium">
-                {t("managedSiteChannels:migration.target.label")}
-              </div>
-              <Select
-                value={targetSiteType}
-                onValueChange={handleTargetSiteTypeChange}
-                disabled={
-                  isLoadingPreview ||
-                  isRunning ||
-                  !!executionResult ||
-                  !availableTargets.length
-                }
-              >
-                <SelectTrigger
-                  aria-label={t("managedSiteChannels:migration.target.label")}
-                >
-                  <SelectValue
-                    placeholder={
-                      t("managedSiteChannels:migration.target.placeholder") ??
-                      ""
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableTargets.map((target) => (
-                    <SelectItem key={target.siteType} value={target.siteType}>
-                      {getManagedSiteLabel(t, target.siteType)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              leftIcon={<RefreshCcw className="h-4 w-4" />}
-              loading={isManualPreviewRefresh}
-              disabled={
-                !targetSiteType ||
-                isLoadingPreview ||
-                isRunning ||
-                !!executionResult
-              }
-              onClick={handleRefreshPreview}
-            >
-              {isManualPreviewRefresh
-                ? t("managedSiteChannels:migration.preview.loading")
-                : t("managedSiteChannels:migration.actions.refreshPreview")}
-            </Button>
-          </div>
-
-          <div className="grid gap-3 rounded-md border p-3 text-sm md:grid-cols-2">
-            <div>
-              <div className="text-muted-foreground text-xs uppercase">
-                {t("managedSiteChannels:migration.target.sourceLabel")}
-              </div>
-              <div className="font-medium">
-                {getManagedSiteLabel(t, sourceSiteType)}
-              </div>
-            </div>
-            <div>
-              <div className="text-muted-foreground text-xs uppercase">
-                {t("managedSiteChannels:migration.target.destinationLabel")}
-              </div>
-              <div className="font-medium">
-                {selectedTarget
-                  ? getManagedSiteLabel(t, selectedTarget.siteType)
-                  : t("managedSiteChannels:migration.target.unselected")}
-              </div>
-            </div>
-          </div>
-
-          {previewError && (
-            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
-              {t("managedSiteChannels:migration.preview.loadFailed", {
-                error: previewError,
-              })}
-            </div>
-          )}
-
-          {!previewError && isLoadingPreview && !isManualPreviewRefresh && (
-            <div className="text-muted-foreground rounded-md border p-3 text-sm">
-              <div className="flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t("managedSiteChannels:migration.preview.loading")}
-              </div>
-            </div>
-          )}
-
-          {!executionResult && preview && (
-            <>
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-medium">
-                      {t("managedSiteChannels:migration.generalWarnings.title")}
-                    </div>
-                    <div className="mt-1 text-xs">
-                      {t(
-                        "managedSiteChannels:migration.generalWarnings.compactSummary",
-                      )}
-                    </div>
-                  </div>
-                  <Tooltip
-                    content={
-                      <WarningTooltipContent
-                        items={preview.generalWarningCodes.map((code) =>
-                          getGeneralWarningText(t, code),
-                        )}
-                      />
-                    }
-                    position="left"
-                    wrapperClassName="inline-flex"
-                  >
-                    <Badge
-                      variant="secondary"
-                      size="sm"
-                      className="cursor-help whitespace-nowrap"
-                    >
-                      {preview.generalWarningCodes.length}{" "}
-                      {t(
-                        "managedSiteChannels:migration.preview.badges.limitsLabel",
-                      )}
-                    </Badge>
-                  </Tooltip>
-                </div>
-              </div>
-
-              <div className={SCROLLABLE_RESULT_LIST_CLASS}>
-                {preview.items.map((item) => (
-                  <div
-                    key={item.channelId}
-                    className="space-y-2 rounded-md border p-3"
-                  >
-                    <CollapsibleSection
-                      title={
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium">
-                              {item.channelName}
-                            </div>
-                            <div className="text-muted-foreground mt-0.5 flex flex-wrap gap-2 text-xs">
-                              <span>#{item.channelId}</span>
-                              <span className="truncate">
-                                {item.sourceChannel.base_url || "—"}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            {item.warningCodes.length > 0 && (
-                              <Tooltip
-                                content={
-                                  <WarningTooltipContent
-                                    items={item.warningCodes.map(
-                                      (warningCode) =>
-                                        getItemWarningText(t, warningCode),
-                                    )}
-                                  />
-                                }
-                                position="left"
-                                wrapperClassName="inline-flex"
-                              >
-                                <Badge
-                                  variant="secondary"
-                                  size="sm"
-                                  className="cursor-help whitespace-nowrap"
-                                >
-                                  {item.warningCodes.length}{" "}
-                                  {t(
-                                    "managedSiteChannels:migration.preview.badges.warningsLabel",
-                                  )}
-                                </Badge>
-                              </Tooltip>
-                            )}
-                            {item.status === "ready" ? (
-                              <Badge variant="success" size="sm">
-                                {t(
-                                  "managedSiteChannels:migration.preview.status.ready",
-                                )}
-                              </Badge>
-                            ) : (
-                              <Tooltip
-                                content={
-                                  <div className="max-w-sm space-y-2 text-left">
-                                    <div className="font-medium">
-                                      {getBlockedReasonText(
-                                        t,
-                                        item.blockingReasonCode,
-                                      )}
-                                    </div>
-                                    {item.blockingMessage && (
-                                      <div>{item.blockingMessage}</div>
-                                    )}
-                                  </div>
-                                }
-                                position="left"
-                                wrapperClassName="inline-flex"
-                              >
-                                <Badge
-                                  variant="warning"
-                                  size="sm"
-                                  className="cursor-help whitespace-nowrap"
-                                >
-                                  {t(
-                                    "managedSiteChannels:migration.preview.status.blocked",
-                                  )}
-                                </Badge>
-                              </Tooltip>
-                            )}
-                          </div>
-                        </div>
-                      }
-                      defaultOpen={item.status === "blocked"}
-                      buttonClassName="px-0 py-0 hover:bg-transparent dark:hover:bg-transparent"
-                      panelClassName="mt-3 space-y-3 border-0 bg-transparent p-0"
-                    >
-                      <div className="space-y-3">
-                        <div className="overflow-hidden rounded-md border">
-                          <div className="bg-border grid gap-px md:grid-cols-[minmax(0,120px)_minmax(0,1fr)_minmax(0,1fr)]">
-                            <div className="bg-muted/50 px-3 py-2 text-[11px] font-medium uppercase">
-                              {t(
-                                "managedSiteChannels:migration.preview.compare.fieldLabel",
-                              )}
-                            </div>
-                            <div className="bg-muted/50 px-3 py-2 text-xs font-medium">
-                              {t(
-                                "managedSiteChannels:migration.target.sourceLabel",
-                              )}
-                            </div>
-                            <div className="bg-muted/50 px-3 py-2 text-xs font-medium">
-                              {t(
-                                "managedSiteChannels:migration.target.destinationLabel",
-                              )}
-                            </div>
-                          </div>
-                          <PreviewComparisonRow
-                            label={t("channelDialog:fields.baseUrl.label")}
-                            sourceValue={
-                              item.sourceChannel.base_url?.trim() || "—"
-                            }
-                            targetValue={item.draft?.base_url.trim() || "—"}
-                          />
-                          <PreviewComparisonRow
-                            label={t("channelDialog:fields.type.label")}
-                            sourceValue={getChannelTypeText(
-                              sourceSiteType,
-                              item.sourceChannel.type,
-                            )}
-                            targetValue={
-                              item.draft
-                                ? getChannelTypeText(
-                                    preview.targetSiteType,
-                                    item.draft.type,
-                                  )
-                                : "—"
-                            }
-                          />
-                          <PreviewComparisonRow
-                            label={t("channelDialog:fields.models.label")}
-                            sourceValue={formatDelimitedValues(
-                              item.sourceChannel.models,
-                            )}
-                            targetValue={
-                              item.draft
-                                ? formatArrayValues(item.draft.models)
-                                : "—"
-                            }
-                          />
-                          <PreviewComparisonRow
-                            label={t("channelDialog:fields.groups.label")}
-                            sourceValue={formatDelimitedValues(
-                              item.sourceChannel.group,
-                            )}
-                            targetValue={
-                              item.draft
-                                ? formatArrayValues(item.draft.groups)
-                                : "—"
-                            }
-                          />
-                          <PreviewComparisonRow
-                            label={t("channelDialog:fields.priority.label")}
-                            sourceValue={String(
-                              item.sourceChannel.priority ?? 0,
-                            )}
-                            targetValue={
-                              item.draft ? String(item.draft.priority) : "—"
-                            }
-                          />
-                          <PreviewComparisonRow
-                            label={t("channelDialog:fields.weight.label")}
-                            sourceValue={String(item.sourceChannel.weight ?? 0)}
-                            targetValue={
-                              item.draft ? String(item.draft.weight) : "—"
-                            }
-                          />
-                          <PreviewComparisonRow
-                            label={t("channelDialog:fields.status.label")}
-                            sourceValue={getStatusText(
-                              t,
-                              item.sourceChannel.status,
-                            )}
-                            targetValue={
-                              item.draft
-                                ? getStatusText(t, item.draft.status)
-                                : t(
-                                    "managedSiteChannels:migration.preview.status.blocked",
-                                  )
-                            }
-                          />
-                        </div>
-
-                        {item.status === "blocked" && (
-                          <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-                            <div className="font-medium">
-                              {getBlockedReasonText(t, item.blockingReasonCode)}
-                            </div>
-                            {item.blockingMessage && (
-                              <div className="mt-1">{item.blockingMessage}</div>
-                            )}
-                          </div>
-                        )}
-
-                        {item.warningCodes.length > 0 && (
-                          <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-xs">
-                            {item.warningCodes.map((warningCode) => (
-                              <li key={warningCode}>
-                                {getItemWarningText(t, warningCode)}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    </CollapsibleSection>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {executionResult && (
-            <div className="space-y-3">
-              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-900/40 dark:bg-blue-950/30 dark:text-blue-200">
-                <div className="font-medium">
-                  {t("managedSiteChannels:migration.results.title")}
-                </div>
-                <div className="mt-1">
-                  {t("managedSiteChannels:migration.results.summary", {
-                    created: executionResult.createdCount,
-                    failed: executionResult.failedCount,
-                    skipped: executionResult.skippedCount,
-                    total: executionResult.totalSelected,
-                  })}
-                </div>
-              </div>
-
-              <div className={SCROLLABLE_RESULT_LIST_CLASS}>
-                {executionResult.items.map((item) => {
-                  const badge = getExecutionBadge(t, item)
-                  return (
-                    <div
-                      key={item.channelId}
-                      className="space-y-2 rounded-md border p-3"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-medium">
-                            {item.channelName}
-                          </div>
-                          <div className="text-muted-foreground text-xs">
-                            #{item.channelId}
-                          </div>
-                        </div>
-                        <Badge variant={badge.variant} size="sm">
-                          {badge.text}
-                        </Badge>
-                      </div>
-
-                      {item.error && (
-                        <div className="text-muted-foreground text-xs">
-                          {item.error}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      </Modal>
-
-      <DestructiveConfirmDialog
-        isOpen={isConfirmOpen}
-        onClose={() => {
+    <ManagedSiteMigrationDialogView
+      isOpen={isOpen}
+      selectedTarget={targetSiteType}
+      targets={availableTargets.map((target) => ({
+        value: target.siteType,
+        label: getManagedSiteLabel(t, target.siteType),
+      }))}
+      preview={presentationPreview}
+      result={presentationResult}
+      labels={presentationLabels}
+      isConfirmationOpen={isConfirmOpen}
+      isRunning={isRunning}
+      isRecoveryRunning={isRecovering}
+      refreshRequired={requiresUncertainResultRecovery}
+      callbacks={{
+        onTargetChange: handleTargetSiteTypeChange,
+        onRefreshPreview: handleRefreshPreview,
+        onRecoverRefreshRequired: () => void handleRecoverUncertainResult(),
+        onConfirm: () => void handleConfirm(),
+        onClose: handleClose,
+        onOpenConfirmation: () => setIsConfirmOpen(true),
+        onCloseConfirmation: () => {
           if (!isRunning) setIsConfirmOpen(false)
-        }}
-        title={t("managedSiteChannels:migration.confirm.title")}
-        description={t("managedSiteChannels:migration.confirm.description", {
-          ready: preview?.readyCount ?? 0,
-          total: preview?.totalCount ?? 0,
-        })}
-        warningTitle={t("managedSiteChannels:migration.confirm.warningTitle")}
-        cancelLabel={t("managedSiteChannels:migration.actions.cancel")}
-        confirmLabel={t("managedSiteChannels:migration.confirm.confirm")}
-        workingLabel={t("managedSiteChannels:migration.actions.running")}
-        onConfirm={() => {
-          void handleConfirm()
-        }}
-        isWorking={isRunning}
-      />
-    </>
+        },
+      }}
+    />
   )
 }

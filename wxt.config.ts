@@ -8,6 +8,7 @@ import {
   readE2eBuildVariant,
 } from "./e2e/utils/e2eBuildVariants"
 import { reactDevToolsAuto } from "./plugins/react-devtools-auto"
+import { OPENROUTER_WEB_ORIGIN } from "./src/services/accountSiteDefinitions/identifiers"
 
 type BrowserTarget = "chrome" | "firefox" | "safari" | string
 type ManifestPermission = string
@@ -65,6 +66,14 @@ export default defineConfig({
       optional_permissions: optionalPermissions,
       // ensure can get site cookies, please refer to https://stackoverflow.com/a/70070106/22460724
       host_permissions: ["<all_urls>"],
+      // MV3 scopes this resource to OpenRouter. MV2 exposes WAR globally, so
+      // the bridge itself fails closed on the exact canonical origin and path.
+      web_accessible_resources: [
+        {
+          resources: ["openrouter-clerk-session.js"],
+          matches: [`${OPENROUTER_WEB_ORIGIN}/*`],
+        },
+      ],
       browser_specific_settings: {
         gecko: {
           id: "{bc73541a-133d-4b50-b261-36ea20df0d24}",

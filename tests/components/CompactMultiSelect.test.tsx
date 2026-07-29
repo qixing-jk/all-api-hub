@@ -89,6 +89,43 @@ describe("CompactMultiSelect", () => {
     expect(onChange).toHaveBeenCalledWith(["id-alpha"])
   })
 
+  it("forwards combined field accessibility metadata to the chips input", () => {
+    renderCompact(
+      <>
+        <CompactMultiSelect
+          options={[]}
+          selected={[]}
+          onChange={vi.fn()}
+          aria-label="Models"
+          aria-describedby="models-error"
+          aria-invalid
+          aria-required
+        />
+        <p id="models-error">Select at least one model.</p>
+      </>,
+    )
+
+    const input = screen.getByRole("combobox", { name: "Models" })
+    expect(input).toHaveAttribute("aria-invalid", "true")
+    expect(input).toHaveAttribute("aria-required", "true")
+    expect(input).toHaveAccessibleDescription("Select at least one model.")
+  })
+
+  it("keeps optional chips inputs free of required metadata by default", () => {
+    renderCompact(
+      <CompactMultiSelect
+        options={[]}
+        selected={[]}
+        onChange={vi.fn()}
+        aria-label="Optional models"
+      />,
+    )
+
+    expect(
+      screen.getByRole("combobox", { name: "Optional models" }),
+    ).not.toHaveAttribute("aria-required")
+  })
+
   it("shows option counts in chips display mode", async () => {
     const user = userEvent.setup()
 

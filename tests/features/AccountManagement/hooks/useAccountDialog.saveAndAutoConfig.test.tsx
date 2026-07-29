@@ -1191,18 +1191,20 @@ describe("useAccountDialog save and auto-config flows", () => {
       }),
     ).rejects.toThrow("backend leaked details")
 
-    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Failure,
-      {
-        diagnostics: {
-          failure: {
-            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
-            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          diagnostics: {
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            },
           },
         },
-      },
-    )
+      )
+    })
     expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
@@ -3567,18 +3569,20 @@ describe("useAccountDialog save and auto-config flows", () => {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Failure,
-      {
-        diagnostics: {
-          failure: {
-            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
-            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
-            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.AuthInvalid,
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          diagnostics: {
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.AuthInvalid,
+            },
           },
         },
-      },
-    )
+      )
+    })
     expect(
       JSON.stringify(mockCompleteProductAnalyticsAction.mock.calls),
     ).not.toContain("private backend")

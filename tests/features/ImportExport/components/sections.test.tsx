@@ -7,6 +7,12 @@ import ExportSection from "~/features/ImportExport/components/ExportSection"
 import ImportSection from "~/features/ImportExport/components/ImportSection"
 import { WebDAVDecryptPasswordModal } from "~/features/ImportExport/components/WebDAVDecryptPasswordModal"
 import { IMPORT_EXPORT_TEST_IDS } from "~/features/ImportExport/testIds"
+import enImportExport from "~/locales/en/importExport.json"
+import es419ImportExport from "~/locales/es-419/importExport.json"
+import jaImportExport from "~/locales/ja/importExport.json"
+import viImportExport from "~/locales/vi/importExport.json"
+import zhCnImportExport from "~/locales/zh-CN/importExport.json"
+import zhTwImportExport from "~/locales/zh-TW/importExport.json"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -57,6 +63,82 @@ describe("ImportExport section components", () => {
     mockHandleExportAll.mockResolvedValue(undefined)
     mockHandleExportAccounts.mockResolvedValue(undefined)
     mockHandleExportPreferences.mockResolvedValue(undefined)
+  })
+
+  it("describes plaintext manual account and full exports in every app locale", () => {
+    const resources = [
+      {
+        locale: "en",
+        resource: enImportExport,
+        credentials: /saved (?:account )?credentials/i,
+        guidance: /store (?:the |exported )?files? securely/i,
+        providerSpecificForbidden: /OpenRouter|Management Key/i,
+        plaintext: /plaintext/i,
+      },
+      {
+        locale: "es-419",
+        resource: es419ImportExport,
+        credentials: /credenciales guardadas/i,
+        guidance: /guarda (?:el archivo|los archivos) de forma segura/i,
+        providerSpecificForbidden:
+          /OpenRouter|Management Key|clave de administración/i,
+        plaintext: /texto sin formato/i,
+      },
+      {
+        locale: "ja",
+        resource: jaImportExport,
+        credentials: /保存済み.*認証情報/,
+        guidance: /ファイルは安全に保管/,
+        providerSpecificForbidden: /OpenRouter|Management Key|管理キー/i,
+        plaintext: /平文/,
+      },
+      {
+        locale: "vi",
+        resource: viImportExport,
+        credentials: /thông tin xác thực.*đã lưu/i,
+        guidance: /lưu tệp an toàn/i,
+        providerSpecificForbidden: /OpenRouter|Management Key|khóa quản lý/i,
+        plaintext: /văn bản thuần túy/i,
+      },
+      {
+        locale: "zh-CN",
+        resource: zhCnImportExport,
+        credentials: /已保存的.*凭据/,
+        guidance: /妥善保管(?:导出)?文件/,
+        providerSpecificForbidden: /OpenRouter|Management Key|管理密钥/i,
+        plaintext: /明文/,
+      },
+      {
+        locale: "zh-TW",
+        resource: zhTwImportExport,
+        credentials: /已儲存的.*憑證/,
+        guidance: /妥善保管(?:匯出)?檔案/,
+        providerSpecificForbidden: /OpenRouter|Management Key|管理金鑰/i,
+        plaintext: /明文/,
+      },
+    ]
+    resources.forEach(
+      ({
+        locale,
+        resource,
+        credentials,
+        guidance,
+        providerSpecificForbidden,
+        plaintext,
+      }) => {
+        const descriptions = [
+          resource.export.accountDataDescription,
+          resource.export.fullBackupDescription,
+        ]
+        descriptions.forEach((description) => {
+          expect(description.length, locale).toBeGreaterThan(20)
+          expect(description, locale).toMatch(credentials)
+          expect(description, locale).toMatch(guidance)
+          expect(description, locale).not.toMatch(providerSpecificForbidden)
+          expect(description, locale).toMatch(plaintext)
+        })
+      },
+    )
   })
 
   it("routes export actions to utility helpers", async () => {

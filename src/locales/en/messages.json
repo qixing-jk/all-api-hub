@@ -130,6 +130,24 @@
     "corsError": "This may be caused by CORS configuration. Please check the CORS whitelist setting in Octopus settings.",
     "noChannelsToSync": "No channels to sync"
   },
+  "openrouter": {
+    "bootstrap": {
+      "cancelled_before_create": "OpenRouter key creation was cancelled before anything was created.",
+      "cancelledAfterCreate": "The key was created while cancellation was pending. Review it below and save or revoke it.",
+      "failed": "OpenRouter key creation could not be confirmed. Enter a key manually or review Management Keys.",
+      "invalid_origin": "OpenRouter key creation requires the canonical OpenRouter page.",
+      "logged_out": "Sign in to OpenRouter, then try auto-detect again.",
+      "mutationUnconfirmed": "OpenRouter may have created a key, but the result was not delivered. Review Management Keys before trying again.",
+      "page_changed": "Keep the OpenRouter Management Keys page open, then try auto-detect again.",
+      "timeout": "OpenRouter key creation timed out. Review Management Keys before trying again.",
+      "validationFailed": "OpenRouter created a key, but validation failed. Paste it below or revoke it from Management Keys."
+    },
+    "credentialInvalid": "This OpenRouter management key is invalid or revoked.",
+    "malformedResponse": "OpenRouter returned an unexpected response. Try again later.",
+    "managementKeyRequired": "Create a new Management Key in OpenRouter and copy it immediately. Existing Management Keys cannot be revealed again.",
+    "networkFallback": "Could not connect to OpenRouter. Check your connection and try again.",
+    "permissionDenied": "This OpenRouter management key does not have permission to read account credits."
+  },
   "operations": {
     "detection": {
       "failed": "Auto-detection failed, please enter information manually or ensure you are logged in to the target site",

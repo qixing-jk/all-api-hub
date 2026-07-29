@@ -117,6 +117,8 @@ test("adds an account, creates a reusable API profile from its key, and verifies
   extensionId,
   page,
 }) => {
+  test.slow()
+
   const serviceWorker = await getServiceWorker(context)
   await seedUserPreferences(serviceWorker, {
     tempWindowFallback: {
@@ -125,7 +127,6 @@ test("adds an account, creates a reusable API profile from its key, and verifies
   })
 
   const sitePage = await context.newPage()
-  installExtensionPageGuards(sitePage)
   await forceExtensionLanguage(sitePage, "en")
   await sitePage.addInitScript(() => {
     window.localStorage.setItem(

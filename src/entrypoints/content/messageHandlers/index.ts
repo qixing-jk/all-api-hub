@@ -5,6 +5,7 @@ import {
   handleGetLocalStorage,
   handleGetRenderedTitle,
   handleGetUserFromLocalStorage,
+  handleOpenRouterManagementKeyAction,
   handlePerformTempWindowFetch,
   handleShowShieldBypassUi,
   handleTriggerCheckinPageAction,
@@ -58,6 +59,12 @@ export function setupContentMessageHandlers() {
 
     if (request.action === RuntimeActionIds.ContentShowShieldBypassUi) {
       return handleShowShieldBypassUi(request, sendResponse)
+    }
+
+    if (
+      request.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
+    ) {
+      return handleOpenRouterManagementKeyAction(request, sendResponse)
     }
   })
 }

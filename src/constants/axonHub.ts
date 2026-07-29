@@ -30,8 +30,45 @@ export const AXON_HUB_CHANNEL_TYPE = {
   OLLAMA: "ollama",
 } as const
 
+const AXON_HUB_AUTO_SYNC_UNSUPPORTED_TYPES = new Set<string>([
+  AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT,
+  AXON_HUB_CHANNEL_TYPE.CLAUDECODE,
+])
+
 export type AxonHubChannelType =
   (typeof AXON_HUB_CHANNEL_TYPE)[keyof typeof AXON_HUB_CHANNEL_TYPE]
+
+export const AXON_HUB_CHANNEL_FIELD_IDS = {
+  NAME: "name",
+  TYPE: "type",
+  BASE_URL: "baseURL",
+  STATUS: "status",
+  KEY: "key",
+  SUPPORTED_MODELS: "supportedModels",
+  MANUAL_MODELS: "manualModels",
+  DEFAULT_TEST_MODEL: "defaultTestModel",
+  AUTO_SYNC_SUPPORTED_MODELS: "autoSyncSupportedModels",
+  AUTO_SYNC_MODEL_PATTERN: "autoSyncModelPattern",
+  TAGS: "tags",
+  ORDERING_WEIGHT: "orderingWeight",
+  REMARK: "remark",
+  EXTRA_MODEL_PREFIX: "extraModelPrefix",
+} as const
+
+export type AxonHubChannelFieldId =
+  (typeof AXON_HUB_CHANNEL_FIELD_IDS)[keyof typeof AXON_HUB_CHANNEL_FIELD_IDS]
+
+export const AXON_HUB_EDITABLE_FIELD_IDS: readonly AxonHubChannelFieldId[] =
+  Object.freeze(Object.values(AXON_HUB_CHANNEL_FIELD_IDS))
+
+export const AXON_HUB_TABLE_FIELD_IDS = [
+  AXON_HUB_CHANNEL_FIELD_IDS.NAME,
+  AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
+  AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL,
+  AXON_HUB_CHANNEL_FIELD_IDS.STATUS,
+  AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS,
+  AXON_HUB_CHANNEL_FIELD_IDS.TAGS,
+] as const
 
 export const AxonHubChannelTypeNames: Record<AxonHubChannelType, string> = {
   [AXON_HUB_CHANNEL_TYPE.OPENAI]: "OpenAI",
@@ -66,6 +103,11 @@ export const isAxonHubChannelType = (
 ): value is AxonHubChannelType =>
   typeof value === "string" &&
   Object.prototype.hasOwnProperty.call(AxonHubChannelTypeNames, value)
+
+/** Matches beta5: model auto-sync is unavailable for provider-managed credentials. */
+export const isAxonHubModelAutoSyncSupported = (value: unknown): boolean =>
+  isAxonHubChannelType(value) &&
+  !AXON_HUB_AUTO_SYNC_UNSUPPORTED_TYPES.has(value)
 
 export const DEFAULT_AXON_HUB_CHANNEL_FIELDS = {
   mode: "single",

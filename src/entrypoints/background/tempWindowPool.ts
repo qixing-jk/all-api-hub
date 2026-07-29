@@ -113,6 +113,7 @@ const DEFAULT_TEMP_CONTEXT_MODE: TempWindowFallbackPreferences["tempContextMode"
   TEMP_CONTEXT_MODES.Composite
 
 const TEMP_WINDOW_FETCH_NO_RESPONSE_ERROR = "No response from temp window fetch"
+
 const TURNSTILE_TOKEN_UNAVAILABLE_ERROR = "Turnstile token not available"
 const TEMP_WINDOW_ANALYTICS_FAILURE_REASONS = {
   IncognitoAccessRequired: "incognito_access_required",
@@ -1960,6 +1961,7 @@ async function getSiteDataFromTab(
       userId: userResponse.data?.userId,
       user: userResponse.data?.user,
       accessToken: userResponse.data?.accessToken,
+      transientAuth: userResponse.data?.transientAuth,
       sub2apiAuth: userResponse.data?.sub2apiAuth,
       siteTypeHint: userResponse.data?.siteTypeHint,
     }
@@ -2127,9 +2129,15 @@ async function acquireTempContext(
  * - 支持强制关闭（forceClose）直接销毁窗口/标签页
  * - 否则从持有集合中移除 request，仅在最后一个持有者释放后才进入空闲清理/销毁流程。
  */
+type TempContextReleaseOptions = {
+  forceClose?: boolean
+  reason?: string
+}
+
+/** Releases a request-owned context using the caller-selected timing policy. */
 async function releaseTempContext(
   requestId: string,
-  options: { forceClose?: boolean; reason?: string } = {},
+  options: TempContextReleaseOptions = {},
 ) {
   if (options.forceClose) {
     await executeTempContextRelease(requestId, options)
@@ -2152,7 +2160,7 @@ async function releaseTempContext(
 /** Executes the shared release operation after its timing policy is chosen. */
 async function executeTempContextRelease(
   requestId: string,
-  options: { forceClose?: boolean; reason?: string },
+  options: TempContextReleaseOptions,
 ): Promise<void> {
   const context = tempRequestContextMap.get(requestId)
   tempRequestContextMap.delete(requestId)
@@ -2673,6 +2681,41 @@ async function getTempContextTabSnapshot(
   }
 }
 
+/** Generic runtime port for background features that need a temporary page. */
+export const tempWindowBackgroundRuntime = {
+  run(
+    url: string,
+    options: { incognito?: boolean },
+    task: () => Promise<void>,
+  ): Promise<void> {
+    return runTempPageHandler(url, options, task)
+  },
+
+  async acquire(
+    url: string,
+    requestId: string,
+    suppressMinimize?: boolean,
+    options: { incognito?: boolean } = {},
+  ) {
+    const context = await acquireTempContext(
+      url,
+      requestId,
+      suppressMinimize,
+      options,
+    )
+    return {
+      tabId: context.tabId,
+      navigate: (
+        targetUrl: string,
+        meta: { requestId: string; origin: string },
+      ) => navigateTempContextToPage(context, targetUrl, meta),
+      inspect: () => getTempContextTabSnapshot(context.tabId),
+      release: (releaseOptions: TempContextReleaseOptions = {}) =>
+        releaseTempContext(requestId, releaseOptions),
+    }
+  },
+}
+
 /**
  * Opens a temporary tab inside a single shared window (composite mode).
  * Reuses the shared window when possible and falls back to recreating it when closed.
@@ -2939,9 +2982,15 @@ function scheduleContextCleanup(context: TempContext) {
  * - 从各种索引与池中移除
  * - 可选地关闭对应的窗口/标签页。
  */
+type DestroyContextOptions = {
+  skipBrowserRemoval?: boolean
+  reason?: string
+}
+
+/** Finalizes one tracked context before running best-effort external cleanup. */
 async function destroyContext(
   context: TempContext,
-  options: { skipBrowserRemoval?: boolean; reason?: string } = {},
+  options: DestroyContextOptions = {},
 ) {
   if (!isTrackedContext(context)) {
     return

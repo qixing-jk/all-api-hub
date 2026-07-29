@@ -9,7 +9,6 @@ import {
   getManagedSiteChannelRowActionsButtonTestId,
   getManagedSiteChannelRowEditActionTestId,
   getManagedSiteChannelRowSelectTestId,
-  getManagedSiteChannelRowTestId,
   MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX,
   MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
   MANAGED_SITE_CHANNELS_REFRESH_STATES,
@@ -36,6 +35,7 @@ type ManagedSiteChannelScenarioContext<TSiteType extends ManagedSiteType> = {
   sourceAccountSkipReason?: string
   tokenName?: string
   tokenCleanupPrefix?: string
+  beforeDeleteConfirm?: () => void | Promise<void>
 }
 
 const CRUD_MODEL = "gpt-4o-mini"
@@ -58,6 +58,18 @@ const channelsUrl = (extensionId: string, params?: Record<string, string>) => {
   return url.toString()
 }
 
+async function expectManagedSiteChannelsIdle(page: Page) {
+  const refreshButton = page.getByTestId(
+    MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton,
+  )
+  await expect(refreshButton).toHaveAttribute(
+    MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+    MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
+    { timeout: 60_000 },
+  )
+  return refreshButton
+}
+
 async function cleanupManagedSiteChannelsByPrefix<
   TSiteType extends ManagedSiteType,
 >(params: {
@@ -70,6 +82,7 @@ async function cleanupManagedSiteChannelsByPrefix<
     channelsUrl(params.extensionId, { search: params.prefix }),
   )
   await waitForExtensionRoot(params.page)
+  await expectManagedSiteChannelsIdle(params.page)
 
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const row = channelRowByText(params.page, params.prefix).first()
@@ -83,6 +96,7 @@ async function cleanupManagedSiteChannelsByPrefix<
       channelsUrl(params.extensionId, { search: params.prefix }),
     )
     await waitForExtensionRoot(params.page)
+    await expectManagedSiteChannelsIdle(params.page)
   }
 
   throw new Error(
@@ -155,7 +169,11 @@ export async function runManagedSiteChannelsCrudScenario<
     await expect(channelRowByName(context.page, channelName)).toHaveCount(0)
     await expectPaginationSummary(context.page, "1", "1", "1")
 
-    await deleteVisibleChannelByName(context.page, editedChannelName)
+    await deleteVisibleChannelByName(
+      context.page,
+      editedChannelName,
+      context.beforeDeleteConfirm,
+    )
   } finally {
     await cleanupManagedSiteChannelsByPrefix({
       page: context.page,
@@ -308,42 +326,13 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
   channelName: string
 }) {
   await expect(async () => {
+    const refreshButton = await expectManagedSiteChannelsIdle(params.page)
     const row = channelRowByName(params.page, params.channelName)
     if ((await row.count()) > 0) {
       await expect(row).toBeVisible({ timeout: 10_000 })
       return
     }
 
-    const refreshButton = params.page.getByTestId(
-      MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton,
-    )
-    await expect(refreshButton).toHaveAttribute(
-      MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
-      new RegExp(
-        `${MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle}|${MANAGED_SITE_CHANNELS_REFRESH_STATES.Loading}`,
-      ),
-      { timeout: 10_000 },
-    )
-    if (
-      (await refreshButton.getAttribute(
-        MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
-      )) === MANAGED_SITE_CHANNELS_REFRESH_STATES.Loading
-    ) {
-      await expect(refreshButton).toHaveAttribute(
-        MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
-        MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
-        {
-          timeout: 10_000,
-        },
-      )
-    }
-    await expect(refreshButton).toHaveAttribute(
-      MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
-      MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
-      {
-        timeout: 10_000,
-      },
-    )
     await expect(refreshButton).toBeEnabled({ timeout: 10_000 })
     await refreshButton.click()
     await expect(refreshButton)
@@ -353,13 +342,7 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
         { timeout: 5_000 },
       )
       .catch(() => undefined)
-    await expect(refreshButton).toHaveAttribute(
-      MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
-      MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
-      {
-        timeout: 30_000,
-      },
-    )
+    await expectManagedSiteChannelsIdle(params.page)
     await expect(row).toBeVisible({ timeout: 20_000 })
   }).toPass({
     intervals: [1_000, 3_000, 5_000],
@@ -419,10 +402,17 @@ async function cleanupKeyManagementTokensByPrefix(params: {
   )
 }
 
-async function deleteVisibleChannelByName(page: Page, channelName: string) {
+async function deleteVisibleChannelByName(
+  page: Page,
+  channelName: string,
+  beforeConfirm?: () => void | Promise<void>,
+) {
+  const refreshButton = await expectManagedSiteChannelsIdle(page)
   const row = channelRowByName(page, channelName)
+  await expect(row).toBeVisible({ timeout: 30_000 })
+  const rowTestToken = await getChannelRowTestToken(row)
   await row
-    .getByTestId(getManagedSiteChannelRowSelectTestId(channelName))
+    .getByTestId(getManagedSiteChannelRowSelectTestId(rowTestToken))
     .click()
   await expect(
     page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton),
@@ -430,10 +420,24 @@ async function deleteVisibleChannelByName(page: Page, channelName: string) {
   await page
     .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton)
     .click()
-  await page
-    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton)
-    .click()
-  await expect(row).toHaveCount(0, { timeout: 30_000 })
+  const confirmButton = page.getByTestId(
+    MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton,
+  )
+  await expect(confirmButton).toBeVisible({ timeout: 10_000 })
+  await expect(confirmButton).toBeEnabled({ timeout: 10_000 })
+  await beforeConfirm?.()
+  await confirmButton.click()
+  await expect(async () => {
+    expect(
+      await refreshButton.getAttribute(
+        MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+      ),
+    ).toBe(MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle)
+    expect(await row.count()).toBe(0)
+  }).toPass({
+    intervals: [500, 1_000, 3_000],
+    timeout: 60_000,
+  })
 }
 
 async function createManagedSiteChannelFromUi(
@@ -485,14 +489,15 @@ async function openSingleVisibleChannelEditDialog(page: Page, rowText: string) {
   await expect(async () => {
     const row = channelRowByName(page, rowText)
     await expect(row).toBeVisible({ timeout: 10_000 })
+    const rowTestToken = await getChannelRowTestToken(row)
     const actionsButton = row.getByTestId(
-      getManagedSiteChannelRowActionsButtonTestId(rowText),
+      getManagedSiteChannelRowActionsButtonTestId(rowTestToken),
     )
     await expect(actionsButton).toBeEnabled({ timeout: 10_000 })
     await actionsButton.click({ timeout: 10_000 })
 
     const editAction = page.getByTestId(
-      getManagedSiteChannelRowEditActionTestId(rowText),
+      getManagedSiteChannelRowEditActionTestId(rowTestToken),
     )
     await expect(editAction).toBeVisible({ timeout: 10_000 })
     await editAction.click({ timeout: 10_000 })
@@ -538,8 +543,18 @@ async function expectPaginationSummary(
   ).toHaveAttribute("data-total", total, { timeout: 30_000 })
 }
 
-function channelRowByName(page: Page, channelName: string) {
-  return page.getByTestId(getManagedSiteChannelRowTestId(channelName))
+export function channelRowByName(page: Page, channelName: string) {
+  return page
+    .locator(`[data-testid^="${MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX}"]`)
+    .filter({ has: page.getByText(channelName, { exact: true }) })
+}
+
+export async function getChannelRowTestToken(row: Locator) {
+  const testId = await row.getAttribute("data-testid")
+  if (!testId?.startsWith(MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX)) {
+    throw new Error("Managed-site channel row is missing its stable test token")
+  }
+  return testId.slice(MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX.length)
 }
 
 async function getChannelRowName(row: ReturnType<typeof channelRowByText>) {

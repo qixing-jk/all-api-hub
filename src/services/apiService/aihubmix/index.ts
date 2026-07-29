@@ -26,9 +26,16 @@ import type {
   SiteStatusInfo,
   UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
+import {
+  composeAbortSignals,
+  startAbortableTask,
+} from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiData } from "~/services/apiTransport/request"
-import { withSiteApiRequestLimit } from "~/services/apiTransport/siteRequestLimiter"
+import {
+  resolveSiteRequestLimitKey,
+  withSiteApiRequestLease,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type {
   ApiResponse,
   ApiServiceRequest,
@@ -662,16 +669,40 @@ export async function fetchAccountQuota(
 export async function fetchInviteLink(
   request: ApiServiceRequest,
 ): Promise<string> {
-  const userInfo = await withSiteApiRequestLimit(
-    AIHUBMIX_API_ORIGIN,
-    async () =>
-      await fetchAIHubMixData<unknown>(
-        request,
-        AIHUBMIX_API_USER_SELF_ENDPOINT,
-        { cache: "no-store", signal: request.abortSignal },
-      ),
+  const admissionAbort = composeAbortSignals([
     request.abortSignal,
-  )
+    request.abortDeadline?.signal,
+  ])
+  let userInfo: unknown
+
+  try {
+    userInfo = await withSiteApiRequestLease(
+      resolveSiteRequestLimitKey(AIHUBMIX_API_ORIGIN),
+      () => {
+        // Keep the deadline inside limiter dispatch so queue wait is not charged.
+        return startAbortableTask(
+          async (signal) => {
+            request.abortDeadline?.start()
+            return await fetchAIHubMixData<unknown>(
+              request,
+              AIHUBMIX_API_USER_SELF_ENDPOINT,
+              { cache: "no-store", signal },
+            )
+          },
+          {
+            signals: [request.abortSignal, request.abortDeadline?.signal],
+            timeoutMs: request.abortDeadline
+              ? undefined
+              : request.requestTimeoutMs,
+          },
+        )
+      },
+      admissionAbort.signal,
+    )
+  } finally {
+    admissionAbort.dispose()
+  }
+
   if (!userInfo || typeof userInfo !== "object" || Array.isArray(userInfo)) {
     throw new InviteLinkError(INVITE_LINK_FAILURE_REASONS.InviteDataMissing)
   }

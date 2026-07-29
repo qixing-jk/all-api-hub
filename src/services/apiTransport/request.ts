@@ -1,4 +1,8 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  composeAbortSignals,
+  startAbortableTask,
+} from "~/services/apiTransport/abortableTask"
 import { buildCompatUserIdHeaders } from "~/services/apiTransport/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import {
@@ -8,7 +12,10 @@ import {
 } from "~/services/apiTransport/errors"
 import { createMinIntervalLimiter } from "~/services/apiTransport/minIntervalLimiter"
 import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"
-import { withSiteApiRequestLimit } from "~/services/apiTransport/siteRequestLimiter"
+import {
+  resolveSiteRequestLimitKey,
+  withSiteApiRequestLease,
+} from "~/services/apiTransport/siteRequestLimiter"
 import type {
   ApiAuthTokenMode,
   ApiResponse,
@@ -61,6 +68,16 @@ interface ContentFetchResponse<T> {
   data?: T
   error?: string
   code?: ApiErrorCode
+}
+
+/** Redacts the exact request credential before emitting transport diagnostics. */
+function getSafeTransportErrorMessage(
+  error: unknown,
+  requestAccessToken: string | undefined,
+): string {
+  const message = getErrorMessage(error)
+  if (!requestAccessToken?.trim()) return message
+  return message.split(requestAccessToken).join("[REDACTED]")
 }
 
 const logger = createLogger("ApiTransportRequest")
@@ -163,16 +180,6 @@ function isLogApiEndpoint(endpoint: string | undefined): boolean {
  */
 function resolveLogRateLimitKey(baseUrl: string): string {
   return normalizeUrlForOriginKey(baseUrl, { stripTrailingSlashes: true })
-}
-
-/**
- * Extract the canonical site origin used for process-local API request limiting.
- */
-function resolveSiteRequestLimitKey(baseUrl: string): string {
-  return normalizeUrlForOriginKey(baseUrl, {
-    lowerCase: true,
-    stripTrailingSlashes: true,
-  })
 }
 
 /**
@@ -392,7 +399,10 @@ async function executeWithCurrentTabContentPreference<T>(
     logger.debug("Current-tab content fetch failed; falling back", {
       endpoint: context.endpoint,
       url: context.url,
-      error: getErrorMessage(error),
+      error: getSafeTransportErrorMessage(
+        error,
+        context.request.auth.accessToken,
+      ),
     })
     // Keep current-tab fallback behavior aligned with temp-window fallback for
     // now. If mutating-request replay becomes a real issue, handle it in the
@@ -597,56 +607,81 @@ const _fetchApi = async <T>(
     )
   }
 
-  const executeRequest = async () => {
-    const fallback = async () =>
-      await executeWithTempWindowFallback(context, async () => {
-        if (onlyData) {
-          return await apiRequestData<T>(
+  const startRequest = () => {
+    return startAbortableTask(
+      async (signal) => {
+        request.abortDeadline?.start()
+        const dispatchedFetchOptions = { ...fetchOptions, signal }
+        const dispatchedContext = {
+          ...context,
+          fetchOptions: dispatchedFetchOptions,
+        }
+        const fallback = async () =>
+          await executeWithTempWindowFallback(dispatchedContext, async () => {
+            if (onlyData) {
+              return await apiRequestData<T>(
+                url,
+                dispatchedFetchOptions,
+                options.endpoint,
+                responseType,
+              )
+            }
+            const response = await apiRequest<T>(
+              url,
+              dispatchedFetchOptions,
+              options.endpoint,
+              responseType,
+            )
+
+            if (responseType === "json") {
+              return response as ApiResponse<T>
+            }
+
+            return response as T
+          })
+
+        return await executeWithCurrentTabContentPreference<T>(
+          {
+            request,
             url,
-            fetchOptions,
-            options.endpoint,
+            endpoint: options.endpoint,
+            fetchOptions: dispatchedFetchOptions,
+            onlyData,
             responseType,
-          )
-        }
-        const response = await apiRequest<T>(
-          url,
-          fetchOptions,
-          options.endpoint,
-          responseType,
+            options,
+          },
+          fallback,
         )
-
-        if (responseType === "json") {
-          return response as ApiResponse<T>
-        }
-
-        return response as T
-      })
-
-    return await executeWithCurrentTabContentPreference<T>(
-      {
-        request,
-        url,
-        endpoint: options.endpoint,
-        fetchOptions,
-        onlyData,
-        responseType,
-        options,
       },
-      fallback,
+      {
+        signals: [
+          fetchOptions.signal ?? undefined,
+          request.abortDeadline?.signal,
+        ],
+        timeoutMs: request.abortDeadline ? undefined : request.requestTimeoutMs,
+      },
     )
   }
 
   if (request.bypassSiteRequestLimit) {
-    return await executeRequest()
+    return await startRequest().result
   }
 
   const siteRequestLimitKey = resolveSiteRequestLimitKey(baseUrl)
-
-  return await withSiteApiRequestLimit(
-    siteRequestLimitKey,
-    executeRequest,
+  const admissionAbort = composeAbortSignals([
     fetchOptions.signal ?? undefined,
-  )
+    request.abortDeadline?.signal,
+  ])
+
+  try {
+    return await withSiteApiRequestLease(
+      siteRequestLimitKey,
+      startRequest,
+      admissionAbort.signal,
+    )
+  } finally {
+    admissionAbort.dispose()
+  }
 }
 
 /**

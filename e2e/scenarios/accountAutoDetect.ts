@@ -14,6 +14,7 @@ type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
 
 type AccountDetectionContext = void | {
   prepareDetectedDialog?: (dialog: AccountAddDialog) => Promise<void>
+  cleanupDetectableSite?: () => Promise<void>
 }
 
 async function runFinalizers(finalizers: Array<() => Promise<void>>) {
@@ -81,9 +82,10 @@ export async function runAccountAutoDetectScenario(
   const sitePage = await env.openSitePage()
   let fixture: AccountFixture | undefined
   let primaryError: unknown
+  let detectionContext: AccountDetectionContext
 
   try {
-    const detectionContext = await env.prepareDetectableSite(sitePage)
+    detectionContext = await env.prepareDetectableSite(sitePage)
     const savedAccount = await saveAutoDetectedAccountFromApp({
       page: env.extensionPage,
       extensionId: env.extensionId,
@@ -105,6 +107,9 @@ export async function runAccountAutoDetectScenario(
   let cleanupError: unknown
   try {
     await runFinalizers([
+      async () => {
+        await detectionContext?.cleanupDetectableSite?.()
+      },
       async () => {
         await env.cleanup?.()
       },

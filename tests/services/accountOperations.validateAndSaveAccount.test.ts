@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -7,6 +7,8 @@ import {
   validateAndUpdateAccount,
 } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -25,10 +27,26 @@ const {
   fetchAccountDataMock,
   getSiteTypeCapabilitiesMock,
   ensureDefaultApiTokenForAccountMock,
+  loggerMock,
+  otherLoggerMock,
+  validateManagementKeyMock,
 } = vi.hoisted(() => ({
   fetchAccountDataMock: vi.fn(),
   getSiteTypeCapabilitiesMock: vi.fn(),
   ensureDefaultApiTokenForAccountMock: vi.fn(),
+  loggerMock: {
+    debug: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  },
+  otherLoggerMock: {
+    debug: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  },
+  validateManagementKeyMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -42,6 +60,15 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
+}))
+
+vi.mock("~/services/apiService/openrouter", () => ({
+  validateManagementKey: validateManagementKeyMock,
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: (scope: string) =>
+    scope === "AccountOperations" ? loggerMock : otherLoggerMock,
 }))
 
 vi.mock(
@@ -133,7 +160,124 @@ const updateAccountFromRemote = (accountId: string) =>
     "",
   )
 
+const LOG_TEST_ACCOUNT_DATA = {
+  quota: 100,
+  today_prompt_tokens: 1,
+  today_completion_tokens: 2,
+  today_quota_consumption: 3,
+  today_requests_count: 4,
+  today_income: 5,
+  checkIn: CHECK_IN_DISABLED,
+}
+
+const saveAccountForLogTest = (
+  siteType: typeof SITE_TYPES.NEW_API | typeof SITE_TYPES.OPENROUTER,
+  deferDataRefresh: boolean,
+) =>
+  validateAndSaveAccount(
+    siteType === SITE_TYPES.OPENROUTER
+      ? "https://openrouter.ai/private-path"
+      : "https://api.example.invalid/private-path",
+    siteType === SITE_TYPES.OPENROUTER
+      ? " Private OpenRouter Label "
+      : " Ordinary Example ",
+    siteType === SITE_TYPES.OPENROUTER ? "private-user" : "ordinary-user",
+    siteType === SITE_TYPES.OPENROUTER
+      ? "private-management-key"
+      : "ordinary-token",
+    siteType === SITE_TYPES.OPENROUTER ? "private-editable-id" : "ordinary-id",
+    "7",
+    "",
+    [],
+    CHECK_IN_DISABLED,
+    siteType,
+    AuthTypeEnum.AccessToken,
+    "",
+    undefined,
+    false,
+    false,
+    undefined,
+    { deferDataRefresh },
+  )
+
+const addStoredAccountForLogTest = (
+  siteType: typeof SITE_TYPES.NEW_API | typeof SITE_TYPES.OPENROUTER,
+) =>
+  accountStorage.addAccount({
+    site_name:
+      siteType === SITE_TYPES.OPENROUTER ? "OpenRouter" : "Old Example",
+    site_url:
+      siteType === SITE_TYPES.OPENROUTER
+        ? "https://openrouter.ai"
+        : "https://api.example.invalid",
+    site_type: siteType,
+    health: { status: SiteHealthStatus.Healthy },
+    authType: AuthTypeEnum.AccessToken,
+    disabled: false,
+    excludeFromTotalBalance: false,
+    excludeFromTodayIncome: false,
+    exchange_rate: 7,
+    notes: "",
+    tagIds: [],
+    checkIn: CHECK_IN_DISABLED,
+    account_info: {
+      id:
+        siteType === SITE_TYPES.OPENROUTER
+          ? "private-existing-id"
+          : "ordinary-id",
+      access_token:
+        siteType === SITE_TYPES.OPENROUTER
+          ? "private-management-key"
+          : "ordinary-token",
+      username:
+        siteType === SITE_TYPES.OPENROUTER ? "private-user" : "ordinary-user",
+      quota: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+    },
+    last_sync_time: 0,
+  })
+
+const updateAccountForLogTest = (
+  accountId: string,
+  siteType: typeof SITE_TYPES.NEW_API | typeof SITE_TYPES.OPENROUTER,
+  deferDataRefresh: boolean,
+) =>
+  validateAndUpdateAccount(
+    accountId,
+    siteType === SITE_TYPES.OPENROUTER
+      ? "https://openrouter.ai/private-path"
+      : "https://api.example.invalid/private-path",
+    siteType === SITE_TYPES.OPENROUTER
+      ? " Private OpenRouter Label "
+      : " Ordinary Updated Example ",
+    siteType === SITE_TYPES.OPENROUTER ? "private-user" : "ordinary-user",
+    siteType === SITE_TYPES.OPENROUTER
+      ? "private-management-key"
+      : "ordinary-token",
+    siteType === SITE_TYPES.OPENROUTER ? "private-editable-id" : "ordinary-id",
+    "7",
+    "",
+    [],
+    CHECK_IN_DISABLED,
+    siteType,
+    AuthTypeEnum.AccessToken,
+    "",
+    undefined,
+    false,
+    false,
+    undefined,
+    { deferDataRefresh },
+  )
+
 describe("accountOperations validateAndSaveAccount", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   beforeEach(async () => {
     vi.clearAllMocks()
     await accountStorage.clearAllData()
@@ -143,6 +287,7 @@ describe("accountOperations validateAndSaveAccount", () => {
       autoProvisionKeyOnAccountAdd: false,
       showTodayCashflow: false,
     })
+    validateManagementKeyMock.mockResolvedValue({})
     getSiteTypeCapabilitiesMock.mockReturnValue({
       account: {
         data: {
@@ -152,6 +297,1401 @@ describe("accountOperations validateAndSaveAccount", () => {
         tokenProvisioning: {},
       },
     })
+  })
+
+  it("validates an OpenRouter management key before deferred persistence", async () => {
+    const events: string[] = []
+    validateManagementKeyMock.mockImplementation(
+      async ({ accessToken }: { accessToken: string }) => {
+        events.push(`validate:${accessToken}`)
+        return {}
+      },
+    )
+    const addSpy = vi
+      .spyOn(accountStorage, "addAccount")
+      .mockImplementation(async (_data) => {
+        events.push("persist")
+        return "openrouter:test"
+      })
+
+    const result = await validateAndSaveAccount(
+      "https://openrouter.ai",
+      "OpenRouter",
+      "",
+      "  sk-or-v1-test  ",
+      "",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    expect(validateManagementKeyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ accessToken: "sk-or-v1-test" }),
+    )
+    expect(events).toEqual(["validate:sk-or-v1-test", "persist"])
+    expect(addSpy).toHaveBeenCalled()
+  })
+
+  it("preserves ordinary preference errors in fallback logs", async () => {
+    const preferenceError = new Error("preference storage unavailable")
+    vi.spyOn(userPreferences, "getPreferences").mockRejectedValue(
+      preferenceError,
+    )
+
+    const result = await validateAndSaveAccount(
+      "https://api.example.invalid",
+      "Example",
+      "user",
+      "token",
+      "1",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      "Failed to read user preferences; falling back to defaults",
+      preferenceError,
+    )
+  })
+
+  it("preserves ordinary storage errors in failure logs", async () => {
+    const storageError = new Error("account storage unavailable")
+    vi.spyOn(accountStorage, "addAccount").mockRejectedValue(storageError)
+
+    const result = await validateAndSaveAccount(
+      "https://api.example.invalid",
+      "Example",
+      "user",
+      "token",
+      "1",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(false)
+    expect(loggerMock.error).toHaveBeenCalledWith(
+      "Failed to save account",
+      storageError,
+    )
+  })
+
+  it("preserves ordinary data-fetch errors in fallback logs", async () => {
+    const fetchError = new Error("upstream unavailable")
+    fetchAccountDataMock.mockRejectedValue(fetchError)
+
+    const result = await validateAndSaveAccount(
+      "https://api.example.invalid",
+      "Example",
+      "user",
+      "token",
+      "1",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result.success).toBe(true)
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      "Data fetch failed; saving configuration only",
+      fetchError,
+    )
+  })
+
+  it("keeps OpenRouter data-fetch errors out of fallback logs", async () => {
+    const fetchError = new Error("credential-sensitive upstream response")
+    fetchAccountDataMock.mockRejectedValue(fetchError)
+
+    const result = await validateAndSaveAccount(
+      "https://openrouter.ai",
+      "OpenRouter",
+      "",
+      "management-key-placeholder",
+      "",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result.success).toBe(true)
+    expect(loggerMock.warn).toHaveBeenCalledWith(
+      "Data fetch failed; saving configuration only",
+      {
+        siteType: SITE_TYPES.OPENROUTER,
+        status: "fallback",
+      },
+    )
+    expect(loggerMock.warn).not.toHaveBeenCalledWith(
+      "Data fetch failed; saving configuration only",
+      fetchError,
+    )
+  })
+
+  it.each([
+    {
+      label: "invalid credentials",
+      error: new ApiError(
+        "openrouter-401-private-sentinel",
+        401,
+        "/credits",
+        API_ERROR_CODES.HTTP_401,
+      ),
+      expectedReason: "messages:openrouter.credentialInvalid",
+    },
+    {
+      label: "missing permission",
+      error: new ApiError(
+        "openrouter-403-private-sentinel",
+        403,
+        "/credits",
+        API_ERROR_CODES.HTTP_403,
+      ),
+      expectedReason: "messages:openrouter.permissionDenied",
+    },
+    {
+      label: "network failure",
+      error: new ApiError(
+        "openrouter-network-private-sentinel",
+        undefined,
+        "/credits",
+        API_ERROR_CODES.NETWORK_ERROR,
+      ),
+      expectedReason: "messages:openrouter.networkFallback",
+    },
+    {
+      label: "rate limiting",
+      error: new ApiError(
+        "openrouter-429-private-sentinel",
+        429,
+        "/credits",
+        API_ERROR_CODES.HTTP_429,
+      ),
+      expectedReason: "account:healthStatus.unknownError",
+    },
+    {
+      label: "server failure",
+      error: new ApiError(
+        "openrouter-500-private-sentinel",
+        500,
+        "/credits",
+        API_ERROR_CODES.HTTP_OTHER,
+      ),
+      expectedReason: "account:healthStatus.unknownError",
+    },
+    {
+      label: "content mismatch",
+      error: new ApiError(
+        "openrouter-content-private-sentinel",
+        200,
+        "/credits",
+        API_ERROR_CODES.CONTENT_TYPE_MISMATCH,
+      ),
+      expectedReason: "messages:openrouter.malformedResponse",
+    },
+    {
+      label: "JSON parse failure",
+      error: new ApiError(
+        "openrouter-json-private-sentinel",
+        200,
+        "/credits",
+        API_ERROR_CODES.JSON_PARSE_ERROR,
+      ),
+      expectedReason: "messages:openrouter.malformedResponse",
+    },
+    {
+      label: "malformed key response",
+      error: new ApiError("openrouter-key-private-sentinel", undefined, "/key"),
+      expectedReason: "messages:openrouter.malformedResponse",
+    },
+    {
+      label: "unknown failure",
+      error: new Error("openrouter-unknown-private-sentinel"),
+      expectedReason: "account:healthStatus.unknownError",
+    },
+  ])(
+    "stores a controlled OpenRouter add health reason for $label",
+    async ({ error, expectedReason }) => {
+      fetchAccountDataMock.mockRejectedValueOnce(error)
+
+      const result = await saveAccountForLogTest(SITE_TYPES.OPENROUTER, false)
+
+      expect(result.success).toBe(true)
+      const saved = await accountStorage.getAccountById(result.accountId!)
+      expect(saved?.health).toMatchObject({
+        status: SiteHealthStatus.Warning,
+        reason: expectedReason,
+      })
+      expect(JSON.stringify(saved)).not.toContain(error.message)
+    },
+  )
+
+  it.each([
+    {
+      label: "non-management key",
+      error: new OpenRouterManagementKeyRequiredError(),
+      expectedMessage: "messages:openrouter.managementKeyRequired",
+    },
+    {
+      label: "rate limiting",
+      error: new ApiError(
+        "openrouter-key-429-private-sentinel",
+        429,
+        "/key",
+        API_ERROR_CODES.HTTP_429,
+      ),
+      expectedMessage: "messages:openrouter.networkFallback",
+    },
+    {
+      label: "server failure",
+      error: new ApiError(
+        "openrouter-key-500-private-sentinel",
+        500,
+        "/key",
+        API_ERROR_CODES.HTTP_OTHER,
+      ),
+      expectedMessage: "messages:openrouter.networkFallback",
+    },
+    {
+      label: "content mismatch",
+      error: new ApiError(
+        "openrouter-key-content-private-sentinel",
+        200,
+        "/key",
+        API_ERROR_CODES.CONTENT_TYPE_MISMATCH,
+      ),
+      expectedMessage: "messages:openrouter.malformedResponse",
+    },
+    {
+      label: "JSON parse failure",
+      error: new ApiError(
+        "openrouter-key-json-private-sentinel",
+        200,
+        "/key",
+        API_ERROR_CODES.JSON_PARSE_ERROR,
+      ),
+      expectedMessage: "messages:openrouter.malformedResponse",
+    },
+    {
+      label: "local structure validation",
+      error: new ApiError(
+        "openrouter-key-structure-private-sentinel",
+        undefined,
+        "/key",
+      ),
+      expectedMessage: "messages:openrouter.malformedResponse",
+    },
+  ])(
+    "classifies OpenRouter credential $label without backend text",
+    async ({ error, expectedMessage }) => {
+      validateManagementKeyMock.mockRejectedValueOnce(error)
+
+      const result = await saveAccountForLogTest(SITE_TYPES.OPENROUTER, true)
+
+      expect(result).toEqual({ success: false, message: expectedMessage })
+      expect(JSON.stringify(result)).not.toContain(error.message)
+    },
+  )
+
+  it("stores a controlled malformed-credits reason in an OpenRouter update", async () => {
+    const privateError = new ApiError(
+      "openrouter-credits-private-sentinel",
+      undefined,
+      "/credits",
+    )
+    const accountId = await addStoredAccountForLogTest(SITE_TYPES.OPENROUTER)
+    fetchAccountDataMock.mockRejectedValueOnce(privateError)
+
+    const result = await updateAccountForLogTest(
+      accountId,
+      SITE_TYPES.OPENROUTER,
+      false,
+    )
+
+    expect(result.success).toBe(true)
+    const saved = await accountStorage.getAccountById(accountId)
+    expect(saved?.health).toMatchObject({
+      status: SiteHealthStatus.Warning,
+      reason: "messages:openrouter.malformedResponse",
+    })
+    expect(JSON.stringify(saved)).not.toContain(privateError.message)
+  })
+
+  it.each(["add", "update"] as const)(
+    "preserves ordinary data-fetch health reasons on %s",
+    async (operation) => {
+      const rawReason = `ordinary-${operation}-private-diagnostic`
+      fetchAccountDataMock.mockRejectedValueOnce(new Error(rawReason))
+
+      if (operation === "add") {
+        const result = await saveAccountForLogTest(SITE_TYPES.NEW_API, false)
+        const saved = await accountStorage.getAccountById(result.accountId!)
+        expect(saved?.health.reason).toBe(rawReason)
+        return
+      }
+
+      const accountId = await addStoredAccountForLogTest(SITE_TYPES.NEW_API)
+      await updateAccountForLogTest(accountId, SITE_TYPES.NEW_API, false)
+      const saved = await accountStorage.getAccountById(accountId)
+      expect(saved?.health.reason).toBe(rawReason)
+    },
+  )
+
+  it("limits OpenRouter validation, preference, and storage failure logs", async () => {
+    validateManagementKeyMock.mockRejectedValue(
+      new Error("private validation response with stack"),
+    )
+
+    await saveAccountForLogTest(SITE_TYPES.OPENROUTER, true)
+    expect(loggerMock.warn.mock.calls).toEqual([
+      [
+        "Account credential validation failed",
+        { siteType: SITE_TYPES.OPENROUTER, status: "rejected" },
+      ],
+    ])
+    expect(loggerMock.error.mock.calls).toEqual([])
+
+    vi.clearAllMocks()
+    validateManagementKeyMock.mockResolvedValue({
+      userId: "private-creator-id",
+    })
+    vi.mocked(userPreferences.getPreferences).mockRejectedValue(
+      new Error("private preference failure with stack"),
+    )
+    await saveAccountForLogTest(SITE_TYPES.OPENROUTER, true)
+    expect(loggerMock.warn.mock.calls).toEqual([
+      [
+        "Failed to read user preferences; falling back to defaults",
+        { status: "fallback" },
+      ],
+    ])
+    expect(loggerMock.info.mock.calls).toEqual([
+      [
+        "Account saved before deferred data refresh",
+        {
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "saved_before_deferred_refresh",
+        },
+      ],
+    ])
+    expect(loggerMock.error.mock.calls).toEqual([])
+
+    vi.clearAllMocks()
+    validateManagementKeyMock.mockResolvedValue({
+      userId: "private-creator-id",
+    })
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      autoProvisionKeyOnAccountAdd: false,
+      showTodayCashflow: false,
+    })
+    vi.spyOn(accountStorage, "addAccount").mockRejectedValue(
+      new Error("private storage failure with stack"),
+    )
+    await saveAccountForLogTest(SITE_TYPES.OPENROUTER, true)
+    expect(loggerMock.warn.mock.calls).toEqual([])
+    expect(loggerMock.info.mock.calls).toEqual([])
+    expect(loggerMock.error.mock.calls).toEqual([
+      [
+        "Failed to save account",
+        { siteType: SITE_TYPES.OPENROUTER, status: "persist_failed" },
+      ],
+    ])
+  })
+
+  it("restores the four baseline ordinary-site success logs", async () => {
+    fetchAccountDataMock.mockResolvedValue(LOG_TEST_ACCOUNT_DATA)
+
+    await saveAccountForLogTest(SITE_TYPES.NEW_API, true)
+    expect(loggerMock.info.mock.calls).toEqual([
+      [
+        "Account saved before deferred data refresh",
+        {
+          accountId: expect.any(String),
+          siteName: "Ordinary Example",
+          siteType: SITE_TYPES.NEW_API,
+        },
+      ],
+    ])
+
+    loggerMock.info.mockClear()
+    await saveAccountForLogTest(SITE_TYPES.NEW_API, false)
+    expect(loggerMock.info.mock.calls).toEqual([
+      [
+        "Account saved with data refresh",
+        {
+          accountId: expect.any(String),
+          siteName: "Ordinary Example",
+          siteType: SITE_TYPES.NEW_API,
+        },
+      ],
+    ])
+
+    loggerMock.info.mockClear()
+    const accountId = await addStoredAccountForLogTest(SITE_TYPES.NEW_API)
+    await updateAccountForLogTest(accountId, SITE_TYPES.NEW_API, true)
+    expect(loggerMock.info.mock.calls).toEqual([
+      [
+        "Account updated before deferred data refresh",
+        {
+          accountId,
+          siteName: "Ordinary Updated Example",
+          siteType: SITE_TYPES.NEW_API,
+        },
+      ],
+    ])
+
+    loggerMock.info.mockClear()
+    await updateAccountForLogTest(accountId, SITE_TYPES.NEW_API, false)
+    expect(loggerMock.info.mock.calls).toEqual([
+      [
+        "Account updated with data refresh",
+        {
+          accountId,
+          siteName: "Ordinary Updated Example",
+          siteType: SITE_TYPES.NEW_API,
+        },
+      ],
+    ])
+  })
+
+  it("limits every OpenRouter add log payload across success and fallback paths", async () => {
+    fetchAccountDataMock.mockResolvedValue(LOG_TEST_ACCOUNT_DATA)
+
+    await saveAccountForLogTest(SITE_TYPES.OPENROUTER, true)
+    expect(loggerMock.debug.mock.calls).toEqual([])
+    expect(loggerMock.info.mock.calls).toEqual([
+      [
+        "Account saved before deferred data refresh",
+        {
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "saved_before_deferred_refresh",
+        },
+      ],
+    ])
+    expect(loggerMock.warn.mock.calls).toEqual([])
+    expect(loggerMock.error.mock.calls).toEqual([])
+
+    vi.clearAllMocks()
+    validateManagementKeyMock.mockResolvedValue({
+      userId: "private-creator-id",
+    })
+    fetchAccountDataMock.mockResolvedValue(LOG_TEST_ACCOUNT_DATA)
+    await saveAccountForLogTest(SITE_TYPES.OPENROUTER, false)
+    expect(loggerMock.debug.mock.calls).toEqual([
+      [
+        "Fetching account data for new account",
+        {
+          authType: AuthTypeEnum.AccessToken,
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "fetching",
+        },
+      ],
+    ])
+    expect(loggerMock.info.mock.calls).toEqual([
+      [
+        "Account saved with data refresh",
+        {
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "saved_with_refresh",
+        },
+      ],
+    ])
+    expect(loggerMock.warn.mock.calls).toEqual([])
+    expect(loggerMock.error.mock.calls).toEqual([])
+
+    vi.clearAllMocks()
+    validateManagementKeyMock.mockResolvedValue({
+      userId: "private-creator-id",
+    })
+    fetchAccountDataMock.mockRejectedValue(
+      new Error("private backend message with stack"),
+    )
+    await saveAccountForLogTest(SITE_TYPES.OPENROUTER, false)
+    expect(loggerMock.debug.mock.calls).toEqual([
+      [
+        "Fetching account data for new account",
+        {
+          authType: AuthTypeEnum.AccessToken,
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "fetching",
+        },
+      ],
+    ])
+    expect(loggerMock.info.mock.calls).toEqual([])
+    expect(loggerMock.warn.mock.calls).toEqual([
+      [
+        "Data fetch failed; saving configuration only",
+        { siteType: SITE_TYPES.OPENROUTER, status: "fallback" },
+      ],
+      [
+        "Account saved without data refresh",
+        {
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "saved_without_data_refresh",
+        },
+      ],
+    ])
+    expect(loggerMock.error.mock.calls).toEqual([])
+  })
+
+  it("limits every OpenRouter update log payload across success and fallback paths", async () => {
+    fetchAccountDataMock.mockResolvedValue(LOG_TEST_ACCOUNT_DATA)
+    const accountId = await addStoredAccountForLogTest(SITE_TYPES.OPENROUTER)
+    loggerMock.debug.mockClear()
+    loggerMock.info.mockClear()
+    loggerMock.warn.mockClear()
+    loggerMock.error.mockClear()
+
+    await updateAccountForLogTest(accountId, SITE_TYPES.OPENROUTER, true)
+    expect(loggerMock.debug.mock.calls).toEqual([])
+    expect(loggerMock.info.mock.calls).toEqual([
+      [
+        "Account updated before deferred data refresh",
+        {
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "updated_before_deferred_refresh",
+        },
+      ],
+    ])
+    expect(loggerMock.warn.mock.calls).toEqual([])
+    expect(loggerMock.error.mock.calls).toEqual([])
+
+    vi.clearAllMocks()
+    validateManagementKeyMock.mockResolvedValue({})
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      account: { data: { fetchData: fetchAccountDataMock } },
+    })
+    fetchAccountDataMock.mockResolvedValue(LOG_TEST_ACCOUNT_DATA)
+    await updateAccountForLogTest(accountId, SITE_TYPES.OPENROUTER, false)
+    expect(loggerMock.debug.mock.calls).toEqual([
+      [
+        "Fetching account data for update",
+        {
+          authType: AuthTypeEnum.AccessToken,
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "fetching",
+        },
+      ],
+    ])
+    expect(loggerMock.info.mock.calls).toEqual([
+      [
+        "Account updated with data refresh",
+        {
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "updated_with_refresh",
+        },
+      ],
+    ])
+    expect(loggerMock.warn.mock.calls).toEqual([])
+    expect(loggerMock.error.mock.calls).toEqual([])
+
+    vi.clearAllMocks()
+    validateManagementKeyMock.mockResolvedValue({})
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      account: { data: { fetchData: fetchAccountDataMock } },
+    })
+    fetchAccountDataMock.mockRejectedValue(
+      new Error("private backend message with stack"),
+    )
+    await updateAccountForLogTest(accountId, SITE_TYPES.OPENROUTER, false)
+    expect(loggerMock.debug.mock.calls).toEqual([
+      [
+        "Fetching account data for update",
+        {
+          authType: AuthTypeEnum.AccessToken,
+          siteType: SITE_TYPES.OPENROUTER,
+          status: "fetching",
+        },
+      ],
+    ])
+    expect(loggerMock.info.mock.calls).toEqual([])
+    expect(loggerMock.warn.mock.calls).toEqual([
+      [
+        "Data fetch failed; saving configuration only",
+        { siteType: SITE_TYPES.OPENROUTER, status: "fallback" },
+      ],
+    ])
+    expect(loggerMock.error.mock.calls).toEqual([])
+  })
+
+  it("uses validated creator identity when editable OpenRouter identity is blank", async () => {
+    validateManagementKeyMock.mockResolvedValue({ userId: "user-placeholder" })
+
+    const result = await validateAndSaveAccount(
+      "https://openrouter.ai",
+      "OpenRouter",
+      "",
+      "management-key-placeholder",
+      "",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    const saved = await accountStorage.getAccountById(result.accountId!)
+    expect(saved).toMatchObject({
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        id: "user-placeholder",
+        access_token: "management-key-placeholder",
+      },
+    })
+    expect(saved?.account_info).not.toHaveProperty("identity_scope")
+  })
+
+  it("normalizes ordinary account identity when adding an account", async () => {
+    const result = await validateAndSaveAccount(
+      "https://api.example.invalid",
+      "Example",
+      "user",
+      "token",
+      "  ordinary-id  ",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    await expect(
+      accountStorage.getAccountById(result.accountId!),
+    ).resolves.toMatchObject({
+      account_info: { id: "ordinary-id" },
+    })
+  })
+
+  it("prefers entered OpenRouter identity over the validated creator on add", async () => {
+    validateManagementKeyMock.mockResolvedValue({ userId: "validated-creator" })
+
+    const result = await validateAndSaveAccount(
+      "https://openrouter.ai",
+      "OpenRouter",
+      "",
+      "management-key-placeholder",
+      " edited-placeholder ",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    const saved = await accountStorage.getAccountById(result.accountId!)
+    expect(saved?.account_info.id).toBe("edited-placeholder")
+    expect(saved?.account_info).not.toHaveProperty("identity_scope")
+  })
+
+  it("stores a non-secret local fallback when OpenRouter has no creator identity", async () => {
+    vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(
+      "00000000-0000-4000-8000-000000000005",
+    )
+    const digestSpy = vi.spyOn(globalThis.crypto.subtle, "digest")
+    const managementKey = "management-key-placeholder"
+
+    const result = await validateAndSaveAccount(
+      "https://openrouter.ai",
+      "OpenRouter",
+      "",
+      managementKey,
+      "",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    const savedIdentity = (await accountStorage.getAccountById(
+      result.accountId!,
+    ))!.account_info
+    expect(savedIdentity.id).toBe(
+      "openrouter:00000000-0000-4000-8000-000000000005",
+    )
+    expect(savedIdentity).not.toHaveProperty("identity_scope")
+    expect(savedIdentity.id).not.toContain(managementKey)
+    expect(digestSpy).not.toHaveBeenCalled()
+  })
+
+  it("preserves an auto-bootstrap local fallback through save-time revalidation", async () => {
+    const localIdentity = "openrouter:00000000-0000-4000-8000-000000000006"
+
+    const result = await validateAndSaveAccount(
+      "https://openrouter.ai",
+      "OpenRouter",
+      "",
+      "management-key-placeholder",
+      localIdentity,
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    const saved = await accountStorage.getAccountById(result.accountId!)
+    expect(saved?.account_info.id).toBe(localIdentity)
+    expect(saved?.account_info).not.toHaveProperty("identity_scope")
+  })
+
+  it("keeps a site-prefixed OpenRouter creator identity as metadata", async () => {
+    validateManagementKeyMock.mockResolvedValue({
+      userId: "openrouter:upstream-user",
+    })
+
+    const result = await validateAndSaveAccount(
+      "https://openrouter.ai",
+      "OpenRouter",
+      "",
+      "management-key-placeholder",
+      "openrouter:upstream-user",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    const saved = await accountStorage.getAccountById(result.accountId!)
+    expect(saved?.account_info.id).toBe("openrouter:upstream-user")
+    expect(saved?.account_info).not.toHaveProperty("identity_scope")
+  })
+
+  it.each(["add", "update"] as const)(
+    "rejects OpenRouter Cookie auth for direct %s operations",
+    async (operation) => {
+      const existingAccountId = await accountStorage.addAccount({
+        site_name: "OpenRouter",
+        site_url: "https://openrouter.ai",
+        site_type: SITE_TYPES.OPENROUTER,
+        health: { status: SiteHealthStatus.Healthy },
+        authType: AuthTypeEnum.AccessToken,
+        disabled: false,
+        excludeFromTotalBalance: false,
+        excludeFromTodayIncome: false,
+        exchange_rate: 7,
+        notes: "",
+        tagIds: [],
+        checkIn: CHECK_IN_DISABLED,
+        account_info: {
+          id: "openrouter:existing",
+          access_token: "old-key",
+          username: "",
+          quota: 0,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 0,
+          today_requests_count: 0,
+          today_income: 0,
+        },
+        last_sync_time: 0,
+      })
+
+      const result =
+        operation === "add"
+          ? await validateAndSaveAccount(
+              "https://openrouter.ai",
+              "OpenRouter",
+              "",
+              "management-key",
+              "",
+              "7",
+              "",
+              [],
+              CHECK_IN_DISABLED,
+              SITE_TYPES.OPENROUTER,
+              AuthTypeEnum.Cookie,
+              "session=valid",
+              undefined,
+              false,
+              false,
+              undefined,
+              { deferDataRefresh: true },
+            )
+          : await validateAndUpdateAccount(
+              existingAccountId,
+              "https://openrouter.ai",
+              "OpenRouter",
+              "",
+              "management-key",
+              "",
+              "7",
+              "",
+              [],
+              CHECK_IN_DISABLED,
+              SITE_TYPES.OPENROUTER,
+              AuthTypeEnum.Cookie,
+              "session=valid",
+              undefined,
+              false,
+              false,
+              undefined,
+              { deferDataRefresh: true },
+            )
+
+      expect(result).toMatchObject({
+        success: false,
+        message: "messages:errors.validation.incompleteAccountInfo",
+      })
+      const storedAccounts = await accountStorage.getAllAccountsOrThrow()
+      expect(storedAccounts).toHaveLength(1)
+      expect(storedAccounts[0]).toMatchObject({
+        id: existingAccountId,
+        authType: AuthTypeEnum.AccessToken,
+        account_info: {
+          id: "openrouter:existing",
+          access_token: "old-key",
+        },
+      })
+    },
+  )
+
+  it("rejects an unvalidated unchanged token when changing an ordinary account to OpenRouter", async () => {
+    const accountId = await addStoredAccountForLogTest(SITE_TYPES.NEW_API)
+    validateManagementKeyMock.mockRejectedValue(
+      new ApiError(
+        "runtime token is not a management key",
+        401,
+        "/key",
+        API_ERROR_CODES.HTTP_401,
+      ),
+    )
+
+    const result = await validateAndUpdateAccount(
+      accountId,
+      "https://openrouter.ai",
+      "OpenRouter",
+      "",
+      " ordinary-token ",
+      "",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      message: "messages:openrouter.credentialInvalid",
+    })
+    expect(validateManagementKeyMock).toHaveBeenCalledWith({
+      accessToken: "ordinary-token",
+    })
+    await expect(
+      accountStorage.getAccountById(accountId),
+    ).resolves.toMatchObject({
+      site_type: SITE_TYPES.NEW_API,
+      account_info: {
+        id: "ordinary-id",
+        access_token: "ordinary-token",
+      },
+    })
+  })
+
+  it("returns a controlled failure when an OpenRouter edit account is missing", async () => {
+    await expect(
+      validateAndUpdateAccount(
+        "missing-account",
+        "https://openrouter.ai",
+        "OpenRouter",
+        "",
+        "management-key-placeholder",
+        "editable-id",
+        "7",
+        "",
+        [],
+        CHECK_IN_DISABLED,
+        SITE_TYPES.OPENROUTER,
+        AuthTypeEnum.AccessToken,
+        "",
+        undefined,
+        false,
+        false,
+        undefined,
+        { deferDataRefresh: true },
+      ),
+    ).resolves.toEqual({
+      success: false,
+      message: "messages:errors.validation.updateAccountFailed",
+    })
+    expect(validateManagementKeyMock).not.toHaveBeenCalled()
+  })
+
+  it("returns a controlled failure when OpenRouter account lookup fails", async () => {
+    const storageError = new Error("private-storage-diagnostic")
+    vi.spyOn(accountStorage, "getAllAccountsOrThrow").mockRejectedValueOnce(
+      storageError,
+    )
+
+    await expect(
+      validateAndUpdateAccount(
+        "stored-account",
+        "https://openrouter.ai",
+        "OpenRouter",
+        "",
+        "management-key-placeholder",
+        "editable-id",
+        "7",
+        "",
+        [],
+        CHECK_IN_DISABLED,
+        SITE_TYPES.OPENROUTER,
+        AuthTypeEnum.AccessToken,
+        "",
+        undefined,
+        false,
+        false,
+        undefined,
+        { deferDataRefresh: true },
+      ),
+    ).resolves.toEqual({
+      success: false,
+      message: "messages:errors.validation.updateAccountFailed",
+    })
+    expect(validateManagementKeyMock).not.toHaveBeenCalled()
+    expect(loggerMock.error).toHaveBeenCalledWith(
+      "Failed to load account for update",
+      { siteType: SITE_TYPES.OPENROUTER, status: "load_failed" },
+    )
+    expect(JSON.stringify(loggerMock.error.mock.calls)).not.toContain(
+      storageError.message,
+    )
+  })
+
+  it("normalizes ordinary account identity when updating an account", async () => {
+    const accountId = await addStoredAccountForLogTest(SITE_TYPES.NEW_API)
+
+    const result = await validateAndUpdateAccount(
+      accountId,
+      "https://api.example.invalid",
+      "Example",
+      "user",
+      "token",
+      "  updated-ordinary-id  ",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    await expect(
+      accountStorage.getAccountById(accountId),
+    ).resolves.toMatchObject({
+      account_info: { id: "updated-ordinary-id" },
+    })
+  })
+
+  it("uses validated creator identity when an unchanged token transitions to OpenRouter", async () => {
+    validateManagementKeyMock.mockResolvedValue({
+      userId: "validated-creator",
+    })
+    const accountId = await addStoredAccountForLogTest(SITE_TYPES.NEW_API)
+
+    const result = await validateAndUpdateAccount(
+      accountId,
+      "https://openrouter.ai",
+      "OpenRouter",
+      "",
+      "ordinary-token",
+      "",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    expect(validateManagementKeyMock).toHaveBeenCalledWith({
+      accessToken: "ordinary-token",
+    })
+    await expect(
+      accountStorage.getAccountById(accountId),
+    ).resolves.toMatchObject({
+      site_type: SITE_TYPES.OPENROUTER,
+      account_info: {
+        id: "validated-creator",
+        access_token: "ordinary-token",
+      },
+    })
+  })
+
+  it("prefers entered OpenRouter identity over validation and stored identity on edit", async () => {
+    validateManagementKeyMock.mockResolvedValue({ userId: "validated-creator" })
+    const accountId = await accountStorage.addAccount({
+      site_name: "Upstream account",
+      site_url: "https://upstream.example.invalid",
+      site_type: SITE_TYPES.NEW_API,
+      health: { status: SiteHealthStatus.Healthy },
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      notes: "",
+      tagIds: [],
+      checkIn: CHECK_IN_DISABLED,
+      account_info: {
+        id: "upstream-user-id",
+        access_token: "old-token",
+        username: "upstream-user",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      last_sync_time: 0,
+    })
+
+    const result = await validateAndUpdateAccount(
+      accountId,
+      "https://openrouter.ai",
+      "OpenRouter",
+      "",
+      "old-token",
+      " edited-placeholder ",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    expect(validateManagementKeyMock).toHaveBeenCalledWith({
+      accessToken: "old-token",
+    })
+    const saved = await accountStorage.getAccountById(accountId)
+    expect(saved?.site_type).toBe(SITE_TYPES.OPENROUTER)
+    expect(saved?.account_info.id).toBe("edited-placeholder")
+    expect(saved?.account_info).not.toHaveProperty("identity_scope")
+  })
+
+  it("persists trimmed entered username when adding OpenRouter", async () => {
+    const addResult = await validateAndSaveAccount(
+      "https://openrouter.ai",
+      "OpenRouter",
+      " entered-username ",
+      "management-key",
+      "",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(addResult.success).toBe(true)
+    await expect(
+      accountStorage.getAccountById(addResult.accountId!),
+    ).resolves.toMatchObject({
+      account_info: { username: "entered-username" },
+    })
+  })
+
+  it("uses entered OpenRouter username and preserves a generated fallback when ID is cleared", async () => {
+    const generatedFallback = "openrouter:00000000-0000-4000-8000-000000000008"
+    const accountId = await accountStorage.addAccount({
+      site_name: "OpenRouter",
+      site_url: "https://openrouter.ai",
+      site_type: SITE_TYPES.OPENROUTER,
+      health: { status: SiteHealthStatus.Healthy },
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      notes: "",
+      tagIds: [],
+      checkIn: CHECK_IN_DISABLED,
+      account_info: {
+        id: generatedFallback,
+        access_token: "old-key",
+        username: "stored-username",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      last_sync_time: 0,
+    })
+
+    const updateResult = await validateAndUpdateAccount(
+      accountId,
+      "https://openrouter.ai",
+      "OpenRouter",
+      "entered-username",
+      "new-key",
+      "",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(updateResult.success).toBe(true)
+    const saved = await accountStorage.getAccountById(accountId)
+    expect(saved?.account_info).toMatchObject({
+      id: generatedFallback,
+      username: "entered-username",
+    })
+    expect(saved?.account_info).not.toHaveProperty("identity_scope")
+  })
+
+  it("preserves an explicitly cleared OpenRouter username over validation", async () => {
+    validateManagementKeyMock.mockResolvedValue({})
+    const accountId = await accountStorage.addAccount({
+      site_name: "OpenRouter",
+      site_url: "https://openrouter.ai",
+      site_type: SITE_TYPES.OPENROUTER,
+      health: { status: SiteHealthStatus.Healthy },
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      notes: "",
+      tagIds: [],
+      checkIn: CHECK_IN_DISABLED,
+      account_info: {
+        id: "openrouter:existing",
+        access_token: "old-key",
+        username: "stored-username",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      last_sync_time: 0,
+    })
+
+    const updateResult = await validateAndUpdateAccount(
+      accountId,
+      "https://openrouter.ai",
+      "OpenRouter",
+      "   ",
+      "new-key",
+      "",
+      "7",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(updateResult.success).toBe(true)
+    await expect(
+      accountStorage.getAccountById(accountId),
+    ).resolves.toMatchObject({
+      account_info: { username: "" },
+    })
+  })
+
+  it("skips OpenRouter credential validation for metadata-only edits", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      account: {
+        data: { fetchData: fetchAccountDataMock },
+      },
+    })
+    const accountId = await accountStorage.addAccount({
+      site_name: "OpenRouter",
+      site_url: "https://openrouter.ai",
+      site_type: SITE_TYPES.OPENROUTER,
+      health: { status: SiteHealthStatus.Healthy },
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      notes: "old",
+      tagIds: [],
+      checkIn: CHECK_IN_DISABLED,
+      account_info: {
+        id: "openrouter:existing",
+        access_token: "same-key",
+        username: "",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      last_sync_time: 0,
+    })
+
+    const result = await validateAndUpdateAccount(
+      accountId,
+      "https://openrouter.ai",
+      "Renamed",
+      "",
+      " same-key ",
+      "openrouter:existing",
+      "7",
+      "new notes",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      false,
+      undefined,
+      { deferDataRefresh: true },
+    )
+
+    expect(result.success).toBe(true)
+    expect(validateManagementKeyMock).not.toHaveBeenCalled()
+    const saved = await accountStorage.getAccountById(accountId)
+    expect(saved?.account_info.id).toBe("openrouter:existing")
+    expect(saved?.account_info).not.toHaveProperty("identity_scope")
   })
 
   it.each(availabilityReplacementCases)(

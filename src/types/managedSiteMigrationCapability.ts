@@ -204,8 +204,15 @@ export class ManagedSiteMigrationExecutionAbortedError extends Error {
   }
 }
 
+export type ManagedSiteMigrationSelectionValidationContext = {
+  isValid(selection: ManagedSiteMigrationSelection): boolean
+}
+
 export type ManagedSiteMigrationCapability = {
   source?: {
+    createSelectionValidationContext?(
+      options?: ResourceOperationOptions,
+    ): Promise<ManagedSiteMigrationSelectionValidationContext>
     prepare(
       selection: ManagedSiteMigrationSelection,
       options?: ResourceOperationOptions,

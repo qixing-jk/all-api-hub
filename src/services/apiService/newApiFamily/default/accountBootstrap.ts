@@ -6,12 +6,20 @@ import type {
 } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiData } from "~/services/apiTransport/request"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type {
+  ApiServiceRequest,
+  FetchApiOptions,
+} from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("NewApiFamilyAccountBootstrap")
+
+type AccessTokenCreationPolicy = Pick<
+  FetchApiOptions,
+  "currentTabTransport" | "tempWindowFallback"
+>
 
 interface AccountBootstrapImplementation {
   fetchUserInfo: typeof fetchUserInfo
@@ -107,9 +115,11 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
  */
 export async function createAccessToken(
   request: ApiServiceRequest,
+  creationPolicy?: AccessTokenCreationPolicy,
 ): Promise<string> {
   const accessToken = await fetchApiData<string>(request, {
     endpoint: "/api/user/token",
+    ...creationPolicy,
   })
 
   const normalizedAccessToken =
@@ -131,6 +141,7 @@ export async function createAccessToken(
  */
 export async function getOrCreateAccessToken(
   request: ApiServiceRequest,
+  creationPolicy?: AccessTokenCreationPolicy,
 ): Promise<AccessTokenInfo> {
   const userInfo = await fetchUserInfo(request)
 
@@ -138,7 +149,7 @@ export async function getOrCreateAccessToken(
 
   if (!accessToken) {
     logger.info("访问令牌为空，尝试自动创建")
-    accessToken = await createAccessToken(request)
+    accessToken = await createAccessToken(request, creationPolicy)
     logger.info("自动创建访问令牌成功")
   }
 

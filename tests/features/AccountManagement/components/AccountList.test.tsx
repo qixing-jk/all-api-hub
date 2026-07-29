@@ -9,6 +9,7 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSelectionCheckboxTestId,
 } from "~/features/AccountManagement/testIds"
+import enAccount from "~/locales/en/account.json"
 import {
   INVITE_LINK_FAILURE_REASONS,
   InviteLinkError,
@@ -30,6 +31,7 @@ import {
 } from "~/types/accountTodayStats"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData, buildTag } from "~~/tests/test-utils/factories"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import {
   act,
   render,
@@ -622,6 +624,7 @@ describe("AccountList", () => {
   })
 
   afterEach(() => {
+    testI18n.removeResourceBundle("en", "account")
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
   })
@@ -634,7 +637,6 @@ describe("AccountList", () => {
         isInitialLoad: true,
       }),
     )
-
     render(<AccountList />)
 
     expect(screen.queryByText("account:emptyState")).not.toBeInTheDocument()
@@ -1087,6 +1089,73 @@ describe("AccountList", () => {
     expect(screen.queryByText("Enabled Gamma")).not.toBeInTheDocument()
     expect(screen.queryByText("Unsynced Delta")).not.toBeInTheDocument()
     expect(screen.getByText("common:total: 1")).toBeInTheDocument()
+  })
+
+  it("uses the generic bulk deletion confirmation for OpenRouter", async () => {
+    const user = userEvent.setup()
+    const openRouter = buildDisplaySiteData({
+      id: "openrouter",
+      name: "OpenRouter",
+      siteType: "openrouter",
+    })
+    const compatible = buildDisplaySiteData({
+      id: "compatible",
+      name: "Compatible",
+      siteType: "new-api",
+    })
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [openRouter, compatible],
+        displayData: [openRouter, compatible],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+    testI18n.addResource(
+      "en",
+      "account",
+      "bulk.deleteConfirmDescription_one",
+      enAccount.bulk.deleteConfirmDescription_one,
+    )
+
+    render(<AccountList />)
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId(openRouter.id),
+      ),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.deleteSelected" }),
+    )
+
+    expect(
+      screen.getByText(
+        enAccount.bulk.deleteConfirmDescription_one.replace("{{count}}", "1"),
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getAllByRole("button", { name: "account:bulk.exit" })[0],
+    )
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(
+      screen.getByTestId(
+        getAccountManagementSelectionCheckboxTestId(compatible.id),
+      ),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.deleteSelected" }),
+    )
+    expect(
+      screen.getByText(
+        enAccount.bulk.deleteConfirmDescription_one.replace("{{count}}", "1"),
+      ),
+    ).toBeInTheDocument()
   })
 
   it("links disabled filter with search results", async () => {

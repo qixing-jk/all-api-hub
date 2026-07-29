@@ -16,6 +16,7 @@ import {
   searchChannels,
   updateChannel as updateOctopusChannel,
 } from "~/services/apiService/octopus"
+import { getManagedSiteDeleteCertainty } from "~/services/managedSites/mutationCertainty"
 import {
   buildChannelName,
   buildChannelPayload,
@@ -178,6 +179,7 @@ export const octopusManagedSiteChannels: ManagedSiteChannelsCapability<OctopusCo
           success: false,
           data: null,
           message: getErrorMessage(error) || "Failed to delete channel",
+          ...getManagedSiteDeleteCertainty(error),
         }
       }
     },

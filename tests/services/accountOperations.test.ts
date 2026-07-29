@@ -18,15 +18,23 @@ const {
   mockFetchSiteStatus,
   mockgetSiteTypeCapabilities,
   mockUpdateAccount,
+  mockGetAllAccountsOrThrow,
+  mockValidateManagementKey,
 } = vi.hoisted(() => ({
   mockFetchAccountData: vi.fn(),
   mockFetchSiteStatus: vi.fn(),
   mockgetSiteTypeCapabilities: vi.fn(),
   mockUpdateAccount: vi.fn(),
+  mockGetAllAccountsOrThrow: vi.fn(),
+  mockValidateManagementKey: vi.fn(),
 }))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: mockgetSiteTypeCapabilities,
+}))
+
+vi.mock("~/services/apiService/openrouter", () => ({
+  validateManagementKey: mockValidateManagementKey,
 }))
 
 vi.mock("~/services/accounts/accountStorage", async (importOriginal) => {
@@ -37,6 +45,7 @@ vi.mock("~/services/accounts/accountStorage", async (importOriginal) => {
     ...actual,
     accountStorage: {
       ...actual.accountStorage,
+      getAllAccountsOrThrow: mockGetAllAccountsOrThrow,
       updateAccount: mockUpdateAccount,
     },
   }
@@ -48,6 +57,9 @@ describe("accountOperations", () => {
     mockFetchSiteStatus.mockReset()
     mockgetSiteTypeCapabilities.mockReset()
     mockUpdateAccount.mockReset()
+    mockGetAllAccountsOrThrow.mockReset()
+    mockValidateManagementKey.mockReset()
+    mockValidateManagementKey.mockResolvedValue({})
     mockgetSiteTypeCapabilities.mockReturnValue({
       siteType: SITE_TYPES.NEW_API,
       account: {
@@ -62,6 +74,40 @@ describe("accountOperations", () => {
   })
 
   describe("validateAndUpdateAccount", () => {
+    it("fails closed for an OpenRouter edit when the strict account read fails", async () => {
+      mockGetAllAccountsOrThrow.mockRejectedValue(
+        new Error("storage unavailable"),
+      )
+
+      await expect(
+        validateAndUpdateAccount(
+          "account-1",
+          "https://openrouter.ai",
+          "OpenRouter",
+          "",
+          "management-key",
+          "",
+          "7.0",
+          "",
+          [],
+          { enableDetection: false },
+          SITE_TYPES.OPENROUTER,
+          AuthTypeEnum.AccessToken,
+          "",
+          undefined,
+          false,
+          false,
+          undefined,
+          { deferDataRefresh: true },
+        ),
+      ).resolves.toEqual({
+        success: false,
+        message: "messages:errors.validation.updateAccountFailed",
+      })
+      expect(mockValidateManagementKey).not.toHaveBeenCalled()
+      expect(mockUpdateAccount).not.toHaveBeenCalled()
+    })
+
     it("persists empty tagIds to clear account tags", async () => {
       mockFetchAccountData.mockResolvedValueOnce({
         quota: 1,
@@ -241,6 +287,20 @@ describe("accountOperations", () => {
   })
 
   describe("isValidAccount", () => {
+    const isValidAuthCombination = (
+      auth: Pick<
+        Parameters<typeof isValidAccount>[0],
+        "siteType" | "authType" | "accessToken" | "cookieAuthSessionCookie"
+      >,
+    ) =>
+      isValidAccount({
+        siteName: "Example Site",
+        username: "example-user",
+        userId: "example-user-id",
+        exchangeRate: "7.0",
+        ...auth,
+      })
+
     it("validates complete account", () => {
       expect(
         isValidAccount({
@@ -331,6 +391,121 @@ describe("accountOperations", () => {
           exchangeRate: "7.0",
         }),
       ).toBe(false)
+    })
+
+    it("does not require optional OpenRouter identity metadata", () => {
+      expect(
+        isValidAccount({
+          siteName: "OpenRouter",
+          username: "",
+          userId: "",
+          siteType: SITE_TYPES.OPENROUTER,
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "management-key",
+          exchangeRate: "7.0",
+        }),
+      ).toBe(true)
+    })
+
+    it.each([
+      {
+        siteType: SITE_TYPES.SHAREDCHAT,
+        authType: AuthTypeEnum.Cookie,
+        accessToken: "",
+        cookieAuthSessionCookie: "session=placeholder",
+      },
+      {
+        siteType: SITE_TYPES.SUB2API,
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "placeholder-token",
+        cookieAuthSessionCookie: "",
+      },
+      {
+        siteType: SITE_TYPES.VO_API_V2,
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "placeholder-token",
+        cookieAuthSessionCookie: "",
+      },
+      {
+        siteType: SITE_TYPES.VO_API,
+        authType: AuthTypeEnum.Cookie,
+        accessToken: "",
+        cookieAuthSessionCookie: "session=placeholder",
+      },
+      {
+        siteType: SITE_TYPES.NEW_API,
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "placeholder-token",
+        cookieAuthSessionCookie: "",
+      },
+      {
+        siteType: SITE_TYPES.NEW_API,
+        authType: AuthTypeEnum.Cookie,
+        accessToken: "",
+        cookieAuthSessionCookie: "session=placeholder",
+      },
+    ])(
+      "accepts the supported $authType credential for $siteType",
+      ({ siteType, authType, accessToken, cookieAuthSessionCookie }) => {
+        expect(
+          isValidAuthCombination({
+            siteType,
+            authType,
+            accessToken,
+            cookieAuthSessionCookie,
+          }),
+        ).toBe(true)
+      },
+    )
+
+    it.each([
+      {
+        siteType: SITE_TYPES.SHAREDCHAT,
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "placeholder-token",
+        cookieAuthSessionCookie: "",
+      },
+      {
+        siteType: SITE_TYPES.SUB2API,
+        authType: AuthTypeEnum.Cookie,
+        accessToken: "",
+        cookieAuthSessionCookie: "session=placeholder",
+      },
+      {
+        siteType: SITE_TYPES.VO_API_V2,
+        authType: AuthTypeEnum.Cookie,
+        accessToken: "",
+        cookieAuthSessionCookie: "session=placeholder",
+      },
+      {
+        siteType: SITE_TYPES.OPENROUTER,
+        authType: AuthTypeEnum.Cookie,
+        accessToken: "",
+        cookieAuthSessionCookie: "session=placeholder",
+      },
+    ])(
+      "rejects unsupported $authType credentials for $siteType",
+      ({ siteType, authType, accessToken, cookieAuthSessionCookie }) => {
+        expect(
+          isValidAuthCombination({
+            siteType,
+            authType,
+            accessToken,
+            cookieAuthSessionCookie,
+          }),
+        ).toBe(false)
+      },
+    )
+
+    it("keeps no-auth accounts compatible with single-auth site profiles", () => {
+      expect(
+        isValidAuthCombination({
+          siteType: SITE_TYPES.SUB2API,
+          authType: AuthTypeEnum.None,
+          accessToken: "",
+          cookieAuthSessionCookie: "",
+        }),
+      ).toBe(true)
     })
 
     it("rejects invalid exchange rate", () => {

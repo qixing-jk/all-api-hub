@@ -255,6 +255,7 @@
       "manualPickHint": "你可以在每組中手動選擇要保留的帳號（手動選擇會覆蓋保留策略）。",
       "previewDelete": "預覽刪除",
       "recommended": "推薦",
+      "sameCredential": "相同管理金鑰",
       "strategy": {
         "keepEnabled": "優先保留啟用（如有）",
         "keepMostRecentlyUpdated": "優先保留最近更新",

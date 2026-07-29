@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { render, screen } from "~~/tests/test-utils/render"
+import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 /**
  * Minimal legacy Modal host for select-layer assertions.
@@ -211,7 +211,6 @@ describe("floating layer primitives inside dialogs", () => {
   })
 
   it("requests Modal close when clicking the visual backdrop around the panel", async () => {
-    const user = userEvent.setup()
     const onClose = vi.fn()
 
     render(
@@ -225,9 +224,70 @@ describe("floating layer primitives inside dialogs", () => {
     const positioner = document.querySelector('[data-slot="modal-positioner"]')
     expect(positioner).toBeInTheDocument()
 
-    await user.click(positioner as HTMLElement)
+    fireEvent.pointerDown(positioner as HTMLElement)
+    fireEvent.click(positioner as HTMLElement, { detail: 1 })
 
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves non-pointer backdrop dismissal", async () => {
+    const onClose = vi.fn()
+
+    render(
+      <Modal isOpen={true} onClose={onClose}>
+        <button type="button">Inside modal</button>
+      </Modal>,
+    )
+
+    await screen.findByRole("dialog")
+
+    const positioner = document.querySelector('[data-slot="modal-positioner"]')
+    expect(positioner).toBeInTheDocument()
+
+    fireEvent.click(positioner as HTMLElement)
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("clears backdrop pointer origin when the pointer is canceled", async () => {
+    const onClose = vi.fn()
+
+    render(
+      <Modal isOpen={true} onClose={onClose}>
+        <button type="button">Inside modal</button>
+      </Modal>,
+    )
+
+    await screen.findByRole("dialog")
+
+    const positioner = document.querySelector('[data-slot="modal-positioner"]')
+    expect(positioner).toBeInTheDocument()
+
+    fireEvent.pointerDown(positioner as HTMLElement)
+    fireEvent.pointerCancel(positioner as HTMLElement)
+    fireEvent.click(positioner as HTMLElement, { detail: 1 })
+
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it("keeps Modal open when a pointer drag starts inside the panel", async () => {
+    const onClose = vi.fn()
+
+    render(
+      <Modal isOpen={true} onClose={onClose}>
+        <span>Selectable modal content</span>
+      </Modal>,
+    )
+
+    const content = await screen.findByText("Selectable modal content")
+    const positioner = document.querySelector('[data-slot="modal-positioner"]')
+    expect(positioner).toBeInTheDocument()
+
+    fireEvent.pointerDown(content)
+    fireEvent.pointerUp(positioner as HTMLElement)
+    fireEvent.click(positioner as HTMLElement, { detail: 1 })
+
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it("uses Modal title as the dialog name without duplicating visible headings", async () => {

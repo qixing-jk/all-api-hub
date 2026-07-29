@@ -3,6 +3,7 @@ import type { TFunction } from "i18next"
 import { Separator } from "~/components/ui"
 
 import type { DedupeAccountsDialogGroup } from "./types"
+import { formatDedupeGroupIdentityLabel } from "./utils"
 
 export interface DedupeAccountsConfirmDetailsProps {
   groups: DedupeAccountsDialogGroup[]
@@ -50,15 +51,10 @@ export function DedupeAccountsConfirmDetails({
             .join(", ")
 
           return (
-            <div
-              key={`confirm:${group.key.origin}::${group.key.userId}`}
-              className="space-y-1"
-            >
+            <div key={`confirm:${group.key.id}`} className="space-y-1">
               <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
                 {group.key.origin} ·{" "}
-                {t("ui:dialog.dedupeAccounts.userId", {
-                  userId: group.key.userId,
-                })}
+                {formatDedupeGroupIdentityLabel(group.key, t)}
               </div>
               <div className="text-sm">
                 <span className="font-medium">

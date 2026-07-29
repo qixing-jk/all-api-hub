@@ -34,7 +34,11 @@ import {
   getAccountSiteProductProfileOverride,
   getAccountSiteTypeValues,
   getManagedSiteTypeValues,
+  MANAGED_RESOURCE_KINDS,
+  MANAGED_RESOURCE_MODES,
   MANAGED_SITE_TYPES,
+  OPENROUTER_HOSTNAMES,
+  OPENROUTER_WEB_ORIGIN,
   SHAREDCHAT_HOSTNAMES,
   SITE_TYPES,
   type AccountSiteDefinition,
@@ -47,6 +51,7 @@ import {
   SITE_TYPE_DEFINITIONS,
 } from "~/services/accountSiteDefinitions/definitions"
 import type { SiteType } from "~/services/accountSiteDefinitions/identifiers"
+import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { MODEL_LIST_ACCOUNT_SOURCE_ROUTES } from "~/services/modelList/accountSources/readiness"
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_TODAY_METRIC_REASONS } from "~/types/accountTodayStats"
@@ -74,6 +79,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.SUB2API
   | typeof SITE_TYPES.AIHUBMIX
   | typeof SITE_TYPES.SHAREDCHAT
+  | typeof SITE_TYPES.OPENROUTER
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
@@ -232,6 +238,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.SUB2API,
       SITE_TYPES.AIHUBMIX,
       SITE_TYPES.SHAREDCHAT,
+      SITE_TYPES.OPENROUTER,
       SITE_TYPES.UNKNOWN,
     ])
   })
@@ -275,29 +282,49 @@ describe("account site definition registry", () => {
     }
   })
 
-  it("gives every managed site an explicit managed-resource policy", () => {
+  it("keeps every managed-resource mode explicit in the static definitions", () => {
+    const expectedModes = new Map<ManagedSiteType, string>([
+      [SITE_TYPES.NEW_API, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.VELOERA, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.DONE_HUB, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.OCTOPUS, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.AXON_HUB, MANAGED_RESOURCE_MODES.NativeResource],
+      [SITE_TYPES.CLAUDE_CODE_HUB, MANAGED_RESOURCE_MODES.LegacyChannel],
+    ])
+
     for (const siteType of MANAGED_SITE_TYPES) {
       expect(getAccountSiteDefinition(siteType)?.managedResource).toMatchObject(
         {
-          mode: "legacy-channel",
-          primaryKind: "channel",
+          mode: expectedModes.get(siteType),
+          primaryKind: MANAGED_RESOURCE_KINDS.Channel,
           settingsTarget: { tabId: "managedSite" },
         },
       )
     }
   })
 
-  it("keeps AxonHub on the legacy channel path until UI cutover", () => {
-    expect(
-      getAccountSiteDefinition(SITE_TYPES.AXON_HUB)?.managedResource,
-    ).toMatchObject({
-      mode: "legacy-channel",
-      primaryKind: "channel",
+  it("switches AxonHub to the registered native channel path", () => {
+    const policy = getAccountSiteDefinition(
+      SITE_TYPES.AXON_HUB,
+    )?.managedResource
+
+    expect(policy).toMatchObject({
+      mode: MANAGED_RESOURCE_MODES.NativeResource,
+      primaryKind: MANAGED_RESOURCE_KINDS.Channel,
       settingsTarget: {
         tabId: "managedSite",
         anchor: SETTINGS_ANCHORS.AXON_HUB,
       },
       actions: ["create", "delete-selected", "migrate"],
+    })
+    expect(
+      getManagedResourceRegistration(
+        SITE_TYPES.AXON_HUB,
+        MANAGED_RESOURCE_KINDS.Channel,
+      ),
+    ).toMatchObject({
+      siteType: SITE_TYPES.AXON_HUB,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
     })
   })
 
@@ -354,6 +381,45 @@ describe("account site definition registry", () => {
     expect(getAccountSiteDefinition(SITE_TYPES.OCTOPUS)?.adapterFamily).toBe(
       ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     )
+    expect(getAccountSiteDefinition(SITE_TYPES.OPENROUTER)).toMatchObject({
+      scopes: [ACCOUNT_SITE_DEFINITION_SCOPES.Account],
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter,
+      readiness: {
+        modelList: {
+          expectedRoute: ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.Unsupported,
+        },
+      },
+    })
+  })
+
+  it("defines OpenRouter account-only access-token policy and canonical origins", () => {
+    const definition = getAccountSiteDefinition(SITE_TYPES.OPENROUTER)
+    const profile = getAccountSiteProductProfile(SITE_TYPES.OPENROUTER)
+
+    expect(definition?.onboarding?.routes?.adminCredentialsPath).toBe(
+      "/settings/management-keys",
+    )
+    expect(profile.auth).toMatchObject({
+      allowedAuthTypes: [AuthTypeEnum.AccessToken],
+      defaultAuthType: AuthTypeEnum.AccessToken,
+      defaultAuthHostnames: [],
+      supportsCookieAuth: false,
+      supportsBuiltInCheckInDetection: false,
+    })
+    expect(profile.identity).toMatchObject({
+      usernameRequired: false,
+      storedUserIdentityFields: [],
+    })
+    expect(profile.identity).not.toHaveProperty("input")
+    expect(profile.identity).not.toHaveProperty("presentation")
+    expect(profile.identity).not.toHaveProperty("scope")
+    expect(profile.identity).not.toHaveProperty("fallbackScope")
+    expect(profile.urls).toMatchObject({
+      storageOrigin: OPENROUTER_WEB_ORIGIN,
+      duplicateOrigin: OPENROUTER_WEB_ORIGIN,
+      recognizedHostnames: OPENROUTER_HOSTNAMES,
+    })
+    expect(profile.modelList.directPricing).toBe("unsupported")
   })
 
   it("defines VoAPI v2 before old VoAPI with account-only policy", () => {

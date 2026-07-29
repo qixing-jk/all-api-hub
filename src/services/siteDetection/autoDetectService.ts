@@ -25,7 +25,9 @@ import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   readAccountBrowserSessionFromTab,
 } from "~/services/accountBrowserSession"
+import { normalizeContentSessionTransientAuth } from "~/services/accountBrowserSession/transientAuth"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   API_SERVICE_FETCH_CONTEXT_KINDS,
@@ -70,6 +72,7 @@ interface AutoDetectResult {
     user: any
     siteType: AccountSiteType
     accessToken?: string
+    transientAuth?: ContentSessionTransientAuth
     sub2apiAuth?: Sub2ApiAuthConfig
     fetchContext?: AutoDetectFetchContext
   }
@@ -81,6 +84,7 @@ interface UserDataResult {
   userId: string
   user: any
   accessToken?: string
+  transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
   siteTypeHint?: AccountSiteType
   fetchContext?: AutoDetectFetchContext
@@ -223,6 +227,9 @@ async function combineUserDataAndSiteType(
         user: userData.user,
         siteType,
         accessToken: userData.accessToken,
+        ...(userData.transientAuth
+          ? { transientAuth: userData.transientAuth }
+          : {}),
         sub2apiAuth: userData.sub2apiAuth,
         ...(userData.fetchContext
           ? { fetchContext: userData.fetchContext }
@@ -435,10 +442,16 @@ async function getUserDataViaBackground(
       )
     }
 
+    const transientAuth = normalizeContentSessionTransientAuth(
+      response.data.transientAuth,
+      { baseUrl: url, siteType },
+    )
+
     return {
       userId,
       user: response.data.user,
       accessToken: response.data.accessToken,
+      ...(transientAuth ? { transientAuth } : {}),
       sub2apiAuth: response.data.sub2apiAuth,
       siteTypeHint: normalizeSiteTypeHint(response.data.siteTypeHint),
       ...(fetchContext ? { fetchContext } : {}),
@@ -554,6 +567,9 @@ async function getUserDataFromCurrentTab(
           userId: session.userId,
           user: session.user,
           accessToken: session.accessToken,
+          ...(session.transientAuth
+            ? { transientAuth: session.transientAuth }
+            : {}),
           sub2apiAuth: session.sub2apiAuth,
           siteTypeHint: normalizeSiteTypeHint(session.siteTypeHint),
           fetchContext,

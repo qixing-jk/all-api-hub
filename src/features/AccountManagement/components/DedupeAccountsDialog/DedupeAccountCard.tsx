@@ -18,7 +18,9 @@ import { formatTimestamp } from "./utils"
 type AccountCardGroup = Pick<
   DedupeAccountsDialogGroup,
   "groupId" | "keepAccountId" | "recommendedKeepAccountId" | "hasManualOverride"
->
+> & {
+  reason: DedupeAccountsDialogGroup["key"]["reason"]
+}
 
 export interface DedupeAccountCardProps {
   account: SiteAccount

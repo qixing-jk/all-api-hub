@@ -89,17 +89,17 @@ export default function DedupeAccountsDialog({
     () => buildDedupeAccountLabelMap(accounts),
     [accounts],
   )
-
   const scanGroups = scan.groups
 
   const groups = useMemo<DedupeAccountsDialogGroup[]>(() => {
     return scanGroups.map((group) => {
-      const groupId = `${group.key.origin}::${group.key.userId}`
+      const groupAccounts = group.accounts
+      const groupId = group.key.id
       const recommendedKeepAccountId = group.keepAccountId
       const manualKeepAccountId = keepOverridesByGroupId[groupId]
       const resolvedManualKeepAccountId =
         manualKeepAccountId &&
-        group.accounts.some((account) => account.id === manualKeepAccountId)
+        groupAccounts.some((account) => account.id === manualKeepAccountId)
           ? manualKeepAccountId
           : undefined
       const keepAccountId =
@@ -108,9 +108,10 @@ export default function DedupeAccountsDialog({
 
       return {
         ...group,
+        accounts: groupAccounts,
         groupId,
         keepAccountId,
-        deleteAccountIds: group.accounts
+        deleteAccountIds: groupAccounts
           .filter((account) => account.id !== keepAccountId)
           .map((account) => account.id),
         recommendedKeepAccountId,

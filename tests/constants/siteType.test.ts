@@ -6,6 +6,7 @@ import {
   getAccountSiteApiRouter,
   isAccountSiteType,
   isManagedSiteType,
+  OPENROUTER_HOSTNAMES,
   SHAREDCHAT_HOSTNAMES,
   SITE_TYPES,
 } from "~/constants/siteType"
@@ -18,6 +19,7 @@ describe("siteType constants", () => {
     expect(isAccountSiteType(SITE_TYPES.SUB2API)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.AIHUBMIX)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.SHAREDCHAT)).toBe(true)
+    expect(isAccountSiteType(SITE_TYPES.OPENROUTER)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.UNKNOWN)).toBe(true)
     expect(isAccountSiteType(SITE_TYPES.OCTOPUS)).toBe(false)
     expect(isAccountSiteType(SITE_TYPES.AXON_HUB)).toBe(false)
@@ -34,6 +36,7 @@ describe("siteType constants", () => {
     expect(isManagedSiteType(SITE_TYPES.SUB2API)).toBe(false)
     expect(isManagedSiteType(SITE_TYPES.AIHUBMIX)).toBe(false)
     expect(isManagedSiteType(SITE_TYPES.SHAREDCHAT)).toBe(false)
+    expect(isManagedSiteType(SITE_TYPES.OPENROUTER)).toBe(false)
     expect(isManagedSiteType("toString")).toBe(false)
   })
 
@@ -106,6 +109,13 @@ describe("siteType constants", () => {
     expect(ACCOUNT_SITE_DOMAIN_RULES).toContainEqual({
       name: SITE_TYPES.SHAREDCHAT,
       hostnames: SHAREDCHAT_HOSTNAMES,
+    })
+  })
+
+  it("includes the canonical OpenRouter domain detection rule", () => {
+    expect(ACCOUNT_SITE_DOMAIN_RULES).toContainEqual({
+      name: SITE_TYPES.OPENROUTER,
+      hostnames: OPENROUTER_HOSTNAMES,
     })
   })
 })

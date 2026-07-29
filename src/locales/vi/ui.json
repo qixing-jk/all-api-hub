@@ -255,6 +255,7 @@
       "manualPickHint": "Bạn có thể chọn thủ công tài khoản muốn giữ lại trong mỗi nhóm (chọn thủ công sẽ ghi đè chính sách giữ lại).",
       "previewDelete": "Xem trước xóa",
       "recommended": "Đề xuất",
+      "sameCredential": "Cùng khóa quản lý",
       "strategy": {
         "keepEnabled": "Ưu tiên giữ lại đã bật (nếu có)",
         "keepMostRecentlyUpdated": "Ưu tiên giữ lại cập nhật gần nhất",

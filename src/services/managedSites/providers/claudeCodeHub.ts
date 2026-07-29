@@ -4,6 +4,7 @@ import {
   isClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import type { ManagedSiteChannelDeleteResponse } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import type { ApiResponse } from "~/services/apiTransport/type"
 import {
@@ -11,6 +12,7 @@ import {
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import { getManagedSiteDeleteCertainty } from "~/services/managedSites/mutationCertainty"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
@@ -476,7 +478,7 @@ export async function updateChannel(
 export async function deleteChannel(
   config: ClaudeCodeHubConfig,
   channelId: number,
-): Promise<ApiResponse<unknown>> {
+): Promise<ManagedSiteChannelDeleteResponse> {
   try {
     const deleted = await claudeCodeHubApi.deleteProvider(config, channelId)
     return { success: true, data: deleted, message: "success" }
@@ -486,6 +488,7 @@ export async function deleteChannel(
       data: null,
       message:
         getErrorMessage(error) || t("messages:claudecodehub.deleteFailed"),
+      ...getManagedSiteDeleteCertainty(error),
     }
   }
 }

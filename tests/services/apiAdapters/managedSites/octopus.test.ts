@@ -316,6 +316,18 @@ describe("Octopus managed-site channel capability", () => {
         message: "delete failed",
       },
     )
+
+    octopusApi.deleteChannel.mockRejectedValueOnce(
+      new TypeError("Failed to fetch"),
+    )
+    await expect(octopusManagedSiteChannels.delete(config, 7)).resolves.toEqual(
+      {
+        success: false,
+        data: null,
+        message: "Failed to fetch",
+        certainty: "uncertain",
+      },
+    )
   })
 
   it("maps native Octopus channels to core resource summaries", async () => {

@@ -33,6 +33,7 @@ const renderCard = (siteType: AccountSiteType) => {
         keepAccountId: account.id,
         recommendedKeepAccountId: account.id,
         hasManualOverride: false,
+        reason: "same_origin_user",
       }}
       accountLabelById={new Map([[account.id, "Account"]])}
       pinnedAccountIds={[]}
@@ -46,6 +47,45 @@ const renderCard = (siteType: AccountSiteType) => {
 }
 
 describe("DedupeAccountCard today statistics", () => {
+  it("renders an ordinary record's user id in a secret-free credential group", async () => {
+    const account = buildSiteAccount({
+      id: "local-account-id",
+      site_type: SITE_TYPES.NEW_API,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "upstream-user-id",
+        access_token: "credential-secret",
+      },
+    })
+
+    render(
+      <DedupeAccountCard
+        account={account}
+        group={{
+          groupId: "group-credential",
+          keepAccountId: account.id,
+          recommendedKeepAccountId: account.id,
+          hasManualOverride: false,
+          reason: "same_credential",
+        }}
+        accountLabelById={new Map([[account.id, "Ordinary account"]])}
+        pinnedAccountIds={[]}
+        detailsOpenByAccountId={{ [account.id]: true }}
+        isWorking={false}
+        t={t}
+        onKeepChange={vi.fn()}
+        onToggleDetails={vi.fn()}
+      />,
+    )
+
+    await screen.findByText("Ordinary account")
+    expect(screen.getByText("upstream-user-id")).toBeInTheDocument()
+    expect(
+      screen.getByText("ui:dialog.dedupeAccounts.details.userId"),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("credential-secret")).not.toBeInTheDocument()
+  })
+
   it.each([SITE_TYPES.NEW_API, SITE_TYPES.AIHUBMIX])(
     "does not render legacy compatibility values for %s",
     async (siteType) => {
@@ -89,6 +129,7 @@ describe("DedupeAccountCard today statistics", () => {
           keepAccountId: account.id,
           recommendedKeepAccountId: account.id,
           hasManualOverride: false,
+          reason: "same_origin_user",
         }}
         accountLabelById={new Map([[account.id, "Account"]])}
         pinnedAccountIds={[]}
@@ -137,6 +178,7 @@ describe("DedupeAccountCard today statistics", () => {
           keepAccountId: account.id,
           recommendedKeepAccountId: account.id,
           hasManualOverride: false,
+          reason: "same_origin_user",
         }}
         accountLabelById={new Map([[account.id, "Account"]])}
         pinnedAccountIds={[]}
@@ -189,6 +231,7 @@ describe("DedupeAccountCard today statistics", () => {
           keepAccountId: account.id,
           recommendedKeepAccountId: account.id,
           hasManualOverride: false,
+          reason: "same_origin_user",
         }}
         accountLabelById={new Map([[account.id, "Account"]])}
         pinnedAccountIds={[]}
@@ -246,6 +289,7 @@ describe("DedupeAccountCard today statistics", () => {
           keepAccountId: account.id,
           recommendedKeepAccountId: account.id,
           hasManualOverride: false,
+          reason: "same_origin_user",
         }}
         accountLabelById={new Map([[account.id, "Account"]])}
         pinnedAccountIds={[]}

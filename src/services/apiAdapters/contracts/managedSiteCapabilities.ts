@@ -16,6 +16,17 @@ export type ManagedSiteChannelRequestOptions = {
   bypassSiteRequestLimit?: boolean
 }
 
+export const MANAGED_SITE_MUTATION_CERTAINTIES = {
+  Uncertain: "uncertain",
+} as const
+
+export type ManagedSiteMutationCertainty =
+  (typeof MANAGED_SITE_MUTATION_CERTAINTIES)[keyof typeof MANAGED_SITE_MUTATION_CERTAINTIES]
+
+export type ManagedSiteChannelDeleteResponse = ApiResponse<unknown> & {
+  certainty?: ManagedSiteMutationCertainty
+}
+
 export type ManagedSiteChannelsCapability<
   TConfig = ManagedSiteRuntimeConfigValue,
 > = {
@@ -37,7 +48,10 @@ export type ManagedSiteChannelsCapability<
     config: TConfig,
     channelData: UpdateChannelPayload,
   ): Promise<ApiResponse<unknown>>
-  delete(config: TConfig, channelId: number): Promise<ApiResponse<unknown>>
+  delete(
+    config: TConfig,
+    channelId: number,
+  ): Promise<ManagedSiteChannelDeleteResponse>
   fetchSecretKey?(config: TConfig, channelId: number): Promise<string>
   hydrateComparableKeys?(
     config: TConfig,

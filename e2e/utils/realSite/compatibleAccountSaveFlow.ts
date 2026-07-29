@@ -12,6 +12,7 @@ type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
 
 type CompatibleRealSiteLoginResult = {
   user: Record<string, unknown>
+  cleanupOwnedSession?: () => Promise<void>
 }
 
 export async function runCompatibleRealSiteAccountSaveFlow(params: {
@@ -40,6 +41,9 @@ export async function runCompatibleRealSiteAccountSaveFlow(params: {
     login: async (sitePage) => {
       const loginResult = await params.login(sitePage, params.config)
       expect(loginResult.user).toBeTruthy()
+      return {
+        cleanupDetectableSite: loginResult.cleanupOwnedSession,
+      }
     },
   })
 }

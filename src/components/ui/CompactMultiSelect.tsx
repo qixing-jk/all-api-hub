@@ -364,6 +364,14 @@ export function CompactMultiSelect({
       ? buttonProps["aria-labelledby"]
       : labelId
 
+  const chipsInputAriaDescribedBy =
+    typeof buttonProps["aria-describedby"] === "string"
+      ? buttonProps["aria-describedby"]
+      : undefined
+
+  const chipsInputAriaInvalid = buttonProps["aria-invalid"]
+  const chipsInputAriaRequired = buttonProps["aria-required"]
+
   const hasMatchingOption = React.useMemo(() => {
     const q = searchTerm.trim().toLowerCase()
     if (!q) return false
@@ -520,6 +528,9 @@ export function CompactMultiSelect({
                     data-testid={inputTestId}
                     aria-label={chipsInputAriaLabel}
                     aria-labelledby={chipsInputAriaLabelledBy}
+                    aria-describedby={chipsInputAriaDescribedBy}
+                    aria-invalid={chipsInputAriaInvalid}
+                    aria-required={chipsInputAriaRequired}
                     placeholder={chipsInputPlaceholder}
                     disabled={disabled}
                     onKeyDown={handleCustomKeyDown}

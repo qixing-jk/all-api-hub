@@ -39,6 +39,39 @@ const config = {
 const AUTH_URL = "https://axonhub.example.com/admin/auth/signin"
 const GRAPHQL_URL = "https://axonhub.example.com/admin/graphql"
 
+const extractSelectionBlock = (source: string, marker: string) => {
+  const markerIndex = source.indexOf(marker)
+  const openBrace = source.indexOf("{", markerIndex)
+  if (markerIndex < 0 || openBrace < 0) {
+    throw new Error(`missing GraphQL selection marker: ${marker}`)
+  }
+  let depth = 0
+  for (let index = openBrace; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1
+    if (source[index] !== "}") continue
+    depth -= 1
+    if (depth === 0) return source.slice(openBrace + 1, index)
+  }
+  throw new Error(`unterminated GraphQL selection marker: ${marker}`)
+}
+
+const getTopLevelSelectionNames = (selection: string) => {
+  const names = new Set<string>()
+  let depth = 0
+  for (const line of selection.split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (depth === 0) {
+      const name = /^([_A-Za-z][_0-9A-Za-z]*)\b/.exec(trimmed)?.[1]
+      if (name) names.add(name)
+    }
+    for (const character of line) {
+      if (character === "{") depth += 1
+      if (character === "}") depth -= 1
+    }
+  }
+  return names
+}
+
 const nativeNullBaseUrlChannel: AxonHubChannel = {
   id: "gid://axonhub/Channel/native-null-base-url",
   type: "openai",
@@ -48,7 +81,7 @@ const nativeNullBaseUrlChannel: AxonHubChannel = {
   tags: ["table-tag"],
   credentials: null,
   supportedModels: ["model-alpha"],
-  manualModels: [],
+  manualModels: ["manual-alpha"],
   defaultTestModel: "model-alpha",
   settings: null,
 }
@@ -257,6 +290,8 @@ describe("AxonHub API service", () => {
           name: "Native page channel",
           baseURL: null,
           tags: ["table-tag"],
+          supportedModels: ["model-alpha"],
+          manualModels: ["manual-alpha"],
         }),
       ],
       total: 7,
@@ -267,6 +302,7 @@ describe("AxonHub API service", () => {
 
     expect(capturedQuery).toContain("queryChannels(input: $input)")
     expect(capturedQuery).toContain("tags")
+    expect(capturedQuery).toContain("manualModels")
     for (const detailOnlySelection of [
       "settings",
       "modelMappings",
@@ -321,6 +357,59 @@ describe("AxonHub API service", () => {
       credentials: null,
     })
     expect(capturedQuery).toContain("__typename")
+    const channelSelection = extractSelectionBlock(
+      capturedQuery,
+      "... on Channel",
+    )
+    expect([...getTopLevelSelectionNames(channelSelection)]).toEqual(
+      expect.arrayContaining([
+        "name",
+        "type",
+        "baseURL",
+        "status",
+        "credentials",
+        "supportedModels",
+        "manualModels",
+        "defaultTestModel",
+        "autoSyncSupportedModels",
+        "autoSyncModelPattern",
+        "tags",
+        "orderingWeight",
+        "remark",
+        "settings",
+      ]),
+    )
+    const credentialsSelection = extractSelectionBlock(
+      channelSelection,
+      "credentials",
+    )
+    expect([...getTopLevelSelectionNames(credentialsSelection)]).toEqual(
+      expect.arrayContaining(["apiKey", "apiKeys", "gcp", "oauth"]),
+    )
+    expect([
+      ...getTopLevelSelectionNames(
+        extractSelectionBlock(credentialsSelection, "gcp"),
+      ),
+    ]).toEqual(expect.arrayContaining(["region", "projectID", "jsonData"]))
+    expect([
+      ...getTopLevelSelectionNames(
+        extractSelectionBlock(credentialsSelection, "oauth"),
+      ),
+    ]).toEqual(
+      expect.arrayContaining([
+        "accessToken",
+        "refreshToken",
+        "clientID",
+        "expiresAt",
+        "tokenType",
+        "scopes",
+      ]),
+    )
+    expect([
+      ...getTopLevelSelectionNames(
+        extractSelectionBlock(channelSelection, "settings"),
+      ),
+    ]).toContain("extraModelPrefix")
     expect(capturedVariables).toEqual({ id: opaqueId })
   })
 

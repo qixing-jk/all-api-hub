@@ -1,10 +1,15 @@
 import type { BrowserContext, Route } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import {
+  OPENROUTER_MANAGEMENT_KEY_TRANSPORT_MARGIN_MS,
+  OPENROUTER_MANAGEMENT_KEY_TRANSPORT_TIMEOUT_MS,
+} from "~/constants/openRouterBootstrap"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_WEB_ORIGIN,
+  OPENROUTER_WEB_ORIGIN,
   SITE_TYPES,
 } from "~/constants/siteType"
 import {
@@ -13,7 +18,9 @@ import {
   getCopyKeyDialogRuntimeKeyItemTestId,
 } from "~/features/AccountManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import enMessages from "~/locales/en/messages.json" with { type: "json" }
 import { buildAccountTokenRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
+import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { ApiToken, SiteAccount } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -26,6 +33,7 @@ import {
 import { verifyCcSwitchModelExportDeepLink } from "~~/e2e/scenarios/ccSwitchExport"
 import {
   createStoredAccount,
+  E2E_NEW_API_RC22_AUTH,
   forceExtensionLanguage,
   installExtensionPageGuards,
   seedStoredAccounts,
@@ -39,12 +47,159 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { expectAccountListItemVisibleBySite } from "~~/e2e/utils/realSite/accountAdd"
 
 const DEFAULT_AUTO_PROVISION_TOKEN_NAME = "user group (auto)"
 const AIHUBMIX_SITE_URL = AIHUBMIX_WEB_ORIGIN
 const MANAGED_SITE_BASE_URL = "https://managed-site.example.com"
 const MANAGED_SITE_ADMIN_TOKEN = "managed-site-admin-token"
 const MANAGED_SITE_USER_ID = "1"
+const OPENROUTER_API_PATH = new URL(OPENROUTER_API_BASE_URL).pathname
+const OPENROUTER_MANAGEMENT_KEY = "sk-or-e2e-management-key"
+const OPENROUTER_CREATOR_USER_ID = "openrouter-user-placeholder"
+
+type OpenRouterManagementKeyFixtureMode = "authenticated" | "logged_out"
+
+async function stubOpenRouterManagementKeyRoutes(
+  context: BrowserContext,
+  mode: OpenRouterManagementKeyFixtureMode,
+) {
+  let createCount = 0
+
+  await context.exposeBinding(
+    "__aahRecordOpenRouterManagementKeyCreate",
+    (_source, label: unknown) => {
+      if (typeof label === "string" && label.trim()) {
+        createCount += 1
+      }
+    },
+  )
+
+  await context.route(`${OPENROUTER_WEB_ORIGIN}/**`, async (route: Route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+
+    if (
+      request.method() === "GET" &&
+      url.pathname === "/settings/management-keys"
+    ) {
+      const body =
+        mode === "logged_out"
+          ? `<!doctype html>
+            <html>
+              <head><title>Sign in | OpenRouter</title></head>
+              <body><a href="/auth/login">Sign in</a></body>
+            </html>`
+          : `<!doctype html>
+            <html>
+              <head><title>Management Keys | OpenRouter</title></head>
+              <body>
+                <main>
+                  <h1>Management Keys</h1>
+                  <button id="new-key" type="button">New Key</button>
+                </main>
+                <div id="create-dialog" role="dialog" hidden>
+                  <label for="name">Name</label>
+                  <input id="name" placeholder="e.g. &quot;Management Key&quot;" />
+                  <button type="button" data-disabled disabled>Create</button>
+                  <button type="button">Close</button>
+                </div>
+                <script>
+                  window.Clerk = {
+                    user: {
+                      id: "${OPENROUTER_CREATOR_USER_ID}",
+                      fullName: "OpenRouter Example",
+                      username: "ignored-placeholder",
+                      primaryEmailAddress: {
+                        emailAddress: "ignored@example.invalid",
+                      },
+                    },
+                  }
+                  const createDialog = document.getElementById("create-dialog")
+                  const input = createDialog.querySelector("input")
+                  const createButton = Array.from(createDialog.querySelectorAll("button"))
+                    .find((button) => button.textContent.trim() === "Create")
+                  input.addEventListener("input", () => {
+                    createButton.disabled = !input.value.trim()
+                    createButton.toggleAttribute("data-disabled", createButton.disabled)
+                  })
+                  document.getElementById("new-key").addEventListener("click", () => {
+                    createDialog.hidden = false
+                    createDialog.setAttribute("data-open", "")
+                  })
+                  createButton.addEventListener("click", () => {
+                    void window.__aahRecordOpenRouterManagementKeyCreate(input.value)
+                    createDialog.remove()
+                    const resultDialog = document.createElement("div")
+                    resultDialog.setAttribute("role", "dialog")
+                    resultDialog.setAttribute("data-open", "")
+                    resultDialog.innerHTML = [
+                      "<p>Your new management key:</p>",
+                      "<code>${OPENROUTER_MANAGEMENT_KEY}</code>",
+                      '<button type="button">Close</button>',
+                    ].join("")
+                    resultDialog.querySelector("button").addEventListener("click", () => {
+                      resultDialog.remove()
+                    })
+                    document.body.append(resultDialog)
+                  })
+                </script>
+              </body>
+            </html>`
+
+      await route.fulfill({ status: 200, contentType: "text/html", body })
+      return
+    }
+
+    if (
+      request.method() === "GET" &&
+      url.pathname === `${OPENROUTER_API_PATH}/key`
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            is_management_key: true,
+            creator_user_id: OPENROUTER_CREATOR_USER_ID,
+          },
+        }),
+      })
+      return
+    }
+
+    if (
+      request.method() === "GET" &&
+      url.pathname === `${OPENROUTER_API_PATH}/credits`
+    ) {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: { total_credits: 10, total_usage: 2 },
+        }),
+      })
+      return
+    }
+
+    if (request.method() === "GET" && url.pathname === "/favicon.ico") {
+      await route.fulfill({ status: 204, body: "" })
+      return
+    }
+
+    await route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: `Unhandled OpenRouter E2E route: ${request.method()} ${url.pathname}`,
+      }),
+    })
+  })
+
+  return {
+    getCreateCount: () => createCount,
+  }
+}
 
 function createCopyDialogToken(overrides: Partial<ApiToken> = {}): ApiToken {
   const nowSeconds = Math.floor(Date.now() / 1000)
@@ -448,6 +603,222 @@ test("adds an account through the real add-account auto-detect flow", async ({
   expect(persistedAccounts).toContain('"username":"e2e-user"')
 })
 
+test("adds an rc22 account from AuthBundle and persists only its PAT", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const baseUrl = "https://rc22.example.invalid"
+  const { dashboardToken, managementPat, sessionId } = E2E_NEW_API_RC22_AUTH
+
+  await stubNewApiSiteRoutes(context, {
+    baseUrl,
+    dashboardAuthMode: "auth-bundle",
+    accessToken: managementPat,
+  })
+
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    tempWindowFallback: {
+      enabled: false,
+    },
+  })
+
+  const fixture = await runAccountAutoDetectScenario({
+    extensionId,
+    extensionPage: page,
+    baseUrl,
+    siteType: SITE_TYPES.NEW_API,
+    getServiceWorker: async () => serviceWorker,
+    openSitePage: async () => {
+      const sitePage = await context.newPage()
+      await sitePage.goto(baseUrl)
+      expect(
+        await sitePage.evaluate(() => localStorage.getItem("user")),
+      ).toBeNull()
+      await sitePage.bringToFront()
+      return sitePage
+    },
+    prepareDetectableSite: async (sitePage) => ({
+      cleanupDetectableSite: async () => {
+        const cleanupResult = await sitePage.evaluate(
+          async ({ dashboardToken, managementPat, sessionId }) => {
+            const logoutResponse = await fetch("/api/user/auth/logout", {
+              method: "POST",
+              credentials: "include",
+              headers: {
+                Authorization: `Bearer ${dashboardToken}`,
+                "X-Auth-Session": sessionId,
+              },
+            })
+            const revokedDashboardResponse = await fetch("/api/user/self", {
+              headers: { Authorization: `Bearer ${dashboardToken}` },
+            })
+            const patResponse = await fetch("/api/user/self", {
+              headers: { Authorization: `Bearer ${managementPat}` },
+            })
+
+            return {
+              logoutStatus: logoutResponse.status,
+              revokedDashboardStatus: revokedDashboardResponse.status,
+              patStatus: patResponse.status,
+            }
+          },
+          { dashboardToken, managementPat, sessionId },
+        )
+
+        expect(cleanupResult).toEqual({
+          logoutStatus: 200,
+          revokedDashboardStatus: 401,
+          patStatus: 200,
+        })
+      },
+    }),
+  })
+
+  const accounts = await readStoredAccounts(serviceWorker)
+  const saved = accounts.find((account) => account.id === fixture.accountId)
+  expect(saved?.account_info.access_token).toBe(managementPat)
+  expect(JSON.stringify(saved)).not.toContain(dashboardToken)
+})
+
+test("OpenRouter auto-detect bootstrap creates and saves one management key", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    tempWindowFallback: {
+      enabled: false,
+    },
+  })
+  const openRouterFixture = await stubOpenRouterManagementKeyRoutes(
+    context,
+    "authenticated",
+  )
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ACCOUNT}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
+  const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+  await dialog
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput)
+    .fill(OPENROUTER_WEB_ORIGIN)
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
+
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger),
+  ).toHaveAttribute("data-site-type", SITE_TYPES.OPENROUTER)
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
+  ).toHaveValue(OPENROUTER_MANAGEMENT_KEY)
+  const usernameInput = dialog.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput,
+  )
+  const userIdInput = dialog.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput,
+  )
+  await expect(usernameInput).toBeVisible()
+  await expect(usernameInput).toBeEditable()
+  await expect(usernameInput).toHaveJSProperty("required", false)
+  await expect(usernameInput).toHaveValue("OpenRouter Example")
+  await expect(userIdInput).toBeVisible()
+  await expect(userIdInput).toBeEditable()
+  await expect(userIdInput).toHaveJSProperty("required", false)
+  await expect(userIdInput).toHaveValue(OPENROUTER_CREATOR_USER_ID)
+  await expect.poll(openRouterFixture.getCreateCount).toBe(1)
+
+  await usernameInput.fill("Edited Example")
+  await userIdInput.fill("edited-user-placeholder")
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton).click()
+  await expect(dialog).toBeHidden()
+
+  await expectAccountListItemVisibleBySite(page, {
+    siteType: SITE_TYPES.OPENROUTER,
+    baseUrl: OPENROUTER_WEB_ORIGIN,
+  })
+  await expect
+    .poll(async () => {
+      const accounts = await readStoredAccounts(serviceWorker)
+      return accounts.find(
+        (account) =>
+          account.site_type === SITE_TYPES.OPENROUTER &&
+          account.site_url === OPENROUTER_WEB_ORIGIN,
+      )
+    })
+    .toMatchObject({
+      site_type: SITE_TYPES.OPENROUTER,
+      site_url: OPENROUTER_WEB_ORIGIN,
+      account_info: {
+        id: "edited-user-placeholder",
+        username: "Edited Example",
+        access_token: OPENROUTER_MANAGEMENT_KEY,
+      },
+    })
+
+  expect(openRouterFixture.getCreateCount()).toBe(1)
+})
+
+test("OpenRouter auto-detect bootstrap shows manual fallback while logged out", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    tempWindowFallback: {
+      enabled: false,
+    },
+  })
+  const openRouterFixture = await stubOpenRouterManagementKeyRoutes(
+    context,
+    "logged_out",
+  )
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ACCOUNT}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
+  const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+  await dialog
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput)
+    .fill(OPENROUTER_WEB_ORIGIN)
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
+
+  const loggedOutGuidance = dialog.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage,
+  )
+  await expect(loggedOutGuidance).toBeVisible({
+    timeout:
+      OPENROUTER_MANAGEMENT_KEY_TRANSPORT_TIMEOUT_MS +
+      OPENROUTER_MANAGEMENT_KEY_TRANSPORT_MARGIN_MS,
+  })
+  await expect(loggedOutGuidance).toHaveText(
+    enMessages.openrouter.bootstrap.logged_out,
+  )
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger),
+  ).toHaveAttribute("data-site-type", SITE_TYPES.OPENROUTER)
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput),
+  ).toBeDisabled()
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
+  ).toBeVisible()
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
+  ).toBeEmpty()
+  await expect.poll(openRouterFixture.getCreateCount).toBe(0)
+})
+
 test("enables default-key provisioning, adds an account, saves the created key as a reusable API profile, and verifies it from the popup", async ({
   context,
   extensionId,
@@ -481,7 +852,6 @@ test("enables default-key provisioning, adds an account, saves the created key a
     getServiceWorker: async () => serviceWorker,
     openSitePage: async () => {
       const sitePage = await context.newPage()
-      installExtensionPageGuards(sitePage)
       await forceExtensionLanguage(sitePage, "en")
       await sitePage.addInitScript(() => {
         window.localStorage.setItem(

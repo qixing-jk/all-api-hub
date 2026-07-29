@@ -79,6 +79,9 @@
     "notes": "备注",
     "notesPlaceholder": "选填，输入备注信息",
     "openRedeemWithCheckIn": "使用外部签到时同时打开充值页面",
+    "openrouterManagementKey": "OpenRouter 管理密钥",
+    "openrouterManagementKeyGuidance": "请在 OpenRouter 的 Management Keys 页面新建管理密钥并立即复制，然后粘贴到这里。现有管理密钥的明文无法再次显示。",
+    "openrouterManagementKeyGuidanceTitle": "使用 OpenRouter 管理密钥",
     "showAccessToken": "显示访问令牌",
     "showRefreshToken": "显示 Refresh Token",
     "siteName": "网站名称",
@@ -122,6 +125,8 @@
     "manualAdd": "手动添加",
     "manualInfo": "手动填写账号信息。账号将被安全地保存在本地存储中",
     "openLdohSiteList": "打开 LDOH 站点列表",
+    "openrouterBootstrap": "创建 OpenRouter 管理密钥",
+    "openrouterBootstrapInfo": "此操作会在 OpenRouter 创建新的管理密钥，然后使用该密钥识别并补全账号信息。",
     "reDetectInfo": "如果站点信息有变化，建议点击\"重新识别\"按钮（需要在目标站点先自行登录）"
   },
   "messages": {
@@ -151,9 +156,17 @@
   },
   "mode": {
     "autoDetect": "自动识别",
+    "createOpenRouterManagementKey": "创建 OpenRouter 管理密钥并识别",
+    "creatingOpenRouterManagementKey": "正在创建 OpenRouter 管理密钥...",
     "detecting": "识别中...",
     "manualAdd": "手动添加",
     "reDetect": "重新识别"
+  },
+  "openrouterBootstrapRecovery": {
+    "label": "可识别标签：{{label}}",
+    "manualReview": "OpenRouter 中可能存在带有此标签的管理密钥。",
+    "manualRevocation": "请检查管理密钥；如果不再需要，请手动删除带有此标签的密钥。",
+    "title": "OpenRouter 密钥创建需要你的处理"
   },
   "sections": {
     "accountAuth": {
@@ -177,6 +190,7 @@
     "alreadyAdded": "该站点已存在账号",
     "authMethod": "认证方式",
     "authMethodPlaceholder": "认证方式",
+    "authMethodSelectedForSite": "已根据 {{siteType}} 的要求自动选择认证方式。",
     "authType": {
       "accessToken": "访问令牌认证",
       "cookieAuth": "Cookie 认证"
@@ -186,7 +200,6 @@
     "currentSite": "当前站点",
     "editNow": "立即编辑",
     "siteUrl": "网站 URL",
-    "sub2apiAuthOnly": "Sub2API 仅支持访问令牌认证（JWT）",
     "sub2apiHint": "Sub2API 使用短期 JWT，当失效时，扩展会自动使用临时窗口尝试获取新的 JWT（需要在该站点已登录）。启用“插件托管会话”后，每个账号可后台自动独立刷新和续期认证，支持同站点多账号。",
     "unknown": "无法获取",
     "useCurrent": "使用当前站点"

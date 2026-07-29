@@ -1,3 +1,7 @@
+import {
+  AXON_HUB_EDITABLE_FIELD_IDS,
+  AXON_HUB_TABLE_FIELD_IDS,
+} from "~/constants/axonHub"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES,
@@ -11,6 +15,7 @@ import {
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
 } from "~/services/accounts/accountSiteProfile/contracts"
+import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -32,6 +37,8 @@ import {
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_LOGIN_PATH,
   AIHUBMIX_WEB_ORIGIN,
+  OPENROUTER_HOSTNAMES,
+  OPENROUTER_WEB_ORIGIN,
   SHAREDCHAT_HOSTNAMES,
   SHAREDCHAT_WEB_ORIGIN,
   SITE_TYPES,
@@ -110,6 +117,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.SUB2API,
   SITE_TYPES.AIHUBMIX,
   SITE_TYPES.SHAREDCHAT,
+  SITE_TYPES.OPENROUTER,
   SITE_TYPES.UNKNOWN,
 ] as const
 
@@ -385,6 +393,50 @@ const ACCOUNT_SITE_DEFINITIONS = [
     },
     readiness: unsupportedModelListReadiness,
   },
+  {
+    siteType: SITE_TYPES.OPENROUTER,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter,
+    onboarding: {
+      detection: { hostnames: OPENROUTER_HOSTNAMES },
+      routes: { adminCredentialsPath: "/settings/management-keys" },
+    },
+    productProfile: {
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+        supportsCookieAuth: false,
+        supportsBuiltInCheckInDetection: false,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: [],
+      },
+      modelList: {
+        directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
+        tokenScopedCatalogFallback:
+          ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
+        dashboardEstimateLoader:
+          ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS.None,
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: OPENROUTER_HOSTNAMES,
+        storageOrigin: OPENROUTER_WEB_ORIGIN,
+        duplicateOrigin: OPENROUTER_WEB_ORIGIN,
+      },
+    },
+    readiness: unsupportedModelListReadiness,
+  },
 ] as const satisfies readonly AccountSiteDefinition[]
 
 const MANAGED_ONLY_SITE_DEFINITIONS = [
@@ -400,30 +452,9 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,
-      tableFieldIds: [
-        "name",
-        "type",
-        "baseURL",
-        "status",
-        "supportedModels",
-        "tags",
-      ],
-      detailFieldIds: [
-        "name",
-        "type",
-        "baseURL",
-        "status",
-        "key",
-        "supportedModels",
-        "manualModels",
-        "defaultTestModel",
-        "autoSyncSupportedModels",
-        "autoSyncModelPattern",
-        "tags",
-        "orderingWeight",
-        "remark",
-        "extraModelPrefix",
-      ],
+      mode: MANAGED_RESOURCE_MODES.NativeResource,
+      tableFieldIds: AXON_HUB_TABLE_FIELD_IDS,
+      detailFieldIds: AXON_HUB_EDITABLE_FIELD_IDS,
       actions: [
         MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
         MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,

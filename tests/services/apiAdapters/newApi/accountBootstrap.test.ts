@@ -118,6 +118,30 @@ describe("createNewApiAccountBootstrap", () => {
     ).resolves.toBe("/login")
   })
 
+  it("forwards an explicit token creation policy through the factory closure", async () => {
+    const accessToken = {
+      username: "Example User",
+      access_token: "created-token",
+    }
+    const accessTokenCreationPolicy = {
+      currentTabTransport: "disabled" as const,
+      tempWindowFallback: { statusCodes: [], codes: [] },
+    }
+    mockGetOrCreateAccessToken.mockResolvedValueOnce(accessToken)
+
+    const accountBootstrap = createNewApiAccountBootstrap(SITE_TYPES.NEW_API, {
+      accessTokenCreationPolicy,
+    })
+
+    await expect(
+      accountBootstrap.getOrCreateAccessToken(request),
+    ).resolves.toBe(accessToken)
+    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith(
+      request,
+      accessTokenCreationPolicy,
+    )
+  })
+
   it.each([
     [SITE_TYPES.ANYROUTER, anyrouterFetchSupportCheckIn],
     [SITE_TYPES.WONG_GONGYI, wongFetchSupportCheckIn],

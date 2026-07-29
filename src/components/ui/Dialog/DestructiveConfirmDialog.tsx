@@ -58,6 +58,10 @@ interface DestructiveConfirmDialogProps {
    * Optional stable selector for the destructive confirmation action.
    */
   confirmButtonTestId?: string
+  /**
+   * Optional stable selector for the cancel action.
+   */
+  cancelButtonTestId?: string
 }
 
 /**
@@ -80,6 +84,7 @@ export function DestructiveConfirmDialog({
   isWorking = false,
   size = "sm",
   confirmButtonTestId,
+  cancelButtonTestId,
 }: DestructiveConfirmDialogProps) {
   return (
     <Modal
@@ -108,6 +113,7 @@ export function DestructiveConfirmDialog({
             variant="secondary"
             className="flex-1"
             disabled={isWorking}
+            data-testid={cancelButtonTestId}
           >
             {cancelLabel}
           </Button>

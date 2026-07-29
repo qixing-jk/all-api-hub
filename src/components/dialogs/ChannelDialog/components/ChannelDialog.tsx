@@ -14,19 +14,7 @@ import {
   CHANNEL_DIALOG_ADVISORY_WARNING_KINDS,
 } from "~/components/dialogs/ChannelDialog/utils/advisoryWarning"
 import { ManagedSiteChannelAssessmentSignalsRow } from "~/components/ManagedSiteChannelAssessmentSignals"
-import {
-  Alert,
-  Button,
-  CompactMultiSelect,
-  Input,
-  Label,
-  Modal,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui"
+import { Alert, Button } from "~/components/ui"
 import {
   AxonHubChannelTypeOptions,
   isAxonHubChannelType,
@@ -40,6 +28,7 @@ import { ChannelType, ChannelTypeOptions } from "~/constants/managedSite"
 import { OctopusOutboundTypeOptions } from "~/constants/octopus"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { ManagedSiteChannelDetailView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteChannelDetailView"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { toManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
@@ -59,6 +48,9 @@ import {
   type ManagedSiteChannel,
 } from "~/types/managedSite"
 import { OctopusOutboundType } from "~/types/octopus"
+
+import { ChannelCommonFieldsBody } from "./ChannelCommonFieldsBody"
+import { ChannelEditorShell } from "./ChannelEditorShell"
 
 export interface ChannelDialogProps {
   isOpen: boolean
@@ -456,24 +448,16 @@ export function ChannelDialog({
     retryResourceEditLoad()
   }
 
-  const header = (
-    <div>
-      <h3 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
-        {isAddMode
-          ? t("channelDialog:title.add")
-          : isViewMode
-            ? t("channelDialog:title.view")
-            : t("channelDialog:title.edit")}
-      </h3>
-      <p className="dark:text-dark-text-secondary mt-1 text-sm text-gray-500">
-        {isAddMode
-          ? t("channelDialog:description.add")
-          : isViewMode
-            ? t("channelDialog:description.view")
-            : t("channelDialog:description.edit")}
-      </p>
-    </div>
-  )
+  const dialogTitle = isAddMode
+    ? t("channelDialog:title.add")
+    : isViewMode
+      ? t("channelDialog:title.view")
+      : t("channelDialog:title.edit")
+  const dialogDescription = isAddMode
+    ? t("channelDialog:description.add")
+    : isViewMode
+      ? t("channelDialog:description.view")
+      : t("channelDialog:description.edit")
 
   const submitButtonLabel = isSaving
     ? isAddMode
@@ -483,39 +467,76 @@ export function ChannelDialog({
       ? t("channelDialog:actions.create")
       : t("channelDialog:actions.update")
 
-  const footer = (
-    <div className="flex justify-end gap-3">
-      <Button
-        variant="outline"
-        onClick={onClose}
-        disabled={isSaving}
-        type="button"
-      >
-        {isViewMode ? t("common:actions.close") : t("common:actions.cancel")}
-      </Button>
-      {!isViewMode && (
-        <Button
-          onClick={handleSubmit}
-          disabled={!isFormValid || isResourceEditUnavailable}
-          loading={isSaving}
-          type="submit"
-          data-testid={CHANNEL_DIALOG_TEST_IDS.submitButton}
-        >
-          {submitButtonLabel}
-        </Button>
-      )}
-    </div>
-  )
+  const channelTypeValue =
+    formData.type === undefined || formData.type === null
+      ? ""
+      : String(formData.type)
+  const channelTypeLabel =
+    channelTypeOptions.find(
+      (option) => String(option.value) === channelTypeValue,
+    )?.label ?? channelTypeValue
+  const statusLabel =
+    formData.status === CHANNEL_STATUS.Enable
+      ? t("channelDialog:fields.status.enabled")
+      : formData.status === CHANNEL_STATUS.ManuallyDisabled
+        ? t("channelDialog:fields.status.disabled")
+        : formData.status === undefined || formData.status === null
+          ? ""
+          : String(formData.status)
+  const detailFields = [
+    {
+      label: t("channelDialog:fields.type.label"),
+      value: channelTypeLabel,
+    },
+    {
+      label: t("channelDialog:fields.key.label"),
+      value: formData.key ? "••••••••" : "",
+    },
+    {
+      label: t("channelDialog:fields.baseUrl.label"),
+      value: formData.base_url,
+    },
+    {
+      label: t("channelDialog:fields.models.label"),
+      value: formData.models.join(", "),
+    },
+    ...(!isOctopus && !isAxonHub
+      ? [
+          {
+            label: t("channelDialog:fields.groups.label"),
+            value: formData.groups.join(", "),
+          },
+          {
+            label: t("channelDialog:fields.priority.label"),
+            value: String(formData.priority),
+          },
+          {
+            label: t("channelDialog:fields.weight.label"),
+            value: String(formData.weight),
+          },
+        ]
+      : []),
+    {
+      label: t("channelDialog:fields.status.label"),
+      value: statusLabel,
+    },
+  ]
 
   return (
-    <Modal
+    <ChannelEditorShell
       isOpen={isOpen}
       onClose={onClose}
-      header={header}
-      footer={footer}
-      size="lg"
-      closeOnBackdropClick={!isSaving}
-      closeOnEsc={!isSaving}
+      title={dialogTitle}
+      description={dialogDescription}
+      closeLabel={
+        isViewMode ? t("common:actions.close") : t("common:actions.cancel")
+      }
+      submitLabel={submitButtonLabel}
+      submitTestId={CHANNEL_DIALOG_TEST_IDS.submitButton}
+      showSubmit={!isViewMode}
+      isSubmitDisabled={!isFormValid || isResourceEditUnavailable}
+      onSubmit={isViewMode ? (event) => event.preventDefault() : handleSubmit}
+      isSubmitting={isSaving}
     >
       {currentAdvisoryWarning ? (
         <Alert
@@ -576,336 +597,89 @@ export function ChannelDialog({
           </div>
         </Alert>
       ) : null}
-      <form
-        onSubmit={isViewMode ? (event) => event.preventDefault() : handleSubmit}
-        className="space-y-4"
-      >
-        {/* Channel Name */}
-        <div>
-          <Label htmlFor="channel-name" required={!isViewMode}>
-            {t("channelDialog:fields.name.label")}
-          </Label>
-          <Input
-            id="channel-name"
-            data-testid={CHANNEL_DIALOG_TEST_IDS.nameInput}
-            type="text"
-            value={formData.name}
-            onChange={(e) => updateField("name", e.target.value)}
-            placeholder={t("channelDialog:fields.name.placeholder")}
-            disabled={isFormInteractionDisabled}
-            readOnly={isViewMode}
-            required={!isViewMode}
-          />
-        </div>
-
-        {/* Channel Type */}
-        <div>
-          <Label htmlFor="channel-type" required={!isViewMode}>
-            {t("channelDialog:fields.type.label")}
-          </Label>
-          <Select
-            value={
+      {isViewMode ? (
+        <ManagedSiteChannelDetailView
+          name={formData.name}
+          fields={detailFields}
+          missingValue={t("common:labels.notAvailable")}
+        />
+      ) : (
+        <ChannelCommonFieldsBody
+          t={t}
+          values={{
+            name: formData.name,
+            type:
               formData.type === undefined || formData.type === null
                 ? ""
-                : String(formData.type)
-            }
-            onValueChange={(value) =>
-              handleTypeChange(
-                // AxonHub and Claude Code Hub use backend-owned string
-                // channel/provider types, so keep them out of numeric coercion.
-                isAxonHub || isClaudeCodeHub
-                  ? value
-                  : (Number(value) as ChannelType | OctopusOutboundType),
-              )
-            }
-            disabled={isFormInteractionDisabled || !isAddMode}
-            required={!isViewMode}
-          >
-            <SelectTrigger id="channel-type">
-              <SelectValue
-                placeholder={t("channelDialog:fields.type.placeholder")}
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {shouldShowUnknownStringType ? (
-                <SelectItem value={String(formData.type)}>
-                  {String(formData.type)}
-                </SelectItem>
-              ) : null}
-              {channelTypeOptions.map((option) => (
-                <SelectItem key={option.value} value={String(option.value)}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-            {t("channelDialog:fields.type.hint")}
-          </p>
-        </div>
-
-        {/* API Key */}
-        <div>
-          <Label
-            htmlFor="channel-key"
-            required={!isViewMode && isKeyFieldRequired}
-          >
-            {t("channelDialog:fields.key.label")}
-          </Label>
-          <Input
-            id="channel-key"
-            data-testid={CHANNEL_DIALOG_TEST_IDS.keyInput}
-            type="password"
-            revealable
-            revealed={showKey}
-            onRevealedChange={setShowKey}
-            revealLabels={{
-              show: t("channelDialog:actions.showKey"),
-              hide: t("channelDialog:actions.hideKey"),
-            }}
-            value={formData.key}
-            onChange={(e) => updateField("key", e.target.value)}
-            placeholder={t("channelDialog:fields.key.placeholder")}
-            disabled={isFormInteractionDisabled}
-            readOnly={isViewMode}
-            required={!isViewMode && isKeyFieldRequired}
-          />
-          {!isAddMode && !isViewMode && onRequestRealKey ? (
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="dark:text-dark-text-secondary text-xs text-gray-500">
-                {t("channelDialog:fields.key.realKeyHint")}
-              </p>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void handleLoadRealKey()}
-                disabled={isFormInteractionDisabled}
-                loading={isLoadingRealKey}
-              >
-                {isLoadingRealKey
-                  ? t("channelDialog:actions.loadingRealKey")
-                  : t("channelDialog:actions.loadRealKey")}
-              </Button>
-            </div>
-          ) : null}
-        </div>
-
-        {/* Base URL */}
-        <div>
-          <Label
-            htmlFor="channel-base-url"
-            required={!isViewMode && isBaseUrlRequired}
-          >
-            {t("channelDialog:fields.baseUrl.label")}
-          </Label>
-          <Input
-            id="channel-base-url"
-            data-testid={CHANNEL_DIALOG_TEST_IDS.baseUrlInput}
-            type="url"
-            value={formData.base_url}
-            onChange={(e) => updateField("base_url", e.target.value)}
-            placeholder={t("channelDialog:fields.baseUrl.placeholder")}
-            disabled={isFormInteractionDisabled}
-            readOnly={isViewMode}
-            required={!isViewMode && isBaseUrlRequired}
-          />
-        </div>
-
-        {/* Models */}
-        {shouldShowGenericModelsField ? (
-          <div>
-            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <Label className="mb-0">
-                {t("channelDialog:fields.models.label")}
-              </Label>
-              {!isViewMode && (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSelectAllModels}
-                    disabled={
-                      isFormInteractionDisabled ||
-                      isLoadingModels ||
-                      availableModels.length === 0
-                    }
-                    type="button"
-                  >
-                    {t("channelDialog:actions.selectAll")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleInverseModels}
-                    disabled={
-                      isFormInteractionDisabled ||
-                      isLoadingModels ||
-                      availableModels.length === 0
-                    }
-                    type="button"
-                  >
-                    {t("channelDialog:actions.inverse")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDeselectAllModels}
-                    disabled={
-                      isFormInteractionDisabled ||
-                      isLoadingModels ||
-                      formData.models.length === 0
-                    }
-                    type="button"
-                  >
-                    {t("channelDialog:actions.deselectAll")}
-                  </Button>
-                </div>
-              )}
-            </div>
-            {showModelPrefillWarning ? (
-              <Alert
-                variant="warning"
-                title={t("channelDialog:warnings.modelsPrefillFailed.title")}
-                description={t(
-                  "channelDialog:warnings.modelsPrefillFailed.description",
-                )}
-                className="mb-3"
-              />
-            ) : null}
-            <CompactMultiSelect
-              options={availableModels}
-              selected={formData.models}
-              onChange={(models) => updateField("models", models)}
-              size="default"
-              inputTestId={CHANNEL_DIALOG_TEST_IDS.modelsInput}
-              placeholder={
-                isLoadingModels
-                  ? t("channelDialog:fields.models.loading")
-                  : t("channelDialog:fields.models.placeholder")
-              }
-              disabled={
-                isViewMode || isFormInteractionDisabled || isLoadingModels
-              }
-              allowCustom
-            />
-            <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-              {t("channelDialog:fields.models.hint")}
-            </p>
-          </div>
-        ) : null}
-
-        {/* Groups - Octopus/AxonHub do not expose New API group semantics here. */}
-        {!isOctopus && !isAxonHub && (
-          <div>
-            <CompactMultiSelect
-              label={t("channelDialog:fields.groups.label")}
-              options={availableGroups}
-              selected={formData.groups}
-              onChange={(groups) => updateField("groups", groups)}
-              size="default"
-              placeholder={
-                isLoadingGroups
-                  ? t("channelDialog:fields.groups.loading")
-                  : t("channelDialog:fields.groups.placeholder")
-              }
-              disabled={
-                isViewMode || isFormInteractionDisabled || isLoadingGroups
-              }
-              allowCustom
-            />
-            <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-              {t("channelDialog:fields.groups.hint")}
-            </p>
-          </div>
-        )}
-
-        {/* Advanced Settings */}
-        <details className="dark:border-dark-bg-tertiary rounded-lg border border-gray-200 p-3">
-          <summary className="dark:text-dark-text-primary cursor-pointer text-sm font-medium text-gray-700">
-            {t("channelDialog:sections.advanced")}
-          </summary>
-          <div className="mt-3 space-y-4">
-            {/* Priority - Octopus/AxonHub do not expose New API priority semantics here. */}
-            {!isOctopus && !isAxonHub && (
-              <div>
-                <Label htmlFor="channel-priority">
-                  {t("channelDialog:fields.priority.label")}
-                </Label>
-                <Input
-                  id="channel-priority"
-                  type="number"
-                  value={formData.priority}
-                  onChange={(e) =>
-                    updateField("priority", parseInt(e.target.value) || 0)
-                  }
-                  placeholder="0"
-                  disabled={isFormInteractionDisabled}
-                  readOnly={isViewMode}
-                  min="0"
-                />
-                <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-                  {t("channelDialog:fields.priority.hint")}
-                </p>
-              </div>
-            )}
-
-            {/* Weight - Octopus/AxonHub do not expose New API weight semantics here. */}
-            {!isOctopus && !isAxonHub && (
-              <div>
-                <Label htmlFor="channel-weight">
-                  {t("channelDialog:fields.weight.label")}
-                </Label>
-                <Input
-                  id="channel-weight"
-                  type="number"
-                  value={formData.weight}
-                  onChange={(e) =>
-                    updateField("weight", parseInt(e.target.value) || 0)
-                  }
-                  placeholder="0"
-                  disabled={isFormInteractionDisabled}
-                  readOnly={isViewMode}
-                  min="0"
-                />
-                <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
-                  {t("channelDialog:fields.weight.hint")}
-                </p>
-              </div>
-            )}
-
-            {/* Status */}
-            <div>
-              <Label htmlFor="channel-status">
-                {t("channelDialog:fields.status.label")}
-              </Label>
-              <Select
-                value={
-                  formData.status === undefined || formData.status === null
-                    ? ""
-                    : String(formData.status)
-                }
-                onValueChange={(value) =>
-                  updateField("status", Number(value) as ChannelStatus)
-                }
-                disabled={isViewMode || isFormInteractionDisabled}
-              >
-                <SelectTrigger id="channel-status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={String(CHANNEL_STATUS.Enable)}>
-                    {t("channelDialog:fields.status.enabled")}
-                  </SelectItem>
-                  <SelectItem value={String(CHANNEL_STATUS.ManuallyDisabled)}>
-                    {t("channelDialog:fields.status.disabled")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </details>
-      </form>
+                : String(formData.type),
+            key: formData.key,
+            baseURL: formData.base_url,
+            models: formData.models,
+            groups: formData.groups,
+            priority: formData.priority,
+            weight: formData.weight,
+            status:
+              formData.status === undefined || formData.status === null
+                ? ""
+                : String(formData.status),
+          }}
+          channelTypeOptions={channelTypeOptions.map((option) => ({
+            value: String(option.value),
+            label: option.label,
+          }))}
+          availableModels={availableModels}
+          availableGroups={availableGroups}
+          statusOptions={[
+            {
+              value: String(CHANNEL_STATUS.Enable),
+              label: t("channelDialog:fields.status.enabled"),
+            },
+            {
+              value: String(CHANNEL_STATUS.ManuallyDisabled),
+              label: t("channelDialog:fields.status.disabled"),
+            },
+          ]}
+          isViewMode={isViewMode}
+          isAddMode={isAddMode}
+          isInteractionDisabled={isFormInteractionDisabled}
+          isKeyRequired={isKeyFieldRequired}
+          isBaseURLRequired={isBaseUrlRequired}
+          isKeyRevealed={showKey}
+          canLoadRealKey={
+            !isAddMode && !isViewMode && Boolean(onRequestRealKey)
+          }
+          isLoadingRealKey={isLoadingRealKey}
+          isLoadingModels={isLoadingModels}
+          isLoadingGroups={isLoadingGroups}
+          showUnknownStringType={Boolean(shouldShowUnknownStringType)}
+          showGenericModelsField={shouldShowGenericModelsField}
+          showGroupsField={!isOctopus && !isAxonHub}
+          showPriorityAndWeight={!isOctopus && !isAxonHub}
+          showModelPrefillWarning={showModelPrefillWarning}
+          onNameChange={(value) => updateField("name", value)}
+          onTypeChange={(value) =>
+            handleTypeChange(
+              isAxonHub || isClaudeCodeHub
+                ? value
+                : (Number(value) as ChannelType | OctopusOutboundType),
+            )
+          }
+          onKeyChange={(value) => updateField("key", value)}
+          onKeyRevealedChange={setShowKey}
+          onLoadRealKey={() => void handleLoadRealKey()}
+          onBaseURLChange={(value) => updateField("base_url", value)}
+          onModelsChange={(models) => updateField("models", models)}
+          onGroupsChange={(groups) => updateField("groups", groups)}
+          onSelectAllModels={handleSelectAllModels}
+          onInverseModels={handleInverseModels}
+          onDeselectAllModels={handleDeselectAllModels}
+          onPriorityChange={(priority) => updateField("priority", priority)}
+          onWeightChange={(weight) => updateField("weight", weight)}
+          onStatusChange={(status) =>
+            updateField("status", Number(status) as ChannelStatus)
+          }
+        />
+      )}
 
       <NewApiManagedVerificationDialog
         isOpen={verification.dialogState.isOpen}
@@ -922,6 +696,6 @@ export function ChannelDialog({
         onOpenSite={verification.openBaseUrl}
         onUpdateRequestConfig={verification.patchRequestConfig}
       />
-    </Modal>
+    </ChannelEditorShell>
   )
 }

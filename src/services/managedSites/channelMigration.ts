@@ -1,6 +1,8 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
+  isManagedResourceRef,
+  isManagedResourceRefFor,
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type ManagedResourceRef,
@@ -46,6 +48,7 @@ import {
   type ManagedSiteMigrationCanonicalPreview,
   type ManagedSiteMigrationCanonicalPreviewItem,
   type ManagedSiteMigrationSelection,
+  type ManagedSiteMigrationSelectionValidationContext,
   type ManagedSiteMigrationSource,
   type ManagedSiteMigrationTargetPreparation,
 } from "~/types/managedSiteMigrationCapability"
@@ -94,6 +97,8 @@ const migrationBlockingFallbacks = {
     "The source credential is unavailable. Verify source access and try again.",
   [migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED]:
     "The source credential could not be resolved. Verify source access and try again.",
+  [migrationBlockers.SOURCE_TYPE_UNSUPPORTED]:
+    "The source channel type is not supported for migration. Choose a supported channel or migrate it manually.",
   [migrationBlockers.TARGET_DRAFT_PREPARATION_FAILED]:
     "The target channel could not be prepared. Review channel models and target configuration, then retry.",
 } satisfies Record<ManagedSiteChannelMigrationBlockedReasonCode, string>
@@ -420,12 +425,18 @@ export async function prepareManagedSiteMigrationPreview(params: {
   selections: readonly ManagedSiteMigrationSelection[]
   options?: ResourceOperationOptions
 }): Promise<ManagedSiteMigrationCanonicalPreview> {
-  const sourceCapability = resolveManagedSiteMigrationCapability(
-    params.sourceSiteType,
-  )?.source
-  const targetCapability = resolveManagedSiteMigrationCapability(
-    params.targetSiteType,
-  )?.target
+  const hasValidSourceSelection = params.selections.some(
+    (selection) =>
+      isManagedResourceRef(selection.ref) &&
+      selection.ref.siteType === params.sourceSiteType &&
+      selection.ref.kind === MANAGED_RESOURCE_KINDS.Channel,
+  )
+  const sourceCapability = hasValidSourceSelection
+    ? resolveManagedSiteMigrationCapability(params.sourceSiteType)?.source
+    : undefined
+  const targetCapability = hasValidSourceSelection
+    ? resolveManagedSiteMigrationCapability(params.targetSiteType)?.target
+    : undefined
   return await prepareManagedSiteMigrationPreviewCore({
     sourceSiteType: params.sourceSiteType,
     targetSiteType: params.targetSiteType,
@@ -439,6 +450,9 @@ export async function prepareManagedSiteMigrationPreview(params: {
         adjustments: target.adjustments,
       }),
     prepareSource: (selection) =>
+      isManagedResourceRef(selection.ref) &&
+      selection.ref.siteType === params.sourceSiteType &&
+      selection.ref.kind === MANAGED_RESOURCE_KINDS.Channel &&
       sourceCapability
         ? sourceCapability.prepare(selection, params.options)
         : Promise.resolve({
@@ -474,15 +488,67 @@ export async function executeManagedSiteMigration(params: {
   const targetCapability = resolveManagedSiteMigrationCapability(
     preview.targetSiteType,
   )?.target
-  const legacyTargetService = targetCapability
-    ? null
-    : getManagedSiteServiceForType(preview.targetSiteType)
+  const hasStructurallyValidItem = preview.items.some((item) =>
+    isManagedResourceRefFor(item.selection.ref, {
+      siteType: preview.sourceSiteType,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+    }),
+  )
+  const createSelectionValidationContext =
+    sourceCapability?.createSelectionValidationContext
+  let selectionValidationContext: ManagedSiteMigrationSelectionValidationContext | null =
+    null
+  if (hasStructurallyValidItem && createSelectionValidationContext) {
+    try {
+      selectionValidationContext = await createSelectionValidationContext(
+        params.options,
+      )
+    } catch (error) {
+      if (
+        params.options?.signal?.aborted ||
+        (typeof error === "object" &&
+          error !== null &&
+          "name" in error &&
+          error.name === "AbortError")
+      ) {
+        throw error
+      }
+    }
+  }
+  const validatedItems = preview.items.map((item) => {
+    const structurallyValid = isManagedResourceRefFor(item.selection.ref, {
+      siteType: preview.sourceSiteType,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+    })
+    const contextValid = createSelectionValidationContext
+      ? selectionValidationContext?.isValid(item.selection) === true
+      : true
+    if (structurallyValid && contextValid) return item
+    return {
+      selection: item.selection,
+      status: "blocked" as const,
+      warningCodes: [],
+      blockingReasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
+    }
+  })
+  const validatedPreview: ManagedSiteMigrationCanonicalPreview = {
+    ...preview,
+    items: validatedItems,
+    readyCount: validatedItems.filter((item) => item.status === "ready").length,
+    blockedCount: validatedItems.filter((item) => item.status === "blocked")
+      .length,
+  }
+  const hasReadyItem = validatedPreview.readyCount > 0
+  const legacyTargetService =
+    hasReadyItem && !targetCapability
+      ? getManagedSiteServiceForType(preview.targetSiteType)
+      : null
   const legacyTargetConfig = legacyTargetService
     ? await legacyTargetService.getConfig()
     : null
 
   return await executeManagedSiteMigrationCore({
-    preview,
+    preview: validatedPreview,
     targetAvailable: Boolean(targetCapability || legacyTargetConfig),
     signal: params.options?.signal,
     sourceFailureReasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
@@ -848,30 +914,46 @@ export async function executeManagedSiteChannelMigration(
           skipped: false,
         }
       }
+
+      if (result.status === "skipped") {
+        return {
+          channelId: legacyItem.channelId,
+          channelName: legacyItem.channelName,
+          success: false,
+          skipped: true,
+          blockingReasonCode: result.blockingReasonCode,
+          error:
+            legacyItem.blockingMessage?.trim() ||
+            getMigrationBlockingFallback(result.blockingReasonCode),
+        }
+      }
+
+      if (result.status === "uncertain") {
+        return {
+          channelId: legacyItem.channelId,
+          channelName: legacyItem.channelName,
+          success: false,
+          skipped: false,
+          uncertain: true,
+          error: migrationUncertaintyWarning,
+        }
+      }
+
       return {
         channelId: legacyItem.channelId,
         channelName: legacyItem.channelName,
         success: false,
-        skipped: result.status === "skipped",
-        blockingReasonCode:
-          result.status === "skipped"
-            ? result.blockingReasonCode
-            : legacyItem.blockingReasonCode,
-        error:
-          result.status === "skipped"
-            ? legacyItem.blockingMessage?.trim() ||
-              getMigrationBlockingFallback(result.blockingReasonCode)
-            : result.status === "uncertain"
-              ? migrationUncertaintyWarning
-              : errors.get(result.selectionId)?.trim() || "Unknown error",
+        skipped: false,
+        error: errors.get(result.selectionId)?.trim() || "Unknown error",
       }
     })
   return {
-    totalSelected: preview.totalCount,
+    totalSelected: canonicalResult.totalSelected,
     attemptedCount: canonicalResult.attemptedCount,
-    createdCount: items.filter((item) => item.success).length,
-    failedCount: items.filter((item) => !item.success && !item.skipped).length,
-    skippedCount: items.filter((item) => item.skipped).length,
+    createdCount: canonicalResult.createdCount,
+    failedCount: canonicalResult.failedCount,
+    skippedCount: canonicalResult.skippedCount,
+    uncertainCount: canonicalResult.uncertainCount,
     items,
   }
 }

@@ -29,6 +29,7 @@ const AXON_HUB_CHANNEL_LIST_SELECTION = `
   status
   tags
   supportedModels
+  manualModels
 `
 
 // AxonHub v1.0.0-beta5 keeps ChannelSettingsInput as a replacement value, so
@@ -865,6 +866,7 @@ const toSafeAxonHubChannelSummary = (value: unknown): AxonHubChannel | null => {
     baseURL: value.baseURL,
     tags: value.tags as string[] | null | undefined,
     supportedModels: value.supportedModels as string[] | null | undefined,
+    manualModels: value.manualModels as string[] | null | undefined,
   }
 }
 

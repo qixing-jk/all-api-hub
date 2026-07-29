@@ -226,6 +226,23 @@ describe("detectSiteType", () => {
         expect(titleFetched).toBe(false)
       })
 
+      it("detects OpenRouter from the canonical hostname without title fetch", async () => {
+        let titleFetched = false
+        server.use(
+          http.get("https://openrouter.ai", () => {
+            titleFetched = true
+            return new HttpResponse("<html><title>new-api</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://openrouter.ai/settings/management-keys"),
+        ).resolves.toBe(SITE_TYPES.OPENROUTER)
+        expect(titleFetched).toBe(false)
+      })
+
       it("does not generalize SharedChat detection to sibling hostnames", async () => {
         server.use(
           http.get("https://api.sharedchat.cc", () => {

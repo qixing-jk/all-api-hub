@@ -86,11 +86,17 @@ vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/productAnalytics/actions", () => ({
-  startProductAnalyticsAction: mockStartProductAnalyticsAction,
-  resolveProductAnalyticsErrorCategoryFromError:
-    mockResolveProductAnalyticsErrorCategoryFromError,
-}))
+vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/actions")>()
+
+  return {
+    ...actual,
+    startProductAnalyticsAction: mockStartProductAnalyticsAction,
+    resolveProductAnalyticsErrorCategoryFromError:
+      mockResolveProductAnalyticsErrorCategoryFromError,
+  }
+})
 
 vi.mock("~/services/popupInterruptionHint", async (importOriginal) => {
   const actual =
@@ -218,6 +224,7 @@ describe("useAccountDialog analytics", () => {
         exchangeRate: 7,
         siteName: "Detected Site",
         siteType: SITE_TYPES.NEW_API,
+        checkIn: { enableDetection: false },
         autoDetectContext: {
           strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
           fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
@@ -244,6 +251,7 @@ describe("useAccountDialog analytics", () => {
       PRODUCT_ANALYTICS_RESULTS.Success,
       {
         insights: {
+          fallbackUsed: false,
           requestedAuthMode: AuthTypeEnum.AccessToken,
           autoDetectStrategy: AUTO_DETECT_STRATEGIES.CurrentTab,
           siteType: SITE_TYPES.NEW_API,
@@ -256,6 +264,7 @@ describe("useAccountDialog analytics", () => {
     expect(
       mockCompleteProductAnalyticsAction.mock.calls[0]?.[1]?.insights,
     ).toEqual({
+      fallbackUsed: false,
       requestedAuthMode: AuthTypeEnum.AccessToken,
       autoDetectStrategy: AUTO_DETECT_STRATEGIES.CurrentTab,
       siteType: SITE_TYPES.NEW_API,
@@ -277,6 +286,7 @@ describe("useAccountDialog analytics", () => {
         exchangeRate: 7,
         siteName: "Detected Site",
         siteType: SITE_TYPES.NEW_API,
+        checkIn: { enableDetection: false },
       },
     })
 
@@ -311,6 +321,7 @@ describe("useAccountDialog analytics", () => {
         exchangeRate: 7,
         siteName: "Detected Site",
         siteType: SITE_TYPES.NEW_API,
+        checkIn: { enableDetection: false },
       },
     })
 
@@ -374,6 +385,7 @@ describe("useAccountDialog analytics", () => {
           },
         },
         insights: {
+          fallbackUsed: true,
           accountAutoDetectFailureReason:
             AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
           requestedAuthMode: AuthTypeEnum.AccessToken,
@@ -431,6 +443,7 @@ describe("useAccountDialog analytics", () => {
           },
         },
         insights: {
+          fallbackUsed: true,
           accountAutoDetectFailureReason:
             AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
           requestedAuthMode: AuthTypeEnum.AccessToken,
@@ -481,6 +494,7 @@ describe("useAccountDialog analytics", () => {
           },
         },
         insights: {
+          fallbackUsed: true,
           requestedAuthMode: AuthTypeEnum.AccessToken,
           accountAutoDetectFailureReason:
             AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
@@ -539,6 +553,7 @@ describe("useAccountDialog analytics", () => {
             },
           },
           insights: {
+            fallbackUsed: true,
             requestedAuthMode: AuthTypeEnum.AccessToken,
           },
         },
@@ -581,6 +596,7 @@ describe("useAccountDialog analytics", () => {
           },
         },
         insights: {
+          fallbackUsed: true,
           requestedAuthMode: AuthTypeEnum.AccessToken,
         },
       },
@@ -624,6 +640,7 @@ describe("useAccountDialog analytics", () => {
       PRODUCT_ANALYTICS_RESULTS.Cancelled,
       {
         insights: {
+          fallbackUsed: false,
           requestedAuthMode: AuthTypeEnum.AccessToken,
         },
       },
@@ -648,6 +665,7 @@ describe("useAccountDialog analytics", () => {
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       {
         insights: {
+          fallbackUsed: false,
           requestedAuthMode: AuthTypeEnum.AccessToken,
         },
       },
@@ -689,6 +707,7 @@ describe("useAccountDialog analytics", () => {
           },
         },
         insights: {
+          fallbackUsed: false,
           requestedAuthMode: AuthTypeEnum.AccessToken,
         },
       },
@@ -709,6 +728,7 @@ describe("useAccountDialog analytics", () => {
         exchangeRate: 7,
         siteName: "Detected Site",
         siteType: SITE_TYPES.NEW_API,
+        checkIn: { enableDetection: false },
       },
     })
     const storageGetSpy = vi
@@ -732,6 +752,7 @@ describe("useAccountDialog analytics", () => {
       PRODUCT_ANALYTICS_RESULTS.Success,
       {
         insights: {
+          fallbackUsed: false,
           requestedAuthMode: AuthTypeEnum.AccessToken,
           siteType: SITE_TYPES.NEW_API,
         },
@@ -771,6 +792,7 @@ describe("useAccountDialog analytics", () => {
           },
         },
         insights: {
+          fallbackUsed: true,
           requestedAuthMode: AuthTypeEnum.AccessToken,
         },
       },
@@ -812,6 +834,7 @@ describe("useAccountDialog analytics", () => {
           },
         },
         insights: {
+          fallbackUsed: true,
           requestedAuthMode: AuthTypeEnum.AccessToken,
         },
       },

@@ -4,6 +4,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
 import { setupAccountKeyRepairMessagingListeners } from "~/services/accounts/accountKeyAutoProvisioning"
 import { setupAutoRefreshMessagingListeners } from "~/services/accounts/autoRefreshService"
+import type { OpenRouterManagementKeyOperation } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
 import { setupAutoCheckinMessagingListeners } from "~/services/checkin/autoCheckin/scheduler"
 import { setupExternalCheckInMessagingListeners } from "~/services/checkin/externalCheckInService"
 import {
@@ -44,6 +45,11 @@ import {
 
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
 import {
+  cancelTempWindowOpenRouterManagementKeyAction,
+  handleTempWindowOpenRouterManagementKeyAction,
+  markTempWindowOpenRouterManagementKeyDispatched,
+} from "./openrouter/managementKeyAction"
+import {
   handleAutoDetectSite,
   handleCloseTempWindow,
   handleOpenTempWindow,
@@ -58,6 +64,18 @@ import {
  */
 const logger = createLogger("RuntimeMessages")
 
+/** Accepts only the page mutation operation supported by this runtime route. */
+function normalizeOpenRouterManagementKeyOperation(
+  value: unknown,
+): OpenRouterManagementKeyOperation | undefined {
+  if (!value || typeof value !== "object") return undefined
+  const operation = value as Record<string, unknown>
+  if (operation.kind !== "create" || typeof operation.label !== "string") {
+    return undefined
+  }
+  return { kind: "create", label: operation.label }
+}
+
 /** Normalizes untrusted temp-window presentation metadata at the runtime boundary. */
 function normalizeTempWindowRuntimeRequest<
   T extends Record<string, unknown> & {
@@ -65,6 +83,21 @@ function normalizeTempWindowRuntimeRequest<
     tempWindowRequestSource?: unknown
   },
 >(request: T) {
+  if (
+    request.action === RuntimeActionIds.TempWindowOpenRouterManagementKeyAction
+  ) {
+    return {
+      action: request.action,
+      requestId: request.requestId,
+      operation: normalizeOpenRouterManagementKeyOperation(request.operation),
+      tempWindowRequestSource: normalizeTempWindowRequestSource(
+        request.tempWindowRequestSource,
+      ),
+      ...(typeof request.suppressMinimize === "boolean"
+        ? { suppressMinimize: request.suppressMinimize }
+        : {}),
+    }
+  }
   const normalizedRequest = Object.assign({}, request, {
     tempWindowRequestSource: normalizeTempWindowRequestSource(
       request.tempWindowRequestSource,
@@ -215,6 +248,39 @@ export function setupRuntimeMessageListeners() {
           normalizeTempWindowRuntimeRequest(request),
           sendResponse,
         )
+        return true
+      }
+
+      if (
+        request.action ===
+        RuntimeActionIds.TempWindowOpenRouterManagementKeyAction
+      ) {
+        void handleTempWindowOpenRouterManagementKeyAction(
+          normalizeTempWindowRuntimeRequest(request),
+          sendResponse,
+        )
+        return true
+      }
+
+      if (
+        request.action ===
+        RuntimeActionIds.TempWindowCancelOpenRouterManagementKeyAction
+      ) {
+        const requestId =
+          typeof request.requestId === "string" ? request.requestId : ""
+        sendResponse(cancelTempWindowOpenRouterManagementKeyAction(requestId))
+        return true
+      }
+
+      if (
+        request.action ===
+        RuntimeActionIds.TempWindowOpenRouterManagementKeyDispatched
+      ) {
+        const requestId =
+          typeof request.requestId === "string" ? request.requestId : ""
+        const marked =
+          markTempWindowOpenRouterManagementKeyDispatched(requestId)
+        sendResponse({ requestId, marked })
         return true
       }
 

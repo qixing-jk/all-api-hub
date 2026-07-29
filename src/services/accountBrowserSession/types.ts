@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { Sub2ApiAuthConfig } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
@@ -21,6 +22,7 @@ export type AccountBrowserSession = {
   userId: string
   user: Record<string, unknown>
   accessToken?: string
+  transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
   fetchContext?: AccountBrowserSessionFetchContext
 }

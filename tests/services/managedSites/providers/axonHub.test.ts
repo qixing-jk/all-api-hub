@@ -406,6 +406,34 @@ describe("AxonHub managed-site provider", () => {
       data: null,
       message: "delete exploded",
     })
+
+    mockDeleteAxonHubChannel.mockRejectedValueOnce(
+      new DOMException("Aborted", "AbortError"),
+    )
+    await expect(
+      provider.deleteChannel(passedAxonHubConfig, 8),
+    ).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "Aborted",
+      certainty: "uncertain",
+    })
+  })
+
+  it("keeps AxonHub id-resolution failures confirmed because delete was not dispatched", async () => {
+    const provider = await import("~/services/managedSites/providers/axonHub")
+    mockResolveAxonHubGraphqlIdForMutation.mockRejectedValueOnce(
+      new TypeError("Failed to fetch"),
+    )
+
+    await expect(
+      provider.deleteChannel(passedAxonHubConfig, 9),
+    ).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "Failed to fetch",
+    })
+    expect(mockDeleteAxonHubChannel).not.toHaveBeenCalled()
   })
 
   it("prefills imports from selected token credentials and requires final models", async () => {

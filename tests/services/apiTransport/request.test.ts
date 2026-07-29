@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import {
   ApiError,
   API_ERROR_CODES as ApiErrorCodes,
@@ -22,6 +23,7 @@ import {
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
 import { server } from "~~/tests/msw/server"
+import { runMockSiteRequestTask } from "~~/tests/test-utils/siteRequestLease"
 
 const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
   () => {
@@ -33,10 +35,7 @@ const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
 )
 
 const { mockWithSiteApiRequestLimit } = vi.hoisted(() => {
-  const mockWithSiteApiRequestLimit = vi.fn(
-    async (_key: string, task: () => Promise<unknown>, _signal?: AbortSignal) =>
-      await task(),
-  )
+  const mockWithSiteApiRequestLimit = vi.fn()
 
   return { mockWithSiteApiRequestLimit }
 })
@@ -57,6 +56,19 @@ const { mockSendTabMessageWithRetry, mockSendRuntimeMessage } = vi.hoisted(
 
 const { mockIsProtectionBypassFirefoxEnv } = vi.hoisted(() => ({
   mockIsProtectionBypassFirefoxEnv: vi.fn(() => true),
+}))
+
+const { mockLoggerDebug } = vi.hoisted(() => ({
+  mockLoggerDebug: vi.fn(),
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: mockLoggerDebug,
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+  }),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -98,15 +110,20 @@ vi.mock("~/services/apiTransport/minIntervalLimiter", () => ({
   createMinIntervalLimiter: mockCreateMinIntervalLimiter,
 }))
 
-vi.mock("~/services/apiTransport/siteRequestLimiter", () => ({
-  SITE_API_REQUEST_LIMITS: {
-    maxConcurrentPerSite: 2,
-    requestsPerMinute: 18,
-    burst: 4,
+vi.mock(
+  "~/services/apiTransport/siteRequestLimiter",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiTransport/siteRequestLimiter")
+      >()
+    return {
+      ...actual,
+      withSiteApiRequestLimit: mockWithSiteApiRequestLimit,
+      withSiteApiRequestLease: mockWithSiteApiRequestLimit,
+    }
   },
-  createSiteRequestLimiter: vi.fn(),
-  withSiteApiRequestLimit: mockWithSiteApiRequestLimit,
-}))
+)
 
 vi.mock("~/utils/browser/protectionBypass", () => ({
   isProtectionBypassFirefoxEnv: mockIsProtectionBypassFirefoxEnv,
@@ -166,11 +183,8 @@ describe("apiTransport request helpers", () => {
     mockHasCookieInterceptorPermissions.mockReset()
     mockGetPreferences.mockReset()
     mockWithSiteApiRequestLimit.mockImplementation(
-      async (
-        _key: string,
-        task: () => Promise<unknown>,
-        _signal?: AbortSignal,
-      ) => await task(),
+      async (_key: string, task: () => any, _signal?: AbortSignal) =>
+        await runMockSiteRequestTask(task),
     )
     mockHasCookieInterceptorPermissions.mockResolvedValue(true)
     mockGetPreferences.mockResolvedValue({
@@ -454,6 +468,220 @@ describe("apiTransport request helpers", () => {
       )
     },
   )
+
+  it("starts a request timeout only after site-limiter dispatch", async () => {
+    vi.useFakeTimers()
+    const abortController = new AbortController()
+    let dispatchRequest: (() => void) | undefined
+    let completeFetch: (() => void) | undefined
+    let underlyingCompletion: Promise<unknown> | undefined
+    let underlyingCompleted = false
+    let receivedSignal: AbortSignal | undefined
+    let requestError: unknown
+    let requestSettled: Promise<void> | undefined
+    let runDispatchedTask: (() => void) | undefined
+    let dispatchRequested = false
+    let resolveLimiter!: (value: unknown) => void
+    let forceRejectLimiter!: (reason?: unknown) => void
+    const limiterResult = new Promise<unknown>((resolve, reject) => {
+      resolveLimiter = resolve
+      forceRejectLimiter = reject
+    })
+    void limiterResult.catch(() => undefined)
+    const dispatchOrQueueRequest = () => {
+      dispatchRequested = true
+      runDispatchedTask?.()
+    }
+    dispatchRequest = dispatchOrQueueRequest
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation((_input, options) => {
+        receivedSignal = options?.signal ?? undefined
+
+        return new Promise<Response>((resolve) => {
+          completeFetch = () =>
+            resolve(
+              new Response(
+                JSON.stringify({
+                  success: true,
+                  data: { ok: true },
+                  message: "ok",
+                }),
+                { headers: { "content-type": "application/json" } },
+              ),
+            )
+        })
+      })
+
+    mockWithSiteApiRequestLimit.mockImplementation(
+      async (_key: string, task: () => any) => {
+        runDispatchedTask = () => {
+          runDispatchedTask = undefined
+          dispatchRequest = undefined
+          const dispatched = task()
+          underlyingCompletion = dispatched?.completion
+          void underlyingCompletion?.then(() => {
+            underlyingCompleted = true
+          })
+          void (dispatched?.result ?? dispatched).then(
+            resolveLimiter,
+            forceRejectLimiter,
+          )
+        }
+        if (dispatchRequested) runDispatchedTask()
+        return await limiterResult
+      },
+    )
+
+    try {
+      const request = fetchApiData(
+        {
+          baseUrl: "https://example.invalid/base/",
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          abortSignal: abortController.signal,
+          requestTimeoutMs: 1_000,
+        },
+        { endpoint: "/api/user/self" },
+      )
+      requestSettled = request.then(
+        () => undefined,
+        (error) => {
+          requestError = error
+        },
+      )
+
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(fetchSpy).not.toHaveBeenCalled()
+
+      dispatchRequest?.()
+      await vi.advanceTimersByTimeAsync(0)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(999)
+      expect(receivedSignal?.aborted).toBe(false)
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect(receivedSignal?.aborted).toBe(true)
+      await requestSettled
+      expect(requestError).toMatchObject({ name: "TimeoutError" })
+      expect(underlyingCompleted).toBe(false)
+
+      completeFetch?.()
+      await underlyingCompletion
+      expect(underlyingCompleted).toBe(true)
+    } finally {
+      abortController.abort()
+      forceRejectLimiter(new DOMException("Test cleanup", "AbortError"))
+      await vi.advanceTimersByTimeAsync(0)
+      completeFetch?.()
+      await underlyingCompletion
+      fetchSpy.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
+  it("starts a shared deadline when the limiter dispatches the request", async () => {
+    const abortController = new AbortController()
+    const start = vi.fn()
+    server.use(
+      http.get("https://example.invalid/base/api/user/self", () =>
+        HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "ok",
+        }),
+      ),
+    )
+
+    await fetchApiData(
+      {
+        baseUrl: "https://example.invalid/base/",
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        abortSignal: abortController.signal,
+        abortDeadline: {
+          signal: abortController.signal,
+          start,
+          dispose: vi.fn(),
+        },
+      },
+      { endpoint: "/api/user/self" },
+    )
+
+    expect(start).toHaveBeenCalledTimes(1)
+  })
+
+  it("aborts a dispatched request when only its shared deadline expires", async () => {
+    vi.useFakeTimers()
+    const abortDeadline = createDeferredAbortDeadline(1_000)
+    let receivedSignal: AbortSignal | undefined
+    let settleFetch: (() => void) | undefined
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation((_input, options) => {
+        receivedSignal = options?.signal ?? undefined
+        return new Promise<Response>((resolve, reject) => {
+          settleFetch = () => resolve(new Response("late response"))
+          receivedSignal?.addEventListener(
+            "abort",
+            () => reject(receivedSignal?.reason),
+            { once: true },
+          )
+        })
+      })
+
+    try {
+      const request = fetchApiData(
+        {
+          baseUrl: "https://example.invalid/base/",
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          abortDeadline,
+        },
+        { endpoint: "/api/user/self" },
+      )
+      void request.catch(() => undefined)
+
+      await vi.advanceTimersByTimeAsync(0)
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+      expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+        "https://example.invalid",
+        expect.any(Function),
+        abortDeadline.signal,
+      )
+
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(receivedSignal?.aborted).toBe(true)
+      await expect(request).rejects.toMatchObject({ name: "TimeoutError" })
+    } finally {
+      abortDeadline.dispose()
+      settleFetch?.()
+      fetchSpy.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
+  it("does not start a shared deadline for a pre-aborted dispatch", async () => {
+    const abortController = new AbortController()
+    const start = vi.fn()
+    abortController.abort(new DOMException("Cancelled", "AbortError"))
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: "https://example.invalid/base/",
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          abortSignal: abortController.signal,
+          abortDeadline: {
+            signal: abortController.signal,
+            start,
+            dispose: vi.fn(),
+          },
+        },
+        { endpoint: "/api/user/self" },
+      ),
+    ).rejects.toBe(abortController.signal.reason)
+
+    expect(start).not.toHaveBeenCalled()
+  })
 
   it("fetchApiData uses the same site limiter key for different paths on the same origin", async () => {
     server.use(
@@ -897,6 +1125,52 @@ describe("apiTransport request helpers", () => {
     ).resolves.toEqual({ ok: true })
 
     expect(mockSendTabMessageWithRetry).toHaveBeenCalledTimes(1)
+  })
+
+  it("redacts the request access token from current-tab fallback diagnostics", async () => {
+    const dashboardBearer = "dashboard-bearer-sensitive-example"
+    mockSendTabMessageWithRetry.mockResolvedValueOnce({
+      success: false,
+      status: 503,
+      error: `safe diagnostic: Authorization: Bearer ${dashboardBearer}`,
+    })
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "direct",
+        }),
+      ),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: dashboardBearer,
+          },
+          fetchContext: {
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(mockLoggerDebug).toHaveBeenCalledWith(
+      "Current-tab content fetch failed; falling back",
+      expect.objectContaining({
+        error: expect.stringContaining("safe diagnostic"),
+      }),
+    )
+    const serializedLoggerArguments = JSON.stringify(mockLoggerDebug.mock.calls)
+    expect(serializedLoggerArguments).not.toContain(dashboardBearer)
+    expect(serializedLoggerArguments).toContain("Bearer [REDACTED]")
   })
 
   it("fetchApiData preserves the popup temp window source through fallback context", async () => {

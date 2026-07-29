@@ -90,12 +90,12 @@
     "title": "Cài đặt tích hợp AxonHub",
     "validation": {
       "corsFailed": "Xác minh cấu hình AxonHub thất bại: {{error}}. Điều này thường có nghĩa là phiên bản AxonHub mới chưa cho phép nguồn trình duyệt của tiện ích. Hãy điều chỉnh cấu hình CORS phía máy chủ AxonHub, đặt AXONHUB_SERVER_CORS_ALLOWED_ORIGINS thành \"*\", hoặc cho phép nguồn tiện ích / trình duyệt rồi thử lại.",
-      "description": "Kiểm tra email và mật khẩu có thể đăng nhập GraphQL quản trị AxonHub hay không",
+      "description": "Xác minh thông tin đăng nhập quản trị AxonHub. Cấu hình chỉ được lưu sau khi đăng nhập thành công.",
       "failed": "Xác minh cấu hình AxonHub thất bại: {{error}}",
       "missingFields": "Vui lòng điền tất cả trường bắt buộc",
-      "success": "Xác minh cấu hình AxonHub thành công",
-      "title": "Xác minh cấu hình",
-      "validate": "Xác minh cấu hình",
+      "success": "Đã xác minh và lưu cấu hình AxonHub thành công",
+      "title": "Xác minh và lưu cấu hình",
+      "validate": "Xác minh và lưu",
       "validating": "Đang xác minh..."
     }
   },

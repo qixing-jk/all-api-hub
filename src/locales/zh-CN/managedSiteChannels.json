@@ -1,8 +1,36 @@
 {
   "alerts": {
+    "authenticationFailed": {
+      "description": "已保存的 AxonHub 凭据被拒绝。请打开设置更新凭据，然后刷新渠道列表。",
+      "title": "请重新登录 AxonHub"
+    },
+    "editorLoadError": {
+      "description": "无法加载渠道表单。请刷新渠道列表后重试。",
+      "title": "无法打开渠道编辑器"
+    },
+    "editorSaveError": {
+      "description": "你的更改未保存，请重试。",
+      "title": "无法保存渠道"
+    },
     "loadError": {
       "description": "{{error}}",
       "title": "无法加载渠道"
+    },
+    "partialMutation": {
+      "description": "部分字段可能已保存，但渠道状态尚未确认。请刷新渠道列表并核对渠道后再重试。",
+      "title": "渠道更新需要核对"
+    },
+    "permissionDenied": {
+      "description": "当前 AxonHub 账号无权管理渠道。请改用管理员账号或调整权限，然后刷新。",
+      "title": "AxonHub 拒绝访问"
+    },
+    "savedRefreshError": {
+      "description": "渠道已保存，但无法加载最新列表。请先刷新渠道列表，再进行其他更改。",
+      "title": "渠道已保存，需要刷新"
+    },
+    "unavailable": {
+      "description": "无法连接 AxonHub。请检查服务器和网络，然后刷新渠道列表。",
+      "title": "AxonHub 暂时不可用"
     }
   },
   "description": "在此搜索、编辑、删除或手动同步与你的托管站点相连的所有渠道。",
@@ -10,8 +38,125 @@
     "cancel": "取消",
     "confirm": "删除",
     "deleteDescription": "此操作无法撤销，所选配置将被永久删除。",
+    "deleteRefreshAction": "刷新渠道列表",
+    "deleteRefreshRequired": "部分删除结果的状态不确定。请先刷新渠道列表，再继续删除。",
+    "deleteResultStatus": {
+      "failed": "失败",
+      "success": "已删除",
+      "uncertain": "状态不确定"
+    },
+    "deleteResultsTitle": "删除结果",
     "deleteTitle": "删除渠道？",
     "deleteTitlePlural": "删除这些渠道？"
+  },
+  "editor": {
+    "fields": {
+      "autoSyncModelPattern": {
+        "help": "仅同步匹配此规则的模型；使用 (?i) 前缀可忽略大小写，留空则同步全部模型。",
+        "invalid": "请输入有效的模型过滤规则。",
+        "label": "模型过滤规则",
+        "placeholder": "例如 (?i)^model-example"
+      },
+      "autoSyncSupportedModels": {
+        "help": "AxonHub 会按其系统设置的频率，从提供商 API 更新已启用渠道的模型列表。",
+        "label": "自动同步支持的模型"
+      },
+      "defaultTestModel": {
+        "help": "用于测试此渠道的连接，请从支持的模型中选择。",
+        "label": "默认测试模型",
+        "placeholder": "选择已配置的模型"
+      },
+      "extraModelPrefix": {
+        "help": "配置额外的模型前缀，允许使用带前缀的模型名称访问该渠道。例如：配置前缀为 'deepseek'，则 'deepseek/deepseek-chat' 和 'deepseek-chat' 都可以访问该渠道。",
+        "label": "额外模型前缀",
+        "placeholder": "例如：deepseek"
+      },
+      "orderingWeight": {
+        "help": "AxonHub 选择渠道时会优先使用较大的值；相同值具有相同的排序优先级。",
+        "label": "排序权重"
+      },
+      "remark": {
+        "help": "添加关于此渠道的备注或说明以供参考。",
+        "label": "备注",
+        "placeholder": "为此渠道输入备注或说明..."
+      },
+      "supportedModels": {
+        "help": "输入或粘贴模型名称。在此添加的模型会在自动同步时保留。"
+      },
+      "tags": {
+        "help": "添加标签来分类和过滤渠道。按回车键添加标签，也可以粘贴以逗号或换行分隔的多个标签。",
+        "label": "标签",
+        "placeholder": "添加标签..."
+      }
+    },
+    "options": {
+      "channelType": {
+        "anthropic": "Anthropic",
+        "anthropicAws": "AWS Anthropic",
+        "anthropicGcp": "Google Cloud Anthropic",
+        "claudeCode": "Claude Code",
+        "deepseek": "DeepSeek",
+        "deepseekAnthropic": "DeepSeek Anthropic",
+        "gemini": "Gemini",
+        "geminiOpenai": "Gemini OpenAI",
+        "geminiVertex": "Gemini Vertex",
+        "githubCopilot": "GitHub Copilot",
+        "nanogpt": "NanoGPT",
+        "ollama": "Ollama",
+        "openai": "OpenAI",
+        "openaiResponses": "OpenAI Responses",
+        "openrouter": "OpenRouter",
+        "siliconflow": "SiliconFlow",
+        "unsupported": "不支持的渠道类型",
+        "volcengine": "Volcengine",
+        "xai": "xAI"
+      },
+      "status": {
+        "archived": "已归档",
+        "disabled": "已禁用",
+        "enabled": "已启用",
+        "unknown": "未知"
+      },
+      "unknown": "未知选项"
+    },
+    "secret": {
+      "actions": {
+        "clear": "移除已保存凭据",
+        "restore": "保留已保存凭据",
+        "retry": "重试"
+      },
+      "createHint": "输入新渠道的凭据。",
+      "keepExistingHint": "将此字段留空可保留已保存的凭据，不作更改。",
+      "loadError": "无法加载已保存凭据。",
+      "loading": "正在加载已保存的凭据…",
+      "placeholder": "输入凭据",
+      "replacementBlocked": {
+        "multipleCredentials": "此渠道有多个 API 密钥。请在 AxonHub 中管理这些密钥。"
+      },
+      "replacementDisabled": "此凭据类型无法在此处替换。",
+      "state": {
+        "available": "已有可用的凭据。",
+        "masked": "已保存脱敏凭据。",
+        "permissionHidden": "已保存凭据因权限限制而不可见。",
+        "unavailable": "暂无可显示的凭据。"
+      }
+    },
+    "sections": {
+      "advanced": "高级",
+      "basic": "基础信息",
+      "connection": "连接与凭据",
+      "metadata": "元数据",
+      "models": "模型",
+      "routing": "路由",
+      "sync": "模型同步"
+    },
+    "validation": {
+      "inconsistentValue": "此值与其他字段冲突。",
+      "invalidValue": "请输入有效值。",
+      "outOfRange": "请输入允许范围内的值。",
+      "required": "此字段为必填项。",
+      "unsupportedOption": "不支持此选项。"
+    }
   },
   "filter": {
     "statusLabel": "按状态筛选"
@@ -100,6 +245,7 @@
     "actions": {
       "cancel": "取消",
       "close": "关闭",
+      "refreshChannels": "刷新渠道列表",
       "refreshPreview": "刷新预览",
       "running": "迁移中…",
       "start": "开始迁移"
@@ -113,6 +259,7 @@
     "blockedReasons": {
       "sourceKeyMissing": "缺少源渠道密钥，当前无法迁移。",
       "sourceKeyResolutionFailed": "无法获取源渠道密钥。若刚完成验证，请刷新预览后重试。",
+      "sourceTypeUnsupported": "该源渠道类型暂不支持迁移。请选择受支持的渠道，或手动迁移。",
       "targetDraftPreparationFailed": "无法准备目标渠道草稿。请检查渠道信息并刷新预览后重试。"
     },
     "confirm": {
@@ -159,12 +306,21 @@
       "summary": "预览结果：{{ready}} 个可迁移，{{blocked}} 个已阻止，共 {{total}} 个渠道。"
     },
     "results": {
+      "refreshRequired": "部分创建结果的状态不确定。请刷新渠道列表后再关闭。",
       "status": {
         "failed": "失败",
         "skipped": "已跳过",
-        "success": "已创建"
+        "success": "已创建",
+        "uncertain": "状态不确定"
       },
-      "summary": "迁移结果：成功 {{created}} 个，失败 {{failed}} 个，跳过 {{skipped}} 个，共 {{total}} 个。",
+      "summary": "迁移结果：{{created}}，{{failed}}，{{skipped}}，{{uncertain}}，{{total}}。",
+      "summaryMetrics": {
+        "created": "成功 {{count}} 个",
+        "failed": "失败 {{count}} 个",
+        "skipped": "跳过 {{count}} 个",
+        "total": "共 {{count}} 个",
+        "uncertain": "状态不确定 {{count}} 个"
+      },
       "title": "迁移结果"
     },
     "target": {
@@ -176,6 +332,7 @@
     },
     "title": "迁移渠道"
   },
+  "resourceDescription": "搜索、创建、编辑和删除与此托管站点相连的渠道。",
   "statusLabels": {
     "autoDisabled": "自动禁用",
     "enabled": "启用",

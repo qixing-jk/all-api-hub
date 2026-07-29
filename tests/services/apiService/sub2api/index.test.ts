@@ -45,6 +45,7 @@ import type {
   Sub2ApiAnnouncementListData,
   Sub2ApiEnvelope,
 } from "~/services/apiService/sub2api/type"
+import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi } from "~/services/apiTransport/request"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
@@ -1395,6 +1396,11 @@ describe("apiService sub2api exported operations", () => {
   })
 
   it("checks the public flag before fetching and encoding the affiliate code", async () => {
+    const abortDeadline = {
+      signal: new AbortController().signal,
+      start: vi.fn(),
+      dispose: vi.fn(),
+    }
     vi.mocked(fetchApi)
       .mockResolvedValueOnce({
         code: 0,
@@ -1411,6 +1417,7 @@ describe("apiService sub2api exported operations", () => {
       fetchInviteLink({
         ...baseRequest,
         baseUrl: "https://sub2.example.invalid/console",
+        abortDeadline,
       } as any),
     ).resolves.toBe(
       "https://sub2.example.invalid/register?aff=code%2Fwith%20spaces%3F",
@@ -1418,6 +1425,7 @@ describe("apiService sub2api exported operations", () => {
 
     expect(vi.mocked(fetchApi)).toHaveBeenCalledTimes(2)
     const publicSettingsRequest = vi.mocked(fetchApi).mock.calls[0]?.[0]
+    expect(publicSettingsRequest?.abortDeadline).toBe(abortDeadline)
     expect(publicSettingsRequest?.baseUrl).toBe(
       "https://sub2.example.invalid/console",
     )
@@ -1433,9 +1441,84 @@ describe("apiService sub2api exported operations", () => {
         accessToken: "jwt-token",
       },
     })
+    expect(vi.mocked(fetchApi).mock.calls[1]?.[0]?.abortDeadline).toBe(
+      abortDeadline,
+    )
     expect((vi.mocked(fetchApi).mock.calls[1]?.[1] as any)?.endpoint).toBe(
       "/api/v1/user/aff",
     )
+  })
+
+  it("does not reset one invite-link deadline through an authenticated 401 retry", async () => {
+    vi.useFakeTimers()
+    const abortDeadline = createDeferredAbortDeadline(1_000)
+    let callCount = 0
+    vi.mocked(fetchApi).mockImplementation(async (request) => {
+      if (request.abortSignal?.aborted) {
+        throw request.abortSignal.reason
+      }
+
+      request.abortDeadline?.start()
+      callCount += 1
+
+      if (callCount === 1) {
+        await vi.advanceTimersByTimeAsync(900)
+        return {
+          code: 0,
+          message: "ok",
+          data: { affiliate_enabled: true },
+        } as any
+      }
+
+      if (callCount === 2) {
+        await vi.advanceTimersByTimeAsync(100)
+        throw new ApiError("Unauthorized", 401, "/api/v1/user/aff")
+      }
+
+      return {
+        code: 0,
+        message: "ok",
+        data: { aff_code: "unexpected-retry" },
+      } as any
+    })
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "retry-jwt",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+
+    try {
+      await expect(
+        fetchInviteLink({
+          ...baseRequest,
+          baseUrl: "https://sub2.example.invalid",
+          abortSignal: abortDeadline.signal,
+          abortDeadline,
+        } as any),
+      ).rejects.toMatchObject({ name: "TimeoutError" })
+
+      expect(vi.mocked(fetchApi)).toHaveBeenCalledTimes(3)
+      for (const [request] of vi.mocked(fetchApi).mock.calls) {
+        expect(request.abortDeadline).toBe(abortDeadline)
+      }
+      expect(
+        vi
+          .mocked(fetchApi)
+          .mock.calls.map(
+            ([, options]) => (options as { endpoint: string }).endpoint,
+          ),
+      ).toEqual([
+        "/api/v1/settings/public",
+        "/api/v1/user/aff",
+        "/api/v1/user/aff",
+      ])
+      expect(vi.mocked(fetchApi).mock.calls[2]?.[0]?.auth.accessToken).toBe(
+        "retry-jwt",
+      )
+      expect(abortDeadline.signal.aborted).toBe(true)
+    } finally {
+      abortDeadline.dispose()
+      vi.useRealTimers()
+    }
   })
 
   it.each([

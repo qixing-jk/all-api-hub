@@ -49,6 +49,9 @@ const mocks = vi.hoisted(() => ({
   handleTempWindowCheckinPageAction: vi.fn(),
   handleTempWindowTurnstileFetch: vi.fn(),
   handleTempWindowGetRenderedTitle: vi.fn(),
+  handleTempWindowOpenRouterManagementKeyAction: vi.fn(),
+  cancelTempWindowOpenRouterManagementKeyAction: vi.fn(),
+  markTempWindowOpenRouterManagementKeyDispatched: vi.fn(),
   openBugReportPage: vi.fn(),
 }))
 
@@ -87,6 +90,15 @@ vi.mock("~/entrypoints/background/tempWindowPool", () => ({
   handleTempWindowCheckinPageAction: mocks.handleTempWindowCheckinPageAction,
   handleTempWindowTurnstileFetch: mocks.handleTempWindowTurnstileFetch,
   handleTempWindowGetRenderedTitle: mocks.handleTempWindowGetRenderedTitle,
+}))
+
+vi.mock("~/entrypoints/background/openrouter/managementKeyAction", () => ({
+  handleTempWindowOpenRouterManagementKeyAction:
+    mocks.handleTempWindowOpenRouterManagementKeyAction,
+  cancelTempWindowOpenRouterManagementKeyAction:
+    mocks.cancelTempWindowOpenRouterManagementKeyAction,
+  markTempWindowOpenRouterManagementKeyDispatched:
+    mocks.markTempWindowOpenRouterManagementKeyDispatched,
 }))
 
 vi.mock("~/services/models/modelSync", () => ({
@@ -430,6 +442,14 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     const cases = [
       {
         request: {
+          action: RuntimeActionIds.TempWindowOpenRouterManagementKeyAction,
+          requestId: "request-example",
+          operation: { kind: "create", label: "extension-request-example" },
+        },
+        expected: mocks.handleTempWindowOpenRouterManagementKeyAction,
+      },
+      {
+        request: {
           action: RuntimeActionIds.TempWindowCheckinPageAction,
           originUrl: "https://example.invalid",
           pageUrl: "https://example.invalid/console/personal",
@@ -453,7 +473,9 @@ describe("setupRuntimeMessageListeners additional routing", () => {
 
       expect(result).toBe(true)
       expect(expected).toHaveBeenLastCalledWith(
-        request.action === RuntimeActionIds.TempWindowCheckinPageAction
+        request.action === RuntimeActionIds.TempWindowCheckinPageAction ||
+          request.action ===
+            RuntimeActionIds.TempWindowOpenRouterManagementKeyAction
           ? {
               ...request,
               tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
@@ -465,6 +487,14 @@ describe("setupRuntimeMessageListeners additional routing", () => {
   })
 
   it.each([
+    {
+      action: RuntimeActionIds.TempWindowOpenRouterManagementKeyAction,
+      handler: mocks.handleTempWindowOpenRouterManagementKeyAction,
+      fields: {
+        requestId: "request-example",
+        operation: { kind: "create", label: "extension-request-example" },
+      },
+    },
     {
       action: RuntimeActionIds.AutoDetectSite,
       handler: mocks.handleAutoDetectSite,
@@ -553,6 +583,154 @@ describe("setupRuntimeMessageListeners additional routing", () => {
       )
     },
   )
+
+  it("routes OpenRouter cancellation and dispatch markers by request ID", async () => {
+    const listener = await loadListener()
+    mocks.cancelTempWindowOpenRouterManagementKeyAction.mockReturnValue({
+      requestId: "request-example",
+      certainty: "known",
+      cancellationAccepted: true,
+      mutationState: "dispatched_unconfirmed",
+      label: "recognizable-label",
+    })
+    mocks.markTempWindowOpenRouterManagementKeyDispatched.mockReturnValue(true)
+
+    const cancelResponse = vi.fn()
+    expect(
+      listener(
+        {
+          action:
+            RuntimeActionIds.TempWindowCancelOpenRouterManagementKeyAction,
+          requestId: "request-example",
+        },
+        {},
+        cancelResponse,
+      ),
+    ).toBe(true)
+    expect(cancelResponse).toHaveBeenCalledWith({
+      requestId: "request-example",
+      certainty: "known",
+      cancellationAccepted: true,
+      mutationState: "dispatched_unconfirmed",
+      label: "recognizable-label",
+    })
+
+    const dispatchResponse = vi.fn()
+    expect(
+      listener(
+        {
+          action: RuntimeActionIds.TempWindowOpenRouterManagementKeyDispatched,
+          requestId: "request-example",
+        },
+        {},
+        dispatchResponse,
+      ),
+    ).toBe(true)
+    expect(dispatchResponse).toHaveBeenCalledWith({
+      requestId: "request-example",
+      marked: true,
+    })
+  })
+
+  it("strips caller-controlled page fields from OpenRouter action payloads", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+
+    listener(
+      {
+        action: RuntimeActionIds.TempWindowOpenRouterManagementKeyAction,
+        requestId: "request-strict-boundary",
+        operation: { kind: "create", label: "extension-request-example" },
+        originUrl: "https://example.invalid",
+        pageUrl: "https://example.invalid/private",
+        timeoutMs: 1,
+        signal: { aborted: false },
+        rawPageResponse: "private",
+      },
+      {},
+      sendResponse,
+    )
+
+    expect(
+      mocks.handleTempWindowOpenRouterManagementKeyAction,
+    ).toHaveBeenCalledWith(
+      {
+        action: RuntimeActionIds.TempWindowOpenRouterManagementKeyAction,
+        requestId: "request-strict-boundary",
+        operation: { kind: "create", label: "extension-request-example" },
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      },
+      sendResponse,
+    )
+  })
+
+  it("rejects malformed OpenRouter action operations at the runtime boundary", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+
+    listener(
+      {
+        action: RuntimeActionIds.TempWindowOpenRouterManagementKeyAction,
+        requestId: "request-malformed-operation",
+        operation: { kind: "delete", label: "ignored-label" },
+      },
+      {},
+      sendResponse,
+    )
+
+    expect(
+      mocks.handleTempWindowOpenRouterManagementKeyAction,
+    ).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "request-malformed-operation",
+        operation: undefined,
+      }),
+      sendResponse,
+    )
+  })
+
+  it("normalizes malformed OpenRouter control-message request IDs", async () => {
+    mocks.cancelTempWindowOpenRouterManagementKeyAction.mockReturnValue({
+      requestId: "",
+      certainty: "unknown",
+    })
+    mocks.markTempWindowOpenRouterManagementKeyDispatched.mockReturnValue(false)
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+
+    listener(
+      {
+        action: RuntimeActionIds.TempWindowCancelOpenRouterManagementKeyAction,
+        requestId: { private: "id" },
+      },
+      {},
+      sendResponse,
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      requestId: "",
+      certainty: "unknown",
+    })
+    expect(
+      mocks.cancelTempWindowOpenRouterManagementKeyAction,
+    ).toHaveBeenCalledWith("")
+
+    sendResponse.mockClear()
+    listener(
+      {
+        action: RuntimeActionIds.TempWindowOpenRouterManagementKeyDispatched,
+        requestId: { private: "id" },
+      },
+      {},
+      sendResponse,
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      requestId: "",
+      marked: false,
+    })
+    expect(
+      mocks.markTempWindowOpenRouterManagementKeyDispatched,
+    ).toHaveBeenCalledWith("")
+  })
 
   it("does not route typed Redemption Assist RPCs through the raw runtime listener", async () => {
     const listener = await loadListener()

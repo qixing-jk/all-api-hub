@@ -40,6 +40,45 @@ function createDraft(
 }
 
 describe("Account Dialog site policy", () => {
+  it.each([
+    [SITE_TYPES.OPENROUTER, "OpenRouter"],
+    [SITE_TYPES.SUB2API, "Sub2API"],
+    [SITE_TYPES.AIHUBMIX, "AIHubMix"],
+  ])("provides the user-facing label for %s", (siteType, siteTypeLabel) => {
+    expect(getAccountDialogSitePolicy(siteType).siteTypeLabel).toBe(
+      siteTypeLabel,
+    )
+  })
+
+  it("locks OpenRouter to the canonical management-key account policy", () => {
+    const policy = getAccountDialogSitePolicy(SITE_TYPES.OPENROUTER)
+
+    expect(policy).toMatchObject({
+      canonicalSiteUrl: "https://openrouter.ai",
+      defaultSiteName: "OpenRouter",
+      lockSiteUrl: true,
+      forceAccessTokenAuth: true,
+      requireUsername: false,
+      requireUserId: false,
+      allowCookieAuthSession: false,
+      allowBuiltInCheckInDetection: false,
+    })
+    expect(policy).not.toHaveProperty("credentialKind")
+  })
+
+  it.each([SITE_TYPES.SUB2API, SITE_TYPES.SHAREDCHAT, SITE_TYPES.VO_API_V2])(
+    "does not require a username for %s",
+    (siteType) => {
+      expect(getAccountDialogSitePolicy(siteType).requireUsername).toBe(false)
+    },
+  )
+
+  it("keeps usernames required for sites whose profile requires them", () => {
+    expect(getAccountDialogSitePolicy(SITE_TYPES.NEW_API).requireUsername).toBe(
+      true,
+    )
+  })
+
   it("returns independent policy objects for callers", () => {
     const firstSub2ApiPolicy = getAccountDialogSitePolicy(SITE_TYPES.SUB2API)
     firstSub2ApiPolicy.allowCookieAutoImport = true
@@ -72,6 +111,8 @@ describe("Account Dialog site policy", () => {
     expect(normalized.sub2apiUseRefreshToken).toBe(false)
     expect(normalized.sub2apiRefreshToken).toBe("")
     expect(normalized.sub2apiTokenExpiresAt).toBeNull()
+    expect(policy.requireUsername).toBe(true)
+    expect(policy.requireUserId).toBe(true)
     expect(
       shouldAutoImportCookieAuthForAccountDialogSite({
         policy,
@@ -153,6 +194,8 @@ describe("Account Dialog site policy", () => {
     expect(aihubmixPolicy.allowBuiltInCheckInDetection).toBe(false)
     expect(aihubmixPolicy.allowSub2ApiRefreshTokenState).toBe(false)
     expect(aihubmixPolicy.deferSuccessForOneTimeKeyPostSaveFlow).toBe(true)
+    expect(aihubmixPolicy.requireUsername).toBe(true)
+    expect(aihubmixPolicy.requireUserId).toBe(true)
 
     vi.doUnmock("~/services/accounts/accountSiteProfile")
     vi.resetModules()

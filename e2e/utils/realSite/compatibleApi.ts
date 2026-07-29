@@ -20,6 +20,15 @@ import {
 const DEFAULT_LOGIN_PATH = "/login"
 const DEFAULT_LOGIN_API_PATH = "/api/user/login"
 const DEFAULT_LOGIN_2FA_API_PATH = "/api/user/login/2fa"
+const AUTH_REFRESH_PATH = "/api/user/auth/refresh"
+const AUTH_LOGOUT_PATH = "/api/user/auth/logout"
+const SECURITY_VERIFICATION_BODY_PATTERN =
+  /verify you are human|performing security verification|cloudflare/iu
+const AUTH_BUNDLE_MARKER_FIELDS = [
+  "access_token",
+  "token_type",
+  "access_expires_at",
+] as const
 
 type RequiredRealSiteEnvKey<TPrefix extends string> =
   | `AAH_E2E_${TPrefix}_BASE_URL`
@@ -48,6 +57,7 @@ export interface CompatibleApiRealSiteConfig {
 export interface CompatibleApiRealSiteLoginResult {
   reusedSession: boolean
   user: Record<string, unknown>
+  cleanupOwnedSession?: () => Promise<void>
 }
 
 type CompatibleApiLoginApiPayload = {
@@ -61,7 +71,29 @@ type CompatibleApiResolverOptions<TPrefix extends string> = {
 type CompatibleApiLoginOptions = {
   label: string
   envPrefix: string
+  authBundle?: boolean
 }
+
+type CompatibleAuthBundle = {
+  kind: "authBundle"
+  user: Record<string, unknown>
+  accessToken: string
+  sessionId: string
+}
+
+type CompatibleLegacyUser = {
+  kind: "legacyUser"
+  user: Record<string, unknown>
+}
+
+type CompatibleLoginPayload = CompatibleAuthBundle | CompatibleLegacyUser
+type CompatibleLoginPayloadMode = "authBundleFirst" | "legacyFirst"
+
+type AuthBundleProbeResult =
+  | CompatibleAuthBundle
+  | { kind: "anonymous" | "legacyFallback" }
+
+class TerminalCompatibleApiLoginError extends Error {}
 
 export function resolveCompatibleApiRealSiteConfig<TPrefix extends string>({
   envPrefix,
@@ -129,25 +161,50 @@ export async function loginToCompatibleApiRealSite(
   options: CompatibleApiLoginOptions,
 ): Promise<CompatibleApiRealSiteLoginResult> {
   await ensureRealSiteOriginPage(page, config.loginUrl)
+  let loginPayloadMode: CompatibleLoginPayloadMode = options.authBundle
+    ? "authBundleFirst"
+    : "legacyFirst"
 
-  const existingUser = await waitForStoredUser(page, 2_500)
-  if (existingUser) {
-    return {
-      reusedSession: true,
-      user: existingUser,
+  if (options.authBundle) {
+    const probeResult = await probeCompatibleAuthBundle(page, config, options)
+    if (probeResult.kind === "authBundle") {
+      return createAuthBundleLoginResult(
+        page,
+        config,
+        options,
+        probeResult,
+        true,
+      )
+    }
+
+    if (probeResult.kind === "legacyFallback") {
+      loginPayloadMode = "legacyFirst"
+      const existingUser = await waitForStoredUser(page, 2_500)
+      if (existingUser) {
+        return {
+          reusedSession: true,
+          user: existingUser,
+        }
+      }
+    }
+  } else {
+    const existingUser = await waitForStoredUser(page, 2_500)
+    if (existingUser) {
+      return {
+        reusedSession: true,
+        user: existingUser,
+      }
     }
   }
 
-  const apiUser = await tryLoginToCompatibleApiRealSiteViaApi(
+  const apiLoginResult = await tryLoginToCompatibleApiRealSiteViaApi(
     page,
     config,
     options,
+    loginPayloadMode,
   )
-  if (apiUser) {
-    return {
-      reusedSession: false,
-      user: apiUser,
-    }
+  if (apiLoginResult) {
+    return apiLoginResult
   }
 
   const locatorFactory = createLocatorFactory(`AAH_E2E_${options.envPrefix}`)
@@ -186,6 +243,25 @@ export async function loginToCompatibleApiRealSite(
 
   await maybeSubmitTotp(page, config, options)
 
+  if (options.authBundle) {
+    const probeResult = await probeCompatibleAuthBundle(page, config, options)
+    if (probeResult.kind === "authBundle") {
+      return createAuthBundleLoginResult(
+        page,
+        config,
+        options,
+        probeResult,
+        false,
+      )
+    }
+
+    if (probeResult.kind === "anonymous") {
+      throw new TerminalCompatibleApiLoginError(
+        `Real ${options.label} login did not create an authenticated session.`,
+      )
+    }
+  }
+
   const user = await waitForStoredUser(page, 30_000)
   if (!user) {
     throw new Error(
@@ -203,7 +279,8 @@ async function tryLoginToCompatibleApiRealSiteViaApi(
   page: Page,
   config: CompatibleApiRealSiteConfig,
   options: CompatibleApiLoginOptions,
-): Promise<Record<string, unknown> | null> {
+  payloadMode: CompatibleLoginPayloadMode,
+): Promise<CompatibleApiRealSiteLoginResult | null> {
   const loginApiUrls = Array.from(
     new Set([
       config.loginApiUrl,
@@ -222,15 +299,45 @@ async function tryLoginToCompatibleApiRealSiteViaApi(
         },
         failOnStatusCode: false,
       })
-      const responseText = await response.text()
-      const payload = extractCompatibleApiPayload(safeParseJson(responseText))
+      let responseText = await response.text()
+      let responseStatus = response.status()
+      const responseOk = response.ok()
+      let payload = extractCompatibleApiPayload(safeParseJson(responseText))
       const loginPayload = payload as CompatibleApiLoginApiPayload | null
 
       if (loginPayload?.require_2fa) {
-        await completeCompatibleApiLogin2fa(page, config, options)
-      } else if (!response.ok()) {
-        lastErrorMessage = buildCompatibleApiLoginApiErrorMessage(
-          response.status(),
+        let twoFactorResponse
+        try {
+          twoFactorResponse = await completeCompatibleApiLogin2fa(
+            page,
+            config,
+            options,
+          )
+        } catch (error) {
+          if (
+            options.authBundle &&
+            !(error instanceof TerminalCompatibleApiLoginError)
+          ) {
+            throw new TerminalCompatibleApiLoginError(
+              `Real ${options.label} 2FA request failed.`,
+            )
+          }
+          throw error
+        }
+        responseText = twoFactorResponse.responseText
+        responseStatus = twoFactorResponse.status
+        payload = extractCompatibleApiPayload(safeParseJson(responseText))
+      } else if (!responseOk) {
+        if (options.authBundle && isTerminalAuthBundleStatus(responseStatus)) {
+          throw createAuthSessionStatusError(
+            options,
+            responseStatus,
+            responseText,
+          )
+        }
+
+        lastErrorMessage = buildCompatibleApiAttemptErrorMessage(
+          responseStatus,
           responseText,
           loginApiUrl,
           options,
@@ -238,12 +345,32 @@ async function tryLoginToCompatibleApiRealSiteViaApi(
         continue
       }
 
+      const parsedPayload = parseCompatibleLoginPayload(payload, payloadMode)
+      if (options.authBundle) {
+        if (parsedPayload?.kind === "authBundle") {
+          return createAuthBundleLoginResult(
+            page,
+            config,
+            options,
+            parsedPayload,
+            false,
+          )
+        }
+
+        if (!parsedPayload) {
+          throw new TerminalCompatibleApiLoginError(
+            `Real ${options.label} auth session response is invalid.`,
+          )
+        }
+      }
+
       const user =
-        parseCompatibleApiUser(payload) ??
-        (await fetchCompatibleApiUser(page, config))
+        parsedPayload?.kind === "legacyUser"
+          ? parsedPayload.user
+          : await fetchCompatibleApiUser(page, config)
       if (!user) {
-        lastErrorMessage = buildCompatibleApiLoginApiErrorMessage(
-          response.status(),
+        lastErrorMessage = buildCompatibleApiAttemptErrorMessage(
+          responseStatus,
           responseText,
           loginApiUrl,
           options,
@@ -256,10 +383,21 @@ async function tryLoginToCompatibleApiRealSiteViaApi(
         user: JSON.stringify(user),
       })
 
-      return user
+      return {
+        reusedSession: false,
+        user,
+      }
     } catch (error) {
+      if (error instanceof TerminalCompatibleApiLoginError) {
+        throw error
+      }
+
       lastErrorMessage = `${options.label} login API request failed at ${loginApiUrl}: ${
-        error instanceof Error ? error.message : String(error)
+        options.authBundle
+          ? "request failed"
+          : error instanceof Error
+            ? error.message
+            : String(error)
       }`
     }
   }
@@ -292,15 +430,100 @@ function parseCompatibleApiUser(payload: unknown) {
   return user
 }
 
+function parseCompatibleLoginPayload(
+  payload: unknown,
+  mode: CompatibleLoginPayloadMode,
+): CompatibleLoginPayload | null {
+  if (!isRecord(payload)) {
+    return null
+  }
+
+  const legacyUser = parseCompatibleApiUser(payload)
+  if (mode === "legacyFirst" && legacyUser) {
+    return { kind: "legacyUser", user: legacyUser }
+  }
+
+  if (isRecognizableAuthBundleAttempt(payload)) {
+    const accessToken = getNonBlankString(payload.access_token)
+    const tokenType = payload.token_type
+    const accessExpiresAt = payload.access_expires_at
+    const user = parseAuthBundleUser(payload.user)
+    const session = isRecord(payload.session) ? payload.session : null
+    const sessionId = session ? getNonBlankString(session.sid) : null
+
+    if (
+      !accessToken ||
+      tokenType !== "Bearer" ||
+      typeof accessExpiresAt !== "number" ||
+      !Number.isFinite(accessExpiresAt) ||
+      accessExpiresAt <= Date.now() / 1_000 ||
+      !user ||
+      !sessionId ||
+      session?.current !== true
+    ) {
+      return null
+    }
+
+    return {
+      kind: "authBundle",
+      user,
+      accessToken,
+      sessionId,
+    }
+  }
+
+  if (legacyUser) {
+    return { kind: "legacyUser", user: legacyUser }
+  }
+
+  return null
+}
+
+function parseAuthBundleUser(payload: unknown) {
+  if (!isRecord(payload)) {
+    return null
+  }
+
+  const username = getNonBlankString(payload.username)
+  if (payload.id == null && !username) {
+    return null
+  }
+
+  return payload
+}
+
+function isRecognizableAuthBundleAttempt(payload: unknown) {
+  if (!isRecord(payload)) {
+    return false
+  }
+
+  if (
+    AUTH_BUNDLE_MARKER_FIELDS.some((field) =>
+      Object.prototype.hasOwnProperty.call(payload, field),
+    )
+  ) {
+    return true
+  }
+
+  return Boolean(
+    isRecord(payload.session) &&
+      (Object.prototype.hasOwnProperty.call(payload.session, "sid") ||
+        Object.prototype.hasOwnProperty.call(payload.session, "current")),
+  )
+}
+
 async function completeCompatibleApiLogin2fa(
   page: Page,
   config: Pick<CompatibleApiRealSiteConfig, "login2faApiUrl" | "totpSecret">,
   options: CompatibleApiLoginOptions,
-) {
+): Promise<{ ok: boolean; status: number; responseText: string }> {
   if (!config.totpSecret) {
-    throw new Error(
+    const error = new Error(
       `Real ${options.label} login requires 2FA, but AAH_E2E_${options.envPrefix}_TOTP_SECRET is not set.`,
     )
+    throw options.authBundle
+      ? new TerminalCompatibleApiLoginError(error.message)
+      : error
   }
 
   const response = await page.request.post(config.login2faApiUrl, {
@@ -310,8 +533,17 @@ async function completeCompatibleApiLogin2fa(
     failOnStatusCode: false,
   })
 
+  const responseText = await response.text()
+
   if (!response.ok()) {
-    const responseText = await response.text()
+    if (options.authBundle) {
+      throw createAuthSessionStatusError(
+        options,
+        response.status(),
+        responseText,
+      )
+    }
+
     throw new Error(
       buildCompatibleApiLoginApiErrorMessage(
         response.status(),
@@ -321,6 +553,171 @@ async function completeCompatibleApiLogin2fa(
       ),
     )
   }
+
+  return {
+    ok: true,
+    status: response.status(),
+    responseText,
+  }
+}
+
+async function probeCompatibleAuthBundle(
+  page: Page,
+  config: Pick<CompatibleApiRealSiteConfig, "baseUrl">,
+  options: CompatibleApiLoginOptions,
+): Promise<AuthBundleProbeResult> {
+  // Pinned rc.22 contract: https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/docs/authentication.md
+  const origin = new URL(config.baseUrl).origin
+  let response
+
+  try {
+    response = await page.request.post(
+      resolveRealSiteUrl(config.baseUrl, AUTH_REFRESH_PATH),
+      {
+        failOnStatusCode: false,
+        headers: { Origin: origin },
+      },
+    )
+  } catch {
+    throw new TerminalCompatibleApiLoginError(
+      `Real ${options.label} auth session refresh request failed.`,
+    )
+  }
+
+  const status = response.status()
+  if (status === 401) {
+    return { kind: "anonymous" }
+  }
+  if (status === 404 || status === 405) {
+    return { kind: "legacyFallback" }
+  }
+
+  const responseText = await response.text()
+  if (!response.ok()) {
+    throw createAuthSessionStatusError(options, status, responseText)
+  }
+
+  const rawResponse = safeParseJson(responseText)
+  const rawPayload =
+    isRecord(rawResponse) && "data" in rawResponse
+      ? rawResponse.data
+      : rawResponse
+  const payload = extractCompatibleApiPayload(rawResponse)
+  const parsedPayload = parseCompatibleLoginPayload(payload, "authBundleFirst")
+  if (parsedPayload?.kind === "authBundle") {
+    return parsedPayload
+  }
+
+  if (
+    isRecognizableAuthBundleAttempt(payload) ||
+    isRecognizableAuthBundleAttempt(rawPayload)
+  ) {
+    throw new TerminalCompatibleApiLoginError(
+      `Real ${options.label} auth session response is invalid.`,
+    )
+  }
+
+  return { kind: "legacyFallback" }
+}
+
+function createAuthBundleLoginResult(
+  page: Page,
+  config: Pick<CompatibleApiRealSiteConfig, "baseUrl">,
+  options: CompatibleApiLoginOptions,
+  authBundle: CompatibleAuthBundle,
+  reusedSession: boolean,
+): CompatibleApiRealSiteLoginResult {
+  return {
+    reusedSession,
+    user: authBundle.user,
+    ...(reusedSession
+      ? {}
+      : {
+          cleanupOwnedSession: createOwnedAuthSessionCleanup(
+            page,
+            config,
+            options,
+            authBundle,
+          ),
+        }),
+  }
+}
+
+function createOwnedAuthSessionCleanup(
+  page: Page,
+  config: Pick<CompatibleApiRealSiteConfig, "baseUrl">,
+  options: CompatibleApiLoginOptions,
+  authBundle: CompatibleAuthBundle,
+) {
+  return async () => {
+    const origin = new URL(config.baseUrl).origin
+    let response
+
+    try {
+      response = await page.request.post(
+        resolveRealSiteUrl(config.baseUrl, AUTH_LOGOUT_PATH),
+        {
+          failOnStatusCode: false,
+          headers: {
+            Origin: origin,
+            Authorization: `Bearer ${authBundle.accessToken}`,
+            "X-Auth-Session": authBundle.sessionId,
+          },
+        },
+      )
+    } catch {
+      throw new Error(`Real ${options.label} auth session cleanup failed.`)
+    }
+
+    if (!response.ok()) {
+      const responseText = await response.text()
+      throw createAuthSessionStatusError(
+        options,
+        response.status(),
+        responseText,
+        "cleanup",
+      )
+    }
+  }
+}
+
+function createAuthSessionStatusError(
+  options: CompatibleApiLoginOptions,
+  status: number,
+  responseText: string,
+  action = "request",
+) {
+  const code = getSafeAuthErrorCode(responseText)
+  return new TerminalCompatibleApiLoginError(
+    `${options.label} auth session ${action} failed (HTTP ${status}${code ? `, ${code}` : ""})`,
+  )
+}
+
+function getSafeAuthErrorCode(responseText: string) {
+  const parsed = safeParseJson(responseText)
+  if (!isRecord(parsed)) {
+    return null
+  }
+
+  const code = getNonBlankString(parsed.code)
+  return code && /^[A-Z][A-Z0-9_]{0,79}$/u.test(code) ? code : null
+}
+
+function isTerminalAuthBundleStatus(status: number) {
+  return status === 409 || status === 429 || status >= 500
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value))
+}
+
+function getNonBlankString(value: unknown) {
+  if (typeof value !== "string") {
+    return null
+  }
+
+  const trimmed = value.trim()
+  return trimmed || null
 }
 
 async function fetchCompatibleApiUser(
@@ -485,11 +882,7 @@ function buildCompatibleApiLoginApiErrorMessage(
 ) {
   const normalizedText = responseText.trim()
 
-  if (
-    /verify you are human|performing security verification|cloudflare/iu.test(
-      normalizedText,
-    )
-  ) {
+  if (SECURITY_VERIFICATION_BODY_PATTERN.test(normalizedText)) {
     return `${options.label} login API at ${loginApiUrl} is blocked by a security verification page (HTTP ${status}).`
   }
 
@@ -504,6 +897,28 @@ function buildCompatibleApiLoginApiErrorMessage(
   return `${options.label} login API at ${loginApiUrl} returned HTTP ${status}: ${normalizedText.slice(0, 280)}`
 }
 
+function buildCompatibleApiAttemptErrorMessage(
+  status: number,
+  responseText: string,
+  loginApiUrl: string,
+  options: CompatibleApiLoginOptions,
+) {
+  if (!options.authBundle) {
+    return buildCompatibleApiLoginApiErrorMessage(
+      status,
+      responseText,
+      loginApiUrl,
+      options,
+    )
+  }
+
+  if (SECURITY_VERIFICATION_BODY_PATTERN.test(responseText)) {
+    return `${options.label} login API at ${loginApiUrl} is blocked by a security verification page (HTTP ${status}).`
+  }
+
+  return `${options.label} login API at ${loginApiUrl} returned HTTP ${status}.`
+}
+
 async function looksLikeSecurityVerificationPage(page: Page) {
   const url = page.url()
   if (/cdn-cgi|challenge|cloudflare/iu.test(url)) {
@@ -514,7 +929,5 @@ async function looksLikeSecurityVerificationPage(page: Page) {
     .locator("body")
     .textContent()
     .catch(() => "")
-  return /verify you are human|performing security verification|cloudflare/iu.test(
-    bodyText ?? "",
-  )
+  return SECURITY_VERIFICATION_BODY_PATTERN.test(bodyText ?? "")
 }

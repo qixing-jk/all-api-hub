@@ -1,7 +1,9 @@
+import { readFileSync } from "node:fs"
 import { describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import * as tempWindowFetchClient from "~/utils/browser/tempWindowFetch"
 import {
   tempWindowFetch,
   tempWindowGetRenderedTitle,
@@ -48,6 +50,26 @@ vi.mock("~/entrypoints/background/tempWindowPool", () => ({
 }))
 
 describe("tempWindowFetch helpers (background context)", () => {
+  it("keeps provider-specific OpenRouter transport out of the generic facade", () => {
+    expect(tempWindowFetchClient).not.toHaveProperty(
+      "tempWindowOpenRouterManagementKeyAction",
+    )
+    expect(tempWindowFetchClient).not.toHaveProperty(
+      "cancelTempWindowOpenRouterManagementKeyAction",
+    )
+
+    const genericTypeSource = readFileSync(
+      new URL("../../src/types/tempWindowFetch.ts", import.meta.url),
+      "utf8",
+    )
+    const genericClientSource = readFileSync(
+      new URL("../../src/utils/browser/tempWindowFetch.ts", import.meta.url),
+      "utf8",
+    )
+    expect(genericTypeSource).not.toMatch(/OpenRouterManagementKey/)
+    expect(genericClientSource).not.toMatch(/OpenRouterManagementKey/)
+  })
+
   it("delegates tempWindowFetch to the background handler", async () => {
     handleTempWindowFetchMock.mockImplementation((request, sendResponse) => {
       sendResponse({ success: true, data: request.fetchUrl })

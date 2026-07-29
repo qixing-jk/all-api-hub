@@ -260,6 +260,7 @@
       "manualPickHint": "You can manually choose which account to keep in each set. Manual choices override the keep strategy.",
       "previewDelete": "Preview deletion",
       "recommended": "Recommended",
+      "sameCredential": "Same management key",
       "strategy": {
         "keepEnabled": "Keep enabled (if any)",
         "keepMostRecentlyUpdated": "Keep most recently updated",

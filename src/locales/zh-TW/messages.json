@@ -130,6 +130,24 @@
     "corsError": "這可能是 CORS 配置問題。請在 Octopus 設定中檢查 CORS 白名單配置。",
     "noChannelsToSync": "沒有可同步的渠道"
   },
+  "openrouter": {
+    "bootstrap": {
+      "cancelled_before_create": "OpenRouter 金鑰建立已在建立前取消。",
+      "cancelledAfterCreate": "等待取消時已建立金鑰。請在下方檢查，然後儲存或撤銷。",
+      "failed": "無法確認 OpenRouter 金鑰是否建立成功。請手動輸入金鑰，或檢查管理金鑰。",
+      "invalid_origin": "建立 OpenRouter 金鑰需要開啟正規的 OpenRouter 頁面。",
+      "logged_out": "請先登入 OpenRouter，然後重試自動識別。",
+      "mutationUnconfirmed": "OpenRouter 可能已建立金鑰，但結果未能傳回。請在重試前檢查管理金鑰。",
+      "page_changed": "請保持 OpenRouter 管理金鑰頁面開啟，然後重試自動識別。",
+      "timeout": "OpenRouter 金鑰建立逾時。請在重試前檢查管理金鑰。",
+      "validationFailed": "OpenRouter 已建立金鑰，但驗證失敗。請在下方貼上，或從管理金鑰中撤銷。"
+    },
+    "credentialInvalid": "此 OpenRouter 管理金鑰無效或已撤銷。",
+    "malformedResponse": "OpenRouter 回傳了非預期的回應，請稍後再試。",
+    "managementKeyRequired": "請在 OpenRouter 中建立新的管理金鑰並立即複製。現有管理金鑰的明文無法再次顯示。",
+    "networkFallback": "無法連線至 OpenRouter。請檢查網路連線後再試。",
+    "permissionDenied": "此 OpenRouter 管理金鑰沒有讀取帳號餘額的權限。"
+  },
   "operations": {
     "detection": {
       "failed": "自動檢測失敗，請手動輸入資訊或確保已在目標站點登入",

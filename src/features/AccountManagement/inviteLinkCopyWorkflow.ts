@@ -2,6 +2,7 @@ import {
   canFetchDisplayAccountInviteLink,
   fetchDisplayAccountInviteLink,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import {
   INVITE_LINK_FAILURE_REASONS,
   InviteLinkError,
@@ -59,64 +60,14 @@ async function fetchInviteLink({
   batchSignal?: AbortSignal
   requestTimeoutMs?: number
 }): Promise<string> {
-  const hasRequestTimeout = isPositiveFiniteTimeout(requestTimeoutMs)
-
-  const sourceSignals = [signal, batchSignal].filter(
-    (sourceSignal): sourceSignal is AbortSignal => sourceSignal !== undefined,
+  return await runAbortableTask(
+    async (abortSignal) =>
+      await fetchDisplayAccountInviteLink(account, {
+        abortSignal,
+        requestTimeoutMs,
+      }),
+    { signals: [signal, batchSignal] },
   )
-
-  if (!hasRequestTimeout && sourceSignals.length === 0) {
-    return fetchDisplayAccountInviteLink(account, {
-      abortSignal: undefined,
-    })
-  }
-
-  const controller = new AbortController()
-  const signalCleanups: Array<() => void> = []
-  const cleanupSourceSignals = () => {
-    signalCleanups.forEach((cleanup) => cleanup())
-    signalCleanups.length = 0
-  }
-  let rejectOnAbort!: () => void
-  const abortPromise = new Promise<never>((_resolve, reject) => {
-    rejectOnAbort = () => reject(controller.signal.reason)
-    controller.signal.addEventListener("abort", rejectOnAbort, { once: true })
-  })
-
-  // The parent is checked before this batch starts and adapter calls are
-  // deferred below, so every source listener is attached before abort can race.
-  for (const sourceSignal of sourceSignals) {
-    const relayAbort = () => {
-      controller.abort(sourceSignal.reason)
-    }
-
-    sourceSignal.addEventListener("abort", relayAbort, { once: true })
-    signalCleanups.push(() => {
-      sourceSignal.removeEventListener("abort", relayAbort)
-    })
-  }
-
-  const timeoutId = hasRequestTimeout
-    ? setTimeout(() => {
-        controller.abort(
-          new InviteLinkError(INVITE_LINK_FAILURE_REASONS.Timeout),
-        )
-      }, requestTimeoutMs)
-    : undefined
-  const fetchPromise = Promise.resolve().then(() => {
-    controller.signal.throwIfAborted()
-    return fetchDisplayAccountInviteLink(account, {
-      abortSignal: controller.signal,
-    })
-  })
-
-  try {
-    return await Promise.race([fetchPromise, abortPromise])
-  } finally {
-    if (timeoutId !== undefined) clearTimeout(timeoutId)
-    cleanupSourceSignals()
-    controller.signal.removeEventListener("abort", rejectOnAbort)
-  }
 }
 
 /** Fetches invite links concurrently while preserving account order. */

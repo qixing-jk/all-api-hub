@@ -5,6 +5,7 @@ import {
   handleGetUserFromLocalStorage,
 } from "~/entrypoints/content/messageHandlers/handlers/storage"
 import { compatibleUserContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/compatibleUser"
+import { newApiAuthBundleContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/newApiAuthBundle"
 import { sharedChatContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/sharedchat"
 import {
   sub2ApiContentSessionExtractor,
@@ -653,6 +654,149 @@ describe("content storage handler", () => {
         },
       })
     })
+
+    it("does not fall through to stale compatible-user storage for an invalid rc.22 AuthBundle", async () => {
+      const nowSeconds = 1_800_000_000
+      vi.spyOn(Date, "now").mockReturnValue(nowSeconds * 1000)
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ id: "stale-user", username: "stale" }),
+      )
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                access_token: "dashboard-token-placeholder",
+                token_type: "Bearer",
+                access_expires_at: nowSeconds - 1,
+                user: { id: "current-user", username: "current" },
+                session: { sid: "session-placeholder", current: true },
+              },
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          ),
+        ),
+      )
+      const compatibleExtractSpy = vi.spyOn(
+        compatibleUserContentSessionExtractor,
+        "extract",
+      )
+      mockGetContentSessionExtractors.mockReturnValue([
+        newApiAuthBundleContentSessionExtractor,
+        compatibleUserContentSessionExtractor,
+      ])
+
+      const response = await new Promise<any>((resolve) => {
+        handleGetUserFromLocalStorage(
+          {
+            url: "https://message-origin.example.invalid",
+            siteType: "new-api",
+          },
+          resolve,
+        )
+      })
+
+      expect(response).toEqual({
+        success: false,
+        error: "New API dashboard session response is invalid",
+      })
+      expect(compatibleExtractSpy).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ["generic user", { user: { id: "unrelated-user" } }],
+      ["generic session", { session: { state: "active" } }],
+    ])(
+      "falls through to compatible-user storage for an unrelated %s response",
+      async (_description, data) => {
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ id: "legacy-user", username: "legacy" }),
+        )
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue(
+            new Response(JSON.stringify({ success: true, data }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          ),
+        )
+        const compatibleExtractSpy = vi.spyOn(
+          compatibleUserContentSessionExtractor,
+          "extract",
+        )
+        mockGetContentSessionExtractors.mockReturnValue([
+          newApiAuthBundleContentSessionExtractor,
+          compatibleUserContentSessionExtractor,
+        ])
+
+        const response = await new Promise<any>((resolve) => {
+          handleGetUserFromLocalStorage(
+            {
+              url: "https://message-origin.example.invalid",
+              siteType: "new-api",
+            },
+            resolve,
+          )
+        })
+
+        expect(response).toEqual({
+          success: true,
+          data: {
+            userId: "legacy-user",
+            user: { id: "legacy-user", username: "legacy" },
+            siteTypeHint: "new-api",
+          },
+        })
+        expect(compatibleExtractSpy).toHaveBeenCalledTimes(1)
+      },
+    )
+
+    it.each([404, 405])(
+      "falls through to compatible-user storage for legacy HTTP %i",
+      async (status) => {
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ id: "legacy-user", username: "legacy" }),
+        )
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue(new Response(null, { status })),
+        )
+        const compatibleExtractSpy = vi.spyOn(
+          compatibleUserContentSessionExtractor,
+          "extract",
+        )
+        mockGetContentSessionExtractors.mockReturnValue([
+          newApiAuthBundleContentSessionExtractor,
+          compatibleUserContentSessionExtractor,
+        ])
+
+        const response = await new Promise<any>((resolve) => {
+          handleGetUserFromLocalStorage(
+            {
+              url: "https://message-origin.example.invalid",
+              siteType: "new-api",
+            },
+            resolve,
+          )
+        })
+
+        expect(response).toEqual({
+          success: true,
+          data: {
+            userId: "legacy-user",
+            user: { id: "legacy-user", username: "legacy" },
+            siteTypeHint: "new-api",
+          },
+        })
+        expect(compatibleExtractSpy).toHaveBeenCalledTimes(1)
+      },
+    )
 
     it("returns userInfoNotFound when no extractor returns a result", async () => {
       mockGetContentSessionExtractors.mockReturnValue([
