@@ -117,8 +117,16 @@ export function useManagedResourceMutationController({
   const deleteGeneration = useRef(0)
   const deleteAbortControllers = useRef<Set<AbortController>>(new Set())
   const deleteSession = useRef<{
-    rowKey: string
-    ref: ManagedResourceRef
+    targets: Array<{
+      rowKey: string
+      ref: ManagedResourceRef
+    }>
+    actionId:
+      | typeof PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel
+      | typeof PRODUCT_ANALYTICS_ACTION_IDS.DeleteSelectedManagedSiteChannels
+    surfaceId:
+      | typeof PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
+      | typeof PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar
   } | null>(null)
   const deletePromise = useRef<Promise<DeleteResult[]> | undefined>(undefined)
   const freshReadPromise = useRef<Promise<boolean> | undefined>(undefined)
@@ -603,7 +611,7 @@ export function useManagedResourceMutationController({
     [analytics, endMutationSession, onMutationStart, refresh, workspace],
   )
 
-  const bulkDelete = useCallback(
+  const openBulkDelete = useCallback(
     (rowKeys: readonly string[]) => {
       if (
         !workspace ||
@@ -637,18 +645,31 @@ export function useManagedResourceMutationController({
         return Promise.resolve([])
       }
       if (!beginMutationSession("delete")) return Promise.resolve([])
-      sessionPhase.current = "delete-execution"
-      return executeDeleteTargets(
-        resolvedTargets as { rowKey: string; ref: ManagedResourceRef }[],
-        PRODUCT_ANALYTICS_ACTION_IDS.DeleteSelectedManagedSiteChannels,
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
-      )
+      sessionPhase.current = "delete-confirmation"
+      deleteSession.current = {
+        targets: resolvedTargets as {
+          rowKey: string
+          ref: ManagedResourceRef
+        }[],
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.DeleteSelectedManagedSiteChannels,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+      }
+      setDeleteState((current) => ({
+        ...current,
+        isOpen: true,
+        isExecuting: false,
+        rowKeys: [...rowKeys],
+        results: [],
+        failure: null,
+      }))
+      return Promise.resolve([])
     },
     [
       capabilities.canDelete,
       beginMutationSession,
       deleteState.requiresFreshRead,
-      executeDeleteTargets,
       resolveRef,
       workspace,
     ],
@@ -678,7 +699,12 @@ export function useManagedResourceMutationController({
       }
       if (!beginMutationSession("delete")) return false
       sessionPhase.current = "delete-confirmation"
-      deleteSession.current = { rowKey, ref: { ...ref } }
+      deleteSession.current = {
+        targets: [{ rowKey, ref: { ...ref } }],
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+      }
       setDeleteState((current) => ({
         ...current,
         isOpen: true,
@@ -705,8 +731,11 @@ export function useManagedResourceMutationController({
     }
     if (sessionPhase.current !== "delete-confirmation")
       return Promise.resolve([])
-    const currentRef = resolveRef?.(session.rowKey)
-    if (!currentRef || refIdentity(currentRef) !== refIdentity(session.ref)) {
+    const isSessionCurrent = session.targets.every(({ rowKey, ref }) => {
+      const currentRef = resolveRef?.(rowKey)
+      return currentRef && refIdentity(currentRef) === refIdentity(ref)
+    })
+    if (!isSessionCurrent) {
       deleteSession.current = null
       endMutationSession("delete")
       sessionPhase.current = "idle"
@@ -720,9 +749,9 @@ export function useManagedResourceMutationController({
     }
     sessionPhase.current = "delete-execution"
     return executeDeleteTargets(
-      [session],
-      PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel,
-      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+      session.targets,
+      session.actionId,
+      session.surfaceId,
     )
   }, [
     capabilities.canDelete,
@@ -826,6 +855,6 @@ export function useManagedResourceMutationController({
     confirmDelete,
     cancelDelete,
     recoverFreshRead,
-    bulkDelete,
+    openBulkDelete,
   }
 }

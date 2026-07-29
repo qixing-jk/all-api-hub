@@ -19,7 +19,9 @@ const INTERCEPTED_AXON_HUB_ORIGIN = "https://axonhub.example.invalid"
 
 const AXON_HUB_PRIMARY_ID = "gid://axonhub/Channel/opaque-primary"
 const AXON_HUB_SECONDARY_ID = "gid://axonhub/Channel/opaque-secondary"
+const AXON_HUB_CREATED_ID = "gid://axonhub/Channel/opaque-created"
 const AXON_HUB_NEXT_CURSOR = "axonhub-cursor-page-2"
+const AXON_HUB_CREATED_CURSOR = "axonhub-cursor-page-3"
 
 const channel = (overrides: Partial<ManagedSiteChannel>): ManagedSiteChannel =>
   ({
@@ -55,6 +57,13 @@ let interceptedAxonHubPrimaryName = "Example primary"
 let interceptedAxonHubPrimaryTags = ["fixture-tag"]
 let interceptedAxonHubUpdateVariables: Record<string, unknown> | null = null
 let interceptedAxonHubListRequestCount = 0
+let interceptedAxonHubDeleteRequestCount = 0
+let interceptedAxonHubCreatedChannel: {
+  name: string
+  baseURL: string
+  supportedModels: string[]
+  tags: string[]
+} | null = null
 
 const axonHubSummary = (params: {
   id: string
@@ -158,6 +167,15 @@ function getAxonHubSecondarySummary() {
   })
 }
 
+function getAxonHubCreatedSummary() {
+  if (!interceptedAxonHubCreatedChannel) return null
+
+  return axonHubSummary({
+    id: AXON_HUB_CREATED_ID,
+    ...interceptedAxonHubCreatedChannel,
+  })
+}
+
 function getAxonHubPrimaryDetail() {
   return axonHubDetail({
     id: AXON_HUB_PRIMARY_ID,
@@ -168,12 +186,25 @@ function getAxonHubPrimaryDetail() {
   })
 }
 
+function getAxonHubCreatedDetail() {
+  if (!interceptedAxonHubCreatedChannel) return null
+
+  return axonHubDetail({
+    id: AXON_HUB_CREATED_ID,
+    ...interceptedAxonHubCreatedChannel,
+  })
+}
+
 export function getInterceptedAxonHubUpdateVariables() {
   return interceptedAxonHubUpdateVariables
 }
 
 export function getInterceptedAxonHubListRequestCount() {
   return interceptedAxonHubListRequestCount
+}
+
+export function getInterceptedAxonHubDeleteRequestCount() {
+  return interceptedAxonHubDeleteRequestCount
 }
 
 async function fulfill(route: Route, body: unknown) {
@@ -230,6 +261,8 @@ async function installAxonHubIntercepts(context: BrowserContext) {
   interceptedAxonHubPrimaryTags = ["fixture-tag"]
   interceptedAxonHubUpdateVariables = null
   interceptedAxonHubListRequestCount = 0
+  interceptedAxonHubDeleteRequestCount = 0
+  interceptedAxonHubCreatedChannel = null
 
   await context.route(`${INTERCEPTED_AXON_HUB_ORIGIN}/**`, async (route) => {
     const url = new URL(route.request().url())
@@ -255,31 +288,44 @@ async function installAxonHubIntercepts(context: BrowserContext) {
         | { after?: string | null }
         | undefined
       const after = input?.after
-      if (
-        after !== undefined &&
-        after !== null &&
-        after !== AXON_HUB_NEXT_CURSOR
-      ) {
+      const createdSummary = getAxonHubCreatedSummary()
+      const summaries = [
+        getAxonHubPrimarySummary(),
+        getAxonHubSecondarySummary(),
+        ...(createdSummary ? [createdSummary] : []),
+      ]
+      const pageIndex =
+        after === undefined || after === null
+          ? 0
+          : after === AXON_HUB_NEXT_CURSOR
+            ? 1
+            : after === AXON_HUB_CREATED_CURSOR
+              ? 2
+              : -1
+      if (pageIndex < 0 || pageIndex >= summaries.length) {
         await fulfillGraphQLError(route, "Unsupported fixture page cursor.")
         return
       }
-      const isSecondPage = after === AXON_HUB_NEXT_CURSOR
+      const hasNextPage = pageIndex < summaries.length - 1
+      const endCursor = hasNextPage
+        ? pageIndex === 0
+          ? AXON_HUB_NEXT_CURSOR
+          : AXON_HUB_CREATED_CURSOR
+        : null
       await fulfill(route, {
         data: {
           queryChannels: {
             edges: [
               {
-                node: isSecondPage
-                  ? getAxonHubSecondarySummary()
-                  : getAxonHubPrimarySummary(),
-                cursor: isSecondPage ? "axonhub-edge-2" : "axonhub-edge-1",
+                node: summaries[pageIndex],
+                cursor: `axonhub-edge-${pageIndex + 1}`,
               },
             ],
             pageInfo: {
-              hasNextPage: !isSecondPage,
-              endCursor: isSecondPage ? null : AXON_HUB_NEXT_CURSOR,
+              hasNextPage,
+              endCursor,
             },
-            totalCount: 2,
+            totalCount: summaries.length,
           },
         },
       })
@@ -288,7 +334,11 @@ async function installAxonHubIntercepts(context: BrowserContext) {
 
     if (query.includes("query GetAxonHubChannel")) {
       const id = body.variables?.id
-      if (id !== AXON_HUB_PRIMARY_ID && id !== AXON_HUB_SECONDARY_ID) {
+      if (
+        id !== AXON_HUB_PRIMARY_ID &&
+        id !== AXON_HUB_SECONDARY_ID &&
+        (id !== AXON_HUB_CREATED_ID || !interceptedAxonHubCreatedChannel)
+      ) {
         await fulfillGraphQLError(route, "Unknown fixture channel ID.")
         return
       }
@@ -297,33 +347,92 @@ async function installAxonHubIntercepts(context: BrowserContext) {
           node:
             id === AXON_HUB_PRIMARY_ID
               ? getAxonHubPrimaryDetail()
-              : axonHubDetail({
-                  id: AXON_HUB_SECONDARY_ID,
-                  name: "Example secondary",
-                  tags: ["secondary-tag"],
-                  baseURL: "https://secondary.example.invalid/v1",
-                  supportedModels: ["model-beta"],
-                }),
+              : id === AXON_HUB_SECONDARY_ID
+                ? axonHubDetail({
+                    id: AXON_HUB_SECONDARY_ID,
+                    name: "Example secondary",
+                    tags: ["secondary-tag"],
+                    baseURL: "https://secondary.example.invalid/v1",
+                    supportedModels: ["model-beta"],
+                  })
+                : getAxonHubCreatedDetail(),
         },
+      })
+      return
+    }
+
+    if (query.includes("mutation CreateChannel(")) {
+      const input = (body.variables?.input ?? {}) as {
+        name?: string
+        baseURL?: string | null
+        supportedModels?: string[]
+        tags?: string[] | null
+      }
+      interceptedAxonHubCreatedChannel = {
+        name: input.name ?? "Fixture created channel",
+        baseURL: input.baseURL ?? "https://upstream.example.invalid/v1",
+        supportedModels: input.supportedModels ?? ["model-alpha"],
+        tags: input.tags ?? [],
+      }
+      await fulfill(route, {
+        data: { createChannel: getAxonHubCreatedDetail() },
       })
       return
     }
 
     if (query.includes("mutation UpdateChannel(")) {
       interceptedAxonHubUpdateVariables = body.variables ?? null
+      const id = body.variables?.id
       const input = (body.variables?.input ?? {}) as {
         name?: string
         tags?: string[]
       }
-      if (typeof input.name === "string") {
-        interceptedAxonHubPrimaryName = input.name
-      }
-      if (Array.isArray(input.tags)) {
-        interceptedAxonHubPrimaryTags = input.tags
+      if (id === AXON_HUB_CREATED_ID && interceptedAxonHubCreatedChannel) {
+        if (typeof input.name === "string") {
+          interceptedAxonHubCreatedChannel.name = input.name
+        }
+        if (Array.isArray(input.tags)) {
+          interceptedAxonHubCreatedChannel.tags = input.tags
+        }
+      } else {
+        if (typeof input.name === "string") {
+          interceptedAxonHubPrimaryName = input.name
+        }
+        if (Array.isArray(input.tags)) {
+          interceptedAxonHubPrimaryTags = input.tags
+        }
       }
       await fulfill(route, {
-        data: { updateChannel: getAxonHubPrimaryDetail() },
+        data: {
+          updateChannel:
+            id === AXON_HUB_CREATED_ID
+              ? getAxonHubCreatedDetail()
+              : getAxonHubPrimaryDetail(),
+        },
       })
+      return
+    }
+
+    if (query.includes("mutation UpdateChannelStatus(")) {
+      await fulfill(route, {
+        data: {
+          updateChannelStatus: {
+            __typename: "Channel",
+            id: body.variables?.id,
+            status: body.variables?.status,
+          },
+        },
+      })
+      return
+    }
+
+    if (query.includes("mutation DeleteChannel(")) {
+      interceptedAxonHubDeleteRequestCount += 1
+      const deleted =
+        body.variables?.id === AXON_HUB_CREATED_ID &&
+        interceptedAxonHubCreatedChannel !== null
+      if (deleted) interceptedAxonHubCreatedChannel = null
+      await fulfill(route, { data: { deleteChannel: deleted } })
       return
     }
 

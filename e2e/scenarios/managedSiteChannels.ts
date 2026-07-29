@@ -9,7 +9,6 @@ import {
   getManagedSiteChannelRowActionsButtonTestId,
   getManagedSiteChannelRowEditActionTestId,
   getManagedSiteChannelRowSelectTestId,
-  getManagedSiteChannelRowTestId,
   MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX,
   MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
   MANAGED_SITE_CHANNELS_REFRESH_STATES,
@@ -36,6 +35,7 @@ type ManagedSiteChannelScenarioContext<TSiteType extends ManagedSiteType> = {
   sourceAccountSkipReason?: string
   tokenName?: string
   tokenCleanupPrefix?: string
+  beforeDeleteConfirm?: () => void | Promise<void>
 }
 
 const CRUD_MODEL = "gpt-4o-mini"
@@ -155,7 +155,11 @@ export async function runManagedSiteChannelsCrudScenario<
     await expect(channelRowByName(context.page, channelName)).toHaveCount(0)
     await expectPaginationSummary(context.page, "1", "1", "1")
 
-    await deleteVisibleChannelByName(context.page, editedChannelName)
+    await deleteVisibleChannelByName(
+      context.page,
+      editedChannelName,
+      context.beforeDeleteConfirm,
+    )
   } finally {
     await cleanupManagedSiteChannelsByPrefix({
       page: context.page,
@@ -419,10 +423,15 @@ async function cleanupKeyManagementTokensByPrefix(params: {
   )
 }
 
-async function deleteVisibleChannelByName(page: Page, channelName: string) {
+async function deleteVisibleChannelByName(
+  page: Page,
+  channelName: string,
+  beforeConfirm?: () => void | Promise<void>,
+) {
   const row = channelRowByName(page, channelName)
+  const rowTestToken = await getChannelRowTestToken(row)
   await row
-    .getByTestId(getManagedSiteChannelRowSelectTestId(channelName))
+    .getByTestId(getManagedSiteChannelRowSelectTestId(rowTestToken))
     .click()
   await expect(
     page.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton),
@@ -430,9 +439,13 @@ async function deleteVisibleChannelByName(page: Page, channelName: string) {
   await page
     .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton)
     .click()
-  await page
-    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton)
-    .click()
+  const confirmButton = page.getByTestId(
+    MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton,
+  )
+  await expect(confirmButton).toBeVisible({ timeout: 10_000 })
+  await expect(confirmButton).toBeEnabled({ timeout: 10_000 })
+  await beforeConfirm?.()
+  await confirmButton.click()
   await expect(row).toHaveCount(0, { timeout: 30_000 })
 }
 
@@ -485,14 +498,15 @@ async function openSingleVisibleChannelEditDialog(page: Page, rowText: string) {
   await expect(async () => {
     const row = channelRowByName(page, rowText)
     await expect(row).toBeVisible({ timeout: 10_000 })
+    const rowTestToken = await getChannelRowTestToken(row)
     const actionsButton = row.getByTestId(
-      getManagedSiteChannelRowActionsButtonTestId(rowText),
+      getManagedSiteChannelRowActionsButtonTestId(rowTestToken),
     )
     await expect(actionsButton).toBeEnabled({ timeout: 10_000 })
     await actionsButton.click({ timeout: 10_000 })
 
     const editAction = page.getByTestId(
-      getManagedSiteChannelRowEditActionTestId(rowText),
+      getManagedSiteChannelRowEditActionTestId(rowTestToken),
     )
     await expect(editAction).toBeVisible({ timeout: 10_000 })
     await editAction.click({ timeout: 10_000 })
@@ -539,7 +553,17 @@ async function expectPaginationSummary(
 }
 
 function channelRowByName(page: Page, channelName: string) {
-  return page.getByTestId(getManagedSiteChannelRowTestId(channelName))
+  return page
+    .locator(`[data-testid^="${MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX}"]`)
+    .filter({ has: page.getByText(channelName, { exact: true }) })
+}
+
+async function getChannelRowTestToken(row: Locator) {
+  const testId = await row.getAttribute("data-testid")
+  if (!testId?.startsWith(MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX)) {
+    throw new Error("Managed-site channel row is missing its stable test token")
+  }
+  return testId.slice(MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX.length)
 }
 
 async function getChannelRowName(row: ReturnType<typeof channelRowByText>) {

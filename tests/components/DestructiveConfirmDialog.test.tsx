@@ -52,4 +52,23 @@ describe("DestructiveConfirmDialog", () => {
       await screen.findByRole("button", { name: "Delete" }),
     ).toHaveTextContent("Delete")
   })
+
+  it("exposes optional stable selectors for both dialog actions", async () => {
+    render(
+      <DestructiveConfirmDialog
+        isOpen
+        onClose={vi.fn()}
+        title="Delete item"
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={vi.fn()}
+        confirmButtonTestId="delete-confirm"
+        cancelButtonTestId="delete-cancel"
+      />,
+    )
+
+    expect(await screen.findByTestId("delete-confirm")).toBeInTheDocument()
+    expect(screen.getByTestId("delete-cancel")).toBeInTheDocument()
+  })
 })

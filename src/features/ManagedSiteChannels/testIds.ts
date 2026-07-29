@@ -7,6 +7,7 @@ export const MANAGED_SITE_CHANNELS_TEST_IDS = {
   searchInput: "managed-site-channels-search-input",
   paginationSummary: "managed-site-channels-pagination-summary",
   deleteChannelConfirmButton: "managed-site-channels-delete-confirm-button",
+  deleteChannelCancelButton: "managed-site-channels-delete-cancel-button",
   deleteSelectedButton: "managed-site-channels-delete-selected-button",
 } as const
 

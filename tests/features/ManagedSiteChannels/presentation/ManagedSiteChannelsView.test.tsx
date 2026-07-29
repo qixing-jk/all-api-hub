@@ -681,6 +681,94 @@ describe("ManagedSiteChannelsView", () => {
     expect(onRefresh).toHaveBeenCalledTimes(1)
   })
 
+  it("renders a controlled delete failure without implying refresh recovery", () => {
+    const onRefresh = vi.fn()
+
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={createState({
+          deleteState: {
+            isOpen: false,
+            isWorking: false,
+            rowKeys: [],
+            results: [],
+            requiresRefresh: false,
+            failure: {
+              category: "Delete failed",
+              message: "Refresh the channels and try again.",
+            },
+          },
+        })}
+        callbacks={createCallbacks({ onRefresh })}
+      />,
+    )
+
+    const alert = screen.getByRole("alert")
+    expect(alert).toHaveTextContent("Delete failed")
+    expect(alert).toHaveTextContent("Refresh the channels and try again.")
+    expect(
+      within(alert).queryByRole("button", { name: "Refresh channels" }),
+    ).toBeNull()
+    expect(onRefresh).not.toHaveBeenCalled()
+  })
+
+  it("offers delete failure refresh recovery only when a fresh read is required", async () => {
+    const user = userEvent.setup()
+    const onRefresh = vi.fn()
+
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={createState({
+          deleteState: {
+            isOpen: false,
+            isWorking: false,
+            rowKeys: [],
+            results: [],
+            requiresRefresh: true,
+            failure: {
+              category: "Delete state uncertain",
+              message: "Refresh before continuing.",
+            },
+          },
+        })}
+        callbacks={createCallbacks({ onRefresh })}
+      />,
+    )
+
+    const alert = screen.getByRole("alert")
+    await user.click(
+      within(alert).getByRole("button", { name: "Refresh channels" }),
+    )
+    expect(onRefresh).toHaveBeenCalledOnce()
+  })
+
+  it("makes native create and row actions visibly unavailable while a fresh read is required", () => {
+    render(
+      <ManagedSiteChannelsView
+        {...commonProps}
+        state={createState({
+          isResourceInteractionBlocked: true,
+          deleteState: {
+            isOpen: false,
+            isWorking: false,
+            rowKeys: [],
+            results: [],
+            requiresRefresh: true,
+          },
+        })}
+        callbacks={createCallbacks()}
+      />,
+    )
+
+    expect(screen.getByRole("button", { name: "Add channel" })).toBeDisabled()
+    expect(screen.queryByRole("button", { name: "Open actions" })).toBeNull()
+    expect(
+      screen.getByRole("button", { name: "Delete selected" }),
+    ).toBeDisabled()
+  })
+
   it("uses registry visibility, sort missing order, status facet, and safe native extension cells", async () => {
     const user = userEvent.setup()
     const onStatusFilterChange = vi.fn()

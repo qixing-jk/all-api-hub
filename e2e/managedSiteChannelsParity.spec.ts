@@ -1,4 +1,5 @@
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   getManagedSiteChannelRowActionsButtonTestId,
   getManagedSiteChannelRowEditActionTestId,
@@ -6,11 +7,13 @@ import {
 } from "~/features/ManagedSiteChannels/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
+  getInterceptedAxonHubDeleteRequestCount,
   getInterceptedAxonHubListRequestCount,
   getInterceptedAxonHubUpdateVariables,
   openInterceptedAxonHubManagedSiteChannels,
   openInterceptedManagedSiteChannels,
 } from "~~/e2e/fixtures/managedSiteChannelsIntercepted"
+import { runManagedSiteChannelsCrudScenario } from "~~/e2e/scenarios/managedSiteChannels"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 test.use({
@@ -233,6 +236,67 @@ test("runs the AxonHub native edit and migration preview through the shared UI",
   await expect(
     migrationDialog.getByText("Available Models", { exact: true }),
   ).toBeVisible()
+})
+
+test("runs shared AxonHub CRUD without depending on name-derived row tokens", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  test.setTimeout(120_000)
+
+  await openInterceptedAxonHubManagedSiteChannels({
+    context,
+    extensionId,
+    page,
+  })
+
+  await runManagedSiteChannelsCrudScenario({
+    page,
+    extensionId,
+    siteType: SITE_TYPES.AXON_HUB,
+    label: "AxonHub intercepted",
+    runPrefix: "AAH E2E AxonHub intercepted",
+    beforeDeleteConfirm: () => {
+      expect(getInterceptedAxonHubDeleteRequestCount()).toBe(0)
+    },
+  })
+
+  expect(getInterceptedAxonHubDeleteRequestCount()).toBe(1)
+})
+
+test("cancels native bulk-delete confirmation without dispatching a request", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  await openInterceptedAxonHubManagedSiteChannels({
+    context,
+    extensionId,
+    page,
+  })
+  await waitForExtensionRoot(page)
+
+  const row = page
+    .getByRole("row")
+    .filter({ has: page.getByText("Example primary", { exact: true }) })
+  await row.getByTestId(/-select$/u).click()
+  await page
+    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton)
+    .click()
+
+  const confirmButton = page.getByTestId(
+    MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton,
+  )
+  await expect(confirmButton).toBeEnabled()
+  expect(getInterceptedAxonHubDeleteRequestCount()).toBe(0)
+
+  await page
+    .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelCancelButton)
+    .click()
+  await expect(confirmButton).toBeHidden()
+  await expect(row).toBeVisible()
+  expect(getInterceptedAxonHubDeleteRequestCount()).toBe(0)
 })
 
 test.describe("mobile legacy parity", () => {

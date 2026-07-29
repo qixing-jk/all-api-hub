@@ -1480,7 +1480,7 @@ describe("useManagedResourceMutationController", () => {
     act(() => {
       result.current.openDelete(rowKey)
     })
-    await act(async () => result.current.bulkDelete([rowKey]))
+    await act(async () => result.current.openBulkDelete([rowKey]))
     expect(workspace.openCreateEditor).not.toHaveBeenCalled()
     expect(workspace.openEditEditor).toHaveBeenCalledOnce()
     expect(workspace.delete).not.toHaveBeenCalled()
@@ -1527,7 +1527,7 @@ describe("useManagedResourceMutationController", () => {
       act(() => {
         result.current.openDelete(rowKey)
       })
-      await act(async () => result.current.bulkDelete([rowKey]))
+      await act(async () => result.current.openBulkDelete([rowKey]))
       expect(workspace.openCreateEditor).not.toHaveBeenCalled()
       expect(workspace.delete).not.toHaveBeenCalled()
     },
@@ -1827,7 +1827,7 @@ describe("useManagedResourceMutationController", () => {
       opened = result.current.openDelete("opaque-row")
     })
     expect(opened).toBe(false)
-    await act(async () => result.current.bulkDelete(["opaque-row"]))
+    await act(async () => result.current.openBulkDelete(["opaque-row"]))
     expect(workspace.delete).toHaveBeenCalledOnce()
 
     await act(async () => result.current.recoverFreshRead())
@@ -1958,6 +1958,97 @@ describe("useManagedResourceMutationController", () => {
     )
   })
 
+  it("opens bulk-delete confirmation without dispatch and cancels without side effects", async () => {
+    const workspace = createManagedResourceWorkspace()
+    const analytics = createAnalytics()
+    const onMutationStart = vi.fn()
+    const refs = {
+      first: EXAMPLE_MANAGED_RESOURCE_REF,
+      second: { ...EXAMPLE_MANAGED_RESOURCE_REF, resourceId: "second" },
+    }
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        resolveRef: (rowKey) => refs[rowKey as keyof typeof refs],
+        analytics: analytics.analytics,
+        onMutationStart,
+      }),
+    )
+
+    await act(async () => result.current.openBulkDelete(["first", "second"]))
+
+    expect(workspace.delete).not.toHaveBeenCalled()
+    expect(analytics.startAction).not.toHaveBeenCalled()
+    expect(onMutationStart).not.toHaveBeenCalled()
+    expect(result.current.deleteState).toMatchObject({
+      isOpen: true,
+      isExecuting: false,
+      rowKeys: ["first", "second"],
+    })
+
+    act(() => result.current.cancelDelete())
+
+    expect(workspace.delete).not.toHaveBeenCalled()
+    expect(analytics.startAction).not.toHaveBeenCalled()
+    expect(onMutationStart).not.toHaveBeenCalled()
+    expect(result.current.deleteState).toMatchObject({
+      isOpen: false,
+      rowKeys: [],
+    })
+  })
+
+  it("rejects the entire confirmed bulk delete when any ref identity changes", async () => {
+    const firstRef = EXAMPLE_MANAGED_RESOURCE_REF
+    let secondRef = { ...EXAMPLE_MANAGED_RESOURCE_REF, resourceId: "second" }
+    const workspace = createManagedResourceWorkspace()
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        resolveRef: (rowKey) => (rowKey === "first" ? firstRef : secondRef),
+      }),
+    )
+
+    await act(async () => result.current.openBulkDelete(["first", "second"]))
+    secondRef = { ...secondRef, resourceId: "replacement" }
+    await act(async () => result.current.confirmDelete())
+
+    expect(workspace.delete).not.toHaveBeenCalled()
+    expect(result.current.deleteState).toMatchObject({
+      isOpen: false,
+      rowKeys: [],
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+  })
+
+  it("coalesces repeated confirmation of one bulk-delete session", async () => {
+    const pending = deferred<void>()
+    const workspace = createManagedResourceWorkspace({
+      delete: vi.fn(() => pending.promise),
+    })
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        refresh: vi.fn(async () => true),
+        resolveRef: () => EXAMPLE_MANAGED_RESOURCE_REF,
+      }),
+    )
+
+    await act(async () => result.current.openBulkDelete(["opaque-row"]))
+    let first!: ReturnType<typeof result.current.confirmDelete>
+    let second!: ReturnType<typeof result.current.confirmDelete>
+    act(() => {
+      first = result.current.confirmDelete()
+      second = result.current.confirmDelete()
+    })
+
+    expect(second).toBe(first)
+    await waitFor(() => expect(workspace.delete).toHaveBeenCalledOnce())
+    await act(async () => {
+      pending.resolve()
+      await first
+    })
+  })
+
   it("snapshots row keys, limits deletes to four, preserves order, and refreshes once", async () => {
     let active = 0
     let peak = 0
@@ -1991,11 +2082,12 @@ describe("useManagedResourceMutationController", () => {
       useManagedResourceMutationController({ workspace, refresh, resolveRef }),
     )
 
-    let execution!: ReturnType<typeof result.current.bulkDelete>
+    await act(async () =>
+      result.current.openBulkDelete(refs.map((_, index) => `row-${index}`)),
+    )
+    let execution!: ReturnType<typeof result.current.confirmDelete>
     act(() => {
-      execution = result.current.bulkDelete(
-        refs.map((_, index) => `row-${index}`),
-      )
+      execution = result.current.confirmDelete()
     })
     await waitFor(() => expect(workspace.delete).toHaveBeenCalledTimes(4))
     expect(peak).toBe(4)
@@ -2015,7 +2107,7 @@ describe("useManagedResourceMutationController", () => {
     ])
     expect(refresh).toHaveBeenCalledOnce()
     expect(result.current.deleteState.requiresRefresh).toBe(true)
-    await act(async () => result.current.bulkDelete(["row-0"]))
+    await act(async () => result.current.openBulkDelete(["row-0"]))
     expect(workspace.delete).toHaveBeenCalledTimes(6)
   })
 
@@ -2032,7 +2124,9 @@ describe("useManagedResourceMutationController", () => {
       }),
     )
 
-    await act(async () => result.current.bulkDelete(["opaque-row"]))
+    await act(async () => result.current.openBulkDelete(["opaque-row"]))
+    expect(workspace.delete).not.toHaveBeenCalled()
+    await act(async () => result.current.confirmDelete())
 
     expect(analytics.startAction).toHaveBeenCalledOnce()
     expect(analytics.startAction).toHaveBeenCalledWith({
@@ -2070,9 +2164,9 @@ describe("useManagedResourceMutationController", () => {
       }),
     )
 
-    await act(async () => result.current.bulkDelete([]))
-    await act(async () => result.current.bulkDelete(["same", "same"]))
-    await act(async () => result.current.bulkDelete(["first", "second"]))
+    await act(async () => result.current.openBulkDelete([]))
+    await act(async () => result.current.openBulkDelete(["same", "same"]))
+    await act(async () => result.current.openBulkDelete(["first", "second"]))
 
     expect(workspace.delete).not.toHaveBeenCalled()
     expect(refresh).not.toHaveBeenCalled()
@@ -2098,7 +2192,7 @@ describe("useManagedResourceMutationController", () => {
       }),
     )
     expect(result.current.capabilities.canDelete).toBe(false)
-    await act(async () => result.current.bulkDelete(["crafted-row"]))
+    await act(async () => result.current.openBulkDelete(["crafted-row"]))
     expect(workspace.delete).not.toHaveBeenCalled()
     expect(result.current.deleteState.failure).toEqual({
       code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
@@ -2123,9 +2217,10 @@ describe("useManagedResourceMutationController", () => {
         }),
       { initialProps: { workspace: oldWorkspace } },
     )
-    let execution!: ReturnType<typeof result.current.bulkDelete>
+    await act(async () => result.current.openBulkDelete(["row-one"]))
+    let execution!: ReturnType<typeof result.current.confirmDelete>
     act(() => {
-      execution = result.current.bulkDelete(["row-one"])
+      execution = result.current.confirmDelete()
     })
     await waitFor(() => expect(oldWorkspace.delete).toHaveBeenCalledOnce())
     const signal = (oldWorkspace.delete as ReturnType<typeof vi.fn>).mock
@@ -2169,16 +2264,18 @@ describe("useManagedResourceMutationController", () => {
         }),
       { initialProps: { workspace: oldWorkspace } },
     )
-    let oldExecution!: ReturnType<typeof result.current.bulkDelete>
+    await act(async () => result.current.openBulkDelete(["old-row"]))
+    let oldExecution!: ReturnType<typeof result.current.confirmDelete>
     act(() => {
-      oldExecution = result.current.bulkDelete(["old-row"])
+      oldExecution = result.current.confirmDelete()
     })
     await waitFor(() => expect(oldWorkspace.delete).toHaveBeenCalledOnce())
 
     rerender({ workspace: newWorkspace })
-    let newExecution!: ReturnType<typeof result.current.bulkDelete>
+    await act(async () => result.current.openBulkDelete(["new-row"]))
+    let newExecution!: ReturnType<typeof result.current.confirmDelete>
     act(() => {
-      newExecution = result.current.bulkDelete(["new-row"])
+      newExecution = result.current.confirmDelete()
     })
     await waitFor(() => expect(newWorkspace.delete).toHaveBeenCalledOnce())
 

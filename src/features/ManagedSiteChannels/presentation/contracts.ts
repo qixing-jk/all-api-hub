@@ -117,6 +117,7 @@ export type ManagedChannelsPresentationState = {
   total: number
   isLoading: boolean
   isRefreshing: boolean
+  isResourceInteractionBlocked?: boolean
   failure?: ManagedChannelsFailureState | null
   isConfigurationMissing: boolean
   migrationMode: boolean
