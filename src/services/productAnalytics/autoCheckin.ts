@@ -399,6 +399,7 @@ export function buildAutoCheckinConfigSnapshotProperties(
     setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
     entrypoint,
     global_enabled: preferences.globalEnabled === true,
+    sub2api_enabled: preferences.sub2apiEnabled === true,
     ui_pretrigger_enabled: preferences.pretriggerDailyOnUiOpen === true,
     notify_completion_enabled: preferences.notifyUiOnCompletion !== false,
     retry_enabled: preferences.retryStrategy?.enabled === true,

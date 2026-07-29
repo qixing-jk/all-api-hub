@@ -837,6 +837,7 @@ export function buildAggregateSettingsSnapshotEvent(
     managed_site_model_sync_global_filters_configured:
       managedSiteModelSync.global_filters_configured,
     auto_checkin_global_enabled: autoCheckin.global_enabled,
+    auto_checkin_sub2api_enabled: autoCheckin.sub2api_enabled,
     auto_checkin_ui_pretrigger_enabled: autoCheckin.ui_pretrigger_enabled,
     auto_checkin_notify_completion_enabled:
       autoCheckin.notify_completion_enabled,

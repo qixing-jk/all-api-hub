@@ -94,7 +94,7 @@ describe("useAccountDialog Sub2API constraints", () => {
     ;(globalThis.browser.tabs.sendMessage as any) = vi.fn()
   })
 
-  it("forces Sub2API dialogs back to JWT auth, clears cookie sessions, and disables built-in check-in", async () => {
+  it("forces Sub2API dialogs back to JWT auth, clears cookie sessions, and preserves supported check-in", async () => {
     const { result } = renderHook(() =>
       useAccountDialog({
         mode: DIALOG_MODES.ADD,
@@ -122,8 +122,8 @@ describe("useAccountDialog Sub2API constraints", () => {
     await waitFor(() => {
       expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
       expect(result.current.state.cookieAuthSessionCookie).toBe("")
-      expect(result.current.state.checkIn.enableDetection).toBe(false)
-      expect(result.current.state.checkIn.autoCheckInEnabled).toBe(false)
+      expect(result.current.state.checkIn.enableDetection).toBe(true)
+      expect(result.current.state.checkIn.autoCheckInEnabled).toBe(true)
     })
   })
 

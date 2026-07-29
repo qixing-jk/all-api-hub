@@ -3,10 +3,10 @@
  *
  * Source: https://github.com/Wei-Shaw/sub2api
  * Daily check-in is not part of upstream mainline. Deployments that carry the
- * feature expose it either as `/api/v1/redeem/checkin[/status]` (current fork
- * routing, registered next to the redemption routes) or as the older
- * `/api/v1/check-in[/status]` pair. Both shapes are attempted in that order and
- * a missing-route response on the first pair falls back to the second, so a
+ * feature expose it either as the older `/api/v1/check-in[/status]` pair or as
+ * `/api/v1/redeem/checkin[/status]` (current fork routing, registered next to
+ * the redemption routes). The observed older pair is attempted first and a
+ * missing-route response falls back to the redeem-scoped pair, so a
  * single account setting works across forks.
  *
  * This module stays free of transport/auth concerns: the caller owns request

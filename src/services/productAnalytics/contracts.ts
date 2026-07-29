@@ -1138,6 +1138,7 @@ export type ProductAnalyticsEventPayloadMap = {
     task_enabled_count?: number
     notification_enabled?: boolean
     global_enabled?: boolean
+    sub2api_enabled?: boolean
     ui_pretrigger_enabled?: boolean
     notify_completion_enabled?: boolean
     retry_enabled?: boolean
@@ -1188,6 +1189,7 @@ export type ProductAnalyticsEventPayloadMap = {
     managed_site_model_sync_allowed_models_configured?: boolean
     managed_site_model_sync_global_filters_configured?: boolean
     auto_checkin_global_enabled?: boolean
+    auto_checkin_sub2api_enabled?: boolean
     auto_checkin_ui_pretrigger_enabled?: boolean
     auto_checkin_notify_completion_enabled?: boolean
     auto_checkin_retry_enabled?: boolean

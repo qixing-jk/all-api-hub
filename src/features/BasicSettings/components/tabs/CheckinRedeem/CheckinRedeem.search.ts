@@ -5,6 +5,8 @@ import {
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
+import { AUTO_CHECKIN_SUB2API_TARGET_ID } from "./targetIds"
+
 export const checkinRedeemSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:auto-checkin",
@@ -42,7 +44,7 @@ export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:auto-checkin-sub2api-enable",
     "checkinRedeem",
-    "auto-checkin-sub2api-enable",
+    AUTO_CHECKIN_SUB2API_TARGET_ID,
     "autoCheckin:settings.sub2apiEnabled",
     578,
     {

@@ -30,6 +30,8 @@ import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/core/toastHelpers"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
+import { AUTO_CHECKIN_SUB2API_TARGET_ID } from "./targetIds"
+
 /**
  * Unified logger scoped to the Basic Settings auto check-in section.
  */
@@ -233,7 +235,7 @@ export default function AutoCheckinSettings() {
 
           {/* Sub2API check-in opt-in */}
           <CardItem
-            id="auto-checkin-sub2api-enable"
+            id={AUTO_CHECKIN_SUB2API_TARGET_ID}
             title={t("autoCheckin:settings.sub2apiEnabled")}
             description={t("autoCheckin:settings.sub2apiEnabledDesc")}
             rightContent={

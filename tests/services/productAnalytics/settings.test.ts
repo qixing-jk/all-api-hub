@@ -356,6 +356,7 @@ describe("settings product analytics snapshots", () => {
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         global_enabled: true,
+        sub2api_enabled: false,
         ui_pretrigger_enabled: true,
         notify_completion_enabled: false,
         retry_enabled: true,
@@ -496,6 +497,7 @@ describe("settings product analytics snapshots", () => {
         webdav_configured: true,
         webdav_auto_sync_enabled: true,
         auto_checkin_global_enabled: false,
+        auto_checkin_sub2api_enabled: false,
       }),
     )
     expect(snapshot).not.toHaveProperty("setting_id")

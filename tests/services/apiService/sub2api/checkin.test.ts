@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
   extractSub2ApiCheckinMessage,
@@ -17,6 +17,10 @@ const createApiError = (statusCode: number, message = "boom") =>
     "/api/v1/redeem/checkin",
     API_ERROR_CODES.HTTP_OTHER,
   )
+
+afterEach(() => {
+  vi.useRealTimers()
+})
 
 describe("sub2api check-in routes", () => {
   // The `/api/v1/check-in` pair is the only one observed on a live deployment,
@@ -64,6 +68,8 @@ describe("parseSub2ApiCheckinPayload", () => {
   })
 
   it("falls back to comparing the last check-in date with today", () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-07-29T12:00:00Z"))
     const today = new Date().toISOString().slice(0, 10)
 
     expect(

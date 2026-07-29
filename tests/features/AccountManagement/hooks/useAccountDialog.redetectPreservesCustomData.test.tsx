@@ -333,7 +333,7 @@ describe("useAccountDialog re-detect preservation", () => {
     }
   })
 
-  it("forces detected Sub2API accounts back to JWT auth, keeps refresh-token mode opt-in, and disables built-in check-in", async () => {
+  it("forces detected Sub2API accounts back to JWT auth, keeps refresh-token mode opt-in, and preserves supported check-in", async () => {
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: true,
       message: "ok",
@@ -396,8 +396,8 @@ describe("useAccountDialog re-detect preservation", () => {
       expect(result.current.state.siteType).toBe("sub2api")
       expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
       expect(result.current.state.cookieAuthSessionCookie).toBe("")
-      expect(result.current.state.checkIn.enableDetection).toBe(false)
-      expect(result.current.state.checkIn.autoCheckInEnabled).toBe(false)
+      expect(result.current.state.checkIn.enableDetection).toBe(true)
+      expect(result.current.state.checkIn.autoCheckInEnabled).toBe(true)
       expect(result.current.state.sub2apiUseRefreshToken).toBe(false)
       expect(result.current.state.sub2apiRefreshToken).toBe("refresh-token")
       expect(result.current.state.sub2apiTokenExpiresAt).toBe(123456789)

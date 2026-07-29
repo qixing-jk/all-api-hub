@@ -183,7 +183,7 @@ describe("Account Dialog site policy", () => {
       SITE_TYPES.SUB2API,
     )
     expect(sub2apiPolicy.allowCookieAuthSession).toBe(false)
-    expect(sub2apiPolicy.allowBuiltInCheckInDetection).toBe(false)
+    expect(sub2apiPolicy.allowBuiltInCheckInDetection).toBe(true)
     expect(sub2apiPolicy.allowSub2ApiRefreshTokenState).toBe(true)
 
     const aihubmixPolicy = getIsolatedSitePolicy(SITE_TYPES.AIHUBMIX)
@@ -209,7 +209,7 @@ describe("Account Dialog site policy", () => {
       cookieAuthSessionCookie: "",
       checkIn: {
         ...createEmptyAccountDialogDraft().checkIn,
-        enableDetection: false,
+        enableDetection: true,
         autoCheckInEnabled: false,
       },
     })
@@ -222,7 +222,7 @@ describe("Account Dialog site policy", () => {
     ).toBe(draft)
   })
 
-  it("normalizes Sub2API dialogs to access-token auth and inactive built-in check-in", () => {
+  it("normalizes Sub2API dialogs to access-token auth and supported built-in check-in", () => {
     const policy = getAccountDialogSitePolicy(SITE_TYPES.SUB2API)
     const normalized = normalizeAccountDialogDraftForSitePolicy({
       draft: createDraft({ siteType: SITE_TYPES.SUB2API }),
@@ -231,8 +231,8 @@ describe("Account Dialog site policy", () => {
 
     expect(normalized.authType).toBe(AuthTypeEnum.AccessToken)
     expect(normalized.cookieAuthSessionCookie).toBe("")
-    expect(normalized.checkIn.enableDetection).toBe(false)
-    expect(normalized.checkIn.autoCheckInEnabled).toBe(false)
+    expect(normalized.checkIn.enableDetection).toBe(true)
+    expect(normalized.checkIn.autoCheckInEnabled).toBe(true)
     expect(normalized.sub2apiUseRefreshToken).toBe(true)
     expect(normalized.sub2apiRefreshToken).toBe(" refresh-token ")
     expect(normalized.sub2apiTokenExpiresAt).toBe(123456)
