@@ -58,6 +58,18 @@ const channelsUrl = (extensionId: string, params?: Record<string, string>) => {
   return url.toString()
 }
 
+async function expectManagedSiteChannelsIdle(page: Page) {
+  const refreshButton = page.getByTestId(
+    MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton,
+  )
+  await expect(refreshButton).toHaveAttribute(
+    MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+    MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
+    { timeout: 60_000 },
+  )
+  return refreshButton
+}
+
 async function cleanupManagedSiteChannelsByPrefix<
   TSiteType extends ManagedSiteType,
 >(params: {
@@ -70,6 +82,7 @@ async function cleanupManagedSiteChannelsByPrefix<
     channelsUrl(params.extensionId, { search: params.prefix }),
   )
   await waitForExtensionRoot(params.page)
+  await expectManagedSiteChannelsIdle(params.page)
 
   for (let attempt = 0; attempt < 20; attempt += 1) {
     const row = channelRowByText(params.page, params.prefix).first()
@@ -83,6 +96,7 @@ async function cleanupManagedSiteChannelsByPrefix<
       channelsUrl(params.extensionId, { search: params.prefix }),
     )
     await waitForExtensionRoot(params.page)
+    await expectManagedSiteChannelsIdle(params.page)
   }
 
   throw new Error(
@@ -312,42 +326,13 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
   channelName: string
 }) {
   await expect(async () => {
+    const refreshButton = await expectManagedSiteChannelsIdle(params.page)
     const row = channelRowByName(params.page, params.channelName)
     if ((await row.count()) > 0) {
       await expect(row).toBeVisible({ timeout: 10_000 })
       return
     }
 
-    const refreshButton = params.page.getByTestId(
-      MANAGED_SITE_CHANNELS_TEST_IDS.refreshButton,
-    )
-    await expect(refreshButton).toHaveAttribute(
-      MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
-      new RegExp(
-        `${MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle}|${MANAGED_SITE_CHANNELS_REFRESH_STATES.Loading}`,
-      ),
-      { timeout: 10_000 },
-    )
-    if (
-      (await refreshButton.getAttribute(
-        MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
-      )) === MANAGED_SITE_CHANNELS_REFRESH_STATES.Loading
-    ) {
-      await expect(refreshButton).toHaveAttribute(
-        MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
-        MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
-        {
-          timeout: 10_000,
-        },
-      )
-    }
-    await expect(refreshButton).toHaveAttribute(
-      MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
-      MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
-      {
-        timeout: 10_000,
-      },
-    )
     await expect(refreshButton).toBeEnabled({ timeout: 10_000 })
     await refreshButton.click()
     await expect(refreshButton)
@@ -357,13 +342,7 @@ async function expectManagedSiteChannelVisibleAfterRefresh(params: {
         { timeout: 5_000 },
       )
       .catch(() => undefined)
-    await expect(refreshButton).toHaveAttribute(
-      MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
-      MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
-      {
-        timeout: 30_000,
-      },
-    )
+    await expectManagedSiteChannelsIdle(params.page)
     await expect(row).toBeVisible({ timeout: 20_000 })
   }).toPass({
     intervals: [1_000, 3_000, 5_000],
@@ -428,7 +407,9 @@ async function deleteVisibleChannelByName(
   channelName: string,
   beforeConfirm?: () => void | Promise<void>,
 ) {
+  const refreshButton = await expectManagedSiteChannelsIdle(page)
   const row = channelRowByName(page, channelName)
+  await expect(row).toBeVisible({ timeout: 30_000 })
   const rowTestToken = await getChannelRowTestToken(row)
   await row
     .getByTestId(getManagedSiteChannelRowSelectTestId(rowTestToken))
@@ -446,7 +427,17 @@ async function deleteVisibleChannelByName(
   await expect(confirmButton).toBeEnabled({ timeout: 10_000 })
   await beforeConfirm?.()
   await confirmButton.click()
-  await expect(row).toHaveCount(0, { timeout: 30_000 })
+  await expect(async () => {
+    expect(
+      await refreshButton.getAttribute(
+        MANAGED_SITE_CHANNELS_REFRESH_STATE_ATTRIBUTE,
+      ),
+    ).toBe(MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle)
+    expect(await row.count()).toBe(0)
+  }).toPass({
+    intervals: [500, 1_000, 3_000],
+    timeout: 60_000,
+  })
 }
 
 async function createManagedSiteChannelFromUi(
