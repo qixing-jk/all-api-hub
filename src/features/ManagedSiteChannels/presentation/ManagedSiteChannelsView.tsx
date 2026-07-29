@@ -476,6 +476,16 @@ export function ManagedSiteChannelsView({
   const filteredRows = table.getFilteredRowModel().rows
   const selectedCount = selectedRows.length
   const filteredCount = filteredRows.length
+  const renderDeleteRefreshAction = () => (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={callbacks.onRefresh}
+      disabled={state.isRefreshing || !capabilities.canRefresh}
+    >
+      {labels.deleteRefreshAction}
+    </Button>
+  )
   const emptyTableMessage =
     state.searchValue.trim() ||
     state.channelIdFilterValue.trim() ||
@@ -615,16 +625,9 @@ export function ManagedSiteChannelsView({
               <AlertTitle>{state.deleteState.failure.category}</AlertTitle>
               <AlertDescription className="space-y-3">
                 <p>{state.deleteState.failure.message}</p>
-                {state.deleteState.requiresRefresh ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={callbacks.onRefresh}
-                    disabled={state.isRefreshing || !capabilities.canRefresh}
-                  >
-                    {labels.deleteRefreshAction}
-                  </Button>
-                ) : null}
+                {state.deleteState.requiresRefresh
+                  ? renderDeleteRefreshAction()
+                  : null}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -666,16 +669,9 @@ export function ManagedSiteChannelsView({
                   </li>
                 ))}
               </ol>
-              {state.deleteState.requiresRefresh ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={callbacks.onRefresh}
-                  disabled={state.isRefreshing || !capabilities.canRefresh}
-                >
-                  {labels.deleteRefreshAction}
-                </Button>
-              ) : null}
+              {state.deleteState.requiresRefresh
+                ? renderDeleteRefreshAction()
+                : null}
             </section>
           ) : null}
 

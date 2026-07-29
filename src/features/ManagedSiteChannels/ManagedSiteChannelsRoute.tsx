@@ -535,10 +535,6 @@ function NativeManagedSiteChannels({
       })),
     [canMigrate, list.allRows],
   )
-  const nativeRowsByKey = useMemo(
-    () => new Map(nativeRows.map((row) => [row.rowKey, row])),
-    [nativeRows],
-  )
   const confirmedDeleteLabels = useRef(new Map<string, string>())
   const editorPageFailure = (() => {
     switch (mutation.editorFeedback?.kind) {
@@ -698,7 +694,7 @@ function NativeManagedSiteChannels({
     onDeleteConfirm: () => {
       confirmedDeleteLabels.current = new Map(
         mutation.deleteState.rowKeys.flatMap((rowKey) => {
-          const row = nativeRowsByKey.get(rowKey)
+          const row = rowsByKey.get(rowKey)
           return row ? [[rowKey, row.name] as const] : []
         }),
       )

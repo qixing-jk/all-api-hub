@@ -3,6 +3,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   getManagedSiteChannelRowActionsButtonTestId,
   getManagedSiteChannelRowEditActionTestId,
+  getManagedSiteChannelRowSelectTestId,
   MANAGED_SITE_CHANNELS_TEST_IDS,
 } from "~/features/ManagedSiteChannels/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -13,7 +14,11 @@ import {
   openInterceptedAxonHubManagedSiteChannels,
   openInterceptedManagedSiteChannels,
 } from "~~/e2e/fixtures/managedSiteChannelsIntercepted"
-import { runManagedSiteChannelsCrudScenario } from "~~/e2e/scenarios/managedSiteChannels"
+import {
+  channelRowByName,
+  getChannelRowTestToken,
+  runManagedSiteChannelsCrudScenario,
+} from "~~/e2e/scenarios/managedSiteChannels"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 test.use({
@@ -277,10 +282,11 @@ test("cancels native bulk-delete confirmation without dispatching a request", as
   })
   await waitForExtensionRoot(page)
 
-  const row = page
-    .getByRole("row")
-    .filter({ has: page.getByText("Example primary", { exact: true }) })
-  await row.getByTestId(/-select$/u).click()
+  const row = channelRowByName(page, "Example primary")
+  const rowTestToken = await getChannelRowTestToken(row)
+  await page
+    .getByTestId(getManagedSiteChannelRowSelectTestId(rowTestToken))
+    .click()
   await page
     .getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton)
     .click()

@@ -552,13 +552,13 @@ async function expectPaginationSummary(
   ).toHaveAttribute("data-total", total, { timeout: 30_000 })
 }
 
-function channelRowByName(page: Page, channelName: string) {
+export function channelRowByName(page: Page, channelName: string) {
   return page
     .locator(`[data-testid^="${MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX}"]`)
     .filter({ has: page.getByText(channelName, { exact: true }) })
 }
 
-async function getChannelRowTestToken(row: Locator) {
+export async function getChannelRowTestToken(row: Locator) {
   const testId = await row.getAttribute("data-testid")
   if (!testId?.startsWith(MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX)) {
     throw new Error("Managed-site channel row is missing its stable test token")
