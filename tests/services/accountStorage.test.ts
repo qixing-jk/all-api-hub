@@ -2285,6 +2285,7 @@ describe("accountStorage core behaviors", () => {
       expect.objectContaining({
         baseUrl: "https://foo.example.com",
         accountId: "needs-detect",
+        protectionBypassExecution,
         cookieAuthSessionCookie: "stored-session-cookie",
         auth: expect.objectContaining({
           authType: AuthTypeEnum.AccessToken,
@@ -2294,8 +2295,13 @@ describe("accountStorage core behaviors", () => {
         }),
       }),
     )
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
+      expect.objectContaining({ protectionBypassExecution }),
+    )
     expect(updatedAccount?.site_type).toBe("one-api")
     expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
+    expect(updatedAccount).not.toHaveProperty("protectionBypassExecution")
+    expect(updatedAccount).not.toHaveProperty("tempWindowRequestSource")
   })
 
   it("refreshAccount should skip disabled accounts and avoid network calls", async () => {

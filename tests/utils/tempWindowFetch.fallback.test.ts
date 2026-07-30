@@ -190,6 +190,12 @@ function expectRuntimeTask(
       }),
     }),
   )
+  const envelope = mocks.sendRuntimeMessageMock.mock.calls.at(-1)?.[0]
+  expect(envelope).not.toHaveProperty("protectionBypassExecution")
+  expect(envelope).not.toHaveProperty("tempWindowRequestSource")
+  expect(envelope?.task).not.toHaveProperty("execution")
+  expect(envelope?.task?.params).not.toHaveProperty("protectionBypassExecution")
+  expect(envelope?.task?.params).not.toHaveProperty("tempWindowRequestSource")
 }
 
 describe("tempWindowFetch runtime helpers and fallback gating", () => {

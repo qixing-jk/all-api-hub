@@ -542,6 +542,10 @@ describe("tempWindowPool window fallback", () => {
         sendResponse,
         authorizeAtAcquire,
       )
+      const taskParams =
+        handleTempWindowOpenRouterManagementKeyActionMock.mock.calls[0]?.[0]
+      expect(taskParams).not.toHaveProperty("protectionBypassExecution")
+      expect(taskParams).not.toHaveProperty("tempWindowRequestSource")
     },
   )
 
@@ -2474,36 +2478,69 @@ describe("tempWindowPool window fallback", () => {
     })
   })
 
-  it("opens and closes an open_context through the authorized pool lifecycle", async () => {
+  it("rejects owned tasks at the raw pool seam before browser work begins", async () => {
+    const { executeRawTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const sendResponse = vi.fn()
+
+    type Assert<T extends true> = T
+    type RawTempContextTask = Parameters<typeof executeRawTempContextTask>[0]
+    type MismatchedTask = {
+      kind: "open_context"
+      params: { originUrl: "https://example.invalid/mismatched-task" }
+    }
+    type MismatchedTaskAccepted = MismatchedTask extends RawTempContextTask
+      ? true
+      : false
+    // @ts-expect-error Mismatched kind/params pairs must remain unassignable.
+    type _RejectMismatchedTask = Assert<MismatchedTaskAccepted>
+
+    await expect(
+      executeRawTempContextTask(
+        {
+          kind: "api_fallback_fetch",
+          params: {
+            originUrl: "https://example.invalid",
+            fetchUrl: "https://example.invalid/api/fallback",
+            fetchOptions: { method: "GET" },
+          },
+        } as never,
+        sendResponse,
+      ),
+    ).rejects.toThrow(
+      "Owned task api_fallback_fetch requires explicit authorization",
+    )
+
+    expect(createTabMock).not.toHaveBeenCalled()
+    expect(createWindowMock).not.toHaveBeenCalled()
+    expect(tabsUpdateMock).not.toHaveBeenCalled()
+    expect(sendMessageMock).not.toHaveBeenCalled()
+    expect(sendResponse).not.toHaveBeenCalled()
+  })
+
+  it("opens and closes an open_context through the raw pool lifecycle", async () => {
     tempContextMode = "tab"
     createTabMock.mockResolvedValueOnce({ id: 777 })
 
     const {
-      executeAuthorizedTempContextTask,
+      executeRawTempContextTask,
       handleCloseTempWindow,
       setupTempWindowListeners,
-    } = await import("~/entrypoints/background/tempWindowPool")
-    const authorizeAtAcquire = vi.fn(async () => ({
-      kind: "allowed" as const,
-      adapter: "tab" as const,
-      feature: "key_management" as const,
-      operation: "open_context" as const,
-      cause: "explicit_context" as const,
-      surface: "background" as const,
-    }))
+    } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
     const sendResponse = vi.fn()
 
     setupTempWindowListeners()
-    const openRequest = executeAuthorizedTempContextTask(
+    const openRequest = executeRawTempContextTask(
       {
         kind: "open_context",
         params: {
-          url: "https://example.invalid/authorized-open",
-          requestId: "req-authorized-open",
+          url: "https://example.invalid/raw-open",
+          requestId: "req-raw-open",
         },
       },
-      "background",
-      authorizeAtAcquire,
       sendResponse,
     )
 
@@ -2512,16 +2549,15 @@ describe("tempWindowPool window fallback", () => {
 
     expect(onTabRemovedMock).toHaveBeenCalledTimes(1)
     expect(onWindowRemovedMock).toHaveBeenCalledTimes(1)
-    expect(authorizeAtAcquire).toHaveBeenCalledTimes(1)
     expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
     expect(tabsUpdateMock).toHaveBeenCalledWith(777, {
-      url: "https://example.invalid/authorized-open",
+      url: "https://example.invalid/raw-open",
     })
     expect(sendMessageMock).toHaveBeenCalledWith(
       777,
       expect.objectContaining({
         action: RuntimeActionIds.ContentCheckCapGuard,
-        requestId: "req-authorized-open",
+        requestId: "req-raw-open",
       }),
     )
     expect(sendResponse).toHaveBeenCalledWith({
@@ -2530,23 +2566,21 @@ describe("tempWindowPool window fallback", () => {
     })
 
     const closeResponse = vi.fn()
-    await handleCloseTempWindow(
-      { requestId: "req-authorized-open" },
-      closeResponse,
-    )
+    await handleCloseTempWindow({ requestId: "req-raw-open" }, closeResponse)
 
     expect(removeTabMock).toHaveBeenCalledWith(777)
     expect(closeResponse).toHaveBeenCalledWith({ success: true })
   })
 
-  it("removes an authorized tab by tabs.remove when its ID collides with a window ID", async () => {
+  it("removes a raw-pool tab by tabs.remove when its ID collides with a window ID", async () => {
     tempContextMode = "tab"
     createTabMock.mockResolvedValueOnce({ id: 901 })
 
-    const { executeAuthorizedTempContextTask, handleCloseTempWindow } =
-      await import("~/entrypoints/background/tempWindowPool")
+    const { executeRawTempContextTask, handleCloseTempWindow } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
     const sendResponse = vi.fn()
-    const openRequest = executeAuthorizedTempContextTask(
+    const openRequest = executeRawTempContextTask(
       {
         kind: "open_context",
         params: {
@@ -2554,15 +2588,6 @@ describe("tempWindowPool window fallback", () => {
           requestId: "req-tab-window-id-collision",
         },
       },
-      "background",
-      vi.fn(async () => ({
-        kind: "allowed" as const,
-        adapter: "tab" as const,
-        feature: "key_management" as const,
-        operation: "open_context" as const,
-        cause: "explicit_context" as const,
-        surface: "background" as const,
-      })),
       sendResponse,
     )
 
@@ -3230,7 +3255,7 @@ describe("tempWindowPool window fallback", () => {
     const authorizeAtAcquire = vi.fn(async () => ({
       kind: "allowed" as const,
       adapter: "tab" as const,
-      feature: "ldoh_site_lookup" as const,
+      feature: "account_refresh" as const,
       operation: "session_read" as const,
       cause: "session_required" as const,
       surface: "background" as const,

@@ -752,6 +752,11 @@ describe("account browser-session reader", () => {
         },
       }),
     )
+    const envelope = mockSendRuntimeMessage.mock.calls[0]?.[0]
+    expect(envelope).not.toHaveProperty("protectionBypassExecution")
+    expect(envelope).not.toHaveProperty("tempWindowRequestSource")
+    expect(envelope?.task).not.toHaveProperty("execution")
+    expect(envelope?.task?.params).not.toHaveProperty("tempWindowRequestSource")
   })
 
   it("notifies callers about temp-window read errors without throwing", async () => {

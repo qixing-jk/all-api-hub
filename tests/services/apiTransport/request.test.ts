@@ -1282,6 +1282,9 @@ describe("apiTransport request helpers", () => {
       }),
     )
     const protectedTask = mockSendRuntimeMessage.mock.calls[0]?.[0]?.task
+    expect(mockSendRuntimeMessage.mock.calls[0]?.[0]?.execution).toBe(
+      protectionBypassExecution,
+    )
     expect(protectedTask?.params).not.toHaveProperty(
       "protectionBypassExecution",
     )

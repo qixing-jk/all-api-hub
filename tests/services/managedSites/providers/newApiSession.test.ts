@@ -566,6 +566,14 @@ describe("newApiSession", () => {
         execution: VERIFY_EXECUTION,
       }),
     )
+    const envelope = sendRuntimeMessageMock.mock.calls[0]?.[0]
+    expect(envelope).not.toHaveProperty("protectionBypassExecution")
+    expect(envelope).not.toHaveProperty("tempWindowRequestSource")
+    expect(envelope?.task).not.toHaveProperty("execution")
+    expect(envelope?.task?.params).not.toHaveProperty(
+      "protectionBypassExecution",
+    )
+    expect(envelope?.task?.params).not.toHaveProperty("tempWindowRequestSource")
   })
 
   it("preserves structured temp-context errors when rollback is impossible for a hidden key read", async () => {

@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { tempWindowOpenRouterManagementKeyAction } from "~/services/apiAdapters/openrouter/managementKeyActionClient"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
   TEMP_CONTEXT_TASK_KINDS,
 } from "~/services/protectionBypass/contracts"
 import * as tempWindowFetchClient from "~/utils/browser/tempWindowFetch"
@@ -29,6 +31,16 @@ const testExecution = {
   trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
   surface: PROTECTION_BYPASS_SURFACES.Background,
 } as const
+
+function expectNoTaskLevelExecutionDuplicate(): void {
+  const envelope = executeProtectionBypassTaskMock.mock.calls.at(-1)?.[0]
+
+  expect(envelope).not.toHaveProperty("protectionBypassExecution")
+  expect(envelope).not.toHaveProperty("tempWindowRequestSource")
+  expect(envelope?.task).not.toHaveProperty("execution")
+  expect(envelope?.task?.params).not.toHaveProperty("protectionBypassExecution")
+  expect(envelope?.task?.params).not.toHaveProperty("tempWindowRequestSource")
+}
 
 vi.mock("~/utils/browser", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/browser")>()
@@ -78,6 +90,43 @@ describe("tempWindowFetch helpers (background context)", () => {
     expect(genericClientSource).not.toMatch(/OpenRouterManagementKey/)
   })
 
+  it("passes one OpenRouter management-key execution through the provider client", async () => {
+    const execution = {
+      version: 2,
+      kind: "user_command",
+      command: PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+      surface: PROTECTION_BYPASS_SURFACES.Options,
+    } as const
+    executeProtectionBypassTaskMock.mockResolvedValueOnce({
+      requestId: "request-openrouter-management-key",
+      operation: "create",
+      mutationState: "not_dispatched",
+      attemptOutcome: "failed",
+      label: "Account connection (example)",
+    })
+
+    await tempWindowOpenRouterManagementKeyAction({
+      requestId: "request-openrouter-management-key",
+      operation: { kind: "create", label: "Account connection (example)" },
+      protectionBypassExecution: execution,
+    })
+
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
+      execution,
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction,
+        params: {
+          requestId: "request-openrouter-management-key",
+          operation: {
+            kind: "create",
+            label: "Account connection (example)",
+          },
+        },
+      },
+    })
+    expectNoTaskLevelExecutionDuplicate()
+  })
+
   it("passes the exact fetch envelope to the background Coordinator", async () => {
     const coordinatorResponse = { success: true, data: "fetch-result" }
     executeProtectionBypassTaskMock.mockResolvedValueOnce(coordinatorResponse)
@@ -101,6 +150,7 @@ describe("tempWindowFetch helpers (background context)", () => {
         },
       },
     })
+    expectNoTaskLevelExecutionDuplicate()
     expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
     expect(response).toBe(coordinatorResponse)
   })
@@ -127,6 +177,7 @@ describe("tempWindowFetch helpers (background context)", () => {
         },
       },
     })
+    expectNoTaskLevelExecutionDuplicate()
     expect(response).toBe(coordinatorResponse)
   })
 
@@ -158,6 +209,7 @@ describe("tempWindowFetch helpers (background context)", () => {
         },
       },
     })
+    expectNoTaskLevelExecutionDuplicate()
     expect(response).toBe(coordinatorResponse)
   })
 
@@ -191,6 +243,7 @@ describe("tempWindowFetch helpers (background context)", () => {
         },
       },
     })
+    expectNoTaskLevelExecutionDuplicate()
     expect(response).toBe(coordinatorResponse)
   })
 

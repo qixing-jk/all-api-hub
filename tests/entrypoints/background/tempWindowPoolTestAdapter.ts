@@ -12,9 +12,12 @@ import {
 import {
   getTempContextTaskMetadata,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURE_TASK_KINDS,
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
+  TEMP_CONTEXT_TASK_KINDS,
   type ProtectionBypassExecution,
+  type ProtectionBypassFeature,
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
 import type { ProtectionBypassPolicyDecision } from "~/services/protectionBypass/policy"
@@ -33,18 +36,35 @@ export {
   setupTempWindowListeners,
 }
 
-const TEST_PROTECTION_BYPASS_EXECUTION: ProtectionBypassExecution = {
+/**
+ * Supplies presentation metadata to pool-level fixtures below the policy
+ * boundary. It is never evidence that a feature owns the exercised task.
+ */
+const TEST_BELOW_POLICY_EXECUTION = {
   version: 2,
   kind: "automatic",
   feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
   trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
   surface: PROTECTION_BYPASS_SURFACES.Background,
-}
+} as const satisfies ProtectionBypassExecution
 
 type TestProtectedRequest<
   T extends { protectionBypassExecution: ProtectionBypassExecution },
 > = Omit<T, "protectionBypassExecution"> &
   Partial<Pick<T, "protectionBypassExecution">>
+
+type RawPoolTestRequest<
+  T extends { protectionBypassExecution: ProtectionBypassExecution },
+> = Omit<T, "protectionBypassExecution">
+
+type DormantTempContextTask = Extract<
+  TempContextTask,
+  {
+    kind:
+      | typeof TEMP_CONTEXT_TASK_KINDS.RenderedTitle
+      | typeof TEMP_CONTEXT_TASK_KINDS.OpenContext
+  }
+>
 
 function resolveTestExecution(request: {
   protectionBypassExecution?: ProtectionBypassExecution
@@ -52,10 +72,9 @@ function resolveTestExecution(request: {
 }): ProtectionBypassExecution {
   return (
     request.protectionBypassExecution ?? {
-      ...TEST_PROTECTION_BYPASS_EXECUTION,
+      ...TEST_BELOW_POLICY_EXECUTION,
       surface:
-        request.tempWindowRequestSource ??
-        TEST_PROTECTION_BYPASS_EXECUTION.surface,
+        request.tempWindowRequestSource ?? TEST_BELOW_POLICY_EXECUTION.surface,
     }
   )
 }
@@ -79,6 +98,24 @@ export async function executeAuthorizedTempContextTask(
   sendResponse: (response?: any) => void,
   reportOutcome?: (...args: any[]) => void,
 ) {
+  await executePoolTaskForTest(
+    task,
+    authorizeAtAcquire,
+    sendResponse,
+    reportOutcome,
+  )
+}
+
+/** Dispatches a pool fixture after its test seam selects the policy boundary. */
+async function executePoolTaskForTest(
+  task: {
+    kind: TempContextTask["kind"]
+    params: object
+  },
+  authorizeAtAcquire: () => Promise<ProtectionBypassPolicyDecision | undefined>,
+  sendResponse: (response?: any) => void,
+  reportOutcome?: (...args: any[]) => void,
+) {
   const params = task.params as Record<string, unknown> & {
     protectionBypassExecution?: ProtectionBypassExecution
     tempWindowRequestSource?: TempWindowRequestSource
@@ -95,7 +132,7 @@ export async function executeAuthorizedTempContextTask(
     } as TempContextTask,
     protectionBypassExecution?.surface ??
       tempWindowRequestSource ??
-      TEST_PROTECTION_BYPASS_EXECUTION.surface,
+      TEST_BELOW_POLICY_EXECUTION.surface,
     authorizeAtAcquire,
     sendResponse,
     reportOutcome,
@@ -104,6 +141,7 @@ export async function executeAuthorizedTempContextTask(
 
 async function authorizeTestTask(
   task: TempContextTask,
+  feature: ProtectionBypassFeature,
 ): Promise<ProtectionBypassPolicyDecision> {
   const preferences = await userPreferences.getPreferences()
   const fallback = {
@@ -116,21 +154,60 @@ async function authorizeTestTask(
   return {
     kind: "allowed",
     adapter: fallback.tempContextMode,
-    feature: "key_management",
+    feature,
     surface: "background",
     ...getTempContextTaskMetadata(task),
   }
+}
+
+function resolveTestDecisionFeature(
+  task: TempContextTask,
+): ProtectionBypassFeature | undefined {
+  return Object.values(PROTECTION_BYPASS_FEATURES).find((feature) =>
+    (
+      PROTECTION_BYPASS_FEATURE_TASK_KINDS[
+        feature
+      ] as readonly TempContextTask["kind"][]
+    ).includes(task.kind),
+  )
+}
+
+/** Executes an ownerless legacy fixture below the production policy boundary. */
+export async function executeRawTempContextTask(
+  task: DormantTempContextTask,
+  sendResponse: (response?: any) => void,
+) {
+  if (resolveTestDecisionFeature(task)) {
+    throw new Error(`Owned task ${task.kind} requires explicit authorization`)
+  }
+
+  await executePoolTaskForTest(task, async () => undefined, sendResponse)
 }
 
 async function executeTestTask(
   task: TempContextTask,
   sendResponse: (response?: any) => void,
 ) {
-  await executeAuthorizedTempContextTask(
-    task,
-    () => authorizeTestTask(task),
-    sendResponse,
-  )
+  const feature = resolveTestDecisionFeature(task)
+  if (feature) {
+    await executeAuthorizedTempContextTask(
+      task,
+      () => authorizeTestTask(task, feature),
+      sendResponse,
+    )
+    return
+  }
+
+  if (
+    task.kind === TEMP_CONTEXT_TASK_KINDS.RenderedTitle ||
+    task.kind === TEMP_CONTEXT_TASK_KINDS.OpenContext
+  ) {
+    // Dormant raw-pool fixtures deliberately have no policy owner or decision.
+    await executeRawTempContextTask(task, sendResponse)
+    return
+  }
+
+  throw new Error(`Owned task ${task.kind} has no test authorization owner`)
 }
 
 export async function handleAutoDetectSite(
@@ -190,11 +267,11 @@ export async function handleTempWindowTurnstileFetch(
 }
 
 export async function handleTempWindowGetRenderedTitle(
-  request: TestProtectedRequest<TempWindowRenderedTitleParams>,
+  request: RawPoolTestRequest<TempWindowRenderedTitleParams>,
   sendResponse: (response?: any) => void,
 ) {
   await executeTestTask(
-    { kind: "rendered_title", params: withTestExecution(request) },
+    { kind: "rendered_title", params: request },
     sendResponse,
   )
 }

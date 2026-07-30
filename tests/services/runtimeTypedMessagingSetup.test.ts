@@ -1599,8 +1599,10 @@ describe("typed runtime messaging setup", () => {
   it("preserves AutoCheckin UI command ownership through scheduler and temp task", async () => {
     const onAutoCheckinMessage: OnMessageMock = vi.fn(() => vi.fn())
     const authorizeDecisions: unknown[] = []
+    const executedTasks: unknown[] = []
     const executeAuthorizedTempContextTask = vi.fn(
-      async (_task, _source, authorizeAtAcquire, sendResponse) => {
+      async (task, _source, authorizeAtAcquire, sendResponse) => {
+        executedTasks.push(task)
         const decision = await authorizeAtAcquire()
         authorizeDecisions.push(decision)
         sendResponse({ success: decision.kind === "allowed" })
@@ -1752,6 +1754,22 @@ describe("typed runtime messaging setup", () => {
         surface: TEMP_WINDOW_REQUEST_SOURCES.Options,
       }),
     ])
+    expect(executedTasks).toHaveLength(1)
+    expect(executedTasks[0]).toEqual(
+      expect.objectContaining({
+        kind: "turnstile_fetch",
+      }),
+    )
+    const executedParams = (
+      executedTasks[0] as { params: Record<string, unknown> }
+    ).params
+    expect(executedParams).not.toHaveProperty("protectionBypassExecution")
+    expect(executedParams).not.toHaveProperty("tempWindowRequestSource")
+    expect(savedStatus).not.toBeNull()
+    expect(JSON.stringify(savedStatus)).not.toContain("user_command")
+    expect(JSON.stringify(savedStatus)).not.toContain(
+      "protectionBypassExecution",
+    )
   })
 
   it("wraps every auto check-in typed listener failure", async () => {

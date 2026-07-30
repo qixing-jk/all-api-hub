@@ -900,6 +900,9 @@ describe("fetchDisplayAccountTokens", () => {
       }),
       token,
     })
+    const request = resolveTokenKey.mock.calls[0]?.[0]?.request
+    expect(request).not.toHaveProperty("tempWindowRequestSource")
+    expect(request.protectionBypassExecution).toBe(protectionBypassExecution)
   })
 
   it("resolves singleton service credential runtime tokens without key management", async () => {
