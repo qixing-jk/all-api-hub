@@ -42,7 +42,10 @@ const logger = createLogger("PreferencesMigration")
 // canonical per-feature protection-bypass policy.
 const AUTOMATIC_FEATURE_BYPASS_PREFERENCES_VERSION = 27
 
-// Current version of the preferences schema
+/**
+ * Current version of the preferences schema.
+ * @alias
+ */
 export const CURRENT_PREFERENCES_VERSION =
   AUTOMATIC_FEATURE_BYPASS_PREFERENCES_VERSION
 

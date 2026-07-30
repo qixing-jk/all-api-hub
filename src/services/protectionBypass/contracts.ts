@@ -380,6 +380,10 @@ export const TEMP_CONTEXT_TASK_KINDS = {
   OpenContext: "open_context",
 } as const
 
+/**
+ * Public task-kind contract shared by task dispatch and policy metadata.
+ */
+/* @public */
 export type TempContextTaskKind =
   (typeof TEMP_CONTEXT_TASK_KINDS)[keyof typeof TEMP_CONTEXT_TASK_KINDS]
 
