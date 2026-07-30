@@ -382,7 +382,7 @@ class DailyBalanceHistoryScheduler {
       const accounts = await accountStorage.getEnabledAccounts()
       const protectionBypassExecution =
         createAutomaticProtectionBypassExecution(
-          PROTECTION_BYPASS_FEATURES.AccountRefresh,
+          PROTECTION_BYPASS_FEATURES.BalanceHistory,
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
           PROTECTION_BYPASS_SURFACES.Background,
         )

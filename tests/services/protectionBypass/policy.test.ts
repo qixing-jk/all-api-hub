@@ -10,13 +10,13 @@ import {
   PROTECTION_BYPASS_DENIED_REASONS,
   PROTECTION_BYPASS_EXECUTION_KINDS,
   PROTECTION_BYPASS_EXECUTION_VERSION,
+  PROTECTION_BYPASS_FEATURE_TASK_KINDS,
   PROTECTION_BYPASS_FEATURES,
-  PROTECTION_BYPASS_OPERATIONS,
   PROTECTION_BYPASS_SURFACES,
   TEMP_CONTEXT_TASK_KINDS,
+  type ProtectionBypassAutomaticFeature,
   type ProtectionBypassAutomaticTrigger,
   type ProtectionBypassCause,
-  type ProtectionBypassExecutionKind,
   type ProtectionBypassFeature,
   type ProtectionBypassOperation,
   type ProtectionBypassSurface,
@@ -75,7 +75,7 @@ function buildPolicy(
 }
 
 function automaticExecution(
-  feature: ProtectionBypassFeature,
+  feature: ProtectionBypassAutomaticFeature,
   trigger: ProtectionBypassAutomaticTrigger,
   surface: ProtectionBypassSurface,
 ): ResolvedProtectionBypassExecution {
@@ -242,7 +242,7 @@ describe("evaluateProtectionBypassPolicy", () => {
     expect(
       evaluateProtectionBypassPolicy({
         execution: automaticExecution(
-          PROTECTION_BYPASS_FEATURES.SessionResync,
+          PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
           PROTECTION_BYPASS_SURFACES.Options,
         ),
@@ -253,10 +253,10 @@ describe("evaluateProtectionBypassPolicy", () => {
     ).toMatchObject({ kind: "denied", reason: "automatic_disabled" })
   })
 
-  it("allows verify-protection session reads without expanding the feature to generic fetch", () => {
+  it("allows the key-management session and fallback task kinds", () => {
     const execution = resolvedUserCommandExecution({
-      command: "verify_protection",
-      feature: PROTECTION_BYPASS_FEATURES.Verification,
+      command: "manage_api_keys",
+      feature: PROTECTION_BYPASS_FEATURES.KeyManagement,
       surface: PROTECTION_BYPASS_SURFACES.Options,
     })
 
@@ -278,15 +278,15 @@ describe("evaluateProtectionBypassPolicy", () => {
         policy: buildPolicy(),
         capability: availableCapability,
       }),
-    ).toMatchObject({ kind: "denied", reason: "operation_not_permitted" })
+    ).toMatchObject({ kind: "allowed", operation: "fetch" })
   })
 
   it("denies an otherwise eligible operation when its current resource is stale", () => {
     expect(
       evaluateProtectionBypassPolicy({
         execution: resolvedUserCommandExecution({
-          command: "verify_protection",
-          feature: PROTECTION_BYPASS_FEATURES.Verification,
+          command: "manage_api_keys",
+          feature: PROTECTION_BYPASS_FEATURES.KeyManagement,
           surface: PROTECTION_BYPASS_SURFACES.Options,
         }),
         task: newApiSessionReadTask,
@@ -322,7 +322,7 @@ describe("evaluateProtectionBypassPolicy", () => {
   ) {
     if (
       decision.kind === PROTECTION_BYPASS_DECISION_RESULTS.Denied &&
-      decision.reason === PROTECTION_BYPASS_DENIED_REASONS.OperationNotPermitted
+      decision.reason === PROTECTION_BYPASS_DENIED_REASONS.TaskNotPermitted
     ) {
       expectTypeOf(decision.feature).toEqualTypeOf<ProtectionBypassFeature>()
       expectTypeOf(
@@ -336,11 +336,11 @@ describe("evaluateProtectionBypassPolicy", () => {
   function assertContextlessDenial(decision: ProtectionBypassPolicyDecision) {
     if (
       decision.kind === PROTECTION_BYPASS_DECISION_RESULTS.Denied &&
-      decision.reason === PROTECTION_BYPASS_DENIED_REASONS.MissingIntent
+      decision.reason === PROTECTION_BYPASS_DENIED_REASONS.MissingExecution
     ) {
       expectTypeOf(decision).toEqualTypeOf<{
         kind: "denied"
-        reason: "missing_intent"
+        reason: "missing_execution"
       }>()
     }
   }
@@ -441,21 +441,24 @@ describe("evaluateProtectionBypassPolicy", () => {
     })
 
     assertContextlessDenial(decision)
-    expect(decision).toMatchObject({ kind: "denied", reason: "missing_intent" })
+    expect(decision).toMatchObject({
+      kind: "denied",
+      reason: "missing_execution",
+    })
   })
 
-  it("denies an operation outside the static feature-operation matrix", () => {
+  it("denies a task outside the static feature-task matrix", () => {
     const execution = resolvedUserCommandExecution({
-      command: "verify_protection",
-      feature: PROTECTION_BYPASS_FEATURES.Verification,
+      command: "manage_api_keys",
+      feature: PROTECTION_BYPASS_FEATURES.KeyManagement,
       surface: PROTECTION_BYPASS_SURFACES.Options,
     })
 
     const decision = evaluateProtectionBypassPolicy({
       execution,
       task: {
-        kind: TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
-        params: fetchParams,
+        kind: TEMP_CONTEXT_TASK_KINDS.RenderedTitle,
+        params: { originUrl: fetchParams.originUrl },
       },
       policy: buildPolicy(),
       capability: availableCapability,
@@ -464,7 +467,7 @@ describe("evaluateProtectionBypassPolicy", () => {
     assertEvaluatedDenialContext(decision)
     expect(decision).toMatchObject({
       kind: "denied",
-      reason: "operation_not_permitted",
+      reason: "task_not_permitted",
     })
   })
 
@@ -493,208 +496,110 @@ describe("evaluateProtectionBypassPolicy", () => {
     })
   })
 
-  const allOperations = Object.values(PROTECTION_BYPASS_OPERATIONS)
-  const taskForOperation = (
-    operation: ProtectionBypassOperation,
-  ): TempContextTask => {
-    switch (operation) {
-      case PROTECTION_BYPASS_OPERATIONS.Fetch:
-        return {
-          kind: TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
-          params: fetchParams,
-        }
-      case PROTECTION_BYPASS_OPERATIONS.TurnstileFetch:
-        return {
-          kind: TEMP_CONTEXT_TASK_KINDS.TurnstileFetch,
-          params: { ...fetchParams, pageUrl: fetchParams.originUrl },
-        }
-      case PROTECTION_BYPASS_OPERATIONS.NativePageAction:
-        return {
-          kind: TEMP_CONTEXT_TASK_KINDS.NativePageAction,
-          params: nativeParams,
-        }
-      case PROTECTION_BYPASS_OPERATIONS.RenderedTitle:
-        return {
-          kind: TEMP_CONTEXT_TASK_KINDS.RenderedTitle,
-          params: {
-            originUrl: fetchParams.originUrl,
-          },
-        }
-      case PROTECTION_BYPASS_OPERATIONS.SessionRead:
-        return {
-          kind: TEMP_CONTEXT_TASK_KINDS.SessionRead,
-          params: {
-            url: fetchParams.originUrl,
-            requestId: "request-1",
-            siteType: "new-api",
-          },
-        }
-      case PROTECTION_BYPASS_OPERATIONS.OpenContext:
-        return {
-          kind: TEMP_CONTEXT_TASK_KINDS.OpenContext,
-          params: {
-            url: fetchParams.originUrl,
-            requestId: "request-1",
-          },
-        }
+  it("enforces the approved product-feature by task-kind matrix", () => {
+    const permitted: Record<ProtectionBypassFeature, readonly string[]> = {
+      account_refresh: ["api_fallback_fetch", "session_read"],
+      balance_history: ["api_fallback_fetch", "session_read"],
+      checkin: [
+        "api_fallback_fetch",
+        "turnstile_fetch",
+        "native_page_action",
+        "session_read",
+      ],
+      redemption_assist: ["api_fallback_fetch", "session_read"],
+      ldoh_site_lookup: ["api_fallback_fetch"],
+      key_management: [
+        "api_fallback_fetch",
+        "session_read",
+        "new_api_session_read",
+      ],
+      managed_site_channels: ["new_api_session_read"],
+      managed_site_model_sync: ["new_api_session_read"],
+      account_onboarding: [
+        "api_fallback_fetch",
+        "profile_isolated_fetch",
+        "session_read",
+        "openrouter_management_key_action",
+      ],
     }
-  }
+    const taskForKind = (kind: TempContextTask["kind"]): TempContextTask => {
+      switch (kind) {
+        case "api_fallback_fetch":
+        case "profile_isolated_fetch":
+          return { kind, params: fetchParams }
+        case "turnstile_fetch":
+          return {
+            kind,
+            params: { ...fetchParams, pageUrl: fetchParams.originUrl },
+          }
+        case "native_page_action":
+          return { kind, params: nativeParams }
+        case "openrouter_management_key_action":
+          return {
+            kind,
+            params: {
+              requestId: "request-1",
+              operation: { kind: "create", label: "Example" },
+            },
+          }
+        case "rendered_title":
+          return { kind, params: { originUrl: fetchParams.originUrl } }
+        case "session_read":
+          return {
+            kind,
+            params: {
+              url: fetchParams.originUrl,
+              requestId: "request-1",
+              siteType: "new-api",
+            },
+          }
+        case "new_api_session_read":
+          return {
+            kind,
+            params: {
+              origin: fetchParams.originUrl,
+              action: "channel_key",
+              channelId: 1,
+              userId: "example-user",
+            },
+          }
+        case "open_context":
+          return {
+            kind,
+            params: { url: fetchParams.originUrl, requestId: "request-1" },
+          }
+      }
+    }
 
-  const registrationMatrix: readonly {
-    kind: ProtectionBypassExecutionKind
-    feature: ProtectionBypassFeature
-    operations: readonly ProtectionBypassOperation[]
-  }[] = [
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
-      feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
-      operations: [PROTECTION_BYPASS_OPERATIONS.Fetch],
-    },
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
-      feature: PROTECTION_BYPASS_FEATURES.AccountOnboarding,
-      operations: [
-        PROTECTION_BYPASS_OPERATIONS.Fetch,
-        PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
-        PROTECTION_BYPASS_OPERATIONS.SessionRead,
-        PROTECTION_BYPASS_OPERATIONS.OpenContext,
-        PROTECTION_BYPASS_OPERATIONS.NativePageAction,
-      ],
-    },
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
-      feature: PROTECTION_BYPASS_FEATURES.Checkin,
-      operations: [
-        PROTECTION_BYPASS_OPERATIONS.Fetch,
-        PROTECTION_BYPASS_OPERATIONS.TurnstileFetch,
-        PROTECTION_BYPASS_OPERATIONS.NativePageAction,
-      ],
-    },
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
-      feature: PROTECTION_BYPASS_FEATURES.SiteDetection,
-      operations: [
-        PROTECTION_BYPASS_OPERATIONS.Fetch,
-        PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
-        PROTECTION_BYPASS_OPERATIONS.SessionRead,
-      ],
-    },
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
-      feature: PROTECTION_BYPASS_FEATURES.SessionResync,
-      operations: [
-        PROTECTION_BYPASS_OPERATIONS.Fetch,
-        PROTECTION_BYPASS_OPERATIONS.SessionRead,
-      ],
-    },
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
-      feature: PROTECTION_BYPASS_FEATURES.Verification,
-      operations: [
-        PROTECTION_BYPASS_OPERATIONS.TurnstileFetch,
-        PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
-        PROTECTION_BYPASS_OPERATIONS.SessionRead,
-        PROTECTION_BYPASS_OPERATIONS.OpenContext,
-      ],
-    },
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
-      feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
-      operations: [PROTECTION_BYPASS_OPERATIONS.Fetch],
-    },
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
-      feature: PROTECTION_BYPASS_FEATURES.AccountOnboarding,
-      operations: [
-        PROTECTION_BYPASS_OPERATIONS.Fetch,
-        PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
-        PROTECTION_BYPASS_OPERATIONS.SessionRead,
-        PROTECTION_BYPASS_OPERATIONS.OpenContext,
-        PROTECTION_BYPASS_OPERATIONS.NativePageAction,
-      ],
-    },
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
-      feature: PROTECTION_BYPASS_FEATURES.Checkin,
-      operations: [
-        PROTECTION_BYPASS_OPERATIONS.Fetch,
-        PROTECTION_BYPASS_OPERATIONS.TurnstileFetch,
-        PROTECTION_BYPASS_OPERATIONS.NativePageAction,
-      ],
-    },
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
-      feature: PROTECTION_BYPASS_FEATURES.SiteDetection,
-      operations: [
-        PROTECTION_BYPASS_OPERATIONS.Fetch,
-        PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
-        PROTECTION_BYPASS_OPERATIONS.SessionRead,
-      ],
-    },
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
-      feature: PROTECTION_BYPASS_FEATURES.SessionResync,
-      operations: [
-        PROTECTION_BYPASS_OPERATIONS.Fetch,
-        PROTECTION_BYPASS_OPERATIONS.SessionRead,
-      ],
-    },
-    {
-      kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
-      feature: PROTECTION_BYPASS_FEATURES.Verification,
-      operations: [
-        PROTECTION_BYPASS_OPERATIONS.TurnstileFetch,
-        PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
-        PROTECTION_BYPASS_OPERATIONS.SessionRead,
-        PROTECTION_BYPASS_OPERATIONS.OpenContext,
-      ],
-    },
-  ]
-
-  it.each(registrationMatrix)(
-    "enforces the closed $kind registration for $feature",
-    ({ kind, feature, operations }) => {
-      for (const operation of allOperations) {
-        const execution =
-          kind === PROTECTION_BYPASS_EXECUTION_KINDS.Automatic
-            ? automaticExecution(
-                feature,
-                PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
-                PROTECTION_BYPASS_SURFACES.Background,
-              )
-            : resolvedUserCommandExecution({
-                command: "verify_protection",
-                feature,
-                surface: PROTECTION_BYPASS_SURFACES.Background,
-              })
+    for (const feature of Object.values(PROTECTION_BYPASS_FEATURES)) {
+      for (const kind of Object.values(TEMP_CONTEXT_TASK_KINDS)) {
         const decision = evaluateProtectionBypassPolicy({
-          execution,
-          task: taskForOperation(operation),
+          execution: resolvedUserCommandExecution({
+            command: "manage_api_keys",
+            feature,
+            surface: PROTECTION_BYPASS_SURFACES.Background,
+          }),
+          task: taskForKind(kind),
           policy: buildPolicy(),
           capability: availableCapability,
         })
-
-        if (operations.includes(operation)) {
-          expect(decision).toMatchObject({
-            kind: "allowed",
-            feature,
-            operation,
-          })
-        } else {
-          expect(decision).toMatchObject({
-            kind: "denied",
-            reason: "operation_not_permitted",
-          })
+        expect(decision.kind).toBe(
+          permitted[feature].includes(kind) ? "allowed" : "denied",
+        )
+        if (decision.kind === "denied" && !permitted[feature].includes(kind)) {
+          expect(decision.reason).toBe("task_not_permitted")
         }
       }
-    },
-  )
+    }
+
+    expect(PROTECTION_BYPASS_FEATURE_TASK_KINDS).toMatchObject(permitted)
+  })
 
   it("applies the static feature matrix to automatic execution", () => {
     expect(
       evaluateProtectionBypassPolicy({
         execution: automaticExecution(
-          PROTECTION_BYPASS_FEATURES.AccountOnboarding,
+          PROTECTION_BYPASS_FEATURES.AccountRefresh,
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
           PROTECTION_BYPASS_SURFACES.Background,
         ),
@@ -759,11 +664,11 @@ describe("evaluateProtectionBypassPolicy", () => {
     ).toMatchObject({ kind: "denied", reason })
   })
 
-  it("allows content-script work only after all non-surface policies pass", () => {
+  it("denies rendered-title tasks for every product workflow", () => {
     expect(
       evaluateProtectionBypassPolicy({
         execution: automaticExecution(
-          PROTECTION_BYPASS_FEATURES.SiteDetection,
+          PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
           PROTECTION_BYPASS_SURFACES.ContentScript,
         ),
@@ -777,11 +682,11 @@ describe("evaluateProtectionBypassPolicy", () => {
         capability: availableCapability,
       }),
     ).toMatchObject({
-      kind: "allowed",
-      feature: "site_detection",
+      kind: "denied",
+      feature: "ldoh_site_lookup",
+      reason: "task_not_permitted",
       operation: "rendered_title",
       surface: "content_script",
-      adapter: "tab",
     })
   })
 
@@ -806,6 +711,12 @@ describe("evaluateProtectionBypassPolicy", () => {
         policy: buildPolicy({ automaticMasterEnabled: false }),
         capability: availableCapability,
       }),
-    ).toMatchObject({ kind: "denied", reason: "automatic_disabled" })
+    ).toMatchObject({
+      kind: "denied",
+      reason:
+        task.kind === TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
+          ? "task_not_permitted"
+          : "automatic_disabled",
+    })
   })
 })

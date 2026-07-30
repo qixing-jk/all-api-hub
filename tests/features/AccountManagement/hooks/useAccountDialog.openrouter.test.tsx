@@ -45,7 +45,7 @@ const {
 }))
 
 const openRouterProtectionExecution = {
-  version: 1 as const,
+  version: 2 as const,
   kind: "user_command" as const,
   command: "add_account",
   surface: "options",

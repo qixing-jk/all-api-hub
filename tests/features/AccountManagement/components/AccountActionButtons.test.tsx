@@ -165,7 +165,7 @@ const {
       work: (execution: unknown) => Promise<unknown>,
     ) =>
       work({
-        version: 1,
+        version: 2,
         kind: "user_command",
         command,
         surface,
@@ -1706,7 +1706,7 @@ describe("AccountActionButtons", () => {
         {
           accountIds: ["acc-5"],
           protectionBypassExecution: {
-            version: 1,
+            version: 2,
             kind: "user_command",
             command: PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
             surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
@@ -2698,7 +2698,7 @@ describe("AccountActionButtons", () => {
       expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(322)
     })
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
-      "verify_protection",
+      "manage_site_channels",
       "popup",
       expect.any(Function),
     )

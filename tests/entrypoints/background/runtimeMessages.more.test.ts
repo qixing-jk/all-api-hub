@@ -14,17 +14,17 @@ type RuntimeMessageListener = (
 ) => unknown
 
 const backgroundExecution = {
-  version: 1,
+  version: 2,
   kind: "automatic",
-  feature: "site_detection",
+  feature: "ldoh_site_lookup",
   trigger: "background_recovery",
   surface: "background",
 } as const
 
 const popupExecution = {
-  version: 1,
+  version: 2,
   kind: "automatic",
-  feature: "site_detection",
+  feature: "ldoh_site_lookup",
   trigger: "ui_lifecycle",
   surface: "popup",
 } as const

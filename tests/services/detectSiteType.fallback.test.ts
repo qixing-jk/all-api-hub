@@ -19,7 +19,7 @@ import {
 } from "~~/tests/services/protectionBypass/fixtures"
 
 const SITE_DETECTION_EXECUTION = automaticExecution(
-  PROTECTION_BYPASS_FEATURES.SiteDetection,
+  PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
   TEMP_WINDOW_REQUEST_SOURCES.Options,
 )

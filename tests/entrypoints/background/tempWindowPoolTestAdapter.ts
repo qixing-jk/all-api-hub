@@ -34,9 +34,9 @@ export {
 }
 
 const TEST_PROTECTION_BYPASS_EXECUTION: ProtectionBypassExecution = {
-  version: 1,
+  version: 2,
   kind: "automatic",
-  feature: PROTECTION_BYPASS_FEATURES.Verification,
+  feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
   trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
   surface: PROTECTION_BYPASS_SURFACES.Background,
 }
@@ -116,7 +116,7 @@ async function authorizeTestTask(
   return {
     kind: "allowed",
     adapter: fallback.tempContextMode,
-    feature: "verification",
+    feature: "key_management",
     surface: "background",
     ...getTempContextTaskMetadata(task),
   }

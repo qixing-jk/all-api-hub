@@ -158,7 +158,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     const sendResponse = vi.fn()
     const sender = { url: "chrome-extension://test/popup.html" }
     const protectionBypassExecution = {
-      version: 1,
+      version: 2,
       kind: "user_command",
       command: "add_account",
       surface: "popup",
@@ -206,7 +206,7 @@ describe("setupRuntimeMessageListeners routing", () => {
         {
           action: RuntimeActionIds.ProtectionBypassExecuteTask,
           execution: {
-            version: 1,
+            version: 2,
             kind: "user_command",
             command: "add_account",
             surface: "popup",

@@ -2,8 +2,8 @@ import {
   PROTECTION_BYPASS_EXECUTION_KINDS,
   PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_SURFACES,
+  type ProtectionBypassAutomaticFeature,
   type ProtectionBypassAutomaticTrigger,
-  type ProtectionBypassFeature,
   type ProtectionBypassSurface,
   type ProtectionBypassUserCommand,
 } from "~/services/protectionBypass/contracts"
@@ -22,7 +22,7 @@ export function userCommandExecution(
 }
 
 export function automaticExecution(
-  feature: ProtectionBypassFeature,
+  feature: ProtectionBypassAutomaticFeature,
   trigger: ProtectionBypassAutomaticTrigger,
   surface: ProtectionBypassSurface = PROTECTION_BYPASS_SURFACES.Background,
 ) {

@@ -87,9 +87,9 @@ const buildAccountTokenInput = (
 })
 
 const sessionResyncExecution = {
-  version: 1 as const,
+  version: 2 as const,
   kind: "automatic" as const,
-  feature: "session_resync" as const,
+  feature: "managed_site_channels" as const,
   trigger: "background_recovery" as const,
   surface: "background" as const,
 }
@@ -230,7 +230,7 @@ describe("managed-site token batch export", () => {
     })
     const token = buildAccountToken()
     const protectionBypassExecution = userCommandExecution(
-      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
       PROTECTION_BYPASS_SURFACES.Options,
     )
     const preview = await prepareManagedSiteTokenBatchExportPreview({

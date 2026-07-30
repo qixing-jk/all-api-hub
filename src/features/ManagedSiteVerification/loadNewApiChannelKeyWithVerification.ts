@@ -17,6 +17,9 @@ import type { OpenNewApiManagedVerificationParams } from "./useNewApiManagedVeri
 
 interface LoadNewApiChannelKeyWithVerificationParams {
   channelId: number
+  command:
+    | typeof PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys
+    | typeof PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels
   label?: string
   requestKind?: OpenNewApiManagedVerificationParams["kind"]
   config: Pick<
@@ -39,7 +42,7 @@ export async function loadNewApiChannelKeyWithVerification(
 ): Promise<boolean> {
   const loadKey = async () => {
     const key = await withProtectionBypassUserCommand(
-      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      params.command,
       PROTECTION_BYPASS_SURFACES.Options,
       async (protectionBypassExecution) =>
         await fetchNewApiChannelKey({

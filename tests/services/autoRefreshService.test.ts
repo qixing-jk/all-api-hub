@@ -259,7 +259,7 @@ describe("AutoRefreshService", () => {
 
       expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(false, {
         protectionBypassExecution: expect.objectContaining({
-          version: 1,
+          version: 2,
           kind: "automatic",
           feature: "account_refresh",
           trigger: "scheduled",
@@ -642,19 +642,19 @@ describe("auto-refresh typed message resolvers", () => {
     it.each([
       null,
       {
-        version: 2,
+        version: 1,
         kind: "user_command",
         command: "refresh_all_accounts",
         surface: "options",
       },
       {
-        version: 1,
+        version: 2,
         kind: "user_command",
         command: "unknown",
         surface: "options",
       },
       {
-        version: 1,
+        version: 2,
         kind: "automatic",
         feature: "unknown",
         trigger: "scheduled",
@@ -675,7 +675,7 @@ describe("auto-refresh typed message resolvers", () => {
     it("should reject a well-formed command from another workflow", async () => {
       const response = await resolveAutoRefreshRefreshNowMessage({
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "user_command",
           command: "manual_checkin",
           surface: "options",
@@ -853,7 +853,7 @@ describe("auto-refresh typed message resolvers", () => {
       refreshHandler!({
         data: {
           protectionBypassExecution: {
-            version: 1,
+            version: 2,
             kind: "user_command",
             command: "unknown",
             surface: "options",
@@ -868,7 +868,7 @@ describe("auto-refresh typed message resolvers", () => {
       refreshHandler!({
         data: {
           protectionBypassExecution: {
-            version: 1,
+            version: 2,
             kind: "user_command",
             command: "manual_checkin",
             surface: "options",

@@ -58,7 +58,7 @@ describe("Sub2API token re-sync", () => {
   it("passes popup source to the browser-session reader", async () => {
     mockResolveAccountBrowserSession.mockResolvedValueOnce(null)
     const protectionBypassExecution = {
-      version: 1 as const,
+      version: 2 as const,
       kind: "user_command" as const,
       command: "reauthenticate_account",
       surface: "options",

@@ -167,7 +167,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
         expect.objectContaining({
           requestId: expect.any(String),
           protectionBypassExecution: {
-            version: 1,
+            version: 2,
             kind: "automatic",
             feature: PROTECTION_BYPASS_FEATURES.Checkin,
             trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,

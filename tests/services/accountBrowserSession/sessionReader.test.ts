@@ -68,9 +68,9 @@ vi.mock("~/utils/browser/tempWindowFetch", () => ({
 }))
 
 const testExecution = {
-  version: 1,
+  version: 2,
   kind: "user_command",
-  command: "verify_protection",
+  command: "manage_api_keys",
   surface: "options",
 } as const
 
@@ -721,9 +721,9 @@ describe("account browser-session reader", () => {
 
   it("preserves protection bypass execution through the AutoDetectSite session read", async () => {
     const protectionBypassExecution = {
-      version: 1,
+      version: 2,
       kind: "user_command",
-      command: "verify_protection",
+      command: "manage_api_keys",
       surface: "options",
     } as const
     mockSendRuntimeMessage.mockResolvedValueOnce({

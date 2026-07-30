@@ -41,7 +41,7 @@ function isLdohUiLifecycleExecution(
   return (
     isProtectionBypassExecution(execution) &&
     execution.kind === "automatic" &&
-    execution.feature === PROTECTION_BYPASS_FEATURES.SiteDetection &&
+    execution.feature === PROTECTION_BYPASS_FEATURES.LdohSiteLookup &&
     execution.trigger === PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle &&
     (execution.surface === TEMP_WINDOW_REQUEST_SOURCES.Popup ||
       execution.surface === TEMP_WINDOW_REQUEST_SOURCES.Options)
@@ -158,7 +158,7 @@ async function refreshLdohSiteListCache(
 export function repairLdohSiteListCache() {
   return refreshLdohSiteListCache(
     createAutomaticProtectionBypassExecution(
-      PROTECTION_BYPASS_FEATURES.SiteDetection,
+      PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
       PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
       TEMP_WINDOW_REQUEST_SOURCES.Background,
     ),

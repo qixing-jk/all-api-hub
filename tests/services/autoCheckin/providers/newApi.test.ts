@@ -65,7 +65,7 @@ const mockAccount = buildSiteAccount({
 const DEFAULT_PROVIDER_CONTEXT = {
   tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
   protectionBypassExecution: {
-    version: 1,
+    version: 2,
     kind: "user_command",
     command: "manual_checkin",
     surface: "options",
@@ -178,7 +178,7 @@ describe("newApiProvider", () => {
       const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "user_command",
           command: "manual_checkin",
           surface: "options",
@@ -1274,7 +1274,7 @@ describe("newApiProvider", () => {
       const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "user_command",
           command: "manual_checkin",
           surface: "options",

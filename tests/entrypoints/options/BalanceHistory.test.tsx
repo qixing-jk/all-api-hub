@@ -103,7 +103,7 @@ vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
         command: string,
         surface: string,
         work: (execution: unknown) => Promise<unknown>,
-      ) => work({ version: 1, kind: "user_command", command, surface }),
+      ) => work({ version: 2, kind: "user_command", command, surface }),
     ),
   }
 })
@@ -700,7 +700,7 @@ describe("BalanceHistory options page", () => {
           {
             accountIds: ["a1"],
             protectionBypassExecution: expect.objectContaining({
-              version: 1,
+              version: 2,
               kind: "user_command",
               command: PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
               surface: PROTECTION_BYPASS_SURFACES.Options,
@@ -890,7 +890,7 @@ describe("BalanceHistory options page", () => {
           BalanceHistoryMessageTypes.RefreshNow,
           {
             protectionBypassExecution: expect.objectContaining({
-              version: 1,
+              version: 2,
               kind: "user_command",
               command: PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
               surface: PROTECTION_BYPASS_SURFACES.Options,

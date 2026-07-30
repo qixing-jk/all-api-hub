@@ -11,7 +11,7 @@ import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {
   INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
-  isRefreshAllAccountsProtectionBypassExecution,
+  isAutoRefreshProtectionBypassExecution,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
@@ -264,7 +264,7 @@ export function setupAutoRefreshMessagingListeners() {
       AutoRefreshMessageTypes.RefreshNow,
       async ({ data }) => {
         if (
-          !isRefreshAllAccountsProtectionBypassExecution(
+          !isAutoRefreshProtectionBypassExecution(
             data?.protectionBypassExecution,
           )
         ) {
@@ -312,7 +312,7 @@ export async function resolveAutoRefreshRefreshNowMessage(
 ): Promise<AutoRefreshRefreshNowResponse> {
   try {
     if (
-      !isRefreshAllAccountsProtectionBypassExecution(
+      !isAutoRefreshProtectionBypassExecution(
         request?.protectionBypassExecution,
       )
     ) {

@@ -880,9 +880,9 @@ describe("fetchDisplayAccountTokens", () => {
     const token = { id: 1, key: "sk-masked", status: 1, name: "Masked" }
     const abortController = new AbortController()
     const protectionBypassExecution = {
-      version: 1,
+      version: 2,
       kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
-      command: PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
       surface: PROTECTION_BYPASS_SURFACES.Options,
     } as const
     resolveTokenKey.mockResolvedValue("sk-real")

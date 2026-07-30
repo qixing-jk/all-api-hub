@@ -80,7 +80,7 @@ describe("useAccountData enabled slices", () => {
       false,
       expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
-          version: 1,
+          version: 2,
           kind: "user_command",
         }),
       }),

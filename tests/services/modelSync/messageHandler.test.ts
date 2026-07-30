@@ -29,7 +29,7 @@ import {
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const MODEL_SYNC_EXECUTION = userCommandExecution(
-  PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+  PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
 )
 
 const WRONG_MODEL_SYNC_EXECUTION = userCommandExecution(
@@ -433,7 +433,7 @@ describe("ManagedSiteModelSync operation helpers", () => {
   it.each([
     { ...MODEL_SYNC_EXECUTION, command: "unknown_command" },
     { ...MODEL_SYNC_EXECUTION, surface: "unknown_surface" },
-    { ...MODEL_SYNC_EXECUTION, version: 2 },
+    { ...MODEL_SYNC_EXECUTION, version: 1 },
   ])("rejects malformed plain execution metadata: %j", async (execution) => {
     const executeSync = vi.spyOn(modelSyncScheduler, "executeSync")
     setupManagedSiteModelSyncMessagingListeners()

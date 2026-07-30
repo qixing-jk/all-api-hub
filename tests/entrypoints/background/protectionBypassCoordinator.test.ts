@@ -15,6 +15,7 @@ import {
   PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
   TEMP_CONTEXT_TASK_KINDS,
+  type ProtectionBypassAutomaticFeature,
   type ProtectionBypassExecution,
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
@@ -35,16 +36,16 @@ const allowedPolicy = {
 }
 
 const automaticExecution = {
-  version: 1,
+  version: 2,
   kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
-  feature: PROTECTION_BYPASS_FEATURES.SiteDetection,
+  feature: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
   trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
   surface: PROTECTION_BYPASS_SURFACES.Options,
 } as const
 
 const verificationExecution = {
   ...automaticExecution,
-  feature: PROTECTION_BYPASS_FEATURES.Verification,
+  feature: PROTECTION_BYPASS_FEATURES.KeyManagement,
 } as const
 
 const taskParams = {
@@ -177,8 +178,8 @@ describe("resolveProtectionBypassExecution", () => {
       PROTECTION_BYPASS_FEATURES.AccountOnboarding,
     ],
     [
-      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
-      PROTECTION_BYPASS_FEATURES.Verification,
+      PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
+      PROTECTION_BYPASS_FEATURES.KeyManagement,
     ],
   ] as const)("maps %s to %s", (command, feature) => {
     expect(
@@ -192,13 +193,13 @@ describe("resolveProtectionBypassExecution", () => {
   it("returns missing intent for undefined and invalid intent for malformed input", () => {
     expect(resolveProtectionBypassExecution(undefined)).toEqual({
       kind: "invalid",
-      reason: PROTECTION_BYPASS_DENIED_REASONS.MissingIntent,
+      reason: PROTECTION_BYPASS_DENIED_REASONS.MissingExecution,
     })
     expect(
-      resolveProtectionBypassExecution({ version: 1, kind: "user_command" }),
+      resolveProtectionBypassExecution({ version: 2, kind: "user_command" }),
     ).toEqual({
       kind: "invalid",
-      reason: PROTECTION_BYPASS_DENIED_REASONS.InvalidIntent,
+      reason: PROTECTION_BYPASS_DENIED_REASONS.InvalidExecution,
     })
   })
 
@@ -212,7 +213,7 @@ describe("resolveProtectionBypassExecution", () => {
 })
 
 describe("ProtectionBypassCoordinator", () => {
-  it("submits all nine registered task kinds through acquire-time authorization", async () => {
+  it("submits permitted tasks and preflights prohibited task kinds", async () => {
     const executeAuthorizedTask = vi.fn(
       async (
         _task,
@@ -231,26 +232,37 @@ describe("ProtectionBypassCoordinator", () => {
 
     for (const task of allTaskKinds) {
       const execution =
-        task.kind === TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch ||
-        task.kind === TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
+        task.kind === TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch
           ? userCommandExecution(PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount)
-          : task.kind === TEMP_CONTEXT_TASK_KINDS.TurnstileFetch ||
-              task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction
-            ? userCommandExecution(
-                PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
-              )
-            : userCommandExecution(
-                PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
-              )
+          : task.kind === TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch ||
+              task.kind ===
+                TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction
+            ? userCommandExecution(PROTECTION_BYPASS_USER_COMMANDS.AddAccount)
+            : task.kind === TEMP_CONTEXT_TASK_KINDS.TurnstileFetch ||
+                task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction
+              ? userCommandExecution(
+                  PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+                )
+              : task.kind === TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead
+                ? userCommandExecution(
+                    PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
+                  )
+                : userCommandExecution(
+                    PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+                  )
       await expect(
         coordinator.execute({
           task: withExecution(task, execution),
           execution,
         }),
-      ).resolves.toEqual({ success: true })
+      ).resolves.toMatchObject({
+        success:
+          task.kind !== TEMP_CONTEXT_TASK_KINDS.RenderedTitle &&
+          task.kind !== TEMP_CONTEXT_TASK_KINDS.OpenContext,
+      })
     }
 
-    expect(executeAuthorizedTask).toHaveBeenCalledTimes(allTaskKinds.length)
+    expect(executeAuthorizedTask).toHaveBeenCalledTimes(allTaskKinds.length - 2)
   })
 
   it("executes plain user-command intent without consulting sender ownership", async () => {
@@ -413,31 +425,73 @@ describe("ProtectionBypassCoordinator", () => {
     )
   })
 
-  it("denies malformed and missing outer intent through policy", async () => {
+  it("returns missing and invalid execution without pool submission", async () => {
     const coordinator = createDecisionCoordinator()
-    for (const execution of [undefined, { version: 1, kind: "user_command" }]) {
+    for (const execution of [undefined, { version: 2, kind: "user_command" }]) {
       await expect(
         coordinator.execute({
           task: fetchTask(automaticExecution),
           execution,
         } as any),
-      ).resolves.toEqual({
+      ).resolves.toMatchObject({
         success: false,
         code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
       })
     }
   })
 
+  it("rejects v1 execution before policy, capability, resource, or pool work", async () => {
+    const readPolicy = vi.fn()
+    const resolveCapability = vi.fn()
+    const validateNewApiSessionReadResource = vi.fn()
+    const executeAuthorizedTask = vi.fn()
+    const recordDecision = vi.fn()
+
+    const v1Execution = {
+      version: 1,
+      kind: "automatic",
+      feature: "account_refresh",
+      trigger: "scheduled",
+      surface: "background",
+    }
+
+    expect(resolveProtectionBypassExecution(v1Execution)).toEqual({
+      kind: "invalid",
+      reason: PROTECTION_BYPASS_DENIED_REASONS.InvalidExecution,
+    })
+
+    const response = await createDecisionCoordinator({
+      readPolicy,
+      resolveCapability,
+      validateNewApiSessionReadResource,
+      executeAuthorizedTask,
+      recordDecision,
+    }).execute({
+      task: fetchTask(automaticExecution),
+      execution: v1Execution,
+    } as any)
+
+    expect(response).toMatchObject({
+      success: false,
+      code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+    })
+    expect(readPolicy).not.toHaveBeenCalled()
+    expect(resolveCapability).not.toHaveBeenCalled()
+    expect(validateNewApiSessionReadResource).not.toHaveBeenCalled()
+    expect(executeAuthorizedTask).not.toHaveBeenCalled()
+    expect(recordDecision).not.toHaveBeenCalled()
+  })
+
   it.each([
-    ["missing", undefined, PROTECTION_BYPASS_DENIED_REASONS.MissingIntent],
+    ["missing", undefined, PROTECTION_BYPASS_DENIED_REASONS.MissingExecution],
     [
       "malformed",
-      { version: 1, kind: "user_command" },
-      PROTECTION_BYPASS_DENIED_REASONS.InvalidIntent,
+      { version: 2, kind: "user_command" },
+      PROTECTION_BYPASS_DENIED_REASONS.InvalidExecution,
     ],
   ])(
     "skips current-resource I/O for %s New API session-read intent",
-    async (_case, execution, reason) => {
+    async (_case, execution, _reason) => {
       const validateNewApiSessionReadResource = vi.fn().mockResolvedValue(true)
       const recordDecision = vi.fn().mockResolvedValue(undefined)
 
@@ -457,39 +511,59 @@ describe("ProtectionBypassCoordinator", () => {
           },
           execution,
         } as any),
-      ).resolves.toEqual({
+      ).resolves.toMatchObject({
         success: false,
         code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
       })
       expect(validateNewApiSessionReadResource).not.toHaveBeenCalled()
-      expect(recordDecision).toHaveBeenCalledTimes(1)
-      expect(recordDecision).toHaveBeenCalledWith(
-        expect.objectContaining({
-          decision: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
-          denialReason: reason,
-        }),
-      )
+      expect(recordDecision).not.toHaveBeenCalled()
     },
   )
 
-  it("denies a task outside the command-derived feature matrix", async () => {
+  it("preflights a task outside the command-derived feature matrix", async () => {
+    const readPolicy = vi.fn().mockResolvedValue(allowedPolicy)
+    const resolveCapability = vi.fn()
+    const executeAuthorizedTask = vi.fn()
+    const recordDecision = vi.fn().mockResolvedValue(undefined)
     const execution = userCommandExecution(
-      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
     )
     await expect(
-      createDecisionCoordinator().execute({
-        task: fetchTask(execution),
+      createDecisionCoordinator({
+        readPolicy,
+        resolveCapability,
+        executeAuthorizedTask,
+        recordDecision,
+      }).execute({
+        task: {
+          kind: TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
+          params: {
+            origin: "https://example.invalid",
+            action: "channel_key",
+            userId: "example-user",
+            channelId: 12,
+          },
+        },
         execution,
       }),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       success: false,
       code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
     })
+    expect(readPolicy).not.toHaveBeenCalled()
+    expect(resolveCapability).not.toHaveBeenCalled()
+    expect(executeAuthorizedTask).not.toHaveBeenCalled()
+    expect(recordDecision).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        decision: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+        denialReason: PROTECTION_BYPASS_DENIED_REASONS.TaskNotPermitted,
+      }),
+    )
   })
 
   it("checks the exact New API origin, user, and channel at acquire time", async () => {
     const execution = userCommandExecution(
-      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
     )
     const validateNewApiSessionReadResource = vi.fn().mockResolvedValue(true)
     const response = await createDecisionCoordinator({
@@ -517,7 +591,7 @@ describe("ProtectionBypassCoordinator", () => {
 
   it("fails closed when the current New API resource is stale", async () => {
     const execution = userCommandExecution(
-      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
     )
     const response = await createDecisionCoordinator({
       validateNewApiSessionReadResource: vi.fn().mockResolvedValue(false),
@@ -548,7 +622,7 @@ describe("ProtectionBypassCoordinator", () => {
     const recordDecision = vi.fn().mockResolvedValue(undefined)
     let resourceIsCurrent = true
     const execution = userCommandExecution(
-      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
     )
 
     const responsePromise = createProtectionBypassCoordinator({
@@ -632,7 +706,7 @@ describe("ProtectionBypassCoordinator", () => {
   it("normalizes resource-validator rejection to one controlled stale denial", async () => {
     const recordDecision = vi.fn().mockResolvedValue(undefined)
     const execution = userCommandExecution(
-      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
     )
 
     await expect(
@@ -722,7 +796,7 @@ describe("ProtectionBypassCoordinator", () => {
     const recordStarted = createDeferred<void>()
     const neverFinishes = new Promise<void>(() => undefined)
     const acquired = vi.fn()
-    const task = withExecution(allTaskKinds[7], verificationExecution)
+    const task = withExecution(allTaskKinds[6], verificationExecution)
     const coordinator = createDecisionCoordinator({
       executeAuthorizedTask: vi.fn(
         async (
@@ -760,7 +834,7 @@ describe("ProtectionBypassCoordinator", () => {
 
   it("records the actual acquired adapter instead of the policy preference", async () => {
     const recordDecision = vi.fn().mockResolvedValue(undefined)
-    const task = withExecution(allTaskKinds[7], verificationExecution)
+    const task = withExecution(allTaskKinds[6], verificationExecution)
 
     await createDecisionCoordinator({
       resolveCapability: vi.fn().mockResolvedValue({
@@ -797,7 +871,7 @@ describe("ProtectionBypassCoordinator", () => {
 
   it("records acquisition failure as one unavailable outcome without an adapter", async () => {
     const recordDecision = vi.fn().mockResolvedValue(undefined)
-    const task = withExecution(allTaskKinds[7], verificationExecution)
+    const task = withExecution(allTaskKinds[6], verificationExecution)
 
     await createDecisionCoordinator({
       resolveCapability: vi.fn().mockResolvedValue({
@@ -980,9 +1054,9 @@ describe("ProtectionBypassCoordinator", () => {
 
   it("binds queued policy, presentation, and telemetry to one intent snapshot", async () => {
     const mutableExecution = { ...automaticExecution } as {
-      version: 1
+      version: 2
       kind: typeof PROTECTION_BYPASS_EXECUTION_KINDS.Automatic
-      feature: (typeof PROTECTION_BYPASS_FEATURES)[keyof typeof PROTECTION_BYPASS_FEATURES]
+      feature: ProtectionBypassAutomaticFeature
       trigger: (typeof PROTECTION_BYPASS_AUTOMATIC_TRIGGERS)[keyof typeof PROTECTION_BYPASS_AUTOMATIC_TRIGGERS]
       surface: (typeof PROTECTION_BYPASS_SURFACES)[keyof typeof PROTECTION_BYPASS_SURFACES]
     }
@@ -1038,13 +1112,13 @@ describe("ProtectionBypassCoordinator", () => {
     expect(observedDecision).toEqual([
       expect.objectContaining({
         kind: PROTECTION_BYPASS_DECISION_RESULTS.Allowed,
-        feature: PROTECTION_BYPASS_FEATURES.SiteDetection,
+        feature: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
         surface: PROTECTION_BYPASS_SURFACES.Options,
       }),
     ])
     expect(recordDecision).toHaveBeenCalledWith(
       expect.objectContaining({
-        feature: PROTECTION_BYPASS_FEATURES.SiteDetection,
+        feature: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
         invocationKind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
         automaticTrigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
         decision: PROTECTION_BYPASS_DECISION_RESULTS.Allowed,
@@ -1053,27 +1127,24 @@ describe("ProtectionBypassCoordinator", () => {
   })
 
   it.each([
-    [undefined, PROTECTION_BYPASS_DENIED_REASONS.MissingIntent],
+    [undefined, PROTECTION_BYPASS_DENIED_REASONS.MissingExecution],
     [
-      { version: 1, kind: "user_command" },
-      PROTECTION_BYPASS_DENIED_REASONS.InvalidIntent,
+      { version: 2, kind: "user_command" },
+      PROTECTION_BYPASS_DENIED_REASONS.InvalidExecution,
     ],
-  ])("records controlled %s denial telemetry", async (execution, reason) => {
-    const recordDecision = vi.fn().mockResolvedValue(undefined)
+  ])(
+    "does not fabricate telemetry for %s execution",
+    async (execution, _reason) => {
+      const recordDecision = vi.fn().mockResolvedValue(undefined)
 
-    await createDecisionCoordinator({ recordDecision }).execute({
-      task: fetchTask(automaticExecution),
-      execution,
-    } as any)
+      await createDecisionCoordinator({ recordDecision }).execute({
+        task: fetchTask(automaticExecution),
+        execution,
+      } as any)
 
-    expect(recordDecision).toHaveBeenCalledWith(
-      expect.objectContaining({
-        invocationKind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
-        decision: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
-        denialReason: reason,
-      }),
-    )
-  })
+      expect(recordDecision).not.toHaveBeenCalled()
+    },
+  )
 
   it("rejects malformed task envelopes before execution", async () => {
     const executeAuthorizedTask = vi.fn()

@@ -222,7 +222,7 @@ class ModelSyncScheduler {
       }),
       protectionBypassExecution ??
         createAutomaticProtectionBypassExecution(
-          PROTECTION_BYPASS_FEATURES.SessionResync,
+          PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
           trigger,
           PROTECTION_BYPASS_SURFACES.Background,
         ),

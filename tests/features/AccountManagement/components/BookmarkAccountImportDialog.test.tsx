@@ -279,7 +279,7 @@ describe("BookmarkAccountImportDialog", () => {
         command: unknown,
         surface: unknown,
         work: (execution: unknown) => Promise<unknown>,
-      ) => work({ version: 1, kind: "user_command", command, surface }),
+      ) => work({ version: 2, kind: "user_command", command, surface }),
     )
   })
 
@@ -1004,7 +1004,7 @@ describe("BookmarkAccountImportDialog", () => {
     expect(
       runBookmarkAccountImportMock.mock.calls[0][0].protectionBypassExecution,
     ).toEqual({
-      version: 1,
+      version: 2,
       kind: "user_command",
       command: "add_account",
       surface: "background",

@@ -63,7 +63,7 @@ describe("AnyRouter API service", () => {
   const backgroundProviderContext = {
     tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
     protectionBypassExecution: {
-      version: 1,
+      version: 2,
       kind: "automatic",
       feature: PROTECTION_BYPASS_FEATURES.Checkin,
       trigger: "scheduled",

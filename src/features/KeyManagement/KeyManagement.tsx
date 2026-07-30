@@ -245,9 +245,7 @@ export default function KeyManagement(props: {
       if (!targetAccountId) return
 
       await withProtectionBypassUserCommand(
-        targetAccountId === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
-          ? PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts
-          : PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
+        PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
         PROTECTION_BYPASS_SURFACES.Options,
         async (protectionBypassExecution) => {
           await loadTokens(accountId, { protectionBypassExecution })
@@ -259,7 +257,7 @@ export default function KeyManagement(props: {
 
   const handleRefreshManagedSiteStatuses = useCallback(async () => {
     await withProtectionBypassUserCommand(
-      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
       PROTECTION_BYPASS_SURFACES.Options,
       async (protectionBypassExecution) => {
         await refreshManagedSiteTokenStatuses({
@@ -299,6 +297,7 @@ export default function KeyManagement(props: {
 
       await loadNewApiChannelKeyWithVerification({
         channelId: candidateChannel.id,
+        command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
         label: token.name,
         requestKind: "token",
         config: {
@@ -328,7 +327,7 @@ export default function KeyManagement(props: {
 
     const refreshedStatus =
       (await withProtectionBypassUserCommand(
-        PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+        PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
         PROTECTION_BYPASS_SURFACES.Options,
         async (protectionBypassExecution) =>
           await refreshManagedSiteTokenStatusForToken(token, {
@@ -358,7 +357,7 @@ export default function KeyManagement(props: {
       },
       onVerified: async () => {
         await withProtectionBypassUserCommand(
-          PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+          PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
           PROTECTION_BYPASS_SURFACES.Options,
           async (protectionBypassExecution) => {
             await refreshManagedSiteTokenStatusForToken(token, {

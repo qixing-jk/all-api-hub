@@ -63,7 +63,7 @@ const {
 })
 
 const modelSyncExecution = userCommandExecution(
-  PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+  PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
 )
 
 vi.mock("react-hot-toast", () => ({
@@ -410,7 +410,7 @@ describe("ManagedSiteModelSync page", () => {
       )
     })
     expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
-      "verify_protection",
+      "sync_managed_site_models",
       "options",
       expect.any(Function),
     )
@@ -465,7 +465,7 @@ describe("ManagedSiteModelSync page", () => {
 
       await waitFor(() => {
         expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
-          "verify_protection",
+          "sync_managed_site_models",
           "options",
           expect.any(Function),
         )
@@ -599,7 +599,7 @@ describe("ManagedSiteModelSync page", () => {
 
     await waitFor(() => {
       expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
-        "verify_protection",
+        "sync_managed_site_models",
         "options",
         expect.any(Function),
       )

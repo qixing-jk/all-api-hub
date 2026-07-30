@@ -134,7 +134,7 @@ describe("AutoCheckin quick run", () => {
         command: unknown,
         surface: unknown,
         work: (execution: unknown) => Promise<unknown>,
-      ) => work({ version: 1, kind: "user_command", command, surface }),
+      ) => work({ version: 2, kind: "user_command", command, surface }),
     )
   })
 
@@ -299,7 +299,7 @@ describe("AutoCheckin quick run", () => {
       AutoCheckinMessageTypes.RunNow,
       {
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "user_command",
           command: "manual_checkin",
           surface: "popup",
@@ -409,7 +409,7 @@ describe("AutoCheckin quick run", () => {
         dryRun: true,
         debug: true,
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "automatic",
           feature: PROTECTION_BYPASS_FEATURES.Checkin,
           trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
@@ -423,7 +423,7 @@ describe("AutoCheckin quick run", () => {
         requestId: expect.any(String),
         debug: true,
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "automatic",
           feature: PROTECTION_BYPASS_FEATURES.Checkin,
           trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,

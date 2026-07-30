@@ -33,9 +33,9 @@ const {
   withProtectionBypassUserCommandMock: vi.fn(
     async (_command, _surface, work) =>
       await work({
-        version: 1,
+        version: 2,
         kind: "user_command",
-        command: "verify_protection",
+        command: "manage_site_channels",
         surface: "options",
       }),
   ),
@@ -320,15 +320,15 @@ describe("ChannelDialog advisory verification action", () => {
       7,
       {
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "user_command",
-          command: "verify_protection",
+          command: "manage_site_channels",
           surface: "options",
         },
       },
     )
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
-      "verify_protection",
+      "manage_site_channels",
       "options",
       expect.any(Function),
     )

@@ -151,7 +151,7 @@ describe("productAnalyticsState", () => {
     await productAnalyticsState.replaceShieldBypassSummaryState({
       day: "2026-05-11",
       promptShownCount: 9,
-      featureCounts: { verification: 9 },
+      featureCounts: { key_management: 9 },
       decisionCounts: { allowed: 9 },
     })
 

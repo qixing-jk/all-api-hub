@@ -60,9 +60,9 @@ describe("LdohSiteLookupProvider refresh intent", () => {
       expect(requestLdohSiteLookupRefreshSitesMock).toHaveBeenCalledWith({
         maxAttempts: 1,
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "automatic",
-          feature: PROTECTION_BYPASS_FEATURES.SiteDetection,
+          feature: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
           trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
           surface,
         },

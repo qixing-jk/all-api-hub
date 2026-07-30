@@ -100,7 +100,7 @@ export function LdohSiteLookupProvider({ children }: { children: ReactNode }) {
         await requestLdohSiteLookupRefreshSites({
           maxAttempts: 1,
           protectionBypassExecution: createAutomaticProtectionBypassExecution(
-            PROTECTION_BYPASS_FEATURES.SiteDetection,
+            PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
             PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
             getCurrentTempWindowRequestSource(),
           ),

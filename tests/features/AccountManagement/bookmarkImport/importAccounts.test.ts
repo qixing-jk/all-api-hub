@@ -8,7 +8,7 @@ import { AuthTypeEnum } from "~/types"
 describe("runBookmarkAccountImport", () => {
   it("reuses one onboarding execution for every selected candidate", async () => {
     const protectionBypassExecution = {
-      version: 1,
+      version: 2,
       kind: "user_command",
       command: "add_account",
       surface: "options",

@@ -369,9 +369,9 @@ describe("dailyBalanceHistoryScheduler", () => {
       includeTodayCashflow: true,
       balanceHistoryCaptureSource: "alarm",
       protectionBypassExecution: expect.objectContaining({
-        version: 1,
+        version: 2,
         kind: "automatic",
-        feature: "account_refresh",
+        feature: "balance_history",
         trigger: "scheduled",
         surface: "background",
       }),
@@ -495,19 +495,19 @@ describe("dailyBalanceHistoryScheduler", () => {
 
   it.each([
     {
-      version: 2,
+      version: 1,
       kind: "user_command",
       command: "refresh_all_accounts",
       surface: "options",
     },
     {
-      version: 1,
+      version: 2,
       kind: "user_command",
       command: "unknown",
       surface: "options",
     },
     {
-      version: 1,
+      version: 2,
       kind: "automatic",
       feature: "account_refresh",
       trigger: "invalid",

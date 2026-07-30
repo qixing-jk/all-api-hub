@@ -227,9 +227,9 @@ describe("modelSyncScheduler additional scheduler flows", () => {
         }),
       ],
       {
-        version: 1,
+        version: 2,
         kind: "automatic",
-        feature: "session_resync",
+        feature: "managed_site_model_sync",
         trigger: "background_recovery",
         surface: "background",
       },

@@ -31,7 +31,7 @@ vi.mock("~/services/apiService/openrouter", () => ({
 
 const tempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Options
 const testExecution = {
-  version: 1,
+  version: 2,
   kind: "user_command",
   command: "add_account",
   surface: "options",
@@ -78,7 +78,7 @@ describe("OpenRouter account provisioning", () => {
 
   it("owns the canonical onboarding result mapping in the provider module", async () => {
     const protectionBypassExecution = {
-      version: 1 as const,
+      version: 2 as const,
       kind: "user_command" as const,
       command: "add_account",
       surface: "options",

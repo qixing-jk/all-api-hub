@@ -245,7 +245,7 @@ export default function ManagedSiteModelSync({
     work: (protectionBypassExecution: ProtectionBypassExecution) => Promise<T>,
   ) => {
     return await withProtectionBypassUserCommand(
-      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
       PROTECTION_BYPASS_SURFACES.Options,
       work,
     )

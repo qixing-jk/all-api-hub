@@ -8,11 +8,13 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
 import { CHANNEL_STATUS } from "~/types/newApi"
 
-const { resolveManagedUpstreamResourceFeatureCapabilitiesMock } = vi.hoisted(
-  () => ({
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock: vi.fn(),
-  }),
-)
+const {
+  getSiteTypeCapabilitiesMock,
+  resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+} = vi.hoisted(() => ({
+  getSiteTypeCapabilitiesMock: vi.fn(),
+  resolveManagedUpstreamResourceFeatureCapabilitiesMock: vi.fn(),
+}))
 
 vi.mock("~/services/models/modelMetadata", () => ({
   modelMetadataService: {
@@ -29,15 +31,10 @@ vi.mock("~/services/models/modelMetadata", () => ({
 const listChannelsMock = vi.fn()
 const updateChannelModelMappingMock = vi.fn()
 
-vi.mock("~/services/models/modelSync", () => {
-  class ModelSyncServiceMock {
-    listChannels = listChannelsMock
-    updateChannelModelMapping = updateChannelModelMappingMock
-  }
-  return {
-    ModelSyncService: ModelSyncServiceMock,
-  }
-})
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteTypeCapabilities: (...args: unknown[]) =>
+    getSiteTypeCapabilitiesMock(...args),
+}))
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   hasValidManagedSiteConfig: vi.fn(),
@@ -316,6 +313,14 @@ describe("ModelRedirectService.applyModelRedirect", () => {
       feature: "modelRedirect",
       reason: "feature-slice-disabled",
     })
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      managedSites: {
+        channels: {
+          list: listChannelsMock,
+          updateModelMapping: updateChannelModelMappingMock,
+        },
+      },
+    })
   })
 
   it("should return error when New API config is invalid", async () => {
@@ -399,10 +404,94 @@ describe("ModelRedirectService.applyModelRedirect", () => {
 
     const result = await ModelRedirectService.applyModelRedirect()
 
-    // Smoke-test the happy path without asserting on internal implementation details
-    expect(typeof result.success).toBe("boolean")
-    expect(result.updatedChannels).toBeGreaterThanOrEqual(0)
-    expect(Array.isArray(result.errors)).toBe(true)
+    expect(result).toMatchObject({
+      success: true,
+      updatedChannels: 1,
+      errors: [],
+    })
+    expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://example.com" }),
+      1,
+      ["openai/gpt-4o", "gpt-4o"],
+      { "gpt-4o": "openai/gpt-4o" },
+    )
+  })
+
+  it("deduplicates normalized existing and appended models before direct writes", async () => {
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      newApi: {
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      },
+      modelRedirect: {
+        ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
+        enabled: true,
+        standardModels: ["alpha"],
+      },
+    } as any)
+    listChannelsMock.mockResolvedValue({
+      items: [
+        {
+          id: 1,
+          name: "active-channel",
+          models: "alpha, alpha ,beta,alpha",
+        },
+      ],
+    })
+    vi.spyOn(
+      ModelRedirectService,
+      "generateModelMappingForChannel",
+    ).mockReturnValue({ " alpha ": "vendor/alpha", gamma: "vendor/gamma" })
+
+    await ModelRedirectService.applyModelRedirect()
+
+    expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://example.com" }),
+      1,
+      ["alpha", "beta", "gamma"],
+      { " alpha ": "vendor/alpha", gamma: "vendor/gamma" },
+    )
+  })
+
+  it("rejects search-only capabilities for preview and apply", async () => {
+    const searchChannelsMock = vi.fn().mockResolvedValue({ items: [] })
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      managedSites: {
+        channels: {
+          search: searchChannelsMock,
+          updateModelMapping: updateChannelModelMappingMock,
+        },
+      },
+    })
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      newApi: {
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      },
+      modelRedirect: {
+        ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
+        enabled: true,
+      },
+    } as any)
+
+    await expect(
+      ModelRedirectService.listManagedSiteChannels(),
+    ).resolves.toMatchObject({
+      success: false,
+      channels: [],
+      message: "Model redirect is not supported for this managed site",
+    })
+    await expect(
+      ModelRedirectService.applyModelRedirect(),
+    ).resolves.toMatchObject({
+      success: false,
+      updatedChannels: 0,
+      message: "Model redirect is not supported for this managed site",
+    })
+    expect(searchChannelsMock).not.toHaveBeenCalled()
+    expect(updateChannelModelMappingMock).not.toHaveBeenCalled()
   })
 
   it("uses resource detail drafts for model redirect writes when the resource feature is supported", async () => {
@@ -458,7 +547,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
           type: 1,
           key: "sk-real-key",
           base_url: "https://upstream.example.invalid",
-          models: ["openai/gpt-4o"],
+          models: ["openai/gpt-4o", " openai/gpt-4o "],
           groups: [],
           priority: 0,
           weight: 1,

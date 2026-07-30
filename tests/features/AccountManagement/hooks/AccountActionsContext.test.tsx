@@ -208,7 +208,7 @@ beforeEach(() => {
       command: string,
       surface: string,
       work: (execution: unknown) => Promise<unknown>,
-    ) => work({ version: 1, kind: "user_command", command, surface }),
+    ) => work({ version: 2, kind: "user_command", command, surface }),
   )
   Object.assign(navigator, {
     clipboard: {
@@ -450,7 +450,7 @@ describe("AccountActionsContext", () => {
     expect(mockRefreshAccount).toHaveBeenCalledWith("refresh-1", false, {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       protectionBypassExecution: expect.objectContaining({
-        version: 1,
+        version: 2,
         kind: "user_command",
       }),
     })
@@ -518,7 +518,7 @@ describe("AccountActionsContext", () => {
         work: (execution: unknown) => Promise<unknown>,
       ) => {
         await grantReady
-        return work({ version: 1, kind: "user_command", command, surface })
+        return work({ version: 2, kind: "user_command", command, surface })
       },
     )
     mockRefreshAccount.mockResolvedValueOnce({ refreshed: true })

@@ -10,7 +10,7 @@ import { OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH } from "~/services/apiAdapt
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const testExecution = {
-  version: 1,
+  version: 2,
   kind: "user_command",
   command: "add_account",
   surface: "options",
@@ -40,7 +40,7 @@ describe("OpenRouter Management Key action client", () => {
 
   it("routes create through the shared protected-task transport", async () => {
     const protectionBypassExecution = {
-      version: 1 as const,
+      version: 2 as const,
       kind: "user_command" as const,
       command: "add_account",
       surface: "options",

@@ -63,9 +63,9 @@ const buildExpectedAssessment = (overrides: Record<string, unknown> = {}) => ({
 })
 
 const sessionResyncExecution = {
-  version: 1 as const,
+  version: 2 as const,
   kind: "automatic" as const,
-  feature: "session_resync" as const,
+  feature: "managed_site_channels" as const,
   trigger: "background_recovery" as const,
   surface: "background" as const,
 }

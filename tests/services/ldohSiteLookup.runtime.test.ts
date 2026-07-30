@@ -19,9 +19,9 @@ vi.mock("~/utils/browser/browserApi", () => ({
 }))
 
 const UI_LIFECYCLE_EXECUTION = {
-  version: 1,
+  version: 2,
   kind: "automatic",
-  feature: "site_detection",
+  feature: "ldoh_site_lookup",
   trigger: "ui_lifecycle",
   surface: "options",
 } as const
@@ -59,9 +59,9 @@ describe("ldohSiteLookup runtime", () => {
 
   it("includes explicit site-detection execution in the typed refresh request", async () => {
     const protectionBypassExecution = {
-      version: 1,
+      version: 2,
       kind: "automatic",
-      feature: "site_detection",
+      feature: "ldoh_site_lookup",
       trigger: "ui_lifecycle",
       surface: "options",
     } as const

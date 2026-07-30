@@ -371,7 +371,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         {
           tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
           protectionBypassExecution: {
-            version: 1,
+            version: 2,
             kind: "user_command",
             command: "add_account",
             surface: "popup",

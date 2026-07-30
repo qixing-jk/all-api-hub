@@ -17,7 +17,7 @@ import {
 describe("protection bypass execution constructors", () => {
   it("builds a versioned automatic execution without inferring its intent", () => {
     const execution = createAutomaticProtectionBypassExecution(
-      PROTECTION_BYPASS_FEATURES.SiteDetection,
+      PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
       PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
       PROTECTION_BYPASS_SURFACES.ContentScript,
     )
@@ -25,7 +25,7 @@ describe("protection bypass execution constructors", () => {
     expect(execution).toEqual({
       version: PROTECTION_BYPASS_EXECUTION_VERSION,
       kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
-      feature: PROTECTION_BYPASS_FEATURES.SiteDetection,
+      feature: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
       trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
       surface: PROTECTION_BYPASS_SURFACES.ContentScript,
     })

@@ -1297,7 +1297,7 @@ describe("AccountDataContext actions", () => {
     mockCreateTag.mockImplementation(async (name: string) => {
       const created = { id: "tag-1", name }
       currentTagStore = {
-        version: 1,
+        version: 2,
         tagsById: { "tag-1": created },
       }
       return created
@@ -1305,14 +1305,14 @@ describe("AccountDataContext actions", () => {
     mockRenameTag.mockImplementation(async (tagId: string, name: string) => {
       const updated = { id: tagId, name }
       currentTagStore = {
-        version: 1,
+        version: 2,
         tagsById: { [tagId]: updated },
       }
       return updated
     })
     mockDeleteTag.mockImplementation(async () => {
       currentTagStore = {
-        version: 1,
+        version: 2,
         tagsById: {},
       }
       return { updatedAccounts: 2 }
@@ -1836,7 +1836,7 @@ describe("AccountDataContext refresh orchestration", () => {
     expect(mockRefreshAllAccounts).toHaveBeenCalledWith(true, {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       protectionBypassExecution: expect.objectContaining({
-        version: 1,
+        version: 2,
         kind: "user_command",
       }),
     })
@@ -1881,7 +1881,7 @@ describe("AccountDataContext refresh orchestration", () => {
     expect(mockRefreshDisabledAccounts).toHaveBeenCalledWith(true, {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       protectionBypassExecution: expect.objectContaining({
-        version: 1,
+        version: 2,
         kind: "user_command",
       }),
     })
@@ -2148,7 +2148,7 @@ describe("AccountDataContext refresh orchestration", () => {
       expect(mockRefreshAllAccounts).toHaveBeenCalledWith(false, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "automatic",
           feature: "account_refresh",
           trigger: "ui_lifecycle",
@@ -2196,7 +2196,7 @@ describe("AccountDataContext refresh orchestration", () => {
         expect(mockRefreshAllAccounts).toHaveBeenCalledWith(false, {
           tempWindowRequestSource: surface,
           protectionBypassExecution: {
-            version: 1,
+            version: 2,
             kind: "automatic",
             feature: "account_refresh",
             trigger: "ui_lifecycle",

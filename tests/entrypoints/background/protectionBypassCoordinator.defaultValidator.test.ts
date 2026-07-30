@@ -76,7 +76,7 @@ async function executeDefaultResourceValidation(
   })
   const exactResource = { ...resource, ...resourceOverride }
   const execution = userCommandExecution(
-    PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+    PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
   )
   const response = vi.fn()
 

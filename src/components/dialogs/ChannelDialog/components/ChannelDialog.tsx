@@ -361,13 +361,13 @@ export function ChannelDialog({
       })
     const resolution = options?.resolveHiddenKeys
       ? await withProtectionBypassUserCommand(
-          PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+          PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
           PROTECTION_BYPASS_SURFACES.Options,
           resolveDuplicate,
         )
       : await resolveDuplicate(
           createAutomaticProtectionBypassExecution(
-            PROTECTION_BYPASS_FEATURES.SessionResync,
+            PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
             PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
             getCurrentTempWindowRequestSource(),
           ),

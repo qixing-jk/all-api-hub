@@ -176,13 +176,13 @@ export function useManagedSiteTokenBatchExportDialog({
         const nextPreview =
           requestOrigin === PREVIEW_LOAD_ORIGINS.MANUAL
             ? await withProtectionBypassUserCommand(
-                PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+                PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
                 PROTECTION_BYPASS_SURFACES.Options,
                 preparePreview,
               )
             : await preparePreview(
                 createAutomaticProtectionBypassExecution(
-                  PROTECTION_BYPASS_FEATURES.SessionResync,
+                  PROTECTION_BYPASS_FEATURES.KeyManagement,
                   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
                   PROTECTION_BYPASS_SURFACES.Options,
                 ),
@@ -390,6 +390,7 @@ export function useManagedSiteTokenBatchExportDialog({
         try {
           const loadedImmediately = await loadNewApiChannelKeyWithVerification({
             channelId: candidate.id,
+            command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
             label: candidate.name,
             requestKind: "channel",
             config: {

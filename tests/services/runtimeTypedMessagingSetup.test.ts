@@ -18,7 +18,7 @@ const RETRY_CHECKIN_EXECUTION = userCommandExecution(
 )
 
 const UI_OPEN_CHECKIN_EXECUTION = {
-  version: 1,
+  version: 2,
   kind: "automatic",
   feature: PROTECTION_BYPASS_FEATURES.Checkin,
   trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
@@ -30,7 +30,7 @@ const ACCOUNT_REFRESH_EXECUTION = userCommandExecution(
 )
 
 const MODEL_SYNC_EXECUTION = userCommandExecution(
-  PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+  PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
 )
 
 const OPTIONS_SENDER = {
@@ -38,9 +38,9 @@ const OPTIONS_SENDER = {
 } as const
 
 const UI_LDOH_SITE_DETECTION_EXECUTION = {
-  version: 1,
+  version: 2,
   kind: "automatic",
-  feature: PROTECTION_BYPASS_FEATURES.SiteDetection,
+  feature: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
   trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
   surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
 } as const
@@ -359,9 +359,9 @@ describe("typed runtime messaging setup", () => {
       )({
         data: {
           protectionBypassExecution: {
-            version: 1,
+            version: 2,
             kind: "automatic",
-            feature: PROTECTION_BYPASS_FEATURES.SessionResync,
+            feature: PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
             trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
             surface: TEMP_WINDOW_REQUEST_SOURCES.Options,
           },
@@ -1091,7 +1091,7 @@ describe("typed runtime messaging setup", () => {
     const invalidUiRequests = [
       {
         execution: {
-          version: 1,
+          version: 2,
           kind: "user_command",
           command: "refresh_account",
           surface: "popup",
@@ -1148,9 +1148,9 @@ describe("typed runtime messaging setup", () => {
     expect(fetchApi).toHaveBeenCalledWith(
       expect.objectContaining({
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "automatic",
-          feature: "site_detection",
+          feature: "ldoh_site_lookup",
           trigger: "background_recovery",
           surface: TEMP_WINDOW_REQUEST_SOURCES.Background,
         },
@@ -1220,9 +1220,10 @@ describe("typed runtime messaging setup", () => {
         )
         const response = await protectionBypassCoordinator.execute({
           task: {
-            kind: "rendered_title",
+            kind: "api_fallback_fetch",
             params: {
               originUrl: "https://example.invalid",
+              fetchUrl: "https://example.invalid/api/ldoh/sites",
               requestId: "ldoh-continuation",
             },
           },
@@ -1262,7 +1263,7 @@ describe("typed runtime messaging setup", () => {
     expect(authorizeDecisions).toEqual([
       expect.objectContaining({
         kind: "allowed",
-        feature: PROTECTION_BYPASS_FEATURES.SiteDetection,
+        feature: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
         surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       }),
     ])

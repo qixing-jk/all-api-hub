@@ -582,7 +582,7 @@ export default function AccountActionButtons({
         "userId" in managedConfig
       ) {
         resolution = await withProtectionBypassUserCommand(
-          PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+          PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
           getCurrentTempWindowRequestSource(),
           async (protectionBypassExecution) =>
             await resolveManagedSiteChannelMatch({

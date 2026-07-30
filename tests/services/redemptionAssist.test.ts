@@ -511,9 +511,9 @@ describe("redemptionAssist post-redeem refresh", () => {
     expect(redeemCodeForAccount).toHaveBeenCalledWith("acc_1", "CODE_1")
     expect(refreshAccount).toHaveBeenCalledWith("acc_1", true, {
       protectionBypassExecution: expect.objectContaining({
-        version: 1,
+        version: 2,
         kind: "automatic",
-        feature: "account_refresh",
+        feature: "redemption_assist",
         trigger: "background_recovery",
         surface: "background",
       }),
@@ -570,9 +570,9 @@ describe("redemptionAssist post-redeem refresh", () => {
     expect(redeemCodeForAccount).toHaveBeenCalledWith("acc_2", "CODE_2")
     expect(refreshAccount).toHaveBeenCalledWith("acc_2", true, {
       protectionBypassExecution: expect.objectContaining({
-        version: 1,
+        version: 2,
         kind: "automatic",
-        feature: "account_refresh",
+        feature: "redemption_assist",
         trigger: "background_recovery",
         surface: "background",
       }),
@@ -614,9 +614,9 @@ describe("redemptionAssist post-redeem refresh", () => {
 
     expect(refreshAccount).toHaveBeenCalledWith("acc_3", true, {
       protectionBypassExecution: expect.objectContaining({
-        version: 1,
+        version: 2,
         kind: "automatic",
-        feature: "account_refresh",
+        feature: "redemption_assist",
         trigger: "background_recovery",
         surface: "background",
       }),
@@ -661,9 +661,9 @@ describe("redemptionAssist post-redeem refresh", () => {
     await vi.waitFor(() => {
       expect(refreshAccount).toHaveBeenCalledWith("acc_await", true, {
         protectionBypassExecution: expect.objectContaining({
-          version: 1,
+          version: 2,
           kind: "automatic",
-          feature: "account_refresh",
+          feature: "redemption_assist",
           trigger: "background_recovery",
           surface: "background",
         }),

@@ -20,17 +20,17 @@ const { fetchNewApiChannelKeyMock } = vi.hoisted(() => ({
 }))
 
 const SESSION_READ_EXECUTION = {
-  version: 1,
+  version: 2,
   kind: "automatic",
-  feature: "session_resync",
+  feature: "key_management",
   trigger: "ui_lifecycle",
   surface: "options",
 } as const
 
 const IMPORT_EXECUTION = {
-  version: 1,
+  version: 2,
   kind: "user_command",
-  command: "verify_protection",
+  command: "manage_api_keys",
   surface: "options",
 } as const
 

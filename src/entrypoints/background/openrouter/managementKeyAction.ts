@@ -15,6 +15,7 @@ import {
   type TempWindowOpenRouterManagementKeyCancelResult,
 } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
 import { normalizeOpenRouterManagementKeySecret } from "~/services/apiAdapters/openrouter/managementKeySecret"
+import { PROTECTION_BYPASS_DENIED_REASONS } from "~/services/protectionBypass/contracts"
 import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
 
 import {
@@ -39,8 +40,11 @@ type OpenRouterManagementKeyActionState = {
 }
 
 /** Fails closed when a non-runtime caller omits Coordinator authorization. */
-const denyMissingProtectionBypassIntent: AuthorizeTempContextAtAcquire =
-  async () => ({ kind: "denied", reason: "missing_intent" })
+const denyMissingProtectionBypassExecution: AuthorizeTempContextAtAcquire =
+  async () => ({
+    kind: "denied",
+    reason: PROTECTION_BYPASS_DENIED_REASONS.MissingExecution,
+  })
 
 const openRouterManagementKeyActions = new Map<
   string,
@@ -479,7 +483,7 @@ export async function handleTempWindowOpenRouterManagementKeyAction(
   sendResponse: (
     response: TempWindowOpenRouterManagementKeyActionResult,
   ) => void,
-  authorizeAtAcquire: AuthorizeTempContextAtAcquire = denyMissingProtectionBypassIntent,
+  authorizeAtAcquire: AuthorizeTempContextAtAcquire = denyMissingProtectionBypassExecution,
 ) {
   if (
     !request ||

@@ -149,7 +149,7 @@ const BASE_URL = "https://example.com/base/"
 const ENDPOINT = "/api/test"
 const API_URL = "https://example.com/base/api/test"
 const backgroundProtectionBypassExecution = {
-  version: 1,
+  version: 2,
   kind: "automatic",
   feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
   trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
@@ -1210,7 +1210,7 @@ describe("apiTransport request helpers", () => {
 
     let normalFetchCount = 0
     const protectionBypassExecution = {
-      version: 1,
+      version: 2,
       kind: "automatic",
       feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
       trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,

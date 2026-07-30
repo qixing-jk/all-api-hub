@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest"
 import { OPENROUTER_MANAGEMENT_KEY_LABEL_MAX_LENGTH } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
 import {
   getTempContextTaskMetadata,
+  isAutoRefreshProtectionBypassExecution,
   isManualModelSyncProtectionBypassExecution,
   isProtectionBypassExecution,
   isRefreshAllAccountsProtectionBypassExecution,
   isTempContextTask,
+  PROTECTION_BYPASS_AUTOMATIC_FEATURES,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_CAPABILITY_KINDS,
   PROTECTION_BYPASS_DECISION_RESULTS,
@@ -17,6 +19,7 @@ import {
   PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
   TEMP_CONTEXT_TASK_KINDS,
+  type ProtectionBypassExecution,
 } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 
@@ -95,12 +98,58 @@ const canonicalTasks = [
 ] as const
 
 describe("protection bypass runtime contracts", () => {
+  const staleExecution: ProtectionBypassExecution = {
+    // @ts-expect-error V2 execution metadata must not accept legacy versions.
+    version: 1,
+    kind: "user_command",
+    command: "refresh_account",
+    surface: "options",
+  }
+
+  const removedAutomaticFeature: ProtectionBypassExecution = {
+    version: 2,
+    kind: "automatic",
+    // @ts-expect-error Automatic execution must use the current automatic catalog.
+    feature: "session_resync",
+    trigger: "scheduled",
+    surface: "background",
+  }
+
+  it("keeps legacy execution fixtures outside the public type", () => {
+    expect(staleExecution).toBeDefined()
+    expect(removedAutomaticFeature).toBeDefined()
+  })
+
   it("keeps the execution wire contract stable", () => {
-    expect(PROTECTION_BYPASS_EXECUTION_VERSION).toBe(1)
+    expect(PROTECTION_BYPASS_EXECUTION_VERSION).toBe(2)
     expect(PROTECTION_BYPASS_EXECUTION_KINDS).toEqual({
       UserCommand: "user_command",
       Automatic: "automatic",
     })
+  })
+
+  it("keeps the closed product workflow catalog serialized in product order", () => {
+    expect(PROTECTION_BYPASS_FEATURES).toEqual({
+      AccountRefresh: "account_refresh",
+      BalanceHistory: "balance_history",
+      Checkin: "checkin",
+      RedemptionAssist: "redemption_assist",
+      LdohSiteLookup: "ldoh_site_lookup",
+      KeyManagement: "key_management",
+      ManagedSiteChannels: "managed_site_channels",
+      ManagedSiteModelSync: "managed_site_model_sync",
+      AccountOnboarding: "account_onboarding",
+    })
+    expect(Object.values(PROTECTION_BYPASS_AUTOMATIC_FEATURES)).toEqual([
+      "account_refresh",
+      "balance_history",
+      "checkin",
+      "redemption_assist",
+      "ldoh_site_lookup",
+      "key_management",
+      "managed_site_channels",
+      "managed_site_model_sync",
+    ])
   })
 
   it("accepts a serialized plain user-command execution", () => {
@@ -119,9 +168,50 @@ describe("protection bypass runtime contracts", () => {
   it("rejects the legacy opaque grant shape", () => {
     expect(
       isProtectionBypassExecution({
-        version: 1,
+        version: 2,
         kind: "user_command",
         grantId: "legacy",
+      }),
+    ).toBe(false)
+  })
+
+  it("rejects structurally valid v1 user-command and automatic executions", () => {
+    expect(
+      isProtectionBypassExecution({
+        version: 1,
+        kind: "user_command",
+        command: "refresh_account",
+        surface: "options",
+      }),
+    ).toBe(false)
+    expect(
+      isProtectionBypassExecution({
+        version: 1,
+        kind: "automatic",
+        feature: "account_refresh",
+        trigger: "scheduled",
+        surface: "background",
+      }),
+    ).toBe(false)
+  })
+
+  it("rejects removed automatic features", () => {
+    expect(
+      isProtectionBypassExecution({
+        version: 2,
+        kind: "automatic",
+        feature: "session_resync",
+        trigger: "scheduled",
+        surface: "background",
+      }),
+    ).toBe(false)
+    expect(
+      isProtectionBypassExecution({
+        version: 2,
+        kind: "automatic",
+        feature: "account_onboarding",
+        trigger: "scheduled",
+        surface: "background",
       }),
     ).toBe(false)
   })
@@ -139,10 +229,10 @@ describe("protection bypass runtime contracts", () => {
     ).toBe(false)
   })
 
-  it("classifies refresh-all user and automatic account-refresh intent", () => {
+  it("keeps refresh-now explicit while accepting automatic account refresh for auto-refresh", () => {
     expect(
       isRefreshAllAccountsProtectionBypassExecution({
-        version: 1,
+        version: PROTECTION_BYPASS_EXECUTION_VERSION,
         kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
         command: PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
         surface: PROTECTION_BYPASS_SURFACES.Options,
@@ -150,7 +240,16 @@ describe("protection bypass runtime contracts", () => {
     ).toBe(true)
     expect(
       isRefreshAllAccountsProtectionBypassExecution({
-        version: 1,
+        version: PROTECTION_BYPASS_EXECUTION_VERSION,
+        kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
+        feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+        trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+        surface: PROTECTION_BYPASS_SURFACES.Background,
+      }),
+    ).toBe(false)
+    expect(
+      isAutoRefreshProtectionBypassExecution({
+        version: PROTECTION_BYPASS_EXECUTION_VERSION,
         kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
         feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
         trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
@@ -167,18 +266,18 @@ describe("protection bypass runtime contracts", () => {
     ).toBe(false)
   })
 
-  it("classifies only verify-protection as manual model-sync intent", () => {
+  it("classifies only sync-managed-site-models as manual model-sync intent", () => {
     expect(
       isManualModelSyncProtectionBypassExecution({
-        version: 1,
+        version: PROTECTION_BYPASS_EXECUTION_VERSION,
         kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
-        command: PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+        command: PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
         surface: PROTECTION_BYPASS_SURFACES.Options,
       }),
     ).toBe(true)
     expect(
       isManualModelSyncProtectionBypassExecution({
-        version: 1,
+        version: PROTECTION_BYPASS_EXECUTION_VERSION,
         kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
         command: PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
         surface: PROTECTION_BYPASS_SURFACES.Options,
@@ -474,8 +573,8 @@ describe("protection bypass runtime contracts", () => {
     expect(PROTECTION_BYPASS_CAPABILITY_KINDS.PermissionRequired).toBe(
       "permission_required",
     )
-    expect(PROTECTION_BYPASS_DENIED_REASONS.OperationNotPermitted).toBe(
-      "operation_not_permitted",
+    expect(PROTECTION_BYPASS_DENIED_REASONS.TaskNotPermitted).toBe(
+      "task_not_permitted",
     )
   })
 })

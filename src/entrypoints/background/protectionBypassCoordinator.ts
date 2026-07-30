@@ -17,12 +17,13 @@ import {
 import {
   getTempContextTaskMetadata,
   isProtectionBypassExecution,
+  isProtectionBypassTaskPermitted,
   isTempContextTask,
   PROTECTION_BYPASS_CAPABILITY_KINDS,
   PROTECTION_BYPASS_DECISION_RESULTS,
   PROTECTION_BYPASS_DENIED_REASONS,
   PROTECTION_BYPASS_EXECUTION_KINDS,
-  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_USER_COMMAND_FEATURES,
   TEMP_CONTEXT_TASK_KINDS,
   type NewApiChannelKeyResource,
@@ -162,21 +163,31 @@ export function resolveProtectionBypassExecution(
   if (execution === undefined) {
     return {
       kind: "invalid",
-      reason: PROTECTION_BYPASS_DENIED_REASONS.MissingIntent,
+      reason: PROTECTION_BYPASS_DENIED_REASONS.MissingExecution,
     }
   }
   if (!isProtectionBypassExecution(execution)) {
     return {
       kind: "invalid",
-      reason: PROTECTION_BYPASS_DENIED_REASONS.InvalidIntent,
+      reason: PROTECTION_BYPASS_DENIED_REASONS.InvalidExecution,
     }
   }
   if (execution.kind === PROTECTION_BYPASS_EXECUTION_KINDS.Automatic) {
-    return Object.freeze({ ...execution })
+    return Object.freeze({ ...execution }) as Extract<
+      ResolvedProtectionBypassExecution,
+      { kind: typeof PROTECTION_BYPASS_EXECUTION_KINDS.Automatic }
+    >
   }
   return Object.freeze({
-    ...execution,
-    feature: PROTECTION_BYPASS_USER_COMMAND_FEATURES[execution.command],
+    version: PROTECTION_BYPASS_EXECUTION_VERSION,
+    kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
+    command:
+      execution.command as keyof typeof PROTECTION_BYPASS_USER_COMMAND_FEATURES,
+    feature:
+      PROTECTION_BYPASS_USER_COMMAND_FEATURES[
+        execution.command as keyof typeof PROTECTION_BYPASS_USER_COMMAND_FEATURES
+      ],
+    surface: execution.surface,
   })
 }
 
@@ -216,6 +227,43 @@ export function createProtectionBypassCoordinator({
       )
       const authorizedTask = task
 
+      if (resolvedExecution.kind === "invalid") {
+        return buildTaskFailure(
+          authorizedTask,
+          API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+        ) as TempContextTaskResult<TTask>
+      }
+
+      if (
+        !isProtectionBypassTaskPermitted(
+          resolvedExecution.feature,
+          authorizedTask.kind,
+        )
+      ) {
+        const summary: ProtectionBypassDecisionSummary = {
+          feature: resolvedExecution.feature,
+          invocationKind: resolvedExecution.kind,
+          ...(resolvedExecution.kind ===
+          PROTECTION_BYPASS_EXECUTION_KINDS.Automatic
+            ? { automaticTrigger: resolvedExecution.trigger }
+            : {}),
+          operation: getTempContextTaskMetadata(authorizedTask).operation,
+          decision: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+          denialReason: PROTECTION_BYPASS_DENIED_REASONS.TaskNotPermitted,
+        }
+        try {
+          void recordDecision(summary).catch(() => {
+            // Telemetry is best effort and must never change policy outcomes.
+          })
+        } catch {
+          // Dependency failures may also throw before returning a promise.
+        }
+        return buildTaskFailure(
+          authorizedTask,
+          API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+        ) as TempContextTaskResult<TTask>
+      }
+
       let finalDecision:
         | ReturnType<typeof evaluateProtectionBypassPolicy>
         | undefined
@@ -238,10 +286,7 @@ export function createProtectionBypassCoordinator({
         }
 
         let resourceIsCurrent = true
-        if (
-          resolvedExecution.kind !== "invalid" &&
-          authorizedTask.kind === TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead
-        ) {
+        if (authorizedTask.kind === TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead) {
           try {
             resourceIsCurrent = await validateNewApiSessionReadResource({
               origin: authorizedTask.params.origin,
@@ -267,13 +312,8 @@ export function createProtectionBypassCoordinator({
         if (hasRecordedDecision || !finalDecision) return
         hasRecordedDecision = true
         const summary: ProtectionBypassDecisionSummary = {
-          ...(resolvedExecution.kind !== "invalid"
-            ? { feature: resolvedExecution.feature }
-            : {}),
-          invocationKind:
-            resolvedExecution.kind !== "invalid"
-              ? resolvedExecution.kind
-              : PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
+          feature: resolvedExecution.feature,
+          invocationKind: resolvedExecution.kind,
           ...(resolvedExecution.kind ===
           PROTECTION_BYPASS_EXECUTION_KINDS.Automatic
             ? { automaticTrigger: resolvedExecution.trigger }
@@ -322,9 +362,7 @@ export function createProtectionBypassCoordinator({
 
           void executeAuthorizedTask(
             authorizedTask,
-            resolvedExecution.kind !== "invalid"
-              ? resolvedExecution.surface
-              : PROTECTION_BYPASS_SURFACES.Background,
+            resolvedExecution.surface,
             authorizeAtAcquire,
             sendResponse,
             reportOutcome,

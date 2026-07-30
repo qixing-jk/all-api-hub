@@ -12,7 +12,7 @@ import { AuthTypeEnum } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const testExecution = {
-  version: 1,
+  version: 2,
   kind: "user_command",
   command: "add_account",
   surface: "options",

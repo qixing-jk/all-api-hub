@@ -45,7 +45,7 @@ async function bestEffortRefreshAccountAfterSuccessfulRedeem(
   try {
     const result = await accountStorage.refreshAccount(accountId, true, {
       protectionBypassExecution: createAutomaticProtectionBypassExecution(
-        PROTECTION_BYPASS_FEATURES.AccountRefresh,
+        PROTECTION_BYPASS_FEATURES.RedemptionAssist,
         PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
         PROTECTION_BYPASS_SURFACES.Background,
       ),

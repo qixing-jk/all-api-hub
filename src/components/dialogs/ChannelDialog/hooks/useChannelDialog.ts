@@ -299,7 +299,7 @@ export function useChannelDialog() {
       models: params.models,
       key: params.key,
       protectionBypassExecution: createAutomaticProtectionBypassExecution(
-        PROTECTION_BYPASS_FEATURES.SessionResync,
+        PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
         PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
         getCurrentTempWindowRequestSource(),
       ),

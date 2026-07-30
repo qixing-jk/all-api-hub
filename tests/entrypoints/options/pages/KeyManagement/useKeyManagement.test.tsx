@@ -320,7 +320,7 @@ describe("useKeyManagement enabled account filtering", () => {
     await waitFor(() => expect(result.current.selectedAccount).toBe("all"))
   })
 
-  it("marks route-controlled token loading as automatic account refresh work", async () => {
+  it("marks route-controlled token loading as automatic key-management work", async () => {
     const account = createDisplayAccount({
       id: "route-account",
       name: "Route Account",
@@ -348,7 +348,7 @@ describe("useKeyManagement enabled account filtering", () => {
       expect.objectContaining({
         accountId: account.id,
         protectionBypassExecution: automaticExecution(
-          PROTECTION_BYPASS_FEATURES.AccountRefresh,
+          PROTECTION_BYPASS_FEATURES.KeyManagement,
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
           PROTECTION_BYPASS_SURFACES.Options,
         ),
@@ -1068,7 +1068,7 @@ describe("useKeyManagement enabled account filtering", () => {
           accountId: "sharedchat-status-acc",
         }),
         protectionBypassExecution: automaticExecution(
-          PROTECTION_BYPASS_FEATURES.SessionResync,
+          PROTECTION_BYPASS_FEATURES.KeyManagement,
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
           PROTECTION_BYPASS_SURFACES.Options,
         ),
@@ -2999,7 +2999,7 @@ describe("useKeyManagement enabled account filtering", () => {
         result.current.tokens[0]!,
         {
           protectionBypassExecution: userCommandExecution(
-            PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+            PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
           ),
         },
       )
@@ -3012,7 +3012,7 @@ describe("useKeyManagement enabled account filtering", () => {
           77: "verified-channel-key",
         },
         protectionBypassExecution: userCommandExecution(
-          PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+          PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
         ),
       }),
     )
@@ -3674,7 +3674,7 @@ describe("useKeyManagement enabled account filtering", () => {
       request: expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
           kind: "user_command",
-          command: PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
+          command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
           surface: PROTECTION_BYPASS_SURFACES.Options,
         }),
       }),
@@ -3685,7 +3685,7 @@ describe("useKeyManagement enabled account filtering", () => {
         expect.objectContaining({
           protectionBypassExecution: expect.objectContaining({
             kind: "automatic",
-            feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+            feature: PROTECTION_BYPASS_FEATURES.KeyManagement,
             trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
             surface: PROTECTION_BYPASS_SURFACES.Options,
           }),

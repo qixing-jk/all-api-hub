@@ -313,7 +313,7 @@ describe("tempWindowPool window fallback", () => {
       vi.fn().mockResolvedValue({
         kind: "allowed",
         adapter: "tab",
-        feature: "verification",
+        feature: "key_management",
         operation: "session_read",
         cause: "session_required",
         surface: "background",
@@ -459,7 +459,7 @@ describe("tempWindowPool window fallback", () => {
           },
           tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
           protectionBypassExecution: {
-            version: 1,
+            version: 2,
             kind: "user_command",
             command: "add_account",
             surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
@@ -521,7 +521,7 @@ describe("tempWindowPool window fallback", () => {
             },
             ...(suppressMinimize === undefined ? {} : { suppressMinimize }),
             protectionBypassExecution: {
-              version: 1,
+              version: 2,
               kind: "user_command",
               command: "add_account",
               surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
@@ -2486,7 +2486,7 @@ describe("tempWindowPool window fallback", () => {
     const authorizeAtAcquire = vi.fn(async () => ({
       kind: "allowed" as const,
       adapter: "tab" as const,
-      feature: "verification" as const,
+      feature: "key_management" as const,
       operation: "open_context" as const,
       cause: "explicit_context" as const,
       surface: "background" as const,
@@ -2558,7 +2558,7 @@ describe("tempWindowPool window fallback", () => {
       vi.fn(async () => ({
         kind: "allowed" as const,
         adapter: "tab" as const,
-        feature: "verification" as const,
+        feature: "key_management" as const,
         operation: "open_context" as const,
         cause: "explicit_context" as const,
         surface: "background" as const,
@@ -3230,7 +3230,7 @@ describe("tempWindowPool window fallback", () => {
     const authorizeAtAcquire = vi.fn(async () => ({
       kind: "allowed" as const,
       adapter: "tab" as const,
-      feature: "site_detection" as const,
+      feature: "ldoh_site_lookup" as const,
       operation: "session_read" as const,
       cause: "session_required" as const,
       surface: "background" as const,

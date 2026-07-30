@@ -22,7 +22,7 @@ import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const VERIFY_EXECUTION = userCommandExecution(
-  PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+  PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
 )
 
 const { generateNewApiTotpCodeMock, sendRuntimeMessageMock } = vi.hoisted(

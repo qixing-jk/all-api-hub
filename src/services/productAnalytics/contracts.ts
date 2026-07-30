@@ -88,11 +88,11 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION = {
     PROTECTION_BYPASS_DECISION_RESULTS.Denied,
   [PROTECTION_BYPASS_DENIED_REASONS.ManualFeatureDisabled]:
     PROTECTION_BYPASS_DECISION_RESULTS.Denied,
-  [PROTECTION_BYPASS_DENIED_REASONS.MissingIntent]:
+  [PROTECTION_BYPASS_DENIED_REASONS.MissingExecution]:
     PROTECTION_BYPASS_DECISION_RESULTS.Denied,
-  [PROTECTION_BYPASS_DENIED_REASONS.InvalidIntent]:
+  [PROTECTION_BYPASS_DENIED_REASONS.InvalidExecution]:
     PROTECTION_BYPASS_DECISION_RESULTS.Denied,
-  [PROTECTION_BYPASS_DENIED_REASONS.OperationNotPermitted]:
+  [PROTECTION_BYPASS_DENIED_REASONS.TaskNotPermitted]:
     PROTECTION_BYPASS_DECISION_RESULTS.Denied,
   [PROTECTION_BYPASS_DENIED_REASONS.ResourceStale]:
     PROTECTION_BYPASS_DECISION_RESULTS.Denied,
@@ -139,11 +139,14 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS = {
 /** Fixed scalar properties emitted by the bounded daily bypass summary. */
 export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES = [
   "protection_bypass_feature_account_refresh_count",
-  "protection_bypass_feature_account_onboarding_count",
+  "protection_bypass_feature_balance_history_count",
   "protection_bypass_feature_checkin_count",
-  "protection_bypass_feature_site_detection_count",
-  "protection_bypass_feature_session_resync_count",
-  "protection_bypass_feature_verification_count",
+  "protection_bypass_feature_redemption_assist_count",
+  "protection_bypass_feature_ldoh_site_lookup_count",
+  "protection_bypass_feature_key_management_count",
+  "protection_bypass_feature_managed_site_channels_count",
+  "protection_bypass_feature_managed_site_model_sync_count",
+  "protection_bypass_feature_account_onboarding_count",
   "protection_bypass_feature_other_count",
   "protection_bypass_invocation_user_command_count",
   "protection_bypass_invocation_automatic_count",
@@ -168,9 +171,9 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES = [
   "protection_bypass_denial_feature_disabled_count",
   "protection_bypass_denial_surface_disabled_count",
   "protection_bypass_denial_manual_feature_disabled_count",
-  "protection_bypass_denial_missing_intent_count",
-  "protection_bypass_denial_invalid_intent_count",
-  "protection_bypass_denial_operation_not_permitted_count",
+  "protection_bypass_denial_missing_execution_count",
+  "protection_bypass_denial_invalid_execution_count",
+  "protection_bypass_denial_task_not_permitted_count",
   "protection_bypass_denial_resource_stale_count",
   "protection_bypass_denial_permission_required_count",
   "protection_bypass_denial_unsupported_environment_count",

@@ -642,7 +642,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               protectionBypassExecution:
                 protectionBypassExecution ??
                 createAutomaticProtectionBypassExecution(
-                  PROTECTION_BYPASS_FEATURES.SessionResync,
+                  PROTECTION_BYPASS_FEATURES.KeyManagement,
                   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
                   PROTECTION_BYPASS_SURFACES.Options,
                 ),
@@ -1032,7 +1032,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const protectionBypassExecution =
         options?.protectionBypassExecution ??
         createAutomaticProtectionBypassExecution(
-          PROTECTION_BYPASS_FEATURES.AccountRefresh,
+          PROTECTION_BYPASS_FEATURES.KeyManagement,
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
           PROTECTION_BYPASS_SURFACES.Options,
         )
@@ -1200,7 +1200,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       ),
     )
     const loadResult = await withProtectionBypassUserCommand(
-      PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+      PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
       PROTECTION_BYPASS_SURFACES.Options,
       async (protectionBypassExecution) =>
         await loadTokensForAccounts({
@@ -2052,7 +2052,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     )
     try {
       await withProtectionBypassUserCommand(
-        PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
+        PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
         PROTECTION_BYPASS_SURFACES.Options,
         async (protectionBypassExecution) => {
           const account = enabledDisplayData.find(
@@ -2088,7 +2088,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
           const reconciliationExecution =
             createAutomaticProtectionBypassExecution(
-              PROTECTION_BYPASS_FEATURES.AccountRefresh,
+              PROTECTION_BYPASS_FEATURES.KeyManagement,
               PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
               PROTECTION_BYPASS_SURFACES.Options,
             )

@@ -80,7 +80,7 @@ describe("auto-detect completion", () => {
   it("routes completion through the adapter with valid current-tab context", async () => {
     const fetchContext = currentTabFetchContext("https://status.example.com")
     const protectionBypassExecution = {
-      version: 1,
+      version: 2,
       kind: "user_command",
       command: "detect_account",
       surface: "options",

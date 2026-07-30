@@ -28,7 +28,7 @@ const {
   withProtectionBypassUserCommandMock: vi.fn(
     async (command, surface, work) =>
       await work({
-        version: 1,
+        version: 2,
         kind: "user_command",
         command,
         surface,
@@ -208,16 +208,16 @@ describe("KeyManagement managed-site status support", () => {
     withProtectionBypassUserCommandMock.mockClear()
     await userEvent.setup().click(refreshButton)
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
-      "verify_protection",
+      "manage_api_keys",
       "options",
       expect.any(Function),
     )
     expect(baseHookResult.refreshManagedSiteTokenStatuses).toHaveBeenCalledWith(
       {
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "user_command",
-          command: "verify_protection",
+          command: "manage_api_keys",
           surface: "options",
         },
       },
@@ -251,7 +251,7 @@ describe("KeyManagement managed-site status support", () => {
     ).toBe(undefined)
   })
 
-  it("marks a single-account header refresh as a user command", async () => {
+  it("marks a single-account token reload as a key-management command", async () => {
     const loadTokens = vi.fn().mockResolvedValue(undefined)
     useKeyManagementMock.mockReturnValue({
       ...baseHookResult,
@@ -268,21 +268,21 @@ describe("KeyManagement managed-site status support", () => {
     )
 
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
-      "refresh_account",
+      "manage_api_keys",
       "options",
       expect.any(Function),
     )
     expect(loadTokens).toHaveBeenCalledWith(undefined, {
       protectionBypassExecution: {
-        version: 1,
+        version: 2,
         kind: "user_command",
-        command: "refresh_account",
+        command: "manage_api_keys",
         surface: "options",
       },
     })
   })
 
-  it("marks an all-account header refresh as a user command", async () => {
+  it("marks an all-account token reload as a key-management command", async () => {
     const loadTokens = vi.fn().mockResolvedValue(undefined)
     useKeyManagementMock.mockReturnValue({
       ...baseHookResult,
@@ -300,18 +300,18 @@ describe("KeyManagement managed-site status support", () => {
     )
 
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
-      "refresh_all_accounts",
+      "manage_api_keys",
       "options",
       expect.any(Function),
     )
     expect(loadTokens).toHaveBeenCalledWith(undefined, {
       protectionBypassExecution: expect.objectContaining({
-        command: "refresh_all_accounts",
+        command: "manage_api_keys",
       }),
     })
   })
 
-  it("marks a current-account retry as a user command", async () => {
+  it("marks a current-account token retry as a key-management command", async () => {
     const loadTokens = vi.fn().mockResolvedValue(undefined)
     useKeyManagementMock.mockReturnValue({
       ...baseHookResult,
@@ -325,13 +325,13 @@ describe("KeyManagement managed-site status support", () => {
     await tokenListPropsSpy.mock.lastCall?.[0]?.onRetryCurrentAccount?.()
 
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
-      "refresh_account",
+      "manage_api_keys",
       "options",
       expect.any(Function),
     )
     expect(loadTokens).toHaveBeenCalledWith("acc-1", {
       protectionBypassExecution: expect.objectContaining({
-        command: "refresh_account",
+        command: "manage_api_keys",
       }),
     })
   })
@@ -514,9 +514,9 @@ describe("KeyManagement managed-site status support", () => {
       baseHookResult.tokens[0],
       {
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "user_command",
-          command: "verify_protection",
+          command: "manage_api_keys",
           surface: "options",
         },
       },
@@ -531,7 +531,7 @@ describe("KeyManagement managed-site status support", () => {
       openNewApiManagedVerificationMock.mock.calls[0]?.[0]?.onVerified
     await onVerified()
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
-      "verify_protection",
+      "manage_api_keys",
       "options",
       expect.any(Function),
     )
@@ -539,9 +539,9 @@ describe("KeyManagement managed-site status support", () => {
       baseHookResult.tokens[0],
       {
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "user_command",
-          command: "verify_protection",
+          command: "manage_api_keys",
           surface: "options",
         },
       },
@@ -606,9 +606,9 @@ describe("KeyManagement managed-site status support", () => {
       baseHookResult.tokens[0],
       {
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "user_command",
-          command: "verify_protection",
+          command: "manage_api_keys",
           surface: "options",
         },
       },

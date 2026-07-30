@@ -23,7 +23,7 @@ const { executeProtectionBypassTaskMock, sendRuntimeMessageMock } = vi.hoisted(
 )
 
 const testExecution = {
-  version: 1,
+  version: 2,
   kind: "automatic",
   feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
   trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,

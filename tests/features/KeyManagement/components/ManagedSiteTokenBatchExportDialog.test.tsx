@@ -614,7 +614,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
           kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
-          feature: PROTECTION_BYPASS_FEATURES.SessionResync,
+          feature: PROTECTION_BYPASS_FEATURES.KeyManagement,
           trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
           surface: PROTECTION_BYPASS_SURFACES.Options,
         }),
@@ -624,7 +624,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
           kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
-          command: PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+          command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
           surface: PROTECTION_BYPASS_SURFACES.Options,
         }),
       }),

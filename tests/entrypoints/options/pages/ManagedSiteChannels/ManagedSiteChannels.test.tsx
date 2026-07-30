@@ -124,9 +124,9 @@ const {
   mockWithProtectionBypassUserCommand: vi.fn(
     async (_command, _surface, work) =>
       await work({
-        version: 1,
+        version: 2,
         kind: "user_command",
-        command: "verify_protection",
+        command: "sync_managed_site_models",
         surface: "options",
       }),
   ),
@@ -2752,16 +2752,16 @@ describe("ManagedSiteChannels", () => {
         {
           channelIds: [1],
           protectionBypassExecution: {
-            version: 1,
+            version: 2,
             kind: "user_command",
-            command: "verify_protection",
+            command: "sync_managed_site_models",
             surface: "options",
           },
         },
       )
     })
     expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
-      "verify_protection",
+      "sync_managed_site_models",
       "options",
       expect.any(Function),
     )
@@ -3440,16 +3440,16 @@ describe("ManagedSiteChannels", () => {
         {
           channelIds: [1, 2],
           protectionBypassExecution: {
-            version: 1,
+            version: 2,
             kind: "user_command",
-            command: "verify_protection",
+            command: "sync_managed_site_models",
             surface: "options",
           },
         },
       )
     })
     expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
-      "verify_protection",
+      "sync_managed_site_models",
       "options",
       expect.any(Function),
     )
@@ -3621,9 +3621,9 @@ describe("ManagedSiteChannels", () => {
         totpSecret: "JBSWY3DPEHPK3PXP",
         channelId: 208,
         protectionBypassExecution: {
-          version: 1,
+          version: 2,
           kind: "user_command",
-          command: "verify_protection",
+          command: "sync_managed_site_models",
           surface: "options",
         },
       })

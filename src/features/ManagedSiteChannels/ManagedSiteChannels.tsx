@@ -726,6 +726,8 @@ export default function ManagedSiteChannels({
                   if (isNewApiManagedSite) {
                     await loadNewApiChannelKeyWithVerification({
                       channelId: channel.id,
+                      command:
+                        PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
                       label: channel.name,
                       config: {
                         baseUrl: newApiBaseUrl,
@@ -1083,7 +1085,7 @@ export default function ManagedSiteChannels({
       })
       try {
         const response = await withProtectionBypassUserCommand(
-          PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+          PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
           PROTECTION_BYPASS_SURFACES.Options,
           async (protectionBypassExecution) =>
             await sendModelSyncMessage(ModelSyncMessageTypes.TriggerSelected, {
@@ -1231,6 +1233,7 @@ export default function ManagedSiteChannels({
 
       const loaded = await loadNewApiChannelKeyWithVerification({
         channelId,
+        command: PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
         label: channelName,
         requestKind: "channel",
         config: {

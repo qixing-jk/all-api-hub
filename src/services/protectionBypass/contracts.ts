@@ -24,7 +24,7 @@ import type {
 import { isPlainObject } from "~/utils/core/object"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 
-export const PROTECTION_BYPASS_EXECUTION_VERSION = 1 as const
+export const PROTECTION_BYPASS_EXECUTION_VERSION = 2 as const
 
 export const PROTECTION_BYPASS_EXECUTION_KINDS = {
   UserCommand: "user_command",
@@ -55,14 +55,14 @@ export const PROTECTION_BYPASS_CAPABILITY_KINDS = {
   AdapterUnavailable: "adapter_unavailable",
 } as const
 
-export const PROTECTION_BYPASS_DENIED_REASONS = {
+const PROTECTION_BYPASS_DENIED_REASON_CATALOG = {
   AutomaticDisabled: "automatic_disabled",
   FeatureDisabled: "feature_disabled",
   SurfaceDisabled: "surface_disabled",
   ManualFeatureDisabled: "manual_feature_disabled",
-  MissingIntent: "missing_intent",
-  InvalidIntent: "invalid_intent",
-  OperationNotPermitted: "operation_not_permitted",
+  MissingExecution: "missing_execution",
+  InvalidExecution: "invalid_execution",
+  TaskNotPermitted: "task_not_permitted",
   ResourceStale: "resource_stale",
   PermissionRequired: "permission_required",
   UnsupportedEnvironment: "unsupported_environment",
@@ -72,19 +72,41 @@ export const PROTECTION_BYPASS_DENIED_REASONS = {
 export type ProtectionBypassDeniedReason =
   (typeof PROTECTION_BYPASS_DENIED_REASONS)[keyof typeof PROTECTION_BYPASS_DENIED_REASONS]
 
-export const PROTECTION_BYPASS_FEATURES = {
+const PROTECTION_BYPASS_FEATURE_CATALOG = {
   AccountRefresh: "account_refresh",
-  AccountOnboarding: "account_onboarding",
+  BalanceHistory: "balance_history",
   Checkin: "checkin",
-  SiteDetection: "site_detection",
-  SessionResync: "session_resync",
-  Verification: "verification",
+  RedemptionAssist: "redemption_assist",
+  LdohSiteLookup: "ldoh_site_lookup",
+  KeyManagement: "key_management",
+  ManagedSiteChannels: "managed_site_channels",
+  ManagedSiteModelSync: "managed_site_model_sync",
+  AccountOnboarding: "account_onboarding",
 } as const
+
+export const PROTECTION_BYPASS_DENIED_REASONS =
+  PROTECTION_BYPASS_DENIED_REASON_CATALOG
+
+export const PROTECTION_BYPASS_FEATURES = PROTECTION_BYPASS_FEATURE_CATALOG
 
 export type ProtectionBypassFeature =
   (typeof PROTECTION_BYPASS_FEATURES)[keyof typeof PROTECTION_BYPASS_FEATURES]
 
-export const PROTECTION_BYPASS_USER_COMMANDS = {
+export const PROTECTION_BYPASS_AUTOMATIC_FEATURES = {
+  AccountRefresh: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+  BalanceHistory: PROTECTION_BYPASS_FEATURES.BalanceHistory,
+  Checkin: PROTECTION_BYPASS_FEATURES.Checkin,
+  RedemptionAssist: PROTECTION_BYPASS_FEATURES.RedemptionAssist,
+  LdohSiteLookup: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
+  KeyManagement: PROTECTION_BYPASS_FEATURES.KeyManagement,
+  ManagedSiteChannels: PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+  ManagedSiteModelSync: PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+} as const satisfies Record<string, ProtectionBypassFeature>
+
+export type ProtectionBypassAutomaticFeature =
+  (typeof PROTECTION_BYPASS_AUTOMATIC_FEATURES)[keyof typeof PROTECTION_BYPASS_AUTOMATIC_FEATURES]
+
+const PROTECTION_BYPASS_USER_COMMAND_CATALOG = {
   RefreshAccount: "refresh_account",
   RefreshAllAccounts: "refresh_all_accounts",
   RefreshDisabledAccounts: "refresh_disabled_accounts",
@@ -93,8 +115,13 @@ export const PROTECTION_BYPASS_USER_COMMANDS = {
   AddAccount: "add_account",
   DetectAccount: "detect_account",
   ReauthenticateAccount: "reauthenticate_account",
-  VerifyProtection: "verify_protection",
+  ManageApiKeys: "manage_api_keys",
+  ManageSiteChannels: "manage_site_channels",
+  SyncManagedSiteModels: "sync_managed_site_models",
 } as const
+
+export const PROTECTION_BYPASS_USER_COMMANDS =
+  PROTECTION_BYPASS_USER_COMMAND_CATALOG
 
 export type ProtectionBypassUserCommand =
   (typeof PROTECTION_BYPASS_USER_COMMANDS)[keyof typeof PROTECTION_BYPASS_USER_COMMANDS]
@@ -128,8 +155,12 @@ export const PROTECTION_BYPASS_USER_COMMAND_FEATURES = {
     PROTECTION_BYPASS_FEATURES.AccountOnboarding,
   [PROTECTION_BYPASS_USER_COMMANDS.ReauthenticateAccount]:
     PROTECTION_BYPASS_FEATURES.AccountOnboarding,
-  [PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection]:
-    PROTECTION_BYPASS_FEATURES.Verification,
+  [PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys]:
+    PROTECTION_BYPASS_FEATURES.KeyManagement,
+  [PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels]:
+    PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+  [PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels]:
+    PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
 } as const satisfies Record<
   ProtectionBypassUserCommand,
   ProtectionBypassFeature
@@ -189,14 +220,14 @@ export type ProtectionBypassExecution =
   | {
       readonly version: typeof PROTECTION_BYPASS_EXECUTION_VERSION
       readonly kind: typeof PROTECTION_BYPASS_EXECUTION_KINDS.Automatic
-      readonly feature: ProtectionBypassFeature
+      readonly feature: ProtectionBypassAutomaticFeature
       readonly trigger: ProtectionBypassAutomaticTrigger
       readonly surface: ProtectionBypassSurface
     }
 
 /** Builds explicit automatic intent without inferring it from the caller. */
 export function createAutomaticProtectionBypassExecution(
-  feature: ProtectionBypassFeature,
+  feature: ProtectionBypassAutomaticFeature,
   trigger: ProtectionBypassAutomaticTrigger,
   surface: ProtectionBypassSurface,
 ): Extract<
@@ -237,8 +268,8 @@ export function isProtectionBypassExecution(
     Object.keys(execution).every((key) =>
       ["version", "kind", "feature", "trigger", "surface"].includes(key),
     ) &&
-    Object.values(PROTECTION_BYPASS_FEATURES).includes(
-      execution.feature as ProtectionBypassFeature,
+    Object.values(PROTECTION_BYPASS_AUTOMATIC_FEATURES).includes(
+      execution.feature as ProtectionBypassAutomaticFeature,
     ) &&
     Object.values(PROTECTION_BYPASS_AUTOMATIC_TRIGGERS).includes(
       execution.trigger as ProtectionBypassAutomaticTrigger,
@@ -249,8 +280,19 @@ export function isProtectionBypassExecution(
   )
 }
 
-/** Accepts only refresh-all intent, while preserving canonical automatic refresh metadata. */
+/** Accepts only the explicit refresh-all command for manual refresh-now routes. */
 export function isRefreshAllAccountsProtectionBypassExecution(
+  value: unknown,
+): value is ProtectionBypassExecution {
+  if (!isProtectionBypassExecution(value)) return false
+  return (
+    value.kind === PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand &&
+    value.command === PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts
+  )
+}
+
+/** Accepts automatic account refresh plus the explicit refresh-all command. */
+export function isAutoRefreshProtectionBypassExecution(
   value: unknown,
 ): value is ProtectionBypassExecution {
   if (!isProtectionBypassExecution(value)) return false
@@ -259,7 +301,7 @@ export function isRefreshAllAccountsProtectionBypassExecution(
     : value.feature === PROTECTION_BYPASS_FEATURES.AccountRefresh
 }
 
-/** Accepts only the explicit manual command used by model-sync UI actions. */
+/** Accepts only the explicit model-sync command used by model-sync UI actions. */
 export function isManualModelSyncProtectionBypassExecution(
   value: unknown,
 ): value is Extract<
@@ -269,27 +311,31 @@ export function isManualModelSyncProtectionBypassExecution(
   return (
     isProtectionBypassExecution(value) &&
     value.kind === PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand &&
-    value.command === PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection
+    value.command === PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels
   )
 }
 
 export type ResolvedProtectionBypassExecution =
-  | Extract<
-      ProtectionBypassExecution,
-      { kind: typeof PROTECTION_BYPASS_EXECUTION_KINDS.Automatic }
-    >
-  | (Extract<
-      ProtectionBypassExecution,
-      { kind: typeof PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand }
-    > & {
+  | {
+      readonly version: typeof PROTECTION_BYPASS_EXECUTION_VERSION
+      readonly kind: typeof PROTECTION_BYPASS_EXECUTION_KINDS.Automatic
+      readonly feature: ProtectionBypassAutomaticFeature
+      readonly trigger: ProtectionBypassAutomaticTrigger
+      readonly surface: ProtectionBypassSurface
+    }
+  | {
+      readonly version: typeof PROTECTION_BYPASS_EXECUTION_VERSION
+      readonly kind: typeof PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand
+      readonly command: ProtectionBypassUserCommand
       readonly feature: ProtectionBypassFeature
-    })
+      readonly surface: ProtectionBypassSurface
+    }
 
 export type ProtectionBypassIntentResolutionFailure = {
   kind: "invalid"
   reason:
-    | typeof PROTECTION_BYPASS_DENIED_REASONS.MissingIntent
-    | typeof PROTECTION_BYPASS_DENIED_REASONS.InvalidIntent
+    | typeof PROTECTION_BYPASS_DENIED_REASONS.MissingExecution
+    | typeof PROTECTION_BYPASS_DENIED_REASONS.InvalidExecution
 }
 
 export interface TempWindowSessionReadParams {
@@ -336,7 +382,7 @@ export const TEMP_CONTEXT_TASK_KINDS = {
   OpenContext: "open_context",
 } as const
 
-type TempContextTaskKind =
+export type TempContextTaskKind =
   (typeof TEMP_CONTEXT_TASK_KINDS)[keyof typeof TEMP_CONTEXT_TASK_KINDS]
 
 export type TempWindowFetchTaskKind =
@@ -666,38 +712,58 @@ export function getTempContextTaskMetadata(
   return TEMP_CONTEXT_TASK_METADATA[task.kind]
 }
 
-export const PROTECTION_BYPASS_FEATURE_OPERATIONS = {
+export const PROTECTION_BYPASS_FEATURE_TASK_KINDS = {
   [PROTECTION_BYPASS_FEATURES.AccountRefresh]: [
-    PROTECTION_BYPASS_OPERATIONS.Fetch,
+    TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.SessionRead,
   ],
-  [PROTECTION_BYPASS_FEATURES.AccountOnboarding]: [
-    PROTECTION_BYPASS_OPERATIONS.Fetch,
-    PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
-    PROTECTION_BYPASS_OPERATIONS.SessionRead,
-    PROTECTION_BYPASS_OPERATIONS.OpenContext,
-    PROTECTION_BYPASS_OPERATIONS.NativePageAction,
+  [PROTECTION_BYPASS_FEATURES.BalanceHistory]: [
+    TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.SessionRead,
   ],
   [PROTECTION_BYPASS_FEATURES.Checkin]: [
-    PROTECTION_BYPASS_OPERATIONS.Fetch,
-    PROTECTION_BYPASS_OPERATIONS.TurnstileFetch,
-    PROTECTION_BYPASS_OPERATIONS.NativePageAction,
+    TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.TurnstileFetch,
+    TEMP_CONTEXT_TASK_KINDS.NativePageAction,
+    TEMP_CONTEXT_TASK_KINDS.SessionRead,
   ],
-  [PROTECTION_BYPASS_FEATURES.SiteDetection]: [
-    PROTECTION_BYPASS_OPERATIONS.Fetch,
-    PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
-    PROTECTION_BYPASS_OPERATIONS.SessionRead,
+  [PROTECTION_BYPASS_FEATURES.RedemptionAssist]: [
+    TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.SessionRead,
   ],
-  [PROTECTION_BYPASS_FEATURES.SessionResync]: [
-    PROTECTION_BYPASS_OPERATIONS.Fetch,
-    PROTECTION_BYPASS_OPERATIONS.SessionRead,
+  [PROTECTION_BYPASS_FEATURES.LdohSiteLookup]: [
+    TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
   ],
-  [PROTECTION_BYPASS_FEATURES.Verification]: [
-    PROTECTION_BYPASS_OPERATIONS.TurnstileFetch,
-    PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
-    PROTECTION_BYPASS_OPERATIONS.SessionRead,
-    PROTECTION_BYPASS_OPERATIONS.OpenContext,
+  [PROTECTION_BYPASS_FEATURES.KeyManagement]: [
+    TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.SessionRead,
+    TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
+  ],
+  [PROTECTION_BYPASS_FEATURES.ManagedSiteChannels]: [
+    TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
+  ],
+  [PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync]: [
+    TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
+  ],
+  [PROTECTION_BYPASS_FEATURES.AccountOnboarding]: [
+    TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+    TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
+    TEMP_CONTEXT_TASK_KINDS.SessionRead,
+    TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction,
   ],
 } as const satisfies Record<
   ProtectionBypassFeature,
-  readonly ProtectionBypassOperation[]
+  readonly TempContextTaskKind[]
 >
+
+/** Keeps workflow ownership closed before policy or resource checks run. */
+export function isProtectionBypassTaskPermitted(
+  feature: ProtectionBypassFeature,
+  taskKind: TempContextTaskKind,
+): boolean {
+  return (
+    PROTECTION_BYPASS_FEATURE_TASK_KINDS[
+      feature
+    ] as readonly TempContextTaskKind[]
+  ).includes(taskKind)
+}
