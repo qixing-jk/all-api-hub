@@ -228,6 +228,49 @@ describe("product announcement service", () => {
     )
   })
 
+  it("prefers local bundled announcements over cached copies in development", async () => {
+    vi.stubEnv("MODE", "development")
+    await productAnnouncementStorage.updateState((state) => {
+      state.lastFetchedAt = Date.parse("2026-06-06T00:00:00Z")
+      state.cachedFeed = {
+        schemaVersion: 1,
+        defaultLocale: "zh-CN",
+        announcements: [
+          {
+            id: "bundled-notice",
+            revision: 1,
+            severity: "warning",
+            priority: 1,
+            affectedVersions: ">=3.0.0",
+            startsAt: "2026-01-01T00:00:00Z",
+            expiresAt: "2027-01-01T00:00:00Z",
+            content: {
+              "zh-CN": {
+                title: "Cached notice",
+                message: "Cached remote content",
+              },
+            },
+          },
+        ],
+      }
+    })
+
+    const state = await productAnnouncementService.getCurrentState({
+      locale: "zh-CN",
+      currentVersion: "3.44.0",
+      now: Date.parse("2026-06-06T00:00:00Z"),
+    })
+
+    expect(
+      state.view.notices.filter((notice) => notice.id === "bundled-notice"),
+    ).toEqual([
+      expect.objectContaining({
+        title: "Bundled notice",
+        message: "Bundled fallback notice",
+      }),
+    ])
+  })
+
   it("ignores whitespace-only dismiss ids", async () => {
     await productAnnouncementService.dismiss("   ", 2)
 
@@ -369,7 +412,7 @@ describe("product announcement service", () => {
     expect(state.view.primaryRiskNotice?.id).toBe("dev-critical-announcement")
   })
 
-  it("merges bundled development examples with cached remote notices in development mode", async () => {
+  it("merges local bundled and cached remote notices in development mode", async () => {
     vi.stubEnv("MODE", "development")
     await productAnnouncementStorage.updateState((state) => {
       state.lastFetchedAt = 100
@@ -404,6 +447,7 @@ describe("product announcement service", () => {
 
     expect(state.view.notices.map((notice) => notice.id)).toEqual([
       "dev-critical-announcement",
+      "bundled-notice",
       "cached-info",
     ])
     await expect(productAnnouncementStorage.getState()).resolves.toMatchObject({
