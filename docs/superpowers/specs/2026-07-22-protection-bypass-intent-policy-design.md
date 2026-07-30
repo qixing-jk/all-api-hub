@@ -1,7 +1,7 @@
 # Protection Bypass Intent Policy Design
 
 Date: 2026-07-22
-Revised: 2026-07-30
+Revised: 2026-07-31
 
 ## Revision Status
 
@@ -24,6 +24,11 @@ revision deferred. It replaces the legacy page-surface and refresh-mode
 "usage scope" settings with automatic bypass controls for user-recognizable
 product features. This document remains the single design authority; the
 follow-up implementation plan records execution and validation only.
+
+The 2026-07-31 revision restores the repository's established read-only
+preference migration behavior. Ordinary reads expose a canonical current-version
+snapshot without persisting it; normal save and import operations remain the
+boundaries that update extension storage.
 
 ## Purpose
 
@@ -298,13 +303,11 @@ type ProtectionBypassExecution =
 Version 1 is implemented on the current main branch and is no longer a
 branch-local draft. Version 2 changes feature wire values and narrows the
 automatic feature set. Runtime parsing validates the version, discriminant,
-and every enum value so old, malformed, or stale messages fail closed. A
-recognized version mismatch produces the controlled
-`execution_version_mismatch` reason before ordinary shape validation. The
-runtime response maps it to `TEMP_WINDOW_EXECUTION_VERSION_MISMATCH` with a
-stable safe fallback message asking the user to refresh the extension page.
-Other malformed values remain `invalid_execution`. Old feature values are
-never guessed or silently reclassified.
+and every enum value so old, malformed, or stale messages fail closed as
+`invalid_execution`. Old feature values are never guessed or silently
+reclassified. No cross-version runtime adapter or dedicated mismatch state is
+needed: execution values are not persisted, and the extension-update overlap
+between an old page and a new worker is transient.
 
 For a user command, the Coordinator derives the top-level product feature from
 one canonical command definition. For example, a profile-isolated fallback or
@@ -618,48 +621,33 @@ whether that product feature's automatic execution may acquire a protected
 context.
 
 One canonical normalizer rebuilds `tempWindowFallback` rather than
-deep-merging it. It is used by local schema migration, manual backup import, and
-WebDAV import:
+deep-merging it. Local schema migration, manual backup import, and WebDAV import
+all pass through the ordinary preference migration path:
 
 ```text
-enabled                    -> preserve the selected snapshot value
-tempContextMode            -> preserve the selected snapshot value
-current-version v2 key     -> preserve its valid boolean value
-legacy account_refresh     -> legacy useForAutoRefresh, then embedded v2,
-                              then local v2, then true
-other legacy feature keys  -> embedded v2, then local v2, then true
-missing current-version key -> local v2 when importing, otherwise true
+enabled             -> preserve
+tempContextMode     -> preserve
+valid feature key   -> preserve its boolean value
+account_refresh     -> otherwise use legacy useForAutoRefresh, then true
+other missing keys  -> true
 ```
 
-The source preference schema version selects the branch before field
-precedence is evaluated. This matters because an old client may preserve the
-unknown v2 map while stamping the document with its legacy schema version. In
-that case a newly changed `useForAutoRefresh` is authoritative for
-`account_refresh`; the stale embedded v2 value must not win. For a
-current-version payload, the canonical v2 map is authoritative and any leftover
-legacy field is ignored.
-
 Delete `useInPopup`, `useInSidePanel`, `useInOptions`, `useForAutoRefresh`, and
-`useForManualRefresh` from persisted preferences, types, defaults, import/export
-data, WebDAV-synchronized settings, analytics snapshots, and runtime policy.
-The one-time migration may read `useForAutoRefresh` to preserve its stated
-account-refresh intent, but no runtime compatibility branch or stale key
-remains afterward.
+`useForManualRefresh` from current preference types, defaults, returned and
+exported snapshots, newly saved or imported data, WebDAV uploads, analytics
+snapshots, and runtime policy. Migration may read `useForAutoRefresh` from a
+legacy stored object to preserve its stated account-refresh intent, but the
+canonical v27 snapshot exposed to runtime consumers has no compatibility
+branch or stale key.
 
-Local migration runs under the existing preference write lock and atomically
-persists the rebuilt latest-version object before exposing it. A schema-only
-rewrite preserves `sharedPreferencesLastUpdated`; it is not a user edit. A
-user's later toggle change stamps that timestamp normally.
-
-WebDAV keeps its existing whole-preference timestamp winner. After choosing
-the incoming snapshot, normalization receives the current local preferences as
-a fallback only for v2 feature keys absent from an older payload. Thus a
-newer-timestamp legacy client may still change shared `enabled`,
-`tempContextMode`, and the legacy account-refresh choice without resetting the
-other seven v2 choices.
-Every accepted import is atomically saved in canonical form, and every later
-upload contains only the canonical map. This import normalization is persisted
-data migration, not a runtime policy compatibility adapter.
+Ordinary preference reads migrate, normalize, and default-merge in memory only;
+they neither acquire the preference write lock nor mutate extension storage.
+The returned snapshot preserves existing timestamps and uses the canonical v27
+shape, while the raw legacy object may remain in storage until a subsequent
+normal save or import. Those write paths retain the existing write lock and
+persist one canonical current-version object, so later exports and WebDAV
+uploads contain only the canonical map. No cross-version merge or compatibility
+policy is added.
 
 This deliberately does not attempt to translate old surface opt-outs. A
 surface can host several product features, and a product feature can cross UI
@@ -700,7 +688,6 @@ because the automatic master or a feature switch is off.
 | Automatic invocation with `enabled: false` | Deny as `automatic_disabled` |
 | Automatic invocation with its feature disabled | Deny as `feature_disabled` |
 | Automatic invocation with master and feature enabled | Validate exact task kind, then evaluate capability and resource facts |
-| Recognized execution version mismatch | Deny as `execution_version_mismatch` and ask the caller to refresh its extension page |
 | Missing or malformed execution | Deny as `missing_execution` or `invalid_execution` |
 | Feature/task mismatch | Deny as `task_not_permitted` |
 | Unavailable permissions or browser support | Deny with the existing capability classification |
@@ -719,7 +706,6 @@ Controlled internal denial reasons no longer include grant lifecycle failures:
 type ProtectionBypassDeniedReason =
   | "automatic_disabled"
   | "feature_disabled"
-  | "execution_version_mismatch"
   | "missing_execution"
   | "invalid_execution"
   | "task_not_permitted"
@@ -733,8 +719,6 @@ Preserve existing public compatibility codes where practical:
 
 - product-policy denials map to `TEMP_WINDOW_DISABLED`;
 - missing permissions map to `TEMP_WINDOW_PERMISSION_REQUIRED`;
-- recognized version mismatch maps to
-  `TEMP_WINDOW_EXECUTION_VERSION_MISMATCH` with a refresh-page fallback;
 - missing or malformed execution, unavailable policy, and stale resource map
   to a typed policy-context classification and never trigger an unrelated
   "enable protection bypass" reminder;
@@ -787,9 +771,10 @@ Use a test-first refactor on the follow-up task branch:
    model commands where those explicit workflows can reach protected work.
 5. Replace Coordinator policy fields and denial reasons while preserving the
    acquire-time validation order and unconditional cleanup.
-6. Add the new preference shape and canonical migration, explicitly rebuilding
-   and atomically persisting the stored object without the five legacy keys,
-   including import and cross-version WebDAV normalization.
+6. Add the new preference shape and canonical migration, rebuilding read
+   snapshots without the five legacy keys while leaving ordinary reads
+   storage-neutral; normal saves and imported preferences persist the canonical
+   object.
 7. Replace the settings card, search targets, locale copy, settings snapshots,
    privacy allow-list, and daily summary dimensions.
 8. Update focused service, propagation, Coordinator, settings, migration,
@@ -798,8 +783,9 @@ Use a test-first refactor on the follow-up task branch:
    Chromium E2E, and final diff inspection.
 
 Do not keep a runtime compatibility adapter for old preferences or execution
-feature values. Preference migration is one-time persisted-data conversion;
-wire-version mismatch fails closed and asks an old extension page to refresh.
+feature values. Preference migration interprets legacy storage into the current
+runtime shape at the read boundary; old execution values simply fail closed as
+invalid.
 
 ## Testing
 
@@ -811,9 +797,7 @@ wire-version mismatch fails closed and asks an old extension page to refresh.
 - valid explicit refresh, check-in, onboarding, key, channel, and model
   commands remain eligible when the automatic master or matching feature is
   disabled;
-- automatic parsing rejects manual-only features;
-- a version-1 execution sent through the runtime handler returns the dedicated
-  mismatch code and actionable refresh fallback without entering the pool;
+- automatic parsing rejects manual-only features and version-1 execution;
 - missing, malformed, or unknown execution values fail closed;
 - runtime catalogs, derived unions, parsers, and exhaustive task mappings stay
   synchronized without a separately maintained string list;
@@ -871,16 +855,13 @@ wire-version mismatch fails closed and asks an old extension page to refresh.
 - child choices remain editable while the master or owning product feature is
   disabled;
 - preference migration preserves `enabled`, `tempContextMode`, and the stated
-  account-refresh intent while physically removing all five legacy keys;
+  account-refresh intent in the canonical returned snapshot while leaving raw
+  legacy storage unchanged on ordinary reads;
 - valid existing v2 feature choices survive repeat normalization;
-- local migration atomically writes the canonical object without advancing the
-  shared-preferences timestamp;
-- old backup imports and synchronized settings pass through the same
-  normalizer;
-- a winning legacy WebDAV payload preserves local v2-only choices, maps its
-  account-refresh choice, and cannot create a sync reset loop;
-- a full v2 upload, legacy-client account-refresh edit, and v2 re-import round
-  trip applies that legacy edit while preserving the other seven choices;
+- local reads return the canonical v27 object with existing timestamps and no
+  legacy keys, without acquiring the write lock or persisting defaults;
+- old backup imports and synchronized settings pass through the same ordinary
+  migration and are saved without legacy keys;
 - settings search removes old scope targets and exposes all eight features;
 - all supported application locales keep the same key shape;
 - settings snapshots, daily summaries, and privacy sanitizers accept only
