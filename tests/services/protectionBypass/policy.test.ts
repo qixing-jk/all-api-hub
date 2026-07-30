@@ -60,14 +60,15 @@ function buildPolicy(
 ): ProtectionBypassPolicy {
   return {
     automaticMasterEnabled: true,
-    automaticAccountRefreshEnabled: true,
-    manualAccountRefreshEnabled: true,
-    allowedSurfaces: {
-      popup: true,
-      options: true,
-      sidepanel: true,
-      content_script: true,
-      background: true,
+    automaticFeatureBypass: {
+      account_refresh: true,
+      balance_history: true,
+      checkin: true,
+      redemption_assist: true,
+      ldoh_site_lookup: true,
+      key_management: true,
+      managed_site_channels: true,
+      managed_site_model_sync: true,
     },
     preferredMode: TEMP_CONTEXT_MODES.Tab,
     ...overrides,
@@ -194,26 +195,23 @@ describe("canonical protection-bypass surfaces", () => {
 describe("normalizeProtectionBypassPreferences", () => {
   const source = {
     enabled: false,
-    useForAutoRefresh: false,
-    useForManualRefresh: true,
-    useInPopup: false,
-    useInOptions: true,
-    useInSidePanel: false,
+    automaticFeatureBypass: {
+      account_refresh: false,
+      balance_history: true,
+      checkin: true,
+      redemption_assist: true,
+      ldoh_site_lookup: true,
+      key_management: true,
+      managed_site_channels: true,
+      managed_site_model_sync: true,
+    },
     tempContextMode: TEMP_CONTEXT_MODES.Composite,
   }
 
-  it("maps persisted compatibility fields without inventing a content-script switch", () => {
+  it("maps persisted automatic feature preferences", () => {
     expect(normalizeProtectionBypassPreferences(source)).toEqual({
       automaticMasterEnabled: false,
-      automaticAccountRefreshEnabled: false,
-      manualAccountRefreshEnabled: true,
-      allowedSurfaces: {
-        popup: false,
-        options: true,
-        sidepanel: false,
-        content_script: true,
-        background: true,
-      },
+      automaticFeatureBypass: source.automaticFeatureBypass,
       preferredMode: TEMP_CONTEXT_MODES.Composite,
     })
   })
@@ -366,7 +364,7 @@ describe("evaluateProtectionBypassPolicy", () => {
     },
   )
 
-  it("keeps the manual refresh policy narrower than an eligible refresh command", () => {
+  it("allows explicit refresh commands when automatic bypass is disabled", () => {
     const execution = resolvedUserCommandExecution({
       command: "refresh_account",
       feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
@@ -380,10 +378,10 @@ describe("evaluateProtectionBypassPolicy", () => {
           kind: TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
           params: fetchParams,
         },
-        policy: buildPolicy({ manualAccountRefreshEnabled: false }),
+        policy: buildPolicy({ automaticMasterEnabled: false }),
         capability: availableCapability,
       }),
-    ).toMatchObject({ kind: "denied", reason: "manual_feature_disabled" })
+    ).toMatchObject({ kind: "allowed" })
   })
 
   it("denies an automatic account refresh when its feature policy is disabled", () => {
@@ -398,13 +396,18 @@ describe("evaluateProtectionBypassPolicy", () => {
           kind: TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
           params: fetchParams,
         },
-        policy: buildPolicy({ automaticAccountRefreshEnabled: false }),
+        policy: buildPolicy({
+          automaticFeatureBypass: {
+            ...buildPolicy().automaticFeatureBypass,
+            account_refresh: false,
+          },
+        }),
         capability: availableCapability,
       }),
     ).toMatchObject({ kind: "denied", reason: "feature_disabled" })
   })
 
-  it("denies a disabled originating surface", () => {
+  it("keeps execution surface as context without using it as authorization", () => {
     const execution = resolvedUserCommandExecution({
       command: "add_account",
       feature: PROTECTION_BYPASS_FEATURES.AccountOnboarding,
@@ -418,15 +421,13 @@ describe("evaluateProtectionBypassPolicy", () => {
           kind: TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
           params: fetchParams,
         },
-        policy: buildPolicy({
-          allowedSurfaces: {
-            ...buildPolicy().allowedSurfaces,
-            popup: false,
-          },
-        }),
+        policy: buildPolicy(),
         capability: availableCapability,
       }),
-    ).toMatchObject({ kind: "denied", reason: "surface_disabled" })
+    ).toMatchObject({
+      kind: "allowed",
+      surface: PROTECTION_BYPASS_SURFACES.Popup,
+    })
   })
 
   it("denies missing execution without inferring intent from request metadata", () => {

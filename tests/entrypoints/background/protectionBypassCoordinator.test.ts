@@ -23,14 +23,15 @@ import { userCommandExecution } from "~~/tests/services/protectionBypass/fixture
 
 const allowedPolicy = {
   automaticMasterEnabled: true,
-  automaticAccountRefreshEnabled: true,
-  manualAccountRefreshEnabled: true,
-  allowedSurfaces: {
-    popup: true,
-    options: true,
-    sidepanel: true,
-    content_script: true,
-    background: true,
+  automaticFeatureBypass: {
+    account_refresh: true,
+    balance_history: true,
+    checkin: true,
+    redemption_assist: true,
+    ldoh_site_lookup: true,
+    key_management: true,
+    managed_site_channels: true,
+    managed_site_model_sync: true,
   },
   preferredMode: "tab" as const,
 }
@@ -1067,10 +1068,9 @@ describe("ProtectionBypassCoordinator", () => {
     const responsePromise = createProtectionBypassCoordinator({
       readPolicy: vi.fn().mockResolvedValue({
         ...allowedPolicy,
-        automaticAccountRefreshEnabled: false,
-        allowedSurfaces: {
-          ...allowedPolicy.allowedSurfaces,
-          popup: false,
+        automaticFeatureBypass: {
+          ...allowedPolicy.automaticFeatureBypass,
+          account_refresh: false,
         },
       }),
       recordDecision,

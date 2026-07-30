@@ -37,6 +37,12 @@ import {
 import type { LogLevel } from "~/types/logging"
 import type { ThemeMode } from "~/types/theme"
 
+import type { SettingsSnapshotAutomaticFeatureBypassProperty } from "./settingsSnapshot"
+
+type SettingsSnapshotAutomaticFeatureBypassPayload = Partial<
+  Record<SettingsSnapshotAutomaticFeatureBypassProperty, boolean>
+>
+
 export const PRODUCT_ANALYTICS_EVENTS = {
   AppOpened: "app_opened",
   PageViewed: "page_viewed",
@@ -83,10 +89,6 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION = {
   [PROTECTION_BYPASS_DENIED_REASONS.AutomaticDisabled]:
     PROTECTION_BYPASS_DECISION_RESULTS.Denied,
   [PROTECTION_BYPASS_DENIED_REASONS.FeatureDisabled]:
-    PROTECTION_BYPASS_DECISION_RESULTS.Denied,
-  [PROTECTION_BYPASS_DENIED_REASONS.SurfaceDisabled]:
-    PROTECTION_BYPASS_DECISION_RESULTS.Denied,
-  [PROTECTION_BYPASS_DENIED_REASONS.ManualFeatureDisabled]:
     PROTECTION_BYPASS_DECISION_RESULTS.Denied,
   [PROTECTION_BYPASS_DENIED_REASONS.MissingExecution]:
     PROTECTION_BYPASS_DECISION_RESULTS.Denied,
@@ -169,8 +171,6 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES = [
   "protection_bypass_decision_other_count",
   "protection_bypass_denial_automatic_disabled_count",
   "protection_bypass_denial_feature_disabled_count",
-  "protection_bypass_denial_surface_disabled_count",
-  "protection_bypass_denial_manual_feature_disabled_count",
   "protection_bypass_denial_missing_execution_count",
   "protection_bypass_denial_invalid_execution_count",
   "protection_bypass_denial_task_not_permitted_count",
@@ -1228,11 +1228,6 @@ export type ProductAnalyticsEventPayloadMap = {
     auto_detect_enhanced_enabled?: boolean
     auto_detect_url_patterns_configured?: boolean
     api_key_cleanup_patterns_configured?: boolean
-    popup_enabled?: boolean
-    sidepanel_enabled?: boolean
-    options_enabled?: boolean
-    auto_refresh_enabled?: boolean
-    manual_refresh_enabled?: boolean
     reminder_dismissed?: boolean
     mode?: ProductAnalyticsModeId
     auto_sync_enabled?: boolean
@@ -1268,7 +1263,7 @@ export type ProductAnalyticsEventPayloadMap = {
     window_length_minutes?: number
     deterministic_time_minutes?: number
     entrypoint: ProductAnalyticsEntrypoint
-  }
+  } & SettingsSnapshotAutomaticFeatureBypassPayload
   [PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured]: Omit<
     ProductAnalyticsEventPayloadMap[typeof PRODUCT_ANALYTICS_EVENTS.SettingChanged],
     "setting_id"
@@ -1333,11 +1328,6 @@ export type ProductAnalyticsEventPayloadMap = {
     web_ai_api_check_auto_detect_enhanced_enabled?: boolean
     web_ai_api_check_auto_detect_patterns_configured?: boolean
     temp_window_fallback_automatic_bypass_enabled?: boolean
-    temp_window_fallback_popup_enabled?: boolean
-    temp_window_fallback_sidepanel_enabled?: boolean
-    temp_window_fallback_options_enabled?: boolean
-    temp_window_fallback_auto_refresh_enabled?: boolean
-    temp_window_fallback_manual_refresh_enabled?: boolean
     temp_window_fallback_mode?: ProductAnalyticsModeId
     temp_window_fallback_reminder_dismissed?: boolean
     webdav_configured?: boolean

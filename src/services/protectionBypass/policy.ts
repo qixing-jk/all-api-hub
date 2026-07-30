@@ -7,7 +7,7 @@ import {
   PROTECTION_BYPASS_DECISION_RESULTS,
   PROTECTION_BYPASS_DENIED_REASONS,
   PROTECTION_BYPASS_EXECUTION_KINDS,
-  PROTECTION_BYPASS_FEATURES,
+  type ProtectionBypassAutomaticFeature,
   type ProtectionBypassCause,
   type ProtectionBypassDecisionKind,
   type ProtectionBypassDeniedReason,
@@ -21,9 +21,7 @@ import {
 
 export interface ProtectionBypassPolicy {
   automaticMasterEnabled: boolean
-  automaticAccountRefreshEnabled: boolean
-  manualAccountRefreshEnabled: boolean
-  allowedSurfaces: Record<ProtectionBypassSurface, boolean>
+  automaticFeatureBypass: Record<ProtectionBypassAutomaticFeature, boolean>
   preferredMode: TempContextMode
 }
 
@@ -132,6 +130,17 @@ function isUnavailablePolicy(
   )
 }
 
+/** Evaluates the persisted automatic gates for policy and health checks. */
+export function isAutomaticProtectionBypassEnabled(
+  policy: Pick<
+    ProtectionBypassPolicy,
+    "automaticMasterEnabled" | "automaticFeatureBypass"
+  >,
+  feature: ProtectionBypassAutomaticFeature,
+): boolean {
+  return policy.automaticMasterEnabled && policy.automaticFeatureBypass[feature]
+}
+
 /** Evaluates resolved invocation intent against policy and capability facts. */
 export function evaluateProtectionBypassPolicy({
   execution,
@@ -165,24 +174,9 @@ export function evaluateProtectionBypassPolicy({
     if (!policy.automaticMasterEnabled) {
       return denied(PROTECTION_BYPASS_DENIED_REASONS.AutomaticDisabled, context)
     }
-    if (
-      execution.feature === PROTECTION_BYPASS_FEATURES.AccountRefresh &&
-      !policy.automaticAccountRefreshEnabled
-    ) {
+    if (!isAutomaticProtectionBypassEnabled(policy, execution.feature)) {
       return denied(PROTECTION_BYPASS_DENIED_REASONS.FeatureDisabled, context)
     }
-  } else if (
-    execution.feature === PROTECTION_BYPASS_FEATURES.AccountRefresh &&
-    !policy.manualAccountRefreshEnabled
-  ) {
-    return denied(
-      PROTECTION_BYPASS_DENIED_REASONS.ManualFeatureDisabled,
-      context,
-    )
-  }
-
-  if (!policy.allowedSurfaces[execution.surface]) {
-    return denied(PROTECTION_BYPASS_DENIED_REASONS.SurfaceDisabled, context)
   }
   if (
     capability.kind === PROTECTION_BYPASS_CAPABILITY_KINDS.PermissionRequired

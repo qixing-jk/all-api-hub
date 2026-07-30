@@ -13,8 +13,6 @@ import type { ProtectionBypassPolicyDecision } from "./policy"
 const DISABLED_REASONS = new Set<ProtectionBypassDeniedReason>([
   PROTECTION_BYPASS_DENIED_REASONS.AutomaticDisabled,
   PROTECTION_BYPASS_DENIED_REASONS.FeatureDisabled,
-  PROTECTION_BYPASS_DENIED_REASONS.SurfaceDisabled,
-  PROTECTION_BYPASS_DENIED_REASONS.ManualFeatureDisabled,
 ])
 
 /** Maps controlled policy denials to the stable runtime error contract. */

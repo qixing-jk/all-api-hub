@@ -50,6 +50,7 @@ export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
     sorting: "accountManagement",
     "auto-refresh": "refresh",
     refresh: "refresh",
+    [SETTINGS_ANCHORS.SHIELD_SETTINGS]: "refresh",
     [SETTINGS_ANCHORS.AUTO_CHECKIN]: "checkinRedeem",
     "checkin-redeem": "checkinRedeem",
     checkin: "checkinRedeem",

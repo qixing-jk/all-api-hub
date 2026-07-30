@@ -307,7 +307,7 @@ describe("productAnalyticsState", () => {
         automaticTriggerCounts: { scheduled: 1, mystery: 2 },
         operationCounts: { fetch: 3, secret_operation: 7 },
         decisionCounts: { allowed: 1, impossible: 9 },
-        denialReasonCounts: { surface_disabled: 2, backend_message: 5 },
+        denialReasonCounts: { deprecated_reason: 2, backend_message: 5 },
         adapterCounts: { tab: 1, private_host: 6 },
       }),
     ).toEqual({
@@ -318,7 +318,7 @@ describe("productAnalyticsState", () => {
       automaticTriggerCounts: { scheduled: 1, other: 2 },
       operationCounts: { fetch: 3, other: 7 },
       decisionCounts: { allowed: 1, other: 9 },
-      denialReasonCounts: { surface_disabled: 2, other: 5 },
+      denialReasonCounts: { other: 7 },
       adapterCounts: { tab: 1, other: 6 },
     })
   })

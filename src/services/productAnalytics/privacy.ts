@@ -55,6 +55,7 @@ import {
   PRODUCT_ANALYTICS_TOOLBAR_ACTION_CLICK_BEHAVIORS,
   type ProductAnalyticsEventName,
 } from "./contracts"
+import { SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES } from "./settingsSnapshot"
 
 type SanitizedProperties = Record<string, string | boolean | number>
 
@@ -255,11 +256,6 @@ const EVENT_ALLOWED_KEYS = {
     "auto_detect_enhanced_enabled",
     "auto_detect_url_patterns_configured",
     "api_key_cleanup_patterns_configured",
-    "popup_enabled",
-    "sidepanel_enabled",
-    "options_enabled",
-    "auto_refresh_enabled",
-    "manual_refresh_enabled",
     "reminder_dismissed",
     "mode",
     "auto_sync_enabled",
@@ -295,6 +291,7 @@ const EVENT_ALLOWED_KEYS = {
     "window_length_minutes",
     "deterministic_time_minutes",
     "entrypoint",
+    ...SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES,
   ],
   [PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured]: [
     "setting_id",
@@ -353,11 +350,6 @@ const EVENT_ALLOWED_KEYS = {
     "auto_detect_enhanced_enabled",
     "auto_detect_url_patterns_configured",
     "api_key_cleanup_patterns_configured",
-    "popup_enabled",
-    "sidepanel_enabled",
-    "options_enabled",
-    "auto_refresh_enabled",
-    "manual_refresh_enabled",
     "reminder_dismissed",
     "mode",
     "auto_sync_enabled",
@@ -438,11 +430,7 @@ const EVENT_ALLOWED_KEYS = {
     "web_ai_api_check_auto_detect_enhanced_enabled",
     "web_ai_api_check_auto_detect_patterns_configured",
     "temp_window_fallback_automatic_bypass_enabled",
-    "temp_window_fallback_popup_enabled",
-    "temp_window_fallback_sidepanel_enabled",
-    "temp_window_fallback_options_enabled",
-    "temp_window_fallback_auto_refresh_enabled",
-    "temp_window_fallback_manual_refresh_enabled",
+    ...SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES,
     "temp_window_fallback_mode",
     "temp_window_fallback_reminder_dismissed",
     "webdav_configured",
@@ -577,6 +565,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
 }
 
 const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
+  ...SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES,
   "account_count",
   "account_auto_detect_failure_reason",
   "account_auto_detect_attempt_outcome",

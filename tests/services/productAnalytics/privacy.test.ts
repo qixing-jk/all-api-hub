@@ -44,6 +44,7 @@ import {
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
 } from "~/services/productAnalytics/contracts"
 import { sanitizeProductAnalyticsEvent } from "~/services/productAnalytics/privacy"
+import { SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES } from "~/services/productAnalytics/settingsSnapshot"
 import { AuthTypeEnum } from "~/types"
 
 describe("product analytics privacy filtering", () => {
@@ -1764,6 +1765,50 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("keeps every fixed automatic-feature scalar while discarding legacy and dynamic maps", () => {
+    const fixed = Object.fromEntries(
+      SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES.map(
+        (property, index) => [property, index % 2 === 0],
+      ),
+    )
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      {
+        ...fixed,
+        temp_window_fallback_popup_enabled: true,
+        temp_window_fallback_auto_refresh_enabled: true,
+        automaticFeatureBypass: "dynamic-map",
+      },
+    )
+
+    expect(sanitized).toEqual(fixed)
+  })
+
+  it.each([
+    PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+    PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+  ])("strips exact legacy automatic-bypass setting keys from %s", (event) => {
+    const fixed = Object.fromEntries(
+      SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES.map(
+        (property, index) => [property, index % 2 === 0],
+      ),
+    )
+    const sanitized = sanitizeProductAnalyticsEvent(event, {
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      ...fixed,
+      popup_enabled: true,
+      sidepanel_enabled: true,
+      options_enabled: true,
+      auto_refresh_enabled: true,
+      manual_refresh_enabled: true,
+    })
+
+    expect(sanitized).toEqual({
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      ...fixed,
+    })
+  })
+
   it("defines one reviewed property for every controlled bypass bucket", () => {
     const prefixes = {
       featureCounts: "feature",
@@ -1792,8 +1837,6 @@ describe("product analytics privacy filtering", () => {
     expect(PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION).toEqual({
       automatic_disabled: "denied",
       feature_disabled: "denied",
-      surface_disabled: "denied",
-      manual_feature_disabled: "denied",
       missing_execution: "denied",
       invalid_execution: "denied",
       task_not_permitted: "denied",

@@ -93,11 +93,16 @@ test("isolates same-site cookie and access-token accounts through account refres
     await seedUserPreferences(serviceWorker, {
       tempWindowFallback: {
         enabled: true,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          account_refresh: true,
+          balance_history: true,
+          checkin: true,
+          redemption_assist: true,
+          ldoh_site_lookup: true,
+          key_management: true,
+          managed_site_channels: true,
+          managed_site_model_sync: true,
+        },
         tempContextMode: "composite",
       },
       tempWindowFallbackReminder: {

@@ -2105,7 +2105,10 @@ describe("UserPreferencesContext", () => {
         },
       })
       await context.updateTempWindowFallback({
-        useForManualRefresh: false,
+        automaticFeatureBypass: {
+          ...DEFAULT_PREFERENCES.tempWindowFallback!.automaticFeatureBypass,
+          account_refresh: false,
+        },
       })
       await context.updateTempWindowFallbackReminder({
         dismissed: true,
@@ -2141,7 +2144,9 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.preferences.tempWindowFallback).toEqual(
       expect.objectContaining({
         ...DEFAULT_PREFERENCES.tempWindowFallback,
-        useForManualRefresh: false,
+        automaticFeatureBypass: expect.objectContaining({
+          account_refresh: false,
+        }),
       }),
     )
     expect(

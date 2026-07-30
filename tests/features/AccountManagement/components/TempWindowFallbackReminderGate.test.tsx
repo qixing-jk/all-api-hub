@@ -16,11 +16,16 @@ const {
   },
   tempWindowFallbackState: {
     enabled: true,
-    useInPopup: true,
-    useInSidePanel: true,
-    useInOptions: true,
-    useForAutoRefresh: true,
-    useForManualRefresh: true,
+    automaticFeatureBypass: {
+      account_refresh: true,
+      balance_history: true,
+      checkin: true,
+      redemption_assist: true,
+      ldoh_site_lookup: true,
+      key_management: true,
+      managed_site_channels: true,
+      managed_site_model_sync: true,
+    },
     tempContextMode: "composite",
   },
   getTempWindowFallbackBlockStatusMock: vi.fn(),
@@ -91,11 +96,16 @@ describe("TempWindowFallbackReminderGate", () => {
     vi.clearAllMocks()
     accountDataState.displayData = []
     tempWindowFallbackState.enabled = true
-    tempWindowFallbackState.useInPopup = true
-    tempWindowFallbackState.useInSidePanel = true
-    tempWindowFallbackState.useInOptions = true
-    tempWindowFallbackState.useForAutoRefresh = true
-    tempWindowFallbackState.useForManualRefresh = true
+    tempWindowFallbackState.automaticFeatureBypass = {
+      account_refresh: true,
+      balance_history: true,
+      checkin: true,
+      redemption_assist: true,
+      ldoh_site_lookup: true,
+      key_management: true,
+      managed_site_channels: true,
+      managed_site_model_sync: true,
+    }
     reminderPreferenceState.dismissed = false
     getTempWindowFallbackBlockStatusMock.mockResolvedValue({
       kind: "available",

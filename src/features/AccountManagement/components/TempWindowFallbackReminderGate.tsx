@@ -35,7 +35,7 @@ export function TempWindowFallbackReminderGate() {
     return getTempWindowFallbackIssue(displayData)
   }, [displayData])
 
-  const blockCheckToken = useMemo(() => {
+  const blockCheckToken = (() => {
     if (!issue) {
       return null
     }
@@ -43,22 +43,9 @@ export function TempWindowFallbackReminderGate() {
     return JSON.stringify({
       accountId: issue.accountId,
       code: issue.code,
-      enabled: tempWindowFallback.enabled,
-      useInPopup: tempWindowFallback.useInPopup,
-      useInSidePanel: tempWindowFallback.useInSidePanel,
-      useInOptions: tempWindowFallback.useInOptions,
-      useForAutoRefresh: tempWindowFallback.useForAutoRefresh,
-      useForManualRefresh: tempWindowFallback.useForManualRefresh,
+      preferences: tempWindowFallback,
     })
-  }, [
-    issue,
-    tempWindowFallback.enabled,
-    tempWindowFallback.useForAutoRefresh,
-    tempWindowFallback.useForManualRefresh,
-    tempWindowFallback.useInOptions,
-    tempWindowFallback.useInPopup,
-    tempWindowFallback.useInSidePanel,
-  ])
+  })()
 
   useEffect(() => {
     if (!issue || !blockCheckToken) {

@@ -25,14 +25,15 @@ describe("refresh settings search definitions", () => {
         id: "control:shield-enabled",
         targetId: "shield-enabled",
         titleKey: "settings:refresh.shieldEnabled",
-        descriptionKey: "settings:refresh.shieldDescriptionTempWindowOnly",
-        keywords: expect.arrayContaining([
-          "site verification",
-          "automatic refresh",
-          "automatic check-in",
-        ]),
+        descriptionKey: "settings:refresh.shieldEnabledDescTempWindowOnly",
+        keywords: expect.arrayContaining(["site verification", "automatic"]),
       }),
     )
+    expect(
+      refreshSearchControls.filter((item) =>
+        item.id.startsWith("control:shield-automatic-feature-"),
+      ),
+    ).toHaveLength(8)
   })
 
   it.each([
@@ -60,21 +61,36 @@ describe("refresh settings search definitions", () => {
       locale: "zh-TW",
       settings: zhTwSettings,
     },
-  ])("keeps browser variants aligned in $locale", ({ settings }) => {
-    expect(settings.refresh.shieldTitle).toBeTruthy()
-    expect(settings.refresh.shieldEnabled).toBeTruthy()
-    expect(settings.refresh.shieldEnabledDescTempWindowOnly).toBe(
-      settings.refresh.shieldEnabledDescWithCookieInterceptor,
-    )
+  ])(
+    "keeps website verification copy aligned in $locale",
+    ({ locale, settings }) => {
+      const refresh = settings.refresh as Record<string, unknown>
 
-    for (const permission of [
-      "Cookies",
-      "Web Request",
-      "Web Request Blocking",
-    ]) {
-      expect(settings.refresh.shieldPermissionWarningTitle).toContain(
-        permission,
+      expect(settings.refresh.shieldTitle).toBeTruthy()
+      expect(settings.refresh.shieldEnabled).toBeTruthy()
+      expect(settings.refresh.shieldEnabledDescTempWindowOnly).toBe(
+        settings.refresh.shieldEnabledDescWithCookieInterceptor,
       )
-    }
-  })
+
+      for (const key of [
+        "shieldMethodComposite",
+        "shieldMethodTab",
+        "shieldMethodWindow",
+      ]) {
+        expect(refresh[key], `${locale}:refresh.${key}`).toEqual(
+          expect.stringMatching(/\S/),
+        )
+      }
+
+      for (const permission of [
+        "Cookies",
+        "Web Request",
+        "Web Request Blocking",
+      ]) {
+        expect(settings.refresh.shieldPermissionWarningTitle).toContain(
+          permission,
+        )
+      }
+    },
+  )
 })

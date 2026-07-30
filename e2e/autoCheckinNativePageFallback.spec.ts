@@ -339,7 +339,6 @@ test("automatic native-page fallback is denied while an explicit run is allowed"
       tempWindowFallback: {
         ...DEFAULT_PREFERENCES.tempWindowFallback!,
         enabled: false,
-        useInOptions: true,
         tempContextMode: "tab",
       },
     })

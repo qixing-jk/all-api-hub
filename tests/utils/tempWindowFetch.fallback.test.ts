@@ -45,11 +45,16 @@ const mocks = vi.hoisted(() => ({
   },
   defaultTempWindowFallback: {
     enabled: true,
-    useInPopup: true,
-    useInSidePanel: true,
-    useInOptions: true,
-    useForAutoRefresh: true,
-    useForManualRefresh: true,
+    automaticFeatureBypass: {
+      account_refresh: true,
+      balance_history: true,
+      checkin: true,
+      redemption_assist: true,
+      ldoh_site_lookup: true,
+      key_management: true,
+      managed_site_channels: true,
+      managed_site_model_sync: true,
+    },
     tempContextMode: "composite" as const,
   },
 }))
@@ -226,19 +231,20 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     await expect(canUseTempWindowFetch()).resolves.toBe(false)
   })
 
-  it("reports popup presentation preference blocks through the shared block-status helper", async () => {
+  it("reports automatic account-refresh preference blocks through the shared block-status helper", async () => {
     await expect(
       getTempWindowFallbackBlockStatus({
         preferences: buildTempWindowPreferences({
-          useInPopup: false,
+          automaticFeatureBypass: {
+            ...mocks.defaultTempWindowFallback.automaticFeatureBypass,
+            account_refresh: false,
+          },
         }),
-        isBackground: false,
-        inPopup: true,
       }),
     ).resolves.toEqual({
       kind: "blocked",
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
-      reason: "popup_disabled",
+      reason: "automatic_account_refresh_disabled",
     })
   })
 
@@ -260,12 +266,12 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     {
       location: "background",
       isBackground: true,
-      preferences: buildTempWindowPreferences({ useForAutoRefresh: false }),
+      preferences: buildTempWindowPreferences(),
     },
     {
       location: "non-background",
       isBackground: false,
-      preferences: buildTempWindowPreferences({ useForManualRefresh: false }),
+      preferences: buildTempWindowPreferences(),
     },
   ])(
     "does not infer authorization from a $location execution location",
@@ -300,7 +306,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
   })
 
-  it("reports Firefox popup contexts as not applicable before permission checks", async () => {
+  it("reports Firefox permission requirements independent of presentation surface", async () => {
     mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
     mocks.hasCookieInterceptorPermissionsMock.mockResolvedValue(false)
 
@@ -311,9 +317,9 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
         inPopup: true,
       }),
     ).resolves.toEqual({
-      kind: "not_applicable",
-      code: null,
-      reason: "firefox_popup_unsupported",
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
+      reason: "permission_required",
     })
   })
 
@@ -514,7 +520,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
   })
 
-  it("prefers the propagated popup source when fallback executes in background", async () => {
+  it("keeps the account health check independent of propagated presentation source", async () => {
     mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
 
     await expect(
@@ -524,9 +530,9 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       }),
     ).resolves.toEqual({
-      kind: "not_applicable",
+      kind: "available",
       code: null,
-      reason: "firefox_popup_unsupported",
+      reason: null,
     })
   })
 

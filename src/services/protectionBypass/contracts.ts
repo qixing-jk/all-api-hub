@@ -58,8 +58,6 @@ export const PROTECTION_BYPASS_CAPABILITY_KINDS = {
 const PROTECTION_BYPASS_DENIED_REASON_CATALOG = {
   AutomaticDisabled: "automatic_disabled",
   FeatureDisabled: "feature_disabled",
-  SurfaceDisabled: "surface_disabled",
-  ManualFeatureDisabled: "manual_feature_disabled",
   MissingExecution: "missing_execution",
   InvalidExecution: "invalid_execution",
   TaskNotPermitted: "task_not_permitted",

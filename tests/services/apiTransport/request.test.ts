@@ -99,11 +99,16 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
     tempWindowFallback: {
       enabled: false,
-      useInPopup: true,
-      useInSidePanel: true,
-      useInOptions: true,
-      useForAutoRefresh: true,
-      useForManualRefresh: true,
+      automaticFeatureBypass: {
+        account_refresh: true,
+        balance_history: true,
+        checkin: true,
+        redemption_assist: true,
+        ldoh_site_lookup: true,
+        key_management: true,
+        managed_site_channels: true,
+        managed_site_model_sync: true,
+      },
     },
   },
   userPreferences: {
@@ -198,11 +203,16 @@ describe("apiTransport request helpers", () => {
     mockGetPreferences.mockResolvedValue({
       tempWindowFallback: {
         enabled: false,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          account_refresh: true,
+          balance_history: true,
+          checkin: true,
+          redemption_assist: true,
+          ldoh_site_lookup: true,
+          key_management: true,
+          managed_site_channels: true,
+          managed_site_model_sync: true,
+        },
       },
     })
     mockSendTabMessageWithRetry.mockReset()
@@ -1186,11 +1196,16 @@ describe("apiTransport request helpers", () => {
     mockGetPreferences.mockResolvedValueOnce({
       tempWindowFallback: {
         enabled: true,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          account_refresh: true,
+          balance_history: true,
+          checkin: true,
+          redemption_assist: true,
+          ldoh_site_lookup: true,
+          key_management: true,
+          managed_site_channels: true,
+          managed_site_model_sync: true,
+        },
       },
     })
     mockSendTabMessageWithRetry.mockResolvedValueOnce({
@@ -1277,11 +1292,16 @@ describe("apiTransport request helpers", () => {
     mockGetPreferences.mockResolvedValueOnce({
       tempWindowFallback: {
         enabled: true,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          account_refresh: true,
+          balance_history: true,
+          checkin: true,
+          redemption_assist: true,
+          ldoh_site_lookup: true,
+          key_management: true,
+          managed_site_channels: true,
+          managed_site_model_sync: true,
+        },
       },
     })
     mockSendRuntimeMessage.mockResolvedValueOnce({
@@ -1336,11 +1356,16 @@ describe("apiTransport request helpers", () => {
     mockGetPreferences.mockResolvedValueOnce({
       tempWindowFallback: {
         enabled: true,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          account_refresh: true,
+          balance_history: true,
+          checkin: true,
+          redemption_assist: true,
+          ldoh_site_lookup: true,
+          key_management: true,
+          managed_site_channels: true,
+          managed_site_model_sync: true,
+        },
       },
     })
     mockSendRuntimeMessage.mockResolvedValueOnce({

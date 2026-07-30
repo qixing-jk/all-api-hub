@@ -54,6 +54,7 @@ describe("ShieldSettings", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    updateTempWindowFallback.mockResolvedValue({ ok: true })
     canUseTempWindowFetchMock.mockResolvedValue(true)
     getProtectionBypassUiVariantMock.mockReturnValue(
       "tempWindowWithCookieInterceptor",
@@ -62,11 +63,16 @@ describe("ShieldSettings", () => {
     useUserPreferencesContextMock.mockReturnValue({
       tempWindowFallback: {
         enabled: true,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          account_refresh: true,
+          balance_history: true,
+          checkin: true,
+          redemption_assist: true,
+          ldoh_site_lookup: true,
+          key_management: true,
+          managed_site_channels: true,
+          managed_site_model_sync: true,
+        },
         tempContextMode: "composite",
       },
       updateTempWindowFallback,
@@ -116,11 +122,16 @@ describe("ShieldSettings", () => {
     useUserPreferencesContextMock.mockReturnValue({
       tempWindowFallback: {
         enabled: false,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          account_refresh: true,
+          balance_history: true,
+          checkin: true,
+          redemption_assist: true,
+          ldoh_site_lookup: true,
+          key_management: true,
+          managed_site_channels: true,
+          managed_site_model_sync: true,
+        },
         tempContextMode: "composite",
       },
       updateTempWindowFallback,
@@ -134,28 +145,18 @@ describe("ShieldSettings", () => {
     const method = await screen.findByRole("button", {
       name: "settings:refresh.shieldMethodTab",
     })
-    const [popup, sidepanel, options, automatic, manual] =
-      screen.getAllByRole("checkbox")
+    const automaticFeatures = screen.getAllByRole("checkbox")
 
     expect(method).toBeEnabled()
-    expect(popup).toBeEnabled()
-    expect(sidepanel).toBeEnabled()
-    expect(options).toBeEnabled()
-    expect(automatic).toBeDisabled()
-    expect(manual).toBeEnabled()
+    expect(automaticFeatures).toHaveLength(8)
+    for (const feature of automaticFeatures) expect(feature).toBeEnabled()
   })
 
-  it("updates fallback methods and contexts, including the firefox-specific branch", async () => {
-    isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
-
+  it("updates fallback methods and complete automatic feature maps", async () => {
     render(<ShieldSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
-
-    expect(
-      await screen.findByText("settings:refresh.shieldPopupFirefoxNote"),
-    ).toBeInTheDocument()
 
     const tabModeButton = screen.getByRole("button", {
       name: "settings:refresh.shieldMethodTab",
@@ -166,32 +167,46 @@ describe("ShieldSettings", () => {
 
     fireEvent.click(tabModeButton)
 
-    const [, sidePanelCheckbox, optionsCheckbox, autoRefreshCheckbox] =
-      screen.getAllByRole("checkbox")
+    const accountRefreshCheckbox = screen.getAllByRole("checkbox")[0]
 
     await waitFor(() => {
-      expect(sidePanelCheckbox).toBeEnabled()
-      expect(optionsCheckbox).toBeEnabled()
-      expect(autoRefreshCheckbox).toBeEnabled()
+      expect(accountRefreshCheckbox).toBeEnabled()
     })
 
-    fireEvent.click(sidePanelCheckbox)
-    fireEvent.click(optionsCheckbox)
-    fireEvent.click(autoRefreshCheckbox)
+    fireEvent.click(accountRefreshCheckbox)
 
     await waitFor(() => {
       expect(updateTempWindowFallback).toHaveBeenCalledWith({
         tempContextMode: "tab",
       })
     })
-    expect(updateTempWindowFallback).toHaveBeenCalledWith({
-      useInSidePanel: false,
+    expect(updateTempWindowFallback).toHaveBeenCalledWith(
+      expect.objectContaining({
+        automaticFeatureBypass: expect.objectContaining({
+          account_refresh: false,
+        }),
+      }),
+    )
+  })
+
+  it("keeps rapid automatic-feature changes in the latest complete map", async () => {
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
     })
-    expect(updateTempWindowFallback).toHaveBeenCalledWith({
-      useInOptions: false,
+
+    const [accountRefresh, balanceHistory] = screen.getAllByRole("checkbox")
+    fireEvent.click(accountRefresh)
+    fireEvent.click(balanceHistory)
+
+    await waitFor(() => {
+      expect(updateTempWindowFallback).toHaveBeenCalledTimes(2)
     })
-    expect(updateTempWindowFallback).toHaveBeenCalledWith({
-      useForAutoRefresh: false,
+    expect(updateTempWindowFallback).toHaveBeenLastCalledWith({
+      automaticFeatureBypass: expect.objectContaining({
+        account_refresh: false,
+        balance_history: false,
+      }),
     })
   })
 

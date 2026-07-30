@@ -369,13 +369,25 @@ export function buildTempWindowPrefs(
 ): TempWindowFallbackPreferences {
   const base: TempWindowFallbackPreferences = {
     enabled: true,
-    useInPopup: true,
-    useInSidePanel: true,
-    useInOptions: true,
-    useForAutoRefresh: true,
-    useForManualRefresh: true,
+    automaticFeatureBypass: {
+      account_refresh: true,
+      balance_history: true,
+      checkin: true,
+      redemption_assist: true,
+      ldoh_site_lookup: true,
+      key_management: true,
+      managed_site_channels: true,
+      managed_site_model_sync: true,
+    },
     tempContextMode: "composite",
   }
 
-  return { ...base, ...overrides }
+  return {
+    ...base,
+    ...overrides,
+    automaticFeatureBypass: {
+      ...base.automaticFeatureBypass,
+      ...overrides.automaticFeatureBypass,
+    },
+  }
 }
