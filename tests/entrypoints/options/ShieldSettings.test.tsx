@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ShieldSettings from "~/features/BasicSettings/components/tabs/Refresh/ShieldSettings"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 const {
   canUseTempWindowFetchMock,
@@ -48,6 +54,42 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
     openSettingsTab: (...args: unknown[]) => openSettingsTabMock(...args),
   }
 })
+
+const completeExternalAutomaticFeatureBypass = {
+  account_refresh: true,
+  balance_history: false,
+  checkin: true,
+  redemption_assist: false,
+  ldoh_site_lookup: true,
+  key_management: false,
+  managed_site_channels: true,
+  managed_site_model_sync: false,
+}
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+
+  return { promise, reject, resolve }
+}
+
+function expectAutomaticFeatureCheckboxStates(
+  checkboxes: HTMLElement[],
+  expected: boolean[],
+) {
+  expect(checkboxes).toHaveLength(expected.length)
+  for (const [index, checked] of expected.entries()) {
+    if (checked) {
+      expect(checkboxes[index]).toBeChecked()
+    } else {
+      expect(checkboxes[index]).not.toBeChecked()
+    }
+  }
+}
 
 describe("ShieldSettings", () => {
   const updateTempWindowFallback = vi.fn()
@@ -209,6 +251,150 @@ describe("ShieldSettings", () => {
       }),
     })
   })
+
+  it("restores the complete external feature map when the latest write returns false", async () => {
+    const latestWrite = createDeferred<{ ok: boolean }>()
+    updateTempWindowFallback.mockReturnValueOnce(latestWrite.promise)
+    useUserPreferencesContextMock.mockReturnValue({
+      tempWindowFallback: {
+        enabled: true,
+        automaticFeatureBypass: completeExternalAutomaticFeatureBypass,
+        tempContextMode: "composite",
+      },
+      updateTempWindowFallback,
+    })
+
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const [accountRefresh, ...otherFeatures] = screen.getAllByRole("checkbox")
+    fireEvent.click(accountRefresh)
+
+    await waitFor(() => {
+      expect(updateTempWindowFallback).toHaveBeenCalledWith({
+        automaticFeatureBypass: {
+          ...completeExternalAutomaticFeatureBypass,
+          account_refresh: false,
+        },
+      })
+    })
+    expect(accountRefresh).not.toBeChecked()
+
+    await act(async () => {
+      latestWrite.resolve({ ok: false })
+      await latestWrite.promise
+    })
+
+    expect(accountRefresh).toBeChecked()
+    expectAutomaticFeatureCheckboxStates(otherFeatures, [
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+    ])
+  })
+
+  it("restores the complete external feature map when the latest write rejects", async () => {
+    const latestWrite = createDeferred<{ ok: boolean }>()
+    updateTempWindowFallback.mockReturnValueOnce(latestWrite.promise)
+    useUserPreferencesContextMock.mockReturnValue({
+      tempWindowFallback: {
+        enabled: true,
+        automaticFeatureBypass: completeExternalAutomaticFeatureBypass,
+        tempContextMode: "composite",
+      },
+      updateTempWindowFallback,
+    })
+
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const [accountRefresh, ...otherFeatures] = screen.getAllByRole("checkbox")
+    fireEvent.click(accountRefresh)
+
+    await waitFor(() => {
+      expect(updateTempWindowFallback).toHaveBeenCalledWith({
+        automaticFeatureBypass: {
+          ...completeExternalAutomaticFeatureBypass,
+          account_refresh: false,
+        },
+      })
+    })
+    expect(accountRefresh).not.toBeChecked()
+
+    await act(async () => {
+      latestWrite.reject(new Error("write rejected"))
+      await latestWrite.promise.catch(() => undefined)
+    })
+
+    expect(accountRefresh).toBeChecked()
+    expectAutomaticFeatureCheckboxStates(otherFeatures, [
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+    ])
+  })
+
+  it.each([
+    {
+      name: "returns false",
+      settleOlderWrite: (
+        write: ReturnType<typeof createDeferred<{ ok: boolean }>>,
+      ) => write.resolve({ ok: false }),
+    },
+    {
+      name: "rejects",
+      settleOlderWrite: (
+        write: ReturnType<typeof createDeferred<{ ok: boolean }>>,
+      ) => write.reject(new Error("older write rejected")),
+    },
+  ])(
+    "keeps newer confirmed feature choices when an older write $name",
+    async ({ settleOlderWrite }) => {
+      const olderWrite = createDeferred<{ ok: boolean }>()
+      const newerWrite = createDeferred<{ ok: boolean }>()
+      updateTempWindowFallback
+        .mockReturnValueOnce(olderWrite.promise)
+        .mockReturnValueOnce(newerWrite.promise)
+
+      render(<ShieldSettings />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+
+      const [accountRefresh, balanceHistory] = screen.getAllByRole("checkbox")
+      fireEvent.click(accountRefresh)
+      fireEvent.click(balanceHistory)
+
+      await waitFor(() => {
+        expect(updateTempWindowFallback).toHaveBeenCalledTimes(2)
+      })
+      expect(balanceHistory).not.toBeChecked()
+
+      await act(async () => {
+        newerWrite.resolve({ ok: true })
+        await newerWrite.promise
+      })
+      await act(async () => {
+        settleOlderWrite(olderWrite)
+        await olderWrite.promise.catch(() => undefined)
+      })
+
+      expect(accountRefresh).not.toBeChecked()
+      expect(balanceHistory).not.toBeChecked()
+    },
+  )
 
   it("lets shield method buttons wrap inside narrow settings cards", async () => {
     render(<ShieldSettings />, {

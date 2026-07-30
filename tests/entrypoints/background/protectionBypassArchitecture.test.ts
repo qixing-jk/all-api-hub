@@ -206,8 +206,13 @@ function targetsTempWindowFetch(moduleSpecifier: ts.Expression): boolean {
 }
 
 const unresolvedAlias = Symbol("unresolvedAlias")
+const tempContextTaskKindsCatalog = Symbol("tempContextTaskKindsCatalog")
 
 type AliasValue = ts.Expression | typeof unresolvedAlias
+type ResolvedDormantTaskKind =
+  | string
+  | typeof tempContextTaskKindsCatalog
+  | undefined
 type AliasBinding = {
   name: string
   scope: ts.Node
@@ -216,7 +221,7 @@ type AliasBinding = {
 type ScopeAliases = ReadonlyMap<ts.Node, ReadonlyMap<string, AliasBinding>>
 type ResolutionState =
   | { state: "in_progress" }
-  | { state: "resolved"; value: string | undefined }
+  | { state: "resolved"; value: ResolvedDormantTaskKind }
 type DormantTaskKindResolver = {
   aliases: ScopeAliases
   bindingStates: Map<AliasBinding, ResolutionState>
@@ -413,6 +418,14 @@ function resolveDormantTaskKind(
   expression: ts.Expression,
   resolver: DormantTaskKindResolver,
 ): string | undefined {
+  const resolved = resolveDormantTaskKindValue(expression, resolver)
+  return typeof resolved === "string" ? resolved : undefined
+}
+
+function resolveDormantTaskKindValue(
+  expression: ts.Expression,
+  resolver: DormantTaskKindResolver,
+): ResolvedDormantTaskKind {
   return resolveMemoized(resolver.expressionStates, expression, () =>
     resolveDormantTaskKindUncached(expression, resolver),
   )
@@ -421,8 +434,8 @@ function resolveDormantTaskKind(
 function resolveMemoized<T extends object>(
   states: Map<T, ResolutionState>,
   key: T,
-  resolve: () => string | undefined,
-): string | undefined {
+  resolve: () => ResolvedDormantTaskKind,
+): ResolvedDormantTaskKind {
   const existingState = states.get(key)
   if (existingState) {
     return existingState.state === "resolved" ? existingState.value : undefined
@@ -437,19 +450,19 @@ function resolveMemoized<T extends object>(
 function resolveAliasBinding(
   binding: AliasBinding,
   resolver: DormantTaskKindResolver,
-): string | undefined {
+): ResolvedDormantTaskKind {
   const aliasValue = binding.value
   if (aliasValue === unresolvedAlias) return undefined
 
   return resolveMemoized(resolver.bindingStates, binding, () =>
-    resolveDormantTaskKind(aliasValue, resolver),
+    resolveDormantTaskKindValue(aliasValue, resolver),
   )
 }
 
 function resolveDormantTaskKindUncached(
   expression: ts.Expression,
   resolver: DormantTaskKindResolver,
-): string | undefined {
+): ResolvedDormantTaskKind {
   const unwrapped = unwrapTaskKindExpression(expression)
   if (
     ts.isStringLiteral(unwrapped) ||
@@ -459,16 +472,16 @@ function resolveDormantTaskKindUncached(
   }
   if (
     ts.isPropertyAccessExpression(unwrapped) &&
-    ts.isIdentifier(unwrapped.expression) &&
-    unwrapped.expression.text === "TEMP_CONTEXT_TASK_KINDS"
+    resolveDormantTaskKindValue(unwrapped.expression, resolver) ===
+      tempContextTaskKindsCatalog
   ) {
     if (unwrapped.name.text === "RenderedTitle") return "rendered_title"
     if (unwrapped.name.text === "OpenContext") return "open_context"
   }
   if (
     ts.isElementAccessExpression(unwrapped) &&
-    ts.isIdentifier(unwrapped.expression) &&
-    unwrapped.expression.text === "TEMP_CONTEXT_TASK_KINDS" &&
+    resolveDormantTaskKindValue(unwrapped.expression, resolver) ===
+      tempContextTaskKindsCatalog &&
     unwrapped.argumentExpression &&
     ts.isStringLiteral(unwrapped.argumentExpression)
   ) {
@@ -480,6 +493,9 @@ function resolveDormantTaskKindUncached(
     }
   }
   if (ts.isIdentifier(unwrapped)) {
+    if (unwrapped.text === "TEMP_CONTEXT_TASK_KINDS") {
+      return tempContextTaskKindsCatalog
+    }
     const alias = findSimpleConstAlias(unwrapped, resolver.aliases)
     if (alias) return resolveAliasBinding(alias, resolver)
   }
@@ -677,6 +693,22 @@ describe("architecture source analysis", () => {
       source: `
         const alias = TEMP_CONTEXT_TASK_KINDS.OpenContext
         execute({ kind: alias, params: {} })
+      `,
+      expected: "task:open_context",
+    },
+    {
+      name: "const catalog alias property-access task construction",
+      source: `
+        const kinds = TEMP_CONTEXT_TASK_KINDS
+        execute({ kind: kinds.RenderedTitle, params: {} })
+      `,
+      expected: "task:rendered_title",
+    },
+    {
+      name: "const catalog alias element-access task construction",
+      source: `
+        const kinds = TEMP_CONTEXT_TASK_KINDS
+        execute({ kind: kinds["OpenContext"], params: {} })
       `,
       expected: "task:open_context",
     },
