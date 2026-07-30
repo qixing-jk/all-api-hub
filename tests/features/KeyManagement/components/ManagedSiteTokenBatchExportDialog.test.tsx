@@ -17,6 +17,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_EXECUTION_KINDS,
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
@@ -612,7 +613,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(mockPreparePreview.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
-          kind: "automatic",
+          kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
           feature: PROTECTION_BYPASS_FEATURES.SessionResync,
           trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
           surface: PROTECTION_BYPASS_SURFACES.Options,
@@ -622,7 +623,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(mockPreparePreview.mock.calls[1]?.[0]).toEqual(
       expect.objectContaining({
         protectionBypassExecution: expect.objectContaining({
-          kind: "user_command",
+          kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
           command: PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
           surface: PROTECTION_BYPASS_SURFACES.Options,
         }),

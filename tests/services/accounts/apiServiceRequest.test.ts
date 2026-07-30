@@ -36,6 +36,11 @@ import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTok
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
+import {
+  PROTECTION_BYPASS_EXECUTION_KINDS,
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 
 type ExpectAccountRuntimeKeyFetcher = (
@@ -871,19 +876,27 @@ describe("fetchDisplayAccountTokens", () => {
     })
   })
 
-  it("passes abort signals to token secret resolution requests", async () => {
+  it("passes abort and protection-bypass context to token secret resolution requests", async () => {
     const token = { id: 1, key: "sk-masked", status: 1, name: "Masked" }
     const abortController = new AbortController()
+    const protectionBypassExecution = {
+      version: 1,
+      kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
+      command: PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      surface: PROTECTION_BYPASS_SURFACES.Options,
+    } as const
     resolveTokenKey.mockResolvedValue("sk-real")
 
     await resolveDisplayAccountTokenForSecret(ACCOUNT as any, token as any, {
       abortSignal: abortController.signal,
+      protectionBypassExecution,
     })
 
     expect(resolveTokenKey).toHaveBeenCalledWith({
       request: expect.objectContaining({
         ...REQUEST,
         abortSignal: abortController.signal,
+        protectionBypassExecution,
       }),
       token,
     })

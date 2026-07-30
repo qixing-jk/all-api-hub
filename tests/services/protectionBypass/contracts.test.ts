@@ -18,6 +18,7 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
   TEMP_CONTEXT_TASK_KINDS,
 } from "~/services/protectionBypass/contracts"
+import { AuthTypeEnum } from "~/types"
 
 const canonicalTasks = [
   {
@@ -25,6 +26,8 @@ const canonicalTasks = [
     params: {
       originUrl: "https://example.invalid",
       fetchUrl: "https://example.invalid/api/user/self",
+      tempContextTaskKind: TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+      authType: AuthTypeEnum.Cookie,
     },
   },
   {
@@ -32,6 +35,7 @@ const canonicalTasks = [
     params: {
       originUrl: "https://example.invalid",
       fetchUrl: "https://example.invalid/api/user/self",
+      tempContextTaskKind: TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
     },
   },
   {
@@ -49,6 +53,7 @@ const canonicalTasks = [
       pageUrl: "https://example.invalid/console/personal",
       siteType: "new-api",
       expectedUserId: "example-user",
+      authType: AuthTypeEnum.AccessToken,
     },
   },
   {
@@ -77,6 +82,7 @@ const canonicalTasks = [
       action: "channel_key",
       channelId: 7,
       userId: "example-user",
+      requestId: "request-new-api-session",
     },
   },
   {
@@ -432,6 +438,7 @@ describe("protection bypass runtime contracts", () => {
     const canonicalTask = canonicalTasks.find((task) => task.kind === kind)!
 
     for (const url of [
+      "%",
       "javascript:alert(1)",
       "data:text/plain,example",
       "file:///example",
