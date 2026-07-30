@@ -30,11 +30,23 @@ test("rejects incognito temp-window fallback without opening a normal temporary 
         chrome.runtime.sendMessage(
           {
             action,
-            originUrl,
-            fetchUrl,
-            fetchOptions: { method: "GET" },
-            requestId: "e2e-incognito-temp-window-fallback",
-            useIncognito: true,
+            execution: {
+              version: 1,
+              kind: "automatic",
+              feature: "account_refresh",
+              trigger: "background_recovery",
+              surface: "options",
+            },
+            task: {
+              kind: "api_fallback_fetch",
+              params: {
+                originUrl,
+                fetchUrl,
+                fetchOptions: { method: "GET" },
+                requestId: "e2e-incognito-temp-window-fallback",
+                useIncognito: true,
+              },
+            },
           },
           (result) => {
             const error = chrome.runtime.lastError
@@ -48,7 +60,7 @@ test("rejects incognito temp-window fallback without opening a normal temporary 
       })
     },
     {
-      action: RuntimeActionIds.TempWindowFetch,
+      action: RuntimeActionIds.ProtectionBypassExecuteTask,
       originUrl: ORIGIN_URL,
       fetchUrl: FETCH_URL,
     },
