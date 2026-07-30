@@ -1,9 +1,13 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -159,6 +163,116 @@ test("opens a searched settings control and preserves its tab and anchor in the 
     page.getByRole("button", { name: "Data Refresh" }),
   ).toHaveAttribute("aria-pressed", "true")
   await expect(page.getByText("Refresh Interval").first()).toBeVisible()
+})
+
+test("opens automatic check-in verification assistance from settings search and persists its feature control", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const initialAutomaticFeatureBypass = {
+    ...DEFAULT_PREFERENCES.tempWindowFallback!.automaticFeatureBypass,
+    [PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin]: false,
+  }
+  const persistedAutomaticFeatureBypass = {
+    ...initialAutomaticFeatureBypass,
+    [PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin]: true,
+  }
+
+  await seedUserPreferences(serviceWorker, {
+    tempWindowFallback: {
+      ...DEFAULT_PREFERENCES.tempWindowFallback!,
+      enabled: false,
+      automaticFeatureBypass: initialAutomaticFeatureBypass,
+      tempContextMode: TEMP_CONTEXT_MODES.Tab,
+    },
+  })
+
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  await page.getByRole("button", { name: "Open settings search" }).click()
+
+  const dialog = page.getByRole("dialog", { name: "Search settings" })
+  await expect(dialog).toBeVisible()
+  await dialog.getByPlaceholder("Search settings...").fill("check-in")
+  await dialog
+    .getByRole("option", {
+      name: /^Check-in Settings \/ Data Refresh \/ Website verification assistance$/,
+    })
+    .click()
+
+  await expect(dialog).toHaveCount(0)
+  await expect(page).toHaveURL(/options\.html\?.*#basic$/)
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return {
+        hash: url.hash,
+        tab: url.searchParams.get("tab"),
+        anchor: url.searchParams.get("anchor"),
+        highlight: url.searchParams.get("highlight"),
+      }
+    })
+    .toEqual({
+      hash: "#basic",
+      tab: "refresh",
+      anchor:
+        SHIELD_SETTINGS_TARGET_IDS.feature[
+          PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin
+        ],
+      highlight:
+        SHIELD_SETTINGS_TARGET_IDS.feature[
+          PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin
+        ],
+    })
+
+  const masterToggle = page
+    .locator(`#${SHIELD_SETTINGS_TARGET_IDS.enabled}`)
+    .getByRole("switch", { name: "Toggle" })
+  const checkinFeatureToggle = page
+    .locator(
+      `#${
+        SHIELD_SETTINGS_TARGET_IDS.feature[
+          PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin
+        ]
+      }`,
+    )
+    .getByRole("checkbox")
+
+  await expect(masterToggle).toHaveAttribute("aria-checked", "false")
+  await expect(checkinFeatureToggle).toBeEnabled()
+  await expect(checkinFeatureToggle).not.toBeChecked()
+
+  await checkinFeatureToggle.click()
+  await expect(checkinFeatureToggle).toBeChecked()
+  await expect
+    .poll(async () =>
+      getPlasmoStorageJsonValue<{
+        tempWindowFallback?: {
+          enabled?: boolean
+          automaticFeatureBypass?: Record<string, boolean>
+          tempContextMode?: string
+        }
+      }>(serviceWorker, STORAGE_KEYS.USER_PREFERENCES),
+    )
+    .toMatchObject({
+      tempWindowFallback: {
+        enabled: false,
+        automaticFeatureBypass: persistedAutomaticFeatureBypass,
+        tempContextMode: TEMP_CONTEXT_MODES.Tab,
+      },
+    })
+
+  await page.reload()
+  await waitForExtensionRoot(page)
+
+  await expect(masterToggle).toHaveAttribute("aria-checked", "false")
+  await expect(checkinFeatureToggle).toBeChecked()
 })
 
 test("opens product analytics from settings search and persists opt-out", async ({

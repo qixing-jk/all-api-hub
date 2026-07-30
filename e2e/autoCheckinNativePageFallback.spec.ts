@@ -5,8 +5,10 @@ import type { Page, Worker } from "@playwright/test"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
@@ -338,8 +340,12 @@ test("automatic native-page fallback is denied while an explicit run is allowed"
       },
       tempWindowFallback: {
         ...DEFAULT_PREFERENCES.tempWindowFallback!,
-        enabled: false,
-        tempContextMode: "tab",
+        enabled: true,
+        automaticFeatureBypass: {
+          ...DEFAULT_PREFERENCES.tempWindowFallback!.automaticFeatureBypass,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin]: false,
+        },
+        tempContextMode: TEMP_CONTEXT_MODES.Tab,
       },
     })
     await seedStoredAccounts(serviceWorker, [
