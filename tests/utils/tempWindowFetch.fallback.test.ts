@@ -6,6 +6,7 @@ import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
+  TEMP_CONTEXT_TASK_KINDS,
 } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import {
@@ -75,17 +76,17 @@ vi.mock("~/entrypoints/background/protectionBypassCoordinator", () => ({
         responded = true
       }
       let result
-      if (task.kind === "turnstile_fetch") {
+      if (task.kind === TEMP_CONTEXT_TASK_KINDS.TurnstileFetch) {
         result = mocks.handleTempWindowTurnstileFetchMock(
           task.params,
           sendResponse,
         )
-      } else if (task.kind === "native_page_action") {
+      } else if (task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction) {
         result = mocks.handleTempWindowCheckinPageActionMock(
           task.params,
           sendResponse,
         )
-      } else if (task.kind === "rendered_title") {
+      } else if (task.kind === TEMP_CONTEXT_TASK_KINDS.RenderedTitle) {
         result = mocks.handleTempWindowGetRenderedTitleMock(
           task.params,
           sendResponse,
@@ -335,7 +336,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       success: true,
       data: "ok",
     })
-    expectRuntimeTask("api_fallback_fetch", {
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
       fetchOptions: { method: "POST" },
@@ -359,7 +360,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       },
     })
 
-    expectRuntimeTask("api_fallback_fetch", {
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
       fetchOptions: { method: "POST" },
     })
   })
@@ -376,7 +377,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       fetchUrl: "https://example.com/api/models",
     })
 
-    expectRuntimeTask("api_fallback_fetch", {
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
     })
@@ -586,7 +587,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
         async () => ({ success: true, data: { ok: false }, message: "direct" }),
       )
 
-      expectRuntimeTask("profile_isolated_fetch", {})
+      expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch, {})
       expect(
         mocks.sendRuntimeMessageMock.mock.calls[0]?.[0].task.params,
       ).not.toHaveProperty("tempWindowRequestSource")
@@ -650,7 +651,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       models: ["gpt-4.1"],
     })
     expect(mocks.getPreferencesMock).not.toHaveBeenCalled()
-    expectRuntimeTask("api_fallback_fetch", {
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
       requestId: "uuid:temp-fetch-https://example.com/api/models",
@@ -742,7 +743,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     )
 
     expect(result).toEqual({ account: "stored-cookie" })
-    expectRuntimeTask("api_fallback_fetch", {
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
       accountId: "acct-1",
       authType: AuthTypeEnum.Cookie,
       cookieAuthSessionCookie: "session=stored-account",
@@ -805,7 +806,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     )
 
     expect(result).toEqual({ account: "stored-cookie" })
-    expectRuntimeTask("api_fallback_fetch", {
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
       accountId: "acct-1",
       authType: AuthTypeEnum.Cookie,
       cookieAuthSessionCookie: "session=stored-account",

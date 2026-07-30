@@ -1,6 +1,9 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ApiErrorCode } from "~/services/apiTransport/errors"
-import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
+import type {
+  ProtectionBypassExecution,
+  TempWindowFetchTaskKind,
+} from "~/services/protectionBypass/contracts"
 import type { AuthTypeEnum } from "~/types/index"
 import type {
   CheckinPageActionTriggerResult,
@@ -37,7 +40,7 @@ export interface TempWindowFetchParams {
   responseType?: TempWindowResponseType
   tempWindowRequestSource?: TempWindowRequestSource
   protectionBypassExecution: ProtectionBypassExecution
-  tempContextTaskKind?: "api_fallback_fetch" | "profile_isolated_fetch"
+  tempContextTaskKind?: TempWindowFetchTaskKind
   suppressMinimize?: boolean
   /** Account ID for per-request cookie isolation */
   accountId?: string

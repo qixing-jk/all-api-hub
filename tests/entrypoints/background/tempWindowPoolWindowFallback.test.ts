@@ -413,24 +413,24 @@ describe("tempWindowPool window fallback", () => {
 
     expect(renderedTitleResponse).toHaveBeenCalledWith({
       success: false,
-      error: "firefox_popup_unsupported",
+      error: "settings:refresh.shieldPopupFirefoxNote",
     })
     expect(autoDetectResponse).toHaveBeenCalledWith({
       success: false,
-      error: "firefox_popup_unsupported",
+      error: "settings:refresh.shieldPopupFirefoxNote",
     })
     expect(fetchResponse).toHaveBeenCalledWith({
       success: false,
-      error: "firefox_popup_unsupported",
+      error: "settings:refresh.shieldPopupFirefoxNote",
     })
     expect(pageActionResponse).toHaveBeenCalledWith({
       success: false,
       reason: "trigger_failed",
-      error: "firefox_popup_unsupported",
+      error: "settings:refresh.shieldPopupFirefoxNote",
     })
     expect(turnstileResponse).toHaveBeenCalledWith({
       success: false,
-      error: "firefox_popup_unsupported",
+      error: "settings:refresh.shieldPopupFirefoxNote",
       turnstile: { status: "error", hasTurnstile: false },
     })
     expect(createWindowMock).not.toHaveBeenCalled()

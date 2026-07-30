@@ -55,6 +55,11 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to temp window fetch helpers and fallback behavior.
  */
 const logger = createLogger("TempWindowFetch")
+const TEMP_WINDOW_POLICY_BLOCK_CODES = new Set<ApiErrorCode>([
+  API_ERROR_CODES.TEMP_WINDOW_DISABLED,
+  API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED,
+  API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+])
 
 /** Sends one canonical protected-task envelope through the active context. */
 export async function executeProtectionBypassTask<
@@ -468,12 +473,6 @@ export async function executeWithTempWindowFallback<T>(
       throw primaryError
     }
 
-    const TEMP_WINDOW_POLICY_BLOCK_CODES = new Set<ApiErrorCode>([
-      API_ERROR_CODES.TEMP_WINDOW_DISABLED,
-      API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED,
-      API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
-    ])
-
     try {
       return await fetchViaTempWindow<T>(context)
     } catch (fallbackError) {
@@ -606,8 +605,8 @@ async function fetchViaTempWindow<T>(
     tempWindowRequestSource: context.tempWindowRequestSource,
     protectionBypassExecution: context.protectionBypassExecution,
     tempContextTaskKind: context.forceTempWindow
-      ? "profile_isolated_fetch"
-      : "api_fallback_fetch",
+      ? TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
+      : TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
     accountId: context.accountId,
     authType: context.authType,
     cookieAuthSessionCookie: context.cookieAuthSessionCookie,

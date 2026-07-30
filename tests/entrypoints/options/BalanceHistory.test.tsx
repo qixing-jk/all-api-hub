@@ -24,6 +24,10 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import {
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
@@ -698,6 +702,8 @@ describe("BalanceHistory options page", () => {
             protectionBypassExecution: expect.objectContaining({
               version: 1,
               kind: "user_command",
+              command: PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+              surface: PROTECTION_BYPASS_SURFACES.Options,
             }),
           },
         )
@@ -886,6 +892,8 @@ describe("BalanceHistory options page", () => {
             protectionBypassExecution: expect.objectContaining({
               version: 1,
               kind: "user_command",
+              command: PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+              surface: PROTECTION_BYPASS_SURFACES.Options,
             }),
           },
         )

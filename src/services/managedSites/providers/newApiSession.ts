@@ -169,6 +169,8 @@ const isSecureVerificationError = (error: unknown) =>
     (error.statusCode === 403 || error.code === API_ERROR_CODES.HTTP_403)) ||
   (error instanceof Error && looksLikeVerificationRequirement(error.message))
 
+// New API deployments signal browser-session verification with either an
+// explicit 403 or a non-JSON verification page returned to the API client.
 const isNewApiSessionReadFallbackError = (error: ApiError) =>
   error.statusCode === 403 ||
   error.code === API_ERROR_CODES.HTTP_403 ||

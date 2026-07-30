@@ -40,13 +40,6 @@ const fetchParams = {
   originUrl: "https://example.invalid",
   fetchUrl: "https://example.invalid/api/account",
   requestId: "request-1",
-  protectionBypassExecution: {
-    version: PROTECTION_BYPASS_EXECUTION_VERSION,
-    kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
-    feature: PROTECTION_BYPASS_FEATURES.SiteDetection,
-    trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
-    surface: PROTECTION_BYPASS_SURFACES.Background,
-  } as const,
 }
 
 const nativeParams = {
@@ -55,13 +48,6 @@ const nativeParams = {
   requestId: "request-1",
   siteType: "new-api" as const,
   expectedUserId: "example-user",
-  protectionBypassExecution: {
-    version: PROTECTION_BYPASS_EXECUTION_VERSION,
-    kind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
-    feature: PROTECTION_BYPASS_FEATURES.Checkin,
-    trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
-    surface: PROTECTION_BYPASS_SURFACES.Background,
-  } as const,
 }
 
 const availableCapability: ProtectionBypassCapability = {

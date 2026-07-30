@@ -119,7 +119,7 @@ const isUiOpenCheckinExecution = (
   surface: TempWindowRequestSource,
 ): execution is ProtectionBypassExecution =>
   isProtectionBypassExecution(execution) &&
-  execution.kind === "automatic" &&
+  execution.kind === PROTECTION_BYPASS_EXECUTION_KINDS.Automatic &&
   execution.feature === PROTECTION_BYPASS_FEATURES.Checkin &&
   execution.trigger === PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle &&
   execution.surface === surface
@@ -2865,7 +2865,7 @@ export async function runAutoCheckinNow(
   ) {
     return {
       success: false as const,
-      error: "Missing or invalid protection bypass execution",
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
     }
   }
 
@@ -2976,7 +2976,7 @@ export async function pretriggerAutoCheckinDailyOnUiOpen(
   ) {
     return {
       success: false as const,
-      error: "Missing or invalid protection bypass execution",
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
     }
   }
   const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
@@ -3009,7 +3009,7 @@ export async function retryAutoCheckinAccount(
   ) {
     return {
       success: false as const,
-      error: "Missing or invalid protection bypass execution",
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
     }
   }
   await autoCheckinScheduler.retryAccount(

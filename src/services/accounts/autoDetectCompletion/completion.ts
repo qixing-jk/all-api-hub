@@ -4,7 +4,10 @@ import {
 } from "~/constants/autoDetect"
 import { getSiteName } from "~/services/accounts/siteName"
 import type { SiteStatusInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
-import type { AccountCompletionHelpers } from "~/services/apiAdapters/contracts/accountCompletion"
+import type {
+  AccountCompletionHelpers,
+  AccountCompletionRuntimeContext,
+} from "~/services/apiAdapters/contracts/accountCompletion"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type {
@@ -128,10 +131,7 @@ const createAccountCompletionHelpers = (params: {
   createServiceRequest(input: {
     baseUrl: string
     auth: ApiServiceRequest["auth"]
-    context: {
-      fetchContext?: ApiServiceFetchContext
-      protectionBypassExecution?: ProtectionBypassExecution
-    }
+    context: AccountCompletionRuntimeContext
   }) {
     return createAutoDetectApiRequest({
       baseUrl: input.baseUrl,

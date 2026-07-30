@@ -38,11 +38,15 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/contracts"
-import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  createAutomaticProtectionBypassExecution,
+  withProtectionBypassUserCommand,
+} from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
   type ProtectionBypassExecution,
 } from "~/services/protectionBypass/contracts"
 import type { AccountToken, DisplaySiteData } from "~/types"
@@ -715,8 +719,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       accountId: string
       loadEpoch: number
       toastOnError: boolean
+      protectionBypassExecution: ProtectionBypassExecution
     }): Promise<TokenLoadStatus | null> => {
-      const { accountId, loadEpoch, toastOnError } = params
+      const { accountId, loadEpoch, toastOnError, protectionBypassExecution } =
+        params
       const account = accountById.get(accountId)
       if (!account) return null
 
@@ -745,8 +751,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       }))
 
       try {
-        const { keyManagement, serviceCredential, request } =
-          createDisplayAccountApiContext(account)
+        const {
+          keyManagement,
+          serviceCredential,
+          request: baseRequest,
+        } = createDisplayAccountApiContext(account)
+        const request = {
+          ...baseRequest,
+          protectionBypassExecution,
+        }
 
         if (!keyManagement && !serviceCredential) {
           const errorCategory = PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
@@ -928,8 +941,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     async (params: {
       accountIds: string[]
       loadEpoch: number
+      protectionBypassExecution: ProtectionBypassExecution
     }): Promise<TokenLoadAggregateResult> => {
-      const { accountIds, loadEpoch } = params
+      const { accountIds, loadEpoch, protectionBypassExecution } = params
       tokenLoadErrorCategoriesRef.current = {}
       const targetAccounts = accountIds.flatMap((id) => {
         const account = accountById.get(id)
@@ -954,6 +968,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               accountId,
               loadEpoch,
               toastOnError: false,
+              protectionBypassExecution,
             })
             if (status === "loaded" || status === "error") {
               statuses.push(status)
@@ -1006,9 +1021,21 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
    * - all accounts: loads each enabled account with per-account error isolation
    */
   const loadTokens = useCallback(
-    async (accountId?: string) => {
+    async (
+      accountId?: string,
+      options?: {
+        protectionBypassExecution?: ProtectionBypassExecution
+      },
+    ) => {
       const targetAccountId = accountId ?? selectedAccount
       if (!targetAccountId || enabledDisplayData.length === 0) return
+      const protectionBypassExecution =
+        options?.protectionBypassExecution ??
+        createAutomaticProtectionBypassExecution(
+          PROTECTION_BYPASS_FEATURES.AccountRefresh,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          PROTECTION_BYPASS_SURFACES.Options,
+        )
 
       const tracker = startProductAnalyticsAction(
         keyManagementAnalyticsContext(
@@ -1048,6 +1075,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         const loadResult = await loadTokensForAccounts({
           accountIds: targetAccountIds,
           loadEpoch,
+          protectionBypassExecution,
         })
         if (!isEpochActive(loadEpoch)) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
@@ -1112,6 +1140,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         accountId: targetAccountId,
         loadEpoch,
         toastOnError: true,
+        protectionBypassExecution,
       })
       const result =
         status === "loaded"
@@ -1170,10 +1199,16 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader,
       ),
     )
-    const loadResult = await loadTokensForAccounts({
-      accountIds: failedAccountIds,
-      loadEpoch: selectionEpochRef.current,
-    })
+    const loadResult = await withProtectionBypassUserCommand(
+      PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+      PROTECTION_BYPASS_SURFACES.Options,
+      async (protectionBypassExecution) =>
+        await loadTokensForAccounts({
+          accountIds: failedAccountIds,
+          loadEpoch: selectionEpochRef.current,
+          protectionBypassExecution,
+        }),
+    )
     const successCount = loadResult.successCount
     const failureCount = loadResult.failureCount
     tracker.complete(
@@ -1494,54 +1529,61 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     )
   }, [tokenInventories, tokens])
 
-  const refreshManagedSiteTokenStatuses = useCallback(async () => {
-    if (
-      !isManagedSiteChannelStatusSupported ||
-      statusCheckTokens.length === 0
-    ) {
-      return
-    }
-
-    setIsManagedSiteStatusRefreshing(true)
-    const targetTokenCount = statusCheckTokens.length
-    const tracker = startProductAnalyticsAction(
-      keyManagementAnalyticsContext(
-        PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteTokenStatus,
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader,
-      ),
-    )
-
-    try {
-      const results = await runManagedSiteStatusChecks({
-        tokens: statusCheckTokens,
-        force: true,
-      })
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-        insights: {
-          itemCount: targetTokenCount,
-          ...summarizeManagedSiteTokenStatusResults(results, targetTokenCount),
-        },
-      })
-    } catch (error) {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          itemCount: targetTokenCount,
-          failureCount: targetTokenCount,
-          statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-        },
-      })
-      throw error
-    } finally {
-      if (isMountedRef.current) {
-        setIsManagedSiteStatusRefreshing(false)
+  const refreshManagedSiteTokenStatuses = useCallback(
+    async (options?: RefreshManagedSiteTokenStatusOptions) => {
+      if (
+        !isManagedSiteChannelStatusSupported ||
+        statusCheckTokens.length === 0
+      ) {
+        return
       }
-    }
-  }, [
-    isManagedSiteChannelStatusSupported,
-    runManagedSiteStatusChecks,
-    statusCheckTokens,
-  ])
+
+      setIsManagedSiteStatusRefreshing(true)
+      const targetTokenCount = statusCheckTokens.length
+      const tracker = startProductAnalyticsAction(
+        keyManagementAnalyticsContext(
+          PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteTokenStatus,
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader,
+        ),
+      )
+
+      try {
+        const results = await runManagedSiteStatusChecks({
+          tokens: statusCheckTokens,
+          force: true,
+          protectionBypassExecution: options?.protectionBypassExecution,
+        })
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: {
+            itemCount: targetTokenCount,
+            ...summarizeManagedSiteTokenStatusResults(
+              results,
+              targetTokenCount,
+            ),
+          },
+        })
+      } catch (error) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            itemCount: targetTokenCount,
+            failureCount: targetTokenCount,
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+          },
+        })
+        throw error
+      } finally {
+        if (isMountedRef.current) {
+          setIsManagedSiteStatusRefreshing(false)
+        }
+      }
+    },
+    [
+      isManagedSiteChannelStatusSupported,
+      runManagedSiteStatusChecks,
+      statusCheckTokens,
+    ],
+  )
 
   const refreshManagedSiteTokenStatusForToken = useCallback(
     async (
@@ -2009,42 +2051,61 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       ),
     )
     try {
-      const account = enabledDisplayData.find(
-        (acc) => acc.id === token.accountId,
-      )
-      if (!account) {
-        toast.error(t("keyManagement:messages.accountNotFound"))
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        })
-        return
-      }
+      await withProtectionBypassUserCommand(
+        PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
+        PROTECTION_BYPASS_SURFACES.Options,
+        async (protectionBypassExecution) => {
+          const account = enabledDisplayData.find(
+            (acc) => acc.id === token.accountId,
+          )
+          if (!account) {
+            toast.error(t("keyManagement:messages.accountNotFound"))
+            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            })
+            return
+          }
 
-      const { keyManagement, request } = createDisplayAccountApiContext(account)
-      await requireDisplayAccountKeyManagement(
-        account,
-        keyManagement,
-      ).deleteToken({
-        request,
-        tokenId: token.id,
-      })
-      clearTokenVisibilityState(token)
-      removeTokenFromInventory(token)
-      invalidateManagedSiteStatusForToken(token)
-      toast.success(
-        t("keyManagement:messages.deleteSuccess", { name: token.name }),
-      )
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+          const { keyManagement, request: baseRequest } =
+            createDisplayAccountApiContext(account)
+          await requireDisplayAccountKeyManagement(
+            account,
+            keyManagement,
+          ).deleteToken({
+            request: {
+              ...baseRequest,
+              protectionBypassExecution,
+            },
+            tokenId: token.id,
+          })
+          clearTokenVisibilityState(token)
+          removeTokenFromInventory(token)
+          invalidateManagedSiteStatusForToken(token)
+          toast.success(
+            t("keyManagement:messages.deleteSuccess", { name: token.name }),
+          )
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
 
-      if (selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE) {
-        void loadTokensForAccount({
-          accountId: token.accountId,
-          loadEpoch: selectionEpochRef.current,
-          toastOnError: false,
-        })
-      } else if (selectedAccount) {
-        void loadTokens()
-      }
+          const reconciliationExecution =
+            createAutomaticProtectionBypassExecution(
+              PROTECTION_BYPASS_FEATURES.AccountRefresh,
+              PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+              PROTECTION_BYPASS_SURFACES.Options,
+            )
+          if (selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE) {
+            void loadTokensForAccount({
+              accountId: token.accountId,
+              loadEpoch: selectionEpochRef.current,
+              toastOnError: false,
+              protectionBypassExecution: reconciliationExecution,
+            })
+          } else if (selectedAccount) {
+            void loadTokens(undefined, {
+              protectionBypassExecution: reconciliationExecution,
+            })
+          }
+        },
+      )
     } catch (error) {
       const errorMessage = getErrorMessage(error) || String(error)
       logger.error("删除密钥失败", errorMessage)

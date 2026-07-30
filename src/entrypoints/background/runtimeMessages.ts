@@ -41,6 +41,7 @@ import {
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { t } from "~/utils/i18n/core"
 import {
   openBugReportPage,
   openOrFocusOptionsMenuItem,
@@ -165,7 +166,7 @@ export function setupRuntimeMessageListeners() {
         ) {
           sendResponse({
             success: false,
-            error: "Invalid protection bypass request",
+            error: t("messages:background.tempWindowPolicyContextInvalid"),
             code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
           })
           return true

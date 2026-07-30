@@ -27,11 +27,15 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
-import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  createAutomaticProtectionBypassExecution,
+  withProtectionBypassUserCommand,
+} from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import type {
   ManagedSiteTokenBatchExportExecutionResult,
@@ -159,15 +163,30 @@ export function useManagedSiteTokenBatchExportDialog({
 
     void (async () => {
       try {
-        const nextPreview = await prepareManagedSiteTokenBatchExportPreview({
-          items: openedItemsRef.current,
-          resolvedChannelKeysByItemId: resolvedChannelKeysByItemIdRef.current,
-          protectionBypassExecution: createAutomaticProtectionBypassExecution(
-            PROTECTION_BYPASS_FEATURES.SessionResync,
-            PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
-            PROTECTION_BYPASS_SURFACES.Options,
-          ),
-        })
+        const preparePreview = (
+          protectionBypassExecution: Parameters<
+            typeof prepareManagedSiteTokenBatchExportPreview
+          >[0]["protectionBypassExecution"],
+        ) =>
+          prepareManagedSiteTokenBatchExportPreview({
+            items: openedItemsRef.current,
+            resolvedChannelKeysByItemId: resolvedChannelKeysByItemIdRef.current,
+            protectionBypassExecution,
+          })
+        const nextPreview =
+          requestOrigin === PREVIEW_LOAD_ORIGINS.MANUAL
+            ? await withProtectionBypassUserCommand(
+                PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+                PROTECTION_BYPASS_SURFACES.Options,
+                preparePreview,
+              )
+            : await preparePreview(
+                createAutomaticProtectionBypassExecution(
+                  PROTECTION_BYPASS_FEATURES.SessionResync,
+                  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+                  PROTECTION_BYPASS_SURFACES.Options,
+                ),
+              )
         if (cancelled) return
         setPreview(nextPreview)
         setSelectedIds(

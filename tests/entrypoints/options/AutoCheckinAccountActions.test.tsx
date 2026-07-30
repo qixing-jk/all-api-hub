@@ -361,12 +361,12 @@ describe("AutoCheckin account actions", () => {
       expect(retryButton).toBeDisabled()
     })
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledTimes(1)
-    expect(
-      sendRuntimeMessageSpy.mock.calls.filter(
-        ([message]) => message === AutoCheckinMessageTypes.RetryAccount,
-      ),
-    ).toHaveLength(1)
     await waitFor(() => {
+      expect(
+        sendRuntimeMessageSpy.mock.calls.filter(
+          ([message]) => message === AutoCheckinMessageTypes.RetryAccount,
+        ),
+      ).toHaveLength(1)
       expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
         AutoCheckinMessageTypes.RetryAccount,
         {

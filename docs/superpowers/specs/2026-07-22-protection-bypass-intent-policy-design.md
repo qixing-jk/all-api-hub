@@ -351,8 +351,7 @@ Keep the public Interface small:
 ```ts
 interface ProtectionBypassCoordinator {
   execute<TTask extends TempContextTask>(
-    execution: ProtectionBypassExecution | undefined,
-    task: TTask,
+    request: ProtectionBypassExecuteRequest<TTask>,
   ): Promise<TempContextTaskResult<TTask>>
 }
 ```

@@ -1930,6 +1930,52 @@ describe("AccountDataContext refresh orchestration", () => {
     expect(mockRefreshAllAccounts).toHaveBeenCalledTimes(1)
   })
 
+  it("runs a forced all-account refresh after a weaker in-flight refresh", async () => {
+    let releaseFirstRefresh!: () => void
+    mockRefreshAllAccounts
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseFirstRefresh = () =>
+              resolve({
+                success: 0,
+                failed: 0,
+                refreshedCount: 0,
+                latestSyncTime: 0,
+              })
+          }),
+      )
+      .mockResolvedValueOnce({
+        success: 0,
+        failed: 0,
+        refreshedCount: 0,
+        latestSyncTime: 0,
+      })
+
+    const getLatestCtx = await renderAccountDataProvider()
+    let regularRefresh!: Promise<unknown>
+    let forcedRefresh!: Promise<unknown>
+    act(() => {
+      regularRefresh = getLatestCtx().handleRefresh(false)
+      forcedRefresh = getLatestCtx().handleRefresh(true)
+    })
+
+    await waitFor(() => {
+      expect(mockRefreshAllAccounts).toHaveBeenCalledTimes(1)
+    })
+    expect(mockRefreshAllAccounts.mock.calls[0]?.[0]).toBe(false)
+
+    await act(async () => {
+      releaseFirstRefresh()
+      await Promise.all([regularRefresh, forcedRefresh])
+    })
+
+    expect(mockRefreshAllAccounts.mock.calls.map(([force]) => force)).toEqual([
+      false,
+      true,
+    ])
+  })
+
   it("blocks duplicate disabled-account refreshes while intent creation is pending", async () => {
     let releaseIntent!: () => void
     const intentReady = new Promise<void>((resolve) => {
@@ -1969,6 +2015,51 @@ describe("AccountDataContext refresh orchestration", () => {
     })
 
     expect(mockRefreshDisabledAccounts).toHaveBeenCalledTimes(1)
+  })
+
+  it("runs a forced disabled-account refresh after a weaker in-flight refresh", async () => {
+    let releaseFirstRefresh!: () => void
+    mockRefreshDisabledAccounts
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseFirstRefresh = () =>
+              resolve({
+                processedCount: 0,
+                failedCount: 0,
+                reEnabledCount: 0,
+                latestSyncTime: 0,
+              })
+          }),
+      )
+      .mockResolvedValueOnce({
+        processedCount: 0,
+        failedCount: 0,
+        reEnabledCount: 0,
+        latestSyncTime: 0,
+      })
+
+    const getLatestCtx = await renderAccountDataProvider()
+    let regularRefresh!: Promise<unknown>
+    let forcedRefresh!: Promise<unknown>
+    act(() => {
+      regularRefresh = getLatestCtx().handleRefreshDisabledAccounts(false)
+      forcedRefresh = getLatestCtx().handleRefreshDisabledAccounts(true)
+    })
+
+    await waitFor(() => {
+      expect(mockRefreshDisabledAccounts).toHaveBeenCalledTimes(1)
+    })
+    expect(mockRefreshDisabledAccounts.mock.calls[0]?.[0]).toBe(false)
+
+    await act(async () => {
+      releaseFirstRefresh()
+      await Promise.all([regularRefresh, forcedRefresh])
+    })
+
+    expect(
+      mockRefreshDisabledAccounts.mock.calls.map(([force]) => force),
+    ).toEqual([false, true])
   })
 
   it("reloads account data after disabled-account refresh failures and clears the refreshing state", async () => {

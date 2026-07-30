@@ -876,6 +876,43 @@ describe("ProtectionBypassCoordinator", () => {
     }
   })
 
+  it("maps an injected policy reader rejection to unavailable policy", async () => {
+    const response = await createProtectionBypassCoordinator({
+      readPolicy: vi.fn().mockRejectedValue(new Error("storage unavailable")),
+      resolveCapability: vi.fn().mockResolvedValue({
+        kind: "available",
+        adapter: "tab",
+      }),
+      executeAuthorizedTask: vi.fn(
+        async (
+          _task,
+          _source,
+          authorizeAtAcquire,
+          sendResponse,
+          reportOutcome,
+        ) => {
+          const decision = await authorizeAtAcquire()
+          reportOutcome({ kind: "denied" })
+          sendResponse({
+            success: false,
+            code:
+              decision.kind === PROTECTION_BYPASS_DECISION_RESULTS.Denied
+                ? getProtectionBypassDecisionErrorCode(decision)
+                : undefined,
+          })
+        },
+      ),
+    }).execute({
+      task: fetchTask(automaticExecution),
+      execution: automaticExecution,
+    })
+
+    expect(response).toEqual({
+      success: false,
+      code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+    })
+  })
+
   it("maps capability lookup rejection to unavailable policy context", async () => {
     const recordDecision = vi.fn().mockResolvedValue(undefined)
 

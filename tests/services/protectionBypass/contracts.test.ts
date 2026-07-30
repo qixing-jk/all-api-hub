@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { OPENROUTER_MANAGEMENT_KEY_LABEL_MAX_LENGTH } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
 import {
   getTempContextTaskMetadata,
   isManualModelSyncProtectionBypassExecution,
@@ -180,17 +181,19 @@ describe("protection bypass runtime contracts", () => {
   })
 
   it("keeps the temporary-context task wire contract stable", () => {
-    expect(Object.values(TEMP_CONTEXT_TASK_KINDS)).toEqual([
-      "api_fallback_fetch",
-      "profile_isolated_fetch",
-      "turnstile_fetch",
-      "native_page_action",
-      "openrouter_management_key_action",
-      "rendered_title",
-      "session_read",
-      "new_api_session_read",
-      "open_context",
-    ])
+    expect(new Set(Object.values(TEMP_CONTEXT_TASK_KINDS))).toEqual(
+      new Set([
+        "api_fallback_fetch",
+        "profile_isolated_fetch",
+        "turnstile_fetch",
+        "native_page_action",
+        "openrouter_management_key_action",
+        "rendered_title",
+        "session_read",
+        "new_api_session_read",
+        "open_context",
+      ]),
+    )
   })
 
   it("defines policy metadata for every temporary-context task kind", () => {
@@ -303,7 +306,10 @@ describe("protection bypass runtime contracts", () => {
     },
     {
       requestId: "request-openrouter",
-      operation: { kind: "create", label: "x".repeat(97) },
+      operation: {
+        kind: "create",
+        label: "x".repeat(OPENROUTER_MANAGEMENT_KEY_LABEL_MAX_LENGTH + 1),
+      },
     },
     {
       requestId: "request-openrouter",
@@ -325,6 +331,21 @@ describe("protection bypass runtime contracts", () => {
         params,
       }),
     ).toBe(false)
+  })
+
+  it("accepts an OpenRouter label at the maximum length", () => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction,
+        params: {
+          requestId: "request-openrouter",
+          operation: {
+            kind: "create",
+            label: "x".repeat(OPENROUTER_MANAGEMENT_KEY_LABEL_MAX_LENGTH),
+          },
+        },
+      }),
+    ).toBe(true)
   })
 
   it.each([
@@ -389,6 +410,52 @@ describe("protection bypass runtime contracts", () => {
     },
   ])("rejects invalid optional task primitives %#", (task) => {
     expect(isTempContextTask(task)).toBe(false)
+  })
+
+  const urlFields = [
+    [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, "originUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, "fetchUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch, "originUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch, "fetchUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch, "originUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch, "fetchUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch, "pageUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.NativePageAction, "originUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.NativePageAction, "pageUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.RenderedTitle, "originUrl"],
+    [TEMP_CONTEXT_TASK_KINDS.SessionRead, "url"],
+    [TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead, "origin"],
+    [TEMP_CONTEXT_TASK_KINDS.OpenContext, "url"],
+  ] as const
+
+  it.each(urlFields)("rejects non-HTTP %s.%s URLs", (kind, field) => {
+    const canonicalTask = canonicalTasks.find((task) => task.kind === kind)!
+
+    for (const url of [
+      "javascript:alert(1)",
+      "data:text/plain,example",
+      "file:///example",
+      "chrome-extension://example.invalid/page.html",
+    ]) {
+      expect(
+        isTempContextTask({
+          ...canonicalTask,
+          params: { ...canonicalTask.params, [field]: url },
+        }),
+      ).toBe(false)
+    }
+  })
+
+  it.each(canonicalTasks)("accepts HTTP for $kind", (task) => {
+    const params = Object.fromEntries(
+      Object.entries(task.params).map(([key, value]) => [
+        key,
+        typeof value === "string" && value.startsWith("https://")
+          ? value.replace("https://", "http://")
+          : value,
+      ]),
+    )
+    expect(isTempContextTask({ ...task, params })).toBe(true)
   })
 
   it("keeps decision, capability, and denial wire values stable", () => {

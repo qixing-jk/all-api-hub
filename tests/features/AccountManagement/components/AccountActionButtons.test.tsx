@@ -160,15 +160,15 @@ const {
   getCurrentTempWindowRequestSourceMock: vi.fn(),
   withProtectionBypassUserCommandMock: vi.fn(
     async (
-      _command: unknown,
-      _surface: unknown,
+      command: unknown,
+      surface: unknown,
       work: (execution: unknown) => Promise<unknown>,
     ) =>
       work({
         version: 1,
         kind: "user_command",
-        command: "verify_protection",
-        surface: "options",
+        command,
+        surface,
       }),
   ),
 }))
@@ -1708,8 +1708,8 @@ describe("AccountActionButtons", () => {
           protectionBypassExecution: {
             version: 1,
             kind: "user_command",
-            command: "verify_protection",
-            surface: "options",
+            command: PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+            surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
           },
         },
       )

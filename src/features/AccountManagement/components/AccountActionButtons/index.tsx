@@ -27,6 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -577,7 +578,7 @@ export default function AccountActionButtons({
 
       if (
         recoverableCandidate &&
-        service.siteType === "new-api" &&
+        service.siteType === SITE_TYPES.NEW_API &&
         "userId" in managedConfig
       ) {
         resolution = await withProtectionBypassUserCommand(

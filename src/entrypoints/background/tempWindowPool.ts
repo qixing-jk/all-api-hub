@@ -645,7 +645,12 @@ export async function executeAuthorizedTempContextTask(
     presentationSource,
   )
   if (presentation.kind === "blocked") {
-    sendResponse(buildPresentationFailure(task, presentation.reason))
+    sendResponse(
+      buildPresentationFailure(
+        task,
+        t("settings:refresh.shieldPopupFirefoxNote"),
+      ),
+    )
     return
   }
   const { suppressMinimize } = presentation

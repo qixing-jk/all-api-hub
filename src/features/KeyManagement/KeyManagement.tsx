@@ -239,6 +239,36 @@ export default function KeyManagement(props: {
     [setSelectedAccount],
   )
 
+  const handleRefreshTokens = useCallback(
+    async (accountId?: string) => {
+      const targetAccountId = accountId ?? selectedAccount
+      if (!targetAccountId) return
+
+      await withProtectionBypassUserCommand(
+        targetAccountId === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+          ? PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts
+          : PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
+        PROTECTION_BYPASS_SURFACES.Options,
+        async (protectionBypassExecution) => {
+          await loadTokens(accountId, { protectionBypassExecution })
+        },
+      )
+    },
+    [loadTokens, selectedAccount],
+  )
+
+  const handleRefreshManagedSiteStatuses = useCallback(async () => {
+    await withProtectionBypassUserCommand(
+      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      PROTECTION_BYPASS_SURFACES.Options,
+      async (protectionBypassExecution) => {
+        await refreshManagedSiteTokenStatuses({
+          protectionBypassExecution,
+        })
+      },
+    )
+  }, [refreshManagedSiteTokenStatuses])
+
   const handleRequestAccountSelection = useCallback(() => {
     const selectorTrigger = accountSelectorTriggerRef.current
 
@@ -297,7 +327,14 @@ export default function KeyManagement(props: {
     }
 
     const refreshedStatus =
-      (await refreshManagedSiteTokenStatusForToken(token)) ?? managedSiteStatus
+      (await withProtectionBypassUserCommand(
+        PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+        PROTECTION_BYPASS_SURFACES.Options,
+        async (protectionBypassExecution) =>
+          await refreshManagedSiteTokenStatusForToken(token, {
+            protectionBypassExecution,
+          }),
+      )) ?? managedSiteStatus
 
     if (!canRetryNewApiManagedVerification(refreshedStatus)) {
       return
@@ -380,7 +417,7 @@ export default function KeyManagement(props: {
       <Header
         onAddToken={handleRequestAddToken}
         onRepairMissingKeys={handleRepairMissingKeys}
-        onRefresh={() => selectedAccount && loadTokens()}
+        onRefresh={handleRefreshTokens}
         onOpenSelectedAccountModels={
           selectedAccount &&
           selectedAccount !== KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
@@ -389,7 +426,7 @@ export default function KeyManagement(props: {
         }
         onRefreshManagedSiteStatus={
           isManagedSiteChannelStatusSupported
-            ? () => void refreshManagedSiteTokenStatuses()
+            ? () => void handleRefreshManagedSiteStatuses()
             : undefined
         }
         managedSiteStatusHint={
@@ -463,7 +500,7 @@ export default function KeyManagement(props: {
         onRetryCurrentAccount={
           selectedAccount &&
           selectedAccount !== KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
-            ? () => void loadTokens(selectedAccount)
+            ? () => void handleRefreshTokens(selectedAccount)
             : undefined
         }
         managedSiteTokenStatuses={managedSiteTokenStatuses}

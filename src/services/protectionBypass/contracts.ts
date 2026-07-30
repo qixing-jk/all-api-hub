@@ -22,6 +22,7 @@ import type {
   TempWindowTurnstileFetchParams,
 } from "~/types/tempWindowFetch"
 import { isPlainObject } from "~/utils/core/object"
+import { isHttpUrl } from "~/utils/core/urlParsing"
 
 export const PROTECTION_BYPASS_EXECUTION_VERSION = 1 as const
 
@@ -338,6 +339,10 @@ export const TEMP_CONTEXT_TASK_KINDS = {
 type TempContextTaskKind =
   (typeof TEMP_CONTEXT_TASK_KINDS)[keyof typeof TEMP_CONTEXT_TASK_KINDS]
 
+export type TempWindowFetchTaskKind =
+  | typeof TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch
+  | typeof TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
+
 type WithoutProtectionBypassIntent<T> = Omit<
   T,
   "protectionBypassExecution" | "tempWindowRequestSource"
@@ -455,8 +460,8 @@ function isOptionalPositiveNumber(value: unknown): value is number | undefined {
 /** Checks optional shared fetch fields without duplicating RequestInit. */
 function hasValidSharedFetchParams(value: Record<string, unknown>): boolean {
   return (
-    isNonEmptyString(value.originUrl) &&
-    isNonEmptyString(value.fetchUrl) &&
+    isHttpUrl(value.originUrl) &&
+    isHttpUrl(value.fetchUrl) &&
     (value.fetchOptions === undefined || isPlainObject(value.fetchOptions)) &&
     isOptionalRequestId(value.requestId) &&
     (value.responseType === undefined ||
@@ -495,8 +500,8 @@ function isOpenRouterManagementKeyActionParams(
 /** Checks the fields read by the native page-action handler. */
 function isNativePageActionParams(value: Record<string, unknown>): boolean {
   return (
-    isNonEmptyString(value.originUrl) &&
-    isNonEmptyString(value.pageUrl) &&
+    isHttpUrl(value.originUrl) &&
+    isHttpUrl(value.pageUrl) &&
     isAccountSiteType(value.siteType) &&
     isNonEmptyString(value.expectedUserId) &&
     isOptionalRequestId(value.requestId) &&
@@ -573,7 +578,7 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
     case TEMP_CONTEXT_TASK_KINDS.TurnstileFetch:
       return (
         hasValidSharedFetchParams(params) &&
-        isNonEmptyString(params.pageUrl) &&
+        isHttpUrl(params.pageUrl) &&
         isOptionalPositiveNumber(params.turnstileTimeoutMs) &&
         isOptionalString(params.turnstileParamName) &&
         (params.turnstilePreTrigger === undefined ||
@@ -585,13 +590,13 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
       return isOpenRouterManagementKeyActionParams(params)
     case TEMP_CONTEXT_TASK_KINDS.RenderedTitle:
       return (
-        isNonEmptyString(params.originUrl) &&
+        isHttpUrl(params.originUrl) &&
         isOptionalRequestId(params.requestId) &&
         isOptionalBoolean(params.suppressMinimize)
       )
     case TEMP_CONTEXT_TASK_KINDS.SessionRead:
       return (
-        isNonEmptyString(params.url) &&
+        isHttpUrl(params.url) &&
         isNonEmptyString(params.requestId) &&
         isAccountSiteType(params.siteType) &&
         isOptionalBoolean(params.useIncognito) &&
@@ -601,7 +606,7 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
       return isTempWindowNewApiSessionReadParams(params)
     case TEMP_CONTEXT_TASK_KINDS.OpenContext:
       return (
-        isNonEmptyString(params.url) &&
+        isHttpUrl(params.url) &&
         isNonEmptyString(params.requestId) &&
         isOptionalBoolean(params.suppressMinimize)
       )

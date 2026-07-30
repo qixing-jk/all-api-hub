@@ -37,8 +37,10 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import {
+  INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
   type ProtectionBypassExecution,
   type ProtectionBypassSurface,
@@ -55,7 +57,10 @@ import {
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
-import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
 
 const manualExecution = (
   surface: ProtectionBypassSurface = TEMP_WINDOW_REQUEST_SOURCES.Options,
@@ -71,37 +76,27 @@ const retryAccountExecution = (surface: ProtectionBypassSurface) =>
 const OPTIONS_MANUAL_EXECUTION = manualExecution()
 
 const uiOpenExecution = (surface: ProtectionBypassSurface) =>
-  ({
-    version: 1,
-    kind: "automatic",
-    feature: PROTECTION_BYPASS_FEATURES.Checkin,
-    trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+  automaticExecution(
+    PROTECTION_BYPASS_FEATURES.Checkin,
+    PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
     surface,
-  }) as const satisfies ProtectionBypassExecution
+  )
 
-const SCHEDULED_EXECUTION = {
-  version: 1,
-  kind: "automatic",
-  feature: PROTECTION_BYPASS_FEATURES.Checkin,
-  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
-  surface: TEMP_WINDOW_REQUEST_SOURCES.Background,
-} as const satisfies ProtectionBypassExecution
+const SCHEDULED_EXECUTION = automaticExecution(
+  PROTECTION_BYPASS_FEATURES.Checkin,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+)
 
-const RETRY_EXECUTION = {
-  version: 1,
-  kind: "automatic",
-  feature: PROTECTION_BYPASS_FEATURES.Checkin,
-  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Retry,
-  surface: TEMP_WINDOW_REQUEST_SOURCES.Background,
-} as const satisfies ProtectionBypassExecution
+const RETRY_EXECUTION = automaticExecution(
+  PROTECTION_BYPASS_FEATURES.Checkin,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Retry,
+)
 
-const ACCOUNT_REFRESH_EXECUTION = {
-  version: 1,
-  kind: "automatic",
-  feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
-  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
-  surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-} as const satisfies ProtectionBypassExecution
+const ACCOUNT_REFRESH_EXECUTION = automaticExecution(
+  PROTECTION_BYPASS_FEATURES.AccountRefresh,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+  PROTECTION_BYPASS_SURFACES.Popup,
+)
 
 const runCheckinsForTest = (
   options: Omit<
@@ -3661,7 +3656,7 @@ describe("auto check-in operation helpers", () => {
       }),
     ).resolves.toEqual({
       success: false,
-      error: "Missing or invalid protection bypass execution",
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
     })
 
     expect(runSpy).not.toHaveBeenCalled()
@@ -3678,7 +3673,7 @@ describe("auto check-in operation helpers", () => {
       }),
     ).resolves.toEqual({
       success: false,
-      error: "Missing or invalid protection bypass execution",
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
     })
 
     expect(runSpy).not.toHaveBeenCalled()
@@ -3826,7 +3821,7 @@ describe("auto check-in operation helpers", () => {
       ),
     ).resolves.toEqual({
       success: false,
-      error: "Missing or invalid protection bypass execution",
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
     })
 
     expect(retrySpy).not.toHaveBeenCalled()
@@ -4042,7 +4037,7 @@ describe("auto check-in operation helpers", () => {
       }),
     ).resolves.toEqual({
       success: false,
-      error: "Missing or invalid protection bypass execution",
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
     })
 
     expect(pretriggerSpy).not.toHaveBeenCalled()
@@ -4059,7 +4054,7 @@ describe("auto check-in operation helpers", () => {
       ),
     ).resolves.toEqual({
       success: false,
-      error: "Missing or invalid protection bypass execution",
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
     })
 
     expect(retrySpy).not.toHaveBeenCalled()

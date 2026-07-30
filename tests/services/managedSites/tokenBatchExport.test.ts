@@ -7,6 +7,10 @@ import {
 } from "~/services/accounts/accountRuntimeKeys"
 import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
+import {
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import type { AccountToken } from "~/types"
 import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
@@ -14,6 +18,7 @@ import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
 } from "~/types/managedSiteTokenBatchExport"
 import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -224,8 +229,13 @@ describe("managed-site token batch export", () => {
       baseUrl: "https://upstream.example.com/",
     })
     const token = buildAccountToken()
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      PROTECTION_BYPASS_SURFACES.Options,
+    )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [buildAccountTokenInput(account, token)],
+      protectionBypassExecution,
     })
 
     expect(preview.readyCount).toBe(1)
@@ -234,6 +244,11 @@ describe("managed-site token batch export", () => {
       accountName: "Alpha",
       runtimeKeyName: "Token 11",
     })
+    expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledWith(
+      account,
+      expect.anything(),
+      { protectionBypassExecution },
+    )
 
     const result = await executeManagedSiteTokenBatchExport({
       preview,

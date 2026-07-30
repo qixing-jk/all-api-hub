@@ -5,6 +5,7 @@ import { ApiError } from "~/services/apiTransport/errors"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import {
   fetchSiteOriginalTitle,
@@ -12,14 +13,16 @@ import {
 } from "~/services/siteDetection/detectSiteType"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
 
-const SITE_DETECTION_EXECUTION = {
-  version: 1,
-  kind: "automatic",
-  feature: PROTECTION_BYPASS_FEATURES.SiteDetection,
-  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
-  surface: TEMP_WINDOW_REQUEST_SOURCES.Options,
-} as const
+const SITE_DETECTION_EXECUTION = automaticExecution(
+  PROTECTION_BYPASS_FEATURES.SiteDetection,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+  TEMP_WINDOW_REQUEST_SOURCES.Options,
+)
 
 const mocks = vi.hoisted(() => ({
   canUseTempWindowFetch: vi.fn(),
@@ -103,12 +106,9 @@ describe("detectSiteType temp-context fallbacks", () => {
   })
 
   it("preserves onboarding execution through the temp-context title fetch", async () => {
-    const protectionBypassExecution = {
-      version: 1,
-      kind: "user_command",
-      command: "detect_account",
-      surface: "options",
-    } as const
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+    )
     mocks.canUseTempWindowFetch.mockResolvedValue(true)
     mocks.tempWindowFetch.mockResolvedValue({
       success: true,

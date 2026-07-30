@@ -16,6 +16,12 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
 import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
+import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
@@ -603,6 +609,25 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(loadingLabelCount).toBe(1)
     expect(lockedStartState).toEqual({ ariaBusy: null, disabled: true })
     expect(mockPreparePreview).toHaveBeenCalledTimes(2)
+    expect(mockPreparePreview.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        protectionBypassExecution: expect.objectContaining({
+          kind: "automatic",
+          feature: PROTECTION_BYPASS_FEATURES.SessionResync,
+          trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          surface: PROTECTION_BYPASS_SURFACES.Options,
+        }),
+      }),
+    )
+    expect(mockPreparePreview.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        protectionBypassExecution: expect.objectContaining({
+          kind: "user_command",
+          command: PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+          surface: PROTECTION_BYPASS_SURFACES.Options,
+        }),
+      }),
+    )
     expect(
       await screen.findByRole("button", {
         name: "keyManagement:batchManagedSiteExport.actions.refreshPreview",

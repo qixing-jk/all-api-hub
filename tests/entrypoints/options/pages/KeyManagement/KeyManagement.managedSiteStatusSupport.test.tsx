@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
@@ -187,11 +188,10 @@ describe("KeyManagement managed-site status support", () => {
 
     render(<KeyManagement />)
 
-    expect(
-      await screen.findByRole("button", {
-        name: "keyManagement:managedSiteStatus.actions.refresh",
-      }),
-    ).toBeInTheDocument()
+    const refreshButton = await screen.findByRole("button", {
+      name: "keyManagement:managedSiteStatus.actions.refresh",
+    })
+    expect(refreshButton).toBeInTheDocument()
     expect(
       screen.queryByText("keyManagement:managedSiteStatus.pageUnsupported"),
     ).toBeNull()
@@ -203,6 +203,24 @@ describe("KeyManagement managed-site status support", () => {
     expect(
       tokenListPropsSpy.mock.lastCall?.[0]?.onManagedSiteVerificationRetry,
     ).toEqual(expect.any(Function))
+
+    withProtectionBypassUserCommandMock.mockClear()
+    await userEvent.setup().click(refreshButton)
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
+      "verify_protection",
+      "options",
+      expect.any(Function),
+    )
+    expect(baseHookResult.refreshManagedSiteTokenStatuses).toHaveBeenCalledWith(
+      {
+        protectionBypassExecution: {
+          version: 1,
+          kind: "user_command",
+          command: "verify_protection",
+          surface: "options",
+        },
+      },
+    )
   })
 
   it("hides refresh controls, shows the unsupported hint, and omits the post-import refresh callback when lookup is unsupported", async () => {
@@ -408,6 +426,14 @@ describe("KeyManagement managed-site status support", () => {
 
     expect(refreshManagedSiteTokenStatusForToken).toHaveBeenCalledWith(
       baseHookResult.tokens[0],
+      {
+        protectionBypassExecution: {
+          version: 1,
+          kind: "user_command",
+          command: "verify_protection",
+          surface: "options",
+        },
+      },
     )
     expect(openNewApiManagedVerificationMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -492,6 +518,14 @@ describe("KeyManagement managed-site status support", () => {
 
     expect(refreshManagedSiteTokenStatusForToken).toHaveBeenCalledWith(
       baseHookResult.tokens[0],
+      {
+        protectionBypassExecution: {
+          version: 1,
+          kind: "user_command",
+          command: "verify_protection",
+          surface: "options",
+        },
+      },
     )
     expect(openNewApiManagedVerificationMock).not.toHaveBeenCalled()
   })

@@ -225,7 +225,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     expect(handleOpenRouterManagementKeyAction).not.toHaveBeenCalled()
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
-      error: "Invalid protection bypass request",
+      error: "messages:background.tempWindowPolicyContextInvalid",
       code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
     })
   })

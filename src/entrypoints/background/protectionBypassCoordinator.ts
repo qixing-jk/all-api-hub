@@ -222,7 +222,12 @@ export function createProtectionBypassCoordinator({
       let hasRecordedDecision = false
 
       const authorizeAtAcquire: AuthorizeTempContextAtAcquire = async () => {
-        const policy = await readPolicy()
+        let policy: ProtectionBypassPolicyState
+        try {
+          policy = await readPolicy()
+        } catch {
+          policy = { kind: PROTECTION_BYPASS_DECISION_RESULTS.Unavailable }
+        }
         let capability: ProtectionBypassCapability
         try {
           capability = await resolveCapability(policy)

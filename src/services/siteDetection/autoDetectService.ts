@@ -62,16 +62,6 @@ function normalizeSiteTypeHint(value: unknown): AccountSiteType | undefined {
   return isAccountSiteType(value) ? value : undefined
 }
 
-/** Preserves legacy one-argument calls when no execution context exists. */
-function getAccountSiteTypeWithExecution(
-  url: string,
-  protectionBypassExecution?: ProtectionBypassExecution,
-) {
-  return protectionBypassExecution
-    ? getAccountSiteType(url, protectionBypassExecution)
-    : getAccountSiteType(url)
-}
-
 type AutoDetectFetchContext = ApiServiceFetchContext
 
 interface AutoDetectResult {
@@ -232,7 +222,7 @@ async function combineUserDataAndSiteType(
   try {
     const siteType =
       userData.siteTypeHint ||
-      (await getAccountSiteTypeWithExecution(url, protectionBypassExecution))
+      (await getAccountSiteType(url, protectionBypassExecution))
     return {
       success: true,
       data: {
@@ -353,10 +343,7 @@ async function autoDetectDirect(
 
   try {
     // 检测站点类型，避免在未知站点上下文中使用默认 API
-    const siteType = await getAccountSiteTypeWithExecution(
-      url,
-      protectionBypassExecution,
-    )
+    const siteType = await getAccountSiteType(url, protectionBypassExecution)
 
     // 通过 API 获取用户数据
     const userData = await getUserDataViaAPI(
@@ -536,10 +523,7 @@ async function autoDetectViaBackground(
   })
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
-  const siteType = await getAccountSiteTypeWithExecution(
-    url,
-    protectionBypassExecution,
-  )
+  const siteType = await getAccountSiteType(url, protectionBypassExecution)
 
   // 通过 Background 获取用户数据
   const userData = await getUserDataViaBackground(
@@ -693,10 +677,7 @@ async function autoDetectFromCurrentTab(
   logger.info("使用当前标签页方式", { url, tabId })
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
-  const siteType = await getAccountSiteTypeWithExecution(
-    url,
-    protectionBypassExecution,
-  )
+  const siteType = await getAccountSiteType(url, protectionBypassExecution)
 
   // 从当前标签页获取用户数据
   const { userData, contentScriptUnavailable, strategy, fetchContext } =
@@ -902,10 +883,7 @@ async function autoDetectViaBackgroundWithContext(
     fetchContext: summarizeApiServiceFetchContext(fetchContext),
   })
 
-  const siteType = await getAccountSiteTypeWithExecution(
-    url,
-    protectionBypassExecution,
-  )
+  const siteType = await getAccountSiteType(url, protectionBypassExecution)
   const userData = await getUserDataViaBackground(
     url,
     siteType,

@@ -256,12 +256,14 @@ export const AccountDataProvider = ({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isRefreshingDisabledAccounts, setIsRefreshingDisabledAccounts] =
     useState(false)
-  const refreshCommandRef = useRef<ReturnType<
-    typeof accountStorage.refreshAllAccounts
-  > | null>(null)
-  const refreshDisabledCommandRef = useRef<ReturnType<
-    typeof accountStorage.refreshDisabledAccounts
-  > | null>(null)
+  const refreshCommandRef = useRef<{
+    promise: ReturnType<typeof accountStorage.refreshAllAccounts>
+    force: boolean
+  } | null>(null)
+  const refreshDisabledCommandRef = useRef<{
+    promise: ReturnType<typeof accountStorage.refreshDisabledAccounts>
+    force: boolean
+  } | null>(null)
   const [prevTotalConsumption, setPrevTotalConsumption] =
     useState<CurrencyAmount>({ USD: 0, CNY: 0 })
   const [todayIncomeEstimateTotals, setTodayIncomeEstimateTotals] = useState<
@@ -745,8 +747,16 @@ export const AccountDataProvider = ({
 
   const handleRefresh = useCallback(
     async (force: boolean = false) => {
-      if (refreshCommandRef.current) {
-        return await refreshCommandRef.current
+      while (refreshCommandRef.current) {
+        const activeRefresh = refreshCommandRef.current
+        if (!force || activeRefresh.force) {
+          return await activeRefresh.promise
+        }
+        try {
+          await activeRefresh.promise
+        } catch {
+          // A forced user request still gets its own attempt after an earlier failure.
+        }
       }
 
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()
@@ -757,11 +767,11 @@ export const AccountDataProvider = ({
         async (execution) =>
           await refreshAccounts(execution, force, tempWindowRequestSource),
       )
-      refreshCommandRef.current = refreshPromise
+      refreshCommandRef.current = { promise: refreshPromise, force }
       try {
         return await refreshPromise
       } finally {
-        if (refreshCommandRef.current === refreshPromise) {
+        if (refreshCommandRef.current?.promise === refreshPromise) {
           refreshCommandRef.current = null
           setIsRefreshing(false)
         }
@@ -772,8 +782,16 @@ export const AccountDataProvider = ({
 
   const handleRefreshDisabledAccounts = useCallback(
     async (force: boolean = false) => {
-      if (refreshDisabledCommandRef.current) {
-        return await refreshDisabledCommandRef.current
+      while (refreshDisabledCommandRef.current) {
+        const activeRefresh = refreshDisabledCommandRef.current
+        if (!force || activeRefresh.force) {
+          return await activeRefresh.promise
+        }
+        try {
+          await activeRefresh.promise
+        } catch {
+          // A forced user request still gets its own attempt after an earlier failure.
+        }
       }
 
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()
@@ -805,11 +823,11 @@ export const AccountDataProvider = ({
           }
         },
       )
-      refreshDisabledCommandRef.current = refreshPromise
+      refreshDisabledCommandRef.current = { promise: refreshPromise, force }
       try {
         return await refreshPromise
       } finally {
-        if (refreshDisabledCommandRef.current === refreshPromise) {
+        if (refreshDisabledCommandRef.current?.promise === refreshPromise) {
           refreshDisabledCommandRef.current = null
           setIsRefreshingDisabledAccounts(false)
         }

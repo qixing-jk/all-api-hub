@@ -192,7 +192,7 @@ test("shows the shield-bypass content prompt and opens its settings anchor", asy
 
   await expect(
     settingsPage.getByRole("heading", {
-      name: "Temp-window protection bypass",
+      name: "Website verification assistance",
     }),
   ).toBeInViewport()
 })

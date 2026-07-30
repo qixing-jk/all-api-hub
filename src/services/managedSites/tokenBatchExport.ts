@@ -256,19 +256,30 @@ const collectSecrets = (
 
 const resolveInputRuntimeKeyForManagedSiteExport = async (
   input: ManagedSiteTokenBatchExportItemInput,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AccountRuntimeKey> => {
   if (!isAccountTokenRuntimeKey(input.runtimeKey)) {
     return input.runtimeKey
   }
 
-  return resolveDisplayAccountRuntimeKeySecret(input.account, input.runtimeKey)
+  return resolveDisplayAccountRuntimeKeySecret(
+    input.account,
+    input.runtimeKey,
+    {
+      protectionBypassExecution,
+    },
+  )
 }
 
 const resolveInputTokenForManagedSiteExport = async (
   input: ManagedSiteTokenBatchExportItemInput,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AccountToken> =>
   accountRuntimeKeyToLegacyAccountToken(
-    await resolveInputRuntimeKeyForManagedSiteExport(input),
+    await resolveInputRuntimeKeyForManagedSiteExport(
+      input,
+      protectionBypassExecution,
+    ),
   )
 
 const resolveInputAccountForManagedSiteExport = (
@@ -302,7 +313,10 @@ const preparePreviewItem = async (params: {
   let resolvedToken: AccountToken
 
   try {
-    resolvedToken = await resolveInputTokenForManagedSiteExport(input)
+    resolvedToken = await resolveInputTokenForManagedSiteExport(
+      input,
+      params.protectionBypassExecution,
+    )
     secretsToRedact = Array.from(
       new Set([...secretsToRedact, resolvedToken.key].filter(Boolean)),
     )
