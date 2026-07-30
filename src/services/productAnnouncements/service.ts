@@ -57,12 +57,16 @@ interface GetCurrentProductAnnouncementStateOptions {
   now?: number
 }
 
+type ValidProductAnnouncementFeed = RawProductAnnouncementFeed & {
+  announcements: unknown[]
+}
+
 /**
  * Checks the feed-level shape before trusting remote or persisted catalog data.
  */
 function isValidProductAnnouncementFeed(
   feed: RawProductAnnouncementFeed,
-): boolean {
+): feed is ValidProductAnnouncementFeed {
   return (
     isPlainObject(feed) &&
     (feed.defaultLocale == null || typeof feed.defaultLocale === "string") &&
@@ -86,15 +90,13 @@ function getRawAnnouncementId(announcement: unknown): string | null {
  * Adds local bundled notices and development examples without persisting them.
  */
 function getRuntimeProductAnnouncementFeed(
-  feed: RawProductAnnouncementFeed,
-): RawProductAnnouncementFeed {
+  feed: ValidProductAnnouncementFeed,
+): ValidProductAnnouncementFeed {
   if (!isDevelopmentMode()) {
     return feed
   }
 
-  const bundledAnnouncements = Array.isArray(bundledFeed.announcements)
-    ? bundledFeed.announcements
-    : []
+  const bundledAnnouncements = bundledFeed.announcements
   const devAnnouncements = Array.isArray(
     bundledFeed._examples?.devAnnouncements,
   )
@@ -110,9 +112,7 @@ function getRuntimeProductAnnouncementFeed(
       .map(getRawAnnouncementId)
       .filter((id): id is string => id !== null),
   )
-  const feedAnnouncements = Array.isArray(feed.announcements)
-    ? feed.announcements
-    : []
+  const feedAnnouncements = feed.announcements
 
   return {
     ...feed,

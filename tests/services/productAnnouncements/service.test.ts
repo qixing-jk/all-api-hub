@@ -271,6 +271,58 @@ describe("product announcement service", () => {
     ])
   })
 
+  it("keeps valid cached notices when sibling ids are malformed", async () => {
+    vi.stubEnv("MODE", "development")
+    await productAnnouncementStorage.updateState((state) => {
+      state.lastFetchedAt = Date.parse("2026-06-06T00:00:00Z")
+      state.cachedFeed = {
+        schemaVersion: 1,
+        defaultLocale: "zh-CN",
+        announcements: [
+          null,
+          { id: 123 },
+          { id: "   " },
+          {
+            id: "cached-info",
+            revision: 1,
+            severity: "info",
+            priority: 1,
+            affectedVersions: "*",
+            startsAt: "2026-01-01T00:00:00Z",
+            expiresAt: "2027-01-01T00:00:00Z",
+            content: {
+              "zh-CN": {
+                title: "Cached info",
+                message: "Cached remote notice",
+              },
+            },
+          },
+        ],
+      }
+    })
+
+    const state = await productAnnouncementService.getCurrentState({
+      locale: "zh-CN",
+      currentVersion: "3.44.0",
+      now: Date.parse("2026-06-06T00:00:00Z"),
+    })
+
+    expect(state.view.notices.map((notice) => notice.id)).toEqual([
+      "dev-critical-announcement",
+      "bundled-notice",
+      "cached-info",
+    ])
+    await expect(productAnnouncementStorage.getState()).resolves.toMatchObject({
+      cachedFeed: {
+        announcements: expect.arrayContaining([
+          null,
+          { id: 123 },
+          { id: "   " },
+        ]),
+      },
+    })
+  })
+
   it("ignores whitespace-only dismiss ids", async () => {
     await productAnnouncementService.dismiss("   ", 2)
 
