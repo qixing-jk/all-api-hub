@@ -1,25 +1,29 @@
 # Protection Bypass Intent Policy Design
 
 Date: 2026-07-22
-Revised: 2026-07-29
+Revised: 2026-07-30
 
 ## Revision Status
 
-This revision supersedes the original background grant design for the same
-feature. The original design correctly established explicit invocation intent,
-a single background Coordinator, and acquire-time enforcement, but it treated
-an internal product-policy distinction as if it needed a short-lived
+The 2026-07-29 revision superseded the original background grant design for the
+same feature. The original design correctly established explicit invocation
+intent, a single background Coordinator, and acquire-time enforcement, but it
+treated an internal product-policy distinction as if it needed a short-lived
 authorization capability.
 
 The extension's protected workflows and runtime messages are internal trusted
 code paths. This feature is not a security boundary against compromised
 extension code, and no current product requirement depends on revocation,
 expiry, ownership transfer, or survival across a service-worker restart.
-Consequently, the final design keeps explicit intent propagation and removes
-the grant registry, grant lifecycle, and verified-continuation machinery.
+Consequently, the implemented architecture keeps explicit intent propagation
+and removes the grant registry, grant lifecycle, and verified-continuation
+machinery.
 
-The already executed implementation plan must be revised before implementation
-continues. This document is the design authority for that replan.
+The 2026-07-30 revision completes the product-policy change that the prior
+revision deferred. It replaces the legacy page-surface and refresh-mode
+"usage scope" settings with automatic bypass controls for user-recognizable
+product features. This document remains the single design authority; the
+follow-up implementation plan records execution and validation only.
 
 ## Purpose
 
@@ -35,14 +39,14 @@ Make temporary-context protection bypass obey the user's intent consistently:
 
 Issue #1202 exposed that the legacy `tempWindowFallback.enabled` setting was
 only checked by the generic API-error fallback. Direct Turnstile fetches,
-native-page actions, rendered-title reads, site detection, and forced
-browser-profile isolation could reach the background pool through other paths.
+native-page actions, site detection, and forced browser-profile isolation could
+reach the background pool through other paths.
 The design must close that enforcement gap without introducing a second
 authorization system.
 
 ## Product Semantics
 
-The current product rule is:
+The product rule is:
 
 > Disabling automatic protection bypass denies automatic work. Explicit user
 > commands may still use the configured temporary context.
@@ -52,8 +56,9 @@ Examples of explicit user commands include:
 - refresh one account or all accounts;
 - run a manual check-in;
 - add, detect, or reauthenticate an account;
-- start a user-visible verification command, including a
-  verification-backed model-sync workflow.
+- load or verify key-management data;
+- inspect managed-site channels or run model-sync work from an explicit UI
+  command.
 
 The following remain automatic even when opening the extension was itself a
 user gesture:
@@ -62,18 +67,37 @@ user gesture:
 - UI-open check-in pretriggers;
 - scheduled refresh or check-in;
 - detached or scheduled retries and background recovery;
-- session resynchronization not owned by an active user command;
-- automatic site detection not owned by an active onboarding command.
+- automatic key-management, managed-channel, or model-sync work not owned by
+  an active user command;
+- automatic LDOH site-index refresh.
 
 An explicit command's context covers the awaited and delegated work that is
 part of that workflow. It does not implicitly authorize a later scheduled
 retry. A retry root creates a new automatic context.
 
-Current manual-refresh and surface preferences remain compatibility policy in
-this refactor so stored settings and user-visible behavior do not change
-incidentally. They are not trusted evidence of user intent. The planned product
-direction replaces them with per-automatic-feature settings; that migration is
-outside this revision.
+Automatic bypass is controlled by one master switch and eight product-feature
+switches:
+
+| Automatic feature | Owned automatic work |
+| --- | --- |
+| `account_refresh` | scheduled refresh and refresh on extension open |
+| `balance_history` | end-of-day balance-history capture |
+| `checkin` | scheduled check-in, UI-open pretrigger, and automatic retry |
+| `redemption_assist` | account refresh after a successful redemption |
+| `ldoh_site_lookup` | LDOH site-index refresh |
+| `key_management` | key inventory loading, managed-channel status lookup, batch-export preview, and post-delete reload |
+| `managed_site_channels` | automatic channel matching and duplicate checks |
+| `managed_site_model_sync` | automatic model sync and its model-mapping post-processing |
+
+These settings control only whether automatic work may acquire a protected
+temporary context. They do not enable or disable the owning product feature.
+They never deny an explicit user command. Product-feature settings remain
+editable while the automatic master or the owning product feature is disabled,
+so a user's future intent is preserved.
+
+`account_onboarding` remains a manual-only feature. The overloaded generic
+`verification` feature and `VerifyProtection` command are removed; explicit
+key, channel, and model workflows receive product-owned commands instead.
 
 ## Architectural Decision
 
@@ -102,8 +126,10 @@ Keep:
 
 - explicit `automatic` versus `user_command` execution;
 - automatic feature and trigger classification;
+- a closed automatic-feature subset separate from manual-only features;
 - user-command identity;
-- the canonical protected-task union and task-owned operation metadata;
+- the canonical protected-task union, exact feature-to-task-kind validation,
+  and task-owned operation metadata;
 - one Coordinator as the only product-policy gateway to the pool;
 - acquire-time evaluation of current policy, capability, and resource state;
 - the existing pool and real Tab, Window, and Composite Adapters;
@@ -119,7 +145,11 @@ Remove:
   binding;
 - verified-continuation registration and its background WeakMap;
 - grant-specific profiles, errors, telemetry, and lifecycle tests;
-- repeated grant resolution before dispatch and again before acquire.
+- repeated grant resolution before dispatch and again before acquire;
+- legacy surface and refresh-mode policy gates;
+- generic verification ownership that conflates key, channel, and model work;
+- low-level service factories that invent automatic execution metadata instead
+  of receiving it from a real workflow root.
 
 ## Why Explicit Propagation Remains
 
@@ -141,7 +171,8 @@ Alternatives are weaker:
 - a background cache recreates lifecycle, cleanup, restart, and concurrency
   problems without providing a required feature;
 - moving entire product workflows into the Coordinator would make it own
-  account, check-in, onboarding, and verification orchestration.
+  account, check-in, onboarding, key-management, channel, and model
+  orchestration.
 
 ## Structured Execution Context
 
@@ -160,8 +191,9 @@ a string union plus a separate Set or array containing the same values.
 | --- | --- |
 | Contract version | `PROTECTION_BYPASS_EXECUTION_VERSION` |
 | Execution kinds | `PROTECTION_BYPASS_EXECUTION_KINDS` |
-| Features | existing `PROTECTION_BYPASS_FEATURES` |
-| User commands | existing `PROTECTION_BYPASS_USER_COMMANDS` |
+| Product features | `PROTECTION_BYPASS_FEATURES` |
+| Automatic-feature subset | `PROTECTION_BYPASS_AUTOMATIC_FEATURES` |
+| User commands | `PROTECTION_BYPASS_USER_COMMANDS` |
 | Automatic triggers | existing `PROTECTION_BYPASS_AUTOMATIC_TRIGGERS` |
 | Surfaces | existing `TEMP_WINDOW_REQUEST_SOURCES` / `PROTECTION_BYPASS_SURFACES` alias |
 | Task kinds | `TEMP_CONTEXT_TASK_KINDS` |
@@ -177,7 +209,7 @@ a string union plus a separate Set or array containing the same values.
 For example:
 
 ```ts
-export const PROTECTION_BYPASS_EXECUTION_VERSION = 1 as const
+export const PROTECTION_BYPASS_EXECUTION_VERSION = 2 as const
 
 export const PROTECTION_BYPASS_EXECUTION_KINDS = {
   UserCommand: "user_command",
@@ -211,6 +243,30 @@ type ProtectionBypassDecisionKind = Exclude<
 >
 ```
 
+The product-feature catalog contains the eight automatic features listed in
+Product Semantics plus manual-only `account_onboarding`. Derive
+`ProtectionBypassAutomaticFeature` from
+`PROTECTION_BYPASS_AUTOMATIC_FEATURES`; do not model it as
+`Exclude<ProtectionBypassFeature, ...>` or duplicate its string values in the
+settings Module. Automatic constructors and runtime parsing accept only this
+subset.
+
+The version-2 user-command catalog and feature mapping are:
+
+| User command | Product feature |
+| --- | --- |
+| `refresh_account`, `refresh_all_accounts`, `refresh_disabled_accounts` | `account_refresh` |
+| `manual_checkin`, `retry_checkin_account` | `checkin` |
+| `add_account`, `detect_account`, `reauthenticate_account` | `account_onboarding` |
+| `manage_api_keys` | `key_management` |
+| `manage_site_channels` | `managed_site_channels` |
+| `sync_managed_site_models` | `managed_site_model_sync` |
+
+The last three replace `verify_protection`. They identify the user's product
+action without splitting commands by individual endpoint or protected task. A
+model-sync action started from the channel page still uses
+`sync_managed_site_models`; the visible page does not redefine ownership.
+
 The execution discriminants, task union, parsers, exhaustive switches, policy
 decisions, error mapping, and telemetry types consume these values. Runtime
 validation may build a Set from `Object.values(...)`; the Set is derived data,
@@ -233,38 +289,78 @@ type ProtectionBypassExecution =
   | {
       version: typeof PROTECTION_BYPASS_EXECUTION_VERSION
       kind: typeof PROTECTION_BYPASS_EXECUTION_KINDS.Automatic
-      feature: ProtectionBypassFeature
+      feature: ProtectionBypassAutomaticFeature
       trigger: ProtectionBypassAutomaticTrigger
       surface: ProtectionBypassSurface
     }
 ```
 
-The branch-local version-1 contract has not shipped, so replacing its
-`grantId` member does not require a persisted-data migration. Runtime parsing
-still validates the discriminant and every enum value so malformed or stale
-messages fail closed.
+Version 1 is implemented on the current main branch and is no longer a
+branch-local draft. Version 2 changes feature wire values and narrows the
+automatic feature set. Runtime parsing validates the version, discriminant,
+and every enum value so old, malformed, or stale messages fail closed. A
+recognized version mismatch produces the controlled
+`execution_version_mismatch` reason before ordinary shape validation. The
+runtime response maps it to `TEMP_WINDOW_EXECUTION_VERSION_MISMATCH` with a
+stable safe fallback message asking the user to refresh the extension page.
+Other malformed values remain `invalid_execution`. Old feature values are
+never guessed or silently reclassified.
 
-For a user command, the Coordinator derives the top-level feature from one
-canonical command definition. For example, a rendered-title read during
-account onboarding remains owned by `account_onboarding`; its leaf operation
-is still `rendered_title`. The caller does not independently claim both a
-command and a feature.
+For a user command, the Coordinator derives the top-level product feature from
+one canonical command definition. For example, a profile-isolated fallback or
+OpenRouter management-key action during onboarding remains owned by
+`account_onboarding`; a hidden-key read from the key-management workflow
+remains owned by `key_management`. The caller does not independently claim both
+a command and a feature.
 
 The command definition maps a command to its feature only. It contains no
-lease duration, resource scope, or stateful allowed-operation grant. A separate
-static feature-to-operation matrix remains a useful correctness invariant: the
-Coordinator rejects a task whose operation does not belong to the derived
-feature. That check is deterministic contract validation, not authorization
-state.
+lease duration, resource scope, or stateful allowed-operation grant. Commands
+must identify their product action; one generic verification command must not
+stand in for key management, managed channels, and model sync.
 
-`surface` is retained only while legacy surface settings remain in the
-product. It is presentation and compatibility metadata:
+A static `PROTECTION_BYPASS_FEATURE_TASK_KINDS` matrix is the deterministic
+contract invariant. It maps every product feature to the exact canonical task
+kinds that the audited workflow may submit. The Coordinator rejects any other
+task as `task_not_permitted`. Task-to-operation and task-to-cause mappings
+remain separate, derived metadata for telemetry and capability routing. An
+operation-level matrix is not sufficient because distinct tasks can share
+`fetch`, `session_read`, or `native_page_action`.
+
+The version-2 matrix is:
+
+| Product feature | Allowed task kinds |
+| --- | --- |
+| `account_refresh` | `ApiFallbackFetch`, `SessionRead` |
+| `balance_history` | `ApiFallbackFetch`, `SessionRead` |
+| `checkin` | `ApiFallbackFetch`, `TurnstileFetch`, `NativePageAction`, `SessionRead` |
+| `redemption_assist` | `ApiFallbackFetch`, `SessionRead` |
+| `ldoh_site_lookup` | `ApiFallbackFetch` |
+| `key_management` | `ApiFallbackFetch`, `SessionRead`, `NewApiSessionRead` |
+| `managed_site_channels` | `NewApiSessionRead` |
+| `managed_site_model_sync` | `NewApiSessionRead` |
+| `account_onboarding` | `ApiFallbackFetch`, `ProfileIsolatedFetch`, `SessionRead`, `OpenRouterManagementKeyAction` |
+
+`ProfileIsolatedFetch` is onboarding-only because current saved-account,
+check-in, history, redemption, and key-management roots do not propagate the
+browser profile fetch context. `SessionRead` is the generic account-browser
+session fallback; `NewApiSessionRead` is the closed New API hidden-channel-key
+read. They are not interchangeable. `NativePageAction` is check-in-only;
+OpenRouter provisioning uses its dedicated task kind.
+
+`RenderedTitle` and `OpenContext` have no production caller or workflow root in
+the current tree and are authorized for no feature. Their exported submitter
+helpers and pool support do not justify widening this matrix; removing those
+dormant task kinds is a separate deletion decision.
+
+`surface` remains presentation and message metadata even after surface settings
+are removed:
 
 - it never proves a user gesture;
 - it is not compared with runtime sender or tab ownership;
 - it is not stored in a registry;
-- it can be removed from the execution contract when the legacy settings are
-  replaced.
+- it may control presentation, minimization, Firefox popup compatibility, and
+  validation of UI-owned runtime messages;
+- it never participates in product-policy authorization.
 
 The task passed to the Coordinator remains a discriminated union owned by the
 temporary-context feature:
@@ -367,22 +463,26 @@ require `finally` cleanup.
 temporary-context pool. It:
 
 1. validates the execution and task shapes;
-2. derives command, feature, operation, and cause metadata;
-3. constructs an `authorizeAtAcquire` callback and submits the task plus that
+2. derives the product feature for a user command and rejects automatic values
+   outside the automatic-feature subset;
+3. validates the exact feature-to-task-kind contract, then derives operation
+   and cause metadata from the task;
+4. constructs an `authorizeAtAcquire` callback and submits the task plus that
    callback to the pool;
-4. lets the pool complete scheduler admission and take the same-origin acquire
+5. lets the pool complete scheduler admission and take the same-origin acquire
    lock;
-5. from inside that lock, the pool invokes the callback, which reads current
+6. from inside that lock, the pool invokes the callback, which reads current
    product policy and browser capability;
-6. the callback validates current resource state as its last asynchronous fact
+7. the callback validates current resource state as its last asynchronous fact
    and synchronously returns the decision;
-7. the pool immediately reuses or creates the context after an allowed
+8. the pool immediately reuses or creates the context after an allowed
    decision;
-8. the Coordinator maps controlled denials and records privacy-safe summary
+9. the Coordinator maps controlled denials and records privacy-safe summary
    telemetry.
 
-The Coordinator does not orchestrate account refresh, check-in, onboarding, or
-verification. The pool does not read product preferences or infer intent.
+The Coordinator does not orchestrate account refresh, check-in, onboarding,
+key-management, channel, or model workflows. The pool does not read product
+preferences or infer intent.
 
 Cleanup, release, close, and destruction of an existing temporary context
 remain unconditional. Policy controls new protected use, not resource cleanup.
@@ -398,9 +498,9 @@ remain unconditional. Policy controls new protected use, not resource cleanup.
 3. If the ordinary request succeeds, the protected resource is never used.
 4. If fallback is required, the fallback Module submits an
    `api_fallback_fetch` task and the execution value to the Coordinator.
-5. The Coordinator derives `account_refresh`, evaluates current compatibility
-   preferences and capability, performs final resource validation, then allows
-   or denies the acquire.
+5. The Coordinator derives `account_refresh`, skips automatic feature settings,
+   evaluates current capability, performs final resource validation, then
+   allows or denies the acquire.
 6. When the refresh promise settles, there is no grant to revoke.
 
 Concurrent refresh-all fan-out may share the same immutable execution value.
@@ -410,11 +510,12 @@ Its lifetime is the workflow's ordinary promise graph, not a clock-based lease.
 
 1. The explicit add or detect-account action creates an onboarding command
    context.
-2. Site detection, session reads, and verification forward it unchanged.
+2. Site detection, profile-isolated fallback, session reads, and OpenRouter
+   provisioning forward it unchanged.
 3. Their owning Modules select the appropriate protected task.
-4. Automatic detection outside that workflow constructs an automatic
-   `site_detection` context and cannot become manual merely because it runs
-   from the same entrypoint.
+4. Automatic work outside that workflow creates an execution for its real
+   product owner and cannot become manual merely because it runs from the same
+   entrypoint.
 
 ### UI-open check-in pretrigger
 
@@ -438,17 +539,19 @@ the desired time.
 
 ## Authoritative Enforcement and Current-State Validation
 
-All protected operations enter the same Coordinator seam:
+All production protected operations enter the same Coordinator seam:
 
 - generic API fallback and profile-isolated fetches;
 - Turnstile fetches;
 - native-page actions;
 - OpenRouter management-key page actions;
-- rendered-title and session reads;
+- generic session reads;
 - exact New API channel-key session reads;
-- site-detection operations;
-- explicit open-context commands;
+- LDOH site-index refresh;
 - forced incognito or cookie-store isolation.
+
+Dormant rendered-title and open-context task support has no product-feature
+owner and therefore fails the exact feature-to-task-kind check.
 
 `forceTempWindow` and browser-profile isolation describe technical necessity;
 they never elevate a denied invocation.
@@ -461,7 +564,7 @@ caller-side decision may improve feedback but is never a permit.
 The Coordinator reads current values rather than trusting workflow-start
 snapshots:
 
-- current automatic and compatibility preferences;
+- current automatic master and per-feature preferences;
 - current browser permissions and capability;
 - current managed-site identity, origin, user, channel, or other
   operation-specific resource facts.
@@ -488,70 +591,118 @@ Reusing an already pooled context still requires the same decision. Otherwise,
 an automatic caller could bypass current policy whenever another workflow left
 a reusable context behind.
 
-`handleOpenTempWindow` accepts an existing execution value and submits an
-`open_context` task. It does not mint manual intent from sender or surface.
-Browser tab/window creation helpers remain private to the pool.
+The dormant `handleOpenTempWindow` helper cannot mint manual intent from sender
+or surface. Because `OpenContext` has no product-feature owner, any such task is
+rejected by the exact feature-to-task-kind check. Removing the dormant helper is
+a separate cleanup decision. Browser tab/window creation helpers remain private
+to the pool.
 
-## Preference Compatibility and Future Settings
+## Product-Feature Preferences and Migration
 
-Do not migrate stored preference fields as part of the grant removal:
+Replace the legacy usage-scope fields with one automatic feature map:
 
-```text
-enabled             -> automatic.masterEnabled
-useForAutoRefresh   -> current automatic account-refresh compatibility gate
-useForManualRefresh -> current explicit refresh compatibility gate
-useInPopup          -> current popup compatibility gate
-useInSidePanel      -> current side-panel compatibility gate
-useInOptions        -> current options compatibility gate
-tempContextMode     -> preferred temporary-context Adapter
+```ts
+interface TempWindowFallbackPreferences {
+  enabled: boolean
+  automaticFeatureBypass: Record<
+    ProtectionBypassAutomaticFeature,
+    boolean
+  >
+  tempContextMode: TempContextMode
+}
 ```
 
-The stored name `enabled` is a legacy implementation detail whose current
-product meaning is automatic protection-bypass enablement.
+`enabled` remains the automatic master switch. `tempContextMode` remains the
+preferred temporary-context Adapter. `automaticFeatureBypass` answers only
+whether that product feature's automatic execution may acquire a protected
+context.
 
-The manual and surface settings remain behavior-preserving compatibility gates
-only. This revision deliberately does not deepen their role or create new
-surface ownership validation because workflows cross popup, options,
-side-panel, content-script, and background boundaries.
-
-The intended later model is automatic feature policy:
+One canonical normalizer rebuilds `tempWindowFallback` rather than
+deep-merging it. It is used by local schema migration, manual backup import, and
+WebDAV import:
 
 ```text
-automatic.masterEnabled
-automatic.features.account_refresh
-automatic.features.checkin
-automatic.features.site_detection
-automatic.features.session_resync
-automatic.features.verification
+enabled                    -> preserve the selected snapshot value
+tempContextMode            -> preserve the selected snapshot value
+current-version v2 key     -> preserve its valid boolean value
+legacy account_refresh     -> legacy useForAutoRefresh, then embedded v2,
+                              then local v2, then true
+other legacy feature keys  -> embedded v2, then local v2, then true
+missing current-version key -> local v2 when importing, otherwise true
 ```
 
-The existing `automatic.feature` field gives that future policy one stable
-input. Adding those settings and deprecating the legacy manual/surface gates is
-a separate product change. A total kill switch is not currently planned; if it
-is reconsidered later, it is also an independent policy change. Neither change
-requires modifying execution propagation or reintroducing grants.
+The source preference schema version selects the branch before field
+precedence is evaluated. This matters because an old client may preserve the
+unknown v2 map while stamping the document with its legacy schema version. In
+that case a newly changed `useForAutoRefresh` is authoritative for
+`account_refresh`; the stale embedded v2 value must not win. For a
+current-version payload, the canonical v2 map is authoritative and any leftover
+legacy field is ignored.
 
-## Settings Behavior Preserved by This Revision
+Delete `useInPopup`, `useInSidePanel`, `useInOptions`, `useForAutoRefresh`, and
+`useForManualRefresh` from persisted preferences, types, defaults, import/export
+data, WebDAV-synchronized settings, analytics snapshots, and runtime policy.
+The one-time migration may read `useForAutoRefresh` to preserve its stated
+account-refresh intent, but no runtime compatibility branch or stale key
+remains afterward.
 
-The main switch continues to be presented as automatic protection bypass, not
-as a promise that no explicit command can ever open a temporary context.
-Disabling it must not make the mode, manual-refresh, or legacy surface controls
-uneditable while those controls still exist. Existing settings-search targets,
-the `refresh` tab, and the `shield-settings` anchor remain stable.
+Local migration runs under the existing preference write lock and atomically
+persists the rebuilt latest-version object before exposing it. A schema-only
+rewrite preserves `sharedPreferencesLastUpdated`; it is not a user edit. A
+user's later toggle change stamps that timestamp normally.
 
-No locale, settings-search, deep-link, or telemetry snapshot wording should
-regress to describing `enabled` as a total kill switch. The grant removal itself
-adds no new user-facing control.
+WebDAV keeps its existing whole-preference timestamp winner. After choosing
+the incoming snapshot, normalization receives the current local preferences as
+a fallback only for v2 feature keys absent from an older payload. Thus a
+newer-timestamp legacy client may still change shared `enabled`,
+`tempContextMode`, and the legacy account-refresh choice without resetting the
+other seven v2 choices.
+Every accepted import is atomically saved in canonical form, and every later
+upload contains only the canonical map. This import normalization is persisted
+data migration, not a runtime policy compatibility adapter.
+
+This deliberately does not attempt to translate old surface opt-outs. A
+surface can host several product features, and a product feature can cross UI
+and background surfaces, so no lossless mapping exists. Manual-refresh opt-out
+also disappears because explicit user commands are no longer policy-gated.
+
+## Settings Behavior
+
+Replace the `shield-contexts` card with "Automatic features allowed to open a
+temporary verification page" controls for the eight automatic features. Keep
+the automatic master, Adapter mode, permission entry, `refresh` tab, and
+`shield-settings` section anchor.
+The rendered page has exactly one `shield-settings` DOM id; remove the current
+duplicate wrapper id while preserving the public anchor.
+
+The UI explains:
+
+> These choices only control whether an automatically running feature may open
+> a temporary page when site verification is required. They do not enable or
+> disable the feature itself and do not affect actions you start yourself.
+
+The automatic master may disable effective use without disabling the child
+controls. An owning product feature's own enabled state does not clear, disable,
+or rewrite its bypass preference. Remove the five old search targets and add
+one target per automatic feature. Locale resources stay synchronized across all
+supported application locales.
+
+Legacy block-status and reminder helpers stop reading page-surface and manual
+refresh fields. Any remaining reminder consumes an invocation-aware policy
+result and must not describe an eligible explicit command as disabled merely
+because the automatic master or a feature switch is off.
 
 ## Policy Matrix
 
-| Invocation | Current decision |
+| Invocation | Decision |
 | --- | --- |
-| Valid explicit refresh command | Evaluate current manual-refresh and surface compatibility, capability, and resource facts; automatic master does not deny it |
-| Other valid explicit command | Evaluate current surface compatibility, capability, and resource facts; automatic master does not deny it |
+| Valid explicit user command | Validate its product feature and exact task kind, then evaluate capability and resource facts; automatic settings do not deny it |
 | Automatic invocation with `enabled: false` | Deny as `automatic_disabled` |
-| Automatic invocation with `enabled: true` | Evaluate current feature compatibility, surface compatibility, capability, and resource facts |
-| Missing or malformed execution | Deny as `missing_intent` or `invalid_intent` |
+| Automatic invocation with its feature disabled | Deny as `feature_disabled` |
+| Automatic invocation with master and feature enabled | Validate exact task kind, then evaluate capability and resource facts |
+| Recognized execution version mismatch | Deny as `execution_version_mismatch` and ask the caller to refresh its extension page |
+| Missing or malformed execution | Deny as `missing_execution` or `invalid_execution` |
+| Feature/task mismatch | Deny as `task_not_permitted` |
 | Unavailable permissions or browser support | Deny with the existing capability classification |
 | Resource changed before acquire | Deny as stale or invalid resource |
 | Cleanup of an existing context | Allow |
@@ -568,11 +719,10 @@ Controlled internal denial reasons no longer include grant lifecycle failures:
 type ProtectionBypassDeniedReason =
   | "automatic_disabled"
   | "feature_disabled"
-  | "surface_disabled"
-  | "manual_feature_disabled"
-  | "missing_intent"
-  | "invalid_intent"
-  | "operation_not_permitted"
+  | "execution_version_mismatch"
+  | "missing_execution"
+  | "invalid_execution"
+  | "task_not_permitted"
   | "resource_stale"
   | "permission_required"
   | "unsupported_environment"
@@ -583,15 +733,19 @@ Preserve existing public compatibility codes where practical:
 
 - product-policy denials map to `TEMP_WINDOW_DISABLED`;
 - missing permissions map to `TEMP_WINDOW_PERMISSION_REQUIRED`;
-- missing or malformed intent, unavailable policy, and stale resource map to a
-  typed policy-context classification and never trigger an unrelated
+- recognized version mismatch maps to
+  `TEMP_WINDOW_EXECUTION_VERSION_MISMATCH` with a refresh-page fallback;
+- missing or malformed execution, unavailable policy, and stale resource map
+  to a typed policy-context classification and never trigger an unrelated
   "enable protection bypass" reminder;
 - user-visible errors provide a stable local fallback and retain safe useful
   detail where available.
 
-An explicit command denied by a current compatibility setting should identify
-the setting that blocked it. An automatic denial remains quiet unless an
-existing result or health surface needs to explain degraded behavior.
+An automatic policy denial remains quiet unless an existing result or health
+surface needs to explain degraded behavior. An explicit command is never
+denied by automatic or surface preferences. Permission, unsupported
+environment, and stale-resource errors provide an actionable local fallback
+and may retain safe diagnostic detail in the affected user's private UI.
 
 ## Telemetry
 
@@ -604,6 +758,12 @@ dimensions only:
 - controlled denial reason;
 - selected Adapter for allowed operations.
 
+Reuse the existing settings snapshot and daily summary rather than adding
+per-toggle action events. The settings snapshot records eight fixed boolean
+fields; the daily summary accepts only the canonical feature values. Update the
+typed payload, aggregate snapshot, privacy allow-list, and focused tests
+together. Do not send dynamic feature keys.
+
 Remove grant lifecycle and invalid-grant counters. Never record execution
 objects, commands as free-form strings, URLs, origins, hosts, account IDs,
 site names, request IDs, raw errors, or backend messages.
@@ -614,49 +774,51 @@ as an independently tested telemetry task.
 
 ## Migration Sequence
 
-Use a behavior-preserving, test-first refactor on the current task branch:
+Use a test-first refactor on the follow-up task branch:
 
-1. Characterize current observable behavior at execution roots, Coordinator
-   policy decisions, acquire-time validation, runtime transport, and the
-   protected pool seam.
-2. Change the execution contract from `grantId` to explicit command data and
-   make user/automatic constructors pure. Centralize the runtime value families
-   listed above and derive their unions and validation sets.
-3. Update workflow roots and propagation paths without changing their product
-   classifications.
-4. Simplify the Coordinator to consume execution directly and make current
-   resource validation the final asynchronous acquire-time fact.
-5. Remove begin/end runtime actions, the grant registry, verified
-   continuations, grant profiles, and their lifecycle tests.
-6. Normalize runtime transport to one envelope-level execution value, remove
-   duplicated execution and source members from canonical task params, and
-   derive the pool presentation source from `execution.surface`.
-7. Update controlled errors and telemetry to remove grant-only states while
-   retaining deterministic `operation_not_permitted` contract validation.
-8. Retain and strengthen architecture tests proving every protected operation
-   enters only through the Coordinator.
-9. Run focused behavior and propagation suites, locale extraction when
-   affected, the staged validation gate, the push validation gate, and the
-   deterministic browser-level regression.
+1. Characterize every automatic construction root and explicit command that
+   can reach a protected task.
+2. Introduce the product-feature catalog, automatic subset, exact
+   feature-to-task-kind matrix, and version-2 execution parser.
+3. Reclassify workflow roots. Move execution creation out of low-level model
+   service factories and remove the unused automatic execution from
+   `ModelRedirectService`.
+4. Split the generic verification command into product-owned key, channel, and
+   model commands where those explicit workflows can reach protected work.
+5. Replace Coordinator policy fields and denial reasons while preserving the
+   acquire-time validation order and unconditional cleanup.
+6. Add the new preference shape and canonical migration, explicitly rebuilding
+   and atomically persisting the stored object without the five legacy keys,
+   including import and cross-version WebDAV normalization.
+7. Replace the settings card, search targets, locale copy, settings snapshots,
+   privacy allow-list, and daily summary dimensions.
+8. Update focused service, propagation, Coordinator, settings, migration,
+   analytics, and browser-level regressions.
+9. Run locale extraction, staged validation, push validation, targeted
+   Chromium E2E, and final diff inspection.
 
-No compatibility shim should preserve the grant path. It would keep two
-architectures alive for an unpublished internal contract.
+Do not keep a runtime compatibility adapter for old preferences or execution
+feature values. Preference migration is one-time persisted-data conversion;
+wire-version mismatch fails closed and asks an old extension page to refresh.
 
 ## Testing
 
 ### Execution and policy tests
 
 - automatic master disabled denies UI lifecycle, schedule, retry, and recovery;
-- valid explicit refresh, check-in, onboarding, and verification commands,
-  including a verification-backed model-sync workflow, remain eligible when
-  the automatic master is disabled;
-- current manual and surface compatibility gates retain their existing
-  behavior;
+- each of the eight automatic product-feature settings denies only its owning
+  automatic work;
+- valid explicit refresh, check-in, onboarding, key, channel, and model
+  commands remain eligible when the automatic master or matching feature is
+  disabled;
+- automatic parsing rejects manual-only features;
+- a version-1 execution sent through the runtime handler returns the dedicated
+  mismatch code and actionable refresh fallback without entering the pool;
 - missing, malformed, or unknown execution values fail closed;
 - runtime catalogs, derived unions, parsers, and exhaustive task mappings stay
   synchronized without a separately maintained string list;
-- feature-to-operation mismatches fail as `operation_not_permitted` without any
-  stateful grant lookup;
+- feature-to-task-kind mismatches fail as `task_not_permitted` even when two
+  task kinds share an operation;
 - `forceTempWindow`, incognito, and cookie-store requirements never elevate a
   denied request;
 - policy read failure returns `policy_unavailable`;
@@ -667,21 +829,29 @@ architectures alive for an unpublished internal contract.
 - refresh one and refresh all preserve the same explicit command value through
   account storage, Site Adapter Capability, API transport, and fallback;
 - manual check-in and onboarding preserve their command context;
-- UI-open pretrigger, alarms, scheduled retry, and background recovery are
-  classified as automatic;
+- scheduled and open-time account refresh remain `account_refresh`;
+- balance-history capture, redemption follow-up, LDOH refresh, key-management
+  loading, channel matching, and model sync use their audited product owner;
+- UI-open pretrigger, alarms, scheduled retry, and true background recovery are
+  classified as automatic with their real trigger and surface;
 - retry records and delayed automatic roots never persist or inherit a
   user-command execution;
 - fan-out may reuse immutable execution data without registration;
-- Fetch, TurnstileFetch, CheckinPageAction, OpenRouter management-key actions,
-  RenderedTitle, generic and New API session reads, and open-context runtime
-  actions all enter the Coordinator;
+- API fallback, profile-isolated fetch, Turnstile, check-in page action,
+  OpenRouter management-key action, and generic and New API session reads all
+  enter the Coordinator;
+- dormant rendered-title and open-context task kinds are authorized for no
+  feature and have no production caller or workflow root;
 - runtime messages contain one authoritative execution value, canonical task
   params contain no duplicate intent/source value, and pool presentation source
   is derived from `execution.surface`;
 - no runtime handler or exported helper can call protected tab/window creation
   outside the private pool seam;
 - no grant registry, begin/end action, verified continuation, or grant ID
-  remains reachable or exported.
+  remains reachable or exported;
+- `ModelRedirectService` does not invent an automatic execution; model-sync
+  post-processing inherits model-sync execution, and any future protected
+  redirect UI action starts from a dedicated user command.
 
 ### Acquire-time correctness tests
 
@@ -696,31 +866,50 @@ architectures alive for an unpublished internal contract.
 ### UI, locale, search, and analytics tests
 
 - disabling automatic bypass leaves explicit commands eligible;
-- existing compatibility controls retain current behavior until their later
-  replacement;
-- settings search and locale wording continue to describe the switch as
-  automatic bypass;
-- daily summaries and privacy sanitizers accept only controlled enums and no
-  grant data.
+- the eight controls describe permission to use automatic bypass rather than
+  enabling their product features;
+- child choices remain editable while the master or owning product feature is
+  disabled;
+- preference migration preserves `enabled`, `tempContextMode`, and the stated
+  account-refresh intent while physically removing all five legacy keys;
+- valid existing v2 feature choices survive repeat normalization;
+- local migration atomically writes the canonical object without advancing the
+  shared-preferences timestamp;
+- old backup imports and synchronized settings pass through the same
+  normalizer;
+- a winning legacy WebDAV payload preserves local v2-only choices, maps its
+  account-refresh choice, and cannot create a sync reset loop;
+- a full v2 upload, legacy-client account-refresh edit, and v2 re-import round
+  trip applies that legacy edit while preserving the other seven choices;
+- settings search removes old scope targets and exposes all eight features;
+- all supported application locales keep the same key shape;
+- settings snapshots, daily summaries, and privacy sanitizers accept only
+  fixed controlled fields and no grant, URL, site, account, or backend data.
 
 ### Browser-level regression
 
 Retain one deterministic Playwright scenario in the built extension:
 
-1. disable automatic protection bypass;
-2. trigger an automatic UI-open path whose fixture requests a temporary page;
+1. enable the automatic master and disable automatic bypass for check-in;
+2. trigger the automatic UI-open check-in path whose fixture requests a
+   temporary page;
 3. assert that no temporary tab or window is created;
-4. start the corresponding explicit user command;
+4. start the corresponding explicit check-in command;
 5. assert that its temporary context is allowed.
+
+Update the existing settings/deep-link browser flow to prove the replacement
+feature controls are reachable. Do not add one E2E scenario per product
+feature; Vitest covers the exhaustive policy and classification matrix.
 
 Use fixture data and reserved example domains. Vitest covers the policy matrix;
 Playwright covers the cross-entrypoint extension-runtime risk.
 
 ## Non-Goals
 
-- Do not add per-feature settings in this refactor.
-- Do not add a total protection-bypass kill switch.
-- Do not remove or redesign the legacy manual/surface settings yet.
+- Do not add a second-level scenario taxonomy or one setting per call site.
+- Do not remove the automatic master switch.
+- Do not use product-feature settings to enable or disable the owning feature.
+- Do not turn presentation `surface` back into an authorization input.
 - Do not redesign Tab, Window, or Composite lifecycle and concurrency.
 - Do not cancel a protected operation after it has acquired its context.
 - Do not treat internal intent metadata as a security boundary against
@@ -760,3 +949,16 @@ The canonical runtime catalog removes duplicated protocol literals without
 creating a generic constants bucket. Each value family stays owned by the
 Protection Bypass Module (or aliases an existing owner), and downstream types,
 validators, switches, error mapping, and telemetry derive from it.
+
+The product-feature catalog replaces `site_detection`, `session_resync`, and
+generic `verification` ownership with user-recognizable feature boundaries.
+The automatic subset, command mapping, feature-to-task-kind matrix, settings,
+and telemetry all derive from this catalog rather than maintaining parallel
+string lists. Detailed triggers and operations remain diagnostic dimensions,
+not user configuration.
+
+This revision also removes misleading low-level execution creation. A workflow
+root owns product intent; service factories accept and forward execution but do
+not manufacture a background identity. Model redirect UI methods currently do
+not consume protected execution and therefore carry none. Automatic redirect
+post-processing stays part of model sync and inherits the model-sync execution.
