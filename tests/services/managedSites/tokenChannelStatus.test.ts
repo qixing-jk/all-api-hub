@@ -62,6 +62,18 @@ const buildExpectedAssessment = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
+const sessionResyncExecution = {
+  version: 1 as const,
+  kind: "automatic" as const,
+  feature: "session_resync" as const,
+  trigger: "background_recovery" as const,
+  surface: "background" as const,
+}
+
+const sessionResyncOptions = {
+  protectionBypassExecution: sessionResyncExecution,
+}
+
 const { resolveDisplayAccountTokenForSecretMock } = vi.hoisted(() => ({
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
 }))
@@ -1063,6 +1075,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
       account,
       token,
       service,
+      protectionBypassExecution: sessionResyncExecution,
     })
 
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
@@ -1072,6 +1085,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
         userId: "1",
       },
       43,
+      sessionResyncOptions,
     )
     expect(result).toMatchObject({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,

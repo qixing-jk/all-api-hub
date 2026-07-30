@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES,
+  OPENROUTER_BOOTSTRAP_MUTATION_STATES,
+} from "~/constants/openRouterBootstrap"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
@@ -25,12 +29,14 @@ const {
   recordTempWindowTurnstileFetchResultMock,
   loggerErrorMock,
   loggerWarnMock,
+  handleTempWindowOpenRouterManagementKeyActionMock,
 } = vi.hoisted(() => ({
   trackProductAnalyticsActionCompletedMock: vi.fn(),
   recordTempWindowFetchResultMock: vi.fn(),
   recordTempWindowTurnstileFetchResultMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   loggerWarnMock: vi.fn(),
+  handleTempWindowOpenRouterManagementKeyActionMock: vi.fn(),
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
@@ -175,6 +181,7 @@ describe("tempWindowPool window fallback", () => {
     recordTempWindowTurnstileFetchResultMock.mockReset()
     loggerErrorMock.mockReset()
     loggerWarnMock.mockReset()
+    handleTempWindowOpenRouterManagementKeyActionMock.mockReset()
 
     vi.useFakeTimers()
     vi.resetModules()
@@ -254,6 +261,13 @@ describe("tempWindowPool window fallback", () => {
         getPreferences: getPreferencesMock,
       },
     }))
+    vi.doMock(
+      "~/entrypoints/background/openrouter/managementKeyAction",
+      () => ({
+        handleTempWindowOpenRouterManagementKeyAction:
+          handleTempWindowOpenRouterManagementKeyActionMock,
+      }),
+    )
     vi.doMock("~/utils/i18n/core", () => ({
       t: vi.fn((key: string) => key),
     }))
@@ -271,9 +285,63 @@ describe("tempWindowPool window fallback", () => {
     vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/services/siteDetection/detectSiteType")
     vi.doUnmock("~/services/preferences/userPreferences")
+    vi.doUnmock("~/entrypoints/background/openrouter/managementKeyAction")
     vi.doUnmock("~/utils/i18n/core")
     vi.resetModules()
     vi.restoreAllMocks()
+  })
+
+  it("executes a constrained New API channel-key session read with fixed request behavior", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 650 })
+
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const sendResponse = vi.fn()
+    const request = executeAuthorizedTempContextTask(
+      {
+        kind: "new_api_session_read",
+        params: {
+          origin: "https://example.invalid",
+          action: "channel_key",
+          channelId: 12,
+          userId: "user-1",
+          requestId: "req-new-api-key",
+        },
+      },
+      vi.fn().mockResolvedValue({
+        kind: "allowed",
+        adapter: "tab",
+        feature: "verification",
+        operation: "session_read",
+        cause: "session_required",
+        surface: "background",
+      }),
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(sendMessageMock).toHaveBeenCalledWith(650, {
+      action: RuntimeActionIds.ContentPerformTempWindowFetch,
+      requestId: "req-new-api-key",
+      fetchUrl: "https://example.invalid/api/channel/12/key",
+      fetchOptions: expect.objectContaining({
+        method: "POST",
+        body: "{}",
+        credentials: "include",
+        headers: expect.objectContaining({
+          "Content-Type": "application/json",
+          "New-API-User": "user-1",
+        }),
+      }),
+      responseType: "json",
+    })
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true }),
+    )
   })
 
   it("blocks Firefox popup-source requests at every direct handler boundary without opening a context", async () => {
@@ -285,7 +353,9 @@ describe("tempWindowPool window fallback", () => {
       handleTempWindowFetch,
       handleTempWindowGetRenderedTitle,
       handleTempWindowTurnstileFetch,
-    } = await import("~/entrypoints/background/tempWindowPool")
+    } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
 
     const renderedTitleResponse = vi.fn()
     await handleTempWindowGetRenderedTitle(
@@ -369,6 +439,112 @@ describe("tempWindowPool window fallback", () => {
     expect(sendMessageMock).not.toHaveBeenCalled()
   })
 
+  it("uses authorized popup presentation for an OpenRouter task despite conflicting legacy source metadata", async () => {
+    isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
+
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const authorizeAtAcquire = vi.fn()
+    const sendResponse = vi.fn()
+
+    await executeAuthorizedTempContextTask(
+      {
+        kind: "openrouter_management_key_action",
+        params: {
+          requestId: "request-openrouter-firefox-popup",
+          operation: {
+            kind: "create",
+            label: "extension-request-firefox-popup",
+          },
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: {
+            version: 1,
+            kind: "user_command",
+            command: "add_account",
+            surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          },
+        },
+      },
+      authorizeAtAcquire,
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      requestId: "request-openrouter-firefox-popup",
+      operation: "create",
+      mutationState: OPENROUTER_BOOTSTRAP_MUTATION_STATES.NotDispatched,
+      attemptOutcome: OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.Failed,
+      label: "extension-request-firefox-popup",
+    })
+    expect(authorizeAtAcquire).not.toHaveBeenCalled()
+    expect(
+      handleTempWindowOpenRouterManagementKeyActionMock,
+    ).not.toHaveBeenCalled()
+    expect(createWindowMock).not.toHaveBeenCalled()
+    expect(createTabMock).not.toHaveBeenCalled()
+    expect(tabsQueryMock).not.toHaveBeenCalled()
+    expect(sendMessageMock).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["defaults popup presentation to visible", undefined, true],
+    ["respects an explicit minimize override", false, false],
+  ])(
+    "%s for an authorized OpenRouter task",
+    async (_case, suppressMinimize, expectedSuppressMinimize) => {
+      handleTempWindowOpenRouterManagementKeyActionMock.mockImplementationOnce(
+        async (request, _suppressMinimize, sendResponse) => {
+          sendResponse({
+            requestId: request.requestId,
+            operation: "create",
+            mutationState: OPENROUTER_BOOTSTRAP_MUTATION_STATES.NotDispatched,
+            attemptOutcome: OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.Failed,
+            label: request.operation.label,
+          })
+        },
+      )
+      const { executeAuthorizedTempContextTask } = await import(
+        "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+      )
+      const authorizeAtAcquire = vi.fn()
+      const sendResponse = vi.fn()
+
+      await executeAuthorizedTempContextTask(
+        {
+          kind: "openrouter_management_key_action",
+          params: {
+            requestId: `request-openrouter-popup-${String(suppressMinimize)}`,
+            operation: {
+              kind: "create",
+              label: "extension-request-popup-presentation",
+            },
+            ...(suppressMinimize === undefined ? {} : { suppressMinimize }),
+            protectionBypassExecution: {
+              version: 1,
+              kind: "user_command",
+              command: "add_account",
+              surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+            },
+          },
+        },
+        authorizeAtAcquire,
+        sendResponse,
+      )
+
+      expect(
+        handleTempWindowOpenRouterManagementKeyActionMock,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestId: `request-openrouter-popup-${String(suppressMinimize)}`,
+        }),
+        expectedSuppressMinimize,
+        sendResponse,
+        authorizeAtAcquire,
+      )
+    },
+  )
+
   it("rolls back popup temp-context creation to a plain tab", async () => {
     tempContextMode = "window"
     createWindowMock.mockRejectedValueOnce(
@@ -377,7 +553,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 101 })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -426,6 +602,232 @@ describe("tempWindowPool window fallback", () => {
     expect(removeTabMock).toHaveBeenCalledWith(101)
   })
 
+  it("reports the tab adapter actually acquired after window rollback", async () => {
+    createWindowMock.mockRejectedValueOnce(
+      new Error("Popup windows are not allowed on this runtime"),
+    )
+    createTabMock.mockResolvedValueOnce({ id: 102 })
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const reportOutcome = vi.fn()
+    const request = executeAuthorizedTempContextTask(
+      {
+        kind: "api_fallback_fetch",
+        params: {
+          originUrl: "https://example.invalid",
+          fetchUrl: "https://example.invalid/api/fallback",
+          fetchOptions: { method: "GET" },
+          requestId: "req-reported-window-rollback",
+        },
+      },
+      vi.fn().mockResolvedValue({
+        kind: "allowed",
+        adapter: "window",
+        feature: "account_refresh",
+        operation: "fetch",
+        cause: "api_error_fallback",
+        surface: "background",
+      }),
+      vi.fn(),
+      reportOutcome,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(reportOutcome).toHaveBeenCalledTimes(1)
+    expect(reportOutcome).toHaveBeenCalledWith({
+      kind: "allowed",
+      adapter: "tab",
+    })
+  })
+
+  it("reports the tab adapter actually acquired after composite rollback", async () => {
+    createWindowMock.mockRejectedValueOnce(
+      new Error("Window creation is not supported for popup or normal windows"),
+    )
+    createTabMock.mockResolvedValueOnce({ id: 105 })
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const reportOutcome = vi.fn()
+    const request = executeAuthorizedTempContextTask(
+      {
+        kind: "api_fallback_fetch",
+        params: {
+          originUrl: "https://example.invalid",
+          fetchUrl: "https://example.invalid/api/composite-fallback",
+          fetchOptions: { method: "GET" },
+          requestId: "req-reported-composite-rollback",
+        },
+      },
+      vi.fn().mockResolvedValue({
+        kind: "allowed",
+        adapter: "composite",
+        feature: "account_refresh",
+        operation: "fetch",
+        cause: "api_error_fallback",
+        surface: "background",
+      }),
+      vi.fn(),
+      reportOutcome,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(reportOutcome).toHaveBeenCalledTimes(1)
+    expect(reportOutcome).toHaveBeenCalledWith({
+      kind: "allowed",
+      adapter: "tab",
+    })
+  })
+
+  it("reports the existing adapter when policy preference differs on reuse", async () => {
+    createTabMock.mockResolvedValueOnce({ id: 103 })
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const task = (requestId: string) => ({
+      kind: "api_fallback_fetch" as const,
+      params: {
+        originUrl: "https://example.invalid",
+        fetchUrl: `https://example.invalid/api/${requestId}`,
+        fetchOptions: { method: "GET" },
+        requestId,
+      },
+    })
+    const firstOutcome = vi.fn()
+    const firstRequest = executeAuthorizedTempContextTask(
+      task("req-reuse-adapter-first"),
+      vi.fn().mockResolvedValue({
+        kind: "allowed",
+        adapter: "tab",
+        feature: "account_refresh",
+        operation: "fetch",
+        cause: "api_error_fallback",
+        surface: "background",
+      }),
+      vi.fn(),
+      firstOutcome,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    await firstRequest
+
+    const secondOutcome = vi.fn()
+    const secondRequest = executeAuthorizedTempContextTask(
+      task("req-reuse-adapter-second"),
+      vi.fn().mockResolvedValue({
+        kind: "allowed",
+        adapter: "window",
+        feature: "account_refresh",
+        operation: "fetch",
+        cause: "api_error_fallback",
+        surface: "background",
+      }),
+      vi.fn(),
+      secondOutcome,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    await secondRequest
+
+    expect(createTabMock).toHaveBeenCalledTimes(1)
+    expect(createWindowMock).not.toHaveBeenCalled()
+    expect(firstOutcome).toHaveBeenCalledWith({
+      kind: "allowed",
+      adapter: "tab",
+    })
+    expect(secondOutcome).toHaveBeenCalledWith({
+      kind: "allowed",
+      adapter: "tab",
+    })
+  })
+
+  it("does not let an unresolved outcome observer block the next same-origin task", async () => {
+    createTabMock.mockResolvedValueOnce({ id: 104 })
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const neverFinishes = new Promise<void>(() => undefined)
+    const reportOutcome = vi.fn(() => {
+      void neverFinishes
+    })
+    const authorizeAtAcquire = vi.fn().mockResolvedValue({
+      kind: "allowed",
+      adapter: "tab",
+      feature: "account_refresh",
+      operation: "fetch",
+      cause: "api_error_fallback",
+      surface: "background",
+    })
+    const run = (requestId: string) =>
+      executeAuthorizedTempContextTask(
+        {
+          kind: "api_fallback_fetch",
+          params: {
+            originUrl: "https://example.invalid",
+            fetchUrl: `https://example.invalid/api/${requestId}`,
+            fetchOptions: { method: "GET" },
+            requestId,
+          },
+        },
+        authorizeAtAcquire,
+        vi.fn(),
+        reportOutcome,
+      )
+
+    const first = run("req-unresolved-outcome-first")
+    await vi.advanceTimersByTimeAsync(500)
+    await first
+    const second = run("req-unresolved-outcome-second")
+    await vi.advanceTimersByTimeAsync(500)
+    await second
+
+    expect(createTabMock).toHaveBeenCalledTimes(1)
+    expect(authorizeAtAcquire).toHaveBeenCalledTimes(2)
+    expect(reportOutcome).toHaveBeenCalledTimes(2)
+  })
+
+  it("reports an allowed acquisition failure as unavailable without an adapter", async () => {
+    createWindowMock.mockRejectedValueOnce(new Error("unexpected window error"))
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const reportOutcome = vi.fn()
+    const response = vi.fn()
+    const request = executeAuthorizedTempContextTask(
+      {
+        kind: "api_fallback_fetch",
+        params: {
+          originUrl: "https://example.invalid",
+          fetchUrl: "https://example.invalid/api/unavailable",
+          fetchOptions: { method: "GET" },
+          requestId: "req-acquisition-unavailable",
+        },
+      },
+      vi.fn().mockResolvedValue({
+        kind: "allowed",
+        adapter: "window",
+        feature: "account_refresh",
+        operation: "fetch",
+        cause: "api_error_fallback",
+        surface: "background",
+      }),
+      response,
+      reportOutcome,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false }),
+    )
+    expect(reportOutcome).toHaveBeenCalledTimes(1)
+    expect(reportOutcome).toHaveBeenCalledWith({ kind: "unavailable" })
+  })
+
   it("finalizes a popup context after one failed removal so the next request creates a fresh context", async () => {
     tempContextMode = "window"
     createWindowMock
@@ -438,7 +840,7 @@ describe("tempWindowPool window fallback", () => {
     removeWindowMock.mockRejectedValueOnce(new Error("transient close failure"))
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -521,7 +923,7 @@ describe("tempWindowPool window fallback", () => {
     })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -567,7 +969,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const request = handleTempWindowFetch(
@@ -643,7 +1045,7 @@ describe("tempWindowPool window fallback", () => {
     applyFirefoxTempWindowDownloadBlockRuleMock.mockResolvedValueOnce(602)
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -677,7 +1079,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 603 })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -715,7 +1117,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 202 })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -762,7 +1164,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 304 })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -803,7 +1205,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 307 })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -843,7 +1245,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 309 })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -890,7 +1292,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -935,7 +1337,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowTurnstileFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -972,7 +1374,7 @@ describe("tempWindowPool window fallback", () => {
     createWindowMock.mockResolvedValueOnce(undefined)
 
     const { handleTempWindowTurnstileFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1006,7 +1408,7 @@ describe("tempWindowPool window fallback", () => {
     tabsQueryMock.mockResolvedValueOnce([])
 
     const { handleTempWindowTurnstileFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1039,7 +1441,7 @@ describe("tempWindowPool window fallback", () => {
     isAllowedIncognitoAccessMock.mockResolvedValueOnce(false)
 
     const { handleTempWindowTurnstileFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1071,7 +1473,7 @@ describe("tempWindowPool window fallback", () => {
     isAllowedIncognitoAccessMock.mockResolvedValueOnce(false)
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1117,7 +1519,7 @@ describe("tempWindowPool window fallback", () => {
     tabsQueryMock.mockResolvedValueOnce([{ id: 491 }])
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1151,47 +1553,6 @@ describe("tempWindowPool window fallback", () => {
     })
   })
 
-  it("falls back to default temp-context preferences when reading user preferences throws", async () => {
-    tempContextMode = "window"
-    defaultTempContextMode = "tab"
-    getPreferencesMock.mockRejectedValueOnce(
-      new Error("preferences unavailable"),
-    )
-    createTabMock.mockResolvedValueOnce({ id: 492 })
-
-    const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
-    )
-
-    const sendResponse = vi.fn()
-    const request = handleTempWindowFetch(
-      {
-        originUrl: "https://example.com",
-        fetchUrl: "https://example.com/api/default-tab-mode",
-        fetchOptions: { method: "GET" },
-        requestId: "req-default-tab-mode",
-      },
-      sendResponse,
-    )
-
-    await vi.advanceTimersByTimeAsync(500)
-    await request
-
-    expect(createWindowMock).not.toHaveBeenCalled()
-    expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
-    expect(tabsUpdateMock).toHaveBeenCalledWith(492, {
-      url: "https://example.com",
-    })
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      data: {
-        success: true,
-        message: "",
-        data: "ok",
-      },
-    })
-  })
-
   it("surfaces unexpected popup-window creation failures in temp fetch flows", async () => {
     tempContextMode = "window"
     createWindowMock.mockRejectedValueOnce(
@@ -1199,7 +1560,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1228,7 +1589,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1280,7 +1641,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleCloseTempWindow, handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const fetchResponse = vi.fn()
@@ -1322,7 +1683,7 @@ describe("tempWindowPool window fallback", () => {
 
   it("rejects invalid temp-window fetch requests before opening any context", async () => {
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1346,7 +1707,7 @@ describe("tempWindowPool window fallback", () => {
 
   it("rejects invalid turnstile requests before opening any context", async () => {
     const { handleTempWindowTurnstileFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1373,12 +1734,12 @@ describe("tempWindowPool window fallback", () => {
     })
   })
 
-  it("merges detected site type with user data from the temp context", async () => {
+  it("merges the caller-normalized site type with user data from the temp context", async () => {
     tempContextMode = "tab"
     createTabMock.mockResolvedValueOnce({ id: 508 })
 
     const { handleAutoDetectSite } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1386,6 +1747,7 @@ describe("tempWindowPool window fallback", () => {
       {
         url: "https://example.com/account",
         requestId: "req-auto-detect-success",
+        siteType: "new-api",
       },
       sendResponse,
     )
@@ -1393,7 +1755,7 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(500)
     await request
 
-    expect(getSiteTypeMock).toHaveBeenCalledWith("https://example.com/account")
+    expect(getSiteTypeMock).not.toHaveBeenCalled()
     expect(sendMessageMock).toHaveBeenCalledWith(
       508,
       expect.objectContaining({
@@ -1445,7 +1807,7 @@ describe("tempWindowPool window fallback", () => {
     })
 
     const { handleAutoDetectSite } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1453,6 +1815,7 @@ describe("tempWindowPool window fallback", () => {
       {
         url: "https://dashboard.example.invalid/account",
         requestId: "req-auto-detect-transient-auth",
+        siteType: "new-api",
       },
       sendResponse,
     )
@@ -1486,7 +1849,7 @@ describe("tempWindowPool window fallback", () => {
     tabsQueryMock.mockResolvedValueOnce([{ id: 609 }])
 
     const { handleAutoDetectSite } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1494,6 +1857,7 @@ describe("tempWindowPool window fallback", () => {
       {
         url: "https://example.com/account",
         requestId: "req-auto-detect-incognito",
+        siteType: "new-api",
         useIncognito: true,
       },
       sendResponse,
@@ -1531,7 +1895,7 @@ describe("tempWindowPool window fallback", () => {
     tabsQueryMock.mockResolvedValueOnce([{ id: 611 }])
 
     const { handleAutoDetectSite } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1539,6 +1903,7 @@ describe("tempWindowPool window fallback", () => {
       {
         url: "https://aihubmix.com",
         requestId: "req-auto-detect-suppress-minimize",
+        siteType: "new-api",
         suppressMinimize: true,
       },
       sendResponse,
@@ -1580,7 +1945,7 @@ describe("tempWindowPool window fallback", () => {
     tabsQueryMock.mockResolvedValueOnce([{ id: 613 }])
 
     const { handleAutoDetectSite } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1588,6 +1953,7 @@ describe("tempWindowPool window fallback", () => {
       {
         url: "https://aihubmix.com",
         requestId: "req-auto-detect-composite-suppress-minimize",
+        siteType: "new-api",
         suppressMinimize: true,
       },
       sendResponse,
@@ -1628,7 +1994,7 @@ describe("tempWindowPool window fallback", () => {
     isAllowedIncognitoAccessMock.mockResolvedValueOnce(false)
 
     const { handleAutoDetectSite } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1636,6 +2002,7 @@ describe("tempWindowPool window fallback", () => {
       {
         url: "https://example.com/account",
         requestId: "req-auto-detect-incognito-denied",
+        siteType: "new-api",
         useIncognito: true,
       },
       sendResponse,
@@ -1672,7 +2039,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleAutoDetectSite } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1680,6 +2047,7 @@ describe("tempWindowPool window fallback", () => {
       {
         url: "https://example.com/account",
         requestId: "req-auto-detect-no-user",
+        siteType: "new-api",
       },
       sendResponse,
     )
@@ -1694,36 +2062,6 @@ describe("tempWindowPool window fallback", () => {
 
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeTabMock).toHaveBeenCalledWith(509)
-  })
-
-  it("surfaces auto-detect failures when site-type detection throws", async () => {
-    tempContextMode = "tab"
-    getSiteTypeMock.mockRejectedValueOnce(new Error("site-type lookup failed"))
-
-    const { handleAutoDetectSite } = await import(
-      "~/entrypoints/background/tempWindowPool"
-    )
-
-    const sendResponse = vi.fn()
-    const request = handleAutoDetectSite(
-      {
-        url: "https://example.com/account",
-        requestId: "req-auto-detect-site-type-error",
-      },
-      sendResponse,
-    )
-
-    await vi.advanceTimersByTimeAsync(500)
-    await request
-
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "site-type lookup failed",
-    })
-
-    await vi.advanceTimersByTimeAsync(2500)
-    expect(createTabMock).not.toHaveBeenCalled()
-    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
   })
 
   it("returns a safe null auto-detect result when temp-context user data lookup throws", async () => {
@@ -1746,7 +2084,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleAutoDetectSite } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1754,6 +2092,7 @@ describe("tempWindowPool window fallback", () => {
       {
         url: "https://example.com/account",
         requestId: "req-auto-detect-user-read-error",
+        siteType: "new-api",
       },
       sendResponse,
     )
@@ -1790,7 +2129,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowGetRenderedTitle } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1821,7 +2160,7 @@ describe("tempWindowPool window fallback", () => {
     tabsQueryMock.mockResolvedValueOnce([{ id: 621 }])
 
     const { handleTempWindowGetRenderedTitle } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const request = handleTempWindowGetRenderedTitle(
@@ -1848,7 +2187,7 @@ describe("tempWindowPool window fallback", () => {
     tabsQueryMock.mockResolvedValueOnce([{ id: 623 }])
 
     const { handleTempWindowGetRenderedTitle } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const firstRequest = handleTempWindowGetRenderedTitle(
@@ -1890,7 +2229,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowGetRenderedTitle } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -1925,7 +2264,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 512 })
 
     const { handleCloseTempWindow, handleTempWindowGetRenderedTitle } =
-      await import("~/entrypoints/background/tempWindowPool")
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const titleResponse = vi.fn()
     const request = handleTempWindowGetRenderedTitle(
@@ -1957,39 +2296,6 @@ describe("tempWindowPool window fallback", () => {
     expect(removeTabMock).toHaveBeenCalledWith(512)
   })
 
-  it("returns a structured close failure when browser removal throws for an open temp window", async () => {
-    tempContextMode = "tab"
-    createTabMock.mockResolvedValueOnce({ id: 5120 })
-
-    const { handleCloseTempWindow, handleOpenTempWindow } = await import(
-      "~/entrypoints/background/tempWindowPool"
-    )
-
-    const openResponse = vi.fn()
-    await handleOpenTempWindow(
-      {
-        requestId: "req-close-error",
-        url: "https://example.com/close-error",
-      },
-      openResponse,
-    )
-
-    expect(openResponse).toHaveBeenCalledWith({
-      success: true,
-      tabId: 5120,
-    })
-
-    removeTabMock.mockRejectedValueOnce(new Error("close failed"))
-
-    const closeResponse = vi.fn()
-    await handleCloseTempWindow({ requestId: "req-close-error" }, closeResponse)
-
-    expect(closeResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "close failed",
-    })
-  })
-
   it("cleans up a pooled tab context when the browser removes the temp tab externally", async () => {
     tempContextMode = "tab"
     createTabMock.mockResolvedValueOnce({ id: 513 })
@@ -1998,7 +2304,9 @@ describe("tempWindowPool window fallback", () => {
       handleCloseTempWindow,
       handleTempWindowGetRenderedTitle,
       setupTempWindowListeners,
-    } = await import("~/entrypoints/background/tempWindowPool")
+    } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
 
     setupTempWindowListeners()
 
@@ -2051,7 +2359,9 @@ describe("tempWindowPool window fallback", () => {
       handleCloseTempWindow,
       handleTempWindowGetRenderedTitle,
       setupTempWindowListeners,
-    } = await import("~/entrypoints/background/tempWindowPool")
+    } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
 
     setupTempWindowListeners()
 
@@ -2102,7 +2412,7 @@ describe("tempWindowPool window fallback", () => {
       .mockResolvedValueOnce({ id: 616 })
 
     const { cleanupTempContextsOnSuspend, handleTempWindowFetch } =
-      await import("~/entrypoints/background/tempWindowPool")
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const firstResponse = vi.fn()
     const firstRequest = handleTempWindowFetch(
@@ -2164,6 +2474,110 @@ describe("tempWindowPool window fallback", () => {
     })
   })
 
+  it("opens and closes an open_context through the authorized pool lifecycle", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 777 })
+
+    const {
+      executeAuthorizedTempContextTask,
+      handleCloseTempWindow,
+      setupTempWindowListeners,
+    } = await import("~/entrypoints/background/tempWindowPool")
+    const authorizeAtAcquire = vi.fn(async () => ({
+      kind: "allowed" as const,
+      adapter: "tab" as const,
+      feature: "verification" as const,
+      operation: "open_context" as const,
+      cause: "explicit_context" as const,
+      surface: "background" as const,
+    }))
+    const sendResponse = vi.fn()
+
+    setupTempWindowListeners()
+    const openRequest = executeAuthorizedTempContextTask(
+      {
+        kind: "open_context",
+        params: {
+          url: "https://example.invalid/authorized-open",
+          requestId: "req-authorized-open",
+        },
+      },
+      "background",
+      authorizeAtAcquire,
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await openRequest
+
+    expect(onTabRemovedMock).toHaveBeenCalledTimes(1)
+    expect(onWindowRemovedMock).toHaveBeenCalledTimes(1)
+    expect(authorizeAtAcquire).toHaveBeenCalledTimes(1)
+    expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
+    expect(tabsUpdateMock).toHaveBeenCalledWith(777, {
+      url: "https://example.invalid/authorized-open",
+    })
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      777,
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentCheckCapGuard,
+        requestId: "req-authorized-open",
+      }),
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      tabId: 777,
+    })
+
+    const closeResponse = vi.fn()
+    await handleCloseTempWindow(
+      { requestId: "req-authorized-open" },
+      closeResponse,
+    )
+
+    expect(removeTabMock).toHaveBeenCalledWith(777)
+    expect(closeResponse).toHaveBeenCalledWith({ success: true })
+  })
+
+  it("removes an authorized tab by tabs.remove when its ID collides with a window ID", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 901 })
+
+    const { executeAuthorizedTempContextTask, handleCloseTempWindow } =
+      await import("~/entrypoints/background/tempWindowPool")
+    const sendResponse = vi.fn()
+    const openRequest = executeAuthorizedTempContextTask(
+      {
+        kind: "open_context",
+        params: {
+          url: "https://example.invalid/tab-window-id-collision",
+          requestId: "req-tab-window-id-collision",
+        },
+      },
+      "background",
+      vi.fn(async () => ({
+        kind: "allowed" as const,
+        adapter: "tab" as const,
+        feature: "verification" as const,
+        operation: "open_context" as const,
+        cause: "explicit_context" as const,
+        surface: "background" as const,
+      })),
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await openRequest
+    await handleCloseTempWindow(
+      { requestId: "req-tab-window-id-collision" },
+      vi.fn(),
+    )
+
+    expect(removeTabMock).toHaveBeenCalledWith(901)
+    expect(removeWindowMock).not.toHaveBeenCalledWith(901)
+    expect(removeTabOrWindowMock).not.toHaveBeenCalledWith(901)
+  })
+
   it("cleans up pooled popup contexts on background suspend and forces a fresh popup next time", async () => {
     tempContextMode = "window"
     createWindowMock
@@ -2174,7 +2588,7 @@ describe("tempWindowPool window fallback", () => {
       .mockResolvedValueOnce([{ id: 620 }])
 
     const { cleanupTempContextsOnSuspend, handleTempWindowGetRenderedTitle } =
-      await import("~/entrypoints/background/tempWindowPool")
+      await import("~~/tests/entrypoints/background/tempWindowPoolTestAdapter")
 
     const firstResponse = vi.fn()
     const firstRequest = handleTempWindowGetRenderedTitle(
@@ -2226,7 +2640,7 @@ describe("tempWindowPool window fallback", () => {
     tabsGetMock.mockRejectedValueOnce(new Error("tab disappeared"))
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -2260,7 +2674,7 @@ describe("tempWindowPool window fallback", () => {
     tabsGetMock.mockResolvedValue({ status: "loading" })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -2313,7 +2727,7 @@ describe("tempWindowPool window fallback", () => {
     createTabMock.mockResolvedValueOnce({ id: 505 })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -2363,7 +2777,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -2436,7 +2850,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -2511,7 +2925,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -2547,7 +2961,7 @@ describe("tempWindowPool window fallback", () => {
       .mockResolvedValueOnce({ id: 607 })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const firstResponse = vi.fn()
@@ -2650,7 +3064,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const firstResponse = vi.fn()
@@ -2706,6 +3120,152 @@ describe("tempWindowPool window fallback", () => {
     expect(createTabMock).toHaveBeenCalledTimes(1)
   })
 
+  it("re-authorizes queued same-origin work before reusing a pooled context", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 609 })
+    const firstFetch = createDeferred<{
+      success: boolean
+      data: { success: boolean; message: string; data: string }
+    }>()
+    let fetchAttempts = 0
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: { action: string }) => {
+        if (message.action === RuntimeActionIds.ContentShowShieldBypassUi) {
+          return undefined
+        }
+        if (
+          message.action === RuntimeActionIds.ContentCheckCapGuard ||
+          message.action === RuntimeActionIds.ContentCheckCloudflareGuard
+        ) {
+          return { success: true, passed: true }
+        }
+        if (message.action === RuntimeActionIds.ContentPerformTempWindowFetch) {
+          fetchAttempts += 1
+          return await firstFetch.promise
+        }
+        throw new Error(`Unexpected action: ${message.action}`)
+      },
+    )
+
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const task = (requestId: string, suffix: string) => ({
+      kind: "api_fallback_fetch" as const,
+      params: {
+        originUrl: `https://example.invalid/${suffix}`,
+        fetchUrl: `https://example.invalid/api/${suffix}`,
+        fetchOptions: { method: "GET" },
+        requestId,
+      },
+    })
+    let automaticEnabled = true
+    const authorizeAtAcquire = vi.fn(async () =>
+      automaticEnabled
+        ? {
+            kind: "allowed" as const,
+            adapter: "tab" as const,
+            feature: "account_refresh" as const,
+            operation: "fetch" as const,
+            cause: "api_error_fallback" as const,
+            surface: "background" as const,
+          }
+        : {
+            kind: "denied" as const,
+            reason: "automatic_disabled" as const,
+            feature: "account_refresh" as const,
+            operation: "fetch" as const,
+            cause: "api_error_fallback" as const,
+            surface: "background" as const,
+          },
+    )
+
+    const firstResponse = vi.fn()
+    const firstRequest = executeAuthorizedTempContextTask(
+      task("req-authorize-1", "one"),
+      authorizeAtAcquire,
+      firstResponse,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    expect(authorizeAtAcquire).toHaveBeenCalledTimes(1)
+
+    const secondResponse = vi.fn()
+    const secondRequest = executeAuthorizedTempContextTask(
+      task("req-authorize-2", "two"),
+      authorizeAtAcquire,
+      secondResponse,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    expect(authorizeAtAcquire).toHaveBeenCalledTimes(1)
+
+    automaticEnabled = false
+    firstFetch.resolve({
+      success: true,
+      data: { success: true, message: "", data: "first" },
+    })
+    await firstRequest
+    await vi.advanceTimersByTimeAsync(500)
+    await secondRequest
+
+    expect(authorizeAtAcquire).toHaveBeenCalledTimes(2)
+    expect(fetchAttempts).toBe(1)
+    expect(createTabMock).toHaveBeenCalledTimes(1)
+    expect(secondResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: false,
+        code: API_ERROR_CODES.TEMP_WINDOW_DISABLED,
+      }),
+    )
+  })
+
+  it("completes an unknown-domain session read without nested site detection or acquire", async () => {
+    vi.useRealTimers()
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 649 })
+    getSiteTypeMock.mockImplementation(() => new Promise(() => {}))
+
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const authorizeAtAcquire = vi.fn(async () => ({
+      kind: "allowed" as const,
+      adapter: "tab" as const,
+      feature: "site_detection" as const,
+      operation: "session_read" as const,
+      cause: "session_required" as const,
+      surface: "background" as const,
+    }))
+    const sendResponse = vi.fn()
+
+    const execution = executeAuthorizedTempContextTask(
+      {
+        kind: "session_read",
+        params: {
+          url: "https://unknown.example.invalid/account",
+          requestId: "req-unknown-domain-session",
+          siteType: "new-api",
+        },
+      },
+      authorizeAtAcquire,
+      sendResponse,
+    )
+
+    await vi.waitFor(
+      () => {
+        expect(sendResponse).toHaveBeenCalledWith({
+          success: true,
+          data: expect.objectContaining({ siteType: "new-api" }),
+        })
+      },
+      { timeout: 1_500 },
+    )
+    await execution
+
+    expect(getSiteTypeMock).not.toHaveBeenCalled()
+    expect(authorizeAtAcquire).toHaveBeenCalledTimes(1)
+    expect(createTabMock).toHaveBeenCalledTimes(1)
+  })
+
   it("recreates a context for queued same-origin work after force close", async () => {
     tempContextMode = "tab"
     createTabMock
@@ -2750,7 +3310,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleCloseTempWindow, handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const firstResponse = vi.fn()
@@ -2848,7 +3408,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const firstResponse = vi.fn()
@@ -2957,7 +3517,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const requests = Array.from({ length: 4 }, (_, index) => {
@@ -3003,7 +3563,7 @@ describe("tempWindowPool window fallback", () => {
       .mockResolvedValueOnce({ id: 709 })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const firstResponse = vi.fn()
@@ -3050,7 +3610,7 @@ describe("tempWindowPool window fallback", () => {
       .mockResolvedValueOnce({ id: 711 })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const firstResponse = vi.fn()
@@ -3107,7 +3667,7 @@ describe("tempWindowPool window fallback", () => {
     const abortController = new AbortController()
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3151,7 +3711,7 @@ describe("tempWindowPool window fallback", () => {
     applyTempWindowCookieRuleMock.mockResolvedValueOnce(1_000_606)
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3210,7 +3770,7 @@ describe("tempWindowPool window fallback", () => {
     applyTempWindowCookieRuleMock.mockResolvedValueOnce(1_000_616)
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3260,7 +3820,7 @@ describe("tempWindowPool window fallback", () => {
     applyTempWindowCookieRuleMock.mockResolvedValueOnce(null)
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3318,7 +3878,7 @@ describe("tempWindowPool window fallback", () => {
     getCookieHeaderForUrlMock.mockResolvedValueOnce("")
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3373,7 +3933,7 @@ describe("tempWindowPool window fallback", () => {
     applyTempWindowCookieRuleMock.mockResolvedValueOnce(1_000_707)
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3438,7 +3998,7 @@ describe("tempWindowPool window fallback", () => {
     applyTempWindowCookieRuleMock.mockResolvedValueOnce(1_000_708)
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3502,7 +4062,7 @@ describe("tempWindowPool window fallback", () => {
     })
 
     const { handleTempWindowFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3594,7 +4154,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowTurnstileFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3692,7 +4252,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowTurnstileFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3787,7 +4347,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowTurnstileFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3869,7 +4429,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowTurnstileFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -3953,7 +4513,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowTurnstileFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -4053,7 +4613,7 @@ describe("tempWindowPool window fallback", () => {
     )
 
     const { handleTempWindowTurnstileFetch } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()

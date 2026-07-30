@@ -11,6 +11,7 @@ import { server } from "~~/tests/msw/server"
 import { buildTempWindowPrefs } from "~~/tests/test-utils/factories"
 
 vi.mock("~/entrypoints/background/tempWindowPool", () => ({
+  executeAuthorizedTempContextTask: vi.fn(),
   handleTempWindowFetch: vi.fn(),
   handleTempWindowGetRenderedTitle: vi.fn(),
 }))
@@ -78,7 +79,7 @@ describe("ldohSiteLookup background refresh", () => {
     const { writeLdohSiteListCache } = await import(
       "~/services/integrations/ldohSiteLookup/cache"
     )
-    const { refreshLdohSiteListCache } = await import(
+    const { repairLdohSiteListCache } = await import(
       "~/services/integrations/ldohSiteLookup/background"
     )
 
@@ -88,7 +89,7 @@ describe("ldohSiteLookup background refresh", () => {
       }),
     )
 
-    const result = await refreshLdohSiteListCache()
+    const result = await repairLdohSiteListCache()
 
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -117,7 +118,7 @@ describe("ldohSiteLookup background refresh", () => {
     const { writeLdohSiteListCache } = await import(
       "~/services/integrations/ldohSiteLookup/cache"
     )
-    const { refreshLdohSiteListCache } = await import(
+    const { repairLdohSiteListCache } = await import(
       "~/services/integrations/ldohSiteLookup/background"
     )
 
@@ -127,7 +128,7 @@ describe("ldohSiteLookup background refresh", () => {
       }),
     )
 
-    const result = await refreshLdohSiteListCache()
+    const result = await repairLdohSiteListCache()
 
     expect(result.success).toBe(false)
     if (!result.success) {
@@ -171,7 +172,7 @@ describe("ldohSiteLookup background refresh", () => {
       items: [{ id: "site-1", apiBaseUrl: "https://api.example.com" }],
     })
 
-    const { refreshLdohSiteListCache } = await import(
+    const { repairLdohSiteListCache } = await import(
       "~/services/integrations/ldohSiteLookup/background"
     )
 
@@ -181,7 +182,7 @@ describe("ldohSiteLookup background refresh", () => {
       }),
     )
 
-    const result = await refreshLdohSiteListCache()
+    const result = await repairLdohSiteListCache()
 
     expect(result.success).toBe(true)
     if (result.success === true) {
@@ -189,7 +190,13 @@ describe("ldohSiteLookup background refresh", () => {
     }
 
     expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalledWith(
-      expect.objectContaining({ action: RuntimeActionIds.TempWindowFetch }),
+      expect.objectContaining({
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        task: {
+          kind: "api_fallback_fetch",
+          params: expect.objectContaining({ fetchUrl: ldohSitesUrl }),
+        },
+      }),
     )
 
     expect(vi.mocked(writeLdohSiteListCache)).toHaveBeenCalledWith([
@@ -238,12 +245,12 @@ describe("ldohSiteLookup background refresh", () => {
       }),
     )
 
-    const { refreshLdohSiteListCache } = await import(
+    const { repairLdohSiteListCache } = await import(
       "~/services/integrations/ldohSiteLookup/background"
     )
 
-    const first = refreshLdohSiteListCache()
-    const second = refreshLdohSiteListCache()
+    const first = repairLdohSiteListCache()
+    const second = repairLdohSiteListCache()
 
     await vi.waitFor(() => {
       expect(requestCount).toBe(1)

@@ -146,8 +146,8 @@
     "httpError": "HTTP {{statusCode}}: {{message}}",
     "networkFailed": "Falló la conexión de red",
     "normal": "El estado de la cuenta es normal",
-    "tempWindowDisabled": "La omisión de protección está deshabilitada. Actívala en Configuración > Actualización de datos",
-    "tempWindowPermissionRequired": "La omisión de protección necesita permisos de interceptor de cookies en Firefox. Concédelos en Configuración > Permisos",
+    "tempWindowDisabled": "La actualización automática encontró una verificación del sitio, pero las tareas automáticas no pueden abrir páginas temporales. Activa esta opción en Configuración > Actualización de datos",
+    "tempWindowPermissionRequired": "Firefox necesita los permisos Cookies, Web Request y Web Request Blocking para verificar el sitio. Concédelos en Configuración > Permisos",
     "unknown": "Desconocido",
     "unknownError": "Error desconocido",
     "warning": "Advertencia"

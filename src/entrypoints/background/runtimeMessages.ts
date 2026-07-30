@@ -4,7 +4,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
 import { setupAccountKeyRepairMessagingListeners } from "~/services/accounts/accountKeyAutoProvisioning"
 import { setupAutoRefreshMessagingListeners } from "~/services/accounts/autoRefreshService"
-import type { OpenRouterManagementKeyOperation } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
+import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { setupAutoCheckinMessagingListeners } from "~/services/checkin/autoCheckin/scheduler"
 import { setupExternalCheckInMessagingListeners } from "~/services/checkin/externalCheckInService"
 import {
@@ -19,6 +19,10 @@ import { setupTaskNotificationMessagingListeners } from "~/services/notification
 import { setupPreferencesMessagingListeners } from "~/services/preferences/runtimePreferencesService"
 import { setupProductAnalyticsMessagingListeners } from "~/services/productAnalytics/runtime"
 import { setupProductAnnouncementMessagingListeners } from "~/services/productAnnouncements/service"
+import {
+  isProtectionBypassExecution,
+  isTempContextTask,
+} from "~/services/protectionBypass/contracts"
 import { setupRedemptionAssistMessagingListeners } from "~/services/redemption/redemptionAssist"
 import { setupSiteAnnouncementsMessagingListeners } from "~/services/siteAnnouncements/scheduler"
 import { setupReleaseUpdateMessagingListeners } from "~/services/updates/releaseUpdateService"
@@ -35,7 +39,6 @@ import {
   hasCookieReadPermissionForUrl,
 } from "~/utils/browser/cookieHelper"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
-import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import {
@@ -46,72 +49,15 @@ import {
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
 import {
   cancelTempWindowOpenRouterManagementKeyAction,
-  handleTempWindowOpenRouterManagementKeyAction,
   markTempWindowOpenRouterManagementKeyDispatched,
 } from "./openrouter/managementKeyAction"
-import {
-  handleAutoDetectSite,
-  handleCloseTempWindow,
-  handleOpenTempWindow,
-  handleTempWindowCheckinPageAction,
-  handleTempWindowFetch,
-  handleTempWindowGetRenderedTitle,
-  handleTempWindowTurnstileFetch,
-} from "./tempWindowPool"
+import { protectionBypassCoordinator } from "./protectionBypassCoordinator"
+import { handleCloseTempWindow } from "./tempWindowPool"
 
 /**
  * Unified logger scoped to background runtime message routing.
  */
 const logger = createLogger("RuntimeMessages")
-
-/** Accepts only the page mutation operation supported by this runtime route. */
-function normalizeOpenRouterManagementKeyOperation(
-  value: unknown,
-): OpenRouterManagementKeyOperation | undefined {
-  if (!value || typeof value !== "object") return undefined
-  const operation = value as Record<string, unknown>
-  if (operation.kind !== "create" || typeof operation.label !== "string") {
-    return undefined
-  }
-  return { kind: "create", label: operation.label }
-}
-
-/** Normalizes untrusted temp-window presentation metadata at the runtime boundary. */
-function normalizeTempWindowRuntimeRequest<
-  T extends Record<string, unknown> & {
-    suppressMinimize?: unknown
-    tempWindowRequestSource?: unknown
-  },
->(request: T) {
-  if (
-    request.action === RuntimeActionIds.TempWindowOpenRouterManagementKeyAction
-  ) {
-    return {
-      action: request.action,
-      requestId: request.requestId,
-      operation: normalizeOpenRouterManagementKeyOperation(request.operation),
-      tempWindowRequestSource: normalizeTempWindowRequestSource(
-        request.tempWindowRequestSource,
-      ),
-      ...(typeof request.suppressMinimize === "boolean"
-        ? { suppressMinimize: request.suppressMinimize }
-        : {}),
-    }
-  }
-  const normalizedRequest = Object.assign({}, request, {
-    tempWindowRequestSource: normalizeTempWindowRequestSource(
-      request.tempWindowRequestSource,
-    ),
-  })
-
-  if (typeof request.suppressMinimize === "boolean") {
-    normalizedRequest.suppressMinimize = request.suppressMinimize
-  } else {
-    delete normalizedRequest.suppressMinimize
-  }
-
-  return normalizedRequest
-}
 
 /**
  * Resolves the browser cookie store that should be used for a cookie import request.
@@ -209,56 +155,32 @@ export function setupRuntimeMessageListeners() {
         return true
       }
 
-      if (request.action === RuntimeActionIds.OpenTempWindow) {
-        void handleOpenTempWindow(request, sendResponse)
-        return true // 保持异步响应通道
+      if (request.action === RuntimeActionIds.ProtectionBypassExecuteTask) {
+        // Plain command intent is accepted only from internal extension
+        // messaging. Reassess this trust boundary before adding
+        // externally_connectable, onMessageExternal, or onConnectExternal.
+        if (
+          !isProtectionBypassExecution(request.execution) ||
+          !isTempContextTask(request.task)
+        ) {
+          sendResponse({
+            success: false,
+            error: "Invalid protection bypass request",
+            code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+          })
+          return true
+        }
+        void protectionBypassCoordinator
+          .execute({ task: request.task, execution: request.execution })
+          .then(sendResponse)
+          .catch((error) => {
+            sendResponse({ success: false, error: getErrorMessage(error) })
+          })
+        return true
       }
 
       if (request.action === RuntimeActionIds.CloseTempWindow) {
         void handleCloseTempWindow(request, sendResponse)
-        return true
-      }
-
-      if (request.action === RuntimeActionIds.AutoDetectSite) {
-        void handleAutoDetectSite(
-          normalizeTempWindowRuntimeRequest(request),
-          sendResponse,
-        )
-        return true
-      }
-
-      if (request.action === RuntimeActionIds.TempWindowFetch) {
-        void handleTempWindowFetch(
-          normalizeTempWindowRuntimeRequest(request),
-          sendResponse,
-        )
-        return true
-      }
-
-      if (request.action === RuntimeActionIds.TempWindowTurnstileFetch) {
-        void handleTempWindowTurnstileFetch(
-          normalizeTempWindowRuntimeRequest(request),
-          sendResponse,
-        )
-        return true
-      }
-
-      if (request.action === RuntimeActionIds.TempWindowCheckinPageAction) {
-        void handleTempWindowCheckinPageAction(
-          normalizeTempWindowRuntimeRequest(request),
-          sendResponse,
-        )
-        return true
-      }
-
-      if (
-        request.action ===
-        RuntimeActionIds.TempWindowOpenRouterManagementKeyAction
-      ) {
-        void handleTempWindowOpenRouterManagementKeyAction(
-          normalizeTempWindowRuntimeRequest(request),
-          sendResponse,
-        )
         return true
       }
 
@@ -281,14 +203,6 @@ export function setupRuntimeMessageListeners() {
         const marked =
           markTempWindowOpenRouterManagementKeyDispatched(requestId)
         sendResponse({ requestId, marked })
-        return true
-      }
-
-      if (request.action === RuntimeActionIds.TempWindowGetRenderedTitle) {
-        void handleTempWindowGetRenderedTitle(
-          normalizeTempWindowRuntimeRequest(request),
-          sendResponse,
-        )
         return true
       }
 

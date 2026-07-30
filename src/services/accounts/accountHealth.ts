@@ -33,6 +33,13 @@ export const determineHealthStatus = (error: any): HealthCheckResult => {
         code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
       }
     }
+    if (error.code === API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID) {
+      return {
+        status: SiteHealthStatus.Warning,
+        message: t("messages:background.tempWindowPolicyContextInvalid"),
+        code: TEMP_WINDOW_HEALTH_STATUS_CODES.POLICY_CONTEXT_INVALID,
+      }
+    }
 
     // HTTP响应码不为200的情况
     if (error.statusCode) {

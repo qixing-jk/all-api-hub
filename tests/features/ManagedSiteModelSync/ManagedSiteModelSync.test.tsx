@@ -24,7 +24,13 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
+import {
+  PROTECTION_BYPASS_USER_COMMANDS,
+  type ProtectionBypassSurface,
+  type ProtectionBypassUserCommand,
+} from "~/services/protectionBypass/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const {
@@ -35,22 +41,30 @@ const {
   mockStartProductAnalyticsAction,
   mockTrackProductAnalyticsActionCompleted,
   mockCompleteProductAnalyticsAction,
+  mockWithProtectionBypassUserCommand,
   loggerMocks,
-} = vi.hoisted(() => ({
-  mockSendRuntimeMessage: vi.fn(),
-  mockUseUserPreferencesContext: vi.fn(),
-  mockShowWarningToast: vi.fn(),
-  mockOpenSettingsTab: vi.fn(),
-  mockStartProductAnalyticsAction: vi.fn(),
-  mockTrackProductAnalyticsActionCompleted: vi.fn(),
-  mockCompleteProductAnalyticsAction: vi.fn(),
-  loggerMocks: {
-    error: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-  },
-}))
+} = vi.hoisted(() => {
+  return {
+    mockSendRuntimeMessage: vi.fn(),
+    mockUseUserPreferencesContext: vi.fn(),
+    mockShowWarningToast: vi.fn(),
+    mockOpenSettingsTab: vi.fn(),
+    mockStartProductAnalyticsAction: vi.fn(),
+    mockTrackProductAnalyticsActionCompleted: vi.fn(),
+    mockCompleteProductAnalyticsAction: vi.fn(),
+    mockWithProtectionBypassUserCommand: vi.fn(),
+    loggerMocks: {
+      error: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+    },
+  }
+})
+
+const modelSyncExecution = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+)
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -84,10 +98,14 @@ vi.mock("~/services/models/modelSync/messaging", async (importOriginal) => {
 
   return {
     ...actual,
-    sendModelSyncMessage: (type: string, _data?: Record<string, unknown>) =>
-      mockSendRuntimeMessage(type, _data),
+    sendModelSyncMessage: (type: string, data?: Record<string, unknown>) =>
+      mockSendRuntimeMessage(type, data),
   }
 })
+
+vi.mock("~/services/protectionBypass/client", () => ({
+  withProtectionBypassUserCommand: mockWithProtectionBypassUserCommand,
+}))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: (...args: unknown[]) =>
@@ -242,6 +260,13 @@ const resultsTableAnalyticsContext = (actionId: string) => ({
 describe("ManagedSiteModelSync page", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockWithProtectionBypassUserCommand.mockImplementation(
+      async (
+        command: ProtectionBypassUserCommand,
+        surface: ProtectionBypassSurface,
+        work: (execution: unknown) => Promise<unknown>,
+      ) => await work(userCommandExecution(command, surface)),
+    )
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
     })
@@ -378,9 +403,17 @@ describe("ManagedSiteModelSync page", () => {
     await waitFor(() => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
         ModelSyncMessageTypes.TriggerSelected,
-        { channelIds: [101] },
+        {
+          channelIds: [101],
+          protectionBypassExecution: modelSyncExecution,
+        },
       )
     })
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
+      "verify_protection",
+      "options",
+      expect.any(Function),
+    )
     expect(toast.success).toHaveBeenCalled()
   })
 
@@ -389,16 +422,19 @@ describe("ManagedSiteModelSync page", () => {
       messageType: ModelSyncMessageTypes.TriggerAll,
       pendingName: "managedSiteModelSync:execution.actions.runningAll",
       startName: "managedSiteModelSync:execution.actions.runAll",
+      expectedChannelIds: [201, 202],
     },
     {
       messageType: ModelSyncMessageTypes.TriggerSelected,
       pendingName: "managedSiteModelSync:execution.actions.runningSelected",
       startName: "managedSiteModelSync:execution.actions.runSelected (1)",
+      expectedChannelIds: [101],
     },
     {
       messageType: ModelSyncMessageTypes.TriggerFailedOnly,
       pendingName: "managedSiteModelSync:execution.actions.retryingFailed",
       startName: "managedSiteModelSync:execution.actions.retryFailed",
+      expectedChannelIds: [101],
     },
   ])(
     "keeps $messageType busy through rejection cleanup and permits retry",
@@ -426,6 +462,14 @@ describe("ManagedSiteModelSync page", () => {
       }
 
       fireEvent.click(screen.getByRole("button", { name: startName }))
+
+      await waitFor(() => {
+        expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
+          "verify_protection",
+          "options",
+          expect.any(Function),
+        )
+      })
 
       const pendingButton = screen.getByRole("button", { name: pendingName })
       expect(pendingButton).toBeDisabled()
@@ -551,6 +595,14 @@ describe("ManagedSiteModelSync page", () => {
       for (const lockedBulkButton of lockedBulkButtons) {
         lockedBulkButton.click()
       }
+    })
+
+    await waitFor(() => {
+      expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
+        "verify_protection",
+        "options",
+        expect.any(Function),
+      )
     })
 
     expect(activeRowSync).toBeDisabled()
@@ -2298,7 +2350,10 @@ describe("ManagedSiteModelSync page", () => {
     await waitFor(() => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
         ModelSyncMessageTypes.TriggerSelected,
-        { channelIds: [201] },
+        {
+          channelIds: [201],
+          protectionBypassExecution: modelSyncExecution,
+        },
       )
     })
 
@@ -2678,7 +2733,7 @@ describe("ManagedSiteModelSync page", () => {
     await waitFor(() => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
         ModelSyncMessageTypes.TriggerAll,
-        undefined,
+        { protectionBypassExecution: modelSyncExecution },
       )
     })
 
@@ -2796,7 +2851,7 @@ describe("ManagedSiteModelSync page", () => {
     await waitFor(() => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
         ModelSyncMessageTypes.TriggerAll,
-        undefined,
+        { protectionBypassExecution: modelSyncExecution },
       )
     })
 
@@ -2907,7 +2962,7 @@ describe("ManagedSiteModelSync page", () => {
     await waitFor(() => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
         ModelSyncMessageTypes.TriggerAll,
-        undefined,
+        { protectionBypassExecution: modelSyncExecution },
       )
       expect(toast.error).toHaveBeenCalledWith(
         "managedSiteModelSync:messages.error.syncFailed",
@@ -3015,7 +3070,10 @@ describe("ManagedSiteModelSync page", () => {
     await waitFor(() => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
         ModelSyncMessageTypes.TriggerSelected,
-        { channelIds: [101] },
+        {
+          channelIds: [101],
+          protectionBypassExecution: modelSyncExecution,
+        },
       )
       expect(toast.error).toHaveBeenCalledWith(
         "managedSiteModelSync:messages.error.syncFailed",
@@ -3144,7 +3202,7 @@ describe("ManagedSiteModelSync page", () => {
     await waitFor(() => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
         ModelSyncMessageTypes.TriggerFailedOnly,
-        undefined,
+        { protectionBypassExecution: modelSyncExecution },
       )
     })
 
@@ -3258,7 +3316,10 @@ describe("ManagedSiteModelSync page", () => {
     await waitFor(() => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
         ModelSyncMessageTypes.TriggerSelected,
-        { channelIds: [201] },
+        {
+          channelIds: [201],
+          protectionBypassExecution: modelSyncExecution,
+        },
       )
     })
     expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(

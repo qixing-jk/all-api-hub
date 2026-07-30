@@ -136,8 +136,8 @@
     "httpError": "HTTP {{statusCode}}: {{message}}",
     "networkFailed": "Network connection failed",
     "normal": "Account status is normal",
-    "tempWindowDisabled": "Protection bypass is disabled. Enable it in Settings > Data Refresh",
-    "tempWindowPermissionRequired": "Protection bypass needs cookie interceptor permissions on Firefox. Grant them in Settings > Permissions",
+    "tempWindowDisabled": "Automatic refresh encountered site verification, but automatic tasks cannot currently open temporary pages. Turn this on in Settings > Data Refresh",
+    "tempWindowPermissionRequired": "Firefox needs the Cookies, Web Request, and Web Request Blocking permissions for site verification. Grant them in Settings > Permissions",
     "unknown": "Unknown",
     "unknownError": "Unknown error",
     "warning": "Warning"

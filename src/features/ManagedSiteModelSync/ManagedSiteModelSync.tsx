@@ -18,6 +18,7 @@ import {
   TabsTrigger,
 } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import {
@@ -48,6 +49,12 @@ import {
   type ProductAnalyticsStatusKind,
 } from "~/services/productAnalytics/contracts"
 import { buildManagedSiteModelSyncDiagnostics } from "~/services/productAnalytics/managedSiteModelSync"
+import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import type {
@@ -232,6 +239,17 @@ export default function ManagedSiteModelSync({
   const [manualSelectedIds, setManualSelectedIds] = useState<Set<number>>(
     new Set(),
   )
+
+  const runManualModelSync = async <T,>(
+    _channelIds: number[],
+    work: (protectionBypassExecution: ProtectionBypassExecution) => Promise<T>,
+  ) => {
+    return await withProtectionBypassUserCommand(
+      PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+      PROTECTION_BYPASS_SURFACES.Options,
+      work,
+    )
+  }
   const [isLoading, setIsLoading] = useState(true)
   const [isManualRefreshPending, setIsManualRefreshPending] = useState(false)
   const [activeAction, setActiveAction] =
@@ -441,6 +459,7 @@ export default function ManagedSiteModelSync({
             },
           },
         )
+        return items
       } else {
         throw new Error(response.error)
       }
@@ -462,6 +481,7 @@ export default function ManagedSiteModelSync({
           error: message,
         }),
       )
+      return null
     } finally {
       setIsChannelsLoading(false)
       setHasAttemptedChannelsLoad(true)
@@ -748,8 +768,16 @@ export default function ManagedSiteModelSync({
 
     setActiveAction(MANAGED_SITE_MODEL_SYNC_ACTIONS.RETRY_FAILED)
     try {
-      const response = await sendModelSyncMessage(
-        ModelSyncMessageTypes.TriggerFailedOnly,
+      const failedChannelIds =
+        lastExecution?.items
+          .filter((item) => !item.ok)
+          .map((item) => item.channelId) ?? []
+      const response = await runManualModelSync(
+        failedChannelIds,
+        async (protectionBypassExecution) =>
+          await sendModelSyncMessage(ModelSyncMessageTypes.TriggerFailedOnly, {
+            protectionBypassExecution,
+          }),
       )
 
       if (!isCurrentSyncRequest(requestToken)) return
@@ -799,8 +827,24 @@ export default function ManagedSiteModelSync({
 
     setActiveAction(MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_ALL)
     try {
-      const response = await sendModelSyncMessage(
-        ModelSyncMessageTypes.TriggerAll,
+      const latestChannels =
+        managedSiteType === SITE_TYPES.NEW_API ? await loadChannels() : channels
+      if (!latestChannels) {
+        completeModelSyncActionAnalytics(
+          tracker,
+          PRODUCT_ANALYTICS_RESULTS.Failure,
+          {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          },
+        )
+        return
+      }
+      const response = await runManualModelSync(
+        latestChannels.map((channel) => channel.id),
+        async (protectionBypassExecution) =>
+          await sendModelSyncMessage(ModelSyncMessageTypes.TriggerAll, {
+            protectionBypassExecution,
+          }),
       )
 
       if (!isCurrentSyncRequest(requestToken)) return
@@ -880,11 +924,14 @@ export default function ManagedSiteModelSync({
         : MANAGED_SITE_MODEL_SYNC_ACTIONS.RUN_SELECTED_MANUAL,
     )
     try {
-      const response = await sendModelSyncMessage(
-        ModelSyncMessageTypes.TriggerSelected,
-        {
-          channelIds: Array.from(selectedSet),
-        },
+      const selectedChannelIds = Array.from(selectedSet)
+      const response = await runManualModelSync(
+        selectedChannelIds,
+        async (protectionBypassExecution) =>
+          await sendModelSyncMessage(ModelSyncMessageTypes.TriggerSelected, {
+            channelIds: selectedChannelIds,
+            protectionBypassExecution,
+          }),
       )
 
       if (!isCurrentSyncRequest(requestToken)) return
@@ -944,11 +991,13 @@ export default function ManagedSiteModelSync({
 
     setRunningChannelId(channelId)
     try {
-      const response = await sendModelSyncMessage(
-        ModelSyncMessageTypes.TriggerSelected,
-        {
-          channelIds: [channelId],
-        },
+      const response = await runManualModelSync(
+        [channelId],
+        async (protectionBypassExecution) =>
+          await sendModelSyncMessage(ModelSyncMessageTypes.TriggerSelected, {
+            channelIds: [channelId],
+            protectionBypassExecution,
+          }),
       )
 
       if (!isCurrentSyncRequest(requestToken)) return

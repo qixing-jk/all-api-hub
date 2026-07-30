@@ -7,6 +7,7 @@ import {
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import type { ManagedSiteChannelMatchService } from "~/services/managedSites/channelMatchResolver"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ChannelFormData } from "~/types/managedSite"
 
 /**
@@ -16,6 +17,7 @@ export async function resolveManagedSiteImportDuplicate(params: {
   service: ManagedSiteChannelMatchService
   managedConfig: ManagedSiteConfig
   formData: ChannelFormData
+  protectionBypassExecution?: ProtectionBypassExecution
 }) {
   const resolution = await resolveManagedSiteChannelMatch({
     service: params.service,
@@ -23,6 +25,7 @@ export async function resolveManagedSiteImportDuplicate(params: {
     accountBaseUrl: params.formData.base_url,
     models: params.formData.models,
     key: params.formData.key,
+    protectionBypassExecution: params.protectionBypassExecution,
   })
 
   const exactMatch = getManagedSiteChannelExactMatch(resolution)

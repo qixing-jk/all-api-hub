@@ -126,8 +126,8 @@
     "httpError": "HTTP {{statusCode}}: {{message}}",
     "networkFailed": "網路連線失敗",
     "normal": "帳號狀態正常",
-    "tempWindowDisabled": "過盾功能已關閉，請在 設定 > 資料重新整理 中啟用",
-    "tempWindowPermissionRequired": "Firefox 過盾功能需要 Cookie 攔截權限，請在 設定 > 權限管理 中授予",
+    "tempWindowDisabled": "自動重新整理遇到網站驗證，但目前不允許自動工作開啟臨時頁面。請前往「設定 > 資料重新整理」開啟",
+    "tempWindowPermissionRequired": "Firefox 需要 Cookies、Web Request 和 Web Request Blocking 權限才能完成網站驗證。請前往「設定 > 權限管理」授予",
     "unknown": "未知",
     "unknownError": "未知錯誤",
     "warning": "警告"

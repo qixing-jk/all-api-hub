@@ -126,8 +126,8 @@
     "httpError": "Lỗi HTTP {{statusCode}}: {{message}}",
     "networkFailed": "Kết nối mạng thất bại",
     "normal": "Trạng thái tài khoản bình thường",
-    "tempWindowDisabled": "Tính năng vượt rào đã bị tắt, vui lòng bật trong Cài đặt > Làm mới dữ liệu",
-    "tempWindowPermissionRequired": "Tính năng vượt rào của Firefox yêu cầu quyền chặn Cookie, vui lòng cấp quyền trong Cài đặt > Quản lý quyền",
+    "tempWindowDisabled": "Làm mới tự động gặp bước xác minh trang web, nhưng tác vụ tự động hiện không được phép mở trang tạm. Hãy bật trong Cài đặt > Làm mới dữ liệu",
+    "tempWindowPermissionRequired": "Firefox cần các quyền Cookies, Web Request và Web Request Blocking để xác minh trang web. Hãy cấp trong Cài đặt > Quản lý quyền",
     "unknown": "Không rõ",
     "unknownError": "Lỗi không rõ",
     "warning": "Cảnh báo"

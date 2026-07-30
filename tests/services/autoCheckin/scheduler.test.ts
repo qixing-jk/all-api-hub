@@ -36,6 +36,13 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+  type ProtectionBypassExecution,
+  type ProtectionBypassSurface,
+} from "~/services/protectionBypass/contracts"
 import { AUTO_CHECKIN_RUN_TYPE } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import {
@@ -48,6 +55,97 @@ import {
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+
+const manualExecution = (
+  surface: ProtectionBypassSurface = TEMP_WINDOW_REQUEST_SOURCES.Options,
+) =>
+  userCommandExecution(PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin, surface)
+
+const retryAccountExecution = (surface: ProtectionBypassSurface) =>
+  userCommandExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount,
+    surface,
+  )
+
+const OPTIONS_MANUAL_EXECUTION = manualExecution()
+
+const uiOpenExecution = (surface: ProtectionBypassSurface) =>
+  ({
+    version: 1,
+    kind: "automatic",
+    feature: PROTECTION_BYPASS_FEATURES.Checkin,
+    trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+    surface,
+  }) as const satisfies ProtectionBypassExecution
+
+const SCHEDULED_EXECUTION = {
+  version: 1,
+  kind: "automatic",
+  feature: PROTECTION_BYPASS_FEATURES.Checkin,
+  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+  surface: TEMP_WINDOW_REQUEST_SOURCES.Background,
+} as const satisfies ProtectionBypassExecution
+
+const RETRY_EXECUTION = {
+  version: 1,
+  kind: "automatic",
+  feature: PROTECTION_BYPASS_FEATURES.Checkin,
+  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Retry,
+  surface: TEMP_WINDOW_REQUEST_SOURCES.Background,
+} as const satisfies ProtectionBypassExecution
+
+const ACCOUNT_REFRESH_EXECUTION = {
+  version: 1,
+  kind: "automatic",
+  feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+  surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+} as const satisfies ProtectionBypassExecution
+
+const runCheckinsForTest = (
+  options: Omit<
+    Parameters<typeof autoCheckinScheduler.runCheckins>[0],
+    "protectionBypassExecution"
+  >,
+  protectionBypassExecution?: ProtectionBypassExecution,
+) =>
+  autoCheckinScheduler.runCheckins({
+    ...options,
+    protectionBypassExecution:
+      protectionBypassExecution ??
+      (options.runType === AUTO_CHECKIN_RUN_TYPE.DAILY
+        ? SCHEDULED_EXECUTION
+        : manualExecution(
+            options.tempWindowRequestSource ??
+              TEMP_WINDOW_REQUEST_SOURCES.Background,
+          )),
+  })
+
+const retryAccountForTest = (
+  accountId: string,
+  tempWindowRequestSource: (typeof TEMP_WINDOW_REQUEST_SOURCES)[keyof typeof TEMP_WINDOW_REQUEST_SOURCES] = TEMP_WINDOW_REQUEST_SOURCES.Background,
+) =>
+  autoCheckinScheduler.retryAccount(
+    accountId,
+    tempWindowRequestSource,
+    retryAccountExecution(tempWindowRequestSource),
+  )
+
+const pretriggerDailyOnUiOpenForTest = (
+  params: Omit<
+    Parameters<typeof autoCheckinScheduler.pretriggerDailyOnUiOpen>[0],
+    "protectionBypassExecution"
+  >,
+) => {
+  const tempWindowRequestSource =
+    params.tempWindowRequestSource ?? TEMP_WINDOW_REQUEST_SOURCES.Popup
+  return autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    ...params,
+    tempWindowRequestSource,
+    protectionBypassExecution: uiOpenExecution(tempWindowRequestSource),
+  })
+}
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
@@ -319,6 +417,7 @@ describe("autoCheckinScheduler.initialize", () => {
     expect(handleDailyAlarmSpy).toHaveBeenCalledWith(
       dailyAlarm,
       TEMP_WINDOW_REQUEST_SOURCES.Background,
+      SCHEDULED_EXECUTION,
     )
     expect(handleRetryAlarmSpy).toHaveBeenCalledWith(retryAlarm)
 
@@ -989,7 +1088,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
     })
 
@@ -1081,7 +1180,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
     })
 
@@ -1089,6 +1188,16 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     expect(provider.checkIn.mock.calls.map((call) => call[0].id)).toEqual(
       expect.arrayContaining(["a", "b"]),
     )
+    expect(provider.checkIn.mock.calls.map((call) => call[1])).toEqual([
+      {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: SCHEDULED_EXECUTION,
+      },
+      {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: SCHEDULED_EXECUTION,
+      },
+    ])
 
     expect(storedStatus.lastDailyRunDay).toBe("2024-01-01")
     expect(storedStatus.perAccount.a.status).toBe("already_checked")
@@ -1141,7 +1250,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    const runPromise = autoCheckinScheduler.runCheckins({
+    const runPromise = runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
     })
 
@@ -1213,7 +1322,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         }
       })
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
     })
 
@@ -1268,7 +1377,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
     })
 
@@ -1351,6 +1460,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       expect.objectContaining({ id: "b" }),
       {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: RETRY_EXECUTION,
       },
     )
     expect(storedStatus.retryState).toBeUndefined()
@@ -1394,7 +1504,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       detectionDisabledAccount,
     ])
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
     })
 
@@ -1477,7 +1587,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
     })
 
@@ -1534,7 +1644,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     } as any
 
     await expect(
-      autoCheckinScheduler.runCheckins({
+      runCheckinsForTest({
         runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       }),
     ).resolves.toBeUndefined()
@@ -1600,7 +1710,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: ["target"],
     })
@@ -1664,7 +1774,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     )
 
     await expect(
-      autoCheckinScheduler.runCheckins({
+      runCheckinsForTest({
         runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
         targetAccountIds: ["legacy"],
       }),
@@ -1727,7 +1837,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     } as any
 
     await expect(
-      autoCheckinScheduler.runCheckins({
+      runCheckinsForTest({
         runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       }),
     ).resolves.toBeUndefined()
@@ -1781,7 +1891,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     )
 
     await expect(
-      autoCheckinScheduler.runCheckins({
+      runCheckinsForTest({
         runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
       }),
     ).resolves.toBeUndefined()
@@ -1916,12 +2026,16 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       "refreshAccountsAfterSuccessfulCheckins",
     )
 
-    await (autoCheckinScheduler as any).runRetryCheckins()
+    await (autoCheckinScheduler as any).runRetryCheckins(
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+      RETRY_EXECUTION,
+    )
 
     expect(provider.checkIn).toHaveBeenCalledTimes(2)
     for (const call of provider.checkIn.mock.calls) {
       expect(call[1]).toEqual({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: RETRY_EXECUTION,
       })
     }
     expect(storedStatus.perAccount.disabled).toMatchObject({
@@ -1944,11 +2058,15 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
     expect(storedStatus.retryState).not.toHaveProperty(
       "tempWindowRequestSource",
     )
+    expect(storedStatus.retryState).not.toHaveProperty(
+      "protectionBypassExecution",
+    )
     expect(storedStatus.pendingRetry).toBe(true)
     expect(refreshSpy).toHaveBeenCalledWith({
       accountIds: ["success"],
       force: true,
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      protectionBypassExecution: RETRY_EXECUTION,
     })
     expect(mockedBrowserApi.sendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -2829,7 +2947,7 @@ describe("autoCheckinScheduler targeting support", () => {
       detectionDisabledAccount,
     ])
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: ["disabled", "detection-disabled"],
     })
@@ -2962,7 +3080,7 @@ describe("autoCheckinScheduler targeting support", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: ["target"],
     })
@@ -2972,6 +3090,9 @@ describe("autoCheckinScheduler targeting support", () => {
       expect.objectContaining({ id: "target" }),
       {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: manualExecution(
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+        ),
       },
     )
     expect(storedStatus.perAccount.target).toMatchObject({
@@ -3061,7 +3182,7 @@ describe("autoCheckinScheduler targeting support", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: ["target"],
     })
@@ -3129,7 +3250,7 @@ describe("autoCheckinScheduler targeting support", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: ["a"],
     })
@@ -3139,6 +3260,9 @@ describe("autoCheckinScheduler targeting support", () => {
       expect.objectContaining({ id: "a" }),
       {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: manualExecution(
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+        ),
       },
     )
 
@@ -3187,7 +3311,7 @@ describe("autoCheckinScheduler targeting support", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
     })
 
@@ -3239,7 +3363,7 @@ describe("autoCheckinScheduler targeting support", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: ["a"],
     })
@@ -3322,7 +3446,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
     })
@@ -3332,8 +3456,15 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       true,
       {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: manualExecution(
+          TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        ),
       },
     )
+    expect(
+      mockedAccountStorage.refreshAccount.mock.calls[0]?.[2]
+        ?.protectionBypassExecution,
+    ).toEqual(manualExecution(TEMP_WINDOW_REQUEST_SOURCES.Popup))
     expect(mockedBrowserApi.sendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         action: RuntimeActionIds.AutoCheckinRunCompleted,
@@ -3397,7 +3528,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
     })
 
@@ -3406,8 +3537,15 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       true,
       {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: manualExecution(
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+        ),
       },
     )
+    expect(
+      mockedAccountStorage.refreshAccount.mock.calls[0]?.[2]
+        ?.protectionBypassExecution,
+    ).toEqual(manualExecution(TEMP_WINDOW_REQUEST_SOURCES.Background))
     expect(mockedBrowserApi.sendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         action: RuntimeActionIds.AutoCheckinRunCompleted,
@@ -3466,7 +3604,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
     }
     mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
 
-    await autoCheckinScheduler.runCheckins({
+    await runCheckinsForTest({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
     })
 
@@ -3475,6 +3613,9 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       true,
       {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: manualExecution(
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+        ),
       },
     )
     expect(mockedBrowserApi.sendRuntimeMessage).not.toHaveBeenCalledWith(
@@ -3497,27 +3638,68 @@ describe("auto check-in operation helpers", () => {
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockResolvedValueOnce(undefined)
-    await expect(runAutoCheckinNow()).resolves.toEqual({ success: true })
+    await expect(
+      runAutoCheckinNow({
+        protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
+      }),
+    ).resolves.toEqual({ success: true })
 
     expect(runSpy).toHaveBeenCalledWith({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: undefined,
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+      protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
     })
+  })
+
+  it("rejects automatic account-refresh execution at the manual run boundary", async () => {
+    const runSpy = vi.spyOn(autoCheckinScheduler as any, "runCheckins")
+
+    await expect(
+      runAutoCheckinNow({
+        protectionBypassExecution: ACCOUNT_REFRESH_EXECUTION,
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Missing or invalid protection bypass execution",
+    })
+
+    expect(runSpy).not.toHaveBeenCalled()
+  })
+
+  it("rejects another valid user command at the manual run boundary", async () => {
+    const runSpy = vi.spyOn(autoCheckinScheduler as any, "runCheckins")
+
+    await expect(
+      runAutoCheckinNow({
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
+        ),
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Missing or invalid protection bypass execution",
+    })
+
+    expect(runSpy).not.toHaveBeenCalled()
   })
 
   it("should pass accountIds for targeted manual runs", async () => {
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockResolvedValueOnce(undefined)
-    await expect(runAutoCheckinNow({ accountIds: ["a"] })).resolves.toEqual({
-      success: true,
-    })
+    await expect(
+      runAutoCheckinNow({
+        accountIds: ["a"],
+        protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
+      }),
+    ).resolves.toEqual({ success: true })
 
     expect(runSpy).toHaveBeenCalledWith({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: ["a"],
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+      protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
     })
   })
 
@@ -3526,13 +3708,17 @@ describe("auto check-in operation helpers", () => {
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockResolvedValueOnce(undefined)
     await expect(
-      runAutoCheckinNow({ accountIds: [" a ", "a", "b "] }),
+      runAutoCheckinNow({
+        accountIds: [" a ", "a", "b "],
+        protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
+      }),
     ).resolves.toEqual({ success: true })
 
     expect(runSpy).toHaveBeenCalledWith({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: ["a", "b"],
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+      protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
     })
   })
 
@@ -3553,7 +3739,10 @@ describe("auto check-in operation helpers", () => {
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockResolvedValueOnce(undefined)
     await expect(
-      runAutoCheckinNow({ accountIds: "account-1" as any }),
+      runAutoCheckinNow({
+        accountIds: "account-1" as any,
+        protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
+      }),
     ).resolves.toEqual({
       success: false,
       error: "Invalid payload: accountIds must be a non-empty string[]",
@@ -3611,14 +3800,36 @@ describe("auto check-in operation helpers", () => {
     const retrySpy = vi
       .spyOn(autoCheckinScheduler as any, "retryAccount")
       .mockResolvedValueOnce(undefined)
-    await expect(retryAutoCheckinAccount("account-1")).resolves.toEqual({
-      success: true,
-    })
+    await expect(
+      retryAutoCheckinAccount(
+        "account-1",
+        undefined,
+        retryAccountExecution(TEMP_WINDOW_REQUEST_SOURCES.Background),
+      ),
+    ).resolves.toEqual({ success: true })
 
     expect(retrySpy).toHaveBeenCalledWith(
       "account-1",
       TEMP_WINDOW_REQUEST_SOURCES.Background,
+      retryAccountExecution(TEMP_WINDOW_REQUEST_SOURCES.Background),
     )
+  })
+
+  it("rejects another valid user command at the retry boundary", async () => {
+    const retrySpy = vi.spyOn(autoCheckinScheduler as any, "retryAccount")
+
+    await expect(
+      retryAutoCheckinAccount(
+        "account-1",
+        TEMP_WINDOW_REQUEST_SOURCES.Options,
+        userCommandExecution(PROTECTION_BYPASS_USER_COMMANDS.AddAccount),
+      ),
+    ).resolves.toEqual({
+      success: false,
+      error: "Missing or invalid protection bypass execution",
+    })
+
+    expect(retrySpy).not.toHaveBeenCalled()
   })
 
   it("passes valid popup source through the manual retry message boundary", async () => {
@@ -3629,11 +3840,13 @@ describe("auto check-in operation helpers", () => {
     await retryAutoCheckinAccount(
       "account-1",
       TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      retryAccountExecution(TEMP_WINDOW_REQUEST_SOURCES.Popup),
     )
 
     expect(retrySpy).toHaveBeenCalledWith(
       "account-1",
       TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      retryAccountExecution(TEMP_WINDOW_REQUEST_SOURCES.Popup),
     )
   })
 
@@ -3642,11 +3855,16 @@ describe("auto check-in operation helpers", () => {
       .spyOn(autoCheckinScheduler as any, "retryAccount")
       .mockResolvedValueOnce(undefined)
 
-    await retryAutoCheckinAccount("account-1", "invalid-source")
+    await retryAutoCheckinAccount(
+      "account-1",
+      "invalid-source",
+      retryAccountExecution(TEMP_WINDOW_REQUEST_SOURCES.Background),
+    )
 
     expect(retrySpy).toHaveBeenCalledWith(
       "account-1",
       TEMP_WINDOW_REQUEST_SOURCES.Background,
+      retryAccountExecution(TEMP_WINDOW_REQUEST_SOURCES.Background),
     )
   })
 
@@ -3659,13 +3877,18 @@ describe("auto check-in operation helpers", () => {
     ).mockImplementation((error: unknown) =>
       error instanceof Error ? error.message : String(error),
     )
-    await expect(retryAutoCheckinAccount("account-1")).rejects.toThrow(
-      "retry failed",
-    )
+    await expect(
+      retryAutoCheckinAccount(
+        "account-1",
+        undefined,
+        retryAccountExecution(TEMP_WINDOW_REQUEST_SOURCES.Background),
+      ),
+    ).rejects.toThrow("retry failed")
 
     expect(retrySpy).toHaveBeenCalledWith(
       "account-1",
       TEMP_WINDOW_REQUEST_SOURCES.Background,
+      retryAccountExecution(TEMP_WINDOW_REQUEST_SOURCES.Background),
     )
   })
 
@@ -3767,7 +3990,9 @@ describe("auto check-in operation helpers", () => {
     await expect(
       pretriggerAutoCheckinDailyOnUiOpen({
         requestId: "req-1",
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: uiOpenExecution(
+          TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        ),
       }),
     ).resolves.toEqual({
       success: true,
@@ -3780,6 +4005,9 @@ describe("auto check-in operation helpers", () => {
       dryRun: undefined,
       debug: undefined,
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution: uiOpenExecution(
+        TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      ),
     })
   })
 
@@ -3790,6 +4018,9 @@ describe("auto check-in operation helpers", () => {
 
     await pretriggerAutoCheckinDailyOnUiOpen({
       tempWindowRequestSource: "invalid-source",
+      protectionBypassExecution: uiOpenExecution(
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+      ),
     } as any)
 
     expect(pretriggerSpy).toHaveBeenCalledWith(
@@ -3799,7 +4030,42 @@ describe("auto check-in operation helpers", () => {
     )
   })
 
-  it("normalizes the manual run source once at the message boundary", async () => {
+  it("rejects a mismatched automatic feature at the UI-open boundary", async () => {
+    const pretriggerSpy = vi.spyOn(
+      autoCheckinScheduler as any,
+      "pretriggerDailyOnUiOpen",
+    )
+
+    await expect(
+      pretriggerAutoCheckinDailyOnUiOpen({
+        protectionBypassExecution: ACCOUNT_REFRESH_EXECUTION,
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Missing or invalid protection bypass execution",
+    })
+
+    expect(pretriggerSpy).not.toHaveBeenCalled()
+  })
+
+  it("rejects automatic execution at the manual retry boundary", async () => {
+    const retrySpy = vi.spyOn(autoCheckinScheduler as any, "retryAccount")
+
+    await expect(
+      retryAutoCheckinAccount(
+        "account-1",
+        TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        RETRY_EXECUTION,
+      ),
+    ).resolves.toEqual({
+      success: false,
+      error: "Missing or invalid protection bypass execution",
+    })
+
+    expect(retrySpy).not.toHaveBeenCalled()
+  })
+
+  it("derives the manual run source from the execution intent", async () => {
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockResolvedValueOnce(undefined)
@@ -3808,13 +4074,14 @@ describe("auto check-in operation helpers", () => {
     )
 
     await runAutoCheckinNow({
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
     })
 
     expect(runSpy).toHaveBeenCalledWith({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: undefined,
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+      protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
     })
   })
 
@@ -3855,7 +4122,11 @@ describe("auto check-in operation helpers", () => {
     ).mockImplementation((error: unknown) =>
       error instanceof Error ? error.message : String(error),
     )
-    await expect(runAutoCheckinNow()).resolves.toEqual({
+    await expect(
+      runAutoCheckinNow({
+        protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
+      }),
+    ).resolves.toEqual({
       success: false,
       error: "boom",
     })
@@ -3875,7 +4146,11 @@ describe("auto check-in operation helpers", () => {
     ).mockImplementation((error: unknown) =>
       error instanceof Error ? error.message : String(error),
     )
-    await expect(runAutoCheckinNow()).resolves.toEqual({
+    await expect(
+      runAutoCheckinNow({
+        protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
+      }),
+    ).resolves.toEqual({
       success: false,
       error: "boom",
     })
@@ -3891,12 +4166,17 @@ describe("auto check-in operation helpers", () => {
     const scheduleSpy = vi
       .spyOn(autoCheckinScheduler as any, "scheduleNextRun")
       .mockRejectedValueOnce(new Error("reschedule failed"))
-    await expect(runAutoCheckinNow()).resolves.toEqual({ success: true })
+    await expect(
+      runAutoCheckinNow({
+        protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
+      }),
+    ).resolves.toEqual({ success: true })
 
     expect(runSpy).toHaveBeenCalledWith({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: undefined,
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+      protectionBypassExecution: OPTIONS_MANUAL_EXECUTION,
     })
     expect(scheduleSpy).toHaveBeenCalledWith({ preserveExisting: true })
   })
@@ -3911,9 +4191,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
   it("throws when retrying an account that no longer exists", async () => {
     mockedAccountStorage.getAllAccounts.mockResolvedValueOnce([])
 
-    await expect(
-      autoCheckinScheduler.retryAccount("missing-account"),
-    ).rejects.toThrow()
+    await expect(retryAccountForTest("missing-account")).rejects.toThrow()
   })
 
   it("skips disabled accounts with an explicit skip reason", async () => {
@@ -3935,7 +4213,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       },
     } as any)
 
-    const result = await autoCheckinScheduler.retryAccount("disabled-1")
+    const result = await retryAccountForTest("disabled-1")
 
     expect(result.result.status).toBe("skipped")
     expect(result.result.reasonCode).toBe("account_disabled")
@@ -4002,7 +4280,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
 
-    const result = await autoCheckinScheduler.retryAccount("disabled-1")
+    const result = await retryAccountForTest("disabled-1")
 
     expect(result.result.status).toBe("skipped")
     expect(result.result.reasonCode).toBe("account_disabled")
@@ -4086,7 +4364,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
 
-    const result = await autoCheckinScheduler.retryAccount(
+    const result = await retryAccountForTest(
       "retry-1",
       TEMP_WINDOW_REQUEST_SOURCES.Popup,
     )
@@ -4103,6 +4381,9 @@ describe("autoCheckinScheduler.retryAccount", () => {
     })
     expect(provider.checkIn).toHaveBeenCalledWith(account, {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution: retryAccountExecution(
+        TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      ),
     })
     expect(scheduleRetrySpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -4184,7 +4465,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       "scheduleRetryAlarm",
     ).mockRejectedValueOnce(new Error("retry reschedule failed"))
 
-    await expect(autoCheckinScheduler.retryAccount("retry-1")).rejects.toThrow(
+    await expect(retryAccountForTest("retry-1")).rejects.toThrow(
       "retry reschedule failed",
     )
 
@@ -4287,7 +4568,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
 
-    const result = await autoCheckinScheduler.retryAccount("retry-1")
+    const result = await retryAccountForTest("retry-1")
 
     expect(result.result.status).toBe("success")
     expect(result.pendingRetry).toBe(true)
@@ -4377,7 +4658,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
 
-    const result = await autoCheckinScheduler.retryAccount("retry-1")
+    const result = await retryAccountForTest("retry-1")
 
     expect(result.result.status).toBe("failed")
     expect(result.pendingRetry).toBe(true)
@@ -4474,7 +4755,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
 
-    const result = await autoCheckinScheduler.retryAccount("adhoc-1")
+    const result = await retryAccountForTest("adhoc-1")
 
     expect(result.result.status).toBe("success")
     expect(result.pendingRetry).toBe(true)
@@ -4628,8 +4909,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
 
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
-      .mockImplementation(async ({ runType }: any) => {
-        expect(runType).toBe(AUTO_CHECKIN_RUN_TYPE.DAILY)
+      .mockImplementation(async () => {
         await autoCheckinStorage.saveStatus({
           ...(storedStatus ?? {}),
           lastDailyRunDay: today,
@@ -4646,13 +4926,19 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
         } as any)
       })
 
-    const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    const result = await pretriggerDailyOnUiOpenForTest({
       requestId: "req-1",
     })
 
     expect(result.started).toBe(true)
     expect(result.eligible).toBe(true)
-    expect(runSpy).toHaveBeenCalled()
+    expect(runSpy).toHaveBeenCalledWith({
+      runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution: uiOpenExecution(
+        TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      ),
+    })
     expect(result.summary).toEqual(
       expect.objectContaining({
         totalEligible: 2,
@@ -4696,7 +4982,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
       },
     )
 
-    const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    const result = await pretriggerDailyOnUiOpenForTest({
       requestId: "req-notify-fails",
     })
 
@@ -4735,7 +5021,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
 
     const runSpy = vi.spyOn(autoCheckinScheduler as any, "runCheckins")
 
-    const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    const result = await pretriggerDailyOnUiOpenForTest({
       requestId: "req-2",
     })
 
@@ -4758,7 +5044,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
 
     const runSpy = vi.spyOn(autoCheckinScheduler as any, "runCheckins")
 
-    const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    const result = await pretriggerDailyOnUiOpenForTest({
       dryRun: true,
       debug: true,
     })
@@ -4791,7 +5077,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
 
     const runSpy = vi.spyOn(autoCheckinScheduler as any, "runCheckins")
 
-    const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    const result = await pretriggerDailyOnUiOpenForTest({
       requestId: "req-3",
     })
 
@@ -4820,7 +5106,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
 
     const runSpy = vi.spyOn(autoCheckinScheduler as any, "runCheckins")
 
-    const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    const result = await pretriggerDailyOnUiOpenForTest({
       debug: true,
     })
 
@@ -4841,7 +5127,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
   it("returns alarms_api_unavailable when the alarms API cannot be used", async () => {
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(false)
 
-    const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    const result = await pretriggerDailyOnUiOpenForTest({
       debug: true,
     })
 
@@ -4861,7 +5147,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
     })
 
     await expect(
-      autoCheckinScheduler.pretriggerDailyOnUiOpen({ debug: true }),
+      pretriggerDailyOnUiOpenForTest({ debug: true }),
     ).resolves.toMatchObject({
       started: false,
       eligible: false,
@@ -4881,7 +5167,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
     })
 
     await expect(
-      autoCheckinScheduler.pretriggerDailyOnUiOpen({ debug: true }),
+      pretriggerDailyOnUiOpenForTest({ debug: true }),
     ).resolves.toMatchObject({
       started: false,
       eligible: false,
@@ -4900,7 +5186,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
       },
     })
 
-    const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    const result = await pretriggerDailyOnUiOpenForTest({
       debug: true,
     })
 
@@ -4919,7 +5205,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-01-23T09:00:00"))
 
-    const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    const result = await pretriggerDailyOnUiOpenForTest({
       debug: true,
     })
 
@@ -4947,7 +5233,7 @@ describe("autoCheckinScheduler.pretriggerDailyOnUiOpen", () => {
       dailyAlarmTargetDay: "2026-01-22",
     }
 
-    const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    const result = await pretriggerDailyOnUiOpenForTest({
       debug: true,
     })
 
@@ -4982,14 +5268,19 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
       undefined,
     )
 
-    await (autoCheckinScheduler as any).handleDailyAlarm({
-      name: "autoCheckinDaily",
-      scheduledTime: Date.now(),
-    })
+    await (autoCheckinScheduler as any).handleDailyAlarm(
+      {
+        name: "autoCheckinDaily",
+        scheduledTime: Date.now(),
+      },
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+      SCHEDULED_EXECUTION,
+    )
 
     expect(runSpy).toHaveBeenCalledWith({
       runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      protectionBypassExecution: SCHEDULED_EXECUTION,
     })
     vi.useRealTimers()
   })
@@ -5223,6 +5514,7 @@ describe("autoCheckinScheduler debug helpers", () => {
         scheduledTime: Date.now(),
       },
       TEMP_WINDOW_REQUEST_SOURCES.Background,
+      SCHEDULED_EXECUTION,
     )
 
     vi.useRealTimers()

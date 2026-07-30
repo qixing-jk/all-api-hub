@@ -100,6 +100,49 @@ describe("ShieldSettings", () => {
       preserveHistory: true,
     })
     expect(canUseTempWindowFetchMock).toHaveBeenCalledTimes(2)
+
+    expect(screen.getByRole("switch")).toBeEnabled()
+    expect(
+      screen.getByRole("button", {
+        name: "settings:refresh.shieldMethodTab",
+      }),
+    ).toBeEnabled()
+    for (const checkbox of screen.getAllByRole("checkbox")) {
+      expect(checkbox).toBeEnabled()
+    }
+  })
+
+  it("keeps manual policy controls editable when automatic bypass is off", async () => {
+    useUserPreferencesContextMock.mockReturnValue({
+      tempWindowFallback: {
+        enabled: false,
+        useInPopup: true,
+        useInSidePanel: true,
+        useInOptions: true,
+        useForAutoRefresh: true,
+        useForManualRefresh: true,
+        tempContextMode: "composite",
+      },
+      updateTempWindowFallback,
+    })
+
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const method = await screen.findByRole("button", {
+      name: "settings:refresh.shieldMethodTab",
+    })
+    const [popup, sidepanel, options, automatic, manual] =
+      screen.getAllByRole("checkbox")
+
+    expect(method).toBeEnabled()
+    expect(popup).toBeEnabled()
+    expect(sidepanel).toBeEnabled()
+    expect(options).toBeEnabled()
+    expect(automatic).toBeDisabled()
+    expect(manual).toBeEnabled()
   })
 
   it("updates fallback methods and contexts, including the firefox-specific branch", async () => {

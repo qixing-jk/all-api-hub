@@ -34,17 +34,21 @@ import {
   recordShieldBypassTempWindowFetchResult,
   recordShieldBypassTempWindowTurnstileFetchResult,
 } from "~/services/productAnalytics/shieldBypassSummary"
-import { getAccountSiteType } from "~/services/siteDetection/detectSiteType"
+import {
+  PROTECTION_BYPASS_DECISION_RESULTS,
+  TEMP_CONTEXT_TASK_KINDS,
+  type ProtectionBypassDecisionResult,
+  type ProtectionBypassSurface,
+  type TempContextTask,
+} from "~/services/protectionBypass/contracts"
+import { getProtectionBypassDecisionErrorCode } from "~/services/protectionBypass/decisionErrorCode"
+import type { ProtectionBypassPolicyDecision } from "~/services/protectionBypass/policy"
 import { AuthTypeEnum } from "~/types"
 import type {
   TempWindowCheckinPageAction,
-  TempWindowCheckinPageActionParams,
   TempWindowFetch,
-  TempWindowFetchParams,
   TempWindowPageAccountIdentity,
-  TempWindowRenderedTitleParams,
   TempWindowTurnstileFetch,
-  TempWindowTurnstileFetchParams,
   TempWindowTurnstileMeta,
 } from "~/types/tempWindowFetch"
 import type { CheckinPageActionTriggerResult } from "~/types/turnstile"
@@ -95,7 +99,14 @@ import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 import { appendQueryParam } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
 
+import { handleTempWindowOpenRouterManagementKeyAction } from "./openrouter/managementKeyAction"
+import { checkTempContextProtectionGuards } from "./tempContextProtectionGuards"
 import { tempPageTaskScheduler } from "./tempPageTaskScheduler"
+
+type TaskParams<TKind extends TempContextTask["kind"]> = Extract<
+  TempContextTask,
+  { kind: TKind }
+>["params"]
 
 /**
  * Unified logger scoped to background temp-window lifecycle and fetch helpers.
@@ -384,19 +395,12 @@ async function navigateTempContextToPage(
  * 在临时上下文中渲染页面并读取真实的 document.title。
  */
 async function executeTempWindowGetRenderedTitle(
-  request: TempWindowRenderedTitleParams,
+  request: TaskParams<typeof TEMP_CONTEXT_TASK_KINDS.RenderedTitle>,
+  suppressMinimize: boolean,
   sendResponse: (response?: any) => void,
+  authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
   const { originUrl, requestId } = request
-  const policy = resolveTempWindowRequestPolicy({
-    tempWindowRequestSource: request.tempWindowRequestSource,
-    suppressMinimize: request.suppressMinimize,
-  })
-  if (policy.blockedReason) {
-    sendResponse({ success: false, error: policy.blockedReason })
-    return
-  }
-  const { suppressMinimize } = policy
   const tempRequestId = requestId || `temp-title-${Date.now()}`
 
   logTempWindow("tempWindowGetRenderedTitleStart", {
@@ -409,6 +413,8 @@ async function executeTempWindowGetRenderedTitle(
       originUrl,
       tempRequestId,
       suppressMinimize,
+      {},
+      authorizeAtAcquire,
     )
     const { tabId } = context
 
@@ -431,20 +437,11 @@ async function executeTempWindowGetRenderedTitle(
       forceClose: true,
       reason: "tempWindowGetRenderedTitleError",
     })
-    sendResponse({ success: false, error: getErrorMessage(error) })
+    const failure = toTempWindowFailureResponse(error)
+    sendResponse({ success: false, error: failure.error, code: failure.code })
   } finally {
     await releaseTempContext(tempRequestId)
   }
-}
-
-/** Queues rendered-title work through the shared temp-page scheduler. */
-export async function handleTempWindowGetRenderedTitle(
-  request: TempWindowRenderedTitleParams,
-  sendResponse: (response?: any) => void,
-) {
-  await runTempPageHandler(request.originUrl, {}, () =>
-    executeTempWindowGetRenderedTitle(request, sendResponse),
-  )
 }
 
 /**
@@ -466,6 +463,275 @@ async function runTempPageHandler(
 ): Promise<void> {
   const originKey = buildTempContextOriginKey(normalizeOrigin(url), options)
   await tempPageTaskScheduler.run(originKey, task)
+}
+
+export type AuthorizedTempContextOutcome =
+  | {
+      kind: Extract<
+        ProtectionBypassDecisionResult,
+        typeof PROTECTION_BYPASS_DECISION_RESULTS.Allowed
+      >
+      adapter: TempContextMode
+    }
+  | { kind: typeof PROTECTION_BYPASS_DECISION_RESULTS.Denied }
+  | { kind: typeof PROTECTION_BYPASS_DECISION_RESULTS.Unavailable }
+
+export type ReportAuthorizedTempContextOutcome = (
+  outcome: AuthorizedTempContextOutcome,
+) => void
+
+export type AuthorizeTempContextAtAcquire =
+  (() => Promise<ProtectionBypassPolicyDecision>) & {
+    reportOutcome?: ReportAuthorizedTempContextOutcome
+  }
+
+/** Notifies policy analytics after releasing the acquisition lock. */
+function reportAuthorizedTempContextOutcome(
+  authorizeAtAcquire: AuthorizeTempContextAtAcquire | undefined,
+  outcome: AuthorizedTempContextOutcome,
+) {
+  try {
+    authorizeAtAcquire?.reportOutcome?.(outcome)
+  } catch {
+    // Analytics observers are best effort and cannot change pool outcomes.
+  }
+}
+
+/** Converts a denied acquire-time decision into the public transport code. */
+function createProtectionBypassDecisionError(
+  decision: Extract<
+    ProtectionBypassPolicyDecision,
+    { kind: typeof PROTECTION_BYPASS_DECISION_RESULTS.Denied }
+  >,
+) {
+  const error = new Error(
+    t("messages:background.tempWindowPolicyContextInvalid"),
+  ) as Error & { code: ApiErrorCode }
+  error.name = "ProtectionBypassPolicyError"
+  error.code = getProtectionBypassDecisionErrorCode(decision)
+  return error
+}
+
+/** Executes an explicit open request through the same authorized pool acquire path. */
+async function executeOpenTempContext(
+  task: Extract<
+    TempContextTask,
+    { kind: typeof TEMP_CONTEXT_TASK_KINDS.OpenContext }
+  >,
+  suppressMinimize: boolean,
+  authorizeAtAcquire: AuthorizeTempContextAtAcquire,
+  sendResponse: (response?: any) => void,
+) {
+  const { url, requestId } = task.params
+  try {
+    const context = await acquireTempContext(
+      url,
+      requestId,
+      suppressMinimize,
+      {},
+      authorizeAtAcquire,
+    )
+    sendResponse({
+      success: true,
+      tabId: context.tabId,
+      ...(context.ownerWindowId ? { windowId: context.ownerWindowId } : {}),
+    })
+  } catch (error) {
+    const failure = toTempWindowFailureResponse(error)
+    sendResponse({ success: false, error: failure.error, code: failure.code })
+  }
+}
+
+/**
+ * Executes the sole protected New API cookie-session read. New API fixes the
+ * hidden-key contract at POST /api/channel/:id/key; callers cannot supply a
+ * method, endpoint, body, or headers (https://github.com/QuantumNous/new-api).
+ */
+async function executeNewApiSessionRead(
+  request: TaskParams<typeof TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead>,
+  suppressMinimize: boolean,
+  sendResponse: (response?: any) => void,
+  authorizeAtAcquire: AuthorizeTempContextAtAcquire,
+) {
+  const fetchUrl = `${request.origin}/api/channel/${request.channelId}/key`
+  await executeTempWindowFetch(
+    {
+      originUrl: request.origin,
+      fetchUrl,
+      fetchOptions: {
+        method: "POST",
+        body: "{}",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "New-API-User": request.userId,
+        },
+      },
+      responseType: "json",
+      requestId: request.requestId,
+      authType: AuthTypeEnum.Cookie,
+    },
+    suppressMinimize,
+    sendResponse,
+    authorizeAtAcquire,
+  )
+}
+
+/**
+ * Single protected pool adapter. Scheduler admission happens before the
+ * executor reaches the same-origin acquire lock and invokes authorization.
+ */
+function resolveAuthorizedTaskPresentation(
+  task: TempContextTask,
+  presentationSource: ProtectionBypassSurface,
+):
+  | {
+      kind: "ready"
+      source: ProtectionBypassSurface
+      suppressMinimize: boolean
+    }
+  | { kind: "blocked"; reason: "firefox_popup_unsupported" } {
+  const policy = resolveTempWindowRequestPolicy({
+    tempWindowRequestSource: presentationSource,
+    suppressMinimize:
+      "suppressMinimize" in task.params
+        ? task.params.suppressMinimize
+        : undefined,
+  })
+  return policy.blockedReason
+    ? { kind: "blocked", reason: policy.blockedReason }
+    : {
+        kind: "ready",
+        source: policy.tempWindowRequestSource,
+        suppressMinimize: policy.suppressMinimize,
+      }
+}
+
+/** Builds the task-shaped failure returned when presentation is unavailable. */
+function buildPresentationFailure(task: TempContextTask, error: string) {
+  if (task.kind === TEMP_CONTEXT_TASK_KINDS.TurnstileFetch) {
+    return {
+      success: false,
+      error,
+      turnstile: { status: "error", hasTurnstile: false },
+    }
+  }
+  if (task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction) {
+    return { success: false, reason: "trigger_failed", error }
+  }
+  if (task.kind === TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction) {
+    return {
+      requestId: task.params.requestId,
+      operation: "create",
+      mutationState: "not_dispatched",
+      attemptOutcome: "failed",
+      label: task.params.operation.label,
+    } as const
+  }
+  return { success: false, error }
+}
+
+/** Resolves presentation once, then dispatches one authorized temp-context task. */
+export async function executeAuthorizedTempContextTask(
+  task: TempContextTask,
+  presentationSource: ProtectionBypassSurface,
+  authorizeAtAcquire: AuthorizeTempContextAtAcquire,
+  sendResponse: (response?: any) => void,
+  reportOutcome?: ReportAuthorizedTempContextOutcome,
+) {
+  authorizeAtAcquire.reportOutcome = reportOutcome
+  const presentation = resolveAuthorizedTaskPresentation(
+    task,
+    presentationSource,
+  )
+  if (presentation.kind === "blocked") {
+    sendResponse(buildPresentationFailure(task, presentation.reason))
+    return
+  }
+  const { suppressMinimize } = presentation
+
+  if (task.kind === TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction) {
+    await handleTempWindowOpenRouterManagementKeyAction(
+      task.params,
+      suppressMinimize,
+      sendResponse,
+      authorizeAtAcquire,
+    )
+    return
+  }
+  const url =
+    task.kind === TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead
+      ? task.params.origin
+      : task.kind === TEMP_CONTEXT_TASK_KINDS.SessionRead ||
+          task.kind === TEMP_CONTEXT_TASK_KINDS.OpenContext
+        ? task.params.url
+        : task.kind === TEMP_CONTEXT_TASK_KINDS.TurnstileFetch ||
+            task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction
+          ? task.params.pageUrl || task.params.originUrl
+          : task.params.originUrl
+  const incognito =
+    "useIncognito" in task.params && Boolean(task.params.useIncognito)
+
+  await runTempPageHandler(url, { incognito }, async () => {
+    switch (task.kind) {
+      case TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch:
+      case TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch:
+        await executeTempWindowFetch(
+          task.params,
+          suppressMinimize,
+          sendResponse,
+          authorizeAtAcquire,
+        )
+        return
+      case TEMP_CONTEXT_TASK_KINDS.TurnstileFetch:
+        await executeTempWindowTurnstileFetch(
+          task.params,
+          suppressMinimize,
+          sendResponse,
+          authorizeAtAcquire,
+        )
+        return
+      case TEMP_CONTEXT_TASK_KINDS.NativePageAction:
+        await executeTempWindowCheckinPageAction(
+          task.params,
+          suppressMinimize,
+          sendResponse,
+          authorizeAtAcquire,
+        )
+        return
+      case TEMP_CONTEXT_TASK_KINDS.RenderedTitle:
+        await executeTempWindowGetRenderedTitle(
+          task.params,
+          suppressMinimize,
+          sendResponse,
+          authorizeAtAcquire,
+        )
+        return
+      case TEMP_CONTEXT_TASK_KINDS.SessionRead:
+        await executeAutoDetectSite(
+          task.params,
+          suppressMinimize,
+          sendResponse,
+          authorizeAtAcquire,
+        )
+        return
+      case TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead:
+        await executeNewApiSessionRead(
+          task.params,
+          suppressMinimize,
+          sendResponse,
+          authorizeAtAcquire,
+        )
+        return
+      case TEMP_CONTEXT_TASK_KINDS.OpenContext:
+        await executeOpenTempContext(
+          task,
+          suppressMinimize,
+          authorizeAtAcquire,
+          sendResponse,
+        )
+    }
+  })
 }
 
 type TempContextSharedFields = {
@@ -636,6 +902,20 @@ function toTempWindowFailureResponse(error: unknown): {
     }
   }
 
+  if (
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    Object.values(API_ERROR_CODES).includes(
+      (error as { code?: ApiErrorCode }).code as ApiErrorCode,
+    )
+  ) {
+    return {
+      error: getErrorMessage(error),
+      code: (error as { code: ApiErrorCode }).code,
+    }
+  }
+
   return {
     error: getErrorMessage(error),
     ...(error instanceof Error &&
@@ -770,9 +1050,6 @@ function trackTempWindowFetchCompleted(input: {
     },
   })
 }
-
-// 手动打开的临时窗口/标签页
-const tempWindows = new Map<string, TempWindowHandle>()
 
 const tempRequestContextMap = new Map<string, TempContext>()
 const tempContextById = new Map<number, TempContext>()
@@ -973,7 +1250,7 @@ export async function cleanupTempContextsOnSuspend() {
 }
 
 /**
- * 处理临时窗口关闭事件，移除 tempWindows 记录并销毁对应的 window 上下文。
+ * Handles browser window removal and destroys the matching tracked context.
  */
 function handleTempWindowRemoved(windowId: number) {
   if (compositeWindowId === windowId) {
@@ -981,23 +1258,8 @@ function handleTempWindowRemoved(windowId: number) {
     logTempWindow("compositeWindowRemoved", { windowId })
   }
 
-  let removedRequestId: string | undefined
-  for (const [requestId, handle] of tempWindows.entries()) {
-    const belongsToRemovedWindow =
-      (handle.kind === TEMP_CONTEXT_MODES.Window &&
-        handle.windowId === windowId) ||
-      (handle.kind === TEMP_CONTEXT_MODES.Composite &&
-        handle.windowId === windowId)
-
-    if (belongsToRemovedWindow) {
-      tempWindows.delete(requestId)
-      removedRequestId ??= requestId
-    }
-  }
-
   logTempWindow("windowRemoved", {
     windowId,
-    requestId: removedRequestId ?? null,
   })
 
   const context = tempContextById.get(windowId)
@@ -1014,25 +1276,11 @@ function handleTempWindowRemoved(windowId: number) {
 }
 
 /**
- * 处理临时标签页关闭事件，移除 tempWindows 记录并销毁对应的 tab 上下文。
+ * Handles browser tab removal and destroys the matching tracked context.
  */
 function handleTempTabRemoved(tabId: number) {
-  let removedRequestId: string | undefined
-  for (const [requestId, handle] of tempWindows.entries()) {
-    const belongsToRemovedTab =
-      (handle.kind === TEMP_CONTEXT_MODES.Tab && handle.tabId === tabId) ||
-      (handle.kind === TEMP_CONTEXT_MODES.Composite && handle.tabId === tabId)
-
-    if (belongsToRemovedTab) {
-      tempWindows.delete(requestId)
-      removedRequestId = requestId
-      break
-    }
-  }
-
   logTempWindow("tabRemoved", {
     tabId,
-    requestId: removedRequestId ?? null,
   })
 
   const context = tempContextByTabId.get(tabId)
@@ -1049,116 +1297,6 @@ function handleTempTabRemoved(tabId: number) {
 }
 
 /**
- * 根据请求参数打开临时窗口或标签页，并记录 requestId 与 window/tabId 的映射。
- */
-export async function handleOpenTempWindow(
-  request: any,
-  sendResponse: (response?: any) => void,
-) {
-  try {
-    const { url, requestId } = request
-    const preferredMode = await resolveTempContextMode()
-    const origin = normalizeOrigin(url)
-
-    logTempWindow(RuntimeActionIds.OpenTempWindow, {
-      requestId,
-      origin,
-      url: sanitizeUrlForLog(url),
-      preferredMode,
-    })
-
-    const shouldUseWindow =
-      preferredMode === TEMP_CONTEXT_MODES.Window && hasWindowsAPI()
-    const shouldUseComposite =
-      preferredMode === TEMP_CONTEXT_MODES.Composite && hasWindowsAPI()
-
-    if (shouldUseComposite) {
-      const { windowId, tabId } = await openTabInCompositeWindow({
-        initialUrl: url,
-        origin,
-        requestId,
-        suppressMinimize: true,
-      })
-
-      tempWindows.set(requestId, {
-        kind: TEMP_CONTEXT_MODES.Composite,
-        windowId,
-        tabId,
-      })
-      logTempWindow("openTempCompositeTabSuccess", {
-        requestId,
-        windowId,
-        tabId,
-      })
-      sendResponse({ success: true, windowId, tabId })
-    } else if (shouldUseWindow) {
-      // 创建新窗口
-      const window = await createWindow({
-        url: url,
-        type: "popup",
-        width: 800,
-        height: 600,
-        focused: false,
-      })
-
-      if (window?.id) {
-        // 记录窗口ID
-        tempWindows.set(requestId, {
-          kind: TEMP_CONTEXT_MODES.Window,
-          windowId: window.id,
-        })
-        logTempWindow("openTempWindowSuccess", {
-          requestId,
-          windowId: window.id,
-        })
-        sendResponse({ success: true, windowId: window.id })
-      } else {
-        logTempWindow("openTempWindowFailed", {
-          requestId,
-          reason: "noWindowId",
-          preferredMode,
-        })
-        sendResponse({
-          success: false,
-          error: t("messages:background.cannotCreateWindow"),
-        })
-      }
-    } else {
-      // 使用标签页
-      const tab = await createTab(url, false)
-      if (tab?.id) {
-        tempWindows.set(requestId, {
-          kind: TEMP_CONTEXT_MODES.Tab,
-          tabId: tab.id,
-        })
-        logTempWindow("openTempTabSuccess", {
-          requestId,
-          tabId: tab.id,
-          preferredMode,
-        })
-        sendResponse({ success: true, tabId: tab.id })
-      } else {
-        logTempWindow("openTempTabFailed", {
-          requestId,
-          reason: "noTabId",
-          preferredMode,
-        })
-        sendResponse({
-          success: false,
-          error: t("messages:background.cannotCreateWindow"),
-        })
-      }
-    }
-  } catch (error) {
-    logTempWindow("openTempWindowError", {
-      requestId: request?.requestId ?? null,
-      error: getErrorMessage(error),
-    })
-    sendResponse({ success: false, error: getErrorMessage(error) })
-  }
-}
-
-/**
  * 关闭指定 requestId 关联的临时窗口/标签页，或释放临时上下文。
  */
 export async function handleCloseTempWindow(
@@ -1167,26 +1305,12 @@ export async function handleCloseTempWindow(
 ) {
   try {
     const { requestId } = request
-    const handle = tempWindows.get(requestId)
-
     logTempWindow(RuntimeActionIds.CloseTempWindow, {
       requestId,
-      mappedHandle: handle ?? null,
       hasRequestContext: requestId
         ? tempRequestContextMap.has(requestId)
         : false,
     })
-
-    if (handle) {
-      await removeTempWindowHandle(handle)
-      tempWindows.delete(requestId)
-      logTempWindow("closeTempWindowSuccess", {
-        requestId,
-        removedHandle: handle,
-      })
-      sendResponse({ success: true })
-      return
-    }
 
     if (requestId && tempRequestContextMap.has(requestId)) {
       await releaseTempContext(requestId, {
@@ -1217,20 +1341,12 @@ export async function handleCloseTempWindow(
  * 自动检测站点类型与用户信息，通过临时上下文访问目标站点。
  */
 async function executeAutoDetectSite(
-  request: any,
+  request: TaskParams<typeof TEMP_CONTEXT_TASK_KINDS.SessionRead>,
+  suppressMinimize: boolean,
   sendResponse: (response?: any) => void,
+  authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
   const { url, requestId, useIncognito } = request
-  const policy = resolveTempWindowRequestPolicy({
-    tempWindowRequestSource: request.tempWindowRequestSource,
-    suppressMinimize: request.suppressMinimize,
-  })
-  if (policy.blockedReason) {
-    sendResponse({ success: false, error: policy.blockedReason })
-    return
-  }
-  const { suppressMinimize } = policy
-
   try {
     if (useIncognito) {
       const allowed = await isAllowedIncognitoAccess()
@@ -1243,7 +1359,7 @@ async function executeAutoDetectSite(
       }
     }
 
-    const siteType = await getAccountSiteType(url)
+    const { siteType } = request
     const userData = await getSiteDataFromTab(
       url,
       requestId,
@@ -1252,6 +1368,7 @@ async function executeAutoDetectSite(
         incognito: Boolean(useIncognito),
         siteType,
       },
+      authorizeAtAcquire,
     )
 
     let result = null
@@ -1272,28 +1389,22 @@ async function executeAutoDetectSite(
       data: result,
     })
   } catch (error) {
-    sendResponse({ success: false, error: getErrorMessage(error) })
+    const failure = toTempWindowFailureResponse(error)
+    sendResponse({ success: false, error: failure.error, code: failure.code })
   }
-}
-
-/** Queues site auto-detection through the shared temp-page scheduler. */
-export async function handleAutoDetectSite(
-  request: any,
-  sendResponse: (response?: any) => void,
-) {
-  await runTempPageHandler(
-    request.url,
-    { incognito: Boolean(request.useIncognito) },
-    () => executeAutoDetectSite(request, sendResponse),
-  )
 }
 
 /**
  * 在临时上下文中执行跨域 fetch 请求，用于绕过需要真实浏览器环境的接口访问。
  */
 async function executeTempWindowFetch(
-  request: TempWindowFetchParams,
+  request: TaskParams<
+    | typeof TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch
+    | typeof TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
+  >,
+  suppressMinimize: boolean,
   sendResponse: (response?: any) => void,
+  authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
   const {
     originUrl,
@@ -1307,16 +1418,6 @@ async function executeTempWindowFetch(
     useIncognito,
     cookieStoreId,
   } = request
-  const policy = resolveTempWindowRequestPolicy({
-    tempWindowRequestSource: request.tempWindowRequestSource,
-    suppressMinimize: request.suppressMinimize,
-  })
-  if (policy.blockedReason) {
-    sendResponse({ success: false, error: policy.blockedReason })
-    return
-  }
-  const { suppressMinimize } = policy
-
   if (!originUrl || !fetchUrl) {
     const error = t("messages:background.invalidFetchRequest")
     sendResponse({
@@ -1375,6 +1476,7 @@ async function executeTempWindowFetch(
       tempRequestId,
       suppressMinimize,
       { incognito: Boolean(useIncognito) },
+      authorizeAtAcquire,
     )
     const { tabId } = context
 
@@ -1449,18 +1551,6 @@ async function executeTempWindowFetch(
   }
 }
 
-/** Queues a temp-page fetch through the shared temp-page scheduler. */
-export async function handleTempWindowFetch(
-  request: TempWindowFetchParams,
-  sendResponse: (response?: any) => void,
-) {
-  await runTempPageHandler(
-    request.originUrl,
-    { incognito: Boolean(request.useIncognito) },
-    () => executeTempWindowFetch(request, sendResponse),
-  )
-}
-
 /**
  * Resolves the logged-in account identity from a temporary page tab.
  */
@@ -1512,25 +1602,13 @@ async function resolveTempPageAccountIdentity(params: {
  * Opens a temporary page context and triggers the native check-in page action after identity verification.
  */
 async function executeTempWindowCheckinPageAction(
-  request: TempWindowCheckinPageActionParams,
+  request: TaskParams<typeof TEMP_CONTEXT_TASK_KINDS.NativePageAction>,
+  suppressMinimize: boolean,
   sendResponse: (response?: TempWindowCheckinPageAction) => void,
+  authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
   const { originUrl, pageUrl, requestId, siteType, expectedUserId, trigger } =
     request
-  const policy = resolveTempWindowRequestPolicy({
-    tempWindowRequestSource: request.tempWindowRequestSource,
-    suppressMinimize: request.suppressMinimize,
-  })
-  if (policy.blockedReason) {
-    sendResponse({
-      success: false,
-      reason: "trigger_failed",
-      error: policy.blockedReason,
-    })
-    return
-  }
-  const { suppressMinimize } = policy
-
   if (
     !originUrl ||
     !pageUrl ||
@@ -1560,6 +1638,8 @@ async function executeTempWindowCheckinPageAction(
       pageUrl,
       tempRequestId,
       suppressMinimize,
+      {},
+      authorizeAtAcquire,
     )
     const { tabId } = context
 
@@ -1637,9 +1717,10 @@ async function executeTempWindowCheckinPageAction(
       ...(triggerResult.error ? { error: triggerResult.error } : {}),
     })
   } catch (error) {
+    const failure = toTempWindowFailureResponse(error)
     logTempWindow("tempWindowCheckinPageActionError", {
       requestId: tempRequestId,
-      error: getErrorMessage(error),
+      error: failure.error,
     })
     await releaseTempContext(tempRequestId, {
       forceClose: true,
@@ -1648,21 +1729,12 @@ async function executeTempWindowCheckinPageAction(
     sendResponse({
       success: false,
       reason: "trigger_failed",
-      error: getErrorMessage(error),
+      error: failure.error,
+      code: failure.code,
     })
   } finally {
     await releaseTempContext(tempRequestId)
   }
-}
-
-/** Queues a native check-in page action through the shared scheduler. */
-export async function handleTempWindowCheckinPageAction(
-  request: TempWindowCheckinPageActionParams,
-  sendResponse: (response?: TempWindowCheckinPageAction) => void,
-) {
-  await runTempPageHandler(request.pageUrl || request.originUrl, {}, () =>
-    executeTempWindowCheckinPageAction(request, sendResponse),
-  )
 }
 
 /**
@@ -1673,8 +1745,10 @@ export async function handleTempWindowCheckinPageAction(
  * content script, then replays the target request in the same tab.
  */
 async function executeTempWindowTurnstileFetch(
-  request: TempWindowTurnstileFetchParams,
+  request: TaskParams<typeof TEMP_CONTEXT_TASK_KINDS.TurnstileFetch>,
+  suppressMinimize: boolean,
   sendResponse: (response?: any) => void,
+  authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
   const {
     originUrl,
@@ -1692,20 +1766,6 @@ async function executeTempWindowTurnstileFetch(
     turnstileParamName,
     turnstilePreTrigger,
   } = request
-  const policy = resolveTempWindowRequestPolicy({
-    tempWindowRequestSource: request.tempWindowRequestSource,
-    suppressMinimize: request.suppressMinimize,
-  })
-  if (policy.blockedReason) {
-    sendResponse({
-      success: false,
-      error: policy.blockedReason,
-      turnstile: { status: "error", hasTurnstile: false },
-    })
-    return
-  }
-  const { suppressMinimize } = policy
-
   const turnstile: TempWindowTurnstileMeta = {
     status: "error",
     hasTurnstile: false,
@@ -1773,6 +1833,7 @@ async function executeTempWindowTurnstileFetch(
       tempRequestId,
       suppressMinimize,
       { incognito: Boolean(useIncognito) },
+      authorizeAtAcquire,
     )
     const { tabId } = context
 
@@ -1910,18 +1971,6 @@ async function executeTempWindowTurnstileFetch(
   }
 }
 
-/** Queues a Turnstile-assisted fetch through the shared scheduler. */
-export async function handleTempWindowTurnstileFetch(
-  request: TempWindowTurnstileFetchParams,
-  sendResponse: (response?: any) => void,
-) {
-  await runTempPageHandler(
-    request.pageUrl || request.originUrl,
-    { incognito: Boolean(request.useIncognito) },
-    () => executeTempWindowTurnstileFetch(request, sendResponse),
-  )
-}
-
 /**
  * 通过临时浏览上下文中的标签页获取站点用户信息
  * @param url 页面地址（含 origin），用于确定要获取或创建的临时上下文
@@ -1932,6 +1981,7 @@ async function getSiteDataFromTab(
   requestId: string,
   suppressMinimize?: boolean,
   options: { incognito?: boolean; siteType?: string } = {},
+  authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
   try {
     const context = await acquireTempContext(
@@ -1939,6 +1989,7 @@ async function getSiteDataFromTab(
       requestId,
       suppressMinimize,
       options,
+      authorizeAtAcquire,
     )
     const { tabId } = context
 
@@ -1976,6 +2027,17 @@ async function getSiteDataFromTab(
       forceClose: true,
       reason: "getSiteDataFromTabError",
     })
+    const errorCode =
+      error && typeof error === "object" && "code" in error
+        ? (error as { code?: ApiErrorCode }).code
+        : undefined
+    if (
+      errorCode === API_ERROR_CODES.TEMP_WINDOW_DISABLED ||
+      errorCode === API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED ||
+      errorCode === API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID
+    ) {
+      throw error
+    }
     return null
   }
 }
@@ -2050,78 +2112,116 @@ async function acquireTempContext(
   requestId: string,
   suppressMinimize?: boolean,
   options: { incognito?: boolean } = {},
+  authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
   const origin = buildTempContextOriginKey(normalizeOrigin(url), options)
-  const preferredMode = await resolveTempContextMode()
+  let finalDecision: ProtectionBypassPolicyDecision | undefined
 
   logTempWindow("acquireTempContextStart", {
     requestId,
     origin,
-    preferredMode,
   })
 
-  return await withOriginLock(origin, async () => {
-    // If this origin's pool is in the middle of being destroyed, do not
-    // attempt to reuse or create a new context for it.
-    if (destroyingOrigins.has(origin)) {
-      throw new Error("Temp context pool is being destroyed for this origin")
-    }
+  try {
+    const context = await withOriginLock(origin, async () => {
+      // If this origin's pool is in the middle of being destroyed, do not
+      // attempt to reuse or create a new context for it.
+      if (destroyingOrigins.has(origin)) {
+        throw new Error("Temp context pool is being destroyed for this origin")
+      }
 
-    let context = await getReusableContext(origin)
-    if (!context) {
-      logTempWindow("acquireTempContextCreate", {
-        requestId,
-        origin,
-        url: sanitizeUrlForLog(url),
-        preferredMode,
-      })
-      context = await createTempContextInstance(
-        url,
-        origin,
-        requestId,
-        preferredMode,
-        suppressMinimize,
-        options,
-      )
-      registerContext(origin, context)
-      logTempWindow("acquireTempContextCreated", {
-        requestId,
-        origin,
-        contextId: context.id,
-        tabId: context.tabId,
-        type: context.type,
-        preferredMode,
-      })
-    } else {
-      logTempWindow("acquireTempContextReuse", {
-        requestId,
-        origin,
-        contextId: context.id,
-        tabId: context.tabId,
-        type: context.type,
-        preferredMode,
-      })
-    }
+      const decision = authorizeAtAcquire
+        ? await authorizeAtAcquire()
+        : undefined
+      finalDecision = decision
+      if (decision?.kind === PROTECTION_BYPASS_DECISION_RESULTS.Denied) {
+        throw createProtectionBypassDecisionError(decision)
+      }
+      const preferredMode =
+        decision?.kind === PROTECTION_BYPASS_DECISION_RESULTS.Allowed
+          ? decision.adapter
+          : await resolveTempContextMode()
 
-    // It's possible that during async operations the context or its pool was
-    // marked for destruction. Perform a final validity check before using it.
-    if (destroyingOrigins.has(origin) || !tempContextById.has(context.id)) {
-      throw new Error("Acquired temp context is no longer valid")
-    }
+      let acquiredContext = await getReusableContext(origin)
+      if (!acquiredContext) {
+        logTempWindow("acquireTempContextCreate", {
+          requestId,
+          origin,
+          url: sanitizeUrlForLog(url),
+          preferredMode,
+        })
+        acquiredContext = await createTempContextInstance(
+          url,
+          origin,
+          requestId,
+          preferredMode,
+          suppressMinimize,
+          options,
+        )
+        registerContext(origin, acquiredContext)
+        logTempWindow("acquireTempContextCreated", {
+          requestId,
+          origin,
+          contextId: acquiredContext.id,
+          tabId: acquiredContext.tabId,
+          type: acquiredContext.type,
+          preferredMode,
+        })
+      } else {
+        logTempWindow("acquireTempContextReuse", {
+          requestId,
+          origin,
+          contextId: acquiredContext.id,
+          tabId: acquiredContext.tabId,
+          type: acquiredContext.type,
+          preferredMode,
+        })
+      }
 
-    attachRequestToContext(requestId, context)
-    context.lastUsed = Date.now()
-    clearContextReleaseTimer(context)
-    logTempWindow("acquireTempContextSuccess", {
-      requestId,
-      origin,
-      contextId: context.id,
-      tabId: context.tabId,
-      type: context.type,
-      activeRequestCount: context.activeRequestIds.size,
+      // It's possible that during async operations the context or its pool was
+      // marked for destruction. Perform a final validity check before using it.
+      if (
+        destroyingOrigins.has(origin) ||
+        !tempContextById.has(acquiredContext.id)
+      ) {
+        throw new Error("Acquired temp context is no longer valid")
+      }
+
+      attachRequestToContext(requestId, acquiredContext)
+      acquiredContext.lastUsed = Date.now()
+      clearContextReleaseTimer(acquiredContext)
+      logTempWindow("acquireTempContextSuccess", {
+        requestId,
+        origin,
+        contextId: acquiredContext.id,
+        tabId: acquiredContext.tabId,
+        type: acquiredContext.type,
+        activeRequestCount: acquiredContext.activeRequestIds.size,
+      })
+      return acquiredContext
     })
+
+    if (finalDecision?.kind === PROTECTION_BYPASS_DECISION_RESULTS.Allowed) {
+      reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
+        kind: PROTECTION_BYPASS_DECISION_RESULTS.Allowed,
+        adapter: context.mode,
+      })
+    }
     return context
-  })
+  } catch (error) {
+    if (finalDecision?.kind === PROTECTION_BYPASS_DECISION_RESULTS.Denied) {
+      reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
+        kind: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+      })
+    } else if (
+      finalDecision?.kind === PROTECTION_BYPASS_DECISION_RESULTS.Allowed
+    ) {
+      reportAuthorizedTempContextOutcome(authorizeAtAcquire, {
+        kind: PROTECTION_BYPASS_DECISION_RESULTS.Unavailable,
+      })
+    }
+    throw error
+  }
 }
 
 /**
@@ -2696,12 +2796,14 @@ export const tempWindowBackgroundRuntime = {
     requestId: string,
     suppressMinimize?: boolean,
     options: { incognito?: boolean } = {},
+    authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
   ) {
     const context = await acquireTempContext(
       url,
       requestId,
       suppressMinimize,
       options,
+      authorizeAtAcquire,
     )
     return {
       tabId: context.tabId,
@@ -3083,84 +3185,6 @@ function normalizeOrigin(url: string) {
     return new URL(url).origin
   } catch {
     return url
-  }
-}
-
-type GuardCheckMessageResponse = {
-  success: boolean
-  passed: boolean
-  detection?: unknown
-  error?: string
-}
-
-type TempContextProtectionGuardStatus = {
-  passed: boolean
-  capPassed: boolean
-  cloudflarePassed: boolean
-  cap?: GuardCheckMessageResponse | null
-  cloudflare?: GuardCheckMessageResponse | null
-}
-
-/**
- * Parse a guard-check PromiseSettledResult into a stable status shape.
- *
- * Guard checks are performed via content-script messaging and may fail when the
- * page blocks scripts or the content script isn't ready. This helper enforces a
- * defensive response schema before consuming the result.
- */
-function parseGuardCheckResult(result: PromiseSettledResult<any>): {
-  passed: boolean
-  response: GuardCheckMessageResponse | null
-} {
-  if (result.status === "rejected") {
-    return { passed: false, response: null }
-  }
-
-  const response = result.value as GuardCheckMessageResponse | null | undefined
-  const isValid =
-    !!response &&
-    typeof response === "object" &&
-    typeof response.success === "boolean"
-
-  if (!isValid) {
-    return { passed: false, response: null }
-  }
-
-  return { passed: Boolean(response.success && response.passed), response }
-}
-
-/**
- * Checks protection-bypass readiness for a temp context tab by querying content-side guards.
- *
- * The temp-window flow depends on the browser earning the correct cookies/session state
- * before replaying API requests. Some sites use Cloudflare, others use CAP (cap.js).
- *
- * This helper runs both checks concurrently and returns a combined readiness verdict.
- */
-export async function checkTempContextProtectionGuards(params: {
-  tabId: number
-  requestId?: string
-}): Promise<TempContextProtectionGuardStatus> {
-  const [capResult, cloudflareResult] = await Promise.allSettled([
-    sendTabMessageWithRetry(params.tabId, {
-      action: RuntimeActionIds.ContentCheckCapGuard,
-      requestId: params.requestId,
-    }),
-    sendTabMessageWithRetry(params.tabId, {
-      action: RuntimeActionIds.ContentCheckCloudflareGuard,
-      requestId: params.requestId,
-    }),
-  ])
-
-  const cap = parseGuardCheckResult(capResult)
-  const cloudflare = parseGuardCheckResult(cloudflareResult)
-
-  return {
-    passed: cap.passed && cloudflare.passed,
-    capPassed: cap.passed,
-    cloudflarePassed: cloudflare.passed,
-    cap: cap.response,
-    cloudflare: cloudflare.response,
   }
 }
 

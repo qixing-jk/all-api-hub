@@ -11,6 +11,7 @@ import type {
   ApiServiceFetchContext,
   ApiServiceRequest,
 } from "~/services/apiTransport/type"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -71,11 +72,15 @@ function createAutoDetectApiRequest(params: {
   baseUrl: string
   auth: ApiServiceRequest["auth"]
   fetchContext?: ApiServiceFetchContext
+  protectionBypassExecution?: ProtectionBypassExecution
 }): ApiServiceRequest {
   return {
     baseUrl: params.baseUrl,
     auth: params.auth,
     ...(params.fetchContext ? { fetchContext: params.fetchContext } : {}),
+    ...(params.protectionBypassExecution
+      ? { protectionBypassExecution: params.protectionBypassExecution }
+      : {}),
   }
 }
 
@@ -125,12 +130,14 @@ const createAccountCompletionHelpers = (params: {
     auth: ApiServiceRequest["auth"]
     context: {
       fetchContext?: ApiServiceFetchContext
+      protectionBypassExecution?: ProtectionBypassExecution
     }
   }) {
     return createAutoDetectApiRequest({
       baseUrl: input.baseUrl,
       auth: input.auth,
       fetchContext: input.context.fetchContext,
+      protectionBypassExecution: input.context.protectionBypassExecution,
     })
   },
   fetchSiteName(siteStatus: SiteStatusInfo | null) {
@@ -154,7 +161,13 @@ const createAccountCompletionHelpers = (params: {
 export async function completeAutoDetectedAccount(
   request: AutoDetectCompletionRequest,
 ): Promise<AutoDetectCompletionData> {
-  const { url, requestedAuthType, detected, autoDetectContext } = request
+  const {
+    url,
+    requestedAuthType,
+    detected,
+    autoDetectContext,
+    protectionBypassExecution,
+  } = request
   const { siteType } = detected
   const autoDetectFetchContext = getAutoDetectFetchContext(detected)
   const accountCompletion =
@@ -176,6 +189,7 @@ export async function completeAutoDetectedAccount(
         ...(autoDetectFetchContext
           ? { fetchContext: autoDetectFetchContext }
           : {}),
+        ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
       },
     },
     createAccountCompletionHelpers({

@@ -21,6 +21,7 @@ import {
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { ensureAccountTagsStorageMigrated } from "~/services/tags/migrations/accountTagsStorageMigration"
 import {
   DELETED_ENTRY_KIND,
@@ -102,11 +103,12 @@ type RefreshAccountOptions = {
   allowDisabled?: boolean
   reEnableOnSuccess?: boolean
   tempWindowRequestSource?: TempWindowRequestSource
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 type RefreshAccountsOptions = Pick<
   RefreshAccountOptions,
-  "tempWindowRequestSource"
+  "tempWindowRequestSource" | "protectionBypassExecution"
 >
 
 type UpdateAccountOptions = {
@@ -1090,7 +1092,10 @@ class AccountStorageService {
         return { account, refreshed: false, skippedReason: "account_disabled" }
       }
 
-      account = await this.refreshSiteMetadataIfNeeded(account)
+      account = await this.refreshSiteMetadataIfNeeded(
+        account,
+        options?.protectionBypassExecution,
+      )
 
       if (await this.shouldSkipRefresh(account, force)) {
         logger.debug("账号刷新间隔未到，跳过刷新", {
@@ -1113,6 +1118,7 @@ class AccountStorageService {
       const accountRefresh = getSiteTypeCapabilities(account.site_type).account
         ?.refresh
       const tempWindowRequestSource = options?.tempWindowRequestSource
+      const protectionBypassExecution = options?.protectionBypassExecution
 
       // Refresh check-in support status together with account refresh.
       const currentCheckIn = account.checkIn
@@ -1126,6 +1132,7 @@ class AccountStorageService {
             cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
             auth,
             ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+            ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
           })
 
           if (typeof support === "boolean") {
@@ -1156,6 +1163,7 @@ class AccountStorageService {
             auth,
             includeTodayCashflow,
             ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+            ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
           })
         : createMissingAccountRefreshResult(account.site_type)
 
@@ -1355,6 +1363,7 @@ class AccountStorageService {
     const includeTodayCashflow =
       (await userPreferences.getPreferences()).showTodayCashflow ?? true
     const tempWindowRequestSource = options?.tempWindowRequestSource
+    const protectionBypassExecution = options?.protectionBypassExecution
     let successCount = 0
     let failedCount = 0
     let refreshedCount = 0
@@ -1366,6 +1375,7 @@ class AccountStorageService {
         this.refreshAccount(account.id, force, {
           includeTodayCashflow,
           ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+          ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
         }),
       ),
     )
@@ -1412,6 +1422,7 @@ class AccountStorageService {
     const includeTodayCashflow =
       (await userPreferences.getPreferences()).showTodayCashflow ?? true
     const tempWindowRequestSource = options?.tempWindowRequestSource
+    const protectionBypassExecution = options?.protectionBypassExecution
     let processedCount = 0
     let failedCount = 0
     let reEnabledCount = 0
@@ -1424,6 +1435,7 @@ class AccountStorageService {
           allowDisabled: true,
           reEnableOnSuccess: true,
           ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+          ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
         }),
       ),
     )
@@ -2236,6 +2248,7 @@ class AccountStorageService {
    */
   private async refreshSiteMetadataIfNeeded(
     account: SiteAccount,
+    protectionBypassExecution?: ProtectionBypassExecution,
   ): Promise<SiteAccount> {
     const normalizedUrl = this.normalizeBaseUrl(account.site_url)
     if (!normalizedUrl) {
@@ -2255,7 +2268,10 @@ class AccountStorageService {
     if (needsSiteType) {
       // Remote inference fills in SITE_TYPES.UNKNOWN entries after migrations
       try {
-        const detectedType = await getAccountSiteType(normalizedUrl)
+        const detectedType = await getAccountSiteType(
+          normalizedUrl,
+          protectionBypassExecution,
+        )
         if (detectedType && detectedType !== SITE_TYPES.UNKNOWN) {
           updates.site_type = detectedType
         }

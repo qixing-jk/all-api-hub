@@ -6,13 +6,26 @@ import {
 
 export type TempWindowFallbackSettingsTab = "refresh" | "permissions"
 export type TempWindowFallbackSettingsAnchor = "shield-settings"
+export type TempWindowFallbackReminderCode =
+  | typeof TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED
+  | typeof TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED
 
 export interface TempWindowFallbackIssue {
-  code: HealthStatusCode
+  code: TempWindowFallbackReminderCode
   accountId: string
   accountName: string
   settingsTab: TempWindowFallbackSettingsTab
   settingsAnchor?: TempWindowFallbackSettingsAnchor
+}
+
+/** Invalid invocation context is locally retryable and must not open Settings. */
+export function isTempWindowFallbackReminderCode(
+  code: HealthStatusCode | null,
+): code is TempWindowFallbackReminderCode {
+  return (
+    code === TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED ||
+    code === TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED
+  )
 }
 
 /**
@@ -51,10 +64,7 @@ export function getTempWindowFallbackIssue(
 ): TempWindowFallbackIssue | null {
   for (const site of sites) {
     const code = site.health?.code
-    if (
-      code !== TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED &&
-      code !== TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED
-    ) {
+    if (!code || !isTempWindowFallbackReminderCode(code)) {
       continue
     }
 

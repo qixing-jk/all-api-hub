@@ -28,6 +28,21 @@ describe("account health helpers", () => {
     expect(
       determineHealthStatus(
         new ApiError(
+          "expired command",
+          undefined,
+          "/api/user/self",
+          API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+        ),
+      ),
+    ).toEqual({
+      status: SiteHealthStatus.Warning,
+      message: "messages:background.tempWindowPolicyContextInvalid",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.POLICY_CONTEXT_INVALID,
+    })
+
+    expect(
+      determineHealthStatus(
+        new ApiError(
           "permission required",
           undefined,
           "/api/user/self",

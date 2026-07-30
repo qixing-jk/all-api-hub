@@ -34,7 +34,10 @@ import {
   type ProductAnalyticsFailureReason,
   type ProductAnalyticsFailureStage,
 } from "~/services/productAnalytics/contracts"
+import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { getBrowserBookmarkTree } from "~/utils/browser/browserApi"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
 type BookmarkAccountImportDialogStage =
   | "permission-needed"
@@ -50,6 +53,7 @@ type BookmarkAccountImportDialogError =
   | "read-failed"
   | "empty"
   | "no-candidates"
+  | "import-failed"
   | "reload-failed"
   | null
 
@@ -548,10 +552,34 @@ export function useBookmarkAccountImportDialog() {
     const tracker = startProductAnalyticsAction(
       BOOKMARK_IMPORT_ANALYTICS_CONTEXT,
     )
-    const importResult = await runBookmarkAccountImport({
-      candidates: selectedCandidates,
-      onProgress: setProgress,
-    })
+    let importResult: BookmarkAccountImportRunResult
+    try {
+      importResult = await withProtectionBypassUserCommand(
+        PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+        getCurrentTempWindowRequestSource(),
+        (protectionBypassExecution) =>
+          runBookmarkAccountImport({
+            candidates: selectedCandidates,
+            onProgress: setProgress,
+            protectionBypassExecution,
+          }),
+      )
+    } catch {
+      setError("import-failed")
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+          itemCount: candidates.length,
+          selectedCount: selectedCandidates.length,
+          readyCount: scanSummary.readyCount,
+          blockedCount: scanSummary.duplicateCount,
+        },
+      })
+      setStage("review")
+      return
+    }
     setResult(importResult)
 
     try {

@@ -35,11 +35,11 @@
     "unsupportedModelSync": "AxonHub does not support managed-site model sync in this version"
   },
   "background": {
-    "cannotCreateWindow": "Unable to create window",
     "cannotCreateWindowOrTab": "Unable to create window or get tab",
     "incognitoAccessRequired": "Incognito access is required to use a private temporary window. Please enable \"Allow in incognito\" for this extension and retry.",
     "invalidFetchRequest": "Invalid fetch request",
     "pageLoadTimeout": "Page load timeout",
+    "tempWindowPolicyContextInvalid": "This operation cannot continue. Start it again.",
     "windowCreationUnavailable": "This flow needs the browser to open a temporary window, but window creation is unavailable. Allow extension-created windows or retry in a browser that supports them.",
     "windowNotFound": "Window or tab not found"
   },

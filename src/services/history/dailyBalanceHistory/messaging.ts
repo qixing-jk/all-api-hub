@@ -1,3 +1,4 @@
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
@@ -10,6 +11,7 @@ export interface BalanceHistoryUpdateSettingsRequest {
 
 export interface BalanceHistoryRefreshNowRequest {
   accountIds?: string[]
+  protectionBypassExecution: ProtectionBypassExecution
 }
 
 export type BalanceHistoryUpdateSettingsResponse = RuntimeMessageResponse<{
@@ -27,7 +29,7 @@ interface BalanceHistoryProtocolMap {
     data: BalanceHistoryUpdateSettingsRequest,
   ): BalanceHistoryUpdateSettingsResponse
   [BalanceHistoryMessageTypes.RefreshNow](
-    data?: BalanceHistoryRefreshNowRequest,
+    data: BalanceHistoryRefreshNowRequest,
   ): BalanceHistoryRefreshNowResponse
   [BalanceHistoryMessageTypes.Prune](): RuntimeMessageResponse<undefined>
 }

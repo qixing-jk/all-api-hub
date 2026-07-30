@@ -18,6 +18,11 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+} from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type {
   AutoCheckinRunResult,
@@ -136,11 +141,17 @@ export function useAutoCheckinUiOpenPretrigger(): {
     void (async () => {
       try {
         const tempWindowRequestSource = getCurrentTempWindowRequestSource()
+        const protectionBypassExecution =
+          createAutomaticProtectionBypassExecution(
+            PROTECTION_BYPASS_FEATURES.Checkin,
+            PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+            tempWindowRequestSource,
+          )
         const response = await sendAutoCheckinMessage(
           AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
           {
             requestId,
-            tempWindowRequestSource,
+            protectionBypassExecution,
           },
         )
 

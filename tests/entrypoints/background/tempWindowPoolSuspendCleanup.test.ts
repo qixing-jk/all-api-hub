@@ -94,7 +94,9 @@ describe("cleanupTempContextsOnSuspend", () => {
       cleanupTempContextsOnSuspend,
       handleCloseTempWindow,
       handleTempWindowGetRenderedTitle,
-    } = await import("~/entrypoints/background/tempWindowPool")
+    } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
 
     const firstResponse = vi.fn()
     const firstRequest = handleTempWindowGetRenderedTitle(
@@ -158,7 +160,7 @@ describe("cleanupTempContextsOnSuspend", () => {
 
   it("resolves without closing anything when no temp contexts are tracked", async () => {
     const { cleanupTempContextsOnSuspend } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     await expect(cleanupTempContextsOnSuspend()).resolves.toBeUndefined()

@@ -17,7 +17,10 @@ import {
 import { normalizeOpenRouterManagementKeySecret } from "~/services/apiAdapters/openrouter/managementKeySecret"
 import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
 
-import { tempWindowBackgroundRuntime } from "../tempWindowPool"
+import {
+  tempWindowBackgroundRuntime,
+  type AuthorizeTempContextAtAcquire,
+} from "../tempWindowPool"
 
 type OpenRouterManagementKeyActionState = {
   request: TempWindowOpenRouterManagementKeyActionParams
@@ -34,6 +37,10 @@ type OpenRouterManagementKeyActionState = {
     reason?: string
   }) => Promise<void>
 }
+
+/** Fails closed when a non-runtime caller omits Coordinator authorization. */
+const denyMissingProtectionBypassIntent: AuthorizeTempContextAtAcquire =
+  async () => ({ kind: "denied", reason: "missing_intent" })
 
 const openRouterManagementKeyActions = new Map<
   string,
@@ -233,6 +240,8 @@ function normalizeOrigin(url: string) {
 /** Executes one canonical OpenRouter page action under the temp-page scheduler. */
 async function executeTempWindowOpenRouterManagementKeyAction(
   state: OpenRouterManagementKeyActionState,
+  suppressMinimize: boolean,
+  authorizeAtAcquire: AuthorizeTempContextAtAcquire,
 ) {
   const { request } = state
   let pageDeadlineExpired = false
@@ -276,7 +285,9 @@ async function executeTempWindowOpenRouterManagementKeyAction(
     const context = await tempWindowBackgroundRuntime.acquire(
       OPENROUTER_MANAGEMENT_KEYS_URL,
       request.requestId,
-      Boolean(request.suppressMinimize),
+      suppressMinimize,
+      {},
+      authorizeAtAcquire,
     )
     state.contextAcquired = true
     state.releaseContext = context.release
@@ -464,9 +475,11 @@ async function executeTempWindowOpenRouterManagementKeyAction(
 /** Queues a dedicated OpenRouter page action and guards its lifecycle. */
 export async function handleTempWindowOpenRouterManagementKeyAction(
   request: TempWindowOpenRouterManagementKeyActionParams,
+  suppressMinimize: boolean,
   sendResponse: (
     response: TempWindowOpenRouterManagementKeyActionResult,
   ) => void,
+  authorizeAtAcquire: AuthorizeTempContextAtAcquire = denyMissingProtectionBypassIntent,
 ) {
   if (
     !request ||
@@ -518,7 +531,12 @@ export async function handleTempWindowOpenRouterManagementKeyAction(
     await tempWindowBackgroundRuntime.run(
       OPENROUTER_MANAGEMENT_KEYS_URL,
       {},
-      () => executeTempWindowOpenRouterManagementKeyAction(state),
+      () =>
+        executeTempWindowOpenRouterManagementKeyAction(
+          state,
+          suppressMinimize,
+          authorizeAtAcquire,
+        ),
     )
   } catch {
     await settleOpenRouterManagementKeyAction(

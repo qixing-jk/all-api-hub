@@ -31,6 +31,17 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsResult,
 } from "~/services/productAnalytics/contracts"
+import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+  isProtectionBypassExecution,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_EXECUTION_KINDS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+  type ProtectionBypassExecution,
+  type ProtectionBypassUserCommand,
+} from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import {
@@ -81,6 +92,37 @@ import { resolveAutoCheckinProvider } from "./providers"
 import { AUTO_CHECKIN_STATUS_STORAGE_LOCK, autoCheckinStorage } from "./storage"
 
 const logger = createLogger("AutoCheckin")
+
+const createAutomaticCheckinExecution = (
+  trigger: (typeof PROTECTION_BYPASS_AUTOMATIC_TRIGGERS)[keyof typeof PROTECTION_BYPASS_AUTOMATIC_TRIGGERS],
+  surface: TempWindowRequestSource,
+) =>
+  createAutomaticProtectionBypassExecution(
+    PROTECTION_BYPASS_FEATURES.Checkin,
+    trigger,
+    surface,
+  )
+
+const isExpectedCheckinCommandExecution = (
+  execution: unknown,
+  expectedCommand: ProtectionBypassUserCommand,
+): execution is Extract<
+  ProtectionBypassExecution,
+  { kind: typeof PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand }
+> =>
+  isProtectionBypassExecution(execution) &&
+  execution.kind === PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand &&
+  execution.command === expectedCommand
+
+const isUiOpenCheckinExecution = (
+  execution: unknown,
+  surface: TempWindowRequestSource,
+): execution is ProtectionBypassExecution =>
+  isProtectionBypassExecution(execution) &&
+  execution.kind === "automatic" &&
+  execution.feature === PROTECTION_BYPASS_FEATURES.Checkin &&
+  execution.trigger === PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle &&
+  execution.surface === surface
 
 /**
  * Reason codes describing why the UI-open pre-trigger is not eligible to run.
@@ -178,6 +220,7 @@ class AutoCheckinScheduler {
     accountIds: string[]
     force?: boolean
     tempWindowRequestSource?: TempWindowRequestSource
+    protectionBypassExecution?: ProtectionBypassExecution
   }): Promise<void> {
     try {
       const uniqueAccountIds = Array.from(new Set(params.accountIds)).filter(
@@ -199,6 +242,12 @@ class AutoCheckinScheduler {
               const result = params.tempWindowRequestSource
                 ? await accountStorage.refreshAccount(accountId, force, {
                     tempWindowRequestSource: params.tempWindowRequestSource,
+                    ...(params.protectionBypassExecution
+                      ? {
+                          protectionBypassExecution:
+                            params.protectionBypassExecution,
+                        }
+                      : {}),
                   })
                 : await accountStorage.refreshAccount(accountId, force)
               if (result?.refreshed === true) return "refreshed"
@@ -943,7 +992,8 @@ class AutoCheckinScheduler {
   private async runAccountCheckin(
     account: SiteAccount,
     accountName: string,
-    tempWindowRequestSource: TempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Background,
+    tempWindowRequestSource: TempWindowRequestSource,
+    protectionBypassExecution: ProtectionBypassExecution,
   ): Promise<{
     result: CheckinAccountResult
     successful: boolean
@@ -984,6 +1034,7 @@ class AutoCheckinScheduler {
 
       const providerResult = await provider.checkIn(account, {
         tempWindowRequestSource,
+        protectionBypassExecution,
       })
       const result = buildResult(providerResult.status, {
         messageKey: providerResult.messageKey,
@@ -1032,6 +1083,7 @@ class AutoCheckinScheduler {
     accounts: SiteAccount[]
     accountDisplayNameById: Map<string, string>
     tempWindowRequestSource: TempWindowRequestSource
+    protectionBypassExecution: ProtectionBypassExecution
   }): Promise<
     Array<{
       result: CheckinAccountResult
@@ -1047,6 +1099,7 @@ class AutoCheckinScheduler {
             account,
             accountName,
             params.tempWindowRequestSource,
+            params.protectionBypassExecution,
           )
         } catch (error) {
           return {
@@ -1085,6 +1138,10 @@ class AutoCheckinScheduler {
               await this.handleDailyAlarm(
                 alarm,
                 TEMP_WINDOW_REQUEST_SOURCES.Background,
+                createAutomaticCheckinExecution(
+                  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+                  TEMP_WINDOW_REQUEST_SOURCES.Background,
+                ),
               )
             } catch (error) {
               logger.error("Daily alarm execution failed", error)
@@ -1484,7 +1541,8 @@ class AutoCheckinScheduler {
    */
   private async handleDailyAlarm(
     alarm: browser.alarms.Alarm,
-    tempWindowRequestSource: TempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Background,
+    tempWindowRequestSource: TempWindowRequestSource,
+    protectionBypassExecution: ProtectionBypassExecution,
   ) {
     const now = new Date()
     const today = this.getLocalDay(now)
@@ -1517,6 +1575,7 @@ class AutoCheckinScheduler {
         await this.runCheckins({
           runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
           tempWindowRequestSource,
+          protectionBypassExecution,
         })
       } catch (error) {
         logger.error("Error during daily check-in execution", error)
@@ -1544,9 +1603,10 @@ class AutoCheckinScheduler {
    * This method is intentionally scoped to the existing daily alarm path and
    * does not change retry behavior or provider semantics.
    */
-  async pretriggerDailyOnUiOpen(params?: {
+  async pretriggerDailyOnUiOpen(params: {
     requestId?: string
     tempWindowRequestSource?: TempWindowRequestSource
+    protectionBypassExecution: ProtectionBypassExecution
     /**
      * When true, evaluates eligibility but does not execute the daily run.
      * Intended for UI diagnostics so users can understand why a pre-trigger did
@@ -1715,7 +1775,8 @@ class AutoCheckinScheduler {
         name: AutoCheckinScheduler.DAILY_ALARM_NAME,
         scheduledTime: dailyAlarm.scheduledTime,
       } as browser.alarms.Alarm,
-      params?.tempWindowRequestSource ?? TEMP_WINDOW_REQUEST_SOURCES.Background,
+      params.tempWindowRequestSource ?? TEMP_WINDOW_REQUEST_SOURCES.Background,
+      params.protectionBypassExecution,
     )
 
     const updatedStatus = await autoCheckinStorage.getStatus()
@@ -1762,7 +1823,13 @@ class AutoCheckinScheduler {
 
     logger.info("Retry alarm triggered; starting retries")
     try {
-      await this.runRetryCheckins()
+      await this.runRetryCheckins(
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+        createAutomaticCheckinExecution(
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Retry,
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+        ),
+      )
     } catch (error) {
       logger.error("Error during retry execution", error)
     } finally {
@@ -1785,6 +1852,10 @@ class AutoCheckinScheduler {
         scheduledTime: Date.now(),
       } as browser.alarms.Alarm,
       TEMP_WINDOW_REQUEST_SOURCES.Background,
+      createAutomaticCheckinExecution(
+        PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+        TEMP_WINDOW_REQUEST_SOURCES.Background,
+      ),
     )
   }
 
@@ -1865,10 +1936,11 @@ class AutoCheckinScheduler {
    * Important: we DO NOT use `checkIn.siteStatus.isCheckedInToday` for eligibility because it
    * is not trusted. Providers must return `already_checked` when appropriate.
    */
-  async runCheckins(options?: {
+  async runCheckins(options: {
     runType?: AutoCheckinRunType
     targetAccountIds?: string[]
     tempWindowRequestSource?: TempWindowRequestSource
+    protectionBypassExecution: ProtectionBypassExecution
   }): Promise<void> {
     // Default to manual runs for UI-triggered or debug entry points.
     const runType = options?.runType ?? AUTO_CHECKIN_RUN_TYPE.MANUAL
@@ -1876,6 +1948,7 @@ class AutoCheckinScheduler {
     const targetAccountIds = options?.targetAccountIds
     const tempWindowRequestSource =
       options?.tempWindowRequestSource ?? TEMP_WINDOW_REQUEST_SOURCES.Background
+    const protectionBypassExecution = options.protectionBypassExecution
     const targetAccountIdSet =
       !isDailyRun &&
       Array.isArray(targetAccountIds) &&
@@ -2114,6 +2187,7 @@ class AutoCheckinScheduler {
         accounts: runnableAccounts,
         accountDisplayNameById,
         tempWindowRequestSource,
+        protectionBypassExecution,
       })
 
       for (const outcome of checkinOutcomes) {
@@ -2231,6 +2305,7 @@ class AutoCheckinScheduler {
         accountIds: accountIdsToRefresh,
         force: true,
         tempWindowRequestSource,
+        protectionBypassExecution,
       })
 
       if (notifyUiOnCompletion) {
@@ -2330,7 +2405,8 @@ class AutoCheckinScheduler {
    * - Retries stop once `attempts >= retryStrategy.maxAttemptsPerDay`.
    */
   private async runRetryCheckins(
-    tempWindowRequestSource: TempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Background,
+    tempWindowRequestSource: TempWindowRequestSource,
+    protectionBypassExecution: ProtectionBypassExecution,
   ): Promise<void> {
     const startTime = Date.now()
     const now = new Date()
@@ -2427,6 +2503,7 @@ class AutoCheckinScheduler {
         account,
         accountDisplayNameById.get(account.id) ?? account.id,
         tempWindowRequestSource,
+        protectionBypassExecution,
       )
       // Persist that we've attempted one more time for this account today, regardless of outcome.
       attemptsByAccount[accountId] = attempts + 1
@@ -2493,6 +2570,7 @@ class AutoCheckinScheduler {
       accountIds: accountIdsToRefresh,
       force: true,
       tempWindowRequestSource,
+      protectionBypassExecution,
     })
 
     if (notifyUiOnCompletion) {
@@ -2599,7 +2677,8 @@ class AutoCheckinScheduler {
    */
   async retryAccount(
     accountId: string,
-    tempWindowRequestSource: TempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Background,
+    tempWindowRequestSource: TempWindowRequestSource,
+    protectionBypassExecution: ProtectionBypassExecution,
   ) {
     const today = this.getLocalDay()
     const allAccounts = await accountStorage.getAllAccounts()
@@ -2627,6 +2706,7 @@ class AutoCheckinScheduler {
               account,
               accountDisplayNameById.get(account.id) ?? account.id,
               tempWindowRequestSource,
+              protectionBypassExecution,
             )
           ).result
 
@@ -2765,20 +2845,36 @@ function parseTargetAccountIds(accountIds: unknown):
 /**
  * Run auto check-in immediately for all or selected accounts.
  */
-export async function runAutoCheckinNow(data: AutoCheckinRunNowRequest = {}) {
+export async function runAutoCheckinNow(
+  data: AutoCheckinRunNowRequest = {},
+  verifiedTempWindowRequestSource?: TempWindowRequestSource,
+) {
   const targetIdsResult = parseTargetAccountIds(data.accountIds)
   if (!targetIdsResult.success) {
     return { success: false as const, error: targetIdsResult.error }
   }
-  const tempWindowRequestSource = normalizeTempWindowRequestSource(
-    data.tempWindowRequestSource,
-  )
+  const tempWindowRequestSource =
+    verifiedTempWindowRequestSource ??
+    data.protectionBypassExecution?.surface ??
+    TEMP_WINDOW_REQUEST_SOURCES.Background
+  if (
+    !isExpectedCheckinCommandExecution(
+      data.protectionBypassExecution,
+      PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+    )
+  ) {
+    return {
+      success: false as const,
+      error: "Missing or invalid protection bypass execution",
+    }
+  }
 
   try {
     await autoCheckinScheduler.runCheckins({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: targetIdsResult.targetAccountIds,
       tempWindowRequestSource,
+      protectionBypassExecution: data.protectionBypassExecution,
     })
     return { success: true as const }
   } catch (e) {
@@ -2866,15 +2962,29 @@ export async function scheduleAutoCheckinDailyAlarmForToday(
  */
 export async function pretriggerAutoCheckinDailyOnUiOpen(
   data: AutoCheckinPretriggerDailyOnUiOpenRequest = {},
+  verifiedTempWindowRequestSource?: TempWindowRequestSource,
 ) {
-  const tempWindowRequestSource = normalizeTempWindowRequestSource(
-    data.tempWindowRequestSource,
-  )
+  const tempWindowRequestSource =
+    verifiedTempWindowRequestSource ??
+    data.protectionBypassExecution?.surface ??
+    TEMP_WINDOW_REQUEST_SOURCES.Background
+  if (
+    !isUiOpenCheckinExecution(
+      data.protectionBypassExecution,
+      tempWindowRequestSource,
+    )
+  ) {
+    return {
+      success: false as const,
+      error: "Missing or invalid protection bypass execution",
+    }
+  }
   const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
     requestId: data.requestId,
     dryRun: data.dryRun,
     debug: data.debug,
     tempWindowRequestSource,
+    protectionBypassExecution: data.protectionBypassExecution,
   })
   return { success: true as const, ...result }
 }
@@ -2885,13 +2995,28 @@ export async function pretriggerAutoCheckinDailyOnUiOpen(
 export async function retryAutoCheckinAccount(
   accountId?: string,
   tempWindowRequestSource?: unknown,
+  protectionBypassExecution?: unknown,
+  verifiedTempWindowRequestSource?: TempWindowRequestSource,
 ) {
   if (!accountId) {
     return { success: false as const, error: "Missing accountId" }
   }
+  if (
+    !isExpectedCheckinCommandExecution(
+      protectionBypassExecution,
+      PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount,
+    )
+  ) {
+    return {
+      success: false as const,
+      error: "Missing or invalid protection bypass execution",
+    }
+  }
   await autoCheckinScheduler.retryAccount(
     accountId,
-    normalizeTempWindowRequestSource(tempWindowRequestSource),
+    verifiedTempWindowRequestSource ??
+      normalizeTempWindowRequestSource(tempWindowRequestSource),
+    protectionBypassExecution,
   )
   return { success: true as const }
 }
@@ -2938,6 +3063,20 @@ function toAutoCheckinFailure(error: unknown) {
   return { success: false as const, error: getErrorMessage(error) }
 }
 
+/** Validates plain execution intent before forwarding a typed check-in request. */
+async function resolveVerifiedAutoCheckinMessage<T>(
+  execution: unknown,
+  resolve: (tempWindowRequestSource: TempWindowRequestSource) => Promise<T>,
+) {
+  if (!isProtectionBypassExecution(execution)) {
+    return {
+      success: false as const,
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+    }
+  }
+  return await resolve(execution.surface)
+}
+
 let autoCheckinMessagingCleanup: (() => void)[] | null = null
 
 /**
@@ -2951,7 +3090,11 @@ export function setupAutoCheckinMessagingListeners() {
   autoCheckinMessagingCleanup = [
     onAutoCheckinMessage(AutoCheckinMessageTypes.RunNow, async ({ data }) => {
       try {
-        return await runAutoCheckinNow(data)
+        return await resolveVerifiedAutoCheckinMessage(
+          data?.protectionBypassExecution,
+          (tempWindowRequestSource) =>
+            runAutoCheckinNow(data, tempWindowRequestSource),
+        )
       } catch (error) {
         return toAutoCheckinFailure(error)
       }
@@ -3000,7 +3143,11 @@ export function setupAutoCheckinMessagingListeners() {
       AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
       async ({ data }) => {
         try {
-          return await pretriggerAutoCheckinDailyOnUiOpen(data)
+          return await resolveVerifiedAutoCheckinMessage(
+            data?.protectionBypassExecution,
+            (tempWindowRequestSource) =>
+              pretriggerAutoCheckinDailyOnUiOpen(data, tempWindowRequestSource),
+          )
         } catch (error) {
           return toAutoCheckinFailure(error)
         }
@@ -3010,9 +3157,15 @@ export function setupAutoCheckinMessagingListeners() {
       AutoCheckinMessageTypes.RetryAccount,
       async ({ data }) => {
         try {
-          return await retryAutoCheckinAccount(
-            data.accountId,
-            data.tempWindowRequestSource,
+          return await resolveVerifiedAutoCheckinMessage(
+            data?.protectionBypassExecution,
+            (tempWindowRequestSource) =>
+              retryAutoCheckinAccount(
+                data.accountId,
+                data.protectionBypassExecution?.surface,
+                data.protectionBypassExecution,
+                tempWindowRequestSource,
+              ),
           )
         } catch (error) {
           return toAutoCheckinFailure(error)

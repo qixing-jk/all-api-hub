@@ -126,8 +126,8 @@
     "httpError": "HTTP {{statusCode}}: {{message}}",
     "networkFailed": "ネットワーク接続に失敗しました",
     "normal": "アカウント状態は正常です",
-    "tempWindowDisabled": "保護回避が無効です。設定 > データ更新 で有効にしてください",
-    "tempWindowPermissionRequired": "Firefox では保護回避に Cookie Interceptor 権限が必要です。設定 > 権限 で付与してください",
+    "tempWindowDisabled": "自動更新でサイト認証が必要になりましたが、自動タスクによる一時ページの表示は現在許可されていません。設定 > データ更新 で有効にしてください",
+    "tempWindowPermissionRequired": "Firefox でサイト認証を行うには、Cookies、Web Request、Web Request Blocking の各権限が必要です。設定 > 権限 で許可してください",
     "unknown": "不明",
     "unknownError": "不明なエラー",
     "warning": "警告"

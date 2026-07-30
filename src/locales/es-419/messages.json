@@ -35,11 +35,11 @@
     "unsupportedModelSync": "AxonHub no admite la sincronización de modelos de sitios administrados en esta versión"
   },
   "background": {
-    "cannotCreateWindow": "No se puede crear la ventana",
     "cannotCreateWindowOrTab": "No se puede crear la ventana ni obtener la pestaña",
     "incognitoAccessRequired": "Se requiere acceso de incógnito para usar una ventana temporal privada. Habilita \"Permitir en incógnito\" para esta extensión y vuelve a intentarlo.",
     "invalidFetchRequest": "Solicitud fetch no válida",
     "pageLoadTimeout": "Tiempo de carga de la página agotado",
+    "tempWindowPolicyContextInvalid": "Esta operación no puede continuar. Iníciala de nuevo.",
     "windowCreationUnavailable": "Este flujo necesita que el navegador abra una ventana temporal, pero la creación de ventanas no está disponible. Permite ventanas creadas por extensiones o reintenta en un navegador que las admita.",
     "windowNotFound": "No se encontró la ventana o pestaña"
   },

@@ -1005,6 +1005,13 @@ describe("useKeyManagement enabled account filtering", () => {
           name: "Codex",
           accountId: "sharedchat-status-acc",
         }),
+        protectionBypassExecution: {
+          version: 1,
+          kind: "automatic",
+          feature: "session_resync",
+          trigger: "ui_lifecycle",
+          surface: "options",
+        },
       }),
     )
   })
@@ -2930,6 +2937,14 @@ describe("useKeyManagement enabled account filtering", () => {
     await act(async () => {
       await result.current.refreshManagedSiteTokenStatusForToken(
         result.current.tokens[0]!,
+        {
+          protectionBypassExecution: {
+            version: 1,
+            kind: "user_command",
+            command: "verify_protection",
+            surface: "options",
+          },
+        },
       )
     })
 
@@ -2938,6 +2953,12 @@ describe("useKeyManagement enabled account filtering", () => {
       expect.objectContaining({
         resolvedChannelKeysById: {
           77: "verified-channel-key",
+        },
+        protectionBypassExecution: {
+          version: 1,
+          kind: "user_command",
+          command: "verify_protection",
+          surface: "options",
         },
       }),
     )

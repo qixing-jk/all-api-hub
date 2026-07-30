@@ -6,6 +6,7 @@ import {
   fetchSupportCheckIn,
   refreshAccountData,
 } from "~/services/apiService/anyrouter"
+import { PROTECTION_BYPASS_FEATURES } from "~/services/protectionBypass/contracts"
 import { SiteHealthStatus } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -61,7 +62,16 @@ vi.mock("~/utils/i18n/core", () => ({
 describe("AnyRouter API service", () => {
   const backgroundProviderContext = {
     tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+    protectionBypassExecution: {
+      version: 1,
+      kind: "automatic",
+      feature: PROTECTION_BYPASS_FEATURES.Checkin,
+      trigger: "scheduled",
+      surface: TEMP_WINDOW_REQUEST_SOURCES.Background,
+    },
   }
+  const protectionBypassExecution =
+    backgroundProviderContext.protectionBypassExecution
   const baseRequest = {
     baseUrl: "https://anyrouter.example.com",
     auth: {
@@ -81,6 +91,7 @@ describe("AnyRouter API service", () => {
         openRedeemWithCheckIn: true,
       },
     },
+    protectionBypassExecution,
   } as any
 
   beforeEach(() => {
@@ -173,6 +184,9 @@ describe("AnyRouter API service", () => {
 
     expect(mockCheckIn).toHaveBeenCalledWith(expect.any(Object), {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution: expect.objectContaining({
+        feature: PROTECTION_BYPASS_FEATURES.Checkin,
+      }),
     })
   })
 

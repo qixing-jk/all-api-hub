@@ -15,6 +15,17 @@ import {
   SITE_TYPES,
   type ManagedSiteType,
 } from "~/constants/siteType"
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_DECISION_RESULTS,
+  PROTECTION_BYPASS_DENIED_REASONS,
+  PROTECTION_BYPASS_EXECUTION_KINDS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_OPERATIONS,
+  type ProtectionBypassDecisionResult,
+  type ProtectionBypassDeniedReason,
+} from "~/services/protectionBypass/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import {
   AuthTypeEnum,
@@ -66,6 +77,113 @@ export const PRODUCT_ANALYTICS_RESULTS = {
 
 export type ProductAnalyticsResult =
   (typeof PRODUCT_ANALYTICS_RESULTS)[keyof typeof PRODUCT_ANALYTICS_RESULTS]
+
+/** Exhaustive privacy-safe outcome classification for every policy denial. */
+export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION = {
+  [PROTECTION_BYPASS_DENIED_REASONS.AutomaticDisabled]:
+    PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+  [PROTECTION_BYPASS_DENIED_REASONS.FeatureDisabled]:
+    PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+  [PROTECTION_BYPASS_DENIED_REASONS.SurfaceDisabled]:
+    PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+  [PROTECTION_BYPASS_DENIED_REASONS.ManualFeatureDisabled]:
+    PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+  [PROTECTION_BYPASS_DENIED_REASONS.MissingIntent]:
+    PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+  [PROTECTION_BYPASS_DENIED_REASONS.InvalidIntent]:
+    PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+  [PROTECTION_BYPASS_DENIED_REASONS.OperationNotPermitted]:
+    PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+  [PROTECTION_BYPASS_DENIED_REASONS.ResourceStale]:
+    PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+  [PROTECTION_BYPASS_DENIED_REASONS.PermissionRequired]:
+    PROTECTION_BYPASS_DECISION_RESULTS.Unavailable,
+  [PROTECTION_BYPASS_DENIED_REASONS.UnsupportedEnvironment]:
+    PROTECTION_BYPASS_DECISION_RESULTS.Unavailable,
+  [PROTECTION_BYPASS_DENIED_REASONS.PolicyUnavailable]:
+    PROTECTION_BYPASS_DECISION_RESULTS.Unavailable,
+} as const satisfies Record<
+  ProtectionBypassDeniedReason,
+  Exclude<
+    ProtectionBypassDecisionResult,
+    typeof PROTECTION_BYPASS_DECISION_RESULTS.Allowed
+  >
+>
+
+const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_REASONS = Object.keys(
+  PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION,
+) as ProtectionBypassDeniedReason[]
+
+export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS = {
+  featureCounts: [...Object.values(PROTECTION_BYPASS_FEATURES), "other"],
+  invocationKindCounts: [
+    ...Object.values(PROTECTION_BYPASS_EXECUTION_KINDS),
+    "other",
+  ],
+  automaticTriggerCounts: [
+    ...Object.values(PROTECTION_BYPASS_AUTOMATIC_TRIGGERS),
+    "other",
+  ],
+  operationCounts: [...Object.values(PROTECTION_BYPASS_OPERATIONS), "other"],
+  decisionCounts: [
+    ...Object.values(PROTECTION_BYPASS_DECISION_RESULTS),
+    "other",
+  ],
+  denialReasonCounts: [
+    ...PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_REASONS,
+    "other",
+  ],
+  adapterCounts: [...Object.values(TEMP_CONTEXT_MODES), "other"],
+} as const
+
+/** Fixed scalar properties emitted by the bounded daily bypass summary. */
+export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES = [
+  "protection_bypass_feature_account_refresh_count",
+  "protection_bypass_feature_account_onboarding_count",
+  "protection_bypass_feature_checkin_count",
+  "protection_bypass_feature_site_detection_count",
+  "protection_bypass_feature_session_resync_count",
+  "protection_bypass_feature_verification_count",
+  "protection_bypass_feature_other_count",
+  "protection_bypass_invocation_user_command_count",
+  "protection_bypass_invocation_automatic_count",
+  "protection_bypass_invocation_other_count",
+  "protection_bypass_trigger_ui_lifecycle_count",
+  "protection_bypass_trigger_scheduled_count",
+  "protection_bypass_trigger_retry_count",
+  "protection_bypass_trigger_background_recovery_count",
+  "protection_bypass_trigger_other_count",
+  "protection_bypass_operation_fetch_count",
+  "protection_bypass_operation_turnstile_fetch_count",
+  "protection_bypass_operation_native_page_action_count",
+  "protection_bypass_operation_rendered_title_count",
+  "protection_bypass_operation_session_read_count",
+  "protection_bypass_operation_open_context_count",
+  "protection_bypass_operation_other_count",
+  "protection_bypass_decision_allowed_count",
+  "protection_bypass_decision_denied_count",
+  "protection_bypass_decision_unavailable_count",
+  "protection_bypass_decision_other_count",
+  "protection_bypass_denial_automatic_disabled_count",
+  "protection_bypass_denial_feature_disabled_count",
+  "protection_bypass_denial_surface_disabled_count",
+  "protection_bypass_denial_manual_feature_disabled_count",
+  "protection_bypass_denial_missing_intent_count",
+  "protection_bypass_denial_invalid_intent_count",
+  "protection_bypass_denial_operation_not_permitted_count",
+  "protection_bypass_denial_resource_stale_count",
+  "protection_bypass_denial_permission_required_count",
+  "protection_bypass_denial_unsupported_environment_count",
+  "protection_bypass_denial_policy_unavailable_count",
+  "protection_bypass_denial_other_count",
+  "protection_bypass_adapter_window_count",
+  "protection_bypass_adapter_composite_count",
+  "protection_bypass_adapter_tab_count",
+  "protection_bypass_adapter_other_count",
+] as const
+
+export type ProductAnalyticsProtectionBypassCountProperty =
+  (typeof PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES)[number]
 
 export const PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS = {
   KiloV7: "kilo-v7",
@@ -1008,7 +1126,7 @@ export type ProductAnalyticsEventPayloadMap = {
     temp_window_fetch_failure_count?: number
     temp_window_turnstile_fetch_success_count?: number
     temp_window_turnstile_fetch_failure_count?: number
-  }
+  } & Partial<Record<ProductAnalyticsProtectionBypassCountProperty, number>>
   [PRODUCT_ANALYTICS_EVENTS.SponsorRecommendationsDailySummaryCaptured]: {
     feature_id: typeof PRODUCT_ANALYTICS_FEATURE_IDS.SponsorRecommendations
     entrypoint: typeof PRODUCT_ANALYTICS_ENTRYPOINTS.Background
@@ -1211,7 +1329,7 @@ export type ProductAnalyticsEventPayloadMap = {
     web_ai_api_check_auto_detect_enabled?: boolean
     web_ai_api_check_auto_detect_enhanced_enabled?: boolean
     web_ai_api_check_auto_detect_patterns_configured?: boolean
-    temp_window_fallback_enabled?: boolean
+    temp_window_fallback_automatic_bypass_enabled?: boolean
     temp_window_fallback_popup_enabled?: boolean
     temp_window_fallback_sidepanel_enabled?: boolean
     temp_window_fallback_options_enabled?: boolean

@@ -1,3 +1,4 @@
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
@@ -22,6 +23,10 @@ export type AutoRefreshRefreshNowResponse = RuntimeMessageResponse<{
   failed: number
 }>
 
+export interface AutoRefreshRefreshNowRequest {
+  protectionBypassExecution: ProtectionBypassExecution
+}
+
 export type AutoRefreshStatusResponse = RuntimeMessageResponse<{
   isRunning: boolean
   isInitialized: boolean
@@ -31,7 +36,9 @@ export type AutoRefreshMutationResponse = RuntimeMessageResponse<undefined>
 
 interface AutoRefreshProtocolMap {
   [AutoRefreshMessageTypes.Setup](): AutoRefreshMutationResponse
-  [AutoRefreshMessageTypes.RefreshNow](): AutoRefreshRefreshNowResponse
+  [AutoRefreshMessageTypes.RefreshNow](
+    data: AutoRefreshRefreshNowRequest,
+  ): AutoRefreshRefreshNowResponse
   [AutoRefreshMessageTypes.Stop](): AutoRefreshMutationResponse
   [AutoRefreshMessageTypes.UpdateSettings](
     data: AutoRefreshUpdateSettingsRequest,

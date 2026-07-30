@@ -25,6 +25,7 @@ import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequ
 const createRequest = (
   account: SiteAccount,
   tempWindowRequestSource: TempWindowRequestSource,
+  protectionBypassExecution?: AutoCheckinProviderContext["protectionBypassExecution"],
 ): ApiServiceRequest => ({
   baseUrl: account.site_url,
   accountId: account.id,
@@ -34,6 +35,7 @@ const createRequest = (
     userId: account.account_info.id,
   },
   tempWindowRequestSource,
+  ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
 })
 
 const isVoApiV2Account = (account: SiteAccount): boolean =>
@@ -102,10 +104,10 @@ export const voApiV2Provider: AutoCheckinProvider = {
   },
   async checkIn(
     account,
-    context?: AutoCheckinProviderContext,
+    context: AutoCheckinProviderContext,
   ): Promise<AutoCheckinProviderResult> {
     const tempWindowRequestSource = normalizeTempWindowRequestSource(
-      context?.tempWindowRequestSource,
+      context.tempWindowRequestSource,
     )
     try {
       if (!this.canCheckIn(account as SiteAccount)) {
@@ -116,7 +118,11 @@ export const voApiV2Provider: AutoCheckinProvider = {
       }
 
       const siteAccount = account as SiteAccount
-      const request = createRequest(siteAccount, tempWindowRequestSource)
+      const request = createRequest(
+        siteAccount,
+        tempWindowRequestSource,
+        context.protectionBypassExecution,
+      )
       try {
         return await runCheckIn(request)
       } catch (error) {
@@ -127,6 +133,7 @@ export const voApiV2Provider: AutoCheckinProvider = {
         const resynced = await resyncVoApiV2AuthToken(
           siteAccount.site_url,
           tempWindowRequestSource,
+          context.protectionBypassExecution,
         )
         if (!resynced) {
           throw error

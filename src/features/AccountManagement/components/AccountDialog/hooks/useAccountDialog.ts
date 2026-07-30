@@ -107,6 +107,11 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
 import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
+import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_USER_COMMANDS,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
 import {
   AuthTypeEnum,
   type ApiToken,
@@ -199,54 +204,56 @@ function createCurrentTabBrowserSessionContext(
 const logger = createLogger("AccountDialogHook")
 
 /**
- * Refreshes saved account data without keeping the account dialog save flow open.
+ * Refreshes saved account data within the originating save command.
  */
-function schedulePostSaveAccountRefresh(
+async function refreshPostSaveAccount(
   accountId: string,
   tempWindowRequestSource: TempWindowRequestSource,
+  protectionBypassExecution: ProtectionBypassExecution,
   onPostSaveAccountRefresh?: (accountIds: string[]) => Promise<void>,
 ) {
-  void accountStorage
-    .refreshAccount(accountId, true, { tempWindowRequestSource })
-    .then(async (result) => {
-      if (!result?.refreshed) {
-        return
-      }
+  try {
+    const result = await accountStorage.refreshAccount(accountId, true, {
+      tempWindowRequestSource,
+      protectionBypassExecution,
+    })
+    if (!result?.refreshed) {
+      return
+    }
 
-      if (onPostSaveAccountRefresh) {
-        await onPostSaveAccountRefresh([accountId])
-      }
+    if (onPostSaveAccountRefresh) {
+      await onPostSaveAccountRefresh([accountId])
+    }
 
-      try {
-        await sendRuntimeMessage(
-          {
-            action: RuntimeActionIds.AccountRefreshCompleted,
-            updatedAccountIds: [accountId],
-          },
-          { maxAttempts: 1 },
-        )
-      } catch (error) {
-        const errorMessage = getErrorMessage(error)
-        if (isMessageReceiverUnavailableError(error)) {
-          logger.debug("Post-save account refresh notification ignored", {
-            accountId,
-            error: errorMessage,
-          })
-          return
-        }
-
-        logger.warn("Post-save account refresh notification failed", {
+    try {
+      await sendRuntimeMessage(
+        {
+          action: RuntimeActionIds.AccountRefreshCompleted,
+          updatedAccountIds: [accountId],
+        },
+        { maxAttempts: 1 },
+      )
+    } catch (error) {
+      const errorMessage = getErrorMessage(error)
+      if (isMessageReceiverUnavailableError(error)) {
+        logger.debug("Post-save account refresh notification ignored", {
           accountId,
           error: errorMessage,
         })
+        return
       }
-    })
-    .catch((error) => {
-      logger.warn("Post-save deferred account refresh failed", {
+
+      logger.warn("Post-save account refresh notification failed", {
         accountId,
-        error: getErrorMessage(error),
+        error: errorMessage,
       })
+    }
+  } catch (error) {
+    logger.warn("Post-save initial account refresh failed", {
+      accountId,
+      error: getErrorMessage(error),
     })
+  }
 }
 
 interface CookieAuthPermissionState {
@@ -1722,21 +1729,31 @@ export function useAccountDialog({
       )
       let importError: unknown
 
-      const imported = await resolveAccountBrowserSession({
-        baseUrl,
-        siteType: SITE_TYPES.SUB2API,
-        ...(currentTab ? { currentTab } : {}),
-        useExistingTabs: true,
-        useTempWindow: true,
+      const imported = await withProtectionBypassUserCommand(
+        mode === DIALOG_MODES.ADD
+          ? PROTECTION_BYPASS_USER_COMMANDS.AddAccount
+          : PROTECTION_BYPASS_USER_COMMANDS.ReauthenticateAccount,
         tempWindowRequestSource,
-        requestIdPrefix: "account-dialog-sub2api-import",
-        isUsableSession: hasUsableSub2apiRefreshToken,
-        onError: (error, context) => {
-          if (context.source === ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW) {
-            importError ??= error
-          }
-        },
-      })
+        (protectionBypassExecution) =>
+          resolveAccountBrowserSession({
+            baseUrl,
+            siteType: SITE_TYPES.SUB2API,
+            ...(currentTab ? { currentTab } : {}),
+            useExistingTabs: true,
+            useTempWindow: true,
+            tempWindowRequestSource,
+            protectionBypassExecution,
+            requestIdPrefix: "account-dialog-sub2api-import",
+            isUsableSession: hasUsableSub2apiRefreshToken,
+            onError: (error, context) => {
+              if (
+                context.source === ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW
+              ) {
+                importError ??= error
+              }
+            },
+          }),
+      )
 
       const refreshToken = imported?.sub2apiAuth?.refreshToken?.trim() ?? ""
       if (!refreshToken) {
@@ -2012,31 +2029,37 @@ export function useAccountDialog({
         if (!openRouterAdmission) return
         let onboardingError: unknown
         let shouldShowDetectionError = false
-        const outcome = await startPreparedOpenRouterOnboarding({
-          preparation: openRouterAdmission.preparation,
-          onStarted: () => setSiteType(SITE_TYPES.OPENROUTER),
-          onCredentialCreated: (credential) => {
-            setDraft((prev) => ({ ...prev, accessToken: credential }))
-          },
-          onManualFallback: (failure) => {
-            onboardingError = failure.error
-            shouldShowDetectionError = failure.showDetectionError
-            if (failure.showDetectionError) {
-              setDetectionError(
-                failure.error
-                  ? analyzeAutoDetectError(failure.error)
-                  : {
-                      type: AutoDetectErrorType.UNKNOWN,
-                      message: failure.message ?? "",
-                    },
-              )
-            }
-            enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
-          },
-          onDetected: async (resultData) => {
-            await applyAutoDetectedData(resultData)
-          },
-        })
+        const outcome = await withProtectionBypassUserCommand(
+          PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+          getCurrentTempWindowRequestSource(),
+          (protectionBypassExecution) =>
+            startPreparedOpenRouterOnboarding({
+              preparation: openRouterAdmission.preparation,
+              protectionBypassExecution,
+              onStarted: () => setSiteType(SITE_TYPES.OPENROUTER),
+              onCredentialCreated: (credential) => {
+                setDraft((prev) => ({ ...prev, accessToken: credential }))
+              },
+              onManualFallback: (failure) => {
+                onboardingError = failure.error
+                shouldShowDetectionError = failure.showDetectionError
+                if (failure.showDetectionError) {
+                  setDetectionError(
+                    failure.error
+                      ? analyzeAutoDetectError(failure.error)
+                      : {
+                          type: AutoDetectErrorType.UNKNOWN,
+                          message: failure.message ?? "",
+                        },
+                  )
+                }
+                enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
+              },
+              onDetected: async (resultData) => {
+                await applyAutoDetectedData(resultData)
+              },
+            }),
+        )
 
         if (outcome.status === "cancelled_before_dispatch") {
           analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
@@ -2080,7 +2103,12 @@ export function useAccountDialog({
         return
       }
 
-      const result = await autoDetectAccount(requestedUrl, authType)
+      const result = await withProtectionBypassUserCommand(
+        PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+        getCurrentTempWindowRequestSource(),
+        (protectionBypassExecution) =>
+          autoDetectAccount(requestedUrl, authType, protectionBypassExecution),
+      )
       if (!result.success) {
         enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
         setDetectionError(result.detailedError || null)
@@ -2231,9 +2259,9 @@ export function useAccountDialog({
       const normalizedUserId = userId.trim()
       const normalizedAccessToken = accessToken.trim()
 
-      const result =
+      const saveAccount = () =>
         mode === DIALOG_MODES.ADD
-          ? await validateAndSaveAccount(
+          ? validateAndSaveAccount(
               url.trim(),
               siteName.trim(),
               username.trim(),
@@ -2257,7 +2285,7 @@ export function useAccountDialog({
                   shouldDeferSuccessForSitePolicy,
               },
             )
-          : await validateAndUpdateAccount(
+          : validateAndUpdateAccount(
               account!.id,
               url.trim(),
               siteName.trim(),
@@ -2277,6 +2305,32 @@ export function useAccountDialog({
               sub2apiAuth,
               { deferDataRefresh: true },
             )
+      const result = await withProtectionBypassUserCommand(
+        mode === DIALOG_MODES.ADD
+          ? PROTECTION_BYPASS_USER_COMMANDS.AddAccount
+          : PROTECTION_BYPASS_USER_COMMANDS.ReauthenticateAccount,
+        tempWindowRequestSource,
+        async (protectionBypassExecution) => {
+          const saveResult = await saveAccount()
+          const savedAccountId =
+            saveResult.success &&
+            typeof saveResult.accountId === "string" &&
+            saveResult.accountId.trim().length
+              ? saveResult.accountId.trim()
+              : null
+
+          if (savedAccountId) {
+            await refreshPostSaveAccount(
+              savedAccountId,
+              tempWindowRequestSource,
+              protectionBypassExecution,
+              onPostSaveAccountRefresh,
+            )
+          }
+
+          return saveResult
+        },
+      )
 
       if (!result.success) {
         saveAnalyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -2298,14 +2352,6 @@ export function useAccountDialog({
         typeof result.accountId === "string" && result.accountId.trim().length
           ? result.accountId.trim()
           : null
-
-      if (savedAccountId) {
-        schedulePostSaveAccountRefresh(
-          savedAccountId,
-          tempWindowRequestSource,
-          onPostSaveAccountRefresh,
-        )
-      }
 
       const feedbackMessage =
         typeof result.message === "string" && result.message.trim().length > 0
@@ -2342,10 +2388,16 @@ export function useAccountDialog({
                   try {
                     const tempWindowRequestSource =
                       getCurrentTempWindowRequestSource()
-                    const refreshResult = await accountStorage.refreshAccount(
-                      warningAccountId,
-                      true,
-                      { tempWindowRequestSource },
+                    const refreshResult = await withProtectionBypassUserCommand(
+                      mode === DIALOG_MODES.ADD
+                        ? PROTECTION_BYPASS_USER_COMMANDS.AddAccount
+                        : PROTECTION_BYPASS_USER_COMMANDS.ReauthenticateAccount,
+                      tempWindowRequestSource,
+                      (protectionBypassExecution) =>
+                        accountStorage.refreshAccount(warningAccountId, true, {
+                          tempWindowRequestSource,
+                          protectionBypassExecution,
+                        }),
                     )
 
                     if (!refreshResult?.refreshed) {

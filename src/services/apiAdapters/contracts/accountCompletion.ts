@@ -9,9 +9,11 @@ import type {
   ApiServiceFetchContext,
   ApiServiceRequest,
 } from "~/services/apiTransport/type"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 
 export type AccountCompletionRuntimeContext = {
   fetchContext?: ApiServiceFetchContext
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 export type AccountCompletionServiceRequestInput = {

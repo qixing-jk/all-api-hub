@@ -14,8 +14,10 @@ import {
 } from "~/services/accounts/utils/autoDetectUtils"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const {
   mockAutoDetectSmart,
@@ -397,7 +399,31 @@ describe("accountOperations autoDetectAccount", () => {
     expect(mockAutoDetectSmart).not.toHaveBeenCalled()
   })
 
+  it("forwards the onboarding execution to smart detection", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+    )
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      error: "not detected",
+    })
+
+    await autoDetectAccount(
+      "https://example.invalid",
+      AuthTypeEnum.AccessToken,
+      protectionBypassExecution,
+    )
+
+    expect(mockAutoDetectSmart).toHaveBeenCalledWith(
+      "https://example.invalid",
+      protectionBypassExecution,
+    )
+  })
+
   it("returns Sub2API result with default exchange rate and empty username", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+    )
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
@@ -416,6 +442,7 @@ describe("accountOperations autoDetectAccount", () => {
     const result = await autoDetectAccount(
       "https://sub2.example.com",
       AuthTypeEnum.Cookie,
+      protectionBypassExecution,
     )
 
     expect(result.success).toBe(true)
@@ -423,6 +450,10 @@ describe("accountOperations autoDetectAccount", () => {
     expect(result.data?.username).toBe("")
     expect(result.data?.accessToken).toBe("jwt-token")
     expect(result.data?.exchangeRate).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
+    expect(mockFetchSiteStatus).toHaveBeenCalledTimes(1)
+    expect(
+      mockFetchSiteStatus.mock.calls[0]?.[0].protectionBypassExecution,
+    ).toEqual(protectionBypassExecution)
   })
 
   it("uses detected Sub2API access-token semantics during auto-detect completion", async () => {

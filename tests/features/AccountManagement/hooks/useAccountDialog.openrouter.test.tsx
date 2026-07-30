@@ -28,6 +28,7 @@ const {
   mockStartPopupCriticalFlow,
   mockCompletePopupCriticalFlow,
   mockLoggerWarn,
+  mockWithProtectionBypassUserCommand,
 } = vi.hoisted(() => ({
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
@@ -40,7 +41,24 @@ const {
   mockStartPopupCriticalFlow: vi.fn(),
   mockCompletePopupCriticalFlow: vi.fn(),
   mockLoggerWarn: vi.fn(),
+  mockWithProtectionBypassUserCommand: vi.fn(),
 }))
+
+const openRouterProtectionExecution = {
+  version: 1 as const,
+  kind: "user_command" as const,
+  command: "add_account",
+  surface: "options",
+}
+
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/protectionBypass/client")>()
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: mockWithProtectionBypassUserCommand,
+  }
+})
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({
@@ -174,6 +192,10 @@ describe("useAccountDialog OpenRouter behavior", () => {
     mockStartPopupCriticalFlow.mockReset()
     mockCompletePopupCriticalFlow.mockReset()
     mockLoggerWarn.mockReset()
+    mockWithProtectionBypassUserCommand.mockReset()
+    mockWithProtectionBypassUserCommand.mockImplementation(
+      async (_command, _surface, work) => work(openRouterProtectionExecution),
+    )
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
     })
@@ -346,6 +368,11 @@ describe("useAccountDialog OpenRouter behavior", () => {
     })
 
     expect(mockAutoDetectAccount).toHaveBeenCalledOnce()
+    expect(mockAutoDetectAccount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        protectionBypassExecution: openRouterProtectionExecution,
+      }),
+    )
     expect(mockGenericAutoDetectAccount).not.toHaveBeenCalled()
     expect(result.current.state.url).toBe("https://openrouter.ai")
     expect(result.current.state.siteType).toBe(SITE_TYPES.OPENROUTER)

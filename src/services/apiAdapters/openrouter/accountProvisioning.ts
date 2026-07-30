@@ -9,6 +9,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { OPENROUTER_DISPLAY_NAME } from "~/services/accountSiteDefinitions/identifiers"
 import { validateManagementKey } from "~/services/apiService/openrouter"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { t } from "~/utils/i18n/core"
@@ -27,6 +28,7 @@ import type {
 type OpenRouterProvisioningRequest = {
   requestId: string
   tempWindowRequestSource?: TempWindowRequestSource
+  protectionBypassExecution: ProtectionBypassExecution
 }
 
 /** Builds recovery evidence when a create dispatch cannot be confirmed. */
@@ -85,6 +87,7 @@ export async function provisionOpenRouterAccount(
       ...(request.tempWindowRequestSource
         ? { tempWindowRequestSource: request.tempWindowRequestSource }
         : {}),
+      protectionBypassExecution: request.protectionBypassExecution,
     })
 
     if (!created) return createMutationUnconfirmedOutcome(requestId, label)

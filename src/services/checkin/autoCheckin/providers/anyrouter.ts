@@ -41,11 +41,12 @@ function isAnyrouterAlreadyCheckedMessage(message: string): boolean {
 
 const checkinAnyRouter = async (
   account: SiteAccount | AnyrouterCheckInParams,
-  context?: AutoCheckinProviderContext,
+  context: AutoCheckinProviderContext,
 ): Promise<AutoCheckinProviderResult> => {
   const tempWindowRequestSource = normalizeTempWindowRequestSource(
-    context?.tempWindowRequestSource,
+    context.tempWindowRequestSource,
   )
+  const protectionBypassExecution = context.protectionBypassExecution
   const { site_url, account_info } = account
   const cookieAuthSessionCookie = isSiteAccount(account)
     ? account.cookieAuth?.sessionCookie
@@ -67,6 +68,7 @@ const checkinAnyRouter = async (
           userId: account_info.id,
         },
         tempWindowRequestSource,
+        ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
       },
       {
         endpoint: "/api/user/sign_in",

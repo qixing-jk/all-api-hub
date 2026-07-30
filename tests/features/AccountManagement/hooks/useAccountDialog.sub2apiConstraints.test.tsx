@@ -59,6 +59,14 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   })),
 }))
 
+vi.mock("~/services/protectionBypass/client", () => ({
+  withProtectionBypassUserCommand: async (
+    command: unknown,
+    surface: unknown,
+    work: (execution: unknown) => Promise<unknown>,
+  ) => work({ version: 1, kind: "user_command", command, surface }),
+}))
+
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/browserApi")>()

@@ -38,6 +38,7 @@
       },
       "folderCount_one": "{{count}} folder",
       "folderCount_other": "{{count}} folders",
+      "importFailed": "The import could not be completed. Try again.",
       "importing": "Importing {{completed}} of {{total}} selected sites...",
       "includeExisting": "Include sites that already have saved accounts",
       "initialSteps": {
@@ -389,12 +390,12 @@
         "notNow": "Not now",
         "openSettings": "Open settings"
       },
-      "descriptionDisabledTempWindowOnly": "{{accountName}} needs a temporary popup window to open and pass protection so requests can complete successfully. Enable it in Settings > Data Refresh",
-      "descriptionDisabledWithCookieInterceptor": "{{accountName}} needs the protection-bypass flow on Firefox. A temporary popup window will open to obtain cookies, and Cookie Interceptor will attach them to requests. Enable it in Settings > Data Refresh",
-      "descriptionPermissionTempWindowOnly": "{{accountName}} needs permission to open a temporary popup window so requests can complete successfully. Grant it in Settings > Permissions",
-      "descriptionPermissionWithCookieInterceptor": "{{accountName}} needs Cookie Interceptor permissions on Firefox. The temporary popup window must open to obtain cookies, and requests will attach them. Grant it in Settings > Permissions",
-      "titleTempWindowOnly": "Enable temporary window mode for requests",
-      "titleWithCookieInterceptor": "Enable protection bypass for requests"
+      "descriptionDisabledTempWindowOnly": "Automatic refresh for {{accountName}} encountered site verification, but automatic tasks cannot currently open temporary pages. Turn this on in Settings > Data Refresh.",
+      "descriptionDisabledWithCookieInterceptor": "Automatic refresh for {{accountName}} encountered site verification, but automatic tasks cannot currently open temporary pages. Turn this on in Settings > Data Refresh.",
+      "descriptionPermissionTempWindowOnly": "Automatic refresh for {{accountName}} needs to open a temporary page for site verification. Grant the required permission in Settings > Permissions.",
+      "descriptionPermissionWithCookieInterceptor": "Automatic refresh for {{accountName}} needs the Cookies, Web Request, and Web Request Blocking permissions for site verification. Grant them in Settings > Permissions.",
+      "titleTempWindowOnly": "Automatic refresh needs site verification",
+      "titleWithCookieInterceptor": "Automatic refresh needs site verification"
     },
     "updateLog": {
       "autoOpenSetting": "Update log auto-open",

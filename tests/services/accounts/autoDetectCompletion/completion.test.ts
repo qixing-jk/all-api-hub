@@ -13,14 +13,17 @@ import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
-const { getSiteTypeCapabilitiesMock, accountCompletionMock } = vi.hoisted(
-  () => ({
-    getSiteTypeCapabilitiesMock: vi.fn(),
-    accountCompletionMock: {
-      complete: vi.fn(),
-    },
-  }),
-)
+const {
+  getSiteTypeCapabilitiesMock,
+  accountCompletionMock,
+  fetchSiteStatusMock,
+} = vi.hoisted(() => ({
+  getSiteTypeCapabilitiesMock: vi.fn(),
+  accountCompletionMock: {
+    complete: vi.fn(),
+  },
+  fetchSiteStatusMock: vi.fn(),
+}))
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
@@ -66,6 +69,9 @@ describe("auto-detect completion", () => {
       siteType: SITE_TYPES.NEW_API,
       account: {
         completion: accountCompletionMock,
+        bootstrap: {
+          fetchSiteStatus: fetchSiteStatusMock,
+        },
       },
     })
     accountCompletionMock.complete.mockResolvedValue(completedAccountData)
@@ -73,6 +79,12 @@ describe("auto-detect completion", () => {
 
   it("routes completion through the adapter with valid current-tab context", async () => {
     const fetchContext = currentTabFetchContext("https://status.example.com")
+    const protectionBypassExecution = {
+      version: 1,
+      kind: "user_command",
+      command: "detect_account",
+      surface: "options",
+    } as const
     const autoDetectContext = {
       strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
       siteType: SITE_TYPES.NEW_API,
@@ -87,6 +99,7 @@ describe("auto-detect completion", () => {
       url: "https://status.example.com",
       requestedAuthType: AuthTypeEnum.AccessToken,
       autoDetectContext,
+      protectionBypassExecution,
       detected,
     })
 
@@ -100,8 +113,11 @@ describe("auto-detect completion", () => {
       requestedAuthType: AuthTypeEnum.AccessToken,
       detected,
       autoDetectContext,
-      context: { fetchContext },
+      context: { fetchContext, protectionBypassExecution },
     })
+    expect(adapterRequest.context.protectionBypassExecution).toBe(
+      protectionBypassExecution,
+    )
     expect(Object.keys(helpers).sort()).toEqual(
       [
         "createServiceRequest",
@@ -119,7 +135,7 @@ describe("auto-detect completion", () => {
           authType: AuthTypeEnum.Cookie,
           userId: "7",
         },
-        context: { fetchContext },
+        context: { fetchContext, protectionBypassExecution },
       }),
     ).toEqual({
       baseUrl: "https://status.example.com",
@@ -128,7 +144,15 @@ describe("auto-detect completion", () => {
         userId: "7",
       },
       fetchContext,
+      protectionBypassExecution,
     })
+    expect(
+      helpers.createServiceRequest({
+        baseUrl: "https://status.example.com",
+        auth: { authType: AuthTypeEnum.None },
+        context: { fetchContext, protectionBypassExecution },
+      }).protectionBypassExecution,
+    ).toBe(protectionBypassExecution)
     expect(helpers.trimString("  trimmed  ")).toBe("trimmed")
     expect(
       helpers.createInitialCheckInConfig({
@@ -151,6 +175,8 @@ describe("auto-detect completion", () => {
         system_name: "Status Portal",
       }),
     ).resolves.toBe("Status Portal")
+    await expect(helpers.fetchSiteName(null)).resolves.toBe("Example")
+    expect(fetchSiteStatusMock).not.toHaveBeenCalled()
     expect(result).toEqual({
       ...completedAccountData,
       siteType: SITE_TYPES.NEW_API,

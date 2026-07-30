@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import React from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest"
 
 import { TempWindowFallbackReminderDialog } from "~/features/AccountManagement/components/TempWindowFallbackReminderDialog"
+import type { TempWindowFallbackIssue } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 
 const {
@@ -102,6 +103,13 @@ describe("TempWindowFallbackReminderDialog", () => {
     getProtectionBypassUiVariantMock.mockReturnValue(
       protectionBypassVariants.TempWindowOnly,
     )
+  })
+
+  it("keeps Settings actions scoped to disabled and permission issues", () => {
+    expectTypeOf<TempWindowFallbackIssue["code"]>().toEqualTypeOf<
+      | typeof TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED
+      | typeof TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED
+    >()
   })
 
   it("renders the permission-required copy for the cookie-interceptor variant and opens settings", async () => {

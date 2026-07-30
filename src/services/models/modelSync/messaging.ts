@@ -1,3 +1,4 @@
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
@@ -11,7 +12,11 @@ import type {
 
 import type { managedSiteModelSyncStorage } from "./storage"
 
-interface ModelSyncTriggerSelectedRequest {
+interface ModelSyncTriggerRequest {
+  protectionBypassExecution: ProtectionBypassExecution
+}
+
+interface ModelSyncTriggerSelectedRequest extends ModelSyncTriggerRequest {
   channelIds: number[]
 }
 
@@ -50,11 +55,15 @@ type ModelSyncMutationResponse =
 
 interface ModelSyncProtocolMap {
   [ModelSyncMessageTypes.GetNextRun](): RuntimeMessageResponse<ModelSyncNextRun>
-  [ModelSyncMessageTypes.TriggerAll](): RuntimeMessageResponse<ExecutionResult>
+  [ModelSyncMessageTypes.TriggerAll](
+    data: ModelSyncTriggerRequest,
+  ): RuntimeMessageResponse<ExecutionResult>
   [ModelSyncMessageTypes.TriggerSelected](
     data: ModelSyncTriggerSelectedRequest,
   ): RuntimeMessageResponse<ExecutionResult>
-  [ModelSyncMessageTypes.TriggerFailedOnly](): RuntimeMessageResponse<ExecutionResult>
+  [ModelSyncMessageTypes.TriggerFailedOnly](
+    data: ModelSyncTriggerRequest,
+  ): RuntimeMessageResponse<ExecutionResult>
   [ModelSyncMessageTypes.GetLastExecution](): RuntimeMessageResponse<ExecutionResult | null>
   [ModelSyncMessageTypes.GetProgress](): RuntimeMessageResponse<ExecutionProgress | null>
   [ModelSyncMessageTypes.UpdateSettings](

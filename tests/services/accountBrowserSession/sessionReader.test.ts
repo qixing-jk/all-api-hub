@@ -6,23 +6,35 @@ import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   readAccountBrowserSessionFromExistingTabs,
   readAccountBrowserSessionFromTab,
-  resolveAccountBrowserSession,
+  resolveAccountBrowserSession as resolveAccountBrowserSessionProduction,
 } from "~/services/accountBrowserSession"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const {
+  mockExecuteProtectionBypassTask,
   mockGetAllTabs,
   mockGetBrowserApiCapabilities,
+  mockIsExtensionBackground,
   mockSendRuntimeMessage,
   mockSendTabMessage,
 } = vi.hoisted(() => ({
+  mockExecuteProtectionBypassTask: vi.fn(),
   mockGetAllTabs: vi.fn(),
   mockGetBrowserApiCapabilities: vi.fn(),
+  mockIsExtensionBackground: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
   mockSendTabMessage: vi.fn(),
 }))
+
+vi.mock("~/utils/browser", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser")>()
+  return {
+    ...actual,
+    isExtensionBackground: mockIsExtensionBackground,
+  }
+})
 
 vi.mock("~/utils/browser/browserApi", () => ({
   getAllTabs: mockGetAllTabs,
@@ -31,14 +43,132 @@ vi.mock("~/utils/browser/browserApi", () => ({
   sendTabMessageWithRetry: mockSendTabMessage,
 }))
 
+vi.mock("~/utils/browser/tempWindowFetch", () => ({
+  executeProtectionBypassTask: async (request: unknown) => {
+    if (!mockIsExtensionBackground()) {
+      return mockSendRuntimeMessage({
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        ...(request as object),
+      })
+    }
+
+    let response: unknown
+    let responded = false
+    await mockExecuteProtectionBypassTask(
+      request,
+      undefined,
+      (value: unknown) => {
+        if (!responded) response = value
+        responded = true
+      },
+    )
+    if (!responded) throw new Error("handler completed without response")
+    return response
+  },
+}))
+
+const testExecution = {
+  version: 1,
+  kind: "user_command",
+  command: "verify_protection",
+  surface: "options",
+} as const
+
+function resolveAccountBrowserSession(
+  options: Parameters<typeof resolveAccountBrowserSessionProduction>[0],
+) {
+  return resolveAccountBrowserSessionProduction({
+    ...options,
+    protectionBypassExecution:
+      options.protectionBypassExecution ?? testExecution,
+  })
+}
+
 describe("account browser-session reader", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockIsExtensionBackground.mockReturnValue(false)
     mockGetBrowserApiCapabilities.mockReturnValue({
       hasWindows: true,
       hasTabs: true,
       hasBackgroundMessaging: true,
     })
+  })
+
+  it.each(["MV3 service worker", "Firefox MV2 background page"])(
+    "routes a temp session read directly through the coordinator in a %s",
+    async () => {
+      mockIsExtensionBackground.mockReturnValue(true)
+      mockExecuteProtectionBypassTask.mockImplementationOnce(
+        async (_request, sender, sendResponse) => {
+          expect(sender).toBeUndefined()
+          sendResponse({
+            success: true,
+            data: {
+              siteType: SITE_TYPES.SUB2API,
+              userId: "11",
+              user: { username: "background-user" },
+            },
+          })
+        },
+      )
+
+      const session = await resolveAccountBrowserSession({
+        baseUrl: "https://unknown.example.invalid",
+        siteType: SITE_TYPES.SUB2API,
+        useTempWindow: true,
+      })
+
+      expect(session).toEqual(
+        expect.objectContaining({
+          source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+          siteType: SITE_TYPES.SUB2API,
+          userId: "11",
+        }),
+      )
+      expect(mockExecuteProtectionBypassTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          task: {
+            kind: "session_read",
+            params: expect.objectContaining({
+              url: "https://unknown.example.invalid",
+              siteType: SITE_TYPES.SUB2API,
+            }),
+          },
+        }),
+        undefined,
+        expect.any(Function),
+      )
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    },
+  )
+
+  it("uses runtime messaging for a non-background temp session read", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        siteType: SITE_TYPES.SUB2API,
+        userId: "12",
+        user: { username: "popup-user" },
+      },
+    })
+
+    await resolveAccountBrowserSession({
+      baseUrl: "https://unknown.example.invalid",
+      siteType: SITE_TYPES.SUB2API,
+      useTempWindow: true,
+    })
+
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        task: {
+          kind: "session_read",
+          params: expect.objectContaining({ siteType: SITE_TYPES.SUB2API }),
+        },
+      }),
+    )
+    expect(mockExecuteProtectionBypassTask).not.toHaveBeenCalled()
   })
 
   it("reads and normalizes a successful tab content-session response", async () => {
@@ -538,9 +668,14 @@ describe("account browser-session reader", () => {
     )
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: RuntimeActionIds.AutoDetectSite,
-        url: "https://sub2.example.com",
-        requestId: expect.stringMatching(/^test-session-/),
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        task: {
+          kind: "session_read",
+          params: expect.objectContaining({
+            url: "https://sub2.example.com",
+            requestId: expect.stringMatching(/^test-session-/),
+          }),
+        },
       }),
     )
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
@@ -570,14 +705,53 @@ describe("account browser-session reader", () => {
 
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: RuntimeActionIds.AutoDetectSite,
-        url: "https://example.invalid",
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-        suppressMinimize: false,
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        task: {
+          kind: "session_read",
+          params: expect.objectContaining({
+            url: "https://example.invalid",
+            suppressMinimize: false,
+          }),
+        },
       }),
     )
     expect(session).not.toHaveProperty("tempWindowRequestSource")
     expect(session).not.toHaveProperty("suppressMinimize")
+  })
+
+  it("preserves protection bypass execution through the AutoDetectSite session read", async () => {
+    const protectionBypassExecution = {
+      version: 1,
+      kind: "user_command",
+      command: "verify_protection",
+      surface: "options",
+    } as const
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "11",
+        user: { username: "temp-user" },
+        accessToken: "temp-token",
+      },
+    })
+
+    await resolveAccountBrowserSession({
+      baseUrl: "https://example.invalid",
+      siteType: SITE_TYPES.SUB2API,
+      useTempWindow: true,
+      protectionBypassExecution,
+    })
+
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        execution: protectionBypassExecution,
+        task: {
+          kind: "session_read",
+          params: expect.not.objectContaining({ protectionBypassExecution }),
+        },
+      }),
+    )
   })
 
   it("notifies callers about temp-window read errors without throwing", async () => {
@@ -655,9 +829,14 @@ describe("account browser-session reader", () => {
     expect(session?.source).toBe(ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW)
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: RuntimeActionIds.AutoDetectSite,
-        url: "https://sub2.example.com",
-        useIncognito: true,
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        task: {
+          kind: "session_read",
+          params: expect.objectContaining({
+            url: "https://sub2.example.com",
+            useIncognito: true,
+          }),
+        },
       }),
     )
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
@@ -725,9 +904,14 @@ describe("account browser-session reader", () => {
     expect(session?.source).toBe(ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW)
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: RuntimeActionIds.AutoDetectSite,
-        url: "https://sub2.example.com",
-        useIncognito: true,
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        task: {
+          kind: "session_read",
+          params: expect.objectContaining({
+            url: "https://sub2.example.com",
+            useIncognito: true,
+          }),
+        },
       }),
     )
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith(

@@ -35,6 +35,7 @@
         "unknown": "导入失败。"
       },
       "folderCount": "{{count}} 个文件夹",
+      "importFailed": "导入未能完成，请重试。",
       "importing": "正在导入 {{completed}} / {{total}} 个已选站点...",
       "includeExisting": "包含已有已保存账号的站点",
       "initialSteps": {
@@ -379,12 +380,12 @@
         "notNow": "稍后再说",
         "openSettings": "打开设置"
       },
-      "descriptionDisabledTempWindowOnly": "{{accountName}} 的网络请求需要弹出临时窗口来通过防护，确保请求成功完成，请在 设置 > 数据刷新 中启用",
-      "descriptionDisabledWithCookieInterceptor": "{{accountName}} 在 Firefox 中需要启用过盾流程。扩展会弹出临时窗口来获取 Cookie，并由 Cookie 拦截器在发送请求时自动附加这些 Cookie，请在 设置 > 数据刷新 中启用",
-      "descriptionPermissionTempWindowOnly": "{{accountName}} 需要弹出临时窗口的权限才能完成请求，请在 设置 > 权限 中授予",
-      "descriptionPermissionWithCookieInterceptor": "{{accountName}} 在 Firefox 中需要 Cookie 拦截权限。扩展需要弹出临时窗口获取 Cookie，并在发送请求时自动附加认证信息，请在 设置 > 权限 中授予",
-      "titleTempWindowOnly": "启用临时窗口模式以完成网络请求",
-      "titleWithCookieInterceptor": "启用过盾流程以完成网络请求"
+      "descriptionDisabledTempWindowOnly": "{{accountName}} 的自动刷新遇到网站验证，但当前不允许自动任务打开临时页面。请前往“设置 > 数据刷新”开启。",
+      "descriptionDisabledWithCookieInterceptor": "{{accountName}} 的自动刷新遇到网站验证，但当前不允许自动任务打开临时页面。请前往“设置 > 数据刷新”开启。",
+      "descriptionPermissionTempWindowOnly": "{{accountName}} 的自动刷新需要打开临时页面完成网站验证。请前往“设置 > 权限”授予所需权限。",
+      "descriptionPermissionWithCookieInterceptor": "{{accountName}} 的自动刷新需要 Cookies、Web Request 和 Web Request Blocking 权限才能完成网站验证。请前往“设置 > 权限”授予。",
+      "titleTempWindowOnly": "自动刷新需要网站验证",
+      "titleWithCookieInterceptor": "自动刷新需要网站验证"
     },
     "updateLog": {
       "autoOpenSetting": "更新日志自动打开",

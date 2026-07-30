@@ -68,6 +68,23 @@ const account = {
   },
 } as unknown as SiteAccount
 
+const DEFAULT_PROVIDER_CONTEXT = {
+  tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+  protectionBypassExecution: {
+    version: 1,
+    kind: "user_command",
+    command: "manual_checkin",
+    surface: "options",
+  },
+} as const
+
+const checkInForTest = (
+  account: Parameters<typeof voApiV2Provider.checkIn>[0],
+  context: Parameters<
+    typeof voApiV2Provider.checkIn
+  >[1] = DEFAULT_PROVIDER_CONTEXT,
+) => voApiV2Provider.checkIn(account, context)
+
 describe("voApiV2Provider", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -96,8 +113,14 @@ describe("voApiV2Provider", () => {
     )
 
     await expect(
-      voApiV2Provider.checkIn(account, {
+      checkInForTest(account, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: {
+          version: 1,
+          kind: "user_command",
+          command: "manual_checkin",
+          surface: "options",
+        },
       }),
     ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
     expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledWith(
@@ -122,7 +145,7 @@ describe("voApiV2Provider", () => {
       ),
     )
 
-    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
+    await expect(checkInForTest(account)).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
     })
     expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledWith(
@@ -155,7 +178,7 @@ describe("voApiV2Provider", () => {
 
   it("returns a failed result for unusable VoAPI v2 accounts", async () => {
     await expect(
-      voApiV2Provider.checkIn({
+      checkInForTest({
         ...account,
         account_info: { ...account.account_info, access_token: "" },
       } as SiteAccount),
@@ -177,7 +200,7 @@ describe("voApiV2Provider", () => {
       ),
     )
 
-    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
+    await expect(checkInForTest(account)).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
     })
   })
@@ -194,12 +217,13 @@ describe("voApiV2Provider", () => {
       ),
     )
 
-    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
+    await expect(checkInForTest(account)).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
     })
     expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
       "https://example.invalid",
       TEMP_WINDOW_REQUEST_SOURCES.Background,
+      DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
     )
   })
 
@@ -213,7 +237,7 @@ describe("voApiV2Provider", () => {
       ),
     )
 
-    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
+    await expect(checkInForTest(account)).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
     })
     expect(mockResyncVoApiV2AuthToken).not.toHaveBeenCalled()
@@ -253,8 +277,14 @@ describe("voApiV2Provider", () => {
     )
 
     await expect(
-      voApiV2Provider.checkIn(account, {
+      checkInForTest(account, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: {
+          version: 1,
+          kind: "user_command",
+          command: "manual_checkin",
+          surface: "options",
+        },
       }),
     ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
 
@@ -266,11 +296,14 @@ describe("voApiV2Provider", () => {
     expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
       "https://example.invalid",
       TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
     )
     expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledTimes(2)
     for (const [request] of mockSubmitVoApiV2CheckIn.mock.calls) {
       expect(request).toMatchObject({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution:
+          DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
       })
     }
     expect(mockFetchVoApiV2CheckInStats).toHaveBeenCalledWith(

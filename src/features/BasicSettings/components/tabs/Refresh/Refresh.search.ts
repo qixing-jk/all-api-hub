@@ -97,13 +97,21 @@ export const refreshSearchControls: OptionsSearchItemDefinition[] = [
     "settings:refresh.shieldEnabled",
     544,
     {
-      descriptionKey: "settings:refresh.shieldEnabledDescTempWindowOnly",
+      descriptionKey: "settings:refresh.shieldDescriptionTempWindowOnly",
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,
         "settings:tabs.refresh",
         "settings:refresh.shieldTitle",
       ],
-      keywords: ["shield", "firewall", "cloudflare", "temp window"],
+      keywords: [
+        "site verification",
+        "cloudflare",
+        "temporary page",
+        "temporary tab",
+        "temporary window",
+        "automatic refresh",
+        "automatic check-in",
+      ],
     },
   ),
   buildControlDefinition(
@@ -119,7 +127,12 @@ export const refreshSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.refresh",
         "settings:refresh.shieldTitle",
       ],
-      keywords: ["shield", "window", "tab", "composite"],
+      keywords: [
+        "site verification",
+        "shared window",
+        "background tab",
+        "new window",
+      ],
     },
   ),
   buildControlDefinition(
@@ -135,7 +148,14 @@ export const refreshSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.refresh",
         "settings:refresh.shieldTitle",
       ],
-      keywords: ["shield", "contexts", "popup", "sidepanel", "options"],
+      keywords: [
+        "site verification",
+        "extension popup",
+        "side panel",
+        "settings page",
+        "automatic refresh",
+        "manual refresh",
+      ],
     },
   ),
   buildControlDefinition(

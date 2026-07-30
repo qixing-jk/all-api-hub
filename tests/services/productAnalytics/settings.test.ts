@@ -495,9 +495,11 @@ describe("settings product analytics snapshots", () => {
         webdav_configured: true,
         webdav_auto_sync_enabled: true,
         auto_checkin_global_enabled: false,
+        temp_window_fallback_automatic_bypass_enabled: true,
       }),
     )
     expect(snapshot).not.toHaveProperty("setting_id")
+    expect(snapshot).not.toHaveProperty("temp_window_fallback_enabled")
     expect(JSON.stringify(snapshot)).not.toContain("private")
     expect(JSON.stringify(snapshot)).not.toContain("https://")
   })

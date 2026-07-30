@@ -22,7 +22,9 @@ const {
   mockGetSiteName,
   mockGetActiveTabs,
   mockGetAllAccountsOrThrow,
+  mockAutoDetectAccount,
   mockValidateAndSaveAccount,
+  mockWithProtectionBypassUserCommand,
   onTabActivatedMock,
   onTabUpdatedMock,
   mockUserPreferencesContext,
@@ -30,7 +32,9 @@ const {
   mockGetSiteName: vi.fn(),
   mockGetActiveTabs: vi.fn(),
   mockGetAllAccountsOrThrow: vi.fn(),
+  mockAutoDetectAccount: vi.fn(),
   mockValidateAndSaveAccount: vi.fn(),
+  mockWithProtectionBypassUserCommand: vi.fn(),
   onTabActivatedMock: vi.fn(),
   onTabUpdatedMock: vi.fn(),
   mockUserPreferencesContext: {
@@ -67,6 +71,7 @@ vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
     >()
   return {
     ...actual,
+    autoDetectAccount: mockAutoDetectAccount,
     getSiteName: mockGetSiteName,
     validateAndSaveAccount: mockValidateAndSaveAccount,
   }
@@ -78,6 +83,15 @@ vi.mock("~/services/accounts/accountStorage", () => ({
     refreshAccount: vi.fn(),
   },
 }))
+
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/protectionBypass/client")>()
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: mockWithProtectionBypassUserCommand,
+  }
+})
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
@@ -147,6 +161,50 @@ describe("useAccountDialog current tab detection", () => {
       success: true,
       accountId: "saved-account",
     })
+    mockAutoDetectAccount.mockResolvedValue({
+      success: false,
+      message: "not detected",
+    })
+    mockWithProtectionBypassUserCommand.mockImplementation(
+      async (
+        command: unknown,
+        surface: unknown,
+        work: (execution: unknown) => Promise<unknown>,
+      ) => work({ version: 1, kind: "user_command", command, surface }),
+    )
+  })
+
+  it("runs explicit auto-detect under one detect-account intent", async () => {
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://example.invalid")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
+      "detect_account",
+      expect.any(String),
+      expect.any(Function),
+    )
+    expect(mockAutoDetectAccount).toHaveBeenCalledWith(
+      "https://example.invalid",
+      AuthTypeEnum.AccessToken,
+      {
+        version: 1,
+        kind: "user_command",
+        command: "detect_account",
+        surface: "background",
+      },
+    )
   })
 
   it("loads the current tab url and derived site name for add mode", async () => {

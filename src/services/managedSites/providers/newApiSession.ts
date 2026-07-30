@@ -1,9 +1,14 @@
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import {
+  NEW_API_SESSION_READ_ACTIONS,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum } from "~/types"
 import type { NewApiConfig } from "~/types/newApiConfig"
+import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
@@ -163,6 +168,11 @@ const isSecureVerificationError = (error: unknown) =>
   (error instanceof ApiError &&
     (error.statusCode === 403 || error.code === API_ERROR_CODES.HTTP_403)) ||
   (error instanceof Error && looksLikeVerificationRequirement(error.message))
+
+const isNewApiSessionReadFallbackError = (error: ApiError) =>
+  error.statusCode === 403 ||
+  error.code === API_ERROR_CODES.HTTP_403 ||
+  error.code === API_ERROR_CODES.CONTENT_TYPE_MISMATCH
 
 const sanitizeNewApiSessionError = (error: unknown, secrets: string[] = []) => {
   return toSanitizedErrorSummary(error, secrets)
@@ -672,6 +682,7 @@ export async function fetchNewApiChannelKey(params: {
   username?: string
   password?: string
   totpSecret?: string
+  protectionBypassExecution?: ProtectionBypassExecution
 }): Promise<string> {
   await ensureNewApiChannelKeyAccess({
     baseUrl: params.baseUrl,
@@ -682,16 +693,62 @@ export async function fetchNewApiChannelKey(params: {
   })
 
   try {
-    const response = await fetchApiData<{ key?: string } | string>(
-      createCookieAuthRequest(params.baseUrl, params.userId),
-      {
-        endpoint: `/api/channel/${params.channelId}/key`,
-        options: {
-          method: "POST",
-          body: JSON.stringify({}),
+    const endpoint = `/api/channel/${params.channelId}/key`
+    let response: { key?: string } | string
+    try {
+      response = await fetchApiData<{ key?: string } | string>(
+        createCookieAuthRequest(params.baseUrl, params.userId),
+        {
+          endpoint,
+          options: {
+            method: "POST",
+            body: JSON.stringify({}),
+          },
         },
-      },
-    )
+      )
+    } catch (error) {
+      if (
+        !params.protectionBypassExecution ||
+        !(error instanceof ApiError) ||
+        error.code === API_ERROR_CODES.BUSINESS_ERROR ||
+        !isNewApiSessionReadFallbackError(error)
+      ) {
+        throw error
+      }
+
+      const origin = new URL(params.baseUrl).origin
+      const { tempWindowNewApiSessionRead } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+      const fallback = await tempWindowNewApiSessionRead({
+        origin,
+        action: NEW_API_SESSION_READ_ACTIONS.ChannelKey,
+        channelId: params.channelId,
+        userId: params.userId?.toString().trim() ?? "",
+        requestId: safeRandomUUID(`new-api-channel-key-${params.channelId}`),
+        protectionBypassExecution: params.protectionBypassExecution,
+      })
+      if (!fallback.success) {
+        throw new ApiError(
+          fallback.error || "New API session read failed",
+          fallback.status,
+          endpoint,
+          fallback.code,
+        )
+      }
+      const body = fallback.data as
+        | { success?: boolean; message?: string; data?: unknown }
+        | undefined
+      if (!body?.success) {
+        throw new ApiError(
+          body?.message || t("messages:errors.api.invalidResponseFormat"),
+          fallback.status,
+          endpoint,
+          API_ERROR_CODES.BUSINESS_ERROR,
+        )
+      }
+      response = body.data as { key?: string } | string
+    }
 
     const key =
       typeof response === "string" ? response.trim() : response?.key?.trim()

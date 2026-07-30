@@ -23,15 +23,27 @@ vi.mock("~/entrypoints/background/tempWindowPool", () => ({
   tempWindowBackgroundRuntime: {
     run: async (_url: string, _options: unknown, task: () => Promise<void>) =>
       task(),
-    acquire: vi.fn(async () => ({
-      tabId: 123,
-      navigate: vi.fn().mockResolvedValue(undefined),
-      inspect: vi.fn().mockResolvedValue({
-        url: "https://example.invalid/settings/management-keys",
-        status: "complete",
-      }),
-      release: mocks.contextRelease,
-    })),
+    acquire: vi.fn(
+      async (
+        _url: string,
+        _requestId: string,
+        _suppressMinimize: boolean,
+        _options: unknown,
+        authorizeAtAcquire?: () => Promise<{ kind: string }>,
+      ) => {
+        const decision = await authorizeAtAcquire?.()
+        if (decision?.kind !== "allowed") throw new Error("not authorized")
+        return {
+          tabId: 123,
+          navigate: vi.fn().mockResolvedValue(undefined),
+          inspect: vi.fn().mockResolvedValue({
+            url: "https://example.invalid/settings/management-keys",
+            status: "complete",
+          }),
+          release: mocks.contextRelease,
+        }
+      },
+    ),
   },
 }))
 
@@ -61,7 +73,7 @@ describe("OpenRouter Management Key temp-context port", () => {
 
   it("releases through the request-bound context handle", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
     const sendResponse = vi.fn()
 
@@ -87,5 +99,31 @@ describe("OpenRouter Management Key temp-context port", () => {
     expect(mocks.contextRelease.mock.calls[0]?.[0]).not.toHaveProperty(
       "browserRemovalAttempts",
     )
+  })
+
+  it("fails closed when Coordinator authorization is omitted", async () => {
+    const { handleTempWindowOpenRouterManagementKeyAction } = await import(
+      "~/entrypoints/background/openrouter/managementKeyAction"
+    )
+    const sendResponse = vi.fn()
+
+    await handleTempWindowOpenRouterManagementKeyAction(
+      {
+        requestId: "request_without_authorization",
+        operation: { kind: "create", label: "extension-request-example" },
+      },
+      false,
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "request_without_authorization",
+        mutationState: "not_dispatched",
+        attemptOutcome: "failed",
+      }),
+    )
+    expect(mocks.sendTabMessage).not.toHaveBeenCalled()
+    expect(mocks.contextRelease).not.toHaveBeenCalled()
   })
 })

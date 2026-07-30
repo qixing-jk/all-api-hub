@@ -19,18 +19,31 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import {
   clearAlarm,
   getAlarm,
   hasAlarmsAPI,
   onAlarm,
 } from "~/utils/browser/browserApi"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+
+const MODEL_SYNC_EXECUTION = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+)
+
+const WRONG_MODEL_SYNC_EXECUTION = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+)
 
 const modelSyncMessageHandlers = vi.hoisted(
   () =>
     new Map<
       string,
-      (message: { data: Record<string, unknown> }) => Promise<unknown> | unknown
+      (message: {
+        data: Record<string, unknown>
+        sender?: { url?: string }
+      }) => Promise<unknown> | unknown
     >(),
 )
 const onModelSyncMessageMock = vi.hoisted(() => vi.fn())
@@ -118,7 +131,6 @@ describe("ManagedSiteModelSync operation helpers", () => {
     vi.clearAllMocks()
     ;(modelSyncScheduler as any).isInitialized = false
     ;(globalThis as any).__modelSyncMessagingCleanup = null
-
     mockedUserPreferences.getPreferences.mockResolvedValue({
       managedSiteModelSync: {
         ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
@@ -219,6 +231,34 @@ describe("ManagedSiteModelSync operation helpers", () => {
     })
   })
 
+  it.each([
+    ["all", () => triggerAllModelSync(WRONG_MODEL_SYNC_EXECUTION)],
+    [
+      "selected",
+      () => triggerSelectedModelSync([1], WRONG_MODEL_SYNC_EXECUTION),
+    ],
+    [
+      "failed only",
+      () => triggerFailedOnlyModelSync(WRONG_MODEL_SYNC_EXECUTION),
+    ],
+  ])(
+    "rejects a well-formed %s command at the exported handler",
+    async (_name, run) => {
+      const executeSync = vi.spyOn(modelSyncScheduler, "executeSync")
+      const executeFailedOnly = vi.spyOn(
+        modelSyncScheduler,
+        "executeFailedOnly",
+      )
+
+      await expect(run()).resolves.toEqual({
+        success: false,
+        error: "Invalid protection bypass execution",
+      })
+      expect(executeSync).not.toHaveBeenCalled()
+      expect(executeFailedOnly).not.toHaveBeenCalled()
+    },
+  )
+
   it("rejects selected sync requests without channel ids", async () => {
     const executeSyncSpy = vi.spyOn(modelSyncScheduler, "executeSync")
 
@@ -262,7 +302,11 @@ describe("ManagedSiteModelSync operation helpers", () => {
     const selectedHandler = modelSyncMessageHandlers.get(
       "modelSync:triggerSelected",
     )
-    await expect(selectedHandler?.({ data: {} })).resolves.toEqual({
+    await expect(
+      selectedHandler?.({
+        data: { protectionBypassExecution: MODEL_SYNC_EXECUTION },
+      }),
+    ).resolves.toEqual({
       success: false,
       error: "channelIds must be a non-empty array for selected sync",
     })
@@ -275,14 +319,22 @@ describe("ManagedSiteModelSync operation helpers", () => {
       "modelSync:triggerAll",
     )
 
-    await expect(triggerAllHandler?.({ data: {} })).resolves.toEqual({
+    await expect(
+      triggerAllHandler?.({
+        data: { protectionBypassExecution: MODEL_SYNC_EXECUTION },
+      }),
+    ).resolves.toEqual({
       success: false,
       error: "upstream token secret leaked",
     })
 
     executeSyncSpy.mockRejectedValueOnce(new Error(""))
 
-    await expect(triggerAllHandler?.({ data: {} })).resolves.toEqual({
+    await expect(
+      triggerAllHandler?.({
+        data: { protectionBypassExecution: MODEL_SYNC_EXECUTION },
+      }),
+    ).resolves.toEqual({
       success: false,
       error: "Runtime request failed",
     })
@@ -327,12 +379,15 @@ describe("ManagedSiteModelSync operation helpers", () => {
     ])
     await expect(
       modelSyncMessageHandlers.get("modelSync:triggerSelected")?.({
-        data: { channelIds: [1] },
+        data: {
+          channelIds: [1],
+          protectionBypassExecution: structuredClone(MODEL_SYNC_EXECUTION),
+        },
       }),
     ).resolves.toEqual({ success: true, data: executionResult })
     await expect(
       modelSyncMessageHandlers.get("modelSync:triggerFailedOnly")?.({
-        data: {},
+        data: { protectionBypassExecution: MODEL_SYNC_EXECUTION },
       }),
     ).resolves.toEqual({ success: true, data: failedOnlyResult })
     await expect(
@@ -346,6 +401,52 @@ describe("ManagedSiteModelSync operation helpers", () => {
     await expect(
       modelSyncMessageHandlers.get("modelSync:listChannels")?.({ data: {} }),
     ).resolves.toEqual({ success: true, data: channels })
+  })
+
+  it("rejects well-formed commands from another workflow at every manual listener", async () => {
+    const executeSync = vi.spyOn(modelSyncScheduler, "executeSync")
+    const executeFailedOnly = vi.spyOn(modelSyncScheduler, "executeFailedOnly")
+    setupManagedSiteModelSyncMessagingListeners()
+
+    for (const [type, data] of [
+      ["modelSync:triggerAll", {}],
+      ["modelSync:triggerSelected", { channelIds: [1] }],
+      ["modelSync:triggerFailedOnly", {}],
+    ] as const) {
+      await expect(
+        modelSyncMessageHandlers.get(type)?.({
+          data: {
+            ...data,
+            protectionBypassExecution: WRONG_MODEL_SYNC_EXECUTION,
+          },
+        }),
+      ).resolves.toEqual({
+        success: false,
+        error: "Invalid protection bypass execution",
+      })
+    }
+
+    expect(executeSync).not.toHaveBeenCalled()
+    expect(executeFailedOnly).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { ...MODEL_SYNC_EXECUTION, command: "unknown_command" },
+    { ...MODEL_SYNC_EXECUTION, surface: "unknown_surface" },
+    { ...MODEL_SYNC_EXECUTION, version: 2 },
+  ])("rejects malformed plain execution metadata: %j", async (execution) => {
+    const executeSync = vi.spyOn(modelSyncScheduler, "executeSync")
+    setupManagedSiteModelSyncMessagingListeners()
+
+    await expect(
+      modelSyncMessageHandlers.get("modelSync:triggerAll")?.({
+        data: { protectionBypassExecution: execution },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid protection bypass execution",
+    })
+    expect(executeSync).not.toHaveBeenCalled()
   })
 })
 

@@ -4,6 +4,7 @@ import {
   resolveAccountBrowserSession,
   type AccountBrowserSession,
 } from "~/services/accountBrowserSession"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 type Sub2ApiResyncedToken = {
@@ -44,6 +45,7 @@ const mapResyncSource = (
 export async function resyncSub2ApiAuthToken(
   baseUrl: string,
   tempWindowRequestSource?: TempWindowRequestSource,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<Sub2ApiResyncedToken | null> {
   const session = await resolveAccountBrowserSession({
     baseUrl,
@@ -52,6 +54,7 @@ export async function resyncSub2ApiAuthToken(
     useTempWindow: true,
     requestIdPrefix: "sub2api-token-resync",
     ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+    ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
     isUsableSession: hasUsableAccessToken,
   })
 

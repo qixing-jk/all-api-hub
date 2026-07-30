@@ -61,6 +61,11 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
+import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 import {
@@ -1077,11 +1082,14 @@ export default function ManagedSiteChannels({
         return next
       })
       try {
-        const response = await sendModelSyncMessage(
-          ModelSyncMessageTypes.TriggerSelected,
-          {
-            channelIds: eligibleChannelIds,
-          },
+        const response = await withProtectionBypassUserCommand(
+          PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+          PROTECTION_BYPASS_SURFACES.Options,
+          async (protectionBypassExecution) =>
+            await sendModelSyncMessage(ModelSyncMessageTypes.TriggerSelected, {
+              channelIds: eligibleChannelIds,
+              protectionBypassExecution,
+            }),
         )
         if (!response?.success) {
           throw new Error(response?.error || "Failed to sync channels")

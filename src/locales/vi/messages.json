@@ -35,11 +35,11 @@
     "unsupportedModelSync": "Phiên bản hiện tại không hỗ trợ đồng bộ mô hình trạm quản lý AxonHub"
   },
   "background": {
-    "cannotCreateWindow": "Không thể tạo cửa sổ",
     "cannotCreateWindowOrTab": "Không thể tạo cửa sổ hoặc lấy thẻ",
     "incognitoAccessRequired": "Cần cho phép tiện ích hoạt động trong chế độ ẩn danh để sử dụng cửa sổ tạm thời ẩn danh, vui lòng bật \"Cho phép trong chế độ ẩn danh\" trên trang quản lý tiện ích và thử lại",
     "invalidFetchRequest": "Tham số yêu cầu không hợp lệ",
     "pageLoadTimeout": "Tải trang quá thời gian",
+    "tempWindowPolicyContextInvalid": "Không thể tiếp tục thao tác này. Hãy bắt đầu lại.",
     "windowCreationUnavailable": "Quy trình hiện tại yêu cầu trình duyệt mở một cửa sổ tạm thời, nhưng việc tạo cửa sổ không khả dụng. Vui lòng cho phép tiện ích tạo cửa sổ hoặc chuyển sang sử dụng trình duyệt hỗ trợ tính năng này rồi thử lại.",
     "windowNotFound": "Không tìm thấy cửa sổ hoặc thẻ tương ứng"
   },

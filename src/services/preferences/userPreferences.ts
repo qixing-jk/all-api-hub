@@ -722,6 +722,14 @@ class UserPreferencesService {
   }
 
   /**
+   * Get current preferences while preserving storage failures for callers that
+   * must fail closed instead of silently applying defaults.
+   */
+  async getPreferencesStrict(): Promise<UserPreferences> {
+    return await this.readPreferencesSnapshot()
+  }
+
+  /**
    * Save partial user preferences (deep merge) and return a typed write result.
    */
   async savePreferencesWithResult(

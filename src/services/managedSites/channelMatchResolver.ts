@@ -17,6 +17,7 @@ import {
   normalizeManagedSiteChannelBaseUrl,
 } from "~/services/managedSites/utils/channelMatching"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ManagedSiteChannelListData } from "~/types/managedSite"
 
 export type ManagedSiteChannelMatchService = Pick<
@@ -52,7 +53,9 @@ interface ResolveManagedSiteChannelMatchParams {
   key?: string
   resolvedChannelKeysById?: Record<number, string>
   resolveHiddenKeys?: boolean
+  hiddenKeyChannelIds?: readonly number[]
   requestCache?: ManagedSiteChannelMatchRequestCache
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 interface ManagedSiteChannelMatchResolution
@@ -91,6 +94,7 @@ const fetchRecoverableCandidateSecretKey = async (params: {
   managedConfig: ManagedSiteRuntimeConfigValue
   channelId: number
   requestCache?: ManagedSiteChannelMatchRequestCache
+  protectionBypassExecution: ProtectionBypassExecution
 }) => {
   try {
     const cachedSecretKeyPromise =
@@ -103,6 +107,9 @@ const fetchRecoverableCandidateSecretKey = async (params: {
     const secretKeyPromise = params.service.fetchChannelSecretKey!(
       params.managedConfig,
       params.channelId,
+      {
+        protectionBypassExecution: params.protectionBypassExecution,
+      },
     )
     params.requestCache?.channelSecretKeysById.set(
       params.channelId,
@@ -306,6 +313,7 @@ export async function resolveManagedSiteChannelMatch(
 
   if (
     resolveHiddenKeys &&
+    params.protectionBypassExecution &&
     typeof service.fetchChannelSecretKey === "function" &&
     key?.trim()
   ) {
@@ -345,7 +353,11 @@ export async function resolveManagedSiteChannelMatch(
         "string"
         ? [rankedRecoverableCandidate]
         : []),
-    ]
+    ].filter(
+      (channel) =>
+        !params.hiddenKeyChannelIds ||
+        params.hiddenKeyChannelIds.includes(channel.id),
+    )
 
     for (const recoverableCandidate of recoverableCandidates) {
       try {
@@ -355,6 +367,7 @@ export async function resolveManagedSiteChannelMatch(
             managedConfig,
             channelId: recoverableCandidate.id,
             requestCache,
+            protectionBypassExecution: params.protectionBypassExecution,
           })
         if (requestCache) {
           requestCache.resolvedChannelKeysById[recoverableCandidate.id] =
@@ -374,6 +387,7 @@ export async function resolveManagedSiteChannelMatch(
   }
 
   if (
+    params.protectionBypassExecution &&
     typeof service.hydrateComparableChannelKeys === "function" &&
     key?.trim() &&
     !hasExactKeyAndModelMatch()
@@ -415,13 +429,18 @@ export async function resolveManagedSiteChannelMatch(
       !hasUsableManagedSiteChannelKey(rankedRecoverableCandidate.key)
         ? [rankedRecoverableCandidate]
         : []),
-    ]
+    ].filter(
+      (channel) =>
+        !params.hiddenKeyChannelIds ||
+        params.hiddenKeyChannelIds.includes(channel.id),
+    )
 
     if (recoverableCandidates.length > 0) {
       try {
         const hydratedCandidates = await service.hydrateComparableChannelKeys(
           managedConfig,
           recoverableCandidates,
+          { protectionBypassExecution: params.protectionBypassExecution },
         )
 
         for (const channel of hydratedCandidates) {

@@ -112,6 +112,52 @@ describe("TempWindowFallbackReminderGate", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("does not check settings or render a reminder for invalid invocation context", async () => {
+    accountDataState.displayData = [
+      {
+        id: "acc-invalid",
+        name: "Retry locally",
+        health: {
+          code: TEMP_WINDOW_HEALTH_STATUS_CODES.POLICY_CONTEXT_INVALID,
+        },
+      },
+    ]
+
+    render(<TempWindowFallbackReminderGate />)
+
+    await waitFor(() => {
+      expect(getTempWindowFallbackBlockStatusMock).not.toHaveBeenCalled()
+      expect(
+        screen.queryByTestId("temp-window-fallback-reminder"),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("ignores an invalid invocation-context result from the shared fallback gate", async () => {
+    accountDataState.displayData = [
+      {
+        id: "acc-disabled",
+        name: "Stale issue",
+        health: {
+          code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+        },
+      },
+    ]
+    getTempWindowFallbackBlockStatusMock.mockResolvedValue({
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.POLICY_CONTEXT_INVALID,
+      reason: "missing_execution",
+    })
+
+    render(<TempWindowFallbackReminderGate />)
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("temp-window-fallback-reminder"),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it("renders nothing for a stale disabled issue when the shared fallback gate reports no current block", async () => {
     accountDataState.displayData = [
       {

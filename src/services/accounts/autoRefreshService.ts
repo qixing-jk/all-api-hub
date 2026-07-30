@@ -2,13 +2,23 @@ import {
   AutoRefreshMessageTypes,
   onAutoRefreshMessage,
   type AutoRefreshMutationResponse,
+  type AutoRefreshRefreshNowRequest,
   type AutoRefreshRefreshNowResponse,
   type AutoRefreshStatusResponse,
   type AutoRefreshUpdateSettingsRequest,
 } from "~/services/accounts/autoRefreshMessaging"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
+import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+  isRefreshAllAccountsProtectionBypassExecution,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+} from "~/services/protectionBypass/contracts"
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import { AccountAutoRefresh } from "~/types/accountAutoRefresh"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import {
   isMessageReceiverUnavailableError,
   sendRuntimeMessage,
@@ -105,7 +115,13 @@ class AutoRefreshService {
       logger.info("开始执行后台刷新")
 
       // 直接调用accountStorage的刷新方法
-      const result = await accountStorage.refreshAllAccounts(false)
+      const result = await accountStorage.refreshAllAccounts(false, {
+        protectionBypassExecution: createAutomaticProtectionBypassExecution(
+          PROTECTION_BYPASS_FEATURES.AccountRefresh,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+          PROTECTION_BYPASS_SURFACES.Background,
+        ),
+      })
       logger.info("后台刷新完成", {
         success: result.success,
         failed: result.failed,
@@ -128,10 +144,16 @@ class AutoRefreshService {
    * Trigger a one-off immediate refresh (bypasses interval scheduling).
    * @returns Counts of succeeded/failed account refreshes.
    */
-  async refreshNow(): Promise<{ success: number; failed: number }> {
+  async refreshNow(
+    protectionBypassExecution: AutoRefreshRefreshNowRequest["protectionBypassExecution"],
+    tempWindowRequestSource?: TempWindowRequestSource,
+  ): Promise<{ success: number; failed: number }> {
     try {
       logger.info("执行立即刷新")
-      const result = await accountStorage.refreshAllAccounts(true)
+      const result = await accountStorage.refreshAllAccounts(true, {
+        protectionBypassExecution,
+        ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+      })
       logger.info("立即刷新完成", {
         success: result.success,
         failed: result.failed,
@@ -238,8 +260,23 @@ export function setupAutoRefreshMessagingListeners() {
     onAutoRefreshMessage(AutoRefreshMessageTypes.Setup, () =>
       resolveAutoRefreshSetupMessage(),
     ),
-    onAutoRefreshMessage(AutoRefreshMessageTypes.RefreshNow, () =>
-      resolveAutoRefreshRefreshNowMessage(),
+    onAutoRefreshMessage(
+      AutoRefreshMessageTypes.RefreshNow,
+      async ({ data }) => {
+        if (
+          !isRefreshAllAccountsProtectionBypassExecution(
+            data?.protectionBypassExecution,
+          )
+        ) {
+          return createRuntimeMessageFailure(
+            INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+          )
+        }
+        return await resolveAutoRefreshRefreshNowMessage(
+          data,
+          data.protectionBypassExecution.surface,
+        )
+      },
     ),
     onAutoRefreshMessage(AutoRefreshMessageTypes.Stop, () =>
       resolveAutoRefreshStopMessage(),
@@ -269,9 +306,27 @@ export async function resolveAutoRefreshSetupMessage(): Promise<AutoRefreshMutat
 /**
  * Resolve a typed request to refresh all accounts immediately.
  */
-export async function resolveAutoRefreshRefreshNowMessage(): Promise<AutoRefreshRefreshNowResponse> {
+export async function resolveAutoRefreshRefreshNowMessage(
+  request?: AutoRefreshRefreshNowRequest,
+  tempWindowRequestSource?: TempWindowRequestSource,
+): Promise<AutoRefreshRefreshNowResponse> {
   try {
-    return { success: true, data: await autoRefreshService.refreshNow() }
+    if (
+      !isRefreshAllAccountsProtectionBypassExecution(
+        request?.protectionBypassExecution,
+      )
+    ) {
+      return createRuntimeMessageFailure(
+        INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+      )
+    }
+    return {
+      success: true,
+      data: await autoRefreshService.refreshNow(
+        request.protectionBypassExecution,
+        tempWindowRequestSource,
+      ),
+    }
   } catch (error) {
     logger.error("处理消息失败", error)
     return createRuntimeMessageFailure(getErrorMessage(error))

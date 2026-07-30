@@ -1,6 +1,7 @@
 import type { ApiResponse } from "~/services/apiTransport/type"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
   ChannelFormData,
@@ -25,6 +26,10 @@ export type ManagedSiteMutationCertainty =
 
 export type ManagedSiteChannelDeleteResponse = ApiResponse<unknown> & {
   certainty?: ManagedSiteMutationCertainty
+}
+
+export type ManagedSiteChannelSecretReadOptions = {
+  protectionBypassExecution: ProtectionBypassExecution
 }
 
 export type ManagedSiteChannelsCapability<
@@ -52,10 +57,15 @@ export type ManagedSiteChannelsCapability<
     config: TConfig,
     channelId: number,
   ): Promise<ManagedSiteChannelDeleteResponse>
-  fetchSecretKey?(config: TConfig, channelId: number): Promise<string>
+  fetchSecretKey?(
+    config: TConfig,
+    channelId: number,
+    options?: ManagedSiteChannelSecretReadOptions,
+  ): Promise<string>
   hydrateComparableKeys?(
     config: TConfig,
     candidates: ManagedSiteChannel[],
+    options?: ManagedSiteChannelSecretReadOptions,
   ): Promise<ManagedSiteChannel[]>
   fetchModels?(
     config: TConfig,

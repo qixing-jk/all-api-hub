@@ -1,10 +1,11 @@
-import {
-  OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES,
-  OPENROUTER_BOOTSTRAP_MUTATION_STATES,
-} from "~/constants/openRouterBootstrap"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  TEMP_CONTEXT_TASK_KINDS,
+  type ProtectionBypassExecution,
+  type TempContextTask,
+} from "~/services/protectionBypass/contracts"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
-import { resolveTempWindowRequestPolicy } from "~/utils/browser/tempWindowRequestSource"
+import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
 
 import type {
   TempWindowOpenRouterManagementKeyActionParams,
@@ -18,33 +19,29 @@ import {
 
 /** Executes the canonical OpenRouter Management Keys page action. */
 export async function tempWindowOpenRouterManagementKeyAction(
-  params: TempWindowOpenRouterManagementKeyActionParams,
+  params: TempWindowOpenRouterManagementKeyActionParams & {
+    protectionBypassExecution: ProtectionBypassExecution
+  },
 ): Promise<TempWindowOpenRouterManagementKeyActionResult> {
-  const policy = resolveTempWindowRequestPolicy({
-    tempWindowRequestSource: params.tempWindowRequestSource,
-    suppressMinimize: params.suppressMinimize,
-  })
-  if (policy.blockedReason) {
-    return {
+  const task: Extract<
+    TempContextTask,
+    { kind: typeof TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction }
+  > = {
+    kind: TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction,
+    params: {
       requestId: params.requestId,
-      operation: "create",
-      mutationState: OPENROUTER_BOOTSTRAP_MUTATION_STATES.NotDispatched,
-      attemptOutcome: OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES.Failed,
-      label: params.operation.label,
-    }
-  }
-  const payload: TempWindowOpenRouterManagementKeyActionParams = {
-    requestId: params.requestId,
-    operation: params.operation,
-    tempWindowRequestSource: policy.tempWindowRequestSource,
-    suppressMinimize: policy.suppressMinimize,
+      operation: params.operation,
+      ...(params.suppressMinimize === undefined
+        ? {}
+        : { suppressMinimize: params.suppressMinimize }),
+    },
   }
 
-  const response = await sendRuntimeMessage({
-    action: RuntimeActionIds.TempWindowOpenRouterManagementKeyAction,
-    ...payload,
+  const response = await executeProtectionBypassTask({
+    execution: params.protectionBypassExecution,
+    task,
   })
-  return normalizeOpenRouterManagementKeyActionResult(payload, response)
+  return normalizeOpenRouterManagementKeyActionResult(params, response)
 }
 
 /** Requests cancellation using only the opaque action request ID. */

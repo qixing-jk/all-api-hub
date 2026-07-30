@@ -27,6 +27,9 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_IDS,
   PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
+  PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES,
+  PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION,
+  PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SORT_FIELDS,
@@ -1688,6 +1691,22 @@ describe("product analytics privacy filtering", () => {
         temp_window_fetch_failure_count: 1,
         temp_window_turnstile_fetch_success_count: 0,
         temp_window_turnstile_fetch_failure_count: 6,
+        protection_bypass_feature_checkin_count: 4,
+        protection_bypass_invocation_automatic_count: 4,
+        protection_bypass_trigger_scheduled_count: 3,
+        protection_bypass_operation_native_page_action_count: 4,
+        protection_bypass_decision_denied_count: 4,
+        protection_bypass_denial_automatic_disabled_count: 4,
+        protection_bypass_denial_resource_stale_count: 2,
+        protection_bypass_adapter_tab_count: 2,
+        protection_bypass_feature_private_host_count: 99,
+        grant_id: "private-grant",
+        request_id: "private-request",
+        origin: "https://private.example",
+        host: "private.example",
+        account_id: "private-account",
+        raw_error: "secret",
+        message: "secret",
         fetchUrl: "https://private.example/api/checkin?token=secret",
       },
     )
@@ -1704,7 +1723,91 @@ describe("product analytics privacy filtering", () => {
       temp_window_fetch_failure_count: 1,
       temp_window_turnstile_fetch_success_count: 0,
       temp_window_turnstile_fetch_failure_count: 6,
+      protection_bypass_feature_checkin_count: 4,
+      protection_bypass_invocation_automatic_count: 4,
+      protection_bypass_trigger_scheduled_count: 3,
+      protection_bypass_operation_native_page_action_count: 4,
+      protection_bypass_decision_denied_count: 4,
+      protection_bypass_denial_automatic_disabled_count: 4,
+      protection_bypass_denial_resource_stale_count: 2,
+      protection_bypass_adapter_tab_count: 2,
     })
+  })
+
+  it("keeps every fixed protection-bypass counter as a primitive number", () => {
+    const counters = Object.fromEntries(
+      PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES.map((key) => [
+        key,
+        1,
+      ]),
+    )
+
+    expect(
+      sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured,
+        counters,
+      ),
+    ).toEqual(counters)
+  })
+
+  it("keeps automatic bypass enablement without accepting the old kill-switch name", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      {
+        temp_window_fallback_automatic_bypass_enabled: false,
+        temp_window_fallback_enabled: false,
+      },
+    )
+
+    expect(sanitized).toEqual({
+      temp_window_fallback_automatic_bypass_enabled: false,
+    })
+  })
+
+  it("defines one reviewed property for every controlled bypass bucket", () => {
+    const prefixes = {
+      featureCounts: "feature",
+      invocationKindCounts: "invocation",
+      automaticTriggerCounts: "trigger",
+      operationCounts: "operation",
+      decisionCounts: "decision",
+      denialReasonCounts: "denial",
+      adapterCounts: "adapter",
+    } as const
+    const expected = Object.entries(
+      PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS,
+    ).flatMap(([dimension, values]) =>
+      values.map(
+        (value) =>
+          `protection_bypass_${prefixes[dimension as keyof typeof prefixes]}_${value}_count`,
+      ),
+    )
+
+    expect(PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES).toEqual(
+      expected,
+    )
+  })
+
+  it("derives the denial dimension from one reviewed outcome classification", () => {
+    expect(PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION).toEqual({
+      automatic_disabled: "denied",
+      feature_disabled: "denied",
+      surface_disabled: "denied",
+      manual_feature_disabled: "denied",
+      missing_intent: "denied",
+      invalid_intent: "denied",
+      operation_not_permitted: "denied",
+      resource_stale: "denied",
+      permission_required: "unavailable",
+      unsupported_environment: "unavailable",
+      policy_unavailable: "unavailable",
+    })
+    expect(
+      PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS.denialReasonCounts,
+    ).toEqual([
+      ...Object.keys(PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION),
+      "other",
+    ])
   })
 
   it("drops invalid enum values while keeping valid entrypoint", () => {

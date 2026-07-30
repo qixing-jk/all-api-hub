@@ -5,9 +5,10 @@ import { TempWindowFallbackReminderDialog } from "~/features/AccountManagement/c
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import {
   getTempWindowFallbackIssue,
+  isTempWindowFallbackReminderCode,
   type TempWindowFallbackIssue,
+  type TempWindowFallbackReminderCode,
 } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
-import { type TempWindowHealthStatusCode } from "~/types"
 import { getTempWindowFallbackBlockStatus } from "~/utils/browser/tempWindowFetch"
 
 /**
@@ -24,7 +25,7 @@ export function TempWindowFallbackReminderGate() {
 
   const [isOpen, setIsOpen] = useState(false)
   const [currentBlockCode, setCurrentBlockCode] =
-    useState<TempWindowHealthStatusCode | null>(null)
+    useState<TempWindowFallbackReminderCode | null>(null)
   const [resolvedBlockToken, setResolvedBlockToken] = useState<string | null>(
     null,
   )
@@ -77,7 +78,12 @@ export function TempWindowFallbackReminderGate() {
           return
         }
 
-        setCurrentBlockCode(status.kind === "blocked" ? status.code : null)
+        setCurrentBlockCode(
+          status.kind === "blocked" &&
+            isTempWindowFallbackReminderCode(status.code)
+            ? status.code
+            : null,
+        )
         setResolvedBlockToken(activeToken)
       })
       .catch(() => {

@@ -14,6 +14,7 @@ const {
   isNewApiVerifiedSessionActiveMock,
   requestDuplicateChannelWarningMock,
   updateFieldMock,
+  withProtectionBypassUserCommandMock,
 } = vi.hoisted(() => ({
   capturedVerificationRequests: [] as any[],
   fetchChannelSecretKeyMock: vi.fn(async () => "sk-test"),
@@ -29,7 +30,26 @@ const {
   isNewApiVerifiedSessionActiveMock: vi.fn(),
   requestDuplicateChannelWarningMock: vi.fn(),
   updateFieldMock: vi.fn(),
+  withProtectionBypassUserCommandMock: vi.fn(
+    async (_command, _surface, work) =>
+      await work({
+        version: 1,
+        kind: "user_command",
+        command: "verify_protection",
+        surface: "options",
+      }),
+  ),
 }))
+
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import("~/services/protectionBypass/client")
+
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: withProtectionBypassUserCommandMock,
+  }
+})
 
 vi.mock(
   "~/components/dialogs/ChannelDialog/context/ChannelDialogContext",
@@ -279,6 +299,7 @@ describe("ChannelDialog advisory verification action", () => {
     )
 
     expect(capturedVerificationRequests).toHaveLength(1)
+    expect(withProtectionBypassUserCommandMock).not.toHaveBeenCalled()
 
     await act(async () => {
       await capturedVerificationRequests[0].onVerified()
@@ -297,6 +318,19 @@ describe("ChannelDialog advisory verification action", () => {
         userId: "1",
       },
       7,
+      {
+        protectionBypassExecution: {
+          version: 1,
+          kind: "user_command",
+          command: "verify_protection",
+          surface: "options",
+        },
+      },
+    )
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
+      "verify_protection",
+      "options",
+      expect.any(Function),
     )
 
     expect(

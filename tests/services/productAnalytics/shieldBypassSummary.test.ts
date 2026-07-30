@@ -7,6 +7,14 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_DECISION_RESULTS,
+  PROTECTION_BYPASS_DENIED_REASONS,
+  PROTECTION_BYPASS_EXECUTION_KINDS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_OPERATIONS,
+} from "~/services/protectionBypass/contracts"
 
 const { captureMock, stateMocks } = vi.hoisted(() => ({
   captureMock: vi.fn(),
@@ -50,6 +58,18 @@ describe("shield bypass product analytics summary", () => {
       tempWindowFetchFailureCount: 1,
       tempWindowTurnstileFetchSuccessCount: 0,
       tempWindowTurnstileFetchFailureCount: 4,
+      featureCounts: { checkin: 4, account_refresh: 2, other: 1 },
+      invocationKindCounts: { automatic: 5, user_command: 2 },
+      automaticTriggerCounts: { scheduled: 3, retry: 2 },
+      operationCounts: { fetch: 2, native_page_action: 5 },
+      decisionCounts: { allowed: 3, denied: 2, unavailable: 2 },
+      denialReasonCounts: {
+        automatic_disabled: 2,
+        permission_required: 1,
+        policy_unavailable: 1,
+        resource_stale: 3,
+      },
+      adapterCounts: { tab: 2, window: 1 },
     })
     stateMocks.incrementShieldBypassSummary.mockResolvedValue(true)
     stateMocks.replaceShieldBypassSummaryState.mockResolvedValue(true)
@@ -120,6 +140,36 @@ describe("shield bypass product analytics summary", () => {
     expect(captureMock).not.toHaveBeenCalled()
   })
 
+  it("records one privacy-safe marginal patch per final policy decision", async () => {
+    const { recordProtectionBypassDecision } = await import(
+      "~/services/productAnalytics/shieldBypassSummary"
+    )
+
+    await recordProtectionBypassDecision({
+      feature: PROTECTION_BYPASS_FEATURES.Checkin,
+      invocationKind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
+      automaticTrigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+      operation: PROTECTION_BYPASS_OPERATIONS.NativePageAction,
+      decision: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+      denialReason: PROTECTION_BYPASS_DENIED_REASONS.AutomaticDisabled,
+    })
+
+    expect(stateMocks.incrementShieldBypassSummary).toHaveBeenCalledWith({
+      featureCounts: { checkin: 1 },
+      invocationKindCounts: { automatic: 1 },
+      automaticTriggerCounts: { scheduled: 1 },
+      operationCounts: { native_page_action: 1 },
+      decisionCounts: { denied: 1 },
+      denialReasonCounts: { automatic_disabled: 1 },
+    })
+    expect(
+      JSON.stringify(stateMocks.incrementShieldBypassSummary.mock.calls),
+    ).not.toMatch(
+      /grant|request|https?:|origin|host|account|raw|message|error/i,
+    )
+    expect(captureMock).not.toHaveBeenCalled()
+  })
+
   it("uploads one exact daily summary and rolls the local state forward", async () => {
     const { flushShieldBypassDailySummary } = await import(
       "~/services/productAnalytics/shieldBypassSummary"
@@ -141,6 +191,24 @@ describe("shield bypass product analytics summary", () => {
         temp_window_fetch_failure_count: 1,
         temp_window_turnstile_fetch_success_count: 0,
         temp_window_turnstile_fetch_failure_count: 4,
+        protection_bypass_feature_account_refresh_count: 2,
+        protection_bypass_feature_checkin_count: 4,
+        protection_bypass_feature_other_count: 1,
+        protection_bypass_invocation_automatic_count: 5,
+        protection_bypass_invocation_user_command_count: 2,
+        protection_bypass_trigger_scheduled_count: 3,
+        protection_bypass_trigger_retry_count: 2,
+        protection_bypass_operation_fetch_count: 2,
+        protection_bypass_operation_native_page_action_count: 5,
+        protection_bypass_decision_allowed_count: 3,
+        protection_bypass_decision_denied_count: 2,
+        protection_bypass_decision_unavailable_count: 2,
+        protection_bypass_denial_automatic_disabled_count: 2,
+        protection_bypass_denial_permission_required_count: 1,
+        protection_bypass_denial_policy_unavailable_count: 1,
+        protection_bypass_denial_resource_stale_count: 3,
+        protection_bypass_adapter_tab_count: 2,
+        protection_bypass_adapter_window_count: 1,
       },
     )
     expect(stateMocks.replaceShieldBypassSummaryState).toHaveBeenCalledWith({
@@ -152,6 +220,13 @@ describe("shield bypass product analytics summary", () => {
       tempWindowFetchFailureCount: 0,
       tempWindowTurnstileFetchSuccessCount: 0,
       tempWindowTurnstileFetchFailureCount: 0,
+      featureCounts: {},
+      invocationKindCounts: {},
+      automaticTriggerCounts: {},
+      operationCounts: {},
+      decisionCounts: {},
+      denialReasonCounts: {},
+      adapterCounts: {},
     })
   })
 

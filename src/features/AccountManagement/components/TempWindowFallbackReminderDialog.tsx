@@ -24,7 +24,8 @@ export interface TempWindowFallbackReminderDialogProps {
 
 /**
  * Reminder dialog shown when refresh health indicates temp-window fallback is required,
- * but is blocked by disabled configuration or missing permissions.
+ * but is blocked by disabled configuration or missing permissions. Invalid
+ * invocation context is handled as a local retry and never reaches this dialog.
  */
 export function TempWindowFallbackReminderDialog({
   isOpen,

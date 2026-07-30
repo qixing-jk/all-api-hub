@@ -31,11 +31,12 @@ const ENDPOINT = "/api/user/check_in"
  */
 async function checkinVeloera(
   account: SiteAccount,
-  context?: AutoCheckinProviderContext,
+  context: AutoCheckinProviderContext,
 ): Promise<CheckinResult> {
   const tempWindowRequestSource = normalizeTempWindowRequestSource(
-    context?.tempWindowRequestSource,
+    context.tempWindowRequestSource,
   )
+  const protectionBypassExecution = context.protectionBypassExecution
   const { site_url, account_info, authType } = account
 
   try {
@@ -51,6 +52,7 @@ async function checkinVeloera(
           accessToken: account_info.access_token,
         },
         tempWindowRequestSource,
+        ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
       },
       {
         endpoint: ENDPOINT,

@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
+import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type {
   AccountStats,
   CurrencyAmount,
@@ -9,6 +11,7 @@ import type {
   DisplaySiteData,
   SiteAccount,
 } from "~/types"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -66,6 +69,9 @@ export const useAccountData = (): UseAccountDataResult => {
   // 加载状态
   const [isInitialLoad, setIsInitialLoad] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const refreshCommandRef = useRef<ReturnType<
+    typeof accountStorage.refreshAllAccounts
+  > | null>(null)
 
   // 动画相关状态
   const [prevTotalConsumption, setPrevTotalConsumption] = useState({
@@ -145,25 +151,43 @@ export const useAccountData = (): UseAccountDataResult => {
    * back to the caller so toast logic can reflect success/failure counts.
    */
   const handleRefresh = useCallback(async () => {
+    if (refreshCommandRef.current) {
+      return await refreshCommandRef.current
+    }
+
+    const source = getCurrentTempWindowRequestSource()
     setIsRefreshing(true)
+    const refreshPromise = withProtectionBypassUserCommand(
+      PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+      source,
+      async (protectionBypassExecution) => {
+        setIsRefreshing(true)
+        try {
+          const refreshResult = await accountStorage.refreshAllAccounts(false, {
+            tempWindowRequestSource: source,
+            protectionBypassExecution,
+          })
+          logger.debug("刷新结果", refreshResult)
+          await loadAccountData()
+          setLastUpdateTime(new Date())
+          return refreshResult
+        } catch (error) {
+          logger.error("刷新数据失败", error)
+          await loadAccountData()
+          throw error
+        } finally {
+          setIsRefreshing(false)
+        }
+      },
+    )
+    refreshCommandRef.current = refreshPromise
     try {
-      // 刷新所有账号数据
-      const refreshResult = await accountStorage.refreshAllAccounts()
-      logger.debug("刷新结果", refreshResult)
-
-      // 重新加载显示数据
-      await loadAccountData()
-      setLastUpdateTime(new Date())
-
-      // 返回刷新结果，让组件层处理 UI 反馈
-      return refreshResult
-    } catch (error) {
-      logger.error("刷新数据失败", error)
-      // 即使刷新失败也尝试加载本地数据
-      await loadAccountData()
-      throw error
+      return await refreshPromise
     } finally {
-      setIsRefreshing(false)
+      if (refreshCommandRef.current === refreshPromise) {
+        refreshCommandRef.current = null
+        setIsRefreshing(false)
+      }
     }
   }, [loadAccountData])
 

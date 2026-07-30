@@ -126,8 +126,8 @@
     "httpError": "HTTP {{statusCode}}: {{message}}",
     "networkFailed": "网络连接失败",
     "normal": "账号状态正常",
-    "tempWindowDisabled": "过盾功能已关闭，请在 设置 > 数据刷新 中启用",
-    "tempWindowPermissionRequired": "Firefox 过盾功能需要 Cookie 拦截权限，请在 设置 > 权限管理 中授予",
+    "tempWindowDisabled": "自动刷新遇到网站验证，但当前不允许自动任务打开临时页面。请前往“设置 > 数据刷新”开启",
+    "tempWindowPermissionRequired": "Firefox 需要 Cookies、Web Request 和 Web Request Blocking 权限才能完成网站验证。请前往“设置 > 权限管理”授予",
     "unknown": "未知",
     "unknownError": "未知错误",
     "warning": "警告"

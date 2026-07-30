@@ -24,6 +24,12 @@ import type {
   LdohSiteSummary,
 } from "~/services/integrations/ldohSiteLookup/types"
 import { buildLdohSiteSearchUrlFromUrl } from "~/services/integrations/ldohSiteLookup/url"
+import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+} from "~/services/protectionBypass/contracts"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -91,7 +97,14 @@ export function LdohSiteLookupProvider({ children }: { children: ReactNode }) {
       refreshAttemptedRef.current = true
 
       try {
-        await requestLdohSiteLookupRefreshSites({ maxAttempts: 1 })
+        await requestLdohSiteLookupRefreshSites({
+          maxAttempts: 1,
+          protectionBypassExecution: createAutomaticProtectionBypassExecution(
+            PROTECTION_BYPASS_FEATURES.SiteDetection,
+            PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+            getCurrentTempWindowRequestSource(),
+          ),
+        })
       } catch (error) {
         logger.debug("Background refresh request failed", {
           error: getErrorMessage(error),

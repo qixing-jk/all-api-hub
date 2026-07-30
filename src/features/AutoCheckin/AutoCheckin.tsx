@@ -41,6 +41,15 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   type ProductAnalyticsResult,
 } from "~/services/productAnalytics/contracts"
+import {
+  createAutomaticProtectionBypassExecution,
+  withProtectionBypassUserCommand,
+} from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { DisplaySiteData } from "~/types"
 import {
@@ -263,6 +272,7 @@ export default function AutoCheckin(props: {
   })
 
   const quickRunTriggeredRef = useRef(false)
+  const manualCheckinInFlightRef = useRef(false)
 
   const loadStatus = useCallback(async () => {
     const loadId = latestStatusLoadIdRef.current + 1
@@ -312,6 +322,8 @@ export default function AutoCheckin(props: {
   }, [loadStatus])
 
   const handleRunNow = useCallback(async () => {
+    if (manualCheckinInFlightRef.current) return
+    manualCheckinInFlightRef.current = true
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
@@ -324,9 +336,13 @@ export default function AutoCheckin(props: {
       toast.loading(t("messages.loading.running"))
 
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.RunNow,
-        { tempWindowRequestSource },
+      const response = await withProtectionBypassUserCommand(
+        PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        tempWindowRequestSource,
+        (protectionBypassExecution) =>
+          sendAutoCheckinMessage(AutoCheckinMessageTypes.RunNow, {
+            protectionBypassExecution,
+          }),
       )
 
       toast.dismiss()
@@ -359,6 +375,7 @@ export default function AutoCheckin(props: {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     } finally {
+      manualCheckinInFlightRef.current = false
       setIsRunning(false)
     }
   }, [loadStatus, t])
@@ -477,12 +494,18 @@ export default function AutoCheckin(props: {
       toast.loading(t("messages.loading.evaluatingUiOpenPretrigger"))
 
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()
+      const protectionBypassExecution =
+        createAutomaticProtectionBypassExecution(
+          PROTECTION_BYPASS_FEATURES.Checkin,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          tempWindowRequestSource,
+        )
       const response = await sendAutoCheckinMessage(
         AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
         {
           dryRun: true,
           debug: true,
-          tempWindowRequestSource,
+          protectionBypassExecution,
         },
       )
 
@@ -543,12 +566,18 @@ export default function AutoCheckin(props: {
       })
 
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()
+      const protectionBypassExecution =
+        createAutomaticProtectionBypassExecution(
+          PROTECTION_BYPASS_FEATURES.Checkin,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          tempWindowRequestSource,
+        )
       const response = await sendAutoCheckinMessage(
         AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
         {
           requestId,
           debug: true,
-          tempWindowRequestSource,
+          protectionBypassExecution,
         },
       )
 
@@ -721,6 +750,8 @@ export default function AutoCheckin(props: {
   }
 
   const handleRetryAccount = async (accountId: string) => {
+    if (manualCheckinInFlightRef.current) return
+    manualCheckinInFlightRef.current = true
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RetryAutoCheckinAccount,
@@ -731,12 +762,14 @@ export default function AutoCheckin(props: {
     try {
       setRetryingAccountId(accountId)
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.RetryAccount,
-        {
-          accountId,
-          tempWindowRequestSource,
-        },
+      const response = await withProtectionBypassUserCommand(
+        PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount,
+        tempWindowRequestSource,
+        (protectionBypassExecution) =>
+          sendAutoCheckinMessage(AutoCheckinMessageTypes.RetryAccount, {
+            accountId,
+            protectionBypassExecution,
+          }),
       )
 
       if (response.success) {
@@ -764,6 +797,7 @@ export default function AutoCheckin(props: {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     } finally {
+      manualCheckinInFlightRef.current = false
       setRetryingAccountId(null)
     }
   }

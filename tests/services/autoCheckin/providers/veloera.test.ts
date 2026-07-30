@@ -40,6 +40,23 @@ const mockAccount: SiteAccount = {
   user_updated_at: Date.now(),
 }
 
+const DEFAULT_PROVIDER_CONTEXT = {
+  tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+  protectionBypassExecution: {
+    version: 1,
+    kind: "user_command",
+    command: "manual_checkin",
+    surface: "options",
+  },
+} as const
+
+const checkInForTest = (
+  account: Parameters<typeof veloeraProvider.checkIn>[0],
+  context: Parameters<
+    typeof veloeraProvider.checkIn
+  >[1] = DEFAULT_PROVIDER_CONTEXT,
+) => veloeraProvider.checkIn(account, context)
+
 describe("veloeraProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -83,8 +100,14 @@ describe("veloeraProvider", () => {
         message: "",
       })
 
-      const result = await veloeraProvider.checkIn(mockAccount, {
+      const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: {
+          version: 1,
+          kind: "user_command",
+          command: "manual_checkin",
+          surface: "options",
+        },
       })
 
       expect(result).toEqual({
@@ -107,7 +130,7 @@ describe("veloeraProvider", () => {
         message: "Success",
       })
 
-      const result = await veloeraProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("success")
       expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
@@ -122,7 +145,7 @@ describe("veloeraProvider", () => {
         message: "已签到",
       })
 
-      const result = await veloeraProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("already_checked")
     })
 
@@ -134,7 +157,7 @@ describe("veloeraProvider", () => {
         message: "",
       })
 
-      const result = await veloeraProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -152,7 +175,7 @@ describe("veloeraProvider", () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       vi.mocked(fetchApi).mockRejectedValueOnce(new Error("404 Not found"))
 
-      const result = await veloeraProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -164,7 +187,7 @@ describe("veloeraProvider", () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       vi.mocked(fetchApi).mockRejectedValueOnce(new Error("Network error"))
 
-      const result = await veloeraProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
     })
   })

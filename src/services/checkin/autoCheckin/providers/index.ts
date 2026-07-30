@@ -2,6 +2,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
@@ -20,12 +21,13 @@ export interface AutoCheckinProvider {
   canCheckIn(account: SiteAccount): boolean
   checkIn(
     account: SiteAccount | AnyrouterCheckInParams,
-    context?: AutoCheckinProviderContext,
+    context: AutoCheckinProviderContext,
   ): Promise<AutoCheckinProviderResult>
 }
 
 export interface AutoCheckinProviderContext {
   tempWindowRequestSource: TempWindowRequestSource
+  protectionBypassExecution: ProtectionBypassExecution
 }
 
 const providers: Record<string, AutoCheckinProvider> = {

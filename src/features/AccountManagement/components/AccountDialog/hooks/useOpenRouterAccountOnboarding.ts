@@ -22,6 +22,7 @@ import type {
   OpenRouterAccountOnboardingResult,
   OpenRouterProvisioningMetadata,
 } from "~/services/apiAdapters/openrouter/types"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { showWarningToast } from "~/utils/core/toastHelpers"
@@ -82,6 +83,7 @@ type OpenRouterOnboardingRunResult = {
 
 type OpenRouterOnboardingStartParams = {
   preparation: OpenRouterOnboardingPreparation
+  protectionBypassExecution: ProtectionBypassExecution
   onStarted: () => void
   onDetected: (data: AutoDetectCompletionData) => void | Promise<void>
   onManualFallback: (failure: {
@@ -433,6 +435,7 @@ export function useOpenRouterAccountOnboarding() {
   const startPrepared = useCallback(
     async ({
       preparation,
+      protectionBypassExecution,
       onStarted,
       onDetected,
       onManualFallback,
@@ -471,6 +474,7 @@ export function useOpenRouterAccountOnboarding() {
         promise = onboardOpenRouterAccount({
           requestId,
           tempWindowRequestSource,
+          protectionBypassExecution,
         })
         activeRef.current = { requestId, promise, contextVersion, sessionId }
         releasePreparation(preparation)

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react"
+import { fireEvent, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -20,6 +20,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
 } from "~/services/productAnalytics/contracts"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
@@ -106,6 +107,7 @@ const {
   resolveDisplayAccountRuntimeKeySecretMock,
   resolveManagedUpstreamResourceFeatureCapabilitiesMock,
   getCurrentTempWindowRequestSourceMock,
+  withProtectionBypassUserCommandMock,
 } = vi.hoisted(() => ({
   mockHandleSetAccountDisabled: vi.fn(),
   mockHandleRefreshAccount: vi.fn(),
@@ -156,6 +158,19 @@ const {
   resolveDisplayAccountRuntimeKeySecretMock: vi.fn(),
   resolveManagedUpstreamResourceFeatureCapabilitiesMock: vi.fn(),
   getCurrentTempWindowRequestSourceMock: vi.fn(),
+  withProtectionBypassUserCommandMock: vi.fn(
+    async (
+      _command: unknown,
+      _surface: unknown,
+      work: (execution: unknown) => Promise<unknown>,
+    ) =>
+      work({
+        version: 1,
+        kind: "user_command",
+        command: "verify_protection",
+        surface: "options",
+      }),
+  ),
 }))
 
 vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
@@ -201,6 +216,15 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
     ...actual,
     sendAutoCheckinMessage: (type: string, data?: Record<string, unknown>) =>
       sendRuntimeMessageMock(type, data),
+  }
+})
+
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/protectionBypass/client")>()
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: withProtectionBypassUserCommandMock,
   }
 })
 
@@ -1681,7 +1705,12 @@ describe("AccountActionButtons", () => {
         AutoCheckinMessageTypes.RunNow,
         {
           accountIds: ["acc-5"],
-          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          protectionBypassExecution: {
+            version: 1,
+            kind: "user_command",
+            command: "verify_protection",
+            surface: "options",
+          },
         },
       )
       expect(sendRuntimeMessageMock).toHaveBeenCalledWith(
@@ -1710,6 +1739,11 @@ describe("AccountActionButtons", () => {
       )
     })
     expect(getCurrentTempWindowRequestSourceMock).toHaveBeenCalledTimes(1)
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
+      PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      expect.any(Function),
+    )
     expect(
       sendRuntimeMessageMock.mock.calls.filter(
         ([type]) => type === AutoCheckinMessageTypes.RunNow,
@@ -1720,6 +1754,55 @@ describe("AccountActionButtons", () => {
         ([type]) => type === AutoCheckinMessageTypes.GetStatus,
       ),
     ).toHaveLength(1)
+  })
+
+  it("coalesces rapid targeted Quick check-in clicks into one user command", async () => {
+    const run = createDeferred<{ success: boolean }>()
+    sendRuntimeMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.RunNow) return await run.promise
+      if (type === AutoCheckinMessageTypes.GetStatus) {
+        return { success: true, data: { perAccount: {} } }
+      }
+      return { success: true }
+    })
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-double-click",
+          disabled: false,
+          checkIn: { enableDetection: true },
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    const quickCheckinButton = (
+      await screen.findByText("account:actions.quickCheckin")
+    ).closest("button")
+    expect(quickCheckinButton).not.toBeNull()
+
+    fireEvent.click(quickCheckinButton!)
+    fireEvent.click(quickCheckinButton!)
+
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledTimes(1)
+    expect(
+      sendRuntimeMessageMock.mock.calls.filter(
+        ([type]) => type === AutoCheckinMessageTypes.RunNow,
+      ),
+    ).toHaveLength(1)
+
+    run.resolve({ success: true })
+    await waitFor(() => {
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith(
+        AutoCheckinMessageTypes.GetStatus,
+        undefined,
+      )
+    })
   })
 
   it("shows a failure toast when quick check-in finishes without a per-account result", async () => {
@@ -2551,6 +2634,83 @@ describe("AccountActionButtons", () => {
       "https://api.example.com",
     )
     expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
+  })
+
+  it("uses a scoped verification grant when account locate must recover a hidden New API key", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-hidden" }])
+    const fetchChannelSecretKey = vi.fn().mockResolvedValue("sk-hidden")
+    const managedService = {
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      prepareChannelFormData: vi.fn().mockResolvedValue({
+        base_url: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "sk-hidden",
+      }),
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 322,
+            name: "Hidden Managed Channel",
+            base_url: "https://api.example.com",
+            models: "gpt-4",
+            key: "sk-***",
+          },
+        ],
+        total: 1,
+        type_counts: {},
+      }),
+      fetchChannelSecretKey,
+    }
+    getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-6-hidden",
+          disabled: false,
+          name: "Site",
+          baseUrl: "https://api.example.com",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    const menu = await screen.findByRole("menu")
+    await user.click(
+      (
+        await within(menu).findByText(
+          "account:actions.locateManagedSiteChannel",
+        )
+      ).closest("button")!,
+    )
+
+    await waitFor(() => {
+      expect(openManagedSiteChannelsForChannelMock).toHaveBeenCalledWith(322)
+    })
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
+      "verify_protection",
+      "popup",
+      expect.any(Function),
+    )
+    expect(fetchChannelSecretKey).toHaveBeenCalledWith(
+      expect.any(Object),
+      322,
+      expect.objectContaining({
+        protectionBypassExecution: expect.objectContaining({
+          kind: "user_command",
+        }),
+      }),
+    )
   })
 
   it("uses resource-backed channel candidates for account shortcut locate when feature-gated", async () => {

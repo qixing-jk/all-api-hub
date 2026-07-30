@@ -38,6 +38,13 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/contracts"
+import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
 import type { AccountToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -193,6 +200,7 @@ type ManagedSiteTokenChannelStatusResult = Awaited<
 
 interface RefreshManagedSiteTokenStatusOptions {
   resolvedChannelKeysById?: Record<number, string>
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 interface ConfirmManagedSiteTokenStatusWithChannelKeyOptions {
@@ -499,6 +507,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       targets?: ManagedSiteStatusCheckTargetInput[]
       force?: boolean
       resolvedChannelKeysByIdentityKey?: Record<string, Record<number, string>>
+      protectionBypassExecution?: ProtectionBypassExecution
     }): Promise<Record<string, ManagedSiteTokenChannelStatusResult>> => {
       const resultsByIdentityKey: Record<
         string,
@@ -514,6 +523,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         targets: explicitTargets = [],
         force = false,
         resolvedChannelKeysByIdentityKey = {},
+        protectionBypassExecution,
       } = params
       const uniqueTargets = new Map<
         string,
@@ -625,6 +635,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               token: target.token,
               resolvedChannelKeysById: target.resolvedChannelKeysById,
               operationContext,
+              protectionBypassExecution:
+                protectionBypassExecution ??
+                createAutomaticProtectionBypassExecution(
+                  PROTECTION_BYPASS_FEATURES.SessionResync,
+                  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+                  PROTECTION_BYPASS_SURFACES.Options,
+                ),
             })
             const displayResult = toDisplayManagedSiteTokenStatusResult(result)
 
@@ -1550,6 +1567,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               [identityKey]: options.resolvedChannelKeysById,
             }
           : undefined,
+        protectionBypassExecution: options?.protectionBypassExecution,
       })
 
       return results[identityKey]

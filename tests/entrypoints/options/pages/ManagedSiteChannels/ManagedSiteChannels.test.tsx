@@ -113,6 +113,7 @@ const {
   mockTrackProductAnalyticsActionCompleted,
   mockCompleteProductAnalyticsAction,
   mockResolveManagedUpstreamResourceCapabilities,
+  mockWithProtectionBypassUserCommand,
 } = vi.hoisted(() => ({
   mockFetchChannelFilters: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
@@ -120,6 +121,19 @@ const {
   mockTrackProductAnalyticsActionCompleted: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
   mockResolveManagedUpstreamResourceCapabilities: vi.fn(),
+  mockWithProtectionBypassUserCommand: vi.fn(
+    async (_command, _surface, work) =>
+      await work({
+        version: 1,
+        kind: "user_command",
+        command: "verify_protection",
+        surface: "options",
+      }),
+  ),
+}))
+
+vi.mock("~/services/protectionBypass/client", () => ({
+  withProtectionBypassUserCommand: mockWithProtectionBypassUserCommand,
 }))
 
 vi.mock("~/features/ManagedSiteChannels/utils/channelFilters", async () => ({
@@ -2735,9 +2749,22 @@ describe("ManagedSiteChannels", () => {
     await waitFor(() => {
       expect(sendModelSyncMessage).toHaveBeenCalledWith(
         "modelSync:triggerSelected",
-        { channelIds: [1] },
+        {
+          channelIds: [1],
+          protectionBypassExecution: {
+            version: 1,
+            kind: "user_command",
+            command: "verify_protection",
+            surface: "options",
+          },
+        },
       )
     })
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
+      "verify_protection",
+      "options",
+      expect.any(Function),
+    )
 
     expect(toast.error).toHaveBeenCalledWith(
       "managedSiteChannels:toasts.syncFailed",
@@ -3410,9 +3437,22 @@ describe("ManagedSiteChannels", () => {
     await waitFor(() => {
       expect(sendModelSyncMessage).toHaveBeenCalledWith(
         "modelSync:triggerSelected",
-        { channelIds: [1, 2] },
+        {
+          channelIds: [1, 2],
+          protectionBypassExecution: {
+            version: 1,
+            kind: "user_command",
+            command: "verify_protection",
+            surface: "options",
+          },
+        },
       )
     })
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
+      "verify_protection",
+      "options",
+      expect.any(Function),
+    )
 
     expect(toast.success).toHaveBeenCalledWith(
       "managedSiteChannels:toasts.syncCompleted",
@@ -3580,6 +3620,12 @@ describe("ManagedSiteChannels", () => {
         password: "secret-password",
         totpSecret: "JBSWY3DPEHPK3PXP",
         channelId: 208,
+        protectionBypassExecution: {
+          version: 1,
+          kind: "user_command",
+          command: "verify_protection",
+          surface: "options",
+        },
       })
     })
 

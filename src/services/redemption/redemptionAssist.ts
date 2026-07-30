@@ -4,6 +4,12 @@ import {
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+} from "~/services/protectionBypass/contracts"
 import { redeemService } from "~/services/redemption/redeemService"
 import { isPossibleRedemptionCode } from "~/services/redemption/utils/redemptionCode"
 import { searchAccounts } from "~/services/search/accountSearch"
@@ -37,7 +43,13 @@ async function bestEffortRefreshAccountAfterSuccessfulRedeem(
   accountId: string,
 ) {
   try {
-    const result = await accountStorage.refreshAccount(accountId, true)
+    const result = await accountStorage.refreshAccount(accountId, true, {
+      protectionBypassExecution: createAutomaticProtectionBypassExecution(
+        PROTECTION_BYPASS_FEATURES.AccountRefresh,
+        PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+        PROTECTION_BYPASS_SURFACES.Background,
+      ),
+    })
     if (result?.refreshed !== true) {
       logger.debug("Post-redeem refresh did not refresh", {
         accountId,

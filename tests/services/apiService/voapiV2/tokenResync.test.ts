@@ -60,16 +60,24 @@ describe("VoAPI v2 token re-sync", () => {
 
   it("passes popup source to the browser-session reader", async () => {
     mockResolveAccountBrowserSession.mockResolvedValueOnce(null)
+    const protectionBypassExecution = {
+      version: 1 as const,
+      kind: "user_command" as const,
+      command: "reauthenticate_account",
+      surface: "options",
+    } as const
 
     await resyncVoApiV2AuthToken(
       "https://example.invalid",
       TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution,
     )
 
     expect(mockResolveAccountBrowserSession).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://example.invalid",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution,
       }),
     )
   })

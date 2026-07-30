@@ -1,7 +1,10 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import type {
+  ManagedSiteChannelDraftRequestOptions,
+  ManagedSiteChannelSecretReadOptions,
+} from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   createChannel as createNewApiChannel,
   deleteChannel as deleteNewApiChannel,
@@ -124,12 +127,14 @@ export async function deleteChannel(config: NewApiConfig, channelId: number) {
 export async function fetchChannelSecretKey(
   config: NewApiConfig,
   channelId: number,
+  options: ManagedSiteChannelSecretReadOptions,
 ): Promise<string> {
   const sessionConfig = await getNewApiManagedSessionConfig(config)
 
   return await fetchNewApiChannelKey({
     ...sessionConfig,
     channelId,
+    protectionBypassExecution: options.protectionBypassExecution,
   })
 }
 
@@ -139,6 +144,7 @@ export async function fetchChannelSecretKey(
 export async function hydrateComparableChannelKeys(
   config: NewApiConfig,
   candidates: ManagedSiteChannel[],
+  options: ManagedSiteChannelSecretReadOptions,
 ): Promise<ManagedSiteChannel[]> {
   const sessionConfig = await getNewApiManagedSessionConfig(config)
   const hydratedCandidates: ManagedSiteChannel[] = []
@@ -153,6 +159,7 @@ export async function hydrateComparableChannelKeys(
       const resolvedKey = await fetchNewApiChannelKey({
         ...sessionConfig,
         channelId: candidate.id,
+        protectionBypassExecution: options.protectionBypassExecution,
       })
 
       hydratedCandidates.push({
@@ -410,6 +417,7 @@ export function buildChannelPayload(
 export async function importToNewApi(
   account: DisplaySiteData,
   token: ApiToken,
+  options?: ManagedSiteChannelSecretReadOptions,
 ): Promise<ServiceResponse<void>> {
   try {
     const prefs = await userPreferences.getPreferences()
@@ -440,6 +448,7 @@ export async function importToNewApi(
       service: newApiImportDuplicateService,
       managedConfig,
       formData,
+      protectionBypassExecution: options?.protectionBypassExecution,
     })
 
     if (existingChannel) {

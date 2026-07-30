@@ -46,6 +46,7 @@ const ENDPOINT = AUTO_CHECKIN_USER_CHECKIN_ENDPOINT
 async function performCheckin(
   account: SiteAccount,
   tempWindowRequestSource: TempWindowRequestSource,
+  protectionBypassExecution?: AutoCheckinProviderContext["protectionBypassExecution"],
 ): Promise<WongCheckinApiResponse> {
   const { site_url, account_info } = account
 
@@ -60,6 +61,7 @@ async function performCheckin(
         accessToken: account_info.access_token,
       },
       tempWindowRequestSource,
+      ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
     },
     {
       endpoint: ENDPOINT,
@@ -77,15 +79,16 @@ async function performCheckin(
  */
 async function checkinWongGongyi(
   account: SiteAccount,
-  context?: AutoCheckinProviderContext,
+  context: AutoCheckinProviderContext,
 ): Promise<AutoCheckinProviderResult> {
   const tempWindowRequestSource = normalizeTempWindowRequestSource(
-    context?.tempWindowRequestSource,
+    context.tempWindowRequestSource,
   )
   try {
     const checkinResponse = await performCheckin(
       account,
       tempWindowRequestSource,
+      context.protectionBypassExecution,
     )
     const responseMessage = normalizeCheckinMessage(checkinResponse.message)
 

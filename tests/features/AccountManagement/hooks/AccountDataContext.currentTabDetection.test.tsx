@@ -101,31 +101,36 @@ vi.mock("~/services/search/accountSearch", () => ({
   searchAccountSearchIndex: vi.fn(() => []),
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
-  getActiveTabs: vi.fn(async () => activeTabs),
-  getAllTabs: vi.fn(async () => []),
-  onRuntimeMessage: vi.fn(() => () => {}),
-  onTabActivated: vi.fn(() => () => {}),
-  onTabRemoved: vi.fn(() => () => {}),
-  onTabUpdated: vi.fn((listener: any) => {
-    tabUpdatedListeners.push(listener)
-    return () => {
-      tabUpdatedListeners = tabUpdatedListeners.filter(
-        (currentListener) => currentListener !== listener,
-      )
-    }
-  }),
-  sendTabMessageWithRetry: vi.fn(
-    (
-      tabId: number,
-      message: unknown,
-      options?: browser.tabs._SendMessageOptions,
-    ) =>
-      typeof options === "undefined"
-        ? globalThis.browser.tabs.sendMessage(tabId, message)
-        : globalThis.browser.tabs.sendMessage(tabId, message, options),
-  ),
-}))
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+  return {
+    ...actual,
+    getActiveTabs: vi.fn(async () => activeTabs),
+    getAllTabs: vi.fn(async () => []),
+    onRuntimeMessage: vi.fn(() => () => {}),
+    onTabActivated: vi.fn(() => () => {}),
+    onTabRemoved: vi.fn(() => () => {}),
+    onTabUpdated: vi.fn((listener: any) => {
+      tabUpdatedListeners.push(listener)
+      return () => {
+        tabUpdatedListeners = tabUpdatedListeners.filter(
+          (currentListener) => currentListener !== listener,
+        )
+      }
+    }),
+    sendTabMessageWithRetry: vi.fn(
+      (
+        tabId: number,
+        message: unknown,
+        options?: browser.tabs._SendMessageOptions,
+      ) =>
+        typeof options === "undefined"
+          ? globalThis.browser.tabs.sendMessage(tabId, message)
+          : globalThis.browser.tabs.sendMessage(tabId, message, options),
+    ),
+  }
+})
 
 /**
  * Captures the latest AccountDataContext value for assertions.

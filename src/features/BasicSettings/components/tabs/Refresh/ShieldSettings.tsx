@@ -73,7 +73,6 @@ export default function ShieldSettings() {
   const shieldManualRefresh = tempWindowFallback.useForManualRefresh
   const shieldTempContextMode = tempWindowFallback.tempContextMode
 
-  const disableShieldUI = !canUseTempWindowFallback
   const shieldMethodHint =
     shieldTempContextMode === TEMP_CONTEXT_MODES.Window
       ? t("refresh.shieldMethodHintWindow")
@@ -124,7 +123,6 @@ export default function ShieldSettings() {
             rightContent={
               <Switch
                 checked={shieldEnabled}
-                disabled={disableShieldUI}
                 onChange={(value) =>
                   updateTempWindowFallback({ enabled: value })
                 }
@@ -149,11 +147,6 @@ export default function ShieldSettings() {
                         ? "default"
                         : "outline"
                     }
-                    disabled={
-                      disableShieldUI ||
-                      !shieldEnabled ||
-                      (isFirefoxEnv && !canUseTempWindowFallback)
-                    }
                     onClick={() =>
                       updateTempWindowFallback({
                         tempContextMode: TEMP_CONTEXT_MODES.Composite,
@@ -173,7 +166,6 @@ export default function ShieldSettings() {
                         ? "default"
                         : "outline"
                     }
-                    disabled={disableShieldUI || !shieldEnabled}
                     onClick={() =>
                       updateTempWindowFallback({
                         tempContextMode: TEMP_CONTEXT_MODES.Tab,
@@ -189,11 +181,6 @@ export default function ShieldSettings() {
                       shieldTempContextMode === TEMP_CONTEXT_MODES.Window
                         ? "default"
                         : "outline"
-                    }
-                    disabled={
-                      disableShieldUI ||
-                      !shieldEnabled ||
-                      (isFirefoxEnv && !canUseTempWindowFallback)
                     }
                     onClick={() =>
                       updateTempWindowFallback({
@@ -223,9 +210,7 @@ export default function ShieldSettings() {
                   >
                     <Checkbox
                       checked={shieldPopup}
-                      disabled={
-                        disableShieldUI || !shieldEnabled || isFirefoxEnv
-                      }
+                      disabled={isFirefoxEnv}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
                           useInPopup: Boolean(checked),
@@ -243,7 +228,6 @@ export default function ShieldSettings() {
                   >
                     <Checkbox
                       checked={shieldSidepanel}
-                      disabled={disableShieldUI || !shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
                           useInSidePanel: Boolean(checked),
@@ -261,7 +245,6 @@ export default function ShieldSettings() {
                   >
                     <Checkbox
                       checked={shieldOptions}
-                      disabled={disableShieldUI || !shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
                           useInOptions: Boolean(checked),
@@ -279,7 +262,7 @@ export default function ShieldSettings() {
                   >
                     <Checkbox
                       checked={shieldAutoRefresh}
-                      disabled={disableShieldUI || !shieldEnabled}
+                      disabled={!shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
                           useForAutoRefresh: Boolean(checked),
@@ -297,7 +280,6 @@ export default function ShieldSettings() {
                   >
                     <Checkbox
                       checked={shieldManualRefresh}
-                      disabled={disableShieldUI || !shieldEnabled}
                       onCheckedChange={(checked) =>
                         updateTempWindowFallback({
                           useForManualRefresh: Boolean(checked),

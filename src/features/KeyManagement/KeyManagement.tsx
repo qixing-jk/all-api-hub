@@ -20,6 +20,11 @@ import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
+import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import type { AccountToken } from "~/types"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
 import {
@@ -298,6 +303,12 @@ export default function KeyManagement(props: {
       return
     }
 
+    const refreshedCandidateChannel =
+      getRecoverableNewApiCandidateChannel(refreshedStatus)
+    if (!refreshedCandidateChannel) {
+      return
+    }
+
     verification.openNewApiManagedVerification({
       kind: "token",
       label: token.name,
@@ -309,7 +320,15 @@ export default function KeyManagement(props: {
         totpSecret: newApiTotpSecret,
       },
       onVerified: async () => {
-        await refreshManagedSiteTokenStatusForToken(token)
+        await withProtectionBypassUserCommand(
+          PROTECTION_BYPASS_USER_COMMANDS.VerifyProtection,
+          PROTECTION_BYPASS_SURFACES.Options,
+          async (protectionBypassExecution) => {
+            await refreshManagedSiteTokenStatusForToken(token, {
+              protectionBypassExecution,
+            })
+          },
+        )
       },
     })
   }

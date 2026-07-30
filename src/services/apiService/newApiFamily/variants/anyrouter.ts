@@ -47,6 +47,13 @@ export async function fetchCheckInStatus(
     const tempWindowRequestSource = normalizeTempWindowRequestSource(
       request.tempWindowRequestSource,
     )
+    if (!request.protectionBypassExecution) {
+      return undefined
+    }
+    const checkInContext = {
+      tempWindowRequestSource,
+      protectionBypassExecution: request.protectionBypassExecution,
+    }
     const checkInData = await anyrouterProvider.checkIn(
       {
         site_url: request.baseUrl,
@@ -55,7 +62,7 @@ export async function fetchCheckInStatus(
           request.cookieAuthSessionCookie ?? request.auth.cookie,
         account_info: { id: numericUserId },
       },
-      { tempWindowRequestSource },
+      checkInContext,
     )
     return checkInData.status !== CHECKIN_RESULT_STATUS.ALREADY_CHECKED
   } catch (error) {

@@ -1,6 +1,7 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { Sub2ApiAuthConfig } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
@@ -50,6 +51,8 @@ export type ReadAccountBrowserSessionFromTabOptions = {
     | typeof ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
   >
   fetchContext?: AccountBrowserSessionFetchContext
+  /** Carries caller intent for downstream temp-context workflows; tab reads do not consume it. */
+  protectionBypassExecution?: ProtectionBypassExecution
   onError?: AccountBrowserSessionErrorHandler
 }
 
@@ -61,6 +64,7 @@ export type ReadAccountBrowserSessionFromExistingTabsOptions = {
     cookieStoreId?: string
   }
   isUsableSession?: AccountBrowserSessionPredicate
+  protectionBypassExecution?: ProtectionBypassExecution
   onError?: AccountBrowserSessionErrorHandler
 }
 
@@ -75,6 +79,7 @@ export type ResolveAccountBrowserSessionOptions = {
   useExistingTabs?: boolean
   useTempWindow?: boolean
   tempWindowRequestSource?: TempWindowRequestSource
+  protectionBypassExecution?: ProtectionBypassExecution
   suppressMinimize?: boolean
   requestIdPrefix?: string
   isUsableSession?: AccountBrowserSessionPredicate

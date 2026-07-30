@@ -38,6 +38,7 @@ import {
   type ProductAnalyticsModeId,
 } from "./contracts"
 import { trackProductAnalyticsEvent } from "./dispatch"
+import { SETTINGS_SNAPSHOT_AUTOMATIC_BYPASS_ENABLED_PROPERTY } from "./settingsSnapshot"
 import { getWebdavSyncStrategyMode } from "./webDavSync"
 
 type SettingChangedPayload = ProductAnalyticsEventPayload<
@@ -871,7 +872,9 @@ export function buildAggregateSettingsSnapshotEvent(
       webAiApiCheck.auto_detect_enhanced_enabled,
     web_ai_api_check_auto_detect_patterns_configured:
       webAiApiCheck.auto_detect_url_patterns_configured,
-    temp_window_fallback_enabled: tempWindowFallback.enabled,
+    // Explicit commands remain governed by their narrower manual policy.
+    [SETTINGS_SNAPSHOT_AUTOMATIC_BYPASS_ENABLED_PROPERTY]:
+      tempWindowFallback.enabled,
     temp_window_fallback_popup_enabled: tempWindowFallback.popup_enabled,
     temp_window_fallback_sidepanel_enabled:
       tempWindowFallback.sidepanel_enabled,

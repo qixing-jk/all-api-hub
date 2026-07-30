@@ -5,9 +5,9 @@ import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import {
   getAllTabs,
   getBrowserApiCapabilities,
-  sendRuntimeMessage,
   sendTabMessageWithRetry,
 } from "~/utils/browser/browserApi"
+import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 
@@ -271,6 +271,7 @@ export async function readAccountBrowserSessionFromExistingTabs(
         ...(tab.incognito === true ? { incognito: true } : {}),
         ...(tab.cookieStoreId ? { cookieStoreId: tab.cookieStoreId } : {}),
       }),
+      protectionBypassExecution: options.protectionBypassExecution,
       onError: options.onError,
     })
 
@@ -289,17 +290,19 @@ const readAccountBrowserSessionFromTempWindow = async (
   options: ResolveAccountBrowserSessionOptions,
 ): Promise<AccountBrowserSession | null> => {
   try {
-    const response = await sendRuntimeMessage({
-      action: RuntimeActionIds.AutoDetectSite,
+    if (!options.protectionBypassExecution) return null
+    const params = {
       url: options.baseUrl,
       requestId: `${options.requestIdPrefix ?? "account-browser-session"}-${Date.now()}`,
-      ...(options.tempWindowRequestSource
-        ? { tempWindowRequestSource: options.tempWindowRequestSource }
-        : {}),
+      siteType: options.siteType,
       ...(typeof options.suppressMinimize === "boolean"
         ? { suppressMinimize: options.suppressMinimize }
         : {}),
       ...(options.currentTab?.incognito === true ? { useIncognito: true } : {}),
+    }
+    const response = await executeProtectionBypassTask({
+      task: { kind: "session_read", params },
+      execution: options.protectionBypassExecution,
     })
 
     if (!response?.success || !response.data) return null
@@ -336,6 +339,7 @@ export async function resolveAccountBrowserSession(
       siteType: options.siteType,
       source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       fetchContext: createCurrentTabFetchContext(options),
+      protectionBypassExecution: options.protectionBypassExecution,
       onError: options.onError,
     })
     if (session && isUsable(session)) return session
@@ -354,6 +358,7 @@ export async function resolveAccountBrowserSession(
           }
         : undefined,
       isUsableSession: isUsable,
+      protectionBypassExecution: options.protectionBypassExecution,
       onError: options.onError,
     })
     if (session) return session

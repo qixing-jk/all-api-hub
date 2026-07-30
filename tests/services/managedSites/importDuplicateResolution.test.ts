@@ -15,6 +15,14 @@ const managedConfig = {
   userId: "1",
 }
 
+const sessionResyncExecution = {
+  version: 1 as const,
+  kind: "automatic" as const,
+  feature: "session_resync" as const,
+  trigger: "background_recovery" as const,
+  surface: "background" as const,
+}
+
 const formData = {
   name: "Imported Channel",
   type: "openai",
@@ -89,6 +97,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
         service,
         managedConfig,
         formData,
+        protectionBypassExecution: sessionResyncExecution,
       }),
     ).rejects.toMatchObject({
       name: MatchResolutionUnresolvedError.name,

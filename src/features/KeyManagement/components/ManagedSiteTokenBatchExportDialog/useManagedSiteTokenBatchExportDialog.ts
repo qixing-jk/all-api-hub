@@ -27,6 +27,12 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
+import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+} from "~/services/protectionBypass/contracts"
 import type {
   ManagedSiteTokenBatchExportExecutionResult,
   ManagedSiteTokenBatchExportItemInput,
@@ -156,6 +162,11 @@ export function useManagedSiteTokenBatchExportDialog({
         const nextPreview = await prepareManagedSiteTokenBatchExportPreview({
           items: openedItemsRef.current,
           resolvedChannelKeysByItemId: resolvedChannelKeysByItemIdRef.current,
+          protectionBypassExecution: createAutomaticProtectionBypassExecution(
+            PROTECTION_BYPASS_FEATURES.SessionResync,
+            PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+            PROTECTION_BYPASS_SURFACES.Options,
+          ),
         })
         if (cancelled) return
         setPreview(nextPreview)

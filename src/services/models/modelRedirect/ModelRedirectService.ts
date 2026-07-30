@@ -22,6 +22,12 @@ import {
   removeDateSuffix,
   toModelTokenKey,
 } from "~/services/models/utils/modelName"
+import {
+  createAutomaticProtectionBypassExecution,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+} from "~/services/protectionBypass/contracts"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
@@ -337,7 +343,18 @@ export class ModelRedirectService {
     return {
       ok: true,
       runtimeConfig,
-      service: new ModelSyncService(runtimeConfig),
+      service: new ModelSyncService(
+        runtimeConfig,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        createAutomaticProtectionBypassExecution(
+          PROTECTION_BYPASS_FEATURES.SessionResync,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+          PROTECTION_BYPASS_SURFACES.Background,
+        ),
+      ),
     }
   }
 

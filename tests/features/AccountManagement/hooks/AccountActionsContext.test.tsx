@@ -37,6 +37,7 @@ const {
   mockStartProductAnalyticsAction,
   mockCompleteProductAnalyticsAction,
   mockGetCurrentTempWindowRequestSource,
+  mockWithProtectionBypassUserCommand,
 } = vi.hoisted(() => ({
   mockLoadAccountData: vi.fn(),
   mockSendExternalCheckInMessage: vi.fn(),
@@ -54,6 +55,7 @@ const {
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
   mockGetCurrentTempWindowRequestSource: vi.fn(),
+  mockWithProtectionBypassUserCommand: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -115,6 +117,15 @@ vi.mock("~/utils/browser/tempWindowRequestSource", async (importOriginal) => {
   return {
     ...actual,
     getCurrentTempWindowRequestSource: mockGetCurrentTempWindowRequestSource,
+  }
+})
+
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/protectionBypass/client")>()
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: mockWithProtectionBypassUserCommand,
   }
 })
 
@@ -192,6 +203,13 @@ beforeEach(() => {
   mockStartProductAnalyticsAction.mockReturnValue({
     complete: mockCompleteProductAnalyticsAction,
   })
+  mockWithProtectionBypassUserCommand.mockImplementation(
+    async (
+      command: string,
+      surface: string,
+      work: (execution: unknown) => Promise<unknown>,
+    ) => work({ version: 1, kind: "user_command", command, surface }),
+  )
   Object.assign(navigator, {
     clipboard: {
       writeText: vi.fn(),
@@ -431,7 +449,12 @@ describe("AccountActionsContext", () => {
     expect(mockRefreshAccount).toHaveBeenCalledTimes(1)
     expect(mockRefreshAccount).toHaveBeenCalledWith("refresh-1", false, {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution: expect.objectContaining({
+        version: 1,
+        kind: "user_command",
+      }),
     })
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
 
     const refreshToastPromise = mockToast.promise.mock.calls[0]?.[0]
@@ -480,6 +503,42 @@ describe("AccountActionsContext", () => {
         },
       },
     )
+  })
+
+  it("blocks duplicate row refreshes while grant creation is pending", async () => {
+    const { getContext } = await renderContext()
+    let releaseGrant!: () => void
+    const grantReady = new Promise<void>((resolve) => {
+      releaseGrant = resolve
+    })
+    mockWithProtectionBypassUserCommand.mockImplementationOnce(
+      async (
+        command: string,
+        surface: string,
+        work: (execution: unknown) => Promise<unknown>,
+      ) => {
+        await grantReady
+        return work({ version: 1, kind: "user_command", command, surface })
+      },
+    )
+    mockRefreshAccount.mockResolvedValueOnce({ refreshed: true })
+    const account = createAccount({ id: "pending-grant" })
+
+    let firstRefresh!: Promise<void>
+    act(() => {
+      firstRefresh = getContext().handleRefreshAccount(account, false)
+      void getContext().handleRefreshAccount(account, false)
+    })
+
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
+    expect(mockRefreshAccount).not.toHaveBeenCalled()
+
+    await act(async () => {
+      releaseGrant()
+      await firstRefresh
+    })
+
+    expect(mockRefreshAccount).toHaveBeenCalledTimes(1)
   })
 
   it("uses the refreshed success message when account data actually changes", async () => {

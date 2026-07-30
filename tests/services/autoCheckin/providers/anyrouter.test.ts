@@ -43,6 +43,23 @@ const mockAccount: SiteAccount = {
   user_updated_at: Date.now(),
 }
 
+const DEFAULT_PROVIDER_CONTEXT = {
+  tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+  protectionBypassExecution: {
+    version: 1,
+    kind: "user_command",
+    command: "manual_checkin",
+    surface: "options",
+  },
+} as const
+
+const checkInForTest = (
+  account: Parameters<typeof anyrouterProvider.checkIn>[0],
+  context: Parameters<
+    typeof anyrouterProvider.checkIn
+  >[1] = DEFAULT_PROVIDER_CONTEXT,
+) => anyrouterProvider.checkIn(account, context)
+
 describe("anyrouterProvider", () => {
   describe("canCheckIn", () => {
     it("returns true for valid account", () => {
@@ -76,13 +93,21 @@ describe("anyrouterProvider", () => {
         message: "签到成功，获得 $25 额度",
       })
 
-      const result = await anyrouterProvider.checkIn(mockAccount, {
+      const protectionBypassExecution = {
+        version: 1,
+        kind: "user_command",
+        command: "manual_checkin",
+        surface: "options",
+      } as const
+      const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution,
       })
       expect(result.status).toBe("success")
       expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
         accountId: "test-id",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution,
       })
     })
 
@@ -107,7 +132,7 @@ describe("anyrouterProvider", () => {
         },
       }
 
-      const result = await anyrouterProvider.checkIn(account)
+      const result = await checkInForTest(account)
 
       const latestRequest =
         mockedFetchApi.mock.calls[mockedFetchApi.mock.calls.length - 1]?.[0]
@@ -136,7 +161,7 @@ describe("anyrouterProvider", () => {
         message: "Success! bonus quota granted",
       })
 
-      const result = await anyrouterProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "success",
@@ -163,7 +188,7 @@ describe("anyrouterProvider", () => {
         message: "",
       })
 
-      const result = await anyrouterProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("already_checked")
     })
 
@@ -179,7 +204,7 @@ describe("anyrouterProvider", () => {
         message: "already checked today",
       })
 
-      const result = await anyrouterProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "already_checked",
@@ -200,7 +225,7 @@ describe("anyrouterProvider", () => {
         message: "",
       })
 
-      const result = await anyrouterProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -227,7 +252,7 @@ describe("anyrouterProvider", () => {
         message: "queued",
       })
 
-      const result = await anyrouterProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("failed")
       expect(result.rawMessage).toBe("queued")
@@ -245,7 +270,7 @@ describe("anyrouterProvider", () => {
         message: "已签到",
       })
 
-      const result = await anyrouterProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
     })
 
@@ -261,7 +286,7 @@ describe("anyrouterProvider", () => {
         message: "error",
       })
 
-      const result = await anyrouterProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
     })
 
@@ -275,7 +300,7 @@ describe("anyrouterProvider", () => {
         message: "Not found",
       })
 
-      const result = await anyrouterProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -290,7 +315,7 @@ describe("anyrouterProvider", () => {
       )
       mockedFetchApi.mockRejectedValueOnce(new Error("已签到"))
 
-      const result = await anyrouterProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("already_checked")
     })
 
@@ -301,7 +326,7 @@ describe("anyrouterProvider", () => {
       )
       mockedFetchApi.mockRejectedValueOnce(new Error("Network error"))
 
-      const result = await anyrouterProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
     })
   })

@@ -38,6 +38,7 @@ import {
   toManagedSiteAssessmentChannel,
   toManagedSiteVerifiedKeyAssessment,
 } from "~/services/managedSites/verifiedChannelKeyAssessment"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken } from "~/types"
 import type { ChannelFormData } from "~/types/managedSite"
@@ -293,6 +294,7 @@ const preparePreviewItem = async (params: {
   managedConfig: ManagedSiteConfig
   resolvedChannelKeysById?: Record<number, string>
   operationContext?: ManagedSiteOperationContext
+  protectionBypassExecution?: ProtectionBypassExecution
 }): Promise<ManagedSiteTokenBatchExportPreviewItem> => {
   const { input, service, managedConfig } = params
   let secretsToRedact = collectSecrets(input, managedConfig)
@@ -375,6 +377,7 @@ const preparePreviewItem = async (params: {
       resolvedChannelKeysById: params.resolvedChannelKeysById,
       resolveHiddenKeys: true,
       requestCache: params.operationContext?.channelMatch,
+      protectionBypassExecution: params.protectionBypassExecution,
     })
     const exactMatch = getManagedSiteChannelExactMatch(resolution)
     const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
@@ -486,6 +489,7 @@ const buildPreview = (
 export async function prepareManagedSiteTokenBatchExportPreview(params: {
   items: ManagedSiteTokenBatchExportItemInput[]
   resolvedChannelKeysByItemId?: Record<string, Record<number, string>>
+  protectionBypassExecution?: ProtectionBypassExecution
 }): Promise<ManagedSiteTokenBatchExportPreview> {
   const service = await getManagedSiteService()
   const managedConfig = await service.getConfig()
@@ -514,6 +518,7 @@ export async function prepareManagedSiteTokenBatchExportPreview(params: {
         resolvedChannelKeysById:
           params.resolvedChannelKeysByItemId?.[getInputRuntimeKeyId(input)],
         operationContext,
+        protectionBypassExecution: params.protectionBypassExecution,
       }),
   )
 

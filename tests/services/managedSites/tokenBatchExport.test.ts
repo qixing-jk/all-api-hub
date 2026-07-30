@@ -81,6 +81,18 @@ const buildAccountTokenInput = (
   runtimeKey: buildAccountTokenRuntimeKey(account, token),
 })
 
+const sessionResyncExecution = {
+  version: 1 as const,
+  kind: "automatic" as const,
+  feature: "session_resync" as const,
+  trigger: "background_recovery" as const,
+  surface: "background" as const,
+}
+
+const sessionResyncOptions = {
+  protectionBypassExecution: sessionResyncExecution,
+}
+
 const buildMatchInspection = (overrides: Record<string, any> = {}) => ({
   searchBaseUrl: "https://upstream.example.com",
   searchCompleted: true,
@@ -1061,6 +1073,7 @@ describe("managed-site token batch export", () => {
             }),
           ),
         ],
+        protectionBypassExecution: sessionResyncExecution,
       })
 
       expect(hydrateComparableChannelKeys).toHaveBeenCalled()
@@ -1170,6 +1183,7 @@ describe("managed-site token batch export", () => {
             }),
           ),
         ],
+        protectionBypassExecution: sessionResyncExecution,
       })
 
       expect(fetchChannelSecretKey).toHaveBeenCalledWith(
@@ -1179,6 +1193,7 @@ describe("managed-site token batch export", () => {
           userId: "1",
         }),
         77,
+        sessionResyncOptions,
       )
       expect(preview.items[0]).toMatchObject({
         status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
@@ -1248,6 +1263,7 @@ describe("managed-site token batch export", () => {
           buildAccountTokenInput(account, firstToken),
           buildAccountTokenInput(account, secondToken),
         ],
+        protectionBypassExecution: sessionResyncExecution,
       })
 
       expect(searchChannel).toHaveBeenCalledTimes(1)

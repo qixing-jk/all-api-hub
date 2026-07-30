@@ -89,6 +89,21 @@ vi.mock("~/services/history/dailyBalanceHistory/messaging", () => ({
   sendBalanceHistoryMessage: vi.fn(),
 }))
 
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/protectionBypass/client")>()
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: vi.fn(
+      async (
+        command: string,
+        surface: string,
+        work: (execution: unknown) => Promise<unknown>,
+      ) => work({ version: 1, kind: "user_command", command, surface }),
+    ),
+  }
+})
+
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: startProductAnalyticsActionMock,
   trackProductAnalyticsActionStarted: trackProductAnalyticsActionStartedMock,
@@ -678,7 +693,13 @@ describe("BalanceHistory options page", () => {
       await waitFor(() => {
         expect(vi.mocked(sendBalanceHistoryMessage)).toHaveBeenCalledWith(
           BalanceHistoryMessageTypes.RefreshNow,
-          { accountIds: ["a1"] },
+          {
+            accountIds: ["a1"],
+            protectionBypassExecution: expect.objectContaining({
+              version: 1,
+              kind: "user_command",
+            }),
+          },
         )
       })
 
@@ -861,7 +882,12 @@ describe("BalanceHistory options page", () => {
       await waitFor(() => {
         expect(vi.mocked(sendBalanceHistoryMessage)).toHaveBeenCalledWith(
           BalanceHistoryMessageTypes.RefreshNow,
-          undefined,
+          {
+            protectionBypassExecution: expect.objectContaining({
+              version: 1,
+              kind: "user_command",
+            }),
+          },
         )
       })
 

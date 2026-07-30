@@ -6,6 +6,7 @@ import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
@@ -96,6 +97,7 @@ export class ModelSyncService {
     number,
     ModelSyncResourceCacheEntry
   >()
+  private readonly protectionBypassExecution?: ProtectionBypassExecution
 
   /**
    * Create a model sync service bound to a specific managed-site runtime config.
@@ -113,6 +115,7 @@ export class ModelSyncService {
     allowedModels?: string[],
     channelConfigs?: ChannelConfigMap | null,
     globalChannelModelFilters?: ChannelModelFilterRule[] | null,
+    protectionBypassExecution?: ProtectionBypassExecution,
   ) {
     this.managedSiteConfig = managedSiteConfig
     if (rateLimitConfig) {
@@ -132,6 +135,7 @@ export class ModelSyncService {
     if (globalChannelModelFilters && globalChannelModelFilters.length > 0) {
       this.globalChannelModelFilters = globalChannelModelFilters
     }
+    this.protectionBypassExecution = protectionBypassExecution
   }
 
   /**
@@ -560,6 +564,7 @@ export class ModelSyncService {
           managedConfig: this.managedSiteConfig,
           cache: probeFilterCache,
           abortSignal: probeFilterAbort.signal,
+          protectionBypassExecution: this.protectionBypassExecution,
         }
         try {
           const globallyScopedModels = await this.applyFilters(

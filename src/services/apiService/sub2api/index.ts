@@ -408,6 +408,7 @@ const resyncSub2ApiRequestAuth = async <
     const resynced = await resyncSub2ApiAuthToken(
       latestRequest.baseUrl,
       latestRequest.tempWindowRequestSource,
+      latestRequest.protectionBypassExecution,
     )
     if (!resynced) {
       throw createLoginRequiredError(params.endpoint)

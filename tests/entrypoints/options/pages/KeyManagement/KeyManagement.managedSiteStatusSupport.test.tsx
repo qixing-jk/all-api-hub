@@ -15,6 +15,7 @@ const {
   mockedUseUserPreferencesContext,
   openNewApiManagedVerificationMock,
   loadNewApiChannelKeyWithVerificationMock,
+  withProtectionBypassUserCommandMock,
 } = vi.hoisted(() => ({
   sendRuntimeActionMessageMock: vi.fn(),
   tokenListPropsSpy: vi.fn(),
@@ -22,6 +23,15 @@ const {
   mockedUseUserPreferencesContext: vi.fn(),
   openNewApiManagedVerificationMock: vi.fn(),
   loadNewApiChannelKeyWithVerificationMock: vi.fn(),
+  withProtectionBypassUserCommandMock: vi.fn(
+    async (_command, _surface, work) =>
+      await work({
+        version: 1,
+        kind: "user_command",
+        command: "verify_protection",
+        surface: "options",
+      }),
+  ),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -59,6 +69,10 @@ vi.mock(
     }),
   }),
 )
+
+vi.mock("~/services/protectionBypass/client", () => ({
+  withProtectionBypassUserCommand: withProtectionBypassUserCommandMock,
+}))
 
 vi.mock(
   "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog",
@@ -152,6 +166,7 @@ describe("KeyManagement managed-site status support", () => {
     useKeyManagementMock.mockReset()
     openNewApiManagedVerificationMock.mockReset()
     loadNewApiChannelKeyWithVerificationMock.mockReset()
+    withProtectionBypassUserCommandMock.mockClear()
     mockedUseUserPreferencesContext.mockReturnValue({
       managedSiteType: "new-api",
       newApiBaseUrl: "https://managed.example",
@@ -330,6 +345,26 @@ describe("KeyManagement managed-site status support", () => {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
         MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+      assessment: {
+        searchBaseUrl: "https://example.com",
+        searchCompleted: true,
+        url: {
+          matched: true,
+          candidateCount: 1,
+          channel: { id: 88, name: "Managed Channel 88" },
+        },
+        key: {
+          comparable: false,
+          matched: false,
+          reason: "comparison-unavailable",
+        },
+        models: {
+          comparable: true,
+          matched: true,
+          reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
+          channel: { id: 88, name: "Managed Channel 88" },
+        },
+      },
       recovery: {
         siteType: "new-api",
         managedBaseUrl: "https://managed.example",
@@ -379,6 +414,25 @@ describe("KeyManagement managed-site status support", () => {
         kind: "token",
         label: "Token 1",
       }),
+    )
+    const onVerified =
+      openNewApiManagedVerificationMock.mock.calls[0]?.[0]?.onVerified
+    await onVerified()
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
+      "verify_protection",
+      "options",
+      expect.any(Function),
+    )
+    expect(refreshManagedSiteTokenStatusForToken).toHaveBeenLastCalledWith(
+      baseHookResult.tokens[0],
+      {
+        protectionBypassExecution: {
+          version: 1,
+          kind: "user_command",
+          command: "verify_protection",
+          surface: "options",
+        },
+      },
     )
   })
 

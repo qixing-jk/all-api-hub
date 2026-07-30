@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
@@ -25,6 +26,8 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { DisplaySiteData } from "~/types"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
@@ -86,109 +89,127 @@ export const AccountActionsProvider = ({
   const [refreshingAccountId, setRefreshingAccountId] = useState<string | null>(
     null,
   )
+  const refreshingAccountIdRef = useRef<string | null>(null)
 
   const handleRefreshAccount = useCallback(
     async (account: DisplaySiteData, force: boolean = true) => {
-      if (refreshingAccountId) return
+      if (refreshingAccountIdRef.current) return
       if (account.disabled === true) return
 
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()
+      refreshingAccountIdRef.current = account.id
       setRefreshingAccountId(account.id)
-      const tracker = startProductAnalyticsAction({
-        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccount,
-        surfaceId:
-          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      })
-      let analyticsCompleted = false
-
-      const refreshPromise = async () => {
-        const result = await accountStorage.refreshAccount(account.id, force, {
-          tempWindowRequestSource,
-        })
-        if (result) {
-          await loadAccountData()
-          return result
-        } else {
-          throw new Error(
-            t("messages:toast.error.refreshAccount", {
-              accountName: account.name,
-            }),
-          )
-        }
-      }
-
       try {
-        await toast.promise(
-          refreshPromise().then(async (result) => {
-            if (!result.refreshed) {
-              analyticsCompleted = true
-              tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-                diagnostics: buildAccountRefreshDiagnostics({
-                  sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
-                  mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
-                  siteType: account.siteType,
-                  requestedAuthMode: account.authType,
-                  itemCount: 1,
-                  successCount: 0,
-                  failureCount: 0,
-                  skippedCount: 1,
-                }),
-              })
-              return t("messages:toast.success.refreshSkipped")
+        await withProtectionBypassUserCommand(
+          PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
+          tempWindowRequestSource,
+          async (execution) => {
+            const tracker = startProductAnalyticsAction({
+              featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+              actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccount,
+              surfaceId:
+                PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+              entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+            })
+            let analyticsCompleted = false
+
+            const refreshPromise = async () => {
+              const result = await accountStorage.refreshAccount(
+                account.id,
+                force,
+                {
+                  tempWindowRequestSource,
+                  protectionBypassExecution: execution,
+                },
+              )
+              if (result) {
+                await loadAccountData()
+                return result
+              } else {
+                throw new Error(
+                  t("messages:toast.error.refreshAccount", {
+                    accountName: account.name,
+                  }),
+                )
+              }
             }
-            analyticsCompleted = true
-            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-              diagnostics: buildAccountRefreshDiagnostics({
-                sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
-                mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
-                siteType: account.siteType,
-                requestedAuthMode: account.authType,
-                itemCount: 1,
-                successCount: 1,
-                failureCount: 0,
-                skippedCount: 0,
-              }),
-            })
-            return t("messages:toast.success.refreshAccount", {
-              accountName: account.name,
-            })
-          }),
-          {
-            loading: t("messages:toast.loading.refreshingAccount", {
-              accountName: account.name,
-            }),
-            success: (message) => message,
-            error: t("messages:toast.error.refreshAccount", {
-              accountName: account.name,
-            }),
+
+            try {
+              await toast.promise(
+                refreshPromise().then(async (result) => {
+                  if (!result.refreshed) {
+                    analyticsCompleted = true
+                    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+                      diagnostics: buildAccountRefreshDiagnostics({
+                        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+                        mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+                        siteType: account.siteType,
+                        requestedAuthMode: account.authType,
+                        itemCount: 1,
+                        successCount: 0,
+                        failureCount: 0,
+                        skippedCount: 1,
+                      }),
+                    })
+                    return t("messages:toast.success.refreshSkipped")
+                  }
+                  analyticsCompleted = true
+                  tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+                    diagnostics: buildAccountRefreshDiagnostics({
+                      sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+                      mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+                      siteType: account.siteType,
+                      requestedAuthMode: account.authType,
+                      itemCount: 1,
+                      successCount: 1,
+                      failureCount: 0,
+                      skippedCount: 0,
+                    }),
+                  })
+                  return t("messages:toast.success.refreshAccount", {
+                    accountName: account.name,
+                  })
+                }),
+                {
+                  loading: t("messages:toast.loading.refreshingAccount", {
+                    accountName: account.name,
+                  }),
+                  success: (message) => message,
+                  error: t("messages:toast.error.refreshAccount", {
+                    accountName: account.name,
+                  }),
+                },
+              )
+            } catch (error) {
+              if (!analyticsCompleted) {
+                analyticsCompleted = true
+                tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+                  errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+                  diagnostics: buildAccountRefreshDiagnostics({
+                    sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+                    mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+                    siteType: account.siteType,
+                    requestedAuthMode: account.authType,
+                    itemCount: 1,
+                    successCount: 0,
+                    failureCount: 1,
+                    skippedCount: 0,
+                    error,
+                  }),
+                })
+              }
+              logger.error("Error refreshing account", error)
+            }
           },
         )
-      } catch (error) {
-        if (!analyticsCompleted) {
-          analyticsCompleted = true
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            diagnostics: buildAccountRefreshDiagnostics({
-              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
-              mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
-              siteType: account.siteType,
-              requestedAuthMode: account.authType,
-              itemCount: 1,
-              successCount: 0,
-              failureCount: 1,
-              skippedCount: 0,
-              error,
-            }),
-          })
-        }
-        logger.error("Error refreshing account", error)
       } finally {
-        setRefreshingAccountId(null)
+        if (refreshingAccountIdRef.current === account.id) {
+          refreshingAccountIdRef.current = null
+          setRefreshingAccountId(null)
+        }
       }
     },
-    [refreshingAccountId, loadAccountData],
+    [loadAccountData],
   )
 
   const handleSetAccountDisabled = useCallback(
