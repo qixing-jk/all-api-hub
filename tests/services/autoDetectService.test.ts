@@ -1700,7 +1700,7 @@ describe("autoDetectSmart", () => {
       },
     })
     expect(result.data).not.toHaveProperty("fetchContext")
-    expect(mockGetAccountSiteType).toHaveBeenCalledWith("not a url")
+    expect(mockGetAccountSiteType).toHaveBeenCalledWith("not a url", undefined)
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
       baseUrl: "not a url",
       auth: {

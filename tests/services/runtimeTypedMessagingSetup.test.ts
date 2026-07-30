@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_USER_COMMANDS,
@@ -1488,7 +1489,7 @@ describe("typed runtime messaging setup", () => {
       }),
     ).resolves.toEqual({
       success: false,
-      error: "Missing or invalid protection bypass execution",
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
     })
     await expect(
       getRegisteredHandler(
@@ -1503,7 +1504,7 @@ describe("typed runtime messaging setup", () => {
       }),
     ).resolves.toEqual({
       success: false,
-      error: "Missing or invalid protection bypass execution",
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
     })
     for (const [type, data] of [
       [
