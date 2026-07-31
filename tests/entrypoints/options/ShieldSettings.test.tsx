@@ -324,6 +324,13 @@ describe("ShieldSettings", () => {
 
     context.tempWindowFallback = {
       ...context.tempWindowFallback,
+      automaticFeatureBypass: { ...completeExternalAutomaticFeatureBypass },
+    }
+    rerender(<ShieldSettings />)
+    expect(accountRefresh).not.toBeChecked()
+
+    context.tempWindowFallback = {
+      ...context.tempWindowFallback,
       automaticFeatureBypass: {
         ...completeExternalAutomaticFeatureBypass,
         account_refresh: false,
