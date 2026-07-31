@@ -1,9 +1,17 @@
 import userEvent from "@testing-library/user-event"
+import type { TFunction } from "i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
-import { SHIELD_DEV_TRIGGER_PRESET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
-import { executeShieldDevTrigger } from "~/features/BasicSettings/components/tabs/Refresh/protectionBypassDevTriggerRuntime"
+import {
+  getShieldDevTriggerPreset,
+  SHIELD_DEV_TRIGGER_PRESET_IDS,
+} from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
+import { getShieldDevTriggerPresetLabel } from "~/features/BasicSettings/components/tabs/Refresh/ProtectionBypassDevTrigger"
+import {
+  executeShieldDevTrigger,
+  parseShieldDevTriggerDelay,
+} from "~/features/BasicSettings/components/tabs/Refresh/protectionBypassDevTriggerRuntime"
 import ShieldSettings from "~/features/BasicSettings/components/tabs/Refresh/ShieldSettings"
 import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,
@@ -628,6 +636,25 @@ describe("ShieldSettings", () => {
     expect(executeProtectionBypassTaskMock).not.toHaveBeenCalled()
   })
 
+  it("rejects an unexpected development-trigger preset label", () => {
+    expect(() =>
+      getShieldDevTriggerPresetLabel(
+        vi.fn() as unknown as TFunction,
+        "future-preset" as never,
+      ),
+    ).toThrow("Unexpected development trigger preset: future-preset")
+  })
+
+  it("falls back to the default development-trigger preset for unknown input", () => {
+    expect(getShieldDevTriggerPreset("future-preset" as never).id).toBe(
+      SHIELD_DEV_TRIGGER_PRESET_IDS.AccountRefreshScheduled,
+    )
+  })
+
+  it("rejects fractional development-trigger delays", () => {
+    expect(parseShieldDevTriggerDelay("1.5")).toBeNull()
+  })
+
   it("prefills the development trigger URL", async () => {
     isDevelopmentModeMock.mockReturnValue(true)
     render(<ShieldSettings />, {
@@ -791,6 +818,101 @@ describe("ShieldSettings", () => {
     expect(executeProtectionBypassTaskMock).not.toHaveBeenCalled()
     expect(
       screen.getByText("settings:refresh.shieldDevTriggerInvalidDelay"),
+    ).toHaveAttribute("role", "alert")
+  })
+
+  it("rejects a non-HTTP development-trigger URL", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+      ).not.toBeInTheDocument()
+    })
+
+    fireEvent.change(
+      screen.getByRole("textbox", {
+        name: "settings:refresh.shieldDevTriggerUrlLabel",
+      }),
+      { target: { value: "file:///protected" } },
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:refresh.shieldDevTriggerStart",
+      }),
+    )
+
+    expect(executeProtectionBypassTaskMock).not.toHaveBeenCalled()
+    expect(
+      screen.getByText("settings:refresh.shieldDevTriggerInvalidUrl"),
+    ).toHaveAttribute("role", "alert")
+  })
+
+  it("preserves a useful development-trigger failure message", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    executeProtectionBypassTaskMock.mockResolvedValueOnce({
+      success: false,
+      error: "Request rejected by the target",
+    })
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+      ).not.toBeInTheDocument()
+    })
+
+    fireEvent.change(
+      screen.getByRole("spinbutton", {
+        name: "settings:refresh.shieldDevTriggerDelayLabel",
+      }),
+      { target: { value: "0" } },
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:refresh.shieldDevTriggerStart",
+      }),
+    )
+
+    expect(
+      await screen.findByText("Request rejected by the target"),
+    ).toHaveAttribute("role", "alert")
+  })
+
+  it("uses localized fallback copy for an empty thrown error", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    executeProtectionBypassTaskMock.mockRejectedValueOnce(new Error())
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+      ).not.toBeInTheDocument()
+    })
+
+    fireEvent.change(
+      screen.getByRole("spinbutton", {
+        name: "settings:refresh.shieldDevTriggerDelayLabel",
+      }),
+      { target: { value: "0" } },
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:refresh.shieldDevTriggerStart",
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        "settings:refresh.shieldDevTriggerFailureFallback",
+      ),
     ).toHaveAttribute("role", "alert")
   })
 

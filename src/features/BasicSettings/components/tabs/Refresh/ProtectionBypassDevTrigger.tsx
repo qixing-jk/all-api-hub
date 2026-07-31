@@ -39,7 +39,10 @@ type TriggerFeedback =
   | null
 
 /** Resolves the localized label for a controlled existing-behavior preset. */
-function getPresetLabel(t: TFunction, id: ShieldDevTriggerPresetId) {
+export function getShieldDevTriggerPresetLabel(
+  t: TFunction,
+  id: ShieldDevTriggerPresetId,
+) {
   switch (id) {
     case SHIELD_DEV_TRIGGER_PRESET_IDS.AccountRefreshScheduled:
       return t("settings:refresh.shieldDevTriggerPresetAccountRefreshScheduled")
@@ -102,6 +105,7 @@ export function ProtectionBypassDevTrigger() {
       setRemainingSeconds(null)
       setIsRunning(true)
       setFeedback(null)
+      const failureFallback = t("refresh.shieldDevTriggerFailureFallback")
 
       try {
         const response = await executeShieldDevTrigger({
@@ -120,13 +124,15 @@ export function ProtectionBypassDevTrigger() {
         } else {
           setFeedback({
             kind: "error",
-            message:
-              response.error ?? t("refresh.shieldDevTriggerFailureFallback"),
+            message: response.error?.trim() || failureFallback,
           })
         }
       } catch (error) {
         if (!isMountedRef.current) return
-        setFeedback({ kind: "error", message: getErrorMessage(error) })
+        setFeedback({
+          kind: "error",
+          message: getErrorMessage(error, failureFallback),
+        })
       } finally {
         if (isMountedRef.current) setIsRunning(false)
       }
@@ -211,7 +217,7 @@ export function ProtectionBypassDevTrigger() {
                 <SelectContent>
                   {SHIELD_DEV_TRIGGER_PRESETS.map((preset) => (
                     <SelectItem key={preset.id} value={preset.id}>
-                      {getPresetLabel(t, preset.id)}
+                      {getShieldDevTriggerPresetLabel(t, preset.id)}
                     </SelectItem>
                   ))}
                 </SelectContent>
