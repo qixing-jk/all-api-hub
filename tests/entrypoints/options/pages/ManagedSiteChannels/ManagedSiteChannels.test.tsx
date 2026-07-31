@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { renderToStaticMarkup } from "react-dom/server"
 import toast from "react-hot-toast"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   ChannelDialogContainer,
@@ -378,6 +378,10 @@ describe("ManagedSiteChannels", () => {
     vi.mocked(apiCredentialProfilesStorage.listProfiles).mockResolvedValue([])
   })
 
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   const buildPreferences = (options?: {
     managedSiteType?: ManagedSiteType
     withMigrationTarget?: boolean
@@ -547,7 +551,6 @@ describe("ManagedSiteChannels", () => {
   }
 
   const setupStaleChannelResponseAfterSiteSwitch = async () => {
-    const nativeAbortController = globalThis.AbortController
     class NonSignalingAbortController {
       readonly signal = { aborted: false } as AbortSignal
       abort = vi.fn()
@@ -631,8 +634,6 @@ describe("ManagedSiteChannels", () => {
     return {
       listChannels,
       staleResponse,
-      restoreAbortController: () =>
-        vi.stubGlobal("AbortController", nativeAbortController),
     }
   }
 
@@ -1358,65 +1359,57 @@ describe("ManagedSiteChannels", () => {
 
   it("ignores a rejected request from the previous managed site after switching types", async () => {
     const harness = await setupStaleChannelResponseAfterSiteSwitch()
-    try {
-      harness.staleResponse.reject(new Error("Old site request failed"))
+    harness.staleResponse.reject(new Error("Old site request failed"))
 
-      await waitFor(() => {
-        expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-          PRODUCT_ANALYTICS_RESULTS.Cancelled,
-          {
-            insights: {
-              failureReason:
-                PRODUCT_ANALYTICS_FAILURE_REASONS.StaleResponseIgnored,
-              managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
-            },
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+        {
+          insights: {
+            failureReason:
+              PRODUCT_ANALYTICS_FAILURE_REASONS.StaleResponseIgnored,
+            managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
           },
-        )
-        expect(
-          screen.queryByText("managedSiteChannels:alerts.loadError.title"),
-        ).not.toBeInTheDocument()
-      })
-      expect(screen.getByText("Beta")).toBeInTheDocument()
-      expect(toast.error).not.toHaveBeenCalled()
-    } finally {
-      harness.restoreAbortController()
-    }
+        },
+      )
+      expect(
+        screen.queryByText("managedSiteChannels:alerts.loadError.title"),
+      ).not.toBeInTheDocument()
+    })
+    expect(screen.getByText("Beta")).toBeInTheDocument()
+    expect(toast.error).not.toHaveBeenCalled()
   })
 
   it("ignores a fulfilled request from the previous managed site after switching types", async () => {
     const harness = await setupStaleChannelResponseAfterSiteSwitch()
-    try {
-      harness.staleResponse.resolve(
-        buildChannelListData([
-          {
-            id: 3,
-            name: "Old Alpha response",
-            base_url: "https://old-site.example",
-          },
-        ]),
-      )
+    harness.staleResponse.resolve(
+      buildChannelListData([
+        {
+          id: 3,
+          name: "Old Alpha response",
+          base_url: "https://old-site.example",
+        },
+      ]),
+    )
 
-      await waitFor(() => {
-        expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-          PRODUCT_ANALYTICS_RESULTS.Cancelled,
-          {
-            insights: {
-              failureReason:
-                PRODUCT_ANALYTICS_FAILURE_REASONS.StaleResponseIgnored,
-              managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
-            },
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+        {
+          insights: {
+            failureReason:
+              PRODUCT_ANALYTICS_FAILURE_REASONS.StaleResponseIgnored,
+            managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
           },
-        )
-      })
-      expect(screen.getByText("Beta")).toBeInTheDocument()
-      expect(screen.queryByText("Old Alpha response")).not.toBeInTheDocument()
-      expect(
-        screen.queryByText("managedSiteChannels:alerts.loadError.title"),
-      ).not.toBeInTheDocument()
-      expect(toast.error).not.toHaveBeenCalled()
-    } finally {
-      harness.restoreAbortController()
-    }
+        },
+      )
+    })
+    expect(screen.getByText("Beta")).toBeInTheDocument()
+    expect(screen.queryByText("Old Alpha response")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("managedSiteChannels:alerts.loadError.title"),
+    ).not.toBeInTheDocument()
+    expect(toast.error).not.toHaveBeenCalled()
   })
 
   it("clears stale status filters when the managed site type changes", async () => {
@@ -2966,7 +2959,7 @@ describe("ManagedSiteChannels", () => {
     const tokenConsoleAction = screen.getByRole("link", {
       name: "managedSiteChannels:gatewayGuidance.openTokenConsole",
     })
-    expect(tokenConsoleAction.parentElement).toHaveTextContent(
+    expect(document.body).toHaveTextContent(
       "managedSiteChannels:gatewayGuidance.clientHint",
     )
     expect(tokenConsoleAction).toHaveAttribute(

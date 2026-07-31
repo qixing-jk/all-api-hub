@@ -201,7 +201,7 @@ describe("KeyManagement managed-site status support", () => {
     await waitFor(() => expect(tokenListPropsSpy).toHaveBeenCalled())
     expect(
       tokenListPropsSpy.mock.lastCall?.[0]?.guidedManagedSiteImport,
-    ).toEqual({
+    ).toStrictEqual({
       accountId: undefined,
       tokenId: undefined,
       request: `${KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS.ManagedSite}::`,

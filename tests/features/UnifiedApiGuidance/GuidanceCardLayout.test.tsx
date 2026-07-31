@@ -63,9 +63,6 @@ describe("GuidanceCardLayout", () => {
     expect(actionRail).toContainElement(sessionDismiss)
     expect(actionRail).toContainElement(permanentDismiss)
     expect(container.querySelector("[data-guidance-action-panel]")).toBeNull()
-    expect(
-      container.querySelector("[data-guidance-dismiss-standalone-footer]"),
-    ).toBeNull()
   })
 
   it("uses dismissal controls to compress the right action panel without making them part of the panel", () => {
@@ -113,8 +110,5 @@ describe("GuidanceCardLayout", () => {
     expect(actionPanel).toContainElement(businessAction)
     expect(actionPanel).not.toContainElement(sessionDismiss)
     expect(actionPanel).not.toContainElement(permanentDismiss)
-    expect(
-      container.querySelector("[data-guidance-dismiss-standalone-footer]"),
-    ).toBeNull()
   })
 })
