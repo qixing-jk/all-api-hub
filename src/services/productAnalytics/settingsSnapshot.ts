@@ -1,4 +1,7 @@
-import type { ProtectionBypassAutomaticFeature } from "~/services/protectionBypass/contracts"
+import {
+  PROTECTION_BYPASS_FEATURES,
+  type ProtectionBypassAutomaticFeature,
+} from "~/services/protectionBypass/contracts"
 
 export const SETTINGS_SNAPSHOT_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000
 
@@ -8,20 +11,21 @@ export const SETTINGS_SNAPSHOT_AUTOMATIC_BYPASS_ENABLED_PROPERTY =
 
 export const SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTY_FEATURES = {
   temp_window_fallback_automatic_bypass_account_refresh_enabled:
-    "account_refresh",
+    PROTECTION_BYPASS_FEATURES.AccountRefresh,
   temp_window_fallback_automatic_bypass_balance_history_enabled:
-    "balance_history",
-  temp_window_fallback_automatic_bypass_checkin_enabled: "checkin",
+    PROTECTION_BYPASS_FEATURES.BalanceHistory,
+  temp_window_fallback_automatic_bypass_checkin_enabled:
+    PROTECTION_BYPASS_FEATURES.Checkin,
   temp_window_fallback_automatic_bypass_redemption_assist_enabled:
-    "redemption_assist",
+    PROTECTION_BYPASS_FEATURES.RedemptionAssist,
   temp_window_fallback_automatic_bypass_ldoh_site_lookup_enabled:
-    "ldoh_site_lookup",
+    PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
   temp_window_fallback_automatic_bypass_key_management_enabled:
-    "key_management",
+    PROTECTION_BYPASS_FEATURES.KeyManagement,
   temp_window_fallback_automatic_bypass_managed_site_channels_enabled:
-    "managed_site_channels",
+    PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
   temp_window_fallback_automatic_bypass_managed_site_model_sync_enabled:
-    "managed_site_model_sync",
+    PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
 } as const satisfies Record<string, ProtectionBypassAutomaticFeature>
 
 export const SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES =

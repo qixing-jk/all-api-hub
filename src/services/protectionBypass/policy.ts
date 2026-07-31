@@ -11,8 +11,8 @@ import {
   type ProtectionBypassCause,
   type ProtectionBypassDecisionKind,
   type ProtectionBypassDeniedReason,
+  type ProtectionBypassExecutionResolutionFailure,
   type ProtectionBypassFeature,
-  type ProtectionBypassIntentResolutionFailure,
   type ProtectionBypassOperation,
   type ProtectionBypassSurface,
   type ResolvedProtectionBypassExecution,
@@ -87,7 +87,7 @@ export type ProtectionBypassPolicyDecision =
 interface EvaluateProtectionBypassPolicyInput {
   execution:
     | ResolvedProtectionBypassExecution
-    | ProtectionBypassIntentResolutionFailure
+    | ProtectionBypassExecutionResolutionFailure
     | undefined
   task: TempContextTask
   policy: ProtectionBypassPolicyState

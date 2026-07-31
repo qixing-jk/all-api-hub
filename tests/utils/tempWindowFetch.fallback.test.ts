@@ -258,8 +258,6 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     await expect(
       getTempWindowFallbackBlockStatus({
         preferences: buildTempWindowPreferences({ enabled: false }),
-        isBackground: false,
-        inPopup: false,
       }),
     ).resolves.toEqual({
       kind: "blocked",
@@ -268,33 +266,6 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
   })
 
-  it.each([
-    {
-      location: "background",
-      isBackground: true,
-      preferences: buildTempWindowPreferences(),
-    },
-    {
-      location: "non-background",
-      isBackground: false,
-      preferences: buildTempWindowPreferences(),
-    },
-  ])(
-    "does not infer authorization from a $location execution location",
-    async ({ isBackground, preferences }) => {
-      await expect(
-        getTempWindowFallbackBlockStatus({
-          preferences,
-          isBackground,
-        }),
-      ).resolves.toEqual({
-        kind: "available",
-        code: null,
-        reason: null,
-      })
-    },
-  )
-
   it("reports Firefox permission blocks through the shared block-status helper", async () => {
     mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
     mocks.hasCookieInterceptorPermissionsMock.mockResolvedValue(false)
@@ -302,8 +273,6 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     await expect(
       getTempWindowFallbackBlockStatus({
         preferences: buildTempWindowPreferences(),
-        isBackground: false,
-        inPopup: false,
       }),
     ).resolves.toEqual({
       kind: "blocked",
@@ -319,8 +288,6 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     await expect(
       getTempWindowFallbackBlockStatus({
         preferences: buildTempWindowPreferences(),
-        isBackground: false,
-        inPopup: true,
       }),
     ).resolves.toEqual({
       kind: "blocked",
@@ -523,22 +490,6 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
     expectRuntimeTask("rendered_title", {
       originUrl: "https://example.com",
-    })
-  })
-
-  it("keeps the account health check independent of propagated presentation source", async () => {
-    mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
-
-    await expect(
-      getTempWindowFallbackBlockStatus({
-        preferences: buildTempWindowPreferences(),
-        isBackground: true,
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      }),
-    ).resolves.toEqual({
-      kind: "available",
-      code: null,
-      reason: null,
     })
   })
 

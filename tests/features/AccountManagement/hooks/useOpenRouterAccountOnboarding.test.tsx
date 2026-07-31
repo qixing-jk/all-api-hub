@@ -8,15 +8,14 @@ import {
 } from "~/constants/openRouterBootstrap"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useOpenRouterAccountOnboarding as useOpenRouterAccountOnboardingProduction } from "~/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
-const testExecution = {
-  version: 2,
-  kind: "user_command",
-  command: "add_account",
-  surface: "options",
-} as const
+const testExecution = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+)
 
 function useOpenRouterAccountOnboarding() {
   const hook = useOpenRouterAccountOnboardingProduction()

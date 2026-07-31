@@ -19,6 +19,7 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 // Verifies account action flows through the public context API, including
@@ -208,7 +209,13 @@ beforeEach(() => {
       command: string,
       surface: string,
       work: (execution: unknown) => Promise<unknown>,
-    ) => work({ version: 2, kind: "user_command", command, surface }),
+    ) =>
+      work({
+        version: PROTECTION_BYPASS_EXECUTION_VERSION,
+        kind: "user_command",
+        command,
+        surface,
+      }),
   )
   Object.assign(navigator, {
     clipboard: {
@@ -450,7 +457,7 @@ describe("AccountActionsContext", () => {
     expect(mockRefreshAccount).toHaveBeenCalledWith("refresh-1", false, {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       protectionBypassExecution: expect.objectContaining({
-        version: 2,
+        version: PROTECTION_BYPASS_EXECUTION_VERSION,
         kind: "user_command",
       }),
     })
@@ -518,7 +525,12 @@ describe("AccountActionsContext", () => {
         work: (execution: unknown) => Promise<unknown>,
       ) => {
         await grantReady
-        return work({ version: 2, kind: "user_command", command, surface })
+        return work({
+          version: PROTECTION_BYPASS_EXECUTION_VERSION,
+          kind: "user_command",
+          command,
+          surface,
+        })
       },
     )
     mockRefreshAccount.mockResolvedValueOnce({ refreshed: true })

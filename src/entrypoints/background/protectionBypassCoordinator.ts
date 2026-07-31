@@ -28,7 +28,7 @@ import {
   TEMP_CONTEXT_TASK_KINDS,
   type NewApiChannelKeyResource,
   type ProtectionBypassExecuteRequest,
-  type ProtectionBypassIntentResolutionFailure,
+  type ProtectionBypassExecutionResolutionFailure,
   type ProtectionBypassSurface,
   type ResolvedProtectionBypassExecution,
   type TempContextTask,
@@ -159,7 +159,9 @@ async function validateCurrentNewApiSessionReadResource(
 /** Resolves plain invocation intent without consulting runtime grant state. */
 export function resolveProtectionBypassExecution(
   execution: unknown,
-): ResolvedProtectionBypassExecution | ProtectionBypassIntentResolutionFailure {
+):
+  | ResolvedProtectionBypassExecution
+  | ProtectionBypassExecutionResolutionFailure {
   if (execution === undefined) {
     return {
       kind: "invalid",

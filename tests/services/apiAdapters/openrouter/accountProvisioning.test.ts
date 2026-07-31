@@ -11,7 +11,9 @@ import {
   onboardOpenRouterAccount as onboardOpenRouterAccountProduction,
   provisionOpenRouterAccount as provisionOpenRouterAccountProduction,
 } from "~/services/apiAdapters/openrouter/accountProvisioning"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const { createManagementKey, cancelManagementKey, validateManagementKey } =
   vi.hoisted(() => ({
@@ -30,12 +32,9 @@ vi.mock("~/services/apiService/openrouter", () => ({
 }))
 
 const tempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Options
-const testExecution = {
-  version: 2,
-  kind: "user_command",
-  command: "add_account",
-  surface: "options",
-} as const
+const testExecution = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+)
 
 function provisionOpenRouterAccount(
   request: Omit<
@@ -77,12 +76,9 @@ describe("OpenRouter account provisioning", () => {
   })
 
   it("owns the canonical onboarding result mapping in the provider module", async () => {
-    const protectionBypassExecution = {
-      version: 2 as const,
-      kind: "user_command" as const,
-      command: "add_account",
-      surface: "options",
-    } as const
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+    )
     createManagementKey.mockResolvedValue({
       operation: "create",
       requestId: "request-onboarding",

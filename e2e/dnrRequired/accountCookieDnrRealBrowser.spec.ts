@@ -9,6 +9,7 @@ import {
   KEY_MANAGEMENT_TEST_IDS,
 } from "~/features/KeyManagement/testIds"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
+import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -94,14 +95,14 @@ test("isolates same-site cookie and access-token accounts through account refres
       tempWindowFallback: {
         enabled: true,
         automaticFeatureBypass: {
-          account_refresh: true,
-          balance_history: true,
-          checkin: true,
-          redemption_assist: true,
-          ldoh_site_lookup: true,
-          key_management: true,
-          managed_site_channels: true,
-          managed_site_model_sync: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.BalanceHistory]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.RedemptionAssist]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.LdohSiteLookup]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.KeyManagement]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteChannels]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteModelSync]: true,
         },
         tempContextMode: "composite",
       },

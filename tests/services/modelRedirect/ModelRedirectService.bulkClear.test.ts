@@ -43,7 +43,7 @@ const mockedUserPreferences = userPreferences as unknown as {
   getPreferences: ReturnType<typeof vi.fn>
 }
 
-describe("ModelRedirectService.clearChannelModelMappings", () => {
+describe("ModelRedirectService managed channel operations", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
@@ -87,6 +87,24 @@ describe("ModelRedirectService.clearChannelModelMappings", () => {
     expect(result.clearedChannels).toBe(0)
     expect(result.failedChannels).toBe(2)
     expect(result.errors[0]).toContain("Managed site configuration is missing")
+  })
+
+  it("lists the complete managed-site channel inventory", async () => {
+    const channels = [
+      { id: 1, name: "Example channel", models: "model-a,model-b" },
+    ]
+    listChannelsMock.mockResolvedValue({ items: channels })
+
+    await expect(
+      ModelRedirectService.listManagedSiteChannels(),
+    ).resolves.toEqual({
+      success: true,
+      channels,
+      errors: [],
+    })
+    expect(listChannelsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://example.com" }),
+    )
   })
 
   it("rejects search-only capabilities without clearing a partial channel inventory", async () => {

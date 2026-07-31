@@ -3,12 +3,13 @@ import { describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { runBookmarkAccountImport } from "~/features/AccountManagement/bookmarkImport/importAccounts"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
+import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 
 describe("runBookmarkAccountImport", () => {
   it("reuses one onboarding execution for every selected candidate", async () => {
     const protectionBypassExecution = {
-      version: 2,
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
       kind: "user_command",
       command: "add_account",
       surface: "options",

@@ -15,6 +15,7 @@ import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { normalizeWebdavOrderedEntryIds } from "~/services/webdav/webdavSelectiveSync"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 // Basic getErrorMessage passthrough to avoid noisy output
 vi.mock("~/utils/core/error", () => ({
@@ -135,19 +136,6 @@ const mockTestConnection = vi.fn()
 const mockDownloadBackup = vi.fn()
 const mockUploadBackup = vi.fn()
 const mockParseWebdavBackupJson = vi.fn()
-
-/**
- * Creates a deferred promise helper for tests.
- */
-function createDeferred<T>() {
-  let resolve!: (value: T) => void
-  let reject!: (reason?: unknown) => void
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res
-    reject = rej
-  })
-  return { promise, resolve, reject }
-}
 
 vi.mock("~/services/webdav/webdavService", () => ({
   testWebdavConnection: (...args: any[]) => mockTestConnection(...args),

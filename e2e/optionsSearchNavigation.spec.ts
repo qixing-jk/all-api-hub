@@ -225,24 +225,23 @@ test("opens automatic check-in verification assistance from settings search and 
         SHIELD_SETTINGS_TARGET_IDS.feature[
           PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin
         ],
-      highlight:
-        SHIELD_SETTINGS_TARGET_IDS.feature[
-          PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin
-        ],
+      highlight: null,
     })
 
-  const masterToggle = page
-    .locator(`#${SHIELD_SETTINGS_TARGET_IDS.enabled}`)
-    .getByRole("switch", { name: "Toggle" })
-  const checkinFeatureToggle = page
-    .locator(
+  await expect(
+    page.locator(
       `#${
         SHIELD_SETTINGS_TARGET_IDS.feature[
           PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin
         ]
       }`,
-    )
-    .getByRole("checkbox")
+    ),
+  ).toBeInViewport()
+
+  const masterToggle = page
+    .locator(`#${SHIELD_SETTINGS_TARGET_IDS.enabled}`)
+    .getByRole("switch", { name: "Toggle" })
+  const checkinFeatureToggle = page.getByRole("checkbox", { name: "Check-in" })
 
   await expect(masterToggle).toHaveAttribute("aria-checked", "false")
   await expect(checkinFeatureToggle).toBeEnabled()

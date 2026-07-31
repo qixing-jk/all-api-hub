@@ -865,10 +865,10 @@ action opens the fixture page, clicks it, and persists success.
 
 In `optionsSearchNavigation.spec.ts`, seed the automatic master off and the
 check-in bypass preference false, search for automatic check-in verification
-assistance, select the result, and assert `tab=refresh`, anchor/highlight equal
-the exported check-in target ID, and the checkbox remains enabled. Toggle it
-and reload to prove the complete feature record persisted even while the master
-was off.
+assistance, select the result, and assert `tab=refresh`, the anchor equals the
+exported check-in target ID, the one-shot highlight is consumed after the target
+becomes visible, and the checkbox remains enabled. Toggle it and reload to prove
+the complete feature record persisted even while the master was off.
 
 In `shieldBypassContentPrompt.spec.ts`, preserve the existing prompt-to-root
 anchor flow and assert the settings page renders the automatic-feature group

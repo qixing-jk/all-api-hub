@@ -11,7 +11,9 @@ import {
 } from "~/services/accounts/autoDetectCompletion/completion"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const {
   getSiteTypeCapabilitiesMock,
@@ -79,12 +81,9 @@ describe("auto-detect completion", () => {
 
   it("routes completion through the adapter with valid current-tab context", async () => {
     const fetchContext = currentTabFetchContext("https://status.example.com")
-    const protectionBypassExecution = {
-      version: 2,
-      kind: "user_command",
-      command: "detect_account",
-      surface: "options",
-    } as const
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+    )
     const autoDetectContext = {
       strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
       siteType: SITE_TYPES.NEW_API,

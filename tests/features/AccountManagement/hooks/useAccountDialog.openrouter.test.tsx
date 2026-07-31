@@ -11,8 +11,10 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -44,12 +46,9 @@ const {
   mockWithProtectionBypassUserCommand: vi.fn(),
 }))
 
-const openRouterProtectionExecution = {
-  version: 2 as const,
-  kind: "user_command" as const,
-  command: "add_account",
-  surface: "options",
-}
+const openRouterProtectionExecution = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+)
 
 vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
   const actual =

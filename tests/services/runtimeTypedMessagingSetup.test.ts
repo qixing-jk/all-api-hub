@@ -37,7 +37,7 @@ const OPTIONS_SENDER = {
   url: "chrome-extension://test/options.html",
 } as const
 
-const UI_LDOH_SITE_DETECTION_EXECUTION = {
+const UI_LDOH_SITE_LOOKUP_EXECUTION = {
   version: 2,
   kind: "automatic",
   feature: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
@@ -45,8 +45,8 @@ const UI_LDOH_SITE_DETECTION_EXECUTION = {
   surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
 } as const
 
-const OPTIONS_LDOH_SITE_DETECTION_EXECUTION = {
-  ...UI_LDOH_SITE_DETECTION_EXECUTION,
+const OPTIONS_LDOH_SITE_LOOKUP_EXECUTION = {
+  ...UI_LDOH_SITE_LOOKUP_EXECUTION,
   surface: TEMP_WINDOW_REQUEST_SOURCES.Options,
 } as const
 
@@ -1053,11 +1053,11 @@ describe("typed runtime messaging setup", () => {
     )
     const validUiRequests = [
       {
-        execution: UI_LDOH_SITE_DETECTION_EXECUTION,
+        execution: UI_LDOH_SITE_LOOKUP_EXECUTION,
         sender: { url: "https://example.invalid/popup.html" },
       },
       {
-        execution: OPTIONS_LDOH_SITE_DETECTION_EXECUTION,
+        execution: OPTIONS_LDOH_SITE_LOOKUP_EXECUTION,
         sender: { url: "moz-extension://test/options.html#/accounts" },
       },
     ] as const
@@ -1100,28 +1100,28 @@ describe("typed runtime messaging setup", () => {
       },
       {
         execution: {
-          ...UI_LDOH_SITE_DETECTION_EXECUTION,
+          ...UI_LDOH_SITE_LOOKUP_EXECUTION,
           feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
         },
         sender: { url: "chrome-extension://test/popup.html" },
       },
       {
         execution: {
-          ...UI_LDOH_SITE_DETECTION_EXECUTION,
+          ...UI_LDOH_SITE_LOOKUP_EXECUTION,
           trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
         },
         sender: { url: "chrome-extension://test/popup.html" },
       },
       {
         execution: {
-          ...UI_LDOH_SITE_DETECTION_EXECUTION,
+          ...UI_LDOH_SITE_LOOKUP_EXECUTION,
           surface: TEMP_WINDOW_REQUEST_SOURCES.Background,
         },
         sender: { url: "chrome-extension://test/background.html" },
       },
       {
         execution: {
-          ...UI_LDOH_SITE_DETECTION_EXECUTION,
+          ...UI_LDOH_SITE_LOOKUP_EXECUTION,
           surface: "invalid-surface",
         },
         sender: { url: "chrome-extension://test/popup.html" },
@@ -1163,7 +1163,7 @@ describe("typed runtime messaging setup", () => {
     await expect(
       refreshHandler({
         data: {
-          protectionBypassExecution: UI_LDOH_SITE_DETECTION_EXECUTION,
+          protectionBypassExecution: UI_LDOH_SITE_LOOKUP_EXECUTION,
         },
         sender: { url: "chrome-extension://test/popup.html" },
       }),
@@ -1246,7 +1246,7 @@ describe("typed runtime messaging setup", () => {
         "ldohSiteLookup:refreshSites",
       )({
         data: {
-          protectionBypassExecution: UI_LDOH_SITE_DETECTION_EXECUTION,
+          protectionBypassExecution: UI_LDOH_SITE_LOOKUP_EXECUTION,
         },
         sender: { url: "chrome-extension://test/popup.html" },
       }),

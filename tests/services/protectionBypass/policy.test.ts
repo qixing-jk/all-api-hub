@@ -1,6 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest"
 
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   getTempContextTaskMetadata,
   NEW_API_SESSION_READ_ACTIONS,
@@ -223,6 +224,16 @@ describe("normalizeProtectionBypassPreferences", () => {
 
     expect(result).toEqual({ kind: "unavailable" })
   })
+
+  it.each([undefined, "unsupported-mode"])(
+    "defaults a missing or invalid temporary-context mode (%s)",
+    (tempContextMode) => {
+      expect(
+        normalizeTempWindowFallbackPreferences({ tempContextMode })
+          .tempContextMode,
+      ).toBe(TEMP_CONTEXT_MODES.Composite)
+    },
+  )
 })
 
 describe("evaluateProtectionBypassPolicy", () => {
@@ -498,7 +509,10 @@ describe("evaluateProtectionBypassPolicy", () => {
   })
 
   it("enforces the approved product-feature by task-kind matrix", () => {
-    const permitted: Record<ProtectionBypassFeature, readonly string[]> = {
+    const permitted: Record<
+      ProtectionBypassFeature,
+      readonly TempContextTask["kind"][]
+    > = {
       account_refresh: ["api_fallback_fetch", "session_read"],
       balance_history: ["api_fallback_fetch", "session_read"],
       checkin: [

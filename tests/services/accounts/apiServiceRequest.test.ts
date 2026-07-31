@@ -38,6 +38,7 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import {
   PROTECTION_BYPASS_EXECUTION_KINDS,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
@@ -880,7 +881,7 @@ describe("fetchDisplayAccountTokens", () => {
     const token = { id: 1, key: "sk-masked", status: 1, name: "Masked" }
     const abortController = new AbortController()
     const protectionBypassExecution = {
-      version: 2,
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
       kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
       command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
       surface: PROTECTION_BYPASS_SURFACES.Options,

@@ -23,7 +23,6 @@ import {
   type TempWindowNewApiSessionReadParams,
 } from "~/services/protectionBypass/contracts"
 import { isAutomaticProtectionBypassEnabled } from "~/services/protectionBypass/policy"
-import { normalizeProtectionBypassPreferences } from "~/services/protectionBypass/preferencePolicy"
 import { AuthTypeEnum } from "~/types"
 import {
   TEMP_WINDOW_HEALTH_STATUS_CODES,
@@ -118,11 +117,6 @@ type TempWindowFallbackBlockStatus =
       reason: null
     }
   | {
-      kind: "not_applicable"
-      code: null
-      reason: "firefox_popup_unsupported"
-    }
-  | {
       kind: "blocked"
       code: TempWindowHealthStatusCode
       reason: TempWindowFallbackBlockedReason
@@ -133,14 +127,12 @@ type TempWindowFallbackBlockStatus =
  */
 export async function getTempWindowFallbackBlockStatus(params: {
   preferences: TempWindowFallbackPreferences
-  isBackground?: boolean
-  inPopup?: boolean
-  inSidePanel?: boolean
-  inOptions?: boolean
-  tempWindowRequestSource?: unknown
 }): Promise<TempWindowFallbackBlockStatus> {
   const { preferences } = params
-  const policy = normalizeProtectionBypassPreferences(preferences)
+  const policy = {
+    automaticMasterEnabled: preferences.enabled,
+    automaticFeatureBypass: preferences.automaticFeatureBypass,
+  }
   if (!policy.automaticMasterEnabled) {
     return {
       kind: "blocked",

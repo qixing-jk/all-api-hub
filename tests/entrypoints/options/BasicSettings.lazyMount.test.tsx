@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import BasicSettings from "~/features/BasicSettings/BasicSettings"
+import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
+import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
 import {
   act,
   render,
@@ -453,14 +455,14 @@ describe("BasicSettings tab mounting", () => {
       tempWindowFallback: {
         enabled: true,
         automaticFeatureBypass: {
-          account_refresh: true,
-          balance_history: true,
-          checkin: true,
-          redemption_assist: true,
-          ldoh_site_lookup: true,
-          key_management: true,
-          managed_site_channels: true,
-          managed_site_model_sync: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.BalanceHistory]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.RedemptionAssist]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.LdohSiteLookup]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.KeyManagement]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteChannels]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteModelSync]: true,
         },
         tempContextMode: "composite",
       },
@@ -471,10 +473,13 @@ describe("BasicSettings tab mounting", () => {
     render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
 
     await waitFor(() => {
-      expect(document.querySelectorAll("#shield-settings")).toHaveLength(1)
+      expect(
+        document.querySelectorAll(`#${SHIELD_SETTINGS_TARGET_IDS.root}`),
+      ).toHaveLength(1)
     })
-    const shieldSettings =
-      document.querySelector<HTMLElement>("#shield-settings")
+    const shieldSettings = document.querySelector<HTMLElement>(
+      `#${SHIELD_SETTINGS_TARGET_IDS.root}`,
+    )
     if (!shieldSettings) throw new Error("Shield settings did not mount")
 
     const automaticFeatures = within(shieldSettings).getAllByRole("checkbox")

@@ -4,9 +4,11 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
 import { ApiError } from "~/services/apiTransport/errors"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { safeRandomUUID } from "~/utils/core/identifier"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/apiTransport/request", () => ({
@@ -64,12 +66,9 @@ const mockAccount = buildSiteAccount({
 
 const DEFAULT_PROVIDER_CONTEXT = {
   tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-  protectionBypassExecution: {
-    version: 2,
-    kind: "user_command",
-    command: "manual_checkin",
-    surface: "options",
-  },
+  protectionBypassExecution: userCommandExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+  ),
 } as const
 
 const checkInForTest = (
@@ -177,12 +176,9 @@ describe("newApiProvider", () => {
 
       const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-        protectionBypassExecution: {
-          version: 2,
-          kind: "user_command",
-          command: "manual_checkin",
-          surface: "options",
-        },
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       })
 
       expect(result).toEqual({
@@ -1273,12 +1269,9 @@ describe("newApiProvider", () => {
 
       const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-        protectionBypassExecution: {
-          version: 2,
-          kind: "user_command",
-          command: "manual_checkin",
-          surface: "options",
-        },
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       })
 
       expect(result.status).toBe("success")

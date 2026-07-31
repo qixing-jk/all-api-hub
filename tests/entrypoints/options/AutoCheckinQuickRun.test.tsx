@@ -13,6 +13,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
   PROTECTION_BYPASS_USER_COMMANDS,
@@ -20,6 +21,10 @@ import {
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 function createDeferred<T>() {
@@ -134,7 +139,13 @@ describe("AutoCheckin quick run", () => {
         command: unknown,
         surface: unknown,
         work: (execution: unknown) => Promise<unknown>,
-      ) => work({ version: 2, kind: "user_command", command, surface }),
+      ) =>
+        work({
+          version: PROTECTION_BYPASS_EXECUTION_VERSION,
+          kind: "user_command",
+          command,
+          surface,
+        }),
     )
   })
 
@@ -298,12 +309,10 @@ describe("AutoCheckin quick run", () => {
     expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
       AutoCheckinMessageTypes.RunNow,
       {
-        protectionBypassExecution: {
-          version: 2,
-          kind: "user_command",
-          command: "manual_checkin",
-          surface: "popup",
-        },
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+          PROTECTION_BYPASS_SURFACES.Popup,
+        ),
       },
     )
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
@@ -408,13 +417,11 @@ describe("AutoCheckin quick run", () => {
       expectedRequest: {
         dryRun: true,
         debug: true,
-        protectionBypassExecution: {
-          version: 2,
-          kind: "automatic",
-          feature: PROTECTION_BYPASS_FEATURES.Checkin,
-          trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
-          surface: PROTECTION_BYPASS_SURFACES.Popup,
-        },
+        protectionBypassExecution: automaticExecution(
+          PROTECTION_BYPASS_FEATURES.Checkin,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          PROTECTION_BYPASS_SURFACES.Popup,
+        ),
       },
     },
     {
@@ -422,13 +429,11 @@ describe("AutoCheckin quick run", () => {
       expectedRequest: {
         requestId: expect.any(String),
         debug: true,
-        protectionBypassExecution: {
-          version: 2,
-          kind: "automatic",
-          feature: PROTECTION_BYPASS_FEATURES.Checkin,
-          trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
-          surface: PROTECTION_BYPASS_SURFACES.Popup,
-        },
+        protectionBypassExecution: automaticExecution(
+          PROTECTION_BYPASS_FEATURES.Checkin,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          PROTECTION_BYPASS_SURFACES.Popup,
+        ),
       },
     },
   ])(

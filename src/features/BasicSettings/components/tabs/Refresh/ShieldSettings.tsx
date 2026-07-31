@@ -1,5 +1,5 @@
 import { StarIcon } from "@heroicons/react/24/outline"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -21,6 +21,7 @@ import {
 } from "~/components/ui"
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { SHIELD_AUTOMATIC_FEATURE_ITEMS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
@@ -70,8 +71,10 @@ export default function ShieldSettings() {
     ProtectionBypassUiVariants.TempWindowWithCookieInterceptor
       ? t("refresh.shieldEnabledDescWithCookieInterceptor")
       : t("refresh.shieldEnabledDescTempWindowOnly")
-  const normalizedPreferences =
-    normalizeTempWindowFallbackPreferences(tempWindowFallback)
+  const normalizedPreferences = useMemo(
+    () => normalizeTempWindowFallbackPreferences(tempWindowFallback),
+    [tempWindowFallback],
+  )
   const externalAutomaticFeatureBypass =
     normalizedPreferences.automaticFeatureBypass
   const latestAutomaticFeatureBypassRef = useRef(externalAutomaticFeatureBypass)
@@ -84,9 +87,8 @@ export default function ShieldSettings() {
   const [automaticFeatureBypass, setAutomaticFeatureBypass] = useState(
     externalAutomaticFeatureBypass,
   )
-  externalAutomaticFeatureBypassRef.current = externalAutomaticFeatureBypass
-
   useEffect(() => {
+    externalAutomaticFeatureBypassRef.current = externalAutomaticFeatureBypass
     const pendingAutomaticFeatureBypass =
       pendingAutomaticFeatureBypassRef.current
     if (pendingAutomaticFeatureBypass) {
@@ -154,43 +156,9 @@ export default function ShieldSettings() {
       : mode === TEMP_CONTEXT_MODES.Tab
         ? t("refresh.shieldMethodHintTab")
         : t("refresh.shieldMethodHintComposite")
-  const automaticFeatures = [
-    [
-      PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh,
-      t("refresh.shieldAutomaticFeatureAccountRefresh"),
-    ],
-    [
-      PROTECTION_BYPASS_AUTOMATIC_FEATURES.BalanceHistory,
-      t("refresh.shieldAutomaticFeatureBalanceHistory"),
-    ],
-    [
-      PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin,
-      t("refresh.shieldAutomaticFeatureCheckin"),
-    ],
-    [
-      PROTECTION_BYPASS_AUTOMATIC_FEATURES.RedemptionAssist,
-      t("refresh.shieldAutomaticFeatureRedemptionAssist"),
-    ],
-    [
-      PROTECTION_BYPASS_AUTOMATIC_FEATURES.LdohSiteLookup,
-      t("refresh.shieldAutomaticFeatureLdohSiteLookup"),
-    ],
-    [
-      PROTECTION_BYPASS_AUTOMATIC_FEATURES.KeyManagement,
-      t("refresh.shieldAutomaticFeatureKeyManagement"),
-    ],
-    [
-      PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteChannels,
-      t("refresh.shieldAutomaticFeatureManagedSiteChannels"),
-    ],
-    [
-      PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteModelSync,
-      t("refresh.shieldAutomaticFeatureManagedSiteModelSync"),
-    ],
-  ] as const satisfies readonly (readonly [
-    ProtectionBypassAutomaticFeature,
-    string,
-  ])[]
+  const automaticFeatures = SHIELD_AUTOMATIC_FEATURE_ITEMS.map(
+    ({ feature, titleKey }) => [feature, t(titleKey)] as const,
+  )
 
   return (
     <SettingSection

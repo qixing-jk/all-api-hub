@@ -12,7 +12,7 @@ import {
 import {
   getTempContextTaskMetadata,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
-  PROTECTION_BYPASS_FEATURE_TASK_KINDS,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
   TEMP_CONTEXT_TASK_KINDS,
@@ -41,7 +41,7 @@ export {
  * boundary. It is never evidence that a feature owns the exercised task.
  */
 const TEST_BELOW_POLICY_EXECUTION = {
-  version: 2,
+  version: PROTECTION_BYPASS_EXECUTION_VERSION,
   kind: "automatic",
   feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
   trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
@@ -160,16 +160,28 @@ async function authorizeTestTask(
   }
 }
 
+const TEST_DECISION_FEATURE_BY_TASK_KIND: Partial<
+  Record<TempContextTask["kind"], ProtectionBypassFeature>
+> = {
+  [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch]:
+    PROTECTION_BYPASS_FEATURES.AccountRefresh,
+  [TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch]:
+    PROTECTION_BYPASS_FEATURES.AccountOnboarding,
+  [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch]: PROTECTION_BYPASS_FEATURES.Checkin,
+  [TEMP_CONTEXT_TASK_KINDS.NativePageAction]:
+    PROTECTION_BYPASS_FEATURES.Checkin,
+  [TEMP_CONTEXT_TASK_KINDS.SessionRead]:
+    PROTECTION_BYPASS_FEATURES.AccountRefresh,
+  [TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead]:
+    PROTECTION_BYPASS_FEATURES.KeyManagement,
+  [TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction]:
+    PROTECTION_BYPASS_FEATURES.AccountOnboarding,
+}
+
 function resolveTestDecisionFeature(
   task: TempContextTask,
 ): ProtectionBypassFeature | undefined {
-  return Object.values(PROTECTION_BYPASS_FEATURES).find((feature) =>
-    (
-      PROTECTION_BYPASS_FEATURE_TASK_KINDS[
-        feature
-      ] as readonly TempContextTask["kind"][]
-    ).includes(task.kind),
-  )
+  return TEST_DECISION_FEATURE_BY_TASK_KIND[task.kind]
 }
 
 /** Executes an ownerless legacy fixture below the production policy boundary. */
@@ -207,7 +219,7 @@ async function executeTestTask(
     return
   }
 
-  throw new Error(`Owned task ${task.kind} has no test authorization owner`)
+  throw new Error(`Unowned task ${task.kind} has no test authorization owner`)
 }
 
 export async function handleAutoDetectSite(

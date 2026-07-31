@@ -167,6 +167,27 @@ function parseSource(source: string, fileName: string): ts.SourceFile {
   )
 }
 
+function findProtectionBypassReferences(sourceFile: ts.SourceFile): string[] {
+  const references = new Set<string>()
+
+  const visit = (node: ts.Node) => {
+    if (
+      ts.isImportDeclaration(node) &&
+      ts.isStringLiteral(node.moduleSpecifier) &&
+      /protectionBypass/i.test(node.moduleSpecifier.text)
+    ) {
+      references.add(`import:${node.moduleSpecifier.text}`)
+    }
+    if (ts.isIdentifier(node) && /protectionBypass/i.test(node.text)) {
+      references.add(`identifier:${node.text}`)
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+  return [...references].sort()
+}
+
 function isInsideFunction(node: ts.Node, functionName: string): boolean {
   let current: ts.Node | undefined = node.parent
   while (current) {
@@ -1091,10 +1112,11 @@ describe("protection bypass architecture", () => {
   it("keeps ModelRedirectService outside protection-bypass execution ownership", async () => {
     const source = await fs.readFile(modelRedirectServicePath, "utf8")
 
-    expect(source).not.toMatch(
-      /(?:import|new|create)[\s\S]{0,120}(?:ProtectionBypass|protectionBypass)/,
-    )
-    expect(source).not.toMatch(/protectionBypassExecution/)
+    expect(
+      findProtectionBypassReferences(
+        parseSource(source, modelRedirectServicePath),
+      ),
+    ).toEqual([])
   })
 
   it("keeps rendered-title and open-context helpers dormant in production", async () => {

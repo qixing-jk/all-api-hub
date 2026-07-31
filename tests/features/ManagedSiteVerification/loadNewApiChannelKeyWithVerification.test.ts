@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import {
+  PROTECTION_BYPASS_EXECUTION_KINDS,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 
 const { fetchNewApiChannelKeyMock, withProtectionBypassUserCommandMock } =
   vi.hoisted(() => ({
@@ -10,8 +14,8 @@ const { fetchNewApiChannelKeyMock, withProtectionBypassUserCommandMock } =
     withProtectionBypassUserCommandMock: vi.fn(
       async (command, surface, work) =>
         await work({
-          version: 2,
-          kind: "user_command",
+          version: PROTECTION_BYPASS_EXECUTION_VERSION,
+          kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
           command,
           surface,
         }),
@@ -120,8 +124,8 @@ describe("loadNewApiChannelKeyWithVerification", () => {
       totpSecret: BASE_PARAMS.config.totpSecret,
       channelId: BASE_PARAMS.channelId,
       protectionBypassExecution: expect.objectContaining({
-        kind: "user_command",
-        command: "manage_site_channels",
+        kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
+        command: PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
         surface: "options",
       }),
     })
@@ -151,13 +155,13 @@ describe("loadNewApiChannelKeyWithVerification", () => {
     expect(withProtectionBypassUserCommandMock).toHaveBeenCalledTimes(2)
     expect(withProtectionBypassUserCommandMock).toHaveBeenNthCalledWith(
       1,
-      "manage_site_channels",
+      PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
       "options",
       expect.any(Function),
     )
     expect(withProtectionBypassUserCommandMock).toHaveBeenNthCalledWith(
       2,
-      "manage_site_channels",
+      PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
       "options",
       expect.any(Function),
     )

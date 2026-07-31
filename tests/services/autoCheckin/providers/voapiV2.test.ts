@@ -7,10 +7,12 @@ import {
   type AutoCheckinProvider,
 } from "~/services/checkin/autoCheckin/providers"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const {
   mockResyncVoApiV2AuthToken,
@@ -70,12 +72,9 @@ const account = {
 
 const DEFAULT_PROVIDER_CONTEXT = {
   tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-  protectionBypassExecution: {
-    version: 2,
-    kind: "user_command",
-    command: "manual_checkin",
-    surface: "options",
-  },
+  protectionBypassExecution: userCommandExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+  ),
 } as const
 
 const checkInForTest = (
@@ -115,12 +114,9 @@ describe("voApiV2Provider", () => {
     await expect(
       checkInForTest(account, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-        protectionBypassExecution: {
-          version: 2,
-          kind: "user_command",
-          command: "manual_checkin",
-          surface: "options",
-        },
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       }),
     ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
     expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledWith(
@@ -279,12 +275,9 @@ describe("voApiV2Provider", () => {
     await expect(
       checkInForTest(account, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-        protectionBypassExecution: {
-          version: 2,
-          kind: "user_command",
-          command: "manual_checkin",
-          surface: "options",
-        },
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       }),
     ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
 

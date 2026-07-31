@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import ShieldSettings from "~/features/BasicSettings/components/tabs/Refresh/ShieldSettings"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_FEATURES,
+  type ProtectionBypassAutomaticFeature,
+} from "~/services/protectionBypass/contracts"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   act,
   fireEvent,
@@ -66,27 +72,45 @@ const completeExternalAutomaticFeatureBypass = {
   managed_site_model_sync: false,
 }
 
-const createDeferred = <T,>() => {
-  let resolve!: (value: T | PromiseLike<T>) => void
-  let reject!: (reason?: unknown) => void
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res
-    reject = rej
-  })
+const automaticFeatureCheckboxNames = {
+  [PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh]:
+    "settings:refresh.shieldAutomaticFeatureAccountRefresh",
+  [PROTECTION_BYPASS_AUTOMATIC_FEATURES.BalanceHistory]:
+    "settings:refresh.shieldAutomaticFeatureBalanceHistory",
+  [PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin]:
+    "settings:refresh.shieldAutomaticFeatureCheckin",
+  [PROTECTION_BYPASS_AUTOMATIC_FEATURES.RedemptionAssist]:
+    "settings:refresh.shieldAutomaticFeatureRedemptionAssist",
+  [PROTECTION_BYPASS_AUTOMATIC_FEATURES.LdohSiteLookup]:
+    "settings:refresh.shieldAutomaticFeatureLdohSiteLookup",
+  [PROTECTION_BYPASS_AUTOMATIC_FEATURES.KeyManagement]:
+    "settings:refresh.shieldAutomaticFeatureKeyManagement",
+  [PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteChannels]:
+    "settings:refresh.shieldAutomaticFeatureManagedSiteChannels",
+  [PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteModelSync]:
+    "settings:refresh.shieldAutomaticFeatureManagedSiteModelSync",
+} as const satisfies Record<ProtectionBypassAutomaticFeature, string>
 
-  return { promise, reject, resolve }
+function getAutomaticFeatureCheckbox(
+  feature: ProtectionBypassAutomaticFeature,
+) {
+  return screen.getByRole("checkbox", {
+    name: automaticFeatureCheckboxNames[feature],
+  })
 }
 
 function expectAutomaticFeatureCheckboxStates(
-  checkboxes: HTMLElement[],
-  expected: boolean[],
+  expected: Record<ProtectionBypassAutomaticFeature, boolean>,
 ) {
-  expect(checkboxes).toHaveLength(expected.length)
-  for (const [index, checked] of expected.entries()) {
+  for (const [feature, checked] of Object.entries(expected) as [
+    ProtectionBypassAutomaticFeature,
+    boolean,
+  ][]) {
+    const checkbox = getAutomaticFeatureCheckbox(feature)
     if (checked) {
-      expect(checkboxes[index]).toBeChecked()
+      expect(checkbox).toBeChecked()
     } else {
-      expect(checkboxes[index]).not.toBeChecked()
+      expect(checkbox).not.toBeChecked()
     }
   }
 }
@@ -155,8 +179,8 @@ describe("ShieldSettings", () => {
         name: "settings:refresh.shieldMethodTab",
       }),
     ).toBeEnabled()
-    for (const checkbox of screen.getAllByRole("checkbox")) {
-      expect(checkbox).toBeEnabled()
+    for (const feature of Object.values(PROTECTION_BYPASS_AUTOMATIC_FEATURES)) {
+      expect(getAutomaticFeatureCheckbox(feature)).toBeEnabled()
     }
   })
 
@@ -187,11 +211,10 @@ describe("ShieldSettings", () => {
     const method = await screen.findByRole("button", {
       name: "settings:refresh.shieldMethodTab",
     })
-    const automaticFeatures = screen.getAllByRole("checkbox")
-
     expect(method).toBeEnabled()
-    expect(automaticFeatures).toHaveLength(8)
-    for (const feature of automaticFeatures) expect(feature).toBeEnabled()
+    for (const feature of Object.values(PROTECTION_BYPASS_AUTOMATIC_FEATURES)) {
+      expect(getAutomaticFeatureCheckbox(feature)).toBeEnabled()
+    }
   })
 
   it("updates fallback methods and complete automatic feature maps", async () => {
@@ -209,7 +232,9 @@ describe("ShieldSettings", () => {
 
     fireEvent.click(tabModeButton)
 
-    const accountRefreshCheckbox = screen.getAllByRole("checkbox")[0]
+    const accountRefreshCheckbox = getAutomaticFeatureCheckbox(
+      PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh,
+    )
 
     await waitFor(() => {
       expect(accountRefreshCheckbox).toBeEnabled()
@@ -231,13 +256,102 @@ describe("ShieldSettings", () => {
     )
   })
 
+  it("updates the automatic bypass master switch", async () => {
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    fireEvent.click(screen.getByRole("switch"))
+
+    expect(updateTempWindowFallback).toHaveBeenCalledWith({ enabled: false })
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it.each([
+    [TEMP_CONTEXT_MODES.Window, "settings:refresh.shieldMethodHintWindow"],
+    [TEMP_CONTEXT_MODES.Tab, "settings:refresh.shieldMethodHintTab"],
+  ] as const)(
+    "shows the %s temporary-context method hint",
+    async (mode, hint) => {
+      useUserPreferencesContextMock.mockReturnValue({
+        tempWindowFallback: {
+          enabled: true,
+          automaticFeatureBypass: completeExternalAutomaticFeatureBypass,
+          tempContextMode: mode,
+        },
+        updateTempWindowFallback,
+      })
+
+      render(<ShieldSettings />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+
+      expect(screen.getByText(hint)).toBeInTheDocument()
+      await waitFor(() => {
+        expect(
+          screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+        ).not.toBeInTheDocument()
+      })
+    },
+  )
+
+  it("accepts a pending feature write before synchronizing a later external update", async () => {
+    const context = {
+      tempWindowFallback: {
+        enabled: true,
+        automaticFeatureBypass: completeExternalAutomaticFeatureBypass,
+        tempContextMode: TEMP_CONTEXT_MODES.Composite,
+      },
+      updateTempWindowFallback,
+    }
+    useUserPreferencesContextMock.mockImplementation(() => context)
+    const { rerender } = render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const accountRefresh = getAutomaticFeatureCheckbox(
+      PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh,
+    )
+
+    fireEvent.click(accountRefresh)
+    await waitFor(() => expect(accountRefresh).not.toBeChecked())
+
+    context.tempWindowFallback = {
+      ...context.tempWindowFallback,
+      automaticFeatureBypass: {
+        ...completeExternalAutomaticFeatureBypass,
+        account_refresh: false,
+      },
+    }
+    rerender(<ShieldSettings />)
+
+    context.tempWindowFallback = {
+      ...context.tempWindowFallback,
+      automaticFeatureBypass: completeExternalAutomaticFeatureBypass,
+    }
+    rerender(<ShieldSettings />)
+
+    await waitFor(() => expect(accountRefresh).toBeChecked())
+  })
+
   it("keeps rapid automatic-feature changes in the latest complete map", async () => {
     render(<ShieldSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
 
-    const [accountRefresh, balanceHistory] = screen.getAllByRole("checkbox")
+    const accountRefresh = getAutomaticFeatureCheckbox(
+      PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh,
+    )
+    const balanceHistory = getAutomaticFeatureCheckbox(
+      PROTECTION_BYPASS_AUTOMATIC_FEATURES.BalanceHistory,
+    )
     fireEvent.click(accountRefresh)
     fireEvent.click(balanceHistory)
 
@@ -269,7 +383,9 @@ describe("ShieldSettings", () => {
       withThemeProvider: false,
     })
 
-    const [accountRefresh, ...otherFeatures] = screen.getAllByRole("checkbox")
+    const accountRefresh = getAutomaticFeatureCheckbox(
+      PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh,
+    )
     fireEvent.click(accountRefresh)
 
     await waitFor(() => {
@@ -288,15 +404,7 @@ describe("ShieldSettings", () => {
     })
 
     expect(accountRefresh).toBeChecked()
-    expectAutomaticFeatureCheckboxStates(otherFeatures, [
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-    ])
+    expectAutomaticFeatureCheckboxStates(completeExternalAutomaticFeatureBypass)
   })
 
   it("restores the complete external feature map when the latest write rejects", async () => {
@@ -316,7 +424,9 @@ describe("ShieldSettings", () => {
       withThemeProvider: false,
     })
 
-    const [accountRefresh, ...otherFeatures] = screen.getAllByRole("checkbox")
+    const accountRefresh = getAutomaticFeatureCheckbox(
+      PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh,
+    )
     fireEvent.click(accountRefresh)
 
     await waitFor(() => {
@@ -335,15 +445,7 @@ describe("ShieldSettings", () => {
     })
 
     expect(accountRefresh).toBeChecked()
-    expectAutomaticFeatureCheckboxStates(otherFeatures, [
-      false,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-    ])
+    expectAutomaticFeatureCheckboxStates(completeExternalAutomaticFeatureBypass)
   })
 
   it.each([
@@ -373,7 +475,12 @@ describe("ShieldSettings", () => {
         withThemeProvider: false,
       })
 
-      const [accountRefresh, balanceHistory] = screen.getAllByRole("checkbox")
+      const accountRefresh = getAutomaticFeatureCheckbox(
+        PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh,
+      )
+      const balanceHistory = getAutomaticFeatureCheckbox(
+        PROTECTION_BYPASS_AUTOMATIC_FEATURES.BalanceHistory,
+      )
       fireEvent.click(accountRefresh)
       fireEvent.click(balanceHistory)
 

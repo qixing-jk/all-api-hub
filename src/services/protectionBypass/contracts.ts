@@ -281,7 +281,10 @@ export function isProtectionBypassExecution(
 /** Accepts only the explicit refresh-all command for manual refresh-now routes. */
 export function isRefreshAllAccountsProtectionBypassExecution(
   value: unknown,
-): value is ProtectionBypassExecution {
+): value is Extract<
+  ProtectionBypassExecution,
+  { kind: typeof PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand }
+> {
   if (!isProtectionBypassExecution(value)) return false
   return (
     value.kind === PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand &&
@@ -329,7 +332,7 @@ export type ResolvedProtectionBypassExecution =
       readonly surface: ProtectionBypassSurface
     }
 
-export type ProtectionBypassIntentResolutionFailure = {
+export type ProtectionBypassExecutionResolutionFailure = {
   kind: "invalid"
   reason:
     | typeof PROTECTION_BYPASS_DENIED_REASONS.MissingExecution

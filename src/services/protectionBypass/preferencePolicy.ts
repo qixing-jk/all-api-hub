@@ -1,4 +1,3 @@
-import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import type { TempWindowFallbackPreferences } from "~/services/preferences/userPreferences"
 
 import { PROTECTION_BYPASS_DECISION_RESULTS } from "./contracts"
@@ -11,11 +10,10 @@ import type {
 export function normalizeProtectionBypassPreferences(
   source: TempWindowFallbackPreferences,
 ): ProtectionBypassPolicy {
-  const preferences = normalizeTempWindowFallbackPreferences(source)
   return {
-    automaticMasterEnabled: preferences.enabled,
-    automaticFeatureBypass: preferences.automaticFeatureBypass,
-    preferredMode: preferences.tempContextMode,
+    automaticMasterEnabled: source.enabled,
+    automaticFeatureBypass: source.automaticFeatureBypass,
+    preferredMode: source.tempContextMode,
   }
 }
 

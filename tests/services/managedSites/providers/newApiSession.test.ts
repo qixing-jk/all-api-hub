@@ -21,7 +21,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
-const VERIFY_EXECUTION = userCommandExecution(
+const MANAGE_API_KEYS_EXECUTION = userCommandExecution(
   PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
 )
 
@@ -506,7 +506,7 @@ describe("newApiSession", () => {
       fetchNewApiChannelKey({
         ...BASE_CONFIG,
         channelId: 12,
-        protectionBypassExecution: VERIFY_EXECUTION,
+        protectionBypassExecution: MANAGE_API_KEYS_EXECUTION,
       }),
     ).resolves.toBe("hidden-channel-key")
   })
@@ -547,7 +547,7 @@ describe("newApiSession", () => {
       fetchNewApiChannelKey({
         ...BASE_CONFIG,
         channelId: 12,
-        protectionBypassExecution: VERIFY_EXECUTION,
+        protectionBypassExecution: MANAGE_API_KEYS_EXECUTION,
       }),
     ).resolves.toBe("hidden-channel-key-via-temp-context")
 
@@ -563,10 +563,12 @@ describe("newApiSession", () => {
             userId: BASE_CONFIG.userId,
           }),
         },
-        execution: VERIFY_EXECUTION,
+        execution: MANAGE_API_KEYS_EXECUTION,
       }),
     )
+    expect(sendRuntimeMessageMock).toHaveBeenCalledTimes(1)
     const envelope = sendRuntimeMessageMock.mock.calls[0]?.[0]
+    expect(envelope).toBeDefined()
     expect(envelope).not.toHaveProperty("protectionBypassExecution")
     expect(envelope).not.toHaveProperty("tempWindowRequestSource")
     expect(envelope?.task).not.toHaveProperty("execution")
@@ -609,7 +611,7 @@ describe("newApiSession", () => {
       fetchNewApiChannelKey({
         ...BASE_CONFIG,
         channelId: 12,
-        protectionBypassExecution: VERIFY_EXECUTION,
+        protectionBypassExecution: MANAGE_API_KEYS_EXECUTION,
       }),
     ).rejects.toEqual(
       expect.objectContaining({

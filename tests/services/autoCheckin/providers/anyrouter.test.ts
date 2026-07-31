@@ -5,8 +5,10 @@ import {
   anyrouterProvider,
   type AnyrouterCheckInParams,
 } from "~/services/checkin/autoCheckin/providers/anyrouter"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
@@ -45,12 +47,9 @@ const mockAccount: SiteAccount = {
 
 const DEFAULT_PROVIDER_CONTEXT = {
   tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-  protectionBypassExecution: {
-    version: 2,
-    kind: "user_command",
-    command: "manual_checkin",
-    surface: "options",
-  },
+  protectionBypassExecution: userCommandExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+  ),
 } as const
 
 const checkInForTest = (
@@ -93,12 +92,9 @@ describe("anyrouterProvider", () => {
         message: "签到成功，获得 $25 额度",
       })
 
-      const protectionBypassExecution = {
-        version: 2,
-        kind: "user_command",
-        command: "manual_checkin",
-        surface: "options",
-      } as const
+      const protectionBypassExecution = userCommandExecution(
+        PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+      )
       const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
         protectionBypassExecution,

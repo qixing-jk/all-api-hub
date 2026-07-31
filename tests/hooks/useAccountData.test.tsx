@@ -79,10 +79,9 @@ describe("useAccountData enabled slices", () => {
     expect(mockRefreshAllAccounts).toHaveBeenCalledWith(
       false,
       expect.objectContaining({
-        protectionBypassExecution: expect.objectContaining({
-          version: 2,
-          kind: "user_command",
-        }),
+        protectionBypassExecution: expect.objectContaining(
+          userCommandExecution("refresh_all_accounts", "background"),
+        ),
       }),
     )
   })

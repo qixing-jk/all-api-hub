@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
@@ -42,12 +44,9 @@ const mockAccount: SiteAccount = {
 
 const DEFAULT_PROVIDER_CONTEXT = {
   tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-  protectionBypassExecution: {
-    version: 2,
-    kind: "user_command",
-    command: "manual_checkin",
-    surface: "options",
-  },
+  protectionBypassExecution: userCommandExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+  ),
 } as const
 
 const checkInForTest = (
@@ -102,12 +101,9 @@ describe("veloeraProvider", () => {
 
       const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-        protectionBypassExecution: {
-          version: 2,
-          kind: "user_command",
-          command: "manual_checkin",
-          surface: "options",
-        },
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       })
 
       expect(result).toEqual({

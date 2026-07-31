@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { resyncVoApiV2AuthToken } from "~/services/apiService/voapiV2/tokenResync"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const { mockResolveAccountBrowserSession } = vi.hoisted(() => ({
   mockResolveAccountBrowserSession: vi.fn(),
@@ -60,12 +62,9 @@ describe("VoAPI v2 token re-sync", () => {
 
   it("passes popup source to the browser-session reader", async () => {
     mockResolveAccountBrowserSession.mockResolvedValueOnce(null)
-    const protectionBypassExecution = {
-      version: 2 as const,
-      kind: "user_command" as const,
-      command: "reauthenticate_account",
-      surface: "options",
-    } as const
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.ReauthenticateAccount,
+    )
 
     await resyncVoApiV2AuthToken(
       "https://example.invalid",

@@ -16,8 +16,10 @@ import {
   API_AUTH_TOKEN_MODES,
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
 } from "~/services/apiTransport/type"
+import { DEFAULT_AUTOMATIC_FEATURE_BYPASS } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_SURFACES,
 } from "~/services/protectionBypass/contracts"
@@ -95,26 +97,25 @@ vi.mock("~/services/permissions/permissionManager", () => ({
   hasCookieInterceptorPermissions: mockHasCookieInterceptorPermissions,
 }))
 
-vi.mock("~/services/preferences/userPreferences", () => ({
-  DEFAULT_PREFERENCES: {
-    tempWindowFallback: {
-      enabled: false,
-      automaticFeatureBypass: {
-        account_refresh: true,
-        balance_history: true,
-        checkin: true,
-        redemption_assist: true,
-        ldoh_site_lookup: true,
-        key_management: true,
-        managed_site_channels: true,
-        managed_site_model_sync: true,
+vi.mock("~/services/preferences/userPreferences", async () => {
+  const { DEFAULT_AUTOMATIC_FEATURE_BYPASS } = await import(
+    "~/services/preferences/tempWindowFallbackPreferences"
+  )
+
+  return {
+    DEFAULT_PREFERENCES: {
+      tempWindowFallback: {
+        enabled: false,
+        automaticFeatureBypass: {
+          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
+        },
       },
     },
-  },
-  userPreferences: {
-    getPreferences: mockGetPreferences,
-  },
-}))
+    userPreferences: {
+      getPreferences: mockGetPreferences,
+    },
+  }
+})
 
 vi.mock("~/services/apiTransport/minIntervalLimiter", () => ({
   createMinIntervalLimiter: mockCreateMinIntervalLimiter,
@@ -154,7 +155,7 @@ const BASE_URL = "https://example.com/base/"
 const ENDPOINT = "/api/test"
 const API_URL = "https://example.com/base/api/test"
 const backgroundProtectionBypassExecution = {
-  version: 2,
+  version: PROTECTION_BYPASS_EXECUTION_VERSION,
   kind: "automatic",
   feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
   trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
@@ -204,14 +205,7 @@ describe("apiTransport request helpers", () => {
       tempWindowFallback: {
         enabled: false,
         automaticFeatureBypass: {
-          account_refresh: true,
-          balance_history: true,
-          checkin: true,
-          redemption_assist: true,
-          ldoh_site_lookup: true,
-          key_management: true,
-          managed_site_channels: true,
-          managed_site_model_sync: true,
+          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
         },
       },
     })
@@ -1197,14 +1191,7 @@ describe("apiTransport request helpers", () => {
       tempWindowFallback: {
         enabled: true,
         automaticFeatureBypass: {
-          account_refresh: true,
-          balance_history: true,
-          checkin: true,
-          redemption_assist: true,
-          ldoh_site_lookup: true,
-          key_management: true,
-          managed_site_channels: true,
-          managed_site_model_sync: true,
+          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
         },
       },
     })
@@ -1225,7 +1212,7 @@ describe("apiTransport request helpers", () => {
 
     let normalFetchCount = 0
     const protectionBypassExecution = {
-      version: 2,
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
       kind: "automatic",
       feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
       trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
@@ -1296,14 +1283,7 @@ describe("apiTransport request helpers", () => {
       tempWindowFallback: {
         enabled: true,
         automaticFeatureBypass: {
-          account_refresh: true,
-          balance_history: true,
-          checkin: true,
-          redemption_assist: true,
-          ldoh_site_lookup: true,
-          key_management: true,
-          managed_site_channels: true,
-          managed_site_model_sync: true,
+          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
         },
       },
     })
@@ -1360,14 +1340,7 @@ describe("apiTransport request helpers", () => {
       tempWindowFallback: {
         enabled: true,
         automaticFeatureBypass: {
-          account_refresh: true,
-          balance_history: true,
-          checkin: true,
-          redemption_assist: true,
-          ldoh_site_lookup: true,
-          key_management: true,
-          managed_site_channels: true,
-          managed_site_model_sync: true,
+          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
         },
       },
     })

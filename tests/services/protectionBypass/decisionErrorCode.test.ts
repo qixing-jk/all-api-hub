@@ -8,18 +8,35 @@ import {
 import { getProtectionBypassDecisionErrorCode } from "~/services/protectionBypass/decisionErrorCode"
 
 describe("protection bypass decision error codes", () => {
-  it.each([
-    "missing_execution",
-    "invalid_execution",
-    "task_not_permitted",
-  ] as const)("maps %s to the stable invalid-context error", (reason) => {
-    expect(
-      getProtectionBypassDecisionErrorCode({
-        kind: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
-        reason,
-      } as never),
-    ).toBe(API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID)
-  })
+  const invalidContextDecisions = [
+    {
+      kind: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+      reason: PROTECTION_BYPASS_DENIED_REASONS.MissingExecution,
+    },
+    {
+      kind: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+      reason: PROTECTION_BYPASS_DENIED_REASONS.InvalidExecution,
+    },
+    {
+      kind: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+      reason: PROTECTION_BYPASS_DENIED_REASONS.TaskNotPermitted,
+      feature: "account_refresh",
+      operation: "native_page_action",
+      cause: "verification_required",
+      surface: "options",
+    },
+  ] as const satisfies readonly Parameters<
+    typeof getProtectionBypassDecisionErrorCode
+  >[0][]
+
+  it.each(invalidContextDecisions)(
+    "maps $reason to the stable invalid-context error",
+    (decision) => {
+      expect(getProtectionBypassDecisionErrorCode(decision)).toBe(
+        API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+      )
+    },
+  )
 
   it("exports the v2 execution denial vocabulary", () => {
     expect(PROTECTION_BYPASS_DENIED_REASONS).toMatchObject({

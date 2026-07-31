@@ -129,17 +129,17 @@ describe("protection bypass runtime contracts", () => {
   })
 
   it("keeps the closed product workflow catalog serialized in product order", () => {
-    expect(PROTECTION_BYPASS_FEATURES).toEqual({
-      AccountRefresh: "account_refresh",
-      BalanceHistory: "balance_history",
-      Checkin: "checkin",
-      RedemptionAssist: "redemption_assist",
-      LdohSiteLookup: "ldoh_site_lookup",
-      KeyManagement: "key_management",
-      ManagedSiteChannels: "managed_site_channels",
-      ManagedSiteModelSync: "managed_site_model_sync",
-      AccountOnboarding: "account_onboarding",
-    })
+    expect(Object.entries(PROTECTION_BYPASS_FEATURES)).toEqual([
+      ["AccountRefresh", "account_refresh"],
+      ["BalanceHistory", "balance_history"],
+      ["Checkin", "checkin"],
+      ["RedemptionAssist", "redemption_assist"],
+      ["LdohSiteLookup", "ldoh_site_lookup"],
+      ["KeyManagement", "key_management"],
+      ["ManagedSiteChannels", "managed_site_channels"],
+      ["ManagedSiteModelSync", "managed_site_model_sync"],
+      ["AccountOnboarding", "account_onboarding"],
+    ])
     expect(Object.values(PROTECTION_BYPASS_AUTOMATIC_FEATURES)).toEqual([
       "account_refresh",
       "balance_history",

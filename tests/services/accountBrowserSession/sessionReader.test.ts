@@ -10,6 +10,7 @@ import {
 } from "~/services/accountBrowserSession"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 
 const {
@@ -68,7 +69,7 @@ vi.mock("~/utils/browser/tempWindowFetch", () => ({
 }))
 
 const testExecution = {
-  version: 2,
+  version: PROTECTION_BYPASS_EXECUTION_VERSION,
   kind: "user_command",
   command: "manage_api_keys",
   surface: "options",
@@ -721,7 +722,7 @@ describe("account browser-session reader", () => {
 
   it("preserves protection bypass execution through the AutoDetectSite session read", async () => {
     const protectionBypassExecution = {
-      version: 2,
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
       kind: "user_command",
       command: "manage_api_keys",
       surface: "options",
@@ -752,10 +753,15 @@ describe("account browser-session reader", () => {
         },
       }),
     )
+    expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
     const envelope = mockSendRuntimeMessage.mock.calls[0]?.[0]
+    expect(envelope).toBeDefined()
     expect(envelope).not.toHaveProperty("protectionBypassExecution")
     expect(envelope).not.toHaveProperty("tempWindowRequestSource")
     expect(envelope?.task).not.toHaveProperty("execution")
+    expect(envelope?.task?.params).not.toHaveProperty(
+      "protectionBypassExecution",
+    )
     expect(envelope?.task?.params).not.toHaveProperty("tempWindowRequestSource")
   })
 

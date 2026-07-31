@@ -20,6 +20,7 @@ import {
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const allowedPolicy = {
   automaticMasterEnabled: true,
@@ -90,14 +91,6 @@ function withExecution(
   _execution: ProtectionBypassExecution,
 ): TempContextTask {
   return task
-}
-
-function createDeferred<T>() {
-  let resolve!: (value: T | PromiseLike<T>) => void
-  const promise = new Promise<T>((res) => {
-    resolve = res
-  })
-  return { promise, resolve }
 }
 
 function fetchTask(_execution: ProtectionBypassExecution) {
@@ -556,6 +549,53 @@ describe("ProtectionBypassCoordinator", () => {
     expect(executeAuthorizedTask).not.toHaveBeenCalled()
     expect(recordDecision).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
+        decision: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
+        denialReason: PROTECTION_BYPASS_DENIED_REASONS.TaskNotPermitted,
+      }),
+    )
+  })
+
+  it("records the automatic trigger when a feature does not own the task", async () => {
+    const readPolicy = vi.fn().mockResolvedValue(allowedPolicy)
+    const resolveCapability = vi.fn()
+    const executeAuthorizedTask = vi.fn()
+    const recordDecision = vi.fn().mockResolvedValue(undefined)
+    const execution = {
+      ...automaticExecution,
+      feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+      trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+    } as const
+
+    await expect(
+      createDecisionCoordinator({
+        readPolicy,
+        resolveCapability,
+        executeAuthorizedTask,
+        recordDecision,
+      }).execute({
+        task: {
+          kind: TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
+          params: {
+            origin: "https://example.invalid",
+            action: "channel_key",
+            userId: "example-user",
+            channelId: 12,
+          },
+        },
+        execution,
+      }),
+    ).resolves.toMatchObject({
+      success: false,
+      code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+    })
+    expect(readPolicy).not.toHaveBeenCalled()
+    expect(resolveCapability).not.toHaveBeenCalled()
+    expect(executeAuthorizedTask).not.toHaveBeenCalled()
+    expect(recordDecision).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+        invocationKind: PROTECTION_BYPASS_EXECUTION_KINDS.Automatic,
+        automaticTrigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
         decision: PROTECTION_BYPASS_DECISION_RESULTS.Denied,
         denialReason: PROTECTION_BYPASS_DENIED_REASONS.TaskNotPermitted,
       }),

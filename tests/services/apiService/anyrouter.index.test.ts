@@ -6,10 +6,14 @@ import {
   fetchSupportCheckIn,
   refreshAccountData,
 } from "~/services/apiService/anyrouter"
-import { PROTECTION_BYPASS_FEATURES } from "~/services/protectionBypass/contracts"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+} from "~/services/protectionBypass/contracts"
 import { SiteHealthStatus } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const {
   mockDetermineHealthStatus,
@@ -62,13 +66,10 @@ vi.mock("~/utils/i18n/core", () => ({
 describe("AnyRouter API service", () => {
   const backgroundProviderContext = {
     tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-    protectionBypassExecution: {
-      version: 2,
-      kind: "automatic",
-      feature: PROTECTION_BYPASS_FEATURES.Checkin,
-      trigger: "scheduled",
-      surface: TEMP_WINDOW_REQUEST_SOURCES.Background,
-    },
+    protectionBypassExecution: automaticExecution(
+      PROTECTION_BYPASS_FEATURES.Checkin,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+    ),
   }
   const protectionBypassExecution =
     backgroundProviderContext.protectionBypassExecution

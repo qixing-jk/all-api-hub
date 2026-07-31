@@ -16,6 +16,7 @@ import {
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import {
@@ -459,7 +460,7 @@ describe("tempWindowPool window fallback", () => {
           },
           tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
           protectionBypassExecution: {
-            version: 2,
+            version: PROTECTION_BYPASS_EXECUTION_VERSION,
             kind: "user_command",
             command: "add_account",
             surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
@@ -521,7 +522,7 @@ describe("tempWindowPool window fallback", () => {
             },
             ...(suppressMinimize === undefined ? {} : { suppressMinimize }),
             protectionBypassExecution: {
-              version: 2,
+              version: PROTECTION_BYPASS_EXECUTION_VERSION,
               kind: "user_command",
               command: "add_account",
               surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
@@ -542,8 +543,12 @@ describe("tempWindowPool window fallback", () => {
         sendResponse,
         authorizeAtAcquire,
       )
+      expect(
+        handleTempWindowOpenRouterManagementKeyActionMock,
+      ).toHaveBeenCalledTimes(1)
       const taskParams =
         handleTempWindowOpenRouterManagementKeyActionMock.mock.calls[0]?.[0]
+      expect(taskParams).toBeDefined()
       expect(taskParams).not.toHaveProperty("protectionBypassExecution")
       expect(taskParams).not.toHaveProperty("tempWindowRequestSource")
     },

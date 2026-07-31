@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { LdohSiteLookupProvider } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_FEATURES,
 } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -60,7 +61,7 @@ describe("LdohSiteLookupProvider refresh intent", () => {
       expect(requestLdohSiteLookupRefreshSitesMock).toHaveBeenCalledWith({
         maxAttempts: 1,
         protectionBypassExecution: {
-          version: 2,
+          version: PROTECTION_BYPASS_EXECUTION_VERSION,
           kind: "automatic",
           feature: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
           trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,

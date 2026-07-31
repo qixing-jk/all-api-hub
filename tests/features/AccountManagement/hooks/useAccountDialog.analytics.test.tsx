@@ -25,6 +25,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -91,7 +92,13 @@ vi.mock("~/services/protectionBypass/client", () => ({
     command: unknown,
     surface: unknown,
     work: (execution: unknown) => Promise<unknown>,
-  ) => work({ version: 2, kind: "user_command", command, surface }),
+  ) =>
+    work({
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
+      kind: "user_command",
+      command,
+      surface,
+    }),
 }))
 
 vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {

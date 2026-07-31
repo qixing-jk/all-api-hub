@@ -46,8 +46,10 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 import { navigateWithinOptionsPage, openSettingsTab } from "~/utils/navigation"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import {
   act,
   fireEvent,
@@ -122,13 +124,8 @@ const {
   mockCompleteProductAnalyticsAction: vi.fn(),
   mockResolveManagedUpstreamResourceCapabilities: vi.fn(),
   mockWithProtectionBypassUserCommand: vi.fn(
-    async (_command, _surface, work) =>
-      await work({
-        version: 2,
-        kind: "user_command",
-        command: "sync_managed_site_models",
-        surface: "options",
-      }),
+    async (command, surface, work) =>
+      await work(userCommandExecution(command, surface)),
   ),
 }))
 
@@ -2751,12 +2748,9 @@ describe("ManagedSiteChannels", () => {
         "modelSync:triggerSelected",
         {
           channelIds: [1],
-          protectionBypassExecution: {
-            version: 2,
-            kind: "user_command",
-            command: "sync_managed_site_models",
-            surface: "options",
-          },
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
+          ),
         },
       )
     })
@@ -3439,12 +3433,9 @@ describe("ManagedSiteChannels", () => {
         "modelSync:triggerSelected",
         {
           channelIds: [1, 2],
-          protectionBypassExecution: {
-            version: 2,
-            kind: "user_command",
-            command: "sync_managed_site_models",
-            surface: "options",
-          },
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
+          ),
         },
       )
     })
@@ -3620,12 +3611,9 @@ describe("ManagedSiteChannels", () => {
         password: "secret-password",
         totpSecret: "JBSWY3DPEHPK3PXP",
         channelId: 208,
-        protectionBypassExecution: {
-          version: 2,
-          kind: "user_command",
-          command: "sync_managed_site_models",
-          surface: "options",
-        },
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+        ),
       })
     })
 

@@ -22,12 +22,16 @@ import type {
   ProtectionBypassUserCommand,
 } from "~/services/protectionBypass/contracts"
 import type { SearchResult } from "~/services/search/accountSearch"
+import { TAG_STORE_VERSION } from "~/services/tags/tagStoreUtils"
 import type { DisplaySiteData } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 import { SortingCriteriaType } from "~/types/sorting"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
-import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 type MockIndexedAccountSearchEntry = {
@@ -1224,7 +1228,7 @@ describe("AccountDataContext actions", () => {
     ])
     mockGetPinnedList.mockResolvedValue(["missing-pin", "bookmark-1", "acc-1"])
     mockGetTagStore.mockResolvedValue({
-      version: 1,
+      version: TAG_STORE_VERSION,
       tagsById: {
         "tag-1": { id: "tag-1", name: "Beta" },
         "tag-2": { id: "tag-2", name: "alpha" },
@@ -1297,7 +1301,7 @@ describe("AccountDataContext actions", () => {
     mockCreateTag.mockImplementation(async (name: string) => {
       const created = { id: "tag-1", name }
       currentTagStore = {
-        version: 2,
+        version: TAG_STORE_VERSION,
         tagsById: { "tag-1": created },
       }
       return created
@@ -1305,14 +1309,14 @@ describe("AccountDataContext actions", () => {
     mockRenameTag.mockImplementation(async (tagId: string, name: string) => {
       const updated = { id: tagId, name }
       currentTagStore = {
-        version: 2,
+        version: TAG_STORE_VERSION,
         tagsById: { [tagId]: updated },
       }
       return updated
     })
     mockDeleteTag.mockImplementation(async () => {
       currentTagStore = {
-        version: 2,
+        version: TAG_STORE_VERSION,
         tagsById: {},
       }
       return { updatedAccounts: 2 }
@@ -1835,10 +1839,9 @@ describe("AccountDataContext refresh orchestration", () => {
 
     expect(mockRefreshAllAccounts).toHaveBeenCalledWith(true, {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      protectionBypassExecution: expect.objectContaining({
-        version: 2,
-        kind: "user_command",
-      }),
+      protectionBypassExecution: expect.objectContaining(
+        userCommandExecution("refresh_all_accounts", "popup"),
+      ),
     })
     expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
@@ -1880,10 +1883,9 @@ describe("AccountDataContext refresh orchestration", () => {
 
     expect(mockRefreshDisabledAccounts).toHaveBeenCalledWith(true, {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      protectionBypassExecution: expect.objectContaining({
-        version: 2,
-        kind: "user_command",
-      }),
+      protectionBypassExecution: expect.objectContaining(
+        userCommandExecution("refresh_disabled_accounts", "popup"),
+      ),
     })
     expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
@@ -2147,13 +2149,11 @@ describe("AccountDataContext refresh orchestration", () => {
       expect(mockToastPromise).toHaveBeenCalledTimes(1)
       expect(mockRefreshAllAccounts).toHaveBeenCalledWith(false, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-        protectionBypassExecution: {
-          version: 2,
-          kind: "automatic",
-          feature: "account_refresh",
-          trigger: "ui_lifecycle",
-          surface: TEMP_WINDOW_REQUEST_SOURCES.Background,
-        },
+        protectionBypassExecution: automaticExecution(
+          "account_refresh",
+          "ui_lifecycle",
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+        ),
       })
       expect(mockWithProtectionBypassUserCommand).not.toHaveBeenCalled()
     })
@@ -2195,13 +2195,11 @@ describe("AccountDataContext refresh orchestration", () => {
       await waitFor(() => {
         expect(mockRefreshAllAccounts).toHaveBeenCalledWith(false, {
           tempWindowRequestSource: surface,
-          protectionBypassExecution: {
-            version: 2,
-            kind: "automatic",
-            feature: "account_refresh",
-            trigger: "ui_lifecycle",
+          protectionBypassExecution: automaticExecution(
+            "account_refresh",
+            "ui_lifecycle",
             surface,
-          },
+          ),
         })
       })
     },

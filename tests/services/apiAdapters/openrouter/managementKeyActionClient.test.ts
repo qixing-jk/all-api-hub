@@ -7,14 +7,13 @@ import {
   tempWindowOpenRouterManagementKeyAction,
 } from "~/services/apiAdapters/openrouter/managementKeyActionClient"
 import { OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH } from "~/services/apiAdapters/openrouter/managementKeySecret"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
-const testExecution = {
-  version: 2,
-  kind: "user_command",
-  command: "add_account",
-  surface: "options",
-} as const
+const testExecution = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+)
 
 const { executeProtectionBypassTaskMock, sendRuntimeMessageMock } = vi.hoisted(
   () => ({
@@ -39,12 +38,9 @@ describe("OpenRouter Management Key action client", () => {
   })
 
   it("routes create through the shared protected-task transport", async () => {
-    const protectionBypassExecution = {
-      version: 2 as const,
-      kind: "user_command" as const,
-      command: "add_account",
-      surface: "options",
-    } as const
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+    )
     executeProtectionBypassTaskMock.mockResolvedValueOnce({
       requestId: "request-example",
       operation: "create",

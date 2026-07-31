@@ -14,6 +14,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
@@ -279,7 +280,13 @@ describe("BookmarkAccountImportDialog", () => {
         command: unknown,
         surface: unknown,
         work: (execution: unknown) => Promise<unknown>,
-      ) => work({ version: 2, kind: "user_command", command, surface }),
+      ) =>
+        work({
+          version: PROTECTION_BYPASS_EXECUTION_VERSION,
+          kind: "user_command",
+          command,
+          surface,
+        }),
     )
   })
 
@@ -1004,7 +1011,7 @@ describe("BookmarkAccountImportDialog", () => {
     expect(
       runBookmarkAccountImportMock.mock.calls[0][0].protectionBypassExecution,
     ).toEqual({
-      version: 2,
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
       kind: "user_command",
       command: "add_account",
       surface: "background",

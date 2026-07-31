@@ -4,53 +4,14 @@ import {
   DEFAULT_BREADCRUMBS,
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
+import { SHIELD_AUTOMATIC_FEATURE_ITEMS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
-import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
 
 const shieldBreadcrumbs = [
   ...DEFAULT_BREADCRUMBS,
   "settings:tabs.refresh",
   "settings:refresh.shieldTitle",
 ]
-
-const automaticFeatureSearch = [
-  [
-    PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh,
-    "accountRefresh",
-    "Account refresh",
-  ],
-  [
-    PROTECTION_BYPASS_AUTOMATIC_FEATURES.BalanceHistory,
-    "balanceHistory",
-    "Balance history",
-  ],
-  [PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin, "checkin", "Check-in"],
-  [
-    PROTECTION_BYPASS_AUTOMATIC_FEATURES.RedemptionAssist,
-    "redemptionAssist",
-    "Redemption assistance",
-  ],
-  [
-    PROTECTION_BYPASS_AUTOMATIC_FEATURES.LdohSiteLookup,
-    "ldohSiteLookup",
-    "Site lookup",
-  ],
-  [
-    PROTECTION_BYPASS_AUTOMATIC_FEATURES.KeyManagement,
-    "keyManagement",
-    "Key management",
-  ],
-  [
-    PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteChannels,
-    "managedSiteChannels",
-    "Managed-site channels",
-  ],
-  [
-    PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteModelSync,
-    "managedSiteModelSync",
-    "Managed-site model sync",
-  ],
-] as const
 
 export const refreshSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
@@ -181,17 +142,18 @@ export const refreshSearchControls: OptionsSearchItemDefinition[] = [
       keywords: ["automatic", "temporary page"],
     },
   ),
-  ...automaticFeatureSearch.map(([feature, key, keyword], index) =>
-    buildControlDefinition(
-      `control:shield-automatic-feature-${feature}`,
-      "refresh",
-      SHIELD_SETTINGS_TARGET_IDS.feature[feature],
-      `settings:refresh.shieldAutomaticFeature${key[0].toUpperCase()}${key.slice(1)}`,
-      547 + index,
-      {
-        breadcrumbsKeys: shieldBreadcrumbs,
-        keywords: ["shield", "automatic", keyword],
-      },
-    ),
+  ...SHIELD_AUTOMATIC_FEATURE_ITEMS.map(
+    ({ feature, titleKey, keyword }, index) =>
+      buildControlDefinition(
+        `control:shield-automatic-feature-${feature}`,
+        "refresh",
+        SHIELD_SETTINGS_TARGET_IDS.feature[feature],
+        titleKey,
+        547 + index,
+        {
+          breadcrumbsKeys: shieldBreadcrumbs,
+          keywords: ["shield", "automatic", keyword],
+        },
+      ),
   ),
 ]

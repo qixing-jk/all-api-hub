@@ -21,7 +21,10 @@ import {
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
 } from "~/types/taskNotifications"
-import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
 
 const {
   mockGetPreferences,
@@ -368,13 +371,10 @@ describe("dailyBalanceHistoryScheduler", () => {
     expect(mockRefreshAccount).toHaveBeenNthCalledWith(1, "a", true, {
       includeTodayCashflow: true,
       balanceHistoryCaptureSource: "alarm",
-      protectionBypassExecution: expect.objectContaining({
-        version: 2,
-        kind: "automatic",
-        feature: "balance_history",
-        trigger: "scheduled",
-        surface: "background",
-      }),
+      protectionBypassExecution: automaticExecution(
+        "balance_history",
+        "scheduled",
+      ),
     })
     expect(result).toEqual({
       started: true,

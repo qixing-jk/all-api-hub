@@ -27,7 +27,10 @@ import {
 } from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
-import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
 
 const preferenceWriteSuccess = (
   preferences: Partial<UserPreferences> = {},
@@ -258,13 +261,10 @@ describe("AutoRefreshService", () => {
       await vi.advanceTimersByTimeAsync(interval * 1000)
 
       expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(false, {
-        protectionBypassExecution: expect.objectContaining({
-          version: 2,
-          kind: "automatic",
-          feature: "account_refresh",
-          trigger: "scheduled",
-          surface: "background",
-        }),
+        protectionBypassExecution: automaticExecution(
+          "account_refresh",
+          "scheduled",
+        ),
       })
       expect(usageHistoryScheduler.runAfterRefreshSync).toHaveBeenCalledTimes(1)
       expect(notifyFrontendSpy).toHaveBeenCalledWith("refresh_completed", {
@@ -674,12 +674,9 @@ describe("auto-refresh typed message resolvers", () => {
 
     it("should reject a well-formed command from another workflow", async () => {
       const response = await resolveAutoRefreshRefreshNowMessage({
-        protectionBypassExecution: {
-          version: 2,
-          kind: "user_command",
-          command: "manual_checkin",
-          surface: "options",
-        },
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       })
 
       expect(response).toEqual({
