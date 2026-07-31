@@ -258,6 +258,14 @@ export default function ShieldSettings() {
                       }
                     >
                       {label}
+                      {nextMode === TEMP_CONTEXT_MODES.Tab && (
+                        <>
+                          {" "}
+                          <span className="sr-only">
+                            {t("refresh.shieldMethodRecommended")}
+                          </span>
+                        </>
+                      )}
                     </Button>
                   ))}
                 </ResponsiveButtonGroup>

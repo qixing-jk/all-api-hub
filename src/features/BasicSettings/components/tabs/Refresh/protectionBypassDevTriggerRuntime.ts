@@ -4,6 +4,7 @@ import {
 } from "~/services/protectionBypass/contracts"
 import type { TempWindowFetch } from "~/types/tempWindowFetch"
 import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
+import { isDevelopmentMode } from "~/utils/core/environment"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { tryParseHttpUrl } from "~/utils/core/urlParsing"
 
@@ -43,6 +44,12 @@ export async function executeShieldDevTrigger(params: {
   presetId: ShieldDevTriggerPresetId
   url: string
 }): Promise<TempWindowFetch> {
+  if (!isDevelopmentMode()) {
+    throw new Error(
+      "The protection bypass development trigger is unavailable outside development mode.",
+    )
+  }
+
   const preset = getShieldDevTriggerPreset(params.presetId)
   const execution = createAutomaticProtectionBypassExecution(
     preset.feature,

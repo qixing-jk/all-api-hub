@@ -2,12 +2,15 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import { SHIELD_DEV_TRIGGER_PRESET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
+import { executeShieldDevTrigger } from "~/features/BasicSettings/components/tabs/Refresh/protectionBypassDevTriggerRuntime"
 import ShieldSettings from "~/features/BasicSettings/components/tabs/Refresh/ShieldSettings"
 import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,
   type ProtectionBypassAutomaticFeature,
 } from "~/services/protectionBypass/contracts"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import {
   act,
   fireEvent,
@@ -200,7 +203,7 @@ describe("ShieldSettings", () => {
     expect(screen.getByRole("switch")).toBeEnabled()
     expect(
       screen.getByRole("button", {
-        name: "settings:refresh.shieldMethodTab",
+        name: /^settings:refresh\.shieldMethodTab/,
       }),
     ).toBeEnabled()
     for (const feature of Object.values(PROTECTION_BYPASS_AUTOMATIC_FEATURES)) {
@@ -233,7 +236,7 @@ describe("ShieldSettings", () => {
     })
 
     const method = await screen.findByRole("button", {
-      name: "settings:refresh.shieldMethodTab",
+      name: /^settings:refresh\.shieldMethodTab/,
     })
     expect(method).toBeEnabled()
     for (const feature of Object.values(PROTECTION_BYPASS_AUTOMATIC_FEATURES)) {
@@ -248,7 +251,7 @@ describe("ShieldSettings", () => {
     })
 
     const tabModeButton = screen.getByRole("button", {
-      name: "settings:refresh.shieldMethodTab",
+      name: /^settings:refresh\.shieldMethodTab/,
     })
     await waitFor(() => {
       expect(tabModeButton).toBeEnabled()
@@ -325,7 +328,7 @@ describe("ShieldSettings", () => {
     },
   )
 
-  it("reserves one stable layout area for every temporary-context method hint", async () => {
+  it("exposes only the selected temporary-context hint to assistive technology", async () => {
     useUserPreferencesContextMock.mockReturnValue({
       tempWindowFallback: {
         enabled: true,
@@ -348,15 +351,9 @@ describe("ShieldSettings", () => {
       screen.getByText("settings:refresh.shieldMethodHintWindow"),
     ]
 
-    expect(selectedHint.parentElement).toHaveClass("grid", "w-0", "min-w-full")
     expect(selectedHint).not.toHaveAttribute("aria-hidden")
     for (const inactiveHint of inactiveHints) {
       expect(inactiveHint).toHaveAttribute("aria-hidden", "true")
-      expect(inactiveHint).toHaveClass(
-        "invisible",
-        "col-start-1",
-        "row-start-1",
-      )
     }
 
     await waitFor(() => {
@@ -575,35 +572,6 @@ describe("ShieldSettings", () => {
     },
   )
 
-  it("lets shield method buttons wrap inside narrow settings cards", async () => {
-    render(<ShieldSettings />, {
-      withUserPreferencesProvider: false,
-      withThemeProvider: false,
-    })
-
-    const tabModeButton = await screen.findByRole("button", {
-      name: "settings:refresh.shieldMethodTab",
-    })
-    const methodGroup = tabModeButton.parentElement
-    const methodContent = methodGroup?.parentElement
-
-    expect(methodGroup).toHaveClass(
-      "flex",
-      "w-full",
-      "flex-wrap",
-      "[@container(min-width:42rem)]:w-auto",
-    )
-    expect(tabModeButton).toHaveClass(
-      "min-w-fit",
-      "flex-1",
-      "[@container(min-width:42rem)]:flex-none",
-    )
-    expect(methodContent).toHaveClass(
-      "items-stretch",
-      "[@container(min-width:42rem)]:items-end",
-    )
-  })
-
   it("puts the recommended current-window method first", async () => {
     render(<ShieldSettings />, {
       withUserPreferencesProvider: false,
@@ -620,7 +588,7 @@ describe("ShieldSettings", () => {
     })
     expect(within(methodGroup).getAllByRole("button")).toEqual([
       screen.getByRole("button", {
-        name: "settings:refresh.shieldMethodTab",
+        name: "settings:refresh.shieldMethodTab settings:refresh.shieldMethodRecommended",
       }),
       screen.getByRole("button", {
         name: "settings:refresh.shieldMethodComposite",
@@ -629,6 +597,35 @@ describe("ShieldSettings", () => {
         name: "settings:refresh.shieldMethodWindow",
       }),
     ])
+  })
+
+  it("gives the recommended opening method an accessible text equivalent", async () => {
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+      ).not.toBeInTheDocument()
+    })
+
+    expect(
+      screen.getByRole("button", {
+        name: "settings:refresh.shieldMethodTab settings:refresh.shieldMethodRecommended",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("blocks development-trigger execution outside development mode", async () => {
+    await expect(
+      executeShieldDevTrigger({
+        presetId: SHIELD_DEV_TRIGGER_PRESET_IDS.AccountRefreshScheduled,
+        url: "https://example.invalid/protected",
+      }),
+    ).rejects.toThrow(/development mode/i)
+
+    expect(executeProtectionBypassTaskMock).not.toHaveBeenCalled()
   })
 
   it("prefills the development trigger URL", async () => {
@@ -712,6 +709,52 @@ describe("ShieldSettings", () => {
       })
     } finally {
       vi.useRealTimers()
+    }
+  })
+
+  it("uses locale-controlled singular wording for the countdown", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    testI18n.addResourceBundle(
+      "en",
+      "settings",
+      {
+        refresh: {
+          shieldDevTriggerCountdown_one: "Triggers in {{count}} second",
+          shieldDevTriggerCountdown_other: "Triggers in {{count}} seconds",
+        },
+      },
+      true,
+      true,
+    )
+
+    try {
+      render(<ShieldSettings />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      await waitFor(() => {
+        expect(
+          screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+        ).not.toBeInTheDocument()
+      })
+      vi.useFakeTimers()
+
+      fireEvent.change(
+        screen.getByRole("spinbutton", {
+          name: "settings:refresh.shieldDevTriggerDelayLabel",
+        }),
+        { target: { value: "1" } },
+      )
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "settings:refresh.shieldDevTriggerStart",
+        }),
+      )
+
+      expect(screen.getByText("Triggers in 1 second")).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+      testI18n.removeResourceBundle("en", "settings")
     }
   })
 

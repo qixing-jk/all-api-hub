@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { assertNever } from "~/utils/core/assert"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -54,6 +55,8 @@ function getPresetLabel(t: TFunction, id: ShieldDevTriggerPresetId) {
       return t("settings:refresh.shieldDevTriggerPresetLdohSiteLookupRecovery")
     case SHIELD_DEV_TRIGGER_PRESET_IDS.KeyManagementRecovery:
       return t("settings:refresh.shieldDevTriggerPresetKeyManagementRecovery")
+    default:
+      return assertNever(id, `Unexpected development trigger preset: ${id}`)
   }
 }
 
@@ -258,7 +261,7 @@ export function ProtectionBypassDevTrigger() {
             {isWaiting && (
               <Muted role="status">
                 {t("refresh.shieldDevTriggerCountdown", {
-                  seconds: remainingSeconds,
+                  count: remainingSeconds,
                 })}
               </Muted>
             )}
