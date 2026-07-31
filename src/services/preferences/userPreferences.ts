@@ -2,7 +2,6 @@ import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import {
   STORAGE_LOCKS,
   USER_PREFERENCES_STORAGE_KEYS,
@@ -18,6 +17,7 @@ import {
 } from "~/services/preferences/migrations/preferencesMigration"
 import {
   DEFAULT_AUTOMATIC_FEATURE_BYPASS,
+  DEFAULT_TEMP_CONTEXT_MODE,
   normalizeTempWindowFallbackPreferences,
   type TempWindowFallbackPreferences,
 } from "~/services/preferences/tempWindowFallbackPreferences"
@@ -634,7 +634,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   tempWindowFallback: {
     enabled: true,
     automaticFeatureBypass: DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-    tempContextMode: TEMP_CONTEXT_MODES.Composite,
+    tempContextMode: DEFAULT_TEMP_CONTEXT_MODE,
   },
   tempWindowFallbackReminder: {
     dismissed: false,

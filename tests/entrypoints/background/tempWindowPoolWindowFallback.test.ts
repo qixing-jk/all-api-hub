@@ -1521,11 +1521,10 @@ describe("tempWindowPool window fallback", () => {
   })
 
   it("falls back to the default saved temp-context mode when user preferences are missing that field", async () => {
-    tempContextMode = "tab"
-    defaultTempContextMode = "composite"
+    tempContextMode = "window"
+    defaultTempContextMode = "tab"
     getPreferencesMock.mockResolvedValueOnce({})
-    createWindowMock.mockResolvedValueOnce({ id: 490 })
-    tabsQueryMock.mockResolvedValueOnce([{ id: 491 }])
+    createTabMock.mockResolvedValueOnce({ id: 490 })
 
     const { handleTempWindowFetch } = await import(
       "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
@@ -1535,9 +1534,9 @@ describe("tempWindowPool window fallback", () => {
     const request = handleTempWindowFetch(
       {
         originUrl: "https://example.com",
-        fetchUrl: "https://example.com/api/default-composite-mode",
+        fetchUrl: "https://example.com/api/default-tab-mode",
         fetchOptions: { method: "GET" },
-        requestId: "req-default-composite-mode",
+        requestId: "req-default-tab-mode",
       },
       sendResponse,
     )
@@ -1545,13 +1544,8 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(500)
     await request
 
-    expect(createWindowMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: "normal",
-        url: "about:blank",
-      }),
-    )
-    expect(createTabMock).not.toHaveBeenCalled()
+    expect(createTabMock).toHaveBeenCalledWith("about:blank", false)
+    expect(createWindowMock).not.toHaveBeenCalled()
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       data: {

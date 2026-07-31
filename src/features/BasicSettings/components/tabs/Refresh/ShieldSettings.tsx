@@ -1,4 +1,4 @@
-import { StarIcon } from "@heroicons/react/24/outline"
+import { AppWindow, Layers2, PanelTop, Star } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -23,6 +23,7 @@ import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { SHIELD_AUTOMATIC_FEATURE_ITEMS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
+import { cn } from "~/lib/utils"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,
@@ -152,12 +153,11 @@ export default function ShieldSettings() {
   )
 
   const mode = normalizedPreferences.tempContextMode
-  const methodHint =
-    mode === TEMP_CONTEXT_MODES.Window
-      ? t("refresh.shieldMethodHintWindow")
-      : mode === TEMP_CONTEXT_MODES.Tab
-        ? t("refresh.shieldMethodHintTab")
-        : t("refresh.shieldMethodHintComposite")
+  const methodHints = [
+    [TEMP_CONTEXT_MODES.Tab, t("refresh.shieldMethodHintTab")],
+    [TEMP_CONTEXT_MODES.Composite, t("refresh.shieldMethodHintComposite")],
+    [TEMP_CONTEXT_MODES.Window, t("refresh.shieldMethodHintWindow")],
+  ] as const
   const automaticFeatures = SHIELD_AUTOMATIC_FEATURE_ITEMS.map(
     ({ feature, titleKey }) => [feature, t(titleKey)] as const,
   )
@@ -211,7 +211,7 @@ export default function ShieldSettings() {
             title={t("refresh.shieldMethodTitle")}
             description={t("refresh.shieldMethodDesc")}
             rightContent={
-              <div className="flex flex-col space-y-2 text-left">
+              <div className="flex flex-col items-stretch space-y-2 text-left [@container(min-width:42rem)]:items-end">
                 <ResponsiveButtonGroup
                   variant="plain"
                   aria-label={t("refresh.shieldMethodTitle")}
@@ -219,16 +219,22 @@ export default function ShieldSettings() {
                   {(
                     [
                       [
+                        TEMP_CONTEXT_MODES.Tab,
+                        t("refresh.shieldMethodTab"),
+                        <PanelTop aria-hidden="true" className="size-4" />,
+                      ],
+                      [
                         TEMP_CONTEXT_MODES.Composite,
                         t("refresh.shieldMethodComposite"),
+                        <AppWindow aria-hidden="true" className="size-4" />,
                       ],
-                      [TEMP_CONTEXT_MODES.Tab, t("refresh.shieldMethodTab")],
                       [
                         TEMP_CONTEXT_MODES.Window,
                         t("refresh.shieldMethodWindow"),
+                        <Layers2 aria-hidden="true" className="size-4" />,
                       ],
                     ] as const
-                  ).map(([nextMode, label]) => (
+                  ).map(([nextMode, label, modeIcon]) => (
                     <Button
                       key={nextMode}
                       size="sm"
@@ -237,9 +243,17 @@ export default function ShieldSettings() {
                         updateTempWindowFallback({ tempContextMode: nextMode })
                       }
                       className={responsiveButtonGroupItemClassName}
-                      leftIcon={
-                        nextMode === TEMP_CONTEXT_MODES.Composite ? (
-                          <StarIcon className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                      leftIcon={modeIcon}
+                      rightIcon={
+                        nextMode === TEMP_CONTEXT_MODES.Tab ? (
+                          <Star
+                            aria-hidden="true"
+                            className={
+                              mode === nextMode
+                                ? "size-3.5 fill-current text-current"
+                                : "size-3.5 fill-current text-amber-500 dark:text-amber-400"
+                            }
+                          />
                         ) : undefined
                       }
                     >
@@ -247,7 +261,24 @@ export default function ShieldSettings() {
                     </Button>
                   ))}
                 </ResponsiveButtonGroup>
-                <Muted>{methodHint}</Muted>
+                <div className="grid w-0 min-w-full">
+                  {methodHints.map(([hintMode, hint]) => {
+                    const isSelected = mode === hintMode
+
+                    return (
+                      <Muted
+                        key={hintMode}
+                        aria-hidden={isSelected ? undefined : true}
+                        className={cn(
+                          "col-start-1 row-start-1",
+                          !isSelected && "invisible",
+                        )}
+                      >
+                        {hint}
+                      </Muted>
+                    )
+                  })}
+                </div>
               </div>
             }
           />

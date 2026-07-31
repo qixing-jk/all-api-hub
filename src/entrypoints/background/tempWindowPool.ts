@@ -11,6 +11,7 @@ import {
   API_ERROR_CODES,
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
+import { DEFAULT_TEMP_CONTEXT_MODE } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   DEFAULT_PREFERENCES,
   TempWindowFallbackPreferences,
@@ -120,9 +121,6 @@ const TEMP_CONTEXT_TYPES = {
   Window: TEMP_CONTEXT_MODES.Window,
   Tab: TEMP_CONTEXT_MODES.Tab,
 } as const
-const DEFAULT_TEMP_CONTEXT_MODE: TempWindowFallbackPreferences["tempContextMode"] =
-  TEMP_CONTEXT_MODES.Composite
-
 const TEMP_WINDOW_FETCH_NO_RESPONSE_ERROR = "No response from temp window fetch"
 
 const TURNSTILE_TOKEN_UNAVAILABLE_ERROR = "Turnstile token not available"

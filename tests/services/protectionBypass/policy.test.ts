@@ -231,7 +231,7 @@ describe("normalizeProtectionBypassPreferences", () => {
       expect(
         normalizeTempWindowFallbackPreferences({ tempContextMode })
           .tempContextMode,
-      ).toBe(TEMP_CONTEXT_MODES.Composite)
+      ).toBe(TEMP_CONTEXT_MODES.Tab)
     },
   )
 })

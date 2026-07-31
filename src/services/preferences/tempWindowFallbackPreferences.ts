@@ -7,6 +7,8 @@ import {
   type ProtectionBypassAutomaticFeature,
 } from "~/services/protectionBypass/contracts"
 
+export const DEFAULT_TEMP_CONTEXT_MODE = TEMP_CONTEXT_MODES.Tab
+
 export const DEFAULT_AUTOMATIC_FEATURE_BYPASS = Object.fromEntries(
   Object.values(PROTECTION_BYPASS_AUTOMATIC_FEATURES).map((feature) => [
     feature,
@@ -65,6 +67,6 @@ export function normalizeTempWindowFallbackPreferences(
     automaticFeatureBypass,
     tempContextMode: isTempContextMode(source.tempContextMode)
       ? source.tempContextMode
-      : TEMP_CONTEXT_MODES.Composite,
+      : DEFAULT_TEMP_CONTEXT_MODE,
   }
 }
