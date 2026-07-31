@@ -55,7 +55,7 @@
         "disabled": "Turn on auto check-in when you want rewards claimed automatically. Future schedules and results will appear here."
       },
       "managedSiteModelSync": {
-        "disabled": "Turn on model sync when you want managed-site models refreshed automatically. Sync interval and scope will appear here."
+        "disabled": "Turn on model sync when you want self-hosted AI gateway models refreshed automatically. Sync interval and scope will appear here."
       },
       "siteAnnouncements": {
         "disabled": "Turn on announcement polling when you want site updates surfaced here. Recent checks and announcement counts will appear here."
@@ -72,7 +72,7 @@
         "allowedModels": "Allowed models",
         "concurrency": "Concurrency",
         "interval": "Sync interval (hours)",
-        "label": "Managed site model sync",
+        "label": "Self-hosted AI gateway model sync",
         "open": "Open sync"
       },
       "siteAnnouncements": {
@@ -145,12 +145,12 @@
       }
     },
     "managedSite": {
-      "description": "Managed-site channel administration and model sync capabilities.",
-      "label": "Managed site",
+      "description": "Channel administration and model sync for your self-hosted AI gateway.",
+      "label": "Self-hosted AI gateway",
       "state": {
-        "disabled": "No managed site is connected yet. Connect one when you need channel or model management.",
-        "needs_setup": "Connect a managed site first, then you can manage channels or sync models here.",
-        "not_applicable": "This site type does not support managed-site administration yet."
+        "disabled": "No self-hosted AI gateway is configured yet. Configure one when you need channel or model management.",
+        "needs_setup": "Configure a self-hosted AI gateway first, then you can manage channels or sync models here.",
+        "not_applicable": "This site type does not support self-hosted AI gateway administration yet."
       }
     },
     "subItems": {
@@ -178,7 +178,8 @@
     "automationOverview": "Automation runs",
     "configurationOverview": "Configuration Overview",
     "needsAttention": "Needs Attention",
-    "recentUsage": "Recent Usage"
+    "recentUsage": "Recent Usage",
+    "unifiedApiGuidance": "Unified API setup"
   },
   "severity": {
     "error": "Error",
@@ -213,6 +214,69 @@
     "pendingRefresh": "Refresh pending",
     "pendingRefreshHelp": "Today's statistics have not been confirmed. Refresh the relevant account from the Accounts list.",
     "unavailable": "Unavailable"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "Add account",
+      "addApiCredential": "Add API credential",
+      "addGatewayChannel": "Add first gateway channel",
+      "configureManagedSite": "Configure self-hosted AI gateway",
+      "manageChannels": "Manage channels",
+      "openApiCredentialProfiles": "Open credential library",
+      "openModelSync": "Open model sync"
+    },
+    "boundaryNote": "All API Hub manages and imports configuration. It does not proxy model requests; external clients call your self-hosted AI gateway.",
+    "description": {
+      "has_gateway_channels": "A gateway channel was created or imported before. Open channel management to confirm its current state, then get the API address and access key your client needs.",
+      "needs_importable_source": "You have accounts, but their current account types cannot expose importable keys. Save an API key first, or add an account type that supports key access, then import it into your self-hosted AI gateway.",
+      "needs_managed_site": "You have account keys or API keys. Configure your self-hosted AI gateway to import them as gateway channels, so multiple keys can be used through one AI API.",
+      "needs_sources": "Add an account or save an API key first. Then you can export it directly to a client or import it into your self-hosted AI gateway as one unified AI API.",
+      "ready_accounts": "Your self-hosted AI gateway's basic configuration is complete. Continue by importing an account key or API key; the import flow will validate the connection and create a gateway channel.",
+      "ready_profiles": "Your self-hosted AI gateway's basic configuration is complete. Open the credential library to validate and import a saved API key as a gateway channel."
+    },
+    "directToolExportNote": "If you do not need the self-hosted gateway yet, you can export a single credential directly to a client tool.",
+    "headline": "Combine account keys or API keys into one unified AI API",
+    "modelSyncOptional": "Model sync can update gateway model lists automatically and reduce manual maintenance; enable it after channels exist when needed.",
+    "optionalLabel": "Optional maintenance",
+    "sources": {
+      "account": "Account sources",
+      "accountUnavailable": "Accounts not importable",
+      "both": "Accounts + credentials",
+      "none": "No sources yet",
+      "profile": "Credential sources"
+    },
+    "stepper": {
+      "label": "Unified API setup progress",
+      "states": {
+        "completed": "Completed",
+        "current": "Current step",
+        "upcoming": "Later"
+      },
+      "steps": {
+        "clientAccess": {
+          "description": "Get the gateway API address and an access key for your client.",
+          "title": "Connect a client"
+        },
+        "gatewayChannel": {
+          "description": "Import at least one account key or saved API credential.",
+          "title": "Create a gateway channel"
+        },
+        "gatewaySettings": {
+          "description": "Enter the admin connection details for your self-hosted AI gateway.",
+          "title": "Save gateway settings"
+        },
+        "source": {
+          "description": "Add an account that can expose keys or save an API credential.",
+          "title": "Prepare a source"
+        }
+      }
+    },
+    "unavailable": {
+      "badge": "Status unconfirmed",
+      "description": "Accounts, credentials, or gateway settings could not be loaded. No missing-source conclusion has been made.",
+      "retry": "Retry setup check",
+      "title": "Setup status unavailable"
+    }
   },
   "usage": {
     "activityMix": "Recent trend",

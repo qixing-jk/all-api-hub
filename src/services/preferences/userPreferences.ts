@@ -207,6 +207,26 @@ export interface WebAiApiCheckPreferences {
   keyCleanup: WebAiApiCheckKeyCleanupPreferences
 }
 
+export const GATEWAY_GUIDANCE_SURFACES = {
+  Account: "account",
+  ApiCredentialProfiles: "apiCredentialProfiles",
+} as const
+
+export type GatewayGuidanceSurface =
+  (typeof GATEWAY_GUIDANCE_SURFACES)[keyof typeof GATEWAY_GUIDANCE_SURFACES]
+
+export interface GatewayGuidancePreferences {
+  /**
+   * One-way onboarding completion marker for self-hosted gateway guidance.
+   *
+   * Once a user has created or imported at least one managed-site channel, the
+   * account/API credential source-surface guidance should stay complete even if
+   * channels are later deleted or gateway config changes.
+   */
+  onboardingCompletedAt?: number
+  dismissedAtBySurface?: Partial<Record<GatewayGuidanceSurface, number>>
+}
+
 // 用户偏好设置类型定义
 export interface UserPreferences {
   themeMode: ThemeMode
@@ -316,6 +336,8 @@ export interface UserPreferences {
 
   // 是否显示健康状态
   showHealthStatus: boolean
+
+  gatewayGuidance?: GatewayGuidancePreferences
 
   // WebDAV 备份/同步配置
   webdav: WebDAVSettings
@@ -561,6 +583,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   usageHistory: DEFAULT_USAGE_HISTORY_PREFERENCES,
   balanceHistory: DEFAULT_BALANCE_HISTORY_PREFERENCES,
   showHealthStatus: true, // 默认显示健康状态
+  gatewayGuidance: {},
   webdav: DEFAULT_WEBDAV_SETTINGS,
   lastUpdated: 0,
   sharedPreferencesLastUpdated: 0,

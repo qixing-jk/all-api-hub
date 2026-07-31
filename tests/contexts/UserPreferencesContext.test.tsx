@@ -551,6 +551,31 @@ describe("UserPreferencesContext", () => {
     })
   })
 
+  it("persists gateway guidance dismissal for a single source surface without completing onboarding", async () => {
+    const context = await renderProvider({
+      ...clonePreferences(),
+      gatewayGuidance: {
+        dismissedAtBySurface: {
+          account: 111,
+        },
+      },
+    })
+
+    await act(async () => {
+      await context.dismissGatewayGuidanceSurface("apiCredentialProfiles")
+    })
+
+    expect((latestContext as any)?.preferences.gatewayGuidance).toMatchObject({
+      dismissedAtBySurface: {
+        account: 111,
+        apiCredentialProfiles: expect.any(Number),
+      },
+    })
+    expect(
+      (latestContext as any)?.preferences.gatewayGuidance.onboardingCompletedAt,
+    ).toBeUndefined()
+  })
+
   it("updates scalar, nested, and runtime-backed preferences through the provider", async () => {
     const context = await renderProvider()
 

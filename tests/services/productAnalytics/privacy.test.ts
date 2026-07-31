@@ -42,6 +42,8 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
+  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
+  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES,
 } from "~/services/productAnalytics/contracts"
 import { sanitizeProductAnalyticsEvent } from "~/services/productAnalytics/privacy"
 import { SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES } from "~/services/productAnalytics/settingsSnapshot"
@@ -160,6 +162,72 @@ describe("product analytics privacy filtering", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       duration_ms: 2000,
+    })
+  })
+
+  it("keeps unified API guidance click fields as controlled enums only", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
+        target_page_id: MENU_ITEM_IDS.KEYS,
+        managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+        guidance_status:
+          PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
+        guidance_action_kind:
+          PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS.ManageChannels,
+        rawStatus: "ready for production user",
+        accountName: "Private account",
+        apiKey: "sk-secret",
+        sourceUrl: "https://private.example.invalid",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
+      target_page_id: MENU_ITEM_IDS.KEYS,
+      managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+      guidance_status:
+        PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
+      guidance_action_kind:
+        PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS.ManageChannels,
+    })
+  })
+
+  it("drops invalid unified API guidance telemetry values", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        guidance_status: "ready_for_private_customer",
+        guidance_action_kind: "open_production_key_named_alice",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
     })
   })
 

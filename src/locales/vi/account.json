@@ -203,7 +203,7 @@
       "docs": "Mở hướng dẫn cho người mới",
       "star": "Cho dự án một sao (Star)"
     },
-    "description": "Bạn có thể cho dự án một sao (Star) trước, hoặc xem tài liệu trước để tìm hiểu cách quản lý các trạm trung chuyển và tài khoản New API",
+    "description": "Thêm tài khoản để tạo kho nguồn cho số dư, kiểm tra trạng thái, API key, xuất trực tiếp và nhập kênh AI gateway tự triển khai sau này.",
     "hint": "Trước khi thêm tài khoản, bạn cũng có thể tùy ý xem tài liệu và thông tin dự án",
     "title": "Chào mừng đến với All API Hub"
   },
@@ -264,5 +264,43 @@
     "pendingRefreshHelp": "Số liệu thống kê hôm nay chưa được xác nhận. Hãy làm mới tài khoản liên quan trong danh sách tài khoản.",
     "refreshActionHelp": "Số liệu thống kê hôm nay chưa được xác nhận. Nhấp để làm mới tài khoản.",
     "unavailable": "Không khả dụng"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "Thêm tài khoản",
+      "addApiCredential": "Thêm thông tin API",
+      "addGatewayChannel": "Thêm kênh gateway đầu tiên",
+      "configureManagedSite": "Cấu hình AI gateway tự triển khai",
+      "manageChannels": "Quản lý kênh",
+      "openApiCredentialProfiles": "Mở thư viện xác thực",
+      "openModelSync": "Mở đồng bộ model"
+    },
+    "boundaryNote": "All API Hub quản lý nguồn tài khoản; AI gateway tự triển khai của bạn mới là dịch vụ AI API được client bên ngoài gọi.",
+    "description": {
+      "has_gateway_channels": "Một kênh gateway đã từng được tạo hoặc nhập. Mở quản lý kênh để xác nhận trạng thái hiện tại và tiếp tục thiết lập client.",
+      "needs_importable_source": "Các tài khoản hiện tại không thể cung cấp key có thể nhập. Hãy lưu API key trước, hoặc thêm loại tài khoản hỗ trợ lấy key, rồi nhập vào AI gateway tự triển khai.",
+      "needs_managed_site": "Sau khi cấu hình kết nối quản trị của AI gateway tự triển khai, các tài khoản này có thể được nhập làm kênh gateway.",
+      "needs_sources": "Thêm tài khoản để tạo nguồn key có thể quản lý. Sau đó có thể xuất trực tiếp từng key hoặc nhập nhanh vào AI gateway tự triển khai.",
+      "ready_accounts": "Mở quản lý key để nhập các key tài khoản đã chọn vào AI gateway tự triển khai, giúp nhiều key cùng cung cấp một AI API thống nhất.",
+      "ready_profiles": "API key đã lưu nằm trong thư viện thông tin xác thực, có thể tái sử dụng trực tiếp hoặc nhập làm kênh gateway."
+    },
+    "directToolExportNote": "Xuất trực tiếp sang công cụ vẫn có thể dùng song song với việc nhập vào AI gateway tự triển khai.",
+    "dismissDialog": {
+      "confirm": "Không hiển thị nữa",
+      "description": "Trang tài khoản sẽ không hiển thị gợi ý này nữa. Bạn vẫn có thể xem hướng dẫn kết nối AI gateway tự triển khai trên trang tổng quan.",
+      "title": "Không hiển thị gợi ý này nữa?"
+    },
+    "dismissForSession": "Ẩn gợi ý lúc này",
+    "headline": "Dùng key tài khoản làm nguồn cho AI gateway",
+    "modelSyncOptional": "Đồng bộ model có thể tự động cập nhật danh sách model của gateway và giảm bảo trì thủ công; có thể bật khi cần sau khi đã có kênh.",
+    "optionalLabel": "Bảo trì tùy chọn",
+    "permanentlyDismiss": "Không hiển thị gợi ý này nữa",
+    "sources": {
+      "account": "Nguồn tài khoản",
+      "accountUnavailable": "Tài khoản chưa thể nhập",
+      "both": "Tài khoản + xác thực",
+      "none": "Chưa có nguồn tài khoản",
+      "profile": "Nguồn xác thực"
+    }
   }
 }

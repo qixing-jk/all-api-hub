@@ -53,6 +53,8 @@ import {
   PRODUCT_ANALYTICS_TARGET_STATES,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
   PRODUCT_ANALYTICS_TOOLBAR_ACTION_CLICK_BEHAVIORS,
+  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
+  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES,
   type ProductAnalyticsEventName,
 } from "./contracts"
 import { SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES } from "./settingsSnapshot"
@@ -143,6 +145,8 @@ const EVENT_ALLOWED_KEYS = {
     "product_announcement_severity",
     "product_announcement_action_kind",
     "product_announcement_active_count",
+    "guidance_status",
+    "guidance_action_kind",
     "entrypoint",
   ],
   [PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured]: [
@@ -495,6 +499,12 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   error_category: Object.values(PRODUCT_ANALYTICS_ERROR_CATEGORIES),
   failure_stage: Object.values(PRODUCT_ANALYTICS_FAILURE_STAGES),
   feature_id: Object.values(PRODUCT_ANALYTICS_FEATURE_IDS),
+  guidance_status: Object.values(
+    PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES,
+  ),
+  guidance_action_kind: Object.values(
+    PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
+  ),
   currency_type: CURRENCY_TYPES,
   log_level: LOG_LEVELS,
   kilo_code_export_target: Object.values(

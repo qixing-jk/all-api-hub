@@ -225,7 +225,7 @@
       "docs": "Open getting started",
       "star": "View on GitHub"
     },
-    "description": "You can star the project and browse the guides to learn how to manage your relay and New API accounts",
+    "description": "Add accounts to build a source inventory for balances, health checks, API keys, direct exports, and later self-hosted AI gateway channel import.",
     "hint": "Feel free to look around the website and docs before adding any accounts",
     "title": "Welcome to All API Hub"
   },
@@ -286,5 +286,43 @@
     "pendingRefreshHelp": "Today's statistics have not been confirmed. Refresh the relevant account from the Accounts list.",
     "refreshActionHelp": "Today's statistics have not been confirmed. Click to refresh this account.",
     "unavailable": "Unavailable"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "Add account",
+      "addApiCredential": "Add API credential",
+      "addGatewayChannel": "Add first gateway channel",
+      "configureManagedSite": "Configure self-hosted AI gateway",
+      "manageChannels": "Manage channels",
+      "openApiCredentialProfiles": "Open credential library",
+      "openModelSync": "Open model sync"
+    },
+    "boundaryNote": "All API Hub manages account keys. It does not proxy model requests; external clients call your self-hosted AI gateway.",
+    "description": {
+      "has_gateway_channels": "A gateway channel was created or imported before. Open channel management to confirm its current state and continue client setup.",
+      "needs_importable_source": "The current accounts cannot expose importable keys. Save an API key first, or add an account type that supports key access, then import it into your self-hosted AI gateway.",
+      "needs_managed_site": "You have account keys. Configure your self-hosted AI gateway to import them as gateway channels.",
+      "needs_sources": "After you add accounts, their keys can be exported directly to clients or imported into your self-hosted AI gateway as one unified AI API.",
+      "ready_accounts": "Use Key Management to import selected account keys into self-hosted AI gateway channels.",
+      "ready_profiles": "Saved API keys can be reused directly from the credential library or imported individually as gateway channels."
+    },
+    "directToolExportNote": "If you do not need the self-hosted gateway yet, you can export a single credential directly to a client tool.",
+    "dismissDialog": {
+      "confirm": "Do not show again",
+      "description": "The account page will stop showing this tip. You can still find the self-hosted AI gateway guidance on the overview page.",
+      "title": "Stop showing this tip?"
+    },
+    "dismissForSession": "Hide this tip for now",
+    "headline": "Connect account keys to your self-hosted AI gateway",
+    "modelSyncOptional": "Model sync can update gateway model lists automatically and reduce manual maintenance; enable it after channels exist when needed.",
+    "optionalLabel": "Optional maintenance",
+    "permanentlyDismiss": "Do not show this tip again",
+    "sources": {
+      "account": "Account sources",
+      "accountUnavailable": "Accounts not importable",
+      "both": "Accounts + credentials",
+      "none": "No account sources yet",
+      "profile": "Credential sources"
+    }
   }
 }

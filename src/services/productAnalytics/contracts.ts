@@ -587,6 +587,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
     "prefill_api_credential_base_url_from_history",
   OpenSidepanelFromPopup: "open_sidepanel_from_popup",
   OpenSidepanelFromToolbarAction: "open_sidepanel_from_toolbar_action",
+  OpenUnifiedApiGuidanceAction: "open_unified_api_guidance_action",
   ClearApiCredentialProfileFilters: "clear_api_credential_profile_filters",
   FilterApiCredentialProfiles: "filter_api_credential_profiles",
   OpenUpdateAccountDialog: "open_update_account_dialog",
@@ -723,10 +724,14 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   OptionsAccountManagementHeader: "options_account_management_header",
   OptionsAccountManagementPage: "options_account_management_page",
   OptionsAccountManagementRowActions: "options_account_management_row_actions",
+  OptionsAccountManagementUnifiedApiGuidance:
+    "options_account_management_unified_api_guidance",
   OptionsAccountManagementAddAccountSponsorRecommendations:
     "options_account_management_add_account_sponsor_recommendations",
   OptionsAccountManagementNewcomerSponsorRecommendations:
     "options_account_management_newcomer_sponsor_recommendations",
+  OptionsAccountDialogAutoDetectRecovery:
+    "options_account_dialog_auto_detect_recovery",
   OptionsAccountTokenKiloCodeExportDialog:
     "options_account_token_kilo_code_export_dialog",
   OptionsApiCredentialProfilesDialog: "options_api_credential_profiles_dialog",
@@ -773,6 +778,7 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   OptionsOverviewAutomationOverview: "options_overview_automation_overview",
   OptionsOverviewRecentUsage: "options_overview_recent_usage",
   OptionsOverviewStatusSummary: "options_overview_status_summary",
+  OptionsOverviewUnifiedApiGuidance: "options_overview_unified_api_guidance",
   OptionsProductAnnouncementsBanner: "options_product_announcements_banner",
   OptionsProductAnnouncementsHeader: "options_product_announcements_header",
   OptionsSiteAnnouncementCard: "options_site_announcement_card",
@@ -922,6 +928,32 @@ export type ProductAnalyticsAccountAutoDetectFetchContextKind =
 export const PRODUCT_ANALYTICS_REQUESTED_AUTH_MODES = AuthTypeEnum
 
 export type ProductAnalyticsRequestedAuthMode = AuthTypeEnum
+
+export const PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES = {
+  NeedsSources: "needs_sources",
+  NeedsImportableSource: "needs_importable_source",
+  NeedsManagedSite: "needs_managed_site",
+  ReadyToImport: "ready_to_import",
+  HasGatewayChannels: "has_gateway_channels",
+} as const
+
+export type ProductAnalyticsUnifiedApiGuidanceStatus =
+  (typeof PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES)[keyof typeof PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES]
+
+export const PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS = {
+  AddAccount: "add_account",
+  AddApiCredential: "add_api_credential",
+  ConfigureManagedSite: "configure_managed_site",
+  AddGatewayChannel: "add_gateway_channel",
+  OpenApiCredentialProfiles: "open_api_credential_profiles",
+  ManageChannels: "manage_channels",
+  OpenModelSync: "open_model_sync",
+  SaveApiCredentialRecovery: "save_api_credential_recovery",
+  RequestSiteSupport: "request_site_support",
+} as const
+
+export type ProductAnalyticsUnifiedApiGuidanceActionKind =
+  (typeof PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS)[keyof typeof PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS]
 
 export const PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS = {
   ApiCredentialProfilesFallback: "api_credential_profiles_fallback",
@@ -1116,6 +1148,8 @@ export type ProductAnalyticsEventPayloadMap = {
     product_announcement_severity?: ProductAnalyticsProductAnnouncementSeverity
     product_announcement_action_kind?: ProductAnalyticsProductAnnouncementActionKind
     product_announcement_active_count?: number
+    guidance_status?: ProductAnalyticsUnifiedApiGuidanceStatus
+    guidance_action_kind?: ProductAnalyticsUnifiedApiGuidanceActionKind
     entrypoint: ProductAnalyticsEntrypoint
   }
   [PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured]: {
