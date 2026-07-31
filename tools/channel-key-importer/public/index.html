@@ -317,6 +317,33 @@
                   </button>
                 </span>
               </div>
+              <div class="routing-options">
+                <label class="field">
+                  <span>渠道优先级</span>
+                  <input
+                    id="channel-priority"
+                    type="number"
+                    step="1"
+                    placeholder="0"
+                  />
+                  <small id="channel-priority-help"
+                    >数值越大越优先使用；留空时新渠道使用 0。</small
+                  >
+                </label>
+                <label class="field">
+                  <span>渠道权重</span>
+                  <input
+                    id="channel-weight"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="0"
+                  />
+                  <small id="channel-weight-help"
+                    >同优先级渠道按权重比例分流；留空时新渠道使用 0。</small
+                  >
+                </label>
+              </div>
               <label class="field">
                 <span>渠道配置来源</span>
                 <select id="config-source" required>
@@ -451,8 +478,12 @@
               </label>
               <div class="schedule-options hidden" id="schedule-options">
                 <label class="field">
-                  <span>首次执行时间</span>
-                  <input id="schedule-start-at" type="datetime-local" />
+                  <span>首次执行时间（精确到秒）</span>
+                  <input
+                    id="schedule-start-at"
+                    type="datetime-local"
+                    step="1"
+                  />
                 </label>
                 <label class="field">
                   <span>每次上几条</span>
@@ -510,6 +541,12 @@
               </div>
               <div>
                 <small>渠道分组</small><strong id="preview-groups">—</strong>
+              </div>
+              <div>
+                <small>优先级</small><strong id="preview-priority">0</strong>
+              </div>
+              <div>
+                <small>权重</small><strong id="preview-weight">0</strong>
               </div>
               <div class="hidden" id="preview-aws-routing-fact">
                 <small>AWS 推理路由</small

@@ -15,7 +15,7 @@ on:
       version:
         description: "Release version without the v prefix"
         required: true
-        default: "0.2.0"
+        default: "0.3.0"
 
 permissions:
   contents: write
@@ -82,6 +82,9 @@ jobs:
           - AWS Bedrock 自动识别 Key 类型和来源地区
           - Global 模式使用一个来源地区并生成 `global.*` 模型映射
           - 渠道名称和预览明确显示 AWS 来源地区
+          - 定时上 Key 支持精确到秒，并按最近任务动态唤醒
+          - 创建、复制和更新渠道时可设置优先级与权重
+          - 用量监测使用 New API 数据库汇总接口校准消费金额
 
           - macOS Apple Silicon：`mac-arm64.dmg`
           - macOS Intel：`mac-x64.dmg`

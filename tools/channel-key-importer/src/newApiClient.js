@@ -104,6 +104,8 @@ const channelTemplateSummary = (channel) => ({
   baseUrl: String(channel.base_url || ""),
   groups: splitChannelValues(channel.group),
   modelCount: splitChannelValues(channel.models).length,
+  priority: Number(channel.priority) || 0,
+  weight: Number(channel.weight) || 0,
 })
 
 export async function verifyNewApi(config) {
@@ -587,7 +589,9 @@ export async function findSimilarChannels(config, provider) {
 export async function updateExistingChannelKey(config, input) {
   // New API only applies key_mode=append to a channel already configured for
   // multiple keys; otherwise its PUT contract replaces the single saved key.
+  // Its update contract also accepts optional priority and weight integers.
   // https://github.com/QuantumNous/new-api/blob/main/controller/channel.go
+  // https://github.com/QuantumNous/new-api-docs/blob/main/docs/api/fei-channel-management.md
   return await requestJson(
     `${config.targetUrl}/api/channel/`,
     {
@@ -597,6 +601,10 @@ export async function updateExistingChannelKey(config, input) {
         id: input.channelId,
         key: input.apiKey,
         ...(input.append ? { key_mode: "append" } : {}),
+        ...(Number.isInteger(input.priority)
+          ? { priority: input.priority }
+          : {}),
+        ...(Number.isInteger(input.weight) ? { weight: input.weight } : {}),
       }),
     },
     [config.adminToken, config.sessionCookie, input.apiKey].filter(Boolean),
@@ -627,8 +635,11 @@ const buildChannelPayload = (input, key) => ({
   other: input.channelOther || "",
   group: input.groups.join(","),
   groups: input.groups,
-  priority: input.templateConfig?.priority ?? 0,
-  weight: input.templateConfig?.weight ?? 0,
+  // New API accepts integer priority/weight fields when creating a channel.
+  // Higher priority wins; equal-priority channels split by weight ratio.
+  // https://github.com/QuantumNous/new-api-docs/blob/main/docs/api/fei-channel-management.md
+  priority: input.priority ?? input.templateConfig?.priority ?? 0,
+  weight: input.weight ?? input.templateConfig?.weight ?? 0,
   status: 1,
 })
 

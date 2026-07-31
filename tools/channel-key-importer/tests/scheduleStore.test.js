@@ -86,6 +86,34 @@ test("stores scheduled keys encrypted and exposes only public metadata", async (
   }
 })
 
+test("finds the nearest active schedule with second precision", async () => {
+  const { root, store } = await makeStore()
+  try {
+    await store.create({
+      preview,
+      createOptions: { combineKeys: false },
+      schedule: {
+        startAt: "2026-07-10T10:05:42.000Z",
+        batchSize: 1,
+        intervalMinutes: 30,
+      },
+    })
+    await store.create({
+      preview,
+      createOptions: { combineKeys: false },
+      schedule: {
+        startAt: "2026-07-10T10:03:17.000Z",
+        batchSize: 1,
+        intervalMinutes: 30,
+      },
+    })
+
+    assert.equal(await store.nextRunAt(), "2026-07-10T10:03:17.000Z")
+  } finally {
+    await rm(root, { force: true, recursive: true })
+  }
+})
+
 test("claims due batches and marks mixed results by key index", async () => {
   const { root, store } = await makeStore()
   try {

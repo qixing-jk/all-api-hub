@@ -70,6 +70,10 @@ const elements = {
   channelGroups: $("#channel-groups"),
   channelGroupsHelp: $("#channel-groups-help"),
   refreshGroups: $("#refresh-groups"),
+  channelPriority: $("#channel-priority"),
+  channelPriorityHelp: $("#channel-priority-help"),
+  channelWeight: $("#channel-weight"),
+  channelWeightHelp: $("#channel-weight-help"),
   sourceBaseUrl: $("#source-base-url"),
   baseUrlHelp: $("#base-url-help"),
   configSource: $("#config-source"),
@@ -107,6 +111,8 @@ const elements = {
   previewProvider: $("#preview-provider"),
   previewBaseUrl: $("#preview-base-url"),
   previewGroups: $("#preview-groups"),
+  previewPriority: $("#preview-priority"),
+  previewWeight: $("#preview-weight"),
   previewAwsRoutingFact: $("#preview-aws-routing-fact"),
   previewAwsRouting: $("#preview-aws-routing"),
   modelCount: $("#model-count"),
@@ -493,6 +499,8 @@ function selectProvider(provider) {
     : "可以按实际部署修改；留空时由 New API 使用默认值。"
   elements.apiKey.value = ""
   elements.keyQuotas.value = ""
+  elements.channelPriority.value = ""
+  elements.channelWeight.value = ""
   elements.awsGlobalField.classList.toggle("hidden", provider.id !== "aws")
   elements.awsGlobalInference.checked = false
   state.channelTemplates = []
@@ -601,6 +609,12 @@ function updateConfigSourceUi() {
     : state.selectedProvider?.requiresBaseUrl
       ? "这个渠道必须填写完整的 Base URL。"
       : "可以按实际部署修改；留空时由 New API 使用默认值。"
+  elements.channelPriorityHelp.textContent = template
+    ? `留空沿用“${template.name}”的优先级 ${template.priority}。`
+    : "数值越大越优先使用；留空时新渠道使用 0。"
+  elements.channelWeightHelp.textContent = template
+    ? `留空沿用“${template.name}”的权重 ${template.weight}。`
+    : "同优先级渠道按权重比例分流；留空时新渠道使用 0。"
   elements.providerModelsField.classList.toggle("hidden", !manual)
   elements.providerModelMappingsField.classList.toggle(
     "hidden",
@@ -790,6 +804,8 @@ function renderPreview(preview) {
   elements.previewBaseUrl.textContent =
     preview.provider.baseUrl || "New API 默认"
   elements.previewGroups.textContent = preview.groups.join("、")
+  elements.previewPriority.textContent = String(preview.priority)
+  elements.previewWeight.textContent = String(preview.weight)
   elements.previewAwsRoutingFact.classList.toggle("hidden", !preview.awsRouting)
   elements.previewAwsRouting.textContent = preview.awsRouting
     ? `${preview.awsRouting.regions.join("、")} · ${
@@ -899,7 +915,7 @@ const formatDateTime = (value) => {
 
 const formatDateTimeInput = (date) => {
   const offset = date.getTimezoneOffset() * 60_000
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16)
+  return new Date(date.getTime() - offset).toISOString().slice(0, 19)
 }
 
 const formatUsageTime = (timestamp) => {
@@ -1434,7 +1450,7 @@ function renderSchedules() {
     const details = document.createElement("p")
     details.textContent = `每次 ${schedule.batchSize} 条；间隔 ${
       schedule.intervalMinutes
-    } 分钟；最近执行 ${formatDateTime(schedule.lastRunAt)}。`
+    } 分钟；优先级 ${schedule.priority}；权重 ${schedule.weight}；最近执行 ${formatDateTime(schedule.lastRunAt)}。`
     if (schedule.lastError) {
       const error = document.createElement("p")
       error.className = "schedule-error"
@@ -1979,6 +1995,8 @@ function buildCredentialRequestBody() {
     name: elements.channelName.value,
     automaticName: !state.channelNameEdited,
     groups: selectedGroups(),
+    priority: elements.channelPriority.value,
+    weight: elements.channelWeight.value,
     configSource: selectedTemplateId()
       ? "template"
       : elements.configSource.value,

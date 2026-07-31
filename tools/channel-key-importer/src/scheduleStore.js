@@ -55,6 +55,8 @@ const publicJob = (job) => ({
   status: job.status,
   batchSize: job.batchSize,
   intervalMinutes: job.intervalMinutes,
+  priority: Number.isInteger(job.preview?.priority) ? job.preview.priority : 0,
+  weight: Number.isInteger(job.preview?.weight) ? job.preview.weight : 0,
   nextRunAt: job.nextRunAt,
   lastRunAt: job.lastRunAt || null,
   lastError: job.lastError || "",
@@ -180,6 +182,20 @@ export class ScheduleStore {
 
   async list() {
     return (await this.#readAll()).map(publicJob)
+  }
+
+  async nextRunAt() {
+    const timestamps = (await this.#readAll())
+      .filter(
+        (job) =>
+          job.status === "active" &&
+          (job.entries || []).some((entry) => entry.status === "pending"),
+      )
+      .map((job) => new Date(job.nextRunAt).getTime())
+      .filter(Number.isFinite)
+    return timestamps.length > 0
+      ? new Date(Math.min(...timestamps)).toISOString()
+      : null
   }
 
   async create({ preview, createOptions, schedule }) {

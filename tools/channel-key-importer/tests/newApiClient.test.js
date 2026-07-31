@@ -284,6 +284,8 @@ test("lists same-type channels for explicit template selection", async (context)
             base_url: "https://bedrock-runtime.us-east-1.amazonaws.com",
             group: "default,aws",
             models: "claude-sonnet-4-6,claude-opus-4-6",
+            priority: 7,
+            weight: 100,
             status: 1,
           },
           { id: 25, name: "OpenAI", type: 1, status: 1 },
@@ -300,6 +302,8 @@ test("lists same-type channels for explicit template selection", async (context)
       baseUrl: "https://bedrock-runtime.us-east-1.amazonaws.com",
       groups: ["default", "aws"],
       modelCount: 2,
+      priority: 7,
+      weight: 100,
     },
   ])
 })
@@ -450,6 +454,8 @@ test("appends a key only when the selected channel is multi-key", async (context
     channelId: 8,
     apiKey: "sk-replacement-key",
     append: false,
+    priority: 12,
+    weight: 80,
   })
 
   assert.deepEqual(requests, [
@@ -459,7 +465,12 @@ test("appends a key only when the selected channel is multi-key", async (context
     },
     {
       url: "https://new-api.example.com/api/channel/",
-      body: { id: 8, key: "sk-replacement-key" },
+      body: {
+        id: 8,
+        key: "sk-replacement-key",
+        priority: 12,
+        weight: 80,
+      },
     },
   ])
 })
@@ -493,6 +504,8 @@ test("creates a single New API channel with normalized fields", async (context) 
     models: ["deepseek-chat", "deepseek-reasoner"],
     modelMapping: { "deepseek-v4": "deepseek-v4-pro" },
     groups: ["default", "vip"],
+    priority: 12,
+    weight: 80,
   })
 
   assert.equal(requestBody.mode, "single")
@@ -507,8 +520,8 @@ test("creates a single New API channel with normalized fields", async (context) 
     other: "",
     group: "default,vip",
     groups: ["default", "vip"],
-    priority: 0,
-    weight: 0,
+    priority: 12,
+    weight: 80,
     status: 1,
   })
 })
@@ -534,13 +547,15 @@ test("passes provider-specific settings and extra configuration to New API", asy
       weight: 11,
       param_override: '{"temperature":0.2}',
     },
+    priority: 15,
+    weight: 120,
     groups: ["default"],
   })
 
   assert.equal(requestBody.channel.settings, '{"aws_key_type":"ak_sk"}')
   assert.equal(requestBody.channel.other, '{"default":"us-east-1"}')
-  assert.equal(requestBody.channel.priority, 7)
-  assert.equal(requestBody.channel.weight, 11)
+  assert.equal(requestBody.channel.priority, 15)
+  assert.equal(requestBody.channel.weight, 120)
   assert.equal(requestBody.channel.param_override, '{"temperature":0.2}')
 })
 

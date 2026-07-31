@@ -70,6 +70,10 @@ const MODULE_PATH = fileURLToPath(import.meta.url)
 const PUBLIC_DIR = fileURLToPath(new URL("../public", import.meta.url))
 const SESSION_TOKEN = randomBytes(32).toString("base64url")
 const MAX_BODY_BYTES = 64 * 1024
+const IDLE_SCHEDULE_CHECK_MS = 60_000
+const MAX_TIMER_DELAY_MS = 2_147_483_647
+const MIN_CHANNEL_PRIORITY = -2_147_483_648
+const MAX_CHANNEL_ROUTING_VALUE = 2_147_483_647
 
 const configStore = new ConfigStore()
 const balanceStore = new BalanceStore()
@@ -253,6 +257,25 @@ const buildEntryBaseUrl = (preview, entry) =>
     ? getAwsRuntimeBaseUrl(entry.apiKey)
     : preview.baseUrl
 
+export function normalizeChannelRoutingValue(
+  value,
+  label,
+  minimum = MIN_CHANNEL_PRIORITY,
+) {
+  if (value == null || String(value).trim() === "") return null
+  const number = Number(value)
+  if (
+    !Number.isInteger(number) ||
+    number < minimum ||
+    number > MAX_CHANNEL_ROUTING_VALUE
+  ) {
+    throw new Error(
+      `${label}必须是 ${minimum} 到 ${MAX_CHANNEL_ROUTING_VALUE} 之间的整数`,
+    )
+  }
+  return number
+}
+
 async function buildCredentialPreview(body) {
   const provider = getProvider(String(body.providerId || ""))
   if (!provider.importable) throw new Error(provider.description)
@@ -345,6 +368,15 @@ async function buildCredentialPreview(body) {
   if (groups.join(",").length > 64) {
     throw new Error("所选渠道分组名称总长度不能超过 64 个字符")
   }
+  const priorityOverride = normalizeChannelRoutingValue(
+    body.priority,
+    "渠道优先级",
+  )
+  const weightOverride = normalizeChannelRoutingValue(
+    body.weight,
+    "渠道权重",
+    0,
+  )
   const resolvedProvider = { ...provider, resolvedBaseUrl: baseUrl }
   const defaultModels =
     configSource === "new-api"
@@ -389,6 +421,12 @@ async function buildCredentialPreview(body) {
     baseUrl,
     name,
     groups,
+    priority: priorityOverride ?? template?.advanced?.priority ?? 0,
+    weight: weightOverride ?? template?.advanced?.weight ?? 0,
+    routingOverrides: {
+      priority: priorityOverride,
+      weight: weightOverride,
+    },
     models,
     duplicates,
     profileId: runtimeConfig.profileId,
@@ -423,6 +461,8 @@ const buildPreviewResponse = (preview, previewId) => ({
   },
   name: preview.name,
   groups: preview.groups,
+  priority: preview.priority,
+  weight: preview.weight,
   models: preview.models,
   duplicates: preview.duplicates,
   keyCount: preview.keys.length,
@@ -471,6 +511,8 @@ async function createChannelsFromPreview(preview, body) {
           channelId: existingChannel.id,
           apiKey: entry.apiKey,
           append: existingChannel.isMultiKey,
+          priority: preview.routingOverrides?.priority,
+          weight: preview.routingOverrides?.weight,
         })
         updatedEntries.push({
           ...entry,
@@ -740,7 +782,13 @@ async function runDueScheduleBatch(now = new Date()) {
   }
 }
 
-async function handleApi(request, response, url, port) {
+async function handleApi(
+  request,
+  response,
+  url,
+  port,
+  onScheduleChanged = async () => {},
+) {
   if (request.method === "GET" && url.pathname === "/api/bootstrap") {
     let profiles = await configStore.listProfiles()
     const unnamedProfiles = profiles.filter(
@@ -964,6 +1012,7 @@ async function handleApi(request, response, url, port) {
       },
       schedule: body.schedule,
     })
+    await onScheduleChanged()
     return sendJson(response, 200, { schedule })
   }
 
@@ -992,6 +1041,7 @@ async function handleApi(request, response, url, port) {
           result,
           new Date(),
         )
+        await onScheduleChanged()
         return sendJson(response, 200, { schedule })
       } catch (error) {
         const schedule = await scheduleStore.failRun(
@@ -999,6 +1049,7 @@ async function handleApi(request, response, url, port) {
           error,
           new Date(),
         )
+        await onScheduleChanged()
         return sendJson(response, 200, { schedule })
       }
     }
@@ -1009,6 +1060,7 @@ async function handleApi(request, response, url, port) {
           ? "paused"
           : "active"
     const schedule = await scheduleStore.updateStatus(scheduleId, status)
+    await onScheduleChanged()
     return sendJson(response, 200, { schedule })
   }
 
@@ -1120,6 +1172,13 @@ async function serveStatic(response, pathname) {
   response.end(body)
 }
 
+export function calculateScheduleDelay(nextRunAt, now = Date.now()) {
+  if (!nextRunAt) return IDLE_SCHEDULE_CHECK_MS
+  const timestamp = new Date(nextRunAt).getTime()
+  if (!Number.isFinite(timestamp)) return IDLE_SCHEDULE_CHECK_MS
+  return Math.min(MAX_TIMER_DELAY_MS, Math.max(0, timestamp - now))
+}
+
 export async function startImporterServer({
   host = HOST,
   port = DEFAULT_PORT,
@@ -1130,6 +1189,18 @@ export async function startImporterServer({
   let activePort = port
   let scheduleTimer = null
   let scheduleRunning = false
+  let scheduleGeneration = 0
+  let closing = false
+  const scheduleNextRun = async () => {
+    const generation = ++scheduleGeneration
+    if (scheduleTimer) {
+      clearTimeout(scheduleTimer)
+      scheduleTimer = null
+    }
+    const nextRunAt = await scheduleStore.nextRunAt()
+    if (closing || generation !== scheduleGeneration) return
+    scheduleTimer = setTimeout(runSchedules, calculateScheduleDelay(nextRunAt))
+  }
   const runSchedules = async () => {
     if (scheduleRunning) return
     scheduleRunning = true
@@ -1143,6 +1214,7 @@ export async function startImporterServer({
       )
     } finally {
       scheduleRunning = false
+      await scheduleNextRun()
     }
   }
   const server = createServer(async (request, response) => {
@@ -1152,7 +1224,13 @@ export async function startImporterServer({
       }
       const url = new URL(request.url || "/", `http://${request.headers.host}`)
       if (url.pathname.startsWith("/api/")) {
-        return await handleApi(request, response, url, activePort)
+        return await handleApi(
+          request,
+          response,
+          url,
+          activePort,
+          scheduleNextRun,
+        )
       }
       if (request.method !== "GET") {
         response.writeHead(405).end("Method not allowed")
@@ -1178,7 +1256,8 @@ export async function startImporterServer({
   })
   const url = `http://${host}:${activePort}`
   process.stdout.write(`dataeyesai 已启动：${url}\n`)
-  scheduleTimer = setInterval(runSchedules, 30_000)
+  // Use the nearest queued timestamp instead of coarse polling so a task can
+  // start on its selected second. Network and upstream latency still apply.
   void runSchedules()
   if (openBrowser && process.platform === "darwin") {
     const { execFile } = await import("node:child_process")
@@ -1188,7 +1267,9 @@ export async function startImporterServer({
     server,
     url,
     close: async () => {
-      if (scheduleTimer) clearInterval(scheduleTimer)
+      closing = true
+      scheduleGeneration += 1
+      if (scheduleTimer) clearTimeout(scheduleTimer)
       await new Promise((resolveClose, reject) => {
         server.close((error) => (error ? reject(error) : resolveClose()))
       })
