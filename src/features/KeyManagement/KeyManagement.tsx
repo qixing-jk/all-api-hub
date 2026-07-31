@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { DestructiveConfirmDialog } from "~/components/ui"
+import {
+  DestructiveConfirmDialog,
+  Notice,
+  NoticeActionButton,
+} from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -15,6 +19,7 @@ import {
 } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
 import { canCreateAccountApiTokens } from "~/services/accounts/keyProductCapabilities"
 import { getRecoverableManagedSiteChannelCandidate } from "~/services/managedSites/channelMatch"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -29,6 +34,7 @@ import type { AccountToken } from "~/types"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
 import {
   openModelsPage,
+  openSettingsTab,
   pushWithinOptionsPage,
   replaceWithinOptionsPage,
 } from "~/utils/navigation"
@@ -40,7 +46,11 @@ import { Header } from "./components/Header"
 import { RepairMissingKeysDialog } from "./components/RepairMissingKeysDialog"
 import { TokenList } from "./components/TokenList"
 import { TokenSearchBar } from "./components/TokenSearchBar"
-import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "./constants"
+import {
+  KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+  KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
+  KEY_MANAGEMENT_ROUTE_PARAMS,
+} from "./constants"
 import { useKeyManagement } from "./hooks/useKeyManagement"
 import { KEY_MANAGEMENT_TEST_IDS } from "./testIds"
 
@@ -112,6 +122,7 @@ export default function KeyManagement(props: {
   const accountSelectorTriggerRef = useRef<HTMLButtonElement>(null)
   const verification = useNewApiManagedVerification()
   const {
+    preferences,
     managedSiteType,
     newApiBaseUrl,
     newApiUserId,
@@ -119,6 +130,10 @@ export default function KeyManagement(props: {
     newApiPassword,
     newApiTotpSecret,
   } = useUserPreferencesContext()
+  const isManagedSiteConfigComplete = hasValidManagedSiteConfig(
+    preferences,
+    managedSiteType,
+  )
 
   const {
     displayData,
@@ -411,6 +426,29 @@ export default function KeyManagement(props: {
       ? selectedAddTokenScopeAccount.id
       : null
 
+  const routeGuidedImport =
+    routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport]
+  const routeGuidedImportAccountId = routeParams?.accountId
+  const routeGuidedImportTokenId =
+    routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.TokenId]
+  const guidedManagedSiteImport = useMemo(() => {
+    if (
+      routeGuidedImport !== KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS.ManagedSite
+    ) {
+      return undefined
+    }
+
+    return {
+      accountId: routeGuidedImportAccountId,
+      tokenId: routeGuidedImportTokenId,
+      request: [
+        routeGuidedImport,
+        routeGuidedImportAccountId ?? "",
+        routeGuidedImportTokenId ?? "",
+      ].join(":"),
+    }
+  }, [routeGuidedImport, routeGuidedImportAccountId, routeGuidedImportTokenId])
+
   return (
     <div className="p-6">
       <Header
@@ -513,8 +551,32 @@ export default function KeyManagement(props: {
             ? handleManagedSiteVerificationRetry
             : undefined
         }
+        guidedManagedSiteImport={guidedManagedSiteImport}
         allAccountsFilterAccountIds={allAccountsFilterAccountIds}
       />
+
+      {!isManagedSiteConfigComplete ? (
+        <Notice
+          tone="info"
+          className="mx-auto mt-6 max-w-2xl text-left"
+          description={
+            <span>
+              {t("keyManagement:managedSiteSetupRecovery.description")}{" "}
+              <NoticeActionButton
+                onClick={() =>
+                  void openSettingsTab("managedSite", {
+                    preserveHistory: true,
+                  })
+                }
+              >
+                {t(
+                  "keyManagement:managedSiteSetupRecovery.configureManagedSite",
+                )}
+              </NoticeActionButton>
+            </span>
+          }
+        />
+      ) : null}
 
       <Footer />
 

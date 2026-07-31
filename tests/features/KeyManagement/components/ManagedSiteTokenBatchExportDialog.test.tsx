@@ -54,6 +54,7 @@ const {
   mockLoadNewApiChannelKeyWithVerification,
   mockOpenNewApiManagedVerification,
   mockPreparePreview,
+  mockPushWithinOptionsPage,
   mockTrackProductAnalyticsActionCompleted,
   mockTrackProductAnalyticsActionStarted,
   mockToastSuccess,
@@ -68,6 +69,7 @@ const {
   mockLoadNewApiChannelKeyWithVerification: vi.fn(),
   mockOpenNewApiManagedVerification: vi.fn(),
   mockPreparePreview: vi.fn(),
+  mockPushWithinOptionsPage: vi.fn(),
   mockTrackProductAnalyticsActionCompleted: vi.fn(),
   mockTrackProductAnalyticsActionStarted: vi.fn(),
   mockToastSuccess: vi.fn(),
@@ -75,6 +77,15 @@ const {
     isOpen: false,
   },
 }))
+
+vi.mock("~/utils/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+
+  return {
+    ...actual,
+    pushWithinOptionsPage: mockPushWithinOptionsPage,
+  }
+})
 
 vi.mock(
   "~/features/KeyManagement/components/managedSiteTokenBatchExportPreview",
@@ -930,10 +941,13 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
+    const confirmDialog = screen.getByRole("dialog", {
+      name: "keyManagement:batchManagedSiteExport.confirm.title",
+    })
     await user.click(
-      screen.getAllByRole("button", {
+      within(confirmDialog).getByRole("button", {
         name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
+      }),
     )
 
     await waitFor(() => {
@@ -966,12 +980,118 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       selectedExecutableCount: 0,
       onClose: vi.fn(),
       onStart: vi.fn(),
+      onViewChannels: vi.fn(),
     })
 
     expect(t).toHaveBeenCalledWith(
       "keyManagement:batchManagedSiteExport.preview.selected",
       { count: 1 },
     )
+  })
+
+  it("closes the completed dialog before navigating to managed-site channels", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    mockPreparePreview.mockResolvedValue(preview)
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+      skippedCount: 0,
+      items: [
+        {
+          id: "account_token:account-1:1",
+          accountName: "Account 1",
+          runtimeKeyName: "Token 1",
+          success: true,
+          skipped: false,
+        },
+      ],
+    })
+
+    renderDialog({ onClose })
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    const confirmDialog = screen.getByRole("dialog", {
+      name: "keyManagement:batchManagedSiteExport.confirm.title",
+    })
+    await user.click(
+      within(confirmDialog).getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.viewChannels",
+      }),
+    )
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(mockPushWithinOptionsPage).toHaveBeenCalledWith(
+      "#managedSiteChannels",
+    )
+    expect(onClose.mock.invocationCallOrder[0]).toBeLessThan(
+      mockPushWithinOptionsPage.mock.invocationCallOrder[0],
+    )
+  })
+
+  it("keeps only Close in the result footer when no channels were created", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(preview)
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 1,
+      skippedCount: 0,
+      items: [
+        {
+          id: "account_token:account-1:1",
+          accountName: "Account 1",
+          runtimeKeyName: "Token 1",
+          success: false,
+          skipped: false,
+          error: "channel creation failed",
+        },
+      ],
+    })
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    const confirmDialog = screen.getByRole("dialog", {
+      name: "keyManagement:batchManagedSiteExport.confirm.title",
+    })
+    await user.click(
+      within(confirmDialog).getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.results.summary",
+      ),
+    ).toBeVisible()
+
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.viewChannels",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    ).toBeVisible()
   })
 
   it("disables selection controls while an export is running", async () => {

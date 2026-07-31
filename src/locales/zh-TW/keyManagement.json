@@ -62,16 +62,17 @@
       "selectAll": "已選 {{selected}}/{{total}}",
       "start": "開始匯入",
       "verifyAndRefresh": "驗證並重新整理預覽",
-      "verifying": "正在驗證..."
+      "verifying": "正在驗證...",
+      "viewChannels": "檢視渠道"
     },
     "blockedReasons": {
-      "baseUrlRequired": "目標自管理站點需要 Base URL。",
-      "configMissing": "缺少自管理站點管理員設定。",
+      "baseUrlRequired": "目標自建 AI 閘道需要 Base URL。",
+      "configMissing": "缺少自建 AI 閘道管理員設定。",
       "inputPreparationFailed": "無法為此金鑰準備渠道資料。",
       "keyRequired": "產生的渠道 Key 為空。",
       "modelsRequired": "未解析到可用模型。",
       "nameRequired": "產生的渠道名稱為空。",
-      "realKeyRequired": "目標自管理站點需要真實供應商 Key。",
+      "realKeyRequired": "目標自建 AI 閘道需要真實供應商 Key。",
       "secretResolutionFailed": "無法解析真實金鑰。"
     },
     "confirm": {
@@ -85,6 +86,7 @@
       "groups": "分組",
       "models": "模型"
     },
+    "gatewayDescription": "這會將帳號 Key 匯入為自建 AI 閘道渠道。匯入後，多個 Key 即可透過同一個 AI API 提供給客戶端使用。",
     "loadingDescription": "正在為 {{selectedCount}} 個已選金鑰準備預覽。",
     "messages": {
       "completed": "批次匯入完成：成功 {{created}} 個，失敗 {{failed}} 個，跳過 {{skipped}} 個。",
@@ -118,10 +120,10 @@
       "skipped": "已跳過",
       "warning": "需確認"
     },
-    "title": "批次匯入到自管理站點",
+    "title": "批次匯入到自建 AI 閘道",
     "warnings": {
       "backendSearchFailed": "重複檢查暫時無法連線目標後台。",
-      "dedupeUnsupported": "目前自管理站點無法可靠依 Base URL 檢查重複渠道。",
+      "dedupeUnsupported": "目前自建 AI 閘道無法可靠依 Base URL 檢查重複渠道。",
       "exactVerificationUnavailable": "可能已有符合渠道，但目前無法完成精確 Key 驗證。",
       "matchRequiresConfirmation": "發現相似渠道，請確認後再建立。",
       "modelPrefillFailed": "模型預填失敗，將使用目前可用的模型列表。"
@@ -187,6 +189,10 @@
     "description": "無法讀取目前帳號的金鑰列表。可能是登入已失效、權限不足，或站點暫時無法連線。請先重新登入站點後再重試。\n\n錯誤資訊：{{error}}",
     "openSite": "開啟站點",
     "title": "金鑰列表載入失敗"
+  },
+  "managedSiteSetupRecovery": {
+    "configureManagedSite": "設定自建 AI 閘道",
+    "description": "完成自建 AI 閘道設定後，可將帳號 Key 匯入為閘道渠道，彙整成一個統一 AI API。"
   },
   "managedSiteStatus": {
     "actions": {
@@ -392,6 +398,9 @@
   "showingCount_other": "顯示 {{count}} 個",
   "title": "金鑰管理",
   "totalKeys_other": "總計 {{count}} 個金鑰",
+  "unifiedApiGuidance": {
+    "headerBridge": "將帳號 Key 一鍵匯入自建 AI 閘道後，多個 Key 即可透過同一個 AI API 使用；直接匯出到客戶端工具仍是免閘道路徑。"
+  },
   "unsupportedSource": {
     "description": "目前帳號的站點類型已支援儲存帳號，但擴充功能尚未適配此站點的金鑰列表協議。你可以提交站點支援請求，協助我們補齊金鑰管理能力。",
     "requestSiteSupport": "回報站點支援",

@@ -686,6 +686,15 @@ describe("TokenHeader analytics", () => {
     })
   })
 
+  it("highlights managed-site import without opening the import dialog", () => {
+    renderTokenHeader({ guidedManagedSiteImportRequest: "request-1" })
+
+    expect(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton),
+    ).toHaveAttribute("data-guidance-highlight", "true")
+    expect(openWithAccountMock).not.toHaveBeenCalled()
+  })
+
   it("tracks managed-site single token import as skipped when preparation does not open", async () => {
     openWithAccountMock.mockResolvedValueOnce({ opened: false })
 

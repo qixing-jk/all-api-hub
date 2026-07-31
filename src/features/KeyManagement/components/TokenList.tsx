@@ -69,6 +69,12 @@ const isAccountTokenEntry = (
   runtimeKey: Extract<KeyManagementEntry["runtimeKey"], { token: AccountToken }>
 } => isAccountTokenRuntimeKey(entry.runtimeKey)
 
+interface GuidedManagedSiteImportTarget {
+  accountId?: string
+  tokenId?: string
+  request: string
+}
+
 interface TokenListProps {
   isLoading: boolean
   tokens: AccountToken[]
@@ -110,6 +116,7 @@ interface TokenListProps {
   serviceCredentials?: Record<string, ServiceCredentialState>
   onCopyServiceCredential?: (account: DisplaySiteData) => Promise<void>
   onRotateServiceCredential?: (account: DisplaySiteData) => Promise<void>
+  guidedManagedSiteImport?: GuidedManagedSiteImportTarget
 }
 
 /**
@@ -334,6 +341,7 @@ function TokenEmptyState({
  * @param props.onManagedSiteImportSuccess Optional callback after a managed-site token import succeeds.
  * @param props.onManagedSiteVerificationRetry Optional callback to retry managed-site token verification.
  * @param props.allAccountsFilterAccountIds Optional account ID filters applied in all-accounts mode.
+ * @param props.guidedManagedSiteImport Optional guided import target from route params.
  */
 export function TokenList(props: TokenListProps) {
   const {
@@ -365,9 +373,12 @@ export function TokenList(props: TokenListProps) {
     serviceCredentials = {},
     onCopyServiceCredential,
     onRotateServiceCredential,
+    guidedManagedSiteImport,
   } = props
   const { t } = useTranslation(["keyManagement", "settings"])
   const { managedSiteType } = useUserPreferencesContext()
+  const guidedManagedSiteImportAccountId = guidedManagedSiteImport?.accountId
+  const guidedManagedSiteImportTokenId = guidedManagedSiteImport?.tokenId
   const [ccSwitchContext, setCCSwitchContext] = useState<{
     token: AccountToken
     account: DisplaySiteData
@@ -429,6 +440,26 @@ export function TokenList(props: TokenListProps) {
   ])
   const filteredEntries = providedFilteredEntries ?? entries
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
+  const guidedManagedSiteImportEntryId = useMemo(() => {
+    if (!guidedManagedSiteImportAccountId) return null
+
+    const targetEntry = filteredEntries.find((entry) => {
+      if (!isAccountTokenEntry(entry)) return false
+
+      const token = entry.runtimeKey.token
+      return (
+        token.accountId === guidedManagedSiteImportAccountId &&
+        (!guidedManagedSiteImportTokenId ||
+          String(token.id) === guidedManagedSiteImportTokenId)
+      )
+    })
+
+    return targetEntry?.id ?? null
+  }, [
+    filteredEntries,
+    guidedManagedSiteImportAccountId,
+    guidedManagedSiteImportTokenId,
+  ])
 
   const isAllAccountsMode =
     selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
@@ -472,6 +503,18 @@ export function TokenList(props: TokenListProps) {
       return next
     })
   }, [allAccountsFilterAccountIds, isAllAccountsMode])
+
+  useEffect(() => {
+    if (!isAllAccountsMode || !guidedManagedSiteImportAccountId) return
+
+    setCollapsedAccountIds((prev) => {
+      if (!prev.has(guidedManagedSiteImportAccountId)) return prev
+
+      const next = new Set(prev)
+      next.delete(guidedManagedSiteImportAccountId)
+      return next
+    })
+  }, [guidedManagedSiteImportAccountId, isAllAccountsMode])
 
   const groupedEntries = useMemo(() => {
     if (!isAllAccountsMode) return null
@@ -990,6 +1033,11 @@ export function TokenList(props: TokenListProps) {
                             onOpenCCSwitchDialog={() =>
                               handleOpenCCSwitchDialog(token, account)
                             }
+                            guidedManagedSiteImportRequest={
+                              entry.id === guidedManagedSiteImportEntryId
+                                ? guidedManagedSiteImport?.request
+                                : undefined
+                            }
                           />
                         )
                       })}
@@ -1048,6 +1096,11 @@ export function TokenList(props: TokenListProps) {
                 }
                 onOpenCCSwitchDialog={() =>
                   handleOpenCCSwitchDialog(token, account)
+                }
+                guidedManagedSiteImportRequest={
+                  entry.id === guidedManagedSiteImportEntryId
+                    ? guidedManagedSiteImport?.request
+                    : undefined
                 }
               />
             )

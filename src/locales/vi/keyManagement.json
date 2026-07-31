@@ -62,16 +62,17 @@
       "selectAll": "Đã chọn {{selected}}/{{total}}",
       "start": "Bắt đầu nhập",
       "verifyAndRefresh": "Xác minh và làm mới bản xem trước",
-      "verifying": "Đang xác minh..."
+      "verifying": "Đang xác minh...",
+      "viewChannels": "Mở quản lý kênh"
     },
     "blockedReasons": {
-      "baseUrlRequired": "Trang web tự quản lý mục tiêu yêu cầu Base URL.",
-      "configMissing": "Thiếu cấu hình quản trị viên trang web tự quản lý.",
+      "baseUrlRequired": "AI gateway tự triển khai mục tiêu yêu cầu Base URL.",
+      "configMissing": "Thiếu cấu hình quản trị viên AI gateway tự triển khai.",
       "inputPreparationFailed": "Không thể chuẩn bị dữ liệu kênh cho khóa này.",
       "keyRequired": "Key kênh được tạo bị trống.",
       "modelsRequired": "Không thể phân tích các mô hình khả dụng.",
       "nameRequired": "Tên kênh được tạo bị trống.",
-      "realKeyRequired": "Trang web tự quản lý mục tiêu yêu cầu Key nhà cung cấp thực.",
+      "realKeyRequired": "AI gateway tự triển khai mục tiêu yêu cầu Key nhà cung cấp thực.",
       "secretResolutionFailed": "Không thể phân tích khóa thực."
     },
     "confirm": {
@@ -85,6 +86,7 @@
       "groups": "Nhóm",
       "models": "Mô hình"
     },
+    "gatewayDescription": "Thao tác này nhập key tài khoản làm kênh của AI gateway tự triển khai. Sau khi nhập, nhiều key có thể được client sử dụng thông qua một AI API.",
     "loadingDescription": "Đang chuẩn bị bản xem trước cho {{selectedCount}} khóa đã chọn.",
     "messages": {
       "completed": "Nhập hàng loạt hoàn tất: thành công {{created}}, thất bại {{failed}}, bỏ qua {{skipped}}.",
@@ -118,10 +120,10 @@
       "skipped": "Đã bỏ qua",
       "warning": "Cần xác nhận"
     },
-    "title": "Nhập hàng loạt vào trang web tự quản lý",
+    "title": "Nhập hàng loạt vào AI gateway tự triển khai",
     "warnings": {
       "backendSearchFailed": "Kiểm tra trùng lặp tạm thời không thể kết nối với backend mục tiêu.",
-      "dedupeUnsupported": "Trang web tự quản lý hiện tại không thể kiểm tra kênh trùng lặp một cách đáng tin cậy bằng Base URL.",
+      "dedupeUnsupported": "AI gateway tự triển khai hiện tại không thể kiểm tra kênh trùng lặp một cách đáng tin cậy bằng Base URL.",
       "exactVerificationUnavailable": "Có thể đã có kênh khớp, nhưng hiện tại không thể hoàn tất xác minh Key chính xác.",
       "matchRequiresConfirmation": "Đã phát hiện kênh tương tự, vui lòng xác nhận trước khi tạo.",
       "modelPrefillFailed": "Điền sẵn mô hình thất bại, sẽ sử dụng danh sách mô hình khả dụng hiện tại."
@@ -187,6 +189,10 @@
     "description": "Không thể đọc danh sách khóa của tài khoản hiện tại. Có thể phiên đăng nhập đã hết hạn, không đủ quyền hoặc trang web tạm thời không thể truy cập. Vui lòng đăng nhập lại vào trang web trước khi thử lại.\n\nThông báo lỗi: {{error}}",
     "openSite": "Mở trang web",
     "title": "Tải danh sách khóa thất bại"
+  },
+  "managedSiteSetupRecovery": {
+    "configureManagedSite": "Cấu hình AI gateway tự triển khai",
+    "description": "Cấu hình AI gateway tự triển khai để nhập key tài khoản làm kênh, từ đó nhiều key cùng cung cấp một AI API thống nhất."
   },
   "managedSiteStatus": {
     "actions": {
@@ -392,6 +398,9 @@
   "showingCount_other": "Đang hiển thị {{count}}",
   "title": "Quản lý khóa",
   "totalKeys_other": "Tổng cộng {{count}} key",
+  "unifiedApiGuidance": {
+    "headerBridge": "Khi muốn AI gateway tự triển khai tổng hợp nhiều key thành một AI API thống nhất, hãy nhập key tài khoản làm kênh gateway. Xuất trực tiếp sang công cụ client vẫn là một đường riêng."
+  },
   "unsupportedSource": {
     "description": "Loại trang của tài khoản này có thể được lưu, nhưng tiện ích chưa thích ứng giao thức danh sách khóa của trang này. Hãy gửi yêu cầu hỗ trợ trang để giúp chúng tôi bổ sung khả năng quản lý khóa.",
     "requestSiteSupport": "Yêu cầu hỗ trợ trang",
