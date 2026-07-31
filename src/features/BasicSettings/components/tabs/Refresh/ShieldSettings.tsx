@@ -35,6 +35,8 @@ import {
 import { canUseTempWindowFetch } from "~/utils/browser/tempWindowFetch"
 import { openSettingsTab } from "~/utils/navigation"
 
+import { ProtectionBypassDevTrigger } from "./ProtectionBypassDevTrigger"
+
 /** Compares complete automatic-feature preference maps. */
 function hasSameAutomaticFeatureBypass(
   left: Record<ProtectionBypassAutomaticFeature, boolean>,
@@ -275,6 +277,7 @@ export default function ShieldSettings() {
               </div>
             }
           />
+          <ProtectionBypassDevTrigger />
         </CardList>
       </Card>
     </SettingSection>

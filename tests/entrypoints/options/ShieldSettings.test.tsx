@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
@@ -17,13 +18,17 @@ import {
 
 const {
   canUseTempWindowFetchMock,
+  executeProtectionBypassTaskMock,
   getProtectionBypassUiVariantMock,
+  isDevelopmentModeMock,
   isProtectionBypassFirefoxEnvMock,
   openSettingsTabMock,
   useUserPreferencesContextMock,
 } = vi.hoisted(() => ({
   canUseTempWindowFetchMock: vi.fn(),
+  executeProtectionBypassTaskMock: vi.fn(),
   getProtectionBypassUiVariantMock: vi.fn(),
+  isDevelopmentModeMock: vi.fn(),
   isProtectionBypassFirefoxEnvMock: vi.fn(),
   openSettingsTabMock: vi.fn(),
   useUserPreferencesContextMock: vi.fn(),
@@ -50,7 +55,19 @@ vi.mock("~/utils/browser/protectionBypass", () => ({
 
 vi.mock("~/utils/browser/tempWindowFetch", () => ({
   canUseTempWindowFetch: () => canUseTempWindowFetchMock(),
+  executeProtectionBypassTask: (...args: unknown[]) =>
+    executeProtectionBypassTaskMock(...args),
 }))
+
+vi.mock("~/utils/core/environment", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/core/environment")>()
+
+  return {
+    ...actual,
+    isDevelopmentMode: () => isDevelopmentModeMock(),
+  }
+})
 
 vi.mock("~/utils/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/navigation")>()
@@ -122,9 +139,15 @@ describe("ShieldSettings", () => {
     vi.clearAllMocks()
     updateTempWindowFallback.mockResolvedValue({ ok: true })
     canUseTempWindowFetchMock.mockResolvedValue(true)
+    executeProtectionBypassTaskMock.mockResolvedValue({
+      success: true,
+      status: 200,
+      data: "ok",
+    })
     getProtectionBypassUiVariantMock.mockReturnValue(
       "tempWindowWithCookieInterceptor",
     )
+    isDevelopmentModeMock.mockReturnValue(false)
     isProtectionBypassFirefoxEnvMock.mockReturnValue(false)
     useUserPreferencesContextMock.mockReturnValue({
       tempWindowFallback: {
@@ -532,5 +555,216 @@ describe("ShieldSettings", () => {
       "flex-1",
       "[@container(min-width:42rem)]:flex-none",
     )
+  })
+
+  it("prefills the development trigger URL", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+      ).not.toBeInTheDocument()
+    })
+
+    expect(
+      screen.getByRole("textbox", {
+        name: "settings:refresh.shieldDevTriggerUrlLabel",
+      }),
+    ).toHaveValue("https://example.com/")
+  })
+
+  it("delays a development preset before submitting its real protected task", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+
+    try {
+      render(<ShieldSettings />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      await waitFor(() => {
+        expect(
+          screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+        ).not.toBeInTheDocument()
+      })
+      vi.useFakeTimers()
+
+      fireEvent.change(
+        screen.getByRole("textbox", {
+          name: "settings:refresh.shieldDevTriggerUrlLabel",
+        }),
+        { target: { value: "https://example.invalid/protected" } },
+      )
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "settings:refresh.shieldDevTriggerStart",
+        }),
+      )
+
+      expect(executeProtectionBypassTaskMock).not.toHaveBeenCalled()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(4_999)
+      })
+      expect(executeProtectionBypassTaskMock).not.toHaveBeenCalled()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1)
+      })
+
+      expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
+        execution: {
+          version: 2,
+          kind: "automatic",
+          feature: "account_refresh",
+          trigger: "scheduled",
+          surface: "background",
+        },
+        task: {
+          kind: "api_fallback_fetch",
+          params: {
+            originUrl: "https://example.invalid/protected",
+            fetchUrl: "https://example.invalid/protected",
+            fetchOptions: {
+              credentials: "include",
+              method: "GET",
+            },
+            requestId: expect.any(String),
+            responseType: "text",
+          },
+        },
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("rejects an empty development-trigger delay instead of treating it as immediate", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+      ).not.toBeInTheDocument()
+    })
+
+    fireEvent.change(
+      screen.getByRole("textbox", {
+        name: "settings:refresh.shieldDevTriggerUrlLabel",
+      }),
+      { target: { value: "https://example.invalid/protected" } },
+    )
+    fireEvent.change(
+      screen.getByRole("spinbutton", {
+        name: "settings:refresh.shieldDevTriggerDelayLabel",
+      }),
+      { target: { value: "" } },
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:refresh.shieldDevTriggerStart",
+      }),
+    )
+
+    expect(executeProtectionBypassTaskMock).not.toHaveBeenCalled()
+    expect(
+      screen.getByText("settings:refresh.shieldDevTriggerInvalidDelay"),
+    ).toHaveAttribute("role", "alert")
+  })
+
+  it("cancels a waiting development trigger", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+
+    try {
+      render(<ShieldSettings />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      await waitFor(() => {
+        expect(
+          screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+        ).not.toBeInTheDocument()
+      })
+      vi.useFakeTimers()
+
+      fireEvent.change(
+        screen.getByRole("textbox", {
+          name: "settings:refresh.shieldDevTriggerUrlLabel",
+        }),
+        { target: { value: "https://example.invalid/protected" } },
+      )
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "settings:refresh.shieldDevTriggerStart",
+        }),
+      )
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "settings:refresh.shieldDevTriggerCancel",
+        }),
+      )
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5_000)
+      })
+
+      expect(executeProtectionBypassTaskMock).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("uses the selected existing behavior preset", async () => {
+    const user = userEvent.setup()
+    isDevelopmentModeMock.mockReturnValue(true)
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "settings:refresh.shieldDevTriggerPresetLabel",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "settings:refresh.shieldDevTriggerPresetCheckinScheduled",
+      }),
+    )
+    await user.type(
+      screen.getByRole("textbox", {
+        name: "settings:refresh.shieldDevTriggerUrlLabel",
+      }),
+      "https://example.invalid/protected",
+    )
+    fireEvent.change(
+      screen.getByRole("spinbutton", {
+        name: "settings:refresh.shieldDevTriggerDelayLabel",
+      }),
+      { target: { value: "0" } },
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings:refresh.shieldDevTriggerStart",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          execution: expect.objectContaining({
+            feature: "checkin",
+            trigger: "scheduled",
+            surface: "background",
+          }),
+        }),
+      )
+    })
   })
 })
