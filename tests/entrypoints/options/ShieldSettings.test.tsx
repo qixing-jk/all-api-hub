@@ -884,9 +884,9 @@ describe("ShieldSettings", () => {
     ).toHaveAttribute("role", "alert")
   })
 
-  it("uses localized fallback copy for an empty thrown error", async () => {
+  it("uses localized fallback copy for a blank thrown error", async () => {
     isDevelopmentModeMock.mockReturnValue(true)
-    executeProtectionBypassTaskMock.mockRejectedValueOnce(new Error())
+    executeProtectionBypassTaskMock.mockRejectedValueOnce(new Error("   "))
     render(<ShieldSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,

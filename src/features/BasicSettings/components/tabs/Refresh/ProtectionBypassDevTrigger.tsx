@@ -131,7 +131,8 @@ export function ProtectionBypassDevTrigger() {
         if (!isMountedRef.current) return
         setFeedback({
           kind: "error",
-          message: getErrorMessage(error, failureFallback),
+          message:
+            getErrorMessage(error, failureFallback).trim() || failureFallback,
         })
       } finally {
         if (isMountedRef.current) setIsRunning(false)
