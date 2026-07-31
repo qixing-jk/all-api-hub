@@ -188,6 +188,7 @@
   },
   "states": {
     "allClear": "目前沒有需要處理的事項。",
+    "loadDetailUnavailable": "部分總覽資訊暫時無法使用，請重試載入。",
     "loadedWithError": "部分資訊載入失敗，已顯示可用資料。",
     "loading": "正在載入總覽..."
   },

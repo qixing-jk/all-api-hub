@@ -188,6 +188,7 @@
   },
   "states": {
     "allClear": "当前没有需要处理的事项。",
+    "loadDetailUnavailable": "部分总览信息暂时不可用，请重试加载。",
     "loadedWithError": "部分信息加载失败，已显示可用数据。",
     "loading": "正在加载总览..."
   },

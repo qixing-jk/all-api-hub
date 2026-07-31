@@ -19,11 +19,17 @@ describe("getGatewayGuidanceImportableAccounts", () => {
   it("keeps only enabled accounts whose runtime key can be resolved", () => {
     const disabled = keyResolvableAccount("disabled-account", true)
     const enabled = keyResolvableAccount("enabled-account", false)
+    const nonResolvable = {
+      ...keyResolvableAccount("non-resolvable-account", false),
+      token: "",
+    }
 
     expect(
-      getGatewayGuidanceImportableAccounts([disabled, enabled]).map(
-        (account) => account.id,
-      ),
+      getGatewayGuidanceImportableAccounts([
+        disabled,
+        nonResolvable,
+        enabled,
+      ]).map((account) => account.id),
     ).toEqual(["enabled-account"])
   })
 })

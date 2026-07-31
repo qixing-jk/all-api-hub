@@ -4,6 +4,28 @@ import { GuidanceCardLayout } from "~/features/UnifiedApiGuidance/components/Gui
 import { render, screen } from "~~/tests/test-utils/render"
 
 describe("GuidanceCardLayout", () => {
+  it("renders guidance copy without an action rail when no controls are available", () => {
+    const { container } = render(
+      <GuidanceCardLayout
+        badge="Badge"
+        badgeVariant="info"
+        title="Guidance title"
+        description="Guidance description"
+        notes={<div>Guidance notes</div>}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(screen.getByText("Guidance title")).toBeVisible()
+    expect(screen.getByText("Guidance description")).toBeVisible()
+    expect(screen.getByText("Guidance notes")).toBeVisible()
+    expect(container.querySelector("[data-guidance-action-rail]")).toBeNull()
+  })
+
   it("keeps dismissal controls in the right rail without creating an action panel when there are no business actions", () => {
     const { container } = render(
       <GuidanceCardLayout

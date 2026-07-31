@@ -264,6 +264,41 @@ describe("ManagedSiteTab", () => {
     )
   })
 
+  it("opens guided account-key import without preselection when account inventory is unavailable", async () => {
+    const user = userEvent.setup()
+    mockedGetAllAccounts.mockRejectedValueOnce(
+      new Error("account inventory unavailable"),
+    )
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        preferences: {
+          lastUpdated: 1,
+          managedSiteType: SITE_TYPES.NEW_API,
+          newApi: {
+            baseUrl: "https://managed.example.invalid",
+            adminToken: "managed-admin-token",
+            userId: "1",
+          },
+        },
+      }),
+    )
+    render(<ManagedSiteTab />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "settings:managedSite.gatewayGuidance.actions.importAccountKeys",
+      }),
+    )
+
+    expect(mockedPushWithinOptionsPage).toHaveBeenCalledWith(
+      `#${MENU_ITEM_IDS.KEYS}`,
+      {
+        [KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport]:
+          KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS.ManagedSite,
+      },
+    )
+  })
+
   it("opens the API credential import teaching entry", async () => {
     const user = userEvent.setup()
     mockedUseUserPreferencesContext.mockReturnValue(

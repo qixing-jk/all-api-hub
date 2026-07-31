@@ -188,6 +188,7 @@
   },
   "states": {
     "allClear": "Hiện không có mục nào cần xử lý.",
+    "loadDetailUnavailable": "Một số thông tin tổng quan tạm thời không khả dụng. Hãy thử tải lại.",
     "loadedWithError": "Một số thông tin tải thất bại. Đang hiển thị dữ liệu có sẵn.",
     "loading": "Đang tải tổng quan..."
   },

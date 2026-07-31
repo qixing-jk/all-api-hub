@@ -188,6 +188,7 @@
   },
   "states": {
     "allClear": "No hay nada que requiera atención en este momento.",
+    "loadDetailUnavailable": "Parte de la información del resumen no está disponible temporalmente. Intenta cargarla de nuevo.",
     "loadedWithError": "No se pudo cargar parte de la información. Se muestran los datos disponibles.",
     "loading": "Cargando resumen..."
   },

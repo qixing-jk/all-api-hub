@@ -14,7 +14,7 @@ import {
 } from "~/services/managedSites/tokenChannelStatus"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   mockCCSwitchDialog,
@@ -671,7 +671,10 @@ describe("ServiceCredentialCard", () => {
     const onImportCompleted = mockOpenWithCredentials.mock.calls.at(-1)?.[1] as
       | ((result: { success: boolean }) => void)
       | undefined
-    onImportCompleted?.({ success: true })
+    expect(onImportCompleted).toEqual(expect.any(Function))
+    act(() => {
+      onImportCompleted?.({ success: true })
+    })
 
     await waitFor(() => {
       expect(

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 import { isManagedSiteType } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
@@ -17,7 +18,6 @@ import {
   USAGE_HISTORY_STORE_SCHEMA_VERSION,
   type UsageHistoryStore,
 } from "~/types/usageHistory"
-import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { buildOptionsOverviewViewModel } from "./overviewSelectors"
@@ -67,6 +67,7 @@ interface OptionsOverviewDataState {
  * Loads local-only data needed for the Options overview workbench.
  */
 export function useOptionsOverviewData(): OptionsOverviewDataState {
+  const { t } = useTranslation(["optionsOverview"])
   const [viewModel, setViewModel] = useState<OptionsOverviewViewModel | null>(
     null,
   )
@@ -113,15 +114,14 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
             ? [
                 {
                   source: OPTIONS_OVERVIEW_DATA_SOURCES[index],
-                  // Logger sanitization treats nested causes as untrusted text.
-                  cause: result.reason,
+                  status: "rejected" as const,
                 },
               ]
             : [],
         )
         const firstFailure = failures[0]
-        const firstError = firstFailure
-          ? getErrorMessage(firstFailure.cause)
+        const loadErrorMessage = firstFailure
+          ? t("optionsOverview:states.loadDetailUnavailable")
           : null
         if (firstFailure) {
           logger.error("Some options overview data failed to load", {
@@ -130,7 +130,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
         }
 
         if (!results.some((result) => result.status === "fulfilled")) {
-          setError(firstError)
+          setError(loadErrorMessage)
           return
         }
 
@@ -185,12 +185,13 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
               apiCredentialProfilesResult.status === "fulfilled",
           }),
         )
-        setError(firstError)
-      } catch (loadError) {
+        setError(loadErrorMessage)
+      } catch {
         if (!isCurrent) return
-        const message = getErrorMessage(loadError)
-        logger.error("Failed to load options overview data", loadError)
-        setError(message)
+        logger.error("Failed to load options overview data", {
+          status: "rejected",
+        })
+        setError(t("optionsOverview:states.loadDetailUnavailable"))
       } finally {
         if (isCurrent) {
           setIsLoading(false)
@@ -203,7 +204,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
     return () => {
       isCurrent = false
     }
-  }, [reloadVersion])
+  }, [reloadVersion, t])
 
   return {
     isLoading,

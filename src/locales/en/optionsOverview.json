@@ -188,6 +188,7 @@
   },
   "states": {
     "allClear": "There is nothing that needs attention right now.",
+    "loadDetailUnavailable": "Some overview information is temporarily unavailable. Try loading it again.",
     "loadedWithError": "Some information failed to load. Showing available data.",
     "loading": "Loading overview..."
   },

@@ -592,6 +592,31 @@ describe("useApiCredentialProfilesController", () => {
     expect(markGatewayGuidanceOnboardingCompletedMock).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps a successful managed-site import usable when recording guidance completion fails", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    openWithCredentialsMock.mockResolvedValueOnce({ opened: true })
+    markGatewayGuidanceOnboardingCompletedMock.mockRejectedValueOnce(
+      new Error("preferences unavailable"),
+    )
+
+    const { result } = renderController()
+
+    await act(async () => {
+      result.current.handleExport(buildProfile(), "managedSite")
+    })
+
+    const onSuccess = openWithCredentialsMock.mock.calls[0]?.[1]
+    expect(onSuccess).toEqual(expect.any(Function))
+
+    await act(async () => {
+      onSuccess?.({ success: true })
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(markGatewayGuidanceOnboardingCompletedMock).toHaveBeenCalledTimes(1)
+  })
+
   it("allows concurrent refreshes for different profiles and localizes errors", async () => {
     tagStorageListTagsMock.mockResolvedValue([])
     let resolveFirstRefresh: (() => void) | undefined

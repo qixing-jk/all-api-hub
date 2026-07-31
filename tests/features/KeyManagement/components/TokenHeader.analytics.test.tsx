@@ -691,13 +691,51 @@ describe("TokenHeader analytics", () => {
     })
   })
 
-  it("highlights managed-site import without opening the import dialog", () => {
-    renderTokenHeader({ guidedManagedSiteImportRequest: "request-1" })
+  it("keeps managed-site import success when recording guidance completion fails", async () => {
+    openWithAccountMock.mockResolvedValueOnce({ opened: true })
+    markGatewayGuidanceOnboardingCompletedMock.mockRejectedValueOnce(
+      new Error("preferences unavailable"),
+    )
 
-    expect(
-      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton),
-    ).toHaveAttribute("data-guidance-highlight", "true")
-    expect(openWithAccountMock).not.toHaveBeenCalled()
+    const user = userEvent.setup()
+    renderTokenHeader()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    )
+
+    const onImportCompleted = openWithAccountMock.mock.calls[0]?.[2]
+    expect(onImportCompleted).toEqual(expect.any(Function))
+    act(() => {
+      onImportCompleted?.({ success: true })
+    })
+
+    await waitFor(() => {
+      expect(markGatewayGuidanceOnboardingCompletedMock).toHaveBeenCalledTimes(
+        1,
+      )
+    })
+    expect(showResultToastMock).toHaveBeenCalledWith({ success: true })
+  })
+
+  it("highlights managed-site import without opening the import dialog", () => {
+    vi.useFakeTimers()
+    try {
+      renderTokenHeader({ guidedManagedSiteImportRequest: "request-1" })
+
+      const importButton = screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton,
+      )
+      expect(importButton).toHaveAttribute("data-guidance-highlight", "true")
+      act(() => {
+        vi.advanceTimersByTime(5000)
+      })
+      expect(importButton).not.toHaveAttribute("data-guidance-highlight")
+      expect(openWithAccountMock).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("tracks managed-site single token import as skipped when preparation does not open", async () => {

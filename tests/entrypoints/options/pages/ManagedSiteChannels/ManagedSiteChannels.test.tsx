@@ -546,6 +546,96 @@ describe("ManagedSiteChannels", () => {
     return service
   }
 
+  const setupStaleChannelResponseAfterSiteSwitch = async () => {
+    const nativeAbortController = globalThis.AbortController
+    class NonSignalingAbortController {
+      readonly signal = { aborted: false } as AbortSignal
+      abort = vi.fn()
+    }
+    vi.stubGlobal("AbortController", NonSignalingAbortController)
+
+    let currentManagedSiteType: ManagedSiteType = SITE_TYPES.NEW_API
+    let currentPreferences = buildPreferences({
+      managedSiteType: currentManagedSiteType,
+      withMigrationTarget: true,
+    })
+    const staleResponse =
+      createDeferred<ReturnType<typeof buildChannelListData>>()
+    const listChannels = vi
+      .fn()
+      .mockResolvedValueOnce(
+        buildChannelListData([
+          { id: 1, name: "Alpha", base_url: "https://site-a.example" },
+        ]),
+      )
+      .mockReturnValueOnce(staleResponse.promise)
+      .mockResolvedValueOnce(
+        buildChannelListData([
+          { id: 2, name: "Beta", base_url: "https://site-b.example" },
+        ]),
+      )
+
+    vi.mocked(useUserPreferencesContext).mockImplementation(
+      () =>
+        ({
+          preferences: currentPreferences,
+          managedSiteType: currentManagedSiteType,
+          newApiBaseUrl: currentPreferences.newApi.baseUrl,
+          newApiUserId: currentPreferences.newApi.userId,
+          newApiUsername: currentPreferences.newApi.username,
+          newApiPassword: currentPreferences.newApi.password,
+          newApiTotpSecret: currentPreferences.newApi.totpSecret,
+          markGatewayGuidanceOnboardingCompleted:
+            markGatewayGuidanceOnboardingCompletedMock,
+        }) as any,
+    )
+    vi.mocked(getManagedSiteService).mockImplementation(
+      async () =>
+        ({
+          siteType: currentManagedSiteType,
+          messagesKey:
+            currentManagedSiteType === SITE_TYPES.DONE_HUB
+              ? "donehub"
+              : "newapi",
+          getConfig: vi.fn().mockResolvedValue({
+            baseUrl:
+              currentManagedSiteType === SITE_TYPES.DONE_HUB
+                ? "https://donehub.example"
+                : "https://admin.example",
+            token: "token",
+            userId: "1",
+          }),
+          listChannels,
+        }) as any,
+    )
+
+    const { rerender } = render(<ManagedSiteChannels />)
+    await waitForRowText("Alpha")
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.refresh",
+      }),
+    )
+    await waitFor(() => expect(listChannels).toHaveBeenCalledTimes(2))
+
+    currentManagedSiteType = SITE_TYPES.DONE_HUB
+    currentPreferences = buildPreferences({
+      managedSiteType: currentManagedSiteType,
+      withMigrationTarget: true,
+    })
+    rerender(<ManagedSiteChannels />)
+
+    await waitForRowText("Beta")
+    expect(listChannels).toHaveBeenCalledTimes(3)
+
+    return {
+      listChannels,
+      staleResponse,
+      restoreAbortController: () =>
+        vi.stubGlobal("AbortController", nativeAbortController),
+    }
+  }
+
   const buildCompleteChannelRow = (
     overrides: Record<string, unknown> = {},
   ): ChannelRow =>
@@ -1267,98 +1357,9 @@ describe("ManagedSiteChannels", () => {
   })
 
   it("ignores a rejected request from the previous managed site after switching types", async () => {
-    const user = userEvent.setup()
-    const nativeAbortController = globalThis.AbortController
-    class NonSignalingAbortController {
-      readonly signal = { aborted: false } as AbortSignal
-      abort = vi.fn()
-    }
-    vi.stubGlobal("AbortController", NonSignalingAbortController)
-
-    let currentManagedSiteType: ManagedSiteType = SITE_TYPES.NEW_API
-    let currentPreferences = buildPreferences({
-      managedSiteType: currentManagedSiteType,
-      withMigrationTarget: true,
-    })
-    let rejectNewApiChannels: ((reason?: unknown) => void) | undefined
-    const listChannels = vi
-      .fn()
-      .mockResolvedValueOnce(
-        buildChannelListData([
-          { id: 1, name: "Alpha", base_url: "https://site-a.example" },
-        ]),
-      )
-      .mockImplementationOnce(
-        () =>
-          new Promise((_resolve, reject) => {
-            rejectNewApiChannels = reject
-          }),
-      )
-      .mockResolvedValueOnce(
-        buildChannelListData([
-          { id: 2, name: "Beta", base_url: "https://site-b.example" },
-        ]),
-      )
-
-    vi.mocked(useUserPreferencesContext).mockImplementation(
-      () =>
-        ({
-          preferences: currentPreferences,
-          managedSiteType: currentManagedSiteType,
-          newApiBaseUrl: currentPreferences.newApi.baseUrl,
-          newApiUserId: currentPreferences.newApi.userId,
-          newApiUsername: currentPreferences.newApi.username,
-          newApiPassword: currentPreferences.newApi.password,
-          newApiTotpSecret: currentPreferences.newApi.totpSecret,
-          markGatewayGuidanceOnboardingCompleted:
-            markGatewayGuidanceOnboardingCompletedMock,
-        }) as any,
-    )
-    vi.mocked(getManagedSiteService).mockImplementation(
-      async () =>
-        ({
-          siteType: currentManagedSiteType,
-          messagesKey:
-            currentManagedSiteType === SITE_TYPES.DONE_HUB
-              ? "donehub"
-              : "newapi",
-          getConfig: vi.fn().mockResolvedValue({
-            baseUrl:
-              currentManagedSiteType === SITE_TYPES.DONE_HUB
-                ? "https://donehub.example"
-                : "https://admin.example",
-            token: "token",
-            userId: "1",
-          }),
-          listChannels,
-        }) as any,
-    )
-
+    const harness = await setupStaleChannelResponseAfterSiteSwitch()
     try {
-      const { rerender } = render(<ManagedSiteChannels />)
-
-      await waitForRowText("Alpha")
-      await user.click(
-        screen.getByRole("button", {
-          name: "managedSiteChannels:toolbar.refresh",
-        }),
-      )
-
-      await waitFor(() => {
-        expect(listChannels).toHaveBeenCalledTimes(2)
-      })
-
-      currentManagedSiteType = SITE_TYPES.DONE_HUB
-      currentPreferences = buildPreferences({
-        managedSiteType: currentManagedSiteType,
-        withMigrationTarget: true,
-      })
-      rerender(<ManagedSiteChannels />)
-
-      await waitForRowText("Beta")
-      expect(listChannels).toHaveBeenCalledTimes(3)
-
-      rejectNewApiChannels?.(new Error("Old site request failed"))
+      harness.staleResponse.reject(new Error("Old site request failed"))
 
       await waitFor(() => {
         expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
@@ -1378,102 +1379,14 @@ describe("ManagedSiteChannels", () => {
       expect(screen.getByText("Beta")).toBeInTheDocument()
       expect(toast.error).not.toHaveBeenCalled()
     } finally {
-      vi.stubGlobal("AbortController", nativeAbortController)
+      harness.restoreAbortController()
     }
   })
 
   it("ignores a fulfilled request from the previous managed site after switching types", async () => {
-    const user = userEvent.setup()
-    const nativeAbortController = globalThis.AbortController
-    class NonSignalingAbortController {
-      readonly signal = { aborted: false } as AbortSignal
-      abort = vi.fn()
-    }
-    vi.stubGlobal("AbortController", NonSignalingAbortController)
-
-    let currentManagedSiteType: ManagedSiteType = SITE_TYPES.NEW_API
-    let currentPreferences = buildPreferences({
-      managedSiteType: currentManagedSiteType,
-      withMigrationTarget: true,
-    })
-    let resolveNewApiChannels:
-      | ((value: ReturnType<typeof buildChannelListData>) => void)
-      | undefined
-    const listChannels = vi
-      .fn()
-      .mockResolvedValueOnce(
-        buildChannelListData([
-          { id: 1, name: "Alpha", base_url: "https://site-a.example" },
-        ]),
-      )
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            resolveNewApiChannels = resolve
-          }),
-      )
-      .mockResolvedValueOnce(
-        buildChannelListData([
-          { id: 2, name: "Beta", base_url: "https://site-b.example" },
-        ]),
-      )
-
-    vi.mocked(useUserPreferencesContext).mockImplementation(
-      () =>
-        ({
-          preferences: currentPreferences,
-          managedSiteType: currentManagedSiteType,
-          newApiBaseUrl: currentPreferences.newApi.baseUrl,
-          newApiUserId: currentPreferences.newApi.userId,
-          newApiUsername: currentPreferences.newApi.username,
-          newApiPassword: currentPreferences.newApi.password,
-          newApiTotpSecret: currentPreferences.newApi.totpSecret,
-          markGatewayGuidanceOnboardingCompleted:
-            markGatewayGuidanceOnboardingCompletedMock,
-        }) as any,
-    )
-    vi.mocked(getManagedSiteService).mockImplementation(
-      async () =>
-        ({
-          siteType: currentManagedSiteType,
-          messagesKey:
-            currentManagedSiteType === SITE_TYPES.DONE_HUB
-              ? "donehub"
-              : "newapi",
-          getConfig: vi.fn().mockResolvedValue({
-            baseUrl:
-              currentManagedSiteType === SITE_TYPES.DONE_HUB
-                ? "https://donehub.example"
-                : "https://admin.example",
-            token: "token",
-            userId: "1",
-          }),
-          listChannels,
-        }) as any,
-    )
-
+    const harness = await setupStaleChannelResponseAfterSiteSwitch()
     try {
-      const { rerender } = render(<ManagedSiteChannels />)
-
-      await waitForRowText("Alpha")
-      await user.click(
-        screen.getByRole("button", {
-          name: "managedSiteChannels:toolbar.refresh",
-        }),
-      )
-      await waitFor(() => expect(listChannels).toHaveBeenCalledTimes(2))
-
-      currentManagedSiteType = SITE_TYPES.DONE_HUB
-      currentPreferences = buildPreferences({
-        managedSiteType: currentManagedSiteType,
-        withMigrationTarget: true,
-      })
-      rerender(<ManagedSiteChannels />)
-
-      await waitForRowText("Beta")
-      expect(listChannels).toHaveBeenCalledTimes(3)
-
-      resolveNewApiChannels?.(
+      harness.staleResponse.resolve(
         buildChannelListData([
           {
             id: 3,
@@ -1502,7 +1415,7 @@ describe("ManagedSiteChannels", () => {
       ).not.toBeInTheDocument()
       expect(toast.error).not.toHaveBeenCalled()
     } finally {
-      vi.stubGlobal("AbortController", nativeAbortController)
+      harness.restoreAbortController()
     }
   })
 

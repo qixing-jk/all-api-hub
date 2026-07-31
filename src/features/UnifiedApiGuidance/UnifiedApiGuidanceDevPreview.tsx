@@ -34,6 +34,10 @@ import {
   type UnifiedApiGuidanceAction,
   type UnifiedApiGuidanceModel,
 } from "./model"
+import {
+  buildUnifiedApiGuidancePreviewScenarioTestId,
+  UNIFIED_API_GUIDANCE_TEST_IDS,
+} from "./testIds"
 import { UnifiedApiGuidanceCard } from "./UnifiedApiGuidanceCard"
 
 interface GuidancePreviewScenario {
@@ -343,7 +347,10 @@ function CurrentStatePreview({
   }
 
   return (
-    <Card className="mb-6 border-blue-200 bg-blue-50/60 dark:border-blue-900/50 dark:bg-blue-950/10">
+    <Card
+      className="mb-6 border-blue-200 bg-blue-50/60 dark:border-blue-900/50 dark:bg-blue-950/10"
+      data-testid={UNIFIED_API_GUIDANCE_TEST_IDS.currentPreviewState}
+    >
       <CardHeader>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
@@ -425,7 +432,10 @@ function ScenarioPreview({
   ) => void
 }) {
   return (
-    <div id={buildScenarioElementId(scenario.id)}>
+    <div
+      id={buildScenarioElementId(scenario.id)}
+      data-testid={buildUnifiedApiGuidancePreviewScenarioTestId(scenario.id)}
+    >
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">

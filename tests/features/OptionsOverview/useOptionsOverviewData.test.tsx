@@ -158,7 +158,9 @@ describe("useOptionsOverviewData", () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    expect(result.current.error).toBe("storage unavailable")
+    expect(result.current.error).toBe(
+      "optionsOverview:states.loadDetailUnavailable",
+    )
     expect(result.current.viewModel).not.toBeNull()
     expect(result.current.viewModel?.usageSnapshot).toMatchObject({
       todayRequests: 1,
@@ -178,10 +180,11 @@ describe("useOptionsOverviewData", () => {
     ).toBe(false)
   })
 
-  it("logs every rejected data source while showing only the first error", async () => {
+  it("reports rejected sources without logging or displaying their raw reasons", async () => {
     mockSuccessfulLoad()
-    const accountsFailure = new Error("accounts storage unavailable")
-    const preferencesFailure = new Error("preferences storage unavailable")
+    const sensitiveReason = "secret-token-should-not-leak"
+    const accountsFailure = new Error(sensitiveReason)
+    const preferencesFailure = new Error(`preferences ${sensitiveReason}`)
     vi.mocked(accountStorage.getAllAccounts).mockRejectedValueOnce(
       accountsFailure,
     )
@@ -197,16 +200,21 @@ describe("useOptionsOverviewData", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(result.current.error).toBe("accounts storage unavailable")
+    expect(result.current.error).toBe(
+      "optionsOverview:states.loadDetailUnavailable",
+    )
     expect(result.current.viewModel).not.toBeNull()
     expect(loggerErrorMock).toHaveBeenCalledWith(
       "Some options overview data failed to load",
       {
         failures: [
-          { source: "accounts", cause: accountsFailure },
-          { source: "preferences", cause: preferencesFailure },
+          { source: "accounts", status: "rejected" },
+          { source: "preferences", status: "rejected" },
         ],
       },
+    )
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain(
+      sensitiveReason,
     )
   })
 
@@ -234,7 +242,9 @@ describe("useOptionsOverviewData", () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false))
 
-    expect(result.current.error).toBe("local storage unavailable")
+    expect(result.current.error).toBe(
+      "optionsOverview:states.loadDetailUnavailable",
+    )
     expect(result.current.viewModel).toBeNull()
   })
 })

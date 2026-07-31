@@ -1,9 +1,13 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
+import type { ComponentPropsWithoutRef, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { OptionsOverviewViewModel } from "~/features/OptionsOverview/types"
+import {
+  buildUnifiedApiGuidancePreviewScenarioTestId,
+  UNIFIED_API_GUIDANCE_TEST_IDS,
+} from "~/features/UnifiedApiGuidance/testIds"
 import UnifiedApiGuidanceDevPreview from "~/features/UnifiedApiGuidance/UnifiedApiGuidanceDevPreview"
 
 interface PreviewDataState {
@@ -49,6 +53,16 @@ const { optionsOverviewDataState } = vi.hoisted(() => ({
   } as PreviewDataState,
 }))
 
+const getCurrentStateQueries = () =>
+  within(screen.getByTestId(UNIFIED_API_GUIDANCE_TEST_IDS.currentPreviewState))
+
+const getScenarioQueries = (scenarioId: string) =>
+  within(
+    screen.getByTestId(
+      buildUnifiedApiGuidancePreviewScenarioTestId(scenarioId),
+    ),
+  )
+
 const readyViewModel = optionsOverviewDataState.viewModel
 
 vi.mock("~/features/OptionsOverview/useOptionsOverviewData", () => ({
@@ -85,13 +99,13 @@ vi.mock("~/components/ui", () => ({
   Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
   Button: ({
     children,
-    onClick,
-  }: {
-    children: ReactNode
-    onClick?: () => void
-  }) => <button onClick={onClick}>{children}</button>,
-  Card: ({ children }: { children: ReactNode }) => (
-    <section>{children}</section>
+    rightIcon: _rightIcon,
+    ...props
+  }: ComponentPropsWithoutRef<"button"> & { rightIcon?: ReactNode }) => (
+    <button {...props}>{children}</button>
+  ),
+  Card: ({ children, ...props }: ComponentPropsWithoutRef<"section">) => (
+    <section {...props}>{children}</section>
   ),
   CardContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CardDescription: ({ children }: { children: ReactNode }) => <p>{children}</p>,
@@ -109,11 +123,7 @@ describe("UnifiedApiGuidanceDevPreview", () => {
   it("labels the current user guidance state before fixture scenarios", () => {
     render(<UnifiedApiGuidanceDevPreview />)
 
-    const currentState = screen
-      .getByRole("heading", { name: "Current user state" })
-      .closest("section")
-    expect(currentState).not.toBeNull()
-    const currentQueries = within(currentState!)
+    const currentQueries = getCurrentStateQueries()
 
     expect(currentQueries.getByText("ready_to_import")).toBeInTheDocument()
     expect(currentQueries.getByText("profile")).toBeInTheDocument()
@@ -156,13 +166,7 @@ describe("UnifiedApiGuidanceDevPreview", () => {
     expect(
       screen.getByRole("heading", { name: "Unified API guidance preview" }),
     ).toBeInTheDocument()
-    const scenario = screen
-      .getByRole("heading", {
-        name: "Account exists without key-management capability",
-      })
-      .closest("section")
-    expect(scenario).not.toBeNull()
-    const scenarioQueries = within(scenario!)
+    const scenarioQueries = getScenarioQueries("needs-importable-source")
 
     expect(
       scenarioQueries.getByText("needs_importable_source"),
@@ -210,13 +214,7 @@ describe("UnifiedApiGuidanceDevPreview", () => {
   it("shows the API credential guidance setup transition", async () => {
     render(<UnifiedApiGuidanceDevPreview />)
 
-    const scenario = screen
-      .getByRole("heading", {
-        name: "API credential exists before gateway setup",
-      })
-      .closest("section")
-    expect(scenario).not.toBeNull()
-    const scenarioQueries = within(scenario!)
+    const scenarioQueries = getScenarioQueries("profile-needs-managed-site")
 
     expect(
       scenarioQueries.getByText(
@@ -244,13 +242,9 @@ describe("UnifiedApiGuidanceDevPreview", () => {
   it("records the ready API credential next-step action", async () => {
     render(<UnifiedApiGuidanceDevPreview />)
 
-    const scenario = screen
-      .getByRole("heading", {
-        name: "Gateway configured with API credentials",
-      })
-      .closest("section")
+    const scenarioQueries = getScenarioQueries("ready-profile")
     await userEvent.click(
-      within(scenario!).getByRole("button", {
+      scenarioQueries.getByRole("button", {
         name: "apiCredentialProfiles:unifiedApiGuidance.actions.addFirstChannel",
       }),
     )
@@ -260,18 +254,28 @@ describe("UnifiedApiGuidanceDevPreview", () => {
         "ready-profile:apiCredentialProfiles:manage_channels -> managedSiteChannels",
       ),
     ).toBeInTheDocument()
+
+    await userEvent.click(
+      scenarioQueries.getByRole("button", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.dismissForSession",
+      }),
+    )
+    await userEvent.click(
+      scenarioQueries.getByRole("button", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.permanentlyDismiss",
+      }),
+    )
+    expect(
+      scenarioQueries.getByRole("heading", {
+        name: "Gateway configured with API credentials",
+      }),
+    ).toBeInTheDocument()
   })
 
   it("shows the completed gateway-channel transition without claiming client setup is complete", () => {
     render(<UnifiedApiGuidanceDevPreview />)
 
-    const scenario = screen
-      .getByRole("heading", {
-        name: "Gateway channel onboarding completed",
-      })
-      .closest("section")
-    expect(scenario).not.toBeNull()
-    const scenarioQueries = within(scenario!)
+    const scenarioQueries = getScenarioQueries("has-gateway-channels")
 
     expect(
       scenarioQueries.getAllByText("has_gateway_channels").length,
@@ -294,11 +298,7 @@ describe("UnifiedApiGuidanceDevPreview", () => {
     render(<UnifiedApiGuidanceDevPreview />)
 
     expect(
-      within(
-        screen
-          .getByRole("heading", { name: "Current user state" })
-          .closest("section")!,
-      ).getByText(
+      getCurrentStateQueries().getByText(
         "Current guidance is unavailable. Reload the page to try again.",
       ),
     ).toBeInTheDocument()
@@ -310,11 +310,7 @@ describe("UnifiedApiGuidanceDevPreview", () => {
 
     render(<UnifiedApiGuidanceDevPreview />)
 
-    const currentState = within(
-      screen
-        .getByRole("heading", { name: "Current user state" })
-        .closest("section")!,
-    )
+    const currentState = getCurrentStateQueries()
     expect(
       currentState.getByText("Loading current guidance state..."),
     ).toBeInTheDocument()
@@ -331,11 +327,7 @@ describe("UnifiedApiGuidanceDevPreview", () => {
 
     render(<UnifiedApiGuidanceDevPreview />)
 
-    const currentState = within(
-      screen
-        .getByRole("heading", { name: "Current user state" })
-        .closest("section")!,
-    )
+    const currentState = getCurrentStateQueries()
     expect(
       currentState.getByText(
         "Failed to load current guidance state: Profile storage unavailable",
@@ -365,11 +357,9 @@ describe("UnifiedApiGuidanceDevPreview", () => {
     render(<UnifiedApiGuidanceDevPreview />)
 
     expect(
-      within(
-        screen
-          .getByRole("heading", { name: "Current user state" })
-          .closest("section")!,
-      ).getByText("Closest fixture: Gateway channel onboarding completed"),
+      getCurrentStateQueries().getByText(
+        "Closest fixture: Gateway channel onboarding completed",
+      ),
     ).toBeInTheDocument()
   })
 
@@ -397,23 +387,15 @@ describe("UnifiedApiGuidanceDevPreview", () => {
 
     render(<UnifiedApiGuidanceDevPreview />)
 
-    expect(
-      within(
-        screen
-          .getByRole("heading", { name: "Current user state" })
-          .closest("section")!,
-      ).getByText(reason),
-    ).toBeInTheDocument()
+    expect(getCurrentStateQueries().getByText(reason)).toBeInTheDocument()
   })
 
   it("records fixture actions with their scenario, surface, and target", async () => {
     render(<UnifiedApiGuidanceDevPreview />)
 
-    const scenario = screen
-      .getByRole("heading", { name: "No source inventory" })
-      .closest("section")
+    const scenarioQueries = getScenarioQueries("needs-sources")
     await userEvent.click(
-      within(scenario!).getByRole("button", {
+      scenarioQueries.getByRole("button", {
         name: "optionsOverview:unifiedApiGuidance.actions.addAccount",
       }),
     )

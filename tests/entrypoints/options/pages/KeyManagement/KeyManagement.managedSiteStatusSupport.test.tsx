@@ -2,7 +2,11 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
-import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
+import {
+  KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+  KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
+  KEY_MANAGEMENT_ROUTE_PARAMS,
+} from "~/features/KeyManagement/constants"
 import { MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS } from "~/services/managedSites/channelMatch"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
@@ -176,6 +180,31 @@ describe("KeyManagement managed-site status support", () => {
       newApiUsername: "admin",
       newApiPassword: "secret-password",
       newApiTotpSecret: "JBSWY3DPEHPK3PXP",
+    })
+  })
+
+  it("passes a deterministic guided-import request when no account or token is preselected", async () => {
+    useKeyManagementMock.mockReturnValue({
+      ...baseHookResult,
+      isManagedSiteChannelStatusSupported: true,
+    })
+
+    render(
+      <KeyManagement
+        routeParams={{
+          [KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport]:
+            KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS.ManagedSite,
+        }}
+      />,
+    )
+
+    await waitFor(() => expect(tokenListPropsSpy).toHaveBeenCalled())
+    expect(
+      tokenListPropsSpy.mock.lastCall?.[0]?.guidedManagedSiteImport,
+    ).toEqual({
+      accountId: undefined,
+      tokenId: undefined,
+      request: `${KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS.ManagedSite}::`,
     })
   })
 
