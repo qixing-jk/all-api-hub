@@ -23,6 +23,7 @@ import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
+import { assertNever } from "~/utils/core/assert"
 
 import {
   UNIFIED_API_GUIDANCE_SURFACES,
@@ -253,6 +254,11 @@ const getCurrentStateReason = (model: UnifiedApiGuidanceModel) => {
       return "Current data can be imported into the configured self-hosted gateway."
     case "has_gateway_channels":
       return "A gateway channel was created or imported before; confirm current channel health and client access in the gateway."
+    default:
+      return assertNever(
+        model.status,
+        `Unexpected guidance status: ${model.status}`,
+      )
   }
 }
 
@@ -364,6 +370,11 @@ function CurrentStatePreview({
         {error ? (
           <div className="text-sm text-red-600 dark:text-red-300">
             Failed to load current guidance state: {error}
+          </div>
+        ) : null}
+        {!isLoading && !error && !model ? (
+          <div className="text-sm text-slate-600 dark:text-slate-300">
+            Current guidance is unavailable. Reload the page to try again.
           </div>
         ) : null}
         {model && diagnostics ? (

@@ -616,7 +616,7 @@ export function useApiCredentialProfilesController() {
             showResultToast(result)
             if (result?.success) {
               void Promise.resolve(
-                markGatewayGuidanceOnboardingCompleted?.(),
+                markGatewayGuidanceOnboardingCompleted(),
               ).catch((error) => {
                 logger.warn(
                   "Failed to mark gateway guidance onboarding complete.",

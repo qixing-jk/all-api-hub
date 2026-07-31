@@ -4,6 +4,10 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
+  ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
+} from "~/features/AccountManagement/routeParams"
+import {
   buildUnifiedApiGuidanceModel,
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
   UNIFIED_API_GUIDANCE_SOURCE_KINDS,
@@ -53,6 +57,10 @@ describe("buildUnifiedApiGuidanceModel", () => {
     )
     expect(model.primaryAction.target).toEqual({
       menuItemId: MENU_ITEM_IDS.ACCOUNT,
+      params: {
+        [ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action]:
+          ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add,
+      },
     })
     expect(model.secondaryActions.map((action) => action.kind)).toContain(
       UNIFIED_API_GUIDANCE_ACTION_KINDS.AddApiCredential,

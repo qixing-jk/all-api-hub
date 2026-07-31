@@ -34,8 +34,12 @@ const MANAGED_SITE_CONSOLE_ROUTES: Record<
   },
 }
 
-const joinConsolePath = (baseUrl: string, path: string) =>
-  `${(normalizeHttpUrl(baseUrl) ?? baseUrl.trim()).replace(/\/+$/, "")}${path}`
+const joinConsolePath = (baseUrl: string, path: string): string | null => {
+  const normalizedBaseUrl = normalizeHttpUrl(baseUrl)
+  if (!normalizedBaseUrl) return null
+
+  return `${normalizedBaseUrl.replace(/\/+$/, "")}${path}`
+}
 
 export const buildManagedSiteChannelConsoleUrl = (
   baseUrl: string,

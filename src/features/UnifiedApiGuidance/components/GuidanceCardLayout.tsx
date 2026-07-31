@@ -159,11 +159,13 @@ export function GuidanceCardActionButton({
   onClick,
   primary = false,
   busy = false,
+  testId,
 }: {
   children: ReactNode
   onClick: () => void
   primary?: boolean
   busy?: boolean
+  testId?: string
 }) {
   return (
     <Button
@@ -177,6 +179,7 @@ export function GuidanceCardActionButton({
       )}
       aria-busy={busy || undefined}
       aria-disabled={busy || undefined}
+      data-testid={testId}
       rightIcon={
         busy ? (
           <Spinner size="sm" />

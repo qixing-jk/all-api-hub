@@ -1,6 +1,12 @@
 import { ArrowPathIcon } from "@heroicons/react/24/outline"
 import { BookmarkPlus, CalendarCheck2, Search, UserRound } from "lucide-react"
-import { useCallback, useState, type MouseEvent } from "react"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -16,11 +22,16 @@ import { useAccountActionsContext } from "~/features/AccountManagement/hooks/Acc
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import {
+  ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
+  ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
+} from "~/features/AccountManagement/routeParams"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
 import {
   buildUnifiedApiGuidanceModel,
   GatewayGuidanceDismissDialog,
+  getGatewayGuidanceImportableAccounts,
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
   UNIFIED_API_GUIDANCE_SURFACES,
   UnifiedApiGuidanceCard,
@@ -28,7 +39,6 @@ import {
   withGuidedAccountKeyImportTarget,
   type UnifiedApiGuidanceAction,
 } from "~/features/UnifiedApiGuidance"
-import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
 import { GATEWAY_GUIDANCE_SURFACES } from "~/services/preferences/userPreferences"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -58,6 +68,7 @@ const headerSurface =
 /** Props used to coordinate account-management page actions with provider-owned dialogs. */
 interface AccountManagementContentProps {
   searchQuery?: string
+  routeAction?: string
   isBookmarkImportDialogOpen: boolean
   onOpenBookmarkImport: () => void
   onCloseBookmarkImport: () => void
@@ -68,12 +79,14 @@ interface AccountManagementContentProps {
  */
 function AccountManagementContent({
   searchQuery,
+  routeAction,
   isBookmarkImportDialogOpen,
   onOpenBookmarkImport,
   onCloseBookmarkImport,
 }: AccountManagementContentProps) {
-  const { t } = useTranslation(["account", "common"])
+  const { t } = useTranslation(["account", "common", "messages"])
   const { openAddAccount } = useDialogStateContext()
+  const consumedAddRouteActionRef = useRef(false)
   const {
     displayData,
     handleRefresh,
@@ -93,12 +106,10 @@ function AccountManagementContent({
   const enabledAccountCount = displayData.filter(
     (account) => !account.disabled,
   ).length
-  const keyAccessibleAccountCount = displayData.filter(
-    canResolveAccountRuntimeKeySecret,
-  ).length
-  const gatewayGuidanceImportAccountId = displayData.find(
-    canResolveAccountRuntimeKeySecret,
-  )?.id
+  const keyAccessibleAccounts =
+    getGatewayGuidanceImportableAccounts(displayData)
+  const keyAccessibleAccountCount = keyAccessibleAccounts.length
+  const gatewayGuidanceImportAccountId = keyAccessibleAccounts[0]?.id
   const unifiedApiGuidance = buildUnifiedApiGuidanceModel({
     enabledAccountCount,
     keyAccessibleAccountCount,
@@ -106,6 +117,21 @@ function AccountManagementContent({
     preferences,
     managedSiteType,
   })
+
+  useEffect(() => {
+    const shouldOpenAddAccount =
+      routeAction === ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add
+    if (!shouldOpenAddAccount) {
+      consumedAddRouteActionRef.current = false
+      return
+    }
+    if (consumedAddRouteActionRef.current) {
+      return
+    }
+
+    consumedAddRouteActionRef.current = true
+    openAddAccount()
+  }, [openAddAccount, routeAction])
 
   const externalCheckInAccounts = displayData.filter((account) => {
     const customUrl = account.checkIn?.customCheckIn?.url
@@ -435,6 +461,11 @@ function AccountManagementContent({
         description={t("account:unifiedApiGuidance.dismissDialog.description")}
         cancelLabel={t("common:actions.cancel")}
         confirmLabel={t("account:unifiedApiGuidance.dismissDialog.confirm")}
+        errorMessage={
+          guidanceDismissal.hasPermanentDismissError
+            ? t("messages:toast.error.saveFailed")
+            : undefined
+        }
         isSaving={guidanceDismissal.isPermanentDismissSaving}
         onClose={guidanceDismissal.cancelPermanentDismiss}
         onConfirm={() => void guidanceDismissal.confirmPermanentDismiss()}
@@ -483,6 +514,7 @@ function AccountManagement({
     >
       <AccountManagementContent
         searchQuery={routeParams?.search}
+        routeAction={routeParams?.[ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action]}
         isBookmarkImportDialogOpen={isBookmarkImportDialogOpen}
         onOpenBookmarkImport={openBookmarkImportDialog}
         onCloseBookmarkImport={closeBookmarkImportDialog}

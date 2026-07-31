@@ -2,6 +2,11 @@ import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
+  ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
+} from "~/features/AccountManagement/routeParams"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
@@ -12,6 +17,7 @@ import {
   KEY_MANAGEMENT_TEST_IDS,
 } from "~/features/KeyManagement/testIds"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
+import { UNIFIED_API_GUIDANCE_TEST_IDS } from "~/features/UnifiedApiGuidance/testIds"
 import type { ApiToken } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -181,6 +187,46 @@ test("overview action center opens disabled auto check-in settings", async ({
   ).toBeVisible()
 })
 
+test("overview add-account guidance opens the account dialog", async ({
+  extensionId,
+  page,
+}) => {
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+  await expectPermissionOnboardingHidden(page)
+
+  const guidance = page.getByTestId(
+    OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance,
+  )
+  await expect(guidance).toBeVisible()
+  await guidance
+    .getByTestId(UNIFIED_API_GUIDANCE_TEST_IDS.primaryAction)
+    .click()
+
+  await expect
+    .poll(() => {
+      const url = new URL(page.url())
+      return {
+        hash: url.hash,
+        action: url.searchParams.get(ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action),
+      }
+    })
+    .toEqual({
+      hash: `#${MENU_ITEM_IDS.ACCOUNT}`,
+      action: ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add,
+    })
+
+  const accountDialog = page.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog,
+  )
+  await expect(accountDialog).toBeVisible()
+  await expect(
+    accountDialog.getByRole("heading", { name: "Add Account" }),
+  ).toBeVisible()
+})
+
 test("overview gateway CTA opens key management with guided account import highlighted", async ({
   context,
   extensionId,
@@ -215,7 +261,7 @@ test("overview gateway CTA opens key management with guided account import highl
   )
   await expect(guidance).toBeVisible()
   await guidance
-    .getByRole("button", { name: "Add first gateway channel" })
+    .getByTestId(UNIFIED_API_GUIDANCE_TEST_IDS.primaryAction)
     .click()
 
   await expect

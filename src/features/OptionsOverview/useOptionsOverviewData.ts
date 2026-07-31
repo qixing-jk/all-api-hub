@@ -40,6 +40,17 @@ const EMPTY_USAGE_STORE: UsageHistoryStore = {
   accounts: {},
 }
 
+const OPTIONS_OVERVIEW_DATA_SOURCES = [
+  "accounts",
+  "accountStats",
+  "usageHistory",
+  "apiCredentialProfiles",
+  "preferences",
+  "autoCheckinStatus",
+  "siteAnnouncementRecords",
+  "siteAnnouncementStatuses",
+] as const
+
 /** Returns a fulfilled local-store value or its presentation fallback. */
 function settledValue<T>(result: PromiseSettledResult<T>, fallback: T): T {
   return result.status === "fulfilled" ? result.value : fallback
@@ -97,18 +108,25 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
 
         if (!isCurrent) return
 
-        const firstFailure = results.find(
-          (result): result is PromiseRejectedResult =>
-            result.status === "rejected",
+        const failures = results.flatMap((result, index) =>
+          result.status === "rejected"
+            ? [
+                {
+                  source: OPTIONS_OVERVIEW_DATA_SOURCES[index],
+                  // Logger sanitization treats nested causes as untrusted text.
+                  cause: result.reason,
+                },
+              ]
+            : [],
         )
+        const firstFailure = failures[0]
         const firstError = firstFailure
-          ? getErrorMessage(firstFailure.reason)
+          ? getErrorMessage(firstFailure.cause)
           : null
         if (firstFailure) {
-          logger.error(
-            "Some options overview data failed to load",
-            firstFailure.reason,
-          )
+          logger.error("Some options overview data failed to load", {
+            failures,
+          })
         }
 
         if (!results.some((result) => result.status === "fulfilled")) {

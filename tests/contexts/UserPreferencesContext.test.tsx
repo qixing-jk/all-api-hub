@@ -576,6 +576,46 @@ describe("UserPreferencesContext", () => {
     ).toBeUndefined()
   })
 
+  it("marks gateway onboarding once while preserving surface dismissals", async () => {
+    const context = await renderProvider({
+      ...clonePreferences(),
+      gatewayGuidance: {
+        dismissedAtBySurface: {
+          account: 111,
+        },
+      },
+    })
+
+    await act(async () => {
+      await context.markGatewayGuidanceOnboardingCompleted()
+    })
+
+    const completedAt = (latestContext as any)?.preferences.gatewayGuidance
+      .onboardingCompletedAt
+    expect(completedAt).toEqual(expect.any(Number))
+    expect(
+      (latestContext as any)?.preferences.gatewayGuidance.dismissedAtBySurface,
+    ).toEqual({ account: 111 })
+
+    const writeCount =
+      mockedUserPreferences.savePreferencesWithResult.mock.calls.length
+    await act(async () => {
+      await (
+        latestContext as ReturnType<typeof useUserPreferencesContext>
+      ).markGatewayGuidanceOnboardingCompleted()
+      await (
+        latestContext as ReturnType<typeof useUserPreferencesContext>
+      ).dismissGatewayGuidanceSurface("account")
+    })
+
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledTimes(writeCount)
+    expect(
+      (latestContext as any)?.preferences.gatewayGuidance.onboardingCompletedAt,
+    ).toBe(completedAt)
+  })
+
   it("updates scalar, nested, and runtime-backed preferences through the provider", async () => {
     const context = await renderProvider()
 

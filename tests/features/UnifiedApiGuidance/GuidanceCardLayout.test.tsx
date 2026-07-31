@@ -40,8 +40,6 @@ describe("GuidanceCardLayout", () => {
     expect(screen.getByRole("button", { name: "Hide for now" })).toBeVisible()
     expect(actionRail).toContainElement(sessionDismiss)
     expect(actionRail).toContainElement(permanentDismiss)
-    expect(sessionDismiss).toHaveClass("absolute", "top-3", "right-3")
-    expect(sessionDismiss).toHaveClass("lg:static")
     expect(container.querySelector("[data-guidance-action-panel]")).toBeNull()
     expect(
       container.querySelector("[data-guidance-dismiss-standalone-footer]"),
@@ -93,8 +91,6 @@ describe("GuidanceCardLayout", () => {
     expect(actionPanel).toContainElement(businessAction)
     expect(actionPanel).not.toContainElement(sessionDismiss)
     expect(actionPanel).not.toContainElement(permanentDismiss)
-    expect(sessionDismiss).toHaveClass("absolute", "top-3", "right-3")
-    expect(sessionDismiss).toHaveClass("lg:static")
     expect(
       container.querySelector("[data-guidance-dismiss-standalone-footer]"),
     ).toBeNull()

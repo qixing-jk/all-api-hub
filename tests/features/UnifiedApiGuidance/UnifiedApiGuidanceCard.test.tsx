@@ -6,6 +6,7 @@ import {
   buildUnifiedApiGuidanceModel,
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
   UNIFIED_API_GUIDANCE_SURFACES,
+  UNIFIED_API_GUIDANCE_TEST_IDS,
   UnifiedApiGuidanceCard,
   UnifiedApiGuidanceUnavailableCard,
   type UnifiedApiGuidanceAction,
@@ -75,6 +76,11 @@ describe("UnifiedApiGuidanceCard", () => {
         "optionsOverview:unifiedApiGuidance.stepper.states.upcoming",
       ),
     ).toBeVisible()
+    expect(
+      screen.getByTestId(UNIFIED_API_GUIDANCE_TEST_IDS.primaryAction),
+    ).toHaveAccessibleName(
+      "optionsOverview:unifiedApiGuidance.actions.addGatewayChannel",
+    )
 
     await user.click(
       screen.getByRole("button", {

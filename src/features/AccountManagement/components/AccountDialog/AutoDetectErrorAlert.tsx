@@ -20,7 +20,6 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
-  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES,
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { createTab } from "~/utils/browser/browserApi"
@@ -101,8 +100,6 @@ export default function AutoDetectErrorAlert({
         result: PRODUCT_ANALYTICS_RESULTS.Success,
         target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
         target_page_id: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES,
-        guidance_status:
-          PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES.NeedsSources,
         guidance_action_kind:
           PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS.SaveApiCredentialRecovery,
       },

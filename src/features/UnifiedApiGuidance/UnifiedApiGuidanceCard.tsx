@@ -19,6 +19,7 @@ import {
   type UnifiedApiGuidanceAction,
   type UnifiedApiGuidanceModel,
 } from "./model"
+import { UNIFIED_API_GUIDANCE_TEST_IDS } from "./testIds"
 
 interface UnifiedApiGuidanceCardProps {
   model: UnifiedApiGuidanceModel
@@ -230,6 +231,7 @@ function GuidanceActionButton({
   return (
     <GuidanceCardActionButton
       primary={primary}
+      testId={primary ? UNIFIED_API_GUIDANCE_TEST_IDS.primaryAction : undefined}
       onClick={() => onAction(action)}
     >
       {copy.actionLabel(action.kind)}

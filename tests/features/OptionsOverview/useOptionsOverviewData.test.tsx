@@ -15,6 +15,23 @@ import { SiteHealthStatus } from "~/types"
 import { buildAccountStats } from "~~/tests/test-utils/accountTodayStats"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
+const { loggerErrorMock } = vi.hoisted(() => ({
+  loggerErrorMock: vi.fn(),
+}))
+
+vi.mock("~/utils/core/logger", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/core/logger")>()
+  return {
+    ...actual,
+    createLogger: vi.fn(() => ({
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: loggerErrorMock,
+    })),
+  }
+})
+
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     getAllAccounts: vi.fn(),
@@ -159,6 +176,66 @@ describe("useOptionsOverviewData", () => {
         (item) => item.kind === "addAccount",
       ),
     ).toBe(false)
+  })
+
+  it("logs every rejected data source while showing only the first error", async () => {
+    mockSuccessfulLoad()
+    const accountsFailure = new Error("accounts storage unavailable")
+    const preferencesFailure = new Error("preferences storage unavailable")
+    vi.mocked(accountStorage.getAllAccounts).mockRejectedValueOnce(
+      accountsFailure,
+    )
+    vi.mocked(userPreferences.getPreferences).mockRejectedValueOnce(
+      preferencesFailure,
+    )
+
+    const { result } = renderHook(() => useOptionsOverviewData(), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.error).toBe("accounts storage unavailable")
+    expect(result.current.viewModel).not.toBeNull()
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      "Some options overview data failed to load",
+      {
+        failures: [
+          { source: "accounts", cause: accountsFailure },
+          { source: "preferences", cause: preferencesFailure },
+        ],
+      },
+    )
+  })
+
+  it("keeps the overview unavailable when every local data source fails", async () => {
+    mockSuccessfulLoad()
+    const failure = new Error("local storage unavailable")
+    vi.mocked(accountStorage.getAllAccounts).mockRejectedValueOnce(failure)
+    vi.mocked(accountStorage.getAccountStats).mockRejectedValueOnce(failure)
+    vi.mocked(usageHistoryStorage.getStore).mockRejectedValueOnce(failure)
+    vi.mocked(apiCredentialProfilesStorage.listProfiles).mockRejectedValueOnce(
+      failure,
+    )
+    vi.mocked(userPreferences.getPreferences).mockRejectedValueOnce(failure)
+    vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(failure)
+    vi.mocked(siteAnnouncementStorage.listRecords).mockRejectedValueOnce(
+      failure,
+    )
+    vi.mocked(siteAnnouncementStorage.getStatus).mockRejectedValueOnce(failure)
+
+    const { result } = renderHook(() => useOptionsOverviewData(), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.error).toBe("local storage unavailable")
+    expect(result.current.viewModel).toBeNull()
   })
 })
 

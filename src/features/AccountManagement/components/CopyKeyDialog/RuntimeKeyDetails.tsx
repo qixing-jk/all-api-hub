@@ -221,7 +221,7 @@ export function RuntimeKeyDetails({
           (channelResult) => {
             showResultToast(channelResult)
             if (channelResult?.success) {
-              void markGatewayGuidanceOnboardingCompleted?.()
+              void markGatewayGuidanceOnboardingCompleted()
             }
           },
           {
@@ -234,7 +234,7 @@ export function RuntimeKeyDetails({
           (channelResult) => {
             showResultToast(channelResult)
             if (channelResult?.success) {
-              void markGatewayGuidanceOnboardingCompleted?.()
+              void markGatewayGuidanceOnboardingCompleted()
             }
           },
         )

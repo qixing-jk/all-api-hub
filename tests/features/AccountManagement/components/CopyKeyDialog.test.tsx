@@ -76,6 +76,7 @@ const {
     claudeCodeRouterBaseUrl: "https://router.example.invalid",
     cliProxyBaseUrl: "https://cliproxy.example.invalid",
     cliProxyManagementKey: "cliproxy-management-key",
+    markGatewayGuidanceOnboardingCompleted: vi.fn(),
     managedSiteType: "new-api",
     themeMode: "system",
     updateThemeMode: vi.fn(),

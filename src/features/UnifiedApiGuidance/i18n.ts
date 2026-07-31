@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next"
 
+import { GATEWAY_GUIDANCE_SURFACES } from "~/services/preferences/userPreferences"
 import { assertNever } from "~/utils/core/assert"
 
 import {
@@ -17,7 +18,7 @@ import {
 
 export const UNIFIED_API_GUIDANCE_SURFACES = {
   OptionsOverview: "optionsOverview",
-  Account: "account",
+  Account: GATEWAY_GUIDANCE_SURFACES.Account,
 } as const
 
 type ValueOf<T> = T[keyof T]
@@ -132,6 +133,11 @@ function getAccountDescription(t: TFunction, model: UnifiedApiGuidanceModel) {
         : t("account:unifiedApiGuidance.description.ready_profiles")
     case UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels:
       return t("account:unifiedApiGuidance.description.has_gateway_channels")
+    default:
+      return assertNever(
+        model.status,
+        `Unexpected guidance status: ${model.status}`,
+      )
   }
 }
 
@@ -161,6 +167,11 @@ function getOptionsOverviewDescription(
     case UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels:
       return t(
         "optionsOverview:unifiedApiGuidance.description.has_gateway_channels",
+      )
+    default:
+      return assertNever(
+        model.status,
+        `Unexpected guidance status: ${model.status}`,
       )
   }
 }
@@ -255,6 +266,11 @@ function getAccountSourceSummary(
       return t("account:unifiedApiGuidance.sources.profile")
     case UNIFIED_API_GUIDANCE_SOURCE_KINDS.None:
       return t("account:unifiedApiGuidance.sources.none")
+    default:
+      return assertNever(
+        sourceKind,
+        `Unexpected guidance source kind: ${sourceKind}`,
+      )
   }
 }
 
@@ -276,6 +292,11 @@ function getOptionsOverviewSourceSummary(
       return t("optionsOverview:unifiedApiGuidance.sources.profile")
     case UNIFIED_API_GUIDANCE_SOURCE_KINDS.None:
       return t("optionsOverview:unifiedApiGuidance.sources.none")
+    default:
+      return assertNever(
+        sourceKind,
+        `Unexpected guidance source kind: ${sourceKind}`,
+      )
   }
 }
 

@@ -47,4 +47,16 @@ describe("managed site console routes", () => {
       ),
     ).toBe("https://gateway.example.invalid/channels")
   })
+
+  it.each(["", "   ", "/relative/path", "javascript:alert(1)"])(
+    "does not build console routes from an invalid base URL %j",
+    (baseUrl) => {
+      expect(
+        buildManagedSiteChannelConsoleUrl(baseUrl, SITE_TYPES.NEW_API),
+      ).toBeNull()
+      expect(
+        buildManagedSiteTokenConsoleUrl(baseUrl, SITE_TYPES.NEW_API),
+      ).toBeNull()
+    },
+  )
 })

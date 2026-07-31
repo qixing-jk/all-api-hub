@@ -371,8 +371,8 @@ describe("AccountManagement unified API guidance", () => {
     accountDataContextState.current = {
       ...accountDataContextState.current,
       displayData: [
-        keyAccessibleAccount(),
-        { id: "disabled-account", disabled: true },
+        { ...keyAccessibleAccount("disabled-account"), disabled: true },
+        keyAccessibleAccount("enabled-account"),
       ],
     }
     userPreferencesContextState.current = {
@@ -401,7 +401,7 @@ describe("AccountManagement unified API guidance", () => {
     )
 
     expect(pushWithinOptionsPageMock).toHaveBeenCalledWith("#keys", {
-      accountId: "account-1",
+      accountId: "enabled-account",
       guidedImport: "managedSite",
     })
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
@@ -537,6 +537,51 @@ describe("AccountManagement unified API guidance", () => {
     await waitFor(() => {
       expect(dismissGatewayGuidanceSurfaceMock).toHaveBeenCalledWith("account")
     })
+  })
+
+  it("shows a safe local error when permanent dismissal is not saved", async () => {
+    dismissGatewayGuidanceSurfaceMock.mockResolvedValueOnce({
+      ok: false,
+      error: "sensitive backend detail",
+    })
+    accountDataContextState.current = {
+      ...accountDataContextState.current,
+      displayData: [{ id: "account-1", disabled: false }],
+    }
+    userPreferencesContextState.current = {
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        lastUpdated: 1,
+        gatewayGuidance: {},
+      },
+      managedSiteType: SITE_TYPES.NEW_API,
+      dismissGatewayGuidanceSurface: dismissGatewayGuidanceSurfaceMock,
+    }
+
+    render(<AccountManagement />, {
+      withReleaseUpdateStatusProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "account:unifiedApiGuidance.permanentlyDismiss",
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "account:unifiedApiGuidance.dismissDialog.confirm",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("alert", {
+        name: "messages:toast.error.saveFailed",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("sensitive backend detail"),
+    ).not.toBeInTheDocument()
   })
 })
 

@@ -356,6 +356,10 @@ const openRowActionsMenu = async (
 }
 
 describe("ManagedSiteChannels", () => {
+  const markGatewayGuidanceOnboardingCompletedMock = vi
+    .fn()
+    .mockResolvedValue({ ok: true })
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(fetchChannelFilters).mockResolvedValue([])
@@ -491,6 +495,8 @@ describe("ManagedSiteChannels", () => {
       newApiUsername: preferences.newApi.username,
       newApiPassword: preferences.newApi.password,
       newApiTotpSecret: preferences.newApi.totpSecret,
+      markGatewayGuidanceOnboardingCompleted:
+        markGatewayGuidanceOnboardingCompletedMock,
     } as any)
 
     const service = {
@@ -987,6 +993,34 @@ describe("ManagedSiteChannels", () => {
     )
   })
 
+  it("keeps account Key import available when API credential inventory fails", async () => {
+    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+      {
+        id: "account-1",
+        disabled: false,
+        siteType: "new-api",
+        baseUrl: "https://account.example.invalid",
+        authType: "access_token",
+        userId: "user-1",
+        token: "test-token",
+      },
+    ] as any)
+    vi.mocked(apiCredentialProfilesStorage.listProfiles).mockRejectedValue(
+      new Error("API credential inventory unavailable"),
+    )
+    mockChannels([])
+
+    render(<ManagedSiteChannels />)
+
+    const actions = await screen.findAllByRole("button", {
+      name: /managedSiteChannels:gatewayGuidance\.empty\.importFrom/,
+    })
+
+    expect(actions[0]).toHaveTextContent(
+      "managedSiteChannels:gatewayGuidance.empty.importFromAccountKey",
+    )
+  })
+
   it("keeps account Key import primary when an account source is available", async () => {
     vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
       {
@@ -1118,6 +1152,25 @@ describe("ManagedSiteChannels", () => {
     )
   })
 
+  it("keeps loaded channels visible when recording onboarding completion fails", async () => {
+    markGatewayGuidanceOnboardingCompletedMock.mockRejectedValueOnce(
+      new Error("preferences unavailable"),
+    )
+    mockChannels([
+      { id: 1, name: "Alpha", base_url: "https://alpha.example.invalid" },
+    ])
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+    await waitFor(() => {
+      expect(markGatewayGuidanceOnboardingCompletedMock).toHaveBeenCalledTimes(
+        1,
+      )
+    })
+    expect(screen.getByText("Alpha")).toBeVisible()
+  })
+
   it("reloads the channel list when the managed site type changes", async () => {
     let currentManagedSiteType: ManagedSiteType = SITE_TYPES.NEW_API
     let currentPreferences = buildPreferences({
@@ -1157,6 +1210,8 @@ describe("ManagedSiteChannels", () => {
           newApiUsername: currentPreferences.newApi.username,
           newApiPassword: currentPreferences.newApi.password,
           newApiTotpSecret: currentPreferences.newApi.totpSecret,
+          markGatewayGuidanceOnboardingCompleted:
+            markGatewayGuidanceOnboardingCompletedMock,
           updateManagedSiteType: vi.fn().mockResolvedValue(true),
         }) as any,
     )
@@ -1255,6 +1310,8 @@ describe("ManagedSiteChannels", () => {
           newApiUsername: currentPreferences.newApi.username,
           newApiPassword: currentPreferences.newApi.password,
           newApiTotpSecret: currentPreferences.newApi.totpSecret,
+          markGatewayGuidanceOnboardingCompleted:
+            markGatewayGuidanceOnboardingCompletedMock,
         }) as any,
     )
     vi.mocked(getManagedSiteService).mockImplementation(
@@ -1325,6 +1382,130 @@ describe("ManagedSiteChannels", () => {
     }
   })
 
+  it("ignores a fulfilled request from the previous managed site after switching types", async () => {
+    const user = userEvent.setup()
+    const nativeAbortController = globalThis.AbortController
+    class NonSignalingAbortController {
+      readonly signal = { aborted: false } as AbortSignal
+      abort = vi.fn()
+    }
+    vi.stubGlobal("AbortController", NonSignalingAbortController)
+
+    let currentManagedSiteType: ManagedSiteType = SITE_TYPES.NEW_API
+    let currentPreferences = buildPreferences({
+      managedSiteType: currentManagedSiteType,
+      withMigrationTarget: true,
+    })
+    let resolveNewApiChannels:
+      | ((value: ReturnType<typeof buildChannelListData>) => void)
+      | undefined
+    const listChannels = vi
+      .fn()
+      .mockResolvedValueOnce(
+        buildChannelListData([
+          { id: 1, name: "Alpha", base_url: "https://site-a.example" },
+        ]),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveNewApiChannels = resolve
+          }),
+      )
+      .mockResolvedValueOnce(
+        buildChannelListData([
+          { id: 2, name: "Beta", base_url: "https://site-b.example" },
+        ]),
+      )
+
+    vi.mocked(useUserPreferencesContext).mockImplementation(
+      () =>
+        ({
+          preferences: currentPreferences,
+          managedSiteType: currentManagedSiteType,
+          newApiBaseUrl: currentPreferences.newApi.baseUrl,
+          newApiUserId: currentPreferences.newApi.userId,
+          newApiUsername: currentPreferences.newApi.username,
+          newApiPassword: currentPreferences.newApi.password,
+          newApiTotpSecret: currentPreferences.newApi.totpSecret,
+          markGatewayGuidanceOnboardingCompleted:
+            markGatewayGuidanceOnboardingCompletedMock,
+        }) as any,
+    )
+    vi.mocked(getManagedSiteService).mockImplementation(
+      async () =>
+        ({
+          siteType: currentManagedSiteType,
+          messagesKey:
+            currentManagedSiteType === SITE_TYPES.DONE_HUB
+              ? "donehub"
+              : "newapi",
+          getConfig: vi.fn().mockResolvedValue({
+            baseUrl:
+              currentManagedSiteType === SITE_TYPES.DONE_HUB
+                ? "https://donehub.example"
+                : "https://admin.example",
+            token: "token",
+            userId: "1",
+          }),
+          listChannels,
+        }) as any,
+    )
+
+    try {
+      const { rerender } = render(<ManagedSiteChannels />)
+
+      await waitForRowText("Alpha")
+      await user.click(
+        screen.getByRole("button", {
+          name: "managedSiteChannels:toolbar.refresh",
+        }),
+      )
+      await waitFor(() => expect(listChannels).toHaveBeenCalledTimes(2))
+
+      currentManagedSiteType = SITE_TYPES.DONE_HUB
+      currentPreferences = buildPreferences({
+        managedSiteType: currentManagedSiteType,
+        withMigrationTarget: true,
+      })
+      rerender(<ManagedSiteChannels />)
+
+      await waitForRowText("Beta")
+      expect(listChannels).toHaveBeenCalledTimes(3)
+
+      resolveNewApiChannels?.(
+        buildChannelListData([
+          {
+            id: 3,
+            name: "Old Alpha response",
+            base_url: "https://old-site.example",
+          },
+        ]),
+      )
+
+      await waitFor(() => {
+        expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+          PRODUCT_ANALYTICS_RESULTS.Cancelled,
+          {
+            insights: {
+              failureReason:
+                PRODUCT_ANALYTICS_FAILURE_REASONS.StaleResponseIgnored,
+              managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+            },
+          },
+        )
+      })
+      expect(screen.getByText("Beta")).toBeInTheDocument()
+      expect(screen.queryByText("Old Alpha response")).not.toBeInTheDocument()
+      expect(
+        screen.queryByText("managedSiteChannels:alerts.loadError.title"),
+      ).not.toBeInTheDocument()
+      expect(toast.error).not.toHaveBeenCalled()
+    } finally {
+      vi.stubGlobal("AbortController", nativeAbortController)
+    }
+  })
+
   it("clears stale status filters when the managed site type changes", async () => {
     const user = userEvent.setup()
     let currentManagedSiteType: ManagedSiteType = SITE_TYPES.NEW_API
@@ -1378,6 +1559,8 @@ describe("ManagedSiteChannels", () => {
           newApiUsername: currentPreferences.newApi.username,
           newApiPassword: currentPreferences.newApi.password,
           newApiTotpSecret: currentPreferences.newApi.totpSecret,
+          markGatewayGuidanceOnboardingCompleted:
+            markGatewayGuidanceOnboardingCompletedMock,
         }) as any,
     )
     vi.mocked(getManagedSiteService).mockImplementation(async () =>
@@ -2802,6 +2985,8 @@ describe("ManagedSiteChannels", () => {
       newApiUsername: preferences.newApi.username,
       newApiPassword: preferences.newApi.password,
       newApiTotpSecret: preferences.newApi.totpSecret,
+      markGatewayGuidanceOnboardingCompleted:
+        markGatewayGuidanceOnboardingCompletedMock,
     } as any)
 
     render(<ManagedSiteChannels />)
@@ -2876,6 +3061,41 @@ describe("ManagedSiteChannels", () => {
       "https://admin.example/keys",
     )
     expect(tokenConsoleAction).toHaveAttribute("target", "_blank")
+  })
+
+  it("does not expose console actions for an invalid managed-site base URL", async () => {
+    mockChannels([])
+    const preferences = buildPreferences({
+      managedSiteType: SITE_TYPES.NEW_API,
+    })
+    preferences.newApi.baseUrl = "/relative/path"
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences,
+      managedSiteType: SITE_TYPES.NEW_API,
+      newApiBaseUrl: preferences.newApi.baseUrl,
+      newApiUserId: preferences.newApi.userId,
+      newApiUsername: preferences.newApi.username,
+      newApiPassword: preferences.newApi.password,
+      newApiTotpSecret: preferences.newApi.totpSecret,
+      markGatewayGuidanceOnboardingCompleted:
+        markGatewayGuidanceOnboardingCompletedMock,
+    } as any)
+
+    render(<ManagedSiteChannels />)
+
+    await screen.findByText("managedSiteChannels:gatewayGuidance.empty.title")
+
+    expect(
+      screen.queryByRole("button", {
+        name: "managedSiteChannels:gatewayGuidance.openChannelConsole",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", {
+        name: "managedSiteChannels:gatewayGuidance.openTokenConsole",
+      }),
+    ).not.toBeInTheDocument()
+    expect(createTab).not.toHaveBeenCalled()
   })
 
   it("shows a load error alert when fetching channels fails", async () => {
@@ -3698,6 +3918,8 @@ describe("ManagedSiteChannels", () => {
           newApiUsername: currentPreferences.newApi.username,
           newApiPassword: currentPreferences.newApi.password,
           newApiTotpSecret: currentPreferences.newApi.totpSecret,
+          markGatewayGuidanceOnboardingCompleted:
+            markGatewayGuidanceOnboardingCompletedMock,
           updateManagedSiteType: vi.fn().mockResolvedValue(true),
         }) as any,
     )
@@ -4319,6 +4541,8 @@ describe("ManagedSiteChannels", () => {
           newApiUsername: currentPreferences.newApi.username,
           newApiPassword: currentPreferences.newApi.password,
           newApiTotpSecret: currentPreferences.newApi.totpSecret,
+          markGatewayGuidanceOnboardingCompleted:
+            markGatewayGuidanceOnboardingCompletedMock,
         }) as any,
     )
 

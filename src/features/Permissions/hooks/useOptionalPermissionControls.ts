@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -76,8 +76,10 @@ export function useOptionalPermissionControls({
   }))
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [hasLoaded, setHasLoaded] = useState(false)
+  const loadGenerationRef = useRef(0)
 
   useEffect(() => {
+    loadGenerationRef.current += 1
     setHasLoaded(false)
     setState((prev) => ({
       statuses: {
@@ -94,6 +96,7 @@ export function useOptionalPermissionControls({
   const loadStatuses = useCallback(async () => {
     if (!enabled || permissionIds.length === 0) return
 
+    const loadGeneration = ++loadGenerationRef.current
     setIsRefreshing(true)
     logger.debug("Checking optional permission statuses")
     try {
@@ -103,6 +106,8 @@ export function useOptionalPermissionControls({
           granted: await hasPermission(id),
         })),
       )
+      if (loadGeneration !== loadGenerationRef.current) return
+
       logger.debug("Optional permission statuses resolved", { results })
 
       const statuses = permissionIds.reduce(
@@ -128,10 +133,13 @@ export function useOptionalPermissionControls({
         },
       }))
     } catch (error) {
+      if (loadGeneration !== loadGenerationRef.current) return
       logger.error("Failed to check optional permission statuses", { error })
     } finally {
-      setHasLoaded(true)
-      setIsRefreshing(false)
+      if (loadGeneration === loadGenerationRef.current) {
+        setHasLoaded(true)
+        setIsRefreshing(false)
+      }
     }
   }, [enabled, logger, permissionIds])
 
@@ -144,6 +152,7 @@ export function useOptionalPermissionControls({
     })
 
     return () => {
+      loadGenerationRef.current += 1
       unsubscribe()
     }
   }, [enabled, loadStatuses])

@@ -225,7 +225,7 @@
       "docs": "Open getting started",
       "star": "View on GitHub"
     },
-    "description": "Add accounts to build a source inventory for balances, health checks, API keys, direct exports, and later self-hosted AI gateway channel import.",
+    "description": "Add accounts to build a source inventory for balances, health checks, API keys, and direct exports. Later, import them into a self-hosted AI gateway channel.",
     "hint": "Feel free to look around the website and docs before adding any accounts",
     "title": "Welcome to All API Hub"
   },

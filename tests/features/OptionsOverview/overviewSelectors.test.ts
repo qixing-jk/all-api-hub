@@ -1085,6 +1085,48 @@ describe("Options overview selectors", () => {
     expect(view.gatewayGuidanceImportAccountId).toBeUndefined()
   })
 
+  it("does not treat a disabled key-resolvable account as an import source", () => {
+    const disabledAccount = {
+      ...healthyAccount,
+      id: "disabled-account",
+      disabled: true,
+    }
+    const disabledDisplayData = {
+      ...healthyDisplayData,
+      id: disabledAccount.id,
+      disabled: true,
+    }
+    const view = buildOptionsOverviewViewModel({
+      accounts: [disabledAccount],
+      displayData: [disabledDisplayData],
+      accountStats: emptyStats,
+      apiCredentialProfiles: [],
+      usageStore: emptyUsageStore,
+      preferences: {
+        ...basePreferences,
+        newApi: {
+          ...basePreferences.newApi,
+          baseUrl: "https://managed.example.invalid",
+          adminToken: "redacted-admin-token",
+          userId: "1",
+        },
+      },
+      managedSiteType: SITE_TYPES.NEW_API,
+      autoCheckinStatus: null,
+      ...baseOverviewInput,
+    })
+
+    expect(view.unifiedApiGuidanceDiagnostics).toMatchObject({
+      enabledAccountCount: 0,
+      keyAccessibleAccountCount: 0,
+    })
+    expect(view.unifiedApiGuidance).toMatchObject({
+      status: UNIFIED_API_GUIDANCE_STATUSES.NeedsSources,
+      sourceKind: UNIFIED_API_GUIDANCE_SOURCE_KINDS.None,
+    })
+    expect(view.gatewayGuidanceImportAccountId).toBeUndefined()
+  })
+
   it("requires a valid managed-site admin user id before marking standard managed sites configured", () => {
     const view = buildOptionsOverviewViewModel({
       accounts: [healthyAccount],

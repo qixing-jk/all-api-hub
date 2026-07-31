@@ -10,7 +10,7 @@
 
 ---
 
-### Task 1: Add managed-site configuration next steps
+## Task 1: Add managed-site configuration next steps
 
 **Files:**
 - Modify: `src/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteTab.tsx`
@@ -41,7 +41,7 @@ Run: `pnpm vitest --run tests/entrypoints/options/ManagedSiteTab.test.tsx`
 
 Expected: PASS.
 
-### Task 2: Add configuration recovery to source import surfaces
+## Task 2: Add configuration recovery to source import surfaces
 
 **Files:**
 - Modify: `src/features/KeyManagement/KeyManagement.tsx`
@@ -75,7 +75,7 @@ Run: `pnpm vitest --run tests/entrypoints/options/pages/KeyManagement/KeyManagem
 
 Expected: PASS.
 
-### Task 3: Cover both source paths in the empty channel state
+## Task 3: Cover both source paths in the empty channel state
 
 **Files:**
 - Modify: `src/features/ManagedSiteChannels/ManagedSiteChannels.tsx`
@@ -84,7 +84,7 @@ Expected: PASS.
 
 - [ ] **Step 1: Write the failing navigation test**
 
-Extend the loaded-empty-state test to require both `Open Key Management` and `Open API Credential Library` actions. Assert that the new action navigates to `#apiCredentialProfiles`.
+Extend the loaded-empty-state test to require both `Open Key Management` and `Open API Credential Library` actions. Assert that the new action navigates to `#apiCredentialProfiles`. Add race regressions for both directions: a late success from the old site type must not replace current rows or completion state, and a late failure from the old site type must not replace the current error/toast/analytics outcome.
 
 - [ ] **Step 2: Run the focused test and confirm failure**
 
@@ -96,7 +96,7 @@ Expected: FAIL because the API Credential Profiles action is absent.
 
 Replace the single empty-state button with a wrapping action row. Keep Key Management as the primary/default action and add API Credential Library as an outline secondary action. Use `pushWithinOptionsPage` for both explicit workflow transitions. Do not show either action for filtered-empty, initial-loading, error, or configuration-required states.
 
-Track successful completion of the initial channel load explicitly before allowing the gateway empty state to render. Reset that state when the managed-site type changes. Ignore both fulfilled and rejected stale requests from a previous site type so they cannot replace the current rows, error state, toast, or analytics outcome.
+Track successful completion of the initial channel load explicitly before allowing the gateway empty state to render. Give each load a request identity and an `AbortController`; abort the previous load when the managed-site type changes or the effect is cleaned up. Guard the success, rejection, and finalization paths with both the active request identity and captured site type. A backend that ignores abort can still settle late, so both fulfilled and rejected old-type requests must be ignored and must not replace current rows, completion state, error state, toast, or analytics outcome.
 
 - [ ] **Step 4: Add the localized action label**
 
@@ -108,7 +108,7 @@ Run: `pnpm vitest --run tests/entrypoints/options/pages/ManagedSiteChannels/Mana
 
 Expected: PASS.
 
-### Task 4: Continue from successful batch import to channel management
+## Task 4: Continue from successful batch import to channel management
 
 **Files:**
 - Modify: `src/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog.tsx`
@@ -140,14 +140,14 @@ Run: `pnpm vitest --run tests/features/KeyManagement/components/ManagedSiteToken
 
 Expected: PASS.
 
-### Task 5: Validate the integrated slice
+## Task 5: Validate the integrated slice
 
 **Files:**
 - Verify all task-scoped files above.
 
 - [ ] **Step 1: Run related tests**
 
-Run: `pnpm vitest related --run <all task-scoped TS/TSX files>`
+Run: `pnpm vitest related --run src/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteTab.tsx tests/entrypoints/options/ManagedSiteTab.test.tsx src/features/KeyManagement/KeyManagement.tsx src/features/ApiCredentialProfiles/ApiCredentialProfiles.tsx tests/entrypoints/options/pages/KeyManagement/KeyManagement.emptyStateActions.test.tsx tests/entrypoints/options/pages/ApiCredentialProfiles/ApiCredentialProfiles.test.tsx src/features/ManagedSiteChannels/ManagedSiteChannels.tsx tests/entrypoints/options/pages/ManagedSiteChannels/ManagedSiteChannels.test.tsx src/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog.tsx src/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportFooter.tsx tests/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog.test.tsx`
 
 Expected: PASS.
 

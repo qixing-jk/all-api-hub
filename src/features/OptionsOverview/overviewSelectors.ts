@@ -1,6 +1,8 @@
 import type { ManagedSiteType } from "~/constants/siteType"
-import { buildUnifiedApiGuidanceModel } from "~/features/UnifiedApiGuidance"
-import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
+import {
+  buildUnifiedApiGuidanceModel,
+  getGatewayGuidanceImportableAccounts,
+} from "~/features/UnifiedApiGuidance"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
@@ -50,8 +52,8 @@ export function buildOptionsOverviewViewModel(
   const enabledAccounts = input.accounts.filter(
     (account) => account.disabled !== true,
   )
-  const keyAccessibleAccounts = input.displayData.filter(
-    canResolveAccountRuntimeKeySecret,
+  const keyAccessibleAccounts = getGatewayGuidanceImportableAccounts(
+    input.displayData,
   )
   const unifiedApiGuidanceDiagnostics = {
     enabledAccountCount: enabledAccounts.length,

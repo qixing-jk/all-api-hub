@@ -15,7 +15,6 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
-  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES,
 } from "~/services/productAnalytics/contracts"
 
 const { openLoginTabMock, reloadCurrentTabMock } = vi.hoisted(() => ({
@@ -319,12 +318,13 @@ describe("AccountDialog warnings", () => {
         result: PRODUCT_ANALYTICS_RESULTS.Success,
         target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
         target_page_id: "apiCredentialProfiles",
-        guidance_status:
-          PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES.NeedsSources,
         guidance_action_kind:
           PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS.SaveApiCredentialRecovery,
       },
     )
+    expect(
+      vi.mocked(trackProductAnalyticsEventMock).mock.calls.at(-1)?.[1],
+    ).not.toHaveProperty("guidance_status")
   })
 
   it("prefers a custom API credential profiles handler when provided", () => {
@@ -397,9 +397,12 @@ describe("AccountDialog warnings", () => {
     )
 
     expect(
-      screen.queryByText(
-        "accountDialog:warnings.autoDetectApiCredentialRecovery.description",
-      ),
+      screen.queryByText("apiCredentialFallback.apiCredentials.description"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "actions.openApiCredentialProfiles",
+      }),
     ).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole("button", { name: "Retry login" }))

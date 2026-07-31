@@ -475,7 +475,7 @@ interface UserPreferencesContextType {
   updateSiteAnnouncementNotifications: (
     updates: Partial<SiteAnnouncementPreferences>,
   ) => Promise<RuntimeMutationResponse>
-  markGatewayGuidanceOnboardingCompleted?: () => PreferenceWritePromise
+  markGatewayGuidanceOnboardingCompleted: () => PreferenceWritePromise
   dismissGatewayGuidanceSurface: (
     surface: GatewayGuidanceSurface,
   ) => PreferenceWritePromise

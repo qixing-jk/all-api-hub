@@ -85,6 +85,7 @@ E2E decision: no Playwright E2E. The navigation and rendering risk is covered by
   - Covers optional-maintenance copy.
 - Modify locale JSON files in every app locale directory:
   - `src/locales/en/{optionsOverview,account,accountDialog,apiCredentialProfiles,keyManagement,managedSiteChannels,managedSiteModelSync}.json`
+  - `src/locales/es-419/{optionsOverview,account,accountDialog,apiCredentialProfiles,keyManagement,managedSiteChannels,managedSiteModelSync}.json`
   - `src/locales/zh-CN/{optionsOverview,account,accountDialog,apiCredentialProfiles,keyManagement,managedSiteChannels,managedSiteModelSync}.json`
   - `src/locales/zh-TW/{optionsOverview,account,accountDialog,apiCredentialProfiles,keyManagement,managedSiteChannels,managedSiteModelSync}.json`
   - `src/locales/ja/{optionsOverview,account,accountDialog,apiCredentialProfiles,keyManagement,managedSiteChannels,managedSiteModelSync}.json`
@@ -360,6 +361,8 @@ interface BuildUnifiedApiGuidanceModelInput {
   managedSiteType: ManagedSiteType | undefined
 }
 
+// Historical draft only; see the current availability contract below.
+
 const buildBasicSettingsTarget = (
   anchor: typeof SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR,
 ): UnifiedApiGuidanceNavigationTarget => ({
@@ -507,6 +510,8 @@ export function buildUnifiedApiGuidanceModel(
   }
 }
 ```
+
+> **Current availability contract (supersedes the scalar-count draft above):** availability is decided at the Overview data boundary. If any guidance-dependent local store is unavailable, pass `unifiedApiGuidanceDataAvailable: false`, withhold the guidance model instead of converting unknown data to zero/`needs_sources`, keep independently loaded widgets visible, and render a neutral retryable unavailable state.
 
 Create `src/features/UnifiedApiGuidance/index.ts`:
 
@@ -762,6 +767,8 @@ export function trackUnifiedApiGuidanceAction(params: {
 }
 ```
 
+The current telemetry contract keeps shared guidance-card actions under `PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview`. Account-dialog auto-detect recovery is a separate Account Management action: use `PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement` and the controlled recovery action kind, but omit `guidance_status` because a recognition failure does not prove the source inventory is empty or otherwise establish `NeedsSources`.
+
 Update `src/features/UnifiedApiGuidance/index.ts`:
 
 ```ts
@@ -919,6 +926,8 @@ Expected: FAIL because `UnifiedApiGuidanceCard` is not exported.
 - [ ] **Step 3: Add the reusable guidance card**
 
 Create `src/features/UnifiedApiGuidance/UnifiedApiGuidanceCard.tsx`:
+
+> **Current i18n contract (supersedes the dynamic-key draft below):** the model carries typed status/source/action values, and surface-aware copy resolvers use exhaustive literal `t("namespace:key")` switch branches. Do not reconstruct translation keys from model strings or reintroduce dynamic `tKey(...)` calls.
 
 ```tsx
 import { ArrowRight, KeyRound, ServerCog } from "lucide-react"
@@ -1320,7 +1329,7 @@ Add this subtree under `src/locales/en/optionsOverview.json`:
 }
 ```
 
-Add equivalent `unifiedApiGuidance` keys to `zh-CN`, `zh-TW`, `ja`, and `vi` in the same file name. Use this content:
+Add equivalent `unifiedApiGuidance` keys to `es-419`, `zh-CN`, `zh-TW`, `ja`, and `vi` in the same file name. Use this content:
 
 ```json
 {
@@ -1368,7 +1377,8 @@ Expected: PASS.
 Run:
 
 ```powershell
-git add src/features/UnifiedApiGuidance/UnifiedApiGuidanceCard.tsx src/features/UnifiedApiGuidance/index.ts src/features/OptionsOverview tests/features/UnifiedApiGuidance tests/features/OptionsOverview tests/entrypoints/options/pages/OptionsOverview/OptionsOverview.test.tsx src/locales
+git add -p
+git diff --cached --name-only
 git commit -m "feat(options): surface unified api setup guidance"
 ```
 
@@ -1549,7 +1559,7 @@ const handleUnifiedApiGuidanceAction = (action: UnifiedApiGuidanceAction) => {
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementUnifiedApiGuidance,
   })
 
-  if (action.kind === "add_account") {
+  if (action.kind === UNIFIED_API_GUIDANCE_ACTION_KINDS.AddAccount) {
     openAddAccount()
     return
   }
@@ -1603,7 +1613,6 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
-  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES,
   trackProductAnalyticsEvent,
 } from "~/services/productAnalytics/events"
 import {
@@ -1642,9 +1651,7 @@ const handleOpenApiCredentialProfiles = () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
-      target_page_id: "apiCredentialProfiles",
-      guidance_status:
-        PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES.NeedsSources,
+      target_page_id: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES,
       guidance_action_kind:
         PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS.SaveApiCredentialRecovery,
     },
@@ -1732,7 +1739,7 @@ Add `accountDialog:warnings.autoDetectApiCredentialRecovery` in every locale. Us
 }
 ```
 
-Translate the same keys in `zh-CN`, `zh-TW`, `ja`, and `vi`, keeping the JSON shape identical.
+Translate the same keys in `es-419`, `zh-CN`, `zh-TW`, `ja`, and `vi`, keeping the JSON shape identical.
 
 - [ ] **Step 8: Run account-focused tests**
 
@@ -1749,7 +1756,8 @@ Expected: PASS.
 Run:
 
 ```powershell
-git add src/features/AccountManagement tests/features/AccountManagement src/locales
+git add -p
+git diff --cached --name-only
 git commit -m "feat(account): guide unified api source setup"
 ```
 
@@ -1903,7 +1911,7 @@ Add inside `batchManagedSiteExport`:
 "gatewayDescription": "This creates managed-site channels. External tools call the managed site as the unified API endpoint."
 ```
 
-Translate these keys in `zh-CN`, `zh-TW`, `ja`, and `vi`. Keep the JSON key shape identical.
+Translate these keys in `es-419`, `zh-CN`, `zh-TW`, `ja`, and `vi`. Keep the JSON key shape identical.
 
 - [ ] **Step 7: Run focused tests**
 
@@ -1920,7 +1928,8 @@ Expected: PASS.
 Run:
 
 ```powershell
-git add src/features/ApiCredentialProfiles src/features/KeyManagement tests/features/ApiCredentialProfiles tests/entrypoints/options/pages/KeyManagement src/locales
+git add -p
+git diff --cached --name-only
 git commit -m "feat(credentials): clarify managed-site source paths"
 ```
 
@@ -2072,7 +2081,7 @@ Change `managedSiteModelSync.description` to:
 "description": "Optional model-list maintenance for supported managed-site channels."
 ```
 
-Translate the same key shape in `zh-CN`, `zh-TW`, `ja`, and `vi`.
+Translate the same key shape in `es-419`, `zh-CN`, `zh-TW`, `ja`, and `vi`.
 
 - [ ] **Step 7: Run managed-site tests**
 
@@ -2089,7 +2098,8 @@ Expected: PASS.
 Run:
 
 ```powershell
-git add src/features/ManagedSiteChannels src/features/ManagedSiteModelSync tests/entrypoints/options/pages/ManagedSiteChannels tests/features/ManagedSiteModelSync src/locales
+git add -p
+git diff --cached --name-only
 git commit -m "feat(managed-sites): clarify gateway and model sync guidance"
 ```
 
@@ -2117,16 +2127,17 @@ Run:
 
 ```powershell
 pnpm run i18n:extract:ci
+git diff -- src/locales
 ```
 
-Expected: PASS with no unexpected locale rewrites. If it reports missing or removed keys, fix the source `t(...)` calls or locale key shape, then rerun the command.
+Expected: PASS with no unexpected locale rewrites. Inspect the locale diff and confirm that only expected key-shape or copy changes remain. If extraction reports missing or removed keys, fix the source `t(...)` calls or locale key shape, then rerun both commands.
 
 - [ ] **Step 3: Run focused tests**
 
 Run:
 
 ```powershell
-pnpm vitest run tests/features/UnifiedApiGuidance/unifiedApiGuidanceModel.test.ts tests/features/UnifiedApiGuidance/UnifiedApiGuidanceCard.test.tsx tests/services/productAnalytics/privacy.test.ts tests/features/OptionsOverview/layout.test.ts tests/features/OptionsOverview/overviewSelectors.test.ts tests/entrypoints/options/pages/OptionsOverview/OptionsOverview.test.tsx tests/features/AccountManagement/AccountManagement.analytics.test.tsx tests/features/AccountManagement/components/NewcomerSupportCard.test.tsx tests/features/AccountManagement/components/AccountDialogWarnings.test.tsx tests/features/ApiCredentialProfiles/ApiCredentialProfilesListView.test.tsx tests/entrypoints/options/pages/KeyManagement/KeyManagement.emptyStateActions.test.tsx tests/entrypoints/options/pages/KeyManagement/TokenList.batchExport.test.tsx tests/entrypoints/options/pages/ManagedSiteChannels/ManagedSiteChannels.test.tsx tests/features/ManagedSiteModelSync/ManagedSiteModelSync.test.tsx
+pnpm vitest run tests/features/UnifiedApiGuidance/unifiedApiGuidanceModel.test.ts tests/features/UnifiedApiGuidance/UnifiedApiGuidanceCard.test.tsx tests/services/productAnalytics/privacy.test.ts tests/features/OptionsOverview/layout.test.ts tests/features/OptionsOverview/overviewSelectors.test.ts tests/features/OptionsOverview/useOptionsOverviewData.test.tsx tests/entrypoints/options/pages/OptionsOverview/OptionsOverview.test.tsx tests/features/AccountManagement/AccountManagement.analytics.test.tsx tests/features/AccountManagement/components/NewcomerSupportCard.test.tsx tests/features/AccountManagement/components/AccountDialogWarnings.test.tsx tests/features/ApiCredentialProfiles/ApiCredentialProfilesListView.test.tsx tests/entrypoints/options/pages/KeyManagement/KeyManagement.emptyStateActions.test.tsx tests/entrypoints/options/pages/KeyManagement/TokenList.batchExport.test.tsx tests/entrypoints/options/pages/ManagedSiteChannels/ManagedSiteChannels.test.tsx tests/features/ManagedSiteModelSync/ManagedSiteModelSync.test.tsx tests/features/Permissions/useOptionalPermissionControls.test.tsx tests/entrypoints/options/PermissionSettings.test.tsx
 ```
 
 Expected: PASS.
@@ -2176,7 +2187,8 @@ Expected: PASS. This gate is justified because the implementation changes typed 
 If Steps 1-6 required additional cleanup edits, run:
 
 ```powershell
-git add src/features/UnifiedApiGuidance src/features/OptionsOverview src/features/AccountManagement src/features/ApiCredentialProfiles src/features/KeyManagement src/features/ManagedSiteChannels src/features/ManagedSiteModelSync src/services/productAnalytics src/locales tests/features tests/entrypoints/options/pages tests/services/productAnalytics
+git add -p
+git diff --cached --name-only
 git commit -m "chore(options): validate unified api guidance copy"
 ```
 

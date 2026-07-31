@@ -148,7 +148,7 @@ const createApiCredentialProfilesContextValue = (
 ) =>
   ({
     preferences,
-    managedSiteType: SITE_TYPES.NEW_API,
+    managedSiteType: preferences.managedSiteType,
     currencyType: preferences.currencyType,
     claudeCodeRouterBaseUrl: preferences.claudeCodeRouter?.baseUrl ?? "",
     claudeCodeRouterApiKey: preferences.claudeCodeRouter?.apiKey ?? "",
@@ -516,6 +516,39 @@ describe("ApiCredentialProfiles page", () => {
         "apiCredentialProfiles",
       )
     })
+  })
+
+  it("shows a safe local error when permanent dismissal rejects", async () => {
+    const user = userEvent.setup()
+    mockDismissGatewayGuidanceSurface.mockRejectedValueOnce(
+      new Error("sensitive backend detail"),
+    )
+
+    render(<ApiCredentialProfiles />)
+
+    expect(
+      await screen.findByText("apiCredentialProfiles:unifiedApiGuidance.title"),
+    ).toBeVisible()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.permanentlyDismiss",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.dismissDialog.confirm",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("alert", {
+        name: "messages:toast.error.saveFailed",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("sensitive backend detail"),
+    ).not.toBeInTheDocument()
   })
 
   it("creates a profile via the add dialog and renders it", async () => {

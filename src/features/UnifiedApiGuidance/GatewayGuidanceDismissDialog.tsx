@@ -14,6 +14,7 @@ interface GatewayGuidanceDismissDialogProps {
   description: string
   cancelLabel: string
   confirmLabel: string
+  errorMessage?: string
   isSaving?: boolean
   onClose: () => void
   onConfirm: () => void
@@ -28,6 +29,7 @@ export function GatewayGuidanceDismissDialog({
   description,
   cancelLabel,
   confirmLabel,
+  errorMessage,
   isSaving = false,
   onClose,
   onConfirm,
@@ -39,6 +41,15 @@ export function GatewayGuidanceDismissDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
+        {errorMessage ? (
+          <p
+            role="alert"
+            aria-label={errorMessage}
+            className="text-sm text-red-600 dark:text-red-400"
+          >
+            {errorMessage}
+          </p>
+        ) : null}
         <DialogFooter>
           <Button
             type="button"

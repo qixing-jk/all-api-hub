@@ -44,6 +44,7 @@ const {
     claudeCodeRouterBaseUrl: "https://router.example.invalid",
     cliProxyBaseUrl: "https://cliproxy.example.invalid",
     cliProxyManagementKey: "cliproxy-management-key",
+    markGatewayGuidanceOnboardingCompleted: vi.fn(),
     managedSiteType: "new-api",
   },
   mockVerifyApiDialog: vi.fn(),
@@ -663,6 +664,20 @@ describe("ServiceCredentialCard", () => {
         managedSiteStatus,
       },
     )
+
+    mockUserPreferences.markGatewayGuidanceOnboardingCompleted.mockRejectedValueOnce(
+      new Error("preference storage unavailable"),
+    )
+    const onImportCompleted = mockOpenWithCredentials.mock.calls.at(-1)?.[1] as
+      | ((result: { success: boolean }) => void)
+      | undefined
+    onImportCompleted?.({ success: true })
+
+    await waitFor(() => {
+      expect(
+        mockUserPreferences.markGatewayGuidanceOnboardingCompleted,
+      ).toHaveBeenCalledTimes(1)
+    })
   })
 
   it("keeps configuration-dependent exports closed when required settings are missing", async () => {

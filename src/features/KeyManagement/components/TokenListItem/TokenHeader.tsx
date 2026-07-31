@@ -375,7 +375,7 @@ function TokenActionButtons({
           }
           if (result?.success) {
             void Promise.resolve(
-              markGatewayGuidanceOnboardingCompleted?.(),
+              markGatewayGuidanceOnboardingCompleted(),
             ).catch((error) =>
               logger.error(
                 "Failed to mark gateway guidance onboarding complete",

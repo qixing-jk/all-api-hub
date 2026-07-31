@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import {
+  ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
+  ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
+} from "~/features/AccountManagement/routeParams"
 import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import { OverviewUsageSnapshot } from "~/features/OptionsOverview/components/OverviewUsageSnapshot"
 import OptionsOverview, {
@@ -159,7 +163,13 @@ const setupViewModel: OptionsOverviewViewModel = {
     ],
     primaryAction: {
       kind: UNIFIED_API_GUIDANCE_ACTION_KINDS.AddAccount,
-      target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
+      target: {
+        menuItemId: MENU_ITEM_IDS.ACCOUNT,
+        params: {
+          [ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action]:
+            ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add,
+        },
+      },
     },
     secondaryActions: [
       {
@@ -1142,7 +1152,10 @@ describe("OptionsOverview", () => {
       }),
     )
 
-    expect(pushWithinOptionsPageMock).toHaveBeenCalledWith("#account", {})
+    expect(pushWithinOptionsPageMock).toHaveBeenCalledWith("#account", {
+      [ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action]:
+        ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add,
+    })
     expect(trackProductAnalyticsEvent).toHaveBeenCalledTimes(1)
     expect(trackProductAnalyticsEvent).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
@@ -1155,7 +1168,7 @@ describe("OptionsOverview", () => {
         result: PRODUCT_ANALYTICS_RESULTS.Success,
         target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
         target_page_id: MENU_ITEM_IDS.ACCOUNT,
-        route_params_present: false,
+        route_params_present: true,
         guidance_status: "needs_sources",
         guidance_action_kind: "add_account",
       },

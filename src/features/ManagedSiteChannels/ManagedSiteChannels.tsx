@@ -377,11 +377,13 @@ export default function ManagedSiteChannels({
     managedSiteBaseUrl,
     managedSiteType,
   )
+  const managedSiteChannelConsoleUrl = buildManagedSiteChannelConsoleUrl(
+    managedSiteBaseUrl,
+    managedSiteType,
+  )
   const openManagedSiteChannelConsole = () => {
-    void createTab(
-      buildManagedSiteChannelConsoleUrl(managedSiteBaseUrl, managedSiteType),
-      true,
-    )
+    if (!managedSiteChannelConsoleUrl) return
+    void createTab(managedSiteChannelConsoleUrl, true)
   }
 
   const [channels, setChannels] = useState<ChannelRow[]>([])
@@ -603,14 +605,14 @@ export default function ManagedSiteChannels({
           ),
         )
         if (items.length > 0) {
-          void Promise.resolve(
-            markGatewayGuidanceOnboardingCompleted?.(),
-          ).catch((error) => {
-            logger.warn(
-              "Failed to mark gateway guidance onboarding complete.",
-              error,
-            )
-          })
+          void Promise.resolve(markGatewayGuidanceOnboardingCompleted()).catch(
+            (error) => {
+              logger.warn(
+                "Failed to mark gateway guidance onboarding complete.",
+                error,
+              )
+            },
+          )
         }
         setHasCompletedInitialChannelLoad(true)
         completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Success, {
@@ -2115,7 +2117,7 @@ export default function ManagedSiteChannels({
         labels={presentationLabels}
         title={t("title")}
         titleActions={
-          !isConfigMissing ? (
+          !isConfigMissing && managedSiteChannelConsoleUrl ? (
             <Tooltip content={t("gatewayGuidance.openChannelConsole")}>
               <IconButton
                 type="button"
@@ -2139,7 +2141,7 @@ export default function ManagedSiteChannels({
         description={
           <>
             {t("gatewayGuidance.headerDescription")}{" "}
-            {!isConfigMissing ? (
+            {!isConfigMissing && managedSiteTokenConsoleUrl ? (
               <>
                 {t("gatewayGuidance.clientHint")}{" "}
                 <a

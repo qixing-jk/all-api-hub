@@ -31,6 +31,7 @@ import {
 const {
   completeProductAnalyticsActionMock,
   createProfileMock,
+  markGatewayGuidanceOnboardingCompletedMock,
   openInCherryStudioMock,
   openWithAccountMock,
   resolveDisplayAccountTokenForSecretMock,
@@ -41,6 +42,7 @@ const {
 } = vi.hoisted(() => ({
   completeProductAnalyticsActionMock: vi.fn(),
   createProfileMock: vi.fn(),
+  markGatewayGuidanceOnboardingCompletedMock: vi.fn(),
   openInCherryStudioMock: vi.fn(),
   openWithAccountMock: vi.fn(),
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
@@ -61,6 +63,8 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
     claudeCodeRouterBaseUrl: "",
     cliProxyBaseUrl: "",
     cliProxyManagementKey: "",
+    markGatewayGuidanceOnboardingCompleted:
+      markGatewayGuidanceOnboardingCompletedMock,
     managedSiteType: "new-api",
   }),
 }))
@@ -167,6 +171,7 @@ describe("TokenHeader analytics", () => {
   beforeEach(() => {
     completeProductAnalyticsActionMock.mockReset()
     createProfileMock.mockReset()
+    markGatewayGuidanceOnboardingCompletedMock.mockReset()
     openInCherryStudioMock.mockReset()
     openWithAccountMock.mockReset()
     resolveDisplayAccountTokenForSecretMock.mockReset()

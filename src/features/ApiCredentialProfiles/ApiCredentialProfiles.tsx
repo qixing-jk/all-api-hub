@@ -54,6 +54,7 @@ export default function ApiCredentialProfiles({
     "apiCredentialProfiles",
     "aiApiVerification",
     "common",
+    "messages",
   ])
 
   const controller = useApiCredentialProfilesController()
@@ -190,6 +191,11 @@ export default function ApiCredentialProfiles({
           confirmLabel={t(
             "apiCredentialProfiles:unifiedApiGuidance.dismissDialog.confirm",
           )}
+          errorMessage={
+            guidanceDismissal.hasPermanentDismissError
+              ? t("messages:toast.error.saveFailed")
+              : undefined
+          }
           isSaving={guidanceDismissal.isPermanentDismissSaving}
           onClose={guidanceDismissal.cancelPermanentDismiss}
           onConfirm={() => void guidanceDismissal.confirmPermanentDismiss()}

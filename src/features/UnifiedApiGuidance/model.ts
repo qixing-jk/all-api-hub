@@ -5,6 +5,10 @@ import {
 } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import type { ManagedSiteType } from "~/constants/siteType"
+import {
+  ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
+  ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
+} from "~/features/AccountManagement/routeParams"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { supportsManagedSiteModelSync } from "~/services/managedSites/utils/managedSite"
 import type {
@@ -187,7 +191,13 @@ const buildBasicSettingsTarget = (
 
 const accountAction = (): UnifiedApiGuidanceAction => ({
   kind: UNIFIED_API_GUIDANCE_ACTION_KINDS.AddAccount,
-  target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
+  target: {
+    menuItemId: MENU_ITEM_IDS.ACCOUNT,
+    params: {
+      [ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action]:
+        ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add,
+    },
+  },
 })
 
 const apiCredentialAction = (): UnifiedApiGuidanceAction => ({

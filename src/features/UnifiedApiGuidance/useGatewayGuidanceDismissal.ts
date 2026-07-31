@@ -51,6 +51,8 @@ export function useGatewayGuidanceDismissal(
   const [isPermanentDismissDialogOpen, setPermanentDismissDialogOpen] =
     useState(false)
   const [isPermanentDismissSaving, setPermanentDismissSaving] = useState(false)
+  const [hasPermanentDismissError, setHasPermanentDismissError] =
+    useState(false)
 
   const dismissForSession = useCallback(() => {
     writeSessionDismissal(surface)
@@ -58,20 +60,27 @@ export function useGatewayGuidanceDismissal(
   }, [surface])
 
   const requestPermanentDismiss = useCallback(() => {
+    setHasPermanentDismissError(false)
     setPermanentDismissDialogOpen(true)
   }, [])
 
   const cancelPermanentDismiss = useCallback(() => {
+    setHasPermanentDismissError(false)
     setPermanentDismissDialogOpen(false)
   }, [])
 
   const confirmPermanentDismiss = useCallback(async () => {
+    setHasPermanentDismissError(false)
     setPermanentDismissSaving(true)
     try {
       const result = await dismissGatewayGuidanceSurface(surface)
       if (result.ok) {
         setPermanentDismissDialogOpen(false)
+      } else {
+        setHasPermanentDismissError(true)
       }
+    } catch {
+      setHasPermanentDismissError(true)
     } finally {
       setPermanentDismissSaving(false)
     }
@@ -89,5 +98,6 @@ export function useGatewayGuidanceDismissal(
     confirmPermanentDismiss,
     isPermanentDismissDialogOpen,
     isPermanentDismissSaving,
+    hasPermanentDismissError,
   }
 }
