@@ -15,7 +15,7 @@ on:
       version:
         description: "Release version without the v prefix"
         required: true
-        default: "0.3.0"
+        default: "0.3.1"
 
 permissions:
   contents: write
@@ -84,6 +84,7 @@ jobs:
           - 渠道名称和预览明确显示 AWS 来源地区
           - 定时上 Key 支持精确到秒，并按最近任务动态唤醒
           - 创建、复制和更新渠道时可设置优先级与权重
+          - 优先级与权重位于批量写入方式下方，录入时无需返回上方查找
           - 用量监测使用 New API 数据库汇总接口校准消费金额
 
           - macOS Apple Silicon：`mac-arm64.dmg`

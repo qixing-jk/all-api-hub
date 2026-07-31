@@ -317,33 +317,6 @@
                   </button>
                 </span>
               </div>
-              <div class="routing-options">
-                <label class="field">
-                  <span>渠道优先级</span>
-                  <input
-                    id="channel-priority"
-                    type="number"
-                    step="1"
-                    placeholder="0"
-                  />
-                  <small id="channel-priority-help"
-                    >数值越大越优先使用；留空时新渠道使用 0。</small
-                  >
-                </label>
-                <label class="field">
-                  <span>渠道权重</span>
-                  <input
-                    id="channel-weight"
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="0"
-                  />
-                  <small id="channel-weight-help"
-                    >同优先级渠道按权重比例分流；留空时新渠道使用 0。</small
-                  >
-                </label>
-              </div>
               <label class="field">
                 <span>渠道配置来源</span>
                 <select id="config-source" required>
@@ -458,6 +431,39 @@
                   >独立渠道会按每条 Key 的额度分别命名、记录和统计用量。</small
                 >
               </label>
+              <div class="routing-options" aria-label="渠道路由设置">
+                <div class="routing-options-heading">
+                  <strong>渠道路由设置</strong>
+                  <small
+                    >写入 New API 时，同时设置渠道的调用顺序和分流比例。</small
+                  >
+                </div>
+                <label class="field">
+                  <span>渠道优先级</span>
+                  <input
+                    id="channel-priority"
+                    type="number"
+                    step="1"
+                    placeholder="0"
+                  />
+                  <small id="channel-priority-help"
+                    >数值越大越优先使用；留空时新渠道使用 0。</small
+                  >
+                </label>
+                <label class="field">
+                  <span>渠道权重</span>
+                  <input
+                    id="channel-weight"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder="0"
+                  />
+                  <small id="channel-weight-help"
+                    >同优先级渠道按权重比例分流；留空时新渠道使用 0。</small
+                  >
+                </label>
+              </div>
               <label class="check-row">
                 <input id="auto-write" type="checkbox" checked />
                 <span
@@ -713,11 +719,10 @@
             </button>
           </div>
           <p class="records-note">
-            待写入 Key 会加密保存在本机，列表只显示尾号和指纹；服务长驻后，即使页面关掉也会按时间执行。
+            待写入 Key
+            会加密保存在本机，列表只显示尾号和指纹；服务长驻后，即使页面关掉也会按时间执行。
           </p>
-          <div class="schedule-empty" id="schedule-empty">
-            还没有定时任务。
-          </div>
+          <div class="schedule-empty" id="schedule-empty">还没有定时任务。</div>
           <div class="schedule-list" id="schedule-list"></div>
         </section>
 
@@ -742,8 +747,8 @@
           </div>
           <p class="records-note usage-monitor-description">
             日期筛选按 Key 的录入时间计算；已用额度是这些 Key
-            从录入后至今的累计消费。金额使用 New API 数据库汇总接口校准，剩余百分比只计算已填写额度的
-            Key。
+            从录入后至今的累计消费。金额使用 New API
+            数据库汇总接口校准，剩余百分比只计算已填写额度的 Key。
           </p>
           <div class="usage-monitor-toolbar" aria-label="用量监测时间筛选">
             <label>

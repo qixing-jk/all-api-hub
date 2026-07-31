@@ -889,6 +889,20 @@ select:focus {
   border-radius: 14px;
   background: #f3f7ff;
 }
+.routing-options-heading {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 3px;
+  padding-bottom: 2px;
+}
+.routing-options-heading strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+.routing-options-heading small {
+  color: var(--muted);
+  font-size: 10px;
+}
 .provider-summary {
   display: grid;
   grid-template-columns: 48px 1fr auto;
