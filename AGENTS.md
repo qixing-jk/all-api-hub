@@ -297,7 +297,7 @@ Use validation as progressive gates:
 ### Extraction Workflow
 
 - When legitimate runtime keys cannot be enumerated from executable source, preserve the narrowest key family with `extract.preservePatterns` or an extractor plugin. Do not add no-op helpers, unreachable branches, dummy `t(...)` calls, or extraction-only comments solely to retain keys.
-- After running `pnpm run i18n:extract`, inspect the locale diff before proceeding. Confirm the intended new keys are still present and no required keys were removed as "unused" by the extractor.
+- After running `pnpm run i18n:extract` or any hook that can update locale files, inspect both the extractor-produced diff and the task-scoped `src/locales/**` diff against the task base before proceeding. Account for every deleted existing key; do not accept `pnpm run i18n:extract:ci` reporting no updates as proof when locale changes are already present or staged.
 - If `i18n:extract` removes keys you expected to keep, fix the source usage or extractor configuration instead of re-adding locale JSON by hand. In this repo, prefer direct extractable calls such as `t("ns:key")` over wrapper names like `translate("ns:key")` unless the wrapper is explicitly configured in `i18next.config.ts`.
 - After changing translation keys, locale JSON, or any UI code that adds new `t(...)` usages, run `pnpm run i18n:extract:ci` and ensure it reports no unexpected updates before handoff.
 
