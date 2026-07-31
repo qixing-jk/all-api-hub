@@ -285,6 +285,7 @@ export function useApiCredentialProfilesController() {
     claudeCodeRouterApiKey,
     cliProxyBaseUrl,
     cliProxyManagementKey,
+    markGatewayGuidanceOnboardingCompleted,
   } = useUserPreferencesContext()
   const analyticsScope = useProductAnalyticsScope()
   const { openWithCredentials } = useChannelDialog()
@@ -613,6 +614,16 @@ export function useApiCredentialProfilesController() {
           },
           (result) => {
             showResultToast(result)
+            if (result?.success) {
+              void Promise.resolve(
+                markGatewayGuidanceOnboardingCompleted?.(),
+              ).catch((error) => {
+                logger.warn(
+                  "Failed to mark gateway guidance onboarding complete.",
+                  error,
+                )
+              })
+            }
           },
         )
           .then((result) =>
@@ -643,6 +654,7 @@ export function useApiCredentialProfilesController() {
       claudeCodeRouterBaseUrl,
       cliProxyBaseUrl,
       cliProxyManagementKey,
+      markGatewayGuidanceOnboardingCompleted,
       openWithCredentials,
       t,
     ],

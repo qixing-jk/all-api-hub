@@ -27,6 +27,7 @@ const {
   deleteProfileMock,
   openInCherryStudioMock,
   openWithCredentialsMock,
+  markGatewayGuidanceOnboardingCompletedMock,
   refreshTelemetryMock,
   startProductAnalyticsActionMock,
   tagStorageListTagsMock,
@@ -39,6 +40,7 @@ const {
   deleteProfileMock: vi.fn(),
   openInCherryStudioMock: vi.fn(),
   openWithCredentialsMock: vi.fn(),
+  markGatewayGuidanceOnboardingCompletedMock: vi.fn(),
   refreshTelemetryMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   tagStorageListTagsMock: vi.fn(),
@@ -66,6 +68,8 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
     claudeCodeRouterBaseUrl: "",
     cliProxyBaseUrl: "",
     cliProxyManagementKey: "",
+    markGatewayGuidanceOnboardingCompleted:
+      markGatewayGuidanceOnboardingCompletedMock,
     managedSiteType: "new-api",
   }),
 }))
@@ -189,6 +193,7 @@ describe("useApiCredentialProfilesController", () => {
     completeProductAnalyticsActionMock.mockReset()
     createProfileMock.mockReset()
     deleteProfileMock.mockReset()
+    markGatewayGuidanceOnboardingCompletedMock.mockReset()
     openInCherryStudioMock.mockReset()
     openWithCredentialsMock.mockReset()
     refreshTelemetryMock.mockReset()
@@ -565,6 +570,26 @@ describe("useApiCredentialProfilesController", () => {
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
     )
+  })
+
+  it("marks gateway guidance complete after a managed-site profile import succeeds", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    openWithCredentialsMock.mockResolvedValueOnce({ opened: true })
+
+    const { result } = renderController()
+
+    await act(async () => {
+      result.current.handleExport(buildProfile(), "managedSite")
+    })
+
+    const onSuccess = openWithCredentialsMock.mock.calls[0]?.[1]
+    expect(onSuccess).toEqual(expect.any(Function))
+
+    await act(async () => {
+      await onSuccess?.({ success: true })
+    })
+
+    expect(markGatewayGuidanceOnboardingCompletedMock).toHaveBeenCalledTimes(1)
   })
 
   it("allows concurrent refreshes for different profiles and localizes errors", async () => {

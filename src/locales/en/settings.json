@@ -231,11 +231,26 @@
     "claudeCodeHub": "Claude Code Hub",
     "description": "Select which API aggregator platform you want to manage. This determines which configuration will be used for channel management and model syncing.",
     "doneHub": "Done Hub",
+    "gatewayGuidance": {
+      "actions": {
+        "importAccountKeys": "Add channel with account key",
+        "importApiKeys": "Add channel with API key",
+        "viewChannels": "View imported channels"
+      },
+      "configComplete": {
+        "description": "The basic setup only connects the gateway admin backend. To let external clients call models through this self-hosted AI gateway as one unified AI API, import account keys or API keys as gateway channels.",
+        "title": "Next: import usable keys"
+      },
+      "unconfigured": {
+        "description": "Configure your self-hosted AI gateway, then import account keys or API keys as gateway channels so multiple keys can be used through one AI API.",
+        "title": "Configure your self-hosted AI gateway"
+      }
+    },
     "newApi": "New API",
     "octopus": "Octopus",
     "siteTypeDesc": "Choose the platform used for channel management and model sync",
-    "siteTypeLabel": "Managed Site Type",
-    "title": "Managed Site Configuration",
+    "siteTypeLabel": "Gateway type",
+    "title": "Self-hosted AI gateway configuration",
     "veloera": "Veloera"
   },
   "messages": {
@@ -362,7 +377,8 @@
     "status": {
       "checking": "Checking…",
       "denied": "Not granted",
-      "granted": "Granted"
+      "granted": "Granted",
+      "unavailable": "Unavailable"
     },
     "statusCaption": "Permission status is synced with the browser. Click refresh if you changed permissions outside this page.",
     "title": "Permissions"
@@ -531,7 +547,7 @@
     "cliProxy": "CLIProxyAPI",
     "dataBackup": "Data & Backup",
     "general": "General",
-    "managedSite": "Managed site",
+    "managedSite": "Self-hosted AI gateway",
     "notifications": "Notifications",
     "permissions": "Permissions",
     "refresh": "Data Refresh",

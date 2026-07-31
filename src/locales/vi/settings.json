@@ -231,11 +231,26 @@
     "claudeCodeHub": "Claude Code Hub",
     "description": "Chọn trang nền tảng tổng hợp API mà bạn muốn quản lý. Lựa chọn này quyết định cấu hình dùng cho quản lý kênh và đồng bộ mô hình.",
     "doneHub": "Done Hub",
+    "gatewayGuidance": {
+      "actions": {
+        "importAccountKeys": "Thêm kênh bằng key tài khoản",
+        "importApiKeys": "Thêm kênh bằng API key",
+        "viewChannels": "Xem kênh đã nhập"
+      },
+      "configComplete": {
+        "description": "Cấu hình cơ bản mới chỉ kết nối backend quản trị gateway. Để client bên ngoài gọi model qua AI gateway tự triển khai này như một AI API thống nhất, hãy nhập key tài khoản hoặc API key làm kênh gateway.",
+        "title": "Bước tiếp theo: nhập key có thể dùng"
+      },
+      "unconfigured": {
+        "description": "Trước tiên hãy cấu hình AI gateway tự triển khai, sau đó nhập key tài khoản hoặc API key làm kênh gateway. Như vậy nhiều key có thể cùng cung cấp một AI API thống nhất.",
+        "title": "Cấu hình AI gateway tự triển khai"
+      }
+    },
     "newApi": "New API",
     "octopus": "Octopus",
     "siteTypeDesc": "Chọn nền tảng dùng cho quản lý kênh và đồng bộ mô hình",
-    "siteTypeLabel": "Loại trang",
-    "title": "Cấu hình trang tự triển khai",
+    "siteTypeLabel": "Loại gateway",
+    "title": "Cấu hình AI gateway tự triển khai",
     "veloera": "Veloera"
   },
   "messages": {
@@ -362,7 +377,8 @@
     "status": {
       "checking": "Đang kiểm tra...",
       "denied": "Chưa cấp",
-      "granted": "Đã cấp"
+      "granted": "Đã cấp",
+      "unavailable": "Không xác định"
     },
     "statusCaption": "Trạng thái quyền được đồng bộ với trình duyệt. Nếu đã sửa ngoài trang này, hãy bấm làm mới.",
     "title": "Quản lý quyền"
@@ -531,7 +547,7 @@
     "cliProxy": "CLIProxyAPI",
     "dataBackup": "Dữ liệu và sao lưu",
     "general": "Chung",
-    "managedSite": "Quản lý trang tự triển khai",
+    "managedSite": "AI gateway tự triển khai",
     "notifications": "Thông báo",
     "permissions": "Quản lý quyền",
     "refresh": "Làm mới dữ liệu",

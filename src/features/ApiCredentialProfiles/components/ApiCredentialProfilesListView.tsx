@@ -7,6 +7,7 @@ import {
   EmptyState,
   Input,
   Notice,
+  NoticeActionButton,
   SearchableSelect,
   Spinner,
   TagFilter,
@@ -37,6 +38,7 @@ export interface ApiCredentialProfilesListViewProps {
   controller: ApiCredentialProfilesController
   variant?: "options" | "popup"
   autoFocusSearch?: boolean
+  guidedImportEntryRequest?: number
   className?: string
 }
 
@@ -74,6 +76,7 @@ export function ApiCredentialProfilesListView({
   controller,
   variant = "options",
   autoFocusSearch = false,
+  guidedImportEntryRequest = 0,
   className,
 }: ApiCredentialProfilesListViewProps) {
   const { t } = useTranslation([
@@ -156,6 +159,17 @@ export function ApiCredentialProfilesListView({
   }, [controller.tags, tagCountsById])
 
   const maxTagFilterLines = isSmallScreen ? 2 : isDesktop ? 3 : 2
+
+  useEffect(() => {
+    if (!guidedImportEntryRequest || controller.profiles.length === 0) {
+      return
+    }
+
+    setSearchTerm("")
+    setApiTypeFilter("")
+    setSelectedTagIds([])
+    setLastFilterMode(null)
+  }, [controller.profiles.length, guidedImportEntryRequest])
 
   const filteredProfiles = useMemo(() => {
     const query = normalizeForSearch(searchTerm)
@@ -399,13 +413,9 @@ export function ApiCredentialProfilesListView({
               description={
                 <span>
                   {t("apiCredentialProfiles:empty.keyManagementImportHint")}{" "}
-                  <button
-                    type="button"
-                    className="font-medium text-blue-700 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:text-blue-200"
-                    onClick={handleOpenKeyManagement}
-                  >
+                  <NoticeActionButton onClick={handleOpenKeyManagement}>
                     {t("apiCredentialProfiles:empty.keyManagementLink")}
-                  </button>
+                  </NoticeActionButton>
                 </span>
               }
             />
@@ -415,6 +425,14 @@ export function ApiCredentialProfilesListView({
         <ApiCredentialProfilesList
           profiles={filteredProfiles}
           controller={controller}
+          guidedImportEntry={
+            guidedImportEntryRequest && controller.profiles[0]
+              ? {
+                  profileId: controller.profiles[0].id,
+                  request: guidedImportEntryRequest,
+                }
+              : undefined
+          }
         />
       )}
     </div>

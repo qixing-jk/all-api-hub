@@ -8,6 +8,7 @@ import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettings
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import BookmarkAccountImportDialog from "~/features/AccountManagement/components/BookmarkAccountImportDialog"
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
@@ -16,21 +17,38 @@ import { useAccountDataContext } from "~/features/AccountManagement/hooks/Accoun
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
+import {
+  buildUnifiedApiGuidanceModel,
+  GatewayGuidanceDismissDialog,
+  UNIFIED_API_GUIDANCE_ACTION_KINDS,
+  UNIFIED_API_GUIDANCE_SURFACES,
+  UnifiedApiGuidanceCard,
+  useGatewayGuidanceDismissal,
+  withGuidedAccountKeyImportTarget,
+  type UnifiedApiGuidanceAction,
+} from "~/features/UnifiedApiGuidance"
+import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
+import { GATEWAY_GUIDANCE_SURFACES } from "~/services/preferences/userPreferences"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { createLogger } from "~/utils/core/logger"
 import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 
 const logger = createLogger("AccountManagementPage")
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
@@ -64,8 +82,30 @@ function AccountManagementContent({
     isRefreshingDisabledAccounts,
   } = useAccountDataContext()
   const { handleOpenExternalCheckIns } = useAccountActionsContext()
+  const { preferences, managedSiteType } = useUserPreferencesContext()
+  const { profiles: apiCredentialProfiles } = useApiCredentialProfiles()
+  const guidanceDismissal = useGatewayGuidanceDismissal(
+    GATEWAY_GUIDANCE_SURFACES.Account,
+    preferences,
+  )
   const [isDedupeDialogOpen, setIsDedupeDialogOpen] = useState(false)
   const disabledAccounts = displayData.filter((account) => account.disabled)
+  const enabledAccountCount = displayData.filter(
+    (account) => !account.disabled,
+  ).length
+  const keyAccessibleAccountCount = displayData.filter(
+    canResolveAccountRuntimeKeySecret,
+  ).length
+  const gatewayGuidanceImportAccountId = displayData.find(
+    canResolveAccountRuntimeKeySecret,
+  )?.id
+  const unifiedApiGuidance = buildUnifiedApiGuidanceModel({
+    enabledAccountCount,
+    keyAccessibleAccountCount,
+    profileCount: apiCredentialProfiles.length,
+    preferences,
+    managedSiteType,
+  })
 
   const externalCheckInAccounts = displayData.filter((account) => {
     const customUrl = account.checkIn?.customCheckIn?.url
@@ -75,6 +115,44 @@ function AccountManagementContent({
   const canOpenExternalCheckIns = externalCheckInAccounts.length > 0
   const canRefreshDisabledAccounts = disabledAccounts.length > 0
   const isAnyRefreshRunning = isRefreshing || isRefreshingDisabledAccounts
+
+  const handleUnifiedApiGuidanceAction = useCallback(
+    (action: UnifiedApiGuidanceAction) => {
+      const navigationAction = withGuidedAccountKeyImportTarget(
+        action,
+        gatewayGuidanceImportAccountId,
+      )
+      const routeParams = navigationAction.target.params ?? {}
+
+      void trackProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+          surface_id:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementUnifiedApiGuidance,
+          entrypoint: optionsEntrypoint,
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+          target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
+          target_page_id: navigationAction.target.menuItemId,
+          route_params_present: Object.keys(routeParams).length > 0,
+          guidance_status: unifiedApiGuidance.status,
+          guidance_action_kind: navigationAction.kind,
+        },
+      )
+
+      if (action.kind === UNIFIED_API_GUIDANCE_ACTION_KINDS.AddAccount) {
+        openAddAccount()
+        return
+      }
+
+      pushWithinOptionsPage(
+        `#${navigationAction.target.menuItemId}`,
+        routeParams,
+      )
+    },
+    [gatewayGuidanceImportAccountId, openAddAccount, unifiedApiGuidance.status],
+  )
 
   // Open all configured external check-in sites and sync the checked-in status.
   const handleOpenExternalCheckInsClick = async (
@@ -336,6 +414,30 @@ function AccountManagementContent({
             </div>
           </ProductAnalyticsScope>
         }
+      />
+
+      {guidanceDismissal.shouldShow ? (
+        <div className="mb-4">
+          <UnifiedApiGuidanceCard
+            model={unifiedApiGuidance}
+            surface={UNIFIED_API_GUIDANCE_SURFACES.Account}
+            onAction={handleUnifiedApiGuidanceAction}
+            onDismissForSession={guidanceDismissal.dismissForSession}
+            onRequestPermanentDismiss={
+              guidanceDismissal.requestPermanentDismiss
+            }
+          />
+        </div>
+      ) : null}
+      <GatewayGuidanceDismissDialog
+        isOpen={guidanceDismissal.isPermanentDismissDialogOpen}
+        title={t("account:unifiedApiGuidance.dismissDialog.title")}
+        description={t("account:unifiedApiGuidance.dismissDialog.description")}
+        cancelLabel={t("common:actions.cancel")}
+        confirmLabel={t("account:unifiedApiGuidance.dismissDialog.confirm")}
+        isSaving={guidanceDismissal.isPermanentDismissSaving}
+        onClose={guidanceDismissal.cancelPermanentDismiss}
+        onConfirm={() => void guidanceDismissal.confirmPermanentDismiss()}
       />
 
       <div className="dark:bg-dark-bg-secondary flex flex-col bg-white">

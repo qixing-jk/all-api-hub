@@ -231,11 +231,26 @@
     "claudeCodeHub": "Claude Code Hub",
     "description": "管理したい API 中継プラットフォームを選択します。この設定により、チャネル管理やモデル同期で使われる構成が決まります。",
     "doneHub": "Done Hub",
+    "gatewayGuidance": {
+      "actions": {
+        "importAccountKeys": "アカウントキーでチャネルを追加",
+        "importApiKeys": "API キーでチャネルを追加",
+        "viewChannels": "取り込み済みチャネルを表示"
+      },
+      "configComplete": {
+        "description": "基本設定ではゲートウェイ管理バックエンドへの接続だけが完了しています。外部クライアントがこのセルフホスト AI ゲートウェイを 1 つの AI API として使いモデルを呼び出せるようにするには、アカウントキーまたは API キーをゲートウェイチャネルとして取り込んでください。",
+        "title": "次のステップ: 利用可能なキーを取り込む"
+      },
+      "unconfigured": {
+        "description": "セルフホスト AI ゲートウェイを設定すると、アカウントキーや API キーをチャネルとして取り込み、複数のキーを 1 つの AI API から利用できます。",
+        "title": "セルフホスト AI ゲートウェイを設定"
+      }
+    },
     "newApi": "New API",
     "octopus": "Octopus",
     "siteTypeDesc": "チャネル管理とモデル同期に使用するプラットフォームを選択します",
-    "siteTypeLabel": "管理対象サイト種別",
-    "title": "管理対象サイト設定",
+    "siteTypeLabel": "ゲートウェイ種別",
+    "title": "セルフホスト AI ゲートウェイ設定",
     "veloera": "Veloera"
   },
   "messages": {
@@ -362,7 +377,8 @@
     "status": {
       "checking": "確認中…",
       "denied": "未許可",
-      "granted": "許可済み"
+      "granted": "許可済み",
+      "unavailable": "確認できません"
     },
     "statusCaption": "権限状態はブラウザと同期されています。このページ以外で変更した場合は更新を押してください。",
     "title": "権限"
@@ -531,7 +547,7 @@
     "cliProxy": "CLIProxyAPI",
     "dataBackup": "データとバックアップ",
     "general": "一般",
-    "managedSite": "管理対象サイト",
+    "managedSite": "セルフホスト AI ゲートウェイ",
     "notifications": "通知",
     "permissions": "権限",
     "refresh": "データ更新",

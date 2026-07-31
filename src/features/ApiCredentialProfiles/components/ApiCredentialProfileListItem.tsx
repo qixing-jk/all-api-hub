@@ -11,6 +11,7 @@ import {
 } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 import { Copy } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
@@ -38,6 +39,7 @@ import {
 import type { ManagedSiteType } from "~/constants/siteType"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { cn } from "~/lib/utils"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -98,6 +100,7 @@ interface ApiCredentialProfileListItemProps {
   isTelemetryRefreshing: boolean
   managedSiteType: ManagedSiteType
   managedSiteLabel: string
+  guidedImportEntryRequest?: number
 }
 
 /**
@@ -202,6 +205,7 @@ export function ApiCredentialProfileListItem({
   isTelemetryRefreshing,
   managedSiteType,
   managedSiteLabel,
+  guidedImportEntryRequest,
 }: ApiCredentialProfileListItemProps) {
   const { t } = useTranslation([
     "apiCredentialProfiles",
@@ -212,6 +216,10 @@ export function ApiCredentialProfileListItem({
   ])
   const { currencyType } = useUserPreferencesContext()
   const telemetry = profile.telemetrySnapshot
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false)
+  const [isImportEntryHighlighted, setIsImportEntryHighlighted] =
+    useState(false)
+  const exportMenuButtonRef = useRef<HTMLButtonElement>(null)
   const handleRefreshTelemetry = () => {
     onRefreshTelemetry(profile)
   }
@@ -246,6 +254,25 @@ export function ApiCredentialProfileListItem({
           date: expirationDate,
         })
     : t("apiCredentialProfiles:list.expirationStatus.none")
+
+  useEffect(() => {
+    if (!guidedImportEntryRequest) {
+      return
+    }
+
+    setIsExportMenuOpen(true)
+    setIsImportEntryHighlighted(true)
+
+    const button = exportMenuButtonRef.current
+    button?.scrollIntoView?.({ block: "center", inline: "nearest" })
+    button?.focus()
+
+    const timeoutId = window.setTimeout(() => {
+      setIsImportEntryHighlighted(false)
+    }, 5000)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [guidedImportEntryRequest])
 
   return (
     <ProductAnalyticsScope
@@ -601,12 +628,23 @@ export function ApiCredentialProfileListItem({
               >
                 <CpuChipIcon className="h-4 w-4" />
               </IconButton>
-              <DropdownMenu>
+              <DropdownMenu
+                open={isExportMenuOpen}
+                onOpenChange={setIsExportMenuOpen}
+              >
                 <DropdownMenuTrigger asChild>
                   <IconButton
+                    ref={exportMenuButtonRef}
                     aria-label={t("common:actions.export")}
                     size="sm"
                     variant="ghost"
+                    className={cn(
+                      isImportEntryHighlighted &&
+                        "ring-2 ring-emerald-500 ring-offset-2 dark:ring-emerald-400",
+                    )}
+                    data-guidance-highlight={
+                      isImportEntryHighlighted ? "true" : undefined
+                    }
                     data-testid={
                       API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton
                     }
@@ -673,6 +711,13 @@ export function ApiCredentialProfileListItem({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
+                    className={cn(
+                      isImportEntryHighlighted &&
+                        "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-500 ring-inset dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-400",
+                    )}
+                    data-guidance-highlight={
+                      isImportEntryHighlighted ? "true" : undefined
+                    }
                     onSelect={() => onExport(profile, "managedSite")}
                   >
                     <span aria-hidden="true">

@@ -1,7 +1,18 @@
 import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ApiCredentialProfiles from "~/entrypoints/options/pages/ApiCredentialProfiles"
+import {
+  KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
+  KEY_MANAGEMENT_ROUTE_PARAMS,
+} from "~/features/KeyManagement/constants"
+import {
+  DEFAULT_PREFERENCES,
+  type UserPreferences,
+} from "~/services/preferences/userPreferences"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   createProfileVerificationHistoryTarget,
@@ -19,6 +30,11 @@ import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 let store: ApiCredentialProfile[] = []
 const mockOpenModelsPage = vi.fn()
+const mockOpenSettingsTab = vi.fn()
+const mockOpenWithCredentials = vi.fn()
+const pushWithinOptionsPageMock = vi.fn()
+const mockUseUserPreferencesContext = vi.fn()
+const mockDismissGatewayGuidanceSurface = vi.fn()
 const mockFetchOpenAICompatibleModelIds = vi.fn(
   async (
     _params: Parameters<
@@ -100,6 +116,47 @@ const mockDeleteProfile = vi.fn(async (id: string) => {
   return store.length !== before
 })
 
+type UserPreferencesContextValue = ReturnType<typeof useUserPreferencesContext>
+type ApiCredentialProfilesContextValue = Pick<
+  UserPreferencesContextValue,
+  | "preferences"
+  | "managedSiteType"
+  | "currencyType"
+  | "claudeCodeRouterBaseUrl"
+  | "claudeCodeRouterApiKey"
+  | "cliProxyBaseUrl"
+  | "cliProxyManagementKey"
+  | "dismissGatewayGuidanceSurface"
+>
+
+const createManagedSitePreferences = (
+  newApiOverrides: Partial<UserPreferences["newApi"]> = {},
+): UserPreferences => ({
+  ...DEFAULT_PREFERENCES,
+  managedSiteType: SITE_TYPES.NEW_API,
+  newApi: {
+    ...DEFAULT_PREFERENCES.newApi,
+    baseUrl: "https://managed.example",
+    adminToken: "managed-token",
+    userId: "1",
+    ...newApiOverrides,
+  },
+})
+
+const createApiCredentialProfilesContextValue = (
+  preferences: UserPreferences = createManagedSitePreferences(),
+) =>
+  ({
+    preferences,
+    managedSiteType: SITE_TYPES.NEW_API,
+    currencyType: preferences.currencyType,
+    claudeCodeRouterBaseUrl: preferences.claudeCodeRouter?.baseUrl ?? "",
+    claudeCodeRouterApiKey: preferences.claudeCodeRouter?.apiKey ?? "",
+    cliProxyBaseUrl: preferences.cliProxy?.baseUrl ?? "",
+    cliProxyManagementKey: preferences.cliProxy?.managementKey ?? "",
+    dismissGatewayGuidanceSurface: mockDismissGatewayGuidanceSurface,
+  }) satisfies ApiCredentialProfilesContextValue
+
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
   () => ({
@@ -113,6 +170,11 @@ vi.mock(
     },
   }),
 )
+
+vi.mock("~/components/dialogs/ChannelDialog", () => ({
+  ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
+  useChannelDialog: () => ({ openWithCredentials: mockOpenWithCredentials }),
+}))
 
 vi.mock("~/services/apiCredentialProfiles/modelCatalog", async () => {
   const actual = await vi.importActual<
@@ -138,8 +200,21 @@ vi.mock("~/services/tags/tagStorage", () => ({
   },
 }))
 
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+
+  return {
+    ...actual,
+    useUserPreferencesContext: () => mockUseUserPreferencesContext(),
+  }
+})
+
 vi.mock("~/utils/navigation", () => ({
   openModelsPage: (...args: unknown[]) => mockOpenModelsPage(...args),
+  openSettingsTab: (...args: unknown[]) => mockOpenSettingsTab(...args),
+  pushWithinOptionsPage: (...args: unknown[]) =>
+    pushWithinOptionsPageMock(...args),
 }))
 
 vi.mock("~/services/aiApi/openaiCompatible", () => ({
@@ -152,6 +227,7 @@ vi.mock("~/services/aiApi/openaiCompatible", () => ({
 
 describe("ApiCredentialProfiles page", () => {
   beforeEach(async () => {
+    globalThis.sessionStorage?.clear()
     store = []
     mockListProfiles.mockClear()
     mockFetchOpenAICompatibleModelIds.mockReset()
@@ -166,7 +242,280 @@ describe("ApiCredentialProfiles page", () => {
     mockRenameTag.mockClear()
     mockDeleteTag.mockClear()
     mockOpenModelsPage.mockReset()
+    mockOpenSettingsTab.mockReset()
+    mockOpenWithCredentials.mockReset()
+    pushWithinOptionsPageMock.mockReset()
+    mockDismissGatewayGuidanceSurface.mockReset()
+    mockUseUserPreferencesContext.mockReturnValue(
+      createApiCredentialProfilesContextValue(),
+    )
     await verificationResultHistoryStorage.clearAllData()
+  })
+
+  it("guides users to save an API credential before gateway import", async () => {
+    const user = userEvent.setup()
+
+    render(<ApiCredentialProfiles />)
+
+    expect(
+      await screen.findByText("apiCredentialProfiles:unifiedApiGuidance.title"),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "apiCredentialProfiles:unifiedApiGuidance.description.needs_sources",
+      ),
+    ).toBeVisible()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.actions.addApiCredential",
+      }),
+    )
+
+    expect(
+      await screen.findByText("apiCredentialProfiles:dialog.addTitle"),
+    ).toBeInTheDocument()
+  })
+
+  it("guides saved API credentials to managed-site setup when the gateway is incomplete", async () => {
+    const user = userEvent.setup()
+    store = [
+      {
+        id: "p-1",
+        name: "Saved Key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://example.invalid",
+        apiKey: "sk-test",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+    mockUseUserPreferencesContext.mockReturnValue(
+      createApiCredentialProfilesContextValue(
+        createManagedSitePreferences({ adminToken: "", userId: "" }),
+      ),
+    )
+
+    render(<ApiCredentialProfiles />)
+
+    expect(
+      await screen.findByText(
+        "apiCredentialProfiles:unifiedApiGuidance.description.needs_managed_site",
+      ),
+    ).toBeVisible()
+    expect(await screen.findByText("Saved Key")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.actions.configureManagedSite",
+      }),
+    )
+
+    expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite", {
+      preserveHistory: true,
+    })
+  })
+
+  it("keeps ready API credential gateway guidance on the credential workflow", async () => {
+    const user = userEvent.setup()
+    store = [
+      {
+        id: "p-1",
+        name: "Ready Key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://example.invalid",
+        apiKey: "sk-test",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+
+    render(<ApiCredentialProfiles />)
+
+    expect(
+      await screen.findByText(
+        "apiCredentialProfiles:unifiedApiGuidance.description.ready_to_import",
+      ),
+    ).toBeVisible()
+    expect(await screen.findByText("Ready Key")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "account:unifiedApiGuidance.actions.addAccount",
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.actions.addFirstChannel",
+      }),
+    )
+
+    expect(pushWithinOptionsPageMock).not.toHaveBeenCalled()
+    expect(mockOpenWithCredentials).not.toHaveBeenCalled()
+    const importMenuItem = await screen.findByRole("menuitem", {
+      name: "keyManagement:actions.importToManagedSite",
+    })
+    expect(importMenuItem).toBeVisible()
+    expect(importMenuItem).toHaveAttribute("data-guidance-highlight", "true")
+  })
+
+  it("reveals the managed-site import entry from a guided deep link", async () => {
+    store = [
+      {
+        id: "p-1",
+        name: "Deep-linked Key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://example.invalid",
+        apiKey: "sk-test",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+
+    render(
+      <ApiCredentialProfiles
+        routeParams={{
+          [KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport]:
+            KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS.ManagedSite,
+        }}
+      />,
+    )
+
+    const importMenuItem = await screen.findByRole("menuitem", {
+      name: "keyManagement:actions.importToManagedSite",
+    })
+    expect(importMenuItem).toBeVisible()
+    expect(importMenuItem).toHaveAttribute("data-guidance-highlight", "true")
+    expect(mockOpenWithCredentials).not.toHaveBeenCalled()
+  })
+
+  it("keeps managed-site setup recovery out of guidance for complete configuration", async () => {
+    store = [
+      {
+        id: "p-1",
+        name: "Complete Key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://example.invalid",
+        apiKey: "sk-test",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+
+    render(<ApiCredentialProfiles />)
+
+    expect(
+      await screen.findByText(
+        "apiCredentialProfiles:unifiedApiGuidance.description.ready_to_import",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.queryByText(
+        "apiCredentialProfiles:unifiedApiGuidance.description.needs_managed_site",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.actions.configureManagedSite",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText("apiCredentialProfiles:unifiedApiGuidance.importHint"),
+    ).toBeVisible()
+  })
+
+  it("hides API credential gateway guidance after gateway onboarding has completed once", async () => {
+    mockUseUserPreferencesContext.mockReturnValue(
+      createApiCredentialProfilesContextValue({
+        ...createManagedSitePreferences(),
+        gatewayGuidance: {
+          onboardingCompletedAt: 1,
+        },
+      }),
+    )
+
+    render(<ApiCredentialProfiles />)
+
+    expect(
+      await screen.findByText("apiCredentialProfiles:empty.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("apiCredentialProfiles:unifiedApiGuidance.title"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("temporarily hides API credential gateway guidance without writing preferences", async () => {
+    const user = userEvent.setup()
+
+    render(<ApiCredentialProfiles />)
+
+    expect(
+      await screen.findByText("apiCredentialProfiles:unifiedApiGuidance.title"),
+    ).toBeVisible()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.dismissForSession",
+      }),
+    )
+
+    expect(
+      screen.queryByText("apiCredentialProfiles:unifiedApiGuidance.title"),
+    ).not.toBeInTheDocument()
+    expect(mockDismissGatewayGuidanceSurface).not.toHaveBeenCalled()
+  })
+
+  it("permanently dismisses API credential gateway guidance for the API credential surface", async () => {
+    const user = userEvent.setup()
+    mockDismissGatewayGuidanceSurface.mockResolvedValueOnce({
+      ok: true,
+      preferences: {
+        ...DEFAULT_PREFERENCES,
+        gatewayGuidance: {
+          dismissedAtBySurface: {
+            apiCredentialProfiles: 1,
+          },
+        },
+      },
+    })
+
+    render(<ApiCredentialProfiles />)
+
+    expect(
+      await screen.findByText("apiCredentialProfiles:unifiedApiGuidance.title"),
+    ).toBeVisible()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.permanentlyDismiss",
+      }),
+    )
+
+    expect(
+      screen.getByRole("dialog", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.dismissDialog.title",
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:unifiedApiGuidance.dismissDialog.confirm",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockDismissGatewayGuidanceSurface).toHaveBeenCalledWith(
+        "apiCredentialProfiles",
+      )
+    })
   })
 
   it("creates a profile via the add dialog and renders it", async () => {

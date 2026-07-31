@@ -231,11 +231,26 @@
     "claudeCodeHub": "Claude Code Hub",
     "description": "選擇您要管理的 API 聚合平台站點。這將決定用於渠道管理和模型同步的配置。",
     "doneHub": "Done Hub",
+    "gatewayGuidance": {
+      "actions": {
+        "importAccountKeys": "用帳號 Key 新增渠道",
+        "importApiKeys": "用 API Key 新增渠道",
+        "viewChannels": "查看已匯入渠道"
+      },
+      "configComplete": {
+        "description": "基礎設定只完成了閘道後台連線。若要讓外部客戶端透過這個自建 AI 閘道呼叫模型，還需要把帳號 Key 或 API Key 匯入為閘道渠道，形成統一 AI API。",
+        "title": "下一步：匯入可用 Key"
+      },
+      "unconfigured": {
+        "description": "完成自建 AI 閘道設定後，即可將帳號 Key 或 API Key 匯入為閘道渠道，讓多個 Key 透過同一個 AI API 使用。",
+        "title": "設定自建 AI 閘道"
+      }
+    },
     "newApi": "New API",
     "octopus": "Octopus",
     "siteTypeDesc": "選擇用於渠道管理和模型同步的平台",
-    "siteTypeLabel": "站點型別",
-    "title": "自建站點配置",
+    "siteTypeLabel": "閘道型別",
+    "title": "自建 AI 閘道設定",
     "veloera": "Veloera"
   },
   "messages": {
@@ -362,7 +377,8 @@
     "status": {
       "checking": "檢測中…",
       "denied": "未授予",
-      "granted": "已授予"
+      "granted": "已授予",
+      "unavailable": "暫時無法取得"
     },
     "statusCaption": "權限狀態與瀏覽器同步，如在此頁面外修改請點擊重新整理。",
     "title": "權限管理"
@@ -531,7 +547,7 @@
     "cliProxy": "CLIProxyAPI",
     "dataBackup": "資料與備份",
     "general": "通用",
-    "managedSite": "自建站點管理",
+    "managedSite": "自建 AI 閘道",
     "notifications": "通知",
     "permissions": "權限管理",
     "refresh": "資料重新整理",
