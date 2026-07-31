@@ -33,7 +33,6 @@
       "title": "AxonHub không khả dụng"
     }
   },
-  "description": "Tìm kiếm, chỉnh sửa, xóa hoặc đồng bộ thủ công tất cả các kênh được kết nối với trang web lưu trữ của bạn tại đây.",
   "dialog": {
     "cancel": "Hủy",
     "confirm": "Xóa",
@@ -240,6 +239,19 @@
       "label": "Chế độ chỉnh sửa",
       "visual": "Chỉnh sửa trực quan"
     }
+  },
+  "gatewayGuidance": {
+    "clientHint": "Ứng dụng bên ngoài cũng cần key truy cập do gateway này cấp.",
+    "empty": {
+      "description": "AI gateway tự triển khai này chưa có kênh. Sau khi nhập key tài khoản hoặc API key, gateway có thể được client bên ngoài sử dụng như một AI API.",
+      "importFromAccountKey": "Nhập kênh từ key tài khoản",
+      "importFromApiKeyLibrary": "Nhập kênh từ Kho API Credentials",
+      "title": "Chưa có kênh AI gateway tự triển khai"
+    },
+    "headerDescription": "Quản lý kênh của AI gateway tự triển khai và gộp nhiều key tài khoản hoặc API key thành một AI API.",
+    "openChannelConsole": "Mở trang quản lý kênh gateway",
+    "openTokenConsole": "Mở trang quản lý token",
+    "unconfiguredValueDescription": "Sau khi cấu hình, bạn có thể nhập các key tài khoản và API key rời rạc làm kênh gateway, rồi xem và quản lý trực tiếp trong All API Hub."
   },
   "migration": {
     "actions": {

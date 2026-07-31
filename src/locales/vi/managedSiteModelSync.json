@@ -1,5 +1,5 @@
 {
-  "description": "Tự động đồng bộ hóa danh sách mô hình cho tất cả các kênh trong trang web do bạn quản lý, đảm bảo nhất quán với thượng nguồn",
+  "description": "Tự động cập nhật danh sách model trong AI gateway tự triển khai và giảm bảo trì thủ công; có thể bật khi cần sau khi đã tạo kênh.",
   "execution": {
     "actions": {
       "refresh": "Làm mới kết quả",
@@ -100,6 +100,9 @@
     "warning": {
       "syncCompletedWithFailures": "Đồng bộ hóa đã hoàn tất, nhưng vẫn còn {{failed}} kênh thất bại (thành công: {{success}}/{{total}}). Bạn có thể trực tiếp thử lại các mục thất bại."
     }
+  },
+  "optionalGuidance": {
+    "description": "Đồng bộ model có thể tự động cập nhật danh sách model, ánh xạ hoặc định tuyến của gateway và giảm bảo trì thủ công. Đây là chức năng mở rộng sau khi tạo kênh, không ảnh hưởng đến việc dùng các kênh hiện có như một AI API."
   },
   "settings": {
     "allowedModels": "Danh sách mô hình được phép",

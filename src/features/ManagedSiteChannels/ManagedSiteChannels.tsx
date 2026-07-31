@@ -17,6 +17,9 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
+import Tooltip from "~/components/Tooltip"
+import { Button, IconButton, Notice } from "~/components/ui"
 import { AxonHubChannelTypeNames } from "~/constants/axonHub"
 import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
@@ -25,9 +28,21 @@ import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import {
+  KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
+  KEY_MANAGEMENT_ROUTE_PARAMS,
+} from "~/features/KeyManagement/constants"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import { buildGuidedAccountKeyImportTarget } from "~/features/UnifiedApiGuidance/navigation"
+import { accountStorage } from "~/services/accounts/accountStorage"
+import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import {
+  buildManagedSiteChannelConsoleUrl,
+  buildManagedSiteTokenConsoleUrl,
+} from "~/services/managedSites/managedSiteConsoleRoutes"
 import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
@@ -38,6 +53,7 @@ import {
 } from "~/services/managedSites/managedUpstreamResourceMigration"
 import { resolveManagedUpstreamResourceCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import {
+  getManagedSiteAdminConfigForType,
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
   getManagedSiteMessagesKeyFromSiteType,
@@ -72,12 +88,15 @@ import {
   createManagedUpstreamResourceRef,
   normalizeManagedUpstreamResourceScopeKey,
 } from "~/types/managedUpstreamResource"
+import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import {
   navigateWithinOptionsPage,
   openManagedSiteModelSyncForChannel,
   openSettingsTab,
+  pushWithinOptionsPage,
 } from "~/utils/navigation"
 
 import ChannelFilterDialog from "./components/ChannelFilterDialog"
@@ -104,6 +123,7 @@ const channelsToolbarSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar
 const channelsRowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
+const logger = createLogger("ManagedSiteChannels")
 
 const MANAGED_SITE_TYPE_OPTIONS: ManagedSiteType[] = [
   SITE_TYPES.NEW_API,
@@ -328,6 +348,7 @@ export default function ManagedSiteChannels({
     newApiUsername,
     newApiPassword,
     newApiTotpSecret,
+    markGatewayGuidanceOnboardingCompleted,
     updateManagedSiteType,
   } = useUserPreferencesContext()
   const managedSiteType = siteType ?? contextManagedSiteType
@@ -349,10 +370,33 @@ export default function ManagedSiteChannels({
   )
   const managedSiteAnalyticsType =
     resolveProductAnalyticsManagedSiteType(managedSiteType)
+  const managedSiteBaseUrl =
+    getManagedSiteAdminConfigForType(preferences, managedSiteType)?.baseUrl ??
+    ""
+  const managedSiteTokenConsoleUrl = buildManagedSiteTokenConsoleUrl(
+    managedSiteBaseUrl,
+    managedSiteType,
+  )
+  const openManagedSiteChannelConsole = () => {
+    void createTab(
+      buildManagedSiteChannelConsoleUrl(managedSiteBaseUrl, managedSiteType),
+      true,
+    )
+  }
 
   const [channels, setChannels] = useState<ChannelRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hasCompletedInitialChannelLoad, setHasCompletedInitialChannelLoad] =
+    useState(false)
+  const [gatewayGuidanceImportAccountId, setGatewayGuidanceImportAccountId] =
+    useState<string | undefined>()
+  const [hasGatewayGuidanceProfiles, setHasGatewayGuidanceProfiles] =
+    useState(false)
+  const [
+    isGatewayGuidanceSourceInventoryLoaded,
+    setIsGatewayGuidanceSourceInventoryLoaded,
+  ] = useState(false)
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     base_url: false,
@@ -389,6 +433,7 @@ export default function ManagedSiteChannels({
   const [migrationChannels, setMigrationChannels] = useState<ChannelRow[]>([])
   const [isMigrationDialogOpen, setIsMigrationDialogOpen] = useState(false)
   const [isMigrationMode, setIsMigrationMode] = useState(false)
+  const currentManagedSiteTypeRef = useRef(managedSiteType)
   const activeRefreshRef = useRef<ActiveRefresh | null>(null)
   const channelFilterResourceScopeBaseUrlRef = useRef("")
   const deleteScopeGenerationRef = useRef(0)
@@ -409,6 +454,56 @@ export default function ManagedSiteChannels({
     [managedSiteType, preferences, supportsChannelMigration],
   )
   const hasMigrationTargets = migrationTargets.length > 0
+
+  useEffect(() => {
+    let isCurrent = true
+
+    const loadGatewayGuidanceSources = async () => {
+      const [accounts, profiles] = await Promise.all([
+        accountStorage.getAllAccounts().catch((error) => {
+          logger.warn(
+            "Failed to load account context for gateway guidance",
+            error,
+          )
+          return []
+        }),
+        apiCredentialProfilesStorage.listProfiles().catch((error) => {
+          logger.warn(
+            "Failed to load API credential context for gateway guidance",
+            error,
+          )
+          return []
+        }),
+      ])
+      if (!isCurrent) return
+
+      const displayAccounts = accountStorage.convertToDisplayData(accounts)
+      setGatewayGuidanceImportAccountId(
+        displayAccounts.find(canResolveAccountRuntimeKeySecret)?.id,
+      )
+      setHasGatewayGuidanceProfiles(profiles.length > 0)
+      setIsGatewayGuidanceSourceInventoryLoaded(true)
+    }
+
+    void loadGatewayGuidanceSources()
+    return () => {
+      isCurrent = false
+    }
+  }, [])
+
+  const handleOpenGatewayChannelImport = useCallback(() => {
+    const target = buildGuidedAccountKeyImportTarget(
+      gatewayGuidanceImportAccountId,
+    )
+    pushWithinOptionsPage(`#${target.menuItemId}`, target.params)
+  }, [gatewayGuidanceImportAccountId])
+
+  const handleOpenApiCredentialProfiles = useCallback(() => {
+    pushWithinOptionsPage(`#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`, {
+      [KEY_MANAGEMENT_ROUTE_PARAMS.GuidedImport]:
+        KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS.ManagedSite,
+    })
+  }, [])
 
   const refreshChannels = useCallback(
     async (analyticsContext?: ProductAnalyticsActionContext) => {
@@ -439,6 +534,7 @@ export default function ManagedSiteChannels({
         setChannels([])
         setError(null)
         setIsLoading(false)
+        setHasCompletedInitialChannelLoad(false)
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           insights: {
             itemCount: 0,
@@ -483,7 +579,8 @@ export default function ManagedSiteChannels({
         })
         if (
           activeRefreshRef.current !== activeRefresh ||
-          refreshAbortController.signal.aborted
+          refreshAbortController.signal.aborted ||
+          currentManagedSiteTypeRef.current !== managedSiteType
         ) {
           completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
             insights: {
@@ -505,6 +602,17 @@ export default function ManagedSiteChannels({
             ),
           ),
         )
+        if (items.length > 0) {
+          void Promise.resolve(
+            markGatewayGuidanceOnboardingCompleted?.(),
+          ).catch((error) => {
+            logger.warn(
+              "Failed to mark gateway guidance onboarding complete.",
+              error,
+            )
+          })
+        }
+        setHasCompletedInitialChannelLoad(true)
         completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             itemCount: items.length,
@@ -515,10 +623,14 @@ export default function ManagedSiteChannels({
         setDeleteRequiresRefresh(false)
         return true
       } catch (err) {
-        if (refreshAbortController.signal.aborted) {
+        const isStaleRefresh =
+          activeRefreshRef.current !== activeRefresh ||
+          currentManagedSiteTypeRef.current !== managedSiteType
+        if (refreshAbortController.signal.aborted || isStaleRefresh) {
           completeAnalytics(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
             insights: {
               failureReason:
+                refreshAbortController.signal.aborted &&
                 activeRefresh.abortSource === REFRESH_ABORT_SOURCES.User
                   ? PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser
                   : PRODUCT_ANALYTICS_FAILURE_REASONS.StaleResponseIgnored,
@@ -556,6 +668,7 @@ export default function ManagedSiteChannels({
       isConfigMissing,
       managedSiteAnalyticsType,
       managedSiteType,
+      markGatewayGuidanceOnboardingCompleted,
       t,
     ],
   )
@@ -582,10 +695,12 @@ export default function ManagedSiteChannels({
   }, [managedSiteAnalyticsType])
 
   useLayoutEffect(() => {
+    currentManagedSiteTypeRef.current = managedSiteType
     editOpenGenerationRef.current += 1
     channelFilterResourceScopeBaseUrlRef.current = ""
     setChannels([])
     setError(null)
+    setHasCompletedInitialChannelLoad(false)
   }, [managedSiteType])
 
   useEffect(() => {
@@ -1954,6 +2069,43 @@ export default function ManagedSiteChannels({
     ],
   )
 
+  const hasActiveFilters = Boolean(
+    searchValue.trim() ||
+      channelIdFilterValue.trim() ||
+      selectedStatuses.length,
+  )
+  const isLoadedEmpty =
+    hasCompletedInitialChannelLoad &&
+    !hasActiveFilters &&
+    !error &&
+    !isLoading &&
+    channels.length === 0
+  const shouldPrioritizeApiCredentialProfiles =
+    !gatewayGuidanceImportAccountId && hasGatewayGuidanceProfiles
+  const gatewayImportActions = !isGatewayGuidanceSourceInventoryLoaded
+    ? []
+    : shouldPrioritizeApiCredentialProfiles
+      ? [
+          {
+            label: t("gatewayGuidance.empty.importFromApiKeyLibrary"),
+            onClick: handleOpenApiCredentialProfiles,
+          },
+          {
+            label: t("gatewayGuidance.empty.importFromAccountKey"),
+            onClick: handleOpenGatewayChannelImport,
+          },
+        ]
+      : [
+          {
+            label: t("gatewayGuidance.empty.importFromAccountKey"),
+            onClick: handleOpenGatewayChannelImport,
+          },
+          {
+            label: t("gatewayGuidance.empty.importFromApiKeyLibrary"),
+            onClick: handleOpenApiCredentialProfiles,
+          },
+        ]
+
   return (
     <>
       <ManagedSiteChannelsView
@@ -1962,11 +2114,85 @@ export default function ManagedSiteChannels({
         callbacks={presentationCallbacks}
         labels={presentationLabels}
         title={t("title")}
-        description={t("description")}
+        titleActions={
+          !isConfigMissing ? (
+            <Tooltip content={t("gatewayGuidance.openChannelConsole")}>
+              <IconButton
+                type="button"
+                size="sm"
+                variant="outline"
+                aria-label={t("gatewayGuidance.openChannelConsole")}
+                analyticsAction={{
+                  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+                  actionId:
+                    PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelManagement,
+                  surfaceId: channelsToolbarSurface,
+                  entrypoint: optionsEntrypoint,
+                }}
+                onClick={openManagedSiteChannelConsole}
+              >
+                <WorkflowTransitionIcon className="h-4 w-4" aria-hidden />
+              </IconButton>
+            </Tooltip>
+          ) : null
+        }
+        description={
+          <>
+            {t("gatewayGuidance.headerDescription")}{" "}
+            {!isConfigMissing ? (
+              <>
+                {t("gatewayGuidance.clientHint")}{" "}
+                <a
+                  href={managedSiteTokenConsoleUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="font-medium text-blue-700 underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:text-blue-200"
+                >
+                  {t("gatewayGuidance.openTokenConsole")}
+                </a>
+              </>
+            ) : null}
+          </>
+        }
         configurationMissingDescription={getManagedSiteConfigMissingMessage(
           t,
           getManagedSiteMessagesKeyFromSiteType(managedSiteType),
         )}
+        configurationMissingNotice={
+          <Notice
+            tone="info"
+            className="mx-auto max-w-md text-left"
+            description={t("gatewayGuidance.unconfiguredValueDescription")}
+          />
+        }
+        emptyContent={
+          isLoadedEmpty ? (
+            <div className="mx-auto flex max-w-md flex-col items-center gap-3 py-4 text-center">
+              <div className="space-y-1">
+                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {t("gatewayGuidance.empty.title")}
+                </div>
+                <div className="text-muted-foreground text-sm">
+                  {t("gatewayGuidance.empty.description")}
+                </div>
+              </div>
+              <div className="flex w-full max-w-full flex-wrap items-center justify-center gap-2">
+                {gatewayImportActions.map((action, index) => (
+                  <Button
+                    key={action.label}
+                    type="button"
+                    variant={index === 0 ? "default" : "outline"}
+                    size="sm"
+                    className="h-auto min-h-8 max-w-full break-words whitespace-normal"
+                    onClick={action.onClick}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          ) : undefined
+        }
         siteTypeLabel={t("settings:managedSite.siteTypeLabel")}
         filterDialog={
           <ChannelFilterDialog

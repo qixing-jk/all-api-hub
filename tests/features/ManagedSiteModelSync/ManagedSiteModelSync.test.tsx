@@ -376,6 +376,11 @@ describe("ManagedSiteModelSync page", () => {
 
     expect(
       await screen.findByText(
+        "managedSiteModelSync:optionalGuidance.description",
+      ),
+    ).toBeVisible()
+    expect(
+      await screen.findByText(
         "managedSiteModelSync:execution.overview.enabled",
       ),
     ).toBeInTheDocument()

@@ -1,5 +1,5 @@
 {
-  "description": "Sincroniza automáticamente las listas de modelos de todos los canales en tu sitio administrado, asegurando consistencia con upstream",
+  "description": "Actualiza automáticamente las listas de modelos del AI gateway autohospedado y reduce mantenimiento manual; puedes activarlo cuando haga falta después de crear canales.",
   "execution": {
     "actions": {
       "refresh": "Actualizar resultados",
@@ -106,6 +106,9 @@
     "warning": {
       "syncCompletedWithFailures": "La sincronización terminó, pero {{failed}} canal(es) aún fallaron ({{success}}/{{total}} correctos). Puedes reintentar solo los elementos fallidos."
     }
+  },
+  "optionalGuidance": {
+    "description": "La sincronización de modelos puede actualizar automáticamente las listas de modelos, mapeos o rutas del gateway y reducir mantenimiento manual. Es una mejora posterior a la creación de canales y no afecta el uso de los canales existentes como una AI API."
   },
   "settings": {
     "allowedModels": "Lista de modelos permitidos",

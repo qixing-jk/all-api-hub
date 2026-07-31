@@ -1493,6 +1493,12 @@ export default function ManagedSiteModelSync({
         spacing="compact"
       />
 
+      {!isModelSyncUnsupported && !isConfigMissing ? (
+        <p className="mb-6 text-sm leading-6 text-slate-600 dark:text-slate-400">
+          {t("managedSiteModelSync:optionalGuidance.description")}
+        </p>
+      ) : null}
+
       {isModelSyncUnsupported ? (
         <EmptyState
           className="mt-6"

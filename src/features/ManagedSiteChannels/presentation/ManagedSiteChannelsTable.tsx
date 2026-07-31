@@ -6,6 +6,7 @@ import {
   type Table as TanStackTable,
 } from "@tanstack/react-table"
 import { ChevronDown, ChevronUp, Loader2 } from "lucide-react"
+import type { ReactNode } from "react"
 
 import {
   Table,
@@ -41,12 +42,14 @@ export function ManagedSiteChannelsTable({
   isInitialLoading,
   loadingLabel,
   emptyMessage,
+  emptyContent,
 }: {
   table: TanStackTable<ManagedChannelsRowViewModel>
   columnCount: number
   isInitialLoading: boolean
   loadingLabel: string
   emptyMessage: string
+  emptyContent?: ReactNode
 }) {
   return (
     <div className="border-border bg-background overflow-hidden rounded-lg border">
@@ -167,9 +170,11 @@ export function ManagedSiteChannelsTable({
           ) : (
             <TableRow>
               <TableCell colSpan={columnCount} className="h-32 text-center">
-                <div className="text-muted-foreground text-sm">
-                  {emptyMessage}
-                </div>
+                {emptyContent ?? (
+                  <div className="text-muted-foreground text-sm">
+                    {emptyMessage}
+                  </div>
+                )}
               </TableCell>
             </TableRow>
           )}

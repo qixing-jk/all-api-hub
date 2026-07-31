@@ -33,7 +33,6 @@
       "title": "AxonHub 暫時無法使用"
     }
   },
-  "description": "在此搜尋、編輯、刪除或手動同步與你的託管站點相連的所有渠道。",
   "dialog": {
     "cancel": "取消",
     "confirm": "刪除",
@@ -240,6 +239,19 @@
       "label": "編輯模式",
       "visual": "視覺化編輯"
     }
+  },
+  "gatewayGuidance": {
+    "clientHint": "外部用戶端還需要使用此閘道簽發的呼叫 Key。",
+    "empty": {
+      "description": "目前自建 AI 閘道還沒有渠道。請先匯入帳號 Key 或 API Key，之後這個閘道即可作為統一 AI API 提供給外部客戶端使用。",
+      "importFromAccountKey": "從帳號 Key 匯入渠道",
+      "importFromApiKeyLibrary": "從 API 憑據庫匯入渠道",
+      "title": "還沒有自建 AI 閘道渠道"
+    },
+    "headerDescription": "管理自建 AI 閘道中的渠道，把多個帳號 Key 或 API Key 彙整成一個統一 AI API。",
+    "openChannelConsole": "開啟閘道渠道管理",
+    "openTokenConsole": "開啟權杖管理",
+    "unconfiguredValueDescription": "設定後，可以把分散的帳號 Key 和 API Key 匯入為閘道渠道，並直接在 All API Hub 中統一查看和管理。"
   },
   "migration": {
     "actions": {
