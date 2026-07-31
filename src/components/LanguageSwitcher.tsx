@@ -43,6 +43,8 @@ function getLanguageOptionLabel(t: TFunction, language: SupportedUiLanguage) {
       return t("settings:appearanceLanguage.switcher.options.en.label")
     case "es-419":
       return t("settings:appearanceLanguage.switcher.options.es-419.label")
+    case "pt-BR":
+      return t("settings:appearanceLanguage.switcher.options.pt-BR.label")
     case "ja":
       return t("settings:appearanceLanguage.switcher.options.ja.label")
     case "vi":
@@ -63,6 +65,8 @@ function getLanguageOptionName(t: TFunction, language: SupportedUiLanguage) {
       return t("settings:appearanceLanguage.switcher.options.en.name")
     case "es-419":
       return t("settings:appearanceLanguage.switcher.options.es-419.name")
+    case "pt-BR":
+      return t("settings:appearanceLanguage.switcher.options.pt-BR.name")
     case "ja":
       return t("settings:appearanceLanguage.switcher.options.ja.name")
     case "vi":

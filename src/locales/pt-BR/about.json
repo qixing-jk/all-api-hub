@@ -1,0 +1,73 @@
+{
+  "copyrightAck": "Direitos Autorais e Agradecimentos",
+  "devMaintenance": "Desenvolvimento e Manutenção",
+  "features": "Recursos",
+  "feedbackSection": {
+    "bugReport": {
+      "button": "Abrir relatório de erro",
+      "description": "Relate comportamentos incorretos, erros ou resultados inesperados usando o modelo de relatório de erro."
+    },
+    "community": {
+      "button": "Abrir central da comunidade",
+      "description": "Veja o código QR do WeChat, grupo do QQ, comunidade multilíngue no Discord, grupo do Telegram e outros canais para dúvidas, discussões de configuração e solução de problemas."
+    },
+    "discussion": {
+      "button": "Abrir discussões",
+      "description": "Faça perguntas, compare configurações ou inicie uma discussão mais ampla com a comunidade no GitHub Discussions."
+    },
+    "featureRequest": {
+      "button": "Abrir solicitação de recurso",
+      "description": "Compartilhe uma ideia de melhoria ou solicitação de fluxo de trabalho através do modelo de solicitação de recurso."
+    },
+    "languageRequest": {
+      "button": "Abrir solicitação de idioma",
+      "description": "Peça para adicionarmos suporte a um novo idioma de interface no All API Hub."
+    },
+    "title": "Feedback e Suporte"
+  },
+  "githubDesc": "Veja o código-fonte, envie problemas ou participe do desenvolvimento do projeto",
+  "githubRepo": "Repositório no GitHub",
+  "homepage": "Página inicial do projeto",
+  "homepageDesc": "Veja documentação detalhada, guias do usuário e mais informações",
+  "implementedFeatures": "Recursos implementados",
+  "intro": "O All API Hub é uma extensão de navegador para gerenciar sites de terceiros compatíveis com a New API e sua própria instância da New API. Ele centraliza o monitoramento de contas e saldos, a ordenação inteligente e a detecção de sites, além de oferecer automações como atualização automática e bypass de firewall em uma janela temporária. Para instâncias auto-hospedadas da New API, também oferece gerenciamento de canais e sincronização da lista de modelos, com integração ao CLIProxyAPI, backup via WebDAV e ferramentas de importação e exportação.",
+  "privacyText": "Dados sensíveis como contas, chaves de API, cookies, saldos, conteúdo de solicitações e entradas do usuário permanecem locais por padrão. Análises de produto anônimas opcionais são usadas apenas para priorizar correções de problemas comuns, melhorar os fluxos de trabalho principais e a compatibilidade, e reduzir atritos desnecessários, sem coletar dados sensíveis.",
+  "privacyTitle": "Proteção de Privacidade",
+  "projectLinks": "Links do Projeto",
+  "releaseUpdate": {
+    "currentVersion": "Versão atual: v{{version}}",
+    "latestVersion": "Última versão estável: v{{version}}",
+    "title": "Atualizações de Versão"
+  },
+  "starRepo": "Deixar uma estrela",
+  "stores": {
+    "chrome": "Chrome Web Store",
+    "edge": "Microsoft Edge Add-ons",
+    "firefox": "Firefox Add-ons"
+  },
+  "storesSection": {
+    "download": {
+      "button": "Abrir loja",
+      "description": "Baixe na {{store}}."
+    },
+    "review": {
+      "button": "Avaliar na {{store}}",
+      "description": "Se o All API Hub te ajuda, uma avaliação positiva na {{store}} ajuda bastante.",
+      "title": "Deixe uma avaliação positiva"
+    },
+    "title": "Avaliar e Baixar"
+  },
+  "techStack": {
+    "radix": "Primitivas de interface acessíveis",
+    "react": "Biblioteca de interface de usuário",
+    "tailwindcss": "Framework CSS atômico",
+    "title": "Stack Tecnológica",
+    "typescript": "JavaScript com tipagem segura",
+    "wxt": "Framework de desenvolvimento de extensões para navegador"
+  },
+  "thanksDesc": "Agradecemos a todos os desenvolvedores que contribuíram para a comunidade de código aberto. O desenvolvimento desta extensão beneficia-se desses excelentes projetos e ferramentas de código aberto",
+  "title": "Sobre",
+  "upcomingFeatures": "Próximos recursos",
+  "version": "Versão:",
+  "visitHomepage": "Visitar página inicial"
+}

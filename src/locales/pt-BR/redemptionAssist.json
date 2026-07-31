@@ -1,0 +1,55 @@
+{
+  "accountSelect": {
+    "confirm": "Confirmar resgate",
+    "noResults": "Nenhuma conta correspondente encontrada",
+    "title": "Selecione uma conta para usar no resgate",
+    "titleFallback": "Nenhuma conta corresponde a este site. Selecione uma manualmente",
+    "titleMultiple": "Várias contas disponíveis, selecione uma para resgate"
+  },
+  "actions": {
+    "autoRedeem": "Resgate automático"
+  },
+  "messages": {
+    "batchResultSummary": "Total: {{total}}. Sucesso: {{success}}. Falha: {{failed}}.",
+    "batchResultTitle": "Resultados de resgate",
+    "cancelled": "Cancelado",
+    "noAccountForUrl": "Nenhuma conta correspondente encontrada para este site. Adicione o site como uma conta em All API Hub e tente novamente.",
+    "promptConfirm": "Detectamos um possível código de resgate, {{code}}, nesta página. Deseja tentar resgatá-lo automaticamente neste site?",
+    "promptConfirmBatch_one": "Detectamos {{count}} possível código de resgate nesta página. Selecione o código que deseja resgatar automaticamente neste site.",
+    "promptConfirmBatch_many": "Detectamos {{count}} possíveis códigos de resgate nesta página. Selecione os códigos que deseja resgatar automaticamente neste site.",
+    "promptConfirmBatch_other": "Detectamos {{count}} possíveis códigos de resgate nesta página. Selecione os códigos que deseja resgatar automaticamente neste site.",
+    "promptSettingsLink": "Abrir configurações do assistente de resgate",
+    "promptSource": "Este prompt é fornecido pela extensão All API Hub",
+    "promptTitle": "Assistente de resgate",
+    "redeemFailed": "Falha no resgate. Por favor, tente novamente mais tarde.",
+    "redeemLoading": "Tentando resgatar…",
+    "redeemSuccess": "Resgatado com sucesso. Valor creditado: {{amount}}",
+    "selectAll": "Selecionar tudo",
+    "success": {
+      "settingsSaved": "As configurações de assistência de resgate foram salvas"
+    }
+  },
+  "settings": {
+    "contextMenu": {
+      "enable": "Mostrar no menu do botão direito do navegador",
+      "enableDesc": "Adiciona o item “Assistente de resgate” ao menu de contexto do navegador."
+    },
+    "description": "Configure como a extensão detecta e auxilia no resgate de códigos em páginas suportadas",
+    "enable": "Ativar assistência para resgate",
+    "enableDesc": "Detecta automaticamente códigos de resgate em páginas suportadas e mostra uma solicitação de resgate",
+    "relaxedCodeValidation": "Relaxar restrições de formato de código",
+    "relaxedCodeValidationDesc": "Quando ativado, qualquer código de 32 caracteres será tratado como um possível código de resgate (sem verificação de conjunto de caracteres).",
+    "title": "Assistente de resgate",
+    "urlWhitelist": {
+      "enable": "Ativar lista de URLs permitidas",
+      "enableDesc": "Quando ativado, o resgate assistido só é executado em URLs permitidas pelas regras abaixo.",
+      "includeAccountSiteUrls": "Incluir URLs dos sites das contas",
+      "includeAccountSiteUrlsDesc": "Permitir todas as páginas na origem da URL do site de cada conta.",
+      "includeCheckInAndRedeemUrls": "Incluir URLs de check-in e resgate",
+      "includeCheckInAndRedeemUrlsDesc": "Permitir as páginas de check-in e resgate (personalizadas ou padrão) de cada conta.",
+      "patterns": "Padrões de regex personalizados",
+      "patternsDesc": "Um padrão JavaScript RegExp por linha. A correspondência sem distinção entre maiúsculas e minúsculas é aplicada.",
+      "patternsPlaceholder": "^https://example\\.com/console/topup"
+    }
+  }
+}

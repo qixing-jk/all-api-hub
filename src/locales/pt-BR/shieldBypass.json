@@ -1,0 +1,11 @@
+{
+  "titlePrefix": "All API Hub · Bypass de proteção",
+  "toast": {
+    "actions": {
+      "dismiss": "Dispensar",
+      "openSettings": "Abrir configurações do bypass de proteção"
+    },
+    "body": "Esta página foi aberta automaticamente pelo All API Hub para passar por páginas de proteção (por exemplo, desafios do Cloudflare) e obter os cookies ou a sessão necessários.\n\nIsso é necessário para que o All API Hub faça solicitações com sucesso e detecte dados em sites protegidos.\n\nSe uma etapa de verificação aparecer, conclua-a nesta janela. Após a aprovação, o All API Hub continuará e esta janela poderá ser fechada automaticamente.",
+    "title": "Assistente de bypass de proteção do All API Hub (janela temporária)"
+  }
+}

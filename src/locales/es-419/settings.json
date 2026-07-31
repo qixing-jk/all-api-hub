@@ -40,6 +40,10 @@
           "label": "JA",
           "name": "Japonés"
         },
+        "pt-BR": {
+          "label": "PT-BR",
+          "name": "Portugués (Brasil)"
+        },
         "vi": {
           "label": "VI",
           "name": "Vietnamita"

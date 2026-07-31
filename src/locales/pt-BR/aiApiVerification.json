@@ -1,0 +1,92 @@
+{
+  "verifyDialog": {
+    "actions": {
+      "close": "Fechar",
+      "manageModelKey": "Abrir configuração da chave de modelo",
+      "retry": "Tentar novamente",
+      "run": "Executar",
+      "running": "Executando...",
+      "runOne": "Executar",
+      "stop": "Parar",
+      "stopProbe": "Interromper {{probe}}"
+    },
+    "apiTypes": {
+      "anthropic": "Anthropic",
+      "google": "Google/Gemini",
+      "openai": "OpenAI",
+      "openaiCompatible": "Compatível com OpenAI"
+    },
+    "details": {
+      "input": "Entrada",
+      "output": "Saída"
+    },
+    "errors": {
+      "unexpected": "Erro inesperado"
+    },
+    "history": {
+      "clear": "Limpar histórico",
+      "lastVerified": "Última verificação"
+    },
+    "idleHint": "Selecione uma chave para iniciar a verificação. O ID do modelo é obrigatório para testes que dependem de um modelo.",
+    "loadingRuntimeKeysHint": "Carregando chaves...",
+    "meta": {
+      "apiType": "Tipo de API",
+      "apiTypePlaceholder": "Selecione o tipo de API",
+      "model": "Modelo",
+      "modelPlaceholder": "Insira o ID do modelo",
+      "runtimeKey": "Chave",
+      "runtimeKeyIncompatible": "Indisponível para este modelo",
+      "runtimeKeyPlaceholder": "Selecione uma chave"
+    },
+    "noCompatibleRuntimeKeyHint": "Nenhuma chave está disponível para o grupo deste modelo. Crie ou escolha uma chave de um grupo habilitado no Gerenciamento de Chaves.",
+    "notRunYet": "Ainda não executado",
+    "probes": {
+      "models": "Endpoint de modelos (/v1/models)",
+      "structured-output": "Saída estruturada (esquema JSON)",
+      "text-generation": "Geração de texto",
+      "tool-calling": "Chamada de ferramenta/função",
+      "web-search": "Pesquisa na web / grounding"
+    },
+    "requiresModelId": "Insira um ID de modelo para executar este teste.",
+    "selectedRuntimeKeyIncompatibleHint": "A chave selecionada não está disponível para o grupo deste modelo. Escolha uma chave compatível antes de executar a verificação.",
+    "status": {
+      "fail": "Falha",
+      "pass": "Aprovado",
+      "pending": "Pendente",
+      "unsupported": "Não compatível",
+      "unverified": "Não verificado"
+    },
+    "summaries": {
+      "endpointNotFound": "Endpoint não encontrado (404): esta API pode não ser compatível",
+      "forbidden": "Proibido (403): acesso negado",
+      "httpError": "Erro HTTP ({{status}})",
+      "modelsFetched": "{{count}} modelos obtidos.",
+      "modelsFetched_one": "{{count}} modelo obtido.",
+      "modelsFetched_other": "{{count}} modelos obtidos.",
+      "modelsProbeUnsupportedForApiType": "O teste de modelos não é compatível com este tipo de API.",
+      "noModelAvailableToRunProbes": "Nenhum modelo disponível para executar os testes.",
+      "noModelIdProvided": "Nenhum ID de modelo informado.",
+      "noModelIdProvidedToRunProbe": "Nenhum ID de modelo informado para executar o teste.",
+      "noModelIdProvidedToRunProbes": "Nenhum ID de modelo informado para executar os testes.",
+      "noModelsReturned": "Nenhum modelo retornado.",
+      "noToolCallDetected": "Nenhuma chamada de ferramenta detectada (o modelo pode não ser compatível com ferramentas).",
+      "stopped": "Interrompido pelo usuário.",
+      "structuredOutputInvalid": "Saída inválida.",
+      "structuredOutputSucceeded": "Saída estruturada concluída com sucesso.",
+      "textGenerationSucceeded": "Geração de texto concluída com sucesso.",
+      "textGenerationUnexpectedResponse": "Texto de resposta inesperado.",
+      "toolCallSucceeded": "Chamada de ferramenta concluída com sucesso.",
+      "unauthorized": "Não autorizado (401): chave inválida ou autenticação ausente",
+      "webSearchGroundingNoResults": "Nenhum resultado de pesquisa na web/grounding.",
+      "webSearchGroundingSucceeded": "Pesquisa na web/grounding concluída com sucesso.",
+      "webSearchNoResults": "Nenhum resultado de pesquisa na web.",
+      "webSearchRequiresExplicitSupport": "O teste de pesquisa na web exige suporte explícito do tipo de API.",
+      "webSearchSucceeded": "Pesquisa na web concluída com sucesso.",
+      "webSearchUnsupportedAnthropic": "O teste de pesquisa na web não é compatível com endpoints da Anthropic.",
+      "webSearchUnsupportedForApiType": "O teste de pesquisa na web não é compatível com este tipo de API."
+    },
+    "title": "Verificação de API",
+    "unsupportedProbeForApiType": "O teste {{probe}} não é compatível com este tipo de API.",
+    "warning": "Quando o suporte é detectado, é muito provável que ele seja real. Quando não é detectado, ainda pode existir. Os resultados servem apenas como referência; confirme pelo uso real da ferramenta."
+  }
+}

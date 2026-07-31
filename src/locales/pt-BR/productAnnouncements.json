@@ -1,0 +1,32 @@
+{
+  "actions": {
+    "close": "Fechar anúncios de produtos",
+    "dismiss": "Descartar",
+    "dismissFor": "Descartar {{title}}",
+    "open": "Anúncios de produtos",
+    "openWithRiskCount": "Anúncios de produtos, {{riskCount}} avisos de risco ativos",
+    "restore": "Restaurar",
+    "restoreFor": "Restaurar {{title}}",
+    "viewAll": "Ver tudo"
+  },
+  "empty": {
+    "active": "Nenhum anúncio de produto",
+    "dismissed": "Nenhum anúncio descartado"
+  },
+  "filters": {
+    "active": "Ativos",
+    "dismissed": "Descartados"
+  },
+  "labels": {
+    "critical": "Crítico",
+    "info": "Informativo",
+    "unread": "Não lido",
+    "warning": "Aviso"
+  },
+  "loading": "Carregando anúncios de produtos...",
+  "summary": {
+    "additional_one": "Mais {{riskCount}} aviso de risco",
+    "additional_other": "Mais {{riskCount}} avisos de risco"
+  },
+  "title": "Anúncios de produtos"
+}

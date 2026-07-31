@@ -1,0 +1,241 @@
+{
+  "actions": {
+    "autoConfigAriaLabel": "Salve a conta e abra a configuração do canal {{managedSite}}",
+    "autoConfigRequiresValidAccount": "Preencha primeiro o formulário de conta",
+    "autoConfigTitle": "Salve esta conta e abra um formulário de canal pré-preenchido em {{managedSite}}",
+    "configToManagedSite": "Salve e configure em {{managedSite}}",
+    "configuring": "Configurando...",
+    "confirmAdd": "Confirmar adição",
+    "helpDocument": "Guia de solução de problemas",
+    "openApiCredentialProfiles": "Abrir credenciais de API",
+    "reloadCurrentPage": "Recarregar página atual",
+    "reloadExtensionAndRetry": "Recarregue a extensão e tente novamente",
+    "reportUnsupportedSite": "Solicitar suporte do site",
+    "saveAccount": "Salvar conta",
+    "saveChanges": "Salvar alterações",
+    "workflow": {
+      "checkingToken": "Verificando chaves de API...",
+      "creatingToken": "Criando chave padrão...",
+      "loadingSavedAccount": "Carregando conta salva...",
+      "openingManagedSiteDialog": "Abrindo configuração do canal...",
+      "savingAccount": "Salvando conta...",
+      "waitingForOneTimeKey": "Aguardando o salvamento da chave de uso único...",
+      "waitingForSub2ApiGroup": "Escolha um grupo Sub2API..."
+    }
+  },
+  "aihubmixDefaultKeyPrompt": {
+    "cancel": "Criar mais tarde",
+    "cancelHint": "Cancelar não afeta a conta salva. Você poderá criar uma chave de API do AIHubMix manualmente no Gerenciamento de Chaves mais tarde.",
+    "confirm": "Criar e visualizar agora",
+    "creating": "Criando...",
+    "description": "{{accountName}} foi salva. As chaves de API do AIHubMix são exibidas apenas uma vez após a criação. Copie e salve a chave completa agora.",
+    "title": "Criar uma chave padrão do AIHubMix?",
+    "warningTitle": "A chave completa é mostrada apenas uma vez"
+  },
+  "apiCredentialFallback": {
+    "apiCredentials": {
+      "description": "Se você só precisa armazenar chaves e fazer chamadas de API agora, comece pelo fluxo mais simples de credenciais de API. Quando houver suporte para a conta, adicione uma conta web para check-ins, atualização de saldo e sincronização do painel."
+    },
+    "siteSupport": {
+      "description": "Se a detecção ainda falhar após seguir o guia de solução de problemas, este site pode ainda não ser compatível ou esta página pode não suportar a detecção automática."
+    },
+    "title": "Ainda não é reconhecido? Experimente estas alternativas"
+  },
+  "bookmarkImportBatch": {
+    "action": "Importação em lote de favoritos",
+    "prompt": "Vários sites salvos como favoritos do navegador?"
+  },
+  "form": {
+    "accessToken": "Token de acesso",
+    "autoCheckInEnabled": "Habilitar check-in automático diário",
+    "autoCheckInEnabledDesc": "Se esta conta participa do check-in diário quando o check-in automático global está ativado",
+    "checkInStatus": "Status do check-in",
+    "checkInStatusDesc": "O sistema verifica e exibe o status do check-in de hoje durante a atualização da conta. Esta é apenas a exibição de status e não realiza check-in.",
+    "checkInStatusUnsupported": "{{siteType}} não suporta exibição de status de check-in ou check-in automático.",
+    "cookieAuthSessionCookie": "Cookie de sessão",
+    "cookieAuthSessionCookieDesc": "Importe o cookie de sessão desta conta de uma guia do navegador em que você esteja conectado. Para várias contas, importe cada cookie separadamente.",
+    "cookieAuthSessionCookiePlaceholder": "Colar valor do cabeçalho do cookie",
+    "cookiePermissionEnableCookieAuth": "Conceder permissões para autenticação por cookie com várias contas",
+    "cookiePermissionHelpAction": "Abrir configurações de permissões",
+    "cookiePermissionRecommendationDesc": "Permite ler os cookies da página em que você está conectado e anexar o cookie correto de cada conta às solicitações de atualização, check-in e operações relacionadas. Isso mantém estável o uso de várias contas no mesmo site.",
+    "customCheckInDesc": "URL do site externo de check-in/benefícios onde você pode consultar o saldo da conta ou resgatar códigos",
+    "customCheckInUrl": "URL do site externo de check-in (opcional)",
+    "customRedeemUrl": "URL personalizada da página de recarga/resgate (opcional)",
+    "customRedeemUrlDesc": "URL da página de recarga ou resgate",
+    "exchangeRate": "Proporção do valor de recarga (CNY/USD)",
+    "exchangeRateDesc": "Indica quantos RMB são necessários para recarregar 1 USD. O sistema tentará obter essa taxa automaticamente; preencha-a manualmente se isso não for possível.",
+    "exchangeRatePlaceholder": "Insira a taxa de câmbio",
+    "excludeFromTodayIncome": "Excluir da renda de hoje",
+    "excludeFromTodayIncomeDesc": "Ignora esta conta nos totais da Renda de hoje sem desativar a atualização, o check-in ou a exibição da conta",
+    "excludeFromTotalBalance": "Excluir do saldo total",
+    "excludeFromTotalBalanceDesc": "Ignora esta conta no agregado do Saldo Total sem desativar a atualização ou o check-in",
+    "hideAccessToken": "Ocultar token de acesso",
+    "hideRefreshToken": "Ocultar token de atualização",
+    "importCookieAuthSessionCookie": "Importar do login atual",
+    "manualBalanceUsd": "Saldo Manual (USD)",
+    "manualBalanceUsdDesc": "Use esta opção quando o site não puder consultar o saldo ou a cota automaticamente",
+    "manualBalanceUsdError": "Insira um valor válido (>= 0)",
+    "manualBalanceUsdPlaceholder": "Deixe em branco para busca automática",
+    "notes": "Notas",
+    "notesPlaceholder": "Opcional, insira notas",
+    "openRedeemWithCheckIn": "Abrir também a página de resgate ao usar o check-in externo",
+    "openrouterManagementKey": "Chave de gerenciamento OpenRouter",
+    "openrouterManagementKeyGuidance": "Crie uma nova chave de gerenciamento na página Chaves de gerenciamento do OpenRouter, copie-a imediatamente e cole-a aqui. As Chaves de Gerenciamento existentes não podem ser reveladas novamente.",
+    "openrouterManagementKeyGuidanceTitle": "Use uma chave de gerenciamento OpenRouter",
+    "showAccessToken": "Mostrar token de acesso",
+    "showRefreshToken": "Mostrar token de atualização",
+    "siteName": "Nome do site",
+    "siteType": "Tipo de site",
+    "sub2apiImportRefreshToken": "Importar da conta com login atual",
+    "sub2apiRefreshToken": "Token de atualização",
+    "sub2apiRefreshTokenMode": "Sessão hospedada pela extensão (várias contas)",
+    "sub2apiRefreshTokenModeDesc": "Opcional. Armazene o refresh_token da sessão atual do painel na extensão para que cada conta Sub2API possa atualizar e renovar a autenticação independentemente em segundo plano (suporta várias contas em um site).",
+    "sub2apiRefreshTokenPlaceholder": "Cole o valor de refresh_token",
+    "sub2apiRefreshTokenWarningDesc": "Tokens de atualização são credenciais de longa duração usadas em sessões hospedadas pela extensão. Eles são salvos com a conta, inclusive em backups e exportações. Para evitar conflitos de rotação, importe o token de uma janela anônima ou privativa e feche-a; não use a mesma sessão do painel em paralelo.",
+    "sub2apiRefreshTokenWarningTitle": "Nota",
+    "sub2apiTokenExpiresAt": "O token de acesso expira em",
+    "tags": "Tags",
+    "tagsCreate": "Criar \"{{name}}\"",
+    "tagsDelete": "Excluir",
+    "tagsDeleteCancel": "Cancelar",
+    "tagsDeleteConfirm": "Excluir",
+    "tagsDeleteDescription": "Exclua \"{{name}}\" de todos os lugares. Isso removerá a tag de todas as contas.",
+    "tagsDeleteTitle": "Excluir etiqueta",
+    "tagsDescription": "Use tags para categorizar contas para filtragem rápida",
+    "tagsNoResults": "Nenhuma tag encontrada",
+    "tagsPlaceholder": "Adicionar ou selecionar tags",
+    "tagsRemove": "Remover {{name}}",
+    "tagsRename": "Renomear",
+    "tagsRenameCancel": "Cancelar",
+    "tagsRenameSave": "Salvar",
+    "tagsSearchPlaceholder": "Pesquisar tags...",
+    "tagsSelectedCount_one": "{{count}} tag selecionada",
+    "tagsSelectedCount_many": "{{count}} tags selecionadas",
+    "tagsSelectedCount_other": "{{count}} tags selecionadas",
+    "userId": "ID do usuário",
+    "username": "Nome de usuário",
+    "validRateError": "Insira uma taxa de câmbio válida, maior que 0"
+  },
+  "infoPanel": {
+    "autoDetect": "Detecção automática",
+    "autoDetectInfo": "Faça login no site de destino primeiro. A extensão detectará e preencherá automaticamente as informações necessárias para adicionar a conta.",
+    "confirmAddInfo": "Confira se as informações da conta estão corretas antes de clicar em \"Confirmar adição\".",
+    "confirmation": "Confirmação de informações da conta",
+    "editInfo": "Editar informações da conta",
+    "editInfoDesc": "Após modificar as informações da conta, o sistema verificará novamente e obterá os dados de saldo mais recentes",
+    "ldohSiteListHint": "Ainda não tem um site? O LDOH oferece um diretório de vários serviços comunitários de IA da Linux.do.",
+    "manualAdd": "Adição manual",
+    "manualInfo": "Preencha manualmente as informações da conta. Ela será salva com segurança no armazenamento local.",
+    "openLdohSiteList": "Abrir lista de sites LDOH",
+    "openrouterBootstrap": "Crie uma chave de gerenciamento OpenRouter",
+    "openrouterBootstrapInfo": "Esta ação cria uma nova chave de gerenciamento no OpenRouter e a utiliza para detectar e preencher os detalhes da conta.",
+    "reDetectInfo": "Se as informações do site mudarem, clique em \"Detectar novamente\". Primeiro, você precisa entrar no site de destino."
+  },
+  "messages": {
+    "addSuccess": "Conta {{name}} adicionada com sucesso!",
+    "autoDetectCookiePermissionReloadHint": "Se a primeira detecção continuar aguardando após você conceder permissões de Cookie para várias contas, recarregue a extensão e tente novamente.",
+    "autoDetectFailed": "Falha na detecção automática: {{error}}",
+    "autoDetectSuccess": "Detecção automática bem-sucedida!",
+    "autoDetectTakingTooLong": "A detecção automática está demorando mais que o esperado. Abra o guia de solução de problemas.",
+    "cookiePermissionGranted": "Permissão concedida",
+    "cookiePermissionGrantFailed": "A permissão não foi concedida",
+    "importCookiesEmpty": "Nenhum cookie de navegador foi encontrado para este site. Faça login neste site primeiro e tente novamente.",
+    "importCookiesFailed": "Falha ao importar cookies: {{error}}",
+    "importCookiesFailedUnknown": "Falha ao importar cookies devido a um erro desconhecido.",
+    "importCookiesLoading": "Importando cookies...",
+    "importCookiesPermissionDenied": "A extensão não conseguiu ler os cookies deste site. Verifique as permissões de cookies/site do navegador para este site e tente novamente.",
+    "importCookiesSuccess": "Cookies importados",
+    "importSub2apiSessionMissing": "Nenhum refresh_token encontrado. Entre no painel do Sub2API e tente novamente.",
+    "importSub2apiSessionSuccess": "Sessão do Sub2API importada",
+    "loadFailed": "Falha ao carregar os dados da conta",
+    "newApiConfigFailed": "A configuração automática para New API falhou: {{error}}",
+    "operationFailed": "Falha na operação: {{error}}",
+    "reloadExtensionConfirm": "Recarregar a extensão fechará a página da extensão atual. Certifique-se de que todas as informações necessárias foram salvas.",
+    "saveAccountFailed": "Falha ao salvar conta",
+    "saveFailed": "Falha ao salvar",
+    "updateSuccess": "Conta {{name}} atualizada com sucesso!",
+    "urlRequired": "Insira uma URL primeiro"
+  },
+  "mode": {
+    "autoDetect": "Detecção automática",
+    "createOpenRouterManagementKey": "Criar chave de gerenciamento OpenRouter e detectar",
+    "creatingOpenRouterManagementKey": "Criando chave de gerenciamento do OpenRouter...",
+    "detecting": "Detectando...",
+    "manualAdd": "Adição manual",
+    "reDetect": "Detectar novamente"
+  },
+  "openrouterBootstrapRecovery": {
+    "label": "Etiqueta reconhecível: {{label}}",
+    "manualReview": "Pode existir no OpenRouter uma chave de gerenciamento com este rótulo.",
+    "manualRevocation": "Revise as Chaves de Gerenciamento e exclua a chave rotulada manualmente se não precisar dela.",
+    "title": "A criação de chave OpenRouter precisa de sua atenção"
+  },
+  "sections": {
+    "accountAuth": {
+      "title": "Autenticação de conta"
+    },
+    "balanceAndStats": {
+      "title": "Saldo e estatísticas"
+    },
+    "checkInConfig": {
+      "title": "Configurações de check-in"
+    },
+    "siteInfo": {
+      "title": "Informações do site"
+    },
+    "tagsAndNotes": {
+      "description": "As tags ajudam a organizar, filtrar e identificar contas rapidamente, enquanto as notas adicionam contexto de apoio.",
+      "title": "Tags e notas"
+    }
+  },
+  "siteInfo": {
+    "alreadyAdded": "Já existem contas para este site",
+    "authMethod": "Método de autenticação",
+    "authMethodPlaceholder": "Método de autenticação",
+    "authMethodSelectedForSite": "O método de autenticação foi selecionado automaticamente conforme os requisitos de {{siteType}}.",
+    "authType": {
+      "accessToken": "Autenticação por token de acesso",
+      "cookieAuth": "Autenticação por cookie"
+    },
+    "cookieWarning": "Prefira tokens de acesso. A autenticação de cookie requer a importação de um cookie de sessão, e ele pode expirar/renovar e parar de funcionar, exigindo reimportação; para várias contas no mesmo site, importe um cookie de sessão por conta. Use somente quando necessário.",
+    "currentLoginAlreadyAdded": "Login atual já adicionado",
+    "currentSite": "Site atual",
+    "editNow": "Editar agora",
+    "siteUrl": "URL do site",
+    "sub2apiHint": "O Sub2API usa JWTs de curta duração. Quando eles expirarem, a extensão tentará obter automaticamente um novo JWT em uma janela temporária (é preciso estar conectado ao site). Com a \"Sessão hospedada pela extensão\" ativada, cada conta pode atualizar e renovar sua autenticação de forma independente em segundo plano, permitindo várias contas no mesmo site.",
+    "unknown": "Não foi possível obter",
+    "useCurrent": "Usar site atual"
+  },
+  "title": {
+    "add": "Adicionar conta",
+    "edit": "Editar conta"
+  },
+  "warnings": {
+    "duplicateAccount": {
+      "actions": {
+        "continue": "Continuar",
+        "disableAndContinue": "Não me lembre novamente e continue"
+      },
+      "description_one": "Você já tem {{count}} conta de {{siteUrl}}. Adicionar outra pode criar uma duplicata. Deseja continuar?",
+      "description_many": "Você já tem {{count}} contas de {{siteUrl}}. Adicionar outra pode criar uma duplicata. Deseja continuar?",
+      "description_other": "Você já tem {{count}} contas de {{siteUrl}}. Adicionar outra pode criar uma duplicata. Deseja continuar?",
+      "descriptionExact": "Já existe uma conta de {{siteUrl}} com o ID de usuário {{userId}} ({{username}}). Adicionar outra pode criar uma duplicata. Deseja continuar?",
+      "title": "Conta duplicada",
+      "warningTitle": "Este site já possui contas"
+    },
+    "managedSiteConfig": {
+      "actions": {
+        "later": "Talvez mais tarde",
+        "openSettings": "Abrir configurações"
+      },
+      "description": "{{message}}",
+      "guide": "Este recurso salva a conta atual, prepara uma chave de API utilizável e a preenche em um novo canal de {{managedSite}}, agilizando a criação do canal. Ele estará disponível depois que você concluir a configuração do site gerenciado.",
+      "title": "Configure {{managedSite}} primeiro",
+      "warningTitle": "{{managedSite}} ainda não está configurado"
+    },
+    "reloadExtension": {
+      "title": "Recarregar extensão",
+      "warningTitle": "Confirmar recarga da extensão?"
+    }
+  }
+}

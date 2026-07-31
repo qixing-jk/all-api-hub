@@ -1,0 +1,22 @@
+{
+  "actions": {
+    "shareAccountSnapshot": "Compartilhar captura da conta",
+    "shareOverviewSnapshot": "Compartilhar captura do resumo geral"
+  },
+  "labels": {
+    "accounts": "Contas",
+    "asOf": "Em",
+    "balance": "Saldo",
+    "income": "Renda",
+    "net": "Líquido",
+    "outcome": "Gastos",
+    "overview": "Visão geral",
+    "site": "Site",
+    "today": "Hoje",
+    "totalBalance": "Saldo total"
+  },
+  "toast": {
+    "captionHint": "A legenda não foi copiada automaticamente. Copiá-la pode substituir a imagem da área de transferência.",
+    "copyCaption": "Copiar legenda"
+  }
+}

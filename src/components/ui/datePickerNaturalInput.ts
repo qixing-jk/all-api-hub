@@ -40,6 +40,25 @@ function parseChineseFallbackDate(
 }
 
 /**
+ * Parses Portuguese relative-day phrases that Chrono currently misreads.
+ */
+function parsePortugueseFallbackDate(
+  input: string,
+  referenceDate: Date,
+): string | null {
+  const match = /^daqui a (\d+) dias?$/iu.exec(input.trim())
+  if (!match) return null
+
+  const days = Number(match[1])
+  if (!Number.isSafeInteger(days) || days <= 0) return null
+
+  const parsedDate = dayjs(referenceDate).add(days, "day")
+  return parsedDate.isValid()
+    ? formatDatePickerValue(parsedDate.toDate())
+    : null
+}
+
+/**
  * Parses natural-language dates with a Chrono parser and normalizes the result.
  */
 function parseChronoDate(
@@ -207,6 +226,19 @@ export function parseNaturalDatePickerValue(
     referenceDate,
   )
   if (chineseFallbackDate) return chineseFallbackDate
+
+  const portugueseFallbackDate = parsePortugueseFallbackDate(
+    normalizedInput,
+    referenceDate,
+  )
+  if (portugueseFallbackDate) return portugueseFallbackDate
+
+  const portugueseDate = parseChronoDate(
+    normalizedInput,
+    referenceDate,
+    chrono.pt,
+  )
+  if (portugueseDate) return portugueseDate
 
   return parseChronoDate(normalizedInput, referenceDate, chrono)
 }

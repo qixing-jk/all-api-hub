@@ -11,6 +11,7 @@ import {
 const REPO_ROOT = process.cwd()
 const LOCALES_DIR = path.join(REPO_ROOT, "src", "locales")
 const MANIFEST_LOCALES_DIR = path.join(REPO_ROOT, "src", "public", "_locales")
+const MANIFEST_DESCRIPTION_MAX_LENGTH = 132
 const SRC_DIR = path.join(REPO_ROOT, "src")
 const PLURAL_CATEGORIES_BY_LANGUAGE = Object.fromEntries(
   SUPPORTED_UI_LANGUAGES.map((language) => [
@@ -300,6 +301,39 @@ describe("i18n locale validation", () => {
     }
   })
 
+  it("keeps Brazilian Portuguese many plurals aligned with other plurals", async () => {
+    const languageDir = path.join(LOCALES_DIR, "pt-BR")
+    const files = (await fs.readdir(languageDir)).filter((name) =>
+      name.endsWith(".json"),
+    )
+    const mismatches: string[] = []
+
+    const visit = (value: Record<string, unknown>, prefix: string) => {
+      for (const [key, child] of Object.entries(value)) {
+        if (child && typeof child === "object" && !Array.isArray(child)) {
+          visit(child as Record<string, unknown>, `${prefix}${key}.`)
+          continue
+        }
+
+        if (!key.endsWith("_many") || typeof child !== "string") continue
+
+        const otherKey = `${key.slice(0, -"_many".length)}_other`
+        if (value[otherKey] !== child) {
+          mismatches.push(`${prefix}${key}`)
+        }
+      }
+    }
+
+    for (const file of files) {
+      const content = JSON.parse(
+        await fs.readFile(path.join(languageDir, file), "utf8"),
+      ) as Record<string, unknown>
+      visit(content, `${path.basename(file, ".json")}:`)
+    }
+
+    expect(mismatches).toEqual([])
+  })
+
   it("resolves static translation keys referenced in src", async () => {
     const localeMapsByLanguage = Object.fromEntries(
       await Promise.all(
@@ -521,5 +555,60 @@ describe("i18n locale validation", () => {
     )
 
     expect(genericSpanishManifest).toEqual(latinAmericanSpanishManifest)
+  })
+
+  it("provides a complete Brazilian Portuguese manifest locale", async () => {
+    const englishManifest = JSON.parse(
+      await fs.readFile(
+        path.join(MANIFEST_LOCALES_DIR, "en", "messages.json"),
+        "utf8",
+      ),
+    ) as Record<string, { message: string }>
+    const brazilianPortugueseManifest = JSON.parse(
+      await fs.readFile(
+        path.join(MANIFEST_LOCALES_DIR, "pt_BR", "messages.json"),
+        "utf8",
+      ),
+    ) as Record<string, { message: string }>
+
+    expect(Object.keys(brazilianPortugueseManifest).sort()).toEqual(
+      Object.keys(englishManifest).sort(),
+    )
+    expect(
+      Object.values(brazilianPortugueseManifest).every(
+        ({ message }) => message.trim().length > 0,
+      ),
+    ).toBe(true)
+    expect(
+      brazilianPortugueseManifest.manifest_description.message.length,
+    ).toBeLessThanOrEqual(MANIFEST_DESCRIPTION_MAX_LENGTH)
+  })
+
+  it("provides distinct Portugal Portuguese manifest copy", async () => {
+    const brazilianPortugueseManifest = JSON.parse(
+      await fs.readFile(
+        path.join(MANIFEST_LOCALES_DIR, "pt_BR", "messages.json"),
+        "utf8",
+      ),
+    ) as Record<string, { message: string }>
+    const portugalPortugueseManifest = JSON.parse(
+      await fs.readFile(
+        path.join(MANIFEST_LOCALES_DIR, "pt_PT", "messages.json"),
+        "utf8",
+      ),
+    ) as Record<string, { message: string }>
+
+    expect(Object.keys(portugalPortugueseManifest).sort()).toEqual(
+      Object.keys(brazilianPortugueseManifest).sort(),
+    )
+    expect(
+      Object.values(portugalPortugueseManifest).every(
+        ({ message }) => message.trim().length > 0,
+      ),
+    ).toBe(true)
+    expect(
+      portugalPortugueseManifest.manifest_description.message.length,
+    ).toBeLessThanOrEqual(MANIFEST_DESCRIPTION_MAX_LENGTH)
+    expect(portugalPortugueseManifest).not.toEqual(brazilianPortugueseManifest)
   })
 })

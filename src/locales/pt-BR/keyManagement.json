@@ -1,0 +1,440 @@
+{
+  "accountSummary": {
+    "keys_one": "{{count}} chave",
+    "keys_many": "{{count}} chaves",
+    "keys_other": "{{count}} chaves",
+    "loadFailed": "Falha ao carregar",
+    "title": "Visão geral das contas",
+    "unsupported": "não compatível"
+  },
+  "actions": {
+    "collapseAll": "Recolher tudo",
+    "deleteKey": "Excluir chave",
+    "disable": "Desativar",
+    "editKey": "Editar chave",
+    "enable": "Ativar",
+    "expandAll": "Expandir tudo",
+    "exportToCCSwitch": "Exportar para o CC Switch",
+    "exportToKiloCode": "Exportar configuração do Kilo Code",
+    "hideKey": "Ocultar chave",
+    "importToClaudeCodeRouter": "Importar para o Claude Code Router",
+    "importToCliProxy": "Importar para o CLIProxyAPI",
+    "importToManagedSite": "Importar para {{site}}",
+    "openApiProfiles": "Abrir biblioteca de credenciais de API",
+    "openSelectedAccountModels": "Ver modelos da conta",
+    "retryFailed": "Tentar novamente as falhas",
+    "saveToApiProfiles": "Salvar na biblioteca de credenciais de API",
+    "saveToApiProfilesHint": "Salve esta chave na biblioteca de credenciais de API para copiá-la, verificá-la e exportá-la rapidamente.",
+    "showKey": "Mostrar chave",
+    "useInCherry": "Usar no Cherry Studio",
+    "verifyApi": "Verificar API",
+    "verifyCliSupport": "Verificar compatibilidade com CLI"
+  },
+  "allAccounts": "Todas as contas",
+  "allAccountsFailed_one": "{{count}} falhou",
+  "allAccountsFailed_many": "{{count}} falharam",
+  "allAccountsFailed_other": "{{count}} falharam",
+  "allAccountsLoading_one": "{{count}} carregando",
+  "allAccountsLoading_many": "{{count}} carregando",
+  "allAccountsLoading_other": "{{count}} carregando",
+  "allAccountsProgress": "{{loaded}}/{{total}} contas carregadas",
+  "batchApiCredentialProfiles": {
+    "actions": {
+      "open": "Salvar na biblioteca de credenciais de API ({{selectedCount}})"
+    }
+  },
+  "batchCliProxyExport": {
+    "actions": {
+      "open": "Importar em lote para o CLIProxyAPI ({{selectedCount}})",
+      "running": "Importando...",
+      "start": "Iniciar importação"
+    },
+    "description": "Importe as {{selectedCount}} chaves selecionadas para o CLIProxyAPI usando uma única política de provedor.",
+    "results": {
+      "failed": "Falhou",
+      "pending": "Pendente",
+      "running": "Importando",
+      "success": "Concluído"
+    },
+    "summary": "{{total}} no total, {{success}} concluídas, {{failed}} com falha.",
+    "title": "Importação em lote para o CLIProxyAPI"
+  },
+  "batchManagedSiteExport": {
+    "actions": {
+      "clearSelection": "Limpar seleção",
+      "open": "Importar em lote para {{site}} ({{selectedCount}})",
+      "refreshPreview": "Atualizar prévia",
+      "running": "Importando...",
+      "selectAll": "{{selected}}/{{total}} selecionadas",
+      "start": "Iniciar importação",
+      "verifyAndRefresh": "Verificar e atualizar a prévia",
+      "verifying": "Verificando...",
+      "viewChannels": "Ver canais"
+    },
+    "blockedReasons": {
+      "baseUrlRequired": "O gateway de IA auto-hospedado de destino exige uma URL base.",
+      "configMissing": "A configuração de administrador do gateway de IA auto-hospedado está ausente.",
+      "inputPreparationFailed": "Não foi possível preparar os dados do canal para esta chave.",
+      "keyRequired": "A chave de canal gerada está vazia.",
+      "modelsRequired": "Nenhum modelo foi identificado para esta chave.",
+      "nameRequired": "O nome de canal gerado está vazio.",
+      "realKeyRequired": "O gateway de IA auto-hospedado de destino exige uma chave real do provedor.",
+      "secretResolutionFailed": "Não foi possível obter o segredo real do token."
+    },
+    "confirm": {
+      "description": "Isso criará canais para as {{selectedCount}} chaves selecionadas. Correspondências exatas existentes e linhas bloqueadas não serão criadas.",
+      "title": "Importar chaves selecionadas"
+    },
+    "description": "Revise as {{selectedCount}} chaves selecionadas antes de criar canais em {{site}}.",
+    "fields": {
+      "baseUrl": "URL base",
+      "editModelsLabel": "Editar modelos de {{name}}",
+      "groups": "Grupos",
+      "models": "Modelos"
+    },
+    "gatewayDescription": "Isso importa chaves de contas como canais de um gateway de IA auto-hospedado. Após a importação, os clientes poderão usar várias chaves por meio de uma única API de IA.",
+    "loadingDescription": "Preparando a prévia das {{selectedCount}} chaves selecionadas.",
+    "messages": {
+      "completed": "Importação em lote concluída: {{created}} criados, {{failed}} com falha, {{skipped}} ignorados.",
+      "duplicate": "Já existe uma correspondência exata: {{channel}}",
+      "executionFailed": "Falha ao executar a importação em lote: {{error}}",
+      "verificationFailed": "Falha na verificação do New API: {{error}}"
+    },
+    "preview": {
+      "loadFailed": "Falha ao carregar a prévia: {{error}}",
+      "loading": "Preparando prévia dos canais...",
+      "selected_one": "{{count}} chave selecionada",
+      "selected_many": "{{count}} chaves selecionadas",
+      "selected_other": "{{count}} chaves selecionadas",
+      "summary": "Prévia: {{ready}} prontos, {{warning}} avisos, {{skipped}} ignorados, {{blocked}} bloqueados, {{total}} no total."
+    },
+    "results": {
+      "channelCreationFailed": "Falha ao criar o canal.",
+      "status": {
+        "failed": "Falhou",
+        "skipped": "Ignorado",
+        "success": "Criado"
+      },
+      "summary": "Resultado: {{created}} criados, {{failed}} com falha, {{skipped}} ignorados, {{total}} no total."
+    },
+    "selection": {
+      "accountGroup": "Selecionar as chaves visíveis da conta {{name}}",
+      "rowLabel": "Selecionar {{name}} para importação em lote",
+      "visible": "{{selected}}/{{total}} visíveis selecionadas"
+    },
+    "status": {
+      "blocked": "Bloqueado",
+      "ready": "Pronto",
+      "skipped": "Ignorado",
+      "warning": "Aviso"
+    },
+    "title": "Importação em lote para gateway de IA auto-hospedado",
+    "warnings": {
+      "backendSearchFailed": "A verificação de duplicatas não conseguiu acessar o backend de destino.",
+      "dedupeUnsupported": "O gateway de IA auto-hospedado atual não consegue verificar duplicatas com segurança pela URL base.",
+      "exactVerificationUnavailable": "Pode haver um canal correspondente, mas a verificação exata da chave não está disponível.",
+      "matchRequiresConfirmation": "Há um canal semelhante; revise-o antes de criar.",
+      "modelPrefillFailed": "Falha ao preencher os modelos; usando a melhor lista de modelos disponível."
+    }
+  },
+  "createFirstKey": "Criar primeira chave",
+  "description": "Esta página exibe as informações das chaves de API de todas as contas, incluindo uso e data de expiração. Para criar uma chave para uma conta específica, clique no botão \"Adicionar chave\" no canto superior direito ou no botão \"+\" ao lado de cada item. Mantenha suas chaves de API seguras e não as compartilhe com outras pessoas",
+  "dialog": {
+    "accountSelect": "Selecionar conta",
+    "addToken": "Adicionar chave de API",
+    "advancedSettings": "Configurações avançadas",
+    "availableModels": "Modelos disponíveis",
+    "basicInfo": "Informações básicas",
+    "createFailed": "Falha ao criar a chave. Tente novamente mais tarde",
+    "createNotSupported": "Esta conta não permite criar chaves de API.",
+    "createSuccess": "Chave criada com sucesso",
+    "createToken": "Criar chave",
+    "editModeNoChange": "Não é possível alterar a conta no modo de edição",
+    "editToken": "Editar chave de API",
+    "expiration": "Data de expiração",
+    "expirationPlaceholder": "Deixe em branco para nunca expirar",
+    "groupLabel": "Grupo",
+    "groupRate": "Taxa:",
+    "groupRestrictedNote": "Somente grupos compatíveis com este modelo podem ser selecionados.",
+    "ipExample": "Exemplo: 192.168.1.1,10.0.0.1 ou use * para não limitar",
+    "ipLimits": "Limites de IP",
+    "ipPlaceholder": "Deixe em branco para não limitar; separe vários IPs com vírgulas",
+    "loadDataFailed": "Falha ao carregar os dados. Tente novamente mais tarde",
+    "modelLimits": "Limites de modelos",
+    "modelSelectHint_one": "{{count}} modelo selecionado",
+    "modelSelectHint_many": "{{count}} modelos selecionados",
+    "modelSelectHint_other": "{{count}} modelos selecionados",
+    "nameRequired": "O nome da chave não pode ficar em branco",
+    "quotaPlaceholder": "Insira o valor da cota (USD)",
+    "quotaRate": "1 USD = {{rate}} pontos de cota",
+    "quotaSettings": "Configurações de cota",
+    "selectAccountError": "Selecione uma conta",
+    "selectModels": "Selecionar modelos",
+    "subnetExample": "Exemplo: 192.168.1.0/24",
+    "subnetLimits": "Limites de sub-rede",
+    "subnetPlaceholder": "Deixe em branco para não limitar ou insira uma sub-rede ou CIDR",
+    "tokenName": "Nome do token",
+    "unlimitedQuota": "Cota ilimitada",
+    "updateFailed": "Falha ao atualizar a chave. Tente novamente mais tarde",
+    "updateNotSupported": "Esta conta não permite atualizar chaves de API.",
+    "updateSuccess": "Chave atualizada com sucesso",
+    "updateToken": "Atualizar chave",
+    "validExpiration": "A data de expiração deve ser posterior à data atual",
+    "validIp": "Insira endereços IP válidos e separe vários IPs com vírgulas",
+    "validQuota": "Insira um valor de cota válido",
+    "warningText": "Mantenha suas chaves de API seguras e não as compartilhe",
+    "warningTitle": "Observações"
+  },
+  "enabledCount_one": "{{count}} ativa",
+  "enabledCount_many": "{{count}} ativas",
+  "enabledCount_other": "{{count}} ativas",
+  "keyDetails": {
+    "createTime": "Criada em:",
+    "expireTime": "Expira em:",
+    "group": "Grupo:",
+    "key": "Chave:",
+    "neverExpires": "Nunca expira",
+    "remainingQuota": "Cota restante:",
+    "usedQuota": "Cota usada:"
+  },
+  "loadError": {
+    "description": "A extensão não conseguiu carregar as chaves desta conta. A sessão pode ter expirado, as permissões podem ser insuficientes ou o site pode estar temporariamente indisponível. Entre novamente no site e tente de novo.\n\nErro: {{error}}",
+    "openSite": "Abrir site",
+    "title": "Falha ao carregar as chaves"
+  },
+  "managedSiteSetupRecovery": {
+    "configureManagedSite": "Configurar gateway de IA auto-hospedado",
+    "description": "Configure seu gateway de IA auto-hospedado para importar chaves de contas como canais do gateway e reuni-las em uma única API de IA."
+  },
+  "managedSiteStatus": {
+    "actions": {
+      "configureChecks": "Configurar verificações do site gerenciado",
+      "refresh": "Atualizar status dos canais do site gerenciado",
+      "refreshing": "Atualizando status dos canais do site gerenciado",
+      "reviewChannels": "Revisar canais",
+      "verifyNow": "Verificar agora"
+    },
+    "badges": {
+      "added": "Adicionada",
+      "checkFailed": "Falha na verificação",
+      "checking": "Verificando",
+      "configMissing": "Não configurado",
+      "notAdded": "Não adicionada",
+      "requiresConfirmation": "Requer confirmação",
+      "unknown": "Desconhecido",
+      "verificationUnavailable": "Não é possível verificar por completo"
+    },
+    "descriptions": {
+      "backendSearchFailed": "Não foi possível concluir as verificações do site gerenciado.",
+      "baseUrlSearchUnsupported": "Este recurso não é compatível com o site gerenciado atual, pois ele não permite buscar canais pela URL base.",
+      "configMissingOptional": "As verificações opcionais dos canais do site gerenciado ainda não estão ativadas. Você ainda pode ver, copiar e criar chaves.",
+      "inputPreparationFailed": "A verificação não conseguiu preparar dados de canal comparáveis.",
+      "newApiRetrieveKeyHint": "No New API, a comparação completa depende da chave do canal. Como visualizar essa chave exige verificação em duas etapas (2FA), a comparação completa não está disponível no momento."
+    },
+    "pageUnsupported": "As verificações dos canais do site gerenciado não estão disponíveis nesta página porque o site atual não permite buscar canais por URL.",
+    "recovery": {
+      "configureLogin": "Primeiro, adicione nas Configurações os campos de login e auxílio de 2FA do New API. Até lá, a chave do canal não poderá ser lida e a comparação completa não poderá ser concluída.",
+      "verificationRequired": "A comparação completa da chave exige primeiro uma verificação breve do New API, pois visualizar uma chave de canal do New API requer 2FA."
+    },
+    "signals": {
+      "key": {
+        "matched": "Chave correspondente",
+        "noMatch": "Chave não correspondente",
+        "notProvided": "Chave ausente",
+        "tooltipMatched": "Um canal no mesmo agrupamento de URL normalizada corresponde a esta chave: {{channelName}}.",
+        "tooltipNoMatch": "Havia chaves de canal comparáveis, mas nenhuma correspondia a esta chave.",
+        "tooltipNotProvided": "Nenhuma chave comparável estava disponível para este token.",
+        "tooltipUnavailable": "Não foi possível concluir a comparação porque não havia chaves de canal comparáveis.",
+        "unavailable": "Chave indisponível"
+      },
+      "models": {
+        "contained": "Modelos contidos",
+        "exact": "Modelos exatos",
+        "noMatch": "Modelos não correspondentes",
+        "notProvided": "Modelos ausentes",
+        "similar": "Modelos semelhantes",
+        "tooltipContained": "O conjunto de modelos normalizado corresponde ao canal {{channelName}} por contenção.",
+        "tooltipExact": "O conjunto de modelos normalizado corresponde exatamente ao canal {{channelName}}.",
+        "tooltipNoMatch": "Nenhuma correspondência de modelo foi confirmada no agrupamento de URL normalizada.",
+        "tooltipNotProvided": "Nenhuma lista de modelos comparável estava disponível para este token.",
+        "tooltipSimilar": "O conjunto de modelos normalizado corresponde ao canal {{channelName}} por similaridade ({{score}}%).",
+        "tooltipUnavailable": "Não foi possível concluir a comparação de modelos porque não havia um agrupamento de URL comparável.",
+        "unavailable": "Modelos indisponíveis"
+      },
+      "url": {
+        "matched": "URL correspondente",
+        "noMatch": "URL não encontrada",
+        "tooltipMatched_one": "Encontrado {{count}} canal candidato no mesmo agrupamento de URL normalizada. Exemplo: {{channelName}}.",
+        "tooltipMatched_many": "Encontrados {{count}} canais candidatos no mesmo agrupamento de URL normalizada. Exemplo: {{channelName}}.",
+        "tooltipMatched_other": "Encontrados {{count}} canais candidatos no mesmo agrupamento de URL normalizada. Exemplo: {{channelName}}.",
+        "tooltipNoMatch": "Nenhum canal foi encontrado no mesmo agrupamento de URL normalizada."
+      }
+    }
+  },
+  "messages": {
+    "accountNotFound": "Informações da conta não encontradas",
+    "batchSavedToApiProfiles": "Chaves selecionadas salvas na biblioteca de credenciais de API",
+    "batchSaveToApiProfilesFailed": "Falha ao salvar as chaves selecionadas na biblioteca de credenciais de API",
+    "batchSaveToApiProfilesPartialFailed": "{{savedCount}} de {{totalCount}} chaves selecionadas foram salvas. Não foi possível salvar {{failedCount}}.",
+    "copyFailed": "Falha ao copiar",
+    "deleteConfirm": "Tem certeza de que deseja excluir a chave {{name}}? Esta ação não pode ser desfeita",
+    "deleteSuccess": "Chave {{name}} excluída com sucesso",
+    "keyCopied": "Chave {{name}} copiada para a área de transferência",
+    "loadFailed": "Falha ao carregar a lista de chaves",
+    "revealFailed": "Falha ao revelar a chave",
+    "savedToApiProfiles": "{{name}} foi salva na biblioteca de credenciais de API",
+    "saveToApiProfilesFailed": "Falha ao salvar na biblioteca de credenciais de API",
+    "serviceCredentialCopied": "Chave de serviço copiada para a área de transferência",
+    "serviceCredentialRotated": "Chave de serviço redefinida",
+    "serviceCredentialRotateFailed": "Falha ao redefinir a chave de serviço",
+    "verifyApiFailed": "Falha ao abrir a verificação da API",
+    "verifyCliSupportFailed": "Falha ao abrir a verificação de compatibilidade com CLI"
+  },
+  "noKeys": "Ainda não há dados de chaves",
+  "noMatchingKeys": "Nenhuma chave correspondente encontrada",
+  "oneTimeKey": {
+    "close": "Já salvei, fechar",
+    "copied": "Chave completa copiada para a área de transferência",
+    "copiedAction": "Copiada",
+    "copy": "Copiar chave completa",
+    "copyFailed": "Falha ao copiar a chave completa",
+    "keyLabel": "Chave completa",
+    "subtitle": "O valor completo da chave {{name}} só é exibido após esta criação.",
+    "subtitleUnnamed": "A chave completa só é exibida após esta criação.",
+    "title": "Salve a chave completa agora",
+    "warningDescription": "O AIHubMix não permite visualizar a chave completa novamente. Depois de fechar esta caixa de diálogo, listas ou detalhes poderão mostrar apenas um valor mascarado.",
+    "warningTitle": "Esta chave só pode ser visualizada uma vez"
+  },
+  "pleaseAddAccount": "Adicione uma conta primeiro",
+  "pleaseSelectAccount": "Selecione uma conta",
+  "refreshTokenList": "Atualizar lista de chaves",
+  "repairMissingKeys": {
+    "action": "Verificar chaves",
+    "actions": {
+      "cancel": "Cancelar verificação",
+      "rerun": "Verificar novamente",
+      "start": "Iniciar verificação e preencher lacunas"
+    },
+    "coverage": {
+      "createdGroup": "Criado: {{group}}",
+      "groupsCovered": "{{covered}}/{{total}} grupos cobertos",
+      "missingGroup": "Ausente: {{group}}"
+    },
+    "deleteConfirm": {
+      "confirm": "Excluir chaves selecionadas",
+      "description": "Essas chaves também serão excluídas dos sites correspondentes e não poderão ser restauradas pela extensão. Confirme se os grupos delas não estão mais em uso.",
+      "more_one": "E mais {{count}}",
+      "more_many": "E mais {{count}}",
+      "more_other": "E mais {{count}}",
+      "title_one": "Excluir {{count}} chave inválida?",
+      "title_many": "Excluir {{count}} chaves inválidas?",
+      "title_other": "Excluir {{count}} chaves inválidas?"
+    },
+    "description": "Verifique os grupos disponíveis de cada conta, crie chaves padrão para os grupos sem chaves e liste chaves incomuns cujos grupos não estão disponíveis.",
+    "historyNote": "Este é o resultado da verificação anterior. Nenhuma tarefa está em execução no momento, e você pode iniciar a verificação novamente.",
+    "initialNotice": "Após o início, as contas salvas serão verificadas quanto aos grupos disponíveis, e serão criadas chaves padrão para os grupos sem chaves.",
+    "invalidKeys": {
+      "badge": "Inválida",
+      "deleteFailed": "Falha ao excluir as chaves inválidas",
+      "deletePartial": "{{deleted}} excluídas, {{failed}} com falha",
+      "deleteSelected": "Excluir selecionadas",
+      "deleteSuccess_one": "{{count}} chave inválida excluída",
+      "deleteSuccess_many": "{{count}} chaves inválidas excluídas",
+      "deleteSuccess_other": "{{count}} chaves inválidas excluídas",
+      "emptyDescription": "Esta verificação não encontrou chaves cujos grupos estejam indisponíveis.",
+      "emptyTitle": "Nenhuma chave inválida",
+      "groupUnavailable": "O grupo {{group}} não está disponível no momento",
+      "selectAll": "Selecionar todos os resultados atuais",
+      "selectedCount_one": "{{count}} chave inválida selecionada",
+      "selectedCount_many": "{{count}} chaves inválidas selecionadas",
+      "selectedCount_other": "{{count}} chaves inválidas selecionadas"
+    },
+    "messages": {
+      "cancelFailed": "Falha ao cancelar a tarefa de correção",
+      "loadFailed": "Falha ao carregar o progresso da correção",
+      "startFailed": "Falha ao iniciar a tarefa de correção"
+    },
+    "noMatchingResults": "Nenhum resultado correspondente",
+    "outcomes": {
+      "alreadyHad": "Já tinha chaves",
+      "created": "Criada",
+      "failed": "Falhou",
+      "skipped": "Ignorada"
+    },
+    "previousResult": {
+      "backToSetup": "Voltar à verificação",
+      "description": "Você pode consultar o resultado da verificação anterior. Novas verificações usam as configurações atuais.",
+      "title": "Resultado da verificação anterior disponível",
+      "view": "Ver resultado anterior"
+    },
+    "progressLabel": "Progresso",
+    "remoteWriteNotice": "Esta ação pode criar novas chaves nos sites correspondentes. Nenhuma chave será excluída automaticamente.",
+    "renameOption": {
+      "helper": "Aplica-se somente às chaves criadas automaticamente pela extensão. Durante a verificação, os nomes delas acompanharão o grupo atual.",
+      "infoLabel": "Ver detalhes do alinhamento de nomes das chaves",
+      "label": "Manter os nomes das chaves alinhados aos grupos",
+      "tooltip": "Somente chaves com o padrão de nome criado automaticamente são processadas, como “user group (auto)” ou “vip group (auto)”. Após a correção, o nome acompanhará o grupo atual da chave. Outros nomes não serão alterados."
+    },
+    "renameSummary": {
+      "accountFailed_one": "{{count}} nome não sincronizado",
+      "accountFailed_many": "{{count}} nomes não sincronizados",
+      "accountFailed_other": "{{count}} nomes não sincronizados",
+      "accountRenamed_one": "{{count}} nome sincronizado",
+      "accountRenamed_many": "{{count}} nomes sincronizados",
+      "accountRenamed_other": "{{count}} nomes sincronizados",
+      "failed": "Nomes não sincronizados",
+      "renamed": "Nomes sincronizados",
+      "summarySeparator": ", "
+    },
+    "resultsTitle": "Resultados",
+    "runningNote": "Esta tarefa é executada em segundo plano. Você pode fechar esta caixa de diálogo e voltar mais tarde ou cancelá-la no cartão de progresso.",
+    "searchLabel": "Pesquisar",
+    "searchPlaceholder": "Pesquisar conta, origem ou tipo de site...",
+    "skipReasons": {
+      "aihubmixOneTimeKey": "As chaves do AIHubMix só podem ser visualizadas uma vez. Crie a chave manualmente e salve a chave completa imediatamente.",
+      "noneAuth": "Sem credenciais (tipo de autenticação: none)",
+      "sub2api": "É necessário selecionar um grupo do Sub2API; crie a chave manualmente",
+      "tokenAutomationUnsupported": "Este site oferece uma credencial de serviço em vez do gerenciamento de tokens de API; a correção automática de chaves será ignorada."
+    },
+    "title": "Verificação da cobertura de chaves",
+    "totalsLabels": {
+      "eligibleAccounts": "Contas qualificadas",
+      "enabledAccounts": "Contas ativadas",
+      "processedAccounts": "Processadas"
+    },
+    "views": {
+      "accountCoverage": "Cobertura das contas",
+      "invalidKeys": "Chaves inválidas",
+      "label": "Visualização dos resultados"
+    }
+  },
+  "searchPlaceholder": "Pesquisar nome da chave...",
+  "selectAccount": "Selecionar conta",
+  "selectAccountToContinue": "Selecione uma conta acima antes de visualizar ou criar chaves.",
+  "serviceCredential": {
+    "authenticated": "Autenticada",
+    "baseUrl": "URL base:",
+    "copy": "Copiar",
+    "notAuthenticated": "Não autenticada",
+    "rotate": "Redefinir",
+    "rotateUnsupported": "Este site não permite redefinir a chave de serviço",
+    "rotating": "Redefinindo...",
+    "singleton": "Chave de serviço"
+  },
+  "showingCount_one": "Exibindo {{count}}",
+  "showingCount_many": "Exibindo {{count}}",
+  "showingCount_other": "Exibindo {{count}}",
+  "title": "Gerenciamento de chaves",
+  "totalKeys_one": "Total de {{count}} chave",
+  "totalKeys_many": "Total de {{count}} chaves",
+  "totalKeys_other": "Total de {{count}} chaves",
+  "unifiedApiGuidance": {
+    "headerBridge": "Importe as chaves das contas para seu gateway de IA auto-hospedado e use várias chaves por meio de uma única API de IA. A exportação direta para ferramentas cliente continua sendo a opção sem gateway."
+  },
+  "unsupportedSource": {
+    "description": "É possível salvar este tipo de site na conta, mas a extensão ainda não adaptou o protocolo de listagem de chaves. Envie uma solicitação de compatibilidade para nos ajudar a adicionar o gerenciamento de chaves.",
+    "requestSiteSupport": "Solicitar compatibilidade com o site",
+    "supportRequestErrorMessage": "O gerenciamento de chaves não foi implementado para {{siteType}}",
+    "title": "O gerenciamento de chaves ainda não é compatível com este tipo de site"
+  }
+}

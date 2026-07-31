@@ -294,6 +294,21 @@ describe("LanguageSwitcher", () => {
     })
   })
 
+  it("shows and persists Brazilian Portuguese from the select variant", async () => {
+    render(<LanguageSwitcher variant="select" />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:appearanceLanguage.switcher.options.pt-BR.name",
+      }),
+    )
+
+    expect(changeLanguageMock).toHaveBeenCalledWith("pt-BR")
+    await waitFor(() => {
+      expect(setLanguageMock).toHaveBeenCalledWith("pt-BR")
+    })
+  })
+
   it("renders the icon-dropdown trigger label and changes language from the radio menu", () => {
     render(<LanguageSwitcher variant="icon-dropdown" />)
 

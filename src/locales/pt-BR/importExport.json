@@ -1,0 +1,192 @@
+{
+  "description": "Faça backup e restaure os dados da extensão",
+  "export": {
+    "accountData": "Dados das contas",
+    "accountDataDescription": "As exportações manuais de contas e do JSON completo incluem credenciais salvas em texto simples. Armazene os arquivos exportados com segurança.",
+    "accountsExported": "Dados das contas exportados com sucesso",
+    "dataExported": "Dados exportados com sucesso",
+    "description": "Exporte os dados como um arquivo JSON para backup",
+    "exportFailed": "Falha na exportação. Tente novamente",
+    "fullBackup": "Exportação completa",
+    "fullBackupDescription": "As exportações manuais do JSON completo incluem as credenciais salvas das contas em texto simples junto com as configurações do usuário. Armazene o arquivo com segurança.",
+    "settingsExported": "Configurações do usuário exportadas com sucesso",
+    "title": "Exportar dados",
+    "userSettings": "Configurações do usuário",
+    "userSettingsDescription": "Exporte somente as configurações da interface e as preferências"
+  },
+  "import": {
+    "backupTime": "Data do backup",
+    "containsAccountData": "Contém dados de contas",
+    "containsApiCredentialProfiles": "Contém a biblioteca de credenciais de API",
+    "containsChannelConfigs": "Contém configurações de canais",
+    "containsUserSettings": "Contém configurações do usuário",
+    "dataInvalid": "Erro no formato dos dados. Verifique o formato JSON",
+    "dataPreview": "Pré-visualização dos dados",
+    "dataValid": "O formato dos dados está correto",
+    "description": "Restaure os dados de um arquivo de backup",
+    "downloadImportFailed": "Falha ao importar do WebDAV",
+    "formatError": "Erro no formato dos dados. Verifique o formato JSON",
+    "formatNotCorrect": "O formato dos dados está incorreto",
+    "importFailed": "Falha na importação: {{error}}",
+    "importSelectedSuccess": "Conteúdo selecionado importado com sucesso",
+    "importSuccess": "Dados importados com sucesso",
+    "noImportableData": "Nenhum dado que possa ser importado foi encontrado",
+    "pasteJsonData": "Cole os dados JSON ou importe usando o seletor de arquivos acima...",
+    "replaceWarning": "Alguns dados deste dispositivo serão substituídos. Se necessário, exporte primeiro um backup.",
+    "sections": {
+      "accounts": {
+        "description": "Inclui contas, favoritos e tags.",
+        "title": "Contas e favoritos"
+      },
+      "apiCredentialProfiles": {
+        "description": "Inclui URLs de API, chaves e observações salvas.",
+        "title": "Biblioteca de credenciais de API"
+      },
+      "channelConfigs": {
+        "description": "Inclui regras de canais, como filtros de modelos.",
+        "title": "Configuração de canais"
+      },
+      "label": "Escolha o que importar",
+      "preferences": {
+        "description": "Inclui tema, idioma, comportamento dos cliques e outras preferências.",
+        "title": "Configurações do usuário"
+      }
+    },
+    "sectionStrategy": {
+      "accounts": {
+        "merge": "Adicionar",
+        "replace": "Substituir"
+      },
+      "apiCredentialProfiles": {
+        "merge": "Adicionar",
+        "replace": "Substituir"
+      },
+      "channelConfigs": {
+        "merge": "Adicionar",
+        "replace": "Substituir",
+        "skip": "Ignorar"
+      },
+      "preferences": {
+        "replace": "Substituir",
+        "skip": "Ignorar"
+      }
+    },
+    "sectionStrategyHelp": {
+      "accounts": {
+        "merge": "Útil ao trazer contas de outro computador; as contas e os favoritos atuais serão mantidos.",
+        "replace": "Suas contas e seus favoritos atuais ficarão iguais aos da lista do backup."
+      },
+      "apiCredentialProfiles": {
+        "merge": "Adicione credenciais de API do backup; as credenciais atuais serão mantidas.",
+        "replace": "Sua biblioteca atual de credenciais de API ficará igual à do backup."
+      },
+      "channelConfigs": {
+        "merge": "Adicione ou atualize regras por canal; as regras mais recentes do backup serão aplicadas.",
+        "replace": "Sua configuração atual de canais ficará igual à do backup.",
+        "skip": "Mantenha as regras atuais dos canais."
+      },
+      "preferences": {
+        "replace": "Substitua as configurações atuais deste dispositivo pelas configurações do backup.",
+        "skip": "Mantenha o tema, o idioma e os hábitos atuais deste dispositivo."
+      }
+    },
+    "selectBackupFile": "Selecionar arquivo de backup",
+    "selectFileImport": "Selecione um arquivo ou insira os dados que deseja importar",
+    "title": "Importar dados"
+  },
+  "notice": {
+    "importantNotice": "Aviso importante",
+    "importWarning1": "Antes de importar, escolha para cada tipo de dado se deseja adicioná-lo, substituí-lo ou ignorá-lo. Por padrão, contas e credenciais de API são adicionadas, enquanto as configurações atuais são mantidas",
+    "importWarning2": "Recomendamos exportar os dados atuais como backup antes da importação",
+    "importWarning3": "Somente arquivos no formato JSON exportados por esta extensão são compatíveis",
+    "importWarning4": "Os dados importados podem conter informações confidenciais (tokens de contas e chaves de API). Proteja os backups e importe somente de fontes confiáveis"
+  },
+  "title": "Importar/exportar",
+  "webdav": {
+    "actionState": {
+      "saved": "A configuração está salva. O teste de conexão, o envio ao WebDAV e a importação do WebDAV usam a configuração salva no momento.",
+      "unsaved": "Há alterações não salvas na configuração. O teste de conexão, o envio ao WebDAV e a importação do WebDAV salvarão essas alterações primeiro."
+    },
+    "autoSync": {
+      "actionState": {
+        "saved": "Sincronizar agora usa as configurações salvas do WebDAV e da sincronização automática.",
+        "unsaved": "Há alterações não salvas nas configurações de sincronização automática. Sincronizar agora não as utilizará; salve primeiro essas configurações."
+      },
+      "description": "Configure a sincronização automática dos dados compartilhados. As configurações locais do dispositivo permanecem no dispositivo atual.",
+      "enable": "Ativar sincronização automática",
+      "enableDesc": "Quando ativada, os dados compartilhados serão sincronizados com o WebDAV nos intervalos definidos.",
+      "interval": "Intervalo de sincronização (segundos)",
+      "intervalDesc": "Defina a frequência da sincronização automática",
+      "intervalHint": "Cerca de {{minutes}} minutos",
+      "lastSync": "Última sincronização",
+      "saveSettings": "Salvar configurações",
+      "strategy": "Estratégia de sincronização",
+      "strategyDesc": "Escolha como os dados devem ser sincronizados",
+      "strategyLocalFirst": "Local primeiro: os dados locais substituem os remotos",
+      "strategyMerge": "Mesclagem inteligente: mescla os dados locais e remotos com base nas datas",
+      "strategyRemoteFirst": "Remoto primeiro: os dados remotos substituem os locais",
+      "syncNow": "Sincronizar agora",
+      "title": "Sincronização automática com WebDAV"
+    },
+    "configDesc": "Configure o WebDAV para sincronizar dados compartilhados. Algumas configurações locais do dispositivo permanecem nele e não são enviadas nem substituídas.",
+    "downloadImport": "Importar do WebDAV",
+    "downloadImportWithSave": "Salvar e importar do WebDAV",
+    "encryption": {
+      "decryptAction": "Descriptografar e importar",
+      "decryptDialogDesc": "Estes dados de sincronização do WebDAV estão criptografados. Tente usar uma senha para importá-los.",
+      "decryptDialogTitle": "Descriptografar dados do WebDAV",
+      "decryptFailed": "Falha ao descriptografar",
+      "decryptPassword": "Senha",
+      "decryptPrompt": "Não foi possível descriptografar automaticamente. Insira sua senha.",
+      "enableDesc": "Opcional: criptografe os backups do WebDAV com uma senha. Se a criptografia estiver desativada, os backups enviados conterão as credenciais salvas em texto simples. Use criptografia ou armazene-os com segurança.",
+      "password": "Senha de criptografia",
+      "passwordDesc": "Usada para criptografar os dados enviados ao WebDAV e descriptografar os dados baixados do WebDAV.",
+      "passwordPlaceholder": "Insira a senha",
+      "savePassword": "Salvar senha para descriptografar futuramente",
+      "title": "Criptografia de dados do WebDAV"
+    },
+    "hidePassword": "Ocultar senha",
+    "notSynced": "Não sincronizado",
+    "password": "Senha",
+    "rebuildDialog": {
+      "cancel": "Agora não",
+      "confirm": "Recriar deste dispositivo",
+      "description": "O arquivo de backup no WebDAV está incompleto. Continuar a sincronização pode misturar os dados incorretamente. Você pode criar um novo backup na nuvem usando os dados deste dispositivo.",
+      "fullSelectionNote": "Esta recriação incluirá todos os dados sincronizáveis apenas neste envio. Seu escopo de sincronização salvo não será alterado.",
+      "title": "Seu backup na nuvem pode estar danificado",
+      "warningDescription": "A recriação substituirá o backup do WebDAV pelos dados atuais deste dispositivo. Se faltarem contas, favoritos ou preferências neste dispositivo, faça o envio de outro dispositivo com dados completos ou importe primeiro um backup completo.",
+      "warningTitle": "Verifique se este dispositivo tem todos os dados"
+    },
+    "restorePolicy": {
+      "description": "O WebDAV serve para sincronizar dados compartilhados, não para fazer um backup completo do dispositivo. As configurações de conexão/criptografia do WebDAV, a seleção de sincronização e as configurações de atualização automática das contas deste dispositivo permanecem locais e não serão enviadas ao WebDAV nem substituídas por ele. Use a exportação/importação manual para migrar essas configurações locais do dispositivo.",
+      "title": "Aviso sobre o escopo da sincronização"
+    },
+    "saveConfig": "Salvar configuração",
+    "showPassword": "Mostrar senha",
+    "syncData": {
+      "accounts": "Contas",
+      "apiCredentialProfiles": "Biblioteca de credenciais de API",
+      "bookmarks": "Favoritos",
+      "description": "Escolha quais domínios de dados compartilhados participarão da sincronização com o WebDAV. Preferências locais do dispositivo, como as configurações do WebDAV, a seleção de sincronização e a atualização automática das contas, permanecem no dispositivo atual, enquanto as configurações dos canais continuam sincronizadas por compatibilidade.",
+      "preferences": "Preferências",
+      "selectionRequired": "Selecione pelo menos um domínio de dados para sincronizar",
+      "title": "Dados da sincronização"
+    },
+    "syncError": "Falha na sincronização",
+    "syncFailed": "Falha na sincronização",
+    "syncing": "Sincronizando",
+    "syncSuccess": "Sincronização concluída",
+    "testConnection": "Testar conexão",
+    "testConnectionWithSave": "Salvar e testar conexão",
+    "testFailed": "Falha no teste de conexão",
+    "testSuccess": "Teste de conexão concluído",
+    "title": "Sincronização com WebDAV",
+    "uploadBackup": "Enviar ao WebDAV",
+    "uploadBackupWithSave": "Salvar e enviar ao WebDAV",
+    "uploadFailed": "Falha ao enviar ao WebDAV",
+    "uploadSuccess": "Enviado ao WebDAV",
+    "username": "Nome de usuário",
+    "webdavUrl": "URL do WebDAV",
+    "webdavUrlExample": "Por exemplo: a URL completa do arquivo https://dav.example.com/{{filename}} ou a URL do diretório raiz do WebDAV"
+  }
+}

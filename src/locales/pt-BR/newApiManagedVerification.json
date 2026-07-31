@@ -1,0 +1,48 @@
+{
+  "dialog": {
+    "actions": {
+      "close": "Fechar",
+      "openSite": "Abrir site",
+      "retry": "Tentar novamente",
+      "retryAfterPasskey": "Tentar novamente após a chave de acesso",
+      "saveAndRetry": "Salvar e tentar novamente",
+      "submitLoginCode": "Enviar código de login",
+      "submitVerificationCode": "Enviar código de verificação"
+    },
+    "body": {
+      "credentialsMissing": "Adicione um nome de usuário e uma senha de login do New API nas Configurações antes de executar a verificação assistida por sessão.",
+      "failure": "Não foi possível concluir o fluxo de verificação do New API.",
+      "loggingIn": "Verificando a sessão atual do New API e preparando a verificação, caso necessária.",
+      "loginTwoFactor": "A etapa de login do New API exige um código de verificação para que a sessão administrativa baseada no navegador possa continuar.",
+      "passkeyManual": "No momento, esta conta exige verificação por chave de acesso para a etapa segura. Conclua a verificação da chave de acesso no site, volte aqui e tente novamente.",
+      "secureVerification": "A sessão administrativa está conectada, mas o New API ainda exige um código de verificação segura para que as chaves ocultas dos canais possam ser lidas.",
+      "successChannel": "Verificação de {{label}} concluída. A chave real do canal foi carregada.",
+      "successSettings": "O fluxo de login e verificação do New API foi concluído com sucesso. Agora você pode continuar com as ações que exigem login e verificação.",
+      "successToken": "Verificação de {{label}} concluída. O status do site gerenciado foi atualizado."
+    },
+    "fields": {
+      "codeLabel": "Código de verificação"
+    },
+    "hints": {
+      "manualFallback": "A inserção manual do código continua disponível mesmo quando o TOTP automático está configurado.",
+      "openSettingsShortcut": "Você pode preencher aqui a configuração que falta e continuar a verificação imediatamente.",
+      "passkey": "Abra o site, conclua a solicitação da chave de acesso, volte aqui e tente novamente."
+    },
+    "messages": {
+      "completeRequiredConfig": "Preencha primeiro os campos de configuração obrigatórios.",
+      "finishing": "Finalizando a verificação da sessão do New API...",
+      "missingBaseUrl": "Adicione a URL base do New API antes de testar o fluxo da sessão.",
+      "missingCode": "Insira primeiro o código de verificação.",
+      "quickConfigSaveFailed": "Falha ao salvar a configuração rápida. Tente novamente.",
+      "refreshingChannel": "Carregando a chave real do canal...",
+      "refreshingToken": "Atualizando o status de site gerenciado deste token...",
+      "starting": "Iniciando o fluxo de verificação do New API...",
+      "submitting": "Enviando o código de verificação..."
+    },
+    "title": {
+      "channel": "Verificação da chave de canal do New API",
+      "settings": "Verificação da sessão do New API",
+      "token": "Nova tentativa de verificação do New API"
+    }
+  }
+}

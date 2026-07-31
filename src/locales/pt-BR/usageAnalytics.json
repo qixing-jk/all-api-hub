@@ -1,0 +1,225 @@
+{
+  "actions": {
+    "applySettings": "Aplicar configurações",
+    "export": "Exportar",
+    "openAccountUsageSettings": "Configurações de uso",
+    "refresh": "Atualizar",
+    "syncNow": "Sincronizar agora"
+  },
+  "charts": {
+    "accountComparison": {
+      "description": "Compare os totais das contas da seleção atual.",
+      "series": {
+        "tokens": "Total de tokens"
+      },
+      "title": "Comparação por conta"
+    },
+    "common": {
+      "chartType": {
+        "ariaLabel": "Tipo de gráfico",
+        "histogram": "Histograma",
+        "pie": "Pizza"
+      }
+    },
+    "dailyOverview": {
+      "axes": {
+        "requests": "Solicitações",
+        "tokens": "Tokens / Cota"
+      },
+      "description": "Tendências multimétricas com dica de ferramenta e zoom.",
+      "series": {
+        "completionTokens": "Tokens de conclusão",
+        "promptTokens": "Tokens de prompt",
+        "quota": "Cota",
+        "requests": "Solicitações",
+        "totalTokens": "Total de tokens"
+      },
+      "title": "Visão geral diária"
+    },
+    "latencyHistogram": {
+      "description": "Histograma de latência por solicitação (`use_time`) para a seleção atual.",
+      "series": {
+        "count": "Contagem"
+      },
+      "title": "Distribuição de latência"
+    },
+    "latencyTrend": {
+      "axes": {
+        "seconds": "Segundos",
+        "slowCount": "Solicitações lentas"
+      },
+      "description": "Latência média e máxima diária, além da quantidade de solicitações lentas.",
+      "series": {
+        "avg": "Média",
+        "max": "Máx.",
+        "slow": "Lento"
+      },
+      "title": "Tendência de latência"
+    },
+    "modelCostDistribution": {
+      "description": "Principais modelos por cota consumida (convertida em USD) no período selecionado.",
+      "series": {
+        "usd": "Custo (USD)"
+      },
+      "title": "Distribuição de custos por modelo"
+    },
+    "modelDistribution": {
+      "description": "Principais modelos por total de tokens no período selecionado.",
+      "series": {
+        "tokens": "Total de tokens"
+      },
+      "title": "Distribuição por modelo"
+    },
+    "modelHeatmap": {
+      "description": "Intensidade de uso de token ao longo do tempo para os principais modelos (clique em um modelo para focar).",
+      "series": {
+        "tokens": "Total de tokens"
+      },
+      "title": "Mapa de calor de modelo × dia"
+    },
+    "other": "Outro",
+    "slowModels": {
+      "description": "Modelos com mais solicitações lentas na seleção atual.",
+      "series": {
+        "slowCount": "Solicitações lentas"
+      },
+      "title": "Modelos lentos"
+    },
+    "slowTokens": {
+      "description": "Tokens de API com mais solicitações lentas na seleção atual.",
+      "series": {
+        "slowCount": "Solicitações lentas"
+      },
+      "title": "Tokens lentos"
+    },
+    "usageTimeHeatmap": {
+      "description": "Total de tokens agregados por dia da semana e hora (horário local).",
+      "series": {
+        "tokens": "Total de tokens"
+      },
+      "title": "Mapa de calor do tempo de uso"
+    }
+  },
+  "description": "Sincronize e visualize o histórico de uso agregado entre contas, com suporte para exportação.",
+  "empty": {
+    "description": "Ative a sincronização em Configurações → Uso da conta e clique em \"Sincronizar agora\" para obter o histórico de uso recente.",
+    "title": "Ainda não há dados de histórico de uso"
+  },
+  "filters": {
+    "accounts": "Contas",
+    "accountsHint": "Escolha um subconjunto de contas (a seleção vazia significa todas nos sites selecionados).",
+    "allAccounts": "Todas as contas",
+    "allSites": "Todos os sites",
+    "allTokens": "Todos os tokens",
+    "endDay": "Data de término",
+    "sites": "Sites",
+    "sitesHint": "Escolha um subconjunto de sites (seleção vazia significa todos).",
+    "startDay": "Data de início",
+    "tokens": "Tokens de API",
+    "tokensHint": "Filtro de token opcional derivado de agregados de histórico de uso (seleção vazia significa tudo dentro das contas selecionadas).",
+    "unknownToken": "Token desconhecido"
+  },
+  "hover": {
+    "account": "Conta",
+    "notes": "Notas",
+    "owners": "Contas",
+    "site": "Site",
+    "token": "Token",
+    "type": "Tipo",
+    "url": "URL"
+  },
+  "messages": {
+    "error": {
+      "exportFailed": "Falha na exportação: {{error}}",
+      "exportNoData": "Não há dados para exportar para a seleção atual",
+      "settingsSaveFailed": "Falha ao salvar configurações: {{error}}",
+      "syncFailed": "Falha na sincronização: {{error}}"
+    },
+    "loading": {
+      "syncing": "Sincronizando histórico de uso..."
+    },
+    "success": {
+      "exported": "Exportado",
+      "settingsSaved": "Configurações salvas",
+      "syncCompleted": "Sincronização concluída (sucesso: {{success}}, ignorado: {{skipped}}, erro: {{error}}, sem suporte: {{unsupported}})",
+      "syncCompletedNoSummary": "Sincronização concluída"
+    },
+    "warning": {
+      "scheduleFallback": "Este navegador não suporta sincronização agendada, por isso foi alterado para \"Após atualização da conta\": {{warning}}",
+      "syncCompletedWithIssues": "Sincronização concluída com acompanhamento necessário (sucesso: {{success}}, ignorado: {{skipped}}, erro: {{error}}, sem suporte: {{unsupported}})"
+    }
+  },
+  "settings": {
+    "alarmUnsupported": "A API de alarmes não é compatível com este navegador; o agendamento semelhante ao cron não está disponível.",
+    "enabled": "Sincronização do histórico de uso",
+    "enabledHint": "Quando ativada, a extensão armazena agregados diários limitados (sem registros brutos).",
+    "retentionDays": "Retenção (dias)",
+    "scheduleMode": "Programação de sincronização automática",
+    "scheduleModePlaceholder": "Selecione um modo de programação",
+    "scheduleModes": {
+      "afterRefresh": "Após atualização da conta",
+      "alarm": "Estilo cron (API de alarmes)",
+      "manual": "Somente manual"
+    },
+    "syncIntervalHours": "Intervalo mínimo de sincronização (horas)"
+  },
+  "status": {
+    "never": "Nunca",
+    "states": {
+      "error": "Erro",
+      "never": "Nunca",
+      "success": "Sucesso",
+      "unsupported": "Sem suporte"
+    }
+  },
+  "summary": {
+    "completionTokens": "Tokens de saída",
+    "cost": "Custo",
+    "promptTokens": "Tokens de entrada",
+    "requests": "Solicitações",
+    "totalTokens": "Total de tokens"
+  },
+  "syncTab": {
+    "actions": {
+      "clearSelection": "Limpar seleção",
+      "refreshStatus": "Atualizar status",
+      "syncAccount": "Sincronizar conta",
+      "syncing": "Sincronizando...",
+      "syncSelected": "Sincronizar selecionadas",
+      "viewStatus": "Ver status de sincronização"
+    },
+    "noAccounts": "Nenhuma conta encontrada.",
+    "searchPlaceholder": "Digite para pesquisar…",
+    "settingsDescription": "Configure como o histórico de uso agregado é armazenado e programado.",
+    "settingsTitle": "Sincronização do histórico de uso",
+    "stateDescription": "Visualize o estado de sincronização por conta e o carimbo de data/hora da última sincronização.",
+    "stateTitle": "Estado de sincronização",
+    "table": {
+      "columns": {
+        "account": "Conta",
+        "lastSyncAt": "Última sincronização",
+        "message": "Mensagem",
+        "state": "Estado"
+      },
+      "empty": "Nenhuma conta corresponde à pesquisa atual.",
+      "loading": "Carregando…",
+      "noMessage": "—",
+      "rowActions": "Ações de linha",
+      "selectAll": "Selecionar todas as contas",
+      "selectedCount_one": "Selecionada: {{count}}",
+      "selectedCount_many": "Selecionadas: {{count}}",
+      "selectedCount_other": "Selecionadas: {{count}}",
+      "selectRow": "Selecionar conta: {{name}}"
+    }
+  },
+  "title": "Análise de uso",
+  "weekdays": {
+    "fri": "Sex.",
+    "mon": "Seg.",
+    "sat": "Sáb.",
+    "sun": "Dom.",
+    "thu": "Qui.",
+    "tue": "Ter.",
+    "wed": "Qua."
+  }
+}

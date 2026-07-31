@@ -1,10 +1,14 @@
 import userEvent from "@testing-library/user-event"
+import { ptBR } from "date-fns/locale"
 import dayjs from "dayjs"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { Calendar } from "~/components/ui/calendar"
 import { DatePicker } from "~/components/ui/DatePicker"
-import { parseDatePickerValue } from "~/components/ui/datePickerValue"
+import {
+  getDatePickerLocale,
+  parseDatePickerValue,
+} from "~/components/ui/datePickerValue"
 import { render, screen, within } from "~~/tests/test-utils/render"
 
 const labels = {
@@ -447,6 +451,11 @@ describe("Calendar", () => {
 })
 
 describe("datePickerValue", () => {
+  it("uses Brazilian Portuguese calendar copy for Portuguese locales", () => {
+    expect(getDatePickerLocale("pt-BR")).toBe(ptBR)
+    expect(getDatePickerLocale("pt-PT")).toBe(ptBR)
+  })
+
   it("returns null for canonical dates with missing month or day parts", () => {
     expect(parseDatePickerValue("2026-00-01")).toBeNull()
     expect(parseDatePickerValue("2026-01-00")).toBeNull()
