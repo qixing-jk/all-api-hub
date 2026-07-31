@@ -24,6 +24,8 @@ export function buildAttentionItems(input: {
   enabledAccountCount: number
   profileCount: number
   problemAccounts: DisplaySiteData[]
+  accountsDataAvailable?: boolean
+  profilesDataAvailable?: boolean
 }): OptionsOverviewAttentionItem[] {
   const items: OptionsOverviewAttentionItem[] = input.problemAccounts.map(
     (account) => ({
@@ -37,7 +39,10 @@ export function buildAttentionItems(input: {
     }),
   )
 
-  if (input.enabledAccountCount === 0) {
+  if (
+    input.accountsDataAvailable !== false &&
+    input.enabledAccountCount === 0
+  ) {
     items.push({
       id: "setup:add-account",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.addAccount,
@@ -46,7 +51,7 @@ export function buildAttentionItems(input: {
     })
   }
 
-  if (input.profileCount === 0) {
+  if (input.profilesDataAvailable !== false && input.profileCount === 0) {
     items.push({
       id: "setup:add-profile",
       kind: OPTIONS_OVERVIEW_ATTENTION_KINDS.addProfile,

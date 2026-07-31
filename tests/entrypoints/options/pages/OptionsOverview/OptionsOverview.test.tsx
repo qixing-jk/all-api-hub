@@ -15,6 +15,11 @@ import type {
   OptionsOverviewViewModel,
 } from "~/features/OptionsOverview/types"
 import {
+  UNIFIED_API_GUIDANCE_ACTION_KINDS,
+  UNIFIED_API_GUIDANCE_SOURCE_KINDS,
+  UNIFIED_API_GUIDANCE_STATUSES,
+} from "~/features/UnifiedApiGuidance"
+import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
@@ -33,17 +38,23 @@ const {
   setLastSeenOptionalPermissionsMock,
   trackProductAnalyticsEventMock,
   useOptionsOverviewDataMock,
+  useOptionalPermissionControlsMock,
   useProductAnnouncementsMock,
 } = vi.hoisted(() => ({
   pushWithinOptionsPageMock: vi.fn(),
   setLastSeenOptionalPermissionsMock: vi.fn(),
   trackProductAnalyticsEventMock: vi.fn(),
   useOptionsOverviewDataMock: vi.fn(),
+  useOptionalPermissionControlsMock: vi.fn(),
   useProductAnnouncementsMock: vi.fn(),
 }))
 
 vi.mock("~/features/OptionsOverview/useOptionsOverviewData", () => ({
   useOptionsOverviewData: useOptionsOverviewDataMock,
+}))
+
+vi.mock("~/features/Permissions/hooks/useOptionalPermissionControls", () => ({
+  useOptionalPermissionControls: useOptionalPermissionControlsMock,
 }))
 
 vi.mock(
@@ -136,6 +147,34 @@ const setupViewModel: OptionsOverviewViewModel = {
       target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
     },
   ],
+  unifiedApiGuidance: {
+    status: UNIFIED_API_GUIDANCE_STATUSES.NeedsSources,
+    sourceKind: UNIFIED_API_GUIDANCE_SOURCE_KINDS.None,
+    modelSyncSupported: false,
+    steps: [
+      { id: "source", state: "current" },
+      { id: "gateway_settings", state: "upcoming" },
+      { id: "gateway_channel", state: "upcoming" },
+      { id: "client_access", state: "upcoming" },
+    ],
+    primaryAction: {
+      kind: UNIFIED_API_GUIDANCE_ACTION_KINDS.AddAccount,
+      target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
+    },
+    secondaryActions: [
+      {
+        kind: UNIFIED_API_GUIDANCE_ACTION_KINDS.AddApiCredential,
+        target: { menuItemId: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES },
+      },
+    ],
+    optionalActions: [],
+  },
+  unifiedApiGuidanceDiagnostics: {
+    enabledAccountCount: 0,
+    keyAccessibleAccountCount: 0,
+    profileCount: 0,
+    gatewayConfigured: false,
+  },
   attentionItems: [
     {
       id: "setup:add-account",
@@ -383,6 +422,10 @@ describe("OptionsOverview", () => {
     vi.clearAllMocks()
     setLastSeenOptionalPermissionsMock.mockResolvedValue(undefined)
     trackProductAnalyticsEventMock.mockResolvedValue(true)
+    useOptionalPermissionControlsMock.mockReturnValue({
+      statuses: { notifications: true },
+      isLoading: false,
+    })
     useProductAnnouncementsMock.mockReturnValue({
       state: {
         view: {
@@ -1076,6 +1119,169 @@ describe("OptionsOverview", () => {
     expect(pushWithinOptionsPageMock).toHaveBeenCalledWith("#account", {
       search: "unhealthy-account",
     })
+  })
+
+  it("renders unified API guidance and tracks primary action navigation", async () => {
+    const user = userEvent.setup()
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: null,
+      viewModel: setupViewModel,
+      reload: vi.fn(),
+    })
+
+    renderOverview()
+
+    expect(
+      screen.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance),
+    ).toHaveTextContent("optionsOverview:unifiedApiGuidance.headline")
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "optionsOverview:unifiedApiGuidance.actions.addAccount",
+      }),
+    )
+
+    expect(pushWithinOptionsPageMock).toHaveBeenCalledWith("#account", {})
+    expect(trackProductAnalyticsEvent).toHaveBeenCalledTimes(1)
+    expect(trackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
+        target_page_id: MENU_ITEM_IDS.ACCOUNT,
+        route_params_present: false,
+        guidance_status: "needs_sources",
+        guidance_action_kind: "add_account",
+      },
+    )
+    expect(trackProductAnalyticsEvent).not.toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenOptionsOverviewTarget,
+      }),
+    )
+  })
+
+  it("keeps unrelated optional permissions out of unified API guidance", () => {
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: null,
+      viewModel: setupViewModel,
+      reload: vi.fn(),
+    })
+    useOptionalPermissionControlsMock.mockReturnValue({
+      statuses: { notifications: false },
+      isLoading: false,
+    })
+
+    renderOverview()
+
+    expect(
+      screen.queryByText(
+        "optionsOverview:unifiedApiGuidance.permissions.title",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "optionsOverview:unifiedApiGuidance.permissions.description",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "optionsOverview:unifiedApiGuidance.actions.addAccount",
+      }),
+    ).toBeEnabled()
+  })
+
+  it("withholds setup conclusions when unified API guidance data is unavailable", async () => {
+    const reload = vi.fn()
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: "storage unavailable",
+      viewModel: {
+        ...setupViewModel,
+        unifiedApiGuidance: null,
+      },
+      reload,
+    })
+
+    renderOverview()
+
+    expect(
+      screen.getByText("optionsOverview:unifiedApiGuidance.unavailable.title"),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "optionsOverview:unifiedApiGuidance.unavailable.description",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("optionsOverview:unifiedApiGuidance.sources.none"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("optionsOverview:unifiedApiGuidance.stepper.label"),
+    ).not.toBeInTheDocument()
+
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: "optionsOverview:unifiedApiGuidance.unavailable.retry",
+      }),
+    )
+
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+
+  it("routes account-ready guidance to a specific key import target", async () => {
+    const user = userEvent.setup()
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: null,
+      viewModel: {
+        ...setupViewModel,
+        gatewayGuidanceImportAccountId: "account-1",
+        unifiedApiGuidance: {
+          ...setupViewModel.unifiedApiGuidance,
+          status: UNIFIED_API_GUIDANCE_STATUSES.ReadyToImport,
+          sourceKind: UNIFIED_API_GUIDANCE_SOURCE_KINDS.Account,
+          primaryAction: {
+            kind: UNIFIED_API_GUIDANCE_ACTION_KINDS.AddGatewayChannel,
+            target: { menuItemId: MENU_ITEM_IDS.KEYS },
+          },
+        },
+      } as OptionsOverviewViewModel,
+      reload: vi.fn(),
+    })
+
+    renderOverview()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "optionsOverview:unifiedApiGuidance.actions.addGatewayChannel",
+      }),
+    )
+
+    expect(pushWithinOptionsPageMock).toHaveBeenCalledWith("#keys", {
+      accountId: "account-1",
+      guidedImport: "managedSite",
+    })
+    expect(trackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+        target_page_id: MENU_ITEM_IDS.KEYS,
+        route_params_present: true,
+        guidance_status: UNIFIED_API_GUIDANCE_STATUSES.ReadyToImport,
+        guidance_action_kind:
+          UNIFIED_API_GUIDANCE_ACTION_KINDS.AddGatewayChannel,
+      }),
+    )
   })
 
   it("tracks dashboard navigation without exposing raw route params", async () => {

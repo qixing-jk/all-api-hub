@@ -125,7 +125,7 @@ describe("useOptionsOverviewData", () => {
     })
   })
 
-  it("captures store failures without replacing the previous loading state forever", async () => {
+  it("keeps available overview data but withholds guidance when source inventory fails", async () => {
     mockSuccessfulLoad()
     vi.mocked(accountStorage.getAllAccounts).mockRejectedValueOnce(
       new Error("storage unavailable"),
@@ -142,7 +142,23 @@ describe("useOptionsOverviewData", () => {
     })
 
     expect(result.current.error).toBe("storage unavailable")
-    expect(result.current.viewModel).toBeNull()
+    expect(result.current.viewModel).not.toBeNull()
+    expect(result.current.viewModel?.usageSnapshot).toMatchObject({
+      todayRequests: 1,
+      todayTokens: 5,
+      hasUsageData: true,
+    })
+    expect(result.current.viewModel?.unifiedApiGuidance).toBeNull()
+    expect(
+      result.current.viewModel?.statusCards.find(
+        (card) => card.id === "accounts",
+      )?.value,
+    ).toBe("-")
+    expect(
+      result.current.viewModel?.attentionItems.some(
+        (item) => item.kind === "addAccount",
+      ),
+    ).toBe(false)
   })
 })
 

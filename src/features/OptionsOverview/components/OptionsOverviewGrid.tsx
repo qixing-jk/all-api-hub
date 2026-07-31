@@ -1,6 +1,16 @@
 import type { TFunction } from "i18next"
 import type { ReactNode } from "react"
 
+import {
+  trackUnifiedApiGuidanceAction,
+  UNIFIED_API_GUIDANCE_SURFACES,
+  UnifiedApiGuidanceCard,
+  UnifiedApiGuidanceUnavailableCard,
+  withGuidedAccountKeyImportTarget,
+  type UnifiedApiGuidanceAction,
+} from "~/features/UnifiedApiGuidance"
+import { PRODUCT_ANALYTICS_SURFACE_IDS } from "~/services/productAnalytics/contracts"
+
 import { OPTIONS_OVERVIEW_WIDGET_IDS } from "../ids"
 import { OVERVIEW_WIDGET_LAYOUT } from "../layout"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "../testIds"
@@ -22,6 +32,9 @@ interface OptionsOverviewGridProps {
   viewModel: OptionsOverviewViewModel
   t: TFunction
   onNavigate: (intent: OptionsOverviewNavigationIntent) => void
+  onNavigateWithoutTracking: (target: OptionsOverviewNavigationTarget) => void
+  isLoading: boolean
+  onRetry: () => void
 }
 
 const columnSpanClass: Record<
@@ -40,6 +53,9 @@ export function OptionsOverviewGrid({
   viewModel,
   t,
   onNavigate,
+  onNavigateWithoutTracking,
+  isLoading,
+  onRetry,
 }: OptionsOverviewGridProps) {
   return (
     <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-3">
@@ -50,7 +66,15 @@ export function OptionsOverviewGrid({
               {getOverviewSectionTitle(item.id, t)}
             </h3>
           )}
-          {renderWidget(item.id, viewModel, t, onNavigate)}
+          {renderWidget(
+            item.id,
+            viewModel,
+            t,
+            onNavigate,
+            onNavigateWithoutTracking,
+            isLoading,
+            onRetry,
+          )}
         </section>
       ))}
     </div>
@@ -65,11 +89,13 @@ function renderWidget(
   viewModel: OptionsOverviewViewModel,
   t: TFunction,
   onNavigate: (intent: OptionsOverviewNavigationIntent) => void,
+  onNavigateWithoutTracking: (target: OptionsOverviewNavigationTarget) => void,
+  isLoading: boolean,
+  onRetry: () => void,
 ) {
   const navigateFromWidget = (target: OptionsOverviewNavigationTarget) => {
     onNavigate({ target, sourceWidgetId: id })
   }
-
   switch (id) {
     case OPTIONS_OVERVIEW_WIDGET_IDS.statusSummary:
       return (
@@ -80,6 +106,52 @@ function renderWidget(
           data-testid={OPTIONS_OVERVIEW_TEST_IDS.statusSummary}
         />
       )
+    case OPTIONS_OVERVIEW_WIDGET_IDS.unifiedApiGuidance: {
+      const guidanceModel = viewModel.unifiedApiGuidance
+      if (!guidanceModel) {
+        return (
+          <div
+            className="flex min-h-0 flex-1 flex-col"
+            data-testid={OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance}
+          >
+            <UnifiedApiGuidanceUnavailableCard
+              isRetrying={isLoading}
+              onRetry={onRetry}
+            />
+          </div>
+        )
+      }
+
+      const handleUnifiedApiGuidanceAction = (
+        action: UnifiedApiGuidanceAction,
+      ) => {
+        const navigationAction = withGuidedAccountKeyImportTarget(
+          action,
+          viewModel.gatewayGuidanceImportAccountId,
+        )
+
+        void trackUnifiedApiGuidanceAction({
+          model: guidanceModel,
+          action: navigationAction,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
+        })
+        onNavigateWithoutTracking(navigationAction.target)
+      }
+
+      return (
+        <div
+          className="flex min-h-0 flex-1 flex-col"
+          data-testid={OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance}
+        >
+          <UnifiedApiGuidanceCard
+            model={guidanceModel}
+            surface={UNIFIED_API_GUIDANCE_SURFACES.OptionsOverview}
+            onAction={handleUnifiedApiGuidanceAction}
+          />
+        </div>
+      )
+    }
     case OPTIONS_OVERVIEW_WIDGET_IDS.needsAttention:
       return (
         <WidgetBody testId={OPTIONS_OVERVIEW_TEST_IDS.needsAttention}>

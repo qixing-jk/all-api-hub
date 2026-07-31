@@ -30,6 +30,8 @@ import { useOptionsOverviewData } from "./useOptionsOverviewData"
 
 const overviewWidgetSurfaceIds = {
   statusSummary: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewStatusSummary,
+  unifiedApiGuidance:
+    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
   needsAttention: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewAttentionList,
   automationOverview:
     PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewAutomationOverview,
@@ -140,6 +142,12 @@ export default function OptionsOverview() {
     pushWithinOptionsPage(`#${target.menuItemId}`, target.params ?? {})
   }
 
+  const handleNavigateWithoutTracking = (
+    target: OptionsOverviewNavigationIntent["target"],
+  ) => {
+    pushWithinOptionsPage(`#${target.menuItemId}`, target.params ?? {})
+  }
+
   const handleViewAllProductAnnouncements = () => {
     requestProductAnnouncementPopoverOpen("options-header")
   }
@@ -195,6 +203,9 @@ export default function OptionsOverview() {
             viewModel={viewModel}
             t={t}
             onNavigate={handleNavigate}
+            onNavigateWithoutTracking={handleNavigateWithoutTracking}
+            isLoading={isLoading}
+            onRetry={handleRetry}
           />
         </>
       ) : null}

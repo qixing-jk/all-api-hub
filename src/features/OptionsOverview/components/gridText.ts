@@ -12,6 +12,8 @@ type TitledOverviewWidgetId = Exclude<
 const sectionTitleResolvers = {
   [OPTIONS_OVERVIEW_WIDGET_IDS.needsAttention]: (t: TFunction) =>
     t("optionsOverview:sections.needsAttention"),
+  [OPTIONS_OVERVIEW_WIDGET_IDS.unifiedApiGuidance]: (t: TFunction) =>
+    t("optionsOverview:sections.unifiedApiGuidance"),
   [OPTIONS_OVERVIEW_WIDGET_IDS.automationOverview]: (t: TFunction) =>
     t("optionsOverview:sections.automationOverview"),
   [OPTIONS_OVERVIEW_WIDGET_IDS.recentUsage]: (t: TFunction) =>

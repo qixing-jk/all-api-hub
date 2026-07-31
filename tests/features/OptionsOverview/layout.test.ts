@@ -11,6 +11,11 @@ describe("overview widget layout", () => {
         persisted: false,
       },
       {
+        id: "unifiedApiGuidance",
+        columnSpan: 3,
+        persisted: false,
+      },
+      {
         id: "needsAttention",
         columnSpan: 2,
         persisted: false,

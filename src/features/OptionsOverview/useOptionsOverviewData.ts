@@ -2,18 +2,21 @@ import { useCallback, useEffect, useState } from "react"
 
 import { isManagedSiteType } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { createEmptyAccountTodayStatsCoverage } from "~/services/accounts/accountTodayStats"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
-import {
-  userPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
+import type { AccountStats } from "~/types"
 import type {
   SiteAnnouncementRecord,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
+import {
+  USAGE_HISTORY_STORE_SCHEMA_VERSION,
+  type UsageHistoryStore,
+} from "~/types/usageHistory"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -21,6 +24,26 @@ import { buildOptionsOverviewViewModel } from "./overviewSelectors"
 import type { OptionsOverviewViewModel } from "./types"
 
 const logger = createLogger("OptionsOverviewData")
+
+const EMPTY_ACCOUNT_STATS: AccountStats = {
+  total_quota: 0,
+  today_total_consumption: 0,
+  today_total_requests: 0,
+  today_total_prompt_tokens: 0,
+  today_total_completion_tokens: 0,
+  today_total_income: 0,
+  todayStatsCoverage: createEmptyAccountTodayStatsCoverage(),
+}
+
+const EMPTY_USAGE_STORE: UsageHistoryStore = {
+  schemaVersion: USAGE_HISTORY_STORE_SCHEMA_VERSION,
+  accounts: {},
+}
+
+/** Returns a fulfilled local-store value or its presentation fallback. */
+function settledValue<T>(result: PromiseSettledResult<T>, fallback: T): T {
+  return result.status === "fulfilled" ? result.value : fallback
+}
 
 interface OptionsOverviewDataState {
   isLoading: boolean
@@ -50,16 +73,7 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
     const load = async () => {
       setIsLoading(true)
       try {
-        const [
-          accounts,
-          accountStats,
-          usageStore,
-          apiCredentialProfiles,
-          prefs,
-          autoCheckinStatus,
-          siteAnnouncementRecords,
-          siteAnnouncementStatuses,
-        ] = await Promise.all([
+        const results = await Promise.allSettled([
           accountStorage.getAllAccounts(),
           accountStorage.getAccountStats(),
           usageHistoryStorage.getStore(),
@@ -70,11 +84,67 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
           siteAnnouncementStorage.getStatus(),
         ])
 
+        const [
+          accountsResult,
+          accountStatsResult,
+          usageStoreResult,
+          apiCredentialProfilesResult,
+          preferencesResult,
+          autoCheckinStatusResult,
+          siteAnnouncementRecordsResult,
+          siteAnnouncementStatusesResult,
+        ] = results
+
         if (!isCurrent) return
 
-        const preferences = prefs as UserPreferences
-        const managedSiteType = isManagedSiteType(preferences.managedSiteType)
-          ? preferences.managedSiteType
+        const firstFailure = results.find(
+          (result): result is PromiseRejectedResult =>
+            result.status === "rejected",
+        )
+        const firstError = firstFailure
+          ? getErrorMessage(firstFailure.reason)
+          : null
+        if (firstFailure) {
+          logger.error(
+            "Some options overview data failed to load",
+            firstFailure.reason,
+          )
+        }
+
+        if (!results.some((result) => result.status === "fulfilled")) {
+          setError(firstError)
+          return
+        }
+
+        const accounts = settledValue(accountsResult, [])
+        const accountStats = settledValue(
+          accountStatsResult,
+          EMPTY_ACCOUNT_STATS,
+        )
+        const usageStore = settledValue(usageStoreResult, EMPTY_USAGE_STORE)
+        const apiCredentialProfiles = settledValue(
+          apiCredentialProfilesResult,
+          [],
+        )
+        const preferences = settledValue(preferencesResult, null)
+        const autoCheckinStatus = settledValue(autoCheckinStatusResult, null)
+        const siteAnnouncementRecords = settledValue(
+          siteAnnouncementRecordsResult,
+          [],
+        )
+        const siteAnnouncementStatuses = settledValue(
+          siteAnnouncementStatusesResult,
+          [],
+        )
+        const unifiedApiGuidanceDataAvailable = [
+          accountsResult,
+          apiCredentialProfilesResult,
+          preferencesResult,
+        ].every((result) => result.status === "fulfilled")
+
+        const configuredManagedSiteType = preferences?.managedSiteType
+        const managedSiteType = isManagedSiteType(configuredManagedSiteType)
+          ? configuredManagedSiteType
           : undefined
         const displayData = accountStorage.convertToDisplayData(accounts)
         setViewModel(
@@ -91,9 +161,13 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
               siteAnnouncementRecords as SiteAnnouncementRecord[],
             siteAnnouncementStatuses:
               siteAnnouncementStatuses as SiteAnnouncementSiteState[],
+            unifiedApiGuidanceDataAvailable,
+            accountsDataAvailable: accountsResult.status === "fulfilled",
+            profilesDataAvailable:
+              apiCredentialProfilesResult.status === "fulfilled",
           }),
         )
-        setError(null)
+        setError(firstError)
       } catch (loadError) {
         if (!isCurrent) return
         const message = getErrorMessage(loadError)

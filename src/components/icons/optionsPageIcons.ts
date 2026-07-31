@@ -4,6 +4,7 @@ import {
   Bookmark,
   CalendarCheck2,
   Cloud,
+  Compass,
   Cpu,
   Info,
   Layers,
@@ -48,6 +49,7 @@ export const OPTIONS_MENU_ITEM_ICONS = {
 
 export const DEV_OPTIONS_MENU_ITEM_ICONS = {
   [DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB]: Palette,
+  [DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW]: Compass,
 } satisfies Record<DevOptionsMenuItemId, LucideIcon>
 
 export const OPTIONS_CAPABILITY_ICONS = {

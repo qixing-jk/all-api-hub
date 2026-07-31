@@ -1,4 +1,5 @@
 import type { OptionsMenuItemId } from "~/constants/optionsMenuIds"
+import type { UnifiedApiGuidanceModel } from "~/features/UnifiedApiGuidance"
 import type { AccountMetricCoverage } from "~/types"
 
 import type {
@@ -158,8 +159,18 @@ export interface OptionsOverviewAutomationOverview {
   items: OptionsOverviewAutomationItem[]
 }
 
+export interface OptionsOverviewUnifiedApiGuidanceDiagnostics {
+  enabledAccountCount: number
+  keyAccessibleAccountCount: number
+  profileCount: number
+  gatewayConfigured: boolean
+}
+
 export interface OptionsOverviewViewModel {
   statusCards: OptionsOverviewStatusCard[]
+  unifiedApiGuidance: UnifiedApiGuidanceModel | null
+  unifiedApiGuidanceDiagnostics: OptionsOverviewUnifiedApiGuidanceDiagnostics
+  gatewayGuidanceImportAccountId?: string
   attentionItems: OptionsOverviewAttentionItem[]
   autoCheckinPanel: OptionsOverviewAutoCheckinPanel
   automationOverview: OptionsOverviewAutomationOverview
