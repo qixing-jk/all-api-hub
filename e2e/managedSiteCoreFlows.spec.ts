@@ -539,7 +539,9 @@ test("configures New API managed-site credentials from settings and opens model 
   await expectPermissionOnboardingHidden(page)
 
   await expect(
-    page.getByRole("heading", { name: "Managed Site Configuration" }),
+    page.getByRole("heading", {
+      name: "Self-hosted AI gateway configuration",
+    }),
   ).toBeVisible()
   await expect(
     page.getByRole("heading", { name: "New API Integration Settings" }),

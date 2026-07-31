@@ -269,6 +269,7 @@ export const getManagedSiteSettingsActionLabel = (
  * @param props.managedSiteStatus Current managed-site status used to reuse duplicate-review results when available.
  * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
  * @param props.onManagedSiteImportSuccess Optional managed-site import success callback.
+ * @param props.guidedManagedSiteImportRequest Request key that highlights the managed-site import action.
  */
 function TokenActionButtons({
   token,
@@ -768,6 +769,7 @@ function TokenActionButtons({
  * @param props.isManagedSiteStatusChecking Whether the managed-site status is checking.
  * @param props.onManagedSiteImportSuccess Optional callback after successful managed-site import.
  * @param props.onManagedSiteVerificationRetry Optional callback for New API verification-assisted retry.
+ * @param props.guidedManagedSiteImportRequest Request key that highlights the managed-site import action.
  */
 export function TokenHeader({
   token,
