@@ -56,6 +56,16 @@ describe("parseSub2ApiCheckinPayload", () => {
     expect(payload.isCheckedInToday).toBe(true)
   })
 
+  it("locates a flag inside array payloads", () => {
+    // `findValue` recurses into arrays; some deployments wrap the flag in an
+    // array of objects rather than a plain envelope.
+    expect(
+      parseSub2ApiCheckinPayload({
+        data: [{ id: 1 }, { checked_in_today: true }],
+      }).isCheckedInToday,
+    ).toBe(true)
+  })
+
   it("treats a numeric flag as a boolean", () => {
     expect(
       parseSub2ApiCheckinPayload({ data: { is_checked_in: 1 } })

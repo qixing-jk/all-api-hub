@@ -24,6 +24,7 @@ import {
   fetchUserInfo,
   getOrCreateAccessToken,
   markSub2ApiAnnouncementRead,
+  performSub2ApiCheckin,
   refreshAccountData,
   updateApiToken,
 } from "~/services/apiService/sub2api"
@@ -61,6 +62,19 @@ const { mockGetLatestAuth, mockPersistAuthUpdate } = vi.hoisted(() => ({
   mockGetLatestAuth: vi.fn(),
   mockPersistAuthUpdate: vi.fn(),
 }))
+
+const { mockIsSub2ApiCheckinEnabled } = vi.hoisted(() => ({
+  mockIsSub2ApiCheckinEnabled: vi.fn(),
+}))
+
+vi.mock("~/services/checkin/sub2apiCheckinPreference", () => ({
+  isSub2ApiCheckinEnabled: mockIsSub2ApiCheckinEnabled,
+}))
+
+// Most tests in this file exercise Sub2API with check-in opt-in off (the
+// upstream default), so the probe never runs and no extra `fetchApi` calls are
+// made. The opt-in-on describe block at the end flips this back on.
+mockIsSub2ApiCheckinEnabled.mockResolvedValue(false)
 
 vi.mock("~/services/accounts/accountHealth", () => ({
   determineHealthStatus: vi.fn(() => ({
@@ -2715,5 +2729,231 @@ describe("apiService sub2api exported operations", () => {
       ip_whitelist: [],
       expires_in_days: 0,
     })
+  })
+})
+
+describe("apiService sub2api check-in with the global opt-in on", () => {
+  beforeEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+    vi.clearAllMocks()
+    vi.mocked(fetchApi).mockReset()
+    vi.mocked(resyncSub2ApiAuthToken).mockReset()
+    mockGetLatestAuth.mockReset()
+    mockPersistAuthUpdate.mockReset()
+    mockGetLatestAuth.mockResolvedValue(null)
+    mockPersistAuthUpdate.mockResolvedValue(true)
+    mockIsSub2ApiCheckinEnabled.mockResolvedValue(true)
+  })
+
+  const request = {
+    baseUrl: "https://sub2.example.com",
+    accountId: "account-1",
+    auth: {
+      authType: AuthTypeEnum.AccessToken,
+      userId: "1",
+      accessToken: "jwt-token",
+    },
+  } as const
+
+  const statusProbeBody = {
+    code: 0,
+    message: "",
+    data: { checked_in_today: false },
+  }
+
+  const currentUserBody = {
+    code: 0,
+    message: "ok",
+    data: { id: 1, username: "alice", balance: 2 },
+  }
+
+  const todayUsageBody = {
+    code: 0,
+    message: "ok",
+    data: {
+      total_requests: 2,
+      total_input_tokens: 12,
+      total_output_tokens: 8,
+      total_actual_cost: 0.25,
+    },
+  }
+
+  const mockFetchApiByEndpoint = (bodies: Record<string, unknown>) => {
+    // Match by substring (usage carries a `?period=today` query), longest key
+    // first so `/api/v1/check-in/status` wins over `/api/v1/check-in`.
+    const keys = Object.keys(bodies).sort((a, b) => b.length - a.length)
+
+    vi.mocked(fetchApi).mockImplementation(
+      async (_authRequest: unknown, spec: { endpoint?: string }) => {
+        const endpoint = spec?.endpoint ?? ""
+        const match = keys.find((key) => endpoint.includes(key))
+        if (match) {
+          return bodies[match]
+        }
+        throw new Error(`unexpected endpoint: ${endpoint}`)
+      },
+    )
+  }
+
+  it("reports support when the probe finds a check-in route", async () => {
+    mockFetchApiByEndpoint({
+      "/api/v1/check-in/status": statusProbeBody,
+    })
+
+    await expect(fetchSupportCheckIn(request as any)).resolves.toBe(true)
+  })
+
+  it("reports unknown support when the probe fails for an unrelated reason", async () => {
+    vi.mocked(fetchApi).mockRejectedValueOnce(
+      new ApiError(
+        "upstream down",
+        500,
+        "/api/v1/check-in/status",
+        API_ERROR_CODES.HTTP_OTHER,
+      ),
+    )
+
+    await expect(fetchSupportCheckIn(request as any)).resolves.toBeUndefined()
+  })
+
+  it("reports no support when every check-in route is missing", async () => {
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError(
+          "not found",
+          404,
+          "/api/v1/check-in/status",
+          API_ERROR_CODES.HTTP_OTHER,
+        ),
+      )
+      .mockRejectedValueOnce(
+        new ApiError(
+          "not found",
+          404,
+          "/api/v1/redeem/checkin/status",
+          API_ERROR_CODES.HTTP_OTHER,
+        ),
+      )
+
+    await expect(fetchSupportCheckIn(request as any)).resolves.toBe(false)
+  })
+
+  it("resolves undefined when no check-in route exists", async () => {
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError(
+          "not found",
+          404,
+          "/api/v1/check-in/status",
+          API_ERROR_CODES.HTTP_OTHER,
+        ),
+      )
+      .mockRejectedValueOnce(
+        new ApiError(
+          "not found",
+          404,
+          "/api/v1/redeem/checkin/status",
+          API_ERROR_CODES.HTTP_OTHER,
+        ),
+      )
+
+    await expect(fetchCheckInStatus(request as any)).resolves.toBeUndefined()
+  })
+
+  it("resolves can-check-in from a not-yet-checked probe", async () => {
+    mockFetchApiByEndpoint({
+      "/api/v1/check-in/status": statusProbeBody,
+    })
+
+    await expect(fetchCheckInStatus(request as any)).resolves.toBe(true)
+  })
+
+  it("resolves undefined when the status probe fails", async () => {
+    vi.mocked(fetchApi).mockRejectedValueOnce(
+      new ApiError(
+        "upstream down",
+        500,
+        "/api/v1/check-in/status",
+        API_ERROR_CODES.HTTP_OTHER,
+      ),
+    )
+
+    await expect(fetchCheckInStatus(request as any)).resolves.toBeUndefined()
+  })
+
+  it("treats an already-checked-in probe error as proof the route exists", async () => {
+    vi.mocked(fetchApi).mockRejectedValueOnce(
+      new ApiError(
+        "已签到",
+        409,
+        "/api/v1/check-in/status",
+        API_ERROR_CODES.HTTP_OTHER,
+      ),
+    )
+
+    const outcome = await performSub2ApiCheckin(request as any)
+
+    expect(outcome.alreadyChecked).toBe(true)
+  })
+
+  it("rethrows a non-already-checked failure from the check-in post", async () => {
+    vi.mocked(fetchApi)
+      .mockResolvedValueOnce(statusProbeBody)
+      .mockRejectedValueOnce(
+        new ApiError(
+          "quota exhausted",
+          400,
+          "/api/v1/check-in",
+          API_ERROR_CODES.HTTP_OTHER,
+        ),
+      )
+
+    await expect(performSub2ApiCheckin(request as any)).rejects.toThrow(
+      "quota exhausted",
+    )
+  })
+
+  it("runs the support probe when account detection is enabled", async () => {
+    mockFetchApiByEndpoint({
+      "/api/v1/check-in/status": statusProbeBody,
+      "/api/v1/auth/me": currentUserBody,
+      "/api/v1/usage/stats": todayUsageBody,
+    })
+
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: {
+        enableDetection: true,
+        autoCheckInEnabled: true,
+        siteStatus: { isCheckedInToday: false },
+        customCheckIn: { url: "", redeemUrl: "", openRedeemWithCheckIn: true },
+      },
+    } as any)
+
+    expect(result.checkIn.enableDetection).toBe(true)
+    // Probe says not checked in yet, so the site can still check in today.
+    expect(result.checkIn.siteStatus?.isCheckedInToday).toBe(false)
+  })
+
+  it("skips the support probe when account detection is disabled", async () => {
+    mockFetchApiByEndpoint({
+      "/api/v1/auth/me": currentUserBody,
+      "/api/v1/usage/stats": todayUsageBody,
+    })
+
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: {
+        enableDetection: false,
+        autoCheckInEnabled: true,
+        siteStatus: { isCheckedInToday: true },
+        customCheckIn: { url: "", redeemUrl: "", openRedeemWithCheckIn: true },
+      },
+    } as any)
+
+    expect(result.checkIn.enableDetection).toBe(false)
+    // No probe was sent, so the previously-known status is preserved.
+    expect(result.checkIn.siteStatus?.isCheckedInToday).toBe(true)
   })
 })

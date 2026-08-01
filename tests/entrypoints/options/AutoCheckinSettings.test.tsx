@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import AutoCheckinSettings from "~/features/BasicSettings/components/tabs/CheckinRedeem/AutoCheckinSettings"
+import { AUTO_CHECKIN_SUB2API_TARGET_ID } from "~/features/BasicSettings/components/tabs/CheckinRedeem/targetIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -16,6 +17,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "~~/tests/test-utils/render"
 
 const {
@@ -120,6 +122,24 @@ describe("AutoCheckinSettings", () => {
       },
       updateAutoCheckin,
       resetAutoCheckinConfig,
+    })
+  })
+
+  it("persists the Sub2API check-in opt-in when its switch is toggled", async () => {
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const sub2apiCard = document.getElementById(AUTO_CHECKIN_SUB2API_TARGET_ID)
+    expect(sub2apiCard).not.toBeNull()
+
+    fireEvent.click(within(sub2apiCard!).getByRole("switch"))
+
+    await waitFor(() => {
+      expect(updateAutoCheckin).toHaveBeenCalledWith({
+        sub2apiEnabled: true,
+      })
     })
   })
 

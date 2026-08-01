@@ -15,6 +15,7 @@ describe("autoCheckin utils", () => {
       "autoCheckin:providerFallback.checkinSuccessful",
       "autoCheckin:providerFallback.checkinFailed",
       "autoCheckin:providerFallback.endpointNotSupported",
+      "autoCheckin:providerFallback.sub2apiDisabled",
       "autoCheckin:providerFallback.nativePageIdentityMismatch",
       "autoCheckin:providerFallback.nativePageIdentityMissing",
       "autoCheckin:providerFallback.nativePageStatusUnconfirmed",

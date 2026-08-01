@@ -152,6 +152,24 @@ describe("sub2ApiProvider", () => {
     expect(checkinHandler).toHaveBeenCalledWith("Bearer jwt-dashboard")
   })
 
+  it("falls back to the local success copy when the backend returns no message or reward", async () => {
+    server.use(
+      http.get(PRIMARY_STATUS_URL, () =>
+        HttpResponse.json(envelope({ checked_in_today: false })),
+      ),
+      http.post(PRIMARY_CHECKIN_URL, () => HttpResponse.json(envelope({}))),
+    )
+
+    const result = await checkInForTest(createAccount())
+
+    expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
+    expect(result.messageKey).toBe(
+      "autoCheckin:providerFallback.checkinSuccessful",
+    )
+    expect(result.rawMessage).toBeUndefined()
+    expect(result.data).toBeUndefined()
+  })
+
   it("falls back to the redeem-scoped route when the primary route is missing", async () => {
     const fallbackCheckin = vi.fn()
     server.use(
