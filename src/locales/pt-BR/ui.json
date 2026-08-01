@@ -55,7 +55,7 @@
       "permissionNeeded": "O acesso aos favoritos é opcional e solicitado somente para esta importação em lote.",
       "readFailed": "Não foi possível ler a árvore de favoritos do navegador.",
       "reloadFailed": "A importação foi concluída, mas não foi possível recarregar os dados da conta. Atualize a lista de contas e tente novamente se as novas contas não estiverem visíveis.",
-      "resultSummary": "{{success}} importado, {{failed}} com falha, {{skipped}} ignorado.",
+      "resultSummary": "Resultado da importação — sucessos: {{success}}; falhas: {{failed}}; ignorados: {{skipped}}.",
       "scanning": "Verificando os favoritos do navegador...",
       "scopeHelp": "A verificação cria apenas uma prévia. Você pode voltar aqui e ajustar a seleção antes de importar.",
       "searchEmpty": "Nenhum escopo de favoritos correspondente",
@@ -227,7 +227,7 @@
     "dedupeAccounts": {
       "confirm": {
         "confirmDelete": "Excluir",
-        "description": "Isso excluirá {{deleteCount}} conta(s) em {{groups}} conjunto(s) de duplicatas.",
+        "description": "Contas a excluir: {{deleteCount}}. Conjuntos de duplicatas: {{groups}}.",
         "title": "Excluir contas duplicadas",
         "warningOrder": "A ordem manual será ajustada.",
         "warningPinned_one": "{{count}} conta fixada será excluída.",
@@ -276,7 +276,7 @@
         "keepPinned": "Manter fixado (se houver)"
       },
       "strategyLabel": "Estratégia de manutenção",
-      "summary": "{{groups}} conjunto(s) de duplicatas · {{deleteCount}} conta(s) a excluir",
+      "summary": "Conjuntos de duplicatas: {{groups}} · contas a excluir: {{deleteCount}}",
       "title": "Limpeza de contas duplicadas",
       "unscannableHint_one": "{{count}} conta não pôde ser verificada e foi ignorada.",
       "unscannableHint_many": "{{count}} contas não puderam ser verificadas e foram ignoradas.",
@@ -289,7 +289,7 @@
       "deleteFailed": "Falha na exclusão: {{error}}",
       "deleteSuccess": "Conta {{name}} excluída com sucesso!",
       "deleting": "Excluindo conta {{name}}...",
-      "noResponse": "A operação de exclusão não retornou com sucesso",
+      "noResponse": "A operação de exclusão não foi concluída com sucesso",
       "siteName": "Nome do site",
       "siteUrl": "URL do site",
       "title": "Excluir conta",
@@ -403,7 +403,7 @@
       "descriptionDisabledTempWindowOnly": "A atualização automática para {{accountName}} encontrou verificação de site, mas as tarefas automáticas não podem abrir páginas temporárias no momento. Ative isso em Configurações > Atualização de dados.",
       "descriptionDisabledWithCookieInterceptor": "A atualização automática para {{accountName}} encontrou verificação de site, mas as tarefas automáticas não podem abrir páginas temporárias no momento. Ative isso em Configurações > Atualização de dados.",
       "descriptionPermissionTempWindowOnly": "A atualização automática para {{accountName}} precisa abrir uma página temporária para verificação do site. Conceda a permissão necessária em Configurações > Permissões.",
-      "descriptionPermissionWithCookieInterceptor": "A atualização automática para {{accountName}} precisa das permissões Cookies, Solicitação da Web e Bloqueio de Solicitação da Web para verificação do site. Conceda-os em Configurações > Permissões.",
+      "descriptionPermissionWithCookieInterceptor": "A atualização automática para {{accountName}} precisa das permissões Cookies, Solicitação da Web e Bloqueio de Solicitação da Web para verificação do site. Conceda-as em Configurações > Permissões.",
       "titleTempWindowOnly": "A atualização automática precisa de verificação do site",
       "titleWithCookieInterceptor": "A atualização automática precisa de verificação do site"
     },
@@ -452,7 +452,7 @@
     "copySuccess": "Valores selecionados copiados",
     "emptyWithQueryAllowCustom": "Pressione Enter para adicionar \"{{value}}\"",
     "noOptions": "Nenhuma opção disponível",
-    "noOptionsAllowCustom": "Nenhuma opção disponível. Digite para criar um",
+    "noOptionsAllowCustom": "Nenhuma opção disponível. Digite para criar uma opção",
     "placeholder": "Selecione...",
     "removeValue": "Remover {{value}}",
     "selectAll": "Selecionar tudo",
@@ -537,7 +537,7 @@
   "searchableSelect": {
     "empty": "Nenhum resultado encontrado",
     "noOptions": "Nenhuma opção disponível",
-    "noOptionsAllowCustom": "Nenhuma opção disponível. Digite para criar um",
+    "noOptionsAllowCustom": "Nenhuma opção disponível. Digite para criar uma opção",
     "searchPlaceholder": "Pesquisar...",
     "useValue": "Usar \"{{value}}\""
   }

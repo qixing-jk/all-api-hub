@@ -45,8 +45,11 @@ function parseChineseFallbackDate(
 function parsePortugueseFallbackDate(
   input: string,
   referenceDate: Date,
-): string | null {
-  const match = /^daqui a (\d+) dias?$/iu.exec(input.trim())
+): string | null | undefined {
+  const normalizedInput = input.trim()
+  if (!/^daqui a \d+/iu.test(normalizedInput)) return undefined
+
+  const match = /^daqui a (\d+) dias?$/iu.exec(normalizedInput)
   if (!match) return null
 
   const days = Number(match[1])
@@ -231,7 +234,7 @@ export function parseNaturalDatePickerValue(
     normalizedInput,
     referenceDate,
   )
-  if (portugueseFallbackDate) return portugueseFallbackDate
+  if (portugueseFallbackDate !== undefined) return portugueseFallbackDate
 
   const portugueseDate = parseChronoDate(
     normalizedInput,

@@ -266,7 +266,7 @@
     "runtimeRequestFailed": "Falha na solicitação de tempo de execução. Tente novamente mais tarde.",
     "saveSettingsFailed": "Falha ao salvar as configurações",
     "updateFailed": "Falha na atualização do {{name}}",
-    "updateSuccess": "{{name}} Atualização bem-sucedida"
+    "updateSuccess": "Atualização de {{name}} concluída com sucesso"
   },
   "newApi": {
     "adminCredentialsLink": {
@@ -373,7 +373,7 @@
       }
     },
     "messages": {
-      "granted": "{{name}} ativado. Os fluxos de trabalho relacionados agora serão executados conforme esperado.",
+      "granted": "Permissão ativada: {{name}}. Os fluxos de trabalho relacionados agora serão executados conforme esperado.",
       "grantFailed": "Não foi possível ativar {{name}}. Tente novamente mais tarde se ainda precisar.",
       "revoked": "Permissão {{name}} revogada",
       "revokeFailed": "Falha ao revogar a permissão {{name}}"
@@ -467,10 +467,10 @@
     "shieldEnabledDescTempWindowOnly": "Quando ativados, a atualização automática, o check-in e tarefas semelhantes podem abrir uma página temporária quando a verificação do site for necessária. Quando desativado, as ações que você mesmo inicia ainda podem usar esse recurso de acordo com as configurações abaixo.",
     "shieldEnabledDescWithCookieInterceptor": "Quando ativados, a atualização automática, o check-in e tarefas semelhantes podem abrir uma página temporária quando a verificação do site for necessária. Quando desativado, as ações que você mesmo inicia ainda podem usar esse recurso de acordo com as configurações abaixo.",
     "shieldMethodComposite": "Uma única janela compartilhada",
-    "shieldMethodDesc": "Escolha onde as páginas de verificação serão exibidas. Por padrão, eles abrem na janela do navegador que você já está usando, sem criar uma janela extra.",
+    "shieldMethodDesc": "Escolha onde as páginas de verificação serão exibidas. Por padrão, elas são abertas na janela do navegador que você já está usando, sem criar uma janela extra.",
     "shieldMethodHintComposite": "Melhor quando você deseja manter as páginas de verificação separadas da navegação diária. As páginas ficam juntas em uma janela separada; o navegador pode vir para o primeiro plano quando a janela for aberta pela primeira vez.",
     "shieldMethodHintTab": "Melhor quando você não deseja que a verificação interrompa o que você está fazendo. A página é aberta como uma guia inativa na janela atual do navegador, sem abrir outra janela ou colocar o navegador em primeiro plano.",
-    "shieldMethodHintWindow": "Melhor quando você deseja que cada verificação use sua própria janela. Cada um abre separadamente; verificações consecutivas podem criar várias janelas e colocar repetidamente o navegador em primeiro plano.",
+    "shieldMethodHintWindow": "Melhor quando você deseja que cada verificação use sua própria janela. Cada uma é aberta separadamente; verificações consecutivas podem criar várias janelas e colocar repetidamente o navegador em primeiro plano.",
     "shieldMethodRecommended": "Recomendado",
     "shieldMethodTab": "Guia na janela atual",
     "shieldMethodTitle": "Método de abertura",
@@ -656,19 +656,19 @@
     },
     "notification": {
       "body": {
-        "failure": "{{task}} falhou.",
-        "partialSuccess": "{{task}} parcialmente concluído.",
-        "success": "{{task}} concluído com sucesso."
+        "failure": "A tarefa {{task}} falhou.",
+        "partialSuccess": "A tarefa {{task}} foi parcialmente concluída.",
+        "success": "A tarefa {{task}} foi concluída com sucesso."
       },
-      "counts": "Total {{total}}, sucesso {{success}}, falha {{failed}}, {{skipped}} ignorado.",
+      "counts": "Total: {{total}}; sucessos: {{success}}; falhas: {{failed}}; ignorados: {{skipped}}.",
       "title": {
-        "failure": "{{task}} falhou",
-        "partialSuccess": "{{task}} parcialmente bem-sucedido",
-        "success": "{{task}} concluído"
+        "failure": "Falha na tarefa: {{task}}",
+        "partialSuccess": "Tarefa parcialmente concluída: {{task}}",
+        "success": "Tarefa concluída: {{task}}"
       }
     },
     "permission": {
-      "description": "As notificações do sistema requerem a permissão opcional de notificações do navegador. Você também pode revogá-lo em Permissões.",
+      "description": "As notificações do sistema requerem a permissão opcional de notificações do navegador. Você também pode revogar essa permissão em Permissões.",
       "request": "Conceder permissão de notificação",
       "requestFailed": "A permissão de notificação não foi concedida",
       "requestSuccess": "Permissão de notificação concedida",

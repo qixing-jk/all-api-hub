@@ -117,7 +117,7 @@
       "enableDesc": "Quando ativada, os dados compartilhados serão sincronizados com o WebDAV nos intervalos definidos.",
       "interval": "Intervalo de sincronização (segundos)",
       "intervalDesc": "Defina a frequência da sincronização automática",
-      "intervalHint": "Cerca de {{minutes}} minutos",
+      "intervalHint": "Tempo aproximado: {{minutes}} min",
       "lastSync": "Última sincronização",
       "saveSettings": "Salvar configurações",
       "strategy": "Estratégia de sincronização",

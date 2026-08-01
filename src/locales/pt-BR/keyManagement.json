@@ -37,7 +37,7 @@
   "allAccountsLoading_one": "{{count}} carregando",
   "allAccountsLoading_many": "{{count}} carregando",
   "allAccountsLoading_other": "{{count}} carregando",
-  "allAccountsProgress": "{{loaded}}/{{total}} contas carregadas",
+  "allAccountsProgress": "Contas carregadas: {{loaded}}/{{total}}",
   "batchApiCredentialProfiles": {
     "actions": {
       "open": "Salvar na biblioteca de credenciais de API ({{selectedCount}})"
@@ -49,14 +49,14 @@
       "running": "Importando...",
       "start": "Iniciar importação"
     },
-    "description": "Importe as {{selectedCount}} chaves selecionadas para o CLIProxyAPI usando uma única política de provedor.",
+    "description": "Chaves selecionadas para importar no CLIProxyAPI: {{selectedCount}}. Será usada uma única política de provedor.",
     "results": {
       "failed": "Falhou",
       "pending": "Pendente",
       "running": "Importando",
       "success": "Concluído"
     },
-    "summary": "{{total}} no total, {{success}} concluídas, {{failed}} com falha.",
+    "summary": "Importações — total: {{total}}; sucessos: {{success}}; falhas: {{failed}}.",
     "title": "Importação em lote para o CLIProxyAPI"
   },
   "batchManagedSiteExport": {
@@ -65,7 +65,7 @@
       "open": "Importar em lote para {{site}} ({{selectedCount}})",
       "refreshPreview": "Atualizar prévia",
       "running": "Importando...",
-      "selectAll": "{{selected}}/{{total}} selecionadas",
+      "selectAll": "Seleção: {{selected}}/{{total}}",
       "start": "Iniciar importação",
       "verifyAndRefresh": "Verificar e atualizar a prévia",
       "verifying": "Verificando...",
@@ -82,10 +82,10 @@
       "secretResolutionFailed": "Não foi possível obter o segredo real do token."
     },
     "confirm": {
-      "description": "Isso criará canais para as {{selectedCount}} chaves selecionadas. Correspondências exatas existentes e linhas bloqueadas não serão criadas.",
+      "description": "Quantidade de chaves para criação de canais: {{selectedCount}}. Correspondências exatas existentes e linhas bloqueadas não serão criadas.",
       "title": "Importar chaves selecionadas"
     },
-    "description": "Revise as {{selectedCount}} chaves selecionadas antes de criar canais em {{site}}.",
+    "description": "Chaves selecionadas para revisão: {{selectedCount}}. Depois, crie os canais em {{site}}.",
     "fields": {
       "baseUrl": "URL base",
       "editModelsLabel": "Editar modelos de {{name}}",
@@ -93,9 +93,9 @@
       "models": "Modelos"
     },
     "gatewayDescription": "Isso importa chaves de contas como canais de um gateway de IA auto-hospedado. Após a importação, os clientes poderão usar várias chaves por meio de uma única API de IA.",
-    "loadingDescription": "Preparando a prévia das {{selectedCount}} chaves selecionadas.",
+    "loadingDescription": "Preparando a prévia. Chaves selecionadas: {{selectedCount}}.",
     "messages": {
-      "completed": "Importação em lote concluída: {{created}} criados, {{failed}} com falha, {{skipped}} ignorados.",
+      "completed": "Importação em lote concluída — criados: {{created}}; falhas: {{failed}}; ignorados: {{skipped}}.",
       "duplicate": "Já existe uma correspondência exata: {{channel}}",
       "executionFailed": "Falha ao executar a importação em lote: {{error}}",
       "verificationFailed": "Falha na verificação do New API: {{error}}"
@@ -106,7 +106,7 @@
       "selected_one": "{{count}} chave selecionada",
       "selected_many": "{{count}} chaves selecionadas",
       "selected_other": "{{count}} chaves selecionadas",
-      "summary": "Prévia: {{ready}} prontos, {{warning}} avisos, {{skipped}} ignorados, {{blocked}} bloqueados, {{total}} no total."
+      "summary": "Prévia — prontos: {{ready}}; avisos: {{warning}}; ignorados: {{skipped}}; bloqueados: {{blocked}}; total: {{total}}."
     },
     "results": {
       "channelCreationFailed": "Falha ao criar o canal.",
@@ -115,12 +115,12 @@
         "skipped": "Ignorado",
         "success": "Criado"
       },
-      "summary": "Resultado: {{created}} criados, {{failed}} com falha, {{skipped}} ignorados, {{total}} no total."
+      "summary": "Resultado — criados: {{created}}; falhas: {{failed}}; ignorados: {{skipped}}; total: {{total}}."
     },
     "selection": {
       "accountGroup": "Selecionar as chaves visíveis da conta {{name}}",
       "rowLabel": "Selecionar {{name}} para importação em lote",
-      "visible": "{{selected}}/{{total}} visíveis selecionadas"
+      "visible": "Seleção visível: {{selected}}/{{total}}"
     },
     "status": {
       "blocked": "Bloqueado",
@@ -317,7 +317,7 @@
     },
     "coverage": {
       "createdGroup": "Criado: {{group}}",
-      "groupsCovered": "{{covered}}/{{total}} grupos cobertos",
+      "groupsCovered": "Grupos cobertos: {{covered}}/{{total}}",
       "missingGroup": "Ausente: {{group}}"
     },
     "deleteConfirm": {
@@ -336,7 +336,7 @@
     "invalidKeys": {
       "badge": "Inválida",
       "deleteFailed": "Falha ao excluir as chaves inválidas",
-      "deletePartial": "{{deleted}} excluídas, {{failed}} com falha",
+      "deletePartial": "Exclusões concluídas: {{deleted}}; falhas: {{failed}}",
       "deleteSelected": "Excluir selecionadas",
       "deleteSuccess_one": "{{count}} chave inválida excluída",
       "deleteSuccess_many": "{{count}} chaves inválidas excluídas",

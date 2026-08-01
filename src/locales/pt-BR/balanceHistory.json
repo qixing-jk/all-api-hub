@@ -13,7 +13,7 @@
       "chartType": "Tipo de gráfico",
       "reference": "Referência"
     },
-    "coverage": "{{covered}}/{{total}} contas com dados",
+    "coverage": "Contas com dados: {{covered}}/{{total}}",
     "empty": "Não há dados para exibir para este detalhamento.",
     "hints": {
       "pieDisabledForNegative": "Os gráficos de pizza não estão disponíveis para valores negativos."

@@ -63,7 +63,7 @@
     "copyInviteLinksClipboardFailedWithReasons": "O acesso à área de transferência foi bloqueado. Copie os links de convite gerados manualmente. Outras contas: {{reasonSummary}}.",
     "copyInviteLinksFailed": "Falha ao buscar links de convite. Por favor, tente novamente mais tarde.",
     "copyInviteLinksFailedWithReasons": "Nenhum link de convite foi copiado: {{reasonSummary}}.",
-    "copyInviteLinksPartialSuccess": "Links de convite {{successCount}} copiados. Outras contas: {{reasonSummary}}.",
+    "copyInviteLinksPartialSuccess": "Quantidade de links de convite copiados: {{successCount}}. Outras contas: {{reasonSummary}}.",
     "copyInviteLinksSuccess_one": "Link de convite {{count}} copiado.",
     "copyInviteLinksSuccess_many": "Links de convite {{count}} copiados.",
     "copyInviteLinksSuccess_other": "Links de convite {{count}} copiados.",
@@ -147,7 +147,7 @@
     "networkFailed": "Falha na conexão de rede",
     "normal": "O status da conta é normal",
     "tempWindowDisabled": "A atualização automática encontrou verificação de site, mas as tarefas automáticas não podem abrir páginas temporárias no momento. Ative isso em Configurações > Atualização de dados",
-    "tempWindowPermissionRequired": "Firefox precisa das permissões Cookies, Solicitação da Web e Bloqueio de Solicitação da Web para verificação do site. Conceda-os em Configurações > Permissões",
+    "tempWindowPermissionRequired": "Firefox precisa das permissões Cookies, Solicitação da Web e Bloqueio de Solicitação da Web para verificação do site. Conceda-as em Configurações > Permissões",
     "unknown": "Desconhecido",
     "unknownError": "Erro desconhecido",
     "warning": "Aviso"

@@ -276,11 +276,11 @@
     },
     "confirm": {
       "confirm": "Confirmar migração",
-      "description": "Isso criará novos canais de destino para {{ready}} dos {{total}} canais selecionados que estão prontos.",
+      "description": "Isso criará novos canais de destino. Canais prontos: {{ready}}; canais selecionados: {{total}}.",
       "title": "Iniciar a migração de canais?",
       "warningTitle": "Este fluxo apenas cria novos canais. Ele não sincroniza, elimina duplicatas nem reverte alterações."
     },
-    "description": "Copie {{selectedCount}} canais do site gerenciado atual para outro site gerenciado configurado.",
+    "description": "Canais selecionados para copiar: {{selectedCount}}. Destino: outro site gerenciado configurado.",
     "generalWarnings": {
       "compactSummary": "Somente criação. Passe o cursor para ver detalhes.",
       "createOnly": "Esta migração apenas cria novos canais no site de destino e não altera os canais de origem.",
@@ -310,12 +310,12 @@
       },
       "loadFailed": "Falha ao carregar a prévia da migração: {{error}}",
       "loading": "Criando prévia da migração...",
-      "selectedCount": "{{selectedCount}} canais selecionados",
+      "selectedCount": "Canais selecionados: {{selectedCount}}",
       "status": {
         "blocked": "Bloqueado",
         "ready": "Pronto"
       },
-      "summary": "Prévia: {{ready}} prontos, {{blocked}} bloqueados, {{total}} selecionados."
+      "summary": "Prévia — canais prontos: {{ready}}; bloqueados: {{blocked}}; selecionados: {{total}}."
     },
     "results": {
       "refreshRequired": "Alguns resultados da criação são incertos. Atualize a lista de canais antes de fechar.",
@@ -379,7 +379,7 @@
     "noEntries": "Nenhuma entrada",
     "paginationNext": "Próxima página",
     "paginationPrev": "Página anterior",
-    "paginationSummary": "{{start}} - {{end}} de {{total}} canais",
+    "paginationSummary": "Canais exibidos: {{start}} - {{end}} de {{total}}",
     "rowActions": {
       "delete": "Excluir",
       "edit": "Editar",

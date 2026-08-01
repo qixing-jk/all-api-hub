@@ -104,7 +104,7 @@
       "syncCompleted": "Sincronização concluída: {{success}}/{{total}} com sucesso"
     },
     "warning": {
-      "syncCompletedWithFailures": "A sincronização terminou, mas ainda houve falha em {{failed}} canais ({{success}}/{{total}} concluídos). Você pode tentar novamente apenas os itens que falharam."
+      "syncCompletedWithFailures": "A sincronização terminou com falhas. Canais com falha: {{failed}}. Concluídos: {{success}}/{{total}}. Você pode tentar novamente apenas os itens que falharam."
     }
   },
   "optionalGuidance": {

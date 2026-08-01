@@ -17,6 +17,7 @@ describe("parseNaturalDatePickerValue", () => {
     ["明年", "2027-07-10"],
     ["in 7 days", "2026-07-17"],
     ["amanhã", "2026-07-11"],
+    ["daqui a 1 dia", "2026-07-11"],
     ["daqui a 7 dias", "2026-07-17"],
     ["20260801", "2026-08-01"],
     ["2026801", "2026-08-01"],
@@ -38,6 +39,9 @@ describe("parseNaturalDatePickerValue", () => {
     "20260229",
     "202607010",
     "202607-01-01",
+    "daqui a 0 dias",
+    "daqui a 9007199254740992 dias",
+    "daqui a 7",
     "not a date",
   ])("rejects %s", (input) => {
     expect(parseNaturalDatePickerValue(input, referenceDate)).toBeNull()
