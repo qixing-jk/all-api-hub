@@ -388,6 +388,48 @@ describe("product announcement feed normalization", () => {
     expect(normalized.notices[0]?.cta).toBeUndefined()
   })
 
+  it("preserves explicit extension CTA kinds through feed normalization", () => {
+    const feed = {
+      ...baseFeed,
+      announcements: [
+        {
+          id: "extension-cta",
+          revision: 1,
+          severity: PRODUCT_ANNOUNCEMENT_SEVERITIES.Info,
+          priority: 1,
+          affectedVersions: "*",
+          startsAt: "2026-06-01T00:00:00.000Z",
+          expiresAt: "2026-06-20T00:00:00.000Z",
+          content: {
+            "zh-CN": {
+              title: "设置公告",
+              message: "前往相关设置。",
+              cta: {
+                kind: "extension",
+                label: "前往设置",
+                url: "options.html?tab=refresh&anchor=shield-method#basic",
+              },
+            },
+          },
+        },
+      ],
+    }
+
+    const normalized = normalizeProductAnnouncementFeed(feed, {
+      currentVersion: "3.44.0",
+      locale: "zh-CN",
+      now,
+      dismissed: {},
+      seenAt: {},
+    })
+
+    expect(normalized.notices[0]?.cta).toEqual({
+      kind: "extension",
+      label: "前往设置",
+      url: "options.html?tab=refresh&anchor=shield-method#basic",
+    })
+  })
+
   it("keeps dismissed notices in the list while excluding them from active selectors", () => {
     const normalized = normalizeProductAnnouncementFeed(baseFeed, {
       currentVersion: "3.44.0",

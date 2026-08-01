@@ -72,27 +72,66 @@
       "content": {
         "zh-CN": {
           "title": "过盾窗口总是打断当前工作？",
-          "message": "如果过盾时弹出的独立窗口会把浏览器带到前台、打断当前操作，可前往「设置 → 数据刷新」，将过盾页面的打开方式改为标签页模式。该选项在不同版本中可能显示为「当前窗口标签页」「后台标签页」或「临时标签页」。验证页面会作为非活动标签页加入现有浏览器窗口，不再额外弹出窗口；如果你希望将验证页面与日常浏览分开，也可以继续使用窗口方式。"
+          "message": "如果过盾时弹出的独立窗口会把浏览器带到前台、打断当前操作，可前往「设置 → 数据刷新」，将过盾页面的打开方式改为标签页模式。该选项在不同版本中可能显示为「当前窗口标签页」「后台标签页」或「临时标签页」。验证页面会作为非活动标签页加入现有浏览器窗口，不再额外弹出窗口；如果你希望将验证页面与日常浏览分开，也可以继续使用窗口方式。",
+          "cta": {
+            "kind": "extension",
+            "label": "前往设置",
+            "url": "options.html?tab=refresh&anchor=shield-method&highlight=shield-method#basic"
+          }
         },
         "zh-TW": {
           "title": "過盾視窗總是打斷目前工作？",
-          "message": "如果過盾時彈出的獨立視窗會讓瀏覽器回到前景、打斷目前操作，可前往「設定 → 資料重新整理」，將過盾頁面的開啟方式改為分頁模式。此選項在不同版本中可能顯示為「目前視窗分頁」、「背景分頁」或「臨時標籤頁」。驗證頁面會以非作用中分頁加入現有瀏覽器視窗，不再另外彈出視窗；如果你希望將驗證頁面與日常瀏覽分開，也可以繼續使用視窗模式。"
+          "message": "如果過盾時彈出的獨立視窗會讓瀏覽器回到前景、打斷目前操作，可前往「設定 → 資料重新整理」，將過盾頁面的開啟方式改為分頁模式。此選項在不同版本中可能顯示為「目前視窗分頁」、「背景分頁」或「臨時標籤頁」。驗證頁面會以非作用中分頁加入現有瀏覽器視窗，不再另外彈出視窗；如果你希望將驗證頁面與日常瀏覽分開，也可以繼續使用視窗模式。",
+          "cta": {
+            "kind": "extension",
+            "label": "前往設定",
+            "url": "options.html?tab=refresh&anchor=shield-method&highlight=shield-method#basic"
+          }
         },
         "en": {
           "title": "Do verification windows keep interrupting your work?",
-          "message": "If a separate verification window brings the browser to the foreground and interrupts what you are doing, go to “Settings → Data Refresh” and switch the verification page opening method to tab mode. Depending on the version, this option may be labeled “Tab in current window,” “Background tab,” or “Temp tab.” The verification page is added to an existing browser window as an inactive tab instead of opening another window. You can keep using a window mode if you prefer to separate verification pages from everyday browsing."
+          "message": "If a separate verification window brings the browser to the foreground and interrupts what you are doing, go to “Settings → Data Refresh” and switch the verification page opening method to tab mode. Depending on the version, this option may be labeled “Tab in current window,” “Background tab,” or “Temp tab.” The verification page is added to an existing browser window as an inactive tab instead of opening another window. You can keep using a window mode if you prefer to separate verification pages from everyday browsing.",
+          "cta": {
+            "kind": "extension",
+            "label": "Open settings",
+            "url": "options.html?tab=refresh&anchor=shield-method&highlight=shield-method#basic"
+          }
         },
         "ja": {
           "title": "認証ウィンドウに作業を中断されていませんか？",
-          "message": "サイト認証中に別ウィンドウがブラウザを前面に出して作業を中断する場合は、「設定 → データ更新」で、認証ページの開き方をタブモードに変更できます。バージョンによって、この項目は「現在のウィンドウのタブ」、「バックグラウンドタブ」、または「一時タブ」と表示されます。認証ページは別ウィンドウを開かず、既存のブラウザウィンドウに非アクティブなタブとして追加されます。認証ページを普段のブラウジングと分けたい場合は、ウィンドウモードをそのまま使用できます。"
+          "message": "サイト認証中に別ウィンドウがブラウザを前面に出して作業を中断する場合は、「設定 → データ更新」で、認証ページの開き方をタブモードに変更できます。バージョンによって、この項目は「現在のウィンドウのタブ」、「バックグラウンドタブ」、または「一時タブ」と表示されます。認証ページは別ウィンドウを開かず、既存のブラウザウィンドウに非アクティブなタブとして追加されます。認証ページを普段のブラウジングと分けたい場合は、ウィンドウモードをそのまま使用できます。",
+          "cta": {
+            "kind": "extension",
+            "label": "設定を開く",
+            "url": "options.html?tab=refresh&anchor=shield-method&highlight=shield-method#basic"
+          }
         },
         "vi": {
           "title": "Cửa sổ xác minh thường xuyên làm gián đoạn công việc?",
-          "message": "Nếu cửa sổ xác minh riêng đưa trình duyệt ra phía trước và làm gián đoạn thao tác hiện tại, hãy vào “Cài đặt → Làm mới dữ liệu” và chuyển cách mở trang xác minh sang chế độ tab. Tùy phiên bản, tùy chọn này có thể có tên “Tab trong cửa sổ hiện tại”, “Tab nền” hoặc “Tab tạm”. Trang xác minh sẽ được thêm vào cửa sổ trình duyệt hiện có dưới dạng tab không hoạt động thay vì mở thêm cửa sổ. Bạn vẫn có thể dùng chế độ cửa sổ nếu muốn tách trang xác minh khỏi việc duyệt web hằng ngày."
+          "message": "Nếu cửa sổ xác minh riêng đưa trình duyệt ra phía trước và làm gián đoạn thao tác hiện tại, hãy vào “Cài đặt → Làm mới dữ liệu” và chuyển cách mở trang xác minh sang chế độ tab. Tùy phiên bản, tùy chọn này có thể có tên “Tab trong cửa sổ hiện tại”, “Tab nền” hoặc “Tab tạm”. Trang xác minh sẽ được thêm vào cửa sổ trình duyệt hiện có dưới dạng tab không hoạt động thay vì mở thêm cửa sổ. Bạn vẫn có thể dùng chế độ cửa sổ nếu muốn tách trang xác minh khỏi việc duyệt web hằng ngày.",
+          "cta": {
+            "kind": "extension",
+            "label": "Mở phần cài đặt",
+            "url": "options.html?tab=refresh&anchor=shield-method&highlight=shield-method#basic"
+          }
         },
         "es-419": {
           "title": "¿Las ventanas de verificación interrumpen tu trabajo?",
-          "message": "Si una ventana de verificación independiente trae el navegador al primer plano e interrumpe lo que estás haciendo, ve a «Configuración → Actualización de datos» y cambia la forma de abrir la página de verificación al modo de pestaña. Según la versión, esta opción puede aparecer como «Pestaña en la ventana actual», «Pestaña en segundo plano» o «Pestaña temporal». La página de verificación se añadirá a una ventana existente del navegador como pestaña inactiva, sin abrir otra ventana. Puedes seguir usando un modo de ventana si prefieres separar las páginas de verificación de tu navegación habitual."
+          "message": "Si una ventana de verificación independiente trae el navegador al primer plano e interrumpe lo que estás haciendo, ve a «Configuración → Actualización de datos» y cambia la forma de abrir la página de verificación al modo de pestaña. Según la versión, esta opción puede aparecer como «Pestaña en la ventana actual», «Pestaña en segundo plano» o «Pestaña temporal». La página de verificación se añadirá a una ventana existente del navegador como pestaña inactiva, sin abrir otra ventana. Puedes seguir usando un modo de ventana si prefieres separar las páginas de verificación de tu navegación habitual.",
+          "cta": {
+            "kind": "extension",
+            "label": "Abrir configuración",
+            "url": "options.html?tab=refresh&anchor=shield-method&highlight=shield-method#basic"
+          }
+        },
+        "pt-BR": {
+          "title": "As janelas de verificação sempre interrompem seu trabalho?",
+          "message": "Se uma janela de verificação separada trouxer o navegador para o primeiro plano e interromper o que você está fazendo, acesse “Configurações → Atualização de dados” e altere o modo de abertura da página de verificação para o modo de aba. Dependendo da versão, essa opção pode aparecer como “Aba na janela atual”, “Aba em segundo plano” ou “Aba temporária”. A página de verificação será adicionada a uma janela existente do navegador como uma aba inativa, sem abrir outra janela. Você também pode continuar usando um modo de janela se preferir separar as páginas de verificação da navegação cotidiana.",
+          "cta": {
+            "kind": "extension",
+            "label": "Abrir configurações",
+            "url": "options.html?tab=refresh&anchor=shield-method&highlight=shield-method#basic"
+          }
         }
       }
     }

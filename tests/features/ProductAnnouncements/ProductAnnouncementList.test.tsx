@@ -91,6 +91,7 @@ describe("ProductAnnouncementList", () => {
         {
           ...notice,
           cta: {
+            kind: "external",
             label: "Broken link",
             url: "not a url",
           },
@@ -99,5 +100,25 @@ describe("ProductAnnouncementList", () => {
     })
 
     expect(screen.queryByRole("link", { name: "Broken link" })).toBeNull()
+  })
+
+  it("renders extension CTAs with the current runtime origin", () => {
+    renderList({
+      notices: [
+        {
+          ...notice,
+          cta: {
+            kind: "extension",
+            label: "Open settings",
+            url: "options.html?tab=refresh&anchor=shield-method#basic",
+          },
+        },
+      ],
+    })
+
+    expect(screen.getByRole("link", { name: "Open settings" })).toHaveAttribute(
+      "href",
+      "chrome-extension://test-extension-id/options.html?tab=refresh&anchor=shield-method#basic",
+    )
   })
 })

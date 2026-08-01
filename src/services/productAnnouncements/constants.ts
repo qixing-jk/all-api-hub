@@ -16,3 +16,8 @@ export const PRODUCT_ANNOUNCEMENT_SEVERITIES = {
   Warning: "warning",
   Info: "info",
 } as const
+
+export const PRODUCT_ANNOUNCEMENT_CTA_KINDS = {
+  External: "external",
+  Extension: "extension",
+} as const

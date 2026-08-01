@@ -4,7 +4,9 @@ import { useTranslation } from "react-i18next"
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Badge, Button } from "~/components/ui"
 import { cn } from "~/lib/utils"
+import { PRODUCT_ANNOUNCEMENT_CTA_KINDS } from "~/services/productAnnouncements/constants"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
+import { getExtensionURL } from "~/utils/browser/browserApi"
 
 import {
   getProductAnnouncementSeverityLabel,
@@ -36,15 +38,26 @@ const SEVERITY_BADGE_VARIANTS: Record<
   info: "info",
 }
 
-/**
- * Keeps CTA rendering limited to safe HTTPS navigation even if upstream validation changes.
- */
+/** Keeps external CTA rendering limited to safe HTTPS navigation. */
 function isHttpsUrl(url: string) {
   try {
     return new URL(url).protocol === "https:"
   } catch {
     return false
   }
+}
+
+/** Resolves a normalized CTA into the concrete link used by this extension runtime. */
+function resolveCtaHref(cta: NonNullable<ProductAnnouncement["cta"]>) {
+  if (cta.kind === PRODUCT_ANNOUNCEMENT_CTA_KINDS.External) {
+    return isHttpsUrl(cta.url) ? cta.url : null
+  }
+
+  if (cta.kind === PRODUCT_ANNOUNCEMENT_CTA_KINDS.Extension) {
+    return getExtensionURL(cta.url)
+  }
+
+  return null
 }
 
 /**
@@ -89,7 +102,8 @@ export function ProductAnnouncementList({
       className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1"
     >
       {notices.map((notice) => {
-        const cta = notice.cta && isHttpsUrl(notice.cta.url) ? notice.cta : null
+        const cta = notice.cta
+        const ctaHref = cta ? resolveCtaHref(cta) : null
         const dismissLabel = t("actions.dismissFor", { title: notice.title })
         const dismissAriaLabel =
           dismissLabel === "productAnnouncements:actions.dismissFor"
@@ -167,9 +181,9 @@ export function ProductAnnouncementList({
             <p className="dark:text-dark-text-secondary mt-2 text-xs leading-5 break-words whitespace-pre-wrap text-gray-600">
               {notice.message}
             </p>
-            {cta ? (
+            {cta && ctaHref ? (
               <a
-                href={cta.url}
+                href={ctaHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-2 inline-flex max-w-full items-center gap-1 text-xs font-medium text-blue-600 underline-offset-4 hover:underline dark:text-blue-300"
