@@ -2,6 +2,7 @@ import dayjs from "dayjs"
 
 import "dayjs/locale/es"
 import "dayjs/locale/ja"
+import "dayjs/locale/pt-br"
 import "dayjs/locale/vi"
 import "dayjs/locale/zh-cn"
 import "dayjs/locale/zh-tw"

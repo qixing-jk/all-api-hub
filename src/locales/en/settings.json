@@ -40,6 +40,10 @@
           "label": "JA",
           "name": "Japanese"
         },
+        "pt-BR": {
+          "label": "PT-BR",
+          "name": "Portuguese (Brazil)"
+        },
         "vi": {
           "label": "VI",
           "name": "Vietnamese"

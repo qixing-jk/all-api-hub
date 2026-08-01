@@ -110,6 +110,12 @@ describe("docsLocale", () => {
     expect(getDocsLocalePath("es-419")).toBe("en/")
   })
 
+  it("falls back to english docs for Brazilian Portuguese", async () => {
+    const { getDocsLocalePath } = await import("~/utils/navigation/docsLocale")
+
+    expect(getDocsLocalePath("pt-BR")).toBe("en/")
+  })
+
   it("defaults to english when no language source is available", async () => {
     Object.defineProperty(globalThis, "window", {
       configurable: true,

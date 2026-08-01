@@ -2,6 +2,7 @@ import dayjs from "dayjs"
 
 import "dayjs/locale/es"
 import "dayjs/locale/ja"
+import "dayjs/locale/pt-br"
 import "dayjs/locale/vi"
 import "dayjs/locale/zh-cn"
 import "dayjs/locale/zh-tw"
@@ -52,9 +53,19 @@ i18n
   })
   .then(async () => {
     const storedLanguage = await userPreferences.getLanguage()
+    const requestedLanguage = normalizeAppLanguage(i18n.language)
+    const resolvedLanguage = normalizeAppLanguage(i18n.resolvedLanguage)
+    // i18next resolves unsupported regional tags to the configured fallback
+    // before the app can normalize them (for example, pt-PT -> pt-BR).
+    const detectedLanguage =
+      resolvedLanguage === DEFAULT_LANG &&
+      requestedLanguage &&
+      requestedLanguage !== DEFAULT_LANG
+        ? requestedLanguage
+        : resolvedLanguage ?? requestedLanguage
     const initialLanguage = resolveInitialAppLanguage({
       userPreferenceLanguage: storedLanguage,
-      detectedLanguage: i18n.resolvedLanguage || i18n.language,
+      detectedLanguage,
     })
 
     if (

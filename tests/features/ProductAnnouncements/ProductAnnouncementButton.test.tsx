@@ -41,6 +41,7 @@ const warningNotice = {
   title: "Warning notice",
   message: "Check configuration.",
   cta: {
+    kind: "external",
     label: "Secure notes",
     url: "https://github.com/qixing-jk/all-api-hub/releases",
   },
@@ -53,6 +54,7 @@ const unsafeCtaNotice = {
   id: "unsafe",
   title: "Unsafe CTA",
   cta: {
+    kind: "external",
     label: "Unsafe notes",
     url: "http://example.com/insecure",
   },

@@ -148,6 +148,7 @@ function readCta(value: unknown): RawProductAnnouncementCta | undefined {
   if (!isRecord(value)) return undefined
 
   return {
+    kind: value.kind,
     label: value.label,
     url: value.url,
   }

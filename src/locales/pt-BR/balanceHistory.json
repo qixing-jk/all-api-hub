@@ -1,0 +1,163 @@
+{
+  "actions": {
+    "applySettings": "Aplicar configurações",
+    "prune": "Remover dados antigos",
+    "refreshNow": "Atualizar agora"
+  },
+  "breakdown": {
+    "chartTypes": {
+      "histogram": "Histograma",
+      "pie": "Pizza"
+    },
+    "controls": {
+      "chartType": "Tipo de gráfico",
+      "reference": "Referência"
+    },
+    "coverage": "Contas com dados: {{covered}}/{{total}}",
+    "empty": "Não há dados para exibir para este detalhamento.",
+    "hints": {
+      "pieDisabledForNegative": "Os gráficos de pizza não estão disponíveis para valores negativos."
+    },
+    "title": "Detalhamento da conta"
+  },
+  "description": "Registre instantâneos diários de saldo e fluxo de caixa e visualize tendências ao longo do tempo.",
+  "empty": {
+    "description": "Ative o histórico de saldo e atualize uma conta para registrar o primeiro instantâneo.",
+    "title": "Nenhum instantâneo ainda"
+  },
+  "emptyRange": {
+    "description": "Existem instantâneos, mas nenhum se enquadra no intervalo de datas selecionado. Tente ampliar o alcance ou atualizar uma conta.",
+    "title": "Nenhum instantâneo neste intervalo"
+  },
+  "filters": {
+    "accounts": "Contas",
+    "accountsHint": "Selecione as contas a serem incluídas nos gráficos.",
+    "allAccounts": "Todas as contas",
+    "allTags": "Todas as tags",
+    "endDay": "Data de término",
+    "noDataInRange": "Nenhum dado neste intervalo",
+    "quickRanges": {
+      "180d": "180 dias",
+      "30d": "30 dias",
+      "365d": "1 ano",
+      "7d": "7 dias",
+      "90d": "90 dias"
+    },
+    "range": "Período",
+    "rangeHint": "Delimitado pela janela de retenção ({{days}} dias).",
+    "startDay": "Data de início",
+    "tags": "Tags",
+    "tagsHint": "Filtre contas por tags."
+  },
+  "hints": {
+    "disabled": {
+      "actions": {
+        "openSettings": "Abrir configurações"
+      },
+      "description": "Ative Histórico de saldo nas configurações para começar a gravar instantâneos.",
+      "title": "Histórico de saldo desativado"
+    },
+    "incompleteSelection": {
+      "description": "Os totais são calculados com base no melhor esforço, somando as contas que possuem dados de cada dia. Quando a cobertura está incompleta (contas {{minCovered}}–{{maxCovered}}/{{totalAccounts}}), os totais podem ser subestimados.",
+      "title": "O total pode estar incompleto"
+    }
+  },
+  "messages": {
+    "error": {
+      "pruneFailed": "Falha na remoção: {{error}}",
+      "refreshFailed": "Falha na atualização: {{error}}",
+      "settingsSaveFailed": "Falha ao salvar configurações: {{error}}"
+    },
+    "loading": {
+      "loadingData": "Carregando…",
+      "pruning": "Removendo dados antigos…",
+      "refreshing": "Atualizando…",
+      "savingSettings": "Salvando configurações…"
+    },
+    "success": {
+      "pruneCompleted": "Dados antigos removidos",
+      "refreshCompleted": "Atualização concluída",
+      "settingsSaved": "Configurações salvas"
+    }
+  },
+  "metrics": {
+    "balance": "Saldo",
+    "estimatedIncome": "Renda estimada",
+    "income": "Renda",
+    "net": "Variação líquida",
+    "outcome": "Gastos"
+  },
+  "overview": {
+    "kpis": {
+      "coverageAccounts": "Contas {{covered}}/{{total}}",
+      "endBalance": {
+        "label": "Saldo final"
+      },
+      "incomeTotal": {
+        "label": "Renda total"
+      },
+      "outcomeTotal": {
+        "label": "Gastos totais"
+      },
+      "rangeNet": {
+        "label": "Variação líquida no período"
+      }
+    },
+    "title": "Visão geral"
+  },
+  "settings": {
+    "alarmUnsupported": "A API de alarmes não está disponível neste navegador; não é possível habilitar a captura de fim de dia.",
+    "enabled": "Habilitar histórico de saldo",
+    "enabledHint": "Quando desativado, nenhum instantâneo é gravado e a captura agendada é desativada.",
+    "endOfDayCapture": "Captura de fim de dia",
+    "endOfDayCaptureHint": "Tenta fazer uma captura diária por volta de {{time}} (requer a API de alarmes).",
+    "estimatedTodayIncome": "Mostrar renda estimada hoje",
+    "estimatedTodayIncomeHint": "Usa o histórico de saldo para estimar recompensas que não aparecem nos registros de receitas do site. Indisponível quando falta a linha de base do dia anterior.",
+    "retentionDays": "Retenção (dias)"
+  },
+  "summary": {
+    "coverage": "Dias com dados: saldo {{snapshotAvailableDays}}/{{totalDays}} (completo {{snapshotCompleteDays}}/{{totalDays}}), fluxo de caixa {{cashflowAvailableDays}}/{{totalDays}} (completo {{cashflowCompleteDays}}/{{totalDays}})."
+  },
+  "table": {
+    "columns": {
+      "account": "Conta",
+      "cashflowCoverage": "Cobertura de fluxo de caixa",
+      "endBalance": "Saldo final",
+      "estimatedIncomeTotal": "Renda total estimada",
+      "incomeTotal": "Renda total",
+      "outcomeTotal": "Gastos totais",
+      "rangeNet": "Variação líquida no período",
+      "snapshotCoverage": "Cobertura de snapshots",
+      "startBalance": "Saldo inicial"
+    },
+    "coverageFormat": "{{covered}}/{{total}}",
+    "empty": "Nenhum resumo de conta para exibir.",
+    "loading": "Carregando…",
+    "title": "Resumo da conta"
+  },
+  "title": "Histórico de saldo",
+  "trend": {
+    "chartTypes": {
+      "bar": "Barra",
+      "line": "Linha"
+    },
+    "controls": {
+      "chartType": "Tipo de gráfico",
+      "scope": "Ver"
+    },
+    "emptyMetric": "Não há dados {{metric}} neste intervalo.",
+    "scopes": {
+      "accounts": "Por conta",
+      "total": "Total"
+    },
+    "subtitle": "Série por conta com intervalos para dias faltantes.",
+    "subtitleTotal": "Total (soma) das contas selecionadas; os valores podem ser subestimados em dias com cobertura incompleta.",
+    "title": "Tendência"
+  },
+  "warnings": {
+    "cashflowDisabled": {
+      "description": "A busca de fluxo de caixa de hoje está desativada e a captura de final do dia está desativada. Ative \"Mostrar fluxo de caixa de hoje\" ou \"Captura de final do dia\" para registrar valores de receitas/gastos.",
+      "title": "O histórico de receitas/gastos estará vazio"
+    }
+  }
+}

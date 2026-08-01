@@ -28,6 +28,14 @@ describe("i18n resources", () => {
       }),
       settings: expect.any(Object),
     })
+    expect(resources["pt-BR"]).toMatchObject({
+      common: expect.objectContaining({
+        actions: expect.objectContaining({
+          cancel: "Cancelar",
+        }),
+      }),
+      settings: expect.any(Object),
+    })
     expect(resources["zh-CN"]).toMatchObject({
       common: expect.objectContaining({
         actions: expect.objectContaining({
@@ -52,5 +60,6 @@ describe("i18n resources", () => {
     expect(mapToDayjsLocale("ja-JP")).toBe("ja-jp")
     expect(mapToDayjsLocale("vi_VN")).toBe("vi-vn")
     expect(mapToDayjsLocale("es-419")).toBe("es")
+    expect(mapToDayjsLocale("pt-BR")).toBe("pt-br")
   })
 })

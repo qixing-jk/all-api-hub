@@ -1,0 +1,75 @@
+{
+  "actions": {
+    "checkNow": "Verificar agora",
+    "collapse": "Recolher",
+    "expand": "Expandir",
+    "markAllRead": "Marcar tudo como lido",
+    "markRead": "Marcar como lido",
+    "pollingSettings": "Configurações de consulta automática",
+    "viewSource": "Ver anúncio do site"
+  },
+  "badges": {
+    "notified": "Notificado",
+    "unread": "Não lido"
+  },
+  "description": {
+    "disabledSummary": "A pesquisa automática está desativada; você ainda pode acionar uma verificação manual.",
+    "enabledInterval": "Intervalo atual: a cada {{intervalMinutes}} minutos.",
+    "enabledSummary": "A consulta automática está ativada; revise os anúncios encontrados, gerencie o estado de leitura e inicie uma verificação manual.",
+    "pollingSettingsLink": "Configurar consulta automática"
+  },
+  "empty": {
+    "addAccount": "Adicionar conta",
+    "description": "Novos anúncios encontrados por verificações em segundo plano aparecerão aqui.",
+    "descriptionWhenPollingDisabled": "Você pode verificar manualmente agora; a consulta automática pode ser gerenciada nas configurações.",
+    "filtered": "Nenhum anúncio corresponde aos filtros atuais",
+    "noAccounts": "Adicione uma conta antes de verificar os anúncios",
+    "noAccountsDesc": "As verificações de anúncios precisam de pelo menos uma conta habilitada para saber quais sites devem ser pesquisados.",
+    "pollingSettingsLink": "Configurar consulta automática",
+    "title": "Nenhum registro de anúncio"
+  },
+  "filters": {
+    "allReadStates": "Todos os estados",
+    "allSites": "Todos os sites",
+    "allSiteTypes": "Todos os tipos",
+    "read": "Lidos",
+    "readState": "Estado de leitura",
+    "searchSite": "Pesquisar sites",
+    "site": "Site",
+    "siteType": "Tipo de site",
+    "unread": "Não lido"
+  },
+  "loading": "Carregando anúncios...",
+  "messages": {
+    "checkCompleted": "Verificação do anúncio concluída",
+    "checkFailed": "Falha na verificação do anúncio",
+    "loadFailed": "Falha ao carregar anúncios",
+    "markAllReadFailed": "Falha ao marcar anúncios como lidos",
+    "markReadFailed": "Falha ao marcar o anúncio como lido"
+  },
+  "notification": {
+    "multipleUnread_one": "{{title}} e mais {{count}} anúncio não lido",
+    "multipleUnread_many": "{{title}} e mais {{count}} anúncios não lidos",
+    "multipleUnread_other": "{{title}} e mais {{count}} anúncios não lidos",
+    "title": "{{site}} tem novos anúncios"
+  },
+  "status": {
+    "failed": "Falha na verificação do anúncio mais recente: {{error}}",
+    "failedTitle": "Falha na verificação",
+    "lastChecked": "Última verificação: {{time}}",
+    "unsupported": "A verificação mais recente não encontrou um endpoint de anúncio utilizável para este site.",
+    "unsupportedTitle": "Endpoint de anúncio não suportado"
+  },
+  "summary": {
+    "filtered_one": "Exibindo {{count}} de {{total}} anúncio",
+    "filtered_many": "Exibindo {{count}} de {{total}} anúncios",
+    "filtered_other": "Exibindo {{count}} de {{total}} anúncios",
+    "notified_one": "{{count}} notificação do sistema enviada",
+    "notified_many": "{{count}} notificações do sistema enviadas",
+    "notified_other": "{{count}} notificações do sistema enviadas",
+    "sites": "Sites",
+    "total": "Total",
+    "unread": "Não lido"
+  },
+  "title": "Anúncios do site"
+}

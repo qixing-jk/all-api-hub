@@ -1,0 +1,93 @@
+{
+  "actions": {
+    "cancel": "Cancelar",
+    "clear": "Limpar",
+    "close": "Fechar",
+    "copyKey": "Copiar Chave",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "export": "Exportar",
+    "goToSettings": "Ir para Configurações",
+    "import": "Importar",
+    "more": "Mais",
+    "openSidePanel": "Abrir no Painel Lateral",
+    "refresh": "Atualizar",
+    "reset": "Redefinir",
+    "retry": "Tentar novamente",
+    "save": "Salvar"
+  },
+  "currency": {
+    "clickToSwitch": "Clique para alternar para {{currency}}",
+    "cny": "CNY",
+    "usd": "USD"
+  },
+  "datePicker": {
+    "in1Year": "+1 ano",
+    "in30Days": "+30 dias",
+    "in7Days": "+7 dias",
+    "in90Days": "+90 dias",
+    "naturalInput": {
+      "invalid": "Insira uma data reconhecível, como AAAA-MM-DD ou daqui a 7 dias",
+      "label": "Inserir data",
+      "openCalendar": "Abrir calendário",
+      "placeholder": "Tente daqui a 7 dias, amanhã ou 2026-08-01",
+      "preview": "Será definido para: {{date}}"
+    },
+    "noExpiration": "Sem expiração",
+    "placeholder": "Selecionar data"
+  },
+  "labels": {
+    "apiKey": "Chave de API",
+    "notAvailable": "N/D",
+    "settings": "Configurações",
+    "token": "Token",
+    "unknown": "Desconhecido"
+  },
+  "quota": {
+    "unlimited": "Ilimitada"
+  },
+  "rootErrorBoundary": {
+    "genericDescription": "A página não pôde ser exibida corretamente. Recarregue primeiro. Se isso continuar acontecendo, relate o problema para que possamos ajudar.",
+    "reload": "Recarregar página",
+    "reportIssue": "Relatar problema",
+    "requestLanguage": "Solicitar um idioma",
+    "title": "Falha ao exibir a página",
+    "translationDescription": "Se você estiver usando a tradução automática, desative-a para esta página ou mude para o idioma necessário nas configurações da extensão."
+  },
+  "status": {
+    "applying": "Aplicando...",
+    "cancelled": "Cancelado",
+    "cancelling": "Cancelando...",
+    "checking": "Verificando...",
+    "configurationRequired": "Configuração necessária",
+    "copying": "Copiando...",
+    "creating": "Criando...",
+    "deleting": "Excluindo...",
+    "disabled": "Desativado",
+    "disabling": "Desativando...",
+    "enabled": "Ativado",
+    "enabling": "Ativando...",
+    "error": "Erro",
+    "exporting": "Exportando...",
+    "failed": "Falhou",
+    "importing": "Importando...",
+    "loading": "Carregando...",
+    "opening": "Abrindo...",
+    "processing": "Processando...",
+    "refreshing": "Atualizando...",
+    "resetting": "Redefinindo...",
+    "retrying": "Tentando novamente...",
+    "saving": "Salvando...",
+    "starting": "Iniciando...",
+    "success": "Sucesso",
+    "testing": "Testando...",
+    "updating": "Atualizando...",
+    "uploading": "Enviando..."
+  },
+  "time": {
+    "neverExpires": "Nunca expira",
+    "seconds": "segundos",
+    "updatedAt": "Atualizado às {{time}}"
+  },
+  "total": "Total"
+}

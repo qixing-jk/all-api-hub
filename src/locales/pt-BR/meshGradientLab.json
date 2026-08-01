@@ -1,0 +1,27 @@
+{
+  "actions": {
+    "shuffleSeed": "Sortear semente"
+  },
+  "captions": {
+    "layoutIndex": "layout nº {{index}}",
+    "paletteIndex": "#{{index}}"
+  },
+  "labels": {
+    "layout": "Layout",
+    "overlay": "Sobreposição",
+    "palette": "Paleta",
+    "seed": "Semente",
+    "view": "Visualização"
+  },
+  "summaryLayout_one": "{{count}} layout",
+  "summaryLayout_many": "{{count}} layouts",
+  "summaryLayout_other": "{{count}} layouts",
+  "summaryPalette_one": "{{count}} paleta",
+  "summaryPalette_many": "{{count}} paletas",
+  "summaryPalette_other": "{{count}} paletas",
+  "title": "Laboratório de gradiente de malha (desenvolvimento)",
+  "view": {
+    "layouts": "Layouts",
+    "palettes": "Paletas"
+  }
+}

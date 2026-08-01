@@ -1,0 +1,20 @@
+{
+  "manifest_name": {
+    "message": "All API Hub - O seu gestor completo de ativos de IA"
+  },
+  "manifest_description": {
+    "message": "saldo e utilização, check-in automático, exportação de chaves, testes de API e sincronização/redirecionamento de canais e modelos"
+  },
+  "manifest_commands_sidebar_action": {
+    "message": "Abrir o All API Hub na barra lateral"
+  },
+  "manifest_commands_browser_action": {
+    "message": "Abrir o All API Hub na janela pop-up"
+  },
+  "context_menu_redeem_selection": {
+    "message": "Resgatar a seleção com o Assistente de Resgate"
+  },
+  "context_menu_ai_api_check": {
+    "message": "Testar rapidamente a disponibilidade funcional das APIs de IA"
+  }
+}

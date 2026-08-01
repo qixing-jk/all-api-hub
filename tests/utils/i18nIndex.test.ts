@@ -47,6 +47,7 @@ vi.mock("~/utils/i18n/language", () => ({
     const languageFamily = normalized.toLowerCase().split("-")[0]
     if (languageFamily === "en") return "en"
     if (languageFamily === "ja") return "ja"
+    if (languageFamily === "pt") return "pt-BR"
     if (languageFamily === "vi") return "vi"
     if (normalized.toLowerCase() === "zh-tw") return "zh-TW"
     if (languageFamily === "zh") return "zh-CN"
@@ -205,6 +206,31 @@ describe("app i18n initialization", () => {
       expect(i18nCoreMock.changeLanguage).not.toHaveBeenCalled()
       expect(localeSpy).toHaveBeenCalledWith("ja")
       expect(document.documentElement.lang).toBe("ja")
+    } finally {
+      localeSpy.mockRestore()
+    }
+  })
+
+  it("prefers a supported browser language family over i18next fallback resolution", async () => {
+    const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("pt-br")
+    i18nCoreMock.language = "pt-PT"
+    i18nCoreMock.resolvedLanguage = "zh-CN"
+    getLanguageMock.mockResolvedValueOnce(undefined)
+    resolveInitialAppLanguageMock.mockReturnValueOnce("pt-BR")
+
+    try {
+      await import("~/utils/i18n/index")
+
+      await vi.waitFor(() => {
+        expect(resolveInitialAppLanguageMock).toHaveBeenCalledWith({
+          userPreferenceLanguage: undefined,
+          detectedLanguage: "pt-BR",
+        })
+      })
+
+      expect(i18nCoreMock.changeLanguage).toHaveBeenCalledWith("pt-BR")
+      expect(localeSpy).toHaveBeenCalledWith("pt-br")
+      expect(document.documentElement.lang).toBe("pt-BR")
     } finally {
       localeSpy.mockRestore()
     }

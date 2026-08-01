@@ -19,6 +19,10 @@ describe("i18n language helpers", () => {
     expect(normalizeAppLanguage("es-419")).toBe("es-419")
     expect(normalizeAppLanguage("es_MX")).toBe("es-419")
     expect(normalizeAppLanguage("es-AR")).toBe("es-419")
+    expect(normalizeAppLanguage("pt")).toBe("pt-BR")
+    expect(normalizeAppLanguage("pt-BR")).toBe("pt-BR")
+    expect(normalizeAppLanguage("pt_BR")).toBe("pt-BR")
+    expect(normalizeAppLanguage("pt-PT")).toBe("pt-BR")
     expect(normalizeAppLanguage("zh-CN")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh_CN")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh-SG")).toBe("zh-CN")
@@ -90,6 +94,14 @@ describe("i18n language helpers", () => {
         detectedLanguage: "es-MX",
       }),
     ).toBe("es-419")
+  })
+
+  it("keeps detected Portuguese variants as Brazilian Portuguese", () => {
+    expect(
+      resolveInitialAppLanguage({
+        detectedLanguage: "pt-PT",
+      }),
+    ).toBe("pt-BR")
   })
 
   it("falls back to English when detection is unsupported", () => {

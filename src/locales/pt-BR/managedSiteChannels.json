@@ -1,0 +1,431 @@
+{
+  "alerts": {
+    "authenticationFailed": {
+      "description": "As credenciais salvas do AxonHub foram recusadas. Abra os ajustes, atualize-as e depois atualize a lista de canais.",
+      "title": "Entre novamente no AxonHub"
+    },
+    "editorLoadError": {
+      "description": "Não foi possível carregar o formulário do canal. Atualize a lista de canais e tente novamente.",
+      "title": "Não foi possível abrir o editor de canais"
+    },
+    "editorSaveError": {
+      "description": "Suas alterações não foram salvas. Tente novamente.",
+      "title": "Não foi possível salvar o canal"
+    },
+    "loadError": {
+      "description": "{{error}}",
+      "title": "Não foi possível carregar os canais"
+    },
+    "partialMutation": {
+      "description": "Alguns campos podem ter sido salvos, mas não foi possível confirmar o status. Atualize a lista de canais e revise o canal antes de tentar novamente.",
+      "title": "A atualização do canal precisa ser revisada"
+    },
+    "permissionDenied": {
+      "description": "Esta conta do AxonHub não pode gerenciar canais. Use uma conta de administrador ou atualize as permissões e depois atualize a lista.",
+      "title": "Acesso ao AxonHub negado"
+    },
+    "savedRefreshError": {
+      "description": "O canal foi salvo, mas não foi possível carregar a lista mais recente. Atualize a lista de canais antes de fazer outras alterações.",
+      "title": "Canal salvo; é necessário atualizar"
+    },
+    "unavailable": {
+      "description": "Não foi possível acessar o AxonHub. Verifique o servidor e a rede e depois atualize a lista de canais.",
+      "title": "O AxonHub está indisponível"
+    }
+  },
+  "dialog": {
+    "cancel": "Cancelar",
+    "confirm": "Excluir",
+    "deleteDescription": "Esta ação não pode ser desfeita. Os canais selecionados serão removidos permanentemente.",
+    "deleteRefreshAction": "Atualizar canais",
+    "deleteRefreshRequired": "Alguns resultados da exclusão são incertos. Atualize a lista de canais antes de excluir novamente.",
+    "deleteResultStatus": {
+      "failed": "Falhou",
+      "success": "Excluído",
+      "uncertain": "Incerto"
+    },
+    "deleteResultsTitle": "Resultados da exclusão",
+    "deleteTitle": "Excluir canal?",
+    "deleteTitlePlural": "Excluir canais?"
+  },
+  "editor": {
+    "fields": {
+      "autoSyncModelPattern": {
+        "help": "Sincronize somente modelos correspondentes. Comece com (?i) para ignorar maiúsculas e minúsculas; deixe em branco para sincronizar todos os modelos.",
+        "invalid": "Insira um padrão de filtro de modelos válido.",
+        "label": "Padrão do filtro de modelos",
+        "placeholder": "Por exemplo, (?i)^model-example"
+      },
+      "autoSyncSupportedModels": {
+        "help": "O AxonHub atualiza os canais ativos pela API do provedor na frequência configurada nos ajustes do sistema do AxonHub.",
+        "label": "Sincronizar automaticamente os modelos compatíveis"
+      },
+      "defaultTestModel": {
+        "help": "Usado para testar a conexão deste canal. Escolha um dos modelos compatíveis.",
+        "label": "Modelo de teste padrão",
+        "placeholder": "Selecione um modelo configurado"
+      },
+      "extraModelPrefix": {
+        "help": "Configure prefixos adicionais para permitir o acesso a este canal usando nomes de modelos com prefixo. Por exemplo, com o prefixo 'deepseek', tanto 'deepseek/deepseek-chat' quanto 'deepseek-chat' podem acessar este canal.",
+        "label": "Prefixo adicional de modelo",
+        "placeholder": "ex.: deepseek"
+      },
+      "orderingWeight": {
+        "help": "Valores mais altos têm preferência quando o AxonHub seleciona um canal; valores iguais têm a mesma prioridade de ordenação.",
+        "label": "Peso de ordenação"
+      },
+      "remark": {
+        "help": "Adicione observações sobre este canal para referência.",
+        "label": "Observação",
+        "placeholder": "Insira uma observação sobre este canal..."
+      },
+      "supportedModels": {
+        "help": "Digite ou cole nomes de modelos. Os modelos adicionados aqui são mantidos durante a sincronização automática."
+      },
+      "tags": {
+        "help": "Adicione tags para categorizar e filtrar canais. Pressione Enter para adicionar uma tag. Você também pode colar tags separadas por vírgulas ou linhas.",
+        "label": "Tags",
+        "placeholder": "Adicionar tags..."
+      }
+    },
+    "options": {
+      "channelType": {
+        "anthropic": "Anthropic",
+        "anthropicAws": "Anthropic na AWS",
+        "anthropicGcp": "Anthropic no Google Cloud",
+        "claudeCode": "Claude Code",
+        "deepseek": "DeepSeek",
+        "deepseekAnthropic": "DeepSeek Anthropic",
+        "gemini": "Gemini",
+        "geminiOpenai": "Gemini OpenAI",
+        "geminiVertex": "Gemini Vertex",
+        "githubCopilot": "GitHub Copilot",
+        "nanogpt": "NanoGPT",
+        "ollama": "Ollama",
+        "openai": "OpenAI",
+        "openaiResponses": "OpenAI Responses",
+        "openrouter": "OpenRouter",
+        "siliconflow": "SiliconFlow",
+        "unsupported": "Tipo de canal não compatível",
+        "volcengine": "Volcengine",
+        "xai": "xAI"
+      },
+      "status": {
+        "archived": "Arquivado",
+        "disabled": "Desativado",
+        "enabled": "Ativado",
+        "unknown": "Desconhecido"
+      },
+      "unknown": "Opção desconhecida"
+    },
+    "secret": {
+      "actions": {
+        "clear": "Remover credencial salva",
+        "restore": "Manter credencial salva",
+        "retry": "Tentar novamente"
+      },
+      "createHint": "Insira uma credencial para o novo canal.",
+      "keepExistingHint": "Deixe este campo em branco para manter a credencial salva sem alterações.",
+      "loadError": "Não foi possível carregar a credencial salva.",
+      "loading": "Carregando a credencial salva...",
+      "placeholder": "Insira uma credencial",
+      "replacementBlocked": {
+        "multipleCredentials": "Este canal tem várias chaves de API. Gerencie-as no AxonHub."
+      },
+      "replacementDisabled": "Este tipo de credencial não pode ser substituído aqui.",
+      "state": {
+        "available": "Há uma credencial salva disponível.",
+        "masked": "Há uma credencial mascarada salva.",
+        "permissionHidden": "A credencial salva está oculta devido às permissões.",
+        "unavailable": "Não há nenhuma credencial disponível para exibição."
+      }
+    },
+    "sections": {
+      "advanced": "Avançado",
+      "basic": "Básico",
+      "connection": "Conexão",
+      "metadata": "Metadados",
+      "models": "Modelos",
+      "routing": "Roteamento",
+      "sync": "Sincronização de modelos"
+    },
+    "validation": {
+      "inconsistentValue": "Este valor entra em conflito com outro campo.",
+      "invalidValue": "Insira um valor válido.",
+      "outOfRange": "Insira um valor dentro do intervalo permitido.",
+      "required": "Este campo é obrigatório.",
+      "unsupportedOption": "Esta opção não é compatível."
+    }
+  },
+  "filter": {
+    "statusLabel": "Filtrar por status"
+  },
+  "filters": {
+    "actionOptions": {
+      "exclude": "Excluir modelos correspondentes",
+      "include": "Incluir modelos correspondentes"
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "moveDown": "Mover filtro para baixo",
+      "moveUp": "Mover filtro para cima",
+      "save": "Salvar filtros"
+    },
+    "addPatternRule": "Adicionar regra de padrão",
+    "addProbeRule": "Adicionar regra de teste",
+    "empty": {
+      "description": "Adicione regras de inclusão ou exclusão com regex opcional para controlar os modelos sincronizados.",
+      "title": "Ainda não há filtros"
+    },
+    "hints": {
+      "probesAllPass": "Um modelo só corresponde a esta regra quando todos os testes selecionados são aprovados. Os testes usam a URL base do canal e a chave de canal obtida.",
+      "regex": "Regras de regex permitem correspondências avançadas com a sintaxe do JavaScript.",
+      "substring": "Regras simples procuram substrings diferenciando maiúsculas de minúsculas nos nomes dos modelos.",
+      "unsupportedChannelType": "As regras de teste não estão disponíveis para este tipo de canal porque ele não pode ser associado a uma API de verificação compatível."
+    },
+    "jsonEditor": {
+      "hint": "O JSON deve ser um array de objetos de regras de padrão ou de teste. Regras de padrão usam kind: 'pattern', name e pattern. Regras de teste usam kind: 'probe', name e probeIds. Campos de credencial como apiKey, key e baseUrl são ignorados.",
+      "label": "Editor JSON avançado",
+      "placeholder": "Cole ou edite aqui um array de objetos de regras de filtro para reutilizar rapidamente a mesma configuração em vários canais."
+    },
+    "labels": {
+      "action": "Ação",
+      "delete": "Excluir filtro",
+      "description": "Descrição",
+      "enabled": "Ativado",
+      "name": "Nome do filtro",
+      "pattern": "Padrão de correspondência",
+      "probes": "Testes de verificação",
+      "regex": "Modo regex",
+      "ruleType": "Tipo de regra"
+    },
+    "loading": "Carregando filtros do canal...",
+    "messages": {
+      "jsonArrayRequired": "O JSON deve ser um array de regras de filtro.",
+      "jsonInvalid": "JSON de filtros inválido: {{error}}",
+      "jsonItemNotObject": "O filtro no índice {{index}} deve ser um objeto.",
+      "loadFailed": "Falha ao carregar os filtros: {{error}}",
+      "saved": "Filtros salvos",
+      "saveFailed": "Falha ao salvar os filtros: {{error}}",
+      "validationName": "Informe um nome para cada filtro.",
+      "validationPattern": "O padrão do filtro não pode ficar em branco.",
+      "validationProbeIds": "Selecione pelo menos um teste de verificação para cada regra de teste.",
+      "validationRegex": "Padrão de regex inválido: {{error}}"
+    },
+    "placeholders": {
+      "description": "Observações opcionais sobre esta regra",
+      "name": "ex.: Permitir GPT-4",
+      "pattern": "Texto exato ou padrão regex",
+      "probes": "Selecionar testes",
+      "probeSearch": "Pesquisar testes"
+    },
+    "probes": {
+      "empty": "Nenhum teste encontrado",
+      "options": {
+        "structured-output": "Saída estruturada",
+        "text-generation": "Geração de texto",
+        "tool-calling": "Chamada de ferramentas",
+        "web-search": "Pesquisa na web"
+      }
+    },
+    "ruleTypeOptions": {
+      "pattern": "Padrão",
+      "probe": "Teste"
+    },
+    "subtitle": "Personalize as regras de filtro de {{channel}}",
+    "title": "Filtros do canal",
+    "viewMode": {
+      "json": "Edição em JSON",
+      "label": "Modo de edição",
+      "visual": "Edição visual"
+    }
+  },
+  "gatewayGuidance": {
+    "clientHint": "Os clientes externos também precisam de uma chave de acesso emitida por este gateway.",
+    "empty": {
+      "description": "Este gateway de IA auto-hospedado ainda não tem canais. Importe primeiro chaves de contas ou chaves de API; depois, o gateway poderá oferecer uma única API de IA a clientes externos.",
+      "importFromAccountKey": "Importar canal de uma chave de conta",
+      "importFromApiKeyLibrary": "Importar canal da biblioteca de credenciais de API",
+      "title": "Ainda não há canais no gateway de IA auto-hospedado"
+    },
+    "headerDescription": "Gerencie os canais do seu gateway de IA auto-hospedado e reúna várias chaves de contas ou de API em uma única API de IA.",
+    "openChannelConsole": "Abrir gerenciamento de canais do gateway",
+    "openTokenConsole": "Abrir gerenciamento de tokens",
+    "unconfiguredValueDescription": "Após a configuração, você poderá importar chaves de contas e de API dispersas como canais do gateway e gerenciá-las diretamente no All API Hub."
+  },
+  "migration": {
+    "actions": {
+      "cancel": "Cancelar",
+      "close": "Fechar",
+      "refreshChannels": "Atualizar lista de canais",
+      "refreshPreview": "Atualizar prévia",
+      "running": "Migrando...",
+      "start": "Iniciar migração"
+    },
+    "alerts": {
+      "noTargets": {
+        "description": "Configure outro site gerenciado de destino nos ajustes antes de usar a migração de canais."
+      }
+    },
+    "betaBadge": "Beta",
+    "blockedReasons": {
+      "sourceKeyMissing": "A chave do canal de origem está indisponível, portanto este canal ainda não pode ser migrado.",
+      "sourceKeyResolutionFailed": "Não foi possível carregar a chave do canal de origem. Se você acabou de concluir a verificação, atualize a prévia e tente novamente.",
+      "sourceTypeUnsupported": "Este tipo de canal de origem não é compatível com a migração. Escolha um canal compatível ou faça a migração manualmente.",
+      "targetDraftPreparationFailed": "Não foi possível preparar o rascunho do canal de destino. Revise os detalhes do canal, atualize a prévia e tente novamente."
+    },
+    "confirm": {
+      "confirm": "Confirmar migração",
+      "description": "Isso criará novos canais de destino. Canais prontos: {{ready}}; canais selecionados: {{total}}.",
+      "title": "Iniciar a migração de canais?",
+      "warningTitle": "Este fluxo apenas cria novos canais. Ele não sincroniza, elimina duplicatas nem reverte alterações."
+    },
+    "description": "Canais selecionados para copiar: {{selectedCount}}. Destino: outro site gerenciado configurado.",
+    "generalWarnings": {
+      "compactSummary": "Somente criação. Passe o cursor para ver detalhes.",
+      "createOnly": "Esta migração apenas cria novos canais no site de destino e não altera os canais de origem.",
+      "noDedupeOrSync": "Esta migração não procura duplicatas, não substitui canais de destino existentes nem os sincroniza.",
+      "noRollback": "Este fluxo não oferece reversão automática. Use a lista de resultados para revisar qualquer ação manual necessária.",
+      "title": "Limitações da migração"
+    },
+    "itemWarnings": {
+      "dropsAdvancedSettings": "As configurações avançadas específicas do provedor não podem ser copiadas diretamente e serão descartadas.",
+      "dropsModelMapping": "Os mapeamentos de redirecionamento de modelos não serão copiados.",
+      "dropsMultiKeyState": "O estado de execução com várias chaves não será copiado.",
+      "dropsStatusCodeMapping": "As configurações de mapeamento de códigos de status não serão copiadas.",
+      "targetForcesDefaultGroup": "O site de destino substituirá os grupos de origem pelo grupo padrão.",
+      "targetIgnoresPriority": "O site de destino não preservará a prioridade de origem.",
+      "targetIgnoresWeight": "O site de destino não preservará o peso de origem.",
+      "targetNormalizesBaseUrl": "O site de destino normalizará a URL base antes da criação.",
+      "targetRemapsChannelType": "O site de destino remapeará o tipo de canal para o tipo compatível mais próximo.",
+      "targetSimplifiesStatus": "O site de destino simplificará o status de origem para ativado ou desativado."
+    },
+    "preview": {
+      "badges": {
+        "limitsLabel": "limitações",
+        "warningsLabel": "avisos"
+      },
+      "compare": {
+        "fieldLabel": "Campo"
+      },
+      "loadFailed": "Falha ao carregar a prévia da migração: {{error}}",
+      "loading": "Criando prévia da migração...",
+      "selectedCount": "Canais selecionados: {{selectedCount}}",
+      "status": {
+        "blocked": "Bloqueado",
+        "ready": "Pronto"
+      },
+      "summary": "Prévia — canais prontos: {{ready}}; bloqueados: {{blocked}}; selecionados: {{total}}."
+    },
+    "results": {
+      "refreshRequired": "Alguns resultados da criação são incertos. Atualize a lista de canais antes de fechar.",
+      "status": {
+        "failed": "Falhou",
+        "skipped": "Ignorado",
+        "success": "Criado",
+        "uncertain": "Incerto"
+      },
+      "summary": "Resultados: {{created}}, {{failed}}, {{skipped}}, {{uncertain}}, {{total}}.",
+      "summaryMetrics": {
+        "created_one": "{{count}} criado",
+        "created_many": "{{count}} criados",
+        "created_other": "{{count}} criados",
+        "failed_one": "{{count}} falhou",
+        "failed_many": "{{count}} falharam",
+        "failed_other": "{{count}} falharam",
+        "skipped_one": "{{count}} ignorado",
+        "skipped_many": "{{count}} ignorados",
+        "skipped_other": "{{count}} ignorados",
+        "total_one": "{{count}} no total",
+        "total_many": "{{count}} no total",
+        "total_other": "{{count}} no total",
+        "uncertain_one": "{{count}} incerto",
+        "uncertain_many": "{{count}} incertos",
+        "uncertain_other": "{{count}} incertos"
+      },
+      "title": "Resultados da migração"
+    },
+    "target": {
+      "destinationLabel": "Site de destino",
+      "label": "Destino da migração",
+      "placeholder": "Selecione um site gerenciado de destino",
+      "sourceLabel": "Site de origem",
+      "unselected": "Não selecionado"
+    },
+    "title": "Migrar canais"
+  },
+  "resourceDescription": "Pesquise, crie, edite e exclua os canais conectados a este site gerenciado.",
+  "statusLabels": {
+    "autoDisabled": "Desativado automaticamente",
+    "enabled": "Ativado",
+    "manualPause": "Pausado manualmente",
+    "unknown": "Desconhecido"
+  },
+  "table": {
+    "columns": {
+      "actions": "Ações",
+      "group": "Grupos disponíveis",
+      "id": "ID",
+      "models": "Modelos",
+      "name": "Canal",
+      "priority": "Prioridade",
+      "status": "Status",
+      "type": "Tipo",
+      "weight": "Peso"
+    },
+    "emptyFiltered": "Nenhum canal correspondente encontrado. Ajuste a pesquisa ou os filtros.",
+    "emptyNoChannels": "Ainda não há canais. Adicione um canal ou atualize a lista.",
+    "loading": "Carregando canais...",
+    "noEntries": "Nenhuma entrada",
+    "paginationNext": "Próxima página",
+    "paginationPrev": "Página anterior",
+    "paginationSummary": "Canais exibidos: {{start}} - {{end}} de {{total}}",
+    "rowActions": {
+      "delete": "Excluir",
+      "edit": "Editar",
+      "filters": "Editar regras de filtro do canal",
+      "migrate": "Migrar para outro site",
+      "openSync": "Abrir interface de sincronização de modelos",
+      "sync": "Sincronizar a lista de modelos agora",
+      "syncing": "Sincronizando...",
+      "view": "Ver canal"
+    },
+    "rowsPerPage": "Linhas por página",
+    "selectAll": "Selecionar todas as linhas",
+    "selectRow": "Selecionar linha"
+  },
+  "title": "Gerenciamento de canais",
+  "toasts": {
+    "channelDeleted": "Canal excluído",
+    "channelSaved": "Canal salvo",
+    "channelsDeleted_one": "{{count}} canal excluído",
+    "channelsDeleted_many": "{{count}} canais excluídos",
+    "channelsDeleted_other": "{{count}} canais excluídos",
+    "channelUpdated": "Canal atualizado",
+    "revealKeyFailed": "Falha ao carregar a chave real do canal: {{error}}",
+    "revealKeyMasked": "A chave do canal ainda está mascarada",
+    "revealKeyUnavailable": "A chave do canal está indisponível",
+    "revealKeyUnsupported": "Este site gerenciado não permite revelar as chaves dos canais",
+    "someDeletesFailed_one": "Falha ao excluir {{count}} canal: {{error}}",
+    "someDeletesFailed_many": "Falha ao excluir {{count}} canais: {{error}}",
+    "someDeletesFailed_other": "Falha ao excluir {{count}} canais: {{error}}",
+    "syncCompleted": "Sincronização de modelos concluída ({{success}}/{{total}})",
+    "syncFailed": "Falha na sincronização de modelos: {{error}}"
+  },
+  "toolbar": {
+    "addChannel": "Adicionar canal",
+    "cancelRefresh": "Interromper atualização",
+    "clearSearch": "Limpar pesquisa",
+    "columns": "Colunas",
+    "deleteSelected": "Excluir selecionados",
+    "enterMigrationMode": "Migração de canais",
+    "exitMigrationMode": "Sair do modo de migração",
+    "migrateFiltered": "Migrar todos os canais filtrados",
+    "migrateSelected": "Migrar selecionados",
+    "refresh": "Atualizar",
+    "searchPlaceholder": "Pesquisar por nome, URL ou grupo",
+    "status": "Status",
+    "syncSelected": "Sincronizar modelos dos canais selecionados",
+    "toggleColumns": "Mostrar ou ocultar colunas"
+  }
+}

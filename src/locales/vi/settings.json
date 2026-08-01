@@ -40,6 +40,10 @@
           "label": "JA",
           "name": "Tiếng Nhật"
         },
+        "pt-BR": {
+          "label": "PT-BR",
+          "name": "Tiếng Bồ Đào Nha (Brazil)"
+        },
         "vi": {
           "label": "VI",
           "name": "Tiếng Việt"
