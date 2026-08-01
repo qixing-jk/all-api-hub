@@ -165,6 +165,7 @@
     "updateFailed": "Falha ao atualizar conta"
   },
   "sub2api": {
+    "checkinUnsupported": "Este site Sub2API não expõe um endpoint de check-in.",
     "createRequiresAvailableGroup": "Esta conta não possui nenhum grupo disponível para criação de chave. Verifique os grupos disponíveis da conta e tente novamente.",
     "groupMissing": "O grupo '{{group}}' do Sub2API não está mais disponível. Atualize a lista de grupos e tente novamente.",
     "loginRequired": "Faça login no painel do Sub2API primeiro (para que a extensão possa ler auth_token/auth_user do localStorage) e tente novamente.",

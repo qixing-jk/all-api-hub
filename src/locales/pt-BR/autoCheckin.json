@@ -126,6 +126,7 @@
     "nativePageStatusUnconfirmed": "A ação de check-in da página foi clicada, mas o status da conta de destino não foi confirmado. Por favor, abra a página de check-in e verifique manualmente: {{checkInUrl}}",
     "nativePageTargetNotFound": "O botão de check-in não foi encontrado na página. Abra a página de check-in e conclua o check-in manualmente: {{checkInUrl}}",
     "nativePageTriggerFailed": "A ação de check-in da página não pôde ser acionada. Abra a página de check-in e conclua o check-in manualmente: {{checkInUrl}}",
+    "sub2apiDisabled": "O check-in do Sub2API está desativado. Ative-o em Configurações básicas → Check-in e resgate.",
     "turnstileIncognitoAccessRequired": "A extensão deve ter permissão para ser executada em janelas anônimas/privadas para buscar o token Turnstile em uma janela temporária privada (cenário de múltiplas contas). Ative \"Permitir modo anônimo\" para esta extensão e tente novamente ou abra a página de check-in para concluir a verificação: {{checkInUrl}}",
     "turnstileManualRequired": "A verificação Cloudflare Turnstile é necessária. Abra a página de check-in para concluir a verificação: {{checkInUrl}}",
     "unknownError": "Ocorreu um erro desconhecido"
@@ -152,6 +153,8 @@
     "scheduleModeDeterministic": "Determinístico",
     "scheduleModeRandom": "Aleatório",
     "scheduleModeTitle": "Modo de programação",
+    "sub2apiEnabled": "Ativar check-in do Sub2API",
+    "sub2apiEnabledDesc": "O projeto original do Sub2API não inclui um endpoint de check-in; apenas alguns deployments e forks o oferecem. Ative para detectar e executar o check-in das contas Sub2API.",
     "title": "Check-in automático",
     "viewExecution": "Histórico de check-in automático",
     "viewExecutionButton": "Abrir resultados",
