@@ -103,7 +103,9 @@ describe("accountSiteProfile", () => {
     expect(profile.identity.usernameRequired).toBe(false)
     expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
     expect(profile.auth.supportsCookieAuth).toBe(false)
-    expect(profile.auth.supportsBuiltInCheckInDetection).toBe(false)
+    // Check-in is fork-only upstream: the capability is exposed here and gated
+    // at runtime by the global Sub2API check-in opt-in.
+    expect(profile.auth.supportsBuiltInCheckInDetection).toBe(true)
     expect(profile.supplementalAuth.kind).toBe(
       ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
     )

@@ -684,17 +684,15 @@ describe("AccountDialog AccountForm", () => {
         "accountDialog:form.sub2apiRefreshTokenWarningTitle",
       ),
     ).toBeInTheDocument()
+    // Sub2API exposes built-in check-in detection (gated at runtime by the
+    // global opt-in), so the check-in section renders instead of the
+    // unsupported copy.
     expect(
-      screen.getByText("accountDialog:form.checkInStatusUnsupported", {
-        exact: false,
-      }),
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn),
     ).toBeInTheDocument()
     expect(
-      screen.queryByText("accountDialog:form.checkInStatusDesc"),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("switch", {
-        name: "accountDialog:form.checkInStatus",
+      screen.queryByText("accountDialog:form.checkInStatusUnsupported", {
+        exact: false,
       }),
     ).not.toBeInTheDocument()
     expect(screen.getByDisplayValue("formatted-expiry")).toBeDisabled()

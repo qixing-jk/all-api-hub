@@ -406,6 +406,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
       retry_max_attempts: 3,
       window_length_minutes: 270,
       deterministic_time_minutes: 570,
+      sub2api_enabled: false,
     })
     expect(JSON.stringify(snapshotCall?.[1])).not.toContain("08:15")
     expect(JSON.stringify(snapshotCall?.[1])).not.toContain("12:45")

@@ -598,7 +598,7 @@ describe("account site definition registry", () => {
         defaultAuthType: AuthTypeEnum.AccessToken,
         defaultAuthHostnames: [],
         supportsCookieAuth: false,
-        supportsBuiltInCheckInDetection: false,
+        supportsBuiltInCheckInDetection: true,
       },
       authSession: {
         kind: ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS.Sub2ApiRefreshToken,
