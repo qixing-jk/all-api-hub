@@ -7,6 +7,8 @@ import {
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { createLogger } from "~/utils/core/logger"
 
+import { PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS } from "./contracts"
+
 const logger = createLogger("ProductAnalyticsState")
 
 interface ProductAnalyticsState {
@@ -27,7 +29,26 @@ export type ProductAnalyticsShieldBypassSummaryState = {
   tempWindowFetchFailureCount?: number
   tempWindowTurnstileFetchSuccessCount?: number
   tempWindowTurnstileFetchFailureCount?: number
+  featureCounts?: ProductAnalyticsProtectionBypassCounter<"featureCounts">
+  invocationKindCounts?: ProductAnalyticsProtectionBypassCounter<"invocationKindCounts">
+  automaticTriggerCounts?: ProductAnalyticsProtectionBypassCounter<"automaticTriggerCounts">
+  operationCounts?: ProductAnalyticsProtectionBypassCounter<"operationCounts">
+  decisionCounts?: ProductAnalyticsProtectionBypassCounter<"decisionCounts">
+  denialReasonCounts?: ProductAnalyticsProtectionBypassCounter<"denialReasonCounts">
+  adapterCounts?: ProductAnalyticsProtectionBypassCounter<"adapterCounts">
 }
+
+type ProductAnalyticsProtectionBypassDimension =
+  keyof typeof PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS
+
+type ProductAnalyticsProtectionBypassCounter<
+  Dimension extends ProductAnalyticsProtectionBypassDimension,
+> = Partial<
+  Record<
+    (typeof PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS)[Dimension][number],
+    number
+  >
+>
 
 export type ProductAnalyticsShieldBypassSummaryPatch = Omit<
   ProductAnalyticsShieldBypassSummaryState,
@@ -59,6 +80,27 @@ function normalizeCount(value: unknown): number | undefined {
   return Math.floor(value)
 }
 
+/** Folds persisted keys into a fixed enum-sized map plus one overflow bucket. */
+function normalizeControlledCounter(
+  value: unknown,
+  allowedValues: readonly string[],
+): Record<string, number> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined
+  }
+
+  const allowed = new Set(allowedValues)
+  const normalized: Record<string, number> = {}
+  for (const [rawKey, rawCount] of Object.entries(value)) {
+    const count = normalizeCount(rawCount)
+    if (count === undefined) continue
+    const key = allowed.has(rawKey) ? rawKey : "other"
+    normalized[key] = (normalized[key] ?? 0) + count
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined
+}
+
 /**
  * Keeps only valid shield-bypass summary fields from persisted storage.
  */
@@ -71,6 +113,7 @@ export function normalizeShieldBypassSummaryState(
 
   const state = value as ProductAnalyticsShieldBypassSummaryState
   const normalized: ProductAnalyticsShieldBypassSummaryState = {}
+  const mutableNormalized = normalized as Record<string, unknown>
 
   if (typeof state.day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(state.day)) {
     normalized.day = state.day
@@ -90,6 +133,15 @@ export function normalizeShieldBypassSummaryState(
     const count = normalizeCount(state[key])
     if (typeof count === "number") {
       normalized[key] = count
+    }
+  }
+
+  for (const [key, allowedValues] of Object.entries(
+    PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS,
+  ) as Array<[ProductAnalyticsProtectionBypassDimension, readonly string[]]>) {
+    const counts = normalizeControlledCounter(state[key], allowedValues)
+    if (counts) {
+      mutableNormalized[key] = counts
     }
   }
 
@@ -285,12 +337,41 @@ class ProductAnalyticsStateService {
           ...current,
           day: today,
         }
+        const mutableNextSummary = nextSummary as Record<string, unknown>
 
-        for (const [key, value] of Object.entries(patch) as Array<
-          [keyof ProductAnalyticsShieldBypassSummaryPatch, number | undefined]
+        const numericPatch = { ...patch } as Record<string, unknown>
+        for (const key of Object.keys(
+          PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS,
+        )) {
+          delete numericPatch[key]
+        }
+        for (const [key, value] of Object.entries(numericPatch) as Array<
+          [keyof ProductAnalyticsShieldBypassSummaryPatch, unknown]
         >) {
           if (typeof value !== "number" || !Number.isFinite(value)) continue
-          nextSummary[key] = Math.max(0, (nextSummary[key] ?? 0) + value)
+          mutableNextSummary[key] = Math.max(
+            0,
+            ((mutableNextSummary[key] as number) ?? 0) + value,
+          )
+        }
+
+        for (const [key, allowedValues] of Object.entries(
+          PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS,
+        ) as Array<
+          [ProductAnalyticsProtectionBypassDimension, readonly string[]]
+        >) {
+          const increments = normalizeControlledCounter(
+            patch[key],
+            allowedValues,
+          )
+          if (!increments) continue
+          const merged = {
+            ...((nextSummary[key] as Record<string, number> | undefined) ?? {}),
+          }
+          for (const [bucket, count] of Object.entries(increments)) {
+            merged[bucket] = (merged[bucket] ?? 0) + count
+          }
+          mutableNextSummary[key] = merged
         }
 
         await this.saveState({

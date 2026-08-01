@@ -68,16 +68,17 @@
       "selectAll": "{{selected}}/{{total}} seleccionadas",
       "start": "Iniciar importación",
       "verifyAndRefresh": "Verificar y actualizar vista previa",
-      "verifying": "Verificando..."
+      "verifying": "Verificando...",
+      "viewChannels": "Ver canales"
     },
     "blockedReasons": {
-      "baseUrlRequired": "El sitio administrado de destino requiere una URL base.",
-      "configMissing": "Falta la configuración de administrador del sitio administrado.",
+      "baseUrlRequired": "El AI gateway autohospedado de destino requiere una URL base.",
+      "configMissing": "Falta la configuración de administrador del AI gateway autohospedado.",
       "inputPreparationFailed": "No se pudieron preparar los datos de canal para esta clave.",
       "keyRequired": "La clave de canal generada está vacía.",
       "modelsRequired": "No se resolvieron modelos para esta clave.",
       "nameRequired": "El nombre de canal generado está vacío.",
-      "realKeyRequired": "El sitio administrado de destino requiere una clave real del proveedor.",
+      "realKeyRequired": "El AI gateway autohospedado de destino requiere una clave real del proveedor.",
       "secretResolutionFailed": "No se pudo resolver el secreto real del token."
     },
     "confirm": {
@@ -91,6 +92,7 @@
       "groups": "Grupos",
       "models": "Modelos"
     },
+    "gatewayDescription": "Esto importa claves de cuenta como canales del AI gateway autohospedado. Después de importar, los clientes pueden usar varias claves mediante una AI API.",
     "loadingDescription": "Preparando vista previa para {{selectedCount}} claves seleccionadas.",
     "messages": {
       "completed": "Importación por lote completada: {{created}} creados, {{failed}} fallidos, {{skipped}} omitidos.",
@@ -126,10 +128,10 @@
       "skipped": "Omitido",
       "warning": "Advertencia"
     },
-    "title": "Importación por lote a sitio administrado",
+    "title": "Importación por lote al AI gateway autohospedado",
     "warnings": {
       "backendSearchFailed": "La comprobación de duplicados no pudo llegar al backend de destino.",
-      "dedupeUnsupported": "El sitio administrado actual no puede comprobar duplicados por URL base de forma confiable.",
+      "dedupeUnsupported": "El AI gateway autohospedado actual no puede comprobar duplicados por URL base de forma confiable.",
       "exactVerificationUnavailable": "Puede haber un canal existente coincidente, pero la verificación exacta de clave no está disponible.",
       "matchRequiresConfirmation": "Existe un canal similar; revísalo antes de crear.",
       "modelPrefillFailed": "Falló el prerrelleno de modelos; se usará la mejor lista de modelos disponible."
@@ -199,6 +201,10 @@
     "description": "La extensión no pudo cargar las claves de esta cuenta. Es posible que la sesión haya expirado, que los permisos sean insuficientes o que el sitio no esté disponible temporalmente. Inicia sesión de nuevo en el sitio y vuelve a intentar.\n\nError: {{error}}",
     "openSite": "Abrir sitio",
     "title": "No se pudieron cargar las claves"
+  },
+  "managedSiteSetupRecovery": {
+    "configureManagedSite": "Configurar AI gateway autohospedado",
+    "description": "Configura un AI gateway autohospedado para importar claves de cuenta como canales, de modo que varias claves ofrezcan una AI API unificada."
   },
   "managedSiteStatus": {
     "actions": {
@@ -422,6 +428,9 @@
   "totalKeys_one": "Total {{count}} clave",
   "totalKeys_many": "Total {{count}} claves",
   "totalKeys_other": "Total {{count}} claves",
+  "unifiedApiGuidance": {
+    "headerBridge": "Cuando quieras que el AI gateway autohospedado reúna varias claves en una AI API unificada, importa claves de cuenta como canales del gateway. La exportación directa a herramientas cliente sigue siendo una ruta independiente."
+  },
   "unsupportedSource": {
     "description": "El tipo de sitio de esta cuenta se puede guardar, pero la extensión aún no ha adaptado su protocolo de lista de claves. Envía una solicitud de soporte del sitio para ayudarnos a agregar soporte de gestión de claves.",
     "requestSiteSupport": "Solicitar soporte del sitio",

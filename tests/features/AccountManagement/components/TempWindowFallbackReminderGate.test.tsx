@@ -16,11 +16,16 @@ const {
   },
   tempWindowFallbackState: {
     enabled: true,
-    useInPopup: true,
-    useInSidePanel: true,
-    useInOptions: true,
-    useForAutoRefresh: true,
-    useForManualRefresh: true,
+    automaticFeatureBypass: {
+      account_refresh: true,
+      balance_history: true,
+      checkin: true,
+      redemption_assist: true,
+      ldoh_site_lookup: true,
+      key_management: true,
+      managed_site_channels: true,
+      managed_site_model_sync: true,
+    },
     tempContextMode: "composite",
   },
   getTempWindowFallbackBlockStatusMock: vi.fn(),
@@ -91,11 +96,16 @@ describe("TempWindowFallbackReminderGate", () => {
     vi.clearAllMocks()
     accountDataState.displayData = []
     tempWindowFallbackState.enabled = true
-    tempWindowFallbackState.useInPopup = true
-    tempWindowFallbackState.useInSidePanel = true
-    tempWindowFallbackState.useInOptions = true
-    tempWindowFallbackState.useForAutoRefresh = true
-    tempWindowFallbackState.useForManualRefresh = true
+    tempWindowFallbackState.automaticFeatureBypass = {
+      account_refresh: true,
+      balance_history: true,
+      checkin: true,
+      redemption_assist: true,
+      ldoh_site_lookup: true,
+      key_management: true,
+      managed_site_channels: true,
+      managed_site_model_sync: true,
+    }
     reminderPreferenceState.dismissed = false
     getTempWindowFallbackBlockStatusMock.mockResolvedValue({
       kind: "available",
@@ -110,6 +120,52 @@ describe("TempWindowFallbackReminderGate", () => {
     expect(
       screen.queryByTestId("temp-window-fallback-reminder"),
     ).not.toBeInTheDocument()
+  })
+
+  it("does not check settings or render a reminder for invalid invocation context", async () => {
+    accountDataState.displayData = [
+      {
+        id: "acc-invalid",
+        name: "Retry locally",
+        health: {
+          code: TEMP_WINDOW_HEALTH_STATUS_CODES.POLICY_CONTEXT_INVALID,
+        },
+      },
+    ]
+
+    render(<TempWindowFallbackReminderGate />)
+
+    await waitFor(() => {
+      expect(getTempWindowFallbackBlockStatusMock).not.toHaveBeenCalled()
+      expect(
+        screen.queryByTestId("temp-window-fallback-reminder"),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("ignores an invalid invocation-context result from the shared fallback gate", async () => {
+    accountDataState.displayData = [
+      {
+        id: "acc-disabled",
+        name: "Stale issue",
+        health: {
+          code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+        },
+      },
+    ]
+    getTempWindowFallbackBlockStatusMock.mockResolvedValue({
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.POLICY_CONTEXT_INVALID,
+      reason: "missing_execution",
+    })
+
+    render(<TempWindowFallbackReminderGate />)
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("temp-window-fallback-reminder"),
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("renders nothing for a stale disabled issue when the shared fallback gate reports no current block", async () => {

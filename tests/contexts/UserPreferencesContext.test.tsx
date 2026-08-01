@@ -551,6 +551,71 @@ describe("UserPreferencesContext", () => {
     })
   })
 
+  it("persists gateway guidance dismissal for a single source surface without completing onboarding", async () => {
+    const context = await renderProvider({
+      ...clonePreferences(),
+      gatewayGuidance: {
+        dismissedAtBySurface: {
+          account: 111,
+        },
+      },
+    })
+
+    await act(async () => {
+      await context.dismissGatewayGuidanceSurface("apiCredentialProfiles")
+    })
+
+    expect((latestContext as any)?.preferences.gatewayGuidance).toMatchObject({
+      dismissedAtBySurface: {
+        account: 111,
+        apiCredentialProfiles: expect.any(Number),
+      },
+    })
+    expect(
+      (latestContext as any)?.preferences.gatewayGuidance.onboardingCompletedAt,
+    ).toBeUndefined()
+  })
+
+  it("marks gateway onboarding once while preserving surface dismissals", async () => {
+    const context = await renderProvider({
+      ...clonePreferences(),
+      gatewayGuidance: {
+        dismissedAtBySurface: {
+          account: 111,
+        },
+      },
+    })
+
+    await act(async () => {
+      await context.markGatewayGuidanceOnboardingCompleted()
+    })
+
+    const completedAt = (latestContext as any)?.preferences.gatewayGuidance
+      .onboardingCompletedAt
+    expect(completedAt).toEqual(expect.any(Number))
+    expect(
+      (latestContext as any)?.preferences.gatewayGuidance.dismissedAtBySurface,
+    ).toEqual({ account: 111 })
+
+    const writeCount =
+      mockedUserPreferences.savePreferencesWithResult.mock.calls.length
+    await act(async () => {
+      await (
+        latestContext as ReturnType<typeof useUserPreferencesContext>
+      ).markGatewayGuidanceOnboardingCompleted()
+      await (
+        latestContext as ReturnType<typeof useUserPreferencesContext>
+      ).dismissGatewayGuidanceSurface("account")
+    })
+
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledTimes(writeCount)
+    expect(
+      (latestContext as any)?.preferences.gatewayGuidance.onboardingCompletedAt,
+    ).toBe(completedAt)
+  })
+
   it("updates scalar, nested, and runtime-backed preferences through the provider", async () => {
     const context = await renderProvider()
 
@@ -2105,7 +2170,10 @@ describe("UserPreferencesContext", () => {
         },
       })
       await context.updateTempWindowFallback({
-        useForManualRefresh: false,
+        automaticFeatureBypass: {
+          ...DEFAULT_PREFERENCES.tempWindowFallback!.automaticFeatureBypass,
+          account_refresh: false,
+        },
       })
       await context.updateTempWindowFallbackReminder({
         dismissed: true,
@@ -2141,7 +2209,9 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.preferences.tempWindowFallback).toEqual(
       expect.objectContaining({
         ...DEFAULT_PREFERENCES.tempWindowFallback,
-        useForManualRefresh: false,
+        automaticFeatureBypass: expect.objectContaining({
+          account_refresh: false,
+        }),
       }),
     )
     expect(

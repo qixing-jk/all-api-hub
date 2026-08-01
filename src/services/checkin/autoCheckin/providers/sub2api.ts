@@ -29,7 +29,7 @@ import type { AutoCheckinProvider, AutoCheckinProviderContext } from "./index"
  */
 async function checkinSub2Api(
   account: SiteAccount,
-  context?: AutoCheckinProviderContext,
+  context: AutoCheckinProviderContext,
 ): Promise<AutoCheckinProviderResult> {
   // Re-check the opt-in here: a stored `enableDetection` can outlive the switch
   // being turned off, and the scheduler resolves providers synchronously.
@@ -41,7 +41,7 @@ async function checkinSub2Api(
   }
 
   const tempWindowRequestSource = normalizeTempWindowRequestSource(
-    context?.tempWindowRequestSource,
+    context.tempWindowRequestSource,
   )
 
   try {
@@ -61,6 +61,7 @@ async function checkinSub2Api(
         tokenExpiresAt: account.sub2apiAuth?.tokenExpiresAt,
       },
       tempWindowRequestSource,
+      protectionBypassExecution: context.protectionBypassExecution,
       sub2apiAuthSession: accountSub2ApiAuthSession,
     }
 

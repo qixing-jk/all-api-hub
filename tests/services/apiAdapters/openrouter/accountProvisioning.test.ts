@@ -8,10 +8,12 @@ import {
 } from "~/constants/openRouterBootstrap"
 import {
   cancelOpenRouterAccountProvisioning,
-  onboardOpenRouterAccount,
-  provisionOpenRouterAccount,
+  onboardOpenRouterAccount as onboardOpenRouterAccountProduction,
+  provisionOpenRouterAccount as provisionOpenRouterAccountProduction,
 } from "~/services/apiAdapters/openrouter/accountProvisioning"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const { createManagementKey, cancelManagementKey, validateManagementKey } =
   vi.hoisted(() => ({
@@ -30,6 +32,43 @@ vi.mock("~/services/apiService/openrouter", () => ({
 }))
 
 const tempWindowRequestSource = TEMP_WINDOW_REQUEST_SOURCES.Options
+const testExecution = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+)
+
+function provisionOpenRouterAccount(
+  request: Omit<
+    Parameters<typeof provisionOpenRouterAccountProduction>[0],
+    "protectionBypassExecution"
+  > & {
+    protectionBypassExecution?: Parameters<
+      typeof provisionOpenRouterAccountProduction
+    >[0]["protectionBypassExecution"]
+  },
+) {
+  return provisionOpenRouterAccountProduction({
+    ...request,
+    protectionBypassExecution:
+      request.protectionBypassExecution ?? testExecution,
+  })
+}
+
+function onboardOpenRouterAccount(
+  request: Omit<
+    Parameters<typeof onboardOpenRouterAccountProduction>[0],
+    "protectionBypassExecution"
+  > & {
+    protectionBypassExecution?: Parameters<
+      typeof onboardOpenRouterAccountProduction
+    >[0]["protectionBypassExecution"]
+  },
+) {
+  return onboardOpenRouterAccountProduction({
+    ...request,
+    protectionBypassExecution:
+      request.protectionBypassExecution ?? testExecution,
+  })
+}
 
 describe("OpenRouter account provisioning", () => {
   beforeEach(() => {
@@ -37,6 +76,9 @@ describe("OpenRouter account provisioning", () => {
   })
 
   it("owns the canonical onboarding result mapping in the provider module", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+    )
     createManagementKey.mockResolvedValue({
       operation: "create",
       requestId: "request-onboarding",
@@ -51,6 +93,7 @@ describe("OpenRouter account provisioning", () => {
       onboardOpenRouterAccount({
         requestId: "request-onboarding",
         tempWindowRequestSource,
+        protectionBypassExecution,
       }),
     ).resolves.toMatchObject({
       kind: "bootstrap_completed",
@@ -66,6 +109,9 @@ describe("OpenRouter account provisioning", () => {
         mutationState: OPENROUTER_BOOTSTRAP_MUTATION_STATES.Created,
       },
     })
+    expect(createManagementKey).toHaveBeenCalledWith(
+      expect.objectContaining({ protectionBypassExecution }),
+    )
   })
 
   it.each([
@@ -251,6 +297,7 @@ describe("OpenRouter account provisioning", () => {
         kind: "create",
         label: createOpenRouterBootstrapLabel("request-example"),
       },
+      protectionBypassExecution: testExecution,
       tempWindowRequestSource,
     })
     expect(result).toMatchObject({
@@ -548,6 +595,7 @@ describe("OpenRouter account provisioning", () => {
         kind: "create",
         label: createOpenRouterBootstrapLabel("request-normalized"),
       },
+      protectionBypassExecution: testExecution,
     })
     expect(cancelManagementKey).toHaveBeenCalledWith("request-normalized")
   })

@@ -27,6 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -58,9 +59,13 @@ import {
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import {
   getManagedSiteChannelExactMatch,
+  getRecoverableManagedSiteChannelCandidate,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
 } from "~/services/managedSites/channelMatch"
-import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
+import {
+  createManagedSiteChannelMatchRequestCache,
+  resolveManagedSiteChannelMatch,
+} from "~/services/managedSites/channelMatchResolver"
 import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
@@ -89,6 +94,8 @@ import {
   type ProductAnalyticsResult,
   type ProductAnalyticsStatusKind,
 } from "~/services/productAnalytics/contracts"
+import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
@@ -292,6 +299,7 @@ export default function AccountActionButtons({
     string | null
   >(null)
   const inviteLinkAbortControllerRef = useRef<AbortController | null>(null)
+  const quickCheckinInFlightRef = useRef(false)
   const isMountedRef = useRef(true)
 
   const isAccountDisabled = site.disabled === true
@@ -553,13 +561,38 @@ export default function AccountActionButtons({
         )
       }
 
-      const resolution = await resolveManagedSiteChannelMatch({
+      const requestCache = createManagedSiteChannelMatchRequestCache()
+      const matchParams = {
         service: buildTokenChannelStatusChannelMatchService({ service }),
         managedConfig,
         accountBaseUrl: searchBaseUrl,
         models: formData.models,
         key: formData.key,
+        requestCache,
+      }
+      let resolution = await resolveManagedSiteChannelMatch(matchParams)
+      const recoverableCandidate = getRecoverableManagedSiteChannelCandidate({
+        url: resolution.url,
+        models: resolution.models,
       })
+
+      if (
+        recoverableCandidate &&
+        service.siteType === SITE_TYPES.NEW_API &&
+        "userId" in managedConfig
+      ) {
+        resolution = await withProtectionBypassUserCommand(
+          PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+          getCurrentTempWindowRequestSource(),
+          async (protectionBypassExecution) =>
+            await resolveManagedSiteChannelMatch({
+              ...matchParams,
+              resolveHiddenKeys: true,
+              hiddenKeyChannelIds: [recoverableCandidate.id],
+              protectionBypassExecution,
+            }),
+        )
+      }
       const exactMatch = getManagedSiteChannelExactMatch(resolution)
 
       if (
@@ -807,11 +840,14 @@ export default function AccountActionButtons({
    * Uses the shared background scheduler so provider/persistence behavior stays consistent.
    */
   const handleQuickCheckin = async () => {
+    if (quickCheckinInFlightRef.current) return
+    quickCheckinInFlightRef.current = true
     const tracker = startProductAnalyticsAction(quickCheckinAnalyticsContext)
 
     if (isAccountDisabled) {
       toast.error(t("autoCheckin:messages.error.accountDisabled"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+      quickCheckinInFlightRef.current = false
       return
     }
 
@@ -820,12 +856,14 @@ export default function AccountActionButtons({
       toastId = toast.loading(t("autoCheckin:messages.loading.running"))
 
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.RunNow,
-        {
-          accountIds: [site.id],
-          tempWindowRequestSource,
-        },
+      const response = await withProtectionBypassUserCommand(
+        PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        tempWindowRequestSource,
+        (protectionBypassExecution) =>
+          sendAutoCheckinMessage(AutoCheckinMessageTypes.RunNow, {
+            accountIds: [site.id],
+            protectionBypassExecution,
+          }),
       )
 
       if (toastId) toast.dismiss(toastId)
@@ -919,6 +957,8 @@ export default function AccountActionButtons({
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
       })
+    } finally {
+      quickCheckinInFlightRef.current = false
     }
   }
 

@@ -1417,5 +1417,104 @@ describe("preferencesMigration", () => {
       expect(result).not.toHaveProperty("webdavSyncInterval")
       expect(result).not.toHaveProperty("webdavSyncStrategy")
     })
+
+    it("rebuilds legacy temporary-window fallback preferences as the complete v27 automatic feature map", () => {
+      const legacy = createV0Preferences({
+        preferencesVersion: 26,
+        tempWindowFallback: {
+          enabled: false,
+          useInPopup: false,
+          useInSidePanel: true,
+          useInOptions: false,
+          useForAutoRefresh: false,
+          useForManualRefresh: true,
+          tempContextMode: "tab",
+          automaticFeatureBypass: {
+            account_refresh: true,
+            checkin: false,
+            key_management: "invalid",
+          },
+        } as any,
+      })
+
+      const migrated = migratePreferences(legacy)
+
+      expect(migrated.preferencesVersion).toBe(27)
+      expect(migrated.tempWindowFallback).toEqual({
+        enabled: false,
+        tempContextMode: "tab",
+        automaticFeatureBypass: {
+          account_refresh: true,
+          balance_history: true,
+          checkin: false,
+          redemption_assist: true,
+          ldoh_site_lookup: true,
+          key_management: true,
+          managed_site_channels: true,
+          managed_site_model_sync: true,
+        },
+      })
+      for (const legacyKey of [
+        "useInPopup",
+        "useInSidePanel",
+        "useInOptions",
+        "useForAutoRefresh",
+        "useForManualRefresh",
+      ]) {
+        expect(migrated.tempWindowFallback).not.toHaveProperty(legacyKey)
+      }
+      expect(migratePreferences(migrated)).toEqual(migrated)
+    })
+
+    it("uses the v26 auto-refresh preference when the canonical feature is missing", () => {
+      const migrated = migratePreferences(
+        createV0Preferences({
+          preferencesVersion: 26,
+          tempWindowFallback: {
+            enabled: true,
+            useForAutoRefresh: false,
+            tempContextMode: "composite",
+          } as any,
+        }),
+      )
+
+      expect(migrated.tempWindowFallback!.automaticFeatureBypass).toEqual({
+        account_refresh: false,
+        balance_history: true,
+        checkin: true,
+        redemption_assist: true,
+        ldoh_site_lookup: true,
+        key_management: true,
+        managed_site_channels: true,
+        managed_site_model_sync: true,
+      })
+    })
+
+    it("preserves every complete canonical automatic feature choice", () => {
+      const automaticFeatureBypass = {
+        account_refresh: false,
+        balance_history: true,
+        checkin: false,
+        redemption_assist: true,
+        ldoh_site_lookup: false,
+        key_management: true,
+        managed_site_channels: false,
+        managed_site_model_sync: true,
+      }
+      const migrated = migratePreferences(
+        createV0Preferences({
+          preferencesVersion: 26,
+          tempWindowFallback: {
+            enabled: true,
+            automaticFeatureBypass,
+            tempContextMode: "tab",
+          } as any,
+        }),
+      )
+
+      expect(migrated.tempWindowFallback!.automaticFeatureBypass).toEqual(
+        automaticFeatureBypass,
+      )
+    })
   })
 })

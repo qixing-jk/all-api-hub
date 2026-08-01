@@ -31,14 +31,22 @@ import {
 import { createLogger } from "~/utils/core/logger"
 import { normalizeAppLanguage } from "~/utils/i18n/language"
 
+import { normalizeTempWindowFallbackPreferences } from "../tempWindowFallbackPreferences"
 import type { UserPreferences } from "../userPreferences"
 import { normalizeSharedPreferencesMetadata } from "../webdavSharedPreferences"
 import { migrateSortingConfig } from "./sortingConfigMigration"
 
 const logger = createLogger("PreferencesMigration")
 
-// Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 26
+// Version that replaces legacy temporary-window surface switches with the
+// canonical per-feature protection-bypass policy.
+const AUTOMATIC_FEATURE_BYPASS_PREFERENCES_VERSION = 27
+
+/**
+ * Current version of the preferences schema.
+ */
+export const CURRENT_PREFERENCES_VERSION =
+  AUTOMATIC_FEATURE_BYPASS_PREFERENCES_VERSION
 
 /**
  * Migration function type
@@ -601,6 +609,17 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       preferencesVersion: 26,
     }
   },
+
+  // Version 26 -> 27: replace legacy surface switches with per-feature policy.
+  [AUTOMATIC_FEATURE_BYPASS_PREFERENCES_VERSION]: (
+    prefs: UserPreferences,
+  ): UserPreferences => ({
+    ...prefs,
+    tempWindowFallback: normalizeTempWindowFallbackPreferences(
+      (prefs as any).tempWindowFallback,
+    ),
+    preferencesVersion: AUTOMATIC_FEATURE_BYPASS_PREFERENCES_VERSION,
+  }),
 }
 
 /**

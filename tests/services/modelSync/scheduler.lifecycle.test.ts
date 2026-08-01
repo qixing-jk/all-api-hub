@@ -214,6 +214,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
     await alarmHandler?.({ name: "managedSiteModelSync" })
     expect(executeSpy).toHaveBeenCalledTimes(1)
+    expect(executeSpy).toHaveBeenCalledWith(undefined, "scheduled")
     expect(mocks.startProductAnalyticsAction).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ScheduledManagedSiteModelSync,

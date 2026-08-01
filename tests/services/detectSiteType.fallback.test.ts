@@ -3,10 +3,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ApiError } from "~/services/apiTransport/errors"
 import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
+import {
   fetchSiteOriginalTitle,
   getAccountSiteType,
 } from "~/services/siteDetection/detectSiteType"
 import { AuthTypeEnum } from "~/types"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
+
+const SITE_DETECTION_EXECUTION = automaticExecution(
+  PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+  TEMP_WINDOW_REQUEST_SOURCES.Options,
+)
 
 const mocks = vi.hoisted(() => ({
   canUseTempWindowFetch: vi.fn(),
@@ -69,7 +85,10 @@ describe("detectSiteType temp-context fallbacks", () => {
       data: "<html><title>WONG公益站</title></html>",
     })
 
-    const title = await fetchSiteOriginalTitle("https://example.com/app")
+    const title = await fetchSiteOriginalTitle(
+      "https://example.com/app",
+      SITE_DETECTION_EXECUTION,
+    )
 
     expect(title).toBe("WONG公益站")
     expect(mocks.fetchApi).not.toHaveBeenCalled()
@@ -82,7 +101,28 @@ describe("detectSiteType temp-context fallbacks", () => {
         cache: "no-store",
       },
       requestId: "uuid:fetch-title-https://example.com/",
+      protectionBypassExecution: SITE_DETECTION_EXECUTION,
     })
+  })
+
+  it("preserves onboarding execution through the temp-context title fetch", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+    )
+    mocks.canUseTempWindowFetch.mockResolvedValue(true)
+    mocks.tempWindowFetch.mockResolvedValue({
+      success: true,
+      data: "<html><title>Example</title></html>",
+    })
+
+    await fetchSiteOriginalTitle(
+      "https://example.invalid",
+      protectionBypassExecution,
+    )
+
+    expect(mocks.tempWindowFetch).toHaveBeenCalledWith(
+      expect.objectContaining({ protectionBypassExecution }),
+    )
   })
 
   it("falls back to the direct fetch when the temp-window probe throws", async () => {
@@ -91,13 +131,17 @@ describe("detectSiteType temp-context fallbacks", () => {
       "<html><title>Direct Fetch Title</title></html>",
     )
 
-    const title = await fetchSiteOriginalTitle("https://example.com")
+    const title = await fetchSiteOriginalTitle(
+      "https://example.com",
+      SITE_DETECTION_EXECUTION,
+    )
 
     expect(title).toBe("Direct Fetch Title")
     expect(mocks.fetchApi).toHaveBeenCalledWith(
       {
         baseUrl: "https://example.com",
         auth: { authType: AuthTypeEnum.None },
+        protectionBypassExecution: SITE_DETECTION_EXECUTION,
       },
       {
         endpoint: "/",

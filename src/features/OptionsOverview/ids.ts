@@ -1,5 +1,6 @@
 export const OPTIONS_OVERVIEW_WIDGET_IDS = {
   statusSummary: "statusSummary",
+  unifiedApiGuidance: "unifiedApiGuidance",
   needsAttention: "needsAttention",
   automationOverview: "automationOverview",
   recentUsage: "recentUsage",

@@ -15,22 +15,32 @@ export function buildStatusCards(input: {
   attentionCount: number
   todayRequests: number
   todayRequestsCoverage: AccountMetricCoverage
+  accountsDataAvailable?: boolean
+  profilesDataAvailable?: boolean
 }): OptionsOverviewStatusCard[] {
+  const accountsDataAvailable = input.accountsDataAvailable !== false
+  const profilesDataAvailable = input.profilesDataAvailable !== false
   const todayRequestsPresentation = getTodayMetricPresentation(
     input.todayRequests,
     input.todayRequestsCoverage,
   )
+
   return [
     {
       id: OPTIONS_OVERVIEW_STATUS_CARD_IDS.accounts,
-      value: String(input.enabledAccountCount),
-      severity: input.enabledAccountCount > 0 ? "success" : "warning",
+      value: accountsDataAvailable ? String(input.enabledAccountCount) : "-",
+      severity: accountsDataAvailable
+        ? input.enabledAccountCount > 0
+          ? "success"
+          : "warning"
+        : "info",
       target: buildAccountNavigationTarget(),
     },
     {
       id: OPTIONS_OVERVIEW_STATUS_CARD_IDS.profiles,
-      value: String(input.profileCount),
-      severity: input.profileCount > 0 ? "success" : "info",
+      value: profilesDataAvailable ? String(input.profileCount) : "-",
+      severity:
+        profilesDataAvailable && input.profileCount > 0 ? "success" : "info",
       target: { menuItemId: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES },
     },
     {

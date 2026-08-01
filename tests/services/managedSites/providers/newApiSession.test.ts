@@ -17,7 +17,13 @@ import {
   submitNewApiLoginTwoFactorCode,
   submitNewApiSecureVerificationCode,
 } from "~/services/managedSites/providers/newApiSession"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { server } from "~~/tests/msw/server"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+
+const MANAGE_API_KEYS_EXECUTION = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
+)
 
 const { generateNewApiTotpCodeMock, sendRuntimeMessageMock } = vi.hoisted(
   () => ({
@@ -500,6 +506,7 @@ describe("newApiSession", () => {
       fetchNewApiChannelKey({
         ...BASE_CONFIG,
         channelId: 12,
+        protectionBypassExecution: MANAGE_API_KEYS_EXECUTION,
       }),
     ).resolves.toBe("hidden-channel-key")
   })
@@ -540,16 +547,35 @@ describe("newApiSession", () => {
       fetchNewApiChannelKey({
         ...BASE_CONFIG,
         channelId: 12,
+        protectionBypassExecution: MANAGE_API_KEYS_EXECUTION,
       }),
     ).resolves.toBe("hidden-channel-key-via-temp-context")
 
     expect(sendRuntimeMessageMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: RuntimeActionIds.TempWindowFetch,
-        originUrl: BASE_CONFIG.baseUrl,
-        fetchUrl: `${BASE_CONFIG.baseUrl}/api/channel/12/key`,
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        task: {
+          kind: "new_api_session_read",
+          params: expect.objectContaining({
+            origin: BASE_CONFIG.baseUrl,
+            action: "channel_key",
+            channelId: 12,
+            userId: BASE_CONFIG.userId,
+          }),
+        },
+        execution: MANAGE_API_KEYS_EXECUTION,
       }),
     )
+    expect(sendRuntimeMessageMock).toHaveBeenCalledTimes(1)
+    const envelope = sendRuntimeMessageMock.mock.calls[0]?.[0]
+    expect(envelope).toBeDefined()
+    expect(envelope).not.toHaveProperty("protectionBypassExecution")
+    expect(envelope).not.toHaveProperty("tempWindowRequestSource")
+    expect(envelope?.task).not.toHaveProperty("execution")
+    expect(envelope?.task?.params).not.toHaveProperty(
+      "protectionBypassExecution",
+    )
+    expect(envelope?.task?.params).not.toHaveProperty("tempWindowRequestSource")
   })
 
   it("preserves structured temp-context errors when rollback is impossible for a hidden key read", async () => {
@@ -585,6 +611,7 @@ describe("newApiSession", () => {
       fetchNewApiChannelKey({
         ...BASE_CONFIG,
         channelId: 12,
+        protectionBypassExecution: MANAGE_API_KEYS_EXECUTION,
       }),
     ).rejects.toEqual(
       expect.objectContaining({

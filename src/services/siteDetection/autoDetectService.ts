@@ -14,7 +14,6 @@ import {
   type AutoDetectAnalyticsContext,
   type AutoDetectErrorCode,
 } from "~/constants/autoDetect"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_HOSTNAMES,
@@ -34,14 +33,15 @@ import {
   summarizeApiServiceFetchContext,
 } from "~/services/apiTransport/type"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import {
   getActiveOrAllTabs,
   getBrowserApiCapabilities,
   isMessageReceiverUnavailableError,
-  sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
+import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -210,6 +210,7 @@ function withAutoDetectContext(
 async function combineUserDataAndSiteType(
   userData: UserDataResult | null,
   url: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AutoDetectResult> {
   if (!userData) {
     return {
@@ -219,7 +220,9 @@ async function combineUserDataAndSiteType(
   }
 
   try {
-    const siteType = userData.siteTypeHint || (await getAccountSiteType(url))
+    const siteType =
+      userData.siteTypeHint ||
+      (await getAccountSiteType(url, protectionBypassExecution))
     return {
       success: true,
       data: {
@@ -265,6 +268,7 @@ async function getUserDataViaAPI(
   siteType: AccountSiteType,
   fetchContext?: AutoDetectFetchContext,
   tempWindowRequestSource?: TempWindowRequestSource,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<UserDataResult | null> {
   try {
     if (fetchContext) {
@@ -291,6 +295,7 @@ async function getUserDataViaAPI(
       },
       ...(fetchContext ? { fetchContext } : {}),
       ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+      ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
     })
     const userId = normalizeAccountIdentity(userInfo?.id)
     if (!userInfo || !userId) {
@@ -330,19 +335,32 @@ async function getUserDataViaAPI(
  * 2) Extract userId and user payload
  * 3) Detect site type and return unified result
  */
-async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
+async function autoDetectDirect(
+  url: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
+): Promise<AutoDetectResult> {
   logger.info("使用直接方式", { url })
 
   try {
     // 检测站点类型，避免在未知站点上下文中使用默认 API
-    const siteType = await getAccountSiteType(url)
+    const siteType = await getAccountSiteType(url, protectionBypassExecution)
 
     // 通过 API 获取用户数据
-    const userData = await getUserDataViaAPI(url, siteType)
+    const userData = await getUserDataViaAPI(
+      url,
+      siteType,
+      undefined,
+      undefined,
+      protectionBypassExecution,
+    )
 
     // 组合用户数据和站点类型（公共逻辑）
     return withAutoDetectContext(
-      await combineUserDataAndSiteType(userData, url),
+      await combineUserDataAndSiteType(
+        userData,
+        url,
+        protectionBypassExecution,
+      ),
       createAutoDetectContext({
         strategy: AUTO_DETECT_STRATEGIES.DirectApi,
         siteType,
@@ -374,10 +392,20 @@ async function getUserDataViaBackground(
   url: string,
   siteType: AccountSiteType,
   fetchContext?: AutoDetectFetchContext,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<UserDataResult | null> {
   const tempWindowRequestSource = getCurrentTempWindowRequestSource()
 
   try {
+    if (!protectionBypassExecution) {
+      return await getUserDataViaAPI(
+        url,
+        siteType,
+        fetchContext,
+        tempWindowRequestSource,
+        protectionBypassExecution,
+      )
+    }
     const requestId = `auto-detect-${Date.now()}`
     logger.debug("Background auto-detect request prepared", {
       url,
@@ -387,15 +415,18 @@ async function getUserDataViaBackground(
       fetchContext: summarizeApiServiceFetchContext(fetchContext),
     })
 
-    const response = await sendRuntimeMessage({
-      action: RuntimeActionIds.AutoDetectSite,
+    const params = {
       url: url,
       requestId: requestId,
-      tempWindowRequestSource,
+      siteType,
       ...(fetchContext?.incognito === true ? { useIncognito: true } : {}),
       ...(fetchContext?.cookieStoreId
         ? { cookieStoreId: fetchContext.cookieStoreId }
         : {}),
+    }
+    const response = await executeProtectionBypassTask({
+      task: { kind: "session_read" as const, params },
+      execution: protectionBypassExecution,
     })
 
     if (!response || !response.success || !response.data) {
@@ -416,6 +447,7 @@ async function getUserDataViaBackground(
         siteType,
         fetchContext,
         tempWindowRequestSource,
+        protectionBypassExecution,
       )
     }
 
@@ -439,6 +471,7 @@ async function getUserDataViaBackground(
         siteType,
         fetchContext,
         tempWindowRequestSource,
+        protectionBypassExecution,
       )
     }
 
@@ -468,6 +501,7 @@ async function getUserDataViaBackground(
       siteType,
       fetchContext,
       tempWindowRequestSource,
+      protectionBypassExecution,
     )
   }
 }
@@ -481,6 +515,7 @@ async function getUserDataViaBackground(
 async function autoDetectViaBackground(
   url: string,
   fetchContext?: AutoDetectFetchContext,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AutoDetectResult> {
   logger.info("使用 Background 方式", {
     url,
@@ -488,14 +523,19 @@ async function autoDetectViaBackground(
   })
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
-  const siteType = await getAccountSiteType(url)
+  const siteType = await getAccountSiteType(url, protectionBypassExecution)
 
   // 通过 Background 获取用户数据
-  const userData = await getUserDataViaBackground(url, siteType, fetchContext)
+  const userData = await getUserDataViaBackground(
+    url,
+    siteType,
+    fetchContext,
+    protectionBypassExecution,
+  )
 
   // 组合用户数据和站点类型（公共逻辑）
   return withAutoDetectContext(
-    await combineUserDataAndSiteType(userData, url),
+    await combineUserDataAndSiteType(userData, url, protectionBypassExecution),
     createAutoDetectContext({
       strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
       siteType,
@@ -517,6 +557,7 @@ async function getUserDataFromCurrentTab(
   tabId: number,
   incognito?: boolean,
   cookieStoreId?: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<CurrentTabUserDataResult> {
   let contentScriptUnavailable = false
   const fetchContext: AutoDetectFetchContext = {
@@ -540,6 +581,7 @@ async function getUserDataFromCurrentTab(
       siteType,
       source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       fetchContext,
+      protectionBypassExecution,
       onError(error) {
         contentScriptUnavailable = isMessageReceiverUnavailableError(error)
 
@@ -585,6 +627,8 @@ async function getUserDataFromCurrentTab(
       url,
       siteType,
       fetchContext,
+      undefined,
+      protectionBypassExecution,
     )
     if (fallbackUserData) {
       return {
@@ -628,11 +672,12 @@ async function autoDetectFromCurrentTab(
   tabId: number,
   incognito?: boolean,
   cookieStoreId?: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AutoDetectResult> {
   logger.info("使用当前标签页方式", { url, tabId })
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
-  const siteType = await getAccountSiteType(url)
+  const siteType = await getAccountSiteType(url, protectionBypassExecution)
 
   // 从当前标签页获取用户数据
   const { userData, contentScriptUnavailable, strategy, fetchContext } =
@@ -642,10 +687,15 @@ async function autoDetectFromCurrentTab(
       tabId,
       incognito,
       cookieStoreId,
+      protectionBypassExecution,
     )
 
   // 组合用户数据和站点类型（公共逻辑）
-  const result = await combineUserDataAndSiteType(userData, url)
+  const result = await combineUserDataAndSiteType(
+    userData,
+    url,
+    protectionBypassExecution,
+  )
   const autoDetectContext = createAutoDetectContext({
     strategy:
       contentScriptUnavailable && !result.success
@@ -676,7 +726,10 @@ async function autoDetectFromCurrentTab(
  * 2. Background 方式（如果支持 runtime/background messaging）
  * 3. 直接 API 方式（所有平台的 fallback）
  */
-export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
+export async function autoDetectSmart(
+  url: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
+): Promise<AutoDetectResult> {
   const detectionUrl = resolveAutoDetectUrl(url)
   const capabilities = detectPlatformCapabilities()
   let shouldHintCurrentTabReload = false
@@ -718,6 +771,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
             currentTab.id,
             currentTab.incognito === true,
             currentTab.cookieStoreId,
+            protectionBypassExecution,
           )
           if (currentTabResult.success) {
             return currentTabResult
@@ -751,6 +805,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
           const backgroundResult = await autoDetectViaBackgroundWithContext(
             detectionUrl,
             currentTabContext,
+            protectionBypassExecution,
           )
           if (backgroundResult.success) {
             return backgroundResult
@@ -770,6 +825,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
       const result = await autoDetectViaBackground(
         detectionUrl,
         browserFallbackContext,
+        protectionBypassExecution,
       )
       if (result.success) {
         return result
@@ -790,7 +846,10 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
   }
 
   // 3. Fallback: 使用直接方式（手机 或其他方式失败）
-  const directResult = await autoDetectDirect(detectionUrl)
+  const directResult = await autoDetectDirect(
+    detectionUrl,
+    protectionBypassExecution,
+  )
 
   if (
     shouldHintCurrentTabReload &&
@@ -817,16 +876,22 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
 async function autoDetectViaBackgroundWithContext(
   url: string,
   fetchContext: AutoDetectFetchContext,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AutoDetectResult> {
   logger.info("使用带当前标签页上下文的 Background 方式", {
     url,
     fetchContext: summarizeApiServiceFetchContext(fetchContext),
   })
 
-  const siteType = await getAccountSiteType(url)
-  const userData = await getUserDataViaBackground(url, siteType, fetchContext)
+  const siteType = await getAccountSiteType(url, protectionBypassExecution)
+  const userData = await getUserDataViaBackground(
+    url,
+    siteType,
+    fetchContext,
+    protectionBypassExecution,
+  )
   return withAutoDetectContext(
-    await combineUserDataAndSiteType(userData, url),
+    await combineUserDataAndSiteType(userData, url, protectionBypassExecution),
     createAutoDetectContext({
       strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
       siteType,

@@ -1,8 +1,10 @@
 import { useTranslation } from "react-i18next"
 
 import { DestructiveConfirmDialog, Modal } from "~/components/ui"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import { ManagedSiteTokenBatchExportFooter } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportFooter"
 import { ManagedSiteTokenBatchExportPreviewList } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportPreviewList"
@@ -35,6 +37,10 @@ export function ManagedSiteTokenBatchExportDialog({
     t,
   })
   const verificationState = dialog.verification.dialogState
+  const handleViewChannels = () => {
+    dialog.actions.close()
+    pushWithinOptionsPage(`#${MENU_ITEM_IDS.MANAGED_SITE_CHANNELS}`)
+  }
 
   return (
     <>
@@ -60,6 +66,9 @@ export function ManagedSiteTokenBatchExportDialog({
                     selectedCount: items.length,
                   })}
             </div>
+            <div className="text-muted-foreground text-sm">
+              {t("keyManagement:batchManagedSiteExport.gatewayDescription")}
+            </div>
           </div>
         }
         footer={
@@ -74,6 +83,7 @@ export function ManagedSiteTokenBatchExportDialog({
             selectedExecutableCount={dialog.executableSelection.selectedCount}
             onClose={dialog.actions.close}
             onStart={dialog.actions.openConfirm}
+            onViewChannels={handleViewChannels}
           />
         }
       >

@@ -2,9 +2,15 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import enKeyManagement from "~/locales/en/keyManagement.json"
+import {
+  DEFAULT_PREFERENCES,
+  type UserPreferences,
+} from "~/services/preferences/userPreferences"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -18,6 +24,7 @@ const {
   pushWithinOptionsPageMock,
   replaceWithinOptionsPageMock,
   openModelsPageMock,
+  openSettingsTabMock,
   mockedUseUserPreferencesContext,
   addTokenDialogPropsSpy,
   accountSummaryBarPropsSpy,
@@ -29,6 +36,7 @@ const {
   pushWithinOptionsPageMock: vi.fn(),
   replaceWithinOptionsPageMock: vi.fn(),
   openModelsPageMock: vi.fn(),
+  openSettingsTabMock: vi.fn(),
   mockedUseUserPreferencesContext: vi.fn(),
   addTokenDialogPropsSpy: vi.fn(),
   accountSummaryBarPropsSpy: vi.fn(),
@@ -53,6 +61,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
     pushWithinOptionsPage: pushWithinOptionsPageMock,
     replaceWithinOptionsPage: replaceWithinOptionsPageMock,
     openModelsPage: openModelsPageMock,
+    openSettingsTab: openSettingsTabMock,
   }
 })
 
@@ -247,6 +256,48 @@ const createHookResult = (
   ...overrides,
 })
 
+type UserPreferencesContextValue = ReturnType<typeof useUserPreferencesContext>
+type KeyManagementContextValue = Pick<
+  UserPreferencesContextValue,
+  | "preferences"
+  | "managedSiteType"
+  | "newApiBaseUrl"
+  | "newApiUserId"
+  | "newApiUsername"
+  | "newApiPassword"
+  | "newApiTotpSecret"
+>
+
+const createManagedSitePreferences = (
+  newApiOverrides: Partial<UserPreferences["newApi"]> = {},
+): UserPreferences => ({
+  ...DEFAULT_PREFERENCES,
+  managedSiteType: SITE_TYPES.NEW_API,
+  newApi: {
+    ...DEFAULT_PREFERENCES.newApi,
+    baseUrl: "https://managed.example",
+    adminToken: "managed-token",
+    userId: "1",
+    username: "admin",
+    password: "secret-password",
+    totpSecret: "JBSWY3DPEHPK3PXP",
+    ...newApiOverrides,
+  },
+})
+
+const createKeyManagementContextValue = (
+  preferences: UserPreferences = createManagedSitePreferences(),
+) =>
+  ({
+    preferences,
+    managedSiteType: SITE_TYPES.NEW_API,
+    newApiBaseUrl: preferences.newApi.baseUrl,
+    newApiUserId: preferences.newApi.userId,
+    newApiUsername: preferences.newApi.username ?? "",
+    newApiPassword: preferences.newApi.password ?? "",
+    newApiTotpSecret: preferences.newApi.totpSecret ?? "",
+  }) satisfies KeyManagementContextValue
+
 describe("KeyManagement empty-state actions", () => {
   beforeEach(() => {
     sendRuntimeActionMessageMock.mockReset()
@@ -255,6 +306,7 @@ describe("KeyManagement empty-state actions", () => {
     pushWithinOptionsPageMock.mockReset()
     replaceWithinOptionsPageMock.mockReset()
     openModelsPageMock.mockReset()
+    openSettingsTabMock.mockReset()
     addTokenDialogPropsSpy.mockReset()
     accountSummaryBarPropsSpy.mockReset()
     getSiteTypeCapabilitiesMock.mockReset()
@@ -277,15 +329,72 @@ describe("KeyManagement empty-state actions", () => {
               },
             },
     }))
-    mockedUseUserPreferencesContext.mockReturnValue({
-      managedSiteType: "new-api",
-      newApiBaseUrl: "https://managed.example",
-      newApiUserId: "1",
-      newApiUsername: "admin",
-      newApiPassword: "secret-password",
-      newApiTotpSecret: "JBSWY3DPEHPK3PXP",
-    })
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createKeyManagementContextValue(),
+    )
     sendRuntimeActionMessageMock.mockResolvedValue({ success: false })
+  })
+
+  it("offers incomplete managed-site setup as a lightweight inline hint", async () => {
+    const user = userEvent.setup()
+    useKeyManagementMock.mockReturnValue(createHookResult())
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createKeyManagementContextValue(
+        createManagedSitePreferences({ adminToken: "", userId: "" }),
+      ),
+    )
+
+    expect(enKeyManagement.managedSiteSetupRecovery.description).toContain(
+      "self-hosted AI gateway",
+    )
+    expect(enKeyManagement.managedSiteSetupRecovery.description).toContain(
+      "gateway channels",
+    )
+    expect(enKeyManagement.managedSiteSetupRecovery.description).toContain(
+      "one unified AI API",
+    )
+    expect(enKeyManagement.managedSiteSetupRecovery.description).not.toContain(
+      "You can still",
+    )
+
+    render(<KeyManagement />)
+
+    const setupDescription = await screen.findByText(
+      "keyManagement:managedSiteSetupRecovery.description",
+    )
+    const setupHint = setupDescription.closest('[role="status"]')
+    const setupAction = screen.getByRole("button", {
+      name: "keyManagement:managedSiteSetupRecovery.configureManagedSite",
+    })
+
+    expect(setupHint).not.toBeNull()
+    expect(
+      within(setupHint as HTMLElement).queryByText(
+        "keyManagement:managedSiteSetupRecovery.title",
+      ),
+    ).not.toBeInTheDocument()
+    expect(setupAction.closest("p")).toBe(setupDescription.closest("p"))
+
+    await user.click(setupAction)
+
+    expect(openSettingsTabMock).toHaveBeenCalledWith("managedSite", {
+      preserveHistory: true,
+    })
+  })
+
+  it("does not show managed-site setup recovery for a complete configuration", () => {
+    useKeyManagementMock.mockReturnValue(createHookResult())
+
+    render(<KeyManagement />)
+
+    expect(
+      screen.queryByText("keyManagement:managedSiteSetupRecovery.title"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:managedSiteSetupRecovery.configureManagedSite",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("routes the no-account CTA to account management", async () => {
@@ -294,6 +403,10 @@ describe("KeyManagement empty-state actions", () => {
     useKeyManagementMock.mockReturnValue(createHookResult())
 
     render(<KeyManagement />)
+
+    expect(
+      await screen.findByText("keyManagement:unifiedApiGuidance.headerBridge"),
+    ).toBeVisible()
 
     await user.click(
       await screen.findByRole("button", {

@@ -33,10 +33,21 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: trackStartedMock,
 }))
 
-vi.mock("~/services/productAnalytics/shieldBypassSummary", () => ({
-  recordShieldBypassPromptDismissed: recordDismissedMock,
-  recordShieldBypassSettingsVisited: recordSettingsVisitedMock,
-}))
+vi.mock(
+  "~/services/productAnalytics/shieldBypassSummary",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/productAnalytics/shieldBypassSummary")
+      >()
+
+    return {
+      ...actual,
+      recordShieldBypassPromptDismissed: recordDismissedMock,
+      recordShieldBypassSettingsVisited: recordSettingsVisitedMock,
+    }
+  },
+)
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()

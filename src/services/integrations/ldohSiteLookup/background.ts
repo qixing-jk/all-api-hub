@@ -6,18 +6,47 @@ import {
   LDOH_ORIGIN,
   LDOH_SITES_ENDPOINT,
 } from "~/services/integrations/ldohSiteLookup/constants"
-import type { LdohSiteLookupRefreshSitesResponse } from "~/services/integrations/ldohSiteLookup/runtime"
+import type {
+  LdohSiteLookupRefreshSitesRequest,
+  LdohSiteLookupRefreshSitesResponse,
+} from "~/services/integrations/ldohSiteLookup/runtime"
 import {
   LdohSiteLookupMessageTypes,
   onLdohSiteLookupMessage,
 } from "~/services/integrations/ldohSiteLookup/runtime"
 import type { LdohSitesApiResponse } from "~/services/integrations/ldohSiteLookup/types"
+import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+  isProtectionBypassExecution,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import { AuthTypeEnum } from "~/types"
+import {
+  TEMP_WINDOW_REQUEST_SOURCES,
+  type TempWindowRequestSource,
+} from "~/types/tempWindowFetch"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("LdohSiteLookupBackground")
+
+/** Accepts only UI-owned site-detection executions for typed refresh requests. */
+function isLdohUiLifecycleExecution(
+  execution: unknown,
+): execution is ProtectionBypassExecution {
+  return (
+    isProtectionBypassExecution(execution) &&
+    execution.kind === "automatic" &&
+    execution.feature === PROTECTION_BYPASS_FEATURES.LdohSiteLookup &&
+    execution.trigger === PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle &&
+    (execution.surface === TEMP_WINDOW_REQUEST_SOURCES.Popup ||
+      execution.surface === TEMP_WINDOW_REQUEST_SOURCES.Options)
+  )
+}
 
 /**
  * Fetches the site directory from LDOH using the shared `fetchApi` wrapper.
@@ -36,9 +65,16 @@ const LDOH_SITE_LIST_REQUEST = {
 /**
  * Fetches the site directory from LDOH using the shared `fetchApi` wrapper.
  */
-async function fetchLdohSites(): Promise<LdohSitesApiResponse> {
+async function fetchLdohSites(
+  protectionBypassExecution: ProtectionBypassExecution,
+  tempWindowRequestSource: TempWindowRequestSource,
+): Promise<LdohSitesApiResponse> {
   return await fetchApi<LdohSitesApiResponse>(
-    LDOH_SITE_LIST_REQUEST,
+    {
+      ...LDOH_SITE_LIST_REQUEST,
+      protectionBypassExecution,
+      tempWindowRequestSource,
+    },
     {
       endpoint: LDOH_SITES_ENDPOINT,
       responseType: "json",
@@ -62,14 +98,20 @@ let inFlightRefresh: Promise<LdohSiteLookupRefreshSitesResponse> | null = null
  * Uses the shared fetch pipeline (background first + temp-window fallback) and
  * de-duplicates concurrent refresh requests so we don't spam network or storage.
  */
-export async function refreshLdohSiteListCache(): Promise<LdohSiteLookupRefreshSitesResponse> {
+async function refreshLdohSiteListCache(
+  protectionBypassExecution: ProtectionBypassExecution,
+  tempWindowRequestSource: TempWindowRequestSource,
+): Promise<LdohSiteLookupRefreshSitesResponse> {
   if (inFlightRefresh) {
     return inFlightRefresh
   }
 
   inFlightRefresh = (async () => {
     try {
-      const response = await fetchLdohSites()
+      const response = await fetchLdohSites(
+        protectionBypassExecution,
+        tempWindowRequestSource,
+      )
       const cache = await writeLdohSiteListCache(response.sites)
 
       return { success: true, cachedCount: cache.items.length }
@@ -112,6 +154,18 @@ export async function refreshLdohSiteListCache(): Promise<LdohSiteLookupRefreshS
   }
 }
 
+/** Refreshes the LDOH cache from a background-owned recovery root. */
+export function repairLdohSiteListCache() {
+  return refreshLdohSiteListCache(
+    createAutomaticProtectionBypassExecution(
+      PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+    ),
+    TEMP_WINDOW_REQUEST_SOURCES.Background,
+  )
+}
+
 let ldohSiteLookupMessagingCleanup: (() => void)[] | null = null
 
 /**
@@ -123,8 +177,9 @@ export function setupLdohSiteLookupMessagingListeners() {
   }
 
   ldohSiteLookupMessagingCleanup = [
-    onLdohSiteLookupMessage(LdohSiteLookupMessageTypes.RefreshSites, () =>
-      resolveLdohSiteLookupRefreshSitesMessage(),
+    onLdohSiteLookupMessage(
+      LdohSiteLookupMessageTypes.RefreshSites,
+      (message) => resolveLdohSiteLookupRefreshSitesMessage(message.data),
     ),
   ]
 }
@@ -132,9 +187,27 @@ export function setupLdohSiteLookupMessagingListeners() {
 /**
  * Resolve typed LDOH site lookup refresh messages through the shared service logic.
  */
-async function resolveLdohSiteLookupRefreshSitesMessage(): Promise<LdohSiteLookupRefreshSitesResponse> {
+async function resolveLdohSiteLookupRefreshSitesMessage(
+  request: unknown,
+): Promise<LdohSiteLookupRefreshSitesResponse> {
+  const protectionBypassExecution = (
+    request as Partial<LdohSiteLookupRefreshSitesRequest> | null
+  )?.protectionBypassExecution
+  if (
+    !request ||
+    typeof request !== "object" ||
+    !isLdohUiLifecycleExecution(protectionBypassExecution)
+  ) {
+    return createRuntimeMessageFailure(
+      INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+    )
+  }
+
   try {
-    return await refreshLdohSiteListCache()
+    return await refreshLdohSiteListCache(
+      protectionBypassExecution,
+      protectionBypassExecution.surface,
+    )
   } catch (error) {
     return createRuntimeMessageFailure(getErrorMessage(error))
   }

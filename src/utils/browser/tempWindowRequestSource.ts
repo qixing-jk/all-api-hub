@@ -13,7 +13,7 @@ import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 
 type TempWindowRequestBlockedReason = "firefox_popup_unsupported" | null
 
-/** Normalizes an untrusted request source to the safe background default. */
+/** Normalizes untrusted presentation metadata without granting authorization. */
 export function normalizeTempWindowRequestSource(
   value: unknown,
 ): TempWindowRequestSource {
@@ -39,7 +39,7 @@ export function getCurrentTempWindowRequestSource(): TempWindowRequestSource {
   return TEMP_WINDOW_REQUEST_SOURCES.Background
 }
 
-/** Resolves source-aware minimization and browser compatibility policy. */
+/** Resolves presentation/minimization and Firefox compatibility only. */
 export function resolveTempWindowRequestPolicy({
   tempWindowRequestSource,
   suppressMinimize,

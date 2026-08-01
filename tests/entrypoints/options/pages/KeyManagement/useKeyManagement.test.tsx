@@ -21,7 +21,17 @@ import {
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { createToken } from "~~/tests/utils/keyManagementFactories"
@@ -308,6 +318,58 @@ describe("useKeyManagement enabled account filtering", () => {
     })
 
     await waitFor(() => expect(result.current.selectedAccount).toBe("all"))
+  })
+
+  it("marks route-controlled token loading as automatic key-management work", async () => {
+    const account = createDisplayAccount({
+      id: "route-account",
+      name: "Route Account",
+    })
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([])
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue(
+      createAdapterWithKeyManagement({
+        fetchTokens: fetchAccountTokens,
+      }) as any,
+    )
+
+    const { result } = renderHook(
+      () => useKeyManagement({ accountId: account.id }),
+      {
+        wrapper: createWrapper(),
+      },
+    )
+
+    await waitFor(() => expect(fetchAccountTokens).toHaveBeenCalledTimes(1))
+    expect(fetchAccountTokens).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: account.id,
+        protectionBypassExecution: automaticExecution(
+          PROTECTION_BYPASS_FEATURES.KeyManagement,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          PROTECTION_BYPASS_SURFACES.Options,
+        ),
+      }),
+    )
+
+    const explicitExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
+    )
+    await act(async () => {
+      await result.current.loadTokens(account.id, {
+        protectionBypassExecution: explicitExecution,
+      })
+    })
+
+    expect(fetchAccountTokens).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        accountId: account.id,
+        protectionBypassExecution: explicitExecution,
+      }),
+    )
   })
 
   it("starts token loads for all distinct origins without a global cap in all mode", async () => {
@@ -1005,6 +1067,11 @@ describe("useKeyManagement enabled account filtering", () => {
           name: "Codex",
           accountId: "sharedchat-status-acc",
         }),
+        protectionBypassExecution: automaticExecution(
+          PROTECTION_BYPASS_FEATURES.KeyManagement,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          PROTECTION_BYPASS_SURFACES.Options,
+        ),
       }),
     )
   })
@@ -2930,6 +2997,11 @@ describe("useKeyManagement enabled account filtering", () => {
     await act(async () => {
       await result.current.refreshManagedSiteTokenStatusForToken(
         result.current.tokens[0]!,
+        {
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
+          ),
+        },
       )
     })
 
@@ -2939,6 +3011,9 @@ describe("useKeyManagement enabled account filtering", () => {
         resolvedChannelKeysById: {
           77: "verified-channel-key",
         },
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
+        ),
       }),
     )
   })
@@ -3596,9 +3671,27 @@ describe("useKeyManagement enabled account filtering", () => {
 
     await waitFor(() => expect(result.current.tokens).toHaveLength(0))
     expect(deleteToken).toHaveBeenCalledWith({
-      request: expect.anything(),
+      request: expect.objectContaining({
+        protectionBypassExecution: expect.objectContaining({
+          kind: "user_command",
+          command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
+          surface: PROTECTION_BYPASS_SURFACES.Options,
+        }),
+      }),
       tokenId: 303,
     })
+    await waitFor(() =>
+      expect(fetchAccountTokens).toHaveBeenCalledWith(
+        expect.objectContaining({
+          protectionBypassExecution: expect.objectContaining({
+            kind: "automatic",
+            feature: PROTECTION_BYPASS_FEATURES.KeyManagement,
+            trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+            surface: PROTECTION_BYPASS_SURFACES.Options,
+          }),
+        }),
+      ),
+    )
     expect(
       result.current.managedSiteTokenStatuses["delete-acc:303"],
     ).toBeUndefined()

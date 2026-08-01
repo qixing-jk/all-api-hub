@@ -81,6 +81,10 @@ interface TokenListItemProps {
    * Toggles batch selection for this token.
    */
   onSelectionChange?: (checked: boolean) => void
+  /**
+   * Request key used to temporarily highlight this token's managed-site import action.
+   */
+  guidedManagedSiteImportRequest?: string
 }
 
 /**
@@ -105,6 +109,7 @@ export function TokenListItem(props: TokenListItemProps) {
     onManagedSiteVerificationRetry,
     isSelected = false,
     onSelectionChange,
+    guidedManagedSiteImportRequest,
   } = props
   const { t } = useTranslation("keyManagement")
   const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
@@ -141,6 +146,7 @@ export function TokenListItem(props: TokenListItemProps) {
                 onOpenCCSwitchDialog={() =>
                   onOpenCCSwitchDialog(token, account)
                 }
+                guidedManagedSiteImportRequest={guidedManagedSiteImportRequest}
               />
               <div className="min-w-0 flex-1">
                 <div className="dark:text-dark-text-secondary space-y-2 text-xs text-gray-600 sm:text-sm">

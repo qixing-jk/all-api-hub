@@ -62,16 +62,17 @@
       "selectAll": "{{selected}}/{{total}} 選択中",
       "start": "インポート開始",
       "verifyAndRefresh": "検証してプレビューを更新",
-      "verifying": "検証中..."
+      "verifying": "検証中...",
+      "viewChannels": "チャネル管理を開く"
     },
     "blockedReasons": {
-      "baseUrlRequired": "対象の管理対象サイトでは Base URL が必要です。",
-      "configMissing": "管理対象サイトの管理者設定がありません。",
+      "baseUrlRequired": "対象のセルフホスト AI ゲートウェイでは Base URL が必要です。",
+      "configMissing": "セルフホスト AI ゲートウェイの管理者設定がありません。",
       "inputPreparationFailed": "このキーのチャネルデータを準備できませんでした。",
       "keyRequired": "生成されたチャネル Key が空です。",
       "modelsRequired": "利用可能なモデルを解決できませんでした。",
       "nameRequired": "生成されたチャネル名が空です。",
-      "realKeyRequired": "対象の管理対象サイトでは実際のプロバイダー Key が必要です。",
+      "realKeyRequired": "対象のセルフホスト AI ゲートウェイでは実際のプロバイダー Key が必要です。",
       "secretResolutionFailed": "実際のトークンシークレットを解決できませんでした。"
     },
     "confirm": {
@@ -85,6 +86,7 @@
       "groups": "グループ",
       "models": "モデル"
     },
+    "gatewayDescription": "アカウントキーをセルフホスト AI ゲートウェイチャネルとして取り込みます。取り込み後は、複数のキーを 1 つの AI API からクライアントで利用できます。",
     "loadingDescription": "選択済み {{selectedCount}} 件のキーのプレビューを準備しています。",
     "messages": {
       "completed": "一括インポート完了: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件。",
@@ -118,10 +120,10 @@
       "skipped": "スキップ",
       "warning": "警告"
     },
-    "title": "管理対象サイトへ一括インポート",
+    "title": "セルフホスト AI ゲートウェイへ一括インポート",
     "warnings": {
       "backendSearchFailed": "対象バックエンドで重複チェックを完了できませんでした。",
-      "dedupeUnsupported": "現在の管理対象サイトでは Base URL による重複チェックを信頼できません。",
+      "dedupeUnsupported": "現在のセルフホスト AI ゲートウェイでは Base URL による重複チェックを信頼できません。",
       "exactVerificationUnavailable": "一致するチャネルが存在する可能性がありますが、正確な Key 検証は利用できません。",
       "matchRequiresConfirmation": "類似チャネルがあります。作成前に確認してください。",
       "modelPrefillFailed": "モデルの事前入力に失敗しました。利用可能なモデルリストを使用します。"
@@ -187,6 +189,10 @@
     "description": "このアカウントのキー一覧を取得できませんでした。ログインが失効している、権限が不足している、またはサイトが一時的に利用できない可能性があります。サイトに再ログインしてから再試行してください。\n\nエラー: {{error}}",
     "openSite": "サイトを開く",
     "title": "キー一覧を読み込めませんでした"
+  },
+  "managedSiteSetupRecovery": {
+    "configureManagedSite": "セルフホスト AI ゲートウェイを設定",
+    "description": "セルフホスト AI ゲートウェイを設定すると、アカウントキーをゲートウェイチャネルとして取り込み、1 つの AI API にまとめられます。"
   },
   "managedSiteStatus": {
     "actions": {
@@ -392,6 +398,9 @@
   "showingCount_other": "{{count}} 件を表示中",
   "title": "キー管理",
   "totalKeys_other": "合計 {{count}} キー",
+  "unifiedApiGuidance": {
+    "headerBridge": "アカウントキーをセルフホスト AI ゲートウェイへ簡単に取り込むと、複数のキーを 1 つの AI API から利用できます。クライアントツールへの直接エクスポートはゲートウェイを使わない方法です。"
+  },
   "unsupportedSource": {
     "description": "このアカウントのサイト種別は保存できますが、拡張機能はこのサイトのキー一覧プロトコルにはまだ対応していません。サイト対応リクエストを送信すると、キー管理機能の追加に役立ちます。",
     "requestSiteSupport": "サイト対応をリクエスト",

@@ -1,4 +1,9 @@
 import type { ManagedSiteType } from "~/constants/siteType"
+import {
+  buildUnifiedApiGuidanceModel,
+  getGatewayGuidanceImportableAccounts,
+} from "~/features/UnifiedApiGuidance"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   SiteHealthStatus,
@@ -33,6 +38,9 @@ interface BuildOptionsOverviewViewModelInput {
   autoCheckinStatus: AutoCheckinStatus | null | undefined
   siteAnnouncementRecords: SiteAnnouncementRecord[]
   siteAnnouncementStatuses: SiteAnnouncementSiteState[]
+  unifiedApiGuidanceDataAvailable?: boolean
+  accountsDataAvailable?: boolean
+  profilesDataAvailable?: boolean
 }
 
 /**
@@ -44,6 +52,19 @@ export function buildOptionsOverviewViewModel(
   const enabledAccounts = input.accounts.filter(
     (account) => account.disabled !== true,
   )
+  const keyAccessibleAccounts = getGatewayGuidanceImportableAccounts(
+    input.displayData,
+  )
+  const unifiedApiGuidanceDiagnostics = {
+    enabledAccountCount: enabledAccounts.length,
+    keyAccessibleAccountCount: keyAccessibleAccounts.length,
+    profileCount: input.apiCredentialProfiles.length,
+    gatewayConfigured: hasValidManagedSiteConfig(
+      input.preferences ?? null,
+      input.managedSiteType,
+    ),
+  }
+  const gatewayGuidanceImportAccountId = keyAccessibleAccounts[0]?.id
   const problemAccounts = input.displayData.filter(
     (account) =>
       account.disabled !== true &&
@@ -55,6 +76,8 @@ export function buildOptionsOverviewViewModel(
     enabledAccountCount: enabledAccounts.length,
     profileCount: input.apiCredentialProfiles.length,
     problemAccounts,
+    accountsDataAvailable: input.accountsDataAvailable,
+    profilesDataAvailable: input.profilesDataAvailable,
   })
   const autoCheckinPanel = buildAutoCheckinPanel({
     preferences: input.preferences,
@@ -68,7 +91,23 @@ export function buildOptionsOverviewViewModel(
       attentionCount: attentionItems.length,
       todayRequests: usageSnapshot.todayRequests,
       todayRequestsCoverage: usageSnapshot.todayRequestsCoverage,
+      accountsDataAvailable: input.accountsDataAvailable,
+      profilesDataAvailable: input.profilesDataAvailable,
     }),
+    unifiedApiGuidance:
+      input.unifiedApiGuidanceDataAvailable === false
+        ? null
+        : buildUnifiedApiGuidanceModel({
+            enabledAccountCount:
+              unifiedApiGuidanceDiagnostics.enabledAccountCount,
+            keyAccessibleAccountCount:
+              unifiedApiGuidanceDiagnostics.keyAccessibleAccountCount,
+            profileCount: unifiedApiGuidanceDiagnostics.profileCount,
+            preferences: input.preferences,
+            managedSiteType: input.managedSiteType,
+          }),
+    unifiedApiGuidanceDiagnostics,
+    gatewayGuidanceImportAccountId,
     attentionItems,
     autoCheckinPanel,
     automationOverview: buildAutomationOverview({

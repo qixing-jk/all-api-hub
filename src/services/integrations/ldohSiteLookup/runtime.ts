@@ -1,3 +1,4 @@
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import {
@@ -19,7 +20,9 @@ export const LdohSiteLookupMessageTypes = {
 /**
  * Runtime request to refresh the cached LDOH site directory (background-only work).
  */
-type LdohSiteLookupRefreshSitesRequest = Record<string, never>
+export type LdohSiteLookupRefreshSitesRequest = {
+  protectionBypassExecution: ProtectionBypassExecution
+}
 
 /**
  * Runtime response for LDOH site directory refresh requests.
@@ -96,14 +99,14 @@ async function sendLdohSiteLookupMessageWithRetry(
  * UI code does not depend on raw runtime message transport details.
  */
 export async function requestLdohSiteLookupRefreshSites(
-  options?: SendMessageRetryOptions,
+  options: SendMessageRetryOptions & LdohSiteLookupRefreshSitesRequest,
 ): Promise<LdohSiteLookupRefreshSitesResponse> {
   let response: unknown
 
   try {
     response = await sendLdohSiteLookupMessageWithRetry(
       LdohSiteLookupMessageTypes.RefreshSites,
-      {},
+      { protectionBypassExecution: options.protectionBypassExecution },
       options,
     )
   } catch (error) {

@@ -7,17 +7,23 @@ import {
   tempWindowOpenRouterManagementKeyAction,
 } from "~/services/apiAdapters/openrouter/managementKeyActionClient"
 import { OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH } from "~/services/apiAdapters/openrouter/managementKeySecret"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
-const { isProtectionBypassFirefoxEnvMock, sendRuntimeMessageMock } = vi.hoisted(
+const testExecution = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+)
+
+const { executeProtectionBypassTaskMock, sendRuntimeMessageMock } = vi.hoisted(
   () => ({
-    isProtectionBypassFirefoxEnvMock: vi.fn(() => false),
+    executeProtectionBypassTaskMock: vi.fn(),
     sendRuntimeMessageMock: vi.fn(),
   }),
 )
 
-vi.mock("~/utils/browser/protectionBypass", () => ({
-  isProtectionBypassFirefoxEnv: isProtectionBypassFirefoxEnvMock,
+vi.mock("~/utils/browser/tempWindowFetch", () => ({
+  executeProtectionBypassTask: executeProtectionBypassTaskMock,
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -29,11 +35,13 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 describe("OpenRouter Management Key action client", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    isProtectionBypassFirefoxEnvMock.mockReturnValue(false)
   })
 
-  it("routes create through the runtime message boundary", async () => {
-    sendRuntimeMessageMock.mockResolvedValueOnce({
+  it("routes create through the shared protected-task transport", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+    )
+    executeProtectionBypassTaskMock.mockResolvedValueOnce({
       requestId: "request-example",
       operation: "create",
       mutationState: "created",
@@ -45,26 +53,41 @@ describe("OpenRouter Management Key action client", () => {
     const response = await tempWindowOpenRouterManagementKeyAction({
       requestId: "request-example",
       operation: { kind: "create", label: "extension-request-example" },
+      protectionBypassExecution,
     })
 
-    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
-      action: RuntimeActionIds.TempWindowOpenRouterManagementKeyAction,
-      requestId: "request-example",
-      operation: { kind: "create", label: "extension-request-example" },
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-      suppressMinimize: false,
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
+      execution: protectionBypassExecution,
+      task: {
+        kind: "openrouter_management_key_action",
+        params: {
+          requestId: "request-example",
+          operation: { kind: "create", label: "extension-request-example" },
+        },
+      },
     })
+    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
     expect(response).toMatchObject({ mutationState: "created" })
   })
 
-  it("fails closed without runtime dispatch for a Firefox popup request", async () => {
-    isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
+  it("delegates Firefox popup rejection to the unified runtime boundary", async () => {
+    executeProtectionBypassTaskMock.mockResolvedValueOnce({
+      requestId: "request-firefox-popup",
+      operation: "create",
+      mutationState: "not_dispatched",
+      attemptOutcome: "failed",
+      label: "extension-request-popup",
+    })
 
     await expect(
       tempWindowOpenRouterManagementKeyAction({
         requestId: "request-firefox-popup",
         operation: { kind: "create", label: "extension-request-popup" },
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: {
+          ...testExecution,
+          surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        },
       }),
     ).resolves.toEqual({
       requestId: "request-firefox-popup",
@@ -73,7 +96,11 @@ describe("OpenRouter Management Key action client", () => {
       attemptOutcome: "failed",
       label: "extension-request-popup",
     })
-    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        execution: expect.objectContaining({ surface: "popup" }),
+      }),
+    )
   })
 
   it("routes cancellation through the runtime message boundary by opaque request ID only", async () => {
@@ -100,42 +127,46 @@ describe("OpenRouter Management Key action client", () => {
     })
   })
 
-  it("uses the shared runtime action namespace", async () => {
-    sendRuntimeMessageMock
-      .mockResolvedValueOnce({
-        requestId: "request-runtime",
-        operation: "create",
-        mutationState: "not_dispatched",
-        attemptOutcome: "logged_out",
-        label: "extension-request-runtime",
-      })
-      .mockResolvedValueOnce({
-        requestId: "request-runtime",
-        certainty: "unknown",
-        cancellationAccepted: true,
-      })
+  it("keeps lifecycle control on runtime while create uses the shared transport", async () => {
+    executeProtectionBypassTaskMock.mockResolvedValueOnce({
+      requestId: "request-runtime",
+      operation: "create",
+      mutationState: "not_dispatched",
+      attemptOutcome: "logged_out",
+      label: "extension-request-runtime",
+    })
+    sendRuntimeMessageMock.mockResolvedValueOnce({
+      requestId: "request-runtime",
+      certainty: "unknown",
+      cancellationAccepted: true,
+    })
 
     await tempWindowOpenRouterManagementKeyAction({
       requestId: "request-runtime",
       operation: { kind: "create", label: "extension-request-runtime" },
+      protectionBypassExecution: testExecution,
     })
     await cancelTempWindowOpenRouterManagementKeyAction("request-runtime")
 
-    expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(1, {
-      action: RuntimeActionIds.TempWindowOpenRouterManagementKeyAction,
-      requestId: "request-runtime",
-      operation: { kind: "create", label: "extension-request-runtime" },
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-      suppressMinimize: false,
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
+      execution: testExecution,
+      task: {
+        kind: "openrouter_management_key_action",
+        params: {
+          requestId: "request-runtime",
+          operation: { kind: "create", label: "extension-request-runtime" },
+        },
+      },
     })
-    expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(2, {
+    expect(sendRuntimeMessageMock).toHaveBeenCalledOnce()
+    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
       action: RuntimeActionIds.TempWindowCancelOpenRouterManagementKeyAction,
       requestId: "request-runtime",
     })
   })
 
   it("does not treat a malformed runtime create response as created", async () => {
-    sendRuntimeMessageMock.mockResolvedValueOnce({
+    executeProtectionBypassTaskMock.mockResolvedValueOnce({
       requestId: "request-malformed-create",
       operation: "create",
       mutationState: "created",
@@ -147,6 +178,7 @@ describe("OpenRouter Management Key action client", () => {
     await expect(
       tempWindowOpenRouterManagementKeyAction({
         requestId: "request-malformed-create",
+        protectionBypassExecution: testExecution,
         operation: {
           kind: "create",
           label: "extension-request-malformed-create",
@@ -174,7 +206,7 @@ describe("OpenRouter Management Key action client", () => {
   ])(
     "does not forward a %s runtime secret as created evidence",
     async (_case, accessToken) => {
-      sendRuntimeMessageMock.mockResolvedValueOnce({
+      executeProtectionBypassTaskMock.mockResolvedValueOnce({
         requestId: "request-invalid-secret",
         operation: "create",
         mutationState: "created",
@@ -185,6 +217,7 @@ describe("OpenRouter Management Key action client", () => {
 
       const result = await tempWindowOpenRouterManagementKeyAction({
         requestId: "request-invalid-secret",
+        protectionBypassExecution: testExecution,
         operation: {
           kind: "create",
           label: "extension-request-invalid-secret",
@@ -221,7 +254,7 @@ describe("OpenRouter Management Key action client", () => {
   ])(
     "normalizes a valid %s runtime secret",
     async (_case, accessToken, expected) => {
-      sendRuntimeMessageMock.mockResolvedValueOnce({
+      executeProtectionBypassTaskMock.mockResolvedValueOnce({
         requestId: "request-valid-secret",
         operation: "create",
         mutationState: "created",
@@ -233,6 +266,7 @@ describe("OpenRouter Management Key action client", () => {
       await expect(
         tempWindowOpenRouterManagementKeyAction({
           requestId: "request-valid-secret",
+          protectionBypassExecution: testExecution,
           operation: {
             kind: "create",
             label: "extension-request-valid-secret",

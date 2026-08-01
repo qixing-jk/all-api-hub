@@ -1,10 +1,29 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import {
+  PROTECTION_BYPASS_EXECUTION_KINDS,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 
-const { fetchNewApiChannelKeyMock } = vi.hoisted(() => ({
-  fetchNewApiChannelKeyMock: vi.fn(),
+const { fetchNewApiChannelKeyMock, withProtectionBypassUserCommandMock } =
+  vi.hoisted(() => ({
+    fetchNewApiChannelKeyMock: vi.fn(),
+    withProtectionBypassUserCommandMock: vi.fn(
+      async (command, surface, work) =>
+        await work({
+          version: PROTECTION_BYPASS_EXECUTION_VERSION,
+          kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
+          command,
+          surface,
+        }),
+    ),
+  }))
+
+vi.mock("~/services/protectionBypass/client", () => ({
+  withProtectionBypassUserCommand: withProtectionBypassUserCommandMock,
 }))
 
 vi.mock("~/services/managedSites/providers/newApiSession", () => ({
@@ -23,6 +42,7 @@ vi.mock("~/services/managedSites/providers/newApiSession", () => ({
 
 const BASE_PARAMS = {
   channelId: 12,
+  command: PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
   label: "Channel A",
   requestKind: "channel" as const,
   config: {
@@ -35,6 +55,11 @@ const BASE_PARAMS = {
 }
 
 describe("loadNewApiChannelKeyWithVerification", () => {
+  beforeEach(() => {
+    fetchNewApiChannelKeyMock.mockReset()
+    withProtectionBypassUserCommandMock.mockClear()
+  })
+
   it("opens verification from the requirement result returned by the provider layer", async () => {
     const { NewApiChannelKeyRequirementError } = await import(
       "~/services/managedSites/providers/newApiSession"
@@ -63,6 +88,7 @@ describe("loadNewApiChannelKeyWithVerification", () => {
       password: BASE_PARAMS.config.password,
       totpSecret: BASE_PARAMS.config.totpSecret,
       channelId: BASE_PARAMS.channelId,
+      protectionBypassExecution: expect.any(Object),
     })
     expect(openVerification).toHaveBeenCalledWith({
       kind: "channel",
@@ -97,9 +123,52 @@ describe("loadNewApiChannelKeyWithVerification", () => {
       password: BASE_PARAMS.config.password,
       totpSecret: BASE_PARAMS.config.totpSecret,
       channelId: BASE_PARAMS.channelId,
+      protectionBypassExecution: expect.objectContaining({
+        kind: PROTECTION_BYPASS_EXECUTION_KINDS.UserCommand,
+        command: PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+        surface: "options",
+      }),
     })
     expect(setKey).toHaveBeenCalledWith("hidden-channel-key")
     expect(openVerification).not.toHaveBeenCalled()
+  })
+
+  it("creates fresh verification intent when delayed onVerified work resumes", async () => {
+    const { NewApiChannelKeyRequirementError } = await import(
+      "~/services/managedSites/providers/newApiSession"
+    )
+    fetchNewApiChannelKeyMock
+      .mockRejectedValueOnce(
+        new NewApiChannelKeyRequirementError("secure-verification-required"),
+      )
+      .mockResolvedValueOnce("hidden-channel-key")
+    const openVerification = vi.fn()
+
+    await loadNewApiChannelKeyWithVerification({
+      ...BASE_PARAMS,
+      setKey: vi.fn(),
+      openVerification,
+    })
+    const onVerified = openVerification.mock.calls[0]?.[0]?.onVerified
+    await onVerified()
+
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledTimes(2)
+    expect(withProtectionBypassUserCommandMock).toHaveBeenNthCalledWith(
+      1,
+      PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+      "options",
+      expect.any(Function),
+    )
+    expect(withProtectionBypassUserCommandMock).toHaveBeenNthCalledWith(
+      2,
+      PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+      "options",
+      expect.any(Function),
+    )
+    const executions = fetchNewApiChannelKeyMock.mock.calls.map(
+      ([params]) => params.protectionBypassExecution,
+    )
+    expect(executions[0]).not.toBe(executions[1])
   })
 
   it("opens the verification dialog with localized guidance when temp-window rollback is impossible", async () => {

@@ -167,6 +167,9 @@ const DEV_MENU_ITEMS: MenuItem[] = []
 
 if (isDevelopmentMode()) {
   const MeshGradientLab = lazy(() => import("./pages/MeshGradientLab"))
+  const UnifiedApiGuidanceDevPreview = lazy(
+    () => import("./pages/UnifiedApiGuidanceDevPreview"),
+  )
 
   const MeshGradientLabComponent: ComponentType<any> = (props) =>
     createElement(
@@ -174,11 +177,24 @@ if (isDevelopmentMode()) {
       { fallback: null },
       createElement(MeshGradientLab, props),
     )
+  const UnifiedApiGuidanceDevPreviewComponent: ComponentType<any> = (props) =>
+    createElement(
+      Suspense,
+      { fallback: null },
+      createElement(UnifiedApiGuidanceDevPreview, props),
+    )
 
   DEV_MENU_ITEMS.push({
     id: DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB,
     icon: DEV_OPTIONS_MENU_ITEM_ICONS[DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB],
     component: MeshGradientLabComponent,
+  })
+  DEV_MENU_ITEMS.push({
+    id: DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW,
+    icon: DEV_OPTIONS_MENU_ITEM_ICONS[
+      DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW
+    ],
+    component: UnifiedApiGuidanceDevPreviewComponent,
   })
 }
 

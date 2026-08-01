@@ -1,5 +1,9 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ApiErrorCode } from "~/services/apiTransport/errors"
+import type {
+  ProtectionBypassExecution,
+  TempWindowFetchTaskKind,
+} from "~/services/protectionBypass/contracts"
 import type { AuthTypeEnum } from "~/types/index"
 import type {
   CheckinPageActionTriggerResult,
@@ -10,6 +14,7 @@ export const TEMP_WINDOW_REQUEST_SOURCES = {
   Popup: "popup",
   Options: "options",
   Sidepanel: "sidepanel",
+  ContentScript: "content_script",
   Background: "background",
 } as const
 
@@ -34,6 +39,8 @@ export interface TempWindowFetchParams {
   requestId?: string
   responseType?: TempWindowResponseType
   tempWindowRequestSource?: TempWindowRequestSource
+  protectionBypassExecution: ProtectionBypassExecution
+  tempContextTaskKind?: TempWindowFetchTaskKind
   suppressMinimize?: boolean
   /** Account ID for per-request cookie isolation */
   accountId?: string
@@ -105,6 +112,7 @@ export interface TempWindowCheckinPageActionParams {
   authType?: AuthTypeEnum
   cookieAuthSessionCookie?: string
   cookieStoreId?: string
+  protectionBypassExecution: ProtectionBypassExecution
 }
 
 export interface TempWindowFetch {
@@ -127,19 +135,26 @@ export interface TempWindowCheckinPageAction {
   expectedUserId?: string
   trigger?: CheckinPageActionTriggerResult
   error?: string
+  code?: ApiErrorCode
 }
 
 export interface TempWindowRenderedTitleResponse {
   success: boolean
   title?: string
   error?: string
+  code?: ApiErrorCode
 }
+
+export type TempWindowOpenContextResult =
+  | { success: true; tabId: number; windowId?: number }
+  | { success: false; error: string; code?: ApiErrorCode }
 
 export interface TempWindowRenderedTitleParams {
   originUrl: string
   requestId?: string
   tempWindowRequestSource?: TempWindowRequestSource
   suppressMinimize?: boolean
+  protectionBypassExecution: ProtectionBypassExecution
 }
 
 export interface TempWindowFallbackAllowlist {
@@ -155,6 +170,7 @@ export interface TempWindowFallbackContext {
   onlyData: boolean
   responseType: TempWindowResponseType
   tempWindowRequestSource?: TempWindowRequestSource
+  protectionBypassExecution: ProtectionBypassExecution
   /**
    * Allowlist controlling which `ApiError.statusCode` and/or `ApiError.code` values can trigger temp-window fallback.
    * When provided, this fully overrides the default allowlist: omitted fields default to empty lists.

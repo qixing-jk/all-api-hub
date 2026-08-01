@@ -59,6 +59,12 @@ describe("getMenuItemLabel", () => {
     expect(
       getMenuItemLabel(t as any, DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB),
     ).toBe("ui:navigation.meshGradientLab")
+    expect(
+      getMenuItemLabel(
+        t as any,
+        DEV_MENU_ITEM_IDS.UNIFIED_API_GUIDANCE_PREVIEW,
+      ),
+    ).toBe("ui:navigation.unifiedApiGuidancePreview")
   })
 
   it("throws for unexpected menu ids so new routes must be wired explicitly", () => {

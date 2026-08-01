@@ -1,5 +1,11 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  createAutomaticProtectionBypassExecution,
+  PROTECTION_BYPASS_AUTOMATIC_FEATURES,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_SURFACES,
+} from "~/services/protectionBypass/contracts"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -25,16 +31,22 @@ test("rejects incognito temp-window fallback without opening a normal temporary 
 
   const pagesBefore = context.pages()
   const response = await page.evaluate(
-    async ({ action, fetchUrl, originUrl }) => {
+    async ({ action, execution, fetchUrl, originUrl }) => {
       return await new Promise<unknown>((resolve, reject) => {
         chrome.runtime.sendMessage(
           {
             action,
-            originUrl,
-            fetchUrl,
-            fetchOptions: { method: "GET" },
-            requestId: "e2e-incognito-temp-window-fallback",
-            useIncognito: true,
+            execution,
+            task: {
+              kind: "api_fallback_fetch",
+              params: {
+                originUrl,
+                fetchUrl,
+                fetchOptions: { method: "GET" },
+                requestId: "e2e-incognito-temp-window-fallback",
+                useIncognito: true,
+              },
+            },
           },
           (result) => {
             const error = chrome.runtime.lastError
@@ -48,7 +60,12 @@ test("rejects incognito temp-window fallback without opening a normal temporary 
       })
     },
     {
-      action: RuntimeActionIds.TempWindowFetch,
+      action: RuntimeActionIds.ProtectionBypassExecuteTask,
+      execution: createAutomaticProtectionBypassExecution(
+        PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh,
+        PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+        PROTECTION_BYPASS_SURFACES.Options,
+      ),
       originUrl: ORIGIN_URL,
       fetchUrl: FETCH_URL,
     },

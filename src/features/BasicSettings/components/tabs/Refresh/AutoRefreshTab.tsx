@@ -10,9 +10,7 @@ export default function AutoRefreshTab() {
       <section id="auto-refresh">
         <RefreshSettings />
       </section>
-      <section id="shield-settings">
-        <ShieldSettings />
-      </section>
+      <ShieldSettings />
     </div>
   )
 }

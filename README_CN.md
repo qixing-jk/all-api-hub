@@ -58,28 +58,35 @@
 <a id="features"></a>
 ## ✨ 它能为你做什么？
 
-### 📊 多站点统一看板
-- **多账号资产总览**：集中查看余额、用量与健康状态。
-- **智能站点识别**：粘贴地址即可识别架构、计费比例并完成添加。
-- **API 凭据库**：保存常用 `Base URL + API Key`，用于复制、验证接口、查看模型与余额/用量。
+### 📊 AI 资产全局掌控
+- **中转站账号统一看板**：集中管理多个 AI 中转站账号，查看余额、用量与账号状态，免去逐站登录和来回切换。
+- **API 凭据库**：无需绑定站点账号，把别人分享或平时零散收集的 Base URL 与 API Key 集中收好；查余额、看模型、测连接或导出，打开就能用。
+- **用量与趋势统计**：记录余额变化，按站点、账号和模型查看统计图表，消耗情况一目了然。
 
-### 💰 智能省钱与自动收益
-- **模型价格比对**：计算各站点模型折合单价，找出更划算的分组与站点。
-- **全自动签到流**：一键或定时执行支持站点的签到。
-- **用量深度统计**：按站点、账号、模型、日期生成报表，包含热力图与慢请求分析。
+### 💰 省钱比价与自动签到
+- **跨站模型价格比对**：自动换算各站点同一模型的实际价格，快速找出更划算的调用渠道。
+- **多站点自动签到**：支持一键或定时完成每日签到，自动领取签到奖励，免去每天逐站签到操作。
 
-### 🚀 极速生态集成
-- **一键快捷导出**：同步到 **CherryStudio, CC Switch, CLIProxyAPI, Claude Code Router, Kilo Code** 等，完整列表见 [支持的工具](https://all-api-hub.qixing1217.top/supported-export-tools.html)。
-- **后台联动工具**：将账号/密钥导入为自建站点渠道，并提供渠道管理、模型重定向、渠道同步等工具。
-- **网页嗅探与快速录入**：在网页上选中 Base URL 或 API Key 即可快速弹出测试窗并保存，详情见 [网页 API 嗅探与验证](https://all-api-hub.qixing1217.top/web-ai-api-check.html)。
+### 🚀 便捷录入与客户端集成
+- **网页快速录入**：从网页中识别 Base URL 与 API Key，直接测试并存入 API 凭据库，减少反复复制和切换页面。
+- **客户端一键导出**：将凭据快速导出至 CherryStudio、CC Switch、CLIProxyAPI、Claude Code Router、Kilo Code 等客户端，详见 [支持的工具](https://all-api-hub.qixing1217.top/supported-export-tools.html)。
 
-### 🧪 稳定性护航
-- **多维度接口验证**：支持批量测试模型可用性、Token 兼容性及 CLI 代理可用性。
-- **CF 过盾助手**：自动协助通过 Cloudflare 挑战，确保数据刷新与接口调用不中断。
+### 🧪 接口验证与故障排查
+- **API 与模型验证**：一键检测 API 连通性与模型可用性，快速判断 Key 是否有效、模型能否正常调用。
+- **CLI 接入测试**：验证命令行工具能否正常使用目标 API，减少配置完成后的反复排查。
 
-### 🔒 保护隐私与安全
-- **默认本地管理**：Key 和账号信息默认保存在本机，只有启用 WebDAV 备份/同步时才会上传。
-- **加密同步**：支持 WebDAV 加密备份，换设备也能恢复数据。
+### 🔔 重要消息与任务提醒
+- **公告集中查看**：自动汇总并集中展示已添加站点的各类公告消息，维护安排、模型调整、价格变动等任何动态也能及时收到提醒，无需逐站翻找。
+- **任务结果通知**：自动签到、WebDAV 自动同步和模型同步等任务完成后，可通过浏览器或已配置的通知方式接收结果，遇到失败或异常也能及时处理。
+
+### 🛠️ 自建 AI 网关集成与管理
+- **主流 AI 网关统一管理**：New API、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub 网关都能直接在插件里管理渠道，不必逐个打开后台。
+- **快速创建网关渠道**：把已保存的站点账号或 API 凭据库中的凭据快速创建为自建 AI 网关渠道，之后便能通过网关统一调用各类模型，并在不同渠道间灵活切换。
+- **模型同步与重定向**：可手动或定时自动自定义同步渠道模型列表，及时跟进上游模型变化；支持自定义模型重定向规则，让客户端使用任何模型名称也能正常调用。
+
+### 🔐 数据安全与云端同步
+- **默认本地管理**：API Key、账号与设置默认保存在浏览器本地，仅在启用备份或同步时写入配置的 WebDAV 存储。
+- **加密 WebDAV 自动同步**：开启加密与定时自动同步后，可在多台设备间安全传输与同步数据，更换设备也能顺畅接续使用。
 
 <a id="installation"></a>
 ## 🚀 快速安装
@@ -262,9 +269,9 @@ GitHub Stable 和 Nightly 属于手动安装通道，不会自动更新；可 St
 <a id="introduction-tech"></a>
 ### 🧩 强大的兼容性
 不论你用的是哪种架构，我们基本都支持：
-- **账号站点兼容架构**：[one-api](https://github.com/songquanpeng/one-api)、[new-api](https://github.com/QuantumNous/new-api)、[Veloera](https://github.com/Veloera/Veloera)、[one-hub](https://github.com/MartialBE/one-hub)、[done-hub](https://github.com/deanxv/done-hub)、[Sub2API](https://github.com/Wei-Shaw/sub2api) 等
-- **特色账号平台与兼容实现**：[AIHubMix](https://aihubmix.com/?aff=W3DN)、[AnyRouter](https://anyrouter.top)、Neo-API、Super-API、v-api 等
-- **自建管理后台**：[new-api](https://github.com/QuantumNous/new-api)、[Veloera](https://github.com/Veloera/Veloera)、[done-hub](https://github.com/deanxv/done-hub)、[Octopus](https://github.com/bestruirui/octopus)、[AxonHub](https://github.com/looplj/axonhub)、[Claude Code Hub](https://github.com/ding113/claude-code-hub) 等，用于渠道管理、迁移和部分模型同步
+- **账号站点兼容架构**：[new-api](https://github.com/QuantumNous/new-api)、[one-api](https://github.com/songquanpeng/one-api)、[Sub2API](https://github.com/Wei-Shaw/sub2api)、[one-hub](https://github.com/MartialBE/one-hub)、[Veloera](https://github.com/Veloera/Veloera)、[done-hub](https://github.com/deanxv/done-hub) 等
+- **特色账号平台与兼容实现**：[AnyRouter](https://anyrouter.top)、[AIHubMix](https://aihubmix.com/?aff=W3DN)、Super-API、v-api、Neo-API 等
+- **自建管理后台**：[new-api](https://github.com/QuantumNous/new-api)、[AxonHub](https://github.com/looplj/axonhub)、[Claude Code Hub](https://github.com/ding113/claude-code-hub)、[Octopus](https://github.com/bestruirui/octopus)、[Veloera](https://github.com/Veloera/Veloera)、[done-hub](https://github.com/deanxv/done-hub) 等，用于渠道管理、迁移和部分模型同步
 - **查看完整列表**：👉 [支持的站点](https://all-api-hub.qixing1217.top/supported-sites.html)
 
 <a id="ui-preview"></a>

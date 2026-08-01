@@ -121,6 +121,7 @@ export function RuntimeKeyDetails({
     claudeCodeRouterApiKey,
     cliProxyBaseUrl,
     cliProxyManagementKey,
+    markGatewayGuidanceOnboardingCompleted,
   } = useUserPreferencesContext()
   const { openWithAccount, openWithCredentials } = useChannelDialog()
 
@@ -219,6 +220,9 @@ export function RuntimeKeyDetails({
           },
           (channelResult) => {
             showResultToast(channelResult)
+            if (channelResult?.success) {
+              void markGatewayGuidanceOnboardingCompleted()
+            }
           },
           {
             managedSiteStatus: undefined,
@@ -229,6 +233,9 @@ export function RuntimeKeyDetails({
           accountRuntimeKeyToLegacyAccountToken(runtimeKey),
           (channelResult) => {
             showResultToast(channelResult)
+            if (channelResult?.success) {
+              void markGatewayGuidanceOnboardingCompleted()
+            }
           },
         )
 

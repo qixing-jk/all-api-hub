@@ -14,7 +14,7 @@ import {
 } from "~/services/managedSites/tokenChannelStatus"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   mockCCSwitchDialog,
@@ -44,6 +44,7 @@ const {
     claudeCodeRouterBaseUrl: "https://router.example.invalid",
     cliProxyBaseUrl: "https://cliproxy.example.invalid",
     cliProxyManagementKey: "cliproxy-management-key",
+    markGatewayGuidanceOnboardingCompleted: vi.fn(),
     managedSiteType: "new-api",
   },
   mockVerifyApiDialog: vi.fn(),
@@ -663,6 +664,23 @@ describe("ServiceCredentialCard", () => {
         managedSiteStatus,
       },
     )
+
+    mockUserPreferences.markGatewayGuidanceOnboardingCompleted.mockRejectedValueOnce(
+      new Error("preference storage unavailable"),
+    )
+    const onImportCompleted = mockOpenWithCredentials.mock.calls.at(-1)?.[1] as
+      | ((result: { success: boolean }) => void)
+      | undefined
+    expect(onImportCompleted).toEqual(expect.any(Function))
+    act(() => {
+      onImportCompleted?.({ success: true })
+    })
+
+    await waitFor(() => {
+      expect(
+        mockUserPreferences.markGatewayGuidanceOnboardingCompleted,
+      ).toHaveBeenCalledTimes(1)
+    })
   })
 
   it("keeps configuration-dependent exports closed when required settings are missing", async () => {

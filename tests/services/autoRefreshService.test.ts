@@ -25,7 +25,12 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
 
 const preferenceWriteSuccess = (
   preferences: Partial<UserPreferences> = {},
@@ -38,9 +43,11 @@ const preferenceWriteSuccess = (
   },
 })
 
-const { mockOnAutoRefreshMessage } = vi.hoisted(() => ({
-  mockOnAutoRefreshMessage: vi.fn(() => vi.fn()),
-}))
+const { mockExecuteAuthorizedTempContextTask, mockOnAutoRefreshMessage } =
+  vi.hoisted(() => ({
+    mockExecuteAuthorizedTempContextTask: vi.fn(),
+    mockOnAutoRefreshMessage: vi.fn(() => vi.fn()),
+  }))
 
 // Mock dependencies.
 //
@@ -66,6 +73,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
     ...actual,
     userPreferences: {
       getPreferences: vi.fn(),
+      getPreferencesStrict: vi.fn(),
       savePreferences: vi.fn(),
     },
   }
@@ -75,6 +83,10 @@ vi.mock("~/services/history/usageHistory/scheduler", () => ({
   usageHistoryScheduler: {
     runAfterRefreshSync: vi.fn(),
   },
+}))
+
+vi.mock("~/entrypoints/background/tempWindowPool", () => ({
+  executeAuthorizedTempContextTask: mockExecuteAuthorizedTempContextTask,
 }))
 
 vi.mock("~/services/accounts/autoRefreshMessaging", async (importOriginal) => {
@@ -96,6 +108,10 @@ vi.stubGlobal("browser", {
     sendMessage: mockSendMessage,
   },
 })
+
+const refreshAllExecution = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+)
 
 afterAll(() => {
   vi.unstubAllGlobals()
@@ -244,7 +260,12 @@ describe("AutoRefreshService", () => {
       expect(autoRefreshService.getStatus().isRunning).toBe(true)
       await vi.advanceTimersByTimeAsync(interval * 1000)
 
-      expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(false)
+      expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(false, {
+        protectionBypassExecution: automaticExecution(
+          "account_refresh",
+          "scheduled",
+        ),
+      })
       expect(usageHistoryScheduler.runAfterRefreshSync).toHaveBeenCalledTimes(1)
       expect(notifyFrontendSpy).toHaveBeenCalledWith("refresh_completed", {
         success: 2,
@@ -355,9 +376,11 @@ describe("AutoRefreshService", () => {
 
       vi.mocked(accountStorage.refreshAllAccounts).mockResolvedValue(mockResult)
 
-      const result = await autoRefreshService.refreshNow()
+      const result = await autoRefreshService.refreshNow(refreshAllExecution)
 
-      expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(true)
+      expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(true, {
+        protectionBypassExecution: refreshAllExecution,
+      })
       expect(result).toEqual(mockResult)
     })
 
@@ -366,7 +389,9 @@ describe("AutoRefreshService", () => {
 
       vi.mocked(accountStorage.refreshAllAccounts).mockRejectedValue(error)
 
-      await expect(autoRefreshService.refreshNow()).rejects.toThrow(error)
+      await expect(
+        autoRefreshService.refreshNow(refreshAllExecution),
+      ).rejects.toThrow(error)
     })
   })
 
@@ -577,9 +602,13 @@ describe("auto-refresh typed message resolvers", () => {
       }
       vi.mocked(accountStorage.refreshAllAccounts).mockResolvedValue(mockResult)
 
-      const response = await resolveAutoRefreshRefreshNowMessage()
+      const response = await resolveAutoRefreshRefreshNowMessage({
+        protectionBypassExecution: refreshAllExecution,
+      })
 
-      expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(true)
+      expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(true, {
+        protectionBypassExecution: refreshAllExecution,
+      })
       expect(response).toEqual({
         success: true,
         data: mockResult,
@@ -590,12 +619,71 @@ describe("auto-refresh typed message resolvers", () => {
       const error = new Error("Refresh failed")
       vi.mocked(accountStorage.refreshAllAccounts).mockRejectedValue(error)
 
-      const response = await resolveAutoRefreshRefreshNowMessage()
+      const response = await resolveAutoRefreshRefreshNowMessage({
+        protectionBypassExecution: refreshAllExecution,
+      })
 
       expect(response).toEqual({
         success: false,
         error: "Error: Refresh failed",
       })
+    })
+
+    it("should reject missing execution at the runtime boundary", async () => {
+      const response = await resolveAutoRefreshRefreshNowMessage(undefined)
+
+      expect(response).toEqual({
+        success: false,
+        error: "Invalid protection bypass execution",
+      })
+      expect(accountStorage.refreshAllAccounts).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      null,
+      {
+        version: 1,
+        kind: "user_command",
+        command: "refresh_all_accounts",
+        surface: "options",
+      },
+      {
+        version: 2,
+        kind: "user_command",
+        command: "unknown",
+        surface: "options",
+      },
+      {
+        version: 2,
+        kind: "automatic",
+        feature: "unknown",
+        trigger: "scheduled",
+        surface: "background",
+      },
+    ])("should reject malformed execution metadata: %j", async (execution) => {
+      const response = await resolveAutoRefreshRefreshNowMessage({
+        protectionBypassExecution: execution as any,
+      })
+
+      expect(response).toEqual({
+        success: false,
+        error: "Invalid protection bypass execution",
+      })
+      expect(accountStorage.refreshAllAccounts).not.toHaveBeenCalled()
+    })
+
+    it("should reject a well-formed command from another workflow", async () => {
+      const response = await resolveAutoRefreshRefreshNowMessage({
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
+      })
+
+      expect(response).toEqual({
+        success: false,
+        error: "Invalid protection bypass execution",
+      })
+      expect(accountStorage.refreshAllAccounts).not.toHaveBeenCalled()
     })
   })
 
@@ -660,7 +748,7 @@ describe("auto-refresh typed message resolvers", () => {
     })
   })
 
-  it("registers typed message listeners once", () => {
+  it("registers typed listeners once and forwards validated plain UI intent", async () => {
     setupAutoRefreshMessagingListeners()
     setupAutoRefreshMessagingListeners()
 
@@ -690,5 +778,104 @@ describe("auto-refresh typed message resolvers", () => {
       AutoRefreshMessageTypes.GetStatus,
       expect.any(Function),
     )
+
+    const registeredHandlers = mockOnAutoRefreshMessage.mock
+      .calls as unknown as Array<
+      [string, (message: unknown) => Promise<unknown>]
+    >
+    const refreshHandler = registeredHandlers.find(
+      ([type]) => type === AutoRefreshMessageTypes.RefreshNow,
+    )?.[1]
+    expect(refreshHandler).toBeTypeOf("function")
+    vi.mocked(userPreferences.getPreferencesStrict).mockResolvedValue(
+      DEFAULT_PREFERENCES,
+    )
+    const sender = { url: "chrome-extension://test/options.html" } as any
+    const { protectionBypassCoordinator } = await import(
+      "~/entrypoints/background/protectionBypassCoordinator"
+    )
+    const execution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+    )
+    const authorizeDecisions: unknown[] = []
+    mockExecuteAuthorizedTempContextTask.mockImplementation(
+      async (_task, _source, authorizeAtAcquire, sendResponse) => {
+        const decision = await authorizeAtAcquire()
+        authorizeDecisions.push(decision)
+        sendResponse({ success: decision.kind === "allowed" })
+      },
+    )
+    vi.mocked(accountStorage.refreshAllAccounts).mockImplementation(
+      async (_force, options) => {
+        const response = await protectionBypassCoordinator.execute({
+          task: {
+            kind: "api_fallback_fetch",
+            params: {
+              originUrl: "https://example.invalid",
+              fetchUrl: "https://example.invalid/api/account",
+              requestId: "auto-refresh-continuation",
+            },
+          },
+          execution: options?.protectionBypassExecution,
+        } as any)
+        if (!(response as any)?.success)
+          throw new Error("Coordinator denied task")
+        return {
+          success: 1,
+          failed: 0,
+          refreshedCount: 1,
+          latestSyncTime: Date.now(),
+        }
+      },
+    )
+
+    await expect(
+      refreshHandler!({
+        data: { protectionBypassExecution: execution },
+        sender,
+      } as any),
+    ).resolves.toMatchObject({ success: true })
+    expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(true, {
+      protectionBypassExecution: execution,
+      tempWindowRequestSource: "options",
+    })
+    expect(authorizeDecisions).toEqual([
+      expect.objectContaining({
+        kind: "allowed",
+        feature: "account_refresh",
+        surface: "options",
+      }),
+    ])
+    await expect(
+      refreshHandler!({
+        data: {
+          protectionBypassExecution: {
+            version: 2,
+            kind: "user_command",
+            command: "unknown",
+            surface: "options",
+          },
+        },
+      } as any),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid protection bypass execution",
+    })
+    await expect(
+      refreshHandler!({
+        data: {
+          protectionBypassExecution: {
+            version: 2,
+            kind: "user_command",
+            command: "manual_checkin",
+            surface: "options",
+          },
+        },
+      } as any),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid protection bypass execution",
+    })
+    expect(accountStorage.refreshAllAccounts).toHaveBeenCalledTimes(1)
   })
 })

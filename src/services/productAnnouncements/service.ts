@@ -57,12 +57,16 @@ interface GetCurrentProductAnnouncementStateOptions {
   now?: number
 }
 
+type ValidProductAnnouncementFeed = RawProductAnnouncementFeed & {
+  announcements: unknown[]
+}
+
 /**
  * Checks the feed-level shape before trusting remote or persisted catalog data.
  */
 function isValidProductAnnouncementFeed(
   feed: RawProductAnnouncementFeed,
-): boolean {
+): feed is ValidProductAnnouncementFeed {
   return (
     isPlainObject(feed) &&
     (feed.defaultLocale == null || typeof feed.defaultLocale === "string") &&
@@ -71,29 +75,53 @@ function isValidProductAnnouncementFeed(
 }
 
 /**
- * Adds bundled development examples to the runtime view without persisting them.
+ * Reads an announcement id for development-only feed replacement.
+ */
+function getRawAnnouncementId(announcement: unknown): string | null {
+  if (!isPlainObject(announcement)) return null
+
+  const id = announcement.id
+  if (typeof id !== "string") return null
+
+  return id.trim() || null
+}
+
+/**
+ * Adds local bundled notices and development examples without persisting them.
  */
 function getRuntimeProductAnnouncementFeed(
-  feed: RawProductAnnouncementFeed,
-): RawProductAnnouncementFeed {
+  feed: ValidProductAnnouncementFeed,
+): ValidProductAnnouncementFeed {
   if (!isDevelopmentMode()) {
     return feed
   }
 
+  const bundledAnnouncements = bundledFeed.announcements
   const devAnnouncements = Array.isArray(
     bundledFeed._examples?.devAnnouncements,
   )
     ? bundledFeed._examples.devAnnouncements
     : []
-  if (devAnnouncements.length === 0) {
+  const localAnnouncements = [...bundledAnnouncements, ...devAnnouncements]
+  if (localAnnouncements.length === 0) {
     return feed
   }
+
+  const localAnnouncementIds = new Set(
+    localAnnouncements
+      .map(getRawAnnouncementId)
+      .filter((id): id is string => id !== null),
+  )
+  const feedAnnouncements = feed.announcements
 
   return {
     ...feed,
     announcements: [
-      ...(Array.isArray(feed.announcements) ? feed.announcements : []),
-      ...devAnnouncements,
+      ...feedAnnouncements.filter((announcement) => {
+        const id = getRawAnnouncementId(announcement)
+        return id === null || !localAnnouncementIds.has(id)
+      }),
+      ...localAnnouncements,
     ],
   }
 }

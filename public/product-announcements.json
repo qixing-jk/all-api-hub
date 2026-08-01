@@ -1,7 +1,67 @@
 {
   "schemaVersion": 1,
   "defaultLocale": "zh-CN",
-  "announcements": [],
+  "announcements": [
+    {
+      "id": "new-api-auto-detection-before-3-54",
+      "revision": 1,
+      "severity": "warning",
+      "priority": 80,
+      "affectedVersions": "<3.54.0",
+      "startsAt": "2026-07-30T00:00:00.000Z",
+      "expiresAt": "2099-01-01T00:00:00.000Z",
+      "content": {
+        "zh-CN": {
+          "title": "部分新版 New API 站点暂时无法自动识别",
+          "message": "如果你要添加的 New API 类型站点已升级到最新版本，当前版本可能无法自动识别账号。你仍可选择“手动添加”并填写账号信息完成添加；自动识别将在即将发布的 3.54 版本中适配。",
+          "cta": {
+            "label": "查看手动添加指南",
+            "url": "https://all-api-hub.qixing1217.top/account-management.html#manual-addition"
+          }
+        },
+        "zh-TW": {
+          "title": "部分新版 New API 站點暫時無法自動識別",
+          "message": "如果你要新增的 New API 類型站點已升級至最新版本，目前版本可能無法自動識別帳號。你仍可選擇「手動新增」並填寫帳號資料完成新增；自動識別將在即將發布的 3.54 版本中支援。",
+          "cta": {
+            "label": "查看手動新增指南",
+            "url": "https://all-api-hub.qixing1217.top/account-management.html#manual-addition"
+          }
+        },
+        "en": {
+          "title": "Some updated New API sites cannot be auto-detected yet",
+          "message": "If the New API site you want to add has been updated to the latest version, this version may not detect the account automatically. You can still select “Manual Add” and fill in the account details; auto-detection support is coming in version 3.54.",
+          "cta": {
+            "label": "View the manual addition guide",
+            "url": "https://all-api-hub.qixing1217.top/en/account-management.html#manual-addition"
+          }
+        },
+        "ja": {
+          "title": "一部の新しい New API サイトはまだ自動認識できません",
+          "message": "追加する New API 系サイトが最新バージョンに更新されている場合、現在のバージョンではアカウントを自動認識できないことがあります。「手動追加」を選び、アカウント情報を入力すれば追加できます。自動認識は近日公開予定のバージョン 3.54 で対応します。",
+          "cta": {
+            "label": "手動追加ガイドを見る",
+            "url": "https://all-api-hub.qixing1217.top/ja/account-management.html#manual-addition"
+          }
+        },
+        "vi": {
+          "title": "Một số trang New API mới chưa thể được tự động nhận diện",
+          "message": "Nếu trang thuộc loại New API bạn muốn thêm đã được nâng cấp lên phiên bản mới nhất, phiên bản hiện tại có thể không tự động nhận diện được tài khoản. Bạn vẫn có thể chọn “Thêm thủ công” và điền thông tin tài khoản; tính năng tự động nhận diện sẽ được hỗ trợ trong phiên bản 3.54 sắp phát hành.",
+          "cta": {
+            "label": "Xem hướng dẫn thêm thủ công",
+            "url": "https://all-api-hub.qixing1217.top/en/account-management.html#manual-addition"
+          }
+        },
+        "es-419": {
+          "title": "Algunos sitios New API recientes aún no se detectan automáticamente",
+          "message": "Si el sitio de tipo New API que quieres agregar se actualizó a la versión más reciente, es posible que esta versión no detecte la cuenta automáticamente. Aún puedes seleccionar “Agregado manual” y completar los datos de la cuenta; la detección automática será compatible en la próxima versión 3.54.",
+          "cta": {
+            "label": "Ver la guía para agregar manualmente",
+            "url": "https://all-api-hub.qixing1217.top/en/account-management.html#manual-addition"
+          }
+        }
+      }
+    }
+  ],
   "_examples": {
     "devAnnouncements": [
       {

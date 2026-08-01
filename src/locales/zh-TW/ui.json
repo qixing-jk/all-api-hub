@@ -37,6 +37,7 @@
       },
       "folderCount_one": "{{count}} 個資料夾",
       "folderCount_other": "{{count}} 個資料夾",
+      "importFailed": "匯入未能完成，請再試一次。",
       "importing": "正在匯入 {{completed}} / {{total}} 個已選站點...",
       "includeExisting": "包含已有已儲存帳號的站點",
       "initialSteps": {
@@ -382,12 +383,12 @@
         "notNow": "稍後再說",
         "openSettings": "開啟設定"
       },
-      "descriptionDisabledTempWindowOnly": "{{accountName}} 的網路請求需要彈出臨時視窗來透過防護，確保請求成功完成，請在 設定 > 資料重新整理 中啟用",
-      "descriptionDisabledWithCookieInterceptor": "{{accountName}} 在 Firefox 中需要啟用過盾流程。擴充套件會彈出臨時視窗來獲取 Cookie，並由 Cookie 攔截器在傳送請求時自動附加這些 Cookie，請在 設定 > 資料重新整理 中啟用",
-      "descriptionPermissionTempWindowOnly": "{{accountName}} 需要彈出臨時視窗的權限才能完成請求，請在 設定 > 權限 中授予",
-      "descriptionPermissionWithCookieInterceptor": "{{accountName}} 在 Firefox 中需要 Cookie 攔截權限。擴充套件需要彈出臨時視窗獲取 Cookie，並在傳送請求時自動附加認證資訊，請在 設定 > 權限 中授予",
-      "titleTempWindowOnly": "啟用臨時視窗模式以完成網路請求",
-      "titleWithCookieInterceptor": "啟用過盾流程以完成網路請求"
+      "descriptionDisabledTempWindowOnly": "{{accountName}} 的自動重新整理遇到網站驗證，但目前不允許自動工作開啟臨時頁面。請前往「設定 > 資料重新整理」開啟。",
+      "descriptionDisabledWithCookieInterceptor": "{{accountName}} 的自動重新整理遇到網站驗證，但目前不允許自動工作開啟臨時頁面。請前往「設定 > 資料重新整理」開啟。",
+      "descriptionPermissionTempWindowOnly": "{{accountName}} 的自動重新整理需要開啟臨時頁面完成網站驗證。請前往「設定 > 權限」授予所需權限。",
+      "descriptionPermissionWithCookieInterceptor": "{{accountName}} 的自動重新整理需要 Cookies、Web Request 和 Web Request Blocking 權限才能完成網站驗證。請前往「設定 > 權限」授予。",
+      "titleTempWindowOnly": "自動重新整理需要網站驗證",
+      "titleWithCookieInterceptor": "自動重新整理需要網站驗證"
     },
     "updateLog": {
       "autoOpenSetting": "更新日誌自動開啟",
@@ -473,6 +474,7 @@
     "sidebarCollapsedHint": "側邊欄已摺疊，僅顯示圖示",
     "siteAnnouncements": "網站公告",
     "toggleMenu": "切換選單",
+    "unifiedApiGuidancePreview": "統一 API 引導預覽 (Dev)",
     "usageAnalytics": "用量分析"
   },
   "optionsSearch": {

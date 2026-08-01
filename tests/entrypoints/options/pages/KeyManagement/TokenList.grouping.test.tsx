@@ -12,8 +12,19 @@ import {
 } from "~~/tests/utils/keyManagementFactories"
 
 vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
-  TokenListItem: ({ token }: { token: { name: string } }) => (
-    <div>{token.name}</div>
+  TokenListItem: ({
+    token,
+    guidedManagedSiteImportRequest,
+  }: {
+    token: { name: string }
+    guidedManagedSiteImportRequest?: string
+  }) => (
+    <div
+      data-testid={`token-row-${token.name}`}
+      data-guided-import-request={guidedManagedSiteImportRequest}
+    >
+      {token.name}
+    </div>
   ),
 }))
 
@@ -195,6 +206,55 @@ describe("TokenList grouped all-accounts UX", () => {
     ).toBeInTheDocument()
     expect(await screen.findByText("Token A1")).toBeInTheDocument()
     expect(await screen.findByText("Token B1")).toBeInTheDocument()
+  })
+
+  it("expands the guided account group and forwards the import request", async () => {
+    const accountA = createAccount({ id: "acc-a", name: "Account A" })
+    const accountB = createAccount({ id: "acc-b", name: "Account B" })
+
+    const tokenA1 = createToken({
+      id: 1,
+      name: "Token A1",
+      key: "sk-a1",
+      accountId: accountA.id,
+      accountName: accountA.name,
+    })
+    const tokenB1 = createToken({
+      id: 1,
+      name: "Token B1",
+      key: "sk-b1",
+      accountId: accountB.id,
+      accountName: accountB.name,
+    })
+
+    render(
+      <TokenList
+        isLoading={false}
+        tokens={[tokenA1, tokenB1] as any}
+        filteredTokens={[tokenA1, tokenB1] as any}
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={getVisibleTokenKey as any}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={vi.fn()}
+        selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
+        displayData={[accountA, accountB] as any}
+        guidedManagedSiteImport={{
+          accountId: accountB.id,
+          request: "managedSite:acc-b:",
+        }}
+      />,
+    )
+
+    const guidedRow = await screen.findByTestId("token-row-Token B1")
+    expect(guidedRow).toHaveAttribute(
+      "data-guided-import-request",
+      "managedSite:acc-b:",
+    )
+    expect(screen.queryByTestId("token-row-Token A1")).not.toBeInTheDocument()
   })
 
   it("includes loaded service credentials in all-account groups", async () => {

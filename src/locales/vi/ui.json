@@ -37,6 +37,7 @@
       },
       "folderCount_one": "{{count}} thư mục",
       "folderCount_other": "{{count}} thư mục",
+      "importFailed": "Không thể hoàn tất quá trình nhập. Hãy thử lại.",
       "importing": "Đang nhập {{completed}} / {{total}} trang đã chọn...",
       "includeExisting": "Bao gồm các trang đã có tài khoản đã lưu",
       "initialSteps": {
@@ -382,12 +383,12 @@
         "notNow": "Để sau",
         "openSettings": "Mở cài đặt"
       },
-      "descriptionDisabledTempWindowOnly": "Các yêu cầu mạng của {{accountName}} cần bật cửa sổ tạm thời để vượt qua bảo vệ, nhằm đảm bảo yêu cầu hoàn thành thành công. Vui lòng kích hoạt trong Cài đặt > Làm mới dữ liệu",
-      "descriptionDisabledWithCookieInterceptor": "{{accountName}} cần bật quy trình vượt khiên trong Firefox. Tiện ích sẽ bật cửa sổ tạm thời để lấy Cookie và tự động đính kèm các Cookie này qua bộ chặn Cookie khi gửi yêu cầu, vui lòng kích hoạt trong Cài đặt > Làm mới dữ liệu",
-      "descriptionPermissionTempWindowOnly": "{{accountName}} cần quyền mở cửa sổ tạm thời để hoàn thành yêu cầu, vui lòng cấp quyền trong Cài đặt > Quyền",
-      "descriptionPermissionWithCookieInterceptor": "{{accountName}} cần quyền chặn Cookie trong Firefox. Tiện ích cần bật cửa sổ tạm thời để lấy Cookie và tự động đính kèm thông tin xác thực khi gửi yêu cầu, vui lòng cấp quyền trong Cài đặt > Quyền",
-      "titleTempWindowOnly": "Bật chế độ cửa sổ tạm thời để hoàn thành yêu cầu mạng",
-      "titleWithCookieInterceptor": "Bật quy trình vượt khiên để hoàn thành yêu cầu mạng"
+      "descriptionDisabledTempWindowOnly": "Tính năng làm mới tự động cho {{accountName}} gặp bước xác minh trang web, nhưng tác vụ tự động hiện không được phép mở trang tạm. Hãy bật tùy chọn này trong Cài đặt > Làm mới dữ liệu.",
+      "descriptionDisabledWithCookieInterceptor": "Tính năng làm mới tự động cho {{accountName}} gặp bước xác minh trang web, nhưng tác vụ tự động hiện không được phép mở trang tạm. Hãy bật tùy chọn này trong Cài đặt > Làm mới dữ liệu.",
+      "descriptionPermissionTempWindowOnly": "Tính năng làm mới tự động cho {{accountName}} cần mở trang tạm để xác minh trang web. Hãy cấp quyền cần thiết trong Cài đặt > Quyền.",
+      "descriptionPermissionWithCookieInterceptor": "Tính năng làm mới tự động cho {{accountName}} cần các quyền Cookies, Web Request và Web Request Blocking để xác minh trang web. Hãy cấp trong Cài đặt > Quyền.",
+      "titleTempWindowOnly": "Làm mới tự động cần xác minh trang web",
+      "titleWithCookieInterceptor": "Làm mới tự động cần xác minh trang web"
     },
     "updateLog": {
       "autoOpenSetting": "Tự động mở nhật ký cập nhật",
@@ -473,6 +474,7 @@
     "sidebarCollapsedHint": "Thanh bên đã được thu gọn, chỉ hiển thị biểu tượng",
     "siteAnnouncements": "Thông báo trang web",
     "toggleMenu": "Chuyển đổi menu",
+    "unifiedApiGuidancePreview": "Xem trước hướng dẫn API hợp nhất (Dev)",
     "usageAnalytics": "Phân tích sử dụng"
   },
   "optionsSearch": {

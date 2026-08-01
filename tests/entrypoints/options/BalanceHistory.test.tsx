@@ -24,6 +24,10 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import {
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
@@ -88,6 +92,21 @@ vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
 vi.mock("~/services/history/dailyBalanceHistory/messaging", () => ({
   sendBalanceHistoryMessage: vi.fn(),
 }))
+
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/protectionBypass/client")>()
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: vi.fn(
+      async (
+        command: string,
+        surface: string,
+        work: (execution: unknown) => Promise<unknown>,
+      ) => work({ version: 2, kind: "user_command", command, surface }),
+    ),
+  }
+})
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: startProductAnalyticsActionMock,
@@ -678,7 +697,15 @@ describe("BalanceHistory options page", () => {
       await waitFor(() => {
         expect(vi.mocked(sendBalanceHistoryMessage)).toHaveBeenCalledWith(
           BalanceHistoryMessageTypes.RefreshNow,
-          { accountIds: ["a1"] },
+          {
+            accountIds: ["a1"],
+            protectionBypassExecution: expect.objectContaining({
+              version: 2,
+              kind: "user_command",
+              command: PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+              surface: PROTECTION_BYPASS_SURFACES.Options,
+            }),
+          },
         )
       })
 
@@ -861,7 +888,14 @@ describe("BalanceHistory options page", () => {
       await waitFor(() => {
         expect(vi.mocked(sendBalanceHistoryMessage)).toHaveBeenCalledWith(
           BalanceHistoryMessageTypes.RefreshNow,
-          undefined,
+          {
+            protectionBypassExecution: expect.objectContaining({
+              version: 2,
+              kind: "user_command",
+              command: PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+              surface: PROTECTION_BYPASS_SURFACES.Options,
+            }),
+          },
         )
       })
 

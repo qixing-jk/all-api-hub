@@ -10,6 +10,7 @@ import { useAccountDialog } from "~/features/AccountManagement/components/Accoun
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -53,6 +54,20 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
     })),
   }
 })
+
+vi.mock("~/services/protectionBypass/client", () => ({
+  withProtectionBypassUserCommand: async (
+    command: unknown,
+    surface: unknown,
+    work: (execution: unknown) => Promise<unknown>,
+  ) =>
+    work({
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
+      kind: "user_command",
+      command,
+      surface,
+    }),
+}))
 
 vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
   const actual =

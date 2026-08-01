@@ -55,7 +55,7 @@
         "disabled": "想自动领取签到奖励时，先开启自动签到。之后这里会显示下次计划和执行结果。"
       },
       "managedSiteModelSync": {
-        "disabled": "需要自动同步自建站点模型时，先开启模型同步。之后这里会显示同步间隔和范围。"
+        "disabled": "需要自动同步自建 AI 网关模型时，先开启模型同步。之后这里会显示同步间隔和范围。"
       },
       "siteAnnouncements": {
         "disabled": "想及时看到站点公告时，先开启公告抓取。之后这里会显示最近检查时间和公告数量。"
@@ -145,12 +145,12 @@
       }
     },
     "managedSite": {
-      "description": "自建站点的渠道管理与模型同步能力。",
-      "label": "自建站点",
+      "description": "自建 AI 网关的渠道管理与模型同步能力。",
+      "label": "自建 AI 网关",
       "state": {
-        "disabled": "还没有连接自建站点，需要时可以先完成站点配置。",
-        "needs_setup": "先连接自建站点，才能在这里管理渠道或同步模型。",
-        "not_applicable": "当前站点类型暂不支持自建站点管理。"
+        "disabled": "还没有配置自建 AI 网关，需要时可以先完成网关配置。",
+        "needs_setup": "先配置自建 AI 网关，才能在这里管理渠道或同步模型。",
+        "not_applicable": "当前站点类型暂不支持自建 AI 网关管理。"
       }
     },
     "subItems": {
@@ -178,7 +178,8 @@
     "automationOverview": "自动化执行",
     "configurationOverview": "配置概览",
     "needsAttention": "需要处理",
-    "recentUsage": "近期使用"
+    "recentUsage": "近期使用",
+    "unifiedApiGuidance": "统一 API 设置"
   },
   "severity": {
     "error": "错误",
@@ -187,6 +188,7 @@
   },
   "states": {
     "allClear": "当前没有需要处理的事项。",
+    "loadDetailUnavailable": "部分总览信息暂时不可用，请重试加载。",
     "loadedWithError": "部分信息加载失败，已显示可用数据。",
     "loading": "正在加载总览..."
   },
@@ -213,6 +215,69 @@
     "pendingRefresh": "待刷新",
     "pendingRefreshHelp": "今日统计状态尚未确认。请前往账号列表刷新相关账号。",
     "unavailable": "不可用"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "添加账号",
+      "addApiCredential": "添加 API 凭据",
+      "addGatewayChannel": "添加第一个网关渠道",
+      "configureManagedSite": "配置自建 AI 网关",
+      "manageChannels": "管理渠道",
+      "openApiCredentialProfiles": "打开凭据库",
+      "openModelSync": "打开模型同步"
+    },
+    "boundaryNote": "All API Hub 负责管理和导入配置，不代理模型请求；外部客户端实际调用的是你的自建 AI 网关。",
+    "description": {
+      "has_gateway_channels": "已完成过网关渠道创建或导入。前往渠道管理确认当前状态，并获取外部客户端需要的 API 地址和调用密钥。",
+      "needs_importable_source": "已有账号，但当前账号类型无法读取可导入的 Key。请先保存 API Key，或添加支持 Key 获取的账号，再导入自建 AI 网关。",
+      "needs_managed_site": "已有账号 Key 或 API Key。完成自建 AI 网关配置后，即可将它们导入为网关渠道，让多个 Key 通过同一个 AI API 使用。",
+      "needs_sources": "先添加账号或保存 API Key。之后可以直接导出到客户端，也可以一键导入自建 AI 网关，汇总成一个统一 AI API。",
+      "ready_accounts": "自建 AI 网关基础配置已完成。继续导入账号 Key 或 API Key；导入流程会验证连接并创建网关渠道。",
+      "ready_profiles": "自建 AI 网关基础配置已完成。前往凭据库验证已保存的 API Key，并将它导入为网关渠道。"
+    },
+    "directToolExportNote": "如果暂时不需要自建网关，也可以直接把单个凭据导出到客户端工具。",
+    "headline": "将多个账号 Key 或 API Key 汇总成一个统一 AI API",
+    "modelSyncOptional": "模型同步可自动更新网关模型列表，减少手动维护；渠道创建后可按需开启。",
+    "optionalLabel": "可选维护",
+    "sources": {
+      "account": "账号来源",
+      "accountUnavailable": "账号暂不可导入",
+      "both": "账号 + 凭据",
+      "none": "还没有来源",
+      "profile": "凭据来源"
+    },
+    "stepper": {
+      "label": "统一 API 设置进度",
+      "states": {
+        "completed": "已完成",
+        "current": "当前步骤",
+        "upcoming": "稍后"
+      },
+      "steps": {
+        "clientAccess": {
+          "description": "获取网关 API 地址和客户端调用密钥。",
+          "title": "连接客户端"
+        },
+        "gatewayChannel": {
+          "description": "导入至少一个账号 Key 或已保存的 API 凭据。",
+          "title": "创建网关渠道"
+        },
+        "gatewaySettings": {
+          "description": "填写自建 AI 网关的管理员连接信息。",
+          "title": "保存网关设置"
+        },
+        "source": {
+          "description": "添加可读取 Key 的账号或保存 API 凭据。",
+          "title": "准备数据源"
+        }
+      }
+    },
+    "unavailable": {
+      "badge": "状态未确认",
+      "description": "账号、凭据或网关设置未能加载，当前不会据此判断为“没有来源”。",
+      "retry": "重新检查设置状态",
+      "title": "暂时无法确认设置进度"
+    }
   },
   "usage": {
     "activityMix": "近期趋势",

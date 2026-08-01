@@ -7,9 +7,12 @@ import {
   type AutoCheckinProvider,
 } from "~/services/checkin/autoCheckin/providers"
 import { sub2ApiProvider } from "~/services/checkin/autoCheckin/providers/sub2api"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, type SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const { mockIsSub2ApiCheckinEnabled } = vi.hoisted(() => ({
   mockIsSub2ApiCheckinEnabled: vi.fn(),
@@ -62,6 +65,20 @@ const envelope = (data: unknown, message = "") => ({
   data,
 })
 
+const DEFAULT_PROVIDER_CONTEXT = {
+  tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+  protectionBypassExecution: userCommandExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+  ),
+} as const
+
+const checkInForTest = (
+  account: Parameters<typeof sub2ApiProvider.checkIn>[0],
+  context: Parameters<
+    typeof sub2ApiProvider.checkIn
+  >[1] = DEFAULT_PROVIDER_CONTEXT,
+) => sub2ApiProvider.checkIn(account, context)
+
 describe("sub2ApiProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -104,7 +121,7 @@ describe("sub2ApiProvider", () => {
       }),
     )
 
-    const result = await sub2ApiProvider.checkIn(createAccount())
+    const result = await checkInForTest(createAccount())
 
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.SKIPPED)
     expect(result.messageKey).toBe(
@@ -127,7 +144,7 @@ describe("sub2ApiProvider", () => {
       }),
     )
 
-    const result = await sub2ApiProvider.checkIn(createAccount())
+    const result = await checkInForTest(createAccount())
 
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
     expect(result.rawMessage).toBe("签到成功，获得 0.5")
@@ -151,7 +168,7 @@ describe("sub2ApiProvider", () => {
       }),
     )
 
-    const result = await sub2ApiProvider.checkIn(createAccount())
+    const result = await checkInForTest(createAccount())
 
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
     expect(fallbackCheckin).toHaveBeenCalledTimes(1)
@@ -169,7 +186,7 @@ describe("sub2ApiProvider", () => {
       ),
     )
 
-    const result = await sub2ApiProvider.checkIn(createAccount())
+    const result = await checkInForTest(createAccount())
 
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.FAILED)
     expect(result.messageKey).toBe(
@@ -189,7 +206,7 @@ describe("sub2ApiProvider", () => {
       }),
     )
 
-    const result = await sub2ApiProvider.checkIn(createAccount())
+    const result = await checkInForTest(createAccount())
 
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.ALREADY_CHECKED)
     expect(checkinHandler).not.toHaveBeenCalled()
@@ -206,7 +223,7 @@ describe("sub2ApiProvider", () => {
       ),
     )
 
-    const result = await sub2ApiProvider.checkIn(createAccount())
+    const result = await checkInForTest(createAccount())
 
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.ALREADY_CHECKED)
   })
@@ -219,7 +236,7 @@ describe("sub2ApiProvider", () => {
       ),
     )
 
-    const result = await sub2ApiProvider.checkIn(createAccount())
+    const result = await checkInForTest(createAccount())
 
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.FAILED)
   })
@@ -264,7 +281,7 @@ describe("sub2ApiProvider", () => {
       }),
     )
 
-    const result = await sub2ApiProvider.checkIn(expiringAccount)
+    const result = await checkInForTest(expiringAccount)
 
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
     // The check-in itself must use the rotated access token.

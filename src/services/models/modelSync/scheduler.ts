@@ -27,6 +27,16 @@ import {
   type ProductAnalyticsManagedSiteType,
 } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
+import {
+  createAutomaticProtectionBypassExecution,
+  INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+  isManualModelSyncProtectionBypassExecution,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+  type ProtectionBypassAutomaticTrigger,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type {
@@ -183,7 +193,10 @@ class ModelSyncScheduler {
    * Build a ModelSyncService instance using persisted preferences and channel configs.
    * @throws {Error} When New API config is missing.
    */
-  private async createService(): Promise<ModelSyncService> {
+  private async createService(
+    trigger: ProtectionBypassAutomaticTrigger = PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+    protectionBypassExecution?: ProtectionBypassExecution,
+  ): Promise<ModelSyncService> {
     const userPrefs = await userPreferences.getPreferences()
 
     const { messagesKey } = getManagedSiteContext(userPrefs)
@@ -207,6 +220,12 @@ class ModelSyncScheduler {
       sanitizeChannelFiltersForStorage(config.globalChannelModelFilters, {
         idPrefix: "global-channel-filter",
       }),
+      protectionBypassExecution ??
+        createAutomaticProtectionBypassExecution(
+          PROTECTION_BYPASS_FEATURES.ManagedSiteModelSync,
+          trigger,
+          PROTECTION_BYPASS_SURFACES.Background,
+        ),
     )
   }
 
@@ -238,7 +257,10 @@ class ModelSyncScheduler {
               )
 
               // Await to keep the MV3 service worker alive while the sync runs.
-              const result = await this.executeSync()
+              const result = await this.executeSync(
+                undefined,
+                PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+              )
               tracker.complete(
                 result.statistics.failureCount > 0
                   ? PRODUCT_ANALYTICS_RESULTS.Failure
@@ -428,7 +450,11 @@ class ModelSyncScheduler {
    * @param channelIds Optional subset of channel IDs to sync; defaults to all.
    * @returns ExecutionResult with per-channel outcomes and statistics.
    */
-  async executeSync(channelIds?: number[]): Promise<ExecutionResult> {
+  async executeSync(
+    channelIds?: number[],
+    trigger: ProtectionBypassAutomaticTrigger = PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+    protectionBypassExecution?: ProtectionBypassExecution,
+  ): Promise<ExecutionResult> {
     logger.info("Starting execution")
 
     // Get preferences from userPreferences
@@ -460,7 +486,7 @@ class ModelSyncScheduler {
     }
 
     // Initialize service (for non-Octopus sites)
-    const service = await this.createService()
+    const service = await this.createService(trigger, protectionBypassExecution)
 
     const modelRedirectConfig =
       prefs.modelRedirect ?? DEFAULT_MODEL_REDIRECT_PREFERENCES
@@ -750,7 +776,9 @@ class ModelSyncScheduler {
    * @returns ExecutionResult for retry batch.
    * @throws {Error} When no previous execution exists or no failed channels are found.
    */
-  async executeFailedOnly(): Promise<ExecutionResult> {
+  async executeFailedOnly(
+    protectionBypassExecution?: ProtectionBypassExecution,
+  ): Promise<ExecutionResult> {
     const lastExecution = await managedSiteModelSyncStorage.getLastExecution()
     if (!lastExecution) {
       throw new Error("No previous execution found")
@@ -764,7 +792,13 @@ class ModelSyncScheduler {
       throw new Error("No failed channels to retry")
     }
 
-    return this.executeSync(failedChannelIds)
+    return protectionBypassExecution
+      ? this.executeSync(
+          failedChannelIds,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+          protectionBypassExecution,
+        )
+      : this.executeSync(failedChannelIds)
   }
 
   /**
@@ -900,18 +934,49 @@ export async function getModelSyncNextRun() {
   }
 }
 
+/** Builds the controlled runtime response for invalid manual model-sync intent. */
+function createInvalidModelSyncExecutionFailure() {
+  return {
+    success: false as const,
+    error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+  }
+}
+
 /**
  * Run model sync for all eligible managed-site channels.
  */
-export async function triggerAllModelSync() {
-  const resultAll = await modelSyncScheduler.executeSync()
+export async function triggerAllModelSync(
+  protectionBypassExecution?: ProtectionBypassExecution,
+) {
+  if (
+    protectionBypassExecution !== undefined &&
+    !isManualModelSyncProtectionBypassExecution(protectionBypassExecution)
+  ) {
+    return createInvalidModelSyncExecutionFailure()
+  }
+  const resultAll = protectionBypassExecution
+    ? await modelSyncScheduler.executeSync(
+        undefined,
+        PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+        protectionBypassExecution,
+      )
+    : await modelSyncScheduler.executeSync()
   return { success: true as const, data: resultAll }
 }
 
 /**
  * Run model sync for the selected managed-site channels.
  */
-export async function triggerSelectedModelSync(channelIds?: number[]) {
+export async function triggerSelectedModelSync(
+  channelIds?: number[],
+  protectionBypassExecution?: ProtectionBypassExecution,
+) {
+  if (
+    protectionBypassExecution !== undefined &&
+    !isManualModelSyncProtectionBypassExecution(protectionBypassExecution)
+  ) {
+    return createInvalidModelSyncExecutionFailure()
+  }
   if (!Array.isArray(channelIds) || channelIds.length === 0) {
     return {
       success: false as const,
@@ -919,15 +984,31 @@ export async function triggerSelectedModelSync(channelIds?: number[]) {
     }
   }
 
-  const resultSelected = await modelSyncScheduler.executeSync(channelIds)
+  const resultSelected = protectionBypassExecution
+    ? await modelSyncScheduler.executeSync(
+        channelIds,
+        PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+        protectionBypassExecution,
+      )
+    : await modelSyncScheduler.executeSync(channelIds)
   return { success: true as const, data: resultSelected }
 }
 
 /**
  * Retry model sync only for channels from the last failed execution.
  */
-export async function triggerFailedOnlyModelSync() {
-  const resultFailed = await modelSyncScheduler.executeFailedOnly()
+export async function triggerFailedOnlyModelSync(
+  protectionBypassExecution?: ProtectionBypassExecution,
+) {
+  if (
+    protectionBypassExecution !== undefined &&
+    !isManualModelSyncProtectionBypassExecution(protectionBypassExecution)
+  ) {
+    return createInvalidModelSyncExecutionFailure()
+  }
+  const resultFailed = protectionBypassExecution
+    ? await modelSyncScheduler.executeFailedOnly(protectionBypassExecution)
+    : await modelSyncScheduler.executeFailedOnly()
   return { success: true as const, data: resultFailed }
 }
 
@@ -994,6 +1075,17 @@ function toModelSyncFailure(error: unknown) {
   }
 }
 
+/** Validates manual model-sync intent before executing the awaited batch. */
+async function resolveVerifiedModelSyncMessage<T>(
+  execution: unknown,
+  resolve: () => Promise<T>,
+) {
+  if (!isManualModelSyncProtectionBypassExecution(execution)) {
+    return createInvalidModelSyncExecutionFailure()
+  }
+  return await resolve()
+}
+
 let modelSyncMessagingCleanup: (() => void)[] | null = null
 
 /**
@@ -1012,30 +1104,42 @@ export function setupManagedSiteModelSyncMessagingListeners() {
         return toModelSyncFailure(error)
       }
     }),
-    onModelSyncMessage(ModelSyncMessageTypes.TriggerAll, async () => {
+    onModelSyncMessage(ModelSyncMessageTypes.TriggerAll, async (message) => {
       try {
-        return await triggerAllModelSync()
+        const execution = message?.data.protectionBypassExecution
+        return await resolveVerifiedModelSyncMessage(execution, () =>
+          triggerAllModelSync(execution),
+        )
       } catch (error) {
         return toModelSyncFailure(error)
       }
     }),
     onModelSyncMessage(
       ModelSyncMessageTypes.TriggerSelected,
-      async ({ data }) => {
+      async (message) => {
         try {
-          return await triggerSelectedModelSync(data.channelIds)
+          const execution = message?.data.protectionBypassExecution
+          return await resolveVerifiedModelSyncMessage(execution, () =>
+            triggerSelectedModelSync(message?.data.channelIds, execution),
+          )
         } catch (error) {
           return toModelSyncFailure(error)
         }
       },
     ),
-    onModelSyncMessage(ModelSyncMessageTypes.TriggerFailedOnly, async () => {
-      try {
-        return await triggerFailedOnlyModelSync()
-      } catch (error) {
-        return toModelSyncFailure(error)
-      }
-    }),
+    onModelSyncMessage(
+      ModelSyncMessageTypes.TriggerFailedOnly,
+      async (message) => {
+        try {
+          const execution = message?.data.protectionBypassExecution
+          return await resolveVerifiedModelSyncMessage(execution, () =>
+            triggerFailedOnlyModelSync(execution),
+          )
+        } catch (error) {
+          return toModelSyncFailure(error)
+        }
+      },
+    ),
     onModelSyncMessage(ModelSyncMessageTypes.GetLastExecution, async () => {
       try {
         return await getModelSyncLastExecution()

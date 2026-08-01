@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
@@ -39,6 +41,20 @@ const mockAccount: SiteAccount = {
   updated_at: Date.now(),
   user_updated_at: Date.now(),
 }
+
+const DEFAULT_PROVIDER_CONTEXT = {
+  tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+  protectionBypassExecution: userCommandExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+  ),
+} as const
+
+const checkInForTest = (
+  account: Parameters<typeof wongGongyiProvider.checkIn>[0],
+  context: Parameters<
+    typeof wongGongyiProvider.checkIn
+  >[1] = DEFAULT_PROVIDER_CONTEXT,
+) => wongGongyiProvider.checkIn(account, context)
 
 describe("wongGongyiProvider", () => {
   beforeEach(() => {
@@ -92,8 +108,11 @@ describe("wongGongyiProvider", () => {
         data: { enabled: true, checked_in: true },
       })
 
-      const result = await wongGongyiProvider.checkIn(mockAccount, {
+      const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       })
       expect(result.status).toBe("already_checked")
       expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
@@ -115,7 +134,7 @@ describe("wongGongyiProvider", () => {
         data: undefined,
       })
 
-      const result = await wongGongyiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("already_checked")
       expect(mockedFetchApi.mock.calls[0]?.[0]).toMatchObject({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
@@ -132,7 +151,7 @@ describe("wongGongyiProvider", () => {
         data: { enabled: false, checked_in: false },
       })
 
-      const result = await wongGongyiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
       expect(result.messageKey).toBe("autoCheckin:providerWong.checkinDisabled")
     })
@@ -147,7 +166,7 @@ describe("wongGongyiProvider", () => {
         data: { enabled: true, checked_in: false },
       })
 
-      const result = await wongGongyiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("success")
       expect(result.messageKey).toBe(
         "autoCheckin:providerFallback.checkinSuccessful",
@@ -164,7 +183,7 @@ describe("wongGongyiProvider", () => {
         data: { enabled: true, checked_in: false },
       })
 
-      const result = await wongGongyiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
       expect(result.messageKey).toBe(
         "autoCheckin:providerFallback.checkinFailed",
@@ -181,7 +200,7 @@ describe("wongGongyiProvider", () => {
         data: null,
       })
 
-      const result = await wongGongyiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("already_checked")
     })
 
@@ -191,7 +210,7 @@ describe("wongGongyiProvider", () => {
 
       mockedFetchApi.mockRejectedValueOnce(new Error("Network error"))
 
-      const result = await wongGongyiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
       expect(result.rawMessage).toBe("Network error")
     })
@@ -205,7 +224,7 @@ describe("wongGongyiProvider", () => {
         message: "Not Found",
       })
 
-      const result = await wongGongyiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
       expect(result.messageKey).toBe(
         "autoCheckin:providerFallback.endpointNotSupported",

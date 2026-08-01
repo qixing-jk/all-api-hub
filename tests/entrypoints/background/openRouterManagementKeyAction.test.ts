@@ -138,7 +138,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("opens a new OpenRouter context directly on the Management Keys page", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
     const response = vi.fn()
 
@@ -165,7 +165,9 @@ describe("OpenRouter Management Key background action", () => {
     const {
       handleTempWindowOpenRouterManagementKeyAction,
       markTempWindowOpenRouterManagementKeyDispatched,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     let resolvePage: ((value: unknown) => void) | undefined
     mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const sendResponse = vi.fn()
@@ -215,7 +217,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("rejects caller-controlled action fields as a request failure", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
     const sendResponse = vi.fn()
     await handleTempWindowOpenRouterManagementKeyAction(
@@ -239,7 +241,9 @@ describe("OpenRouter Management Key background action", () => {
     const {
       cancelTempWindowOpenRouterManagementKeyAction,
       handleTempWindowOpenRouterManagementKeyAction,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     const sendResponse = vi.fn()
     expect(
       cancelTempWindowOpenRouterManagementKeyAction("request-cancel-before"),
@@ -286,7 +290,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("bounds pre-cancelled request IDs and admits the oldest after eviction", async () => {
     const action = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
 
     for (
@@ -352,7 +356,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("normalizes malformed action requests before scheduling", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
     const response = vi.fn()
 
@@ -373,7 +377,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("omits cancellation acceptance and mutation evidence for malformed IDs", async () => {
     const { cancelTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
 
     expect(cancelTempWindowOpenRouterManagementKeyAction("")).toEqual({
@@ -387,7 +391,9 @@ describe("OpenRouter Management Key background action", () => {
       cancelTempWindowOpenRouterManagementKeyAction,
       handleTempWindowOpenRouterManagementKeyAction,
       markTempWindowOpenRouterManagementKeyDispatched,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     let resolvePage: ((value: unknown) => void) | undefined
     mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const sendResponse = vi.fn()
@@ -462,7 +468,9 @@ describe("OpenRouter Management Key background action", () => {
     const {
       handleTempWindowOpenRouterManagementKeyAction,
       markTempWindowOpenRouterManagementKeyDispatched,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     mockPageResponder(() => new Promise(() => {}))
     const sendResponse = vi.fn()
     const pending = handleTempWindowOpenRouterManagementKeyAction(
@@ -501,7 +509,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("keeps the transport open through the page classification deadline", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
     let resolvePage: ((value: unknown) => void) | undefined
     mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
@@ -540,7 +548,9 @@ describe("OpenRouter Management Key background action", () => {
     const {
       cancelTempWindowOpenRouterManagementKeyAction,
       handleTempWindowOpenRouterManagementKeyAction,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     let resolveTab: ((value: { id: number }) => void) | undefined
     createTabMock.mockImplementation(
       () => new Promise((resolve) => (resolveTab = resolve)),
@@ -584,7 +594,9 @@ describe("OpenRouter Management Key background action", () => {
     const {
       cancelTempWindowOpenRouterManagementKeyAction,
       handleTempWindowOpenRouterManagementKeyAction,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     let resolveNavigation: (() => void) | undefined
     updateTabMock.mockImplementationOnce(
       () => new Promise<void>((resolve) => (resolveNavigation = resolve)),
@@ -631,7 +643,7 @@ describe("OpenRouter Management Key background action", () => {
         url,
       })
       const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-        "~/entrypoints/background/openrouter/managementKeyAction"
+        "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
       )
       const response = vi.fn()
       const pending = handleTempWindowOpenRouterManagementKeyAction(
@@ -655,7 +667,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("rejects a duplicate in-flight request ID without a second mutation", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
     let resolvePage: ((value: unknown) => void) | undefined
     mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
@@ -711,7 +723,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("normalizes a mismatched page result without forwarding its secret", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
     mockPageResponder(() => ({
       requestId: "other-request",
@@ -751,7 +763,7 @@ describe("OpenRouter Management Key background action", () => {
     "rejects a page result with mismatched operation metadata",
     async (fields) => {
       const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-        "~/entrypoints/background/openrouter/managementKeyAction"
+        "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
       )
       mockPageResponder((message) => ({
         requestId: message.requestId,
@@ -794,7 +806,7 @@ describe("OpenRouter Management Key background action", () => {
         handleTempWindowOpenRouterManagementKeyAction,
         markTempWindowOpenRouterManagementKeyDispatched,
       } = await import(
-        "~/entrypoints/background/openrouter/managementKeyAction"
+        "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
       )
       const dispatch = recordDispatchOutcomes(
         markTempWindowOpenRouterManagementKeyDispatched,
@@ -833,7 +845,9 @@ describe("OpenRouter Management Key background action", () => {
     const {
       handleTempWindowOpenRouterManagementKeyAction,
       markTempWindowOpenRouterManagementKeyDispatched,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     const dispatch = recordDispatchOutcomes(
       markTempWindowOpenRouterManagementKeyDispatched,
     )
@@ -886,7 +900,7 @@ describe("OpenRouter Management Key background action", () => {
     "derives mutation certainty from the marker for $mutationState page results",
     async (pageFields) => {
       const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-        "~/entrypoints/background/openrouter/managementKeyAction"
+        "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
       )
       mockPageResponder((message) => ({
         requestId: message.requestId,
@@ -919,7 +933,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("releases the context even when sending the result throws", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
     const sendResponse = vi.fn(() => {
       throw new Error("response channel closed")
@@ -941,7 +955,9 @@ describe("OpenRouter Management Key background action", () => {
       cancelTempWindowOpenRouterManagementKeyAction,
       handleTempWindowOpenRouterManagementKeyAction,
       markTempWindowOpenRouterManagementKeyDispatched,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     let resolvePage: ((value: unknown) => void) | undefined
     mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const response = vi.fn()
@@ -993,7 +1009,9 @@ describe("OpenRouter Management Key background action", () => {
     const {
       cancelTempWindowOpenRouterManagementKeyAction,
       handleTempWindowOpenRouterManagementKeyAction,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     let resolveTab: ((value: { id: number }) => void) | undefined
     createTabMock.mockImplementation(
       () => new Promise((resolve) => (resolveTab = resolve)),
@@ -1037,7 +1055,9 @@ describe("OpenRouter Management Key background action", () => {
     const {
       cancelTempWindowOpenRouterManagementKeyAction,
       handleTempWindowOpenRouterManagementKeyAction,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     let resolveTab: ((value: { id: number }) => void) | undefined
     createTabMock.mockImplementation(
       () => new Promise((resolve) => (resolveTab = resolve)),
@@ -1073,7 +1093,9 @@ describe("OpenRouter Management Key background action", () => {
     const {
       handleTempWindowOpenRouterManagementKeyAction,
       markTempWindowOpenRouterManagementKeyDispatched,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     let resolvePage: ((value: unknown) => void) | undefined
     mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const response = vi.fn()
@@ -1121,7 +1143,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("retains only exact secret-free completion summaries for cancellation", async () => {
     const action = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
     const dispatch = recordDispatchOutcomes(
       action.markTempWindowOpenRouterManagementKeyDispatched,
@@ -1226,7 +1248,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("evicts only the oldest completed summary at the existing bound", async () => {
     const action = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
 
     for (
@@ -1290,7 +1312,9 @@ describe("OpenRouter Management Key background action", () => {
     const {
       handleTempWindowOpenRouterManagementKeyAction,
       markTempWindowOpenRouterManagementKeyDispatched,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     let resolvePage: ((value: unknown) => void) | undefined
     mockPageResponder(() => new Promise((resolve) => (resolvePage = resolve)))
     const response = vi.fn()
@@ -1328,7 +1352,7 @@ describe("OpenRouter Management Key background action", () => {
 
   it("attempts browser context removal once without resending the result", async () => {
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
     removeTabOrWindowMock.mockRejectedValueOnce(
       new Error("temporary cleanup failure"),
@@ -1351,7 +1375,9 @@ describe("OpenRouter Management Key background action", () => {
     const {
       handleTempWindowOpenRouterManagementKeyAction,
       markTempWindowOpenRouterManagementKeyDispatched,
-    } = await import("~/entrypoints/background/openrouter/managementKeyAction")
+    } = await import(
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
+    )
     removeTabOrWindowMock.mockRejectedValue(
       new Error("persistent close failure"),
     )
@@ -1405,7 +1431,7 @@ describe("OpenRouter Management Key background action", () => {
       },
     }))
     const { handleTempWindowOpenRouterManagementKeyAction } = await import(
-      "~/entrypoints/background/openrouter/managementKeyAction"
+      "~~/tests/entrypoints/background/openRouterManagementKeyActionTestAdapter"
     )
     const response = vi.fn()
 

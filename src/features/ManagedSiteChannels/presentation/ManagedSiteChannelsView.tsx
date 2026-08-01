@@ -92,8 +92,11 @@ type ManagedSiteChannelsViewProps = {
   callbacks: ManagedChannelsCallbacks
   labels: ManagedChannelsLabels
   title: string
-  description: string
+  titleActions?: ReactNode
+  description: ReactNode
   configurationMissingDescription: string
+  configurationMissingNotice?: ReactNode
+  emptyContent?: ReactNode
   configurationSettingsTarget?: {
     tabId: "managedSite"
     anchor?: string
@@ -201,8 +204,11 @@ export function ManagedSiteChannelsView({
   callbacks,
   labels,
   title,
+  titleActions,
   description,
   configurationMissingDescription,
+  configurationMissingNotice,
+  emptyContent,
   configurationSettingsTarget,
   siteTypeLabel,
   filterDialog,
@@ -516,17 +522,20 @@ export function ManagedSiteChannelsView({
         icon={Layers}
         title={title}
         titleActions={
-          <Tooltip content={labels.settings}>
-            <IconButton
-              type="button"
-              size="sm"
-              variant="outline"
-              aria-label={labels.settings}
-              onClick={callbacks.onSettings}
-            >
-              <Settings className="h-4 w-4" />
-            </IconButton>
-          </Tooltip>
+          <>
+            <Tooltip content={labels.settings}>
+              <IconButton
+                type="button"
+                size="sm"
+                variant="outline"
+                aria-label={labels.settings}
+                onClick={callbacks.onSettings}
+              >
+                <Settings className="h-4 w-4" />
+              </IconButton>
+            </Tooltip>
+            {titleActions}
+          </>
         }
         description={description}
         actions={
@@ -602,12 +611,15 @@ export function ManagedSiteChannelsView({
       />
 
       {state.isConfigurationMissing ? (
-        <ManagedSiteConfigRequiredState
-          description={configurationMissingDescription}
-          settingsTarget={configurationSettingsTarget}
-          onRetry={callbacks.onRefresh}
-          isRetrying={state.isRefreshing}
-        />
+        <div className="space-y-4">
+          <ManagedSiteConfigRequiredState
+            description={configurationMissingDescription}
+            settingsTarget={configurationSettingsTarget}
+            onRetry={callbacks.onRefresh}
+            isRetrying={state.isRefreshing}
+          />
+          {configurationMissingNotice}
+        </div>
       ) : (
         <>
           {state.failure ? (
@@ -876,6 +888,7 @@ export function ManagedSiteChannelsView({
             isInitialLoading={isInitialLoading}
             loadingLabel={labels.loading}
             emptyMessage={emptyTableMessage}
+            emptyContent={emptyContent}
           />
 
           <div className="flex flex-wrap items-center gap-4 text-sm">

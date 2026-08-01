@@ -3,9 +3,59 @@ import { describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { runBookmarkAccountImport } from "~/features/AccountManagement/bookmarkImport/importAccounts"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
+import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 
 describe("runBookmarkAccountImport", () => {
+  it("reuses one onboarding execution for every selected candidate", async () => {
+    const protectionBypassExecution = {
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
+      kind: "user_command",
+      command: "add_account",
+      surface: "options",
+    } as const
+    const autoDetectAccount = vi.fn().mockResolvedValue({
+      success: false,
+      message: "not detected",
+    })
+
+    await runBookmarkAccountImport({
+      candidates: [
+        {
+          id: "bookmark-import:https://one.example.invalid",
+          url: "https://one.example.invalid",
+          normalizedOrigin: "https://one.example.invalid",
+          status: "ready",
+          selectedByDefault: true,
+          sourceBookmarkCount: 1,
+        },
+        {
+          id: "bookmark-import:https://two.example.invalid",
+          url: "https://two.example.invalid",
+          normalizedOrigin: "https://two.example.invalid",
+          status: "ready",
+          selectedByDefault: true,
+          sourceBookmarkCount: 1,
+        },
+      ],
+      autoDetectAccount,
+      protectionBypassExecution,
+    })
+
+    expect(autoDetectAccount).toHaveBeenNthCalledWith(
+      1,
+      "https://one.example.invalid",
+      AuthTypeEnum.AccessToken,
+      protectionBypassExecution,
+    )
+    expect(autoDetectAccount).toHaveBeenNthCalledWith(
+      2,
+      "https://two.example.invalid",
+      AuthTypeEnum.AccessToken,
+      protectionBypassExecution,
+    )
+  })
+
   it("waits for the current candidate save before detecting the next candidate", async () => {
     let resolveFirstSave:
       | ((value: { success: true; message: string; accountId: string }) => void)

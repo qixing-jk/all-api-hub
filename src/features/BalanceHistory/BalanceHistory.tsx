@@ -62,6 +62,11 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { listTagsSorted } from "~/services/tags/tagStoreUtils"
@@ -253,19 +258,28 @@ export default function BalanceHistory() {
     let toastId: string | undefined
     try {
       toastId = toast.loading(t("messages.loading.refreshing"))
-      const response = await sendBalanceHistoryMessage(
-        BalanceHistoryMessageTypes.RefreshNow,
-        selectedAccountIds.length
-          ? { accountIds: selectedAccountIds }
-          : undefined,
+      await withProtectionBypassUserCommand(
+        PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+        PROTECTION_BYPASS_SURFACES.Options,
+        async (protectionBypassExecution) => {
+          const response = await sendBalanceHistoryMessage(
+            BalanceHistoryMessageTypes.RefreshNow,
+            {
+              ...(selectedAccountIds.length
+                ? { accountIds: selectedAccountIds }
+                : {}),
+              protectionBypassExecution,
+            },
+          )
+
+          if (!response?.success) {
+            throw new Error(response?.error || "Unknown error")
+          }
+
+          toast.success(t("messages.success.refreshCompleted"), { id: toastId })
+          await loadData()
+        },
       )
-
-      if (!response?.success) {
-        throw new Error(response?.error || "Unknown error")
-      }
-
-      toast.success(t("messages.success.refreshCompleted"), { id: toastId })
-      await loadData()
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       toast.error(

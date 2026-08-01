@@ -126,8 +126,8 @@
     "httpError": "HTTP {{statusCode}}: {{message}}",
     "networkFailed": "网络连接失败",
     "normal": "账号状态正常",
-    "tempWindowDisabled": "过盾功能已关闭，请在 设置 > 数据刷新 中启用",
-    "tempWindowPermissionRequired": "Firefox 过盾功能需要 Cookie 拦截权限，请在 设置 > 权限管理 中授予",
+    "tempWindowDisabled": "自动刷新遇到网站验证，但当前不允许自动任务打开临时页面。请前往“设置 > 数据刷新”开启",
+    "tempWindowPermissionRequired": "Firefox 需要 Cookies、Web Request 和 Web Request Blocking 权限才能完成网站验证。请前往“设置 > 权限管理”授予",
     "unknown": "未知",
     "unknownError": "未知错误",
     "warning": "警告"
@@ -203,7 +203,7 @@
       "docs": "打开新手指引",
       "star": "给项目点个 Star"
     },
-    "description": "可以先为项目点个 Star，也可以先看看文档，了解如何管理中转站和 New API 账号",
+    "description": "添加账号可建立来源清单，用于余额、健康检查、API Key、直接导出，以及后续导入自建 AI 网关渠道。",
     "hint": "在添加账号之前，也可以先随意看看文档和项目信息",
     "title": "欢迎使用 All API Hub"
   },
@@ -264,5 +264,43 @@
     "pendingRefreshHelp": "今日统计状态尚未确认。请前往账号列表刷新相关账号。",
     "refreshActionHelp": "今日统计状态尚未确认。点击刷新账号后即可更新。",
     "unavailable": "不可用"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "添加账号",
+      "addApiCredential": "添加 API 凭据",
+      "addGatewayChannel": "添加第一个网关渠道",
+      "configureManagedSite": "配置自建 AI 网关",
+      "manageChannels": "管理渠道",
+      "openApiCredentialProfiles": "打开凭据库",
+      "openModelSync": "打开模型同步"
+    },
+    "boundaryNote": "All API Hub 负责管理账号 Key，不代理模型请求；外部客户端实际调用的是你的自建 AI 网关。",
+    "description": {
+      "has_gateway_channels": "已完成过网关渠道创建或导入。前往渠道管理确认当前状态，再继续配置外部客户端。",
+      "needs_importable_source": "当前账号无法读取可导入的 Key。请先保存 API Key，或添加支持 Key 获取的账号，再导入自建 AI 网关。",
+      "needs_managed_site": "已有账号 Key。完成自建 AI 网关配置后，即可将它们导入为网关渠道。",
+      "needs_sources": "添加账号后，账号中的 Key 可以直接导出到客户端，也可以导入自建 AI 网关，汇总成一个统一 AI API。",
+      "ready_accounts": "使用密钥管理将选中的账号 Key 一键导入为自建 AI 网关渠道。",
+      "ready_profiles": "已保存的 API Key 可在凭据库中直接复用，也可以单独导入为网关渠道。"
+    },
+    "directToolExportNote": "如果暂时不需要自建网关，也可以直接把单个凭据导出到客户端工具。",
+    "dismissDialog": {
+      "confirm": "不再显示",
+      "description": "账号页将不再显示这个提示；你仍然可以在总览页查看如何把账号 Key 接入自建 AI 网关。",
+      "title": "不再显示这个提示？"
+    },
+    "dismissForSession": "本次关闭提示",
+    "headline": "把账号 Key 接入自建 AI 网关",
+    "modelSyncOptional": "模型同步可自动更新网关模型列表，减少手动维护；渠道创建后可按需开启。",
+    "optionalLabel": "可选维护",
+    "permanentlyDismiss": "不再显示此提示",
+    "sources": {
+      "account": "账号来源",
+      "accountUnavailable": "账号暂不可导入",
+      "both": "账号 + 凭据",
+      "none": "还没有账号来源",
+      "profile": "凭据来源"
+    }
   }
 }

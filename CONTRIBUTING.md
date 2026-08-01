@@ -69,15 +69,23 @@ This project uses [Vitest](https://vitest.dev/) for unit and component testing. 
 ### Running Tests
 
 ```bash
-# Run all tests
-pnpm test
+# Run tests related to the files you changed
+pnpm exec vitest related --run path/to/changed-file.ts
+
+# Run one or more focused test files
+pnpm exec vitest run tests/path/to/feature.test.ts
 
 # Run tests in watch mode (useful during development)
 pnpm test:watch
 
-# Run tests with coverage report (used in CI)
+# Run the full test suite locally when broad validation is justified
+pnpm test
+
+# Run the full suite with coverage (normally handled by CI)
 pnpm test:ci
 ```
+
+During normal development, run the smallest relevant test set and let the pull request CI run the full sharded suite with coverage. Run `pnpm test` or `pnpm test:ci` locally when changing test infrastructure, Vitest or coverage configuration, widely shared runtime behavior, or when reproducing a CI-only failure. Documentation, copy, formatting, type-only, and similarly narrow changes do not require the full local suite unless they affect executable behavior.
 
 ### Test Coverage
 
@@ -86,6 +94,8 @@ Coverage reports are automatically generated when running `pnpm test:ci`. You ca
 The repository enforces global Vitest coverage thresholds in CI. Treat `vitest.config.ts` as the source of truth for the current required values rather than copying them into this document.
 
 ### Writing Tests
+
+Add or update tests when a change modifies meaningful executable behavior. A useful test should protect an observable behavior, regression, relevant edge case, or contract. Do not add tests solely to execute lines, mirror implementation details, or satisfy coverage. Documentation, copy, formatting, type-only, and mechanical changes generally do not need new tests.
 
 #### Unit Tests
 
@@ -280,7 +290,7 @@ pnpm zip:all
 
 ## Continuous Integration
 
-GitHub Actions automatically runs tests on every push and pull request. The workflow:
+GitHub Actions runs the test workflow for pull requests and for pushes to `main` or `develop` when configured source or tooling paths change. The workflow:
 
 1. Checks out the code
 2. Installs dependencies with pnpm
@@ -288,18 +298,18 @@ GitHub Actions automatically runs tests on every push and pull request. The work
 4. Runs `pnpm lint` for repository-wide lint validation
 5. Runs `pnpm knip` to catch unused files, exports, and dependencies
 6. Runs `pnpm run i18n:extract:ci` and `pnpm run i18n:status` to ensure locale files stay in sync with code and all secondary locales are complete
-7. Runs `pnpm test:ci` to execute tests with coverage
+7. Runs the Vitest suite in parallel shards with coverage
 8. Uploads coverage artifacts
 
-Make sure all tests pass before submitting a pull request.
+Before submitting a pull request, run the focused tests and local validation relevant to your change. The pull request CI is the authoritative full-suite and coverage check.
 
 ## Pull Request Guidelines
 
 1. **Create a feature branch** from `main`
-2. **Write tests** for new features or bug fixes
-3. **Ensure all tests pass**: Run `pnpm test:ci`
-4. **Lint and format code**: Run `pnpm lint` and `pnpm format`
-5. **Type check**: Run `pnpm compile`
+2. **Add meaningful tests for behavior changes**: Protect observable behavior, regressions, relevant edge cases, or contracts; do not add tests only to increase coverage
+3. **Run affected tests**: Prefer `pnpm exec vitest related --run <changed files>` or focused test files; rely on CI for the full suite and coverage by default
+4. **Run the staged-file gate**: Use `pnpm run validate:staged` after staging only the files for your change
+5. **Run broader static checks when justified**: Use `pnpm run validate:push` for changes to TypeScript contracts, exports, dependencies, generated wiring, or repository structure
 6. **Write clear commit messages** describing your changes
 7. **Update documentation** if you're adding new features
 

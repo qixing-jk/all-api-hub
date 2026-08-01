@@ -6,6 +6,15 @@ import {
 import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+  isRefreshAllAccountsProtectionBypassExecution,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
 import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
@@ -19,6 +28,7 @@ import {
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
 } from "~/types/taskNotifications"
+import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import {
   clearAlarm,
   createAlarm,
@@ -201,7 +211,11 @@ class DailyBalanceHistoryScheduler {
     })
   }
 
-  async refreshNow(accountIds?: string[]): Promise<{
+  async refreshNow(
+    protectionBypassExecution: ProtectionBypassExecution,
+    accountIds?: string[],
+    tempWindowRequestSource?: TempWindowRequestSource,
+  ): Promise<{
     success: number
     failed: number
     refreshedCount: number
@@ -213,7 +227,10 @@ class DailyBalanceHistoryScheduler {
       : undefined
 
     if (accountIds == null) {
-      const result = await accountStorage.refreshAllAccounts(true)
+      const result = await accountStorage.refreshAllAccounts(true, {
+        protectionBypassExecution,
+        ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+      })
       return {
         success: result.success,
         failed: result.failed,
@@ -226,7 +243,12 @@ class DailyBalanceHistoryScheduler {
     }
 
     const results = await Promise.allSettled(
-      ids.map((id) => accountStorage.refreshAccount(id, true)),
+      ids.map((id) =>
+        accountStorage.refreshAccount(id, true, {
+          protectionBypassExecution,
+          ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+        }),
+      ),
     )
 
     let success = 0
@@ -358,11 +380,18 @@ class DailyBalanceHistoryScheduler {
       }
 
       const accounts = await accountStorage.getEnabledAccounts()
+      const protectionBypassExecution =
+        createAutomaticProtectionBypassExecution(
+          PROTECTION_BYPASS_FEATURES.BalanceHistory,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+          PROTECTION_BYPASS_SURFACES.Background,
+        )
       const results = await Promise.allSettled(
         accounts.map((account) =>
           accountStorage.refreshAccount(account.id, true, {
             includeTodayCashflow: true,
             balanceHistoryCaptureSource: params.trigger,
+            protectionBypassExecution,
           }),
         ),
       )
@@ -424,8 +453,23 @@ export function setupDailyBalanceHistoryMessagingListeners() {
       BalanceHistoryMessageTypes.UpdateSettings,
       ({ data }) => resolveBalanceHistoryUpdateSettingsMessage(data),
     ),
-    onBalanceHistoryMessage(BalanceHistoryMessageTypes.RefreshNow, ({ data }) =>
-      resolveBalanceHistoryRefreshNowMessage(data),
+    onBalanceHistoryMessage(
+      BalanceHistoryMessageTypes.RefreshNow,
+      async ({ data }) => {
+        if (
+          !isRefreshAllAccountsProtectionBypassExecution(
+            data?.protectionBypassExecution,
+          )
+        ) {
+          return createRuntimeMessageFailure(
+            INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+          )
+        }
+        return await resolveBalanceHistoryRefreshNowMessage(
+          data,
+          data.protectionBypassExecution.surface,
+        )
+      },
     ),
     onBalanceHistoryMessage(BalanceHistoryMessageTypes.Prune, () =>
       resolveBalanceHistoryPruneMessage(),
@@ -455,8 +499,18 @@ export async function resolveBalanceHistoryUpdateSettingsMessage(
  */
 export async function resolveBalanceHistoryRefreshNowMessage(
   request?: BalanceHistoryRefreshNowRequest,
+  tempWindowRequestSource?: TempWindowRequestSource,
 ): Promise<BalanceHistoryRefreshNowResponse> {
   try {
+    if (
+      !isRefreshAllAccountsProtectionBypassExecution(
+        request?.protectionBypassExecution,
+      )
+    ) {
+      return createRuntimeMessageFailure(
+        INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+      )
+    }
     if (
       request &&
       request.accountIds !== undefined &&
@@ -470,7 +524,11 @@ export async function resolveBalanceHistoryRefreshNowMessage(
     const accountIds = Array.isArray(request?.accountIds)
       ? request.accountIds
       : undefined
-    const result = await dailyBalanceHistoryScheduler.refreshNow(accountIds)
+    const result = await dailyBalanceHistoryScheduler.refreshNow(
+      request.protectionBypassExecution,
+      accountIds,
+      tempWindowRequestSource,
+    )
     return { success: true, data: result }
   } catch (error) {
     logger.error("Message handling failed", error)

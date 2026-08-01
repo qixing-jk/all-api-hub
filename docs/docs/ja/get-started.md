@@ -61,19 +61,16 @@
 <a id="manual-addition"></a>
 ### 2.2 手動追加（代替）
 
-自動認識がうまくいかない場合や、正確に制御したい場合は、手動で入力できます：
-- **ユーザー名 / ID**：サイトに表示される名前。
-- **アクセス トークン (Access Token)**：通常、サイトの「設定」または「トークン」ページで見つけることができます。
-- **モード選択**：デフォルトでは `Access Token` モードを推奨します。
+自動認識に失敗した場合は、**「手動追加」**をクリックし、サイト種別を選択してアカウント情報を入力します。必要な項目、Access Token の確認場所、注意事項については、[アカウントの手動追加ガイド](./account-management.md#manual-addition)を参照してください。
 
 ---
 
 ## 3. サポートされているサイトタイプ
 
 どのアーキテクチャを使っていても、高い確率で対応しています：
-- **アカウントサイト互換アーキテクチャ**：One API, New API, Veloera, One-Hub, Done-Hub, Sub2API など。
-- **特色あるアカウントプラットフォームと互換実装**：AIHubMix, AnyRouter, Neo-API, Super-API, v-api など。
-- **セルフホスト型管理バックエンド**：New API, Veloera, Done-Hub, [Octopus](https://github.com/bestruirui/octopus), AxonHub, Claude Code Hub など。チャネル管理、移行、一部のモデル同期に利用できます。
+- **アカウントサイト互換アーキテクチャ**：New API, One API, Sub2API, One-Hub, Veloera, Done-Hub など。
+- **特色あるアカウントプラットフォームと互換実装**：AnyRouter, AIHubMix, Super-API, v-api, Neo-API など。
+- **セルフホスト型管理バックエンド**：New API, AxonHub, Claude Code Hub, [Octopus](https://github.com/bestruirui/octopus), Veloera, Done-Hub など。チャネル管理、移行、一部のモデル同期に利用できます。
 
 ::: tip 互換性に関するヒント
 アカウントサイト互換アーキテクチャで構築された中継サイトは、通常アカウントとして追加できます。AxonHub、Octopus、Claude Code Hub などは主にセルフホスト型管理バックエンドとして利用します。完全な互換性リストについては、[サポートされているサイトとシステムタイプ](./supported-sites.md) を参照してください。

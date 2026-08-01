@@ -30,6 +30,7 @@ import {
 } from "~/services/apiTransport/abortableTask"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { normalizeInviteLinkError } from "~/services/inviteLinks/errors"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import {
   AuthTypeEnum,
   type ApiToken,
@@ -396,7 +397,19 @@ export async function fetchDisplayAccountInviteLink(
 
 export interface ResolveDisplayAccountTokenForSecretOptions {
   abortSignal?: AbortSignal
+  protectionBypassExecution?: ProtectionBypassExecution
 }
+
+const buildSecretResolutionRequest = (
+  request: ApiServiceRequest,
+  options: ResolveDisplayAccountTokenForSecretOptions,
+): ApiServiceRequest => ({
+  ...request,
+  ...(options.abortSignal ? { abortSignal: options.abortSignal } : {}),
+  ...(options.protectionBypassExecution
+    ? { protectionBypassExecution: options.protectionBypassExecution }
+    : {}),
+})
 
 /**
  * Fetches the current token inventory for a display account.
@@ -473,9 +486,7 @@ export async function resolveDisplayAccountTokenForSecret<
 ): Promise<TToken> {
   const { keyManagement, serviceCredential, request } =
     createDisplayAccountApiContext(account)
-  const resolutionRequest = options.abortSignal
-    ? { ...request, abortSignal: options.abortSignal }
-    : request
+  const resolutionRequest = buildSecretResolutionRequest(request, options)
   let resolvedKey: string
 
   if (keyManagement) {
@@ -524,9 +535,7 @@ export async function resolveDisplayAccountRuntimeKeySecret<
   if (isServiceCredentialRuntimeKey(runtimeKey)) {
     const { serviceCredential, request } =
       createDisplayAccountApiContext(account)
-    const resolutionRequest = options.abortSignal
-      ? { ...request, abortSignal: options.abortSignal }
-      : request
+    const resolutionRequest = buildSecretResolutionRequest(request, options)
     if (!serviceCredential) {
       throw new Error(
         `serviceCredential is not implemented for ${account.siteType}`,

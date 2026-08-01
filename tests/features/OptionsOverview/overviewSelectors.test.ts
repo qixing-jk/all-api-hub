@@ -8,6 +8,11 @@ import {
   WEBDAV_TARGET_IDS,
 } from "~/features/ImportExport/searchTargets"
 import { buildOptionsOverviewViewModel } from "~/features/OptionsOverview/overviewSelectors"
+import {
+  UNIFIED_API_GUIDANCE_ACTION_KINDS,
+  UNIFIED_API_GUIDANCE_SOURCE_KINDS,
+  UNIFIED_API_GUIDANCE_STATUSES,
+} from "~/features/UnifiedApiGuidance"
 import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
 import {
   DEFAULT_PREFERENCES,
@@ -276,6 +281,20 @@ describe("Options overview selectors", () => {
         .find((item) => item.id === "accountFoundation")
         ?.subItems.map((item) => item.target.menuItemId),
     ).toContain(MENU_ITEM_IDS.ACCOUNT)
+    expect(view.unifiedApiGuidance).toMatchObject({
+      status: UNIFIED_API_GUIDANCE_STATUSES.NeedsSources,
+      sourceKind: UNIFIED_API_GUIDANCE_SOURCE_KINDS.None,
+      primaryAction: {
+        kind: UNIFIED_API_GUIDANCE_ACTION_KINDS.AddAccount,
+        target: { menuItemId: MENU_ITEM_IDS.ACCOUNT },
+      },
+    })
+    expect(view.unifiedApiGuidanceDiagnostics).toEqual({
+      enabledAccountCount: 0,
+      keyAccessibleAccountCount: 0,
+      profileCount: 0,
+      gatewayConfigured: false,
+    })
   })
 
   it("keeps unavailable request coverage on the today-usage status card", () => {
@@ -965,7 +984,7 @@ describe("Options overview selectors", () => {
       accounts: [healthyAccount],
       displayData: [healthyDisplayData],
       accountStats: emptyStats,
-      apiCredentialProfiles: [profile],
+      apiCredentialProfiles: [],
       usageStore: emptyUsageStore,
       preferences: {
         ...basePreferences,
@@ -1017,6 +1036,95 @@ describe("Options overview selectors", () => {
         SETTINGS_ANCHORS.MANAGED_SITE_MODEL_SYNC,
       ],
     ])
+    expect(configuredView.unifiedApiGuidance).toMatchObject({
+      status: UNIFIED_API_GUIDANCE_STATUSES.ReadyToImport,
+      sourceKind: UNIFIED_API_GUIDANCE_SOURCE_KINDS.Account,
+      primaryAction: {
+        kind: UNIFIED_API_GUIDANCE_ACTION_KINDS.AddGatewayChannel,
+        target: { menuItemId: MENU_ITEM_IDS.KEYS },
+      },
+    })
+  })
+
+  it("does not treat enabled accounts without key access as gateway import sources", () => {
+    const view = buildOptionsOverviewViewModel({
+      accounts: [healthyAccount],
+      displayData: [
+        {
+          ...healthyDisplayData,
+          authType: AuthTypeEnum.None,
+          token: "",
+          userId: "",
+        },
+      ],
+      accountStats: emptyStats,
+      apiCredentialProfiles: [],
+      usageStore: emptyUsageStore,
+      preferences: {
+        ...basePreferences,
+        newApi: {
+          ...basePreferences.newApi,
+          baseUrl: "https://managed.example.invalid",
+          adminToken: "redacted-admin-token",
+          userId: "1",
+        },
+      },
+      managedSiteType: SITE_TYPES.NEW_API,
+      autoCheckinStatus: null,
+      ...baseOverviewInput,
+    })
+
+    expect(view.unifiedApiGuidance).toMatchObject({
+      status: UNIFIED_API_GUIDANCE_STATUSES.NeedsImportableSource,
+      sourceKind: UNIFIED_API_GUIDANCE_SOURCE_KINDS.AccountUnavailable,
+      primaryAction: {
+        kind: UNIFIED_API_GUIDANCE_ACTION_KINDS.AddApiCredential,
+        target: { menuItemId: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES },
+      },
+    })
+    expect(view.gatewayGuidanceImportAccountId).toBeUndefined()
+  })
+
+  it("does not treat a disabled key-resolvable account as an import source", () => {
+    const disabledAccount = {
+      ...healthyAccount,
+      id: "disabled-account",
+      disabled: true,
+    }
+    const disabledDisplayData = {
+      ...healthyDisplayData,
+      id: disabledAccount.id,
+      disabled: true,
+    }
+    const view = buildOptionsOverviewViewModel({
+      accounts: [disabledAccount],
+      displayData: [disabledDisplayData],
+      accountStats: emptyStats,
+      apiCredentialProfiles: [],
+      usageStore: emptyUsageStore,
+      preferences: {
+        ...basePreferences,
+        newApi: {
+          ...basePreferences.newApi,
+          baseUrl: "https://managed.example.invalid",
+          adminToken: "redacted-admin-token",
+          userId: "1",
+        },
+      },
+      managedSiteType: SITE_TYPES.NEW_API,
+      autoCheckinStatus: null,
+      ...baseOverviewInput,
+    })
+
+    expect(view.unifiedApiGuidanceDiagnostics).toMatchObject({
+      enabledAccountCount: 0,
+      keyAccessibleAccountCount: 0,
+    })
+    expect(view.unifiedApiGuidance).toMatchObject({
+      status: UNIFIED_API_GUIDANCE_STATUSES.NeedsSources,
+      sourceKind: UNIFIED_API_GUIDANCE_SOURCE_KINDS.None,
+    })
+    expect(view.gatewayGuidanceImportAccountId).toBeUndefined()
   })
 
   it("requires a valid managed-site admin user id before marking standard managed sites configured", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import {
   createDefaultPreferences,
   DEFAULT_PREFERENCES,
@@ -52,6 +53,9 @@ describe("userPreferences", () => {
       expect(DEFAULT_PREFERENCES.webAiApiCheck?.contextMenu.enabled).toBe(true)
       expect(DEFAULT_PREFERENCES.tempWindowFallbackReminder?.dismissed).toBe(
         false,
+      )
+      expect(DEFAULT_PREFERENCES.tempWindowFallback?.tempContextMode).toBe(
+        TEMP_CONTEXT_MODES.Tab,
       )
     })
 

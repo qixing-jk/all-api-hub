@@ -7,7 +7,7 @@ import {
 } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 import { Copy } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -45,6 +45,7 @@ import {
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import { cn } from "~/lib/utils"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
@@ -134,6 +135,10 @@ interface TokenHeaderProps {
     token: AccountToken,
     managedSiteStatus: ManagedSiteTokenChannelStatus,
   ) => void | Promise<void>
+  /**
+   * Request key used to temporarily highlight the managed-site import action.
+   */
+  guidedManagedSiteImportRequest?: string
 }
 
 export const getManagedSiteStatusBadgeVariant = (params: {
@@ -264,6 +269,7 @@ export const getManagedSiteSettingsActionLabel = (
  * @param props.managedSiteStatus Current managed-site status used to reuse duplicate-review results when available.
  * @param props.onOpenCCSwitchDialog Optional CCSwitch export opener.
  * @param props.onManagedSiteImportSuccess Optional managed-site import success callback.
+ * @param props.guidedManagedSiteImportRequest Request key that highlights the managed-site import action.
  */
 function TokenActionButtons({
   token,
@@ -274,6 +280,7 @@ function TokenActionButtons({
   managedSiteStatus,
   onOpenCCSwitchDialog,
   onManagedSiteImportSuccess,
+  guidedManagedSiteImportRequest,
 }: TokenHeaderProps) {
   const { t } = useTranslation(["keyManagement", "settings"])
   const {
@@ -282,12 +289,16 @@ function TokenActionButtons({
     claudeCodeRouterApiKey,
     cliProxyBaseUrl,
     cliProxyManagementKey,
+    markGatewayGuidanceOnboardingCompleted,
   } = useUserPreferencesContext()
   const { openWithAccount } = useChannelDialog()
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
+  const [isManagedSiteImportHighlighted, setIsManagedSiteImportHighlighted] =
+    useState(false)
+  const managedSiteImportButtonRef = useRef<HTMLButtonElement>(null)
   const [verifyingProfile, setVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [cliVerifyingProfile, setCliVerifyingProfile] =
@@ -295,6 +306,25 @@ function TokenActionButtons({
 
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
   const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
+
+  useEffect(() => {
+    if (!guidedManagedSiteImportRequest) {
+      return
+    }
+
+    setIsManagedSiteImportHighlighted(true)
+    managedSiteImportButtonRef.current?.scrollIntoView?.({
+      block: "center",
+      inline: "nearest",
+    })
+    managedSiteImportButtonRef.current?.focus()
+
+    const timeoutId = window.setTimeout(() => {
+      setIsManagedSiteImportHighlighted(false)
+    }, 5000)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [guidedManagedSiteImportRequest])
 
   const buildTransientProfile = (resolvedToken: AccountToken) => {
     const now = Date.now()
@@ -341,6 +371,16 @@ function TokenActionButtons({
                   "Managed-site import success callback failed",
                   error,
                 ),
+            )
+          }
+          if (result?.success) {
+            void Promise.resolve(
+              markGatewayGuidanceOnboardingCompleted(),
+            ).catch((error) =>
+              logger.error(
+                "Failed to mark gateway guidance onboarding complete",
+                error,
+              ),
             )
           }
         },
@@ -678,12 +718,20 @@ function TokenActionButtons({
         <ClaudeCodeRouterIcon size="sm" />
       </IconButton>
       <IconButton
+        ref={managedSiteImportButtonRef}
         aria-label={t("actions.importToManagedSite", {
           site: managedSiteLabel,
         })}
         data-testid={KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton}
+        data-guidance-highlight={
+          isManagedSiteImportHighlighted ? "true" : undefined
+        }
         size="sm"
         variant="ghost"
+        className={cn(
+          isManagedSiteImportHighlighted &&
+            "dark:ring-offset-dark-bg-secondary ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-emerald-400",
+        )}
         onClick={handleImportToManagedSite}
       >
         <ManagedSiteIcon siteType={managedSiteType} size="sm" />
@@ -721,6 +769,7 @@ function TokenActionButtons({
  * @param props.isManagedSiteStatusChecking Whether the managed-site status is checking.
  * @param props.onManagedSiteImportSuccess Optional callback after successful managed-site import.
  * @param props.onManagedSiteVerificationRetry Optional callback for New API verification-assisted retry.
+ * @param props.guidedManagedSiteImportRequest Request key that highlights the managed-site import action.
  */
 export function TokenHeader({
   token,
@@ -733,6 +782,7 @@ export function TokenHeader({
   isManagedSiteStatusChecking = false,
   onManagedSiteImportSuccess,
   onManagedSiteVerificationRetry,
+  guidedManagedSiteImportRequest,
 }: TokenHeaderProps) {
   const { t } = useTranslation(["keyManagement", "common"])
   const { managedSiteType } = useUserPreferencesContext()
@@ -984,6 +1034,7 @@ export function TokenHeader({
         managedSiteStatus={managedSiteStatus}
         onOpenCCSwitchDialog={onOpenCCSwitchDialog}
         onManagedSiteImportSuccess={onManagedSiteImportSuccess}
+        guidedManagedSiteImportRequest={guidedManagedSiteImportRequest}
       />
     </div>
   )

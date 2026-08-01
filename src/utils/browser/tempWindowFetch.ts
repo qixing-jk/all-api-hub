@@ -1,11 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
-  handleTempWindowCheckinPageAction,
-  handleTempWindowFetch,
-  handleTempWindowGetRenderedTitle,
-  handleTempWindowTurnstileFetch,
-} from "~/entrypoints/background/tempWindowPool"
-import {
   API_ERROR_CODES,
   ApiError,
   type ApiErrorCode,
@@ -19,18 +13,22 @@ import {
   COOKIE_INTERCEPTOR_PERMISSIONS,
   hasCookieInterceptorPermissions,
 } from "~/services/permissions/permissionManager"
+import type { TempWindowFallbackPreferences } from "~/services/preferences/userPreferences"
 import {
-  DEFAULT_PREFERENCES,
-  TempWindowFallbackPreferences,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+  PROTECTION_BYPASS_AUTOMATIC_FEATURES,
+  TEMP_CONTEXT_TASK_KINDS,
+  type ProtectionBypassExecuteRequest,
+  type TempContextTask,
+  type TempContextTaskResult,
+  type TempWindowNewApiSessionReadParams,
+} from "~/services/protectionBypass/contracts"
+import { isAutomaticProtectionBypassEnabled } from "~/services/protectionBypass/policy"
 import { AuthTypeEnum } from "~/types"
 import {
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type TempWindowHealthStatusCode,
 } from "~/types/tempWindow"
 import {
-  TEMP_WINDOW_REQUEST_SOURCES,
   type TempWindowCheckinPageAction,
   type TempWindowCheckinPageActionParams,
   type TempWindowFallbackAllowlist,
@@ -43,18 +41,9 @@ import {
   type TempWindowTurnstileFetchParams,
 } from "~/types/tempWindowFetch"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
-import { OPTIONS_PAGE_URL } from "~/utils/browser/extensionPageUrls"
-import {
-  isExtensionBackground,
-  isExtensionPopup,
-  isExtensionSidePanel,
-} from "~/utils/browser/index"
+import { isExtensionBackground } from "~/utils/browser/index"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
-import {
-  normalizeTempWindowRequestSource,
-  resolveTempWindowRequestPolicy,
-} from "~/utils/browser/tempWindowRequestSource"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
@@ -62,8 +51,29 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to temp window fetch helpers and fallback behavior.
  */
 const logger = createLogger("TempWindowFetch")
-const FIREFOX_POPUP_TEMP_WINDOW_UNSUPPORTED_ERROR =
-  "Temporary-window operations are unavailable from the Firefox popup"
+const TEMP_WINDOW_POLICY_BLOCK_CODES = new Set<ApiErrorCode>([
+  API_ERROR_CODES.TEMP_WINDOW_DISABLED,
+  API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED,
+  API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+])
+
+/** Sends one canonical protected-task envelope through the active context. */
+export async function executeProtectionBypassTask<
+  TTask extends TempContextTask,
+>(
+  request: ProtectionBypassExecuteRequest<TTask>,
+): Promise<TempContextTaskResult<TTask>> {
+  if (isExtensionBackground()) {
+    const { protectionBypassCoordinator } = await import(
+      "~/entrypoints/background/protectionBypassCoordinator"
+    )
+    return await protectionBypassCoordinator.execute(request)
+  }
+  return await sendRuntimeMessage({
+    action: RuntimeActionIds.ProtectionBypassExecuteTask,
+    ...request,
+  })
+}
 
 /**
  * Type guard to validate the shape of a temp window rendered title response.
@@ -97,12 +107,8 @@ export async function canUseTempWindowFetch() {
 
 type TempWindowFallbackBlockedReason =
   | "master_disabled"
+  | "automatic_account_refresh_disabled"
   | "permission_required"
-  | "popup_disabled"
-  | "sidepanel_disabled"
-  | "options_disabled"
-  | "auto_refresh_disabled"
-  | "manual_refresh_disabled"
 
 type TempWindowFallbackBlockStatus =
   | {
@@ -111,137 +117,39 @@ type TempWindowFallbackBlockStatus =
       reason: null
     }
   | {
-      kind: "not_applicable"
-      code: null
-      reason: "firefox_popup_unsupported"
-    }
-  | {
       kind: "blocked"
       code: TempWindowHealthStatusCode
       reason: TempWindowFallbackBlockedReason
     }
 
 /**
- * Evaluates whether temp-window fallback is currently blocked for the active UI/runtime context.
- *
- * This is shared by the actual fallback path and reminder UIs so they stay aligned
- * on the same enablement, context, and permission gates.
+ * Evaluates the known automatic account-refresh fallback, used by its health reminder.
  */
-export async function getTempWindowFallbackBlockStatus(
-  params: {
-    preferences?: TempWindowFallbackPreferences
-    isBackground?: boolean
-    inPopup?: boolean
-    inSidePanel?: boolean
-    inOptions?: boolean
-    tempWindowRequestSource?: unknown
-  } = {},
-): Promise<TempWindowFallbackBlockStatus> {
-  const preferences: TempWindowFallbackPreferences = {
-    ...(DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences),
-    ...(params.preferences ?? {}),
+export async function getTempWindowFallbackBlockStatus(params: {
+  preferences: TempWindowFallbackPreferences
+}): Promise<TempWindowFallbackBlockStatus> {
+  const { preferences } = params
+  const policy = {
+    automaticMasterEnabled: preferences.enabled,
+    automaticFeatureBypass: preferences.automaticFeatureBypass,
   }
-  const source =
-    params.tempWindowRequestSource === undefined
-      ? undefined
-      : normalizeTempWindowRequestSource(params.tempWindowRequestSource)
-  const isBackground =
-    source === undefined
-      ? params.isBackground ?? isExtensionBackground()
-      : source === TEMP_WINDOW_REQUEST_SOURCES.Background
-  let inPopup =
-    source === undefined
-      ? params.inPopup ?? false
-      : source === TEMP_WINDOW_REQUEST_SOURCES.Popup
-  let inSidePanel =
-    source === undefined
-      ? params.inSidePanel ?? false
-      : source === TEMP_WINDOW_REQUEST_SOURCES.Sidepanel
-  let inOptions =
-    source === undefined
-      ? params.inOptions ?? false
-      : source === TEMP_WINDOW_REQUEST_SOURCES.Options
-
-  if (source === undefined && !isBackground) {
-    try {
-      if (params.inPopup === undefined && isExtensionPopup()) {
-        inPopup = true
-      } else if (params.inSidePanel === undefined && isExtensionSidePanel()) {
-        inSidePanel = true
-      } else if (
-        params.inOptions === undefined &&
-        typeof window !== "undefined"
-      ) {
-        const currentUrl = new URL(window.location.href)
-        if (currentUrl && currentUrl.href.startsWith(OPTIONS_PAGE_URL)) {
-          inOptions = true
-        }
-      }
-    } catch {
-      // ignore environment detection errors
-    }
-  }
-
-  if (
-    inPopup &&
-    (source !== undefined || !isBackground) &&
-    isProtectionBypassFirefoxEnv()
-  ) {
-    return {
-      kind: "not_applicable",
-      code: null,
-      reason: "firefox_popup_unsupported",
-    }
-  }
-
-  if (!preferences.enabled) {
+  if (!policy.automaticMasterEnabled) {
     return {
       kind: "blocked",
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
       reason: "master_disabled",
     }
   }
-
-  const isAutoRefreshContext = isBackground
-  const isManualRefreshContext = !isBackground
-
-  if (inPopup && !preferences.useInPopup) {
+  if (
+    !isAutomaticProtectionBypassEnabled(
+      policy,
+      PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh,
+    )
+  ) {
     return {
       kind: "blocked",
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
-      reason: "popup_disabled",
-    }
-  }
-
-  if (inSidePanel && !preferences.useInSidePanel) {
-    return {
-      kind: "blocked",
-      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
-      reason: "sidepanel_disabled",
-    }
-  }
-
-  if (inOptions && !preferences.useInOptions) {
-    return {
-      kind: "blocked",
-      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
-      reason: "options_disabled",
-    }
-  }
-
-  if (isAutoRefreshContext && !preferences.useForAutoRefresh) {
-    return {
-      kind: "blocked",
-      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
-      reason: "auto_refresh_disabled",
-    }
-  }
-
-  if (isManualRefreshContext && !preferences.useForManualRefresh) {
-    return {
-      kind: "blocked",
-      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
-      reason: "manual_refresh_disabled",
+      reason: "automatic_account_refresh_disabled",
     }
   }
 
@@ -269,57 +177,52 @@ export async function getTempWindowFallbackBlockStatus(
 export async function tempWindowFetch(
   params: TempWindowFetchParams,
 ): Promise<TempWindowFetch> {
-  const policy = resolveTempWindowRequestPolicy({
-    tempWindowRequestSource: params.tempWindowRequestSource,
-    suppressMinimize: params.suppressMinimize,
-  })
-
-  if (policy.blockedReason) {
-    return {
-      success: false,
-      error: FIREFOX_POPUP_TEMP_WINDOW_UNSUPPORTED_ERROR,
-    }
-  }
-
   const payload: TempWindowFetchParams = {
     ...params,
     ...(params.fetchOptions
       ? { fetchOptions: normalizeRequestInitForMessage(params.fetchOptions) }
       : {}),
-    tempWindowRequestSource: policy.tempWindowRequestSource,
-    suppressMinimize: policy.suppressMinimize,
   }
-
-  // Make sure works normally in all contexts, including background
-  if (isExtensionBackground()) {
-    return await new Promise<TempWindowFetch>((resolve) => {
-      let responded = false
-
-      const finalize = (response?: TempWindowFetch) => {
-        if (responded) return
-        responded = true
-        resolve(
-          response ?? {
-            success: false,
-            error: "Empty tempWindowFetch response",
-          },
-        )
-      }
-
-      void (async () => {
-        try {
-          await handleTempWindowFetch(payload, (response) => {
-            finalize(response as TempWindowFetch)
-          })
-        } finally {
-          finalize()
-        }
-      })()
+  const {
+    protectionBypassExecution: execution,
+    tempWindowRequestSource: _ignoredSource,
+    ...taskParams
+  } = payload
+  if (
+    payload.tempContextTaskKind === TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
+  ) {
+    return await executeProtectionBypassTask({
+      execution,
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
+        params: taskParams,
+      },
     })
   }
-  return await sendRuntimeMessage({
-    action: RuntimeActionIds.TempWindowFetch,
-    ...payload,
+  return await executeProtectionBypassTask({
+    execution,
+    task: {
+      kind: TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+      params: taskParams,
+    },
+  })
+}
+
+/** Executes the closed New API cookie-session read through the Coordinator. */
+export async function tempWindowNewApiSessionRead(
+  params: TempWindowNewApiSessionReadParams,
+): Promise<TempWindowFetch> {
+  const {
+    protectionBypassExecution: execution,
+    tempWindowRequestSource: _ignoredSource,
+    ...taskParams
+  } = params
+  return await executeProtectionBypassTask({
+    execution,
+    task: {
+      kind: TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead,
+      params: taskParams,
+    },
   })
 }
 
@@ -329,60 +232,20 @@ export async function tempWindowFetch(
 export async function tempWindowTurnstileFetch(
   params: TempWindowTurnstileFetchParams,
 ): Promise<TempWindowTurnstileFetch> {
-  const policy = resolveTempWindowRequestPolicy({
-    tempWindowRequestSource: params.tempWindowRequestSource,
-    suppressMinimize: params.suppressMinimize,
-  })
-
-  if (policy.blockedReason) {
-    return {
-      success: false,
-      error: FIREFOX_POPUP_TEMP_WINDOW_UNSUPPORTED_ERROR,
-      turnstile: { status: "error", hasTurnstile: false },
-    }
-  }
-
   const payload: TempWindowTurnstileFetchParams = {
     ...params,
     ...(params.fetchOptions
       ? { fetchOptions: normalizeRequestInitForMessage(params.fetchOptions) }
       : {}),
-    tempWindowRequestSource: policy.tempWindowRequestSource,
-    suppressMinimize: policy.suppressMinimize,
   }
-
-  // Make sure works normally in all contexts, including background
-  if (isExtensionBackground()) {
-    return await new Promise<TempWindowTurnstileFetch>((resolve) => {
-      let responded = false
-
-      const finalize = (response?: TempWindowTurnstileFetch) => {
-        if (responded) return
-        responded = true
-        resolve(
-          response ?? {
-            success: false,
-            error: "Empty tempWindowTurnstileFetch response",
-            turnstile: { status: "error", hasTurnstile: false },
-          },
-        )
-      }
-
-      void (async () => {
-        try {
-          await handleTempWindowTurnstileFetch(payload, (response) => {
-            finalize(response as TempWindowTurnstileFetch)
-          })
-        } finally {
-          finalize()
-        }
-      })()
-    })
-  }
-
-  return await sendRuntimeMessage({
-    action: RuntimeActionIds.TempWindowTurnstileFetch,
-    ...payload,
+  const {
+    protectionBypassExecution: execution,
+    tempWindowRequestSource: _ignoredSource,
+    ...taskParams
+  } = payload
+  return await executeProtectionBypassTask({
+    execution,
+    task: { kind: TEMP_CONTEXT_TASK_KINDS.TurnstileFetch, params: taskParams },
   })
 }
 
@@ -393,56 +256,17 @@ export async function tempWindowTurnstileFetch(
 export async function tempWindowTriggerCheckinPageAction(
   params: TempWindowCheckinPageActionParams,
 ): Promise<TempWindowCheckinPageAction> {
-  const policy = resolveTempWindowRequestPolicy({
-    tempWindowRequestSource: params.tempWindowRequestSource,
-    suppressMinimize: params.suppressMinimize,
-  })
-
-  if (policy.blockedReason) {
-    return {
-      success: false,
-      reason: "trigger_failed",
-      error: FIREFOX_POPUP_TEMP_WINDOW_UNSUPPORTED_ERROR,
-    }
-  }
-
-  const payload: TempWindowCheckinPageActionParams = {
-    ...params,
-    tempWindowRequestSource: policy.tempWindowRequestSource,
-    suppressMinimize: policy.suppressMinimize,
-  }
-
-  if (isExtensionBackground()) {
-    return await new Promise<TempWindowCheckinPageAction>((resolve) => {
-      let responded = false
-
-      const finalize = (response?: TempWindowCheckinPageAction) => {
-        if (responded) return
-        responded = true
-        resolve(
-          response ?? {
-            success: false,
-            reason: "trigger_failed",
-            error: "Empty tempWindowCheckinPageAction response",
-          },
-        )
-      }
-
-      void (async () => {
-        try {
-          await handleTempWindowCheckinPageAction(payload, (response) => {
-            finalize(response as TempWindowCheckinPageAction)
-          })
-        } finally {
-          finalize()
-        }
-      })()
-    })
-  }
-
-  return await sendRuntimeMessage({
-    action: RuntimeActionIds.TempWindowCheckinPageAction,
-    ...payload,
+  const {
+    protectionBypassExecution: execution,
+    tempWindowRequestSource: _ignoredSource,
+    ...taskParams
+  } = params
+  return await executeProtectionBypassTask({
+    execution,
+    task: {
+      kind: TEMP_CONTEXT_TASK_KINDS.NativePageAction,
+      params: taskParams,
+    },
   })
 }
 
@@ -452,66 +276,18 @@ export async function tempWindowTriggerCheckinPageAction(
 export async function tempWindowGetRenderedTitle(
   params: TempWindowRenderedTitleParams,
 ): Promise<TempWindowRenderedTitleResponse> {
-  const policy = resolveTempWindowRequestPolicy({
-    tempWindowRequestSource: params.tempWindowRequestSource,
-    suppressMinimize: params.suppressMinimize,
+  const {
+    protectionBypassExecution: execution,
+    tempWindowRequestSource: _ignoredSource,
+    ...taskParams
+  } = params
+  const response = await executeProtectionBypassTask({
+    execution,
+    task: { kind: TEMP_CONTEXT_TASK_KINDS.RenderedTitle, params: taskParams },
   })
-
-  if (policy.blockedReason) {
-    return {
-      success: false,
-      error: FIREFOX_POPUP_TEMP_WINDOW_UNSUPPORTED_ERROR,
-    }
-  }
-
-  const payload = {
-    action: RuntimeActionIds.TempWindowGetRenderedTitle,
-    ...params,
-    tempWindowRequestSource: policy.tempWindowRequestSource,
-    suppressMinimize: policy.suppressMinimize,
-  }
-
-  // Make sure works normally in all contexts, including background
-  if (isExtensionBackground()) {
-    return await new Promise<TempWindowRenderedTitleResponse>((resolve) => {
-      // reuse background handler directly for synchronous contexts
-      let responded = false
-
-      const finalize = (response?: TempWindowRenderedTitleResponse) => {
-        if (responded) return
-        responded = true
-        resolve(
-          response ?? {
-            success: false,
-            error: "Empty tempWindowGetRenderedTitle response",
-          },
-        )
-      }
-
-      void (async () => {
-        try {
-          await handleTempWindowGetRenderedTitle(
-            payload,
-            (response: unknown) => {
-              if (isTempWindowRenderedTitleResponse(response)) {
-                finalize(response)
-                return
-              }
-
-              finalize({
-                success: false,
-                error: "Invalid tempWindowGetRenderedTitle response",
-              })
-            },
-          )
-        } finally {
-          finalize()
-        }
-      })()
-    })
-  }
-
-  return await sendRuntimeMessage(payload)
+  return isTempWindowRenderedTitleResponse(response)
+    ? response
+    : { success: false, error: "Invalid tempWindowGetRenderedTitle response" }
 }
 
 const TEMP_WINDOW_FALLBACK_STATUS = new Set([403])
@@ -618,12 +394,25 @@ export async function executeWithTempWindowFallback<T>(
 
   try {
     return await primaryRequest()
-  } catch (error) {
-    if (!(await shouldUseTempWindowFallback(error, context))) {
-      throw error
+  } catch (primaryError) {
+    if (!(await shouldUseTempWindowFallback(primaryError, context))) {
+      throw primaryError
     }
 
-    return await fetchViaTempWindow<T>(context)
+    try {
+      return await fetchViaTempWindow<T>(context)
+    } catch (fallbackError) {
+      if (
+        primaryError instanceof ApiError &&
+        fallbackError instanceof ApiError &&
+        fallbackError.code &&
+        TEMP_WINDOW_POLICY_BLOCK_CODES.has(fallbackError.code)
+      ) {
+        tagTempWindowFallbackBlocked(primaryError, fallbackError.code)
+        throw primaryError
+      }
+      throw fallbackError
+    }
   }
 }
 
@@ -697,102 +486,22 @@ async function shouldUseTempWindowFallback(
     return false
   }
 
-  const policy = resolveTempWindowRequestPolicy({
-    tempWindowRequestSource: context.tempWindowRequestSource,
-  })
-  if (policy.blockedReason) {
+  if (!(await canUseTempWindowFetch())) {
+    tagTempWindowFallbackBlocked(
+      error,
+      API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED,
+    )
     logSkipTempWindowFallback(
-      "Running in Firefox popup; temp window fallback is forcibly disabled to avoid closing the popup.",
+      "Cookie interceptor permissions not granted; skipping temp window fallback.",
       context,
+      {
+        permissions: COOKIE_INTERCEPTOR_PERMISSIONS,
+      },
     )
     return false
   }
 
-  let prefsFallback: TempWindowFallbackPreferences | undefined
-  try {
-    const prefs = await userPreferences.getPreferences()
-    prefsFallback =
-      (prefs.tempWindowFallback as TempWindowFallbackPreferences | undefined) ??
-      (DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences)
-  } catch {
-    prefsFallback =
-      DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences
-  }
-
-  const blockStatus = await getTempWindowFallbackBlockStatus({
-    preferences: prefsFallback,
-    tempWindowRequestSource: context.tempWindowRequestSource,
-  })
-
-  if (blockStatus.kind === "available") {
-    return true
-  }
-
-  if (blockStatus.kind === "not_applicable") {
-    logSkipTempWindowFallback(
-      "Running in Firefox popup; temp window fallback is forcibly disabled to avoid closing the popup.",
-      context,
-    )
-    return false
-  }
-
-  tagTempWindowFallbackBlocked(
-    error,
-    blockStatus.code === TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED
-      ? API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED
-      : API_ERROR_CODES.TEMP_WINDOW_DISABLED,
-  )
-
-  switch (blockStatus.reason) {
-    case "master_disabled":
-      logSkipTempWindowFallback(
-        "Temp window shield is disabled or preferences are missing.",
-        context,
-        {
-          enabled: prefsFallback?.enabled ?? null,
-        },
-      )
-      return false
-    case "permission_required":
-      logSkipTempWindowFallback(
-        "Cookie interceptor permissions not granted; skipping temp window fallback.",
-        context,
-        {
-          permissions: COOKIE_INTERCEPTOR_PERMISSIONS,
-        },
-      )
-      return false
-    case "popup_disabled":
-      logSkipTempWindowFallback(
-        "Popup context is disabled by user shield preferences.",
-        context,
-      )
-      return false
-    case "sidepanel_disabled":
-      logSkipTempWindowFallback(
-        "Side panel context is disabled by user shield preferences.",
-        context,
-      )
-      return false
-    case "options_disabled":
-      logSkipTempWindowFallback(
-        "Options page context is disabled by user shield preferences.",
-        context,
-      )
-      return false
-    case "auto_refresh_disabled":
-      logSkipTempWindowFallback(
-        "Auto-refresh context is disabled by user shield preferences.",
-        context,
-      )
-      return false
-    case "manual_refresh_disabled":
-      logSkipTempWindowFallback(
-        "Manual refresh context is disabled by user shield preferences.",
-        context,
-      )
-      return false
-  }
+  return true
 }
 
 /**
@@ -820,6 +529,10 @@ async function fetchViaTempWindow<T>(
     requestId,
     responseType,
     tempWindowRequestSource: context.tempWindowRequestSource,
+    protectionBypassExecution: context.protectionBypassExecution,
+    tempContextTaskKind: context.forceTempWindow
+      ? TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch
+      : TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
     accountId: context.accountId,
     authType: context.authType,
     cookieAuthSessionCookie: context.cookieAuthSessionCookie,

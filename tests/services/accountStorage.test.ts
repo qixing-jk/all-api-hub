@@ -14,6 +14,7 @@ import {
 } from "~/services/core/storageKeys"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -28,6 +29,7 @@ import {
 } from "~/types/accountTodayStats"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import {
   buildCompleteTodayStatsAvailability,
   buildTodayStatsAvailabilityReplacementCases,
@@ -1008,6 +1010,10 @@ describe("accountStorage core behaviors", () => {
       showTodayCashflow: false,
     })
 
+    const popupExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
     const refreshAccountSpy = vi
       .spyOn(accountStorage, "refreshAccount")
       .mockResolvedValueOnce({
@@ -1023,20 +1029,29 @@ describe("accountStorage core behaviors", () => {
     try {
       const result = await accountStorage.refreshAllAccounts(false, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: popupExecution,
       })
 
       expect(refreshAccountSpy).toHaveBeenNthCalledWith(1, "refresh-1", false, {
         includeTodayCashflow: false,
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: popupExecution,
       })
       expect(refreshAccountSpy).toHaveBeenNthCalledWith(2, "refresh-2", false, {
         includeTodayCashflow: false,
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: popupExecution,
       })
       expect(refreshAccountSpy).toHaveBeenNthCalledWith(3, "refresh-3", false, {
         includeTodayCashflow: false,
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: popupExecution,
       })
+      expect(
+        refreshAccountSpy.mock.calls.map(
+          ([, , options]) => options?.protectionBypassExecution,
+        ),
+      ).toEqual([popupExecution, popupExecution, popupExecution])
       expect(result).toEqual({
         success: 2,
         failed: 1,
@@ -1114,16 +1129,27 @@ describe("accountStorage core behaviors", () => {
       ),
     )
 
+    const popupExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
+
     await accountStorage.refreshAllAccounts(true, {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution: popupExecution,
     })
 
     expect(mockResolveAccountBrowserSession).toHaveBeenCalledWith(
       expect.objectContaining({
         baseUrl: "https://example.invalid",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: popupExecution,
       }),
     )
+    expect(
+      mockResolveAccountBrowserSession.mock.calls[0]?.[0]
+        .protectionBypassExecution,
+    ).toEqual(popupExecution)
   })
 
   it("refreshDisabledAccounts only probes disabled accounts and summarizes restored results", async () => {
@@ -1149,9 +1175,15 @@ describe("accountStorage core behaviors", () => {
         account: { last_sync_time: 222 },
       } as any)
 
+    const popupExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.RefreshDisabledAccounts,
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    )
+
     try {
       const result = await accountStorage.refreshDisabledAccounts(true, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: popupExecution,
       })
 
       expect(refreshAccountSpy).toHaveBeenCalledTimes(2)
@@ -1160,13 +1192,20 @@ describe("accountStorage core behaviors", () => {
         allowDisabled: true,
         reEnableOnSuccess: true,
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: popupExecution,
       })
       expect(refreshAccountSpy).toHaveBeenNthCalledWith(2, "disabled-c", true, {
         includeTodayCashflow: true,
         allowDisabled: true,
         reEnableOnSuccess: true,
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: popupExecution,
       })
+      expect(
+        refreshAccountSpy.mock.calls.map(
+          ([, , options]) => options?.protectionBypassExecution,
+        ),
+      ).toEqual([popupExecution, popupExecution])
       expect(result).toEqual({
         processedCount: 2,
         failedCount: 0,
@@ -2213,6 +2252,9 @@ describe("accountStorage core behaviors", () => {
   })
 
   it("refreshAccount should re-detect unknown site type and check-in support", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.RefreshAccount,
+    )
     const account = createAccount({
       id: "needs-detect",
       site_url: "https://foo.example.com",
@@ -2225,12 +2267,15 @@ describe("accountStorage core behaviors", () => {
     mockGetAccountSiteType.mockResolvedValue("one-api")
     mockFetchSupportCheckIn.mockResolvedValue(true)
 
-    await accountStorage.refreshAccount("needs-detect", true)
+    await accountStorage.refreshAccount("needs-detect", true, {
+      protectionBypassExecution,
+    })
 
     const updatedAccount = await accountStorage.getAccountById("needs-detect")
 
     expect(mockGetAccountSiteType).toHaveBeenCalledWith(
       "https://foo.example.com",
+      protectionBypassExecution,
     )
     expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith("one-api")
     expect(mockgetSiteTypeCapabilities).not.toHaveBeenCalledWith(
@@ -2240,6 +2285,7 @@ describe("accountStorage core behaviors", () => {
       expect.objectContaining({
         baseUrl: "https://foo.example.com",
         accountId: "needs-detect",
+        protectionBypassExecution,
         cookieAuthSessionCookie: "stored-session-cookie",
         auth: expect.objectContaining({
           authType: AuthTypeEnum.AccessToken,
@@ -2249,8 +2295,13 @@ describe("accountStorage core behaviors", () => {
         }),
       }),
     )
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
+      expect.objectContaining({ protectionBypassExecution }),
+    )
     expect(updatedAccount?.site_type).toBe("one-api")
     expect(updatedAccount?.checkIn?.enableDetection).toBe(true)
+    expect(updatedAccount).not.toHaveProperty("protectionBypassExecution")
+    expect(updatedAccount).not.toHaveProperty("tempWindowRequestSource")
   })
 
   it("refreshAccount should skip disabled accounts and avoid network calls", async () => {

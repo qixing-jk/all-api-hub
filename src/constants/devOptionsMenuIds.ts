@@ -6,6 +6,7 @@
  */
 export const DEV_MENU_ITEM_IDS = {
   MESH_GRADIENT_LAB: "meshGradientLab",
+  UNIFIED_API_GUIDANCE_PREVIEW: "unifiedApiGuidancePreview",
 } as const
 
 export type DevOptionsMenuItemId =

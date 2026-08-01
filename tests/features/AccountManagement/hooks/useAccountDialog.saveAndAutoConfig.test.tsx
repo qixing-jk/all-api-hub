@@ -28,6 +28,10 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import type {
+  ProtectionBypassSurface,
+  ProtectionBypassUserCommand,
+} from "~/services/protectionBypass/contracts"
 import {
   AuthTypeEnum,
   SiteAccount,
@@ -36,6 +40,7 @@ import {
   type DisplaySiteData,
 } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -53,6 +58,7 @@ const {
   mockStartProductAnalyticsAction,
   mockCompleteProductAnalyticsAction,
   mockGetCurrentTempWindowRequestSource,
+  mockWithProtectionBypassUserCommand,
 } = vi.hoisted(() => ({
   mockToast: vi.fn(),
   mockValidateAndSaveAccount: vi.fn(),
@@ -67,6 +73,7 @@ const {
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
   mockGetCurrentTempWindowRequestSource: vi.fn(),
+  mockWithProtectionBypassUserCommand: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => {
@@ -173,12 +180,28 @@ vi.mock("~/utils/browser/tempWindowRequestSource", async (importOriginal) => {
   }
 })
 
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/protectionBypass/client")>()
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: mockWithProtectionBypassUserCommand,
+  }
+})
+
 describe("useAccountDialog save and auto-config flows", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     vi.restoreAllMocks()
     mockGetCurrentTempWindowRequestSource.mockReturnValue(
       TEMP_WINDOW_REQUEST_SOURCES.Background,
+    )
+    mockWithProtectionBypassUserCommand.mockImplementation(
+      async (
+        command: ProtectionBypassUserCommand,
+        surface: ProtectionBypassSurface,
+        work: (execution: unknown) => Promise<unknown>,
+      ) => work(userCommandExecution(command, surface)),
     )
     await accountStorage.clearAllData()
     mockValidateAndSaveAccount.mockResolvedValue({
@@ -345,13 +368,46 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(accountStorage.refreshAccount).toHaveBeenCalledWith(
         "saved-account-id",
         true,
-        { tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup },
+        {
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          protectionBypassExecution: userCommandExecution(
+            "add_account",
+            "popup",
+          ),
+        },
       )
     })
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
+      "add_account",
+      TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      expect.any(Function),
+    )
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
+    expect(
+      vi.mocked(accountStorage.refreshAccount).mock.calls[0]?.[2]
+        ?.protectionBypassExecution,
+    ).toEqual(userCommandExecution("add_account", "popup"))
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
   })
 
   it("captures the current surface again when the warning refresh action is clicked", async () => {
+    const initialExecution = userCommandExecution("add_account", "options")
+    const retryExecution = userCommandExecution("add_account", "popup")
+    mockWithProtectionBypassUserCommand
+      .mockImplementationOnce(
+        async (
+          _command: unknown,
+          _surface: unknown,
+          work: (execution: unknown) => Promise<unknown>,
+        ) => work(initialExecution),
+      )
+      .mockImplementationOnce(
+        async (
+          _command: unknown,
+          _surface: unknown,
+          work: (execution: unknown) => Promise<unknown>,
+        ) => work(retryExecution),
+      )
     mockGetCurrentTempWindowRequestSource
       .mockReturnValueOnce(TEMP_WINDOW_REQUEST_SOURCES.Options)
       .mockReturnValueOnce(TEMP_WINDOW_REQUEST_SOURCES.Popup)
@@ -396,14 +452,21 @@ describe("useAccountDialog save and auto-config flows", () => {
       1,
       "saved-account-id",
       true,
-      { tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options },
+      {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+        protectionBypassExecution: initialExecution,
+      },
     )
     expect(accountStorage.refreshAccount).toHaveBeenNthCalledWith(
       2,
       "saved-account-id",
       true,
-      { tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup },
+      {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: retryExecution,
+      },
     )
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(2)
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(2)
   })
 
@@ -562,6 +625,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     await waitFor(() => {
       expect(refreshSpy).toHaveBeenCalledWith("saved-account-id", true, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: expect.objectContaining({
+          kind: "user_command",
+        }),
       })
     })
   })
@@ -624,6 +690,9 @@ describe("useAccountDialog save and auto-config flows", () => {
         true,
         {
           tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: expect.objectContaining({
+            kind: "user_command",
+          }),
         },
       )
     })
@@ -718,6 +787,9 @@ describe("useAccountDialog save and auto-config flows", () => {
         true,
         {
           tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: expect.objectContaining({
+            kind: "user_command",
+          }),
         },
       )
     })
@@ -772,6 +844,11 @@ describe("useAccountDialog save and auto-config flows", () => {
   })
 
   it("updates an existing account with trimmed values and uses the default update success toast", async () => {
+    mockValidateAndUpdateAccount.mockResolvedValueOnce({
+      success: true,
+      accountId: "existing-account-id",
+      feedbackLevel: "success",
+    })
     const { result } = renderEditHook({
       account: {
         id: "existing-account-id",
@@ -821,6 +898,23 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
     expect(toast.success).toHaveBeenCalledWith(
       "accountDialog:messages.updateSuccess",
+    )
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledWith(
+      "reauthenticate_account",
+      TEMP_WINDOW_REQUEST_SOURCES.Background,
+      expect.any(Function),
+    )
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
+    expect(accountStorage.refreshAccount).toHaveBeenCalledWith(
+      "existing-account-id",
+      true,
+      {
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: userCommandExecution(
+          "reauthenticate_account",
+          "background",
+        ),
+      },
     )
   })
 
@@ -1185,11 +1279,11 @@ describe("useAccountDialog save and auto-config flows", () => {
 
     await fillStandardAddAccountDraft(result)
 
-    await expect(
-      act(async () => {
-        await result.current.handlers.handleSaveAccount()
-      }),
-    ).rejects.toThrow("backend leaked details")
+    await act(async () => {
+      await expect(result.current.handlers.handleSaveAccount()).rejects.toThrow(
+        "backend leaked details",
+      )
+    })
 
     await waitFor(() => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
@@ -3557,11 +3651,11 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.setters.setSiteType("one-api")
     })
 
-    await expect(
-      act(async () => {
-        await result.current.handlers.handleSaveAccount()
-      }),
-    ).rejects.toThrow("private backend")
+    await act(async () => {
+      await expect(result.current.handlers.handleSaveAccount()).rejects.toThrow(
+        "private backend",
+      )
+    })
 
     expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,

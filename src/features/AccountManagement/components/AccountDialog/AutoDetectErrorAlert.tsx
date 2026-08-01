@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Alert, Button } from "~/components/ui"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import {
   AutoDetectErrorType,
@@ -10,11 +11,29 @@ import {
   reloadCurrentTab,
   type AutoDetectErrorProps,
 } from "~/services/accounts/utils/autoDetectUtils"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
+  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
+} from "~/services/productAnalytics/contracts"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { createTab } from "~/utils/browser/browserApi"
 import {
   openApiCredentialProfilesPage,
   openSiteSupportRequestPage,
 } from "~/utils/navigation"
+
+const apiCredentialRecoveryErrorTypes = new Set<AutoDetectErrorType>([
+  AutoDetectErrorType.INVALID_RESPONSE,
+  AutoDetectErrorType.NOT_FOUND,
+  AutoDetectErrorType.FORBIDDEN,
+  AutoDetectErrorType.UNKNOWN,
+])
 
 /**
  * Alert displayed when automatic credential detection fails so users can recover.
@@ -70,11 +89,29 @@ export default function AutoDetectErrorAlert({
       return
     }
 
+    void trackProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountDialogAutoDetectRecovery,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
+        target_page_id: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES,
+        guidance_action_kind:
+          PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS.SaveApiCredentialRecovery,
+      },
+    )
     void openApiCredentialProfilesPage()
   }
 
   const hasRecoveryAction = Boolean(error.actionText || error.helpDocUrl)
-  const canShowApiCredentialFallback = Boolean(siteUrl)
+  const canRecoverWithApiCredentialProfile =
+    apiCredentialRecoveryErrorTypes.has(error.type)
+  const canShowApiCredentialFallback =
+    Boolean(siteUrl) && canRecoverWithApiCredentialProfile
 
   return (
     <div className="mb-4 space-y-3">

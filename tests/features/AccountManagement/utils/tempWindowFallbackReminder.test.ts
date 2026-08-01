@@ -55,6 +55,20 @@ describe("tempWindowFallbackReminder", () => {
     expect(issue).toBeNull()
   })
 
+  it("does not open settings reminders for invalid policy context", () => {
+    const issue = getTempWindowFallbackIssue([
+      makeSite({
+        health: {
+          status: SiteHealthStatus.Warning,
+          reason: "retry locally",
+          code: TEMP_WINDOW_HEALTH_STATUS_CODES.POLICY_CONTEXT_INVALID,
+        },
+      }),
+    ])
+
+    expect(issue).toBeNull()
+  })
+
   it("returns an issue for TEMP_WINDOW_DISABLED and maps to the shield settings anchor", () => {
     const issue = getTempWindowFallbackIssue([
       makeSite({

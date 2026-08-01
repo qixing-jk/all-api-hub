@@ -55,7 +55,7 @@
         "disabled": "Activa el check-in automático cuando quieras reclamar recompensas automáticamente. Las programaciones y resultados futuros aparecerán aquí."
       },
       "managedSiteModelSync": {
-        "disabled": "Activa la sincronización de modelos cuando quieras actualizar automáticamente los modelos de sitios administrados. El intervalo y alcance de sincronización aparecerán aquí."
+        "disabled": "Activa la sincronización de modelos cuando quieras actualizar automáticamente los modelos del AI gateway autohospedado. El intervalo y alcance de sincronización aparecerán aquí."
       },
       "siteAnnouncements": {
         "disabled": "Activa el sondeo de anuncios cuando quieras ver actualizaciones del sitio aquí. Las comprobaciones recientes y los conteos de anuncios aparecerán aquí."
@@ -72,7 +72,7 @@
         "allowedModels": "Modelos permitidos",
         "concurrency": "Concurrencia",
         "interval": "Intervalo de sincronización (horas)",
-        "label": "Sincronización de modelos de sitio administrado",
+        "label": "Sincronización de modelos del AI gateway autohospedado",
         "open": "Abrir sincronización"
       },
       "siteAnnouncements": {
@@ -145,12 +145,12 @@
       }
     },
     "managedSite": {
-      "description": "Administración de canales de sitios administrados y capacidades de sincronización de modelos.",
-      "label": "Sitio administrado",
+      "description": "Administración de canales y sincronización de modelos para tu AI gateway autohospedado.",
+      "label": "AI gateway autohospedado",
       "state": {
-        "disabled": "Aún no hay ningún sitio administrado conectado. Conecta uno cuando necesites administrar canales o modelos.",
-        "needs_setup": "Conecta primero un sitio administrado; luego podrás administrar canales o sincronizar modelos aquí.",
-        "not_applicable": "Este tipo de sitio aún no admite administración de sitios administrados."
+        "disabled": "Aún no hay ningún AI gateway autohospedado configurado. Configura uno cuando necesites administrar canales o modelos.",
+        "needs_setup": "Configura primero un AI gateway autohospedado; luego podrás administrar canales o sincronizar modelos aquí.",
+        "not_applicable": "Este tipo de sitio aún no admite administración de AI gateway autohospedado."
       }
     },
     "subItems": {
@@ -178,7 +178,8 @@
     "automationOverview": "Ejecuciones de automatización",
     "configurationOverview": "Resumen de configuración",
     "needsAttention": "Requiere atención",
-    "recentUsage": "Uso reciente"
+    "recentUsage": "Uso reciente",
+    "unifiedApiGuidance": "Configuración de Unified API"
   },
   "severity": {
     "error": "Error",
@@ -187,6 +188,7 @@
   },
   "states": {
     "allClear": "No hay nada que requiera atención en este momento.",
+    "loadDetailUnavailable": "Parte de la información del resumen no está disponible temporalmente. Intenta cargarla de nuevo.",
     "loadedWithError": "No se pudo cargar parte de la información. Se muestran los datos disponibles.",
     "loading": "Cargando resumen..."
   },
@@ -213,6 +215,69 @@
     "pendingRefresh": "Actualización pendiente",
     "pendingRefreshHelp": "Las estadísticas de hoy aún no se han confirmado. Actualiza la cuenta correspondiente desde la lista de cuentas.",
     "unavailable": "No disponible"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "Agregar cuenta",
+      "addApiCredential": "Agregar credencial de API",
+      "addGatewayChannel": "Agregar primer canal de gateway",
+      "configureManagedSite": "Configurar AI gateway autohospedado",
+      "manageChannels": "Administrar canales",
+      "openApiCredentialProfiles": "Abrir Biblioteca de credenciales de API",
+      "openModelSync": "Abrir Sincronización de modelos"
+    },
+    "boundaryNote": "All API Hub administra e importa la configuración; no hace proxy de las solicitudes de modelos. Los clientes externos llaman a tu AI gateway autohospedado.",
+    "description": {
+      "has_gateway_channels": "Antes se creó o importó un canal del gateway. Abre la administración de canales para confirmar su estado actual y obtener la dirección de API y la clave de acceso que necesita tu cliente.",
+      "needs_importable_source": "Ya tienes cuentas, pero sus tipos actuales no pueden exponer claves importables. Primero guarda una API key o agrega un tipo de cuenta que permita acceder a claves, y luego impórtala en tu AI gateway autohospedado.",
+      "needs_managed_site": "Ya tienes claves de cuenta o API keys. Después de configurar tu AI gateway autohospedado, puedes importarlas como canales del gateway para que varias claves usen una sola AI API.",
+      "needs_sources": "Primero agrega cuentas o guarda API keys. Luego puedes exportarlas directamente a clientes o importarlas fácilmente a tu AI gateway autohospedado para reunirlas en una AI API unificada.",
+      "ready_accounts": "La configuración básica del AI gateway autohospedado está completa. Continúa importando una clave de cuenta o API key; el flujo de importación validará la conexión y creará un canal.",
+      "ready_profiles": "La configuración básica del AI gateway autohospedado está completa. Abre la biblioteca de credenciales para validar e importar una API key guardada como canal del gateway."
+    },
+    "directToolExportNote": "Si aún no necesitas un gateway autohospedado, también puedes exportar una credencial individual directamente a herramientas cliente.",
+    "headline": "Reúne varias claves de cuenta o API keys en una AI API unificada",
+    "modelSyncOptional": "La sincronización de modelos puede actualizar automáticamente la lista de modelos del gateway y reducir mantenimiento manual; puedes activarla cuando haga falta después de crear canales.",
+    "optionalLabel": "Mantenimiento opcional",
+    "sources": {
+      "account": "Fuentes de cuentas",
+      "accountUnavailable": "Cuentas no importables",
+      "both": "Cuentas + credenciales",
+      "none": "Aún no hay fuentes",
+      "profile": "Fuentes de credenciales"
+    },
+    "stepper": {
+      "label": "Progreso de configuración de la API unificada",
+      "states": {
+        "completed": "Completado",
+        "current": "Paso actual",
+        "upcoming": "Más adelante"
+      },
+      "steps": {
+        "clientAccess": {
+          "description": "Obtén la dirección de API del gateway y una clave de acceso para tu cliente.",
+          "title": "Conectar un cliente"
+        },
+        "gatewayChannel": {
+          "description": "Importa al menos una clave de cuenta o credencial de API guardada.",
+          "title": "Crear un canal del gateway"
+        },
+        "gatewaySettings": {
+          "description": "Ingresa los datos de conexión de administrador de tu AI gateway autohospedado.",
+          "title": "Guardar configuración del gateway"
+        },
+        "source": {
+          "description": "Agrega una cuenta que permita obtener claves o guarda una credencial de API.",
+          "title": "Preparar una fuente"
+        }
+      }
+    },
+    "unavailable": {
+      "badge": "Estado sin confirmar",
+      "description": "No se pudieron cargar las cuentas, las credenciales o la configuración del gateway. No se asumirá que faltan fuentes.",
+      "retry": "Volver a comprobar",
+      "title": "No se pudo confirmar la configuración"
+    }
   },
   "usage": {
     "activityMix": "Tendencia reciente",

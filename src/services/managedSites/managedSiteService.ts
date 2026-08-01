@@ -3,6 +3,7 @@ import type {
   ManagedSiteChannelDeleteResponse,
   ManagedSiteChannelDraftRequestOptions,
   ManagedSiteChannelRequestOptions,
+  ManagedSiteChannelSecretReadOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ApiResponse } from "~/services/apiTransport/type"
@@ -102,9 +103,14 @@ export interface ManagedSiteService<
   hydrateComparableChannelKeys?(
     config: TConfig,
     candidates: ManagedSiteChannel[],
+    options?: ManagedSiteChannelSecretReadOptions,
   ): Promise<ManagedSiteChannel[]>
 
-  fetchChannelSecretKey?(config: TConfig, channelId: number): Promise<string>
+  fetchChannelSecretKey?(
+    config: TConfig,
+    channelId: number,
+    options?: ManagedSiteChannelSecretReadOptions,
+  ): Promise<string>
 }
 
 export type TypedManagedSiteService<TSiteType extends ManagedSiteType> =

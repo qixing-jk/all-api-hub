@@ -55,7 +55,7 @@
         "disabled": "Khi muốn tự động nhận phần thưởng điểm danh, hãy bật tự động điểm danh. Lịch kế tiếp và kết quả sẽ xuất hiện tại đây."
       },
       "managedSiteModelSync": {
-        "disabled": "Khi muốn tự động cập nhật model của trang tự quản, hãy bật đồng bộ model. Khoảng đồng bộ và phạm vi sẽ xuất hiện tại đây."
+        "disabled": "Khi muốn tự động cập nhật model của AI gateway tự triển khai, hãy bật đồng bộ model. Khoảng đồng bộ và phạm vi sẽ xuất hiện tại đây."
       },
       "siteAnnouncements": {
         "disabled": "Khi muốn theo dõi thông báo trang kịp thời, hãy bật lấy thông báo. Lần kiểm tra gần nhất và số thông báo sẽ xuất hiện tại đây."
@@ -72,7 +72,7 @@
         "allowedModels": "Model giới hạn",
         "concurrency": "Số luồng",
         "interval": "Khoảng đồng bộ (giờ)",
-        "label": "Đồng bộ model trang quản lý",
+        "label": "Đồng bộ model AI gateway tự triển khai",
         "open": "Mở đồng bộ"
       },
       "siteAnnouncements": {
@@ -145,12 +145,12 @@
       }
     },
     "managedSite": {
-      "description": "Quản lý kênh và đồng bộ model cho trang tự quản.",
-      "label": "Trang tự quản",
+      "description": "Quản lý kênh và đồng bộ model cho AI gateway tự triển khai.",
+      "label": "AI gateway tự triển khai",
       "state": {
-        "disabled": "Chưa kết nối trang tự quản. Khi cần, hãy hoàn tất cấu hình trang trước.",
-        "needs_setup": "Kết nối trang tự quản trước, rồi bạn có thể quản lý kênh hoặc đồng bộ model tại đây.",
-        "not_applicable": "Loại trang này hiện chưa hỗ trợ quản lý trang tự quản."
+        "disabled": "Chưa cấu hình AI gateway tự triển khai. Khi cần, hãy hoàn tất cấu hình gateway trước.",
+        "needs_setup": "Cấu hình AI gateway tự triển khai trước, rồi bạn có thể quản lý kênh hoặc đồng bộ model tại đây.",
+        "not_applicable": "Loại trang này hiện chưa hỗ trợ quản lý AI gateway tự triển khai."
       }
     },
     "subItems": {
@@ -178,7 +178,8 @@
     "automationOverview": "Tác vụ tự động",
     "configurationOverview": "Tổng quan cấu hình",
     "needsAttention": "Cần xử lý",
-    "recentUsage": "Sử dụng gần đây"
+    "recentUsage": "Sử dụng gần đây",
+    "unifiedApiGuidance": "Thiết lập API hợp nhất"
   },
   "severity": {
     "error": "Lỗi",
@@ -187,6 +188,7 @@
   },
   "states": {
     "allClear": "Hiện không có mục nào cần xử lý.",
+    "loadDetailUnavailable": "Một số thông tin tổng quan tạm thời không khả dụng. Hãy thử tải lại.",
     "loadedWithError": "Một số thông tin tải thất bại. Đang hiển thị dữ liệu có sẵn.",
     "loading": "Đang tải tổng quan..."
   },
@@ -213,6 +215,69 @@
     "pendingRefresh": "Chờ làm mới",
     "pendingRefreshHelp": "Số liệu thống kê hôm nay chưa được xác nhận. Hãy làm mới tài khoản liên quan trong danh sách tài khoản.",
     "unavailable": "Không khả dụng"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "Thêm tài khoản",
+      "addApiCredential": "Thêm thông tin API",
+      "addGatewayChannel": "Thêm kênh gateway đầu tiên",
+      "configureManagedSite": "Cấu hình AI gateway tự triển khai",
+      "manageChannels": "Quản lý kênh",
+      "openApiCredentialProfiles": "Mở thư viện xác thực",
+      "openModelSync": "Mở đồng bộ model"
+    },
+    "boundaryNote": "All API Hub quản lý và nhập cấu hình; ứng dụng không proxy yêu cầu model. Client bên ngoài sẽ gọi AI gateway tự triển khai của bạn.",
+    "description": {
+      "has_gateway_channels": "Một kênh gateway đã từng được tạo hoặc nhập. Mở quản lý kênh để xác nhận trạng thái hiện tại, sau đó lấy địa chỉ API và access key mà client cần.",
+      "needs_importable_source": "Bạn đã có tài khoản, nhưng loại tài khoản hiện tại không thể cung cấp key có thể nhập. Hãy lưu API key trước, hoặc thêm loại tài khoản hỗ trợ lấy key, rồi nhập vào AI gateway tự triển khai.",
+      "needs_managed_site": "Bạn đã có key tài khoản hoặc API key. Sau khi cấu hình AI gateway tự triển khai, bạn có thể nhập chúng làm kênh gateway để nhiều key dùng chung một AI API.",
+      "needs_sources": "Trước tiên hãy thêm tài khoản hoặc lưu API key. Sau đó bạn có thể xuất trực tiếp sang client, hoặc nhập nhanh vào AI gateway tự triển khai để tổng hợp thành một AI API thống nhất.",
+      "ready_accounts": "Đã hoàn tất cấu hình cơ bản cho AI gateway tự triển khai. Tiếp tục nhập key tài khoản hoặc API key; quy trình nhập sẽ xác minh kết nối và tạo kênh gateway.",
+      "ready_profiles": "Đã hoàn tất cấu hình cơ bản cho AI gateway tự triển khai. Mở thư viện xác thực để xác minh và nhập API key đã lưu làm kênh gateway."
+    },
+    "directToolExportNote": "Nếu tạm thời chưa cần gateway tự triển khai, bạn cũng có thể xuất trực tiếp từng thông tin xác thực sang công cụ client.",
+    "headline": "Gộp nhiều key tài khoản hoặc API key thành một AI API thống nhất",
+    "modelSyncOptional": "Đồng bộ model có thể tự động cập nhật danh sách model của gateway và giảm thao tác bảo trì thủ công; có thể bật khi cần sau khi đã tạo kênh.",
+    "optionalLabel": "Bảo trì tùy chọn",
+    "sources": {
+      "account": "Nguồn tài khoản",
+      "accountUnavailable": "Tài khoản chưa thể nhập",
+      "both": "Tài khoản + xác thực",
+      "none": "Chưa có nguồn",
+      "profile": "Nguồn xác thực"
+    },
+    "stepper": {
+      "label": "Tiến trình thiết lập API thống nhất",
+      "states": {
+        "completed": "Đã hoàn tất",
+        "current": "Bước hiện tại",
+        "upcoming": "Sau"
+      },
+      "steps": {
+        "clientAccess": {
+          "description": "Lấy địa chỉ API của gateway và access key cho client.",
+          "title": "Kết nối client"
+        },
+        "gatewayChannel": {
+          "description": "Nhập ít nhất một key tài khoản hoặc thông tin xác thực API đã lưu.",
+          "title": "Tạo kênh gateway"
+        },
+        "gatewaySettings": {
+          "description": "Nhập thông tin kết nối quản trị của AI gateway tự triển khai.",
+          "title": "Lưu cấu hình gateway"
+        },
+        "source": {
+          "description": "Thêm tài khoản có thể cung cấp key hoặc lưu thông tin xác thực API.",
+          "title": "Chuẩn bị nguồn"
+        }
+      }
+    },
+    "unavailable": {
+      "badge": "Chưa xác nhận trạng thái",
+      "description": "Không thể tải tài khoản, thông tin xác thực hoặc cấu hình cổng. Hệ thống sẽ không kết luận rằng bạn chưa có nguồn.",
+      "retry": "Kiểm tra lại thiết lập",
+      "title": "Không thể xác nhận tiến độ thiết lập"
+    }
   },
   "usage": {
     "activityMix": "Xu hướng gần đây",

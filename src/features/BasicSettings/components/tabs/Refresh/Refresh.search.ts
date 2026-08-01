@@ -4,6 +4,14 @@ import {
   DEFAULT_BREADCRUMBS,
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
+import { SHIELD_AUTOMATIC_FEATURE_ITEMS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
+import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
+
+const shieldBreadcrumbs = [
+  ...DEFAULT_BREADCRUMBS,
+  "settings:tabs.refresh",
+  "settings:refresh.shieldTitle",
+]
 
 export const refreshSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
@@ -16,12 +24,10 @@ export const refreshSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:shield-settings",
     "refresh",
-    "shield-settings",
+    SHIELD_SETTINGS_TARGET_IDS.root,
     "settings:refresh.shieldTitle",
     241,
-    {
-      keywords: ["shield", "firewall", "cloudflare"],
-    },
+    { keywords: ["shield", "firewall", "cloudflare"] },
   ),
 ]
 
@@ -93,124 +99,61 @@ export const refreshSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:shield-enabled",
     "refresh",
-    "shield-enabled",
+    SHIELD_SETTINGS_TARGET_IDS.enabled,
     "settings:refresh.shieldEnabled",
     544,
     {
       descriptionKey: "settings:refresh.shieldEnabledDescTempWindowOnly",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.refresh",
-        "settings:refresh.shieldTitle",
+      breadcrumbsKeys: shieldBreadcrumbs,
+      keywords: [
+        "site verification",
+        "cloudflare",
+        "temporary page",
+        "automatic",
       ],
-      keywords: ["shield", "firewall", "cloudflare", "temp window"],
     },
   ),
   buildControlDefinition(
     "control:shield-method",
     "refresh",
-    "shield-method",
+    SHIELD_SETTINGS_TARGET_IDS.method,
     "settings:refresh.shieldMethodTitle",
     545,
     {
       descriptionKey: "settings:refresh.shieldMethodDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.refresh",
-        "settings:refresh.shieldTitle",
+      breadcrumbsKeys: shieldBreadcrumbs,
+      keywords: [
+        "site verification",
+        "shared window",
+        "background tab",
+        "new window",
       ],
-      keywords: ["shield", "window", "tab", "composite"],
     },
   ),
   buildControlDefinition(
-    "control:shield-contexts",
+    "control:shield-automatic-features",
     "refresh",
-    "shield-contexts",
-    "settings:refresh.shieldContextsTitle",
+    SHIELD_SETTINGS_TARGET_IDS.automaticFeatures,
+    "settings:refresh.shieldAutomaticFeaturesTitle",
     546,
     {
-      descriptionKey: "settings:refresh.shieldContextsDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.refresh",
-        "settings:refresh.shieldTitle",
-      ],
-      keywords: ["shield", "contexts", "popup", "sidepanel", "options"],
+      descriptionKey: "settings:refresh.shieldAutomaticFeaturesDesc",
+      breadcrumbsKeys: shieldBreadcrumbs,
+      keywords: ["automatic", "temporary page"],
     },
   ),
-  buildControlDefinition(
-    "control:shield-popup",
-    "refresh",
-    "shield-popup",
-    "settings:refresh.shieldPopup",
-    547,
-    {
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.refresh",
-        "settings:refresh.shieldTitle",
-      ],
-      keywords: ["shield", "popup"],
-    },
-  ),
-  buildControlDefinition(
-    "control:shield-sidepanel",
-    "refresh",
-    "shield-sidepanel",
-    "settings:refresh.shieldSidepanel",
-    548,
-    {
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.refresh",
-        "settings:refresh.shieldTitle",
-      ],
-      keywords: ["shield", "sidepanel", "sidebar"],
-    },
-  ),
-  buildControlDefinition(
-    "control:shield-options",
-    "refresh",
-    "shield-options",
-    "settings:refresh.shieldOptions",
-    549,
-    {
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.refresh",
-        "settings:refresh.shieldTitle",
-      ],
-      keywords: ["shield", "options"],
-    },
-  ),
-  buildControlDefinition(
-    "control:shield-auto-refresh",
-    "refresh",
-    "shield-auto-refresh",
-    "settings:refresh.shieldAutoRefresh",
-    550,
-    {
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.refresh",
-        "settings:refresh.shieldTitle",
-      ],
-      keywords: ["shield", "auto refresh"],
-    },
-  ),
-  buildControlDefinition(
-    "control:shield-manual-refresh",
-    "refresh",
-    "shield-manual-refresh",
-    "settings:refresh.shieldManualRefresh",
-    551,
-    {
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.refresh",
-        "settings:refresh.shieldTitle",
-      ],
-      keywords: ["shield", "manual refresh"],
-    },
+  ...SHIELD_AUTOMATIC_FEATURE_ITEMS.map(
+    ({ feature, titleKey, keyword }, index) =>
+      buildControlDefinition(
+        `control:shield-automatic-feature-${feature}`,
+        "refresh",
+        SHIELD_SETTINGS_TARGET_IDS.feature[feature],
+        titleKey,
+        547 + index,
+        {
+          breadcrumbsKeys: shieldBreadcrumbs,
+          keywords: ["shield", "automatic", keyword],
+        },
+      ),
   ),
 ]

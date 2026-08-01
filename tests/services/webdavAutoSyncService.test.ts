@@ -1,11 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
+import { Storage } from "@plasmohq/storage"
+
+import {
+  ACCOUNT_STORAGE_KEYS,
+  USER_PREFERENCES_STORAGE_KEYS,
+} from "~/services/core/storageKeys"
+import {
+  DEFAULT_PREFERENCES,
+  userPreferences,
+} from "~/services/preferences/userPreferences"
 import { createDefaultTagStore } from "~/services/tags/tagStoreUtils"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { normalizeWebdavOrderedEntryIds } from "~/services/webdav/webdavSelectiveSync"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 // Basic getErrorMessage passthrough to avoid noisy output
 vi.mock("~/utils/core/error", () => ({
@@ -126,19 +136,6 @@ const mockTestConnection = vi.fn()
 const mockDownloadBackup = vi.fn()
 const mockUploadBackup = vi.fn()
 const mockParseWebdavBackupJson = vi.fn()
-
-/**
- * Creates a deferred promise helper for tests.
- */
-function createDeferred<T>() {
-  let resolve!: (value: T) => void
-  let reject!: (reason?: unknown) => void
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res
-    reject = rej
-  })
-  return { promise, resolve, reject }
-}
 
 vi.mock("~/services/webdav/webdavService", () => ({
   testWebdavConnection: (...args: any[]) => mockTestConnection(...args),
@@ -1304,6 +1301,98 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
     })
     expect(uploaded.preferences.accountAutoRefresh).toBeUndefined()
     expect(uploaded.preferences.webdav).toBeUndefined()
+  })
+
+  it("converges legacy WebDAV preferences to a canonical v27 snapshot before the next upload", async () => {
+    const storage = new Storage({ area: "local" })
+    const service = createService()
+    const userPreferencesPrototype = Object.getPrototypeOf(userPreferences)
+
+    await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      lastUpdated: 100,
+      sharedPreferencesLastUpdated: 100,
+    })
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "merge",
+        syncData: {
+          accounts: false,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: true,
+        },
+      },
+    } as any)
+    mockExportPreferences.mockImplementation(() =>
+      userPreferencesPrototype.getPreferences.call(userPreferences),
+    )
+    mockImportPreferences.mockImplementation((...args) =>
+      userPreferencesPrototype.importPreferences.call(userPreferences, ...args),
+    )
+    mockDownloadBackup.mockResolvedValue(
+      JSON.stringify({
+        version: "2.0",
+        timestamp: 200,
+        preferences: {
+          ...DEFAULT_PREFERENCES,
+          preferencesVersion: 26,
+          lastUpdated: 200,
+          sharedPreferencesLastUpdated: 200,
+          tempWindowFallback: {
+            enabled: true,
+            useForAutoRefresh: false,
+            tempContextMode: "composite",
+          },
+        },
+        channelConfigs: {},
+      }),
+    )
+
+    try {
+      await service.syncWithWebdav()
+
+      const storedAfterImport = (await storage.get(
+        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+      )) as any
+      expect(storedAfterImport.preferencesVersion).toBe(27)
+      expect(storedAfterImport.tempWindowFallback).toMatchObject({
+        automaticFeatureBypass: { account_refresh: false },
+      })
+      expect(storedAfterImport.tempWindowFallback).not.toHaveProperty(
+        "useForAutoRefresh",
+      )
+
+      mockUploadBackup.mockClear()
+      mockGetPreferences.mockResolvedValue({
+        webdav: {
+          syncStrategy: "upload_only",
+          syncData: {
+            accounts: false,
+            bookmarks: false,
+            apiCredentialProfiles: false,
+            preferences: true,
+          },
+        },
+      } as any)
+      mockDownloadBackup.mockRejectedValue({
+        code: "WEBDAV_FILE_NOT_FOUND",
+        message: "messages:webdav.fileNotFound",
+      })
+
+      await service.syncWithWebdav()
+
+      const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+      expect(uploaded.preferences.preferencesVersion).toBe(27)
+      expect(uploaded.preferences.tempWindowFallback).toMatchObject({
+        automaticFeatureBypass: { account_refresh: false },
+      })
+      expect(uploaded.preferences.tempWindowFallback).not.toHaveProperty(
+        "useForAutoRefresh",
+      )
+    } finally {
+      await storage.remove(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES)
+    }
   })
 
   it("accounts-only sync preserves remote bookmarks metadata in uploaded backup", async () => {

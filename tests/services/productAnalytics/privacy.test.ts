@@ -27,6 +27,9 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_IDS,
   PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
+  PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES,
+  PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION,
+  PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SORT_FIELDS,
@@ -39,8 +42,11 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
+  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
+  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES,
 } from "~/services/productAnalytics/contracts"
 import { sanitizeProductAnalyticsEvent } from "~/services/productAnalytics/privacy"
+import { SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES } from "~/services/productAnalytics/settingsSnapshot"
 import { AuthTypeEnum } from "~/types"
 
 describe("product analytics privacy filtering", () => {
@@ -156,6 +162,72 @@ describe("product analytics privacy filtering", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       duration_ms: 2000,
+    })
+  })
+
+  it("keeps unified API guidance click fields as controlled enums only", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
+        target_page_id: MENU_ITEM_IDS.KEYS,
+        managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+        guidance_status:
+          PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
+        guidance_action_kind:
+          PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS.ManageChannels,
+        rawStatus: "ready for production user",
+        accountName: "Private account",
+        apiKey: "sk-secret",
+        sourceUrl: "https://private.example.invalid",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
+      target_page_id: MENU_ITEM_IDS.KEYS,
+      managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+      guidance_status:
+        PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels,
+      guidance_action_kind:
+        PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS.ManageChannels,
+    })
+  })
+
+  it("drops invalid unified API guidance telemetry values", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        guidance_status: "ready_for_private_customer",
+        guidance_action_kind: "open_production_key_named_alice",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
     })
   })
 
@@ -1688,6 +1760,22 @@ describe("product analytics privacy filtering", () => {
         temp_window_fetch_failure_count: 1,
         temp_window_turnstile_fetch_success_count: 0,
         temp_window_turnstile_fetch_failure_count: 6,
+        protection_bypass_feature_checkin_count: 4,
+        protection_bypass_invocation_automatic_count: 4,
+        protection_bypass_trigger_scheduled_count: 3,
+        protection_bypass_operation_native_page_action_count: 4,
+        protection_bypass_decision_denied_count: 4,
+        protection_bypass_denial_automatic_disabled_count: 4,
+        protection_bypass_denial_resource_stale_count: 2,
+        protection_bypass_adapter_tab_count: 2,
+        protection_bypass_feature_private_host_count: 99,
+        grant_id: "private-grant",
+        request_id: "private-request",
+        origin: "https://private.example",
+        host: "private.example",
+        account_id: "private-account",
+        raw_error: "secret",
+        message: "secret",
         fetchUrl: "https://private.example/api/checkin?token=secret",
       },
     )
@@ -1704,7 +1792,133 @@ describe("product analytics privacy filtering", () => {
       temp_window_fetch_failure_count: 1,
       temp_window_turnstile_fetch_success_count: 0,
       temp_window_turnstile_fetch_failure_count: 6,
+      protection_bypass_feature_checkin_count: 4,
+      protection_bypass_invocation_automatic_count: 4,
+      protection_bypass_trigger_scheduled_count: 3,
+      protection_bypass_operation_native_page_action_count: 4,
+      protection_bypass_decision_denied_count: 4,
+      protection_bypass_denial_automatic_disabled_count: 4,
+      protection_bypass_denial_resource_stale_count: 2,
+      protection_bypass_adapter_tab_count: 2,
     })
+  })
+
+  it("keeps every fixed protection-bypass counter as a primitive number", () => {
+    const counters = Object.fromEntries(
+      PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES.map((key) => [
+        key,
+        1,
+      ]),
+    )
+
+    expect(
+      sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured,
+        counters,
+      ),
+    ).toEqual(counters)
+  })
+
+  it("keeps automatic bypass enablement without accepting the old kill-switch name", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      {
+        temp_window_fallback_automatic_bypass_enabled: false,
+        temp_window_fallback_enabled: false,
+      },
+    )
+
+    expect(sanitized).toEqual({
+      temp_window_fallback_automatic_bypass_enabled: false,
+    })
+  })
+
+  it("keeps every fixed automatic-feature scalar while discarding legacy and dynamic maps", () => {
+    const fixed = Object.fromEntries(
+      SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES.map(
+        (property, index) => [property, index % 2 === 0],
+      ),
+    )
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      {
+        ...fixed,
+        temp_window_fallback_popup_enabled: true,
+        temp_window_fallback_auto_refresh_enabled: true,
+        automaticFeatureBypass: "dynamic-map",
+      },
+    )
+
+    expect(sanitized).toEqual(fixed)
+  })
+
+  it.each([
+    PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+    PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+  ])("strips exact legacy automatic-bypass setting keys from %s", (event) => {
+    const fixed = Object.fromEntries(
+      SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES.map(
+        (property, index) => [property, index % 2 === 0],
+      ),
+    )
+    const sanitized = sanitizeProductAnalyticsEvent(event, {
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      ...fixed,
+      popup_enabled: true,
+      sidepanel_enabled: true,
+      options_enabled: true,
+      auto_refresh_enabled: true,
+      manual_refresh_enabled: true,
+    })
+
+    expect(sanitized).toEqual({
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      ...fixed,
+    })
+  })
+
+  it("defines one reviewed property for every controlled bypass bucket", () => {
+    const prefixes = {
+      featureCounts: "feature",
+      invocationKindCounts: "invocation",
+      automaticTriggerCounts: "trigger",
+      operationCounts: "operation",
+      decisionCounts: "decision",
+      denialReasonCounts: "denial",
+      adapterCounts: "adapter",
+    } as const
+    const expected = Object.entries(
+      PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS,
+    ).flatMap(([dimension, values]) =>
+      values.map(
+        (value) =>
+          `protection_bypass_${prefixes[dimension as keyof typeof prefixes]}_${value}_count`,
+      ),
+    )
+
+    expect(PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES).toEqual(
+      expected,
+    )
+  })
+
+  it("derives the denial dimension from one reviewed outcome classification", () => {
+    expect(PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION).toEqual({
+      automatic_disabled: "denied",
+      feature_disabled: "denied",
+      missing_execution: "denied",
+      invalid_execution: "denied",
+      task_not_permitted: "denied",
+      resource_stale: "denied",
+      permission_required: "unavailable",
+      unsupported_environment: "unavailable",
+      policy_unavailable: "unavailable",
+    })
+    expect(
+      PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS.denialReasonCounts,
+    ).toEqual([
+      ...Object.keys(PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION),
+      "other",
+    ])
   })
 
   it("drops invalid enum values while keeping valid entrypoint", () => {

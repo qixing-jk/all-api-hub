@@ -33,7 +33,6 @@
       "title": "AxonHub no está disponible"
     }
   },
-  "description": "Busca, edita, elimina y sincroniza manualmente canales conectados a tu sitio administrado.",
   "dialog": {
     "cancel": "Cancelar",
     "confirm": "Eliminar",
@@ -240,6 +239,19 @@
       "label": "Modo de edición",
       "visual": "Edición visual"
     }
+  },
+  "gatewayGuidance": {
+    "clientHint": "Los clientes externos también necesitan una clave de acceso emitida por este gateway.",
+    "empty": {
+      "description": "Este AI gateway autohospedado aún no tiene canales. Después de importar claves de cuenta o API keys, el gateway podrá usarse desde clientes externos como una AI API.",
+      "importFromAccountKey": "Importar canal desde una clave de cuenta",
+      "importFromApiKeyLibrary": "Importar canal desde la Biblioteca de credenciales de API",
+      "title": "Aún no hay canales del AI gateway autohospedado"
+    },
+    "headerDescription": "Administra los canales del AI gateway autohospedado y reúne varias claves de cuenta o API keys en una AI API.",
+    "openChannelConsole": "Abrir la administración de canales del gateway",
+    "openTokenConsole": "Abrir la administración de tokens",
+    "unconfiguredValueDescription": "Después de configurarlo, podrás importar claves de cuenta y API keys dispersas como canales del gateway, y verlas y administrarlas directamente en All API Hub."
   },
   "migration": {
     "actions": {

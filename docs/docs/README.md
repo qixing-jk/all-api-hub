@@ -26,24 +26,24 @@ actions:
     type: "secondary"
 
 features:
-  - title: "📦 资产统一看板"
-    details: "把多个站点与账号集中在一个面板里，余额、用量与健康状态一眼看清，支持智能识别地址自动添加。"
-  - title: "🏷️ API 凭据库"
-    details: "无需账号，直接保存 Base URL + API Key，用于快速复制、验证接口、查看模型与余额/用量。"
-  - title: "💰 模型价格比对"
-    details: "跨站对比各模型实际折合单价，自动锁定当前最优分组，助你寻找最实惠的调用路径。"
-  - title: "✅ 深度接口验证"
-    details: "批量测试模型可用性、Token 兼容性及 CLI 代理连通性，轻松排查“站点能通、工具报错”的问题。"
-  - title: "📈 用量深度统计"
-    details: "按日期、账号、模型多维分析用量与花费，提供热力图、延迟视图与慢请求分析。"
-  - title: "📅 自动签到辅助"
-    details: "集中识别并处理支持签到的站点，支持定时自动签到、自定义 URL 与充值/兑换页面跳转。"
-  - title: "🚀 极速生态集成"
-    details: "一键同步到 CherryStudio、CC Switch、Kilo Code 等，或直接将账号推送到自建管理后台。"
-  - title: "🛠️ 自建站点联动"
-    details: "深度适配 New API、AxonHub、Claude Code Hub 等，实现渠道管理、模型同步与重定向。"
-  - title: "🔒 隐私与安全同步"
-    details: "默认本地存储，支持加密 WebDAV 自动同步与备份，遇到 Cloudflare 挑战时可自动协助过盾。"
+  - title: "📊 多站点资产看板"
+    details: "一屏掌握多个 AI 中转站的余额、用量、趋势与账号状态，告别分散管理。"
+  - title: "🔑 API 凭据库"
+    details: "无需绑定站点账号，把别人分享或平时零散收集的 Base URL 与 API Key 集中收好，需要查询、测试或导出时打开就能用。"
+  - title: "💰 跨站模型价格比对"
+    details: "计算各站点模型的折合单价，直观找出更具性价比的模型与分组。"
+  - title: "✅ 多站点自动签到"
+    details: "一键或定时完成多站点每日签到，自动领取奖励，免去每天逐站登录。"
+  - title: "🧪 API、模型与 CLI 验证"
+    details: "一键测试 API 连通性、模型可用性与 CLI 接入状态，快速排查配置问题。"
+  - title: "🔔 公告与任务提醒"
+    details: "集中展示已添加站点的各类公告，维护、模型、价格等动态及时提醒；自动签到、WebDAV 自动同步和模型同步的结果也能及时收到。"
+  - title: "🚀 网页录入与一键导出"
+    details: "从网页快速识别 Base URL 或 API Key，并一键导出至常用 AI 客户端。"
+  - title: "🛠️ 主流 AI 网关支持"
+    details: "统一管理 New API、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub；可用已保存的站点账号或 API 凭据库中的凭据快速创建渠道，统一调用模型、灵活切换渠道，也支持模型同步与重定向。"
+  - title: "🔐 本地优先与自动同步"
+    details: "数据默认保存在浏览器本地；开启加密 WebDAV 自动同步后，可在多台设备间安全同步，换电脑也能接着使用。"
 
 footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 ---
@@ -74,9 +74,9 @@ footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 ## 🧩 支持的系统架构
 
 不论你用的是哪种架构，我们基本都支持：
-- **账号站点兼容架构**：One API, New API, Veloera, One-Hub, Done-Hub, Sub2API 等。
-- **特色账号平台与兼容实现**：AIHubMix, AnyRouter, Neo-API, Super-API, v-api 等。
-- **自建管理后台**：New API, Veloera, Done-Hub, Octopus, AxonHub, Claude Code Hub 等，用于渠道管理、迁移和部分模型同步。
+- **账号站点兼容架构**：New API, One API, Sub2API, One-Hub, Veloera, Done-Hub 等。
+- **特色账号平台与兼容实现**：AnyRouter, AIHubMix, Super-API, v-api, Neo-API 等。
+- **自建管理后台**：New API, AxonHub, Claude Code Hub, Octopus, Veloera, Done-Hub 等，用于渠道管理、迁移和部分模型同步。
 
 > 如果你在 macOS 上使用 Safari，请先查看 [Safari 安装指南](./safari-install.md)。
 > 如果你使用 QQ/360/Brave/Vivaldi/Opera 等浏览器，请查看 [其他浏览器安装指南](./other-browser-install.md)。

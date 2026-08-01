@@ -49,6 +49,9 @@ describe("ApiError", () => {
 
     it("should expose structured error codes", () => {
       expect(API_ERROR_CODES.HTTP_401).toBe("HTTP_401")
+      expect(API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID).toBe(
+        "TEMP_WINDOW_POLICY_CONTEXT_INVALID",
+      )
     })
   })
 

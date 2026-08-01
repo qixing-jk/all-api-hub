@@ -7,10 +7,12 @@ import {
   type AutoCheckinProvider,
 } from "~/services/checkin/autoCheckin/providers"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const {
   mockResyncVoApiV2AuthToken,
@@ -68,6 +70,20 @@ const account = {
   },
 } as unknown as SiteAccount
 
+const DEFAULT_PROVIDER_CONTEXT = {
+  tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+  protectionBypassExecution: userCommandExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+  ),
+} as const
+
+const checkInForTest = (
+  account: Parameters<typeof voApiV2Provider.checkIn>[0],
+  context: Parameters<
+    typeof voApiV2Provider.checkIn
+  >[1] = DEFAULT_PROVIDER_CONTEXT,
+) => voApiV2Provider.checkIn(account, context)
+
 describe("voApiV2Provider", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -96,8 +112,11 @@ describe("voApiV2Provider", () => {
     )
 
     await expect(
-      voApiV2Provider.checkIn(account, {
+      checkInForTest(account, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       }),
     ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
     expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledWith(
@@ -122,7 +141,7 @@ describe("voApiV2Provider", () => {
       ),
     )
 
-    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
+    await expect(checkInForTest(account)).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
     })
     expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledWith(
@@ -155,7 +174,7 @@ describe("voApiV2Provider", () => {
 
   it("returns a failed result for unusable VoAPI v2 accounts", async () => {
     await expect(
-      voApiV2Provider.checkIn({
+      checkInForTest({
         ...account,
         account_info: { ...account.account_info, access_token: "" },
       } as SiteAccount),
@@ -177,7 +196,7 @@ describe("voApiV2Provider", () => {
       ),
     )
 
-    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
+    await expect(checkInForTest(account)).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
     })
   })
@@ -194,12 +213,13 @@ describe("voApiV2Provider", () => {
       ),
     )
 
-    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
+    await expect(checkInForTest(account)).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
     })
     expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
       "https://example.invalid",
       TEMP_WINDOW_REQUEST_SOURCES.Background,
+      DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
     )
   })
 
@@ -213,7 +233,7 @@ describe("voApiV2Provider", () => {
       ),
     )
 
-    await expect(voApiV2Provider.checkIn(account)).resolves.toMatchObject({
+    await expect(checkInForTest(account)).resolves.toMatchObject({
       status: CHECKIN_RESULT_STATUS.FAILED,
     })
     expect(mockResyncVoApiV2AuthToken).not.toHaveBeenCalled()
@@ -253,8 +273,11 @@ describe("voApiV2Provider", () => {
     )
 
     await expect(
-      voApiV2Provider.checkIn(account, {
+      checkInForTest(account, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       }),
     ).resolves.toMatchObject({ status: CHECKIN_RESULT_STATUS.SUCCESS })
 
@@ -266,11 +289,14 @@ describe("voApiV2Provider", () => {
     expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
       "https://example.invalid",
       TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
     )
     expect(mockSubmitVoApiV2CheckIn).toHaveBeenCalledTimes(2)
     for (const [request] of mockSubmitVoApiV2CheckIn.mock.calls) {
       expect(request).toMatchObject({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution:
+          DEFAULT_PROVIDER_CONTEXT.protectionBypassExecution,
       })
     }
     expect(mockFetchVoApiV2CheckInStats).toHaveBeenCalledWith(

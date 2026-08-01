@@ -26,24 +26,24 @@ actions:
     type: "secondary"
 
 features:
-  - title: "📦 Unified Asset Dashboard"
-    details: "Consolidate multiple sites and accounts into a single panel for a clear overview of balances, usage, and health status, with smart site identification."
-  - title: "🏷️ API Credential Library"
-    details: "Save Base URL + API Key without a site account for quick copying, API verification, model lookup, and balance/usage checks."
-  - title: "💰 Model Price Comparison"
-    details: "Compare actual costs across different sites, automatically identify the best group, and find the most cost-effective path."
-  - title: "✅ In-depth API Validation"
-    details: "Batch test model availability, Token compatibility, and CLI proxy connectivity to troubleshoot integration issues."
-  - title: "📈 Detailed Usage Analytics"
-    details: "Analyze usage and costs by date, account, and model. Includes heatmaps, latency views, and slow request analysis."
-  - title: "📅 Auto Check-in Assistant"
-    details: "Centrally manage check-ins for supported sites. Includes automatic scheduled check-ins and custom URL jumps."
-  - title: "🚀 Fast Ecosystem Integration"
-    details: "Instant sync to CherryStudio, CC Switch, Kilo Code, or push accounts directly to your self-hosted management backend."
-  - title: "🛠️ Self-hosted Site Linkage"
-    details: "Deeply adapted for New API, AxonHub, Claude Code Hub, and more, enabling channel management and model sync."
-  - title: "🔒 Privacy & Secure Sync"
-    details: "Local-first storage with encrypted WebDAV sync. Includes a Cloudflare assistant to handle bot challenges automatically."
+  - title: "📊 Multi-Site Asset Dashboard"
+    details: "See balances, usage, trends, and account status across multiple AI relay sites on one screen instead of managing them separately."
+  - title: "🔑 API Credential Library"
+    details: "No site account required—keep Base URLs and API Keys shared by others or collected over time in one place, ready for lookups, testing, or export."
+  - title: "💰 Cross-Site Model Price Comparison"
+    details: "Calculate effective model prices across sites and quickly find better-value models and groups."
+  - title: "✅ Multi-Site Auto Check-In"
+    details: "Check in to multiple sites with one click or on a schedule, collect rewards automatically, and skip daily logins."
+  - title: "🧪 API, Model & CLI Verification"
+    details: "Test API connectivity, model availability, and CLI integration in one click to quickly troubleshoot configuration issues."
+  - title: "🔔 Announcements & Task Alerts"
+    details: "See announcements from added sites in one place and receive timely maintenance, model, and pricing updates, plus results from auto check-ins, WebDAV auto-sync, and model sync."
+  - title: "🚀 Web Capture & One-Click Export"
+    details: "Quickly find Base URLs or API Keys on web pages and export them to popular AI clients with one click."
+  - title: "🛠️ Popular AI Gateway Support"
+    details: "Manage New API, AxonHub, Claude Code Hub, Octopus, Veloera, and DoneHub in one place; create channels from saved accounts or API credentials, call models through the gateway, switch channels as needed, and use model sync and redirects."
+  - title: "🔐 Local-First Storage & Auto-Sync"
+    details: "Data stays in your browser by default; enable encrypted WebDAV auto-sync to keep it safely synchronized across devices and continue where you left off after switching computers."
 
 footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 ---
@@ -78,9 +78,9 @@ In the AI era, many of us keep multiple relay-site accounts to save money or try
 
 No matter which architecture you use, there is a good chance we support it:
 
-- **Account-site compatible architectures**: One API, New API, Veloera, One-Hub, Done-Hub, Sub2API, and more.
-- **Specialized account platforms and compatible implementations**: AIHubMix, AnyRouter, Neo-API, Super-API, v-api, and more.
-- **Self-hosted admin backends**: New API, Veloera, Done-Hub, [Octopus](https://github.com/bestruirui/octopus), AxonHub, Claude Code Hub, and more, for channel management, migration, and partial model sync.
+- **Account-site compatible architectures**: New API, One API, Sub2API, One-Hub, Veloera, Done-Hub, and more.
+- **Specialized account platforms and compatible implementations**: AnyRouter, AIHubMix, Super-API, v-api, Neo-API, and more.
+- **Self-hosted admin backends**: New API, AxonHub, Claude Code Hub, [Octopus](https://github.com/bestruirui/octopus), Veloera, Done-Hub, and more, for channel management, migration, and partial model sync.
 
 > If you use Safari on macOS, read the [Safari Installation Guide](./safari-install.md) first.
 > If you use QQ Browser, 360 Browser, Brave, Vivaldi, Opera, or similar browsers, read the [Other Browser Installation Guide](./other-browser-install.md).

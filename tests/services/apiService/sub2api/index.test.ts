@@ -797,6 +797,7 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       request.baseUrl,
       TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      undefined,
     )
     const retryRequest = vi.mocked(fetchApi).mock.calls[1]?.[0] as any
     expect(retryRequest?.auth?.accessToken).toBe("new-jwt")
@@ -1131,6 +1132,7 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       request.baseUrl,
       undefined,
+      undefined,
     )
     expect(
       (vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth?.accessToken,
@@ -1235,6 +1237,7 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       request.baseUrl,
+      undefined,
       undefined,
     )
     expect(
@@ -1343,6 +1346,7 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       request.baseUrl,
+      undefined,
       undefined,
     )
     expect(fetchApi).toHaveBeenCalledTimes(1)
@@ -1928,6 +1932,7 @@ describe("apiService sub2api exported operations", () => {
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       "https://sub2.example.com",
       undefined,
+      undefined,
     )
     expect((vi.mocked(fetchApi).mock.calls[0]?.[0] as any)?.auth).toMatchObject(
       {
@@ -2037,6 +2042,7 @@ describe("apiService sub2api exported operations", () => {
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       "https://sub2.example.com",
       undefined,
+      undefined,
     )
     expect(fetchApi).toHaveBeenCalledTimes(2)
     expect(
@@ -2077,6 +2083,7 @@ describe("apiService sub2api exported operations", () => {
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       "https://sub2.example.com",
       undefined,
+      undefined,
     )
   })
 
@@ -2098,6 +2105,7 @@ describe("apiService sub2api exported operations", () => {
 
     expect(resyncSub2ApiAuthToken).toHaveBeenCalledWith(
       "https://sub2.example.com",
+      undefined,
       undefined,
     )
   })

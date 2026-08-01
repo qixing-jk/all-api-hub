@@ -41,9 +41,7 @@ When required fields are not met, the submit button will be disabled or saving w
 -   When **Access Token authentication** is selected: **Access Token** has been filled in.
 -   When **Cookie authentication** is selected: **Session Cookie (Header Value)** has been imported or filled in.
 
-If auto-identification consistently fails, you can switch to **Manual Addition**, save the account first, and then gradually complete the information.
-
 ## Last Resort: Manually Add Account
 If auto-identification consistently fails, you can switch to **Manual Addition**, complete the information, and then save the account.
 
-See [Manual Account Addition Guide](./get-started.md#manual-addition) for details.
+See the [Manual Account Addition Guide](./account-management.md#manual-addition) for details.

@@ -61,7 +61,7 @@ function isNotDefaultSiteName(siteName: string): boolean {
  * @param input 可能为浏览器 Tab 对象或字符串 URL
  * @param siteTypeHint Optional site-type hint so site-specific API overrides can
  * be used when resolving the display name.
- * @param siteStatusInfo Optional pre-fetched site status info to avoid redundant API calls when resolving the display name.
+ * @param siteStatusInfo Optional pre-fetched status; null marks a completed empty lookup and avoids a redundant request.
  * @returns 计算后的站点名称
  */
 export async function getSiteName(
@@ -91,7 +91,7 @@ export async function getSiteName(
   if (siteTypeHint) {
     let resolvedSiteStatus = siteStatusInfo
     if (
-      !resolvedSiteStatus &&
+      resolvedSiteStatus === undefined &&
       siteTypeHint &&
       isAccountSiteType(siteTypeHint)
     ) {

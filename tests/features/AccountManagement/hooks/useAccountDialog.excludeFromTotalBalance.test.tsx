@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -30,6 +31,20 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
     openDefaultTokenQuickCreateDialogForAccount:
       mockOpenDefaultTokenQuickCreateDialogForAccount,
   }),
+}))
+
+vi.mock("~/services/protectionBypass/client", () => ({
+  withProtectionBypassUserCommand: async (
+    command: unknown,
+    surface: unknown,
+    work: (execution: unknown) => Promise<unknown>,
+  ) =>
+    work({
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
+      kind: "user_command",
+      command,
+      surface,
+    }),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {

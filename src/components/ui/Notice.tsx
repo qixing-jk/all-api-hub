@@ -76,6 +76,7 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
       <div
         ref={ref}
         role="status"
+        data-tone={tone}
         aria-live="polite"
         aria-labelledby={title ? titleId : undefined}
         aria-describedby={description ? descriptionId : undefined}

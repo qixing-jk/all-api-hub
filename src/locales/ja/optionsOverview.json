@@ -55,7 +55,7 @@
         "disabled": "チェックイン報酬を自動で受け取りたいときは、自動チェックインをオンにしてください。以後の予定と結果がここに表示されます。"
       },
       "managedSiteModelSync": {
-        "disabled": "自建サイトのモデルを自動更新したいときは、モデル同期をオンにしてください。同期間隔と範囲がここに表示されます。"
+        "disabled": "セルフホスト AI ゲートウェイのモデルを自動更新したいときは、モデル同期をオンにしてください。同期間隔と範囲がここに表示されます。"
       },
       "siteAnnouncements": {
         "disabled": "サイトのお知らせを見逃したくないときは、公告取得をオンにしてください。最近の確認時刻と公告数がここに表示されます。"
@@ -72,7 +72,7 @@
         "allowedModels": "限定モデル数",
         "concurrency": "並行数",
         "interval": "同期間隔（時間）",
-        "label": "管理サイトモデル同期",
+        "label": "セルフホスト AI ゲートウェイモデル同期",
         "open": "同期を開く"
       },
       "siteAnnouncements": {
@@ -145,12 +145,12 @@
       }
     },
     "managedSite": {
-      "description": "自建サイトのチャネル管理とモデル同期機能です。",
-      "label": "自建サイト",
+      "description": "セルフホスト AI ゲートウェイのチャネル管理とモデル同期機能です。",
+      "label": "セルフホスト AI ゲートウェイ",
       "state": {
-        "disabled": "自建サイトはまだ接続されていません。必要になったら先にサイト設定を完了してください。",
-        "needs_setup": "まず自建サイトに接続すると、ここでチャネル管理やモデル同期を使えます。",
-        "not_applicable": "このサイト種別では自建サイト管理をまだ利用できません。"
+        "disabled": "セルフホスト AI ゲートウェイはまだ設定されていません。必要になったら先にゲートウェイ設定を完了してください。",
+        "needs_setup": "まずセルフホスト AI ゲートウェイを設定すると、ここでチャネル管理やモデル同期を使えます。",
+        "not_applicable": "このサイト種別ではセルフホスト AI ゲートウェイ管理をまだ利用できません。"
       }
     },
     "subItems": {
@@ -178,7 +178,8 @@
     "automationOverview": "自動化実行",
     "configurationOverview": "設定概要",
     "needsAttention": "対応が必要",
-    "recentUsage": "最近の利用"
+    "recentUsage": "最近の利用",
+    "unifiedApiGuidance": "統一 API 設定"
   },
   "severity": {
     "error": "エラー",
@@ -187,6 +188,7 @@
   },
   "states": {
     "allClear": "現在対応が必要な項目はありません。",
+    "loadDetailUnavailable": "概要の一部の情報を一時的に利用できません。もう一度読み込んでください。",
     "loadedWithError": "一部の情報を読み込めませんでした。利用可能なデータを表示しています。",
     "loading": "概要を読み込み中..."
   },
@@ -213,6 +215,69 @@
     "pendingRefresh": "更新待ち",
     "pendingRefreshHelp": "今日の統計はまだ確認されていません。アカウント一覧で対象のアカウントを更新してください。",
     "unavailable": "利用不可"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "アカウントを追加",
+      "addApiCredential": "API 認証情報を追加",
+      "addGatewayChannel": "最初のゲートウェイチャネルを追加",
+      "configureManagedSite": "セルフホスト AI ゲートウェイを設定",
+      "manageChannels": "チャネルを管理",
+      "openApiCredentialProfiles": "認証情報ライブラリを開く",
+      "openModelSync": "モデル同期を開く"
+    },
+    "boundaryNote": "All API Hub は設定の管理とインポートを行います。モデルリクエストは中継せず、外部クライアントが呼び出す先はセルフホスト AI ゲートウェイです。",
+    "description": {
+      "has_gateway_channels": "以前にゲートウェイチャネルが作成または取り込まれています。チャネル管理で現在の状態を確認し、クライアントに必要な API アドレスとアクセスキーを取得してください。",
+      "needs_importable_source": "アカウントはありますが、現在のアカウント種別からはインポート可能なキーを取得できません。先に API キーを保存するか、キーを取得できるアカウント種別を追加してから、セルフホスト AI ゲートウェイへ取り込んでください。",
+      "needs_managed_site": "アカウントキーまたは API キーがあります。セルフホスト AI ゲートウェイを設定すれば、ゲートウェイチャネルとして取り込み、複数のキーを 1 つの AI API から利用できます。",
+      "needs_sources": "まずアカウントを追加するか API キーを保存してください。その後、クライアントへ直接エクスポートするか、セルフホスト AI ゲートウェイへ簡単に取り込んで 1 つの AI API にまとめられます。",
+      "ready_accounts": "セルフホスト AI ゲートウェイの基本設定が完了しました。アカウントキーまたは API キーの取り込みへ進むと、接続を検証してゲートウェイチャネルを作成します。",
+      "ready_profiles": "セルフホスト AI ゲートウェイの基本設定が完了しました。認証情報ライブラリを開き、保存済み API キーを検証してゲートウェイチャネルとして取り込んでください。"
+    },
+    "directToolExportNote": "セルフホストゲートウェイが不要な場合は、個別の認証情報をクライアントツールへ直接エクスポートできます。",
+    "headline": "複数のアカウントキーや API キーを 1 つの AI API にまとめる",
+    "modelSyncOptional": "モデル同期はゲートウェイのモデル一覧を自動更新して手動管理を減らします。チャネル作成後に必要に応じて有効化できます。",
+    "optionalLabel": "任意のメンテナンス",
+    "sources": {
+      "account": "アカウントソース",
+      "accountUnavailable": "アカウントは未対応",
+      "both": "アカウント + 認証情報",
+      "none": "ソースはまだありません",
+      "profile": "認証情報ソース"
+    },
+    "stepper": {
+      "label": "統一 API の設定進捗",
+      "states": {
+        "completed": "完了",
+        "current": "現在の手順",
+        "upcoming": "後で"
+      },
+      "steps": {
+        "clientAccess": {
+          "description": "ゲートウェイの API アドレスとクライアント用アクセスキーを取得します。",
+          "title": "クライアントを接続"
+        },
+        "gatewayChannel": {
+          "description": "アカウントキーまたは保存済み API 認証情報を 1 つ以上取り込みます。",
+          "title": "ゲートウェイチャネルを作成"
+        },
+        "gatewaySettings": {
+          "description": "セルフホスト AI ゲートウェイの管理者接続情報を入力します。",
+          "title": "ゲートウェイ設定を保存"
+        },
+        "source": {
+          "description": "キーを取得できるアカウントを追加するか、API 認証情報を保存します。",
+          "title": "ソースを準備"
+        }
+      }
+    },
+    "unavailable": {
+      "badge": "状態未確認",
+      "description": "アカウント、認証情報、またはゲートウェイ設定を読み込めませんでした。データソースがないとは判定しません。",
+      "retry": "設定状態を再確認",
+      "title": "設定状況を確認できません"
+    }
   },
   "usage": {
     "activityMix": "最近の傾向",

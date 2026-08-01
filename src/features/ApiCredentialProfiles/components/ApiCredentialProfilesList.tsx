@@ -6,6 +6,10 @@ import { ApiCredentialProfileListItem } from "./ApiCredentialProfileListItem"
 interface ApiCredentialProfilesListProps {
   profiles: ApiCredentialProfile[]
   controller: ApiCredentialProfilesController
+  guidedImportEntry?: {
+    profileId: string
+    request: number
+  }
 }
 
 /**
@@ -14,6 +18,7 @@ interface ApiCredentialProfilesListProps {
 export function ApiCredentialProfilesList({
   profiles,
   controller,
+  guidedImportEntry,
 }: ApiCredentialProfilesListProps) {
   return (
     <div className="space-y-3">
@@ -42,6 +47,11 @@ export function ApiCredentialProfilesList({
           )}
           managedSiteType={controller.managedSiteType}
           managedSiteLabel={controller.managedSiteLabel}
+          guidedImportEntryRequest={
+            guidedImportEntry?.profileId === profile.id
+              ? guidedImportEntry.request
+              : undefined
+          }
           onVerify={(p) => controller.setVerifyingProfile(p)}
           onVerifyCliSupport={(p) => controller.setCliVerifyingProfile(p)}
           onEdit={controller.openEditDialog}

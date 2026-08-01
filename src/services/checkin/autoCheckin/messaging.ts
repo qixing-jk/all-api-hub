@@ -1,3 +1,4 @@
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
@@ -8,11 +9,10 @@ import type {
   AutoCheckinRunSummary,
   AutoCheckinStatus,
 } from "~/types/autoCheckin"
-import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 export interface AutoCheckinRunNowRequest {
   accountIds?: string[]
-  tempWindowRequestSource?: TempWindowRequestSource
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 export interface AutoCheckinDebugScheduleDailyAlarmForTodayRequest {
@@ -23,7 +23,7 @@ export interface AutoCheckinPretriggerDailyOnUiOpenRequest {
   requestId?: string
   dryRun?: boolean
   debug?: boolean
-  tempWindowRequestSource?: TempWindowRequestSource
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 type AutoCheckinPretriggerDailyOnUiOpenResponse =
@@ -44,7 +44,7 @@ type AutoCheckinPretriggerDailyOnUiOpenResponse =
 
 interface AutoCheckinRetryAccountRequest {
   accountId?: string
-  tempWindowRequestSource?: TempWindowRequestSource
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 export interface AutoCheckinGetAccountInfoRequest {

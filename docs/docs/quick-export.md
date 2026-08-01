@@ -8,7 +8,7 @@
 |------|------|------|
 | CherryStudio | 通过本地协议唤起客户端，自动填充 API 信息 | 需启动 CherryStudio 桌面端并授权 |
 | CC Switch | 以 JSON/剪贴板格式输出，内置专用字段映射 | 需在 CC Switch 内使用导入功能粘贴内容 |
-| 自建托管站点（New API / DoneHub / Veloera / Octopus / AxonHub / Claude Code Hub） | 调用目标后台管理接口，自动创建或更新 Channel / Provider | 需先在扩展中完成对应后台配置 |
+| 自建托管站点（New API / AxonHub / Claude Code Hub / Octopus / Veloera / DoneHub） | 调用目标后台管理接口，自动创建或更新 Channel / Provider | 需先在扩展中完成对应后台配置 |
 
 ## 前置配置
 

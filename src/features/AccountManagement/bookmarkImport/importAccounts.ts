@@ -4,6 +4,7 @@ import {
   autoDetectAccount as defaultAutoDetectAccount,
   validateAndSaveAccount as defaultValidateAndSaveAccount,
 } from "~/services/accounts/accountOperations"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import type {
   AccountSaveResponse,
@@ -23,9 +24,11 @@ interface RunBookmarkAccountImportInput {
   autoDetectAccount?: (
     url: string,
     authType: AuthTypeEnum,
+    protectionBypassExecution?: ProtectionBypassExecution,
   ) => Promise<AccountValidationResponse>
   validateAndSaveAccount?: typeof defaultValidateAndSaveAccount
   onProgress?: (progress: BookmarkAccountImportProgress) => void
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 /**
@@ -79,6 +82,7 @@ export async function runBookmarkAccountImport({
   autoDetectAccount = defaultAutoDetectAccount,
   validateAndSaveAccount = defaultValidateAndSaveAccount,
   onProgress,
+  protectionBypassExecution,
 }: RunBookmarkAccountImportInput): Promise<BookmarkAccountImportRunResult> {
   const rows: BookmarkAccountImportRowResult[] = []
   let completedCount = 0
@@ -88,6 +92,7 @@ export async function runBookmarkAccountImport({
       const detection = await autoDetectAccount(
         candidate.url,
         AuthTypeEnum.AccessToken,
+        protectionBypassExecution,
       )
 
       if (!detection.success || !detection.data) {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -6,6 +6,16 @@ import AutoDetectErrorAlert from "~/features/AccountManagement/components/Accoun
 import { DuplicateAccountWarningDialog } from "~/features/AccountManagement/components/AccountDialog/DuplicateAccountWarningDialog"
 import { ManagedSiteConfigPromptDialog } from "~/features/AccountManagement/components/AccountDialog/ManagedSiteConfigPromptDialog"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
+  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
+} from "~/services/productAnalytics/contracts"
 
 const { openLoginTabMock, reloadCurrentTabMock } = vi.hoisted(() => ({
   openLoginTabMock: vi.fn(),
@@ -17,6 +27,8 @@ const { openApiCredentialProfilesPageMock, openSiteSupportRequestPageMock } =
     openApiCredentialProfilesPageMock: vi.fn(),
     openSiteSupportRequestPageMock: vi.fn(),
   }))
+
+const trackProductAnalyticsEventMock = vi.hoisted(() => vi.fn())
 
 vi.mock("~/services/accounts/utils/autoDetectUtils", async () => {
   const actual = await vi.importActual<
@@ -42,6 +54,18 @@ vi.mock("react-i18next", async (importOriginal) => {
   }
 })
 
+vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/productAnalytics/dispatch")
+    >()
+
+  return {
+    ...actual,
+    trackProductAnalyticsEvent: trackProductAnalyticsEventMock,
+  }
+})
+
 vi.mock("~/utils/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/navigation")>()
 
@@ -58,6 +82,8 @@ describe("AccountDialog warnings", () => {
     reloadCurrentTabMock.mockReset()
     openApiCredentialProfilesPageMock.mockReset()
     openSiteSupportRequestPageMock.mockReset()
+    trackProductAnalyticsEventMock.mockReset()
+    trackProductAnalyticsEventMock.mockResolvedValue(true)
     ;(browser.tabs as any).create = vi.fn()
   })
 
@@ -65,7 +91,7 @@ describe("AccountDialog warnings", () => {
     render(
       <AutoDetectErrorAlert
         error={{
-          type: AutoDetectErrorType.UNKNOWN,
+          type: AutoDetectErrorType.NETWORK_ERROR,
           message: "Detection failed",
         }}
       />,
@@ -230,6 +256,32 @@ describe("AccountDialog warnings", () => {
     })
   })
 
+  it.each([
+    AutoDetectErrorType.INVALID_RESPONSE,
+    AutoDetectErrorType.NOT_FOUND,
+    AutoDetectErrorType.FORBIDDEN,
+    AutoDetectErrorType.UNKNOWN,
+  ])("shows API credential recovery for %s auto-detect failures", (type) => {
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type,
+          message: "Detection failed",
+        }}
+        siteUrl="https://relay.example.com/console"
+      />,
+    )
+
+    expect(
+      screen.getByText("apiCredentialFallback.apiCredentials.description"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "actions.openApiCredentialProfiles",
+      }),
+    ).toBeInTheDocument()
+  })
+
   it("guides users to API credential profiles after detection failures with a site URL", () => {
     render(
       <AutoDetectErrorAlert
@@ -255,6 +307,24 @@ describe("AccountDialog warnings", () => {
     )
 
     expect(openApiCredentialProfilesPageMock).toHaveBeenCalledTimes(1)
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenUnifiedApiGuidanceAction,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountDialogAutoDetectRecovery,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
+        target_page_id: "apiCredentialProfiles",
+        guidance_action_kind:
+          PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS.SaveApiCredentialRecovery,
+      },
+    )
+    expect(
+      vi.mocked(trackProductAnalyticsEventMock).mock.calls.at(-1)?.[1],
+    ).not.toHaveProperty("guidance_status")
   })
 
   it("prefers a custom API credential profiles handler when provided", () => {
@@ -278,6 +348,69 @@ describe("AccountDialog warnings", () => {
     )
 
     expect(onApiCredentialProfilesClick).toHaveBeenCalledTimes(1)
+    expect(openApiCredentialProfilesPageMock).not.toHaveBeenCalled()
+    expect(trackProductAnalyticsEventMock).not.toHaveBeenCalled()
+  })
+
+  it("keeps the existing primary action before API credential recovery", () => {
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.FORBIDDEN,
+          message: "Detection was forbidden",
+          actionText: "Retry detection",
+          helpDocUrl: "https://docs.example.invalid/autodetect",
+        }}
+        siteUrl="https://relay.example.invalid/console"
+      />,
+    )
+
+    const alert = screen.getByText("Detection was forbidden").closest("div")
+
+    expect(
+      within(alert as HTMLElement)
+        .getAllByRole("button")
+        .map((action) => action.textContent),
+    ).toEqual(["Retry detection", "actions.helpDocument"])
+    expect(
+      screen.getByRole("button", {
+        name: "actions.openApiCredentialProfiles",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "actions.reportUnsupportedSite",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("does not replace unauthorized login recovery with API credential recovery", () => {
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.UNAUTHORIZED,
+          message: "Please log in",
+          actionText: "Retry login",
+        }}
+        siteUrl="https://site.example.com"
+      />,
+    )
+
+    expect(
+      screen.queryByText("apiCredentialFallback.apiCredentials.description"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "actions.openApiCredentialProfiles",
+      }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry login" }))
+
+    expect(openLoginTabMock).toHaveBeenCalledWith(
+      "https://site.example.com",
+      undefined,
+    )
     expect(openApiCredentialProfilesPageMock).not.toHaveBeenCalled()
   })
 

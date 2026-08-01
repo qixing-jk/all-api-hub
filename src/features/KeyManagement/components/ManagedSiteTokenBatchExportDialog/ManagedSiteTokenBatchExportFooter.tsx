@@ -19,6 +19,7 @@ interface ManagedSiteTokenBatchExportFooterProps {
   selectedExecutableCount: number
   onClose: () => void
   onStart: () => void
+  onViewChannels: () => void
 }
 
 /**
@@ -35,11 +36,12 @@ export function ManagedSiteTokenBatchExportFooter({
   selectedExecutableCount,
   onClose,
   onStart,
+  onViewChannels,
 }: ManagedSiteTokenBatchExportFooterProps) {
   if (executionResult) {
     return (
-      <div className="flex items-center justify-between gap-3">
-        <div className="text-muted-foreground text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="text-muted-foreground min-w-0 flex-1 text-sm break-words">
           {t("keyManagement:batchManagedSiteExport.results.summary", {
             created: executionResult.createdCount,
             failed: executionResult.failedCount,
@@ -47,15 +49,28 @@ export function ManagedSiteTokenBatchExportFooter({
             total: executionResult.items.length,
           })}
         </div>
-        <Button
-          type="button"
-          onClick={onClose}
-          data-testid={
-            KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportCloseButton
-          }
-        >
-          {t("common:actions.close")}
-        </Button>
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+          {executionResult.createdCount > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-auto min-h-9 whitespace-normal"
+              onClick={onViewChannels}
+            >
+              {t("keyManagement:batchManagedSiteExport.actions.viewChannels")}
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            className="h-auto min-h-9 whitespace-normal"
+            onClick={onClose}
+            data-testid={
+              KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportCloseButton
+            }
+          >
+            {t("common:actions.close")}
+          </Button>
+        </div>
       </div>
     )
   }

@@ -11,6 +11,7 @@ export type AccountRefreshSupportRequest = Pick<
   | "accountId"
   | "cookieAuthSessionCookie"
   | "tempWindowRequestSource"
+  | "protectionBypassExecution"
 >
 
 export type AccountRefreshRequest = ApiServiceAccountRequest

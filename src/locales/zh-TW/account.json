@@ -126,8 +126,8 @@
     "httpError": "HTTP {{statusCode}}: {{message}}",
     "networkFailed": "網路連線失敗",
     "normal": "帳號狀態正常",
-    "tempWindowDisabled": "過盾功能已關閉，請在 設定 > 資料重新整理 中啟用",
-    "tempWindowPermissionRequired": "Firefox 過盾功能需要 Cookie 攔截權限，請在 設定 > 權限管理 中授予",
+    "tempWindowDisabled": "自動重新整理遇到網站驗證，但目前不允許自動工作開啟臨時頁面。請前往「設定 > 資料重新整理」開啟",
+    "tempWindowPermissionRequired": "Firefox 需要 Cookies、Web Request 和 Web Request Blocking 權限才能完成網站驗證。請前往「設定 > 權限管理」授予",
     "unknown": "未知",
     "unknownError": "未知錯誤",
     "warning": "警告"
@@ -203,7 +203,7 @@
       "docs": "開啟新手指引",
       "star": "給專案點個 Star"
     },
-    "description": "可以先為專案點個 Star，也可以先看看文件，瞭解如何管理中轉站和 New API 帳號",
+    "description": "新增帳號可建立來源清單，用於餘額、健康檢查、API Key、直接匯出，以及後續匯入自建 AI 閘道渠道。",
     "hint": "在新增帳號之前，也可以先隨意看看文件和專案資訊",
     "title": "歡迎使用 All API Hub"
   },
@@ -264,5 +264,43 @@
     "pendingRefreshHelp": "今日統計狀態尚未確認。請前往帳號清單重新整理相關帳號。",
     "refreshActionHelp": "今日統計狀態尚未確認。點擊重新整理帳號後即可更新。",
     "unavailable": "不可用"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "新增帳號",
+      "addApiCredential": "新增 API 憑據",
+      "addGatewayChannel": "新增第一個閘道渠道",
+      "configureManagedSite": "設定自建 AI 閘道",
+      "manageChannels": "管理渠道",
+      "openApiCredentialProfiles": "開啟憑據庫",
+      "openModelSync": "開啟模型同步"
+    },
+    "boundaryNote": "All API Hub 負責管理帳號 Key，不代理模型請求；外部客戶端實際呼叫的是你的自建 AI 閘道。",
+    "description": {
+      "has_gateway_channels": "先前已建立或匯入過閘道渠道。前往渠道管理確認目前狀態，再繼續設定外部客戶端。",
+      "needs_importable_source": "目前帳號無法讀取可匯入的 Key。請先儲存 API Key，或新增支援 Key 取得的帳號，再匯入自建 AI 閘道。",
+      "needs_managed_site": "已有帳號 Key。完成自建 AI 閘道設定後，即可將它們匯入為閘道渠道。",
+      "needs_sources": "新增帳號後，帳號中的 Key 可以直接匯出到客戶端，也可以匯入自建 AI 閘道，彙整成一個統一 AI API。",
+      "ready_accounts": "使用金鑰管理將選取的帳號 Key 一鍵匯入為自建 AI 閘道渠道。",
+      "ready_profiles": "已儲存的 API Key 可在憑據庫中直接重複使用，也可以單獨匯入為閘道渠道。"
+    },
+    "directToolExportNote": "如果暫時不需要自建閘道，也可以直接把單個憑據匯出到客戶端工具。",
+    "dismissDialog": {
+      "confirm": "不再顯示",
+      "description": "帳戶頁將不再顯示這個提示；你仍然可以在總覽頁查看如何把帳號 Key 接入自建 AI 閘道。",
+      "title": "不再顯示這個提示？"
+    },
+    "dismissForSession": "本次關閉提示",
+    "headline": "把帳號 Key 接入自建 AI 閘道",
+    "modelSyncOptional": "模型同步可自動更新閘道模型列表，減少手動維護；渠道建立後可按需開啟。",
+    "optionalLabel": "可選維護",
+    "permanentlyDismiss": "不再顯示此提示",
+    "sources": {
+      "account": "帳號來源",
+      "accountUnavailable": "帳號暫不可匯入",
+      "both": "帳號 + 憑據",
+      "none": "還沒有帳號來源",
+      "profile": "憑據來源"
+    }
   }
 }

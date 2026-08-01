@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { PreferencesMessageTypes } from "~/services/preferences/messaging"
 import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
 
@@ -21,6 +22,8 @@ describe("setupRuntimeMessageListeners routing", () => {
   let setupProductAnnouncementMessagingListeners: ReturnType<typeof vi.fn>
   let setupRedemptionAssistMessagingListeners: ReturnType<typeof vi.fn>
   let setupProductAnalyticsMessagingListeners: ReturnType<typeof vi.fn>
+  let executeProtectionBypassTask: ReturnType<typeof vi.fn>
+  let handleOpenRouterManagementKeyAction: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     runtimeMessageListener = undefined
@@ -32,6 +35,8 @@ describe("setupRuntimeMessageListeners routing", () => {
     setupProductAnnouncementMessagingListeners = vi.fn()
     setupRedemptionAssistMessagingListeners = vi.fn()
     setupProductAnalyticsMessagingListeners = vi.fn()
+    executeProtectionBypassTask = vi.fn().mockResolvedValue({ success: true })
+    handleOpenRouterManagementKeyAction = vi.fn().mockResolvedValue(undefined)
 
     vi.resetModules()
 
@@ -87,6 +92,20 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doMock("~/services/productAnalytics/runtime", () => ({
       setupProductAnalyticsMessagingListeners,
     }))
+    vi.doMock("~/entrypoints/background/protectionBypassCoordinator", () => ({
+      protectionBypassCoordinator: {
+        execute: executeProtectionBypassTask,
+      },
+    }))
+    vi.doMock(
+      "~/entrypoints/background/openrouter/managementKeyAction",
+      () => ({
+        handleTempWindowOpenRouterManagementKeyAction:
+          handleOpenRouterManagementKeyAction,
+        cancelTempWindowOpenRouterManagementKeyAction: vi.fn(),
+        markTempWindowOpenRouterManagementKeyDispatched: vi.fn(),
+      }),
+    )
     vi.doMock("~/services/history/usageHistory/scheduler", () => ({
       setupUsageHistoryMessagingListeners: vi.fn(),
     }))
@@ -120,6 +139,8 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/checkin/externalCheckInService")
     vi.doUnmock("~/services/redemption/redemptionAssist")
     vi.doUnmock("~/services/productAnalytics/runtime")
+    vi.doUnmock("~/entrypoints/background/protectionBypassCoordinator")
+    vi.doUnmock("~/entrypoints/background/openrouter/managementKeyAction")
     vi.doUnmock("~/services/history/usageHistory/scheduler")
     vi.doUnmock("~/services/webdav/webdavAutoSyncService")
     ;(globalThis as any).browser.cookies = originalBrowserCookies
@@ -127,6 +148,86 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/siteAnnouncements/scheduler")
     vi.resetModules()
     vi.restoreAllMocks()
+  })
+
+  it("routes OpenRouter page mutation through protection-bypass authorization", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    setupRuntimeMessageListeners()
+    const sendResponse = vi.fn()
+    const sender = { url: "chrome-extension://test/popup.html" }
+    const protectionBypassExecution = {
+      version: 2,
+      kind: "user_command",
+      command: "add_account",
+      surface: "popup",
+    }
+
+    expect(
+      runtimeMessageListener?.(
+        {
+          action: RuntimeActionIds.ProtectionBypassExecuteTask,
+          execution: protectionBypassExecution,
+          task: {
+            kind: "openrouter_management_key_action",
+            params: {
+              requestId: "request-openrouter",
+              operation: { kind: "create", label: "Example label" },
+            },
+          },
+        },
+        sender,
+        sendResponse,
+      ),
+    ).toBe(true)
+    expect(executeProtectionBypassTask).toHaveBeenCalledWith({
+      task: {
+        kind: "openrouter_management_key_action",
+        params: {
+          requestId: "request-openrouter",
+          operation: { kind: "create", label: "Example label" },
+        },
+      },
+      execution: protectionBypassExecution,
+    })
+    expect(handleOpenRouterManagementKeyAction).not.toHaveBeenCalled()
+  })
+
+  it("rejects malformed Firefox-popup OpenRouter tasks before the Coordinator", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    setupRuntimeMessageListeners()
+    const sendResponse = vi.fn()
+
+    expect(
+      runtimeMessageListener?.(
+        {
+          action: RuntimeActionIds.ProtectionBypassExecuteTask,
+          execution: {
+            version: 2,
+            kind: "user_command",
+            command: "add_account",
+            surface: "popup",
+          },
+          task: {
+            kind: "openrouter_management_key_action",
+            params: {},
+          },
+        },
+        { url: "moz-extension://example.invalid/popup.html" },
+        sendResponse,
+      ),
+    ).toBe(true)
+
+    expect(executeProtectionBypassTask).not.toHaveBeenCalled()
+    expect(handleOpenRouterManagementKeyAction).not.toHaveBeenCalled()
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "messages:background.tempWindowPolicyContextInvalid",
+      code: API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+    })
   })
 
   it("sets up typed preferences messaging listeners", async () => {

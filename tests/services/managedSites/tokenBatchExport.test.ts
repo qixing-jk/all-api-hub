@@ -7,6 +7,10 @@ import {
 } from "~/services/accounts/accountRuntimeKeys"
 import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
+import {
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import type { AccountToken } from "~/types"
 import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
@@ -14,6 +18,7 @@ import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
 } from "~/types/managedSiteTokenBatchExport"
 import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -80,6 +85,18 @@ const buildAccountTokenInput = (
   account,
   runtimeKey: buildAccountTokenRuntimeKey(account, token),
 })
+
+const sessionResyncExecution = {
+  version: 2 as const,
+  kind: "automatic" as const,
+  feature: "managed_site_channels" as const,
+  trigger: "background_recovery" as const,
+  surface: "background" as const,
+}
+
+const sessionResyncOptions = {
+  protectionBypassExecution: sessionResyncExecution,
+}
 
 const buildMatchInspection = (overrides: Record<string, any> = {}) => ({
   searchBaseUrl: "https://upstream.example.com",
@@ -212,8 +229,13 @@ describe("managed-site token batch export", () => {
       baseUrl: "https://upstream.example.com/",
     })
     const token = buildAccountToken()
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
+      PROTECTION_BYPASS_SURFACES.Options,
+    )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [buildAccountTokenInput(account, token)],
+      protectionBypassExecution,
     })
 
     expect(preview.readyCount).toBe(1)
@@ -222,6 +244,11 @@ describe("managed-site token batch export", () => {
       accountName: "Alpha",
       runtimeKeyName: "Token 11",
     })
+    expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalledWith(
+      account,
+      expect.anything(),
+      { protectionBypassExecution },
+    )
 
     const result = await executeManagedSiteTokenBatchExport({
       preview,
@@ -1061,6 +1088,7 @@ describe("managed-site token batch export", () => {
             }),
           ),
         ],
+        protectionBypassExecution: sessionResyncExecution,
       })
 
       expect(hydrateComparableChannelKeys).toHaveBeenCalled()
@@ -1170,6 +1198,7 @@ describe("managed-site token batch export", () => {
             }),
           ),
         ],
+        protectionBypassExecution: sessionResyncExecution,
       })
 
       expect(fetchChannelSecretKey).toHaveBeenCalledWith(
@@ -1179,6 +1208,7 @@ describe("managed-site token batch export", () => {
           userId: "1",
         }),
         77,
+        sessionResyncOptions,
       )
       expect(preview.items[0]).toMatchObject({
         status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
@@ -1248,6 +1278,7 @@ describe("managed-site token batch export", () => {
           buildAccountTokenInput(account, firstToken),
           buildAccountTokenInput(account, secondToken),
         ],
+        protectionBypassExecution: sessionResyncExecution,
       })
 
       expect(searchChannel).toHaveBeenCalledTimes(1)

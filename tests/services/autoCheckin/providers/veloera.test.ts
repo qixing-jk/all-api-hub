@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: vi.fn(),
@@ -39,6 +41,20 @@ const mockAccount: SiteAccount = {
   updated_at: Date.now(),
   user_updated_at: Date.now(),
 }
+
+const DEFAULT_PROVIDER_CONTEXT = {
+  tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+  protectionBypassExecution: userCommandExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+  ),
+} as const
+
+const checkInForTest = (
+  account: Parameters<typeof veloeraProvider.checkIn>[0],
+  context: Parameters<
+    typeof veloeraProvider.checkIn
+  >[1] = DEFAULT_PROVIDER_CONTEXT,
+) => veloeraProvider.checkIn(account, context)
 
 describe("veloeraProvider", () => {
   beforeEach(() => {
@@ -83,8 +99,11 @@ describe("veloeraProvider", () => {
         message: "",
       })
 
-      const result = await veloeraProvider.checkIn(mockAccount, {
+      const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       })
 
       expect(result).toEqual({
@@ -107,7 +126,7 @@ describe("veloeraProvider", () => {
         message: "Success",
       })
 
-      const result = await veloeraProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("success")
       expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
@@ -122,7 +141,7 @@ describe("veloeraProvider", () => {
         message: "已签到",
       })
 
-      const result = await veloeraProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("already_checked")
     })
 
@@ -134,7 +153,7 @@ describe("veloeraProvider", () => {
         message: "",
       })
 
-      const result = await veloeraProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -152,7 +171,7 @@ describe("veloeraProvider", () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       vi.mocked(fetchApi).mockRejectedValueOnce(new Error("404 Not found"))
 
-      const result = await veloeraProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -164,7 +183,7 @@ describe("veloeraProvider", () => {
       const { fetchApi } = await import("~/services/apiTransport/request")
       vi.mocked(fetchApi).mockRejectedValueOnce(new Error("Network error"))
 
-      const result = await veloeraProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
       expect(result.status).toBe("failed")
     })
   })

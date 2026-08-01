@@ -146,8 +146,8 @@
     "httpError": "HTTP {{statusCode}}: {{message}}",
     "networkFailed": "Falló la conexión de red",
     "normal": "El estado de la cuenta es normal",
-    "tempWindowDisabled": "La omisión de protección está deshabilitada. Actívala en Configuración > Actualización de datos",
-    "tempWindowPermissionRequired": "La omisión de protección necesita permisos de interceptor de cookies en Firefox. Concédelos en Configuración > Permisos",
+    "tempWindowDisabled": "La actualización automática encontró una verificación del sitio, pero las tareas automáticas no pueden abrir páginas temporales. Activa esta opción en Configuración > Actualización de datos",
+    "tempWindowPermissionRequired": "Firefox necesita los permisos Cookies, Web Request y Web Request Blocking para verificar el sitio. Concédelos en Configuración > Permisos",
     "unknown": "Desconocido",
     "unknownError": "Error desconocido",
     "warning": "Advertencia"
@@ -308,5 +308,43 @@
     "pendingRefreshHelp": "Las estadísticas de hoy aún no se han confirmado. Actualiza la cuenta correspondiente desde la lista de cuentas.",
     "refreshActionHelp": "Las estadísticas de hoy aún no se han confirmado. Actualiza esta cuenta.",
     "unavailable": "No disponible"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "Agregar cuenta",
+      "addApiCredential": "Agregar credencial de API",
+      "addGatewayChannel": "Agregar primer canal de gateway",
+      "configureManagedSite": "Configurar AI gateway autohospedado",
+      "manageChannels": "Administrar canales",
+      "openApiCredentialProfiles": "Abrir Biblioteca de credenciales de API",
+      "openModelSync": "Abrir Sincronización de modelos"
+    },
+    "boundaryNote": "All API Hub administra las fuentes de cuenta; tu AI gateway autohospedado es el servicio AI API que llaman los clientes externos.",
+    "description": {
+      "has_gateway_channels": "Antes se creó o importó un canal del gateway. Abre la administración de canales para confirmar su estado actual y continuar la configuración del cliente.",
+      "needs_importable_source": "Las cuentas actuales no pueden exponer claves importables. Primero guarda una API key o agrega un tipo de cuenta que permita acceder a claves, y luego impórtala en tu AI gateway autohospedado.",
+      "needs_managed_site": "Después de configurar la conexión de administración del AI gateway autohospedado, estas cuentas se pueden importar como canales del gateway.",
+      "needs_sources": "Agrega cuentas para crear fuentes de claves administrables. Luego puedes exportar claves individuales directamente o importarlas fácilmente al AI gateway autohospedado.",
+      "ready_accounts": "Abre Gestión de claves para importar las claves de cuenta seleccionadas al AI gateway autohospedado, de modo que varias claves ofrezcan una AI API unificada.",
+      "ready_profiles": "Las API keys guardadas están en la biblioteca de credenciales y se pueden reutilizar directamente o importar como canales del gateway."
+    },
+    "directToolExportNote": "La exportación directa a herramientas sigue disponible junto con la importación al AI gateway autohospedado.",
+    "dismissDialog": {
+      "confirm": "No volver a mostrar",
+      "description": "La página de cuentas dejará de mostrar este consejo. Aún puedes consultar la guía del AI gateway autohospedado en la página de resumen.",
+      "title": "¿Dejar de mostrar este consejo?"
+    },
+    "dismissForSession": "Ocultar este consejo por ahora",
+    "headline": "Usa claves de cuenta como fuentes para el AI gateway",
+    "modelSyncOptional": "La sincronización de modelos puede actualizar automáticamente la lista de modelos del gateway y reducir mantenimiento manual; puedes activarla cuando haga falta después de crear canales.",
+    "optionalLabel": "Mantenimiento opcional",
+    "permanentlyDismiss": "No volver a mostrar este consejo",
+    "sources": {
+      "account": "Fuentes de cuentas",
+      "accountUnavailable": "Cuentas no importables",
+      "both": "Cuentas + credenciales",
+      "none": "Aún no hay fuentes de cuentas",
+      "profile": "Fuentes de credenciales"
+    }
   }
 }

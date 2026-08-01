@@ -7,9 +7,37 @@ import {
   OPENROUTER_BOOTSTRAP_MUTATION_STATES,
 } from "~/constants/openRouterBootstrap"
 import { SITE_TYPES } from "~/constants/siteType"
-import { useOpenRouterAccountOnboarding } from "~/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding"
+import { useOpenRouterAccountOnboarding as useOpenRouterAccountOnboardingProduction } from "~/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
+
+const testExecution = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+)
+
+function useOpenRouterAccountOnboarding() {
+  const hook = useOpenRouterAccountOnboardingProduction()
+  return {
+    ...hook,
+    startPrepared: (
+      params: Omit<
+        Parameters<typeof hook.startPrepared>[0],
+        "protectionBypassExecution"
+      > & {
+        protectionBypassExecution?: Parameters<
+          typeof hook.startPrepared
+        >[0]["protectionBypassExecution"]
+      },
+    ) =>
+      hook.startPrepared({
+        ...params,
+        protectionBypassExecution:
+          params.protectionBypassExecution ?? testExecution,
+      }),
+  }
+}
 
 const {
   mockOnboardOpenRouterAccount,
@@ -216,6 +244,7 @@ describe("useOpenRouterAccountOnboarding", () => {
     expect(mockSafeRandomUUID).toHaveBeenCalledWith("account-auto-detect")
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledOnce()
     expect(mockOnboardOpenRouterAccount).toHaveBeenCalledWith({
+      protectionBypassExecution: testExecution,
       requestId: "completed-request-placeholder",
       tempWindowRequestSource: "background",
     })

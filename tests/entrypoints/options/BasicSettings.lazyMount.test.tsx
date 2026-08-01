@@ -4,11 +4,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import BasicSettings from "~/features/BasicSettings/BasicSettings"
-import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
+import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
+import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
-const { mockedUseUserPreferencesContext } = vi.hoisted(() => ({
-  mockedUseUserPreferencesContext: vi.fn(),
-}))
+const { mockedUseUserPreferencesContext, renderActualAutoRefreshTab } =
+  vi.hoisted(() => ({
+    mockedUseUserPreferencesContext: vi.fn(),
+    renderActualAutoRefreshTab: vi.fn(),
+  }))
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
@@ -61,10 +71,43 @@ vi.mock(
 
 vi.mock(
   "~/features/BasicSettings/components/tabs/Refresh/AutoRefreshTab",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/features/BasicSettings/components/tabs/Refresh/AutoRefreshTab")
+      >()
+    const AutoRefreshTab = actual.default
+
+    return {
+      ...actual,
+      default: () =>
+        renderActualAutoRefreshTab() ? (
+          <AutoRefreshTab />
+        ) : (
+          <div data-testid="refresh-tab-content" />
+        ),
+    }
+  },
+)
+
+vi.mock(
+  "~/features/BasicSettings/components/tabs/Refresh/RefreshSettings",
   () => ({
-    default: () => <div data-testid="refresh-tab-content" />,
+    default: () => <div data-testid="refresh-settings-content" />,
   }),
 )
+
+vi.mock("~/utils/browser/protectionBypass", () => ({
+  ProtectionBypassUiVariants: {
+    TempWindowOnly: "tempWindowOnly",
+    TempWindowWithCookieInterceptor: "tempWindowWithCookieInterceptor",
+  },
+  getProtectionBypassUiVariant: () => "tempWindowOnly",
+}))
+
+vi.mock("~/utils/browser/tempWindowFetch", () => ({
+  canUseTempWindowFetch: async () => true,
+}))
 
 vi.mock(
   "~/features/BasicSettings/components/tabs/CheckinRedeem/CheckinRedeemTab",
@@ -225,6 +268,8 @@ function configureDesktopTabOverflow(
 describe("BasicSettings tab mounting", () => {
   beforeEach(() => {
     mockedUseUserPreferencesContext.mockReset()
+    renderActualAutoRefreshTab.mockReset()
+    renderActualAutoRefreshTab.mockReturnValue(false)
     mockedUseUserPreferencesContext.mockReturnValue({
       isLoading: false,
     })
@@ -401,6 +446,47 @@ describe("BasicSettings tab mounting", () => {
     expect(screen.getByTestId("page-header")).toBeInTheDocument()
     expect(screen.getByTestId("general-tab-content")).toBeInTheDocument()
     expect(screen.queryByTestId("loading-skeleton")).not.toBeInTheDocument()
+  })
+
+  it("mounts one editable shield settings section in the composed refresh tab", async () => {
+    renderActualAutoRefreshTab.mockReturnValue(true)
+    mockedUseUserPreferencesContext.mockReturnValue({
+      isLoading: false,
+      tempWindowFallback: {
+        enabled: true,
+        automaticFeatureBypass: {
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.AccountRefresh]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.BalanceHistory]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.RedemptionAssist]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.LdohSiteLookup]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.KeyManagement]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteChannels]: true,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.ManagedSiteModelSync]: true,
+        },
+        tempContextMode: "composite",
+      },
+      updateTempWindowFallback: vi.fn(),
+    })
+    window.history.replaceState(null, "", "/?tab=refresh#basic")
+
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
+
+    await waitFor(() => {
+      expect(
+        document.querySelectorAll(`#${SHIELD_SETTINGS_TARGET_IDS.root}`),
+      ).toHaveLength(1)
+    })
+    const shieldSettings = document.querySelector<HTMLElement>(
+      `#${SHIELD_SETTINGS_TARGET_IDS.root}`,
+    )
+    if (!shieldSettings) throw new Error("Shield settings did not mount")
+
+    const automaticFeatures = within(shieldSettings).getAllByRole("checkbox")
+    expect(automaticFeatures).toHaveLength(8)
+    for (const automaticFeature of automaticFeatures) {
+      expect(automaticFeature).toBeEnabled()
+    }
   })
 
   it("keeps the selected desktop tab visible when it is wider than the last fitted tab", async () => {

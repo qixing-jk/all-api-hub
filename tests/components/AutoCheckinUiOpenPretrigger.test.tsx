@@ -17,6 +17,11 @@ import {
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+} from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { AUTO_CHECKIN_RUN_RESULT } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -104,7 +109,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
     window.history.replaceState(null, "", "/")
   })
 
-  it("captures the popup source for the pretrigger request before showing completion", async () => {
+  it("encodes the popup surface in the pretrigger intent before showing completion", async () => {
     const toast = (await import("react-hot-toast")).default
 
     /**
@@ -161,7 +166,13 @@ describe("AutoCheckinUiOpenPretrigger", () => {
         AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
         expect.objectContaining({
           requestId: expect.any(String),
-          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          protectionBypassExecution: {
+            version: 2,
+            kind: "automatic",
+            feature: PROTECTION_BYPASS_FEATURES.Checkin,
+            trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+            surface: PROTECTION_BYPASS_SURFACES.Popup,
+          },
         }),
       )
     })

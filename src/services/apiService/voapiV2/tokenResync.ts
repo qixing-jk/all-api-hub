@@ -4,6 +4,7 @@ import {
   resolveAccountBrowserSession,
   type AccountBrowserSession,
 } from "~/services/accountBrowserSession"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 type VoApiV2ResyncedToken = {
@@ -53,6 +54,7 @@ const resolveUsername = (session: AccountBrowserSession): string | undefined =>
 export async function resyncVoApiV2AuthToken(
   baseUrl: string,
   tempWindowRequestSource?: TempWindowRequestSource,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<VoApiV2ResyncedToken | null> {
   const session = await resolveAccountBrowserSession({
     baseUrl,
@@ -61,6 +63,7 @@ export async function resyncVoApiV2AuthToken(
     useTempWindow: true,
     requestIdPrefix: "voapi-v2-token-resync",
     ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+    ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
     isUsableSession: hasUsableDashboardJwt,
   })
 

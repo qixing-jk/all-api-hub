@@ -26,6 +26,7 @@ import {
   resolveProviderErrorResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
@@ -263,6 +264,7 @@ function resolveStandardCheckinResult(params: {
 async function fetchCheckedInTodayStatus(
   account: SiteAccount,
   tempWindowRequestSource: TempWindowRequestSource,
+  protectionBypassExecution: ProtectionBypassExecution,
 ): Promise<boolean | undefined> {
   const currentMonth = new Date()
     .toISOString()
@@ -280,6 +282,7 @@ async function fetchCheckedInTodayStatus(
           accessToken: account.account_info.access_token,
         },
         tempWindowRequestSource,
+        protectionBypassExecution,
       },
       {
         endpoint: `${ENDPOINT}?month=${currentMonth}`,
@@ -305,6 +308,7 @@ async function fetchCheckedInTodayStatus(
 async function pollCheckedInTodayStatus(
   account: SiteAccount,
   tempWindowRequestSource: TempWindowRequestSource,
+  protectionBypassExecution: ProtectionBypassExecution,
 ): Promise<boolean | undefined> {
   const deadline = Date.now() + NATIVE_PAGE_STATUS_POLL_TIMEOUT_MS
   let lastStatus: boolean | undefined
@@ -313,6 +317,7 @@ async function pollCheckedInTodayStatus(
     lastStatus = await fetchCheckedInTodayStatus(
       account,
       tempWindowRequestSource,
+      protectionBypassExecution,
     )
     if (lastStatus === true) return true
 
@@ -378,6 +383,7 @@ function buildTurnstileAssistedParams(
   account: SiteAccount,
   checkInUrl: string,
   tempWindowRequestSource: TempWindowRequestSource,
+  protectionBypassExecution: ProtectionBypassExecution,
 ) {
   const fetchUrl = joinUrl(account.site_url, ENDPOINT)
 
@@ -393,6 +399,7 @@ function buildTurnstileAssistedParams(
     turnstileTimeoutMs: TURNSTILE_ASSIST_TIMEOUT_MS,
     turnstilePreTrigger: resolveTurnstilePreTrigger(account),
     tempWindowRequestSource,
+    protectionBypassExecution,
   } as const
 }
 
@@ -497,6 +504,7 @@ async function resolveNativePageCheckinResult(params: {
   account: SiteAccount
   responseMessage: string
   tempWindowRequestSource: TempWindowRequestSource
+  protectionBypassExecution: ProtectionBypassExecution
 }): Promise<CheckinResult> {
   const checkInUrl = await resolveCheckInUrl(params.account)
   const expectedUserId = normalizeAccountIdentity(
@@ -524,6 +532,7 @@ async function resolveNativePageCheckinResult(params: {
       expectedUserId,
       trigger: resolveTurnstilePreTrigger(params.account),
       tempWindowRequestSource: params.tempWindowRequestSource,
+      protectionBypassExecution: params.protectionBypassExecution,
     })
   } catch (error: unknown) {
     const errorMessage = getProviderErrorMessage(error)
@@ -545,6 +554,7 @@ async function resolveNativePageCheckinResult(params: {
   const checkedInToday = await pollCheckedInTodayStatus(
     params.account,
     params.tempWindowRequestSource,
+    params.protectionBypassExecution,
   )
   if (checkedInToday === true) {
     return {
@@ -624,12 +634,14 @@ async function resolveTurnstileAssistedCheckinResult(params: {
   account: SiteAccount
   responseMessage: string
   tempWindowRequestSource: TempWindowRequestSource
+  protectionBypassExecution: ProtectionBypassExecution
 }): Promise<CheckinResult> {
   const checkInUrl = await resolveCheckInUrl(params.account)
   const assistedParams = buildTurnstileAssistedParams(
     params.account,
     checkInUrl,
     params.tempWindowRequestSource,
+    params.protectionBypassExecution,
   )
 
   const initialAttempt = await runPreferredTurnstileAssistedAttempt({
@@ -652,6 +664,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
       const checkedInToday = await fetchCheckedInTodayStatus(
         params.account,
         params.tempWindowRequestSource,
+        params.protectionBypassExecution,
       )
       if (checkedInToday === true) {
         return {
@@ -763,6 +776,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
     const checkedInToday = await fetchCheckedInTodayStatus(
       params.account,
       params.tempWindowRequestSource,
+      params.protectionBypassExecution,
     )
     if (checkedInToday === true) {
       return {
@@ -798,6 +812,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
 async function performCheckin(
   account: SiteAccount,
   tempWindowRequestSource: TempWindowRequestSource,
+  protectionBypassExecution: ProtectionBypassExecution,
 ): Promise<NewApiCheckInResponse> {
   const { site_url, account_info } = account
 
@@ -812,6 +827,7 @@ async function performCheckin(
         accessToken: account_info.access_token,
       },
       tempWindowRequestSource,
+      protectionBypassExecution,
     },
     {
       endpoint: ENDPOINT,
@@ -842,15 +858,16 @@ function getProviderErrorMessage(error: unknown): string {
  */
 async function checkinNewApi(
   account: SiteAccount,
-  context?: AutoCheckinProviderContext,
+  context: AutoCheckinProviderContext,
 ): Promise<CheckinResult> {
   const tempWindowRequestSource = normalizeTempWindowRequestSource(
-    context?.tempWindowRequestSource,
+    context.tempWindowRequestSource,
   )
   try {
     const checkinResponse = await performCheckin(
       account,
       tempWindowRequestSource,
+      context.protectionBypassExecution,
     )
     const responseMessage = normalizeCheckinMessage(checkinResponse.message)
 
@@ -871,6 +888,7 @@ async function checkinNewApi(
         account,
         responseMessage,
         tempWindowRequestSource,
+        protectionBypassExecution: context.protectionBypassExecution,
       })
     }
 
@@ -884,6 +902,7 @@ async function checkinNewApi(
         account,
         responseMessage,
         tempWindowRequestSource,
+        protectionBypassExecution: context.protectionBypassExecution,
       })
     }
 
@@ -908,6 +927,7 @@ async function checkinNewApi(
         account,
         responseMessage: errorMessage,
         tempWindowRequestSource,
+        protectionBypassExecution: context.protectionBypassExecution,
       })
     }
 

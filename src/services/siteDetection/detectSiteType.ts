@@ -7,6 +7,7 @@ import {
 import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import {
   canUseTempWindowFetch,
@@ -31,7 +32,10 @@ const VOAPI_V2_USER_INFO_ENDPOINT = "/api/user/info"
  *
  * not get final title after js execution, because some sites may change title after load, but we want the original one for better site type detection accuracy.
  */
-export const fetchSiteOriginalTitle = async (url: string) => {
+export const fetchSiteOriginalTitle = async (
+  url: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
+) => {
   const parseTitle = (html: string) => {
     const match = html.match(/<title>(.*?)<\/title>/i) // simple, case-insensitive title extract
     return match ? match[1] : ""
@@ -42,7 +46,7 @@ export const fetchSiteOriginalTitle = async (url: string) => {
 
   // 尝试临时上下文获取标题，确保通过 WAF/盾后读取真实页面内容
   try {
-    if (await canUseTempWindowFetch()) {
+    if (protectionBypassExecution && (await canUseTempWindowFetch())) {
       const tempResult = await tempWindowFetch({
         originUrl: fetchUrl,
         fetchUrl,
@@ -52,6 +56,7 @@ export const fetchSiteOriginalTitle = async (url: string) => {
           cache: "no-store",
         },
         requestId: tempRequestId,
+        protectionBypassExecution,
       })
 
       if (tempResult?.success && typeof tempResult.data === "string") {
@@ -69,6 +74,7 @@ export const fetchSiteOriginalTitle = async (url: string) => {
     {
       baseUrl: url,
       auth: { authType: AuthTypeEnum.None },
+      protectionBypassExecution,
     },
     {
       endpoint: "/",
@@ -118,12 +124,14 @@ function detectAccountSiteTypeFromApiErrorMessage(
  */
 async function detectNewApiFamilySiteTypeFromCompatAuthError(
   url: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AccountSiteType> {
   try {
     await fetchApiData<unknown>(
       {
         baseUrl: url,
         auth: { authType: AuthTypeEnum.Cookie },
+        protectionBypassExecution,
       },
       {
         endpoint: "/api/user/self",
@@ -257,6 +265,7 @@ function detectAccountSiteTypeFromDomain(url: string): AccountSiteType {
 
 export const getAccountSiteType = async (
   url: string,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AccountSiteType> => {
   const domainSiteType = detectAccountSiteTypeFromDomain(url)
   if (domainSiteType !== SITE_TYPES.UNKNOWN) {
@@ -273,12 +282,15 @@ export const getAccountSiteType = async (
     return sub2ApiSiteType
   }
 
-  const title = await fetchSiteOriginalTitle(url)
+  const title = await fetchSiteOriginalTitle(url, protectionBypassExecution)
   for (const rule of getAccountSiteTitleRules()) {
     if (rule.regex.test(title)) {
       return rule.name
     }
   }
 
-  return await detectNewApiFamilySiteTypeFromCompatAuthError(url)
+  return await detectNewApiFamilySiteTypeFromCompatAuthError(
+    url,
+    protectionBypassExecution,
+  )
 }

@@ -11,10 +11,21 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void
@@ -34,6 +45,7 @@ const {
   sendAutoCheckinMessageMock,
   pushWithinOptionsPageMock,
   getCurrentTempWindowRequestSourceMock,
+  withProtectionBypassUserCommandMock,
 } = vi.hoisted(() => ({
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
@@ -41,6 +53,7 @@ const {
   sendAutoCheckinMessageMock: vi.fn(),
   pushWithinOptionsPageMock: vi.fn(),
   getCurrentTempWindowRequestSourceMock: vi.fn(),
+  withProtectionBypassUserCommandMock: vi.fn(),
 }))
 
 vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
@@ -88,6 +101,15 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
   }
 })
 
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/protectionBypass/client")>()
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: withProtectionBypassUserCommandMock,
+  }
+})
+
 vi.mock("~/utils/core/environment", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/core/environment")>()
@@ -112,6 +134,19 @@ describe("AutoCheckin quick run", () => {
       complete: completeProductAnalyticsActionMock,
     })
     vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    withProtectionBypassUserCommandMock.mockImplementation(
+      async (
+        command: unknown,
+        surface: unknown,
+        work: (execution: unknown) => Promise<unknown>,
+      ) =>
+        work({
+          version: PROTECTION_BYPASS_EXECUTION_VERSION,
+          kind: "user_command",
+          command,
+          surface,
+        }),
+    )
   })
 
   it("shows an account setup empty state when no account can run auto check-in", async () => {
@@ -274,8 +309,16 @@ describe("AutoCheckin quick run", () => {
     expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
       AutoCheckinMessageTypes.RunNow,
       {
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+          PROTECTION_BYPASS_SURFACES.Popup,
+        ),
       },
+    )
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
+      PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+      PROTECTION_BYPASS_SURFACES.Popup,
+      expect.any(Function),
     )
     expect(getCurrentTempWindowRequestSourceMock).toHaveBeenCalledTimes(1)
     expect(
@@ -374,7 +417,11 @@ describe("AutoCheckin quick run", () => {
       expectedRequest: {
         dryRun: true,
         debug: true,
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: automaticExecution(
+          PROTECTION_BYPASS_FEATURES.Checkin,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          PROTECTION_BYPASS_SURFACES.Popup,
+        ),
       },
     },
     {
@@ -382,7 +429,11 @@ describe("AutoCheckin quick run", () => {
       expectedRequest: {
         requestId: expect.any(String),
         debug: true,
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: automaticExecution(
+          PROTECTION_BYPASS_FEATURES.Checkin,
+          PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+          PROTECTION_BYPASS_SURFACES.Popup,
+        ),
       },
     },
   ])(
@@ -463,6 +514,37 @@ describe("AutoCheckin quick run", () => {
 
     await user.click(restoredButton)
     await waitFor(() => expect(runNowAttempts).toBe(2))
+  })
+
+  it("coalesces rapid run-now clicks into one user command", async () => {
+    const run = createDeferred<{ success: boolean }>()
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus) {
+        return { success: true, data: { perAccount: {} } }
+      }
+      if (type === AutoCheckinMessageTypes.RunNow) return await run.promise
+      return { success: true }
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    const button = await screen.findByRole("button", {
+      name: "autoCheckin:execution.runNow",
+    })
+    fireEvent.click(button)
+    fireEvent.click(button)
+
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledTimes(1)
+    expect(
+      sendAutoCheckinMessageMock.mock.calls.filter(
+        ([type]) => type === AutoCheckinMessageTypes.RunNow,
+      ),
+    ).toHaveLength(1)
+
+    run.resolve({ success: true })
+    await screen.findByRole("button", {
+      name: "autoCheckin:execution.runNow",
+    })
   })
 
   it("keeps the initiating debug action busy while locking debug siblings", async () => {

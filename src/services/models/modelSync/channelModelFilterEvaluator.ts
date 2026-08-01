@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import {
   API_TYPES,
   runApiVerificationProbe,
@@ -46,6 +47,7 @@ export interface ProbeFilterContext {
   cache: Map<string, boolean>
   resolvedKey?: string
   abortSignal?: AbortSignal
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 interface ProbeExecutionInput {
@@ -218,10 +220,16 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
   }
 
   try {
-    const key = await service.fetchChannelSecretKey(
-      context.managedConfig.config,
-      context.channel.id,
-    )
+    const key = context.protectionBypassExecution
+      ? await service.fetchChannelSecretKey(
+          context.managedConfig.config,
+          context.channel.id,
+          { protectionBypassExecution: context.protectionBypassExecution },
+        )
+      : await service.fetchChannelSecretKey(
+          context.managedConfig.config,
+          context.channel.id,
+        )
     if (!hasUsableManagedSiteChannelKey(key)) {
       throw new Error("channel_key_unavailable")
     }

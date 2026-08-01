@@ -16,6 +16,13 @@ import {
   API_AUTH_TOKEN_MODES,
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
 } from "~/services/apiTransport/type"
+import { DEFAULT_AUTOMATIC_FEATURE_BYPASS } from "~/services/preferences/tempWindowFallbackPreferences"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_EXECUTION_VERSION,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+} from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import {
@@ -90,21 +97,25 @@ vi.mock("~/services/permissions/permissionManager", () => ({
   hasCookieInterceptorPermissions: mockHasCookieInterceptorPermissions,
 }))
 
-vi.mock("~/services/preferences/userPreferences", () => ({
-  DEFAULT_PREFERENCES: {
-    tempWindowFallback: {
-      enabled: false,
-      useInPopup: true,
-      useInSidePanel: true,
-      useInOptions: true,
-      useForAutoRefresh: true,
-      useForManualRefresh: true,
+vi.mock("~/services/preferences/userPreferences", async () => {
+  const { DEFAULT_AUTOMATIC_FEATURE_BYPASS } = await import(
+    "~/services/preferences/tempWindowFallbackPreferences"
+  )
+
+  return {
+    DEFAULT_PREFERENCES: {
+      tempWindowFallback: {
+        enabled: false,
+        automaticFeatureBypass: {
+          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
+        },
+      },
     },
-  },
-  userPreferences: {
-    getPreferences: mockGetPreferences,
-  },
-}))
+    userPreferences: {
+      getPreferences: mockGetPreferences,
+    },
+  }
+})
 
 vi.mock("~/services/apiTransport/minIntervalLimiter", () => ({
   createMinIntervalLimiter: mockCreateMinIntervalLimiter,
@@ -143,17 +154,19 @@ vi.mock("~/utils/browser/extensionPageUrls", () => ({
 const BASE_URL = "https://example.com/base/"
 const ENDPOINT = "/api/test"
 const API_URL = "https://example.com/base/api/test"
+const backgroundProtectionBypassExecution = {
+  version: PROTECTION_BYPASS_EXECUTION_VERSION,
+  kind: "automatic",
+  feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+  surface: PROTECTION_BYPASS_SURFACES.Background,
+} as const
 
-function mockTempWindowFallbackDisabledPreference() {
-  mockGetPreferences.mockResolvedValueOnce({
-    tempWindowFallback: {
-      enabled: false,
-      useInPopup: true,
-      useInSidePanel: true,
-      useInOptions: true,
-      useForAutoRefresh: true,
-      useForManualRefresh: true,
-    },
+function mockTempWindowFallbackDisabledResponse() {
+  mockSendRuntimeMessage.mockResolvedValueOnce({
+    success: false,
+    error: "messages:background.tempWindowPolicyContextInvalid",
+    code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
   })
 }
 
@@ -165,6 +178,7 @@ async function expectTempWindowDisabledFallback(
       {
         baseUrl: BASE_URL,
         auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        protectionBypassExecution: backgroundProtectionBypassExecution,
       },
       { endpoint },
     ),
@@ -190,11 +204,9 @@ describe("apiTransport request helpers", () => {
     mockGetPreferences.mockResolvedValue({
       tempWindowFallback: {
         enabled: false,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
+        },
       },
     })
     mockSendTabMessageWithRetry.mockReset()
@@ -1178,11 +1190,9 @@ describe("apiTransport request helpers", () => {
     mockGetPreferences.mockResolvedValueOnce({
       tempWindowFallback: {
         enabled: true,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
+        },
       },
     })
     mockSendTabMessageWithRetry.mockResolvedValueOnce({
@@ -1201,6 +1211,13 @@ describe("apiTransport request helpers", () => {
     })
 
     let normalFetchCount = 0
+    const protectionBypassExecution = {
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
+      kind: "automatic",
+      feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+      trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+      surface: PROTECTION_BYPASS_SURFACES.Popup,
+    } as const
     server.use(
       http.get(API_URL, () => {
         normalFetchCount += 1
@@ -1222,6 +1239,7 @@ describe("apiTransport request helpers", () => {
             userId: "123",
           },
           tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          protectionBypassExecution,
           fetchContext: {
             kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
@@ -1237,26 +1255,36 @@ describe("apiTransport request helpers", () => {
     expect(normalFetchCount).toBe(0)
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: RuntimeActionIds.TempWindowFetch,
-        originUrl: BASE_URL,
-        fetchUrl: API_URL,
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-        suppressMinimize: true,
-        useIncognito: true,
-        cookieStoreId: "1-incognito",
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        execution: protectionBypassExecution,
+        task: {
+          kind: "profile_isolated_fetch",
+          params: expect.objectContaining({
+            originUrl: BASE_URL,
+            fetchUrl: API_URL,
+            useIncognito: true,
+            cookieStoreId: "1-incognito",
+          }),
+        },
       }),
     )
+    const protectedTask = mockSendRuntimeMessage.mock.calls[0]?.[0]?.task
+    expect(mockSendRuntimeMessage.mock.calls[0]?.[0]?.execution).toBe(
+      protectionBypassExecution,
+    )
+    expect(protectedTask?.params).not.toHaveProperty(
+      "protectionBypassExecution",
+    )
+    expect(protectedTask?.params).not.toHaveProperty("tempWindowRequestSource")
   })
 
-  it("fetchApiData skips normal fetch for incognito browser-context fallback", async () => {
+  it("rejects forced incognito fallback without execution context", async () => {
     mockGetPreferences.mockResolvedValueOnce({
       tempWindowFallback: {
         enabled: true,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
+        },
       },
     })
     mockSendRuntimeMessage.mockResolvedValueOnce({
@@ -1298,30 +1326,22 @@ describe("apiTransport request helpers", () => {
         },
         { endpoint: ENDPOINT },
       ),
-    ).resolves.toEqual({ ok: true })
+    ).rejects.toMatchObject({
+      code: ApiErrorCodes.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+    })
 
     expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
     expect(normalFetchCount).toBe(0)
-    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.TempWindowFetch,
-        originUrl: BASE_URL,
-        fetchUrl: API_URL,
-        useIncognito: true,
-        cookieStoreId: "1-incognito",
-      }),
-    )
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
   })
 
   it("fetchApiData skips normal fetch when a browser-context cookie store is present", async () => {
     mockGetPreferences.mockResolvedValueOnce({
       tempWindowFallback: {
         enabled: true,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
+        },
       },
     })
     mockSendRuntimeMessage.mockResolvedValueOnce({
@@ -1355,6 +1375,7 @@ describe("apiTransport request helpers", () => {
             cookie: "session=abc123",
             userId: "123",
           },
+          protectionBypassExecution: backgroundProtectionBypassExecution,
           fetchContext: {
             kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
             cookieStoreId: "firefox-container-2",
@@ -1368,10 +1389,15 @@ describe("apiTransport request helpers", () => {
     expect(normalFetchCount).toBe(0)
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: RuntimeActionIds.TempWindowFetch,
-        originUrl: BASE_URL,
-        fetchUrl: API_URL,
-        cookieStoreId: "firefox-container-2",
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        task: {
+          kind: "profile_isolated_fetch",
+          params: expect.objectContaining({
+            originUrl: BASE_URL,
+            fetchUrl: API_URL,
+            cookieStoreId: "firefox-container-2",
+          }),
+        },
       }),
     )
   })
@@ -2017,7 +2043,7 @@ describe("apiTransport request helpers", () => {
   })
 
   it("fetchApiData should keep unknown structured 403 errors eligible for temp-window fallback", async () => {
-    mockTempWindowFallbackDisabledPreference()
+    mockTempWindowFallbackDisabledResponse()
     server.use(
       http.get(API_URL, () => {
         return HttpResponse.json(
@@ -2037,7 +2063,7 @@ describe("apiTransport request helpers", () => {
   })
 
   it("fetchApiData should keep primitive JSON 403 errors eligible for temp-window fallback", async () => {
-    mockTempWindowFallbackDisabledPreference()
+    mockTempWindowFallbackDisabledResponse()
     server.use(
       http.get(API_URL, () => {
         return HttpResponse.json("gateway denied", { status: 403 })
@@ -2048,7 +2074,7 @@ describe("apiTransport request helpers", () => {
   })
 
   it("fetchApiData should keep structured 403 errors without messages eligible for temp-window fallback", async () => {
-    mockTempWindowFallbackDisabledPreference()
+    mockTempWindowFallbackDisabledResponse()
     server.use(
       http.get(API_URL, () => {
         return HttpResponse.json(
@@ -2067,15 +2093,10 @@ describe("apiTransport request helpers", () => {
   })
 
   it("fetchApiData should tag eligible errors when temp-window fallback is disabled", async () => {
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: false,
-        useInPopup: true,
-        useInSidePanel: true,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: true,
-      },
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: false,
+      error: "messages:background.tempWindowPolicyContextInvalid",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
     })
     server.use(
       http.get(API_URL, () => {
@@ -2088,6 +2109,7 @@ describe("apiTransport request helpers", () => {
         {
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          protectionBypassExecution: backgroundProtectionBypassExecution,
         },
         { endpoint: ENDPOINT },
       ),

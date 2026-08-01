@@ -37,6 +37,7 @@
       },
       "folderCount_one": "{{count}} 件のフォルダー",
       "folderCount_other": "{{count}} 件のフォルダー",
+      "importFailed": "インポートを完了できませんでした。もう一度お試しください。",
       "importing": "選択したサイトをインポート中: {{completed}} / {{total}}...",
       "includeExisting": "保存済みアカウントがあるサイトも含める",
       "initialSteps": {
@@ -382,12 +383,12 @@
         "notNow": "今はしない",
         "openSettings": "設定を開く"
       },
-      "descriptionDisabledTempWindowOnly": "{{accountName}} では、リクエストを正常に完了するために一時ポップアップウィンドウを開いて保護を通過する必要があります。設定 > データ更新 で有効にしてください",
-      "descriptionDisabledWithCookieInterceptor": "{{accountName}} では Firefox の保護回避フローが必要です。一時ポップアップウィンドウが開いて Cookie を取得し、Cookie Interceptor がそれをリクエストへ付与します。設定 > データ更新 で有効にしてください",
-      "descriptionPermissionTempWindowOnly": "{{accountName}} では、リクエストを正常に完了するために一時ポップアップウィンドウを開く権限が必要です。設定 > 権限 で付与してください",
-      "descriptionPermissionWithCookieInterceptor": "{{accountName}} では Firefox の Cookie Interceptor 権限が必要です。Cookie 取得のために一時ポップアップウィンドウを開き、リクエストに付与します。設定 > 権限 で付与してください",
-      "titleTempWindowOnly": "リクエスト用の一時ウィンドウモードを有効にする",
-      "titleWithCookieInterceptor": "リクエスト用の保護回避を有効にする"
+      "descriptionDisabledTempWindowOnly": "{{accountName}} の自動更新でサイト認証が必要になりましたが、自動タスクによる一時ページの表示は現在許可されていません。設定 > データ更新 で有効にしてください。",
+      "descriptionDisabledWithCookieInterceptor": "{{accountName}} の自動更新でサイト認証が必要になりましたが、自動タスクによる一時ページの表示は現在許可されていません。設定 > データ更新 で有効にしてください。",
+      "descriptionPermissionTempWindowOnly": "{{accountName}} の自動更新では、サイト認証用の一時ページを開く必要があります。設定 > 権限 で必要な権限を許可してください。",
+      "descriptionPermissionWithCookieInterceptor": "{{accountName}} の自動更新でサイト認証を行うには、Cookies、Web Request、Web Request Blocking の各権限が必要です。設定 > 権限 で許可してください。",
+      "titleTempWindowOnly": "自動更新にはサイト認証が必要です",
+      "titleWithCookieInterceptor": "自動更新にはサイト認証が必要です"
     },
     "updateLog": {
       "autoOpenSetting": "更新ログの自動表示",
@@ -473,6 +474,7 @@
     "sidebarCollapsedHint": "サイドバーは折りたたまれており、アイコンのみ表示されています",
     "siteAnnouncements": "サイトのお知らせ",
     "toggleMenu": "メニューを切り替え",
+    "unifiedApiGuidancePreview": "統一 API ガイダンスプレビュー（開発用）",
     "usageAnalytics": "利用分析"
   },
   "optionsSearch": {

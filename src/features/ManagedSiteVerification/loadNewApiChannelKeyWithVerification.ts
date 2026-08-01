@@ -2,6 +2,11 @@ import {
   fetchNewApiChannelKey,
   NewApiChannelKeyRequirementError,
 } from "~/services/managedSites/providers/newApiSession"
+import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import type { NewApiConfig } from "~/types/newApiConfig"
 
 import {
@@ -12,6 +17,9 @@ import type { OpenNewApiManagedVerificationParams } from "./useNewApiManagedVeri
 
 interface LoadNewApiChannelKeyWithVerificationParams {
   channelId: number
+  command:
+    | typeof PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys
+    | typeof PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels
   label?: string
   requestKind?: OpenNewApiManagedVerificationParams["kind"]
   config: Pick<
@@ -33,14 +41,20 @@ export async function loadNewApiChannelKeyWithVerification(
   params: LoadNewApiChannelKeyWithVerificationParams,
 ): Promise<boolean> {
   const loadKey = async () => {
-    const key = await fetchNewApiChannelKey({
-      baseUrl: params.config.baseUrl,
-      userId: params.config.userId,
-      channelId: params.channelId,
-      username: params.config.username,
-      password: params.config.password,
-      totpSecret: params.config.totpSecret,
-    })
+    const key = await withProtectionBypassUserCommand(
+      params.command,
+      PROTECTION_BYPASS_SURFACES.Options,
+      async (protectionBypassExecution) =>
+        await fetchNewApiChannelKey({
+          baseUrl: params.config.baseUrl,
+          userId: params.config.userId,
+          channelId: params.channelId,
+          username: params.config.username,
+          password: params.config.password,
+          totpSecret: params.config.totpSecret,
+          protectionBypassExecution,
+        }),
+    )
 
     await Promise.resolve(params.setKey(key))
     await Promise.resolve(params.onLoaded?.())

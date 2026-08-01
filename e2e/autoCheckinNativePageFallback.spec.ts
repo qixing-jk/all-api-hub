@@ -1,12 +1,15 @@
 import { createServer, type ServerResponse } from "node:http"
 import type { AddressInfo } from "node:net"
-import type { Worker } from "@playwright/test"
+import type { Page, Worker } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   type AutoCheckinStatus,
@@ -24,10 +27,12 @@ import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageRawValue,
   getServiceWorker,
+  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 const AUTO_CHECKIN_STATUS_STORAGE_KEY = "autoCheckin_status"
+const AUTO_CHECKIN_DAILY_ALARM_NAME = "autoCheckinDaily"
 const NATIVE_ACCOUNT_ID = "native-page-fallback-account"
 const NATIVE_ACCOUNT_NAME = "Native Page Fallback Account"
 const NATIVE_ACCOUNT_USER_ID = "native-user"
@@ -41,6 +46,16 @@ type NativeCheckinFixture = {
     statusCheckCount: number
   }
   close: () => Promise<void>
+}
+
+type RuntimeLike = {
+  sendMessage?: (message: unknown) => Promise<unknown>
+}
+
+type UiOpenPretriggerObservation = {
+  requestCount: number
+  completedCount: number
+  responses: unknown[]
 }
 
 function autoCheckinOptionsUrl(extensionId: string) {
@@ -58,6 +73,114 @@ async function readAutoCheckinStatus(
   if (typeof raw !== "string") return null
 
   return JSON.parse(raw) as AutoCheckinStatus
+}
+
+function getLocalDay(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+async function seedTodayDailyRunTarget(serviceWorker: Worker) {
+  await setPlasmoStorageValue(serviceWorker, AUTO_CHECKIN_STATUS_STORAGE_KEY, {
+    dailyAlarmTargetDay: getLocalDay(),
+  } satisfies AutoCheckinStatus)
+  await serviceWorker.evaluate(async (alarmName) => {
+    const chromeApi = (globalThis as any).chrome
+    await chromeApi.alarms.create(alarmName, {
+      when: Date.now() + 60 * 60 * 1_000,
+    })
+  }, AUTO_CHECKIN_DAILY_ALARM_NAME)
+}
+
+async function installUiOpenPretriggerObservation(page: Page) {
+  await page.addInitScript((pretriggerAction) => {
+    const observationKey = "__aah_auto_checkin_ui_open_pretrigger_observation__"
+    const createEmptyObservation = (): UiOpenPretriggerObservation => ({
+      requestCount: 0,
+      completedCount: 0,
+      responses: [],
+    })
+
+    const readObservation = (): UiOpenPretriggerObservation => {
+      try {
+        const raw = window.sessionStorage.getItem(observationKey)
+        return raw ? JSON.parse(raw) : createEmptyObservation()
+      } catch {
+        return createEmptyObservation()
+      }
+    }
+
+    const writeObservation = (next: UiOpenPretriggerObservation) => {
+      window.sessionStorage.setItem(observationKey, JSON.stringify(next))
+    }
+
+    const patchRuntime = (runtime: RuntimeLike | undefined) => {
+      if (!runtime || typeof runtime.sendMessage !== "function") return
+
+      const originalSendMessage = runtime.sendMessage.bind(runtime)
+      Object.defineProperty(runtime, "sendMessage", {
+        configurable: true,
+        writable: true,
+        value: async (message: unknown) => {
+          const type =
+            typeof message === "object" && message !== null && "type" in message
+              ? String((message as { type?: unknown }).type ?? "")
+              : ""
+
+          if (type !== pretriggerAction) {
+            return await originalSendMessage(message)
+          }
+
+          const startedObservation = readObservation()
+          writeObservation({
+            ...startedObservation,
+            requestCount: startedObservation.requestCount + 1,
+          })
+
+          const response = await originalSendMessage(message)
+          const observedResponse =
+            response && typeof response === "object" && "res" in response
+              ? (response as { res?: unknown }).res
+              : response
+          const observation = readObservation()
+          writeObservation({
+            ...observation,
+            completedCount: observation.completedCount + 1,
+            responses: [...observation.responses, observedResponse],
+          })
+
+          return response
+        },
+      })
+    }
+
+    patchRuntime(globalThis.chrome?.runtime)
+    const browserRuntime = globalThis.browser?.runtime as
+      | RuntimeLike
+      | undefined
+    if (browserRuntime && browserRuntime !== globalThis.chrome?.runtime) {
+      patchRuntime(browserRuntime)
+    }
+  }, AutoCheckinMessageTypes.PretriggerDailyOnUiOpen)
+}
+
+async function readUiOpenPretriggerObservation(
+  page: Page,
+): Promise<UiOpenPretriggerObservation> {
+  return await page.evaluate(() => {
+    try {
+      const raw = window.sessionStorage.getItem(
+        "__aah_auto_checkin_ui_open_pretrigger_observation__",
+      )
+      return raw
+        ? JSON.parse(raw)
+        : { requestCount: 0, completedCount: 0, responses: [] }
+    } catch {
+      return { requestCount: 0, completedCount: 0, responses: [] }
+    }
+  })
 }
 
 function fulfillJson(
@@ -188,7 +311,7 @@ async function createNativeCheckinFixture(): Promise<NativeCheckinFixture> {
   }
 }
 
-test("New API native page fallback clicks the site page and confirms checked-in status", async ({
+test("automatic native-page fallback is denied while an explicit run is allowed", async ({
   context,
   extensionId,
   page,
@@ -203,7 +326,7 @@ test("New API native page fallback clicks the site page and confirms checked-in 
       autoCheckin: {
         ...DEFAULT_PREFERENCES.autoCheckin!,
         globalEnabled: true,
-        pretriggerDailyOnUiOpen: false,
+        pretriggerDailyOnUiOpen: true,
         notifyUiOnCompletion: true,
         windowStart: "00:00",
         windowEnd: "23:59",
@@ -218,7 +341,11 @@ test("New API native page fallback clicks the site page and confirms checked-in 
       tempWindowFallback: {
         ...DEFAULT_PREFERENCES.tempWindowFallback!,
         enabled: true,
-        tempContextMode: "tab",
+        automaticFeatureBypass: {
+          ...DEFAULT_PREFERENCES.tempWindowFallback!.automaticFeatureBypass,
+          [PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin]: false,
+        },
+        tempContextMode: TEMP_CONTEXT_MODES.Tab,
       },
     })
     await seedStoredAccounts(serviceWorker, [
@@ -242,11 +369,69 @@ test("New API native page fallback clicks the site page and confirms checked-in 
       }),
     ])
 
-    await forceExtensionLanguage(page, "en")
-    installExtensionPageGuards(page)
-    await page.goto(autoCheckinOptionsUrl(extensionId))
-    await waitForExtensionRoot(page)
-    await expectPermissionOnboardingHidden(page)
+    await seedTodayDailyRunTarget(serviceWorker)
+
+    const pagesBeforeAutomaticRun = context.pages().length
+    const countsBeforeAutomaticRun = { ...nativeFixture.counts }
+    const automaticPhasePages: Page[] = []
+    const observeAutomaticPage = (automaticPage: Page) => {
+      automaticPhasePages.push(automaticPage)
+    }
+    context.on("page", observeAutomaticPage)
+
+    try {
+      await forceExtensionLanguage(page, "en")
+      installExtensionPageGuards(page)
+      await installUiOpenPretriggerObservation(page)
+      await page.goto(autoCheckinOptionsUrl(extensionId))
+      await waitForExtensionRoot(page)
+      await expectPermissionOnboardingHidden(page)
+
+      await expect
+        .poll(() => readUiOpenPretriggerObservation(page), {
+          message: "UI-open pretrigger should settle before policy assertions",
+          timeout: 30_000,
+        })
+        .toMatchObject({
+          requestCount: 1,
+          completedCount: 1,
+          responses: [
+            {
+              success: true,
+              started: true,
+              eligible: true,
+            },
+          ],
+        })
+
+      expect(nativeFixture.counts.directCheckinPostCount).toBeGreaterThan(
+        countsBeforeAutomaticRun.directCheckinPostCount,
+      )
+      expect(nativeFixture.counts.nativePageRequestCount).toBe(
+        countsBeforeAutomaticRun.nativePageRequestCount,
+      )
+      expect(nativeFixture.counts.nativePageClickCount).toBe(
+        countsBeforeAutomaticRun.nativePageClickCount,
+      )
+      expect(context.pages()).toHaveLength(pagesBeforeAutomaticRun)
+    } finally {
+      context.off("page", observeAutomaticPage)
+    }
+
+    expect(automaticPhasePages).toHaveLength(0)
+
+    const automaticCompletionDialog = page.getByRole("dialog")
+    await expect(automaticCompletionDialog).toBeVisible()
+    await expect(
+      automaticCompletionDialog.getByText("Auto check-in finished"),
+    ).toBeVisible()
+    await automaticCompletionDialog
+      .getByRole("button")
+      .filter({ hasText: "Close" })
+      .click()
+    await expect(automaticCompletionDialog).toBeHidden()
+
+    const countsBeforeExplicitRun = { ...nativeFixture.counts }
 
     await page
       .getByTestId(BASIC_SETTINGS_TEST_IDS.autoCheckinRunNowButton)
@@ -254,12 +439,19 @@ test("New API native page fallback clicks the site page and confirms checked-in 
 
     try {
       await expect
-        .poll(() => nativeFixture.counts.nativePageClickCount, {
-          message: "native page fallback should click the site check-in button",
-          timeout: 30_000,
-        })
-        .toBeGreaterThan(0)
-      expect(nativeFixture.counts.nativePageRequestCount).toBeGreaterThan(0)
+        .poll(
+          () =>
+            nativeFixture.counts.nativePageClickCount >
+              countsBeforeExplicitRun.nativePageClickCount &&
+            nativeFixture.counts.nativePageRequestCount >
+              countsBeforeExplicitRun.nativePageRequestCount,
+          {
+            message:
+              "explicit native-page fallback should request and click the site page",
+            timeout: 30_000,
+          },
+        )
+        .toBe(true)
     } catch (error) {
       const status = await readAutoCheckinStatus(serviceWorker)
       throw new Error(

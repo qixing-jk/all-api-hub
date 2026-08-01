@@ -292,8 +292,14 @@ describe("PermissionSettings", () => {
       screen.queryByText("settings:permissions.status.checking"),
     ).not.toBeInTheDocument()
     expect(
+      screen.getAllByText("settings:permissions.status.granted"),
+    ).toHaveLength(1)
+    expect(
       screen.getAllByText("settings:permissions.status.denied"),
-    ).toHaveLength(4)
+    ).toHaveLength(2)
+    expect(
+      screen.getAllByText("settings:permissions.status.unavailable"),
+    ).toHaveLength(1)
   })
 
   it("shows an error toast when requesting a permission throws", async () => {

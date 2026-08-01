@@ -15,6 +15,23 @@ import { SiteHealthStatus } from "~/types"
 import { buildAccountStats } from "~~/tests/test-utils/accountTodayStats"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
+const { loggerErrorMock } = vi.hoisted(() => ({
+  loggerErrorMock: vi.fn(),
+}))
+
+vi.mock("~/utils/core/logger", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/core/logger")>()
+  return {
+    ...actual,
+    createLogger: vi.fn(() => ({
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: loggerErrorMock,
+    })),
+  }
+})
+
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     getAllAccounts: vi.fn(),
@@ -125,7 +142,7 @@ describe("useOptionsOverviewData", () => {
     })
   })
 
-  it("captures store failures without replacing the previous loading state forever", async () => {
+  it("keeps available overview data but withholds guidance when source inventory fails", async () => {
     mockSuccessfulLoad()
     vi.mocked(accountStorage.getAllAccounts).mockRejectedValueOnce(
       new Error("storage unavailable"),
@@ -141,7 +158,93 @@ describe("useOptionsOverviewData", () => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    expect(result.current.error).toBe("storage unavailable")
+    expect(result.current.error).toBe(
+      "optionsOverview:states.loadDetailUnavailable",
+    )
+    expect(result.current.viewModel).not.toBeNull()
+    expect(result.current.viewModel?.usageSnapshot).toMatchObject({
+      todayRequests: 1,
+      todayTokens: 5,
+      hasUsageData: true,
+    })
+    expect(result.current.viewModel?.unifiedApiGuidance).toBeNull()
+    expect(
+      result.current.viewModel?.statusCards.find(
+        (card) => card.id === "accounts",
+      )?.value,
+    ).toBe("-")
+    expect(
+      result.current.viewModel?.attentionItems.some(
+        (item) => item.kind === "addAccount",
+      ),
+    ).toBe(false)
+  })
+
+  it("reports rejected sources without logging or displaying their raw reasons", async () => {
+    mockSuccessfulLoad()
+    const sensitiveReason = "secret-token-should-not-leak"
+    const accountsFailure = new Error(sensitiveReason)
+    const preferencesFailure = new Error(`preferences ${sensitiveReason}`)
+    vi.mocked(accountStorage.getAllAccounts).mockRejectedValueOnce(
+      accountsFailure,
+    )
+    vi.mocked(userPreferences.getPreferences).mockRejectedValueOnce(
+      preferencesFailure,
+    )
+
+    const { result } = renderHook(() => useOptionsOverviewData(), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.error).toBe(
+      "optionsOverview:states.loadDetailUnavailable",
+    )
+    expect(result.current.viewModel).not.toBeNull()
+    expect(loggerErrorMock).toHaveBeenCalledWith(
+      "Some options overview data failed to load",
+      {
+        failures: [
+          { source: "accounts", status: "rejected" },
+          { source: "preferences", status: "rejected" },
+        ],
+      },
+    )
+    expect(JSON.stringify(loggerErrorMock.mock.calls)).not.toContain(
+      sensitiveReason,
+    )
+  })
+
+  it("keeps the overview unavailable when every local data source fails", async () => {
+    mockSuccessfulLoad()
+    const failure = new Error("local storage unavailable")
+    vi.mocked(accountStorage.getAllAccounts).mockRejectedValueOnce(failure)
+    vi.mocked(accountStorage.getAccountStats).mockRejectedValueOnce(failure)
+    vi.mocked(usageHistoryStorage.getStore).mockRejectedValueOnce(failure)
+    vi.mocked(apiCredentialProfilesStorage.listProfiles).mockRejectedValueOnce(
+      failure,
+    )
+    vi.mocked(userPreferences.getPreferences).mockRejectedValueOnce(failure)
+    vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(failure)
+    vi.mocked(siteAnnouncementStorage.listRecords).mockRejectedValueOnce(
+      failure,
+    )
+    vi.mocked(siteAnnouncementStorage.getStatus).mockRejectedValueOnce(failure)
+
+    const { result } = renderHook(() => useOptionsOverviewData(), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(result.current.error).toBe(
+      "optionsOverview:states.loadDetailUnavailable",
+    )
     expect(result.current.viewModel).toBeNull()
   })
 })

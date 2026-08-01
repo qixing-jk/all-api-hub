@@ -126,8 +126,8 @@
     "httpError": "HTTP {{statusCode}}: {{message}}",
     "networkFailed": "ネットワーク接続に失敗しました",
     "normal": "アカウント状態は正常です",
-    "tempWindowDisabled": "保護回避が無効です。設定 > データ更新 で有効にしてください",
-    "tempWindowPermissionRequired": "Firefox では保護回避に Cookie Interceptor 権限が必要です。設定 > 権限 で付与してください",
+    "tempWindowDisabled": "自動更新でサイト認証が必要になりましたが、自動タスクによる一時ページの表示は現在許可されていません。設定 > データ更新 で有効にしてください",
+    "tempWindowPermissionRequired": "Firefox でサイト認証を行うには、Cookies、Web Request、Web Request Blocking の各権限が必要です。設定 > 権限 で許可してください",
     "unknown": "不明",
     "unknownError": "不明なエラー",
     "warning": "警告"
@@ -203,7 +203,7 @@
       "docs": "はじめにを開く",
       "star": "GitHub で表示"
     },
-    "description": "プロジェクトに Star を付けたりガイドを参照したりして、中継サイトや New API アカウントの管理方法を学べます",
+    "description": "アカウントを追加すると、残高、ヘルスチェック、API キー、直接エクスポート、後続のセルフホスト AI ゲートウェイチャネル取り込みに使えるソース一覧を作成できます。",
     "hint": "アカウントを追加する前に、まず Web サイトやドキュメントを自由に見て回ってください",
     "title": "All API Hub へようこそ"
   },
@@ -264,5 +264,43 @@
     "pendingRefreshHelp": "今日の統計はまだ確認されていません。アカウント一覧で対象のアカウントを更新してください。",
     "refreshActionHelp": "今日の統計はまだ確認されていません。クリックしてアカウントを更新してください。",
     "unavailable": "利用不可"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "アカウントを追加",
+      "addApiCredential": "API 認証情報を追加",
+      "addGatewayChannel": "最初のゲートウェイチャネルを追加",
+      "configureManagedSite": "セルフホスト AI ゲートウェイを設定",
+      "manageChannels": "チャネルを管理",
+      "openApiCredentialProfiles": "認証情報ライブラリを開く",
+      "openModelSync": "モデル同期を開く"
+    },
+    "boundaryNote": "All API Hub はアカウントキーを管理します。モデルリクエストは中継せず、外部クライアントが呼び出す先はセルフホスト AI ゲートウェイです。",
+    "description": {
+      "has_gateway_channels": "以前にゲートウェイチャネルが作成または取り込まれています。チャネル管理で現在の状態を確認し、クライアント設定へ進んでください。",
+      "needs_importable_source": "現在のアカウントからはインポート可能なキーを取得できません。先に API キーを保存するか、キーを取得できるアカウント種別を追加してから、セルフホスト AI ゲートウェイへ取り込んでください。",
+      "needs_managed_site": "アカウントキーがあります。セルフホスト AI ゲートウェイを設定すれば、ゲートウェイチャネルとして取り込めます。",
+      "needs_sources": "アカウントを追加すると、そのキーをクライアントへ直接エクスポートするか、セルフホスト AI ゲートウェイへ取り込んで 1 つの AI API にまとめられます。",
+      "ready_accounts": "キー管理から選択したアカウントキーをセルフホスト AI ゲートウェイチャネルへ簡単に取り込めます。",
+      "ready_profiles": "保存済み API キーは認証情報ライブラリから直接再利用するか、個別にゲートウェイチャネルへ取り込めます。"
+    },
+    "directToolExportNote": "セルフホストゲートウェイが不要な場合は、個別の認証情報をクライアントツールへ直接エクスポートできます。",
+    "dismissDialog": {
+      "confirm": "今後表示しない",
+      "description": "アカウントページではこのヒントを表示しません。セルフホスト AI ゲートウェイへの接続方法は引き続き概要ページで確認できます。",
+      "title": "このヒントを今後表示しませんか？"
+    },
+    "dismissForSession": "今回はヒントを閉じる",
+    "headline": "アカウントキーをセルフホスト AI ゲートウェイへ接続",
+    "modelSyncOptional": "モデル同期はゲートウェイのモデル一覧を自動更新して手動管理を減らします。チャネル作成後に必要に応じて有効化できます。",
+    "optionalLabel": "任意のメンテナンス",
+    "permanentlyDismiss": "このヒントを今後表示しない",
+    "sources": {
+      "account": "アカウントソース",
+      "accountUnavailable": "アカウントは未対応",
+      "both": "アカウント + 認証情報",
+      "none": "アカウントソースはまだありません",
+      "profile": "認証情報ソース"
+    }
   }
 }

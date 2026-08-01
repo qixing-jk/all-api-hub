@@ -1,8 +1,14 @@
 import { readFileSync } from "node:fs"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { tempWindowOpenRouterManagementKeyAction } from "~/services/apiAdapters/openrouter/managementKeyActionClient"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+  TEMP_CONTEXT_TASK_KINDS,
+} from "~/services/protectionBypass/contracts"
 import * as tempWindowFetchClient from "~/utils/browser/tempWindowFetch"
 import {
   tempWindowFetch,
@@ -11,19 +17,30 @@ import {
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
 
-const {
-  sendRuntimeMessageMock,
-  handleTempWindowFetchMock,
-  handleTempWindowCheckinPageActionMock,
-  handleTempWindowTurnstileFetchMock,
-  handleTempWindowGetRenderedTitleMock,
-} = vi.hoisted(() => ({
-  sendRuntimeMessageMock: vi.fn(),
-  handleTempWindowFetchMock: vi.fn(),
-  handleTempWindowCheckinPageActionMock: vi.fn(),
-  handleTempWindowTurnstileFetchMock: vi.fn(),
-  handleTempWindowGetRenderedTitleMock: vi.fn(),
-}))
+const { executeProtectionBypassTaskMock, sendRuntimeMessageMock } = vi.hoisted(
+  () => ({
+    executeProtectionBypassTaskMock: vi.fn(),
+    sendRuntimeMessageMock: vi.fn(),
+  }),
+)
+
+const testExecution = {
+  version: 2,
+  kind: "automatic",
+  feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+  surface: PROTECTION_BYPASS_SURFACES.Background,
+} as const
+
+function expectNoTaskLevelExecutionDuplicate(): void {
+  const envelope = executeProtectionBypassTaskMock.mock.calls.at(-1)?.[0]
+
+  expect(envelope).not.toHaveProperty("protectionBypassExecution")
+  expect(envelope).not.toHaveProperty("tempWindowRequestSource")
+  expect(envelope?.task).not.toHaveProperty("execution")
+  expect(envelope?.task?.params).not.toHaveProperty("protectionBypassExecution")
+  expect(envelope?.task?.params).not.toHaveProperty("tempWindowRequestSource")
+}
 
 vi.mock("~/utils/browser", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/browser")>()
@@ -42,14 +59,17 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/entrypoints/background/tempWindowPool", () => ({
-  handleTempWindowFetch: handleTempWindowFetchMock,
-  handleTempWindowCheckinPageAction: handleTempWindowCheckinPageActionMock,
-  handleTempWindowTurnstileFetch: handleTempWindowTurnstileFetchMock,
-  handleTempWindowGetRenderedTitle: handleTempWindowGetRenderedTitleMock,
+vi.mock("~/entrypoints/background/protectionBypassCoordinator", () => ({
+  protectionBypassCoordinator: {
+    execute: executeProtectionBypassTaskMock,
+  },
 }))
 
 describe("tempWindowFetch helpers (background context)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("keeps provider-specific OpenRouter transport out of the generic facade", () => {
     expect(tempWindowFetchClient).not.toHaveProperty(
       "tempWindowOpenRouterManagementKeyAction",
@@ -70,259 +90,198 @@ describe("tempWindowFetch helpers (background context)", () => {
     expect(genericClientSource).not.toMatch(/OpenRouterManagementKey/)
   })
 
-  it("delegates tempWindowFetch to the background handler", async () => {
-    handleTempWindowFetchMock.mockImplementation((request, sendResponse) => {
-      sendResponse({ success: true, data: request.fetchUrl })
+  it("passes one OpenRouter management-key execution through the provider client", async () => {
+    const execution = {
+      version: 2,
+      kind: "user_command",
+      command: PROTECTION_BYPASS_USER_COMMANDS.AddAccount,
+      surface: PROTECTION_BYPASS_SURFACES.Options,
+    } as const
+    executeProtectionBypassTaskMock.mockResolvedValueOnce({
+      requestId: "request-openrouter-management-key",
+      operation: "create",
+      mutationState: "not_dispatched",
+      attemptOutcome: "failed",
+      label: "Account connection (example)",
     })
 
-    const response = await tempWindowFetch({
-      originUrl: "https://example.com",
-      fetchUrl: "https://example.com/api/test",
-      fetchOptions: { method: "GET" },
+    await tempWindowOpenRouterManagementKeyAction({
+      requestId: "request-openrouter-management-key",
+      operation: { kind: "create", label: "Account connection (example)" },
+      protectionBypassExecution: execution,
     })
 
-    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
-    expect(handleTempWindowFetchMock).toHaveBeenCalledTimes(1)
-    expect(handleTempWindowFetchMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        originUrl: "https://example.com",
-        fetchUrl: "https://example.com/api/test",
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-        suppressMinimize: false,
-      }),
-      expect.any(Function),
-    )
-    expect(response).toEqual({
-      success: true,
-      data: "https://example.com/api/test",
-    })
-  })
-
-  it("keeps the first tempWindowFetch response when the handler responds multiple times", async () => {
-    handleTempWindowFetchMock.mockImplementation((_request, sendResponse) => {
-      sendResponse({ success: true, data: "first" })
-      sendResponse({ success: true, data: "second" })
-    })
-
-    const response = await tempWindowFetch({
-      originUrl: "https://example.com",
-      fetchUrl: "https://example.com/api/test",
-      fetchOptions: { method: "GET" },
-    })
-
-    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
-    expect(handleTempWindowFetchMock).toHaveBeenCalledTimes(1)
-    expect(response).toEqual({
-      success: true,
-      data: "first",
-    })
-  })
-
-  it("delegates tempWindowTurnstileFetch to the background handler", async () => {
-    handleTempWindowTurnstileFetchMock.mockImplementation(
-      (request, sendResponse) => {
-        sendResponse({
-          success: true,
-          data: request.fetchUrl,
-          turnstile: { status: "token_obtained", hasTurnstile: true },
-        })
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
+      execution,
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction,
+        params: {
+          requestId: "request-openrouter-management-key",
+          operation: {
+            kind: "create",
+            label: "Account connection (example)",
+          },
+        },
       },
-    )
+    })
+    expectNoTaskLevelExecutionDuplicate()
+  })
+
+  it("passes the exact fetch envelope to the background Coordinator", async () => {
+    const coordinatorResponse = { success: true, data: "fetch-result" }
+    executeProtectionBypassTaskMock.mockResolvedValueOnce(coordinatorResponse)
+
+    const response = await tempWindowFetch({
+      protectionBypassExecution: testExecution,
+      originUrl: "https://example.invalid",
+      fetchUrl: "https://example.invalid/api/test",
+      fetchOptions: { method: "GET" },
+    })
+
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledOnce()
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
+      execution: testExecution,
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          fetchUrl: "https://example.invalid/api/test",
+          fetchOptions: { method: "GET" },
+        },
+      },
+    })
+    expectNoTaskLevelExecutionDuplicate()
+    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
+    expect(response).toBe(coordinatorResponse)
+  })
+
+  it("passes the profile-isolated task kind through the same Coordinator API", async () => {
+    const coordinatorResponse = { success: true, data: "isolated-result" }
+    executeProtectionBypassTaskMock.mockResolvedValueOnce(coordinatorResponse)
+
+    const response = await tempWindowFetch({
+      protectionBypassExecution: testExecution,
+      originUrl: "https://example.invalid",
+      fetchUrl: "https://example.invalid/api/test",
+      tempContextTaskKind: TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
+    })
+
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
+      execution: testExecution,
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          fetchUrl: "https://example.invalid/api/test",
+          tempContextTaskKind: TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
+        },
+      },
+    })
+    expectNoTaskLevelExecutionDuplicate()
+    expect(response).toBe(coordinatorResponse)
+  })
+
+  it("passes the exact Turnstile envelope to the background Coordinator", async () => {
+    const coordinatorResponse = {
+      success: true,
+      data: "turnstile-result",
+      turnstile: { status: "token_obtained", hasTurnstile: true },
+    }
+    executeProtectionBypassTaskMock.mockResolvedValueOnce(coordinatorResponse)
 
     const response = await tempWindowTurnstileFetch({
-      originUrl: "https://example.com",
-      pageUrl: "https://example.com/checkin",
-      fetchUrl: "https://example.com/api/checkin",
+      protectionBypassExecution: testExecution,
+      originUrl: "https://example.invalid",
+      pageUrl: "https://example.invalid/checkin",
+      fetchUrl: "https://example.invalid/api/checkin",
       fetchOptions: { method: "POST" },
     })
 
-    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
-    expect(handleTempWindowTurnstileFetchMock).toHaveBeenCalledTimes(1)
-    expect(handleTempWindowTurnstileFetchMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        originUrl: "https://example.com",
-        pageUrl: "https://example.com/checkin",
-        fetchUrl: "https://example.com/api/checkin",
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-        suppressMinimize: false,
-      }),
-      expect.any(Function),
-    )
-    expect(response).toEqual({
-      success: true,
-      data: "https://example.com/api/checkin",
-      turnstile: { status: "token_obtained", hasTurnstile: true },
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
+      execution: testExecution,
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.TurnstileFetch,
+        params: {
+          originUrl: "https://example.invalid",
+          pageUrl: "https://example.invalid/checkin",
+          fetchUrl: "https://example.invalid/api/checkin",
+          fetchOptions: { method: "POST" },
+        },
+      },
     })
+    expectNoTaskLevelExecutionDuplicate()
+    expect(response).toBe(coordinatorResponse)
   })
 
-  it("delegates tempWindowTriggerCheckinPageAction to the background handler", async () => {
-    handleTempWindowCheckinPageActionMock.mockImplementation(
-      (_request, sendResponse) => {
-        sendResponse({
-          success: true,
-          reason: "clicked",
-          identity: { userId: "target-user", user: { id: "target-user" } },
-          trigger: {
-            status: "clicked",
-            clicked: true,
-            reason: "clicked",
-            detection: {
-              hasTurnstile: false,
-              reasons: [],
-              score: 0,
-              title: "Check in",
-              url: "https://example.invalid/console/personal",
-            },
-          },
-        })
-      },
-    )
+  it("passes the exact native page-action envelope to the background Coordinator", async () => {
+    const coordinatorResponse = {
+      success: true,
+      reason: "clicked",
+      identity: { userId: "example-user", user: { id: "example-user" } },
+    }
+    executeProtectionBypassTaskMock.mockResolvedValueOnce(coordinatorResponse)
 
     const response = await tempWindowTriggerCheckinPageAction({
+      protectionBypassExecution: testExecution,
       originUrl: "https://example.invalid",
       pageUrl: "https://example.invalid/console/personal",
       siteType: "new-api",
-      expectedUserId: "target-user",
-      requestId: "req-native-wrapper",
+      expectedUserId: "example-user",
+      requestId: "request-native-action",
     })
 
-    expect(handleTempWindowCheckinPageActionMock).toHaveBeenCalledTimes(1)
-    expect(handleTempWindowCheckinPageActionMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-        suppressMinimize: false,
-      }),
-      expect.any(Function),
-    )
-    expect(response).toMatchObject({
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
+      execution: testExecution,
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.NativePageAction,
+        params: {
+          originUrl: "https://example.invalid",
+          pageUrl: "https://example.invalid/console/personal",
+          siteType: "new-api",
+          expectedUserId: "example-user",
+          requestId: "request-native-action",
+        },
+      },
+    })
+    expectNoTaskLevelExecutionDuplicate()
+    expect(response).toBe(coordinatorResponse)
+  })
+
+  it("passes the exact rendered-title envelope and validates its response", async () => {
+    const coordinatorResponse = { success: true, title: "Example title" }
+    executeProtectionBypassTaskMock.mockResolvedValueOnce(coordinatorResponse)
+
+    const response = await tempWindowGetRenderedTitle({
+      protectionBypassExecution: testExecution,
+      originUrl: "https://example.invalid",
+      requestId: "request-rendered-title",
+    })
+
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith({
+      execution: testExecution,
+      task: {
+        kind: TEMP_CONTEXT_TASK_KINDS.RenderedTitle,
+        params: {
+          originUrl: "https://example.invalid",
+          requestId: "request-rendered-title",
+        },
+      },
+    })
+    expect(response).toBe(coordinatorResponse)
+  })
+
+  it("returns an explicit error for a malformed Coordinator title response", async () => {
+    executeProtectionBypassTaskMock.mockResolvedValueOnce({
       success: true,
-      reason: "clicked",
-      identity: { userId: "target-user" },
-    })
-  })
-
-  it("keeps the first tempWindowTurnstileFetch response when the handler responds multiple times", async () => {
-    handleTempWindowTurnstileFetchMock.mockImplementation(
-      (_request, sendResponse) => {
-        sendResponse({
-          success: true,
-          data: "first",
-          turnstile: { status: "token_obtained", hasTurnstile: true },
-        })
-        sendResponse({
-          success: false,
-          error: "late error",
-          turnstile: { status: "error", hasTurnstile: false },
-        })
-      },
-    )
-
-    const response = await tempWindowTurnstileFetch({
-      originUrl: "https://example.com",
-      pageUrl: "https://example.com/checkin",
-      fetchUrl: "https://example.com/api/checkin",
-      fetchOptions: { method: "POST" },
+      title: 123,
     })
 
-    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
-    expect(handleTempWindowTurnstileFetchMock).toHaveBeenCalledTimes(1)
-    expect(response).toEqual({
-      success: true,
-      data: "first",
-      turnstile: { status: "token_obtained", hasTurnstile: true },
-    })
-  })
-
-  it("delegates tempWindowGetRenderedTitle to the background handler", async () => {
-    handleTempWindowGetRenderedTitleMock.mockImplementation(
-      (request, sendResponse) => {
-        sendResponse({ success: true, title: request.originUrl })
-      },
-    )
-
-    const response = await tempWindowGetRenderedTitle({
-      originUrl: "https://example.com",
-    })
-
-    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
-    expect(handleTempWindowGetRenderedTitleMock).toHaveBeenCalledTimes(1)
-    expect(handleTempWindowGetRenderedTitleMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.TempWindowGetRenderedTitle,
-        originUrl: "https://example.com",
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-        suppressMinimize: false,
+    await expect(
+      tempWindowGetRenderedTitle({
+        protectionBypassExecution: testExecution,
+        originUrl: "https://example.invalid",
       }),
-      expect.any(Function),
-    )
-    expect(response).toEqual({ success: true, title: "https://example.com" })
-  })
-
-  it("returns a default failure when tempWindowFetch handler never responds", async () => {
-    handleTempWindowFetchMock.mockImplementation(() => {})
-
-    const response = await tempWindowFetch({
-      originUrl: "https://example.com",
-      fetchUrl: "https://example.com/api/test",
-      fetchOptions: { method: "GET" },
-    })
-
-    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
-    expect(handleTempWindowFetchMock).toHaveBeenCalledTimes(1)
-    expect(response).toEqual({
-      success: false,
-      error: "Empty tempWindowFetch response",
-    })
-  })
-
-  it("returns a default failure when tempWindowTurnstileFetch handler never responds", async () => {
-    handleTempWindowTurnstileFetchMock.mockImplementation(() => {})
-
-    const response = await tempWindowTurnstileFetch({
-      originUrl: "https://example.com",
-      pageUrl: "https://example.com/checkin",
-      fetchUrl: "https://example.com/api/checkin",
-      fetchOptions: { method: "POST" },
-    })
-
-    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
-    expect(handleTempWindowTurnstileFetchMock).toHaveBeenCalledTimes(1)
-    expect(response).toEqual({
-      success: false,
-      error: "Empty tempWindowTurnstileFetch response",
-      turnstile: { status: "error", hasTurnstile: false },
-    })
-  })
-
-  it("returns a default failure when tempWindowGetRenderedTitle handler never responds", async () => {
-    handleTempWindowGetRenderedTitleMock.mockImplementation(() => {})
-
-    const response = await tempWindowGetRenderedTitle({
-      originUrl: "https://example.com",
-    })
-
-    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
-    expect(handleTempWindowGetRenderedTitleMock).toHaveBeenCalledTimes(1)
-    expect(response).toEqual({
-      success: false,
-      error: "Empty tempWindowGetRenderedTitle response",
-    })
-  })
-
-  it("returns an explicit error when tempWindowGetRenderedTitle receives a malformed response", async () => {
-    handleTempWindowGetRenderedTitleMock.mockImplementation(
-      (_request, sendResponse) => {
-        sendResponse({ success: true, title: 123 } as any)
-      },
-    )
-
-    const response = await tempWindowGetRenderedTitle({
-      originUrl: "https://example.com",
-    })
-
-    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
-    expect(handleTempWindowGetRenderedTitleMock).toHaveBeenCalledTimes(1)
-    expect(response).toEqual({
+    ).resolves.toEqual({
       success: false,
       error: "Invalid tempWindowGetRenderedTitle response",
     })

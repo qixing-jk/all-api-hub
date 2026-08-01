@@ -337,6 +337,13 @@ describe("model sync operation helpers", () => {
       expect.any(Array),
       {},
       [],
+      {
+        version: 2,
+        kind: "automatic",
+        feature: "managed_site_model_sync",
+        trigger: "background_recovery",
+        surface: "background",
+      },
     )
     expect(modelSyncListChannelsMock).toHaveBeenCalled()
   })

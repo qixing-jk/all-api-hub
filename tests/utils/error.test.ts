@@ -23,6 +23,12 @@ describe("getErrorMessage", () => {
       const error = new Error("")
       expect(getErrorMessage(error)).toBe("")
     })
+
+    it("should use fallback for blank Error messages", () => {
+      expect(getErrorMessage(new Error("   "), "Unknown error")).toBe(
+        "Unknown error",
+      )
+    })
   })
 
   describe("String handling", () => {
@@ -32,6 +38,10 @@ describe("getErrorMessage", () => {
 
     it("should handle empty string", () => {
       expect(getErrorMessage("")).toBe("")
+    })
+
+    it("should use fallback for blank strings", () => {
+      expect(getErrorMessage("   ", "Unknown error")).toBe("Unknown error")
     })
 
     it("should handle string with special characters", () => {
@@ -69,6 +79,12 @@ describe("getErrorMessage", () => {
     it("should handle message property with undefined", () => {
       const errorObj = { message: undefined }
       expect(getErrorMessage(errorObj)).toBe("")
+    })
+
+    it("should use fallback for blank message properties", () => {
+      expect(getErrorMessage({ message: "   " }, "Unknown error")).toBe(
+        "Unknown error",
+      )
     })
 
     it("should handle nested object in message", () => {

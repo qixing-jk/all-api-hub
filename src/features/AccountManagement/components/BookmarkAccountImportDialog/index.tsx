@@ -33,6 +33,7 @@ const errorMessageKeys = {
   "read-failed": "ui:dialog.bookmarkAccountImport.readFailed",
   empty: "ui:dialog.bookmarkAccountImport.empty",
   "no-candidates": "ui:dialog.bookmarkAccountImport.noCandidates",
+  "import-failed": "ui:dialog.bookmarkAccountImport.importFailed",
   "reload-failed": "ui:dialog.bookmarkAccountImport.reloadFailed",
 } as const
 
@@ -277,6 +278,13 @@ export default function BookmarkAccountImportDialog({
 
       {dialog.stage === "review" && (
         <div className="space-y-4">
+          {dialog.error === "import-failed" && (
+            <Alert
+              compact
+              variant="destructive"
+              description={t(errorMessageKeys["import-failed"])}
+            />
+          )}
           <label className="dark:border-dark-bg-tertiary flex items-start gap-3 rounded-lg border border-gray-200 p-3 text-sm">
             <Checkbox
               checked={dialog.includeExisting}

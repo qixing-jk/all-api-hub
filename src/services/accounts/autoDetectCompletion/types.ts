@@ -5,6 +5,7 @@ import type {
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { AuthTypeEnum, CheckInConfig, Sub2ApiAuthConfig } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -26,6 +27,7 @@ export interface AutoDetectCompletionRequest {
   requestedAuthType: AuthTypeEnum
   detected: DetectedAccountIdentity
   autoDetectContext?: AutoDetectAnalyticsContext
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 export interface AutoDetectCompletionData {

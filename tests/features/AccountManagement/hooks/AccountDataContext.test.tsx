@@ -17,12 +17,21 @@ import {
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import type {
+  ProtectionBypassSurface,
+  ProtectionBypassUserCommand,
+} from "~/services/protectionBypass/contracts"
 import type { SearchResult } from "~/services/search/accountSearch"
+import { TAG_STORE_VERSION } from "~/services/tags/tagStoreUtils"
 import type { DisplaySiteData } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 import { SortingCriteriaType } from "~/types/sorting"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import {
+  automaticExecution,
+  userCommandExecution,
+} from "~~/tests/services/protectionBypass/fixtures"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 type MockIndexedAccountSearchEntry = {
@@ -75,6 +84,7 @@ const {
   mockSearchAccountSearchIndex,
   mockUpdateSortConfig,
   mockGetCurrentTempWindowRequestSource,
+  mockWithProtectionBypassUserCommand,
 } = vi.hoisted(() => ({
   mockLogger: {
     debug: vi.fn(),
@@ -162,6 +172,7 @@ const {
   >(() => []),
   mockUpdateSortConfig: vi.fn(),
   mockGetCurrentTempWindowRequestSource: vi.fn(),
+  mockWithProtectionBypassUserCommand: vi.fn(),
 }))
 
 const mockUserPreferencesContext = vi.hoisted(() => ({
@@ -249,15 +260,29 @@ vi.mock("~/utils/browser/tempWindowRequestSource", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", () => ({
-  getActiveTabs: mockGetActiveTabs,
-  getAllTabs: mockGetAllTabs,
-  sendTabMessageWithRetry: mockSendTabMessage,
-  onRuntimeMessage: mockOnRuntimeMessage,
-  onTabActivated: mockOnTabActivated,
-  onTabRemoved: mockOnTabRemoved,
-  onTabUpdated: mockOnTabUpdated,
-}))
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/protectionBypass/client")>()
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: mockWithProtectionBypassUserCommand,
+  }
+})
+
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+  return {
+    ...actual,
+    getActiveTabs: mockGetActiveTabs,
+    getAllTabs: mockGetAllTabs,
+    sendTabMessageWithRetry: mockSendTabMessage,
+    onRuntimeMessage: mockOnRuntimeMessage,
+    onTabActivated: mockOnTabActivated,
+    onTabRemoved: mockOnTabRemoved,
+    onTabUpdated: mockOnTabUpdated,
+  }
+})
 
 vi.mock("~/services/accountBrowserSession", async (importOriginal) => {
   const actual =
@@ -289,6 +314,13 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockGetCurrentTempWindowRequestSource.mockReturnValue(
     TEMP_WINDOW_REQUEST_SOURCES.Background,
+  )
+  mockWithProtectionBypassUserCommand.mockImplementation(
+    async (
+      command: ProtectionBypassUserCommand,
+      surface: ProtectionBypassSurface,
+      work: (execution: unknown) => Promise<unknown>,
+    ) => work(userCommandExecution(command, surface)),
   )
 
   mockUserPreferencesContext.current = {
@@ -1196,7 +1228,7 @@ describe("AccountDataContext actions", () => {
     ])
     mockGetPinnedList.mockResolvedValue(["missing-pin", "bookmark-1", "acc-1"])
     mockGetTagStore.mockResolvedValue({
-      version: 1,
+      version: TAG_STORE_VERSION,
       tagsById: {
         "tag-1": { id: "tag-1", name: "Beta" },
         "tag-2": { id: "tag-2", name: "alpha" },
@@ -1269,7 +1301,7 @@ describe("AccountDataContext actions", () => {
     mockCreateTag.mockImplementation(async (name: string) => {
       const created = { id: "tag-1", name }
       currentTagStore = {
-        version: 1,
+        version: TAG_STORE_VERSION,
         tagsById: { "tag-1": created },
       }
       return created
@@ -1277,14 +1309,14 @@ describe("AccountDataContext actions", () => {
     mockRenameTag.mockImplementation(async (tagId: string, name: string) => {
       const updated = { id: tagId, name }
       currentTagStore = {
-        version: 1,
+        version: TAG_STORE_VERSION,
         tagsById: { [tagId]: updated },
       }
       return updated
     })
     mockDeleteTag.mockImplementation(async () => {
       currentTagStore = {
-        version: 1,
+        version: TAG_STORE_VERSION,
         tagsById: {},
       }
       return { updatedAccounts: 2 }
@@ -1807,7 +1839,11 @@ describe("AccountDataContext refresh orchestration", () => {
 
     expect(mockRefreshAllAccounts).toHaveBeenCalledWith(true, {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution: expect.objectContaining(
+        userCommandExecution("refresh_all_accounts", "popup"),
+      ),
     })
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
   })
 
@@ -1847,8 +1883,185 @@ describe("AccountDataContext refresh orchestration", () => {
 
     expect(mockRefreshDisabledAccounts).toHaveBeenCalledWith(true, {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution: expect.objectContaining(
+        userCommandExecution("refresh_disabled_accounts", "popup"),
+      ),
     })
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
+  })
+
+  it("blocks duplicate all-account refreshes while intent creation is pending", async () => {
+    let releaseIntent!: () => void
+    const intentReady = new Promise<void>((resolve) => {
+      releaseIntent = resolve
+    })
+    mockWithProtectionBypassUserCommand.mockImplementationOnce(
+      async (
+        command: ProtectionBypassUserCommand,
+        surface: ProtectionBypassSurface,
+        work: (execution: unknown) => Promise<unknown>,
+      ) => {
+        await intentReady
+        return work(userCommandExecution(command, surface))
+      },
+    )
+    mockGetAllAccounts.mockResolvedValue([])
+    mockRefreshAllAccounts.mockResolvedValue({
+      success: 0,
+      failed: 0,
+      refreshedCount: 0,
+      latestSyncTime: 0,
+    })
+
+    const getLatestCtx = await renderAccountDataProvider()
+    let firstRefresh!: Promise<unknown>
+    act(() => {
+      firstRefresh = getLatestCtx().handleRefresh()
+      void getLatestCtx().handleRefresh()
+    })
+
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
+    expect(mockRefreshAllAccounts).not.toHaveBeenCalled()
+
+    await act(async () => {
+      releaseIntent()
+      await firstRefresh
+    })
+
+    expect(mockRefreshAllAccounts).toHaveBeenCalledTimes(1)
+  })
+
+  it("runs a forced all-account refresh after a weaker in-flight refresh", async () => {
+    let releaseFirstRefresh!: () => void
+    mockRefreshAllAccounts
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseFirstRefresh = () =>
+              resolve({
+                success: 0,
+                failed: 0,
+                refreshedCount: 0,
+                latestSyncTime: 0,
+              })
+          }),
+      )
+      .mockResolvedValueOnce({
+        success: 0,
+        failed: 0,
+        refreshedCount: 0,
+        latestSyncTime: 0,
+      })
+
+    const getLatestCtx = await renderAccountDataProvider()
+    let regularRefresh!: Promise<unknown>
+    let forcedRefresh!: Promise<unknown>
+    act(() => {
+      regularRefresh = getLatestCtx().handleRefresh(false)
+      forcedRefresh = getLatestCtx().handleRefresh(true)
+    })
+
+    await waitFor(() => {
+      expect(mockRefreshAllAccounts).toHaveBeenCalledTimes(1)
+    })
+    expect(mockRefreshAllAccounts.mock.calls[0]?.[0]).toBe(false)
+
+    await act(async () => {
+      releaseFirstRefresh()
+      await Promise.all([regularRefresh, forcedRefresh])
+    })
+
+    expect(mockRefreshAllAccounts.mock.calls.map(([force]) => force)).toEqual([
+      false,
+      true,
+    ])
+  })
+
+  it("blocks duplicate disabled-account refreshes while intent creation is pending", async () => {
+    let releaseIntent!: () => void
+    const intentReady = new Promise<void>((resolve) => {
+      releaseIntent = resolve
+    })
+    mockWithProtectionBypassUserCommand.mockImplementationOnce(
+      async (
+        command: ProtectionBypassUserCommand,
+        surface: ProtectionBypassSurface,
+        work: (execution: unknown) => Promise<unknown>,
+      ) => {
+        await intentReady
+        return work(userCommandExecution(command, surface))
+      },
+    )
+    mockGetAllAccounts.mockResolvedValue([])
+    mockRefreshDisabledAccounts.mockResolvedValue({
+      processedCount: 0,
+      failedCount: 0,
+      reEnabledCount: 0,
+      latestSyncTime: 0,
+    })
+
+    const getLatestCtx = await renderAccountDataProvider()
+    let firstRefresh!: Promise<unknown>
+    act(() => {
+      firstRefresh = getLatestCtx().handleRefreshDisabledAccounts()
+      void getLatestCtx().handleRefreshDisabledAccounts()
+    })
+
+    expect(mockWithProtectionBypassUserCommand).toHaveBeenCalledTimes(1)
+    expect(mockRefreshDisabledAccounts).not.toHaveBeenCalled()
+
+    await act(async () => {
+      releaseIntent()
+      await firstRefresh
+    })
+
+    expect(mockRefreshDisabledAccounts).toHaveBeenCalledTimes(1)
+  })
+
+  it("runs a forced disabled-account refresh after a weaker in-flight refresh", async () => {
+    let releaseFirstRefresh!: () => void
+    mockRefreshDisabledAccounts
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            releaseFirstRefresh = () =>
+              resolve({
+                processedCount: 0,
+                failedCount: 0,
+                reEnabledCount: 0,
+                latestSyncTime: 0,
+              })
+          }),
+      )
+      .mockResolvedValueOnce({
+        processedCount: 0,
+        failedCount: 0,
+        reEnabledCount: 0,
+        latestSyncTime: 0,
+      })
+
+    const getLatestCtx = await renderAccountDataProvider()
+    let regularRefresh!: Promise<unknown>
+    let forcedRefresh!: Promise<unknown>
+    act(() => {
+      regularRefresh = getLatestCtx().handleRefreshDisabledAccounts(false)
+      forcedRefresh = getLatestCtx().handleRefreshDisabledAccounts(true)
+    })
+
+    await waitFor(() => {
+      expect(mockRefreshDisabledAccounts).toHaveBeenCalledTimes(1)
+    })
+    expect(mockRefreshDisabledAccounts.mock.calls[0]?.[0]).toBe(false)
+
+    await act(async () => {
+      releaseFirstRefresh()
+      await Promise.all([regularRefresh, forcedRefresh])
+    })
+
+    expect(
+      mockRefreshDisabledAccounts.mock.calls.map(([force]) => force),
+    ).toEqual([false, true])
   })
 
   it("reloads account data after disabled-account refresh failures and clears the refreshing state", async () => {
@@ -1936,7 +2149,13 @@ describe("AccountDataContext refresh orchestration", () => {
       expect(mockToastPromise).toHaveBeenCalledTimes(1)
       expect(mockRefreshAllAccounts).toHaveBeenCalledWith(false, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        protectionBypassExecution: automaticExecution(
+          "account_refresh",
+          "ui_lifecycle",
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+        ),
       })
+      expect(mockWithProtectionBypassUserCommand).not.toHaveBeenCalled()
     })
 
     const [, toastOptions] = mockToastPromise.mock.calls[0]
@@ -1950,6 +2169,41 @@ describe("AccountDataContext refresh orchestration", () => {
       }),
     )
   })
+
+  it.each([
+    TEMP_WINDOW_REQUEST_SOURCES.Popup,
+    TEMP_WINDOW_REQUEST_SOURCES.Options,
+  ])(
+    "uses the actual %s root for refresh-on-open authorization and presentation",
+    async (surface) => {
+      mockUserPreferencesContext.current = {
+        ...mockUserPreferencesContext.current,
+        refreshOnOpen: true,
+      }
+      mockGetCurrentTempWindowRequestSource.mockReturnValue(surface)
+      mockGetAllAccounts.mockResolvedValue([
+        {
+          id: "acc-root-surface",
+          site_url: "https://example.invalid",
+          account_info: { id: 1 },
+          last_sync_time: 1_710_000_000_000,
+        },
+      ])
+
+      await renderAccountDataProvider()
+
+      await waitFor(() => {
+        expect(mockRefreshAllAccounts).toHaveBeenCalledWith(false, {
+          tempWindowRequestSource: surface,
+          protectionBypassExecution: automaticExecution(
+            "account_refresh",
+            "ui_lifecycle",
+            surface,
+          ),
+        })
+      })
+    },
+  )
 
   it("uses the zero-result and failed-result refresh-on-open toast branches", async () => {
     mockUserPreferencesContext.current = {

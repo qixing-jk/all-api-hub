@@ -721,6 +721,21 @@ describe("accountOperations", () => {
       expect(mockFetchSiteStatus).not.toHaveBeenCalled()
     })
 
+    it("treats an explicit null site status as a completed lookup", async () => {
+      mockFetchSiteStatus.mockResolvedValueOnce({
+        system_name: "Unexpected second lookup",
+      })
+
+      const result = await getSiteName(
+        "https://api.example.com/console",
+        SITE_TYPES.NEW_API,
+        null,
+      )
+
+      expect(result).toBe("Example")
+      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    })
+
     it("falls back to the raw input prefix when the URL cannot be parsed", async () => {
       const result = await getSiteName("not a url/path", SITE_TYPES.NEW_API)
 

@@ -40,6 +40,16 @@ import {
 } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
 import { createDynamicSortComparator } from "~/services/preferences/utils/sortingPriority"
 import {
+  createAutomaticProtectionBypassExecution,
+  withProtectionBypassUserCommand,
+} from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
+import {
   buildAccountSearchIndex,
   searchAccountSearchIndex,
 } from "~/services/search/accountSearch"
@@ -246,6 +256,14 @@ export const AccountDataProvider = ({
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isRefreshingDisabledAccounts, setIsRefreshingDisabledAccounts] =
     useState(false)
+  const refreshCommandRef = useRef<{
+    promise: ReturnType<typeof accountStorage.refreshAllAccounts>
+    force: boolean
+  } | null>(null)
+  const refreshDisabledCommandRef = useRef<{
+    promise: ReturnType<typeof accountStorage.refreshDisabledAccounts>
+    force: boolean
+  } | null>(null)
   const [prevTotalConsumption, setPrevTotalConsumption] =
     useState<CurrencyAmount>({ USD: 0, CNY: 0 })
   const [todayIncomeEstimateTotals, setTodayIncomeEstimateTotals] = useState<
@@ -699,13 +717,17 @@ export const AccountDataProvider = ({
     [loadAccountData],
   )
 
-  const handleRefresh = useCallback(
-    async (force: boolean = false) => {
-      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
+  const refreshAccounts = useCallback(
+    async (
+      execution: ProtectionBypassExecution,
+      force: boolean = false,
+      tempWindowRequestSource = getCurrentTempWindowRequestSource(),
+    ) => {
       setIsRefreshing(true)
       try {
         const refreshResult = await accountStorage.refreshAllAccounts(force, {
           tempWindowRequestSource,
+          protectionBypassExecution: execution,
         })
         await loadAccountData()
         if (refreshResult.latestSyncTime > 0) {
@@ -723,26 +745,92 @@ export const AccountDataProvider = ({
     [loadAccountData],
   )
 
+  const handleRefresh = useCallback(
+    async (force: boolean = false) => {
+      while (refreshCommandRef.current) {
+        const activeRefresh = refreshCommandRef.current
+        if (!force || activeRefresh.force) {
+          return await activeRefresh.promise
+        }
+        try {
+          await activeRefresh.promise
+        } catch {
+          // A forced user request still gets its own attempt after an earlier failure.
+        }
+      }
+
+      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
+      setIsRefreshing(true)
+      const refreshPromise = withProtectionBypassUserCommand(
+        PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+        tempWindowRequestSource,
+        async (execution) =>
+          await refreshAccounts(execution, force, tempWindowRequestSource),
+      )
+      refreshCommandRef.current = { promise: refreshPromise, force }
+      try {
+        return await refreshPromise
+      } finally {
+        if (refreshCommandRef.current?.promise === refreshPromise) {
+          refreshCommandRef.current = null
+          setIsRefreshing(false)
+        }
+      }
+    },
+    [refreshAccounts],
+  )
+
   const handleRefreshDisabledAccounts = useCallback(
     async (force: boolean = false) => {
+      while (refreshDisabledCommandRef.current) {
+        const activeRefresh = refreshDisabledCommandRef.current
+        if (!force || activeRefresh.force) {
+          return await activeRefresh.promise
+        }
+        try {
+          await activeRefresh.promise
+        } catch {
+          // A forced user request still gets its own attempt after an earlier failure.
+        }
+      }
+
       const tempWindowRequestSource = getCurrentTempWindowRequestSource()
       setIsRefreshingDisabledAccounts(true)
+      const refreshPromise = withProtectionBypassUserCommand(
+        PROTECTION_BYPASS_USER_COMMANDS.RefreshDisabledAccounts,
+        tempWindowRequestSource,
+        async (execution) => {
+          setIsRefreshingDisabledAccounts(true)
+          try {
+            const refreshResult = await accountStorage.refreshDisabledAccounts(
+              force,
+              {
+                tempWindowRequestSource,
+                protectionBypassExecution: execution,
+              },
+            )
+            await loadAccountData()
+            if (refreshResult.latestSyncTime > 0) {
+              setLastUpdateTime(new Date(refreshResult.latestSyncTime))
+            }
+            return refreshResult
+          } catch (error) {
+            logger.error("Failed to refresh disabled accounts", error)
+            await loadAccountData()
+            throw error
+          } finally {
+            setIsRefreshingDisabledAccounts(false)
+          }
+        },
+      )
+      refreshDisabledCommandRef.current = { promise: refreshPromise, force }
       try {
-        const refreshResult = await accountStorage.refreshDisabledAccounts(
-          force,
-          { tempWindowRequestSource },
-        )
-        await loadAccountData()
-        if (refreshResult.latestSyncTime > 0) {
-          setLastUpdateTime(new Date(refreshResult.latestSyncTime))
-        }
-        return refreshResult
-      } catch (error) {
-        logger.error("Failed to refresh disabled accounts", error)
-        await loadAccountData()
-        throw error
+        return await refreshPromise
       } finally {
-        setIsRefreshingDisabledAccounts(false)
+        if (refreshDisabledCommandRef.current?.promise === refreshPromise) {
+          refreshDisabledCommandRef.current = null
+          setIsRefreshingDisabledAccounts(false)
+        }
       }
     },
     [loadAccountData],
@@ -763,37 +851,46 @@ export const AccountDataProvider = ({
         hasRefreshedOnOpen.current = true // 标记已执行
         logger.info("打开插件时自动刷新已启用，开始刷新")
         try {
+          const tempWindowRequestSource = getCurrentTempWindowRequestSource()
+          const execution = createAutomaticProtectionBypassExecution(
+            PROTECTION_BYPASS_FEATURES.AccountRefresh,
+            PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+            tempWindowRequestSource,
+          )
           if (toast) {
-            await toast.promise(handleRefresh(false), {
-              loading: t("refresh.refreshingAll"),
-              success: (result) => {
-                if (result.failed > 0) {
-                  return t("refresh.refreshComplete", {
-                    success: result.success,
-                    failed: result.failed,
-                  })
-                }
-                const sum = result.success + result.failed
+            await toast.promise(
+              refreshAccounts(execution, false, tempWindowRequestSource),
+              {
+                loading: t("refresh.refreshingAll"),
+                success: (result) => {
+                  if (result.failed > 0) {
+                    return t("refresh.refreshComplete", {
+                      success: result.success,
+                      failed: result.failed,
+                    })
+                  }
+                  const sum = result.success + result.failed
 
-                // 避免无账号时，进行成功提示
-                if (sum === 0) {
-                  return null
-                }
+                  // 避免无账号时，进行成功提示
+                  if (sum === 0) {
+                    return null
+                  }
 
-                const { refreshedCount } = result
-                if (refreshedCount < sum) {
-                  return t("refresh.refreshPartialSkipped", {
-                    success: refreshedCount,
-                    skipped: sum - refreshedCount,
-                  })
-                }
-                logger.debug("打开插件时自动刷新完成")
-                return t("refresh.refreshSuccess")
+                  const { refreshedCount } = result
+                  if (refreshedCount < sum) {
+                    return t("refresh.refreshPartialSkipped", {
+                      success: refreshedCount,
+                      skipped: sum - refreshedCount,
+                    })
+                  }
+                  logger.debug("打开插件时自动刷新完成")
+                  return t("refresh.refreshSuccess")
+                },
+                error: t("refresh.refreshFailed"),
               },
-              error: t("refresh.refreshFailed"),
-            })
+            )
           } else {
-            await handleRefresh(false)
+            await refreshAccounts(execution, false, tempWindowRequestSource)
           }
         } catch (error) {
           logger.error("打开插件时自动刷新失败", error)
@@ -802,7 +899,7 @@ export const AccountDataProvider = ({
     }
 
     handleRefreshOnOpen()
-  }, [handleRefresh, refreshOnOpen, t])
+  }, [refreshAccounts, refreshOnOpen, t])
 
   useEffect(() => {
     loadAccountData()

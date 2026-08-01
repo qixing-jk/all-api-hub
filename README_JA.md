@@ -57,30 +57,37 @@
 **All API Hub は、あなたの AI 資産マネージャーです**。サイト URL を追加すれば、残りの管理は拡張機能が引き受けます。
 
 <a id="features"></a>
-## ✨ できること
+## ✨ All API Hub でできること
 
-### 📊 複数サイトをまとめる統合ダッシュボード
-- **複数アカウントの資産概要**：残高、使用量、健全性を 1 つの画面で確認できます。
-- **スマートなサイト検出**：URL を貼り付けるだけで、アーキテクチャ、課金倍率、設定情報を検出します。
-- **API 認証情報ライブラリ**：よく使う `Base URL + API Key` を保存し、コピー、API 検証、モデル確認、残高/使用量確認に使えます。
+### 📊 AI 資産をまとめて把握
+- **中継サイトアカウントの統合管理**：複数のアカウントを一か所で管理し、サイトごとにログインし直すことなく残高、利用量、状態を確認できます。
+- **API 認証情報ライブラリ**：サイトアカウントを登録せず、共有されたものや日頃個別に収集した Base URL と API Key をまとめて保存できます。残高確認、モデル閲覧、接続テスト、クライアントへのエクスポートもすぐに使えます。
+- **利用量と傾向の統計**：残高の変化を記録し、サイト、アカウント、モデルごとのグラフからクレジットの使い道を把握できます。
 
-### 💰 より賢い節約と自動化
-- **モデル価格比較**：サイトをまたいだ実効モデル価格を計算し、よりお得なグループやエンドポイントを見つけます。
-- **完全自動チェックイン**：対応サイトのチェックインをワンクリックまたはスケジュールで実行できます。
-- **詳細な使用量分析**：サイト、アカウント、モデル、日付ごとのレポートを作成し、ヒートマップや低速リクエスト分析も確認できます。
+### 💰 料金比較と自動チェックイン
+- **サイト間モデル価格比較**：同じモデルの実質価格をサイト間で比較し、よりお得な接続先をすぐに見つけられます。
+- **複数サイトの自動チェックイン**：対応サイトへワンクリックまたはスケジュールでチェックインし、毎日のログインなしで特典を受け取れます。
 
-### 🚀 すばやいエコシステム連携
-- **ワンクリックのクイックエクスポート**：**CherryStudio, CC Switch, CLIProxyAPI, Claude Code Router, Kilo Code** などへ同期できます。対応一覧は [連携ツール](https://all-api-hub.qixing1217.top/ja/supported-export-tools.html) を参照してください。
-- **管理者向けワークフローツール**：アカウントやキーを自社構築サイトのチャネルとしてインポートし、チャネル管理、モデルリダイレクト、チャネル同期を行えます。
-- **Web スニッフィングとクイック保存**：Web ページ上の Base URL や API Key を選択すると、すぐにテストポップアップを開いて保存できます。詳しくは [Web AI API スニッフィングと検証](https://all-api-hub.qixing1217.top/ja/web-ai-api-check.html) を参照してください。
+### 🚀 Web からのクイック取り込みとクライアント連携
+- **Web ページからのクイック取り込み**：Web ページから Base URL と API Key を検出し、その場でテストして認証情報ライブラリへ保存できます。
+- **クライアントへのワンクリックエクスポート**：CherryStudio、CC Switch、CLIProxyAPI、Claude Code Router、Kilo Code などの [連携ツール](https://all-api-hub.qixing1217.top/ja/supported-export-tools.html)へ認証情報をすばやくエクスポートできます。
 
-### 🧪 安定性を支える検証機能
-- **多角的な API 検証**：モデルの可用性、Token 互換性、CLI プロキシの可用性を一括でテストできます。
-- **Cloudflare チャレンジ補助**：Cloudflare チャレンジの通過を自動で支援し、データ更新や API 呼び出しを止めにくくします。
+### 🧪 API 検証とトラブルシューティング
+- **API・モデル検証**：ワンクリックで API の接続状態とモデルの利用可否を確認し、Key やモデルを実際に使えるかすぐに判断できます。
+- **CLI 接続テスト**：一般的なコマンドラインツールから対象 API を利用できるか事前に確認し、設定後のトラブル調査を減らします。
 
-### 🔒 プライバシーとセキュリティ
-- **ローカル管理が既定**：WebDAV バックアップ/同期を有効にしない限り、キーとアカウント情報は端末内に保存されます。
-- **暗号化同期**：暗号化 WebDAV バックアップに対応し、別の端末でもデータを復元できます。
+### 🔔 お知らせとタスク結果通知
+- **お知らせを一か所で確認**：登録済みサイトの各種お知らせを自動で集約・表示し、メンテナンス、モデル変更、価格改定などの更新もすぐに通知します。サイトを一つずつ確認する必要はありません。
+- **タスク結果通知**：自動チェックイン、WebDAV 自動同期、モデル同期などの完了後、ブラウザまたは設定済みの通知先で結果を受け取り、失敗や異常にもすぐ対応できます。
+
+### 🛠️ セルフホスト AI ゲートウェイ管理
+- **主要 AI ゲートウェイを一元管理**：New API、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub のチャネルを、個別の管理画面を開かずに拡張機能から直接管理できます。
+- **ゲートウェイチャネルをすばやく作成**：保存済みのサイトアカウントや API 認証情報ライブラリの認証情報から、セルフホスト AI ゲートウェイのチャネルをすばやく作成できます。その後はゲートウェイ経由で各種モデルをまとめて呼び出し、チャネルを柔軟に切り替えられます。
+- **モデル同期とリダイレクト**：チャネルのモデル一覧を手動またはスケジュールで自動同期し、上流のモデル変更に追従できます。モデルリダイレクトも自由に設定でき、クライアントでは任意のモデル名で呼び出せます。
+
+### 🔐 データ保護とクラウド同期
+- **ローカル優先**：API Key、アカウント、設定はデフォルトでブラウザ内に保存され、バックアップや同期を有効にした場合のみ WebDAV へ書き込まれます。
+- **暗号化 WebDAV 自動同期**：暗号化と定期的な自動同期を有効にすると、複数デバイス間でデータを安全に同期し、パソコンを替えてもそのまま使い続けられます。
 
 <a id="installation"></a>
 ## 🚀 クイックインストール
@@ -260,9 +267,9 @@ GitHub Stable と Nightly は手動インストール用チャネルで、自動
 <a id="introduction-tech"></a>
 ### 🧩 高い互換性
 どのアーキテクチャを使っていても、高い確率で対応しています。
-- **アカウントサイト互換アーキテクチャ**：[one-api](https://github.com/songquanpeng/one-api)、[new-api](https://github.com/QuantumNous/new-api)、[Veloera](https://github.com/Veloera/Veloera)、[one-hub](https://github.com/MartialBE/one-hub)、[done-hub](https://github.com/deanxv/done-hub)、[Sub2API](https://github.com/Wei-Shaw/sub2api) など
-- **特色あるアカウントプラットフォームと互換実装**：[AIHubMix](https://aihubmix.com/?aff=W3DN)、[AnyRouter](https://anyrouter.top)、Neo-API、Super-API、v-api など
-- **セルフホスト型管理バックエンド**：[new-api](https://github.com/QuantumNous/new-api)、[Veloera](https://github.com/Veloera/Veloera)、[done-hub](https://github.com/deanxv/done-hub)、[Octopus](https://github.com/bestruirui/octopus)、[AxonHub](https://github.com/looplj/axonhub)、[Claude Code Hub](https://github.com/ding113/claude-code-hub) など。チャネル管理、移行、一部のモデル同期に利用できます
+- **アカウントサイト互換アーキテクチャ**：[new-api](https://github.com/QuantumNous/new-api)、[one-api](https://github.com/songquanpeng/one-api)、[Sub2API](https://github.com/Wei-Shaw/sub2api)、[one-hub](https://github.com/MartialBE/one-hub)、[Veloera](https://github.com/Veloera/Veloera)、[done-hub](https://github.com/deanxv/done-hub) など
+- **特色あるアカウントプラットフォームと互換実装**：[AnyRouter](https://anyrouter.top)、[AIHubMix](https://aihubmix.com/?aff=W3DN)、Super-API、v-api、Neo-API など
+- **セルフホスト型管理バックエンド**：[new-api](https://github.com/QuantumNous/new-api)、[AxonHub](https://github.com/looplj/axonhub)、[Claude Code Hub](https://github.com/ding113/claude-code-hub)、[Octopus](https://github.com/bestruirui/octopus)、[Veloera](https://github.com/Veloera/Veloera)、[done-hub](https://github.com/deanxv/done-hub) など。チャネル管理、移行、一部のモデル同期に利用できます
 - **完全な一覧**：👉 [対応サイト](https://all-api-hub.qixing1217.top/ja/supported-sites.html)
 
 <a id="ui-preview"></a>

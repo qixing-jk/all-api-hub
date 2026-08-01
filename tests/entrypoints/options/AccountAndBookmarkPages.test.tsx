@@ -4,6 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import AccountManagement from "~/entrypoints/options/pages/AccountManagement"
 import BookmarkManagement from "~/entrypoints/options/pages/BookmarkManagement"
 import {
+  ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
+  ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
+} from "~/features/AccountManagement/routeParams"
+import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -214,6 +218,44 @@ const expectAccountHeaderActionSpanStarted = ({
 }
 
 describe("options AccountManagement page", () => {
+  it("consumes the add-account route action once until the action changes", async () => {
+    const { rerender } = render(
+      <AccountManagement
+        routeParams={{
+          [ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action]:
+            ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add,
+        }}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(openAddAccountMock).toHaveBeenCalledTimes(1)
+    })
+
+    rerender(
+      <AccountManagement
+        routeParams={{
+          [ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action]:
+            ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add,
+        }}
+      />,
+    )
+    expect(openAddAccountMock).toHaveBeenCalledTimes(1)
+
+    rerender(<AccountManagement routeParams={{}} />)
+    rerender(
+      <AccountManagement
+        routeParams={{
+          [ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action]:
+            ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add,
+        }}
+      />,
+    )
+    await waitFor(() => {
+      expect(openAddAccountMock).toHaveBeenCalledTimes(2)
+    })
+  })
+
   it("opens account management settings from the title shortcut", async () => {
     render(<AccountManagement />)
 

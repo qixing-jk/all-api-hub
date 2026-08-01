@@ -93,7 +93,7 @@ When enabled, the plugin saves the `refresh_token` as an **account-private** cre
 If auto-detection fails, you can try the following methods:
 
 1. **Switch Authentication Method**: Try switching from Access Token to Cookie mode.
-2. **Manual Addition**: After auto-detection fails, manually fill in the following information:
+2. **Manual Addition**: If auto-detection fails, follow the [Manual Account Addition Guide](./account-management.md#manual-addition) and enter the following information:
    - Username
    - User ID
    - Access Token

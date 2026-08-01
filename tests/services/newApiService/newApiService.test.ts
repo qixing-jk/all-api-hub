@@ -19,6 +19,21 @@ const { fetchNewApiChannelKeyMock } = vi.hoisted(() => ({
   fetchNewApiChannelKeyMock: vi.fn(),
 }))
 
+const SESSION_READ_EXECUTION = {
+  version: 2,
+  kind: "automatic",
+  feature: "key_management",
+  trigger: "ui_lifecycle",
+  surface: "options",
+} as const
+
+const IMPORT_EXECUTION = {
+  version: 2,
+  kind: "user_command",
+  command: "manage_api_keys",
+  surface: "options",
+} as const
+
 // Mock react-hot-toast
 const mockToast = {
   loading: vi.fn(),
@@ -820,9 +835,11 @@ describe("newApiService", () => {
       )
       fetchNewApiChannelKeyMock.mockResolvedValueOnce("resolved-secret")
 
-      await expect(fetchChannelSecretKey(config, 99)).resolves.toBe(
-        "resolved-secret",
-      )
+      await expect(
+        fetchChannelSecretKey(config, 99, {
+          protectionBypassExecution: SESSION_READ_EXECUTION,
+        }),
+      ).resolves.toBe("resolved-secret")
 
       expect(fetchNewApiChannelKeyMock).toHaveBeenCalledWith({
         baseUrl: "https://new-api.example.com/api/v1",
@@ -831,6 +848,7 @@ describe("newApiService", () => {
         password: "secret",
         totpSecret: "otp-secret",
         channelId: 99,
+        protectionBypassExecution: SESSION_READ_EXECUTION,
       })
     })
 
@@ -858,7 +876,9 @@ describe("newApiService", () => {
       )
       fetchNewApiChannelKeyMock.mockResolvedValueOnce("resolved-secret")
 
-      await fetchChannelSecretKey(config, 100)
+      await fetchChannelSecretKey(config, 100, {
+        protectionBypassExecution: SESSION_READ_EXECUTION,
+      })
 
       expect(fetchNewApiChannelKeyMock).toHaveBeenCalledWith({
         baseUrl: "https://other.example.com/api/v1",
@@ -867,6 +887,7 @@ describe("newApiService", () => {
         password: "",
         totpSecret: "",
         channelId: 100,
+        protectionBypassExecution: SESSION_READ_EXECUTION,
       })
     })
   })
@@ -886,12 +907,16 @@ describe("newApiService", () => {
         createMockUserPreferencesWithNewApi(),
       )
 
-      const result = await hydrateComparableChannelKeys(config, [
-        createMockNewApiChannel({
-          id: 11,
-          key: "sk-visible",
-        }),
-      ])
+      const result = await hydrateComparableChannelKeys(
+        config,
+        [
+          createMockNewApiChannel({
+            id: 11,
+            key: "sk-visible",
+          }),
+        ],
+        { protectionBypassExecution: SESSION_READ_EXECUTION },
+      )
 
       expect(fetchNewApiChannelKeyMock).not.toHaveBeenCalled()
       expect(result).toEqual([
@@ -917,14 +942,18 @@ describe("newApiService", () => {
       )
       fetchNewApiChannelKeyMock.mockResolvedValueOnce("sk-revealed")
 
-      const result = await hydrateComparableChannelKeys(config, [
-        createMockNewApiChannel({
-          id: 12,
-          key: "",
-          base_url: "https://api.example.com/v1",
-          models: "gpt-4o",
-        }),
-      ])
+      const result = await hydrateComparableChannelKeys(
+        config,
+        [
+          createMockNewApiChannel({
+            id: 12,
+            key: "",
+            base_url: "https://api.example.com/v1",
+            models: "gpt-4o",
+          }),
+        ],
+        { protectionBypassExecution: SESSION_READ_EXECUTION },
+      )
 
       expect(result).toEqual([
         expect.objectContaining({
@@ -961,9 +990,11 @@ describe("newApiService", () => {
       )
 
       await expect(
-        hydrateComparableChannelKeys(config, [
-          createMockNewApiChannel({ id: 13, key: "" }),
-        ]),
+        hydrateComparableChannelKeys(
+          config,
+          [createMockNewApiChannel({ id: 13, key: "" })],
+          { protectionBypassExecution: SESSION_READ_EXECUTION },
+        ),
       ).rejects.toMatchObject({
         name: MatchResolutionUnresolvedError.name,
         reason:
@@ -992,9 +1023,11 @@ describe("newApiService", () => {
       )
 
       await expect(
-        hydrateComparableChannelKeys(config, [
-          createMockNewApiChannel({ id: 14, key: "" }),
-        ]),
+        hydrateComparableChannelKeys(
+          config,
+          [createMockNewApiChannel({ id: 14, key: "" })],
+          { protectionBypassExecution: SESSION_READ_EXECUTION },
+        ),
       ).rejects.toMatchObject({
         name: MatchResolutionUnresolvedError.name,
         reason:
@@ -1750,12 +1783,19 @@ describe("newApiService", () => {
         new Error("backend unavailable"),
       )
 
-      const result = await importToNewApi(account, token)
+      const result = await importToNewApi(account, token, {
+        protectionBypassExecution: IMPORT_EXECUTION,
+      })
 
       expect(result).toEqual({
         success: false,
         message: "key-resolution-failed",
       })
+      expect(fetchNewApiChannelKeyMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          protectionBypassExecution: IMPORT_EXECUTION,
+        }),
+      )
       expect(mockCreateChannel).not.toHaveBeenCalled()
     })
 

@@ -509,8 +509,13 @@ export async function refreshAccountData(
         ? await resyncVoApiV2AuthToken(
             request.baseUrl,
             request.tempWindowRequestSource,
+            request.protectionBypassExecution,
           )
-        : await resyncVoApiV2AuthToken(request.baseUrl)
+        : await resyncVoApiV2AuthToken(
+            request.baseUrl,
+            undefined,
+            request.protectionBypassExecution,
+          )
       if (resynced) {
         const resyncedRequest: ApiServiceAccountRequest = {
           ...request,

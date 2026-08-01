@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.54.0](https://github.com/qixing-jk/all-api-hub/compare/v3.53.0...v3.54.0) (2026-07-31)
+
+
+### Features
+
+* **axonhub:** cut over managed channels to native resources ([#1226](https://github.com/qixing-jk/all-api-hub/issues/1226)) ([6a6540f](https://github.com/qixing-jk/all-api-hub/commit/6a6540fb693dd07e09cf4a5ea45705945f4d33d4))
+* **openrouter:** add initial account support ([#1222](https://github.com/qixing-jk/all-api-hub/issues/1222)) ([14eee41](https://github.com/qixing-jk/all-api-hub/commit/14eee41fe6e16c898b7074b2718d5feb4f9f4ff5))
+* **protection-bypass:** add intent-aware automatic bypass controls ([#1232](https://github.com/qixing-jk/all-api-hub/issues/1232)) ([11cbeb6](https://github.com/qixing-jk/all-api-hub/commit/11cbeb6ff2d5fed012312d02bfa73f11fa505381))
+* **protection-bypass:** configure automatic feature policy ([#1236](https://github.com/qixing-jk/all-api-hub/issues/1236)) ([33f54d0](https://github.com/qixing-jk/all-api-hub/commit/33f54d0f8c14834808e030658e1510163c81733e))
+
+
+### Bug Fixes
+
+* **managed-sites:** confirm native bulk deletion ([#1227](https://github.com/qixing-jk/all-api-hub/issues/1227)) ([fcb9888](https://github.com/qixing-jk/all-api-hub/commit/fcb98884fdb8702474440f6daaa97386f0ea9986))
+* **new-api:** support rc22 account auto-detection ([#1221](https://github.com/qixing-jk/all-api-hub/issues/1221)) ([da6672e](https://github.com/qixing-jk/all-api-hub/commit/da6672ef14c3a827891e0b58cc8be133711f4da6))
+* **product-announcements:** prefer bundled notices in development ([#1234](https://github.com/qixing-jk/all-api-hub/issues/1234)) ([46f02dc](https://github.com/qixing-jk/all-api-hub/commit/46f02dc6b03d02b571ed631d4c4f698bfaf78742))
+* start invite link timeout after limiter dispatch ([#1212](https://github.com/qixing-jk/all-api-hub/issues/1212)) ([509fd86](https://github.com/qixing-jk/all-api-hub/commit/509fd86a9b272c49b4d5448c9e5900e6c5987fc1))
+* **ui:** prevent modal drag-out dismissal ([#1225](https://github.com/qixing-jk/all-api-hub/issues/1225)) ([d49be60](https://github.com/qixing-jk/all-api-hub/commit/d49be600eabb3af61bbf164f6b58ab030980fade))
+
+
+### Performance Improvements
+
+* **accounts:** bound bulk invite-link copy latency ([#1210](https://github.com/qixing-jk/all-api-hub/issues/1210)) ([b29b895](https://github.com/qixing-jk/all-api-hub/commit/b29b895f171c27e789847d719a9af6f24cc61a74))
+
 ## [3.53.0](https://github.com/qixing-jk/all-api-hub/compare/v3.52.0...v3.53.0) (2026-07-22)
 
 

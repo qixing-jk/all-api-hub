@@ -1,8 +1,59 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+} from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
-type RuntimeMessageHandler = (input?: { data?: unknown }) => Promise<unknown>
+const MANUAL_CHECKIN_EXECUTION = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+)
+
+const RETRY_CHECKIN_EXECUTION = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount,
+)
+
+const UI_OPEN_CHECKIN_EXECUTION = {
+  version: 2,
+  kind: "automatic",
+  feature: PROTECTION_BYPASS_FEATURES.Checkin,
+  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+  surface: TEMP_WINDOW_REQUEST_SOURCES.Options,
+} as const
+
+const ACCOUNT_REFRESH_EXECUTION = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+)
+
+const MODEL_SYNC_EXECUTION = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.SyncManagedSiteModels,
+)
+
+const OPTIONS_SENDER = {
+  url: "chrome-extension://test/options.html",
+} as const
+
+const UI_LDOH_SITE_LOOKUP_EXECUTION = {
+  version: 2,
+  kind: "automatic",
+  feature: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
+  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+  surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+} as const
+
+const OPTIONS_LDOH_SITE_LOOKUP_EXECUTION = {
+  ...UI_LDOH_SITE_LOOKUP_EXECUTION,
+  surface: TEMP_WINDOW_REQUEST_SOURCES.Options,
+} as const
+
+type RuntimeMessageHandler = (input?: {
+  data?: unknown
+  sender?: { url?: string }
+}) => Promise<unknown>
 type OnMessageMock = ReturnType<
   typeof vi.fn<(type: string, handler: RuntimeMessageHandler) => () => void>
 >
@@ -172,17 +223,12 @@ describe("typed runtime messaging setup", () => {
       },
     })
     await expect(
-      getRegisteredHandler(onModelSyncMessage, "modelSync:triggerAll")(),
-    ).resolves.toEqual({
-      success: true,
-      data: { items: [], statistics: { total: 0 } },
-    })
-    await expect(
       getRegisteredHandler(
         onModelSyncMessage,
-        "modelSync:triggerSelected",
+        "modelSync:triggerAll",
       )({
-        data: { channelIds: [1, 2] },
+        data: { protectionBypassExecution: MODEL_SYNC_EXECUTION },
+        sender: OPTIONS_SENDER,
       }),
     ).resolves.toEqual({
       success: true,
@@ -192,13 +238,40 @@ describe("typed runtime messaging setup", () => {
       getRegisteredHandler(
         onModelSyncMessage,
         "modelSync:triggerSelected",
-      )({ data: { channelIds: [] } }),
+      )({
+        data: {
+          channelIds: [1, 2],
+          protectionBypassExecution: MODEL_SYNC_EXECUTION,
+        },
+        sender: OPTIONS_SENDER,
+      }),
+    ).resolves.toEqual({
+      success: true,
+      data: { items: [], statistics: { total: 0 } },
+    })
+    await expect(
+      getRegisteredHandler(
+        onModelSyncMessage,
+        "modelSync:triggerSelected",
+      )({
+        data: {
+          channelIds: [],
+          protectionBypassExecution: MODEL_SYNC_EXECUTION,
+        },
+        sender: OPTIONS_SENDER,
+      }),
     ).resolves.toEqual({
       success: false,
       error: "channelIds must be a non-empty array for selected sync",
     })
     await expect(
-      getRegisteredHandler(onModelSyncMessage, "modelSync:triggerFailedOnly")(),
+      getRegisteredHandler(
+        onModelSyncMessage,
+        "modelSync:triggerFailedOnly",
+      )({
+        data: { protectionBypassExecution: MODEL_SYNC_EXECUTION },
+        sender: OPTIONS_SENDER,
+      }),
     ).resolves.toEqual({
       success: true,
       data: { items: [], statistics: { total: 0 } },
@@ -249,14 +322,61 @@ describe("typed runtime messaging setup", () => {
       },
     })
 
-    expect(executeSync).toHaveBeenNthCalledWith(1)
-    expect(executeSync).toHaveBeenNthCalledWith(2, [1, 2])
+    expect(executeSync).toHaveBeenNthCalledWith(
+      1,
+      undefined,
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+      MODEL_SYNC_EXECUTION,
+    )
+    expect(executeSync).toHaveBeenNthCalledWith(
+      2,
+      [1, 2],
+      PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+      MODEL_SYNC_EXECUTION,
+    )
+    expect(executeFailedOnly).toHaveBeenCalledWith(MODEL_SYNC_EXECUTION)
     expect(updateSettings).toHaveBeenCalledWith({ enableSync: false })
+  })
+
+  it("rejects model sync messages without user-command intent", async () => {
+    const onModelSyncMessage: OnMessageMock = vi.fn(() => vi.fn())
+    const executeSync = vi.fn()
+
+    vi.doMock("~/services/models/modelSync/messaging", () => ({
+      onModelSyncMessage,
+    }))
+
+    const scheduler = await import("~/services/models/modelSync/scheduler")
+    vi.spyOn(scheduler.modelSyncScheduler, "executeSync").mockImplementation(
+      executeSync,
+    )
+    scheduler.setupManagedSiteModelSyncMessagingListeners()
+
+    await expect(
+      getRegisteredHandler(
+        onModelSyncMessage,
+        "modelSync:triggerAll",
+      )({
+        data: {
+          protectionBypassExecution: {
+            version: 2,
+            kind: "automatic",
+            feature: PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+            trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+            surface: TEMP_WINDOW_REQUEST_SOURCES.Options,
+          },
+        },
+        sender: OPTIONS_SENDER,
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid protection bypass execution",
+    })
+    expect(executeSync).not.toHaveBeenCalled()
   })
 
   it("wraps every model sync typed listener failure with its error message", async () => {
     const onModelSyncMessage: OnMessageMock = vi.fn(() => vi.fn())
-
     vi.doMock("~/services/models/modelSync/messaging", () => ({
       onModelSyncMessage,
     }))
@@ -314,13 +434,33 @@ describe("typed runtime messaging setup", () => {
 
     for (const [type, input, error] of [
       ["modelSync:getNextRun", undefined, "alarm failed"],
-      ["modelSync:triggerAll", undefined, "sync failed"],
       [
-        "modelSync:triggerSelected",
-        { data: { channelIds: [1] } },
+        "modelSync:triggerAll",
+        {
+          data: { protectionBypassExecution: MODEL_SYNC_EXECUTION },
+          sender: OPTIONS_SENDER,
+        },
         "sync failed",
       ],
-      ["modelSync:triggerFailedOnly", undefined, "failed-only sync failed"],
+      [
+        "modelSync:triggerSelected",
+        {
+          data: {
+            channelIds: [1],
+            protectionBypassExecution: MODEL_SYNC_EXECUTION,
+          },
+          sender: OPTIONS_SENDER,
+        },
+        "sync failed",
+      ],
+      [
+        "modelSync:triggerFailedOnly",
+        {
+          data: { protectionBypassExecution: MODEL_SYNC_EXECUTION },
+          sender: OPTIONS_SENDER,
+        },
+        "failed-only sync failed",
+      ],
       ["modelSync:getLastExecution", undefined, "last execution failed"],
       ["modelSync:getProgress", undefined, "progress failed"],
       ["modelSync:updateSettings", { data: { settings: {} } }, "update failed"],
@@ -559,7 +699,13 @@ describe("typed runtime messaging setup", () => {
       getRegisteredHandler(
         onBalanceHistoryMessage,
         "balanceHistory:refreshNow",
-      )({ data: { accountIds: ["account-1"] } }),
+      )({
+        data: {
+          accountIds: ["account-1"],
+          protectionBypassExecution: ACCOUNT_REFRESH_EXECUTION,
+        },
+        sender: OPTIONS_SENDER,
+      }),
     ).resolves.toEqual({
       success: true,
       data: {
@@ -568,15 +714,52 @@ describe("typed runtime messaging setup", () => {
         refreshedCount: 1,
       },
     })
+    expect(
+      scheduler.dailyBalanceHistoryScheduler.refreshNow,
+    ).toHaveBeenCalledWith(
+      ACCOUNT_REFRESH_EXECUTION,
+      ["account-1"],
+      TEMP_WINDOW_REQUEST_SOURCES.Options,
+    )
     await expect(
       getRegisteredHandler(
         onBalanceHistoryMessage,
         "balanceHistory:refreshNow",
-      )({ data: { accountIds: "bad" } }),
+      )({
+        data: {
+          accountIds: "bad",
+          protectionBypassExecution: ACCOUNT_REFRESH_EXECUTION,
+        },
+        sender: OPTIONS_SENDER,
+      }),
     ).resolves.toEqual({
       success: false,
       error: "accountIds must be an array when provided",
     })
+    await expect(
+      getRegisteredHandler(
+        onBalanceHistoryMessage,
+        "balanceHistory:refreshNow",
+      )({
+        data: {
+          protectionBypassExecution: ACCOUNT_REFRESH_EXECUTION,
+        },
+      }),
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        success: 1,
+        failed: 0,
+        refreshedCount: 1,
+      },
+    })
+    expect(
+      scheduler.dailyBalanceHistoryScheduler.refreshNow,
+    ).toHaveBeenLastCalledWith(
+      ACCOUNT_REFRESH_EXECUTION,
+      undefined,
+      TEMP_WINDOW_REQUEST_SOURCES.Options,
+    )
     await expect(
       getRegisteredHandler(onBalanceHistoryMessage, "balanceHistory:prune")(),
     ).resolves.toEqual({ success: true, data: undefined })
@@ -586,6 +769,100 @@ describe("typed runtime messaging setup", () => {
       success: false,
       error: "Failed to prune balance history",
     })
+  })
+
+  it("preserves Balance History UI ownership through account refresh fallback", async () => {
+    const onBalanceHistoryMessage: OnMessageMock = vi.fn(() => vi.fn())
+    const authorizeDecisions: unknown[] = []
+    const executeAuthorizedTempContextTask = vi.fn(
+      async (_task, _source, authorizeAtAcquire, sendResponse) => {
+        const decision = await authorizeAtAcquire()
+        authorizeDecisions.push(decision)
+        sendResponse({ success: decision.kind === "allowed" })
+      },
+    )
+    const refreshAllAccounts = vi.fn(async (_force, options) => {
+      const { protectionBypassCoordinator } = await import(
+        "~/entrypoints/background/protectionBypassCoordinator"
+      )
+      const response = await protectionBypassCoordinator.execute({
+        task: {
+          kind: "api_fallback_fetch",
+          params: {
+            originUrl: "https://example.invalid",
+            fetchUrl: "https://example.invalid/api/account",
+            requestId: "balance-history-continuation",
+          },
+        },
+        execution: options.protectionBypassExecution,
+      })
+      if (!(response as any)?.success)
+        throw new Error("Coordinator denied task")
+      return {
+        success: 1,
+        failed: 0,
+        refreshedCount: 1,
+        latestSyncTime: Date.now(),
+      }
+    })
+
+    vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
+      executeAuthorizedTempContextTask,
+    }))
+    vi.doMock("~/services/history/dailyBalanceHistory/messaging", () => ({
+      onBalanceHistoryMessage,
+    }))
+    vi.doMock("~/services/accounts/accountStorage", () => ({
+      accountStorage: { refreshAllAccounts },
+      resolveAccountTodayStatsAvailability: vi.fn(),
+    }))
+    vi.doMock("~/services/preferences/userPreferences", async () => {
+      const actual = await vi.importActual<
+        typeof import("~/services/preferences/userPreferences")
+      >("~/services/preferences/userPreferences")
+      return {
+        ...actual,
+        userPreferences: {
+          getPreferences: vi.fn().mockResolvedValue(actual.DEFAULT_PREFERENCES),
+          getPreferencesStrict: vi
+            .fn()
+            .mockResolvedValue(actual.DEFAULT_PREFERENCES),
+          savePreferences: vi.fn(),
+        },
+      }
+    })
+
+    const execution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
+    )
+    const scheduler = await import(
+      "~/services/history/dailyBalanceHistory/scheduler"
+    )
+    scheduler.setupDailyBalanceHistoryMessagingListeners()
+
+    await expect(
+      getRegisteredHandler(
+        onBalanceHistoryMessage,
+        "balanceHistory:refreshNow",
+      )({
+        data: { protectionBypassExecution: execution },
+        sender: OPTIONS_SENDER,
+      }),
+    ).resolves.toEqual({
+      success: true,
+      data: { success: 1, failed: 0, refreshedCount: 1 },
+    })
+    expect(refreshAllAccounts).toHaveBeenCalledWith(true, {
+      protectionBypassExecution: execution,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+    })
+    expect(authorizeDecisions).toEqual([
+      expect.objectContaining({
+        kind: "allowed",
+        feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+        surface: TEMP_WINDOW_REQUEST_SOURCES.Options,
+      }),
+    ])
   })
 
   it("routes usage-history typed listeners through runtime resolvers", async () => {
@@ -770,26 +1047,226 @@ describe("typed runtime messaging setup", () => {
     background.setupLdohSiteLookupMessagingListeners()
 
     expect(onLdohSiteLookupMessage).toHaveBeenCalledTimes(1)
+    const refreshHandler = getRegisteredHandler(
+      onLdohSiteLookupMessage,
+      "ldohSiteLookup:refreshSites",
+    )
+    const validUiRequests = [
+      {
+        execution: UI_LDOH_SITE_LOOKUP_EXECUTION,
+        sender: { url: "https://example.invalid/popup.html" },
+      },
+      {
+        execution: OPTIONS_LDOH_SITE_LOOKUP_EXECUTION,
+        sender: { url: "moz-extension://test/options.html#/accounts" },
+      },
+    ] as const
+
+    for (const { execution, sender } of validUiRequests) {
+      await expect(
+        refreshHandler({
+          data: { protectionBypassExecution: structuredClone(execution) },
+          sender,
+        }),
+      ).resolves.toEqual({
+        success: true,
+        cachedCount: 1,
+      })
+      expect(fetchApi.mock.lastCall?.[0].protectionBypassExecution).toEqual(
+        execution,
+      )
+    }
+
+    fetchApi.mockClear()
     await expect(
-      getRegisteredHandler(
-        onLdohSiteLookupMessage,
-        "ldohSiteLookup:refreshSites",
-      )(),
+      refreshHandler({
+        data: {},
+        sender: { url: "chrome-extension://test/popup.html" },
+      }),
     ).resolves.toEqual({
+      success: false,
+      error: "Invalid protection bypass execution",
+    })
+
+    const invalidUiRequests = [
+      {
+        execution: {
+          version: 2,
+          kind: "user_command",
+          command: "refresh_account",
+          surface: "popup",
+        },
+        sender: { url: "chrome-extension://test/popup.html" },
+      },
+      {
+        execution: {
+          ...UI_LDOH_SITE_LOOKUP_EXECUTION,
+          feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+        },
+        sender: { url: "chrome-extension://test/popup.html" },
+      },
+      {
+        execution: {
+          ...UI_LDOH_SITE_LOOKUP_EXECUTION,
+          trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+        },
+        sender: { url: "chrome-extension://test/popup.html" },
+      },
+      {
+        execution: {
+          ...UI_LDOH_SITE_LOOKUP_EXECUTION,
+          surface: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        },
+        sender: { url: "chrome-extension://test/background.html" },
+      },
+      {
+        execution: {
+          ...UI_LDOH_SITE_LOOKUP_EXECUTION,
+          surface: "invalid-surface",
+        },
+        sender: { url: "chrome-extension://test/popup.html" },
+      },
+    ]
+
+    for (const { execution, sender } of invalidUiRequests) {
+      await expect(
+        refreshHandler({
+          data: { protectionBypassExecution: execution },
+          sender,
+        }),
+      ).resolves.toEqual({
+        success: false,
+        error: "Invalid protection bypass execution",
+      })
+    }
+    expect(fetchApi).not.toHaveBeenCalled()
+
+    await expect(background.repairLdohSiteListCache()).resolves.toEqual({
       success: true,
       cachedCount: 1,
     })
+    expect(fetchApi).toHaveBeenCalledWith(
+      expect.objectContaining({
+        protectionBypassExecution: {
+          version: 2,
+          kind: "automatic",
+          feature: "ldoh_site_lookup",
+          trigger: "background_recovery",
+          surface: TEMP_WINDOW_REQUEST_SOURCES.Background,
+        },
+      }),
+      expect.any(Object),
+      true,
+    )
 
     fetchApi.mockRejectedValueOnce(new Error("network failed"))
+    await expect(
+      refreshHandler({
+        data: {
+          protectionBypassExecution: UI_LDOH_SITE_LOOKUP_EXECUTION,
+        },
+        sender: { url: "chrome-extension://test/popup.html" },
+      }),
+    ).resolves.toEqual({ success: false, error: "network failed" })
+  })
+
+  it("preserves an LDOH UI lifecycle owner through final coordinator acquire", async () => {
+    const onLdohSiteLookupMessage: OnMessageMock = vi.fn(() => vi.fn())
+    const authorizeDecisions: unknown[] = []
+    const executeAuthorizedTempContextTask = vi.fn(
+      async (_task, _source, authorizeAtAcquire, sendResponse) => {
+        const decision = await authorizeAtAcquire()
+        authorizeDecisions.push(decision)
+        sendResponse({ success: decision.kind === "allowed" })
+      },
+    )
+    const writeCache = vi.fn().mockResolvedValue({
+      version: 1,
+      fetchedAt: 1,
+      expiresAt: 2,
+      items: [],
+    })
+
+    vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
+      executeAuthorizedTempContextTask,
+    }))
+    vi.doMock("~/services/preferences/userPreferences", async () => {
+      const actual = await vi.importActual<
+        typeof import("~/services/preferences/userPreferences")
+      >("~/services/preferences/userPreferences")
+      return {
+        ...actual,
+        userPreferences: {
+          getPreferences: vi.fn().mockResolvedValue(actual.DEFAULT_PREFERENCES),
+          getPreferencesStrict: vi
+            .fn()
+            .mockResolvedValue(actual.DEFAULT_PREFERENCES),
+        },
+      }
+    })
+    vi.doMock("~/services/integrations/ldohSiteLookup/runtime", async () => {
+      const actual = await vi.importActual<
+        typeof import("~/services/integrations/ldohSiteLookup/runtime")
+      >("~/services/integrations/ldohSiteLookup/runtime")
+      return { ...actual, onLdohSiteLookupMessage }
+    })
+    vi.doMock("~/services/integrations/ldohSiteLookup/cache", () => ({
+      writeLdohSiteListCache: writeCache,
+    }))
+    vi.doMock("~/services/apiTransport/request", () => ({
+      fetchApi: vi.fn(async (request) => {
+        const { protectionBypassCoordinator } = await import(
+          "~/entrypoints/background/protectionBypassCoordinator"
+        )
+        const response = await protectionBypassCoordinator.execute({
+          task: {
+            kind: "api_fallback_fetch",
+            params: {
+              originUrl: "https://example.invalid",
+              fetchUrl: "https://example.invalid/api/ldoh/sites",
+              requestId: "ldoh-continuation",
+            },
+          },
+          execution: request.protectionBypassExecution,
+        })
+        if (!(response as any)?.success)
+          throw new Error("Coordinator denied task")
+        return { sites: [] }
+      }),
+    }))
+
+    const background = await import(
+      "~/services/integrations/ldohSiteLookup/background"
+    )
+    background.setupLdohSiteLookupMessagingListeners()
+
     await expect(
       getRegisteredHandler(
         onLdohSiteLookupMessage,
         "ldohSiteLookup:refreshSites",
-      )(),
-    ).resolves.toEqual({
-      success: false,
-      error: "network failed",
-    })
+      )({
+        data: {
+          protectionBypassExecution: UI_LDOH_SITE_LOOKUP_EXECUTION,
+        },
+        sender: { url: "chrome-extension://test/popup.html" },
+      }),
+    ).resolves.toEqual({ success: true, cachedCount: 0 })
+    expect(executeAuthorizedTempContextTask).toHaveBeenCalledTimes(1)
+    const { fetchApi } = await import("~/services/apiTransport/request")
+    expect(fetchApi).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+      expect.any(Object),
+      true,
+    )
+    expect(authorizeDecisions).toEqual([
+      expect.objectContaining({
+        kind: "allowed",
+        feature: PROTECTION_BYPASS_FEATURES.LdohSiteLookup,
+        surface: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      }),
+    ])
   })
 
   it("registers auto check-in typed listeners once and wraps handler errors", async () => {
@@ -912,7 +1389,11 @@ describe("typed runtime messaging setup", () => {
         onAutoCheckinMessage,
         "autoCheckin:runNow",
       )({
-        data: { accountIds: [" a ", "b", "a"] },
+        data: {
+          accountIds: [" a ", "b", "a"],
+          protectionBypassExecution: MANUAL_CHECKIN_EXECUTION,
+        },
+        sender: OPTIONS_SENDER,
       }),
     ).resolves.toEqual({ success: true })
     await expect(
@@ -920,7 +1401,11 @@ describe("typed runtime messaging setup", () => {
         onAutoCheckinMessage,
         "autoCheckin:runNow",
       )({
-        data: { accountIds: [""] },
+        data: {
+          accountIds: [""],
+          protectionBypassExecution: MANUAL_CHECKIN_EXECUTION,
+        },
+        sender: OPTIONS_SENDER,
       }),
     ).resolves.toEqual({
       success: false,
@@ -954,7 +1439,14 @@ describe("typed runtime messaging setup", () => {
       getRegisteredHandler(
         onAutoCheckinMessage,
         "autoCheckin:pretriggerDailyOnUiOpen",
-      )({ data: { requestId: "request-1", dryRun: true } }),
+      )({
+        data: {
+          requestId: "request-1",
+          dryRun: true,
+          protectionBypassExecution: UI_OPEN_CHECKIN_EXECUTION,
+        },
+        sender: OPTIONS_SENDER,
+      }),
     ).resolves.toEqual({
       success: true,
       started: true,
@@ -965,7 +1457,11 @@ describe("typed runtime messaging setup", () => {
         onAutoCheckinMessage,
         "autoCheckin:retryAccount",
       )({
-        data: { accountId: "account-1" },
+        data: {
+          accountId: "account-1",
+          protectionBypassExecution: RETRY_CHECKIN_EXECUTION,
+        },
+        sender: OPTIONS_SENDER,
       }),
     ).resolves.toEqual({ success: true })
     await expect(
@@ -973,12 +1469,77 @@ describe("typed runtime messaging setup", () => {
         onAutoCheckinMessage,
         "autoCheckin:retryAccount",
       )({
-        data: {},
+        data: {
+          protectionBypassExecution: RETRY_CHECKIN_EXECUTION,
+        },
+        sender: OPTIONS_SENDER,
       }),
     ).resolves.toEqual({
       success: false,
       error: "Missing accountId",
     })
+    await expect(
+      getRegisteredHandler(
+        onAutoCheckinMessage,
+        "autoCheckin:runNow",
+      )({
+        data: {
+          protectionBypassExecution: ACCOUNT_REFRESH_EXECUTION,
+        },
+        sender: OPTIONS_SENDER,
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+    })
+    await expect(
+      getRegisteredHandler(
+        onAutoCheckinMessage,
+        "autoCheckin:retryAccount",
+      )({
+        data: {
+          accountId: "account-1",
+          protectionBypassExecution: MANUAL_CHECKIN_EXECUTION,
+        },
+        sender: OPTIONS_SENDER,
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
+    })
+    for (const [type, data] of [
+      [
+        "autoCheckin:runNow",
+        {
+          protectionBypassExecution: MANUAL_CHECKIN_EXECUTION,
+        },
+      ],
+      [
+        "autoCheckin:pretriggerDailyOnUiOpen",
+        {
+          protectionBypassExecution: UI_OPEN_CHECKIN_EXECUTION,
+        },
+      ],
+      [
+        "autoCheckin:retryAccount",
+        {
+          accountId: "account-1",
+          protectionBypassExecution: RETRY_CHECKIN_EXECUTION,
+        },
+      ],
+    ] as const) {
+      await expect(
+        getRegisteredHandler(
+          onAutoCheckinMessage,
+          type,
+        )({
+          data: { ...data, protectionBypassExecution: {} },
+        }),
+      ).resolves.toEqual({
+        success: false,
+        error: "Invalid protection bypass execution",
+      })
+    }
     await expect(
       getRegisteredHandler(
         onAutoCheckinMessage,
@@ -1008,8 +1569,10 @@ describe("typed runtime messaging setup", () => {
     expect(runCheckins).toHaveBeenCalledWith({
       runType: "manual",
       targetAccountIds: ["a", "b"],
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+      protectionBypassExecution: MANUAL_CHECKIN_EXECUTION,
     })
+    expect(runCheckins).toHaveBeenCalledTimes(1)
     expect(scheduleNextRun).toHaveBeenCalledWith({ preserveExisting: true })
     expect(debugScheduleDailyAlarmForToday).toHaveBeenCalledWith({
       minutesFromNow: 5,
@@ -1018,16 +1581,195 @@ describe("typed runtime messaging setup", () => {
       requestId: "request-1",
       dryRun: true,
       debug: undefined,
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Options,
+      protectionBypassExecution: UI_OPEN_CHECKIN_EXECUTION,
     })
     expect(retryAccount).toHaveBeenCalledWith(
       "account-1",
-      TEMP_WINDOW_REQUEST_SOURCES.Background,
+      TEMP_WINDOW_REQUEST_SOURCES.Options,
+      RETRY_CHECKIN_EXECUTION,
     )
+    expect(retryAccount).toHaveBeenCalledTimes(1)
     expect(getAccountDisplayData).toHaveBeenCalledWith("account-1", {
       includeDisabled: true,
     })
     expect(updateSettings).toHaveBeenCalledWith({ globalEnabled: false })
+  })
+
+  it("preserves AutoCheckin UI command ownership through scheduler and temp task", async () => {
+    const onAutoCheckinMessage: OnMessageMock = vi.fn(() => vi.fn())
+    const authorizeDecisions: unknown[] = []
+    const executedTasks: unknown[] = []
+    const executeAuthorizedTempContextTask = vi.fn(
+      async (task, _source, authorizeAtAcquire, sendResponse) => {
+        executedTasks.push(task)
+        const decision = await authorizeAtAcquire()
+        authorizeDecisions.push(decision)
+        sendResponse({ success: decision.kind === "allowed" })
+      },
+    )
+    let savedStatus: unknown = null
+
+    vi.doMock("~/entrypoints/background/tempWindowPool", () => ({
+      executeAuthorizedTempContextTask,
+    }))
+    vi.doMock("~/services/checkin/autoCheckin/messaging", () => ({
+      onAutoCheckinMessage,
+    }))
+    vi.doMock("~/services/preferences/userPreferences", async () => {
+      const actual = await vi.importActual<
+        typeof import("~/services/preferences/userPreferences")
+      >("~/services/preferences/userPreferences")
+      const preferences = {
+        ...actual.DEFAULT_PREFERENCES,
+        autoCheckin: {
+          ...actual.DEFAULT_PREFERENCES.autoCheckin,
+          globalEnabled: true,
+          notifyUiOnCompletion: false,
+          retryStrategy: {
+            enabled: false,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 3,
+          },
+        },
+      }
+      return {
+        ...actual,
+        userPreferences: {
+          getPreferences: vi.fn().mockResolvedValue(preferences),
+          getPreferencesStrict: vi.fn().mockResolvedValue(preferences),
+          savePreferences: vi.fn(),
+        },
+      }
+    })
+    vi.doMock("~/services/accounts/accountStorage", () => ({
+      accountStorage: {
+        getAllAccounts: vi.fn().mockResolvedValue([
+          {
+            id: "account-1",
+            disabled: false,
+            site_name: "Example",
+            site_type: "Veloera",
+            account_info: { username: "user" },
+            checkIn: { enableDetection: true, autoCheckInEnabled: true },
+          },
+        ]),
+        getEnabledAccounts: vi.fn(),
+        updateAccount: vi.fn(),
+        markAccountAsSiteCheckedIn: vi.fn().mockResolvedValue(undefined),
+        refreshAccount: vi.fn(),
+        getAccountById: vi.fn(),
+        getDisplayDataById: vi.fn(),
+        convertToDisplayData: vi.fn(),
+      },
+    }))
+    vi.doMock("~/services/checkin/autoCheckin/storage", () => ({
+      AUTO_CHECKIN_STATUS_STORAGE_LOCK: "all-api-hub:auto-checkin-status",
+      autoCheckinStorage: {
+        getStatus: vi.fn(async () => savedStatus),
+        saveStatus: vi.fn(async (status) => {
+          savedStatus = status
+          return true
+        }),
+      },
+    }))
+    vi.doMock("~/services/core/storageWriteLock", () => ({
+      withExtensionStorageWriteLock: vi.fn(async (_name, work) => await work()),
+    }))
+    vi.doMock("~/services/productAnalytics/actions", () => ({
+      trackProductAnalyticsActionCompleted: vi.fn(),
+    }))
+    vi.doMock("~/services/productAnalytics/autoCheckin", () => ({
+      buildAutoCheckinDiagnostics: vi.fn(() => ({})),
+      trackAutoCheckinConfigSnapshot: vi.fn(),
+      trackAutoCheckinRunAnalytics: vi.fn(),
+    }))
+    vi.doMock("~/services/notifications/taskNotificationService", () => ({
+      notifyTaskResult: vi.fn(),
+    }))
+    vi.doMock("~/utils/browser/browserApi", async () => {
+      const actual = await vi.importActual<
+        typeof import("~/utils/browser/browserApi")
+      >("~/utils/browser/browserApi")
+      return {
+        ...actual,
+        clearAlarm: vi.fn(),
+        createAlarm: vi.fn(),
+        getAlarm: vi.fn().mockResolvedValue(undefined),
+        hasAlarmsAPI: vi.fn().mockReturnValue(true),
+        isMessageReceiverUnavailableError: vi.fn().mockReturnValue(false),
+        onAlarm: vi.fn(),
+        sendRuntimeMessage: vi.fn().mockResolvedValue(undefined),
+      }
+    })
+    vi.doMock("~/services/checkin/autoCheckin/providers", () => ({
+      resolveAutoCheckinProvider: vi.fn(() => ({
+        canCheckIn: vi.fn(() => true),
+        checkIn: vi.fn(async (_account, context) => {
+          const { protectionBypassCoordinator } = await import(
+            "~/entrypoints/background/protectionBypassCoordinator"
+          )
+          const response = await protectionBypassCoordinator.execute({
+            task: {
+              kind: "turnstile_fetch",
+              params: {
+                originUrl: "https://example.invalid",
+                pageUrl: "https://example.invalid/checkin",
+                fetchUrl: "https://example.invalid/api/checkin",
+                requestId: "auto-checkin-continuation",
+              },
+            },
+            execution: context.protectionBypassExecution,
+          })
+          return (response as any)?.success
+            ? { status: "success" }
+            : { status: "failed", rawMessage: "Coordinator denied task" }
+        }),
+      })),
+    }))
+
+    const execution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+    )
+    const scheduler = await import("~/services/checkin/autoCheckin/scheduler")
+    scheduler.setupAutoCheckinMessagingListeners()
+
+    await expect(
+      getRegisteredHandler(
+        onAutoCheckinMessage,
+        "autoCheckin:runNow",
+      )({
+        data: {
+          accountIds: ["account-1"],
+          protectionBypassExecution: execution,
+        },
+        sender: OPTIONS_SENDER,
+      }),
+    ).resolves.toEqual({ success: true })
+    expect(executeAuthorizedTempContextTask).toHaveBeenCalledTimes(1)
+    expect(authorizeDecisions).toEqual([
+      expect.objectContaining({
+        kind: "allowed",
+        feature: PROTECTION_BYPASS_FEATURES.Checkin,
+        surface: TEMP_WINDOW_REQUEST_SOURCES.Options,
+      }),
+    ])
+    expect(executedTasks).toHaveLength(1)
+    expect(executedTasks[0]).toEqual(
+      expect.objectContaining({
+        kind: "turnstile_fetch",
+      }),
+    )
+    const executedParams = (
+      executedTasks[0] as { params: Record<string, unknown> }
+    ).params
+    expect(executedParams).not.toHaveProperty("protectionBypassExecution")
+    expect(executedParams).not.toHaveProperty("tempWindowRequestSource")
+    expect(savedStatus).not.toBeNull()
+    expect(JSON.stringify(savedStatus)).not.toContain("user_command")
+    expect(JSON.stringify(savedStatus)).not.toContain(
+      "protectionBypassExecution",
+    )
   })
 
   it("wraps every auto check-in typed listener failure", async () => {
@@ -1093,7 +1835,13 @@ describe("typed runtime messaging setup", () => {
     for (const [type, input, error] of [
       [
         "autoCheckin:runNow",
-        { data: { accountIds: ["account-1"] } },
+        {
+          data: {
+            accountIds: ["account-1"],
+            protectionBypassExecution: MANUAL_CHECKIN_EXECUTION,
+          },
+          sender: OPTIONS_SENDER,
+        },
         "run failed",
       ],
       [
@@ -1114,12 +1862,23 @@ describe("typed runtime messaging setup", () => {
       ],
       [
         "autoCheckin:pretriggerDailyOnUiOpen",
-        { data: {} },
+        {
+          data: {
+            protectionBypassExecution: UI_OPEN_CHECKIN_EXECUTION,
+          },
+          sender: OPTIONS_SENDER,
+        },
         "pretrigger failed",
       ],
       [
         "autoCheckin:retryAccount",
-        { data: { accountId: "account-1" } },
+        {
+          data: {
+            accountId: "account-1",
+            protectionBypassExecution: RETRY_CHECKIN_EXECUTION,
+          },
+          sender: OPTIONS_SENDER,
+        },
         "retry failed",
       ],
       [

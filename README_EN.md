@@ -62,28 +62,35 @@ But once you have multiple accounts, management quickly becomes painful:
 <a id="features"></a>
 ## ✨ What Can It Do for You?
 
-### 📊 Unified Dashboard for Multiple Sites
-- **Multi-account asset overview**: See balances, usage, and health status in one panel.
-- **Smart site detection**: Paste a URL to detect the architecture, billing ratio, and setup details.
-- **API credential library**: Save common `Base URL + API Key` pairs for copying, API verification, model lookup, and balance/usage checks.
+### 📊 All Your AI Assets in One View
+- **Unified Relay Account Dashboard**: Manage multiple AI relay accounts in one place and review balances, usage, and account status without signing in to each site.
+- **API Credential Library**: No site account required—bring Base URLs and API Keys shared by others or collected over time together, then check balances, view models, test connections, or export whenever needed.
+- **Usage & Trend Analytics**: Track balance changes and view charts by site, account, and model to understand where your credits go.
 
-### 💰 Smarter Savings and Automated Gains
-- **Model price comparison**: Calculate effective model prices across sites to find better-value groups and endpoints.
-- **Fully automated check-in flow**: Run supported site check-ins with one click or on a schedule.
-- **Deep usage analytics**: Generate reports by site, account, model, and date, including heatmaps and slow-request analysis.
+### 💰 Price Comparison & Auto Check-In
+- **Cross-Site Model Price Comparison**: Compare the effective price of the same model across sites and quickly find a better-value endpoint.
+- **Multi-Site Auto Check-In**: Check in to supported sites with one click or on a schedule, collect rewards automatically, and skip daily logins.
 
-### 🚀 Fast Ecosystem Integration
-- **One-click quick export**: Sync to **CherryStudio, CC Switch, CLIProxyAPI, Claude Code Router, Kilo Code**, and more. See [Supported Tools](https://all-api-hub.qixing1217.top/en/supported-export-tools.html).
-- **Admin workflow tools**: Import accounts/keys as self-hosted site channels, with tools for channel management, model redirection, and channel sync.
-- **Web sniffing and quick capture**: Select a Base URL or API Key on a webpage to instantly open the test popup and save it. See [Web AI API Sniffing & Verification](https://all-api-hub.qixing1217.top/en/web-ai-api-check.html).
+### 🚀 Quick Capture & Client Integration
+- **Quick Web Capture**: Find Base URLs and API Keys on a page, test them immediately, and save them to your credential library with less copying and tab switching.
+- **One-Click Client Export**: Send credentials to CherryStudio, CC Switch, CLIProxyAPI, Claude Code Router, Kilo Code, and other [supported tools](https://all-api-hub.qixing1217.top/en/supported-export-tools.html).
 
-### 🧪 Reliability Safeguards
-- **Multi-dimensional API verification**: Batch test model availability, token compatibility, and CLI proxy availability.
-- **Cloudflare challenge assistant**: Automatically helps you get through Cloudflare challenges so data refreshes and API calls stay uninterrupted.
+### 🧪 API Verification & Troubleshooting
+- **API & Model Verification**: Check API connectivity and model availability in one click to see whether a Key works and a model can be called.
+- **CLI Integration Testing**: Confirm that common command-line tools can use the target API before you spend time troubleshooting a full setup.
 
-### 🔒 Privacy and Security
-- **Local by default**: Keys and account data stay on your device unless you enable WebDAV backup or sync.
-- **Encrypted sync**: Supports encrypted WebDAV backup so you can restore data on another machine.
+### 🔔 Announcements & Task Alerts
+- **Announcements in One Place**: Automatically collect and display announcements from added sites in one place, with timely alerts for maintenance, model, pricing, and other updates—no need to check sites one by one.
+- **Task Result Alerts**: After automated check-ins, WebDAV auto-sync, or model sync completes, receive the result through your browser or a configured notification method so failures and exceptions can be handled promptly.
+
+### 🛠️ Self-Hosted AI Gateway Management
+- **Manage Popular AI Gateways in One Place**: Manage channels for New API, AxonHub, Claude Code Hub, Octopus, Veloera, and DoneHub directly in the extension without opening each admin panel.
+- **Quickly Create Gateway Channels**: Turn saved site accounts or credentials from the API Credential Library into self-hosted AI gateway channels, then call models through the gateway and switch between channels as needed.
+- **Model Sync & Redirects**: Sync channel model lists manually or automatically on a schedule as upstream models change, and define custom redirects so clients can use the model names they prefer.
+
+### 🔐 Data Security & Cloud Sync
+- **Local-First Storage**: API Keys, accounts, and settings stay in your browser by default and are written to WebDAV only when you enable backup or sync.
+- **Encrypted WebDAV Auto-Sync**: Enable encryption and scheduled auto-sync to keep data safely synchronized across devices and pick up where you left off after switching computers.
 
 <a id="installation"></a>
 ## 🚀 Quick Installation
@@ -274,9 +281,9 @@ GitHub Stable and Nightly are manual installation channels and do not auto-updat
 <a id="introduction-tech"></a>
 ### 🧩 Strong Compatibility
 No matter which architecture you use, there is a good chance we support it:
-- **Account-site compatible architectures**: [one-api](https://github.com/songquanpeng/one-api), [new-api](https://github.com/QuantumNous/new-api), [Veloera](https://github.com/Veloera/Veloera), [one-hub](https://github.com/MartialBE/one-hub), [done-hub](https://github.com/deanxv/done-hub), [Sub2API](https://github.com/Wei-Shaw/sub2api), and more
-- **Specialized account platforms and compatible implementations**: [AIHubMix](https://aihubmix.com/?aff=W3DN), [AnyRouter](https://anyrouter.top), Neo-API, Super-API, v-api, and more
-- **Self-hosted admin backends**: [new-api](https://github.com/QuantumNous/new-api), [Veloera](https://github.com/Veloera/Veloera), [done-hub](https://github.com/deanxv/done-hub), [Octopus](https://github.com/bestruirui/octopus), [AxonHub](https://github.com/looplj/axonhub), [Claude Code Hub](https://github.com/ding113/claude-code-hub), and more, for channel management, migration, and partial model sync
+- **Account-site compatible architectures**: [new-api](https://github.com/QuantumNous/new-api), [one-api](https://github.com/songquanpeng/one-api), [Sub2API](https://github.com/Wei-Shaw/sub2api), [one-hub](https://github.com/MartialBE/one-hub), [Veloera](https://github.com/Veloera/Veloera), [done-hub](https://github.com/deanxv/done-hub), and more
+- **Specialized account platforms and compatible implementations**: [AnyRouter](https://anyrouter.top), [AIHubMix](https://aihubmix.com/?aff=W3DN), Super-API, v-api, Neo-API, and more
+- **Self-hosted admin backends**: [new-api](https://github.com/QuantumNous/new-api), [AxonHub](https://github.com/looplj/axonhub), [Claude Code Hub](https://github.com/ding113/claude-code-hub), [Octopus](https://github.com/bestruirui/octopus), [Veloera](https://github.com/Veloera/Veloera), [done-hub](https://github.com/deanxv/done-hub), and more, for channel management, migration, and partial model sync
 - **Full list**: 👉 [Supported Sites](https://all-api-hub.qixing1217.top/en/supported-sites.html)
 
 <a id="ui-preview"></a>

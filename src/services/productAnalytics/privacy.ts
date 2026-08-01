@@ -36,6 +36,7 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_ACTION_KINDS,
   PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_SEVERITIES,
+  PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES,
   PRODUCT_ANALYTICS_REQUESTED_AUTH_MODES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
@@ -52,8 +53,11 @@ import {
   PRODUCT_ANALYTICS_TARGET_STATES,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
   PRODUCT_ANALYTICS_TOOLBAR_ACTION_CLICK_BEHAVIORS,
+  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
+  PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES,
   type ProductAnalyticsEventName,
 } from "./contracts"
+import { SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES } from "./settingsSnapshot"
 
 type SanitizedProperties = Record<string, string | boolean | number>
 
@@ -141,6 +145,8 @@ const EVENT_ALLOWED_KEYS = {
     "product_announcement_severity",
     "product_announcement_action_kind",
     "product_announcement_active_count",
+    "guidance_status",
+    "guidance_action_kind",
     "entrypoint",
   ],
   [PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured]: [
@@ -154,6 +160,7 @@ const EVENT_ALLOWED_KEYS = {
     "temp_window_fetch_failure_count",
     "temp_window_turnstile_fetch_success_count",
     "temp_window_turnstile_fetch_failure_count",
+    ...PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES,
   ],
   [PRODUCT_ANALYTICS_EVENTS.SponsorRecommendationsDailySummaryCaptured]: [
     "feature_id",
@@ -253,11 +260,6 @@ const EVENT_ALLOWED_KEYS = {
     "auto_detect_enhanced_enabled",
     "auto_detect_url_patterns_configured",
     "api_key_cleanup_patterns_configured",
-    "popup_enabled",
-    "sidepanel_enabled",
-    "options_enabled",
-    "auto_refresh_enabled",
-    "manual_refresh_enabled",
     "reminder_dismissed",
     "mode",
     "auto_sync_enabled",
@@ -294,6 +296,7 @@ const EVENT_ALLOWED_KEYS = {
     "window_length_minutes",
     "deterministic_time_minutes",
     "entrypoint",
+    ...SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES,
   ],
   [PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured]: [
     "setting_id",
@@ -352,11 +355,6 @@ const EVENT_ALLOWED_KEYS = {
     "auto_detect_enhanced_enabled",
     "auto_detect_url_patterns_configured",
     "api_key_cleanup_patterns_configured",
-    "popup_enabled",
-    "sidepanel_enabled",
-    "options_enabled",
-    "auto_refresh_enabled",
-    "manual_refresh_enabled",
     "reminder_dismissed",
     "mode",
     "auto_sync_enabled",
@@ -437,12 +435,8 @@ const EVENT_ALLOWED_KEYS = {
     "web_ai_api_check_auto_detect_enabled",
     "web_ai_api_check_auto_detect_enhanced_enabled",
     "web_ai_api_check_auto_detect_patterns_configured",
-    "temp_window_fallback_enabled",
-    "temp_window_fallback_popup_enabled",
-    "temp_window_fallback_sidepanel_enabled",
-    "temp_window_fallback_options_enabled",
-    "temp_window_fallback_auto_refresh_enabled",
-    "temp_window_fallback_manual_refresh_enabled",
+    "temp_window_fallback_automatic_bypass_enabled",
+    ...SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES,
     "temp_window_fallback_mode",
     "temp_window_fallback_reminder_dismissed",
     "webdav_configured",
@@ -507,6 +501,12 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   error_category: Object.values(PRODUCT_ANALYTICS_ERROR_CATEGORIES),
   failure_stage: Object.values(PRODUCT_ANALYTICS_FAILURE_STAGES),
   feature_id: Object.values(PRODUCT_ANALYTICS_FEATURE_IDS),
+  guidance_status: Object.values(
+    PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_STATUSES,
+  ),
+  guidance_action_kind: Object.values(
+    PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
+  ),
   currency_type: CURRENCY_TYPES,
   log_level: LOG_LEVELS,
   kilo_code_export_target: Object.values(
@@ -577,6 +577,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
 }
 
 const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
+  ...SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTIES,
   "account_count",
   "account_auto_detect_failure_reason",
   "account_auto_detect_attempt_outcome",
@@ -622,6 +623,7 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "temp_context_used",
   "shield_bypass_prompt_dismissed_count",
   "shield_bypass_prompt_shown_count",
+  ...PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES,
   "sponsor_campaign_locale",
   "sync_accounts_enabled",
   "source_managed_site_type",
@@ -683,6 +685,7 @@ const RAW_NUMBER_ALLOWED_KEYS = new Set([
   "selected_count",
   "shield_bypass_prompt_dismissed_count",
   "shield_bypass_prompt_shown_count",
+  ...PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES,
   "shield_bypass_settings_visited_count",
   "site_announcements_polling_interval_minutes",
   "skipped_count",

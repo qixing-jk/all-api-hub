@@ -226,6 +226,13 @@ describe("modelSyncScheduler additional scheduler flows", () => {
           probeIds: ["text-generation"],
         }),
       ],
+      {
+        version: 2,
+        kind: "automatic",
+        feature: "managed_site_model_sync",
+        trigger: "background_recovery",
+        surface: "background",
+      },
     )
     const [, , , , sanitizedFilters] = mocks.modelSyncServiceCtor.mock.calls[0]
     expect(sanitizedFilters[0]).not.toHaveProperty("apiKey")

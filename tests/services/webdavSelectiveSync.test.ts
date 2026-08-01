@@ -1,5 +1,12 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { Storage } from "@plasmohq/storage"
+
+import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  DEFAULT_PREFERENCES,
+  userPreferences,
+} from "~/services/preferences/userPreferences"
 import {
   createWebdavImportPayloadBySelection,
   filterWebdavBackupPayloadBySelection,
@@ -980,5 +987,210 @@ describe("createWebdavImportPayloadBySelection", () => {
 
     expect(payload.version).toBe("2.0")
     expect(payload.apiCredentialProfiles).toBeUndefined()
+  })
+})
+
+describe("WebDAV preference convergence", () => {
+  const storage = new Storage({ area: "local" })
+
+  beforeEach(async () => {
+    await storage.remove(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES)
+  })
+
+  afterEach(async () => {
+    await storage.remove(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES)
+  })
+
+  it("imports a legacy v26 preference selection as canonical v27 and re-exports it canonically", async () => {
+    await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      lastUpdated: 100,
+      sharedPreferencesLastUpdated: 100,
+    })
+    const imported = createWebdavImportPayloadBySelection({
+      rawBackup: {
+        version: "2.0",
+        timestamp: 200,
+        preferences: {
+          ...DEFAULT_PREFERENCES,
+          preferencesVersion: 26,
+          lastUpdated: 200,
+          sharedPreferencesLastUpdated: 200,
+          tempWindowFallback: {
+            enabled: true,
+            useForAutoRefresh: false,
+            tempContextMode: "composite",
+          },
+        },
+        channelConfigs: {},
+      } as any,
+      selection: {
+        accounts: false,
+        bookmarks: false,
+        apiCredentialProfiles: false,
+        preferences: true,
+      },
+      localState: {
+        accountsConfig: {
+          accounts: [],
+          bookmarks: [],
+          pinnedAccountIds: [],
+          orderedAccountIds: [],
+          last_updated: 100,
+        },
+        tagStore: { version: 1, tagsById: {} },
+        preferences: DEFAULT_PREFERENCES,
+        channelConfigs: {},
+        apiCredentialProfiles: { version: 2, profiles: [], lastUpdated: 0 },
+      },
+    })
+
+    const result = await userPreferences.importPreferences(
+      imported.preferences!,
+      { preserveWebdav: true },
+    )
+
+    expect(result).toMatchObject({ ok: true })
+    const storedAfterImport = (await storage.get(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+    )) as any
+    expect(storedAfterImport.preferencesVersion).toBe(27)
+    expect(storedAfterImport.tempWindowFallback).toMatchObject({
+      automaticFeatureBypass: { account_refresh: false },
+    })
+    expect(storedAfterImport.tempWindowFallback).not.toHaveProperty(
+      "useForAutoRefresh",
+    )
+
+    const nextUpload = filterWebdavBackupPayloadBySelection({
+      backup: {
+        version: "2.0",
+        timestamp: 300,
+        preferences: await userPreferences.exportPreferences(),
+        channelConfigs: {},
+      } as any,
+      selection: {
+        accounts: false,
+        bookmarks: false,
+        apiCredentialProfiles: false,
+        preferences: true,
+      },
+    })
+
+    expect((nextUpload.preferences as any).preferencesVersion).toBe(27)
+    expect((nextUpload.preferences as any).tempWindowFallback).toMatchObject({
+      automaticFeatureBypass: { account_refresh: false },
+    })
+    expect(
+      (nextUpload.preferences as any).tempWindowFallback,
+    ).not.toHaveProperty("useForAutoRefresh")
+  })
+
+  it("canonicalizes malformed current-version WebDAV preferences before the next upload", async () => {
+    await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      lastUpdated: 100,
+      sharedPreferencesLastUpdated: 100,
+    })
+    const storageSetSpy = vi.spyOn((userPreferences as any).storage, "set")
+    storageSetSpy.mockClear()
+    const imported = createWebdavImportPayloadBySelection({
+      rawBackup: {
+        version: "2.0",
+        timestamp: 200,
+        preferences: {
+          ...DEFAULT_PREFERENCES,
+          preferencesVersion: 27,
+          lastUpdated: 200,
+          sharedPreferencesLastUpdated: 200,
+          tempWindowFallback: {
+            enabled: false,
+            automaticFeatureBypass: {
+              account_refresh: false,
+              balance_history: "invalid",
+              checkin: true,
+            },
+            useForAutoRefresh: true,
+            useInSidePanel: true,
+            tempContextMode: "window",
+          },
+        },
+        channelConfigs: {},
+      } as any,
+      selection: {
+        accounts: false,
+        bookmarks: false,
+        apiCredentialProfiles: false,
+        preferences: true,
+      },
+      localState: {
+        accountsConfig: {
+          accounts: [],
+          bookmarks: [],
+          pinnedAccountIds: [],
+          orderedAccountIds: [],
+          last_updated: 100,
+        },
+        tagStore: { version: 1, tagsById: {} },
+        preferences: DEFAULT_PREFERENCES,
+        channelConfigs: {},
+        apiCredentialProfiles: { version: 2, profiles: [], lastUpdated: 0 },
+      },
+    })
+
+    try {
+      const result = await userPreferences.importPreferences(
+        imported.preferences!,
+        { preserveWebdav: true },
+      )
+
+      expect(result).toMatchObject({ ok: true })
+      expect(storageSetSpy).toHaveBeenCalledTimes(1)
+      const storedAfterImport = (await storage.get(
+        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+      )) as any
+      const nextUpload = filterWebdavBackupPayloadBySelection({
+        backup: {
+          version: "2.0",
+          timestamp: 300,
+          preferences: await userPreferences.exportPreferences(),
+          channelConfigs: {},
+        } as any,
+        selection: {
+          accounts: false,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: true,
+        },
+      })
+
+      expect(storageSetSpy).toHaveBeenCalledTimes(1)
+      expect(storedAfterImport.tempWindowFallback).toEqual({
+        enabled: false,
+        automaticFeatureBypass: {
+          account_refresh: false,
+          balance_history: true,
+          checkin: true,
+          redemption_assist: true,
+          ldoh_site_lookup: true,
+          key_management: true,
+          managed_site_channels: true,
+          managed_site_model_sync: true,
+        },
+        tempContextMode: "window",
+      })
+      expect(nextUpload.preferences).toMatchObject({
+        preferencesVersion: 27,
+        tempWindowFallback: storedAfterImport.tempWindowFallback,
+      })
+      expect(
+        (nextUpload.preferences as any).tempWindowFallback,
+      ).not.toHaveProperty("useForAutoRefresh")
+      expect(
+        (nextUpload.preferences as any).tempWindowFallback,
+      ).not.toHaveProperty("useInSidePanel")
+    } finally {
+      storageSetSpy.mockRestore()
+    }
   })
 })

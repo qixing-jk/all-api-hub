@@ -5,15 +5,19 @@ import {
   AUTO_DETECT_FETCH_CONTEXT_KINDS,
   AUTO_DETECT_STRATEGIES,
 } from "~/constants/autoDetect"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
-import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
+import { autoDetectSmart as autoDetectSmartProduction } from "~/services/siteDetection/autoDetectService"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 const {
+  mockExecuteProtectionBypassTask,
   mockFetchUserInfo,
   mockGetActiveOrAllTabs,
   mockGetActiveTabs,
@@ -21,9 +25,11 @@ const {
   mockGetCurrentTempWindowRequestSource,
   mockgetSiteTypeCapabilities,
   mockIsMessageReceiverUnavailableError,
+  mockIsExtensionBackground,
   mockReadAccountBrowserSessionFromTab,
   mockSendRuntimeMessage,
 } = vi.hoisted(() => ({
+  mockExecuteProtectionBypassTask: vi.fn(),
   mockFetchUserInfo: vi.fn(),
   mockGetActiveOrAllTabs: vi.fn(),
   mockGetActiveTabs: vi.fn(),
@@ -31,9 +37,18 @@ const {
   mockGetCurrentTempWindowRequestSource: vi.fn(),
   mockgetSiteTypeCapabilities: vi.fn(),
   mockIsMessageReceiverUnavailableError: vi.fn(),
+  mockIsExtensionBackground: vi.fn(),
   mockReadAccountBrowserSessionFromTab: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
 }))
+
+vi.mock("~/utils/browser", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser")>()
+  return {
+    ...actual,
+    isExtensionBackground: mockIsExtensionBackground,
+  }
+})
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: mockgetSiteTypeCapabilities,
@@ -70,6 +85,41 @@ vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
   getCurrentTempWindowRequestSource: mockGetCurrentTempWindowRequestSource,
 }))
 
+vi.mock("~/utils/browser/tempWindowFetch", () => ({
+  executeProtectionBypassTask: async (request: unknown) => {
+    if (!mockIsExtensionBackground()) {
+      return mockSendRuntimeMessage({
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        ...(request as object),
+      })
+    }
+
+    let response: unknown
+    let responded = false
+    await mockExecuteProtectionBypassTask(
+      request,
+      undefined,
+      (value: unknown) => {
+        if (!responded) response = value
+        responded = true
+      },
+    )
+    if (!responded) throw new Error("handler completed without response")
+    return response
+  },
+}))
+
+const testExecution = userCommandExecution(
+  PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+)
+
+function autoDetectSmart(
+  url: string,
+  protectionBypassExecution?: Parameters<typeof autoDetectSmartProduction>[1],
+) {
+  return autoDetectSmartProduction(url, protectionBypassExecution)
+}
+
 describe("autoDetectSmart", () => {
   const browserAny = globalThis.browser as any
   const originalRuntime = browserAny.runtime
@@ -77,7 +127,7 @@ describe("autoDetectSmart", () => {
   const originalWindow = (globalThis as any).window
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
 
     if (originalWindow === undefined) {
       delete (globalThis as any).window
@@ -93,6 +143,7 @@ describe("autoDetectSmart", () => {
     }
 
     mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.NEW_API)
+    mockIsExtensionBackground.mockReturnValue(false)
     mockGetCurrentTempWindowRequestSource.mockReturnValue(
       TEMP_WINDOW_REQUEST_SOURCES.Background,
     )
@@ -112,6 +163,81 @@ describe("autoDetectSmart", () => {
       id: 1,
       username: "tester",
     })
+  })
+
+  it.each(["MV3 service worker", "Firefox MV2 background page"])(
+    "routes background session detection directly through the coordinator in a %s",
+    async () => {
+      mockIsExtensionBackground.mockReturnValue(true)
+      mockExecuteProtectionBypassTask.mockImplementationOnce(
+        async (_request, sender, sendResponse) => {
+          expect(sender).toBeUndefined()
+          sendResponse({
+            success: true,
+            data: {
+              siteType: SITE_TYPES.NEW_API,
+              userId: "21",
+              user: { id: 21, username: "background-user" },
+            },
+          })
+        },
+      )
+
+      const result = await autoDetectSmart(
+        "https://unknown.example.invalid/account",
+        testExecution,
+      )
+
+      expect(result).toMatchObject({
+        success: true,
+        data: {
+          siteType: SITE_TYPES.NEW_API,
+          userId: "21",
+        },
+      })
+      expect(mockExecuteProtectionBypassTask).toHaveBeenCalledWith(
+        expect.objectContaining({
+          task: {
+            kind: "session_read",
+            params: expect.objectContaining({
+              siteType: SITE_TYPES.NEW_API,
+              url: "https://unknown.example.invalid/account",
+            }),
+          },
+        }),
+        undefined,
+        expect.any(Function),
+      )
+      expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    },
+  )
+
+  it("uses runtime messaging for non-background session detection", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "22",
+        user: { id: 22, username: "popup-user" },
+      },
+    })
+
+    const result = await autoDetectSmart(
+      "https://unknown.example.invalid/account",
+      testExecution,
+    )
+
+    expect(result.success).toBe(true)
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        task: {
+          kind: "session_read",
+          params: expect.objectContaining({ siteType: SITE_TYPES.NEW_API }),
+        },
+      }),
+    )
+    expect(mockExecuteProtectionBypassTask).not.toHaveBeenCalled()
   })
 
   afterEach(() => {
@@ -244,6 +370,64 @@ describe("autoDetectSmart", () => {
     expect(mockGetActiveTabs).not.toHaveBeenCalled()
   })
 
+  it("carries onboarding execution through current-tab session reads", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+    )
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 101,
+        active: true,
+        url: "https://example.com/dashboard",
+      },
+    ])
+    mockReadAccountBrowserSessionFromTab.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
+      siteType: SITE_TYPES.NEW_API,
+      userId: "12",
+      user: { id: 12, username: "alice" },
+    })
+
+    await autoDetectSmart(
+      "https://example.com/console",
+      protectionBypassExecution,
+    )
+
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledWith(
+      expect.objectContaining({ protectionBypassExecution }),
+    )
+  })
+
+  it("carries onboarding execution through background auto-detect messages", async () => {
+    const protectionBypassExecution = userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+    )
+    mockGetActiveOrAllTabs.mockResolvedValue([])
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "12",
+        user: { id: 12, username: "alice" },
+      },
+    })
+
+    await autoDetectSmart(
+      "https://example.com/console",
+      protectionBypassExecution,
+    )
+
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+        execution: protectionBypassExecution,
+        task: {
+          kind: "session_read",
+          params: expect.not.objectContaining({ protectionBypassExecution }),
+        },
+      }),
+    )
+  })
+
   it("returns privacy-safe current-tab metadata when current-tab detection succeeds", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
       {
@@ -275,7 +459,10 @@ describe("autoDetectSmart", () => {
       },
     })
 
-    const result = await autoDetectSmart("https://example.com/console")
+    const result = await autoDetectSmart(
+      "https://example.com/console",
+      testExecution,
+    )
 
     expect(result.autoDetectContext).toEqual({
       strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
@@ -308,7 +495,10 @@ describe("autoDetectSmart", () => {
       username: "api-incognito-user",
     })
 
-    const result = await autoDetectSmart("https://example.com/console")
+    const result = await autoDetectSmart(
+      "https://example.com/console",
+      testExecution,
+    )
 
     expect(result).toMatchObject({
       success: true,
@@ -340,6 +530,7 @@ describe("autoDetectSmart", () => {
         incognito: true,
         cookieStoreId: "1-incognito",
       },
+      protectionBypassExecution: testExecution,
     })
   })
 
@@ -443,7 +634,10 @@ describe("autoDetectSmart", () => {
       },
     ])
 
-    const result = await autoDetectSmart("https://example.com/console")
+    const result = await autoDetectSmart(
+      "https://example.com/console",
+      testExecution,
+    )
 
     expect(result.success).toBe(false)
     expect(mockgetSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.NEW_API)
@@ -510,7 +704,10 @@ describe("autoDetectSmart", () => {
       },
     })
 
-    const result = await autoDetectSmart("https://example.com/console")
+    const result = await autoDetectSmart(
+      "https://example.com/console",
+      testExecution,
+    )
 
     expect(result.success).toBe(true)
     expect(result.data).toMatchObject({
@@ -646,7 +843,7 @@ describe("autoDetectSmart", () => {
       },
     })
 
-    const result = await autoDetectSmart("https://aihubmix.com")
+    const result = await autoDetectSmart("https://aihubmix.com", testExecution)
 
     expect(result).toMatchObject({
       success: true,
@@ -661,10 +858,16 @@ describe("autoDetectSmart", () => {
     expect(result.data).not.toHaveProperty("fetchContext")
     expect(mockReadAccountBrowserSessionFromTab).not.toHaveBeenCalled()
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-      action: expect.any(String),
-      requestId: expect.any(String),
-      url: "https://aihubmix.com",
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+      action: RuntimeActionIds.ProtectionBypassExecuteTask,
+      execution: testExecution,
+      task: {
+        kind: "session_read",
+        params: {
+          requestId: expect.any(String),
+          siteType: SITE_TYPES.AIHUBMIX,
+          url: "https://aihubmix.com",
+        },
+      },
     })
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
@@ -682,14 +885,23 @@ describe("autoDetectSmart", () => {
     ])
     mockSendRuntimeMessage.mockResolvedValue(null)
 
-    const result = await autoDetectSmart("https://example.invalid")
+    const result = await autoDetectSmart(
+      "https://example.invalid",
+      testExecution,
+    )
 
     expect(result.success).toBe(true)
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-      action: expect.any(String),
-      requestId: expect.any(String),
-      url: "https://example.invalid",
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      action: RuntimeActionIds.ProtectionBypassExecuteTask,
+      execution: testExecution,
+      task: {
+        kind: "session_read",
+        params: {
+          requestId: expect.any(String),
+          siteType: SITE_TYPES.NEW_API,
+          url: "https://example.invalid",
+        },
+      },
     })
     expect(mockGetCurrentTempWindowRequestSource).toHaveBeenCalledTimes(1)
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
@@ -697,6 +909,7 @@ describe("autoDetectSmart", () => {
       auth: {
         authType: AuthTypeEnum.Cookie,
       },
+      protectionBypassExecution: testExecution,
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
     })
   })
@@ -864,7 +1077,10 @@ describe("autoDetectSmart", () => {
       },
     })
 
-    const result = await autoDetectSmart("https://example.invalid/console")
+    const result = await autoDetectSmart(
+      "https://example.invalid/console",
+      testExecution,
+    )
 
     expect(result).toMatchObject({
       success: true,
@@ -911,7 +1127,10 @@ describe("autoDetectSmart", () => {
       },
     })
 
-    const result = await autoDetectSmart("https://example.invalid/console")
+    const result = await autoDetectSmart(
+      "https://example.invalid/console",
+      testExecution,
+    )
 
     expect(result).toMatchObject({
       success: true,
@@ -944,7 +1163,10 @@ describe("autoDetectSmart", () => {
       },
     })
 
-    const result = await autoDetectSmart("https://example.com/console")
+    const result = await autoDetectSmart(
+      "https://example.com/console",
+      testExecution,
+    )
 
     expect(result.success).toBe(true)
     expect(result.data).toMatchObject({
@@ -958,12 +1180,18 @@ describe("autoDetectSmart", () => {
     })
     expect(mockReadAccountBrowserSessionFromTab).not.toHaveBeenCalled()
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-      action: expect.any(String),
-      requestId: expect.any(String),
-      url: "https://example.com/console",
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-      useIncognito: true,
-      cookieStoreId: "1-incognito",
+      action: RuntimeActionIds.ProtectionBypassExecuteTask,
+      execution: testExecution,
+      task: {
+        kind: "session_read",
+        params: {
+          requestId: expect.any(String),
+          siteType: SITE_TYPES.NEW_API,
+          url: "https://example.com/console",
+          useIncognito: true,
+          cookieStoreId: "1-incognito",
+        },
+      },
     })
   })
 
@@ -987,7 +1215,10 @@ describe("autoDetectSmart", () => {
       },
     })
 
-    const result = await autoDetectSmart("https://example.com/console")
+    const result = await autoDetectSmart(
+      "https://example.com/console",
+      testExecution,
+    )
 
     expect(result.success).toBe(true)
     expect(result.data).toMatchObject({
@@ -1002,12 +1233,18 @@ describe("autoDetectSmart", () => {
       },
     })
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-      action: expect.any(String),
-      requestId: expect.any(String),
-      url: "https://example.com/console",
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-      useIncognito: true,
-      cookieStoreId: "1-incognito",
+      action: RuntimeActionIds.ProtectionBypassExecuteTask,
+      execution: testExecution,
+      task: {
+        kind: "session_read",
+        params: {
+          requestId: expect.any(String),
+          siteType: SITE_TYPES.NEW_API,
+          url: "https://example.com/console",
+          useIncognito: true,
+          cookieStoreId: "1-incognito",
+        },
+      },
     })
   })
 
@@ -1028,7 +1265,10 @@ describe("autoDetectSmart", () => {
       username: "api-user",
     })
 
-    const result = await autoDetectSmart("https://example.com/console")
+    const result = await autoDetectSmart(
+      "https://example.com/console",
+      testExecution,
+    )
 
     expect(result).toMatchObject({
       success: true,
@@ -1336,7 +1576,10 @@ describe("autoDetectSmart", () => {
       },
     })
 
-    const result = await autoDetectSmart("https://example.com/console")
+    const result = await autoDetectSmart(
+      "https://example.com/console",
+      testExecution,
+    )
 
     expect(result.success).toBe(true)
     expect(result.data).toMatchObject({
@@ -1457,7 +1700,6 @@ describe("autoDetectSmart", () => {
       },
     })
     expect(result.data).not.toHaveProperty("fetchContext")
-    expect(mockGetAccountSiteType).toHaveBeenCalledWith("not a url")
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
       baseUrl: "not a url",
       auth: {

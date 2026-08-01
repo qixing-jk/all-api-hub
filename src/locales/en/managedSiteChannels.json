@@ -33,7 +33,6 @@
       "title": "AxonHub is unavailable"
     }
   },
-  "description": "Search, edit, delete, and manually sync channels connected to your managed site.",
   "dialog": {
     "cancel": "Cancel",
     "confirm": "Delete",
@@ -240,6 +239,19 @@
       "label": "Edit mode",
       "visual": "Visual edit"
     }
+  },
+  "gatewayGuidance": {
+    "clientHint": "External clients also need a calling key issued by this gateway.",
+    "empty": {
+      "description": "This self-hosted AI gateway has no channels yet. Import account keys or API keys first, then this gateway can provide one unified AI API to external clients.",
+      "importFromAccountKey": "Import channel from account Key",
+      "importFromApiKeyLibrary": "Import channel from API Credential Library",
+      "title": "No self-hosted AI gateway channels yet"
+    },
+    "headerDescription": "Manage channels in your self-hosted AI gateway and combine multiple account keys or API keys into one unified AI API.",
+    "openChannelConsole": "Open gateway channel management",
+    "openTokenConsole": "Open token management",
+    "unconfiguredValueDescription": "After configuration, you can import scattered account keys and API keys as gateway channels, then view and manage them directly in All API Hub."
   },
   "migration": {
     "actions": {

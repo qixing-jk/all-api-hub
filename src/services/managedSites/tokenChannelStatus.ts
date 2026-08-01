@@ -35,6 +35,7 @@ import {
   type ManagedSiteAssessmentChannel,
   type ManagedSiteVerifiedKeyAssessment,
 } from "~/services/managedSites/verifiedChannelKeyAssessment"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type { NewApiConfig } from "~/types/newApiConfig"
@@ -124,6 +125,7 @@ interface GetManagedSiteTokenChannelStatusParams {
   managedConfig?: ManagedSiteConfig | null
   resolvedChannelKeysById?: Record<number, string>
   operationContext?: ManagedSiteOperationContext
+  protectionBypassExecution?: ProtectionBypassExecution
 }
 
 interface ResolveManagedSiteTokenChannelStatusWithVerifiedKeyParams {
@@ -377,6 +379,7 @@ export async function getManagedSiteTokenChannelStatus(
       resolvedChannelKeysById: params.resolvedChannelKeysById,
       resolveHiddenKeys: true,
       requestCache: params.operationContext?.channelMatch,
+      protectionBypassExecution: params.protectionBypassExecution,
     })
     const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
     const exactMatch = getManagedSiteChannelExactMatch(resolution)

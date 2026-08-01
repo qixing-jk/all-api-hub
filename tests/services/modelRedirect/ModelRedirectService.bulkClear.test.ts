@@ -4,25 +4,21 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 
-const { resolveManagedUpstreamResourceFeatureCapabilitiesMock } = vi.hoisted(
-  () => ({
-    resolveManagedUpstreamResourceFeatureCapabilitiesMock: vi.fn(),
-  }),
-)
+const {
+  getSiteTypeCapabilitiesMock,
+  resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+} = vi.hoisted(() => ({
+  getSiteTypeCapabilitiesMock: vi.fn(),
+  resolveManagedUpstreamResourceFeatureCapabilitiesMock: vi.fn(),
+}))
 
 const listChannelsMock = vi.fn()
 const updateChannelModelMappingMock = vi.fn()
 
-vi.mock("~/services/models/modelSync", () => {
-  class ModelSyncServiceMock {
-    listChannels = listChannelsMock
-    updateChannelModelMapping = updateChannelModelMappingMock
-  }
-
-  return {
-    ModelSyncService: ModelSyncServiceMock,
-  }
-})
+vi.mock("~/services/apiAdapters/registry", () => ({
+  getSiteTypeCapabilities: (...args: unknown[]) =>
+    getSiteTypeCapabilitiesMock(...args),
+}))
 
 vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
   resolveManagedUpstreamResourceFeatureCapabilities: (...args: unknown[]) =>
@@ -47,7 +43,7 @@ const mockedUserPreferences = userPreferences as unknown as {
   getPreferences: ReturnType<typeof vi.fn>
 }
 
-describe("ModelRedirectService.clearChannelModelMappings", () => {
+describe("ModelRedirectService managed channel operations", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
@@ -55,6 +51,14 @@ describe("ModelRedirectService.clearChannelModelMappings", () => {
       siteType: SITE_TYPES.NEW_API,
       feature: "modelRedirect",
       reason: "feature-slice-disabled",
+    })
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      managedSites: {
+        channels: {
+          list: listChannelsMock,
+          updateModelMapping: updateChannelModelMappingMock,
+        },
+      },
     })
     mockedUserPreferences.getPreferences.mockResolvedValue({
       managedSiteType: SITE_TYPES.NEW_API,
@@ -85,6 +89,48 @@ describe("ModelRedirectService.clearChannelModelMappings", () => {
     expect(result.errors[0]).toContain("Managed site configuration is missing")
   })
 
+  it("lists the complete managed-site channel inventory", async () => {
+    const channels = [
+      { id: 1, name: "Example channel", models: "model-a,model-b" },
+    ]
+    listChannelsMock.mockResolvedValue({ items: channels })
+
+    await expect(
+      ModelRedirectService.listManagedSiteChannels(),
+    ).resolves.toEqual({
+      success: true,
+      channels,
+      errors: [],
+    })
+    expect(listChannelsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://example.com" }),
+    )
+  })
+
+  it("rejects search-only capabilities without clearing a partial channel inventory", async () => {
+    const searchChannelsMock = vi.fn().mockResolvedValue({ items: [] })
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      managedSites: {
+        channels: {
+          search: searchChannelsMock,
+          updateModelMapping: updateChannelModelMappingMock,
+        },
+      },
+    })
+
+    const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
+
+    expect(result).toMatchObject({
+      success: false,
+      totalSelected: 2,
+      clearedChannels: 0,
+      failedChannels: 2,
+      message: "Model redirect is not supported for this managed site",
+    })
+    expect(searchChannelsMock).not.toHaveBeenCalled()
+    expect(updateChannelModelMappingMock).not.toHaveBeenCalled()
+  })
+
   it("clears model mappings for all selected channels", async () => {
     listChannelsMock.mockResolvedValue({
       items: [
@@ -107,11 +153,15 @@ describe("ModelRedirectService.clearChannelModelMappings", () => {
     expect(result.failedChannels).toBe(0)
     expect(updateChannelModelMappingMock).toHaveBeenCalledTimes(2)
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 1 }),
+      expect.objectContaining({ baseUrl: "https://example.com" }),
+      1,
+      ["a", "b"],
       {},
     )
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 2 }),
+      expect.objectContaining({ baseUrl: "https://example.com" }),
+      2,
+      ["a", "b"],
       {},
     )
   })
@@ -134,11 +184,15 @@ describe("ModelRedirectService.clearChannelModelMappings", () => {
     expect(result.failedChannels).toBe(0)
     expect(updateChannelModelMappingMock).toHaveBeenCalledTimes(1)
     expect(updateChannelModelMappingMock).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 2 }),
+      expect.objectContaining({ baseUrl: "https://example.com" }),
+      2,
+      ["a", "b"],
       {},
     )
     expect(updateChannelModelMappingMock).not.toHaveBeenCalledWith(
-      expect.objectContaining({ id: 1 }),
+      expect.objectContaining({ baseUrl: "https://example.com" }),
+      1,
+      expect.anything(),
       {},
     )
   })

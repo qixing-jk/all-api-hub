@@ -8,6 +8,22 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 3.54.0
+- **New Features:**
+  - `OpenRouter`: You can now add OpenRouter as an account and view or refresh its balance in the extension. When adding the account, sign in to OpenRouter and let the extension create and save a `Management Key`, or paste an existing key manually. A newly created key is displayed only once. Other features are not currently supported. See [Account Management](./account-management.md).
+  - Website Verification Assistance: Independent controls are now available for eight automatic features, including account refresh, check-in, key management, and model sync. You can choose which features may open a temporary verification page. Turning them off can reduce interruptions, but the corresponding features may not complete automatically when a site requires Cloudflare or similar verification; complete it manually or re-enable the control when needed. Actions you start yourself are unaffected, and existing settings are migrated automatically.
+- **Experience Optimizations:**
+  - `AxonHub` Channel Management: You can now edit more channel settings, including supported models, the default test model, automatic sync and filtering rules, tags, sorting weight, notes, and an additional model prefix, without returning to the AxonHub backend to complete the configuration. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - Invitation Links: When copying invitation links for multiple accounts, queued accounts are no longer reported as timed out before their requests begin, and one slow site will not hold up the entire batch indefinitely. If some accounts fail or time out, links already retrieved are still preserved and returned in account order.
+- **Bug Fixes:**
+  - New API Account Detection: Added support for the new `rc.22` login flow. Automatic detection can now complete normally after you sign in, without repeatedly asking you to log in or failing after too many attempts. Older New API sites and existing accounts remain compatible. See [Auto-detection Troubleshooting Guide](./auto-detect.md).
+  - Dialog Interactions: Selecting text inside a dialog or dragging the pointer onto the outer overlay no longer closes the entire dialog by mistake. Clicking the overlay directly still closes it as expected.
+
+**Location Hints:**
+- `OpenRouter` account: Add an account under "Settings → Account Management", enter `https://openrouter.ai`, then create a `Management Key` and run detection, or switch to manual addition.
+- Website verification assistance: Adjust the master control, temporary-page opening mode, and individual automatic-feature controls under "Settings → Data Refresh → Website Verification Assistance".
+- `AxonHub` channel management: Select and configure `AxonHub` under "Settings → Self-Hosted Site Management", then open "Settings → Channel Management" to view and manage channels.
+
 ## 3.53.0
 - **New Features:**
   - Invitation Links: You can now copy invitation links directly from an individual account menu or batch selection on supported sites. Clear reasons are shown if a site has not enabled invitations or if retrieval fails, and already retrieved links are preserved during batch copying.

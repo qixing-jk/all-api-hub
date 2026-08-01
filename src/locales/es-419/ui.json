@@ -41,6 +41,7 @@
       "folderCount_one": "{{count}} carpeta",
       "folderCount_many": "{{count}} carpetas",
       "folderCount_other": "{{count}} carpetas",
+      "importFailed": "No se pudo completar la importación. Inténtalo de nuevo.",
       "importing": "Importando {{completed}} de {{total}} sitios seleccionados...",
       "includeExisting": "Incluir sitios que ya tienen cuentas guardadas",
       "initialSteps": {
@@ -399,12 +400,12 @@
         "notNow": "Ahora no",
         "openSettings": "Abrir ajustes"
       },
-      "descriptionDisabledTempWindowOnly": "{{accountName}} necesita abrir una ventana emergente temporal y pasar la protección para que las solicitudes se completen correctamente. Habilítala en Ajustes > Actualización de datos",
-      "descriptionDisabledWithCookieInterceptor": "{{accountName}} necesita el flujo de omisión de protección en Firefox. Se abrirá una ventana emergente temporal para obtener cookies y Cookie Interceptor las adjuntará a las solicitudes. Habilítalo en Ajustes > Actualización de datos",
-      "descriptionPermissionTempWindowOnly": "{{accountName}} necesita permiso para abrir una ventana emergente temporal para que las solicitudes se completen correctamente. Concédelo en Ajustes > Permisos",
-      "descriptionPermissionWithCookieInterceptor": "{{accountName}} necesita permisos de Cookie Interceptor en Firefox. La ventana emergente temporal debe abrirse para obtener cookies y las solicitudes las adjuntarán. Concédelo en Ajustes > Permisos",
-      "titleTempWindowOnly": "Habilitar modo de ventana temporal para solicitudes",
-      "titleWithCookieInterceptor": "Habilitar omisión de protección para solicitudes"
+      "descriptionDisabledTempWindowOnly": "La actualización automática de {{accountName}} encontró una verificación del sitio, pero las tareas automáticas no pueden abrir páginas temporales. Activa esta opción en Ajustes > Actualización de datos.",
+      "descriptionDisabledWithCookieInterceptor": "La actualización automática de {{accountName}} encontró una verificación del sitio, pero las tareas automáticas no pueden abrir páginas temporales. Activa esta opción en Ajustes > Actualización de datos.",
+      "descriptionPermissionTempWindowOnly": "La actualización automática de {{accountName}} necesita abrir una página temporal para verificar el sitio. Concede el permiso necesario en Ajustes > Permisos.",
+      "descriptionPermissionWithCookieInterceptor": "La actualización automática de {{accountName}} necesita los permisos Cookies, Web Request y Web Request Blocking para verificar el sitio. Concédelos en Ajustes > Permisos.",
+      "titleTempWindowOnly": "La actualización automática necesita verificar el sitio",
+      "titleWithCookieInterceptor": "La actualización automática necesita verificar el sitio"
     },
     "updateLog": {
       "autoOpenSetting": "Apertura automática del registro de cambios",
@@ -490,6 +491,7 @@
     "sidebarCollapsedHint": "Barra lateral contraída, solo se muestran íconos",
     "siteAnnouncements": "Anuncios del sitio",
     "toggleMenu": "Alternar menú",
+    "unifiedApiGuidancePreview": "Vista previa de guía Unified API (Dev)",
     "usageAnalytics": "Analítica de uso"
   },
   "optionsSearch": {

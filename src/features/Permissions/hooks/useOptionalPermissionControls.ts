@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -75,8 +75,12 @@ export function useOptionalPermissionControls({
     pending: buildState(permissionIds, false),
   }))
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const loadGenerationRef = useRef(0)
 
   useEffect(() => {
+    loadGenerationRef.current += 1
+    setHasLoaded(false)
     setState((prev) => ({
       statuses: {
         ...prev.statuses,
@@ -92,41 +96,50 @@ export function useOptionalPermissionControls({
   const loadStatuses = useCallback(async () => {
     if (!enabled || permissionIds.length === 0) return
 
+    const loadGeneration = ++loadGenerationRef.current
     setIsRefreshing(true)
     logger.debug("Checking optional permission statuses")
     try {
-      const results = await Promise.all(
+      const results = await Promise.allSettled(
         permissionIds.map(async (id) => ({
           id,
           granted: await hasPermission(id),
         })),
       )
+      if (loadGeneration !== loadGenerationRef.current) return
+
       logger.debug("Optional permission statuses resolved", { results })
+
+      const statuses = permissionIds.reduce(
+        (acc, id, index) => {
+          const result = results[index]
+          acc[id] = result?.status === "fulfilled" ? result.value.granted : null
+          if (result?.status === "rejected") {
+            logger.error("Failed to check optional permission status", {
+              id,
+              error: result.reason,
+            })
+          }
+          return acc
+        },
+        {} as Record<ManifestOptionalPermissions, boolean | null>,
+      )
 
       setState((prev) => ({
         ...prev,
         statuses: {
           ...prev.statuses,
-          ...results.reduce(
-            (acc, curr) => ({
-              ...acc,
-              [curr.id]: curr.granted,
-            }),
-            {} as Record<ManifestOptionalPermissions, boolean>,
-          ),
+          ...statuses,
         },
       }))
     } catch (error) {
+      if (loadGeneration !== loadGenerationRef.current) return
       logger.error("Failed to check optional permission statuses", { error })
-      setState((prev) => ({
-        ...prev,
-        statuses: {
-          ...prev.statuses,
-          ...buildState<boolean>(permissionIds, false),
-        },
-      }))
     } finally {
-      setIsRefreshing(false)
+      if (loadGeneration === loadGenerationRef.current) {
+        setHasLoaded(true)
+        setIsRefreshing(false)
+      }
     }
   }, [enabled, logger, permissionIds])
 
@@ -139,6 +152,7 @@ export function useOptionalPermissionControls({
     })
 
     return () => {
+      loadGenerationRef.current += 1
       unsubscribe()
     }
   }, [enabled, loadStatuses])
@@ -258,8 +272,8 @@ export function useOptionalPermissionControls({
   )
 
   const isLoading = useMemo(
-    () => permissionIds.some((id) => state.statuses[id] === null),
-    [permissionIds, state.statuses],
+    () => enabled && permissionIds.length > 0 && !hasLoaded,
+    [enabled, hasLoaded, permissionIds.length],
   )
   const isAnyPending = useMemo(
     () => permissionIds.some((id) => state.pending[id]),
@@ -275,13 +289,15 @@ export function useOptionalPermissionControls({
         granted: state.statuses[id],
         statusLabel:
           state.statuses[id] === null
-            ? t("permissions.status.checking")
+            ? isLoading
+              ? t("permissions.status.checking")
+              : t("permissions.status.unavailable")
             : state.statuses[id]
               ? t("permissions.status.granted")
               : t("permissions.status.denied"),
         pending: state.pending[id],
       })),
-    [permissionIds, state.pending, state.statuses, t],
+    [isLoading, permissionIds, state.pending, state.statuses, t],
   )
 
   return {

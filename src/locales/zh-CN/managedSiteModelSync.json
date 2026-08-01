@@ -1,5 +1,5 @@
 {
-  "description": "自动同步您管理站点中所有渠道的模型列表，确保与上游保持一致",
+  "description": "自动更新自建 AI 网关中的模型列表，减少手动维护；渠道创建后可按需开启。",
   "execution": {
     "actions": {
       "refresh": "刷新结果",
@@ -100,6 +100,9 @@
     "warning": {
       "syncCompletedWithFailures": "同步已完成，但仍有 {{failed}} 个渠道失败（成功：{{success}}/{{total}}）。你可以直接重试失败项。"
     }
+  },
+  "optionalGuidance": {
+    "description": "模型同步可自动更新网关模型列表、映射或路由，减少手动维护；它是渠道创建后的增强功能，不影响已有渠道作为统一 AI API 使用。"
   },
   "settings": {
     "allowedModels": "允许的模型列表",

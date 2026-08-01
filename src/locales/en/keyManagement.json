@@ -65,16 +65,17 @@
       "selectAll": "{{selected}}/{{total}} selected",
       "start": "Start import",
       "verifyAndRefresh": "Verify and refresh preview",
-      "verifying": "Verifying..."
+      "verifying": "Verifying...",
+      "viewChannels": "View channels"
     },
     "blockedReasons": {
-      "baseUrlRequired": "Base URL is required by the target managed site.",
-      "configMissing": "Managed-site admin configuration is missing.",
+      "baseUrlRequired": "Base URL is required by the target self-hosted AI gateway.",
+      "configMissing": "Self-hosted AI gateway admin configuration is missing.",
       "inputPreparationFailed": "Could not prepare channel data for this key.",
       "keyRequired": "The generated channel key is empty.",
       "modelsRequired": "No models were resolved for this key.",
       "nameRequired": "The generated channel name is empty.",
-      "realKeyRequired": "The target managed site requires a real provider key.",
+      "realKeyRequired": "The target self-hosted AI gateway requires a real provider key.",
       "secretResolutionFailed": "Could not resolve the real token secret."
     },
     "confirm": {
@@ -88,6 +89,7 @@
       "groups": "Groups",
       "models": "Models"
     },
+    "gatewayDescription": "This imports account keys as self-hosted AI gateway channels. After import, multiple keys can be used by clients through one AI API.",
     "loadingDescription": "Preparing preview for {{selectedCount}} selected keys.",
     "messages": {
       "completed": "Batch import completed: {{created}} created, {{failed}} failed, {{skipped}} skipped.",
@@ -122,10 +124,10 @@
       "skipped": "Skipped",
       "warning": "Warning"
     },
-    "title": "Batch import to managed site",
+    "title": "Batch import to self-hosted AI gateway",
     "warnings": {
       "backendSearchFailed": "Duplicate check could not reach the target backend.",
-      "dedupeUnsupported": "The current managed site cannot reliably check duplicates by Base URL.",
+      "dedupeUnsupported": "The current self-hosted AI gateway cannot reliably check duplicates by Base URL.",
       "exactVerificationUnavailable": "An existing channel may match, but exact key verification is unavailable.",
       "matchRequiresConfirmation": "A similar channel exists; review before creating.",
       "modelPrefillFailed": "Model prefill failed; using the best available model list."
@@ -193,6 +195,10 @@
     "description": "The extension could not load keys for this account. The session may have expired, permissions may be insufficient, or the site may be temporarily unavailable. Sign in to the site again, then retry.\n\nError: {{error}}",
     "openSite": "Open site",
     "title": "Failed to load keys"
+  },
+  "managedSiteSetupRecovery": {
+    "configureManagedSite": "Configure self-hosted AI gateway",
+    "description": "Configure your self-hosted AI gateway to import account keys as gateway channels and combine them into one unified AI API."
   },
   "managedSiteStatus": {
     "actions": {
@@ -407,6 +413,9 @@
   "title": "Key Management",
   "totalKeys_one": "Total {{count}} key",
   "totalKeys_other": "Total {{count}} keys",
+  "unifiedApiGuidance": {
+    "headerBridge": "Import account keys into your self-hosted AI gateway so multiple keys can be used through one AI API. Direct client-tool export remains the no-gateway path."
+  },
   "unsupportedSource": {
     "description": "This account's site type can be saved, but the extension has not adapted its key-list protocol yet. Submit a site-support request to help us add key-management support.",
     "requestSiteSupport": "Request site support",

@@ -1,6 +1,7 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { SITE_TYPES } from "~/constants/siteType"
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   DEFAULT_PREFERENCES,
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
@@ -38,6 +39,11 @@ import {
   type ProductAnalyticsModeId,
 } from "./contracts"
 import { trackProductAnalyticsEvent } from "./dispatch"
+import {
+  SETTINGS_SNAPSHOT_AUTOMATIC_BYPASS_ENABLED_PROPERTY,
+  SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTY_FEATURES,
+  type SettingsSnapshotAutomaticFeatureBypassProperty,
+} from "./settingsSnapshot"
 import { getWebdavSyncStrategyMode } from "./webDavSync"
 
 type SettingChangedPayload = ProductAnalyticsEventPayload<
@@ -318,9 +324,22 @@ function getWebAiApiCheckPreferences(
 function getTempWindowFallbackPreferences(
   preferences: UserPreferences,
 ): TempWindowFallbackPreferences {
-  return (
-    preferences.tempWindowFallback ?? DEFAULT_PREFERENCES.tempWindowFallback!
+  return normalizeTempWindowFallbackPreferences(
+    preferences.tempWindowFallback ?? DEFAULT_PREFERENCES.tempWindowFallback,
   )
+}
+
+function buildAutomaticFeatureBypassSnapshot(
+  config: TempWindowFallbackPreferences,
+): Record<SettingsSnapshotAutomaticFeatureBypassProperty, boolean> {
+  return Object.fromEntries(
+    Object.entries(
+      SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTY_FEATURES,
+    ).map(([property, feature]) => [
+      property,
+      config.automaticFeatureBypass[feature],
+    ]),
+  ) as Record<SettingsSnapshotAutomaticFeatureBypassProperty, boolean>
 }
 
 function buildAccountBehaviorSnapshot(
@@ -512,11 +531,7 @@ function buildTempWindowFallbackSnapshot(
     setting_id: PRODUCT_ANALYTICS_SETTING_IDS.TempWindowFallbackConfigSnapshot,
     entrypoint,
     enabled: config.enabled === true,
-    popup_enabled: config.useInPopup === true,
-    sidepanel_enabled: config.useInSidePanel === true,
-    options_enabled: config.useInOptions === true,
-    auto_refresh_enabled: config.useForAutoRefresh === true,
-    manual_refresh_enabled: config.useForManualRefresh === true,
+    ...buildAutomaticFeatureBypassSnapshot(config),
     mode: getTempWindowMode(config.tempContextMode),
     reminder_dismissed: reminderConfig.dismissed === true,
   }
@@ -872,15 +887,11 @@ export function buildAggregateSettingsSnapshotEvent(
       webAiApiCheck.auto_detect_enhanced_enabled,
     web_ai_api_check_auto_detect_patterns_configured:
       webAiApiCheck.auto_detect_url_patterns_configured,
-    temp_window_fallback_enabled: tempWindowFallback.enabled,
-    temp_window_fallback_popup_enabled: tempWindowFallback.popup_enabled,
-    temp_window_fallback_sidepanel_enabled:
-      tempWindowFallback.sidepanel_enabled,
-    temp_window_fallback_options_enabled: tempWindowFallback.options_enabled,
-    temp_window_fallback_auto_refresh_enabled:
-      tempWindowFallback.auto_refresh_enabled,
-    temp_window_fallback_manual_refresh_enabled:
-      tempWindowFallback.manual_refresh_enabled,
+    [SETTINGS_SNAPSHOT_AUTOMATIC_BYPASS_ENABLED_PROPERTY]:
+      tempWindowFallback.enabled,
+    ...buildAutomaticFeatureBypassSnapshot(
+      getTempWindowFallbackPreferences(preferences),
+    ),
     temp_window_fallback_mode: tempWindowFallback.mode,
     temp_window_fallback_reminder_dismissed:
       tempWindowFallback.reminder_dismissed,

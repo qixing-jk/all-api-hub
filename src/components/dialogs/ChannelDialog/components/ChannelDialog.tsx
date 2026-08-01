@@ -42,12 +42,24 @@ import {
 } from "~/services/managedSites/providers/newApiSession"
 import { getManagedSiteConfigMissingMessage } from "~/services/managedSites/utils/managedSite"
 import {
+  createAutomaticProtectionBypassExecution,
+  withProtectionBypassUserCommand,
+} from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+  type ProtectionBypassExecution,
+} from "~/services/protectionBypass/contracts"
+import {
   CHANNEL_STATUS,
   type ChannelFormData,
   type ChannelStatus,
   type ManagedSiteChannel,
 } from "~/types/managedSite"
 import { OctopusOutboundType } from "~/types/octopus"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
 import { ChannelCommonFieldsBody } from "./ChannelCommonFieldsBody"
 import { ChannelEditorShell } from "./ChannelEditorShell"
@@ -321,6 +333,7 @@ export function ChannelDialog({
 
   const reassessDuplicateWarning = async (options?: {
     resolveHiddenKeys?: boolean
+    channelId?: number
   }) => {
     const service = await getManagedSiteService()
     const managedConfig = await service.getConfig()
@@ -331,14 +344,34 @@ export function ChannelDialog({
       )
     }
 
-    const resolution = await resolveManagedSiteChannelMatch({
-      service,
-      managedConfig,
-      accountBaseUrl: formData.base_url,
-      models: formData.models,
-      key: formData.key,
-      resolveHiddenKeys: options?.resolveHiddenKeys,
-    })
+    const resolveDuplicate = async (
+      protectionBypassExecution: ProtectionBypassExecution,
+    ) =>
+      await resolveManagedSiteChannelMatch({
+        service,
+        managedConfig,
+        accountBaseUrl: formData.base_url,
+        models: formData.models,
+        key: formData.key,
+        resolveHiddenKeys: options?.resolveHiddenKeys,
+        hiddenKeyChannelIds: options?.channelId
+          ? [options.channelId]
+          : undefined,
+        protectionBypassExecution,
+      })
+    const resolution = options?.resolveHiddenKeys
+      ? await withProtectionBypassUserCommand(
+          PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
+          PROTECTION_BYPASS_SURFACES.Options,
+          resolveDuplicate,
+        )
+      : await resolveDuplicate(
+          createAutomaticProtectionBypassExecution(
+            PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+            PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+            getCurrentTempWindowRequestSource(),
+          ),
+        )
     const exactMatch = getManagedSiteChannelExactMatch(resolution)
 
     if (exactMatch) {
@@ -414,8 +447,13 @@ export function ChannelDialog({
         totpSecret: newApiTotpSecret,
       },
       onVerified: async () => {
+        const candidateChannelId =
+          currentAdvisoryWarning.assessment?.models.channel?.id ??
+          currentAdvisoryWarning.assessment?.url.channel?.id
+        if (!candidateChannelId) return
         const duplicateState = await reassessDuplicateWarning({
           resolveHiddenKeys: true,
+          channelId: candidateChannelId,
         })
 
         if (duplicateState.exactDuplicateChannelName) {

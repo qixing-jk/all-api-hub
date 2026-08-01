@@ -11,11 +11,24 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
+import {
+  PROTECTION_BYPASS_SURFACES,
+  PROTECTION_BYPASS_USER_COMMANDS,
+  type ProtectionBypassSurface,
+  type ProtectionBypassUserCommand,
+} from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { openSettingsTab } from "~/utils/navigation"
-import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const { toast, getCurrentTempWindowRequestSourceMock } = vi.hoisted(() => ({
   toast: {
@@ -57,9 +70,14 @@ vi.mock("react-hot-toast", () => ({
   default: toast,
 }))
 
-const { setAccountDisabledMock, deleteAccountMock } = vi.hoisted(() => ({
+const {
+  setAccountDisabledMock,
+  deleteAccountMock,
+  withProtectionBypassUserCommandMock,
+} = vi.hoisted(() => ({
   setAccountDisabledMock: vi.fn(),
   deleteAccountMock: vi.fn(),
+  withProtectionBypassUserCommandMock: vi.fn(),
 }))
 
 const {
@@ -87,6 +105,15 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     trackProductAnalyticsActionCompletedMock,
   trackProductAnalyticsActionStarted: trackProductAnalyticsActionStartedMock,
 }))
+
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/protectionBypass/client")>()
+  return {
+    ...actual,
+    withProtectionBypassUserCommand: withProtectionBypassUserCommandMock,
+  }
+})
 
 vi.mock("~/utils/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/navigation")>()
@@ -140,6 +167,13 @@ describe("AutoCheckin account actions", () => {
       complete: completeProductAnalyticsActionMock,
     })
     trackProductAnalyticsActionCompletedMock.mockReset()
+    withProtectionBypassUserCommandMock.mockImplementation(
+      async (
+        command: ProtectionBypassUserCommand,
+        surface: ProtectionBypassSurface,
+        work: (execution: unknown) => Promise<unknown>,
+      ) => work(userCommandExecution(command, surface)),
+    )
   })
 
   it("opens auto check-in settings from the title shortcut", async () => {
@@ -225,8 +259,16 @@ describe("AutoCheckin account actions", () => {
         AutoCheckinMessageTypes.RetryAccount,
         {
           accountId: "alpha",
-          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount,
+            PROTECTION_BYPASS_SURFACES.Popup,
+          ),
         },
+      )
+      expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
+        PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount,
+        PROTECTION_BYPASS_SURFACES.Popup,
+        expect.any(Function),
       )
     })
     expect(getCurrentTempWindowRequestSourceMock).toHaveBeenCalledTimes(1)
@@ -264,7 +306,6 @@ describe("AutoCheckin account actions", () => {
   })
 
   it("shows a retry failure toast and restores the retry button after the request settles", async () => {
-    const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
 
     let resolveRetry:
@@ -293,7 +334,10 @@ describe("AutoCheckin account actions", () => {
         if (message === AutoCheckinMessageTypes.RetryAccount) {
           expect(data).toEqual({
             accountId: "alpha",
-            tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+            protectionBypassExecution: userCommandExecution(
+              PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount,
+              PROTECTION_BYPASS_SURFACES.Background,
+            ),
           })
           return await new Promise<{ success: boolean; error?: string }>(
             (resolve) => {
@@ -310,17 +354,27 @@ describe("AutoCheckin account actions", () => {
     const retryButton = await screen.findByRole("button", {
       name: "autoCheckin:execution.actions.retryAccount",
     })
-    await user.click(retryButton)
+    fireEvent.click(retryButton)
+    fireEvent.click(retryButton)
 
     await waitFor(() => {
       expect(retryButton).toBeDisabled()
     })
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledTimes(1)
     await waitFor(() => {
+      expect(
+        sendRuntimeMessageSpy.mock.calls.filter(
+          ([message]) => message === AutoCheckinMessageTypes.RetryAccount,
+        ),
+      ).toHaveLength(1)
       expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
         AutoCheckinMessageTypes.RetryAccount,
         {
           accountId: "alpha",
-          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.RetryCheckinAccount,
+            PROTECTION_BYPASS_SURFACES.Background,
+          ),
         },
       )
     })

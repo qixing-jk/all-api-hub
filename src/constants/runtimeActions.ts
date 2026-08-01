@@ -61,19 +61,12 @@ export const RuntimeActionIds = {
   ),
   CloudflareGuardLog: "cloudflareGuardLog",
 
-  OpenTempWindow: "openTempWindow",
   CloseTempWindow: "closeTempWindow",
-  AutoDetectSite: "autoDetectSite",
-  TempWindowFetch: "tempWindowFetch",
-  TempWindowTurnstileFetch: "tempWindowTurnstileFetch",
-  TempWindowCheckinPageAction: "tempWindowCheckinPageAction",
-  TempWindowOpenRouterManagementKeyAction:
-    "tempWindowOpenRouterManagementKeyAction",
   TempWindowCancelOpenRouterManagementKeyAction:
     "tempWindowCancelOpenRouterManagementKeyAction",
   TempWindowOpenRouterManagementKeyDispatched:
     "tempWindowOpenRouterManagementKeyDispatched",
-  TempWindowGetRenderedTitle: "tempWindowGetRenderedTitle",
+  ProtectionBypassExecuteTask: "protectionBypass:executeTask",
 
   CookieInterceptorTrackUrl: composeRuntimeAction(
     RuntimeActionPrefixes.CookieInterceptor,

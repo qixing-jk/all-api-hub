@@ -140,7 +140,7 @@ describe("tempWindowPool native check-in page action", () => {
 
   it("refuses invalid native page action requests before opening a context", async () => {
     const { handleTempWindowCheckinPageAction } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -164,7 +164,7 @@ describe("tempWindowPool native check-in page action", () => {
 
   it("resolves page identity and triggers the page action when identity matches", async () => {
     const { handleTempWindowCheckinPageAction } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -235,7 +235,7 @@ describe("tempWindowPool native check-in page action", () => {
     )
 
     const { handleTempWindowCheckinPageAction } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -284,7 +284,7 @@ describe("tempWindowPool native check-in page action", () => {
     )
 
     const { handleTempWindowCheckinPageAction } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -339,7 +339,7 @@ describe("tempWindowPool native check-in page action", () => {
     )
 
     const { handleTempWindowCheckinPageAction } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -406,7 +406,7 @@ describe("tempWindowPool native check-in page action", () => {
     )
 
     const { handleTempWindowCheckinPageAction } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -440,7 +440,9 @@ describe("tempWindowPool native check-in page action", () => {
     const {
       handleTempWindowCheckinPageAction,
       handleTempWindowTurnstileFetch,
-    } = await import("~/entrypoints/background/tempWindowPool")
+    } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
 
     const firstRequest = handleTempWindowCheckinPageAction(
       {
@@ -570,7 +572,7 @@ describe("tempWindowPool native check-in page action", () => {
 
   it("verifies the live tab url before reusing a cached temp context page", async () => {
     const { handleTempWindowCheckinPageAction } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const firstRequest = handleTempWindowCheckinPageAction(
@@ -651,7 +653,7 @@ describe("tempWindowPool native check-in page action", () => {
     )
 
     const { handleTempWindowCheckinPageAction } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const sendResponse = vi.fn()
@@ -709,7 +711,7 @@ describe("tempWindowPool native check-in page action", () => {
     )
 
     const { handleTempWindowCheckinPageAction } = await import(
-      "~/entrypoints/background/tempWindowPool"
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
 
     const noResponse = vi.fn()

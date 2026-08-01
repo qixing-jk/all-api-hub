@@ -1,4 +1,5 @@
 import type { DeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import type {
   TempWindowFallbackAllowlist,
@@ -103,6 +104,8 @@ export interface ApiTransportRequest {
   fetchContext?: ApiTransportFetchContext
   /** Originating extension surface for temporary-window presentation policy. */
   tempWindowRequestSource?: TempWindowRequestSource
+  /** Invocation intent for protected temporary-context work. */
+  protectionBypassExecution?: ProtectionBypassExecution
   /** Skip the generic per-site limiter when the caller already applies a narrower limiter. */
   bypassSiteRequestLimit?: boolean
 }

@@ -78,6 +78,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import {
   ApiToken,
@@ -372,6 +373,7 @@ export function parseManualQuotaFromUsd(
 export async function autoDetectAccount(
   url: string,
   authType: AuthTypeEnum,
+  protectionBypassExecution?: ProtectionBypassExecution,
 ): Promise<AccountAutoDetectResponse> {
   if (!url.trim()) {
     return {
@@ -407,7 +409,10 @@ export async function autoDetectAccount(
     }
 
     // 使用智能自动识别服务
-    const detectResult = await autoDetectSmart(url.trim())
+    const detectResult = await autoDetectSmart(
+      url.trim(),
+      protectionBypassExecution,
+    )
     autoDetectContext = detectResult.autoDetectContext
 
     if (!detectResult.success || !detectResult.data) {
@@ -465,6 +470,7 @@ export async function autoDetectAccount(
       requestedAuthType: authType,
       detected: detectResult.data,
       autoDetectContext,
+      protectionBypassExecution,
     })
 
     return {

@@ -69,8 +69,9 @@ describe("runtimeActions registry and helpers", () => {
     expect(RuntimeActionIds.ContentPerformTempWindowFetch).toBe(
       "performTempWindowFetch",
     )
-    expect(RuntimeActionIds.OpenTempWindow).toBe("openTempWindow")
-    expect(RuntimeActionIds.TempWindowFetch).toBe("tempWindowFetch")
+    expect(RuntimeActionIds.ProtectionBypassExecuteTask).toBe(
+      "protectionBypass:executeTask",
+    )
     expect(RuntimeActionIds.CloudflareGuardLog).toBe("cloudflareGuardLog")
     expect(RuntimeActionIds.OpenSettingsWebAiApiCheck).toBe(
       "openSettings:webAiApiCheck",

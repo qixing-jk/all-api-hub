@@ -30,13 +30,19 @@ const createDeferred = <T,>() => {
 }
 
 const {
-  mockBuildBatchExportResult,
   mockCompleteProductAnalyticsAction,
+  mockTrackProductAnalyticsActionCompleted,
+  mockTrackProductAnalyticsActionStarted,
+  mockExecuteManagedSiteTokenBatchExport,
+  mockPrepareManagedSiteTokenBatchExportPreview,
   mockSaveApiCredentialProfiles,
   mockStartProductAnalyticsAction,
 } = vi.hoisted(() => ({
-  mockBuildBatchExportResult: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
+  mockTrackProductAnalyticsActionCompleted: vi.fn(),
+  mockTrackProductAnalyticsActionStarted: vi.fn(),
+  mockExecuteManagedSiteTokenBatchExport: vi.fn(),
+  mockPrepareManagedSiteTokenBatchExportPreview: vi.fn(),
   mockSaveApiCredentialProfiles: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
 }))
@@ -44,6 +50,10 @@ const {
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: (...args: unknown[]) =>
     mockStartProductAnalyticsAction(...args),
+  trackProductAnalyticsActionCompleted: (...args: unknown[]) =>
+    mockTrackProductAnalyticsActionCompleted(...args),
+  trackProductAnalyticsActionStarted: (...args: unknown[]) =>
+    mockTrackProductAnalyticsActionStarted(...args),
 }))
 
 vi.mock(
@@ -127,56 +137,12 @@ vi.mock(
   }),
 )
 
-vi.mock(
-  "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog",
-  () => ({
-    ManagedSiteTokenBatchExportDialog: ({
-      isOpen,
-      items,
-      onClose,
-      onCompleted,
-    }: {
-      isOpen: boolean
-      items: Array<{
-        account: { id: string }
-        runtimeKey: {
-          id: string
-          label: string
-          token?: { accountId: string; id: number }
-        }
-      }>
-      onClose: () => void
-      onCompleted?: (result: {
-        totalSelected: number
-        attemptedCount: number
-        createdCount: number
-        failedCount: number
-        skippedCount: number
-        items: Array<{
-          id: string
-          accountName: string
-          runtimeKeyName: string
-          success: boolean
-          skipped: boolean
-        }>
-      }) => void
-    }) =>
-      isOpen ? (
-        <div data-testid="batch-export-dialog">
-          <div data-testid="batch-export-item-count">{items.length}</div>
-          <button
-            type="button"
-            onClick={() => onCompleted?.(mockBuildBatchExportResult(items))}
-          >
-            Complete batch export
-          </button>
-          <button type="button" onClick={onClose}>
-            Close batch export
-          </button>
-        </div>
-      ) : null,
-  }),
-)
+vi.mock("~/services/managedSites/tokenBatchExport", () => ({
+  executeManagedSiteTokenBatchExport: (...args: unknown[]) =>
+    mockExecuteManagedSiteTokenBatchExport(...args),
+  prepareManagedSiteTokenBatchExportPreview: (...args: unknown[]) =>
+    mockPrepareManagedSiteTokenBatchExportPreview(...args),
+}))
 
 const account = createAccount({ id: "acc-1", name: "Account 1" })
 const token1 = createToken({
@@ -230,29 +196,56 @@ describe("TokenList batch export selection", () => {
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
     })
-    mockBuildBatchExportResult.mockImplementation((items) => ({
-      totalSelected: items.length,
-      attemptedCount: items.length,
-      createdCount: items.length,
-      failedCount: 0,
-      skippedCount: 0,
-      items: items.map(
-        (item: {
-          account: { id: string }
-          runtimeKey: {
-            id: string
-            label: string
-            token?: { accountId: string; id: number }
-          }
-        }) => ({
-          id: item.runtimeKey.id,
-          accountName: item.account.id,
-          runtimeKeyName: item.runtimeKey.label,
+    mockPrepareManagedSiteTokenBatchExportPreview.mockImplementation(
+      ({ items }) => ({
+        siteType: "new-api",
+        totalCount: items.length,
+        readyCount: items.length,
+        warningCount: 0,
+        skippedCount: 0,
+        blockedCount: 0,
+        items: items.map(
+          ({
+            account,
+            runtimeKey,
+          }: {
+            account: { id: string; name: string }
+            runtimeKey: { id: string; label: string }
+          }) => ({
+            id: runtimeKey.id,
+            accountId: account.id,
+            accountName: account.name,
+            runtimeKeyId: runtimeKey.id,
+            runtimeKeyName: runtimeKey.label,
+            draft: {
+              name: runtimeKey.label,
+              base_url: "https://example.invalid/v1",
+              key: "sk-test",
+              models: ["model-a"],
+              groups: ["default"],
+            },
+            status: "ready",
+            warningCodes: [],
+          }),
+        ),
+      }),
+    )
+    mockExecuteManagedSiteTokenBatchExport.mockImplementation(
+      ({ selectedItemIds }) => ({
+        totalSelected: selectedItemIds.length,
+        attemptedCount: selectedItemIds.length,
+        createdCount: selectedItemIds.length,
+        failedCount: 0,
+        skippedCount: 0,
+        items: selectedItemIds.map((id: string) => ({
+          id,
+          accountName: id.split(":")[0],
+          tokenName: id.split(":")[1],
           success: true,
           skipped: false,
-        }),
-      ),
-    }))
+        })),
+      }),
+    )
   })
 
   it("toggles visible token selection from the toolbar", async () => {
@@ -350,30 +343,6 @@ describe("TokenList batch export selection", () => {
     const user = userEvent.setup()
     const onManagedSiteImportSuccess = vi.fn()
     const { rerender } = renderTokenList({ onManagedSiteImportSuccess })
-    mockBuildBatchExportResult.mockImplementation(() => ({
-      totalSelected: 2,
-      attemptedCount: 2,
-      createdCount: 1,
-      failedCount: 1,
-      skippedCount: 0,
-      items: [
-        {
-          id: `account_token:${token1.accountId}:${token1.id}`,
-          accountName: token1.accountId,
-          runtimeKeyName: String(token1.id),
-          success: true,
-          skipped: false,
-        },
-        {
-          id: `account_token:${token2.accountId}:${token2.id}`,
-          accountName: token2.accountId,
-          runtimeKeyName: String(token2.id),
-          success: false,
-          skipped: false,
-        },
-      ],
-    }))
-
     await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
     await user.click(await screen.findByRole("checkbox", { name: "Token 2" }))
     await user.click(
@@ -382,7 +351,9 @@ describe("TokenList batch export selection", () => {
       }),
     )
 
-    expect(screen.getByTestId("batch-export-item-count")).toHaveTextContent("2")
+    expect(
+      await screen.findByText("keyManagement:batchManagedSiteExport.title"),
+    ).toBeVisible()
 
     rerender(
       <TokenList
@@ -393,12 +364,25 @@ describe("TokenList batch export selection", () => {
       />,
     )
 
-    expect(screen.getByTestId("batch-export-item-count")).toHaveTextContent("2")
     await user.click(
-      screen.getByRole("button", { name: "Complete batch export" }),
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportStartButton,
+      ),
+    )
+    const startButtons = await screen.findAllByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.start",
+    })
+    await user.click(
+      startButtons.find(
+        (button) =>
+          button !==
+          screen.getByTestId(
+            KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportStartButton,
+          ),
+      ) as HTMLElement,
     )
 
-    expect(onManagedSiteImportSuccess).toHaveBeenCalledTimes(1)
+    expect(onManagedSiteImportSuccess).toHaveBeenCalledTimes(2)
     expect(onManagedSiteImportSuccess).toHaveBeenCalledWith(
       expect.objectContaining({
         id: token1.id,
@@ -418,11 +402,23 @@ describe("TokenList batch export selection", () => {
       }),
     )
 
-    expect(screen.getByTestId("batch-export-dialog")).toBeInTheDocument()
-    expect(screen.getByTestId("batch-export-item-count")).toHaveTextContent("1")
+    expect(
+      await screen.findByText("keyManagement:batchManagedSiteExport.title"),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.gatewayDescription",
+      ),
+    ).toBeVisible()
 
-    await user.click(screen.getByRole("button", { name: "Close batch export" }))
-    expect(screen.queryByTestId("batch-export-dialog")).toBeNull()
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.cancel" }),
+    )
+    await waitFor(() =>
+      expect(
+        screen.queryByText("keyManagement:batchManagedSiteExport.title"),
+      ).toBeNull(),
+    )
     expect(screen.getByRole("checkbox", { name: "Token 1" })).toBeChecked()
   })
 
@@ -708,10 +704,26 @@ describe("TokenList batch export selection", () => {
 
     await user.click(managedSiteExportButton)
 
-    expect(screen.getByTestId("batch-export-item-count")).toHaveTextContent("1")
-    expect(mockBuildBatchExportResult).not.toHaveBeenCalled()
+    expect(mockPrepareManagedSiteTokenBatchExportPreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            account: expect.objectContaining({ id: sharedChatAccount.id }),
+            runtimeKey: expect.objectContaining({
+              id: serviceCredentialRuntimeKey.id,
+            }),
+          }),
+        ],
+        resolvedChannelKeysByItemId: {},
+      }),
+    )
+    expect(
+      await screen.findByText("keyManagement:batchManagedSiteExport.title"),
+    ).toBeVisible()
 
-    await user.click(screen.getByRole("button", { name: "Close batch export" }))
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.cancel" }),
+    )
 
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.batchSaveToApiProfilesButton),

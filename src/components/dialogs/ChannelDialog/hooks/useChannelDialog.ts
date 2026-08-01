@@ -45,6 +45,11 @@ import {
   getManagedSiteConfigMissingMessage,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
+import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+} from "~/services/protectionBypass/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
   AuthTypeEnum,
@@ -55,6 +60,7 @@ import {
   type SiteAccount,
 } from "~/types"
 import type { ManagedSiteChannel } from "~/types/managedSite"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -292,6 +298,11 @@ export function useChannelDialog() {
       accountBaseUrl: params.accountBaseUrl,
       models: params.models,
       key: params.key,
+      protectionBypassExecution: createAutomaticProtectionBypassExecution(
+        PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+        PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+        getCurrentTempWindowRequestSource(),
+      ),
     })
     const exactMatch = getManagedSiteChannelExactMatch(resolution)
 

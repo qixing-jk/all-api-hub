@@ -616,29 +616,50 @@ const _fetchApi = async <T>(
           ...context,
           fetchOptions: dispatchedFetchOptions,
         }
-        const fallback = async () =>
-          await executeWithTempWindowFallback(dispatchedContext, async () => {
-            if (onlyData) {
-              return await apiRequestData<T>(
-                url,
-                dispatchedFetchOptions,
-                options.endpoint,
-                responseType,
-              )
-            }
-            const response = await apiRequest<T>(
+        const primaryRequest = async () => {
+          if (onlyData) {
+            return await apiRequestData<T>(
               url,
               dispatchedFetchOptions,
               options.endpoint,
               responseType,
             )
+          }
+          const response = await apiRequest<T>(
+            url,
+            dispatchedFetchOptions,
+            options.endpoint,
+            responseType,
+          )
 
-            if (responseType === "json") {
-              return response as ApiResponse<T>
+          if (responseType === "json") {
+            return response as ApiResponse<T>
+          }
+
+          return response as T
+        }
+        const fallback = async () => {
+          const execution = request.protectionBypassExecution
+          if (!execution) {
+            if (dispatchedContext.forceTempWindow) {
+              throw new ApiError(
+                t("messages:background.tempWindowPolicyContextInvalid"),
+                undefined,
+                options.endpoint,
+                API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+              )
             }
+            return await primaryRequest()
+          }
 
-            return response as T
-          })
+          return await executeWithTempWindowFallback(
+            {
+              ...dispatchedContext,
+              protectionBypassExecution: execution,
+            },
+            primaryRequest,
+          )
+        }
 
         return await executeWithCurrentTabContentPreference<T>(
           {

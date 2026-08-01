@@ -8,7 +8,7 @@
 |------|------|------|
 | CherryStudio | ローカルプロトコルを介してクライアントを起動し、API 情報を自動入力 | CherryStudio デスクトップ版を起動し、認証が必要です |
 | CC Switch | JSON / クリップボード形式で出力し、専用のフィールドマッピングを内蔵 | CC Switch 内でインポート機能を使って内容を貼り付ける必要があります |
-| セルフホスト型サイト（New API / DoneHub / Veloera / Octopus / AxonHub / Claude Code Hub） | 対象バックエンドの管理インターフェースを呼び出し、Channel / Provider を自動作成または更新 | 拡張機能で対応するバックエンド設定を事前に完了する必要があります |
+| セルフホスト型サイト（New API / AxonHub / Claude Code Hub / Octopus / Veloera / DoneHub） | 対象バックエンドの管理インターフェースを呼び出し、Channel / Provider を自動作成または更新 | 拡張機能で対応するバックエンド設定を事前に完了する必要があります |
 
 ## 事前設定
 

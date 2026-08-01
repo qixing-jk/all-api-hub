@@ -1,5 +1,5 @@
 {
-  "description": "Automatically synchronize model lists for all channels in your managed site, ensuring consistency with upstream",
+  "description": "Automatically update model lists in your self-hosted AI gateway and reduce manual maintenance; enable it after channels exist when needed.",
   "execution": {
     "actions": {
       "refresh": "Refresh Results",
@@ -103,6 +103,9 @@
     "warning": {
       "syncCompletedWithFailures": "Sync finished, but {{failed}} channel(s) still failed ({{success}}/{{total}} succeeded). You can retry only the failed items."
     }
+  },
+  "optionalGuidance": {
+    "description": "Model sync can update gateway model lists, mappings, or routes automatically and reduce manual maintenance. It is an enhancement after channels exist and does not affect existing channels being used as one unified AI API."
   },
   "settings": {
     "allowedModels": "Allowed Model List",

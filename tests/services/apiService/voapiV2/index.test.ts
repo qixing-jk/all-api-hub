@@ -524,6 +524,7 @@ describe("apiService VoAPI v2", () => {
     expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
       "https://example.invalid",
       TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      undefined,
     )
   })
 
@@ -572,6 +573,8 @@ describe("apiService VoAPI v2", () => {
     })
     expect(mockResyncVoApiV2AuthToken).toHaveBeenCalledWith(
       "https://example.invalid",
+      undefined,
+      undefined,
     )
   })
 

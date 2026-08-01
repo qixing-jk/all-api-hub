@@ -4,9 +4,11 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
 import { ApiError } from "~/services/apiTransport/errors"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { safeRandomUUID } from "~/utils/core/identifier"
+import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/apiTransport/request", () => ({
@@ -61,6 +63,20 @@ const mockAccount = buildSiteAccount({
     today_income: 0,
   },
 })
+
+const DEFAULT_PROVIDER_CONTEXT = {
+  tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+  protectionBypassExecution: userCommandExecution(
+    PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+  ),
+} as const
+
+const checkInForTest = (
+  account: Parameters<typeof newApiProvider.checkIn>[0],
+  context: Parameters<
+    typeof newApiProvider.checkIn
+  >[1] = DEFAULT_PROVIDER_CONTEXT,
+) => newApiProvider.checkIn(account, context)
 
 describe("newApiProvider", () => {
   beforeEach(() => {
@@ -158,8 +174,11 @@ describe("newApiProvider", () => {
         stats: { checked_in_today: true },
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount, {
+      const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       })
 
       expect(result).toEqual({
@@ -172,10 +191,20 @@ describe("newApiProvider", () => {
       expect(vi.mocked(fetchApi).mock.calls[0]?.[0]).toMatchObject({
         accountId: "test-id",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: expect.objectContaining({
+          kind: "user_command",
+          command: "manual_checkin",
+          surface: "options",
+        }),
       })
       expect(vi.mocked(fetchApiData).mock.calls[0]?.[0]).toMatchObject({
         accountId: "test-id",
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: expect.objectContaining({
+          kind: "user_command",
+          command: "manual_checkin",
+          surface: "options",
+        }),
       })
       expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -187,6 +216,11 @@ describe("newApiProvider", () => {
           authType: AuthTypeEnum.AccessToken,
           trigger: { kind: "checkinButton" },
           tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+          protectionBypassExecution: expect.objectContaining({
+            kind: "user_command",
+            command: "manual_checkin",
+            surface: "options",
+          }),
         }),
       )
       expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
@@ -213,7 +247,7 @@ describe("newApiProvider", () => {
         stats: { checked_in_today: true },
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("already_checked")
       expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
@@ -242,7 +276,7 @@ describe("newApiProvider", () => {
         stats: { checked_in_today: true },
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("already_checked")
       expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
@@ -273,8 +307,8 @@ describe("newApiProvider", () => {
         stats: { checked_in_today: true },
       } as any)
 
-      await newApiProvider.checkIn(mockAccount)
-      await newApiProvider.checkIn(mockAccount)
+      await checkInForTest(mockAccount)
+      await checkInForTest(mockAccount)
 
       const requestIds = vi
         .mocked(tempWindowTriggerCheckinPageAction)
@@ -308,7 +342,7 @@ describe("newApiProvider", () => {
           data: null,
         })
 
-        const result = await newApiProvider.checkIn(mockAccount)
+        const result = await checkInForTest(mockAccount)
 
         expect(result).toEqual({
           status: "failed",
@@ -334,7 +368,7 @@ describe("newApiProvider", () => {
 
       vi.mocked(fetchApi).mockRejectedValueOnce(error)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -362,7 +396,7 @@ describe("newApiProvider", () => {
         identity: null,
       })
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -390,7 +424,7 @@ describe("newApiProvider", () => {
         expectedUserId: "123",
       })
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -432,7 +466,7 @@ describe("newApiProvider", () => {
         },
       })
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("failed")
       expect(result.messageKey).toBe(
@@ -462,7 +496,7 @@ describe("newApiProvider", () => {
         identity: { userId: "123", user: { id: "123" } },
       })
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("failed")
       expect(result.messageKey).toBe(
@@ -490,7 +524,7 @@ describe("newApiProvider", () => {
         new Error("temp window closed"),
       )
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -537,7 +571,7 @@ describe("newApiProvider", () => {
           stats: { checked_in_today: false },
         } as any)
 
-        const resultPromise = newApiProvider.checkIn(mockAccount)
+        const resultPromise = checkInForTest(mockAccount)
         await vi.advanceTimersByTimeAsync(9_000)
         const result = await resultPromise
 
@@ -579,7 +613,7 @@ describe("newApiProvider", () => {
         stats: { checked_in_today: false },
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("failed")
       expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
@@ -606,7 +640,7 @@ describe("newApiProvider", () => {
         stats: { checked_in_today: true },
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("already_checked")
       expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
@@ -625,7 +659,7 @@ describe("newApiProvider", () => {
         new Error("native page unavailable"),
       )
 
-      await expect(newApiProvider.checkIn(mockAccount)).resolves.toEqual({
+      await expect(checkInForTest(mockAccount)).resolves.toEqual({
         status: "failed",
         messageKey: "autoCheckin:providerFallback.nativePageTriggerFailed",
         messageParams: { checkInUrl: "https://test.com/console/personal" },
@@ -641,7 +675,7 @@ describe("newApiProvider", () => {
         message: "",
         data: { checkin_date: "2026-01-01", quota_awarded: 1 },
       })
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "success",
@@ -663,7 +697,7 @@ describe("newApiProvider", () => {
         data: { checkin_date: "2026-01-01" },
       })
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "already_checked",
@@ -708,7 +742,7 @@ describe("newApiProvider", () => {
         },
       }
 
-      const result = await newApiProvider.checkIn(account)
+      const result = await checkInForTest(account)
 
       expect(result.status).toBe("success")
       expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
@@ -753,7 +787,7 @@ describe("newApiProvider", () => {
         turnstile: { status: "timeout", hasTurnstile: true },
       })
 
-      await newApiProvider.checkIn(mockAccount)
+      await checkInForTest(mockAccount)
 
       expect(resolveAccountSiteRouteUrl).toHaveBeenCalledWith(
         {
@@ -796,7 +830,7 @@ describe("newApiProvider", () => {
         turnstile: { status: "token_obtained", hasTurnstile: true },
       })
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("success")
       expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
@@ -814,7 +848,7 @@ describe("newApiProvider", () => {
         data: { checkin_date: "2026-01-01", quota_awarded: 1 },
       })
 
-      await newApiProvider.checkIn({
+      await checkInForTest({
         ...mockAccount,
         authType: undefined as any,
       })
@@ -869,7 +903,7 @@ describe("newApiProvider", () => {
         },
       }
 
-      await newApiProvider.checkIn(account)
+      await checkInForTest(account)
 
       expect(tempWindowTurnstileFetch).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -926,7 +960,7 @@ describe("newApiProvider", () => {
         },
       }
 
-      const result = await newApiProvider.checkIn(account)
+      const result = await checkInForTest(account)
 
       expect(result.status).toBe("failed")
       expect(result.messageKey).toBe(
@@ -961,7 +995,7 @@ describe("newApiProvider", () => {
         stats: { checked_in_today: true },
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("already_checked")
       expect(result.messageKey).toBe(
@@ -999,7 +1033,7 @@ describe("newApiProvider", () => {
         stats: { checked_in_today: false },
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -1044,7 +1078,7 @@ describe("newApiProvider", () => {
         stats: { checked_in_today: true },
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "already_checked",
@@ -1082,7 +1116,7 @@ describe("newApiProvider", () => {
         },
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -1118,7 +1152,7 @@ describe("newApiProvider", () => {
         data: undefined,
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -1146,7 +1180,7 @@ describe("newApiProvider", () => {
         turnstile: { status: "token_obtained", hasTurnstile: true },
       } as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -1177,7 +1211,7 @@ describe("newApiProvider", () => {
         turnstile: { status: "token_obtained", hasTurnstile: true },
       })
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -1233,8 +1267,11 @@ describe("newApiProvider", () => {
 
       vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(true)
 
-      const result = await newApiProvider.checkIn(mockAccount, {
+      const result = await checkInForTest(mockAccount, {
         tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+        ),
       })
 
       expect(result.status).toBe("success")
@@ -1297,7 +1334,7 @@ describe("newApiProvider", () => {
       } as any)
       vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(true)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -1341,7 +1378,7 @@ describe("newApiProvider", () => {
 
       vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(false)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("failed")
       expect(result.messageKey).toBe(
@@ -1369,7 +1406,7 @@ describe("newApiProvider", () => {
         identity: { userId: "123", user: { id: "123" } },
       })
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result.status).toBe("failed")
       expect(tempWindowTriggerCheckinPageAction).toHaveBeenCalledTimes(1)
@@ -1388,7 +1425,7 @@ describe("newApiProvider", () => {
         data: { reason: "manual step still needed" },
       })
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -1411,7 +1448,7 @@ describe("newApiProvider", () => {
         message: "Not found",
       })
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -1432,7 +1469,7 @@ describe("newApiProvider", () => {
       })
       vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce(null as any)
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",
@@ -1451,7 +1488,7 @@ describe("newApiProvider", () => {
         data: { details: "unknown failure" },
       })
 
-      const result = await newApiProvider.checkIn(mockAccount)
+      const result = await checkInForTest(mockAccount)
 
       expect(result).toEqual({
         status: "failed",

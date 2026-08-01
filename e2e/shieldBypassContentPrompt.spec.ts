@@ -3,6 +3,8 @@ import type { Worker } from "@playwright/test"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
+import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -192,7 +194,32 @@ test("shows the shield-bypass content prompt and opens its settings anchor", asy
 
   await expect(
     settingsPage.getByRole("heading", {
-      name: "Temp-window protection bypass",
+      name: "Website verification assistance",
     }),
   ).toBeInViewport()
+  await expect(
+    settingsPage.locator(`#${SHIELD_SETTINGS_TARGET_IDS.automaticFeatures}`),
+  ).toBeVisible()
+  await expect(
+    settingsPage
+      .locator(
+        `#${
+          SHIELD_SETTINGS_TARGET_IDS.feature[
+            PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin
+          ]
+        }`,
+      )
+      .getByRole("checkbox"),
+  ).toBeVisible()
+  await expect(
+    settingsPage
+      .locator(
+        `#${
+          SHIELD_SETTINGS_TARGET_IDS.feature[
+            PROTECTION_BYPASS_AUTOMATIC_FEATURES.BalanceHistory
+          ]
+        }`,
+      )
+      .getByRole("checkbox"),
+  ).toBeVisible()
 })

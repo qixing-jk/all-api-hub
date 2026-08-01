@@ -61,19 +61,16 @@
 <a id="manual-addition"></a>
 ### 2.2 手动添加（备选）
 
-如果自动识别不成功，或者你想精确控制，可以手动填写：
-- **用户名 / ID**：站点显示的名称。
-- **访问令牌 (Access Token)**：通常在站点的“设置”或“令牌”页面可以找到。
-- **模式选择**：默认推荐 `Access Token` 模式。
+如果自动识别不成功，可以点击 **“手动添加”**，自行选择站点类型并填写账号信息。所需字段、访问令牌获取位置和注意事项请查看 [手动添加账号指南](./account-management.md#manual-addition)。
 
 ---
 
 ## 3. 支持的站点类型
 
 不论你用的是哪种架构，我们基本都支持：
-- **账号站点兼容架构**：One API, New API, Veloera, One-Hub, Done-Hub, Sub2API 等。
-- **特色账号平台与兼容实现**：AIHubMix, AnyRouter, Neo-API, Super-API, v-api 等。
-- **自建管理后台**：New API, Veloera, Done-Hub, Octopus, AxonHub, Claude Code Hub 等，用于渠道管理、迁移和部分模型同步。
+- **账号站点兼容架构**：New API, One API, Sub2API, One-Hub, Veloera, Done-Hub 等。
+- **特色账号平台与兼容实现**：AnyRouter, AIHubMix, Super-API, v-api, Neo-API 等。
+- **自建管理后台**：New API, AxonHub, Claude Code Hub, Octopus, Veloera, Done-Hub 等，用于渠道管理、迁移和部分模型同步。
 
 ::: tip 兼容性提示
 如果是基于账号站点兼容架构搭建的中转站，通常可以作为账号添加；AxonHub、Octopus、Claude Code Hub 等则主要作为自建管理后台使用。完整的兼容列表请查看 [支持的站点与系统类型](./supported-sites.md)。

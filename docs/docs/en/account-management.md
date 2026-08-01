@@ -6,15 +6,37 @@
 
 All API Hub supports multiple ways to add accounts to accommodate different site types and security settings.
 
-### 1.1 Auto-Recognize (Recommended)
+### 1.1 Auto Detection (Recommended)
 This is the simplest way. You just need to log in to the target site in your browser first, then perform the following in the extension:
 1. Click **"Add Account"**.
-2. Enter the site address (Base URL).
-3. Click **"Auto-Recognize"**.
-4. The extension will automatically read login information and fill in the username, user ID, Access Token, and top-up ratio.
+2. Enter the **Site URL**.
+3. Click **"Auto Detect"**.
+4. The extension will attempt to identify the site type and the account currently signed in, then automatically fill in the information needed to add the account.
 
+<a id="manual-addition"></a>
 ### 1.2 Manual Addition
-If auto-recognition fails, you can click **"Manual Input"** to fill in the relevant information. You usually need to obtain the `Access Token` and `User ID` from the site's "Personal Center" or "Settings" page.
+
+The required information and where to find it vary by site type. The following steps use a New API site as an example.
+
+![Switching to Manual Add in the Add Account dialog](../static/image/add-account-dialog-btn.png)
+
+1. Go to **"Account Management"** and click **"Add Account"**.
+2. Enter the **Site URL**, select an authentication method, and click **"Manual Add"**.
+3. Fill in the expanded form:
+   - **Site Name**: A custom name that helps you distinguish the account in the extension.
+   - **Site Type**: Select `new-api`.
+   - **Username and User ID**: Usually available under "Personal Settings" or "Personal Center" on the site.
+   - **Access Token**: Enter the system access token from the site's personal settings. This is not an API key from "Token Management" used to call models.
+   - **Recharge Amount Ratio**: Enter a `CNY/USD` ratio greater than 0. If you are unsure, use the recharge ratio shown by the site.
+4. Review the information, then click **"Save Account"**.
+
+::: tip Recommended settings
+Prefer **Access Token Authentication**. If the account cannot refresh after it is saved, first check the site type, User ID, and Access Token. Try Cookie authentication only when the target site specifically requires it.
+:::
+
+::: warning Protect your account information
+Access Tokens and Cookies are sensitive information. Do not share their full contents or expose them in public screenshots or issue reports.
+:::
 
 ### 1.3 Cookie Mode
 For some sites with strict interface protection or special customizations, if the Access Token mode does not work, you can try switching to **"Cookie Mode"**. In this mode, the extension will use your current login session (Cookie) to request data.

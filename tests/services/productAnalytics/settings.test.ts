@@ -195,11 +195,16 @@ describe("settings product analytics snapshots", () => {
       },
       tempWindowFallback: {
         enabled: true,
-        useInPopup: true,
-        useInSidePanel: false,
-        useInOptions: true,
-        useForAutoRefresh: true,
-        useForManualRefresh: false,
+        automaticFeatureBypass: {
+          account_refresh: true,
+          balance_history: false,
+          checkin: true,
+          redemption_assist: false,
+          ldoh_site_lookup: true,
+          key_management: false,
+          managed_site_channels: true,
+          managed_site_model_sync: false,
+        },
         tempContextMode: "window",
       },
       tempWindowFallbackReminder: {
@@ -401,11 +406,16 @@ describe("settings product analytics snapshots", () => {
           PRODUCT_ANALYTICS_SETTING_IDS.TempWindowFallbackConfigSnapshot,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         enabled: true,
-        popup_enabled: true,
-        sidepanel_enabled: false,
-        options_enabled: true,
-        auto_refresh_enabled: true,
-        manual_refresh_enabled: false,
+        temp_window_fallback_automatic_bypass_account_refresh_enabled: true,
+        temp_window_fallback_automatic_bypass_balance_history_enabled: false,
+        temp_window_fallback_automatic_bypass_checkin_enabled: true,
+        temp_window_fallback_automatic_bypass_redemption_assist_enabled: false,
+        temp_window_fallback_automatic_bypass_ldoh_site_lookup_enabled: true,
+        temp_window_fallback_automatic_bypass_key_management_enabled: false,
+        temp_window_fallback_automatic_bypass_managed_site_channels_enabled:
+          true,
+        temp_window_fallback_automatic_bypass_managed_site_model_sync_enabled:
+          false,
         mode: PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow,
         reminder_dismissed: true,
       },
@@ -498,9 +508,11 @@ describe("settings product analytics snapshots", () => {
         webdav_auto_sync_enabled: true,
         auto_checkin_global_enabled: false,
         auto_checkin_sub2api_enabled: false,
+        temp_window_fallback_automatic_bypass_enabled: true,
       }),
     )
     expect(snapshot).not.toHaveProperty("setting_id")
+    expect(snapshot).not.toHaveProperty("temp_window_fallback_enabled")
     expect(JSON.stringify(snapshot)).not.toContain("private")
     expect(JSON.stringify(snapshot)).not.toContain("https://")
   })
@@ -786,11 +798,16 @@ describe("settings product analytics snapshots", () => {
       },
       tempWindowFallback: {
         enabled: true,
-        useInPopup: false,
-        useInSidePanel: true,
-        useInOptions: false,
-        useForAutoRefresh: false,
-        useForManualRefresh: true,
+        automaticFeatureBypass: {
+          account_refresh: false,
+          balance_history: true,
+          checkin: false,
+          redemption_assist: true,
+          ldoh_site_lookup: false,
+          key_management: true,
+          managed_site_channels: false,
+          managed_site_model_sync: true,
+        },
         tempContextMode: "tab",
       },
     })

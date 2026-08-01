@@ -2,6 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import {
+  PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
+  PROTECTION_BYPASS_FEATURES,
+  PROTECTION_BYPASS_SURFACES,
+  TEMP_CONTEXT_TASK_KINDS,
+} from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import {
   TEMP_WINDOW_REQUEST_SOURCES,
@@ -39,25 +45,65 @@ const mocks = vi.hoisted(() => ({
   },
   defaultTempWindowFallback: {
     enabled: true,
-    useInPopup: true,
-    useInSidePanel: true,
-    useInOptions: true,
-    useForAutoRefresh: true,
-    useForManualRefresh: true,
+    automaticFeatureBypass: {
+      account_refresh: true,
+      balance_history: true,
+      checkin: true,
+      redemption_assist: true,
+      ldoh_site_lookup: true,
+      key_management: true,
+      managed_site_channels: true,
+      managed_site_model_sync: true,
+    },
     tempContextMode: "composite" as const,
   },
 }))
+
+const testExecution = {
+  version: 2,
+  kind: "automatic",
+  feature: PROTECTION_BYPASS_FEATURES.AccountRefresh,
+  trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
+  surface: PROTECTION_BYPASS_SURFACES.Background,
+} as const
 
 vi.mock("~/utils/browser/browserApi", () => ({
   sendRuntimeMessage: mocks.sendRuntimeMessageMock,
 }))
 
-vi.mock("~/entrypoints/background/tempWindowPool", () => ({
-  handleTempWindowFetch: mocks.handleTempWindowFetchMock,
-  handleTempWindowCheckinPageAction:
-    mocks.handleTempWindowCheckinPageActionMock,
-  handleTempWindowTurnstileFetch: mocks.handleTempWindowTurnstileFetchMock,
-  handleTempWindowGetRenderedTitle: mocks.handleTempWindowGetRenderedTitleMock,
+vi.mock("~/entrypoints/background/protectionBypassCoordinator", () => ({
+  protectionBypassCoordinator: {
+    execute: async ({ task }: { task: { kind: string; params: unknown } }) => {
+      let response: unknown
+      let responded = false
+      const sendResponse = (value?: unknown) => {
+        if (!responded) response = value
+        responded = true
+      }
+      let result
+      if (task.kind === TEMP_CONTEXT_TASK_KINDS.TurnstileFetch) {
+        result = mocks.handleTempWindowTurnstileFetchMock(
+          task.params,
+          sendResponse,
+        )
+      } else if (task.kind === TEMP_CONTEXT_TASK_KINDS.NativePageAction) {
+        result = mocks.handleTempWindowCheckinPageActionMock(
+          task.params,
+          sendResponse,
+        )
+      } else if (task.kind === TEMP_CONTEXT_TASK_KINDS.RenderedTitle) {
+        result = mocks.handleTempWindowGetRenderedTitleMock(
+          task.params,
+          sendResponse,
+        )
+      } else {
+        result = mocks.handleTempWindowFetchMock(task.params, sendResponse)
+      }
+      await result
+      if (!responded) throw new Error("handler completed without response")
+      return response
+    },
+  },
 }))
 
 vi.mock("~/services/permissions/permissionManager", () => ({
@@ -117,6 +163,7 @@ function buildContext(
     onlyData: false,
     responseType: "json",
     authType: AuthTypeEnum.AccessToken,
+    protectionBypassExecution: testExecution,
     ...overrides,
   }
 }
@@ -127,6 +174,28 @@ function setWindowHref(href: string) {
       href,
     },
   })
+}
+
+function expectRuntimeTask(
+  kind: string,
+  params: Record<string, unknown>,
+): void {
+  expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
+    expect.objectContaining({
+      action: RuntimeActionIds.ProtectionBypassExecuteTask,
+      execution: testExecution,
+      task: expect.objectContaining({
+        kind,
+        params: expect.objectContaining(params),
+      }),
+    }),
+  )
+  const envelope = mocks.sendRuntimeMessageMock.mock.calls.at(-1)?.[0]
+  expect(envelope).not.toHaveProperty("protectionBypassExecution")
+  expect(envelope).not.toHaveProperty("tempWindowRequestSource")
+  expect(envelope?.task).not.toHaveProperty("execution")
+  expect(envelope?.task?.params).not.toHaveProperty("protectionBypassExecution")
+  expect(envelope?.task?.params).not.toHaveProperty("tempWindowRequestSource")
 }
 
 describe("tempWindowFetch runtime helpers and fallback gating", () => {
@@ -168,32 +237,32 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     await expect(canUseTempWindowFetch()).resolves.toBe(false)
   })
 
-  it("reports popup manual-refresh preference blocks through the shared block-status helper", async () => {
+  it("reports automatic account-refresh preference blocks through the shared block-status helper", async () => {
     await expect(
       getTempWindowFallbackBlockStatus({
         preferences: buildTempWindowPreferences({
-          useInPopup: false,
+          automaticFeatureBypass: {
+            ...mocks.defaultTempWindowFallback.automaticFeatureBypass,
+            account_refresh: false,
+          },
         }),
-        isBackground: false,
-        inPopup: true,
       }),
     ).resolves.toEqual({
       kind: "blocked",
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
-      reason: "popup_disabled",
+      reason: "automatic_account_refresh_disabled",
     })
   })
 
-  it("uses default temp-window preferences when explicit preferences are omitted", async () => {
+  it("uses caller-normalized temp-window preferences without replacing them", async () => {
     await expect(
       getTempWindowFallbackBlockStatus({
-        isBackground: false,
-        inPopup: false,
+        preferences: buildTempWindowPreferences({ enabled: false }),
       }),
     ).resolves.toEqual({
-      kind: "available",
-      code: null,
-      reason: null,
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+      reason: "master_disabled",
     })
   })
 
@@ -204,8 +273,6 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     await expect(
       getTempWindowFallbackBlockStatus({
         preferences: buildTempWindowPreferences(),
-        isBackground: false,
-        inPopup: false,
       }),
     ).resolves.toEqual({
       kind: "blocked",
@@ -214,24 +281,22 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
   })
 
-  it("reports Firefox popup contexts as not applicable before permission checks", async () => {
+  it("reports Firefox permission requirements independent of presentation surface", async () => {
     mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
     mocks.hasCookieInterceptorPermissionsMock.mockResolvedValue(false)
 
     await expect(
       getTempWindowFallbackBlockStatus({
         preferences: buildTempWindowPreferences(),
-        isBackground: false,
-        inPopup: true,
       }),
     ).resolves.toEqual({
-      kind: "not_applicable",
-      code: null,
-      reason: "firefox_popup_unsupported",
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
+      reason: "permission_required",
     })
   })
 
-  it("routes tempWindowFetch through runtime messaging and defaults popup minimize suppression", async () => {
+  it("routes tempWindowFetch through the canonical runtime envelope", async () => {
     setWindowHref("chrome-extension://test/popup.html")
     mocks.isExtensionPopupMock.mockReturnValue(true)
     mocks.sendRuntimeMessageMock.mockResolvedValue({
@@ -240,6 +305,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
 
     const response = await tempWindowFetch({
+      protectionBypassExecution: testExecution,
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
       fetchOptions: { method: "POST" },
@@ -249,13 +315,10 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       success: true,
       data: "ok",
     })
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith({
-      action: RuntimeActionIds.TempWindowFetch,
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
       fetchOptions: { method: "POST" },
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      suppressMinimize: true,
     })
   })
 
@@ -267,6 +330,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
 
     await tempWindowFetch({
+      protectionBypassExecution: testExecution,
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
       fetchOptions: {
@@ -275,12 +339,9 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       },
     })
 
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.TempWindowFetch,
-        fetchOptions: { method: "POST" },
-      }),
-    )
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
+      fetchOptions: { method: "POST" },
+    })
   })
 
   it("omits fetch options from tempWindowFetch runtime messages when none are provided", async () => {
@@ -290,16 +351,14 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
 
     await tempWindowFetch({
+      protectionBypassExecution: testExecution,
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
     })
 
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith({
-      action: RuntimeActionIds.TempWindowFetch,
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-      suppressMinimize: false,
     })
   })
 
@@ -313,11 +372,11 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
 
     const response = await tempWindowTurnstileFetch({
+      protectionBypassExecution: testExecution,
       originUrl: "https://example.com",
       pageUrl: "https://example.com/checkin",
       fetchUrl: "https://example.com/api/checkin",
       fetchOptions: { method: "POST" },
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       suppressMinimize: false,
     })
 
@@ -326,13 +385,11 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       data: "token",
       turnstile: { status: "token_obtained", hasTurnstile: true },
     })
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith({
-      action: RuntimeActionIds.TempWindowTurnstileFetch,
+    expectRuntimeTask("turnstile_fetch", {
       originUrl: "https://example.com",
       pageUrl: "https://example.com/checkin",
       fetchUrl: "https://example.com/api/checkin",
       fetchOptions: { method: "POST" },
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
       suppressMinimize: false,
     })
   })
@@ -346,6 +403,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
 
     await tempWindowTurnstileFetch({
+      protectionBypassExecution: testExecution,
       originUrl: "https://example.com",
       pageUrl: "https://example.com/checkin",
       fetchUrl: "https://example.com/api/checkin",
@@ -355,12 +413,9 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       },
     })
 
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.TempWindowTurnstileFetch,
-        fetchOptions: { method: "POST" },
-      }),
-    )
+    expectRuntimeTask("turnstile_fetch", {
+      fetchOptions: { method: "POST" },
+    })
   })
 
   it("omits fetch options from tempWindowTurnstileFetch runtime messages when none are provided", async () => {
@@ -371,19 +426,20 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
 
     await tempWindowTurnstileFetch({
+      protectionBypassExecution: testExecution,
       originUrl: "https://example.com",
       pageUrl: "https://example.com/checkin",
       fetchUrl: "https://example.com/api/checkin",
     })
 
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith({
-      action: RuntimeActionIds.TempWindowTurnstileFetch,
+    expectRuntimeTask("turnstile_fetch", {
       originUrl: "https://example.com",
       pageUrl: "https://example.com/checkin",
       fetchUrl: "https://example.com/api/checkin",
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-      suppressMinimize: false,
     })
+    expect(
+      mocks.sendRuntimeMessageMock.mock.calls[0]?.[0].task.params,
+    ).not.toHaveProperty("fetchOptions")
   })
 
   it("routes tempWindowTriggerCheckinPageAction through runtime messaging", async () => {
@@ -395,23 +451,21 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
 
     const response = await tempWindowTriggerCheckinPageAction({
+      protectionBypassExecution: testExecution,
       originUrl: "https://example.invalid",
       pageUrl: "https://example.invalid/console/personal",
       siteType: "new-api",
       expectedUserId: "target-user",
       requestId: "req-native-runtime",
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       suppressMinimize: true,
     })
 
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith({
-      action: RuntimeActionIds.TempWindowCheckinPageAction,
+    expectRuntimeTask("native_page_action", {
       originUrl: "https://example.invalid",
       pageUrl: "https://example.invalid/console/personal",
       siteType: "new-api",
       expectedUserId: "target-user",
       requestId: "req-native-runtime",
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
       suppressMinimize: true,
     })
     expect(response.reason).toBe("identity_mismatch")
@@ -426,6 +480,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
 
     const response = await tempWindowGetRenderedTitle({
+      protectionBypassExecution: testExecution,
       originUrl: "https://example.com",
     })
 
@@ -433,76 +488,42 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       success: true,
       title: "WAF Challenge",
     })
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith({
-      action: RuntimeActionIds.TempWindowGetRenderedTitle,
+    expectRuntimeTask("rendered_title", {
       originUrl: "https://example.com",
-      tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      suppressMinimize: true,
     })
   })
 
-  it("prefers the propagated popup source when fallback executes in background", async () => {
-    mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
-
-    await expect(
-      getTempWindowFallbackBlockStatus({
-        preferences: buildTempWindowPreferences(),
-        isBackground: true,
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      }),
-    ).resolves.toEqual({
-      kind: "not_applicable",
-      code: null,
-      reason: "firefox_popup_unsupported",
-    })
-  })
-
-  it("returns structured failures without dispatching Firefox popup requests", async () => {
+  it("dispatches Firefox popup requests for centralized presentation policy", async () => {
     mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
     const popupSource = {
       tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Popup,
+      protectionBypassExecution: testExecution,
     }
 
-    await expect(
-      tempWindowFetch({
-        originUrl: "https://example.invalid",
-        fetchUrl: "https://example.invalid/api/models",
-        ...popupSource,
-      }),
-    ).resolves.toMatchObject({ success: false, error: expect.any(String) })
-    await expect(
-      tempWindowTurnstileFetch({
-        originUrl: "https://example.invalid",
-        pageUrl: "https://example.invalid/checkin",
-        fetchUrl: "https://example.invalid/api/checkin",
-        ...popupSource,
-      }),
-    ).resolves.toMatchObject({
-      success: false,
-      error: expect.any(String),
-      turnstile: { status: "error", hasTurnstile: false },
+    await tempWindowFetch({
+      originUrl: "https://example.invalid",
+      fetchUrl: "https://example.invalid/api/models",
+      ...popupSource,
     })
-    await expect(
-      tempWindowTriggerCheckinPageAction({
-        originUrl: "https://example.invalid",
-        pageUrl: "https://example.invalid/console/personal",
-        siteType: "new-api",
-        expectedUserId: "target-user",
-        ...popupSource,
-      }),
-    ).resolves.toMatchObject({
-      success: false,
-      reason: "trigger_failed",
-      error: expect.any(String),
+    await tempWindowTurnstileFetch({
+      originUrl: "https://example.invalid",
+      pageUrl: "https://example.invalid/checkin",
+      fetchUrl: "https://example.invalid/api/checkin",
+      ...popupSource,
     })
-    await expect(
-      tempWindowGetRenderedTitle({
-        originUrl: "https://example.invalid",
-        ...popupSource,
-      }),
-    ).resolves.toMatchObject({ success: false, error: expect.any(String) })
+    await tempWindowTriggerCheckinPageAction({
+      originUrl: "https://example.invalid",
+      pageUrl: "https://example.invalid/console/personal",
+      siteType: "new-api",
+      expectedUserId: "target-user",
+      ...popupSource,
+    })
+    await tempWindowGetRenderedTitle({
+      originUrl: "https://example.invalid",
+      ...popupSource,
+    })
 
-    expect(mocks.sendRuntimeMessageMock).not.toHaveBeenCalled()
+    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledTimes(4)
     expect(mocks.handleTempWindowFetchMock).not.toHaveBeenCalled()
     expect(mocks.handleTempWindowTurnstileFetchMock).not.toHaveBeenCalled()
     expect(mocks.handleTempWindowCheckinPageActionMock).not.toHaveBeenCalled()
@@ -510,17 +531,11 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
   })
 
   it.each([
-    {
-      source: TEMP_WINDOW_REQUEST_SOURCES.Background,
-      suppressMinimize: false,
-    },
-    {
-      source: TEMP_WINDOW_REQUEST_SOURCES.Popup,
-      suppressMinimize: true,
-    },
+    TEMP_WINDOW_REQUEST_SOURCES.Background,
+    TEMP_WINDOW_REQUEST_SOURCES.Popup,
   ])(
-    "uses $source source policy for generic fallback",
-    async ({ source, suppressMinimize }) => {
+    "propagates $source execution surface outside task params",
+    async (source) => {
       mocks.sendRuntimeMessageMock.mockResolvedValue({
         success: true,
         status: 200,
@@ -535,13 +550,10 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
         async () => ({ success: true, data: { ok: false }, message: "direct" }),
       )
 
-      expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: RuntimeActionIds.TempWindowFetch,
-          tempWindowRequestSource: source,
-          suppressMinimize,
-        }),
-      )
+      expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch, {})
+      expect(
+        mocks.sendRuntimeMessageMock.mock.calls[0]?.[0].task.params,
+      ).not.toHaveProperty("tempWindowRequestSource")
     },
   )
 
@@ -567,7 +579,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     )
   })
 
-  it("falls back using default preferences when loading user preferences fails", async () => {
+  it("does not read user preferences before dispatching fallback", async () => {
     mocks.getPreferencesMock.mockRejectedValue(new Error("storage unavailable"))
     mocks.sendRuntimeMessageMock.mockResolvedValue({
       success: true,
@@ -601,21 +613,17 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     expect(result).toEqual({
       models: ["gpt-4.1"],
     })
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.TempWindowFetch,
-        originUrl: "https://example.com",
-        fetchUrl: "https://example.com/api/models",
-        requestId: "uuid:temp-fetch-https://example.com/api/models",
-        responseType: "json",
-        tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
-        suppressMinimize: false,
-        accountId: "acct-1",
-        authType: AuthTypeEnum.Cookie,
-        cookieAuthSessionCookie: "session=abc",
-        useIncognito: true,
-      }),
-    )
+    expect(mocks.getPreferencesMock).not.toHaveBeenCalled()
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
+      originUrl: "https://example.com",
+      fetchUrl: "https://example.com/api/models",
+      requestId: "uuid:temp-fetch-https://example.com/api/models",
+      responseType: "json",
+      accountId: "acct-1",
+      authType: AuthTypeEnum.Cookie,
+      cookieAuthSessionCookie: "session=abc",
+      useIncognito: true,
+    })
   })
 
   it("returns the full API response when onlyData is disabled", async () => {
@@ -698,14 +706,11 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     )
 
     expect(result).toEqual({ account: "stored-cookie" })
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        action: RuntimeActionIds.TempWindowFetch,
-        accountId: "acct-1",
-        authType: AuthTypeEnum.Cookie,
-        cookieAuthSessionCookie: "session=stored-account",
-      }),
-    )
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
+      accountId: "acct-1",
+      authType: AuthTypeEnum.Cookie,
+      cookieAuthSessionCookie: "session=stored-account",
+    })
   })
 
   it("does not fall back on cookie-auth 401 when an explicit empty allowlist is provided", async () => {
@@ -764,7 +769,11 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     )
 
     expect(result).toEqual({ account: "stored-cookie" })
-    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledOnce()
+    expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
+      accountId: "acct-1",
+      authType: AuthTypeEnum.Cookie,
+      cookieAuthSessionCookie: "session=stored-account",
+    })
   })
 
   it("does not fall back on 401 token-auth failures", async () => {
@@ -808,34 +817,6 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
   })
 
-  it("preserves an existing originalCode when disabled preferences block fallback in popup", async () => {
-    setWindowHref("chrome-extension://test/popup.html")
-    mocks.isExtensionPopupMock.mockReturnValue(true)
-    mocks.getPreferencesMock.mockResolvedValue({
-      tempWindowFallback: buildTempWindowPreferences({
-        useInPopup: false,
-      }),
-    })
-
-    const error = new ApiError(
-      "blocked by WAF",
-      403,
-      "/api/models",
-      API_ERROR_CODES.HTTP_403,
-    )
-    error.originalCode = API_ERROR_CODES.CONTENT_TYPE_MISMATCH
-
-    await expect(
-      executeWithTempWindowFallback(buildContext(), async () => {
-        throw error
-      }),
-    ).rejects.toBe(error)
-
-    expect(error.code).toBe(API_ERROR_CODES.TEMP_WINDOW_DISABLED)
-    expect(error.originalCode).toBe(API_ERROR_CODES.CONTENT_TYPE_MISMATCH)
-    expect(mocks.sendRuntimeMessageMock).not.toHaveBeenCalled()
-  })
-
   it("relabels the error when Firefox permission requirements block fallback", async () => {
     mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
     mocks.hasCookieInterceptorPermissionsMock.mockResolvedValue(false)
@@ -858,7 +839,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     expect(mocks.sendRuntimeMessageMock).not.toHaveBeenCalled()
   })
 
-  it("does not use the temp-window shield inside Firefox popups", async () => {
+  it("defers Firefox popup support decisions to the background policy", async () => {
     setWindowHref("chrome-extension://test/popup.html")
     mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
     mocks.isExtensionPopupMock.mockReturnValue(true)
@@ -870,115 +851,12 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
       API_ERROR_CODES.HTTP_403,
     )
 
-    await expect(
-      executeWithTempWindowFallback(buildContext(), async () => {
-        throw error
-      }),
-    ).rejects.toBe(error)
+    await executeWithTempWindowFallback(buildContext(), async () => {
+      throw error
+    })
 
     expect(mocks.getPreferencesMock).not.toHaveBeenCalled()
-    expect(error.code).toBe(API_ERROR_CODES.HTTP_403)
-    expect(error.originalCode).toBeUndefined()
-  })
-
-  it("honors the options-page preference gate before attempting fallback", async () => {
-    setWindowHref("chrome-extension://test/options.html?tab=refresh")
-    mocks.getPreferencesMock.mockResolvedValue({
-      tempWindowFallback: buildTempWindowPreferences({
-        useInOptions: false,
-      }),
-    })
-
-    const error = new ApiError(
-      "blocked by WAF",
-      403,
-      "/api/models",
-      API_ERROR_CODES.HTTP_403,
-    )
-
-    await expect(
-      executeWithTempWindowFallback(buildContext(), async () => {
-        throw error
-      }),
-    ).rejects.toBe(error)
-
-    expect(error.code).toBe(API_ERROR_CODES.TEMP_WINDOW_DISABLED)
-    expect(error.originalCode).toBe(API_ERROR_CODES.HTTP_403)
-  })
-
-  it("honors the side-panel preference gate before attempting fallback", async () => {
-    setWindowHref("chrome-extension://test/sidepanel.html")
-    mocks.isExtensionSidePanelMock.mockReturnValue(true)
-    mocks.getPreferencesMock.mockResolvedValue({
-      tempWindowFallback: buildTempWindowPreferences({
-        useInSidePanel: false,
-      }),
-    })
-
-    const error = new ApiError(
-      "blocked by WAF",
-      403,
-      "/api/models",
-      API_ERROR_CODES.HTTP_403,
-    )
-
-    await expect(
-      executeWithTempWindowFallback(buildContext(), async () => {
-        throw error
-      }),
-    ).rejects.toBe(error)
-
-    expect(error.code).toBe(API_ERROR_CODES.TEMP_WINDOW_DISABLED)
-    expect(error.originalCode).toBe(API_ERROR_CODES.HTTP_403)
-  })
-
-  it("honors the auto-refresh preference gate in background contexts", async () => {
-    mocks.isExtensionBackgroundMock.mockReturnValue(true)
-    mocks.getPreferencesMock.mockResolvedValue({
-      tempWindowFallback: buildTempWindowPreferences({
-        useForAutoRefresh: false,
-      }),
-    })
-
-    const error = new ApiError(
-      "blocked by WAF",
-      403,
-      "/api/models",
-      API_ERROR_CODES.HTTP_403,
-    )
-
-    await expect(
-      executeWithTempWindowFallback(buildContext(), async () => {
-        throw error
-      }),
-    ).rejects.toBe(error)
-
-    expect(error.code).toBe(API_ERROR_CODES.TEMP_WINDOW_DISABLED)
-    expect(error.originalCode).toBe(API_ERROR_CODES.HTTP_403)
-  })
-
-  it("honors the manual-refresh preference gate in non-background contexts", async () => {
-    mocks.getPreferencesMock.mockResolvedValue({
-      tempWindowFallback: buildTempWindowPreferences({
-        useForManualRefresh: false,
-      }),
-    })
-
-    const error = new ApiError(
-      "blocked by WAF",
-      403,
-      "/api/models",
-      API_ERROR_CODES.HTTP_403,
-    )
-
-    await expect(
-      executeWithTempWindowFallback(buildContext(), async () => {
-        throw error
-      }),
-    ).rejects.toBe(error)
-
-    expect(error.code).toBe(API_ERROR_CODES.TEMP_WINDOW_DISABLED)
-    expect(error.originalCode).toBe(API_ERROR_CODES.HTTP_403)
+    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledTimes(1)
   })
 
   it("skips fallback for non-http base URLs", async () => {

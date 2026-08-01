@@ -113,14 +113,52 @@ describe("productAnalyticsState", () => {
     )
   })
 
+  it("atomically merges bounded protection-bypass decision dimensions", async () => {
+    await Promise.all([
+      productAnalyticsState.incrementShieldBypassSummary({
+        featureCounts: { checkin: 1 },
+        invocationKindCounts: { automatic: 1 },
+        automaticTriggerCounts: { scheduled: 1 },
+        operationCounts: { native_page_action: 1 },
+        decisionCounts: { denied: 1 },
+        denialReasonCounts: { automatic_disabled: 1 },
+      }),
+      productAnalyticsState.incrementShieldBypassSummary({
+        featureCounts: { checkin: 1 },
+        invocationKindCounts: { user_command: 1 },
+        operationCounts: { native_page_action: 1 },
+        decisionCounts: { allowed: 1 },
+        adapterCounts: { tab: 1 },
+      }),
+    ])
+
+    await expect(
+      productAnalyticsState.getShieldBypassSummaryState(),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        featureCounts: { checkin: 2 },
+        invocationKindCounts: { automatic: 1, user_command: 1 },
+        automaticTriggerCounts: { scheduled: 1 },
+        operationCounts: { native_page_action: 2 },
+        decisionCounts: { allowed: 1, denied: 1 },
+        denialReasonCounts: { automatic_disabled: 1 },
+        adapterCounts: { tab: 1 },
+      }),
+    )
+  })
+
   it("rolls shield bypass summary counts to a new UTC day", async () => {
     await productAnalyticsState.replaceShieldBypassSummaryState({
       day: "2026-05-11",
       promptShownCount: 9,
+      featureCounts: { key_management: 9 },
+      decisionCounts: { allowed: 9 },
     })
 
     await productAnalyticsState.incrementShieldBypassSummary({
       settingsVisitedCount: 1,
+      featureCounts: { checkin: 1 },
+      decisionCounts: { denied: 1 },
     })
 
     await expect(productAnalyticsState.getState()).resolves.toEqual(
@@ -128,6 +166,8 @@ describe("productAnalyticsState", () => {
         shieldBypassSummary: {
           day: "2026-05-12",
           settingsVisitedCount: 1,
+          featureCounts: { checkin: 1 },
+          decisionCounts: { denied: 1 },
         },
       }),
     )
@@ -248,6 +288,38 @@ describe("productAnalyticsState", () => {
       day: "2026-05-12",
       promptShownCount: 2,
       tempWindowFetchSuccessCount: 1,
+    })
+  })
+
+  it("normalizes old and hostile decision maps into enum-sized controlled buckets", () => {
+    expect(
+      normalizeShieldBypassSummaryState({
+        day: "2026-05-12",
+        promptShownCount: 2,
+        featureCounts: {
+          checkin: 2.8,
+          unknown_feature: 4,
+          another_unknown: 3,
+          site_detection: 0,
+          verification: -1,
+        },
+        invocationKindCounts: { automatic: 2, forged: 5 },
+        automaticTriggerCounts: { scheduled: 1, mystery: 2 },
+        operationCounts: { fetch: 3, secret_operation: 7 },
+        decisionCounts: { allowed: 1, impossible: 9 },
+        denialReasonCounts: { deprecated_reason: 2, backend_message: 5 },
+        adapterCounts: { tab: 1, private_host: 6 },
+      }),
+    ).toEqual({
+      day: "2026-05-12",
+      promptShownCount: 2,
+      featureCounts: { checkin: 2, other: 7 },
+      invocationKindCounts: { automatic: 2, other: 5 },
+      automaticTriggerCounts: { scheduled: 1, other: 2 },
+      operationCounts: { fetch: 3, other: 7 },
+      decisionCounts: { allowed: 1, other: 9 },
+      denialReasonCounts: { other: 7 },
+      adapterCounts: { tab: 1, other: 6 },
     })
   })
 

@@ -26,24 +26,24 @@ actions:
     type: "secondary"
 
 features:
-  - title: "📦 資産の一元管理ボード"
-    details: "複数のサイトとアカウントを1つのパネルに集約。残高、使用量、健全状態を一目で確認でき、スマートなアドレス認識で簡単に追加できます。"
-  - title: "🏷️ API 認証情報庫"
-    details: "サイトアカウントがなくても、Base URL + API Key を直接保存可能。コピー、API 検証、モデル確認、残高/使用量確認に使えます。"
-  - title: "💰 モデル価格の比較"
-    details: "各サイトのモデル価格を実際のコストで比較。最適なグループを自動的に特定し、最もお得な利用ルートを提案します。"
-  - title: "✅ 高度なインターフェース検証"
-    details: "モデルの可用性、トークン互換性、CLI プロキシの接続性を一括テスト。「サイトは通るがツールでエラーが出る」問題を簡単に解決します。"
-  - title: "📈 詳細な使用量統計"
-    details: "日付、アカウント、モデルごとに使用量と費用を分析。ヒートマップ、遅延ビュー、低速リクエスト分析を提供します。"
-  - title: "📅 自動チェックイン補助"
-    details: "サインイン対応サイトを集中管理。自動スケジュールサインイン、カスタム URL 遷移、チャージ/交換ページへの誘導をサポートします。"
-  - title: "🚀 迅速なエコシステム統合"
-    details: "CherryStudio、CC Switch、Kilo Code 等へ秒速同期。またはアカウント情報を自社構築の管理バックエンドに直接プッシュできます。"
-  - title: "🛠️ 自社構築サイト連携"
-    details: "New API、AxonHub、Claude Code Hub 等に深く対応。チャネル管理やモデル同期、リダイレクト設定が可能です。"
-  - title: "🔒 プライバシーと安全な同期"
-    details: "ローカル保存を基本とし、暗号化 WebDAV 同期をサポート。Cloudflare のチャレンジにも自動的に対応して盾を越えます。"
+  - title: "📊 複数サイトの資産ダッシュボード"
+    details: "複数の AI 中継サイトの残高、利用量、傾向、アカウント状態を一画面で確認し、分散した管理を一つにまとめられます。"
+  - title: "🔑 API 認証情報ライブラリ"
+    details: "サイトアカウントを登録せず、共有されたものや日頃個別に収集した Base URL と API Key をまとめて保存し、情報の確認、テスト、エクスポートにすぐ使えます。"
+  - title: "💰 サイト間モデル価格比較"
+    details: "各サイトのモデル価格を実質価格に換算し、よりお得なモデルやグループをひと目で見つけられます。"
+  - title: "✅ 複数サイトの自動チェックイン"
+    details: "複数サイトへワンクリックまたはスケジュールでチェックインし、毎日のログインなしで特典を自動的に受け取れます。"
+  - title: "🧪 API・モデル・CLI 検証"
+    details: "API の接続状態、モデルの利用可否、CLI の接続状態をワンクリックでテストし、設定上の問題をすばやく切り分けられます。"
+  - title: "🔔 お知らせとタスク結果通知"
+    details: "登録済みサイトのお知らせを一か所で確認し、メンテナンス、モデル、価格などの更新に加えて、自動チェックイン、WebDAV 自動同期、モデル同期の結果もすぐに受け取れます。"
+  - title: "🚀 Web ページからの取り込みとワンクリックエクスポート"
+    details: "Web ページから Base URL や API Key をすばやく検出し、よく使う AI クライアントへワンクリックでエクスポートできます。"
+  - title: "🛠️ 主要 AI ゲートウェイ対応"
+    details: "New API、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub を一元管理し、保存済みのアカウントや API 認証情報からチャネルを作成できます。ゲートウェイ経由でモデルをまとめて呼び出し、チャネルを切り替えながら、モデル同期やリダイレクトも利用できます。"
+  - title: "🔐 ローカル優先と自動同期"
+    details: "データはデフォルトでブラウザ内に保存されます。暗号化 WebDAV 自動同期を有効にすると、複数デバイス間で安全に同期し、パソコンを替えてもそのまま使い続けられます。"
 
 footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 ---
@@ -78,9 +78,9 @@ AI の時代には、節約したり別のモデルを試したりするため�
 
 どのアーキテクチャを使っていても、高い確率で対応しています：
 
-- **アカウントサイト互換アーキテクチャ**：One API, New API, Veloera, One-Hub, Done-Hub, Sub2API など。
-- **特色あるアカウントプラットフォームと互換実装**：AIHubMix, AnyRouter, Neo-API, Super-API, v-api など。
-- **セルフホスト型管理バックエンド**：New API, Veloera, Done-Hub, [Octopus](https://github.com/bestruirui/octopus), AxonHub, Claude Code Hub など。チャネル管理、移行、一部のモデル同期に利用できます。
+- **アカウントサイト互換アーキテクチャ**：New API, One API, Sub2API, One-Hub, Veloera, Done-Hub など。
+- **特色あるアカウントプラットフォームと互換実装**：AnyRouter, AIHubMix, Super-API, v-api, Neo-API など。
+- **セルフホスト型管理バックエンド**：New API, AxonHub, Claude Code Hub, [Octopus](https://github.com/bestruirui/octopus), Veloera, Done-Hub など。チャネル管理、移行、一部のモデル同期に利用できます。
 
 > macOS で Safari を使う場合は、先に [Safari インストールガイド](./safari-install.md) を確認してください。
 > QQ / 360 / Brave / Vivaldi / Opera などのブラウザを使う場合は、[その他のブラウザへのインストールガイド](./other-browser-install.md) を確認してください。

@@ -25,6 +25,8 @@ import {
   buildChannelPayload,
   checkValidNewApiConfig,
   fetchAvailableModels,
+  fetchChannelSecretKey,
+  hydrateComparableChannelKeys,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/newApi"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
@@ -52,6 +54,15 @@ import type { NewApiConfig } from "~/types/newApiConfig"
 import { createManagedSiteConfigCapability } from "./config"
 import { toManagedSiteApiServiceRequest } from "./request"
 
+const requireProtectionBypassExecution = (
+  options: Parameters<typeof fetchChannelSecretKey>[2] | undefined,
+) => {
+  if (!options?.protectionBypassExecution) {
+    throw new Error("New API hidden-key session reads require explicit intent")
+  }
+  return options
+}
+
 export const newApiManagedSiteChannels: ManagedSiteChannelsCapability<NewApiConfig> =
   {
     search: async (config, keyword) =>
@@ -67,6 +78,18 @@ export const newApiManagedSiteChannels: ManagedSiteChannelsCapability<NewApiConf
       await updateChannel(toManagedSiteApiServiceRequest(config), channelData),
     delete: async (config, channelId) =>
       await deleteChannel(toManagedSiteApiServiceRequest(config), channelId),
+    fetchSecretKey: async (config, channelId, options) =>
+      await fetchChannelSecretKey(
+        config,
+        channelId,
+        requireProtectionBypassExecution(options),
+      ),
+    hydrateComparableKeys: async (config, candidates, options) =>
+      await hydrateComparableChannelKeys(
+        config,
+        candidates,
+        requireProtectionBypassExecution(options),
+      ),
     fetchModels: async (config, channelId, options) =>
       await fetchChannelModels(
         toManagedSiteApiServiceRequest(config, options),

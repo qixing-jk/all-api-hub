@@ -46,6 +46,207 @@ describe("userPreferences shared preference timestamps", () => {
     expect(storedAfter.sharedPreferencesLastUpdated).toBeUndefined()
   })
 
+  it("keeps stored v26 preferences unchanged until a normal save writes v27", async () => {
+    const legacyTimestamp = 123457
+    const storedPreferences = {
+      ...DEFAULT_PREFERENCES,
+      preferencesVersion: 26,
+      lastUpdated: legacyTimestamp,
+      sharedPreferencesLastUpdated: legacyTimestamp,
+      tempWindowFallback: {
+        enabled: true,
+        useInPopup: true,
+        useInSidePanel: true,
+        useInOptions: true,
+        useForAutoRefresh: false,
+        useForManualRefresh: true,
+        tempContextMode: "composite",
+      },
+    } as any
+    await storage.set(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+      storedPreferences,
+    )
+
+    const preferences = await userPreferences.getPreferencesStrict()
+    const storedAfter = (await storage.get(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+    )) as any
+
+    expect(preferences.preferencesVersion).toBe(27)
+    expect(preferences.lastUpdated).toBe(legacyTimestamp)
+    expect(preferences.sharedPreferencesLastUpdated).toBe(legacyTimestamp)
+    expect(preferences.tempWindowFallback).not.toHaveProperty(
+      "useForAutoRefresh",
+    )
+    expect(preferences.tempWindowFallback).toMatchObject({
+      automaticFeatureBypass: {
+        account_refresh: false,
+      },
+    })
+    expect(storedAfter).toEqual(storedPreferences)
+
+    vi.setSystemTime(legacyTimestamp + 1)
+    const saveResult = await userPreferences.savePreferences({
+      themeMode: "dark",
+    })
+    const storedAfterSave = (await storage.get(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+    )) as any
+
+    expect(saveResult).toMatchObject({ ok: true })
+    expect(storedAfterSave.preferencesVersion).toBe(27)
+    expect(storedAfterSave.lastUpdated).toBe(legacyTimestamp + 1)
+    expect(storedAfterSave.tempWindowFallback).not.toHaveProperty(
+      "useForAutoRefresh",
+    )
+    expect(
+      storedAfterSave.tempWindowFallback.automaticFeatureBypass.account_refresh,
+    ).toBe(false)
+  })
+
+  it("does not acquire the write lock or write storage during public reads", async () => {
+    await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      preferencesVersion: 26,
+    } as any)
+    const storageSetSpy = vi.spyOn((userPreferences as any).storage, "set")
+    const storageWriteLockSpy = vi.spyOn(
+      userPreferences as any,
+      "withStorageWriteLock",
+    )
+    storageSetSpy.mockClear()
+
+    try {
+      await expect(userPreferences.getPreferences()).resolves.toMatchObject({
+        preferencesVersion: CURRENT_PREFERENCES_VERSION,
+      })
+      await expect(
+        userPreferences.getPreferencesStrict(),
+      ).resolves.toMatchObject({
+        preferencesVersion: CURRENT_PREFERENCES_VERSION,
+      })
+      expect(storageWriteLockSpy).not.toHaveBeenCalled()
+      expect(storageSetSpy).not.toHaveBeenCalled()
+    } finally {
+      storageWriteLockSpy.mockRestore()
+      storageSetSpy.mockRestore()
+    }
+  })
+
+  it("writes only the final canonical import when preserving WebDAV from local v26 preferences", async () => {
+    await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      preferencesVersion: 26,
+      lastUpdated: 100,
+      sharedPreferencesLastUpdated: 100,
+      tempWindowFallback: {
+        enabled: true,
+        useForAutoRefresh: false,
+        tempContextMode: "composite",
+      },
+    } as any)
+    const storageSetSpy = vi.spyOn((userPreferences as any).storage, "set")
+    storageSetSpy.mockClear()
+
+    try {
+      const result = await userPreferences.importPreferences(
+        {
+          ...DEFAULT_PREFERENCES,
+          preferencesVersion: 26,
+          tempWindowFallback: {
+            enabled: false,
+            useForAutoRefresh: true,
+            tempContextMode: "tab",
+          },
+        } as any,
+        { preserveWebdav: true },
+      )
+
+      expect(result).toMatchObject({ ok: true })
+      expect(storageSetSpy).toHaveBeenCalledTimes(1)
+      const storedAfter = (await storage.get(
+        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+      )) as any
+      expect(storedAfter.preferencesVersion).toBe(27)
+      expect(storedAfter.tempWindowFallback).toEqual({
+        enabled: false,
+        automaticFeatureBypass: {
+          account_refresh: true,
+          balance_history: true,
+          checkin: true,
+          redemption_assist: true,
+          ldoh_site_lookup: true,
+          key_management: true,
+          managed_site_channels: true,
+          managed_site_model_sync: true,
+        },
+        tempContextMode: "tab",
+      })
+    } finally {
+      storageSetSpy.mockRestore()
+    }
+  })
+
+  it("canonicalizes malformed current-version manual imports in one final write", async () => {
+    await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      lastUpdated: 100,
+      sharedPreferencesLastUpdated: 100,
+    })
+    const storageSetSpy = vi.spyOn((userPreferences as any).storage, "set")
+    storageSetSpy.mockClear()
+
+    try {
+      const result = await userPreferences.importPreferences({
+        ...DEFAULT_PREFERENCES,
+        preferencesVersion: CURRENT_PREFERENCES_VERSION,
+        tempWindowFallback: {
+          enabled: false,
+          automaticFeatureBypass: {
+            account_refresh: true,
+            balance_history: "invalid",
+            checkin: false,
+          },
+          useForAutoRefresh: false,
+          useInPopup: true,
+          tempContextMode: "tab",
+        },
+      } as any)
+
+      expect(result).toMatchObject({ ok: true })
+      expect(storageSetSpy).toHaveBeenCalledTimes(1)
+      const storedAfter = (await storage.get(
+        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+      )) as any
+      const exported = await userPreferences.exportPreferences()
+      expect(storageSetSpy).toHaveBeenCalledTimes(1)
+      expect(storedAfter.tempWindowFallback).toEqual({
+        enabled: false,
+        automaticFeatureBypass: {
+          account_refresh: true,
+          balance_history: true,
+          checkin: false,
+          redemption_assist: true,
+          ldoh_site_lookup: true,
+          key_management: true,
+          managed_site_channels: true,
+          managed_site_model_sync: true,
+        },
+        tempContextMode: "tab",
+      })
+      expect(exported.tempWindowFallback).toEqual(
+        storedAfter.tempWindowFallback,
+      )
+      expect(storedAfter.tempWindowFallback).not.toHaveProperty(
+        "useForAutoRefresh",
+      )
+      expect(storedAfter.tempWindowFallback).not.toHaveProperty("useInPopup")
+    } finally {
+      storageSetSpy.mockRestore()
+    }
+  })
+
   it("returns neutral timestamps when preferences are missing", async () => {
     vi.setSystemTime(13000)
 

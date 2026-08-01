@@ -14,6 +14,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
@@ -26,6 +27,7 @@ const {
   openAddAccountMock,
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
+  withProtectionBypassUserCommandMock,
   accounts,
 } = vi.hoisted(() => ({
   ensurePermissionsDetailedMock: vi.fn(),
@@ -35,6 +37,7 @@ const {
   openAddAccountMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
+  withProtectionBypassUserCommandMock: vi.fn(),
   accounts: [] as ReturnType<typeof buildSiteAccount>[],
 }))
 
@@ -97,6 +100,10 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
       startProductAnalyticsActionMock(...args),
   }
 })
+
+vi.mock("~/services/protectionBypass/client", () => ({
+  withProtectionBypassUserCommand: withProtectionBypassUserCommandMock,
+}))
 
 function renderDialog() {
   return render(
@@ -268,6 +275,19 @@ describe("BookmarkAccountImportDialog", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
+    withProtectionBypassUserCommandMock.mockImplementation(
+      async (
+        command: unknown,
+        surface: unknown,
+        work: (execution: unknown) => Promise<unknown>,
+      ) =>
+        work({
+          version: PROTECTION_BYPASS_EXECUTION_VERSION,
+          kind: "user_command",
+          command,
+          surface,
+        }),
+    )
   })
 
   it("explains the batch-import workflow before requesting bookmark access", async () => {
@@ -975,6 +995,12 @@ describe("BookmarkAccountImportDialog", () => {
     await waitFor(() => {
       expect(runBookmarkAccountImportMock).toHaveBeenCalledTimes(1)
     })
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledTimes(1)
+    expect(withProtectionBypassUserCommandMock).toHaveBeenCalledWith(
+      "add_account",
+      expect.any(String),
+      expect.any(Function),
+    )
     expect(runBookmarkAccountImportMock.mock.calls[0][0].candidates).toEqual([
       expect.objectContaining({
         id: "bookmark-import:https://new.example.invalid",
@@ -982,6 +1008,14 @@ describe("BookmarkAccountImportDialog", () => {
         status: "ready",
       }),
     ])
+    expect(
+      runBookmarkAccountImportMock.mock.calls[0][0].protectionBypassExecution,
+    ).toEqual({
+      version: PROTECTION_BYPASS_EXECUTION_VERSION,
+      kind: "user_command",
+      command: "add_account",
+      surface: "background",
+    })
     await waitFor(() => {
       expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
     })
@@ -1309,6 +1343,45 @@ describe("BookmarkAccountImportDialog", () => {
         insights: expect.objectContaining({
           failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.StorageReadFailed,
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+        }),
+      }),
+    )
+  })
+
+  it("returns to review with useful feedback when the onboarding grant rejects", async () => {
+    const user = userEvent.setup()
+    withProtectionBypassUserCommandMock.mockRejectedValueOnce(
+      new Error("grant unavailable"),
+    )
+
+    renderDialog()
+
+    await allowBookmarksAndScanSelected(user)
+    await screen.findByText("https://new.example.invalid")
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportImportButton,
+      ),
+    )
+
+    expect(
+      await screen.findByText("ui:dialog.bookmarkAccountImport.importFailed"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportImportButton,
+      ),
+    ).toBeEnabled()
+    expect(runBookmarkAccountImportMock).not.toHaveBeenCalled()
+    expect(loadAccountDataMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: expect.objectContaining({
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+          selectedCount: 2,
         }),
       }),
     )

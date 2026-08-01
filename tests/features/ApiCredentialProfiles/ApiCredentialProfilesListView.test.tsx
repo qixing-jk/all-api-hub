@@ -1,6 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import ApiCredentialProfiles from "~/features/ApiCredentialProfiles/ApiCredentialProfiles"
 import { ApiCredentialProfilesListView } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesListView"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -12,11 +13,15 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { act, fireEvent, render, screen } from "~~/tests/test-utils/render"
 
-const { openKeysPageMock, trackProductAnalyticsActionCompletedMock } =
-  vi.hoisted(() => ({
-    openKeysPageMock: vi.fn(),
-    trackProductAnalyticsActionCompletedMock: vi.fn(),
-  }))
+const {
+  openKeysPageMock,
+  trackProductAnalyticsActionCompletedMock,
+  useApiCredentialProfilesControllerMock,
+} = vi.hoisted(() => ({
+  openKeysPageMock: vi.fn(),
+  trackProductAnalyticsActionCompletedMock: vi.fn(),
+  useApiCredentialProfilesControllerMock: vi.fn(),
+}))
 
 vi.mock("~/utils/navigation", () => ({
   openKeysPage: (...args: unknown[]) => openKeysPageMock(...args),
@@ -32,7 +37,39 @@ vi.mock("~/hooks/useMediaQuery", () => ({
   useIsSmallScreen: () => false,
 }))
 
+vi.mock(
+  "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfilesController",
+  () => ({
+    useApiCredentialProfilesController: () =>
+      useApiCredentialProfilesControllerMock(),
+  }),
+)
+
+vi.mock("~/components/PageHeader", () => ({
+  PageHeader: ({ actions, description, title }: any) => (
+    <header>
+      <h1>{title}</h1>
+      {description ? <div>{description}</div> : null}
+      {actions}
+    </header>
+  ),
+}))
+
 vi.mock("~/components/ui", () => ({
+  Badge: ({ children, size: _size, variant: _variant, ...props }: any) => (
+    <span {...props}>{children}</span>
+  ),
+  Button: ({
+    analyticsAction: _analyticsAction,
+    children,
+    rightIcon: _rightIcon,
+    ...props
+  }: any) => (
+    <button type="button" {...props}>
+      {children}
+    </button>
+  ),
+  Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   Input: ({
     clearButtonLabel,
     leftIcon: _leftIcon,
@@ -93,6 +130,11 @@ vi.mock("~/components/ui", () => ({
       <div>{description}</div>
     </div>
   ),
+  NoticeActionButton: ({ children, ...props }: any) => (
+    <button type="button" {...props}>
+      {children}
+    </button>
+  ),
   Spinner: () => <div data-testid="spinner" />,
 }))
 
@@ -124,6 +166,28 @@ describe("ApiCredentialProfilesListView", () => {
   beforeEach(() => {
     openKeysPageMock.mockReset()
     trackProductAnalyticsActionCompletedMock.mockReset()
+    useApiCredentialProfilesControllerMock.mockReset()
+  })
+
+  it("renders the API credential source-path guidance on the page", async () => {
+    useApiCredentialProfilesControllerMock.mockReturnValue({
+      profiles: [],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    })
+
+    render(<ApiCredentialProfiles />)
+
+    expect(
+      await screen.findByText(
+        "apiCredentialProfiles:unifiedApiGuidance.description.needs_sources",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByText("apiCredentialProfiles:unifiedApiGuidance.boundaryNote"),
+    ).toBeVisible()
   })
 
   it("declares options empty-state add action analytics metadata", async () => {

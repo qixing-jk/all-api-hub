@@ -55,7 +55,7 @@
         "disabled": "想自動領取簽到獎勵時，先開啟自動簽到。之後這裡會顯示下次計畫和執行結果。"
       },
       "managedSiteModelSync": {
-        "disabled": "需要自動同步自建站點模型時，先開啟模型同步。之後這裡會顯示同步間隔和範圍。"
+        "disabled": "需要自動同步自建 AI 閘道模型時，先開啟模型同步。之後這裡會顯示同步間隔和範圍。"
       },
       "siteAnnouncements": {
         "disabled": "想即時看到站點公告時，先開啟公告抓取。之後這裡會顯示最近檢查時間和公告數量。"
@@ -72,7 +72,7 @@
         "allowedModels": "限定模型數",
         "concurrency": "並發數",
         "interval": "同步間隔（小時）",
-        "label": "託管站點模型同步",
+        "label": "自建 AI 閘道模型同步",
         "open": "開啟同步"
       },
       "siteAnnouncements": {
@@ -145,12 +145,12 @@
       }
     },
     "managedSite": {
-      "description": "自建站點的渠道管理與模型同步能力。",
-      "label": "自建站點",
+      "description": "自建 AI 閘道的渠道管理與模型同步能力。",
+      "label": "自建 AI 閘道",
       "state": {
-        "disabled": "還沒有連接自建站點，需要時可以先完成站點設定。",
-        "needs_setup": "先連接自建站點，才能在這裡管理渠道或同步模型。",
-        "not_applicable": "目前站點類型暫不支援自建站點管理。"
+        "disabled": "還沒有設定自建 AI 閘道，需要時可以先完成閘道設定。",
+        "needs_setup": "先設定自建 AI 閘道，才能在這裡管理渠道或同步模型。",
+        "not_applicable": "目前站點類型暫不支援自建 AI 閘道管理。"
       }
     },
     "subItems": {
@@ -178,7 +178,8 @@
     "automationOverview": "自動化執行",
     "configurationOverview": "配置概覽",
     "needsAttention": "需要處理",
-    "recentUsage": "近期使用"
+    "recentUsage": "近期使用",
+    "unifiedApiGuidance": "統一 API 設定"
   },
   "severity": {
     "error": "錯誤",
@@ -187,6 +188,7 @@
   },
   "states": {
     "allClear": "目前沒有需要處理的事項。",
+    "loadDetailUnavailable": "部分總覽資訊暫時無法使用，請重試載入。",
     "loadedWithError": "部分資訊載入失敗，已顯示可用資料。",
     "loading": "正在載入總覽..."
   },
@@ -213,6 +215,69 @@
     "pendingRefresh": "待重新整理",
     "pendingRefreshHelp": "今日統計狀態尚未確認。請前往帳號清單重新整理相關帳號。",
     "unavailable": "不可用"
+  },
+  "unifiedApiGuidance": {
+    "actions": {
+      "addAccount": "新增帳戶",
+      "addApiCredential": "新增 API 憑據",
+      "addGatewayChannel": "新增第一個閘道渠道",
+      "configureManagedSite": "設定自建 AI 閘道",
+      "manageChannels": "管理渠道",
+      "openApiCredentialProfiles": "開啟憑據庫",
+      "openModelSync": "開啟模型同步"
+    },
+    "boundaryNote": "All API Hub 負責管理和匯入設定，不代理模型請求；外部客戶端實際呼叫的是你的自建 AI 閘道。",
+    "description": {
+      "has_gateway_channels": "先前已建立或匯入過閘道渠道。前往渠道管理確認目前狀態，並取得外部客戶端需要的 API 位址和呼叫金鑰。",
+      "needs_importable_source": "已有帳號，但目前帳號類型無法讀取可匯入的 Key。請先儲存 API Key，或新增支援 Key 取得的帳號，再匯入自建 AI 閘道。",
+      "needs_managed_site": "已有帳號 Key 或 API Key。完成自建 AI 閘道設定後，即可將它們匯入為閘道渠道，讓多個 Key 透過同一個 AI API 使用。",
+      "needs_sources": "先新增帳號或儲存 API Key。之後可以直接匯出到客戶端，也可以一鍵匯入自建 AI 閘道，彙整成一個統一 AI API。",
+      "ready_accounts": "自建 AI 閘道基礎設定已完成。繼續匯入帳號 Key 或 API Key；匯入流程會驗證連線並建立閘道渠道。",
+      "ready_profiles": "自建 AI 閘道基礎設定已完成。前往憑據庫驗證已儲存的 API Key，並將它匯入為閘道渠道。"
+    },
+    "directToolExportNote": "如果暫時不需要自建閘道，也可以直接把單個憑據匯出到客戶端工具。",
+    "headline": "將多個帳號 Key 或 API Key 彙整成一個統一 AI API",
+    "modelSyncOptional": "模型同步可自動更新閘道模型列表，減少手動維護；渠道建立後可按需開啟。",
+    "optionalLabel": "可選維護",
+    "sources": {
+      "account": "帳戶來源",
+      "accountUnavailable": "帳戶暫不可匯入",
+      "both": "帳戶 + 憑據",
+      "none": "還沒有來源",
+      "profile": "憑據來源"
+    },
+    "stepper": {
+      "label": "統一 API 設定進度",
+      "states": {
+        "completed": "已完成",
+        "current": "目前步驟",
+        "upcoming": "稍後"
+      },
+      "steps": {
+        "clientAccess": {
+          "description": "取得閘道 API 位址和客戶端呼叫金鑰。",
+          "title": "連接客戶端"
+        },
+        "gatewayChannel": {
+          "description": "匯入至少一個帳號 Key 或已儲存的 API 憑據。",
+          "title": "建立閘道渠道"
+        },
+        "gatewaySettings": {
+          "description": "填寫自建 AI 閘道的管理員連線資訊。",
+          "title": "儲存閘道設定"
+        },
+        "source": {
+          "description": "新增可讀取 Key 的帳號或儲存 API 憑據。",
+          "title": "準備資料來源"
+        }
+      }
+    },
+    "unavailable": {
+      "badge": "狀態未確認",
+      "description": "帳號、憑證或閘道設定未能載入，目前不會因此判定為「沒有來源」。",
+      "retry": "重新檢查設定狀態",
+      "title": "暫時無法確認設定進度"
+    }
   },
   "usage": {
     "activityMix": "近期趨勢",

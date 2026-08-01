@@ -8,6 +8,11 @@ export const OVERVIEW_WIDGET_LAYOUT: OptionsOverviewWidgetLayoutItem[] = [
     persisted: false,
   },
   {
+    id: OPTIONS_OVERVIEW_WIDGET_IDS.unifiedApiGuidance,
+    columnSpan: 3,
+    persisted: false,
+  },
+  {
     id: OPTIONS_OVERVIEW_WIDGET_IDS.needsAttention,
     columnSpan: 2,
     persisted: false,

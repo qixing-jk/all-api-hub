@@ -50,7 +50,17 @@ export function Header({
 }: HeaderProps) {
   const { t } = useTranslation(["keyManagement", "common"])
   const [isManualRefreshLoading, setIsManualRefreshLoading] = useState(false)
-  let description: ReactNode = t("description")
+  const bridgeDescription = (
+    <span className="mt-1 block text-sm text-slate-600 dark:text-slate-400">
+      {t("unifiedApiGuidance.headerBridge")}
+    </span>
+  )
+  let description: ReactNode = (
+    <>
+      <span className="block">{t("description")}</span>
+      {bridgeDescription}
+    </>
+  )
 
   const handleRefresh = async () => {
     setIsManualRefreshLoading(true)
@@ -65,6 +75,7 @@ export function Header({
     description = (
       <>
         <span className="block">{t("description")}</span>
+        {bridgeDescription}
         <span className="mt-1 block font-medium text-amber-700 dark:text-amber-300">
           {managedSiteStatusHint}
         </span>
