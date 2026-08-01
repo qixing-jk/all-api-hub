@@ -874,7 +874,7 @@
           <div class="panel-heading">
             <div>
               <span class="kicker">KEY LEDGER</span>
-              <h2>Key 填入与额度记录</h2>
+              <h2>上 Key 批次记录</h2>
             </div>
             <button
               class="secondary-button compact"
@@ -885,9 +885,8 @@
             </button>
           </div>
           <p class="records-note">
-            只保存 Key 尾号和不可逆指纹，不保存明文。用量按 New API
-            消费日志统计，并按站点、渠道和多 Key
-            索引区分；上游余额按供应商支持情况单独展示。
+            先按每次写入任务显示时间、成功数量、录入额度和累计用量，再展开查看每条
+            Key。只保存 Key 尾号和不可逆指纹，不保存明文。
           </p>
           <div class="usage-summary" id="usage-summary">
             <div>
@@ -965,21 +964,7 @@
             还没有 Key 填入记录。
           </div>
           <div class="records-table-wrap hidden" id="records-table-wrap">
-            <table class="records-table">
-              <thead>
-                <tr>
-                  <th>时间 / 目标</th>
-                  <th>来源 / Key</th>
-                  <th>渠道</th>
-                  <th>额度 / 上游余额</th>
-                  <th>New API 消耗</th>
-                  <th>请求 / Token</th>
-                  <th>最近使用 / 刷新</th>
-                  <th>操作</th>
-                </tr>
-              </thead>
-              <tbody id="records-body"></tbody>
-            </table>
+            <div class="record-batch-list" id="records-body"></div>
           </div>
         </section>
 

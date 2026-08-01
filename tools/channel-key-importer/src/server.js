@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from "node:crypto"
+import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import { createServer } from "node:http"
 import { join, resolve } from "node:path"
@@ -508,6 +508,7 @@ const buildPreviewResponse = (preview, previewId) => ({
 })
 
 async function createChannelsFromPreview(preview, body) {
+  const importBatchId = randomUUID()
   const isTemplateClone = Number.isInteger(preview.templateChannelId)
   if (
     !isTemplateClone &&
@@ -586,6 +587,7 @@ async function createChannelsFromPreview(preview, body) {
     for (const entry of updatedEntries) {
       records.push(
         await importStore.record({
+          importBatchId,
           profileId: runtimeConfig.profileId,
           targetName: runtimeConfig.name,
           targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
@@ -678,6 +680,7 @@ async function createChannelsFromPreview(preview, body) {
     for (const [keyIndex, entry] of preview.keys.entries()) {
       records.push(
         await importStore.record({
+          importBatchId,
           profileId: runtimeConfig.profileId,
           targetName: runtimeConfig.name,
           targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
@@ -756,6 +759,7 @@ async function createChannelsFromPreview(preview, body) {
               // Channel creation already succeeded; balance lookup is best-effort.
             }
             const record = await importStore.record({
+              importBatchId,
               profileId: runtimeConfig.profileId,
               targetName: runtimeConfig.name,
               targetUrl: maskTargetUrl(runtimeConfig.targetUrl),

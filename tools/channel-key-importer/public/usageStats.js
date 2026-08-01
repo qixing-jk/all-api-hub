@@ -106,6 +106,66 @@ export function summarizeUsageRecords(records) {
   return summary
 }
 
+const LEGACY_BATCH_GAP_MS = 45_000
+
+const recordTime = (record) => {
+  const timestamp = Date.parse(record?.importedAt || "")
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+const sameLegacyBatch = (group, record, timestamp) =>
+  group.legacy === true &&
+  group.targetUrl === (record.targetUrl || "") &&
+  group.providerName === (record.providerName || "") &&
+  group.operation === (record.operation || "") &&
+  Math.abs(group.lastRecordAt - timestamp) <= LEGACY_BATCH_GAP_MS
+
+export function groupImportRecords(records) {
+  const groups = []
+  const batches = new Map()
+  const sorted = [...records].sort(
+    (left, right) => recordTime(right) - recordTime(left),
+  )
+
+  for (const record of sorted) {
+    const timestamp = recordTime(record)
+    const batchId = String(record.importBatchId || "")
+    let group = batchId ? batches.get(batchId) : null
+    if (!group && !batchId) {
+      group = groups.find((candidate) =>
+        sameLegacyBatch(candidate, record, timestamp),
+      )
+    }
+    if (!group) {
+      group = {
+        id: batchId || `legacy:${record.id || groups.length}`,
+        legacy: !batchId,
+        targetName: record.targetName || "New API",
+        targetUrl: record.targetUrl || "",
+        providerName: record.providerName || "未知来源",
+        operation: record.operation || "",
+        startedAt: timestamp,
+        completedAt: timestamp,
+        lastRecordAt: timestamp,
+        records: [],
+      }
+      groups.push(group)
+      if (batchId) batches.set(batchId, group)
+    }
+    group.records.push(record)
+    group.startedAt = Math.min(group.startedAt || timestamp, timestamp)
+    group.completedAt = Math.max(group.completedAt || timestamp, timestamp)
+    group.lastRecordAt = timestamp
+  }
+
+  return groups
+    .map((group) => ({
+      ...group,
+      summary: summarizeUsageRecords(group.records),
+    }))
+    .sort((left, right) => right.completedAt - left.completedAt)
+}
+
 export function localDateKey(value) {
   const date = new Date(value)
   if (!Number.isFinite(date.getTime())) return ""

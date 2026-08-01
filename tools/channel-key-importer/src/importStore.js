@@ -144,6 +144,10 @@ export class ImportStore {
         promptTokens: 0,
         completionTokens: 0,
         lastUsedAt: null,
+        importBatchId:
+          typeof input.importBatchId === "string" && input.importBatchId
+            ? input.importBatchId
+            : null,
         operation: input.operation,
         channelId: input.channelId || null,
         channelName: input.channelName,

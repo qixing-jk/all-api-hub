@@ -5,6 +5,7 @@ import {
   filterUsageDashboardRecords,
   filterUsageRecords,
   gatewaySpent,
+  groupImportRecords,
   groupUsageDashboardByDay,
   groupUsageDashboardByTarget,
   localDateKey,
@@ -161,4 +162,65 @@ test("groups dashboard summaries by New API address and import day", () => {
     [localDateKey(firstDay), localDateKey(secondDay)],
   )
   assert.equal(days[1].summary.remainingPercent, 90)
+})
+
+test("groups exact and legacy import batches for a readable ledger", () => {
+  const batchRecords = [
+    {
+      id: "new-1",
+      importBatchId: "batch-a",
+      targetName: "主站",
+      targetUrl: "https://one.example",
+      providerName: "OpenRouter",
+      importedAt: "2026-08-02T01:00:01.000Z",
+      quota: 20,
+      gatewaySpent: 2,
+    },
+    {
+      id: "new-2",
+      importBatchId: "batch-a",
+      targetName: "主站",
+      targetUrl: "https://one.example",
+      providerName: "OpenRouter",
+      importedAt: "2026-08-02T01:00:03.000Z",
+      quota: null,
+      gatewaySpent: 0,
+    },
+    {
+      id: "legacy-1",
+      targetName: "主站",
+      targetUrl: "https://one.example",
+      providerName: "OpenAI",
+      operation: "created",
+      importedAt: "2026-08-01T02:00:00.000Z",
+      quota: 10,
+    },
+    {
+      id: "legacy-2",
+      targetName: "主站",
+      targetUrl: "https://one.example",
+      providerName: "OpenAI",
+      operation: "created",
+      importedAt: "2026-08-01T02:00:20.000Z",
+      quota: 15,
+    },
+    {
+      id: "legacy-3",
+      targetName: "主站",
+      targetUrl: "https://one.example",
+      providerName: "OpenAI",
+      operation: "created",
+      importedAt: "2026-08-01T02:02:00.000Z",
+      quota: 30,
+    },
+  ]
+
+  const groups = groupImportRecords(batchRecords)
+  assert.equal(groups.length, 3)
+  assert.equal(groups[0].records.length, 2)
+  assert.equal(groups[0].summary.quotaTotal, 20)
+  assert.equal(groups[0].summary.unknownQuotaCount, 1)
+  assert.equal(groups[1].records.length, 1)
+  assert.equal(groups[2].records.length, 2)
+  assert.equal(groups[2].summary.quotaTotal, 25)
 })

@@ -2,7 +2,7 @@
   "name": "dataeyesai",
   "private": true,
   "type": "module",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "author": "dataeyesai contributors",
   "license": "MIT",
   "main": "desktop/main.js",

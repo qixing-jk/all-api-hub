@@ -2,6 +2,7 @@ import {
   filterUsageDashboardRecords,
   filterUsageRecords,
   gatewaySpent,
+  groupImportRecords,
   groupUsageDashboardByDay,
   groupUsageDashboardByTarget,
   localDateKey,
@@ -1263,6 +1264,192 @@ function usageStateCopy(record) {
   return { copy: "等待刷新", className: "warning" }
 }
 
+const importOperationCopy = (operation) =>
+  ({
+    created: "新建独立渠道",
+    "created-multi-key": "新建多 Key 渠道",
+    appended: "追加到已有渠道",
+    replaced: "替换已有渠道 Key",
+  })[operation] || "写入 New API"
+
+function appendRecordBatchMetric(container, label, value, detail = "") {
+  const metric = document.createElement("div")
+  const metricLabel = document.createElement("small")
+  metricLabel.textContent = label
+  const metricValue = document.createElement("strong")
+  metricValue.textContent = value
+  metric.append(metricLabel, metricValue)
+  if (detail) {
+    const metricDetail = document.createElement("span")
+    metricDetail.textContent = detail
+    metric.append(metricDetail)
+  }
+  container.append(metric)
+}
+
+function buildRecordDetailRow(record) {
+  const row = document.createElement("tr")
+  const keyCell = document.createElement("td")
+  const source = document.createElement("strong")
+  source.textContent = record.providerName
+  const key = document.createElement("small")
+  key.textContent = `${record.keyHint} · ${record.keyFingerprint}`
+  keyCell.append(source, key)
+
+  const channel = document.createElement("td")
+  channel.className = "channel-cell"
+  const channelName = document.createElement("strong")
+  channelName.textContent = record.channelName || "未定位渠道"
+  const channelId = document.createElement("small")
+  channelId.textContent = record.channelId
+    ? `渠道 ID ${formatInteger(record.channelId)}`
+    : "尚未绑定渠道 ID"
+  channel.append(channelName, channelId)
+
+  const quotaUsage = document.createElement("td")
+  const statusInfo = usageStateCopy(record)
+  const status = document.createElement("span")
+  status.className = `usage-status ${statusInfo.className}`.trim()
+  status.textContent = statusInfo.copy
+  const quota = document.createElement("strong")
+  quota.textContent = Number.isFinite(record.quota)
+    ? `额度 ${formatUsd(record.quota)}`
+    : "额度 x"
+  const cost = document.createElement("small")
+  cost.className = "record-detail-cost"
+  cost.textContent = `已用 ${usageCopy(record)}`
+  quotaUsage.append(status, quota, cost)
+  const trackedSpent = gatewaySpent(record)
+  if (Number.isFinite(record.quota) && trackedSpent != null) {
+    const remaining = document.createElement("small")
+    remaining.textContent = `剩余 ${formatUsd(
+      Math.max(0, record.quota - trackedSpent),
+    )}`
+    quotaUsage.append(remaining)
+    const progress = document.createElement("div")
+    progress.className = `quota-progress ${
+      trackedSpent > record.quota ? "over" : ""
+    }`.trim()
+    const progressValue = document.createElement("span")
+    progressValue.style.width = `${Math.min(
+      100,
+      record.quota > 0 ? (trackedSpent / record.quota) * 100 : 0,
+    )}%`
+    progress.append(progressValue)
+    quotaUsage.append(progress)
+  }
+
+  const traffic = document.createElement("td")
+  const requests = document.createElement("strong")
+  requests.textContent = `${formatInteger(record.requestCount || 0)} 次请求`
+  const tokens = document.createElement("small")
+  tokens.textContent =
+    record.usageDetailsComplete === false
+      ? "Token 明细未完整"
+      : `Token ${formatCompact(
+          (record.promptTokens || 0) + (record.completionTokens || 0),
+        )}`
+  const activity = document.createElement("small")
+  activity.textContent = `最近使用：${formatUsageTime(record.lastUsedAt)}`
+  const checked = document.createElement("small")
+  checked.textContent = record.checkedAt
+    ? `刷新：${formatDateTime(record.checkedAt)}`
+    : "尚未刷新用量"
+  traffic.append(requests, tokens, activity, checked)
+
+  const action = document.createElement("td")
+  const refresh = document.createElement("button")
+  refresh.type = "button"
+  refresh.className = "table-action"
+  refresh.textContent = "刷新消耗"
+  refresh.disabled =
+    !record.channelId ||
+    (record.sharedChannel && !Number.isInteger(record.keyIndex))
+  refresh.addEventListener("click", () => refreshImportRecord(record, refresh))
+  action.append(refresh)
+  row.append(keyCell, channel, quotaUsage, traffic, action)
+  return row
+}
+
+function appendRecordBatch(batch, index) {
+  const card = document.createElement("article")
+  card.className = "record-batch-card"
+  const header = document.createElement("header")
+  const identity = document.createElement("div")
+  identity.className = "record-batch-identity"
+  const time = document.createElement("strong")
+  time.textContent = formatDateTime(batch.startedAt)
+  const destination = document.createElement("small")
+  destination.textContent = `${batch.targetName} · ${batch.providerName} · ${importOperationCopy(batch.operation)}`
+  const targetUrl = document.createElement("span")
+  targetUrl.textContent = batch.targetUrl
+  identity.append(time, destination, targetUrl)
+  const count = document.createElement("b")
+  count.className = "record-batch-count"
+  count.textContent = `成功写入 ${formatInteger(batch.records.length)} 条 Key`
+  header.append(identity, count)
+
+  const metrics = document.createElement("div")
+  metrics.className = "record-batch-metrics"
+  appendRecordBatchMetric(
+    metrics,
+    "本批 Key",
+    formatInteger(batch.summary.recordCount),
+    batch.legacy ? "历史记录按相近写入时间归组" : "同一次批量任务",
+  )
+  appendRecordBatchMetric(
+    metrics,
+    "本批录入额度",
+    formatUsd(batch.summary.quotaTotal),
+    batch.summary.unknownQuotaCount > 0
+      ? `${formatInteger(batch.summary.unknownQuotaCount)} 条额度 x`
+      : "额度均已填写",
+  )
+  appendRecordBatchMetric(
+    metrics,
+    "累计已用",
+    formatUsd(batch.summary.gatewaySpentTotal),
+    `${formatInteger(batch.summary.trackedCount)} 条已刷新`,
+  )
+  appendRecordBatchMetric(
+    metrics,
+    "请求次数",
+    formatInteger(batch.summary.requestCount),
+    `${formatInteger(batch.summary.usedKeyCount)} 条 Key 已使用`,
+  )
+
+  const details = document.createElement("details")
+  details.className = "record-batch-details"
+  details.open = index === 0
+  const summary = document.createElement("summary")
+  summary.textContent = `查看本批 ${formatInteger(batch.records.length)} 条 Key 明细`
+  const tableWrap = document.createElement("div")
+  tableWrap.className = "record-detail-table-wrap"
+  const table = document.createElement("table")
+  table.className = "records-table record-detail-table"
+  const head = document.createElement("thead")
+  const headRow = document.createElement("tr")
+  for (const label of [
+    "来源 / Key",
+    "渠道",
+    "额度 / 已用",
+    "请求 / 最近使用",
+    "操作",
+  ]) {
+    const cell = document.createElement("th")
+    cell.textContent = label
+    headRow.append(cell)
+  }
+  head.append(headRow)
+  const body = document.createElement("tbody")
+  for (const record of batch.records) body.append(buildRecordDetailRow(record))
+  table.append(head, body)
+  tableWrap.append(table)
+  details.append(summary, tableWrap)
+  card.append(header, metrics, details)
+  elements.recordsBody.append(card)
+}
+
 function renderRecords() {
   elements.recordsBody.replaceChildren()
   const records = filterUsageRecords(state.records, currentRecordFilters())
@@ -1274,131 +1461,7 @@ function renderRecords() {
       : "还没有 Key 填入记录。"
   elements.recordsEmpty.classList.toggle("hidden", hasRecords)
   elements.recordsTableWrap.classList.toggle("hidden", !hasRecords)
-  for (const record of records) {
-    const row = document.createElement("tr")
-    const timeTarget = document.createElement("td")
-    const time = document.createElement("strong")
-    time.textContent = new Date(record.importedAt).toLocaleString("zh-CN")
-    const target = document.createElement("small")
-    target.textContent = `${record.targetName || "New API"} · ${record.targetUrl}`
-    timeTarget.append(time, target)
-
-    const sourceKey = document.createElement("td")
-    const source = document.createElement("strong")
-    source.textContent = record.providerName
-    const key = document.createElement("small")
-    key.textContent = `${record.keyHint} · ${record.keyFingerprint}`
-    sourceKey.append(source, key)
-
-    const channel = document.createElement("td")
-    channel.className = "channel-cell"
-    channel.textContent = record.channelName || "未定位"
-    if (record.channelId) {
-      const channelId = document.createElement("small")
-      channelId.textContent = `渠道 #${record.channelId}`
-      channel.append(channelId)
-    }
-    const quotaBalance = document.createElement("td")
-    const quota = document.createElement("strong")
-    quota.textContent = Number.isFinite(record.quota)
-      ? formatUsd(record.quota)
-      : "额度 x"
-    const balance = document.createElement("small")
-    balance.textContent = Number.isFinite(record.currentBalance)
-      ? `上游余额 ${formatUsd(record.currentBalance)}`
-      : "上游余额未查询"
-    quotaBalance.append(quota, balance)
-    if (Number.isFinite(record.upstreamSpent)) {
-      const upstreamSpent = document.createElement("small")
-      upstreamSpent.textContent = `上游差额 ${formatUsd(record.upstreamSpent)}`
-      quotaBalance.append(upstreamSpent)
-    }
-    const spent = document.createElement("td")
-    const status = document.createElement("span")
-    const statusInfo = usageStateCopy(record)
-    status.className = `usage-status ${statusInfo.className}`.trim()
-    status.textContent = statusInfo.copy
-    const cost = document.createElement("strong")
-    cost.className = "usage-cost"
-    cost.textContent = usageCopy(record)
-    spent.append(status, cost)
-    const trackedSpent = gatewaySpent(record)
-    if (Number.isFinite(record.quota) && trackedSpent != null) {
-      const remaining = document.createElement("small")
-      remaining.textContent = `剩余录入额度 ${formatUsd(
-        Math.max(0, record.quota - trackedSpent),
-      )}`
-      spent.append(remaining)
-      const progress = document.createElement("div")
-      progress.className = `quota-progress ${
-        trackedSpent > record.quota ? "over" : ""
-      }`.trim()
-      const progressValue = document.createElement("span")
-      progressValue.style.width = `${Math.min(
-        100,
-        record.quota > 0 ? (trackedSpent / record.quota) * 100 : 0,
-      )}%`
-      progress.append(progressValue)
-      spent.append(progress)
-    }
-    if (record.usageTruncated) {
-      const partial = document.createElement("small")
-      partial.textContent = "日志超过 50,000 条，金额和 Token 仅为已扫描部分"
-      spent.append(partial)
-    }
-    const traffic = document.createElement("td")
-    const requests = document.createElement("strong")
-    requests.textContent = Number.isFinite(record.requestCount)
-      ? `${formatInteger(record.requestCount)} 次`
-      : "请求数待同步"
-    const inputTokens = document.createElement("small")
-    inputTokens.textContent = Number.isFinite(record.promptTokens)
-      ? `输入 ${formatCompact(record.promptTokens)}`
-      : "输入 Token —"
-    const outputTokens = document.createElement("small")
-    outputTokens.textContent = Number.isFinite(record.completionTokens)
-      ? `输出 ${formatCompact(record.completionTokens)}`
-      : "输出 Token —"
-    const totalTokens = document.createElement("small")
-    totalTokens.textContent =
-      record.usageDetailsComplete === false
-        ? "金额准确 · Token 明细未完整"
-        : `合计 ${formatCompact(
-            (record.promptTokens || 0) + (record.completionTokens || 0),
-          )} tokens`
-    traffic.append(requests, inputTokens, outputTokens, totalTokens)
-    const activity = document.createElement("td")
-    const lastUsed = document.createElement("strong")
-    lastUsed.textContent = formatUsageTime(record.lastUsedAt)
-    const checked = document.createElement("small")
-    checked.textContent = record.checkedAt
-      ? `刷新于 ${formatDateTime(record.checkedAt)}`
-      : "尚未刷新"
-    activity.append(lastUsed, checked)
-    const action = document.createElement("td")
-    const refresh = document.createElement("button")
-    refresh.type = "button"
-    refresh.className = "table-action"
-    refresh.textContent = "刷新消耗"
-    refresh.disabled =
-      !record.channelId ||
-      (record.sharedChannel && !Number.isInteger(record.keyIndex))
-    refresh.addEventListener("click", () =>
-      refreshImportRecord(record, refresh),
-    )
-    action.append(refresh)
-    row.append(
-      timeTarget,
-      sourceKey,
-      channel,
-      quotaBalance,
-      spent,
-      traffic,
-      activity,
-      action,
-    )
-    elements.recordsBody.append(row)
-  }
+  groupImportRecords(records).forEach(appendRecordBatch)
 }
 
 async function loadRecords() {
