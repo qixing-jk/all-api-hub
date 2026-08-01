@@ -47,6 +47,9 @@ describe("product announcement CTA URL policy", () => {
       "https://all-api-hub.qixing1217.top/options.html",
       "javascript:alert(1)",
       "//example.invalid/options.html",
+      "\\\\example.invalid/options.html",
+      "/\\example.invalid/options.html",
+      "/\\[",
     ]) {
       expect(
         sanitizeProductAnnouncementCta({

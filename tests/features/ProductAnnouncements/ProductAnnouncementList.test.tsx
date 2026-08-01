@@ -102,6 +102,23 @@ describe("ProductAnnouncementList", () => {
     expect(screen.queryByRole("link", { name: "Broken link" })).toBeNull()
   })
 
+  it("does not render CTAs with unknown kinds", () => {
+    renderList({
+      notices: [
+        {
+          ...notice,
+          cta: {
+            kind: "command",
+            label: "Run command",
+            url: "options.html",
+          } as never,
+        },
+      ],
+    })
+
+    expect(screen.queryByRole("link", { name: "Run command" })).toBeNull()
+  })
+
   it("renders extension CTAs with the current runtime origin", () => {
     renderList({
       notices: [
