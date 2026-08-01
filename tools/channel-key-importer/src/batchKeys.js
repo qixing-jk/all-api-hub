@@ -149,6 +149,16 @@ export function applyQuotaLines(entries, value) {
   })
 }
 
+export function applyUniformQuota(entries, value) {
+  const text = String(value || "").trim()
+  if (!text) throw new Error("请输入统一额度，未知额度请填写 x")
+  const quota = parseQuotaText(text)
+  if (quota != null && (!Number.isFinite(quota) || quota < 0)) {
+    throw new Error("统一额度格式不正确，未知额度请填写 x")
+  }
+  return entries.map((entry) => ({ ...entry, quota }))
+}
+
 export function keyNameHint(apiKey) {
   let value = String(apiKey || "")
     .trim()

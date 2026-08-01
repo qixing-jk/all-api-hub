@@ -3,6 +3,7 @@ import test from "node:test"
 
 import {
   applyQuotaLines,
+  applyUniformQuota,
   buildResourceChannelName,
   keyNameHint,
   parseBatchKeys,
@@ -112,6 +113,22 @@ test("applies quota lines to keys by matching line number", () => {
     { apiKey: "sk-second", quota: null },
   ])
   assert.throws(() => applyQuotaLines(entries, "20"), /Key 有 2 条/)
+})
+
+test("applies one uniform quota to every key", () => {
+  const entries = parseBatchKeys("sk-first | 10\nsk-second | x", "", {
+    deduplicate: false,
+  })
+  assert.deepEqual(applyUniformQuota(entries, "485刀"), [
+    { apiKey: "sk-first", quota: 485 },
+    { apiKey: "sk-second", quota: 485 },
+  ])
+  assert.deepEqual(applyUniformQuota(entries, "x"), [
+    { apiKey: "sk-first", quota: null },
+    { apiKey: "sk-second", quota: null },
+  ])
+  assert.throws(() => applyUniformQuota(entries, ""), /请输入统一额度/)
+  assert.throws(() => applyUniformQuota(entries, "wrong"), /格式不正确/)
 })
 
 test("keeps duplicate input rows until their separate quotas are aligned", () => {

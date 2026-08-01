@@ -97,7 +97,12 @@ const elements = {
   providerModelMappingsLabel: $("#provider-model-mappings-label"),
   providerModelMappings: $("#provider-model-mappings"),
   providerModelMappingsHelp: $("#provider-model-mappings-help"),
+  quotaMode: $("#quota-mode"),
+  uniformQuotaField: $("#uniform-quota-field"),
+  uniformQuota: $("#uniform-quota"),
+  perLineQuotaField: $("#per-line-quota-field"),
   keyQuotas: $("#key-quotas"),
+  quotaHelp: $("#quota-help"),
   awsGlobalField: $("#aws-global-field"),
   awsGlobalInference: $("#aws-global-inference"),
   autoWrite: $("#auto-write"),
@@ -502,7 +507,11 @@ function selectProvider(provider) {
     ? "这个渠道必须填写完整的 Base URL。"
     : "可以按实际部署修改；留空时由 New API 使用默认值。"
   elements.apiKey.value = ""
+  elements.quotaMode.value = "uniform"
+  elements.uniformQuota.value = ""
   elements.keyQuotas.value = ""
+  resetStaticCredentialVisibility()
+  updateQuotaModeForm()
   elements.channelPriority.value = ""
   elements.channelWeight.value = ""
   elements.priorityDescending.checked = false
@@ -523,8 +532,8 @@ function selectProvider(provider) {
       ? "批量完整凭证（可选，一行一条）"
       : "API Key（可批量，一行一条）"
   elements.keyHelp.textContent = provider.channelConfig.credentialModes?.length
-    ? "可整段粘贴多条完整凭证；每条后面可带额度。上方字段用于单条录入。"
-    : "可整段粘贴几十条 Key；Key 后可带额度，支持空格、|、逗号或冒号分隔。"
+    ? "可整段粘贴多条完整凭证；默认明文显示，确认无误后可手动隐藏。"
+    : "可整段粘贴几十条 Key；默认明文显示，确认无误后可手动隐藏。"
   elements.unsupportedNote.classList.toggle("hidden", provider.importable)
   elements.unsupportedNote.textContent = provider.importable
     ? ""
@@ -658,7 +667,7 @@ function createCredentialField(field, valueKind) {
     ? document.createElement("textarea")
     : document.createElement("input")
   if (field.multiline) input.rows = 5
-  if (field.secret && !field.multiline) input.type = "password"
+  if (field.secret && !field.multiline) input.type = "text"
   input.placeholder = field.placeholder || ""
   input.value = field.defaultValue || ""
   input.autocomplete = "new-password"
@@ -666,17 +675,16 @@ function createCredentialField(field, valueKind) {
   const sensitive = field.secret || Boolean(field.fileAccept)
   if (sensitive) input.dataset.sensitive = "true"
   label.append(title)
-  if (sensitive && field.multiline) {
+  if (sensitive) {
     const wrapper = document.createElement("div")
-    wrapper.className = "secret-input textarea-secret"
+    wrapper.className = `secret-input${field.multiline ? " textarea-secret" : ""}`
     const toggle = document.createElement("button")
     toggle.type = "button"
-    toggle.textContent = "显示"
+    toggle.textContent = "隐藏"
     toggle.addEventListener("click", () => {
-      input.classList.toggle("revealed")
-      toggle.textContent = input.classList.contains("revealed")
-        ? "隐藏"
-        : "显示"
+      const visible = isSecretInputVisible(input)
+      setSecretInputVisible(input, !visible)
+      toggle.textContent = visible ? "显示" : "隐藏"
     })
     wrapper.append(input, toggle)
     label.append(wrapper)
@@ -1902,18 +1910,38 @@ elements.addMapping.addEventListener("click", () => {
 elements.manualModels.addEventListener("input", updateModelPlanSummary)
 elements.duplicateTarget.addEventListener("change", updateDuplicateAction)
 
+function isSecretInputVisible(input) {
+  return input.tagName === "TEXTAREA"
+    ? !input.classList.contains("masked")
+    : input.type !== "password"
+}
+
+function setSecretInputVisible(input, visible) {
+  if (input.tagName === "TEXTAREA") {
+    input.classList.toggle("masked", !visible)
+    return
+  }
+  input.type = visible ? "text" : "password"
+}
+
+function resetStaticCredentialVisibility() {
+  for (const input of [
+    elements.apiKey,
+    elements.uniformQuota,
+    elements.keyQuotas,
+  ]) {
+    setSecretInputVisible(input, true)
+    const button = document.querySelector(`[data-toggle-secret="${input.id}"]`)
+    if (button) button.textContent = "隐藏"
+  }
+}
+
 document.querySelectorAll("[data-toggle-secret]").forEach((button) => {
   button.addEventListener("click", () => {
     const input = document.getElementById(button.dataset.toggleSecret)
-    if (input.tagName === "TEXTAREA") {
-      input.classList.toggle("revealed")
-      button.textContent = input.classList.contains("revealed")
-        ? "隐藏"
-        : "显示"
-      return
-    }
-    input.type = input.type === "password" ? "text" : "password"
-    button.textContent = input.type === "password" ? "显示" : "隐藏"
+    const visible = isSecretInputVisible(input)
+    setSecretInputVisible(input, !visible)
+    button.textContent = visible ? "显示" : "隐藏"
   })
 })
 
@@ -2188,6 +2216,8 @@ function buildCredentialRequestBody() {
     templateChannelId: selectedTemplateId(),
     baseUrl: elements.sourceBaseUrl.value,
     apiKey: elements.apiKey.value,
+    quotaMode: elements.quotaMode.value,
+    uniformQuota: elements.uniformQuota.value,
     quotaLines: elements.keyQuotas.value,
     credentialMode: elements.credentialMode.value,
     credentialParts: Object.fromEntries(
@@ -2219,13 +2249,14 @@ function buildCredentialRequestBody() {
 
 function clearSensitiveCredentialInputs() {
   elements.apiKey.value = ""
+  elements.uniformQuota.value = ""
   elements.keyQuotas.value = ""
   elements.providerConfigFields
     .querySelectorAll('[data-sensitive="true"]')
     .forEach((input) => {
       input.value = ""
     })
-  elements.apiKey.classList.remove("revealed")
+  resetStaticCredentialVisibility()
 }
 
 elements.credentialForm.addEventListener("submit", async (event) => {
@@ -2574,6 +2605,19 @@ function updateScheduleForm() {
 }
 
 elements.scheduleEnabled.addEventListener("change", updateScheduleForm)
+
+function updateQuotaModeForm() {
+  const uniform = elements.quotaMode.value === "uniform"
+  elements.uniformQuotaField.classList.toggle("hidden", !uniform)
+  elements.perLineQuotaField.classList.toggle("hidden", uniform)
+  elements.uniformQuota.required = uniform
+  elements.keyQuotas.required = false
+  elements.quotaHelp.textContent = uniform
+    ? "这个额度会应用到本批全部 Key；支持 485、485u、$485、485刀或 x。"
+    : "每行对应左侧同一行 Key；可不填，未知额度填写 x。"
+}
+
+elements.quotaMode.addEventListener("change", updateQuotaModeForm)
 
 function updatePrioritySequenceForm() {
   const multiKey = elements.batchMode.value === "multi_to_single"

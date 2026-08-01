@@ -557,10 +557,9 @@ textarea {
   padding: 12px;
   resize: vertical;
   line-height: 1.5;
-  -webkit-text-security: disc;
 }
-textarea.revealed {
-  -webkit-text-security: none;
+textarea.masked {
+  -webkit-text-security: disc;
 }
 input:focus,
 textarea:focus,
@@ -877,6 +876,24 @@ select:focus {
   grid-template-columns: minmax(0, 2fr) minmax(120px, 0.7fr);
   gap: 12px;
   align-items: start;
+}
+.quota-input-panel {
+  display: grid;
+  gap: 10px;
+}
+.quota-mode-control,
+.quota-mode-field {
+  display: grid;
+  gap: 6px;
+}
+.quota-mode-control > span,
+.quota-mode-field > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+}
+.quota-mode-field input {
+  width: 100%;
 }
 .routing-options {
   display: grid;

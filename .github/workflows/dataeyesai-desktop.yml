@@ -15,7 +15,7 @@ on:
       version:
         description: "Release version without the v prefix"
         required: true
-        default: "0.5.0"
+        default: "0.5.1"
 
 permissions:
   contents: write
@@ -87,6 +87,8 @@ jobs:
           - 批量独立建渠道可按 Key 原始顺序自动递减优先级，定时跨批次也不重置顺序
           - 上 Key 记录按写入批次汇总时间、数量、额度、消耗和请求数，明细按需展开
           - 金额、数量、日期等数据统一使用清晰的无衬线阿拉伯数字
+          - Key 和额度默认明文显示，可分别手动隐藏
+          - 批量 Key 可选择统一额度，只需填写一次金额；也可切换为逐条额度
           - 创建、复制和更新渠道时可设置优先级与权重
           - 优先级与权重位于批量写入方式下方，录入时无需返回上方查找
           - 用量监测使用 New API 数据库汇总接口校准消费金额

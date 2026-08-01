@@ -375,21 +375,67 @@
                       data-toggle-secret="api-key"
                       aria-label="显示或隐藏 API Key"
                     >
-                      显示
+                      隐藏
                     </button>
                   </div>
-                  <small id="key-help">一行一条 Key。</small>
+                  <small id="key-help"
+                    >一行一条 Key；默认明文显示，确认无误后可手动隐藏。</small
+                  >
                 </label>
-                <label class="field">
-                  <span>Key 额度（逐行对应）</span>
-                  <textarea
-                    id="key-quotas"
-                    rows="5"
-                    spellcheck="false"
-                    placeholder="20&#10;x&#10;50"
-                  ></textarea>
-                  <small>可不填；支持 485、485u、$485、485刀或 x。</small>
-                </label>
+                <div class="field quota-input-panel">
+                  <span>Key 额度</span>
+                  <label class="quota-mode-control">
+                    <span>填写方式</span>
+                    <select id="quota-mode">
+                      <option value="uniform">统一额度</option>
+                      <option value="per_line">逐条额度</option>
+                    </select>
+                  </label>
+                  <div class="quota-mode-field" id="uniform-quota-field">
+                    <span>全部 Key 使用同一额度</span>
+                    <div class="secret-input">
+                      <input
+                        id="uniform-quota"
+                        type="text"
+                        inputmode="decimal"
+                        autocomplete="off"
+                        placeholder="例如 500 或 x"
+                      />
+                      <button
+                        type="button"
+                        data-toggle-secret="uniform-quota"
+                        aria-label="显示或隐藏统一额度"
+                      >
+                        隐藏
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    class="quota-mode-field hidden"
+                    id="per-line-quota-field"
+                  >
+                    <span>逐行对应每条 Key</span>
+                    <div class="secret-input textarea-secret">
+                      <textarea
+                        id="key-quotas"
+                        rows="5"
+                        spellcheck="false"
+                        placeholder="20&#10;x&#10;50"
+                      ></textarea>
+                      <button
+                        type="button"
+                        data-toggle-secret="key-quotas"
+                        aria-label="显示或隐藏逐条额度"
+                      >
+                        隐藏
+                      </button>
+                    </div>
+                  </div>
+                  <small id="quota-help"
+                    >统一额度只需填写一次；支持 485、485u、$485、485刀或
+                    x。</small
+                  >
+                </div>
               </div>
               <label class="field hidden" id="provider-models-field">
                 <span>模型或部署名称</span>

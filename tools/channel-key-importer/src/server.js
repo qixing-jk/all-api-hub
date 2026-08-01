@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url"
 import { BalanceStore } from "./balanceStore.js"
 import {
   applyQuotaLines,
+  applyUniformQuota,
   buildResourceChannelName,
   parseBatchKeys,
 } from "./batchKeys.js"
@@ -354,7 +355,9 @@ async function buildCredentialPreview(body) {
       deduplicate: false,
     })
   }
-  if (String(body.quotaLines || "").trim()) {
+  if (body.quotaMode === "uniform") {
+    keys = applyUniformQuota(keys, body.uniformQuota)
+  } else if (String(body.quotaLines || "").trim()) {
     keys = applyQuotaLines(keys, body.quotaLines)
   }
   const awsAutoCredentialMode = provider.id === "aws" && useRawCredentials
