@@ -19,6 +19,18 @@ vi.mock("~/services/checkin/sub2apiCheckinPreference", () => ({
   isSub2ApiCheckinEnabled: mockIsSub2ApiCheckinEnabled,
 }))
 
+const { getAccountByIdMock, updateAccountMock } = vi.hoisted(() => ({
+  getAccountByIdMock: vi.fn(),
+  updateAccountMock: vi.fn(),
+}))
+
+vi.mock("~/services/accounts/accountStorage", () => ({
+  accountStorage: {
+    getAccountById: (...args: unknown[]) => getAccountByIdMock(...args),
+    updateAccount: (...args: unknown[]) => updateAccountMock(...args),
+  },
+}))
+
 const SITE_URL = "https://sub2api.invalid"
 // Primary = the pair observed on a live deployment; fallback = the
 // redeem-scoped pair kept for forks that register check-in elsewhere.
@@ -26,6 +38,7 @@ const PRIMARY_STATUS_URL = `${SITE_URL}/api/v1/check-in/status`
 const PRIMARY_CHECKIN_URL = `${SITE_URL}/api/v1/check-in`
 const FALLBACK_STATUS_URL = `${SITE_URL}/api/v1/redeem/checkin/status`
 const FALLBACK_CHECKIN_URL = `${SITE_URL}/api/v1/redeem/checkin`
+const REFRESH_URL = `${SITE_URL}/api/v1/auth/refresh`
 
 const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount =>
   ({
@@ -53,6 +66,8 @@ describe("sub2ApiProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockIsSub2ApiCheckinEnabled.mockResolvedValue(true)
+    getAccountByIdMock.mockResolvedValue(null)
+    updateAccountMock.mockResolvedValue(true)
   })
 
   it("registers the Sub2API auto-check-in provider", () => {
@@ -207,5 +222,62 @@ describe("sub2ApiProvider", () => {
     const result = await sub2ApiProvider.checkIn(createAccount())
 
     expect(result.status).toBe(CHECKIN_RESULT_STATUS.FAILED)
+  })
+
+  // Sub2API invalidates a refresh token the moment it is exchanged, so a
+  // renewal triggered by a background check-in must reach storage. Dropping it
+  // leaves the stored token dead and forces re-authorization the next day.
+  it("persists the rotated token pair when check-in triggers a refresh", async () => {
+    const expiringAccount = createAccount({
+      account_info: { id: "7", access_token: "expiring-jwt" },
+      sub2apiAuth: {
+        refreshToken: "stored-refresh",
+        // Already past expiry, so the proactive refresh path runs.
+        tokenExpiresAt: Date.now() - 1_000,
+      },
+    } as Partial<SiteAccount>)
+
+    getAccountByIdMock.mockResolvedValue({
+      account_info: expiringAccount.account_info,
+      sub2apiAuth: expiringAccount.sub2apiAuth,
+    })
+
+    const checkinAuthHeader = vi.fn()
+    server.use(
+      http.post(REFRESH_URL, async ({ request }) => {
+        const body = (await request.json()) as { refresh_token?: string }
+        expect(body.refresh_token).toBe("stored-refresh")
+        return HttpResponse.json(
+          envelope({
+            access_token: "rotated-jwt",
+            refresh_token: "rotated-refresh",
+            expires_in: 86_400,
+          }),
+        )
+      }),
+      http.get(PRIMARY_STATUS_URL, () =>
+        HttpResponse.json(envelope({ checked_in_today: false })),
+      ),
+      http.post(PRIMARY_CHECKIN_URL, ({ request }) => {
+        checkinAuthHeader(request.headers.get("authorization"))
+        return HttpResponse.json(envelope({ quota_awarded: "1" }, "签到成功"))
+      }),
+    )
+
+    const result = await sub2ApiProvider.checkIn(expiringAccount)
+
+    expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
+    // The check-in itself must use the rotated access token.
+    expect(checkinAuthHeader).toHaveBeenCalledWith("Bearer rotated-jwt")
+
+    const persisted = updateAccountMock.mock.calls.find(
+      ([, update]) => (update as { sub2apiAuth?: unknown }).sub2apiAuth,
+    )
+    expect(persisted).toBeDefined()
+    expect(persisted?.[0]).toBe("account-1")
+    expect(persisted?.[1]).toMatchObject({
+      account_info: { access_token: "rotated-jwt" },
+      sub2apiAuth: { refreshToken: "rotated-refresh" },
+    })
   })
 })

@@ -1246,6 +1246,71 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(result.authUpdate?.username).toBe("bob")
   })
 
+  // Sub2API rotates refresh tokens single-use, so the stored one is normally
+  // dead once re-sync is reached. Persisting the site's current refresh token
+  // is what restores headless renewal for the next run.
+  it("persists the re-synced refresh token alongside the access token", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 1,
+          message: "invalid_refresh_token",
+          data: null,
+        }),
+        { status: 401, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock as any)
+
+    vi.mocked(fetchApi)
+      .mockRejectedValueOnce(
+        new ApiError("Unauthorized", 401, "/api/v1/auth/me"),
+      )
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { id: 2, username: "bob", balance: 1 },
+      } as any)
+
+    vi.mocked(resyncSub2ApiAuthToken).mockResolvedValueOnce({
+      accessToken: "resynced-jwt",
+      refreshToken: "resynced-refresh",
+      tokenExpiresAt: 1_700_000_060_000,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+    })
+
+    const request = createRequest({
+      accountId: "account-1",
+      sub2apiAuthSession: {
+        getLatestAuth: (...args: any[]) => mockGetLatestAuth(...args),
+        persistAuthUpdate: (...args: any[]) => mockPersistAuthUpdate(...args),
+      },
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: "1",
+        accessToken: "old-jwt",
+        refreshToken: "old-refresh",
+      },
+    })
+
+    const result = await refreshAccountData(request)
+
+    expect(result.success).toBe(true)
+    expect(mockPersistAuthUpdate).toHaveBeenCalledWith("account-1", {
+      accessToken: "resynced-jwt",
+      refreshToken: "resynced-refresh",
+      tokenExpiresAt: 1_700_000_060_000,
+    })
+    // The retried request must carry the re-synced refresh token so a later
+    // renewal in the same run does not reuse the dead one.
+    expect((vi.mocked(fetchApi).mock.calls[1]?.[0] as any)?.auth).toMatchObject(
+      {
+        accessToken: "resynced-jwt",
+        refreshToken: "resynced-refresh",
+      },
+    )
+  })
+
   it("returns restore-required warning when refresh token restore and re-sync both fail", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(

@@ -113,6 +113,54 @@ describe("Sub2API token re-sync", () => {
     ).resolves.toBeNull()
   })
 
+  // Sub2API rotates refresh tokens single-use, so the stored one is usually
+  // already dead by the time re-sync runs. Carrying the site's current refresh
+  // token back is what restores headless renewal instead of buying one more
+  // access-token lifetime.
+  it("carries the re-synced refresh token and expiry back to the caller", async () => {
+    mockResolveAccountBrowserSession.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      siteType: "sub2api",
+      userId: "42",
+      user: { username: "temp-user" },
+      accessToken: " temp-window-token ",
+      sub2apiAuth: {
+        refreshToken: " live-refresh ",
+        tokenExpiresAt: 1_700_000_060_000,
+      },
+    })
+
+    await expect(
+      resyncSub2ApiAuthToken("https://sub2.example.com"),
+    ).resolves.toEqual({
+      accessToken: "temp-window-token",
+      refreshToken: "live-refresh",
+      tokenExpiresAt: 1_700_000_060_000,
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+    })
+  })
+
+  it("omits unusable re-synced refresh-token metadata", async () => {
+    mockResolveAccountBrowserSession.mockResolvedValueOnce({
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+      siteType: "sub2api",
+      userId: "42",
+      user: { username: "tab-user" },
+      accessToken: "tab-token",
+      sub2apiAuth: {
+        refreshToken: "   ",
+        tokenExpiresAt: Number.NaN,
+      },
+    })
+
+    await expect(
+      resyncSub2ApiAuthToken("https://sub2.example.com"),
+    ).resolves.toEqual({
+      accessToken: "tab-token",
+      source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
+    })
+  })
+
   it("passes a usability predicate that accepts only non-empty access tokens", async () => {
     mockResolveAccountBrowserSession.mockImplementationOnce(
       async ({ isUsableSession }) => {

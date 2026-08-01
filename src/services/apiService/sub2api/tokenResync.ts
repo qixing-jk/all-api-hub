@@ -8,6 +8,8 @@ import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 type Sub2ApiResyncedToken = {
   accessToken: string
+  refreshToken?: string
+  tokenExpiresAt?: number
   source:
     | typeof ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
     | typeof ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW
@@ -40,6 +42,11 @@ const mapResyncSource = (
  * Strategy:
  * 1) Prefer an already-open same-origin tab through the browser-session reader.
  * 2) Fall back to the temp-window auto-detect context.
+ *
+ * The refresh token is carried back alongside the access token: Sub2API rotates
+ * refresh tokens single-use, so a rotation performed by the site's own dashboard
+ * leaves the stored one dead. Returning only the access token would restore at
+ * most one token lifetime and never the ability to renew headlessly again.
  */
 export async function resyncSub2ApiAuthToken(
   baseUrl: string,
@@ -58,8 +65,15 @@ export async function resyncSub2ApiAuthToken(
   const accessToken = session?.accessToken?.trim()
   if (!session || !accessToken) return null
 
+  const refreshToken = session.sub2apiAuth?.refreshToken?.trim()
+  const tokenExpiresAt = session.sub2apiAuth?.tokenExpiresAt
+
   return {
     accessToken,
+    ...(refreshToken ? { refreshToken } : {}),
+    ...(typeof tokenExpiresAt === "number" && Number.isFinite(tokenExpiresAt)
+      ? { tokenExpiresAt }
+      : {}),
     source: mapResyncSource(session.source),
   }
 }

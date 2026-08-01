@@ -9,7 +9,9 @@ import {
   isAccountSiteProfileUrl,
   normalizeAccountSiteProfileUrlForOriginKey,
   normalizeAccountSiteSupplementalAuth,
+  shouldDecorateAccountApiRequestWithAuthSession,
 } from "~/services/accounts/accountSiteProfile"
+import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import {
   collectDuplicateAccountNameKeys,
   resolveAccountDisplayName,
@@ -1114,6 +1116,16 @@ class AccountStorageService {
         ?.refresh
       const tempWindowRequestSource = options?.tempWindowRequestSource
 
+      // Sub2API rotates its refresh token on every renewal and invalidates the
+      // previous one immediately, so a renewal triggered by either call below
+      // must be written back. The support probe runs first, so omitting the port
+      // here would burn the stored refresh token before the refresh even starts.
+      const authSessionFields = shouldDecorateAccountApiRequestWithAuthSession(
+        account.site_type,
+      )
+        ? { sub2apiAuthSession: accountSub2ApiAuthSession }
+        : {}
+
       // Refresh check-in support status together with account refresh.
       const currentCheckIn = account.checkIn
       let checkInForRefresh = { ...currentCheckIn }
@@ -1126,6 +1138,7 @@ class AccountStorageService {
             cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
             auth,
             ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+            ...authSessionFields,
           })
 
           if (typeof support === "boolean") {
@@ -1156,6 +1169,7 @@ class AccountStorageService {
             auth,
             includeTodayCashflow,
             ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
+            ...authSessionFields,
           })
         : createMissingAccountRefreshResult(account.site_type)
 

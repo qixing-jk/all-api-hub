@@ -428,13 +428,25 @@ const resyncSub2ApiRequestAuth = async <
       source: resynced.source,
     })
 
-    const resyncedRequest = applySub2ApiAuthUpdate(latestRequest, {
+    // Carry the re-synced refresh token through as well: the stored one is
+    // normally dead by this point (the dashboard rotated it), so restoring only
+    // the access token would leave the account unable to renew on its own.
+    const resyncedAuthUpdate: PersistableSub2ApiAuthUpdate = {
       accessToken: resynced.accessToken,
-    })
+      ...(resynced.refreshToken ? { refreshToken: resynced.refreshToken } : {}),
+      ...(typeof resynced.tokenExpiresAt === "number"
+        ? { tokenExpiresAt: resynced.tokenExpiresAt }
+        : {}),
+    }
+
+    const resyncedRequest = applySub2ApiAuthUpdate(
+      latestRequest,
+      resyncedAuthUpdate,
+    )
 
     await persistSub2ApiAuthUpdate(
       resyncedRequest,
-      { accessToken: resynced.accessToken },
+      resyncedAuthUpdate,
       latestAuthSession,
     )
 

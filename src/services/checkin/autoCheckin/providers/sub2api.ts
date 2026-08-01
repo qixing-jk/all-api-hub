@@ -9,7 +9,9 @@
  * scheduler's normalized result shape.
  */
 
+import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import { performSub2ApiCheckin } from "~/services/apiService/sub2api"
+import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   resolveProviderErrorResult,
@@ -43,7 +45,12 @@ async function checkinSub2Api(
   )
 
   try {
-    const outcome = await performSub2ApiCheckin({
+    // Sub2API rotates the refresh token on every renewal and invalidates the
+    // previous one immediately, so a renewal triggered by this run must be
+    // written back. Without the auth-session port the rotated pair stays in
+    // memory and the stored refresh token is left permanently dead.
+    // Upstream contract: https://github.com/Wei-Shaw/sub2api
+    const request: Sub2ApiAuthSessionRequest = {
       baseUrl: account.site_url,
       accountId: account.id,
       auth: {
@@ -54,7 +61,10 @@ async function checkinSub2Api(
         tokenExpiresAt: account.sub2apiAuth?.tokenExpiresAt,
       },
       tempWindowRequestSource,
-    })
+      sub2apiAuthSession: accountSub2ApiAuthSession,
+    }
+
+    const outcome = await performSub2ApiCheckin(request)
 
     const rawMessage = outcome.message || undefined
 
