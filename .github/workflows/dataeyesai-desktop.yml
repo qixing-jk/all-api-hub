@@ -15,7 +15,7 @@ on:
       version:
         description: "Release version without the v prefix"
         required: true
-        default: "0.5.1"
+        default: "0.6.0"
 
 permissions:
   contents: write
@@ -79,6 +79,11 @@ jobs:
           cat > release-notes.md <<'EOF'
           dataeyesai 桌面安装包。
 
+          - 单页长表单拆分为导入渠道、定时任务、用量监测、上 Key 记录和站点设置五个工作区
+          - 顶部标题、说明和站点状态会随当前工作区切换，减少无关信息干扰
+          - 视觉改为平面运营工具风格，统一无衬线字体、克制圆角和清晰数据层级
+          - 导入首页加入本地生成的渠道操作插画，不使用外部图片和第三方资源
+          - 手机端导航在自身区域横向滚动，不再撑宽整个页面
           - AWS Bedrock 自动识别 Key 类型和来源地区
           - Global 模式使用一个来源地区并生成 `global.*` 模型映射
           - 渠道名称和预览明确显示 AWS 来源地区

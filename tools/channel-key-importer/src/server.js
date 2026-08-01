@@ -1185,8 +1185,18 @@ async function handleApi(
 const CONTENT_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
+  ".jpg": "image/jpeg",
   ".js": "text/javascript; charset=utf-8",
 }
+
+const STATIC_FILES = new Set([
+  "index.html",
+  "styles.css",
+  "app.js",
+  "usageStats.js",
+  "viewState.js",
+  "assets/operations-board.jpg",
+])
 
 async function serveStatic(response, pathname) {
   const providerIconMatch = pathname.match(
@@ -1207,11 +1217,7 @@ async function serveStatic(response, pathname) {
     return
   }
   const fileName = pathname === "/" ? "index.html" : pathname.slice(1)
-  if (
-    !new Set(["index.html", "styles.css", "app.js", "usageStats.js"]).has(
-      fileName,
-    )
-  ) {
+  if (!STATIC_FILES.has(fileName)) {
     response.writeHead(404).end("Not found")
     return
   }

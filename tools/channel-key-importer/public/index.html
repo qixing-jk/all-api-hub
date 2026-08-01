@@ -5,12 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
     <title>dataeyesai · 渠道 Key 导入器</title>
-    <link rel="stylesheet" href="/styles.css?v=20260711-2" />
+    <link rel="stylesheet" href="/styles.css?v=20260802-shell" />
   </head>
   <body>
     <div class="app-shell">
       <aside class="sidebar">
-        <a class="brand" href="#top" aria-label="dataeyesai 首页">
+        <a
+          class="brand"
+          href="#import"
+          data-view-target="import"
+          aria-label="dataeyesai 首页"
+        >
           <span class="brand-mark" aria-hidden="true">
             <span></span><span></span><span></span>
           </span>
@@ -18,11 +23,15 @@
         </a>
 
         <nav class="side-nav" aria-label="页面导航">
-          <a class="active" href="#importer"><span>01</span> 导入渠道</a>
-          <a href="#connection"><span>02</span> 目标连接</a>
-          <a href="#usage-monitor"><span>03</span> 用量监测</a>
-          <a href="#records"><span>04</span> 导入记录</a>
-          <a href="#security"><span>05</span> 安全说明</a>
+          <a class="active" href="#import" data-view-target="import"
+            ><span>01</span> 导入渠道</a
+          >
+          <a href="#tasks" data-view-target="tasks"><span>02</span> 定时任务</a>
+          <a href="#usage" data-view-target="usage"><span>03</span> 用量监测</a>
+          <a href="#records" data-view-target="records"
+            ><span>04</span> 上 Key 记录</a
+          >
+          <a href="#sites" data-view-target="sites"><span>05</span> 站点设置</a>
         </nav>
 
         <div class="sidebar-spacer"></div>
@@ -43,35 +52,29 @@
 
       <main id="top">
         <header class="topbar">
-          <div>
-            <p class="eyebrow">NEW API CHANNEL ONBOARDING</p>
-            <h1>dataeyesai</h1>
+          <div class="page-heading">
+            <p class="eyebrow" id="page-eyebrow">渠道操作</p>
+            <h1 id="page-title">导入渠道</h1>
+            <p class="page-description" id="page-description">
+              选择供应商，录入 Key，然后写入当前 New API。
+            </p>
           </div>
-          <div class="connection-pill" id="connection-pill">
+          <button
+            class="connection-pill"
+            id="connection-pill"
+            type="button"
+            title="打开站点设置"
+          >
             <span></span>
             <div><small>目标站点</small><strong>尚未配置</strong></div>
-          </div>
+          </button>
         </header>
 
-        <section class="intro-grid">
-          <article class="manifesto">
-            <span class="section-number">01</span>
-            <div>
-              <p>选择来源，粘贴 Key。</p>
-              <p>
-                剩下的交给工具：识别渠道类型、拉取模型、检查同源渠道，再写入 New
-                API。
-              </p>
-            </div>
-          </article>
-          <div class="trust-row" aria-label="安全特性">
-            <span>NO ANALYTICS</span>
-            <span>NO KEY LOGS</span>
-            <span>HTTPS ONLY</span>
-          </div>
-        </section>
-
-        <section class="panel connection-panel" id="connection">
+        <section
+          class="panel connection-panel view-hidden"
+          id="connection"
+          data-app-view="sites"
+        >
           <div class="panel-heading">
             <div>
               <span class="kicker">TARGET</span>
@@ -237,7 +240,38 @@
           </section>
         </section>
 
-        <section class="workspace" id="importer">
+        <section class="import-overview" data-app-view="import">
+          <div class="import-overview-copy">
+            <span class="view-label">新建渠道</span>
+            <h2>从一批 Key 到可用渠道</h2>
+            <p>
+              当前页面只保留导入流程。任务、用量和历史记录已拆到独立工作区，录入时不再被其他信息打断。
+            </p>
+            <ol class="workflow-steps" aria-label="导入步骤">
+              <li>
+                <span>1</span><strong>选供应商</strong
+                ><small>明确渠道类型</small>
+              </li>
+              <li>
+                <span>2</span><strong>填凭证</strong
+                ><small>批量 Key 与额度</small>
+              </li>
+              <li>
+                <span>3</span><strong>确认写入</strong
+                ><small>模型、分组和路由</small>
+              </li>
+            </ol>
+          </div>
+          <figure class="operations-visual">
+            <img
+              src="/assets/operations-board.jpg"
+              alt="渠道、定时任务和用量统计组成的操作流程插画"
+            />
+            <figcaption>本地处理 · 不保存完整 Key</figcaption>
+          </figure>
+        </section>
+
+        <section class="workspace" id="importer" data-app-view="import">
           <div class="source-column panel">
             <div class="panel-heading source-heading">
               <div>
@@ -593,7 +627,11 @@
           </div>
         </section>
 
-        <section class="panel preview-panel hidden" id="preview-panel">
+        <section
+          class="panel preview-panel hidden"
+          id="preview-panel"
+          data-app-view="import"
+        >
           <div class="preview-title-row">
             <div>
               <span class="kicker">REVIEW</span>
@@ -772,7 +810,11 @@
           </div>
         </section>
 
-        <section class="panel schedule-panel" id="schedules">
+        <section
+          class="panel schedule-panel view-hidden"
+          id="schedules"
+          data-app-view="tasks"
+        >
           <div class="panel-heading">
             <div>
               <span class="kicker">SCHEDULE</span>
@@ -794,7 +836,11 @@
           <div class="schedule-list" id="schedule-list"></div>
         </section>
 
-        <section class="panel usage-monitor-panel" id="usage-monitor">
+        <section
+          class="panel usage-monitor-panel view-hidden"
+          id="usage-monitor"
+          data-app-view="usage"
+        >
           <div class="panel-heading usage-monitor-heading">
             <div class="usage-monitor-title">
               <div class="usage-monitor-eyebrow">
@@ -916,7 +962,11 @@
           </div>
         </section>
 
-        <section class="panel records-panel" id="records">
+        <section
+          class="panel records-panel view-hidden"
+          id="records"
+          data-app-view="records"
+        >
           <div class="panel-heading">
             <div>
               <span class="kicker">KEY LEDGER</span>
@@ -1022,6 +1072,6 @@
     </div>
 
     <div class="toast hidden" id="toast" role="status"></div>
-    <script type="module" src="/app.js?v=20260711-2"></script>
+    <script type="module" src="/app.js?v=20260802-shell"></script>
   </body>
 </html>

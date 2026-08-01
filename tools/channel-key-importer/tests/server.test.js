@@ -66,6 +66,15 @@ test("starts the packaged server on an available loopback port", async () => {
     assert.equal(response.status, 200)
     assert.match(await response.text(), /dataeyesai/)
     assert.match(importer.url, /^http:\/\/127\.0\.0\.1:\d+$/)
+
+    const viewState = await fetch(`${importer.url}/viewState.js`)
+    assert.equal(viewState.status, 200)
+    assert.match(viewState.headers.get("content-type"), /^text\/javascript/)
+
+    const artwork = await fetch(`${importer.url}/assets/operations-board.jpg`)
+    assert.equal(artwork.status, 200)
+    assert.equal(artwork.headers.get("content-type"), "image/jpeg")
+    assert.ok((await artwork.arrayBuffer()).byteLength > 100_000)
   } finally {
     await importer.close()
   }

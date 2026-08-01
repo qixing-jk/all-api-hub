@@ -10,6 +10,7 @@ import {
   summarizeUsageRecords,
   usageState,
 } from "./usageStats.js"
+import { APP_VIEWS, normalizeAppView } from "./viewState.js"
 
 const state = {
   sessionToken: "",
@@ -32,12 +33,16 @@ const state = {
   credentialTargetUrl: "",
   credentialUserId: "",
   usageAutoRefreshStarted: false,
+  activeView: "import",
 }
 
 const TOKEN_PLACEHOLDER = "粘贴管理员的系统访问令牌"
 
 const $ = (selector) => document.querySelector(selector)
 const elements = {
+  pageEyebrow: $("#page-eyebrow"),
+  pageTitle: $("#page-title"),
+  pageDescription: $("#page-description"),
   connectionPill: $("#connection-pill"),
   configForm: $("#config-form"),
   configStatus: $("#config-status"),
@@ -200,6 +205,41 @@ const elements = {
   recordsBody: $("#records-body"),
   toast: $("#toast"),
 }
+
+function setAppView(value, { updateHash = true, scroll = true } = {}) {
+  const view = normalizeAppView(value)
+  const copy = APP_VIEWS[view]
+  state.activeView = view
+  elements.pageEyebrow.textContent = copy.eyebrow
+  elements.pageTitle.textContent = copy.title
+  elements.pageDescription.textContent = copy.description
+  document.querySelectorAll("[data-app-view]").forEach((section) => {
+    section.classList.toggle("view-hidden", section.dataset.appView !== view)
+  })
+  document.querySelectorAll("[data-view-target]").forEach((link) => {
+    const active = link.dataset.viewTarget === view
+    link.classList.toggle("active", active)
+    if (link.closest("nav")) {
+      if (active) link.setAttribute("aria-current", "page")
+      else link.removeAttribute("aria-current")
+    }
+  })
+  if (updateHash && window.location.hash !== `#${view}`) {
+    history.replaceState(null, "", `#${view}`)
+  }
+  if (scroll) window.scrollTo({ top: 0, behavior: "smooth" })
+}
+
+for (const link of document.querySelectorAll("[data-view-target]")) {
+  link.addEventListener("click", (event) => {
+    event.preventDefault()
+    setAppView(link.dataset.viewTarget)
+  })
+}
+elements.connectionPill.addEventListener("click", () => setAppView("sites"))
+window.addEventListener("hashchange", () =>
+  setAppView(window.location.hash, { updateHash: false }),
+)
 
 const setLoading = (button, loading) => {
   button.classList.toggle("loading", loading)
@@ -2263,6 +2303,7 @@ elements.credentialForm.addEventListener("submit", async (event) => {
   event.preventDefault()
   if (!state.configured) {
     showStatus(elements.credentialStatus, "请先在上方连接 New API。", true)
+    setAppView("sites")
     $("#connection").scrollIntoView({ behavior: "smooth" })
     return
   }
@@ -2665,4 +2706,5 @@ async function bootstrap() {
   }
 }
 
+setAppView(window.location.hash, { updateHash: false, scroll: false })
 bootstrap()
