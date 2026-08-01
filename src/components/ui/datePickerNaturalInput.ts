@@ -49,11 +49,14 @@ function parsePortugueseFallbackDate(
   const normalizedInput = input.trim()
   if (!/^daqui a \d+/iu.test(normalizedInput)) return undefined
 
-  const match = /^daqui a (\d+) dias?$/iu.exec(normalizedInput)
+  const match = /^daqui a (\d+) (dia|dias)$/iu.exec(normalizedInput)
   if (!match) return null
 
   const days = Number(match[1])
   if (!Number.isSafeInteger(days) || days <= 0) return null
+
+  const unit = match[2].toLocaleLowerCase("pt-BR")
+  if (unit !== (days === 1 ? "dia" : "dias")) return null
 
   const parsedDate = dayjs(referenceDate).add(days, "day")
   return parsedDate.isValid()
