@@ -143,6 +143,7 @@ export function PermissionOnboardingDialog({
         onClick={onClose}
         className="w-full"
         disabled={isRequesting}
+        data-testid={OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingDeferButton}
       >
         {t("permissionsOnboarding.actions.maybeLater")}
       </Button>

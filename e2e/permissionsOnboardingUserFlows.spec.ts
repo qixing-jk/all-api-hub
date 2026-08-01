@@ -62,12 +62,14 @@ test("lets first-use users defer recommended permissions and continue into overv
   await expect(
     page.getByRole("heading", { name: "Welcome to All API Hub" }),
   ).toBeVisible()
-  await expect(dialog.getByText("What these permissions do")).toBeVisible()
+  await expect(dialog.getByText("Choose optional permissions")).toBeVisible()
   await expect(
-    page.getByRole("button", { name: "Allow recommended permissions" }),
+    page.getByRole("button", { name: "Allow all recommended permissions" }),
   ).toBeVisible()
 
-  await page.getByRole("button", { name: "Maybe later" }).click()
+  await page
+    .getByTestId(OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingDeferButton)
+    .click()
 
   await expectPermissionOnboardingHidden(page)
   await expect(page).toHaveURL(/options\.html#overview$/)
@@ -90,7 +92,7 @@ test("lets users grant and revoke the cookies permission from settings", async (
   await expect(page.getByRole("heading", { name: "Permissions" })).toBeVisible()
 
   const cookiesRow = page.locator(`#${COOKIE_PERMISSION}`)
-  await expect(cookiesRow).toContainText("Cookies")
+  await expect(cookiesRow).toContainText("Cookie access")
 
   await expect
     .poll(() => hasOptionalPermission(page, COOKIE_PERMISSION), {

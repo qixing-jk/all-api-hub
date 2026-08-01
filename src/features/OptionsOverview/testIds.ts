@@ -7,6 +7,7 @@ export const OPTIONS_OVERVIEW_TEST_IDS = {
   recentUsage: "options-overview-recent-usage",
   actionCenter: "options-overview-action-center",
   permissionOnboardingDialog: "permission-onboarding-dialog",
+  permissionOnboardingDeferButton: "permission-onboarding-defer-button",
   permissionOnboardingIntroSection: "permission-onboarding-intro-section",
   permissionOnboardingPermissionsSection:
     "permission-onboarding-permissions-section",
