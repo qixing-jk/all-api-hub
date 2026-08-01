@@ -224,12 +224,23 @@ test("claims due batches and marks mixed results by key index", async () => {
     assert.equal(updated.entries[0].status, "failed")
     assert.equal(updated.entries[1].channelId, 123)
 
+    const retried = await store.retryFailed(
+      job.id,
+      new Date("2026-07-10T10:02:03.000Z"),
+    )
+    assert.equal(retried.counts.failed, 0)
+    assert.equal(retried.counts.pending, 2)
+    assert.equal(retried.entries[0].status, "pending")
+    assert.equal(retried.entries[0].error, "废 Key")
+    assert.equal(retried.entries[0].retryCount, 1)
+    assert.equal(retried.nextRunAt, "2026-07-10T10:02:03.000Z")
+
     const nextClaim = await store.claimDueJob(
-      new Date("2026-07-10T10:11:00.000Z"),
+      new Date("2026-07-10T10:02:03.000Z"),
     )
     assert.deepEqual(
       nextClaim.preview.keys.map((entry) => entry.priorityIndex),
-      [2],
+      [0, 2],
     )
   } finally {
     await rm(root, { force: true, recursive: true })

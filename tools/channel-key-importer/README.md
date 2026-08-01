@@ -16,6 +16,8 @@
 
 上 Key 记录按每次实际写入批次汇总，列表直接显示写入时间、成功数量、录入额度、累计消耗和请求次数，每条 Key 的渠道与用量明细按需展开。新记录使用批次 ID 精确归组；升级前的旧记录按站点、供应商、操作类型和相近写入时间归组。界面中的日期、数量和金额统一使用清晰的无衬线阿拉伯数字。
 
+定时任务中的失败 Key 不会被删除，仍以加密形式保存在任务中。任务卡会显示“重试失败 Key（数量）”，点击后只把失败项重新加入待写入队列，不会重复已经成功的 Key；上一次错误原因会保留到重试成功，方便排查临时网络错误和无效 Key。
+
 ## 运行
 
 要求 Node.js 24+。
@@ -49,6 +51,26 @@ pnpm channel-importer:package
 安装包输出到 `tools/channel-key-importer/dist/`。推送后可在 GitHub Actions 手动运行 `dataeyesai desktop packages`，成功后会建立带三个安装包的预发布版本。
 
 当前安装包尚未配置 Apple 和 Microsoft 付费代码签名证书，因此首次启动可能出现系统安全提示。应用本身仍固定监听随机本机回环端口，不对局域网或公网开放。
+
+## 多设备服务器版
+
+服务器版使用独立的 dataeyesai 系统访问密钥保护整个工作台。未登录时只能看到登录页，无法读取站点、任务、Key 记录或调用业务接口；登录态 12 小时后失效，同一来源连续输错 5 次会锁定 15 分钟。这个密钥与 New API 管理令牌完全分开，服务端只保存 `scrypt` 哈希。
+
+启用 `DATAEYESAI_STORAGE=sqlite` 后，站点配置、定时任务、额度快照和导入记录统一保存在服务器 SQLite 数据库。多台电脑和手机访问同一服务器时看到的是同一套数据。需要记住的 New API 系统令牌会先用服务器主密钥执行 AES-256-GCM 加密，再写入数据库；定时任务 Key 也保持加密存储。
+
+仓库提供 Docker 部署文件：
+
+```bash
+cd tools/channel-key-importer
+cp server.env.example server.env
+node src/generateAccessKey.js
+openssl rand -base64 32
+docker compose --env-file server.env -f compose.server.yml up -d --build
+```
+
+把生成结果中的 `accessKeyHash` 和主密钥写入 `server.env`，只把一次性显示的 `accessKey` 交给需要登录的设备。`server.env` 和 `server-data/` 已加入 Git 忽略，不会上传到 GitHub。
+
+直接使用 `http://IP:4179` 虽然有登录密钥保护，但浏览器到服务器之间的渠道 Key 仍没有传输加密。生产环境应使用域名和 HTTPS 反向代理，并将 `DATAEYESAI_PUBLIC_HOSTS`、`DATAEYESAI_PUBLIC_ORIGINS` 和 `DATAEYESAI_SECURE_COOKIE` 改成对应的 HTTPS 配置。
 
 ## 安全约束
 

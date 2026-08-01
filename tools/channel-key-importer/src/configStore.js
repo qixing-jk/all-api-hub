@@ -1,11 +1,11 @@
 import { execFile } from "node:child_process"
 import { createHash, randomUUID } from "node:crypto"
-import { mkdir, readFile, writeFile } from "node:fs/promises"
 import { platform } from "node:os"
-import { dirname, join } from "node:path"
+import { join } from "node:path"
 import { promisify } from "node:util"
 
 import { DATA_DIR } from "./dataPath.js"
+import { createJsonStateStore } from "./sharedStorage.js"
 
 const execFileAsync = promisify(execFile)
 const KEYCHAIN_SERVICE = "dataeyesai"
@@ -107,26 +107,21 @@ export class ConfigStore {
   #sessions = new Map()
   #tokenStore = null
 
+  constructor({ stateStore } = {}) {
+    this.stateStore =
+      stateStore || createJsonStateStore({ key: "config", path: CONFIG_PATH })
+  }
+
   setTokenStore(tokenStore) {
     this.#tokenStore = tokenStore || null
   }
 
   async #readState() {
-    try {
-      return normalizeConfigState(
-        JSON.parse(await readFile(CONFIG_PATH, "utf8")),
-      )
-    } catch {
-      return normalizeConfigState(null)
-    }
+    return normalizeConfigState(await this.stateStore.read(null))
   }
 
   async #writeState(state) {
-    await mkdir(dirname(CONFIG_PATH), { recursive: true, mode: 0o700 })
-    await writeFile(CONFIG_PATH, `${JSON.stringify(state, null, 2)}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
-    })
+    await this.stateStore.write(state)
   }
 
   async listProfiles() {

@@ -39,10 +39,14 @@
         <div class="local-card">
           <span class="pulse-dot"></span>
           <div>
-            <strong>本地服务运行中</strong>
-            <span>仅监听 127.0.0.1</span>
+            <strong id="service-label">本地服务运行中</strong>
+            <span id="service-detail">仅监听 127.0.0.1</span>
           </div>
         </div>
+
+        <button class="access-logout hidden" id="access-logout" type="button">
+          退出系统登录
+        </button>
 
         <div class="sidebar-note" id="security">
           <span class="shield-icon" aria-hidden="true">◇</span>

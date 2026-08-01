@@ -40,6 +40,9 @@ const TOKEN_PLACEHOLDER = "粘贴管理员的系统访问令牌"
 
 const $ = (selector) => document.querySelector(selector)
 const elements = {
+  accessLogout: $("#access-logout"),
+  serviceLabel: $("#service-label"),
+  serviceDetail: $("#service-detail"),
   pageEyebrow: $("#page-eyebrow"),
   pageTitle: $("#page-title"),
   pageDescription: $("#page-description"),
@@ -206,6 +209,15 @@ const elements = {
   toast: $("#toast"),
 }
 
+elements.accessLogout.addEventListener("click", async () => {
+  elements.accessLogout.disabled = true
+  try {
+    await fetch("/api/auth/logout", { method: "POST" })
+  } finally {
+    window.location.reload()
+  }
+})
+
 function setAppView(value, { updateHash = true, scroll = true } = {}) {
   const view = normalizeAppView(value)
   const copy = APP_VIEWS[view]
@@ -283,6 +295,10 @@ async function api(path, options = {}) {
     payload = await response.json()
   } catch {
     throw new Error("本地服务返回异常")
+  }
+  if (response.status === 401) {
+    window.location.reload()
+    throw new Error("系统登录已失效，请重新输入访问密钥")
   }
   if (
     response.status === 403 &&
@@ -1584,6 +1600,16 @@ function renderSchedules() {
 
     const actions = document.createElement("div")
     actions.className = "schedule-actions"
+    const retryFailed = document.createElement("button")
+    retryFailed.type = "button"
+    retryFailed.className = "table-action retry-failed"
+    retryFailed.textContent = `重试失败 Key（${schedule.counts.failed}）`
+    retryFailed.disabled =
+      schedule.counts.failed === 0 ||
+      ["running", "cancelled"].includes(schedule.status)
+    retryFailed.addEventListener("click", () =>
+      updateSchedule(schedule.id, "retry-failed", retryFailed),
+    )
     const edit = document.createElement("button")
     edit.type = "button"
     edit.className = "table-action"
@@ -1702,7 +1728,7 @@ function renderSchedules() {
     cancel.addEventListener("click", () =>
       updateSchedule(schedule.id, "cancel", cancel),
     )
-    actions.append(edit, runNow, toggle, cancel)
+    actions.append(retryFailed, edit, runNow, toggle, cancel)
     card.append(editor, actions)
     elements.scheduleList.append(card)
   }
@@ -1726,7 +1752,13 @@ async function updateSchedule(scheduleId, action, button) {
     )
     renderSchedules()
     if (action === "run") await loadRecords()
-    toast(action === "run" ? "已执行一批定时 Key" : "定时任务已更新")
+    toast(
+      action === "run"
+        ? "已执行一批定时 Key"
+        : action === "retry-failed"
+          ? "失败 Key 已重新加入待写入队列"
+          : "定时任务已更新",
+    )
   } catch (error) {
     toast(error.message, true)
   } finally {
@@ -2694,6 +2726,14 @@ async function bootstrap() {
     renderGroups(payload.groups || [])
     state.schedules = payload.schedules || []
     renderSchedules()
+    if (payload.deployment?.sharedDatabase) {
+      elements.serviceLabel.textContent = "共享服务运行中"
+      elements.serviceDetail.textContent = "站点、任务和记录由数据库同步"
+    }
+    elements.accessLogout.classList.toggle(
+      "hidden",
+      !payload.deployment?.accessProtected,
+    )
     if (payload.groupsError) {
       elements.channelGroupsHelp.textContent = `分组读取失败：${payload.groupsError}`
     }

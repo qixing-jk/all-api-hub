@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>dataeyesai · 系统登录</title>
+    <link rel="stylesheet" href="/login.css?v=20260802-server" />
+  </head>
+  <body>
+    <main class="login-shell">
+      <section class="login-card">
+        <div class="brand-row">
+          <span class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+          <strong>dataeyesai</strong>
+        </div>
+        <p class="eyebrow">受保护的渠道工作台</p>
+        <h1>输入系统访问密钥</h1>
+        <p class="description">
+          此密钥只用于进入 dataeyesai，不是 New API
+          管理令牌。登录后可在多台设备上共用站点、任务、用量和写入记录。
+        </p>
+        <form id="access-form">
+          <label for="access-key">系统访问密钥</label>
+          <div class="key-field">
+            <input
+              id="access-key"
+              name="accessKey"
+              type="password"
+              minlength="12"
+              autocomplete="current-password"
+              autofocus
+              required
+            />
+            <button id="toggle-key" type="button">显示</button>
+          </div>
+          <p class="status hidden" id="login-status" role="alert"></p>
+          <button class="submit-button" id="login-button" type="submit">
+            进入工作台
+          </button>
+        </form>
+        <p class="security-note">登录态 12 小时后失效；连续输错会暂时锁定。</p>
+      </section>
+      <figure class="login-visual">
+        <img
+          src="/assets/operations-board.jpg"
+          alt="渠道、定时任务和用量统计组成的操作流程插画"
+        />
+        <figcaption>共享数据库 · 服务端加密 · 独立登录保护</figcaption>
+      </figure>
+    </main>
+    <script type="module" src="/login.js?v=20260802-server"></script>
+  </body>
+</html>

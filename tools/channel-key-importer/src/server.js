@@ -4,6 +4,7 @@ import { createServer } from "node:http"
 import { join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { AccessSessionManager } from "./accessAuth.js"
 import { BalanceStore } from "./balanceStore.js"
 import {
   applyQuotaLines,
@@ -64,8 +65,12 @@ import {
   normalizeTargetUrl,
   validateUserId,
 } from "./security.js"
+import {
+  createSharedTokenStore,
+  sqliteStorageEnabled,
+} from "./sharedStorage.js"
 
-const HOST = "127.0.0.1"
+const HOST = process.env.DATAEYESAI_HOST || "127.0.0.1"
 const DEFAULT_PORT = Number(process.env.CHANNEL_IMPORTER_PORT || 4179)
 const MODULE_PATH = fileURLToPath(import.meta.url)
 const PUBLIC_DIR = fileURLToPath(new URL("../public", import.meta.url))
@@ -82,10 +87,11 @@ const importStore = new ImportStore()
 const previewStore = new PreviewStore()
 const scheduleStore = new ScheduleStore()
 
-const sendJson = (response, status, payload) => {
+const sendJson = (response, status, payload, headers = {}) => {
   response.writeHead(status, {
     "Cache-Control": "no-store",
     "Content-Type": "application/json; charset=utf-8",
+    ...headers,
   })
   response.end(JSON.stringify(payload))
 }
@@ -833,6 +839,8 @@ async function handleApi(
   url,
   port,
   onScheduleChanged = async () => {},
+  publicOrigins = [],
+  accessProtected = false,
 ) {
   if (request.method === "GET" && url.pathname === "/api/bootstrap") {
     let profiles = await configStore.listProfiles()
@@ -881,11 +889,20 @@ async function handleApi(
       groups,
       groupsError,
       schedules: await scheduleStore.list(),
+      deployment: {
+        accessProtected,
+        sharedDatabase: sqliteStorageEnabled(),
+      },
     })
   }
 
   if (
-    !isAllowedApiRequestOrigin(request.method, request.headers.origin, port)
+    !isAllowedApiRequestOrigin(
+      request.method,
+      request.headers.origin,
+      port,
+      publicOrigins,
+    )
   ) {
     return sendJson(response, 403, { error: "来源校验失败" })
   }
@@ -1075,10 +1092,15 @@ async function handleApi(
   }
 
   const scheduleActionMatch = url.pathname.match(
-    /^\/api\/schedules\/([^/]+)\/(run|pause|resume|cancel)$/,
+    /^\/api\/schedules\/([^/]+)\/(run|pause|resume|cancel|retry-failed)$/,
   )
   if (request.method === "POST" && scheduleActionMatch) {
     const [, scheduleId, action] = scheduleActionMatch
+    if (action === "retry-failed") {
+      const schedule = await scheduleStore.retryFailed(scheduleId, new Date())
+      await onScheduleChanged()
+      return sendJson(response, 200, { schedule })
+    }
     if (action === "run") {
       const claim = await scheduleStore.claimJobNow(scheduleId, new Date())
       if (!claim || claim.id !== scheduleId) {
@@ -1198,7 +1220,14 @@ const STATIC_FILES = new Set([
   "assets/operations-board.jpg",
 ])
 
-async function serveStatic(response, pathname) {
+const LOGIN_STATIC_FILES = new Set([
+  "login.html",
+  "login.css",
+  "login.js",
+  "assets/operations-board.jpg",
+])
+
+async function serveStatic(response, pathname, { login = false } = {}) {
   const providerIconMatch = pathname.match(
     /^\/provider-icons\/([a-z0-9-]+)\.svg$/,
   )
@@ -1216,8 +1245,10 @@ async function serveStatic(response, pathname) {
     response.end(svg)
     return
   }
-  const fileName = pathname === "/" ? "index.html" : pathname.slice(1)
-  if (!STATIC_FILES.has(fileName)) {
+  const fileName =
+    pathname === "/" ? (login ? "login.html" : "index.html") : pathname.slice(1)
+  const allowedFiles = login ? LOGIN_STATIC_FILES : STATIC_FILES
+  if (!allowedFiles.has(fileName)) {
     response.writeHead(404).end("Not found")
     return
   }
@@ -1248,8 +1279,17 @@ export async function startImporterServer({
   port = DEFAULT_PORT,
   openBrowser = false,
   tokenStore = null,
+  accessSessions = new AccessSessionManager(),
+  publicHosts = String(process.env.DATAEYESAI_PUBLIC_HOSTS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
+  publicOrigins = String(process.env.DATAEYESAI_PUBLIC_ORIGINS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
 } = {}) {
-  configStore.setTokenStore(tokenStore)
+  configStore.setTokenStore(tokenStore || createSharedTokenStore())
   let activePort = port
   let scheduleTimer = null
   let scheduleRunning = false
@@ -1283,10 +1323,52 @@ export async function startImporterServer({
   }
   const server = createServer(async (request, response) => {
     try {
-      if (!isAllowedHostHeader(request.headers.host, activePort)) {
+      if (!isAllowedHostHeader(request.headers.host, activePort, publicHosts)) {
         return sendJson(response, 403, { error: "Host 校验失败" })
       }
       const url = new URL(request.url || "/", `http://${request.headers.host}`)
+      if (request.method === "POST" && url.pathname === "/api/auth/login") {
+        if (
+          !isAllowedApiRequestOrigin(
+            request.method,
+            request.headers.origin,
+            activePort,
+            publicOrigins,
+          )
+        ) {
+          return sendJson(response, 403, { error: "来源校验失败" })
+        }
+        const body = await readJsonBody(request)
+        const session = accessSessions.login(
+          request.socket.remoteAddress,
+          body.accessKey,
+        )
+        return sendJson(
+          response,
+          200,
+          { success: true },
+          session.cookie ? { "Set-Cookie": session.cookie } : {},
+        )
+      }
+      if (request.method === "POST" && url.pathname === "/api/auth/logout") {
+        return sendJson(
+          response,
+          200,
+          { success: true },
+          { "Set-Cookie": accessSessions.logout(request.headers.cookie) },
+        )
+      }
+      const authenticated = accessSessions.authenticate(request.headers.cookie)
+      if (!authenticated) {
+        if (url.pathname.startsWith("/api/")) {
+          return sendJson(response, 401, { error: "请先输入系统访问密钥" })
+        }
+        if (request.method !== "GET") {
+          response.writeHead(405).end("Method not allowed")
+          return
+        }
+        return await serveStatic(response, url.pathname, { login: true })
+      }
       if (url.pathname.startsWith("/api/")) {
         return await handleApi(
           request,
@@ -1294,6 +1376,8 @@ export async function startImporterServer({
           url,
           activePort,
           scheduleNextRun,
+          publicOrigins,
+          accessSessions.enabled,
         )
       }
       if (request.method !== "GET") {

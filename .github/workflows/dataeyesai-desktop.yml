@@ -15,7 +15,7 @@ on:
       version:
         description: "Release version without the v prefix"
         required: true
-        default: "0.6.0"
+        default: "0.7.0"
 
 permissions:
   contents: write
@@ -84,6 +84,10 @@ jobs:
           - 视觉改为平面运营工具风格，统一无衬线字体、克制圆角和清晰数据层级
           - 导入首页加入本地生成的渠道操作插画，不使用外部图片和第三方资源
           - 手机端导航在自身区域横向滚动，不再撑宽整个页面
+          - 服务器版支持独立系统访问密钥、12 小时登录态和连续输错限流
+          - 多设备通过服务器 SQLite 共享站点、定时任务、用量和导入记录
+          - 记住的 New API 系统令牌使用 AES-256-GCM 加密后写入共享数据库
+          - 定时任务可把失败 Key 单独重新入队，不重复已经成功的 Key
           - AWS Bedrock 自动识别 Key 类型和来源地区
           - Global 模式使用一个来源地区并生成 `global.*` 模型映射
           - 渠道名称和预览明确显示 AWS 来源地区

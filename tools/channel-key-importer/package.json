@@ -2,7 +2,7 @@
   "name": "dataeyesai",
   "private": true,
   "type": "module",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "author": "dataeyesai contributors",
   "license": "MIT",
   "main": "desktop/main.js",
@@ -13,6 +13,7 @@
     "package:current": "electron-builder --publish never",
     "package:mac": "electron-builder --mac dmg --publish never",
     "package:win": "electron-builder --win nsis --publish never",
+    "generate:access-key": "node src/generateAccessKey.js",
     "test": "node --test tests/*.test.js"
   },
   "engines": {

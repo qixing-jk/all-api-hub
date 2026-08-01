@@ -1,0 +1,16 @@
+services:
+  dataeyesai:
+    build:
+      context: .
+    container_name: dataeyesai-channel-manager
+    restart: unless-stopped
+    env_file:
+      - server.env
+    ports:
+      - "${DATAEYESAI_PUBLIC_PORT:-4179}:4179"
+    volumes:
+      - ./server-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

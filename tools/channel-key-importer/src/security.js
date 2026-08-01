@@ -39,20 +39,30 @@ export function validateUserId(value) {
   return userId
 }
 
-export function isAllowedHostHeader(hostHeader, port) {
+export function isAllowedHostHeader(hostHeader, port, additionalHosts = []) {
   if (!hostHeader) return false
   const allowed = new Set([
     `127.0.0.1:${port}`,
     `localhost:${port}`,
     `[::1]:${port}`,
+    ...additionalHosts.map((host) => String(host).toLowerCase()),
   ])
   return allowed.has(hostHeader.toLowerCase())
 }
 
-export function isAllowedOrigin(origin, port) {
+export function isAllowedOrigin(origin, port, additionalOrigins = []) {
   if (!origin) return false
   try {
     const url = new URL(origin)
+    const normalizedOrigin = url.origin.toLowerCase()
+    if (
+      additionalOrigins.some(
+        (allowedOrigin) =>
+          String(allowedOrigin).toLowerCase() === normalizedOrigin,
+      )
+    ) {
+      return true
+    }
     return (
       url.protocol === "http:" &&
       LOOPBACK_HOSTS.has(url.hostname) &&
@@ -63,10 +73,15 @@ export function isAllowedOrigin(origin, port) {
   }
 }
 
-export function isAllowedApiRequestOrigin(method, origin, port) {
+export function isAllowedApiRequestOrigin(
+  method,
+  origin,
+  port,
+  additionalOrigins = [],
+) {
   const readOnly = method === "GET" || method === "HEAD"
   if (readOnly && !origin) return true
-  return isAllowedOrigin(origin, port)
+  return isAllowedOrigin(origin, port, additionalOrigins)
 }
 
 export function maskTargetUrl(value) {

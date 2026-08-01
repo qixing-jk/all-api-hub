@@ -9,6 +9,7 @@ import { dirname, join } from "node:path"
 
 import { DATA_DIR } from "./dataPath.js"
 import { keyIdentity } from "./importStore.js"
+import { createJsonStateStore } from "./sharedStorage.js"
 
 const SCHEDULES_PATH = join(DATA_DIR, "schedules.json")
 const SECRET_PATH = join(DATA_DIR, "schedule-secret.key")
@@ -34,6 +35,7 @@ const publicEntry = (entry) => ({
   channelId: entry.channelId || null,
   channelName: entry.channelName || "",
   importedAt: entry.importedAt || null,
+  retryCount: Number.isInteger(entry.retryCount) ? entry.retryCount : 0,
 })
 
 const jobCounts = (job) => {
@@ -102,10 +104,17 @@ export class ScheduleStore {
     path = SCHEDULES_PATH,
     secretPath = SECRET_PATH,
     now = () => new Date(),
+    stateStore = null,
   } = {}) {
     this.path = path
     this.secretPath = secretPath
     this.now = now
+    this.stateStore =
+      stateStore ||
+      createJsonStateStore({
+        key: path === SCHEDULES_PATH ? "schedules" : `schedules:${path}`,
+        path,
+      })
   }
 
   async #secret() {
@@ -161,21 +170,12 @@ export class ScheduleStore {
   }
 
   async #readAll() {
-    try {
-      const value = JSON.parse(await readFile(this.path, "utf8"))
-      return Array.isArray(value) ? value : []
-    } catch {
-      return []
-    }
+    const value = await this.stateStore.read([])
+    return Array.isArray(value) ? value : []
   }
 
   async #writeAll(jobs) {
-    await mkdir(dirname(this.path), { recursive: true, mode: 0o700 })
-    await writeFile(
-      this.path,
-      `${JSON.stringify(jobs.slice(0, MAX_JOBS), null, 2)}\n`,
-      { encoding: "utf8", mode: 0o600 },
-    )
+    await this.stateStore.write(jobs.slice(0, MAX_JOBS))
   }
 
   async #mutate(operation) {
@@ -414,6 +414,36 @@ export class ScheduleStore {
       job.batchSize = options.batchSize
       job.intervalMinutes = options.intervalMinutes
       job.nextRunAt = options.nextRunAt
+      await this.#writeAll(jobs)
+      return publicJob(job)
+    })
+  }
+
+  async retryFailed(jobId, now = this.now()) {
+    return await this.#mutate(async () => {
+      const jobs = await this.#readAll()
+      const job = jobs.find((item) => item.id === jobId)
+      if (!job) throw new Error("定时任务不存在")
+      if (job.status === "running") {
+        throw new Error("任务正在执行，请结束后再重试失败 Key")
+      }
+      if (job.status === "cancelled") {
+        throw new Error("已取消的任务不能重试失败 Key")
+      }
+      const failedEntries = (job.entries || []).filter(
+        (entry) => entry.status === "failed",
+      )
+      if (failedEntries.length === 0) throw new Error("没有可重试的失败 Key")
+      for (const entry of failedEntries) {
+        entry.status = "pending"
+        entry.retryCount = Number.isInteger(entry.retryCount)
+          ? entry.retryCount + 1
+          : 1
+        delete entry.lockedAt
+      }
+      job.status = "active"
+      job.nextRunAt = now.toISOString()
+      job.lastError = ""
       await this.#writeAll(jobs)
       return publicJob(job)
     })

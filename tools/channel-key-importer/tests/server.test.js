@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
+import { AccessSessionManager, hashAccessKey } from "../src/accessAuth.js"
 import {
   calculateScheduleDelay,
   normalizeChannelRoutingValue,
@@ -21,6 +22,49 @@ test("normalizes optional channel priority and weight", () => {
     () => normalizeChannelRoutingValue("1.5", "渠道优先级"),
     /渠道优先级必须是/,
   )
+})
+
+test("protects the shared server UI with an independent access key", async () => {
+  const accessKey = "shared-server-access-key"
+  const importer = await startImporterServer({
+    port: 0,
+    accessSessions: new AccessSessionManager({
+      accessKeyHash: hashAccessKey(accessKey),
+    }),
+  })
+  try {
+    const loginPage = await fetch(importer.url)
+    assert.equal(loginPage.status, 200)
+    assert.match(await loginPage.text(), /输入系统访问密钥/)
+
+    const unauthorized = await fetch(`${importer.url}/api/bootstrap`)
+    assert.equal(unauthorized.status, 401)
+
+    const login = await fetch(`${importer.url}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: importer.url,
+      },
+      body: JSON.stringify({ accessKey }),
+    })
+    assert.equal(login.status, 200)
+    const cookie = login.headers.get("set-cookie")
+    assert.match(cookie, /dataeyesai_access=/)
+
+    const workspace = await fetch(importer.url, {
+      headers: { Cookie: cookie },
+    })
+    assert.equal(workspace.status, 200)
+    assert.match(await workspace.text(), /导入渠道/)
+
+    const bootstrap = await fetch(`${importer.url}/api/bootstrap`, {
+      headers: { Cookie: cookie },
+    })
+    assert.equal(bootstrap.status, 200)
+  } finally {
+    await importer.close()
+  }
 })
 
 test("calculates a second-precision schedule delay", () => {

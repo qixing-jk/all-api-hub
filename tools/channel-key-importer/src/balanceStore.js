@@ -1,7 +1,7 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises"
-import { dirname, join } from "node:path"
+import { join } from "node:path"
 
 import { DATA_DIR } from "./dataPath.js"
+import { createJsonStateStore } from "./sharedStorage.js"
 
 const BALANCE_PATH = join(DATA_DIR, "balances.json")
 
@@ -22,13 +22,15 @@ const entryKey = ({ targetUrl, userId, channelId }) =>
   `${targetUrl}#${userId}#${channelId}`
 
 export class BalanceStore {
+  constructor({ stateStore } = {}) {
+    this.stateStore =
+      stateStore ||
+      createJsonStateStore({ key: "balances", path: BALANCE_PATH })
+  }
+
   async #readAll() {
-    try {
-      const parsed = JSON.parse(await readFile(BALANCE_PATH, "utf8"))
-      return parsed && typeof parsed === "object" ? parsed : {}
-    } catch {
-      return {}
-    }
+    const parsed = await this.stateStore.read({})
+    return parsed && typeof parsed === "object" ? parsed : {}
   }
 
   async record(reference, currentBalance) {
@@ -45,11 +47,7 @@ export class BalanceStore {
       lastBalance: currentBalance,
       checkedAt,
     }
-    await mkdir(dirname(BALANCE_PATH), { recursive: true, mode: 0o700 })
-    await writeFile(BALANCE_PATH, `${JSON.stringify(entries, null, 2)}\n`, {
-      encoding: "utf8",
-      mode: 0o600,
-    })
+    await this.stateStore.write(entries)
 
     return {
       currentBalance,

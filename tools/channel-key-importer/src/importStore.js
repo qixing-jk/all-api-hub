@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from "node:crypto"
-import { mkdir, readFile, writeFile } from "node:fs/promises"
-import { dirname, join } from "node:path"
+import { join } from "node:path"
 
 import { DATA_DIR } from "./dataPath.js"
+import { createJsonStateStore } from "./sharedStorage.js"
 
 const IMPORTS_PATH = join(DATA_DIR, "imports.json")
 const MAX_RECORDS = 2000
@@ -86,22 +86,18 @@ export function applyBalanceUsage(record, currentBalance) {
 export class ImportStore {
   #mutation = Promise.resolve()
 
+  constructor({ stateStore } = {}) {
+    this.stateStore =
+      stateStore || createJsonStateStore({ key: "imports", path: IMPORTS_PATH })
+  }
+
   async #readAll() {
-    try {
-      const value = JSON.parse(await readFile(IMPORTS_PATH, "utf8"))
-      return Array.isArray(value) ? value : []
-    } catch {
-      return []
-    }
+    const value = await this.stateStore.read([])
+    return Array.isArray(value) ? value : []
   }
 
   async #writeAll(records) {
-    await mkdir(dirname(IMPORTS_PATH), { recursive: true, mode: 0o700 })
-    await writeFile(
-      IMPORTS_PATH,
-      `${JSON.stringify(records.slice(0, MAX_RECORDS), null, 2)}\n`,
-      { encoding: "utf8", mode: 0o600 },
-    )
+    await this.stateStore.write(records.slice(0, MAX_RECORDS))
   }
 
   async list() {

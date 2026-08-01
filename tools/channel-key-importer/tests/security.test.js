@@ -44,8 +44,18 @@ test("rejects target URLs with embedded credentials or query strings", () => {
 test("validates loopback host, origin, and admin user id", () => {
   assert.equal(isAllowedHostHeader("127.0.0.1:4179", 4179), true)
   assert.equal(isAllowedHostHeader("evil.example:4179", 4179), false)
+  assert.equal(
+    isAllowedHostHeader("47.251.143.204:4179", 4179, ["47.251.143.204:4179"]),
+    true,
+  )
   assert.equal(isAllowedOrigin("http://localhost:4179", 4179), true)
   assert.equal(isAllowedOrigin("https://evil.example", 4179), false)
+  assert.equal(
+    isAllowedOrigin("https://keys.example.com", 4179, [
+      "https://keys.example.com",
+    ]),
+    true,
+  )
   assert.equal(isAllowedApiRequestOrigin("GET", undefined, 4179), true)
   assert.equal(
     isAllowedApiRequestOrigin("GET", "https://evil.example", 4179),
