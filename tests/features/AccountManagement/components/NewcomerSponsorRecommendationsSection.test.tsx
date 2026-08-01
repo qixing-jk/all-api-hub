@@ -2,7 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { NewcomerSupportCard } from "~/features/AccountManagement/components/NewcomerSupportCard"
+import { NewcomerSponsorRecommendationsSection } from "~/features/AccountManagement/components/NewcomerSponsorRecommendationsSection"
 import { SPONSOR_CATALOG_SCHEMA_VERSION } from "~/features/AccountManagement/sponsors/constants"
 import {
   SPONSOR_CATALOG_SOURCES,
@@ -112,15 +112,15 @@ function createUnsupportedSponsor(): SponsorRecommendation {
   }
 }
 
-function renderNewcomerSupportCard() {
-  return render(<NewcomerSupportCard />, {
+function renderNewcomerSponsorRecommendationsSection() {
+  return render(<NewcomerSponsorRecommendationsSection />, {
     withReleaseUpdateStatusProvider: false,
     withThemeProvider: false,
     withUserPreferencesProvider: false,
   })
 }
 
-describe("NewcomerSupportCard", () => {
+describe("NewcomerSponsorRecommendationsSection", () => {
   beforeEach(() => {
     vi.unstubAllGlobals()
     vi.clearAllMocks()
@@ -131,22 +131,59 @@ describe("NewcomerSupportCard", () => {
     })
   })
 
-  it("shows the original button group before sponsor recommendations", async () => {
-    renderNewcomerSupportCard()
+  it("shows focused sponsor guidance without the generic welcome actions", async () => {
+    renderNewcomerSponsorRecommendationsSection()
 
     expect(await screen.findByText("Supported Provider")).toBeInTheDocument()
-    const starButton = screen.getByRole("button", {
-      name: "account:newcomerSupport.actions.star",
-    })
-    const sponsorRecommendations = screen.getByTestId(
-      ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendations,
-    )
-
-    expect(starButton.compareDocumentPosition(sponsorRecommendations)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    )
+    expect(
+      screen.getByRole("region", {
+        name: "account:sponsor.newcomer.title",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("account:sponsor.newcomer.description"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("account:sponsor.newcomer.disclosure"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("account:newcomerSupport.title"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "account:newcomerSupport.actions.star",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "account:newcomerSupport.actions.docs",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "account:newcomerSupport.actions.about",
+      }),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: "account:addFirstAccount" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders nothing when no sponsor recommendations are available", () => {
+    setSponsorRecommendations([])
+
+    renderNewcomerSponsorRecommendationsSection()
+
+    expect(
+      screen.queryByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendations),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("account:newcomerSupport.description"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "account:newcomerSupport.actions.star",
+      }),
     ).not.toBeInTheDocument()
   })
 
@@ -155,7 +192,7 @@ describe("NewcomerSupportCard", () => {
     const openSpy = vi.fn()
     vi.stubGlobal("open", openSpy)
 
-    renderNewcomerSupportCard()
+    renderNewcomerSponsorRecommendationsSection()
 
     await user.click(
       await screen.findByTestId(
@@ -182,7 +219,7 @@ describe("NewcomerSupportCard", () => {
     vi.stubGlobal("open", vi.fn())
     setSponsorRecommendations([createUnsupportedSponsor()])
 
-    renderNewcomerSupportCard()
+    renderNewcomerSponsorRecommendationsSection()
 
     await user.click(
       await screen.findByTestId(
@@ -210,34 +247,5 @@ describe("NewcomerSupportCard", () => {
         apiKeyCreateHint: "Use promo code APIHUB after registration.",
       },
     })
-  })
-
-  it("preserves the docs, repo, and about fallback layout when no sponsors are available", () => {
-    setSponsorRecommendations([])
-
-    renderNewcomerSupportCard()
-
-    expect(
-      screen.queryByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendations),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.getByText("account:newcomerSupport.description"),
-    ).toBeInTheDocument()
-    expect(screen.getByText("account:newcomerSupport.hint")).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", {
-        name: "account:newcomerSupport.actions.star",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", {
-        name: "account:newcomerSupport.actions.docs",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", {
-        name: "account:newcomerSupport.actions.about",
-      }),
-    ).toBeInTheDocument()
   })
 })

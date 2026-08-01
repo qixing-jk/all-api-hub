@@ -222,7 +222,7 @@ vi.mock("~/components/ui", () => {
         {rightIcon}
       </button>
     ),
-    Card: ({ children }: any) => <div>{children}</div>,
+    Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     CardContent: ({ children }: any) => <div>{children}</div>,
     CardList: ({ children }: any) => <div>{children}</div>,
     Checkbox: ({ checked, onCheckedChange, ...props }: any) => (
@@ -256,9 +256,10 @@ vi.mock("~/components/ui", () => {
           </button>
         </div>
       ) : null,
-    EmptyState: ({ title, action }: any) => (
+    EmptyState: ({ title, description, action }: any) => (
       <div>
         <div>{title}</div>
+        {description ? <div>{description}</div> : null}
         {action ? (
           <button type="button" onClick={action.onClick}>
             {action.label}
@@ -348,9 +349,14 @@ vi.mock("~/features/AccountManagement/components/DelAccountDialog", () => ({
   default: () => null,
 }))
 
-vi.mock("~/features/AccountManagement/components/NewcomerSupportCard", () => ({
-  NewcomerSupportCard: () => null,
-}))
+vi.mock(
+  "~/features/AccountManagement/components/NewcomerSponsorRecommendationsSection",
+  () => ({
+    NewcomerSponsorRecommendationsSection: () => (
+      <div data-testid="newcomer-sponsor-recommendations" />
+    ),
+  }),
+)
 
 vi.mock(
   "~/features/AccountManagement/components/AccountList/AccountFilterBar",
@@ -640,6 +646,36 @@ describe("AccountList", () => {
     render(<AccountList />)
 
     expect(screen.queryByText("account:emptyState")).not.toBeInTheDocument()
+  })
+
+  it("groups the account action and secondary sponsor guidance in one panel", () => {
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [],
+        displayData: [],
+      }),
+    )
+
+    render(<AccountList />)
+
+    const addAccountButton = screen.getByRole("button", {
+      name: "account:addFirstAccount",
+    })
+    const sponsorRecommendations = screen.getByTestId(
+      "newcomer-sponsor-recommendations",
+    )
+    const emptyAccountPanel = screen.getByRole("region", {
+      name: "account:emptyState",
+    })
+
+    expect(
+      screen.getByText("account:emptyStateDescription"),
+    ).toBeInTheDocument()
+    expect(emptyAccountPanel).toContainElement(addAccountButton)
+    expect(emptyAccountPanel).toContainElement(sponsorRecommendations)
+    expect(
+      addAccountButton.compareDocumentPosition(sponsorRecommendations),
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
 
   it("tracks the empty-state create-account action before opening the dialog", async () => {

@@ -105,8 +105,9 @@
   "currentSiteAddedCount_one": "⚠️Este site já possui {{count}} conta salva",
   "currentSiteAddedCount_many": "⚠️Este site já possui {{count}} contas salvas",
   "currentSiteAddedCount_other": "⚠️Este site já possui {{count}} contas salvas",
-  "description": "Gerencie todos os seus serviços de API de IA em um só lugar",
+  "description": "Gerencie contas de sites e consulte saldos, status de integridade, chaves de API e uso em um só lugar.",
   "emptyState": "Nenhuma conta ainda",
+  "emptyStateDescription": "Adicione uma conta para gerenciar saldos, integridade, chaves de API e uso em um só lugar.",
   "filter": {
     "checkIn": {
       "all": "Todos os estados de check-in",
@@ -241,16 +242,6 @@
     },
     "sort": "Classificar"
   },
-  "newcomerSupport": {
-    "actions": {
-      "about": "Visite o site",
-      "docs": "Abrir guia de início",
-      "star": "Ver no GitHub"
-    },
-    "description": "Adicione contas para criar um inventário de fontes de saldos, verificações de integridade, chaves de API e exportações diretas. Depois, importe essas fontes para um canal do seu gateway de IA auto-hospedado.",
-    "hint": "Sinta-se à vontade para dar uma olhada no site e na documentação antes de adicionar qualquer conta",
-    "title": "Bem-vindo ao All API Hub"
-  },
   "refresh": {
     "refreshComplete": "Atualização concluída: {{success}} com sucesso, {{failed}} com falha",
     "refreshDisabledComplete": "Verificação de contas desativadas concluída: {{restored}} restauradas, {{stillDisabled}} ainda desativadas",
@@ -272,6 +263,10 @@
       "openApiCredentialProfilesFallback": "Adicionar a chave de API deste provedor como credencial de API",
       "openBookmarkManagerFallback": "Salvar o provedor como marcador em vez de adicionar uma conta",
       "visitProvider": "Visitar provedor"
+    },
+    "newcomer": {
+      "description": "Cadastre-se no site de um provedor e siga as orientações do cartão para adicionar uma conta, salvar credenciais de API ou favoritar o site.",
+      "title": "Explore os provedores disponíveis"
     },
     "recommendedProviders": "Fornecedores recomendados",
     "supportStatus": {

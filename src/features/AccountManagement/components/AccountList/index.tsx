@@ -81,7 +81,7 @@ import { formatMoneyFixed } from "~/utils/core/money"
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
 import { InviteLinkManualCopyDialog } from "../InviteLinkManualCopyDialog"
-import { NewcomerSupportCard } from "../NewcomerSupportCard"
+import { NewcomerSponsorRecommendationsSection } from "../NewcomerSponsorRecommendationsSection"
 import AccountFilterBar from "./AccountFilterBar"
 import { NonSortableAccountListItem } from "./AccountListBaseItem"
 import { AccountListInitialLoadingState } from "./AccountListLoadingState"
@@ -1199,22 +1199,38 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
 
   if (!hasAccounts) {
     return (
-      <div
-        className="space-y-2"
+      <Card
+        aria-label={t("account:emptyState")}
+        className="mb-2"
         data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
+        padding="md"
+        role="region"
       >
-        <NewcomerSupportCard />
-        <EmptyState
-          icon={<InboxIcon className="h-12 w-12" />}
-          title={t("account:emptyState")}
-          action={{
-            label: t("account:addFirstAccount"),
-            onClick: handleEmptyStateAddAccountClick,
-            variant: "default",
-            icon: <PlusIcon className="h-4 w-4" />,
-          }}
-        />
-      </div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="shrink-0 rounded-md bg-blue-50 p-2 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300">
+              <InboxIcon className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="dark:text-dark-text-primary text-sm font-medium text-gray-900">
+                {t("account:emptyState")}
+              </h2>
+              <p className="dark:text-dark-text-secondary max-w-2xl text-sm leading-6 text-gray-600">
+                {t("account:emptyStateDescription")}
+              </p>
+            </div>
+          </div>
+          <Button
+            className="w-full shrink-0 sm:w-auto"
+            leftIcon={<PlusIcon className="h-4 w-4" />}
+            onClick={handleEmptyStateAddAccountClick}
+            size="sm"
+          >
+            {t("account:addFirstAccount")}
+          </Button>
+        </div>
+        <NewcomerSponsorRecommendationsSection />
+      </Card>
     )
   }
 

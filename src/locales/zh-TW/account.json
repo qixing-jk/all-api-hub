@@ -87,8 +87,9 @@
   "currentLoginAdded": "⚠️{{siteName}} 的當前登入帳號已在清單中",
   "currentSiteAdded": "⚠️{{siteName}} 已有帳號",
   "currentSiteAddedCount_other": "⚠️當前站點已有 {{count}} 個帳號",
-  "description": "一鍵管理所有AI中轉站",
+  "description": "集中管理站點帳號，查看餘額、健康狀態、API Key 與使用情況。",
   "emptyState": "暫無站點帳號",
+  "emptyStateDescription": "新增帳號後，即可集中查看餘額、健康狀態、API Key 與使用情況。",
   "filter": {
     "checkIn": {
       "all": "全部簽到狀態",
@@ -197,16 +198,6 @@
     },
     "sort": "排序"
   },
-  "newcomerSupport": {
-    "actions": {
-      "about": "訪問專案主頁",
-      "docs": "開啟新手指引",
-      "star": "給專案點個 Star"
-    },
-    "description": "新增帳號可建立來源清單，用於餘額、健康檢查、API Key、直接匯出，以及後續匯入自建 AI 閘道渠道。",
-    "hint": "在新增帳號之前，也可以先隨意看看文件和專案資訊",
-    "title": "歡迎使用 All API Hub"
-  },
   "refresh": {
     "refreshComplete": "重新整理完成: {{success}} 成功, {{failed}} 失敗",
     "refreshDisabledComplete": "已停用帳號探測完成：恢復 {{restored}} 個，仍停用 {{stillDisabled}} 個",
@@ -228,6 +219,10 @@
       "openApiCredentialProfilesFallback": "可將其 API 金鑰新增為 API 憑證",
       "openBookmarkManagerFallback": "暫不新增帳號，先收藏服務商",
       "visitProvider": "造訪服務商"
+    },
+    "newcomer": {
+      "description": "前往服務商網站註冊，再依照卡片提示新增帳號、儲存 API 憑證或收藏站點。",
+      "title": "探索可用服務商"
     },
     "recommendedProviders": "推薦服務商",
     "supportStatus": {

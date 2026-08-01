@@ -105,8 +105,9 @@
   "currentSiteAddedCount_one": "⚠️Este sitio ya tiene {{count}} cuenta guardada",
   "currentSiteAddedCount_many": "⚠️Este sitio ya tiene {{count}} cuentas guardadas",
   "currentSiteAddedCount_other": "⚠️Este sitio ya tiene {{count}} cuentas guardadas",
-  "description": "Administra todas las estaciones de redistribución de IA con un clic",
+  "description": "Administra cuentas de sitios y consulta saldos, estado de salud, claves de API y uso en un solo lugar.",
   "emptyState": "Todavía no hay cuentas",
+  "emptyStateDescription": "Agrega una cuenta para administrar saldos, estado, claves de API y uso en un solo lugar.",
   "filter": {
     "checkIn": {
       "all": "Todos los estados de check-in",
@@ -241,16 +242,6 @@
     },
     "sort": "Ordenar"
   },
-  "newcomerSupport": {
-    "actions": {
-      "about": "Visitar sitio web",
-      "docs": "Abrir guía de inicio",
-      "star": "Ver en GitHub"
-    },
-    "description": "Puedes darle estrella al proyecto y revisar las guías para aprender a administrar tus cuentas relay y New API",
-    "hint": "Puedes explorar el sitio web y la documentación antes de agregar cuentas",
-    "title": "Te damos la bienvenida a All API Hub"
-  },
   "refresh": {
     "refreshComplete": "Actualización completa: {{success}} correctas, {{failed}} fallidas",
     "refreshDisabledComplete": "Sondeo de cuentas deshabilitadas completo: {{restored}} restauradas, {{stillDisabled}} aún deshabilitadas",
@@ -272,6 +263,10 @@
       "openApiCredentialProfilesFallback": "Agregar la clave de API de este proveedor como credencial de API",
       "openBookmarkManagerFallback": "Guardar proveedor en marcadores en lugar de agregar una cuenta",
       "visitProvider": "Visitar proveedor"
+    },
+    "newcomer": {
+      "description": "Regístrate en el sitio web de un proveedor y sigue las indicaciones de la tarjeta para agregar una cuenta, guardar credenciales de API o guardar el sitio en marcadores.",
+      "title": "Explora proveedores disponibles"
     },
     "recommendedProviders": "Proveedores recomendados",
     "supportStatus": {

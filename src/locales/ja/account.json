@@ -87,8 +87,9 @@
   "currentLoginAdded": "⚠️{{siteName}} の現在のログインは一覧に追加済みです",
   "currentSiteAdded": "⚠️{{siteName}} には保存済みアカウントがあります",
   "currentSiteAddedCount_other": "⚠️このサイトには保存済みアカウントが {{count}} 件あります",
-  "description": "すべての AI 中継サイトをワンクリックで管理",
+  "description": "サイトアカウントを管理し、残高、稼働状況、API キー、使用状況をまとめて確認",
   "emptyState": "まだアカウントがありません",
+  "emptyStateDescription": "アカウントを追加すると、残高、稼働状況、API キー、使用状況をまとめて管理できます。",
   "filter": {
     "checkIn": {
       "all": "すべてのチェックイン状態",
@@ -197,16 +198,6 @@
     },
     "sort": "並び替え"
   },
-  "newcomerSupport": {
-    "actions": {
-      "about": "Web サイトを開く",
-      "docs": "はじめにを開く",
-      "star": "GitHub で表示"
-    },
-    "description": "アカウントを追加すると、残高、ヘルスチェック、API キー、直接エクスポート、後続のセルフホスト AI ゲートウェイチャネル取り込みに使えるソース一覧を作成できます。",
-    "hint": "アカウントを追加する前に、まず Web サイトやドキュメントを自由に見て回ってください",
-    "title": "All API Hub へようこそ"
-  },
   "refresh": {
     "refreshComplete": "更新完了: 成功 {{success}} 件、失敗 {{failed}} 件",
     "refreshDisabledComplete": "無効アカウントの再検出が完了しました: {{restored}} 件を復旧、{{stillDisabled}} 件は無効のまま",
@@ -228,6 +219,10 @@
       "openApiCredentialProfilesFallback": "このプロバイダーの API キーを API 認証情報として追加",
       "openBookmarkManagerFallback": "アカウントを追加せず、まずプロバイダーをブックマーク",
       "visitProvider": "プロバイダーを開く"
+    },
+    "newcomer": {
+      "description": "プロバイダーのサイトで登録し、カードの案内に従ってアカウントの追加、API 認証情報の保存、またはサイトのブックマークを行えます。",
+      "title": "利用可能なプロバイダーを探す"
     },
     "recommendedProviders": "おすすめプロバイダー",
     "supportStatus": {

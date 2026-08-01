@@ -96,8 +96,9 @@
   "currentSiteAdded": "⚠️{{siteName}} already has a saved account",
   "currentSiteAddedCount_one": "⚠️This site already has {{count}} saved account",
   "currentSiteAddedCount_other": "⚠️This site already has {{count}} saved accounts",
-  "description": "Manage all AI redistribution stations with one click",
+  "description": "Manage site accounts and view balances, health status, API keys, and usage in one place.",
   "emptyState": "No accounts yet",
+  "emptyStateDescription": "Add an account to manage balances, health, API keys, and usage in one place.",
   "filter": {
     "checkIn": {
       "all": "All check-in states",
@@ -219,16 +220,6 @@
     },
     "sort": "Sort"
   },
-  "newcomerSupport": {
-    "actions": {
-      "about": "Visit website",
-      "docs": "Open getting started",
-      "star": "View on GitHub"
-    },
-    "description": "Add accounts to build a source inventory for balances, health checks, API keys, and direct exports. Later, import them into a self-hosted AI gateway channel.",
-    "hint": "Feel free to look around the website and docs before adding any accounts",
-    "title": "Welcome to All API Hub"
-  },
   "refresh": {
     "refreshComplete": "Refresh complete: {{success}} success, {{failed}} failed",
     "refreshDisabledComplete": "Disabled account probe complete: {{restored}} restored, {{stillDisabled}} still disabled",
@@ -250,6 +241,10 @@
       "openApiCredentialProfilesFallback": "Add this provider's API key as an API credential",
       "openBookmarkManagerFallback": "Bookmark provider instead of adding an account",
       "visitProvider": "Visit provider"
+    },
+    "newcomer": {
+      "description": "Register on a provider's website, then follow the card to add an account, save API credentials, or bookmark the site.",
+      "title": "Explore available providers"
     },
     "recommendedProviders": "Recommended providers",
     "supportStatus": {

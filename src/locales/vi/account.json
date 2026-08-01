@@ -87,8 +87,9 @@
   "currentLoginAdded": "⚠️Tài khoản đăng nhập hiện tại của {{siteName}} đã có trong danh sách",
   "currentSiteAdded": "⚠️{{siteName}} đã có tài khoản",
   "currentSiteAddedCount_other": "⚠️Trang hiện tại đã có {{count}} tài khoản",
-  "description": "Quản lý tất cả các trạm trung chuyển AI bằng một cú nhấp chuột",
+  "description": "Quản lý tài khoản trang web và xem số dư, trạng thái, khóa API cùng mức sử dụng tại một nơi.",
   "emptyState": "Chưa có tài khoản trang web",
+  "emptyStateDescription": "Thêm tài khoản để quản lý số dư, trạng thái, khóa API và mức sử dụng tại một nơi.",
   "filter": {
     "checkIn": {
       "all": "Tất cả trạng thái điểm danh",
@@ -197,16 +198,6 @@
     },
     "sort": "Sắp xếp"
   },
-  "newcomerSupport": {
-    "actions": {
-      "about": "Truy cập trang chủ dự án",
-      "docs": "Mở hướng dẫn cho người mới",
-      "star": "Cho dự án một sao (Star)"
-    },
-    "description": "Thêm tài khoản để tạo kho nguồn cho số dư, kiểm tra trạng thái, API key, xuất trực tiếp và nhập kênh AI gateway tự triển khai sau này.",
-    "hint": "Trước khi thêm tài khoản, bạn cũng có thể tùy ý xem tài liệu và thông tin dự án",
-    "title": "Chào mừng đến với All API Hub"
-  },
   "refresh": {
     "refreshComplete": "Làm mới hoàn tất: {{success}} thành công, {{failed}} thất bại",
     "refreshDisabledComplete": "Khám phá tài khoản đã vô hiệu hóa hoàn tất: khôi phục {{restored}}, vẫn vô hiệu hóa {{stillDisabled}}",
@@ -228,6 +219,10 @@
       "openApiCredentialProfilesFallback": "Thêm API Key của nhà cung cấp này làm thông tin xác thực API",
       "openBookmarkManagerFallback": "Đánh dấu nhà cung cấp thay vì thêm tài khoản",
       "visitProvider": "Truy cập nhà cung cấp"
+    },
+    "newcomer": {
+      "description": "Đăng ký trên trang web của nhà cung cấp, sau đó làm theo hướng dẫn trên thẻ để thêm tài khoản, lưu thông tin xác thực API hoặc đánh dấu trang web.",
+      "title": "Khám phá các nhà cung cấp khả dụng"
     },
     "recommendedProviders": "Nhà cung cấp được đề xuất",
     "supportStatus": {

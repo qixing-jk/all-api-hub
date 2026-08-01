@@ -87,8 +87,9 @@
   "currentLoginAdded": "⚠️{{siteName}} 的当前登录账号已在列表中",
   "currentSiteAdded": "⚠️{{siteName}} 已有账号",
   "currentSiteAddedCount": "⚠️当前站点已有 {{count}} 个账号",
-  "description": "一键管理所有AI中转站",
+  "description": "集中管理站点账号，查看余额、健康状态、API Key 与使用情况。",
   "emptyState": "暂无站点账号",
+  "emptyStateDescription": "添加账号后，可以集中查看余额、健康状态、API Key 和使用情况。",
   "filter": {
     "checkIn": {
       "all": "全部签到状态",
@@ -197,16 +198,6 @@
     },
     "sort": "排序"
   },
-  "newcomerSupport": {
-    "actions": {
-      "about": "访问项目主页",
-      "docs": "打开新手指引",
-      "star": "给项目点个 Star"
-    },
-    "description": "添加账号可建立来源清单，用于余额、健康检查、API Key、直接导出，以及后续导入自建 AI 网关渠道。",
-    "hint": "在添加账号之前，也可以先随意看看文档和项目信息",
-    "title": "欢迎使用 All API Hub"
-  },
   "refresh": {
     "refreshComplete": "刷新完成: {{success}} 成功, {{failed}} 失败",
     "refreshDisabledComplete": "已禁用账号探测完成：恢复 {{restored}} 个，仍禁用 {{stillDisabled}} 个",
@@ -228,6 +219,10 @@
       "openApiCredentialProfilesFallback": "可将其 API 密钥添加为 API 凭证",
       "openBookmarkManagerFallback": "暂不添加账号，先收藏服务商",
       "visitProvider": "访问服务商"
+    },
+    "newcomer": {
+      "description": "前往服务商网站注册，再按卡片提示添加账号、保存 API 凭据或收藏站点。",
+      "title": "探索可用服务商"
     },
     "recommendedProviders": "推荐服务商",
     "supportStatus": {

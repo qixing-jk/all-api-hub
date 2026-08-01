@@ -35,8 +35,12 @@ export function SponsorRecommendationsSection({
 }: SponsorRecommendationsSectionProps) {
   const { t } = useTranslation("account")
   const headingId = useId()
+  const isNewcomer = surface === SPONSOR_RECOMMENDATION_SURFACES.Newcomer
   const showVisibleHeader =
     surface !== SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog
+  const heading = isNewcomer
+    ? t("sponsor.newcomer.title")
+    : t("sponsor.recommendedProviders")
 
   useEffect(() => {
     if (items.length === 0) return
@@ -58,8 +62,13 @@ export function SponsorRecommendationsSection({
           id={headingId}
           className="dark:text-dark-text-primary text-sm font-medium text-gray-900"
         >
-          {t("sponsor.recommendedProviders")}
+          {heading}
         </h3>
+        {isNewcomer ? (
+          <p className="dark:text-dark-text-secondary text-xs leading-5 text-gray-600">
+            {t("sponsor.newcomer.description")}
+          </p>
+        ) : null}
       </div>
       <div className="grid gap-2">
         {items.map((item) => (
