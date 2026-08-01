@@ -21,9 +21,9 @@
   "appearanceLanguage": {
     "language": "Idioma",
     "languageDesc": "Escolha seu idioma preferido",
-    "onboardingHelper": "Atualize o texto de integração imediatamente e mantenha esse idioma para páginas de configurações posteriores.",
+    "onboardingHelper": "O guia e as páginas de configurações seguintes usarão o idioma escolhido.",
     "onboardingLabel": "Escolha seu idioma",
-    "onboardingLanguageRequest": "Não encontra seu idioma? Diga-nos o que adicionar",
+    "onboardingLanguageRequest": "Não encontra seu idioma? Solicite suporte ao idioma",
     "switcher": {
       "currentLanguage": "Idioma da interface atual: {{language}}",
       "groupLabel": "Seletor de idioma da interface",
@@ -340,36 +340,36 @@
       "refresh": "Atualizar status",
       "remove": "Revogar"
     },
-    "description": "Conceda esses recursos opcionais somente quando você precisar que o All API Hub manipule cookies, cabeçalhos ou fluxos de desvio de janela temporária para você.",
-    "helper": "Depois de ativada, a extensão simplesmente anexa os cookies e cabeçalhos de sessão existentes em segundo plano. Você pode desativar qualquer permissão posteriormente sem afetar os recursos principais.",
+    "description": "Conceda permissões opcionais conforme necessário para atualizar dados de contas, usar ferramentas auxiliares, receber notificações e importar sites.",
+    "helper": "Cada permissão é usada apenas pelo recurso correspondente e pode ser revogada a qualquer momento. Recursos sem permissão podem ficar limitados, enquanto os demais continuam funcionando.",
     "items": {
       "bookmarks": {
-        "description": "Ler os favoritos do navegador somente ao importar sites de contas a partir de URLs salvas nos favoritos.",
+        "description": "Lê URLs salvas somente quando você escolhe importar sites dos favoritos do navegador.",
         "title": "Favoritos do navegador"
       },
       "clipboardRead": {
-        "description": "Permitir que o assistente de resgate detecte códigos de resgate copiados, solicitando assim o resgate automático dos códigos.",
+        "description": "Depois que você copia um conteúdo relacionado, ajuda o assistente de resgate ou o teste de AI API a reconhecer códigos de resgate e dados de API.",
         "title": "Leitura da área de transferência"
       },
       "cookies": {
-        "description": "Permite que o All API Hub leia os cookies necessários das contas conectadas para adicionar cabeçalhos de autenticação quando preciso.",
-        "title": "Cookies"
+        "description": "Lê apenas os cookies necessários do site correspondente ao verificar a sessão ou atualizar os dados da conta.",
+        "title": "Acesso a cookies"
       },
       "declarativeNetRequestWithHostAccess": {
-        "description": "Permitir a aplicação de regras de cabeçalho de solicitação pressionando Tab durante a proteção temporária da janela, anexando os cookies corretos para diferentes contas e evitando anomalias de dados em múltiplas contas.",
-        "title": "Solicitação de rede declarativa"
+        "description": "Aplica em uma janela temporária os dados de solicitação necessários para a conta atual e evita misturar dados entre contas.",
+        "title": "Regras de solicitações de rede"
       },
       "notifications": {
         "description": "Permitir que tarefas agendadas em segundo plano enviem notificações do sistema após serem concluídas.",
         "title": "Notificações do sistema"
       },
       "webRequest": {
-        "description": "Permite que a extensão observe solicitações de saída somente quando o desvio da janela temporária ou a atualização automática precisar adicionar os cabeçalhos necessários.",
-        "title": "Solicitação da Web"
+        "description": "Identifica solicitações que precisam de dados da conta somente durante a verificação em janela temporária ou a atualização automática.",
+        "title": "Acesso a solicitações de rede"
       },
       "webRequestBlocking": {
-        "description": "Permite modificação síncrona para que os cookies possam ser anexados antes que uma solicitação saia do navegador, mantendo os fluxos de desvio de firewall confiáveis.",
-        "title": "Bloqueio de solicitação da Web"
+        "description": "Adiciona o cookie necessário da conta atual antes do envio de uma solicitação para concluir a verificação em janela temporária.",
+        "title": "Modificar solicitações de rede"
       }
     },
     "messages": {
@@ -389,26 +389,27 @@
   },
   "permissionsOnboarding": {
     "actions": {
-      "allowAll": "Permitir permissões recomendadas",
-      "maybeLater": "Talvez mais tarde"
+      "allowAll": "Permitir todas as permissões recomendadas",
+      "maybeLater": "Agora não"
     },
-    "analyticsDisclosure": "A extensão inclui análises anônimas e opcionais do produto que nos ajudam a priorizar correções de problemas comuns, melhorar os principais fluxos de trabalho e a compatibilidade e reduzir atritos desnecessários. Elas não coletam chaves de API, cookies, URLs de contas, saldos, conteúdo de solicitações nem dados inseridos pelo usuário.",
-    "intro": "Como um projeto de código aberto, solicitamos apenas as permissões opcionais mínimas necessárias para ativar fluxos de trabalho avançados. Você permanece no controle total.",
-    "openSourceBadge": "Código aberto e voltado para a comunidade",
-    "permissionListDescription": "Essas permissões são necessárias para fluxos de desvio de firewall para que os trabalhos de atualização de dados continuem funcionando em sites protegidos.",
-    "permissionListTitle": "O que essas permissões fazem",
+    "analyticsDisclosure": "As estatísticas anônimas servem apenas para nos ajudar a encontrar problemas e melhorar a experiência. Você pode desativá-las a qualquer momento; elas nunca incluem informações da sua conta, credenciais ou o conteúdo que você envia ou insere.",
+    "intro": "O código está aberto para que qualquer pessoa possa revisá-lo. Você decide se deseja ativar permissões e estatísticas anônimas.",
+    "openSourceBadge": "Código aberto, transparente e feito pela comunidade",
+    "permissionListDescription": "Alguns recursos precisam de permissões adicionais. Veja para que serve cada permissão, conceda apenas as necessárias e revogue quando quiser.",
+    "permissionListTitle": "Escolha as permissões opcionais",
     "project": {
-      "cta": "Acesse o repositório para acompanhar versões, enviar problemas ou participar do desenvolvimento.",
-      "label": "Projeto",
-      "starCta": "Dê uma estrela ao projeto no GitHub para apoiá-lo!"
+      "cta": "Visite o GitHub para explorar o código e as novidades. Você também pode relatar problemas ou compartilhar ideias.",
+      "getStartedCta": "Abrir guia de início",
+      "label": "Código-fonte",
+      "starCta": "All API Hub está sendo útil? Dê uma estrela no GitHub para apoiar o projeto"
     },
     "reason": {
-      "newPermissions": "Adicionamos novas permissões opcionais para oferecer suporte a recursos recentes. Revise e confirme para manter tudo funcionando."
+      "newPermissions": "Novos recursos precisam de permissões opcionais adicionais. Veja para que serve cada uma e conceda apenas as que precisar."
     },
-    "subtitle": "Esta extensão de código aberto precisa de algumas permissões opcionais para ativar recursos como o bypass por janela temporária e outros fluxos de trabalho avançados.",
+    "subtitle": "Escolha seu idioma e ative apenas as permissões opcionais de que precisa. Você pode alterar essas opções depois.",
     "title": "Boas-vindas ao All API Hub",
     "toasts": {
-      "error": "A solicitação de permissão foi rejeitada",
+      "error": "Nem todas as permissões recomendadas foram concedidas",
       "success": "Todas as permissões recomendadas concedidas"
     }
   },

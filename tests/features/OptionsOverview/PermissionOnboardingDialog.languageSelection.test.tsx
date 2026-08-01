@@ -279,6 +279,14 @@ describe("PermissionOnboardingDialog language selection", () => {
       await screen.findByRole("heading", { name: "Welcome to All API Hub" }),
     ).toBeInTheDocument()
     expect(screen.getByText("Choose your language")).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "The source is open for anyone to review. You choose whether to enable permissions and anonymous analytics.",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "Open getting started" }),
+    ).toHaveAttribute("href", expect.stringMatching(/\/get-started$/))
 
     const selector = screen.getByRole("combobox", {
       name: "Current interface language: English",
@@ -295,10 +303,10 @@ describe("PermissionOnboardingDialog language selection", () => {
     )
 
     expect(
-      await screen.findByRole("heading", { name: "欢迎加入 All API Hub" }),
+      await screen.findByRole("heading", { name: "欢迎使用 All API Hub" }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: "授予推荐权限" }),
+      screen.getByRole("button", { name: "授予全部推荐权限" }),
     ).toBeInTheDocument()
     expect(persistedLanguage).toBe("zh-CN")
     expect(preferenceMocks.setLanguage).toHaveBeenCalledWith("zh-CN")
@@ -411,10 +419,10 @@ describe("PermissionOnboardingDialog language selection", () => {
     )
 
     expect(
-      await screen.findByRole("heading", { name: "歡迎加入 All API Hub" }),
+      await screen.findByRole("heading", { name: "歡迎使用 All API Hub" }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: "授予推薦權限" }),
+      screen.getByRole("button", { name: "授予全部推薦權限" }),
     ).toBeInTheDocument()
     expect(persistedLanguage).toBe("zh-TW")
     expect(preferenceMocks.setLanguage).toHaveBeenCalledWith("zh-TW")
@@ -441,7 +449,7 @@ describe("PermissionOnboardingDialog language selection", () => {
       await screen.findByRole("heading", { name: "All API Hub へようこそ" }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: "推奨権限を許可" }),
+      screen.getByRole("button", { name: "推奨権限をすべて許可" }),
     ).toBeInTheDocument()
     expect(persistedLanguage).toBe("ja")
     expect(preferenceMocks.setLanguage).toHaveBeenCalledWith("ja")
@@ -878,6 +886,46 @@ describe("PermissionOnboardingDialog language selection", () => {
     )
 
     openSpy.mockRestore()
+  })
+
+  it("aligns the getting-started action with the source-code callout heading", async () => {
+    const i18n = await createSettingsI18n("en")
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
+
+    const getStartedLink = await screen.findByRole("link", {
+      name: i18n.t("permissionsOnboarding.project.getStartedCta"),
+    })
+    const projectHeading = screen.getByRole("heading", {
+      name: i18n.t("permissionsOnboarding.project.label"),
+    })
+    const repositoryLink = screen.getByRole("link", {
+      name: /github\.com\/qixing-jk\/all-api-hub/u,
+    })
+    const projectAlert = getStartedLink.closest("[role='alert']")
+
+    expect(getStartedLink).toHaveAttribute("data-slot", "button")
+    expect(getStartedLink).toHaveClass("w-full", "md:w-auto")
+    expect(getStartedLink.parentElement).toHaveClass(
+      "grid",
+      "md:grid-cols-[minmax(0,1fr)_auto]",
+      "md:items-start",
+    )
+    expect(projectAlert).not.toHaveClass("md:pr-36")
+    expect(projectAlert).toHaveClass(
+      "grid",
+      "grid-cols-[auto_minmax(0,1fr)]",
+      "items-start",
+      "py-2.5",
+    )
+    expect(projectHeading.parentElement).toHaveClass(
+      "flex",
+      "flex-wrap",
+      "items-center",
+    )
+    expect(projectHeading.parentElement).toContainElement(repositoryLink)
+    expect(projectHeading).toHaveClass("text-sm")
+    expect(repositoryLink).toHaveClass("text-sm")
   })
 
   it("renders the notifications permission item in the onboarding list", async () => {

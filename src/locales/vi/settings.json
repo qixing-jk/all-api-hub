@@ -21,9 +21,9 @@
   "appearanceLanguage": {
     "language": "Ngôn ngữ",
     "languageDesc": "Chọn ngôn ngữ hiển thị bạn muốn dùng",
-    "onboardingHelper": "Sau khi chuyển, nội dung hướng dẫn sẽ cập nhật ngay và được dùng làm ngôn ngữ hiển thị cho trang cài đặt sau này.",
+    "onboardingHelper": "Phần hướng dẫn và các trang cài đặt sau đó sẽ dùng ngôn ngữ bạn chọn.",
     "onboardingLabel": "Chọn ngôn ngữ giao diện",
-    "onboardingLanguageRequest": "Không thấy ngôn ngữ của bạn? Hãy cho chúng tôi biết cần thêm gì",
+    "onboardingLanguageRequest": "Không thấy ngôn ngữ của bạn? Yêu cầu hỗ trợ ngôn ngữ",
     "switcher": {
       "currentLanguage": "Ngôn ngữ giao diện hiện tại: {{language}}",
       "groupLabel": "Chọn ngôn ngữ giao diện",
@@ -340,36 +340,36 @@
       "refresh": "Làm mới trạng thái",
       "remove": "Thu hồi"
     },
-    "description": "Chỉ cấp các quyền tùy chọn này khi cần quy trình vượt bảo vệ bằng cửa sổ tạm.",
-    "helper": "Sau khi bật, quyền chỉ dùng để hoàn tất thao tác Cookie/header cần thiết cho vượt bảo vệ và có thể tắt bất cứ lúc nào, không ảnh hưởng chức năng cơ bản.",
+    "description": "Cấp quyền tùy chọn khi cần để làm mới dữ liệu tài khoản, dùng công cụ hỗ trợ, nhận thông báo tác vụ và nhập trang.",
+    "helper": "Mỗi quyền chỉ được dùng cho chức năng tương ứng và có thể thu hồi bất cứ lúc nào. Chức năng chưa được cấp quyền có thể bị hạn chế, còn các chức năng khác vẫn hoạt động.",
     "items": {
       "bookmarks": {
-        "description": "Chỉ đọc dấu trang trình duyệt khi nhập trang tài khoản từ URL dấu trang đã lưu.",
+        "description": "Chỉ đọc URL đã lưu khi bạn chọn nhập trang từ dấu trang trình duyệt.",
         "title": "Dấu trang trình duyệt"
       },
       "clipboardRead": {
-        "description": "Cho phép trợ lý đổi mã phát hiện mã đổi thưởng đã sao chép, từ đó gợi ý tự động đổi mã.",
+        "description": "Sau khi bạn sao chép nội dung liên quan, giúp trợ lý đổi mã hoặc công cụ kiểm tra AI API nhận diện mã đổi thưởng và thông tin API.",
         "title": "Đọc clipboard"
       },
       "cookies": {
-        "description": "Cho phép đọc Cookie cần thiết để tự động đính kèm thông tin xác thực khi cần.",
-        "title": "Cookies"
+        "description": "Chỉ đọc Cookie cần thiết của trang tương ứng khi kiểm tra trạng thái đăng nhập hoặc làm mới dữ liệu tài khoản.",
+        "title": "Truy cập Cookie"
       },
       "declarativeNetRequestWithHostAccess": {
-        "description": "Cho phép áp dụng quy tắc header yêu cầu theo từng Tab trong thời gian vượt bảo vệ bằng cửa sổ tạm, đính kèm Cookie đúng cho các tài khoản khác nhau và tránh bất thường dữ liệu khi dùng nhiều tài khoản.",
-        "title": "Declarative Net Request"
+        "description": "Áp dụng thông tin yêu cầu cần thiết cho tài khoản hiện tại trong cửa sổ tạm để tránh trộn dữ liệu giữa nhiều tài khoản.",
+        "title": "Quy tắc yêu cầu mạng"
       },
       "notifications": {
         "description": "Cho phép tác vụ nền gửi thông báo hệ thống sau khi hoàn tất.",
         "title": "Thông báo hệ thống"
       },
       "webRequest": {
-        "description": "Chỉ lắng nghe yêu cầu và thêm header cần thiết khi vượt bảo vệ bằng cửa sổ tạm hoặc tự động làm mới.",
-        "title": "Yêu cầu mạng"
+        "description": "Chỉ nhận diện các yêu cầu cần thông tin tài khoản khi xác minh bằng cửa sổ tạm hoặc tự động làm mới.",
+        "title": "Truy cập yêu cầu mạng"
       },
       "webRequestBlocking": {
-        "description": "Đồng bộ đính kèm Cookie trước khi gửi yêu cầu để đảm bảo quy trình vượt trang bảo vệ ổn định.",
-        "title": "Chặn yêu cầu mạng"
+        "description": "Thêm Cookie cần thiết của tài khoản hiện tại trước khi gửi yêu cầu để hoàn tất xác minh bằng cửa sổ tạm.",
+        "title": "Sửa đổi yêu cầu mạng"
       }
     },
     "messages": {
@@ -389,26 +389,27 @@
   },
   "permissionsOnboarding": {
     "actions": {
-      "allowAll": "Cấp quyền khuyến nghị",
-      "maybeLater": "Để sau"
+      "allowAll": "Cấp tất cả quyền khuyến nghị",
+      "maybeLater": "Chưa cấp lúc này"
     },
-    "analyticsDisclosure": "Tiện ích có thống kê sản phẩm ẩn danh có thể tắt, giúp chúng tôi ưu tiên sửa các vấn đề thường gặp, tối ưu chức năng hay dùng và cải thiện tương thích, đồng thời giảm phiền nhiễu không cần thiết; không thu thập API Key, Cookie, URL tài khoản, số dư, nội dung yêu cầu hoặc dữ liệu người dùng nhập.",
-    "intro": "Quyền chỉ dùng để hoàn tất thao tác Cookie/header cần thiết cho vượt bảo vệ và có thể tắt bất cứ lúc nào.",
-    "openSourceBadge": "Mã nguồn mở · Cộng đồng cùng xây dựng",
-    "permissionListDescription": "Các quyền cần thiết cho chức năng vượt tường lửa/bảo vệ, giúp lấy dữ liệu bình thường trên các trang có lớp bảo vệ.",
-    "permissionListTitle": "Tác dụng của các quyền này",
+    "analyticsDisclosure": "Thống kê ẩn danh chỉ giúp chúng tôi phát hiện vấn đề và cải thiện trải nghiệm. Bạn có thể tắt bất kỳ lúc nào; dữ liệu này không bao gồm thông tin tài khoản, thông tin xác thực hay nội dung bạn gửi hoặc nhập.",
+    "intro": "Mã nguồn luôn mở để mọi người xem xét. Bạn quyết định có bật quyền và số liệu thống kê ẩn danh hay không.",
+    "openSourceBadge": "Mã nguồn mở, minh bạch, cùng cộng đồng xây dựng",
+    "permissionListDescription": "Một số chức năng cần thêm quyền. Hãy xem mục đích của từng quyền, chỉ cấp những quyền bạn cần và thu hồi bất cứ lúc nào.",
+    "permissionListTitle": "Chọn quyền tùy chọn cần dùng",
     "project": {
-      "cta": "Vào kho mã để theo dõi phiên bản, gửi Issue hoặc tham gia phát triển.",
-      "label": "Kho dự án",
-      "starCta": "Star trên GitHub"
+      "cta": "Ghé GitHub để xem mã nguồn và những cập nhật mới nhất. Bạn cũng có thể báo lỗi hoặc chia sẻ ý tưởng.",
+      "getStartedCta": "Mở hướng dẫn bắt đầu",
+      "label": "Mã nguồn",
+      "starCta": "All API Hub hữu ích với bạn? Hãy Star trên GitHub để ủng hộ dự án"
     },
     "reason": {
-      "newPermissions": "Chúng tôi đã thêm một số quyền tùy chọn để hỗ trợ chức năng mới. Vui lòng xác nhận cấp quyền lại để mọi thứ hoạt động bình thường."
+      "newPermissions": "Chức năng mới cần thêm quyền tùy chọn. Hãy xem mục đích của từng quyền và chỉ cấp những quyền bạn cần."
     },
-    "subtitle": "Đây là một tiện ích mã nguồn mở, cần quyền tùy chọn để bật các chức năng nâng cao như vượt bảo vệ bằng cửa sổ tạm.",
+    "subtitle": "Chọn ngôn ngữ rồi bật những quyền tùy chọn bạn cần. Bạn có thể thay đổi các thiết lập này sau.",
     "title": "Chào mừng đến với All API Hub",
     "toasts": {
-      "error": "Yêu cầu quyền đã bị hủy",
+      "error": "Chưa cấp đủ tất cả quyền khuyến nghị",
       "success": "Đã cấp tất cả quyền khuyến nghị"
     }
   },

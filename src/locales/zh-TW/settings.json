@@ -21,9 +21,9 @@
   "appearanceLanguage": {
     "language": "語言",
     "languageDesc": "選擇您偏好的顯示語言",
-    "onboardingHelper": "切換後會立即更新引導內容，並作為後續設定頁面的顯示語言。",
+    "onboardingHelper": "切換後，引導和後續設定頁面都會使用所選語言。",
     "onboardingLabel": "選擇介面語言",
-    "onboardingLanguageRequest": "找不到你的語言？告訴我們希望支援哪一種",
+    "onboardingLanguageRequest": "找不到你的語言？請求新增",
     "switcher": {
       "currentLanguage": "當前介面語言：{{language}}",
       "groupLabel": "介面語言選擇",
@@ -340,36 +340,36 @@
       "refresh": "重新整理狀態",
       "remove": "撤銷"
     },
-    "description": "在需要臨時視窗過盾流程時，再授予這些可選權限。",
-    "helper": "開啟後，權限只用於完成過盾必要的 Cookie/請求頭操作，而且可以隨時關閉，不會影響基礎功能。",
+    "description": "按需授予可選權限，用於帳號資料更新、輔助工具、任務通知和站點匯入等功能。",
+    "helper": "每項權限只在對應功能需要時使用，並且可以隨時撤銷；未授權的功能可能受限，但不影響其他功能。",
     "items": {
       "bookmarks": {
-        "description": "僅在從瀏覽器書籤匯入帳號站點時讀取已儲存的書籤網址。",
+        "description": "僅在你選擇從瀏覽器書籤匯入站點時，讀取已儲存的網址。",
         "title": "瀏覽器書籤"
       },
       "clipboardRead": {
-        "description": "允許兌換助手檢測複製的兌換碼，從而提示自動兌換兌換碼。",
+        "description": "在你複製相關內容後，協助兌換助手或 AI API 測試識別兌換碼和 API 資訊。",
         "title": "讀取剪貼簿"
       },
       "cookies": {
-        "description": "允許讀取必要的 Cookie，用於在需要時自動附加認證資訊。",
-        "title": "Cookies"
+        "description": "僅在驗證登入狀態或重新整理帳號資料時，讀取對應站點必要的 Cookie。",
+        "title": "Cookie 存取"
       },
       "declarativeNetRequestWithHostAccess": {
-        "description": "允許在臨時視窗過盾期間按 Tab 應用請求頭規則，為不同帳號附加正確的 Cookie，避免多帳號下的資料異常問題。",
-        "title": "宣告式網路請求"
+        "description": "在臨時視窗中為目前帳號套用所需的請求資訊，避免多帳號資料混淆。",
+        "title": "網路請求規則"
       },
       "notifications": {
         "description": "允許後臺定時任務完成後傳送系統通知。",
         "title": "系統通知"
       },
       "webRequest": {
-        "description": "僅在臨時視窗過盾或自動重新整理需要時，監聽請求並追加必要的請求頭。",
-        "title": "網路請求"
+        "description": "僅在臨時視窗驗證或自動重新整理時，識別需要補充帳號資訊的請求。",
+        "title": "網路請求存取"
       },
       "webRequestBlocking": {
-        "description": "在請求發出前同步附加 Cookie，確保繞過防護頁面的流程穩定可行。",
-        "title": "網路請求阻斷"
+        "description": "在請求發出前補充目前帳號所需的 Cookie，協助臨時視窗驗證正常完成。",
+        "title": "修改網路請求"
       }
     },
     "messages": {
@@ -389,26 +389,27 @@
   },
   "permissionsOnboarding": {
     "actions": {
-      "allowAll": "授予推薦權限",
-      "maybeLater": "稍後再說"
+      "allowAll": "授予全部推薦權限",
+      "maybeLater": "暫不授權"
     },
-    "analyticsDisclosure": "擴充套件包含可關閉的匿名產品統計，幫助我們優先修復常見問題、優化常用功能與相容性，並減少不必要的干擾；不會收集 API Key、Cookie、帳號 URL、餘額、請求內容或使用者輸入。",
-    "intro": "權限只用於完成過盾必要的 Cookie/請求頭操作，而且可以隨時關閉。",
-    "openSourceBadge": "開源 · 社羣共建",
-    "permissionListDescription": "繞過防火牆防護等功能的必要權限，讓資料獲取能在存在防火牆的網站上正常工作。",
-    "permissionListTitle": "這些權限的作用",
+    "analyticsDisclosure": "匿名統計只用於協助我們發現問題、改善體驗，你可以隨時關閉；不會包含你的帳號資訊、憑證或輸入內容。",
+    "intro": "原始碼公開，權限與匿名統計是否啟用，都由你決定。",
+    "openSourceBadge": "開源、透明、社群共建",
+    "permissionListDescription": "部分功能需要額外權限。你可以查看具體用途後按需授權，並隨時撤銷。",
+    "permissionListTitle": "按需選擇可選權限",
     "project": {
-      "cta": "前往倉庫關注版本、提交 Issue 或參與開發。",
-      "label": "專案倉庫",
-      "starCta": "去 GitHub 點亮 Star"
+      "cta": "來 GitHub 看看原始碼和最新進展，也歡迎回報問題或分享想法。",
+      "getStartedCta": "查看新手指引",
+      "label": "原始碼",
+      "starCta": "覺得 All API Hub 有幫助？點亮 Star 支持專案"
     },
     "reason": {
-      "newPermissions": "我們新增了一些可選權限以支援新的功能，請再次確認授權以確保一切正常執行。"
+      "newPermissions": "新增功能需要新的可選權限。請查看具體用途，並按需授權。"
     },
-    "subtitle": "這是一個開源擴充套件，需要可選權限來啟用臨時視窗過盾等高階功能。",
-    "title": "歡迎加入 All API Hub",
+    "subtitle": "先選擇介面語言，再按需開啟可選權限；這些設定之後都可以更改。",
+    "title": "歡迎使用 All API Hub",
     "toasts": {
-      "error": "權限請求被取消",
+      "error": "未能授予全部推薦權限",
       "success": "已授予全部推薦權限"
     }
   },

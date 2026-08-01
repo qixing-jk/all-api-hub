@@ -21,9 +21,9 @@
   "appearanceLanguage": {
     "language": "语言",
     "languageDesc": "选择您偏好的显示语言",
-    "onboardingHelper": "切换后会立即更新引导内容，并作为后续设置页面的显示语言。",
+    "onboardingHelper": "切换后，引导和后续设置页面都会使用所选语言。",
     "onboardingLabel": "选择界面语言",
-    "onboardingLanguageRequest": "没找到你的语言？告诉我们希望支持哪种",
+    "onboardingLanguageRequest": "找不到你的语言？请求添加",
     "switcher": {
       "currentLanguage": "当前界面语言：{{language}}",
       "groupLabel": "界面语言选择",
@@ -340,36 +340,36 @@
       "refresh": "刷新状态",
       "remove": "撤销"
     },
-    "description": "在需要临时窗口过盾流程时，再授予这些可选权限。",
-    "helper": "开启后，权限只用于完成过盾必要的 Cookie/请求头操作，而且可以随时关闭，随时可以关闭，不会影响基础功能。",
+    "description": "按需授予可选权限，用于账号数据更新、辅助工具、任务通知和站点导入等功能。",
+    "helper": "每项权限只在对应功能需要时使用，并且可以随时撤销；未授权的功能可能受限，但不影响其他功能。",
     "items": {
       "bookmarks": {
-        "description": "仅在从浏览器书签导入账号站点时读取已保存的书签网址。",
+        "description": "仅在你选择从浏览器书签导入站点时，读取已保存的网址。",
         "title": "浏览器书签"
       },
       "clipboardRead": {
-        "description": "允许兑换助手检测复制的兑换码，从而提示自动兑换兑换码。",
+        "description": "在你复制相关内容后，帮助兑换助手或 AI API 测试识别兑换码和 API 信息。",
         "title": "读取剪贴板"
       },
       "cookies": {
-        "description": "允许读取必要的 Cookie，用于在需要时自动附加认证信息。",
-        "title": "Cookies"
+        "description": "仅在验证登录状态或刷新账号数据时，读取对应站点必要的 Cookie。",
+        "title": "Cookie 访问"
       },
       "declarativeNetRequestWithHostAccess": {
-        "description": "允许在临时窗口过盾期间按 Tab 应用请求头规则，为不同账号附加正确的 Cookie，避免多账号下的数据异常问题。",
-        "title": "声明式网络请求"
+        "description": "在临时窗口中为当前账号应用所需的请求信息，避免多账号数据混淆。",
+        "title": "网络请求规则"
       },
       "notifications": {
         "description": "允许后台定时任务完成后发送系统通知。",
         "title": "系统通知"
       },
       "webRequest": {
-        "description": "仅在临时窗口过盾或自动刷新需要时，监听请求并追加必要的请求头。",
-        "title": "网络请求"
+        "description": "仅在临时窗口验证或自动刷新时，识别需要补充账号信息的请求。",
+        "title": "网络请求访问"
       },
       "webRequestBlocking": {
-        "description": "在请求发出前同步附加 Cookie，确保绕过防护页面的流程稳定可行。",
-        "title": "网络请求阻断"
+        "description": "在请求发出前补充当前账号所需的 Cookie，帮助临时窗口验证正常完成。",
+        "title": "修改网络请求"
       }
     },
     "messages": {
@@ -389,26 +389,27 @@
   },
   "permissionsOnboarding": {
     "actions": {
-      "allowAll": "授予推荐权限",
-      "maybeLater": "稍后再说"
+      "allowAll": "授予全部推荐权限",
+      "maybeLater": "暂不授权"
     },
-    "analyticsDisclosure": "扩展包含可关闭的匿名产品统计，帮助我们优先修复常见问题、优化常用功能和兼容性，并减少不必要的干扰；不会收集 API Key、Cookie、账号 URL、余额、请求内容或用户输入。",
-    "intro": "权限只用于完成过盾必要的 Cookie/请求头操作，而且可以随时关闭。",
-    "openSourceBadge": "开源 · 社区共建",
-    "permissionListDescription": "绕过防火墙防护等功能的必要权限，让数据获取能在存在防火墙的网站上正常工作。",
-    "permissionListTitle": "这些权限的作用",
+    "analyticsDisclosure": "匿名统计只用于帮助我们发现问题、改善体验，你可以随时关闭；不会包含你的账号信息、凭据或输入内容。",
+    "intro": "源码公开，权限与匿名统计是否启用，都由你决定。",
+    "openSourceBadge": "开源、透明、社区共建",
+    "permissionListDescription": "部分功能需要额外权限。你可以查看具体用途后按需授权，并随时撤销。",
+    "permissionListTitle": "按需选择可选权限",
     "project": {
-      "cta": "前往仓库关注版本、提交 Issue 或参与开发。",
-      "label": "项目仓库",
-      "starCta": "去 GitHub 点亮 Star"
+      "cta": "来 GitHub 看看源码和最新进展，也欢迎反馈问题或分享想法。",
+      "getStartedCta": "查看新手指引",
+      "label": "源代码",
+      "starCta": "觉得 All API Hub 有帮助？点亮 Star 支持项目"
     },
     "reason": {
-      "newPermissions": "我们新增了一些可选权限以支持新的功能，请再次确认授权以确保一切正常运行。"
+      "newPermissions": "新增功能需要新的可选权限。请查看具体用途，并按需授权。"
     },
-    "subtitle": "这是一个开源扩展，需要可选权限来启用临时窗口过盾等高级功能。",
-    "title": "欢迎加入 All API Hub",
+    "subtitle": "先选择界面语言，再按需开启可选权限；这些设置之后都可以更改。",
+    "title": "欢迎使用 All API Hub",
     "toasts": {
-      "error": "权限请求被取消",
+      "error": "未能授予全部推荐权限",
       "success": "已授予全部推荐权限"
     }
   },

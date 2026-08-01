@@ -21,9 +21,9 @@
   "appearanceLanguage": {
     "language": "Idioma",
     "languageDesc": "Elige tu idioma preferido",
-    "onboardingHelper": "Actualiza el texto de bienvenida de inmediato y conserva este idioma para páginas de ajustes posteriores.",
+    "onboardingHelper": "La guía y las páginas de ajustes posteriores usarán el idioma que elijas.",
     "onboardingLabel": "Elige tu idioma",
-    "onboardingLanguageRequest": "¿No ves tu idioma? Dinos cuál agregar",
+    "onboardingLanguageRequest": "¿No encuentras tu idioma? Solicita compatibilidad",
     "switcher": {
       "currentLanguage": "Idioma actual de la interfaz: {{language}}",
       "groupLabel": "Selector de idioma de interfaz",
@@ -340,36 +340,36 @@
       "refresh": "Actualizar estado",
       "remove": "Revocar"
     },
-    "description": "Concede estas capacidades opcionales solo cuando necesites que All API Hub maneje cookies, headers o flujos de omisión con ventana temporal por ti.",
-    "helper": "Una vez habilitadas, la extensión simplemente adjunta tus cookies y headers de sesión existentes en segundo plano. Puedes deshabilitar cualquier permiso después sin afectar las funciones principales.",
+    "description": "Concede permisos opcionales según los necesites para actualizar datos de cuentas, usar herramientas de ayuda, recibir notificaciones e importar sitios.",
+    "helper": "Cada permiso se usa solo para su función correspondiente y puedes revocarlo cuando quieras. Las funciones sin permiso pueden quedar limitadas, pero las demás seguirán disponibles.",
     "items": {
       "bookmarks": {
-        "description": "Leer marcadores del navegador solo al importar sitios de cuenta desde URLs de marcadores guardados.",
+        "description": "Lee las URLs guardadas solo cuando eliges importar sitios desde los marcadores del navegador.",
         "title": "Marcadores del navegador"
       },
       "clipboardRead": {
-        "description": "Permite que el asistente de canje detecte códigos de canje copiados y así sugiera canjearlos automáticamente.",
+        "description": "Después de copiar contenido relacionado, ayuda al asistente de canje o a la prueba de AI API a reconocer códigos de canje y datos de API.",
         "title": "Lectura del portapapeles"
       },
       "cookies": {
-        "description": "Permite que All API Hub lea las cookies necesarias de tus cuentas conectadas para agregar headers de autenticación cuando sea necesario.",
-        "title": "Cookies"
+        "description": "Lee solo las cookies necesarias del sitio correspondiente al comprobar la sesión o actualizar datos de la cuenta.",
+        "title": "Acceso a cookies"
       },
       "declarativeNetRequestWithHostAccess": {
-        "description": "Permite aplicar reglas de headers de solicitud al presionar Tab durante la protección de ventana temporal, adjuntar las cookies correctas para distintas cuentas y evitar anomalías de datos con varias cuentas.",
-        "title": "Declarative Net Request"
+        "description": "Aplica en una ventana temporal los datos de solicitud necesarios para la cuenta actual y evita mezclar datos entre cuentas.",
+        "title": "Reglas de solicitudes de red"
       },
       "notifications": {
         "description": "Permite que tareas programadas en segundo plano envíen notificaciones del sistema después de finalizar.",
         "title": "Notificaciones del sistema"
       },
       "webRequest": {
-        "description": "Permite que la extensión observe solicitudes salientes solo cuando la omisión de ventana temporal o la actualización automática necesite agregar headers requeridos.",
-        "title": "Web Request"
+        "description": "Identifica solicitudes que necesitan datos de la cuenta solo durante la verificación en ventana temporal o la actualización automática.",
+        "title": "Acceso a solicitudes de red"
       },
       "webRequestBlocking": {
-        "description": "Permite modificación sincrónica para que las cookies se adjunten antes de que una solicitud salga del navegador, manteniendo confiables los flujos de omisión de firewall.",
-        "title": "Web Request Blocking"
+        "description": "Agrega la cookie necesaria de la cuenta actual antes de enviar una solicitud para completar la verificación en ventana temporal.",
+        "title": "Modificar solicitudes de red"
       }
     },
     "messages": {
@@ -389,26 +389,27 @@
   },
   "permissionsOnboarding": {
     "actions": {
-      "allowAll": "Permitir permisos recomendados",
-      "maybeLater": "Quizas después"
+      "allowAll": "Permitir todos los permisos recomendados",
+      "maybeLater": "Ahora no"
     },
-    "analyticsDisclosure": "La extensión incluye analítica anónima opcional de producto que nos ayuda a priorizar correcciones de problemas comunes, mejorar flujos principales y compatibilidad, y reducir fricción innecesaria. No recopila API keys, cookies, URLs de cuenta, saldos, contenido de solicitudes ni entradas del usuario.",
-    "intro": "Como proyecto open-source, solo pedimos los permisos opcionales mínimos necesarios para habilitar flujos avanzados. Tú mantienes el control.",
-    "openSourceBadge": "Open-source e impulsado por la comunidad",
-    "permissionListDescription": "Estos permisos son necesarios para flujos de omisión de firewall, de modo que las tareas de actualización de datos sigan funcionando en sitios protegidos.",
-    "permissionListTitle": "Que hacen estos permisos",
+    "analyticsDisclosure": "Las estadísticas anónimas solo nos ayudan a detectar problemas y mejorar la experiencia. Puedes desactivarlas en cualquier momento; nunca incluyen información de tu cuenta, credenciales ni el contenido que envías o introduces.",
+    "intro": "El código está abierto para que cualquiera pueda revisarlo. Tú decides si activas los permisos y las estadísticas anónimas.",
+    "openSourceBadge": "Abierto, transparente y hecho por la comunidad",
+    "permissionListDescription": "Algunas funciones necesitan permisos adicionales. Revisa para qué sirve cada permiso, concede solo los que necesites y revócalos cuando quieras.",
+    "permissionListTitle": "Elige los permisos opcionales",
     "project": {
-      "cta": "Ve al repositorio para seguir versiones, enviar issues o participar en el desarrollo.",
-      "label": "Proyecto",
-      "starCta": "Danos una estrella en GitHub para apoyar el proyecto!"
+      "cta": "Visita GitHub para explorar el código y las novedades. También puedes reportar problemas o compartir ideas.",
+      "getStartedCta": "Abrir guía de inicio",
+      "label": "Código fuente",
+      "starCta": "¿Te resulta útil All API Hub? Dale una estrella en GitHub para apoyar el proyecto"
     },
     "reason": {
-      "newPermissions": "Agregamos nuevos permisos opcionales para soportar funciones recientes. Revísalos y confirma para que todo siga funcionando."
+      "newPermissions": "Las nuevas funciones necesitan permisos opcionales adicionales. Revisa para qué sirve cada uno y concede solo los que necesites."
     },
-    "subtitle": "Esta extensión open-source necesita algunos permisos opcionales para habilitar funciones como la omisión con ventana temporal y otros flujos avanzados.",
+    "subtitle": "Elige tu idioma y habilita solo los permisos opcionales que necesites. Puedes cambiar estas opciones más adelante.",
     "title": "Bienvenido a All API Hub",
     "toasts": {
-      "error": "La solicitud de permisos fue descartada",
+      "error": "No se concedieron todos los permisos recomendados",
       "success": "Todos los permisos recomendados fueron concedidos"
     }
   },

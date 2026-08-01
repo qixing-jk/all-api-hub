@@ -21,9 +21,9 @@
   "appearanceLanguage": {
     "language": "Language",
     "languageDesc": "Choose your preferred language",
-    "onboardingHelper": "Update the onboarding text immediately and keep this language for later settings pages.",
+    "onboardingHelper": "The guide and later settings pages will use your selected language.",
     "onboardingLabel": "Choose your language",
-    "onboardingLanguageRequest": "Don't see your language? Tell us what to add",
+    "onboardingLanguageRequest": "Don't see your language? Request language support",
     "switcher": {
       "currentLanguage": "Current interface language: {{language}}",
       "groupLabel": "Interface language selector",
@@ -340,36 +340,36 @@
       "refresh": "Refresh status",
       "remove": "Revoke"
     },
-    "description": "Only grant these optional capabilities when you need All API Hub to handle cookies, headers, or temp-window bypass flows for you.",
-    "helper": "Once enabled, the extension simply attaches your existing session cookies and headers in the background. You can disable any permission later without affecting core features.",
+    "description": "Grant optional permissions as needed for account data refresh, assistive tools, task notifications, and site imports.",
+    "helper": "Each permission is used only by its related feature and can be revoked at any time. Features without permission may be limited, while others keep working.",
     "items": {
       "bookmarks": {
-        "description": "Read browser bookmarks only when importing account sites from saved bookmark URLs.",
+        "description": "Read saved URLs only when you choose to import sites from browser bookmarks.",
         "title": "Browser bookmarks"
       },
       "clipboardRead": {
-        "description": "Allow the redemption assistant to detect copied redemption codes, thereby prompting automatic redemption of the codes.",
+        "description": "After you copy related content, help Redemption Assist or AI API Test recognize redemption codes and API details.",
         "title": "Clipboard Read"
       },
       "cookies": {
-        "description": "Allows All API Hub to read the necessary cookies for your connected accounts so authentication headers can be added when required.",
-        "title": "Cookies"
+        "description": "Read only the cookies needed for the relevant site when checking sign-in status or refreshing account data.",
+        "title": "Cookie access"
       },
       "declarativeNetRequestWithHostAccess": {
-        "description": "Allow applying request header rules by pressing Tab during the temporary window shield, attaching the correct cookies for different accounts, and avoiding data anomalies under multiple accounts.",
-        "title": "Declarative Net Request"
+        "description": "Apply the request details needed for the current account in a temporary window to prevent data from different accounts being mixed up.",
+        "title": "Network request rules"
       },
       "notifications": {
         "description": "Allow background scheduled tasks to send system notifications after they finish.",
         "title": "System Notifications"
       },
       "webRequest": {
-        "description": "Lets the extension observe outgoing requests only when temp-window bypass or auto-refresh needs to add required headers.",
-        "title": "Web Request"
+        "description": "Identify requests that need account details only during temporary-window verification or automatic refresh.",
+        "title": "Network request access"
       },
       "webRequestBlocking": {
-        "description": "Allows synchronous modification so cookies can be attached before a request leaves the browser, keeping firewall-bypass flows reliable.",
-        "title": "Web Request Blocking"
+        "description": "Add the current account's required cookie before a request is sent so temporary-window verification can complete.",
+        "title": "Modify network requests"
       }
     },
     "messages": {
@@ -389,26 +389,27 @@
   },
   "permissionsOnboarding": {
     "actions": {
-      "allowAll": "Allow recommended permissions",
-      "maybeLater": "Maybe later"
+      "allowAll": "Allow all recommended permissions",
+      "maybeLater": "Not now"
     },
-    "analyticsDisclosure": "The extension includes optional anonymous product analytics that help us prioritize fixes for common issues, improve core workflows and compatibility, and reduce unnecessary friction. It does not collect API keys, cookies, account URLs, balances, request content, or user input.",
-    "intro": "As an open-source project, we only ask for the minimal optional permissions needed to enable advanced workflows. You stay in full control.",
-    "openSourceBadge": "Open-source & community-driven",
-    "permissionListDescription": "These permissions are required for firewall-bypass flows so data refresh jobs keep working on protected sites.",
-    "permissionListTitle": "What these permissions do",
+    "analyticsDisclosure": "Anonymous analytics only help us find issues and improve the experience. You can turn them off at any time; they never include your account information, credentials, or the content you send or enter.",
+    "intro": "The source is open for anyone to review. You choose whether to enable permissions and anonymous analytics.",
+    "openSourceBadge": "Open source, transparent, and community-built",
+    "permissionListDescription": "Some features need additional permissions. Review what each permission is used for, grant only what you need, and revoke access at any time.",
+    "permissionListTitle": "Choose optional permissions",
     "project": {
-      "cta": "Go to the repository to follow versions, submit issues, or participate in development.",
-      "label": "Project",
-      "starCta": "Star us on GitHub to support the project!"
+      "cta": "Explore the source and latest progress on GitHub. You can also report problems or share ideas.",
+      "getStartedCta": "Open getting started",
+      "label": "Source code",
+      "starCta": "Finding All API Hub useful? Star it on GitHub to support the project"
     },
     "reason": {
-      "newPermissions": "We added new optional permissions to support recent features. Please review and confirm to keep everything working."
+      "newPermissions": "New features need additional optional permissions. Review what each one does and allow only what you need."
     },
-    "subtitle": "This open-source extension needs a few optional permissions to enable features like the temp-window bypass and other advanced workflows.",
+    "subtitle": "Choose your language, then enable only the optional permissions you need. You can change these settings later.",
     "title": "Welcome to All API Hub",
     "toasts": {
-      "error": "Permission request was dismissed",
+      "error": "Not all recommended permissions were granted",
       "success": "All recommended permissions granted"
     }
   },

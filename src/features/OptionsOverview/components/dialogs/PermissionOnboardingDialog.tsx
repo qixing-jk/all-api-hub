@@ -7,7 +7,7 @@ import { Modal } from "~/components/ui"
 import { Alert, AlertDescription } from "~/components/ui/Alert"
 import { Button } from "~/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card"
-import { BodySmall, Heading3, Link } from "~/components/ui/Typography"
+import { BodySmall, Heading3, Heading6, Link } from "~/components/ui/Typography"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { PermissionList } from "~/features/Permissions/components/PermissionList"
 import { useOptionalPermissionControls } from "~/features/Permissions/hooks/useOptionalPermissionControls"
@@ -19,6 +19,7 @@ import { trackOptionalPermissionRequestResult } from "~/services/productAnalytic
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
 import { openLanguageRequestPage } from "~/utils/navigation"
+import { getDocsGetStartedUrl } from "~/utils/navigation/docsLinks"
 
 /**
  * Unified logger scoped to the optional-permissions onboarding dialog.
@@ -45,8 +46,9 @@ export function PermissionOnboardingDialog({
   onClose,
   reason,
 }: PermissionOnboardingDialogProps) {
-  const { t } = useTranslation(["settings", "common"])
+  const { t, i18n } = useTranslation(["settings", "common"])
   const [isRequesting, setIsRequesting] = useState(false)
+  const getStartedUrl = getDocsGetStartedUrl(i18n.language)
 
   const hasOptionalPermissions = OPTIONAL_PERMISSIONS.length > 0
   const {
@@ -149,7 +151,7 @@ export function PermissionOnboardingDialog({
         className="h-auto min-h-9 w-full py-2 text-center whitespace-normal sm:col-span-2"
         onClick={handleOpenGithub}
         disabled={isRequesting}
-        leftIcon={<Star className="h-4 w-4" />}
+        leftIcon={<Star className="h-4 w-4 text-amber-500" />}
       >
         {t("permissionsOnboarding.project.starCta")}
       </Button>
@@ -224,7 +226,7 @@ export function PermissionOnboardingDialog({
         >
           <CardHeader bordered padding="sm">
             <CardTitle className="flex items-center gap-2 text-base font-semibold">
-              <Sparkles className="h-5 w-5 text-amber-500" />
+              <Github className="h-5 w-5 text-gray-700 dark:text-gray-300" />
               {t("permissionsOnboarding.openSourceBadge")}
             </CardTitle>
             <BodySmall className="dark:text-dark-text-secondary mt-1 text-gray-500">
@@ -235,26 +237,39 @@ export function PermissionOnboardingDialog({
             <BodySmall className="dark:text-dark-text-secondary text-gray-500">
               {t("permissionsOnboarding.analyticsDisclosure")}
             </BodySmall>
-            <Alert
-              variant="info"
-              title={t("permissionsOnboarding.project.label")}
-            >
-              <AlertDescription>
-                <div>
-                  <Link
-                    href={GITHUB_URL}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1"
-                  >
-                    {GITHUB_URL}
-                    <Github className="h-4 w-4" />
-                  </Link>
+            <Alert variant="info" compact className="py-2.5">
+              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-start md:gap-4">
+                <div className="min-w-0 space-y-1.5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <Heading6 className="shrink-0 tracking-tight">
+                      {t("permissionsOnboarding.project.label")}
+                    </Heading6>
+                    <Link
+                      href={GITHUB_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      size="sm"
+                      className="inline-flex max-w-full items-center gap-1"
+                    >
+                      <span className="break-all">{GITHUB_URL}</span>
+                      <Github className="h-4 w-4 shrink-0" />
+                    </Link>
+                  </div>
                   <BodySmall className="dark:text-dark-text-secondary text-gray-500">
                     {t("permissionsOnboarding.project.cta")}
                   </BodySmall>
                 </div>
-              </AlertDescription>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="w-full md:w-auto"
+                >
+                  <a href={getStartedUrl} target="_blank" rel="noreferrer">
+                    {t("permissionsOnboarding.project.getStartedCta")}
+                  </a>
+                </Button>
+              </div>
             </Alert>
           </CardContent>
         </Card>
