@@ -58,6 +58,14 @@
             "label": "Ver la guía para agregar manualmente",
             "url": "https://all-api-hub.qixing1217.top/en/account-management.html#manual-addition"
           }
+        },
+        "pt-BR": {
+          "title": "Alguns sites New API atualizados ainda não são detectados automaticamente",
+          "message": "Se o site do tipo New API que você deseja adicionar foi atualizado para a versão mais recente, esta versão pode não detectar a conta automaticamente. Você ainda pode selecionar “Adição manual” e preencher os dados da conta; o suporte à detecção automática será incluído na versão 3.54, que será lançada em breve.",
+          "cta": {
+            "label": "Ver o guia de adição manual",
+            "url": "https://all-api-hub.qixing1217.top/en/account-management.html#manual-addition"
+          }
         }
       }
     },
