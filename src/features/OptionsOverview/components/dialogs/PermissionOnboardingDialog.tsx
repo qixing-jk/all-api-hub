@@ -15,7 +15,10 @@ import {
   ensurePermissionsDetailed,
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
-import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
+import {
+  PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
+  trackOptionalPermissionRequestResult,
+} from "~/services/productAnalytics/permissions"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
 import { openLanguageRequestPage } from "~/utils/navigation"
@@ -91,7 +94,8 @@ export function PermissionOnboardingDialog({
         const wasGrantedBefore = statuses[permissionId] === true
         trackOptionalPermissionRequestResult(permissionId, {
           success: false,
-          failureReason: error,
+          failureReason:
+            PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
           wasGrantedBefore,
           wasGrantedAfter: wasGrantedBefore,
         })

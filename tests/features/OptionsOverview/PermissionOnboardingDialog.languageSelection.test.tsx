@@ -21,6 +21,7 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
+import { getDocsGetStartedUrl } from "~/utils/navigation/docsLinks"
 import {
   act,
   render,
@@ -888,7 +889,7 @@ describe("PermissionOnboardingDialog language selection", () => {
     openSpy.mockRestore()
   })
 
-  it("aligns the getting-started action with the source-code callout heading", async () => {
+  it("links the source-code callout to the repository and getting-started guide", async () => {
     const i18n = await createSettingsI18n("en")
 
     renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
@@ -902,30 +903,17 @@ describe("PermissionOnboardingDialog language selection", () => {
     const repositoryLink = screen.getByRole("link", {
       name: /github\.com\/qixing-jk\/all-api-hub/u,
     })
-    const projectAlert = getStartedLink.closest("[role='alert']")
-
-    expect(getStartedLink).toHaveAttribute("data-slot", "button")
-    expect(getStartedLink).toHaveClass("w-full", "md:w-auto")
-    expect(getStartedLink.parentElement).toHaveClass(
-      "grid",
-      "md:grid-cols-[minmax(0,1fr)_auto]",
-      "md:items-start",
+    expect(projectHeading).toBeVisible()
+    expect(repositoryLink).toBeVisible()
+    expect(repositoryLink).toHaveAttribute(
+      "href",
+      "https://github.com/qixing-jk/all-api-hub",
     )
-    expect(projectAlert).not.toHaveClass("md:pr-36")
-    expect(projectAlert).toHaveClass(
-      "grid",
-      "grid-cols-[auto_minmax(0,1fr)]",
-      "items-start",
-      "py-2.5",
+    expect(getStartedLink).toBeVisible()
+    expect(getStartedLink).toHaveAttribute(
+      "href",
+      getDocsGetStartedUrl(i18n.language),
     )
-    expect(projectHeading.parentElement).toHaveClass(
-      "flex",
-      "flex-wrap",
-      "items-center",
-    )
-    expect(projectHeading.parentElement).toContainElement(repositoryLink)
-    expect(projectHeading).toHaveClass("text-sm")
-    expect(repositoryLink).toHaveClass("text-sm")
   })
 
   it("renders the notifications permission item in the onboarding list", async () => {
