@@ -463,6 +463,28 @@
                     >同优先级渠道按权重比例分流；留空时新渠道使用 0。</small
                   >
                 </label>
+                <label class="check-row routing-sequence-row">
+                  <input id="priority-descending" type="checkbox" />
+                  <span
+                    ><strong>批量 Key 优先级依次递减</strong
+                    ><small
+                      >仅用于每条 Key
+                      建立独立渠道；第一条使用上方优先级，后续按粘贴顺序递减。</small
+                    ></span
+                  >
+                </label>
+                <label class="field hidden" id="priority-step-field">
+                  <span>每条递减</span>
+                  <input
+                    id="priority-step"
+                    type="number"
+                    min="1"
+                    max="2147483647"
+                    step="1"
+                    value="1"
+                  />
+                  <small>例如起始 100、每条递减 1，将写入 100、99、98。</small>
+                </label>
               </div>
               <label class="check-row">
                 <input id="auto-write" type="checkbox" checked />

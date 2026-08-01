@@ -74,6 +74,9 @@ const elements = {
   channelPriorityHelp: $("#channel-priority-help"),
   channelWeight: $("#channel-weight"),
   channelWeightHelp: $("#channel-weight-help"),
+  priorityDescending: $("#priority-descending"),
+  priorityStepField: $("#priority-step-field"),
+  priorityStep: $("#priority-step"),
   sourceBaseUrl: $("#source-base-url"),
   baseUrlHelp: $("#base-url-help"),
   configSource: $("#config-source"),
@@ -501,6 +504,9 @@ function selectProvider(provider) {
   elements.keyQuotas.value = ""
   elements.channelPriority.value = ""
   elements.channelWeight.value = ""
+  elements.priorityDescending.checked = false
+  elements.priorityStep.value = "1"
+  updatePrioritySequenceForm()
   elements.awsGlobalField.classList.toggle("hidden", provider.id !== "aws")
   elements.awsGlobalInference.checked = false
   state.channelTemplates = []
@@ -804,7 +810,9 @@ function renderPreview(preview) {
   elements.previewBaseUrl.textContent =
     preview.provider.baseUrl || "New API 默认"
   elements.previewGroups.textContent = preview.groups.join("、")
-  elements.previewPriority.textContent = String(preview.priority)
+  elements.previewPriority.textContent = preview.prioritySequence?.enabled
+    ? `${preview.priority} → ${preview.priority - preview.prioritySequence.step * Math.max(0, preview.keyCount - 1)}（每条 -${preview.prioritySequence.step}）`
+    : String(preview.priority)
   elements.previewWeight.textContent = String(preview.weight)
   elements.previewAwsRoutingFact.classList.toggle("hidden", !preview.awsRouting)
   elements.previewAwsRouting.textContent = preview.awsRouting
@@ -1448,9 +1456,12 @@ function renderSchedules() {
     }
 
     const details = document.createElement("p")
+    const priorityCopy = schedule.prioritySequence?.enabled
+      ? `${schedule.priority} 起、每条 -${schedule.prioritySequence.step}`
+      : String(schedule.priority)
     details.textContent = `每次 ${schedule.batchSize} 条；间隔 ${
       schedule.intervalMinutes
-    } 分钟；优先级 ${schedule.priority}；权重 ${schedule.weight}；最近执行 ${formatDateTime(schedule.lastRunAt)}。`
+    } 分钟；优先级 ${priorityCopy}；权重 ${schedule.weight}；最近执行 ${formatDateTime(schedule.lastRunAt)}。`
     if (schedule.lastError) {
       const error = document.createElement("p")
       error.className = "schedule-error"
@@ -1462,6 +1473,94 @@ function renderSchedules() {
 
     const actions = document.createElement("div")
     actions.className = "schedule-actions"
+    const edit = document.createElement("button")
+    edit.type = "button"
+    edit.className = "table-action"
+    edit.textContent = "修改任务"
+    edit.disabled =
+      schedule.counts.pending === 0 ||
+      !["active", "paused"].includes(schedule.status)
+
+    const editor = document.createElement("form")
+    editor.className = "schedule-editor hidden"
+    editor.setAttribute("aria-label", `修改 ${schedule.name}`)
+    const nextRunField = document.createElement("label")
+    nextRunField.className = "field"
+    const nextRunLabel = document.createElement("span")
+    nextRunLabel.textContent = "下一次执行时间（精确到秒）"
+    const nextRunInput = document.createElement("input")
+    nextRunInput.type = "datetime-local"
+    nextRunInput.step = "1"
+    nextRunInput.required = true
+    const nextRunDate = new Date(schedule.nextRunAt)
+    nextRunInput.value = Number.isFinite(nextRunDate.getTime())
+      ? formatDateTimeInput(nextRunDate)
+      : formatDateTimeInput(new Date(Date.now() + 60_000))
+    nextRunField.append(nextRunLabel, nextRunInput)
+
+    const batchField = document.createElement("label")
+    batchField.className = "field"
+    const batchLabel = document.createElement("span")
+    batchLabel.textContent = "每次上几条"
+    const batchInput = document.createElement("input")
+    batchInput.type = "number"
+    batchInput.min = "1"
+    batchInput.max = "200"
+    batchInput.required = true
+    batchInput.value = String(schedule.batchSize)
+    batchField.append(batchLabel, batchInput)
+
+    const intervalField = document.createElement("label")
+    intervalField.className = "field"
+    const intervalLabel = document.createElement("span")
+    intervalLabel.textContent = "间隔分钟"
+    const intervalInput = document.createElement("input")
+    intervalInput.type = "number"
+    intervalInput.min = "0"
+    intervalInput.max = "43200"
+    intervalInput.required = true
+    intervalInput.value = String(schedule.intervalMinutes)
+    const intervalHelp = document.createElement("small")
+    intervalHelp.textContent = "填 0 表示执行下一批后暂停。"
+    intervalField.append(intervalLabel, intervalInput, intervalHelp)
+
+    const editorActions = document.createElement("div")
+    editorActions.className = "schedule-editor-actions"
+    const save = document.createElement("button")
+    save.type = "submit"
+    save.className = "table-action schedule-save"
+    save.textContent = "保存修改"
+    const discard = document.createElement("button")
+    discard.type = "button"
+    discard.className = "table-action"
+    discard.textContent = "放弃"
+    editorActions.append(save, discard)
+    editor.append(nextRunField, batchField, intervalField, editorActions)
+
+    edit.addEventListener("click", () => {
+      editor.classList.toggle("hidden")
+      edit.textContent = editor.classList.contains("hidden")
+        ? "修改任务"
+        : "收起修改"
+      if (!editor.classList.contains("hidden")) nextRunInput.focus()
+    })
+    discard.addEventListener("click", () => {
+      editor.classList.add("hidden")
+      edit.textContent = "修改任务"
+    })
+    editor.addEventListener("submit", (event) => {
+      event.preventDefault()
+      saveScheduleSettings(
+        schedule.id,
+        {
+          startAt: nextRunInput.value,
+          batchSize: batchInput.value,
+          intervalMinutes: intervalInput.value,
+        },
+        save,
+      )
+    })
+
     const runNow = document.createElement("button")
     runNow.type = "button"
     runNow.className = "table-action"
@@ -1492,8 +1591,8 @@ function renderSchedules() {
     cancel.addEventListener("click", () =>
       updateSchedule(schedule.id, "cancel", cancel),
     )
-    actions.append(runNow, toggle, cancel)
-    card.append(actions)
+    actions.append(edit, runNow, toggle, cancel)
+    card.append(editor, actions)
     elements.scheduleList.append(card)
   }
 }
@@ -1517,6 +1616,25 @@ async function updateSchedule(scheduleId, action, button) {
     renderSchedules()
     if (action === "run") await loadRecords()
     toast(action === "run" ? "已执行一批定时 Key" : "定时任务已更新")
+  } catch (error) {
+    toast(error.message, true)
+  } finally {
+    setLoading(button, false)
+  }
+}
+
+async function saveScheduleSettings(scheduleId, schedule, button) {
+  setLoading(button, true)
+  try {
+    const result = await api(`/api/schedules/${scheduleId}/settings`, {
+      method: "POST",
+      body: JSON.stringify({ schedule }),
+    })
+    state.schedules = state.schedules.map((item) =>
+      item.id === result.schedule.id ? result.schedule : item,
+    )
+    renderSchedules()
+    toast("定时任务时间和批量设置已更新")
   } catch (error) {
     toast(error.message, true)
   } finally {
@@ -1997,6 +2115,10 @@ function buildCredentialRequestBody() {
     groups: selectedGroups(),
     priority: elements.channelPriority.value,
     weight: elements.channelWeight.value,
+    prioritySequence: {
+      enabled: elements.priorityDescending.checked,
+      step: elements.priorityStep.value,
+    },
     configSource: selectedTemplateId()
       ? "template"
       : elements.configSource.value,
@@ -2389,6 +2511,24 @@ function updateScheduleForm() {
 }
 
 elements.scheduleEnabled.addEventListener("change", updateScheduleForm)
+
+function updatePrioritySequenceForm() {
+  const multiKey = elements.batchMode.value === "multi_to_single"
+  if (multiKey) elements.priorityDescending.checked = false
+  elements.priorityDescending.disabled = multiKey
+  const enabled = elements.priorityDescending.checked && !multiKey
+  elements.priorityStepField.classList.toggle("hidden", !enabled)
+  elements.priorityStep.disabled = !enabled
+  if (enabled && !elements.channelPriority.value) {
+    elements.channelPriority.value = "100"
+  }
+}
+
+elements.batchMode.addEventListener("change", updatePrioritySequenceForm)
+elements.priorityDescending.addEventListener(
+  "change",
+  updatePrioritySequenceForm,
+)
 
 async function bootstrap() {
   try {

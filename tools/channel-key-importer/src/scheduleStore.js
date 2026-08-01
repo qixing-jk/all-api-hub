@@ -56,6 +56,10 @@ const publicJob = (job) => ({
   batchSize: job.batchSize,
   intervalMinutes: job.intervalMinutes,
   priority: Number.isInteger(job.preview?.priority) ? job.preview.priority : 0,
+  prioritySequence: job.preview?.prioritySequence || {
+    enabled: false,
+    step: 1,
+  },
   weight: Number.isInteger(job.preview?.weight) ? job.preview.weight : 0,
   nextRunAt: job.nextRunAt,
   lastRunAt: job.lastRunAt || null,
@@ -202,9 +206,10 @@ export class ScheduleStore {
     return await this.#mutate(async () => {
       const options = normalizeScheduleOptions(schedule)
       const entries = await Promise.all(
-        preview.keys.map(async (entry) => ({
+        preview.keys.map(async (entry, priorityIndex) => ({
           id: randomUUID(),
           status: "pending",
+          priorityIndex,
           quota: Number.isFinite(entry.quota) ? entry.quota : null,
           ...keyIdentity(entry.apiKey),
           encryptedKey: await this.#encrypt(entry.apiKey),
@@ -299,6 +304,9 @@ export class ScheduleStore {
           id: entry.id,
           apiKey: await this.#decrypt(entry.encryptedKey),
           quota: Number.isFinite(entry.quota) ? entry.quota : null,
+          priorityIndex: Number.isInteger(entry.priorityIndex)
+            ? entry.priorityIndex
+            : 0,
         })),
       )
       return {
@@ -386,6 +394,26 @@ export class ScheduleStore {
       job.nextRunAt = new Date(
         now.getTime() + Math.max(1, job.intervalMinutes || 5) * 60 * 1000,
       ).toISOString()
+      await this.#writeAll(jobs)
+      return publicJob(job)
+    })
+  }
+
+  async updateSchedule(jobId, schedule) {
+    return await this.#mutate(async () => {
+      const jobs = await this.#readAll()
+      const job = jobs.find((item) => item.id === jobId)
+      if (!job) throw new Error("定时任务不存在")
+      if (!["active", "paused"].includes(job.status)) {
+        throw new Error("只有等待执行或已暂停的任务可以修改")
+      }
+      if (!(job.entries || []).some((entry) => entry.status === "pending")) {
+        throw new Error("该任务没有待写入的 Key")
+      }
+      const options = normalizeScheduleOptions(schedule)
+      job.batchSize = options.batchSize
+      job.intervalMinutes = options.intervalMinutes
+      job.nextRunAt = options.nextRunAt
       await this.#writeAll(jobs)
       return publicJob(job)
     })

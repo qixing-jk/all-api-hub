@@ -15,7 +15,7 @@ on:
       version:
         description: "Release version without the v prefix"
         required: true
-        default: "0.3.1"
+        default: "0.4.0"
 
 permissions:
   contents: write
@@ -83,6 +83,8 @@ jobs:
           - Global 模式使用一个来源地区并生成 `global.*` 模型映射
           - 渠道名称和预览明确显示 AWS 来源地区
           - 定时上 Key 支持精确到秒，并按最近任务动态唤醒
+          - 等待中或已暂停的定时任务可修改下一次执行时间、每批数量和时间间隔
+          - 批量独立建渠道可按 Key 原始顺序自动递减优先级，定时跨批次也不重置顺序
           - 创建、复制和更新渠道时可设置优先级与权重
           - 优先级与权重位于批量写入方式下方，录入时无需返回上方查找
           - 用量监测使用 New API 数据库汇总接口校准消费金额

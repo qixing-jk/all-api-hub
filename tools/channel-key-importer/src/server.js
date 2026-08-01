@@ -276,6 +276,28 @@ export function normalizeChannelRoutingValue(
   return number
 }
 
+export function normalizePrioritySequence(input, priority, keyCount) {
+  const enabled = input?.enabled === true
+  const step = enabled
+    ? normalizeChannelRoutingValue(input.step, "优先级递减步长", 1)
+    : 1
+  if (enabled) {
+    const lastPriority = priority - step * Math.max(0, keyCount - 1)
+    if (lastPriority < MIN_CHANNEL_PRIORITY) {
+      throw new Error("批量递减后的优先级超出 New API 支持范围")
+    }
+  }
+  return { enabled, step }
+}
+
+export function resolveEntryPriority(preview, entry, localIndex) {
+  if (!preview.prioritySequence?.enabled) return preview.priority
+  const sequenceIndex = Number.isInteger(entry.priorityIndex)
+    ? entry.priorityIndex
+    : localIndex
+  return preview.priority - preview.prioritySequence.step * sequenceIndex
+}
+
 async function buildCredentialPreview(body) {
   const provider = getProvider(String(body.providerId || ""))
   if (!provider.importable) throw new Error(provider.description)
@@ -377,6 +399,12 @@ async function buildCredentialPreview(body) {
     "渠道权重",
     0,
   )
+  const resolvedPriority = priorityOverride ?? template?.advanced?.priority ?? 0
+  const prioritySequence = normalizePrioritySequence(
+    body.prioritySequence,
+    resolvedPriority,
+    keys.length,
+  )
   const resolvedProvider = { ...provider, resolvedBaseUrl: baseUrl }
   const defaultModels =
     configSource === "new-api"
@@ -421,8 +449,9 @@ async function buildCredentialPreview(body) {
     baseUrl,
     name,
     groups,
-    priority: priorityOverride ?? template?.advanced?.priority ?? 0,
+    priority: resolvedPriority,
     weight: weightOverride ?? template?.advanced?.weight ?? 0,
+    prioritySequence,
     routingOverrides: {
       priority: priorityOverride,
       weight: weightOverride,
@@ -463,6 +492,7 @@ const buildPreviewResponse = (preview, previewId) => ({
   groups: preview.groups,
   priority: preview.priority,
   weight: preview.weight,
+  prioritySequence: preview.prioritySequence,
   models: preview.models,
   duplicates: preview.duplicates,
   keyCount: preview.keys.length,
@@ -498,6 +528,13 @@ async function createChannelsFromPreview(preview, body) {
     throw new Error("所选同类渠道不在本次预览中，请重新预览")
   }
   const runtimeConfig = await getRuntimeConfig(preview.profileId)
+  if (
+    preview.prioritySequence?.enabled &&
+    preview.keys.length > 1 &&
+    (existingChannel || body.combineKeys === true)
+  ) {
+    throw new Error("优先级依次递减只适用于每条 Key 新建独立渠道")
+  }
   if (existingChannel) {
     if (preview.keys.length > 1 && !existingChannel.isMultiKey) {
       throw new Error("单 Key 渠道不能批量写入，请选择多 Key 渠道或分别新建")
@@ -690,6 +727,7 @@ async function createChannelsFromPreview(preview, body) {
               : preview.name
           const createInput = {
             ...preview,
+            priority: resolveEntryPriority(preview, entry, index),
             apiKey: entry.apiKey,
             baseUrl: buildEntryBaseUrl(preview, entry),
             channelSettings: buildEntryChannelSettings(preview, entry),
@@ -1012,6 +1050,19 @@ async function handleApi(
       },
       schedule: body.schedule,
     })
+    await onScheduleChanged()
+    return sendJson(response, 200, { schedule })
+  }
+
+  const scheduleSettingsMatch = url.pathname.match(
+    /^\/api\/schedules\/([^/]+)\/settings$/,
+  )
+  if (request.method === "POST" && scheduleSettingsMatch) {
+    const body = await readJsonBody(request)
+    const schedule = await scheduleStore.updateSchedule(
+      scheduleSettingsMatch[1],
+      body.schedule,
+    )
     await onScheduleChanged()
     return sendJson(response, 200, { schedule })
   }

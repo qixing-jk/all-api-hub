@@ -903,6 +903,10 @@ select:focus {
   color: var(--muted);
   font-size: 10px;
 }
+.routing-sequence-row {
+  align-self: stretch;
+  margin: 0;
+}
 .provider-summary {
   display: grid;
   grid-template-columns: 48px 1fr auto;
@@ -1173,6 +1177,26 @@ select:focus {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.schedule-editor {
+  display: grid;
+  grid-template-columns: 1.2fr 0.7fr 0.7fr auto;
+  gap: 10px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid #bfd3ff;
+  border-radius: 14px;
+  background: #f3f7ff;
+}
+.schedule-editor-actions {
+  display: flex;
+  gap: 7px;
+  padding-bottom: 1px;
+}
+.schedule-editor .schedule-save {
+  color: white;
+  border-color: #2457d6;
+  background: #2457d6;
 }
 .schedule-error {
   color: #b23b2d !important;
@@ -2209,7 +2233,8 @@ footer p {
 }
 @media (max-width: 760px) {
   .batch-input-grid,
-  .routing-options {
+  .routing-options,
+  .schedule-editor {
     grid-template-columns: 1fr;
   }
   .app-shell {

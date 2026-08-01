@@ -114,6 +114,62 @@ test("finds the nearest active schedule with second precision", async () => {
   }
 })
 
+test("updates a pending schedule and immediately changes its next run", async () => {
+  const { root, store } = await makeStore()
+  try {
+    const job = await store.create({
+      preview,
+      createOptions: { combineKeys: false },
+      schedule: {
+        startAt: "2026-07-10T10:05:42.000Z",
+        batchSize: 1,
+        intervalMinutes: 30,
+      },
+    })
+
+    const updated = await store.updateSchedule(job.id, {
+      startAt: "2026-07-10T10:02:15.000Z",
+      batchSize: 3,
+      intervalMinutes: 5,
+    })
+
+    assert.equal(updated.nextRunAt, "2026-07-10T10:02:15.000Z")
+    assert.equal(updated.batchSize, 3)
+    assert.equal(updated.intervalMinutes, 5)
+    assert.equal(await store.nextRunAt(), "2026-07-10T10:02:15.000Z")
+    assert.equal(updated.counts.pending, 3)
+  } finally {
+    await rm(root, { force: true, recursive: true })
+  }
+})
+
+test("rejects editing a cancelled schedule", async () => {
+  const { root, store } = await makeStore()
+  try {
+    const job = await store.create({
+      preview,
+      createOptions: { combineKeys: false },
+      schedule: {
+        startAt: "2026-07-10T10:05:42.000Z",
+        batchSize: 1,
+        intervalMinutes: 30,
+      },
+    })
+    await store.updateStatus(job.id, "cancelled")
+
+    await assert.rejects(
+      store.updateSchedule(job.id, {
+        startAt: "2026-07-10T10:10:00.000Z",
+        batchSize: 2,
+        intervalMinutes: 10,
+      }),
+      /只有等待执行或已暂停的任务可以修改/,
+    )
+  } finally {
+    await rm(root, { force: true, recursive: true })
+  }
+})
+
 test("claims due batches and marks mixed results by key index", async () => {
   const { root, store } = await makeStore()
   try {
@@ -132,6 +188,10 @@ test("claims due batches and marks mixed results by key index", async () => {
     assert.deepEqual(
       claim.preview.keys.map((entry) => entry.apiKey),
       ["sk-first-secret", "sk-second-secret"],
+    )
+    assert.deepEqual(
+      claim.preview.keys.map((entry) => entry.priorityIndex),
+      [0, 1],
     )
 
     const updated = await store.completeRun(
@@ -163,6 +223,14 @@ test("claims due batches and marks mixed results by key index", async () => {
     assert.equal(updated.status, "active")
     assert.equal(updated.entries[0].status, "failed")
     assert.equal(updated.entries[1].channelId, 123)
+
+    const nextClaim = await store.claimDueJob(
+      new Date("2026-07-10T10:11:00.000Z"),
+    )
+    assert.deepEqual(
+      nextClaim.preview.keys.map((entry) => entry.priorityIndex),
+      [2],
+    )
   } finally {
     await rm(root, { force: true, recursive: true })
   }

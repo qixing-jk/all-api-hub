@@ -4,6 +4,8 @@ import test from "node:test"
 import {
   calculateScheduleDelay,
   normalizeChannelRoutingValue,
+  normalizePrioritySequence,
+  resolveEntryPriority,
   startImporterServer,
 } from "../src/server.js"
 
@@ -35,6 +37,25 @@ test("calculates a second-precision schedule delay", () => {
       Date.parse("2026-08-01T01:06:08.000Z"),
     ),
     0,
+  )
+})
+
+test("assigns descending priorities in original key order", () => {
+  const prioritySequence = normalizePrioritySequence(
+    { enabled: true, step: "2" },
+    100,
+    3,
+  )
+  const preview = { priority: 100, prioritySequence }
+  assert.equal(resolveEntryPriority(preview, {}, 0), 100)
+  assert.equal(resolveEntryPriority(preview, {}, 1), 98)
+  assert.equal(resolveEntryPriority(preview, { priorityIndex: 8 }, 0), 84)
+})
+
+test("rejects an invalid descending priority step", () => {
+  assert.throws(
+    () => normalizePrioritySequence({ enabled: true, step: "0" }, 100, 3),
+    /优先级递减步长必须是/,
   )
 })
 
