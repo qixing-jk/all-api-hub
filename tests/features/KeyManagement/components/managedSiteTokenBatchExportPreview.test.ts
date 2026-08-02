@@ -24,6 +24,19 @@ const candidate = {
   name: "Managed Channel 12",
 }
 
+const manualPreviewTarget = {
+  intent: {
+    source: "manual-selection",
+    verification: "complete",
+  } as const,
+  targetFingerprint: "test-target-fingerprint",
+  targetSummary: {
+    siteType: SITE_TYPES.NEW_API,
+    baseUrl: "https://target.example.invalid",
+    compatibleUserId: "1",
+  },
+}
+
 const buildPreviewItem = (
   fields: Partial<ManagedSiteTokenBatchExportPreviewItem> = {},
 ): ManagedSiteTokenBatchExportPreviewItem => ({
@@ -214,6 +227,7 @@ describe("managedSiteTokenBatchExportPreview helpers", () => {
 
   it("collects New API verification targets from recoverable preview rows", () => {
     const preview: ManagedSiteTokenBatchExportPreview = {
+      ...manualPreviewTarget,
       siteType: SITE_TYPES.NEW_API,
       totalCount: 2,
       readyCount: 1,

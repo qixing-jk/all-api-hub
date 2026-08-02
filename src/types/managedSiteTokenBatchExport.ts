@@ -1,5 +1,6 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { ManagedSiteTokenBatchImportTargetSummary } from "~/services/managedSites/tokenBatchImportTarget"
 import type {
   ManagedSiteAssessmentChannel,
   ManagedSiteVerifiedKeyAssessment,
@@ -7,6 +8,34 @@ import type {
 import type { DisplaySiteData } from "~/types"
 
 import type { ChannelFormData } from "./managedSite"
+
+export const MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES = {
+  MANUAL_SELECTION: "manual-selection",
+  REPAIR_CREATED: "repair-created",
+} as const
+
+export type ManagedSiteTokenBatchImportSource =
+  (typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES)[keyof typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES]
+
+export const MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS = {
+  COMPLETE: "complete",
+  TRUSTED_NEW: "trusted-new",
+} as const
+
+export type ManagedSiteTokenBatchImportVerification =
+  (typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS)[keyof typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS]
+
+export type ManagedSiteBatchImportIntent =
+  | {
+      source: typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.MANUAL_SELECTION
+      verification: typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE
+    }
+  | {
+      source: typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.REPAIR_CREATED
+      verification:
+        | typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW
+        | typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE
+    }
 
 export const MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES = {
   READY: "ready",
@@ -43,10 +72,40 @@ export const MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES = {
 export type ManagedSiteTokenBatchExportBlockedReasonCode =
   (typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES)[keyof typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES]
 
-export type ManagedSiteTokenBatchExportItemInput = {
+export const MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS = {
+  RESOLVED: "resolved",
+  BLOCKED_REFERENCE: "blocked-reference",
+} as const
+
+export interface ResolvedManagedSiteTokenBatchExportItemInput {
+  /** Optional for compatibility with existing manual-selection callers. */
+  kind?: typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.RESOLVED
   account: DisplaySiteData
   runtimeKey: AccountRuntimeKey
 }
+
+export interface BlockedManagedSiteTokenBatchExportItemInput {
+  kind: typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.BLOCKED_REFERENCE
+  id: string
+  accountLabel: string
+  keyLabel: string
+  blockingReasonCode: ManagedSiteTokenBatchExportBlockedReasonCode
+  localFallback: string
+}
+
+export type ManagedSiteTokenBatchExportItemInput =
+  | ResolvedManagedSiteTokenBatchExportItemInput
+  | BlockedManagedSiteTokenBatchExportItemInput
+
+export const isResolvedManagedSiteTokenBatchExportItemInput = (
+  input: ManagedSiteTokenBatchExportItemInput,
+): input is ResolvedManagedSiteTokenBatchExportItemInput =>
+  input.kind !== MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.BLOCKED_REFERENCE
+
+export const isBlockedManagedSiteTokenBatchExportItemInput = (
+  input: ManagedSiteTokenBatchExportItemInput,
+): input is BlockedManagedSiteTokenBatchExportItemInput =>
+  input.kind === MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.BLOCKED_REFERENCE
 
 export type ManagedSiteTokenBatchExportMatchedChannel =
   ManagedSiteAssessmentChannel
@@ -83,7 +142,10 @@ export const isExecutableManagedSiteTokenBatchExportPreviewItem = (
     item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING)
 
 export interface ManagedSiteTokenBatchExportPreview {
+  intent: ManagedSiteBatchImportIntent
   siteType: ManagedSiteType
+  targetFingerprint: string | null
+  targetSummary: ManagedSiteTokenBatchImportTargetSummary | null
   items: ManagedSiteTokenBatchExportPreviewItem[]
   totalCount: number
   readyCount: number
@@ -92,10 +154,21 @@ export interface ManagedSiteTokenBatchExportPreview {
   blockedCount: number
 }
 
+export const MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS = {
+  CREATED: "created",
+  FAILED: "failed",
+  UNCERTAIN: "uncertain",
+} as const
+
+export type ManagedSiteTokenBatchExportExecutionItemResult =
+  (typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS)[keyof typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS]
+
 export interface ManagedSiteTokenBatchExportExecutionItem {
   id: string
   accountName: string
   runtimeKeyName: string
+  result: ManagedSiteTokenBatchExportExecutionItemResult
+  /** Compatibility fields for existing shared-dialog consumers. */
   success: boolean
   skipped: boolean
   error?: string
@@ -106,6 +179,7 @@ export interface ManagedSiteTokenBatchExportExecutionResult {
   attemptedCount: number
   createdCount: number
   failedCount: number
+  uncertainCount: number
   skippedCount: number
   items: ManagedSiteTokenBatchExportExecutionItem[]
 }

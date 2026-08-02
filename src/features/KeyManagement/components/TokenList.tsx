@@ -41,9 +41,10 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { AccountToken, DisplaySiteData } from "~/types"
-import type {
-  ManagedSiteTokenBatchExportExecutionResult,
-  ManagedSiteTokenBatchExportItemInput,
+import {
+  isResolvedManagedSiteTokenBatchExportItemInput,
+  type ManagedSiteTokenBatchExportExecutionResult,
+  type ManagedSiteTokenBatchExportItemInput,
 } from "~/types/managedSiteTokenBatchExport"
 import { createTab } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
@@ -787,7 +788,7 @@ export function TokenList(props: TokenListProps) {
   const isBatchExportSnapshotEligible = useMemo(
     () =>
       isBatchSnapshotEligible(
-        batchExportItems,
+        batchExportItems.filter(isResolvedManagedSiteTokenBatchExportItemInput),
         currentBatchEligibilityByRuntimeKeyId,
       ),
     [batchExportItems, currentBatchEligibilityByRuntimeKeyId],
@@ -970,6 +971,7 @@ export function TokenList(props: TokenListProps) {
 
     const selectedTokenByIdentity = new Map(
       batchExportItems.flatMap((item) =>
+        isResolvedManagedSiteTokenBatchExportItemInput(item) &&
         isAccountTokenRuntimeKey(item.runtimeKey)
           ? [[item.runtimeKey.id, item.runtimeKey.token] as const]
           : [],

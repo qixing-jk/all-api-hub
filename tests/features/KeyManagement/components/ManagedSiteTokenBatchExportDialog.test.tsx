@@ -36,6 +36,19 @@ import {
 } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
+const manualPreviewTarget = {
+  intent: {
+    source: "manual-selection",
+    verification: "complete",
+  } as const,
+  targetFingerprint: "test-target-fingerprint",
+  targetSummary: {
+    siteType: SITE_TYPES.NEW_API,
+    baseUrl: "https://target.example.invalid",
+    compatibleUserId: "1",
+  },
+}
+
 const createDeferred = <T,>() => {
   let resolve!: (value: T) => void
   let reject!: (reason?: unknown) => void
@@ -385,6 +398,7 @@ const buildRecoverablePreviewItem = (
 })
 
 const preview: ManagedSiteTokenBatchExportPreview = {
+  ...manualPreviewTarget,
   siteType: SITE_TYPES.NEW_API,
   totalCount: 2,
   readyCount: 2,
@@ -442,6 +456,7 @@ const buildSingleRecoverablePreview =
   })
 
 const richPreview: ManagedSiteTokenBatchExportPreview = {
+  ...manualPreviewTarget,
   siteType: SITE_TYPES.NEW_API,
   totalCount: 4,
   readyCount: 1,
@@ -492,6 +507,7 @@ const richPreview: ManagedSiteTokenBatchExportPreview = {
 }
 
 const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
+  ...manualPreviewTarget,
   siteType: SITE_TYPES.NEW_API,
   totalCount: 3,
   readyCount: 0,
@@ -2030,6 +2046,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       attemptedCount: 2,
       createdCount: 1,
       failedCount: 1,
+      uncertainCount: 0,
       skippedCount: 0,
       items: [
         {
@@ -2150,6 +2167,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       attemptedCount: 2,
       createdCount: 1,
       failedCount: 1,
+      uncertainCount: 0,
       skippedCount: 0,
       items: [],
     }
