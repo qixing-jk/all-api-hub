@@ -448,6 +448,15 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     ).toBe(false)
   })
 
+  it("rejects protocol-relative custom telemetry endpoints", () => {
+    expect(
+      isSupportedApiCredentialTelemetryEndpoint(
+        "https://example.com/root",
+        "//telemetry.example.com/usage/read-only",
+      ),
+    ).toBe(false)
+  })
+
   it("merges telemetry snapshots by newest successful query without changing identity winner", () => {
     const merged = mergeApiCredentialProfilesConfigs({
       now: 67890,

@@ -70,6 +70,9 @@ export function resolveApiCredentialTelemetryRequestTarget(
 ): { baseUrl: string; endpoint: string; isCrossOrigin: boolean } {
   const trimmed = endpoint.trim()
   if (!trimmed) throw new Error("Custom endpoint is empty")
+  if (trimmed.startsWith("//")) {
+    throw new Error("Custom endpoint must not be protocol-relative")
+  }
 
   const profileBaseUrl = new URL(baseUrl)
   const resolved = trimmed.startsWith("/")
