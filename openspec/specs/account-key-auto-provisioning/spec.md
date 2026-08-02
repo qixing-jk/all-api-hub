@@ -75,21 +75,25 @@ create-key follow-up action.
 - **THEN** the system MUST skip that account
 
 ### Requirement: Key auto-provisioning ensures at least one token
-For an eligible account, the system MUST determine the remote token inventory and MUST create a default token when the account has zero tokens.
+Key auto-provisioning MUST determine the remote token inventory for an eligible
+account whose adapter permits ungrouped default-token creation, and MUST create
+a default token when the account has zero tokens. Group-aware repair flows MUST
+instead follow their group-coverage requirements, including the Sub2API
+behavior above.
 
 #### Scenario: Account already has tokens
-- **GIVEN** an eligible account has one or more tokens
+- **GIVEN** an eligible account using ungrouped default-token creation has one or more tokens
 - **WHEN** key auto-provisioning runs for that account
 - **THEN** the system MUST NOT create a new token
 
 #### Scenario: Account has no tokens
-- **GIVEN** an eligible account has zero tokens
+- **GIVEN** an eligible account using ungrouped default-token creation has zero tokens
 - **WHEN** key auto-provisioning runs for that account
 - **THEN** the system MUST create a default token for that account
 - **AND** subsequent token inventory fetches MUST return at least one token
 
 ### Requirement: Default token definition remains stable
-When key auto-provisioning creates a default token, it MUST use the existing default token definition:
+When key auto-provisioning creates an ungrouped default token, it MUST use the existing default token definition:
 - `name = "user group (auto)"`
 - `unlimited_quota = true`
 - `remain_quota = 0`
@@ -100,7 +104,7 @@ When key auto-provisioning creates a default token, it MUST use the existing def
 - `group = ""` (follow user group)
 
 #### Scenario: Created token uses the default definition
-- **GIVEN** an eligible account has zero tokens
+- **GIVEN** an eligible account using ungrouped default-token creation has zero tokens
 - **WHEN** the system creates a default token via key auto-provisioning
 - **THEN** the created token MUST use the default token definition
 
@@ -109,14 +113,14 @@ The system MUST provide a user-initiated action to run key auto-provisioning acr
 
 The manual repair MUST:
 - Evaluate all enabled accounts, applying eligibility gating
-- Create default tokens for eligible accounts that have zero tokens
+- Create ungrouped default tokens or group-specific tokens according to each eligible account's repair capabilities
 - Be resilient to partial failures (continue processing remaining accounts)
 - Apply rate limiting per site origin (the limiter MUST be keyed by normalized `site_url` origin, not global)
 
 #### Scenario: Bulk repair creates tokens for accounts missing keys
-- **GIVEN** multiple stored accounts exist and at least one eligible account has zero tokens
+- **GIVEN** multiple stored accounts exist and at least one eligible account requires a missing token
 - **WHEN** the user runs the manual key repair action
-- **THEN** the system MUST create a default token for each eligible account that has zero tokens
+- **THEN** the system MUST create tokens according to each eligible account's default-token or group-coverage requirements
 
 #### Scenario: Bulk repair continues when one account fails
 - **GIVEN** multiple eligible accounts exist
