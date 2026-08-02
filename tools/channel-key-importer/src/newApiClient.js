@@ -494,11 +494,19 @@ export async function fetchChannelModels(config, input) {
 export async function listChannelTemplates(config, provider) {
   const templates = []
   for (let page = 1; page <= MAX_CHANNEL_PAGES; page += 1) {
-    const payload = await requestJson(
-      `${config.targetUrl}/api/channel/?p=${page}&page_size=${PAGE_SIZE}`,
-      { headers: requestHeaders(config) },
-      [config.adminToken, config.sessionCookie].filter(Boolean),
-    )
+    let payload
+    try {
+      payload = await requestJson(
+        `${config.targetUrl}/api/channel/?p=${page}&page_size=${PAGE_SIZE}`,
+        { headers: requestHeaders(config) },
+        [config.adminToken, config.sessionCookie].filter(Boolean),
+      )
+    } catch (error) {
+      // Large New API installations need several pages. Keep already-read
+      // templates when a later page has a transient network failure.
+      if (page === 1 || templates.length === 0) throw error
+      break
+    }
     const items = channelListItems(payload)
     templates.push(
       ...items
@@ -507,8 +515,13 @@ export async function listChannelTemplates(config, provider) {
     )
     if (items.length < PAGE_SIZE) break
   }
-  return templates
-    .filter((item) => Number.isInteger(item.id) && item.id > 0)
+  return [
+    ...new Map(
+      templates
+        .filter((item) => Number.isInteger(item.id) && item.id > 0)
+        .map((item) => [item.id, item]),
+    ).values(),
+  ]
     .sort((left, right) => right.id - left.id)
     .slice(0, 500)
 }

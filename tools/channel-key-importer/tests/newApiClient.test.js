@@ -308,6 +308,31 @@ test("lists same-type channels for explicit template selection", async (context)
   ])
 })
 
+test("keeps unique templates when a later channel page is unavailable", async (context) => {
+  const firstPageItems = Array.from({ length: 100 }, (_, index) => ({
+    id: 200 - index,
+    name: `OpenRouter ${index + 1}`,
+    type: 20,
+    status: 1,
+  }))
+  firstPageItems[99] = { ...firstPageItems[0] }
+  let requestCount = 0
+  context.mock.method(globalThis, "fetch", async () => {
+    requestCount += 1
+    if (requestCount === 1) {
+      return jsonResponse({ success: true, data: { items: firstPageItems } })
+    }
+    throw new Error("temporary network failure")
+  })
+
+  const templates = await listChannelTemplates(config, { channelType: 20 })
+
+  assert.equal(requestCount, 2)
+  assert.equal(templates.length, 99)
+  assert.equal(templates[0].id, 200)
+  assert.equal(new Set(templates.map((item) => item.id)).size, templates.length)
+})
+
 test("reads a selected channel template without returning its key", async (context) => {
   context.mock.method(globalThis, "fetch", async () =>
     jsonResponse({
