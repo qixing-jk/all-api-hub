@@ -18,6 +18,7 @@ import { octopusManagedSiteCapabilities } from "./managedSites/octopus"
 import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
 import { createNewApiCapabilities } from "./newApi"
 import { openRouterCapabilities } from "./openrouter"
+import { orcaRouterCapabilities } from "./orcarouter"
 import { sharedChatCapabilities } from "./sharedchat"
 import { sub2ApiCapabilities } from "./sub2api"
 import { voApiV2Capabilities } from "./voapiV2"
@@ -73,6 +74,7 @@ export function getSiteTypeCapabilities(
   if (siteType === SITE_TYPES.AIHUBMIX) return aihubmixCapabilities
   if (siteType === SITE_TYPES.SHAREDCHAT) return sharedChatCapabilities
   if (siteType === SITE_TYPES.OPENROUTER) return openRouterCapabilities
+  if (siteType === SITE_TYPES.ORCAROUTER) return orcaRouterCapabilities
 
   if (adapterFamily === ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily) {
     return withManagedSites(

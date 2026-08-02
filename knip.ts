@@ -66,6 +66,10 @@ const config: KnipConfig = {
     // Explicitly protected site vocabulary.
     "src/constants/siteType.ts": ["exports"],
 
+    // Re-export barrels mirroring the legacy siteType facade; exports are
+    // consumed through the constants facade or definitions registry.
+    "src/services/accountSiteDefinitions/siteTypes.ts": ["exports"],
+
     // Domain vocabularies and contract/type sources are intentionally kept as
     // stable naming surfaces for gradual modularization, even when current
     // local references are sparse.
