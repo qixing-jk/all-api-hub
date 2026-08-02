@@ -18,8 +18,12 @@ The repository already has two substantial pieces of this workflow:
 
 The missing seam is reliable provenance. Repair results currently retain only
 `createdGroups`, so the UI cannot identify the exact keys created by that job.
-The generic batch flow consequently has to treat every selected key as old and
-untrusted even when the repair job just created it.
+Today, the generic batch flow therefore cannot distinguish a repair-created key
+from an arbitrary selection and must run the complete verification policy for
+both. This design preserves exact creation provenance so a fresh first import
+can trust that the referenced keys were created by this repair job and use the
+simplified `trusted-new` policy. Only stale results, retries, or an explicit
+user choice return those items to complete verification.
 
 ## Goals
 
