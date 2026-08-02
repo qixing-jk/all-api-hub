@@ -15,6 +15,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import {
+  BROWSER_FOCUS_STATES,
+  BROWSER_FOCUS_TRANSITIONS,
+  createBrowserFocusObservation,
+  readBrowserFocusState,
+  type BrowserFocusObservation,
+  type BrowserFocusObservationController,
+  type BrowserFocusState,
+  type BrowserFocusTransition,
+} from "~/utils/browser/browserFocus"
 import { assertNever } from "~/utils/core/assert"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
@@ -37,6 +47,52 @@ type TriggerFeedback =
   | { kind: "error"; message: string }
   | { kind: "success"; message: string }
   | null
+
+const UNKNOWN_BROWSER_FOCUS_OBSERVATION = {
+  start: BROWSER_FOCUS_STATES.Unknown,
+  transition: BROWSER_FOCUS_TRANSITIONS.Unknown,
+  end: BROWSER_FOCUS_STATES.Unknown,
+} satisfies BrowserFocusObservation
+
+/** Resolves the localized label for a controlled browser-focus state. */
+function getBrowserFocusStateLabel(t: TFunction, state: BrowserFocusState) {
+  switch (state) {
+    case BROWSER_FOCUS_STATES.Focused:
+      return t("settings:refresh.shieldDevFocusStateFocused")
+    case BROWSER_FOCUS_STATES.Unfocused:
+      return t("settings:refresh.shieldDevFocusStateUnfocused")
+    case BROWSER_FOCUS_STATES.Unknown:
+      return t("settings:refresh.shieldDevFocusStateUnknown")
+    default:
+      return assertNever(state, `Unexpected browser focus state: ${state}`)
+  }
+}
+
+/** Resolves the localized label for a controlled browser-focus transition. */
+function getBrowserFocusTransitionLabel(
+  t: TFunction,
+  transition: BrowserFocusTransition,
+) {
+  switch (transition) {
+    case BROWSER_FOCUS_TRANSITIONS.RemainedFocused:
+      return t("settings:refresh.shieldDevFocusTransitionRemainedFocused")
+    case BROWSER_FOCUS_TRANSITIONS.RemainedUnfocused:
+      return t("settings:refresh.shieldDevFocusTransitionRemainedUnfocused")
+    case BROWSER_FOCUS_TRANSITIONS.Foregrounded:
+      return t("settings:refresh.shieldDevFocusTransitionForegrounded")
+    case BROWSER_FOCUS_TRANSITIONS.Backgrounded:
+      return t("settings:refresh.shieldDevFocusTransitionBackgrounded")
+    case BROWSER_FOCUS_TRANSITIONS.Mixed:
+      return t("settings:refresh.shieldDevFocusTransitionMixed")
+    case BROWSER_FOCUS_TRANSITIONS.Unknown:
+      return t("settings:refresh.shieldDevFocusTransitionUnknown")
+    default:
+      return assertNever(
+        transition,
+        `Unexpected browser focus transition: ${transition}`,
+      )
+  }
+}
 
 /** Resolves the localized label for a controlled existing-behavior preset. */
 export function getShieldDevTriggerPresetLabel(
@@ -76,8 +132,12 @@ export function ProtectionBypassDevTrigger() {
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
   const [isRunning, setIsRunning] = useState(false)
   const [feedback, setFeedback] = useState<TriggerFeedback>(null)
+  const [focusObservation, setFocusObservation] =
+    useState<BrowserFocusObservation | null>(null)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const focusObservationControllerRef =
+    useRef<BrowserFocusObservationController | null>(null)
   const isMountedRef = useRef(true)
 
   const clearTimers = useCallback(() => {
@@ -95,6 +155,9 @@ export function ProtectionBypassDevTrigger() {
     isMountedRef.current = true
     return () => {
       isMountedRef.current = false
+      const focusObservationController = focusObservationControllerRef.current
+      focusObservationControllerRef.current = null
+      focusObservationController?.cancel()
       clearTimers()
     }
   }, [clearTimers])
@@ -106,6 +169,20 @@ export function ProtectionBypassDevTrigger() {
       setIsRunning(true)
       setFeedback(null)
       const failureFallback = t("refresh.shieldDevTriggerFailureFallback")
+      let focusObservationController: BrowserFocusObservationController | null =
+        null
+
+      try {
+        const start = await readBrowserFocusState()
+        if (!isMountedRef.current) return
+
+        focusObservationController = createBrowserFocusObservation(start)
+        focusObservationControllerRef.current = focusObservationController
+      } catch {
+        // Focus diagnostics must never replace the protected request result.
+      }
+
+      if (!isMountedRef.current) return
 
       try {
         const response = await executeShieldDevTrigger({
@@ -134,7 +211,26 @@ export function ProtectionBypassDevTrigger() {
           message: getErrorMessage(error, failureFallback),
         })
       } finally {
-        if (isMountedRef.current) setIsRunning(false)
+        let completedObservation: BrowserFocusObservation =
+          UNKNOWN_BROWSER_FOCUS_OBSERVATION
+        if (focusObservationController) {
+          try {
+            completedObservation = await focusObservationController.finish()
+          } catch {
+            // A failed diagnostic remains neutral and does not affect feedback.
+          }
+
+          if (
+            focusObservationControllerRef.current === focusObservationController
+          ) {
+            focusObservationControllerRef.current = null
+          }
+        }
+
+        if (isMountedRef.current) {
+          setFocusObservation(completedObservation)
+          setIsRunning(false)
+        }
       }
     },
     [clearTimers, presetId, t],
@@ -162,6 +258,7 @@ export function ProtectionBypassDevTrigger() {
     }
 
     setFeedback(null)
+    setFocusObservation(null)
     if (delaySeconds === 0) {
       void execute(normalizedUrl)
       return
@@ -183,6 +280,7 @@ export function ProtectionBypassDevTrigger() {
     clearTimers()
     setRemainingSeconds(null)
     setFeedback(null)
+    setFocusObservation(null)
   }, [clearTimers])
 
   if (!isDevelopmentMode()) return null
@@ -194,8 +292,12 @@ export function ProtectionBypassDevTrigger() {
     <CardItem
       title={t("refresh.shieldDevTriggerTitle")}
       description={t("refresh.shieldDevTriggerDescription")}
+      rightContentClassName="sm:flex-1"
       rightContent={
-        <div className="grid w-full min-w-0 gap-3 text-left [@container(min-width:42rem)]:min-w-[32rem]">
+        <div
+          data-testid="shield-dev-trigger-form"
+          className="grid w-full min-w-0 gap-3 text-left"
+        >
           <div className="grid gap-3 [@container(min-width:42rem)]:grid-cols-[minmax(0,1fr)_8rem]">
             <div className="space-y-1.5">
               <Label htmlFor="shield-dev-trigger-preset">
@@ -283,6 +385,37 @@ export function ProtectionBypassDevTrigger() {
             >
               {feedback.message}
             </BodySmall>
+          )}
+          {focusObservation && (
+            <div
+              role="group"
+              aria-label={t("refresh.shieldDevFocusTitle")}
+              className="grid gap-1"
+            >
+              <BodySmall className="font-medium">
+                {t("refresh.shieldDevFocusTitle")}
+              </BodySmall>
+              <div className="grid gap-0.5">
+                <Muted>
+                  {t("refresh.shieldDevFocusStart", {
+                    state: getBrowserFocusStateLabel(t, focusObservation.start),
+                  })}
+                </Muted>
+                <Muted>
+                  {t("refresh.shieldDevFocusDuring", {
+                    transition: getBrowserFocusTransitionLabel(
+                      t,
+                      focusObservation.transition,
+                    ),
+                  })}
+                </Muted>
+                <Muted>
+                  {t("refresh.shieldDevFocusEnd", {
+                    state: getBrowserFocusStateLabel(t, focusObservation.end),
+                  })}
+                </Muted>
+              </div>
+            </div>
           )}
         </div>
       }
