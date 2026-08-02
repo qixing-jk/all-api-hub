@@ -17,7 +17,7 @@ import {
 } from "~/services/preferences/migrations/preferencesMigration"
 import {
   DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-  DEFAULT_TEMP_CONTEXT_MODE,
+  DEFAULT_TEMP_CONTEXT_PREFERENCE,
   normalizeTempWindowFallbackPreferences,
   type TempWindowFallbackPreferences,
 } from "~/services/preferences/tempWindowFallbackPreferences"
@@ -634,7 +634,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   tempWindowFallback: {
     enabled: true,
     automaticFeatureBypass: DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-    tempContextMode: DEFAULT_TEMP_CONTEXT_MODE,
+    tempContextMode: DEFAULT_TEMP_CONTEXT_PREFERENCE,
   },
   tempWindowFallbackReminder: {
     dismissed: false,

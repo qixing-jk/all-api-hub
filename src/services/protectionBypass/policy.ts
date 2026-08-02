@@ -1,4 +1,4 @@
-import type { TempContextMode } from "~/constants/tempContextMode"
+import type { TempContextPreferenceMode } from "~/constants/tempContextMode"
 
 import {
   getTempContextTaskMetadata,
@@ -22,7 +22,7 @@ import {
 export interface ProtectionBypassPolicy {
   automaticMasterEnabled: boolean
   automaticFeatureBypass: Record<ProtectionBypassAutomaticFeature, boolean>
-  preferredMode: TempContextMode
+  preferredMode: TempContextPreferenceMode
 }
 
 export type ProtectionBypassPolicyState =
@@ -32,7 +32,7 @@ export type ProtectionBypassPolicyState =
 export type ProtectionBypassCapability =
   | {
       kind: typeof PROTECTION_BYPASS_CAPABILITY_KINDS.Available
-      adapter: TempContextMode
+      adapter: TempContextPreferenceMode
     }
   | { kind: typeof PROTECTION_BYPASS_CAPABILITY_KINDS.PermissionRequired }
   | {
@@ -79,7 +79,7 @@ export type ProtectionBypassPolicyDecision =
         ProtectionBypassDecisionKind,
         typeof PROTECTION_BYPASS_DECISION_RESULTS.Allowed
       >
-      adapter: TempContextMode
+      adapter: TempContextPreferenceMode
     } & ProtectionBypassDecisionContext)
   | ProtectionBypassContextlessDeniedDecision
   | ProtectionBypassEvaluatedDeniedDecision

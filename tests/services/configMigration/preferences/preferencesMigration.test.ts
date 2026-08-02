@@ -2,12 +2,14 @@ import { describe, expect, it } from "vitest"
 
 import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
 import { SITE_TYPES } from "~/constants/siteType"
+import { TEMP_CONTEXT_PREFERENCE_MODES } from "~/constants/tempContextMode"
 import {
   CURRENT_PREFERENCES_VERSION,
   getPreferencesVersion,
   migratePreferences,
   needsPreferencesMigration,
 } from "~/services/preferences/migrations/preferencesMigration"
+import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
@@ -115,6 +117,10 @@ function createV0Preferences(
 }
 
 describe("preferencesMigration", () => {
+  it("keeps the preferences schema at v27", () => {
+    expect(CURRENT_PREFERENCES_VERSION).toBe(27)
+  })
+
   describe("getPreferencesVersion", () => {
     it("returns 0 for undefined preferences", () => {
       expect(getPreferencesVersion(undefined)).toBe(0)
@@ -1512,6 +1518,27 @@ describe("preferencesMigration", () => {
 
       expect(migrated.tempWindowFallback!.automaticFeatureBypass).toEqual(
         automaticFeatureBypass,
+      )
+    })
+
+    it("normalizes a missing v27 temporary-window mode without a new migration", () => {
+      const v27Preferences = createV0Preferences({
+        preferencesVersion: 27,
+        tempWindowFallback: {
+          enabled: true,
+          automaticFeatureBypass:
+            DEFAULT_PREFERENCES.tempWindowFallback!.automaticFeatureBypass,
+        },
+      } as any)
+
+      const migrated = migratePreferences(v27Preferences)
+      const normalized = normalizeTempWindowFallbackPreferences(
+        migrated.tempWindowFallback,
+      )
+
+      expect(migrated.preferencesVersion).toBe(27)
+      expect(normalized.tempContextMode).toBe(
+        TEMP_CONTEXT_PREFERENCE_MODES.Auto,
       )
     })
   })

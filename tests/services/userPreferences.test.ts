@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
-import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import {
+  TEMP_CONTEXT_MODES,
+  TEMP_CONTEXT_PREFERENCE_MODES,
+} from "~/constants/tempContextMode"
+import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   createDefaultPreferences,
   DEFAULT_PREFERENCES,
@@ -55,8 +59,14 @@ describe("userPreferences", () => {
         false,
       )
       expect(DEFAULT_PREFERENCES.tempWindowFallback?.tempContextMode).toBe(
-        TEMP_CONTEXT_MODES.Tab,
+        TEMP_CONTEXT_PREFERENCE_MODES.Auto,
       )
+    })
+
+    it("creates new preference snapshots with the automatic context-mode preference", () => {
+      expect(
+        createDefaultPreferences(1).tempWindowFallback?.tempContextMode,
+      ).toBe(TEMP_CONTEXT_PREFERENCE_MODES.Auto)
     })
 
     it("has valid accountAutoRefresh config", () => {
@@ -111,6 +121,73 @@ describe("userPreferences", () => {
         )
       } finally {
         vi.useRealTimers()
+      }
+    })
+  })
+
+  describe("temporary window fallback preferences", () => {
+    it.each(Object.values(TEMP_CONTEXT_MODES))(
+      "preserves stored concrete mode %s",
+      (tempContextMode) => {
+        expect(
+          normalizeTempWindowFallbackPreferences({ tempContextMode }),
+        ).toMatchObject({ tempContextMode })
+      },
+    )
+
+    it.each([undefined, "unsupported", 1])(
+      "normalizes invalid stored mode %s to the automatic default",
+      (tempContextMode) => {
+        expect(
+          normalizeTempWindowFallbackPreferences({ tempContextMode }),
+        ).toMatchObject({
+          tempContextMode: TEMP_CONTEXT_PREFERENCE_MODES.Auto,
+        })
+      },
+    )
+
+    it("accepts the automatic context-mode preference", () => {
+      expect(
+        normalizeTempWindowFallbackPreferences({
+          tempContextMode: TEMP_CONTEXT_PREFERENCE_MODES.Auto,
+        }),
+      ).toMatchObject({
+        tempContextMode: TEMP_CONTEXT_PREFERENCE_MODES.Auto,
+      })
+    })
+
+    it("normalizes a missing stored mode without writing it back", async () => {
+      const storage = (
+        userPreferences as unknown as {
+          storage: {
+            get: (key: string) => Promise<unknown>
+            set: (key: string, value: unknown) => Promise<void>
+          }
+        }
+      ).storage
+      const storedPreferences = {
+        ...createDefaultPreferences(1),
+        tempWindowFallback: {
+          enabled: true,
+          automaticFeatureBypass:
+            DEFAULT_PREFERENCES.tempWindowFallback!.automaticFeatureBypass,
+        },
+      }
+      const getSpy = vi
+        .spyOn(storage, "get")
+        .mockResolvedValueOnce(storedPreferences)
+      const setSpy = vi.spyOn(storage, "set").mockResolvedValue(undefined)
+
+      try {
+        await expect(userPreferences.getPreferences()).resolves.toMatchObject({
+          tempWindowFallback: {
+            tempContextMode: TEMP_CONTEXT_PREFERENCE_MODES.Auto,
+          },
+        })
+        expect(setSpy).not.toHaveBeenCalled()
+      } finally {
+        getSpy.mockRestore()
+        setSpy.mockRestore()
       }
     })
   })

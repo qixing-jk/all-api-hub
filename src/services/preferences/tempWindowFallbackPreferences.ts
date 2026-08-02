@@ -1,13 +1,14 @@
 import {
-  TEMP_CONTEXT_MODES,
-  type TempContextMode,
+  TEMP_CONTEXT_PREFERENCE_MODES,
+  type TempContextPreferenceMode,
 } from "~/constants/tempContextMode"
 import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,
   type ProtectionBypassAutomaticFeature,
 } from "~/services/protectionBypass/contracts"
 
-export const DEFAULT_TEMP_CONTEXT_MODE = TEMP_CONTEXT_MODES.Tab
+export const DEFAULT_TEMP_CONTEXT_PREFERENCE =
+  TEMP_CONTEXT_PREFERENCE_MODES.Auto
 
 export const DEFAULT_AUTOMATIC_FEATURE_BYPASS = Object.fromEntries(
   Object.values(PROTECTION_BYPASS_AUTOMATIC_FEATURES).map((feature) => [
@@ -19,7 +20,7 @@ export const DEFAULT_AUTOMATIC_FEATURE_BYPASS = Object.fromEntries(
 export interface TempWindowFallbackPreferences {
   enabled: boolean
   automaticFeatureBypass: Record<ProtectionBypassAutomaticFeature, boolean>
-  tempContextMode: TempContextMode
+  tempContextMode: TempContextPreferenceMode
 }
 
 interface LegacyTempWindowFallbackPreferences {
@@ -29,9 +30,13 @@ interface LegacyTempWindowFallbackPreferences {
   tempContextMode?: unknown
 }
 
-/** Narrows persisted mode values to supported temporary-context modes. */
-function isTempContextMode(value: unknown): value is TempContextMode {
-  return Object.values(TEMP_CONTEXT_MODES).includes(value as TempContextMode)
+/** Narrows persisted mode values to supported temporary-context preferences. */
+function isTempContextPreferenceMode(
+  value: unknown,
+): value is TempContextPreferenceMode {
+  return Object.values(TEMP_CONTEXT_PREFERENCE_MODES).includes(
+    value as TempContextPreferenceMode,
+  )
 }
 
 /** Rebuilds the persisted fallback shape and intentionally drops legacy keys. */
@@ -65,8 +70,8 @@ export function normalizeTempWindowFallbackPreferences(
   return {
     enabled: typeof source.enabled === "boolean" ? source.enabled : true,
     automaticFeatureBypass,
-    tempContextMode: isTempContextMode(source.tempContextMode)
+    tempContextMode: isTempContextPreferenceMode(source.tempContextMode)
       ? source.tempContextMode
-      : DEFAULT_TEMP_CONTEXT_MODE,
+      : DEFAULT_TEMP_CONTEXT_PREFERENCE,
   }
 }

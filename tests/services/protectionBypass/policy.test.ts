@@ -1,6 +1,9 @@
 import { describe, expect, expectTypeOf, it } from "vitest"
 
-import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import {
+  TEMP_CONTEXT_MODES,
+  TEMP_CONTEXT_PREFERENCE_MODES,
+} from "~/constants/tempContextMode"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   getTempContextTaskMetadata,
@@ -231,7 +234,7 @@ describe("normalizeProtectionBypassPreferences", () => {
       expect(
         normalizeTempWindowFallbackPreferences({ tempContextMode })
           .tempContextMode,
-      ).toBe(TEMP_CONTEXT_MODES.Tab)
+      ).toBe(TEMP_CONTEXT_PREFERENCE_MODES.Auto)
     },
   )
 })
