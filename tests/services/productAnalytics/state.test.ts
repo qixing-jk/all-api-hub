@@ -147,28 +147,77 @@ describe("productAnalyticsState", () => {
     )
   })
 
+  it("atomically merges bounded protection-bypass focus dimensions", async () => {
+    const focusIncrement = {
+      adapterCounts: { auto: 1 },
+      focusStartCounts: { unfocused: 1 },
+      focusEndCounts: { focused: 1 },
+      focusTransitionCounts: { foregrounded: 1 },
+      focusBackgroundStartAdapterCounts: { composite: 1 },
+      focusForegroundActivationAdapterCounts: { composite: 1 },
+      focusUnknownAdapterCounts: { tab: 1 },
+    } as const
+
+    await Promise.all([
+      productAnalyticsState.incrementShieldBypassSummary(focusIncrement),
+      productAnalyticsState.incrementShieldBypassSummary(focusIncrement),
+    ])
+
+    await expect(
+      productAnalyticsState.getShieldBypassSummaryState(),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        adapterCounts: { auto: 2 },
+        focusStartCounts: { unfocused: 2 },
+        focusEndCounts: { focused: 2 },
+        focusTransitionCounts: { foregrounded: 2 },
+        focusBackgroundStartAdapterCounts: { composite: 2 },
+        focusForegroundActivationAdapterCounts: { composite: 2 },
+        focusUnknownAdapterCounts: { tab: 2 },
+      }),
+    )
+  })
+
   it("rolls shield bypass summary counts to a new UTC day", async () => {
     await productAnalyticsState.replaceShieldBypassSummaryState({
       day: "2026-05-11",
       promptShownCount: 9,
       featureCounts: { key_management: 9 },
       decisionCounts: { allowed: 9 },
+      focusStartCounts: { focused: 9 },
+      focusEndCounts: { focused: 9 },
+      focusTransitionCounts: { remained_focused: 9 },
+      focusBackgroundStartAdapterCounts: { window: 9 },
+      focusForegroundActivationAdapterCounts: { window: 9 },
+      focusUnknownAdapterCounts: { window: 9 },
     })
 
     await productAnalyticsState.incrementShieldBypassSummary({
       settingsVisitedCount: 1,
       featureCounts: { checkin: 1 },
       decisionCounts: { denied: 1 },
+      focusStartCounts: { unfocused: 1 },
+      focusEndCounts: { focused: 1 },
+      focusTransitionCounts: { foregrounded: 1 },
+      focusBackgroundStartAdapterCounts: { composite: 1 },
+      focusForegroundActivationAdapterCounts: { composite: 1 },
+      focusUnknownAdapterCounts: { tab: 1 },
     })
 
-    await expect(productAnalyticsState.getState()).resolves.toEqual(
+    const summary = await productAnalyticsState.getShieldBypassSummaryState()
+
+    expect(summary).toEqual(
       expect.objectContaining({
-        shieldBypassSummary: {
-          day: "2026-05-12",
-          settingsVisitedCount: 1,
-          featureCounts: { checkin: 1 },
-          decisionCounts: { denied: 1 },
-        },
+        day: "2026-05-12",
+        settingsVisitedCount: 1,
+        featureCounts: { checkin: 1 },
+        decisionCounts: { denied: 1 },
+        focusStartCounts: { unfocused: 1 },
+        focusEndCounts: { focused: 1 },
+        focusTransitionCounts: { foregrounded: 1 },
+        focusBackgroundStartAdapterCounts: { composite: 1 },
+        focusForegroundActivationAdapterCounts: { composite: 1 },
+        focusUnknownAdapterCounts: { tab: 1 },
       }),
     )
   })
@@ -308,7 +357,13 @@ describe("productAnalyticsState", () => {
         operationCounts: { fetch: 3, secret_operation: 7 },
         decisionCounts: { allowed: 1, impossible: 9 },
         denialReasonCounts: { deprecated_reason: 2, backend_message: 5 },
-        adapterCounts: { tab: 1, private_host: 6 },
+        adapterCounts: { auto: 1, tab: 1, private_host: 6 },
+        focusStartCounts: { focused: 1, hidden: 2 },
+        focusEndCounts: { unknown: 3, visible: 4 },
+        focusTransitionCounts: { mixed: 5, raw_sequence: 6 },
+        focusBackgroundStartAdapterCounts: { window: 1, auto: 2 },
+        focusForegroundActivationAdapterCounts: { composite: 3, auto: 4 },
+        focusUnknownAdapterCounts: { tab: 5, auto: 6 },
       }),
     ).toEqual({
       day: "2026-05-12",
@@ -319,7 +374,13 @@ describe("productAnalyticsState", () => {
       operationCounts: { fetch: 3, other: 7 },
       decisionCounts: { allowed: 1, other: 9 },
       denialReasonCounts: { other: 7 },
-      adapterCounts: { tab: 1, other: 6 },
+      adapterCounts: { auto: 1, tab: 1, other: 6 },
+      focusStartCounts: { focused: 1 },
+      focusEndCounts: { unknown: 3 },
+      focusTransitionCounts: { mixed: 5 },
+      focusBackgroundStartAdapterCounts: { window: 1, other: 2 },
+      focusForegroundActivationAdapterCounts: { composite: 3, other: 4 },
+      focusUnknownAdapterCounts: { tab: 5, other: 6 },
     })
   })
 

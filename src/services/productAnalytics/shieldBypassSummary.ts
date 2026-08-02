@@ -7,6 +7,11 @@ import type {
   ProtectionBypassFeature,
   ProtectionBypassOperation,
 } from "~/services/protectionBypass/contracts"
+import {
+  BROWSER_FOCUS_STATES,
+  BROWSER_FOCUS_TRANSITIONS,
+  type BrowserFocusObservation,
+} from "~/utils/browser/browserFocus"
 
 import { productAnalyticsClient } from "./client"
 import {
@@ -53,6 +58,12 @@ function emptySummary(
     decisionCounts: {},
     denialReasonCounts: {},
     adapterCounts: {},
+    focusStartCounts: {},
+    focusEndCounts: {},
+    focusTransitionCounts: {},
+    focusBackgroundStartAdapterCounts: {},
+    focusForegroundActivationAdapterCounts: {},
+    focusUnknownAdapterCounts: {},
   }
 }
 
@@ -68,6 +79,12 @@ function hasSummaryActivity(summary: ProductAnalyticsShieldBypassSummaryState) {
     summary.decisionCounts,
     summary.denialReasonCounts,
     summary.adapterCounts,
+    summary.focusStartCounts,
+    summary.focusEndCounts,
+    summary.focusTransitionCounts,
+    summary.focusBackgroundStartAdapterCounts,
+    summary.focusForegroundActivationAdapterCounts,
+    summary.focusUnknownAdapterCounts,
   ].some((counts) =>
     Object.values(counts ?? {}).some((count) => (count ?? 0) > 0),
   )
@@ -83,12 +100,12 @@ function hasSummaryActivity(summary: ProductAnalyticsShieldBypassSummaryState) {
   )
 }
 
-const POLICY_COUNT_PROPERTY_SET = new Set<string>(
+const PROTECTION_BYPASS_COUNT_PROPERTY_SET = new Set<string>(
   PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES,
 )
 
 /** Flattens controlled counter maps into the event's fixed scalar properties. */
-function buildPolicyCountProperties(
+function buildProtectionBypassCountProperties(
   summary: ProductAnalyticsShieldBypassSummaryState,
 ): Partial<Record<ProductAnalyticsProtectionBypassCountProperty, number>> {
   const properties: Partial<
@@ -102,12 +119,24 @@ function buildPolicyCountProperties(
     ["decision", summary.decisionCounts],
     ["denial", summary.denialReasonCounts],
     ["adapter", summary.adapterCounts],
+    ["focus_start", summary.focusStartCounts],
+    ["focus_end", summary.focusEndCounts],
+    ["focus_transition", summary.focusTransitionCounts],
+    [
+      "focus_background_start_adapter",
+      summary.focusBackgroundStartAdapterCounts,
+    ],
+    [
+      "focus_foreground_activation_adapter",
+      summary.focusForegroundActivationAdapterCounts,
+    ],
+    ["focus_unknown_adapter", summary.focusUnknownAdapterCounts],
   ] as const
 
   for (const [dimension, counts] of dimensions) {
     for (const [value, count] of Object.entries(counts ?? {})) {
       const property = `protection_bypass_${dimension}_${value}_count`
-      if (!POLICY_COUNT_PROPERTY_SET.has(property)) continue
+      if (!PROTECTION_BYPASS_COUNT_PROPERTY_SET.has(property)) continue
       properties[property as ProductAnalyticsProtectionBypassCountProperty] =
         count
     }
@@ -134,7 +163,7 @@ function buildSummaryProperties(
       summary.tempWindowTurnstileFetchSuccessCount ?? 0,
     temp_window_turnstile_fetch_failure_count:
       summary.tempWindowTurnstileFetchFailureCount ?? 0,
-    ...buildPolicyCountProperties(summary),
+    ...buildProtectionBypassCountProperties(summary),
   }
 }
 
@@ -224,6 +253,36 @@ export async function recordProtectionBypassDecision(
       ? { denialReasonCounts: { [summary.denialReason]: 1 } }
       : {}),
     ...(summary.adapter ? { adapterCounts: { [summary.adapter]: 1 } } : {}),
+  })
+}
+
+/** Records one bounded focus observation as controlled daily counters only. */
+export async function recordShieldBypassFocusObservation(params: {
+  observation: BrowserFocusObservation
+  adapter: TempContextMode
+}) {
+  const { observation, adapter } = params
+  const foregroundActivationObserved =
+    observation.start === BROWSER_FOCUS_STATES.Unfocused &&
+    (observation.transition === BROWSER_FOCUS_TRANSITIONS.Foregrounded ||
+      observation.transition === BROWSER_FOCUS_TRANSITIONS.Mixed ||
+      observation.end === BROWSER_FOCUS_STATES.Focused)
+  const incomplete =
+    observation.start === BROWSER_FOCUS_STATES.Unknown ||
+    observation.end === BROWSER_FOCUS_STATES.Unknown ||
+    observation.transition === BROWSER_FOCUS_TRANSITIONS.Unknown
+
+  await incrementShieldBypassSummary({
+    focusStartCounts: { [observation.start]: 1 },
+    focusEndCounts: { [observation.end]: 1 },
+    focusTransitionCounts: { [observation.transition]: 1 },
+    ...(observation.start === BROWSER_FOCUS_STATES.Unfocused
+      ? { focusBackgroundStartAdapterCounts: { [adapter]: 1 } }
+      : {}),
+    ...(foregroundActivationObserved
+      ? { focusForegroundActivationAdapterCounts: { [adapter]: 1 } }
+      : {}),
+    ...(incomplete ? { focusUnknownAdapterCounts: { [adapter]: 1 } } : {}),
   })
 }
 

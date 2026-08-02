@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
@@ -15,6 +16,10 @@ import {
   PROTECTION_BYPASS_FEATURES,
   PROTECTION_BYPASS_OPERATIONS,
 } from "~/services/protectionBypass/contracts"
+import {
+  BROWSER_FOCUS_STATES,
+  BROWSER_FOCUS_TRANSITIONS,
+} from "~/utils/browser/browserFocus"
 
 const { captureMock, stateMocks } = vi.hoisted(() => ({
   captureMock: vi.fn(),
@@ -69,7 +74,13 @@ describe("shield bypass product analytics summary", () => {
         policy_unavailable: 1,
         resource_stale: 3,
       },
-      adapterCounts: { tab: 2, window: 1 },
+      adapterCounts: { auto: 3, tab: 2, window: 1 },
+      focusStartCounts: { unfocused: 1 },
+      focusEndCounts: { focused: 1 },
+      focusTransitionCounts: { foregrounded: 1 },
+      focusBackgroundStartAdapterCounts: { composite: 1 },
+      focusForegroundActivationAdapterCounts: { composite: 1 },
+      focusUnknownAdapterCounts: { tab: 1 },
     })
     stateMocks.incrementShieldBypassSummary.mockResolvedValue(true)
     stateMocks.replaceShieldBypassSummaryState.mockResolvedValue(true)
@@ -170,6 +181,59 @@ describe("shield bypass product analytics summary", () => {
     expect(captureMock).not.toHaveBeenCalled()
   })
 
+  it.each([
+    [BROWSER_FOCUS_TRANSITIONS.Foregrounded, BROWSER_FOCUS_STATES.Focused],
+    [BROWSER_FOCUS_TRANSITIONS.Mixed, BROWSER_FOCUS_STATES.Unfocused],
+  ] as const)(
+    "records an unfocused %s observation with background and foreground activation counters",
+    async (transition, end) => {
+      const { recordShieldBypassFocusObservation } = await import(
+        "~/services/productAnalytics/shieldBypassSummary"
+      )
+
+      await recordShieldBypassFocusObservation({
+        observation: {
+          start: BROWSER_FOCUS_STATES.Unfocused,
+          transition,
+          end,
+        },
+        adapter: TEMP_CONTEXT_MODES.Composite,
+      })
+
+      expect(stateMocks.incrementShieldBypassSummary).toHaveBeenCalledWith({
+        focusStartCounts: { unfocused: 1 },
+        focusEndCounts: { [end]: 1 },
+        focusTransitionCounts: { [transition]: 1 },
+        focusBackgroundStartAdapterCounts: { composite: 1 },
+        focusForegroundActivationAdapterCounts: { composite: 1 },
+      })
+      expect(captureMock).not.toHaveBeenCalled()
+    },
+  )
+
+  it("records incomplete focus observations without treating unknown start as background", async () => {
+    const { recordShieldBypassFocusObservation } = await import(
+      "~/services/productAnalytics/shieldBypassSummary"
+    )
+
+    await recordShieldBypassFocusObservation({
+      observation: {
+        start: BROWSER_FOCUS_STATES.Unknown,
+        transition: BROWSER_FOCUS_TRANSITIONS.Unknown,
+        end: BROWSER_FOCUS_STATES.Focused,
+      },
+      adapter: TEMP_CONTEXT_MODES.Tab,
+    })
+
+    expect(stateMocks.incrementShieldBypassSummary).toHaveBeenCalledWith({
+      focusStartCounts: { unknown: 1 },
+      focusEndCounts: { focused: 1 },
+      focusTransitionCounts: { unknown: 1 },
+      focusUnknownAdapterCounts: { tab: 1 },
+    })
+    expect(captureMock).not.toHaveBeenCalled()
+  })
+
   it("uploads one exact daily summary and rolls the local state forward", async () => {
     const { flushShieldBypassDailySummary } = await import(
       "~/services/productAnalytics/shieldBypassSummary"
@@ -207,8 +271,15 @@ describe("shield bypass product analytics summary", () => {
         protection_bypass_denial_permission_required_count: 1,
         protection_bypass_denial_policy_unavailable_count: 1,
         protection_bypass_denial_resource_stale_count: 3,
+        protection_bypass_adapter_auto_count: 3,
         protection_bypass_adapter_tab_count: 2,
         protection_bypass_adapter_window_count: 1,
+        protection_bypass_focus_start_unfocused_count: 1,
+        protection_bypass_focus_end_focused_count: 1,
+        protection_bypass_focus_transition_foregrounded_count: 1,
+        protection_bypass_focus_background_start_adapter_composite_count: 1,
+        protection_bypass_focus_foreground_activation_adapter_composite_count: 1,
+        protection_bypass_focus_unknown_adapter_tab_count: 1,
       },
     )
     expect(stateMocks.replaceShieldBypassSummaryState).toHaveBeenCalledWith({
@@ -227,6 +298,12 @@ describe("shield bypass product analytics summary", () => {
       decisionCounts: {},
       denialReasonCounts: {},
       adapterCounts: {},
+      focusStartCounts: {},
+      focusEndCounts: {},
+      focusTransitionCounts: {},
+      focusBackgroundStartAdapterCounts: {},
+      focusForegroundActivationAdapterCounts: {},
+      focusUnknownAdapterCounts: {},
     })
   })
 
@@ -240,6 +317,25 @@ describe("shield bypass product analytics summary", () => {
 
     expect(captureMock).toHaveBeenCalledTimes(1)
     expect(stateMocks.replaceShieldBypassSummaryState).not.toHaveBeenCalled()
+  })
+
+  it("uploads a previous-day summary containing only focus activity", async () => {
+    stateMocks.getShieldBypassSummaryState.mockResolvedValue({
+      day: "2026-05-11",
+      focusStartCounts: { unfocused: 1 },
+    })
+    const { flushShieldBypassDailySummary } = await import(
+      "~/services/productAnalytics/shieldBypassSummary"
+    )
+
+    await expect(flushShieldBypassDailySummary()).resolves.toBe(true)
+
+    expect(captureMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured,
+      expect.objectContaining({
+        protection_bypass_focus_start_unfocused_count: 1,
+      }),
+    )
   })
 
   it("keeps same-day summary local until the next UTC day", async () => {

@@ -31,6 +31,7 @@ import {
   type ProductAnalyticsStatusKind,
 } from "~/services/productAnalytics/contracts"
 import {
+  recordShieldBypassFocusObservation,
   recordShieldBypassTempWindowFetchResult,
   recordShieldBypassTempWindowTurnstileFetchResult,
 } from "~/services/productAnalytics/shieldBypassSummary"
@@ -71,7 +72,10 @@ import {
   WINDOW_CREATION_FAILURE_REASONS,
   type WindowCreationFailureReason,
 } from "~/utils/browser/browserApi"
-import { readBrowserFocusState } from "~/utils/browser/browserFocus"
+import {
+  createBrowserFocusObservation,
+  readBrowserFocusState,
+} from "~/utils/browser/browserFocus"
 import {
   addAuthMethodHeader,
   AUTH_MODE,
@@ -2170,66 +2174,83 @@ async function acquireTempContext(
         focusState,
       })
 
-      let acquiredContext = await getReusableContext(origin)
-      if (!acquiredContext) {
-        logTempWindow("acquireTempContextCreate", {
-          requestId,
-          origin,
-          url: sanitizeUrlForLog(url),
-          preferredMode,
-          requestedMode,
-        })
-        acquiredContext = await createTempContextInstance(
-          url,
-          origin,
-          requestId,
-          requestedMode,
-          suppressMinimize,
-          options,
-        )
-        registerContext(origin, acquiredContext)
-        logTempWindow("acquireTempContextCreated", {
+      const focusObservation = createBrowserFocusObservation(focusState)
+      let acquiredContext: TempContext | null = null
+
+      try {
+        acquiredContext = await getReusableContext(origin)
+        if (!acquiredContext) {
+          logTempWindow("acquireTempContextCreate", {
+            requestId,
+            origin,
+            url: sanitizeUrlForLog(url),
+            preferredMode,
+            requestedMode,
+          })
+          acquiredContext = await createTempContextInstance(
+            url,
+            origin,
+            requestId,
+            requestedMode,
+            suppressMinimize,
+            options,
+          )
+          registerContext(origin, acquiredContext)
+          logTempWindow("acquireTempContextCreated", {
+            requestId,
+            origin,
+            contextId: acquiredContext.id,
+            tabId: acquiredContext.tabId,
+            type: acquiredContext.type,
+            preferredMode,
+            requestedMode,
+          })
+        } else {
+          logTempWindow("acquireTempContextReuse", {
+            requestId,
+            origin,
+            contextId: acquiredContext.id,
+            tabId: acquiredContext.tabId,
+            type: acquiredContext.type,
+            preferredMode,
+            requestedMode,
+          })
+        }
+
+        // It's possible that during async operations the context or its pool was
+        // marked for destruction. Perform a final validity check before using it.
+        if (
+          destroyingOrigins.has(origin) ||
+          !tempContextById.has(acquiredContext.id)
+        ) {
+          throw new Error("Acquired temp context is no longer valid")
+        }
+
+        attachRequestToContext(requestId, acquiredContext)
+        acquiredContext.lastUsed = Date.now()
+        clearContextReleaseTimer(acquiredContext)
+        logTempWindow("acquireTempContextSuccess", {
           requestId,
           origin,
           contextId: acquiredContext.id,
           tabId: acquiredContext.tabId,
           type: acquiredContext.type,
-          preferredMode,
-          requestedMode,
+          activeRequestCount: acquiredContext.activeRequestIds.size,
         })
-      } else {
-        logTempWindow("acquireTempContextReuse", {
-          requestId,
-          origin,
-          contextId: acquiredContext.id,
-          tabId: acquiredContext.tabId,
-          type: acquiredContext.type,
-          preferredMode,
-          requestedMode,
-        })
+        return acquiredContext
+      } finally {
+        const completedObservation = await focusObservation.finish()
+        if (acquiredContext) {
+          try {
+            void recordShieldBypassFocusObservation({
+              observation: completedObservation,
+              adapter: acquiredContext.mode,
+            }).catch(() => undefined)
+          } catch {
+            // Product analytics is best effort and cannot change pool behavior.
+          }
+        }
       }
-
-      // It's possible that during async operations the context or its pool was
-      // marked for destruction. Perform a final validity check before using it.
-      if (
-        destroyingOrigins.has(origin) ||
-        !tempContextById.has(acquiredContext.id)
-      ) {
-        throw new Error("Acquired temp context is no longer valid")
-      }
-
-      attachRequestToContext(requestId, acquiredContext)
-      acquiredContext.lastUsed = Date.now()
-      clearContextReleaseTimer(acquiredContext)
-      logTempWindow("acquireTempContextSuccess", {
-        requestId,
-        origin,
-        contextId: acquiredContext.id,
-        tabId: acquiredContext.tabId,
-        type: acquiredContext.type,
-        activeRequestCount: acquiredContext.activeRequestIds.size,
-      })
-      return acquiredContext
     })
 
     if (finalDecision?.kind === PROTECTION_BYPASS_DECISION_RESULTS.Allowed) {

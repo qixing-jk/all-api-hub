@@ -36,6 +36,12 @@ export type ProductAnalyticsShieldBypassSummaryState = {
   decisionCounts?: ProductAnalyticsProtectionBypassCounter<"decisionCounts">
   denialReasonCounts?: ProductAnalyticsProtectionBypassCounter<"denialReasonCounts">
   adapterCounts?: ProductAnalyticsProtectionBypassCounter<"adapterCounts">
+  focusStartCounts?: ProductAnalyticsProtectionBypassCounter<"focusStartCounts">
+  focusEndCounts?: ProductAnalyticsProtectionBypassCounter<"focusEndCounts">
+  focusTransitionCounts?: ProductAnalyticsProtectionBypassCounter<"focusTransitionCounts">
+  focusBackgroundStartAdapterCounts?: ProductAnalyticsProtectionBypassCounter<"focusBackgroundStartAdapterCounts">
+  focusForegroundActivationAdapterCounts?: ProductAnalyticsProtectionBypassCounter<"focusForegroundActivationAdapterCounts">
+  focusUnknownAdapterCounts?: ProductAnalyticsProtectionBypassCounter<"focusUnknownAdapterCounts">
 }
 
 type ProductAnalyticsProtectionBypassDimension =
@@ -80,7 +86,7 @@ function normalizeCount(value: unknown): number | undefined {
   return Math.floor(value)
 }
 
-/** Folds persisted keys into a fixed enum-sized map plus one overflow bucket. */
+/** Keeps controlled keys and folds unknowns only when an overflow bucket exists. */
 function normalizeControlledCounter(
   value: unknown,
   allowedValues: readonly string[],
@@ -90,10 +96,12 @@ function normalizeControlledCounter(
   }
 
   const allowed = new Set(allowedValues)
+  const hasOverflowBucket = allowed.has("other")
   const normalized: Record<string, number> = {}
   for (const [rawKey, rawCount] of Object.entries(value)) {
     const count = normalizeCount(rawCount)
     if (count === undefined) continue
+    if (!allowed.has(rawKey) && !hasOverflowBucket) continue
     const key = allowed.has(rawKey) ? rawKey : "other"
     normalized[key] = (normalized[key] ?? 0) + count
   }

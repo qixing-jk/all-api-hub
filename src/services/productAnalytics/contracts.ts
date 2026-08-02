@@ -15,7 +15,10 @@ import {
   SITE_TYPES,
   type ManagedSiteType,
 } from "~/constants/siteType"
-import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import {
+  TEMP_CONTEXT_MODES,
+  TEMP_CONTEXT_PREFERENCE_MODES,
+} from "~/constants/tempContextMode"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_DECISION_RESULTS,
@@ -36,6 +39,10 @@ import {
 } from "~/types"
 import type { LogLevel } from "~/types/logging"
 import type { ThemeMode } from "~/types/theme"
+import {
+  BROWSER_FOCUS_STATES,
+  BROWSER_FOCUS_TRANSITIONS,
+} from "~/utils/browser/browserFocus"
 
 import type { SettingsSnapshotAutomaticFeatureBypassProperty } from "./settingsSnapshot"
 
@@ -135,7 +142,19 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS = {
     ...PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_REASONS,
     "other",
   ],
-  adapterCounts: [...Object.values(TEMP_CONTEXT_MODES), "other"],
+  adapterCounts: [...Object.values(TEMP_CONTEXT_PREFERENCE_MODES), "other"],
+  focusStartCounts: [...Object.values(BROWSER_FOCUS_STATES)],
+  focusEndCounts: [...Object.values(BROWSER_FOCUS_STATES)],
+  focusTransitionCounts: [...Object.values(BROWSER_FOCUS_TRANSITIONS)],
+  focusBackgroundStartAdapterCounts: [
+    ...Object.values(TEMP_CONTEXT_MODES),
+    "other",
+  ],
+  focusForegroundActivationAdapterCounts: [
+    ...Object.values(TEMP_CONTEXT_MODES),
+    "other",
+  ],
+  focusUnknownAdapterCounts: [...Object.values(TEMP_CONTEXT_MODES), "other"],
 } as const
 
 /** Fixed scalar properties emitted by the bounded daily bypass summary. */
@@ -179,10 +198,35 @@ export const PRODUCT_ANALYTICS_PROTECTION_BYPASS_COUNT_PROPERTIES = [
   "protection_bypass_denial_unsupported_environment_count",
   "protection_bypass_denial_policy_unavailable_count",
   "protection_bypass_denial_other_count",
+  "protection_bypass_adapter_auto_count",
   "protection_bypass_adapter_window_count",
   "protection_bypass_adapter_composite_count",
   "protection_bypass_adapter_tab_count",
   "protection_bypass_adapter_other_count",
+  "protection_bypass_focus_start_focused_count",
+  "protection_bypass_focus_start_unfocused_count",
+  "protection_bypass_focus_start_unknown_count",
+  "protection_bypass_focus_end_focused_count",
+  "protection_bypass_focus_end_unfocused_count",
+  "protection_bypass_focus_end_unknown_count",
+  "protection_bypass_focus_transition_remained_focused_count",
+  "protection_bypass_focus_transition_remained_unfocused_count",
+  "protection_bypass_focus_transition_foregrounded_count",
+  "protection_bypass_focus_transition_backgrounded_count",
+  "protection_bypass_focus_transition_mixed_count",
+  "protection_bypass_focus_transition_unknown_count",
+  "protection_bypass_focus_background_start_adapter_window_count",
+  "protection_bypass_focus_background_start_adapter_composite_count",
+  "protection_bypass_focus_background_start_adapter_tab_count",
+  "protection_bypass_focus_background_start_adapter_other_count",
+  "protection_bypass_focus_foreground_activation_adapter_window_count",
+  "protection_bypass_focus_foreground_activation_adapter_composite_count",
+  "protection_bypass_focus_foreground_activation_adapter_tab_count",
+  "protection_bypass_focus_foreground_activation_adapter_other_count",
+  "protection_bypass_focus_unknown_adapter_window_count",
+  "protection_bypass_focus_unknown_adapter_composite_count",
+  "protection_bypass_focus_unknown_adapter_tab_count",
+  "protection_bypass_focus_unknown_adapter_other_count",
 ] as const
 
 export type ProductAnalyticsProtectionBypassCountProperty =

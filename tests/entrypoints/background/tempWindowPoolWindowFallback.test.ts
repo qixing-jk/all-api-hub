@@ -5,6 +5,7 @@ import {
   OPENROUTER_BOOTSTRAP_MUTATION_STATES,
 } from "~/constants/openRouterBootstrap"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import {
@@ -28,6 +29,8 @@ const {
   trackProductAnalyticsActionCompletedMock,
   recordTempWindowFetchResultMock,
   recordTempWindowTurnstileFetchResultMock,
+  recordShieldBypassFocusObservationMock,
+  createBrowserFocusObservationMock,
   loggerErrorMock,
   loggerWarnMock,
   handleTempWindowOpenRouterManagementKeyActionMock,
@@ -35,6 +38,8 @@ const {
   trackProductAnalyticsActionCompletedMock: vi.fn(),
   recordTempWindowFetchResultMock: vi.fn(),
   recordTempWindowTurnstileFetchResultMock: vi.fn(),
+  recordShieldBypassFocusObservationMock: vi.fn(),
+  createBrowserFocusObservationMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   loggerWarnMock: vi.fn(),
   handleTempWindowOpenRouterManagementKeyActionMock: vi.fn(),
@@ -49,6 +54,7 @@ vi.mock("~/services/productAnalytics/shieldBypassSummary", () => ({
   recordShieldBypassTempWindowFetchResult: recordTempWindowFetchResultMock,
   recordShieldBypassTempWindowTurnstileFetchResult:
     recordTempWindowTurnstileFetchResultMock,
+  recordShieldBypassFocusObservation: recordShieldBypassFocusObservationMock,
 }))
 
 vi.mock("~/utils/core/logger", () => ({
@@ -178,6 +184,24 @@ describe("tempWindowPool window fallback", () => {
     trackProductAnalyticsActionCompletedMock.mockReset()
     recordTempWindowFetchResultMock.mockReset()
     recordTempWindowTurnstileFetchResultMock.mockReset()
+    recordShieldBypassFocusObservationMock
+      .mockReset()
+      .mockResolvedValue(undefined)
+    createBrowserFocusObservationMock
+      .mockReset()
+      .mockImplementation((start: "focused" | "unfocused" | "unknown") => ({
+        finish: vi.fn().mockResolvedValue({
+          start,
+          transition:
+            start === "focused"
+              ? "remained_focused"
+              : start === "unfocused"
+                ? "remained_unfocused"
+                : "unknown",
+          end: start,
+        }),
+        cancel: vi.fn(),
+      }))
     loggerErrorMock.mockReset()
     loggerWarnMock.mockReset()
     handleTempWindowOpenRouterManagementKeyActionMock.mockReset()
@@ -215,6 +239,15 @@ describe("tempWindowPool window fallback", () => {
         removeTab: removeTabMock,
         removeTabOrWindow: removeTabOrWindowMock,
         removeWindow: removeWindowMock,
+      }
+    })
+    vi.doMock("~/utils/browser/browserFocus", async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import("~/utils/browser/browserFocus")>()
+
+      return {
+        ...actual,
+        createBrowserFocusObservation: createBrowserFocusObservationMock,
       }
     })
     vi.doMock("~/services/accounts/accountStorage", () => ({
@@ -288,6 +321,7 @@ describe("tempWindowPool window fallback", () => {
     vi.doUnmock("~/utils/browser/firefoxTempWindowDownloadBlocker")
     vi.doUnmock("~/utils/browser/protectionBypass")
     vi.doUnmock("~/utils/browser/browserApi")
+    vi.doUnmock("~/utils/browser/browserFocus")
     vi.doUnmock("~/services/siteDetection/detectSiteType")
     vi.doUnmock("~/services/preferences/userPreferences")
     vi.doUnmock("~/entrypoints/background/openrouter/managementKeyAction")
@@ -902,18 +936,43 @@ describe("tempWindowPool window fallback", () => {
     tempContextMode = "auto"
     const markers: string[] = []
     ;(globalThis as any).browser.windows.getLastFocused = vi.fn(async () => {
-      markers.push("focus")
+      markers.push("focus-snapshot")
       return { id: 1, focused: false }
     })
-    createTabMock.mockImplementationOnce(async () => {
-      markers.push("open")
+    createBrowserFocusObservationMock.mockImplementation(() => {
+      markers.push("observe-start")
+      return {
+        finish: vi.fn(async () => {
+          markers.push("observe-finish")
+          return {
+            start: "unfocused",
+            transition: "foregrounded",
+            end: "focused",
+          }
+        }),
+        cancel: vi.fn(),
+      }
+    })
+    createWindowMock.mockImplementationOnce(async () => {
+      markers.push("open-or-reuse")
       return { id: 121 }
+    })
+    tabsQueryMock.mockResolvedValueOnce([{ id: 122 }])
+    const sendMessage = sendMessageMock.getMockImplementation() as (
+      tabId: number,
+      message: { action: string },
+    ) => Promise<unknown>
+    sendMessageMock.mockImplementation(async (tabId, message) => {
+      if (message.action === RuntimeActionIds.ContentPerformTempWindowFetch) {
+        markers.push("protected-task")
+      }
+      return await sendMessage(tabId, message)
     })
     const authorizeAtAcquire = vi.fn(async () => {
       markers.push("authorize")
       return {
         kind: "allowed" as const,
-        adapter: "auto" as const,
+        adapter: "composite" as const,
         feature: "account_refresh" as const,
         operation: "fetch" as const,
         cause: "api_error_fallback" as const,
@@ -942,11 +1001,26 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(500)
     await firstRequest
 
-    expect(markers).toEqual(["focus", "authorize", "open"])
+    expect(markers).toEqual([
+      "focus-snapshot",
+      "authorize",
+      "observe-start",
+      "open-or-reuse",
+      "observe-finish",
+      "protected-task",
+    ])
+    expect(recordShieldBypassFocusObservationMock).toHaveBeenCalledWith({
+      observation: {
+        start: "unfocused",
+        transition: "foregrounded",
+        end: "focused",
+      },
+      adapter: TEMP_CONTEXT_MODES.Composite,
+    })
 
     markers.length = 0
     tabsGetMock.mockImplementation(async () => {
-      markers.push("reuse")
+      markers.push("open-or-reuse")
       return { status: "complete" }
     })
     const secondRequest = executeAuthorizedTempContextTask(
@@ -957,8 +1031,23 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(500)
     await secondRequest
 
-    expect(markers.slice(0, 3)).toEqual(["focus", "authorize", "reuse"])
-    expect(createTabMock).toHaveBeenCalledTimes(1)
+    expect(markers).toEqual([
+      "focus-snapshot",
+      "authorize",
+      "observe-start",
+      "open-or-reuse",
+      "observe-finish",
+      "protected-task",
+    ])
+    expect(createWindowMock).toHaveBeenCalledTimes(1)
+    expect(recordShieldBypassFocusObservationMock).toHaveBeenLastCalledWith({
+      observation: {
+        start: "unfocused",
+        transition: "foregrounded",
+        end: "focused",
+      },
+      adapter: TEMP_CONTEXT_MODES.Composite,
+    })
   })
 
   it("reports the tab adapter actually acquired after window rollback", async () => {
@@ -1000,6 +1089,9 @@ describe("tempWindowPool window fallback", () => {
       kind: "allowed",
       adapter: "tab",
     })
+    expect(recordShieldBypassFocusObservationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ adapter: TEMP_CONTEXT_MODES.Tab }),
+    )
   })
 
   it("reports the tab adapter actually acquired after composite rollback", async () => {
@@ -1101,6 +1193,10 @@ describe("tempWindowPool window fallback", () => {
       kind: "allowed",
       adapter: "tab",
     })
+    expect(recordShieldBypassFocusObservationMock).toHaveBeenCalledTimes(2)
+    expect(recordShieldBypassFocusObservationMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ adapter: TEMP_CONTEXT_MODES.Tab }),
+    )
   })
 
   it("does not let an unresolved outcome observer block the next same-origin task", async () => {
@@ -1150,6 +1246,15 @@ describe("tempWindowPool window fallback", () => {
 
   it("reports an allowed acquisition failure as unavailable without an adapter", async () => {
     createWindowMock.mockRejectedValueOnce(new Error("unexpected window error"))
+    const finishFocusObservation = vi.fn().mockResolvedValue({
+      start: "unknown",
+      transition: "unknown",
+      end: "unknown",
+    })
+    createBrowserFocusObservationMock.mockReturnValueOnce({
+      finish: finishFocusObservation,
+      cancel: vi.fn(),
+    })
     const { executeAuthorizedTempContextTask } = await import(
       "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
     )
@@ -1185,6 +1290,50 @@ describe("tempWindowPool window fallback", () => {
     )
     expect(reportOutcome).toHaveBeenCalledTimes(1)
     expect(reportOutcome).toHaveBeenCalledWith({ kind: "unavailable" })
+    expect(finishFocusObservation).toHaveBeenCalledOnce()
+    expect(recordShieldBypassFocusObservationMock).not.toHaveBeenCalled()
+  })
+
+  it("does not let rejected focus telemetry change the protected task result", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 123 })
+    recordShieldBypassFocusObservationMock.mockRejectedValueOnce(
+      new Error("analytics unavailable"),
+    )
+    const { executeAuthorizedTempContextTask } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+    const response = vi.fn()
+    const request = executeAuthorizedTempContextTask(
+      {
+        kind: "api_fallback_fetch",
+        params: {
+          originUrl: "https://example.invalid",
+          fetchUrl: "https://example.invalid/api/analytics-unavailable",
+          fetchOptions: { method: "GET" },
+          requestId: "req-focus-analytics-unavailable",
+        },
+      },
+      vi.fn().mockResolvedValue({
+        kind: "allowed",
+        adapter: "tab",
+        feature: "account_refresh",
+        operation: "fetch",
+        cause: "api_error_fallback",
+        surface: "background",
+      }),
+      response,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(recordShieldBypassFocusObservationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ adapter: TEMP_CONTEXT_MODES.Tab }),
+    )
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true }),
+    )
   })
 
   it("finalizes a popup context after one failed removal so the next request creates a fresh context", async () => {

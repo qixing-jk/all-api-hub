@@ -1768,6 +1768,10 @@ describe("product analytics privacy filtering", () => {
         protection_bypass_denial_automatic_disabled_count: 4,
         protection_bypass_denial_resource_stale_count: 2,
         protection_bypass_adapter_tab_count: 2,
+        protection_bypass_focus_start_unfocused_count: 1,
+        protection_bypass_focus_transition_foregrounded_count: 1,
+        protection_bypass_focus_window_id: 17,
+        protection_bypass_focus_end_focused_count: "one",
         protection_bypass_feature_private_host_count: 99,
         grant_id: "private-grant",
         request_id: "private-request",
@@ -1800,6 +1804,8 @@ describe("product analytics privacy filtering", () => {
       protection_bypass_denial_automatic_disabled_count: 4,
       protection_bypass_denial_resource_stale_count: 2,
       protection_bypass_adapter_tab_count: 2,
+      protection_bypass_focus_start_unfocused_count: 1,
+      protection_bypass_focus_transition_foregrounded_count: 1,
     })
   })
 
@@ -1886,6 +1892,13 @@ describe("product analytics privacy filtering", () => {
       decisionCounts: "decision",
       denialReasonCounts: "denial",
       adapterCounts: "adapter",
+      focusStartCounts: "focus_start",
+      focusEndCounts: "focus_end",
+      focusTransitionCounts: "focus_transition",
+      focusBackgroundStartAdapterCounts: "focus_background_start_adapter",
+      focusForegroundActivationAdapterCounts:
+        "focus_foreground_activation_adapter",
+      focusUnknownAdapterCounts: "focus_unknown_adapter",
     } as const
     const expected = Object.entries(
       PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS,
