@@ -211,6 +211,29 @@ describe("shield bypass product analytics summary", () => {
     },
   )
 
+  it("counts a focused end snapshot when the foreground event was missed", async () => {
+    const { recordShieldBypassFocusObservation } = await import(
+      "~/services/productAnalytics/shieldBypassSummary"
+    )
+
+    await recordShieldBypassFocusObservation({
+      observation: {
+        start: BROWSER_FOCUS_STATES.Unfocused,
+        transition: BROWSER_FOCUS_TRANSITIONS.RemainedUnfocused,
+        end: BROWSER_FOCUS_STATES.Focused,
+      },
+      adapter: TEMP_CONTEXT_MODES.Tab,
+    })
+
+    expect(stateMocks.incrementShieldBypassSummary).toHaveBeenCalledWith({
+      focusStartCounts: { unfocused: 1 },
+      focusEndCounts: { focused: 1 },
+      focusTransitionCounts: { remained_unfocused: 1 },
+      focusBackgroundStartAdapterCounts: { tab: 1 },
+      focusForegroundActivationAdapterCounts: { tab: 1 },
+    })
+  })
+
   it("records incomplete focus observations without treating unknown start as background", async () => {
     const { recordShieldBypassFocusObservation } = await import(
       "~/services/productAnalytics/shieldBypassSummary"

@@ -323,6 +323,21 @@ describe("createBrowserFocusObservation", () => {
     })
   })
 
+  it("ignores malformed focus events without inventing a transition", async () => {
+    getLastFocused.mockResolvedValueOnce({ id: 1, focused: false })
+    const observation = createBrowserFocusObservation(
+      BROWSER_FOCUS_STATES.Unfocused,
+    )
+
+    listener?.("invalid-window-id" as never)
+
+    await expect(observation.finish()).resolves.toEqual({
+      start: BROWSER_FOCUS_STATES.Unfocused,
+      transition: BROWSER_FOCUS_TRANSITIONS.RemainedUnfocused,
+      end: BROWSER_FOCUS_STATES.Unfocused,
+    })
+  })
+
   it("removes its listener before reading the end state and shares concurrent finishes", async () => {
     const calls: string[] = []
     removeListener.mockImplementation(() => {

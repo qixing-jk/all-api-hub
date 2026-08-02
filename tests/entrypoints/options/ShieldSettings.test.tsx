@@ -939,46 +939,70 @@ describe("ShieldSettings", () => {
     }
   })
 
-  it("shows the focus outcome for a completed development trigger", async () => {
-    isDevelopmentModeMock.mockReturnValue(true)
-    focusObservationController.finish.mockResolvedValueOnce({
-      start: "focused",
-      transition: "backgrounded",
-      end: "unfocused",
-    })
-    const view = render(<ShieldSettings />, {
-      withUserPreferencesProvider: false,
-      withThemeProvider: false,
-    })
+  it.each([
+    {
+      observation: {
+        start: "focused",
+        transition: "backgrounded",
+        end: "unfocused",
+      },
+      expectedStart: "Start: browser in foreground",
+      expectedDuring: "During: browser moved to background",
+      expectedEnd: "End: browser in background",
+    },
+    {
+      observation: {
+        start: "unfocused",
+        transition: "remained_unfocused",
+        end: "unfocused",
+      },
+      expectedStart: "Start: browser in background",
+      expectedDuring: "During: browser remained in background",
+      expectedEnd: "End: browser in background",
+    },
+    {
+      observation: {
+        start: "focused",
+        transition: "mixed",
+        end: "focused",
+      },
+      expectedStart: "Start: browser in foreground",
+      expectedDuring: "During: browser moved between foreground and background",
+      expectedEnd: "End: browser in foreground",
+    },
+  ])(
+    "shows the focus outcome for a completed development trigger",
+    async ({ observation, expectedStart, expectedDuring, expectedEnd }) => {
+      isDevelopmentModeMock.mockReturnValue(true)
+      focusObservationController.finish.mockResolvedValueOnce(observation)
+      const view = render(<ShieldSettings />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
 
-    fireEvent.change(
-      screen.getByRole("spinbutton", {
-        name: "settings:refresh.shieldDevTriggerDelayLabel",
-      }),
-      { target: { value: "0" } },
-    )
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "settings:refresh.shieldDevTriggerStart",
-      }),
-    )
+      fireEvent.change(
+        screen.getByRole("spinbutton", {
+          name: "settings:refresh.shieldDevTriggerDelayLabel",
+        }),
+        { target: { value: "0" } },
+      )
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "settings:refresh.shieldDevTriggerStart",
+        }),
+      )
 
-    const result = await screen.findByRole("group", { name: "This run" })
-    expect(within(result).getByText("This run")).toBeInTheDocument()
-    expect(
-      within(result).getByText("Start: browser in foreground"),
-    ).toBeInTheDocument()
-    expect(
-      within(result).getByText("During: browser moved to background"),
-    ).toBeInTheDocument()
-    expect(
-      within(result).getByText("End: browser in background"),
-    ).toBeInTheDocument()
-    expect(focusObservationController.finish).toHaveBeenCalledTimes(1)
-    expect(focusObservationController.cancel).not.toHaveBeenCalled()
-    view.unmount()
-    expect(focusObservationController.cancel).not.toHaveBeenCalled()
-  })
+      const result = await screen.findByRole("group", { name: "This run" })
+      expect(within(result).getByText("This run")).toBeInTheDocument()
+      expect(within(result).getByText(expectedStart)).toBeInTheDocument()
+      expect(within(result).getByText(expectedDuring)).toBeInTheDocument()
+      expect(within(result).getByText(expectedEnd)).toBeInTheDocument()
+      expect(focusObservationController.finish).toHaveBeenCalledTimes(1)
+      expect(focusObservationController.cancel).not.toHaveBeenCalled()
+      view.unmount()
+      expect(focusObservationController.cancel).not.toHaveBeenCalled()
+    },
+  )
 
   it("uses locale-controlled singular wording for the countdown", async () => {
     isDevelopmentModeMock.mockReturnValue(true)
