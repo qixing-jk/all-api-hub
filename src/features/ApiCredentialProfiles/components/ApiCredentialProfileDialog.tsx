@@ -151,6 +151,7 @@ export function ApiCredentialProfileDialog({
       DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode,
     )
   const [customEndpoint, setCustomEndpoint] = useState("")
+  const [customBearerToken, setCustomBearerToken] = useState("")
   const [customJsonPaths, setCustomJsonPaths] =
     useState<ApiCredentialTelemetryJsonPathMap>({})
 
@@ -172,6 +173,8 @@ export function ApiCredentialProfileDialog({
   const telemetryModeInputId = "api-credential-profile-telemetry-mode"
   const customEndpointInputId =
     "api-credential-profile-telemetry-custom-endpoint"
+  const customBearerTokenInputId =
+    "api-credential-profile-telemetry-bearer-token"
 
   useEffect(() => {
     if (!isOpen) return
@@ -188,6 +191,9 @@ export function ApiCredentialProfileDialog({
       setExpiresAtInput(formatDatePickerTimestamp(profile.expiresAt))
       setTelemetryMode(normalizeTelemetryMode(profile.telemetryConfig?.mode))
       setCustomEndpoint(profile.telemetryConfig?.customEndpoint?.endpoint ?? "")
+      setCustomBearerToken(
+        profile.telemetryConfig?.customEndpoint?.bearerToken ?? "",
+      )
       setCustomJsonPaths(
         profile.telemetryConfig?.customEndpoint?.jsonPaths ?? {},
       )
@@ -203,6 +209,7 @@ export function ApiCredentialProfileDialog({
     setExpiresAtInput("")
     setTelemetryMode(DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode)
     setCustomEndpoint("")
+    setCustomBearerToken("")
     setCustomJsonPaths({})
   }, [addPrefill, isOpen, profile])
 
@@ -344,6 +351,9 @@ export function ApiCredentialProfileDialog({
       mode: "customReadOnlyEndpoint",
       customEndpoint: {
         endpoint: customEndpoint.trim(),
+        ...(customBearerToken.trim()
+          ? { bearerToken: customBearerToken.trim() }
+          : {}),
         jsonPaths: coerceApiCredentialTelemetryJsonPathMap(customJsonPaths),
       },
     }
@@ -719,6 +729,35 @@ export function ApiCredentialProfileDialog({
                       "apiCredentialProfiles:dialog.placeholders.telemetryEndpoint",
                     )}
                     disabled={isSaving}
+                  />
+                </FormField>
+
+                <FormField
+                  label={t(
+                    "apiCredentialProfiles:dialog.fields.telemetryBearerToken",
+                  )}
+                  description={t(
+                    "apiCredentialProfiles:dialog.hints.telemetryBearerToken",
+                  )}
+                  htmlFor={customBearerTokenInputId}
+                >
+                  <Input
+                    id={customBearerTokenInputId}
+                    type="password"
+                    revealable
+                    revealLabels={{
+                      show: t("keyManagement:actions.showKey"),
+                      hide: t("keyManagement:actions.hideKey"),
+                    }}
+                    value={customBearerToken}
+                    onChange={(event) =>
+                      setCustomBearerToken(event.target.value)
+                    }
+                    placeholder={t(
+                      "apiCredentialProfiles:dialog.placeholders.telemetryBearerToken",
+                    )}
+                    disabled={isSaving}
+                    leftIcon={<KeyIcon className="h-5 w-5" />}
                   />
                 </FormField>
 

@@ -415,6 +415,101 @@ describe("api credential profile telemetry", () => {
     )
   })
 
+  it("resolves root-relative custom telemetry endpoints from the profile origin", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Custom Subpath",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://custom-subpath.example.com/api/agents",
+      apiKey: "sk-custom-subpath",
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint",
+        customEndpoint: {
+          endpoint: "/api/telemetry/usage",
+          jsonPaths: {
+            balanceUsd: "balance",
+          },
+        },
+      },
+    })
+    const fetchMock = vi.fn(async () => jsonResponse({ balance: 6.25 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://custom-subpath.example.com/api/telemetry/usage",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer sk-custom-subpath",
+        }),
+      }),
+    )
+  })
+
+  it("uses a dedicated bearer token for a cross-origin custom telemetry URL", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Custom Bearer",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://custom-bearer.example.com/api/agents",
+      apiKey: "sk-custom-bearer",
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint",
+        customEndpoint: {
+          endpoint:
+            "https://telemetry.example.com/api/telemetry/usage?period=today",
+          bearerToken: "dedicated-telemetry-token",
+          jsonPaths: {
+            balanceUsd: "balance",
+          },
+        },
+      },
+    })
+    const fetchMock = vi.fn(async () => jsonResponse({ balance: 7.5 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://telemetry.example.com/api/telemetry/usage?period=today",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer dedicated-telemetry-token",
+        }),
+      }),
+    )
+  })
+
+  it("uses the profile API key for a cross-origin custom telemetry URL when no dedicated token is set", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Custom Cross-Origin Fallback",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.example.com/v1/models",
+      apiKey: "sk-cross-origin-fallback",
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint",
+        customEndpoint: {
+          endpoint: "https://telemetry.example.com/usage",
+          jsonPaths: {
+            balanceUsd: "balance",
+          },
+        },
+      },
+    })
+    const fetchMock = vi.fn(async () => jsonResponse({ balance: 8.5 }))
+    vi.stubGlobal("fetch", fetchMock)
+
+    await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://telemetry.example.com/usage",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer sk-cross-origin-fallback",
+        }),
+      }),
+    )
+  })
+
   it("redacts custom endpoint query values before persisting attempts", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "Custom Query",
@@ -446,6 +541,43 @@ describe("api credential profile telemetry", () => {
     expect(customAttempt?.endpoint).not.toContain("sk-custom-query")
     expect(customAttempt?.endpoint).not.toContain("secret-cursor")
     expect(customAttempt?.endpoint).toContain("REDACTED")
+  })
+
+  it("redacts the dedicated bearer token from custom telemetry errors", async () => {
+    const apiKey = "shared-telemetry-secret"
+    const dedicatedBearerToken = `${apiKey}-private-tail`
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Custom Error Redaction",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://custom-error.example.com",
+      apiKey,
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint",
+        customEndpoint: {
+          endpoint: "/usage",
+          bearerToken: dedicatedBearerToken,
+          jsonPaths: {
+            balanceUsd: "balance",
+          },
+        },
+      },
+    })
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse(
+          { message: `Authorization: Bearer ${dedicatedBearerToken}` },
+          401,
+        ),
+      ),
+    )
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+    const serializedSnapshot = JSON.stringify(snapshot)
+
+    expect(serializedSnapshot).not.toContain(dedicatedBearerToken)
+    expect(serializedSnapshot).not.toContain("private-tail")
+    expect(serializedSnapshot).toContain("[REDACTED]")
   })
 
   it("prefers the custom configuration error when malformed custom endpoints are dropped during coercion", async () => {

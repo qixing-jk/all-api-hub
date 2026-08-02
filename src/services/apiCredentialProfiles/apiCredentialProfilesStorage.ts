@@ -341,23 +341,26 @@ function mergeTelemetrySnapshot(
  * Preserves explicit telemetry config when duplicate profiles are merged.
  */
 function mergeTelemetryConfig(
-  newer: ApiCredentialTelemetryConfig | undefined,
-  older: ApiCredentialTelemetryConfig | undefined,
-  baseUrl?: string,
+  newer: ApiCredentialTelemetryConfig,
+  older: ApiCredentialTelemetryConfig,
 ): ApiCredentialTelemetryConfig {
-  const normalizedNewer = coerceApiCredentialTelemetryConfig(newer, {
-    baseUrl,
-  })
-  const normalizedOlder = coerceApiCredentialTelemetryConfig(older, {
-    baseUrl,
-  })
-  if (normalizedNewer.mode !== DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode) {
-    return normalizedNewer
+  if (newer.mode !== DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode) {
+    return newer
   }
-  if (normalizedOlder.mode !== DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode) {
-    return normalizedOlder
+  if (older.mode !== DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode) {
+    return older
   }
-  return normalizedNewer
+  return newer
+}
+
+/**
+ * Compares telemetry configs after boundary coercion has made key order stable.
+ */
+function isSameTelemetryConfig(
+  first: ApiCredentialTelemetryConfig,
+  second: ApiCredentialTelemetryConfig,
+): boolean {
+  return JSON.stringify(first) === JSON.stringify(second)
 }
 
 /**
@@ -420,21 +423,34 @@ function dedupeProfiles(profiles: ApiCredentialProfile[]): {
       ...(Array.isArray(newer.tagIds) ? newer.tagIds : []),
       ...(Array.isArray(older.tagIds) ? older.tagIds : []),
     ])
+    const newerTelemetryConfig = coerceApiCredentialTelemetryConfig(
+      newer.telemetryConfig,
+      { baseUrl: newer.baseUrl },
+    )
+    const olderTelemetryConfig = coerceApiCredentialTelemetryConfig(
+      older.telemetryConfig,
+      { baseUrl: older.baseUrl },
+    )
+    const telemetryConfig = mergeTelemetryConfig(
+      newerTelemetryConfig,
+      olderTelemetryConfig,
+    )
+    const telemetrySnapshot = mergeTelemetrySnapshot(
+      isSameTelemetryConfig(newerTelemetryConfig, telemetryConfig)
+        ? newer.telemetrySnapshot
+        : undefined,
+      isSameTelemetryConfig(olderTelemetryConfig, telemetryConfig)
+        ? older.telemetrySnapshot
+        : undefined,
+    )
 
     byIdentity.set(key, {
       ...newer,
       createdAt:
         Math.min(newer.createdAt || 0, older.createdAt || 0) || newer.createdAt,
       tagIds: mergedTagIds,
-      telemetryConfig: mergeTelemetryConfig(
-        newer.telemetryConfig,
-        older.telemetryConfig,
-        newer.baseUrl,
-      ),
-      telemetrySnapshot: mergeTelemetrySnapshot(
-        newer.telemetrySnapshot,
-        older.telemetrySnapshot,
-      ),
+      telemetryConfig,
+      telemetrySnapshot,
     })
   }
 
@@ -766,6 +782,22 @@ class ApiCredentialProfilesStorageService {
         updates.telemetryConfig !== undefined ||
         nextApiType !== current.apiType ||
         nextBaseUrl !== current.baseUrl
+      const currentTelemetryConfig = coerceApiCredentialTelemetryConfig(
+        current.telemetryConfig,
+        { baseUrl: current.baseUrl },
+      )
+      const nextTelemetryConfig = shouldReCoerceTelemetryConfig
+        ? coerceApiCredentialTelemetryConfig(
+            updates.telemetryConfig !== undefined
+              ? updates.telemetryConfig
+              : current.telemetryConfig,
+            { baseUrl: nextBaseUrl },
+          )
+        : currentTelemetryConfig
+      const hasTelemetryConfigChanged = !isSameTelemetryConfig(
+        nextTelemetryConfig,
+        currentTelemetryConfig,
+      )
       const nextExpiresAt =
         updates.expiresAt !== undefined
           ? coerceOptionalTimestamp(updates.expiresAt)
@@ -788,20 +820,12 @@ class ApiCredentialProfilesStorageService {
             ? updates.notes.trim()
             : current.notes,
         ...(nextExpiresAt !== undefined ? { expiresAt: nextExpiresAt } : {}),
-        telemetryConfig: shouldReCoerceTelemetryConfig
-          ? coerceApiCredentialTelemetryConfig(
-              updates.telemetryConfig !== undefined
-                ? updates.telemetryConfig
-                : current.telemetryConfig,
-              {
-                baseUrl: nextBaseUrl,
-              },
-            )
-          : current.telemetryConfig,
+        telemetryConfig: nextTelemetryConfig,
         telemetrySnapshot:
           nextApiType !== current.apiType ||
           nextBaseUrl !== current.baseUrl ||
-          nextApiKey !== current.apiKey
+          nextApiKey !== current.apiKey ||
+          hasTelemetryConfigChanged
             ? undefined
             : current.telemetrySnapshot,
         updatedAt: Date.now(),

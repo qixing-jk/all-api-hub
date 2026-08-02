@@ -276,7 +276,7 @@ describe("ApiCredentialProfileDialog", () => {
         "apiCredentialProfiles:dialog.placeholders.telemetryEndpoint",
       ),
       {
-        target: { value: "https://evil.example.com/usage/read-only" },
+        target: { value: "ftp://telemetry.example.com/usage/read-only" },
       },
     )
     fireEvent.change(
@@ -307,7 +307,15 @@ describe("ApiCredentialProfileDialog", () => {
         "apiCredentialProfiles:dialog.placeholders.telemetryEndpoint",
       ),
       {
-        target: { value: "https://custom.example.com/usage/read-only" },
+        target: { value: "https://telemetry.example.com/usage/read-only" },
+      },
+    )
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.telemetryBearerToken",
+      ),
+      {
+        target: { value: " dedicated-telemetry-token " },
       },
     )
     fireEvent.change(
@@ -332,7 +340,8 @@ describe("ApiCredentialProfileDialog", () => {
           telemetryConfig: {
             mode: "customReadOnlyEndpoint",
             customEndpoint: {
-              endpoint: "https://custom.example.com/usage/read-only",
+              endpoint: "https://telemetry.example.com/usage/read-only",
+              bearerToken: "dedicated-telemetry-token",
               jsonPaths: {
                 balanceUsd: "data.balance",
               },
@@ -351,6 +360,7 @@ describe("ApiCredentialProfileDialog", () => {
           mode: "customReadOnlyEndpoint",
           customEndpoint: {
             endpoint: "/usage/totals",
+            bearerToken: "saved-telemetry-token",
             jsonPaths: {
               balanceUsd: "data.balance",
               totalUsedUsd: "data.total.used",
@@ -371,6 +381,10 @@ describe("ApiCredentialProfileDialog", () => {
     ).toHaveValue("customReadOnlyEndpoint")
     expect(screen.getByDisplayValue("/usage/totals")).toHaveValue(
       "/usage/totals",
+    )
+    expect(screen.getByDisplayValue("saved-telemetry-token")).toHaveAttribute(
+      "type",
+      "password",
     )
     expect(screen.getByDisplayValue("data.balance")).toHaveValue("data.balance")
     expect(screen.getByDisplayValue("data.total.used")).toHaveValue(
