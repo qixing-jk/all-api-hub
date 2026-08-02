@@ -113,26 +113,19 @@ vi.mock("~/services/apiAdapters/registry", () => ({
               userGroups: { fetch: async () => ({}) },
             },
             tokenProvisioning:
-              siteType === SITE_TYPES.SUB2API
+              siteType === SITE_TYPES.AIHUBMIX
                 ? {
                     getRepairPolicy: () => ({
                       kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-                      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
+                      skipReason:
+                        ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
                     }),
                   }
-                : siteType === SITE_TYPES.AIHUBMIX
-                  ? {
-                      getRepairPolicy: () => ({
-                        kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-                        skipReason:
-                          ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
-                      }),
-                    }
-                  : {
-                      getRepairPolicy: () => ({
-                        kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-                      }),
-                    },
+                : {
+                    getRepairPolicy: () => ({
+                      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+                    }),
+                  },
           }),
     },
   })),
@@ -232,7 +225,7 @@ describe("accountKeyRepair", () => {
     })
   })
 
-  it("records skipped, created, and failed outcomes during a repair run", async () => {
+  it("repairs Sub2API accounts and records other repair outcomes", async () => {
     const sub2apiAccount = buildSiteAccount({
       id: "sub2api-1",
       site_type: SITE_TYPES.SUB2API,
@@ -363,6 +356,14 @@ describe("accountKeyRepair", () => {
     mocks.ensureAccountKeysForAvailableGroups
       .mockResolvedValueOnce({
         created: true,
+        availableGroups: ["default", "vip"],
+        coveredGroups: ["default", "vip"],
+        createdGroups: ["vip"],
+        missingGroups: [],
+        invalidTokens: [],
+      })
+      .mockResolvedValueOnce({
+        created: true,
         availableGroups: [],
         coveredGroups: [],
         createdGroups: [""],
@@ -397,18 +398,18 @@ describe("accountKeyRepair", () => {
     const progress = await accountKeyRepairRunner.getProgress()
     expect(progress.totals).toMatchObject({
       enabledAccounts: 5,
-      eligibleAccounts: 2,
-      processedAccounts: 2,
-      processedEligibleAccounts: 2,
+      eligibleAccounts: 3,
+      processedAccounts: 3,
+      processedEligibleAccounts: 3,
     })
     expect(progress.summary).toEqual({
-      created: 2,
+      created: 3,
       alreadyHad: 0,
-      skipped: 3,
+      skipped: 2,
       failed: 0,
-      availableGroups: 0,
-      coveredGroups: 0,
-      createdKeys: 2,
+      availableGroups: 2,
+      coveredGroups: 2,
+      createdKeys: 3,
       renamedKeys: 0,
       renameFailed: 0,
       invalidKeys: 0,
@@ -419,8 +420,10 @@ describe("accountKeyRepair", () => {
       expect.arrayContaining([
         expect.objectContaining({
           accountId: "sub2api-1",
-          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
-          skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
+          availableGroups: ["default", "vip"],
+          coveredGroups: ["default", "vip"],
+          createdGroups: ["vip"],
           siteUrlOrigin: "https://sub2api.example.com",
         }),
         expect.objectContaining({
@@ -448,7 +451,14 @@ describe("accountKeyRepair", () => {
         }),
       ]),
     )
-    expect(mocks.ensureAccountKeysForAvailableGroups).toHaveBeenCalledTimes(2)
+    expect(mocks.ensureAccountKeysForAvailableGroups).toHaveBeenCalledTimes(3)
+    expect(mocks.ensureAccountKeysForAvailableGroups).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: sub2apiAccount,
+        accountName: "Sub2API",
+        siteUrlOrigin: "https://sub2api.example.com",
+      }),
+    )
     expect(mocks.sendRuntimeMessage).toHaveBeenCalledWith(
       {
         type: RuntimeMessageTypes.AccountKeyRepairProgress,

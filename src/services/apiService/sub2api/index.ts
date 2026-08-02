@@ -90,6 +90,7 @@ import {
 const logger = createLogger("ApiService.Sub2API")
 const DEFAULT_KEYS_PAGE = 1
 const DEFAULT_KEYS_PAGE_SIZE = 100
+const FULL_KEYS_PAGE_SIZE = 1000
 const SUB2API_RUNTIME_MODELS_ENDPOINT = "/v1/models"
 const sub2ApiAuthMutationLocks = new Map<string, Promise<void>>()
 
@@ -1407,14 +1408,16 @@ export async function refreshAccountData(
   }
 }
 
-/**
- * Fetch the list of API tokens for the account, with pagination support.
- */
-export async function fetchAccountTokens(
+type Sub2ApiKeyPage = {
+  tokens: ApiToken[]
+  totalPages: number
+}
+
+const fetchAccountTokenPage = async (
   request: ApiServiceRequest,
-  page: number = DEFAULT_KEYS_PAGE,
-  size: number = DEFAULT_KEYS_PAGE_SIZE,
-): Promise<ApiToken[]> {
+  page: number,
+  size: number,
+): Promise<Sub2ApiKeyPage> => {
   const endpoint = createSub2ApiKeysEndpoint(page, size)
 
   try {
@@ -1424,12 +1427,17 @@ export async function fetchAccountTokens(
         cache: "no-store",
       })
 
-    return extractSub2ApiKeyItems(data).map((item) =>
-      parseSub2ApiKey(item, {
-        defaultUserId: hydratedRequest.auth?.userId,
-        endpoint,
-      }),
-    )
+    return {
+      tokens: extractSub2ApiKeyItems(data).map((item) =>
+        parseSub2ApiKey(item, {
+          defaultUserId: hydratedRequest.auth?.userId,
+          endpoint,
+        }),
+      ),
+      totalPages: Array.isArray(data)
+        ? DEFAULT_KEYS_PAGE
+        : Math.max(page, normalizePositiveInteger(data.pages ?? page, page)),
+    }
   } catch (error) {
     logger.error("Failed to fetch Sub2API keys", {
       accountId: request.accountId,
@@ -1437,6 +1445,44 @@ export async function fetchAccountTokens(
       error: getSafeErrorMessage(error),
     })
     throw error
+  }
+}
+
+/**
+ * Fetch the requested API-token inventory page.
+ */
+export async function fetchAccountTokens(
+  request: ApiServiceRequest,
+  page: number = DEFAULT_KEYS_PAGE,
+  size: number = DEFAULT_KEYS_PAGE_SIZE,
+): Promise<ApiToken[]> {
+  return (await fetchAccountTokenPage(request, page, size)).tokens
+}
+
+/**
+ * Fetch the complete API-token inventory for coverage checks.
+ */
+export async function fetchAllAccountTokens(
+  request: ApiServiceRequest,
+): Promise<ApiToken[]> {
+  const tokens: ApiToken[] = []
+  let page = DEFAULT_KEYS_PAGE
+
+  // Upstream paginates this endpoint and caps page_size at 1000:
+  // https://github.com/Wei-Shaw/sub2api/blob/main/backend/internal/pkg/response/response.go
+  while (true) {
+    const result = await fetchAccountTokenPage(
+      request,
+      page,
+      FULL_KEYS_PAGE_SIZE,
+    )
+    tokens.push(...result.tokens)
+
+    if (page >= result.totalPages) {
+      return tokens
+    }
+
+    page += 1
   }
 }
 

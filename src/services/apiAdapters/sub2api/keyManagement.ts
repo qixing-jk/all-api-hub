@@ -4,6 +4,7 @@ import {
   deleteApiToken,
   fetchAccountAvailableModels,
   fetchAccountTokens,
+  fetchAllAccountTokens,
   fetchUserGroups,
   resolveApiTokenKey,
   updateApiToken,
@@ -12,6 +13,7 @@ import {
 export const sub2ApiKeyManagement: KeyManagementCapability = {
   fetchTokens: (request, options) =>
     fetchAccountTokens(request, options?.page, options?.size),
+  fetchAllTokens: (request) => fetchAllAccountTokens(request),
   createToken: (request, tokenData) => createApiToken(request, tokenData),
   updateToken: ({ request, tokenId, tokenData }) =>
     updateApiToken(request, tokenId, tokenData),

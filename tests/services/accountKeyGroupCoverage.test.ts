@@ -28,6 +28,7 @@ import {
 } from "~~/tests/test-utils/factories"
 
 const mocks = vi.hoisted(() => ({
+  fetchAllAccountTokens: vi.fn(),
   fetchAccountTokens: vi.fn(),
   fetchUserGroups: vi.fn(),
   createApiToken: vi.fn(),
@@ -42,6 +43,8 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     siteType: SITE_TYPES.NEW_API,
     account: {
       keyManagement: {
+        fetchAllTokens: (...args: unknown[]) =>
+          mocks.fetchAllAccountTokens(...args),
         fetchTokens: (...args: unknown[]) => mocks.fetchAccountTokens(...args),
         userGroups: {
           fetch: (...args: unknown[]) => mocks.fetchUserGroups(...args),
@@ -106,7 +109,11 @@ const runCoverage = (abortSignal?: AbortSignal) =>
 
 describe("ensureAccountKeysForAvailableGroups", () => {
   beforeEach(() => {
+    mocks.fetchAllAccountTokens.mockReset()
     mocks.fetchAccountTokens.mockReset()
+    mocks.fetchAllAccountTokens.mockImplementation((...args: unknown[]) =>
+      mocks.fetchAccountTokens(...args),
+    )
     mocks.fetchUserGroups.mockReset()
     mocks.createApiToken.mockReset()
     mocks.updateApiToken.mockReset()
@@ -180,6 +187,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       }),
       buildGroupDefaultTokenRequest("vip"),
     )
+    expect(mocks.fetchAllAccountTokens).toHaveBeenCalledOnce()
   })
 
   it("uses stored account context for group coverage token APIs and adapter lookup", async () => {

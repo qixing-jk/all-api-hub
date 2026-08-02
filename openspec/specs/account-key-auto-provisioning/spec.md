@@ -28,12 +28,13 @@ When auto-provisioning on add is enabled, token inventory fetch and/or token cre
 - **THEN** the system MUST keep the added account persisted
 
 ### Requirement: Eligibility gating for key auto-provisioning
-Key auto-provisioning (both on-add and manual repair) MUST only operate on eligible accounts.
+Key auto-provisioning MUST only operate on accounts that are eligible for the
+current workflow.
 
-An account is eligible when all of the following are true:
+An account is eligible for manual repair when all of the following are true:
 - The account is enabled (`disabled = false`)
 - The account has credentials suitable for token management (`authType != "none"`)
-- The account is not `site_type = "sub2api"`
+- The site adapter's repair policy marks the account as eligible
 
 #### Scenario: Disabled accounts are skipped and not shown
 - **GIVEN** an account is disabled (`disabled = true`)
@@ -41,15 +42,27 @@ An account is eligible when all of the following are true:
 - **THEN** the system MUST exclude the disabled account from the repair operation
 - **AND** the system MUST NOT show the disabled account in the repair operation UI or results
 
-#### Scenario: Sub2API accounts are skipped
+#### Scenario: Automatic account-add provisioning skips Sub2API accounts
 - **GIVEN** an account has `site_type = "sub2api"`
-- **WHEN** key auto-provisioning is triggered (on-add or manual repair)
-- **THEN** the system MUST skip that account and MUST NOT call token-management endpoints for it
+- **WHEN** implicit account-add key auto-provisioning is triggered
+- **THEN** the system MUST NOT create a key or guess a group without an explicit group selection
 
-Automated account-add provisioning and background repair MUST continue skipping `sub2api` accounts. However, when the manual repair UI reports a skipped `sub2api` account and the underlying account record remains available in the current results view, the system MUST expose an explicit user-triggered create-key follow-up action that drives the shared Sub2API token creation flow instead of silently ignoring the row.
+#### Scenario: User-triggered repair covers every available Sub2API group
+- **GIVEN** an enabled `sub2api` account has credentials suitable for token management
+- **AND** one or more current Sub2API groups do not have a key
+- **WHEN** the user explicitly starts the manual key repair action
+- **THEN** the system MUST inspect the account's current available groups and complete paginated key inventory
+- **AND** it MUST create one key for each currently uncovered group
+- **AND** it MUST NOT guess a single default group or require a separate choice for each uncovered group
 
-#### Scenario: Manual repair offers explicit follow-up key creation for skipped Sub2API accounts
-- **GIVEN** the manual repair flow reports a skipped `sub2api` account
+Automatic account-add provisioning MUST continue skipping `sub2api` accounts.
+For backward compatibility, when a current manual repair result reports a
+legacy skipped `sub2api` account and the underlying account record remains
+available, the system MUST continue exposing the explicit group-aware
+create-key follow-up action.
+
+#### Scenario: Current legacy repair results retain Sub2API follow-up key creation
+- **GIVEN** a current manual repair result reports a skipped `sub2api` account
 - **AND** the underlying account record is available in the current results view
 - **WHEN** the user reviews the repair results
 - **THEN** the UI MUST offer an explicit create-key action for that account

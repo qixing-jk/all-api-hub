@@ -125,7 +125,9 @@ export async function ensureAccountKeysForAvailableGroups(params: {
     : accountContext.request
   const accountId = account.id
 
-  const tokens = await keyManagement.fetchTokens(request)
+  const tokens = keyManagement.fetchAllTokens
+    ? await keyManagement.fetchAllTokens(request)
+    : await keyManagement.fetchTokens(request)
   const groupsData = keyManagement.userGroups
     ? await keyManagement.userGroups.fetch(request)
     : {}

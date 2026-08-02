@@ -26,6 +26,7 @@ const {
   mockSub2ApiCreateApiToken,
   mockSub2ApiDeleteApiToken,
   mockSub2ApiFetchAccountAvailableModels,
+  mockSub2ApiFetchAllAccountTokens,
   mockSub2ApiFetchAccountTokens,
   mockSub2ApiFetchUserGroups,
   mockSub2ApiResolveApiTokenKey,
@@ -58,6 +59,7 @@ const {
   mockSub2ApiCreateApiToken: vi.fn(),
   mockSub2ApiDeleteApiToken: vi.fn(),
   mockSub2ApiFetchAccountAvailableModels: vi.fn(),
+  mockSub2ApiFetchAllAccountTokens: vi.fn(),
   mockSub2ApiFetchAccountTokens: vi.fn(),
   mockSub2ApiFetchUserGroups: vi.fn(),
   mockSub2ApiResolveApiTokenKey: vi.fn(),
@@ -89,6 +91,7 @@ vi.mock("~/services/apiService/sub2api", () => ({
   createApiToken: mockSub2ApiCreateApiToken,
   deleteApiToken: mockSub2ApiDeleteApiToken,
   fetchAccountAvailableModels: mockSub2ApiFetchAccountAvailableModels,
+  fetchAllAccountTokens: mockSub2ApiFetchAllAccountTokens,
   fetchAccountTokens: mockSub2ApiFetchAccountTokens,
   fetchUserGroups: mockSub2ApiFetchUserGroups,
   resolveApiTokenKey: mockSub2ApiResolveApiTokenKey,
@@ -266,6 +269,7 @@ describe("apiAdapter keyManagement", () => {
   it("delegates Sub2API key operations to backend key helpers", async () => {
     const expectedTokens = [token]
     mockSub2ApiFetchAccountTokens.mockResolvedValueOnce(expectedTokens)
+    mockSub2ApiFetchAllAccountTokens.mockResolvedValueOnce(expectedTokens)
     mockSub2ApiCreateApiToken.mockResolvedValueOnce(token)
     mockSub2ApiUpdateApiToken.mockResolvedValueOnce(true)
     mockSub2ApiResolveApiTokenKey.mockResolvedValueOnce("sk-sub2api")
@@ -278,6 +282,9 @@ describe("apiAdapter keyManagement", () => {
     await expect(
       sub2ApiKeyManagement.fetchTokens(request, { page: 3, size: 50 }),
     ).resolves.toBe(expectedTokens)
+    await expect(sub2ApiKeyManagement.fetchAllTokens?.(request)).resolves.toBe(
+      expectedTokens,
+    )
     await expect(
       sub2ApiKeyManagement.createToken(request, tokenData),
     ).resolves.toBe(token)
@@ -302,6 +309,7 @@ describe("apiAdapter keyManagement", () => {
     ).resolves.toBe(availableModels)
 
     expect(mockSub2ApiFetchAccountTokens).toHaveBeenCalledWith(request, 3, 50)
+    expect(mockSub2ApiFetchAllAccountTokens).toHaveBeenCalledWith(request)
     expect(mockSub2ApiCreateApiToken).toHaveBeenCalledWith(request, tokenData)
     expect(mockSub2ApiUpdateApiToken).toHaveBeenCalledWith(
       request,

@@ -169,7 +169,7 @@ describe("apiAdapter tokenProvisioning", () => {
     ).toEqual(["default", "vip"])
   })
 
-  it("requires Sub2API groups before creating default tokens", () => {
+  it("keeps implicit Sub2API creation blocked while allowing repair coverage", () => {
     expect(
       sub2ApiTokenProvisioning.resolveDefaultTokenCreation({
         workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
@@ -234,8 +234,7 @@ describe("apiAdapter tokenProvisioning", () => {
     })
 
     expect(sub2ApiTokenProvisioning.getRepairPolicy()).toEqual({
-      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
+      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
     })
   })
 

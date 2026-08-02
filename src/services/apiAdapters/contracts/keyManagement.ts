@@ -38,6 +38,7 @@ export type KeyManagementCapability = {
     request: ApiServiceRequest,
     options?: FetchAccountTokensOptions,
   ): Promise<ApiToken[]>
+  fetchAllTokens?(request: ApiServiceRequest): Promise<ApiToken[]>
   createToken(
     request: ApiServiceRequest,
     tokenData: CreateTokenRequest,

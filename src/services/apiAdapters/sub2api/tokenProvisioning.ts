@@ -9,7 +9,6 @@ import {
   TOKEN_PROVISIONING_WORKFLOWS,
   type TokenProvisioningCapability,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 
 const createWithGroup = (
   defaultTokenData: CreateTokenRequest,
@@ -102,7 +101,6 @@ export const sub2ApiTokenProvisioning: TokenProvisioningCapability = {
     }
   },
   getRepairPolicy: () => ({
-    kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-    skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
+    kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
   }),
 }

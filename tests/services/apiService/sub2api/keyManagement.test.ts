@@ -6,6 +6,7 @@ import {
   createApiToken,
   fetchAccountAvailableModels,
   fetchAccountTokens,
+  fetchAllAccountTokens,
   fetchSub2ApiGroupRates,
   fetchTokenById,
   fetchUserGroups,
@@ -246,6 +247,58 @@ describe("apiService sub2api key management service", () => {
     await expect(fetchAccountAvailableModels(createRequest())).resolves.toEqual(
       [],
     )
+  })
+
+  it("fetches every key inventory page for group coverage", async () => {
+    fetchApiMock
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          items: [
+            {
+              id: 1,
+              key: "default-key",
+              name: "Default key",
+              status: "active",
+              group: { id: 1, name: "default" },
+            },
+          ],
+          total: 1001,
+          page: 1,
+          page_size: 1000,
+          pages: 2,
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          items: [
+            {
+              id: 2,
+              key: "vip-key",
+              name: "VIP key",
+              status: "active",
+              group: { id: 9, name: "vip" },
+            },
+          ],
+          total: 1001,
+          page: 2,
+          page_size: 1000,
+          pages: 2,
+        },
+      })
+
+    await expect(fetchAllAccountTokens(createRequest())).resolves.toEqual([
+      expect.objectContaining({ id: 1, group: "default" }),
+      expect.objectContaining({ id: 2, group: "vip" }),
+    ])
+
+    expect(fetchApiMock.mock.calls.map((call) => call[1]?.endpoint)).toEqual([
+      "/api/v1/keys?page=1&page_size=1000",
+      "/api/v1/keys?page=2&page_size=1000",
+    ])
   })
 
   it("keeps key-creation available models empty even with Sub2API form metadata", async () => {
