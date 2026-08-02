@@ -193,7 +193,7 @@ describe("accountKeyRepair", () => {
   })
 
   it("returns stored progress snapshots when a previous repair run was persisted", async () => {
-    mocks.storageMap.set("accountKeyRepair_progress", {
+    const storedProgress = {
       jobId: "job-stored",
       state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
       totals: {
@@ -211,22 +211,16 @@ describe("accountKeyRepair", () => {
       results: [
         { accountId: "acc-1", outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created },
       ],
-    })
+    }
+    mocks.storageMap.set("accountKeyRepair_progress", storedProgress)
 
     const { accountKeyRepairRunner } = await import(
       "~/services/accounts/accountKeyAutoProvisioning/repair"
     )
 
-    await expect(accountKeyRepairRunner.getProgress()).resolves.toMatchObject({
-      jobId: "job-stored",
-      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
-      summary: {
-        created: 1,
-        alreadyHad: 1,
-        skipped: 1,
-        failed: 0,
-      },
-    })
+    await expect(accountKeyRepairRunner.getProgress()).resolves.toEqual(
+      storedProgress,
+    )
   })
 
   it("repairs Sub2API accounts and records other repair outcomes", async () => {
@@ -538,7 +532,7 @@ describe("accountKeyRepair", () => {
     ).rejects.toThrow("keyManagement is not implemented for openrouter")
   })
 
-  it("records group coverage and invalid keys from the group-aware audit helper", async () => {
+  it("stores and broadcasts exact created-token references without changing repair accounting", async () => {
     const account = buildSiteAccount({
       id: "new-api-1",
       site_type: "new-api",
@@ -572,9 +566,10 @@ describe("accountKeyRepair", () => {
     ])
     mocks.ensureAccountKeysForAvailableGroups.mockResolvedValueOnce({
       created: true,
-      availableGroups: ["default", "vip"],
-      coveredGroups: ["default", "vip"],
-      createdGroups: ["vip"],
+      availableGroups: ["default", "vip", "beta"],
+      coveredGroups: ["default", "vip", "beta"],
+      createdGroups: ["vip", "beta"],
+      createdTokens: [{ tokenId: 42, group: "vip" }],
       missingGroups: [],
       invalidTokens: [
         {
@@ -607,18 +602,19 @@ describe("accountKeyRepair", () => {
       alreadyHad: 0,
       skipped: 0,
       failed: 0,
-      availableGroups: 2,
-      coveredGroups: 2,
-      createdKeys: 1,
+      availableGroups: 3,
+      coveredGroups: 3,
+      createdKeys: 2,
       invalidKeys: 1,
     })
     expect(progress.results).toEqual([
       expect.objectContaining({
         accountId: "new-api-1",
         outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
-        availableGroups: ["default", "vip"],
-        coveredGroups: ["default", "vip"],
-        createdGroups: ["vip"],
+        availableGroups: ["default", "vip", "beta"],
+        coveredGroups: ["default", "vip", "beta"],
+        createdGroups: ["vip", "beta"],
+        createdTokens: [{ tokenId: 42, group: "vip" }],
         invalidTokens: [
           expect.objectContaining({
             tokenId: 9,
@@ -629,6 +625,30 @@ describe("accountKeyRepair", () => {
         ],
       }),
     ])
+    expect(mocks.storageMap.get("accountKeyRepair_progress")).toMatchObject({
+      summary: expect.objectContaining({ createdKeys: 2 }),
+      results: [
+        expect.objectContaining({
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
+          createdTokens: [{ tokenId: 42, group: "vip" }],
+        }),
+      ],
+    })
+    expect(mocks.sendRuntimeMessage).toHaveBeenCalledWith(
+      {
+        type: RuntimeMessageTypes.AccountKeyRepairProgress,
+        payload: expect.objectContaining({
+          summary: expect.objectContaining({ createdKeys: 2 }),
+          results: [
+            expect.objectContaining({
+              outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
+              createdTokens: [{ tokenId: 42, group: "vip" }],
+            }),
+          ],
+        }),
+      },
+      { maxAttempts: 1 },
+    )
   })
 
   it("marks unresolved group provisioning as failed instead of already covered", async () => {

@@ -417,6 +417,7 @@ class AccountKeyRepairRunner {
         availableGroups: result.availableGroups,
         coveredGroups: result.coveredGroups,
         createdGroups: result.createdGroups,
+        createdTokens: result.createdTokens,
         missingGroups: result.missingGroups,
         invalidTokens: result.invalidTokens,
         renamedTokens: result.renamedTokens,

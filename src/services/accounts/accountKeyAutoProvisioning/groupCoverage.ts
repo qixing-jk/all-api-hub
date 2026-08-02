@@ -3,6 +3,7 @@ import {
   DEFAULT_TOKEN_LIFECYCLE_BLOCK_REASONS,
   DEFAULT_TOKEN_LIFECYCLE_RESULT_KINDS,
   resolveDefaultTokenLifecycleDecisionFromCapabilities,
+  selectSingleNewApiTokenByIdDiff,
 } from "~/services/accounts/defaultTokenLifecycle"
 import {
   createAccountApiRequestFromStoredAccount,
@@ -20,6 +21,7 @@ import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
+  type AccountKeyRepairCreatedTokenReference,
   type AccountKeyRepairDeleteInvalidTokensResult,
   type AccountKeyRepairInvalidToken,
   type AccountKeyRepairRenamedToken,
@@ -37,6 +39,7 @@ interface AccountKeyCoverageResult {
   availableGroups: string[]
   coveredGroups: string[]
   createdGroups: string[]
+  createdTokens: AccountKeyRepairCreatedTokenReference[]
   missingGroups: string[]
   invalidTokens: AccountKeyRepairInvalidToken[]
   renamedTokens: AccountKeyRepairRenamedToken[]
@@ -125,9 +128,12 @@ export async function ensureAccountKeysForAvailableGroups(params: {
     : accountContext.request
   const accountId = account.id
 
-  const tokens = keyManagement.fetchAllTokens
-    ? await keyManagement.fetchAllTokens(request)
-    : await keyManagement.fetchTokens(request)
+  const fetchTokenInventory = () =>
+    keyManagement.fetchAllTokens
+      ? keyManagement.fetchAllTokens(request)
+      : keyManagement.fetchTokens(request)
+  const tokens = await fetchTokenInventory()
+  const existingTokenIds = tokens.map((token) => token.id)
   const groupsData = keyManagement.userGroups
     ? await keyManagement.userGroups.fetch(request)
     : {}
@@ -142,6 +148,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
         availableGroups: [],
         coveredGroups: [],
         createdGroups: [],
+        createdTokens: [],
         missingGroups: [],
         invalidTokens: [],
         renamedTokens: [],
@@ -169,7 +176,10 @@ export async function ensureAccountKeysForAvailableGroups(params: {
 
     const createResult = await createDefaultTokenFromDecision({
       workflow: TOKEN_PROVISIONING_WORKFLOWS.Repair,
-      keyManagement,
+      keyManagement: {
+        ...keyManagement,
+        fetchTokens: fetchTokenInventory,
+      },
       tokenProvisioning,
       createRequest: request,
       inventoryRequest: request,
@@ -211,6 +221,14 @@ export async function ensureAccountKeysForAvailableGroups(params: {
       availableGroups: [],
       coveredGroups: [],
       createdGroups: [decision.tokenData.group],
+      createdTokens: [
+        {
+          tokenId: createResult.token.id,
+          group:
+            normalizeGroupName(createResult.token.group) ||
+            normalizeGroupName(decision.tokenData.group),
+        },
+      ],
       missingGroups: [],
       invalidTokens: [],
       renamedTokens: [],
@@ -265,6 +283,7 @@ export async function ensureAccountKeysForAvailableGroups(params: {
   }
 
   const createdGroups: string[] = []
+  const createdTokens: AccountKeyRepairCreatedTokenReference[] = []
   const missingGroups: string[] = []
 
   for (const group of uniqueGroups) {
@@ -282,11 +301,32 @@ export async function ensureAccountKeysForAvailableGroups(params: {
     }
   }
 
+  if (createdGroups.length > 0) {
+    try {
+      const refreshedTokens = await fetchTokenInventory()
+
+      for (const group of createdGroups) {
+        const recoveredToken = selectSingleNewApiTokenByIdDiff({
+          existingTokenIds,
+          tokens: refreshedTokens.filter(
+            (token) => normalizeGroupName(token.group) === group,
+          ),
+        })
+        if (recoveredToken) {
+          createdTokens.push({ tokenId: recoveredToken.id, group })
+        }
+      }
+    } catch {
+      // Reference recovery is best-effort and must not change repair success.
+    }
+  }
+
   return {
     created: createdGroups.length > 0,
     availableGroups: uniqueGroups,
     coveredGroups: uniqueGroups.filter((group) => coveredGroupSet.has(group)),
     createdGroups,
+    createdTokens,
     missingGroups,
     invalidTokens,
     renamedTokens,

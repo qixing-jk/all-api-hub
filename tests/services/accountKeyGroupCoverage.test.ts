@@ -159,6 +159,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       availableGroups: ["default", "vip"],
       coveredGroups: ["default", "vip"],
       createdGroups: ["vip"],
+      createdTokens: [],
       missingGroups: [],
       invalidTokens: [
         {
@@ -187,7 +188,93 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       }),
       buildGroupDefaultTokenRequest("vip"),
     )
-    expect(mocks.fetchAllAccountTokens).toHaveBeenCalledOnce()
+    expect(mocks.fetchAllAccountTokens).toHaveBeenCalledTimes(2)
+  })
+
+  it("records exact grouped token references after one post-create inventory refresh", async () => {
+    const existingToken = buildApiToken({
+      id: 1,
+      name: "default key",
+      group: "default",
+    })
+    mocks.fetchAccountTokens
+      .mockResolvedValueOnce([existingToken])
+      .mockResolvedValueOnce([
+        existingToken,
+        buildApiToken({ id: 2, name: "vip key", group: " vip " }),
+        buildApiToken({ id: 3, name: "beta key", group: "beta" }),
+      ])
+    mocks.fetchUserGroups.mockResolvedValue({
+      default: { desc: "Default", ratio: 1 },
+      vip: { desc: "VIP", ratio: 1 },
+      beta: { desc: "Beta", ratio: 1 },
+    })
+    mocks.createApiToken.mockResolvedValue(true)
+
+    const result = await runCoverage()
+
+    expect(result.createdTokens).toEqual([
+      { tokenId: 2, group: "vip" },
+      { tokenId: 3, group: "beta" },
+    ])
+    expect(mocks.fetchAllAccountTokens).toHaveBeenCalledTimes(2)
+    expect(
+      mocks.fetchAllAccountTokens.mock.invocationCallOrder[1],
+    ).toBeGreaterThan(mocks.createApiToken.mock.invocationCallOrder[1])
+  })
+
+  it("preserves grouped repair success when a created-token reference is ambiguous", async () => {
+    const existingToken = buildApiToken({
+      id: 1,
+      name: "default key",
+      group: "default",
+    })
+    mocks.fetchAccountTokens
+      .mockResolvedValueOnce([existingToken])
+      .mockResolvedValueOnce([
+        existingToken,
+        buildApiToken({ id: 2, name: "vip key", group: "vip" }),
+        buildApiToken({ id: 3, name: "concurrent vip key", group: " vip " }),
+        buildApiToken({ id: 4, name: "beta key", group: "beta" }),
+      ])
+    mocks.fetchUserGroups.mockResolvedValue({
+      default: { desc: "Default", ratio: 1 },
+      vip: { desc: "VIP", ratio: 1 },
+      beta: { desc: "Beta", ratio: 1 },
+    })
+    mocks.createApiToken.mockResolvedValue(true)
+
+    const result = await runCoverage()
+
+    expect(result).toMatchObject({
+      created: true,
+      createdGroups: ["vip", "beta"],
+      createdTokens: [{ tokenId: 4, group: "beta" }],
+      missingGroups: [],
+    })
+  })
+
+  it("preserves grouped repair success when the post-create inventory reload fails", async () => {
+    mocks.fetchAccountTokens
+      .mockResolvedValueOnce([
+        buildApiToken({ id: 1, name: "default key", group: "default" }),
+      ])
+      .mockRejectedValueOnce(new Error("inventory unavailable"))
+    mocks.fetchUserGroups.mockResolvedValue({
+      default: { desc: "Default", ratio: 1 },
+      vip: { desc: "VIP", ratio: 1 },
+    })
+    mocks.createApiToken.mockResolvedValue(true)
+
+    const result = await runCoverage()
+
+    expect(result).toMatchObject({
+      created: true,
+      createdGroups: ["vip"],
+      createdTokens: [],
+      missingGroups: [],
+    })
+    expect(mocks.fetchAllAccountTokens).toHaveBeenCalledTimes(2)
   })
 
   it("uses stored account context for group coverage token APIs and adapter lookup", async () => {
@@ -526,6 +613,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       availableGroups: [],
       coveredGroups: [],
       createdGroups: [""],
+      createdTokens: [{ tokenId: 22, group: "" }],
       missingGroups: [],
       invalidTokens: [],
       renamedTokens: [],
@@ -570,6 +658,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       availableGroups: [],
       coveredGroups: [],
       createdGroups: [""],
+      createdTokens: [{ tokenId: 22, group: "" }],
       missingGroups: [],
       invalidTokens: [],
       renamedTokens: [],
@@ -700,6 +789,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       availableGroups: [],
       coveredGroups: [],
       createdGroups: [],
+      createdTokens: [],
       missingGroups: [],
       invalidTokens: [],
       renamedTokens: [],
@@ -732,6 +822,7 @@ describe("ensureAccountKeysForAvailableGroups", () => {
       availableGroups: ["default", "vip", "beta"],
       coveredGroups: ["default", "beta"],
       createdGroups: ["beta"],
+      createdTokens: [],
       missingGroups: ["vip"],
       invalidTokens: [],
       renamedTokens: [],

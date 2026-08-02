@@ -86,6 +86,11 @@ export interface AccountKeyRepairRenamedToken {
   nextName: string
 }
 
+export interface AccountKeyRepairCreatedTokenReference {
+  tokenId: number
+  group: string
+}
+
 export interface AccountKeyRepairAccountResult {
   accountId: string
   accountName: string
@@ -97,6 +102,7 @@ export interface AccountKeyRepairAccountResult {
   availableGroups?: string[]
   coveredGroups?: string[]
   createdGroups?: string[]
+  createdTokens?: AccountKeyRepairCreatedTokenReference[]
   missingGroups?: string[]
   invalidTokens?: AccountKeyRepairInvalidToken[]
   renamedTokens?: AccountKeyRepairRenamedToken[]
