@@ -29,12 +29,13 @@ export type ApiCredentialTelemetryJsonPathMap = {
 
 export type ApiCredentialTelemetryCustomEndpoint = {
   /**
-   * Read-only endpoint path or URL under the profile base URL origin.
+   * Root-relative path or absolute HTTP(S) URL for a read-only endpoint.
    */
   endpoint: string
   /**
    * Optional dedicated Bearer token stored in extension local storage.
-   * Falls back to the profile API key and must never be logged.
+   * Same-origin requests fall back to the profile API key; cross-origin
+   * requests remain unauthenticated when this is omitted. Never log it.
    */
   bearerToken?: string
   jsonPaths: ApiCredentialTelemetryJsonPathMap

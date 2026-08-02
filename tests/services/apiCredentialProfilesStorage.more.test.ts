@@ -378,7 +378,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
             telemetryConfig: {
               mode: "customReadOnlyEndpoint",
               customEndpoint: {
-                endpoint: "https://evil.example.com/usage",
+                endpoint: "https://telemetry.example.com/usage",
                 jsonPaths: {
                   balanceUsd: "data.balance",
                 },
@@ -395,7 +395,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
         telemetryConfig: {
           mode: "customReadOnlyEndpoint",
           customEndpoint: {
-            endpoint: "https://evil.example.com/usage",
+            endpoint: "https://telemetry.example.com/usage",
             jsonPaths: {
               balanceUsd: "data.balance",
             },
@@ -641,6 +641,70 @@ describe("apiCredentialProfilesStorage additional flows", () => {
       expect.objectContaining({
         id: "incoming-1",
         telemetrySnapshot: expect.objectContaining({ balanceUsd: 2 }),
+      }),
+    )
+  })
+
+  it("keeps an older explicit config and its snapshot over a newer automatic duplicate", () => {
+    const olderSnapshot = {
+      health: { status: SiteHealthStatus.Healthy },
+      lastSyncTime: 9000,
+      lastSuccessTime: 9000,
+      balanceUsd: 3,
+      attempts: [],
+    }
+    const merged = mergeApiCredentialProfilesConfigs({
+      now: 67890,
+      local: {
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+        lastUpdated: 1,
+        profiles: [
+          {
+            id: "older-explicit",
+            name: "Older explicit",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 10,
+            telemetryConfig: { mode: "newApiTokenUsage" },
+            telemetrySnapshot: olderSnapshot,
+          },
+        ],
+      },
+      incoming: {
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+        lastUpdated: 2,
+        profiles: [
+          {
+            id: "newer-auto",
+            name: "Newer automatic",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            tagIds: [],
+            notes: "",
+            createdAt: 2,
+            updatedAt: 20,
+            telemetryConfig: { mode: "auto" },
+            telemetrySnapshot: {
+              ...olderSnapshot,
+              balanceUsd: 9,
+              lastSyncTime: 10000,
+              lastSuccessTime: 10000,
+            },
+          },
+        ],
+      },
+    })
+
+    expect(merged.profiles[0]).toEqual(
+      expect.objectContaining({
+        id: "newer-auto",
+        telemetryConfig: { mode: "newApiTokenUsage" },
+        telemetrySnapshot: expect.objectContaining({ balanceUsd: 3 }),
       }),
     )
   })

@@ -191,19 +191,21 @@ function createOpenAiBillingUsageEndpoint(start: string, end: string): string {
 }
 
 /**
- * Fetches a read-only telemetry endpoint with bearer-token authentication.
+ * Fetches a read-only telemetry endpoint with optional bearer authentication.
  */
 async function fetchJson(params: {
   baseUrl: string
   endpoint: string
-  bearerToken: string
+  bearerToken?: string
 }): Promise<JsonFetchResult> {
   try {
     const json = await fetchApi<unknown>(
       {
         baseUrl: params.baseUrl,
         auth: {
-          authType: AuthTypeEnum.AccessToken,
+          authType: params.bearerToken
+            ? AuthTypeEnum.AccessToken
+            : AuthTypeEnum.None,
           accessToken: params.bearerToken,
         },
       },
@@ -539,7 +541,9 @@ async function queryCustomReadOnlyEndpoint(
   const result = await fetchJson({
     baseUrl: requestTarget.baseUrl,
     endpoint: requestTarget.endpoint,
-    bearerToken: config.customEndpoint.bearerToken ?? profile.apiKey,
+    bearerToken:
+      config.customEndpoint.bearerToken ??
+      (requestTarget.isCrossOrigin ? undefined : profile.apiKey),
   })
 
   return {
@@ -703,19 +707,10 @@ export async function refreshApiCredentialProfileTelemetry(
 
   const modelSucceeded = Boolean(models && models.count > 0)
   const usageSucceeded = Boolean(usageResult)
-  const customEndpointError = attempts.find((attempt) => {
-    if (
-      attempt.status !== "error" ||
-      attempt.source !== "customReadOnlyEndpoint"
-    ) {
-      return false
-    }
-
-    return (
-      attempt.message === "Custom endpoint is not configured" ||
-      attempt.endpoint === config.customEndpoint?.endpoint
-    )
-  })?.message
+  const customEndpointError = attempts.find(
+    (attempt) =>
+      attempt.status === "error" && attempt.source === "customReadOnlyEndpoint",
+  )?.message
   const lastError =
     usageSucceeded || modelSucceeded
       ? undefined

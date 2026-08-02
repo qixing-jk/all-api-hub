@@ -352,6 +352,69 @@ describe("ApiCredentialProfileDialog", () => {
     })
   })
 
+  it("omits a whitespace-only custom telemetry bearer token", async () => {
+    const { onSave } = renderDialog()
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.name",
+      ),
+      { target: { value: "Unauthenticated telemetry" } },
+    )
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.baseUrl",
+      ),
+      { target: { value: "https://api.example.com" } },
+    )
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.apiKey",
+      ),
+      { target: { value: "sk-profile" } },
+    )
+    fireEvent.change(
+      screen.getByLabelText(
+        "apiCredentialProfiles:dialog.fields.telemetryPreset",
+      ),
+      { target: { value: "customReadOnlyEndpoint" } },
+    )
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.telemetryEndpoint",
+      ),
+      { target: { value: "https://telemetry.example.com/usage" } },
+    )
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.telemetryBearerToken",
+      ),
+      { target: { value: "   " } },
+    )
+    fireEvent.change(
+      screen.getAllByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.telemetryJsonPath",
+      )[0]!,
+      { target: { value: "data.balance" } },
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          telemetryConfig: {
+            mode: "customReadOnlyEndpoint",
+            customEndpoint: {
+              endpoint: "https://telemetry.example.com/usage",
+              jsonPaths: { balanceUsd: "data.balance" },
+            },
+          },
+        }),
+      )
+    })
+  })
+
   it("replays stored telemetry config when editing an existing profile", () => {
     renderDialog({
       profile: buildProfile({

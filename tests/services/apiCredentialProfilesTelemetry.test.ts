@@ -479,12 +479,12 @@ describe("api credential profile telemetry", () => {
     )
   })
 
-  it("uses the profile API key for a cross-origin custom telemetry URL when no dedicated token is set", async () => {
+  it("omits authentication for a cross-origin custom telemetry URL when no dedicated token is set", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
-      name: "Custom Cross-Origin Fallback",
+      name: "Custom Cross-Origin Anonymous",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
       baseUrl: "https://api.example.com/v1/models",
-      apiKey: "sk-cross-origin-fallback",
+      apiKey: "sk-cross-origin-profile",
       telemetryConfig: {
         mode: "customReadOnlyEndpoint",
         customEndpoint: {
@@ -503,8 +503,8 @@ describe("api credential profile telemetry", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "https://telemetry.example.com/usage",
       expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "Bearer sk-cross-origin-fallback",
+        headers: expect.not.objectContaining({
+          Authorization: expect.any(String),
         }),
       }),
     )
@@ -619,5 +619,45 @@ describe("api credential profile telemetry", () => {
         }),
       ]),
     )
+  })
+
+  it("prefers an absolute custom endpoint error when model discovery also fails", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Absolute Custom Error",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.example.com/v1",
+      apiKey: "sk-absolute-custom-error",
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint",
+        customEndpoint: {
+          endpoint: "https://telemetry.example.com/usage",
+          bearerToken: "dedicated-token",
+          jsonPaths: {
+            balanceUsd: "balance",
+          },
+        },
+      },
+    })
+
+    fetchApiCredentialModelIdsMock.mockRejectedValueOnce(
+      new Error("models failed"),
+    )
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ message: "custom failed" }, 500)),
+    )
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+    const customAttempt = snapshot.attempts.find(
+      (attempt) => attempt.source === "customReadOnlyEndpoint",
+    )
+
+    expect(customAttempt).toEqual(
+      expect.objectContaining({
+        status: "error",
+        message: expect.stringContaining("custom failed"),
+      }),
+    )
+    expect(snapshot.lastError).toBe(customAttempt?.message)
   })
 })

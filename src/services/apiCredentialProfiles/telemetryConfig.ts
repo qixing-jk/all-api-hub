@@ -62,12 +62,12 @@ export function coerceApiCredentialTelemetryJsonPathMap(
 }
 
 /**
- * Resolves a custom endpoint into a request target on the profile origin.
+ * Resolves a root-relative or absolute custom endpoint into a request target.
  */
 export function resolveApiCredentialTelemetryRequestTarget(
   baseUrl: string,
   endpoint: string,
-): { baseUrl: string; endpoint: string } {
+): { baseUrl: string; endpoint: string; isCrossOrigin: boolean } {
   const trimmed = endpoint.trim()
   if (!trimmed) throw new Error("Custom endpoint is empty")
 
@@ -83,6 +83,7 @@ export function resolveApiCredentialTelemetryRequestTarget(
   return {
     baseUrl: resolved.origin,
     endpoint: `${resolved.pathname}${resolved.search}`,
+    isCrossOrigin: resolved.origin !== profileBaseUrl.origin,
   }
 }
 
