@@ -1,4 +1,4 @@
-import { AppWindow, Layers2, PanelTop, Star } from "lucide-react"
+import { AppWindow, Layers2, PanelTop, Sparkles, Star } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -19,7 +19,10 @@ import {
   Switch,
   WorkflowTransitionButton,
 } from "~/components/ui"
-import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import {
+  TEMP_CONTEXT_MODES,
+  TEMP_CONTEXT_PREFERENCE_MODES,
+} from "~/constants/tempContextMode"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { SHIELD_AUTOMATIC_FEATURE_ITEMS } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
@@ -154,6 +157,7 @@ export default function ShieldSettings() {
 
   const mode = normalizedPreferences.tempContextMode
   const methodHints = [
+    [TEMP_CONTEXT_PREFERENCE_MODES.Auto, t("refresh.shieldMethodHintAuto")],
     [TEMP_CONTEXT_MODES.Tab, t("refresh.shieldMethodHintTab")],
     [TEMP_CONTEXT_MODES.Composite, t("refresh.shieldMethodHintComposite")],
     [TEMP_CONTEXT_MODES.Window, t("refresh.shieldMethodHintWindow")],
@@ -210,14 +214,21 @@ export default function ShieldSettings() {
             id={SHIELD_SETTINGS_TARGET_IDS.method}
             title={t("refresh.shieldMethodTitle")}
             description={t("refresh.shieldMethodDesc")}
+            rightContentClassName="sm:flex-1"
             rightContent={
-              <div className="flex flex-col items-stretch space-y-2 text-left [@container(min-width:42rem)]:items-end">
+              <div className="flex flex-col items-stretch space-y-2 text-left">
                 <ResponsiveButtonGroup
                   variant="plain"
                   aria-label={t("refresh.shieldMethodTitle")}
+                  className="max-w-full justify-end [@container(min-width:42rem)]:w-full"
                 >
                   {(
                     [
+                      [
+                        TEMP_CONTEXT_PREFERENCE_MODES.Auto,
+                        t("refresh.shieldMethodAuto"),
+                        <Sparkles aria-hidden="true" className="size-4" />,
+                      ],
                       [
                         TEMP_CONTEXT_MODES.Tab,
                         t("refresh.shieldMethodTab"),
@@ -237,6 +248,7 @@ export default function ShieldSettings() {
                   ).map(([nextMode, label, modeIcon]) => (
                     <Button
                       key={nextMode}
+                      aria-pressed={mode === nextMode}
                       size="sm"
                       variant={mode === nextMode ? "default" : "outline"}
                       onClick={() =>
@@ -245,7 +257,7 @@ export default function ShieldSettings() {
                       className={responsiveButtonGroupItemClassName}
                       leftIcon={modeIcon}
                       rightIcon={
-                        nextMode === TEMP_CONTEXT_MODES.Tab ? (
+                        nextMode === TEMP_CONTEXT_PREFERENCE_MODES.Auto ? (
                           <Star
                             aria-hidden="true"
                             className={
@@ -258,7 +270,7 @@ export default function ShieldSettings() {
                       }
                     >
                       {label}
-                      {nextMode === TEMP_CONTEXT_MODES.Tab && (
+                      {nextMode === TEMP_CONTEXT_PREFERENCE_MODES.Auto && (
                         <>
                           {" "}
                           <span className="sr-only">

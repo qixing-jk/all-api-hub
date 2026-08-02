@@ -12,6 +12,7 @@ type SearchDefinitionOptions = {
   descriptionKey?: string
   breadcrumbsKeys?: string[]
   keywords?: string[]
+  keywordKeys?: string[]
   isVisible?: (context: OptionsSearchContext) => boolean
 }
 
@@ -66,6 +67,7 @@ export const buildSectionDefinition = (
     `settings:tabs.${tabId}`,
   ],
   keywords: options?.keywords ?? [],
+  keywordKeys: options?.keywordKeys,
   order,
   isVisible: options?.isVisible,
 })
@@ -89,6 +91,7 @@ export const buildPageSectionDefinition = (
     `__page:${pageId}`,
   ],
   keywords: options?.keywords ?? [],
+  keywordKeys: options?.keywordKeys,
   order,
   isVisible: options?.isVisible,
 })
@@ -113,6 +116,7 @@ export const buildControlDefinition = (
     `settings:tabs.${tabId}`,
   ],
   keywords: options?.keywords ?? [],
+  keywordKeys: options?.keywordKeys,
   order,
   isVisible: options?.isVisible,
 })
@@ -136,6 +140,7 @@ export const buildPageControlDefinition = (
     `__page:${pageId}`,
   ],
   keywords: options?.keywords ?? [],
+  keywordKeys: options?.keywordKeys,
   order,
   isVisible: options?.isVisible,
 })

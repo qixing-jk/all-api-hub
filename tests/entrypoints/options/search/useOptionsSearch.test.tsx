@@ -80,6 +80,19 @@ describe("useOptionsSearch", () => {
     ).toBe(true)
   })
 
+  it("matches localized keyword keys independently from the description", () => {
+    const { result } = renderHook(
+      () => useOptionsSearch(context, "settings:refresh.shieldMethodHintAuto"),
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(result.current.results[0]?.id).toBe("control:shield-method")
+  })
+
   it("hides controls whose runtime targets are not rendered", () => {
     const { result } = renderHook(
       () =>

@@ -33,6 +33,7 @@ export interface CardSectionProps
     VariantProps<typeof cardItemVariants> {
   leftContent?: React.ReactNode
   rightContent?: React.ReactNode
+  rightContentClassName?: string
   icon?: React.ReactNode
   title?: string
   titleContent?: React.ReactNode
@@ -48,6 +49,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
       interactive,
       leftContent,
       rightContent,
+      rightContentClassName,
       icon,
       title,
       titleContent,
@@ -110,7 +112,12 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
               </div>
             </div>
             {rightContent && (
-              <div className="w-full min-w-0 flex-1 sm:ml-auto sm:w-auto sm:flex-none">
+              <div
+                className={cn(
+                  "w-full min-w-0 flex-1 sm:ml-auto sm:w-auto sm:flex-none",
+                  rightContentClassName,
+                )}
+              >
                 {rightContent}
               </div>
             )}

@@ -1,6 +1,10 @@
 /* eslint-disable jsdoc/require-jsdoc */
 import { SITE_TYPES } from "~/constants/siteType"
-import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import {
+  TEMP_CONTEXT_MODES,
+  TEMP_CONTEXT_PREFERENCE_MODES,
+  type TempContextPreferenceMode,
+} from "~/constants/tempContextMode"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   DEFAULT_PREFERENCES,
@@ -103,16 +107,19 @@ function getUsageHistoryScheduleMode(mode: string | undefined) {
   return PRODUCT_ANALYTICS_MODE_IDS.UsageHistoryAfterRefresh
 }
 
+const TEMP_WINDOW_ANALYTICS_MODE_BY_PREFERENCE = {
+  [TEMP_CONTEXT_PREFERENCE_MODES.Auto]:
+    PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeAuto,
+  [TEMP_CONTEXT_MODES.Tab]: PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeTab,
+  [TEMP_CONTEXT_MODES.Composite]:
+    PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeComposite,
+  [TEMP_CONTEXT_MODES.Window]: PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow,
+} as const satisfies Record<TempContextPreferenceMode, ProductAnalyticsModeId>
+
 function getTempWindowMode(
   mode: TempWindowFallbackPreferences["tempContextMode"],
 ): ProductAnalyticsModeId {
-  if (mode === TEMP_CONTEXT_MODES.Window) {
-    return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow
-  }
-  if (mode === TEMP_CONTEXT_MODES.Tab) {
-    return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeTab
-  }
-  return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeComposite
+  return TEMP_WINDOW_ANALYTICS_MODE_BY_PREFERENCE[mode]
 }
 
 function getActionClickBehavior(

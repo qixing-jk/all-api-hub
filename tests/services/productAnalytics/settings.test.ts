@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  TEMP_CONTEXT_MODES,
+  TEMP_CONTEXT_PREFERENCE_MODES,
+} from "~/constants/tempContextMode"
+import {
   createDefaultPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
@@ -52,6 +56,45 @@ describe("settings product analytics snapshots", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
+
+  it.each([
+    [
+      TEMP_CONTEXT_PREFERENCE_MODES.Auto,
+      PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeAuto,
+    ],
+    [TEMP_CONTEXT_MODES.Tab, PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeTab],
+    [
+      TEMP_CONTEXT_MODES.Composite,
+      PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeComposite,
+    ],
+    [
+      TEMP_CONTEXT_MODES.Window,
+      PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow,
+    ],
+  ] as const)(
+    "maps the %s temporary context to its controlled snapshot mode",
+    (tempContextMode, expectedMode) => {
+      const preferences = createPreferences()
+      preferences.tempWindowFallback = {
+        ...preferences.tempWindowFallback!,
+        tempContextMode,
+      }
+
+      const [snapshot] = buildSettingsSnapshotEvents(
+        preferences,
+        PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        { tempWindowFallback: {} },
+      )
+
+      expect(snapshot).toEqual(
+        expect.objectContaining({
+          setting_id:
+            PRODUCT_ANALYTICS_SETTING_IDS.TempWindowFallbackConfigSnapshot,
+          mode: expectedMode,
+        }),
+      )
+    },
+  )
 
   it("builds broad privacy-safe settings snapshots for development insights", () => {
     const preferences = createPreferences({

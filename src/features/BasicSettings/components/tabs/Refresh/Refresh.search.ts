@@ -128,6 +128,10 @@ export const refreshSearchControls: OptionsSearchItemDefinition[] = [
         "background tab",
         "new window",
       ],
+      keywordKeys: [
+        "settings:refresh.shieldMethodAuto",
+        "settings:refresh.shieldMethodHintAuto",
+      ],
     },
   ),
   buildControlDefinition(

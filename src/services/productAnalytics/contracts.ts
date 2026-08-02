@@ -335,6 +335,7 @@ export const PRODUCT_ANALYTICS_MODE_IDS = {
   RateLimitLessThan20: "rate_limit_lt_20",
   RateLimitTwentyTo60: "rate_limit_20_60",
   RateLimitSixtyPlus: "rate_limit_60_plus",
+  TempWindowModeAuto: "temp_window_mode_auto",
   TempWindowModeTab: "temp_window_mode_tab",
   TempWindowModeWindow: "temp_window_mode_window",
   TempWindowModeComposite: "temp_window_mode_composite",

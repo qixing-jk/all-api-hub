@@ -25,6 +25,7 @@ export interface OptionsSearchItemDefinition {
   descriptionKey?: string
   breadcrumbsKeys: string[]
   keywords: string[]
+  keywordKeys?: string[]
   order: number
   isVisible?: (context: OptionsSearchContext) => boolean
 }

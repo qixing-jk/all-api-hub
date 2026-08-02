@@ -75,6 +75,10 @@ function localizeSearchItem(
     breadcrumbs: item.breadcrumbsKeys.map((key) =>
       resolveSyntheticPageTitle(key, t),
     ),
+    keywords: [
+      ...item.keywords,
+      ...(item.keywordKeys ?? []).map((key) => t(key)),
+    ],
   }
 }
 

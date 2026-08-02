@@ -26,6 +26,21 @@ describe("CardItem", () => {
     )
   })
 
+  it("composes a task-specific right-content width override", () => {
+    render(
+      <CardItem
+        title="Title"
+        rightContent={<span data-testid="right-content">Right</span>}
+        rightContentClassName="sm:flex-1 [@container(min-width:42rem)]:flex-none"
+      />,
+    )
+
+    expect(screen.getByTestId("right-content").parentElement).toHaveClass(
+      "sm:flex-1",
+      "[@container(min-width:42rem)]:flex-none",
+    )
+  })
+
   it("adds top spacing above left content when header copy is present", () => {
     render(
       <CardItem

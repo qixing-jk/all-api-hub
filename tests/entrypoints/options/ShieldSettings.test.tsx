@@ -2,7 +2,11 @@ import userEvent from "@testing-library/user-event"
 import type { TFunction } from "i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import {
+  TEMP_CONTEXT_MODES,
+  TEMP_CONTEXT_PREFERENCE_MODES,
+  type TempContextPreferenceMode,
+} from "~/constants/tempContextMode"
 import {
   getShieldDevTriggerPreset,
   SHIELD_DEV_TRIGGER_PRESET_IDS,
@@ -12,6 +16,7 @@ import {
   executeShieldDevTrigger,
   parseShieldDevTriggerDelay,
 } from "~/features/BasicSettings/components/tabs/Refresh/protectionBypassDevTriggerRuntime"
+import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
 import ShieldSettings from "~/features/BasicSettings/components/tabs/Refresh/ShieldSettings"
 import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,
@@ -180,6 +185,142 @@ describe("ShieldSettings", () => {
     })
   })
 
+  it("lists all opening methods in accessible preference order", async () => {
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const methodGroup = screen.getByRole("group", {
+      name: "settings:refresh.shieldMethodTitle",
+    })
+    const methodButtons = within(methodGroup).getAllByRole("button")
+
+    expect(methodButtons).toHaveLength(4)
+    expect(methodButtons[0]).toHaveAccessibleName(
+      "settings:refresh.shieldMethodAuto settings:refresh.shieldMethodRecommended",
+    )
+    expect(methodButtons[1]).toHaveAccessibleName(
+      "settings:refresh.shieldMethodTab",
+    )
+    expect(methodButtons[2]).toHaveAccessibleName(
+      "settings:refresh.shieldMethodComposite",
+    )
+    expect(methodButtons[3]).toHaveAccessibleName(
+      "settings:refresh.shieldMethodWindow",
+    )
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("keeps long opening methods inside a shrinkable wrapping pane", async () => {
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+      ).not.toBeInTheDocument()
+    })
+
+    const methodGroup = screen.getByRole("group", {
+      name: "settings:refresh.shieldMethodTitle",
+    })
+    const methodLayout = methodGroup.parentElement
+    const rightPane = methodLayout?.parentElement
+
+    // JSDOM cannot resolve container-query geometry, so protect the three
+    // constraints that prevent max-content buttons from crushing the copy.
+    expect(rightPane).toHaveClass("sm:flex-1")
+    expect(rightPane).not.toHaveClass("[@container(min-width:42rem)]:flex-none")
+    expect(methodLayout).toHaveClass("items-stretch")
+    expect(methodLayout).not.toHaveClass(
+      "[@container(min-width:42rem)]:items-end",
+    )
+    expect(methodGroup).toHaveClass(
+      "max-w-full",
+      "[@container(min-width:42rem)]:w-full",
+    )
+  })
+
+  it("renders the opening methods at their canonical target", async () => {
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      document.getElementById(SHIELD_SETTINGS_TARGET_IDS.method),
+    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("requests Automatic persistence then reflects external synchronization", async () => {
+    const { rerender } = render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      screen.getByRole("button", {
+        name: "settings:refresh.shieldMethodComposite",
+        pressed: true,
+      }),
+    ).toBeInTheDocument()
+    const autoButton = screen.getByRole("button", {
+      name: /^settings:refresh\.shieldMethodAuto/,
+    })
+
+    fireEvent.click(autoButton)
+
+    expect(updateTempWindowFallback).toHaveBeenCalledWith({
+      tempContextMode: "auto",
+    })
+
+    useUserPreferencesContextMock.mockReturnValue({
+      tempWindowFallback: {
+        enabled: true,
+        automaticFeatureBypass: completeExternalAutomaticFeatureBypass,
+        tempContextMode: TEMP_CONTEXT_PREFERENCE_MODES.Auto,
+      },
+      updateTempWindowFallback,
+    })
+    rerender(<ShieldSettings />)
+
+    expect(
+      screen.getByRole("button", {
+        name: /^settings:refresh\.shieldMethodAuto/,
+        pressed: true,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "settings:refresh.shieldMethodComposite",
+        pressed: false,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("settings:refresh.shieldMethodHintAuto"),
+    ).not.toHaveAttribute("aria-hidden")
+    expect(
+      screen.getByText("settings:refresh.shieldMethodHintComposite"),
+    ).toHaveAttribute("aria-hidden", "true")
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it("shows the permission warning when temp-window access is unavailable", async () => {
     canUseTempWindowFetchMock.mockResolvedValue(false)
 
@@ -308,26 +449,64 @@ describe("ShieldSettings", () => {
   })
 
   it.each([
-    [TEMP_CONTEXT_MODES.Window, "settings:refresh.shieldMethodHintWindow"],
-    [TEMP_CONTEXT_MODES.Tab, "settings:refresh.shieldMethodHintTab"],
+    [
+      TEMP_CONTEXT_PREFERENCE_MODES.Auto,
+      "settings:refresh.shieldMethodHintAuto",
+      "settings:refresh.shieldMethodAuto settings:refresh.shieldMethodRecommended",
+    ],
+    [
+      TEMP_CONTEXT_MODES.Tab,
+      "settings:refresh.shieldMethodHintTab",
+      "settings:refresh.shieldMethodTab",
+    ],
+    [
+      TEMP_CONTEXT_MODES.Composite,
+      "settings:refresh.shieldMethodHintComposite",
+      "settings:refresh.shieldMethodComposite",
+    ],
+    [
+      TEMP_CONTEXT_MODES.Window,
+      "settings:refresh.shieldMethodHintWindow",
+      "settings:refresh.shieldMethodWindow",
+    ],
   ] as const)(
-    "shows the %s temporary-context method hint",
-    async (mode, hint) => {
-      useUserPreferencesContextMock.mockReturnValue({
+    "exposes only the selected %s temporary-context method hint",
+    async (mode, selectedHint, selectedButtonName) => {
+      let currentMode: TempContextPreferenceMode =
+        mode === TEMP_CONTEXT_PREFERENCE_MODES.Auto
+          ? TEMP_CONTEXT_MODES.Composite
+          : TEMP_CONTEXT_PREFERENCE_MODES.Auto
+      useUserPreferencesContextMock.mockImplementation(() => ({
         tempWindowFallback: {
           enabled: true,
           automaticFeatureBypass: completeExternalAutomaticFeatureBypass,
-          tempContextMode: mode,
+          tempContextMode: currentMode,
         },
         updateTempWindowFallback,
-      })
+      }))
 
-      render(<ShieldSettings />, {
+      const { rerender } = render(<ShieldSettings />, {
         withUserPreferencesProvider: false,
         withThemeProvider: false,
       })
+      currentMode = mode
+      rerender(<ShieldSettings />)
 
-      expect(screen.getByText(hint)).toBeInTheDocument()
+      const pressedButtons = screen.getAllByRole("button", { pressed: true })
+      expect(pressedButtons).toHaveLength(1)
+      expect(pressedButtons[0]).toHaveAccessibleName(selectedButtonName)
+      expect(screen.getByText(selectedHint)).not.toHaveAttribute("aria-hidden")
+      const allHints = [
+        "settings:refresh.shieldMethodHintAuto",
+        "settings:refresh.shieldMethodHintTab",
+        "settings:refresh.shieldMethodHintComposite",
+        "settings:refresh.shieldMethodHintWindow",
+      ] as const
+      for (const hint of allHints) {
+        if (hint !== selectedHint) {
+          expect(screen.getByText(hint)).toHaveAttribute("aria-hidden", "true")
+        }
+      }
       await waitFor(() => {
         expect(
           screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
@@ -335,41 +514,6 @@ describe("ShieldSettings", () => {
       })
     },
   )
-
-  it("exposes only the selected temporary-context hint to assistive technology", async () => {
-    useUserPreferencesContextMock.mockReturnValue({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: completeExternalAutomaticFeatureBypass,
-        tempContextMode: TEMP_CONTEXT_MODES.Composite,
-      },
-      updateTempWindowFallback,
-    })
-
-    render(<ShieldSettings />, {
-      withUserPreferencesProvider: false,
-      withThemeProvider: false,
-    })
-
-    const selectedHint = screen.getByText(
-      "settings:refresh.shieldMethodHintComposite",
-    )
-    const inactiveHints = [
-      screen.getByText("settings:refresh.shieldMethodHintTab"),
-      screen.getByText("settings:refresh.shieldMethodHintWindow"),
-    ]
-
-    expect(selectedHint).not.toHaveAttribute("aria-hidden")
-    for (const inactiveHint of inactiveHints) {
-      expect(inactiveHint).toHaveAttribute("aria-hidden", "true")
-    }
-
-    await waitFor(() => {
-      expect(
-        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
-      ).not.toBeInTheDocument()
-    })
-  })
 
   it("accepts a pending feature write before synchronizing a later external update", async () => {
     const context = {
@@ -579,51 +723,6 @@ describe("ShieldSettings", () => {
       expect(balanceHistory).not.toBeChecked()
     },
   )
-
-  it("puts the recommended current-window method first", async () => {
-    render(<ShieldSettings />, {
-      withUserPreferencesProvider: false,
-      withThemeProvider: false,
-    })
-
-    const methodGroup = screen.getByRole("group", {
-      name: "settings:refresh.shieldMethodTitle",
-    })
-    await waitFor(() => {
-      expect(
-        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
-      ).not.toBeInTheDocument()
-    })
-    expect(within(methodGroup).getAllByRole("button")).toEqual([
-      screen.getByRole("button", {
-        name: "settings:refresh.shieldMethodTab settings:refresh.shieldMethodRecommended",
-      }),
-      screen.getByRole("button", {
-        name: "settings:refresh.shieldMethodComposite",
-      }),
-      screen.getByRole("button", {
-        name: "settings:refresh.shieldMethodWindow",
-      }),
-    ])
-  })
-
-  it("gives the recommended opening method an accessible text equivalent", async () => {
-    render(<ShieldSettings />, {
-      withUserPreferencesProvider: false,
-      withThemeProvider: false,
-    })
-    await waitFor(() => {
-      expect(
-        screen.queryByText("settings:refresh.shieldPermissionWarningTitle"),
-      ).not.toBeInTheDocument()
-    })
-
-    expect(
-      screen.getByRole("button", {
-        name: "settings:refresh.shieldMethodTab settings:refresh.shieldMethodRecommended",
-      }),
-    ).toBeInTheDocument()
-  })
 
   it("blocks development-trigger execution outside development mode", async () => {
     await expect(
