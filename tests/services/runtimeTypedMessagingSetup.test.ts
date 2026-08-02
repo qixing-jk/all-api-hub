@@ -495,6 +495,8 @@ describe("typed runtime messaging setup", () => {
           Cancel: "accountKeyRepair:cancel",
           GetProgress: "accountKeyRepair:getProgress",
           DeleteInvalidTokens: "accountKeyRepair:deleteInvalidTokens",
+          RecordManagedSiteImportResults:
+            "accountKeyRepair:recordManagedSiteImportResults",
         },
         onAccountKeyRepairMessage,
       }),
@@ -519,7 +521,32 @@ describe("typed runtime messaging setup", () => {
     repair.setupAccountKeyRepairMessagingListeners()
     repair.setupAccountKeyRepairMessagingListeners()
 
-    expect(onAccountKeyRepairMessage).toHaveBeenCalledTimes(4)
+    expect(onAccountKeyRepairMessage).toHaveBeenCalledTimes(5)
+    const recordImportResultsHandler = getRegisteredHandler(
+      onAccountKeyRepairMessage,
+      "accountKeyRepair:recordManagedSiteImportResults",
+    )
+    await expect(
+      recordImportResultsHandler({
+        data: {
+          jobId: "job-123",
+          targetFingerprint: "a".repeat(64),
+          items: [
+            {
+              accountId: "account-1",
+              tokenId: 11,
+              status: "created",
+              updatedAt: 123,
+            },
+          ],
+        },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "invalid_managed_site_import_results_request",
+    })
+    expect(storageGet).not.toHaveBeenCalled()
+
     const getProgressHandler = onAccountKeyRepairMessage.mock.calls.find(
       ([type]) => type === "accountKeyRepair:getProgress",
     )?.[1]
@@ -546,8 +573,99 @@ describe("typed runtime messaging setup", () => {
       success: false,
       error: "repair failed",
     })
+
+    await expect(
+      recordImportResultsHandler({
+        data: {
+          jobId: "job-123",
+          targetFingerprint: "a".repeat(64),
+          items: [
+            {
+              accountId: "account-1",
+              tokenId: 11,
+              status: "created",
+            },
+          ],
+        },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "repair failed",
+    })
     expect(getAllAccounts).toHaveBeenCalledTimes(1)
     expect(convertToDisplayData).toHaveBeenCalledWith([], [])
+  })
+
+  it("surfaces managed-site import receipt persistence failures through the typed listener", async () => {
+    const onAccountKeyRepairMessage: OnMessageMock = vi.fn(() => vi.fn())
+    const storageGet = vi.fn().mockResolvedValue({
+      jobId: "job-123",
+      state: "completed",
+      totals: {
+        enabledAccounts: 0,
+        eligibleAccounts: 0,
+        processedAccounts: 0,
+        processedEligibleAccounts: 0,
+      },
+      summary: {
+        created: 0,
+        alreadyHad: 0,
+        skipped: 0,
+        failed: 0,
+      },
+      results: [],
+    })
+    const storageSet = vi.fn().mockRejectedValue(new Error("storage failed"))
+
+    vi.doMock(
+      "~/services/accounts/accountKeyAutoProvisioning/messaging",
+      () => ({
+        AccountKeyRepairMessageTypes: {
+          Start: "accountKeyRepair:start",
+          Cancel: "accountKeyRepair:cancel",
+          GetProgress: "accountKeyRepair:getProgress",
+          DeleteInvalidTokens: "accountKeyRepair:deleteInvalidTokens",
+          RecordManagedSiteImportResults:
+            "accountKeyRepair:recordManagedSiteImportResults",
+        },
+        onAccountKeyRepairMessage,
+      }),
+    )
+    vi.doMock("@plasmohq/storage", () => ({
+      Storage: class {
+        get = storageGet
+        set = storageSet
+      },
+    }))
+
+    const repair = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+    repair.setupAccountKeyRepairMessagingListeners()
+    const recordImportResultsHandler = getRegisteredHandler(
+      onAccountKeyRepairMessage,
+      "accountKeyRepair:recordManagedSiteImportResults",
+    )
+
+    await expect(
+      recordImportResultsHandler({
+        data: {
+          jobId: "job-123",
+          targetFingerprint: "a".repeat(64),
+          items: [
+            {
+              accountId: "account-1",
+              tokenId: 11,
+              status: "created",
+            },
+          ],
+        },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "storage failed",
+    })
+    expect(storageSet).toHaveBeenCalledTimes(1)
   })
 
   it("routes WebDAV auto-sync typed listeners through runtime resolvers", async () => {

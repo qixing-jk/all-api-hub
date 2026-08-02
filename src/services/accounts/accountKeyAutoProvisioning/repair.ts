@@ -15,13 +15,16 @@ import type {
   AccountKeyRepairAccountResult,
   AccountKeyRepairDeleteInvalidTokensRequest,
   AccountKeyRepairDeleteInvalidTokensResult,
+  AccountKeyRepairManagedSiteImportReceipt,
   AccountKeyRepairProgress,
+  AccountKeyRepairRecordManagedSiteImportResultsRequest,
   AccountKeyRepairSkipReason,
   AccountKeyRepairStartOptions,
 } from "~/types/accountKeyAutoProvisioning"
 import {
   ACCOUNT_KEY_REPAIR_ERRORS,
   ACCOUNT_KEY_REPAIR_JOB_STATES,
+  ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES,
   ACCOUNT_KEY_REPAIR_OUTCOMES,
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
 } from "~/types/accountKeyAutoProvisioning"
@@ -42,6 +45,63 @@ import {
 import { runPerKeySequential } from "./perOriginQueue"
 
 const logger = createLogger("AccountKeyRepair")
+
+export const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT = 500
+export const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_REQUEST_ERROR =
+  "invalid_managed_site_import_results_request"
+
+const managedSiteImportStatuses = new Set<string>(
+  Object.values(ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES),
+)
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null
+
+const hasOnlyKeys = (
+  value: Record<string, unknown>,
+  allowedKeys: readonly string[],
+) => Object.keys(value).every((key) => allowedKeys.includes(key))
+
+const isControlledManagedSiteImportRequest = (
+  request: unknown,
+): request is AccountKeyRepairRecordManagedSiteImportResultsRequest =>
+  isRecord(request) &&
+  hasOnlyKeys(request, ["jobId", "targetFingerprint", "items"]) &&
+  typeof request.jobId === "string" &&
+  typeof request.targetFingerprint === "string" &&
+  /^[a-f0-9]{64}$/.test(request.targetFingerprint) &&
+  Array.isArray(request.items) &&
+  request.items.length > 0 &&
+  request.items.every(
+    (item) =>
+      isRecord(item) &&
+      hasOnlyKeys(item, ["accountId", "tokenId", "status"]) &&
+      typeof item.accountId === "string" &&
+      Number.isSafeInteger(item.tokenId) &&
+      typeof item.status === "string" &&
+      managedSiteImportStatuses.has(item.status),
+  )
+
+/** Rejects runtime payloads that contain fields outside the receipt protocol. */
+function assertControlledManagedSiteImportRequest(
+  request: unknown,
+): asserts request is AccountKeyRepairRecordManagedSiteImportResultsRequest {
+  if (!isControlledManagedSiteImportRequest(request)) {
+    throw new Error(ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_REQUEST_ERROR)
+  }
+}
+
+const getManagedSiteImportReceiptKey = (
+  receipt: Pick<
+    AccountKeyRepairManagedSiteImportReceipt,
+    "targetFingerprint" | "accountId" | "tokenId"
+  >,
+) =>
+  JSON.stringify([
+    receipt.targetFingerprint,
+    receipt.accountId,
+    receipt.tokenId,
+  ])
 
 const getInvalidTokenDeleteErrorMessage = (error: unknown) => {
   const message = getErrorMessage(error)
@@ -121,6 +181,7 @@ class AccountKeyRepairRunner {
   private storage: Storage
   private currentProgress: AccountKeyRepairProgress | null = null
   private currentRun: Promise<void> | null = null
+  private currentRunProgress: AccountKeyRepairProgress | null = null
   private currentAbortController: AbortController | null = null
   private progressQueue: Promise<void> = Promise.resolve()
 
@@ -128,7 +189,19 @@ class AccountKeyRepairRunner {
     this.storage = new Storage({ area: "local" })
   }
 
+  private getReservedRunProgress(): AccountKeyRepairProgress | null {
+    return this.currentRunProgress &&
+      this.currentProgress?.jobId !== this.currentRunProgress.jobId
+      ? this.currentRunProgress
+      : null
+  }
+
   async getProgress(): Promise<AccountKeyRepairProgress> {
+    const reservedRunProgress = this.getReservedRunProgress()
+    if (reservedRunProgress) {
+      return reservedRunProgress
+    }
+
     if (this.currentProgress) {
       return this.currentProgress
     }
@@ -148,6 +221,10 @@ class AccountKeyRepairRunner {
     options: AccountKeyRepairStartOptions = {},
   ): Promise<AccountKeyRepairProgress> {
     if (this.currentRun) {
+      const reservedRunProgress = this.getReservedRunProgress()
+      if (reservedRunProgress) {
+        return reservedRunProgress
+      }
       return await this.getProgress()
     }
 
@@ -173,9 +250,8 @@ class AccountKeyRepairRunner {
       results: [],
     }
 
-    this.currentProgress = progress
     this.currentAbortController = abortController
-    const initialPersist = this.persistAndNotify()
+    const initialPersist = this.queueProgressReplacement(progress)
     const runPromise = initialPersist
       .then(() => this.run(progress.jobId, abortController.signal, options))
       .catch((error) => {
@@ -188,7 +264,11 @@ class AccountKeyRepairRunner {
         if (this.currentRun === runPromise) {
           this.currentRun = null
         }
+        if (this.currentRunProgress === progress) {
+          this.currentRunProgress = null
+        }
       })
+    this.currentRunProgress = progress
     this.currentRun = runPromise
     await initialPersist
 
@@ -557,23 +637,120 @@ class AccountKeyRepairRunner {
     })
   }
 
-  private async queueProgressUpdate(
-    updater: (progress: AccountKeyRepairProgress) => AccountKeyRepairProgress,
-  ): Promise<void> {
-    this.progressQueue = this.progressQueue
-      .then(async () => {
-        this.updateProgress(updater)
-        await this.persistAndNotify()
-      })
-      .catch((error) => {
-        logger.error("Failed to persist repair progress update", error)
-      })
+  async recordManagedSiteImportResultsForCurrentProgress(
+    request: unknown,
+  ): Promise<AccountKeyRepairProgress> {
+    assertControlledManagedSiteImportRequest(request)
+    const progress = await this.getProgress()
+    if (progress.jobId !== request.jobId) {
+      return progress
+    }
 
-    await this.progressQueue
+    await this.queueProgressUpdate((prev) => {
+      if (prev.jobId !== request.jobId) {
+        return null
+      }
+
+      const receiptUpdatedAt = Date.now()
+      const receiptsByKey = new Map(
+        (prev.managedSiteImportReceipts ?? []).map((receipt) => [
+          getManagedSiteImportReceiptKey(receipt),
+          receipt,
+        ]),
+      )
+
+      for (const item of request.items) {
+        const receipt: AccountKeyRepairManagedSiteImportReceipt = {
+          targetFingerprint: request.targetFingerprint,
+          accountId: item.accountId,
+          tokenId: item.tokenId,
+          status: item.status,
+          updatedAt: receiptUpdatedAt,
+        }
+        receiptsByKey.set(getManagedSiteImportReceiptKey(receipt), receipt)
+      }
+
+      const mergedReceipts = Array.from(receiptsByKey.values())
+      const boundedReceipts =
+        mergedReceipts.length <=
+        ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT
+          ? mergedReceipts
+          : mergedReceipts
+              .sort((left, right) => left.updatedAt - right.updatedAt)
+              .slice(-ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT)
+
+      return {
+        ...prev,
+        managedSiteImportReceipts: boundedReceipts,
+      }
+    })
+
+    return this.currentProgress ?? progress
   }
 
-  private async persistAndNotify(): Promise<void> {
-    const progress = this.currentProgress ?? createIdleProgress()
+  private async queueProgressUpdate(
+    updater: (
+      progress: AccountKeyRepairProgress,
+    ) => AccountKeyRepairProgress | null,
+  ): Promise<void> {
+    const operation = this.enqueueProgressOperation(async () => {
+      const previousProgress = this.currentProgress
+      const base = previousProgress ?? createIdleProgress()
+      const nextProgress = updater(base)
+      if (!nextProgress) {
+        return
+      }
+      const pendingProgress = {
+        ...nextProgress,
+        updatedAt: Date.now(),
+      }
+      await this.persistProgressWithRollback(pendingProgress, previousProgress)
+    })
+
+    await operation
+  }
+
+  private async queueProgressReplacement(
+    progress: AccountKeyRepairProgress,
+  ): Promise<void> {
+    const operation = this.enqueueProgressOperation(async () => {
+      const previousProgress = this.currentProgress
+      await this.persistProgressWithRollback(progress, previousProgress)
+    })
+
+    await operation
+  }
+
+  private enqueueProgressOperation(
+    operation: () => Promise<void>,
+  ): Promise<void> {
+    const operationPromise = this.progressQueue.then(operation)
+    this.progressQueue = operationPromise.catch((error) => {
+      logger.error("Failed to persist repair progress update", error)
+    })
+    return operationPromise
+  }
+
+  private async persistProgressWithRollback(
+    progress: AccountKeyRepairProgress,
+    previousProgress: AccountKeyRepairProgress | null,
+  ): Promise<void> {
+    this.currentProgress = progress
+
+    try {
+      await this.persistAndNotify(progress)
+    } catch (error) {
+      if (this.currentProgress === progress) {
+        this.currentProgress = previousProgress
+      }
+      throw error
+    }
+  }
+
+  private async persistAndNotify(
+    progress: AccountKeyRepairProgress = this.currentProgress ??
+      createIdleProgress(),
+  ): Promise<void> {
     await this.storage.set(
       ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
       progress,
@@ -679,6 +856,17 @@ export async function deleteInvalidAccountTokens(
 }
 
 /**
+ * Merge bounded managed-site import receipts into the matching repair job.
+ */
+export async function recordManagedSiteImportResults(request: unknown) {
+  const progress =
+    await accountKeyRepairRunner.recordManagedSiteImportResultsForCurrentProgress(
+      request,
+    )
+  return { success: true as const, data: progress }
+}
+
+/**
  * Convert account-key repair listener errors into runtime responses.
  */
 function toAccountKeyRepairFailure(error: unknown) {
@@ -729,6 +917,16 @@ export function setupAccountKeyRepairMessagingListeners() {
       async ({ data }) => {
         try {
           return await deleteInvalidAccountTokens(data)
+        } catch (error) {
+          return toAccountKeyRepairFailure(error)
+        }
+      },
+    ),
+    onAccountKeyRepairMessage(
+      AccountKeyRepairMessageTypes.RecordManagedSiteImportResults,
+      async ({ data }) => {
+        try {
+          return await recordManagedSiteImportResults(data)
         } catch (error) {
           return toAccountKeyRepairFailure(error)
         }

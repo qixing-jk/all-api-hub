@@ -5,6 +5,7 @@ import type {
   AccountKeyRepairDeleteInvalidTokensRequest,
   AccountKeyRepairDeleteInvalidTokensResult,
   AccountKeyRepairProgress,
+  AccountKeyRepairRecordManagedSiteImportResultsRequest,
   AccountKeyRepairStartOptions,
 } from "~/types/accountKeyAutoProvisioning"
 
@@ -13,6 +14,8 @@ export const AccountKeyRepairMessageTypes = {
   Cancel: "accountKeyRepair:cancel",
   GetProgress: "accountKeyRepair:getProgress",
   DeleteInvalidTokens: "accountKeyRepair:deleteInvalidTokens",
+  RecordManagedSiteImportResults:
+    "accountKeyRepair:recordManagedSiteImportResults",
 } as const
 
 interface AccountKeyRepairProtocolMap {
@@ -24,6 +27,9 @@ interface AccountKeyRepairProtocolMap {
   [AccountKeyRepairMessageTypes.DeleteInvalidTokens](
     request: AccountKeyRepairDeleteInvalidTokensRequest,
   ): RuntimeMessageResponse<AccountKeyRepairDeleteInvalidTokensResult>
+  [AccountKeyRepairMessageTypes.RecordManagedSiteImportResults](
+    request: AccountKeyRepairRecordManagedSiteImportResultsRequest,
+  ): RuntimeMessageResponse<AccountKeyRepairProgress>
 }
 
 export const {
