@@ -18,6 +18,7 @@ const emptyConfig = () => ({
   targetUrl: "",
   userId: "",
   rememberToken: false,
+  rememberSession: false,
   allowInsecureHttp: false,
 })
 
@@ -65,6 +66,7 @@ export function normalizeConfigState(value) {
           targetUrl: String(profile.targetUrl),
           userId: String(profile.userId),
           rememberToken: profile.rememberToken === true,
+          rememberSession: profile.rememberSession === true,
           allowInsecureHttp: profile.allowInsecureHttp === true,
         }
       })
@@ -94,6 +96,7 @@ export function normalizeConfigState(value) {
           targetUrl: String(value.targetUrl),
           userId: String(value.userId),
           rememberToken: value.rememberToken === true,
+          rememberSession: false,
           allowInsecureHttp: value.allowInsecureHttp === true,
         },
       ],
@@ -155,6 +158,7 @@ export class ConfigStore {
       targetUrl: config.targetUrl,
       userId: config.userId,
       rememberToken: config.rememberToken === true,
+      rememberSession: config.rememberSession === true,
       allowInsecureHttp: config.allowInsecureHttp === true,
     }
     const profiles = existing
@@ -246,21 +250,36 @@ export class ConfigStore {
     }
   }
 
-  saveSession(session) {
-    this.#sessions.set(
-      getCredentialAccount(session.targetUrl, session.userId),
-      { ...session },
-    )
+  async saveSession(session, remember = false) {
+    const account = getCredentialAccount(session.targetUrl, session.userId)
+    this.#sessions.set(account, { ...session })
+    if (!this.#tokenStore?.saveSession) return
+    if (remember) {
+      await this.#tokenStore.saveSession(account, session)
+    } else if (this.#tokenStore.deleteSession) {
+      await this.#tokenStore.deleteSession(account)
+    }
   }
 
-  readSession(targetUrl, userId) {
-    const session = this.#sessions.get(getCredentialAccount(targetUrl, userId))
-    return session ? { ...session } : null
+  async readSession(targetUrl, userId, remember = false) {
+    const account = getCredentialAccount(targetUrl, userId)
+    const session = this.#sessions.get(account)
+    if (session) return { ...session }
+    if (!remember || !this.#tokenStore?.readSession) return null
+    const stored = await this.#tokenStore.readSession(account)
+    if (!stored?.sessionCookie) return null
+    const restored = { ...stored, targetUrl, userId: String(userId) }
+    this.#sessions.set(account, restored)
+    return { ...restored }
   }
 
-  clearSession(targetUrl, userId) {
+  async clearSession(targetUrl, userId) {
     if (targetUrl && userId) {
-      this.#sessions.delete(getCredentialAccount(targetUrl, userId))
+      const account = getCredentialAccount(targetUrl, userId)
+      this.#sessions.delete(account)
+      if (this.#tokenStore?.deleteSession) {
+        await this.#tokenStore.deleteSession(account)
+      }
       return
     }
     this.#sessions.clear()

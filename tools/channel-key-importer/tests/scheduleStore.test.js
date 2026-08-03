@@ -86,6 +86,46 @@ test("stores scheduled keys encrypted and exposes only public metadata", async (
   }
 })
 
+test("skips keys that are already waiting in another schedule", async () => {
+  const { root, store } = await makeStore()
+  try {
+    await store.create({
+      preview: { ...preview, keys: preview.keys.slice(0, 2) },
+      createOptions: {},
+      schedule: {
+        startAt: "2026-07-10T12:00:00.000Z",
+        batchSize: 1,
+        intervalMinutes: 5,
+      },
+    })
+    const queued = await store.findQueuedFingerprints({
+      profileId: preview.profileId,
+      apiKeys: ["sk-first-secret", "sk-not-queued"],
+    })
+    assert.equal(queued.size, 1)
+
+    const second = await store.create({
+      preview: {
+        ...preview,
+        keys: [
+          { apiKey: "sk-first-secret", quota: 20 },
+          { apiKey: "sk-fourth-secret", quota: 40 },
+        ],
+      },
+      createOptions: {},
+      schedule: {
+        startAt: "2026-07-10T12:00:00.000Z",
+        batchSize: 1,
+        intervalMinutes: 5,
+      },
+    })
+    assert.equal(second.counts.total, 1)
+    assert.equal(second.entries[0].keyFingerprint.length, 12)
+  } finally {
+    await rm(root, { force: true, recursive: true })
+  }
+})
+
 test("finds the nearest active schedule with second precision", async () => {
   const { root, store } = await makeStore()
   try {
@@ -99,7 +139,13 @@ test("finds the nearest active schedule with second precision", async () => {
       },
     })
     await store.create({
-      preview,
+      preview: {
+        ...preview,
+        keys: preview.keys.map((entry) => ({
+          ...entry,
+          apiKey: `${entry.apiKey}-second-schedule`,
+        })),
+      },
       createOptions: { combineKeys: false },
       schedule: {
         startAt: "2026-07-10T10:03:17.000Z",
@@ -291,7 +337,78 @@ test("automatically requeues rate-limited scheduled keys", async () => {
     assert.equal(updated.counts.failed, 0)
     assert.equal(updated.entries[0].retryCount, 1)
     assert.match(updated.lastError, /自动排队重试/)
-    assert.equal(updated.nextRunAt, "2026-08-03T00:02:30.000Z")
+    assert.equal(updated.nextRunAt, "2026-08-03T00:03:30.000Z")
+  } finally {
+    await rm(root, { force: true, recursive: true })
+  }
+})
+
+test("does not mark a missing scheduled outcome as imported", async () => {
+  const { root, store } = await makeStore()
+  try {
+    const job = await store.create({
+      preview: { ...preview, keys: preview.keys.slice(0, 1) },
+      createOptions: {},
+      schedule: {
+        startAt: "2026-07-10T10:00:00.000Z",
+        batchSize: 1,
+        intervalMinutes: 5,
+      },
+    })
+    await store.claimDueJob(new Date("2026-07-10T10:00:00.000Z"))
+
+    const updated = await store.completeRun(
+      job.id,
+      { success: false, successCount: 0, failedCount: 0, results: [] },
+      new Date("2026-07-10T10:00:10.000Z"),
+    )
+
+    assert.equal(updated.status, "attention")
+    assert.equal(updated.counts.imported, 0)
+    assert.equal(updated.counts.uncertain, 1)
+    assert.match(updated.entries[0].error, /避免重复渠道/)
+  } finally {
+    await rm(root, { force: true, recursive: true })
+  }
+})
+
+test("keeps a zero-interval rate limit recovery active", async () => {
+  const { root, store } = await makeStore()
+  try {
+    const job = await store.create({
+      preview: { ...preview, keys: preview.keys.slice(0, 1) },
+      createOptions: {},
+      schedule: {
+        startAt: "2026-07-10T10:00:00.000Z",
+        batchSize: 1,
+        intervalMinutes: 0,
+      },
+    })
+    const claim = await store.claimDueJob(new Date("2026-07-10T10:00:00.000Z"))
+
+    const updated = await store.completeRun(
+      job.id,
+      {
+        success: false,
+        successCount: 0,
+        failedCount: 1,
+        results: [
+          {
+            entryId: claim.preview.keys[0].id,
+            keyIndex: 1,
+            success: false,
+            retryable: true,
+            retryAfterMs: 45_000,
+            error: "HTTP 429",
+          },
+        ],
+      },
+      new Date("2026-07-10T10:00:05.000Z"),
+    )
+
+    assert.equal(updated.status, "active")
+    assert.equal(updated.nextRunAt, "2026-07-10T10:00:50.000Z")
+    assert.equal(updated.counts.pending, 1)
   } finally {
     await rm(root, { force: true, recursive: true })
   }

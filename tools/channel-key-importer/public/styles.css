@@ -1110,10 +1110,36 @@ select:focus {
   color: var(--danger);
   background: var(--danger-soft);
 }
+.inline-status.recovering {
+  color: #76520a;
+  border: 1px solid #f0cf83;
+  background: #fff8df;
+}
 
-.preview-panel {
-  margin-top: 18px;
+.preview-dialog {
+  width: min(1180px, calc(100vw - 32px));
+  max-width: none;
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  box-shadow: 0 28px 80px rgb(15 35 68 / 28%);
+}
+.preview-dialog::backdrop {
+  background: rgb(8 26 51 / 54%);
+  backdrop-filter: blur(5px);
+}
+.preview-dialog .preview-panel {
+  max-height: calc(100vh - 32px);
+  margin: 0;
   padding: 26px;
+  overflow: auto;
+  border: 0;
+}
+body:has(.preview-dialog[open]) {
+  overflow: hidden;
 }
 .preview-title-row {
   display: flex;
@@ -1210,7 +1236,7 @@ select:focus {
 }
 .batch-summary {
   display: grid;
-  grid-template-columns: 150px 180px 1fr;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
   gap: 12px;
   align-items: center;
   margin-top: 16px;
@@ -1231,6 +1257,7 @@ select:focus {
   font-size: 14px;
 }
 .batch-summary p {
+  grid-column: 1 / -1;
   margin: 0;
   color: var(--muted);
   font-size: 9px;
@@ -1267,6 +1294,10 @@ select:focus {
   border: 1px solid #d7e2f1;
   border-radius: 16px;
   background: white;
+}
+.schedule-card.recovering {
+  border-color: #e9c76d;
+  background: #fffdf6;
 }
 .schedule-card header {
   display: flex;
@@ -1306,9 +1337,17 @@ select:focus {
   color: #6d28d9;
   background: #ede9fe;
 }
+.schedule-status.attention {
+  color: #9a3412;
+  background: #ffedd5;
+}
+.schedule-status.recovering {
+  color: #76520a;
+  background: #fff0bd;
+}
 .schedule-metrics {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
   gap: 10px;
 }
 .schedule-metrics div {
@@ -1358,6 +1397,15 @@ select:focus {
 }
 .schedule-error {
   color: #b23b2d !important;
+}
+.schedule-recovery-note {
+  margin: 0 !important;
+  padding: 10px 12px;
+  border: 1px solid #efd489;
+  border-radius: 10px;
+  color: #76520a !important;
+  background: #fff8df;
+  font-size: 10px !important;
 }
 .workbench-heading {
   display: flex;
@@ -2279,6 +2327,12 @@ select:focus {
 }
 .record-batch-details[open] > summary {
   border-bottom: 1px solid #e5ecf4;
+}
+.record-sequence-cell {
+  width: 62px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .record-detail-table-wrap {
   overflow-x: auto;

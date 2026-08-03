@@ -5,6 +5,7 @@ import {
   applyBalanceUsage,
   applyGatewayUsage,
   calculateQuotaUsage,
+  ImportStore,
   keyIdentity,
 } from "../src/importStore.js"
 
@@ -14,6 +15,43 @@ test("stores only a masked hint and irreversible key fingerprint", () => {
   assert.equal(identity.keyHint, "••••1234")
   assert.equal(identity.keyFingerprint.length, 12)
   assert.equal(JSON.stringify(identity).includes("super-secret"), false)
+})
+
+test("finds previously imported keys only for the same New API profile", async () => {
+  let records = []
+  const store = new ImportStore({
+    stateStore: {
+      read: async () => records,
+      write: async (value) => {
+        records = value
+      },
+    },
+  })
+  await store.record({
+    profileId: "site-a",
+    targetName: "A",
+    targetUrl: "https://a.example",
+    providerName: "OpenAI",
+    apiKey: "sk-existing-key",
+    quota: 20,
+    operation: "created",
+    channelName: "A channel",
+  })
+
+  const sameSite = await store.findExistingFingerprints({
+    profileId: "site-a",
+    apiKeys: ["sk-existing-key", "sk-new-key"],
+  })
+  const otherSite = await store.findExistingFingerprints({
+    profileId: "site-b",
+    apiKeys: ["sk-existing-key"],
+  })
+
+  assert.deepEqual(
+    [...sameSite],
+    [keyIdentity("sk-existing-key").keyFingerprint],
+  )
+  assert.equal(otherSite.size, 0)
 })
 
 test("calculates consumption from entered quota and provider balance", () => {

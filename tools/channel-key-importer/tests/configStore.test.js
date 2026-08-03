@@ -7,7 +7,7 @@ import {
   normalizeConfigState,
 } from "../src/configStore.js"
 
-test("keeps a direct-login session only in memory for the matching target", () => {
+test("keeps a direct-login session only in memory for the matching target", async () => {
   const store = new ConfigStore()
   const session = {
     targetUrl: "https://new-api.example.com",
@@ -16,15 +16,46 @@ test("keeps a direct-login session only in memory for the matching target", () =
     sessionCookie: "session=opaque-value",
   }
 
-  store.saveSession(session)
+  await store.saveSession(session)
 
   assert.deepEqual(
-    store.readSession(session.targetUrl, session.userId),
+    await store.readSession(session.targetUrl, session.userId),
     session,
   )
-  assert.equal(store.readSession("https://other.example.com", "8"), null)
-  store.clearSession()
-  assert.equal(store.readSession(session.targetUrl, session.userId), null)
+  assert.equal(await store.readSession("https://other.example.com", "8"), null)
+  await store.clearSession()
+  assert.equal(await store.readSession(session.targetUrl, session.userId), null)
+})
+
+test("restores an explicitly remembered direct-login session", async () => {
+  const sessions = new Map()
+  const tokenStore = {
+    async saveSession(account, session) {
+      sessions.set(account, structuredClone(session))
+    },
+    async readSession(account) {
+      return sessions.get(account) || null
+    },
+    async deleteSession(account) {
+      sessions.delete(account)
+    },
+  }
+  const session = {
+    targetUrl: "https://new-api.example.com",
+    userId: "8",
+    username: "admin",
+    sessionCookie: "session=opaque-value",
+  }
+  const writer = new ConfigStore()
+  writer.setTokenStore(tokenStore)
+  await writer.saveSession(session, true)
+
+  const reader = new ConfigStore()
+  reader.setTokenStore(tokenStore)
+  assert.deepEqual(
+    await reader.readSession(session.targetUrl, session.userId, true),
+    session,
+  )
 })
 
 test("uses a desktop token store for cross-platform encrypted persistence", async () => {

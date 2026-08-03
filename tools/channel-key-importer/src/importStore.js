@@ -104,6 +104,24 @@ export class ImportStore {
     return await this.#readAll()
   }
 
+  async findExistingFingerprints({ profileId, targetUrl, apiKeys }) {
+    const requested = new Set(
+      (apiKeys || []).map((apiKey) => keyIdentity(apiKey).keyFingerprint),
+    )
+    if (requested.size === 0) return new Set()
+    const matchesTarget = (record) =>
+      (profileId && record.profileId === profileId) ||
+      (!record.profileId && targetUrl && record.targetUrl === targetUrl)
+    return new Set(
+      (await this.#readAll())
+        .filter(
+          (record) =>
+            matchesTarget(record) && requested.has(record.keyFingerprint),
+        )
+        .map((record) => record.keyFingerprint),
+    )
+  }
+
   async #mutate(operation) {
     const result = this.#mutation.then(operation, operation)
     this.#mutation = result.catch(() => {})
@@ -144,6 +162,9 @@ export class ImportStore {
           typeof input.importBatchId === "string" && input.importBatchId
             ? input.importBatchId
             : null,
+        batchItemIndex: Number.isInteger(input.batchItemIndex)
+          ? input.batchItemIndex
+          : null,
         operation: input.operation,
         channelId: input.channelId || null,
         channelName: input.channelName,

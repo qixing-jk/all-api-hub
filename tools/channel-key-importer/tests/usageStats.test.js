@@ -173,6 +173,7 @@ test("groups exact and legacy import batches for a readable ledger", () => {
       targetUrl: "https://one.example",
       providerName: "OpenRouter",
       importedAt: "2026-08-02T01:00:01.000Z",
+      batchItemIndex: 2,
       quota: 20,
       gatewaySpent: 2,
     },
@@ -183,6 +184,7 @@ test("groups exact and legacy import batches for a readable ledger", () => {
       targetUrl: "https://one.example",
       providerName: "OpenRouter",
       importedAt: "2026-08-02T01:00:03.000Z",
+      batchItemIndex: 1,
       quota: null,
       gatewaySpent: 0,
     },
@@ -218,6 +220,10 @@ test("groups exact and legacy import batches for a readable ledger", () => {
   const groups = groupImportRecords(batchRecords)
   assert.equal(groups.length, 3)
   assert.equal(groups[0].records.length, 2)
+  assert.deepEqual(
+    groups[0].records.map((record) => record.batchItemIndex),
+    [1, 2],
+  )
   assert.equal(groups[0].summary.quotaTotal, 20)
   assert.equal(groups[0].summary.unknownQuotaCount, 1)
   assert.equal(groups[1].records.length, 1)

@@ -2,13 +2,40 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import { AccessSessionManager, hashAccessKey } from "../src/accessAuth.js"
+import { keyIdentity } from "../src/importStore.js"
 import {
   calculateScheduleDelay,
+  deduplicateCredentialEntries,
   normalizeChannelRoutingValue,
   normalizePrioritySequence,
   resolveEntryPriority,
   startImporterServer,
 } from "../src/server.js"
+
+test("deduplicates pasted, imported and queued keys before preview", () => {
+  const imported = new Set([keyIdentity("sk-imported").keyFingerprint])
+  const queued = new Set([keyIdentity("sk-queued").keyFingerprint])
+  const result = deduplicateCredentialEntries(
+    [
+      { apiKey: "sk-new", quota: 20 },
+      { apiKey: "sk-new", quota: 50 },
+      { apiKey: "sk-imported", quota: 30 },
+      { apiKey: "sk-queued", quota: 40 },
+    ],
+    imported,
+    queued,
+  )
+
+  assert.deepEqual(result.keys, [{ apiKey: "sk-new", quota: 20 }])
+  assert.deepEqual(result.summary, {
+    inputCount: 4,
+    inputDuplicateCount: 1,
+    existingDuplicateCount: 1,
+    queuedDuplicateCount: 1,
+    acceptedCount: 1,
+    skippedCount: 3,
+  })
+})
 
 test("normalizes optional channel priority and weight", () => {
   assert.equal(normalizeChannelRoutingValue("", "渠道优先级"), null)

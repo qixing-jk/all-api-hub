@@ -12,9 +12,11 @@ import {
   fetchNewApiGroups,
   fetchNewApiSystemName,
   findCreatedChannel,
+  findCreatedChannels,
   findSimilarChannels,
   listChannelTemplates,
   loginNewApi,
+  parseRetryAfterMs,
   refreshChannelBalance,
   setChannelEnabled,
   updateExistingChannelKey,
@@ -41,6 +43,29 @@ test("reads channel groups from the current New API site", async (context) => {
   )
 
   assert.deepEqual(await fetchNewApiGroups(config), ["default", "vip"])
+})
+
+test("retries rate-limited New API reads used by preview", async (context) => {
+  let requests = 0
+  context.mock.method(globalThis, "fetch", async () => {
+    requests += 1
+    if (requests === 1) {
+      return new Response(
+        JSON.stringify({ success: false, message: "请求次数过多" }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": "0",
+          },
+        },
+      )
+    }
+    return jsonResponse({ success: true, data: ["default"] })
+  })
+
+  assert.deepEqual(await fetchNewApiGroups(config), ["default"])
+  assert.equal(requests, 2)
 })
 
 test("reads built-in models without validating provider keys", async (context) => {
@@ -676,6 +701,72 @@ test("locates the newest exact channel after creation", async (context) => {
   })
 
   assert.equal(channel.id, 9)
+})
+
+test("locates a bulk channel batch with paginated list requests", async (context) => {
+  let requestCount = 0
+  context.mock.method(globalThis, "fetch", async () => {
+    requestCount += 1
+    if (requestCount === 1) {
+      return jsonResponse({
+        success: true,
+        data: {
+          items: [
+            {
+              id: 20,
+              name: "DeepSeek · 1",
+              type: 43,
+              base_url: "https://api.deepseek.com",
+            },
+            ...Array.from({ length: 99 }, (_, index) => ({
+              id: 1000 + index,
+              name: `Other ${index}`,
+              type: 1,
+              base_url: "",
+            })),
+          ],
+        },
+      })
+    }
+    return jsonResponse({
+      success: true,
+      data: {
+        items: [
+          {
+            id: 21,
+            name: "DeepSeek · 2",
+            type: 43,
+            base_url: "https://api.deepseek.com/",
+          },
+        ],
+      },
+    })
+  })
+  const inputs = [
+    {
+      provider: deepSeek,
+      baseUrl: deepSeek.baseUrl,
+      name: "DeepSeek · 1",
+    },
+    {
+      provider: deepSeek,
+      baseUrl: deepSeek.baseUrl,
+      name: "DeepSeek · 2",
+    },
+  ]
+
+  const channels = await findCreatedChannels(config, inputs)
+
+  assert.equal(requestCount, 2)
+  assert.equal(channels.get(inputs[0]).id, 20)
+  assert.equal(channels.get(inputs[1]).id, 21)
+})
+
+test("parses numeric and HTTP-date Retry-After values", () => {
+  const now = Date.parse("2026-08-03T00:00:00.000Z")
+  assert.equal(parseRetryAfterMs("12", now), 12_000)
+  assert.equal(parseRetryAfterMs("Mon, 03 Aug 2026 00:00:09 GMT", now), 9_000)
+  assert.equal(parseRetryAfterMs("invalid", now), null)
 })
 
 test("normalizes a supported New API channel balance", async (context) => {

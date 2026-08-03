@@ -18,6 +18,7 @@ const MIN_BATCH_SIZE = 1
 const MAX_BATCH_SIZE = 200
 const MAX_INTERVAL_MINUTES = 30 * 24 * 60
 const STALE_RUNNING_MS = 30 * 60 * 1000
+const DEFAULT_RATE_LIMIT_RETRY_MS = 3 * 60 * 1000
 
 const clampInteger = (value, fallback, min, max) => {
   const integer = Number.parseInt(String(value ?? ""), 10)
@@ -25,9 +26,10 @@ const clampInteger = (value, fallback, min, max) => {
   return Math.min(max, Math.max(min, integer))
 }
 
-const isRateLimitFailure = (message) =>
+const isRateLimitFailure = (failure) =>
+  failure?.retryable === true ||
   /(?:\b429\b|请求次数过多|too many requests|rate[ -]?limit)/i.test(
-    String(message || ""),
+    String(failure?.error || failure || ""),
   )
 
 const publicEntry = (entry) => ({
@@ -41,6 +43,7 @@ const publicEntry = (entry) => ({
   channelName: entry.channelName || "",
   importedAt: entry.importedAt || null,
   retryCount: Number.isInteger(entry.retryCount) ? entry.retryCount : 0,
+  retryNotBefore: entry.retryNotBefore || null,
 })
 
 const jobCounts = (job) => {
@@ -50,6 +53,7 @@ const jobCounts = (job) => {
     pending: entries.filter((entry) => entry.status === "pending").length,
     imported: entries.filter((entry) => entry.status === "imported").length,
     failed: entries.filter((entry) => entry.status === "failed").length,
+    uncertain: entries.filter((entry) => entry.status === "uncertain").length,
   }
 }
 
@@ -59,6 +63,7 @@ const publicJob = (job) => ({
   providerName: job.providerName,
   targetName: job.targetName,
   targetUrl: job.targetUrl,
+  kind: job.kind || "scheduled",
   status: job.status,
   batchSize: job.batchSize,
   intervalMinutes: job.intervalMinutes,
@@ -207,24 +212,90 @@ export class ScheduleStore {
       : null
   }
 
-  async create({ preview, createOptions, schedule }) {
+  async findQueuedFingerprints({ profileId, apiKeys }) {
+    const requested = new Set(
+      (apiKeys || []).map((apiKey) => keyIdentity(apiKey).keyFingerprint),
+    )
+    if (!profileId || requested.size === 0) return new Set()
+    const fingerprints = []
+    for (const job of await this.#readAll()) {
+      if (
+        !["active", "paused"].includes(job.status) ||
+        job.preview?.profileId !== profileId
+      ) {
+        continue
+      }
+      for (const entry of job.entries || []) {
+        if (
+          ["pending", "running", "uncertain", "failed"].includes(
+            entry.status,
+          ) &&
+          requested.has(entry.keyFingerprint)
+        ) {
+          fingerprints.push(entry.keyFingerprint)
+        }
+      }
+    }
+    return new Set(fingerprints)
+  }
+
+  async create({
+    preview,
+    createOptions,
+    schedule,
+    kind = "scheduled",
+    requestId = "",
+  }) {
     return await this.#mutate(async () => {
+      const jobs = await this.#readAll()
+      const existing = requestId
+        ? jobs.find((job) => job.requestId === requestId)
+        : null
+      if (existing) return publicJob(existing)
+      const occupiedFingerprints = new Set(
+        jobs
+          .filter(
+            (job) =>
+              ["active", "paused"].includes(job.status) &&
+              job.preview?.profileId === preview.profileId,
+          )
+          .flatMap((job) => job.entries || [])
+          .filter((entry) =>
+            ["pending", "running", "uncertain", "failed"].includes(
+              entry.status,
+            ),
+          )
+          .map((entry) => entry.keyFingerprint),
+      )
+      preview = {
+        ...preview,
+        keys: preview.keys.filter(
+          (entry) =>
+            !entry.apiKey ||
+            !occupiedFingerprints.has(keyIdentity(entry.apiKey).keyFingerprint),
+        ),
+      }
       const options = normalizeScheduleOptions(schedule)
       const entries = await Promise.all(
         preview.keys.map(async (entry, priorityIndex) => ({
           id: randomUUID(),
           status: "pending",
-          priorityIndex,
+          priorityIndex: Number.isInteger(entry.priorityIndex)
+            ? entry.priorityIndex
+            : priorityIndex,
           quota: Number.isFinite(entry.quota) ? entry.quota : null,
           ...keyIdentity(entry.apiKey),
           encryptedKey: await this.#encrypt(entry.apiKey),
         })),
       )
       if (entries.length === 0) throw new Error("没有可定时写入的 Key")
-      const { keys, duplicates, ...storedPreview } = preview
+      const { keys, ...storedPreview } = preview
+      const suffix = kind === "recovery" ? "自动续传" : "定时上 Key"
       const job = {
         id: randomUUID(),
-        name: `${preview.name} · 定时上 Key`.slice(0, 100),
+        requestId: String(requestId || ""),
+        kind,
+        name: `${preview.name} · ${suffix}`.slice(0, 100),
         providerName: preview.provider.name,
         targetName: preview.targetName,
         targetUrl: preview.targetUrl,
@@ -240,7 +311,7 @@ export class ScheduleStore {
         createOptions,
         entries,
       }
-      await this.#writeAll([job, ...(await this.#readAll())])
+      await this.#writeAll([job, ...jobs])
       return publicJob(job)
     })
   }
@@ -282,11 +353,14 @@ export class ScheduleStore {
         )
         if (!stale) continue
         for (const entry of runningEntries) {
-          entry.status = "pending"
+          entry.status = "uncertain"
+          entry.error =
+            "上次写入在完成确认前中断，为避免重复渠道，已停止自动重试"
           delete entry.lockedAt
         }
-        job.status = "active"
-        job.lastError = "上次执行中断，未确认的 Key 已重新排队。"
+        job.status = "attention"
+        job.lastError =
+          "上次执行中断，存在未确认结果；为避免重复渠道，未自动重放。"
         recovered = true
       }
       const job = jobs.find(predicate)
@@ -295,8 +369,17 @@ export class ScheduleStore {
         return null
       }
       const pending = job.entries
-        .filter((entry) => entry.status === "pending")
+        .filter(
+          (entry) =>
+            entry.status === "pending" &&
+            (!entry.retryNotBefore ||
+              new Date(entry.retryNotBefore).getTime() <= now.getTime()),
+        )
         .slice(0, job.batchSize)
+      if (pending.length === 0) {
+        if (recovered) await this.#writeAll(jobs)
+        return null
+      }
       for (const entry of pending) {
         entry.status = "running"
         entry.lockedAt = now.toISOString()
@@ -328,37 +411,61 @@ export class ScheduleStore {
       const job = jobs.find((item) => item.id === jobId)
       if (!job) throw new Error("定时任务不存在")
       const running = job.entries.filter((entry) => entry.status === "running")
-      const failures = new Map(
-        (result.failures || result.results || [])
-          .filter((item) => item && item.success === false)
-          .map((item) => [Number(item.keyIndex), item.error || "写入失败"]),
-      )
-      const resultItems = result.results || result.records || []
-      const successfulByIndex = new Map(
+      const resultItems = [
+        ...(result.results || result.records || []),
+        ...(result.failures || []),
+      ].filter(Boolean)
+      const byEntryId = new Map(
         resultItems
-          .filter((item) => item && item.success !== false)
+          .filter((item) => item.entryId)
+          .map((item) => [String(item.entryId), item]),
+      )
+      const byIndex = new Map(
+        resultItems
+          .filter((item) => Number.isInteger(Number(item.keyIndex)))
           .map((item) => [Number(item.keyIndex), item]),
       )
       let rateLimitedCount = 0
+      let uncertainCount = 0
+      let latestRetryNotBefore = 0
       for (const [index, entry] of running.entries()) {
         const keyIndex = index + 1
-        const failed = failures.get(keyIndex)
-        if (failed) {
-          if (isRateLimitFailure(failed)) {
+        const item = byEntryId.get(entry.id) || byIndex.get(keyIndex)
+        if (!item) {
+          entry.status = "uncertain"
+          entry.error =
+            "未收到这条 Key 的明确写入结果，为避免重复渠道，已停止自动重试"
+          delete entry.lockedAt
+          delete entry.retryNotBefore
+          uncertainCount += 1
+          continue
+        }
+        if (item.success === false) {
+          if (isRateLimitFailure(item)) {
+            const retryDelay = Number.isFinite(item.retryAfterMs)
+              ? Math.max(0, item.retryAfterMs)
+              : DEFAULT_RATE_LIMIT_RETRY_MS
+            const retryNotBefore = now.getTime() + retryDelay
             entry.status = "pending"
             entry.error = "New API 限流，已自动排队重试"
+            entry.retryNotBefore = new Date(retryNotBefore).toISOString()
             entry.retryCount = Number.isInteger(entry.retryCount)
               ? entry.retryCount + 1
               : 1
             delete entry.lockedAt
             rateLimitedCount += 1
+            latestRetryNotBefore = Math.max(
+              latestRetryNotBefore,
+              retryNotBefore,
+            )
             continue
           }
           entry.status = "failed"
-          entry.error = failed
+          entry.error = item.error || "写入失败"
+          delete entry.lockedAt
+          delete entry.retryNotBefore
           continue
         }
-        const item = successfulByIndex.get(keyIndex) || resultItems[index] || {}
         const record = item.record || item || {}
         entry.status = "imported"
         entry.error = ""
@@ -366,12 +473,20 @@ export class ScheduleStore {
         entry.channelName =
           record.channelName || item.channelName || result.channelName || ""
         entry.importedAt = now.toISOString()
+        delete entry.lockedAt
+        delete entry.retryNotBefore
       }
-      job.status = job.entries.some((entry) => entry.status === "pending")
-        ? job.intervalMinutes > 0
+      const hasPending = job.entries.some((entry) => entry.status === "pending")
+      const hasAttention = job.entries.some((entry) =>
+        ["failed", "uncertain"].includes(entry.status),
+      )
+      job.status = hasPending
+        ? rateLimitedCount > 0 || job.intervalMinutes > 0
           ? "active"
           : "paused"
-        : "completed"
+        : hasAttention
+          ? "attention"
+          : "completed"
       job.lastRunAt = now.toISOString()
       job.lastResult = {
         success: result.success !== false,
@@ -385,6 +500,11 @@ export class ScheduleStore {
           `${rateLimitedCount} 条 Key 触发 New API 限流，已自动排队重试。`,
         )
       }
+      if (uncertainCount > 0) {
+        statusMessages.push(
+          `${uncertainCount} 条 Key 的结果未确认，为避免重复渠道，已停止自动重试。`,
+        )
+      }
       if (job.status === "paused") {
         statusMessages.push(
           "还有 Key 未写入；间隔为 0，已暂停，手动立即执行可继续。",
@@ -392,8 +512,9 @@ export class ScheduleStore {
       }
       job.lastError = statusMessages.join(" ")
       if (job.status === "active") {
+        const intervalAt = now.getTime() + job.intervalMinutes * 60 * 1000
         job.nextRunAt = new Date(
-          now.getTime() + job.intervalMinutes * 60 * 1000,
+          Math.max(intervalAt, latestRetryNotBefore),
         ).toISOString()
       }
       await this.#writeAll(jobs)
@@ -464,6 +585,7 @@ export class ScheduleStore {
           ? entry.retryCount + 1
           : 1
         delete entry.lockedAt
+        delete entry.retryNotBefore
       }
       job.status = "active"
       job.nextRunAt = now.toISOString()

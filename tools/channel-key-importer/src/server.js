@@ -29,7 +29,7 @@ import {
   findProfileForRecord,
   getCredentialAccount,
 } from "./configStore.js"
-import { ImportStore } from "./importStore.js"
+import { ImportStore, keyIdentity } from "./importStore.js"
 import { buildModelPlan, buildProviderPrefixMappings } from "./modelPlan.js"
 import {
   createNewApiChannel,
@@ -42,7 +42,9 @@ import {
   fetchNewApiGroups,
   fetchNewApiSystemName,
   findCreatedChannel,
+  findCreatedChannels,
   findSimilarChannels,
+  isRateLimitError,
   listChannelTemplates,
   loginNewApi,
   refreshChannelBalance,
@@ -80,12 +82,27 @@ const IDLE_SCHEDULE_CHECK_MS = 60_000
 const MAX_TIMER_DELAY_MS = 2_147_483_647
 const MIN_CHANNEL_PRIORITY = -2_147_483_648
 const MAX_CHANNEL_ROUTING_VALUE = 2_147_483_647
+const configuredRateLimitFallback = Number(
+  process.env.DATAEYESAI_RATE_LIMIT_FALLBACK_SECONDS || 180,
+)
+const RATE_LIMIT_RECOVERY_DELAY_MS =
+  (Number.isFinite(configuredRateLimitFallback)
+    ? Math.max(10, configuredRateLimitFallback)
+    : 180) * 1000
+const RATE_LIMIT_RECOVERY_BATCH_SIZE = 10
 
 const configStore = new ConfigStore()
 const balanceStore = new BalanceStore()
 const importStore = new ImportStore()
 const previewStore = new PreviewStore()
 const scheduleStore = new ScheduleStore()
+let channelOperationQueue = Promise.resolve()
+
+const runChannelOperation = async (operation) => {
+  const result = channelOperationQueue.then(operation, operation)
+  channelOperationQueue = result.catch(() => {})
+  return await result
+}
 
 const sendJson = (response, status, payload, headers = {}) => {
   response.writeHead(status, {
@@ -126,7 +143,11 @@ const getRuntimeConfig = async (profileId = "") => {
     allowInsecureHttp: config.allowInsecureHttp,
   })
   const userId = validateUserId(config.userId)
-  const session = configStore.readSession(targetUrl, userId)
+  const session = await configStore.readSession(
+    targetUrl,
+    userId,
+    config.rememberSession,
+  )
   if (session?.sessionCookie) {
     return { ...config, targetUrl, userId, ...session }
   }
@@ -151,7 +172,11 @@ const getPublicConfig = async (config) => {
       username: "",
     }
   }
-  const session = configStore.readSession(config.targetUrl, config.userId)
+  const session = await configStore.readSession(
+    config.targetUrl,
+    config.userId,
+    config.rememberSession,
+  )
   const token = await configStore.readToken(
     getCredentialAccount(config.targetUrl, config.userId),
     config.rememberToken,
@@ -163,6 +188,29 @@ const getPublicConfig = async (config) => {
     username: session?.username || "",
   }
 }
+
+const channelFailureResult = (error, entry, keyIndex) => ({
+  success: false,
+  keyIndex,
+  ...(entry?.id ? { entryId: entry.id } : {}),
+  error: error instanceof Error ? error.message : "写入失败",
+  retryable: isRateLimitError(error),
+  ...(Number.isFinite(error?.retryAfterMs)
+    ? { retryAfterMs: Math.max(0, error.retryAfterMs) }
+    : {}),
+})
+
+const deferredRateLimitResult = (entry, keyIndex, limited) => ({
+  success: false,
+  keyIndex,
+  ...(entry?.id ? { entryId: entry.id } : {}),
+  error: "New API 限流，已停止继续请求并转入自动续传",
+  retryable: true,
+  deferred: true,
+  ...(Number.isFinite(limited?.retryAfterMs)
+    ? { retryAfterMs: limited.retryAfterMs }
+    : {}),
+})
 
 const enrichBalance = async (runtimeConfig, channelId) => {
   let balance = await refreshChannelBalance(runtimeConfig, channelId)
@@ -305,6 +353,47 @@ export function resolveEntryPriority(preview, entry, localIndex) {
   return preview.priority - preview.prioritySequence.step * sequenceIndex
 }
 
+export function deduplicateCredentialEntries(
+  entries,
+  existingFingerprints = new Set(),
+  queuedFingerprints = new Set(),
+) {
+  const seen = new Set()
+  const keys = []
+  const summary = {
+    inputCount: entries.length,
+    inputDuplicateCount: 0,
+    existingDuplicateCount: 0,
+    queuedDuplicateCount: 0,
+    acceptedCount: 0,
+    skippedCount: 0,
+  }
+  for (const entry of entries) {
+    if (!entry.apiKey) {
+      keys.push(entry)
+      continue
+    }
+    const fingerprint = keyIdentity(entry.apiKey).keyFingerprint
+    if (seen.has(fingerprint)) {
+      summary.inputDuplicateCount += 1
+      continue
+    }
+    seen.add(fingerprint)
+    if (existingFingerprints.has(fingerprint)) {
+      summary.existingDuplicateCount += 1
+      continue
+    }
+    if (queuedFingerprints.has(fingerprint)) {
+      summary.queuedDuplicateCount += 1
+      continue
+    }
+    keys.push(entry)
+  }
+  summary.acceptedCount = keys.length
+  summary.skippedCount = summary.inputCount - summary.acceptedCount
+  return { keys, summary }
+}
+
 async function buildCredentialPreview(body) {
   const provider = getProvider(String(body.providerId || ""))
   if (!provider.importable) throw new Error(provider.description)
@@ -373,7 +462,27 @@ async function buildCredentialPreview(body) {
       template?.channelSettings?.vertex_key_type ||
       String(body.credentialMode || "")
   validateBatchCredentialEntries(provider, credentialMode, keys)
-  keys = [...new Map(keys.map((entry) => [entry.apiKey, entry])).values()]
+  const candidateApiKeys = keys.map((entry) => entry.apiKey).filter(Boolean)
+  const existingFingerprints = await importStore.findExistingFingerprints({
+    profileId: runtimeConfig.profileId,
+    targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
+    apiKeys: candidateApiKeys,
+  })
+  const queuedFingerprints = await scheduleStore.findQueuedFingerprints({
+    profileId: runtimeConfig.profileId,
+    apiKeys: candidateApiKeys,
+  })
+  const deduplication = deduplicateCredentialEntries(
+    keys,
+    existingFingerprints,
+    queuedFingerprints,
+  )
+  keys = deduplication.keys
+  if (keys.length === 0) {
+    throw new Error(
+      `识别到 ${deduplication.summary.inputCount} 条 Key，但均为本批重复、已录入或已在定时队列中，无需再次添加`,
+    )
+  }
   if (!provider.keyOptional && keys.some(({ apiKey }) => apiKey.length < 8)) {
     throw new Error("存在不完整的 API Key 或组合凭证")
   }
@@ -485,6 +594,7 @@ async function buildCredentialPreview(body) {
     templateChannelName: template?.name || "",
     automaticName,
     awsRouting,
+    deduplication: deduplication.summary,
     modelSource:
       configSource === "template" ? `template:${template.name}` : configSource,
   }
@@ -508,15 +618,61 @@ const buildPreviewResponse = (preview, previewId) => ({
   quotaTotal: preview.keys.every(({ quota }) => Number.isFinite(quota))
     ? preview.keys.reduce((total, { quota }) => total + quota, 0)
     : null,
+  knownQuotaTotal: preview.keys.reduce(
+    (total, { quota }) => total + (Number.isFinite(quota) ? quota : 0),
+    0,
+  ),
   modelSource: preview.modelSource,
   templateChannelId: preview.templateChannelId,
   templateChannelName: preview.templateChannelName,
   providerMappings: preview.providerMappings,
   awsRouting: preview.awsRouting,
+  deduplication: preview.deduplication || {
+    inputCount: preview.keys.length,
+    inputDuplicateCount: 0,
+    existingDuplicateCount: 0,
+    queuedDuplicateCount: 0,
+    acceptedCount: preview.keys.length,
+    skippedCount: 0,
+  },
+  unknownQuotaCount: preview.keys.filter(({ quota }) => !Number.isFinite(quota))
+    .length,
   expiresInSeconds: 300,
 })
 
 async function createChannelsFromPreview(preview, body) {
+  const originalKeyCount = preview.keys.length
+  const existingFingerprints = await importStore.findExistingFingerprints({
+    profileId: preview.profileId,
+    targetUrl: preview.targetUrl,
+    apiKeys: preview.keys.map((entry) => entry.apiKey).filter(Boolean),
+  })
+  if (existingFingerprints.size > 0) {
+    preview = {
+      ...preview,
+      keys: preview.keys.filter(
+        (entry) =>
+          !entry.apiKey ||
+          !existingFingerprints.has(keyIdentity(entry.apiKey).keyFingerprint),
+      ),
+    }
+  }
+  const lateDuplicateCount = originalKeyCount - preview.keys.length
+  if (preview.keys.length === 0) {
+    return {
+      success: true,
+      operation: "skipped",
+      keyCount: originalKeyCount,
+      successCount: 0,
+      failedCount: 0,
+      skippedCount: lateDuplicateCount,
+      modelCount: preview.models.length,
+      mappingCount: body.mappings?.length || 0,
+      balance: { status: "unavailable" },
+      results: [],
+      records: [],
+    }
+  }
   const importBatchId = randomUUID()
   const isTemplateClone = Number.isInteger(preview.templateChannelId)
   if (
@@ -551,8 +707,15 @@ async function createChannelsFromPreview(preview, body) {
     }
     const updatedEntries = []
     const updateFailures = []
+    let rateLimitedFailure = null
     let nextKeyIndex = existingChannel.multiKeySize || 0
     for (const [index, entry] of preview.keys.entries()) {
+      if (rateLimitedFailure) {
+        updateFailures.push(
+          deferredRateLimitResult(entry, index + 1, rateLimitedFailure),
+        )
+        continue
+      }
       try {
         await updateExistingChannelKey(runtimeConfig, {
           channelId: existingChannel.id,
@@ -563,18 +726,35 @@ async function createChannelsFromPreview(preview, body) {
         })
         updatedEntries.push({
           ...entry,
+          sourceKeyIndex: index + 1,
           keyIndex: existingChannel.isMultiKey ? nextKeyIndex : null,
         })
         if (existingChannel.isMultiKey) nextKeyIndex += 1
       } catch (error) {
-        updateFailures.push({
-          keyIndex: index + 1,
-          success: false,
-          error: error instanceof Error ? error.message : "写入失败",
-        })
+        const failure = channelFailureResult(error, entry, index + 1)
+        updateFailures.push(failure)
+        if (failure.retryable) rateLimitedFailure = failure
       }
     }
     if (updatedEntries.length === 0) {
+      if (rateLimitedFailure) {
+        return {
+          success: false,
+          operation: "updated",
+          keyAction: existingChannel.isMultiKey ? "appended" : "replaced",
+          channelId: existingChannel.id,
+          channelName: existingChannel.name,
+          balance: { status: "unavailable" },
+          keyCount: preview.keys.length,
+          successCount: 0,
+          failedCount: updateFailures.length,
+          skippedCount: lateDuplicateCount,
+          channelEnabled: Number(existingChannel.status) === 1,
+          failures: updateFailures,
+          results: updateFailures,
+          records: [],
+        }
+      }
       throw new Error(updateFailures[0]?.error || "Key 写入失败")
     }
     let channelEnabled = true
@@ -593,27 +773,36 @@ async function createChannelsFromPreview(preview, body) {
       // The key update already succeeded; balance lookup is best-effort.
     }
     const records = []
+    const results = []
     for (const entry of updatedEntries) {
-      records.push(
-        await importStore.record({
-          importBatchId,
-          profileId: runtimeConfig.profileId,
-          targetName: runtimeConfig.name,
-          targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
-          providerName: preview.provider.name,
-          apiKey: entry.apiKey,
-          quota: entry.quota,
-          currentBalance:
-            !existingChannel.isMultiKey && balance.status === "available"
-              ? balance.currentBalance
-              : null,
-          sharedChannel: existingChannel.isMultiKey,
-          keyIndex: entry.keyIndex,
-          operation: existingChannel.isMultiKey ? "appended" : "replaced",
-          channelId: existingChannel.id,
-          channelName: existingChannel.name,
-        }),
-      )
+      const record = await importStore.record({
+        importBatchId,
+        profileId: runtimeConfig.profileId,
+        targetName: runtimeConfig.name,
+        targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
+        providerName: preview.provider.name,
+        apiKey: entry.apiKey,
+        quota: entry.quota,
+        currentBalance:
+          !existingChannel.isMultiKey && balance.status === "available"
+            ? balance.currentBalance
+            : null,
+        sharedChannel: existingChannel.isMultiKey,
+        keyIndex: entry.keyIndex,
+        batchItemIndex: entry.sourceKeyIndex,
+        operation: existingChannel.isMultiKey ? "appended" : "replaced",
+        channelId: existingChannel.id,
+        channelName: existingChannel.name,
+      })
+      records.push(record)
+      results.push({
+        success: true,
+        keyIndex: entry.sourceKeyIndex,
+        ...(entry.id ? { entryId: entry.id } : {}),
+        channelId: existingChannel.id,
+        channelName: existingChannel.name,
+        record,
+      })
     }
     return {
       success: updateFailures.length === 0 && channelEnabled,
@@ -625,8 +814,12 @@ async function createChannelsFromPreview(preview, body) {
       keyCount: preview.keys.length,
       successCount: updatedEntries.length,
       failedCount: updateFailures.length,
+      skippedCount: lateDuplicateCount,
       channelEnabled,
       failures: updateFailures,
+      results: [...results, ...updateFailures].sort(
+        (left, right) => left.keyIndex - right.keyIndex,
+      ),
       records,
     }
   }
@@ -686,24 +879,33 @@ async function createChannelsFromPreview(preview, body) {
       // The channel is already created; the ledger can still retain the keys.
     }
     const records = []
+    const results = []
     for (const [keyIndex, entry] of preview.keys.entries()) {
-      records.push(
-        await importStore.record({
-          importBatchId,
-          profileId: runtimeConfig.profileId,
-          targetName: runtimeConfig.name,
-          targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
-          providerName: preview.provider.name,
-          apiKey: entry.apiKey,
-          quota: entry.quota,
-          currentBalance: null,
-          sharedChannel: true,
-          keyIndex,
-          operation: "created-multi-key",
-          channelId: createdChannel?.id,
-          channelName: createInput.name,
-        }),
-      )
+      const record = await importStore.record({
+        importBatchId,
+        profileId: runtimeConfig.profileId,
+        targetName: runtimeConfig.name,
+        targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
+        providerName: preview.provider.name,
+        apiKey: entry.apiKey,
+        quota: entry.quota,
+        currentBalance: null,
+        sharedChannel: true,
+        keyIndex,
+        batchItemIndex: keyIndex + 1,
+        operation: "created-multi-key",
+        channelId: createdChannel?.id,
+        channelName: createInput.name,
+      })
+      records.push(record)
+      results.push({
+        success: true,
+        keyIndex: keyIndex + 1,
+        ...(entry.id ? { entryId: entry.id } : {}),
+        channelId: createdChannel?.id ?? null,
+        channelName: createInput.name,
+        record,
+      })
     }
     return {
       success: true,
@@ -713,93 +915,130 @@ async function createChannelsFromPreview(preview, body) {
       keyCount: preview.keys.length,
       successCount: preview.keys.length,
       failedCount: 0,
+      skippedCount: lateDuplicateCount,
       modelCount: modelPlan.models.length,
       mappingCount: Object.keys(modelPlan.modelMapping).length,
       balance: { status: "unavailable" },
+      results,
       records,
     }
   }
 
   const results = []
-  // New API commonly rate-limits channel mutations. Serial creation keeps a
-  // large pasted batch reliable; individual 429 responses are retried below.
-  const concurrency = 1
-  for (let offset = 0; offset < preview.keys.length; offset += concurrency) {
-    await Promise.all(
-      preview.keys
-        .slice(offset, offset + concurrency)
-        .map(async (entry, relativeIndex) => {
-          const index = offset + relativeIndex
-          const entryModelPlan = buildEntryModelPlan(preview, modelPlan, entry)
-          const baseName = preview.automaticName
-            ? buildResourceChannelName(preview.provider.name, [entry], {
-                index,
-                total: preview.keys.length,
-              })
-            : preview.keys.length > 1
-              ? `${preview.name} · ${index + 1}`.slice(0, 80)
-              : preview.name
-          const createInput = {
-            ...preview,
-            priority: resolveEntryPriority(preview, entry, index),
-            apiKey: entry.apiKey,
-            baseUrl: buildEntryBaseUrl(preview, entry),
-            channelSettings: buildEntryChannelSettings(preview, entry),
-            name:
-              preview.provider.id === "aws"
-                ? appendAwsRegionToChannelName(baseName, entry.apiKey)
-                : baseName,
-            ...entryModelPlan,
-          }
-          try {
-            await createNewApiChannel(runtimeConfig, createInput)
-            let createdChannel = null
-            let balance = {
-              status: "unavailable",
-              reason: "渠道已创建，但暂时无法定位新渠道进行余额查询",
-            }
-            try {
-              createdChannel = await findCreatedChannel(
+  const acknowledged = []
+  let rateLimitedFailure = null
+  for (const [index, entry] of preview.keys.entries()) {
+    if (rateLimitedFailure) {
+      results.push(
+        deferredRateLimitResult(entry, index + 1, rateLimitedFailure),
+      )
+      continue
+    }
+    const originalIndex = Number.isInteger(entry.priorityIndex)
+      ? entry.priorityIndex
+      : index
+    const originalTotal = Number.isInteger(preview.originalKeyCount)
+      ? preview.originalKeyCount
+      : preview.keys.length
+    const entryModelPlan = buildEntryModelPlan(preview, modelPlan, entry)
+    const baseName = preview.automaticName
+      ? buildResourceChannelName(preview.provider.name, [entry], {
+          index: originalIndex,
+          total: originalTotal,
+        })
+      : originalTotal > 1
+        ? `${preview.name} · ${originalIndex + 1}`.slice(0, 80)
+        : preview.name
+    const createInput = {
+      ...preview,
+      priority: resolveEntryPriority(preview, entry, index),
+      apiKey: entry.apiKey,
+      baseUrl: buildEntryBaseUrl(preview, entry),
+      channelSettings: buildEntryChannelSettings(preview, entry),
+      name:
+        preview.provider.id === "aws"
+          ? appendAwsRegionToChannelName(baseName, entry.apiKey)
+          : baseName,
+      ...entryModelPlan,
+    }
+    try {
+      await createNewApiChannel(runtimeConfig, createInput)
+      acknowledged.push({ entry, index, createInput })
+    } catch (error) {
+      const failure = channelFailureResult(error, entry, index + 1)
+      results.push(failure)
+      if (failure.retryable) rateLimitedFailure = failure
+    }
+  }
+
+  // New API's successful AddChannel response does not include an id. For a
+  // bulk import, locate every acknowledged channel with paginated list calls
+  // instead of issuing one search request per Key. This roughly halves the
+  // management API traffic that shares New API's global per-IP rate limit.
+  // https://github.com/QuantumNous/new-api/blob/main/controller/channel.go
+  // https://github.com/QuantumNous/new-api/blob/main/router/api-router.go
+  let createdChannels = new Map()
+  try {
+    createdChannels =
+      acknowledged.length === 1
+        ? new Map([
+            [
+              acknowledged[0].createInput,
+              await findCreatedChannel(
                 runtimeConfig,
-                createInput,
-              )
-              if (createdChannel?.id && preview.keys.length === 1) {
-                balance = await enrichBalance(runtimeConfig, createdChannel.id)
-              }
-            } catch {
-              // Channel creation already succeeded; balance lookup is best-effort.
-            }
-            const record = await importStore.record({
-              importBatchId,
-              profileId: runtimeConfig.profileId,
-              targetName: runtimeConfig.name,
-              targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
-              providerName: preview.provider.name,
-              apiKey: entry.apiKey,
-              quota: entry.quota,
-              currentBalance:
-                balance.status === "available" ? balance.currentBalance : null,
-              operation: "created",
-              channelId: createdChannel?.id,
-              channelName: createInput.name,
-            })
-            results.push({
-              success: true,
-              keyIndex: index + 1,
-              channelId: createdChannel?.id ?? null,
-              channelName: createInput.name,
-              balance,
-              record,
-            })
-          } catch (error) {
-            results.push({
-              success: false,
-              keyIndex: index + 1,
-              error: error instanceof Error ? error.message : "写入失败",
-            })
-          }
-        }),
-    )
+                acknowledged[0].createInput,
+              ),
+            ],
+          ])
+        : await findCreatedChannels(
+            runtimeConfig,
+            acknowledged.map((item) => item.createInput),
+          )
+  } catch {
+    // A success:true mutation is authoritative. A lookup failure is retained
+    // as an acknowledged-but-unlocated record and must never retry the POST.
+  }
+
+  for (const { entry, index, createInput } of acknowledged) {
+    const createdChannel = createdChannels.get(createInput) || null
+    let balance = {
+      status: "unavailable",
+      reason: createdChannel?.id
+        ? "批量渠道已定位，可稍后刷新余额"
+        : "渠道已提交成功，但暂时无法定位渠道 ID",
+    }
+    if (createdChannel?.id && preview.keys.length === 1) {
+      try {
+        balance = await enrichBalance(runtimeConfig, createdChannel.id)
+      } catch {
+        // Channel creation already succeeded; balance lookup is best-effort.
+      }
+    }
+    const record = await importStore.record({
+      importBatchId,
+      profileId: runtimeConfig.profileId,
+      targetName: runtimeConfig.name,
+      targetUrl: maskTargetUrl(runtimeConfig.targetUrl),
+      providerName: preview.provider.name,
+      apiKey: entry.apiKey,
+      quota: entry.quota,
+      batchItemIndex: index + 1,
+      currentBalance:
+        balance.status === "available" ? balance.currentBalance : null,
+      operation: "created",
+      channelId: createdChannel?.id,
+      channelName: createInput.name,
+    })
+    results.push({
+      success: true,
+      keyIndex: index + 1,
+      ...(entry.id ? { entryId: entry.id } : {}),
+      channelId: createdChannel?.id ?? null,
+      channelName: createInput.name,
+      verification: createdChannel?.id ? "located" : "acknowledged",
+      balance,
+      record,
+    })
   }
   results.sort((left, right) => (left.keyIndex || 0) - (right.keyIndex || 0))
   const successful = results.filter((result) => result.success)
@@ -813,6 +1052,7 @@ async function createChannelsFromPreview(preview, body) {
     keyCount: preview.keys.length,
     successCount: successful.length,
     failedCount: failed.length,
+    skippedCount: lateDuplicateCount,
     modelCount: preview.models.length,
     mappingCount: body.mappings?.length || 0,
     balance: latest?.balance || { status: "unavailable" },
@@ -820,15 +1060,76 @@ async function createChannelsFromPreview(preview, body) {
   }
 }
 
+const resultFailures = (result) =>
+  [...(result.results || []), ...(result.failures || [])].filter(
+    (item) => item?.success === false,
+  )
+
+async function createRateLimitRecovery(
+  preview,
+  body,
+  result,
+  requestId,
+  now = new Date(),
+) {
+  const failures = resultFailures(result).filter(isRateLimitError)
+  const byIndex = new Map(failures.map((item) => [Number(item.keyIndex), item]))
+  const keys = preview.keys.flatMap((entry, index) => {
+    const failure = byIndex.get(index + 1)
+    if (!failure) return []
+    return [
+      {
+        ...entry,
+        priorityIndex: Number.isInteger(entry.priorityIndex)
+          ? entry.priorityIndex
+          : index,
+      },
+    ]
+  })
+  if (keys.length === 0) return null
+  const retryAfterValues = failures
+    .map((item) => item.retryAfterMs)
+    .filter(Number.isFinite)
+  const retryDelay =
+    retryAfterValues.length > 0
+      ? Math.max(0, ...retryAfterValues)
+      : RATE_LIMIT_RECOVERY_DELAY_MS
+  const combineKeys = body.combineKeys === true
+  return await scheduleStore.create({
+    preview: {
+      ...preview,
+      originalKeyCount: preview.originalKeyCount || preview.keys.length,
+      keys,
+    },
+    createOptions: {
+      confirmDuplicates: true,
+      existingChannelId: Number(body.existingChannelId || 0) || null,
+      manualModels: Array.isArray(body.manualModels) ? body.manualModels : [],
+      mappings: Array.isArray(body.mappings) ? body.mappings : [],
+      combineKeys,
+    },
+    schedule: {
+      startAt: new Date(now.getTime() + retryDelay).toISOString(),
+      batchSize: combineKeys
+        ? keys.length
+        : Math.min(RATE_LIMIT_RECOVERY_BATCH_SIZE, keys.length),
+      intervalMinutes: 1,
+    },
+    kind: "recovery",
+    requestId: `rate-limit:${requestId}`,
+  })
+}
+
 async function runDueScheduleBatch(now = new Date()) {
   const claim = await scheduleStore.claimDueJob(now)
   if (!claim) return null
   try {
-    const result = await createChannelsFromPreview(claim.preview, {
-      ...claim.createOptions,
-      confirmDuplicates: true,
-      existingChannelId: null,
-    })
+    const result = await runChannelOperation(() =>
+      createChannelsFromPreview(claim.preview, {
+        ...claim.createOptions,
+        confirmDuplicates: true,
+      }),
+    )
     return await scheduleStore.completeRun(claim.id, result, new Date())
   } catch (error) {
     return await scheduleStore.failRun(claim.id, error, new Date())
@@ -979,13 +1280,15 @@ async function handleApi(
       targetUrl,
       existingConfig,
     )
-    configStore.saveSession({ targetUrl, ...login })
+    const rememberSession = body.rememberSession === true
+    await configStore.saveSession({ targetUrl, ...login }, rememberSession)
     const profile = await configStore.saveConfig({
       profileId: String(body.profileId || ""),
       ...profileName,
       targetUrl,
       userId: login.userId,
       rememberToken: false,
+      rememberSession,
       allowInsecureHttp,
     })
     return sendJson(response, 200, {
@@ -1024,13 +1327,14 @@ async function handleApi(
       targetUrl,
       existingConfig,
     )
-    configStore.clearSession(targetUrl, userId)
+    await configStore.clearSession(targetUrl, userId)
     const profile = await configStore.saveConfig({
       profileId: String(body.profileId || ""),
       ...profileName,
       targetUrl,
       userId,
       rememberToken,
+      rememberSession: false,
       allowInsecureHttp,
     })
     return sendJson(response, 200, {
@@ -1056,28 +1360,88 @@ async function handleApi(
   if (request.method === "POST" && url.pathname === "/api/create") {
     const body = await readJsonBody(request)
     const previewId = String(body.previewId || "")
-    const preview = previewStore.get(previewId)
-    const result = await createChannelsFromPreview(preview, body)
-    previewStore.delete(previewId)
-    return sendJson(response, 200, result)
+    const preview = previewStore.claim(previewId)
+    try {
+      const result = await runChannelOperation(() =>
+        createChannelsFromPreview(preview, body),
+      )
+      const recoverySchedule = await createRateLimitRecovery(
+        preview,
+        body,
+        result,
+        previewId,
+      )
+      previewStore.delete(previewId)
+      if (recoverySchedule) await onScheduleChanged()
+      return sendJson(response, 200, {
+        ...result,
+        ...(recoverySchedule ? { recoverySchedule } : {}),
+      })
+    } catch (error) {
+      if (isRateLimitError(error)) {
+        const failure = channelFailureResult(error, preview.keys[0], 1)
+        const results = preview.keys.map((entry, index) =>
+          index === 0
+            ? failure
+            : deferredRateLimitResult(entry, index + 1, failure),
+        )
+        const queuedResult = {
+          success: false,
+          operation: "queued",
+          keyCount: preview.keys.length,
+          successCount: 0,
+          failedCount: preview.keys.length,
+          modelCount: preview.models.length,
+          mappingCount: body.mappings?.length || 0,
+          balance: { status: "unavailable" },
+          results,
+        }
+        const recoverySchedule = await createRateLimitRecovery(
+          preview,
+          body,
+          queuedResult,
+          previewId,
+        )
+        previewStore.delete(previewId)
+        await onScheduleChanged()
+        return sendJson(response, 200, {
+          ...queuedResult,
+          recoverySchedule,
+        })
+      }
+      previewStore.release(previewId)
+      throw error
+    }
   }
 
   if (request.method === "POST" && url.pathname === "/api/schedules") {
     const body = await readJsonBody(request)
-    const preview = await buildCredentialPreview(body)
-    const schedule = await scheduleStore.create({
-      preview,
-      createOptions: {
-        confirmDuplicates: true,
-        existingChannelId: null,
-        manualModels: [],
-        mappings: [],
-        combineKeys: body.combineKeys === true,
-      },
-      schedule: body.schedule,
-    })
-    await onScheduleChanged()
-    return sendJson(response, 200, { schedule })
+    const previewId = String(body.previewId || "")
+    const preview = previewId
+      ? previewStore.claim(previewId)
+      : await buildCredentialPreview(body)
+    try {
+      const schedule = await scheduleStore.create({
+        preview,
+        createOptions: {
+          confirmDuplicates: true,
+          existingChannelId: null,
+          manualModels: Array.isArray(body.manualModels)
+            ? body.manualModels
+            : [],
+          mappings: Array.isArray(body.mappings) ? body.mappings : [],
+          combineKeys: body.combineKeys === true,
+        },
+        schedule: body.schedule,
+        requestId: previewId,
+      })
+      if (previewId) previewStore.delete(previewId)
+      await onScheduleChanged()
+      return sendJson(response, 200, { schedule })
+    } catch (error) {
+      if (previewId) previewStore.release(previewId)
+      throw error
+    }
   }
 
   const scheduleSettingsMatch = url.pathname.match(
@@ -1113,11 +1477,12 @@ async function handleApi(
         })
       }
       try {
-        const result = await createChannelsFromPreview(claim.preview, {
-          ...claim.createOptions,
-          confirmDuplicates: true,
-          existingChannelId: null,
-        })
+        const result = await runChannelOperation(() =>
+          createChannelsFromPreview(claim.preview, {
+            ...claim.createOptions,
+            confirmDuplicates: true,
+          }),
+        )
         const schedule = await scheduleStore.completeRun(
           claim.id,
           result,

@@ -161,6 +161,15 @@ export function groupImportRecords(records) {
   return groups
     .map((group) => ({
       ...group,
+      records: [...group.records].sort((left, right) => {
+        if (
+          Number.isInteger(left.batchItemIndex) &&
+          Number.isInteger(right.batchItemIndex)
+        ) {
+          return left.batchItemIndex - right.batchItemIndex
+        }
+        return recordTime(left) - recordTime(right)
+      }),
       summary: summarizeUsageRecords(group.records),
     }))
     .sort((left, right) => right.completedAt - left.completedAt)

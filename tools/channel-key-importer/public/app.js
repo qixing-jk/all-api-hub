@@ -27,12 +27,14 @@ const state = {
   configured: false,
   groups: [],
   preview: null,
+  pendingSchedule: null,
   mappings: [],
   createdChannelId: null,
   pendingInsecureLoginUrl: "",
   credentialTargetUrl: "",
   credentialUserId: "",
   usageAutoRefreshStarted: false,
+  createInFlight: false,
   activeView: "import",
 }
 
@@ -55,6 +57,7 @@ const elements = {
   newProfile: $("#new-profile"),
   loginUsername: $("#login-username"),
   loginPassword: $("#login-password"),
+  rememberSession: $("#remember-session"),
   openLoginPage: $("#open-login-page"),
   allowInsecureHttp: $("#allow-insecure-http"),
   insecureHttpRow: $(".insecure-http-row"),
@@ -113,7 +116,6 @@ const elements = {
   quotaHelp: $("#quota-help"),
   awsGlobalField: $("#aws-global-field"),
   awsGlobalInference: $("#aws-global-inference"),
-  autoWrite: $("#auto-write"),
   scheduleEnabled: $("#schedule-enabled"),
   scheduleOptions: $("#schedule-options"),
   scheduleStartAt: $("#schedule-start-at"),
@@ -123,6 +125,7 @@ const elements = {
   keyLabel: $("#key-label"),
   unsupportedNote: $("#unsupported-note"),
   previewButton: $("#preview-button"),
+  previewDialog: $("#preview-dialog"),
   previewPanel: $("#preview-panel"),
   previewName: $("#preview-name"),
   previewProvider: $("#preview-provider"),
@@ -133,8 +136,11 @@ const elements = {
   previewAwsRoutingFact: $("#preview-aws-routing-fact"),
   previewAwsRouting: $("#preview-aws-routing"),
   modelCount: $("#model-count"),
+  batchInputCount: $("#batch-input-count"),
   batchKeyCount: $("#batch-key-count"),
+  batchSkippedCount: $("#batch-skipped-count"),
   batchQuotaTotal: $("#batch-quota-total"),
+  batchDedupCopy: $("#batch-dedup-copy"),
   modelList: $("#model-list"),
   modelOverflow: $("#model-overflow"),
   finalModelCount: $("#final-model-count"),
@@ -258,16 +264,23 @@ const setLoading = (button, loading) => {
   button.disabled = loading
 }
 
-const showStatus = (element, message, isError = false) => {
+const showStatus = (
+  element,
+  message,
+  isError = false,
+  { recovering = false } = {},
+) => {
   element.textContent = message
   element.classList.remove("hidden")
   element.classList.toggle("error", isError)
+  element.classList.toggle("recovering", recovering)
 }
 
 const hideStatus = (element) => {
   element.textContent = ""
   element.classList.add("hidden")
   element.classList.remove("error")
+  element.classList.remove("recovering")
 }
 
 let toastTimer
@@ -314,7 +327,14 @@ async function api(path, options = {}) {
       payload = await response.json()
     }
   }
-  if (!response.ok) throw new Error(payload.error || "操作失败")
+  if (!response.ok) {
+    const error = new Error(payload.error || "操作失败")
+    error.status = response.status
+    error.retryAfterMs = Number.isFinite(payload.retryAfterMs)
+      ? payload.retryAfterMs
+      : null
+    throw error
+  }
   return payload
 }
 
@@ -357,6 +377,9 @@ function renderConnection(config) {
   elements.loginUsername.value = config.username || ""
   elements.userId.value = config.userId || "1"
   elements.rememberToken.checked = config.rememberToken !== false
+  elements.rememberSession.checked = config.profileId
+    ? config.rememberSession === true
+    : true
   elements.allowInsecureHttp.checked = config.allowInsecureHttp === true
   updateInsecureHttpVisibility()
   elements.connectionPill.classList.toggle("connected", state.configured)
@@ -543,10 +566,16 @@ function renderProviders() {
   }
 }
 
+function closePreviewDialog() {
+  if (elements.previewDialog.open) elements.previewDialog.close()
+  elements.previewPanel.classList.add("hidden")
+  state.preview = null
+  state.pendingSchedule = null
+}
+
 function selectProvider(provider) {
   state.selectedProvider = provider
-  state.preview = null
-  elements.previewPanel.classList.add("hidden")
+  closePreviewDialog()
   hideStatus(elements.credentialStatus)
   elements.credentialEmpty.classList.add("hidden")
   elements.credentialForm.classList.remove("hidden")
@@ -868,7 +897,9 @@ function renderPreview(preview) {
   ]
   state.createdChannelId = null
   elements.createChannel.disabled = false
-  elements.createChannel.querySelector("span").textContent = "确认写入 New API"
+  elements.createChannel.querySelector("span").textContent =
+    state.pendingSchedule === null ? "确认写入 New API" : "确认保存定时任务"
+  elements.discardPreview.textContent = "返回修改"
   elements.balanceCard.classList.add("hidden")
   elements.previewName.textContent = preview.name
   elements.previewProvider.textContent = `${preview.provider.name} / TYPE ${preview.provider.channelType}`
@@ -886,10 +917,33 @@ function renderPreview(preview) {
       }`
     : "—"
   elements.modelCount.textContent = String(preview.models.length)
+  const deduplication = preview.deduplication || {
+    inputCount: preview.keyCount || 1,
+    inputDuplicateCount: 0,
+    existingDuplicateCount: 0,
+    queuedDuplicateCount: 0,
+    acceptedCount: preview.keyCount || 1,
+    skippedCount: 0,
+  }
+  elements.batchInputCount.textContent = String(deduplication.inputCount)
   elements.batchKeyCount.textContent = String(preview.keyCount || 1)
+  elements.batchSkippedCount.textContent = String(deduplication.skippedCount)
   elements.batchQuotaTotal.textContent = Number.isFinite(preview.quotaTotal)
     ? formatUsd(preview.quotaTotal)
-    : "未全部填写"
+    : preview.knownQuotaTotal > 0
+      ? `${formatUsd(preview.knownQuotaTotal)} + ${preview.unknownQuotaCount} 条 x`
+      : `${preview.unknownQuotaCount} 条 x`
+  const duplicateParts = [
+    [deduplication.inputDuplicateCount, "本批重复"],
+    [deduplication.existingDuplicateCount, "本站已录入"],
+    [deduplication.queuedDuplicateCount, "已在定时队列"],
+  ]
+    .filter(([count]) => count > 0)
+    .map(([count, label]) => `${label} ${count} 条`)
+  elements.batchDedupCopy.textContent =
+    duplicateParts.length > 0
+      ? `已自动跳过：${duplicateParts.join("、")}。请核对数量和额度后手动确认。`
+      : "未发现重复 Key。请核对数量和额度后手动确认。"
   elements.modelList.replaceChildren()
   const visibleModels = preview.models.slice(0, 36)
   for (const model of visibleModels) {
@@ -910,7 +964,9 @@ function renderPreview(preview) {
   elements.manualModels.value = ""
   renderMappings()
   const hasDuplicates =
-    preview.duplicates.length > 0 && !preview.templateChannelId
+    state.pendingSchedule === null &&
+    preview.duplicates.length > 0 &&
+    !preview.templateChannelId
   elements.duplicateBox.classList.toggle("hidden", !hasDuplicates)
   elements.confirmDuplicates.checked = false
   elements.duplicateTarget.replaceChildren()
@@ -935,7 +991,7 @@ function renderPreview(preview) {
   updateDuplicateAction()
   hideStatus(elements.createStatus)
   elements.previewPanel.classList.remove("hidden")
-  elements.previewPanel.scrollIntoView({ behavior: "smooth", block: "start" })
+  if (!elements.previewDialog.open) elements.previewDialog.showModal()
 }
 
 function selectedDuplicateChannel() {
@@ -951,7 +1007,7 @@ function updateDuplicateAction() {
   if (!channel) {
     elements.duplicateConfirmCopy.textContent = "我确认仍要新增一个渠道"
     elements.createChannel.querySelector("span").textContent =
-      "确认写入 New API"
+      state.pendingSchedule === null ? "确认写入 New API" : "确认保存定时任务"
     return
   }
   elements.duplicateConfirmCopy.textContent = channel.isMultiKey
@@ -998,14 +1054,30 @@ const formatUsageTime = (timestamp) => {
     : "尚未使用"
 }
 
-const scheduleStatusCopy = (status) =>
-  ({
-    active: "等待执行",
-    running: "正在写入",
-    paused: "已暂停",
-    completed: "已完成",
-    cancelled: "已取消",
-  })[status] || status
+const isRecoverySchedule = (schedule) =>
+  schedule?.kind === "recovery" ||
+  /限流|自动续传/.test(String(schedule?.lastError || "")) ||
+  (schedule?.entries || []).some(
+    (entry) => entry.status === "pending" && /限流/.test(entry.error || ""),
+  )
+
+const scheduleStatusCopy = (status, schedule = null) => {
+  if (isRecoverySchedule(schedule)) {
+    if (status === "active") return "自动续传等待中"
+    if (status === "running") return "正在继续写入"
+    if (status === "paused") return "续传已暂停"
+  }
+  return (
+    {
+      active: "等待执行",
+      running: "正在写入",
+      paused: "已暂停",
+      attention: "需要核对",
+      completed: "已完成",
+      cancelled: "已取消",
+    }[status] || status
+  )
+}
 
 const usageCopy = (record) => {
   const spent = gatewaySpent(record)
@@ -1351,8 +1423,15 @@ function appendRecordBatchMetric(container, label, value, detail = "") {
   container.append(metric)
 }
 
-function buildRecordDetailRow(record) {
+function buildRecordDetailRow(record, fallbackIndex) {
   const row = document.createElement("tr")
+  const sequence = document.createElement("td")
+  sequence.className = "record-sequence-cell"
+  sequence.textContent = `#${formatInteger(
+    Number.isInteger(record.batchItemIndex)
+      ? record.batchItemIndex
+      : fallbackIndex + 1,
+  )}`
   const keyCell = document.createElement("td")
   const source = document.createElement("strong")
   source.textContent = record.providerName
@@ -1431,7 +1510,7 @@ function buildRecordDetailRow(record) {
     (record.sharedChannel && !Number.isInteger(record.keyIndex))
   refresh.addEventListener("click", () => refreshImportRecord(record, refresh))
   action.append(refresh)
-  row.append(keyCell, channel, quotaUsage, traffic, action)
+  row.append(sequence, keyCell, channel, quotaUsage, traffic, action)
   return row
 }
 
@@ -1442,7 +1521,7 @@ function appendRecordBatch(batch, index) {
   const identity = document.createElement("div")
   identity.className = "record-batch-identity"
   const time = document.createElement("strong")
-  time.textContent = formatDateTime(batch.startedAt)
+  time.textContent = `本次添加 · ${formatDateTime(batch.startedAt)}`
   const destination = document.createElement("small")
   destination.textContent = `${batch.targetName} · ${batch.providerName} · ${importOperationCopy(batch.operation)}`
   const targetUrl = document.createElement("span")
@@ -1486,7 +1565,7 @@ function appendRecordBatch(batch, index) {
   details.className = "record-batch-details"
   details.open = index === 0
   const summary = document.createElement("summary")
-  summary.textContent = `查看本批 ${formatInteger(batch.records.length)} 条 Key 明细`
+  summary.textContent = `展开逐条核对本次添加的 ${formatInteger(batch.records.length)} 条 Key`
   const tableWrap = document.createElement("div")
   tableWrap.className = "record-detail-table-wrap"
   const table = document.createElement("table")
@@ -1494,6 +1573,7 @@ function appendRecordBatch(batch, index) {
   const head = document.createElement("thead")
   const headRow = document.createElement("tr")
   for (const label of [
+    "序号",
     "来源 / Key",
     "渠道",
     "额度 / 已用",
@@ -1506,7 +1586,9 @@ function appendRecordBatch(batch, index) {
   }
   head.append(headRow)
   const body = document.createElement("tbody")
-  for (const record of batch.records) body.append(buildRecordDetailRow(record))
+  for (const [recordIndex, record] of batch.records.entries()) {
+    body.append(buildRecordDetailRow(record, recordIndex))
+  }
   table.append(head, body)
   tableWrap.append(table)
   details.append(summary, tableWrap)
@@ -1542,8 +1624,11 @@ function renderSchedules() {
   const hasSchedules = state.schedules.length > 0
   elements.scheduleEmpty.classList.toggle("hidden", hasSchedules)
   for (const schedule of state.schedules) {
+    const recovering =
+      isRecoverySchedule(schedule) && schedule.counts.pending > 0
     const card = document.createElement("article")
-    card.className = "schedule-card"
+    card.className = `schedule-card${recovering ? " recovering" : ""}`
+    card.dataset.scheduleId = schedule.id
     const header = document.createElement("header")
     const titleWrap = document.createElement("div")
     const title = document.createElement("h3")
@@ -1554,8 +1639,10 @@ function renderSchedules() {
     } · ${schedule.targetUrl || ""}`
     titleWrap.append(title, target)
     const status = document.createElement("span")
-    status.className = `schedule-status ${schedule.status}`.trim()
-    status.textContent = scheduleStatusCopy(schedule.status)
+    status.className = `schedule-status ${schedule.status}${
+      recovering ? " recovering" : ""
+    }`.trim()
+    status.textContent = scheduleStatusCopy(schedule.status, schedule)
     header.append(titleWrap, status)
 
     const metrics = document.createElement("div")
@@ -1565,11 +1652,14 @@ function renderSchedules() {
       ["待写入", `${schedule.counts.pending}`],
       ["已写入", `${schedule.counts.imported}`],
       ["失败", `${schedule.counts.failed}`],
+      ...(schedule.counts.uncertain > 0
+        ? [["待核对", `${schedule.counts.uncertain}`]]
+        : []),
       [
         "下一次",
         schedule.status === "active"
           ? formatDateTime(schedule.nextRunAt)
-          : scheduleStatusCopy(schedule.status),
+          : scheduleStatusCopy(schedule.status, schedule),
       ],
     ]
     for (const [label, value] of metricItems) {
@@ -1589,13 +1679,19 @@ function renderSchedules() {
     details.textContent = `每次 ${schedule.batchSize} 条；间隔 ${
       schedule.intervalMinutes
     } 分钟；优先级 ${priorityCopy}；权重 ${schedule.weight}；最近执行 ${formatDateTime(schedule.lastRunAt)}。`
-    if (schedule.lastError) {
-      const error = document.createElement("p")
-      error.className = "schedule-error"
-      error.textContent = schedule.lastError
-      card.append(header, metrics, details, error)
+    if (recovering) {
+      const recovery = document.createElement("p")
+      recovery.className = "schedule-recovery-note"
+      recovery.textContent = `${schedule.counts.pending} 条 Key 已加密保留；成功项不会重复写入。下次自动继续：${formatDateTime(schedule.nextRunAt)}。`
+      card.append(header, metrics, details, recovery)
     } else {
       card.append(header, metrics, details)
+    }
+    if (schedule.lastError) {
+      const error = document.createElement("p")
+      error.className = recovering ? "schedule-recovery-note" : "schedule-error"
+      error.textContent = schedule.lastError
+      card.append(error)
     }
 
     const actions = document.createElement("div")
@@ -1603,7 +1699,7 @@ function renderSchedules() {
     const retryFailed = document.createElement("button")
     retryFailed.type = "button"
     retryFailed.className = "table-action retry-failed"
-    retryFailed.textContent = `重试失败 Key（${schedule.counts.failed}）`
+    retryFailed.textContent = `恢复失败 Key（${schedule.counts.failed}）`
     retryFailed.disabled =
       schedule.counts.failed === 0 ||
       ["running", "cancelled"].includes(schedule.status)
@@ -1701,7 +1797,7 @@ function renderSchedules() {
     const runNow = document.createElement("button")
     runNow.type = "button"
     runNow.className = "table-action"
-    runNow.textContent = "立即上一批"
+    runNow.textContent = recovering ? "立即继续写入" : "立即上一批"
     runNow.disabled =
       schedule.counts.pending === 0 ||
       ["running", "cancelled"].includes(schedule.status)
@@ -1754,7 +1850,7 @@ async function updateSchedule(scheduleId, action, button) {
     if (action === "run") await loadRecords()
     toast(
       action === "run"
-        ? "已执行一批定时 Key"
+        ? "已继续执行一批 Key"
         : action === "retry-failed"
           ? "失败 Key 已重新加入待写入队列"
           : "定时任务已更新",
@@ -2074,8 +2170,7 @@ elements.profileSelect.addEventListener("change", async () => {
     })
     renderConnection(result.config)
     renderGroups(result.groups || [])
-    state.preview = null
-    elements.previewPanel.classList.add("hidden")
+    closePreviewDialog()
     elements.loginPassword.value = ""
     elements.adminToken.value = ""
     showStatus(
@@ -2175,6 +2270,7 @@ elements.configForm.addEventListener("submit", async (event) => {
         targetUrl: elements.targetUrl.value,
         username: elements.loginUsername.value,
         password: elements.loginPassword.value,
+        rememberSession: elements.rememberSession.checked,
         allowInsecureHttp: elements.allowInsecureHttp.checked,
       }),
     })
@@ -2201,7 +2297,9 @@ elements.configForm.addEventListener("submit", async (event) => {
     ).host
     showStatus(
       elements.configStatus,
-      `已登录 ${result.username}：${result.target}。密码没有保存，关闭本地服务后需要重新登录。`,
+      elements.rememberSession.checked
+        ? `已登录 ${result.username}：${result.target}。密码未保存，Session 已加密保存。`
+        : `已登录 ${result.username}：${result.target}。密码和 Session 均未保存。`,
     )
     toast("New API 登录成功")
   } catch (error) {
@@ -2343,43 +2441,24 @@ elements.credentialForm.addEventListener("submit", async (event) => {
   setLoading(elements.previewButton, true)
   try {
     const body = buildCredentialRequestBody()
-    if (elements.scheduleEnabled.checked) {
-      const result = await api("/api/schedules", {
-        method: "POST",
-        body: JSON.stringify({
-          ...body,
-          combineKeys: elements.batchMode.value === "multi_to_single",
-          schedule: {
-            startAt: elements.scheduleStartAt.value,
-            batchSize: elements.scheduleBatchSize.value,
-            intervalMinutes: elements.scheduleIntervalMinutes.value,
-          },
-        }),
-      })
-      clearSensitiveCredentialInputs()
-      state.schedules = [result.schedule, ...state.schedules]
-      renderSchedules()
-      showStatus(
-        elements.credentialStatus,
-        `定时任务已保存：共 ${result.schedule.counts.total} 条 Key，首次执行 ${formatDateTime(result.schedule.nextRunAt)}。`,
-      )
-      toast("定时上 Key 任务已保存")
-      return
-    }
+    state.pendingSchedule = elements.scheduleEnabled.checked
+      ? {
+          startAt: elements.scheduleStartAt.value,
+          batchSize: elements.scheduleBatchSize.value,
+          intervalMinutes: elements.scheduleIntervalMinutes.value,
+        }
+      : null
     const preview = await api("/api/preview", {
       method: "POST",
       body: JSON.stringify(body),
     })
-    clearSensitiveCredentialInputs()
     elements.channelName.value = preview.name
     renderPreview(preview)
     toast(
-      `已读取 ${preview.keyCount} 条 Key 和 ${preview.models.length} 个模型`,
+      `识别 ${preview.deduplication.inputCount} 条，去重后待添加 ${preview.keyCount} 条`,
     )
-    if (elements.autoWrite.checked) {
-      await createCurrentPreview({ forceNew: true })
-    }
   } catch (error) {
+    state.pendingSchedule = null
     showStatus(elements.credentialStatus, error.message, true)
   } finally {
     setLoading(elements.previewButton, false)
@@ -2387,15 +2466,25 @@ elements.credentialForm.addEventListener("submit", async (event) => {
 })
 
 elements.discardPreview.addEventListener("click", () => {
-  state.preview = null
-  elements.previewPanel.classList.add("hidden")
-  toast("这次预览已放弃")
+  if (state.createInFlight) return
+  closePreviewDialog()
+  toast("已返回，可继续修改 Key 或额度")
+})
+
+elements.previewDialog.addEventListener("cancel", (event) => {
+  if (state.createInFlight) {
+    event.preventDefault()
+    return
+  }
+  closePreviewDialog()
 })
 
 async function createCurrentPreview({ forceNew = false } = {}) {
-  if (!state.preview) return
+  if (!state.preview || state.createInFlight) return
   const hasDuplicates =
-    state.preview.duplicates.length > 0 && !state.preview.templateChannelId
+    state.pendingSchedule === null &&
+    state.preview.duplicates.length > 0 &&
+    !state.preview.templateChannelId
   const existingChannel = forceNew ? null : selectedDuplicateChannel()
   if (hasDuplicates && !forceNew && !elements.confirmDuplicates.checked) {
     const message = existingChannel
@@ -2407,8 +2496,42 @@ async function createCurrentPreview({ forceNew = false } = {}) {
     return
   }
   hideStatus(elements.createStatus)
+  state.createInFlight = true
+  elements.discardPreview.disabled = true
   setLoading(elements.createChannel, true)
   try {
+    if (state.pendingSchedule !== null) {
+      const result = await api("/api/schedules", {
+        method: "POST",
+        body: JSON.stringify({
+          previewId: state.preview.previewId,
+          combineKeys:
+            elements.batchMode.value === "multi_to_single" &&
+            state.preview.keyCount > 1,
+          manualModels: parseManualModels(),
+          mappings: state.mappings,
+          schedule: state.pendingSchedule,
+        }),
+      })
+      clearSensitiveCredentialInputs()
+      state.schedules = [
+        result.schedule,
+        ...state.schedules.filter(
+          (schedule) => schedule.id !== result.schedule.id,
+        ),
+      ]
+      renderSchedules()
+      showStatus(
+        elements.createStatus,
+        `定时任务已保存：去重后共 ${result.schedule.counts.total} 条 Key，首次执行 ${formatDateTime(result.schedule.nextRunAt)}。`,
+      )
+      toast("定时上 Key 任务已确认保存")
+      state.preview = null
+      state.pendingSchedule = null
+      elements.createChannel.querySelector("span").textContent = "任务已保存"
+      elements.discardPreview.textContent = "关闭"
+      return
+    }
     const result = await api("/api/create", {
       method: "POST",
       body: JSON.stringify({
@@ -2422,7 +2545,30 @@ async function createCurrentPreview({ forceNew = false } = {}) {
           state.preview.keyCount > 1,
       }),
     })
-    if (result.operation === "updated") {
+    clearSensitiveCredentialInputs()
+    if (result.recoverySchedule) {
+      state.schedules = [
+        result.recoverySchedule,
+        ...state.schedules.filter(
+          (schedule) => schedule.id !== result.recoverySchedule.id,
+        ),
+      ]
+      renderSchedules()
+      const pending = result.recoverySchedule.counts.pending
+      showStatus(
+        elements.createStatus,
+        `部分完成：成功 ${result.successCount} 条，待续传 ${pending} 条。New API 触发限流，剩余 Key 已加密保留；成功项不会重复写入。下次自动继续：${formatDateTime(result.recoverySchedule.nextRunAt)}。`,
+        false,
+        { recovering: true },
+      )
+      toast(`已转自动续传：${pending} 条 Key 等待继续写入`)
+    } else if (result.operation === "skipped") {
+      showStatus(
+        elements.createStatus,
+        `没有重复写入：${result.skippedCount} 条 Key 已由另一批任务先完成。`,
+      )
+      toast("重复 Key 已自动跳过")
+    } else if (result.operation === "updated") {
       const action =
         result.keyAction === "appended" ? "已追加 Key 到" : "已替换 Key："
       const enableCopy = result.channelEnabled
@@ -2455,20 +2601,32 @@ async function createCurrentPreview({ forceNew = false } = {}) {
         result.failedCount > 0,
       )
     }
-    renderBalance(result.balance, result.channelId)
+    if (result.balance) renderBalance(result.balance, result.channelId)
     state.preview = null
-    elements.createChannel.disabled = true
+    state.pendingSchedule = null
+    elements.discardPreview.textContent = "关闭"
     elements.createChannel.querySelector("span").textContent =
-      result.operation === "updated" ? "更新完成" : "写入完成"
-    try {
-      await loadRecords()
-    } catch (error) {
-      toast(`渠道已写入，但记录刷新失败：${error.message}`, true)
+      result.recoverySchedule
+        ? "已转自动续传"
+        : result.operation === "updated"
+          ? "更新完成"
+          : result.operation === "skipped"
+            ? "已自动去重"
+            : "写入完成"
+    if (result.successCount > 0) {
+      try {
+        await loadRecords()
+      } catch (error) {
+        toast(`渠道已写入，但记录刷新失败：${error.message}`, true)
+      }
     }
   } catch (error) {
     showStatus(elements.createStatus, error.message, true)
   } finally {
+    state.createInFlight = false
     setLoading(elements.createChannel, false)
+    elements.createChannel.disabled = !state.preview
+    elements.discardPreview.disabled = false
   }
 }
 
@@ -2665,11 +2823,9 @@ elements.refreshSchedules.addEventListener("click", async () => {
 function updateScheduleForm() {
   const enabled = elements.scheduleEnabled.checked
   elements.scheduleOptions.classList.toggle("hidden", !enabled)
-  elements.autoWrite.disabled = enabled
-  if (enabled) elements.autoWrite.checked = false
   elements.previewButton.querySelector("span").textContent = enabled
-    ? "保存定时上 Key 任务"
-    : "批量添加到 New API"
+    ? "识别并预览定时任务"
+    : "识别 Key 并预览"
   if (enabled && !elements.scheduleStartAt.value) {
     elements.scheduleStartAt.value = formatDateTimeInput(
       new Date(Date.now() + 10 * 60 * 1000),

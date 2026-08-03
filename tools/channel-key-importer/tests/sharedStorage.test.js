@@ -35,10 +35,22 @@ test("shares JSON state and encrypted tokens through SQLite", async () => {
     const tokens = createSharedTokenStore()
     await tokens.save("site#1", "new-api-admin-token-secret")
     assert.equal(await tokens.read("site#1"), "new-api-admin-token-secret")
+    await tokens.saveSession("site#2", {
+      username: "admin",
+      sessionCookie: "session-cookie-secret",
+    })
+    assert.deepEqual(await tokens.readSession("site#2"), {
+      username: "admin",
+      sessionCookie: "session-cookie-secret",
+    })
     await closeSharedStorageForTests()
     const databaseBytes = await readFile(join(root, "shared.sqlite"))
     assert.equal(
       databaseBytes.includes(Buffer.from("new-api-admin-token-secret")),
+      false,
+    )
+    assert.equal(
+      databaseBytes.includes(Buffer.from("session-cookie-secret")),
       false,
     )
   } finally {

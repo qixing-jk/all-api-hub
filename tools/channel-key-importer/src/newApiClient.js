@@ -1,6 +1,8 @@
 const PAGE_SIZE = 100
 const MAX_CHANNEL_PAGES = 20
 const MAX_USAGE_PAGES = 500
+const RATE_LIMIT_PATTERN =
+  /(?:\b429\b|请求次数过多|too many requests|rate[ -]?limit)/i
 
 const requestHeaders = (config) => {
   const headers = {
@@ -69,11 +71,13 @@ async function requestJson(url, options, secrets = []) {
     }
     const error = new Error(message)
     error.status = response.status
-    if (response.status === 429) {
-      const retryAfter = Number(response.headers.get("retry-after"))
-      if (Number.isFinite(retryAfter) && retryAfter >= 0) {
-        error.retryAfterMs = retryAfter * 1000
-      }
+    error.rateLimited =
+      response.status === 429 || RATE_LIMIT_PATTERN.test(message)
+    if (error.rateLimited) {
+      const retryAfterMs = parseRetryAfterMs(
+        response.headers.get("retry-after"),
+      )
+      if (retryAfterMs != null) error.retryAfterMs = retryAfterMs
     }
     throw error
   }
@@ -115,7 +119,7 @@ const channelTemplateSummary = (channel) => ({
 })
 
 export async function verifyNewApi(config) {
-  await requestJson(
+  await requestNewApiRead(
     `${config.targetUrl}/api/channel/?p=1&page_size=1`,
     { headers: requestHeaders(config) },
     [config.adminToken, config.sessionCookie].filter(Boolean),
@@ -165,7 +169,7 @@ export async function discoverNewApiUserId({
 export async function fetchNewApiGroups(config) {
   // New API exposes the admin-configured channel groups as a string array.
   // https://github.com/QuantumNous/new-api/blob/main/controller/group.go
-  const payload = await requestJson(
+  const payload = await requestNewApiRead(
     `${config.targetUrl}/api/group/`,
     { headers: requestHeaders(config) },
     [config.adminToken, config.sessionCookie].filter(Boolean),
@@ -183,7 +187,7 @@ export async function fetchNewApiDefaultModels(config, channelType) {
   // lets an administrator create channels without sending every provider key
   // upstream merely to discover models first.
   // https://github.com/QuantumNous/new-api/blob/main/controller/model.go
-  const payload = await requestJson(
+  const payload = await requestNewApiRead(
     `${config.targetUrl}/api/models`,
     { headers: requestHeaders(config) },
     [config.adminToken, config.sessionCookie].filter(Boolean),
@@ -199,7 +203,7 @@ export async function fetchNewApiDefaultModels(config, channelType) {
 export async function fetchNewApiSystemName(targetUrl) {
   // New API exposes its configured display name through the public status API.
   // https://github.com/QuantumNous/new-api/blob/main/controller/misc.go
-  const payload = await requestJson(`${targetUrl}/api/status`, {
+  const payload = await requestNewApiRead(`${targetUrl}/api/status`, {
     headers: { "Content-Type": "application/json" },
     signal: AbortSignal.timeout(4_000),
   })
@@ -211,13 +215,25 @@ export async function fetchNewApiSystemName(targetUrl) {
 const wait = (milliseconds) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds))
 
-const CHANNEL_MUTATION_RETRY_DELAYS = [1_000, 2_000, 4_000, 8_000, 12_000]
+const CHANNEL_MUTATION_RETRY_DELAYS = [1_000, 2_000]
+const NEW_API_READ_RETRY_DELAYS = [500, 1_000, 2_000, 4_000]
+const MAX_INLINE_RATE_LIMIT_WAIT_MS = 5_000
 
-const isRateLimitError = (error) =>
+export function parseRetryAfterMs(value, now = Date.now()) {
+  const normalized = String(value ?? "").trim()
+  if (!normalized) return null
+  const seconds = Number(normalized)
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000
+  const timestamp = Date.parse(normalized)
+  if (!Number.isFinite(timestamp)) return null
+  return Math.max(0, timestamp - now)
+}
+
+export const isRateLimitError = (error) =>
+  error?.retryable === true ||
+  error?.rateLimited === true ||
   error?.status === 429 ||
-  /(?:\b429\b|请求次数过多|too many requests|rate[ -]?limit)/i.test(
-    String(error?.message || ""),
-  )
+  RATE_LIMIT_PATTERN.test(String(error?.message || error?.error || ""))
 
 async function requestChannelMutation(url, options, secrets) {
   for (let attempt = 0; ; attempt += 1) {
@@ -230,7 +246,27 @@ async function requestChannelMutation(url, options, secrets) {
       ) {
         throw error
       }
-      await wait(error.retryAfterMs ?? CHANNEL_MUTATION_RETRY_DELAYS[attempt])
+      const delay = error.retryAfterMs ?? CHANNEL_MUTATION_RETRY_DELAYS[attempt]
+      if (delay > MAX_INLINE_RATE_LIMIT_WAIT_MS) throw error
+      await wait(delay)
+    }
+  }
+}
+
+async function requestNewApiRead(url, options, secrets = []) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await requestJson(url, options, secrets)
+    } catch (error) {
+      if (
+        !isRateLimitError(error) ||
+        attempt >= NEW_API_READ_RETRY_DELAYS.length
+      ) {
+        throw error
+      }
+      const delay = error.retryAfterMs ?? NEW_API_READ_RETRY_DELAYS[attempt]
+      if (delay > MAX_INLINE_RATE_LIMIT_WAIT_MS) throw error
+      await wait(delay)
     }
   }
 }
@@ -499,7 +535,7 @@ export async function loginNewApi({ targetUrl, username, password }) {
 export async function fetchChannelModels(config, input) {
   // New API performs provider-specific model discovery for every built-in type.
   // Contract: https://github.com/QuantumNous/new-api-docs/blob/main/docs/api/fei-channel-management.md#拉取全部渠道模型
-  const payload = await requestJson(
+  const payload = await requestNewApiRead(
     `${config.targetUrl}/api/channel/fetch_models`,
     {
       method: "POST",
@@ -526,7 +562,7 @@ export async function listChannelTemplates(config, provider) {
   for (let page = 1; page <= MAX_CHANNEL_PAGES; page += 1) {
     let payload
     try {
-      payload = await requestJson(
+      payload = await requestNewApiRead(
         `${config.targetUrl}/api/channel/?p=${page}&page_size=${PAGE_SIZE}`,
         { headers: requestHeaders(config) },
         [config.adminToken, config.sessionCookie].filter(Boolean),
@@ -559,7 +595,7 @@ export async function listChannelTemplates(config, provider) {
 export async function fetchChannelTemplate(config, channelId, provider) {
   const id = Number(channelId)
   if (!Number.isInteger(id) || id <= 0) throw new Error("请选择已有渠道")
-  const payload = await requestJson(
+  const payload = await requestNewApiRead(
     `${config.targetUrl}/api/channel/${id}`,
     { headers: requestHeaders(config) },
     [config.adminToken, config.sessionCookie].filter(Boolean),
@@ -599,7 +635,7 @@ export async function fetchChannelTemplate(config, channelId, provider) {
 export async function findSimilarChannels(config, provider) {
   const matches = []
   for (let page = 1; page <= MAX_CHANNEL_PAGES; page += 1) {
-    const payload = await requestJson(
+    const payload = await requestNewApiRead(
       `${config.targetUrl}/api/channel/?p=${page}&page_size=${PAGE_SIZE}`,
       { headers: requestHeaders(config) },
       [config.adminToken, config.sessionCookie].filter(Boolean),
@@ -624,7 +660,7 @@ export async function findSimilarChannels(config, provider) {
         })
       }
     }
-    if (items.length < PAGE_SIZE) break
+    if (matches.length >= 20 || items.length < PAGE_SIZE) break
   }
   return matches.slice(0, 20)
 }
@@ -735,7 +771,7 @@ export async function createNewApiMultiKeyChannel(config, input) {
 }
 
 export async function findCreatedChannel(config, input) {
-  const payload = await requestJson(
+  const payload = await requestNewApiRead(
     `${config.targetUrl}/api/channel/search?keyword=${encodeURIComponent(input.name)}`,
     { headers: requestHeaders(config) },
     [config.adminToken, config.sessionCookie].filter(Boolean),
@@ -750,6 +786,43 @@ export async function findCreatedChannel(config, input) {
   })
   return (
     matches.sort((left, right) => Number(right.id) - Number(left.id))[0] ?? null
+  )
+}
+
+const createdChannelIdentity = (input) =>
+  [
+    input.name,
+    input.provider.channelType,
+    String(input.baseUrl || "").replace(/\/+$/, ""),
+  ].join("\u0000")
+
+export async function findCreatedChannels(config, inputs) {
+  const expected = new Map(
+    inputs.map((input) => [createdChannelIdentity(input), input]),
+  )
+  const matches = new Map()
+  if (expected.size === 0) return matches
+
+  for (let page = 1; page <= MAX_CHANNEL_PAGES; page += 1) {
+    const payload = await requestNewApiRead(
+      `${config.targetUrl}/api/channel/?p=${page}&page_size=${PAGE_SIZE}`,
+      { headers: requestHeaders(config) },
+      [config.adminToken, config.sessionCookie].filter(Boolean),
+    )
+    const items = channelListItems(payload)
+    for (const channel of items) {
+      const identity = createdChannelIdentity({
+        name: String(channel?.name || ""),
+        provider: { channelType: Number(channel?.type) },
+        baseUrl: String(channel?.base_url || ""),
+      })
+      if (!expected.has(identity) || matches.has(identity)) continue
+      matches.set(identity, channel)
+    }
+    if (matches.size === expected.size || items.length < PAGE_SIZE) break
+  }
+  return new Map(
+    inputs.map((input) => [input, matches.get(createdChannelIdentity(input))]),
   )
 }
 

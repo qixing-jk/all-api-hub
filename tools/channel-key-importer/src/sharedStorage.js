@@ -161,39 +161,73 @@ async function decryptSecret(value) {
   ]).toString("utf8")
 }
 
+async function saveEncryptedSecret(secretKey, value) {
+  const database = await openDatabase()
+  database
+    .prepare(
+      `INSERT INTO encrypted_secrets (secret_key, secret_value, updated_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(secret_key) DO UPDATE SET
+         secret_value = excluded.secret_value,
+         updated_at = excluded.updated_at`,
+    )
+    .run(secretKey, await encryptSecret(value), new Date().toISOString())
+}
+
+async function readEncryptedSecret(secretKey) {
+  const database = await openDatabase()
+  const row = database
+    .prepare("SELECT secret_value FROM encrypted_secrets WHERE secret_key = ?")
+    .get(secretKey)
+  if (!row?.secret_value) return ""
+  try {
+    return await decryptSecret(row.secret_value)
+  } catch {
+    return ""
+  }
+}
+
+async function deleteEncryptedSecret(secretKey) {
+  const database = await openDatabase()
+  database
+    .prepare("DELETE FROM encrypted_secrets WHERE secret_key = ?")
+    .run(secretKey)
+}
+
 export function createSharedTokenStore() {
   if (!sqliteStorageEnabled()) return null
   return {
     async save(account, token) {
-      const database = await openDatabase()
-      database
-        .prepare(
-          `INSERT INTO encrypted_secrets (secret_key, secret_value, updated_at)
-           VALUES (?, ?, ?)
-           ON CONFLICT(secret_key) DO UPDATE SET
-             secret_value = excluded.secret_value,
-             updated_at = excluded.updated_at`,
-        )
-        .run(
-          `new-api-token:${account}`,
-          await encryptSecret(token),
-          new Date().toISOString(),
-        )
+      await saveEncryptedSecret(`new-api-token:${account}`, token)
     },
 
     async read(account) {
-      const database = await openDatabase()
-      const row = database
-        .prepare(
-          "SELECT secret_value FROM encrypted_secrets WHERE secret_key = ?",
-        )
-        .get(`new-api-token:${account}`)
-      if (!row?.secret_value) return ""
+      return await readEncryptedSecret(`new-api-token:${account}`)
+    },
+
+    async delete(account) {
+      await deleteEncryptedSecret(`new-api-token:${account}`)
+    },
+
+    async saveSession(account, session) {
+      await saveEncryptedSecret(
+        `new-api-session:${account}`,
+        JSON.stringify(session),
+      )
+    },
+
+    async readSession(account) {
+      const value = await readEncryptedSecret(`new-api-session:${account}`)
+      if (!value) return null
       try {
-        return await decryptSecret(row.secret_value)
+        return JSON.parse(value)
       } catch {
-        return ""
+        return null
       }
+    },
+
+    async deleteSession(account) {
+      await deleteEncryptedSecret(`new-api-session:${account}`)
     },
   }
 }

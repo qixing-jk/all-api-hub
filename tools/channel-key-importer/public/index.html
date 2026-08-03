@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
     <title>dataeyesai · 渠道 Key 导入器</title>
-    <link rel="stylesheet" href="/styles.css?v=20260802-shell" />
+    <link rel="stylesheet" href="/styles.css?v=20260803-dedup-review" />
   </head>
   <body>
     <div class="app-shell">
@@ -161,6 +161,16 @@
                       显示
                     </button>
                   </div>
+                </label>
+                <label class="check-row field-wide">
+                  <input id="remember-session" type="checkbox" checked />
+                  <span
+                    ><strong>加密保存登录 Session</strong
+                    ><small
+                      >不保存密码；共享服务器使用 AES-GCM
+                      加密，重启后定时任务可继续</small
+                    ></span
+                  >
                 </label>
                 <button
                   class="secondary-button compact open-login-button"
@@ -571,15 +581,6 @@
                 </label>
               </div>
               <label class="check-row">
-                <input id="auto-write" type="checkbox" checked />
-                <span
-                  ><strong>读取后自动批量写入</strong
-                  ><small
-                    >发现同类渠道时也新建独立渠道；关闭后进入高级预览。</small
-                  ></span
-                >
-              </label>
-              <label class="check-row">
                 <input id="schedule-enabled" type="checkbox" />
                 <span
                   ><strong>定时自动上 Key</strong
@@ -620,7 +621,7 @@
                 </label>
               </div>
               <button class="primary-button" id="preview-button" type="submit">
-                <span>批量添加到 New API</span><i aria-hidden="true">↗</i>
+                <span>识别 Key 并预览</span><i aria-hidden="true">↗</i>
               </button>
             </form>
             <div
@@ -631,188 +632,215 @@
           </div>
         </section>
 
-        <section
-          class="panel preview-panel hidden"
-          id="preview-panel"
-          data-app-view="import"
+        <dialog
+          class="preview-dialog"
+          id="preview-dialog"
+          aria-labelledby="preview-dialog-title"
         >
-          <div class="preview-title-row">
-            <div>
-              <span class="kicker">REVIEW</span>
-              <h2>写入前最后看一眼</h2>
-            </div>
-            <div class="preview-expiry"><span></span>预览将在 5 分钟后失效</div>
-          </div>
-
-          <div class="preview-grid">
-            <div class="preview-facts">
+          <section
+            class="panel preview-panel hidden"
+            id="preview-panel"
+            data-app-view="import"
+          >
+            <div class="preview-title-row">
               <div>
-                <small>渠道名称</small><strong id="preview-name">—</strong>
+                <span class="kicker">REVIEW</span>
+                <h2 id="preview-dialog-title">识别完成，确认后再写入</h2>
               </div>
-              <div>
-                <small>渠道类型</small><strong id="preview-provider">—</strong>
-              </div>
-              <div>
-                <small>Base URL</small><strong id="preview-base-url">—</strong>
-              </div>
-              <div>
-                <small>渠道分组</small><strong id="preview-groups">—</strong>
-              </div>
-              <div>
-                <small>优先级</small><strong id="preview-priority">0</strong>
-              </div>
-              <div>
-                <small>权重</small><strong id="preview-weight">0</strong>
-              </div>
-              <div class="hidden" id="preview-aws-routing-fact">
-                <small>AWS 推理路由</small
-                ><strong id="preview-aws-routing">—</strong>
-              </div>
-              <div>
-                <small>发现模型</small
-                ><strong><em id="model-count">0</em> 个</strong>
-              </div>
-            </div>
-            <div class="model-section">
-              <div class="subheading">
-                <h3>上游实际模型</h3>
-                <span id="model-overflow"></span>
-              </div>
-              <div class="model-chips" id="model-list"></div>
-            </div>
-          </div>
-
-          <div class="batch-summary" id="batch-summary">
-            <div>
-              <small>Key 数量</small><strong id="batch-key-count">1</strong>
-            </div>
-            <div>
-              <small>录入总额度</small
-              ><strong id="batch-quota-total">未填写</strong>
-            </div>
-            <p>批量新建时，每条 Key 会建立一个独立渠道；渠道名自动追加序号。</p>
-          </div>
-
-          <div class="model-workbench">
-            <div class="workbench-heading">
-              <div>
-                <span class="kicker">MODEL WORKBENCH</span>
-                <h3>模型名称与重定向</h3>
-                <p>
-                  映射方向是“对外标准名 → 上游实际名”。OpenRouter
-                  会自动把“供应商/模型”重定向成“模型”；同名冲突则保留完整名。
-                </p>
-              </div>
-              <div class="workbench-summary">
-                <strong id="final-model-count">0</strong><span>最终模型</span>
-                <strong id="mapping-count">0</strong><span>名称映射</span>
+              <div class="preview-expiry">
+                <span></span>预览将在 5 分钟后失效
               </div>
             </div>
 
-            <div class="mapping-toolbar">
+            <div class="preview-grid">
+              <div class="preview-facts">
+                <div>
+                  <small>渠道名称</small><strong id="preview-name">—</strong>
+                </div>
+                <div>
+                  <small>渠道类型</small
+                  ><strong id="preview-provider">—</strong>
+                </div>
+                <div>
+                  <small>Base URL</small
+                  ><strong id="preview-base-url">—</strong>
+                </div>
+                <div>
+                  <small>渠道分组</small><strong id="preview-groups">—</strong>
+                </div>
+                <div>
+                  <small>优先级</small><strong id="preview-priority">0</strong>
+                </div>
+                <div>
+                  <small>权重</small><strong id="preview-weight">0</strong>
+                </div>
+                <div class="hidden" id="preview-aws-routing-fact">
+                  <small>AWS 推理路由</small
+                  ><strong id="preview-aws-routing">—</strong>
+                </div>
+                <div>
+                  <small>发现模型</small
+                  ><strong><em id="model-count">0</em> 个</strong>
+                </div>
+              </div>
+              <div class="model-section">
+                <div class="subheading">
+                  <h3>上游实际模型</h3>
+                  <span id="model-overflow"></span>
+                </div>
+                <div class="model-chips" id="model-list"></div>
+              </div>
+            </div>
+
+            <div class="batch-summary" id="batch-summary">
+              <div>
+                <small>原始识别</small
+                ><strong><span id="batch-input-count">1</span> 条</strong>
+              </div>
+              <div>
+                <small>去重后待添加</small
+                ><strong><span id="batch-key-count">1</span> 条</strong>
+              </div>
+              <div>
+                <small>自动跳过重复</small
+                ><strong><span id="batch-skipped-count">0</span> 条</strong>
+              </div>
+              <div>
+                <small>录入总额度</small
+                ><strong id="batch-quota-total">未填写</strong>
+              </div>
+              <p id="batch-dedup-copy">
+                系统会自动跳过本批重复、已录入和已在定时队列中的 Key。
+              </p>
+            </div>
+
+            <div class="model-workbench">
+              <div class="workbench-heading">
+                <div>
+                  <span class="kicker">MODEL WORKBENCH</span>
+                  <h3>模型名称与重定向</h3>
+                  <p>
+                    映射方向是“对外标准名 → 上游实际名”。OpenRouter
+                    会自动把“供应商/模型”重定向成“模型”；同名冲突则保留完整名。
+                  </p>
+                </div>
+                <div class="workbench-summary">
+                  <strong id="final-model-count">0</strong
+                  ><span>最终模型</span> <strong id="mapping-count">0</strong
+                  ><span>名称映射</span>
+                </div>
+              </div>
+
+              <div class="mapping-toolbar">
+                <button
+                  class="secondary-button small"
+                  id="suggest-mappings"
+                  type="button"
+                >
+                  生成标准名建议
+                </button>
+                <button
+                  class="secondary-button small"
+                  id="add-mapping"
+                  type="button"
+                >
+                  ＋ 手动添加映射
+                </button>
+              </div>
+              <div class="mapping-list" id="mapping-list"></div>
+              <datalist id="actual-model-options"></datalist>
+
+              <label class="field manual-models-field">
+                <span>补充 New API 尚未发现的新模型</span>
+                <textarea
+                  id="manual-models"
+                  rows="3"
+                  spellcheck="false"
+                  placeholder="每行一个模型，例如：&#10;gpt-5.2-new&#10;claude-opus-next"
+                ></textarea>
+                <small
+                  >这些名称会直接加入渠道。若 New API
+                  没有对应倍率，请开启自用模式或补充模型倍率/价格。</small
+                >
+              </label>
+            </div>
+
+            <div class="duplicate-box hidden" id="duplicate-box">
+              <div>
+                <span aria-hidden="true">!</span>
+                <div>
+                  <strong>发现同类型或同地址渠道</strong>
+                  <p id="duplicate-copy"></p>
+                </div>
+              </div>
+              <label class="duplicate-target-field">
+                <span>处理方式</span>
+                <select id="duplicate-target">
+                  <option value="">新建独立渠道（不修改现有渠道）</option>
+                </select>
+              </label>
+              <p class="duplicate-target-help">
+                选择已有渠道时只更新 Key，不修改该渠道现有的模型和重定向。
+              </p>
+              <label class="duplicate-confirm-row"
+                ><input id="confirm-duplicates" type="checkbox" />
+                <span id="duplicate-confirm-copy"
+                  >我确认仍要新增一个渠道</span
+                ></label
+              >
+            </div>
+
+            <div class="preview-actions">
               <button
-                class="secondary-button small"
-                id="suggest-mappings"
+                class="secondary-button"
+                id="discard-preview"
                 type="button"
               >
-                生成标准名建议
+                放弃这次预览
               </button>
-              <button
-                class="secondary-button small"
-                id="add-mapping"
-                type="button"
-              >
-                ＋ 手动添加映射
+              <button class="primary-button" id="create-channel" type="button">
+                <span>确认写入 New API</span><i>→</i>
               </button>
             </div>
-            <div class="mapping-list" id="mapping-list"></div>
-            <datalist id="actual-model-options"></datalist>
+            <div
+              class="inline-status hidden"
+              id="create-status"
+              role="status"
+              aria-live="polite"
+            ></div>
 
-            <label class="field manual-models-field">
-              <span>补充 New API 尚未发现的新模型</span>
-              <textarea
-                id="manual-models"
-                rows="3"
-                spellcheck="false"
-                placeholder="每行一个模型，例如：&#10;gpt-5.2-new&#10;claude-opus-next"
-              ></textarea>
-              <small
-                >这些名称会直接加入渠道。若 New API
-                没有对应倍率，请开启自用模式或补充模型倍率/价格。</small
-              >
-            </label>
-          </div>
-
-          <div class="duplicate-box hidden" id="duplicate-box">
-            <div>
-              <span aria-hidden="true">!</span>
-              <div>
-                <strong>发现同类型或同地址渠道</strong>
-                <p id="duplicate-copy"></p>
+            <div class="balance-card hidden" id="balance-card">
+              <div class="balance-heading">
+                <div>
+                  <span class="kicker">KEY BALANCE</span>
+                  <h3>渠道额度</h3>
+                </div>
+                <button
+                  class="secondary-button small"
+                  id="refresh-balance"
+                  type="button"
+                >
+                  刷新余额
+                </button>
               </div>
+              <div class="balance-metrics hidden" id="balance-metrics">
+                <div>
+                  <small>当前剩余</small>
+                  <strong id="remaining-balance">—</strong>
+                </div>
+                <div>
+                  <small>导入后已消耗</small>
+                  <strong id="spent-balance">—</strong>
+                </div>
+                <div>
+                  <small>首次查询额度</small>
+                  <strong id="initial-balance">—</strong>
+                </div>
+              </div>
+              <p id="balance-message"></p>
             </div>
-            <label class="duplicate-target-field">
-              <span>处理方式</span>
-              <select id="duplicate-target">
-                <option value="">新建独立渠道（不修改现有渠道）</option>
-              </select>
-            </label>
-            <p class="duplicate-target-help">
-              选择已有渠道时只更新 Key，不修改该渠道现有的模型和重定向。
-            </p>
-            <label class="duplicate-confirm-row"
-              ><input id="confirm-duplicates" type="checkbox" />
-              <span id="duplicate-confirm-copy"
-                >我确认仍要新增一个渠道</span
-              ></label
-            >
-          </div>
-
-          <div class="preview-actions">
-            <button class="secondary-button" id="discard-preview" type="button">
-              放弃这次预览
-            </button>
-            <button class="primary-button" id="create-channel" type="button">
-              <span>确认写入 New API</span><i>→</i>
-            </button>
-          </div>
-          <div
-            class="inline-status hidden"
-            id="create-status"
-            role="status"
-          ></div>
-
-          <div class="balance-card hidden" id="balance-card">
-            <div class="balance-heading">
-              <div>
-                <span class="kicker">KEY BALANCE</span>
-                <h3>渠道额度</h3>
-              </div>
-              <button
-                class="secondary-button small"
-                id="refresh-balance"
-                type="button"
-              >
-                刷新余额
-              </button>
-            </div>
-            <div class="balance-metrics hidden" id="balance-metrics">
-              <div>
-                <small>当前剩余</small>
-                <strong id="remaining-balance">—</strong>
-              </div>
-              <div>
-                <small>导入后已消耗</small>
-                <strong id="spent-balance">—</strong>
-              </div>
-              <div>
-                <small>首次查询额度</small>
-                <strong id="initial-balance">—</strong>
-              </div>
-            </div>
-            <p id="balance-message"></p>
-          </div>
-        </section>
+          </section>
+        </dialog>
 
         <section
           class="panel schedule-panel view-hidden"
@@ -837,7 +865,11 @@
             会加密保存在本机，列表只显示尾号和指纹；服务长驻后，即使页面关掉也会按时间执行。
           </p>
           <div class="schedule-empty" id="schedule-empty">还没有定时任务。</div>
-          <div class="schedule-list" id="schedule-list"></div>
+          <div
+            class="schedule-list"
+            id="schedule-list"
+            aria-live="polite"
+          ></div>
         </section>
 
         <section
@@ -1076,6 +1108,6 @@
     </div>
 
     <div class="toast hidden" id="toast" role="status"></div>
-    <script type="module" src="/app.js?v=20260802-shell"></script>
+    <script type="module" src="/app.js?v=20260803-dedup-review"></script>
   </body>
 </html>
