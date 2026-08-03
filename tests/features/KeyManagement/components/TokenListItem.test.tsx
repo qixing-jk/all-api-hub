@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { TokenListItem } from "~/features/KeyManagement/components/TokenListItem"
 import type { AccountToken, DisplaySiteData } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -74,12 +75,16 @@ vi.mock(
     TokenHeader: ({
       token,
       onOpenCCSwitchDialog,
+      headerProps,
     }: {
       token: { name: string }
       onOpenCCSwitchDialog?: () => void
+      headerProps?: { detailsTrigger: ReactNode; selection?: ReactNode }
     }) => (
       <div>
         <div>{token.name}</div>
+        {headerProps?.selection}
+        {headerProps?.detailsTrigger}
         <button type="button" onClick={onOpenCCSwitchDialog}>
           Open CC Switch
         </button>
@@ -91,20 +96,29 @@ vi.mock(
 const renderTokenListItem = (props?: {
   isSelected?: boolean
   onSelectionChange?: (checked: boolean) => void
+  siteType?: AccountSiteType
   tokenGroup?: string
+  tokenModels?: string
+  tokenAllowIps?: string
   toggleKeyVisibility?: (
     account: DisplaySiteData,
     token: AccountToken,
   ) => Promise<void>
   onOpenCCSwitchDialog?: (token: AccountToken, account: DisplaySiteData) => void
 }) => {
-  const account = createAccount({ id: "acc-1", name: "Account 1" })
+  const account = createAccount({
+    id: "acc-1",
+    name: "Account 1",
+    siteType: props?.siteType ?? SITE_TYPES.NEW_API,
+  })
   const token = createToken({
     id: 1,
     name: "Token 1",
     accountId: account.id,
     accountName: account.name,
     group: props?.tokenGroup,
+    models: props?.tokenModels,
+    allow_ips: props?.tokenAllowIps,
   })
 
   return render(
@@ -226,25 +240,54 @@ describe("TokenListItem batch selection", () => {
   })
 
   it("omits the selection checkbox when batch selection is unavailable", async () => {
+    const user = userEvent.setup()
     renderTokenListItem({
       tokenGroup: "managed-sites",
     })
 
     expect(await screen.findByText("Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
     const groupLabel = screen.getByText("keyManagement:keyDetails.group")
     const groupValue = screen.getByText("managed-sites")
 
-    expect(groupLabel.parentElement).toHaveClass(
-      "flex",
-      "flex-wrap",
-      "break-words",
-    )
-    expect(groupLabel).toHaveClass("shrink-0")
-    expect(groupValue).toHaveClass("min-w-0", "break-words")
+    expect(groupLabel).toBeVisible()
+    expect(groupValue).toBeVisible()
     expect(
       screen.queryByRole("checkbox", {
         name: "keyManagement:batchManagedSiteExport.selection.rowLabel",
       }),
     ).toBeNull()
+  })
+
+  it("shows legacy summary facts and expands provider metadata", async () => {
+    const user = userEvent.setup()
+    renderTokenListItem({
+      siteType: SITE_TYPES.AIHUBMIX,
+      tokenGroup: "vip",
+      tokenModels: "model-a",
+      tokenAllowIps: "192.0.2.10",
+    })
+
+    expect(
+      await screen.findByText("keyManagement:keyDetails.remainingQuota"),
+    ).toBeVisible()
+    expect(screen.queryByText("192.0.2.10")).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: "Toggle key visibility" }),
+    ).toBeNull()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
+
+    expect(screen.getByText("vip")).toBeVisible()
+    expect(screen.getByText("model-a")).toBeVisible()
+    expect(screen.getByText("192.0.2.10")).toBeVisible()
   })
 })

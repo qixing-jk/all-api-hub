@@ -512,6 +512,40 @@ describe("TokenList batch export selection", () => {
     )
   })
 
+  it("closes the CC Switch dialog when the current token becomes non-exportable", async () => {
+    const user = userEvent.setup()
+    const { rerender } = renderTokenList()
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Open CC Switch for Token 1",
+      }),
+    )
+    expect(screen.getByTestId("cc-switch-export-dialog")).toBeInTheDocument()
+
+    const createResponseOnlyAccount = createAccount({
+      id: account.id,
+      name: account.name,
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+    const currentToken = createToken({
+      ...token1,
+      key: "masked-create-response-only",
+    })
+    rerender(
+      <TokenList
+        {...(defaultProps as any)}
+        displayData={[createResponseOnlyAccount] as any}
+        tokens={[currentToken] as any}
+        filteredTokens={[currentToken] as any}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("cc-switch-export-dialog")).toBeNull()
+    })
+  })
+
   it("opens the batch CLIProxyAPI dialog with the frozen selected tokens", async () => {
     const user = userEvent.setup()
     const { rerender } = renderTokenList()

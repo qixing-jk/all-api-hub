@@ -18,6 +18,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { cn } from "~/lib/utils"
 import {
+  buildDisplayAccountTokenRuntimeKey,
   isAccountTokenRuntimeKey,
   isServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
@@ -43,6 +44,7 @@ import { openSiteSupportRequestPage } from "~/utils/navigation"
 import { SITE_SUPPORT_ERROR_TYPES } from "~/utils/navigation/feedbackLinks"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
+import { isKeyResourceExportable } from "../presentation/legacyKeyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 import {
   type ApiCredentialProfileSaveEntry,
@@ -400,6 +402,34 @@ export function TokenList(props: TokenListProps) {
   const accountById = useMemo(() => {
     return new Map(displayData.map((account) => [account.id, account]))
   }, [displayData])
+  const currentCCSwitchTarget = (() => {
+    if (!ccSwitchContext) return null
+
+    const account = accountById.get(ccSwitchContext.account.id)
+    const token = tokens.find(
+      (candidate) =>
+        candidate.accountId === ccSwitchContext.token.accountId &&
+        candidate.id === ccSwitchContext.token.id,
+    )
+    return account && token
+      ? {
+          account,
+          token,
+          runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
+        }
+      : null
+  })()
+  const isCurrentCCSwitchContextExportable = Boolean(
+    currentCCSwitchTarget &&
+      isKeyResourceExportable(currentCCSwitchTarget.runtimeKey),
+  )
+
+  useEffect(() => {
+    if (ccSwitchContext && !isCurrentCCSwitchContextExportable) {
+      setCCSwitchContext(null)
+    }
+  }, [ccSwitchContext, isCurrentCCSwitchContextExportable])
+
   const entries = useMemo(() => {
     if (providedEntries) return providedEntries
 
@@ -1108,12 +1138,12 @@ export function TokenList(props: TokenListProps) {
         </div>
       )}
 
-      {ccSwitchContext && (
+      {currentCCSwitchTarget && isCurrentCCSwitchContextExportable && (
         <CCSwitchExportDialog
           isOpen={true}
           onClose={handleCloseCCSwitchDialog}
-          account={ccSwitchContext.account}
-          token={ccSwitchContext.token}
+          account={currentCCSwitchTarget.account}
+          token={currentCCSwitchTarget.token}
         />
       )}
 

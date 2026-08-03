@@ -106,6 +106,9 @@ export const isKeyResourceBatchSelectable = (
   runtimeKey: AccountTokenRuntimeKey,
 ) => getActionPolicy(runtimeKey).batchSelect
 
+export const isKeyResourceExportable = (runtimeKey: AccountTokenRuntimeKey) =>
+  getActionPolicy(runtimeKey).exportSecret
+
 export const buildLegacyKeyResourceCardPresentation = (
   runtimeKey: AccountTokenRuntimeKey,
   t: TFunction,

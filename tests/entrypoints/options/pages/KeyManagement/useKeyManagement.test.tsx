@@ -9,6 +9,10 @@ import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/cons
 import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagement"
 import { buildTokenIdentityKey } from "~/features/KeyManagement/utils"
 import { useAccountData } from "~/hooks/useAccountData"
+import {
+  INVENTORY_SECRET_AVAILABILITIES,
+  type InventorySecretAvailability,
+} from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
@@ -129,6 +133,7 @@ const createAdapterWithKeyManagement = (
     deleteToken?: ReturnType<typeof vi.fn>
     fetchUserGroups?: ReturnType<typeof vi.fn>
     fetchAvailableModels?: ReturnType<typeof vi.fn>
+    inventorySecretAvailability?: InventorySecretAvailability
   } = {},
 ) => ({
   siteType: SITE_TYPES.NEW_API,
@@ -145,6 +150,7 @@ const createAdapterWithKeyManagement = (
         overrides.fetchUserGroups ?? vi.fn().mockResolvedValue({}),
       fetchAvailableModels:
         overrides.fetchAvailableModels ?? vi.fn().mockResolvedValue([]),
+      inventorySecretAvailability: overrides.inventorySecretAvailability,
     },
   },
 })
@@ -2065,6 +2071,154 @@ describe("useKeyManagement enabled account filtering", () => {
 
     await waitFor(() => expect(result.current.filteredTokens).toHaveLength(1))
     expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("checks only export-eligible account tokens automatically and on manual refresh", async () => {
+    const recoverableAccount = createDisplayAccount({
+      id: "recoverable-status-acc",
+      name: "Recoverable Status Account",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    const createResponseOnlyAccount = createDisplayAccount({
+      id: "create-response-only-status-acc",
+      name: "Create Response Only Status Account",
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [recoverableAccount, createResponseOnlyAccount],
+    } as any)
+
+    vi.mocked(getSiteTypeCapabilities).mockImplementation(
+      (siteType) =>
+        createAdapterWithKeyManagement({
+          fetchTokens: vi.fn().mockResolvedValue([
+            createToken({
+              id: siteType === SITE_TYPES.AIHUBMIX ? 702 : 701,
+              key:
+                siteType === SITE_TYPES.AIHUBMIX
+                  ? "masked-create-response-only"
+                  : "recoverable-secret",
+            }),
+          ]),
+          inventorySecretAvailability:
+            siteType === SITE_TYPES.AIHUBMIX
+              ? INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly
+              : INVENTORY_SECRET_AVAILABILITIES.Recoverable,
+        }) as any,
+    )
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE)
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(2))
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+    expect(getManagedSiteTokenChannelStatusMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        account: expect.objectContaining({ id: recoverableAccount.id }),
+        token: expect.objectContaining({ id: 701 }),
+      }),
+    )
+
+    getManagedSiteTokenChannelStatusMock.mockClear()
+    startProductAnalyticsActionMock.mockClear()
+    trackerCompleteMock.mockClear()
+
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatuses()
+    })
+
+    expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1)
+    expect(getManagedSiteTokenChannelStatusMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        account: expect.objectContaining({ id: recoverableAccount.id }),
+        token: expect.objectContaining({ id: 701 }),
+      }),
+    )
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 1,
+          successCount: 1,
+          failureCount: 0,
+          statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Warning,
+        },
+      },
+    )
+  })
+
+  it("skips an explicit create-response-only account token status refresh", async () => {
+    const recoverableAccount = createDisplayAccount({
+      id: "recoverable-single-status-acc",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    const createResponseOnlyAccount = createDisplayAccount({
+      id: "create-response-only-single-status-acc",
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [recoverableAccount, createResponseOnlyAccount],
+    } as any)
+    vi.mocked(getSiteTypeCapabilities).mockImplementation(
+      (siteType) =>
+        createAdapterWithKeyManagement({
+          fetchTokens: vi
+            .fn()
+            .mockResolvedValue([
+              createToken({ id: siteType === SITE_TYPES.AIHUBMIX ? 712 : 711 }),
+            ]),
+          inventorySecretAvailability:
+            siteType === SITE_TYPES.AIHUBMIX
+              ? INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly
+              : INVENTORY_SECRET_AVAILABILITIES.Recoverable,
+        }) as any,
+    )
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+    act(() => {
+      result.current.setSelectedAccount(KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE)
+    })
+    await waitFor(() => expect(result.current.tokens).toHaveLength(2))
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+    getManagedSiteTokenChannelStatusMock.mockClear()
+
+    const createResponseOnlyToken = result.current.tokens.find(
+      ({ accountId }) => accountId === createResponseOnlyAccount.id,
+    )!
+    const recoverableToken = result.current.tokens.find(
+      ({ accountId }) => accountId === recoverableAccount.id,
+    )!
+
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatusForToken(
+        createResponseOnlyToken,
+      )
+    })
+    expect(getManagedSiteTokenChannelStatusMock).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatusForToken(
+        recoverableToken,
+      )
+    })
+    expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1)
+    expect(getManagedSiteTokenChannelStatusMock.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        account: expect.objectContaining({ id: recoverableAccount.id }),
+        token: expect.objectContaining({ id: 711 }),
+      }),
+    )
   })
 
   it("shares a managed-site match request cache across status checks in the same batch", async () => {

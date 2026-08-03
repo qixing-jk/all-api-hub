@@ -1,4 +1,5 @@
 import userEvent from "@testing-library/user-event"
+import type { TFunction } from "i18next"
 import { act, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -8,7 +9,10 @@ import {
   SITE_TYPES,
 } from "~/constants/siteType"
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
+import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
+import { buildLegacyKeyResourceCardPresentation } from "~/features/KeyManagement/presentation/legacyKeyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -28,26 +32,45 @@ import {
   createToken,
 } from "~~/tests/utils/keyManagementFactories"
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
+
 const {
   completeProductAnalyticsActionMock,
+  cliProxyDialogRenderMock,
+  claudeCodeRouterDialogRenderMock,
   createProfileMock,
+  kiloCodeDialogRenderMock,
   markGatewayGuidanceOnboardingCompletedMock,
   openInCherryStudioMock,
   openWithAccountMock,
   resolveDisplayAccountTokenForSecretMock,
   showResultToastMock,
   startProductAnalyticsActionMock,
+  userPreferencesContextMock,
   verifyCliDialogRenderMock,
   verifyDialogRenderMock,
 } = vi.hoisted(() => ({
   completeProductAnalyticsActionMock: vi.fn(),
+  cliProxyDialogRenderMock: vi.fn(),
+  claudeCodeRouterDialogRenderMock: vi.fn(),
   createProfileMock: vi.fn(),
+  kiloCodeDialogRenderMock: vi.fn(),
   markGatewayGuidanceOnboardingCompletedMock: vi.fn(),
   openInCherryStudioMock: vi.fn(),
   openWithAccountMock: vi.fn(),
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
   showResultToastMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
+  userPreferencesContextMock: vi.fn(),
   verifyCliDialogRenderMock: vi.fn(),
   verifyDialogRenderMock: vi.fn(),
 }))
@@ -58,27 +81,38 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
-  useUserPreferencesContext: () => ({
-    claudeCodeRouterApiKey: "",
-    claudeCodeRouterBaseUrl: "",
-    cliProxyBaseUrl: "",
-    cliProxyManagementKey: "",
-    markGatewayGuidanceOnboardingCompleted:
-      markGatewayGuidanceOnboardingCompletedMock,
-    managedSiteType: "new-api",
-  }),
+  useUserPreferencesContext: () => userPreferencesContextMock(),
 }))
 
 vi.mock("~/components/KiloCodeExportDialog", () => ({
-  KiloCodeExportDialog: () => null,
+  KiloCodeExportDialog: (props: unknown) => {
+    kiloCodeDialogRenderMock(props)
+    return null
+  },
 }))
 
+const RECOVERABLE_ACTION_POLICY: KeyResourceActionPolicy = {
+  copySecret: true,
+  revealSecret: true,
+  verifySecret: true,
+  exportSecret: true,
+  edit: true,
+  delete: true,
+  batchSelect: true,
+}
+
 vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
-  ClaudeCodeRouterImportDialog: () => null,
+  ClaudeCodeRouterImportDialog: (props: unknown) => {
+    claudeCodeRouterDialogRenderMock(props)
+    return null
+  },
 }))
 
 vi.mock("~/components/CliProxyExportDialog", () => ({
-  CliProxyExportDialog: () => null,
+  CliProxyExportDialog: (props: unknown) => {
+    cliProxyDialogRenderMock(props)
+    return null
+  },
 }))
 
 vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
@@ -133,44 +167,79 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-function renderTokenHeader(
-  props: Partial<Parameters<typeof TokenHeader>[0]> = {},
-) {
-  const account = createAccount({
-    id: "acc-1",
-    name: "Account 1",
-    token: "account-access-token",
-    baseUrl: "https://account.example/v1",
-  })
-  const token = createToken({
-    id: 1,
-    name: "Token 1",
-    key: "sk-sensitive-original",
-    accountId: "acc-1",
-    accountName: "Account 1",
-  })
+type TokenHeaderTestProps = Partial<Parameters<typeof TokenHeader>[0]>
 
-  return render(
+function TokenHeaderHarness({ props }: { props: TokenHeaderTestProps }) {
+  const {
+    account: accountOverride,
+    token: tokenOverride,
+    actionPolicy: actionPolicyOverride,
+    headerProps: headerPropsOverride,
+    ...restProps
+  } = props
+  const account =
+    accountOverride ??
+    createAccount({
+      id: "acc-1",
+      name: "Account 1",
+      token: "account-access-token",
+      baseUrl: "https://account.example/v1",
+    })
+  const token =
+    tokenOverride ??
+    createToken({
+      id: 1,
+      name: "Token 1",
+      key: "sk-sensitive-original",
+      accountId: "acc-1",
+      accountName: "Account 1",
+    })
+  const presentation = buildLegacyKeyResourceCardPresentation(
+    buildDisplayAccountTokenRuntimeKey(account, token),
+    ((key: string) => key) as TFunction,
+  )
+
+  return (
     <TokenHeader
       token={token}
       copyKey={vi.fn()}
       handleEditToken={vi.fn()}
       handleDeleteToken={vi.fn()}
       account={account}
-      {...props}
-    />,
-    {
-      withReleaseUpdateStatusProvider: false,
-      withThemeProvider: false,
-      withUserPreferencesProvider: false,
-    },
+      onOpenCCSwitchDialog={vi.fn()}
+      headerProps={
+        headerPropsOverride ?? {
+          presentation,
+          detailsTrigger: null,
+        }
+      }
+      actionPolicy={actionPolicyOverride ?? presentation.actions}
+      {...restProps}
+    />
   )
+}
+
+function renderTokenHeader(props: TokenHeaderTestProps = {}) {
+  const rendered = render(<TokenHeaderHarness props={props} />, {
+    withReleaseUpdateStatusProvider: false,
+    withThemeProvider: false,
+    withUserPreferencesProvider: false,
+  })
+
+  return {
+    ...rendered,
+    rerenderTokenHeader: (nextProps: TokenHeaderTestProps) =>
+      rendered.rerender(<TokenHeaderHarness props={nextProps} />),
+  }
 }
 
 describe("TokenHeader analytics", () => {
   beforeEach(() => {
     completeProductAnalyticsActionMock.mockReset()
+    cliProxyDialogRenderMock.mockReset()
+    claudeCodeRouterDialogRenderMock.mockReset()
     createProfileMock.mockReset()
+    kiloCodeDialogRenderMock.mockReset()
     markGatewayGuidanceOnboardingCompletedMock.mockReset()
     openInCherryStudioMock.mockReset()
     openWithAccountMock.mockReset()
@@ -179,9 +248,92 @@ describe("TokenHeader analytics", () => {
     startProductAnalyticsActionMock.mockReset()
     verifyCliDialogRenderMock.mockReset()
     verifyDialogRenderMock.mockReset()
+    userPreferencesContextMock.mockReset()
+    userPreferencesContextMock.mockReturnValue({
+      claudeCodeRouterApiKey: "router-key",
+      claudeCodeRouterBaseUrl: "https://router.example.invalid",
+      cliProxyBaseUrl: "https://cli-proxy.example.invalid",
+      cliProxyManagementKey: "cli-proxy-key",
+      markGatewayGuidanceOnboardingCompleted:
+        markGatewayGuidanceOnboardingCompletedMock,
+      managedSiteType: "new-api",
+    })
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
+  })
+
+  it("keeps the full secret action set for recoverable account tokens", () => {
+    renderTokenHeader()
+
+    expect(
+      screen.getByRole("button", { name: "common:actions.copyKey" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "keyManagement:actions.verifyApi" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.saveToApiProfiles",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "keyManagement:actions.editKey" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.deleteKey",
+      }),
+    ).toBeVisible()
+  })
+
+  it("omits secret-dependent actions and dialogs for AIHubMix tokens", () => {
+    renderTokenHeader({
+      account: createAccount({
+        id: "aihubmix-account",
+        name: "AIHubMix Account",
+        siteType: SITE_TYPES.AIHUBMIX,
+        baseUrl: AIHUBMIX_WEB_ORIGIN,
+      }),
+      token: createToken({
+        id: 8,
+        name: "Masked Key",
+        accountId: "aihubmix-account",
+        accountName: "AIHubMix Account",
+        key: "sk-masked",
+      }),
+    })
+
+    const unavailableActions = [
+      "common:actions.copyKey",
+      "keyManagement:actions.verifyApi",
+      "keyManagement:actions.verifyCliSupport",
+      "keyManagement:actions.saveToApiProfiles",
+      "keyManagement:actions.useInCherry",
+      "keyManagement:actions.exportToCCSwitch",
+      "keyManagement:actions.exportToKiloCode",
+      "keyManagement:actions.importToCliProxy",
+      "keyManagement:actions.importToClaudeCodeRouter",
+      "keyManagement:actions.importToManagedSite",
+    ]
+
+    for (const name of unavailableActions) {
+      expect(screen.queryByRole("button", { name })).toBeNull()
+    }
+    expect(kiloCodeDialogRenderMock).not.toHaveBeenCalled()
+    expect(claudeCodeRouterDialogRenderMock).not.toHaveBeenCalled()
+    expect(cliProxyDialogRenderMock).not.toHaveBeenCalled()
+    expect(verifyDialogRenderMock).not.toHaveBeenCalled()
+    expect(verifyCliDialogRenderMock).not.toHaveBeenCalled()
+    expect(openWithAccountMock).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole("button", { name: "keyManagement:actions.editKey" }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.deleteKey",
+      }),
+    ).toBeVisible()
   })
 
   it("tracks saving a token to API Credential Profiles as sanitized success after profile creation", async () => {
@@ -327,6 +479,7 @@ describe("TokenHeader analytics", () => {
         accountName: "AIHubMix Account",
         key: "masked-key",
       }),
+      actionPolicy: RECOVERABLE_ACTION_POLICY,
     })
 
     await user.click(
@@ -738,6 +891,150 @@ describe("TokenHeader analytics", () => {
     }
   })
 
+  it("clears export dialogs and consumes guided requests when export permission is revoked", async () => {
+    const user = userEvent.setup()
+    const { rerenderTokenHeader } = renderTokenHeader({
+      guidedManagedSiteImportRequest: "request-1",
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.exportToKiloCode",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToCliProxy",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToClaudeCodeRouter",
+      }),
+    )
+    expect(kiloCodeDialogRenderMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ isOpen: true }),
+    )
+    expect(cliProxyDialogRenderMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ isOpen: true }),
+    )
+    expect(claudeCodeRouterDialogRenderMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ isOpen: true }),
+    )
+
+    rerenderTokenHeader({
+      actionPolicy: { ...RECOVERABLE_ACTION_POLICY, exportSecret: false },
+      guidedManagedSiteImportRequest: "request-1",
+    })
+    kiloCodeDialogRenderMock.mockClear()
+    cliProxyDialogRenderMock.mockClear()
+    claudeCodeRouterDialogRenderMock.mockClear()
+
+    rerenderTokenHeader({ guidedManagedSiteImportRequest: "request-1" })
+    expect(kiloCodeDialogRenderMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ isOpen: false }),
+    )
+    expect(cliProxyDialogRenderMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ isOpen: false }),
+    )
+    expect(claudeCodeRouterDialogRenderMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ isOpen: false }),
+    )
+    expect(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton),
+    ).not.toHaveAttribute("data-guidance-highlight")
+
+    rerenderTokenHeader({ guidedManagedSiteImportRequest: "request-2" })
+    expect(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton),
+    ).toHaveAttribute("data-guidance-highlight", "true")
+  })
+
+  it("invalidates pending API and CLI verification when permission is revoked", async () => {
+    const apiResolution = createDeferred<ReturnType<typeof createToken>>()
+    const cliResolution = createDeferred<ReturnType<typeof createToken>>()
+    resolveDisplayAccountTokenForSecretMock
+      .mockReturnValueOnce(apiResolution.promise)
+      .mockReturnValueOnce(cliResolution.promise)
+    const user = userEvent.setup()
+    const { rerenderTokenHeader } = renderTokenHeader()
+
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
+    )
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton),
+    )
+    expect(resolveDisplayAccountTokenForSecretMock).toHaveBeenCalledTimes(2)
+
+    rerenderTokenHeader({
+      actionPolicy: { ...RECOVERABLE_ACTION_POLICY, verifySecret: false },
+    })
+    verifyDialogRenderMock.mockClear()
+    verifyCliDialogRenderMock.mockClear()
+    await act(async () => {
+      apiResolution.resolve(createToken({ key: "resolved-api-key" }))
+      cliResolution.resolve(createToken({ key: "resolved-cli-key" }))
+      await Promise.all([apiResolution.promise, cliResolution.promise])
+    })
+    rerenderTokenHeader({ actionPolicy: RECOVERABLE_ACTION_POLICY })
+
+    expect(verifyDialogRenderMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ isOpen: false, profile: null }),
+    )
+    expect(verifyCliDialogRenderMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledTimes(2)
+    expect(completeProductAnalyticsActionMock).toHaveBeenNthCalledWith(
+      1,
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      { diagnostics: { execution: { staleResponseIgnored: true } } },
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenNthCalledWith(
+      2,
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      { diagnostics: { execution: { staleResponseIgnored: true } } },
+    )
+  })
+
+  it("ignores late API and CLI verification failures after permission is revoked", async () => {
+    const apiResolution = createDeferred<ReturnType<typeof createToken>>()
+    const cliResolution = createDeferred<ReturnType<typeof createToken>>()
+    resolveDisplayAccountTokenForSecretMock
+      .mockReturnValueOnce(apiResolution.promise)
+      .mockReturnValueOnce(cliResolution.promise)
+    const user = userEvent.setup()
+    const { rerenderTokenHeader } = renderTokenHeader()
+
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
+    )
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton),
+    )
+    rerenderTokenHeader({
+      actionPolicy: { ...RECOVERABLE_ACTION_POLICY, verifySecret: false },
+    })
+
+    await act(async () => {
+      apiResolution.reject(new Error("stale API resolution failure"))
+      cliResolution.reject(new Error("stale CLI resolution failure"))
+      await Promise.allSettled([apiResolution.promise, cliResolution.promise])
+    })
+
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledTimes(2)
+    expect(completeProductAnalyticsActionMock).toHaveBeenNthCalledWith(
+      1,
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      { diagnostics: { execution: { staleResponseIgnored: true } } },
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenNthCalledWith(
+      2,
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      { diagnostics: { execution: { staleResponseIgnored: true } } },
+    )
+    expect(showResultToastMock).not.toHaveBeenCalled()
+  })
+
   it("tracks managed-site single token import as skipped when preparation does not open", async () => {
     openWithAccountMock.mockResolvedValueOnce({ opened: false })
 
@@ -796,12 +1093,17 @@ describe("TokenHeader responsive layout", () => {
     const title = await screen.findByRole("heading", {
       name: "Readable Key Card Name",
     })
-    const contentColumn = title.closest("div")?.parentElement
+    const contentColumn = title.closest("div")
     const header = contentColumn?.parentElement
     const actions = screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.tokenRowActions)
 
-    expect(header).toHaveClass("flex-col", "sm:flex-row", "sm:items-start")
-    expect(contentColumn).toHaveClass("w-full", "sm:w-auto")
+    expect(header).toHaveClass(
+      "flex-col",
+      "sm:flex-row",
+      "sm:items-start",
+      "sm:justify-between",
+    )
+    expect(contentColumn).toHaveClass("flex-wrap", "min-w-0")
     expect(actions).toHaveClass(
       "w-full",
       "flex-wrap",

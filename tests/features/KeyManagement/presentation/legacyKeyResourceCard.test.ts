@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildLegacyKeyResourceCardPresentation,
   isKeyResourceBatchSelectable,
+  isKeyResourceExportable,
 } from "~/features/KeyManagement/presentation/legacyKeyResourceCard"
 import {
   buildDisplayAccountTokenRuntimeKey,
@@ -70,6 +71,7 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
     })
     expect(presentation.maskedLabel).not.toContain(runtimeKey.secret)
     expect(isKeyResourceBatchSelectable(runtimeKey)).toBe(true)
+    expect(isKeyResourceExportable(runtimeKey)).toBe(true)
   })
 
   it("keeps AIHubMix metadata and mutations but removes stored-secret actions", () => {
@@ -100,6 +102,7 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
       batchSelect: false,
     })
     expect(isKeyResourceBatchSelectable(runtimeKey)).toBe(false)
+    expect(isKeyResourceExportable(runtimeKey)).toBe(false)
   })
 
   it("omits blank optional metadata without dropping required safe facts", () => {

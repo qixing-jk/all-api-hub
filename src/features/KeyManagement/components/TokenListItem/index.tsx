@@ -1,13 +1,15 @@
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Card, CardContent, Checkbox } from "~/components/ui"
+import { KeyResourceCard } from "~/features/KeyManagement/components/KeyResourceCard"
+import { buildLegacyKeyResourceCardPresentation } from "~/features/KeyManagement/presentation/legacyKeyResourceCard"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import type { AccountToken, DisplaySiteData } from "~/types"
 
 import { getKeyManagementTokenRowTestId } from "../../testIds"
 import { buildTokenIdentityKey } from "../../utils"
 import { KeyDisplay } from "./KeyDisplay"
-import { TokenDetails } from "./TokenDetails"
 import { TokenHeader } from "./TokenHeader"
 
 interface TokenListItemProps {
@@ -112,70 +114,58 @@ export function TokenListItem(props: TokenListItemProps) {
     guidedManagedSiteImportRequest,
   } = props
   const { t } = useTranslation("keyManagement")
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false)
   const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
+  const runtimeKey = buildDisplayAccountTokenRuntimeKey(account, token)
+  const presentation = buildLegacyKeyResourceCardPresentation(runtimeKey, t)
+  const canInteractWithSecret =
+    presentation.actions.copySecret || presentation.actions.revealSecret
+  const selectionChange = presentation.actions.batchSelect
+    ? onSelectionChange
+    : undefined
 
   return (
-    <Card
-      variant="interactive"
-      data-testid={getKeyManagementTokenRowTestId(token.id)}
-    >
-      <CardContent padding="default">
-        <div className="flex gap-3">
-          {onSelectionChange ? (
-            <Checkbox
-              className="mt-1"
-              checked={isSelected}
-              aria-label={t("batchManagedSiteExport.selection.rowLabel", {
-                name: token.name,
-              })}
-              onCheckedChange={(checked) => onSelectionChange(checked === true)}
-            />
-          ) : null}
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-col gap-2 sm:gap-3">
-              <TokenHeader
-                token={token}
-                copyKey={copyKey}
-                handleEditToken={handleEditToken}
-                handleDeleteToken={handleDeleteToken}
-                account={account}
-                managedSiteStatus={managedSiteStatus}
-                isManagedSiteStatusChecking={isManagedSiteStatusChecking}
-                onManagedSiteImportSuccess={onManagedSiteImportSuccess}
-                onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
-                onOpenCCSwitchDialog={() =>
-                  onOpenCCSwitchDialog(token, account)
-                }
-                guidedManagedSiteImportRequest={guidedManagedSiteImportRequest}
-              />
-              <div className="min-w-0 flex-1">
-                <div className="dark:text-dark-text-secondary space-y-2 text-xs text-gray-600 sm:text-sm">
-                  <KeyDisplay
-                    tokenKey={displayTokenKey}
-                    tokenIdentityKey={tokenIdentityKey}
-                    visibleKeys={visibleKeys}
-                    isKeyVisibilityLoading={isKeyVisibilityLoading}
-                    toggleKeyVisibility={() =>
-                      void toggleKeyVisibility(account, token)
-                    }
-                  />
-                  <TokenDetails token={token} />
-                  {token.group && (
-                    <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words">
-                      <span className="dark:text-dark-text-tertiary shrink-0 text-gray-500">
-                        {t("keyDetails.group")}
-                      </span>
-                      <span className="dark:text-dark-text-primary min-w-0 font-medium break-words text-gray-900">
-                        {token.group}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <KeyResourceCard
+      presentation={presentation}
+      secret={
+        canInteractWithSecret ? (
+          <KeyDisplay
+            tokenKey={displayTokenKey}
+            tokenIdentityKey={tokenIdentityKey}
+            visibleKeys={visibleKeys}
+            isKeyVisibilityLoading={isKeyVisibilityLoading}
+            toggleKeyVisibility={() => void toggleKeyVisibility(account, token)}
+          />
+        ) : presentation.maskedLabel ? (
+          <code>{presentation.maskedLabel}</code>
+        ) : undefined
+      }
+      details={{ status: "ready", facts: presentation.detailFacts }}
+      isDetailsExpanded={isDetailsExpanded}
+      onDetailsExpandedChange={setIsDetailsExpanded}
+      isSelected={selectionChange ? isSelected : undefined}
+      onSelectionChange={selectionChange}
+      selectionLabel={t("batchManagedSiteExport.selection.rowLabel", {
+        name: token.name,
+      })}
+      testId={getKeyManagementTokenRowTestId(token.id)}
+      renderHeader={(headerProps) => (
+        <TokenHeader
+          token={token}
+          copyKey={copyKey}
+          handleEditToken={handleEditToken}
+          handleDeleteToken={handleDeleteToken}
+          account={account}
+          managedSiteStatus={managedSiteStatus}
+          isManagedSiteStatusChecking={isManagedSiteStatusChecking}
+          onManagedSiteImportSuccess={onManagedSiteImportSuccess}
+          onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
+          onOpenCCSwitchDialog={() => onOpenCCSwitchDialog(token, account)}
+          guidedManagedSiteImportRequest={guidedManagedSiteImportRequest}
+          headerProps={headerProps}
+          actionPolicy={presentation.actions}
+        />
+      )}
+    />
   )
 }

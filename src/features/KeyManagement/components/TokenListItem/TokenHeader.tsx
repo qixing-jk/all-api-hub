@@ -38,12 +38,16 @@ import Tooltip from "~/components/Tooltip"
 import {
   Badge,
   Button,
-  Heading6,
   IconButton,
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
+import {
+  KeyResourceCardHeader,
+  type KeyResourceCardHeaderRenderProps,
+} from "~/features/KeyManagement/components/KeyResourceCard"
+import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { cn } from "~/lib/utils"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
@@ -92,6 +96,10 @@ import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
 const logger = createLogger("TokenHeader")
 
 interface TokenHeaderProps {
+  /** Shared header content and controls owned by the key-resource card. */
+  headerProps: KeyResourceCardHeaderRenderProps
+  /** Provider capability policy controlling available token actions. */
+  actionPolicy: KeyResourceActionPolicy
   /**
    * Token data with account display name included.
    */
@@ -140,6 +148,8 @@ interface TokenHeaderProps {
    */
   guidedManagedSiteImportRequest?: string
 }
+
+type TokenActionButtonsProps = Omit<TokenHeaderProps, "headerProps">
 
 export const getManagedSiteStatusBadgeVariant = (params: {
   isChecking: boolean
@@ -272,6 +282,7 @@ export const getManagedSiteSettingsActionLabel = (
  * @param props.guidedManagedSiteImportRequest Request key that highlights the managed-site import action.
  */
 function TokenActionButtons({
+  actionPolicy,
   token,
   copyKey,
   handleEditToken,
@@ -281,7 +292,7 @@ function TokenActionButtons({
   onOpenCCSwitchDialog,
   onManagedSiteImportSuccess,
   guidedManagedSiteImportRequest,
-}: TokenHeaderProps) {
+}: TokenActionButtonsProps) {
   const { t } = useTranslation(["keyManagement", "settings"])
   const {
     managedSiteType,
@@ -299,6 +310,12 @@ function TokenActionButtons({
   const [isManagedSiteImportHighlighted, setIsManagedSiteImportHighlighted] =
     useState(false)
   const managedSiteImportButtonRef = useRef<HTMLButtonElement>(null)
+  const handledGuidedManagedSiteImportRequestRef = useRef<string | undefined>(
+    undefined,
+  )
+  const verifySecretAllowedRef = useRef(actionPolicy.verifySecret)
+  const apiVerificationEpochRef = useRef(0)
+  const cliVerificationEpochRef = useRef(0)
   const [verifyingProfile, setVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [cliVerifyingProfile, setCliVerifyingProfile] =
@@ -307,11 +324,57 @@ function TokenActionButtons({
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
   const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
 
+  verifySecretAllowedRef.current = actionPolicy.verifySecret
+
+  const isVerificationRequestCurrent = (
+    verificationEpoch: number,
+    currentVerificationEpoch: number,
+  ) =>
+    verifySecretAllowedRef.current &&
+    verificationEpoch === currentVerificationEpoch
+
+  const completeStaleVerification = (
+    tracker: ReturnType<typeof startProductAnalyticsAction>,
+  ) => {
+    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+      diagnostics: { execution: { staleResponseIgnored: true } },
+    })
+  }
+
   useEffect(() => {
-    if (!guidedManagedSiteImportRequest) {
+    if (actionPolicy.exportSecret) {
       return
     }
 
+    setIsClaudeCodeRouterOpen(false)
+    setIsCliProxyDialogOpen(false)
+    setIsKiloCodeDialogOpen(false)
+    setIsManagedSiteImportHighlighted(false)
+  }, [actionPolicy.exportSecret])
+
+  useEffect(() => {
+    if (actionPolicy.verifySecret) {
+      return
+    }
+
+    apiVerificationEpochRef.current += 1
+    cliVerificationEpochRef.current += 1
+    setVerifyingProfile(null)
+    setCliVerifyingProfile(null)
+  }, [actionPolicy.verifySecret])
+
+  useEffect(() => {
+    if (
+      !actionPolicy.exportSecret ||
+      !guidedManagedSiteImportRequest ||
+      handledGuidedManagedSiteImportRequestRef.current ===
+        guidedManagedSiteImportRequest
+    ) {
+      return
+    }
+
+    handledGuidedManagedSiteImportRequestRef.current =
+      guidedManagedSiteImportRequest
     setIsManagedSiteImportHighlighted(true)
     managedSiteImportButtonRef.current?.scrollIntoView?.({
       block: "center",
@@ -324,7 +387,7 @@ function TokenActionButtons({
     }, 5000)
 
     return () => window.clearTimeout(timeoutId)
-  }, [guidedManagedSiteImportRequest])
+  }, [actionPolicy.exportSecret, guidedManagedSiteImportRequest])
 
   const buildTransientProfile = (resolvedToken: AccountToken) => {
     const now = Date.now()
@@ -530,6 +593,7 @@ function TokenActionButtons({
   }
 
   const handleVerifyApi = async () => {
+    const verificationEpoch = ++apiVerificationEpochRef.current
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyAccountTokenApi,
@@ -540,9 +604,27 @@ function TokenActionButtons({
 
     try {
       resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
+      if (
+        !isVerificationRequestCurrent(
+          verificationEpoch,
+          apiVerificationEpochRef.current,
+        )
+      ) {
+        completeStaleVerification(tracker)
+        return
+      }
       setVerifyingProfile(buildTransientProfile(resolvedToken))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
+      if (
+        !isVerificationRequestCurrent(
+          verificationEpoch,
+          apiVerificationEpochRef.current,
+        )
+      ) {
+        completeStaleVerification(tracker)
+        return
+      }
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
@@ -565,6 +647,7 @@ function TokenActionButtons({
   }
 
   const handleVerifyCliSupport = async () => {
+    const verificationEpoch = ++cliVerificationEpochRef.current
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyAccountTokenCliSupport,
@@ -575,9 +658,27 @@ function TokenActionButtons({
 
     try {
       resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
+      if (
+        !isVerificationRequestCurrent(
+          verificationEpoch,
+          cliVerificationEpochRef.current,
+        )
+      ) {
+        completeStaleVerification(tracker)
+        return
+      }
       setCliVerifyingProfile(buildTransientProfile(resolvedToken))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
+      if (
+        !isVerificationRequestCurrent(
+          verificationEpoch,
+          cliVerificationEpochRef.current,
+        )
+      ) {
+        completeStaleVerification(tracker)
+        return
+      }
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
@@ -604,154 +705,178 @@ function TokenActionButtons({
       data-testid={KEY_MANAGEMENT_TEST_IDS.tokenRowActions}
       className="flex w-full flex-wrap items-center justify-start gap-1 sm:w-auto sm:shrink-0 sm:justify-end sm:gap-1.5"
     >
-      <KiloCodeExportDialog
-        isOpen={isKiloCodeDialogOpen}
-        onClose={() => setIsKiloCodeDialogOpen(false)}
-        initialSelectedSiteIds={[account.id]}
-        initialSelectedTokenIdsBySite={{ [account.id]: [`${token.id}`] }}
-      />
-      <ClaudeCodeRouterImportDialog
-        isOpen={isClaudeCodeRouterOpen}
-        onClose={() => setIsClaudeCodeRouterOpen(false)}
-        account={account}
-        token={token}
-        routerBaseUrl={claudeCodeRouterBaseUrl}
-        routerApiKey={claudeCodeRouterApiKey}
-      />
-      <CliProxyExportDialog
-        isOpen={isCliProxyDialogOpen}
-        onClose={() => setIsCliProxyDialogOpen(false)}
-        account={account}
-        token={token}
-      />
-      <VerifyApiCredentialProfileDialog
-        isOpen={Boolean(verifyingProfile)}
-        onClose={() => setVerifyingProfile(null)}
-        profile={verifyingProfile}
-      />
-      {cliVerifyingProfile ? (
-        <VerifyCliSupportDialog
-          isOpen={true}
-          onClose={() => setCliVerifyingProfile(null)}
-          profile={cliVerifyingProfile}
-        />
+      {actionPolicy.exportSecret ? (
+        <>
+          <KiloCodeExportDialog
+            isOpen={isKiloCodeDialogOpen}
+            onClose={() => setIsKiloCodeDialogOpen(false)}
+            initialSelectedSiteIds={[account.id]}
+            initialSelectedTokenIdsBySite={{ [account.id]: [`${token.id}`] }}
+          />
+          <ClaudeCodeRouterImportDialog
+            isOpen={isClaudeCodeRouterOpen}
+            onClose={() => setIsClaudeCodeRouterOpen(false)}
+            account={account}
+            token={token}
+            routerBaseUrl={claudeCodeRouterBaseUrl}
+            routerApiKey={claudeCodeRouterApiKey}
+          />
+          <CliProxyExportDialog
+            isOpen={isCliProxyDialogOpen}
+            onClose={() => setIsCliProxyDialogOpen(false)}
+            account={account}
+            token={token}
+          />
+        </>
       ) : null}
-      <IconButton
-        aria-label={t("common:actions.copyKey")}
-        size="sm"
-        variant="ghost"
-        onClick={() => void copyKey(account, token)}
-      >
-        <Copy className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
-      </IconButton>
-      <Tooltip content={t("keyManagement:actions.saveToApiProfilesHint")}>
+      {actionPolicy.verifySecret ? (
+        <>
+          <VerifyApiCredentialProfileDialog
+            isOpen={Boolean(verifyingProfile)}
+            onClose={() => setVerifyingProfile(null)}
+            profile={verifyingProfile}
+          />
+          {cliVerifyingProfile ? (
+            <VerifyCliSupportDialog
+              isOpen={true}
+              onClose={() => setCliVerifyingProfile(null)}
+              profile={cliVerifyingProfile}
+            />
+          ) : null}
+        </>
+      ) : null}
+      {actionPolicy.copySecret ? (
         <IconButton
-          aria-label={t("keyManagement:actions.saveToApiProfiles")}
-          title={t("keyManagement:actions.saveToApiProfilesHint")}
-          data-testid={KEY_MANAGEMENT_TEST_IDS.saveToApiProfilesButton}
+          aria-label={t("common:actions.copyKey")}
           size="sm"
           variant="ghost"
-          onClick={handleSaveToApiCredentialProfiles}
+          onClick={() => void copyKey(account, token)}
         >
-          <ApiCredentialLibraryIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
+          <Copy className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
         </IconButton>
-      </Tooltip>
-      <IconButton
-        aria-label={t("keyManagement:actions.verifyApi")}
-        size="sm"
-        variant="ghost"
-        data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton}
-        onClick={() => void handleVerifyApi()}
-      >
-        <WrenchScrewdriverIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-      </IconButton>
-      <IconButton
-        aria-label={t("keyManagement:actions.verifyCliSupport")}
-        size="sm"
-        variant="ghost"
-        data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton}
-        onClick={() => void handleVerifyCliSupport()}
-      >
-        <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-      </IconButton>
-      <IconButton
-        aria-label={t("actions.useInCherry")}
-        size="sm"
-        variant="ghost"
-        onClick={() => void handleUseInCherry()}
-      >
-        <CherryIcon />
-      </IconButton>
-      {onOpenCCSwitchDialog && (
+      ) : null}
+      {actionPolicy.exportSecret ? (
+        <Tooltip content={t("keyManagement:actions.saveToApiProfilesHint")}>
+          <IconButton
+            aria-label={t("keyManagement:actions.saveToApiProfiles")}
+            title={t("keyManagement:actions.saveToApiProfilesHint")}
+            data-testid={KEY_MANAGEMENT_TEST_IDS.saveToApiProfilesButton}
+            size="sm"
+            variant="ghost"
+            onClick={handleSaveToApiCredentialProfiles}
+          >
+            <ApiCredentialLibraryIcon className="dark:text-dark-text-tertiary h-4 w-4 text-gray-500" />
+          </IconButton>
+        </Tooltip>
+      ) : null}
+      {actionPolicy.verifySecret ? (
+        <>
+          <IconButton
+            aria-label={t("keyManagement:actions.verifyApi")}
+            size="sm"
+            variant="ghost"
+            data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton}
+            onClick={() => void handleVerifyApi()}
+          >
+            <WrenchScrewdriverIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          </IconButton>
+          <IconButton
+            aria-label={t("keyManagement:actions.verifyCliSupport")}
+            size="sm"
+            variant="ghost"
+            data-testid={KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton}
+            onClick={() => void handleVerifyCliSupport()}
+          >
+            <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+          </IconButton>
+        </>
+      ) : null}
+      {actionPolicy.exportSecret ? (
+        <>
+          <IconButton
+            aria-label={t("actions.useInCherry")}
+            size="sm"
+            variant="ghost"
+            onClick={() => void handleUseInCherry()}
+          >
+            <CherryIcon />
+          </IconButton>
+          {onOpenCCSwitchDialog ? (
+            <IconButton
+              aria-label={t("actions.exportToCCSwitch")}
+              size="sm"
+              variant="ghost"
+              data-testid={KEY_MANAGEMENT_TEST_IDS.exportToCCSwitchButton}
+              onClick={onOpenCCSwitchDialog}
+            >
+              <CCSwitchIcon />
+            </IconButton>
+          ) : null}
+          <IconButton
+            aria-label={t("keyManagement:actions.exportToKiloCode")}
+            size="sm"
+            variant="ghost"
+            onClick={() => setIsKiloCodeDialogOpen(true)}
+          >
+            <KiloCodeIcon className="dark:text-dark-text-tertiary text-gray-500" />
+          </IconButton>
+          <IconButton
+            aria-label={t("actions.importToCliProxy")}
+            size="sm"
+            variant="ghost"
+            onClick={handleOpenCliProxyDialog}
+          >
+            <CliProxyIcon size="sm" />
+          </IconButton>
+          <IconButton
+            aria-label={t("actions.importToClaudeCodeRouter")}
+            size="sm"
+            variant="ghost"
+            onClick={handleOpenClaudeCodeRouter}
+          >
+            <ClaudeCodeRouterIcon size="sm" />
+          </IconButton>
+          <IconButton
+            ref={managedSiteImportButtonRef}
+            aria-label={t("actions.importToManagedSite", {
+              site: managedSiteLabel,
+            })}
+            data-testid={KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton}
+            data-guidance-highlight={
+              isManagedSiteImportHighlighted ? "true" : undefined
+            }
+            size="sm"
+            variant="ghost"
+            className={cn(
+              isManagedSiteImportHighlighted &&
+                "dark:ring-offset-dark-bg-secondary ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-emerald-400",
+            )}
+            onClick={handleImportToManagedSite}
+          >
+            <ManagedSiteIcon siteType={managedSiteType} size="sm" />
+          </IconButton>
+        </>
+      ) : null}
+      {actionPolicy.edit ? (
         <IconButton
-          aria-label={t("actions.exportToCCSwitch")}
+          aria-label={t("actions.editKey")}
           size="sm"
-          variant="ghost"
-          data-testid={KEY_MANAGEMENT_TEST_IDS.exportToCCSwitchButton}
-          onClick={onOpenCCSwitchDialog}
+          variant="outline"
+          onClick={() => handleEditToken(token)}
         >
-          <CCSwitchIcon />
+          <PencilIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
         </IconButton>
-      )}
-      <IconButton
-        aria-label={t("keyManagement:actions.exportToKiloCode")}
-        size="sm"
-        variant="ghost"
-        onClick={() => setIsKiloCodeDialogOpen(true)}
-      >
-        <KiloCodeIcon className="dark:text-dark-text-tertiary text-gray-500" />
-      </IconButton>
-      <IconButton
-        aria-label={t("actions.importToCliProxy")}
-        size="sm"
-        variant="ghost"
-        onClick={handleOpenCliProxyDialog}
-      >
-        <CliProxyIcon size="sm" />
-      </IconButton>
-      <IconButton
-        aria-label={t("actions.importToClaudeCodeRouter")}
-        size="sm"
-        variant="ghost"
-        onClick={handleOpenClaudeCodeRouter}
-      >
-        <ClaudeCodeRouterIcon size="sm" />
-      </IconButton>
-      <IconButton
-        ref={managedSiteImportButtonRef}
-        aria-label={t("actions.importToManagedSite", {
-          site: managedSiteLabel,
-        })}
-        data-testid={KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton}
-        data-guidance-highlight={
-          isManagedSiteImportHighlighted ? "true" : undefined
-        }
-        size="sm"
-        variant="ghost"
-        className={cn(
-          isManagedSiteImportHighlighted &&
-            "dark:ring-offset-dark-bg-secondary ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-emerald-400",
-        )}
-        onClick={handleImportToManagedSite}
-      >
-        <ManagedSiteIcon siteType={managedSiteType} size="sm" />
-      </IconButton>
-      <IconButton
-        aria-label={t("actions.editKey")}
-        size="sm"
-        variant="outline"
-        onClick={() => handleEditToken(token)}
-      >
-        <PencilIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-      </IconButton>
-      <IconButton
-        aria-label={t("actions.deleteKey")}
-        size="sm"
-        variant="destructive"
-        onClick={() => handleDeleteToken(token)}
-      >
-        <TrashIcon className="h-4 w-4" />
-      </IconButton>
+      ) : null}
+      {actionPolicy.delete ? (
+        <IconButton
+          aria-label={t("actions.deleteKey")}
+          size="sm"
+          variant="destructive"
+          onClick={() => handleDeleteToken(token)}
+        >
+          <TrashIcon className="h-4 w-4" />
+        </IconButton>
+      ) : null}
     </div>
   )
 }
@@ -772,6 +897,8 @@ function TokenActionButtons({
  * @param props.guidedManagedSiteImportRequest Request key that highlights the managed-site import action.
  */
 export function TokenHeader({
+  headerProps,
+  actionPolicy,
   token,
   copyKey,
   handleEditToken,
@@ -794,6 +921,7 @@ export function TokenHeader({
     supportsManagedSiteBaseUrlChannelLookup(managedSiteType)
 
   const shouldRenderManagedSiteStatus =
+    actionPolicy.exportSecret &&
     isManagedSiteStatusSupported &&
     (isManagedSiteStatusChecking || Boolean(managedSiteStatus))
   const managedSiteStatusDescription = getManagedSiteStatusDescription(
@@ -880,162 +1008,153 @@ export function TokenHeader({
     )
   }
 
-  return (
-    <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-start">
-      <div className="w-full min-w-0 flex-1 sm:w-auto">
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
-          <Heading6 className="truncate text-sm sm:text-base md:text-lg">
-            {token.name}
-          </Heading6>
-          <Badge
-            variant={token.status === 1 ? "success" : "destructive"}
-            size="sm"
-          >
-            {token.status === 1 ? t("actions.enable") : t("actions.disable")}
-          </Badge>
-          <Badge variant="outline" size="sm">
-            {token.accountName}
-          </Badge>
-        </div>
-
-        {shouldRenderManagedSiteStatus ? (
-          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-            {/* managed site status badge with optional description and signal badges - only show if the managed site supports base URL channel lookup and there's a status to show (either checking or a known status) */}
-            <Badge
-              variant={getManagedSiteStatusBadgeVariant({
-                isChecking: isManagedSiteStatusChecking,
-                managedSiteStatus,
-              })}
-              size="sm"
-              data-testid={KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge}
-            >
-              {isManagedSiteStatusChecking ? (
-                <ArrowPathIcon className="h-3 w-3 animate-spin" />
-              ) : null}
-              {getManagedSiteStatusLabel(t, {
-                isChecking: isManagedSiteStatusChecking,
-                managedSiteStatus,
-              })}
-            </Badge>
-            {managedSiteStatusDescription ? (
-              <span
-                className="break-words whitespace-normal"
-                title={managedSiteStatusDescription}
-              >
-                {managedSiteStatusDescription}
-              </span>
-            ) : null}
-            {managedSiteAssessment ? (
-              <>
-                <SignalBadge
-                  badgeText={getUrlSignalLabel(t, managedSiteAssessment)}
-                  tooltipText={getUrlSignalTooltip(t, managedSiteAssessment)}
-                  variant={getSignalBadgeVariant({
-                    assessment: managedSiteAssessment,
-                    signal: "url",
-                  })}
-                />
-                <SignalBadge
-                  badgeText={getKeySignalLabel(t, managedSiteAssessment)}
-                  tooltipText={getKeySignalTooltip(
-                    t,
-                    managedSiteType,
-                    managedSiteAssessment,
-                  )}
-                  variant={getSignalBadgeVariant({
-                    assessment: managedSiteAssessment,
-                    signal: "key",
-                  })}
-                />
-                <SignalBadge
-                  badgeText={getModelsSignalLabel(t, managedSiteAssessment)}
-                  tooltipText={getModelsSignalTooltip(t, managedSiteAssessment)}
-                  variant={getSignalBadgeVariant({
-                    assessment: managedSiteAssessment,
-                    signal: "models",
-                  })}
-                />
-              </>
-            ) : null}
-
-            {/* channel link button - only show if there's a matched channel or a search URL available (which indicates the user can review potential matches on the managed site) */}
-            {matchedManagedSiteChannel ? (
-              <ManagedSiteChannelLinkButton
-                channelName={matchedManagedSiteChannel.name}
-                channelId={
-                  managedSiteStatus?.status ===
-                  MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
-                    ? matchedManagedSiteChannel.id
-                    : undefined
-                }
-                search={
-                  managedSiteStatus?.status ===
-                  MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
-                    ? undefined
-                    : managedSiteAssessment?.searchBaseUrl
-                }
-                className="h-auto px-0 py-0 text-xs"
-                testId={KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton}
-              />
-            ) : managedSiteAssessment?.searchBaseUrl ? (
-              <ManagedSiteChannelLinkButton
-                channelName={t("managedSiteStatus.actions.reviewChannels")}
-                search={managedSiteAssessment.searchBaseUrl}
-                className="h-auto px-0 py-0 text-xs"
-                testId={KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton}
-              />
-            ) : null}
-
-            {/* verification retry button - only show if the token is in an exact-verification-unavailable unknown status with login credentials configured, which indicates the user can take action to potentially recover to an added status without needing to re-import */}
-            {managedSiteRecoveryMessage ? (
-              <span className="break-words whitespace-normal">
-                {managedSiteRecoveryMessage}
-              </span>
-            ) : null}
-            {shouldShowManagedSiteVerificationRetry ? (
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-auto px-2 py-0.5 text-xs"
-                data-testid={
-                  KEY_MANAGEMENT_TEST_IDS.managedSiteVerificationRetryButton
-                }
-                loading={isManagedSiteVerificationRetrying}
-                onClick={handleManagedSiteVerificationRetryClick}
-              >
-                {isManagedSiteVerificationRetrying
-                  ? t("common:status.checking")
-                  : t("managedSiteStatus.actions.verifyNow")}
-              </Button>
-            ) : null}
-            {shouldShowManagedSiteSettingsAction ? (
-              <WorkflowTransitionButton
-                size="sm"
-                variant="outline"
-                className="h-auto px-2 py-0.5 text-xs"
-                onClick={handleOpenManagedSiteSettings}
-                title={managedSiteRecoveryMessage ?? undefined}
-              >
-                {getManagedSiteSettingsActionLabel(t, {
-                  isConfigMissing: isManagedSiteConfigMissing,
-                })}
-              </WorkflowTransitionButton>
-            ) : null}
-          </div>
+  const providerBadges = shouldRenderManagedSiteStatus ? (
+    <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+      {/* managed site status badge with optional description and signal badges - only show if the managed site supports base URL channel lookup and there's a status to show (either checking or a known status) */}
+      <Badge
+        variant={getManagedSiteStatusBadgeVariant({
+          isChecking: isManagedSiteStatusChecking,
+          managedSiteStatus,
+        })}
+        size="sm"
+        data-testid={KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge}
+      >
+        {isManagedSiteStatusChecking ? (
+          <ArrowPathIcon className="h-3 w-3 animate-spin" />
         ) : null}
-      </div>
+        {getManagedSiteStatusLabel(t, {
+          isChecking: isManagedSiteStatusChecking,
+          managedSiteStatus,
+        })}
+      </Badge>
+      {managedSiteStatusDescription ? (
+        <span
+          className="break-words whitespace-normal"
+          title={managedSiteStatusDescription}
+        >
+          {managedSiteStatusDescription}
+        </span>
+      ) : null}
+      {managedSiteAssessment ? (
+        <>
+          <SignalBadge
+            badgeText={getUrlSignalLabel(t, managedSiteAssessment)}
+            tooltipText={getUrlSignalTooltip(t, managedSiteAssessment)}
+            variant={getSignalBadgeVariant({
+              assessment: managedSiteAssessment,
+              signal: "url",
+            })}
+          />
+          <SignalBadge
+            badgeText={getKeySignalLabel(t, managedSiteAssessment)}
+            tooltipText={getKeySignalTooltip(
+              t,
+              managedSiteType,
+              managedSiteAssessment,
+            )}
+            variant={getSignalBadgeVariant({
+              assessment: managedSiteAssessment,
+              signal: "key",
+            })}
+          />
+          <SignalBadge
+            badgeText={getModelsSignalLabel(t, managedSiteAssessment)}
+            tooltipText={getModelsSignalTooltip(t, managedSiteAssessment)}
+            variant={getSignalBadgeVariant({
+              assessment: managedSiteAssessment,
+              signal: "models",
+            })}
+          />
+        </>
+      ) : null}
 
-      <TokenActionButtons
-        token={token}
-        copyKey={copyKey}
-        handleEditToken={handleEditToken}
-        handleDeleteToken={handleDeleteToken}
-        account={account}
-        managedSiteStatus={managedSiteStatus}
-        onOpenCCSwitchDialog={onOpenCCSwitchDialog}
-        onManagedSiteImportSuccess={onManagedSiteImportSuccess}
-        guidedManagedSiteImportRequest={guidedManagedSiteImportRequest}
-      />
+      {/* channel link button - only show if there's a matched channel or a search URL available (which indicates the user can review potential matches on the managed site) */}
+      {matchedManagedSiteChannel ? (
+        <ManagedSiteChannelLinkButton
+          channelName={matchedManagedSiteChannel.name}
+          channelId={
+            managedSiteStatus?.status ===
+            MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
+              ? matchedManagedSiteChannel.id
+              : undefined
+          }
+          search={
+            managedSiteStatus?.status ===
+            MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
+              ? undefined
+              : managedSiteAssessment?.searchBaseUrl
+          }
+          className="h-auto px-0 py-0 text-xs"
+          testId={KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton}
+        />
+      ) : managedSiteAssessment?.searchBaseUrl ? (
+        <ManagedSiteChannelLinkButton
+          channelName={t("managedSiteStatus.actions.reviewChannels")}
+          search={managedSiteAssessment.searchBaseUrl}
+          className="h-auto px-0 py-0 text-xs"
+          testId={KEY_MANAGEMENT_TEST_IDS.managedSiteChannelLinkButton}
+        />
+      ) : null}
+
+      {/* verification retry button - only show if the token is in an exact-verification-unavailable unknown status with login credentials configured, which indicates the user can take action to potentially recover to an added status without needing to re-import */}
+      {managedSiteRecoveryMessage ? (
+        <span className="break-words whitespace-normal">
+          {managedSiteRecoveryMessage}
+        </span>
+      ) : null}
+      {shouldShowManagedSiteVerificationRetry ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-auto px-2 py-0.5 text-xs"
+          data-testid={
+            KEY_MANAGEMENT_TEST_IDS.managedSiteVerificationRetryButton
+          }
+          loading={isManagedSiteVerificationRetrying}
+          onClick={handleManagedSiteVerificationRetryClick}
+        >
+          {isManagedSiteVerificationRetrying
+            ? t("common:status.checking")
+            : t("managedSiteStatus.actions.verifyNow")}
+        </Button>
+      ) : null}
+      {shouldShowManagedSiteSettingsAction ? (
+        <WorkflowTransitionButton
+          size="sm"
+          variant="outline"
+          className="h-auto px-2 py-0.5 text-xs"
+          onClick={handleOpenManagedSiteSettings}
+          title={managedSiteRecoveryMessage ?? undefined}
+        >
+          {getManagedSiteSettingsActionLabel(t, {
+            isConfigMissing: isManagedSiteConfigMissing,
+          })}
+        </WorkflowTransitionButton>
+      ) : null}
     </div>
+  ) : undefined
+
+  return (
+    <KeyResourceCardHeader
+      {...headerProps}
+      providerBadges={providerBadges}
+      actions={
+        <>
+          {headerProps.actions}
+          <TokenActionButtons
+            actionPolicy={actionPolicy}
+            token={token}
+            copyKey={copyKey}
+            handleEditToken={handleEditToken}
+            handleDeleteToken={handleDeleteToken}
+            account={account}
+            managedSiteStatus={managedSiteStatus}
+            onOpenCCSwitchDialog={onOpenCCSwitchDialog}
+            onManagedSiteImportSuccess={onManagedSiteImportSuccess}
+            guidedManagedSiteImportRequest={guidedManagedSiteImportRequest}
+          />
+        </>
+      }
+    />
   )
 }

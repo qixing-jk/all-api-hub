@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
+import type { ComponentProps, ReactNode } from "react"
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -8,7 +8,10 @@ import {
   AIHUBMIX_WEB_ORIGIN,
   SITE_TYPES,
 } from "~/constants/siteType"
-import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
+import { TokenHeader as KeyResourceTokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
+import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
+import { buildLegacyKeyResourceCardPresentation } from "~/features/KeyManagement/presentation/legacyKeyResourceCard"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
@@ -31,6 +34,16 @@ const mockOpenManagedSiteChannelsPage = vi.fn()
 const mockOpenSettingsTab = vi.fn()
 const mockOpenWithAccount = vi.fn()
 const mockLoggerError = vi.fn()
+
+const RECOVERABLE_ACTION_POLICY: KeyResourceActionPolicy = {
+  copySecret: true,
+  revealSecret: true,
+  verifySecret: true,
+  exportSecret: true,
+  edit: true,
+  delete: true,
+  batchSelect: true,
+}
 
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
@@ -119,6 +132,28 @@ function createAccountStub(): DisplaySiteData {
     authType: AuthTypeEnum.AccessToken,
     checkIn: { enableDetection: false },
   }
+}
+
+type TokenHeaderTestProps = Omit<
+  ComponentProps<typeof KeyResourceTokenHeader>,
+  "headerProps" | "actionPolicy"
+> & {
+  actionPolicy?: KeyResourceActionPolicy
+}
+
+function TokenHeader({ actionPolicy, ...props }: TokenHeaderTestProps) {
+  const presentation = buildLegacyKeyResourceCardPresentation(
+    buildDisplayAccountTokenRuntimeKey(props.account, props.token),
+    testI18n.t,
+  )
+
+  return (
+    <KeyResourceTokenHeader
+      {...props}
+      headerProps={{ presentation, detailsTrigger: null }}
+      actionPolicy={actionPolicy ?? presentation.actions}
+    />
+  )
 }
 
 /**
@@ -348,6 +383,7 @@ describe("TokenHeader save to API profiles", () => {
         handleEditToken={vi.fn()}
         handleDeleteToken={vi.fn()}
         account={account}
+        actionPolicy={RECOVERABLE_ACTION_POLICY}
       />,
     )
 

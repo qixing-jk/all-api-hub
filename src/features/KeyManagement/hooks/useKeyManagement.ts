@@ -6,6 +6,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountData } from "~/hooks/useAccountData"
 import {
+  buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
   isAccountTokenRuntimeKey,
   type AccountRuntimeKey,
@@ -55,6 +56,7 @@ import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
+import { isKeyResourceExportable } from "../presentation/legacyKeyResourceCard"
 import { type KeyManagementEntry, type ServiceCredentialState } from "../types"
 import {
   buildAccountRuntimeKeyEntryIdentityKey,
@@ -347,6 +349,19 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     return new Map(enabledDisplayData.map((account) => [account.id, account]))
   }, [enabledDisplayData])
 
+  const getExportEligibleAccountForToken = useCallback(
+    (token: AccountToken) => {
+      const account = accountById.get(token.accountId)
+      if (!account) {
+        return undefined
+      }
+
+      const runtimeKey = buildDisplayAccountTokenRuntimeKey(account, token)
+      return isKeyResourceExportable(runtimeKey) ? account : undefined
+    },
+    [accountById],
+  )
+
   const managedSiteConfigFingerprint = useMemo(() => {
     if (managedSiteType === SITE_TYPES.OCTOPUS) {
       return [
@@ -541,7 +556,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       >()
 
       for (const token of tokens) {
-        const account = accountById.get(token.accountId)
+        const account = getExportEligibleAccountForToken(token)
         if (!account) {
           continue
         }
@@ -700,8 +715,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       return resultsByIdentityKey
     },
     [
-      accountById,
       buildManagedSiteStatusCacheKey,
+      getExportEligibleAccountForToken,
       isManagedSiteChannelStatusSupported,
       managedSiteConfigFingerprint,
       mergeResolvedChannelKeysForIdentity,
@@ -1525,9 +1540,11 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
   const statusCheckTokens = useMemo(() => {
     return tokens.filter(
-      (token) => tokenInventories[token.accountId]?.status === "loaded",
+      (token) =>
+        tokenInventories[token.accountId]?.status === "loaded" &&
+        Boolean(getExportEligibleAccountForToken(token)),
     )
-  }, [tokenInventories, tokens])
+  }, [getExportEligibleAccountForToken, tokenInventories, tokens])
 
   const refreshManagedSiteTokenStatuses = useCallback(
     async (options?: RefreshManagedSiteTokenStatusOptions) => {
