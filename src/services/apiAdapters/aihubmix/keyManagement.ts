@@ -1,4 +1,7 @@
-import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
+import {
+  INVENTORY_SECRET_AVAILABILITIES,
+  type KeyManagementCapability,
+} from "~/services/apiAdapters/contracts/keyManagement"
 import {
   createApiToken,
   deleteApiToken,
@@ -9,6 +12,8 @@ import {
 } from "~/services/apiService/aihubmix"
 
 export const aihubmixKeyManagement: KeyManagementCapability = {
+  inventorySecretAvailability:
+    INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
   fetchTokens: (request) => fetchAccountTokens(request),
   createToken: (request, tokenData) => createApiToken(request, tokenData),
   updateToken: ({ request, tokenId, tokenData }) =>
