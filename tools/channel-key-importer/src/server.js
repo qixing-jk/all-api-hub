@@ -721,7 +721,9 @@ async function createChannelsFromPreview(preview, body) {
   }
 
   const results = []
-  const concurrency = 5
+  // New API commonly rate-limits channel mutations. Serial creation keeps a
+  // large pasted batch reliable; individual 429 responses are retried below.
+  const concurrency = 1
   for (let offset = 0; offset < preview.keys.length; offset += concurrency) {
     await Promise.all(
       preview.keys

@@ -246,3 +246,53 @@ test("claims due batches and marks mixed results by key index", async () => {
     await rm(root, { force: true, recursive: true })
   }
 })
+
+test("automatically requeues rate-limited scheduled keys", async () => {
+  const root = await mkdtemp(join(tmpdir(), "dataeyesai-schedule-rate-limit-"))
+  try {
+    const store = new ScheduleStore({
+      path: join(root, "schedules.json"),
+      secretPath: join(root, "schedule-secret.key"),
+      now: () => new Date("2026-08-03T00:00:00.000Z"),
+    })
+    const job = await store.create({
+      preview: {
+        ...preview,
+        keys: [{ apiKey: "sk-rate-limited", quota: null }],
+      },
+      createOptions: {},
+      schedule: {
+        startAt: "2026-08-03T00:00:00.000Z",
+        batchSize: 1,
+        intervalMinutes: 2,
+      },
+    })
+    await store.claimDueJob(new Date("2026-08-03T00:00:00.000Z"))
+
+    const updated = await store.completeRun(
+      job.id,
+      {
+        success: false,
+        successCount: 0,
+        failedCount: 1,
+        results: [
+          {
+            success: false,
+            keyIndex: 1,
+            error: "Request failed with status code 429",
+          },
+        ],
+      },
+      new Date("2026-08-03T00:00:30.000Z"),
+    )
+
+    assert.equal(updated.status, "active")
+    assert.equal(updated.counts.pending, 1)
+    assert.equal(updated.counts.failed, 0)
+    assert.equal(updated.entries[0].retryCount, 1)
+    assert.match(updated.lastError, /自动排队重试/)
+    assert.equal(updated.nextRunAt, "2026-08-03T00:02:30.000Z")
+  } finally {
+    await rm(root, { force: true, recursive: true })
+  }
+})

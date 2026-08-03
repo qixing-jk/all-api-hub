@@ -25,6 +25,11 @@ const clampInteger = (value, fallback, min, max) => {
   return Math.min(max, Math.max(min, integer))
 }
 
+const isRateLimitFailure = (message) =>
+  /(?:\b429\b|请求次数过多|too many requests|rate[ -]?limit)/i.test(
+    String(message || ""),
+  )
+
 const publicEntry = (entry) => ({
   id: entry.id,
   status: entry.status,
@@ -334,10 +339,21 @@ export class ScheduleStore {
           .filter((item) => item && item.success !== false)
           .map((item) => [Number(item.keyIndex), item]),
       )
+      let rateLimitedCount = 0
       for (const [index, entry] of running.entries()) {
         const keyIndex = index + 1
         const failed = failures.get(keyIndex)
         if (failed) {
+          if (isRateLimitFailure(failed)) {
+            entry.status = "pending"
+            entry.error = "New API 限流，已自动排队重试"
+            entry.retryCount = Number.isInteger(entry.retryCount)
+              ? entry.retryCount + 1
+              : 1
+            delete entry.lockedAt
+            rateLimitedCount += 1
+            continue
+          }
           entry.status = "failed"
           entry.error = failed
           continue
@@ -363,10 +379,18 @@ export class ScheduleStore {
         failedCount: result.failedCount || 0,
         channelName: result.channelName || "",
       }
-      job.lastError =
-        job.status === "paused"
-          ? "还有 Key 未写入；间隔为 0，已暂停，手动立即执行可继续。"
-          : ""
+      const statusMessages = []
+      if (rateLimitedCount > 0) {
+        statusMessages.push(
+          `${rateLimitedCount} 条 Key 触发 New API 限流，已自动排队重试。`,
+        )
+      }
+      if (job.status === "paused") {
+        statusMessages.push(
+          "还有 Key 未写入；间隔为 0，已暂停，手动立即执行可继续。",
+        )
+      }
+      job.lastError = statusMessages.join(" ")
       if (job.status === "active") {
         job.nextRunAt = new Date(
           now.getTime() + job.intervalMinutes * 60 * 1000,

@@ -69,6 +69,12 @@ async function requestJson(url, options, secrets = []) {
     }
     const error = new Error(message)
     error.status = response.status
+    if (response.status === 429) {
+      const retryAfter = Number(response.headers.get("retry-after"))
+      if (Number.isFinite(retryAfter) && retryAfter >= 0) {
+        error.retryAfterMs = retryAfter * 1000
+      }
+    }
     throw error
   }
   return payload
@@ -204,6 +210,30 @@ export async function fetchNewApiSystemName(targetUrl) {
 
 const wait = (milliseconds) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds))
+
+const CHANNEL_MUTATION_RETRY_DELAYS = [1_000, 2_000, 4_000, 8_000, 12_000]
+
+const isRateLimitError = (error) =>
+  error?.status === 429 ||
+  /(?:\b429\b|请求次数过多|too many requests|rate[ -]?limit)/i.test(
+    String(error?.message || ""),
+  )
+
+async function requestChannelMutation(url, options, secrets) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await requestJson(url, options, secrets)
+    } catch (error) {
+      if (
+        !isRateLimitError(error) ||
+        attempt >= CHANNEL_MUTATION_RETRY_DELAYS.length
+      ) {
+        throw error
+      }
+      await wait(error.retryAfterMs ?? CHANNEL_MUTATION_RETRY_DELAYS[attempt])
+    }
+  }
+}
 
 async function requestUsageJson(url, config) {
   const secrets = [config.adminToken, config.sessionCookie].filter(Boolean)
@@ -605,7 +635,7 @@ export async function updateExistingChannelKey(config, input) {
   // Its update contract also accepts optional priority and weight integers.
   // https://github.com/QuantumNous/new-api/blob/main/controller/channel.go
   // https://github.com/QuantumNous/new-api-docs/blob/main/docs/api/fei-channel-management.md
-  return await requestJson(
+  return await requestChannelMutation(
     `${config.targetUrl}/api/channel/`,
     {
       method: "PUT",
@@ -625,7 +655,7 @@ export async function updateExistingChannelKey(config, input) {
 }
 
 export async function setChannelEnabled(config, channelId) {
-  return await requestJson(
+  return await requestChannelMutation(
     `${config.targetUrl}/api/channel/${channelId}/status`,
     {
       method: "POST",
@@ -663,7 +693,7 @@ export async function createNewApiChannel(config, input) {
     channel: buildChannelPayload(input, input.apiKey),
   }
 
-  return await requestJson(
+  return await requestChannelMutation(
     `${config.targetUrl}/api/channel/`,
     {
       method: "POST",
@@ -689,7 +719,7 @@ export async function createNewApiMultiKeyChannel(config, input) {
       throw new Error("Vertex AI 批量服务账号必须是有效 JSON")
     }
   }
-  return await requestJson(
+  return await requestChannelMutation(
     `${config.targetUrl}/api/channel/`,
     {
       method: "POST",

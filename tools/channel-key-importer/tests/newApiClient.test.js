@@ -551,6 +551,39 @@ test("creates a single New API channel with normalized fields", async (context) 
   })
 })
 
+test("retries a rate-limited channel creation", async (context) => {
+  let requestCount = 0
+  context.mock.method(globalThis, "fetch", async () => {
+    requestCount += 1
+    if (requestCount === 1) {
+      return new Response(
+        JSON.stringify({ success: false, message: "请求次数过多，请稍后再试" }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": "0",
+          },
+        },
+      )
+    }
+    return jsonResponse({ success: true })
+  })
+
+  await createNewApiChannel(config, {
+    name: "OpenRouter retry",
+    provider: { channelType: 20 },
+    apiKey: "sk-or-rate-limited",
+    baseUrl: "https://openrouter.ai/api",
+    models: ["openai/gpt-4o"],
+    modelMapping: {},
+    channelSettings: {},
+    groups: ["default"],
+  })
+
+  assert.equal(requestCount, 2)
+})
+
 test("passes provider-specific settings and extra configuration to New API", async (context) => {
   let requestBody
   context.mock.method(globalThis, "fetch", async (_url, options) => {
