@@ -8,6 +8,8 @@
   "actions": {
     "collapseAll": "Thu gọn tất cả",
     "deleteKey": "Xóa khóa",
+    "details": "Xem chi tiết",
+    "detailsFor": "Xem chi tiết của {{name}}",
     "disable": "Vô hiệu hóa",
     "editKey": "Chỉnh sửa khóa",
     "enable": "Kích hoạt",
@@ -131,6 +133,11 @@
   },
   "createFirstKey": "Tạo khóa đầu tiên",
   "description": "Trang này hiển thị thông tin khóa API của tất cả tài khoản, bao gồm mức sử dụng và thời gian hết hạn. Bạn có thể tạo khóa mới cho một tài khoản cụ thể thông qua nút \"Thêm khóa API\" ở góc trên bên phải hoặc nhấp vào nút \"+\" bên cạnh mỗi mục khóa. Vui lòng bảo quản an toàn khóa API của bạn để tránh rò rỉ cho người khác.",
+  "details": {
+    "empty": "Không có chi tiết bổ sung",
+    "loading": "Đang tải chi tiết",
+    "unavailable": "Chi tiết hiện không khả dụng"
+  },
   "dialog": {
     "accountSelect": "Chọn tài khoản",
     "addToken": "Thêm khóa API",

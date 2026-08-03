@@ -10,6 +10,8 @@
   "actions": {
     "collapseAll": "Contraer todo",
     "deleteKey": "Eliminar clave",
+    "details": "Ver detalles",
+    "detailsFor": "Ver detalles de {{name}}",
     "disable": "Deshabilitar",
     "editKey": "Editar clave",
     "enable": "Habilitar",
@@ -139,6 +141,11 @@
   },
   "createFirstKey": "Crear primera clave",
   "description": "Esta página muestra información de claves API para todas las cuentas, incluido el uso y la fecha de expiración. Puedes crear claves nuevas para cuentas específicas haciendo clic en el botón 'Agregar clave' en la esquina superior derecha o en el botón '+' junto a cada elemento de clave. Mantén tus claves API seguras y evita filtrarlas a otras personas",
+  "details": {
+    "empty": "No hay detalles adicionales",
+    "loading": "Cargando detalles",
+    "unavailable": "Los detalles no están disponibles"
+  },
   "dialog": {
     "accountSelect": "Seleccionar cuenta",
     "addToken": "Agregar clave API",

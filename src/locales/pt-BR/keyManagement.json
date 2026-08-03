@@ -10,6 +10,8 @@
   "actions": {
     "collapseAll": "Recolher tudo",
     "deleteKey": "Excluir chave",
+    "details": "Ver detalhes",
+    "detailsFor": "Ver detalhes de {{name}}",
     "disable": "Desativar",
     "editKey": "Editar chave",
     "enable": "Ativar",
@@ -139,6 +141,11 @@
   },
   "createFirstKey": "Criar primeira chave",
   "description": "Esta página exibe as informações das chaves de API de todas as contas, incluindo uso e data de expiração. Para criar uma chave para uma conta específica, clique no botão \"Adicionar chave\" no canto superior direito ou no botão \"+\" ao lado de cada item. Mantenha suas chaves de API seguras e não as compartilhe com outras pessoas",
+  "details": {
+    "empty": "Não há detalhes adicionais",
+    "loading": "Carregando detalhes",
+    "unavailable": "Os detalhes não estão disponíveis"
+  },
   "dialog": {
     "accountSelect": "Selecionar conta",
     "addToken": "Adicionar chave de API",

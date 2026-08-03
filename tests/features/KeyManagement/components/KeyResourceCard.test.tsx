@@ -1,0 +1,302 @@
+import userEvent from "@testing-library/user-event"
+import { useState, type ReactElement } from "react"
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
+
+import {
+  KeyResourceCard,
+  KeyResourceCardHeader,
+} from "~/features/KeyManagement/components/KeyResourceCard"
+import type { KeyResourceCardPresentation } from "~/features/KeyManagement/presentation/keyResourceCard"
+import enCommon from "~/locales/en/common.json"
+import enKeyManagement from "~/locales/en/keyManagement.json"
+import { testI18n } from "~~/tests/test-utils/i18n"
+import { render, screen } from "~~/tests/test-utils/render"
+
+const presentation: KeyResourceCardPresentation = {
+  id: "key-example",
+  title: "Example key",
+  accountLabel: "Account example",
+  status: "active",
+  statusLabel: "Active",
+  secretAvailability: "recoverable",
+  secretAvailabilityMessage: "Full secret is unavailable after creation.",
+  maskedLabel: "sk-example...",
+  summaryFacts: [
+    { id: "remaining-quota", label: "Remaining quota", value: "100" },
+  ],
+  detailFacts: [{ id: "ip-limits", label: "IP limits", value: "192.0.2.10" }],
+  actions: {
+    copySecret: true,
+    revealSecret: true,
+    verifySecret: true,
+    exportSecret: true,
+    edit: true,
+    delete: true,
+    batchSelect: true,
+  },
+}
+
+function renderKeyResourceCard(ui: ReactElement) {
+  return render(ui, {
+    withThemeProvider: false,
+    withUserPreferencesProvider: false,
+  })
+}
+
+describe("KeyResourceCard", () => {
+  beforeAll(() => {
+    testI18n.addResourceBundle(
+      "en",
+      "keyManagement",
+      enKeyManagement,
+      true,
+      true,
+    )
+    testI18n.addResourceBundle("en", "common", enCommon, true, true)
+  })
+
+  afterAll(() => {
+    testI18n.removeResourceBundle("en", "keyManagement")
+    testI18n.removeResourceBundle("en", "common")
+  })
+
+  it("renders the common hierarchy and expands safe details", async () => {
+    const user = userEvent.setup()
+    function Harness() {
+      const [isExpanded, setIsExpanded] = useState(false)
+      return (
+        <KeyResourceCard
+          presentation={presentation}
+          secret={<code>sk-example</code>}
+          actions={<button type="button">Edit</button>}
+          details={{ status: "ready", facts: presentation.detailFacts }}
+          isDetailsExpanded={isExpanded}
+          onDetailsExpandedChange={setIsExpanded}
+        />
+      )
+    }
+    renderKeyResourceCard(<Harness />)
+
+    expect(screen.getByRole("heading", { name: "Example key" })).toBeVisible()
+    expect(screen.getByText("Account example")).toBeVisible()
+    expect(screen.getByText("Remaining quota")).toBeVisible()
+    expect(screen.getByText("sk-example")).toBeVisible()
+    expect(screen.queryByText("IP limits")).toBeNull()
+    expect(
+      screen.queryByText("Full secret is unavailable after creation."),
+    ).toBeNull()
+
+    await user.click(
+      screen.getByRole("button", { name: "View details for Example key" }),
+    )
+
+    expect(screen.getByText("IP limits")).toBeVisible()
+    expect(screen.getByText("192.0.2.10")).toBeVisible()
+    expect(
+      screen.getByText("Full secret is unavailable after creation."),
+    ).toBeVisible()
+  })
+
+  it("lets callers use the shared header without a detail trigger", () => {
+    renderKeyResourceCard(
+      <KeyResourceCardHeader
+        presentation={presentation}
+        actions={<button type="button">Edit header</button>}
+      />,
+    )
+
+    expect(screen.getByRole("heading", { name: "Example key" })).toBeVisible()
+    expect(screen.getByText("Account example")).toBeVisible()
+    expect(screen.getByText("Active")).toBeVisible()
+    expect(screen.getAllByRole("button", { name: "Edit header" })).toHaveLength(
+      1,
+    )
+  })
+
+  it("lets callers compose one authoritative header with generated controls", () => {
+    renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={presentation}
+        actions={<button type="button">Edit composed key</button>}
+        details={{ status: "ready", facts: presentation.detailFacts }}
+        isDetailsExpanded={false}
+        onDetailsExpandedChange={vi.fn()}
+        renderHeader={(headerProps) => (
+          <KeyResourceCardHeader
+            {...headerProps}
+            providerBadges={<span>Provider badge</span>}
+          />
+        )}
+      />,
+    )
+
+    expect(
+      screen.getAllByRole("heading", { name: "Example key" }),
+    ).toHaveLength(1)
+    expect(screen.getAllByText("Account example")).toHaveLength(1)
+    expect(screen.getAllByText("Active")).toHaveLength(1)
+    expect(screen.getAllByText("Provider badge")).toHaveLength(1)
+    expect(
+      screen.getAllByRole("button", { name: "View details for Example key" }),
+    ).toHaveLength(1)
+    expect(
+      screen.getAllByRole("button", { name: "Edit composed key" }),
+    ).toHaveLength(1)
+  })
+
+  it("renders caller-owned secret controls once while collapsed", () => {
+    renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={presentation}
+        secret={<span>sk-summary-example</span>}
+        secretControls={<button type="button">Copy summary secret</button>}
+        isDetailsExpanded={false}
+        onDetailsExpandedChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getAllByText("sk-summary-example")).toHaveLength(1)
+    expect(
+      screen.getAllByRole("button", { name: "Copy summary secret" }),
+    ).toHaveLength(1)
+  })
+
+  it("announces loading and supports detail retry", async () => {
+    const user = userEvent.setup()
+    const onRetry = vi.fn()
+    const { rerender } = renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={presentation}
+        details={{ status: "loading" }}
+        isDetailsExpanded={true}
+        onDetailsExpandedChange={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole("status")).toHaveTextContent("Loading details")
+    rerender(
+      <KeyResourceCard
+        presentation={presentation}
+        details={{
+          status: "error",
+          message: "Details unavailable",
+          onRetry,
+        }}
+        isDetailsExpanded={true}
+        onDetailsExpandedChange={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent("Details unavailable")
+    await user.click(screen.getByRole("button", { name: "Retry" }))
+    expect(onRetry).toHaveBeenCalledOnce()
+
+    rerender(
+      <KeyResourceCard
+        presentation={presentation}
+        details={{ status: "error", message: "" }}
+        isDetailsExpanded={true}
+        onDetailsExpandedChange={vi.fn()}
+      />,
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent("Details unavailable")
+  })
+
+  it("omits the selection control when no selection callback is supplied", () => {
+    renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={presentation}
+        isDetailsExpanded={false}
+        onDetailsExpandedChange={vi.fn()}
+      />,
+    )
+    expect(screen.queryByRole("checkbox")).toBeNull()
+  })
+
+  it("renders an explicit empty detail state", () => {
+    renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={{ ...presentation, secretAvailabilityMessage: undefined }}
+        details={{ status: "ready", facts: [] }}
+        isDetailsExpanded={true}
+        onDetailsExpandedChange={vi.fn()}
+      />,
+    )
+    expect(screen.getByText("No additional details")).toBeVisible()
+  })
+
+  it("binds the controlled trigger to its detail panel", async () => {
+    const user = userEvent.setup()
+    const onDetailsExpandedChange = vi.fn()
+    const { rerender } = renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={presentation}
+        details={{ status: "ready", facts: presentation.detailFacts }}
+        isDetailsExpanded={false}
+        onDetailsExpandedChange={onDetailsExpandedChange}
+      />,
+    )
+
+    const trigger = screen.getByRole("button", {
+      name: "View details for Example key",
+    })
+    const panelId = trigger.getAttribute("aria-controls")
+
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    expect(panelId).toBeTruthy()
+
+    await user.click(trigger)
+
+    expect(onDetailsExpandedChange).toHaveBeenCalledWith(true)
+    rerender(
+      <KeyResourceCard
+        presentation={presentation}
+        details={{ status: "ready", facts: presentation.detailFacts }}
+        isDetailsExpanded={true}
+        onDetailsExpandedChange={onDetailsExpandedChange}
+      />,
+    )
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+    expect(document.getElementById(panelId!)).toBeVisible()
+  })
+
+  it("gives every card a unique detail trigger and panel binding", () => {
+    const firstPresentation = {
+      ...presentation,
+      id: "key-first",
+      title: "First key",
+    }
+    const secondPresentation = {
+      ...presentation,
+      id: "key-second",
+      title: "Second key",
+    }
+    renderKeyResourceCard(
+      <>
+        <KeyResourceCard
+          presentation={firstPresentation}
+          isDetailsExpanded={true}
+          onDetailsExpandedChange={vi.fn()}
+        />
+        <KeyResourceCard
+          presentation={secondPresentation}
+          isDetailsExpanded={true}
+          onDetailsExpandedChange={vi.fn()}
+        />
+      </>,
+    )
+
+    const firstTrigger = screen.getByRole("button", {
+      name: "View details for First key",
+    })
+    const secondTrigger = screen.getByRole("button", {
+      name: "View details for Second key",
+    })
+    const firstPanelId = firstTrigger.getAttribute("aria-controls")
+    const secondPanelId = secondTrigger.getAttribute("aria-controls")
+
+    expect(firstPanelId).toBeTruthy()
+    expect(secondPanelId).toBeTruthy()
+    expect(firstPanelId).not.toBe(secondPanelId)
+    expect(document.getElementById(firstPanelId!)).toBeVisible()
+    expect(document.getElementById(secondPanelId!)).toBeVisible()
+  })
+})

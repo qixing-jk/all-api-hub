@@ -8,6 +8,8 @@
   "actions": {
     "collapseAll": "すべて折りたたむ",
     "deleteKey": "キーを削除",
+    "details": "詳細を見る",
+    "detailsFor": "{{name}} の詳細を見る",
     "disable": "無効化",
     "editKey": "キーを編集",
     "enable": "有効化",
@@ -131,6 +133,11 @@
   },
   "createFirstKey": "最初のキーを作成",
   "description": "このページでは、すべてのアカウントの API キー情報（利用状況や有効期限を含む）を表示します。右上の「キーを追加」ボタン、または各キー項目の横にある「+」ボタンから、特定アカウント用の新しいキーを作成できます。API キーは安全に保管し、第三者へ漏洩しないようにしてください。",
+  "details": {
+    "empty": "追加の詳細はありません",
+    "loading": "詳細を読み込んでいます",
+    "unavailable": "詳細を利用できません"
+  },
   "dialog": {
     "accountSelect": "アカウントを選択",
     "addToken": "API キーを追加",

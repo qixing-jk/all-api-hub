@@ -9,6 +9,8 @@
   "actions": {
     "collapseAll": "Collapse all",
     "deleteKey": "Delete Key",
+    "details": "View details",
+    "detailsFor": "View details for {{name}}",
     "disable": "Disable",
     "editKey": "Edit Key",
     "enable": "Enable",
@@ -135,6 +137,11 @@
   },
   "createFirstKey": "Create first key",
   "description": "This page displays API key information for all accounts, including usage and expiration time. You can create new keys for specific accounts by clicking the 'Add Key' button in the upper right corner or the '+' button next to each key item. Please keep your API keys safe and avoid leaking them to others",
+  "details": {
+    "empty": "No additional details",
+    "loading": "Loading details",
+    "unavailable": "Details unavailable"
+  },
   "dialog": {
     "accountSelect": "Select Account",
     "addToken": "Add API Key",
