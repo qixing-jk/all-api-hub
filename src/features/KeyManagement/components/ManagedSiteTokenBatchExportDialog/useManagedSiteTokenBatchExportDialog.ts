@@ -1,5 +1,12 @@
 import type { TFunction } from "i18next"
-import { useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import toast from "react-hot-toast"
 
 import {
@@ -97,6 +104,8 @@ export function useManagedSiteTokenBatchExportDialog({
     newApiTotpSecret,
   } = useUserPreferencesContext()
   const verification = useNewApiManagedVerification()
+  const isVerificationDialogOpen = verification.dialogState.isOpen
+  const closeVerificationDialog = verification.closeDialog
   const [preview, setPreview] =
     useState<ManagedSiteTokenBatchExportPreview | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -111,6 +120,9 @@ export function useManagedSiteTokenBatchExportDialog({
     useState<ManagedSiteTokenBatchExportExecutionResult | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [verifyingItemId, setVerifyingItemId] = useState<string | null>(null)
+  const [workflowEpoch, setWorkflowEpoch] = useState<number | null>(null)
+  const workflowEpochCounterRef = useRef(0)
+  const activeWorkflowEpochRef = useRef<number | null>(null)
   const resolvedChannelKeysByItemIdRef = useRef<
     Record<string, Record<number, string>>
   >({})
@@ -122,6 +134,37 @@ export function useManagedSiteTokenBatchExportDialog({
 
   previewRef.current = preview
   latestItemsRef.current = items
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      activeWorkflowEpochRef.current = null
+      setWorkflowEpoch(null)
+      return
+    }
+
+    const ownedEpoch = workflowEpochCounterRef.current + 1
+    workflowEpochCounterRef.current = ownedEpoch
+    activeWorkflowEpochRef.current = ownedEpoch
+    setWorkflowEpoch(ownedEpoch)
+
+    return () => {
+      if (activeWorkflowEpochRef.current === ownedEpoch) {
+        activeWorkflowEpochRef.current = null
+      }
+    }
+  }, [isOpen])
+
+  const isCurrentWorkflow = useCallback(
+    (epoch: number | null) =>
+      epoch !== null && activeWorkflowEpochRef.current === epoch,
+    [],
+  )
+
+  useEffect(() => {
+    if (!isOpen && isVerificationDialogOpen) {
+      closeVerificationDialog()
+    }
+  }, [closeVerificationDialog, isOpen, isVerificationDialogOpen])
 
   useEffect(() => {
     if (!isOpen) {
@@ -160,6 +203,7 @@ export function useManagedSiteTokenBatchExportDialog({
     setExecutionError(null)
     setExecutionResult(null)
     setIsLoadingPreview(true)
+    const previewWorkflowEpoch = activeWorkflowEpochRef.current
 
     void (async () => {
       try {
@@ -187,7 +231,7 @@ export function useManagedSiteTokenBatchExportDialog({
                   PROTECTION_BYPASS_SURFACES.Options,
                 ),
               )
-        if (cancelled) return
+        if (cancelled || !isCurrentWorkflow(previewWorkflowEpoch)) return
         setPreview(nextPreview)
         setSelectedIds(
           new Set(
@@ -197,10 +241,10 @@ export function useManagedSiteTokenBatchExportDialog({
           ),
         )
       } catch (error) {
-        if (cancelled) return
+        if (cancelled || !isCurrentWorkflow(previewWorkflowEpoch)) return
         setPreviewError(getErrorMessage(error))
       } finally {
-        if (!cancelled) {
+        if (!cancelled && isCurrentWorkflow(previewWorkflowEpoch)) {
           setIsLoadingPreview(false)
           setPreviewLoadOrigin(null)
         }
@@ -210,7 +254,7 @@ export function useManagedSiteTokenBatchExportDialog({
     return () => {
       cancelled = true
     }
-  }, [isOpen, refreshKey])
+  }, [isCurrentWorkflow, isOpen, refreshKey])
 
   const executableItems = useMemo(
     () => preview?.items.filter(isExecutablePreviewItem) ?? [],
@@ -343,7 +387,9 @@ export function useManagedSiteTokenBatchExportDialog({
     requestedItem: ManagedSiteTokenBatchExportPreviewItem,
     requestedCandidate: ManagedSiteTokenBatchExportMatchedChannel,
   ) => {
+    const verificationWorkflowEpoch = workflowEpoch
     if (
+      !isCurrentWorkflow(verificationWorkflowEpoch) ||
       !preview ||
       verifyingItemId ||
       verification.dialogState.isOpen ||
@@ -364,6 +410,8 @@ export function useManagedSiteTokenBatchExportDialog({
 
     const verifyTargetsFromIndex = async (startIndex: number) => {
       for (let index = startIndex; index < targets.length; index += 1) {
+        if (!isCurrentWorkflow(verificationWorkflowEpoch)) return
+
         const { item, candidate } = targets[index]
         let resolvedChannelKey = ""
         let shouldContinueAfterDeferredLoad = false
@@ -372,6 +420,8 @@ export function useManagedSiteTokenBatchExportDialog({
         setVerifyingItemId(item.id)
 
         const handleLoaded = async () => {
+          if (!isCurrentWorkflow(verificationWorkflowEpoch)) return
+
           loadCompleted = true
           if (resolvedChannelKey) {
             mergeResolvedChannelKeyForItem(
@@ -382,7 +432,10 @@ export function useManagedSiteTokenBatchExportDialog({
             applyResolvedChannelKeyForItem(item, candidate, resolvedChannelKey)
           }
           setExecutionError(null)
-          if (shouldContinueAfterDeferredLoad) {
+          if (
+            shouldContinueAfterDeferredLoad &&
+            isCurrentWorkflow(verificationWorkflowEpoch)
+          ) {
             await verifyTargetsFromIndex(index + 1)
           }
         }
@@ -401,17 +454,21 @@ export function useManagedSiteTokenBatchExportDialog({
               totpSecret: newApiTotpSecret,
             },
             setKey: (key) => {
+              if (!isCurrentWorkflow(verificationWorkflowEpoch)) return
               resolvedChannelKey = key
             },
             onLoaded: handleLoaded,
-            openVerification: (request) =>
+            openVerification: (request) => {
+              if (!isCurrentWorkflow(verificationWorkflowEpoch)) return
               verification.openNewApiManagedVerification({
                 ...request,
                 closeMode:
                   NEW_API_MANAGED_VERIFICATION_CLOSE_MODES.CLOSE_AFTER_VERIFICATION,
-              }),
+              })
+            },
           })
 
+          if (!isCurrentWorkflow(verificationWorkflowEpoch)) return
           if (!loadedImmediately) {
             if (!loadCompleted) {
               shouldContinueAfterDeferredLoad = true
@@ -420,10 +477,12 @@ export function useManagedSiteTokenBatchExportDialog({
             }
           }
         } catch (error) {
+          if (!isCurrentWorkflow(verificationWorkflowEpoch)) return
           failureMessages.push(getErrorMessage(error))
         }
       }
 
+      if (!isCurrentWorkflow(verificationWorkflowEpoch)) return
       setVerifyingItemId(null)
       if (failureMessages.length > 0) {
         setExecutionError(
@@ -440,6 +499,7 @@ export function useManagedSiteTokenBatchExportDialog({
     try {
       await verifyTargetsFromIndex(0)
     } catch (error) {
+      if (!isCurrentWorkflow(verificationWorkflowEpoch)) return
       setVerifyingItemId(null)
       setExecutionError(
         t("keyManagement:batchManagedSiteExport.messages.verificationFailed", {
@@ -512,7 +572,14 @@ export function useManagedSiteTokenBatchExportDialog({
   }
 
   const handleConfirm = async () => {
-    if (!preview || selectedExecutionIds.length === 0) return
+    const confirmationWorkflowEpoch = workflowEpoch
+    if (
+      !isCurrentWorkflow(confirmationWorkflowEpoch) ||
+      !preview ||
+      selectedExecutionIds.length === 0
+    ) {
+      return
+    }
 
     setIsConfirmOpen(false)
     setIsRunning(true)
@@ -534,6 +601,7 @@ export function useManagedSiteTokenBatchExportDialog({
           failureCount: result.failedCount,
         },
       })
+      if (!isCurrentWorkflow(confirmationWorkflowEpoch)) return
       setExecutionResult(result)
       onCompleted?.(result)
       toast.success(
@@ -553,9 +621,12 @@ export function useManagedSiteTokenBatchExportDialog({
           itemCount: selectedExecutionIds.length,
         },
       })
+      if (!isCurrentWorkflow(confirmationWorkflowEpoch)) return
       setExecutionError(getErrorMessage(error))
     } finally {
-      setIsRunning(false)
+      if (isCurrentWorkflow(confirmationWorkflowEpoch)) {
+        setIsRunning(false)
+      }
     }
   }
 
@@ -585,7 +656,9 @@ export function useManagedSiteTokenBatchExportDialog({
       toggleItem: handleToggleItem,
       changeItemModels: handleItemModelsChange,
       verifyAndRefresh: handleVerifyAndRefresh,
-      openConfirm: () => setIsConfirmOpen(true),
+      openConfirm: () => {
+        if (isCurrentWorkflow(workflowEpoch)) setIsConfirmOpen(true)
+      },
       closeConfirm: () => setIsConfirmOpen(false),
       confirm: handleConfirm,
     },

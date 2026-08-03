@@ -113,7 +113,7 @@ export function ManagedSiteTokenBatchExportDialog({
               isManualPreviewRefresh={dialog.isManualPreviewRefresh}
               isRunning={dialog.isRunning}
               verifyingItemId={dialog.verifyingItemId}
-              isVerificationDialogOpen={verificationState.isOpen}
+              isVerificationDialogOpen={isOpen && verificationState.isOpen}
               onToggleAll={dialog.actions.toggleAll}
               onRefreshPreview={dialog.actions.refreshPreview}
               onToggleItem={dialog.actions.toggleItem}
@@ -125,7 +125,7 @@ export function ManagedSiteTokenBatchExportDialog({
       </Modal>
 
       <DestructiveConfirmDialog
-        isOpen={dialog.isConfirmOpen}
+        isOpen={isOpen && dialog.isConfirmOpen}
         onClose={dialog.actions.closeConfirm}
         onConfirm={dialog.actions.confirm}
         title={t("keyManagement:batchManagedSiteExport.confirm.title")}
@@ -141,7 +141,7 @@ export function ManagedSiteTokenBatchExportDialog({
         isWorking={dialog.isRunning}
       />
       <NewApiManagedVerificationDialog
-        isOpen={verificationState.isOpen}
+        isOpen={isOpen && verificationState.isOpen}
         step={verificationState.step}
         request={verificationState.request}
         code={verificationState.code}

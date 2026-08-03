@@ -12,7 +12,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
   createAccount,
   createToken,
@@ -77,14 +77,18 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
     onOpenCCSwitchDialog?: () => void
   }) => (
     <div>
-      <label>
-        <input
-          type="checkbox"
-          checked={isSelected === true}
-          onChange={(event) => onSelectionChange?.(event.currentTarget.checked)}
-        />
-        {token.name}
-      </label>
+      {onSelectionChange ? (
+        <label>
+          <input
+            type="checkbox"
+            checked={isSelected === true}
+            onChange={(event) => onSelectionChange(event.currentTarget.checked)}
+          />
+          {token.name}
+        </label>
+      ) : (
+        <span>{token.name}</span>
+      )}
       <button type="button" onClick={onOpenCCSwitchDialog}>
         Open CC Switch for {token.name}
       </button>
@@ -274,6 +278,102 @@ describe("TokenList batch export selection", () => {
     expect(token2Selection).not.toBeChecked()
   })
 
+  it("excludes create-response-only keys from selection in a mixed inventory", async () => {
+    const user = userEvent.setup()
+    const recoverableAccount = createAccount({
+      id: "recoverable-account",
+      name: "Recoverable account",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    const createOnlyAccount = createAccount({
+      id: "create-only-account",
+      name: "Create-only account",
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+    const recoverableToken = createToken({
+      id: 1,
+      name: "Recoverable key",
+      accountId: recoverableAccount.id,
+      accountName: recoverableAccount.name,
+    })
+    const createOnlyToken = createToken({
+      id: 2,
+      name: "Create-only key",
+      accountId: createOnlyAccount.id,
+      accountName: createOnlyAccount.name,
+    })
+
+    renderTokenList({
+      selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      displayData: [recoverableAccount, createOnlyAccount] as any,
+      tokens: [recoverableToken, createOnlyToken] as any,
+      filteredTokens: [recoverableToken, createOnlyToken] as any,
+    })
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.expandAll",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("checkbox", { name: "Recoverable key" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("checkbox", { name: "Create-only key" }),
+    ).toBeNull()
+    expect(
+      screen.getAllByRole("checkbox", {
+        name: "keyManagement:batchManagedSiteExport.selection.accountGroup",
+      }),
+    ).toHaveLength(1)
+  })
+
+  it("hides the batch toolbar for an AIHubMix-only inventory", async () => {
+    const createOnlyAccount = createAccount({
+      id: "create-only-account",
+      name: "Create-only account",
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+    const createOnlyToken = createToken({
+      id: 1,
+      name: "Create-only key",
+      accountId: createOnlyAccount.id,
+      accountName: createOnlyAccount.name,
+    })
+
+    renderTokenList({
+      selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      displayData: [createOnlyAccount] as any,
+      tokens: [createOnlyToken] as any,
+      filteredTokens: [createOnlyToken] as any,
+    })
+
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.expandAll",
+      }),
+    )
+
+    expect(await screen.findByText("Create-only key")).toBeVisible()
+    expect(
+      screen.queryByRole("checkbox", {
+        name: "keyManagement:batchManagedSiteExport.selection.accountGroup",
+      }),
+    ).toBeNull()
+    expect(
+      screen.queryByRole("checkbox", {
+        name: "keyManagement:batchManagedSiteExport.selection.visible",
+      }),
+    ).toBeNull()
+    expect(
+      screen.queryByRole("button", {
+        name: /keyManagement:batchManagedSiteExport.actions.open/,
+      }),
+    ).toBeNull()
+  })
+
   it("prunes selected tokens that disappear after data refresh", async () => {
     const user = userEvent.setup()
     const { rerender } = renderTokenList()
@@ -358,7 +458,7 @@ describe("TokenList batch export selection", () => {
     rerender(
       <TokenList
         {...(defaultProps as any)}
-        tokens={[token2] as any}
+        tokens={[token1, token2] as any}
         filteredTokens={[token2] as any}
         onManagedSiteImportSuccess={onManagedSiteImportSuccess}
       />,
@@ -420,6 +520,88 @@ describe("TokenList batch export selection", () => {
       ).toBeNull(),
     )
     expect(screen.getByRole("checkbox", { name: "Token 1" })).toBeChecked()
+  })
+
+  it("closes an open managed-site batch export when eligibility is revoked", async () => {
+    const user = userEvent.setup()
+    const { rerender } = renderTokenList()
+
+    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: /keyManagement:batchManagedSiteExport.actions.open/,
+      }),
+    )
+    expect(
+      await screen.findByText("keyManagement:batchManagedSiteExport.title"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportStartButton,
+      ),
+    )
+    const confirmation = await screen.findByRole("dialog", {
+      name: "keyManagement:batchManagedSiteExport.confirm.title",
+    })
+    const staleConfirmButton = within(confirmation).getByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.start",
+    })
+
+    const createResponseOnlyAccount = createAccount({
+      id: account.id,
+      name: account.name,
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+    rerender(
+      <TokenList
+        {...(defaultProps as any)}
+        displayData={[createResponseOnlyAccount] as any}
+        tokens={[token1, token2] as any}
+        filteredTokens={[token1, token2] as any}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("dialog", {
+        name: "keyManagement:batchManagedSiteExport.confirm.title",
+      }),
+    ).toBeNull()
+    staleConfirmButton.click()
+    await waitFor(() => {
+      expect(
+        screen.queryByText("keyManagement:batchManagedSiteExport.title"),
+      ).toBeNull()
+    })
+    expect(mockExecuteManagedSiteTokenBatchExport).not.toHaveBeenCalled()
+  })
+
+  it("closes an open batch export when a selected token disappears", async () => {
+    const user = userEvent.setup()
+    const { rerender } = renderTokenList()
+
+    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: /keyManagement:batchManagedSiteExport.actions.open/,
+      }),
+    )
+    expect(
+      await screen.findByText("keyManagement:batchManagedSiteExport.title"),
+    ).toBeVisible()
+
+    rerender(
+      <TokenList
+        {...(defaultProps as any)}
+        tokens={[token2] as any}
+        filteredTokens={[token2] as any}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("keyManagement:batchManagedSiteExport.title"),
+      ).toBeNull()
+    })
   })
 
   it("supports grouped selection and CC Switch actions", async () => {
@@ -565,7 +747,7 @@ describe("TokenList batch export selection", () => {
     rerender(
       <TokenList
         {...(defaultProps as any)}
-        tokens={[token2] as any}
+        tokens={[token1, token2] as any}
         filteredTokens={[token2] as any}
       />,
     )
@@ -581,6 +763,41 @@ describe("TokenList batch export selection", () => {
     expect(
       screen.queryByTestId("batch-cli-proxy-export-dialog"),
     ).not.toBeInTheDocument()
+  })
+
+  it("closes an open CLIProxy batch export when eligibility is revoked", async () => {
+    const user = userEvent.setup()
+    const { rerender } = renderTokenList()
+
+    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: /keyManagement:batchCliProxyExport.actions.open/,
+      }),
+    )
+    expect(
+      screen.getByTestId("batch-cli-proxy-export-dialog"),
+    ).toBeInTheDocument()
+
+    const createResponseOnlyAccount = createAccount({
+      id: account.id,
+      name: account.name,
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+    rerender(
+      <TokenList
+        {...(defaultProps as any)}
+        displayData={[createResponseOnlyAccount] as any}
+        tokens={[token1, token2] as any}
+        filteredTokens={[token1, token2] as any}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId("batch-cli-proxy-export-dialog"),
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("saves the selected tokens to API credential profiles and clears selection", async () => {

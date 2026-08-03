@@ -1,6 +1,6 @@
 import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ComponentProps, ReactNode } from "react"
+import { StrictMode, type ComponentProps, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -26,6 +26,7 @@ import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
+  type ManagedSiteTokenBatchExportExecutionResult,
   type ManagedSiteTokenBatchExportPreview,
   type ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
@@ -48,6 +49,7 @@ const createDeferred = <T,>() => {
 
 const {
   mockAllowDisabledVerificationButtonClicks,
+  mockDestructiveConfirmDialogRender,
   mockExecuteBatchExport,
   mockCloseNewApiManagedVerification,
   mockGetPreviewVerificationTargets,
@@ -63,6 +65,7 @@ const {
   mockAllowDisabledVerificationButtonClicks: {
     current: false,
   },
+  mockDestructiveConfirmDialogRender: vi.fn(),
   mockExecuteBatchExport: vi.fn(),
   mockCloseNewApiManagedVerification: vi.fn(),
   mockGetPreviewVerificationTargets: vi.fn(),
@@ -280,8 +283,9 @@ vi.mock("~/components/ui", async (importOriginal) => {
       confirmLabel: string
       cancelLabel: string
       isWorking?: boolean
-    }) =>
-      isOpen ? (
+    }) => {
+      mockDestructiveConfirmDialogRender({ isOpen, onConfirm })
+      return isOpen ? (
         <div role="dialog" aria-label={title}>
           <button type="button" onClick={onClose} disabled={isWorking}>
             {cancelLabel}
@@ -290,7 +294,8 @@ vi.mock("~/components/ui", async (importOriginal) => {
             {confirmLabel}
           </button>
         </div>
-      ) : null,
+      ) : null
+    },
     Modal: ({
       isOpen,
       children,
@@ -844,6 +849,98 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     ).toBeNull()
   })
 
+  it("never exposes a nested confirmation render after the parent closes", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(preview)
+
+    const { rerender } = render(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    expect(
+      screen.getByRole("dialog", {
+        name: "keyManagement:batchManagedSiteExport.confirm.title",
+      }),
+    ).toBeInTheDocument()
+    const capturedConfirm = mockDestructiveConfirmDialogRender.mock.calls.at(
+      -1,
+    )?.[0].onConfirm as () => Promise<void>
+
+    const renderCountBeforeClose =
+      mockDestructiveConfirmDialogRender.mock.calls.length
+    rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={false}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+
+    const closedRenderStates = mockDestructiveConfirmDialogRender.mock.calls
+      .slice(renderCountBeforeClose)
+      .map(([props]) => props.isOpen)
+    expect(closedRenderStates).not.toContain(true)
+    expect(
+      screen.queryByRole("dialog", {
+        name: "keyManagement:batchManagedSiteExport.confirm.title",
+      }),
+    ).toBeNull()
+    await act(async () => {
+      await capturedConfirm()
+    })
+    expect(mockExecuteBatchExport).not.toHaveBeenCalled()
+  })
+
+  it("closes verification state when the parent dialog is invalidated", async () => {
+    mockVerificationDialogState.isOpen = true
+    mockCloseNewApiManagedVerification.mockImplementation(() => {
+      mockVerificationDialogState.isOpen = false
+    })
+    mockPreparePreview.mockResolvedValue(preview)
+
+    const { rerender } = render(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+
+    expect(await screen.findByText("New API verification")).toBeInTheDocument()
+
+    rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={false}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+
+    expect(screen.queryByText("New API verification")).toBeNull()
+    expect(mockCloseNewApiManagedVerification).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    expect(screen.queryByText("New API verification")).toBeNull()
+  })
+
   it("keeps the opened item batch stable across parent rerenders while open", async () => {
     mockPreparePreview.mockResolvedValue(preview)
 
@@ -1303,6 +1400,276 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       expect(button).toBeEnabled()
       expect(button).not.toHaveAttribute("aria-busy")
     }
+  })
+
+  it("discards deferred verification success after close and reopen", async () => {
+    const user = userEvent.setup()
+    const staleVerification = createDeferred<void>()
+    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
+      ...preview,
+      totalCount: 1,
+      readyCount: 0,
+      warningCount: 1,
+      skippedCount: 0,
+      blockedCount: 0,
+      items: [
+        buildRecoverablePreviewItem(preview.items[0], {
+          id: 7,
+          name: "Potential channel",
+        }),
+      ],
+    }
+    mockPreparePreview.mockResolvedValue(recoverablePreview)
+    mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
+      async (params) => {
+        await staleVerification.promise
+        params.setKey("stale-key")
+        params.openVerification({})
+        await Promise.resolve(params.onLoaded?.())
+        return false
+      },
+    )
+
+    const { rerender } = render(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    )
+    await waitFor(() => {
+      expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledOnce()
+    })
+
+    rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={false}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+    rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+
+    await act(async () => {
+      staleVerification.resolve()
+      await staleVerification.promise
+      await Promise.resolve()
+    })
+
+    expect(mockOpenNewApiManagedVerification).not.toHaveBeenCalled()
+    expect(
+      screen.queryByText("keyManagement:batchManagedSiteExport.status.skipped"),
+    ).toBeNull()
+  })
+
+  it("discards deferred verification failure after close and reopen", async () => {
+    const user = userEvent.setup()
+    const staleVerification = createDeferred<void>()
+    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
+      ...preview,
+      totalCount: 1,
+      readyCount: 0,
+      warningCount: 1,
+      skippedCount: 0,
+      blockedCount: 0,
+      items: [
+        buildRecoverablePreviewItem(preview.items[0], {
+          id: 7,
+          name: "Potential channel",
+        }),
+      ],
+    }
+    mockPreparePreview.mockResolvedValue(recoverablePreview)
+    mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
+      async () => {
+        await staleVerification.promise
+        throw new Error("stale verification failed")
+      },
+    )
+
+    const { rerender } = render(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    )
+    await waitFor(() => {
+      expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledOnce()
+    })
+
+    rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={false}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+    rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
+    )
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+
+    await act(async () => {
+      staleVerification.resolve()
+      await staleVerification.promise
+      await Promise.resolve()
+    })
+
+    expect(
+      screen.queryByText(
+        "keyManagement:batchManagedSiteExport.messages.executionFailed",
+      ),
+    ).toBeNull()
+  })
+
+  it("discards deferred verification success after unmount", async () => {
+    const user = userEvent.setup()
+    const staleVerification = createDeferred<void>()
+    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
+      ...preview,
+      totalCount: 1,
+      readyCount: 0,
+      warningCount: 1,
+      skippedCount: 0,
+      blockedCount: 0,
+      items: [
+        buildRecoverablePreviewItem(preview.items[0], {
+          id: 7,
+          name: "Potential channel",
+        }),
+      ],
+    }
+    mockPreparePreview.mockResolvedValue(recoverablePreview)
+    mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
+      async (params) => {
+        await staleVerification.promise
+        params.setKey("stale-key")
+        params.openVerification({})
+        await Promise.resolve(params.onLoaded?.())
+        return false
+      },
+    )
+
+    const { unmount } = renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    )
+    await waitFor(() => {
+      expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledOnce()
+    })
+
+    unmount()
+    await act(async () => {
+      staleVerification.resolve()
+      await staleVerification.promise
+      await Promise.resolve()
+    })
+
+    expect(mockOpenNewApiManagedVerification).not.toHaveBeenCalled()
+  })
+
+  it("does not interpret deferred verification failures after unmount", async () => {
+    const user = userEvent.setup()
+    const staleVerification = createDeferred<void>()
+    const readStaleFailureMessage = vi.fn(() => "stale verification failed")
+    const staleFailure = new Error()
+    Object.defineProperty(staleFailure, "message", {
+      configurable: true,
+      get: readStaleFailureMessage,
+    })
+    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
+      ...preview,
+      totalCount: 1,
+      readyCount: 0,
+      warningCount: 1,
+      skippedCount: 0,
+      blockedCount: 0,
+      items: [
+        buildRecoverablePreviewItem(preview.items[0], {
+          id: 7,
+          name: "Potential channel",
+        }),
+      ],
+    }
+    mockPreparePreview.mockResolvedValue(recoverablePreview)
+    mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
+      async () => {
+        await staleVerification.promise
+        throw staleFailure
+      },
+    )
+
+    const { unmount } = renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+      }),
+    )
+    await waitFor(() => {
+      expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledOnce()
+    })
+
+    unmount()
+    await act(async () => {
+      staleVerification.resolve()
+      await staleVerification.promise
+      await Promise.resolve()
+    })
+
+    expect(readStaleFailureMessage).not.toHaveBeenCalled()
+  })
+
+  it("keeps the active workflow valid through StrictMode effect replay", async () => {
+    mockPreparePreview.mockResolvedValue(preview)
+
+    render(
+      <StrictMode>
+        <ManagedSiteTokenBatchExportDialog
+          isOpen={true}
+          onClose={vi.fn()}
+          items={[{ account, runtimeKey }]}
+        />
+      </StrictMode>,
+    )
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    ).toBeEnabled()
   })
 
   it("removes verified skipped rows from execution selection using the current preview item", async () => {
@@ -1799,6 +2166,138 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(
       mockTrackProductAnalyticsActionCompleted.mock.calls[0]?.[0],
     ).not.toHaveProperty("durationMs")
+  })
+
+  it("tracks deferred execution success after workflow invalidation without stale UI feedback", async () => {
+    const user = userEvent.setup()
+    const deferredExecution =
+      createDeferred<ManagedSiteTokenBatchExportExecutionResult>()
+    const onCompleted = vi.fn()
+    const executionResult: ManagedSiteTokenBatchExportExecutionResult = {
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      skippedCount: 0,
+      items: [],
+    }
+    mockPreparePreview.mockResolvedValue(preview)
+    mockExecuteBatchExport.mockReturnValueOnce(deferredExecution.promise)
+
+    const { rerender } = render(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+        onCompleted={onCompleted}
+      />,
+    )
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+    await waitFor(() => {
+      expect(mockExecuteBatchExport).toHaveBeenCalledOnce()
+    })
+
+    rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={false}
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+        onCompleted={onCompleted}
+      />,
+    )
+    await act(async () => {
+      deferredExecution.resolve(executionResult)
+      await deferredExecution.promise
+      await Promise.resolve()
+    })
+
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledOnce()
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledOnce()
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportManagedSiteTokenChannels,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        selectedCount: 2,
+        itemCount: 2,
+        successCount: 1,
+        failureCount: 1,
+      },
+    })
+    expect(onCompleted).not.toHaveBeenCalled()
+    expect(mockToastSuccess).not.toHaveBeenCalled()
+  })
+
+  it("tracks deferred execution failure after unmount without stale error handling", async () => {
+    const user = userEvent.setup()
+    const deferredExecution = createDeferred<never>()
+    const onCompleted = vi.fn()
+    const readStaleFailureMessage = vi.fn(() => "execute failed")
+    const staleFailure = new Error()
+    Object.defineProperty(staleFailure, "message", {
+      configurable: true,
+      get: readStaleFailureMessage,
+    })
+    mockPreparePreview.mockResolvedValue(preview)
+    mockExecuteBatchExport.mockReturnValueOnce(deferredExecution.promise)
+
+    const { unmount } = renderDialog({ onCompleted })
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "Account 1 / Token 2",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+    await waitFor(() => {
+      expect(mockExecuteBatchExport).toHaveBeenCalledOnce()
+    })
+
+    unmount()
+    await act(async () => {
+      deferredExecution.reject(staleFailure)
+      await deferredExecution.promise.catch(() => undefined)
+      await Promise.resolve()
+    })
+
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledOnce()
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledOnce()
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportManagedSiteTokenChannels,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      insights: {
+        selectedCount: 1,
+        itemCount: 1,
+      },
+    })
+    expect(readStaleFailureMessage).not.toHaveBeenCalled()
+    expect(onCompleted).not.toHaveBeenCalled()
+    expect(mockToastSuccess).not.toHaveBeenCalled()
   })
 
   it("passes edited models to batch execution", async () => {
