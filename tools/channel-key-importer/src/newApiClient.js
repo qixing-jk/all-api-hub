@@ -3,6 +3,8 @@ const MAX_CHANNEL_PAGES = 20
 const MAX_USAGE_PAGES = 500
 const RATE_LIMIT_PATTERN =
   /(?:\b429\b|请求次数过多|too many requests|rate[ -]?limit)/i
+const READ_CACHE_TTL_MS = 30_000
+const readCache = new Map()
 
 const requestHeaders = (config) => {
   const headers = {
@@ -64,6 +66,10 @@ async function requestJson(url, options, secrets = []) {
       message = upstreamMessage
         ? `New API 管理员认证失败：${upstreamMessage}`
         : "New API 管理员认证失败"
+    } else if (response.status === 429) {
+      message = upstreamMessage
+        ? `New API 管理接口正在限流：${upstreamMessage}`
+        : "New API 管理接口正在限流，已停止继续请求"
     } else if (upstreamMessage) {
       message = `New API：${upstreamMessage}`
     } else {
@@ -82,6 +88,17 @@ async function requestJson(url, options, secrets = []) {
     throw error
   }
   return payload
+}
+
+async function cachedRead(key, loader) {
+  const cached = readCache.get(key)
+  if (cached && cached.expiresAt > Date.now()) return cached.value
+  const value = await loader()
+  readCache.set(key, {
+    expiresAt: Date.now() + READ_CACHE_TTL_MS,
+    value,
+  })
+  return value
 }
 
 const channelListItems = (payload) => {
@@ -169,17 +186,22 @@ export async function discoverNewApiUserId({
 export async function fetchNewApiGroups(config) {
   // New API exposes the admin-configured channel groups as a string array.
   // https://github.com/QuantumNous/new-api/blob/main/controller/group.go
-  const payload = await requestNewApiRead(
-    `${config.targetUrl}/api/group/`,
-    { headers: requestHeaders(config) },
-    [config.adminToken, config.sessionCookie].filter(Boolean),
+  return await cachedRead(
+    `groups:${config.targetUrl}:${config.userId}`,
+    async () => {
+      const payload = await requestNewApiRead(
+        `${config.targetUrl}/api/group/`,
+        { headers: requestHeaders(config) },
+        [config.adminToken, config.sessionCookie].filter(Boolean),
+      )
+      const groups = Array.isArray(payload?.data) ? payload.data : []
+      return [...new Set(groups)]
+        .filter((group) => typeof group === "string")
+        .map((group) => group.trim())
+        .filter(Boolean)
+        .slice(0, 200)
+    },
   )
-  const groups = Array.isArray(payload?.data) ? payload.data : []
-  return [...new Set(groups)]
-    .filter((group) => typeof group === "string")
-    .map((group) => group.trim())
-    .filter(Boolean)
-    .slice(0, 200)
 }
 
 export async function fetchNewApiDefaultModels(config, channelType) {
@@ -187,17 +209,22 @@ export async function fetchNewApiDefaultModels(config, channelType) {
   // lets an administrator create channels without sending every provider key
   // upstream merely to discover models first.
   // https://github.com/QuantumNous/new-api/blob/main/controller/model.go
-  const payload = await requestNewApiRead(
-    `${config.targetUrl}/api/models`,
-    { headers: requestHeaders(config) },
-    [config.adminToken, config.sessionCookie].filter(Boolean),
+  return await cachedRead(
+    `models:${config.targetUrl}:${config.userId}:${channelType}`,
+    async () => {
+      const payload = await requestNewApiRead(
+        `${config.targetUrl}/api/models`,
+        { headers: requestHeaders(config) },
+        [config.adminToken, config.sessionCookie].filter(Boolean),
+      )
+      const models = payload?.data?.[String(channelType)]
+      return [...new Set(Array.isArray(models) ? models : [])]
+        .filter((model) => typeof model === "string")
+        .map((model) => model.trim())
+        .filter(Boolean)
+        .slice(0, 2000)
+    },
   )
-  const models = payload?.data?.[String(channelType)]
-  return [...new Set(Array.isArray(models) ? models : [])]
-    .filter((model) => typeof model === "string")
-    .map((model) => model.trim())
-    .filter(Boolean)
-    .slice(0, 2000)
 }
 
 export async function fetchNewApiSystemName(targetUrl) {
@@ -215,8 +242,7 @@ export async function fetchNewApiSystemName(targetUrl) {
 const wait = (milliseconds) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds))
 
-const CHANNEL_MUTATION_RETRY_DELAYS = [1_000, 2_000]
-const NEW_API_READ_RETRY_DELAYS = [500, 1_000, 2_000, 4_000]
+const NEW_API_READ_RETRY_DELAYS = [2_000]
 const MAX_INLINE_RATE_LIMIT_WAIT_MS = 5_000
 
 export function parseRetryAfterMs(value, now = Date.now()) {
@@ -240,13 +266,14 @@ async function requestChannelMutation(url, options, secrets) {
     try {
       return await requestJson(url, options, secrets)
     } catch (error) {
-      if (
-        !isRateLimitError(error) ||
-        attempt >= CHANNEL_MUTATION_RETRY_DELAYS.length
-      ) {
+      if (!isRateLimitError(error) || attempt >= 1) {
         throw error
       }
-      const delay = error.retryAfterMs ?? CHANNEL_MUTATION_RETRY_DELAYS[attempt]
+      // Never blindly replay a channel mutation. Without an explicit short
+      // Retry-After, the caller encrypts the unsubmitted Key and resumes it
+      // from the paced queue instead of increasing New API's critical limit.
+      if (!Number.isFinite(error.retryAfterMs)) throw error
+      const delay = error.retryAfterMs
       if (delay > MAX_INLINE_RATE_LIMIT_WAIT_MS) throw error
       await wait(delay)
     }
@@ -273,7 +300,6 @@ async function requestNewApiRead(url, options, secrets = []) {
 
 async function requestUsageJson(url, config) {
   const secrets = [config.adminToken, config.sessionCookie].filter(Boolean)
-  const retryDelays = [300, 800, 1600]
   for (let attempt = 0; ; attempt += 1) {
     try {
       return await requestJson(
@@ -282,8 +308,15 @@ async function requestUsageJson(url, config) {
         secrets,
       )
     } catch (error) {
-      if (error?.status !== 429 || attempt >= retryDelays.length) throw error
-      await wait(retryDelays[attempt])
+      if (
+        error?.status !== 429 ||
+        attempt >= 1 ||
+        !Number.isFinite(error.retryAfterMs) ||
+        error.retryAfterMs > MAX_INLINE_RATE_LIMIT_WAIT_MS
+      ) {
+        throw error
+      }
+      await wait(error.retryAfterMs)
     }
   }
 }
@@ -563,7 +596,7 @@ export async function listChannelTemplates(config, provider) {
     let payload
     try {
       payload = await requestNewApiRead(
-        `${config.targetUrl}/api/channel/?p=${page}&page_size=${PAGE_SIZE}`,
+        `${config.targetUrl}/api/channel/?p=${page}&page_size=${PAGE_SIZE}&type=${provider.channelType}`,
         { headers: requestHeaders(config) },
         [config.adminToken, config.sessionCookie].filter(Boolean),
       )
@@ -634,33 +667,34 @@ export async function fetchChannelTemplate(config, channelId, provider) {
 
 export async function findSimilarChannels(config, provider) {
   const matches = []
-  for (let page = 1; page <= MAX_CHANNEL_PAGES; page += 1) {
-    const payload = await requestNewApiRead(
-      `${config.targetUrl}/api/channel/?p=${page}&page_size=${PAGE_SIZE}`,
-      { headers: requestHeaders(config) },
-      [config.adminToken, config.sessionCookie].filter(Boolean),
+  // New API can filter the channel list by type. Duplicate warnings only need
+  // a representative set, so one filtered page avoids scanning up to twenty
+  // global pages and consuming the shared per-IP management API quota.
+  // https://github.com/QuantumNous/new-api-docs/blob/main/docs/api/fei-channel-management.md
+  const payload = await requestNewApiRead(
+    `${config.targetUrl}/api/channel/?p=1&page_size=${PAGE_SIZE}&type=${provider.channelType}`,
+    { headers: requestHeaders(config) },
+    [config.adminToken, config.sessionCookie].filter(Boolean),
+  )
+  for (const item of channelListItems(payload)) {
+    const sameType = Number(item?.type) === provider.channelType
+    const providerBaseUrl = String(
+      provider.resolvedBaseUrl || provider.baseUrl || "",
+    ).replace(/\/+$/, "")
+    const sameBaseUrl = Boolean(
+      providerBaseUrl &&
+        String(item?.base_url || "").replace(/\/+$/, "") === providerBaseUrl,
     )
-    const items = channelListItems(payload)
-    for (const item of items) {
-      const sameType = Number(item?.type) === provider.channelType
-      const providerBaseUrl = String(
-        provider.resolvedBaseUrl || provider.baseUrl || "",
-      ).replace(/\/+$/, "")
-      const sameBaseUrl = Boolean(
-        providerBaseUrl &&
-          String(item?.base_url || "").replace(/\/+$/, "") === providerBaseUrl,
-      )
-      if (sameType || sameBaseUrl) {
-        matches.push({
-          id: item.id,
-          name: String(item.name || `渠道 #${item.id}`),
-          status: Number(item.status) === 1 ? "正常" : "已停用",
-          isMultiKey: item?.channel_info?.is_multi_key === true,
-          multiKeySize: Number(item?.channel_info?.multi_key_size) || 0,
-        })
-      }
+    if (sameType || sameBaseUrl) {
+      matches.push({
+        id: item.id,
+        name: String(item.name || `渠道 #${item.id}`),
+        status: Number(item.status) === 1 ? "正常" : "已停用",
+        isMultiKey: item?.channel_info?.is_multi_key === true,
+        multiKeySize: Number(item?.channel_info?.multi_key_size) || 0,
+      })
     }
-    if (matches.length >= 20 || items.length < PAGE_SIZE) break
+    if (matches.length >= 20) break
   }
   return matches.slice(0, 20)
 }

@@ -24,7 +24,7 @@ const readJson = async (request) => {
   return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}")
 }
 
-test("recovers only the rate-limited keys through the encrypted queue", async () => {
+test("paces bulk writes and recovers rate-limited keys through encrypted queues", async () => {
   const root = await mkdtemp(join(tmpdir(), "dataeyesai-recovery-e2e-"))
   const previousDataDir = process.env.DATAEYESAI_DATA_DIR
   const previousStorage = process.env.DATAEYESAI_STORAGE
@@ -33,6 +33,7 @@ test("recovers only the rate-limited keys through the encrypted queue", async ()
 
   const channels = []
   let mutationAttempts = 0
+  let rateLimitNextMutation = false
   const upstream = createServer(async (request, response) => {
     const url = new URL(request.url, "http://127.0.0.1")
     const send = (status, payload, headers = {}) => {
@@ -44,7 +45,8 @@ test("recovers only the rate-limited keys through the encrypted queue", async ()
     }
     if (request.method === "POST" && url.pathname === "/api/channel/") {
       mutationAttempts += 1
-      if (mutationAttempts === 2) {
+      if (rateLimitNextMutation) {
+        rateLimitNextMutation = false
         send(429, null, { "Retry-After": "60" })
         return
       }
@@ -137,7 +139,7 @@ test("recovers only the rate-limited keys through the encrypted queue", async ()
       providerModels: "gpt-4o-mini",
       providerModelMappings: "",
     })
-    const created = await api("/api/create", {
+    const paced = await api("/api/create", {
       previewId: preview.previewId,
       confirmDuplicates: true,
       existingChannelId: null,
@@ -146,26 +148,93 @@ test("recovers only the rate-limited keys through the encrypted queue", async ()
       combineKeys: false,
     })
 
-    assert.equal(created.successCount, 1)
-    assert.ok(created.recoverySchedule, JSON.stringify(created))
-    assert.equal(created.recoverySchedule.counts.pending, 2)
-    assert.equal(mutationAttempts, 2)
-    const completed = await api(
-      `/api/schedules/${created.recoverySchedule.id}/run`,
+    assert.equal(paced.successCount, 1)
+    assert.ok(paced.continuationSchedule, JSON.stringify(paced))
+    assert.equal(paced.continuationSchedule.kind, "paced")
+    assert.equal(paced.continuationSchedule.counts.pending, 2)
+    assert.equal(paced.continuationSchedule.batchSize, 1)
+    assert.equal(paced.continuationSchedule.intervalMinutes, 1)
+    assert.equal(mutationAttempts, 1)
+    const pacedSecond = await api(
+      `/api/schedules/${paced.continuationSchedule.id}/run`,
       {},
     )
-    assert.equal(completed.schedule.counts.pending, 0)
-    assert.equal(completed.schedule.counts.imported, 2)
-    assert.equal(completed.schedule.status, "completed")
-    assert.equal(mutationAttempts, 4)
+    assert.equal(pacedSecond.schedule.counts.pending, 1)
+    assert.equal(pacedSecond.schedule.counts.imported, 1)
+    const pacedCompleted = await api(
+      `/api/schedules/${paced.continuationSchedule.id}/run`,
+      {},
+    )
+    assert.equal(pacedCompleted.schedule.counts.pending, 0)
+    assert.equal(pacedCompleted.schedule.counts.imported, 2)
+    assert.equal(pacedCompleted.schedule.status, "completed")
+    assert.equal(mutationAttempts, 3)
     assert.deepEqual(
       channels.map((channel) => channel.name),
       ["Mock batch · 1", "Mock batch · 2", "Mock batch · 3"],
     )
 
+    const recoveryPreview = await api("/api/preview", {
+      providerId: "openai",
+      name: "Recovery batch",
+      automaticName: false,
+      groups: ["default"],
+      priority: "0",
+      weight: "0",
+      prioritySequence: { enabled: false, step: "1" },
+      configSource: "manual",
+      baseUrl: "https://api.openai.com",
+      apiKey: [
+        "sk-recovery-first-value",
+        "sk-recovery-second-value",
+        "sk-recovery-third-value",
+      ].join("\n"),
+      quotaMode: "uniform",
+      uniformQuota: "x",
+      quotaLines: "",
+      credentialMode: "",
+      credentialParts: {},
+      providerExtra: "",
+      providerFlags: {},
+      providerModels: "gpt-4o-mini",
+      providerModelMappings: "",
+    })
+    rateLimitNextMutation = true
+    const rateLimited = await api("/api/create", {
+      previewId: recoveryPreview.previewId,
+      confirmDuplicates: true,
+      existingChannelId: null,
+      manualModels: [],
+      mappings: [],
+      combineKeys: false,
+    })
+
+    assert.equal(rateLimited.successCount, 0)
+    assert.ok(rateLimited.recoverySchedule, JSON.stringify(rateLimited))
+    assert.equal(rateLimited.recoverySchedule.counts.pending, 3)
+    assert.equal(rateLimited.recoverySchedule.batchSize, 1)
+    assert.equal(mutationAttempts, 4)
+    let recovered
+    for (let index = 0; index < 3; index += 1) {
+      recovered = await api(
+        `/api/schedules/${rateLimited.recoverySchedule.id}/run`,
+        {},
+      )
+    }
+    assert.equal(recovered.schedule.counts.pending, 0)
+    assert.equal(recovered.schedule.counts.imported, 3)
+    assert.equal(recovered.schedule.status, "completed")
+    assert.equal(mutationAttempts, 7)
+    assert.deepEqual(
+      channels.slice(3).map((channel) => channel.name),
+      ["Recovery batch · 1", "Recovery batch · 2", "Recovery batch · 3"],
+    )
+
     const scheduleFile = await readFile(join(root, "schedules.json"), "utf8")
     assert.equal(scheduleFile.includes("sk-mock-second-value"), false)
     assert.equal(scheduleFile.includes("sk-mock-third-value"), false)
+    assert.equal(scheduleFile.includes("sk-recovery-first-value"), false)
+    assert.equal(scheduleFile.includes("sk-recovery-third-value"), false)
   } finally {
     if (importer) await importer.close()
     await close(upstream)

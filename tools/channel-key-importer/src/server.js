@@ -89,7 +89,12 @@ const RATE_LIMIT_RECOVERY_DELAY_MS =
   (Number.isFinite(configuredRateLimitFallback)
     ? Math.max(10, configuredRateLimitFallback)
     : 180) * 1000
-const RATE_LIMIT_RECOVERY_BATCH_SIZE = 10
+const RATE_LIMIT_RECOVERY_BATCH_SIZE = 1
+// New API's default global limiter is shared by all management calls from the
+// same IP. A verified first mutation is followed by one Key per minute so the
+// importer does not exhaust that quota before the next scheduled write.
+// https://github.com/QuantumNous/new-api-docs-v1/blob/main/content/docs/zh/installation/config-maintenance/environment-variables.mdx
+const SAFE_BULK_CONTINUATION_DELAY_MS = 65_000
 
 const configStore = new ConfigStore()
 const balanceStore = new BalanceStore()
@@ -928,15 +933,15 @@ async function createChannelsFromPreview(preview, body) {
   const acknowledged = []
   let rateLimitedFailure = null
   for (const [index, entry] of preview.keys.entries()) {
-    if (rateLimitedFailure) {
-      results.push(
-        deferredRateLimitResult(entry, index + 1, rateLimitedFailure),
-      )
-      continue
-    }
     const originalIndex = Number.isInteger(entry.priorityIndex)
       ? entry.priorityIndex
       : index
+    if (rateLimitedFailure) {
+      results.push(
+        deferredRateLimitResult(entry, originalIndex + 1, rateLimitedFailure),
+      )
+      continue
+    }
     const originalTotal = Number.isInteger(preview.originalKeyCount)
       ? preview.originalKeyCount
       : preview.keys.length
@@ -963,9 +968,9 @@ async function createChannelsFromPreview(preview, body) {
     }
     try {
       await createNewApiChannel(runtimeConfig, createInput)
-      acknowledged.push({ entry, index, createInput })
+      acknowledged.push({ entry, index: originalIndex, createInput })
     } catch (error) {
-      const failure = channelFailureResult(error, entry, index + 1)
+      const failure = channelFailureResult(error, entry, originalIndex + 1)
       results.push(failure)
       if (failure.retryable) rateLimitedFailure = failure
     }
@@ -1117,6 +1122,39 @@ async function createRateLimitRecovery(
     },
     kind: "recovery",
     requestId: `rate-limit:${requestId}`,
+  })
+}
+
+async function createPacedContinuation(
+  preview,
+  body,
+  keys,
+  requestId,
+  now = new Date(),
+) {
+  if (keys.length === 0) return null
+  return await scheduleStore.create({
+    preview: {
+      ...preview,
+      originalKeyCount: preview.originalKeyCount || preview.keys.length,
+      keys,
+    },
+    createOptions: {
+      confirmDuplicates: true,
+      existingChannelId: null,
+      manualModels: Array.isArray(body.manualModels) ? body.manualModels : [],
+      mappings: Array.isArray(body.mappings) ? body.mappings : [],
+      combineKeys: false,
+    },
+    schedule: {
+      startAt: new Date(
+        now.getTime() + SAFE_BULK_CONTINUATION_DELAY_MS,
+      ).toISOString(),
+      batchSize: 1,
+      intervalMinutes: 1,
+    },
+    kind: "paced",
+    requestId: `paced:${requestId}`,
   })
 }
 
@@ -1362,20 +1400,77 @@ async function handleApi(
     const previewId = String(body.previewId || "")
     const preview = previewStore.claim(previewId)
     try {
+      const shouldPaceBulkWrite =
+        body.combineKeys !== true &&
+        !Number(body.existingChannelId || 0) &&
+        preview.keys.length > 1
+      const indexedKeys = preview.keys.map((entry, index) => ({
+        ...entry,
+        priorityIndex: Number.isInteger(entry.priorityIndex)
+          ? entry.priorityIndex
+          : index,
+      }))
+      const operationPreview = shouldPaceBulkWrite
+        ? {
+            ...preview,
+            originalKeyCount: preview.originalKeyCount || preview.keys.length,
+            keys: [indexedKeys[0]],
+          }
+        : preview
       const result = await runChannelOperation(() =>
-        createChannelsFromPreview(preview, body),
+        createChannelsFromPreview(operationPreview, body),
       )
-      const recoverySchedule = await createRateLimitRecovery(
-        preview,
-        body,
-        result,
-        previewId,
-      )
+      const rateLimitedFailure = resultFailures(result).find(isRateLimitError)
+      let recoverySchedule = null
+      let continuationSchedule = null
+      if (shouldPaceBulkWrite && rateLimitedFailure) {
+        const queuedResult = {
+          ...result,
+          keyCount: preview.keys.length,
+          successCount: 0,
+          failedCount: preview.keys.length,
+          results: indexedKeys.map((entry, index) =>
+            index === 0
+              ? rateLimitedFailure
+              : deferredRateLimitResult(entry, index + 1, rateLimitedFailure),
+          ),
+        }
+        recoverySchedule = await createRateLimitRecovery(
+          { ...preview, keys: indexedKeys },
+          body,
+          queuedResult,
+          previewId,
+        )
+      } else if (shouldPaceBulkWrite && result.successCount > 0) {
+        continuationSchedule = await createPacedContinuation(
+          { ...preview, keys: indexedKeys },
+          body,
+          indexedKeys.slice(1),
+          previewId,
+        )
+      } else {
+        recoverySchedule = await createRateLimitRecovery(
+          preview,
+          body,
+          result,
+          previewId,
+        )
+      }
       previewStore.delete(previewId)
-      if (recoverySchedule) await onScheduleChanged()
+      if (recoverySchedule || continuationSchedule) await onScheduleChanged()
       return sendJson(response, 200, {
         ...result,
+        ...(shouldPaceBulkWrite
+          ? {
+              keyCount: preview.keys.length,
+              queuedCount:
+                continuationSchedule?.counts.pending ||
+                recoverySchedule?.counts.pending ||
+                0,
+            }
+          : {}),
         ...(recoverySchedule ? { recoverySchedule } : {}),
+        ...(continuationSchedule ? { continuationSchedule } : {}),
       })
     } catch (error) {
       if (isRateLimitError(error)) {

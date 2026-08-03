@@ -39,6 +39,9 @@ const state = {
 }
 
 const TOKEN_PLACEHOLDER = "粘贴管理员的系统访问令牌"
+const USAGE_REFRESH_INTERVAL_MS = 3_000
+const pause = (milliseconds) =>
+  new Promise((resolve) => setTimeout(resolve, milliseconds))
 
 const $ = (selector) => document.querySelector(selector)
 const elements = {
@@ -1061,11 +1064,18 @@ const isRecoverySchedule = (schedule) =>
     (entry) => entry.status === "pending" && /限流/.test(entry.error || ""),
   )
 
+const isPacedSchedule = (schedule) => schedule?.kind === "paced"
+
 const scheduleStatusCopy = (status, schedule = null) => {
   if (isRecoverySchedule(schedule)) {
     if (status === "active") return "自动续传等待中"
     if (status === "running") return "正在继续写入"
     if (status === "paused") return "续传已暂停"
+  }
+  if (isPacedSchedule(schedule)) {
+    if (status === "active") return "安全队列等待中"
+    if (status === "running") return "正在安全写入"
+    if (status === "paused") return "安全队列已暂停"
   }
   return (
     {
@@ -1626,6 +1636,7 @@ function renderSchedules() {
   for (const schedule of state.schedules) {
     const recovering =
       isRecoverySchedule(schedule) && schedule.counts.pending > 0
+    const paced = isPacedSchedule(schedule) && schedule.counts.pending > 0
     const card = document.createElement("article")
     card.className = `schedule-card${recovering ? " recovering" : ""}`
     card.dataset.scheduleId = schedule.id
@@ -1679,10 +1690,12 @@ function renderSchedules() {
     details.textContent = `每次 ${schedule.batchSize} 条；间隔 ${
       schedule.intervalMinutes
     } 分钟；优先级 ${priorityCopy}；权重 ${schedule.weight}；最近执行 ${formatDateTime(schedule.lastRunAt)}。`
-    if (recovering) {
+    if (recovering || paced) {
       const recovery = document.createElement("p")
       recovery.className = "schedule-recovery-note"
-      recovery.textContent = `${schedule.counts.pending} 条 Key 已加密保留；成功项不会重复写入。下次自动继续：${formatDateTime(schedule.nextRunAt)}。`
+      recovery.textContent = recovering
+        ? `${schedule.counts.pending} 条 Key 已加密保留；成功项不会重复写入。下次自动继续：${formatDateTime(schedule.nextRunAt)}。`
+        : `${schedule.counts.pending} 条 Key 已加密进入安全队列；为避免触发 New API 限流，每分钟自动写入 1 条。下一条：${formatDateTime(schedule.nextRunAt)}。`
       card.append(header, metrics, details, recovery)
     } else {
       card.append(header, metrics, details)
@@ -1797,7 +1810,11 @@ function renderSchedules() {
     const runNow = document.createElement("button")
     runNow.type = "button"
     runNow.className = "table-action"
-    runNow.textContent = recovering ? "立即继续写入" : "立即上一批"
+    runNow.textContent = recovering
+      ? "立即继续写入"
+      : paced
+        ? "立即上一条"
+        : "立即上一批"
     runNow.disabled =
       schedule.counts.pending === 0 ||
       ["running", "cancelled"].includes(schedule.status)
@@ -2546,7 +2563,21 @@ async function createCurrentPreview({ forceNew = false } = {}) {
       }),
     })
     clearSensitiveCredentialInputs()
-    if (result.recoverySchedule) {
+    if (result.continuationSchedule) {
+      state.schedules = [
+        result.continuationSchedule,
+        ...state.schedules.filter(
+          (schedule) => schedule.id !== result.continuationSchedule.id,
+        ),
+      ]
+      renderSchedules()
+      const pending = result.continuationSchedule.counts.pending
+      showStatus(
+        elements.createStatus,
+        `首条已写入，剩余 ${pending} 条已进入安全队列；每分钟自动写入 1 条，避免触发 New API 限流。下一条：${formatDateTime(result.continuationSchedule.nextRunAt)}。`,
+      )
+      toast(`已安全排队：${pending} 条 Key 将自动写入`)
+    } else if (result.recoverySchedule) {
       state.schedules = [
         result.recoverySchedule,
         ...state.schedules.filter(
@@ -2606,13 +2637,15 @@ async function createCurrentPreview({ forceNew = false } = {}) {
     state.pendingSchedule = null
     elements.discardPreview.textContent = "关闭"
     elements.createChannel.querySelector("span").textContent =
-      result.recoverySchedule
-        ? "已转自动续传"
-        : result.operation === "updated"
-          ? "更新完成"
-          : result.operation === "skipped"
-            ? "已自动去重"
-            : "写入完成"
+      result.continuationSchedule
+        ? "已进入安全队列"
+        : result.recoverySchedule
+          ? "已转自动续传"
+          : result.operation === "updated"
+            ? "更新完成"
+            : result.operation === "skipped"
+              ? "已自动去重"
+              : "写入完成"
     if (result.successCount > 0) {
       try {
         await loadRecords()
@@ -2686,41 +2719,46 @@ async function refreshUsageRecords(records, button, options = {}) {
     )
     let updatedCount = 0
     let failedCount = 0
-    for (let index = 0; index < refreshable.length; index += 2) {
-      button.textContent = `刷新中 ${Math.min(
-        index + 2,
-        refreshable.length,
-      )}/${refreshable.length}`
-      const results = await Promise.allSettled(
-        refreshable.slice(index, index + 2).map((record) =>
-          api("/api/imports/refresh", {
-            method: "POST",
-            body: JSON.stringify({ recordId: record.id }),
-          }),
-        ),
-      )
-      for (const result of results) {
-        if (result.status !== "fulfilled") {
-          failedCount += 1
-          continue
-        }
+    let stoppedForRateLimit = false
+    for (let index = 0; index < refreshable.length; index += 1) {
+      button.textContent = `刷新中 ${index + 1}/${refreshable.length}`
+      try {
+        const result = await api("/api/imports/refresh", {
+          method: "POST",
+          body: JSON.stringify({ recordId: refreshable[index].id }),
+        })
         updatedCount += 1
         state.records = state.records.map((record) =>
-          record.id === result.value.record.id ? result.value.record : record,
+          record.id === result.record.id ? result.record : record,
         )
+      } catch (error) {
+        failedCount += 1
+        if (/429|请求次数过多|限流/i.test(error.message)) {
+          stoppedForRateLimit = true
+          break
+        }
+      }
+      if (index < refreshable.length - 1) {
+        await pause(USAGE_REFRESH_INTERVAL_MS)
       }
     }
     renderUsageMonitor()
     renderRecords()
     setUsageMonitorSyncStatus(
-      failedCount > 0 ? `${updatedCount} 条已校准` : "刚刚已校准",
+      stoppedForRateLimit
+        ? `限流保护：已完成 ${updatedCount} 条`
+        : failedCount > 0
+          ? `${updatedCount} 条已校准`
+          : "刚刚已校准",
       failedCount > 0 ? "warning" : "",
     )
     if (!options.silent) {
       toast(
-        failedCount > 0
-          ? `刷新完成：成功 ${updatedCount} 条，失败 ${failedCount} 条`
-          : `已校准 ${updatedCount} 条 Key 累计用量`,
+        stoppedForRateLimit
+          ? `New API 已限流，已停止继续刷新，避免影响上 Key；本次完成 ${updatedCount} 条`
+          : failedCount > 0
+            ? `刷新完成：成功 ${updatedCount} 条，失败 ${failedCount} 条`
+            : `已校准 ${updatedCount} 条 Key 累计用量`,
         failedCount > 0,
       )
     }
@@ -2750,10 +2788,17 @@ async function autoRefreshUsageMonitor() {
     setUsageMonitorSyncStatus("数据已是最新")
     return
   }
-  await refreshUsageRecords(staleRecords, elements.refreshUsageMonitor, {
-    automatic: true,
-    silent: true,
-  })
+  // Entering the usage page only refreshes a very small sample. A full stale
+  // ledger can contain hundreds of channels and would otherwise consume New
+  // API's shared management quota before the user starts importing Keys.
+  await refreshUsageRecords(
+    staleRecords.slice(0, 3),
+    elements.refreshUsageMonitor,
+    {
+      automatic: true,
+      silent: true,
+    },
+  )
 }
 
 elements.refreshRecords.addEventListener("click", async () => {

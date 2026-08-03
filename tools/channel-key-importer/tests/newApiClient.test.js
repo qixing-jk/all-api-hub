@@ -42,7 +42,13 @@ test("reads channel groups from the current New API site", async (context) => {
     }),
   )
 
-  assert.deepEqual(await fetchNewApiGroups(config), ["default", "vip"])
+  assert.deepEqual(
+    await fetchNewApiGroups({
+      ...config,
+      targetUrl: "https://groups.new-api.example.com",
+    }),
+    ["default", "vip"],
+  )
 })
 
 test("retries rate-limited New API reads used by preview", async (context) => {
@@ -64,7 +70,13 @@ test("retries rate-limited New API reads used by preview", async (context) => {
     return jsonResponse({ success: true, data: ["default"] })
   })
 
-  assert.deepEqual(await fetchNewApiGroups(config), ["default"])
+  assert.deepEqual(
+    await fetchNewApiGroups({
+      ...config,
+      targetUrl: "https://retry-groups.new-api.example.com",
+    }),
+    ["default"],
+  )
   assert.equal(requests, 2)
 })
 
@@ -247,8 +259,10 @@ test("automatically finds the user id required by a system access token", async 
 })
 
 test("finds channels sharing a type or a non-empty base URL", async (context) => {
-  context.mock.method(globalThis, "fetch", async () =>
-    jsonResponse({
+  let requestedUrl = ""
+  context.mock.method(globalThis, "fetch", async (url) => {
+    requestedUrl = String(url)
+    return jsonResponse({
       success: true,
       data: {
         items: [
@@ -270,8 +284,8 @@ test("finds channels sharing a type or a non-empty base URL", async (context) =>
           { id: 3, name: "Other", type: 1, base_url: "", status: 1 },
         ],
       },
-    }),
-  )
+    })
+  })
 
   const matches = await findSimilarChannels(config, {
     ...deepSeek,
@@ -294,11 +308,14 @@ test("finds channels sharing a type or a non-empty base URL", async (context) =>
       multiKeySize: 0,
     },
   ])
+  assert.equal(new URL(requestedUrl).searchParams.get("type"), "43")
 })
 
 test("lists same-type channels for explicit template selection", async (context) => {
-  context.mock.method(globalThis, "fetch", async () =>
-    jsonResponse({
+  const requestedUrls = []
+  context.mock.method(globalThis, "fetch", async (url) => {
+    requestedUrls.push(String(url))
+    return jsonResponse({
       success: true,
       data: {
         items: [
@@ -316,8 +333,8 @@ test("lists same-type channels for explicit template selection", async (context)
           { id: 25, name: "OpenAI", type: 1, status: 1 },
         ],
       },
-    }),
-  )
+    })
+  })
 
   assert.deepEqual(await listChannelTemplates(config, { channelType: 33 }), [
     {
@@ -331,6 +348,11 @@ test("lists same-type channels for explicit template selection", async (context)
       weight: 100,
     },
   ])
+  assert.ok(
+    requestedUrls.every(
+      (url) => new URL(url).searchParams.get("type") === "33",
+    ),
+  )
 })
 
 test("keeps unique templates when a later channel page is unavailable", async (context) => {
@@ -607,6 +629,36 @@ test("retries a rate-limited channel creation", async (context) => {
   })
 
   assert.equal(requestCount, 2)
+})
+
+test("does not blindly replay a rate-limited channel creation", async (context) => {
+  let requestCount = 0
+  context.mock.method(globalThis, "fetch", async () => {
+    requestCount += 1
+    return new Response(
+      JSON.stringify({ success: false, message: "请求次数过多，请稍后再试" }),
+      {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      },
+    )
+  })
+
+  await assert.rejects(
+    createNewApiChannel(config, {
+      name: "OpenRouter queued retry",
+      provider: { channelType: 20 },
+      apiKey: "sk-or-rate-limited",
+      baseUrl: "https://openrouter.ai/api",
+      models: ["openai/gpt-4o"],
+      modelMapping: {},
+      channelSettings: {},
+      groups: ["default"],
+    }),
+    /管理接口正在限流/,
+  )
+
+  assert.equal(requestCount, 1)
 })
 
 test("passes provider-specific settings and extra configuration to New API", async (context) => {

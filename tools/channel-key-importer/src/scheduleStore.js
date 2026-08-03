@@ -290,7 +290,12 @@ export class ScheduleStore {
       )
       if (entries.length === 0) throw new Error("没有可定时写入的 Key")
       const { keys, ...storedPreview } = preview
-      const suffix = kind === "recovery" ? "自动续传" : "定时上 Key"
+      const suffix =
+        kind === "recovery"
+          ? "自动续传"
+          : kind === "paced"
+            ? "安全节流队列"
+            : "定时上 Key"
       const job = {
         id: randomUUID(),
         requestId: String(requestId || ""),
