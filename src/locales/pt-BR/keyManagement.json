@@ -189,12 +189,20 @@
   "enabledCount_many": "{{count}} ativas",
   "enabledCount_other": "{{count}} ativas",
   "keyDetails": {
+    "createResponseOnlySecret": "A chave completa está disponível apenas na resposta de criação. Salve-a ao criar a chave.",
     "createTime": "Criada em:",
     "expireTime": "Expira em:",
     "group": "Grupo:",
+    "ipLimits": "Limites de IP:",
     "key": "Chave:",
+    "lastUsedTime": "Último uso:",
+    "limitedQuota": "Cota limitada",
+    "models": "Restrições de modelos:",
     "neverExpires": "Nunca expira",
+    "note": "Observação:",
+    "quotaPolicy": "Política de cota:",
     "remainingQuota": "Cota restante:",
+    "secretUnavailable": "A chave completa não está disponível para esta chave salva.",
     "usedQuota": "Cota usada:"
   },
   "loadError": {

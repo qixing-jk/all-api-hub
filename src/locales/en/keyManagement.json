@@ -183,12 +183,20 @@
   "enabledCount_one": "Enabled {{count}}",
   "enabledCount_other": "Enabled {{count}}",
   "keyDetails": {
+    "createResponseOnlySecret": "The full key is available only in the creation response. Save it when you create the key.",
     "createTime": "Create Time:",
     "expireTime": "Expire Time:",
     "group": "Group:",
+    "ipLimits": "IP Limits:",
     "key": "Key:",
+    "lastUsedTime": "Last Used:",
+    "limitedQuota": "Limited Quota",
+    "models": "Model Restrictions:",
     "neverExpires": "Never Expires",
+    "note": "Note:",
+    "quotaPolicy": "Quota Policy:",
     "remainingQuota": "Remaining Quota:",
+    "secretUnavailable": "The full key is unavailable for this saved key.",
     "usedQuota": "Used Quota:"
   },
   "loadError": {

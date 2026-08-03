@@ -177,12 +177,20 @@
   },
   "enabledCount_other": "{{count}} 件有効",
   "keyDetails": {
+    "createResponseOnlySecret": "完全なキーは作成レスポンスでのみ確認できます。作成時に保存してください。",
     "createTime": "作成時刻:",
     "expireTime": "有効期限:",
     "group": "グループ:",
+    "ipLimits": "IP 制限:",
     "key": "キー:",
+    "lastUsedTime": "最終使用日時:",
+    "limitedQuota": "制限付きクォータ",
+    "models": "モデル制限:",
     "neverExpires": "期限なし",
+    "note": "メモ:",
+    "quotaPolicy": "クォータポリシー:",
     "remainingQuota": "残りクォータ:",
+    "secretUnavailable": "この保存済みキーでは完全なキーを利用できません。",
     "usedQuota": "使用済みクォータ:"
   },
   "loadError": {

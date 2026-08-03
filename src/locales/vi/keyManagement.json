@@ -177,12 +177,20 @@
   },
   "enabledCount_other": "Đã bật {{count}}",
   "keyDetails": {
+    "createResponseOnlySecret": "Khóa đầy đủ chỉ có trong phản hồi tạo khóa. Hãy lưu lại khi tạo.",
     "createTime": "Thời gian tạo:",
     "expireTime": "Thời gian hết hạn:",
     "group": "Nhóm:",
+    "ipLimits": "Giới hạn IP:",
     "key": "Khóa:",
+    "lastUsedTime": "Lần dùng gần nhất:",
+    "limitedQuota": "Hạn ngạch có giới hạn",
+    "models": "Giới hạn mô hình:",
     "neverExpires": "Không bao giờ hết hạn",
+    "note": "Ghi chú:",
+    "quotaPolicy": "Chính sách hạn ngạch:",
     "remainingQuota": "Hạn ngạch còn lại:",
+    "secretUnavailable": "Không có khóa đầy đủ cho khóa đã lưu này.",
     "usedQuota": "Hạn ngạch đã dùng:"
   },
   "loadError": {

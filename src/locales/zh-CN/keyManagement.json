@@ -177,12 +177,20 @@
   },
   "enabledCount": "启用 {{count}} 个",
   "keyDetails": {
+    "createResponseOnlySecret": "完整密钥仅会在创建响应中提供。请在创建时保存。",
     "createTime": "创建时间：",
     "expireTime": "过期时间：",
     "group": "分组：",
+    "ipLimits": "IP 限制：",
     "key": "密钥：",
+    "lastUsedTime": "最近使用时间：",
+    "limitedQuota": "有限额度",
+    "models": "模型限制：",
     "neverExpires": "永不过期",
+    "note": "备注：",
+    "quotaPolicy": "额度策略：",
     "remainingQuota": "剩余额度：",
+    "secretUnavailable": "此已保存密钥的完整值不可用。",
     "usedQuota": "已用额度："
   },
   "loadError": {

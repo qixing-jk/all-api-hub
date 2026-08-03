@@ -177,12 +177,20 @@
   },
   "enabledCount_other": "啟用 {{count}} 個",
   "keyDetails": {
+    "createResponseOnlySecret": "完整金鑰只會在建立回應中提供。請在建立時儲存。",
     "createTime": "建立時間：",
     "expireTime": "過期時間：",
     "group": "分組：",
+    "ipLimits": "IP 限制：",
     "key": "金鑰：",
+    "lastUsedTime": "最近使用時間：",
+    "limitedQuota": "有限額度",
+    "models": "模型限制：",
     "neverExpires": "永不過期",
+    "note": "備註：",
+    "quotaPolicy": "額度策略：",
     "remainingQuota": "剩餘額度：",
+    "secretUnavailable": "此已儲存金鑰的完整值不可用。",
     "usedQuota": "已用額度："
   },
   "loadError": {

@@ -189,12 +189,20 @@
   "enabledCount_many": "{{count}} habilitadas",
   "enabledCount_other": "{{count}} habilitadas",
   "keyDetails": {
+    "createResponseOnlySecret": "La clave completa solo está disponible en la respuesta de creación. Guárdala al crear la clave.",
     "createTime": "Hora de creación:",
     "expireTime": "Hora de expiración:",
     "group": "Grupo:",
+    "ipLimits": "Límites de IP:",
     "key": "Clave:",
+    "lastUsedTime": "Último uso:",
+    "limitedQuota": "Cuota limitada",
+    "models": "Restricciones de modelos:",
     "neverExpires": "Nunca expira",
+    "note": "Nota:",
+    "quotaPolicy": "Política de cuota:",
     "remainingQuota": "Cuota restante:",
+    "secretUnavailable": "La clave completa no está disponible para esta clave guardada.",
     "usedQuota": "Cuota usada:"
   },
   "loadError": {
