@@ -60,6 +60,184 @@ export const collectManagedConfigSecrets = (
   return secrets
 }
 
+const MANAGED_RESOURCE_SECRET_FIELD_PATTERN =
+  /(?:authorization|cookie|credential|password|secret|token|api[_-]?key|^key$|header[_-]?value|channel[_-]?proxy|param(?:eter)?[_-]?override)/i
+const MANAGED_RESOURCE_OVERRIDE_OPERATIONS_FIELD_PATTERN =
+  /^(?:header|body)[_-]?override[_-]?operations$/i
+
+// Provider resource payloads are expected to be shallow. These conservative
+// ceilings keep defensive redaction from becoming an unbounded object walk.
+const MAX_MANAGED_RESOURCE_SECRET_DEPTH = 128
+const MAX_MANAGED_RESOURCE_SECRET_OBJECT_CONTEXTS = 10_000
+const MAX_MANAGED_RESOURCE_SECRET_PROPERTIES = 50_000
+// Bound both collection cardinality and retained text for adversarial payloads.
+const MAX_MANAGED_RESOURCE_SECRET_STRINGS = 1_024
+const MAX_MANAGED_RESOURCE_SECRET_CODE_UNITS = 256 * 1_024
+
+type ManagedResourceSecretTraversalFrame =
+  | {
+      kind: "visit"
+      value: unknown
+      insideSecretField: boolean
+      insideOverrideOperations: boolean
+      depth: number
+    }
+  | {
+      kind: "property"
+      owner: object
+      key: PropertyKey
+      insideSecretField: boolean
+      insideOverrideOperations: boolean
+      depth: number
+    }
+  | { kind: "leave"; value: object }
+
+export type ManagedResourceSecretCollection = Readonly<{
+  knownSecrets: readonly string[]
+  complete: boolean
+}>
+
+/**
+ * Collects secret values from provider-owned resource details and edit drafts.
+ * Callers must ignore provider messages when `complete` is false because a
+ * guarded inspection or traversal ceiling may have hidden another secret.
+ */
+export const collectManagedResourceSecrets = (
+  ...values: readonly unknown[]
+): ManagedResourceSecretCollection => {
+  const secrets = new Set<string>()
+  const visitedContexts = new WeakMap<object, Set<number>>()
+  const activePath = new WeakSet<object>()
+  const stack: ManagedResourceSecretTraversalFrame[] = values
+    .map(
+      (value): ManagedResourceSecretTraversalFrame => ({
+        kind: "visit",
+        value,
+        insideSecretField: false,
+        insideOverrideOperations: false,
+        depth: 0,
+      }),
+    )
+    .reverse()
+  let visitedObjectContexts = 0
+  let scheduledProperties = 0
+  let collectedCodeUnits = 0
+  let complete = true
+
+  while (stack.length > 0) {
+    const frame = stack.pop()!
+    if (frame.kind === "leave") {
+      activePath.delete(frame.value)
+      continue
+    }
+
+    if (frame.kind === "property") {
+      let descriptor: PropertyDescriptor | undefined
+      try {
+        descriptor = Reflect.getOwnPropertyDescriptor(frame.owner, frame.key)
+      } catch {
+        complete = false
+        continue
+      }
+      if (!descriptor || !("value" in descriptor)) {
+        complete = false
+        continue
+      }
+
+      const propertyName = typeof frame.key === "string" ? frame.key : null
+      const itemIsInsideOverrideOperations =
+        frame.insideOverrideOperations ||
+        (propertyName !== null &&
+          MANAGED_RESOURCE_OVERRIDE_OPERATIONS_FIELD_PATTERN.test(propertyName))
+      const itemIsSecret =
+        frame.insideSecretField ||
+        (propertyName !== null &&
+          (MANAGED_RESOURCE_SECRET_FIELD_PATTERN.test(propertyName) ||
+            (frame.insideOverrideOperations && propertyName === "value")))
+      stack.push({
+        kind: "visit",
+        value: descriptor.value,
+        insideSecretField: itemIsSecret,
+        insideOverrideOperations: itemIsInsideOverrideOperations,
+        depth: frame.depth,
+      })
+      continue
+    }
+
+    if (frame.depth > MAX_MANAGED_RESOURCE_SECRET_DEPTH) {
+      complete = false
+      continue
+    }
+    if (typeof frame.value === "string") {
+      if (
+        !frame.insideSecretField ||
+        !frame.value ||
+        secrets.has(frame.value)
+      ) {
+        continue
+      }
+      if (
+        secrets.size >= MAX_MANAGED_RESOURCE_SECRET_STRINGS ||
+        collectedCodeUnits + frame.value.length >
+          MAX_MANAGED_RESOURCE_SECRET_CODE_UNITS
+      ) {
+        complete = false
+        continue
+      }
+      secrets.add(frame.value)
+      collectedCodeUnits += frame.value.length
+      continue
+    }
+    if (!frame.value || typeof frame.value !== "object") continue
+    if (activePath.has(frame.value)) continue
+
+    const contextId =
+      (frame.insideSecretField ? 1 : 0) |
+      (frame.insideOverrideOperations ? 2 : 0)
+    const seenContexts = visitedContexts.get(frame.value)
+    if (seenContexts?.has(contextId)) continue
+    if (visitedObjectContexts >= MAX_MANAGED_RESOURCE_SECRET_OBJECT_CONTEXTS) {
+      complete = false
+      continue
+    }
+    if (seenContexts) seenContexts.add(contextId)
+    else visitedContexts.set(frame.value, new Set([contextId]))
+    visitedObjectContexts += 1
+
+    activePath.add(frame.value)
+    let keys: readonly PropertyKey[]
+    try {
+      keys = Reflect.ownKeys(frame.value)
+    } catch {
+      complete = false
+      activePath.delete(frame.value)
+      continue
+    }
+
+    stack.push({ kind: "leave", value: frame.value })
+    const remainingPropertyBudget =
+      MAX_MANAGED_RESOURCE_SECRET_PROPERTIES - scheduledProperties
+    const propertyCount = Math.min(keys.length, remainingPropertyBudget)
+    if (propertyCount < keys.length) complete = false
+    scheduledProperties += propertyCount
+    for (let index = propertyCount - 1; index >= 0; index -= 1) {
+      stack.push({
+        kind: "property",
+        owner: frame.value,
+        key: keys[index],
+        insideSecretField: frame.insideSecretField,
+        insideOverrideOperations: frame.insideOverrideOperations,
+        depth: frame.depth + 1,
+      })
+    }
+  }
+
+  return Object.freeze({
+    knownSecrets: Object.freeze([...secrets]),
+    complete,
+  })
+}
+
 /**
  * Returns the i18n key for the managed site label shown in UI.
  */

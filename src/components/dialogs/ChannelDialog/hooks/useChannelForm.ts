@@ -14,8 +14,15 @@ import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedUpstreamResourceDraftsCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
-import type { TransitionalLegacyManagedUpstreamResourcesCapability } from "~/services/managedSites/managedUpstreamResourceService"
+import type { ManagedSiteUpstreamResourcesCapability } from "~/services/managedSites/managedUpstreamResourceService"
 import {
+  MANAGED_SITE_MUTATION_OUTCOMES,
+  toPrivateManagedSiteMutationOutput,
+} from "~/services/managedSites/mutations"
+import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
+import {
+  collectManagedConfigSecrets,
+  collectManagedResourceSecrets,
   getManagedSiteConfigMissingMessage,
   hasUsableManagedSiteChannelKey,
 } from "~/services/managedSites/utils/managedSite"
@@ -66,7 +73,7 @@ export type ChannelResourceEditContext = {
   ref: ManagedUpstreamResourceRef
   capabilities: {
     items: Pick<
-      TransitionalLegacyManagedUpstreamResourcesCapability<
+      ManagedSiteUpstreamResourcesCapability<
         unknown,
         unknown,
         ChannelFormData
@@ -194,6 +201,24 @@ export function useChannelForm({
     ? getManagedUpstreamResourceRefKey(resourceEdit.ref)
     : null
 
+  const applyResourceEditDetail = useCallback(
+    (detail: ManagedUpstreamResourceDetail<unknown>, loadRefKey: string) => {
+      if (!resourceEdit) return
+      const descriptors = resourceEdit.capabilities.drafts.describeFields({
+        mode: "edit",
+        detail,
+      })
+      const draft = resourceEdit.capabilities.drafts.prepareEditDraft(detail)
+
+      setResourceDetail(detail)
+      setResourceFieldDescriptors(descriptors)
+      setResourceEditLoadError(null)
+      setResourceEditLoadRefKey(loadRefKey)
+      setFormData(draft)
+    },
+    [resourceEdit],
+  )
+
   const loadManagedSiteType = useCallback(async () => {
     const service = await getManagedSiteService()
     setManagedSiteType(service.siteType)
@@ -282,16 +307,7 @@ export function useChannelForm({
           return
         }
 
-        const descriptors = resourceEdit.capabilities.drafts.describeFields({
-          mode: "edit",
-          detail,
-        })
-        const draft = resourceEdit.capabilities.drafts.prepareEditDraft(detail)
-
-        setResourceDetail(detail)
-        setResourceFieldDescriptors(descriptors)
-        setResourceEditLoadRefKey(loadRefKey)
-        setFormData(draft)
+        applyResourceEditDetail(detail, loadRefKey)
       } catch (error) {
         if (!cancelled) {
           const normalizedError =
@@ -309,7 +325,13 @@ export function useChannelForm({
     return () => {
       cancelled = true
     }
-  }, [isOpen, mode, resourceEdit, resourceEditLoadAttempt])
+  }, [
+    applyResourceEditDetail,
+    isOpen,
+    mode,
+    resourceEdit,
+    resourceEditLoadAttempt,
+  ])
 
   const retryResourceEditLoad = useCallback(() => {
     setResourceEditLoadAttempt((attempt) => attempt + 1)
@@ -522,11 +544,77 @@ export function useChannelForm({
           return
         }
 
+        const resourceSecretCollection = collectManagedResourceSecrets(
+          formData,
+          resourceDetail.native,
+        )
+        const knownSecrets = Object.freeze([
+          ...resourceSecretCollection.knownSecrets,
+          ...(resourceEdit.config !== null &&
+          typeof resourceEdit.config === "object"
+            ? collectManagedConfigSecrets(
+                resourceEdit.config as ManagedSiteRuntimeConfigValue,
+              )
+            : []),
+        ])
         response = await resourceEdit.capabilities.items.update(
           resourceEdit.config,
           resourceDetail,
           formData,
         )
+
+        switch (response.outcome) {
+          case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
+            response = {
+              success: true,
+              data: response.data,
+              message: resourceSecretCollection.complete
+                ? toPrivateManagedSiteMutationOutput(response, {
+                    knownSecrets,
+                  }).message
+                : undefined,
+            }
+            break
+          case MANAGED_SITE_MUTATION_OUTCOMES.Rejected: {
+            const message = resourceSecretCollection.complete
+              ? toPrivateManagedSiteMutationOutput(response, {
+                  knownSecrets,
+                }).message
+              : ""
+            throw new Error(message)
+          }
+          case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
+          case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain: {
+            try {
+              const reconciledDetail =
+                await resourceEdit.capabilities.items.getDetail(
+                  resourceEdit.config,
+                  resourceEdit.ref,
+                )
+              applyResourceEditDetail(
+                reconciledDetail,
+                activeResourceEditRefKey!,
+              )
+            } catch (error) {
+              const reconciliationError =
+                error instanceof Error ? error : new Error(String(error ?? ""))
+              setResourceDetail(null)
+              setResourceFieldDescriptors(null)
+              setResourceEditLoadRefKey(null)
+              setResourceEditLoadError(reconciliationError)
+              logger.error(
+                "Failed to reconcile ambiguous channel update",
+                reconciliationError,
+              )
+            }
+            const message = resourceSecretCollection.complete
+              ? toPrivateManagedSiteMutationOutput(response, {
+                  knownSecrets,
+                }).message
+              : ""
+            throw new Error(message)
+          }
+        }
       } else {
         const apiConfig = await service.getConfig()
         if (!apiConfig) {

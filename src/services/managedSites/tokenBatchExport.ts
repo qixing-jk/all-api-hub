@@ -21,7 +21,7 @@ import {
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import {
   resolveManagedUpstreamResourceFeatureCapabilities,
-  type TransitionalLegacyManagedUpstreamResourcesCapability,
+  type ManagedSiteUpstreamResourcesCapability,
 } from "~/services/managedSites/managedUpstreamResourceService"
 import {
   createManagedSiteOperationContext,
@@ -67,7 +67,7 @@ const TOKEN_BATCH_EXPORT_CONCURRENCY = 4
 const FALLBACK_BLOCKING_MESSAGE = "Failed to prepare this key for batch import"
 
 type TokenBatchExportResourceCapabilities =
-  TransitionalLegacyManagedUpstreamResourcesCapability<
+  ManagedSiteUpstreamResourcesCapability<
     ManagedSiteConfig,
     unknown,
     ChannelFormData

@@ -14,6 +14,17 @@ const {
 
 const listChannelsMock = vi.fn()
 const updateChannelModelMappingMock = vi.fn()
+const succeededMappingResult = {
+  outcome: "succeeded" as const,
+  data: undefined,
+  confirmedEffects: [
+    {
+      kind: "model-mapping-updated" as const,
+      resourceKind: "channel" as const,
+      resourceId: 1,
+    },
+  ],
+}
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: (...args: unknown[]) =>
@@ -46,6 +57,7 @@ const mockedUserPreferences = userPreferences as unknown as {
 describe("ModelRedirectService managed channel operations", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    updateChannelModelMappingMock.mockResolvedValue(succeededMappingResult)
     resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
       supported: false,
       siteType: SITE_TYPES.NEW_API,
@@ -143,7 +155,7 @@ describe("ModelRedirectService managed channel operations", () => {
         { id: 2, name: "c2", models: "a,b", model_mapping: '{"x":"y"}' },
       ],
     })
-    updateChannelModelMappingMock.mockResolvedValue(undefined)
+    updateChannelModelMappingMock.mockResolvedValue(succeededMappingResult)
 
     const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
 
@@ -173,7 +185,7 @@ describe("ModelRedirectService managed channel operations", () => {
         { id: 2, name: "non-empty", models: "a,b", model_mapping: '{"x":"y"}' },
       ],
     })
-    updateChannelModelMappingMock.mockResolvedValue(undefined)
+    updateChannelModelMappingMock.mockResolvedValue(succeededMappingResult)
 
     const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
 
@@ -228,7 +240,7 @@ describe("ModelRedirectService managed channel operations", () => {
           total: 1,
         }),
         getDetail: vi.fn().mockResolvedValue(detail),
-        update: vi.fn().mockResolvedValue({ success: true }),
+        update: vi.fn().mockResolvedValue(succeededMappingResult),
       },
       drafts: {
         prepareEditDraft: vi.fn().mockReturnValue({
@@ -287,7 +299,7 @@ describe("ModelRedirectService managed channel operations", () => {
 
     updateChannelModelMappingMock
       .mockRejectedValueOnce(new Error("boom"))
-      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(succeededMappingResult)
 
     const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
 
@@ -296,6 +308,122 @@ describe("ModelRedirectService managed channel operations", () => {
     expect(result.failedChannels).toBe(1)
     expect(result.errors.join(" ")).toContain("boom")
     expect(result.results).toHaveLength(2)
+  })
+
+  it.each(["partial", "uncertain"] as const)(
+    "refreshes channel inventory and never replays a %s clear write",
+    async (outcome) => {
+      listChannelsMock.mockResolvedValue({
+        items: [
+          {
+            id: 1,
+            name: "c1",
+            models: "a,b",
+            model_mapping: '{"x":"y"}',
+          },
+        ],
+      })
+      updateChannelModelMappingMock.mockResolvedValue(
+        outcome === "partial"
+          ? {
+              outcome,
+              confirmedEffects: [
+                {
+                  kind: "model-mapping-updated",
+                  resourceKind: "channel",
+                  resourceId: 1,
+                },
+              ],
+              completion: "uncertain",
+              diagnostic: { message: `${outcome} clear write` },
+            }
+          : {
+              outcome,
+              diagnostic: { message: `${outcome} clear write` },
+            },
+      )
+
+      const result = await ModelRedirectService.clearChannelModelMappings([1])
+
+      expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()
+      expect(listChannelsMock).toHaveBeenCalledTimes(2)
+      expect(result).toMatchObject({
+        success: false,
+        clearedChannels: 0,
+        failedChannels: 1,
+      })
+      expect(result.errors.join(" ")).toContain(`${outcome} clear write`)
+    },
+  )
+
+  it("redacts a config secret cleared by a rejected direct clear adapter", async () => {
+    const originalSecret = "WillowAmberQuartz418"
+    const mutableConfig = {
+      baseUrl: "https://example.com",
+      adminToken: originalSecret,
+      userId: "1",
+    }
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      managedSiteType: SITE_TYPES.NEW_API,
+      newApi: mutableConfig,
+    })
+    listChannelsMock.mockResolvedValue({
+      items: [
+        {
+          id: 1,
+          name: "c1",
+          models: "a,b",
+          model_mapping: '{"x":"y"}',
+        },
+      ],
+    })
+    updateChannelModelMappingMock.mockImplementation(async (config) => {
+      config.adminToken = ""
+      return {
+        outcome: "rejected",
+        diagnostic: {
+          message: `clear rejected ${originalSecret}`,
+          code: "upstream_rejected",
+        },
+      }
+    })
+
+    const result = await ModelRedirectService.clearChannelModelMappings([1])
+
+    expect(result).toMatchObject({
+      success: false,
+      clearedChannels: 0,
+      failedChannels: 1,
+    })
+    expect(result.errors.join(" ")).toContain("clear rejected")
+    expect(result.errors.join(" ")).not.toContain(originalSecret)
+    expect(mutableConfig.adminToken).toBe("")
+    expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()
+  })
+
+  it("counts an undefined clear-writer result as an invalid mutation contract", async () => {
+    listChannelsMock.mockResolvedValue({
+      items: [
+        {
+          id: 1,
+          name: "c1",
+          models: "a,b",
+          model_mapping: '{"x":"y"}',
+        },
+      ],
+    })
+    updateChannelModelMappingMock.mockResolvedValue(undefined)
+
+    const result = await ModelRedirectService.clearChannelModelMappings([1])
+
+    expect(result).toMatchObject({
+      success: false,
+      clearedChannels: 0,
+      failedChannels: 1,
+    })
+    expect(result.errors.join(" ")).toContain(
+      "Invalid managed site mutation result",
+    )
   })
 
   it("reports missing channels as failures", async () => {

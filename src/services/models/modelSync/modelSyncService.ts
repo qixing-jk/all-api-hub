@@ -5,9 +5,19 @@ import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import {
   resolveManagedUpstreamResourceFeatureCapabilities,
-  type TransitionalLegacyManagedUpstreamResourcesCapability,
+  type ManagedSiteUpstreamResourcesCapability,
 } from "~/services/managedSites/managedUpstreamResourceService"
+import {
+  consumeManagedSiteMutationResult,
+  MANAGED_SITE_MUTATION_RETRY_DECISIONS,
+  type ManagedSiteMutationResult,
+  type ManagedSiteMutationRetryDecision,
+} from "~/services/managedSites/mutations"
 import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
+import {
+  collectManagedConfigSecrets,
+  collectManagedResourceSecrets,
+} from "~/services/managedSites/utils/managedSite"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
@@ -54,12 +64,11 @@ type ModelSyncChannelCapabilities = ManagedSiteChannelsCapability & {
   >
 }
 
-type ModelSyncResourceCapabilities =
-  TransitionalLegacyManagedUpstreamResourcesCapability<
-    ManagedSiteRuntimeConfig["config"],
-    unknown,
-    ChannelFormData
-  >
+type ModelSyncResourceCapabilities = ManagedSiteUpstreamResourcesCapability<
+  ManagedSiteRuntimeConfig["config"],
+  unknown,
+  ChannelFormData
+>
 
 type ModelSyncResourceCacheEntry = {
   capabilities: ModelSyncResourceCapabilities
@@ -77,6 +86,36 @@ type ModelSyncListChannelsOptions = {
  */
 const logger = createLogger("ManagedSiteModelSync")
 
+class ModelSyncMutationError extends Error {
+  constructor(
+    message: string,
+    readonly retryDecision: ManagedSiteMutationRetryDecision,
+  ) {
+    super(message)
+    this.name = "ModelSyncMutationError"
+  }
+}
+
+const consumeModelSyncMutationResult = async (
+  result: unknown,
+  options: {
+    knownSecrets: readonly string[]
+    knownSecretsComplete: boolean
+    reconcile: () => Promise<void>
+  },
+): Promise<void> =>
+  consumeManagedSiteMutationResult(result, {
+    idempotent: true,
+    retryableRejection: true,
+    knownSecrets: options.knownSecrets,
+    knownSecretsComplete: options.knownSecretsComplete,
+    reconcile: options.reconcile,
+    rejectedFallbackMessage: "Model update was rejected",
+    ambiguousFallbackMessage: "Model update requires reconciliation",
+    createError: (message, retryDecision) =>
+      new ModelSyncMutationError(message, retryDecision),
+  })
+
 /**
  * Stop channel work before writeback when its timeout cancellation has fired.
  */
@@ -91,6 +130,20 @@ function throwIfAborted(abortSignal?: AbortSignal) {
  * Handles channel operations for model synchronization
  */
 export class ModelSyncService {
+  get knownSecrets(): readonly string[] {
+    return Object.freeze(
+      collectManagedConfigSecrets(this.managedSiteConfig.config),
+    )
+  }
+
+  get knownSecretsComplete(): boolean {
+    return true
+  }
+
+  async reconcileChannel(): Promise<void> {
+    await this.reconcileChannelMutation()
+  }
+
   private managedSiteConfig: ManagedSiteRuntimeConfig
   private rateLimiter: RateLimiter | null = null
   private allowedModelSet: Set<string> | null = null
@@ -247,6 +300,14 @@ export class ModelSyncService {
     }
   }
 
+  private async reconcileChannelMutation(abortSignal?: AbortSignal) {
+    await this.getChannelListCapability().list(this.managedSiteConfig.config, {
+      beforeRequest: async () => this.throttle(),
+      ...(abortSignal ? { signal: abortSignal } : {}),
+      ...(this.rateLimiter ? { bypassSiteRequestLimit: true } : {}),
+    })
+  }
+
   private toModelSyncChannelFromResource(
     summary: ManagedUpstreamResourceSummary,
   ): ManagedSiteChannel | null {
@@ -379,15 +440,31 @@ export class ModelSyncService {
       ...entry.draft,
       models,
     }
-    const response = await entry.capabilities.items.update(
+    const resourceSecretCollection = collectManagedResourceSecrets(
+      entry.detail.native,
+      draft,
+    )
+    const knownSecrets = Object.freeze([
+      ...collectManagedConfigSecrets(this.managedSiteConfig.config),
+      ...resourceSecretCollection.knownSecrets,
+    ])
+    const result = await entry.capabilities.items.update(
       this.managedSiteConfig.config,
       entry.detail,
       draft,
     )
 
-    if (!response.success) {
-      throw new Error(response.message || "Failed to update channel models")
-    }
+    await consumeModelSyncMutationResult(result, {
+      knownSecrets,
+      knownSecretsComplete: resourceSecretCollection.complete,
+      reconcile: async () => {
+        entry.detail = await entry.capabilities.items.getDetail(
+          this.managedSiteConfig.config,
+          entry.summary.ref,
+        )
+        entry.draft = entry.capabilities.drafts.prepareEditDraft(entry.detail)
+      },
+    })
 
     entry.draft = draft
   }
@@ -480,13 +557,21 @@ export class ModelSyncService {
 
       await this.throttle()
       throwIfAborted(abortSignal)
+      const knownSecrets = Object.freeze(
+        collectManagedConfigSecrets(this.managedSiteConfig.config),
+      )
 
-      await this.getModelSyncChannelCapabilities().updateModels(
+      const result = await this.getModelSyncChannelCapabilities().updateModels(
         this.managedSiteConfig.config,
         channel.id,
         models,
         this.createChannelRequestOptions(abortSignal),
       )
+      await consumeModelSyncMutationResult(result, {
+        knownSecrets,
+        knownSecretsComplete: true,
+        reconcile: () => this.reconcileChannelMutation(abortSignal),
+      })
     } catch (error: any) {
       logger.error("Failed to update channel", { channelId: channel.id, error })
       throw error
@@ -502,7 +587,7 @@ export class ModelSyncService {
     channel: ManagedSiteChannel,
     modelMapping: Record<string, string>,
     abortSignal?: AbortSignal,
-  ): Promise<void> {
+  ): Promise<ManagedSiteMutationResult<unknown>> {
     try {
       const updateModels = union(
         channel.models
@@ -513,14 +598,24 @@ export class ModelSyncService {
       )
       await this.throttle()
       throwIfAborted(abortSignal)
-
-      await this.getModelSyncChannelCapabilities().updateModelMapping(
-        this.managedSiteConfig.config,
-        channel.id,
-        updateModels,
-        modelMapping,
-        this.createChannelRequestOptions(abortSignal),
+      const knownSecrets = Object.freeze(
+        collectManagedConfigSecrets(this.managedSiteConfig.config),
       )
+
+      const result =
+        await this.getModelSyncChannelCapabilities().updateModelMapping(
+          this.managedSiteConfig.config,
+          channel.id,
+          updateModels,
+          modelMapping,
+          this.createChannelRequestOptions(abortSignal),
+        )
+      await consumeModelSyncMutationResult(result, {
+        knownSecrets,
+        knownSecretsComplete: true,
+        reconcile: () => this.reconcileChannelMutation(abortSignal),
+      })
+      return result
     } catch (error) {
       logger.error("Failed to update channel mapping", {
         channelId: channel.id,
@@ -633,6 +728,13 @@ export class ModelSyncService {
         })
 
         attempts += 1
+        if (
+          error instanceof ModelSyncMutationError &&
+          error.retryDecision !==
+            MANAGED_SITE_MUTATION_RETRY_DECISIONS.RetryAllowed
+        ) {
+          break
+        }
         if (attempts > maxRetries) {
           break
         }

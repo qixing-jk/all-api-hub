@@ -13,7 +13,7 @@ import { getManagedSiteService } from "~/services/managedSites/managedSiteServic
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import {
   resolveManagedUpstreamResourceFeatureCapabilities,
-  type TransitionalLegacyManagedUpstreamResourcesCapability,
+  type ManagedSiteUpstreamResourcesCapability,
 } from "~/services/managedSites/managedUpstreamResourceService"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { getNewApiLoginAssistConfig } from "~/services/managedSites/providers/newApi"
@@ -83,7 +83,7 @@ interface ManagedSiteTokenChannelResolvedKeys {
 }
 
 type TokenChannelStatusResourceCapabilities =
-  TransitionalLegacyManagedUpstreamResourcesCapability<ManagedSiteConfig>
+  ManagedSiteUpstreamResourcesCapability<ManagedSiteConfig>
 
 export type ManagedSiteTokenChannelStatus =
   ManagedSiteTokenChannelResolvedKeys &

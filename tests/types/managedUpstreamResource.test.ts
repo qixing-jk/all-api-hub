@@ -8,8 +8,7 @@ import type {
   ManagedUpstreamResourcesCapability,
 } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
-import type { ApiResponse } from "~/services/apiTransport/type"
-import type { TransitionalLegacyManagedUpstreamResourcesCapability } from "~/services/managedSites/managedUpstreamResourceService"
+import type { ManagedSiteUpstreamResourcesCapability } from "~/services/managedSites/managedUpstreamResourceService"
 import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
 import {
   createManagedUpstreamResourceRef,
@@ -143,21 +142,19 @@ describe("managed upstream resource contracts", () => {
     expect(resourcesWithoutSecrets.secrets).toBeUndefined()
   })
 
-  it("keeps provider writes common while the temporary service type stays legacy", () => {
+  it("keeps provider and service resource writes on the common result", () => {
     type ProviderCreateResult = Awaited<
       ReturnType<ManagedUpstreamResourcesCapability["items"]["create"]>
     >
-    type LegacyCreateResult = Awaited<
-      ReturnType<
-        TransitionalLegacyManagedUpstreamResourcesCapability["items"]["create"]
-      >
+    type ServiceCreateResult = Awaited<
+      ReturnType<ManagedSiteUpstreamResourcesCapability["items"]["create"]>
     >
 
     expectTypeOf<ProviderCreateResult>().toEqualTypeOf<
       ManagedSiteMutationResult<ManagedUpstreamResourceSummary | null>
     >()
-    expectTypeOf<LegacyCreateResult>().toEqualTypeOf<
-      ApiResponse<ManagedUpstreamResourceSummary | null>
+    expectTypeOf<ServiceCreateResult>().toEqualTypeOf<
+      ManagedSiteMutationResult<ManagedUpstreamResourceSummary | null>
     >()
   })
 })

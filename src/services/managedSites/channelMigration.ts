@@ -27,13 +27,20 @@ import {
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import {
   resolveManagedUpstreamResourceFeatureCapabilities,
-  type TransitionalLegacyManagedUpstreamResourcesCapability,
+  type ManagedSiteUpstreamResourcesCapability,
 } from "~/services/managedSites/managedUpstreamResourceService"
+import {
+  MANAGED_SITE_MUTATION_OUTCOMES,
+  toPrivateManagedSiteMutationOutput,
+} from "~/services/managedSites/mutations"
 import {
   resolveManagedSiteRuntimeConfigForType,
   type ManagedSiteRuntimeConfigValue,
 } from "~/services/managedSites/runtimeConfig"
-import { needsManagedSiteChannelKeyResolution } from "~/services/managedSites/utils/managedSite"
+import {
+  collectManagedConfigSecrets,
+  needsManagedSiteChannelKeyResolution,
+} from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import {
@@ -49,6 +56,7 @@ import {
   type ManagedSiteMigrationCanonicalExecutionResult,
   type ManagedSiteMigrationCanonicalPreview,
   type ManagedSiteMigrationCanonicalPreviewItem,
+  type ManagedSiteMigrationCreateResult,
   type ManagedSiteMigrationSelection,
   type ManagedSiteMigrationSelectionValidationContext,
   type ManagedSiteMigrationSource,
@@ -85,7 +93,7 @@ type SourceKeyResolutionResult =
     }
 
 type ChannelMigrationResourceCapabilities =
-  TransitionalLegacyManagedUpstreamResourcesCapability<
+  ManagedSiteUpstreamResourcesCapability<
     ManagedSiteRuntimeConfigValue,
     unknown,
     ChannelFormData
@@ -359,20 +367,68 @@ const createTargetChannelForMigration = async (params: {
   targetService: ManagedSiteService
   targetConfig: ManagedSiteRuntimeConfigValue
   draft: ChannelFormData
-}) => {
+  options?: ResourceOperationOptions
+}): Promise<{
+  result: ManagedSiteMigrationCreateResult
+  error?: string
+}> => {
   const targetResources = resolveChannelMigrationResourceCapabilities(
     params.targetSiteType,
   )
 
   if (!targetResources) {
     const payload = params.targetService.buildChannelPayload(params.draft)
-    return await params.targetService.createChannel(
+    const response = await params.targetService.createChannel(
       params.targetConfig,
       payload,
     )
+    return response.success
+      ? { result: { status: "created" } }
+      : {
+          result: {
+            status: "failed",
+            failureCode: migrationFailures.TargetRejected,
+          },
+          error: response.message,
+        }
   }
 
-  return await targetResources.items.create(params.targetConfig, params.draft)
+  const mutation = await targetResources.items.create(
+    params.targetConfig,
+    params.draft,
+  )
+  const output = toPrivateManagedSiteMutationOutput(mutation, {
+    knownSecrets: [
+      ...collectManagedConfigSecrets(params.targetConfig),
+      params.draft.key,
+    ],
+  })
+
+  switch (mutation.outcome) {
+    case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
+      return { result: { status: "created" } }
+    case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
+      return {
+        result: {
+          status: "failed",
+          failureCode: migrationFailures.TargetRejected,
+        },
+        error: output.message,
+      }
+    case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
+    case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
+      try {
+        await targetResources.items.list(
+          params.targetConfig,
+          params.options?.signal
+            ? { signal: params.options.signal }
+            : undefined,
+        )
+      } catch {
+        // Reconciliation is best effort; ambiguous creates remain non-replayable.
+      }
+      return { result: { status: "uncertain" }, error: output.message }
+  }
 }
 
 const buildLegacyTargetPreparationFromCanonicalSource = async (params: {
@@ -567,7 +623,7 @@ export async function executeManagedSiteMigration(params: {
       if (targetCapability) {
         return await targetCapability.create(command, params.options)
       }
-      const response = await createTargetChannelForMigration({
+      const creation = await createTargetChannelForMigration({
         targetSiteType: preview.targetSiteType,
         targetService: legacyTargetService!,
         targetConfig: legacyTargetConfig!,
@@ -576,13 +632,9 @@ export async function executeManagedSiteMigration(params: {
           target: command.projection,
           credential: command.credential,
         }),
+        options: params.options,
       })
-      return response.success
-        ? { status: "created" }
-        : {
-            status: "failed",
-            failureCode: migrationFailures.TargetRejected,
-          }
+      return creation.result
     },
   })
 }
@@ -876,7 +928,7 @@ export async function executeManagedSiteChannelMigration(
           target: targetItem.canonical.target,
           credential: command.credential,
         })
-        const response = await createTargetChannelForMigration({
+        const creation = await createTargetChannelForMigration({
           targetSiteType: preview.targetSiteType,
           targetService: targetService!,
           targetConfig: targetConfig!,
@@ -886,17 +938,13 @@ export async function executeManagedSiteChannelMigration(
             key: executionDraft.key,
           },
         })
-        if (!response.success) {
+        if (creation.result.status === "failed") {
           errors.set(
             targetItem.canonical.selection.selectionId,
-            response.message || "Unknown error",
+            creation.error || "Unknown error",
           )
-          return {
-            status: "failed",
-            failureCode: migrationFailures.TargetRejected,
-          }
         }
-        return { status: "created" }
+        return creation.result
       } catch (error) {
         errors.set(
           targetItem.canonical.selection.selectionId,

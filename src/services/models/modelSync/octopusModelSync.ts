@@ -2,8 +2,15 @@
  * Octopus 模型同步服务
  * 实现 Octopus 站点的模型同步功能
  */
+import { octopusManagedSiteChannels } from "~/services/apiAdapters/managedSites/octopus"
 import * as octopusApi from "~/services/apiService/octopus"
 import { ApiError } from "~/services/apiTransport/errors"
+import {
+  consumeManagedSiteMutationResult,
+  MANAGED_SITE_MUTATION_RETRY_DECISIONS,
+  type ManagedSiteMutationRetryDecision,
+} from "~/services/managedSites/mutations"
+import { collectManagedConfigSecrets } from "~/services/managedSites/utils/managedSite"
 import type {
   ManagedSiteChannel,
   OctopusChannelWithData,
@@ -22,6 +29,16 @@ import { createLogger } from "~/utils/core/logger"
 import { runWithChannelProcessingTimeout } from "./channelProcessingTimeout"
 
 const logger = createLogger("OctopusModelSync")
+
+class OctopusModelSyncMutationError extends Error {
+  constructor(
+    message: string,
+    readonly retryDecision: ManagedSiteMutationRetryDecision,
+  ) {
+    super(message)
+    this.name = "OctopusModelSyncMutationError"
+  }
+}
 
 /**
  * Stop Octopus channel work before writeback when timeout cancellation has fired.
@@ -91,17 +108,28 @@ async function updateChannelModels(
   abortSignal?: AbortSignal,
 ): Promise<void> {
   throwIfAborted(abortSignal)
-  const payload = {
-    id: channel.id,
-    model: models.join(","),
-  }
-  if (abortSignal) {
-    await octopusApi.updateChannel(config, payload, {
-      signal: abortSignal,
-    })
-  } else {
-    await octopusApi.updateChannel(config, payload)
-  }
+  const result = await octopusManagedSiteChannels.updateModels!(
+    config,
+    channel.id,
+    models,
+    abortSignal ? { signal: abortSignal } : undefined,
+  )
+  await consumeManagedSiteMutationResult(result, {
+    idempotent: true,
+    retryableRejection: true,
+    knownSecrets: collectManagedConfigSecrets(config),
+    knownSecretsComplete: true,
+    reconcile: async () => {
+      await octopusManagedSiteChannels.list?.(
+        config,
+        abortSignal ? { signal: abortSignal } : undefined,
+      )
+    },
+    rejectedFallbackMessage: "Model update was rejected",
+    ambiguousFallbackMessage: "Model update requires reconciliation",
+    createError: (message, retryDecision) =>
+      new OctopusModelSyncMutationError(message, retryDecision),
+  })
 }
 
 /**
@@ -187,6 +215,13 @@ async function runForChannel(
       })
 
       attempts += 1
+      if (
+        error instanceof OctopusModelSyncMutationError &&
+        error.retryDecision !==
+          MANAGED_SITE_MUTATION_RETRY_DECISIONS.RetryAllowed
+      ) {
+        break
+      }
       if (attempts > maxRetries) {
         break
       }

@@ -15,15 +15,19 @@ import {
   getAxonHubCredentialCandidates,
   isRegularAxonHubChannelType,
   openAxonHubNativeResourceOperations,
-  type AxonHubNativeFailure,
 } from "~/services/apiAdapters/managedResources/axonHub"
 import {
   mapAxonHubChannelTypeToChannelTypeStrict,
   mapChannelTypeToAxonHubChannelTypeStrict,
 } from "~/services/apiAdapters/managedResources/axonHubChannelType"
+import {
+  MANAGED_SITE_MUTATION_EFFECT_KINDS,
+  MANAGED_SITE_MUTATION_OUTCOMES,
+  type ManagedSiteMutationDiagnostic,
+} from "~/services/managedSites/mutations"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import type { AxonHubChannel, AxonHubCreateChannelInput } from "~/types/axonHub"
+import type { AxonHubChannel } from "~/types/axonHub"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
@@ -117,10 +121,10 @@ const toCanonicalSource = (
   },
 })
 
-const toConfirmedFailureCode = (
-  failure: AxonHubNativeFailure,
+const toConfirmedFailureCodeFromDiagnostic = (
+  diagnostic: ManagedSiteMutationDiagnostic,
 ): ManagedSiteMigrationConfirmedFailureCode => {
-  switch (failure.code) {
+  switch (diagnostic.code) {
     case "upstream_rejected":
       return failures.TargetRejected
     case "configuration_required":
@@ -326,7 +330,7 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           }
           nativeType = mappedType.value
         }
-        const input: AxonHubCreateChannelInput = {
+        const input = {
           type: nativeType,
           name: command.projection.name.trim(),
           ...(baseURL ? { baseURL } : {}),
@@ -350,9 +354,13 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
           }
           return {
             status: "failed",
-            failureCode: toConfirmedFailureCode(error.failure),
+            failureCode: toConfirmedFailureCodeFromDiagnostic({
+              message: error.failure.code,
+              code: error.failure.code,
+            }),
           }
         }
+
         const result = await operations.create(
           input,
           command.projection.status === 1
@@ -360,22 +368,48 @@ export const axonHubManagedSiteMigrationCapability: ManagedSiteMigrationCapabili
             : AXON_HUB_CHANNEL_STATUS.DISABLED,
           options,
         )
-        if (result.certainty === "applied") return { status: "created" }
-        if (result.certainty === "not-applied") {
-          if (
-            result.failure.code === "aborted" &&
-            result.failure.dispatch === "before"
-          ) {
-            throw normalizeAxonHubNativeAbort(
-              new AxonHubNativeError(result.failure),
-            )
-          }
-          return {
-            status: "failed",
-            failureCode: toConfirmedFailureCode(result.failure),
-          }
+
+        switch (result.outcome) {
+          case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
+            if (
+              !result.confirmedEffects.some(
+                (effect) =>
+                  effect.kind ===
+                  MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+              )
+            ) {
+              throw new Error(
+                "AxonHub migration succeeded without a confirmed create effect.",
+              )
+            }
+            return { status: "created" }
+          case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
+            if (result.diagnostic.code === "aborted") {
+              throw normalizeAxonHubNativeAbort(
+                new AxonHubNativeError({ code: "aborted", dispatch: "before" }),
+              )
+            }
+            if (options?.signal?.aborted) {
+              throw (
+                options.signal.reason ??
+                new DOMException("Aborted", "AbortError")
+              )
+            }
+            return {
+              status: "failed",
+              failureCode: toConfirmedFailureCodeFromDiagnostic(
+                result.diagnostic,
+              ),
+            }
+          case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
+          case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
+            try {
+              await operations.list(undefined, options)
+            } catch {
+              // The write remains ambiguous even when the one-shot refresh fails.
+            }
+            return { status: "uncertain" }
         }
-        return { status: "uncertain" }
       },
     },
   }

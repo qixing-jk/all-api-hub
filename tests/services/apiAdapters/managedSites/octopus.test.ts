@@ -597,6 +597,46 @@ describe("Octopus managed-site channel capability", () => {
     })
   })
 
+  it("updates scheduled model lists through the common mutation boundary without changing the payload", async () => {
+    octopusApi.updateChannel.mockResolvedValueOnce({
+      success: true,
+      data: { id: 7 },
+      message: "",
+    })
+    const { octopusManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+    const controller = new AbortController()
+
+    await expect(
+      octopusManagedSiteChannels.updateModels?.(
+        config,
+        7,
+        ["model-a", "model-b"],
+        {
+          signal: controller.signal,
+          bypassSiteRequestLimit: true,
+        },
+      ),
+    ).resolves.toEqual({
+      outcome: "succeeded",
+      confirmedEffects: [
+        {
+          kind: "models-updated",
+          resourceKind: "channel",
+          resourceId: 7,
+        },
+      ],
+      data: undefined,
+    })
+
+    expect(octopusApi.updateChannel).toHaveBeenCalledWith(
+      config,
+      { id: 7, model: "model-a,model-b" },
+      { signal: controller.signal },
+    )
+  })
+
   it("maps Octopus delete responses and failures", async () => {
     octopusApi.deleteChannel.mockResolvedValueOnce({
       success: true,

@@ -21,20 +21,9 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 
 const getSiteTypeCapabilitiesMock = vi.mocked(getSiteTypeCapabilities)
 
-const expectLegacyAdaptedResources = (
+const expectResolvedResources = (
   resources: ManagedUpstreamResourcesCapability,
-) =>
-  expect.objectContaining({
-    items: expect.objectContaining({
-      list: resources.items.list,
-      search: resources.items.search,
-      getDetail: resources.items.getDetail,
-      create: expect.any(Function),
-      update: expect.any(Function),
-      delete: expect.any(Function),
-    }),
-    drafts: resources.drafts,
-  })
+) => resources
 
 describe("managed upstream resource service", () => {
   beforeEach(() => {
@@ -86,11 +75,11 @@ describe("managed upstream resource service", () => {
     ).toEqual({
       supported: true,
       siteType: SITE_TYPES.AXON_HUB,
-      capabilities: expectLegacyAdaptedResources(resources),
+      capabilities: expectResolvedResources(resources),
     })
   })
 
-  it("adapts resource mutation outcomes for legacy callers without raw diagnostics or replay", async () => {
+  it("preserves common resource mutation outcomes at the internal capability boundary", async () => {
     const resources = buildResourcesCapability()
     getSiteTypeCapabilitiesMock.mockReturnValue({
       siteType: SITE_TYPES.NEW_API,
@@ -108,193 +97,48 @@ describe("managed upstream resource service", () => {
     const createMock = vi.mocked(resources.items.create)
     const secret = "sk-example-secret-value"
 
-    createMock.mockResolvedValueOnce({
+    const succeeded = {
       outcome: "succeeded",
       data: null,
       confirmedEffects: [{ kind: "resource-created", resourceKind: "channel" }],
       message: "created",
-    } as never)
+    } as const
+    createMock.mockResolvedValueOnce(succeeded as never)
     await expect(
       resolution.capabilities.items.create({} as never, {} as never),
-    ).resolves.toEqual({ success: true, message: "created", data: null })
+    ).resolves.toBe(succeeded)
 
-    createMock.mockResolvedValueOnce({
+    const rejected = {
       outcome: "rejected",
       diagnostic: {
         message: `provider rejected token ${secret}`,
         raw: { secret },
       },
-    } as never)
+    } as const
+    createMock.mockResolvedValueOnce(rejected as never)
     await expect(
       resolution.capabilities.items.create({} as never, {} as never),
-    ).resolves.toEqual({
-      success: false,
-      message: "provider rejected token [REDACTED]",
-      data: null,
-    })
+    ).resolves.toBe(rejected)
 
-    createMock.mockResolvedValueOnce({
+    const partial = {
       outcome: "partial",
       confirmedEffects: [{ kind: "resource-created", resourceKind: "channel" }],
       completion: "uncertain",
       diagnostic: { message: "status unknown", raw: { secret } },
-    } as never)
+    } as const
+    createMock.mockResolvedValueOnce(partial as never)
     await expect(
       resolution.capabilities.items.create({} as never, {} as never),
-    ).resolves.toEqual({
-      success: true,
-      message: "status unknown",
-      data: null,
-    })
+    ).resolves.toBe(partial)
 
-    createMock.mockResolvedValueOnce({
+    const uncertain = {
       outcome: "uncertain",
       diagnostic: { message: "response lost", raw: { secret } },
-    } as never)
-    const uncertain = await resolution.capabilities.items.create(
-      {} as never,
-      {} as never,
-    )
-    expect(uncertain).toEqual({
-      success: true,
-      message: "response lost",
-      data: null,
-    })
-    expect(JSON.stringify(uncertain)).not.toContain(secret)
-    expect(uncertain).not.toHaveProperty("raw")
-    expect(uncertain).not.toHaveProperty("outcome")
-  })
-
-  it("redacts config credentials from legacy create diagnostics", async () => {
-    const resources = buildResourcesCapability()
-    const capabilities = resolveSupportedResources(
-      SITE_TYPES.NEW_API,
-      resources,
-    )
-    const configSecret = "opaque-reserved-config-value"
-    vi.mocked(resources.items.create).mockResolvedValueOnce(
-      rejectedMutationWithSecrets(configSecret) as never,
-    )
-
+    } as const
+    createMock.mockResolvedValueOnce(uncertain as never)
     await expect(
-      capabilities.items.create(
-        { adminToken: configSecret } as never,
-        { key: "" } as never,
-      ),
-    ).resolves.toEqual(redactedLegacyRejection())
-  })
-
-  it("redacts draft keys from legacy create diagnostics", async () => {
-    const resources = buildResourcesCapability()
-    const capabilities = resolveSupportedResources(
-      SITE_TYPES.NEW_API,
-      resources,
-    )
-    const draftSecret = "opaque-reserved-create-draft-value"
-    vi.mocked(resources.items.create).mockResolvedValueOnce(
-      rejectedMutationWithSecrets(draftSecret) as never,
-    )
-
-    await expect(
-      capabilities.items.create({} as never, { key: draftSecret } as never),
-    ).resolves.toEqual(redactedLegacyRejection())
-  })
-
-  it("redacts draft keys from legacy update diagnostics", async () => {
-    const resources = buildResourcesCapability()
-    const capabilities = resolveSupportedResources(
-      SITE_TYPES.NEW_API,
-      resources,
-    )
-    const draftSecret = "opaque-reserved-update-draft-value"
-    vi.mocked(resources.items.update).mockResolvedValueOnce(
-      rejectedMutationWithSecrets(draftSecret) as never,
-    )
-
-    await expect(
-      capabilities.items.update(
-        {} as never,
-        { native: {} } as never,
-        { key: draftSecret } as never,
-      ),
-    ).resolves.toEqual(redactedLegacyRejection())
-  })
-
-  it("redacts config-only credentials from legacy delete diagnostics", async () => {
-    const resources = buildResourcesCapability()
-    const capabilities = resolveSupportedResources(
-      SITE_TYPES.NEW_API,
-      resources,
-    )
-    const configSecret = "opaque-reserved-delete-config-value"
-    vi.mocked(resources.items.delete).mockResolvedValueOnce(
-      rejectedMutationWithSecrets(configSecret) as never,
-    )
-
-    await expect(
-      capabilities.items.delete(
-        { adminToken: configSecret } as never,
-        {} as never,
-      ),
-    ).resolves.toEqual(redactedLegacyRejection())
-  })
-
-  it("redacts preserved AxonHub native payload secrets from legacy update diagnostics", async () => {
-    const resources = buildResourcesCapability()
-    const capabilities = resolveSupportedResources(
-      SITE_TYPES.AXON_HUB,
-      resources,
-    )
-    const nativeSecrets = [
-      "opaque-reserved-axon-credential-value",
-      "opaque-reserved-axon-setting-value",
-    ]
-    vi.mocked(resources.items.update).mockResolvedValueOnce(
-      rejectedMutationWithSecrets(...nativeSecrets) as never,
-    )
-
-    await expect(
-      capabilities.items.update(
-        {} as never,
-        {
-          native: {
-            credentials: { oauth: { accessToken: nativeSecrets[0] } },
-            settings: { proxy: { password: nativeSecrets[1] } },
-          },
-        } as never,
-        { key: "" } as never,
-      ),
-    ).resolves.toEqual(redactedLegacyRejection(nativeSecrets.length))
-  })
-
-  it("redacts preserved Octopus native payload secrets from legacy update diagnostics", async () => {
-    const resources = buildResourcesCapability()
-    const capabilities = resolveSupportedResources(
-      SITE_TYPES.OCTOPUS,
-      resources,
-    )
-    const nativeSecrets = [
-      "opaque-reserved-octopus-header-value",
-      "opaque-reserved-octopus-proxy-value",
-    ]
-    vi.mocked(resources.items.update).mockResolvedValueOnce(
-      rejectedMutationWithSecrets(...nativeSecrets) as never,
-    )
-
-    await expect(
-      capabilities.items.update(
-        {} as never,
-        {
-          native: {
-            custom_header: [
-              { header_key: "x-example", header_value: nativeSecrets[0] },
-            ],
-            channel_proxy: nativeSecrets[1],
-          },
-        } as never,
-        { key: "" } as never,
-      ),
-    ).resolves.toEqual(redactedLegacyRejection(nativeSecrets.length))
+      resolution.capabilities.items.create({} as never, {} as never),
+    ).resolves.toBe(uncertain)
   })
 
   it("returns a typed unsupported result when an enabled core path lacks the optional capability", () => {
@@ -335,7 +179,7 @@ describe("managed upstream resource service", () => {
     ).toEqual({
       supported: true,
       siteType: SITE_TYPES.NEW_API,
-      capabilities: expectLegacyAdaptedResources(resources),
+      capabilities: expectResolvedResources(resources),
     })
     expect(
       resolveManagedUpstreamResourceCapabilities(SITE_TYPES.VELOERA, {
@@ -385,7 +229,7 @@ describe("managed upstream resource service", () => {
         supported: true,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelRedirect,
-        capabilities: expectLegacyAdaptedResources(resources),
+        capabilities: expectResolvedResources(resources),
       })),
     )
     expect(
@@ -437,7 +281,7 @@ describe("managed upstream resource service", () => {
         supported: true,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
-        capabilities: expectLegacyAdaptedResources(resources),
+        capabilities: expectResolvedResources(resources),
       })),
     )
     expect(
@@ -486,7 +330,7 @@ describe("managed upstream resource service", () => {
           supported: true,
           siteType,
           feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.DuplicateMatching,
-          capabilities: expectLegacyAdaptedResources(resources),
+          capabilities: expectResolvedResources(resources),
         }),
       ),
     )
@@ -521,7 +365,7 @@ describe("managed upstream resource service", () => {
         supported: true,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport,
-        capabilities: expectLegacyAdaptedResources(resources),
+        capabilities: expectResolvedResources(resources),
       })),
     )
     expect(
@@ -572,7 +416,7 @@ describe("managed upstream resource service", () => {
         supported: true,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenChannelStatus,
-        capabilities: expectLegacyAdaptedResources(resources),
+        capabilities: expectResolvedResources(resources),
       })),
     )
     expect(
@@ -633,7 +477,7 @@ describe("managed upstream resource service", () => {
         supported: true,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
-        capabilities: expectLegacyAdaptedResources(resources),
+        capabilities: expectResolvedResources(resources),
       })),
     )
     expect(
@@ -684,7 +528,7 @@ describe("managed upstream resource service", () => {
           supported: true,
           siteType,
           feature,
-          capabilities: expectLegacyAdaptedResources(resources),
+          capabilities: expectResolvedResources(resources),
         })),
       )
       expect(
@@ -749,7 +593,7 @@ describe("managed upstream resource service", () => {
       supported: true,
       siteType: SITE_TYPES.NEW_API,
       feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
-      capabilities: expectLegacyAdaptedResources(resources),
+      capabilities: expectResolvedResources(resources),
     })
   })
 })
@@ -770,42 +614,5 @@ function buildResourcesCapability(): ManagedUpstreamResourcesCapability {
       describeFields: vi.fn(),
       validateDraft: vi.fn(),
     },
-  }
-}
-
-function resolveSupportedResources(
-  siteType: (typeof MANAGED_SITE_TYPES)[number],
-  resources: ManagedUpstreamResourcesCapability,
-) {
-  getSiteTypeCapabilitiesMock.mockReturnValue({
-    siteType,
-    managedSites: {
-      channels: {} as NonNullable<
-        NonNullable<SiteTypeCapabilities["managedSites"]>["channels"]
-      >,
-      resources,
-    },
-  })
-
-  const resolution = resolveManagedUpstreamResourceCapabilities(siteType)
-  if (!resolution.supported) throw new Error("Expected resource support")
-  return resolution.capabilities
-}
-
-function rejectedMutationWithSecrets(...secrets: string[]) {
-  return {
-    outcome: "rejected" as const,
-    diagnostic: { message: `provider response: ${secrets.join(" ")}` },
-  }
-}
-
-function redactedLegacyRejection(secretCount = 1) {
-  return {
-    success: false,
-    message: `provider response: ${Array.from(
-      { length: secretCount },
-      () => "[REDACTED]",
-    ).join(" ")}`,
-    data: null,
   }
 }

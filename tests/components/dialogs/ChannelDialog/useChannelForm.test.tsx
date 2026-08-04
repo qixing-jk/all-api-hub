@@ -20,6 +20,11 @@ import type {
 import type { ManagedUpstreamResourceDetail } from "~/types/managedUpstreamResource"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
+const loggerMocks = vi.hoisted(() => ({
+  error: vi.fn(),
+  warn: vi.fn(),
+}))
+
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteService: vi.fn(),
 }))
@@ -28,6 +33,10 @@ vi.mock("react-hot-toast", () => ({
   default: {
     error: vi.fn(),
   },
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => loggerMocks,
 }))
 
 const buildManagedSiteChannel = (
@@ -539,9 +548,12 @@ describe("useChannelForm", () => {
         }),
     )
     const update = vi.fn().mockResolvedValue({
-      success: true,
+      outcome: "succeeded",
       message: "",
       data: null,
+      confirmedEffects: [
+        { kind: "resource-updated", resourceKind: "channel", resourceId: 32 },
+      ],
     })
     const prepareEditDraft = vi.fn(
       (): ChannelFormData => ({
@@ -638,6 +650,536 @@ describe("useChannelForm", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it.each(["rejected", "partial", "uncertain"] as const)(
+    "does not replay a %s resource-backed update and reconciles ambiguous outcomes",
+    async (outcome) => {
+      const onClose = vi.fn()
+      const onSuccess = vi.fn()
+      const channel = buildManagedSiteChannel({ id: 36 })
+      const detail: ManagedUpstreamResourceDetail<ManagedSiteChannel> = {
+        summary: {
+          ref: {
+            managedSiteType: SITE_TYPES.NEW_API,
+            scopeKey: "https://managed.example.com",
+            resourceId: "36",
+          },
+          displayName: "Example Channel",
+          nativeKind: "channel",
+          status: "enabled",
+          secretState: "masked",
+          capabilities: { canUpdate: true },
+        },
+        native: channel,
+      }
+      const getDetail = vi.fn().mockResolvedValue(detail)
+      const mutationResult =
+        outcome === "rejected"
+          ? {
+              outcome,
+              diagnostic: { message: `${outcome} resource write` },
+            }
+          : outcome === "partial"
+            ? {
+                outcome,
+                confirmedEffects: [
+                  {
+                    kind: "resource-updated" as const,
+                    resourceKind: "channel" as const,
+                    resourceId: 36,
+                  },
+                ],
+                completion: "uncertain" as const,
+                diagnostic: { message: `${outcome} resource write` },
+              }
+            : {
+                outcome,
+                diagnostic: { message: `${outcome} resource write` },
+              }
+      const update = vi.fn().mockResolvedValue(mutationResult)
+      const resourceEdit: ChannelResourceEditContext = {
+        config: {
+          baseUrl: "https://managed.example.com",
+          adminToken: "admin-token",
+          userId: "1",
+        },
+        ref: detail.summary.ref,
+        capabilities: {
+          items: { getDetail, update },
+          drafts: {
+            prepareEditDraft: vi.fn(() => ({
+              name: "Example Channel",
+              type: ChannelType.OpenAI,
+              key: "sk-********",
+              base_url: "https://source.example.com",
+              models: ["gpt-4o"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1 as const,
+            })),
+            describeFields: vi.fn(() => []),
+            validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+          },
+        },
+      }
+
+      const { result } = renderHook(() =>
+        useChannelForm({
+          mode: DIALOG_MODES.EDIT,
+          channel,
+          isOpen: true,
+          onClose,
+          onSuccess,
+          resourceEdit,
+        }),
+      )
+
+      await waitFor(() => expect(result.current.isFormValid).toBe(true))
+      await act(async () => {
+        await result.current.handleSubmit({
+          preventDefault: vi.fn(),
+        } as unknown as FormEvent)
+      })
+
+      expect(update).toHaveBeenCalledOnce()
+      expect(getDetail).toHaveBeenCalledTimes(outcome === "rejected" ? 1 : 2)
+      expect(onSuccess).not.toHaveBeenCalled()
+      expect(onClose).not.toHaveBeenCalled()
+      expect(vi.mocked(toast.error)).toHaveBeenCalled()
+    },
+  )
+
+  it("blocks a second resource update when ambiguous-write reconciliation fails", async () => {
+    const channel = buildManagedSiteChannel({ id: 37, name: "Stale channel" })
+    const detail: ManagedUpstreamResourceDetail<ManagedSiteChannel> = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://managed.example.com",
+          resourceId: "37",
+        },
+        displayName: "Stale channel",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: channel,
+    }
+    const reconcileError = new Error("fresh read failed")
+    const getDetail = vi
+      .fn()
+      .mockResolvedValueOnce(detail)
+      .mockRejectedValueOnce(reconcileError)
+    const update = vi.fn().mockResolvedValue({
+      outcome: "partial",
+      confirmedEffects: [
+        { kind: "resource-updated", resourceKind: "channel", resourceId: 37 },
+      ],
+      completion: "uncertain",
+      diagnostic: { message: "update state unknown" },
+    })
+    const resourceEdit: ChannelResourceEditContext = {
+      config: {
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      },
+      ref: detail.summary.ref,
+      capabilities: {
+        items: { getDetail, update },
+        drafts: {
+          prepareEditDraft: vi.fn(() => ({
+            name: "Stale channel",
+            type: ChannelType.OpenAI,
+            key: "draft-key",
+            base_url: "https://source.example.com",
+            models: ["gpt-4o"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: DEFAULT_CHANNEL_FIELDS.status,
+          })),
+          describeFields: vi.fn(() => []),
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    }
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose: vi.fn(),
+        resourceEdit,
+      }),
+    )
+
+    await waitFor(() => expect(result.current.isFormValid).toBe(true))
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+
+    expect(update).toHaveBeenCalledOnce()
+    expect(result.current.isResourceEditReady).toBe(false)
+    expect(result.current.isFormValid).toBe(false)
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+    expect(update).toHaveBeenCalledOnce()
+  })
+
+  it("replaces stale resource detail and draft after ambiguous-write reconciliation", async () => {
+    const staleChannel = buildManagedSiteChannel({
+      id: 38,
+      name: "Stale channel",
+      key: "stale-key",
+    })
+    const freshChannel = buildManagedSiteChannel({
+      id: 38,
+      name: "Fresh channel",
+      key: "fresh-key",
+    })
+    const staleDetail: ManagedUpstreamResourceDetail<ManagedSiteChannel> = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://managed.example.com",
+          resourceId: "38",
+        },
+        displayName: "Stale channel",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: staleChannel,
+    }
+    const freshDetail: ManagedUpstreamResourceDetail<ManagedSiteChannel> = {
+      summary: { ...staleDetail.summary, displayName: "Fresh channel" },
+      native: freshChannel,
+    }
+    const getDetail = vi
+      .fn()
+      .mockResolvedValueOnce(staleDetail)
+      .mockResolvedValueOnce(freshDetail)
+    const update = vi
+      .fn()
+      .mockResolvedValueOnce({
+        outcome: "uncertain",
+        diagnostic: { message: "update state unknown" },
+      })
+      .mockResolvedValueOnce({
+        outcome: "rejected",
+        diagnostic: { message: "second update rejected" },
+      })
+    const prepareEditDraft = vi.fn(
+      (current: ManagedUpstreamResourceDetail<unknown>): ChannelFormData => {
+        const native = current.native as ManagedSiteChannel
+        return {
+          name: native.name,
+          type: native.type,
+          key: native.key,
+          base_url: native.base_url ?? "",
+          models: native.models.split(","),
+          groups: ["default"],
+          priority: native.priority,
+          weight: native.weight,
+          status: native.status,
+        }
+      },
+    )
+    const describeFields = vi.fn(() => [])
+    const resourceEdit: ChannelResourceEditContext = {
+      config: {
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      },
+      ref: staleDetail.summary.ref,
+      capabilities: {
+        items: { getDetail, update },
+        drafts: {
+          prepareEditDraft,
+          describeFields,
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    }
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel: staleChannel,
+        isOpen: true,
+        onClose: vi.fn(),
+        resourceEdit,
+      }),
+    )
+
+    await waitFor(() =>
+      expect(result.current.formData.name).toBe("Stale channel"),
+    )
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+
+    await waitFor(() =>
+      expect(result.current.formData.name).toBe("Fresh channel"),
+    )
+    expect(result.current.formData.key).toBe("fresh-key")
+    expect(prepareEditDraft).toHaveBeenLastCalledWith(freshDetail)
+    expect(describeFields).toHaveBeenLastCalledWith({
+      mode: "edit",
+      detail: freshDetail,
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+    expect(update).toHaveBeenNthCalledWith(
+      2,
+      resourceEdit.config,
+      freshDetail,
+      expect.objectContaining({ name: "Fresh channel", key: "fresh-key" }),
+    )
+  })
+
+  it("redacts draft and preserved native secrets from resource update feedback", async () => {
+    const draftSecret = "MarbleCobaltFjord927"
+    const headerValue = "WillowAmberQuartz418"
+    const channelProxy = "http://proxy-user:Quartz418@example.invalid:8080"
+    const paramOverride = '{"api_key":"IndigoSummit563"}'
+    const configSecret = "CedarIndigoSummit563"
+    const diagnosticPrefix = "Provider rejected mutable resource update"
+    const channel = buildManagedSiteChannel({
+      id: 39,
+      key: draftSecret,
+      base_url: "https://source.example.invalid",
+    })
+    const detail: ManagedUpstreamResourceDetail<unknown> = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.OCTOPUS,
+          scopeKey: "https://managed.example.invalid",
+          resourceId: "39",
+        },
+        displayName: "Secret channel",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "available",
+        capabilities: { canUpdate: true },
+      },
+      native: {
+        custom_header: [
+          { header_key: "X-Example-Key", header_value: headerValue },
+        ],
+        channel_proxy: channelProxy,
+        param_override: paramOverride,
+      },
+    }
+    const getDetail = vi
+      .fn()
+      .mockResolvedValueOnce(detail)
+      .mockRejectedValueOnce(new Error("reconciliation unavailable"))
+    const update = vi
+      .fn()
+      .mockImplementation(
+        async (_config, mutableDetail, mutableDraft: ChannelFormData) => {
+          const mutableNative = mutableDetail.native as {
+            custom_header: Array<{ header_value: string }>
+            channel_proxy: string
+            param_override: string
+          }
+          mutableDraft.key = ""
+          mutableNative.custom_header[0].header_value = ""
+          mutableNative.channel_proxy = ""
+          mutableNative.param_override = ""
+          return {
+            outcome: "uncertain",
+            diagnostic: {
+              message: `${diagnosticPrefix} ${configSecret} ${draftSecret} ${headerValue} ${channelProxy} ${paramOverride}`,
+            },
+          }
+        },
+      )
+    const resourceEdit: ChannelResourceEditContext = {
+      config: {
+        baseUrl: "https://managed.example.invalid",
+        username: "admin-placeholder",
+        password: configSecret,
+      },
+      ref: detail.summary.ref,
+      capabilities: {
+        items: { getDetail, update },
+        drafts: {
+          prepareEditDraft: vi.fn(() => ({
+            name: "Secret channel",
+            type: ChannelType.OpenAI,
+            key: draftSecret,
+            base_url: "https://source.example.invalid",
+            models: ["gpt-4o"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: DEFAULT_CHANNEL_FIELDS.status,
+          })),
+          describeFields: vi.fn(() => [
+            { name: "key", label: "Key", type: "secret" as const },
+          ]),
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    }
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose: vi.fn(),
+        resourceEdit,
+      }),
+    )
+
+    await waitFor(() => expect(result.current.isFormValid).toBe(true))
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+
+    const toastPayload = JSON.stringify(vi.mocked(toast.error).mock.calls)
+    const loggedError = loggerMocks.error.mock.calls.at(-1)?.[1] as Error
+    expect(loggedError.message).toContain(diagnosticPrefix)
+    expect(toastPayload).not.toContain(configSecret)
+    expect(toastPayload).not.toContain(draftSecret)
+    expect(toastPayload).not.toContain(headerValue)
+    expect(toastPayload).not.toContain(channelProxy)
+    expect(toastPayload).not.toContain(paramOverride)
+    expect(loggedError.message).not.toContain(configSecret)
+    expect(loggedError.message).not.toContain(draftSecret)
+    expect(loggedError.message).not.toContain(headerValue)
+    expect(loggedError.message).not.toContain(channelProxy)
+    expect(loggedError.message).not.toContain(paramOverride)
+  })
+
+  it("uses only translated fallback feedback when resource secret collection is incomplete", async () => {
+    const hiddenSecret = "ui-proxy-hidden-secret-placeholder"
+    const providerText = "Provider UI diagnostic must stay private"
+    const channel = buildManagedSiteChannel({ id: 40 })
+    const native = new Proxy(
+      { token: hiddenSecret },
+      {
+        ownKeys() {
+          throw new Error("resource inspection unavailable")
+        },
+      },
+    )
+    const detail: ManagedUpstreamResourceDetail<unknown> = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://managed.example.invalid",
+          resourceId: "40",
+        },
+        displayName: "Incomplete secret channel",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "available",
+        capabilities: { canUpdate: true },
+      },
+      native,
+    }
+    const getDetail = vi.fn().mockResolvedValue(detail)
+    const update = vi
+      .fn()
+      .mockResolvedValueOnce({
+        outcome: "rejected",
+        diagnostic: { message: `${providerText} ${hiddenSecret}` },
+      })
+      .mockResolvedValueOnce({
+        outcome: "succeeded",
+        data: null,
+        confirmedEffects: [],
+        message: `${providerText} ${hiddenSecret}`,
+      })
+    const resourceEdit: ChannelResourceEditContext = {
+      config: {
+        baseUrl: "https://managed.example.invalid",
+        adminToken: "admin-token-placeholder",
+        userId: "1",
+      },
+      ref: detail.summary.ref,
+      capabilities: {
+        items: { getDetail, update },
+        drafts: {
+          prepareEditDraft: vi.fn(() => ({
+            name: "Incomplete secret channel",
+            type: ChannelType.OpenAI,
+            key: "draft-key-placeholder",
+            base_url: "https://source.example.invalid",
+            models: ["gpt-4o"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: DEFAULT_CHANNEL_FIELDS.status,
+          })),
+          describeFields: vi.fn(() => []),
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    }
+    const onSuccess = vi.fn()
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess,
+        resourceEdit,
+      }),
+    )
+
+    await waitFor(() => expect(result.current.isFormValid).toBe(true))
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+
+    const toastPayload = JSON.stringify(vi.mocked(toast.error).mock.calls)
+    const loggedError = loggerMocks.error.mock.calls.at(-1)?.[1] as Error
+    expect(vi.mocked(toast.error)).toHaveBeenLastCalledWith(
+      "channelDialog:messages.saveFailed",
+    )
+    expect(toastPayload).not.toContain(providerText)
+    expect(toastPayload).not.toContain(hiddenSecret)
+    expect(loggedError.message).toBe("")
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "managedSiteChannels:toasts.channelUpdated",
+      }),
+    )
+    expect(JSON.stringify(onSuccess.mock.calls)).not.toContain(providerText)
+    expect(JSON.stringify(onSuccess.mock.calls)).not.toContain(hiddenSecret)
+  })
+
   it("invalidates loaded resource detail when the resource edit ref changes", async () => {
     const preventDefault = vi.fn()
     const channel = buildManagedSiteChannel({
@@ -680,9 +1222,12 @@ describe("useChannelForm", () => {
           }),
       )
     const update = vi.fn().mockResolvedValue({
-      success: true,
+      outcome: "succeeded",
       message: "",
       data: null,
+      confirmedEffects: [
+        { kind: "resource-updated", resourceKind: "channel", resourceId: 32 },
+      ],
     })
     const resourceEdit: ChannelResourceEditContext = {
       config: {
@@ -811,9 +1356,12 @@ describe("useChannelForm", () => {
       },
     } as const
     const update = vi.fn().mockResolvedValue({
-      success: true,
+      outcome: "succeeded",
       message: "",
       data: null,
+      confirmedEffects: [
+        { kind: "resource-updated", resourceKind: "channel", resourceId: 34 },
+      ],
     })
     const validateDraft = vi.fn(() => ({ valid: true, errors: [] }))
     const resourceEdit = {

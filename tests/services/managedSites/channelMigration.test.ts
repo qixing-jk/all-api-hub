@@ -3236,8 +3236,11 @@ describe("channelMigration", () => {
       type: AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES,
     }))
     const create = vi.fn().mockResolvedValue({
-      success: true,
-      message: "created",
+      outcome: "succeeded",
+      data: null,
+      confirmedEffects: [
+        { kind: "resource-created", resourceKind: "channel", resourceId: 81 },
+      ],
     })
     mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
       (siteType: string, feature: string) =>
@@ -3328,6 +3331,132 @@ describe("channelMigration", () => {
     })
   })
 
+  it.each(["rejected", "partial", "uncertain"] as const)(
+    "maps a feature-gated resource %s result without replaying creation",
+    async (outcome) => {
+      const { executeManagedSiteChannelMigration } = await import(
+        "~/services/managedSites/channelMigration"
+      )
+      const list = vi.fn().mockResolvedValue({ items: [], total: 0 })
+      const create = vi.fn().mockResolvedValue(
+        outcome === "rejected"
+          ? {
+              outcome,
+              diagnostic: { message: "resource rejected" },
+            }
+          : outcome === "partial"
+            ? {
+                outcome,
+                confirmedEffects: [
+                  {
+                    kind: "resource-created",
+                    resourceKind: "channel",
+                    resourceId: 81,
+                  },
+                ],
+                completion: "uncertain",
+                diagnostic: { message: "resource partial" },
+              }
+            : {
+                outcome,
+                diagnostic: { message: "resource uncertain" },
+              },
+      )
+      mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
+        (siteType: string, feature: string) =>
+          siteType === SITE_TYPES.AXON_HUB &&
+          feature === MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration
+            ? {
+                supported: true,
+                siteType,
+                feature,
+                capabilities: {
+                  items: {
+                    list,
+                    search: vi.fn(),
+                    getDetail: vi.fn(),
+                    create,
+                    update: vi.fn(),
+                    delete: vi.fn(),
+                  },
+                  drafts: {
+                    prepareImportDraft: vi.fn(),
+                    prepareEditDraft: vi.fn(),
+                    describeFields: vi.fn(),
+                    validateDraft: vi.fn(),
+                  },
+                },
+              }
+            : {
+                supported: false,
+                siteType,
+                feature,
+                reason: "feature-slice-disabled",
+              },
+      )
+
+      const result = await executeManagedSiteChannelMigration({
+        preview: {
+          sourceSiteType: SITE_TYPES.NEW_API,
+          targetSiteType: SITE_TYPES.AXON_HUB,
+          generalWarningCodes: [],
+          totalCount: 1,
+          readyCount: 1,
+          blockedCount: 0,
+          items: [
+            {
+              channelId: 81,
+              channelName: "Resource Outcome",
+              sourceChannel: buildManagedSiteChannel({
+                id: 81,
+                name: "Resource Outcome",
+              }),
+              draft: {
+                name: "Resource Outcome",
+                type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+                key: "resource-key",
+                base_url: "https://source.example.invalid",
+                models: ["model-example"],
+                groups: ["default"],
+                priority: 0,
+                weight: 0,
+                status: 1,
+              },
+              status: "ready",
+              warningCodes: [],
+            },
+          ],
+        },
+      })
+
+      expect(create).toHaveBeenCalledOnce()
+      if (outcome === "rejected") {
+        expect(list).not.toHaveBeenCalled()
+        expect(result).toMatchObject({
+          createdCount: 0,
+          failedCount: 1,
+          uncertainCount: 0,
+        })
+        expect(result.items[0]).toMatchObject({
+          success: false,
+          error: "resource rejected",
+        })
+        expect(result.items[0]).not.toHaveProperty("uncertain")
+      } else {
+        expect(list).toHaveBeenCalledOnce()
+        expect(result).toMatchObject({
+          createdCount: 0,
+          failedCount: 0,
+          uncertainCount: 1,
+        })
+        expect(result.items[0]).toMatchObject({
+          success: false,
+          uncertain: true,
+        })
+      }
+    },
+  )
+
   it("executes resource target drafts prepared during preview without preparing them again", async () => {
     const {
       executeManagedSiteChannelMigration,
@@ -3338,8 +3467,11 @@ describe("channelMigration", () => {
       preparedByPreview: true,
     }))
     const create = vi.fn().mockResolvedValue({
-      success: true,
-      message: "created",
+      outcome: "succeeded",
+      data: null,
+      confirmedEffects: [
+        { kind: "resource-created", resourceKind: "channel", resourceId: 82 },
+      ],
     })
     mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
       (siteType: string, feature: string) =>
@@ -3457,8 +3589,15 @@ describe("channelMigration", () => {
         "~/services/managedSites/channelMigration"
       )
       const create = vi.fn().mockResolvedValue({
-        success: true,
-        message: "created",
+        outcome: "succeeded",
+        data: null,
+        confirmedEffects: [
+          {
+            kind: "resource-created",
+            resourceKind: "channel",
+            resourceId: "prepared-target",
+          },
+        ],
       })
       const previewDraft = {
         name: "Prepared Target",
@@ -4881,7 +5020,7 @@ describe("channelMigration", () => {
     expect(create).not.toHaveBeenCalled()
   })
 
-  it("stops canonical Axon creation after an actual native abort and retains secret-free progress", async () => {
+  it("stops canonical Axon creation after an adapter abort and retains secret-free progress", async () => {
     const { executeManagedSiteMigration } = await import(
       "~/services/managedSites/channelMigration"
     )
@@ -4897,6 +5036,21 @@ describe("channelMigration", () => {
       status: "ready" as const,
       credential: "execution-key",
     }))
+    const nativeAbort = new axonHubNativeResources.AxonHubNativeError({
+      code: "aborted",
+      dispatch: "before",
+    })
+    const adapterAbort = new DOMException(
+      "The operation was aborted",
+      "AbortError",
+    )
+    Object.defineProperty(adapterAbort, "cause", {
+      value: nativeAbort,
+      configurable: true,
+    })
+    const createTarget = vi.fn(async () => {
+      throw adapterAbort
+    })
     mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
       siteType === SITE_TYPES.NEW_API
         ? {
@@ -4906,40 +5060,34 @@ describe("channelMigration", () => {
             },
           }
         : siteType === SITE_TYPES.AXON_HUB
-          ? { target: axonHubManagedSiteMigrationCapability.target }
+          ? {
+              target: {
+                ...axonHubManagedSiteMigrationCapability.target,
+                create: createTarget,
+              },
+            }
           : null,
     )
-    const nativeAbort = new axonHubNativeResources.AxonHubNativeError({
-      code: "aborted",
-      dispatch: "before",
+
+    const error = await captureMigrationExecutionAbort(
+      executeManagedSiteMigration({ preview }),
+    )
+
+    expect(error.cause).toBe(adapterAbort)
+    expect((error.cause as Error).cause).toBe(nativeAbort)
+    expect(error.details.partialResult).toEqual({
+      totalSelected: 2,
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 0,
+      skippedCount: 0,
+      uncertainCount: 0,
+      items: [],
     })
-    const openSpy = vi
-      .spyOn(axonHubNativeResources, "openAxonHubNativeResourceOperations")
-      .mockRejectedValue(nativeAbort)
-
-    try {
-      const error = await captureMigrationExecutionAbort(
-        executeManagedSiteMigration({ preview }),
-      )
-
-      expect(error.cause).toMatchObject({ name: "AbortError" })
-      expect((error.cause as Error).cause).toBe(nativeAbort)
-      expect(error.details.partialResult).toEqual({
-        totalSelected: 2,
-        attemptedCount: 1,
-        createdCount: 0,
-        failedCount: 0,
-        skippedCount: 0,
-        uncertainCount: 0,
-        items: [],
-      })
-      expect(error.details.remainingSelections).toEqual(selections)
-      expect(resolveCredential).toHaveBeenCalledOnce()
-      expect(openSpy).toHaveBeenCalledOnce()
-      expectMigrationAbortInvariants(error)
-    } finally {
-      openSpy.mockRestore()
-    }
+    expect(error.details.remainingSelections).toEqual(selections)
+    expect(resolveCredential).toHaveBeenCalledOnce()
+    expect(createTarget).toHaveBeenCalledOnce()
+    expectMigrationAbortInvariants(error)
   })
 
   it("keeps canonical preview and result objects free of credentials and commands", async () => {

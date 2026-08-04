@@ -254,6 +254,20 @@ export const octopusManagedSiteChannels: ManagedSiteChannelsCapability<OctopusCo
           ),
       })
     },
+    updateModels: async (config, channelId, models, options) => {
+      return await runOctopusMutation<unknown, void>({
+        effect: octopusChannelEffect("models-updated", channelId),
+        execute: async () => {
+          const payload = { id: channelId, model: models.join(",") }
+          return options?.signal
+            ? await updateOctopusChannel(config, payload, {
+                signal: options.signal,
+              })
+            : await updateOctopusChannel(config, payload)
+        },
+        successData: () => undefined,
+      })
+    },
     delete: async (config, channelId) => {
       return await runOctopusMutation<null, void>({
         effect: octopusChannelEffect("resource-deleted", channelId),

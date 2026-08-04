@@ -138,7 +138,7 @@ export interface AxonHubNativeResourceOperations {
     input: AxonHubCreateChannelInput,
     desiredStatus: AxonHubChannelStatus,
     options?: ResourceOperationOptions,
-  ): Promise<AxonHubNativeMutationResult<AxonHubChannel>>
+  ): Promise<ManagedSiteMutationResult<AxonHubChannel>>
   update(
     detail: AxonHubChannel,
     input: AxonHubUpdateChannelInput,
@@ -493,66 +493,72 @@ export async function openAxonHubNativeResourceOperations(
       return credential
     },
     create: async (input, desiredStatus, operationOptions) => {
-      let created: AxonHubChannel
-      try {
-        created = await createAxonHubChannel(
-          config,
-          input,
-          requestOptions(operationOptions),
-        )
-      } catch (error) {
-        return mutationFailure(error)
-      }
+      const result = await (async (): Promise<
+        AxonHubNativeMutationResult<AxonHubChannel>
+      > => {
+        let created: AxonHubChannel
+        try {
+          created = await createAxonHubChannel(
+            config,
+            input,
+            requestOptions(operationOptions),
+          )
+        } catch (error) {
+          return mutationFailure(error)
+        }
 
-      if (desiredStatus !== AXON_HUB_CHANNEL_STATUS.ENABLED) {
-        return {
-          certainty: "applied",
-          value: created,
-          confirmedEffects: [
-            channelMutationEffect(
-              MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
-              created.id,
-            ),
-          ],
+        if (desiredStatus !== AXON_HUB_CHANNEL_STATUS.ENABLED) {
+          return {
+            certainty: "applied",
+            value: created,
+            confirmedEffects: [
+              channelMutationEffect(
+                MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+                created.id,
+              ),
+            ],
+          }
         }
-      }
 
-      try {
-        await updateAxonHubChannelStatus(
-          config,
-          created.id,
-          desiredStatus,
-          requestOptions(operationOptions),
-        )
-        return {
-          certainty: "applied",
-          value: { ...created, status: desiredStatus },
-          confirmedEffects: [
-            channelMutationEffect(
-              MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
-              created.id,
-            ),
-            channelMutationEffect(
-              MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated,
-              created.id,
-            ),
-          ],
+        try {
+          await updateAxonHubChannelStatus(
+            config,
+            created.id,
+            desiredStatus,
+            requestOptions(operationOptions),
+          )
+          return {
+            certainty: "applied",
+            value: { ...created, status: desiredStatus },
+            confirmedEffects: [
+              channelMutationEffect(
+                MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+                created.id,
+              ),
+              channelMutationEffect(
+                MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated,
+                created.id,
+              ),
+            ],
+          }
+        } catch (error) {
+          const failure = mapRequestFailure(error).failure
+          return {
+            certainty: "partially-applied",
+            value: created,
+            confirmedEffects: [
+              channelMutationEffect(
+                MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+                created.id,
+              ),
+            ],
+            failure,
+            error,
+          }
         }
-      } catch (error) {
-        const failure = mapRequestFailure(error).failure
-        return {
-          certainty: "partially-applied",
-          value: created,
-          confirmedEffects: [
-            channelMutationEffect(
-              MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
-              created.id,
-            ),
-          ],
-          failure,
-          error,
-        }
-      }
+      })()
+
+      return toManagedMutationResult(result)
     },
     // AxonHub beta5 ignores status in UpdateChannel; status changes require
     // UpdateChannelStatus. Source: https://github.com/looplj/axonhub/blob/d061ac7df6aef0c5ec6cdfa9dc5002546a1c5a57/internal/server/biz/channel.go
@@ -1668,10 +1674,7 @@ const axonHubNativeDefinition = {
     operations: AxonHubNativeResourceOperations,
     command: AxonHubCreateCommand,
     options?: ResourceOperationOptions,
-  ) =>
-    operations
-      .create(command.input, command.desiredStatus, options)
-      .then(toManagedMutationResult),
+  ) => operations.create(command.input, command.desiredStatus, options),
   update: (
     operations: AxonHubNativeResourceOperations,
     detail: AxonHubChannel,

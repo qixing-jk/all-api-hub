@@ -41,7 +41,11 @@ import * as axonHubNativeResources from "~/services/apiAdapters/managedResources
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import type { AxonHubChannel, AxonHubUpdateChannelInput } from "~/types/axonHub"
+import type {
+  AxonHubChannel,
+  AxonHubCreateChannelInput,
+  AxonHubUpdateChannelInput,
+} from "~/types/axonHub"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,
@@ -2051,6 +2055,140 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(mocks.updateStatus).not.toHaveBeenCalled()
   })
 
+  it("returns a common succeeded result with exact create effect and options", async () => {
+    const controller = new AbortController()
+    const created = buildDetailChannel({ id: "common-created-id" })
+    mocks.createChannel.mockResolvedValue(created)
+    const operations = await openAxonHubNativeResourceOperations()
+    const input: AxonHubCreateChannelInput = {
+      type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+      name: "Common create",
+      credentials: { apiKeys: ["credential-placeholder"] },
+      supportedModels: ["model-a"],
+      manualModels: ["model-a"],
+      defaultTestModel: "model-a",
+      settings: {},
+      orderingWeight: 0,
+    }
+
+    const result = await operations.create(
+      input,
+      AXON_HUB_CHANNEL_STATUS.DISABLED,
+      { signal: controller.signal },
+    )
+
+    expect(result).toEqual({
+      outcome: "succeeded",
+      data: created,
+      confirmedEffects: [
+        {
+          kind: "resource-created",
+          resourceKind: "channel",
+          resourceId: "common-created-id",
+        },
+      ],
+    })
+    expect(result).not.toHaveProperty("certainty")
+    expect(mocks.createChannel).toHaveBeenCalledWith(config, input, {
+      signal: controller.signal,
+    })
+  })
+
+  it.each([
+    {
+      label: "rejected",
+      error: new mocks.RequestError("upstream-rejected", "not-dispatched"),
+      expectedOutcome: "rejected",
+      expectedCode: "upstream_rejected",
+    },
+    {
+      label: "uncertain",
+      error: new mocks.RequestError("unavailable", "dispatched"),
+      expectedOutcome: "uncertain",
+      expectedCode: "unavailable",
+    },
+  ] as const)(
+    "returns a common $label create result with native diagnostic identity",
+    async ({ error, expectedOutcome, expectedCode }) => {
+      mocks.createChannel.mockRejectedValue(error)
+      const operations = await openAxonHubNativeResourceOperations()
+
+      const result = await operations.create(
+        {
+          type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+          name: "Failed create",
+          credentials: { apiKeys: ["credential-placeholder"] },
+          supportedModels: ["model-a"],
+          manualModels: ["model-a"],
+          defaultTestModel: "model-a",
+          settings: {},
+          orderingWeight: 0,
+        },
+        AXON_HUB_CHANNEL_STATUS.DISABLED,
+      )
+
+      expect(result).toMatchObject({
+        outcome: expectedOutcome,
+        diagnostic: { code: expectedCode, raw: error },
+      })
+      expect(result).not.toHaveProperty("certainty")
+      expect(mocks.createChannel).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("returns a common partial create result with confirmed create effect and raw status failure", async () => {
+    const controller = new AbortController()
+    const created = buildDetailChannel({
+      id: "common-partial-id",
+      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+    })
+    const statusError = new mocks.RequestError("unavailable", "dispatched")
+    mocks.createChannel.mockResolvedValue(created)
+    mocks.updateStatus.mockRejectedValue(statusError)
+    const operations = await openAxonHubNativeResourceOperations()
+
+    const result = await operations.create(
+      {
+        type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+        name: "Partial create",
+        credentials: { apiKeys: ["credential-placeholder"] },
+        supportedModels: ["model-a"],
+        manualModels: ["model-a"],
+        defaultTestModel: "model-a",
+        settings: {},
+        orderingWeight: 0,
+      },
+      AXON_HUB_CHANNEL_STATUS.ENABLED,
+      { signal: controller.signal },
+    )
+
+    expect(result).toEqual({
+      outcome: "partial",
+      data: created,
+      confirmedEffects: [
+        {
+          kind: "resource-created",
+          resourceKind: "channel",
+          resourceId: "common-partial-id",
+        },
+      ],
+      completion: "uncertain",
+      diagnostic: {
+        message: "unavailable",
+        code: "unavailable",
+        raw: statusError,
+      },
+    })
+    expect(result).not.toHaveProperty("certainty")
+    expect(mocks.createChannel).toHaveBeenCalledOnce()
+    expect(mocks.updateStatus).toHaveBeenCalledWith(
+      config,
+      "common-partial-id",
+      AXON_HUB_CHANNEL_STATUS.ENABLED,
+      { signal: controller.signal },
+    )
+  })
+
   it("maps create rejection and applies the requested enabled status", async () => {
     const workspace = await openWorkspace()
     const editor = await workspace.openCreateEditor()
@@ -2582,41 +2720,18 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(mocks.createChannel.mock.calls[0][1]).not.toHaveProperty("baseURL")
   })
 
-  it.each([
-    {
-      code: "configuration_required",
-      arrange: () => mocks.resolveRuntimeConfig.mockReturnValue(null),
-    },
-    {
-      code: "authentication_failed",
-      arrange: () =>
-        mocks.signIn.mockRejectedValue(
-          new mocks.RequestError("authentication", "not-dispatched"),
-        ),
-    },
-    {
-      code: "unavailable",
-      arrange: () =>
-        mocks.signIn.mockRejectedValue(
-          new mocks.RequestError("unavailable", "not-dispatched"),
-        ),
-    },
-  ])(
-    "maps controlled native open failure $code to target unavailable",
-    async ({ arrange }) => {
-      arrange()
-      const command = await buildMigrationCreateCommand()
+  it("maps missing target configuration to target unavailable before the common adapter", async () => {
+    mocks.resolveRuntimeConfig.mockReturnValue(null)
+    const command = await buildMigrationCreateCommand()
 
-      await expect(
-        axonHubManagedSiteMigrationCapability.target!.create(command),
-      ).resolves.toEqual({
-        status: "failed",
-        failureCode:
-          MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetUnavailable,
-      })
-      expect(mocks.createChannel).not.toHaveBeenCalled()
-    },
-  )
+    await expect(
+      axonHubManagedSiteMigrationCapability.target!.create(command),
+    ).resolves.toEqual({
+      status: "failed",
+      failureCode:
+        MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetUnavailable,
+    })
+  })
 
   it("normalizes a controlled native abort while opening the target", async () => {
     mocks.signIn.mockRejectedValue(
@@ -2630,14 +2745,10 @@ describe("AxonHub native managed-resource Adapter", () => {
 
     expect(error).toMatchObject({ name: "AbortError" })
     expect(error.cause).toBeInstanceOf(AxonHubNativeError)
-    expect((error.cause as AxonHubNativeError).failure).toEqual({
-      code: "aborted",
-      dispatch: "before",
-    })
     expect(mocks.createChannel).not.toHaveBeenCalled()
   })
 
-  it("propagates a pre-dispatch native create abort without replay or status mutation", async () => {
+  it("propagates a pre-dispatch native create abort without replay", async () => {
     mocks.createChannel.mockRejectedValue(
       new mocks.RequestError("aborted", "not-dispatched"),
     )
@@ -2647,11 +2758,6 @@ describe("AxonHub native managed-resource Adapter", () => {
       .catch((failure) => failure)
 
     expect(error).toMatchObject({ name: "AbortError" })
-    expect(error.cause).toBeInstanceOf(AxonHubNativeError)
-    expect((error.cause as AxonHubNativeError).failure).toEqual({
-      code: "aborted",
-      dispatch: "before",
-    })
     expect(mocks.createChannel).toHaveBeenCalledOnce()
     expect(mocks.updateStatus).not.toHaveBeenCalled()
   })
@@ -2687,17 +2793,17 @@ describe("AxonHub native managed-resource Adapter", () => {
   )
 
   it("rethrows non-native target open errors without normalization", async () => {
-    const nonNativeError = new Error("Non-native open failure")
+    const adapterError = new Error("Native open failure")
     const openSpy = vi
       .spyOn(axonHubNativeResources, "openAxonHubNativeResourceOperations")
-      .mockRejectedValueOnce(nonNativeError)
+      .mockRejectedValueOnce(adapterError)
 
     try {
       await expect(
         axonHubManagedSiteMigrationCapability.target!.create(
           await buildMigrationCreateCommand(),
         ),
-      ).rejects.toBe(nonNativeError)
+      ).rejects.toBe(adapterError)
     } finally {
       openSpy.mockRestore()
     }
@@ -2792,6 +2898,9 @@ describe("AxonHub native managed-resource Adapter", () => {
     mocks.createChannel.mockRejectedValueOnce(
       new mocks.RequestError("upstream-rejected", "not-dispatched"),
     )
+    mocks.createChannel.mockRejectedValueOnce(
+      new mocks.RequestError("unavailable", "dispatched"),
+    )
     await expect(
       axonHubManagedSiteMigrationCapability.target!.create(command),
     ).resolves.toEqual({
@@ -2800,17 +2909,14 @@ describe("AxonHub native managed-resource Adapter", () => {
         MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
     })
 
-    mocks.createChannel.mockRejectedValueOnce(
-      new mocks.RequestError("unavailable", "dispatched"),
-    )
-    await expect(
-      axonHubManagedSiteMigrationCapability.target!.create(command),
-    ).resolves.toEqual({ status: "uncertain" })
-
     mocks.createChannel.mockResolvedValueOnce(
       buildDetailChannel({ status: AXON_HUB_CHANNEL_STATUS.DISABLED }),
     )
     mocks.updateStatus.mockRejectedValueOnce(new Error("status lost"))
+    await expect(
+      axonHubManagedSiteMigrationCapability.target!.create(command),
+    ).resolves.toEqual({ status: "uncertain" })
+
     await expect(
       axonHubManagedSiteMigrationCapability.target!.create({
         ...command,
@@ -2834,6 +2940,5 @@ describe("AxonHub native managed-resource Adapter", () => {
       failureCode: MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.Unexpected,
     })
     expect(mocks.createChannel).toHaveBeenCalledOnce()
-    expect(mocks.updateStatus).not.toHaveBeenCalled()
   })
 })

@@ -21,7 +21,23 @@ import {
 
 const mocks = vi.hoisted(() => ({
   hasUsableApiTokenKey: vi.fn(),
+  openAxonHubNativeResourceOperations: vi.fn(),
 }))
+
+vi.mock(
+  "~/services/apiAdapters/managedResources/axonHub",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiAdapters/managedResources/axonHub")
+      >()
+    return {
+      ...actual,
+      openAxonHubNativeResourceOperations:
+        mocks.openAxonHubNativeResourceOperations,
+    }
+  },
+)
 
 vi.mock("~/services/accountTokens/apiTokenKey", () => ({
   hasUsableApiTokenKey: mocks.hasUsableApiTokenKey,
@@ -275,5 +291,203 @@ describe("AxonHub migration type boundary", () => {
     ).resolves.toMatchObject({
       projection: { type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC },
     })
+  })
+
+  it.each([
+    {
+      label: "created",
+      mutation: {
+        outcome: "succeeded" as const,
+        data: { id: "created-channel" },
+        confirmedEffects: [
+          {
+            kind: "resource-created" as const,
+            resourceKind: "channel" as const,
+            resourceId: "created-channel",
+          },
+        ],
+      },
+      expected: { status: "created" as const },
+    },
+    {
+      label: "rejected",
+      mutation: {
+        outcome: "rejected" as const,
+        diagnostic: {
+          message: "provider rejected",
+          code: "upstream_rejected",
+        },
+      },
+      expected: {
+        status: "failed" as const,
+        failureCode:
+          MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
+      },
+    },
+    {
+      label: "authentication rejected",
+      mutation: {
+        outcome: "rejected" as const,
+        diagnostic: {
+          message: "authentication failed",
+          code: "authentication_failed",
+        },
+      },
+      expected: {
+        status: "failed" as const,
+        failureCode:
+          MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetUnavailable,
+      },
+    },
+    {
+      label: "availability rejected",
+      mutation: {
+        outcome: "rejected" as const,
+        diagnostic: {
+          message: "target unavailable",
+          code: "unavailable",
+        },
+      },
+      expected: {
+        status: "failed" as const,
+        failureCode:
+          MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetUnavailable,
+      },
+    },
+    {
+      label: "partial",
+      mutation: {
+        outcome: "partial" as const,
+        confirmedEffects: [
+          {
+            kind: "resource-created" as const,
+            resourceKind: "channel" as const,
+            resourceId: "partial-channel",
+          },
+        ] as const,
+        completion: "uncertain" as const,
+        diagnostic: { message: "status update uncertain" },
+      },
+      expected: { status: "uncertain" as const },
+    },
+    {
+      label: "uncertain",
+      mutation: {
+        outcome: "uncertain" as const,
+        diagnostic: { message: "create uncertain" },
+      },
+      expected: { status: "uncertain" as const },
+    },
+  ])(
+    "maps an options-aware native common $label result without replay",
+    async ({ mutation, expected }) => {
+      const controller = new AbortController()
+      const create = vi.fn().mockResolvedValue(mutation)
+      const list = vi.fn().mockResolvedValue({ items: [] })
+      const open = vi
+        .spyOn(axonHubNativeResources, "openAxonHubNativeResourceOperations")
+        .mockResolvedValue({ create, list } as never)
+      const options = { signal: controller.signal }
+
+      await expect(
+        axonHubManagedSiteMigrationCapability.target!.create(
+          buildCommand(ChannelType.OpenAI),
+          options,
+        ),
+      ).resolves.toEqual(expected)
+
+      expect(create).toHaveBeenCalledWith(
+        {
+          type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+          name: "Migration target",
+          baseURL: "https://target.example.invalid",
+          credentials: { apiKeys: ["credential-placeholder"] },
+          supportedModels: ["model-example"],
+          manualModels: ["model-example"],
+          defaultTestModel: "model-example",
+          settings: {},
+          orderingWeight: 0,
+        },
+        AXON_HUB_CHANNEL_STATUS.ENABLED,
+        options,
+      )
+      expect(create).toHaveBeenCalledOnce()
+      expect(open).toHaveBeenCalledWith(options)
+      if (mutation.outcome === "partial" || mutation.outcome === "uncertain") {
+        expect(list).toHaveBeenCalledOnce()
+        expect(list).toHaveBeenCalledWith(undefined, options)
+      } else {
+        expect(list).not.toHaveBeenCalled()
+      }
+    },
+  )
+
+  it("does not retain rejected abort raw diagnostics in the outward cause chain", async () => {
+    const rawSecret = "raw-abort-secret-placeholder"
+    const diagnosticRaw = {
+      authorization: rawSecret,
+      providerPayload: { apiKey: rawSecret },
+    }
+    const create = vi.fn().mockResolvedValue({
+      outcome: "rejected",
+      diagnostic: {
+        message: "Provider request aborted",
+        code: "aborted",
+        raw: diagnosticRaw,
+      },
+    })
+    const list = vi.fn()
+    vi.spyOn(
+      axonHubNativeResources,
+      "openAxonHubNativeResourceOperations",
+    ).mockResolvedValue({ create, list } as never)
+
+    const error = await axonHubManagedSiteMigrationCapability
+      .target!.create(buildCommand(ChannelType.OpenAI))
+      .catch((failure) => failure)
+
+    expect(error).toMatchObject({ name: "AbortError" })
+    const causeChain: unknown[] = []
+    let cause = error?.cause
+    while (cause && typeof cause === "object" && !causeChain.includes(cause)) {
+      causeChain.push(cause)
+      cause = "cause" in cause ? cause.cause : undefined
+    }
+    expect(causeChain).not.toContain(diagnosticRaw)
+    expect(causeChain).not.toContain(diagnosticRaw.providerPayload)
+    for (const causeError of [error, ...causeChain]) {
+      if (causeError instanceof Error) {
+        expect(causeError.message).not.toContain(rawSecret)
+      }
+    }
+    expect(create).toHaveBeenCalledOnce()
+    expect(list).not.toHaveBeenCalled()
+  })
+
+  it("omits an empty optional baseURL from the native migration payload", async () => {
+    const create = vi.fn().mockResolvedValue({
+      outcome: "succeeded",
+      data: { id: "created-channel" },
+      confirmedEffects: [
+        {
+          kind: "resource-created",
+          resourceKind: "channel",
+          resourceId: "created-channel",
+        },
+      ],
+    })
+    vi.spyOn(
+      axonHubNativeResources,
+      "openAxonHubNativeResourceOperations",
+    ).mockResolvedValue({ create, list: vi.fn() } as never)
+    const command = buildCommand(ChannelType.OpenAI)
+    command.projection.baseUrl = "   "
+
+    await expect(
+      axonHubManagedSiteMigrationCapability.target!.create(command),
+    ).resolves.toEqual({ status: "created" })
+
+    expect(create).toHaveBeenCalledOnce()
+    expect(create.mock.calls[0]?.[0]).not.toHaveProperty("baseURL")
   })
 })
