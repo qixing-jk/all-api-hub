@@ -12,11 +12,9 @@ import { DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS } from "~/constants/claudeCodeHu
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
-import type {
-  ManagedUpstreamResourceDraftsCapability,
-  ManagedUpstreamResourceItemsCapability,
-} from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import type { ManagedUpstreamResourceDraftsCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import type { TransitionalLegacyManagedUpstreamResourcesCapability } from "~/services/managedSites/managedUpstreamResourceService"
 import {
   getManagedSiteConfigMissingMessage,
   hasUsableManagedSiteChannelKey,
@@ -68,7 +66,11 @@ export type ChannelResourceEditContext = {
   ref: ManagedUpstreamResourceRef
   capabilities: {
     items: Pick<
-      ManagedUpstreamResourceItemsCapability<unknown, unknown, ChannelFormData>,
+      TransitionalLegacyManagedUpstreamResourcesCapability<
+        unknown,
+        unknown,
+        ChannelFormData
+      >["items"],
       "getDetail" | "update"
     >
     drafts: Pick<

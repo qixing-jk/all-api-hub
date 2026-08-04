@@ -468,16 +468,6 @@ const toDoneHubUpdatePayload = (
   return payload
 }
 
-const toResourceMutationResponse = async (
-  response: ReturnType<typeof createChannel> | ReturnType<typeof updateChannel>,
-) => {
-  const resolvedResponse = await response
-  return {
-    ...resolvedResponse,
-    data: resolvedResponse.data ?? null,
-  }
-}
-
 const doneHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
   DoneHubConfig,
   DoneHubResourceDetailNative,
@@ -512,26 +502,45 @@ const doneHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
         native,
       }
     },
-    create: async (config, draft) =>
-      await toResourceMutationResponse(
-        createChannel(
-          toManagedSiteApiServiceRequest(config),
-          buildChannelPayload(draft),
-        ),
-      ),
-    update: async (config, detail, draft) =>
-      await toResourceMutationResponse(
-        updateChannel(
-          toManagedSiteApiServiceRequest(config),
-          toDoneHubUpdatePayload(detail, draft),
-        ),
-      ),
+    create: async (config, draft) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runDoneHubResponseStep({
+        config,
+        sequence,
+        effect: createManagedSiteChannelEffect("resource-created"),
+        execute: async (request) =>
+          await createChannel(request, buildChannelPayload(draft)),
+      })
+      return step.outcome === "applied"
+        ? sequence.finish({ finalState: "confirmed", data: null })
+        : finishManagedSiteMutationStep(sequence, step)
+    },
+    update: async (config, detail, draft) => {
+      const payload = toDoneHubUpdatePayload(detail, draft)
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runDoneHubResponseStep({
+        config,
+        sequence,
+        effect: createManagedSiteChannelEffect("resource-updated", payload.id),
+        execute: async (request) => await updateChannel(request, payload),
+      })
+      return step.outcome === "applied"
+        ? sequence.finish({ finalState: "confirmed", data: null })
+        : finishManagedSiteMutationStep(sequence, step)
+    },
     delete: async (config, ref) => {
       assertDoneHubResourceRef(config, ref)
-      return await deleteChannel(
-        toManagedSiteApiServiceRequest(config),
-        Number(ref.resourceId),
-      )
+      const resourceId = Number(ref.resourceId)
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runDoneHubResponseStep({
+        config,
+        sequence,
+        effect: createManagedSiteChannelEffect("resource-deleted", resourceId),
+        execute: async (request) => await deleteChannel(request, resourceId),
+      })
+      return step.outcome === "applied"
+        ? sequence.finish({ finalState: "confirmed", data: undefined })
+        : finishManagedSiteMutationStep(sequence, step)
     },
   },
   drafts: {

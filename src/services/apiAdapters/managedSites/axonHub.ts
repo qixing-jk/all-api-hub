@@ -595,15 +595,6 @@ const isRepresentableAxonHubStatus = (status: AxonHubChannel["status"]) =>
   status === AXON_HUB_CHANNEL_STATUS.ENABLED ||
   status === AXON_HUB_CHANNEL_STATUS.DISABLED
 
-const toAxonHubResourceMutationResponse = (
-  config: AxonHubConfig,
-  channel: AxonHubChannel,
-) => ({
-  success: true,
-  message: "success",
-  data: toAxonHubResourceSummary(config, channel),
-})
-
 const axonHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
   AxonHubConfig,
   AxonHubChannel,
@@ -627,49 +618,96 @@ const axonHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       }
     },
     create: async (config, draft) => {
-      const created = await createAxonHubChannel(
-        config,
-        toAxonHubCreateInput(draft),
-      )
-      const finalChannel = { ...created }
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const createStep = await runAxonHubMutationStep({
+        sequence,
+        effect: axonHubChannelEffect("resource-created"),
+        execute: async () =>
+          await createAxonHubChannel(config, toAxonHubCreateInput(draft)),
+      })
+      if (createStep.outcome !== "applied") {
+        return finishAxonHubMutation(sequence, createStep)
+      }
+
+      const finalChannel = { ...createStep.data }
       if (draft.status === CHANNEL_STATUS.Enable) {
-        await updateAxonHubChannelStatus(
-          config,
-          created.id,
-          AXON_HUB_CHANNEL_STATUS.ENABLED,
-        )
+        const statusStep = await runAxonHubMutationStep({
+          sequence,
+          effect: axonHubChannelEffect("status-updated", createStep.data.id),
+          execute: async () =>
+            await updateAxonHubChannelStatus(
+              config,
+              createStep.data.id,
+              AXON_HUB_CHANNEL_STATUS.ENABLED,
+            ),
+        })
+        if (statusStep.outcome !== "applied") {
+          return finishAxonHubMutation(sequence, statusStep)
+        }
         finalChannel.status = AXON_HUB_CHANNEL_STATUS.ENABLED
       }
-      return toAxonHubResourceMutationResponse(config, finalChannel)
+      return sequence.finish({
+        finalState: "confirmed",
+        data: toAxonHubResourceSummary(config, finalChannel),
+      })
     },
     update: async (config, detail, draft) => {
       const native = detail.native
-      const updated = await updateAxonHubChannel(
-        config,
-        native.id,
-        toAxonHubUpdateInput(detail, draft),
-      )
-      const finalChannel = { ...updated }
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const updateStep = await runAxonHubMutationStep({
+        sequence,
+        effect: axonHubChannelEffect("resource-updated", native.id),
+        execute: async () =>
+          await updateAxonHubChannel(
+            config,
+            native.id,
+            toAxonHubUpdateInput(detail, draft),
+          ),
+      })
+      if (updateStep.outcome !== "applied") {
+        return finishAxonHubMutation(sequence, updateStep)
+      }
+
+      const finalChannel = { ...updateStep.data }
       const requestedStatus = toAxonHubStatus(draft.status)
 
       if (
         isRepresentableAxonHubStatus(native.status) &&
         native.status !== requestedStatus
       ) {
-        await updateAxonHubChannelStatus(config, native.id, requestedStatus)
+        const statusStep = await runAxonHubMutationStep({
+          sequence,
+          effect: axonHubChannelEffect("status-updated", native.id),
+          execute: async () =>
+            await updateAxonHubChannelStatus(
+              config,
+              native.id,
+              requestedStatus,
+            ),
+        })
+        if (statusStep.outcome !== "applied") {
+          return finishAxonHubMutation(sequence, statusStep)
+        }
         finalChannel.status = requestedStatus
       }
 
-      return toAxonHubResourceMutationResponse(config, finalChannel)
+      return sequence.finish({
+        finalState: "confirmed",
+        data: toAxonHubResourceSummary(config, finalChannel),
+      })
     },
     delete: async (config, ref) => {
       assertAxonHubResourceRef(config, ref)
-      const deleted = await deleteAxonHubChannel(config, ref.resourceId)
-      return {
-        success: deleted,
-        message: deleted ? "success" : "Failed to delete AxonHub channel",
-        data: deleted,
-      }
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runAxonHubMutationStep({
+        sequence,
+        effect: axonHubChannelEffect("resource-deleted", ref.resourceId),
+        execute: async () => await deleteAxonHubChannel(config, ref.resourceId),
+        rejectResponse: (deleted) => !deleted,
+      })
+      return step.outcome === "applied"
+        ? sequence.finish({ finalState: "confirmed", data: undefined })
+        : finishAxonHubMutation(sequence, step)
     },
   },
   drafts: {

@@ -6,13 +6,15 @@
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { ManagedSiteChannelsCapability } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   MANAGED_UPSTREAM_RESOURCE_FEATURES,
   type ManagedUpstreamResourceFeature,
 } from "~/services/managedSites/managedUpstreamResourceMigration"
-import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
+import {
+  resolveManagedUpstreamResourceFeatureCapabilities,
+  type TransitionalLegacyManagedUpstreamResourcesCapability,
+} from "~/services/managedSites/managedUpstreamResourceService"
 import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import type {
   ManagedSiteRuntimeConfig,
@@ -60,11 +62,12 @@ type ModelRedirectMappingWriter = {
   ): Promise<void>
 }
 
-type ModelRedirectResourceCapabilities = ManagedUpstreamResourcesCapability<
-  ManagedSiteRuntimeConfigValue,
-  unknown,
-  ChannelFormData
->
+type ModelRedirectResourceCapabilities =
+  TransitionalLegacyManagedUpstreamResourcesCapability<
+    ManagedSiteRuntimeConfigValue,
+    unknown,
+    ChannelFormData
+  >
 
 type ModelRedirectChannelCapabilities = Pick<
   ManagedSiteChannelsCapability<ManagedSiteRuntimeConfigValue>,

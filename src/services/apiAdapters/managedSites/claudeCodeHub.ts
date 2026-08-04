@@ -478,22 +478,6 @@ const isClaudeCodeHubProviderDisplay = (
       typeof (value as { name?: unknown }).name === "string",
   )
 
-const toResourceMutationResponse = async (
-  config: ClaudeCodeHubConfig,
-  response:
-    | ReturnType<typeof createProvider>
-    | ReturnType<typeof updateProvider>,
-) => {
-  const resolvedResponse = await response
-  return {
-    success: true,
-    message: "success",
-    data: isClaudeCodeHubProviderDisplay(resolvedResponse)
-      ? toClaudeCodeHubResourceSummary(config, resolvedResponse)
-      : null,
-  }
-}
-
 const claudeCodeHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
   ClaudeCodeHubConfig,
   ClaudeCodeHubProviderDisplay,
@@ -518,26 +502,42 @@ const claudeCodeHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       }
     },
     create: async (config, draft) =>
-      await toResourceMutationResponse(
-        config,
-        createProvider(
-          config,
-          buildClaudeCodeHubCreatePayloadFromFormData(draft),
-        ),
-      ),
+      await runClaudeCodeHubMutation({
+        effect: claudeCodeHubChannelEffect("resource-created"),
+        execute: async () =>
+          await createProvider(
+            config,
+            buildClaudeCodeHubCreatePayloadFromFormData(draft),
+          ),
+        successData: (provider) =>
+          isClaudeCodeHubProviderDisplay(provider)
+            ? toClaudeCodeHubResourceSummary(config, provider)
+            : null,
+      }),
     update: async (config, detail, draft) =>
-      await toResourceMutationResponse(
-        config,
-        updateProvider(config, toClaudeCodeHubUpdatePayload(detail, draft)),
-      ),
+      await runClaudeCodeHubMutation({
+        effect: claudeCodeHubChannelEffect(
+          "resource-updated",
+          detail.native.id,
+        ),
+        execute: async () =>
+          await updateProvider(
+            config,
+            toClaudeCodeHubUpdatePayload(detail, draft),
+          ),
+        successData: (provider) =>
+          isClaudeCodeHubProviderDisplay(provider)
+            ? toClaudeCodeHubResourceSummary(config, provider)
+            : null,
+      }),
     delete: async (config, ref) => {
       assertClaudeCodeHubResourceRef(config, ref)
-      const response = await deleteProvider(config, Number(ref.resourceId))
-      return {
-        success: true,
-        message: "success",
-        data: response ?? null,
-      }
+      const resourceId = Number(ref.resourceId)
+      return await runClaudeCodeHubMutation({
+        effect: claudeCodeHubChannelEffect("resource-deleted", resourceId),
+        execute: async () => await deleteProvider(config, resourceId),
+        successData: () => undefined,
+      })
     },
   },
   drafts: {

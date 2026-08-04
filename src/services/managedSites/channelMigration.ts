@@ -8,7 +8,6 @@ import {
   type ManagedResourceRef,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
   executeManagedSiteMigrationCore,
   prepareManagedSiteMigrationPreviewCore,
@@ -26,7 +25,10 @@ import {
   type ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
-import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
+import {
+  resolveManagedUpstreamResourceFeatureCapabilities,
+  type TransitionalLegacyManagedUpstreamResourcesCapability,
+} from "~/services/managedSites/managedUpstreamResourceService"
 import {
   resolveManagedSiteRuntimeConfigForType,
   type ManagedSiteRuntimeConfigValue,
@@ -82,11 +84,12 @@ type SourceKeyResolutionResult =
       blockingMessage?: string
     }
 
-type ChannelMigrationResourceCapabilities = ManagedUpstreamResourcesCapability<
-  ManagedSiteRuntimeConfigValue,
-  unknown,
-  ChannelFormData
->
+type ChannelMigrationResourceCapabilities =
+  TransitionalLegacyManagedUpstreamResourcesCapability<
+    ManagedSiteRuntimeConfigValue,
+    unknown,
+    ChannelFormData
+  >
 
 const migrationBlockers = MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES
 const migrationFailures = MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES

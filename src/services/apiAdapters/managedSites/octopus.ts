@@ -476,33 +476,6 @@ const toOctopusResourceUpdatePayload = (
   }
 }
 
-const toOctopusResourceMutationResponse = async (
-  config: OctopusConfig,
-  response:
-    | ReturnType<typeof createOctopusChannel>
-    | ReturnType<typeof updateOctopusChannel>,
-) => {
-  const resolvedResponse = await response
-  return {
-    ...resolvedResponse,
-    message: resolvedResponse.message || "success",
-    data: resolvedResponse.data
-      ? toOctopusResourceSummary(config, resolvedResponse.data)
-      : null,
-  }
-}
-
-const toOctopusResourceDeleteResponse = async (
-  response: ReturnType<typeof deleteOctopusChannel>,
-) => {
-  const resolvedResponse = await response
-  return {
-    ...resolvedResponse,
-    data: resolvedResponse.data ?? null,
-    message: resolvedResponse.message || "success",
-  }
-}
-
 const octopusManagedUpstreamResources: ManagedUpstreamResourcesCapability<
   OctopusConfig,
   OctopusChannel,
@@ -532,26 +505,35 @@ const octopusManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       }
     },
     create: async (config, draft) =>
-      await toOctopusResourceMutationResponse(
-        config,
-        createOctopusChannel(
-          config,
-          toOctopusCreateRequest(buildChannelPayload(draft)),
-        ),
-      ),
+      await runOctopusMutation({
+        effect: octopusChannelEffect("resource-created"),
+        execute: async () =>
+          await createOctopusChannel(
+            config,
+            toOctopusCreateRequest(buildChannelPayload(draft)),
+          ),
+        successData: (channel) =>
+          channel ? toOctopusResourceSummary(config, channel) : null,
+      }),
     update: async (config, detail, draft) =>
-      await toOctopusResourceMutationResponse(
-        config,
-        updateOctopusChannel(
-          config,
-          toOctopusResourceUpdatePayload(detail, draft),
-        ),
-      ),
+      await runOctopusMutation({
+        effect: octopusChannelEffect("resource-updated", detail.native.id),
+        execute: async () =>
+          await updateOctopusChannel(
+            config,
+            toOctopusResourceUpdatePayload(detail, draft),
+          ),
+        successData: (channel) =>
+          channel ? toOctopusResourceSummary(config, channel) : null,
+      }),
     delete: async (config, ref) => {
       assertOctopusResourceRef(config, ref)
-      return await toOctopusResourceDeleteResponse(
-        deleteOctopusChannel(config, Number(ref.resourceId)),
-      )
+      const resourceId = Number(ref.resourceId)
+      return await runOctopusMutation<null, void>({
+        effect: octopusChannelEffect("resource-deleted", resourceId),
+        execute: async () => await deleteOctopusChannel(config, resourceId),
+        successData: () => undefined,
+      })
     },
   },
   drafts: {

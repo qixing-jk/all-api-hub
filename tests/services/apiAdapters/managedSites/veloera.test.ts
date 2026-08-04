@@ -16,6 +16,7 @@ import {
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
+import { testManagedUpstreamResourceMutationContract } from "~~/tests/services/apiAdapters/managedSites/resourceMutationContract"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -273,6 +274,107 @@ describe("Veloera managed-site channel capability", () => {
           JSON.stringify(modelMapping),
           undefined,
         ]),
+    },
+  ])
+
+  const resourceDraft: ChannelFormData = {
+    name: "Resource channel",
+    type: 1,
+    key: "sk-resource",
+    base_url: "https://resource.example.invalid/v1",
+    models: ["model-a"],
+    groups: ["default"],
+    priority: 2,
+    weight: 3,
+    status: CHANNEL_STATUS.Enable,
+  }
+  const resourceNative = buildManagedSiteChannel({ id: 19 })
+  const resourceDetail = {
+    summary: {
+      ref: {
+        managedSiteType: SITE_TYPES.VELOERA,
+        scopeKey: "https://veloera.example.invalid",
+        resourceId: "19",
+      },
+      displayName: resourceNative.name,
+      nativeKind: "channel",
+      status: "enabled",
+      secretState: "available",
+      capabilities: { canUpdate: true },
+    },
+    native: resourceNative,
+  } as const
+
+  testManagedUpstreamResourceMutationContract([
+    {
+      name: "create",
+      effect: { kind: "resource-created", resourceKind: "channel" },
+      successData: null,
+      arrange: arrangeRestMutation(veloeraApi.createChannel, null),
+      invoke: async () => {
+        const { veloeraManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/veloera"
+        )
+        return await veloeraManagedSiteCapabilities.resources!.items.create(
+          config,
+          resourceDraft,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(veloeraApi.createChannel.mock.calls.at(-1)?.[1]).toEqual(
+          expect.objectContaining({
+            channel: expect.objectContaining({ name: resourceDraft.name }),
+          }),
+        ),
+    },
+    {
+      name: "update",
+      effect: {
+        kind: "resource-updated",
+        resourceKind: "channel",
+        resourceId: 19,
+      },
+      successData: null,
+      arrange: arrangeRestMutation(veloeraApi.updateChannel, null),
+      invoke: async () => {
+        const { veloeraManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/veloera"
+        )
+        return await veloeraManagedSiteCapabilities.resources!.items.update(
+          config,
+          resourceDetail,
+          resourceDraft,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(veloeraApi.updateChannel.mock.calls.at(-1)?.[1]).toEqual(
+          expect.objectContaining({
+            id: 19,
+            name: resourceDraft.name,
+            other: "advanced",
+          }),
+        ),
+    },
+    {
+      name: "delete",
+      effect: {
+        kind: "resource-deleted",
+        resourceKind: "channel",
+        resourceId: 19,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(veloeraApi.deleteChannel, null),
+      invoke: async () => {
+        const { veloeraManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/veloera"
+        )
+        return await veloeraManagedSiteCapabilities.resources!.items.delete(
+          config,
+          resourceDetail.summary.ref,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(veloeraApi.deleteChannel.mock.calls.at(-1)?.[1]).toBe(19),
     },
   ])
 
@@ -685,10 +787,10 @@ describe("Veloera managed-site channel capability", () => {
     const { veloeraManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/veloera"
     )
-    veloeraApi.updateChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
+    arrangeRestMutation(
+      veloeraApi.updateChannel,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
     const native = buildManagedSiteChannel({
       id: 21,
       key: "sk-********",
@@ -754,10 +856,10 @@ describe("Veloera managed-site channel capability", () => {
     const { veloeraManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/veloera"
     )
-    veloeraApi.updateChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
+    arrangeRestMutation(
+      veloeraApi.updateChannel,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
     const native = buildManagedSiteChannel({
       id: 22,
       key: "sk-********",
@@ -805,14 +907,14 @@ describe("Veloera managed-site channel capability", () => {
     const { veloeraManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/veloera"
     )
-    veloeraApi.createChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
-    veloeraApi.deleteChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
+    arrangeRestMutation(
+      veloeraApi.createChannel,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
+    arrangeRestMutation(
+      veloeraApi.deleteChannel,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
     const draft: ChannelFormData = {
       name: "Created Veloera Channel",
       type: 1,

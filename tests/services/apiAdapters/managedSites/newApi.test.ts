@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { AuthTypeEnum } from "~/types"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import type {
+  ChannelFormData,
   CreateChannelPayload,
   ManagedSiteChannel,
 } from "~/types/managedSite"
@@ -12,6 +13,7 @@ import {
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
+import { testManagedUpstreamResourceMutationContract } from "~~/tests/services/apiAdapters/managedSites/resourceMutationContract"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -266,6 +268,122 @@ describe("newApi managed-site channel capability", () => {
           models: "model-a,model-b",
           model_mapping: JSON.stringify(modelMapping),
         }),
+    },
+  ])
+
+  const resourceDraft = {
+    name: "Resource channel",
+    type: 1,
+    key: "sk-resource",
+    base_url: "https://resource.example.invalid/v1",
+    models: ["model-a"],
+    groups: ["default"],
+    priority: 2,
+    weight: 3,
+    status: 0,
+  } satisfies ChannelFormData
+  const resourceNative = buildManagedSiteChannel({ id: 19, status: 0 })
+  const resourceDetail = {
+    summary: {
+      ref: {
+        managedSiteType: SITE_TYPES.NEW_API,
+        scopeKey: "https://new-api.example.invalid",
+        resourceId: "19",
+      },
+      displayName: resourceNative.name,
+      nativeKind: "channel",
+      status: "disabled",
+      secretState: "available",
+      capabilities: { canUpdate: true },
+    },
+    native: resourceNative,
+  } as const
+
+  testManagedUpstreamResourceMutationContract([
+    {
+      name: "create",
+      effect: { kind: "resource-created", resourceKind: "channel" },
+      successData: null,
+      arrange: (scenario) => {
+        newApiProvider.buildChannelPayload.mockReturnValue(createPayload)
+        return arrangeRestMutation(
+          channelManagement.createChannel,
+          null,
+        )(scenario)
+      },
+      invoke: async () => {
+        const { newApiManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/newApi"
+        )
+        return await newApiManagedSiteCapabilities.resources!.items.create(
+          config,
+          resourceDraft,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(channelManagement.createChannel.mock.calls.at(-1)?.[1]).toBe(
+          createPayload,
+        ),
+    },
+    {
+      name: "update",
+      effect: {
+        kind: "resource-updated",
+        resourceKind: "channel",
+        resourceId: 19,
+      },
+      successData: null,
+      arrange: (scenario) => {
+        arrangeRestMutation(channelManagement.updateChannel, null)(scenario)
+        return arrangeRestMutation(
+          channelManagement.updateChannelFields,
+          null,
+        )(scenario)
+      },
+      invoke: async () => {
+        const { newApiManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/newApi"
+        )
+        return await newApiManagedSiteCapabilities.resources!.items.update(
+          config,
+          resourceDetail,
+          resourceDraft,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(
+          channelManagement.updateChannelFields.mock.calls.at(-1)?.[1],
+        ).toEqual(
+          expect.objectContaining({
+            id: 19,
+            name: resourceDraft.name,
+            base_url: resourceDraft.base_url,
+            models: "model-a",
+            group: "default",
+            other: "advanced",
+          }),
+        ),
+    },
+    {
+      name: "delete",
+      effect: {
+        kind: "resource-deleted",
+        resourceKind: "channel",
+        resourceId: 19,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(channelManagement.deleteChannel, null),
+      invoke: async () => {
+        const { newApiManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/newApi"
+        )
+        return await newApiManagedSiteCapabilities.resources!.items.delete(
+          config,
+          resourceDetail.summary.ref,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(channelManagement.deleteChannel.mock.calls.at(-1)?.[1]).toBe(19),
     },
   ])
 
@@ -797,10 +915,14 @@ describe("newApi managed-site channel capability", () => {
     const { newApiManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/newApi"
     )
-    channelManagement.updateChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
+    arrangeRestMutation(
+      channelManagement.updateChannelFields,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
+    arrangeRestMutation(
+      channelManagement.updateChannelStatus,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
     const native = buildManagedSiteChannel({
       id: 19,
       key: "sk-********",
@@ -833,7 +955,7 @@ describe("newApi managed-site channel capability", () => {
       status: 2,
     })
 
-    expect(channelManagement.updateChannel).toHaveBeenCalledWith(
+    expect(channelManagement.updateChannelFields).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         id: 19,
@@ -852,7 +974,7 @@ describe("newApi managed-site channel capability", () => {
       }),
     )
     expect(
-      channelManagement.updateChannel.mock.calls.at(-1)?.[1],
+      channelManagement.updateChannelFields.mock.calls.at(-1)?.[1],
     ).not.toHaveProperty("key")
   })
 
@@ -860,10 +982,14 @@ describe("newApi managed-site channel capability", () => {
     const { newApiManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/newApi"
     )
-    channelManagement.updateChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
+    arrangeRestMutation(
+      channelManagement.updateChannelFields,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
+    arrangeRestMutation(
+      channelManagement.updateChannelStatus,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
     const native = buildManagedSiteChannel({
       id: 29,
       key: "sk-********",
@@ -891,7 +1017,7 @@ describe("newApi managed-site channel capability", () => {
       key: " sk-new-real-key ",
     })
 
-    expect(channelManagement.updateChannel).toHaveBeenCalledWith(
+    expect(channelManagement.updateChannelFields).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         id: 29,
@@ -904,14 +1030,14 @@ describe("newApi managed-site channel capability", () => {
     const { newApiManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/newApi"
     )
-    channelManagement.createChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
-    channelManagement.deleteChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
+    arrangeRestMutation(
+      channelManagement.createChannel,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
+    arrangeRestMutation(
+      channelManagement.deleteChannel,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
     newApiProvider.buildChannelPayload.mockReturnValue({
       mode: "single",
       channel: {

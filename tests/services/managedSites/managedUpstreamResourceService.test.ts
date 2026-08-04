@@ -21,6 +21,21 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 
 const getSiteTypeCapabilitiesMock = vi.mocked(getSiteTypeCapabilities)
 
+const expectLegacyAdaptedResources = (
+  resources: ManagedUpstreamResourcesCapability,
+) =>
+  expect.objectContaining({
+    items: expect.objectContaining({
+      list: resources.items.list,
+      search: resources.items.search,
+      getDetail: resources.items.getDetail,
+      create: expect.any(Function),
+      update: expect.any(Function),
+      delete: expect.any(Function),
+    }),
+    drafts: resources.drafts,
+  })
+
 describe("managed upstream resource service", () => {
   beforeEach(() => {
     getSiteTypeCapabilitiesMock.mockReset()
@@ -71,8 +86,215 @@ describe("managed upstream resource service", () => {
     ).toEqual({
       supported: true,
       siteType: SITE_TYPES.AXON_HUB,
-      capabilities: resources,
+      capabilities: expectLegacyAdaptedResources(resources),
     })
+  })
+
+  it("adapts resource mutation outcomes for legacy callers without raw diagnostics or replay", async () => {
+    const resources = buildResourcesCapability()
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
+      managedSites: {
+        channels: {} as NonNullable<
+          NonNullable<SiteTypeCapabilities["managedSites"]>["channels"]
+        >,
+        resources,
+      },
+    })
+    const resolution = resolveManagedUpstreamResourceCapabilities(
+      SITE_TYPES.NEW_API,
+    )
+    if (!resolution.supported) throw new Error("Expected resource support")
+    const createMock = vi.mocked(resources.items.create)
+    const secret = "sk-example-secret-value"
+
+    createMock.mockResolvedValueOnce({
+      outcome: "succeeded",
+      data: null,
+      confirmedEffects: [{ kind: "resource-created", resourceKind: "channel" }],
+      message: "created",
+    } as never)
+    await expect(
+      resolution.capabilities.items.create({} as never, {} as never),
+    ).resolves.toEqual({ success: true, message: "created", data: null })
+
+    createMock.mockResolvedValueOnce({
+      outcome: "rejected",
+      diagnostic: {
+        message: `provider rejected token ${secret}`,
+        raw: { secret },
+      },
+    } as never)
+    await expect(
+      resolution.capabilities.items.create({} as never, {} as never),
+    ).resolves.toEqual({
+      success: false,
+      message: "provider rejected token [REDACTED]",
+      data: null,
+    })
+
+    createMock.mockResolvedValueOnce({
+      outcome: "partial",
+      confirmedEffects: [{ kind: "resource-created", resourceKind: "channel" }],
+      completion: "uncertain",
+      diagnostic: { message: "status unknown", raw: { secret } },
+    } as never)
+    await expect(
+      resolution.capabilities.items.create({} as never, {} as never),
+    ).resolves.toEqual({
+      success: true,
+      message: "status unknown",
+      data: null,
+    })
+
+    createMock.mockResolvedValueOnce({
+      outcome: "uncertain",
+      diagnostic: { message: "response lost", raw: { secret } },
+    } as never)
+    const uncertain = await resolution.capabilities.items.create(
+      {} as never,
+      {} as never,
+    )
+    expect(uncertain).toEqual({
+      success: true,
+      message: "response lost",
+      data: null,
+    })
+    expect(JSON.stringify(uncertain)).not.toContain(secret)
+    expect(uncertain).not.toHaveProperty("raw")
+    expect(uncertain).not.toHaveProperty("outcome")
+  })
+
+  it("redacts config credentials from legacy create diagnostics", async () => {
+    const resources = buildResourcesCapability()
+    const capabilities = resolveSupportedResources(
+      SITE_TYPES.NEW_API,
+      resources,
+    )
+    const configSecret = "opaque-reserved-config-value"
+    vi.mocked(resources.items.create).mockResolvedValueOnce(
+      rejectedMutationWithSecrets(configSecret) as never,
+    )
+
+    await expect(
+      capabilities.items.create(
+        { adminToken: configSecret } as never,
+        { key: "" } as never,
+      ),
+    ).resolves.toEqual(redactedLegacyRejection())
+  })
+
+  it("redacts draft keys from legacy create diagnostics", async () => {
+    const resources = buildResourcesCapability()
+    const capabilities = resolveSupportedResources(
+      SITE_TYPES.NEW_API,
+      resources,
+    )
+    const draftSecret = "opaque-reserved-create-draft-value"
+    vi.mocked(resources.items.create).mockResolvedValueOnce(
+      rejectedMutationWithSecrets(draftSecret) as never,
+    )
+
+    await expect(
+      capabilities.items.create({} as never, { key: draftSecret } as never),
+    ).resolves.toEqual(redactedLegacyRejection())
+  })
+
+  it("redacts draft keys from legacy update diagnostics", async () => {
+    const resources = buildResourcesCapability()
+    const capabilities = resolveSupportedResources(
+      SITE_TYPES.NEW_API,
+      resources,
+    )
+    const draftSecret = "opaque-reserved-update-draft-value"
+    vi.mocked(resources.items.update).mockResolvedValueOnce(
+      rejectedMutationWithSecrets(draftSecret) as never,
+    )
+
+    await expect(
+      capabilities.items.update(
+        {} as never,
+        { native: {} } as never,
+        { key: draftSecret } as never,
+      ),
+    ).resolves.toEqual(redactedLegacyRejection())
+  })
+
+  it("redacts config-only credentials from legacy delete diagnostics", async () => {
+    const resources = buildResourcesCapability()
+    const capabilities = resolveSupportedResources(
+      SITE_TYPES.NEW_API,
+      resources,
+    )
+    const configSecret = "opaque-reserved-delete-config-value"
+    vi.mocked(resources.items.delete).mockResolvedValueOnce(
+      rejectedMutationWithSecrets(configSecret) as never,
+    )
+
+    await expect(
+      capabilities.items.delete(
+        { adminToken: configSecret } as never,
+        {} as never,
+      ),
+    ).resolves.toEqual(redactedLegacyRejection())
+  })
+
+  it("redacts preserved AxonHub native payload secrets from legacy update diagnostics", async () => {
+    const resources = buildResourcesCapability()
+    const capabilities = resolveSupportedResources(
+      SITE_TYPES.AXON_HUB,
+      resources,
+    )
+    const nativeSecrets = [
+      "opaque-reserved-axon-credential-value",
+      "opaque-reserved-axon-setting-value",
+    ]
+    vi.mocked(resources.items.update).mockResolvedValueOnce(
+      rejectedMutationWithSecrets(...nativeSecrets) as never,
+    )
+
+    await expect(
+      capabilities.items.update(
+        {} as never,
+        {
+          native: {
+            credentials: { oauth: { accessToken: nativeSecrets[0] } },
+            settings: { proxy: { password: nativeSecrets[1] } },
+          },
+        } as never,
+        { key: "" } as never,
+      ),
+    ).resolves.toEqual(redactedLegacyRejection(nativeSecrets.length))
+  })
+
+  it("redacts preserved Octopus native payload secrets from legacy update diagnostics", async () => {
+    const resources = buildResourcesCapability()
+    const capabilities = resolveSupportedResources(
+      SITE_TYPES.OCTOPUS,
+      resources,
+    )
+    const nativeSecrets = [
+      "opaque-reserved-octopus-header-value",
+      "opaque-reserved-octopus-proxy-value",
+    ]
+    vi.mocked(resources.items.update).mockResolvedValueOnce(
+      rejectedMutationWithSecrets(...nativeSecrets) as never,
+    )
+
+    await expect(
+      capabilities.items.update(
+        {} as never,
+        {
+          native: {
+            custom_header: [
+              { header_key: "x-example", header_value: nativeSecrets[0] },
+            ],
+            channel_proxy: nativeSecrets[1],
+          },
+        } as never,
+        { key: "" } as never,
+      ),
+    ).resolves.toEqual(redactedLegacyRejection(nativeSecrets.length))
   })
 
   it("returns a typed unsupported result when an enabled core path lacks the optional capability", () => {
@@ -113,7 +335,7 @@ describe("managed upstream resource service", () => {
     ).toEqual({
       supported: true,
       siteType: SITE_TYPES.NEW_API,
-      capabilities: resources,
+      capabilities: expectLegacyAdaptedResources(resources),
     })
     expect(
       resolveManagedUpstreamResourceCapabilities(SITE_TYPES.VELOERA, {
@@ -163,7 +385,7 @@ describe("managed upstream resource service", () => {
         supported: true,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelRedirect,
-        capabilities: resources,
+        capabilities: expectLegacyAdaptedResources(resources),
       })),
     )
     expect(
@@ -215,7 +437,7 @@ describe("managed upstream resource service", () => {
         supported: true,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
-        capabilities: resources,
+        capabilities: expectLegacyAdaptedResources(resources),
       })),
     )
     expect(
@@ -264,7 +486,7 @@ describe("managed upstream resource service", () => {
           supported: true,
           siteType,
           feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.DuplicateMatching,
-          capabilities: resources,
+          capabilities: expectLegacyAdaptedResources(resources),
         }),
       ),
     )
@@ -299,7 +521,7 @@ describe("managed upstream resource service", () => {
         supported: true,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport,
-        capabilities: resources,
+        capabilities: expectLegacyAdaptedResources(resources),
       })),
     )
     expect(
@@ -350,7 +572,7 @@ describe("managed upstream resource service", () => {
         supported: true,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenChannelStatus,
-        capabilities: resources,
+        capabilities: expectLegacyAdaptedResources(resources),
       })),
     )
     expect(
@@ -411,7 +633,7 @@ describe("managed upstream resource service", () => {
         supported: true,
         siteType,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelMigration,
-        capabilities: resources,
+        capabilities: expectLegacyAdaptedResources(resources),
       })),
     )
     expect(
@@ -462,7 +684,7 @@ describe("managed upstream resource service", () => {
           supported: true,
           siteType,
           feature,
-          capabilities: resources,
+          capabilities: expectLegacyAdaptedResources(resources),
         })),
       )
       expect(
@@ -527,7 +749,7 @@ describe("managed upstream resource service", () => {
       supported: true,
       siteType: SITE_TYPES.NEW_API,
       feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.ModelSync,
-      capabilities: resources,
+      capabilities: expectLegacyAdaptedResources(resources),
     })
   })
 })
@@ -548,5 +770,42 @@ function buildResourcesCapability(): ManagedUpstreamResourcesCapability {
       describeFields: vi.fn(),
       validateDraft: vi.fn(),
     },
+  }
+}
+
+function resolveSupportedResources(
+  siteType: (typeof MANAGED_SITE_TYPES)[number],
+  resources: ManagedUpstreamResourcesCapability,
+) {
+  getSiteTypeCapabilitiesMock.mockReturnValue({
+    siteType,
+    managedSites: {
+      channels: {} as NonNullable<
+        NonNullable<SiteTypeCapabilities["managedSites"]>["channels"]
+      >,
+      resources,
+    },
+  })
+
+  const resolution = resolveManagedUpstreamResourceCapabilities(siteType)
+  if (!resolution.supported) throw new Error("Expected resource support")
+  return resolution.capabilities
+}
+
+function rejectedMutationWithSecrets(...secrets: string[]) {
+  return {
+    outcome: "rejected" as const,
+    diagnostic: { message: `provider response: ${secrets.join(" ")}` },
+  }
+}
+
+function redactedLegacyRejection(secretCount = 1) {
+  return {
+    success: false,
+    message: `provider response: ${Array.from(
+      { length: secretCount },
+      () => "[REDACTED]",
+    ).join(" ")}`,
+    data: null,
   }
 }

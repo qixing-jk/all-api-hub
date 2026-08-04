@@ -8,6 +8,7 @@ import {
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
+import { testManagedUpstreamResourceMutationContract } from "~~/tests/services/apiAdapters/managedSites/resourceMutationContract"
 
 const claudeCodeHubProvider = vi.hoisted(() => ({
   checkValidClaudeCodeHubConfig: vi.fn(),
@@ -378,6 +379,118 @@ describe("Claude Code Hub managed-site channel capability", () => {
     providerOnlyFlag: true,
   }
 
+  const resourceDraft = {
+    name: "Claude Resource Edited",
+    type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+    key: "sk-resource",
+    base_url: "https://resource.example.invalid/v1",
+    models: ["claude-example"],
+    groups: ["default"],
+    priority: 2,
+    weight: 3,
+    status: CHANNEL_STATUS.Enable,
+  }
+  const resourceDetail = {
+    summary: {
+      ref: {
+        managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+        scopeKey: "https://claude-code-hub.example.invalid",
+        resourceId: String(provider.id),
+      },
+      displayName: provider.name,
+      nativeKind: "provider",
+      status: "disabled",
+      secretState: "masked",
+      capabilities: { canUpdate: true },
+    },
+    native: provider,
+  } as const
+
+  testManagedUpstreamResourceMutationContract([
+    {
+      name: "create",
+      effect: { kind: "resource-created", resourceKind: "channel" },
+      successData: expect.objectContaining({
+        displayName: provider.name,
+        nativeKind: "provider",
+      }),
+      arrange: arrangeNativeMutation(claudeCodeHubApi.createProvider, provider),
+      invoke: async () => {
+        const { claudeCodeHubManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/claudeCodeHub"
+        )
+        return await claudeCodeHubManagedSiteCapabilities.resources!.items.create(
+          config,
+          { ...resourceDraft, name: provider.name },
+        )
+      },
+      assertRequestPayload: () =>
+        expect(claudeCodeHubApi.createProvider.mock.calls.at(-1)?.[1]).toEqual(
+          expect.objectContaining({
+            name: provider.name,
+            allowed_models: [{ matchType: "exact", pattern: "claude-example" }],
+          }),
+        ),
+    },
+    {
+      name: "update",
+      effect: {
+        kind: "resource-updated",
+        resourceKind: "channel",
+        resourceId: provider.id,
+      },
+      successData: expect.objectContaining({
+        displayName: provider.name,
+        nativeKind: "provider",
+      }),
+      arrange: arrangeNativeMutation(claudeCodeHubApi.updateProvider, provider),
+      invoke: async () => {
+        const { claudeCodeHubManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/claudeCodeHub"
+        )
+        return await claudeCodeHubManagedSiteCapabilities.resources!.items.update(
+          config,
+          resourceDetail,
+          { ...resourceDraft, name: provider.name },
+        )
+      },
+      assertRequestPayload: () =>
+        expect(claudeCodeHubApi.updateProvider.mock.calls.at(-1)?.[1]).toEqual(
+          expect.objectContaining({
+            id: provider.id,
+            allowed_models: [
+              { matchType: "prefix", pattern: "claude-" },
+              { matchType: "exact", pattern: "claude-example" },
+            ],
+            providerOnlyFlag: true,
+          }),
+        ),
+    },
+    {
+      name: "delete",
+      effect: {
+        kind: "resource-deleted",
+        resourceKind: "channel",
+        resourceId: provider.id,
+      },
+      successData: undefined,
+      arrange: arrangeNativeMutation(claudeCodeHubApi.deleteProvider, true),
+      invoke: async () => {
+        const { claudeCodeHubManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/claudeCodeHub"
+        )
+        return await claudeCodeHubManagedSiteCapabilities.resources!.items.delete(
+          config,
+          resourceDetail.summary.ref,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(claudeCodeHubApi.deleteProvider.mock.calls.at(-1)?.[1]).toBe(
+          provider.id,
+        ),
+    },
+  ])
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -657,8 +770,8 @@ describe("Claude Code Hub managed-site channel capability", () => {
         status: 1,
       }),
     ).resolves.toEqual({
-      success: true,
-      message: "success",
+      outcome: "succeeded",
+      confirmedEffects: [{ kind: "resource-created", resourceKind: "channel" }],
       data: expect.objectContaining({
         displayName: "Created Claude Provider",
         nativeKind: "provider",
@@ -710,9 +823,15 @@ describe("Claude Code Hub managed-site channel capability", () => {
         resourceId: "7",
       }),
     ).resolves.toEqual({
-      success: true,
-      message: "success",
-      data: null,
+      outcome: "succeeded",
+      data: undefined,
+      confirmedEffects: [
+        {
+          kind: "resource-deleted",
+          resourceKind: "channel",
+          resourceId: 7,
+        },
+      ],
     })
     expect(claudeCodeHubApi.deleteProvider).toHaveBeenCalledWith(config, 7)
   })
@@ -746,8 +865,8 @@ describe("Claude Code Hub managed-site channel capability", () => {
         status: 1,
       }),
     ).resolves.toEqual({
-      success: true,
-      message: "success",
+      outcome: "succeeded",
+      confirmedEffects: [{ kind: "resource-created", resourceKind: "channel" }],
       data: null,
     })
   })

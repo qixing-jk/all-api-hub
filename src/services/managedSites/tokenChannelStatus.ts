@@ -1,6 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
-import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
   getManagedSiteChannelExactMatch,
   type ManagedSiteChannelMatchInspection,
@@ -12,7 +11,10 @@ import type {
 } from "~/services/managedSites/managedSiteService"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
-import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
+import {
+  resolveManagedUpstreamResourceFeatureCapabilities,
+  type TransitionalLegacyManagedUpstreamResourcesCapability,
+} from "~/services/managedSites/managedUpstreamResourceService"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { getNewApiLoginAssistConfig } from "~/services/managedSites/providers/newApi"
 import {
@@ -81,7 +83,7 @@ interface ManagedSiteTokenChannelResolvedKeys {
 }
 
 type TokenChannelStatusResourceCapabilities =
-  ManagedUpstreamResourcesCapability<ManagedSiteConfig>
+  TransitionalLegacyManagedUpstreamResourcesCapability<ManagedSiteConfig>
 
 export type ManagedSiteTokenChannelStatus =
   ManagedSiteTokenChannelResolvedKeys &

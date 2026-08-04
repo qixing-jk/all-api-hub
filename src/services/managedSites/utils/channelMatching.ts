@@ -6,7 +6,7 @@ import {
   formatOptionalSkPrefixTokenComparableKey,
   hasOptionalSkPrefixSiteTokenSemantics,
 } from "~/services/accountTokens/apiTokenKey"
-import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
+import type { ManagedUpstreamResourceItemsCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MATCH_LEVELS,
@@ -57,7 +57,12 @@ interface FindBestManagedSiteChannelMatchParams {
 interface SearchManagedUpstreamResourceChannelsForDuplicateMatchingParams<
   TConfig = unknown,
 > {
-  resources: ManagedUpstreamResourcesCapability<TConfig>
+  resources: {
+    items: Pick<
+      ManagedUpstreamResourceItemsCapability<TConfig>,
+      "search" | "getDetail"
+    >
+  }
   config: TConfig
   accountBaseUrl: string
 }

@@ -1,4 +1,7 @@
-import type { ApiResponse } from "~/services/apiTransport/type"
+import type {
+  ManagedSiteMutationResult,
+  ManagedSiteVoidMutationResult,
+} from "~/services/managedSites/mutations"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import type {
   ManagedUpstreamResourceDetail,
@@ -25,9 +28,6 @@ export type ManagedUpstreamResourceImportInput = {
   source?: unknown
 }
 
-export type ManagedUpstreamResourceMutationResponse<TData = unknown> =
-  ApiResponse<TData>
-
 export type ManagedUpstreamResourceItemsCapability<
   TConfig = ManagedSiteRuntimeConfigValue,
   TNative = unknown,
@@ -48,20 +48,16 @@ export type ManagedUpstreamResourceItemsCapability<
   create(
     config: TConfig,
     draft: TDraft,
-  ): Promise<
-    ManagedUpstreamResourceMutationResponse<ManagedUpstreamResourceSummary | null>
-  >
+  ): Promise<ManagedSiteMutationResult<ManagedUpstreamResourceSummary | null>>
   update(
     config: TConfig,
     detail: ManagedUpstreamResourceDetail<TNative>,
     draft: TDraft,
-  ): Promise<
-    ManagedUpstreamResourceMutationResponse<ManagedUpstreamResourceSummary | null>
-  >
+  ): Promise<ManagedSiteMutationResult<ManagedUpstreamResourceSummary | null>>
   delete(
     config: TConfig,
     ref: ManagedUpstreamResourceRef,
-  ): Promise<ManagedUpstreamResourceMutationResponse<unknown>>
+  ): Promise<ManagedSiteVoidMutationResult>
 }
 
 export type ManagedUpstreamResourceDraftsCapability<

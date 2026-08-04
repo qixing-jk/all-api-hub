@@ -15,6 +15,7 @@ import {
   testManagedSiteChannelMutationContract,
   type ChannelMutationScenario,
 } from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
+import { testManagedUpstreamResourceMutationContract } from "~~/tests/services/apiAdapters/managedSites/resourceMutationContract"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -277,6 +278,110 @@ describe("DoneHub managed-site channel capability", () => {
           },
           undefined,
         ]),
+    },
+  ])
+
+  const resourceDraft: ChannelFormData = {
+    name: "Resource channel",
+    type: 1,
+    key: "sk-resource",
+    base_url: "https://resource.example.invalid/v1",
+    models: ["model-a"],
+    groups: ["default"],
+    priority: 2,
+    weight: 3,
+    status: CHANNEL_STATUS.Enable,
+  }
+  const resourceNative = {
+    ...buildManagedSiteChannel({ id: 19 }),
+    done_hub_only: { preserve: true },
+  }
+  const resourceDetail = {
+    summary: {
+      ref: {
+        managedSiteType: SITE_TYPES.DONE_HUB,
+        scopeKey: "https://done-hub.example.invalid",
+        resourceId: "19",
+      },
+      displayName: resourceNative.name,
+      nativeKind: "channel",
+      status: "enabled",
+      secretState: "available",
+      capabilities: { canUpdate: true },
+    },
+    native: resourceNative,
+  } as const
+
+  testManagedUpstreamResourceMutationContract([
+    {
+      name: "create",
+      effect: { kind: "resource-created", resourceKind: "channel" },
+      successData: null,
+      arrange: arrangeRestMutation(doneHubApi.createChannel, null),
+      invoke: async () => {
+        const { doneHubManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/doneHub"
+        )
+        return await doneHubManagedSiteCapabilities.resources!.items.create(
+          config,
+          resourceDraft,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(doneHubApi.createChannel.mock.calls.at(-1)?.[1]).toEqual(
+          expect.objectContaining({
+            channel: expect.objectContaining({ name: resourceDraft.name }),
+          }),
+        ),
+    },
+    {
+      name: "update",
+      effect: {
+        kind: "resource-updated",
+        resourceKind: "channel",
+        resourceId: 19,
+      },
+      successData: null,
+      arrange: arrangeRestMutation(doneHubApi.updateChannel, null),
+      invoke: async () => {
+        const { doneHubManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/doneHub"
+        )
+        return await doneHubManagedSiteCapabilities.resources!.items.update(
+          config,
+          resourceDetail,
+          resourceDraft,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(doneHubApi.updateChannel.mock.calls.at(-1)?.[1]).toEqual(
+          expect.objectContaining({
+            id: 19,
+            name: resourceDraft.name,
+            done_hub_only: { preserve: true },
+          }),
+        ),
+    },
+    {
+      name: "delete",
+      effect: {
+        kind: "resource-deleted",
+        resourceKind: "channel",
+        resourceId: 19,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(doneHubApi.deleteChannel, null),
+      invoke: async () => {
+        const { doneHubManagedSiteCapabilities } = await import(
+          "~/services/apiAdapters/managedSites/doneHub"
+        )
+        return await doneHubManagedSiteCapabilities.resources!.items.delete(
+          config,
+          resourceDetail.summary.ref,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(doneHubApi.deleteChannel.mock.calls.at(-1)?.[1]).toBe(19),
     },
   ])
 
@@ -828,10 +933,10 @@ describe("DoneHub managed-site channel capability", () => {
     const { doneHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/doneHub"
     )
-    doneHubApi.updateChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
+    arrangeRestMutation(
+      doneHubApi.updateChannel,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
     const normalizedNative = buildManagedSiteChannel({
       id: 24,
       key: "sk-********",
@@ -899,10 +1004,10 @@ describe("DoneHub managed-site channel capability", () => {
     const { doneHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/doneHub"
     )
-    doneHubApi.updateChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
+    arrangeRestMutation(
+      doneHubApi.updateChannel,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
     const native = buildManagedSiteChannel({
       id: 21,
       key: "sk-********",
@@ -968,10 +1073,10 @@ describe("DoneHub managed-site channel capability", () => {
     const { doneHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/doneHub"
     )
-    doneHubApi.updateChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
+    arrangeRestMutation(
+      doneHubApi.updateChannel,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
     const native = buildManagedSiteChannel({
       id: 22,
       key: "sk-********",
@@ -1019,14 +1124,14 @@ describe("DoneHub managed-site channel capability", () => {
     const { doneHubManagedSiteCapabilities } = await import(
       "~/services/apiAdapters/managedSites/doneHub"
     )
-    doneHubApi.createChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
-    doneHubApi.deleteChannel.mockResolvedValue({
-      success: true,
-      message: "ok",
-    })
+    arrangeRestMutation(
+      doneHubApi.createChannel,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
+    arrangeRestMutation(
+      doneHubApi.deleteChannel,
+      null,
+    )(CHANNEL_MUTATION_SCENARIOS.Succeeded)
     const draft: ChannelFormData = {
       name: "Created DoneHub Channel",
       type: 1,

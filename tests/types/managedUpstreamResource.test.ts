@@ -8,6 +8,9 @@ import type {
   ManagedUpstreamResourcesCapability,
 } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
+import type { ApiResponse } from "~/services/apiTransport/type"
+import type { TransitionalLegacyManagedUpstreamResourcesCapability } from "~/services/managedSites/managedUpstreamResourceService"
+import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
 import {
   createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
@@ -139,6 +142,24 @@ describe("managed upstream resource contracts", () => {
     ])
     expect(resourcesWithoutSecrets.secrets).toBeUndefined()
   })
+
+  it("keeps provider writes common while the temporary service type stays legacy", () => {
+    type ProviderCreateResult = Awaited<
+      ReturnType<ManagedUpstreamResourcesCapability["items"]["create"]>
+    >
+    type LegacyCreateResult = Awaited<
+      ReturnType<
+        TransitionalLegacyManagedUpstreamResourcesCapability["items"]["create"]
+      >
+    >
+
+    expectTypeOf<ProviderCreateResult>().toEqualTypeOf<
+      ManagedSiteMutationResult<ManagedUpstreamResourceSummary | null>
+    >()
+    expectTypeOf<LegacyCreateResult>().toEqualTypeOf<
+      ApiResponse<ManagedUpstreamResourceSummary | null>
+    >()
+  })
 })
 
 function buildResourcesCapability<TNative = unknown, TDraft = unknown>() {
@@ -176,9 +197,21 @@ function buildResourcesCapability<TNative = unknown, TDraft = unknown>() {
       list: async () => listData,
       search: async () => listData,
       getDetail: async () => ({ summary, native: {} as TNative }),
-      create: async () => ({ success: true, data: summary, message: "" }),
-      update: async () => ({ success: true, data: summary, message: "" }),
-      delete: async () => ({ success: true, data: null, message: "" }),
+      create: async () => ({
+        outcome: "succeeded" as const,
+        data: summary,
+        confirmedEffects: [],
+      }),
+      update: async () => ({
+        outcome: "succeeded" as const,
+        data: summary,
+        confirmedEffects: [],
+      }),
+      delete: async () => ({
+        outcome: "succeeded" as const,
+        data: undefined,
+        confirmedEffects: [],
+      }),
     },
     drafts: {
       prepareImportDraft: async () => ({ name: "Example" }) as TDraft,

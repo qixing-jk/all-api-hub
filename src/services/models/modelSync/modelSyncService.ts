@@ -1,10 +1,12 @@
 import { union } from "lodash-es"
 
 import type { ManagedSiteChannelsCapability } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
-import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
+import {
+  resolveManagedUpstreamResourceFeatureCapabilities,
+  type TransitionalLegacyManagedUpstreamResourcesCapability,
+} from "~/services/managedSites/managedUpstreamResourceService"
 import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ChannelConfigMap } from "~/types/channelConfig"
@@ -52,11 +54,12 @@ type ModelSyncChannelCapabilities = ManagedSiteChannelsCapability & {
   >
 }
 
-type ModelSyncResourceCapabilities = ManagedUpstreamResourcesCapability<
-  ManagedSiteRuntimeConfig["config"],
-  unknown,
-  ChannelFormData
->
+type ModelSyncResourceCapabilities =
+  TransitionalLegacyManagedUpstreamResourcesCapability<
+    ManagedSiteRuntimeConfig["config"],
+    unknown,
+    ChannelFormData
+  >
 
 type ModelSyncResourceCacheEntry = {
   capabilities: ModelSyncResourceCapabilities

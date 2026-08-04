@@ -6,7 +6,6 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
   getManagedSiteChannelExactMatch,
   getRecoverableManagedSiteChannelCandidate,
@@ -20,7 +19,10 @@ import {
   type ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
-import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
+import {
+  resolveManagedUpstreamResourceFeatureCapabilities,
+  type TransitionalLegacyManagedUpstreamResourcesCapability,
+} from "~/services/managedSites/managedUpstreamResourceService"
 import {
   createManagedSiteOperationContext,
   type ManagedSiteOperationContext,
@@ -64,11 +66,12 @@ const logger = createLogger("ManagedSiteTokenBatchExport")
 const TOKEN_BATCH_EXPORT_CONCURRENCY = 4
 const FALLBACK_BLOCKING_MESSAGE = "Failed to prepare this key for batch import"
 
-type TokenBatchExportResourceCapabilities = ManagedUpstreamResourcesCapability<
-  ManagedSiteConfig,
-  unknown,
-  ChannelFormData
->
+type TokenBatchExportResourceCapabilities =
+  TransitionalLegacyManagedUpstreamResourcesCapability<
+    ManagedSiteConfig,
+    unknown,
+    ChannelFormData
+  >
 
 const mapWithConcurrency = async <TItem, TResult>(
   items: TItem[],
