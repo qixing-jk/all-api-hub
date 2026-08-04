@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import type { TFunction } from "i18next"
-import { act, type ReactNode } from "react"
+import { act, StrictMode, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -49,6 +49,7 @@ const {
   claudeCodeRouterDialogRenderMock,
   createProfileMock,
   kiloCodeDialogRenderMock,
+  loggerErrorMock,
   markGatewayGuidanceOnboardingCompletedMock,
   openInCherryStudioMock,
   openWithAccountMock,
@@ -64,6 +65,7 @@ const {
   claudeCodeRouterDialogRenderMock: vi.fn(),
   createProfileMock: vi.fn(),
   kiloCodeDialogRenderMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
   markGatewayGuidanceOnboardingCompletedMock: vi.fn(),
   openInCherryStudioMock: vi.fn(),
   openWithAccountMock: vi.fn(),
@@ -118,7 +120,17 @@ vi.mock("~/components/CliProxyExportDialog", () => ({
 vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
   VerifyCliSupportDialog: (props: unknown) => {
     verifyCliDialogRenderMock(props)
-    return null
+    const { isOpen, profile } = props as {
+      isOpen: boolean
+      profile: { apiKey: string; baseUrl: string }
+    }
+    return isOpen ? (
+      <div
+        data-testid="verify-cli-dialog-mock"
+        data-api-key={profile.apiKey}
+        data-base-url={profile.baseUrl}
+      />
+    ) : null
   },
 }))
 
@@ -127,7 +139,17 @@ vi.mock(
   () => ({
     VerifyApiCredentialProfileDialog: (props: unknown) => {
       verifyDialogRenderMock(props)
-      return null
+      const { isOpen, profile } = props as {
+        isOpen: boolean
+        profile: { apiKey: string; baseUrl: string } | null
+      }
+      return isOpen && profile ? (
+        <div
+          data-testid="verify-api-dialog-mock"
+          data-api-key={profile.apiKey}
+          data-base-url={profile.baseUrl}
+        />
+      ) : null
     },
   }),
 )
@@ -157,6 +179,10 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 
 vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: (...args: unknown[]) => showResultToastMock(...args),
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({ error: loggerErrorMock }),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -219,8 +245,15 @@ function TokenHeaderHarness({ props }: { props: TokenHeaderTestProps }) {
   )
 }
 
-function renderTokenHeader(props: TokenHeaderTestProps = {}) {
-  const rendered = render(<TokenHeaderHarness props={props} />, {
+function renderTokenHeader(
+  props: TokenHeaderTestProps = {},
+  options: { strictMode?: boolean } = {},
+) {
+  const renderHarness = (nextProps: TokenHeaderTestProps) => {
+    const harness = <TokenHeaderHarness props={nextProps} />
+    return options.strictMode ? <StrictMode>{harness}</StrictMode> : harness
+  }
+  const rendered = render(renderHarness(props), {
     withReleaseUpdateStatusProvider: false,
     withThemeProvider: false,
     withUserPreferencesProvider: false,
@@ -229,7 +262,7 @@ function renderTokenHeader(props: TokenHeaderTestProps = {}) {
   return {
     ...rendered,
     rerenderTokenHeader: (nextProps: TokenHeaderTestProps) =>
-      rendered.rerender(<TokenHeaderHarness props={nextProps} />),
+      rendered.rerender(renderHarness(nextProps)),
   }
 }
 
@@ -519,6 +552,59 @@ describe("TokenHeader analytics", () => {
     })
   })
 
+  it("closes an open API verification when the same keyed resource changes security snapshot", async () => {
+    const account = createAccount({
+      id: "api-generation-account",
+      baseUrl: "https://api-before.example.invalid/v1",
+      token: "account-credential-before",
+    })
+    const token = createToken({
+      id: 41,
+      accountId: account.id,
+      key: "masked-api-key-before",
+    })
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
+      createToken({ ...token, key: "resolved-api-key-before" }),
+    )
+    const user = userEvent.setup()
+    const { rerenderTokenHeader } = renderTokenHeader({ account, token })
+
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
+    )
+
+    const openedDialog = await screen.findByTestId("verify-api-dialog-mock")
+    expect(openedDialog).toHaveAttribute(
+      "data-api-key",
+      "resolved-api-key-before",
+    )
+    expect(openedDialog).toHaveAttribute(
+      "data-base-url",
+      "https://api-before.example.invalid/v1",
+    )
+
+    rerenderTokenHeader({
+      account,
+      token,
+      isManagedSiteStatusChecking: true,
+    })
+    expect(screen.getByTestId("verify-api-dialog-mock")).toBeVisible()
+
+    rerenderTokenHeader({
+      account: {
+        ...account,
+        baseUrl: "https://api-after.example.invalid/v1",
+        token: "account-credential-after",
+      },
+      token,
+    })
+
+    expect(screen.queryByTestId("verify-api-dialog-mock")).toBeNull()
+    expect(verifyDialogRenderMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ isOpen: false, profile: null }),
+    )
+  })
+
   it("tracks token API verification open as sanitized unknown failure when secret resolution fails", async () => {
     resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
       new Error("verification exposed sk-sensitive-verify"),
@@ -626,6 +712,51 @@ describe("TokenHeader analytics", () => {
     expect(
       JSON.stringify(completeProductAnalyticsActionMock.mock.calls),
     ).not.toContain(resolvedSecret)
+  })
+
+  it("closes an open CLI verification when the same keyed resource changes security snapshot", async () => {
+    const account = createAccount({
+      id: "cli-generation-account",
+      baseUrl: "https://cli-before.example.invalid/v1",
+    })
+    const token = createToken({
+      id: 42,
+      accountId: account.id,
+      key: "masked-cli-key-before",
+    })
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce(
+      createToken({ ...token, key: "resolved-cli-key-before" }),
+    )
+    const user = userEvent.setup()
+    const { rerenderTokenHeader } = renderTokenHeader({ account, token })
+
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton),
+    )
+
+    const openedDialog = await screen.findByTestId("verify-cli-dialog-mock")
+    expect(openedDialog).toHaveAttribute(
+      "data-api-key",
+      "resolved-cli-key-before",
+    )
+    expect(openedDialog).toHaveAttribute(
+      "data-base-url",
+      "https://cli-before.example.invalid/v1",
+    )
+
+    rerenderTokenHeader({
+      account,
+      token,
+      isManagedSiteStatusChecking: true,
+    })
+    expect(screen.getByTestId("verify-cli-dialog-mock")).toBeVisible()
+
+    rerenderTokenHeader({
+      account,
+      token: { ...token, key: "masked-cli-key-after" },
+    })
+
+    expect(screen.queryByTestId("verify-cli-dialog-mock")).toBeNull()
   })
 
   it("tracks token CLI support verification open as sanitized unknown failure when secret resolution fails", async () => {
@@ -1033,6 +1164,163 @@ describe("TokenHeader analytics", () => {
       { diagnostics: { execution: { staleResponseIgnored: true } } },
     )
     expect(showResultToastMock).not.toHaveBeenCalled()
+    expect(loggerErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("cancels deferred API and CLI verification successes after unmount", async () => {
+    const apiResolution = createDeferred<ReturnType<typeof createToken>>()
+    const cliResolution = createDeferred<ReturnType<typeof createToken>>()
+    resolveDisplayAccountTokenForSecretMock
+      .mockReturnValueOnce(apiResolution.promise)
+      .mockReturnValueOnce(cliResolution.promise)
+    const user = userEvent.setup()
+    const { unmount } = renderTokenHeader()
+
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
+    )
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton),
+    )
+    unmount()
+    verifyDialogRenderMock.mockClear()
+    verifyCliDialogRenderMock.mockClear()
+
+    await act(async () => {
+      apiResolution.resolve(createToken({ key: "resolved-stale-api-key" }))
+      cliResolution.resolve(createToken({ key: "resolved-stale-cli-key" }))
+      await Promise.all([apiResolution.promise, cliResolution.promise])
+    })
+
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledTimes(2)
+    expect(completeProductAnalyticsActionMock).toHaveBeenNthCalledWith(
+      1,
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      { diagnostics: { execution: { staleResponseIgnored: true } } },
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenNthCalledWith(
+      2,
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      { diagnostics: { execution: { staleResponseIgnored: true } } },
+    )
+    expect(verifyDialogRenderMock).not.toHaveBeenCalled()
+    expect(verifyCliDialogRenderMock).not.toHaveBeenCalled()
+    expect(loggerErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("cancels deferred API and CLI verification failures after unmount", async () => {
+    const apiResolution = createDeferred<ReturnType<typeof createToken>>()
+    const cliResolution = createDeferred<ReturnType<typeof createToken>>()
+    resolveDisplayAccountTokenForSecretMock
+      .mockReturnValueOnce(apiResolution.promise)
+      .mockReturnValueOnce(cliResolution.promise)
+    const user = userEvent.setup()
+    const { unmount } = renderTokenHeader()
+
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
+    )
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton),
+    )
+    unmount()
+
+    await act(async () => {
+      apiResolution.reject(new Error("stale unmounted API failure"))
+      cliResolution.reject(new Error("stale unmounted CLI failure"))
+      await Promise.allSettled([apiResolution.promise, cliResolution.promise])
+    })
+
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledTimes(2)
+    expect(completeProductAnalyticsActionMock).toHaveBeenNthCalledWith(
+      1,
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      { diagnostics: { execution: { staleResponseIgnored: true } } },
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenNthCalledWith(
+      2,
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      { diagnostics: { execution: { staleResponseIgnored: true } } },
+    )
+    expect(showResultToastMock).not.toHaveBeenCalled()
+    expect(loggerErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("keeps current StrictMode verification valid while cancelling a prior same-ID resource generation", async () => {
+    const staleApiResolution = createDeferred<ReturnType<typeof createToken>>()
+    const currentCliToken = createToken({ key: "resolved-current-cli-key" })
+    resolveDisplayAccountTokenForSecretMock
+      .mockReturnValueOnce(staleApiResolution.promise)
+      .mockResolvedValueOnce(currentCliToken)
+    const initialAccount = createAccount({
+      id: "strict-account",
+      name: "Strict Account",
+      baseUrl: "https://before.example.invalid/v1",
+      token: "before-account-credential",
+      cookieAuthSessionCookie: "session=before",
+    })
+    const initialToken = createToken({
+      id: 77,
+      accountId: initialAccount.id,
+      accountName: initialAccount.name,
+      key: "masked-before-key",
+      name: "Same Token",
+    })
+    const changedAccount = createAccount({
+      ...initialAccount,
+      baseUrl: "https://after.example.invalid/v1",
+      token: "after-account-credential",
+      cookieAuthSessionCookie: "session=after",
+    })
+    const changedToken = createToken({
+      ...initialToken,
+      key: "masked-after-key",
+    })
+    const user = userEvent.setup()
+    const { rerenderTokenHeader } = renderTokenHeader(
+      { account: initialAccount, token: initialToken },
+      { strictMode: true },
+    )
+
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenApiButton),
+    )
+    rerenderTokenHeader({ account: changedAccount, token: changedToken })
+    verifyDialogRenderMock.mockClear()
+    await user.click(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.verifyTokenCliSupportButton),
+    )
+
+    await waitFor(() => {
+      expect(verifyCliDialogRenderMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          profile: expect.objectContaining({
+            apiKey: "resolved-current-cli-key",
+            baseUrl: "https://after.example.invalid/v1",
+          }),
+        }),
+      )
+    })
+
+    await act(async () => {
+      staleApiResolution.resolve(createToken({ key: "resolved-stale-api-key" }))
+      await staleApiResolution.promise
+    })
+
+    expect(verifyDialogRenderMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ isOpen: true }),
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledTimes(2)
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      { diagnostics: { execution: { staleResponseIgnored: true } } },
+    )
+    expect(showResultToastMock).not.toHaveBeenCalled()
+    expect(loggerErrorMock).not.toHaveBeenCalled()
   })
 
   it("tracks managed-site single token import as skipped when preparation does not open", async () => {

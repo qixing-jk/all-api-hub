@@ -12,6 +12,8 @@ import {
 } from "~/services/apiService/aihubmix"
 
 export const aihubmixKeyManagement: KeyManagementCapability = {
+  // AIHubMix lists saved keys as masked values with no reveal route; the full
+  // secret is available only in the create response. https://docs.aihubmix.com/en/api/Cli
   inventorySecretAvailability:
     INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
   fetchTokens: (request) => fetchAccountTokens(request),

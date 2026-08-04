@@ -7,7 +7,7 @@ import {
 } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 import { Copy } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -313,7 +313,8 @@ function TokenActionButtons({
   const handledGuidedManagedSiteImportRequestRef = useRef<string | undefined>(
     undefined,
   )
-  const verifySecretAllowedRef = useRef(actionPolicy.verifySecret)
+  const verifySecretAllowedRef = useRef(false)
+  const verificationGenerationRef = useRef<symbol | null>(null)
   const apiVerificationEpochRef = useRef(0)
   const cliVerificationEpochRef = useRef(0)
   const [verifyingProfile, setVerifyingProfile] =
@@ -324,13 +325,14 @@ function TokenActionButtons({
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
   const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
 
-  verifySecretAllowedRef.current = actionPolicy.verifySecret
-
   const isVerificationRequestCurrent = (
+    verificationGeneration: symbol | null,
     verificationEpoch: number,
     currentVerificationEpoch: number,
   ) =>
+    verificationGeneration !== null &&
     verifySecretAllowedRef.current &&
+    verificationGenerationRef.current === verificationGeneration &&
     verificationEpoch === currentVerificationEpoch
 
   const completeStaleVerification = (
@@ -352,16 +354,38 @@ function TokenActionButtons({
     setIsManagedSiteImportHighlighted(false)
   }, [actionPolicy.exportSecret])
 
-  useEffect(() => {
-    if (actionPolicy.verifySecret) {
-      return
-    }
-
-    apiVerificationEpochRef.current += 1
-    cliVerificationEpochRef.current += 1
+  useLayoutEffect(() => {
+    const verificationGeneration = Symbol("token-verification-generation")
+    verificationGenerationRef.current = verificationGeneration
+    verifySecretAllowedRef.current = actionPolicy.verifySecret
     setVerifyingProfile(null)
     setCliVerifyingProfile(null)
-  }, [actionPolicy.verifySecret])
+
+    return () => {
+      if (verificationGenerationRef.current === verificationGeneration) {
+        verificationGenerationRef.current = null
+      }
+      verifySecretAllowedRef.current = false
+      apiVerificationEpochRef.current += 1
+      cliVerificationEpochRef.current += 1
+    }
+  }, [
+    actionPolicy.verifySecret,
+    account.authType,
+    account.baseUrl,
+    account.cookieAuthSessionCookie,
+    account.id,
+    account.name,
+    account.siteType,
+    account.tagIds,
+    account.token,
+    account.userId,
+    token.accountId,
+    token.accountName,
+    token.id,
+    token.key,
+    token.name,
+  ])
 
   useEffect(() => {
     if (
@@ -593,6 +617,7 @@ function TokenActionButtons({
   }
 
   const handleVerifyApi = async () => {
+    const verificationGeneration = verificationGenerationRef.current
     const verificationEpoch = ++apiVerificationEpochRef.current
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
@@ -606,6 +631,7 @@ function TokenActionButtons({
       resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
       if (
         !isVerificationRequestCurrent(
+          verificationGeneration,
           verificationEpoch,
           apiVerificationEpochRef.current,
         )
@@ -618,6 +644,7 @@ function TokenActionButtons({
     } catch (error) {
       if (
         !isVerificationRequestCurrent(
+          verificationGeneration,
           verificationEpoch,
           apiVerificationEpochRef.current,
         )
@@ -647,6 +674,7 @@ function TokenActionButtons({
   }
 
   const handleVerifyCliSupport = async () => {
+    const verificationGeneration = verificationGenerationRef.current
     const verificationEpoch = ++cliVerificationEpochRef.current
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
@@ -660,6 +688,7 @@ function TokenActionButtons({
       resolvedToken = await resolveDisplayAccountTokenForSecret(account, token)
       if (
         !isVerificationRequestCurrent(
+          verificationGeneration,
           verificationEpoch,
           cliVerificationEpochRef.current,
         )
@@ -672,6 +701,7 @@ function TokenActionButtons({
     } catch (error) {
       if (
         !isVerificationRequestCurrent(
+          verificationGeneration,
           verificationEpoch,
           cliVerificationEpochRef.current,
         )
