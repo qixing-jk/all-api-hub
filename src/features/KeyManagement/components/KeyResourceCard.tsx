@@ -54,8 +54,10 @@ export type KeyResourceFactListProps = {
 }
 
 export type KeyResourceSecretDisplayProps = {
+  label?: ReactNode
   secret?: ReactNode
   controls?: ReactNode
+  message?: ReactNode
 }
 
 /**
@@ -133,18 +135,25 @@ export function KeyResourceFactList({ facts }: KeyResourceFactListProps) {
 }
 
 /**
- * Renders optional caller-owned secret content and controls without inferring behavior.
+ * Renders the shared secret label, caller-owned content and availability guidance.
  */
 export function KeyResourceSecretDisplay({
+  label,
   secret,
   controls,
+  message,
 }: KeyResourceSecretDisplayProps) {
-  if (!secret && !controls) {
+  if (!secret && !controls && !message) {
     return null
   }
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-2">
+      {label ? (
+        <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
+          {label}
+        </span>
+      ) : null}
       {secret ? (
         <div className="max-w-full min-w-0 font-mono text-xs break-all">
           {secret}
@@ -152,6 +161,11 @@ export function KeyResourceSecretDisplay({
       ) : null}
       {controls ? (
         <div className="flex flex-wrap items-center gap-1.5">{controls}</div>
+      ) : null}
+      {message ? (
+        <span className="dark:text-dark-text-tertiary min-w-0 text-xs break-words text-gray-500 sm:text-sm">
+          {message}
+        </span>
       ) : null}
     </div>
   )
@@ -226,8 +240,13 @@ export function KeyResourceCard({
           ) : (
             <KeyResourceCardHeader {...headerProps} />
           )}
+          <KeyResourceSecretDisplay
+            label={t("keyDetails.key")}
+            secret={secret}
+            controls={secretControls}
+            message={presentation.secretAvailabilityMessage}
+          />
           <KeyResourceFactList facts={presentation.summaryFacts} />
-          <KeyResourceSecretDisplay secret={secret} controls={secretControls} />
           {isDetailsExpanded ? (
             <div
               id={detailsPanelId}
@@ -235,11 +254,6 @@ export function KeyResourceCard({
               aria-labelledby={detailsTriggerId}
               className="dark:border-dark-bg-tertiary flex min-w-0 flex-col gap-3 border-t border-gray-200 pt-3"
             >
-              {presentation.secretAvailabilityMessage ? (
-                <p className="dark:text-dark-text-secondary text-sm break-words text-gray-600">
-                  {presentation.secretAvailabilityMessage}
-                </p>
-              ) : null}
               {detailState.status === "loading" ? (
                 <div role="status" className="flex items-center gap-2 text-sm">
                   <Spinner aria-hidden="true" size="sm" />

@@ -275,6 +275,10 @@ describe("TokenListItem batch selection", () => {
     expect(
       await screen.findByText("keyManagement:keyDetails.remainingQuota"),
     ).toBeVisible()
+    expect(screen.getByText("keyManagement:keyDetails.key")).toBeVisible()
+    expect(
+      screen.getByText("keyManagement:keyDetails.createResponseOnlySecret"),
+    ).toBeVisible()
     expect(screen.queryByText("192.0.2.10")).toBeNull()
     expect(
       screen.queryByRole("button", { name: "Toggle key visibility" }),
@@ -286,7 +290,7 @@ describe("TokenListItem batch selection", () => {
       }),
     )
 
-    expect(screen.getByText("vip")).toBeVisible()
+    expect(screen.queryByText("vip")).toBeNull()
     expect(screen.getByText("model-a")).toBeVisible()
     expect(screen.getByText("192.0.2.10")).toBeVisible()
   })

@@ -182,7 +182,7 @@
   },
   "enabledCount": "启用 {{count}} 个",
   "keyDetails": {
-    "createResponseOnlySecret": "完整密钥仅会在创建响应中提供。请在创建时保存。",
+    "createResponseOnlySecret": "该站点创建后仅提供密钥掩码，因此无法再次查看完整密钥。",
     "createTime": "创建时间：",
     "expireTime": "过期时间：",
     "followsAccountGroup": "跟随账号分组",

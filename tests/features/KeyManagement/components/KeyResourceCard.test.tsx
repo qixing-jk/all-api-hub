@@ -19,7 +19,8 @@ const presentation: KeyResourceCardPresentation = {
   status: "active",
   statusLabel: "Active",
   secretAvailability: "recoverable",
-  secretAvailabilityMessage: "Full secret is unavailable after creation.",
+  secretAvailabilityMessage:
+    "This site provides only a masked value after creation, so the full key cannot be viewed again.",
   maskedLabel: "sk-example...",
   summaryFacts: [
     { id: "remaining-quota", label: "Remaining quota", value: "100" },
@@ -80,11 +81,33 @@ describe("KeyResourceCard", () => {
     expect(screen.getByRole("heading", { name: "Example key" })).toBeVisible()
     expect(screen.getByText("Account example")).toBeVisible()
     expect(screen.getByText("Remaining quota")).toBeVisible()
+    expect(screen.getByText("Key:")).toBeVisible()
     expect(screen.getByText("sk-example")).toBeVisible()
+    expect(
+      screen.getByText(
+        "This site provides only a masked value after creation, so the full key cannot be viewed again.",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "This site provides only a masked value after creation, so the full key cannot be viewed again.",
+      ).parentElement,
+    ).toBe(screen.getByText("sk-example").parentElement?.parentElement)
+    expect(
+      screen
+        .getByText("sk-example")
+        .compareDocumentPosition(screen.getByText("Remaining quota")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
     expect(screen.queryByText("IP limits")).toBeNull()
     expect(
-      screen.queryByText("Full secret is unavailable after creation."),
-    ).toBeNull()
+      screen
+        .getByText(
+          "This site provides only a masked value after creation, so the full key cannot be viewed again.",
+        )
+        .compareDocumentPosition(screen.getByText("Remaining quota")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
 
     await user.click(
       screen.getByRole("button", { name: "View details for Example key" }),
@@ -93,8 +116,16 @@ describe("KeyResourceCard", () => {
     expect(screen.getByText("IP limits")).toBeVisible()
     expect(screen.getByText("192.0.2.10")).toBeVisible()
     expect(
-      screen.getByText("Full secret is unavailable after creation."),
-    ).toBeVisible()
+      screen
+        .getByText("Remaining quota")
+        .compareDocumentPosition(screen.getByText("IP limits")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      screen.getAllByText(
+        "This site provides only a masked value after creation, so the full key cannot be viewed again.",
+      ),
+    ).toHaveLength(1)
   })
 
   it("lets callers use the shared header without a detail trigger", () => {

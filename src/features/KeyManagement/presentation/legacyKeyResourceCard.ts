@@ -160,11 +160,6 @@ export const buildLegacyKeyResourceCardPresentation = (
   const isUnlimitedQuota = token.unlimited_quota || token.remain_quota < 0
   const detailFacts = [
     createFact(
-      "created-at",
-      t("keyManagement:keyDetails.createTime"),
-      formatLocaleDateTime(token.created_time, t("common:labels.notAvailable")),
-    ),
-    createFact(
       "quota-policy",
       t("keyManagement:keyDetails.quotaPolicy"),
       isUnlimitedQuota
@@ -181,6 +176,11 @@ export const buildLegacyKeyResourceCardPresentation = (
           ),
         )
       : undefined,
+    createFact(
+      "created-at",
+      t("keyManagement:keyDetails.createTime"),
+      formatLocaleDateTime(token.created_time, t("common:labels.notAvailable")),
+    ),
     getOptionalFact("note", t("keyManagement:keyDetails.note"), token.note),
     getOptionalFact(
       "models",
@@ -211,14 +211,14 @@ export const buildLegacyKeyResourceCardPresentation = (
     summaryFacts: [
       getGroupFact(runtimeKey, t),
       createFact(
-        "remaining-quota",
-        t("keyManagement:keyDetails.remainingQuota"),
-        formatQuota(token.remain_quota, isUnlimitedQuota),
-      ),
-      createFact(
         "used-quota",
         t("keyManagement:keyDetails.usedQuota"),
         formatUsedQuota(token),
+      ),
+      createFact(
+        "remaining-quota",
+        t("keyManagement:keyDetails.remainingQuota"),
+        formatQuota(token.remain_quota, isUnlimitedQuota),
       ),
       createFact(
         "expires-at",

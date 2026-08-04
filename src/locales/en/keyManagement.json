@@ -188,7 +188,7 @@
   "enabledCount_one": "Enabled {{count}}",
   "enabledCount_other": "Enabled {{count}}",
   "keyDetails": {
-    "createResponseOnlySecret": "The full key is available only in the creation response. Save it when you create the key.",
+    "createResponseOnlySecret": "This site provides only a masked value after creation, so the full key cannot be viewed again.",
     "createTime": "Create Time:",
     "expireTime": "Expire Time:",
     "followsAccountGroup": "Follows account group",

@@ -19,7 +19,7 @@ import {
 const t = ((key: string) => key) as TFunction
 
 describe("buildLegacyKeyResourceCardPresentation", () => {
-  it("keeps the meaningful group in the summary and legacy metadata in details", () => {
+  it("keeps group and usage prominent while placing creation after last use", () => {
     const runtimeKey = buildDisplayAccountTokenRuntimeKey(
       createAccount({ siteType: SITE_TYPES.NEW_API }),
       createToken({
@@ -29,6 +29,7 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
         model_limits: "ignored-model",
         models: "model-c",
         allow_ips: "192.0.2.10",
+        accessed_time: 1700000000,
       }),
     )
 
@@ -36,13 +37,14 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
 
     expect(presentation.summaryFacts.map(({ id }) => id)).toEqual([
       "group",
-      "remaining-quota",
       "used-quota",
+      "remaining-quota",
       "expires-at",
     ])
     expect(presentation.detailFacts.map(({ id }) => id)).toEqual([
-      "created-at",
       "quota-policy",
+      "last-used-at",
+      "created-at",
       "note",
       "models",
       "ip-limits",
@@ -83,14 +85,16 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
     const presentation = buildLegacyKeyResourceCardPresentation(runtimeKey, t)
 
     expect(presentation.detailFacts.map(({ id }) => id)).toEqual([
-      "created-at",
       "quota-policy",
+      "created-at",
       "models",
       "ip-limits",
     ])
-    expect(presentation.summaryFacts.some(({ id }) => id === "group")).toBe(
-      false,
-    )
+    expect(presentation.summaryFacts.map(({ id }) => id)).toEqual([
+      "used-quota",
+      "remaining-quota",
+      "expires-at",
+    ])
     expect(presentation.secretAvailabilityMessage).toBe(
       "keyManagement:keyDetails.createResponseOnlySecret",
     )
@@ -117,8 +121,8 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
     )
 
     expect(presentation.detailFacts.map(({ id }) => id)).toEqual([
-      "created-at",
       "quota-policy",
+      "created-at",
     ])
   })
 
@@ -136,7 +140,7 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
       t,
     )
 
-    expect(presentation.summaryFacts[0]).toEqual({
+    expect(presentation.summaryFacts.find(({ id }) => id === "group")).toEqual({
       id: "group",
       label: "keyManagement:keyDetails.group",
       value: "keyManagement:keyDetails.followsAccountGroup",
@@ -162,12 +166,12 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
       t,
     )
 
-    expect(ungrouped.summaryFacts[0]?.value).toBe(
+    expect(ungrouped.summaryFacts.find(({ id }) => id === "group")?.value).toBe(
       "keyManagement:keyDetails.ungrouped",
     )
-    expect(unavailable.summaryFacts[0]?.value).toBe(
-      "common:labels.notAvailable",
-    )
+    expect(
+      unavailable.summaryFacts.find(({ id }) => id === "group")?.value,
+    ).toBe("common:labels.notAvailable")
   })
 
   it("shows a missing VoAPI v2 group as unavailable", () => {
@@ -179,9 +183,9 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
       t,
     )
 
-    expect(presentation.summaryFacts[0]?.value).toBe(
-      "common:labels.notAvailable",
-    )
+    expect(
+      presentation.summaryFacts.find(({ id }) => id === "group")?.value,
+    ).toBe("common:labels.notAvailable")
   })
 
   it.each([SITE_TYPES.ONE_API, SITE_TYPES.AIHUBMIX])(

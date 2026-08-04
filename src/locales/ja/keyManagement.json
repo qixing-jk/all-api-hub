@@ -182,7 +182,7 @@
   },
   "enabledCount_other": "{{count}} 件有効",
   "keyDetails": {
-    "createResponseOnlySecret": "完全なキーは作成レスポンスでのみ確認できます。作成時に保存してください。",
+    "createResponseOnlySecret": "このサイトでは作成後はマスクされた値のみ提供されるため、完全なキーを再表示できません。",
     "createTime": "作成時刻:",
     "expireTime": "有効期限:",
     "followsAccountGroup": "アカウントのグループに従う",

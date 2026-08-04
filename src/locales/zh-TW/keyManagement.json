@@ -182,7 +182,7 @@
   },
   "enabledCount_other": "啟用 {{count}} 個",
   "keyDetails": {
-    "createResponseOnlySecret": "完整金鑰只會在建立回應中提供。請在建立時儲存。",
+    "createResponseOnlySecret": "此站點建立後僅提供金鑰遮罩值，因此無法再次查看完整金鑰。",
     "createTime": "建立時間：",
     "expireTime": "過期時間：",
     "followsAccountGroup": "跟隨帳號分組",
