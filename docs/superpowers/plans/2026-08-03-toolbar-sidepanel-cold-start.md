@@ -292,7 +292,7 @@ const handleToolbarActionClick = async (tab: browser.tabs.Tab) => {
   if (behavior !== TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel) return
 
   if (wasUnreconciled) {
-    await openSettingsPage()
+    await handleOpenSidePanelActionClick(tab)
   }
 }
 
@@ -356,9 +356,10 @@ the separate options click handler. Preserve the existing manual side-panel
 analytics behavior unchanged. Reconciled Firefox and Chromium manual fallback
 routes must call the side-panel helper before the listener crosses any `await`.
 An unreconciled listener may read durable state for `options`, but if that read
-resolves to `sidepanel`, it opens Basic settings because the user gesture has
-already been lost. Chromium normally consumes a genuine cold side-panel click
-through its persisted native action configuration.
+resolves to `sidepanel`, it preserves the previous best-effort side-panel open;
+the shared helper falls back to Basic settings if the browser rejects the call.
+Chromium normally consumes a genuine cold side-panel click through its persisted
+native action configuration.
 
 - [ ] **Step 4: Run the focused action tests and verify GREEN**
 

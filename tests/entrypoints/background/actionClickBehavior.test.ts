@@ -21,7 +21,6 @@ describe("background applyActionClickBehavior", () => {
   let loggerWarn: ReturnType<typeof vi.fn>
   let openSidePanelWithFallback: ReturnType<typeof vi.fn>
   let openOptionsPage: ReturnType<typeof vi.fn>
-  let openSettingsPage: ReturnType<typeof vi.fn>
   let startProductAnalyticsAction: ReturnType<typeof vi.fn>
   let trackerComplete: ReturnType<typeof vi.fn>
 
@@ -39,7 +38,6 @@ describe("background applyActionClickBehavior", () => {
     loggerWarn = vi.fn()
     openSidePanelWithFallback = vi.fn().mockResolvedValue(undefined)
     openOptionsPage = vi.fn().mockResolvedValue(undefined)
-    openSettingsPage = vi.fn().mockResolvedValue(undefined)
     trackerComplete = vi.fn().mockResolvedValue(undefined)
     startProductAnalyticsAction = vi.fn().mockReturnValue({
       complete: trackerComplete,
@@ -81,7 +79,6 @@ describe("background applyActionClickBehavior", () => {
     vi.doMock("~/utils/navigation", () => ({
       openSidePanelWithFallback,
       openOptionsPage,
-      openSettingsPage,
     }))
 
     vi.doMock("~/services/productAnalytics/actions", () => ({
@@ -311,7 +308,7 @@ describe("background applyActionClickBehavior", () => {
     expect(openOptionsPage).toHaveBeenCalledTimes(1)
   })
 
-  it("falls back to basic settings when a cold preference read resolves to sidepanel", async () => {
+  it("best-effort routes a cold sidepanel click from the durable preference", async () => {
     getPreferencesStrict.mockResolvedValue({
       actionClickBehavior: "sidepanel",
     })
@@ -328,8 +325,7 @@ describe("background applyActionClickBehavior", () => {
     const clickedTab = { id: 123, windowId: 456 } as browser.tabs.Tab
     await clickHandler(clickedTab)
 
-    expect(openSettingsPage).toHaveBeenCalledTimes(1)
-    expect(openSidePanelWithFallback).not.toHaveBeenCalled()
+    expect(openSidePanelWithFallback).toHaveBeenCalledWith(clickedTab)
   })
 
   it("leaves a cold popup click to the browser", async () => {
@@ -349,7 +345,6 @@ describe("background applyActionClickBehavior", () => {
     await clickHandler({ id: 123, windowId: 456 } as browser.tabs.Tab)
 
     expect(openOptionsPage).not.toHaveBeenCalled()
-    expect(openSettingsPage).not.toHaveBeenCalled()
     expect(openSidePanelWithFallback).not.toHaveBeenCalled()
   })
 

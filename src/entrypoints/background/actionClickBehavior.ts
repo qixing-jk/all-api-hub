@@ -22,11 +22,7 @@ import {
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import {
-  openOptionsPage,
-  openSettingsPage,
-  openSidePanelWithFallback,
-} from "~/utils/navigation"
+import { openOptionsPage, openSidePanelWithFallback } from "~/utils/navigation"
 
 /**
  * Unified logger scoped to toolbar action click behavior wiring.
@@ -128,10 +124,10 @@ const handleToolbarActionClick = async (tab: browser.tabs.Tab) => {
   }
 
   if (wasUnreconciled) {
-    // Storage resolution has already crossed the user-gesture boundary. The
-    // browser-native Chromium route owns real cold starts; manual routing can
-    // only fall back to a destination that does not require that gesture.
-    await openSettingsPage()
+    // The durable read may have crossed the user-gesture boundary, but retain
+    // the previous best-effort behavior: try the side panel, then let the
+    // shared helper fall back to Basic settings if the browser rejects it.
+    await handleOpenSidePanelActionClick(tab)
   }
 }
 
