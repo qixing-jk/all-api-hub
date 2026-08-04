@@ -185,6 +185,7 @@
     "createResponseOnlySecret": "完整密钥仅会在创建响应中提供。请在创建时保存。",
     "createTime": "创建时间：",
     "expireTime": "过期时间：",
+    "followsAccountGroup": "跟随账号分组",
     "group": "分组：",
     "ipLimits": "IP 限制：",
     "key": "密钥：",
@@ -196,6 +197,7 @@
     "quotaPolicy": "额度策略：",
     "remainingQuota": "剩余额度：",
     "secretUnavailable": "此已保存密钥的完整值不可用。",
+    "ungrouped": "未分组",
     "usedQuota": "已用额度："
   },
   "loadError": {

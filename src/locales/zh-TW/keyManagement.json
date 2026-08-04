@@ -185,6 +185,7 @@
     "createResponseOnlySecret": "完整金鑰只會在建立回應中提供。請在建立時儲存。",
     "createTime": "建立時間：",
     "expireTime": "過期時間：",
+    "followsAccountGroup": "跟隨帳號分組",
     "group": "分組：",
     "ipLimits": "IP 限制：",
     "key": "金鑰：",
@@ -196,6 +197,7 @@
     "quotaPolicy": "額度策略：",
     "remainingQuota": "剩餘額度：",
     "secretUnavailable": "此已儲存金鑰的完整值不可用。",
+    "ungrouped": "未分組",
     "usedQuota": "已用額度："
   },
   "loadError": {

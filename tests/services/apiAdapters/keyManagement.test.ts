@@ -164,6 +164,85 @@ describe("apiAdapter keyManagement", () => {
     vi.resetAllMocks()
   })
 
+  it.each([
+    [SITE_TYPES.NEW_API, "follows-account"],
+    [SITE_TYPES.VELOERA, "follows-account"],
+    [SITE_TYPES.ANYROUTER, "follows-account"],
+    [SITE_TYPES.RIX_API, "follows-account"],
+    [SITE_TYPES.ONE_HUB, "unknown"],
+    [SITE_TYPES.DONE_HUB, "unknown"],
+    [SITE_TYPES.V_API, "unknown"],
+    [SITE_TYPES.VO_API, "unknown"],
+    [SITE_TYPES.SUPER_API, "unknown"],
+    [SITE_TYPES.NEO_API, "unknown"],
+    [SITE_TYPES.WONG_GONGYI, "unknown"],
+    [SITE_TYPES.UNKNOWN, "unknown"],
+    [SITE_TYPES.ONE_API, "not-applicable"],
+  ] as const)(
+    "resolves an empty %s inventory group as %s",
+    (siteType, expectedKind) => {
+      const keyManagement = createNewApiKeyManagement(siteType)
+
+      expect(keyManagement.inventoryGroup?.resolve({ group: "" })).toEqual({
+        kind: expectedKind,
+      })
+    },
+  )
+
+  it("normalizes a meaningful New API-family inventory group name", () => {
+    const keyManagement = createNewApiKeyManagement(SITE_TYPES.NEW_API)
+
+    expect(
+      keyManagement.inventoryGroup?.resolve({ group: "  premium  " }),
+    ).toEqual({ kind: "named", name: "premium" })
+  })
+
+  it.each([
+    SITE_TYPES.ONE_HUB,
+    SITE_TYPES.DONE_HUB,
+    SITE_TYPES.V_API,
+    SITE_TYPES.VO_API,
+    SITE_TYPES.SUPER_API,
+    SITE_TYPES.NEO_API,
+    SITE_TYPES.WONG_GONGYI,
+    SITE_TYPES.UNKNOWN,
+  ])("preserves a meaningful %s inventory group name", (siteType) => {
+    const keyManagement = createNewApiKeyManagement(siteType)
+
+    expect(
+      keyManagement.inventoryGroup?.resolve({ group: "  provider-group  " }),
+    ).toEqual({ kind: "named", name: "provider-group" })
+  })
+
+  it("distinguishes Sub2API ungrouped keys from unresolved group references", () => {
+    expect(
+      sub2ApiKeyManagement.inventoryGroup?.resolve({
+        group: "",
+        sub2api_group_id: undefined,
+      }),
+    ).toEqual({ kind: "ungrouped" })
+    expect(
+      sub2ApiKeyManagement.inventoryGroup?.resolve({
+        group: "",
+        sub2api_group_id: 42,
+      }),
+    ).toEqual({ kind: "unavailable" })
+  })
+
+  it("treats a missing VoAPI v2 inventory group name as unavailable", () => {
+    expect(voApiV2KeyManagement.inventoryGroup?.resolve({ group: "" })).toEqual(
+      { kind: "unavailable" },
+    )
+  })
+
+  it("marks key-level AIHubMix groups as not applicable", () => {
+    expect(
+      aihubmixKeyManagement.inventoryGroup?.resolve({
+        group: "fixture-only",
+      }),
+    ).toEqual({ kind: "not-applicable" })
+  })
+
   it("delegates New API-family key operations through the New API-family implementation", async () => {
     const expectedTokens = [token]
     mockFetchAccountTokens.mockResolvedValueOnce(expectedTokens)

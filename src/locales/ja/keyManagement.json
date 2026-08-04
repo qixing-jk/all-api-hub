@@ -185,6 +185,7 @@
     "createResponseOnlySecret": "完全なキーは作成レスポンスでのみ確認できます。作成時に保存してください。",
     "createTime": "作成時刻:",
     "expireTime": "有効期限:",
+    "followsAccountGroup": "アカウントのグループに従う",
     "group": "グループ:",
     "ipLimits": "IP 制限:",
     "key": "キー:",
@@ -196,6 +197,7 @@
     "quotaPolicy": "クォータポリシー:",
     "remainingQuota": "残りクォータ:",
     "secretUnavailable": "この保存済みキーでは完全なキーを利用できません。",
+    "ungrouped": "グループなし",
     "usedQuota": "使用済みクォータ:"
   },
   "loadError": {

@@ -197,6 +197,7 @@
     "createResponseOnlySecret": "La clave completa solo está disponible en la respuesta de creación. Guárdala al crear la clave.",
     "createTime": "Hora de creación:",
     "expireTime": "Hora de expiración:",
+    "followsAccountGroup": "Usa el grupo de la cuenta",
     "group": "Grupo:",
     "ipLimits": "Límites de IP:",
     "key": "Clave:",
@@ -208,6 +209,7 @@
     "quotaPolicy": "Política de cuota:",
     "remainingQuota": "Cuota restante:",
     "secretUnavailable": "La clave completa no está disponible para esta clave guardada.",
+    "ungrouped": "Sin grupo",
     "usedQuota": "Cuota usada:"
   },
   "loadError": {

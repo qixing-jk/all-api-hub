@@ -1,4 +1,8 @@
-import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
+import {
+  INVENTORY_GROUP_KINDS,
+  resolveNamedInventoryGroup,
+  type KeyManagementCapability,
+} from "~/services/apiAdapters/contracts/keyManagement"
 import {
   createApiToken,
   deleteApiToken,
@@ -20,6 +24,26 @@ export const sub2ApiKeyManagement: KeyManagementCapability = {
   resolveTokenKey: ({ request, token }) => resolveApiTokenKey(request, token),
   deleteToken: ({ request, tokenId }) => deleteApiToken(request, tokenId),
   fetchAvailableModels: (request) => fetchAccountAvailableModels(request),
+  // Sub2API persists a nullable group_id; a missing relation is an ungrouped
+  // key, while an id without its joined name is incomplete inventory data.
+  // https://github.com/Wei-Shaw/sub2api/blob/8b3fe664dc68d056a65942b7b309089d65dfb8f7/backend/ent/schema/api_key.go#L40-L46
+  inventoryGroup: {
+    resolve: (token) => {
+      const named = resolveNamedInventoryGroup(
+        token,
+        INVENTORY_GROUP_KINDS.Ungrouped,
+      )
+
+      if (
+        named.kind === INVENTORY_GROUP_KINDS.Ungrouped &&
+        token.sub2api_group_id !== undefined
+      ) {
+        return { kind: INVENTORY_GROUP_KINDS.Unavailable }
+      }
+
+      return named
+    },
+  },
   userGroups: {
     fetch: (request) => fetchUserGroups(request),
   },

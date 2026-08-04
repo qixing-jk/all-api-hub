@@ -6,7 +6,9 @@ import {
 } from "~/services/accounts/accountRuntimeKeys"
 import {
   getInventorySecretAvailability,
+  INVENTORY_GROUP_KINDS,
   INVENTORY_SECRET_AVAILABILITIES,
+  type InventoryGroupState,
   type InventorySecretAvailability,
 } from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -62,6 +64,19 @@ const getSecretAvailability = (runtimeKey: AccountTokenRuntimeKey) => {
   )
 }
 
+const getInventoryGroup = (
+  runtimeKey: AccountTokenRuntimeKey,
+): InventoryGroupState => {
+  const inventoryGroup = getSiteTypeCapabilities(runtimeKey.siteType).account
+    ?.keyManagement?.inventoryGroup
+
+  return (
+    inventoryGroup?.resolve(runtimeKey.token) ?? {
+      kind: INVENTORY_GROUP_KINDS.Unknown,
+    }
+  )
+}
+
 const getActionPolicy = (
   runtimeKey: AccountTokenRuntimeKey,
 ): KeyResourceActionPolicy => {
@@ -100,6 +115,31 @@ const getOptionalFact = (
 ) => {
   const normalizedValue = value?.trim()
   return normalizedValue ? createFact(id, label, normalizedValue) : undefined
+}
+
+const getGroupFact = (
+  runtimeKey: AccountTokenRuntimeKey,
+  t: TFunction,
+): KeyResourceFact | undefined => {
+  const group = getInventoryGroup(runtimeKey)
+  const label = t("keyManagement:keyDetails.group")
+
+  switch (group.kind) {
+    case INVENTORY_GROUP_KINDS.Named:
+      return createFact("group", label, group.name)
+    case INVENTORY_GROUP_KINDS.FollowsAccount:
+      return createFact(
+        "group",
+        label,
+        t("keyManagement:keyDetails.followsAccountGroup"),
+      )
+    case INVENTORY_GROUP_KINDS.Ungrouped:
+      return createFact("group", label, t("keyManagement:keyDetails.ungrouped"))
+    case INVENTORY_GROUP_KINDS.Unavailable:
+      return createFact("group", label, t("common:labels.notAvailable"))
+    default:
+      return undefined
+  }
 }
 
 export const isKeyResourceBatchSelectable = (
@@ -142,7 +182,6 @@ export const buildLegacyKeyResourceCardPresentation = (
         )
       : undefined,
     getOptionalFact("note", t("keyManagement:keyDetails.note"), token.note),
-    getOptionalFact("group", t("keyManagement:keyDetails.group"), token.group),
     getOptionalFact(
       "models",
       t("keyManagement:keyDetails.models"),
@@ -170,6 +209,7 @@ export const buildLegacyKeyResourceCardPresentation = (
       t,
     ),
     summaryFacts: [
+      getGroupFact(runtimeKey, t),
       createFact(
         "remaining-quota",
         t("keyManagement:keyDetails.remainingQuota"),
@@ -185,7 +225,7 @@ export const buildLegacyKeyResourceCardPresentation = (
         t("keyManagement:keyDetails.expireTime"),
         formatKeyTime(token.expired_time),
       ),
-    ],
+    ].filter((fact): fact is KeyResourceFact => fact !== undefined),
     detailFacts,
     actions: getActionPolicy(runtimeKey),
   }

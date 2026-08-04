@@ -1,4 +1,8 @@
-import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
+import {
+  INVENTORY_GROUP_KINDS,
+  resolveNamedInventoryGroup,
+  type KeyManagementCapability,
+} from "~/services/apiAdapters/contracts/keyManagement"
 import {
   createVoApiV2Token,
   deleteVoApiV2Token,
@@ -19,6 +23,13 @@ export const voApiV2KeyManagement: KeyManagementCapability = {
     resolveVoApiV2TokenKey(request, token),
   deleteToken: ({ request, tokenId }) => deleteVoApiV2Token(request, tokenId),
   fetchAvailableModels: (request) => fetchVoApiV2AvailableModels(request),
+  // VoAPI v2 key creation requires a group selection, so a missing group name
+  // in inventory cannot be interpreted as an ungrouped key.
+  // https://demo.voapi.top/assets/keys-BUkrbzdE.js
+  inventoryGroup: {
+    resolve: (token) =>
+      resolveNamedInventoryGroup(token, INVENTORY_GROUP_KINDS.Unavailable),
+  },
   userGroups: {
     fetch: (request) => fetchVoApiV2UserGroups(request),
   },

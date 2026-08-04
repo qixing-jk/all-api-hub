@@ -185,6 +185,7 @@
     "createResponseOnlySecret": "Khóa đầy đủ chỉ có trong phản hồi tạo khóa. Hãy lưu lại khi tạo.",
     "createTime": "Thời gian tạo:",
     "expireTime": "Thời gian hết hạn:",
+    "followsAccountGroup": "Theo nhóm tài khoản",
     "group": "Nhóm:",
     "ipLimits": "Giới hạn IP:",
     "key": "Khóa:",
@@ -196,6 +197,7 @@
     "quotaPolicy": "Chính sách hạn ngạch:",
     "remainingQuota": "Hạn ngạch còn lại:",
     "secretUnavailable": "Không có khóa đầy đủ cho khóa đã lưu này.",
+    "ungrouped": "Chưa phân nhóm",
     "usedQuota": "Hạn ngạch đã dùng:"
   },
   "loadError": {

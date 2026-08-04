@@ -19,7 +19,7 @@ import {
 const t = ((key: string) => key) as TFunction
 
 describe("buildLegacyKeyResourceCardPresentation", () => {
-  it("keeps recoverable legacy actions and limits the summary to four facts", () => {
+  it("keeps the meaningful group in the summary and legacy metadata in details", () => {
     const runtimeKey = buildDisplayAccountTokenRuntimeKey(
       createAccount({ siteType: SITE_TYPES.NEW_API }),
       createToken({
@@ -35,6 +35,7 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
     const presentation = buildLegacyKeyResourceCardPresentation(runtimeKey, t)
 
     expect(presentation.summaryFacts.map(({ id }) => id)).toEqual([
+      "group",
       "remaining-quota",
       "used-quota",
       "expires-at",
@@ -43,7 +44,6 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
       "created-at",
       "quota-policy",
       "note",
-      "group",
       "models",
       "ip-limits",
     ])
@@ -77,7 +77,7 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
   it("keeps AIHubMix metadata and mutations but removes stored-secret actions", () => {
     const runtimeKey = buildDisplayAccountTokenRuntimeKey(
       createAccount({ siteType: SITE_TYPES.AIHUBMIX }),
-      createToken({ group: "vip", models: "model-a", allow_ips: "*" }),
+      createToken({ models: "model-a", allow_ips: "*" }),
     )
 
     const presentation = buildLegacyKeyResourceCardPresentation(runtimeKey, t)
@@ -85,10 +85,12 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
     expect(presentation.detailFacts.map(({ id }) => id)).toEqual([
       "created-at",
       "quota-policy",
-      "group",
       "models",
       "ip-limits",
     ])
+    expect(presentation.summaryFacts.some(({ id }) => id === "group")).toBe(
+      false,
+    )
     expect(presentation.secretAvailabilityMessage).toBe(
       "keyManagement:keyDetails.createResponseOnlySecret",
     )
@@ -109,7 +111,7 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
     const presentation = buildLegacyKeyResourceCardPresentation(
       buildDisplayAccountTokenRuntimeKey(
         createAccount({ siteType: SITE_TYPES.AIHUBMIX }),
-        createToken({ group: "", models: "", allow_ips: "" }),
+        createToken({ models: "", allow_ips: "" }),
       ),
       t,
     )
@@ -119,6 +121,144 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
       "quota-policy",
     ])
   })
+
+  it.each([
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.VELOERA,
+    SITE_TYPES.ANYROUTER,
+    SITE_TYPES.RIX_API,
+  ])("shows an empty %s group as following the account group", (siteType) => {
+    const presentation = buildLegacyKeyResourceCardPresentation(
+      buildDisplayAccountTokenRuntimeKey(
+        createAccount({ siteType }),
+        createToken({ group: "" }),
+      ),
+      t,
+    )
+
+    expect(presentation.summaryFacts[0]).toEqual({
+      id: "group",
+      label: "keyManagement:keyDetails.group",
+      value: "keyManagement:keyDetails.followsAccountGroup",
+    })
+    expect(presentation.detailFacts.some(({ id }) => id === "group")).toBe(
+      false,
+    )
+  })
+
+  it("distinguishes an ungrouped Sub2API key from an unavailable group name", () => {
+    const ungrouped = buildLegacyKeyResourceCardPresentation(
+      buildDisplayAccountTokenRuntimeKey(
+        createAccount({ siteType: SITE_TYPES.SUB2API }),
+        createToken({ group: "", sub2api_group_id: undefined }),
+      ),
+      t,
+    )
+    const unavailable = buildLegacyKeyResourceCardPresentation(
+      buildDisplayAccountTokenRuntimeKey(
+        createAccount({ siteType: SITE_TYPES.SUB2API }),
+        createToken({ group: "", sub2api_group_id: 42 }),
+      ),
+      t,
+    )
+
+    expect(ungrouped.summaryFacts[0]?.value).toBe(
+      "keyManagement:keyDetails.ungrouped",
+    )
+    expect(unavailable.summaryFacts[0]?.value).toBe(
+      "common:labels.notAvailable",
+    )
+  })
+
+  it("shows a missing VoAPI v2 group as unavailable", () => {
+    const presentation = buildLegacyKeyResourceCardPresentation(
+      buildDisplayAccountTokenRuntimeKey(
+        createAccount({ siteType: SITE_TYPES.VO_API_V2 }),
+        createToken({ group: "" }),
+      ),
+      t,
+    )
+
+    expect(presentation.summaryFacts[0]?.value).toBe(
+      "common:labels.notAvailable",
+    )
+  })
+
+  it.each([SITE_TYPES.ONE_API, SITE_TYPES.AIHUBMIX])(
+    "suppresses key-level group metadata for %s",
+    (siteType) => {
+      const presentation = buildLegacyKeyResourceCardPresentation(
+        buildDisplayAccountTokenRuntimeKey(
+          createAccount({ siteType }),
+          createToken({ group: "fixture-only" }),
+        ),
+        t,
+      )
+
+      expect(presentation.summaryFacts.some(({ id }) => id === "group")).toBe(
+        false,
+      )
+      expect(presentation.detailFacts.some(({ id }) => id === "group")).toBe(
+        false,
+      )
+    },
+  )
+
+  it.each([
+    SITE_TYPES.ONE_HUB,
+    SITE_TYPES.DONE_HUB,
+    SITE_TYPES.V_API,
+    SITE_TYPES.VO_API,
+    SITE_TYPES.SUPER_API,
+    SITE_TYPES.NEO_API,
+    SITE_TYPES.WONG_GONGYI,
+    SITE_TYPES.UNKNOWN,
+  ])("omits an empty group when %s cannot resolve its meaning", (siteType) => {
+    const presentation = buildLegacyKeyResourceCardPresentation(
+      buildDisplayAccountTokenRuntimeKey(
+        createAccount({ siteType }),
+        createToken({ group: "" }),
+      ),
+      t,
+    )
+
+    expect(presentation.summaryFacts.some(({ id }) => id === "group")).toBe(
+      false,
+    )
+  })
+
+  it.each([
+    SITE_TYPES.ONE_HUB,
+    SITE_TYPES.DONE_HUB,
+    SITE_TYPES.V_API,
+    SITE_TYPES.VO_API,
+    SITE_TYPES.SUPER_API,
+    SITE_TYPES.NEO_API,
+    SITE_TYPES.WONG_GONGYI,
+    SITE_TYPES.UNKNOWN,
+  ])(
+    "shows a named %s group in the summary without duplication",
+    (siteType) => {
+      const presentation = buildLegacyKeyResourceCardPresentation(
+        buildDisplayAccountTokenRuntimeKey(
+          createAccount({ siteType }),
+          createToken({ group: "  provider-group  " }),
+        ),
+        t,
+      )
+
+      expect(
+        presentation.summaryFacts.find(({ id }) => id === "group"),
+      ).toEqual({
+        id: "group",
+        label: "keyManagement:keyDetails.group",
+        value: "provider-group",
+      })
+      expect(presentation.detailFacts.some(({ id }) => id === "group")).toBe(
+        false,
+      )
+    },
+  )
 
   it("presents unlimited quota as a policy instead of remaining quota", () => {
     const presentation = buildLegacyKeyResourceCardPresentation(
