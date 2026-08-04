@@ -1,6 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import type { TFunction } from "i18next"
-import { act, StrictMode, type ReactNode } from "react"
+import { act, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -8,11 +7,7 @@ import {
   AIHUBMIX_WEB_ORIGIN,
   SITE_TYPES,
 } from "~/constants/siteType"
-import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
-import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
-import { buildLegacyKeyResourceCardPresentation } from "~/features/KeyManagement/presentation/legacyKeyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -27,7 +22,11 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { createDeferred } from "~~/tests/test-utils/deferred"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  RECOVERABLE_ACTION_POLICY,
+  renderTokenHeader,
+} from "~~/tests/test-utils/keyManagement/TokenHeaderHarness"
+import { screen, waitFor } from "~~/tests/test-utils/render"
 import {
   createAccount,
   createToken,
@@ -82,16 +81,6 @@ vi.mock("~/components/KiloCodeExportDialog", () => ({
     return null
   },
 }))
-
-const RECOVERABLE_ACTION_POLICY: KeyResourceActionPolicy = {
-  copySecret: true,
-  revealSecret: true,
-  verifySecret: true,
-  exportSecret: true,
-  edit: true,
-  delete: true,
-  batchSelect: true,
-}
 
 vi.mock("~/components/ClaudeCodeRouterImportDialog", () => ({
   ClaudeCodeRouterImportDialog: (props: unknown) => {
@@ -182,79 +171,6 @@ vi.mock("react-hot-toast", () => ({
     success: vi.fn(),
   },
 }))
-
-type TokenHeaderTestProps = Partial<Parameters<typeof TokenHeader>[0]>
-
-function TokenHeaderHarness({ props }: { props: TokenHeaderTestProps }) {
-  const {
-    account: accountOverride,
-    token: tokenOverride,
-    actionPolicy: actionPolicyOverride,
-    headerProps: headerPropsOverride,
-    ...restProps
-  } = props
-  const account =
-    accountOverride ??
-    createAccount({
-      id: "acc-1",
-      name: "Account 1",
-      token: "account-access-token",
-      baseUrl: "https://account.example/v1",
-    })
-  const token =
-    tokenOverride ??
-    createToken({
-      id: 1,
-      name: "Token 1",
-      key: "sk-sensitive-original",
-      accountId: "acc-1",
-      accountName: "Account 1",
-    })
-  const presentation = buildLegacyKeyResourceCardPresentation(
-    buildDisplayAccountTokenRuntimeKey(account, token),
-    ((key: string) => key) as TFunction,
-  )
-
-  return (
-    <TokenHeader
-      token={token}
-      copyKey={vi.fn()}
-      handleEditToken={vi.fn()}
-      handleDeleteToken={vi.fn()}
-      account={account}
-      onOpenCCSwitchDialog={vi.fn()}
-      headerProps={
-        headerPropsOverride ?? {
-          presentation,
-          detailsTrigger: null,
-        }
-      }
-      actionPolicy={actionPolicyOverride ?? presentation.actions}
-      {...restProps}
-    />
-  )
-}
-
-function renderTokenHeader(
-  props: TokenHeaderTestProps = {},
-  options: { strictMode?: boolean } = {},
-) {
-  const renderHarness = (nextProps: TokenHeaderTestProps) => {
-    const harness = <TokenHeaderHarness props={nextProps} />
-    return options.strictMode ? <StrictMode>{harness}</StrictMode> : harness
-  }
-  const rendered = render(renderHarness(props), {
-    withReleaseUpdateStatusProvider: false,
-    withThemeProvider: false,
-    withUserPreferencesProvider: false,
-  })
-
-  return {
-    ...rendered,
-    rerenderTokenHeader: (nextProps: TokenHeaderTestProps) =>
-      rendered.rerender(renderHarness(nextProps)),
-  }
-}
 
 describe("TokenHeader analytics", () => {
   beforeEach(() => {
@@ -574,8 +490,16 @@ describe("TokenHeader analytics", () => {
     )
 
     rerenderTokenHeader({
-      account,
-      token,
+      account: {
+        ...account,
+        name: "Renamed account",
+        tagIds: ["refreshed-tag"],
+      },
+      token: {
+        ...token,
+        name: "Renamed token",
+        accountName: "Renamed account",
+      },
       isManagedSiteStatusChecking: true,
     })
     expect(screen.getByTestId("verify-api-dialog-mock")).toBeVisible()

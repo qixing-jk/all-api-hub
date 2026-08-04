@@ -1,15 +1,12 @@
-import type { ComponentProps, ReactNode } from "react"
+import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { RuntimeKeyDetails } from "~/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyDetails"
-import { TokenHeader as KeyResourceTokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
-import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
-import { buildLegacyKeyResourceCardPresentation } from "~/features/KeyManagement/presentation/legacyKeyResourceCard"
 import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { testI18n } from "~~/tests/test-utils/i18n"
+import { TokenHeaderHarness as TokenHeader } from "~~/tests/test-utils/keyManagement/TokenHeaderHarness"
 import { render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/components/dialogs/ChannelDialog", () => {
@@ -78,28 +75,6 @@ function createTokenStub(overrides: Record<string, unknown> = {}) {
     accountName: "Test Account",
     ...overrides,
   }
-}
-
-type TokenHeaderTestProps = Omit<
-  ComponentProps<typeof KeyResourceTokenHeader>,
-  "headerProps" | "actionPolicy"
-> & {
-  actionPolicy?: KeyResourceActionPolicy
-}
-
-function TokenHeader({ actionPolicy, ...props }: TokenHeaderTestProps) {
-  const presentation = buildLegacyKeyResourceCardPresentation(
-    buildDisplayAccountTokenRuntimeKey(props.account, props.token),
-    testI18n.t,
-  )
-
-  return (
-    <KeyResourceTokenHeader
-      {...props}
-      headerProps={{ presentation, detailsTrigger: null }}
-      actionPolicy={actionPolicy ?? presentation.actions}
-    />
-  )
 }
 
 function createRuntimeKeyStub(account = createAccountStub()) {

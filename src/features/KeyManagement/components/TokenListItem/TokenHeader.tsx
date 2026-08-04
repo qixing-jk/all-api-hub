@@ -322,7 +322,6 @@ function TokenActionButtons({
     useState<ApiCredentialProfile | null>(null)
   const [cliVerifyingProfile, setCliVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
-  const verificationTagIdsKey = JSON.stringify(account.tagIds ?? [])
 
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
   const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
@@ -377,16 +376,12 @@ function TokenActionButtons({
     account.baseUrl,
     account.cookieAuthSessionCookie,
     account.id,
-    account.name,
     account.siteType,
-    verificationTagIdsKey,
     account.token,
     account.userId,
     token.accountId,
-    token.accountName,
     token.id,
     token.key,
-    token.name,
   ])
 
   useEffect(() => {

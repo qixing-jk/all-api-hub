@@ -425,6 +425,22 @@ const preview: ManagedSiteTokenBatchExportPreview = {
   ],
 }
 
+const buildSingleRecoverablePreview =
+  (): ManagedSiteTokenBatchExportPreview => ({
+    ...preview,
+    totalCount: 1,
+    readyCount: 0,
+    warningCount: 1,
+    skippedCount: 0,
+    blockedCount: 0,
+    items: [
+      buildRecoverablePreviewItem(preview.items[0], {
+        id: 7,
+        name: "Potential channel",
+      }),
+    ],
+  })
+
 const richPreview: ManagedSiteTokenBatchExportPreview = {
   siteType: SITE_TYPES.NEW_API,
   totalCount: 4,
@@ -548,6 +564,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     vi.clearAllMocks()
     mockExecuteBatchExport.mockReset()
     mockCloseNewApiManagedVerification.mockReset()
+    mockCloseNewApiManagedVerification.mockImplementation(() => {
+      mockVerificationDialogState.isOpen = false
+    })
     mockGetPreviewVerificationTargets.mockReset()
     mockLoadNewApiChannelKeyWithVerification.mockReset()
     mockPreparePreview.mockReset()
@@ -903,9 +922,6 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
   it("closes verification state when the parent dialog is invalidated", async () => {
     mockVerificationDialogState.isOpen = true
-    mockCloseNewApiManagedVerification.mockImplementation(() => {
-      mockVerificationDialogState.isOpen = false
-    })
     mockPreparePreview.mockResolvedValue(preview)
 
     const { rerender } = render(
@@ -1409,20 +1425,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
   it("discards deferred verification success after close and reopen", async () => {
     const user = userEvent.setup()
     const staleVerification = createDeferred<void>()
-    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
-      ...preview,
-      totalCount: 1,
-      readyCount: 0,
-      warningCount: 1,
-      skippedCount: 0,
-      blockedCount: 0,
-      items: [
-        buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
-          name: "Potential channel",
-        }),
-      ],
-    }
+    const recoverablePreview = buildSingleRecoverablePreview()
     mockPreparePreview.mockResolvedValue(recoverablePreview)
     mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
       async (params) => {
@@ -1483,20 +1486,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
   it("discards deferred verification failure after close and reopen", async () => {
     const user = userEvent.setup()
     const staleVerification = createDeferred<void>()
-    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
-      ...preview,
-      totalCount: 1,
-      readyCount: 0,
-      warningCount: 1,
-      skippedCount: 0,
-      blockedCount: 0,
-      items: [
-        buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
-          name: "Potential channel",
-        }),
-      ],
-    }
+    const recoverablePreview = buildSingleRecoverablePreview()
     mockPreparePreview.mockResolvedValue(recoverablePreview)
     mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
       async () => {
@@ -1555,20 +1545,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
   it("discards deferred verification success after unmount", async () => {
     const user = userEvent.setup()
     const staleVerification = createDeferred<void>()
-    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
-      ...preview,
-      totalCount: 1,
-      readyCount: 0,
-      warningCount: 1,
-      skippedCount: 0,
-      blockedCount: 0,
-      items: [
-        buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
-          name: "Potential channel",
-        }),
-      ],
-    }
+    const recoverablePreview = buildSingleRecoverablePreview()
     mockPreparePreview.mockResolvedValue(recoverablePreview)
     mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
       async (params) => {
@@ -1611,20 +1588,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       configurable: true,
       get: readStaleFailureMessage,
     })
-    const recoverablePreview: ManagedSiteTokenBatchExportPreview = {
-      ...preview,
-      totalCount: 1,
-      readyCount: 0,
-      warningCount: 1,
-      skippedCount: 0,
-      blockedCount: 0,
-      items: [
-        buildRecoverablePreviewItem(preview.items[0], {
-          id: 7,
-          name: "Potential channel",
-        }),
-      ],
-    }
+    const recoverablePreview = buildSingleRecoverablePreview()
     mockPreparePreview.mockResolvedValue(recoverablePreview)
     mockLoadNewApiChannelKeyWithVerification.mockImplementationOnce(
       async () => {

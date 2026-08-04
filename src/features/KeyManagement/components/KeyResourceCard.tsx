@@ -211,6 +211,7 @@ export function KeyResourceCard({
     name: presentation.title,
   })
 
+  // Expansion is local disclosure state, so it intentionally emits no analytics.
   const detailsTrigger = (
     <Tooltip content={detailsLabel} anchorAsChild>
       <IconButton
