@@ -80,6 +80,26 @@ async function hasSidePanelOpenSupport(
   })
 }
 
+async function getNativeSidePanelActionClickState(
+  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
+): Promise<boolean | null> {
+  return await serviceWorker.evaluate(async () => {
+    const sidePanel = (globalThis as any).chrome?.sidePanel
+    if (typeof sidePanel?.getPanelBehavior !== "function") return null
+    const behavior = await sidePanel.getPanelBehavior()
+    return behavior.openPanelOnActionClick === true
+  })
+}
+
+async function expectNativeSidePanelActionClickState(
+  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
+  expected: boolean,
+) {
+  await expect
+    .poll(async () => getNativeSidePanelActionClickState(serviceWorker))
+    .toBe(expected)
+}
+
 async function hasActionClickListeners(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
 ): Promise<boolean> {
@@ -204,7 +224,7 @@ test("updates toolbar action behavior from settings into the live extension acti
   })
 
   await expectConfiguredActionPopup(serviceWorker, POPUP_PAGE_PATH)
-  await expectActionClickListenerState(serviceWorker, false)
+  await expectActionClickListenerState(serviceWorker, true)
 
   await page.goto(
     `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.BASIC}`,
@@ -219,15 +239,26 @@ test("updates toolbar action behavior from settings into the live extension acti
     "sidepanel",
   )
   const sidePanelOpenSupported = await hasSidePanelOpenSupport(serviceWorker)
-  await expectConfiguredActionPopup(
-    serviceWorker,
-    sidePanelOpenSupported ? "" : POPUP_PAGE_PATH,
-  )
-  await expectActionClickListenerState(serviceWorker, sidePanelOpenSupported)
+  const nativeSidePanelActionClickState =
+    await getNativeSidePanelActionClickState(serviceWorker)
+
+  if (sidePanelOpenSupported) {
+    await expectConfiguredActionPopup(serviceWorker, "")
+    await expectActionClickListenerState(serviceWorker, true)
+    if (nativeSidePanelActionClickState !== null) {
+      await expectNativeSidePanelActionClickState(serviceWorker, true)
+    }
+  } else {
+    await expectConfiguredActionPopup(serviceWorker, POPUP_PAGE_PATH)
+    await expectActionClickListenerState(serviceWorker, true)
+  }
 
   await page.getByRole("button", { name: "Popup" }).click()
 
   await expectStoredPreference(serviceWorker, "actionClickBehavior", "popup")
   await expectConfiguredActionPopup(serviceWorker, POPUP_PAGE_PATH)
-  await expectActionClickListenerState(serviceWorker, false)
+  await expectActionClickListenerState(serviceWorker, true)
+  if (nativeSidePanelActionClickState !== null) {
+    await expectNativeSidePanelActionClickState(serviceWorker, false)
+  }
 })
