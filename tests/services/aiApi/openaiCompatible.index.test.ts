@@ -37,6 +37,7 @@ describe("OpenAI-compatible model fetchers", () => {
 
     await expect(fetchOpenAICompatibleModels(params)).resolves.toEqual(models)
 
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
     expect(mockFetchApiData).toHaveBeenCalledWith(
       {
         baseUrl: "https://openai-compatible.example.com",
@@ -49,6 +50,31 @@ describe("OpenAI-compatible model fetchers", () => {
         endpoint: "/v1/models",
       },
     )
+  })
+
+  it("accepts an empty canonical model list without trying another endpoint", async () => {
+    mockFetchApiData.mockResolvedValueOnce([])
+
+    await expect(fetchOpenAICompatibleModels(params)).resolves.toEqual([])
+
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
+  })
+
+  it("falls back to /models when the canonical model endpoint fails", async () => {
+    const canonicalError = new Error("canonical endpoint unavailable")
+    const models = [{ id: "custom-model" }]
+    mockFetchApiData
+      .mockRejectedValueOnce(canonicalError)
+      .mockResolvedValueOnce(models)
+
+    await expect(fetchOpenAICompatibleModels(params)).resolves.toEqual(models)
+
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(1, expect.any(Object), {
+      endpoint: "/v1/models",
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, expect.any(Object), {
+      endpoint: "/models",
+    })
   })
 
   it("passes caller abort signals to the model-list request", async () => {
@@ -80,6 +106,27 @@ describe("OpenAI-compatible model fetchers", () => {
     )
   })
 
+  it("does not try another model endpoint after the request is aborted", async () => {
+    const abortController = new AbortController()
+    const abortError = new DOMException(
+      "The operation was aborted",
+      "AbortError",
+    )
+    mockFetchApiData.mockImplementationOnce(async () => {
+      abortController.abort()
+      throw abortError
+    })
+
+    await expect(
+      fetchOpenAICompatibleModels({
+        ...params,
+        abortSignal: abortController.signal,
+      }),
+    ).rejects.toBe(abortError)
+
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
+  })
+
   it("maps upstream models into plain model id lists", async () => {
     mockFetchApiData.mockResolvedValueOnce([
       { id: "gpt-4.1", owned_by: "openai" },
@@ -92,14 +139,20 @@ describe("OpenAI-compatible model fetchers", () => {
     ])
   })
 
-  it("logs and rethrows fetch failures", async () => {
-    const error = new Error("upstream unavailable")
-    mockFetchApiData.mockRejectedValueOnce(error)
+  it("logs and rethrows after both model endpoints fail", async () => {
+    const canonicalError = new Error("canonical endpoint unavailable")
+    const fallbackError = new Error("fallback endpoint unavailable")
+    mockFetchApiData
+      .mockRejectedValueOnce(canonicalError)
+      .mockRejectedValueOnce(fallbackError)
 
-    await expect(fetchOpenAICompatibleModels(params)).rejects.toThrow(error)
+    await expect(fetchOpenAICompatibleModels(params)).rejects.toBe(
+      fallbackError,
+    )
+    expect(mockFetchApiData).toHaveBeenCalledTimes(2)
     expect(mockLoggerError).toHaveBeenCalledWith(
       "Failed to fetch upstream model list",
-      error,
+      fallbackError,
     )
   })
 })

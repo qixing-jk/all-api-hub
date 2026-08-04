@@ -12,7 +12,10 @@ import { createLogger } from "~/utils/core/logger"
  */
 const logger = createLogger("AiApi.OpenAICompatible")
 
-const OPENAI_COMPATIBLE_MODELS_ENDPOINT = "/v1/models"
+// Some OpenAI-compatible Base URLs already include their complete API prefix,
+// so model discovery must also try `/models` without changing that Base URL.
+// Volcengine Ark Coding Plan: https://docs.volcengine.com/docs/82379/2160841
+const OPENAI_COMPATIBLE_MODELS_ENDPOINTS = ["/v1/models", "/models"] as const
 
 export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
   const request = {
@@ -22,17 +25,28 @@ export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
       accessToken: params.apiKey,
     },
   }
-  try {
-    return await fetchApiData<UpstreamModelList>(request, {
-      endpoint: OPENAI_COMPATIBLE_MODELS_ENDPOINT,
-      ...(params.abortSignal
-        ? { options: { signal: params.abortSignal } }
-        : {}),
-    })
-  } catch (error) {
-    logger.error("Failed to fetch upstream model list", error)
-    throw error
+  let lastError: unknown
+  for (const endpoint of OPENAI_COMPATIBLE_MODELS_ENDPOINTS) {
+    try {
+      return await fetchApiData<UpstreamModelList>(request, {
+        endpoint,
+        ...(params.abortSignal
+          ? { options: { signal: params.abortSignal } }
+          : {}),
+      })
+    } catch (error) {
+      if (
+        params.abortSignal?.aborted ||
+        (error instanceof Error && error.name === "AbortError")
+      ) {
+        throw error
+      }
+      lastError = error
+    }
   }
+
+  logger.error("Failed to fetch upstream model list", lastError)
+  throw lastError
 }
 
 export const fetchOpenAICompatibleModelIds = async (
