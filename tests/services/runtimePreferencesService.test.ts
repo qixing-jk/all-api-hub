@@ -82,6 +82,47 @@ describe("runtime preference messaging", () => {
     })
   })
 
+  it("waits for action behavior application before acknowledging", async () => {
+    let finishApply!: () => void
+    mocks.applyActionClickBehavior.mockReturnValueOnce(
+      new Promise<void>((resolve) => (finishApply = resolve)),
+    )
+    const { setupPreferencesMessagingListeners } = await importService()
+    setupPreferencesMessagingListeners()
+    const handler = mocks.handlers.get(
+      PreferencesMessageTypes.UpdateActionClickBehavior,
+    )
+
+    let settled = false
+    const response = handler?.({ data: { behavior: "sidepanel" } }).then(
+      (value) => {
+        settled = true
+        return value
+      },
+    )
+    await Promise.resolve()
+    expect(settled).toBe(false)
+
+    finishApply()
+    await expect(response).resolves.toEqual({ success: true, data: undefined })
+  })
+
+  it("reports asynchronous action behavior failures", async () => {
+    mocks.applyActionClickBehavior.mockRejectedValueOnce(
+      new Error("action failed"),
+    )
+    const { setupPreferencesMessagingListeners } = await importService()
+    setupPreferencesMessagingListeners()
+    const handler = mocks.handlers.get(
+      PreferencesMessageTypes.UpdateActionClickBehavior,
+    )
+
+    await expect(handler?.({ data: { behavior: "popup" } })).resolves.toEqual({
+      success: false,
+      error: "action failed",
+    })
+  })
+
   it("refreshes context menus through the listener", async () => {
     const { setupPreferencesMessagingListeners } = await importService()
 

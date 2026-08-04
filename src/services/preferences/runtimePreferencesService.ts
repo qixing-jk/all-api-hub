@@ -37,7 +37,7 @@ async function resolvePreferencesUpdateActionClickBehaviorMessage(
   request: PreferencesUpdateActionClickBehaviorRequest,
 ): Promise<RuntimeMessageResponse<undefined>> {
   try {
-    applyActionClickBehavior(request.behavior)
+    await applyActionClickBehavior(request.behavior)
     return { success: true, data: undefined }
   } catch (error) {
     return createRuntimeMessageFailure(getErrorMessage(error))

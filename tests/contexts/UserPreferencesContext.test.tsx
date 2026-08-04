@@ -438,7 +438,10 @@ describe("UserPreferencesContext", () => {
     mockedSendAutoRefreshMessage.mockResolvedValue(undefined)
     mockedSendBalanceHistoryMessage.mockResolvedValue(undefined)
     mockedSendModelSyncMessage.mockResolvedValue(undefined)
-    mockedSendPreferencesMessage.mockResolvedValue(undefined)
+    mockedSendPreferencesMessage.mockResolvedValue({
+      success: true,
+      data: undefined,
+    })
     mockedSendRedemptionAssistMessage.mockResolvedValue(undefined)
     mockedSendSiteAnnouncementsMessage.mockResolvedValue(undefined)
     mockedSendWebdavAutoSyncMessage.mockResolvedValue(undefined)
@@ -942,6 +945,29 @@ describe("UserPreferencesContext", () => {
     )
   })
 
+  it("waits for background action behavior application before settling", async () => {
+    let finishNotification!: (value: { success: true; data: undefined }) => void
+    mockedSendPreferencesMessage.mockReturnValueOnce(
+      new Promise((resolve) => (finishNotification = resolve)),
+    )
+    const context = await renderProvider()
+
+    let settled = false
+    const update = context
+      .updateActionClickBehavior("sidepanel")
+      .then((value) => {
+        settled = true
+        return value
+      })
+    await act(async () => Promise.resolve())
+    expect(settled).toBe(false)
+
+    finishNotification({ success: true, data: undefined })
+    await act(async () => {
+      await expect(update).resolves.toMatchObject({ ok: true })
+    })
+  })
+
   it("keeps action behavior writes successful when the runtime notification fails", async () => {
     const notifyError = new Error("runtime closed")
     mockedSendPreferencesMessage.mockRejectedValueOnce(notifyError)
@@ -964,6 +990,38 @@ describe("UserPreferencesContext", () => {
         notifyError,
       )
     })
+  })
+
+  it("keeps action behavior writes successful when background application fails", async () => {
+    mockedSendPreferencesMessage.mockResolvedValueOnce({
+      success: false,
+      error: "action failed",
+    })
+    const context = await renderProvider()
+
+    let result!: PreferenceWriteResult
+    await act(async () => {
+      result = await context.updateActionClickBehavior("sidepanel")
+    })
+
+    expect(result).toMatchObject({ ok: true })
+    expect((latestContext as any)?.actionClickBehavior).toBe("sidepanel")
+    expect(mockedSendPreferencesMessage).toHaveBeenCalledWith(
+      "preferences:updateActionClickBehavior",
+      { behavior: "sidepanel" },
+    )
+    expect(loggerMocks.warn).toHaveBeenCalledWith(
+      "Failed to apply action click behavior update",
+      expect.any(Error),
+    )
+    const applicationWarning = loggerMocks.warn.mock.calls.find(
+      ([message]) => message === "Failed to apply action click behavior update",
+    )
+    expect((applicationWarning?.[1] as Error).message).toBe("action failed")
+    expect(loggerMocks.warn).not.toHaveBeenCalledWith(
+      "Failed to notify action click behavior update",
+      expect.anything(),
+    )
   })
 
   it("persists active tab changes through both tab update helpers", async () => {
