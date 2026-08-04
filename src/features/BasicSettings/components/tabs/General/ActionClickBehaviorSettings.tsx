@@ -5,6 +5,7 @@ import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import {
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
   type ToolbarActionClickBehavior,
@@ -71,6 +72,8 @@ export default function ActionClickBehaviorSettings() {
                     value: TOOLBAR_ACTION_CLICK_BEHAVIORS.Popup,
                     label: t("actionClick.popupLabel"),
                     ariaLabel: t("actionClick.popupTitle"),
+                    testId:
+                      BASIC_SETTINGS_TEST_IDS.actionClickBehaviorPopupButton,
                   },
                   {
                     value: TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel,

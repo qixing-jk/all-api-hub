@@ -22,7 +22,11 @@ import {
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { openOptionsPage, openSidePanelWithFallback } from "~/utils/navigation"
+import {
+  openOptionsPage,
+  openSettingsPage,
+  openSidePanelWithFallback,
+} from "~/utils/navigation"
 
 /**
  * Unified logger scoped to toolbar action click behavior wiring.
@@ -99,8 +103,8 @@ const handleToolbarActionClick = async (tab: browser.tabs.Tab) => {
   const support = getSidePanelSupport()
   if (
     appliedBehavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel &&
-    support.supported &&
-    support.kind === "firefox-sidebar-action"
+    (shouldManuallyOpenSidePanel ||
+      (support.supported && support.kind === "firefox-sidebar-action"))
   ) {
     return handleOpenSidePanelActionClick(tab)
   }
@@ -123,12 +127,11 @@ const handleToolbarActionClick = async (tab: browser.tabs.Tab) => {
     return
   }
 
-  if (
-    shouldManuallyOpenSidePanel ||
-    (support.supported &&
-      (support.kind === "firefox-sidebar-action" || wasUnreconciled))
-  ) {
-    await handleOpenSidePanelActionClick(tab)
+  if (wasUnreconciled) {
+    // Storage resolution has already crossed the user-gesture boundary. The
+    // browser-native Chromium route owns real cold starts; manual routing can
+    // only fall back to a destination that does not require that gesture.
+    await openSettingsPage()
   }
 }
 

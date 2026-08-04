@@ -14,7 +14,10 @@ import {
   hasPermissions,
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
-import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  TOOLBAR_ACTION_CLICK_BEHAVIORS,
+  userPreferences,
+} from "~/services/preferences/userPreferences"
 import {
   setupProductAnalyticsAccountChangeListener,
   setupProductAnalyticsPreferencesChangeListener,
@@ -222,7 +225,9 @@ async function main() {
   const toolbarReconciliation = (async () => {
     try {
       const prefs = await userPreferences.getPreferencesStrict()
-      await applyActionClickBehavior(prefs.actionClickBehavior ?? "popup")
+      await applyActionClickBehavior(
+        prefs.actionClickBehavior ?? TOOLBAR_ACTION_CLICK_BEHAVIORS.Popup,
+      )
     } catch (error) {
       logger.warn("Failed to reconcile toolbar action click behavior", error)
     }

@@ -59,6 +59,7 @@ describe("ResponsiveToggleGroup", () => {
             value: "CNY",
             label: "CNY",
             ariaLabel: "Chinese Yuan",
+            testId: "currency-cny-option",
           },
         ]}
       />,
@@ -75,6 +76,7 @@ describe("ResponsiveToggleGroup", () => {
     )
     expect(usdButton).not.toHaveClass("scale-105")
     expect(usdButton).toHaveAttribute("aria-pressed", "true")
+    expect(cnyButton).toHaveAttribute("data-testid", "currency-cny-option")
 
     fireEvent.click(cnyButton)
 

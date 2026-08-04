@@ -1,5 +1,6 @@
 export const BASIC_SETTINGS_TEST_IDS = {
   page: "basic-settings-page",
+  actionClickBehaviorPopupButton: "action-click-behavior-popup-button",
   taskNotificationsBrowserTestButton: "task-notifications-browser-test-button",
   taskNotificationsPermissionGrantButton:
     "task-notifications-permission-grant-button",

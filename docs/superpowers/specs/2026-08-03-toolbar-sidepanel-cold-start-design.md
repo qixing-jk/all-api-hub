@@ -63,7 +63,12 @@ need extension code:
 
 The applied behavior is cached only as runtime routing state. On a fresh
 background context, the dispatcher may load the durable preference if early
-reconciliation has not completed. It must not treat the cache as persistence.
+reconciliation has not completed. That asynchronous read can safely recover an
+`options` click, but it cannot retain the user gesture required by either
+manual side-panel API. If it resolves to `sidepanel`, the dispatcher opens Basic
+settings as a reliable fallback instead of attempting a gesture-gated call.
+Chromium's persisted native projection remains the primary cold-start route.
+The runtime cache must not be treated as persistence.
 
 ### Browser configuration projection
 
@@ -126,6 +131,9 @@ Focused Vitest coverage will prove:
 - popup/options/unsupported/Firefox paths retain their expected routing.
 - the stable dispatcher exists before asynchronous reconciliation and can route
   modes that require extension code.
+- reconciled Firefox and Chromium manual side-panel routes invoke the browser
+  API before the listener crosses an asynchronous boundary, while an
+  unreconciled side-panel click falls back to Basic settings.
 - concurrent configuration calls finish in request order.
 - the runtime preference response waits for configuration and reports an
   asynchronous failure.

@@ -181,9 +181,11 @@ it("uses the stable dispatcher when Chromium native routing fails", async () => 
 
   const clickHandler = addActionClickListener.mock.calls[0]?.[0]
   const clickedTab = { id: 123, windowId: 456 } as browser.tabs.Tab
-  await clickHandler(clickedTab)
+  const clickResult = clickHandler(clickedTab)
 
   expect(openSidePanelWithFallback).toHaveBeenCalledWith(clickedTab)
+
+  await clickResult
 })
 
 it("routes a cold options click from the durable preference", async () => {
@@ -271,6 +273,15 @@ async function getEffectiveClickBehavior(): Promise<ToolbarActionClickBehavior> 
 }
 
 const handleToolbarActionClick = async (tab: browser.tabs.Tab) => {
+  const support = getSidePanelSupport()
+  if (
+    appliedBehavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel &&
+    (shouldManuallyOpenSidePanel ||
+      (support.supported && support.kind === "firefox-sidebar-action"))
+  ) {
+    return handleOpenSidePanelActionClick(tab)
+  }
+
   const wasUnreconciled = appliedBehavior === null
   const behavior = await getEffectiveClickBehavior()
   if (behavior === TOOLBAR_ACTION_CLICK_BEHAVIORS.Options) {
@@ -280,14 +291,8 @@ const handleToolbarActionClick = async (tab: browser.tabs.Tab) => {
 
   if (behavior !== TOOLBAR_ACTION_CLICK_BEHAVIORS.SidePanel) return
 
-  const support = getSidePanelSupport()
-  if (
-    support.supported &&
-    (support.kind === "firefox-sidebar-action" ||
-      shouldManuallyOpenSidePanel ||
-      wasUnreconciled)
-  ) {
-    await handleOpenSidePanelActionClick(tab)
+  if (wasUnreconciled) {
+    await openSettingsPage()
   }
 }
 
@@ -348,10 +353,12 @@ export function applyActionClickBehavior(
 
 Delete `removeActionClickListener`, both conditional listener registrations, and
 the separate options click handler. Preserve the existing manual side-panel
-analytics behavior unchanged. `wasUnreconciled` is a best-effort cold fallback:
-Chromium normally consumes the click when native behavior is enabled, so a cold
-worker receiving `action.onClicked` indicates that extension-managed routing is
-still needed.
+analytics behavior unchanged. Reconciled Firefox and Chromium manual fallback
+routes must call the side-panel helper before the listener crosses any `await`.
+An unreconciled listener may read durable state for `options`, but if that read
+resolves to `sidepanel`, it opens Basic settings because the user gesture has
+already been lost. Chromium normally consumes a genuine cold side-panel click
+through its persisted native action configuration.
 
 - [ ] **Step 4: Run the focused action tests and verify GREEN**
 

@@ -21,6 +21,7 @@ describe("background applyActionClickBehavior", () => {
   let loggerWarn: ReturnType<typeof vi.fn>
   let openSidePanelWithFallback: ReturnType<typeof vi.fn>
   let openOptionsPage: ReturnType<typeof vi.fn>
+  let openSettingsPage: ReturnType<typeof vi.fn>
   let startProductAnalyticsAction: ReturnType<typeof vi.fn>
   let trackerComplete: ReturnType<typeof vi.fn>
 
@@ -38,6 +39,7 @@ describe("background applyActionClickBehavior", () => {
     loggerWarn = vi.fn()
     openSidePanelWithFallback = vi.fn().mockResolvedValue(undefined)
     openOptionsPage = vi.fn().mockResolvedValue(undefined)
+    openSettingsPage = vi.fn().mockResolvedValue(undefined)
     trackerComplete = vi.fn().mockResolvedValue(undefined)
     startProductAnalyticsAction = vi.fn().mockReturnValue({
       complete: trackerComplete,
@@ -79,6 +81,7 @@ describe("background applyActionClickBehavior", () => {
     vi.doMock("~/utils/navigation", () => ({
       openSidePanelWithFallback,
       openOptionsPage,
+      openSettingsPage,
     }))
 
     vi.doMock("~/services/productAnalytics/actions", () => ({
@@ -161,9 +164,11 @@ describe("background applyActionClickBehavior", () => {
 
     const clickHandler = addActionClickListener.mock.calls[0]?.[0]
     const clickedTab = { id: 123, windowId: 456 } as browser.tabs.Tab
-    await clickHandler(clickedTab)
+    const clickResult = clickHandler(clickedTab)
 
     expect(openSidePanelWithFallback).toHaveBeenCalledWith(clickedTab)
+
+    await clickResult
   })
 
   it("allows a known manual sidepanel fallback to transition to options", async () => {
@@ -306,7 +311,7 @@ describe("background applyActionClickBehavior", () => {
     expect(openOptionsPage).toHaveBeenCalledTimes(1)
   })
 
-  it("routes a cold sidepanel click from the durable preference", async () => {
+  it("falls back to basic settings when a cold preference read resolves to sidepanel", async () => {
     getPreferencesStrict.mockResolvedValue({
       actionClickBehavior: "sidepanel",
     })
@@ -323,7 +328,29 @@ describe("background applyActionClickBehavior", () => {
     const clickedTab = { id: 123, windowId: 456 } as browser.tabs.Tab
     await clickHandler(clickedTab)
 
-    expect(openSidePanelWithFallback).toHaveBeenCalledWith(clickedTab)
+    expect(openSettingsPage).toHaveBeenCalledTimes(1)
+    expect(openSidePanelWithFallback).not.toHaveBeenCalled()
+  })
+
+  it("leaves a cold popup click to the browser", async () => {
+    getPreferencesStrict.mockResolvedValue({
+      actionClickBehavior: "popup",
+    })
+    getSidePanelSupport.mockReturnValue({
+      supported: true,
+      kind: "chromium-side-panel",
+    })
+    const { setupActionClickBehaviorListener } = await import(
+      "~/entrypoints/background/actionClickBehavior"
+    )
+    setupActionClickBehaviorListener()
+
+    const clickHandler = addActionClickListener.mock.calls[0]?.[0]
+    await clickHandler({ id: 123, windowId: 456 } as browser.tabs.Tab)
+
+    expect(openOptionsPage).not.toHaveBeenCalled()
+    expect(openSettingsPage).not.toHaveBeenCalled()
+    expect(openSidePanelWithFallback).not.toHaveBeenCalled()
   })
 
   it("ignores a cold click when strict preference storage fails", async () => {

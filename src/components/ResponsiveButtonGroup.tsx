@@ -49,6 +49,7 @@ export interface ResponsiveToggleGroupOption<Value extends string> {
   ariaLabel?: string
   title?: string
   disabled?: boolean
+  testId?: string
   buttonClassName?: string
   leftIcon?: ReactNode
   rightIcon?: ReactNode
@@ -87,6 +88,7 @@ export function ResponsiveToggleGroup<Value extends string>({
           showActiveIndicator={showActiveIndicator}
           title={option.title}
           aria-label={option.ariaLabel}
+          data-testid={option.testId}
           leftIcon={option.leftIcon}
           rightIcon={option.rightIcon}
           className={cn(

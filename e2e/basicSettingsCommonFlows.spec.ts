@@ -1,5 +1,6 @@
 import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -253,7 +254,9 @@ test("updates toolbar action behavior from settings into the live extension acti
     await expectActionClickListenerState(serviceWorker, true)
   }
 
-  await page.getByRole("button", { name: "Popup" }).click()
+  await page
+    .getByTestId(BASIC_SETTINGS_TEST_IDS.actionClickBehaviorPopupButton)
+    .click()
 
   await expectStoredPreference(serviceWorker, "actionClickBehavior", "popup")
   await expectConfiguredActionPopup(serviceWorker, POPUP_PAGE_PATH)
