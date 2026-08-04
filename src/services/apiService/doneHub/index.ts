@@ -459,18 +459,7 @@ export async function updateChannelModels(
     models,
   }
 
-  const response = await fetchApi<void>(
-    request,
-    {
-      endpoint: DONE_HUB_CHANNEL_ENDPOINT,
-      options: {
-        method: "PUT",
-        body: JSON.stringify(payload),
-        signal: options?.signal,
-      },
-    },
-    false,
-  )
+  const response = await updateDoneHubChannelFields(request, payload, options)
 
   if (!response.success) {
     throw new ApiError(
@@ -506,7 +495,24 @@ export async function updateChannelModelMapping(
     model_mapping: modelMappingJson,
   }
 
-  const response = await fetchApi<void>(
+  const response = await updateDoneHubChannelFields(request, payload, options)
+
+  if (!response.success) {
+    throw new ApiError(
+      response.message || "Failed to update channel model mapping",
+      undefined,
+      DONE_HUB_CHANNEL_ENDPOINT,
+    )
+  }
+}
+
+/** Submit one full-object DoneHub channel update without performing a read. */
+export async function updateDoneHubChannelFields(
+  request: ApiServiceRequest,
+  payload: Record<string, unknown>,
+  options?: Pick<RequestInit, "signal">,
+) {
+  return await fetchApi<void>(
     request,
     {
       endpoint: DONE_HUB_CHANNEL_ENDPOINT,
@@ -518,14 +524,6 @@ export async function updateChannelModelMapping(
     },
     false,
   )
-
-  if (!response.success) {
-    throw new ApiError(
-      response.message || "Failed to update channel model mapping",
-      undefined,
-      DONE_HUB_CHANNEL_ENDPOINT,
-    )
-  }
 }
 
 /**

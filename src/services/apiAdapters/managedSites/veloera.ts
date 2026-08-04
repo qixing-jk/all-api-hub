@@ -21,6 +21,16 @@ import {
   updateChannelModelMapping,
   updateChannelModels,
 } from "~/services/apiService/veloera"
+import { ApiError } from "~/services/apiTransport/errors"
+import type {
+  ApiResponse,
+  ApiServiceRequest,
+} from "~/services/apiTransport/type"
+import {
+  createManagedSiteMutationSequence,
+  type ManagedSiteMutationConfirmedEffect,
+  type ManagedSiteMutationSequence,
+} from "~/services/managedSites/mutations"
 import {
   buildChannelName,
   buildChannelPayload,
@@ -51,7 +61,65 @@ import { CHANNEL_STATUS } from "~/types/newApi"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 
 import { createManagedSiteConfigCapability } from "./config"
-import { toManagedSiteApiServiceRequest } from "./request"
+import {
+  createManagedSiteChannelEffect,
+  finishManagedSiteMutationStep,
+  runManagedSiteApiServiceMutationStep,
+  toManagedSiteApiServiceRequest,
+} from "./request"
+
+const toVeloeraMutationResponse = (response: ApiResponse<unknown>) =>
+  response.success
+    ? { outcome: "applied" as const, data: response.data }
+    : {
+        outcome: "rejected" as const,
+        diagnostic: {
+          message: response.message || "Provider rejected the mutation",
+          raw: response,
+        },
+      }
+
+const toVeloeraResponseError = (error: unknown) => {
+  if (
+    error instanceof ApiError &&
+    error.code === undefined &&
+    error.statusCode === undefined &&
+    error.cause === undefined
+  ) {
+    return {
+      outcome: "rejected" as const,
+      diagnostic: { message: error.message, raw: error },
+    }
+  }
+  throw error
+}
+
+const runVeloeraResponseStep = async (input: {
+  config: VeloeraConfig
+  sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>
+  effect: ManagedSiteMutationConfirmedEffect
+  execute(request: ApiServiceRequest): Promise<ApiResponse<unknown>>
+}) =>
+  await runManagedSiteApiServiceMutationStep({
+    ...input,
+    classifyResponse: toVeloeraMutationResponse,
+    classifyResponseError: (error) => {
+      throw error
+    },
+  })
+
+const runVeloeraVoidStep = async (input: {
+  config: VeloeraConfig
+  options?: { bypassSiteRequestLimit?: boolean }
+  sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>
+  effect: ManagedSiteMutationConfirmedEffect
+  execute(request: ApiServiceRequest): Promise<void>
+}) =>
+  await runManagedSiteApiServiceMutationStep({
+    ...input,
+    classifyResponse: () => ({ outcome: "applied", data: undefined }),
+    classifyResponseError: toVeloeraResponseError,
+  })
 
 const fetchSecretKey = async (config: VeloeraConfig, channelId: number) => {
   const channel = await fetchChannel(
@@ -89,12 +157,41 @@ export const veloeraManagedSiteChannels: ManagedSiteChannelsCapability<VeloeraCo
         toManagedSiteApiServiceRequest(config, options),
         options,
       ),
-    create: async (config, channelData) =>
-      await createChannel(toManagedSiteApiServiceRequest(config), channelData),
-    update: async (config, channelData) =>
-      await updateChannel(toManagedSiteApiServiceRequest(config), channelData),
-    delete: async (config, channelId) =>
-      await deleteChannel(toManagedSiteApiServiceRequest(config), channelId),
+    create: async (config, channelData) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runVeloeraResponseStep({
+        config,
+        sequence,
+        effect: createManagedSiteChannelEffect("resource-created"),
+        execute: async (request) => await createChannel(request, channelData),
+      })
+      return finishManagedSiteMutationStep(sequence, step)
+    },
+    update: async (config, channelData) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runVeloeraResponseStep({
+        config,
+        sequence,
+        effect: createManagedSiteChannelEffect(
+          "resource-updated",
+          channelData.id,
+        ),
+        execute: async (request) => await updateChannel(request, channelData),
+      })
+      return finishManagedSiteMutationStep(sequence, step)
+    },
+    delete: async (config, channelId) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runVeloeraResponseStep({
+        config,
+        sequence,
+        effect: createManagedSiteChannelEffect("resource-deleted", channelId),
+        execute: async (request) => await deleteChannel(request, channelId),
+      })
+      return step.outcome === "applied"
+        ? sequence.finish({ finalState: "confirmed", data: undefined })
+        : finishManagedSiteMutationStep(sequence, step)
+    },
     fetchSecretKey,
     hydrateComparableKeys,
     fetchModels: async (config, channelId, options) =>
@@ -103,27 +200,50 @@ export const veloeraManagedSiteChannels: ManagedSiteChannelsCapability<VeloeraCo
         channelId,
         options,
       ),
-    updateModels: async (config, channelId, models, options) =>
-      await updateChannelModels(
-        toManagedSiteApiServiceRequest(config, options),
-        channelId,
-        models.join(","),
+    updateModels: async (config, channelId, models, options) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runVeloeraVoidStep({
+        config,
         options,
-      ),
+        sequence,
+        effect: createManagedSiteChannelEffect("models-updated", channelId),
+        execute: async (request) =>
+          await updateChannelModels(
+            request,
+            channelId,
+            models.join(","),
+            options,
+          ),
+      })
+      return finishManagedSiteMutationStep(sequence, step)
+    },
     updateModelMapping: async (
       config,
       channelId,
       models,
       modelMapping,
       options,
-    ) =>
-      await updateChannelModelMapping(
-        toManagedSiteApiServiceRequest(config, options),
-        channelId,
-        models.join(","),
-        JSON.stringify(modelMapping),
+    ) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runVeloeraVoidStep({
+        config,
         options,
-      ),
+        sequence,
+        effect: createManagedSiteChannelEffect(
+          "model-mapping-updated",
+          channelId,
+        ),
+        execute: async (request) =>
+          await updateChannelModelMapping(
+            request,
+            channelId,
+            models.join(","),
+            JSON.stringify(modelMapping),
+            options,
+          ),
+      })
+      return finishManagedSiteMutationStep(sequence, step)
+    },
   }
 
 const veloeraManagedSiteConfig: ManagedSiteConfigCapability<VeloeraConfig> =

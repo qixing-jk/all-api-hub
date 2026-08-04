@@ -11,23 +11,28 @@ import type {
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
+  axonHubChannelToManagedSite,
+  AxonHubRequestError,
   createAxonHubChannel,
   deleteAxonHubChannel,
   getAxonHubChannel,
+  resolveAxonHubGraphqlIdForMutation,
   updateAxonHubChannel,
   updateAxonHubChannelStatus,
 } from "~/services/apiService/axonHub"
 import {
+  createManagedSiteMutationSequence,
+  type ManagedSiteMutationConfirmedEffect,
+  type ManagedSiteMutationSequence,
+} from "~/services/managedSites/mutations"
+import {
   buildChannelName,
   buildChannelPayload,
   checkValidAxonHubConfig,
-  createChannel,
-  deleteChannel,
   fetchAvailableModels,
   listChannels,
   prepareChannelFormData,
   searchChannel,
-  updateChannel,
 } from "~/services/managedSites/providers/axonHub"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type {
@@ -40,8 +45,10 @@ import {
   CHANNEL_STATUS,
   type AxonHubChannelWithData,
   type ChannelFormData,
+  type CreateChannelPayload,
   type ManagedSiteChannel,
   type ManagedSiteChannelListData,
+  type UpdateChannelPayload,
 } from "~/types/managedSite"
 import {
   assertManagedUpstreamResourceRefScope,
@@ -60,15 +67,6 @@ import { normalizeList } from "~/utils/core/string"
 
 import { createManagedSiteConfigCapability } from "./config"
 import { emptyManagedSiteQueries } from "./unsupportedQueries"
-
-export const axonHubManagedSiteChannels: ManagedSiteChannelsCapability<AxonHubConfig> =
-  {
-    search: searchChannel,
-    list: listChannels,
-    create: createChannel,
-    update: updateChannel,
-    delete: deleteChannel,
-  }
 
 const axonHubManagedSiteConfig: ManagedSiteConfigCapability<AxonHubConfig> =
   createManagedSiteConfigCapability(
@@ -330,6 +328,268 @@ const toAxonHubUpdateInput = (
     remark: native.remark ?? null,
   }
 }
+
+const toAxonHubChannelCreateInput = (
+  channelData: CreateChannelPayload,
+): AxonHubCreateChannelInput => {
+  const channel = channelData.channel
+  const models = normalizeList(channel.models?.split(",") ?? [])
+  if (models.length === 0) {
+    throw new AxonHubRequestError(
+      "upstream-rejected",
+      "not-dispatched",
+      "AxonHub channel models are required",
+    )
+  }
+
+  return {
+    type:
+      typeof channel.type === "string" && channel.type.trim()
+        ? channel.type
+        : AXON_HUB_CHANNEL_TYPE.OPENAI,
+    name: (channel.name ?? "").trim(),
+    baseURL: (channel.base_url ?? "").trim(),
+    credentials: {
+      apiKeys: [(channel.key ?? "").trim()].filter(Boolean),
+    },
+    supportedModels: models,
+    manualModels: models,
+    defaultTestModel: models[0],
+    settings: {},
+    orderingWeight: channel.weight ?? 0,
+  }
+}
+
+const toAxonHubChannelUpdateInput = (
+  channelData: UpdateChannelPayload,
+): AxonHubUpdateChannelInput => {
+  const models = normalizeList(channelData.models?.split(",") ?? [])
+  const input: AxonHubUpdateChannelInput = {}
+
+  if (typeof channelData.type === "string") input.type = channelData.type
+  if (channelData.name !== undefined) input.name = channelData.name.trim()
+  if (channelData.base_url !== undefined) {
+    input.baseURL = channelData.base_url.trim()
+  }
+  if (channelData.key !== undefined) {
+    input.credentials = {
+      apiKeys: [channelData.key.trim()].filter(Boolean),
+    }
+  }
+  if (models.length > 0) {
+    input.supportedModels = models
+    input.manualModels = models
+    input.defaultTestModel = models[0]
+  }
+  if (channelData.weight !== undefined) {
+    input.orderingWeight = channelData.weight
+  }
+
+  return input
+}
+
+const axonHubChannelEffect = (
+  kind: ManagedSiteMutationConfirmedEffect["kind"],
+  resourceId?: string | number,
+): ManagedSiteMutationConfirmedEffect => ({
+  kind,
+  resourceKind: "channel",
+  ...(resourceId === undefined ? {} : { resourceId }),
+})
+
+const isTypedOperationalPreflight = (error: unknown): error is DOMException =>
+  error instanceof DOMException && error.name === "AbortError"
+
+const toAxonHubDiagnostic = (error: AxonHubRequestError | DOMException) => {
+  const code =
+    typeof error.code === "string" ||
+    (typeof error.code === "number" && Number.isSafeInteger(error.code))
+      ? error.code
+      : undefined
+  const statusCode =
+    error instanceof AxonHubRequestError ? error.statusCode : undefined
+  const raw =
+    error instanceof AxonHubRequestError
+      ? error.raw ?? error.cause ?? error
+      : error
+  return {
+    message: error.message,
+    ...(code === undefined ? {} : { code }),
+    ...(statusCode === undefined ? {} : { statusCode }),
+    raw,
+  }
+}
+
+const runAxonHubMutationStep = async <TData>(input: {
+  sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>
+  effect: ManagedSiteMutationConfirmedEffect
+  execute(): Promise<TData>
+  rejectResponse?: (data: TData) => boolean
+}) => {
+  const attempt = input.sequence.beginStep()
+  try {
+    const data = await input.execute()
+    attempt.markPossiblyDispatched()
+    attempt.markResponseReceived()
+    if (input.rejectResponse?.(data)) {
+      attempt.confirmNonApplication()
+      attempt.complete()
+      return {
+        outcome: "rejected" as const,
+        diagnostic: { message: "Provider rejected the mutation", raw: data },
+      }
+    }
+    attempt.confirmEffect(input.effect)
+    attempt.complete()
+    return { outcome: "applied" as const, data }
+  } catch (error) {
+    if (
+      !(error instanceof AxonHubRequestError) &&
+      !isTypedOperationalPreflight(error)
+    ) {
+      throw error
+    }
+    const dispatch =
+      error instanceof AxonHubRequestError ? error.dispatch : "not-dispatched"
+    if (dispatch === "dispatched") {
+      attempt.markPossiblyDispatched()
+    }
+    if (
+      error instanceof AxonHubRequestError &&
+      dispatch === "dispatched" &&
+      error.responseReceived
+    ) {
+      attempt.markResponseReceived()
+    }
+    attempt.complete()
+    return {
+      outcome:
+        dispatch === "not-dispatched"
+          ? ("rejected" as const)
+          : ("uncertain" as const),
+      diagnostic: toAxonHubDiagnostic(error),
+    }
+  }
+}
+
+const finishAxonHubMutation = (
+  sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>,
+  step: {
+    outcome: "rejected" | "uncertain"
+    diagnostic: {
+      message: string
+      code?: string | number
+      statusCode?: number
+      raw?: unknown
+    }
+  },
+) =>
+  sequence.finish({
+    finalState: "unconfirmed",
+    diagnostic: step.diagnostic,
+  })
+
+export const axonHubManagedSiteChannels: ManagedSiteChannelsCapability<AxonHubConfig> =
+  {
+    search: searchChannel,
+    list: listChannels,
+    create: async (config, channelData) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const createStep = await runAxonHubMutationStep({
+        sequence,
+        effect: axonHubChannelEffect("resource-created"),
+        execute: async () =>
+          await createAxonHubChannel(
+            config,
+            toAxonHubChannelCreateInput(channelData),
+          ),
+      })
+      if (createStep.outcome !== "applied") {
+        return finishAxonHubMutation(sequence, createStep)
+      }
+
+      const finalChannel = { ...createStep.data }
+      if (channelData.channel.status === CHANNEL_STATUS.Enable) {
+        const statusStep = await runAxonHubMutationStep({
+          sequence,
+          effect: axonHubChannelEffect("status-updated", createStep.data.id),
+          execute: async () =>
+            await updateAxonHubChannelStatus(
+              config,
+              createStep.data.id,
+              AXON_HUB_CHANNEL_STATUS.ENABLED,
+            ),
+        })
+        if (statusStep.outcome !== "applied") {
+          return finishAxonHubMutation(sequence, statusStep)
+        }
+        finalChannel.status = AXON_HUB_CHANNEL_STATUS.ENABLED
+      }
+
+      return sequence.finish({
+        finalState: "confirmed",
+        data: axonHubChannelToManagedSite(finalChannel),
+      })
+    },
+    update: async (config, channelData) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      let graphqlId: string | undefined
+      const updateStep = await runAxonHubMutationStep({
+        sequence,
+        effect: axonHubChannelEffect("resource-updated", channelData.id),
+        execute: async () => {
+          graphqlId = await resolveAxonHubGraphqlIdForMutation(
+            config,
+            channelData.id,
+          )
+          return await updateAxonHubChannel(
+            config,
+            graphqlId,
+            toAxonHubChannelUpdateInput(channelData),
+          )
+        },
+      })
+      if (updateStep.outcome !== "applied") {
+        return finishAxonHubMutation(sequence, updateStep)
+      }
+
+      const finalChannel = { ...updateStep.data }
+      if (channelData.status !== undefined) {
+        const status = toAxonHubStatus(channelData.status)
+        const statusStep = await runAxonHubMutationStep({
+          sequence,
+          effect: axonHubChannelEffect("status-updated", channelData.id),
+          execute: async () =>
+            await updateAxonHubChannelStatus(config, graphqlId!, status),
+        })
+        if (statusStep.outcome !== "applied") {
+          return finishAxonHubMutation(sequence, statusStep)
+        }
+        finalChannel.status = status
+      }
+
+      return sequence.finish({
+        finalState: "confirmed",
+        data: axonHubChannelToManagedSite(finalChannel),
+      })
+    },
+    delete: async (config, channelId) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runAxonHubMutationStep({
+        sequence,
+        effect: axonHubChannelEffect("resource-deleted", channelId),
+        execute: async () =>
+          await deleteAxonHubChannel(
+            config,
+            await resolveAxonHubGraphqlIdForMutation(config, channelId),
+          ),
+        rejectResponse: (deleted) => !deleted,
+      })
+      return step.outcome === "applied"
+        ? sequence.finish({ finalState: "confirmed", data: undefined })
+        : finishAxonHubMutation(sequence, step)
+    },
+  }
 
 const isRepresentableAxonHubStatus = (status: AxonHubChannel["status"]) =>
   status === AXON_HUB_CHANNEL_STATUS.ENABLED ||

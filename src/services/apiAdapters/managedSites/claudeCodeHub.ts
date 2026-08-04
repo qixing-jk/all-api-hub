@@ -1,4 +1,7 @@
-import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
+import {
+  CLAUDE_CODE_HUB_PROVIDER_TYPE,
+  ClaudeCodeHubProviderTypeNames,
+} from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import type {
   ManagedSiteChannelDraftsCapability,
@@ -7,6 +10,7 @@ import type {
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedUpstreamResourcesCapability } from "~/services/apiAdapters/contracts/managedUpstreamResources"
 import {
+  ClaudeCodeHubApiError,
   createProvider,
   deleteProvider,
   getUnmaskedProviderKey,
@@ -15,12 +19,15 @@ import {
   updateProvider,
 } from "~/services/apiService/claudeCodeHub"
 import {
+  createManagedSiteMutationSequence,
+  type ManagedSiteMutationConfirmedEffect,
+} from "~/services/managedSites/mutations"
+import {
   buildChannelName,
   buildChannelPayload,
   buildClaudeCodeHubCreatePayloadFromFormData,
+  buildClaudeCodeHubUpdatePayloadFromChannelData,
   checkValidClaudeCodeHubConfig,
-  createChannel,
-  deleteChannel,
   fetchAvailableModels,
   fetchChannelSecretKey,
   hydrateComparableChannelKeys,
@@ -28,7 +35,6 @@ import {
   prepareChannelFormData,
   providerToManagedSiteChannel,
   searchChannel,
-  updateChannel,
 } from "~/services/managedSites/providers/claudeCodeHub"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type {
@@ -56,13 +62,131 @@ import { normalizeList } from "~/utils/core/string"
 import { createManagedSiteConfigCapability } from "./config"
 import { emptyManagedSiteQueries } from "./unsupportedQueries"
 
+const claudeCodeHubChannelEffect = (
+  kind: ManagedSiteMutationConfirmedEffect["kind"],
+  resourceId?: number,
+): ManagedSiteMutationConfirmedEffect => ({
+  kind,
+  resourceKind: "channel",
+  ...(resourceId === undefined ? {} : { resourceId }),
+})
+
+const toClaudeCodeHubDiagnostic = (error: unknown) => {
+  const record =
+    typeof error === "object" && error !== null
+      ? (error as { message?: unknown; code?: unknown; status?: unknown })
+      : undefined
+  const code =
+    typeof record?.code === "string" ||
+    (typeof record?.code === "number" && Number.isSafeInteger(record.code))
+      ? record.code
+      : undefined
+  const statusCode =
+    typeof record?.status === "number" &&
+    Number.isSafeInteger(record.status) &&
+    record.status >= 100 &&
+    record.status <= 599
+      ? record.status
+      : undefined
+  return {
+    message:
+      typeof record?.message === "string" && record.message
+        ? record.message
+        : "Claude Code Hub mutation failed",
+    ...(code === undefined ? {} : { code }),
+    ...(statusCode === undefined ? {} : { statusCode }),
+    raw: error,
+  }
+}
+
+const runClaudeCodeHubMutation = async <TData, TResult = TData>(input: {
+  effect: ManagedSiteMutationConfirmedEffect
+  execute(): Promise<TData>
+  successData?: (data: TData) => TResult
+}) => {
+  const sequence = createManagedSiteMutationSequence({ idempotent: false })
+  const attempt = sequence.beginStep()
+  try {
+    const data = await input.execute()
+    attempt.markPossiblyDispatched()
+    attempt.markResponseReceived()
+    attempt.confirmEffect(input.effect)
+    attempt.complete()
+    return sequence.finish({
+      finalState: "confirmed",
+      data: input.successData
+        ? input.successData(data)
+        : (data as unknown as TResult),
+    })
+  } catch (error) {
+    if (!(error instanceof ClaudeCodeHubApiError) || !error.dispatch) {
+      throw error
+    }
+    if (error.dispatch === "dispatched") {
+      attempt.markPossiblyDispatched()
+    }
+    if (error.responseReceived) {
+      attempt.markResponseReceived()
+    }
+    if (error.confirmedNonApplication) {
+      if (error.dispatch === "dispatched" && error.responseReceived) {
+        attempt.confirmNonApplication()
+      }
+    }
+    attempt.complete()
+    return sequence.finish({
+      finalState: "unconfirmed",
+      diagnostic: toClaudeCodeHubDiagnostic(error),
+    })
+  }
+}
+
 export const claudeCodeHubManagedSiteChannels: ManagedSiteChannelsCapability<ClaudeCodeHubConfig> =
   {
     search: searchChannel,
     list: listChannels,
-    create: createChannel,
-    update: updateChannel,
-    delete: deleteChannel,
+    create: async (config, channelData) =>
+      await runClaudeCodeHubMutation<unknown, void>({
+        effect: claudeCodeHubChannelEffect("resource-created"),
+        execute: async () =>
+          await createProvider(
+            config,
+            buildClaudeCodeHubCreatePayloadFromFormData({
+              name: channelData.channel.name ?? "",
+              type:
+                channelData.channel.type ??
+                CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+              key: channelData.channel.key ?? "",
+              base_url: channelData.channel.base_url ?? "",
+              models: normalizeList(
+                channelData.channel.models?.split(",") ?? [],
+              ),
+              groups:
+                channelData.channel.groups ??
+                normalizeList(
+                  channelData.channel.group?.split(",") ?? [DEFAULT_GROUP_TAG],
+                ),
+              priority: channelData.channel.priority ?? 0,
+              weight: channelData.channel.weight ?? 1,
+              status: channelData.channel.status,
+            }),
+          ),
+      }),
+    update: async (config, channelData) =>
+      await runClaudeCodeHubMutation({
+        effect: claudeCodeHubChannelEffect("resource-updated", channelData.id),
+        execute: async () =>
+          await updateProvider(
+            config,
+            buildClaudeCodeHubUpdatePayloadFromChannelData(channelData),
+          ),
+      }),
+    delete: async (config, channelId) =>
+      await runClaudeCodeHubMutation({
+        effect: claudeCodeHubChannelEffect("resource-deleted", channelId),
+        execute: async () => await deleteProvider(config, channelId),
+        successData: () => undefined,
+      }),
     fetchSecretKey: fetchChannelSecretKey,
     hydrateComparableKeys: hydrateComparableChannelKeys,
   }

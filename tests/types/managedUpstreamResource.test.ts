@@ -71,9 +71,21 @@ describe("managed upstream resource contracts", () => {
       managedSites: {
         channels: {
           search: async () => ({ items: [], total: 0, type_counts: {} }),
-          create: async () => ({ success: true, data: null, message: "" }),
-          update: async () => ({ success: true, data: null, message: "" }),
-          delete: async () => ({ success: true, data: null, message: "" }),
+          create: async () => ({
+            outcome: "succeeded",
+            data: null,
+            confirmedEffects: [],
+          }),
+          update: async () => ({
+            outcome: "succeeded",
+            data: null,
+            confirmedEffects: [],
+          }),
+          delete: async () => ({
+            outcome: "succeeded",
+            data: undefined,
+            confirmedEffects: [],
+          }),
         },
         resources,
       },

@@ -5,11 +5,13 @@
 import { ChannelType } from "~/constants"
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import type { ManagedSiteChannelDeleteResponse } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import * as octopusApi from "~/services/apiService/octopus"
 import type { ApiResponse } from "~/services/apiTransport/type"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import { getManagedSiteDeleteCertainty } from "~/services/managedSites/mutationCertainty"
+import {
+  getManagedSiteDeleteCertainty,
+  type ManagedSiteChannelDeleteResponse,
+} from "~/services/managedSites/mutationCertainty"
 import { getNumericChannelType } from "~/services/managedSites/utils/channelType"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"

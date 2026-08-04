@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { ApiError } from "~/services/apiTransport/errors"
 import {
   buildChannelName,
   buildChannelPayload,
@@ -10,6 +11,11 @@ import {
 import { AuthTypeEnum } from "~/types"
 import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
 import type { ManagedSiteChannel } from "~/types/managedSite"
+import {
+  CHANNEL_MUTATION_SCENARIOS,
+  testManagedSiteChannelMutationContract,
+  type ChannelMutationScenario,
+} from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -113,6 +119,163 @@ describe("Veloera managed-site channel capability", () => {
     vi.clearAllMocks()
   })
 
+  const createPayload = {
+    mode: "single",
+    channel: { name: "channel", status: 1 },
+  } as const
+  const updatePayload = { id: 7, name: "updated" }
+  const models = ["model-a", "model-b"]
+  const modelMapping = { "model-a": "upstream-model-a" }
+
+  const arrangeRestMutation =
+    (
+      mock: typeof veloeraApi.createChannel,
+      successData: unknown,
+      responseError = false,
+    ) =>
+    (scenario: ChannelMutationScenario) => {
+      const raw =
+        scenario === CHANNEL_MUTATION_SCENARIOS.PreflightCancellation
+          ? new DOMException("cancelled", "AbortError")
+          : new TypeError("Failed to fetch")
+      const rejectionResponse = responseError
+        ? new ApiError("provider rejected", undefined, "/api/channel")
+        : {
+            success: false,
+            data: null,
+            message: "provider rejected",
+          }
+      mock.mockImplementation(async (request) => {
+        if (scenario === CHANNEL_MUTATION_SCENARIOS.PreflightCancellation) {
+          throw raw
+        }
+        request.observer?.onDispatch()
+        if (scenario === CHANNEL_MUTATION_SCENARIOS.PostDispatchAmbiguity) {
+          throw raw
+        }
+        request.observer?.onResponse()
+        if (scenario === CHANNEL_MUTATION_SCENARIOS.Rejected) {
+          if (responseError) throw rejectionResponse
+          return rejectionResponse
+        }
+        return responseError
+          ? undefined
+          : { success: true, data: successData, message: "success" }
+      })
+      return { raw, rejectionResponse }
+    }
+
+  testManagedSiteChannelMutationContract([
+    {
+      name: "create",
+      effect: { kind: "resource-created", resourceKind: "channel" },
+      successData: { id: 17 },
+      arrange: arrangeRestMutation(veloeraApi.createChannel, { id: 17 }),
+      invoke: async () => {
+        const { veloeraManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/veloera"
+        )
+        return await veloeraManagedSiteChannels.create(config, createPayload)
+      },
+      assertRequestPayload: () =>
+        expect(veloeraApi.createChannel.mock.calls.at(-1)?.[1]).toBe(
+          createPayload,
+        ),
+    },
+    {
+      name: "update",
+      effect: {
+        kind: "resource-updated",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: { id: 7 },
+      arrange: arrangeRestMutation(veloeraApi.updateChannel, { id: 7 }),
+      invoke: async () => {
+        const { veloeraManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/veloera"
+        )
+        return await veloeraManagedSiteChannels.update(config, updatePayload)
+      },
+      assertRequestPayload: () =>
+        expect(veloeraApi.updateChannel.mock.calls.at(-1)?.[1]).toBe(
+          updatePayload,
+        ),
+    },
+    {
+      name: "delete",
+      effect: {
+        kind: "resource-deleted",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(veloeraApi.deleteChannel, null),
+      invoke: async () => {
+        const { veloeraManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/veloera"
+        )
+        return await veloeraManagedSiteChannels.delete(config, 7)
+      },
+      assertRequestPayload: () =>
+        expect(veloeraApi.deleteChannel.mock.calls.at(-1)?.[1]).toBe(7),
+    },
+    {
+      name: "updateModels",
+      effect: {
+        kind: "models-updated",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(veloeraApi.updateChannelModels, null, true),
+      invoke: async () => {
+        const { veloeraManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/veloera"
+        )
+        return await veloeraManagedSiteChannels.updateModels!(config, 7, models)
+      },
+      assertRequestPayload: () =>
+        expect(
+          veloeraApi.updateChannelModels.mock.calls.at(-1)?.slice(1),
+        ).toEqual([7, "model-a,model-b", undefined]),
+    },
+    {
+      name: "updateModelMapping",
+      effect: {
+        kind: "model-mapping-updated",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(
+        veloeraApi.updateChannelModelMapping,
+        null,
+        true,
+      ),
+      invoke: async () => {
+        const { veloeraManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/veloera"
+        )
+        return await veloeraManagedSiteChannels.updateModelMapping!(
+          config,
+          7,
+          models,
+          modelMapping,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(
+          veloeraApi.updateChannelModelMapping.mock.calls.at(-1)?.slice(1),
+        ).toEqual([
+          7,
+          "model-a,model-b",
+          JSON.stringify(modelMapping),
+          undefined,
+        ]),
+    },
+  ])
+
   it("delegates channel operations to direct Veloera helpers", async () => {
     const { veloeraManagedSiteChannels } = await import(
       "~/services/apiAdapters/managedSites/veloera"
@@ -163,12 +326,21 @@ describe("Veloera managed-site channel capability", () => {
         bypassSiteRequestLimit: true,
       },
     )
-    expect(veloeraApi.createChannel).toHaveBeenCalledWith(request, {
-      mode: "single",
-      channel: { name: "channel", status: 1 },
-    })
-    expect(veloeraApi.updateChannel).toHaveBeenCalledWith(request, { id: 1 })
-    expect(veloeraApi.deleteChannel).toHaveBeenCalledWith(request, 1)
+    expect(veloeraApi.createChannel).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      {
+        mode: "single",
+        channel: { name: "channel", status: 1 },
+      },
+    )
+    expect(veloeraApi.updateChannel).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      { id: 1 },
+    )
+    expect(veloeraApi.deleteChannel).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      1,
+    )
     expect(veloeraApi.fetchChannelModels).toHaveBeenCalledWith(
       expect.objectContaining(request),
       1,

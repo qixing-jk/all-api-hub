@@ -4,7 +4,6 @@ import {
   isClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import type { ManagedSiteChannelDeleteResponse } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import type { ApiResponse } from "~/services/apiTransport/type"
 import {
@@ -12,7 +11,10 @@ import {
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import { getManagedSiteDeleteCertainty } from "~/services/managedSites/mutationCertainty"
+import {
+  getManagedSiteDeleteCertainty,
+  type ManagedSiteChannelDeleteResponse,
+} from "~/services/managedSites/mutationCertainty"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"

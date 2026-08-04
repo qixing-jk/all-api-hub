@@ -11,6 +11,11 @@ import { AuthTypeEnum } from "~/types"
 import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import {
+  CHANNEL_MUTATION_SCENARIOS,
+  testManagedSiteChannelMutationContract,
+  type ChannelMutationScenario,
+} from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
+import {
   buildApiToken,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
@@ -27,6 +32,7 @@ const doneHubApi = vi.hoisted(() => ({
   fetchChannelModels: vi.fn(),
   updateChannelModels: vi.fn(),
   updateChannelModelMapping: vi.fn(),
+  updateDoneHubChannelFields: vi.fn(),
   fetchSiteUserGroups: vi.fn(),
 }))
 
@@ -113,7 +119,277 @@ describe("DoneHub managed-site channel capability", () => {
     vi.clearAllMocks()
   })
 
+  const createPayload = {
+    mode: "single",
+    channel: { name: "channel", status: 1 },
+  } as const
+  const updatePayload = { id: 7, name: "updated" }
+  const models = ["model-a", "model-b"]
+  const modelMapping = { "model-a": "upstream-model-a" }
+
+  const arrangeRestMutation =
+    (mock: typeof doneHubApi.createChannel, successData: unknown) =>
+    (scenario: ChannelMutationScenario) => {
+      doneHubApi.fetchChannelRaw.mockResolvedValue({
+        id: 7,
+        name: "preserved",
+        key: "sk-preserved",
+      })
+      const raw =
+        scenario === CHANNEL_MUTATION_SCENARIOS.PreflightCancellation
+          ? new DOMException("cancelled", "AbortError")
+          : new TypeError("Failed to fetch")
+      const rejectionResponse = {
+        success: false,
+        data: null,
+        message: "provider rejected",
+      }
+      mock.mockImplementation(async (request) => {
+        if (scenario === CHANNEL_MUTATION_SCENARIOS.PreflightCancellation) {
+          throw raw
+        }
+        request.observer?.onDispatch()
+        if (scenario === CHANNEL_MUTATION_SCENARIOS.PostDispatchAmbiguity) {
+          throw raw
+        }
+        request.observer?.onResponse()
+        if (scenario === CHANNEL_MUTATION_SCENARIOS.Rejected) {
+          return rejectionResponse
+        }
+        return { success: true, data: successData, message: "success" }
+      })
+      return { raw, rejectionResponse }
+    }
+
+  testManagedSiteChannelMutationContract([
+    {
+      name: "create",
+      effect: { kind: "resource-created", resourceKind: "channel" },
+      successData: { id: 17 },
+      arrange: arrangeRestMutation(doneHubApi.createChannel, { id: 17 }),
+      invoke: async () => {
+        const { doneHubManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/doneHub"
+        )
+        return await doneHubManagedSiteChannels.create(config, createPayload)
+      },
+      assertRequestPayload: () =>
+        expect(doneHubApi.createChannel.mock.calls.at(-1)?.[1]).toBe(
+          createPayload,
+        ),
+    },
+    {
+      name: "update",
+      effect: {
+        kind: "resource-updated",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: { id: 7 },
+      arrange: arrangeRestMutation(doneHubApi.updateChannel, { id: 7 }),
+      invoke: async () => {
+        const { doneHubManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/doneHub"
+        )
+        return await doneHubManagedSiteChannels.update(config, updatePayload)
+      },
+      assertRequestPayload: () =>
+        expect(doneHubApi.updateChannel.mock.calls.at(-1)?.[1]).toBe(
+          updatePayload,
+        ),
+    },
+    {
+      name: "delete",
+      effect: {
+        kind: "resource-deleted",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(doneHubApi.deleteChannel, null),
+      invoke: async () => {
+        const { doneHubManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/doneHub"
+        )
+        return await doneHubManagedSiteChannels.delete(config, 7)
+      },
+      assertRequestPayload: () =>
+        expect(doneHubApi.deleteChannel.mock.calls.at(-1)?.[1]).toBe(7),
+    },
+    {
+      name: "updateModels",
+      effect: {
+        kind: "models-updated",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(doneHubApi.updateDoneHubChannelFields, null),
+      invoke: async () => {
+        const { doneHubManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/doneHub"
+        )
+        return await doneHubManagedSiteChannels.updateModels!(config, 7, models)
+      },
+      assertRequestPayload: () =>
+        expect(
+          doneHubApi.updateDoneHubChannelFields.mock.calls.at(-1)?.slice(1),
+        ).toEqual([
+          {
+            id: 7,
+            name: "preserved",
+            key: "sk-preserved",
+            models: "model-a,model-b",
+          },
+          undefined,
+        ]),
+    },
+    {
+      name: "updateModelMapping",
+      effect: {
+        kind: "model-mapping-updated",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(doneHubApi.updateDoneHubChannelFields, null),
+      invoke: async () => {
+        const { doneHubManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/doneHub"
+        )
+        return await doneHubManagedSiteChannels.updateModelMapping!(
+          config,
+          7,
+          models,
+          modelMapping,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(
+          doneHubApi.updateDoneHubChannelFields.mock.calls.at(-1)?.slice(1),
+        ).toEqual([
+          {
+            id: 7,
+            name: "preserved",
+            key: "sk-preserved",
+            models: "model-a,model-b",
+            model_mapping: JSON.stringify(modelMapping),
+          },
+          undefined,
+        ]),
+    },
+  ])
+
+  it.each([
+    new DOMException("cancelled", "AbortError"),
+    new TypeError("Failed to fetch"),
+  ])(
+    "keeps DoneHub model-update preflight failures undispatched",
+    async (raw) => {
+      doneHubApi.fetchChannelRaw.mockRejectedValue(raw)
+      const { doneHubManagedSiteChannels } = await import(
+        "~/services/apiAdapters/managedSites/doneHub"
+      )
+
+      await expect(
+        doneHubManagedSiteChannels.updateModels!(config, 7, models),
+      ).resolves.toMatchObject({
+        outcome: "rejected",
+        diagnostic: { raw },
+      })
+      expect(doneHubApi.updateDoneHubChannelFields).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(["models", "mapping"] as const)(
+    "preserves exact %s PUT options while keeping the preflight observer-free",
+    async (operation) => {
+      const controller = new AbortController()
+      const options = {
+        signal: controller.signal,
+        bypassSiteRequestLimit: true,
+      }
+      const preserved = {
+        id: 7,
+        name: "preserved",
+        key: "sk-preserved",
+        base_url: "https://upstream.example.invalid",
+      }
+      doneHubApi.fetchChannelRaw.mockResolvedValue(preserved)
+      doneHubApi.updateDoneHubChannelFields.mockImplementation(
+        async (request) => {
+          request.observer?.onDispatch()
+          request.observer?.onResponse()
+          return { success: true, data: null, message: "success" }
+        },
+      )
+      const { doneHubManagedSiteChannels } = await import(
+        "~/services/apiAdapters/managedSites/doneHub"
+      )
+
+      if (operation === "models") {
+        await doneHubManagedSiteChannels.updateModels!(
+          config,
+          7,
+          models,
+          options,
+        )
+      } else {
+        await doneHubManagedSiteChannels.updateModelMapping!(
+          config,
+          7,
+          models,
+          modelMapping,
+          options,
+        )
+      }
+
+      const expectedRequest = {
+        baseUrl: config.baseUrl,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: config.adminToken,
+          userId: config.userId,
+        },
+        bypassSiteRequestLimit: true,
+      }
+      expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledWith(
+        expectedRequest,
+        7,
+        options,
+      )
+      expect(
+        doneHubApi.fetchChannelRaw.mock.calls.at(-1)?.[0],
+      ).not.toHaveProperty("observer")
+      expect(doneHubApi.updateDoneHubChannelFields).toHaveBeenCalledWith(
+        {
+          ...expectedRequest,
+          observer: {
+            onDispatch: expect.any(Function),
+            onResponse: expect.any(Function),
+          },
+        },
+        {
+          ...preserved,
+          models: "model-a,model-b",
+          ...(operation === "mapping"
+            ? { model_mapping: JSON.stringify(modelMapping) }
+            : {}),
+        },
+        options,
+      )
+    },
+  )
+
   it("delegates channel operations and model sync to direct DoneHub helpers", async () => {
+    doneHubApi.fetchChannelRaw.mockResolvedValue({ id: 1, name: "preserved" })
+    doneHubApi.updateDoneHubChannelFields.mockImplementation(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return { success: true, data: null, message: "success" }
+      },
+    )
     const { doneHubManagedSiteChannels } = await import(
       "~/services/apiAdapters/managedSites/doneHub"
     )
@@ -150,28 +426,41 @@ describe("DoneHub managed-site channel capability", () => {
       { ...request, bypassSiteRequestLimit: true },
       { bypassSiteRequestLimit: true },
     )
-    expect(doneHubApi.createChannel).toHaveBeenCalledWith(request, {
-      mode: "single",
-      channel: { name: "channel", status: 1 },
-    })
-    expect(doneHubApi.updateChannel).toHaveBeenCalledWith(request, { id: 1 })
-    expect(doneHubApi.deleteChannel).toHaveBeenCalledWith(request, 1)
+    expect(doneHubApi.createChannel).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      {
+        mode: "single",
+        channel: { name: "channel", status: 1 },
+      },
+    )
+    expect(doneHubApi.updateChannel).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      { id: 1 },
+    )
+    expect(doneHubApi.deleteChannel).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      1,
+    )
     expect(doneHubApi.fetchChannelModels).toHaveBeenCalledWith(
       request,
       1,
       undefined,
     )
-    expect(doneHubApi.updateChannelModels).toHaveBeenCalledWith(
+    expect(doneHubApi.fetchChannelRaw).toHaveBeenCalledWith(
       request,
       1,
-      "model-a",
       undefined,
     )
-    expect(doneHubApi.updateChannelModelMapping).toHaveBeenCalledWith(
-      request,
-      1,
-      "model-a",
-      JSON.stringify({ "model-a": "upstream-model-a" }),
+    expect(doneHubApi.updateDoneHubChannelFields).toHaveBeenLastCalledWith(
+      expect.objectContaining(request),
+      {
+        id: 1,
+        name: "preserved",
+        models: "model-a",
+        model_mapping: JSON.stringify({
+          "model-a": "upstream-model-a",
+        }),
+      },
       undefined,
     )
   })

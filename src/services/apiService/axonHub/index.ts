@@ -335,13 +335,45 @@ export type AxonHubRequestFailureKind =
   | "unavailable"
   | "aborted"
 
+type AxonHubRequestErrorDetails = {
+  responseReceived?: boolean
+  statusCode?: number
+  code?: string
+  raw?: unknown
+  cause?: unknown
+  safeMessage?: string
+}
+
+const toValidHttpStatusCode = (statusCode: number | undefined) =>
+  statusCode !== undefined &&
+  Number.isSafeInteger(statusCode) &&
+  statusCode >= 100 &&
+  statusCode <= 599
+    ? statusCode
+    : undefined
+
 export class AxonHubRequestError extends Error {
+  readonly responseReceived: boolean
+  readonly statusCode?: number
+  readonly code?: string
+  readonly raw?: unknown
+  readonly cause?: unknown
+  readonly safeMessage: string
+
   constructor(
     readonly kind: AxonHubRequestFailureKind,
     readonly dispatch: "not-dispatched" | "dispatched",
+    message: string = kind,
+    details: AxonHubRequestErrorDetails = {},
   ) {
-    super(kind)
+    super(details.safeMessage ?? message)
     this.name = "AxonHubRequestError"
+    this.responseReceived = details.responseReceived ?? false
+    this.statusCode = toValidHttpStatusCode(details.statusCode)
+    this.code = details.code
+    this.raw = details.raw
+    this.cause = details.cause ?? details.raw
+    this.safeMessage = details.safeMessage ?? message
   }
 }
 
@@ -442,7 +474,11 @@ export async function resolveAxonHubGraphqlIdForMutation(
     return graphqlId
   }
 
-  throw new Error(`Unable to resolve AxonHub GraphQL id for channel ${id}`)
+  throw new AxonHubRequestError(
+    "not-found",
+    "not-dispatched",
+    `Unable to resolve AxonHub GraphQL id for channel ${id}`,
+  )
 }
 
 const toSafeErrorMessage = (error: unknown, fallback: string) => {
@@ -470,15 +506,23 @@ const toAxonHubRequestError = (
 ) => {
   if (error instanceof AxonHubRequestError) {
     if (dispatch === "dispatched" && error.dispatch === "not-dispatched") {
-      return new AxonHubRequestError(error.kind, dispatch)
+      return new AxonHubRequestError(error.kind, dispatch, error.message, {
+        responseReceived: error.responseReceived,
+        statusCode: error.statusCode,
+        code: error.code,
+        raw: error.raw,
+        cause: error.cause,
+        safeMessage: error.safeMessage,
+      })
     }
     return error
   }
 
-  return new AxonHubRequestError(
-    isAbortError(error) ? "aborted" : fallbackKind,
-    dispatch,
-  )
+  const kind = isAbortError(error) ? "aborted" : fallbackKind
+  return new AxonHubRequestError(kind, dispatch, kind, {
+    raw: error,
+    cause: error,
+  })
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -872,10 +916,21 @@ const toSafeAxonHubChannelSummary = (value: unknown): AxonHubChannel | null => {
 
 const parseGraphqlEnvelope = (
   payload: unknown,
-  dispatch: "not-dispatched" | "dispatched",
+  details: Pick<
+    AxonHubRequestErrorDetails,
+    "responseReceived" | "statusCode"
+  > & {
+    dispatch: "not-dispatched" | "dispatched"
+    raw?: unknown
+  },
 ): GraphQLResponseEnvelope => {
   if (!isRecord(payload)) {
-    throw new AxonHubRequestError("protocol", dispatch)
+    throw new AxonHubRequestError(
+      "protocol",
+      details.dispatch,
+      "protocol",
+      details,
+    )
   }
 
   const errors = payload.errors
@@ -892,7 +947,12 @@ const parseGraphqlEnvelope = (
                 typeof error.extensions.code !== "string"))),
       ))
   ) {
-    throw new AxonHubRequestError("protocol", dispatch)
+    throw new AxonHubRequestError(
+      "protocol",
+      details.dispatch,
+      "protocol",
+      details,
+    )
   }
 
   return {
@@ -1084,6 +1144,24 @@ const classifyGraphqlFailure = (
   return "upstream-rejected"
 }
 
+const getGraphqlErrorCode = (errors: GraphQLErrorPayload[] | undefined) =>
+  errors?.find((error) => error.extensions?.code)?.extensions?.code
+
+const toGraphqlResponseError = (
+  kind: AxonHubRequestFailureKind,
+  dispatch: "not-dispatched" | "dispatched",
+  response: Response,
+  errors?: GraphQLErrorPayload[],
+  raw?: unknown,
+) =>
+  new AxonHubRequestError(kind, dispatch, kind, {
+    responseReceived: true,
+    statusCode: response.status,
+    code: getGraphqlErrorCode(errors),
+    raw,
+    cause: raw,
+  })
+
 /**
  * Execute an authenticated AxonHub admin GraphQL request with one auth retry.
  */
@@ -1100,10 +1178,7 @@ export async function graphqlRequest<T>(
 
   type GraphqlAttempt = { kind: "data"; data: T } | { kind: "retry-auth" }
 
-  const retryAuthentication = (): GraphqlAttempt => {
-    if (isMutation) mutationDispatched = false
-    return { kind: "retry-auth" }
-  }
+  const retryAuthentication = (): GraphqlAttempt => ({ kind: "retry-auth" })
 
   const execute = async (
     sessionToken: string,
@@ -1145,26 +1220,58 @@ export async function graphqlRequest<T>(
         return retryAuthentication()
       }
       if (!response.ok) {
-        throw new AxonHubRequestError(
+        throw toGraphqlResponseError(
           classifyGraphqlFailure(response, undefined),
           dispatch,
+          response,
+          undefined,
+          error,
         )
       }
-      throw new AxonHubRequestError("protocol", dispatch)
+      throw toGraphqlResponseError(
+        "protocol",
+        dispatch,
+        response,
+        undefined,
+        error,
+      )
     }
 
+    const graphqlPayload = parseGraphqlEnvelope(payload, {
+      dispatch,
+      responseReceived: true,
+      statusCode: response.status,
+      raw: payload,
+    })
+
     if (response.status >= 500) {
-      throw new AxonHubRequestError("unavailable", dispatch)
+      throw toGraphqlResponseError(
+        "unavailable",
+        dispatch,
+        response,
+        graphqlPayload.errors,
+        payload,
+      )
     }
     if (response.status === 401) {
       if (allowAuthRetry) return retryAuthentication()
-      throw new AxonHubRequestError("authentication", dispatch)
+      throw toGraphqlResponseError(
+        "authentication",
+        dispatch,
+        response,
+        graphqlPayload.errors,
+        payload,
+      )
     }
     if (response.status === 403) {
-      throw new AxonHubRequestError("permission", dispatch)
+      throw toGraphqlResponseError(
+        "permission",
+        dispatch,
+        response,
+        graphqlPayload.errors,
+        payload,
+      )
     }
-
-    const graphqlPayload = parseGraphqlEnvelope(payload, dispatch)
 
     if (!response.ok || graphqlPayload.errors?.length) {
       if (
@@ -1174,14 +1281,23 @@ export async function graphqlRequest<T>(
         return retryAuthentication()
       }
 
-      throw new AxonHubRequestError(
+      throw toGraphqlResponseError(
         classifyGraphqlFailure(response, graphqlPayload.errors),
         dispatch,
+        response,
+        graphqlPayload.errors,
+        payload,
       )
     }
 
     if (graphqlPayload.data === undefined || graphqlPayload.data === null) {
-      throw new AxonHubRequestError("protocol", dispatch)
+      throw toGraphqlResponseError(
+        "protocol",
+        dispatch,
+        response,
+        undefined,
+        payload,
+      )
     }
 
     return { kind: "data", data: graphqlPayload.data as T }
@@ -1190,7 +1306,7 @@ export async function graphqlRequest<T>(
   try {
     throwIfAborted(options?.signal)
     const token = await getSessionToken(config, false, options)
-    const firstAttempt = await execute(token, retryAuth)
+    const firstAttempt = await execute(token, retryAuth && !isMutation)
     if (firstAttempt.kind === "data") return firstAttempt.data
 
     // Cached admin JWTs are session-scoped and may expire while the extension

@@ -17,6 +17,7 @@ import {
   listAxonHubChannelPage,
   listChannels,
   resolveAxonHubGraphqlId,
+  resolveAxonHubGraphqlIdForMutation,
   searchChannel as searchChannelAdapter,
   searchChannels,
   signIn,
@@ -1331,44 +1332,94 @@ describe("AxonHub API service", () => {
     })
   })
 
-  it("retains controlled status and dispatch phase in AxonHub protocol failures", async () => {
-    let authHits = 0
-    let graphQlHits = 0
-
-    server.use(
-      http.post(AUTH_URL, () => {
-        authHits += 1
-        return HttpResponse.json({ token: `permission-token-${authHits}` })
-      }),
-      http.post(GRAPHQL_URL, () => {
-        graphQlHits += 1
-        return HttpResponse.json(
-          {
-            errors: [
-              {
-                message:
-                  graphQlHits === 1 ? "expired token" : "permission denied",
-              },
-            ],
-          },
-          { status: graphQlHits === 1 ? 401 : 403 },
-        )
-      }),
+  it("preserves the original dispatched transport failure as the typed cause", async () => {
+    const raw = new TypeError("connection closed")
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        url.endsWith("/admin/auth/signin")
+          ? Promise.resolve(
+              new Response(JSON.stringify({ token: "transport-cause-token" }), {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              }),
+            )
+          : Promise.reject(raw),
+      ),
     )
 
-    const failure = await updateAxonHubChannel(config, "opaque-permission-id", {
-      name: "Rejected",
-    }).catch((error: unknown) => error)
+    const failure = await graphqlRequest(
+      { ...config, email: "transport-cause@example.com" },
+      "mutation TransportCause { updateThing }",
+    ).catch((error: unknown) => error)
 
-    expect(failure).toBeInstanceOf(AxonHubRequestError)
     expect(failure).toMatchObject({
-      kind: "permission",
+      kind: "unavailable",
       dispatch: "dispatched",
-      message: "permission",
+      responseReceived: false,
+      raw,
+      cause: raw,
     })
-    expect(authHits).toBe(2)
-    expect(graphQlHits).toBe(2)
   })
+
+  it.each([
+    [
+      "create",
+      () =>
+        createAxonHubChannel(config, {
+          type: "openai",
+          name: "Rejected create",
+          credentials: { apiKeys: ["placeholder-key"] },
+          supportedModels: ["model-alpha"],
+          defaultTestModel: "model-alpha",
+        }),
+    ],
+    [
+      "update",
+      () =>
+        updateAxonHubChannel(config, "opaque-permission-id", {
+          name: "Rejected",
+        }),
+    ],
+    ["delete", () => deleteAxonHubChannel(config, "opaque-permission-id")],
+  ] as const)(
+    "does not retry an authentication-rejected %s after dispatch",
+    async (_operation, mutate) => {
+      let authHits = 0
+      let graphQlHits = 0
+
+      server.use(
+        http.post(AUTH_URL, () => {
+          authHits += 1
+          return HttpResponse.json({ token: `permission-token-${authHits}` })
+        }),
+        http.post(GRAPHQL_URL, () => {
+          graphQlHits += 1
+          return HttpResponse.json(
+            {
+              errors: [
+                {
+                  message: "expired token",
+                },
+              ],
+            },
+            { status: 401 },
+          )
+        }),
+      )
+
+      const failure = await mutate().catch((error: unknown) => error)
+
+      expect(failure).toBeInstanceOf(AxonHubRequestError)
+      expect(failure).toMatchObject({
+        kind: "authentication",
+        dispatch: "dispatched",
+        message: "authentication",
+      })
+      expect(authHits).toBe(1)
+      expect(graphQlHits).toBe(1)
+    },
+  )
 
   it("signs in against the normalized admin endpoint and returns the token", async () => {
     let capturedBody: unknown
@@ -1499,6 +1550,39 @@ describe("AxonHub API service", () => {
       kind: "upstream-rejected",
       dispatch: "not-dispatched",
       message: "upstream-rejected",
+    })
+  })
+
+  it("preserves a validated GraphQL code after an earlier message-only error", async () => {
+    server.use(
+      http.post(AUTH_URL, () =>
+        HttpResponse.json({ token: "graphql-code-token" }),
+      ),
+      http.post(GRAPHQL_URL, () =>
+        HttpResponse.json({
+          errors: [
+            { message: "request rejected" },
+            {
+              message: "authentication required",
+              extensions: { code: "UNAUTHENTICATED" },
+            },
+          ],
+        }),
+      ),
+    )
+
+    await expect(
+      graphqlRequest(
+        { ...config, email: "graphql-code@example.invalid" },
+        "query { viewer { id } }",
+        undefined,
+        { retryAuth: false },
+      ),
+    ).rejects.toMatchObject({
+      kind: "authentication",
+      dispatch: "not-dispatched",
+      code: "UNAUTHENTICATED",
+      message: "authentication",
     })
   })
 
@@ -1679,49 +1763,69 @@ describe("AxonHub API service", () => {
     expect(graphQlHits).toBe(1)
   })
 
-  it("marks a mutation not dispatched when refresh sign-in fails before replay", async () => {
-    let authHits = 0
-    let graphQlHits = 0
-
-    server.use(
-      http.post(AUTH_URL, () => {
-        authHits += 1
-        if (authHits === 1) {
-          return HttpResponse.json({ token: "initial-mutation-token" })
-        }
-        return HttpResponse.json({ message: "unavailable" }, { status: 503 })
-      }),
-      http.post(GRAPHQL_URL, () => {
-        graphQlHits += 1
-        return HttpResponse.json(
-          {
-            errors: [
-              {
-                message: "request rejected",
-                extensions: { code: "UNAUTHENTICATED" },
-              },
-            ],
-          },
+  it.each([
+    {
+      name: "HTTP 401",
+      response: () =>
+        HttpResponse.json(
+          { errors: [{ message: "Bearer secret-token is expired" }] },
           { status: 401 },
-        )
-      }),
-    )
+        ),
+      expectedCode: undefined,
+      expectedStatusCode: 401,
+    },
+    {
+      name: "UNAUTHENTICATED GraphQL error",
+      response: () =>
+        HttpResponse.json({
+          errors: [
+            {
+              message: "Bearer secret-token is expired",
+              extensions: { code: "UNAUTHENTICATED" },
+            },
+          ],
+        }),
+      expectedCode: "UNAUTHENTICATED",
+      expectedStatusCode: 200,
+    },
+  ])(
+    "does not refresh or replay a dispatched mutation after $name",
+    async ({ response, expectedCode, expectedStatusCode }) => {
+      let authHits = 0
+      let graphQlHits = 0
 
-    await expect(
-      graphqlRequest(
-        { ...config, email: "refresh-failure@example.com" },
-        "mutation RefreshFailure { updateThing }",
-      ),
-    ).rejects.toMatchObject({
-      kind: "unavailable",
-      dispatch: "not-dispatched",
-      message: "unavailable",
-    })
-    expect(authHits).toBe(2)
-    expect(graphQlHits).toBe(1)
-  })
+      server.use(
+        http.post(AUTH_URL, () => {
+          authHits += 1
+          return HttpResponse.json({
+            token: `initial-mutation-token-${authHits}`,
+          })
+        }),
+        http.post(GRAPHQL_URL, () => {
+          graphQlHits += 1
+          return response()
+        }),
+      )
 
-  it("marks a mutation not dispatched when aborted before auth replay", async () => {
+      await expect(
+        graphqlRequest(
+          { ...config, email: "refresh-failure@example.com" },
+          "mutation RefreshFailure { updateThing }",
+        ),
+      ).rejects.toMatchObject({
+        kind: "authentication",
+        dispatch: "dispatched",
+        responseReceived: true,
+        statusCode: expectedStatusCode,
+        code: expectedCode,
+        message: "authentication",
+      })
+      expect(authHits).toBe(1)
+      expect(graphQlHits).toBe(1)
+    },
+  )
+
+  it("keeps a mutation dispatched when its caller aborts after an auth rejection", async () => {
     const controller = new AbortController()
     let authHits = 0
     let graphQlHits = 0
@@ -1768,9 +1872,9 @@ describe("AxonHub API service", () => {
         { signal: controller.signal },
       ),
     ).rejects.toMatchObject({
-      kind: "aborted",
-      dispatch: "not-dispatched",
-      message: "aborted",
+      kind: "authentication",
+      dispatch: "dispatched",
+      message: "authentication",
     })
     expect(authHits).toBe(1)
     expect(graphQlHits).toBe(1)
@@ -4087,6 +4191,33 @@ describe("AxonHub API service", () => {
       success: false,
       data: null,
       message: "Unable to resolve AxonHub GraphQL id for channel 999",
+    })
+  })
+
+  it("types unresolved mutation IDs as not-dispatched native failures", async () => {
+    server.use(
+      http.post(AUTH_URL, () =>
+        HttpResponse.json({ token: "unresolved-mutation-id" }),
+      ),
+      http.post(GRAPHQL_URL, () =>
+        HttpResponse.json({
+          data: {
+            queryChannels: {
+              edges: [],
+              pageInfo: { hasNextPage: false, endCursor: null },
+              totalCount: 0,
+            },
+          },
+        }),
+      ),
+    )
+
+    await expect(
+      resolveAxonHubGraphqlIdForMutation(config, 999),
+    ).rejects.toMatchObject({
+      name: "AxonHubRequestError",
+      kind: "not-found",
+      dispatch: "not-dispatched",
     })
   })
 

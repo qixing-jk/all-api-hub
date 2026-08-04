@@ -5,15 +5,15 @@ import {
 } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
-import type {
-  ManagedSiteChannelDeleteResponse,
-  ManagedSiteChannelRequestOptions,
-} from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import type { ManagedSiteChannelRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import * as axonHubApi from "~/services/apiService/axonHub"
 import type { ApiResponse } from "~/services/apiTransport/type"
 import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import { getManagedSiteDeleteCertainty } from "~/services/managedSites/mutationCertainty"
+import {
+  getManagedSiteDeleteCertainty,
+  type ManagedSiteChannelDeleteResponse,
+} from "~/services/managedSites/mutationCertainty"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {

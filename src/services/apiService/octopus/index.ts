@@ -20,6 +20,63 @@ import { buildOctopusAuthHeaders } from "./utils"
 
 const logger = createLogger("OctopusAPI")
 
+export class OctopusMutationApiError extends Error {
+  constructor(
+    message: string,
+    readonly evidence: {
+      dispatch: "not-dispatched" | "dispatched"
+      responseReceived: boolean
+      confirmedNonApplication: boolean
+      raw: unknown
+      statusCode?: number
+      code?: string | number
+    },
+  ) {
+    super(message)
+    this.name = "OctopusMutationApiError"
+  }
+
+  get dispatch() {
+    return this.evidence.dispatch
+  }
+
+  get responseReceived() {
+    return this.evidence.responseReceived
+  }
+
+  get confirmedNonApplication() {
+    return this.evidence.confirmedNonApplication
+  }
+
+  get raw() {
+    return this.evidence.raw
+  }
+
+  get statusCode() {
+    return this.evidence.statusCode
+  }
+
+  get code() {
+    return this.evidence.code
+  }
+}
+
+const getOctopusErrorCode = (error: unknown) => {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return undefined
+  }
+  const code = error.code
+  return typeof code === "string" ||
+    (typeof code === "number" && Number.isSafeInteger(code))
+    ? code
+    : undefined
+}
+
+const getOctopusMutationErrorMessage = (error: unknown) =>
+  error instanceof Error && error.message
+    ? error.message
+    : "Octopus mutation failed"
+
 /**
  * 执行 Octopus API 请求
  */
@@ -27,77 +84,124 @@ async function fetchOctopusApi<T>(
   config: OctopusConfig,
   endpoint: string,
   options: RequestInit = {},
+  requestKind: "read" | "mutation" = "read",
 ): Promise<OctopusApiResponse<T>> {
   const signal = options.signal ?? undefined
-  const token = await octopusAuthManager.getValidToken(config, {
-    signal,
-  })
-  const baseUrl = normalizeBaseUrl(config.baseUrl)
-  const url = `${baseUrl}${endpoint}`
+  const isMutation = requestKind === "mutation"
+  let fetchStarted = false
+  let responseReceived = false
+  let responseStatus: number | undefined
 
-  const response = await fetch(url, {
-    ...options,
-    signal,
-    headers: createOctopusRequestHeaders(token, options.headers),
-  })
+  try {
+    const token = await octopusAuthManager.getValidToken(config, {
+      signal,
+    })
+    const baseUrl = normalizeBaseUrl(config.baseUrl)
+    const url = `${baseUrl}${endpoint}`
 
-  // 检查 HTTP 状态码，处理非成功响应
-  if (!response.ok) {
-    const contentType = response.headers.get("Content-Type") || ""
-    let errorMessage: string
-
-    // Read body once as text, then try to parse as JSON
-    const rawBody = await response.text()
-
-    if (contentType.includes("application/json")) {
-      // 尝试解析 JSON 错误响应
-      try {
-        const errorData = JSON.parse(rawBody)
-        errorMessage =
-          errorData.message || errorData.error || JSON.stringify(errorData)
-      } catch {
-        errorMessage = rawBody
-      }
-    } else {
-      // 非 JSON 响应，使用已读取的文本
-      errorMessage = rawBody
+    if (isMutation && signal?.aborted) {
+      const raw =
+        signal.reason ??
+        new DOMException("The operation was aborted", "AbortError")
+      throw new OctopusMutationApiError(getOctopusMutationErrorMessage(raw), {
+        dispatch: "not-dispatched",
+        responseReceived: false,
+        confirmedNonApplication: true,
+        raw,
+        code: getOctopusErrorCode(raw),
+      })
     }
 
-    throw new Error(
-      `HTTP ${response.status} ${response.statusText}: ${errorMessage}`,
-    )
-  }
+    fetchStarted = true
+    const response = await fetch(url, {
+      ...options,
+      signal,
+      headers: createOctopusRequestHeaders(token, options.headers),
+    })
+    responseReceived = true
+    responseStatus = response.status
 
-  // 检查 Content-Type 是否为 JSON
-  const contentType = response.headers.get("Content-Type") || ""
-  if (!contentType.includes("application/json")) {
-    const text = await response.text()
-    throw new Error(
-      `Expected JSON response but got ${contentType || "unknown content type"}: ${text.slice(0, 200)}`,
-    )
-  }
+    // 检查 HTTP 状态码，处理非成功响应
+    if (!response.ok) {
+      const contentType = response.headers.get("Content-Type") || ""
+      let errorMessage: string
 
-  let data: unknown
-  try {
-    data = await response.json()
-  } catch {
-    throw new Error(`Failed to parse JSON response from ${endpoint}`)
-  }
+      // Read body once as text, then try to parse as JSON
+      const rawBody = await response.text()
 
-  // Octopus 返回格式: { success: boolean, data?: T, message?: string }
-  // 或者 { code: number, message: string, data?: T }
-  const responseData = data as Record<string, unknown>
-  if (
-    responseData.success === false ||
-    (responseData.code !== undefined && responseData.code !== 200)
-  ) {
-    throw new Error((responseData.message as string) || "API request failed")
-  }
+      if (contentType.includes("application/json")) {
+        // 尝试解析 JSON 错误响应
+        try {
+          const errorData = JSON.parse(rawBody)
+          errorMessage =
+            errorData.message || errorData.error || JSON.stringify(errorData)
+        } catch {
+          errorMessage = rawBody
+        }
+      } else {
+        // 非 JSON 响应，使用已读取的文本
+        errorMessage = rawBody
+      }
 
-  return {
-    success: true,
-    data: (responseData.data as T | undefined) ?? null,
-    message: (responseData.message as string) || "success",
+      throw new Error(
+        `HTTP ${response.status} ${response.statusText}: ${errorMessage}`,
+      )
+    }
+
+    // 检查 Content-Type 是否为 JSON
+    const contentType = response.headers.get("Content-Type") || ""
+    if (!contentType.includes("application/json")) {
+      const text = await response.text()
+      throw new Error(
+        `Expected JSON response but got ${contentType || "unknown content type"}: ${text.slice(0, 200)}`,
+      )
+    }
+
+    let data: unknown
+    try {
+      data = await response.json()
+    } catch {
+      throw new Error(`Failed to parse JSON response from ${endpoint}`)
+    }
+
+    // Octopus 返回格式: { success: boolean, data?: T, message?: string }
+    // 或者 { code: number, message: string, data?: T }
+    const responseData = data as Record<string, unknown>
+    if (
+      responseData.success === false ||
+      (responseData.code !== undefined && responseData.code !== 200)
+    ) {
+      const message = (responseData.message as string) || "API request failed"
+      if (isMutation) {
+        throw new OctopusMutationApiError(message, {
+          dispatch: "dispatched",
+          responseReceived: true,
+          confirmedNonApplication: true,
+          raw: data,
+          statusCode: response.status,
+          code: getOctopusErrorCode(data),
+        })
+      }
+      throw new Error(message)
+    }
+
+    return {
+      success: true,
+      data: (responseData.data as T | undefined) ?? null,
+      message: (responseData.message as string) || "success",
+    }
+  } catch (error) {
+    if (!isMutation || error instanceof OctopusMutationApiError) {
+      throw error
+    }
+    throw new OctopusMutationApiError(getOctopusMutationErrorMessage(error), {
+      dispatch: fetchStarted ? "dispatched" : "not-dispatched",
+      responseReceived,
+      confirmedNonApplication: !fetchStarted,
+      raw: error,
+      ...(responseStatus === undefined ? {} : { statusCode: responseStatus }),
+      code: getOctopusErrorCode(error),
+    })
   }
 }
 
@@ -154,11 +258,12 @@ export async function createChannel(
         method: "POST",
         body: JSON.stringify(data),
       },
+      "mutation",
     )
     logger.info("Channel created", { name: data.name })
     return result
   } catch (error) {
-    logger.error("Failed to create channel", error)
+    logger.error("Failed to create channel")
     throw error
   }
 }
@@ -180,11 +285,12 @@ export async function updateChannel(
         body: JSON.stringify(data),
         signal: options?.signal,
       },
+      "mutation",
     )
     logger.info("Channel updated", { id: data.id })
     return result
   } catch (error) {
-    logger.error("Failed to update channel", error)
+    logger.error("Failed to update channel")
     throw error
   }
 }
@@ -203,11 +309,12 @@ export async function deleteChannel(
       {
         method: "DELETE",
       },
+      "mutation",
     )
     logger.info("Channel deleted", { id: channelId })
     return result
   } catch (error) {
-    logger.error("Failed to delete channel", error)
+    logger.error("Failed to delete channel")
     throw error
   }
 }

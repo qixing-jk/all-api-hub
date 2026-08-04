@@ -1,4 +1,7 @@
-import type { ApiResponse } from "~/services/apiTransport/type"
+import type {
+  ManagedSiteMutationResult,
+  ManagedSiteVoidMutationResult,
+} from "~/services/managedSites/mutations"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -15,17 +18,6 @@ import type {
 export type ManagedSiteChannelRequestOptions = {
   signal?: AbortSignal
   bypassSiteRequestLimit?: boolean
-}
-
-export const MANAGED_SITE_MUTATION_CERTAINTIES = {
-  Uncertain: "uncertain",
-} as const
-
-export type ManagedSiteMutationCertainty =
-  (typeof MANAGED_SITE_MUTATION_CERTAINTIES)[keyof typeof MANAGED_SITE_MUTATION_CERTAINTIES]
-
-export type ManagedSiteChannelDeleteResponse = ApiResponse<unknown> & {
-  certainty?: ManagedSiteMutationCertainty
 }
 
 export type ManagedSiteChannelSecretReadOptions = {
@@ -48,15 +40,15 @@ export type ManagedSiteChannelsCapability<
   create(
     config: TConfig,
     channelData: CreateChannelPayload,
-  ): Promise<ApiResponse<unknown>>
+  ): Promise<ManagedSiteMutationResult<unknown>>
   update(
     config: TConfig,
     channelData: UpdateChannelPayload,
-  ): Promise<ApiResponse<unknown>>
+  ): Promise<ManagedSiteMutationResult<unknown>>
   delete(
     config: TConfig,
     channelId: number,
-  ): Promise<ManagedSiteChannelDeleteResponse>
+  ): Promise<ManagedSiteVoidMutationResult>
   fetchSecretKey?(
     config: TConfig,
     channelId: number,
@@ -77,14 +69,14 @@ export type ManagedSiteChannelsCapability<
     channelId: number,
     models: string[],
     options?: ManagedSiteChannelRequestOptions,
-  ): Promise<void>
+  ): Promise<ManagedSiteVoidMutationResult>
   updateModelMapping?(
     config: TConfig,
     channelId: number,
     models: string[],
     modelMapping: Record<string, string>,
     options?: ManagedSiteChannelRequestOptions,
-  ): Promise<void>
+  ): Promise<ManagedSiteVoidMutationResult>
 }
 
 export type ManagedSiteConfigCapability<

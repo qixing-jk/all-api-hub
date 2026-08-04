@@ -53,7 +53,7 @@ const serializeUpdateChannelPayload = (payload: UpdateChannelPayload) => {
   }
 }
 
-const updateChannelStatus = async (
+export const updateChannelStatus = async (
   request: ApiServiceRequest,
   channelId: number,
   status: number,
@@ -73,7 +73,7 @@ const updateChannelStatus = async (
   )
 }
 
-const isNewApiManualStatus = (status: number) =>
+export const isNewApiManualStatus = (status: number) =>
   status === CHANNEL_STATUS.Enable || status === CHANNEL_STATUS.ManuallyDisabled
 
 const buildPartialStatusUpdateFailureResponse = <T>(
@@ -155,15 +155,8 @@ export async function updateChannel(
   channelData: UpdateChannelPayload,
 ) {
   try {
-    const { payload, status } = serializeUpdateChannelPayload(channelData)
-
-    const updateResponse = await fetchApi<void>(request, {
-      endpoint: CHANNEL_API_BASE,
-      options: {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      },
-    })
+    const { status } = serializeUpdateChannelPayload(channelData)
+    const updateResponse = await updateChannelFields(request, channelData)
 
     if (
       !updateResponse.success ||
@@ -193,6 +186,23 @@ export async function updateChannel(
       error,
     )
   }
+}
+
+/** Update only the editable channel fields in one New API request. */
+export async function updateChannelFields(
+  request: ApiServiceRequest,
+  channelData: UpdateChannelPayload,
+  options?: Pick<RequestInit, "signal">,
+) {
+  const { payload } = serializeUpdateChannelPayload(channelData)
+  return await fetchApi<void>(request, {
+    endpoint: CHANNEL_API_BASE,
+    options: {
+      method: "PUT",
+      body: JSON.stringify(payload),
+      signal: options?.signal,
+    },
+  })
 }
 
 /**

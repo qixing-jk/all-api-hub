@@ -1,8 +1,8 @@
 import {
+  isManagedSiteMutationUncertainError,
   MANAGED_SITE_MUTATION_CERTAINTIES,
   type ManagedSiteMutationCertainty,
-} from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { isManagedSiteMutationUncertainError } from "~/services/managedSites/mutationCertainty"
+} from "~/services/managedSites/mutationCertainty"
 
 import { mapSettledWithConcurrency } from "./managedResourceConcurrency"
 

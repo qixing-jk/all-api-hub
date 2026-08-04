@@ -124,6 +124,115 @@ describe("Claude Code Hub action API adapter", () => {
     ])
   })
 
+  const mutationActions = [
+    {
+      name: "create",
+      path: "addProvider",
+      invoke: (signal?: AbortSignal) =>
+        createProvider(
+          config,
+          {
+            name: "Provider",
+            url: "https://api.example.invalid",
+            key: "sk-example",
+            provider_type: "openai-compatible",
+            allowed_models: [],
+          },
+          { signal },
+        ),
+    },
+    {
+      name: "update",
+      path: "editProvider",
+      invoke: (signal?: AbortSignal) =>
+        updateProvider(config, { providerId: 12, name: "Updated" }, { signal }),
+    },
+    {
+      name: "delete",
+      path: "removeProvider",
+      invoke: (signal?: AbortSignal) => deleteProvider(config, 12, { signal }),
+    },
+  ] as const
+
+  it.each(mutationActions)(
+    "$name carries affirmative action rejection evidence",
+    async ({ path, invoke }) => {
+      server.use(
+        http.post(`${PROVIDER_ACTION_BASE}/${path}`, () =>
+          HttpResponse.json(
+            { ok: false, error: "provider rejected" },
+            { status: 403 },
+          ),
+        ),
+      )
+
+      await expect(invoke()).rejects.toMatchObject({
+        name: "ClaudeCodeHubApiError",
+        status: 403,
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: true,
+      })
+    },
+  )
+
+  it.each(mutationActions)(
+    "$name keeps malformed post-dispatch responses ambiguous",
+    async ({ path, invoke }) => {
+      server.use(
+        http.post(
+          `${PROVIDER_ACTION_BASE}/${path}`,
+          () =>
+            new HttpResponse("not json", {
+              status: 200,
+              headers: { "Content-Type": "text/plain" },
+            }),
+        ),
+      )
+
+      await expect(invoke()).rejects.toMatchObject({
+        name: "ClaudeCodeHubApiError",
+        status: 200,
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: false,
+      })
+    },
+  )
+
+  it.each(mutationActions)(
+    "$name keeps response loss after dispatch ambiguous",
+    async ({ path, invoke }) => {
+      server.use(
+        http.post(`${PROVIDER_ACTION_BASE}/${path}`, () =>
+          HttpResponse.error(),
+        ),
+      )
+
+      await expect(invoke()).rejects.toMatchObject({
+        name: "ClaudeCodeHubApiError",
+        dispatch: "dispatched",
+        responseReceived: false,
+        confirmedNonApplication: false,
+      })
+    },
+  )
+
+  it.each(mutationActions)(
+    "$name marks an already-aborted caller as not dispatched",
+    async ({ invoke }) => {
+      const controller = new AbortController()
+      controller.abort(new DOMException("cancelled", "AbortError"))
+
+      await expect(invoke(controller.signal)).rejects.toMatchObject({
+        name: "ClaudeCodeHubApiError",
+        dispatch: "not-dispatched",
+        responseReceived: false,
+        confirmedNonApplication: true,
+      })
+    },
+  )
+
   it("fetches an unmasked provider key from the provider v1 reveal API", async () => {
     let capturedAuthorization: string | null = null
 

@@ -8,6 +8,11 @@ import type {
   ManagedSiteChannel,
 } from "~/types/managedSite"
 import {
+  CHANNEL_MUTATION_SCENARIOS,
+  testManagedSiteChannelMutationContract,
+  type ChannelMutationScenario,
+} from "~~/tests/services/apiAdapters/managedSites/channelMutationContract"
+import {
   buildApiToken,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
@@ -17,6 +22,9 @@ const channelManagement = vi.hoisted(() => ({
   listAllChannels: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
+  updateChannelFields: vi.fn(),
+  updateChannelStatus: vi.fn(),
+  isNewApiManualStatus: vi.fn((status) => status === 1 || status === 2),
   deleteChannel: vi.fn(),
   fetchChannelModels: vi.fn(),
   updateChannelModels: vi.fn(),
@@ -114,6 +122,335 @@ describe("newApi managed-site channel capability", () => {
       ...overrides,
     }) satisfies ManagedSiteChannel
 
+  const createPayload = {
+    mode: "single",
+    channel: { name: "channel", status: 1 },
+  } as CreateChannelPayload
+  const updatePayload = { id: 7, name: "updated" }
+  const models = ["model-a", "model-b"]
+  const modelMapping = { "model-a": "upstream-model-a" }
+
+  const arrangeRestMutation =
+    (mock: typeof channelManagement.createChannel, successData: unknown) =>
+    (scenario: ChannelMutationScenario) => {
+      const raw =
+        scenario === CHANNEL_MUTATION_SCENARIOS.PreflightCancellation
+          ? new DOMException("cancelled", "AbortError")
+          : new TypeError("Failed to fetch")
+      const rejectionResponse = {
+        success: false,
+        data: null,
+        message: "provider rejected",
+      }
+      mock.mockImplementation(async (request) => {
+        if (scenario === CHANNEL_MUTATION_SCENARIOS.PreflightCancellation) {
+          throw raw
+        }
+        request.observer?.onDispatch()
+        if (scenario === CHANNEL_MUTATION_SCENARIOS.PostDispatchAmbiguity) {
+          throw raw
+        }
+        request.observer?.onResponse()
+        return scenario === CHANNEL_MUTATION_SCENARIOS.Rejected
+          ? rejectionResponse
+          : { success: true, data: successData, message: "success" }
+      })
+      return { raw, rejectionResponse }
+    }
+
+  testManagedSiteChannelMutationContract([
+    {
+      name: "create",
+      effect: {
+        kind: "resource-created",
+        resourceKind: "channel",
+      },
+      successData: { id: 17 },
+      arrange: arrangeRestMutation(channelManagement.createChannel, { id: 17 }),
+      invoke: async () => {
+        const { newApiManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/newApi"
+        )
+        return await newApiManagedSiteChannels.create(config, createPayload)
+      },
+      assertRequestPayload: () =>
+        expect(channelManagement.createChannel.mock.calls.at(-1)?.[1]).toBe(
+          createPayload,
+        ),
+    },
+    {
+      name: "update",
+      effect: {
+        kind: "resource-updated",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: { id: 7 },
+      arrange: arrangeRestMutation(channelManagement.updateChannelFields, {
+        id: 7,
+      }),
+      invoke: async () => {
+        const { newApiManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/newApi"
+        )
+        return await newApiManagedSiteChannels.update(config, updatePayload)
+      },
+      assertRequestPayload: () =>
+        expect(
+          channelManagement.updateChannelFields.mock.calls.at(-1)?.[1],
+        ).toBe(updatePayload),
+    },
+    {
+      name: "delete",
+      effect: {
+        kind: "resource-deleted",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(channelManagement.deleteChannel, null),
+      invoke: async () => {
+        const { newApiManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/newApi"
+        )
+        return await newApiManagedSiteChannels.delete(config, 7)
+      },
+      assertRequestPayload: () =>
+        expect(channelManagement.deleteChannel.mock.calls.at(-1)?.[1]).toBe(7),
+    },
+    {
+      name: "updateModels",
+      effect: {
+        kind: "models-updated",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(channelManagement.updateChannelFields, null),
+      invoke: async () => {
+        const { newApiManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/newApi"
+        )
+        return await newApiManagedSiteChannels.updateModels!(config, 7, models)
+      },
+      assertRequestPayload: () =>
+        expect(
+          channelManagement.updateChannelFields.mock.calls.at(-1)?.[1],
+        ).toEqual({ id: 7, models: "model-a,model-b" }),
+    },
+    {
+      name: "updateModelMapping",
+      effect: {
+        kind: "model-mapping-updated",
+        resourceKind: "channel",
+        resourceId: 7,
+      },
+      successData: undefined,
+      arrange: arrangeRestMutation(channelManagement.updateChannelFields, null),
+      invoke: async () => {
+        const { newApiManagedSiteChannels } = await import(
+          "~/services/apiAdapters/managedSites/newApi"
+        )
+        return await newApiManagedSiteChannels.updateModelMapping!(
+          config,
+          7,
+          models,
+          modelMapping,
+        )
+      },
+      assertRequestPayload: () =>
+        expect(
+          channelManagement.updateChannelFields.mock.calls.at(-1)?.[1],
+        ).toEqual({
+          id: 7,
+          models: "model-a,model-b",
+          model_mapping: JSON.stringify(modelMapping),
+        }),
+    },
+  ])
+
+  it("returns the common mutation result for a confirmed create", async () => {
+    channelManagement.createChannel.mockImplementation(async (request) => {
+      request.observer?.onDispatch()
+      request.observer?.onResponse()
+      return { success: true, data: { id: 17 }, message: "created" }
+    })
+    const { newApiManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+    const payload = {
+      mode: "single",
+      channel: { name: "channel", status: 1 },
+    } as CreateChannelPayload
+
+    await expect(
+      newApiManagedSiteChannels.create(config, payload),
+    ).resolves.toEqual({
+      outcome: "succeeded",
+      data: { id: 17 },
+      confirmedEffects: [
+        {
+          kind: "resource-created",
+          resourceKind: "channel",
+        },
+      ],
+    })
+    expect(channelManagement.createChannel.mock.calls.at(-1)?.[1]).toBe(payload)
+  })
+
+  it("returns partial/rejected when fields apply and the status response rejects", async () => {
+    const statusResponse = {
+      success: false,
+      data: null,
+      message: "provider rejected",
+    }
+    channelManagement.updateChannelFields.mockImplementation(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return { success: true, data: { id: 7 }, message: "success" }
+      },
+    )
+    channelManagement.updateChannelStatus.mockImplementation(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return statusResponse
+      },
+    )
+    const { newApiManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+
+    await expect(
+      newApiManagedSiteChannels.update(config, {
+        id: 7,
+        name: "updated",
+        status: CHANNEL_STATUS.Enable,
+      }),
+    ).resolves.toEqual({
+      outcome: "partial",
+      confirmedEffects: [
+        {
+          kind: "resource-updated",
+          resourceKind: "channel",
+          resourceId: 7,
+        },
+      ],
+      completion: "rejected",
+      diagnostic: { message: "provider rejected", raw: statusResponse },
+    })
+  })
+
+  it("returns partial/uncertain when fields apply and the status response is lost", async () => {
+    const raw = new TypeError("Failed to fetch")
+    channelManagement.updateChannelFields.mockImplementation(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return { success: true, data: { id: 7 }, message: "success" }
+      },
+    )
+    channelManagement.updateChannelStatus.mockImplementation(
+      async (request) => {
+        request.observer?.onDispatch()
+        throw raw
+      },
+    )
+    const { newApiManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+
+    await expect(
+      newApiManagedSiteChannels.update(config, {
+        id: 7,
+        status: CHANNEL_STATUS.Enable,
+      }),
+    ).resolves.toEqual({
+      outcome: "partial",
+      confirmedEffects: [
+        {
+          kind: "resource-updated",
+          resourceKind: "channel",
+          resourceId: 7,
+        },
+      ],
+      completion: "uncertain",
+      diagnostic: { message: "Failed to fetch", raw },
+    })
+  })
+
+  it("returns rejected when the field update rejects before status dispatch", async () => {
+    const fieldResponse = {
+      success: false,
+      data: null,
+      message: "provider rejected",
+    }
+    channelManagement.updateChannelFields.mockImplementation(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return fieldResponse
+      },
+    )
+    const { newApiManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+
+    await expect(
+      newApiManagedSiteChannels.update(config, {
+        id: 7,
+        status: CHANNEL_STATUS.Enable,
+      }),
+    ).resolves.toEqual({
+      outcome: "rejected",
+      diagnostic: { message: "provider rejected", raw: fieldResponse },
+    })
+    expect(channelManagement.updateChannelStatus).not.toHaveBeenCalled()
+  })
+
+  it("returns both confirmed effects when fields and status apply", async () => {
+    channelManagement.updateChannelFields.mockImplementation(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return { success: true, data: { id: 7 }, message: "success" }
+      },
+    )
+    channelManagement.updateChannelStatus.mockImplementation(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return { success: true, data: true, message: "success" }
+      },
+    )
+    const { newApiManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+
+    await expect(
+      newApiManagedSiteChannels.update(config, {
+        id: 7,
+        status: CHANNEL_STATUS.Enable,
+      }),
+    ).resolves.toEqual({
+      outcome: "succeeded",
+      data: { id: 7 },
+      confirmedEffects: [
+        {
+          kind: "resource-updated",
+          resourceKind: "channel",
+          resourceId: 7,
+        },
+        {
+          kind: "status-updated",
+          resourceKind: "channel",
+          resourceId: 7,
+        },
+      ],
+    })
+  })
+
   it("delegates channel operations to direct New API family helpers", async () => {
     const { newApiManagedSiteChannels } = await import(
       "~/services/apiAdapters/managedSites/newApi"
@@ -162,30 +499,34 @@ describe("newApi managed-site channel capability", () => {
       { bypassSiteRequestLimit: true },
     )
     expect(channelManagement.createChannel).toHaveBeenCalledWith(
-      request,
+      expect.objectContaining(request),
       createPayload,
     )
-    expect(channelManagement.updateChannel).toHaveBeenCalledWith(request, {
-      id: 1,
-      name: "updated",
-    })
-    expect(channelManagement.deleteChannel).toHaveBeenCalledWith(request, 1)
+    expect(channelManagement.updateChannelFields).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      expect.objectContaining({ id: 1, name: "updated" }),
+    )
+    expect(channelManagement.deleteChannel).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      1,
+    )
     expect(channelManagement.fetchChannelModels).toHaveBeenCalledWith(
       request,
       1,
       undefined,
     )
-    expect(channelManagement.updateChannelModels).toHaveBeenCalledWith(
-      request,
-      1,
-      "gpt-4o",
+    expect(channelManagement.updateChannelFields).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      { id: 1, models: "gpt-4o" },
       undefined,
     )
-    expect(channelManagement.updateChannelModelMapping).toHaveBeenCalledWith(
-      request,
-      1,
-      "gpt-4o",
-      JSON.stringify({ "gpt-4o": "upstream-gpt-4o" }),
+    expect(channelManagement.updateChannelFields).toHaveBeenCalledWith(
+      expect.objectContaining(request),
+      {
+        id: 1,
+        models: "gpt-4o",
+        model_mapping: JSON.stringify({ "gpt-4o": "upstream-gpt-4o" }),
+      },
       undefined,
     )
   })

@@ -27,10 +27,48 @@ export class ClaudeCodeHubApiError extends Error {
   constructor(
     message: string,
     readonly status?: number,
+    readonly evidence?: {
+      dispatch: "not-dispatched" | "dispatched"
+      responseReceived: boolean
+      confirmedNonApplication: boolean
+      raw?: unknown
+      code?: string | number
+    },
   ) {
     super(message)
     this.name = "ClaudeCodeHubApiError"
   }
+
+  get dispatch() {
+    return this.evidence?.dispatch
+  }
+
+  get responseReceived() {
+    return this.evidence?.responseReceived
+  }
+
+  get confirmedNonApplication() {
+    return this.evidence?.confirmedNonApplication
+  }
+
+  get raw() {
+    return this.evidence?.raw
+  }
+
+  get code() {
+    return this.evidence?.code
+  }
+}
+
+const getOperationalErrorCode = (error: unknown) => {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return undefined
+  }
+  const code = error.code
+  return typeof code === "string" ||
+    (typeof code === "number" && Number.isSafeInteger(code))
+    ? code
+    : undefined
 }
 
 /**
@@ -85,6 +123,12 @@ async function parseActionResponse<T>(
     throw new ClaudeCodeHubApiError(
       `Claude Code Hub returned a non-JSON response (${response.status})`,
       response.status,
+      {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: false,
+        raw: response,
+      },
     )
   }
 
@@ -96,6 +140,12 @@ async function parseActionResponse<T>(
     throw new ClaudeCodeHubApiError(
       `Claude Code Hub returned an invalid action response (${response.status})`,
       response.status,
+      {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: false,
+        raw: response,
+      },
     )
   }
 
@@ -108,6 +158,12 @@ async function parseActionResponse<T>(
     throw new ClaudeCodeHubApiError(
       redactClaudeCodeHubSecrets(message, [config.adminToken, ...extraSecrets]),
       response.status,
+      {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: parsed.ok === false,
+        raw: parsed,
+      },
     )
   }
 
@@ -274,9 +330,27 @@ async function callProviderAction<T>(
 ): Promise<T> {
   const baseUrl = normalizeClaudeCodeHubBaseUrl(config.baseUrl)
   let response: Response | undefined
+  let fetchStarted = false
   const actionSignal = buildActionSignal(options)
 
   try {
+    if (actionSignal.signal.aborted) {
+      const raw =
+        actionSignal.signal.reason ??
+        new DOMException("The operation was aborted", "AbortError")
+      throw new ClaudeCodeHubApiError(
+        normalizeActionError(raw, config, options?.secrets ?? []),
+        undefined,
+        {
+          dispatch: "not-dispatched",
+          responseReceived: false,
+          confirmedNonApplication: true,
+          raw,
+          code: getOperationalErrorCode(raw),
+        },
+      )
+    }
+    fetchStarted = true
     response = await fetch(`${baseUrl}/api/actions/providers/${action}`, {
       method: "POST",
       signal: actionSignal.signal,
@@ -298,6 +372,13 @@ async function callProviderAction<T>(
     throw new ClaudeCodeHubApiError(
       normalizeActionError(error, config, options?.secrets ?? []),
       response?.status,
+      {
+        dispatch: fetchStarted ? "dispatched" : "not-dispatched",
+        responseReceived: response !== undefined,
+        confirmedNonApplication: !fetchStarted,
+        raw: error,
+        code: getOperationalErrorCode(error),
+      },
     )
   } finally {
     actionSignal.cleanup()

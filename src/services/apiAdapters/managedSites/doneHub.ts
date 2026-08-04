@@ -18,10 +18,19 @@ import {
   normalizeDoneHubChannel,
   searchChannel,
   updateChannel,
-  updateChannelModelMapping,
-  updateChannelModels,
+  updateDoneHubChannelFields,
   type DoneHubChannelRaw,
 } from "~/services/apiService/doneHub"
+import type {
+  ApiResponse,
+  ApiServiceRequest,
+} from "~/services/apiTransport/type"
+import {
+  createManagedSiteMutationSequence,
+  toManagedSiteMutationDiagnostic,
+  type ManagedSiteMutationConfirmedEffect,
+  type ManagedSiteMutationSequence,
+} from "~/services/managedSites/mutations"
 import {
   buildChannelName,
   buildChannelPayload,
@@ -52,7 +61,70 @@ import {
 import { CHANNEL_STATUS } from "~/types/newApi"
 
 import { createManagedSiteConfigCapability } from "./config"
-import { toManagedSiteApiServiceRequest } from "./request"
+import {
+  createManagedSiteChannelEffect,
+  finishManagedSiteMutationStep,
+  runManagedSiteApiServiceMutationStep,
+  toManagedSiteApiServiceRequest,
+} from "./request"
+
+const toDoneHubMutationResponse = (response: ApiResponse<unknown>) =>
+  response.success
+    ? { outcome: "applied" as const, data: response.data }
+    : {
+        outcome: "rejected" as const,
+        diagnostic: {
+          message: response.message || "Provider rejected the mutation",
+          raw: response,
+        },
+      }
+
+const runDoneHubResponseStep = async (input: {
+  config: DoneHubConfig
+  options?: Pick<RequestInit, "signal"> & {
+    bypassSiteRequestLimit?: boolean
+  }
+  sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>
+  effect: ManagedSiteMutationConfirmedEffect
+  execute(request: ApiServiceRequest): Promise<ApiResponse<unknown>>
+}) =>
+  await runManagedSiteApiServiceMutationStep({
+    ...input,
+    classifyResponse: toDoneHubMutationResponse,
+    classifyResponseError: (error) => {
+      throw error
+    },
+  })
+
+const fetchDoneHubMutationPayload = async (
+  config: DoneHubConfig,
+  sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>,
+  channelId: number,
+  options?: Pick<RequestInit, "signal"> & {
+    bypassSiteRequestLimit?: boolean
+  },
+) => {
+  try {
+    return {
+      outcome: "applied" as const,
+      data: await fetchChannelRaw(
+        toManagedSiteApiServiceRequest(config, options),
+        channelId,
+        options,
+      ),
+    }
+  } catch (error) {
+    const attempt = sequence.beginStep()
+    attempt.complete()
+    return {
+      outcome: "rejected" as const,
+      result: sequence.finish({
+        finalState: "unconfirmed",
+        diagnostic: toManagedSiteMutationDiagnostic(error),
+      }),
+    }
+  }
+}
 
 const fetchSecretKey = async (config: DoneHubConfig, channelId: number) => {
   const channel = await fetchChannel(
@@ -90,12 +162,41 @@ export const doneHubManagedSiteChannels: ManagedSiteChannelsCapability<DoneHubCo
         toManagedSiteApiServiceRequest(config, options),
         options,
       ),
-    create: async (config, channelData) =>
-      await createChannel(toManagedSiteApiServiceRequest(config), channelData),
-    update: async (config, channelData) =>
-      await updateChannel(toManagedSiteApiServiceRequest(config), channelData),
-    delete: async (config, channelId) =>
-      await deleteChannel(toManagedSiteApiServiceRequest(config), channelId),
+    create: async (config, channelData) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runDoneHubResponseStep({
+        config,
+        sequence,
+        effect: createManagedSiteChannelEffect("resource-created"),
+        execute: async (request) => await createChannel(request, channelData),
+      })
+      return finishManagedSiteMutationStep(sequence, step)
+    },
+    update: async (config, channelData) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runDoneHubResponseStep({
+        config,
+        sequence,
+        effect: createManagedSiteChannelEffect(
+          "resource-updated",
+          channelData.id,
+        ),
+        execute: async (request) => await updateChannel(request, channelData),
+      })
+      return finishManagedSiteMutationStep(sequence, step)
+    },
+    delete: async (config, channelId) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const step = await runDoneHubResponseStep({
+        config,
+        sequence,
+        effect: createManagedSiteChannelEffect("resource-deleted", channelId),
+        execute: async (request) => await deleteChannel(request, channelId),
+      })
+      return step.outcome === "applied"
+        ? sequence.finish({ finalState: "confirmed", data: undefined })
+        : finishManagedSiteMutationStep(sequence, step)
+    },
     fetchSecretKey,
     hydrateComparableKeys,
     fetchModels: async (config, channelId, options) =>
@@ -104,27 +205,69 @@ export const doneHubManagedSiteChannels: ManagedSiteChannelsCapability<DoneHubCo
         channelId,
         options,
       ),
-    updateModels: async (config, channelId, models, options) =>
-      await updateChannelModels(
-        toManagedSiteApiServiceRequest(config, options),
+    updateModels: async (config, channelId, models, options) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const preflight = await fetchDoneHubMutationPayload(
+        config,
+        sequence,
         channelId,
-        models.join(","),
         options,
-      ),
+      )
+      if (preflight.outcome === "rejected") return preflight.result
+      const step = await runDoneHubResponseStep({
+        config,
+        options,
+        sequence,
+        effect: createManagedSiteChannelEffect("models-updated", channelId),
+        execute: async (request) =>
+          await updateDoneHubChannelFields(
+            request,
+            { ...preflight.data, models: models.join(",") },
+            options,
+          ),
+      })
+      return step.outcome === "applied"
+        ? sequence.finish({ finalState: "confirmed", data: undefined })
+        : finishManagedSiteMutationStep(sequence, step)
+    },
     updateModelMapping: async (
       config,
       channelId,
       models,
       modelMapping,
       options,
-    ) =>
-      await updateChannelModelMapping(
-        toManagedSiteApiServiceRequest(config, options),
+    ) => {
+      const sequence = createManagedSiteMutationSequence({ idempotent: false })
+      const preflight = await fetchDoneHubMutationPayload(
+        config,
+        sequence,
         channelId,
-        models.join(","),
-        JSON.stringify(modelMapping),
         options,
-      ),
+      )
+      if (preflight.outcome === "rejected") return preflight.result
+      const step = await runDoneHubResponseStep({
+        config,
+        options,
+        sequence,
+        effect: createManagedSiteChannelEffect(
+          "model-mapping-updated",
+          channelId,
+        ),
+        execute: async (request) =>
+          await updateDoneHubChannelFields(
+            request,
+            {
+              ...preflight.data,
+              models: models.join(","),
+              model_mapping: JSON.stringify(modelMapping),
+            },
+            options,
+          ),
+      })
+      return step.outcome === "applied"
+        ? sequence.finish({ finalState: "confirmed", data: undefined })
+        : finishManagedSiteMutationStep(sequence, step)
+    },
   }
 
 const doneHubManagedSiteConfig: ManagedSiteConfigCapability<DoneHubConfig> =
