@@ -65,6 +65,7 @@ Modify:
 - `src/locales/ja/keyManagement.json`
 - `src/locales/vi/keyManagement.json`
 - `src/locales/es-419/keyManagement.json`
+- `src/locales/pt-BR/keyManagement.json`
 
 ## Task 1: Declare stored-secret availability at the adapter boundary
 
@@ -335,7 +336,7 @@ In `legacyKeyResourceCard.ts`:
 - append last-used time when meaningful, plus note, group, model restrictions, and IP restrictions only when nonblank;
 - use `model_limits` when `model_limits_enabled` is true, otherwise use `models`;
 - preserve a safe masked inventory value as `maskedLabel`, but never treat it as a usable secret;
-- provide a localized `secretAvailabilityMessage` for create-response-only or unavailable inventory secrets so the expanded card explains why secret actions are absent;
+- provide a localized `secretAvailabilityMessage` for create-response-only or unavailable inventory secrets so the default key row explains why secret actions are absent;
 - export `isKeyResourceBatchSelectable(runtimeKey)` from the same policy source for `TokenList`.
 
 The core action calculation should have this shape:
@@ -519,7 +520,7 @@ export type KeyResourceCardProps = {
 }
 ```
 
-Render summary facts immediately. Render ready details and `secretAvailabilityMessage` only after controlled expansion. The component invokes `onDetailsExpandedChange` but never owns the expansion state, so OpenRouter can start its cancellable detail read on expansion and transition from loading to ready or error without losing state.
+Render the key row first, including `secretAvailabilityMessage` inline beside a safe masked value when present, followed by the summary facts. Render secondary ready details only after controlled expansion. The component invokes `onDetailsExpandedChange` but never owns the expansion state, so OpenRouter can start its cancellable detail read on expansion and transition from loading to ready or error without losing state.
 
 - [ ] **Step 4: Run component tests and an accessibility-focused regression set**
 
@@ -607,7 +608,7 @@ Inside `TokenListItem`:
 - preserve `getKeyManagementTokenRowTestId(token.id)`;
 - pass `presentation.actions` into `TokenHeader`.
 
-Do not show masked key text for AIHubMix as though it were an actionable secret. If the backend supplies a safe masked label, render it as static identifying text with no reveal/copy controls. The expanded card explains that the secret is available only at creation and still shows creation time, quota policy, last-used time when meaningful, note, group, models, IP limits, edit, and delete.
+Do not show masked key text for AIHubMix as though it were an actionable secret. If the backend supplies a safe masked label, render it as static identifying text with no reveal/copy controls, with the site-owned limitation inline in the same default key row. The expanded card still shows creation time, quota policy, last-used time when meaningful, note, group, models, IP limits, edit, and delete.
 
 - [ ] **Step 4: Make `TokenHeader` capability-driven without rewriting its workflows**
 
@@ -766,7 +767,7 @@ git commit -m "fix(keys): exclude create-only keys from batch actions"
 
 - [ ] **Step 1: Add the same keys to every supported app locale**
 
-Add these keys with natural translations in `en`, `zh-CN`, `zh-TW`, `ja`, `vi`, and `es-419`:
+Add these keys with natural translations in `en`, `zh-CN`, `zh-TW`, `ja`, `vi`, `es-419`, and `pt-BR`:
 
 ```json
 {
@@ -836,7 +837,7 @@ Expected: compile and diff checks PASS. During diff review, confirm:
 
 ```powershell
 git status --porcelain=v1
-git add src/services/apiAdapters/contracts/keyManagement.ts src/services/apiAdapters/aihubmix/keyManagement.ts src/features/KeyManagement/presentation/keyResourceCard.ts src/features/KeyManagement/presentation/legacyKeyResourceCard.ts src/features/KeyManagement/components/KeyResourceCard.tsx src/features/KeyManagement/components/TokenListItem/index.tsx src/features/KeyManagement/components/TokenListItem/TokenHeader.tsx src/features/KeyManagement/components/TokenList.tsx tests/services/apiAdapters/keyManagement.secretAvailability.test.ts tests/features/KeyManagement/presentation/legacyKeyResourceCard.test.ts tests/features/KeyManagement/components/KeyResourceCard.test.tsx tests/features/KeyManagement/components/TokenListItem.test.tsx tests/features/KeyManagement/components/TokenHeader.analytics.test.tsx tests/entrypoints/options/pages/KeyManagement/TokenList.batchExport.test.tsx src/locales/en/keyManagement.json src/locales/zh-CN/keyManagement.json src/locales/zh-TW/keyManagement.json src/locales/ja/keyManagement.json src/locales/vi/keyManagement.json src/locales/es-419/keyManagement.json
+git add src/services/apiAdapters/contracts/keyManagement.ts src/services/apiAdapters/aihubmix/keyManagement.ts src/features/KeyManagement/presentation/keyResourceCard.ts src/features/KeyManagement/presentation/legacyKeyResourceCard.ts src/features/KeyManagement/components/KeyResourceCard.tsx src/features/KeyManagement/components/TokenListItem/index.tsx src/features/KeyManagement/components/TokenListItem/TokenHeader.tsx src/features/KeyManagement/components/TokenList.tsx tests/services/apiAdapters/keyManagement.secretAvailability.test.ts tests/features/KeyManagement/presentation/legacyKeyResourceCard.test.ts tests/features/KeyManagement/components/KeyResourceCard.test.tsx tests/features/KeyManagement/components/TokenListItem.test.tsx tests/features/KeyManagement/components/TokenHeader.analytics.test.tsx tests/entrypoints/options/pages/KeyManagement/TokenList.batchExport.test.tsx src/locales/en/keyManagement.json src/locales/zh-CN/keyManagement.json src/locales/zh-TW/keyManagement.json src/locales/ja/keyManagement.json src/locales/vi/keyManagement.json src/locales/es-419/keyManagement.json src/locales/pt-BR/keyManagement.json
 pnpm run validate:staged
 git diff --cached --check
 git diff --cached --stat
@@ -880,6 +881,6 @@ Expected: `validate:push` PASS and the worktree is clean.
 - [ ] Summary contains no more than four facts; details are icon-triggered and accessible.
 - [ ] Detail loading, error/retry, ready, and empty-detail states are supported by the shared component.
 - [ ] Mixed inventories select only eligible rows; AIHubMix-only inventories show no batch toolbar.
-- [ ] All six app locales have matching key shapes.
+- [ ] All seven app locales have matching key shapes.
 - [ ] Focused tests, extraction integrity, compile, staged validation, and push validation pass.
 - [ ] No OpenRouter-specific API/editor/controller code enters the shared-UI PR.

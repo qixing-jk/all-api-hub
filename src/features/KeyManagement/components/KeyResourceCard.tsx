@@ -18,6 +18,7 @@ import type {
   KeyResourceDetailState,
   KeyResourceFact,
 } from "~/features/KeyManagement/presentation/keyResourceCard"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 
 export type KeyResourceCardProps = {
   presentation: KeyResourceCardPresentation
@@ -51,6 +52,7 @@ export type KeyResourceCardHeaderProps = {
 
 export type KeyResourceFactListProps = {
   facts: KeyResourceFact[]
+  testId?: string
 }
 
 export type KeyResourceSecretDisplayProps = {
@@ -114,9 +116,15 @@ export function KeyResourceCardHeader({
 /**
  * Renders label and value facts in a responsive, wrapping grid.
  */
-export function KeyResourceFactList({ facts }: KeyResourceFactListProps) {
+export function KeyResourceFactList({
+  facts,
+  testId,
+}: KeyResourceFactListProps) {
   return (
-    <div className="xs:grid-cols-2 grid grid-cols-1 gap-2.5 sm:grid-cols-4 sm:gap-3.5">
+    <div
+      data-testid={testId}
+      className="xs:grid-cols-2 grid grid-cols-1 gap-2.5 sm:grid-cols-4 sm:gap-3.5"
+    >
       {facts.map((fact) => (
         <div
           key={fact.id}
@@ -148,7 +156,10 @@ export function KeyResourceSecretDisplay({
   }
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-2">
+    <div
+      data-testid={KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay}
+      className="flex min-w-0 flex-wrap items-center gap-2"
+    >
       {label ? (
         <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
           {label}
@@ -246,7 +257,10 @@ export function KeyResourceCard({
             controls={secretControls}
             message={presentation.secretAvailabilityMessage}
           />
-          <KeyResourceFactList facts={presentation.summaryFacts} />
+          <KeyResourceFactList
+            facts={presentation.summaryFacts}
+            testId={KEY_MANAGEMENT_TEST_IDS.keyResourceSummaryFacts}
+          />
           {isDetailsExpanded ? (
             <div
               id={detailsPanelId}

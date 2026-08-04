@@ -1212,9 +1212,13 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       }),
     )
     await user.click(
-      screen.getAllByRole("button", {
+      within(
+        screen.getByRole("dialog", {
+          name: "keyManagement:batchManagedSiteExport.confirm.title",
+        }),
+      ).getByRole("button", {
         name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
+      }),
     )
 
     await waitFor(() => {
@@ -1747,9 +1751,13 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       }),
     )
     await user.click(
-      screen.getAllByRole("button", {
+      within(
+        screen.getByRole("dialog", {
+          name: "keyManagement:batchManagedSiteExport.confirm.title",
+        }),
+      ).getByRole("button", {
         name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
+      }),
     )
 
     await waitFor(() => {
@@ -2200,9 +2208,13 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       }),
     )
     await user.click(
-      screen.getAllByRole("button", {
+      within(
+        screen.getByRole("dialog", {
+          name: "keyManagement:batchManagedSiteExport.confirm.title",
+        }),
+      ).getByRole("button", {
         name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
+      }),
     )
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledOnce()
@@ -2267,9 +2279,13 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       }),
     )
     await user.click(
-      screen.getAllByRole("button", {
+      within(
+        screen.getByRole("dialog", {
+          name: "keyManagement:batchManagedSiteExport.confirm.title",
+        }),
+      ).getByRole("button", {
         name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
+      }),
     )
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledOnce()

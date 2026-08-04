@@ -376,6 +376,8 @@ describe("TokenHeader save to API profiles", () => {
       updatedAt: 1,
     })
 
+    // AIHubMix is create-response-only in production; this explicit policy keeps
+    // the save action reachable so the test can isolate origin normalization.
     render(
       <TokenHeader
         token={token as any}

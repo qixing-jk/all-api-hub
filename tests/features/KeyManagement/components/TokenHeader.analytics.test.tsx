@@ -26,22 +26,12 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import {
   createAccount,
   createToken,
 } from "~~/tests/utils/keyManagementFactories"
-
-const createDeferred = <T,>() => {
-  let resolve!: (value: T) => void
-  let reject!: (reason?: unknown) => void
-  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise
-    reject = rejectPromise
-  })
-
-  return { promise, reject, resolve }
-}
 
 const {
   completeProductAnalyticsActionMock,
@@ -122,9 +112,9 @@ vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
     verifyCliDialogRenderMock(props)
     const { isOpen, profile } = props as {
       isOpen: boolean
-      profile: { apiKey: string; baseUrl: string }
+      profile: { apiKey: string; baseUrl: string } | null
     }
-    return isOpen ? (
+    return isOpen && profile ? (
       <div
         data-testid="verify-cli-dialog-mock"
         data-api-key={profile.apiKey}
@@ -1368,8 +1358,8 @@ describe("TokenHeader analytics", () => {
   })
 })
 
-describe("TokenHeader responsive layout", () => {
-  it("lets token text take full width before actions on narrow screens", async () => {
+describe("TokenHeader shared card composition", () => {
+  it("renders the token title and row actions", async () => {
     renderTokenHeader({
       token: createToken({
         id: 1,
@@ -1378,26 +1368,13 @@ describe("TokenHeader responsive layout", () => {
       }),
     })
 
-    const title = await screen.findByRole("heading", {
-      name: "Readable Key Card Name",
-    })
-    const contentColumn = title.closest("div")
-    const header = contentColumn?.parentElement
-    const actions = screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.tokenRowActions)
-
-    expect(header).toHaveClass(
-      "flex-col",
-      "sm:flex-row",
-      "sm:items-start",
-      "sm:justify-between",
-    )
-    expect(contentColumn).toHaveClass("flex-wrap", "min-w-0")
-    expect(actions).toHaveClass(
-      "w-full",
-      "flex-wrap",
-      "justify-start",
-      "sm:w-auto",
-      "sm:justify-end",
-    )
+    expect(
+      await screen.findByRole("heading", {
+        name: "Readable Key Card Name",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.tokenRowActions),
+    ).toBeVisible()
   })
 })

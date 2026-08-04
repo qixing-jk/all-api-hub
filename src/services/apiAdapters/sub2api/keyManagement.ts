@@ -36,7 +36,8 @@ export const sub2ApiKeyManagement: KeyManagementCapability = {
 
       if (
         named.kind === INVENTORY_GROUP_KINDS.Ungrouped &&
-        token.sub2api_group_id !== undefined
+        token.sub2api_group_id !== undefined &&
+        token.sub2api_group_id !== null
       ) {
         return { kind: INVENTORY_GROUP_KINDS.Unavailable }
       }

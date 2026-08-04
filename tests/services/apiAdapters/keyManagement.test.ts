@@ -224,6 +224,12 @@ describe("apiAdapter keyManagement", () => {
     expect(
       sub2ApiKeyManagement.inventoryGroup?.resolve({
         group: "",
+        sub2api_group_id: null,
+      }),
+    ).toEqual({ kind: "ungrouped" })
+    expect(
+      sub2ApiKeyManagement.inventoryGroup?.resolve({
+        group: "",
         sub2api_group_id: 42,
       }),
     ).toEqual({ kind: "unavailable" })

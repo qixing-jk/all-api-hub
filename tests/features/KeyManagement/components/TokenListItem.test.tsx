@@ -56,7 +56,7 @@ vi.mock("~/features/KeyManagement/components/TokenListItem/KeyDisplay", () => ({
     <div>
       <div>Key display</div>
       <button type="button" onClick={toggleKeyVisibility}>
-        Toggle key visibility
+        keyManagement:actions.showKey
       </button>
     </div>
   ),
@@ -231,7 +231,7 @@ describe("TokenListItem batch selection", () => {
     expect(onOpenCCSwitchDialog).toHaveBeenCalledTimes(1)
 
     await user.click(
-      screen.getByRole("button", { name: "Toggle key visibility" }),
+      screen.getByRole("button", { name: "keyManagement:actions.showKey" }),
     )
     expect(toggleKeyVisibility).toHaveBeenCalledWith(
       expect.objectContaining({ id: "acc-1" }),
@@ -281,7 +281,9 @@ describe("TokenListItem batch selection", () => {
     ).toBeVisible()
     expect(screen.queryByText("192.0.2.10")).toBeNull()
     expect(
-      screen.queryByRole("button", { name: "Toggle key visibility" }),
+      screen.queryByRole("button", {
+        name: "keyManagement:actions.showKey",
+      }),
     ).toBeNull()
 
     await user.click(

@@ -9,6 +9,8 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   verifyTokenCliSupportButton: "key-management-verify-token-cli-support-button",
   batchSaveToApiProfilesButton:
     "key-management-batch-save-to-api-profiles-button",
+  keyResourceSecretDisplay: "key-management-key-resource-secret-display",
+  keyResourceSummaryFacts: "key-management-key-resource-summary-facts",
   tokenRowActions: "key-management-token-row-actions",
   managedSiteStatusBadge: "key-management-managed-site-status-badge",
   importToManagedSiteButton: "key-management-import-to-managed-site-button",

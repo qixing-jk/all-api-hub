@@ -54,7 +54,9 @@ export type InventoryGroupState =
       kind: Exclude<InventoryGroupKind, typeof INVENTORY_GROUP_KINDS.Named>
     }
 
-export type InventoryGroupToken = Pick<ApiToken, "group" | "sub2api_group_id">
+export type InventoryGroupToken = Pick<ApiToken, "group"> & {
+  sub2api_group_id?: number | null
+}
 
 export type InventoryGroupCapability = {
   resolve(token: InventoryGroupToken): InventoryGroupState

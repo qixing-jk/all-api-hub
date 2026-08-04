@@ -7,10 +7,11 @@ import {
   KeyResourceCardHeader,
 } from "~/features/KeyManagement/components/KeyResourceCard"
 import type { KeyResourceCardPresentation } from "~/features/KeyManagement/presentation/keyResourceCard"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import enCommon from "~/locales/en/common.json"
 import enKeyManagement from "~/locales/en/keyManagement.json"
 import { testI18n } from "~~/tests/test-utils/i18n"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, within } from "~~/tests/test-utils/render"
 
 const presentation: KeyResourceCardPresentation = {
   id: "key-example",
@@ -89,24 +90,24 @@ describe("KeyResourceCard", () => {
       ),
     ).toBeVisible()
     expect(
-      screen.getByText(
+      within(
+        screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay),
+      ).getByText(
         "This site provides only a masked value after creation, so the full key cannot be viewed again.",
-      ).parentElement,
-    ).toBe(screen.getByText("sk-example").parentElement?.parentElement)
+      ),
+    ).toBeVisible()
     expect(
-      screen
-        .getByText("sk-example")
-        .compareDocumentPosition(screen.getByText("Remaining quota")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
+      within(
+        screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay),
+      ).getByText("sk-example"),
+    ).toBeVisible()
     expect(screen.queryByText("IP limits")).toBeNull()
     expect(
       screen
-        .getByText(
-          "This site provides only a masked value after creation, so the full key cannot be viewed again.",
-        )
-        .compareDocumentPosition(screen.getByText("Remaining quota")) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+        .getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay)
+        .compareDocumentPosition(
+          screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSummaryFacts),
+        ) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
 
     await user.click(
@@ -142,6 +143,34 @@ describe("KeyResourceCard", () => {
     expect(screen.getAllByRole("button", { name: "Edit header" })).toHaveLength(
       1,
     )
+  })
+
+  it("renders inactive and unknown provider statuses", () => {
+    renderKeyResourceCard(
+      <>
+        <KeyResourceCardHeader
+          presentation={{
+            ...presentation,
+            id: "inactive-key",
+            title: "Inactive key",
+            status: "inactive",
+            statusLabel: "Inactive",
+          }}
+        />
+        <KeyResourceCardHeader
+          presentation={{
+            ...presentation,
+            id: "unknown-key",
+            title: "Unknown key",
+            status: "unknown",
+            statusLabel: "Unknown",
+          }}
+        />
+      </>,
+    )
+
+    expect(screen.getByText("Inactive")).toBeVisible()
+    expect(screen.getByText("Unknown")).toBeVisible()
   })
 
   it("lets callers compose one authoritative header with generated controls", () => {

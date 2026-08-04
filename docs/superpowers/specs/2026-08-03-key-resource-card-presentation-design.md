@@ -152,6 +152,11 @@ Introduce a provider-neutral `KeyResourceCard` presentation shell. It owns:
 It does not fetch data, resolve secrets, inspect Site Types, translate raw
 backend text, or own mutation state.
 
+The default summary keeps the key row first. When a site can return only a
+masked value for an existing key, the site-owned limitation appears inline in
+that same key row, before the summary facts. The details disclosure is reserved
+for secondary metadata and does not hide this action-relevant limitation.
+
 ### Presentation input
 
 The shared input is a product-owned view model with these conceptual fields:

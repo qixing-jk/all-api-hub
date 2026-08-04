@@ -420,7 +420,7 @@ export function TokenList(props: TokenListProps) {
   const accountById = useMemo(() => {
     return new Map(displayData.map((account) => [account.id, account]))
   }, [displayData])
-  const currentCCSwitchTarget = (() => {
+  const currentCCSwitchTarget = useMemo(() => {
     if (!ccSwitchContext) return null
 
     const account = accountById.get(ccSwitchContext.account.id)
@@ -436,7 +436,7 @@ export function TokenList(props: TokenListProps) {
           runtimeKey: buildDisplayAccountTokenRuntimeKey(account, token),
         }
       : null
-  })()
+  }, [accountById, ccSwitchContext, tokens])
   const isCurrentCCSwitchContextExportable = Boolean(
     currentCCSwitchTarget &&
       isKeyResourceExportable(currentCCSwitchTarget.runtimeKey),
@@ -762,6 +762,16 @@ export function TokenList(props: TokenListProps) {
     })
   }
 
+  const getSelectionProps = (entryId: string) => {
+    const isBatchSelectable = eligibleEntryIds.has(entryId)
+    return {
+      isSelected: isBatchSelectable && selectedEntryIds.has(entryId),
+      onSelectionChange: isBatchSelectable
+        ? (checked: boolean) => toggleEntrySelection(entryId, checked)
+        : undefined,
+    }
+  }
+
   const toggleFilteredSelection = () => {
     setSelectedEntryIds((prev) => {
       const next = new Set(prev)
@@ -890,24 +900,17 @@ export function TokenList(props: TokenListProps) {
     if (!isServiceCredentialRuntimeKey(entry.runtimeKey)) return null
 
     const managedSiteStatusEntry = managedSiteTokenStatuses?.[entry.id]
-    const isBatchSelectable = eligibleEntryIds.has(entry.id)
-
     return onCopyServiceCredential ? (
       <ServiceCredentialCard
         account={entry.runtimeKey.account as DisplaySiteData}
         credential={entry.runtimeKey.credential}
         isRotating={entry.uiState.isRotating}
-        isSelected={isBatchSelectable && selectedEntryIds.has(entry.id)}
+        {...getSelectionProps(entry.id)}
         managedSiteStatus={managedSiteStatusEntry?.result}
         isManagedSiteStatusChecking={
           managedSiteStatusEntry?.isChecking === true
         }
         selectionLabel={entry.runtimeKey.label}
-        onSelectionChange={
-          isBatchSelectable
-            ? (checked) => toggleEntrySelection(entry.id, checked)
-            : undefined
-        }
         onCopy={onCopyServiceCredential}
         onRotate={onRotateServiceCredential}
       />
@@ -940,7 +943,6 @@ export function TokenList(props: TokenListProps) {
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={visibleSelectionChecked}
-              disabled={filteredEligibleEntries.length === 0}
               onCheckedChange={toggleFilteredSelection}
             />
             {t("batchManagedSiteExport.selection.visible", {
@@ -1159,16 +1161,7 @@ export function TokenList(props: TokenListProps) {
                             onManagedSiteVerificationRetry={
                               onManagedSiteVerificationRetry
                             }
-                            isSelected={
-                              eligibleEntryIds.has(entry.id) &&
-                              selectedEntryIds.has(entry.id)
-                            }
-                            onSelectionChange={
-                              eligibleEntryIds.has(entry.id)
-                                ? (checked) =>
-                                    toggleEntrySelection(entry.id, checked)
-                                : undefined
-                            }
+                            {...getSelectionProps(entry.id)}
                             onOpenCCSwitchDialog={() =>
                               handleOpenCCSwitchDialog(token, account)
                             }
@@ -1229,15 +1222,7 @@ export function TokenList(props: TokenListProps) {
                 }
                 onManagedSiteImportSuccess={onManagedSiteImportSuccess}
                 onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
-                isSelected={
-                  eligibleEntryIds.has(entry.id) &&
-                  selectedEntryIds.has(entry.id)
-                }
-                onSelectionChange={
-                  eligibleEntryIds.has(entry.id)
-                    ? (checked) => toggleEntrySelection(entry.id, checked)
-                    : undefined
-                }
+                {...getSelectionProps(entry.id)}
                 onOpenCCSwitchDialog={() =>
                   handleOpenCCSwitchDialog(token, account)
                 }

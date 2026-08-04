@@ -10,6 +10,7 @@ import {
   INVENTORY_SECRET_AVAILABILITIES,
   type InventoryGroupState,
   type InventorySecretAvailability,
+  type KeyManagementCapability,
 } from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
@@ -53,10 +54,12 @@ const getSecretAvailabilityMessage = (
   }
 }
 
-const getSecretAvailability = (runtimeKey: AccountTokenRuntimeKey) => {
-  const keyManagement = getSiteTypeCapabilities(runtimeKey.siteType).account
-    ?.keyManagement
+const getKeyManagement = (runtimeKey: AccountTokenRuntimeKey) =>
+  getSiteTypeCapabilities(runtimeKey.siteType).account?.keyManagement
 
+const getSecretAvailability = (
+  keyManagement: KeyManagementCapability | undefined,
+) => {
   return getInventorySecretAvailability(
     keyManagement ?? {
       inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Unavailable,
@@ -66,9 +69,9 @@ const getSecretAvailability = (runtimeKey: AccountTokenRuntimeKey) => {
 
 const getInventoryGroup = (
   runtimeKey: AccountTokenRuntimeKey,
+  keyManagement: KeyManagementCapability | undefined,
 ): InventoryGroupState => {
-  const inventoryGroup = getSiteTypeCapabilities(runtimeKey.siteType).account
-    ?.keyManagement?.inventoryGroup
+  const inventoryGroup = keyManagement?.inventoryGroup
 
   return (
     inventoryGroup?.resolve(runtimeKey.token) ?? {
@@ -79,8 +82,8 @@ const getInventoryGroup = (
 
 const getActionPolicy = (
   runtimeKey: AccountTokenRuntimeKey,
+  secretAvailability = getSecretAvailability(getKeyManagement(runtimeKey)),
 ): KeyResourceActionPolicy => {
-  const secretAvailability = getSecretAvailability(runtimeKey)
   const canRecoverStoredSecret =
     secretAvailability === INVENTORY_SECRET_AVAILABILITIES.Recoverable
 
@@ -120,8 +123,9 @@ const getOptionalFact = (
 const getGroupFact = (
   runtimeKey: AccountTokenRuntimeKey,
   t: TFunction,
+  keyManagement = getKeyManagement(runtimeKey),
 ): KeyResourceFact | undefined => {
-  const group = getInventoryGroup(runtimeKey)
+  const group = getInventoryGroup(runtimeKey, keyManagement)
   const label = t("keyManagement:keyDetails.group")
 
   switch (group.kind) {
@@ -154,7 +158,8 @@ export const buildLegacyKeyResourceCardPresentation = (
   t: TFunction,
 ): KeyResourceCardPresentation => {
   const { token } = runtimeKey
-  const secretAvailability = getSecretAvailability(runtimeKey)
+  const keyManagement = getKeyManagement(runtimeKey)
+  const secretAvailability = getSecretAvailability(keyManagement)
   const modelRestrictions =
     token.model_limits_enabled === true ? token.model_limits : token.models
   const isUnlimitedQuota = token.unlimited_quota || token.remain_quota < 0
@@ -209,7 +214,7 @@ export const buildLegacyKeyResourceCardPresentation = (
       t,
     ),
     summaryFacts: [
-      getGroupFact(runtimeKey, t),
+      getGroupFact(runtimeKey, t, keyManagement),
       createFact(
         "used-quota",
         t("keyManagement:keyDetails.usedQuota"),
@@ -227,6 +232,6 @@ export const buildLegacyKeyResourceCardPresentation = (
       ),
     ].filter((fact): fact is KeyResourceFact => fact !== undefined),
     detailFacts,
-    actions: getActionPolicy(runtimeKey),
+    actions: getActionPolicy(runtimeKey, secretAvailability),
   }
 }

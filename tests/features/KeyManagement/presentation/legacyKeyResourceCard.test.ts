@@ -111,6 +111,24 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
     expect(isKeyResourceExportable(runtimeKey)).toBe(false)
   })
 
+  it("prefers explicit model limits when the token enables them", () => {
+    const presentation = buildLegacyKeyResourceCardPresentation(
+      buildDisplayAccountTokenRuntimeKey(
+        createAccount({ siteType: SITE_TYPES.NEW_API }),
+        createToken({
+          model_limits_enabled: true,
+          model_limits: "model-limited",
+          models: "model-default",
+        }),
+      ),
+      t,
+    )
+
+    expect(
+      presentation.detailFacts.find(({ id }) => id === "models")?.value,
+    ).toBe("model-limited")
+  })
+
   it("omits blank optional metadata without dropping required safe facts", () => {
     const presentation = buildLegacyKeyResourceCardPresentation(
       buildDisplayAccountTokenRuntimeKey(

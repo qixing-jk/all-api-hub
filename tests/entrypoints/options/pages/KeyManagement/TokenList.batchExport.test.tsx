@@ -543,7 +543,7 @@ describe("TokenList batch export selection", () => {
     const confirmation = await screen.findByRole("dialog", {
       name: "keyManagement:batchManagedSiteExport.confirm.title",
     })
-    const staleConfirmButton = within(confirmation).getByRole("button", {
+    within(confirmation).getByRole("button", {
       name: "keyManagement:batchManagedSiteExport.actions.start",
     })
 
@@ -566,7 +566,6 @@ describe("TokenList batch export selection", () => {
         name: "keyManagement:batchManagedSiteExport.confirm.title",
       }),
     ).toBeNull()
-    staleConfirmButton.click()
     await waitFor(() => {
       expect(
         screen.queryByText("keyManagement:batchManagedSiteExport.title"),

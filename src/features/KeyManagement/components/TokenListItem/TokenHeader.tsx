@@ -271,6 +271,7 @@ export const getManagedSiteSettingsActionLabel = (
 /**
  * Renders action buttons for a token (copy, export, edit/delete).
  * @param props Component props container.
+ * @param props.actionPolicy Provider capability policy controlling available token actions.
  * @param props.token Token being acted upon.
  * @param props.copyKey Clipboard copy handler.
  * @param props.handleEditToken Edit action callback.
@@ -321,6 +322,7 @@ function TokenActionButtons({
     useState<ApiCredentialProfile | null>(null)
   const [cliVerifyingProfile, setCliVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
+  const verificationTagIdsKey = JSON.stringify(account.tagIds ?? [])
 
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
   const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
@@ -377,7 +379,7 @@ function TokenActionButtons({
     account.id,
     account.name,
     account.siteType,
-    account.tagIds,
+    verificationTagIdsKey,
     account.token,
     account.userId,
     token.accountId,
@@ -914,6 +916,8 @@ function TokenActionButtons({
 /**
  * Token header displaying name, status badges, and action buttons.
  * @param props Component props container.
+ * @param props.headerProps Shared key-resource header content and controls.
+ * @param props.actionPolicy Provider capability policy controlling available token actions.
  * @param props.token Token entity with account name.
  * @param props.copyKey Clipboard copy handler.
  * @param props.handleEditToken Edit action callback.
