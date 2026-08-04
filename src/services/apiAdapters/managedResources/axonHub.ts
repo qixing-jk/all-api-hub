@@ -33,7 +33,6 @@ import {
 import {
   defineNativeResourceKind,
   type NativeResourceEditorDefinition,
-  type NativeResourceMutationResult,
 } from "~/services/apiAdapters/managedResources/factory"
 import {
   AxonHubRequestError,
@@ -47,6 +46,13 @@ import {
   type AxonHubChannelPage,
   type AxonHubRequestFailureKind,
 } from "~/services/apiService/axonHub"
+import {
+  MANAGED_SITE_MUTATION_COMPLETIONS,
+  MANAGED_SITE_MUTATION_EFFECT_KINDS,
+  MANAGED_SITE_MUTATION_OUTCOMES,
+  type ManagedSiteMutationConfirmedEffect,
+  type ManagedSiteMutationResult,
+} from "~/services/managedSites/mutations"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
@@ -71,11 +77,43 @@ export type AxonHubNativeFailure = {
 }
 
 export class AxonHubNativeError extends Error {
-  constructor(readonly failure: AxonHubNativeFailure) {
+  constructor(
+    readonly failure: AxonHubNativeFailure,
+    readonly cause?: unknown,
+  ) {
     super(failure.code)
     this.name = "AxonHubNativeError"
   }
 }
+
+// Task 8 removes this private shape when the deferred migration caller switches
+// from the low-level operation facade to ManagedSiteMutationResult.
+type AxonHubNativeMutationResult<T> =
+  | {
+      certainty: "applied"
+      value: T
+      confirmedEffects: readonly ManagedSiteMutationConfirmedEffect[]
+    }
+  | {
+      certainty: "not-applied"
+      failure: AxonHubNativeFailure
+      error: unknown
+    }
+  | {
+      certainty: "possibly-applied"
+      failure: AxonHubNativeFailure
+      error: unknown
+    }
+  | {
+      certainty: "partially-applied"
+      value?: T
+      confirmedEffects: readonly [
+        ManagedSiteMutationConfirmedEffect,
+        ...ManagedSiteMutationConfirmedEffect[],
+      ]
+      failure: AxonHubNativeFailure
+      error: unknown
+    }
 
 type AxonHubNativeResourcePage = {
   readonly items: readonly AxonHubChannelPage["items"][number][]
@@ -100,16 +138,16 @@ export interface AxonHubNativeResourceOperations {
     input: AxonHubCreateChannelInput,
     desiredStatus: AxonHubChannelStatus,
     options?: ResourceOperationOptions,
-  ): Promise<NativeResourceMutationResult<AxonHubChannel, AxonHubNativeFailure>>
+  ): Promise<AxonHubNativeMutationResult<AxonHubChannel>>
   update(
     detail: AxonHubChannel,
     input: AxonHubUpdateChannelInput,
     options?: ResourceOperationOptions,
-  ): Promise<NativeResourceMutationResult<AxonHubChannel, AxonHubNativeFailure>>
+  ): Promise<AxonHubNativeMutationResult<AxonHubChannel>>
   delete(
     ref: ManagedResourceRef,
     options?: ResourceOperationOptions,
-  ): Promise<NativeResourceMutationResult<void, AxonHubNativeFailure>>
+  ): Promise<AxonHubNativeMutationResult<void>>
 }
 
 type AxonHubCreateCommand = {
@@ -229,29 +267,87 @@ const isAxonHubNativeFailure = (
 const mapRequestFailure = (error: unknown): AxonHubNativeError => {
   if (error instanceof AxonHubNativeError) return error
   if (!(error instanceof AxonHubRequestError)) {
-    return createNativeFailure("unexpected")
+    return new AxonHubNativeError(
+      createControlledNativeFailure("unexpected"),
+      error,
+    )
   }
 
   const dispatch = error.dispatch === "dispatched" ? "after" : "before"
-  return createNativeFailure(
-    AXON_HUB_REQUEST_FAILURE_CODES[error.kind],
-    dispatch,
+  return new AxonHubNativeError(
+    createControlledNativeFailure(
+      AXON_HUB_REQUEST_FAILURE_CODES[error.kind],
+      dispatch,
+    ),
+    error,
   )
 }
 
-const mutationFailure = <T>(
-  error: unknown,
-): NativeResourceMutationResult<T, AxonHubNativeFailure> => {
+const mutationFailure = <T>(error: unknown): AxonHubNativeMutationResult<T> => {
   const failure = mapRequestFailure(error).failure
   const acknowledgementMayBeLost =
     failure.dispatch === "after" &&
     (failure.code === "unavailable" ||
       failure.code === "aborted" ||
+      failure.code === "authentication_failed" ||
+      failure.code === "permission_denied" ||
       failure.code === "upstream_rejected" ||
       failure.code === "unexpected")
   return acknowledgementMayBeLost
-    ? { certainty: "possibly-applied" }
-    : { certainty: "not-applied", failure }
+    ? { certainty: "possibly-applied", failure, error }
+    : { certainty: "not-applied", failure, error }
+}
+
+const channelMutationEffect = (
+  kind: ManagedSiteMutationConfirmedEffect["kind"],
+  resourceId: string,
+): ManagedSiteMutationConfirmedEffect => ({
+  kind,
+  resourceKind: MANAGED_RESOURCE_KINDS.Channel,
+  resourceId,
+})
+
+const mutationDiagnostic = (failure: AxonHubNativeFailure, error: unknown) => ({
+  message: failure.code,
+  code: failure.code,
+  raw: error,
+})
+
+const toManagedMutationResult = <T>(
+  result: AxonHubNativeMutationResult<T>,
+): ManagedSiteMutationResult<T> => {
+  if (result.certainty === "applied") {
+    return {
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+      data: result.value,
+      confirmedEffects: result.confirmedEffects,
+    }
+  }
+
+  const diagnostic = mutationDiagnostic(result.failure, result.error)
+  if (result.certainty === "not-applied") {
+    return {
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic,
+    }
+  }
+  if (result.certainty === "possibly-applied") {
+    return {
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+      diagnostic,
+    }
+  }
+
+  return {
+    outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+    ...(result.value === undefined ? {} : { data: result.value }),
+    confirmedEffects: result.confirmedEffects,
+    completion:
+      result.failure.dispatch === "before"
+        ? MANAGED_SITE_MUTATION_COMPLETIONS.Rejected
+        : MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
+    diagnostic,
+  }
 }
 
 const callRead = async <T>(operation: () => Promise<T>): Promise<T> => {
@@ -409,7 +505,16 @@ export async function openAxonHubNativeResourceOperations(
       }
 
       if (desiredStatus !== AXON_HUB_CHANNEL_STATUS.ENABLED) {
-        return { certainty: "applied", value: created }
+        return {
+          certainty: "applied",
+          value: created,
+          confirmedEffects: [
+            channelMutationEffect(
+              MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+              created.id,
+            ),
+          ],
+        }
       }
 
       try {
@@ -422,9 +527,31 @@ export async function openAxonHubNativeResourceOperations(
         return {
           certainty: "applied",
           value: { ...created, status: desiredStatus },
+          confirmedEffects: [
+            channelMutationEffect(
+              MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+              created.id,
+            ),
+            channelMutationEffect(
+              MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated,
+              created.id,
+            ),
+          ],
         }
-      } catch {
-        return { certainty: "partially-applied" }
+      } catch (error) {
+        const failure = mapRequestFailure(error).failure
+        return {
+          certainty: "partially-applied",
+          value: created,
+          confirmedEffects: [
+            channelMutationEffect(
+              MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+              created.id,
+            ),
+          ],
+          failure,
+          error,
+        }
       }
     },
     // AxonHub beta5 ignores status in UpdateChannel; status changes require
@@ -444,6 +571,7 @@ export async function openAxonHubNativeResourceOperations(
       const hasOrdinaryPatch =
         Object.keys(mergedOrdinaryInput).length > 0 || status === undefined
       let updated = detail
+      const confirmedEffects: ManagedSiteMutationConfirmedEffect[] = []
 
       if (hasOrdinaryPatch) {
         try {
@@ -452,6 +580,12 @@ export async function openAxonHubNativeResourceOperations(
             detail.id,
             mergedOrdinaryInput,
             requestOptions(operationOptions),
+          )
+          confirmedEffects.push(
+            channelMutationEffect(
+              MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+              detail.id,
+            ),
           )
         } catch (error) {
           return mutationFailure(error)
@@ -467,15 +601,31 @@ export async function openAxonHubNativeResourceOperations(
             requestOptions(operationOptions),
           )
         } catch (error) {
-          return hasOrdinaryPatch
-            ? { certainty: "partially-applied" }
-            : mutationFailure(error)
+          if (!hasOrdinaryPatch) return mutationFailure(error)
+          const failure = mapRequestFailure(error).failure
+          return {
+            certainty: "partially-applied",
+            value: updated,
+            confirmedEffects: confirmedEffects as [
+              ManagedSiteMutationConfirmedEffect,
+              ...ManagedSiteMutationConfirmedEffect[],
+            ],
+            failure,
+            error,
+          }
         }
+        confirmedEffects.push(
+          channelMutationEffect(
+            MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated,
+            detail.id,
+          ),
+        )
       }
 
       return {
         certainty: "applied",
         value: statusChanged ? { ...updated, status } : updated,
+        confirmedEffects,
       }
     },
     delete: async (ref, operationOptions) => {
@@ -487,21 +637,37 @@ export async function openAxonHubNativeResourceOperations(
           requestOptions(operationOptions),
         )
         if (!deleted) {
+          const failure = createControlledNativeFailure(
+            "upstream_rejected",
+            "after",
+          )
+          const error = new AxonHubNativeError(failure)
           return {
             certainty: "not-applied",
-            failure: createControlledNativeFailure(
-              "upstream_rejected",
-              "after",
-            ),
+            failure,
+            error,
           }
         }
-        return { certainty: "applied", value: undefined }
+        return {
+          certainty: "applied",
+          value: undefined,
+          confirmedEffects: [
+            channelMutationEffect(
+              MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceDeleted,
+              ref.resourceId,
+            ),
+          ],
+        }
       } catch (error) {
         const failure = mapRequestFailure(error).failure
         if (failure.code === "not_found") {
-          return { certainty: "applied", value: undefined }
+          return {
+            certainty: "applied",
+            value: undefined,
+            confirmedEffects: [],
+          }
         }
-        return mutationFailure(new AxonHubNativeError(failure))
+        return mutationFailure(error)
       }
     },
   }
@@ -1502,7 +1668,10 @@ const axonHubNativeDefinition = {
     operations: AxonHubNativeResourceOperations,
     command: AxonHubCreateCommand,
     options?: ResourceOperationOptions,
-  ) => operations.create(command.input, command.desiredStatus, options),
+  ) =>
+    operations
+      .create(command.input, command.desiredStatus, options)
+      .then(toManagedMutationResult),
   update: (
     operations: AxonHubNativeResourceOperations,
     detail: AxonHubChannel,
@@ -1527,22 +1696,26 @@ const axonHubNativeDefinition = {
         ],
       })
     }
-    return operations.update(detail, command, options)
+    return operations
+      .update(detail, command, options)
+      .then(toManagedMutationResult)
   },
   delete: (
     operations: AxonHubNativeResourceOperations,
     locator: string,
     options?: ResourceOperationOptions,
   ) =>
-    operations.delete(
-      {
-        siteType: SITE_TYPES.AXON_HUB,
-        kind: MANAGED_RESOURCE_KINDS.Channel,
-        scopeKey: operations.scopeKey,
-        resourceId: locator,
-      },
-      options,
-    ),
+    operations
+      .delete(
+        {
+          siteType: SITE_TYPES.AXON_HUB,
+          kind: MANAGED_RESOURCE_KINDS.Channel,
+          scopeKey: operations.scopeKey,
+          resourceId: locator,
+        },
+        options,
+      )
+      .then(toManagedMutationResult),
   mapFailure,
 }
 

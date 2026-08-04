@@ -87,8 +87,11 @@ export type ResourcePage = {
 }
 
 export class ManagedResourceError extends Error {
-  constructor(readonly failure: ResourceFailure) {
-    super(failure.code)
+  constructor(
+    readonly failure: ResourceFailure,
+    options?: { privateMessage?: string },
+  ) {
+    super(options?.privateMessage ?? failure.code)
     this.name = "ManagedResourceError"
   }
 }

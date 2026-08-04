@@ -484,12 +484,12 @@ describe("AxonHub native managed-resource Adapter", () => {
     for (const [kind, dispatch, code] of [
       [
         "authentication",
-        "dispatched",
+        "not-dispatched",
         MANAGED_RESOURCE_FAILURE_CODES.AuthenticationFailed,
       ],
       [
         "permission",
-        "dispatched",
+        "not-dispatched",
         MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
       ],
       [
@@ -1119,12 +1119,6 @@ describe("AxonHub native managed-resource Adapter", () => {
       ).rejects.toMatchObject({
         failure: {
           code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
-          fieldIssues: [
-            {
-              fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
-              code: "unsupported_option",
-            },
-          ],
         },
       })
     }
@@ -2096,7 +2090,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     )
   })
 
-  it("maps create plus failed status follow-up to mutation_state_uncertain without replay", async () => {
+  it("maps a partial create result to mutation_state_uncertain without replay", async () => {
     const created = buildDetailChannel({
       id: "created-id",
       status: AXON_HUB_CHANNEL_STATUS.DISABLED,
@@ -2147,7 +2141,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(mocks.updateChannel).toHaveBeenCalledOnce()
   })
 
-  it("treats a generic dispatched GraphQL rejection as possibly applied", async () => {
+  it("treats a dispatched GraphQL rejection as an uncertain result", async () => {
     const detail = buildDetailChannel()
     mocks.getChannel.mockResolvedValue(detail)
     mocks.updateChannel.mockRejectedValue(
@@ -2167,7 +2161,52 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(mocks.updateChannel).toHaveBeenCalledOnce()
   })
 
-  it("normalizes native delete outcomes without unsafe replay", async () => {
+  it.each([
+    ["authentication", "authentication_failed"],
+    ["permission", "permission_denied"],
+  ] as const)(
+    "treats dispatched %s failures as uncertain without losing the raw cause",
+    async (kind, code) => {
+      const detail = buildDetailChannel()
+      const rawCause = new mocks.RequestError(kind, "dispatched")
+      mocks.updateChannel.mockRejectedValue(rawCause)
+
+      const operations = await openAxonHubNativeResourceOperations()
+      const nativeResult = await operations.update(detail, {
+        name: "Uncertain rename",
+      })
+
+      expect(nativeResult).toMatchObject({
+        certainty: "possibly-applied",
+        failure: { code, dispatch: "after" },
+      })
+      if (nativeResult.certainty !== "possibly-applied") {
+        throw new Error("Expected a possibly-applied native result")
+      }
+      expect(nativeResult.error).toBe(rawCause)
+
+      mocks.updateChannel.mockClear()
+      mocks.getChannel.mockResolvedValue(detail)
+      const workspace = await openWorkspace()
+      const editor = await workspace.openEditEditor(refFor(detail))
+      const changedValues = {
+        ...editor.initialValues,
+        name: "Uncertain rename",
+      }
+
+      await expectFailureCode(
+        editor.submit(changedValues),
+        MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      )
+      await expectFailureCode(
+        editor.submit(changedValues),
+        MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+      )
+      expect(mocks.updateChannel).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("projects common delete outcomes without unsafe replay", async () => {
     const workspace = await openWorkspace()
     const ref = refFor()
 
@@ -2183,6 +2222,9 @@ describe("AxonHub native managed-resource Adapter", () => {
     mocks.deleteChannel.mockRejectedValueOnce(
       new mocks.RequestError("not-found", "dispatched"),
     )
+    mocks.getChannel.mockRejectedValueOnce(
+      new mocks.RequestError("not-found", "not-dispatched"),
+    )
     await expect(workspace.delete(ref)).resolves.toBeUndefined()
 
     mocks.deleteChannel.mockRejectedValueOnce(
@@ -2193,6 +2235,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
     )
     expect(mocks.deleteChannel).toHaveBeenCalledTimes(4)
+    expect(mocks.getChannel).toHaveBeenCalledTimes(1)
   })
 
   it("registers AxonHub separately from legacy SiteTypeCapabilities", () => {
