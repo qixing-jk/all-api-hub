@@ -139,8 +139,15 @@ export async function createChannel(
       },
     })
   } catch (error) {
-    logger.error("Failed to create channel", error)
-    throw new Error("创建渠道失败，请检查网络或 Veloera 配置")
+    logger.error("Failed to create channel")
+    throw new ApiError(
+      "创建渠道失败，请检查网络或 Veloera 配置",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      error,
+    )
   }
 }
 
@@ -169,8 +176,15 @@ export async function updateChannel(
       },
     })
   } catch (error) {
-    logger.error("Failed to update channel", error)
-    throw new Error("更新渠道失败，请检查网络或 Veloera 配置")
+    logger.error("Failed to update channel")
+    throw new ApiError(
+      "更新渠道失败，请检查网络或 Veloera 配置",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      error,
+    )
   }
 }
 
@@ -189,8 +203,15 @@ export async function deleteChannel(
       },
     })
   } catch (error) {
-    logger.error("Failed to delete channel", error)
-    throw new Error("删除渠道失败，请检查网络或 Veloera 配置")
+    logger.error("Failed to delete channel")
+    throw new ApiError(
+      "删除渠道失败，请检查网络或 Veloera 配置",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      error,
+    )
   }
 }
 

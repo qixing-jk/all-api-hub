@@ -213,9 +213,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     mocks.isExtensionPopupMock.mockReturnValue(false)
     mocks.isExtensionSidePanelMock.mockReturnValue(false)
     mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(false)
-    mocks.safeRandomUUIDMock.mockImplementation(
-      (prefix: string) => `uuid:${prefix}`,
-    )
+    mocks.safeRandomUUIDMock.mockReturnValue("opaque-request-id")
   })
 
   afterEach(() => {
@@ -617,7 +615,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     expectRuntimeTask(TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, {
       originUrl: "https://example.com",
       fetchUrl: "https://example.com/api/models",
-      requestId: "uuid:temp-fetch-https://example.com/api/models",
+      requestId: "opaque-request-id",
       responseType: "json",
       accountId: "acct-1",
       authType: AuthTypeEnum.Cookie,

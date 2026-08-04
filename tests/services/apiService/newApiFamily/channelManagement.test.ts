@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { toManagedSiteApiServiceRequest } from "~/services/apiAdapters/managedSites/request"
 import {
   createChannel,
   deleteChannel,
@@ -10,12 +11,22 @@ import {
   updateChannelModelMapping,
   updateChannelModels,
 } from "~/services/apiService/newApiFamily/channelManagement"
-import { ApiError } from "~/services/apiTransport/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 
-const { mockFetchApi, mockFetchApiData } = vi.hoisted(() => ({
+const { mockFetchApi, mockFetchApiData, mockLoggerError } = vi.hoisted(() => ({
   mockFetchApi: vi.fn(),
   mockFetchApiData: vi.fn(),
+  mockLoggerError: vi.fn(),
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    error: mockLoggerError,
+    info: vi.fn(),
+    warn: vi.fn(),
+  }),
 }))
 
 vi.mock("~/constants/ui", () => ({
@@ -97,6 +108,69 @@ describe("newApiFamily channel management APIs", () => {
         channel: { groups: ["default"] },
       } as any),
     ).rejects.toThrow("创建渠道失败，请检查网络或 New API 配置。")
+  })
+
+  it("managed-site request conversion retains a local lifecycle observer", () => {
+    const observer = {
+      onDispatch: vi.fn(),
+      onResponse: vi.fn(),
+    }
+
+    expect(
+      toManagedSiteApiServiceRequest(
+        {
+          baseUrl: "https://example.invalid",
+          adminToken: "admin-token",
+          userId: "7",
+        },
+        { observer },
+      ),
+    ).toMatchObject({ observer })
+  })
+
+  it("mutation wrappers preserve ApiError details as cause without logging it", async () => {
+    const operations = [
+      {
+        invoke: () =>
+          createChannel(baseRequest, {
+            channel: { groups: ["default"] },
+          } as any),
+        message: "创建渠道失败，请检查网络或 New API 配置。",
+      },
+      {
+        invoke: () =>
+          updateChannel(baseRequest, { id: 1, name: "Updated" } as any),
+        message: "更新渠道失败，请检查网络或 New API 配置。",
+      },
+      {
+        invoke: () => deleteChannel(baseRequest, 1),
+        message: "删除渠道失败，请检查网络或 New API 配置。",
+      },
+    ]
+
+    for (const operation of operations) {
+      mockFetchApi.mockReset()
+      mockLoggerError.mockClear()
+      const cause = new ApiError(
+        "upstream denied",
+        503,
+        "/api/channel/",
+        API_ERROR_CODES.HTTP_OTHER,
+      )
+      mockFetchApi.mockRejectedValueOnce(cause)
+
+      const error = await operation.invoke().catch((caught) => caught)
+
+      expect(error).toMatchObject({
+        message: operation.message,
+        statusCode: 503,
+        endpoint: "/api/channel/",
+        code: API_ERROR_CODES.HTTP_OTHER,
+        cause,
+      })
+      expect(mockLoggerError).toHaveBeenCalledWith(expect.any(String))
+      expect(mockLoggerError.mock.calls.flat()).not.toContain(cause)
+    }
   })
 
   it("updateChannel and deleteChannel wrap transport failures with user-facing messages", async () => {

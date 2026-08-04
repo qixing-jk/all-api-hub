@@ -14,14 +14,25 @@ import {
   updateChannelModelMapping,
   updateChannelModels,
 } from "~/services/apiService/doneHub"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),
 }))
 
-const { mockFetchApi } = vi.hoisted(() => ({
+const { mockFetchApi, mockLoggerError } = vi.hoisted(() => ({
   mockFetchApi: vi.fn(),
+  mockLoggerError: vi.fn(),
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    error: mockLoggerError,
+    info: vi.fn(),
+    warn: vi.fn(),
+  }),
 }))
 
 const {
@@ -545,6 +556,64 @@ describe("apiService doneHub channel APIs", () => {
     await expect(deleteChannel(request as any, 100)).rejects.toThrow(
       "删除渠道失败，请检查网络或 Done Hub 配置。",
     )
+  })
+
+  it("mutation wrappers preserve ApiError details as cause without logging it", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: "1",
+      },
+    }
+    const operations = [
+      {
+        invoke: () =>
+          createChannel(request as any, {
+            mode: "none" as any,
+            channel: { groups: ["default"] } as any,
+          }),
+        message: "创建渠道失败，请检查网络或 Done Hub 配置。",
+      },
+      {
+        invoke: () =>
+          updateChannel(request as any, {
+            id: 1,
+            name: "Updated",
+            groups: ["default"],
+          }),
+        message: "更新渠道失败，请检查网络或 Done Hub 配置。",
+      },
+      {
+        invoke: () => deleteChannel(request as any, 1),
+        message: "删除渠道失败，请检查网络或 Done Hub 配置。",
+      },
+    ]
+
+    for (const operation of operations) {
+      mockFetchApi.mockReset()
+      mockLoggerError.mockClear()
+      const cause = new ApiError(
+        "upstream denied",
+        504,
+        "/api/channel/",
+        API_ERROR_CODES.HTTP_OTHER,
+      )
+      mockFetchApi.mockRejectedValueOnce(cause)
+
+      const error = await operation.invoke().catch((caught) => caught)
+
+      expect(error).toMatchObject({
+        message: operation.message,
+        statusCode: 504,
+        endpoint: "/api/channel/",
+        code: API_ERROR_CODES.HTTP_OTHER,
+        cause,
+      })
+      expect(mockLoggerError).toHaveBeenCalledWith(expect.any(String))
+      expect(mockLoggerError.mock.calls.flat()).not.toContain(cause)
+    }
   })
 
   it("fetchChannelModels should call provider_models_list using full channel payload", async () => {

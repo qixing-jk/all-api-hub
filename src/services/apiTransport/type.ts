@@ -98,6 +98,11 @@ export function summarizeApiTransportFetchContext(
 
 export const summarizeApiServiceFetchContext = summarizeApiTransportFetchContext
 
+export interface ApiTransportRequestObserver {
+  onDispatch(): void
+  onResponse(): void
+}
+
 export interface ApiTransportRequest {
   auth: AuthConfig
   baseUrl: string
@@ -116,6 +121,8 @@ export interface ApiTransportRequest {
   protectionBypassExecution?: ProtectionBypassExecution
   /** Skip the generic per-site limiter when the caller already applies a narrower limiter. */
   bypassSiteRequestLimit?: boolean
+  /** Process-local lifecycle evidence; callbacks must never cross extension messaging. */
+  observer?: ApiTransportRequestObserver
 }
 
 export type ApiServiceRequest = ApiTransportRequest

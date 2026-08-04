@@ -1,3 +1,5 @@
+import { announceRemoteFetchDispatch } from "~/services/apiTransport/remoteLifecycle"
+import type { ApiTransportRemoteLifecycleEvidence } from "~/types/tempWindowFetch"
 import {
   EXTENSION_HEADER_NAME,
   EXTENSION_HEADER_VALUE,
@@ -25,6 +27,10 @@ export function handlePerformTempWindowFetch(
   request: any,
   sendResponse: (res: any) => void,
 ) {
+  const transportLifecycle: ApiTransportRemoteLifecycleEvidence = {
+    upstreamRequestDispatched: false,
+    upstreamResponseReceived: false,
+  }
   const perform = async () => {
     try {
       const {
@@ -57,7 +63,12 @@ export function handlePerformTempWindowFetch(
       requestHeaders.set(EXTENSION_HEADER_NAME, EXTENSION_HEADER_VALUE)
       normalizedOptions.headers = Object.fromEntries(requestHeaders.entries())
 
+      transportLifecycle.upstreamRequestDispatched = true
+      if (typeof requestId === "string" && requestId.length > 0) {
+        announceRemoteFetchDispatch(requestId)
+      }
       const response = await fetch(fetchUrl, normalizedOptions)
+      transportLifecycle.upstreamResponseReceived = true
 
       const headers: Record<string, string> = {}
       response.headers.forEach((value, key) => {
@@ -83,6 +94,7 @@ export function handlePerformTempWindowFetch(
             : JSON.stringify(data ?? {})
 
       sendResponse({
+        transportLifecycle,
         success: response.ok,
         status: response.status,
         headers,
@@ -108,7 +120,11 @@ export function handlePerformTempWindowFetch(
           error: getErrorMessage(error),
         })
       }
-      sendResponse({ success: false, error: getErrorMessage(error) })
+      sendResponse({
+        transportLifecycle,
+        success: false,
+        error: getErrorMessage(error),
+      })
     }
   }
 

@@ -133,8 +133,15 @@ export async function createChannel(
       },
     })
   } catch (error) {
-    logger.error("创建渠道失败", error)
-    throw new Error("创建渠道失败，请检查网络或 New API 配置。")
+    logger.error("创建渠道失败")
+    throw new ApiError(
+      "创建渠道失败，请检查网络或 New API 配置。",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      error,
+    )
   }
 }
 
@@ -176,8 +183,15 @@ export async function updateChannel(
       ? updateResponse
       : buildPartialStatusUpdateFailureResponse(updateResponse, statusResponse)
   } catch (error) {
-    logger.error("更新渠道失败", error)
-    throw new Error("更新渠道失败，请检查网络或 New API 配置。")
+    logger.error("更新渠道失败")
+    throw new ApiError(
+      "更新渠道失败，请检查网络或 New API 配置。",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      error,
+    )
   }
 }
 
@@ -198,8 +212,15 @@ export async function deleteChannel(
       },
     })
   } catch (error) {
-    logger.error("删除渠道失败", error)
-    throw new Error("删除渠道失败，请检查网络或 New API 配置。")
+    logger.error("删除渠道失败")
+    throw new ApiError(
+      "删除渠道失败，请检查网络或 New API 配置。",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      error,
+    )
   }
 }
 

@@ -4,6 +4,7 @@ import {
   ApiError,
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
+import { observeRemoteFetchLifecycle } from "~/services/apiTransport/remoteLifecycle"
 import {
   extractDataFromApiResponseBody,
   isHttpUrl,
@@ -524,7 +525,7 @@ async function fetchViaTempWindow<TResult>(
     )
   }
 
-  const requestId = safeRandomUUID(`temp-fetch-${context.url}`)
+  const requestId = safeRandomUUID()
   const payload: TempWindowFetchParams = {
     originUrl: context.baseUrl,
     fetchUrl: context.url,
@@ -548,7 +549,20 @@ async function fetchViaTempWindow<TResult>(
     url: context.url,
   })
 
-  const response = await tempWindowFetch(payload)
+  const lifecycle = context.transportLifecycleObserver
+    ? observeRemoteFetchLifecycle(requestId, context.transportLifecycleObserver)
+    : null
+  const abortSignal = fetchOptions.signal
+  const disposeLifecycle = () => lifecycle?.dispose()
+  abortSignal?.addEventListener("abort", disposeLifecycle, { once: true })
+  let response: TempWindowFetch
+  try {
+    response = await tempWindowFetch(payload)
+    lifecycle?.applyResultEvidence(response)
+  } finally {
+    abortSignal?.removeEventListener("abort", disposeLifecycle)
+    disposeLifecycle()
+  }
 
   logger.debug("Temp window fetch response received", {
     endpoint: context.endpoint,

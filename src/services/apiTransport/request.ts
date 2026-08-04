@@ -11,6 +11,7 @@ import {
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
 import { createMinIntervalLimiter } from "~/services/apiTransport/minIntervalLimiter"
+import { observeRemoteFetchLifecycle } from "~/services/apiTransport/remoteLifecycle"
 import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"
 import {
   resolveSiteRequestLimitKey,
@@ -21,6 +22,7 @@ import type {
   ApiResponse,
   ApiTransportFetchContext,
   ApiTransportRequest,
+  ApiTransportRequestObserver,
   ApiTransportResponse,
   AuthConfig,
   FetchApiOptions,
@@ -32,6 +34,7 @@ import {
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import type {
+  ApiTransportRemoteLifecycleEvidence,
   TempWindowFetch,
   TempWindowResponseType,
 } from "~/types/tempWindowFetch"
@@ -79,6 +82,7 @@ type MessageResponseMapper<TResult> = (
 ) => TResult | Promise<TResult>
 
 interface ContentFetchResponse<T> {
+  transportLifecycle?: ApiTransportRemoteLifecycleEvidence
   success?: boolean
   status?: number
   headers?: Record<string, string>
@@ -98,6 +102,20 @@ function getSafeTransportErrorMessage(
 }
 
 const logger = createLogger("ApiTransportRequest")
+
+type ApiTransportObserverEvent = keyof ApiTransportRequestObserver
+
+/** Keeps optional lifecycle evidence best-effort and isolated from transport results. */
+function notifyApiTransportObserver(
+  observer: ApiTransportRequestObserver | undefined,
+  event: ApiTransportObserverEvent,
+): void {
+  try {
+    observer?.[event]()
+  } catch {
+    logger.warn("API transport observer callback failed", { event })
+  }
+}
 
 interface BackendErrorDetails {
   message: string
@@ -353,39 +371,60 @@ async function fetchViaCurrentTabContent<T>(context: {
   endpoint: string
   fetchOptions: RequestInit
   responseType: TempWindowResponseType
+  onDispatch: () => void
+  onResponse: () => void
 }): Promise<AcquiredTransportResponse<T>> {
-  const response = (await sendTabMessageWithRetry(context.fetchContext.tabId, {
-    action: RuntimeActionIds.ContentPerformTempWindowFetch,
-    requestId: safeRandomUUID(`current-tab-fetch-${context.url}`),
-    fetchUrl: context.url,
-    fetchOptions: normalizeRequestInitForMessage(context.fetchOptions),
-    responseType: context.responseType,
-  })) as ContentFetchResponse<ApiResponse<T> | T>
+  const requestId = safeRandomUUID("current-tab-fetch")
+  const lifecycle = observeRemoteFetchLifecycle(requestId, {
+    onDispatch: context.onDispatch,
+    onResponse: context.onResponse,
+  })
+  const abortSignal = context.fetchOptions.signal
+  const disposeLifecycle = () => lifecycle.dispose()
+  abortSignal?.addEventListener("abort", disposeLifecycle, { once: true })
 
-  if (typeof response?.success !== "boolean") {
-    throw new ApiError(
-      response?.error || "Current-tab content fetch failed",
-      response?.status,
-      context.endpoint,
-      response?.code,
-    )
-  }
+  try {
+    const response = (await sendTabMessageWithRetry(
+      context.fetchContext.tabId,
+      {
+        action: RuntimeActionIds.ContentPerformTempWindowFetch,
+        requestId,
+        fetchUrl: context.url,
+        fetchOptions: normalizeRequestInitForMessage(context.fetchOptions),
+        responseType: context.responseType,
+      },
+    )) as ContentFetchResponse<ApiResponse<T> | T>
+    lifecycle.applyResultEvidence(response)
 
-  const status = response.status ?? (response.success ? 200 : undefined)
-  if (status === undefined) {
-    throw new ApiError(
-      response.error || "Current-tab content fetch failed",
-      undefined,
-      context.endpoint,
-      response.code,
-    )
-  }
+    const success = response?.success
+    if (typeof success !== "boolean") {
+      throw new ApiError(
+        response?.error || "Current-tab content fetch failed",
+        response?.status,
+        context.endpoint,
+        response?.code,
+      )
+    }
 
-  return {
-    ok: response.success,
-    status,
-    headers: response.headers ?? {},
-    body: response.data as T,
+    const status = response.status ?? (success ? 200 : undefined)
+    if (status === undefined) {
+      throw new ApiError(
+        response.error || "Current-tab content fetch failed",
+        undefined,
+        context.endpoint,
+        response.code,
+      )
+    }
+
+    return {
+      ok: success,
+      status,
+      headers: response.headers ?? {},
+      body: response.data as T,
+    }
+  } finally {
+    abortSignal?.removeEventListener("abort", disposeLifecycle)
+    disposeLifecycle()
   }
 }
 
@@ -400,6 +439,8 @@ async function executeWithCurrentTabContentPreference<T, TResult>(
     fetchOptions: RequestInit
     responseType: TempWindowResponseType
     options: FetchApiOptions
+    onDispatch: () => void
+    onResponse: () => void
   },
   mapResponse: TransportResponseMapper<T, TResult>,
   fallback: () => Promise<TResult>,
@@ -427,6 +468,8 @@ async function executeWithCurrentTabContentPreference<T, TResult>(
       endpoint: context.endpoint,
       fetchOptions: context.fetchOptions,
       responseType: context.responseType,
+      onDispatch: context.onDispatch,
+      onResponse: context.onResponse,
     })
   } catch (error) {
     logger.debug("Current-tab content fetch failed; falling back", {
@@ -483,8 +526,10 @@ const apiRequestResponse = async <T>(
   options: RequestInit | undefined,
   endpoint: string | undefined,
   responseType: TempWindowResponseType,
+  onResponse: () => void,
 ): Promise<AcquiredTransportResponse<T>> => {
   const response = await fetch(url, options)
+  onResponse()
   const contentType = response.headers.get("content-type") || ""
 
   if (responseType === "json") {
@@ -718,17 +763,31 @@ const _fetchApiWithMapper = async <T, TResult>(
     return startAbortableTask(
       async (signal) => {
         request.abortDeadline?.start()
+        let dispatchObserved = false
+        const onDispatch = () => {
+          if (dispatchObserved) return
+          dispatchObserved = true
+          notifyApiTransportObserver(request.observer, "onDispatch")
+        }
+        let responseObserved = false
+        const onResponse = () => {
+          if (responseObserved) return
+          responseObserved = true
+          notifyApiTransportObserver(request.observer, "onResponse")
+        }
         const dispatchedFetchOptions = { ...fetchOptions, signal }
         const dispatchedContext = {
           ...context,
           fetchOptions: dispatchedFetchOptions,
         }
         const primaryRequest = async () => {
+          onDispatch()
           const response = await apiRequestResponse<T>(
             url,
             dispatchedFetchOptions,
             options.endpoint,
             responseType,
+            onResponse,
           )
           return await mapResponse(response)
         }
@@ -750,6 +809,10 @@ const _fetchApiWithMapper = async <T, TResult>(
             {
               ...dispatchedContext,
               protectionBypassExecution: execution,
+              transportLifecycleObserver: {
+                onDispatch,
+                onResponse,
+              },
             },
             primaryRequest,
             mapTempWindowResponse,
@@ -764,6 +827,8 @@ const _fetchApiWithMapper = async <T, TResult>(
             fetchOptions: dispatchedFetchOptions,
             responseType,
             options,
+            onDispatch,
+            onResponse,
           },
           mapResponse,
           fallback,

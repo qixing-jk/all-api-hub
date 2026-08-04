@@ -52,9 +52,16 @@ export class ApiError extends Error {
     public endpoint?: string,
     public code?: ApiErrorCode,
     public upstreamCode?: string,
+    cause?: unknown,
   ) {
-    super(message)
+    super(message, cause === undefined ? undefined : { cause })
     this.name = "ApiError"
+
+    if (cause instanceof ApiError) {
+      this.statusCode ??= cause.statusCode
+      this.endpoint ??= cause.endpoint
+      this.code ??= cause.code
+    }
   }
 
   /**

@@ -1,3 +1,4 @@
+import type { ApiTransportRequestObserver } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 /**
@@ -9,7 +10,10 @@ export function toManagedSiteApiServiceRequest(
     adminToken: string
     userId: string
   },
-  options?: { bypassSiteRequestLimit?: boolean },
+  options?: {
+    bypassSiteRequestLimit?: boolean
+    observer?: ApiTransportRequestObserver
+  },
 ) {
   return {
     baseUrl: config.baseUrl,
@@ -21,5 +25,6 @@ export function toManagedSiteApiServiceRequest(
     ...(options?.bypassSiteRequestLimit
       ? { bypassSiteRequestLimit: true }
       : {}),
+    ...(options?.observer ? { observer: options.observer } : {}),
   }
 }

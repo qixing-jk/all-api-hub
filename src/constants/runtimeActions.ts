@@ -11,6 +11,7 @@ export const RuntimeActionPrefixes = {
   AccountDialog: "accountDialog:",
   AccountRefresh: "accountRefresh:",
   ApiCheck: "apiCheck:",
+  ApiTransport: "apiTransport:",
   AutoCheckin: "autoCheckin:",
   AutoCheckinPretrigger: "autoCheckinPretrigger:",
   BalanceHistory: "balanceHistory:",
@@ -53,6 +54,10 @@ export const RuntimeActionIds = {
   ApiCheckContextMenuTrigger: composeRuntimeAction(
     RuntimeActionPrefixes.ApiCheck,
     "contextMenuTrigger",
+  ),
+  ApiTransportRemoteFetchDispatched: composeRuntimeAction(
+    RuntimeActionPrefixes.ApiTransport,
+    "remoteFetchDispatched",
   ),
 
   PermissionsCheck: composeRuntimeAction(

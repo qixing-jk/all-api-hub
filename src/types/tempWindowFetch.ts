@@ -32,6 +32,18 @@ export function isTempWindowRequestSource(
 
 export type TempWindowResponseType = "json" | "text" | "arrayBuffer" | "blob"
 
+/** Cloneable evidence produced at the context that owns the upstream fetch. */
+export interface ApiTransportRemoteLifecycleEvidence {
+  upstreamRequestDispatched: boolean
+  upstreamResponseReceived: boolean
+}
+
+/** Process-local callbacks; these must never be copied into runtime messages. */
+export interface ApiTransportRemoteLifecycleObserver {
+  onDispatch: () => void
+  onResponse: () => void
+}
+
 export interface TempWindowFetchParams {
   originUrl: string
   fetchUrl: string
@@ -116,6 +128,7 @@ export interface TempWindowCheckinPageActionParams {
 }
 
 export interface TempWindowFetch {
+  transportLifecycle?: ApiTransportRemoteLifecycleEvidence
   success: boolean
   status?: number
   code?: ApiErrorCode
@@ -188,4 +201,6 @@ export interface TempWindowFallbackContext {
   cookieStoreId?: string
   /** Skip the primary request and execute directly in the temp context. */
   forceTempWindow?: boolean
+  /** Local observer for the remote upstream fetch lifecycle. */
+  transportLifecycleObserver?: ApiTransportRemoteLifecycleObserver
 }

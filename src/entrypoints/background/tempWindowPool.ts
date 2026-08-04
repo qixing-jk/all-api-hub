@@ -11,6 +11,7 @@ import {
   API_ERROR_CODES,
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
+import { applyLocalRemoteFetchResultEvidence } from "~/services/apiTransport/remoteLifecycle"
 import { DEFAULT_TEMP_CONTEXT_PREFERENCE } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   userPreferences,
@@ -1525,6 +1526,7 @@ async function executeTempWindowFetch(
       throw new Error(TEMP_WINDOW_FETCH_NO_RESPONSE_ERROR)
     }
 
+    applyLocalRemoteFetchResultEvidence(tempRequestId, response)
     sendResponse(response)
     const result = getTempWindowAnalyticsResult(response)
     trackTempWindowFetchCompleted({

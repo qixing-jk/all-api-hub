@@ -1,15 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   EXTENSION_HEADER_NAME,
   EXTENSION_HEADER_VALUE,
 } from "~/utils/browser/cookieHelper"
 
-const { logger, mockLogCloudflareGuard } = vi.hoisted(() => ({
-  logger: {
-    warn: vi.fn(),
-  },
-  mockLogCloudflareGuard: vi.fn(),
+const { logger, mockLogCloudflareGuard, mockSendRuntimeMessage } = vi.hoisted(
+  () => ({
+    logger: {
+      warn: vi.fn(),
+    },
+    mockLogCloudflareGuard: vi.fn(),
+    mockSendRuntimeMessage: vi.fn().mockResolvedValue(undefined),
+  }),
+)
+
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+  sendRuntimeMessage: mockSendRuntimeMessage,
 }))
 
 vi.mock("~/utils/core/logger", () => ({
@@ -62,6 +71,10 @@ describe("handlePerformTempWindowFetch", () => {
 
     await vi.waitFor(() => {
       expect(sendResponse).toHaveBeenCalledWith({
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
         success: true,
         status: 200,
         headers: {
@@ -84,6 +97,10 @@ describe("handlePerformTempWindowFetch", () => {
         }),
       }),
     )
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.ApiTransportRemoteFetchDispatched,
+      requestId: "req-1",
+    })
     expect(mockLogCloudflareGuard).toHaveBeenNthCalledWith(
       1,
       "tempFetchStart",
@@ -130,6 +147,10 @@ describe("handlePerformTempWindowFetch", () => {
 
     await vi.waitFor(() => {
       expect(sendResponse).toHaveBeenCalledWith({
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
         success: false,
         status: 403,
         headers: {
@@ -176,6 +197,10 @@ describe("handlePerformTempWindowFetch", () => {
 
     await vi.waitFor(() => {
       expect(sendResponse).toHaveBeenCalledWith({
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
         success: false,
         status: 429,
         headers: {
@@ -213,6 +238,10 @@ describe("handlePerformTempWindowFetch", () => {
 
     await vi.waitFor(() => {
       expect(sendResponse).toHaveBeenCalledWith({
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
         success: false,
         status: 502,
         headers: {
@@ -254,6 +283,10 @@ describe("handlePerformTempWindowFetch", () => {
 
     await vi.waitFor(() => {
       expect(sendResponse).toHaveBeenCalledWith({
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
         success: false,
         status: 502,
         headers: {
@@ -298,6 +331,10 @@ describe("handlePerformTempWindowFetch", () => {
 
     await vi.waitFor(() => {
       expect(sendResponse).toHaveBeenCalledWith({
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: true,
+        },
         success: true,
         status: 204,
         headers: {
@@ -328,12 +365,17 @@ describe("handlePerformTempWindowFetch", () => {
 
     await vi.waitFor(() => {
       expect(sendResponse).toHaveBeenCalledWith({
+        transportLifecycle: {
+          upstreamRequestDispatched: false,
+          upstreamResponseReceived: false,
+        },
         success: false,
         error: "Invalid fetch request",
       })
     })
 
     expect(fetchMock).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
     expect(mockLogCloudflareGuard).not.toHaveBeenCalled()
   })
 
@@ -356,6 +398,10 @@ describe("handlePerformTempWindowFetch", () => {
 
     await vi.waitFor(() => {
       expect(sendResponse).toHaveBeenCalledWith({
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: false,
+        },
         success: false,
         error: "network down",
       })
@@ -375,5 +421,9 @@ describe("handlePerformTempWindowFetch", () => {
         error: "network down",
       }),
     )
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.ApiTransportRemoteFetchDispatched,
+      requestId: "req-err",
+    })
   })
 })

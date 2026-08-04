@@ -59,6 +59,9 @@ describe("runtimeActions registry and helpers", () => {
     expect(RuntimeActionIds.ApiCheckContextMenuTrigger).toBe(
       "apiCheck:contextMenuTrigger",
     )
+    expect(RuntimeActionIds.ApiTransportRemoteFetchDispatched).toBe(
+      "apiTransport:remoteFetchDispatched",
+    )
     expect(RuntimeActionIds.RedemptionAssistContextMenuTrigger).toBe(
       "redemptionAssist:contextMenuTrigger",
     )
