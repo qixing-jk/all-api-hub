@@ -7,6 +7,12 @@ type InstalledListener = (details: {
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0))
 
+const { applyActionClickBehaviorMock, setupActionClickBehaviorListenerMock } =
+  vi.hoisted(() => ({
+    applyActionClickBehaviorMock: vi.fn(),
+    setupActionClickBehaviorListenerMock: vi.fn(),
+  }))
+
 /**
  * Background entrypoint tests for the "open changelog after update" preference.
  *
@@ -24,6 +30,7 @@ describe("background onInstalled changelog opening", () => {
   let getDocsChangelogUrlMock: ReturnType<typeof vi.fn>
   let getManifestMock: ReturnType<typeof vi.fn>
   let getPreferencesMock: ReturnType<typeof vi.fn>
+  let getPreferencesStrictMock: ReturnType<typeof vi.fn>
   let hasPermissionsMock: ReturnType<typeof vi.fn>
   let hasNewOptionalPermissionsMock: ReturnType<typeof vi.fn>
   let openOrFocusOptionsMenuItemMock: ReturnType<typeof vi.fn>
@@ -52,6 +59,10 @@ describe("background onInstalled changelog opening", () => {
       actionClickBehavior: "popup",
       openChangelogOnUpdate: true,
     })
+    getPreferencesStrictMock = vi.fn().mockResolvedValue({
+      actionClickBehavior: "popup",
+      openChangelogOnUpdate: true,
+    })
     hasPermissionsMock = vi.fn().mockResolvedValue(true)
     hasNewOptionalPermissionsMock = vi.fn().mockResolvedValue(false)
     openOrFocusOptionsMenuItemMock = vi.fn()
@@ -61,6 +72,8 @@ describe("background onInstalled changelog opening", () => {
     shouldAutoOpenChangelogForUpdateMock = vi.fn().mockResolvedValue(true)
     triggerStartupSponsorRecommendationsDailySummaryMock = vi.fn()
     isTestModeMock = vi.fn().mockReturnValue(true)
+    applyActionClickBehaviorMock.mockReset().mockResolvedValue(undefined)
+    setupActionClickBehaviorListenerMock.mockReset()
 
     vi.resetModules()
     ;(globalThis as any).defineBackground = (factory: () => unknown) =>
@@ -93,7 +106,10 @@ describe("background onInstalled changelog opening", () => {
     }))
 
     vi.doMock("~/services/preferences/userPreferences", () => ({
-      userPreferences: { getPreferences: getPreferencesMock },
+      userPreferences: {
+        getPreferences: getPreferencesMock,
+        getPreferencesStrict: getPreferencesStrictMock,
+      },
     }))
 
     vi.doMock("~/services/updates/changelogOnUpdateState", () => ({
@@ -129,7 +145,8 @@ describe("background onInstalled changelog opening", () => {
       initializeServices: vi.fn().mockResolvedValue(undefined),
     }))
     vi.doMock("~/entrypoints/background/actionClickBehavior", () => ({
-      applyActionClickBehavior: vi.fn().mockResolvedValue(undefined),
+      applyActionClickBehavior: applyActionClickBehaviorMock,
+      setupActionClickBehaviorListener: setupActionClickBehaviorListenerMock,
     }))
     vi.doMock("~/services/productAnalytics/runtime", () => ({
       setupProductAnalyticsAccountChangeListener: vi.fn(),

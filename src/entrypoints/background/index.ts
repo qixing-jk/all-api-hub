@@ -37,7 +37,10 @@ import { isTestMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
-import { applyActionClickBehavior } from "./actionClickBehavior"
+import {
+  applyActionClickBehavior,
+  setupActionClickBehaviorListener,
+} from "./actionClickBehavior"
 import { setupContextMenus } from "./contextMenus"
 import {
   initializeCookieInterceptors,
@@ -62,6 +65,8 @@ function shouldAutoOpenPermissionsOnboarding(): boolean {
 
 export default defineBackground(() => {
   logger.debug("Hello background", { id: getRuntimeId() })
+
+  setupActionClickBehaviorListener()
 
   // Apply dev-only branding early so the toolbar action is visually distinguishable.
   void applyDevActionBranding()
@@ -202,19 +207,28 @@ export default defineBackground(() => {
     })
   })
 
-  main()
+  void main().catch((error) => {
+    logger.error("Failed to initialize background startup", error)
+  })
 })
 
 /**
  * Entrypoint invoked at background startup.
- * Ensures services are initialized before installing cookie interceptors so that downstream requests have localization and config ready.
+ * Starts services before the first await so alarm listeners are registered during
+ * MV3 startup, then awaits them before installing cookie interceptors.
  */
 async function main() {
-  await initializeServices()
+  const servicesInitialization = initializeServices()
+  const toolbarReconciliation = (async () => {
+    try {
+      const prefs = await userPreferences.getPreferencesStrict()
+      await applyActionClickBehavior(prefs.actionClickBehavior ?? "popup")
+    } catch (error) {
+      logger.warn("Failed to reconcile toolbar action click behavior", error)
+    }
+  })()
 
-  const prefs = await userPreferences.getPreferences()
-  await applyActionClickBehavior(prefs.actionClickBehavior ?? "popup")
-
+  await Promise.all([servicesInitialization, toolbarReconciliation])
   await initializeCookieInterceptors()
   triggerStartupSiteEcosystemSnapshot()
   triggerStartupSettingsSnapshot()

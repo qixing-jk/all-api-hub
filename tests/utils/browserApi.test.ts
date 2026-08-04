@@ -12,7 +12,6 @@ import {
   createContextMenu,
   createNotification,
   createWindow,
-  disableNativeSidePanelActionClick,
   focusTab,
   getActionApi,
   getActiveOrAllTabs,
@@ -41,6 +40,7 @@ import {
   hasStorageChangedListener,
   isAllowedIncognitoAccess,
   isMessageReceiverUnavailableError,
+  NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS,
   onAlarm,
   onContextMenuClicked,
   onInstalled,
@@ -59,7 +59,6 @@ import {
   PERMISSION_OPERATION_FAILURE_REASONS,
   reloadRuntime,
   reloadTab,
-  removeActionClickListener,
   removeContextMenu,
   removePermissions,
   removePermissionsDetailed,
@@ -72,6 +71,7 @@ import {
   sendRuntimeActionMessage,
   sendTabMessageWithRetry,
   setActionPopup,
+  setNativeSidePanelActionClick,
   updateWindow,
   WINDOW_CREATION_FAILURE_REASONS,
 } from "~/utils/browser/browserApi"
@@ -1699,9 +1699,6 @@ describe("browserApi action and permissions helpers", () => {
     actionApi.onClicked.hasListener.mockReturnValue(true)
     cleanup()
     expect(actionApi.onClicked.removeListener).toHaveBeenCalledWith(listener)
-
-    removeActionClickListener(listener)
-    expect(actionApi.onClicked.removeListener).toHaveBeenCalledWith(listener)
   })
 
   it("does not add duplicate action listeners and skips removals when absent", () => {
@@ -1714,41 +1711,43 @@ describe("browserApi action and permissions helpers", () => {
 
     actionApi.onClicked.hasListener.mockReturnValue(false)
     cleanup()
-    removeActionClickListener(listener)
     expect(actionApi.onClicked.removeListener).not.toHaveBeenCalled()
   })
 
-  it("disables native Chromium side-panel action clicks when supported", async () => {
-    const setPanelBehavior = vi.fn().mockResolvedValue(undefined)
-    ;(globalThis as any).chrome = {
-      sidePanel: {
-        setPanelBehavior,
-      },
-    }
+  it.each([true, false])(
+    "sets native Chromium side-panel action clicks to %s when supported",
+    async (enabled) => {
+      const setPanelBehavior = vi.fn().mockResolvedValue(undefined)
+      ;(globalThis as any).chrome = { sidePanel: { setPanelBehavior } }
 
-    await disableNativeSidePanelActionClick()
+      await expect(setNativeSidePanelActionClick(enabled)).resolves.toBe(
+        NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS.Applied,
+      )
+      expect(setPanelBehavior).toHaveBeenCalledWith({
+        openPanelOnActionClick: enabled,
+      })
+    },
+  )
 
-    expect(setPanelBehavior).toHaveBeenCalledWith({
-      openPanelOnActionClick: false,
-    })
+  it("reports unavailable native Chromium side-panel action behavior", async () => {
+    ;(globalThis as any).chrome = { sidePanel: {} }
+
+    await expect(setNativeSidePanelActionClick(true)).resolves.toBe(
+      NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS.Unavailable,
+    )
   })
 
-  it("ignores missing native Chromium side-panel action behavior support", async () => {
-    ;(globalThis as any).chrome = {
-      sidePanel: {},
-    }
-
-    await expect(disableNativeSidePanelActionClick()).resolves.toBeUndefined()
-  })
-
-  it("swallows native Chromium side-panel action behavior failures", async () => {
+  it("reports rejected native Chromium side-panel action behavior", async () => {
     ;(globalThis as any).chrome = {
       sidePanel: {
         setPanelBehavior: vi.fn().mockRejectedValue(new Error("unsupported")),
       },
     }
 
-    await expect(disableNativeSidePanelActionClick()).resolves.toBeUndefined()
+    await expect(setNativeSidePanelActionClick(true)).resolves.toBe(
+      NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS.Rejected,
+    )
+    expect(loggerMock.warn).toHaveBeenCalled()
   })
 
   it("returns permission helper fallbacks when runtime or permissions APIs fail", async () => {

@@ -955,26 +955,38 @@ export const openSidePanel = async (targetTab?: browser.tabs.Tab | null) => {
   }
 }
 
+export const NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS = {
+  Applied: "applied",
+  Unavailable: "unavailable",
+  Rejected: "rejected",
+} as const
+
+export type NativeSidePanelActionClickResult =
+  (typeof NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS)[keyof typeof NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS]
+
 /**
- * Keeps Chromium toolbar action clicks on the extension-managed listener path
- * so fallback behavior can run when side panel opening is unavailable.
+ * Projects toolbar clicks into Chromium's browser-owned side-panel behavior.
+ * Distinguishes a missing control from a rejected attempt so callers can retain
+ * compatible manual routing without acknowledging failed projections.
  */
-export async function disableNativeSidePanelActionClick(): Promise<void> {
+export async function setNativeSidePanelActionClick(
+  enabled: boolean,
+): Promise<NativeSidePanelActionClickResult> {
   const setPanelBehavior = (globalThis as any).chrome?.sidePanel
     ?.setPanelBehavior
 
   if (typeof setPanelBehavior !== "function") {
-    return
+    return NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS.Unavailable
   }
 
   try {
-    await setPanelBehavior({
-      openPanelOnActionClick: false,
-    })
+    await setPanelBehavior({ openPanelOnActionClick: enabled })
+    return NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS.Applied
   } catch (error) {
     logger.warn(
       `sidePanel.setPanelBehavior not available:\n${getErrorMessage(error)}`,
     )
+    return NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS.Rejected
   }
 }
 
@@ -1474,18 +1486,6 @@ export function addActionClickListener(
     if (action.onClicked.hasListener(listener)) {
       action.onClicked.removeListener(listener)
     }
-  }
-}
-
-/**
- * 移除工具栏按钮点击监听（兼容 MV2/MV3）。
- */
-export function removeActionClickListener(
-  listener: (tab: browser.tabs.Tab, info?: any) => void,
-): void {
-  const action = getActionApi()
-  if (action.onClicked.hasListener(listener)) {
-    action.onClicked.removeListener(listener)
   }
 }
 
