@@ -463,8 +463,7 @@
     "list": {
       "actions": {
         "delete": "Xóa khóa",
-        "edit": "Sửa khóa",
-        "singleAccountOnly": "Chọn tài khoản này để chỉnh sửa hoặc xóa khóa"
+        "edit": "Sửa khóa"
       },
       "details": {
         "byokUsage": "Sử dụng BYOK",

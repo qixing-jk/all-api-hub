@@ -463,8 +463,7 @@
     "list": {
       "actions": {
         "delete": "删除密钥",
-        "edit": "编辑密钥",
-        "singleAccountOnly": "请选择此账号后再编辑或删除其密钥"
+        "edit": "编辑密钥"
       },
       "details": {
         "byokUsage": "BYOK 用量",

@@ -1870,6 +1870,16 @@ describe("KeyManagement native page integration", () => {
     expect(
       screen.getByText("keyManagement:accountSummary.loadFailed"),
     ).toBeVisible()
+    expect(
+      screen.getAllByRole("button", {
+        name: "keyManagement:openRouter.list.actions.edit",
+      }),
+    ).toHaveLength(2)
+    for (const button of screen.getAllByRole("button", {
+      name: "keyManagement:openRouter.list.actions.edit",
+    })) {
+      expect(button).toBeEnabled()
+    }
 
     await user.click(
       screen.getByRole("button", {

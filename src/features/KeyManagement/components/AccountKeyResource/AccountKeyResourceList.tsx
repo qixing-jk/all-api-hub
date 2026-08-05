@@ -23,7 +23,7 @@ export function AccountKeyResourceList({
   isDetailLoading,
   detailFailure,
   onCloseDetail,
-  actionsDisabled = false,
+  detailsFromRows = false,
   selectionDisabledReason,
 }: {
   rows: readonly NativeKeyManagementRow[]
@@ -34,7 +34,7 @@ export function AccountKeyResourceList({
   isDetailLoading?: boolean
   detailFailure?: ResourceFailure | null
   onCloseDetail?: () => void
-  actionsDisabled?: boolean
+  detailsFromRows?: boolean
   selectionDisabledReason?: string
 }) {
   const { t } = useTranslation()
@@ -46,15 +46,15 @@ export function AccountKeyResourceList({
         if (expandedRowKeyRef.current !== row.rowKey) return
         expandedRowKeyRef.current = null
         setExpandedRowKey(null)
-        if (!actionsDisabled) onCloseDetail?.()
+        if (!detailsFromRows) onCloseDetail?.()
         return
       }
 
       expandedRowKeyRef.current = row.rowKey
       setExpandedRowKey(row.rowKey)
-      if (!actionsDisabled) onOpenDetail?.(row.facts.ref)
+      if (!detailsFromRows) onOpenDetail?.(row.facts.ref)
     },
-    [actionsDisabled, onCloseDetail, onOpenDetail],
+    [detailsFromRows, onCloseDetail, onOpenDetail],
   )
   if (rows.length === 0) return null
   return (
@@ -80,7 +80,7 @@ export function AccountKeyResourceList({
           }
           isDetailLoading={expandedRowKey === row.rowKey && isDetailLoading}
           detailFailure={expandedRowKey === row.rowKey ? detailFailure : null}
-          actionsDisabled={actionsDisabled}
+          detailsFromRow={detailsFromRows}
           selectionDisabledReason={selectionDisabledReason}
         />
       ))}

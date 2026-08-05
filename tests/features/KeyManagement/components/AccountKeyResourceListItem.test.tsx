@@ -155,15 +155,17 @@ describe("AccountKeyResourceListItem", () => {
     ).toBeNull()
   })
 
-  it("explains disabled native mutations to pointer and keyboard users", async () => {
+  it("keeps native mutations available when details come from row facts", async () => {
     const user = userEvent.setup()
+    const onEdit = vi.fn()
+    const onDelete = vi.fn()
     render(
       <AccountKeyResourceListItem
         row={row}
         onExpandedChange={vi.fn()}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        actionsDisabled
+        onEdit={onEdit}
+        onDelete={onDelete}
+        detailsFromRow
       />,
       { withUserPreferencesProvider: false, withThemeProvider: false },
     )
@@ -171,18 +173,16 @@ describe("AccountKeyResourceListItem", () => {
     const editButton = screen.getByRole("button", {
       name: "keyManagement:openRouter.list.actions.edit",
     })
-    const editActionHint = editButton.parentElement
+    const deleteButton = screen.getByRole("button", {
+      name: "keyManagement:openRouter.list.actions.delete",
+    })
+    expect(editButton).toBeEnabled()
+    expect(deleteButton).toBeEnabled()
 
-    expect(editButton).toBeDisabled()
-    expect(editActionHint).toHaveAttribute("tabindex", "0")
-    expect(editActionHint).toHaveAccessibleDescription(
-      "keyManagement:openRouter.list.actions.singleAccountOnly",
-    )
-
-    await user.hover(editActionHint!)
-    expect(await screen.findByRole("tooltip")).toHaveTextContent(
-      "keyManagement:openRouter.list.actions.singleAccountOnly",
-    )
+    await user.click(editButton)
+    await user.click(deleteButton)
+    expect(onEdit).toHaveBeenCalledWith(row.facts.ref)
+    expect(onDelete).toHaveBeenCalledWith(row.facts.ref)
   })
 
   it("omits mutations that the native resource does not support", () => {
@@ -221,7 +221,7 @@ describe("AccountKeyResourceListItem", () => {
         onExpandedChange={vi.fn()}
         onEdit={vi.fn()}
         onDelete={vi.fn()}
-        actionsDisabled
+        detailsFromRow
         expanded
       />,
       { withUserPreferencesProvider: false, withThemeProvider: false },

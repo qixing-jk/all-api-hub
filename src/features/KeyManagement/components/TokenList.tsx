@@ -154,7 +154,7 @@ interface TokenListProps {
   nativeDetailLoading?: boolean
   nativeDetailFailure?: ResourceFailure | null
   onCloseNativeDetail?: () => void
-  nativeActionsDisabled?: boolean
+  nativeDetailsFromRows?: boolean
   onOpenNativeDetail?: (ref: AccountKeyResourceRef) => void
   onEditNativeKey?: (ref: AccountKeyResourceRef) => void
   onDeleteNativeKey?: (ref: AccountKeyResourceRef) => void
@@ -423,7 +423,7 @@ export function TokenList(props: TokenListProps) {
     nativeDetailLoading = false,
     nativeDetailFailure,
     onCloseNativeDetail,
-    nativeActionsDisabled = false,
+    nativeDetailsFromRows = false,
     onOpenNativeDetail,
     onEditNativeKey,
     onDeleteNativeKey,
@@ -1029,7 +1029,7 @@ export function TokenList(props: TokenListProps) {
       isDetailLoading={nativeDetailLoading}
       detailFailure={nativeDetailFailure}
       onCloseDetail={onCloseNativeDetail}
-      actionsDisabled={nativeActionsDisabled}
+      detailsFromRows={nativeDetailsFromRows}
       selectionDisabledReason={t(
         "keyManagement:batchSelection.unavailableReason",
       )}

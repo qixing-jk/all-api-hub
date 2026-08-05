@@ -463,8 +463,7 @@
     "list": {
       "actions": {
         "delete": "刪除金鑰",
-        "edit": "編輯金鑰",
-        "singleAccountOnly": "請選取此帳號後再編輯或刪除其金鑰"
+        "edit": "編輯金鑰"
       },
       "details": {
         "byokUsage": "BYOK 用量",

@@ -95,6 +95,12 @@ type EditorOpenRequest = {
   boundary: ActiveResourceBoundary
 }
 
+type ResourceActionContext = {
+  session: AccountKeyResourceSession
+  collection: AccountKeyResourceCollection
+  boundary: ActiveResourceBoundary
+}
+
 type DetailState = AccountKeyResourceFacts | null
 
 type DeleteState = {
@@ -226,6 +232,17 @@ const boundariesMatch = (
 
 const boundaryIdentity = (boundary: ActiveResourceBoundary) =>
   JSON.stringify([boundary.accountId, boundary.siteType, boundary.scopeKey])
+
+const boundaryFromResourceRef = (
+  ref: AccountKeyResourceRef,
+): ActiveResourceBoundary => ({
+  accountId: ref.accountId,
+  siteType: ref.siteType,
+  scopeKey: ref.scopeKey,
+  // Combined inventory has no route identity; mutations are bound by the
+  // provider's canonical collection scope instead.
+  routeKey: ref.scopeKey,
+})
 
 type AccountContextSnapshot = DisplayAccountApiSnapshot
 
@@ -483,6 +500,10 @@ export function useAccountKeyResourceController({
     : selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
       ? "all"
       : "single"
+  const mutationAnalyticsMode =
+    mode === "all"
+      ? PRODUCT_ANALYTICS_MODE_IDS.All
+      : PRODUCT_ANALYTICS_MODE_IDS.Single
 
   const [scopes, setScopes] = useState<readonly AccountKeyScope[]>([])
   const [selectedScope, setSelectedScope] = useState<AccountKeyScope | null>(
@@ -571,6 +592,13 @@ export function useAccountKeyResourceController({
     Object.values(freshReadLocks).some((boundary) =>
       boundariesMatch(boundary, currentResourceBoundary),
     )
+  const isFreshReadRequiredForBoundary = useCallback(
+    (boundary: ActiveResourceBoundary) =>
+      Object.values(freshReadLocks).some((lockedBoundary) =>
+        boundariesMatch(lockedBoundary, boundary),
+      ),
+    [freshReadLocks],
+  )
   const generation = useRef(0)
   const loadAbort = useRef<AbortController | null>(null)
   const scopeInventoryAbort = useRef<AbortController | null>(null)
@@ -1043,11 +1071,20 @@ export function useAccountKeyResourceController({
               }),
               controller.signal,
             )
-            return await collectAll(
+            const rows = await collectAll(
               collection,
               search.trim(),
               controller.signal,
             )
+            if (current === generation.current && !controller.signal.aborted) {
+              acceptFreshRead({
+                accountId: account.id,
+                siteType: account.siteType,
+                scopeKey: scope.scopeKey,
+                routeKey: scope.routeKey,
+              })
+            }
+            return rows
           }
           const originGroups = groupAccountsByOrigin(activeAccounts)
           const settledGroups = await mapSettledWithConcurrency(
@@ -1479,6 +1516,43 @@ export function useAccountKeyResourceController({
     [mode],
   )
 
+  const isAcceptedResourceRef = useCallback(
+    (ref: AccountKeyResourceRef) =>
+      acceptedRows.some((row) => refIdentity(row.ref) === refIdentity(ref)),
+    [acceptedRows],
+  )
+
+  const resolveResourceActionContext = useCallback(
+    async (
+      ref: AccountKeyResourceRef,
+      controller: AbortController,
+    ): Promise<ResourceActionContext | null> => {
+      if (mode === "single") {
+        const session = sessionRef.current
+        const collection = collectionRef.current
+        const boundary = activeResourceBoundaryRef.current
+        return session && collection && boundary && isCurrentResourceRef(ref)
+          ? { session, collection, boundary }
+          : null
+      }
+      if (mode !== "all" || !isAcceptedResourceRef(ref)) return null
+      const account = accountsRef.current.find(
+        (candidate) =>
+          candidate.id === ref.accountId && candidate.siteType === ref.siteType,
+      )
+      if (!account) return null
+      const boundary = boundaryFromResourceRef(ref)
+      const session = await openSession(account, controller.signal)
+      if (!session) return null
+      const collection = await awaitAbortable(
+        session.openCollection(ref.scopeKey, { signal: controller.signal }),
+        controller.signal,
+      )
+      return { session, collection, boundary }
+    },
+    [isAcceptedResourceRef, isCurrentResourceRef, mode, openSession],
+  )
+
   const rows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
     return acceptedRows.filter((row) => {
@@ -1619,21 +1693,29 @@ export function useAccountKeyResourceController({
       ref?: AccountKeyResourceRef,
       retryAttemptId?: number,
     ) => {
-      const boundary = activeResourceBoundaryRef.current
+      const boundary =
+        editorMode === "edit" && mode === "all" && ref
+          ? boundaryFromResourceRef(ref)
+          : activeResourceBoundaryRef.current
       if (
-        mode !== "single" ||
+        mode === "idle" ||
+        (editorMode === "create" && mode !== "single") ||
         createdSecretRef.current !== null ||
         loadInProgress.current ||
-        freshReadRequired ||
-        !boundary
+        !boundary ||
+        isFreshReadRequiredForBoundary(boundary) ||
+        (editorMode === "edit" &&
+          (!ref ||
+            (mode === "all"
+              ? !isAcceptedResourceRef(ref)
+              : !isCurrentResourceRef(ref))))
       )
         return
       const session = sessionRef.current
       const collection = collectionRef.current
       if (
-        !session ||
-        (editorMode === "edit" &&
-          (!collection || !ref || !isCurrentResourceRef(ref)))
+        (editorMode === "create" && !session) ||
+        (editorMode === "edit" && mode === "single" && !collection)
       )
         return
       const previousOpening = editorOpeningRef.current
@@ -1663,18 +1745,39 @@ export function useAccountKeyResourceController({
       actionAbort.current = controller
       const current = generation.current
       try {
-        const nativeEditor =
-          editorMode === "create"
-            ? await awaitAbortable(
-                session.openCreateEditor(boundary.scopeKey, {
-                  signal: controller.signal,
-                }),
-                controller.signal,
-              )
-            : await awaitAbortable(
-                collection!.openEditEditor(ref!, { signal: controller.signal }),
-                controller.signal,
-              )
+        const actionContext =
+          editorMode === "edit"
+            ? await resolveResourceActionContext(ref!, controller)
+            : null
+        let nativeEditor: AccountKeyResourceEditor
+        if (editorMode === "edit") {
+          if (!actionContext) {
+            throw new AccountKeyResourceError({
+              code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+            })
+          }
+          sessionRef.current = actionContext.session
+          collectionRef.current = actionContext.collection
+          activeResourceBoundaryRef.current = actionContext.boundary
+          nativeEditor = await awaitAbortable(
+            actionContext.collection.openEditEditor(ref!, {
+              signal: controller.signal,
+            }),
+            controller.signal,
+          )
+        } else {
+          if (!session) {
+            throw new AccountKeyResourceError({
+              code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+            })
+          }
+          nativeEditor = await awaitAbortable(
+            session.openCreateEditor(boundary.scopeKey, {
+              signal: controller.signal,
+            }),
+            controller.signal,
+          )
+        }
         if (
           current !== generation.current ||
           editorOpeningRef.current.status !== "loading" ||
@@ -1718,9 +1821,11 @@ export function useAccountKeyResourceController({
     },
     [
       abortEditorFieldLoads,
-      freshReadRequired,
+      isAcceptedResourceRef,
       isCurrentResourceRef,
+      isFreshReadRequiredForBoundary,
       mode,
+      resolveResourceActionContext,
       transitionEditor,
       transitionEditorOpening,
     ],
@@ -1805,7 +1910,8 @@ export function useAccountKeyResourceController({
       const editorBoundary = editorBoundaryRef.current
       const editorVersion = editorGeneration.current
       if (
-        mode !== "single" ||
+        mode === "idle" ||
+        (currentEditorState?.mode === "create" && mode !== "single") ||
         createdSecretRef.current !== null ||
         loadInProgress.current ||
         !nativeEditor ||
@@ -1814,7 +1920,7 @@ export function useAccountKeyResourceController({
         !activeBoundary ||
         !editorBoundary ||
         !boundariesMatch(activeBoundary, editorBoundary) ||
-        freshReadRequired
+        isFreshReadRequiredForBoundary(editorBoundary)
       )
         return
       const validation = nativeEditor.validate(values)
@@ -1881,7 +1987,7 @@ export function useAccountKeyResourceController({
             requireFreshRead(intendedBoundary)
             tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
               insights: {
-                mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+                mode: mutationAnalyticsMode,
                 ...(account
                   ? { siteType: account.siteType as ProductAnalyticsSiteType }
                   : {}),
@@ -1926,7 +2032,7 @@ export function useAccountKeyResourceController({
           if (!accepted) requireFreshRead(returnedBoundary)
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights: {
-              mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+              mode: mutationAnalyticsMode,
               ...(account
                 ? { siteType: account.siteType as ProductAnalyticsSiteType }
                 : {}),
@@ -1949,7 +2055,7 @@ export function useAccountKeyResourceController({
             tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
               errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
               insights: {
-                mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+                mode: mutationAnalyticsMode,
                 ...(account
                   ? { siteType: account.siteType as ProductAnalyticsSiteType }
                   : {}),
@@ -1973,7 +2079,7 @@ export function useAccountKeyResourceController({
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
             insights: {
-              mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+              mode: mutationAnalyticsMode,
               ...(account
                 ? { siteType: account.siteType as ProductAnalyticsSiteType }
                 : {}),
@@ -1995,8 +2101,9 @@ export function useAccountKeyResourceController({
       return run
     },
     [
-      freshReadRequired,
+      isFreshReadRequiredForBoundary,
       mode,
+      mutationAnalyticsMode,
       refreshAfterMutation,
       requireFreshRead,
       routeTransitionInstanceId,
@@ -2009,19 +2116,26 @@ export function useAccountKeyResourceController({
 
   const openDelete = useCallback(
     (ref: AccountKeyResourceRef) => {
+      const boundary = boundaryFromResourceRef(ref)
       if (
-        mode !== "single" ||
+        mode === "idle" ||
         createdSecretRef.current !== null ||
         loadInProgress.current ||
-        freshReadRequired ||
-        !collectionRef.current ||
-        !isCurrentResourceRef(ref)
+        isFreshReadRequiredForBoundary(boundary) ||
+        (mode === "all"
+          ? !isAcceptedResourceRef(ref)
+          : !collectionRef.current || !isCurrentResourceRef(ref))
       )
         return false
       setDeleteState({ isOpen: true, isExecuting: false, ref, failure: null })
       return true
     },
-    [freshReadRequired, isCurrentResourceRef, mode],
+    [
+      isAcceptedResourceRef,
+      isCurrentResourceRef,
+      isFreshReadRequiredForBoundary,
+      mode,
+    ],
   )
 
   const cancelDelete = useCallback(() => {
@@ -2037,17 +2151,22 @@ export function useAccountKeyResourceController({
 
   const confirmDelete = useCallback(async () => {
     if (
-      mode !== "single" ||
+      mode === "idle" ||
       createdSecretRef.current !== null ||
       loadInProgress.current ||
       !deleteState.ref ||
-      !collectionRef.current ||
-      !isCurrentResourceRef(deleteState.ref)
+      (mode === "all"
+        ? !isAcceptedResourceRef(deleteState.ref)
+        : !collectionRef.current || !isCurrentResourceRef(deleteState.ref))
     )
       return
     const current = generation.current
     const ref = deleteState.ref
-    const boundary = activeResourceBoundaryRef.current!
+    const boundary: ActiveResourceBoundary =
+      mode === "all"
+        ? boundaryFromResourceRef(ref)
+        : activeResourceBoundaryRef.current!
+    if (isFreshReadRequiredForBoundary(boundary)) return
     const mutationIdentity = boundaryIdentity(boundary)
     const existingMutation = mutationsByBoundary.current.get(mutationIdentity)
     if (existingMutation) return existingMutation.promise
@@ -2063,14 +2182,26 @@ export function useAccountKeyResourceController({
     const controller = new AbortController()
     actionAbort.current = controller
     setDeleteState((state) => ({ ...state, isExecuting: true, failure: null }))
-    const run = collectionRef.current
-      .delete(ref, { signal: controller.signal })
+    const run = resolveResourceActionContext(ref, controller)
+      .then((actionContext) => {
+        if (!actionContext) {
+          throw new AccountKeyResourceError({
+            code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+          })
+        }
+        sessionRef.current = actionContext.session
+        collectionRef.current = actionContext.collection
+        activeResourceBoundaryRef.current = actionContext.boundary
+        return actionContext.collection.delete(ref, {
+          signal: controller.signal,
+        })
+      })
       .then(async () => {
         if (current !== generation.current) {
           requireFreshRead(boundary)
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights: {
-              mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+              mode: mutationAnalyticsMode,
               ...(account
                 ? { siteType: account.siteType as ProductAnalyticsSiteType }
                 : {}),
@@ -2089,7 +2220,7 @@ export function useAccountKeyResourceController({
         if (!accepted) requireFreshRead(boundary)
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
-            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+            mode: mutationAnalyticsMode,
             ...(account
               ? { siteType: account.siteType as ProductAnalyticsSiteType }
               : {}),
@@ -2108,7 +2239,7 @@ export function useAccountKeyResourceController({
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
             insights: {
-              mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+              mode: mutationAnalyticsMode,
               ...(account
                 ? { siteType: account.siteType as ProductAnalyticsSiteType }
                 : {}),
@@ -2127,7 +2258,7 @@ export function useAccountKeyResourceController({
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
-            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+            mode: mutationAnalyticsMode,
             ...(account
               ? { siteType: account.siteType as ProductAnalyticsSiteType }
               : {}),
@@ -2147,10 +2278,14 @@ export function useAccountKeyResourceController({
     return run
   }, [
     deleteState.ref,
+    isAcceptedResourceRef,
     isCurrentResourceRef,
+    isFreshReadRequiredForBoundary,
     mode,
+    mutationAnalyticsMode,
     refreshAfterMutation,
     requireFreshRead,
+    resolveResourceActionContext,
   ])
 
   const recordCreatedSecretActionResult = useCallback(

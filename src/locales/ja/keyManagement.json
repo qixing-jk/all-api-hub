@@ -463,8 +463,7 @@
     "list": {
       "actions": {
         "delete": "キーを削除",
-        "edit": "キーを編集",
-        "singleAccountOnly": "このキーを編集または削除するには、このアカウントを選択してください"
+        "edit": "キーを編集"
       },
       "details": {
         "byokUsage": "BYOK 使用量",

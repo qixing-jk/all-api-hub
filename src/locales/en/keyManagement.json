@@ -473,8 +473,7 @@
     "list": {
       "actions": {
         "delete": "Delete key",
-        "edit": "Edit key",
-        "singleAccountOnly": "Select this account to edit or delete its key"
+        "edit": "Edit key"
       },
       "details": {
         "byokUsage": "BYOK usage",

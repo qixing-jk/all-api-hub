@@ -2155,6 +2155,134 @@ describe("useAccountKeyResourceController", () => {
     })
   })
 
+  it("edits a native key from all-account mode without changing the selected account", async () => {
+    const facts = {
+      ...createFacts("scope-native", "key-native"),
+      ref: {
+        ...createFacts("scope-native", "key-native").ref,
+        accountId: "account-native",
+      },
+    }
+    const editor = {
+      fields: [],
+      initialValues: { name: "Example key" },
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn().mockResolvedValue({ facts }),
+    }
+    const collection = {
+      list: vi.fn().mockResolvedValue({ items: [facts] }),
+      openEditEditor: vi.fn().mockResolvedValue(editor),
+      delete: vi.fn(),
+    }
+    const openCollection = vi.fn().mockResolvedValue(collection)
+    const openNativeResources = vi.fn().mockResolvedValue({
+      resolveDefaultScope: vi.fn().mockResolvedValue({
+        scopeKey: "scope-native",
+        routeKey: "default",
+        displayName: "Default",
+        isDefault: true,
+      }),
+      openCollection,
+    })
+    mockNativeResourceSession(openNativeResources)
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-native")],
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      }),
+    )
+
+    await waitFor(() => expect(result.current.rows).toEqual([facts]))
+    const unacceptedRef = { ...facts.ref, resourceId: "unaccepted-key" }
+    await act(async () => result.current.openEdit(unacceptedRef))
+    expect(result.current.editor).toBeNull()
+    expect(result.current.openDelete(unacceptedRef)).toBe(false)
+    expect(openNativeResources).toHaveBeenCalledTimes(1)
+
+    await act(async () => result.current.openEdit(facts.ref))
+    expect(result.current.editor?.mode).toBe("edit")
+
+    await act(async () => {
+      await result.current.submitEditor(result.current.editor!.editorId, {
+        name: "Renamed key",
+      })
+    })
+
+    expect(editor.submit).toHaveBeenCalledTimes(1)
+    expect(openCollection).toHaveBeenCalledWith(
+      "scope-native",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
+    expect(collection.list).toHaveBeenCalledTimes(2)
+    expect(result.current.mode).toBe("all")
+    expect(trackCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          selectedCount: 1,
+        }),
+      }),
+    )
+  })
+
+  it("deletes a native key from all-account mode without changing the selected account", async () => {
+    const facts = {
+      ...createFacts("scope-native", "key-native"),
+      ref: {
+        ...createFacts("scope-native", "key-native").ref,
+        accountId: "account-native",
+      },
+    }
+    const collection = {
+      list: vi.fn().mockResolvedValue({ items: [facts] }),
+      openEditEditor: vi.fn(),
+      delete: vi.fn().mockResolvedValue(undefined),
+    }
+    const openCollection = vi.fn().mockResolvedValue(collection)
+    const openNativeResources = vi.fn().mockResolvedValue({
+      resolveDefaultScope: vi.fn().mockResolvedValue({
+        scopeKey: "scope-native",
+        routeKey: "default",
+        displayName: "Default",
+        isDefault: true,
+      }),
+      openCollection,
+    })
+    mockNativeResourceSession(openNativeResources)
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-native")],
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      }),
+    )
+
+    await waitFor(() => expect(result.current.rows).toEqual([facts]))
+    let opened = false
+    act(() => {
+      opened = result.current.openDelete(facts.ref)
+    })
+    expect(opened).toBe(true)
+    await waitFor(() => expect(result.current.deleteState.isOpen).toBe(true))
+    await act(async () => result.current.confirmDelete())
+
+    expect(collection.delete).toHaveBeenCalledWith(
+      facts.ref,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
+    expect(collection.list).toHaveBeenCalledTimes(2)
+    expect(result.current.mode).toBe("all")
+    expect(trackCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          selectedCount: 1,
+        }),
+      }),
+    )
+  })
+
   it("drains cursors and applies controlled search and status filters", async () => {
     const first = createFacts("workspace-default-id", "key-first")
     const second = {

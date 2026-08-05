@@ -483,8 +483,7 @@
     "list": {
       "actions": {
         "delete": "Excluir chave",
-        "edit": "Editar chave",
-        "singleAccountOnly": "Selecione esta conta para editar ou excluir a chave"
+        "edit": "Editar chave"
       },
       "details": {
         "byokUsage": "Uso de BYOK",

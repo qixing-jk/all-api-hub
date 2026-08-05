@@ -994,7 +994,7 @@ export default function KeyManagement(props: {
         nativeDetailLoading={nativeKeys.isDetailLoading}
         nativeDetailFailure={nativeKeys.detailFailure}
         onCloseNativeDetail={nativeKeys.closeDetail}
-        nativeActionsDisabled={
+        nativeDetailsFromRows={
           selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
         }
         onOpenNativeDetail={(ref) => void nativeKeys.openDetail(ref)}
