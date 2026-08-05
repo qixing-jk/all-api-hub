@@ -16,12 +16,16 @@ import {
   type ResourceOperationOptions,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
+import {
+  assertNativeResourceFacts,
+  createNativeEditorSubmitGate,
+  createNativeResourceRefBoundary,
+  isNativeResourceBoundaryError,
+  resolveNativeResourceMutation,
+} from "~/services/apiAdapters/nativeResources/factory"
 
-export type NativeResourceMutationResult<T, TFailure> =
-  | { certainty: "applied"; value: T }
-  | { certainty: "not-applied"; failure: TFailure }
-  | { certainty: "possibly-applied" }
-  | { certainty: "partially-applied" }
+export type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
 
 export type NativeResourcePage<TItem> = {
   items: readonly TItem[]
@@ -133,58 +137,6 @@ const mapOperationFailure = async <T>(
   }
 }
 
-const toPublicMutation = async <T, TFailure>(
-  operation: () => Promise<NativeResourceMutationResult<T, TFailure>>,
-  mapFailure: (failure: TFailure) => ResourceFailure,
-): Promise<T> => {
-  const result = await operation()
-  if (result.certainty === "applied") return result.value
-  if (result.certainty === "not-applied") {
-    throw new ManagedResourceError(mapFailure(result.failure))
-  }
-  throw new ManagedResourceError({
-    code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-  })
-}
-
-const refsMatch = (
-  actualRef: ManagedResourceRef,
-  expectedRef: ManagedResourceRef,
-) =>
-  actualRef.siteType === expectedRef.siteType &&
-  actualRef.kind === expectedRef.kind &&
-  actualRef.scopeKey === expectedRef.scopeKey &&
-  actualRef.resourceId === expectedRef.resourceId
-
-const assertValidFacts = (
-  facts: ResourceDisplayFacts,
-  expectedRef: ManagedResourceRef,
-) => {
-  if (!refsMatch(facts.ref, expectedRef)) {
-    throw unexpectedDefinitionOutput()
-  }
-
-  if (
-    facts.searchValues !== undefined &&
-    (!Array.isArray(facts.searchValues) ||
-      facts.searchValues.some((value) => typeof value !== "string"))
-  ) {
-    throw unexpectedDefinitionOutput()
-  }
-
-  const fieldIds = new Set<string>()
-  for (const field of facts.fields) {
-    if (fieldIds.has(field.fieldId)) throw unexpectedDefinitionOutput()
-    fieldIds.add(field.fieldId)
-  }
-  return facts
-}
-
-const isValidResourceId = (resourceId: unknown): resourceId is string =>
-  typeof resourceId === "string" &&
-  resourceId.length > 0 &&
-  resourceId.length <= 512
-
 /** Creates a public managed-resource registration from a correlated native Adapter definition. */
 export function defineNativeResourceKind<
   TConfig,
@@ -222,37 +174,44 @@ export function defineNativeResourceKind<
           throw unexpectedDefinitionOutput()
         }
 
-        const createRef = (locator: TLocator): ManagedResourceRef => {
-          const resourceId = definition.encodeLocator(locator)
-          if (!isValidResourceId(resourceId)) throw unexpectedDefinitionOutput()
-          return {
+        const refBoundary = createNativeResourceRefBoundary<
+          ManagedResourceRef,
+          TLocator
+        >({
+          scopeKey,
+          encodeLocator: definition.encodeLocator,
+          decodeLocator: definition.decodeLocator,
+          buildRef: (resourceId) => ({
             siteType: definition.siteType,
             kind: definition.kind,
             scopeKey,
             resourceId,
-          }
-        }
-
-        const decodeRef = (candidate: unknown) => {
-          if (
-            !isManagedResourceRefFor(candidate, {
+          }),
+          matchesRef: (value): value is ManagedResourceRef =>
+            isManagedResourceRefFor(value, {
               siteType: definition.siteType,
               kind: definition.kind,
               scopeKey,
-            })
-          ) {
-            throw invalidPublicInput()
+            }),
+        })
+        const createRef = (locator: TLocator): ManagedResourceRef => {
+          try {
+            return refBoundary.createRef(locator)
+          } catch (error) {
+            if (isNativeResourceBoundaryError(error)) {
+              throw unexpectedDefinitionOutput()
+            }
+            throw error
           }
-
-          const canonicalRef: ManagedResourceRef = {
-            siteType: definition.siteType,
-            kind: definition.kind,
-            scopeKey,
-            resourceId: candidate.resourceId,
-          }
-          return {
-            ref: canonicalRef,
-            locator: definition.decodeLocator(canonicalRef.resourceId),
+        }
+        const decodeRef = (candidate: unknown) => {
+          try {
+            return refBoundary.decodeRef(candidate)
+          } catch (error) {
+            if (isNativeResourceBoundaryError(error)) {
+              throw invalidPublicInput()
+            }
+            throw error
           }
         }
 
@@ -263,7 +222,7 @@ export function defineNativeResourceKind<
           detail: TDetail,
           expectedRef: ManagedResourceRef,
         ) => {
-          if (!refsMatch(refFromDetail(detail), expectedRef)) {
+          if (!refBoundary.refsMatch(refFromDetail(detail), expectedRef)) {
             throw unexpectedDefinitionOutput()
           }
         }
@@ -280,7 +239,18 @@ export function defineNativeResourceKind<
 
         const projectCreatedDetail = (detail: TDetail) => {
           const ref = refFromDetail(detail)
-          return assertValidFacts(definition.toDetailFacts(detail, ref), ref)
+          try {
+            return assertNativeResourceFacts(
+              definition.toDetailFacts(detail, ref),
+              ref,
+              refBoundary.refsMatch,
+            )
+          } catch (error) {
+            if (isNativeResourceBoundaryError(error)) {
+              throw unexpectedDefinitionOutput()
+            }
+            throw error
+          }
         }
 
         const projectDetailAtRef = (
@@ -288,10 +258,18 @@ export function defineNativeResourceKind<
           expectedRef: ManagedResourceRef,
         ) => {
           assertDetailIdentity(detail, expectedRef)
-          return assertValidFacts(
-            definition.toDetailFacts(detail, expectedRef),
-            expectedRef,
-          )
+          try {
+            return assertNativeResourceFacts(
+              definition.toDetailFacts(detail, expectedRef),
+              expectedRef,
+              refBoundary.refsMatch,
+            )
+          } catch (error) {
+            if (isNativeResourceBoundaryError(error)) {
+              throw unexpectedDefinitionOutput()
+            }
+            throw error
+          }
         }
 
         const createEditor = <TCommand>(
@@ -302,9 +280,6 @@ export function defineNativeResourceKind<
           ) => Promise<NativeResourceMutationResult<TDetail, TFailure>>,
           projectResult: (detail: TDetail) => ResourceDisplayFacts,
         ): ResourceEditor => {
-          let closed = false
-          let inflight: Promise<ResourceDisplayFacts> | undefined
-
           const validate = (values: EditableResourceProjection) => {
             try {
               return editorDefinition.validate(values)
@@ -313,45 +288,62 @@ export function defineNativeResourceKind<
             }
           }
 
+          const submitGate = createNativeEditorSubmitGate({
+            validate: (values: EditableResourceProjection) => {
+              const validation = validate(values)
+              if (!validation.valid) throw invalidPublicInput(validation.issues)
+            },
+            buildCommand: (values: EditableResourceProjection) => {
+              try {
+                return editorDefinition.buildCommand(values)
+              } catch (error) {
+                throw toManagedError(error, mapFailure)
+              }
+            },
+            mutate: (command: TCommand, submitOptions) =>
+              mapOperationFailure(
+                () => mutate(command, submitOptions),
+                mapFailure,
+              ),
+            resolve: (result) => {
+              try {
+                const resolution = resolveNativeResourceMutation(result)
+                if (resolution.status === "applied") {
+                  try {
+                    return projectResult(resolution.value)
+                  } catch (error) {
+                    throw toManagedError(error, mapFailure)
+                  }
+                }
+                if (resolution.status === "not-applied") {
+                  throw new ManagedResourceError(mapFailure(resolution.failure))
+                }
+                throw new ManagedResourceError({
+                  code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+                })
+              } catch (error) {
+                throw toManagedError(error, mapFailure)
+              }
+            },
+            normalizeError: (error) =>
+              isNativeResourceBoundaryError(error)
+                ? unexpectedDefinitionOutput()
+                : toManagedError(error, mapFailure),
+            shouldCloseAfterError: (error) => {
+              const managedError = toManagedError(error, mapFailure)
+              return (
+                managedError.failure.code ===
+                  MANAGED_RESOURCE_FAILURE_CODES.NotFound ||
+                managedError.failure.code ===
+                  MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain
+              )
+            },
+            closedError: () => invalidPublicInput(),
+          })
           const submit = (
             values: EditableResourceProjection,
             submitOptions?: ResourceOperationOptions,
-          ) => {
-            if (inflight !== undefined) return inflight
-            if (closed) return Promise.reject(invalidPublicInput())
-
-            const run = mapOperationFailure(async () => {
-              const validation = validate(values)
-              if (!validation.valid) throw invalidPublicInput(validation.issues)
-              const command = editorDefinition.buildCommand(values)
-              let detail: TDetail
-              try {
-                detail = await toPublicMutation(async () => {
-                  const result = await mutate(command, submitOptions)
-                  if (result.certainty !== "not-applied") closed = true
-                  return result
-                }, mapFailure)
-              } catch (error) {
-                const managedError = toManagedError(error, mapFailure)
-                if (
-                  managedError.failure.code ===
-                    MANAGED_RESOURCE_FAILURE_CODES.NotFound ||
-                  managedError.failure.code ===
-                    MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain
-                ) {
-                  closed = true
-                }
-                throw managedError
-              }
-              return projectResult(detail)
-            }, mapFailure)
-
-            const tracked = run.finally(() => {
-              if (inflight === tracked) inflight = undefined
-            })
-            inflight = tracked
-            return tracked
-          }
+          ) => submitGate.submit(values, submitOptions)
 
           return {
             fields: editorDefinition.fields,
@@ -389,10 +381,18 @@ export function defineNativeResourceKind<
                   const page = await definition.list(config, query, listOptions)
                   const items = page.items.map((item) => {
                     const ref = createRef(definition.locatorFromListItem(item))
-                    return assertValidFacts(
-                      definition.toListFacts(item, ref),
-                      ref,
-                    )
+                    try {
+                      return assertNativeResourceFacts(
+                        definition.toListFacts(item, ref),
+                        ref,
+                        refBoundary.refsMatch,
+                      )
+                    } catch (error) {
+                      if (isNativeResourceBoundaryError(error)) {
+                        throw unexpectedDefinitionOutput()
+                      }
+                      throw error
+                    }
                   })
                   return {
                     items,
@@ -408,10 +408,18 @@ export function defineNativeResourceKind<
                 ref,
                 getOptions,
               )
-              return assertValidFacts(
-                definition.toDetailFacts(detail, canonicalRef),
-                canonicalRef,
-              )
+              try {
+                return assertNativeResourceFacts(
+                  definition.toDetailFacts(detail, canonicalRef),
+                  canonicalRef,
+                  refBoundary.refsMatch,
+                )
+              } catch (error) {
+                if (isNativeResourceBoundaryError(error)) {
+                  throw unexpectedDefinitionOutput()
+                }
+                throw error
+              }
             }, mapFailure),
           openCreateEditor: (editorOptions) =>
             !capabilities.canCreate
@@ -468,15 +476,22 @@ export function defineNativeResourceKind<
               : mapOperationFailure(async () => {
                   const { locator } = decodeRef(ref)
                   try {
-                    await mapOperationFailure(
-                      () =>
-                        toPublicMutation(
-                          () =>
-                            definition.delete(config, locator, deleteOptions),
-                          mapFailure,
-                        ),
-                      mapFailure,
+                    const resolution = resolveNativeResourceMutation(
+                      await mapOperationFailure(
+                        () => definition.delete(config, locator, deleteOptions),
+                        mapFailure,
+                      ),
                     )
+                    if (resolution.status === "not-applied") {
+                      throw new ManagedResourceError(
+                        mapFailure(resolution.failure),
+                      )
+                    }
+                    if (resolution.status === "uncertain") {
+                      throw new ManagedResourceError({
+                        code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+                      })
+                    }
                   } catch (error) {
                     if (
                       error instanceof ManagedResourceError &&

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { mapSettledWithConcurrency } from "~/features/ManagedSiteChannels/controllers/managedResourceConcurrency"
+import { mapSettledWithConcurrency as mapNativeSettledWithConcurrency } from "~/services/apiAdapters/nativeResources/concurrency"
 
 const createDeferred = <T>() => {
   let resolve!: (value: T) => void
@@ -13,6 +14,10 @@ const createDeferred = <T>() => {
 }
 
 describe("mapSettledWithConcurrency", () => {
+  it("keeps the managed-site import as a compatibility re-export", () => {
+    expect(mapSettledWithConcurrency).toBe(mapNativeSettledWithConcurrency)
+  })
+
   it("caps concurrency and preserves input order when work settles out of order", async () => {
     const deferredByItem = new Map<
       number,

@@ -29,6 +29,7 @@ import {
   type ResourceSecretState,
   type SecretEditIntent,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   axonHubManagedResourceRegistration,
   AxonHubNativeError,
@@ -358,6 +359,17 @@ const buildMigrationCreateCommand = async (source = buildMigrationSource()) => {
 }
 
 describe("AxonHub native managed-resource Adapter", () => {
+  it("keeps existing AxonHub editor descriptors compatible with neutral field types", async () => {
+    const workspace = await axonHubManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
+
+    expect(
+      editor.fields.every((field) =>
+        Object.values(RESOURCE_FIELD_TYPES).includes(field.type),
+      ),
+    ).toBe(true)
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     const preferences = { marker: "saved-preferences" }

@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import {
   AXON_HUB_CHANNEL_FIELD_IDS,
@@ -13,7 +13,9 @@ import {
   defineManagedResourceFieldPolicy,
   getManagedResourceFieldOptionLabel,
   getManagedResourceFieldPolicy,
+  MANAGED_RESOURCE_SECTION_ORDER,
   resolveManagedResourceFieldPolicy,
+  type ManagedResourceFieldPresentation,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import es419ManagedSiteChannels from "~/locales/es-419/managedSiteChannels.json"
@@ -114,6 +116,14 @@ const resolveLocaleValue = (locale: Record<string, unknown>, key: string) =>
 const resolveKey = ((key: string) => key) as TFunction
 
 describe("managed resource field policy", () => {
+  it("delegates stable section ordering to the neutral resource policy", () => {
+    expect(MANAGED_RESOURCE_SECTION_ORDER).toMatchObject({
+      basic: 0,
+      connection: 1,
+      advanced: 6,
+    })
+  })
+
   it("resolves field copy at the presentation boundary", () => {
     const policy = getManagedResourceFieldPolicy(
       SITE_TYPES.AXON_HUB,
@@ -387,6 +397,28 @@ describe("managed resource field policy", () => {
         ),
       ).toBe(statusField.resolveOptionFallback?.(resolveKey))
     }
+  })
+
+  it("preserves an owned option label that intentionally equals its raw value", () => {
+    const resolver = vi.fn(() => "provider-id")
+    const presentation: ManagedResourceFieldPresentation = {
+      fieldId: "provider",
+      section: "basic",
+      order: 10,
+      renderer: "select",
+      resolveLabel: () => "Provider",
+      optionLabelResolvers: { "provider-id": resolver },
+      resolveOptionFallback: () => "Unknown provider",
+    }
+
+    expect(
+      getManagedResourceFieldOptionLabel(
+        presentation,
+        "provider-id",
+        resolveKey,
+      ),
+    ).toBe("provider-id")
+    expect(resolver).toHaveBeenCalledTimes(1)
   })
 
   it("provides every controlled option and fallback label in all six locales", () => {

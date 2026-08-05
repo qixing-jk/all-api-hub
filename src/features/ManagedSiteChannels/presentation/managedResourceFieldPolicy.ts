@@ -8,14 +8,18 @@ import {
 } from "~/constants/axonHub"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
+  defineResourceEditorFieldPolicy,
+  resolveResourceFieldPolicy,
+  type ResourceEditorFieldPolicy,
+  type ResourceFieldHiddenField,
+  type ResourceFieldPresentation,
+  type ResourceFieldTextResolver,
+} from "~/features/ResourceEditor/resourceFieldPolicy"
+import {
   MANAGED_RESOURCE_KINDS,
   type ManagedResourceKind,
 } from "~/services/accountSiteDefinitions/contracts"
-import type {
-  EditableResourceProjection,
-  ResourceFieldDescriptor,
-  ResourceFieldIssue,
-} from "~/services/apiAdapters/contracts/managedResourceNative"
+import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/managedResourceNative"
 
 export const MANAGED_RESOURCE_EDITOR_MODES = {
   Create: "create",
@@ -55,42 +59,16 @@ export const MANAGED_RESOURCE_FIELD_RENDERERS = {
   Select: "select",
   MultiSelect: "multi-select",
   Secret: "secret",
+  DateTime: "date-time",
 } as const
 
-export type ManagedResourceFieldRenderer =
-  (typeof MANAGED_RESOURCE_FIELD_RENDERERS)[keyof typeof MANAGED_RESOURCE_FIELD_RENDERERS]
-
-export type ManagedResourceFieldPresentation = {
-  fieldId: string
-  section: ManagedResourceSection
-  order: number
-  resolveLabel: ManagedResourceTextResolver
-  resolveHelp?: ManagedResourceTextResolver
-  resolvePlaceholder?: ManagedResourceTextResolver
-  rows?: number
-  optionLabelResolvers?: Readonly<Record<string, ManagedResourceTextResolver>>
-  resolveOptionFallback?: ManagedResourceTextResolver
-  optionSourceFieldIds?: readonly string[]
-  customValuesMirrorFieldId?: string
-  autoSelectFirstOption?: boolean
-  issueLabelResolvers?: Partial<
-    Record<ResourceFieldIssue["code"], ManagedResourceTextResolver>
-  >
-  renderer: ManagedResourceFieldRenderer
-  visibleWhen?: (values: EditableResourceProjection) => boolean
-}
-
-export type ManagedResourceTextResolver = (t: TFunction) => string
-
-export type ManagedResourceHiddenField = {
-  fieldId: string
-  reason: "deferred" | "read-only" | "unsupported"
-}
-
-export type ManagedResourceEditorFieldPolicy = {
-  fields: readonly ManagedResourceFieldPresentation[]
-  hiddenFields: readonly ManagedResourceHiddenField[]
-}
+export type ManagedResourceFieldRenderer = ResourceFieldDescriptor["type"]
+export type ManagedResourceFieldPresentation =
+  ResourceFieldPresentation<ManagedResourceSection>
+export type ManagedResourceTextResolver = ResourceFieldTextResolver
+export type ManagedResourceHiddenField = ResourceFieldHiddenField
+export type ManagedResourceEditorFieldPolicy =
+  ResourceEditorFieldPolicy<ManagedResourceSection>
 
 type ManagedResourceFieldPolicyDefinition = {
   siteType: ManagedSiteType
@@ -100,7 +78,9 @@ type ManagedResourceFieldPolicyDefinition = {
   >
 }
 
-const sectionOrder: Readonly<Record<ManagedResourceSection, number>> = {
+export const MANAGED_RESOURCE_SECTION_ORDER: Readonly<
+  Record<ManagedResourceSection, number>
+> = {
   basic: 0,
   connection: 1,
   models: 2,
@@ -110,73 +90,12 @@ const sectionOrder: Readonly<Record<ManagedResourceSection, number>> = {
   advanced: 6,
 }
 
-const rendererValues = new Set<string>(
-  Object.values(MANAGED_RESOURCE_FIELD_RENDERERS),
-)
-const sectionValues = new Set<string>(Object.values(MANAGED_RESOURCE_SECTIONS))
-
-const assertModePolicy = (policy: ManagedResourceEditorFieldPolicy) => {
-  const classified = new Set<string>()
-  for (const field of policy.fields) {
-    if (
-      !field.fieldId ||
-      classified.has(field.fieldId) ||
-      !sectionValues.has(field.section) ||
-      !rendererValues.has(field.renderer) ||
-      !Number.isFinite(field.order)
-    ) {
-      throw new Error("invalid managed resource field policy")
-    }
-    if (
-      field.rows !== undefined &&
-      (field.renderer !== MANAGED_RESOURCE_FIELD_RENDERERS.Textarea ||
-        !Number.isInteger(field.rows) ||
-        field.rows < 2 ||
-        field.rows > 12)
-    ) {
-      throw new Error("invalid managed resource field policy")
-    }
-    if (field.optionSourceFieldIds !== undefined) {
-      if (
-        field.renderer !== MANAGED_RESOURCE_FIELD_RENDERERS.Select ||
-        field.optionSourceFieldIds.length === 0 ||
-        field.optionSourceFieldIds.some((fieldId) => !fieldId) ||
-        new Set(field.optionSourceFieldIds).size !==
-          field.optionSourceFieldIds.length
-      ) {
-        throw new Error("invalid managed resource field policy")
-      }
-    }
-    if (
-      field.customValuesMirrorFieldId !== undefined &&
-      (field.renderer !== MANAGED_RESOURCE_FIELD_RENDERERS.MultiSelect ||
-        !field.customValuesMirrorFieldId ||
-        field.customValuesMirrorFieldId === field.fieldId)
-    ) {
-      throw new Error("invalid managed resource field policy")
-    }
-    if (
-      field.autoSelectFirstOption &&
-      (!field.optionSourceFieldIds || field.optionSourceFieldIds.length === 0)
-    ) {
-      throw new Error("invalid managed resource field policy")
-    }
-    classified.add(field.fieldId)
-  }
-  for (const field of policy.hiddenFields) {
-    if (!field.fieldId || classified.has(field.fieldId)) {
-      throw new Error("invalid managed resource field policy")
-    }
-    classified.add(field.fieldId)
-  }
-}
-
 /** Defines static frontend-owned presentation without accepting Adapter layout metadata. */
 export function defineManagedResourceFieldPolicy<
   TDefinition extends ManagedResourceFieldPolicyDefinition,
 >(definition: TDefinition): TDefinition {
-  assertModePolicy(definition.modes.create)
-  assertModePolicy(definition.modes.edit)
+  defineResourceEditorFieldPolicy(definition.modes.create)
+  defineResourceEditorFieldPolicy(definition.modes.edit)
   return definition
 }
 
@@ -449,42 +368,21 @@ export function resolveManagedResourceFieldPolicy(
   descriptors: readonly ResourceFieldDescriptor[],
   policy: ManagedResourceEditorFieldPolicy,
 ) {
-  assertModePolicy(policy)
-  const descriptorsByFieldId = new Map(
-    descriptors.map((descriptor) => [descriptor.fieldId, descriptor]),
-  )
-  if (descriptorsByFieldId.size !== descriptors.length) {
-    throw new Error("invalid managed resource field descriptors")
-  }
-  const classifiedFieldIds = new Set([
-    ...policy.fields.map((field) => field.fieldId),
-    ...policy.hiddenFields.map((field) => field.fieldId),
-  ])
-  if (
-    classifiedFieldIds.size !== descriptors.length ||
-    [...classifiedFieldIds].some(
-      (fieldId) => !descriptorsByFieldId.has(fieldId),
+  try {
+    return resolveResourceFieldPolicy(
+      descriptors,
+      policy,
+      MANAGED_RESOURCE_SECTION_ORDER,
     )
-  ) {
-    throw new Error("managed resource field policy mismatch")
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "resource field policy mismatch"
+    ) {
+      throw new Error("managed resource field policy mismatch")
+    }
+    throw error
   }
-
-  const fields = policy.fields
-    .map((presentation) => {
-      const descriptor = descriptorsByFieldId.get(presentation.fieldId)
-      if (!descriptor || descriptor.type !== presentation.renderer) {
-        throw new Error("managed resource field renderer mismatch")
-      }
-      return { descriptor, presentation }
-    })
-    .sort(
-      (first, second) =>
-        sectionOrder[first.presentation.section] -
-          sectionOrder[second.presentation.section] ||
-        first.presentation.order - second.presentation.order,
-    )
-
-  return { fields, hiddenFields: policy.hiddenFields }
 }
 
 export const getManagedResourceFieldOptionLabel = (
@@ -492,14 +390,15 @@ export const getManagedResourceFieldOptionLabel = (
   value: string,
   t: TFunction,
 ) => {
-  const optionLabelResolvers = presentation.optionLabelResolvers
-  if (
-    optionLabelResolvers &&
-    Object.prototype.hasOwnProperty.call(optionLabelResolvers, value)
-  ) {
-    return optionLabelResolvers[value](t)
-  }
-  return presentation.resolveOptionFallback
-    ? presentation.resolveOptionFallback(t)
+  const resolver =
+    presentation.optionLabelResolvers &&
+    Object.prototype.hasOwnProperty.call(
+      presentation.optionLabelResolvers,
+      value,
+    )
+      ? presentation.optionLabelResolvers[value]
+      : presentation.resolveOptionFallback
+  return resolver
+    ? resolver(t)
     : MANAGED_RESOURCE_UNKNOWN_OPTION_LABEL_RESOLVER(t)
 }

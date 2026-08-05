@@ -460,6 +460,13 @@ describe("ManagedResourceEditorBody", () => {
     expect(onSubmit).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps AxonHub channel controls in the managed wrapper", () => {
+    render(<NativeEditorHarness />)
+
+    expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)).toBeVisible()
+    expect(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)).toBeVisible()
+  })
+
   it("keeps native View facts in the shared read-only detail body", () => {
     render(
       <ManagedSiteChannelDetailView

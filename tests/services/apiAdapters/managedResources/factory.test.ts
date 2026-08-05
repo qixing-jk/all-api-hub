@@ -13,6 +13,7 @@ import {
   type ResourceEditor,
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   defineNativeResourceKind,
   type NativeResourceKindDefinition,
@@ -243,6 +244,15 @@ const captureManagedError = async (promise: Promise<unknown>) => {
 }
 
 describe("defineNativeResourceKind", () => {
+  it("keeps unchanged managed editor descriptors compatible with neutral contracts", async () => {
+    const { registration } = createHarness()
+    const editor = await (await registration.open()).openCreateEditor()
+
+    expect(editor.fields).toEqual([
+      { fieldId: "name", type: RESOURCE_FIELD_TYPES.Text, required: true },
+    ])
+  })
+
   it("opens a ready workspace without exposing native config or detail types", async () => {
     const { registration } = createHarness()
     const publicRegistration: ManagedResourceRegistration = registration
@@ -535,6 +545,44 @@ describe("defineNativeResourceKind", () => {
     expect(error.failure.code).toBe(MANAGED_RESOURCE_FAILURE_CODES.Unexpected)
   })
 
+  it("preserves provider boundary failures for the definition failure mapper", async () => {
+    const encodeFailure = createHarness({
+      encodeLocator: vi.fn(() => {
+        throw "denied"
+      }),
+    })
+    const decodeFailure = createHarness({
+      decodeLocator: vi.fn(() => {
+        throw "denied"
+      }),
+    })
+    const projectionFailure = createHarness({
+      toListFacts: vi.fn(() => {
+        throw "denied"
+      }),
+    })
+
+    const encodeError = await captureManagedError(
+      (await encodeFailure.registration.open()).list(),
+    )
+    const decodeError = await captureManagedError(
+      (await decodeFailure.registration.open()).get(toRef()),
+    )
+    const projectionError = await captureManagedError(
+      (await projectionFailure.registration.open()).list(),
+    )
+
+    expect(encodeError.failure.code).toBe(
+      MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+    )
+    expect(decodeError.failure.code).toBe(
+      MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+    )
+    expect(projectionError.failure.code).toBe(
+      MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+    )
+  })
+
   it("rejects get details whose native identity differs from the requested ref", async () => {
     const { definition, registration } = createHarness({
       get: vi.fn(async () => OTHER_DETAIL),
@@ -736,6 +784,105 @@ describe("defineNativeResourceKind", () => {
       thrownEditor.submit({ name: "Do not replay uncertain create" }),
     )
     expect(thrownCreate).toHaveBeenCalledTimes(1)
+  })
+
+  it("normalizes resolver failures and keeps definite rejections retryable", async () => {
+    const mapperThrowingCreate = vi
+      .fn<TestDefinition["create"]>()
+      .mockResolvedValueOnce({
+        certainty: "not-applied",
+        failure: "mapper-throws",
+      } as unknown as NativeResourceMutationResult<TestDetail, TestFailure>)
+      .mockResolvedValueOnce({ certainty: "applied", value: TEST_DETAIL })
+    const mapperThrowingHarness = createHarness({
+      create: mapperThrowingCreate,
+      mapFailure: vi.fn((error) => {
+        if (error === "mapper-throws") throw new Error("mapper failure")
+        return mapTestFailure(error)
+      }),
+    })
+    const mapperThrowingEditor = await (
+      await mapperThrowingHarness.registration.open()
+    ).openCreateEditor()
+
+    expect(
+      (
+        await captureManagedError(
+          mapperThrowingEditor.submit({ name: "First attempt" }),
+        )
+      ).failure.code,
+    ).toBe(MANAGED_RESOURCE_FAILURE_CODES.Unexpected)
+    await expect(
+      mapperThrowingEditor.submit({ name: "Retry" }),
+    ).resolves.toMatchObject({ displayName: TEST_DETAIL.name })
+    expect(mapperThrowingCreate).toHaveBeenCalledTimes(2)
+
+    const malformedResults = [
+      null,
+      { certainty: "not-a-valid-certainty" },
+      {
+        get certainty() {
+          throw new Error("malformed certainty")
+        },
+      },
+    ] as const
+
+    for (const malformedResult of malformedResults) {
+      const malformedCreate = vi
+        .fn<TestDefinition["create"]>()
+        .mockResolvedValueOnce(
+          malformedResult as unknown as NativeResourceMutationResult<
+            TestDetail,
+            TestFailure
+          >,
+        )
+        .mockResolvedValueOnce({ certainty: "applied", value: TEST_DETAIL })
+      const malformedHarness = createHarness({ create: malformedCreate })
+      const malformedEditor = await (
+        await malformedHarness.registration.open()
+      ).openCreateEditor()
+      const first = malformedEditor.submit({ name: "Malformed" })
+      const concurrent = malformedEditor.submit({ name: "Concurrent" })
+
+      expect(first).toBe(concurrent)
+      expect((await captureManagedError(first)).failure.code).toBe(
+        MANAGED_RESOURCE_FAILURE_CODES.Unexpected,
+      )
+      await expect(
+        malformedEditor.submit({ name: "Retry" }),
+      ).resolves.toMatchObject({
+        displayName: TEST_DETAIL.name,
+      })
+      expect(malformedCreate).toHaveBeenCalledTimes(2)
+    }
+  })
+
+  it("keeps malformed mutation results unexpected when a provider mapper disagrees", async () => {
+    const create = vi
+      .fn<TestDefinition["create"]>()
+      .mockResolvedValueOnce(
+        null as unknown as NativeResourceMutationResult<
+          TestDetail,
+          TestFailure
+        >,
+      )
+      .mockResolvedValueOnce({ certainty: "applied", value: TEST_DETAIL })
+    const { registration } = createHarness({
+      create,
+      mapFailure: vi.fn(() => ({
+        code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+      })),
+    })
+    const editor = await (await registration.open()).openCreateEditor()
+
+    expect(
+      (await captureManagedError(editor.submit({ name: "Malformed" }))).failure
+        .code,
+    ).toBe(MANAGED_RESOURCE_FAILURE_CODES.Unexpected)
+    await expect(editor.submit({ name: "Retry" })).resolves.toMatchObject({
+      displayName: TEST_DETAIL.name,
+    })
+    expect(create).toHaveBeenCalledTimes(2)
   })
 
   it("treats deletion of an already-missing resource as success", async () => {

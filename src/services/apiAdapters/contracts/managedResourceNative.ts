@@ -1,44 +1,36 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
+import {
+  type EditableResourceProjection,
+  type ResourceDisplayFact,
+  type ResourceFailure,
+  type ResourceFieldDescriptor,
+  type ResourceListQuery,
+  type ResourceOperationOptions,
+  type ResourceValidationResult,
+} from "~/services/apiAdapters/contracts/resourceNative"
 
-export const MANAGED_RESOURCE_FIELD_TYPES = {
-  Text: "text",
-  Textarea: "textarea",
-  Number: "number",
-  Boolean: "boolean",
-  Select: "select",
-  MultiSelect: "multi-select",
-  Secret: "secret",
-} as const
-
-export const MANAGED_RESOURCE_FAILURE_CODES = {
-  ConfigurationRequired: "configuration_required",
-  InvalidConfiguration: "invalid_configuration",
-  AuthenticationFailed: "authentication_failed",
-  PermissionDenied: "permission_denied",
-  ValidationFailed: "validation_failed",
-  NotFound: "not_found",
-  MutationStateUncertain: "mutation_state_uncertain",
-  Unavailable: "unavailable",
-  UpstreamRejected: "upstream_rejected",
-  Aborted: "aborted",
-  Unexpected: "unexpected",
-} as const
-
-export const MANAGED_RESOURCE_FIELD_ISSUE_CODES = {
-  Required: "required",
-  InvalidValue: "invalid_value",
-  OutOfRange: "out_of_range",
-  UnsupportedOption: "unsupported_option",
-  InconsistentValue: "inconsistent_value",
-} as const
-
-export const MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS = {
-  MultipleCredentials: "multiple_credentials",
-} as const
-
-export type ResourceSecretReplacementBlockReason =
-  (typeof MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS)[keyof typeof MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS]
+export {
+  RESOURCE_FAILURE_CODES as MANAGED_RESOURCE_FAILURE_CODES,
+  RESOURCE_FIELD_ISSUE_CODES as MANAGED_RESOURCE_FIELD_ISSUE_CODES,
+  RESOURCE_FIELD_TYPES as MANAGED_RESOURCE_FIELD_TYPES,
+  RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS as MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS,
+} from "~/services/apiAdapters/contracts/resourceNative"
+export type {
+  EditableResourceProjection,
+  ResourceDisplayFact,
+  ResourceFailure,
+  ResourceFieldDescriptor,
+  ResourceFieldIssue,
+  ResourceFieldOption,
+  ResourceFieldValue,
+  ResourceListQuery,
+  ResourceOperationOptions,
+  ResourceSecretReplacementBlockReason,
+  ResourceSecretState,
+  ResourceValidationResult,
+  SecretEditIntent,
+} from "~/services/apiAdapters/contracts/resourceNative"
 
 export type ManagedResourceRef = {
   siteType: ManagedSiteType
@@ -79,14 +71,6 @@ export const isManagedResourceRefFor = (
   value.kind === expected.kind &&
   (expected.scopeKey === undefined || value.scopeKey === expected.scopeKey)
 
-export type ResourceOperationOptions = { signal?: AbortSignal }
-
-export type ResourceListQuery = {
-  cursor?: string
-  limit?: number
-  search?: string
-}
-
 export type ResourceDisplayFacts = {
   ref: ManagedResourceRef
   displayName: string
@@ -97,84 +81,10 @@ export type ResourceDisplayFacts = {
   actions: { canUpdate: boolean; canDelete: boolean }
 }
 
-export type ResourceSecretState =
-  | "available"
-  | "masked"
-  | "unavailable"
-  | "permission-hidden"
-
-export type ResourceDisplayFact =
-  | { fieldId: string; kind: "text"; value: string }
-  | { fieldId: string; kind: "number"; value: number }
-  | { fieldId: string; kind: "boolean"; value: boolean }
-  | { fieldId: string; kind: "list"; value: readonly string[] }
-  | { fieldId: string; kind: "secret"; state: ResourceSecretState }
-
 export type ResourcePage = {
   items: readonly ResourceDisplayFacts[]
   total?: number
   nextCursor?: string
-}
-
-export type SecretEditIntent =
-  | { kind: "unchanged" }
-  | { kind: "replace"; value: string }
-  | { kind: "clear" }
-
-export type ResourceFieldValue =
-  | string
-  | number
-  | boolean
-  | readonly string[]
-  | SecretEditIntent
-
-export type EditableResourceProjection = Readonly<
-  Record<string, ResourceFieldValue>
->
-
-export type ResourceFieldIssue = {
-  fieldId: string
-  code: (typeof MANAGED_RESOURCE_FIELD_ISSUE_CODES)[keyof typeof MANAGED_RESOURCE_FIELD_ISSUE_CODES]
-}
-
-export type ResourceValidationResult =
-  | { valid: true }
-  | { valid: false; issues: readonly ResourceFieldIssue[] }
-
-type ResourceFieldDescriptorBase = {
-  fieldId: string
-  required?: boolean
-}
-
-export type ResourceFieldDescriptor =
-  | (ResourceFieldDescriptorBase & { type: "text" })
-  | (ResourceFieldDescriptorBase & { type: "textarea" })
-  | (ResourceFieldDescriptorBase & {
-      type: "number"
-      min?: number
-      max?: number
-      step?: number
-    })
-  | (ResourceFieldDescriptorBase & { type: "boolean" })
-  | (ResourceFieldDescriptorBase & {
-      type: "select"
-      options: readonly { value: string }[]
-    })
-  | (ResourceFieldDescriptorBase & {
-      type: "multi-select"
-      options: readonly { value: string }[]
-    })
-  | (ResourceFieldDescriptorBase & {
-      type: "secret"
-      secretState: ResourceSecretState
-      canReplace: boolean
-      replacementBlockReason?: ResourceSecretReplacementBlockReason
-      allowClear: boolean
-    })
-
-export type ResourceFailure = {
-  code: (typeof MANAGED_RESOURCE_FAILURE_CODES)[keyof typeof MANAGED_RESOURCE_FAILURE_CODES]
-  fieldIssues?: readonly ResourceFieldIssue[]
 }
 
 export class ManagedResourceError extends Error {
