@@ -641,6 +641,31 @@ describe("OpenRouter management key API", () => {
     ).rejects.toMatchObject({ statusCode: 404, upstreamCode: "not_found" })
   })
 
+  it("keeps the provider message but drops an unsafe upstream code", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/keys/missing-example`, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "unsafe code!",
+              message: "Key lookup failed",
+              metadata: { internal: "not-retained" },
+            },
+          },
+          { status: 404 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchOpenRouterKey(request, "missing-example"),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      upstreamCode: undefined,
+      message: "Key lookup failed",
+    })
+  })
+
   it("redacts provider-echoed credentials and key hashes from failures", async () => {
     const opaqueHash = "hash/opaque-example"
     const managementKey = request.auth.accessToken.trim()

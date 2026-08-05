@@ -13,6 +13,14 @@ export interface ApiResponse<T = any> {
   message: string
 }
 
+/** Serializable HTTP result shared by every extension fetch context. */
+export interface ApiTransportResponse<T = unknown> {
+  ok: boolean
+  status: number
+  headers: Readonly<Record<string, string>>
+  body: T
+}
+
 export interface AuthConfig {
   /** 认证类型: cookie | access_token | none */
   authType: AuthTypeEnum

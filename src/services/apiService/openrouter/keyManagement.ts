@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { fetchApi } from "~/services/apiTransport/request"
+import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { t } from "~/utils/i18n/core"
 
@@ -73,6 +73,33 @@ const getBoundedUpstreamCode = (
   return redactProviderValues(value, sensitiveValues) === value
     ? value
     : undefined
+}
+
+const getProviderErrorDetails = (
+  body: unknown,
+): { message: string; upstreamCode?: string } | null => {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null
+  const error = (body as { error?: unknown }).error
+  if (!error || typeof error !== "object" || Array.isArray(error)) return null
+
+  const messageValue = (error as { message?: unknown }).message
+  const message =
+    typeof messageValue === "string" ? messageValue.trim() : undefined
+  if (!message) return null
+
+  const codeValue = (error as { code?: unknown }).code
+  const upstreamCode =
+    typeof codeValue === "string" || typeof codeValue === "number"
+      ? getBoundedUpstreamCode(String(codeValue).trim(), [])
+      : undefined
+  return { message, upstreamCode }
+}
+
+const getHttpErrorCode = (status: number) => {
+  if (status === 401) return API_ERROR_CODES.HTTP_401
+  if (status === 403) return API_ERROR_CODES.HTTP_403
+  if (status === 429) return API_ERROR_CODES.HTTP_429
+  return API_ERROR_CODES.HTTP_OTHER
 }
 
 const normalizeProviderFailure = (
@@ -160,20 +187,25 @@ async function fetchRaw(
   options: RequestInit,
   failureContext?: ProviderFailureContext,
 ): Promise<RawResponse> {
+  const context = failureContext ?? { safeEndpoint: endpoint }
   try {
-    return await fetchApi<RawResponse>(
+    const response = await fetchApiResponse<RawResponse>(
       createOpenRouterManagementRequest(request),
       { endpoint, options, ...managementFetchOptions },
-      true,
     )
+    if (!response.ok) {
+      const providerError = getProviderErrorDetails(response.body)
+      throw new ApiError(
+        providerError?.message ?? `请求失败: ${response.status}`,
+        response.status,
+        context.safeEndpoint,
+        getHttpErrorCode(response.status),
+        providerError?.upstreamCode,
+      )
+    }
+    return response.body
   } catch (error) {
-    throw normalizeProviderFailure(
-      error,
-      request,
-      failureContext ?? {
-        safeEndpoint: endpoint,
-      },
-    )
+    throw normalizeProviderFailure(error, request, context)
   }
 }
 

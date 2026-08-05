@@ -8,7 +8,6 @@ import {
   extractDataFromApiResponseBody,
   isHttpUrl,
 } from "~/services/apiTransport/response"
-import type { ApiResponse } from "~/services/apiTransport/type"
 import {
   COOKIE_INTERCEPTOR_PERMISSIONS,
   hasCookieInterceptorPermissions,
@@ -384,12 +383,15 @@ function logSkipTempWindowFallback(
  * @param context Metadata describing the request and fallback behavior.
  * @param primaryRequest Function executing the original request.
  */
-export async function executeWithTempWindowFallback<T>(
+export async function executeWithTempWindowFallback<TResult>(
   context: TempWindowFallbackContext,
-  primaryRequest: () => Promise<T | ApiResponse<T>>,
-): Promise<T | ApiResponse<T>> {
+  primaryRequest: () => Promise<TResult>,
+  mapTempWindowResponse?: (
+    response: TempWindowFetch,
+  ) => TResult | Promise<TResult>,
+): Promise<TResult> {
   if (context.forceTempWindow) {
-    return await fetchViaTempWindow<T>(context)
+    return await fetchViaTempWindow<TResult>(context, mapTempWindowResponse)
   }
 
   try {
@@ -400,7 +402,7 @@ export async function executeWithTempWindowFallback<T>(
     }
 
     try {
-      return await fetchViaTempWindow<T>(context)
+      return await fetchViaTempWindow<TResult>(context, mapTempWindowResponse)
     } catch (fallbackError) {
       if (
         primaryError instanceof ApiError &&
@@ -508,9 +510,10 @@ async function shouldUseTempWindowFallback(
  * Issues the network request via the temp-window channel once fallback is approved.
  * @param context Context describing the original request configuration.
  */
-async function fetchViaTempWindow<T>(
+async function fetchViaTempWindow<TResult>(
   context: TempWindowFallbackContext,
-): Promise<T | ApiResponse<T>> {
+  mapResponse?: (response: TempWindowFetch) => TResult | Promise<TResult>,
+): Promise<TResult> {
   const { fetchOptions, responseType } = context
 
   if (!fetchOptions) {
@@ -554,6 +557,10 @@ async function fetchViaTempWindow<T>(
     status: response.status,
   })
 
+  if (mapResponse) {
+    return await mapResponse(response)
+  }
+
   if (!response.success) {
     throw new ApiError(
       response.error || "Temp window fetch failed",
@@ -567,10 +574,13 @@ async function fetchViaTempWindow<T>(
 
   if (responseType === "json") {
     if (context.onlyData) {
-      return extractDataFromApiResponseBody<T>(responseBody, context.endpoint)
+      return extractDataFromApiResponseBody<TResult>(
+        responseBody,
+        context.endpoint,
+      )
     }
-    return responseBody as ApiResponse<T>
+    return responseBody as TResult
   }
 
-  return responseBody as T
+  return responseBody as TResult
 }

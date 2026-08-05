@@ -21,6 +21,7 @@ import type {
   ApiResponse,
   ApiTransportFetchContext,
   ApiTransportRequest,
+  ApiTransportResponse,
   AuthConfig,
   FetchApiOptions,
 } from "~/services/apiTransport/type"
@@ -30,7 +31,10 @@ import {
   summarizeApiTransportFetchContext,
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
-import type { TempWindowResponseType } from "~/types/tempWindowFetch"
+import type {
+  TempWindowFetch,
+  TempWindowResponseType,
+} from "~/types/tempWindowFetch"
 import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
 import {
   addAuthMethodHeader,
@@ -62,9 +66,22 @@ type NonJsonFetchApiOptions = Omit<FetchApiOptions, "responseType"> & {
 
 type NormalizedAuthContext = AuthConfig
 
+interface AcquiredTransportResponse<T> extends ApiTransportResponse<T> {
+  decodeError?: ApiError
+}
+
+type TransportResponseMapper<T, TResult> = (
+  response: AcquiredTransportResponse<T>,
+) => TResult | Promise<TResult>
+
+type MessageResponseMapper<TResult> = (
+  response: TempWindowFetch,
+) => TResult | Promise<TResult>
+
 interface ContentFetchResponse<T> {
   success?: boolean
   status?: number
+  headers?: Record<string, string>
   data?: T
   error?: string
   code?: ApiErrorCode
@@ -110,14 +127,6 @@ const getSafeUpstreamCode = (value: unknown): string | undefined => {
   return code.length <= 64 && /^[A-Za-z0-9_.-]+$/.test(code) ? code : undefined
 }
 
-const isOpenRouterOrigin = (url: string): boolean => {
-  try {
-    return new URL(url).origin === "https://openrouter.ai"
-  } catch {
-    return false
-  }
-}
-
 /**
  * Extracts known backend-shaped JSON errors so they are not treated as
  * WAF/challenge 403s that temp-window fallback can recover.
@@ -157,11 +166,9 @@ function extractBackendErrorDetails(body: unknown): BackendErrorDetails | null {
   const isBackendError = isKnownBackendErrorType(
     (error as { type?: unknown }).type,
   )
-  const upstreamCode = getSafeUpstreamCode((error as { code?: unknown }).code)
+  if (!isBackendError) return null
 
-  // Generic nested errors are only safe to expose when both fields are
-  // bounded scalars. `new_api_error` preserves its existing classification.
-  if (!isBackendError && !upstreamCode) return null
+  const upstreamCode = getSafeUpstreamCode((error as { code?: unknown }).code)
 
   return {
     message,
@@ -347,9 +354,11 @@ async function fetchViaCurrentTabContent<T>(context: {
   url: string
   endpoint: string
   fetchOptions: RequestInit
-  onlyData: boolean
   responseType: TempWindowResponseType
-}): Promise<T | ApiResponse<T>> {
+}): Promise<{
+  response: AcquiredTransportResponse<T>
+  diagnosticError?: string
+}> {
   const response = (await sendTabMessageWithRetry(context.fetchContext.tabId, {
     action: RuntimeActionIds.ContentPerformTempWindowFetch,
     requestId: safeRandomUUID(`current-tab-fetch-${context.url}`),
@@ -358,7 +367,7 @@ async function fetchViaCurrentTabContent<T>(context: {
     responseType: context.responseType,
   })) as ContentFetchResponse<ApiResponse<T> | T>
 
-  if (!response?.success) {
+  if (typeof response?.success !== "boolean") {
     throw new ApiError(
       response?.error || "Current-tab content fetch failed",
       response?.status,
@@ -367,33 +376,42 @@ async function fetchViaCurrentTabContent<T>(context: {
     )
   }
 
-  const responseBody = response.data
-
-  if (context.responseType === "json") {
-    if (context.onlyData) {
-      return extractDataFromApiResponseBody<T>(responseBody, context.endpoint)
-    }
-    return responseBody as ApiResponse<T>
+  const status = response.status ?? (response.success ? 200 : undefined)
+  if (status === undefined) {
+    throw new ApiError(
+      response.error || "Current-tab content fetch failed",
+      undefined,
+      context.endpoint,
+      response.code,
+    )
   }
 
-  return responseBody as T
+  return {
+    response: {
+      ok: response.success,
+      status,
+      headers: response.headers ?? {},
+      body: response.data as T,
+    },
+    diagnosticError: response.error,
+  }
 }
 
 /**
  * Runs current-tab content fetch first when eligible, then falls back normally.
  */
-async function executeWithCurrentTabContentPreference<T>(
+async function executeWithCurrentTabContentPreference<T, TResult>(
   context: {
     request: ApiTransportRequest
     url: string
     endpoint: string
     fetchOptions: RequestInit
-    onlyData: boolean
     responseType: TempWindowResponseType
     options: FetchApiOptions
   },
-  fallback: () => Promise<T | ApiResponse<T>>,
-): Promise<T | ApiResponse<T>> {
+  mapResponse: TransportResponseMapper<T, TResult>,
+  fallback: () => Promise<TResult>,
+): Promise<TResult> {
   if (
     !isCurrentTabContentFetchEligible({
       request: context.request,
@@ -409,21 +427,23 @@ async function executeWithCurrentTabContentPreference<T>(
     { kind: typeof API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB }
   >
 
+  let diagnosticError: string | undefined
   try {
-    return await fetchViaCurrentTabContent<T>({
+    const result = await fetchViaCurrentTabContent<T>({
       fetchContext,
       url: context.url,
       endpoint: context.endpoint,
       fetchOptions: context.fetchOptions,
-      onlyData: context.onlyData,
       responseType: context.responseType,
     })
+    diagnosticError = result.diagnosticError
+    return await mapResponse(result.response)
   } catch (error) {
     logger.debug("Current-tab content fetch failed; falling back", {
       endpoint: context.endpoint,
       url: context.url,
       error: getSafeTransportErrorMessage(
-        error,
+        diagnosticError ?? error,
         context.request.auth.accessToken,
       ),
     })
@@ -459,113 +479,25 @@ const createAuthRequest = async (
   )
 }
 
-/**
- * Internal helper: call apiRequest and return data field.
- * Warning: For internal use; fetchApiData is the public entry.
- */
-const apiRequestData = async <T>(
-  url: string,
-  options: RequestInit | undefined,
-  endpoint: string | undefined,
-  responseType: TempWindowResponseType,
-): Promise<T> => {
-  const res = (await apiRequest<T>(
-    url,
-    options,
-    endpoint,
-    responseType,
-  )) as ApiResponse<T>
-
-  return extractDataFromApiResponseBody(res, endpoint)
+/** Collects response headers into the message-safe transport contract. */
+function collectResponseHeaders(headers: Headers): Record<string, string> {
+  return Object.fromEntries(headers.entries())
 }
 
 /**
- * Low-level API request helper.
- * - Returns ApiResponse<T> for JSON, raw parsed value otherwise.
- * - Raises ApiError on HTTP failure or content-type mismatch for JSON.
+ * Performs one HTTP exchange and preserves the parsed body regardless of status.
  */
-const apiRequest = async <T>(
+const apiRequestResponse = async <T>(
   url: string,
   options: RequestInit | undefined,
   endpoint: string | undefined,
   responseType: TempWindowResponseType,
-): Promise<ApiResponse<T> | T> => {
+): Promise<AcquiredTransportResponse<T>> => {
   const response = await fetch(url, options)
+  const contentType = response.headers.get("content-type") || ""
 
-  if (!response.ok) {
-    let errorCode: ApiErrorCode = API_ERROR_CODES.HTTP_OTHER
-    let errorMessage = `请求失败: ${response.status}`
-    let backendError: BackendErrorDetails | null = null
-
-    if (response.status === 401) {
-      errorCode = API_ERROR_CODES.HTTP_401
-    } else if (response.status === 403) {
-      errorCode = API_ERROR_CODES.HTTP_403
-    } else if (response.status === 429) {
-      errorCode = API_ERROR_CODES.HTTP_429
-    }
-
-    if (
-      responseType === "json" &&
-      (response.status === 401 || response.status === 429)
-    ) {
-      const retryAfter =
-        response.status === 429 ? response.headers.get("retry-after") : null
-      const hasRetryAfter = response.status === 429 && retryAfter !== null
-
-      if (!hasRetryAfter) {
-        const contentType = response.headers.get("content-type") || ""
-        const looksLikeHtml =
-          /\btext\/html\b/i.test(contentType) ||
-          /\bapplication\/xhtml\+xml\b/i.test(contentType)
-
-        if (looksLikeHtml) {
-          errorCode = API_ERROR_CODES.CONTENT_TYPE_MISMATCH
-        }
-      }
-    }
-
-    if (
-      responseType === "json" &&
-      errorCode !== API_ERROR_CODES.CONTENT_TYPE_MISMATCH
-    ) {
-      try {
-        const responseBody = (await response.clone().json()) as Partial<
-          ApiResponse<unknown>
-        >
-        backendError = extractBackendErrorDetails(responseBody)
-        if (backendError) {
-          // Keep unknown non-OpenRouter 403 bodies on the existing
-          // protection-bypass path. OpenRouter's documented nested error
-          // envelope is safe once extraction has validated both fields.
-          if (
-            backendError.isBackendError ||
-            response.status !== 403 ||
-            isOpenRouterOrigin(url)
-          ) {
-            errorMessage = backendError.message
-          }
-          if (backendError.isBackendError && response.status === 403) {
-            errorCode = API_ERROR_CODES.BUSINESS_ERROR
-          }
-        }
-      } catch {
-        // Keep the generic HTTP status message when the error body is not parseable JSON.
-      }
-    }
-
-    throw new ApiError(
-      errorMessage,
-      response.status,
-      endpoint,
-      errorCode,
-      backendError?.upstreamCode,
-    )
-  }
   if (responseType === "json") {
-    const contentType = response.headers.get("content-type") || ""
-
-    if (contentType && !/\bjson\b/i.test(contentType)) {
+    if (response.ok && contentType && !/\bjson\b/i.test(contentType)) {
       throw new ApiError(
         `响应 content type mismatch: expected JSON but got ${contentType}`,
         response.status,
@@ -575,7 +507,150 @@ const apiRequest = async <T>(
     }
   }
 
-  return await parseResponseByType<T>(response, responseType, endpoint)
+  let body: T
+  try {
+    body =
+      responseType === "json" &&
+      !response.ok &&
+      contentType &&
+      !/\bjson\b/i.test(contentType)
+        ? ((await response.text()) as T)
+        : ((await parseResponseByType<T>(
+            response,
+            responseType,
+            endpoint,
+          )) as T)
+  } catch (error) {
+    if (
+      !response.ok &&
+      error instanceof ApiError &&
+      error.code === API_ERROR_CODES.JSON_PARSE_ERROR
+    ) {
+      return {
+        ok: false,
+        status: response.status,
+        headers: collectResponseHeaders(response.headers),
+        body: undefined as T,
+        decodeError: error,
+      }
+    }
+    throw error
+  }
+
+  return {
+    ok: response.ok,
+    status: response.status,
+    headers: collectResponseHeaders(response.headers),
+    body,
+  }
+}
+
+/** Converts an unsuccessful HTTP result into the legacy shared ApiError. */
+function createCompatibilityHttpError(
+  response: ApiTransportResponse<unknown>,
+  endpoint: string,
+  responseType: TempWindowResponseType,
+): ApiError {
+  let errorCode: ApiErrorCode = API_ERROR_CODES.HTTP_OTHER
+  let errorMessage = `请求失败: ${response.status}`
+  let backendError: BackendErrorDetails | null = null
+
+  if (response.status === 401) {
+    errorCode = API_ERROR_CODES.HTTP_401
+  } else if (response.status === 403) {
+    errorCode = API_ERROR_CODES.HTTP_403
+  } else if (response.status === 429) {
+    errorCode = API_ERROR_CODES.HTTP_429
+  }
+
+  if (
+    responseType === "json" &&
+    (response.status === 401 || response.status === 429)
+  ) {
+    const retryAfter =
+      response.status === 429 ? response.headers["retry-after"] : undefined
+    const hasRetryAfter = response.status === 429 && retryAfter !== undefined
+    const contentType = response.headers["content-type"] || ""
+    const looksLikeHtml =
+      /\btext\/html\b/i.test(contentType) ||
+      /\bapplication\/xhtml\+xml\b/i.test(contentType)
+
+    if (!hasRetryAfter && looksLikeHtml) {
+      errorCode = API_ERROR_CODES.CONTENT_TYPE_MISMATCH
+    }
+  }
+
+  if (
+    responseType === "json" &&
+    errorCode !== API_ERROR_CODES.CONTENT_TYPE_MISMATCH
+  ) {
+    backendError = extractBackendErrorDetails(response.body)
+    if (backendError) {
+      if (backendError.isBackendError || response.status !== 403) {
+        errorMessage = backendError.message
+      }
+      if (backendError.isBackendError && response.status === 403) {
+        errorCode = API_ERROR_CODES.BUSINESS_ERROR
+      }
+    }
+  }
+
+  return new ApiError(
+    errorMessage,
+    response.status,
+    endpoint,
+    errorCode,
+    backendError?.upstreamCode,
+  )
+}
+
+/** Applies the existing envelope and error behavior above raw HTTP transport. */
+function mapCompatibilityResponse<T>(
+  response: AcquiredTransportResponse<T>,
+  context: {
+    endpoint: string
+    responseType: TempWindowResponseType
+    onlyData: boolean
+  },
+): T | ApiResponse<T> {
+  if (!response.ok) {
+    throw createCompatibilityHttpError(
+      response,
+      context.endpoint,
+      context.responseType,
+    )
+  }
+
+  if (response.decodeError) throw response.decodeError
+
+  if (context.responseType === "json" && context.onlyData) {
+    return extractDataFromApiResponseBody<T>(response.body, context.endpoint)
+  }
+
+  return response.body as T | ApiResponse<T>
+}
+
+/** Normalizes a message-channel fetch result without discarding its body. */
+function normalizeMessageFetchResponse<T>(
+  response: TempWindowFetch,
+  endpoint: string,
+): AcquiredTransportResponse<T> {
+  const status = response.status ?? (response.success ? 200 : undefined)
+  if (status === undefined) {
+    throw new ApiError(
+      response.error || "Extension fetch failed",
+      undefined,
+      endpoint,
+      response.code,
+    )
+  }
+
+  return {
+    ok: response.success,
+    status,
+    headers: response.headers ?? {},
+    body: response.data as T,
+  }
 }
 
 /**
@@ -586,11 +661,13 @@ const apiRequest = async <T>(
  * @param onlyData When true, returns the `data` field directly (JSON only).
  * @returns ApiResponse<T>, raw payload, or data field based on flags.
  */
-const _fetchApi = async <T>(
+const _fetchApiWithMapper = async <T, TResult>(
   request: ApiTransportRequest,
   options: FetchApiOptions,
-  onlyData: boolean = false,
-) => {
+  onlyData: boolean,
+  mapResponse: TransportResponseMapper<T, TResult>,
+  mapTempWindowResponse: MessageResponseMapper<TResult>,
+): Promise<TResult> => {
   const responseType = options.responseType ?? "json"
   const { baseUrl, accountId } = request
   const userId = request.auth?.userId
@@ -656,26 +733,13 @@ const _fetchApi = async <T>(
           fetchOptions: dispatchedFetchOptions,
         }
         const primaryRequest = async () => {
-          if (onlyData) {
-            return await apiRequestData<T>(
-              url,
-              dispatchedFetchOptions,
-              options.endpoint,
-              responseType,
-            )
-          }
-          const response = await apiRequest<T>(
+          const response = await apiRequestResponse<T>(
             url,
             dispatchedFetchOptions,
             options.endpoint,
             responseType,
           )
-
-          if (responseType === "json") {
-            return response as ApiResponse<T>
-          }
-
-          return response as T
+          return await mapResponse(response)
         }
         const fallback = async () => {
           const execution = request.protectionBypassExecution
@@ -697,19 +761,20 @@ const _fetchApi = async <T>(
               protectionBypassExecution: execution,
             },
             primaryRequest,
+            mapTempWindowResponse,
           )
         }
 
-        return await executeWithCurrentTabContentPreference<T>(
+        return await executeWithCurrentTabContentPreference<T, TResult>(
           {
             request,
             url,
             endpoint: options.endpoint,
             fetchOptions: dispatchedFetchOptions,
-            onlyData,
             responseType,
             options,
           },
+          mapResponse,
           fallback,
         )
       },
@@ -742,6 +807,68 @@ const _fetchApi = async <T>(
   } finally {
     admissionAbort.dispose()
   }
+}
+
+/** Runs the existing compatibility semantics above the raw response result. */
+const _fetchApi = async <T>(
+  request: ApiTransportRequest,
+  options: FetchApiOptions,
+  onlyData: boolean = false,
+): Promise<T | ApiResponse<T>> => {
+  const responseType = options.responseType ?? "json"
+  return await _fetchApiWithMapper<T, T | ApiResponse<T>>(
+    request,
+    options,
+    onlyData,
+    (response) =>
+      mapCompatibilityResponse(response, {
+        endpoint: options.endpoint,
+        responseType,
+        onlyData,
+      }),
+    (response) => {
+      if (!response.success) {
+        throw new ApiError(
+          response.error || "Temp window fetch failed",
+          response.status,
+          options.endpoint,
+          response.code,
+        )
+      }
+      return mapCompatibilityResponse(
+        normalizeMessageFetchResponse<T>(response, options.endpoint),
+        {
+          endpoint: options.endpoint,
+          responseType,
+          onlyData,
+        },
+      )
+    },
+  )
+}
+
+/**
+ * Returns the parsed response body and HTTP facts without provider semantics.
+ */
+export async function fetchApiResponse<T = unknown>(
+  request: ApiTransportRequest,
+  options: FetchApiOptions,
+): Promise<ApiTransportResponse<T>> {
+  return await _fetchApiWithMapper<T, ApiTransportResponse<T>>(
+    request,
+    options,
+    false,
+    (response) => {
+      if (response.decodeError) throw response.decodeError
+      return {
+        ok: response.ok,
+        status: response.status,
+        headers: response.headers,
+        body: response.body,
+      }
+    },
+    (response) => normalizeMessageFetchResponse<T>(response, options.endpoint),
+  )
 }
 
 /**

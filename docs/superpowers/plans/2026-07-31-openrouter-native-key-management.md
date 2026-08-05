@@ -857,12 +857,14 @@ top-level body is the endpoint contract here: create must retain both
 collapsed into the shared One API/New API `data` convention before its Zod
 schema parses it.
 
-Extend `ApiError` with optional `upstreamCode`. Teach
-`extractBackendErrorDetails` to recognize a bounded scalar nested
-`error.code` together with `error.message`, preserving the message in private
-UI while ignoring `metadata`. Accept only strings/numbers whose normalized
-string is at most 64 characters and matches `[A-Za-z0-9_.-]+`. Existing New API
-business-error classification must remain unchanged.
+Extend `ApiError` with optional `upstreamCode`. Use the protocol-neutral raw
+response contract from
+`../specs/2026-08-05-api-transport-raw-response-boundary-design.md`, then let
+the OpenRouter service recognize its nested `error.code` and `error.message`.
+Preserve the message in private UI while ignoring `metadata`. Accept only
+string/number codes whose normalized string is at most 64 characters and
+matches `[A-Za-z0-9_.-]+`. Existing New API business-error classification and
+unrelated provider behavior must remain unchanged.
 
 - [ ] **Step 6: Re-run focused tests and compile**
 
