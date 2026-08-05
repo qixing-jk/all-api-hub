@@ -646,6 +646,45 @@ describe("defineAccountKeyResourceCapability", () => {
     })
   })
 
+  it("resolves a validated create destination before dispatch", async () => {
+    const destinationScope = {
+      scopeKey: "workspace-destination",
+      routeKey: "destination",
+      displayName: "Destination workspace",
+      isDefault: false,
+    }
+    const create = vi.fn<Definition["create"]>(async () => ({
+      certainty: "applied",
+      value: { detail: { id: "created-key", name: "Created" } },
+    }))
+    const definition = createDefinition({
+      listScopes: vi.fn(async () => [SCOPE, destinationScope]),
+      create,
+      createEditor: vi.fn(async () => ({
+        fields: [],
+        initialValues: { name: "", destinationScopeKey: SCOPE.scopeKey },
+        validate: (): ResourceValidationResult => ({ valid: true }),
+        buildCommand: (values: EditableResourceProjection) => ({
+          name: String(values.name),
+          destinationScopeKey: String(values.destinationScopeKey),
+        }),
+        destinationScopeKey: (command: CreateCommand) =>
+          command.destinationScopeKey!,
+      })),
+    })
+    const editor = await (
+      await openSession(definition)
+    ).openCreateEditor(SCOPE.scopeKey)
+
+    expect(
+      editor.resolveDestinationScopeKey({
+        name: "Created",
+        destinationScopeKey: destinationScope.scopeKey,
+      }),
+    ).toBe(destinationScope.scopeKey)
+    expect(create).not.toHaveBeenCalled()
+  })
+
   it("rejects an unvalidated command destination before create dispatch", async () => {
     const create = vi.fn<Definition["create"]>(async () => ({
       certainty: "applied",

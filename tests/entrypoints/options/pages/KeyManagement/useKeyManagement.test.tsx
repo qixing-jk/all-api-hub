@@ -5368,4 +5368,35 @@ describe("useKeyManagement enabled account filtering", () => {
 
     confirmSpy.mockRestore()
   })
+
+  it("settles native-resource-only accounts as an empty legacy inventory", async () => {
+    const account = createDisplayAccount({
+      id: "native-resource-account",
+      siteType: SITE_TYPES.OPENROUTER,
+    })
+    const openResources = vi.fn()
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: { keyResources: { open: openResources } },
+    } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(result.current.tokenInventories[account.id]).toMatchObject({
+        status: "loaded",
+        tokens: [],
+      }),
+    )
+    expect(result.current.currentAccountUnsupportedKeyManagement).toBe(false)
+    expect(openResources).not.toHaveBeenCalled()
+  })
 })

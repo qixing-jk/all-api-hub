@@ -1,0 +1,2824 @@
+import { act, renderHook, waitFor } from "@testing-library/react"
+import { useEffect } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
+import { useAccountKeyResourceController } from "~/features/KeyManagement/controllers/useAccountKeyResourceController"
+import {
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  AccountKeyResourceError,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
+import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keyResourceFields"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+} from "~/services/productAnalytics/contracts"
+
+const {
+  createDisplayAccountApiContextMock,
+  startProductAnalyticsActionMock,
+  trackCompleteMock,
+} = vi.hoisted(() => ({
+  createDisplayAccountApiContextMock: vi.fn(),
+  startProductAnalyticsActionMock: vi.fn(),
+  trackCompleteMock: vi.fn(),
+}))
+
+vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
+  createDisplayAccountApiContext: (...args: unknown[]) =>
+    createDisplayAccountApiContextMock(...args),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  resolveProductAnalyticsErrorCategoryFromError: vi.fn(() => "unknown"),
+  startProductAnalyticsAction: (...args: unknown[]) =>
+    startProductAnalyticsActionMock(...args),
+}))
+
+const createAccount = (id: string) =>
+  ({
+    id,
+    name: "Example account",
+    siteType: "openrouter" as const,
+    baseUrl: "https://example.invalid",
+  }) as any
+
+const createFacts = (scopeKey: string, resourceId: string) => ({
+  ref: {
+    accountId: "account-example",
+    siteType: "openrouter" as const,
+    scopeKey,
+    resourceId,
+  },
+  displayName: "Example key",
+  maskedLabel: "sk-…example",
+  status: "enabled",
+  fields: [],
+  actions: { canUpdate: true, canDelete: true },
+})
+
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((nextResolve, nextReject) => {
+    resolve = nextResolve
+    reject = nextReject
+  })
+  return { promise, resolve, reject }
+}
+
+const mockNativeResourceSession = (open: ReturnType<typeof vi.fn>) => {
+  createDisplayAccountApiContextMock.mockReturnValue({
+    accountKeyResources: { open },
+    request: {},
+  })
+}
+
+describe("useAccountKeyResourceController", () => {
+  beforeEach(() => {
+    createDisplayAccountApiContextMock.mockReset()
+    startProductAnalyticsActionMock.mockReset()
+    trackCompleteMock.mockReset()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: trackCompleteMock,
+    })
+  })
+
+  it("tracks a native refresh with controlled insights only", async () => {
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: trackCompleteMock,
+    })
+    const account = {
+      ...createAccount("account-raw-example"),
+      name: "Account Raw Name",
+      siteType: "openrouter",
+    }
+    const scope = {
+      scopeKey: "workspace-raw-id",
+      routeKey: "team",
+      displayName: "Workspace Raw Name",
+      isDefault: true,
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+        listScopes: vi.fn().mockResolvedValue([scope]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [account],
+        selectedAccount: account.id,
+        routeParams: { accountId: account.id, workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    await act(async () => {
+      await result.current.refresh()
+    })
+
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccountTokens,
+      }),
+    )
+    expect(trackCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({ insights: expect.any(Object) }),
+    )
+    const calls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      trackCompleteMock.mock.calls,
+    ])
+    for (const value of [
+      "account-raw-example",
+      "workspace-raw-id",
+      "Account Raw Name",
+      "Workspace Raw Name",
+      "hash-example",
+      "secret-example",
+      "limit-example",
+      "upstream message",
+    ]) {
+      expect(calls).not.toContain(value)
+    }
+  })
+
+  it("falls back from an invalid workspace route without opening the stale scope", async () => {
+    const openCollection = vi.fn().mockResolvedValue({
+      list: vi.fn().mockResolvedValue({
+        items: [createFacts("workspace-default-id", "key-example")],
+      }),
+    })
+    const session = {
+      resolveDefaultScope: vi.fn().mockResolvedValue({
+        scopeKey: "workspace-default-id",
+        routeKey: "team",
+        displayName: "Team",
+        isDefault: true,
+      }),
+      listScopes: vi.fn().mockResolvedValue([
+        {
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        },
+      ]),
+      openCollection,
+      openCreateEditor: vi.fn(),
+    }
+    const open = vi.fn().mockResolvedValue(session)
+    const replaceRoute = vi.fn()
+    mockNativeResourceSession(open)
+
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "stale" },
+        replaceRoute,
+      }),
+    )
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    expect(openCollection).toHaveBeenCalledWith("workspace-default-id", {
+      signal: expect.any(AbortSignal),
+    })
+    expect(openCollection).not.toHaveBeenCalledWith("stale", expect.anything())
+    expect(replaceRoute).toHaveBeenCalledWith({
+      accountId: "account-example",
+      workspace: "team",
+    })
+    expect(result.current.notice?.kind).toBe("workspace-fallback")
+  })
+
+  it("rejects an unauthorized route scope when it names a different account", async () => {
+    const openCollection = vi.fn().mockResolvedValue({
+      list: vi.fn().mockResolvedValue({ items: [] }),
+    })
+    const replaceRoute = vi.fn()
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "default",
+          displayName: "Default",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([
+          {
+            scopeKey: "workspace-unauthorized-id",
+            routeKey: "unauthorized",
+            displayName: "Unauthorized",
+            isDefault: false,
+          },
+        ]),
+        openCollection,
+        openCreateEditor: vi.fn(),
+      }),
+    )
+
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: {
+          accountId: "another-account",
+          workspace: "unauthorized",
+        },
+        replaceRoute,
+      }),
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(openCollection).toHaveBeenCalledWith("workspace-default-id", {
+      signal: expect.any(AbortSignal),
+    })
+    expect(openCollection).not.toHaveBeenCalledWith(
+      "workspace-unauthorized-id",
+      expect.anything(),
+    )
+    expect(replaceRoute).toHaveBeenCalledWith({
+      accountId: "account-example",
+      workspace: "default",
+    })
+    expect(result.current.notice?.kind).toBe("workspace-fallback")
+  })
+
+  it("canonicalizes a missing workspace without reporting a fallback", async () => {
+    const scope = {
+      scopeKey: "workspace-default-id",
+      routeKey: "default",
+      displayName: "Default",
+      isDefault: true,
+    }
+    const replaceRoute = vi.fn()
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+        listScopes: vi.fn().mockResolvedValue([scope]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example" },
+        replaceRoute,
+      }),
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scope))
+    expect(replaceRoute).toHaveBeenCalledWith({
+      accountId: "account-example",
+      workspace: "default",
+    })
+    expect(result.current.notice).toBeNull()
+  })
+
+  it("reloads and canonicalizes when only the route account id changes", async () => {
+    const openCollection = vi.fn().mockResolvedValue({
+      list: vi.fn().mockResolvedValue({ items: [] }),
+    })
+    const open = vi.fn().mockResolvedValue({
+      resolveDefaultScope: vi.fn().mockResolvedValue({
+        scopeKey: "workspace-default-id",
+        routeKey: "team",
+        displayName: "Team",
+        isDefault: true,
+      }),
+      listScopes: vi.fn().mockResolvedValue([]),
+      openCollection,
+      openCreateEditor: vi.fn(),
+    })
+    const replaceRoute = vi.fn()
+    mockNativeResourceSession(open)
+    const { rerender } = renderHook(
+      ({ routeAccountId }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: routeAccountId, workspace: "team" },
+          replaceRoute,
+        }),
+      { initialProps: { routeAccountId: "account-example" } },
+    )
+
+    await waitFor(() => expect(openCollection).toHaveBeenCalledTimes(1))
+    expect(replaceRoute).not.toHaveBeenCalled()
+
+    rerender({ routeAccountId: "stale-account" })
+
+    await waitFor(() => expect(openCollection).toHaveBeenCalledTimes(2))
+    expect(open).toHaveBeenCalledTimes(2)
+    expect(replaceRoute).toHaveBeenCalledWith({
+      accountId: "account-example",
+      workspace: "team",
+    })
+  })
+
+  it("rebuilds and aborts when request context changes for the same account identity", async () => {
+    const firstList = deferred<any>()
+    const scope = {
+      scopeKey: "workspace-default-id",
+      routeKey: "team",
+      displayName: "Team",
+      isDefault: true,
+    }
+    const open = vi
+      .fn()
+      .mockResolvedValueOnce({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+        listScopes: vi.fn().mockResolvedValue([scope]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn(() => firstList.promise),
+        }),
+        openCreateEditor: vi.fn(),
+      })
+      .mockResolvedValueOnce({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+        listScopes: vi.fn().mockResolvedValue([scope]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({
+            items: [createFacts(scope.scopeKey, "key-current")],
+          }),
+        }),
+        openCreateEditor: vi.fn(),
+      })
+    mockNativeResourceSession(open)
+    const firstAccount = {
+      ...createAccount("account-example"),
+      baseUrl: "https://first.example.invalid",
+      authType: "access_token",
+      userId: "user-first",
+      token: "secret-first",
+    }
+    const secondAccount = {
+      ...firstAccount,
+      baseUrl: "https://second.example.invalid",
+      userId: "user-second",
+      token: "secret-second",
+      cookieAuthSessionCookie: "secret-cookie-second",
+    }
+    const { result, rerender } = renderHook(
+      ({ account }) =>
+        useAccountKeyResourceController({
+          accounts: [account as any],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace: "team" },
+        }),
+      { initialProps: { account: firstAccount } },
+    )
+    await waitFor(() => expect(open).toHaveBeenCalledTimes(1))
+    const firstSignal = open.mock.calls[0]?.[1]?.signal as
+      | AbortSignal
+      | undefined
+
+    rerender({ account: secondAccount })
+
+    await waitFor(() => expect(open).toHaveBeenCalledTimes(2))
+    await waitFor(() =>
+      expect(result.current.rows.map((row) => row.ref.resourceId)).toEqual([
+        "key-current",
+      ]),
+    )
+    expect(firstSignal?.aborted).toBe(true)
+    expect(createDisplayAccountApiContextMock.mock.lastCall?.[0]).toMatchObject(
+      {
+        id: "account-example",
+        siteType: "openrouter",
+        baseUrl: "https://second.example.invalid",
+        authType: "access_token",
+        userId: "user-second",
+      },
+    )
+    await act(async () => firstList.resolve({ items: [] }))
+    expect(result.current.rows[0]?.ref.resourceId).toBe("key-current")
+  })
+
+  it("aborts an obsolete workspace list and ignores its late rows", async () => {
+    const firstList = deferred<any>()
+    const firstCollection = {
+      list: vi.fn((..._args: unknown[]) => firstList.promise),
+    }
+    const secondCollection = {
+      list: vi.fn().mockResolvedValue({
+        items: [createFacts("workspace-second-id", "key-second")],
+      }),
+    }
+    const scopes = [
+      {
+        scopeKey: "workspace-default-id",
+        routeKey: "team",
+        displayName: "Team",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const session = {
+      resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+      listScopes: vi.fn().mockResolvedValue(scopes),
+      openCollection: vi.fn((scopeKey: string) =>
+        Promise.resolve(
+          scopeKey === "workspace-default-id"
+            ? firstCollection
+            : secondCollection,
+        ),
+      ),
+      openCreateEditor: vi.fn(),
+    }
+    mockNativeResourceSession(vi.fn().mockResolvedValue(session))
+
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: "team" } },
+    )
+
+    await waitFor(() => expect(firstCollection.list).toHaveBeenCalledTimes(1))
+    const firstSignal = (
+      firstCollection.list.mock.calls[0]?.[1] as
+        | { signal?: AbortSignal }
+        | undefined
+    )?.signal
+    rerender({ workspace: "second" })
+    await waitFor(() => expect(secondCollection.list).toHaveBeenCalledTimes(1))
+    expect(firstSignal?.aborted).toBe(true)
+
+    await act(async () => {
+      firstList.resolve({
+        items: [createFacts("workspace-default-id", "late-key")],
+      })
+    })
+
+    await waitFor(() =>
+      expect(result.current.rows.map((row) => row.ref.resourceId)).toEqual([
+        "key-second",
+      ]),
+    )
+  })
+
+  it("rehydrates an OpenRouter create editor for the selected workspace", async () => {
+    const field = OPENROUTER_KEY_FIELD_IDS
+    const previousOptions = deferred<any>()
+    const nextOptions = deferred<any>()
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const fields = [
+      {
+        fieldId: field.Name,
+        type: "text" as const,
+        required: true,
+      },
+      {
+        fieldId: field.Workspace,
+        type: "select" as const,
+        required: true,
+        options: scopes.map((scope) => ({ value: scope.scopeKey })),
+      },
+      {
+        fieldId: field.Creator,
+        type: "select" as const,
+        nullable: true,
+        options: [],
+        optionLoader: { dependsOn: [field.Workspace] },
+      },
+    ]
+    const firstEditor = {
+      fields,
+      initialValues: {
+        [field.Name]: "",
+        [field.Workspace]: "workspace-first-id",
+        [field.Creator]: null,
+      },
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-first-id",
+      loadOptions: vi.fn(() => previousOptions.promise),
+      submit: vi.fn(),
+    }
+    const secondSubmit = vi.fn().mockResolvedValue({
+      facts: createFacts("workspace-second-id", "key-second"),
+    })
+    const secondEditor = {
+      fields,
+      initialValues: {
+        [field.Name]: "",
+        [field.Workspace]: "workspace-second-id",
+        [field.Creator]: null,
+      },
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-second-id",
+      loadOptions: vi.fn(() => nextOptions.promise),
+      submit: secondSubmit,
+    }
+    const replaceRoute = vi.fn()
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi
+          .fn()
+          .mockResolvedValueOnce(firstEditor)
+          .mockResolvedValueOnce(secondEditor),
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+          replaceRoute,
+        }),
+      { initialProps: { workspace: "first" } },
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
+    await act(async () => result.current.openCreate())
+    act(() =>
+      result.current.setEditorValues({
+        [field.Name]: "User key name",
+        [field.Workspace]: "workspace-first-id",
+        [field.Creator]: "member-first",
+      }),
+    )
+    act(() => {
+      void result.current.loadEditorOptions(field.Creator)
+    })
+    await waitFor(() =>
+      expect(firstEditor.loadOptions).toHaveBeenCalledTimes(1),
+    )
+    const firstSignal = (
+      firstEditor.loadOptions.mock.calls[0] as unknown as
+        | [unknown, unknown, { signal?: AbortSignal }]
+        | undefined
+    )?.[2]?.signal
+    expect(result.current.selectScope(scopes[1])).toBe(true)
+    expect(replaceRoute).toHaveBeenCalledWith({
+      accountId: "account-example",
+      workspace: "second",
+    })
+
+    rerender({ workspace: "second" })
+    await waitFor(() =>
+      expect(secondEditor.loadOptions).toHaveBeenCalledTimes(1),
+    )
+    expect(secondEditor.loadOptions).toHaveBeenCalledWith(
+      field.Creator,
+      {
+        [field.Name]: "User key name",
+        [field.Workspace]: "workspace-second-id",
+        [field.Creator]: null,
+      },
+      { signal: expect.any(AbortSignal) },
+    )
+    expect(firstSignal?.aborted).toBe(true)
+    expect(result.current.editor?.mode).toBe("create")
+    nextOptions.resolve([{ value: "member-second" }])
+    await waitFor(() =>
+      expect(result.current.editor?.optionsByField[field.Creator]).toEqual([
+        { value: "member-second" },
+      ]),
+    )
+    expect(result.current.editor?.values).toEqual({
+      [field.Name]: "User key name",
+      [field.Workspace]: "workspace-second-id",
+      [field.Creator]: null,
+    })
+
+    await act(async () => previousOptions.resolve([{ value: "member-first" }]))
+    expect(result.current.editor?.optionsByField[field.Creator]).toEqual([
+      { value: "member-second" },
+    ])
+    expect(result.current.editor?.values[field.Creator]).toBeNull()
+    expect(result.current.editor?.feedback).toBeNull()
+    expect(firstEditor.submit).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await result.current.submitEditor(result.current.editor!.values)
+    })
+    expect(secondSubmit).toHaveBeenCalledWith(
+      {
+        [field.Name]: "User key name",
+        [field.Workspace]: "workspace-second-id",
+        [field.Creator]: null,
+      },
+      { signal: expect.any(AbortSignal) },
+    )
+  })
+
+  it("does not submit the obsolete editor while a workspace transition is loading", async () => {
+    const secondCollection = deferred<any>()
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const firstEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn().mockResolvedValue({}),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection: vi.fn((scopeKey: string) =>
+          scopeKey === "workspace-first-id"
+            ? Promise.resolve({
+                list: vi.fn().mockResolvedValue({ items: [] }),
+              })
+            : secondCollection.promise,
+        ),
+        openCreateEditor: vi.fn().mockResolvedValue(firstEditor),
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: "first" } },
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
+    await act(async () => result.current.openCreate())
+
+    rerender({ workspace: "second" })
+    await waitFor(() => expect(result.current.selectedScope).toBeNull())
+    act(() => {
+      void result.current.submitEditor({})
+    })
+
+    expect(firstEditor.submit).not.toHaveBeenCalled()
+  })
+
+  it("rejects a submit command captured from an obsolete editor generation", async () => {
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const firstEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn().mockResolvedValue({}),
+    }
+    const secondEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn().mockResolvedValue({}),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi
+          .fn()
+          .mockResolvedValueOnce(firstEditor)
+          .mockResolvedValueOnce(secondEditor),
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: "first" } },
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
+    await act(async () => result.current.openCreate())
+    const obsoleteSubmit = result.current.submitEditor
+
+    rerender({ workspace: "second" })
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[1]))
+    await waitFor(() => expect(result.current.editor?.mode).toBe("create"))
+    await act(async () => obsoleteSubmit({}))
+
+    expect(firstEditor.submit).not.toHaveBeenCalled()
+    expect(secondEditor.submit).not.toHaveBeenCalled()
+  })
+
+  it("aborts obsolete editor option loads and ignores their late options", async () => {
+    const firstOptions = deferred<any>()
+    const secondOptions = deferred<any>()
+    const loadOptions = vi
+      .fn()
+      .mockImplementationOnce(() => firstOptions.promise)
+      .mockImplementationOnce(() => secondOptions.promise)
+    const scope = {
+      scopeKey: "workspace-default-id",
+      routeKey: "team",
+      displayName: "Team",
+      isDefault: true,
+    }
+    const session = {
+      resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+      listScopes: vi.fn().mockResolvedValue([scope]),
+      openCollection: vi.fn().mockResolvedValue({
+        list: vi.fn().mockResolvedValue({ items: [] }),
+      }),
+      openCreateEditor: vi.fn().mockResolvedValue({
+        fields: [{ fieldId: "creator", type: "select", options: [] }],
+        initialValues: {},
+        validate: vi.fn().mockReturnValue({ valid: true }),
+        loadOptions,
+        submit: vi.fn(),
+      }),
+    }
+    mockNativeResourceSession(vi.fn().mockResolvedValue(session))
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scope))
+    await act(async () => {
+      await result.current.openCreate()
+    })
+    act(() => {
+      void result.current.loadEditorOptions("creator", {})
+    })
+    await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(1))
+    const firstSignal = (
+      loadOptions.mock.calls[0]?.[2] as {
+        signal?: AbortSignal
+      }
+    )?.signal
+    act(() => {
+      void result.current.loadEditorOptions("creator", {})
+    })
+    await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(2))
+    expect(firstSignal?.aborted).toBe(true)
+
+    await act(async () => {
+      firstOptions.resolve([{ value: "late" }])
+      secondOptions.resolve([{ value: "current" }])
+    })
+
+    await waitFor(() =>
+      expect(result.current.editor?.optionsByField.creator).toEqual([
+        { value: "current" },
+      ]),
+    )
+  })
+
+  it("clears stale dependent options and exposes only the current load failure", async () => {
+    const field = OPENROUTER_KEY_FIELD_IDS
+    const lateFirstFailure = deferred<never>()
+    const retry = deferred<any>()
+    const loadOptions = vi
+      .fn()
+      .mockResolvedValueOnce([{ value: "member-first" }])
+      .mockImplementationOnce(() => lateFirstFailure.promise)
+      .mockRejectedValueOnce(
+        new AccountKeyResourceError({
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+          message: "unsafe upstream detail",
+        }),
+      )
+      .mockImplementationOnce(() => retry.promise)
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const editor = {
+      fields: [
+        {
+          fieldId: field.Workspace,
+          type: "select" as const,
+          options: scopes.map((scope) => ({ value: scope.scopeKey })),
+        },
+        {
+          fieldId: field.Creator,
+          type: "select" as const,
+          nullable: true,
+          options: [],
+          optionLoader: { dependsOn: [field.Workspace] },
+        },
+        { fieldId: field.Name, type: "text" as const },
+      ],
+      initialValues: {
+        [field.Workspace]: "workspace-first-id",
+        [field.Creator]: null,
+        [field.Name]: "",
+      },
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      loadOptions,
+      submit: vi.fn().mockResolvedValue({
+        facts: createFacts("workspace-second-id", "key-second"),
+      }),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi.fn().mockResolvedValue(editor),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "first" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
+    await act(async () => result.current.openCreate())
+    await act(async () => result.current.loadEditorOptions(field.Creator))
+    act(() =>
+      result.current.setEditorValues({
+        [field.Workspace]: "workspace-first-id",
+        [field.Creator]: "member-first",
+        [field.Name]: "kept name",
+      }),
+    )
+
+    act(() => {
+      void result.current.loadEditorOptions(field.Creator, {
+        [field.Workspace]: "workspace-first-id",
+        [field.Creator]: "member-first",
+        [field.Name]: "kept name",
+      })
+    })
+    await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(2))
+    act(() => {
+      void result.current.loadEditorOptions(field.Creator, {
+        [field.Workspace]: "workspace-second-id",
+        [field.Creator]: "member-first",
+        [field.Name]: "kept name",
+      })
+    })
+    await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(3))
+    expect(loadOptions).toHaveBeenLastCalledWith(
+      field.Creator,
+      {
+        [field.Workspace]: "workspace-second-id",
+        [field.Creator]: null,
+        [field.Name]: "kept name",
+      },
+      { signal: expect.any(AbortSignal) },
+    )
+    await waitFor(() =>
+      expect(
+        result.current.editor?.optionFailuresByField[field.Creator],
+      ).toEqual({ code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable }),
+    )
+    expect(result.current.editor?.optionsByField[field.Creator]).toEqual([])
+    expect(result.current.editor?.values).toEqual({
+      [field.Workspace]: "workspace-first-id",
+      [field.Creator]: null,
+      [field.Name]: "kept name",
+    })
+
+    act(() => {
+      void result.current.loadEditorOptions(field.Creator, {
+        ...result.current.editor!.values,
+        [field.Workspace]: "workspace-second-id",
+      })
+    })
+    await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(4))
+    expect(
+      result.current.editor?.optionFailuresByField[field.Creator],
+    ).toBeUndefined()
+    retry.resolve([{ value: "member-second" }])
+    await waitFor(() =>
+      expect(result.current.editor?.optionsByField[field.Creator]).toEqual([
+        { value: "member-second" },
+      ]),
+    )
+
+    await act(async () => lateFirstFailure.reject(new Error("late first")))
+    expect(
+      result.current.editor?.optionFailuresByField[field.Creator],
+    ).toBeUndefined()
+    expect(result.current.editor?.optionsByField[field.Creator]).toEqual([
+      { value: "member-second" },
+    ])
+    await act(async () =>
+      result.current.submitEditor(result.current.editor!.values),
+    )
+    expect(editor.submit.mock.calls[0]?.[0]).not.toMatchObject({
+      [field.Creator]: "member-first",
+    })
+  })
+
+  it("aborts editor option loads when the editor closes", async () => {
+    const options = deferred<any>()
+    const loadOptions = vi.fn(
+      (
+        _fieldId: string,
+        _values: unknown,
+        _options: { signal?: AbortSignal },
+      ) => options.promise,
+    )
+    const scope = {
+      scopeKey: "workspace-default-id",
+      routeKey: "team",
+      displayName: "Team",
+      isDefault: true,
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+        listScopes: vi.fn().mockResolvedValue([scope]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi.fn().mockResolvedValue({
+          fields: [{ fieldId: "creator", type: "select", options: [] }],
+          initialValues: {},
+          validate: vi.fn().mockReturnValue({ valid: true }),
+          loadOptions,
+          submit: vi.fn(),
+        }),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scope))
+    await act(async () => {
+      await result.current.openCreate()
+    })
+    act(() => {
+      void result.current.loadEditorOptions("creator", {})
+    })
+    await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(1))
+    const signal = (
+      (
+        loadOptions.mock.calls[0] as unknown as
+          | [unknown, unknown, { signal?: AbortSignal }]
+          | undefined
+      )?.[2] as { signal?: AbortSignal } | undefined
+    )?.signal
+
+    act(() => result.current.closeEditor())
+
+    expect(signal?.aborted).toBe(true)
+  })
+
+  it("loads only default scopes with bounded all-account concurrency", async () => {
+    const openedScopes: string[] = []
+    let active = 0
+    let maximumActive = 0
+    const accounts = Array.from({ length: 6 }, (_, index) =>
+      createAccount(`account-${index + 1}`),
+    )
+    const openNativeResources = vi.fn((input: any) =>
+      Promise.resolve({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: `scope-${input.account.id}`,
+          routeKey: "default",
+          displayName: "Default",
+          isDefault: true,
+        }),
+        listScopes: vi.fn(),
+        openCollection: vi.fn((scopeKey: string) => {
+          openedScopes.push(scopeKey)
+          return Promise.resolve({
+            list: vi.fn(async () => {
+              active += 1
+              maximumActive = Math.max(maximumActive, active)
+              await Promise.resolve()
+              active -= 1
+              return { items: [] }
+            }),
+          })
+        }),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    mockNativeResourceSession(openNativeResources)
+
+    renderHook(() =>
+      useAccountKeyResourceController({
+        accounts,
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      }),
+    )
+
+    await waitFor(() => expect(openedScopes).toHaveLength(accounts.length))
+    expect(openedScopes).toEqual(
+      accounts.map((account) => `scope-${account.id}`),
+    )
+    expect(maximumActive).toBeLessThanOrEqual(4)
+  })
+
+  it("isolates all-account failures and reports completion progress", async () => {
+    const finalList = deferred<any>()
+    const accounts = [
+      {
+        ...createAccount("account-one"),
+        baseUrl: "https://one.example.invalid",
+      },
+      {
+        ...createAccount("account-failed"),
+        baseUrl: "https://two.example.invalid",
+      },
+      {
+        ...createAccount("account-pending"),
+        baseUrl: "https://three.example.invalid",
+      },
+    ]
+    mockNativeResourceSession(
+      vi.fn((input: { account: { id: string } }) => {
+        if (input.account.id === "account-failed") {
+          return Promise.resolve({
+            resolveDefaultScope: vi.fn().mockRejectedValue(new Error("failed")),
+          })
+        }
+        return Promise.resolve({
+          resolveDefaultScope: vi.fn().mockResolvedValue({
+            scopeKey: `scope-${input.account.id}`,
+            routeKey: "default",
+            displayName: "Default",
+            isDefault: true,
+          }),
+          openCollection: vi.fn().mockResolvedValue({
+            list:
+              input.account.id === "account-pending"
+                ? vi.fn(() => finalList.promise)
+                : vi.fn().mockResolvedValue({
+                    items: [
+                      {
+                        ...createFacts("scope-account-one", "key-one"),
+                        ref: {
+                          ...createFacts("scope-account-one", "key-one").ref,
+                          accountId: "account-one",
+                        },
+                      },
+                    ],
+                  }),
+          }),
+        })
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts,
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      }),
+    )
+
+    await waitFor(() =>
+      expect(result.current.progress).toEqual({
+        total: 3,
+        loaded: 1,
+        loading: 1,
+        error: 1,
+      }),
+    )
+    finalList.resolve({ items: [] })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.failures).toHaveProperty("account-failed")
+    expect(result.current.rows.map((row) => row.ref.accountId)).toEqual([
+      "account-one",
+    ])
+    expect(result.current.progress).toEqual({
+      total: 3,
+      loaded: 2,
+      loading: 0,
+      error: 1,
+    })
+  })
+
+  it("merges only native default scopes in all-account mode", async () => {
+    const nativeRow = {
+      ...createFacts("scope-native", "key-native"),
+      ref: {
+        ...createFacts("scope-native", "key-native").ref,
+        accountId: "account-native",
+      },
+    }
+    const openedAccountIds: string[] = []
+    const openNativeResources = vi.fn((input: { account: { id: string } }) => {
+      openedAccountIds.push(input.account.id)
+      if (input.account.id === "account-failed") {
+        return Promise.resolve({
+          resolveDefaultScope: vi.fn().mockRejectedValue(new Error("failed")),
+        })
+      }
+      return Promise.resolve({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "scope-native",
+          routeKey: "default",
+          displayName: "Default",
+          isDefault: true,
+        }),
+        listScopes: vi.fn(),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [nativeRow] }),
+        }),
+        openCreateEditor: vi.fn(),
+      })
+    })
+    const accounts = [
+      {
+        ...createAccount("account-native"),
+        baseUrl: "https://native.example.invalid",
+      },
+      {
+        ...createAccount("account-legacy"),
+        siteType: "new-api" as const,
+        baseUrl: "https://legacy.example.invalid",
+      },
+      {
+        ...createAccount("account-failed"),
+        baseUrl: "https://failed.example.invalid",
+      },
+    ]
+    createDisplayAccountApiContextMock.mockImplementation((account: any) => ({
+      ...(account.siteType === "openrouter"
+        ? { accountKeyResources: { open: openNativeResources } }
+        : {}),
+      request: {},
+    }))
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts,
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      }),
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+
+    expect(openedAccountIds).toEqual(["account-native", "account-failed"])
+    expect(result.current.mode).toBe("all")
+    expect(result.current.scopes).toEqual([])
+    expect(result.current.selectedScope).toBeNull()
+    expect(result.current.rows).toEqual([nativeRow])
+    expect(result.current.failures).toHaveProperty("account-failed")
+    expect(result.current.failures).not.toHaveProperty("account-legacy")
+    expect(result.current.progress).toEqual({
+      total: 3,
+      loaded: 2,
+      loading: 0,
+      error: 1,
+    })
+  })
+
+  it("drains cursors and applies controlled search and status filters", async () => {
+    const first = createFacts("workspace-default-id", "key-first")
+    const second = {
+      ...createFacts("workspace-default-id", "key-second"),
+      status: "disabled" as const,
+    }
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [first], nextCursor: "next" })
+      .mockResolvedValueOnce({ items: [second] })
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([
+          {
+            scopeKey: "workspace-default-id",
+            routeKey: "team",
+            displayName: "Team",
+            isDefault: true,
+          },
+        ]),
+        openCollection: vi.fn().mockResolvedValue({
+          list,
+          get: vi.fn().mockResolvedValue(first),
+          openEditEditor: vi.fn(),
+          delete: vi.fn(),
+        }),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(2))
+    expect(list.mock.calls.map((call) => call[0])).toEqual([
+      {},
+      { cursor: "next" },
+    ])
+    act(() => result.current.setStatusFilter("disabled"))
+    expect(result.current.rows.map((row) => row.ref.resourceId)).toEqual([
+      "key-second",
+    ])
+    act(() => result.current.setSearch("does-not-match"))
+    expect(result.current.rows).toEqual([])
+  })
+
+  it("rejects duplicate resource refs across collection cursors", async () => {
+    const duplicate = createFacts("workspace-default-id", "key-example")
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi
+            .fn()
+            .mockResolvedValueOnce({ items: [duplicate], nextCursor: "next" })
+            .mockResolvedValueOnce({ items: [duplicate] }),
+        }),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.allRows).toEqual([])
+    expect(result.current.failures).toHaveProperty("account-example")
+  })
+
+  it("rejects a repeated cursor token even when each page has unique refs", async () => {
+    const first = createFacts("workspace-default-id", "key-first")
+    const second = createFacts("workspace-default-id", "key-second")
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi
+            .fn()
+            .mockResolvedValueOnce({ items: [first], nextCursor: "next" })
+            .mockResolvedValueOnce({ items: [second], nextCursor: "next" }),
+        }),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.allRows).toEqual([])
+    expect(result.current.failures).toHaveProperty("account-example")
+  })
+
+  it("refreshes the returned destination and keeps a created secret tied to it", async () => {
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const createdFacts = createFacts("workspace-second-id", "key-created")
+    const createdSecret = {
+      correlation: {
+        kind: "account-key-resource" as const,
+        ref: createdFacts.ref,
+      },
+      displayName: "Created key",
+      secret: "secret-created",
+      secretAvailability: "create-response-only" as const,
+      credential: {},
+    }
+    const resolveDestinationScopeKey = vi.fn(() => "workspace-second-id")
+    const editor = {
+      fields: [
+        {
+          fieldId: "destination",
+          type: "select" as const,
+          options: scopes.map((scope) => ({ value: scope.scopeKey })),
+        },
+      ],
+      initialValues: { destination: "workspace-first-id" },
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey,
+      submit: vi.fn().mockResolvedValue({
+        facts: createdFacts,
+        createdSecret,
+      }),
+    }
+    const firstCollection = {
+      list: vi.fn().mockResolvedValue({ items: [] }),
+    }
+    const secondCollection = {
+      list: vi.fn().mockResolvedValue({ items: [createdFacts] }),
+    }
+    const openCollection = vi.fn((scopeKey: string) =>
+      Promise.resolve(
+        scopeKey === "workspace-first-id" ? firstCollection : secondCollection,
+      ),
+    )
+    const replaceRoute = vi.fn()
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection,
+        openCreateEditor: vi.fn().mockResolvedValue(editor),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "first" },
+        replaceRoute,
+      }),
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
+    await act(async () => result.current.openCreate())
+    await act(async () =>
+      result.current.submitEditor({ destination: "workspace-second-id" }),
+    )
+
+    expect(resolveDestinationScopeKey).toHaveBeenCalledWith({
+      destination: "workspace-second-id",
+    })
+    expect(openCollection.mock.calls.map(([scopeKey]) => scopeKey)).toEqual([
+      "workspace-first-id",
+      "workspace-second-id",
+    ])
+    expect(firstCollection.list).toHaveBeenCalledTimes(1)
+    expect(secondCollection.list).toHaveBeenCalledTimes(1)
+    expect(result.current.selectedScope).toEqual(scopes[1])
+    expect(result.current.rows).toEqual([createdFacts])
+    expect(result.current.createdSecret).toBe(createdSecret)
+    expect(result.current.createdSecret?.correlation).toEqual({
+      kind: "account-key-resource",
+      ref: createdFacts.ref,
+    })
+    expect(replaceRoute).toHaveBeenCalledWith({
+      accountId: "account-example",
+      workspace: "second",
+    })
+  })
+
+  it("fresh-reads the derived create destination after an uncertain result", async () => {
+    const refreshedDestination = deferred<any>()
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const resolveDestinationScopeKey = vi.fn(() => "workspace-second-id")
+    const editor = {
+      fields: [
+        {
+          fieldId: "destination",
+          type: "select" as const,
+          options: scopes.map((scope) => ({ value: scope.scopeKey })),
+        },
+      ],
+      initialValues: { destination: "workspace-first-id" },
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey,
+      submit: vi.fn().mockRejectedValue(
+        new AccountKeyResourceError({
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        }),
+      ),
+    }
+    const firstCollection = {
+      list: vi.fn().mockResolvedValue({ items: [] }),
+    }
+    const secondCollection = {
+      list: vi.fn(() => refreshedDestination.promise),
+    }
+    const openCollection = vi.fn((scopeKey: string) =>
+      Promise.resolve(
+        scopeKey === "workspace-first-id" ? firstCollection : secondCollection,
+      ),
+    )
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection,
+        openCreateEditor: vi.fn().mockResolvedValue(editor),
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: "first" } },
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
+    await act(async () => result.current.openCreate())
+    act(() => {
+      void result.current.submitEditor({ destination: "workspace-second-id" })
+    })
+    await waitFor(() => expect(result.current.freshReadRequired).toBe(true))
+    expect(resolveDestinationScopeKey).toHaveBeenCalledWith({
+      destination: "workspace-second-id",
+    })
+    expect(openCollection.mock.calls.map(([scopeKey]) => scopeKey)).toEqual([
+      "workspace-first-id",
+      "workspace-second-id",
+    ])
+    expect(firstCollection.list).toHaveBeenCalledTimes(1)
+    expect(editor.submit).toHaveBeenCalledTimes(1)
+
+    await act(async () => result.current.refresh())
+    expect(result.current.selectedScope).toEqual(scopes[0])
+    expect(result.current.freshReadRequired).toBe(false)
+
+    rerender({ workspace: "second" })
+    await act(async () => refreshedDestination.resolve({ items: [] }))
+    await waitFor(() => expect(result.current.freshReadRequired).toBe(false))
+    expect(result.current.selectedScope).toEqual(scopes[1])
+    expect(editor.submit).toHaveBeenCalledTimes(1)
+  })
+
+  it("locks mutations after an uncertain result until a fresh read completes", async () => {
+    const refreshedList = deferred<any>()
+    const editor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-default-id",
+      submit: vi.fn().mockRejectedValue(
+        new AccountKeyResourceError({
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        }),
+      ),
+    }
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [] })
+      .mockImplementationOnce(() => refreshedList.promise)
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue({ list }),
+        openCreateEditor: vi.fn().mockResolvedValue(editor),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).not.toBeNull())
+    await act(async () => result.current.openCreate())
+    act(() => {
+      void result.current.submitEditor({})
+    })
+    await waitFor(() => expect(result.current.freshReadRequired).toBe(true))
+    act(() => {
+      void result.current.submitEditor({})
+    })
+    expect(editor.submit).toHaveBeenCalledTimes(1)
+    refreshedList.resolve({ items: [] })
+    await waitFor(() => expect(result.current.freshReadRequired).toBe(false))
+  })
+
+  it("keeps uncertain fresh-read locks scoped to their account and workspace", async () => {
+    const accountARefresh = deferred<any>()
+    const accountAList = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [] })
+      .mockImplementationOnce(() => accountARefresh.promise)
+      .mockResolvedValue({ items: [] })
+    const accountBList = vi.fn().mockResolvedValue({ items: [] })
+    const accountAEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-a-id",
+      submit: vi.fn().mockRejectedValue(
+        new AccountKeyResourceError({
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        }),
+      ),
+    }
+    const accountBFacts = {
+      ...createFacts("workspace-b-id", "key-b"),
+      ref: {
+        ...createFacts("workspace-b-id", "key-b").ref,
+        accountId: "account-b",
+      },
+    }
+    const accountBEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-b-id",
+      submit: vi.fn().mockResolvedValue({ facts: accountBFacts }),
+    }
+    const createSession = (accountId: string) => {
+      const isAccountA = accountId === "account-a"
+      const scope = {
+        scopeKey: isAccountA ? "workspace-a-id" : "workspace-b-id",
+        routeKey: "team",
+        displayName: isAccountA ? "Workspace A" : "Workspace B",
+        isDefault: true,
+      }
+      return {
+        resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+        listScopes: vi.fn().mockResolvedValue([scope]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: isAccountA ? accountAList : accountBList,
+        }),
+        openCreateEditor: vi
+          .fn()
+          .mockResolvedValue(isAccountA ? accountAEditor : accountBEditor),
+      }
+    }
+    createDisplayAccountApiContextMock.mockImplementation((account: any) => ({
+      accountKeyResources: {
+        open: vi.fn().mockResolvedValue(createSession(account.id)),
+      },
+      request: {},
+    }))
+    const accounts = [
+      { ...createAccount("account-a"), baseUrl: "https://a.example.invalid" },
+      { ...createAccount("account-b"), baseUrl: "https://b.example.invalid" },
+    ]
+    const { result, rerender } = renderHook(
+      ({ selectedAccount }) =>
+        useAccountKeyResourceController({
+          accounts,
+          selectedAccount,
+          routeParams: { accountId: selectedAccount, workspace: "team" },
+        }),
+      { initialProps: { selectedAccount: "account-a" } },
+    )
+
+    await waitFor(() =>
+      expect(result.current.selectedScope?.scopeKey).toBe("workspace-a-id"),
+    )
+    await act(async () => result.current.openCreate())
+    act(() => {
+      void result.current.submitEditor({})
+    })
+    await waitFor(() => expect(result.current.freshReadRequired).toBe(true))
+
+    rerender({ selectedAccount: "account-b" })
+    await waitFor(() =>
+      expect(result.current.selectedScope?.scopeKey).toBe("workspace-b-id"),
+    )
+    expect(result.current.freshReadRequired).toBe(false)
+    await act(async () => accountARefresh.reject(new Error("late A read")))
+    expect(result.current.freshReadRequired).toBe(false)
+
+    await act(async () => result.current.openCreate())
+    await act(async () => result.current.submitEditor({}))
+    expect(accountBEditor.submit).toHaveBeenCalledTimes(1)
+
+    rerender({ selectedAccount: "account-a" })
+    await waitFor(() =>
+      expect(result.current.selectedScope?.scopeKey).toBe("workspace-a-id"),
+    )
+    expect(result.current.freshReadRequired).toBe(false)
+  })
+
+  it("keys uncertain locks to canonical native collection identity", async () => {
+    const lateWorkspaceBRead = deferred<any>()
+    const lateWorkspaceCRead = deferred<any>()
+    const workspaceB = {
+      scopeKey: "workspace-b-id",
+      routeKey: "workspace-b",
+      displayName: "Workspace B",
+      isDefault: true,
+    }
+    const canonicalWorkspaceB = {
+      ...workspaceB,
+      routeKey: "workspace-b-canonical",
+    }
+    const workspaceC = {
+      scopeKey: "workspace-c-id",
+      routeKey: "workspace-c",
+      displayName: "Workspace C",
+      isDefault: false,
+    }
+    const workspaceCFacts = createFacts(workspaceC.scopeKey, "key-c")
+    const workspaceBFacts = createFacts(workspaceB.scopeKey, "key-b")
+    const workspaceBList = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [] })
+      .mockImplementationOnce(() => lateWorkspaceBRead.promise)
+      .mockResolvedValueOnce({ items: [workspaceBFacts] })
+    const workspaceCList = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [workspaceCFacts] })
+      .mockImplementationOnce(() => lateWorkspaceCRead.promise)
+      .mockImplementationOnce(() => lateWorkspaceCRead.promise)
+    const workspaceBEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => workspaceB.scopeKey,
+      submit: vi.fn().mockRejectedValue(
+        new AccountKeyResourceError({
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        }),
+      ),
+    }
+    const workspaceCEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => workspaceC.scopeKey,
+      submit: vi.fn().mockRejectedValue(
+        new AccountKeyResourceError({
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        }),
+      ),
+    }
+    const listScopes = vi
+      .fn()
+      .mockResolvedValueOnce([workspaceB, workspaceC])
+      .mockResolvedValue([canonicalWorkspaceB, workspaceC])
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(workspaceB),
+        listScopes,
+        openCollection: vi.fn((scopeKey: string) =>
+          Promise.resolve({
+            list:
+              scopeKey === workspaceB.scopeKey
+                ? workspaceBList
+                : workspaceCList,
+          }),
+        ),
+        openCreateEditor: vi.fn((scopeKey: string) =>
+          Promise.resolve(
+            scopeKey === workspaceB.scopeKey
+              ? workspaceBEditor
+              : workspaceCEditor,
+          ),
+        ),
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: workspaceB.routeKey } },
+    )
+
+    await waitFor(() =>
+      expect(result.current.selectedScope?.scopeKey).toBe(workspaceB.scopeKey),
+    )
+    await act(async () => result.current.openCreate())
+    act(() => {
+      void result.current.submitEditor({})
+    })
+    await waitFor(() => expect(workspaceBList).toHaveBeenCalledTimes(2))
+
+    rerender({ workspace: workspaceC.routeKey })
+    await waitFor(() =>
+      expect(result.current.selectedScope?.scopeKey).toBe(workspaceC.scopeKey),
+    )
+    await act(async () => result.current.openCreate())
+    expect(result.current.editor?.mode).toBe("create")
+    act(() => {
+      void result.current.submitEditor({})
+    })
+    await waitFor(() => expect(workspaceCList).toHaveBeenCalledTimes(2))
+    expect(workspaceCEditor.submit).toHaveBeenCalledTimes(1)
+
+    await act(async () => lateWorkspaceBRead.resolve({ items: [] }))
+    expect(result.current.freshReadRequired).toBe(true)
+
+    rerender({ workspace: "workspace-b-alias" })
+    await waitFor(() =>
+      expect(result.current.selectedScope?.routeKey).toBe(
+        canonicalWorkspaceB.routeKey,
+      ),
+    )
+    await act(async () => result.current.openCreate())
+    expect(result.current.editor?.mode).toBe("create")
+
+    rerender({ workspace: workspaceC.routeKey })
+    await waitFor(() => expect(workspaceCList).toHaveBeenCalledTimes(3))
+    expect(result.current.freshReadRequired).toBe(true)
+    await act(async () =>
+      lateWorkspaceCRead.resolve({ items: [workspaceCFacts] }),
+    )
+    await waitFor(() => expect(result.current.freshReadRequired).toBe(false))
+  })
+
+  it("keeps a stale uncertain create dirty without blocking another workspace", async () => {
+    const pendingWorkspaceBCreate = deferred<any>()
+    const workspaceB = {
+      scopeKey: "workspace-b-id",
+      routeKey: "workspace-b",
+      displayName: "Workspace B",
+      isDefault: true,
+    }
+    const workspaceC = {
+      scopeKey: "workspace-c-id",
+      routeKey: "workspace-c",
+      displayName: "Workspace C",
+      isDefault: false,
+    }
+    const workspaceCFacts = createFacts(workspaceC.scopeKey, "key-c")
+    const pendingWorkspaceCSubmit = deferred<any>()
+    const firstWorkspaceBEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => workspaceB.scopeKey,
+      submit: vi.fn(() => pendingWorkspaceBCreate.promise),
+    }
+    const returnedWorkspaceBEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => workspaceB.scopeKey,
+      submit: vi.fn(),
+    }
+    const workspaceCEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => workspaceC.scopeKey,
+      submit: vi.fn(() => pendingWorkspaceCSubmit.promise),
+    }
+    const openCreateEditor = vi.fn((scopeKey: string) =>
+      Promise.resolve(
+        scopeKey === workspaceC.scopeKey
+          ? workspaceCEditor
+          : openCreateEditor.mock.calls.filter(
+                ([candidate]) => candidate === workspaceB.scopeKey,
+              ).length === 1
+            ? firstWorkspaceBEditor
+            : returnedWorkspaceBEditor,
+      ),
+    )
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(workspaceB),
+        listScopes: vi.fn().mockResolvedValue([workspaceB, workspaceC]),
+        openCollection: vi.fn((scopeKey: string) =>
+          Promise.resolve({
+            list: vi.fn().mockResolvedValue({
+              items: scopeKey === workspaceC.scopeKey ? [workspaceCFacts] : [],
+            }),
+          }),
+        ),
+        openCreateEditor,
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: workspaceB.routeKey } },
+    )
+
+    await waitFor(() =>
+      expect(result.current.selectedScope?.scopeKey).toBe(workspaceB.scopeKey),
+    )
+    await act(async () => result.current.openCreate())
+    let workspaceBSubmit!: Promise<unknown>
+    act(() => {
+      workspaceBSubmit = result.current.submitEditor({})
+    })
+    await waitFor(() =>
+      expect(firstWorkspaceBEditor.submit).toHaveBeenCalledTimes(1),
+    )
+
+    rerender({ workspace: workspaceC.routeKey })
+    await waitFor(() =>
+      expect(result.current.selectedScope?.scopeKey).toBe(workspaceC.scopeKey),
+    )
+    await act(async () => result.current.openCreate())
+    let workspaceCSubmit!: Promise<unknown>
+    act(() => {
+      workspaceCSubmit = result.current.submitEditor({})
+    })
+    await waitFor(() =>
+      expect(workspaceCEditor.submit).toHaveBeenCalledTimes(1),
+    )
+    await act(async () => {
+      pendingWorkspaceCSubmit.resolve({ facts: workspaceCFacts })
+      await workspaceCSubmit
+    })
+
+    rerender({ workspace: workspaceB.routeKey })
+    await waitFor(() =>
+      expect(result.current.selectedScope?.scopeKey).toBe(workspaceB.scopeKey),
+    )
+    await act(async () => result.current.openCreate())
+    act(() => {
+      void result.current.submitEditor({})
+    })
+    expect(returnedWorkspaceBEditor.submit).not.toHaveBeenCalled()
+
+    await act(async () => {
+      pendingWorkspaceBCreate.reject(
+        new AccountKeyResourceError({
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        }),
+      )
+      await workspaceBSubmit
+    })
+    await waitFor(() => expect(result.current.freshReadRequired).toBe(true))
+    expect(result.current.editor?.feedback).toBeNull()
+  })
+
+  it("keeps a stale uncertain delete dirty without blocking another workspace", async () => {
+    const pendingWorkspaceBDelete = deferred<void>()
+    const workspaceB = {
+      scopeKey: "workspace-b-id",
+      routeKey: "workspace-b",
+      displayName: "Workspace B",
+      isDefault: true,
+    }
+    const workspaceC = {
+      scopeKey: "workspace-c-id",
+      routeKey: "workspace-c",
+      displayName: "Workspace C",
+      isDefault: false,
+    }
+    const workspaceBFacts = createFacts(workspaceB.scopeKey, "key-b")
+    const workspaceCFacts = createFacts(workspaceC.scopeKey, "key-c")
+    const pendingWorkspaceCSubmit = deferred<any>()
+    const workspaceCEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => workspaceC.scopeKey,
+      submit: vi.fn(() => pendingWorkspaceCSubmit.promise),
+    }
+    const workspaceBCollection = {
+      list: vi.fn().mockResolvedValue({ items: [workspaceBFacts] }),
+      delete: vi.fn(() => pendingWorkspaceBDelete.promise),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(workspaceB),
+        listScopes: vi.fn().mockResolvedValue([workspaceB, workspaceC]),
+        openCollection: vi.fn((scopeKey: string) =>
+          Promise.resolve(
+            scopeKey === workspaceB.scopeKey
+              ? workspaceBCollection
+              : {
+                  list: vi.fn().mockResolvedValue({ items: [workspaceCFacts] }),
+                },
+          ),
+        ),
+        openCreateEditor: vi.fn((scopeKey: string) =>
+          Promise.resolve(
+            scopeKey === workspaceC.scopeKey ? workspaceCEditor : undefined,
+          ),
+        ),
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: workspaceB.routeKey } },
+    )
+
+    await waitFor(() => expect(result.current.rows).toEqual([workspaceBFacts]))
+    act(() => {
+      expect(result.current.openDelete(workspaceBFacts.ref)).toBe(true)
+    })
+    await waitFor(() =>
+      expect(result.current.deleteState.ref).toEqual(workspaceBFacts.ref),
+    )
+    let workspaceBDelete!: Promise<unknown>
+    act(() => {
+      workspaceBDelete = result.current.confirmDelete()
+    })
+    await waitFor(() =>
+      expect(workspaceBCollection.delete).toHaveBeenCalledTimes(1),
+    )
+
+    rerender({ workspace: workspaceC.routeKey })
+    await waitFor(() =>
+      expect(result.current.selectedScope?.scopeKey).toBe(workspaceC.scopeKey),
+    )
+    await act(async () => result.current.openCreate())
+    let workspaceCSubmit!: Promise<unknown>
+    act(() => {
+      workspaceCSubmit = result.current.submitEditor({})
+    })
+    await waitFor(() =>
+      expect(workspaceCEditor.submit).toHaveBeenCalledTimes(1),
+    )
+    await act(async () => {
+      pendingWorkspaceCSubmit.resolve({ facts: workspaceCFacts })
+      await workspaceCSubmit
+    })
+
+    rerender({ workspace: workspaceB.routeKey })
+    await waitFor(() => expect(result.current.rows).toEqual([workspaceBFacts]))
+    await act(async () => {
+      pendingWorkspaceBDelete.reject(
+        new AccountKeyResourceError({
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        }),
+      )
+      await workspaceBDelete
+    })
+    await waitFor(() => expect(result.current.freshReadRequired).toBe(true))
+    expect(result.current.deleteState.failure).toBeNull()
+  })
+
+  it("loads details and serializes delete commands with redacted analytics", async () => {
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: trackCompleteMock,
+    })
+    const facts = createFacts("workspace-default-id", "key-example")
+    const remove = deferred<void>()
+    const collection = {
+      list: vi.fn().mockResolvedValue({ items: [facts] }),
+      get: vi.fn().mockResolvedValue({
+        ...facts,
+        fields: [{ fieldId: "hash", label: "Hash", value: "hash-example" }],
+      }),
+      openEditEditor: vi.fn().mockResolvedValue({
+        fields: [],
+        initialValues: {},
+        validate: vi.fn().mockReturnValue({ valid: true }),
+        submit: vi.fn(),
+      }),
+      delete: vi.fn(() => remove.promise),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue(collection),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openDetail(facts.ref))
+    expect(result.current.detail?.fields).toEqual([
+      { fieldId: "hash", label: "Hash", value: "hash-example" },
+    ])
+    await act(async () => result.current.openEdit(facts.ref))
+    expect(result.current.editor?.mode).toBe("edit")
+    act(() => result.current.closeEditor())
+    let opened = false
+    act(() => {
+      opened = result.current.openDelete(facts.ref)
+    })
+    expect(opened).toBe(true)
+    await waitFor(() => expect(result.current.deleteState.isOpen).toBe(true))
+    act(() => {
+      void result.current.confirmDelete()
+    })
+    await waitFor(() => expect(collection.delete).toHaveBeenCalledTimes(1))
+    act(() => {
+      void result.current.confirmDelete()
+    })
+    expect(collection.delete).toHaveBeenCalledTimes(1)
+    await act(async () => remove.resolve())
+    await waitFor(() => expect(result.current.deleteState.isOpen).toBe(false))
+    expect(collection.list).toHaveBeenCalledTimes(2)
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
+      }),
+    )
+    const calls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      trackCompleteMock.mock.calls,
+    ])
+    for (const value of ["account-example", "key-example", "hash-example"]) {
+      expect(calls).not.toContain(value)
+    }
+  })
+
+  it("rejects foreign account, site, and scope refs for every resource command", async () => {
+    const collection = {
+      list: vi.fn().mockResolvedValue({ items: [] }),
+      get: vi.fn(),
+      openEditEditor: vi.fn(),
+      delete: vi.fn(),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-current-id",
+          routeKey: "current",
+          displayName: "Current",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue(collection),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: {
+          accountId: "account-example",
+          workspace: "current",
+        },
+      }),
+    )
+    await waitFor(() => expect(result.current.selectedScope).not.toBeNull())
+    const invalidRefs = [
+      {
+        ...createFacts("workspace-current-id", "foreign-account").ref,
+        accountId: "account-foreign",
+      },
+      {
+        ...createFacts("workspace-current-id", "foreign-site").ref,
+        siteType: "new-api" as const,
+      },
+      createFacts("workspace-stale-id", "stale-scope").ref,
+    ]
+
+    for (const ref of invalidRefs) {
+      await act(async () => result.current.openDetail(ref as any))
+      await act(async () => result.current.openEdit(ref as any))
+      let opened = true
+      act(() => {
+        opened = result.current.openDelete(ref as any)
+      })
+      expect(opened).toBe(false)
+    }
+
+    expect(collection.get).not.toHaveBeenCalled()
+    expect(collection.openEditEditor).not.toHaveBeenCalled()
+    expect(collection.delete).not.toHaveBeenCalled()
+  })
+
+  it("tracks an applied edit as an update without leaking submitted values", async () => {
+    const facts = createFacts("workspace-default-id", "key-example")
+    const editor = {
+      fields: [],
+      initialValues: { member: "member-raw" },
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn().mockResolvedValue({ facts }),
+    }
+    const collection = {
+      list: vi.fn().mockResolvedValue({ items: [facts] }),
+      openEditEditor: vi.fn().mockResolvedValue(editor),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue(collection),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openEdit(facts.ref))
+    await act(async () => {
+      await result.current.submitEditor({
+        member: "member-raw",
+        limit: "limit-example",
+        hash: "hash-example",
+        secret: "secret-example",
+        callbackUrl: "https://example.invalid/path",
+      })
+    })
+    expect(editor.submit).toHaveBeenCalledTimes(1)
+    expect(collection.list).toHaveBeenCalledTimes(2)
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
+      }),
+    )
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken,
+      }),
+    )
+    expect(trackCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({ insights: expect.any(Object) }),
+    )
+    const calls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      trackCompleteMock.mock.calls,
+    ])
+    for (const value of [
+      "account-example",
+      "key-example",
+      "Example key",
+      "member-raw",
+      "limit-example",
+      "hash-example",
+      "secret-example",
+      "https://example.invalid/path",
+    ]) {
+      expect(calls).not.toContain(value)
+    }
+  })
+
+  it("tracks a deterministic edit failure without refresh, lock, or replay", async () => {
+    const facts = createFacts("workspace-raw-id", "key-raw-id")
+    const upstreamError = new AccountKeyResourceError({
+      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+      message: "upstream message",
+    })
+    const editor = {
+      fields: [],
+      initialValues: { member: "member-raw" },
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn().mockRejectedValue(upstreamError),
+    }
+    const collection = {
+      list: vi.fn().mockResolvedValue({ items: [facts] }),
+      openEditEditor: vi.fn().mockResolvedValue(editor),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-raw-id",
+          routeKey: "team",
+          displayName: "Workspace Raw Name",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue(collection),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [
+          {
+            ...createAccount("account-raw-id"),
+            name: "Account Raw Name",
+            baseUrl: "https://example.invalid/raw-path",
+          },
+        ],
+        selectedAccount: "account-raw-id",
+        routeParams: { accountId: "account-raw-id", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    const ref = {
+      ...facts.ref,
+      accountId: "account-raw-id",
+    }
+    await act(async () => result.current.openEdit(ref))
+    await act(async () => {
+      await result.current.submitEditor({
+        member: "member-raw",
+        limit: "limit-example",
+        hash: "hash-example",
+        secret: "secret-example",
+        callbackUrl: "https://example.invalid/raw-path",
+      })
+    })
+    expect(editor.submit).toHaveBeenCalledTimes(1)
+    expect(collection.list).toHaveBeenCalledTimes(1)
+    expect(result.current.freshReadRequired).toBe(false)
+    expect(result.current.editor?.feedback?.code).toBe(
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+    )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
+      }),
+    )
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken,
+      }),
+    )
+    expect(trackCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: "unknown",
+        insights: expect.any(Object),
+      }),
+    )
+    const calls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      trackCompleteMock.mock.calls,
+    ])
+    for (const value of [
+      "account-raw-id",
+      "Account Raw Name",
+      "workspace-raw-id",
+      "Workspace Raw Name",
+      "key-raw-id",
+      "member-raw",
+      "limit-example",
+      "hash-example",
+      "upstream message",
+      "secret-example",
+      "https://example.invalid/raw-path",
+    ]) {
+      expect(calls).not.toContain(value)
+    }
+  })
+
+  it("ignores a late edit result after the workspace and editor generation change", async () => {
+    const editResult = deferred<any>()
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const firstFacts = createFacts("workspace-first-id", "key-first")
+    const secondFacts = createFacts("workspace-second-id", "key-second")
+    const editEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn(() => editResult.promise),
+    }
+    const firstCollection = {
+      list: vi.fn().mockResolvedValue({ items: [firstFacts] }),
+      openEditEditor: vi.fn().mockResolvedValue(editEditor),
+    }
+    const secondCollection = {
+      list: vi.fn().mockResolvedValue({ items: [secondFacts] }),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection: vi.fn((scopeKey: string) =>
+          Promise.resolve(
+            scopeKey === "workspace-first-id"
+              ? firstCollection
+              : secondCollection,
+          ),
+        ),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: "first" } },
+    )
+
+    await waitFor(() => expect(result.current.rows).toEqual([firstFacts]))
+    await act(async () => result.current.openEdit(firstFacts.ref))
+    act(() => {
+      void result.current.submitEditor({})
+    })
+    await waitFor(() => expect(editEditor.submit).toHaveBeenCalledTimes(1))
+
+    rerender({ workspace: "second" })
+    await waitFor(() => expect(result.current.rows).toEqual([secondFacts]))
+    await act(async () =>
+      editResult.resolve({
+        facts: firstFacts,
+        createdSecret: {
+          correlation: { kind: "account-key-resource", ref: firstFacts.ref },
+          displayName: "Late secret",
+          secret: "secret-late-example",
+          secretAvailability: "create-response-only",
+          credential: {},
+        },
+      }),
+    )
+
+    expect(result.current.rows).toEqual([secondFacts])
+    expect(result.current.editor).toBeNull()
+    expect(result.current.createdSecret).toBeNull()
+    expect(firstCollection.list).toHaveBeenCalledTimes(1)
+    expect(secondCollection.list).toHaveBeenCalledTimes(1)
+    expect(trackCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          selectedCount: 1,
+        }),
+      }),
+    )
+  })
+
+  it("clears a created secret on account switch and ignores a late create result", async () => {
+    const submitted = deferred<any>()
+    const editor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-default-id",
+      submit: vi.fn(() => submitted.promise),
+    }
+    const facts = createFacts("workspace-default-id", "key-example")
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi.fn().mockResolvedValue(editor),
+      }),
+    )
+    const accounts = [
+      createAccount("account-one"),
+      createAccount("account-two"),
+    ]
+    const { result, rerender } = renderHook(
+      ({ selectedAccount }) =>
+        useAccountKeyResourceController({
+          accounts,
+          selectedAccount,
+          routeParams: { accountId: selectedAccount, workspace: "team" },
+        }),
+      { initialProps: { selectedAccount: "account-one" } },
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).not.toBeNull())
+    await act(async () => result.current.openCreate())
+    act(() => {
+      void result.current.submitEditor({})
+    })
+    await waitFor(() => expect(editor.submit).toHaveBeenCalledTimes(1))
+    rerender({ selectedAccount: "account-two" })
+    await waitFor(() => expect(result.current.createdSecret).toBeNull())
+    await act(async () => {
+      submitted.resolve({
+        facts,
+        createdSecret: {
+          correlation: { kind: "account-key-resource", ref: facts.ref },
+          displayName: "Example key",
+          secret: "secret-example",
+          secretAvailability: "create-response-only",
+          credential: {},
+        },
+      })
+    })
+    expect(result.current.createdSecret).toBeNull()
+  })
+
+  it("ignores a late delete result after the selected account changes", async () => {
+    const remove = deferred<void>()
+    const facts = createFacts("workspace-default-id", "key-example")
+    const collection = {
+      list: vi.fn().mockResolvedValue({ items: [facts] }),
+      delete: vi.fn(() => remove.promise),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue(collection),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const accounts = [
+      createAccount("account-example"),
+      createAccount("account-two"),
+    ]
+    const { result, rerender } = renderHook(
+      ({ selectedAccount }) =>
+        useAccountKeyResourceController({
+          accounts,
+          selectedAccount,
+          routeParams: { accountId: selectedAccount, workspace: "team" },
+        }),
+      { initialProps: { selectedAccount: "account-example" } },
+    )
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    act(() => {
+      result.current.openDelete(facts.ref)
+    })
+    await waitFor(() => expect(result.current.deleteState.isOpen).toBe(true))
+    act(() => {
+      void result.current.confirmDelete()
+    })
+    await waitFor(() => expect(collection.delete).toHaveBeenCalledTimes(1))
+    rerender({ selectedAccount: "account-two" })
+    await act(async () => remove.resolve())
+    await waitFor(() => expect(result.current.deleteState.isOpen).toBe(false))
+    expect(result.current.freshReadRequired).toBe(false)
+  })
+
+  it("aborts an in-flight create when the controller unmounts", async () => {
+    const submitted = deferred<any>()
+    const editor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-default-id",
+      submit: vi.fn(() => submitted.promise),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi.fn().mockResolvedValue(editor),
+      }),
+    )
+    const { result, unmount } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).not.toBeNull())
+    await act(async () => result.current.openCreate())
+    act(() => {
+      void result.current.submitEditor({})
+    })
+    await waitFor(() => expect(editor.submit).toHaveBeenCalledTimes(1))
+    const signal = (
+      editor.submit.mock.calls[0] as unknown as
+        | [unknown, { signal?: AbortSignal }]
+        | undefined
+    )?.[1]?.signal
+    unmount()
+    expect(signal?.aborted).toBe(true)
+    await act(async () => submitted.resolve({}))
+  })
+
+  it("drops the controller-owned reference to a settled secret on unmount", async () => {
+    const facts = createFacts("workspace-default-id", "key-example")
+    const createdSecret = {
+      correlation: { kind: "account-key-resource" as const, ref: facts.ref },
+      displayName: "Example key",
+      secret: "secret-example",
+      secretAvailability: "create-response-only" as const,
+      credential: {},
+    }
+    const editor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-default-id",
+      submit: vi.fn().mockResolvedValue({ facts, createdSecret }),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi.fn().mockResolvedValue(editor),
+      }),
+    )
+    let retainedByHarness: typeof createdSecret | null = null
+    const useHarness = () => {
+      const controller = useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      })
+      useEffect(() => {
+        retainedByHarness = controller.createdSecret as typeof createdSecret
+        return () => {
+          retainedByHarness = null
+        }
+      }, [controller.createdSecret])
+      return controller
+    }
+    const { result, unmount } = renderHook(useHarness)
+
+    await waitFor(() => expect(result.current.selectedScope).not.toBeNull())
+    await act(async () => result.current.openCreate())
+    await act(async () => result.current.submitEditor({}))
+    await waitFor(() =>
+      expect(result.current.createdSecret?.secret).toBe("secret-example"),
+    )
+    expect(retainedByHarness).toBe(createdSecret)
+
+    unmount()
+
+    expect(retainedByHarness).toBeNull()
+  })
+
+  it("serializes mutations and clears one-time creation secrets when the dialog closes", async () => {
+    startProductAnalyticsActionMock.mockClear()
+    trackCompleteMock.mockClear()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: trackCompleteMock,
+    })
+    const submit = deferred<any>()
+    const editor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-default-id",
+      submit: vi.fn(() => submit.promise),
+    }
+    const facts = createFacts("workspace-default-id", "key-example")
+    const session = {
+      resolveDefaultScope: vi.fn().mockResolvedValue({
+        scopeKey: "workspace-default-id",
+        routeKey: "team",
+        displayName: "Team",
+        isDefault: true,
+      }),
+      listScopes: vi.fn().mockResolvedValue([
+        {
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        },
+      ]),
+      openCollection: vi.fn().mockResolvedValue({
+        list: vi.fn().mockResolvedValue({ items: [facts] }),
+        get: vi.fn(),
+        openEditEditor: vi.fn(),
+        delete: vi.fn(),
+      }),
+      openCreateEditor: vi.fn().mockResolvedValue(editor),
+    }
+    mockNativeResourceSession(vi.fn().mockResolvedValue(session))
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    expect(result.current.editor?.mode).toBe("create")
+    void result.current.submitEditor({})
+    void result.current.submitEditor({})
+    expect(editor.submit).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      submit.resolve({
+        facts,
+        createdSecret: {
+          correlation: { kind: "account-key-resource", ref: facts.ref },
+          displayName: "Example key",
+          secret: "secret-example",
+          secretAvailability: "create-response-only",
+          credential: {},
+        },
+      })
+    })
+    await waitFor(() =>
+      expect(result.current.createdSecret?.secret).toBe("secret-example"),
+    )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken,
+      }),
+    )
+    expect(trackCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({ insights: expect.any(Object) }),
+    )
+    startProductAnalyticsActionMock.mockClear()
+    trackCompleteMock.mockClear()
+    act(() => result.current.recordCreatedSecretCopyResult("success"))
+    act(() => result.current.recordCreatedSecretSaveResult("failure"))
+    expect(startProductAnalyticsActionMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKey,
+      }),
+    )
+    expect(startProductAnalyticsActionMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountTokenToApiCredentialProfile,
+      }),
+    )
+    expect(trackCompleteMock).toHaveBeenNthCalledWith(
+      1,
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({ insights: expect.any(Object) }),
+    )
+    expect(trackCompleteMock).toHaveBeenNthCalledWith(
+      2,
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: "unknown",
+        insights: expect.any(Object),
+      }),
+    )
+    const observerCalls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      trackCompleteMock.mock.calls,
+    ])
+    for (const value of [
+      "account-example",
+      "workspace-default-id",
+      "key-example",
+      "Example key",
+      "secret-example",
+    ]) {
+      expect(observerCalls).not.toContain(value)
+    }
+    act(() => result.current.closeCreatedSecret())
+    expect(result.current.createdSecret).toBeNull()
+  })
+})

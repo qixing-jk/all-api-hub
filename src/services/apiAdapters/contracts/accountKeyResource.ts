@@ -76,6 +76,8 @@ export interface AccountKeyResourceEditor {
   readonly fields: readonly ResourceFieldDescriptor[]
   readonly initialValues: EditableResourceProjection
   validate(values: EditableResourceProjection): ResourceValidationResult
+  /** Resolves the validated scope that a submitted command targets. */
+  resolveDestinationScopeKey(values: EditableResourceProjection): string
   loadOptions?: (
     fieldId: string,
     values: EditableResourceProjection,

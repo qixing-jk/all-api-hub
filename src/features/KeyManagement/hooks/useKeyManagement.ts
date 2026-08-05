@@ -769,6 +769,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         const {
           keyManagement,
           serviceCredential,
+          accountKeyResources,
           request: baseRequest,
         } = createDisplayAccountApiContext(account)
         const request = {
@@ -776,7 +777,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           protectionBypassExecution,
         }
 
-        if (!keyManagement && !serviceCredential) {
+        if (!keyManagement && !serviceCredential && !accountKeyResources) {
           const errorCategory = PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
           tokenLoadErrorCategoriesRef.current[accountId] = errorCategory
           setTokenInventories((prev) => ({
@@ -790,6 +791,23 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             },
           }))
           return "error"
+        }
+
+        // Native resources are rendered by their dedicated controller. The legacy
+        // inventory remains an intentionally empty, loaded compatibility surface.
+        if (!keyManagement && !serviceCredential && accountKeyResources) {
+          setTokenInventories((prev) => ({
+            ...prev,
+            [accountId]: {
+              status: "loaded",
+              tokens: [],
+              errorMessage: undefined,
+              errorCategory: undefined,
+              errorKind: undefined,
+            },
+          }))
+          delete tokenLoadErrorCategoriesRef.current[accountId]
+          return "loaded"
         }
 
         const serviceCredentialLoad =

@@ -348,6 +348,7 @@ export function defineAccountKeyResourceCapability<
         }
         const createEditor = <TCommand, TMutationValue>(options: {
           editorDefinition: AccountKeyResourceEditorDefinition<TCommand>
+          resolveDestinationScopeKey(values: EditableResourceProjection): string
           mutate(
             command: TCommand,
             submitOptions?: ResourceOperationOptions,
@@ -404,6 +405,13 @@ export function defineAccountKeyResourceCapability<
             fields: editorDefinition.fields,
             initialValues: editorDefinition.initialValues,
             validate,
+            resolveDestinationScopeKey: (values) => {
+              try {
+                return options.resolveDestinationScopeKey(values)
+              } catch (error) {
+                throw toAccountKeyResourceError(error, mapFailure)
+              }
+            },
             ...(editorDefinition.loadOptions
               ? {
                   loadOptions: (fieldId, values, loadOptions) =>
@@ -551,6 +559,7 @@ export function defineAccountKeyResourceCapability<
                 )
                 return createEditor({
                   editorDefinition,
+                  resolveDestinationScopeKey: () => canonicalScopeKey,
                   mutate: async (command, submitOptions) => {
                     const latest = await readDetail(current.ref, submitOptions)
                     return definition.update(
@@ -621,20 +630,31 @@ export function defineAccountKeyResourceCapability<
                 definition.createEditor(config, providerScope, editorOptions),
               mapFailure,
             )
+            const resolveCreateDestinationScopeKey = (
+              command: TCreateCommand,
+            ) => {
+              const destinationScopeKey =
+                editorDefinition.destinationScopeKey?.(command) ??
+                canonicalScopeKey
+              if (
+                !isBoundedNonBlankString(destinationScopeKey, 2048) ||
+                !cachedScopes?.some(
+                  (scope) => scope.scopeKey === destinationScopeKey,
+                )
+              ) {
+                throw validationFailure()
+              }
+              return destinationScopeKey
+            }
             return createEditor({
               editorDefinition,
+              resolveDestinationScopeKey: (values) => {
+                return resolveCreateDestinationScopeKey(
+                  editorDefinition.buildCommand(values),
+                )
+              },
               mutate: (command, submitOptions) => {
-                const destinationScopeKey =
-                  editorDefinition.destinationScopeKey?.(command) ??
-                  canonicalScopeKey
-                if (
-                  !isBoundedNonBlankString(destinationScopeKey, 2048) ||
-                  !cachedScopes?.some(
-                    (scope) => scope.scopeKey === destinationScopeKey,
-                  )
-                ) {
-                  throw validationFailure()
-                }
+                resolveCreateDestinationScopeKey(command)
                 return definition.create(
                   config,
                   providerScope,
