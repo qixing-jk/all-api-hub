@@ -1,19 +1,26 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
-import { useEffect } from "react"
+import userEvent from "@testing-library/user-event"
+import { useEffect, useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { useAccountKeyResourceController } from "~/features/KeyManagement/controllers/useAccountKeyResourceController"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keyResourceFields"
+import {
+  OPENROUTER_KEY_FIELD_IDS,
+  OPENROUTER_KEY_LIMIT_MODES,
+  OPENROUTER_KEY_LIMIT_RESETS,
+} from "~/services/apiAdapters/openrouter/keyResourceFields"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
+import { render, screen } from "~~/tests/test-utils/render"
 
 const {
   createDisplayAccountApiContextMock,
@@ -571,15 +578,19 @@ describe("useAccountKeyResourceController", () => {
 
     await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
     await act(async () => result.current.openCreate())
+    const firstEditorId = result.current.editor!.editorId
     act(() =>
-      result.current.setEditorValues({
+      result.current.setEditorValues(result.current.editor!.editorId, {
         [field.Name]: "User key name",
         [field.Workspace]: "workspace-first-id",
         [field.Creator]: "member-first",
       }),
     )
     act(() => {
-      void result.current.loadEditorOptions(field.Creator)
+      void result.current.loadEditorOptions(
+        result.current.editor!.editorId,
+        field.Creator,
+      )
     })
     await waitFor(() =>
       expect(firstEditor.loadOptions).toHaveBeenCalledTimes(1),
@@ -589,7 +600,7 @@ describe("useAccountKeyResourceController", () => {
         | [unknown, unknown, { signal?: AbortSignal }]
         | undefined
     )?.[2]?.signal
-    expect(result.current.selectScope(scopes[1])).toBe(true)
+    expect(result.current.selectScope(scopes[1]!.scopeKey)).toBe(true)
     expect(replaceRoute).toHaveBeenCalledWith({
       accountId: "account-example",
       workspace: "second",
@@ -597,8 +608,23 @@ describe("useAccountKeyResourceController", () => {
 
     rerender({ workspace: "second" })
     await waitFor(() =>
-      expect(secondEditor.loadOptions).toHaveBeenCalledTimes(1),
+      expect(result.current.selectedScope?.scopeKey).toBe(
+        "workspace-second-id",
+      ),
     )
+    await waitFor(() =>
+      expect(result.current.editor?.editorId).not.toBe(firstEditorId),
+    )
+    // The keyed dialog owns dependent option loading after rehydration. The
+    // controller only exposes the rehydrated editor session.
+    expect(secondEditor.loadOptions).not.toHaveBeenCalled()
+    act(() => {
+      void result.current.loadEditorOptions(
+        result.current.editor!.editorId,
+        field.Creator,
+      )
+    })
+    await waitFor(() => expect(secondEditor.loadOptions).toHaveBeenCalledOnce())
     expect(secondEditor.loadOptions).toHaveBeenCalledWith(
       field.Creator,
       {
@@ -631,7 +657,10 @@ describe("useAccountKeyResourceController", () => {
     expect(firstEditor.submit).not.toHaveBeenCalled()
 
     await act(async () => {
-      await result.current.submitEditor(result.current.editor!.values)
+      await result.current.submitEditor(
+        result.current.editor!.editorId,
+        result.current.editor!.values,
+      )
     })
     expect(secondSubmit).toHaveBeenCalledWith(
       {
@@ -639,6 +668,184 @@ describe("useAccountKeyResourceController", () => {
         [field.Workspace]: "workspace-second-id",
         [field.Creator]: null,
       },
+      { signal: expect.any(AbortSignal) },
+    )
+  })
+
+  it("keeps a dialog's typed projection through controller workspace rehydration and cannot submit an invalidated creator", async () => {
+    const field = OPENROUTER_KEY_FIELD_IDS
+    const user = userEvent.setup()
+    const firstOptions = deferred<any>()
+    const secondOptions = deferred<any>()
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First team",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Next team",
+        isDefault: false,
+      },
+    ]
+    const fields = [
+      { fieldId: field.Name, type: "text" as const, required: true },
+      {
+        fieldId: field.Workspace,
+        type: "select" as const,
+        required: true,
+        options: scopes.map((scope) => ({
+          value: scope.scopeKey,
+          displayLabel: scope.displayName,
+        })),
+      },
+      {
+        fieldId: field.Creator,
+        type: "select" as const,
+        nullable: true,
+        options: [],
+        optionLoader: { dependsOn: [field.Workspace] },
+      },
+      {
+        fieldId: field.LimitMode,
+        type: "select" as const,
+        required: true,
+        options: Object.values(OPENROUTER_KEY_LIMIT_MODES).map((value) => ({
+          value,
+        })),
+      },
+      { fieldId: field.Limit, type: "number" as const, nullable: true },
+      {
+        fieldId: field.LimitReset,
+        type: "select" as const,
+        required: true,
+        options: Object.values(OPENROUTER_KEY_LIMIT_RESETS).map((value) => ({
+          value,
+        })),
+      },
+      { fieldId: field.ExpiresAt, type: "date-time" as const, nullable: true },
+      { fieldId: field.IncludeByokInLimit, type: "boolean" as const },
+    ]
+    const createInitialValues = (workspace: string) => ({
+      [field.Name]: "",
+      [field.Workspace]: workspace,
+      [field.Creator]: null,
+      [field.LimitMode]: OPENROUTER_KEY_LIMIT_MODES.Unlimited,
+      [field.Limit]: null,
+      [field.LimitReset]: OPENROUTER_KEY_LIMIT_RESETS.None,
+      [field.ExpiresAt]: null,
+      [field.IncludeByokInLimit]: false,
+    })
+    const firstEditor = {
+      fields,
+      initialValues: createInitialValues("workspace-first-id"),
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-first-id",
+      loadOptions: vi.fn(() => firstOptions.promise),
+      submit: vi.fn(),
+    }
+    const secondSubmit = vi.fn().mockResolvedValue({
+      facts: createFacts("workspace-second-id", "key-second"),
+    })
+    const secondEditor = {
+      fields,
+      initialValues: createInitialValues("workspace-second-id"),
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-second-id",
+      loadOptions: vi.fn(() => secondOptions.promise),
+      submit: secondSubmit,
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi
+          .fn()
+          .mockResolvedValueOnce(firstEditor)
+          .mockResolvedValueOnce(secondEditor),
+      }),
+    )
+
+    const ControllerDialogHarness = () => {
+      const [workspace, setWorkspace] = useState("first")
+      const controller = useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace },
+        replaceRoute: (params) => setWorkspace(params.workspace ?? "first"),
+      })
+      return (
+        <>
+          <button type="button" onClick={() => void controller.openCreate()}>
+            Open editor
+          </button>
+          <button
+            type="button"
+            onClick={() => controller.selectScope("workspace-second-id")}
+          >
+            Rehydrate workspace
+          </button>
+          <AccountKeyResourceEditorDialog
+            editor={controller.editor}
+            onClose={controller.closeEditor}
+            onSubmit={controller.submitEditor}
+            onValuesChange={controller.setEditorValues}
+            onLoadOptions={controller.loadEditorOptions}
+          />
+        </>
+      )
+    }
+    render(<ControllerDialogHarness />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await user.click(screen.getByRole("button", { name: "Open editor" }))
+    await waitFor(() => expect(firstEditor.loadOptions).toHaveBeenCalled())
+    await act(async () =>
+      firstOptions.resolve([
+        { value: "member-first", displayLabel: "First member" },
+      ]),
+    )
+    const name = await screen.findByRole("textbox", {
+      name: /keyManagement:openRouter\.editor\.fields\.name\.label/,
+    })
+    await user.type(name, "Typed key")
+    await user.click(
+      screen.getByRole("combobox", {
+        name: /keyManagement:openRouter\.editor\.fields\.creator\.label/,
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "First member" }))
+
+    await user.click(
+      screen.getByRole("button", { name: "Rehydrate workspace" }),
+    )
+    await waitFor(() => expect(secondEditor.loadOptions).toHaveBeenCalled())
+    expect(name).toHaveValue("Typed key")
+    await act(async () =>
+      secondOptions.resolve([
+        { value: "member-second", displayLabel: "Next member" },
+      ]),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:openRouter.editor.actions.save",
+      }),
+    )
+
+    expect(secondSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        [field.Name]: "Typed key",
+        [field.Workspace]: "workspace-second-id",
+        [field.Creator]: null,
+      }),
       { signal: expect.any(AbortSignal) },
     )
   })
@@ -663,6 +870,7 @@ describe("useAccountKeyResourceController", () => {
       fields: [],
       initialValues: {},
       validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-first-id",
       submit: vi.fn().mockResolvedValue({}),
     }
     mockNativeResourceSession(
@@ -695,10 +903,301 @@ describe("useAccountKeyResourceController", () => {
     rerender({ workspace: "second" })
     await waitFor(() => expect(result.current.selectedScope).toBeNull())
     act(() => {
-      void result.current.submitEditor({})
+      void result.current.submitEditor(
+        result.current.editor?.editorId ?? -1,
+        {},
+      )
     })
 
     expect(firstEditor.submit).not.toHaveBeenCalled()
+  })
+
+  it("preserves edits made while a workspace transition is still loading", async () => {
+    const secondCollection = deferred<any>()
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const fields = [{ fieldId: "name", type: "text" as const }]
+    const firstEditor = {
+      fields,
+      initialValues: { name: "" },
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn(),
+    }
+    const secondEditor = {
+      fields,
+      initialValues: { name: "" },
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn(),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection: vi.fn((scopeKey: string) =>
+          scopeKey === "workspace-first-id"
+            ? Promise.resolve({
+                list: vi.fn().mockResolvedValue({ items: [] }),
+              })
+            : secondCollection.promise,
+        ),
+        openCreateEditor: vi
+          .fn()
+          .mockResolvedValueOnce(firstEditor)
+          .mockResolvedValueOnce(secondEditor),
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: "first" } },
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
+    await act(async () => result.current.openCreate())
+
+    rerender({ workspace: "second" })
+    await waitFor(() => expect(result.current.selectedScope).toBeNull())
+    act(() =>
+      result.current.setEditorValues(result.current.editor!.editorId, {
+        name: "Edited during load",
+      }),
+    )
+
+    await act(async () =>
+      secondCollection.resolve({
+        list: vi.fn().mockResolvedValue({ items: [] }),
+      }),
+    )
+    await waitFor(() => expect(result.current.editor?.mode).toBe("create"))
+    expect(result.current.editor?.values).toEqual({
+      name: "Edited during load",
+    })
+  })
+
+  it("does not resurrect an editor closed while a workspace transition is loading", async () => {
+    const secondCollection = deferred<any>()
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const firstEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn(),
+    }
+    const secondEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn(),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection: vi.fn((scopeKey: string) =>
+          scopeKey === "workspace-first-id"
+            ? Promise.resolve({
+                list: vi.fn().mockResolvedValue({ items: [] }),
+              })
+            : secondCollection.promise,
+        ),
+        openCreateEditor: vi
+          .fn()
+          .mockResolvedValueOnce(firstEditor)
+          .mockResolvedValueOnce(secondEditor),
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: "first" } },
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
+    await act(async () => result.current.openCreate())
+
+    rerender({ workspace: "second" })
+    await waitFor(() => expect(result.current.selectedScope).toBeNull())
+    act(() => {
+      // Keep these in one React turn: the rehydration promise must observe the
+      // close synchronously rather than restoring the stale rendered editor.
+      result.current.closeEditor(result.current.editor!.editorId)
+      secondCollection.resolve({
+        list: vi.fn().mockResolvedValue({ items: [] }),
+      })
+    })
+    await act(async () => {})
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.editor).toBeNull()
+  })
+
+  it("closes the preserved editor and surfaces a collection failure during workspace replacement", async () => {
+    const replacementCollection = deferred<any>()
+    const collectionFailure = new AccountKeyResourceError({
+      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+    })
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const firstEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn(),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection: vi.fn((scopeKey: string) =>
+          scopeKey === "workspace-first-id"
+            ? Promise.resolve({
+                list: vi.fn().mockResolvedValue({ items: [] }),
+              })
+            : replacementCollection.promise,
+        ),
+        openCreateEditor: vi.fn().mockResolvedValue(firstEditor),
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: "first" } },
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
+    await act(async () => result.current.openCreate())
+    rerender({ workspace: "second" })
+    await waitFor(() => expect(result.current.isLoading).toBe(true))
+
+    await act(async () => replacementCollection.reject(collectionFailure))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.editor).toBeNull()
+    expect(result.current.selectedScope).toBeNull()
+    expect(result.current.failures["account-example"]?.code).toBe(
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+    )
+    await act(async () =>
+      result.current.submitEditor(result.current.editor?.editorId ?? -1, {}),
+    )
+    expect(firstEditor.submit).not.toHaveBeenCalled()
+  })
+
+  it("closes the preserved editor when replacement editor creation fails after collection preparation", async () => {
+    const replacementEditor = deferred<any>()
+    const editorFailure = new AccountKeyResourceError({
+      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+    })
+    const scopes = [
+      {
+        scopeKey: "workspace-first-id",
+        routeKey: "first",
+        displayName: "First",
+        isDefault: true,
+      },
+      {
+        scopeKey: "workspace-second-id",
+        routeKey: "second",
+        displayName: "Second",
+        isDefault: false,
+      },
+    ]
+    const firstEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn(),
+    }
+    const openCreateEditor = vi
+      .fn()
+      .mockResolvedValueOnce(firstEditor)
+      .mockImplementationOnce(() => replacementEditor.promise)
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
+        listScopes: vi.fn().mockResolvedValue(scopes),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor,
+      }),
+    )
+    const { result, rerender } = renderHook(
+      ({ workspace }) =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example", workspace },
+        }),
+      { initialProps: { workspace: "first" } },
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
+    await act(async () => result.current.openCreate())
+    rerender({ workspace: "second" })
+    await waitFor(() => expect(openCreateEditor).toHaveBeenCalledTimes(2))
+
+    await act(async () => replacementEditor.reject(editorFailure))
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.editor).toBeNull()
+    expect(result.current.selectedScope).toBeNull()
+    expect(result.current.failures["account-example"]?.code).toBe(
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+    )
+    await act(async () =>
+      result.current.submitEditor(result.current.editor?.editorId ?? -1, {}),
+    )
+    expect(firstEditor.submit).not.toHaveBeenCalled()
+    expect(openCreateEditor).toHaveBeenCalledTimes(2)
   })
 
   it("rejects a submit command captured from an obsolete editor generation", async () => {
@@ -720,6 +1219,7 @@ describe("useAccountKeyResourceController", () => {
       fields: [],
       initialValues: {},
       validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-second-id",
       submit: vi.fn().mockResolvedValue({}),
     }
     const secondEditor = {
@@ -753,7 +1253,10 @@ describe("useAccountKeyResourceController", () => {
 
     await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
     await act(async () => result.current.openCreate())
-    const obsoleteSubmit = result.current.submitEditor
+    const firstEditorId = result.current.editor!.editorId
+    const obsoleteSubmit = (values: object) => {
+      return (result.current.submitEditor as any)(firstEditorId, values)
+    }
 
     rerender({ workspace: "second" })
     await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[1]))
@@ -805,7 +1308,11 @@ describe("useAccountKeyResourceController", () => {
       await result.current.openCreate()
     })
     act(() => {
-      void result.current.loadEditorOptions("creator", {})
+      void result.current.loadEditorOptions(
+        result.current.editor!.editorId,
+        "creator",
+        {},
+      )
     })
     await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(1))
     const firstSignal = (
@@ -814,7 +1321,11 @@ describe("useAccountKeyResourceController", () => {
       }
     )?.signal
     act(() => {
-      void result.current.loadEditorOptions("creator", {})
+      void result.current.loadEditorOptions(
+        result.current.editor!.editorId,
+        "creator",
+        {},
+      )
     })
     await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(2))
     expect(firstSignal?.aborted).toBe(true)
@@ -829,6 +1340,73 @@ describe("useAccountKeyResourceController", () => {
         { value: "current" },
       ]),
     )
+  })
+
+  it("does not apply late options from an editor replaced by a new session", async () => {
+    const staleOptions = deferred<any>()
+    const scope = {
+      scopeKey: "workspace-default-id",
+      routeKey: "team",
+      displayName: "Team",
+      isDefault: true,
+    }
+    const firstEditor = {
+      fields: [{ fieldId: "creator", type: "select" as const, options: [] }],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      loadOptions: vi.fn(() => staleOptions.promise),
+      submit: vi.fn(),
+    }
+    const secondEditor = {
+      fields: [{ fieldId: "creator", type: "select" as const, options: [] }],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      loadOptions: vi.fn(),
+      submit: vi.fn(),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+        listScopes: vi.fn().mockResolvedValue([scope]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor: vi
+          .fn()
+          .mockResolvedValueOnce(firstEditor)
+          .mockResolvedValueOnce(secondEditor),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).toEqual(scope))
+    await act(async () => result.current.openCreate())
+    act(() => {
+      void result.current.loadEditorOptions(
+        result.current.editor!.editorId,
+        "creator",
+        {},
+      )
+    })
+    await waitFor(() => expect(firstEditor.loadOptions).toHaveBeenCalledOnce())
+    const staleSignal = (
+      firstEditor.loadOptions.mock.calls[0] as unknown as
+        | [unknown, unknown, { signal?: AbortSignal }]
+        | undefined
+    )?.[2]?.signal
+
+    await act(async () => result.current.openCreate())
+    expect(staleSignal?.aborted).toBe(true)
+    await act(async () => staleOptions.resolve([{ value: "stale-member" }]))
+
+    expect(result.current.editor?.fields).toEqual(secondEditor.fields)
+    expect(result.current.editor?.optionsByField.creator).toBeUndefined()
   })
 
   it("clears stale dependent options and exposes only the current load failure", async () => {
@@ -907,9 +1485,14 @@ describe("useAccountKeyResourceController", () => {
 
     await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
     await act(async () => result.current.openCreate())
-    await act(async () => result.current.loadEditorOptions(field.Creator))
+    await act(async () =>
+      result.current.loadEditorOptions(
+        result.current.editor!.editorId,
+        field.Creator,
+      ),
+    )
     act(() =>
-      result.current.setEditorValues({
+      result.current.setEditorValues(result.current.editor!.editorId, {
         [field.Workspace]: "workspace-first-id",
         [field.Creator]: "member-first",
         [field.Name]: "kept name",
@@ -917,19 +1500,27 @@ describe("useAccountKeyResourceController", () => {
     )
 
     act(() => {
-      void result.current.loadEditorOptions(field.Creator, {
-        [field.Workspace]: "workspace-first-id",
-        [field.Creator]: "member-first",
-        [field.Name]: "kept name",
-      })
+      void result.current.loadEditorOptions(
+        result.current.editor!.editorId,
+        field.Creator,
+        {
+          [field.Workspace]: "workspace-first-id",
+          [field.Creator]: "member-first",
+          [field.Name]: "kept name",
+        },
+      )
     })
     await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(2))
     act(() => {
-      void result.current.loadEditorOptions(field.Creator, {
-        [field.Workspace]: "workspace-second-id",
-        [field.Creator]: "member-first",
-        [field.Name]: "kept name",
-      })
+      void result.current.loadEditorOptions(
+        result.current.editor!.editorId,
+        field.Creator,
+        {
+          [field.Workspace]: "workspace-second-id",
+          [field.Creator]: "member-first",
+          [field.Name]: "kept name",
+        },
+      )
     })
     await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(3))
     expect(loadOptions).toHaveBeenLastCalledWith(
@@ -944,7 +1535,10 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() =>
       expect(
         result.current.editor?.optionFailuresByField[field.Creator],
-      ).toEqual({ code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable }),
+      ).toMatchObject({
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+        message: "unsafe upstream detail",
+      }),
     )
     expect(result.current.editor?.optionsByField[field.Creator]).toEqual([])
     expect(result.current.editor?.values).toEqual({
@@ -954,10 +1548,14 @@ describe("useAccountKeyResourceController", () => {
     })
 
     act(() => {
-      void result.current.loadEditorOptions(field.Creator, {
-        ...result.current.editor!.values,
-        [field.Workspace]: "workspace-second-id",
-      })
+      void result.current.loadEditorOptions(
+        result.current.editor!.editorId,
+        field.Creator,
+        {
+          ...result.current.editor!.values,
+          [field.Workspace]: "workspace-second-id",
+        },
+      )
     })
     await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(4))
     expect(
@@ -978,7 +1576,10 @@ describe("useAccountKeyResourceController", () => {
       { value: "member-second" },
     ])
     await act(async () =>
-      result.current.submitEditor(result.current.editor!.values),
+      result.current.submitEditor(
+        result.current.editor!.editorId,
+        result.current.editor!.values,
+      ),
     )
     expect(editor.submit.mock.calls[0]?.[0]).not.toMatchObject({
       [field.Creator]: "member-first",
@@ -1029,7 +1630,11 @@ describe("useAccountKeyResourceController", () => {
       await result.current.openCreate()
     })
     act(() => {
-      void result.current.loadEditorOptions("creator", {})
+      void result.current.loadEditorOptions(
+        result.current.editor!.editorId,
+        "creator",
+        {},
+      )
     })
     await waitFor(() => expect(loadOptions).toHaveBeenCalledTimes(1))
     const signal = (
@@ -1040,7 +1645,7 @@ describe("useAccountKeyResourceController", () => {
       )?.[2] as { signal?: AbortSignal } | undefined
     )?.signal
 
-    act(() => result.current.closeEditor())
+    act(() => result.current.closeEditor(result.current.editor!.editorId))
 
     expect(signal?.aborted).toBe(true)
   })
@@ -1443,7 +2048,9 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
     await act(async () => result.current.openCreate())
     await act(async () =>
-      result.current.submitEditor({ destination: "workspace-second-id" }),
+      result.current.submitEditor(result.current.editor!.editorId, {
+        destination: "workspace-second-id",
+      }),
     )
 
     expect(resolveDestinationScopeKey).toHaveBeenCalledWith({
@@ -1458,6 +2065,7 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.selectedScope).toEqual(scopes[1])
     expect(result.current.rows).toEqual([createdFacts])
     expect(result.current.createdSecret).toBe(createdSecret)
+    expect(result.current.editor?.terminalClose).toBe(true)
     expect(result.current.createdSecret?.correlation).toEqual({
       kind: "account-key-resource",
       ref: createdFacts.ref,
@@ -1534,7 +2142,9 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(result.current.selectedScope).toEqual(scopes[0]))
     await act(async () => result.current.openCreate())
     act(() => {
-      void result.current.submitEditor({ destination: "workspace-second-id" })
+      void result.current.submitEditor(result.current.editor!.editorId, {
+        destination: "workspace-second-id",
+      })
     })
     await waitFor(() => expect(result.current.freshReadRequired).toBe(true))
     expect(resolveDestinationScopeKey).toHaveBeenCalledWith({
@@ -1598,12 +2208,13 @@ describe("useAccountKeyResourceController", () => {
 
     await waitFor(() => expect(result.current.selectedScope).not.toBeNull())
     await act(async () => result.current.openCreate())
+    const editorId = result.current.editor!.editorId
     act(() => {
-      void result.current.submitEditor({})
+      void result.current.submitEditor(editorId, {})
     })
     await waitFor(() => expect(result.current.freshReadRequired).toBe(true))
     act(() => {
-      void result.current.submitEditor({})
+      void result.current.submitEditor(editorId, {})
     })
     expect(editor.submit).toHaveBeenCalledTimes(1)
     refreshedList.resolve({ items: [] })
@@ -1687,7 +2298,7 @@ describe("useAccountKeyResourceController", () => {
     )
     await act(async () => result.current.openCreate())
     act(() => {
-      void result.current.submitEditor({})
+      void result.current.submitEditor(result.current.editor!.editorId, {})
     })
     await waitFor(() => expect(result.current.freshReadRequired).toBe(true))
 
@@ -1700,7 +2311,9 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.freshReadRequired).toBe(false)
 
     await act(async () => result.current.openCreate())
-    await act(async () => result.current.submitEditor({}))
+    await act(async () =>
+      result.current.submitEditor(result.current.editor!.editorId, {}),
+    )
     expect(accountBEditor.submit).toHaveBeenCalledTimes(1)
 
     rerender({ selectedAccount: "account-a" })
@@ -1803,7 +2416,7 @@ describe("useAccountKeyResourceController", () => {
     )
     await act(async () => result.current.openCreate())
     act(() => {
-      void result.current.submitEditor({})
+      void result.current.submitEditor(result.current.editor!.editorId, {})
     })
     await waitFor(() => expect(workspaceBList).toHaveBeenCalledTimes(2))
 
@@ -1814,7 +2427,7 @@ describe("useAccountKeyResourceController", () => {
     await act(async () => result.current.openCreate())
     expect(result.current.editor?.mode).toBe("create")
     act(() => {
-      void result.current.submitEditor({})
+      void result.current.submitEditor(result.current.editor!.editorId, {})
     })
     await waitFor(() => expect(workspaceCList).toHaveBeenCalledTimes(2))
     expect(workspaceCEditor.submit).toHaveBeenCalledTimes(1)
@@ -1918,7 +2531,10 @@ describe("useAccountKeyResourceController", () => {
     await act(async () => result.current.openCreate())
     let workspaceBSubmit!: Promise<unknown>
     act(() => {
-      workspaceBSubmit = result.current.submitEditor({})
+      workspaceBSubmit = result.current.submitEditor(
+        result.current.editor!.editorId,
+        {},
+      )
     })
     await waitFor(() =>
       expect(firstWorkspaceBEditor.submit).toHaveBeenCalledTimes(1),
@@ -1931,7 +2547,10 @@ describe("useAccountKeyResourceController", () => {
     await act(async () => result.current.openCreate())
     let workspaceCSubmit!: Promise<unknown>
     act(() => {
-      workspaceCSubmit = result.current.submitEditor({})
+      workspaceCSubmit = result.current.submitEditor(
+        result.current.editor!.editorId,
+        {},
+      )
     })
     await waitFor(() =>
       expect(workspaceCEditor.submit).toHaveBeenCalledTimes(1),
@@ -1947,7 +2566,7 @@ describe("useAccountKeyResourceController", () => {
     )
     await act(async () => result.current.openCreate())
     act(() => {
-      void result.current.submitEditor({})
+      void result.current.submitEditor(result.current.editor!.editorId, {})
     })
     expect(returnedWorkspaceBEditor.submit).not.toHaveBeenCalled()
 
@@ -2043,7 +2662,10 @@ describe("useAccountKeyResourceController", () => {
     await act(async () => result.current.openCreate())
     let workspaceCSubmit!: Promise<unknown>
     act(() => {
-      workspaceCSubmit = result.current.submitEditor({})
+      workspaceCSubmit = result.current.submitEditor(
+        result.current.editor!.editorId,
+        {},
+      )
     })
     await waitFor(() =>
       expect(workspaceCEditor.submit).toHaveBeenCalledTimes(1),
@@ -2115,7 +2737,7 @@ describe("useAccountKeyResourceController", () => {
     ])
     await act(async () => result.current.openEdit(facts.ref))
     expect(result.current.editor?.mode).toBe("edit")
-    act(() => result.current.closeEditor())
+    act(() => result.current.closeEditor(result.current.editor!.editorId))
     let opened = false
     act(() => {
       opened = result.current.openDelete(facts.ref)
@@ -2241,7 +2863,7 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(result.current.rows).toHaveLength(1))
     await act(async () => result.current.openEdit(facts.ref))
     await act(async () => {
-      await result.current.submitEditor({
+      await result.current.submitEditor(result.current.editor!.editorId, {
         member: "member-raw",
         limit: "limit-example",
         hash: "hash-example",
@@ -2333,7 +2955,7 @@ describe("useAccountKeyResourceController", () => {
     }
     await act(async () => result.current.openEdit(ref))
     await act(async () => {
-      await result.current.submitEditor({
+      await result.current.submitEditor(result.current.editor!.editorId, {
         member: "member-raw",
         limit: "limit-example",
         hash: "hash-example",
@@ -2443,7 +3065,7 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(result.current.rows).toEqual([firstFacts]))
     await act(async () => result.current.openEdit(firstFacts.ref))
     act(() => {
-      void result.current.submitEditor({})
+      void result.current.submitEditor(result.current.editor!.editorId, {})
     })
     await waitFor(() => expect(editEditor.submit).toHaveBeenCalledTimes(1))
 
@@ -2520,7 +3142,7 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(result.current.selectedScope).not.toBeNull())
     await act(async () => result.current.openCreate())
     act(() => {
-      void result.current.submitEditor({})
+      void result.current.submitEditor(result.current.editor!.editorId, {})
     })
     await waitFor(() => expect(editor.submit).toHaveBeenCalledTimes(1))
     rerender({ selectedAccount: "account-two" })
@@ -2624,7 +3246,7 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(result.current.selectedScope).not.toBeNull())
     await act(async () => result.current.openCreate())
     act(() => {
-      void result.current.submitEditor({})
+      void result.current.submitEditor(result.current.editor!.editorId, {})
     })
     await waitFor(() => expect(editor.submit).toHaveBeenCalledTimes(1))
     const signal = (
@@ -2687,7 +3309,9 @@ describe("useAccountKeyResourceController", () => {
 
     await waitFor(() => expect(result.current.selectedScope).not.toBeNull())
     await act(async () => result.current.openCreate())
-    await act(async () => result.current.submitEditor({}))
+    await act(async () =>
+      result.current.submitEditor(result.current.editor!.editorId, {}),
+    )
     await waitFor(() =>
       expect(result.current.createdSecret?.secret).toBe("secret-example"),
     )
@@ -2747,8 +3371,8 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(result.current.rows).toHaveLength(1))
     await act(async () => result.current.openCreate())
     expect(result.current.editor?.mode).toBe("create")
-    void result.current.submitEditor({})
-    void result.current.submitEditor({})
+    void result.current.submitEditor(result.current.editor!.editorId, {})
+    void result.current.submitEditor(result.current.editor!.editorId, {})
     expect(editor.submit).toHaveBeenCalledTimes(1)
 
     await act(async () => {
@@ -2820,5 +3444,136 @@ describe("useAccountKeyResourceController", () => {
     }
     act(() => result.current.closeCreatedSecret())
     expect(result.current.createdSecret).toBeNull()
+  })
+
+  it("exposes one failed editor-opening attempt and retries its bound request", async () => {
+    const opening = deferred<any>()
+    const editor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-default-id",
+      submit: vi.fn(),
+    }
+    const openCreateEditor = vi
+      .fn()
+      .mockImplementationOnce(() => opening.promise)
+      .mockResolvedValueOnce(editor)
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor,
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).not.toBeNull())
+    act(() => {
+      void result.current.openCreate()
+      void result.current.openCreate()
+    })
+    expect(openCreateEditor).toHaveBeenCalledOnce()
+    expect(result.current.editorOpening.status).toBe("loading")
+
+    await act(async () =>
+      opening.reject(
+        new AccountKeyResourceError({
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+          message: "private provider message",
+        }),
+      ),
+    )
+    await waitFor(() =>
+      expect(result.current.editorOpening.status).toBe("failure"),
+    )
+    expect(result.current.editorOpening).toEqual({
+      attemptId: expect.any(Number),
+      status: "failure",
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+        message: "private provider message",
+      },
+    })
+
+    act(() =>
+      result.current.retryEditorOpening(result.current.editorOpening.attemptId),
+    )
+    await waitFor(() => expect(result.current.editor).not.toBeNull())
+    expect(openCreateEditor).toHaveBeenCalledTimes(2)
+    expect(result.current.editorOpening.status).toBe("idle")
+  })
+
+  it("invalidates only the bound editor-opening attempt", async () => {
+    const firstOpening = deferred<any>()
+    const secondOpening = deferred<any>()
+    const firstEditor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => "workspace-default-id",
+      submit: vi.fn(),
+    }
+    const secondEditor = { ...firstEditor }
+    const openCreateEditor = vi
+      .fn()
+      .mockImplementationOnce(() => firstOpening.promise)
+      .mockImplementationOnce(() => secondOpening.promise)
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue({
+          list: vi.fn().mockResolvedValue({ items: [] }),
+        }),
+        openCreateEditor,
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.selectedScope).not.toBeNull())
+    act(() => void result.current.openCreate())
+    const firstAttemptId = result.current.editorOpening.attemptId
+    act(() => result.current.cancelEditorOpening(firstAttemptId))
+    expect(result.current.editorOpening.status).toBe("idle")
+
+    await act(async () => firstOpening.resolve(firstEditor))
+    expect(result.current.editor).toBeNull()
+
+    act(() => void result.current.openCreate())
+    const secondAttemptId = result.current.editorOpening.attemptId
+    act(() => result.current.cancelEditorOpening(firstAttemptId))
+    expect(result.current.editorOpening).toEqual({
+      attemptId: secondAttemptId,
+      status: "loading",
+    })
+
+    await act(async () => secondOpening.resolve(secondEditor))
+    await waitFor(() => expect(result.current.editor).not.toBeNull())
   })
 })

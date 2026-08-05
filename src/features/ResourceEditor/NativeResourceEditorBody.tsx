@@ -48,6 +48,12 @@ export type ResourceFieldRenderOverride<TSection extends string = string> =
     disabled: boolean
   }) => ReactNode | undefined
 
+export type ResourceEditorSectionRenderOverride<TSection extends string> = (
+  section: TSection,
+  label: string,
+  children: ReactNode,
+) => ReactNode | undefined
+
 export type NativeResourceEditorBodyProps<TSection extends string> = {
   t: TFunction
   descriptors: readonly ResourceFieldDescriptor[]
@@ -63,7 +69,12 @@ export type NativeResourceEditorBodyProps<TSection extends string> = {
     values: EditableResourceProjection,
     options?: ResourceOperationOptions,
   ) => Promise<readonly ResourceFieldOption[]>
+  controlledOptionStates?: Readonly<
+    Record<string, ResourceEditorControlledOptionState | undefined>
+  >
+  onRetryControlledOptions?: (fieldId: string) => void
   renderFieldOverride?: ResourceFieldRenderOverride<TSection>
+  renderSectionOverride?: ResourceEditorSectionRenderOverride<TSection>
 }
 
 const fieldDomId = (fieldId: string) =>
@@ -113,6 +124,14 @@ type OptionLoadState =
   | { status: "loading"; options: readonly ResourceFieldOption[] }
   | { status: "ready"; options: readonly ResourceFieldOption[] }
   | { status: "error"; options: readonly ResourceFieldOption[] }
+
+/** Controller-owned option state for editors whose loading lifecycle is external. */
+export type ResourceEditorControlledOptionState = {
+  status: OptionLoadState["status"]
+  options: readonly ResourceFieldOption[]
+  errorMessage?: string
+  emptyMessage?: string
+}
 
 type DynamicOptionFieldDescriptor = Extract<
   ResourceFieldDescriptor,
@@ -315,7 +334,10 @@ export function NativeResourceEditorBody<TSection extends string>({
   disabled = false,
   onValueChange,
   onLoadOptions,
+  controlledOptionStates,
+  onRetryControlledOptions,
   renderFieldOverride,
+  renderSectionOverride,
 }: NativeResourceEditorBodyProps<TSection>) {
   const resolvedFields = useMemo(
     () => resolveResourceFieldPolicy(descriptors, policy, sectionOrder).fields,
@@ -338,10 +360,14 @@ export function NativeResourceEditorBody<TSection extends string>({
       new Map(
         resolvedFields.flatMap(({ descriptor, presentation }) => {
           if (descriptor.type !== "select") return []
+          const controlledOptionState =
+            controlledOptionStates?.[descriptor.fieldId]
           const options =
-            (onLoadOptions && isDynamicOptionField(descriptor)
-              ? optionStates.get(descriptor.fieldId)?.options
-              : undefined) ?? descriptor.options
+            (controlledOptionState?.status === "ready"
+              ? controlledOptionState.options
+              : onLoadOptions && isDynamicOptionField(descriptor)
+                ? optionStates.get(descriptor.fieldId)?.options
+                : undefined) ?? descriptor.options
           const sourceValues =
             presentation.optionSourceFieldIds?.flatMap((fieldId) =>
               readList(values, fieldId),
@@ -358,7 +384,13 @@ export function NativeResourceEditorBody<TSection extends string>({
           return [[descriptor.fieldId, optionValues] as const]
         }),
       ),
-    [onLoadOptions, optionStates, resolvedFields, values],
+    [
+      controlledOptionStates,
+      onLoadOptions,
+      optionStates,
+      resolvedFields,
+      values,
+    ],
   )
   useEffect(() => {
     for (const { descriptor, presentation } of resolvedFields) {
@@ -548,11 +580,17 @@ export function NativeResourceEditorBody<TSection extends string>({
       )
     }
     if (descriptor.type === "select" || descriptor.type === "multi-select") {
+      const controlledOptionState = controlledOptionStates?.[descriptor.fieldId]
       const optionState =
-        onLoadOptions && isDynamicOptionField(descriptor)
+        controlledOptionState ??
+        (onLoadOptions && isDynamicOptionField(descriptor)
           ? optionStates.get(descriptor.fieldId)
-          : undefined
+          : undefined)
       const loadedOptions = optionState?.options ?? descriptor.options
+      const controlledOptionUnavailable =
+        controlledOptionState !== undefined &&
+        (controlledOptionState.status !== "ready" ||
+          controlledOptionState.options.length === 0)
       const optionValues =
         descriptor.type === "select"
           ? selectOptionsByFieldId.get(descriptor.fieldId) ?? []
@@ -580,6 +618,7 @@ export function NativeResourceEditorBody<TSection extends string>({
               }
               disabled={
                 fieldDisabled ||
+                controlledOptionUnavailable ||
                 (presentation.optionSourceFieldIds !== undefined &&
                   optionValues.length === 0)
               }
@@ -616,6 +655,7 @@ export function NativeResourceEditorBody<TSection extends string>({
             </Select>
             {optionState?.status === "loading" ? (
               <p
+                role="status"
                 aria-live="polite"
                 className="text-muted-foreground mt-1 text-xs"
               >
@@ -624,20 +664,26 @@ export function NativeResourceEditorBody<TSection extends string>({
             ) : null}
             {optionState?.status === "ready" && optionValues.length === 0 ? (
               <p className="text-muted-foreground mt-1 text-xs">
-                {RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.empty(t)}
+                {controlledOptionState?.emptyMessage ??
+                  RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.empty(t)}
               </p>
             ) : null}
             {optionState?.status === "error" ? (
               <div className="mt-1 flex items-center gap-2">
                 <p role="alert" className="text-xs text-red-600">
-                  {RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.error(t)}
+                  {controlledOptionState?.errorMessage ??
+                    RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.error(t)}
                 </p>
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
                   disabled={disabled}
-                  onClick={() => retry(descriptor.fieldId)}
+                  onClick={() =>
+                    controlledOptionState
+                      ? onRetryControlledOptions?.(descriptor.fieldId)
+                      : retry(descriptor.fieldId)
+                  }
                   aria-label={`${RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.retry(t)} ${label}`}
                 >
                   {RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.retry(t)}
@@ -661,7 +707,7 @@ export function NativeResourceEditorBody<TSection extends string>({
             onChange={(nextValue) =>
               onValueChange(descriptor.fieldId, normalizeEditorList(nextValue))
             }
-            disabled={fieldDisabled}
+            disabled={fieldDisabled || controlledOptionUnavailable}
             allowCustom
             placeholder={presentation.resolvePlaceholder?.(t)}
             aria-label={label}
@@ -671,6 +717,7 @@ export function NativeResourceEditorBody<TSection extends string>({
           />
           {optionState?.status === "loading" ? (
             <p
+              role="status"
               aria-live="polite"
               className="text-muted-foreground mt-1 text-xs"
             >
@@ -679,20 +726,26 @@ export function NativeResourceEditorBody<TSection extends string>({
           ) : null}
           {optionState?.status === "ready" && loadedOptions.length === 0 ? (
             <p className="text-muted-foreground mt-1 text-xs">
-              {RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.empty(t)}
+              {controlledOptionState?.emptyMessage ??
+                RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.empty(t)}
             </p>
           ) : null}
           {optionState?.status === "error" ? (
             <div className="mt-1 flex items-center gap-2">
               <p role="alert" className="text-xs text-red-600">
-                {RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.error(t)}
+                {controlledOptionState?.errorMessage ??
+                  RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.error(t)}
               </p>
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
                 disabled={disabled}
-                onClick={() => retry(descriptor.fieldId)}
+                onClick={() =>
+                  controlledOptionState
+                    ? onRetryControlledOptions?.(descriptor.fieldId)
+                    : retry(descriptor.fieldId)
+                }
                 aria-label={`${RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.retry(t)} ${label}`}
               >
                 {RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.retry(t)}
@@ -709,14 +762,21 @@ export function NativeResourceEditorBody<TSection extends string>({
 
   return (
     <div className="space-y-5">
-      {[...fieldsBySection.entries()].map(([section, sectionFields]) => (
-        <fieldset key={section} className="space-y-4">
-          <legend className="text-foreground mb-3 text-sm font-semibold">
-            {sectionLabelResolvers[section](t)}
-          </legend>
-          {sectionFields.map(renderField)}
-        </fieldset>
-      ))}
+      {[...fieldsBySection.entries()].map(([section, sectionFields]) => {
+        const label = sectionLabelResolvers[section](t)
+        const content = sectionFields.map(renderField)
+        const override = renderSectionOverride?.(section, label, content)
+        return override !== undefined ? (
+          <Fragment key={section}>{override}</Fragment>
+        ) : (
+          <fieldset key={section} className="space-y-4">
+            <legend className="text-foreground mb-3 text-sm font-semibold">
+              {label}
+            </legend>
+            {content}
+          </fieldset>
+        )
+      })}
     </div>
   )
 }

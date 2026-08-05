@@ -7,6 +7,7 @@ import {
   NativeResourceEditorBody,
   type NativeResourceEditorBodyProps,
 } from "~/features/ResourceEditor/NativeResourceEditorBody"
+import { defineResourceEditorFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void
@@ -27,6 +28,109 @@ const t = ((key: string) =>
   })[key] ?? key) as TFunction
 
 describe("NativeResourceEditorBody", () => {
+  it("renders controller-owned dynamic option state inline and disables unavailable selectors", () => {
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          { fieldId: "workspace", type: "select", options: [] },
+          {
+            fieldId: "creator",
+            type: "select",
+            options: [],
+            optionLoader: { dependsOn: ["workspace"] },
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "workspace",
+              section: "basic",
+              order: 1,
+              renderer: "select",
+              resolveLabel: () => "Workspace",
+            },
+            {
+              fieldId: "creator",
+              section: "basic",
+              order: 2,
+              renderer: "select",
+              resolveLabel: () => "Creator",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ workspace: "workspace-example", creator: null }}
+        onValueChange={() => undefined}
+        controlledOptionStates={{
+          creator: {
+            status: "error",
+            options: [],
+            errorMessage: "Permission denied",
+          },
+        }}
+        onRetryControlledOptions={() => undefined}
+      />,
+    )
+
+    expect(screen.getByRole("combobox", { name: "Creator" })).toBeDisabled()
+    expect(screen.getByRole("alert")).toHaveTextContent("Permission denied")
+  })
+
+  it("renders and selects ready controller-owned options without copying them into descriptors", async () => {
+    const onValueChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: "creator",
+            type: "select",
+            options: [],
+            optionLoader: { dependsOn: [] },
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "creator",
+              section: "basic",
+              order: 1,
+              renderer: "select",
+              resolveLabel: () => "Creator",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ creator: "" }}
+        onValueChange={onValueChange}
+        controlledOptionStates={{
+          creator: {
+            status: "ready",
+            options: [
+              {
+                value: "member-example",
+                displayLabel: "Example member",
+                secondaryLabel: "member@example.invalid",
+              },
+            ],
+          },
+        }}
+      />,
+    )
+
+    await user.click(screen.getByRole("combobox", { name: "Creator" }))
+    expect(screen.getByText("Example member")).toBeVisible()
+    expect(screen.getByText("member@example.invalid")).toBeVisible()
+    await user.click(screen.getByRole("option", { name: /Example member/ }))
+    expect(onValueChange).toHaveBeenCalledWith("creator", "member-example")
+  })
+
   it("exports its props as the public editor boundary", () => {
     const props: NativeResourceEditorBodyProps<"basic"> = {
       t,
@@ -39,6 +143,42 @@ describe("NativeResourceEditorBody", () => {
     }
 
     expect(props).toBeDefined()
+  })
+
+  it("lets consumers wrap a section without changing its field rendering", () => {
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[{ fieldId: "enabled", type: "boolean" }]}
+        policy={{
+          fields: [
+            {
+              fieldId: "enabled",
+              section: "basic",
+              order: 10,
+              renderer: "boolean",
+              resolveLabel: () => "Enabled",
+            },
+          ],
+          hiddenFields: [],
+        }}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ enabled: true }}
+        onValueChange={() => undefined}
+        renderSectionOverride={(section, label, children) =>
+          section === "basic" ? (
+            <details open role="group" aria-label={label}>
+              <summary>{label}</summary>
+              {children}
+            </details>
+          ) : undefined
+        }
+      />,
+    )
+
+    expect(screen.getByRole("group", { name: "Basic" })).toHaveAttribute("open")
+    expect(screen.getByRole("switch", { name: "Enabled" })).toBeChecked()
   })
 
   it("renders a nullable numeric limit and the creator display label", () => {

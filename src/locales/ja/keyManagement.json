@@ -312,6 +312,142 @@
     "warningDescription": "このキーを完全な形で確認できるのは今だけです。このダイアログを閉じると、一覧や詳細にはマスクされた値だけが表示される場合があります。",
     "warningTitle": "このキーは一度だけ表示できます"
   },
+  "openRouter": {
+    "editor": {
+      "actions": {
+        "cancel": "キャンセル",
+        "save": "キーを保存"
+      },
+      "feedback": {
+        "authenticationFailed": "このアカウントに再度サインインしてからお試しください。",
+        "error": "キーの設定を確認して、もう一度お試しください。",
+        "permissionDenied": "このワークスペースでキーを管理する権限がありません。",
+        "title": "キーを保存できませんでした",
+        "unavailable": "サービスは一時的に利用できません。しばらくしてからお試しください。",
+        "uncertain": "サービスが変更を適用した可能性があります。再試行前に更新してください。"
+      },
+      "fields": {
+        "creator": {
+          "editHelp": "作成者を変更するには、新しいキーを作成してください。",
+          "help": "必要に応じてワークスペースのメンバーにこのキーを割り当てます。",
+          "label": "作成者",
+          "placeholder": "作成者なし"
+        },
+        "disabled": {
+          "help": "無効なキーは再度有効にするまで使用できません。",
+          "label": "キーを無効化"
+        },
+        "expiresAt": {
+          "editHelp": "有効期限を変更するには、新しいキーを作成してください。",
+          "help": "日時はローカル時刻で入力され、UTC として保存されます。",
+          "label": "有効期限"
+        },
+        "includeByokInLimit": {
+          "help": "持ち込みキーの使用量をこの上限に含めます。",
+          "label": "BYOK の使用量を含める"
+        },
+        "limit": {
+          "help": "上限を 0 USD にすると使用できません。",
+          "label": "上限"
+        },
+        "limitMode": {
+          "label": "使用上限"
+        },
+        "limitReset": {
+          "help": "使用上限をリセットする頻度を選択します。",
+          "label": "リセット間隔"
+        },
+        "name": {
+          "help": "識別しやすいキー名を付けてください。",
+          "label": "キー名",
+          "placeholder": "本番用キー"
+        },
+        "workspace": {
+          "editHelp": "ワークスペースを変更するには、新しいキーを作成してください。",
+          "help": "このキーが属するワークスペースを選択します。",
+          "label": "ワークスペース",
+          "placeholder": "ワークスペースを選択"
+        }
+      },
+      "issues": {
+        "inconsistentValue": "この値を確認して、もう一度お試しください。",
+        "invalidValue": "有効な値を入力してください。",
+        "outOfRange": "許可された範囲の値を入力してください。",
+        "required": "この項目は必須です。",
+        "unsupportedOption": "利用可能な選択肢を選んでください。"
+      },
+      "opening": {
+        "failed": "キーエディターを開けませんでした",
+        "loading": "キーエディターを開いています...",
+        "retry": "再試行",
+        "title": "API キーエディターを開く"
+      },
+      "options": {
+        "creator": {
+          "empty": "このワークスペースで利用できるメンバーはいません。",
+          "unknown": "不明なメンバー"
+        },
+        "limitMode": {
+          "limited": "上限あり",
+          "unlimited": "無制限"
+        },
+        "limitReset": {
+          "daily": "毎日",
+          "monthly": "毎月",
+          "none": "リセットしない",
+          "weekly": "毎週"
+        },
+        "workspace": {
+          "unknown": "不明なワークスペース"
+        }
+      },
+      "sections": {
+        "advanced": "詳細",
+        "basic": "基本",
+        "lifecycle": "ライフサイクル",
+        "spending": "使用上限"
+      },
+      "summary": "APIキーの設定",
+      "summaryRules": {
+        "byok": {
+          "excluded": "BYOK 使用量を含めない",
+          "included": "BYOK 使用量を含める"
+        },
+        "expiresAt": "ローカル時刻 {{expiresAt}} に期限切れとなり、UTC で保存されます",
+        "limit": "使用上限: {{limit}} USD",
+        "limitUnset": "使用上限が設定されていません",
+        "neverExpires": "期限なし",
+        "reset": {
+          "daily": "毎日リセット",
+          "monthly": "毎月リセット",
+          "none": "リセットしない",
+          "weekly": "毎週リセット"
+        },
+        "unlimited": "使用上限なし"
+      },
+      "title": {
+        "create": "APIキーを作成",
+        "edit": "APIキーを編集"
+      },
+      "unsaved": {
+        "description": "変更は保存されていません。",
+        "discard": "変更を破棄",
+        "keepEditing": "編集を続ける",
+        "title": "未保存の変更を破棄しますか？"
+      }
+    },
+    "workspace": {
+      "empty": "このアカウントで利用可能なワークスペースはありません。",
+      "error": "ワークスペースを読み込めませんでした",
+      "errorHelp": "アカウントのアクセス権を確認して、もう一度お試しください。",
+      "heading": "ワークスペース",
+      "label": "ワークスペース",
+      "loading": "ワークスペースを読み込んでいます...",
+      "partial": "一部のワークスペースを読み込めませんでした。",
+      "placeholder": "ワークスペースを選択",
+      "retry": "ワークスペースの読み込みを再試行"
+    }
+  },
   "pleaseAddAccount": "先にアカウントを追加してください",
   "pleaseSelectAccount": "アカウントを選択してください",
   "refreshTokenList": "キー一覧を更新",

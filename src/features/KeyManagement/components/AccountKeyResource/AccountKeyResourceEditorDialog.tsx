@@ -1,0 +1,537 @@
+import type { TFunction } from "i18next"
+import { useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
+
+import { Alert, Button, Modal } from "~/components/ui"
+import {
+  NativeResourceEditorBody,
+  type ResourceEditorControlledOptionState,
+} from "~/features/ResourceEditor/NativeResourceEditorBody"
+import type {
+  EditableResourceProjection,
+  ResourceFailure,
+  ResourceFieldDescriptor,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
+import type { ResourceFieldValue } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  OPENROUTER_KEY_FIELD_IDS,
+  OPENROUTER_KEY_LIMIT_MODES,
+  OPENROUTER_KEY_LIMIT_RESETS,
+} from "~/services/apiAdapters/openrouter/keyResourceFields"
+
+import {
+  getOpenRouterKeyResourceFieldPolicy,
+  OPENROUTER_KEY_EDITOR_SECTION_LABEL_RESOLVERS,
+  OPENROUTER_KEY_EDITOR_SECTION_ORDER,
+  type OpenRouterKeyEditorMode,
+} from "../../presentation/accountKeyResourceFieldPolicy"
+
+export type AccountKeyResourceEditorDialogState = {
+  /** Stable for the dialog session; changes only when opening a different editor. */
+  editorId: number
+  mode: OpenRouterKeyEditorMode
+  fields: readonly ResourceFieldDescriptor[]
+  initialValues: EditableResourceProjection
+  values: EditableResourceProjection
+  feedback?: ResourceFailure | null
+  optionsByField?: Readonly<
+    Record<string, readonly { value: string; displayLabel?: string }[]>
+  >
+  optionFailuresByField?: Readonly<Record<string, ResourceFailure | undefined>>
+  loadingFieldIds?: readonly string[]
+  /** A confirmed mutation keeps the shell mounted long enough for Modal to settle focus. */
+  terminalClose?: boolean
+}
+
+export type AccountKeyResourceEditorOpeningState =
+  | { attemptId: number; status: "idle" }
+  | { attemptId: number; status: "loading" }
+  | { attemptId: number; status: "failure"; failure: ResourceFailure }
+
+export type AccountKeyResourceEditorDialogProps = {
+  editor: AccountKeyResourceEditorDialogState | null
+  opening?: AccountKeyResourceEditorOpeningState
+  onRetryOpening?: (attemptId: number) => void
+  onCancelOpening?: (attemptId: number) => void
+  onClose: (editorId: number) => void
+  onSubmit: (
+    editorId: number,
+    values: EditableResourceProjection,
+  ) => Promise<unknown> | void
+  /** The controller owns the projection so asynchronous corrections cannot lose local edits. */
+  onValuesChange: (editorId: number, values: EditableResourceProjection) => void
+  onLoadOptions?: (
+    editorId: number,
+    fieldId: string,
+    values: EditableResourceProjection,
+  ) => void
+}
+
+const field = OPENROUTER_KEY_FIELD_IDS
+
+type DynamicOptionField = Extract<
+  ResourceFieldDescriptor,
+  { type: "select" | "multi-select" }
+>
+
+const isDynamicOptionField = (
+  descriptor: ResourceFieldDescriptor,
+): descriptor is DynamicOptionField =>
+  (descriptor.type === "select" || descriptor.type === "multi-select") &&
+  descriptor.optionLoader !== undefined
+
+const isSameProjection = (
+  left: EditableResourceProjection,
+  right: EditableResourceProjection,
+) => JSON.stringify(left) === JSON.stringify(right)
+
+/** Converts adapter-owned UTC instants to the local value shape required by datetime-local. */
+const toLocalDateTimeInputValue = (
+  value: ResourceFieldValue,
+): ResourceFieldValue => {
+  if (typeof value !== "string" || !value.endsWith("Z")) return value
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  const pad = (part: number) => String(part).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate(),
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+const toEditorValues = (
+  values: EditableResourceProjection,
+): EditableResourceProjection => ({
+  ...values,
+  [field.ExpiresAt]: toLocalDateTimeInputValue(values[field.ExpiresAt]),
+})
+
+const formatLocalDateTime = (value: string, language: string) => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return new Intl.DateTimeFormat(language, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date)
+}
+
+const feedbackMessage = (failure: ResourceFailure, t: TFunction) => {
+  switch (failure.code) {
+    case "permission_denied":
+      return t("keyManagement:openRouter.editor.feedback.permissionDenied")
+    case "authentication_failed":
+      return t("keyManagement:openRouter.editor.feedback.authenticationFailed")
+    case "unavailable":
+      return t("keyManagement:openRouter.editor.feedback.unavailable")
+    case "mutation_state_uncertain":
+      return t("keyManagement:openRouter.editor.feedback.uncertain")
+    default:
+      return t("keyManagement:openRouter.editor.feedback.error")
+  }
+}
+
+const feedbackDescription = (failure: ResourceFailure, t: TFunction) => {
+  const details = [failure.message, failure.upstreamCode].filter(
+    (detail): detail is string => Boolean(detail),
+  )
+  return [feedbackMessage(failure, t), ...details].join("\n")
+}
+
+const semanticSummary = (
+  values: EditableResourceProjection,
+  t: TFunction,
+  language: string,
+) => {
+  const limit = values[field.Limit]
+  const reset = values[field.LimitReset]
+  const expiresAt = values[field.ExpiresAt]
+  const isLimited =
+    values[field.LimitMode] === OPENROUTER_KEY_LIMIT_MODES.Limited
+  return [
+    isLimited
+      ? typeof limit === "number"
+        ? t("keyManagement:openRouter.editor.summaryRules.limit", { limit })
+        : t("keyManagement:openRouter.editor.summaryRules.limitUnset")
+      : t("keyManagement:openRouter.editor.summaryRules.unlimited"),
+    ...(isLimited
+      ? [
+          reset === OPENROUTER_KEY_LIMIT_RESETS.Daily
+            ? t("keyManagement:openRouter.editor.summaryRules.reset.daily")
+            : reset === OPENROUTER_KEY_LIMIT_RESETS.Weekly
+              ? t("keyManagement:openRouter.editor.summaryRules.reset.weekly")
+              : reset === OPENROUTER_KEY_LIMIT_RESETS.Monthly
+                ? t(
+                    "keyManagement:openRouter.editor.summaryRules.reset.monthly",
+                  )
+                : t("keyManagement:openRouter.editor.summaryRules.reset.none"),
+        ]
+      : []),
+    values[field.IncludeByokInLimit]
+      ? t("keyManagement:openRouter.editor.summaryRules.byok.included")
+      : t("keyManagement:openRouter.editor.summaryRules.byok.excluded"),
+    typeof expiresAt === "string" && expiresAt
+      ? t("keyManagement:openRouter.editor.summaryRules.expiresAt", {
+          expiresAt: formatLocalDateTime(expiresAt, language),
+        })
+      : t("keyManagement:openRouter.editor.summaryRules.neverExpires"),
+  ].join(" · ")
+}
+
+/** Renders the local OpenRouter projection while delegating all native operations to its controller. */
+export function AccountKeyResourceEditorDialog({
+  editor,
+  opening = { attemptId: 0, status: "idle" },
+  onRetryOpening,
+  onCancelOpening,
+  onClose,
+  onSubmit,
+  onValuesChange,
+  onLoadOptions,
+}: AccountKeyResourceEditorDialogProps) {
+  const { t } = useTranslation()
+  const editorCloseRequestRef = useRef<(() => void) | null>(null)
+  const isOpen = editor !== null || opening.status !== "idle"
+  if (!isOpen) return null
+  const activeOpening = opening.status === "idle" ? null : opening
+  const isOpening = editor === null
+  const title = isOpening
+    ? t("keyManagement:openRouter.editor.opening.title")
+    : editor.mode === "create"
+      ? t("keyManagement:openRouter.editor.title.create")
+      : t("keyManagement:openRouter.editor.title.edit")
+  const requestClose = () => {
+    if (editor) {
+      editorCloseRequestRef.current?.()
+      return
+    }
+    onCancelOpening?.(opening.attemptId)
+  }
+
+  return (
+    <Modal
+      isOpen
+      onClose={requestClose}
+      title={title}
+      size={isOpening ? "sm" : "lg"}
+      header={<h2 className="text-base font-semibold">{title}</h2>}
+      footer={
+        isOpening ? (
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={requestClose}
+              disabled={!onCancelOpening}
+            >
+              {t(
+                opening.status === "loading"
+                  ? "common:actions.cancel"
+                  : "common:actions.close",
+              )}
+            </Button>
+            {opening.status === "failure" ? (
+              <Button
+                type="button"
+                onClick={() => onRetryOpening?.(opening.attemptId)}
+                disabled={!onRetryOpening}
+              >
+                {t("keyManagement:openRouter.editor.opening.retry")}
+              </Button>
+            ) : null}
+          </div>
+        ) : undefined
+      }
+      focusFallbackKey={
+        editor ? editor.editorId : `${opening.attemptId}:${opening.status}`
+      }
+      terminalCloseKey={editor?.terminalClose ? editor.editorId : null}
+    >
+      {editor && !editor.terminalClose ? (
+        <AccountKeyResourceEditorDialogSession
+          key={editor.editorId}
+          editor={editor}
+          onClose={onClose}
+          onSubmit={onSubmit}
+          onValuesChange={onValuesChange}
+          onLoadOptions={onLoadOptions}
+          onRequestCloseRef={editorCloseRequestRef}
+        />
+      ) : activeOpening ? (
+        <AccountKeyResourceEditorOpeningContent opening={activeOpening} />
+      ) : null}
+    </Modal>
+  )
+}
+
+/** Presents the state of a native editor launch without creating a second modal. */
+function AccountKeyResourceEditorOpeningContent({
+  opening,
+}: {
+  opening: Exclude<AccountKeyResourceEditorOpeningState, { status: "idle" }>
+}) {
+  const { t } = useTranslation()
+  const isLoading = opening.status === "loading"
+
+  return (
+    <Alert
+      variant={isLoading ? "info" : "destructive"}
+      compact
+      role={isLoading ? "status" : "alert"}
+      aria-live="polite"
+      aria-atomic="true"
+      title={
+        isLoading
+          ? t("keyManagement:openRouter.editor.opening.loading")
+          : t("keyManagement:openRouter.editor.opening.failed")
+      }
+      description={
+        isLoading ? undefined : feedbackDescription(opening.failure, t)
+      }
+    />
+  )
+}
+
+type AccountKeyResourceEditorDialogSessionProps = Omit<
+  AccountKeyResourceEditorDialogProps,
+  "editor"
+> & {
+  editor: AccountKeyResourceEditorDialogState
+  onRequestCloseRef: { current: (() => void) | null }
+}
+
+/** Owns local UI state for one immutable editor session. */
+function AccountKeyResourceEditorDialogSession({
+  editor,
+  onClose,
+  onSubmit,
+  onValuesChange,
+  onLoadOptions,
+  onRequestCloseRef,
+}: AccountKeyResourceEditorDialogSessionProps) {
+  const { t, i18n } = useTranslation()
+  const [values, setValues] = useState<EditableResourceProjection>(() =>
+    toEditorValues(editor.values),
+  )
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(
+    Boolean(editor.values[field.IncludeByokInLimit]),
+  )
+  const submittingRef = useRef(false)
+  const initialValuesRef = useRef<EditableResourceProjection>(
+    toEditorValues(editor.initialValues),
+  )
+  const valuesRef = useRef(values)
+  const loadedOptionSignaturesRef = useRef(new Map<string, string>())
+
+  useEffect(() => {
+    const controllerValues = toEditorValues(editor.values)
+    if (!isSameProjection(valuesRef.current, controllerValues)) {
+      valuesRef.current = controllerValues
+      setValues(controllerValues)
+    }
+  }, [editor.values])
+
+  const dynamicOptionFields = (editor?.fields ?? []).filter(
+    isDynamicOptionField,
+  )
+
+  useEffect(() => {
+    if (!onLoadOptions) return
+    for (const candidate of dynamicOptionFields) {
+      const signature = (candidate.optionLoader?.dependsOn ?? [])
+        .map((fieldId) => JSON.stringify(values[fieldId]))
+        .join("|")
+      if (
+        loadedOptionSignaturesRef.current.get(candidate.fieldId) === signature
+      )
+        continue
+      loadedOptionSignaturesRef.current.set(candidate.fieldId, signature)
+      onLoadOptions(editor.editorId, candidate.fieldId, values)
+    }
+  }, [dynamicOptionFields, editor.editorId, onLoadOptions, values])
+
+  const controlledOptionStates:
+    | Readonly<Record<string, ResourceEditorControlledOptionState>>
+    | undefined = onLoadOptions
+    ? Object.fromEntries(
+        dynamicOptionFields.map(
+          (descriptor): [string, ResourceEditorControlledOptionState] => {
+            const options = editor.optionsByField?.[descriptor.fieldId]
+            const failure = editor.optionFailuresByField?.[descriptor.fieldId]
+            const isLoading = editor.loadingFieldIds?.includes(
+              descriptor.fieldId,
+            )
+            return [
+              descriptor.fieldId,
+              {
+                status: isLoading
+                  ? "loading"
+                  : failure
+                    ? "error"
+                    : options
+                      ? "ready"
+                      : "loading",
+                options: options ?? [],
+                ...(failure
+                  ? { errorMessage: feedbackDescription(failure, t) }
+                  : {}),
+                ...(options?.length === 0
+                  ? {
+                      emptyMessage: t(
+                        "keyManagement:openRouter.editor.options.creator.empty",
+                      ),
+                    }
+                  : {}),
+              },
+            ]
+          },
+        ),
+      )
+    : undefined
+  const hasUnresolvedDependentOptions = dynamicOptionFields.some(
+    (descriptor) => {
+      const state = controlledOptionStates?.[descriptor.fieldId]
+      if (!state || state.status === "ready") return false
+      const value = values[descriptor.fieldId]
+      const hasSelectedValue = Array.isArray(value)
+        ? value.length > 0
+        : value !== null && value !== undefined && value !== ""
+      return descriptor.required || hasSelectedValue
+    },
+  )
+
+  const updateValues = (fieldId: string, value: ResourceFieldValue) => {
+    const next = { ...valuesRef.current, [fieldId]: value }
+    for (const candidate of dynamicOptionFields) {
+      if (candidate.optionLoader?.dependsOn.includes(fieldId)) {
+        next[candidate.fieldId] = candidate.nullable ? null : ""
+      }
+    }
+    valuesRef.current = next
+    setValues(next)
+    onValuesChange(editor.editorId, next)
+  }
+  const close = () => {
+    onClose(editor.editorId)
+  }
+  const requestClose = () => {
+    if (isSubmitting) return
+    if (!isSameProjection(values, initialValuesRef.current)) {
+      setConfirmDiscard(true)
+      return
+    }
+    close()
+  }
+  onRequestCloseRef.current = requestClose
+  const submit = async () => {
+    if (submittingRef.current || hasUnresolvedDependentOptions) return
+    submittingRef.current = true
+    setIsSubmitting(true)
+    try {
+      await onSubmit(editor.editorId, values)
+    } finally {
+      submittingRef.current = false
+      setIsSubmitting(false)
+    }
+  }
+
+  const policy = getOpenRouterKeyResourceFieldPolicy(editor.mode)
+  const fieldIssues = editor.feedback?.fieldIssues
+  return (
+    <>
+      <Alert
+        variant="info"
+        compact
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        title={t("keyManagement:openRouter.editor.summary")}
+        description={semanticSummary(values, t, i18n.language)}
+      />
+      {editor.feedback && !fieldIssues?.length ? (
+        <Alert
+          variant="destructive"
+          compact
+          title={t("keyManagement:openRouter.editor.feedback.title")}
+          description={feedbackDescription(editor.feedback, t)}
+        />
+      ) : null}
+      {confirmDiscard ? (
+        <Alert
+          variant="warning"
+          compact
+          title={t("keyManagement:openRouter.editor.unsaved.title")}
+          description={t("keyManagement:openRouter.editor.unsaved.description")}
+        >
+          <div className="mt-2 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setConfirmDiscard(false)}
+            >
+              {t("keyManagement:openRouter.editor.unsaved.keepEditing")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="destructive"
+              onClick={close}
+            >
+              {t("keyManagement:openRouter.editor.unsaved.discard")}
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={editor.fields}
+        policy={policy}
+        sectionOrder={OPENROUTER_KEY_EDITOR_SECTION_ORDER}
+        sectionLabelResolvers={OPENROUTER_KEY_EDITOR_SECTION_LABEL_RESOLVERS}
+        values={values}
+        fieldIssues={fieldIssues}
+        disabled={isSubmitting}
+        onValueChange={updateValues}
+        controlledOptionStates={controlledOptionStates}
+        onRetryControlledOptions={(fieldId) =>
+          onLoadOptions?.(editor.editorId, fieldId, values)
+        }
+        renderSectionOverride={(section, label, children) =>
+          section === "advanced" ? (
+            <details
+              className="space-y-4"
+              open={isAdvancedOpen}
+              onToggle={(event) => setIsAdvancedOpen(event.currentTarget.open)}
+              aria-label={label}
+              role="group"
+            >
+              <summary className="text-foreground cursor-pointer text-sm font-semibold">
+                {label}
+              </summary>
+              <div className="pt-2">{children}</div>
+            </details>
+          ) : undefined
+        }
+      />
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isSubmitting}
+          onClick={requestClose}
+        >
+          {t("keyManagement:openRouter.editor.actions.cancel")}
+        </Button>
+        <Button
+          type="button"
+          loading={isSubmitting}
+          disabled={hasUnresolvedDependentOptions}
+          onClick={() => void submit()}
+        >
+          {t("keyManagement:openRouter.editor.actions.save")}
+        </Button>
+      </div>
+    </>
+  )
+}

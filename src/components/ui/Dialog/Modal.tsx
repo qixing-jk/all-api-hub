@@ -1,6 +1,13 @@
 import { XIcon } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
-import { ReactNode, useRef, type MouseEvent, type PointerEvent } from "react"
+import {
+  ReactNode,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  type MouseEvent,
+  type PointerEvent,
+} from "react"
 
 import { Z_INDEX } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
@@ -27,6 +34,12 @@ interface ModalProps {
   closeOnEsc?: boolean
   closeOnBackdropClick?: boolean
   size?: Size
+  /** Moves focus to a remaining dialog control when this value replaces the focused UI. */
+  focusFallbackKey?: string | number | null
+  /** Requests a normal Modal close when a terminal controller transition is committed. */
+  terminalCloseKey?: string | number | null
+  /** Shares the original opener across an explicit terminal-dialog successor. */
+  focusWorkflowId?: string | number
 }
 
 const sizeMap: Record<Size, string> = {
@@ -41,6 +54,96 @@ const openFloatingLayerSelector = [
   '[data-slot="popover-content"][data-state="open"]',
   '[data-slot="combobox-content"][data-open]',
 ].join(",")
+
+type FocusSession = {
+  generation: number
+  restoreElement: HTMLElement | null
+  active: boolean
+  settled: boolean
+  closeRequested: boolean
+  focusWorkflowId?: string | number
+}
+
+// Radix may deliver close autofocus after a keyed Modal instance has unmounted.
+// This shared stack makes only the foreground session eligible to restore focus,
+// while still letting a nested child restore focus to its parent dialog.
+const focusLeaseStack: FocusSession[] = []
+const focusWorkflowRestorers = new Map<string | number, HTMLElement | null>()
+
+const discardFocusLease = (session: FocusSession) => {
+  session.active = false
+}
+
+const acquireFocusLease = (session: FocusSession) => {
+  for (let index = focusLeaseStack.length - 1; index >= 0; index -= 1) {
+    if (!focusLeaseStack[index]?.active) focusLeaseStack.splice(index, 1)
+  }
+  const workflowPredecessor =
+    session.focusWorkflowId === undefined
+      ? null
+      : [...focusLeaseStack]
+          .reverse()
+          .find(
+            (candidate) =>
+              candidate.active &&
+              candidate.focusWorkflowId === session.focusWorkflowId,
+          )
+  if (session.focusWorkflowId !== undefined) {
+    const storedRestoreElement = focusWorkflowRestorers.get(
+      session.focusWorkflowId,
+    )
+    if (storedRestoreElement !== undefined) {
+      session.restoreElement = storedRestoreElement
+    } else {
+      focusWorkflowRestorers.set(
+        session.focusWorkflowId,
+        session.restoreElement,
+      )
+    }
+  }
+  if (workflowPredecessor) {
+    session.restoreElement = workflowPredecessor.restoreElement
+    workflowPredecessor.active = false
+  }
+  focusLeaseStack.push(session)
+}
+
+const settleFocusLease = (session: FocusSession) => {
+  if (!focusLeaseStack.includes(session)) return null
+  session.settled = true
+  let restoreSession: FocusSession | null = null
+  while (focusLeaseStack.at(-1)?.settled) {
+    const settledSession = focusLeaseStack.pop()!
+    if (settledSession.active) restoreSession = settledSession
+    settledSession.active = false
+  }
+  if (restoreSession?.focusWorkflowId !== undefined)
+    focusWorkflowRestorers.delete(restoreSession.focusWorkflowId)
+  return restoreSession
+}
+
+const removeFocusLease = (session: FocusSession) => {
+  const index = focusLeaseStack.lastIndexOf(session)
+  if (index >= 0) focusLeaseStack.splice(index, 1)
+  session.active = false
+  if (session.focusWorkflowId !== undefined)
+    focusWorkflowRestorers.delete(session.focusWorkflowId)
+}
+
+const settleDeferredFocusLease = (session: FocusSession) => {
+  if (!session.active) return
+  if (focusLeaseStack.at(-1) !== session) {
+    discardFocusLease(session)
+    return
+  }
+  const restoreSession = settleFocusLease(session)
+  const restoreFocusElement = restoreSession?.restoreElement
+  if (restoreFocusElement?.isConnected) restoreFocusElement.focus()
+}
+
+const scheduleDeferredFocusLeaseSettlement = (session: FocusSession) => {
+  queueMicrotask(() => settleDeferredFocusLease(session))
+}
 
 /**
  * Detects nested select, popover, or combobox layers that should handle Escape
@@ -75,14 +178,106 @@ export function Modal({
   closeOnEsc = true,
   closeOnBackdropClick = true,
   size = "md",
+  focusFallbackKey,
+  terminalCloseKey,
+  focusWorkflowId,
 }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null)
   const backdropPointerDownTargetRef = useRef<HTMLDivElement | null>(null)
+  const focusGenerationRef = useRef(0)
+  const activeFocusSessionRef = useRef<FocusSession | null>(null)
+  const focusSessionsByContentRef = useRef(
+    new WeakMap<HTMLElement, FocusSession>(),
+  )
+  const wasOpenRef = useRef(false)
+  const terminalCloseKeyRef = useRef<string | number | null>(null)
+
+  useLayoutEffect(() => {
+    if (!isOpen) {
+      wasOpenRef.current = false
+      return
+    }
+    if (
+      !wasOpenRef.current &&
+      typeof document !== "undefined" &&
+      document.activeElement instanceof HTMLElement
+    ) {
+      const focusSession = {
+        generation: ++focusGenerationRef.current,
+        restoreElement: document.activeElement,
+        active: true,
+        settled: false,
+        closeRequested: false,
+        focusWorkflowId,
+      }
+      if (activeFocusSessionRef.current)
+        discardFocusLease(activeFocusSessionRef.current)
+      activeFocusSessionRef.current = focusSession
+      acquireFocusLease(focusSession)
+      if (contentRef.current) {
+        focusSessionsByContentRef.current.set(contentRef.current, focusSession)
+      }
+    }
+    wasOpenRef.current = true
+  }, [focusWorkflowId, isOpen])
+
+  useLayoutEffect(() => {
+    const activeSession = activeFocusSessionRef.current
+    if (!isOpen && activeSession?.closeRequested)
+      scheduleDeferredFocusLeaseSettlement(activeSession)
+  }, [isOpen])
+
+  useLayoutEffect(
+    () => () => {
+      const activeSession = activeFocusSessionRef.current
+      if (activeSession?.closeRequested) {
+        // A parent can remove a controlled Modal before Radix delivers its
+        // deferred close-autofocus callback. Settle only if no successor has
+        // acquired the foreground lease in the same commit.
+        scheduleDeferredFocusLeaseSettlement(activeSession)
+      } else if (activeSession) {
+        removeFocusLease(activeSession)
+      }
+      activeFocusSessionRef.current = null
+      wasOpenRef.current = false
+    },
+    [],
+  )
 
   const handleBackdropPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     backdropPointerDownTargetRef.current =
       event.target === event.currentTarget ? event.currentTarget : null
   }
+
+  const requestClose = useCallback(() => {
+    const activeSession = activeFocusSessionRef.current
+    if (activeSession) activeSession.closeRequested = true
+    onClose()
+  }, [onClose])
+
+  useLayoutEffect(() => {
+    if (
+      !isOpen ||
+      terminalCloseKey === null ||
+      terminalCloseKey === undefined
+    ) {
+      terminalCloseKeyRef.current = null
+      return
+    }
+    if (terminalCloseKeyRef.current === terminalCloseKey) return
+    terminalCloseKeyRef.current = terminalCloseKey
+    requestClose()
+  }, [isOpen, requestClose, terminalCloseKey])
+
+  useLayoutEffect(() => {
+    if (focusFallbackKey === null || focusFallbackKey === undefined) return
+    const content = contentRef.current
+    if (!isOpen || !content || content.contains(document.activeElement)) return
+    const fallback = content.querySelector<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    )
+    fallback?.focus()
+  }, [focusFallbackKey, isOpen])
 
   const handleBackdropClick = (event: MouseEvent<HTMLDivElement>) => {
     const pointerDownTarget = backdropPointerDownTargetRef.current
@@ -95,7 +290,7 @@ export function Modal({
       (pointerDownTarget === event.currentTarget || isNonPointerClick)
 
     backdropPointerDownTargetRef.current = null
-    if (shouldClose) onClose()
+    if (shouldClose) requestClose()
   }
 
   const handleBackdropPointerCancel = () => {
@@ -114,7 +309,7 @@ export function Modal({
 
   const handleEscapeKeyDown = (event: KeyboardEvent) => {
     event.preventDefault()
-    if (shouldCloseOnEscape()) onClose()
+    if (shouldCloseOnEscape()) requestClose()
   }
 
   const panelBaseClass = cn(
@@ -149,6 +344,31 @@ export function Modal({
               Z_INDEX.modal,
             )}
             onEscapeKeyDown={handleEscapeKeyDown}
+            onOpenAutoFocus={(event) => {
+              const focusSession = activeFocusSessionRef.current
+              if (focusSession && event.currentTarget instanceof HTMLElement) {
+                focusSessionsByContentRef.current.set(
+                  event.currentTarget,
+                  focusSession,
+                )
+              }
+            }}
+            onCloseAutoFocus={(event) => {
+              // Radix dispatches close autofocus on a timer after the scope
+              // unmounts. The shared lease prevents a replaced instance from
+              // restoring focus over the currently opened dialog.
+              event.preventDefault()
+              if (!(event.currentTarget instanceof HTMLElement)) return
+              const focusSession =
+                focusSessionsByContentRef.current.get(event.currentTarget) ??
+                activeFocusSessionRef.current
+              const restoreSession =
+                focusSession && settleFocusLease(focusSession)
+              if (!restoreSession) return
+              const restoreFocusElement = restoreSession.restoreElement
+              if (!restoreFocusElement?.isConnected) return
+              restoreFocusElement.focus()
+            }}
             onPointerDownOutside={(event) => {
               event.preventDefault()
             }}
@@ -174,7 +394,7 @@ export function Modal({
                 {showCloseButton && (
                   <button
                     type="button"
-                    onClick={onClose}
+                    onClick={requestClose}
                     aria-label={t("common:actions.close")}
                     className="dark:hover:bg-dark-bg-tertiary dark:hover:text-dark-text-secondary absolute top-3 right-3 z-10 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 sm:top-4 sm:right-4"
                   >

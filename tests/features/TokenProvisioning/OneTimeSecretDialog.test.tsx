@@ -1,8 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { act } from "react"
+import { act, useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { Modal } from "~/components/ui/Dialog/Modal"
 import { SITE_TYPES } from "~/constants/siteType"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { createLegacyCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
@@ -587,5 +588,55 @@ describe("OneTimeSecretDialog", () => {
     expect(
       screen.getByRole("dialog", { name: "keyManagement:oneTimeKey.title" }),
     ).toBeInTheDocument()
+  })
+
+  it("returns focus to the original launcher after a terminal editor hands off to the secret", async () => {
+    const user = userEvent.setup()
+    const FocusWorkflowHarness = () => {
+      const [phase, setPhase] = useState<"idle" | "editor" | "secret">("idle")
+      return (
+        <>
+          <button type="button" onClick={() => setPhase("editor")}>
+            Open native editor
+          </button>
+          <Modal
+            isOpen={phase === "editor"}
+            onClose={() => setPhase("idle")}
+            title="Native editor"
+            focusWorkflowId="native-create-example"
+          >
+            <button type="button" onClick={() => setPhase("secret")}>
+              Save native key
+            </button>
+          </Modal>
+          <OneTimeSecretDialog
+            isOpen={phase === "secret"}
+            result={RESULT}
+            onClose={() => setPhase("idle")}
+            autoCopy={false}
+            focusWorkflowId="native-create-example"
+          />
+        </>
+      )
+    }
+    render(<FocusWorkflowHarness />)
+
+    const trigger = screen.getByRole("button", {
+      name: "Open native editor",
+    })
+    await user.click(trigger)
+    await user.click(screen.getByRole("button", { name: "Save native key" }))
+    const secretDialog = await screen.findByRole("dialog", {
+      name: "keyManagement:oneTimeKey.title",
+    })
+    expect(secretDialog).toContainElement(document.activeElement as HTMLElement)
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:oneTimeKey.copy" }),
+    )
+    await user.click(
+      screen.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCloseButton),
+    )
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    await waitFor(() => expect(trigger).toHaveFocus())
   })
 })

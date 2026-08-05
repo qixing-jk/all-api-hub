@@ -312,6 +312,142 @@
     "warningDescription": "此金鑰僅能在目前完整查看。關閉此彈窗後，後續清單或詳情可能只顯示遮罩值。",
     "warningTitle": "該金鑰只能查看一次"
   },
+  "openRouter": {
+    "editor": {
+      "actions": {
+        "cancel": "取消",
+        "save": "儲存金鑰"
+      },
+      "feedback": {
+        "authenticationFailed": "請重新登入此帳號後重試。",
+        "error": "請檢查金鑰設定後重試。",
+        "permissionDenied": "你沒有在此工作區管理金鑰的權限。",
+        "title": "無法儲存金鑰",
+        "unavailable": "服務暫時無法使用，請稍後重試。",
+        "uncertain": "服務可能已套用此更改，請重新整理後再試。"
+      },
+      "fields": {
+        "creator": {
+          "editHelp": "如需變更建立者，請建立新的金鑰。",
+          "help": "可選擇將此金鑰指派給工作區成員。",
+          "label": "建立者",
+          "placeholder": "無建立者"
+        },
+        "disabled": {
+          "help": "停用的金鑰在重新啟用前無法使用。",
+          "label": "停用金鑰"
+        },
+        "expiresAt": {
+          "editHelp": "如需變更到期時間，請建立新的金鑰。",
+          "help": "日期和時間按本地時區輸入，並以 UTC 儲存。",
+          "label": "過期時間"
+        },
+        "includeByokInLimit": {
+          "help": "將自帶金鑰用量計入此額度。",
+          "label": "計入 BYOK 用量"
+        },
+        "limit": {
+          "help": "額度為 0 USD 時將無法消費。",
+          "label": "限制額度"
+        },
+        "limitMode": {
+          "label": "用量限制"
+        },
+        "limitReset": {
+          "help": "選擇額度重設的頻率。",
+          "label": "重設週期"
+        },
+        "name": {
+          "help": "為此金鑰使用便於識別的名稱。",
+          "label": "金鑰名稱",
+          "placeholder": "生產環境金鑰"
+        },
+        "workspace": {
+          "editHelp": "如需變更工作區，請建立新的金鑰。",
+          "help": "選擇此金鑰所屬的工作區。",
+          "label": "工作區",
+          "placeholder": "選擇工作區"
+        }
+      },
+      "issues": {
+        "inconsistentValue": "請檢查此值後重試。",
+        "invalidValue": "請輸入有效值。",
+        "outOfRange": "請輸入允許範圍內的值。",
+        "required": "此項為必填項。",
+        "unsupportedOption": "請選擇可用選項。"
+      },
+      "opening": {
+        "failed": "無法開啟金鑰編輯器",
+        "loading": "正在開啟金鑰編輯器...",
+        "retry": "重試",
+        "title": "開啟 API 金鑰編輯器"
+      },
+      "options": {
+        "creator": {
+          "empty": "此工作區沒有可用成員。",
+          "unknown": "未知成員"
+        },
+        "limitMode": {
+          "limited": "限額",
+          "unlimited": "不限額"
+        },
+        "limitReset": {
+          "daily": "每天",
+          "monthly": "每月",
+          "none": "不重設",
+          "weekly": "每週"
+        },
+        "workspace": {
+          "unknown": "未知工作區"
+        }
+      },
+      "sections": {
+        "advanced": "進階設定",
+        "basic": "基本資訊",
+        "lifecycle": "生命週期",
+        "spending": "用量限制"
+      },
+      "summary": "API 金鑰設定",
+      "summaryRules": {
+        "byok": {
+          "excluded": "不計入 BYOK 用量",
+          "included": "計入 BYOK 用量"
+        },
+        "expiresAt": "於本地時間 {{expiresAt}} 到期，並以 UTC 儲存",
+        "limit": "用量上限：{{limit}} USD",
+        "limitUnset": "尚未設定用量上限",
+        "neverExpires": "不會到期",
+        "reset": {
+          "daily": "每日重設",
+          "monthly": "每月重設",
+          "none": "不重設",
+          "weekly": "每週重設"
+        },
+        "unlimited": "無用量上限"
+      },
+      "title": {
+        "create": "建立 API 金鑰",
+        "edit": "編輯 API 金鑰"
+      },
+      "unsaved": {
+        "description": "你的變更尚未儲存。",
+        "discard": "捨棄變更",
+        "keepEditing": "繼續編輯",
+        "title": "捨棄未儲存的變更？"
+      }
+    },
+    "workspace": {
+      "empty": "此帳號沒有可用的工作區。",
+      "error": "無法載入工作區",
+      "errorHelp": "請檢查帳號存取權限後重試。",
+      "heading": "工作區",
+      "label": "工作區",
+      "loading": "正在載入工作區...",
+      "partial": "部分工作區未能載入。",
+      "placeholder": "選擇工作區",
+      "retry": "重試載入工作區"
+    }
+  },
   "pleaseAddAccount": "請先新增帳號",
   "pleaseSelectAccount": "請選擇帳號",
   "refreshTokenList": "重新整理金鑰列表",

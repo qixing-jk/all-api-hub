@@ -312,6 +312,142 @@
     "warningDescription": "Bạn chỉ có thể xem đầy đủ khóa này ngay lúc này. Sau khi đóng hộp thoại, danh sách hoặc chi tiết có thể chỉ hiển thị giá trị đã che.",
     "warningTitle": "Khóa này chỉ có thể được xem một lần"
   },
+  "openRouter": {
+    "editor": {
+      "actions": {
+        "cancel": "Hủy",
+        "save": "Lưu khóa"
+      },
+      "feedback": {
+        "authenticationFailed": "Đăng nhập lại tài khoản này rồi thử lại.",
+        "error": "Kiểm tra cài đặt khóa rồi thử lại.",
+        "permissionDenied": "Bạn không có quyền quản lý khóa trong không gian làm việc này.",
+        "title": "Không thể lưu khóa",
+        "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy thử lại sau.",
+        "uncertain": "Dịch vụ có thể đã áp dụng thay đổi này. Hãy làm mới trước khi thử lại."
+      },
+      "fields": {
+        "creator": {
+          "editHelp": "Để thay đổi người tạo, hãy tạo khóa mới.",
+          "help": "Bạn có thể gán khóa này cho một thành viên.",
+          "label": "Người tạo",
+          "placeholder": "Không có người tạo"
+        },
+        "disabled": {
+          "help": "Khóa bị vô hiệu hóa không thể dùng cho đến khi được bật lại.",
+          "label": "Vô hiệu hóa khóa"
+        },
+        "expiresAt": {
+          "editHelp": "Để thay đổi thời hạn, hãy tạo khóa mới.",
+          "help": "Ngày giờ được nhập theo giờ địa phương và lưu dưới dạng UTC.",
+          "label": "Hết hạn lúc"
+        },
+        "includeByokInLimit": {
+          "help": "Tính mức dùng khóa tự cung cấp vào giới hạn này.",
+          "label": "Bao gồm mức dùng BYOK"
+        },
+        "limit": {
+          "help": "Giới hạn 0 USD sẽ ngăn chi tiêu.",
+          "label": "Giới hạn"
+        },
+        "limitMode": {
+          "label": "Giới hạn chi tiêu"
+        },
+        "limitReset": {
+          "help": "Chọn tần suất đặt lại giới hạn.",
+          "label": "Chu kỳ đặt lại"
+        },
+        "name": {
+          "help": "Dùng tên dễ nhận biết cho khóa này.",
+          "label": "Tên khóa",
+          "placeholder": "Khóa sản xuất"
+        },
+        "workspace": {
+          "editHelp": "Để thay đổi không gian làm việc, hãy tạo khóa mới.",
+          "help": "Chọn không gian làm việc của khóa này.",
+          "label": "Không gian làm việc",
+          "placeholder": "Chọn không gian làm việc"
+        }
+      },
+      "issues": {
+        "inconsistentValue": "Kiểm tra giá trị này rồi thử lại.",
+        "invalidValue": "Nhập giá trị hợp lệ.",
+        "outOfRange": "Nhập giá trị trong phạm vi cho phép.",
+        "required": "Trường này là bắt buộc.",
+        "unsupportedOption": "Chọn một tùy chọn có sẵn."
+      },
+      "opening": {
+        "failed": "Không thể mở trình chỉnh sửa khóa",
+        "loading": "Đang mở trình chỉnh sửa khóa...",
+        "retry": "Thử lại",
+        "title": "Mở trình chỉnh sửa khóa API"
+      },
+      "options": {
+        "creator": {
+          "empty": "Không có thành viên cho không gian làm việc này.",
+          "unknown": "Thành viên không xác định"
+        },
+        "limitMode": {
+          "limited": "Có giới hạn",
+          "unlimited": "Không giới hạn"
+        },
+        "limitReset": {
+          "daily": "Hàng ngày",
+          "monthly": "Hàng tháng",
+          "none": "Không đặt lại",
+          "weekly": "Hàng tuần"
+        },
+        "workspace": {
+          "unknown": "Không gian làm việc không xác định"
+        }
+      },
+      "sections": {
+        "advanced": "Nâng cao",
+        "basic": "Cơ bản",
+        "lifecycle": "Vòng đời",
+        "spending": "Chi tiêu"
+      },
+      "summary": "Cài đặt khóa API",
+      "summaryRules": {
+        "byok": {
+          "excluded": "Không tính mức dùng BYOK",
+          "included": "Tính mức dùng BYOK"
+        },
+        "expiresAt": "Hết hạn lúc giờ địa phương {{expiresAt}} và được lưu theo UTC",
+        "limit": "Giới hạn chi tiêu: {{limit}} USD",
+        "limitUnset": "Chưa đặt giới hạn chi tiêu",
+        "neverExpires": "Không hết hạn",
+        "reset": {
+          "daily": "Đặt lại hằng ngày",
+          "monthly": "Đặt lại hằng tháng",
+          "none": "Không đặt lại",
+          "weekly": "Đặt lại hằng tuần"
+        },
+        "unlimited": "Không giới hạn chi tiêu"
+      },
+      "title": {
+        "create": "Tạo khóa API",
+        "edit": "Chỉnh sửa khóa API"
+      },
+      "unsaved": {
+        "description": "Các thay đổi của bạn chưa được lưu.",
+        "discard": "Bỏ thay đổi",
+        "keepEditing": "Tiếp tục chỉnh sửa",
+        "title": "Bỏ các thay đổi chưa lưu?"
+      }
+    },
+    "workspace": {
+      "empty": "Không có không gian làm việc nào cho tài khoản này.",
+      "error": "Không thể tải không gian làm việc",
+      "errorHelp": "Kiểm tra quyền truy cập tài khoản rồi thử lại.",
+      "heading": "Không gian làm việc",
+      "label": "Không gian làm việc",
+      "loading": "Đang tải không gian làm việc...",
+      "partial": "Không thể tải một số không gian làm việc.",
+      "placeholder": "Chọn không gian làm việc",
+      "retry": "Tải lại không gian làm việc"
+    }
+  },
   "pleaseAddAccount": "Vui lòng thêm tài khoản trước",
   "pleaseSelectAccount": "Vui lòng chọn tài khoản",
   "refreshTokenList": "Làm mới danh sách khóa",

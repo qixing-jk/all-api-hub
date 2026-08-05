@@ -68,6 +68,7 @@ type ControllerNotice = { kind: "workspace-fallback" }
 type EditorMode = "create" | "edit"
 
 type EditorState = {
+  editorId: number
   mode: EditorMode
   fields: AccountKeyResourceEditor["fields"]
   initialValues: EditableResourceProjection
@@ -76,7 +77,19 @@ type EditorState = {
   optionFailuresByField: Record<string, ResourceFailure | undefined>
   loadingFieldIds: readonly string[]
   feedback: ResourceFailure | null
+  terminalClose?: boolean
 } | null
+
+type EditorOpeningState =
+  | { attemptId: number; status: "idle" }
+  | { attemptId: number; status: "loading" }
+  | { attemptId: number; status: "failure"; failure: ResourceFailure }
+
+type EditorOpenRequest = {
+  mode: EditorMode
+  ref?: AccountKeyResourceRef
+  boundary: ActiveResourceBoundary
+}
 
 type DetailState = AccountKeyResourceFacts | null
 
@@ -425,6 +438,10 @@ export function useAccountKeyResourceController({
   const [editor, setEditor] = useState<EditorState>(null)
   const editorStateRef = useRef<EditorState>(editor)
   editorStateRef.current = editor
+  const [editorOpening, setEditorOpening] = useState<EditorOpeningState>({
+    attemptId: 0,
+    status: "idle",
+  })
   const [createdSecret, setCreatedSecret] =
     useState<CreatedRuntimeSecret | null>(null)
   const [deleteState, setDeleteState] = useState<DeleteState>({
@@ -464,11 +481,32 @@ export function useAccountKeyResourceController({
   const editorBoundaryRef = useRef<ActiveResourceBoundary | null>(null)
   const editorFieldGenerations = useRef<Record<string, number>>({})
   const editorGeneration = useRef(0)
-  const renderedEditorGeneration = editorGeneration.current
+  const editorInstanceId = useRef(0)
+  const editorOpeningAttemptId = useRef(0)
+  const editorOpeningRef = useRef<EditorOpeningState>(editorOpening)
+  editorOpeningRef.current = editorOpening
+  const editorOpeningRequestRef = useRef<EditorOpenRequest | null>(null)
   const editorFieldAbortControllers = useRef(new Map<string, AbortController>())
   const mutationsByBoundary = useRef(
     new Map<string, InFlightBoundaryMutation>(),
   )
+
+  // Async editor work can settle before React commits this render. Keep the
+  // controller's authoritative projection in sync with every queued update.
+  const transitionEditor = useCallback(
+    (transition: (current: EditorState) => EditorState) => {
+      const next = transition(editorStateRef.current)
+      editorStateRef.current = next
+      setEditor(next)
+      return next
+    },
+    [],
+  )
+
+  const transitionEditorOpening = useCallback((next: EditorOpeningState) => {
+    editorOpeningRef.current = next
+    setEditorOpening(next)
+  }, [])
 
   const requireFreshRead = useCallback((boundary: ActiveResourceBoundary) => {
     const identity = boundaryIdentity(boundary)
@@ -493,6 +531,32 @@ export function useAccountKeyResourceController({
     editorFieldAbortControllers.current.clear()
     editorFieldGenerations.current = {}
   }, [])
+
+  const clearActiveResourceRefs = useCallback(() => {
+    sessionRef.current = null
+    collectionRef.current = null
+    activeResourceBoundaryRef.current = null
+    editorRef.current = null
+    editorBoundaryRef.current = null
+  }, [])
+
+  const clearTerminalResourceState = useCallback(() => {
+    clearActiveResourceRefs()
+    editorOpeningRequestRef.current = null
+    transitionEditorOpening({
+      attemptId: editorOpeningAttemptId.current,
+      status: "idle",
+    })
+    setDetail(null)
+    transitionEditor(() => null)
+    setCreatedSecret(null)
+    setDeleteState({
+      isOpen: false,
+      isExecuting: false,
+      ref: null,
+      failure: null,
+    })
+  }, [clearActiveResourceRefs, transitionEditor, transitionEditorOpening])
 
   const defaultOpenResources = useCallback<OpenAccountResources>(
     async (account, { signal }) => {
@@ -527,34 +591,30 @@ export function useAccountKeyResourceController({
     actionAbort.current?.abort()
     actionAbort.current = null
     abortEditorFieldLoads()
-    editorRef.current = null
-    editorBoundaryRef.current = null
-    setDetail(null)
-    setEditor(null)
-    setCreatedSecret(null)
-    setDeleteState({
-      isOpen: false,
-      isExecuting: false,
-      ref: null,
-      failure: null,
-    })
-  }, [abortEditorFieldLoads])
+    clearTerminalResourceState()
+  }, [abortEditorFieldLoads, clearTerminalResourceState])
 
   const loadEditorOptions = useCallback(
     async (
+      editorId: number,
       fieldId: string,
       values?: EditableResourceProjection,
       editorOverride?: LoadOptionsEditor,
     ) => {
+      const currentEditorState = editorStateRef.current
       const nativeEditor = editorOverride ?? editorRef.current
-      if (!nativeEditor?.loadOptions) return
+      if (
+        !nativeEditor?.loadOptions ||
+        !currentEditorState ||
+        currentEditorState.editorId !== editorId
+      )
+        return
       const editorVersion = editorGeneration.current
       const nextGeneration = (editorFieldGenerations.current[fieldId] ?? 0) + 1
       editorFieldGenerations.current[fieldId] = nextGeneration
       editorFieldAbortControllers.current.get(fieldId)?.abort()
       const controller = new AbortController()
       editorFieldAbortControllers.current.set(fieldId, controller)
-      const currentEditorState = editorStateRef.current
       const requestedValues = values ?? currentEditorState?.values ?? {}
       const requestedField = nativeEditor.fields.find(
         (field) => field.fieldId === fieldId,
@@ -568,8 +628,8 @@ export function useAccountKeyResourceController({
               [],
             )
           : requestedValues
-      setEditor((current) => {
-        if (!current) return current
+      transitionEditor((current) => {
+        if (!current || current.editorId !== editorId) return current
         const field = current.fields.find(
           (candidate) => candidate.fieldId === fieldId,
         )
@@ -599,8 +659,8 @@ export function useAccountKeyResourceController({
           editorFieldGenerations.current[fieldId] !== nextGeneration
         )
           return
-        setEditor((current) => {
-          if (!current) return current
+        transitionEditor((current) => {
+          if (!current || current.editorId !== editorId) return current
           const value = current.values[fieldId]
           const field = current.fields.find(
             (candidate) => candidate.fieldId === fieldId,
@@ -647,15 +707,13 @@ export function useAccountKeyResourceController({
         )
           return
         const failure = toFailure(error)
-        setEditor((current) =>
-          current
+        transitionEditor((current) =>
+          current && current.editorId === editorId
             ? {
                 ...current,
                 optionFailuresByField: {
                   ...current.optionFailuresByField,
-                  ...(isAborted(failure)
-                    ? {}
-                    : { [fieldId]: { code: failure.code } }),
+                  ...(isAborted(failure) ? {} : { [fieldId]: failure }),
                 },
                 loadingFieldIds: current.loadingFieldIds.filter(
                   (id) => id !== fieldId,
@@ -669,7 +727,7 @@ export function useAccountKeyResourceController({
         }
       }
     },
-    [],
+    [transitionEditor],
   )
 
   const load = useCallback(
@@ -684,15 +742,11 @@ export function useAccountKeyResourceController({
       const preservedEditor = options.preserveEditor
         ? editorStateRef.current
         : null
+      const preservedEditorId = preservedEditor?.editorId
       const preservedEditorBoundary = editorBoundaryRef.current
       const preserveEditor =
         preservedEditor?.mode === "create" &&
         preservedEditorBoundary?.accountId === selectedAccount
-      sessionRef.current = null
-      collectionRef.current = null
-      activeResourceBoundaryRef.current = null
-      editorRef.current = null
-      editorBoundaryRef.current = null
       const controller = new AbortController()
       loadAbort.current = controller
       const current = ++generation.current
@@ -703,7 +757,7 @@ export function useAccountKeyResourceController({
         abortEditorFieldLoads()
         editorRef.current = null
         setDetail(null)
-        setEditor(null)
+        transitionEditor(() => null)
         setDeleteState({
           isOpen: false,
           isExecuting: false,
@@ -734,6 +788,7 @@ export function useAccountKeyResourceController({
       setIsLoading(mode !== "idle")
 
       if (mode === "idle") {
+        clearTerminalResourceState()
         loadInProgress.current = false
         setProgress({ total: 0, loaded: 0, loading: 0, error: 0 })
         setIsLoading(false)
@@ -762,6 +817,7 @@ export function useAccountKeyResourceController({
 
       try {
         if (mode === "all") {
+          clearActiveResourceRefs()
           const loadAccount = async (account: DisplaySiteData) => {
             const session = await openSession(account, controller.signal)
             if (!session) return [] as AccountKeyResourceFacts[]
@@ -838,9 +894,13 @@ export function useAccountKeyResourceController({
         }
 
         const account = activeAccounts[0]
-        if (!account) return false
+        if (!account) {
+          clearTerminalResourceState()
+          return false
+        }
         const session = await openSession(account, controller.signal)
         if (!session) {
+          clearTerminalResourceState()
           acceptProgress(true)
           return true
         }
@@ -920,15 +980,11 @@ export function useAccountKeyResourceController({
           controller.signal,
         )
         if (current !== generation.current) return false
-        sessionRef.current = session
-        collectionRef.current = collection
-        activeResourceBoundaryRef.current = activeBoundary
-        acceptFreshRead(activeBoundary)
-        setLoadingResourceBoundary(null)
-        setScopes(availableScopes)
-        setSelectedScope(scope)
-        setAcceptedRows(rows)
-        if (preserveEditor && preservedEditor) {
+        let rehydratedEditor: {
+          nativeEditor: AccountKeyResourceEditor
+          state: Exclude<EditorState, null>
+        } | null = null
+        if (preserveEditor && preservedEditorId !== undefined) {
           const nativeEditor = await awaitAbortable(
             session.openCreateEditor(scope.scopeKey, {
               signal: controller.signal,
@@ -936,37 +992,51 @@ export function useAccountKeyResourceController({
             controller.signal,
           )
           if (current !== generation.current) return false
-          const rehydratedValues = mergeEditorValuesForScopeChange(
-            preservedEditor.values,
-            nativeEditor,
-          )
-          editorRef.current = nativeEditor
-          editorBoundaryRef.current = activeBoundary
-          setEditor({
-            mode: "create",
-            fields: nativeEditor.fields,
-            initialValues: nativeEditor.initialValues,
-            values: rehydratedValues,
-            optionsByField: {},
-            optionFailuresByField: {},
-            loadingFieldIds: [],
-            feedback: null,
-          })
-          nativeEditor.fields.forEach((field) => {
-            if ("optionLoader" in field && field.optionLoader) {
-              void loadEditorOptions(
-                field.fieldId,
-                rehydratedValues,
-                nativeEditor,
-              )
+          const currentEditor = editorStateRef.current
+          if (
+            currentEditor?.mode === "create" &&
+            currentEditor.editorId === preservedEditorId
+          ) {
+            const rehydratedValues = mergeEditorValuesForScopeChange(
+              currentEditor.values,
+              nativeEditor,
+            )
+            rehydratedEditor = {
+              nativeEditor,
+              state: {
+                // Rehydration replaces the native contract, so it must also
+                // replace the dialog session that owns dynamic option caches.
+                editorId: ++editorInstanceId.current,
+                mode: "create",
+                fields: nativeEditor.fields,
+                initialValues: nativeEditor.initialValues,
+                values: rehydratedValues,
+                optionsByField: {},
+                optionFailuresByField: {},
+                loadingFieldIds: [],
+                feedback: null,
+              },
             }
-          })
+          }
         }
+        if (current !== generation.current) return false
+        sessionRef.current = session
+        collectionRef.current = collection
+        activeResourceBoundaryRef.current = activeBoundary
+        editorRef.current = rehydratedEditor?.nativeEditor ?? null
+        editorBoundaryRef.current = rehydratedEditor ? activeBoundary : null
+        if (rehydratedEditor) transitionEditor(() => rehydratedEditor.state)
+        acceptFreshRead(activeBoundary)
+        setLoadingResourceBoundary(null)
+        setScopes(availableScopes)
+        setSelectedScope(scope)
+        setAcceptedRows(rows)
         acceptProgress(true)
         return true
       } catch (error) {
         const failure = toFailure(error)
         if (current === generation.current && !isAborted(failure)) {
+          clearTerminalResourceState()
           const account = activeAccounts[0]
           if (account) setFailures({ [account.id]: failure })
           acceptProgress(false)
@@ -984,12 +1054,14 @@ export function useAccountKeyResourceController({
     [
       abortEditorFieldLoads,
       acceptFreshRead,
+      clearActiveResourceRefs,
+      clearTerminalResourceState,
       clearDialogs,
-      loadEditorOptions,
       mode,
       openSession,
       search,
       selectedAccount,
+      transitionEditor,
     ],
   )
 
@@ -1025,10 +1097,14 @@ export function useAccountKeyResourceController({
     [],
   )
 
-  const isCurrentResourceRef = useCallback((ref: AccountKeyResourceRef) => {
-    const boundary = activeResourceBoundaryRef.current
-    return !!boundary && refMatchesBoundary(ref, boundary)
-  }, [])
+  const isCurrentResourceRef = useCallback(
+    (ref: AccountKeyResourceRef) => {
+      if (mode !== "single") return false
+      const boundary = activeResourceBoundaryRef.current
+      return !!boundary && refMatchesBoundary(ref, boundary)
+    },
+    [mode],
+  )
 
   const rows = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase()
@@ -1090,7 +1166,12 @@ export function useAccountKeyResourceController({
   const openDetail = useCallback(
     async (ref: AccountKeyResourceRef) => {
       const collection = collectionRef.current
-      if (loadInProgress.current || !collection || !isCurrentResourceRef(ref))
+      if (
+        mode !== "single" ||
+        loadInProgress.current ||
+        !collection ||
+        !isCurrentResourceRef(ref)
+      )
         return
       actionAbort.current?.abort()
       const controller = new AbortController()
@@ -1106,18 +1187,16 @@ export function useAccountKeyResourceController({
         // Detail failures are intentionally surfaced through an empty detail state.
       }
     },
-    [isCurrentResourceRef],
+    [isCurrentResourceRef, mode],
   )
 
   const closeDetail = useCallback(() => setDetail(null), [])
 
   const selectScope = useCallback(
-    (scope: AccountKeyScope) => {
-      if (
-        mode !== "single" ||
-        !scopes.some((candidate) => candidate.scopeKey === scope.scopeKey)
-      )
-        return false
+    (scopeKey: string) => {
+      if (mode !== "single") return false
+      const scope = scopes.find((candidate) => candidate.scopeKey === scopeKey)
+      if (!scope) return false
       replaceRouteRef.current?.({
         [KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]: selectedAccount,
         [KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]: scope.routeKey,
@@ -1128,23 +1207,51 @@ export function useAccountKeyResourceController({
   )
 
   const openEditor = useCallback(
-    async (mode: EditorMode, ref?: AccountKeyResourceRef) => {
+    async (
+      editorMode: EditorMode,
+      ref?: AccountKeyResourceRef,
+      retryAttemptId?: number,
+    ) => {
       const boundary = activeResourceBoundaryRef.current
-      if (loadInProgress.current || freshReadRequired || !boundary) return
+      if (
+        mode !== "single" ||
+        loadInProgress.current ||
+        freshReadRequired ||
+        !boundary
+      )
+        return
       const session = sessionRef.current
       const collection = collectionRef.current
       if (
         !session ||
-        (mode === "edit" && (!collection || !ref || !isCurrentResourceRef(ref)))
+        (editorMode === "edit" &&
+          (!collection || !ref || !isCurrentResourceRef(ref)))
       )
         return
+      const previousOpening = editorOpeningRef.current
+      if (
+        retryAttemptId !== undefined
+          ? previousOpening.status !== "failure" ||
+            previousOpening.attemptId !== retryAttemptId
+          : previousOpening.status === "loading"
+      )
+        return
+      // A replacement editor is a new session even while its provider open is
+      // pending, so no callback from the prior session may update it.
+      abortEditorFieldLoads()
       actionAbort.current?.abort()
+      editorRef.current = null
+      editorBoundaryRef.current = null
+      transitionEditor(() => null)
+      const attemptId = ++editorOpeningAttemptId.current
+      editorOpeningRequestRef.current = { mode: editorMode, ref, boundary }
+      transitionEditorOpening({ attemptId, status: "loading" })
       const controller = new AbortController()
       actionAbort.current = controller
       const current = generation.current
       try {
         const nativeEditor =
-          mode === "create"
+          editorMode === "create"
             ? await awaitAbortable(
                 session.openCreateEditor(boundary.scopeKey, {
                   signal: controller.signal,
@@ -1155,11 +1262,21 @@ export function useAccountKeyResourceController({
                 collection!.openEditEditor(ref!, { signal: controller.signal }),
                 controller.signal,
               )
-        if (current !== generation.current) return
+        if (
+          current !== generation.current ||
+          editorOpeningRef.current.status !== "loading" ||
+          editorOpeningRef.current.attemptId !== attemptId ||
+          !boundariesMatch(
+            activeResourceBoundaryRef.current ?? boundary,
+            boundary,
+          )
+        )
+          return
         editorRef.current = nativeEditor
         editorBoundaryRef.current = boundary
-        setEditor({
-          mode,
+        transitionEditor(() => ({
+          editorId: ++editorInstanceId.current,
+          mode: editorMode,
           fields: nativeEditor.fields,
           initialValues: nativeEditor.initialValues,
           values: nativeEditor.initialValues,
@@ -1167,38 +1284,108 @@ export function useAccountKeyResourceController({
           optionFailuresByField: {},
           loadingFieldIds: [],
           feedback: null,
+        }))
+        editorOpeningRequestRef.current = null
+        transitionEditorOpening({ attemptId, status: "idle" })
+      } catch (error) {
+        const failure = toFailure(error)
+        if (
+          current !== generation.current ||
+          isAborted(failure) ||
+          editorOpeningRef.current.status !== "loading" ||
+          editorOpeningRef.current.attemptId !== attemptId
+        )
+          return
+        transitionEditorOpening({
+          attemptId,
+          status: "failure",
+          failure,
         })
-      } catch {
-        // Editor open is non-mutating; leave the prior dialog state closed.
       }
     },
-    [freshReadRequired, isCurrentResourceRef],
+    [
+      abortEditorFieldLoads,
+      freshReadRequired,
+      isCurrentResourceRef,
+      mode,
+      transitionEditor,
+      transitionEditorOpening,
+    ],
   )
 
-  const closeEditor = useCallback(() => {
-    actionAbort.current?.abort()
-    abortEditorFieldLoads()
-    editorRef.current = null
-    editorBoundaryRef.current = null
-    setEditor(null)
-  }, [abortEditorFieldLoads])
+  const retryEditorOpening = useCallback(
+    (attemptId: number) => {
+      const opening = editorOpeningRef.current
+      const request = editorOpeningRequestRef.current
+      if (
+        opening.status !== "failure" ||
+        opening.attemptId !== attemptId ||
+        !request
+      )
+        return
+      void openEditor(request.mode, request.ref, attemptId)
+    },
+    [openEditor],
+  )
 
-  const setEditorValues = useCallback((values: EditableResourceProjection) => {
-    setEditor((current) => (current ? { ...current, values } : current))
-  }, [])
+  const cancelEditorOpening = useCallback(
+    (attemptId: number) => {
+      const opening = editorOpeningRef.current
+      if (
+        opening.attemptId !== attemptId ||
+        (opening.status !== "loading" && opening.status !== "failure")
+      )
+        return
+      // Advance the generation before aborting so a provider that ignores its
+      // signal cannot publish a late editor after the launch was dismissed.
+      const nextAttemptId = ++editorOpeningAttemptId.current
+      actionAbort.current?.abort()
+      actionAbort.current = null
+      editorOpeningRequestRef.current = null
+      transitionEditorOpening({ attemptId: nextAttemptId, status: "idle" })
+    },
+    [transitionEditorOpening],
+  )
+
+  const closeEditor = useCallback(
+    (editorId: number) => {
+      if (editorStateRef.current?.editorId !== editorId) return
+      actionAbort.current?.abort()
+      abortEditorFieldLoads()
+      editorRef.current = null
+      editorBoundaryRef.current = null
+      editorOpeningRequestRef.current = null
+      transitionEditorOpening({
+        attemptId: editorOpeningAttemptId.current,
+        status: "idle",
+      })
+      transitionEditor(() => null)
+    },
+    [abortEditorFieldLoads, transitionEditor, transitionEditorOpening],
+  )
+
+  const setEditorValues = useCallback(
+    (editorId: number, values: EditableResourceProjection) => {
+      transitionEditor((current) =>
+        current?.editorId === editorId ? { ...current, values } : current,
+      )
+    },
+    [transitionEditor],
+  )
 
   const submitEditor = useCallback(
-    async (values: EditableResourceProjection) => {
+    async (editorId: number, values: EditableResourceProjection) => {
       const nativeEditor = editorRef.current
       const currentEditorState = editorStateRef.current
       const activeBoundary = activeResourceBoundaryRef.current
       const editorBoundary = editorBoundaryRef.current
+      const editorVersion = editorGeneration.current
       if (
+        mode !== "single" ||
         loadInProgress.current ||
-        renderedEditorGeneration !== editorGeneration.current ||
         !nativeEditor ||
         !currentEditorState ||
-        currentEditorState !== editor ||
+        currentEditorState.editorId !== editorId ||
         !activeBoundary ||
         !editorBoundary ||
         !boundariesMatch(activeBoundary, editorBoundary) ||
@@ -1207,8 +1394,8 @@ export function useAccountKeyResourceController({
         return
       const validation = nativeEditor.validate(values)
       if (!validation.valid) {
-        setEditor((current) =>
-          current
+        transitionEditor((current) =>
+          current && current.editorId === editorId
             ? {
                 ...current,
                 feedback: {
@@ -1235,8 +1422,10 @@ export function useAccountKeyResourceController({
             : editorBoundary
       } catch (error) {
         const failure = toFailure(error)
-        setEditor((previous) =>
-          previous ? { ...previous, feedback: failure } : previous,
+        transitionEditor((previous) =>
+          previous && previous.editorId === editorId
+            ? { ...previous, feedback: failure }
+            : previous,
         )
         return
       }
@@ -1259,7 +1448,11 @@ export function useAccountKeyResourceController({
       const run = nativeEditor
         .submit(values, { signal: controller.signal })
         .then(async (result) => {
-          if (current !== generation.current) {
+          if (
+            current !== generation.current ||
+            editorGeneration.current !== editorVersion ||
+            editorStateRef.current?.editorId !== editorId
+          ) {
             requireFreshRead(intendedBoundary)
             tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
               insights: {
@@ -1289,8 +1482,21 @@ export function useAccountKeyResourceController({
           if (result.createdSecret) setCreatedSecret(result.createdSecret)
           editorRef.current = null
           editorBoundaryRef.current = null
-          setEditor(null)
+          transitionEditor((activeEditor) =>
+            activeEditor?.editorId === editorId
+              ? { ...activeEditor, terminalClose: true }
+              : activeEditor,
+          )
           const accepted = await refresh(returnedBoundary)
+          // Refresh may replace the selected collection and clear the editor.
+          // Re-publish this terminal shell so its Modal can settle the opener.
+          transitionEditor((activeEditor) =>
+            activeEditor === null
+              ? { ...currentEditorState, terminalClose: true }
+              : activeEditor?.editorId === editorId
+                ? { ...activeEditor, terminalClose: true }
+                : activeEditor,
+          )
           if (!accepted) requireFreshRead(returnedBoundary)
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights: {
@@ -1304,7 +1510,11 @@ export function useAccountKeyResourceController({
         })
         .catch(async (error: unknown) => {
           const failure = toFailure(error)
-          if (current !== generation.current) {
+          if (
+            current !== generation.current ||
+            editorGeneration.current !== editorVersion ||
+            editorStateRef.current?.editorId !== editorId
+          ) {
             if (
               failure.code ===
               ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
@@ -1322,8 +1532,10 @@ export function useAccountKeyResourceController({
             })
             return
           }
-          setEditor((previous) =>
-            previous ? { ...previous, feedback: failure } : previous,
+          transitionEditor((previous) =>
+            previous && previous.editorId === editorId
+              ? { ...previous, feedback: failure }
+              : previous,
           )
           if (
             failure.code ===
@@ -1357,18 +1569,19 @@ export function useAccountKeyResourceController({
       return run
     },
     [
-      editor,
       freshReadRequired,
+      mode,
       refresh,
-      renderedEditorGeneration,
       requireFreshRead,
       scopes,
+      transitionEditor,
     ],
   )
 
   const openDelete = useCallback(
     (ref: AccountKeyResourceRef) => {
       if (
+        mode !== "single" ||
         loadInProgress.current ||
         freshReadRequired ||
         !collectionRef.current ||
@@ -1378,7 +1591,7 @@ export function useAccountKeyResourceController({
       setDeleteState({ isOpen: true, isExecuting: false, ref, failure: null })
       return true
     },
-    [freshReadRequired, isCurrentResourceRef],
+    [freshReadRequired, isCurrentResourceRef, mode],
   )
 
   const cancelDelete = useCallback(() => {
@@ -1394,6 +1607,7 @@ export function useAccountKeyResourceController({
 
   const confirmDelete = useCallback(async () => {
     if (
+      mode !== "single" ||
       loadInProgress.current ||
       !deleteState.ref ||
       !collectionRef.current ||
@@ -1501,7 +1715,7 @@ export function useAccountKeyResourceController({
       promise: run,
     })
     return run
-  }, [deleteState.ref, isCurrentResourceRef, refresh, requireFreshRead])
+  }, [deleteState.ref, isCurrentResourceRef, mode, refresh, requireFreshRead])
 
   const recordCreatedSecretActionResult = useCallback(
     (
@@ -1557,6 +1771,7 @@ export function useAccountKeyResourceController({
     setStatusFilter,
     detail,
     editor,
+    editorOpening,
     createdSecret,
     deleteState,
     freshReadRequired,
@@ -1567,6 +1782,8 @@ export function useAccountKeyResourceController({
     openCreate: () => openEditor("create"),
     openEdit: (ref: AccountKeyResourceRef) => openEditor("edit", ref),
     closeEditor,
+    retryEditorOpening,
+    cancelEditorOpening,
     setEditorValues,
     loadEditorOptions,
     submitEditor,

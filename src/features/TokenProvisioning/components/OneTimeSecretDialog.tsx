@@ -21,6 +21,8 @@ interface OneTimeSecretDialogProps {
   saveAction?: { onSave: () => Promise<void>; label?: string }
   onCopyResult?: (result: "success" | "failure") => void
   onSaveResult?: (result: "success" | "failure") => void
+  /** Optional explicit workflow key for preserving the opener across a terminal predecessor. */
+  focusWorkflowId?: string | number
 }
 
 type OperationResult = "success" | "failure"
@@ -45,6 +47,7 @@ export function OneTimeSecretDialog({
   saveAction,
   onCopyResult,
   onSaveResult,
+  focusWorkflowId,
 }: OneTimeSecretDialogProps) {
   const { t } = useTranslation(["keyManagement", "common"])
   const [copied, setCopied] = useState(false)
@@ -219,6 +222,7 @@ export function OneTimeSecretDialog({
         onClose={requestClose}
         title={t("keyManagement:oneTimeKey.title")}
         closeOnBackdropClick={false}
+        focusWorkflowId={focusWorkflowId}
         size="lg"
         header={
           <div className="min-w-0 pr-10">

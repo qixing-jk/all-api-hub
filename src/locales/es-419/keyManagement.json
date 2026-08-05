@@ -326,6 +326,142 @@
     "warningDescription": "Esta es la única vez que puedes ver la clave completa. Después de cerrar este diálogo, las listas o los detalles pueden mostrar solo un valor enmascarado.",
     "warningTitle": "Esta clave solo se puede ver una vez"
   },
+  "openRouter": {
+    "editor": {
+      "actions": {
+        "cancel": "Cancelar",
+        "save": "Guardar clave"
+      },
+      "feedback": {
+        "authenticationFailed": "Vuelve a iniciar sesión en esta cuenta e inténtalo de nuevo.",
+        "error": "Revisa la configuración de la clave e inténtalo de nuevo.",
+        "permissionDenied": "No tienes permiso para administrar claves en este espacio de trabajo.",
+        "title": "No se pudo guardar la clave",
+        "unavailable": "El servicio no está disponible temporalmente. Inténtalo pronto.",
+        "uncertain": "El servicio pudo haber aplicado este cambio. Actualiza antes de volver a intentarlo."
+      },
+      "fields": {
+        "creator": {
+          "editHelp": "Para cambiar el creador, crea una clave nueva.",
+          "help": "Opcionalmente asigna esta clave a un miembro.",
+          "label": "Creador",
+          "placeholder": "Sin creador"
+        },
+        "disabled": {
+          "help": "Las claves desactivadas no se pueden usar hasta volver a activarlas.",
+          "label": "Desactivar clave"
+        },
+        "expiresAt": {
+          "editHelp": "Para cambiar la fecha de vencimiento, crea una clave nueva.",
+          "help": "La fecha y hora se introducen localmente y se guardan en UTC.",
+          "label": "Vence el"
+        },
+        "includeByokInLimit": {
+          "help": "Cuenta el uso de claves propias dentro de este límite.",
+          "label": "Incluir uso BYOK"
+        },
+        "limit": {
+          "help": "Un límite de 0 USD impide el gasto.",
+          "label": "Límite"
+        },
+        "limitMode": {
+          "label": "Límite de gasto"
+        },
+        "limitReset": {
+          "help": "Elige con qué frecuencia se restablece el límite.",
+          "label": "Frecuencia de restablecimiento"
+        },
+        "name": {
+          "help": "Usa un nombre reconocible para esta clave.",
+          "label": "Nombre de la clave",
+          "placeholder": "Clave de producción"
+        },
+        "workspace": {
+          "editHelp": "Para cambiar el espacio de trabajo, crea una clave nueva.",
+          "help": "Elige el espacio de trabajo al que pertenece esta clave.",
+          "label": "Espacio de trabajo",
+          "placeholder": "Selecciona un espacio de trabajo"
+        }
+      },
+      "issues": {
+        "inconsistentValue": "Revisa este valor e inténtalo de nuevo.",
+        "invalidValue": "Introduce un valor válido.",
+        "outOfRange": "Introduce un valor dentro del rango permitido.",
+        "required": "Este campo es obligatorio.",
+        "unsupportedOption": "Elige una opción disponible."
+      },
+      "opening": {
+        "failed": "No se pudo abrir el editor de claves",
+        "loading": "Abriendo el editor de claves...",
+        "retry": "Intentar de nuevo",
+        "title": "Abrir editor de clave API"
+      },
+      "options": {
+        "creator": {
+          "empty": "No hay miembros disponibles para este espacio de trabajo.",
+          "unknown": "Miembro desconocido"
+        },
+        "limitMode": {
+          "limited": "Limitado",
+          "unlimited": "Sin límite"
+        },
+        "limitReset": {
+          "daily": "Diario",
+          "monthly": "Mensual",
+          "none": "No se restablece",
+          "weekly": "Semanal"
+        },
+        "workspace": {
+          "unknown": "Espacio de trabajo desconocido"
+        }
+      },
+      "sections": {
+        "advanced": "Avanzado",
+        "basic": "Básico",
+        "lifecycle": "Ciclo de vida",
+        "spending": "Gasto"
+      },
+      "summary": "Configuración de clave API",
+      "summaryRules": {
+        "byok": {
+          "excluded": "No incluye el uso de BYOK",
+          "included": "Incluye el uso de BYOK"
+        },
+        "expiresAt": "Vence a la hora local {{expiresAt}} y se guarda en UTC",
+        "limit": "Límite de gasto: {{limit}} USD",
+        "limitUnset": "El límite de gasto no está establecido",
+        "neverExpires": "No vence",
+        "reset": {
+          "daily": "Se restablece a diario",
+          "monthly": "Se restablece mensualmente",
+          "none": "No se restablece",
+          "weekly": "Se restablece semanalmente"
+        },
+        "unlimited": "Sin límite de gasto"
+      },
+      "title": {
+        "create": "Crear clave API",
+        "edit": "Editar clave API"
+      },
+      "unsaved": {
+        "description": "Tus cambios no se han guardado.",
+        "discard": "Descartar cambios",
+        "keepEditing": "Seguir editando",
+        "title": "¿Descartar cambios sin guardar?"
+      }
+    },
+    "workspace": {
+      "empty": "No hay espacios de trabajo disponibles para esta cuenta.",
+      "error": "No se pudieron cargar los espacios de trabajo",
+      "errorHelp": "Comprueba el acceso de la cuenta e inténtalo de nuevo.",
+      "heading": "Espacio de trabajo",
+      "label": "Espacio de trabajo",
+      "loading": "Cargando espacios de trabajo...",
+      "partial": "No se pudieron cargar algunos espacios de trabajo.",
+      "placeholder": "Selecciona un espacio de trabajo",
+      "retry": "Reintentar la carga de espacios de trabajo"
+    }
+  },
   "pleaseAddAccount": "Agrega una cuenta primero",
   "pleaseSelectAccount": "Selecciona una cuenta",
   "refreshTokenList": "Actualizar lista de claves",

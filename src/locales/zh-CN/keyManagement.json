@@ -312,6 +312,142 @@
     "warningDescription": "此密钥仅能在当前完整查看。关闭此弹窗后，后续列表或详情可能只显示脱敏值。",
     "warningTitle": "该密钥只能查看一次"
   },
+  "openRouter": {
+    "editor": {
+      "actions": {
+        "cancel": "取消",
+        "save": "保存密钥"
+      },
+      "feedback": {
+        "authenticationFailed": "请重新登录此账号后重试。",
+        "error": "请检查密钥设置后重试。",
+        "permissionDenied": "你没有在此工作区管理密钥的权限。",
+        "title": "无法保存密钥",
+        "unavailable": "服务暂时不可用，请稍后重试。",
+        "uncertain": "服务可能已应用此更改，请刷新后再试。"
+      },
+      "fields": {
+        "creator": {
+          "editHelp": "如需更改创建者，请新建密钥。",
+          "help": "可选地将此密钥分配给工作区成员。",
+          "label": "创建者",
+          "placeholder": "无创建者"
+        },
+        "disabled": {
+          "help": "停用的密钥在重新启用前无法使用。",
+          "label": "停用密钥"
+        },
+        "expiresAt": {
+          "editHelp": "如需更改到期时间，请新建密钥。",
+          "help": "日期和时间按本地时区输入，并以 UTC 保存。",
+          "label": "过期时间"
+        },
+        "includeByokInLimit": {
+          "help": "将自带密钥用量计入此额度。",
+          "label": "计入 BYOK 用量"
+        },
+        "limit": {
+          "help": "额度为 0 USD 时将无法消费。",
+          "label": "限制额度"
+        },
+        "limitMode": {
+          "label": "用量限制"
+        },
+        "limitReset": {
+          "help": "选择额度重置的频率。",
+          "label": "重置周期"
+        },
+        "name": {
+          "help": "为此密钥使用便于识别的名称。",
+          "label": "密钥名称",
+          "placeholder": "生产环境密钥"
+        },
+        "workspace": {
+          "editHelp": "如需更改工作区，请新建密钥。",
+          "help": "选择此密钥所属的工作区。",
+          "label": "工作区",
+          "placeholder": "选择工作区"
+        }
+      },
+      "issues": {
+        "inconsistentValue": "请检查此值后重试。",
+        "invalidValue": "请输入有效值。",
+        "outOfRange": "请输入允许范围内的值。",
+        "required": "此项为必填项。",
+        "unsupportedOption": "请选择可用选项。"
+      },
+      "opening": {
+        "failed": "无法打开密钥编辑器",
+        "loading": "正在打开密钥编辑器...",
+        "retry": "重试",
+        "title": "打开 API 密钥编辑器"
+      },
+      "options": {
+        "creator": {
+          "empty": "此工作区没有可用成员。",
+          "unknown": "未知成员"
+        },
+        "limitMode": {
+          "limited": "限额",
+          "unlimited": "不限额"
+        },
+        "limitReset": {
+          "daily": "每天",
+          "monthly": "每月",
+          "none": "不重置",
+          "weekly": "每周"
+        },
+        "workspace": {
+          "unknown": "未知工作区"
+        }
+      },
+      "sections": {
+        "advanced": "高级设置",
+        "basic": "基本信息",
+        "lifecycle": "生命周期",
+        "spending": "用量限制"
+      },
+      "summary": "API 密钥设置",
+      "summaryRules": {
+        "byok": {
+          "excluded": "不计入 BYOK 用量",
+          "included": "计入 BYOK 用量"
+        },
+        "expiresAt": "于本地时间 {{expiresAt}} 过期，并以 UTC 保存",
+        "limit": "用量上限：{{limit}} USD",
+        "limitUnset": "尚未设置用量上限",
+        "neverExpires": "永不过期",
+        "reset": {
+          "daily": "每天重置",
+          "monthly": "每月重置",
+          "none": "不重置",
+          "weekly": "每周重置"
+        },
+        "unlimited": "无用量上限"
+      },
+      "title": {
+        "create": "创建 API 密钥",
+        "edit": "编辑 API 密钥"
+      },
+      "unsaved": {
+        "description": "你的更改尚未保存。",
+        "discard": "放弃更改",
+        "keepEditing": "继续编辑",
+        "title": "放弃未保存的更改？"
+      }
+    },
+    "workspace": {
+      "empty": "此账号没有可用的工作区。",
+      "error": "无法加载工作区",
+      "errorHelp": "请检查账号访问权限后重试。",
+      "heading": "工作区",
+      "label": "工作区",
+      "loading": "正在加载工作区...",
+      "partial": "部分工作区未能加载。",
+      "placeholder": "选择工作区",
+      "retry": "重试加载工作区"
+    }
+  },
   "pleaseAddAccount": "请先添加账号",
   "pleaseSelectAccount": "请选择账号",
   "refreshTokenList": "刷新密钥列表",
