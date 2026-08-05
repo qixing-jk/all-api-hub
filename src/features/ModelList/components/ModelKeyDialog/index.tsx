@@ -18,7 +18,8 @@ import {
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { normalizeGroupNames } from "~/features/ModelList/groupNormalization"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
-import { OneTimeApiKeyDialog } from "~/features/TokenProvisioning/components/OneTimeApiKeyDialog"
+import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
+import { useLegacyApiTokenSecretResult } from "~/features/TokenProvisioning/hooks/useLegacyApiTokenSecretResult"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import {
   buildGroupDefaultTokenRequest,
@@ -185,6 +186,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         source: "ModelKeyDialog",
       })
     : undefined
+  const oneTimeSecretResult = useLegacyApiTokenSecretResult(oneTimeToken)
 
   const requiresExplicitSelection = compatibleRuntimeKeys.length > 1
 
@@ -548,9 +550,9 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         onSuccess={handleTokenCreated}
         showOneTimeKeyDialog={false}
       />
-      <OneTimeApiKeyDialog
+      <OneTimeSecretDialog
         isOpen={!!oneTimeToken}
-        token={oneTimeToken}
+        result={oneTimeSecretResult}
         onClose={clearOneTimeToken}
         saveAction={oneTimeKeySaveAction}
       />

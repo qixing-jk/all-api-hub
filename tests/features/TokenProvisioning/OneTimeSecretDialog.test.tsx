@@ -5,21 +5,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { SITE_TYPES } from "~/constants/siteType"
+import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
-import { createLegacyCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 
-let OneTimeSecretDialog: typeof import("~/features/TokenProvisioning/components/OneTimeSecretDialog").OneTimeSecretDialog
-
-const RESULT = createLegacyCreatedRuntimeSecret({
-  account: {
-    id: "account-example",
-    name: "Example account",
-    baseUrl: "https://api.example.invalid",
-    siteType: SITE_TYPES.NEW_API,
-  },
-  token: { name: "Example key", key: "sk-example-secret" },
-})
+const RESULT = {
+  displayName: "Example key",
+  secret: "sk-example-secret",
+}
 
 const createDeferred = <T,>() => {
   let resolve!: (value: T) => void
@@ -30,10 +23,7 @@ const createDeferred = <T,>() => {
 }
 
 describe("OneTimeSecretDialog", () => {
-  beforeEach(async () => {
-    ;({ OneTimeSecretDialog } = await import(
-      "~/features/TokenProvisioning/components/OneTimeSecretDialog"
-    ))
+  beforeEach(() => {
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText: vi.fn().mockResolvedValue(undefined) },

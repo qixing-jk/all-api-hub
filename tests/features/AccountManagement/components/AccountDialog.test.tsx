@@ -14,6 +14,7 @@ import {
 import { SPONSOR_CATALOG_SCHEMA_VERSION } from "~/features/AccountManagement/sponsors/constants"
 import type { SponsorRecommendation } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import enAccountDialog from "~/locales/en/accountDialog.json"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
@@ -280,37 +281,6 @@ vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   ),
 }))
 
-vi.mock("~/features/TokenProvisioning/components/OneTimeApiKeyDialog", () => ({
-  OneTimeApiKeyDialog: (props: {
-    isOpen: boolean
-    token: { key?: string } | null
-    saveAction?: {
-      onSave: () => Promise<void>
-    }
-  }) => (
-    <div
-      data-testid="post-save-one-time-key-dialog"
-      style={{ pointerEvents: "auto" }}
-    >
-      <div data-testid="post-save-one-time-key-open">
-        {String(props.isOpen)}
-      </div>
-      <div data-testid="post-save-one-time-key-value">
-        {props.token?.key ?? ""}
-      </div>
-      {props.saveAction ? (
-        <button
-          type="button"
-          data-testid="post-save-one-time-key-save"
-          onClick={() => props.saveAction?.onSave().catch(() => undefined)}
-        >
-          save
-        </button>
-      ) : null}
-    </div>
-  ),
-}))
-
 vi.mock(
   "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
   () => ({
@@ -406,6 +376,10 @@ vi.mock("~/utils/navigation", () => ({
 describe("AccountDialog", () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    })
     vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
       matches: false,
       media: query,
@@ -1077,6 +1051,7 @@ describe("AccountDialog", () => {
   it("renders the post-save one-time key dialog only when a token is pending", async () => {
     mockState.postSaveOneTimeToken = {
       key: "sk-one-time",
+      name: "Default API Key",
     }
 
     render(
@@ -1090,13 +1065,13 @@ describe("AccountDialog", () => {
     )
 
     expect(
-      await screen.findByTestId("post-save-one-time-key-open"),
-    ).toHaveTextContent("true")
+      await screen.findByText("keyManagement:oneTimeKey.title"),
+    ).toBeInTheDocument()
     expect(
-      screen.getByTestId("post-save-one-time-key-value"),
-    ).toHaveTextContent("sk-one-time")
+      screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
+    ).toHaveValue("sk-one-time")
     expect(
-      screen.getByTestId("post-save-one-time-key-save"),
+      screen.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeySaveButton),
     ).toBeInTheDocument()
   })
 
@@ -1139,7 +1114,11 @@ describe("AccountDialog", () => {
       />,
     )
 
-    await user.click(await screen.findByTestId("post-save-one-time-key-save"))
+    await user.click(
+      await screen.findByTestId(
+        TOKEN_PROVISIONING_TEST_IDS.oneTimeKeySaveButton,
+      ),
+    )
 
     await waitFor(() => {
       expect(mockCreateApiCredentialProfile).toHaveBeenCalledWith({
@@ -1178,7 +1157,11 @@ describe("AccountDialog", () => {
       />,
     )
 
-    await user.click(await screen.findByTestId("post-save-one-time-key-save"))
+    await user.click(
+      await screen.findByTestId(
+        TOKEN_PROVISIONING_TEST_IDS.oneTimeKeySaveButton,
+      ),
+    )
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(

@@ -16,7 +16,8 @@ import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
-import { OneTimeApiKeyDialog } from "~/features/TokenProvisioning/components/OneTimeApiKeyDialog"
+import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
+import { useLegacyApiTokenSecretResult } from "~/features/TokenProvisioning/hooks/useLegacyApiTokenSecretResult"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import type { DisplaySiteData } from "~/types"
@@ -221,6 +222,9 @@ export default function AccountDialog({
         source: "AccountDialog",
       })
     : undefined
+  const postSaveOneTimeSecretResult = useLegacyApiTokenSecretResult(
+    state.postSaveOneTimeToken,
+  )
 
   const handleOpenApiCredentialProfilesFromDetectFailure = () => {
     void openApiCredentialProfilesPage()
@@ -500,9 +504,9 @@ export default function AccountDialog({
         />
       ) : null}
 
-      <OneTimeApiKeyDialog
+      <OneTimeSecretDialog
         isOpen={!!state.postSaveOneTimeToken}
-        token={state.postSaveOneTimeToken}
+        result={postSaveOneTimeSecretResult}
         onClose={handlers.handlePostSaveOneTimeTokenClose}
         saveAction={postSaveOneTimeKeySaveAction}
       />

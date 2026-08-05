@@ -476,7 +476,6 @@
     "list": {
       "actions": {
         "delete": "Eliminar clave",
-        "details": "Ver detalles",
         "edit": "Editar clave",
         "singleAccountOnly": "Selecciona esta cuenta para editar o eliminar su clave"
       },
@@ -489,15 +488,12 @@
         "creator": "Creador",
         "disabled": "Desactivada",
         "expiresAt": "Caduca",
-        "heading": "Detalles de la clave",
         "includeByokInLimit": "Incluir uso de BYOK",
         "limit": "Límite",
         "limitMode": "Modo de límite",
         "loadFailed": "No se pudieron cargar los detalles de la clave.",
-        "loading": "Cargando detalles de la clave…",
         "remaining": "Restante",
         "reset": "Restablecimiento",
-        "retry": "Intentar de nuevo",
         "updatedAt": "Actualizada",
         "usage": "Uso",
         "usageDaily": "Uso diario",
@@ -666,13 +662,13 @@
   "totalKeys_one": "Total {{count}} clave",
   "totalKeys_many": "Total {{count}} claves",
   "totalKeys_other": "Total {{count}} claves",
-  "unifiedApiGuidance": {
-    "headerBridge": "Cuando quieras que el AI gateway autohospedado reúna varias claves en una AI API unificada, importa claves de cuenta como canales del gateway. La exportación directa a herramientas cliente sigue siendo una ruta independiente."
-  },
   "totalKeysPartial_one": "Total de al menos {{count}} clave",
   "totalKeysPartial_many": "Total de al menos {{count}} claves",
   "totalKeysPartial_other": "Total de al menos {{count}} claves",
   "totalKeysUnavailable": "Total no disponible",
+  "unifiedApiGuidance": {
+    "headerBridge": "Cuando quieras que el AI gateway autohospedado reúna varias claves en una AI API unificada, importa claves de cuenta como canales del gateway. La exportación directa a herramientas cliente sigue siendo una ruta independiente."
+  },
   "unsupportedSource": {
     "description": "El tipo de sitio de esta cuenta se puede guardar, pero la extensión aún no ha adaptado su protocolo de lista de claves. Envía una solicitud de soporte del sitio para ayudarnos a agregar soporte de gestión de claves.",
     "requestSiteSupport": "Solicitar soporte del sitio",

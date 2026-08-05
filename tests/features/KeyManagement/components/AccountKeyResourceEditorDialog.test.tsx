@@ -894,24 +894,8 @@ describe("AccountKeyResourceEditorDialog", () => {
             result={
               hasSecret
                 ? {
-                    correlation: {
-                      kind: "account-key-resource",
-                      ref: {
-                        accountId: "account-example",
-                        siteType: "openrouter",
-                        scopeKey: "workspace-example",
-                        resourceId: "key-example",
-                      },
-                    },
                     displayName: "Example key",
                     secret: "one-time-secret-example",
-                    secretAvailability: "create-response-only",
-                    credential: {
-                      accountName: "Example account",
-                      apiType: "openai-compatible",
-                      baseUrl: "https://example.invalid",
-                      tagIds: [],
-                    },
                   }
                 : null
             }

@@ -458,7 +458,6 @@
     "list": {
       "actions": {
         "delete": "Xóa khóa",
-        "details": "Xem chi tiết",
         "edit": "Sửa khóa",
         "singleAccountOnly": "Chọn tài khoản này để chỉnh sửa hoặc xóa khóa"
       },
@@ -471,15 +470,12 @@
         "creator": "Người tạo",
         "disabled": "Đã tắt",
         "expiresAt": "Hết hạn",
-        "heading": "Chi tiết khóa",
         "includeByokInLimit": "Bao gồm sử dụng BYOK",
         "limit": "Giới hạn",
         "limitMode": "Chế độ giới hạn",
         "loadFailed": "Không thể tải chi tiết khóa.",
-        "loading": "Đang tải chi tiết khóa…",
         "remaining": "Còn lại",
         "reset": "Chu kỳ đặt lại",
-        "retry": "Thử lại",
         "updatedAt": "Đã cập nhật",
         "usage": "Sử dụng",
         "usageDaily": "Sử dụng hàng ngày",
@@ -628,11 +624,11 @@
   "showingCountUnavailable": "Không thể xác định số lượng đang hiển thị",
   "title": "Quản lý khóa",
   "totalKeys_other": "Tổng cộng {{count}} key",
+  "totalKeysPartial_other": "Tổng cộng ít nhất {{count}} key",
+  "totalKeysUnavailable": "Không thể xác định tổng số",
   "unifiedApiGuidance": {
     "headerBridge": "Khi muốn AI gateway tự triển khai tổng hợp nhiều key thành một AI API thống nhất, hãy nhập key tài khoản làm kênh gateway. Xuất trực tiếp sang công cụ client vẫn là một đường riêng."
   },
-  "totalKeysPartial_other": "Tổng cộng ít nhất {{count}} key",
-  "totalKeysUnavailable": "Không thể xác định tổng số",
   "unsupportedSource": {
     "description": "Loại trang của tài khoản này có thể được lưu, nhưng tiện ích chưa thích ứng giao thức danh sách khóa của trang này. Hãy gửi yêu cầu hỗ trợ trang để giúp chúng tôi bổ sung khả năng quản lý khóa.",
     "requestSiteSupport": "Yêu cầu hỗ trợ trang",

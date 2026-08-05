@@ -6,7 +6,8 @@ import { Modal } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
-import { OneTimeApiKeyDialog } from "~/features/TokenProvisioning/components/OneTimeApiKeyDialog"
+import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
+import { useLegacyApiTokenSecretResult } from "~/features/TokenProvisioning/hooks/useLegacyApiTokenSecretResult"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
@@ -71,6 +72,7 @@ export default function CopyKeyDialog({
           source: "CopyKeyDialog",
         })
       : undefined
+  const oneTimeSecretResult = useLegacyApiTokenSecretResult(oneTimeToken)
 
   const handleOpenAddTokenDialog = () => {
     clearDefaultTokenCreateAllowedGroups()
@@ -192,9 +194,9 @@ export default function CopyKeyDialog({
           showOneTimeKeyDialog={false}
         />
       ) : null}
-      <OneTimeApiKeyDialog
+      <OneTimeSecretDialog
         isOpen={!!oneTimeToken}
-        token={oneTimeToken}
+        result={oneTimeSecretResult}
         onClose={clearOneTimeToken}
         saveAction={oneTimeKeySaveAction}
       />

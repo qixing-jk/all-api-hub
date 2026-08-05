@@ -11,11 +11,15 @@ import {
   Modal,
 } from "~/components/ui"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+
+export interface OneTimeSecretPresentation {
+  displayName: string
+  secret: string
+}
 
 interface OneTimeSecretDialogProps {
   isOpen: boolean
-  result: CreatedRuntimeSecret | null
+  result: OneTimeSecretPresentation | null
   onClose: () => void
   autoCopy?: boolean
   saveAction?: { onSave: () => Promise<void>; label?: string }

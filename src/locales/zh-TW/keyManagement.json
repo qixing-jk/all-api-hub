@@ -458,7 +458,6 @@
     "list": {
       "actions": {
         "delete": "刪除金鑰",
-        "details": "查看詳細資料",
         "edit": "編輯金鑰",
         "singleAccountOnly": "請選取此帳號後再編輯或刪除其金鑰"
       },
@@ -471,15 +470,12 @@
         "creator": "建立者",
         "disabled": "已停用",
         "expiresAt": "到期時間",
-        "heading": "金鑰詳細資料",
         "includeByokInLimit": "計入 BYOK 用量",
         "limit": "限額",
         "limitMode": "限額模式",
         "loadFailed": "無法載入金鑰詳細資料。",
-        "loading": "正在載入金鑰詳細資料…",
         "remaining": "剩餘",
         "reset": "重設週期",
-        "retry": "重試",
         "updatedAt": "更新時間",
         "usage": "用量",
         "usageDaily": "每日用量",
@@ -628,11 +624,11 @@
   "showingCountUnavailable": "顯示數量暫時無法取得",
   "title": "金鑰管理",
   "totalKeys_other": "總計 {{count}} 個金鑰",
+  "totalKeysPartial_other": "總計至少 {{count}} 個金鑰",
+  "totalKeysUnavailable": "總數暫時無法取得",
   "unifiedApiGuidance": {
     "headerBridge": "將帳號 Key 一鍵匯入自建 AI 閘道後，多個 Key 即可透過同一個 AI API 使用；直接匯出到客戶端工具仍是免閘道路徑。"
   },
-  "totalKeysPartial_other": "總計至少 {{count}} 個金鑰",
-  "totalKeysUnavailable": "總數暫時無法取得",
   "unsupportedSource": {
     "description": "目前帳號的站點類型已支援儲存帳號，但擴充功能尚未適配此站點的金鑰列表協議。你可以提交站點支援請求，協助我們補齊金鑰管理能力。",
     "requestSiteSupport": "回報站點支援",

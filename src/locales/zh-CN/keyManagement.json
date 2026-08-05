@@ -458,7 +458,6 @@
     "list": {
       "actions": {
         "delete": "删除密钥",
-        "details": "查看详情",
         "edit": "编辑密钥",
         "singleAccountOnly": "请选择此账号后再编辑或删除其密钥"
       },
@@ -471,15 +470,12 @@
         "creator": "创建者",
         "disabled": "已禁用",
         "expiresAt": "过期时间",
-        "heading": "密钥详情",
         "includeByokInLimit": "计入 BYOK 用量",
         "limit": "限额",
         "limitMode": "限额模式",
         "loadFailed": "无法加载密钥详情。",
-        "loading": "正在加载密钥详情…",
         "remaining": "剩余",
         "reset": "重置周期",
-        "retry": "重试",
         "updatedAt": "更新时间",
         "usage": "用量",
         "usageDaily": "日用量",
@@ -628,11 +624,11 @@
   "showingCountUnavailable": "显示数量暂不可用",
   "title": "密钥管理",
   "totalKeys": "总计 {{count}} 个密钥",
+  "totalKeysPartial": "总计至少 {{count}} 个密钥",
+  "totalKeysUnavailable": "总数暂不可用",
   "unifiedApiGuidance": {
     "headerBridge": "将账号 Key 一键导入自建 AI 网关后，多个 Key 即可通过同一个 AI API 使用；直接导出到客户端工具仍是免网关路径。"
   },
-  "totalKeysPartial": "总计至少 {{count}} 个密钥",
-  "totalKeysUnavailable": "总数暂不可用",
   "unsupportedSource": {
     "description": "当前账号的站点类型已支持保存账号，但插件还没有适配该站点的密钥列表协议。你可以提交站点支持请求，帮助我们补齐密钥管理能力。",
     "requestSiteSupport": "反馈站点支持",

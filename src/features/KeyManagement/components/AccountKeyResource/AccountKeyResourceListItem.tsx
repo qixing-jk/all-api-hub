@@ -1,58 +1,53 @@
-import type { TFunction } from "i18next"
-import { ChevronDown, ChevronUp, Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2 } from "lucide-react"
+import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Badge, Button, Card, CardContent } from "~/components/ui"
+import Tooltip from "~/components/Tooltip"
+import { IconButton } from "~/components/ui"
+import { KeyResourceCard } from "~/features/KeyManagement/components/KeyResourceCard"
+import type { KeyResourceDetailState } from "~/features/KeyManagement/presentation/keyResourceCard"
+import {
+  buildOpenRouterKeyResourceCardPresentation,
+  buildOpenRouterKeyResourceDetailFacts,
+} from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import type {
   AccountKeyResourceFacts,
   ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import {
-  OPENROUTER_KEY_FIELD_IDS,
-  OPENROUTER_KEY_LIMIT_MODES,
-} from "~/services/apiAdapters/openrouter/keyResourceFields"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
 import type {
   NativeKeyManagementRow,
   NativeKeyManagementRowAction,
 } from "../../types"
-import { AccountKeyResourceDetails } from "./AccountKeyResourceDetails"
 
-const findFact = (row: NativeKeyManagementRow, fieldId: string) =>
-  row.facts.fields.find((fact) => fact.fieldId === fieldId)
+/** Keeps a disabled mutation's explanation reachable without enabling it. */
+function DisabledNativeActionHint({
+  label,
+  reason,
+  children,
+}: {
+  label: string
+  reason?: string
+  children: ReactNode
+}) {
+  if (!reason) return children
 
-const factValue = (row: NativeKeyManagementRow, fieldId: string) => {
-  const fact = findFact(row, fieldId)
-  return fact && (fact.kind === "number" || fact.kind === "text")
-    ? String(fact.value)
-    : null
+  return (
+    <Tooltip content={reason} anchorAsChild>
+      <span
+        className="inline-flex"
+        tabIndex={0}
+        aria-label={label}
+        aria-disabled="true"
+      >
+        {children}
+      </span>
+    </Tooltip>
+  )
 }
 
-const statusVariant = (status: NativeKeyManagementRow["facts"]["status"]) =>
-  status === "enabled"
-    ? "success"
-    : status === "unknown"
-      ? "warning"
-      : "secondary"
-
-const statusLabel = (
-  status: NativeKeyManagementRow["facts"]["status"],
-  t: TFunction,
-) => {
-  switch (status) {
-    case "enabled":
-      return t("keyManagement:openRouter.list.status.enabled")
-    case "disabled":
-      return t("keyManagement:openRouter.list.status.disabled")
-    case "expired":
-      return t("keyManagement:openRouter.list.status.expired")
-    default:
-      return t("keyManagement:openRouter.list.status.unknown")
-  }
-}
-
-/** Controlled native OpenRouter row with narrow remote-key actions. */
+/** Composes an OpenRouter-native key with the shared key-resource card. */
 export function AccountKeyResourceListItem({
   row,
   onEdit,
@@ -74,136 +69,80 @@ export function AccountKeyResourceListItem({
   onExpandedChange: (expanded: boolean) => void
   actionsDisabled?: boolean
 }) {
-  const { t } = useTranslation()
-  const limit = factValue(row, OPENROUTER_KEY_FIELD_IDS.Limit)
-  const remaining = factValue(row, OPENROUTER_KEY_FIELD_IDS.LimitRemaining)
-  const usage = factValue(row, OPENROUTER_KEY_FIELD_IDS.Usage)
-  const limitMode = factValue(row, OPENROUTER_KEY_FIELD_IDS.LimitMode)
-  const isUnlimited = limitMode === OPENROUTER_KEY_LIMIT_MODES.Unlimited
-  const toggleDetails = () => onExpandedChange(!expanded)
+  const { t } = useTranslation(["keyManagement", "common"])
+  const presentation = buildOpenRouterKeyResourceCardPresentation(row, t)
   const visibleDetail = detail ?? (actionsDisabled ? row.facts : null)
-
-  return (
-    <Card data-testid={KEY_MANAGEMENT_TEST_IDS.nativeKeyRow}>
-      <CardContent className="space-y-3 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate font-medium">{row.facts.displayName}</h3>
-              <Badge variant={statusVariant(row.facts.status)} size="sm">
-                {statusLabel(row.facts.status, t)}
-              </Badge>
-            </div>
-            <p className="text-muted-foreground truncate font-mono text-xs">
-              {row.facts.maskedLabel}
-            </p>
-            <p className="text-muted-foreground text-sm">
-              <span>{row.accountName}</span> · <span>{row.workspaceName}</span>
-            </p>
-          </div>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
+  const detailState: KeyResourceDetailState = isDetailLoading
+    ? { status: "loading" }
+    : detailFailure
+      ? {
+          status: "error",
+          message: t("openRouter.list.details.loadFailed"),
+          onRetry: () => onExpandedChange(true),
+        }
+      : {
+          status: "ready",
+          facts: visibleDetail
+            ? buildOpenRouterKeyResourceDetailFacts(visibleDetail, t)
+            : [],
+        }
+  const disabledReason = actionsDisabled
+    ? t("openRouter.list.actions.singleAccountOnly")
+    : undefined
+  const actions =
+    presentation.actions.edit || presentation.actions.delete ? (
+      <>
+        {presentation.actions.edit ? (
+          <DisabledNativeActionHint
+            label={t("openRouter.list.actions.edit")}
+            reason={disabledReason}
+          >
+            <IconButton
               type="button"
               size="sm"
               variant="outline"
-              onClick={toggleDetails}
-              aria-expanded={expanded}
-              aria-label={t("keyManagement:openRouter.list.actions.details")}
-            >
-              {expanded ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-              {t("keyManagement:openRouter.list.actions.details")}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => onEdit(row.facts.ref)}
+              aria-label={t("openRouter.list.actions.edit")}
+              disableAutoTitle={actionsDisabled}
               disabled={actionsDisabled}
-              title={
-                actionsDisabled
-                  ? t("keyManagement:openRouter.list.actions.singleAccountOnly")
-                  : undefined
-              }
-              aria-label={t("keyManagement:openRouter.list.actions.edit")}
+              onClick={() => onEdit(row.facts.ref)}
             >
-              <Pencil className="h-4 w-4" />
-              {t("keyManagement:openRouter.list.actions.edit")}
-            </Button>
-            <Button
+              <Pencil
+                aria-hidden="true"
+                className="h-4 w-4 text-blue-500 dark:text-blue-400"
+              />
+            </IconButton>
+          </DisabledNativeActionHint>
+        ) : null}
+        {presentation.actions.delete ? (
+          <DisabledNativeActionHint
+            label={t("openRouter.list.actions.delete")}
+            reason={disabledReason}
+          >
+            <IconButton
               type="button"
               size="sm"
               variant="destructive"
-              onClick={() => onDelete(row.facts.ref)}
+              aria-label={t("openRouter.list.actions.delete")}
+              disableAutoTitle={actionsDisabled}
               disabled={actionsDisabled}
-              title={
-                actionsDisabled
-                  ? t("keyManagement:openRouter.list.actions.singleAccountOnly")
-                  : undefined
-              }
-              aria-label={t("keyManagement:openRouter.list.actions.delete")}
+              onClick={() => onDelete(row.facts.ref)}
             >
-              <Trash2 className="h-4 w-4" />
-              {t("keyManagement:openRouter.list.actions.delete")}
-            </Button>
-          </div>
-        </div>
-        <dl className="flex flex-wrap gap-x-5 gap-y-1 text-sm">
-          <div className="flex gap-1">
-            <dt className="text-muted-foreground">
-              {t("keyManagement:openRouter.list.details.limit")}:
-            </dt>
-            <dd>
-              {isUnlimited
-                ? t("keyManagement:openRouter.list.values.unlimited")
-                : limit ?? t("keyManagement:openRouter.list.values.missing")}
-            </dd>
-          </div>
-          <div className="flex gap-1">
-            <dt className="text-muted-foreground">
-              {t("keyManagement:openRouter.list.details.remaining")}:
-            </dt>
-            <dd>
-              {isUnlimited
-                ? t("keyManagement:openRouter.list.values.unlimited")
-                : remaining ??
-                  t("keyManagement:openRouter.list.values.missing")}
-            </dd>
-          </div>
-          <div className="flex gap-1">
-            <dt className="text-muted-foreground">
-              {t("keyManagement:openRouter.list.details.usage")}:
-            </dt>
-            <dd>
-              {usage ?? t("keyManagement:openRouter.list.values.missing")}
-            </dd>
-          </div>
-        </dl>
-        {expanded ? (
-          isDetailLoading ? (
-            <p role="status" className="text-muted-foreground text-sm">
-              {t("keyManagement:openRouter.list.details.loading")}
-            </p>
-          ) : detailFailure ? (
-            <div role="alert" className="space-y-2 text-sm">
-              <p>{t("keyManagement:openRouter.list.details.loadFailed")}</p>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => onExpandedChange(true)}
-              >
-                {t("keyManagement:openRouter.list.details.retry")}
-              </Button>
-            </div>
-          ) : visibleDetail ? (
-            <AccountKeyResourceDetails facts={visibleDetail} />
-          ) : null
+              <Trash2 aria-hidden="true" className="h-4 w-4" />
+            </IconButton>
+          </DisabledNativeActionHint>
         ) : null}
-      </CardContent>
-    </Card>
+      </>
+    ) : undefined
+
+  return (
+    <KeyResourceCard
+      presentation={presentation}
+      secret={presentation.maskedLabel}
+      actions={actions}
+      details={detailState}
+      isDetailsExpanded={expanded}
+      onDetailsExpandedChange={onExpandedChange}
+      testId={KEY_MANAGEMENT_TEST_IDS.nativeKeyRow}
+    />
   )
 }

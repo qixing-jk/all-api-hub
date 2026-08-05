@@ -3,6 +3,10 @@
     "keys_one": "{{count}} chave",
     "keys_many": "{{count}} chaves",
     "keys_other": "{{count}} chaves",
+    "keysUnavailable": "Contagem indisponível",
+    "knownKeys_one": "Pelo menos {{count}} chave",
+    "knownKeys_many": "Pelo menos {{count}} chaves",
+    "knownKeys_other": "Pelo menos {{count}} chaves",
     "loadFailed": "Falha ao carregar",
     "title": "Visão geral das contas",
     "unsupported": "não compatível"
@@ -193,6 +197,10 @@
   "enabledCount_one": "{{count}} ativa",
   "enabledCount_many": "{{count}} ativas",
   "enabledCount_other": "{{count}} ativas",
+  "enabledCountPartial_one": "Pelo menos {{count}} ativa",
+  "enabledCountPartial_many": "Pelo menos {{count}} ativas",
+  "enabledCountPartial_other": "Pelo menos {{count}} ativas",
+  "enabledCountUnavailable": "Contagem de chaves ativas indisponível",
   "keyDetails": {
     "createResponseOnlySecret": "Este site fornece apenas um valor mascarado após a criação, portanto, a chave completa não pode ser vista novamente.",
     "createTime": "Criada em:",
@@ -309,6 +317,12 @@
   "noMatchingKeys": "Nenhuma chave correspondente encontrada",
   "oneTimeKey": {
     "close": "Já salvei, fechar",
+    "closeConfirm": {
+      "cancel": "Manter aberto",
+      "confirm": "Sair sem salvar",
+      "description": "A chave completa não estará mais disponível depois que você fechar esta caixa de diálogo.",
+      "title": "Sair sem salvar?"
+    },
     "copied": "Chave completa copiada para a área de transferência",
     "copiedAction": "Copiada",
     "copy": "Copiar chave completa",
@@ -319,6 +333,207 @@
     "title": "Salve a chave completa agora",
     "warningDescription": "O AIHubMix não permite visualizar a chave completa novamente. Depois de fechar esta caixa de diálogo, listas ou detalhes poderão mostrar apenas um valor mascarado.",
     "warningTitle": "Esta chave só pode ser visualizada uma vez"
+  },
+  "openRouter": {
+    "delete": {
+      "confirm": "Excluir chave",
+      "description": "Excluir {{name}} permanentemente do OpenRouter? Esta exclusão remota não pode ser desfeita.",
+      "feedback": {
+        "authenticationFailed": "Entre novamente e atualize.",
+        "error": "Não foi possível excluir esta chave. Atualize e tente novamente.",
+        "permissionDenied": "Você não tem permissão para excluir esta chave.",
+        "unavailable": "O serviço está temporariamente indisponível. Atualize antes de tentar novamente.",
+        "uncertain": "O estado remoto pode ter mudado. Atualize as chaves antes de tentar novamente."
+      },
+      "refresh": "Atualizar chaves",
+      "title": "Excluir chave de API?"
+    },
+    "editor": {
+      "actions": {
+        "cancel": "Cancelar",
+        "save": "Salvar chave"
+      },
+      "feedback": {
+        "authenticationFailed": "Entre novamente nesta conta e tente de novo.",
+        "error": "Revise as configurações da chave e tente novamente.",
+        "permissionDenied": "Você não tem permissão para gerenciar chaves neste espaço de trabalho.",
+        "title": "Não foi possível salvar a chave",
+        "unavailable": "O serviço está temporariamente indisponível. Tente novamente em instantes.",
+        "uncertain": "O serviço pode ter aplicado esta alteração. Atualize antes de tentar novamente."
+      },
+      "fields": {
+        "creator": {
+          "editHelp": "Para alterar o criador, crie uma nova chave.",
+          "help": "Opcionalmente, atribua esta chave a um membro do espaço de trabalho.",
+          "label": "Criador",
+          "placeholder": "Sem criador"
+        },
+        "disabled": {
+          "help": "Chaves desativadas não podem ser usadas até serem ativadas novamente.",
+          "label": "Desativar chave"
+        },
+        "expiresAt": {
+          "editHelp": "Para alterar a expiração, crie uma nova chave.",
+          "help": "A data e a hora são inseridas no horário local e armazenadas em UTC.",
+          "label": "Expira em"
+        },
+        "includeByokInLimit": {
+          "help": "Contabilize o uso de chaves próprias neste limite.",
+          "label": "Incluir uso de BYOK"
+        },
+        "limit": {
+          "help": "Um limite de 0 USD impede gastos.",
+          "label": "Limite"
+        },
+        "limitMode": {
+          "label": "Limite de gastos"
+        },
+        "limitReset": {
+          "help": "Escolha com que frequência o limite de gastos é redefinido.",
+          "label": "Frequência de redefinição"
+        },
+        "name": {
+          "help": "Use um nome fácil de reconhecer para esta chave.",
+          "label": "Nome da chave",
+          "placeholder": "Chave de produção"
+        },
+        "workspace": {
+          "editHelp": "Para alterar o espaço de trabalho, crie uma nova chave.",
+          "help": "Escolha o espaço de trabalho ao qual esta chave pertence.",
+          "label": "Espaço de trabalho",
+          "placeholder": "Selecione um espaço de trabalho"
+        }
+      },
+      "issues": {
+        "inconsistentValue": "Revise este valor e tente novamente.",
+        "invalidValue": "Insira um valor válido.",
+        "outOfRange": "Insira um valor dentro do intervalo permitido.",
+        "required": "Este campo é obrigatório.",
+        "unsupportedOption": "Escolha uma opção disponível."
+      },
+      "opening": {
+        "failed": "Não foi possível abrir o editor de chaves",
+        "loading": "Abrindo o editor de chaves...",
+        "retry": "Tentar novamente",
+        "title": "Abrir editor de chaves de API"
+      },
+      "options": {
+        "creator": {
+          "empty": "Não há membros disponíveis para este espaço de trabalho.",
+          "none": "Sem criador",
+          "unavailable": "A atribuição de membros não está disponível para o espaço de trabalho selecionado. Você pode criar a chave sem selecionar um membro.",
+          "unknown": "Membro desconhecido"
+        },
+        "limitMode": {
+          "limited": "Limitado",
+          "unlimited": "Ilimitado"
+        },
+        "limitReset": {
+          "daily": "Diariamente",
+          "monthly": "Mensalmente",
+          "none": "Não redefine",
+          "weekly": "Semanalmente"
+        },
+        "workspace": {
+          "unknown": "Espaço de trabalho desconhecido"
+        }
+      },
+      "sections": {
+        "advanced": "Avançado",
+        "basic": "Básico",
+        "lifecycle": "Ciclo de vida",
+        "spending": "Gastos"
+      },
+      "summary": "Configurações da chave de API",
+      "summaryRules": {
+        "byok": {
+          "excluded": "Uso de BYOK não incluído",
+          "included": "Uso de BYOK incluído"
+        },
+        "expiresAt": "Expira no horário local em {{expiresAt}} e é armazenada em UTC",
+        "limit": "Limite de gastos: {{limit}} USD",
+        "limitUnset": "O limite de gastos não está definido",
+        "neverExpires": "Não expira",
+        "reset": {
+          "daily": "Redefine diariamente",
+          "monthly": "Redefine mensalmente",
+          "none": "Não redefine",
+          "weekly": "Redefine semanalmente"
+        },
+        "unlimited": "Sem limite de gastos"
+      },
+      "title": {
+        "create": "Criar chave de API",
+        "edit": "Editar chave de API"
+      },
+      "unsaved": {
+        "description": "Suas alterações não foram salvas.",
+        "discard": "Descartar alterações",
+        "keepEditing": "Continuar editando",
+        "title": "Descartar alterações não salvas?"
+      }
+    },
+    "list": {
+      "actions": {
+        "delete": "Excluir chave",
+        "edit": "Editar chave",
+        "singleAccountOnly": "Selecione esta conta para editar ou excluir a chave"
+      },
+      "details": {
+        "byokUsage": "Uso de BYOK",
+        "byokUsageDaily": "Uso diário de BYOK",
+        "byokUsageMonthly": "Uso mensal de BYOK",
+        "byokUsageWeekly": "Uso semanal de BYOK",
+        "createdAt": "Criada em",
+        "creator": "Criador",
+        "disabled": "Desativada",
+        "expiresAt": "Expira em",
+        "includeByokInLimit": "Incluir uso de BYOK",
+        "limit": "Limite",
+        "limitMode": "Modo do limite",
+        "loadFailed": "Não foi possível carregar os detalhes da chave.",
+        "remaining": "Restante",
+        "reset": "Frequência de redefinição",
+        "updatedAt": "Atualizada em",
+        "usage": "Uso",
+        "usageDaily": "Uso diário",
+        "usageMonthly": "Uso mensal",
+        "usageWeekly": "Uso semanal",
+        "workspace": "Espaço de trabalho"
+      },
+      "heading": "Chaves do OpenRouter",
+      "legacyEligible_one": "Apenas {{count}} chave legada é qualificada para ações em lote; as chaves do OpenRouter são excluídas.",
+      "legacyEligible_many": "Apenas {{count}} chaves legadas são qualificadas para ações em lote; as chaves do OpenRouter são excluídas.",
+      "legacyEligible_other": "Apenas {{count}} chaves legadas são qualificadas para ações em lote; as chaves do OpenRouter são excluídas.",
+      "status": {
+        "all": "Todas",
+        "disabled": "Desativada",
+        "enabled": "Ativada",
+        "expired": "Expirada",
+        "unknown": "Desconhecida"
+      },
+      "statusFilter": {
+        "label": "Status da chave"
+      },
+      "values": {
+        "missing": "Indisponível",
+        "no": "Não",
+        "unlimited": "Ilimitado",
+        "yes": "Sim"
+      }
+    },
+    "workspace": {
+      "empty": "Não há espaços de trabalho disponíveis para esta conta.",
+      "error": "Não foi possível carregar os espaços de trabalho",
+      "errorHelp": "Verifique o acesso à sua conta e tente novamente.",
+      "fallback": "O espaço de trabalho solicitado não está disponível; o espaço padrão é exibido.",
+      "heading": "Espaço de trabalho",
+      "label": "Espaço de trabalho",
+      "loading": "Carregando espaços de trabalho...",
+      "partial": "Não foi possível carregar alguns espaços de trabalho.",
+      "placeholder": "Selecione um espaço de trabalho",
+      "retry": "Tentar carregar os espaços de trabalho novamente"
+    }
   },
   "pleaseAddAccount": "Adicione uma conta primeiro",
   "pleaseSelectAccount": "Selecione uma conta",
@@ -439,10 +654,18 @@
   "showingCount_one": "Exibindo {{count}}",
   "showingCount_many": "Exibindo {{count}}",
   "showingCount_other": "Exibindo {{count}}",
+  "showingCountPartial_one": "Exibindo pelo menos {{count}}",
+  "showingCountPartial_many": "Exibindo pelo menos {{count}}",
+  "showingCountPartial_other": "Exibindo pelo menos {{count}}",
+  "showingCountUnavailable": "Contagem exibida indisponível",
   "title": "Gerenciamento de chaves",
   "totalKeys_one": "Total de {{count}} chave",
   "totalKeys_many": "Total de {{count}} chaves",
   "totalKeys_other": "Total de {{count}} chaves",
+  "totalKeysPartial_one": "Total de pelo menos {{count}} chave",
+  "totalKeysPartial_many": "Total de pelo menos {{count}} chaves",
+  "totalKeysPartial_other": "Total de pelo menos {{count}} chaves",
+  "totalKeysUnavailable": "Total indisponível",
   "unifiedApiGuidance": {
     "headerBridge": "Importe as chaves das contas para seu gateway de IA auto-hospedado e use várias chaves por meio de uma única API de IA. A exportação direta para ferramentas cliente continua sendo a opção sem gateway."
   },

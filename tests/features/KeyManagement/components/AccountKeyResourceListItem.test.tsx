@@ -37,7 +37,7 @@ describe("AccountKeyResourceListItem", () => {
     const setExpanded = vi.fn()
     const edit = vi.fn()
     const remove = vi.fn()
-    render(
+    const { rerender } = render(
       <AccountKeyResourceListItem
         row={row}
         onExpandedChange={setExpanded}
@@ -56,6 +56,16 @@ describe("AccountKeyResourceListItem", () => {
     expect(screen.getByText("Example workspace")).toBeVisible()
     expect(screen.getByText("-2")).toBeVisible()
     expect(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay),
+    ).toBeVisible()
+    expect(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSummaryFacts),
+    ).toBeVisible()
+    expect(screen.getByText("keyManagement:keyDetails.key")).toBeVisible()
+    expect(
+      screen.getByText("keyManagement:keyDetails.createResponseOnlySecret"),
+    ).toBeVisible()
+    expect(
       screen.getByRole("button", {
         name: "keyManagement:openRouter.list.actions.edit",
       }),
@@ -73,7 +83,7 @@ describe("AccountKeyResourceListItem", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "keyManagement:openRouter.list.actions.details",
+        name: "keyManagement:actions.detailsFor",
       }),
     )
     await user.click(
@@ -89,6 +99,32 @@ describe("AccountKeyResourceListItem", () => {
     expect(edit).toHaveBeenCalledWith(row.facts.ref)
     expect(remove).toHaveBeenCalledWith(row.facts.ref)
     expect(setExpanded).toHaveBeenCalledWith(true)
+
+    rerender(
+      <AccountKeyResourceListItem
+        row={row}
+        onExpandedChange={setExpanded}
+        onEdit={edit}
+        onDelete={remove}
+        expanded
+        detail={{
+          ...row.facts,
+          fields: [
+            {
+              fieldId: "workspace_id",
+              kind: "text",
+              value: "Loaded workspace",
+            },
+            { fieldId: "byok_usage", kind: "number", value: 7 },
+          ],
+        }}
+      />,
+    )
+
+    expect(screen.getByText("Loaded workspace")).toBeVisible()
+    expect(
+      screen.getByText("keyManagement:openRouter.list.details.byokUsage"),
+    ).toBeVisible()
   })
 
   it("does not treat missing finite limits as unlimited", () => {
@@ -119,7 +155,8 @@ describe("AccountKeyResourceListItem", () => {
     ).toBeNull()
   })
 
-  it("visibly disables native mutations outside their single-account scope", () => {
+  it("explains disabled native mutations to pointer and keyboard users", async () => {
+    const user = userEvent.setup()
     render(
       <AccountKeyResourceListItem
         row={row}
@@ -131,16 +168,50 @@ describe("AccountKeyResourceListItem", () => {
       { withUserPreferencesProvider: false, withThemeProvider: false },
     )
 
+    const editButton = screen.getByRole("button", {
+      name: "keyManagement:openRouter.list.actions.edit",
+    })
+    const editActionHint = editButton.parentElement
+
+    expect(editButton).toBeDisabled()
+    expect(editActionHint).toHaveAttribute("tabindex", "0")
+    expect(editActionHint).toHaveAccessibleDescription(
+      "keyManagement:openRouter.list.actions.singleAccountOnly",
+    )
+
+    await user.hover(editActionHint!)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "keyManagement:openRouter.list.actions.singleAccountOnly",
+    )
+  })
+
+  it("omits mutations that the native resource does not support", () => {
+    render(
+      <AccountKeyResourceListItem
+        row={{
+          ...row,
+          facts: {
+            ...row.facts,
+            actions: { canUpdate: false, canDelete: false },
+          },
+        }}
+        onExpandedChange={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
     expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: "keyManagement:openRouter.list.actions.edit",
       }),
-    ).toBeDisabled()
+    ).toBeNull()
     expect(
-      screen.getAllByTitle(
-        "keyManagement:openRouter.list.actions.singleAccountOnly",
-      ),
-    ).toHaveLength(2)
+      screen.queryByRole("button", {
+        name: "keyManagement:openRouter.list.actions.delete",
+      }),
+    ).toBeNull()
   })
 
   it("expands list facts in all-account mode without requesting unavailable single-account detail", () => {
@@ -157,8 +228,47 @@ describe("AccountKeyResourceListItem", () => {
     )
 
     expect(
-      screen.getByText("keyManagement:openRouter.list.details.heading"),
-    ).toBeVisible()
-    expect(screen.getAllByText(row.facts.displayName)).toHaveLength(2)
+      screen.getAllByText("keyManagement:openRouter.list.details.limit"),
+    ).toHaveLength(2)
+    expect(screen.getAllByText(row.facts.displayName)).toHaveLength(1)
+  })
+
+  it("uses the shared loading and retryable error detail states", async () => {
+    const user = userEvent.setup()
+    const retry = vi.fn()
+    const { rerender } = render(
+      <AccountKeyResourceListItem
+        row={row}
+        onExpandedChange={retry}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        expanded
+        isDetailLoading
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "keyManagement:details.loading",
+    )
+
+    rerender(
+      <AccountKeyResourceListItem
+        row={row}
+        onExpandedChange={retry}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        expanded
+        detailFailure={{ code: "unavailable" }}
+      />,
+    )
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "keyManagement:openRouter.list.details.loadFailed",
+    )
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+    expect(retry).toHaveBeenCalledWith(true)
   })
 })

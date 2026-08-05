@@ -1,18 +1,23 @@
 import type { TFunction } from "i18next"
-import { useTranslation } from "react-i18next"
 
-import { Badge, Card, CardContent } from "~/components/ui"
+import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import type {
   AccountKeyResourceFacts,
   ResourceDisplayFact,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keyResourceFields"
 
-const nativeFactFieldIds = new Set<string>([
+import type {
+  KeyResourceCardPresentation,
+  KeyResourceFact,
+} from "./keyResourceCard"
+
+const detailFieldIds = new Set<string>([
   OPENROUTER_KEY_FIELD_IDS.Workspace,
   OPENROUTER_KEY_FIELD_IDS.Creator,
   OPENROUTER_KEY_FIELD_IDS.LimitMode,
@@ -33,6 +38,19 @@ const nativeFactFieldIds = new Set<string>([
   OPENROUTER_KEY_FIELD_IDS.UpdatedAt,
   OPENROUTER_KEY_FIELD_IDS.ExpiresAt,
 ])
+
+const findFact = (facts: AccountKeyResourceFacts, fieldId: string) =>
+  facts.fields.find((fact) => fact.fieldId === fieldId)
+
+const primitiveFactValue = (
+  facts: AccountKeyResourceFacts,
+  fieldId: string,
+) => {
+  const fact = findFact(facts, fieldId)
+  return fact && (fact.kind === "number" || fact.kind === "text")
+    ? String(fact.value)
+    : undefined
+}
 
 const fieldLabel = (fieldId: string, t: TFunction) => {
   switch (fieldId) {
@@ -79,7 +97,7 @@ const fieldLabel = (fieldId: string, t: TFunction) => {
   }
 }
 
-const renderFactValue = (fact: ResourceDisplayFact, t: TFunction) => {
+const displayFactValue = (fact: ResourceDisplayFact, t: TFunction) => {
   switch (fact.kind) {
     case "boolean":
       return fact.value
@@ -116,54 +134,110 @@ const renderFactValue = (fact: ResourceDisplayFact, t: TFunction) => {
       return fact.value.join(", ")
     case "secret":
       return "••••"
-    default:
+    case "number":
       return String(fact.value)
   }
 }
 
-/** Shows safe native facts only; opaque resource references never leave controller state. */
-export function AccountKeyResourceDetails({
-  facts,
-}: {
-  facts: AccountKeyResourceFacts
-}) {
-  const { t } = useTranslation()
-  const visibleFacts = facts.fields.filter((fact) =>
-    nativeFactFieldIds.has(fact.fieldId),
-  )
+const statusPresentation = (
+  status: AccountKeyResourceFacts["status"],
+  t: TFunction,
+): Pick<KeyResourceCardPresentation, "status" | "statusLabel"> => {
+  switch (status) {
+    case "enabled":
+      return {
+        status: "active",
+        statusLabel: t("keyManagement:openRouter.list.status.enabled"),
+      }
+    case "disabled":
+      return {
+        status: "inactive",
+        statusLabel: t("keyManagement:openRouter.list.status.disabled"),
+      }
+    case "expired":
+      return {
+        status: "inactive",
+        statusLabel: t("keyManagement:openRouter.list.status.expired"),
+      }
+    default:
+      return {
+        status: "unknown",
+        statusLabel: t("keyManagement:openRouter.list.status.unknown"),
+      }
+  }
+}
 
-  return (
-    <Card padding="none" className="border-dashed">
-      <CardContent className="space-y-3 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="min-w-0">
-            <h3 className="font-medium">
-              {t("keyManagement:openRouter.list.details.heading")}
-            </h3>
-            <p className="text-muted-foreground truncate text-sm">
-              {facts.displayName}
-            </p>
-          </div>
-          <Badge variant="outline" size="sm">
-            {facts.maskedLabel}
-          </Badge>
-        </div>
-        <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          {visibleFacts.map((fact) => (
-            <div
-              key={fact.fieldId}
-              className="flex min-w-0 justify-between gap-3"
-            >
-              <dt className="text-muted-foreground">
-                {fieldLabel(fact.fieldId, t)}
-              </dt>
-              <dd className="min-w-0 text-right font-medium break-words">
-                {renderFactValue(fact, t)}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </CardContent>
-    </Card>
+export const buildOpenRouterKeyResourceDetailFacts = (
+  facts: AccountKeyResourceFacts,
+  t: TFunction,
+): KeyResourceFact[] =>
+  facts.fields
+    .filter((fact) => detailFieldIds.has(fact.fieldId))
+    .map((fact) => ({
+      id: fact.fieldId,
+      label: fieldLabel(fact.fieldId, t),
+      value: displayFactValue(fact, t),
+    }))
+
+export const buildOpenRouterKeyResourceCardPresentation = (
+  row: NativeKeyManagementRow,
+  t: TFunction,
+): KeyResourceCardPresentation => {
+  const limitMode = primitiveFactValue(
+    row.facts,
+    OPENROUTER_KEY_FIELD_IDS.LimitMode,
   )
+  const unlimited = limitMode === OPENROUTER_KEY_LIMIT_MODES.Unlimited
+  const missing = t("keyManagement:openRouter.list.values.missing")
+  const unlimitedLabel = t("keyManagement:openRouter.list.values.unlimited")
+  const limit = primitiveFactValue(row.facts, OPENROUTER_KEY_FIELD_IDS.Limit)
+  const remaining = primitiveFactValue(
+    row.facts,
+    OPENROUTER_KEY_FIELD_IDS.LimitRemaining,
+  )
+  const usage = primitiveFactValue(row.facts, OPENROUTER_KEY_FIELD_IDS.Usage)
+
+  return {
+    id: row.rowKey,
+    title: row.facts.displayName,
+    accountLabel: row.accountName,
+    ...statusPresentation(row.facts.status, t),
+    secretAvailability: INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
+    maskedLabel: row.facts.maskedLabel,
+    secretAvailabilityMessage: t(
+      "keyManagement:keyDetails.createResponseOnlySecret",
+    ),
+    summaryFacts: [
+      {
+        id: OPENROUTER_KEY_FIELD_IDS.Workspace,
+        label: fieldLabel(OPENROUTER_KEY_FIELD_IDS.Workspace, t),
+        value: row.workspaceName,
+      },
+      {
+        id: OPENROUTER_KEY_FIELD_IDS.Limit,
+        label: fieldLabel(OPENROUTER_KEY_FIELD_IDS.Limit, t),
+        value: unlimited ? unlimitedLabel : limit ?? missing,
+      },
+      {
+        id: OPENROUTER_KEY_FIELD_IDS.LimitRemaining,
+        label: fieldLabel(OPENROUTER_KEY_FIELD_IDS.LimitRemaining, t),
+        value: unlimited ? unlimitedLabel : remaining ?? missing,
+      },
+      {
+        id: OPENROUTER_KEY_FIELD_IDS.Usage,
+        label: fieldLabel(OPENROUTER_KEY_FIELD_IDS.Usage, t),
+        value: usage ?? missing,
+      },
+    ],
+    detailFacts: buildOpenRouterKeyResourceDetailFacts(row.facts, t),
+    actions: {
+      copySecret: false,
+      revealSecret: false,
+      verifySecret: false,
+      exportSecret: false,
+      edit: row.facts.actions.canUpdate,
+      delete: row.facts.actions.canDelete,
+      batchSelect: false,
+    },
+  }
 }

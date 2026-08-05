@@ -467,7 +467,6 @@
     "list": {
       "actions": {
         "delete": "Delete key",
-        "details": "View details",
         "edit": "Edit key",
         "singleAccountOnly": "Select this account to edit or delete its key"
       },
@@ -480,15 +479,12 @@
         "creator": "Creator",
         "disabled": "Disabled",
         "expiresAt": "Expires",
-        "heading": "Key details",
         "includeByokInLimit": "Include BYOK usage",
         "limit": "Limit",
         "limitMode": "Limit mode",
         "loadFailed": "Could not load key details.",
-        "loading": "Loading key details…",
         "remaining": "Remaining",
         "reset": "Reset cadence",
-        "retry": "Try again",
         "updatedAt": "Updated",
         "usage": "Usage",
         "usageDaily": "Daily usage",
@@ -647,12 +643,12 @@
   "title": "Key Management",
   "totalKeys_one": "Total {{count}} key",
   "totalKeys_other": "Total {{count}} keys",
-  "unifiedApiGuidance": {
-    "headerBridge": "Import account keys into your self-hosted AI gateway so multiple keys can be used through one AI API. Direct client-tool export remains the no-gateway path."
-  },
   "totalKeysPartial_one": "Total at least {{count}} key",
   "totalKeysPartial_other": "Total at least {{count}} keys",
   "totalKeysUnavailable": "Total unavailable",
+  "unifiedApiGuidance": {
+    "headerBridge": "Import account keys into your self-hosted AI gateway so multiple keys can be used through one AI API. Direct client-tool export remains the no-gateway path."
+  },
   "unsupportedSource": {
     "description": "This account's site type can be saved, but the extension has not adapted its key-list protocol yet. Submit a site-support request to help us add key-management support.",
     "requestSiteSupport": "Request site support",

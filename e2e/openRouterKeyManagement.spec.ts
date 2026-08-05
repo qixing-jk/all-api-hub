@@ -237,6 +237,22 @@ test("manages an OpenRouter key through its native one-time-secret lifecycle", a
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeKeyRow)
     .filter({ hasText: "Lifecycle key" })
   await expect(lifecycleRow).toBeVisible()
+  const lifecycleSummary = lifecycleRow.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.keyResourceSummaryFacts,
+  )
+  await expect(lifecycleSummary).toContainText("Team workspace")
+  await expect(lifecycleSummary).toContainText("50")
+  await expect(
+    lifecycleRow.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay),
+  ).toContainText("full key cannot be viewed again")
+  await expect(
+    lifecycleRow.getByRole("button", { name: "Copy Key" }),
+  ).toHaveCount(0)
+  await lifecycleRow
+    .getByRole("button", { name: "View details for Lifecycle key" })
+    .click()
+  await expect(lifecycleRow).toContainText("BYOK usage")
+  await expect(lifecycleRow).toContainText("Include BYOK usage")
   await lifecycleRow.getByRole("button", { name: "Edit key" }).click()
   editor = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
   await expect(editor).toBeVisible()

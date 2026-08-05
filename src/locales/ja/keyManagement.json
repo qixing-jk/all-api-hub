@@ -458,7 +458,6 @@
     "list": {
       "actions": {
         "delete": "キーを削除",
-        "details": "詳細を表示",
         "edit": "キーを編集",
         "singleAccountOnly": "このキーを編集または削除するには、このアカウントを選択してください"
       },
@@ -471,15 +470,12 @@
         "creator": "作成者",
         "disabled": "無効",
         "expiresAt": "有効期限",
-        "heading": "キーの詳細",
         "includeByokInLimit": "BYOK 使用量を含める",
         "limit": "上限",
         "limitMode": "上限モード",
         "loadFailed": "キーの詳細を読み込めませんでした。",
-        "loading": "キーの詳細を読み込んでいます…",
         "remaining": "残り",
         "reset": "リセット",
-        "retry": "再試行",
         "updatedAt": "更新日時",
         "usage": "使用量",
         "usageDaily": "日次使用量",
@@ -628,11 +624,11 @@
   "showingCountUnavailable": "表示件数を取得できません",
   "title": "キー管理",
   "totalKeys_other": "合計 {{count}} キー",
+  "totalKeysPartial_other": "合計少なくとも {{count}} キー",
+  "totalKeysUnavailable": "合計件数を取得できません",
   "unifiedApiGuidance": {
     "headerBridge": "アカウントキーをセルフホスト AI ゲートウェイへ簡単に取り込むと、複数のキーを 1 つの AI API から利用できます。クライアントツールへの直接エクスポートはゲートウェイを使わない方法です。"
   },
-  "totalKeysPartial_other": "合計少なくとも {{count}} キー",
-  "totalKeysUnavailable": "合計件数を取得できません",
   "unsupportedSource": {
     "description": "このアカウントのサイト種別は保存できますが、拡張機能はこのサイトのキー一覧プロトコルにはまだ対応していません。サイト対応リクエストを送信すると、キー管理機能の追加に役立ちます。",
     "requestSiteSupport": "サイト対応をリクエスト",

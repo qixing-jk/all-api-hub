@@ -1874,12 +1874,10 @@ describe("KeyManagement native page integration", () => {
 
     await user.click(
       screen.getAllByRole("button", {
-        name: "keyManagement:openRouter.list.actions.details",
+        name: "keyManagement:actions.detailsFor",
       })[0],
     )
-    expect(
-      screen.getByText("keyManagement:openRouter.list.details.heading"),
-    ).toBeVisible()
+    expect(screen.getByText("keyManagement:details.empty")).toBeVisible()
     expect(successful.collection.get).not.toHaveBeenCalled()
 
     await user.type(
