@@ -2,7 +2,6 @@
   "accountSummary": {
     "keys_one": "{{count}} key",
     "keys_other": "{{count}} keys",
-    "keysUnavailable": "Count unavailable",
     "knownKeys_one": "At least {{count}} key",
     "knownKeys_other": "At least {{count}} keys",
     "loadFailed": "Load failed",
@@ -33,11 +32,11 @@
     "verifyCliSupport": "Verify CLI Support"
   },
   "allAccounts": "All accounts",
-  "allAccountsFailed_one": "{{count}} failed",
-  "allAccountsFailed_other": "{{count}} failed",
+  "allAccountsFailed_one": "{{count}} account failed to load; results are incomplete",
+  "allAccountsFailed_other": "{{count}} accounts failed to load; results are incomplete",
   "allAccountsLoading_one": "{{count}} loading",
   "allAccountsLoading_other": "{{count}} loading",
-  "allAccountsProgress": "{{loaded}}/{{total}} accounts loaded",
+  "allAccountsProgress": "{{completed}}/{{total}} accounts processed",
   "batchApiCredentialProfiles": {
     "actions": {
       "open": "Save to API credential library ({{selectedCount}})"
@@ -137,10 +136,10 @@
     }
   },
   "batchSelection": {
-    "accountUnavailableReason": "This account has no keys available for batch actions.",
-    "eligibilityNotice_one": "Batch actions apply only to the {{count}} selectable key; items whose full key cannot be retrieved are excluded.",
-    "eligibilityNotice_other": "Batch actions apply only to the {{count}} selectable keys; items whose full keys cannot be retrieved are excluded.",
-    "unavailableReason": "The full key cannot be retrieved, so this item cannot be included in batch actions."
+    "accountUnavailableReason": "This account has no keys that support batch actions.",
+    "eligibilityNotice_one": "{{count}} key currently supports batch actions; other keys will not be included.",
+    "eligibilityNotice_other": "{{count}} keys currently support batch actions; other keys will not be included.",
+    "unavailableReason": "This key does not support batch actions."
   },
   "createFirstKey": "Create first key",
   "description": "This page displays API key information for all accounts, including usage and expiration time. You can create new keys for specific accounts by clicking the 'Add Key' button in the upper right corner or the '+' button next to each key item. Please keep your API keys safe and avoid leaking them to others",
@@ -196,9 +195,6 @@
   },
   "enabledCount_one": "Enabled {{count}}",
   "enabledCount_other": "Enabled {{count}}",
-  "enabledCountPartial_one": "Enabled at least {{count}}",
-  "enabledCountPartial_other": "Enabled at least {{count}}",
-  "enabledCountUnavailable": "Enabled count unavailable",
   "keyDetails": {
     "createResponseOnlySecret": "This site provides only a masked value after creation, so the full key cannot be viewed again.",
     "createTime": "Create Time:",
@@ -218,6 +214,8 @@
     "ungrouped": "Ungrouped",
     "usedQuota": "Used Quota:"
   },
+  "knownTotalKeys_one": "{{count}} key read",
+  "knownTotalKeys_other": "{{count}} keys read",
   "loadError": {
     "description": "The extension could not load keys for this account. The session may have expired, permissions may be insufficient, or the site may be temporarily unavailable. Sign in to the site again, then retry.\n\nError: {{error}}",
     "openSite": "Open site",
@@ -313,12 +311,12 @@
   "noKeys": "No key data yet",
   "noMatchingKeys": "No matching keys found",
   "oneTimeKey": {
-    "close": "I saved it, close",
+    "close": "Close",
     "closeConfirm": {
-      "cancel": "Keep this open",
-      "confirm": "Leave without saving",
-      "description": "The full key will no longer be available after you close this dialog.",
-      "title": "Leave without saving?"
+      "cancel": "Return to the key",
+      "confirm": "Close anyway",
+      "description": "If you have not copied or saved it, return and handle this key first.",
+      "title": "The full key cannot be viewed again after closing"
     },
     "copied": "Full key copied to clipboard",
     "copiedAction": "Copied",
@@ -328,19 +326,19 @@
     "subtitle": "The full value for key {{name}} is shown only after this creation.",
     "subtitleUnnamed": "The full key is shown only after this creation.",
     "title": "Save the full key now",
-    "warningDescription": "This key can only be viewed in full now. After closing this dialog, lists or details may only show a masked value.",
+    "warningDescription": "After closing this dialog, the extension cannot display the full key again.",
     "warningTitle": "This key can only be viewed once"
   },
   "openRouter": {
     "delete": {
       "confirm": "Delete key",
-      "description": "Delete {{name}} from OpenRouter permanently? This remote deletion cannot be undone.",
+      "description": "Permanently delete {{name}} from OpenRouter? It cannot be recovered after deletion.",
       "feedback": {
-        "authenticationFailed": "Sign in again, then refresh.",
+        "authenticationFailed": "Update this account's OpenRouter Management API Key, then refresh.",
         "error": "Could not delete this key. Refresh and try again.",
         "permissionDenied": "You do not have permission to delete this key.",
         "unavailable": "The service is temporarily unavailable. Refresh before trying again.",
-        "uncertain": "Remote state may have changed. Refresh keys before trying again."
+        "uncertain": "The key state may have changed. Refresh keys before deciding whether to retry."
       },
       "refresh": "Refresh keys",
       "title": "Delete API key?"
@@ -351,12 +349,12 @@
         "save": "Save key"
       },
       "feedback": {
-        "authenticationFailed": "Sign in to this account again, then retry.",
-        "error": "Review the key settings and try again.",
+        "authenticationFailed": "Update this account's OpenRouter Management API Key, then retry.",
+        "error": "Follow the error details below, then retry.",
         "permissionDenied": "You do not have permission to manage keys in this workspace.",
         "title": "Could not save key",
         "unavailable": "The service is temporarily unavailable. Try again shortly.",
-        "uncertain": "The service may have applied this change. Refresh before trying again."
+        "uncertain": "The service may have applied this change. Refresh keys to confirm the current state before deciding whether to retry."
       },
       "fields": {
         "creator": {
@@ -640,15 +638,9 @@
   },
   "showingCount_one": "Showing {{count}}",
   "showingCount_other": "Showing {{count}}",
-  "showingCountPartial_one": "Showing at least {{count}}",
-  "showingCountPartial_other": "Showing at least {{count}}",
-  "showingCountUnavailable": "Showing count unavailable",
   "title": "Key Management",
   "totalKeys_one": "Total {{count}} key",
   "totalKeys_other": "Total {{count}} keys",
-  "totalKeysPartial_one": "Total at least {{count}} key",
-  "totalKeysPartial_other": "Total at least {{count}} keys",
-  "totalKeysUnavailable": "Total unavailable",
   "unifiedApiGuidance": {
     "headerBridge": "Import account keys into your self-hosted AI gateway so multiple keys can be used through one AI API. Direct client-tool export remains the no-gateway path."
   },

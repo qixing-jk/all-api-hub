@@ -131,8 +131,26 @@ describe("KeyManagement AccountSummaryBar", () => {
     expect(screen.getByText("Visible native account")).toBeVisible()
     expect(screen.getByText("Failed native account")).toBeVisible()
     expect(screen.getAllByText("accountSummary.keys")).toHaveLength(1)
-    expect(screen.getByText("accountSummary.keysUnavailable")).toBeVisible()
+    expect(screen.queryByText("accountSummary.keysUnavailable")).toBeNull()
     expect(screen.getByText("accountSummary.loadFailed")).toBeVisible()
+  })
+
+  it("does not report an unsupported inventory as zero keys", () => {
+    render(
+      <AccountSummaryBar
+        items={[
+          {
+            accountId: "unsupported",
+            name: "Unsupported account",
+            count: 0,
+            errorType: "unsupported",
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText("accountSummary.unsupported")).toBeVisible()
+    expect(screen.queryByText("accountSummary.keys")).toBeNull()
   })
 
   it("shows known rows as partial without presenting them as a complete count", () => {

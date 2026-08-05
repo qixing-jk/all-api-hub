@@ -1,7 +1,6 @@
 {
   "accountSummary": {
     "keys_other": "{{count}} 個金鑰",
-    "keysUnavailable": "數量暫時無法取得",
     "knownKeys_other": "至少 {{count}} 個金鑰",
     "loadFailed": "載入失敗",
     "title": "帳號概覽",
@@ -31,9 +30,9 @@
     "verifyCliSupport": "驗證 CLI 相容性"
   },
   "allAccounts": "所有帳號",
-  "allAccountsFailed_other": "{{count}} 個失敗",
+  "allAccountsFailed_other": "{{count}} 個帳號載入失敗，結果不完整",
   "allAccountsLoading_other": "{{count}} 個載入中",
-  "allAccountsProgress": "已載入 {{loaded}}/{{total}} 個帳號",
+  "allAccountsProgress": "已處理 {{completed}}/{{total}} 個帳號",
   "batchApiCredentialProfiles": {
     "actions": {
       "open": "儲存到 API 憑據庫（{{selectedCount}}）"
@@ -132,9 +131,9 @@
     }
   },
   "batchSelection": {
-    "accountUnavailableReason": "此帳號沒有可參與批次操作的金鑰。",
-    "eligibilityNotice_other": "批次操作僅適用於目前 {{count}} 個可選取的金鑰；無法讀取完整金鑰的項目不會參與。",
-    "unavailableReason": "無法讀取完整金鑰，因此此項目不能參與批次操作。"
+    "accountUnavailableReason": "此帳號沒有支援批次操作的金鑰。",
+    "eligibilityNotice_other": "目前有 {{count}} 個金鑰支援批次操作；其他金鑰不會參與。",
+    "unavailableReason": "此金鑰不支援批次操作。"
   },
   "createFirstKey": "建立第一個金鑰",
   "description": "此頁面顯示所有帳號的 API 金鑰資訊，包括使用情況和過期時間。可以透過右上角的\"新增金鑰\"按鈕或點擊各金鑰專案旁的\"+\"按鈕為指定帳號建立新金鑰。請妥善保管您的 API 金鑰，避免洩露給他人",
@@ -188,8 +187,6 @@
     "warningTitle": "注意事項"
   },
   "enabledCount_other": "啟用 {{count}} 個",
-  "enabledCountPartial_other": "至少啟用 {{count}} 個",
-  "enabledCountUnavailable": "啟用數量暫時無法取得",
   "keyDetails": {
     "createResponseOnlySecret": "此站點建立後僅提供金鑰遮罩值，因此無法再次查看完整金鑰。",
     "createTime": "建立時間：",
@@ -209,6 +206,7 @@
     "ungrouped": "未分組",
     "usedQuota": "已用額度："
   },
+  "knownTotalKeys_other": "已讀取 {{count}} 個金鑰",
   "loadError": {
     "description": "無法讀取目前帳號的金鑰列表。可能是登入已失效、權限不足，或站點暫時無法連線。請先重新登入站點後再重試。\n\n錯誤資訊：{{error}}",
     "openSite": "開啟站點",
@@ -303,12 +301,12 @@
   "noKeys": "暫無金鑰資料",
   "noMatchingKeys": "沒有找到匹配的金鑰",
   "oneTimeKey": {
-    "close": "我已保存，關閉",
+    "close": "關閉",
     "closeConfirm": {
-      "cancel": "繼續保留",
-      "confirm": "不儲存就離開",
-      "description": "關閉此對話框後，將無法再次查看完整金鑰。",
-      "title": "不儲存就離開？"
+      "cancel": "返回查看金鑰",
+      "confirm": "仍然關閉",
+      "description": "如果尚未複製或儲存，請先返回處理此金鑰。",
+      "title": "關閉後將無法再次查看完整金鑰"
     },
     "copied": "完整金鑰已複製到剪貼簿",
     "copiedAction": "已複製",
@@ -318,19 +316,19 @@
     "subtitle": "金鑰 {{name}} 的完整值只會在本次建立後顯示。",
     "subtitleUnnamed": "完整金鑰只會在本次建立後顯示。",
     "title": "立即保存完整金鑰",
-    "warningDescription": "此金鑰僅能在目前完整查看。關閉此彈窗後，後續清單或詳情可能只顯示遮罩值。",
+    "warningDescription": "關閉此對話框後，擴充功能將無法再次顯示完整金鑰。",
     "warningTitle": "該金鑰只能查看一次"
   },
   "openRouter": {
     "delete": {
       "confirm": "刪除金鑰",
-      "description": "要從 OpenRouter 永久刪除 {{name}} 嗎？此遠端刪除無法復原。",
+      "description": "要從 OpenRouter 永久刪除 {{name}} 嗎？刪除後無法復原。",
       "feedback": {
-        "authenticationFailed": "請重新登入後再重新整理。",
+        "authenticationFailed": "請更新此帳號的 OpenRouter Management API Key，然後重新整理。",
         "error": "無法刪除此金鑰。請重新整理後再試。",
-        "permissionDenied": "您沒有刪除此金鑰的權限。",
+        "permissionDenied": "你沒有刪除此金鑰的權限。",
         "unavailable": "服務暫時無法使用，請先重新整理再試。",
-        "uncertain": "遠端狀態可能已變更。請先重新整理金鑰，再決定是否重試。"
+        "uncertain": "金鑰狀態可能已變更。請先重新整理金鑰，再決定是否重試。"
       },
       "refresh": "重新整理金鑰",
       "title": "刪除 API 金鑰？"
@@ -341,12 +339,12 @@
         "save": "儲存金鑰"
       },
       "feedback": {
-        "authenticationFailed": "請重新登入此帳號後重試。",
-        "error": "請檢查金鑰設定後重試。",
+        "authenticationFailed": "請更新此帳號的 OpenRouter Management API Key，然後重試。",
+        "error": "請依照錯誤資訊處理後重試。",
         "permissionDenied": "你沒有在此工作區管理金鑰的權限。",
         "title": "無法儲存金鑰",
         "unavailable": "服務暫時無法使用，請稍後重試。",
-        "uncertain": "服務可能已套用此更改，請重新整理後再試。"
+        "uncertain": "服務可能已套用此變更。請先重新整理金鑰確認目前狀態，再決定是否重試。"
       },
       "fields": {
         "creator": {
@@ -428,7 +426,7 @@
       "sections": {
         "advanced": "進階設定",
         "basic": "基本資訊",
-        "lifecycle": "生命週期",
+        "lifecycle": "有效期與狀態",
         "spending": "用量限制"
       },
       "summary": "API 金鑰設定",
@@ -623,12 +621,8 @@
     "singleton": "服務金鑰"
   },
   "showingCount_other": "顯示 {{count}} 個",
-  "showingCountPartial_other": "顯示至少 {{count}} 個",
-  "showingCountUnavailable": "顯示數量暫時無法取得",
   "title": "金鑰管理",
   "totalKeys_other": "總計 {{count}} 個金鑰",
-  "totalKeysPartial_other": "總計至少 {{count}} 個金鑰",
-  "totalKeysUnavailable": "總數暫時無法取得",
   "unifiedApiGuidance": {
     "headerBridge": "將帳號 Key 一鍵匯入自建 AI 閘道後，多個 Key 即可透過同一個 AI API 使用；直接匯出到客戶端工具仍是免閘道路徑。"
   },

@@ -115,38 +115,28 @@ export function AccountSelectorPanel({
       {selectedAccount && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="dark:text-dark-text-secondary flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-500">
+            {counts.total !== null ? (
+              <span>{t("totalKeys", { count: counts.total })}</span>
+            ) : counts.knownTotal > 0 ? (
+              <span>{t("knownTotalKeys", { count: counts.knownTotal })}</span>
+            ) : null}
+            {counts.enabled !== null ? (
+              <span>{t("enabledCount", { count: counts.enabled })}</span>
+            ) : null}
             <span>
-              {counts.total !== null
-                ? t("totalKeys", { count: counts.total })
-                : counts.knownTotal > 0
-                  ? t("totalKeysPartial", { count: counts.knownTotal })
-                  : t("totalKeysUnavailable")}
+              {t("showingCount", {
+                count: counts.showing ?? counts.knownShowing,
+              })}
             </span>
-            <span>
-              {counts.enabled !== null
-                ? t("enabledCount", { count: counts.enabled })
-                : counts.knownEnabled > 0
-                  ? t("enabledCountPartial", { count: counts.knownEnabled })
-                  : t("enabledCountUnavailable")}
-            </span>
-            <span>
-              {counts.showing !== null
-                ? t("showingCount", { count: counts.showing })
-                : counts.knownShowing > 0
-                  ? t("showingCountPartial", { count: counts.knownShowing })
-                  : t("showingCountUnavailable")}
-            </span>
-            {isAllAccountsMode && tokenLoadProgress ? (
+            {isAllAccountsMode && tokenLoadProgress?.loading ? (
               <span>
                 {t("allAccountsProgress", {
-                  loaded: tokenLoadProgress.loaded,
+                  completed: tokenLoadProgress.loaded + tokenLoadProgress.error,
                   total: tokenLoadProgress.total,
                 })}
-                {tokenLoadProgress.loading > 0
-                  ? ` · ${t("allAccountsLoading", {
-                      count: tokenLoadProgress.loading,
-                    })}`
-                  : ""}
+                {` · ${t("allAccountsLoading", {
+                  count: tokenLoadProgress.loading,
+                })}`}
               </span>
             ) : null}
           </div>

@@ -3,7 +3,6 @@
     "keys_one": "{{count}} chave",
     "keys_many": "{{count}} chaves",
     "keys_other": "{{count}} chaves",
-    "keysUnavailable": "Contagem indisponível",
     "knownKeys_one": "Pelo menos {{count}} chave",
     "knownKeys_many": "Pelo menos {{count}} chaves",
     "knownKeys_other": "Pelo menos {{count}} chaves",
@@ -35,13 +34,13 @@
     "verifyCliSupport": "Verificar compatibilidade com CLI"
   },
   "allAccounts": "Todas as contas",
-  "allAccountsFailed_one": "{{count}} falhou",
-  "allAccountsFailed_many": "{{count}} falharam",
-  "allAccountsFailed_other": "{{count}} falharam",
+  "allAccountsFailed_one": "Falha ao carregar {{count}} conta; os resultados estão incompletos",
+  "allAccountsFailed_many": "Falha ao carregar {{count}} contas; os resultados estão incompletos",
+  "allAccountsFailed_other": "Falha ao carregar {{count}} contas; os resultados estão incompletos",
   "allAccountsLoading_one": "{{count}} carregando",
   "allAccountsLoading_many": "{{count}} carregando",
   "allAccountsLoading_other": "{{count}} carregando",
-  "allAccountsProgress": "Contas carregadas: {{loaded}}/{{total}}",
+  "allAccountsProgress": "Contas processadas: {{completed}}/{{total}}",
   "batchApiCredentialProfiles": {
     "actions": {
       "open": "Salvar na biblioteca de credenciais de API ({{selectedCount}})"
@@ -142,11 +141,11 @@
     }
   },
   "batchSelection": {
-    "accountUnavailableReason": "Esta conta não tem chaves disponíveis para ações em lote.",
-    "eligibilityNotice_one": "As ações em lote se aplicam somente à {{count}} chave selecionável; itens cuja chave completa não pode ser recuperada são excluídos.",
-    "eligibilityNotice_many": "As ações em lote se aplicam somente às {{count}} chaves selecionáveis; itens cuja chave completa não pode ser recuperada são excluídos.",
-    "eligibilityNotice_other": "As ações em lote se aplicam somente às {{count}} chaves selecionáveis; itens cuja chave completa não pode ser recuperada são excluídos.",
-    "unavailableReason": "A chave completa não pode ser recuperada, portanto este item não pode participar de ações em lote."
+    "accountUnavailableReason": "Esta conta não tem chaves compatíveis com ações em lote.",
+    "eligibilityNotice_one": "Atualmente, {{count}} chave é compatível com ações em lote; as demais não serão incluídas.",
+    "eligibilityNotice_many": "Atualmente, {{count}} chaves são compatíveis com ações em lote; as demais não serão incluídas.",
+    "eligibilityNotice_other": "Atualmente, {{count}} chaves são compatíveis com ações em lote; as demais não serão incluídas.",
+    "unavailableReason": "Esta chave não é compatível com ações em lote."
   },
   "createFirstKey": "Criar primeira chave",
   "description": "Esta página exibe as informações das chaves de API de todas as contas, incluindo uso e data de expiração. Para criar uma chave para uma conta específica, clique no botão \"Adicionar chave\" no canto superior direito ou no botão \"+\" ao lado de cada item. Mantenha suas chaves de API seguras e não as compartilhe com outras pessoas",
@@ -204,10 +203,6 @@
   "enabledCount_one": "{{count}} ativa",
   "enabledCount_many": "{{count}} ativas",
   "enabledCount_other": "{{count}} ativas",
-  "enabledCountPartial_one": "Pelo menos {{count}} ativa",
-  "enabledCountPartial_many": "Pelo menos {{count}} ativas",
-  "enabledCountPartial_other": "Pelo menos {{count}} ativas",
-  "enabledCountUnavailable": "Contagem de chaves ativas indisponível",
   "keyDetails": {
     "createResponseOnlySecret": "Este site fornece apenas um valor mascarado após a criação, portanto, a chave completa não pode ser vista novamente.",
     "createTime": "Criada em:",
@@ -227,6 +222,9 @@
     "ungrouped": "Sem grupo",
     "usedQuota": "Cota usada:"
   },
+  "knownTotalKeys_one": "{{count}} chave lida",
+  "knownTotalKeys_many": "{{count}} chaves lidas",
+  "knownTotalKeys_other": "{{count}} chaves lidas",
   "loadError": {
     "description": "A extensão não conseguiu carregar as chaves desta conta. A sessão pode ter expirado, as permissões podem ser insuficientes ou o site pode estar temporariamente indisponível. Entre novamente no site e tente de novo.\n\nErro: {{error}}",
     "openSite": "Abrir site",
@@ -323,12 +321,12 @@
   "noKeys": "Ainda não há dados de chaves",
   "noMatchingKeys": "Nenhuma chave correspondente encontrada",
   "oneTimeKey": {
-    "close": "Já salvei, fechar",
+    "close": "Fechar",
     "closeConfirm": {
-      "cancel": "Manter aberto",
-      "confirm": "Sair sem salvar",
-      "description": "A chave completa não estará mais disponível depois que você fechar esta caixa de diálogo.",
-      "title": "Sair sem salvar?"
+      "cancel": "Voltar para a chave",
+      "confirm": "Fechar mesmo assim",
+      "description": "Se você ainda não copiou ou salvou, volte e cuide desta chave primeiro.",
+      "title": "A chave completa não poderá ser vista novamente após fechar"
     },
     "copied": "Chave completa copiada para a área de transferência",
     "copiedAction": "Copiada",
@@ -338,19 +336,19 @@
     "subtitle": "O valor completo da chave {{name}} só é exibido após esta criação.",
     "subtitleUnnamed": "A chave completa só é exibida após esta criação.",
     "title": "Salve a chave completa agora",
-    "warningDescription": "O AIHubMix não permite visualizar a chave completa novamente. Depois de fechar esta caixa de diálogo, listas ou detalhes poderão mostrar apenas um valor mascarado.",
+    "warningDescription": "Depois de fechar esta caixa de diálogo, a extensão não poderá exibir a chave completa novamente.",
     "warningTitle": "Esta chave só pode ser visualizada uma vez"
   },
   "openRouter": {
     "delete": {
       "confirm": "Excluir chave",
-      "description": "Excluir {{name}} permanentemente do OpenRouter? Esta exclusão remota não pode ser desfeita.",
+      "description": "Excluir {{name}} permanentemente do OpenRouter? Não será possível recuperar a chave depois.",
       "feedback": {
-        "authenticationFailed": "Entre novamente e atualize.",
+        "authenticationFailed": "Atualize a OpenRouter Management API Key desta conta e depois atualize as chaves.",
         "error": "Não foi possível excluir esta chave. Atualize e tente novamente.",
         "permissionDenied": "Você não tem permissão para excluir esta chave.",
         "unavailable": "O serviço está temporariamente indisponível. Atualize antes de tentar novamente.",
-        "uncertain": "O estado remoto pode ter mudado. Atualize as chaves antes de tentar novamente."
+        "uncertain": "O estado da chave pode ter mudado. Atualize as chaves antes de decidir se deve tentar novamente."
       },
       "refresh": "Atualizar chaves",
       "title": "Excluir chave de API?"
@@ -361,12 +359,12 @@
         "save": "Salvar chave"
       },
       "feedback": {
-        "authenticationFailed": "Entre novamente nesta conta e tente de novo.",
-        "error": "Revise as configurações da chave e tente novamente.",
+        "authenticationFailed": "Atualize a OpenRouter Management API Key desta conta e tente novamente.",
+        "error": "Siga os detalhes do erro e tente novamente.",
         "permissionDenied": "Você não tem permissão para gerenciar chaves neste espaço de trabalho.",
         "title": "Não foi possível salvar a chave",
         "unavailable": "O serviço está temporariamente indisponível. Tente novamente em instantes.",
-        "uncertain": "O serviço pode ter aplicado esta alteração. Atualize antes de tentar novamente."
+        "uncertain": "O serviço pode ter aplicado esta alteração. Atualize as chaves para confirmar o estado atual antes de decidir se deve tentar novamente."
       },
       "fields": {
         "creator": {
@@ -657,18 +655,10 @@
   "showingCount_one": "Exibindo {{count}}",
   "showingCount_many": "Exibindo {{count}}",
   "showingCount_other": "Exibindo {{count}}",
-  "showingCountPartial_one": "Exibindo pelo menos {{count}}",
-  "showingCountPartial_many": "Exibindo pelo menos {{count}}",
-  "showingCountPartial_other": "Exibindo pelo menos {{count}}",
-  "showingCountUnavailable": "Contagem exibida indisponível",
   "title": "Gerenciamento de chaves",
   "totalKeys_one": "Total de {{count}} chave",
   "totalKeys_many": "Total de {{count}} chaves",
   "totalKeys_other": "Total de {{count}} chaves",
-  "totalKeysPartial_one": "Total de pelo menos {{count}} chave",
-  "totalKeysPartial_many": "Total de pelo menos {{count}} chaves",
-  "totalKeysPartial_other": "Total de pelo menos {{count}} chaves",
-  "totalKeysUnavailable": "Total indisponível",
   "unifiedApiGuidance": {
     "headerBridge": "Importe as chaves das contas para seu gateway de IA auto-hospedado e use várias chaves por meio de uma única API de IA. A exportação direta para ferramentas cliente continua sendo a opção sem gateway."
   },

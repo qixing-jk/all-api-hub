@@ -1,7 +1,6 @@
 {
   "accountSummary": {
     "keys_other": "{{count}} キー",
-    "keysUnavailable": "件数を取得できません",
     "knownKeys_other": "少なくとも {{count}} キー",
     "loadFailed": "読み込み失敗",
     "title": "アカウント概要",
@@ -31,9 +30,9 @@
     "verifyCliSupport": "CLI 対応を検証"
   },
   "allAccounts": "すべてのアカウント",
-  "allAccountsFailed_other": "{{count}} 件失敗",
+  "allAccountsFailed_other": "{{count}} 件のアカウントの読み込みに失敗したため、結果は不完全です",
   "allAccountsLoading_other": "{{count}} 件読み込み中",
-  "allAccountsProgress": "{{loaded}}/{{total}} アカウントを読み込み済み",
+  "allAccountsProgress": "{{completed}}/{{total}} アカウントを処理済み",
   "batchApiCredentialProfiles": {
     "actions": {
       "open": "API 認証情報庫に保存（{{selectedCount}}）"
@@ -132,9 +131,9 @@
     }
   },
   "batchSelection": {
-    "accountUnavailableReason": "このアカウントには一括操作に使用できるキーがありません。",
-    "eligibilityNotice_other": "一括操作の対象は、現在選択可能な {{count}} 件のキーのみです。完全なキーを取得できない項目は対象外です。",
-    "unavailableReason": "完全なキーを取得できないため、この項目は一括操作に含められません。"
+    "accountUnavailableReason": "このアカウントには一括操作に対応するキーがありません。",
+    "eligibilityNotice_other": "現在 {{count}} 件のキーが一括操作に対応しています。その他のキーは対象外です。",
+    "unavailableReason": "このキーは一括操作に対応していません。"
   },
   "createFirstKey": "最初のキーを作成",
   "description": "このページでは、すべてのアカウントの API キー情報（利用状況や有効期限を含む）を表示します。右上の「キーを追加」ボタン、または各キー項目の横にある「+」ボタンから、特定アカウント用の新しいキーを作成できます。API キーは安全に保管し、第三者へ漏洩しないようにしてください。",
@@ -188,8 +187,6 @@
     "warningTitle": "注意事項"
   },
   "enabledCount_other": "{{count}} 件有効",
-  "enabledCountPartial_other": "少なくとも {{count}} 件有効",
-  "enabledCountUnavailable": "有効件数を取得できません",
   "keyDetails": {
     "createResponseOnlySecret": "このサイトでは作成後はマスクされた値のみ提供されるため、完全なキーを再表示できません。",
     "createTime": "作成時刻:",
@@ -209,6 +206,7 @@
     "ungrouped": "グループなし",
     "usedQuota": "使用済みクォータ:"
   },
+  "knownTotalKeys_other": "{{count}} 件のキーを読み込み済み",
   "loadError": {
     "description": "このアカウントのキー一覧を取得できませんでした。ログインが失効している、権限が不足している、またはサイトが一時的に利用できない可能性があります。サイトに再ログインしてから再試行してください。\n\nエラー: {{error}}",
     "openSite": "サイトを開く",
@@ -303,12 +301,12 @@
   "noKeys": "まだキーデータがありません",
   "noMatchingKeys": "一致するキーが見つかりません",
   "oneTimeKey": {
-    "close": "保存しました。閉じる",
+    "close": "閉じる",
     "closeConfirm": {
-      "cancel": "このまま開く",
-      "confirm": "保存せずに閉じる",
-      "description": "このダイアログを閉じると、完全なキーを再び表示できなくなります。",
-      "title": "保存せずに閉じますか？"
+      "cancel": "キーの確認に戻る",
+      "confirm": "そのまま閉じる",
+      "description": "まだコピーまたは保存していない場合は、戻ってこのキーを先に処理してください。",
+      "title": "閉じると完全なキーを再表示できません"
     },
     "copied": "完全なキーをクリップボードにコピーしました",
     "copiedAction": "コピー済み",
@@ -318,19 +316,19 @@
     "subtitle": "キー {{name}} の完全な値は、この作成直後にのみ表示されます。",
     "subtitleUnnamed": "完全なキーは、この作成直後にのみ表示されます。",
     "title": "完全なキーを今すぐ保存してください",
-    "warningDescription": "このキーを完全な形で確認できるのは今だけです。このダイアログを閉じると、一覧や詳細にはマスクされた値だけが表示される場合があります。",
+    "warningDescription": "このダイアログを閉じると、拡張機能で完全なキーを再表示できません。",
     "warningTitle": "このキーは一度だけ表示できます"
   },
   "openRouter": {
     "delete": {
       "confirm": "キーを削除",
-      "description": "OpenRouter から {{name}} を完全に削除しますか？このリモート削除は元に戻せません。",
+      "description": "OpenRouter から {{name}} を完全に削除しますか？削除後は復元できません。",
       "feedback": {
-        "authenticationFailed": "再度サインインしてから更新してください。",
+        "authenticationFailed": "このアカウントの OpenRouter Management API Key を更新してから、キーを更新してください。",
         "error": "このキーを削除できませんでした。更新してから再試行してください。",
         "permissionDenied": "このキーを削除する権限がありません。",
         "unavailable": "サービスは一時的に利用できません。再試行前に更新してください。",
-        "uncertain": "リモートの状態が変わった可能性があります。再試行前にキーを更新してください。"
+        "uncertain": "キーの状態が変わった可能性があります。キーを更新してから、再試行するか判断してください。"
       },
       "refresh": "キーを更新",
       "title": "API キーを削除しますか？"
@@ -341,12 +339,12 @@
         "save": "キーを保存"
       },
       "feedback": {
-        "authenticationFailed": "このアカウントに再度サインインしてからお試しください。",
-        "error": "キーの設定を確認して、もう一度お試しください。",
+        "authenticationFailed": "このアカウントの OpenRouter Management API Key を更新してから再試行してください。",
+        "error": "エラーの詳細に従って対処してから再試行してください。",
         "permissionDenied": "このワークスペースでキーを管理する権限がありません。",
         "title": "キーを保存できませんでした",
         "unavailable": "サービスは一時的に利用できません。しばらくしてからお試しください。",
-        "uncertain": "サービスが変更を適用した可能性があります。再試行前に更新してください。"
+        "uncertain": "サービスが変更を適用した可能性があります。キーを更新して現在の状態を確認してから、再試行するか判断してください。"
       },
       "fields": {
         "creator": {
@@ -623,12 +621,8 @@
     "singleton": "サービスキー"
   },
   "showingCount_other": "{{count}} 件を表示中",
-  "showingCountPartial_other": "少なくとも {{count}} 件を表示中",
-  "showingCountUnavailable": "表示件数を取得できません",
   "title": "キー管理",
   "totalKeys_other": "合計 {{count}} キー",
-  "totalKeysPartial_other": "合計少なくとも {{count}} キー",
-  "totalKeysUnavailable": "合計件数を取得できません",
   "unifiedApiGuidance": {
     "headerBridge": "アカウントキーをセルフホスト AI ゲートウェイへ簡単に取り込むと、複数のキーを 1 つの AI API から利用できます。クライアントツールへの直接エクスポートはゲートウェイを使わない方法です。"
   },

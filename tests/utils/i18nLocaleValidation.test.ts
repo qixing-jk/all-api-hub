@@ -300,18 +300,19 @@ function mayContainStaticTranslationReference(sourceText: string) {
 }
 
 describe("i18n locale validation", () => {
-  it("keeps incomplete key-count copy available in every locale", async () => {
-    const requiredExactKeys = [
-      "accountSummary.keysUnavailable",
-      "totalKeysUnavailable",
-      "enabledCountUnavailable",
-      "showingCountUnavailable",
-    ]
+  it("keeps partial inventory copy available without partial visible-count copy", async () => {
     const requiredPluralFamilies = [
       "accountSummary.knownKeys",
+      "knownTotalKeys",
+    ]
+    const removedCountFamilies = [
+      "accountSummary.keysUnavailable",
       "totalKeysPartial",
+      "totalKeysUnavailable",
       "enabledCountPartial",
+      "enabledCountUnavailable",
       "showingCountPartial",
+      "showingCountUnavailable",
     ]
 
     for (const language of SUPPORTED_UI_LANGUAGES) {
@@ -323,9 +324,6 @@ describe("i18n locale validation", () => {
       ) as Record<string, unknown>
       const flat = flattenLocaleEntries(resource)
 
-      for (const key of requiredExactKeys) {
-        expect(flat[key], `${language}:${key}`).toEqual(expect.any(String))
-      }
       for (const family of requiredPluralFamilies) {
         expect(
           Object.entries(flat).some(
@@ -337,6 +335,16 @@ describe("i18n locale validation", () => {
           `${language}:${family}`,
         ).toBe(true)
       }
+      for (const family of removedCountFamilies) {
+        expect(
+          Object.keys(flat).some(
+            (key) => key === family || key.startsWith(`${family}_`),
+          ),
+          `${language}:${family}`,
+        ).toBe(false)
+      }
+      expect(flat.allAccountsProgress, language).toContain("{{completed}}")
+      expect(flat.allAccountsProgress, language).not.toContain("{{loaded}}")
     }
   })
 

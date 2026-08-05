@@ -48,7 +48,7 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
     expect(onRetryFailedAccounts).toHaveBeenCalledTimes(1)
   })
 
-  it("renders known aggregate counts as partial when an included inventory is unknown", async () => {
+  it("keeps the visible count exact while describing known inventory once", async () => {
     render(
       <AccountSelectorPanel
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
@@ -68,14 +68,15 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
     )
 
     expect(
-      await screen.findByText(/keyManagement:totalKeysPartial/),
+      await screen.findByText(/keyManagement:knownTotalKeys/),
     ).toBeVisible()
-    expect(screen.getByText(/keyManagement:enabledCountPartial/)).toBeVisible()
-    expect(screen.getByText(/keyManagement:showingCountPartial/)).toBeVisible()
+    expect(screen.getByText(/keyManagement:showingCount/)).toBeVisible()
+    expect(screen.queryByText(/keyManagement:enabledCountPartial/)).toBeNull()
+    expect(screen.queryByText(/keyManagement:showingCountPartial/)).toBeNull()
     expect(screen.queryByText(/keyManagement:totalKeys$/)).toBeNull()
   })
 
-  it("renders aggregate counts as unavailable when no rows are known", async () => {
+  it("omits unavailable inventory metrics when no rows are known", async () => {
     render(
       <AccountSelectorPanel
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
@@ -94,14 +95,51 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
       />,
     )
 
+    expect(await screen.findByText(/keyManagement:showingCount/)).toBeVisible()
+    expect(screen.queryByText(/keyManagement:totalKeysUnavailable/)).toBeNull()
     expect(
-      await screen.findByText(/keyManagement:totalKeysUnavailable/),
-    ).toBeVisible()
+      screen.queryByText(/keyManagement:enabledCountUnavailable/),
+    ).toBeNull()
     expect(
-      screen.getByText(/keyManagement:enabledCountUnavailable/),
-    ).toBeVisible()
+      screen.queryByText(/keyManagement:showingCountUnavailable/),
+    ).toBeNull()
+  })
+
+  it("shows account progress only while an account is still loading", async () => {
+    const baseProps = {
+      selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      setSelectedAccount: vi.fn(),
+      displayData: [createAccount({ id: "acc-a", name: "Account A" })] as any,
+      tokens: [],
+      filteredTokens: [],
+      failedAccounts: [
+        {
+          accountId: "acc-b",
+          accountName: "Account B",
+          errorMessage: "boom",
+        },
+      ],
+    }
+    const { unmount } = render(
+      <AccountSelectorPanel
+        {...baseProps}
+        tokenLoadProgress={{ total: 2, loaded: 1, loading: 0, error: 1 }}
+      />,
+    )
+
+    await screen.findByText(/keyManagement:selectAccount/)
+    expect(screen.queryByText(/keyManagement:allAccountsProgress/)).toBeNull()
+
+    unmount()
+    render(
+      <AccountSelectorPanel
+        {...baseProps}
+        tokenLoadProgress={{ total: 3, loaded: 1, loading: 1, error: 1 }}
+      />,
+    )
+
     expect(
-      screen.getByText(/keyManagement:showingCountUnavailable/),
+      await screen.findByText(/keyManagement:allAccountsProgress/),
     ).toBeVisible()
   })
 })

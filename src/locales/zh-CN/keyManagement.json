@@ -1,7 +1,6 @@
 {
   "accountSummary": {
     "keys": "{{count}} 个密钥",
-    "keysUnavailable": "数量暂不可用",
     "knownKeys": "至少 {{count}} 个密钥",
     "loadFailed": "加载失败",
     "title": "账号概览",
@@ -31,9 +30,9 @@
     "verifyCliSupport": "验证 CLI 兼容性"
   },
   "allAccounts": "所有账号",
-  "allAccountsFailed": "{{count}} 个失败",
+  "allAccountsFailed": "{{count}} 个账号加载失败，结果不完整",
   "allAccountsLoading": "{{count}} 个加载中",
-  "allAccountsProgress": "已加载 {{loaded}}/{{total}} 个账号",
+  "allAccountsProgress": "已处理 {{completed}}/{{total}} 个账号",
   "batchApiCredentialProfiles": {
     "actions": {
       "open": "保存到 API 凭据库（{{selectedCount}}）"
@@ -132,9 +131,9 @@
     }
   },
   "batchSelection": {
-    "accountUnavailableReason": "该账号没有可参与批量操作的密钥。",
-    "eligibilityNotice": "批量操作仅适用于当前 {{count}} 个可选择的密钥；无法读取完整密钥的项目不会参与。",
-    "unavailableReason": "无法读取完整密钥，因此该项目不能参与批量操作。"
+    "accountUnavailableReason": "该账号没有支持批量操作的密钥。",
+    "eligibilityNotice": "当前有 {{count}} 个密钥支持批量操作；其他密钥不会参与。",
+    "unavailableReason": "此密钥不支持批量操作。"
   },
   "createFirstKey": "创建第一个密钥",
   "description": "此页面显示所有账号的 API 密钥信息，包括使用情况和过期时间。可以通过右上角的\"添加密钥\"按钮或点击各密钥项目旁的\"+\"按钮为指定账号创建新密钥。请妥善保管您的 API 密钥，避免泄露给他人",
@@ -188,8 +187,6 @@
     "warningTitle": "注意事项"
   },
   "enabledCount": "启用 {{count}} 个",
-  "enabledCountPartial": "至少启用 {{count}} 个",
-  "enabledCountUnavailable": "启用数量暂不可用",
   "keyDetails": {
     "createResponseOnlySecret": "该站点创建后仅提供密钥掩码，因此无法再次查看完整密钥。",
     "createTime": "创建时间：",
@@ -209,6 +206,7 @@
     "ungrouped": "未分组",
     "usedQuota": "已用额度："
   },
+  "knownTotalKeys": "已读取 {{count}} 个密钥",
   "loadError": {
     "description": "未能读取当前账号的密钥列表。可能是登录已失效、权限不足，或站点暂时不可访问。请先重新登录站点后再重试。\n\n错误信息：{{error}}",
     "openSite": "打开站点",
@@ -303,12 +301,12 @@
   "noKeys": "暂无密钥数据",
   "noMatchingKeys": "没有找到匹配的密钥",
   "oneTimeKey": {
-    "close": "我已保存，关闭",
+    "close": "关闭",
     "closeConfirm": {
-      "cancel": "继续保留",
-      "confirm": "不保存就离开",
-      "description": "关闭此对话框后，将无法再次查看完整密钥。",
-      "title": "不保存就离开？"
+      "cancel": "返回查看密钥",
+      "confirm": "仍然关闭",
+      "description": "如果尚未复制或保存，请先返回处理此密钥。",
+      "title": "关闭后将无法再次查看完整密钥"
     },
     "copied": "完整密钥已复制到剪贴板",
     "copiedAction": "已复制",
@@ -318,19 +316,19 @@
     "subtitle": "密钥 {{name}} 的完整值只会在本次创建后显示。",
     "subtitleUnnamed": "完整密钥只会在本次创建后显示。",
     "title": "立即保存完整密钥",
-    "warningDescription": "此密钥仅能在当前完整查看。关闭此弹窗后，后续列表或详情可能只显示脱敏值。",
+    "warningDescription": "关闭此对话框后，扩展将无法再次显示完整密钥。",
     "warningTitle": "该密钥只能查看一次"
   },
   "openRouter": {
     "delete": {
       "confirm": "删除密钥",
-      "description": "要从 OpenRouter 永久删除 {{name}} 吗？此远程删除无法撤销。",
+      "description": "要从 OpenRouter 永久删除 {{name}} 吗？删除后无法恢复。",
       "feedback": {
-        "authenticationFailed": "请重新登录后刷新。",
+        "authenticationFailed": "请更新此账号的 OpenRouter Management API Key，然后刷新。",
         "error": "无法删除此密钥。请刷新后再试。",
-        "permissionDenied": "您没有删除此密钥的权限。",
+        "permissionDenied": "你没有删除此密钥的权限。",
         "unavailable": "服务暂时不可用，请刷新后再试。",
-        "uncertain": "远程状态可能已变化。请先刷新密钥，再决定是否重试。"
+        "uncertain": "密钥状态可能已变化。请先刷新密钥，再决定是否重试。"
       },
       "refresh": "刷新密钥",
       "title": "删除 API 密钥？"
@@ -341,12 +339,12 @@
         "save": "保存密钥"
       },
       "feedback": {
-        "authenticationFailed": "请重新登录此账号后重试。",
-        "error": "请检查密钥设置后重试。",
+        "authenticationFailed": "请更新此账号的 OpenRouter Management API Key，然后重试。",
+        "error": "请根据错误信息处理后重试。",
         "permissionDenied": "你没有在此工作区管理密钥的权限。",
         "title": "无法保存密钥",
         "unavailable": "服务暂时不可用，请稍后重试。",
-        "uncertain": "服务可能已应用此更改，请刷新后再试。"
+        "uncertain": "服务可能已应用此更改。请先刷新密钥确认当前状态，再决定是否重试。"
       },
       "fields": {
         "creator": {
@@ -428,7 +426,7 @@
       "sections": {
         "advanced": "高级设置",
         "basic": "基本信息",
-        "lifecycle": "生命周期",
+        "lifecycle": "有效期与状态",
         "spending": "用量限制"
       },
       "summary": "API 密钥设置",
@@ -472,7 +470,7 @@
         "byokUsageWeekly": "每周 BYOK 用量",
         "createdAt": "创建时间",
         "creator": "创建者",
-        "disabled": "已禁用",
+        "disabled": "已停用",
         "expiresAt": "过期时间",
         "includeByokInLimit": "计入 BYOK 用量",
         "limit": "限额",
@@ -623,12 +621,8 @@
     "singleton": "服务密钥"
   },
   "showingCount": "显示 {{count}} 个",
-  "showingCountPartial": "显示至少 {{count}} 个",
-  "showingCountUnavailable": "显示数量暂不可用",
   "title": "密钥管理",
   "totalKeys": "总计 {{count}} 个密钥",
-  "totalKeysPartial": "总计至少 {{count}} 个密钥",
-  "totalKeysUnavailable": "总数暂不可用",
   "unifiedApiGuidance": {
     "headerBridge": "将账号 Key 一键导入自建 AI 网关后，多个 Key 即可通过同一个 AI API 使用；直接导出到客户端工具仍是免网关路径。"
   },

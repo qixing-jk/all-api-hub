@@ -705,7 +705,7 @@ export default function KeyManagement(props: {
     }
     const itemByAccount = new Map<string, KeyManagementAccountSummaryItem>(
       accountSummaryItems.map((item) => {
-        const countIsUnknown = item.errorType === "load-failed"
+        const countIsUnknown = item.errorType !== undefined
         return [
           item.accountId,
           {

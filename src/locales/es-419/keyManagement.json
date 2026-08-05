@@ -3,7 +3,6 @@
     "keys_one": "{{count}} clave",
     "keys_many": "{{count}} claves",
     "keys_other": "{{count}} claves",
-    "keysUnavailable": "Cantidad no disponible",
     "knownKeys_one": "Al menos {{count}} clave",
     "knownKeys_many": "Al menos {{count}} claves",
     "knownKeys_other": "Al menos {{count}} claves",
@@ -35,13 +34,13 @@
     "verifyCliSupport": "Verificar compatibilidad con CLI"
   },
   "allAccounts": "Todas las cuentas",
-  "allAccountsFailed_one": "{{count}} fallida",
-  "allAccountsFailed_many": "{{count}} fallidas",
-  "allAccountsFailed_other": "{{count}} fallidas",
+  "allAccountsFailed_one": "No se pudo cargar {{count}} cuenta; los resultados están incompletos",
+  "allAccountsFailed_many": "No se pudieron cargar {{count}} cuentas; los resultados están incompletos",
+  "allAccountsFailed_other": "No se pudieron cargar {{count}} cuentas; los resultados están incompletos",
   "allAccountsLoading_one": "{{count}} cargando",
   "allAccountsLoading_many": "{{count}} cargando",
   "allAccountsLoading_other": "{{count}} cargando",
-  "allAccountsProgress": "{{loaded}}/{{total}} cuentas cargadas",
+  "allAccountsProgress": "{{completed}}/{{total}} cuentas procesadas",
   "batchApiCredentialProfiles": {
     "actions": {
       "open": "Guardar en biblioteca de credenciales API ({{selectedCount}})"
@@ -142,11 +141,11 @@
     }
   },
   "batchSelection": {
-    "accountUnavailableReason": "Esta cuenta no tiene claves disponibles para acciones por lotes.",
-    "eligibilityNotice_one": "Las acciones por lotes solo se aplican a la {{count}} clave seleccionable; se excluyen los elementos cuya clave completa no se puede recuperar.",
-    "eligibilityNotice_many": "Las acciones por lotes solo se aplican a las {{count}} claves seleccionables; se excluyen los elementos cuya clave completa no se puede recuperar.",
-    "eligibilityNotice_other": "Las acciones por lotes solo se aplican a las {{count}} claves seleccionables; se excluyen los elementos cuya clave completa no se puede recuperar.",
-    "unavailableReason": "No se puede recuperar la clave completa, por lo que este elemento no puede participar en acciones por lotes."
+    "accountUnavailableReason": "Esta cuenta no tiene claves compatibles con acciones por lotes.",
+    "eligibilityNotice_one": "Actualmente, {{count}} clave admite acciones por lotes; las demás no se incluirán.",
+    "eligibilityNotice_many": "Actualmente, {{count}} claves admiten acciones por lotes; las demás no se incluirán.",
+    "eligibilityNotice_other": "Actualmente, {{count}} claves admiten acciones por lotes; las demás no se incluirán.",
+    "unavailableReason": "Esta clave no admite acciones por lotes."
   },
   "createFirstKey": "Crear primera clave",
   "description": "Esta página muestra información de claves API para todas las cuentas, incluido el uso y la fecha de expiración. Puedes crear claves nuevas para cuentas específicas haciendo clic en el botón 'Agregar clave' en la esquina superior derecha o en el botón '+' junto a cada elemento de clave. Mantén tus claves API seguras y evita filtrarlas a otras personas",
@@ -204,10 +203,6 @@
   "enabledCount_one": "{{count}} habilitada",
   "enabledCount_many": "{{count}} habilitadas",
   "enabledCount_other": "{{count}} habilitadas",
-  "enabledCountPartial_one": "Al menos {{count}} habilitada",
-  "enabledCountPartial_many": "Al menos {{count}} habilitadas",
-  "enabledCountPartial_other": "Al menos {{count}} habilitadas",
-  "enabledCountUnavailable": "Cantidad habilitada no disponible",
   "keyDetails": {
     "createResponseOnlySecret": "Este sitio solo proporciona un valor oculto después de la creación, por lo que la clave completa no puede volver a verse.",
     "createTime": "Hora de creación:",
@@ -227,6 +222,9 @@
     "ungrouped": "Sin grupo",
     "usedQuota": "Cuota usada:"
   },
+  "knownTotalKeys_one": "{{count}} clave leída",
+  "knownTotalKeys_many": "{{count}} claves leídas",
+  "knownTotalKeys_other": "{{count}} claves leídas",
   "loadError": {
     "description": "La extensión no pudo cargar las claves de esta cuenta. Es posible que la sesión haya expirado, que los permisos sean insuficientes o que el sitio no esté disponible temporalmente. Inicia sesión de nuevo en el sitio y vuelve a intentar.\n\nError: {{error}}",
     "openSite": "Abrir sitio",
@@ -323,12 +321,12 @@
   "noKeys": "Aún no hay datos de claves",
   "noMatchingKeys": "No se encontraron claves coincidentes",
   "oneTimeKey": {
-    "close": "Ya la guardé, cerrar",
+    "close": "Cerrar",
     "closeConfirm": {
-      "cancel": "Mantener abierto",
-      "confirm": "Salir sin guardar",
-      "description": "No podrás volver a ver la clave completa después de cerrar este diálogo.",
-      "title": "¿Salir sin guardar?"
+      "cancel": "Volver a la clave",
+      "confirm": "Cerrar de todos modos",
+      "description": "Si aún no la copiaste o guardaste, vuelve y procesa primero esta clave.",
+      "title": "No podrás volver a ver la clave completa después de cerrar"
     },
     "copied": "Clave completa copiada al portapapeles",
     "copiedAction": "Copiada",
@@ -338,19 +336,19 @@
     "subtitle": "El valor completo de la clave {{name}} solo se muestra después de esta creación.",
     "subtitleUnnamed": "La clave completa solo se muestra después de esta creación.",
     "title": "Guarda la clave completa ahora",
-    "warningDescription": "Esta es la única vez que puedes ver la clave completa. Después de cerrar este diálogo, las listas o los detalles pueden mostrar solo un valor enmascarado.",
+    "warningDescription": "Después de cerrar este diálogo, la extensión no podrá volver a mostrar la clave completa.",
     "warningTitle": "Esta clave solo se puede ver una vez"
   },
   "openRouter": {
     "delete": {
       "confirm": "Eliminar clave",
-      "description": "¿Eliminar {{name}} de OpenRouter permanentemente? Esta eliminación remota no se puede deshacer.",
+      "description": "¿Eliminar {{name}} de OpenRouter permanentemente? No se podrá recuperar después.",
       "feedback": {
-        "authenticationFailed": "Vuelve a iniciar sesión y actualiza.",
+        "authenticationFailed": "Actualiza la OpenRouter Management API Key de esta cuenta y luego actualiza las claves.",
         "error": "No se pudo eliminar esta clave. Actualiza e inténtalo de nuevo.",
         "permissionDenied": "No tienes permiso para eliminar esta clave.",
         "unavailable": "El servicio no está disponible temporalmente. Actualiza antes de volver a intentarlo.",
-        "uncertain": "El estado remoto puede haber cambiado. Actualiza las claves antes de volver a intentarlo."
+        "uncertain": "El estado de la clave puede haber cambiado. Actualiza las claves antes de decidir si vuelves a intentarlo."
       },
       "refresh": "Actualizar claves",
       "title": "¿Eliminar clave API?"
@@ -361,12 +359,12 @@
         "save": "Guardar clave"
       },
       "feedback": {
-        "authenticationFailed": "Vuelve a iniciar sesión en esta cuenta e inténtalo de nuevo.",
-        "error": "Revisa la configuración de la clave e inténtalo de nuevo.",
+        "authenticationFailed": "Actualiza la OpenRouter Management API Key de esta cuenta y vuelve a intentarlo.",
+        "error": "Sigue los detalles del error y vuelve a intentarlo.",
         "permissionDenied": "No tienes permiso para administrar claves en este espacio de trabajo.",
         "title": "No se pudo guardar la clave",
         "unavailable": "El servicio no está disponible temporalmente. Inténtalo pronto.",
-        "uncertain": "El servicio pudo haber aplicado este cambio. Actualiza antes de volver a intentarlo."
+        "uncertain": "El servicio pudo haber aplicado este cambio. Actualiza las claves para confirmar el estado actual antes de decidir si vuelves a intentarlo."
       },
       "fields": {
         "creator": {
@@ -657,18 +655,10 @@
   "showingCount_one": "Mostrando {{count}}",
   "showingCount_many": "Mostrando {{count}}",
   "showingCount_other": "Mostrando {{count}}",
-  "showingCountPartial_one": "Mostrando al menos {{count}}",
-  "showingCountPartial_many": "Mostrando al menos {{count}}",
-  "showingCountPartial_other": "Mostrando al menos {{count}}",
-  "showingCountUnavailable": "Cantidad mostrada no disponible",
   "title": "Administración de claves",
   "totalKeys_one": "Total {{count}} clave",
   "totalKeys_many": "Total {{count}} claves",
   "totalKeys_other": "Total {{count}} claves",
-  "totalKeysPartial_one": "Total de al menos {{count}} clave",
-  "totalKeysPartial_many": "Total de al menos {{count}} claves",
-  "totalKeysPartial_other": "Total de al menos {{count}} claves",
-  "totalKeysUnavailable": "Total no disponible",
   "unifiedApiGuidance": {
     "headerBridge": "Cuando quieras que el AI gateway autohospedado reúna varias claves en una AI API unificada, importa claves de cuenta como canales del gateway. La exportación directa a herramientas cliente sigue siendo una ruta independiente."
   },

@@ -1,7 +1,6 @@
 {
   "accountSummary": {
     "keys_other": "{{count}} key",
-    "keysUnavailable": "Không thể xác định số lượng",
     "knownKeys_other": "Ít nhất {{count}} key",
     "loadFailed": "Tải thất bại",
     "title": "Tổng quan tài khoản",
@@ -31,9 +30,9 @@
     "verifyCliSupport": "Xác minh tính tương thích CLI"
   },
   "allAccounts": "Tất cả tài khoản",
-  "allAccountsFailed_other": "{{count}} thất bại",
+  "allAccountsFailed_other": "Không thể tải {{count}} tài khoản; kết quả chưa đầy đủ",
   "allAccountsLoading_other": "{{count}} đang tải",
-  "allAccountsProgress": "Đã tải {{loaded}}/{{total}} tài khoản",
+  "allAccountsProgress": "Đã xử lý {{completed}}/{{total}} tài khoản",
   "batchApiCredentialProfiles": {
     "actions": {
       "open": "Lưu vào thư viện thông tin xác thực API ({{selectedCount}})"
@@ -132,9 +131,9 @@
     }
   },
   "batchSelection": {
-    "accountUnavailableReason": "Tài khoản này không có khóa nào có thể dùng cho thao tác hàng loạt.",
-    "eligibilityNotice_other": "Thao tác hàng loạt chỉ áp dụng cho {{count}} khóa có thể chọn; các mục không thể truy xuất khóa đầy đủ sẽ không được áp dụng.",
-    "unavailableReason": "Không thể truy xuất khóa đầy đủ, vì vậy mục này không thể tham gia thao tác hàng loạt."
+    "accountUnavailableReason": "Tài khoản này không có khóa nào hỗ trợ thao tác hàng loạt.",
+    "eligibilityNotice_other": "Hiện có {{count}} khóa hỗ trợ thao tác hàng loạt; các khóa khác sẽ không được áp dụng.",
+    "unavailableReason": "Khóa này không hỗ trợ thao tác hàng loạt."
   },
   "createFirstKey": "Tạo khóa đầu tiên",
   "description": "Trang này hiển thị thông tin khóa API của tất cả tài khoản, bao gồm mức sử dụng và thời gian hết hạn. Bạn có thể tạo khóa mới cho một tài khoản cụ thể thông qua nút \"Thêm khóa API\" ở góc trên bên phải hoặc nhấp vào nút \"+\" bên cạnh mỗi mục khóa. Vui lòng bảo quản an toàn khóa API của bạn để tránh rò rỉ cho người khác.",
@@ -188,8 +187,6 @@
     "warningTitle": "Lưu ý"
   },
   "enabledCount_other": "Đã bật {{count}}",
-  "enabledCountPartial_other": "Đã bật ít nhất {{count}}",
-  "enabledCountUnavailable": "Không thể xác định số lượng đã bật",
   "keyDetails": {
     "createResponseOnlySecret": "Trang web này chỉ cung cấp giá trị đã che sau khi tạo, nên không thể xem lại khóa đầy đủ.",
     "createTime": "Thời gian tạo:",
@@ -209,6 +206,7 @@
     "ungrouped": "Chưa phân nhóm",
     "usedQuota": "Hạn ngạch đã dùng:"
   },
+  "knownTotalKeys_other": "Đã đọc {{count}} khóa",
   "loadError": {
     "description": "Không thể đọc danh sách khóa của tài khoản hiện tại. Có thể phiên đăng nhập đã hết hạn, không đủ quyền hoặc trang web tạm thời không thể truy cập. Vui lòng đăng nhập lại vào trang web trước khi thử lại.\n\nThông báo lỗi: {{error}}",
     "openSite": "Mở trang web",
@@ -303,12 +301,12 @@
   "noKeys": "Chưa có dữ liệu khóa",
   "noMatchingKeys": "Không tìm thấy khóa khớp",
   "oneTimeKey": {
-    "close": "Tôi đã lưu, đóng",
+    "close": "Đóng",
     "closeConfirm": {
-      "cancel": "Giữ hộp thoại mở",
-      "confirm": "Rời đi mà không lưu",
-      "description": "Bạn sẽ không thể xem lại khóa đầy đủ sau khi đóng hộp thoại này.",
-      "title": "Rời đi mà không lưu?"
+      "cancel": "Quay lại xem khóa",
+      "confirm": "Vẫn đóng",
+      "description": "Nếu chưa sao chép hoặc lưu, hãy quay lại và xử lý khóa này trước.",
+      "title": "Không thể xem lại khóa đầy đủ sau khi đóng"
     },
     "copied": "Khóa đầy đủ đã được sao chép vào clipboard",
     "copiedAction": "Đã sao chép",
@@ -318,19 +316,19 @@
     "subtitle": "Giá trị đầy đủ của khóa {{name}} sẽ chỉ hiển thị sau lần tạo này.",
     "subtitleUnnamed": "Khóa đầy đủ sẽ chỉ hiển thị sau lần tạo này.",
     "title": "Lưu khóa đầy đủ ngay lập tức",
-    "warningDescription": "Bạn chỉ có thể xem đầy đủ khóa này ngay lúc này. Sau khi đóng hộp thoại, danh sách hoặc chi tiết có thể chỉ hiển thị giá trị đã che.",
+    "warningDescription": "Sau khi đóng hộp thoại này, tiện ích sẽ không thể hiển thị lại khóa đầy đủ.",
     "warningTitle": "Khóa này chỉ có thể được xem một lần"
   },
   "openRouter": {
     "delete": {
       "confirm": "Xóa khóa",
-      "description": "Xóa vĩnh viễn {{name}} khỏi OpenRouter? Không thể hoàn tác thao tác xóa từ xa này.",
+      "description": "Xóa vĩnh viễn {{name}} khỏi OpenRouter? Không thể khôi phục sau khi xóa.",
       "feedback": {
-        "authenticationFailed": "Đăng nhập lại rồi làm mới.",
+        "authenticationFailed": "Cập nhật OpenRouter Management API Key của tài khoản này rồi làm mới khóa.",
         "error": "Không thể xóa khóa này. Hãy làm mới rồi thử lại.",
         "permissionDenied": "Bạn không có quyền xóa khóa này.",
         "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy làm mới trước khi thử lại.",
-        "uncertain": "Trạng thái từ xa có thể đã thay đổi. Hãy làm mới khóa trước khi thử lại."
+        "uncertain": "Trạng thái khóa có thể đã thay đổi. Hãy làm mới khóa trước khi quyết định có thử lại hay không."
       },
       "refresh": "Làm mới khóa",
       "title": "Xóa khóa API?"
@@ -341,12 +339,12 @@
         "save": "Lưu khóa"
       },
       "feedback": {
-        "authenticationFailed": "Đăng nhập lại tài khoản này rồi thử lại.",
-        "error": "Kiểm tra cài đặt khóa rồi thử lại.",
+        "authenticationFailed": "Cập nhật OpenRouter Management API Key của tài khoản này rồi thử lại.",
+        "error": "Làm theo chi tiết lỗi rồi thử lại.",
         "permissionDenied": "Bạn không có quyền quản lý khóa trong không gian làm việc này.",
         "title": "Không thể lưu khóa",
         "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy thử lại sau.",
-        "uncertain": "Dịch vụ có thể đã áp dụng thay đổi này. Hãy làm mới trước khi thử lại."
+        "uncertain": "Dịch vụ có thể đã áp dụng thay đổi này. Hãy làm mới khóa để xác nhận trạng thái hiện tại trước khi quyết định có thử lại hay không."
       },
       "fields": {
         "creator": {
@@ -623,12 +621,8 @@
     "singleton": "Khóa dịch vụ"
   },
   "showingCount_other": "Đang hiển thị {{count}}",
-  "showingCountPartial_other": "Đang hiển thị ít nhất {{count}}",
-  "showingCountUnavailable": "Không thể xác định số lượng đang hiển thị",
   "title": "Quản lý khóa",
   "totalKeys_other": "Tổng cộng {{count}} key",
-  "totalKeysPartial_other": "Tổng cộng ít nhất {{count}} key",
-  "totalKeysUnavailable": "Không thể xác định tổng số",
   "unifiedApiGuidance": {
     "headerBridge": "Khi muốn AI gateway tự triển khai tổng hợp nhiều key thành một AI API thống nhất, hãy nhập key tài khoản làm kênh gateway. Xuất trực tiếp sang công cụ client vẫn là một đường riêng."
   },
