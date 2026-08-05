@@ -2155,7 +2155,7 @@ describe("useAccountKeyResourceController", () => {
     })
   })
 
-  it("edits a native key from all-account mode without changing the selected account", async () => {
+  it("keeps an updated native key visible while all-account refresh settles", async () => {
     const facts = {
       ...createFacts("scope-native", "key-native"),
       ref: {
@@ -2163,14 +2163,19 @@ describe("useAccountKeyResourceController", () => {
         accountId: "account-native",
       },
     }
+    const updatedFacts = { ...facts, displayName: "Renamed key" }
+    const refreshedList = deferred<{ items: (typeof updatedFacts)[] }>()
     const editor = {
       fields: [],
       initialValues: { name: "Example key" },
       validate: vi.fn().mockReturnValue({ valid: true }),
-      submit: vi.fn().mockResolvedValue({ facts }),
+      submit: vi.fn().mockResolvedValue({ facts: updatedFacts }),
     }
     const collection = {
-      list: vi.fn().mockResolvedValue({ items: [facts] }),
+      list: vi
+        .fn()
+        .mockResolvedValueOnce({ items: [facts] })
+        .mockImplementationOnce(() => refreshedList.promise),
       openEditEditor: vi.fn().mockResolvedValue(editor),
       delete: vi.fn(),
     }
@@ -2202,11 +2207,23 @@ describe("useAccountKeyResourceController", () => {
     await act(async () => result.current.openEdit(facts.ref))
     expect(result.current.editor?.mode).toBe("edit")
 
-    await act(async () => {
-      await result.current.submitEditor(result.current.editor!.editorId, {
-        name: "Renamed key",
-      })
+    let submitPromise: Promise<unknown> | undefined
+    act(() => {
+      submitPromise = result.current.submitEditor(
+        result.current.editor!.editorId,
+        {
+          name: "Renamed key",
+        },
+      )
     })
+    await waitFor(() => expect(result.current.isLoading).toBe(true))
+    expect(result.current.rows).toEqual([updatedFacts])
+
+    await act(async () => {
+      refreshedList.resolve({ items: [updatedFacts] })
+      await submitPromise
+    })
+    expect(result.current.rows).toEqual([updatedFacts])
 
     expect(editor.submit).toHaveBeenCalledTimes(1)
     expect(openCollection).toHaveBeenCalledWith(

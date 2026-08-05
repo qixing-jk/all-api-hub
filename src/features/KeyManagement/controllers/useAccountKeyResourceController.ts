@@ -516,6 +516,8 @@ export function useAccountKeyResourceController({
   const [acceptedRows, setAcceptedRows] = useState<
     readonly AccountKeyResourceFacts[]
   >([])
+  const acceptedRowsRef = useRef(acceptedRows)
+  acceptedRowsRef.current = acceptedRows
   const [failures, setFailures] = useState<Record<string, ResourceFailure>>({})
   const [scopeInventoryFailure, setScopeInventoryFailure] =
     useState<ResourceFailure | null>(null)
@@ -658,6 +660,14 @@ export function useAccountKeyResourceController({
     editorOpeningRef.current = next
     setEditorOpening(next)
   }, [])
+
+  const replaceAcceptedRows = useCallback(
+    (next: readonly AccountKeyResourceFacts[]) => {
+      acceptedRowsRef.current = next
+      setAcceptedRows(next)
+    },
+    [],
+  )
 
   const requireFreshRead = useCallback((boundary: ActiveResourceBoundary) => {
     const identity = boundaryIdentity(boundary)
@@ -922,6 +932,7 @@ export function useAccountKeyResourceController({
       options: {
         preserveCreatedSecret?: boolean
         preserveEditor?: boolean
+        preserveRows?: boolean
         targetScopeKey?: string
         routeTransitionId?: string
       } = {},
@@ -981,7 +992,7 @@ export function useAccountKeyResourceController({
       setScopes([])
       setSelectedScope(null)
       setLoadingResourceBoundary(null)
-      setAcceptedRows([])
+      if (!options.preserveRows || mode === "idle") replaceAcceptedRows([])
       setFailures({})
       setScopeInventoryFailure(null)
       setSettledAccountIds([])
@@ -1027,6 +1038,12 @@ export function useAccountKeyResourceController({
             string,
             readonly AccountKeyResourceFacts[]
           >()
+          if (options.preserveRows) {
+            for (const row of acceptedRowsRef.current) {
+              const rows = rowsByAccount.get(row.ref.accountId) ?? []
+              rowsByAccount.set(row.ref.accountId, [...rows, row])
+            }
+          }
           const settledAccounts = new Set<string>()
           const acceptAccountResult = (
             account: DisplaySiteData,
@@ -1036,7 +1053,7 @@ export function useAccountKeyResourceController({
               return
             if (result.status === "fulfilled") {
               rowsByAccount.set(account.id, result.value)
-              setAcceptedRows(
+              replaceAcceptedRows(
                 activeAccounts.flatMap(
                   (candidate) => rowsByAccount.get(candidate.id) ?? [],
                 ),
@@ -1282,7 +1299,7 @@ export function useAccountKeyResourceController({
         setScopes(availableScopes)
         setSelectedScope(scope)
         setScopeInventoryFailure(scopeInventory.partialFailure ?? null)
-        setAcceptedRows(rows)
+        replaceAcceptedRows(rows)
         acceptProgress(true)
         setSettledAccountIds([account.id])
         return true
@@ -1315,6 +1332,7 @@ export function useAccountKeyResourceController({
       clearDialogs,
       mode,
       openSession,
+      replaceAcceptedRows,
       search,
       selectedAccount,
       transitionCreatedSecret,
@@ -1585,6 +1603,7 @@ export function useAccountKeyResourceController({
       )
       const accepted = await load({
         preserveCreatedSecret: true,
+        preserveRows: true,
         ...(targetBoundary ? { targetScopeKey: targetBoundary.scopeKey } : {}),
         ...(routeTransitionId === undefined ? {} : { routeTransitionId }),
       })
@@ -2010,6 +2029,15 @@ export function useAccountKeyResourceController({
                   routeKey: returnedScope.routeKey,
                 }
               : intendedBoundary
+          if (submitMode === "edit") {
+            replaceAcceptedRows(
+              acceptedRowsRef.current.map((facts) =>
+                refIdentity(facts.ref) === refIdentity(result.facts.ref)
+                  ? result.facts
+                  : facts,
+              ),
+            )
+          }
           if (result.createdSecret)
             transitionCreatedSecret(result.createdSecret)
           const activeEditor = editorStateRef.current
@@ -2104,6 +2132,7 @@ export function useAccountKeyResourceController({
       isFreshReadRequiredForBoundary,
       mode,
       mutationAnalyticsMode,
+      replaceAcceptedRows,
       refreshAfterMutation,
       requireFreshRead,
       routeTransitionInstanceId,
