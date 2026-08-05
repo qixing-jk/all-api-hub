@@ -7,6 +7,7 @@ import {
   AccountKeyResourceEditorDialog,
   type AccountKeyResourceEditorDialogState,
 } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import {
   OPENROUTER_KEY_FIELD_IDS,
@@ -243,6 +244,12 @@ describe("AccountKeyResourceEditorDialog", () => {
     })
     expect(cancel.parentElement).toBe(save.parentElement)
     expect(cancel.parentElement).toHaveClass("flex-wrap")
+    const footer = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.nativeEditorFooter,
+    )
+    expect(footer).toBeVisible()
+    expect(footer).toContainElement(cancel)
+    expect(footer).toContainElement(save)
   })
 
   it("keeps edit-only workspace, creator, and expiry fields read-only and associates field issues", () => {

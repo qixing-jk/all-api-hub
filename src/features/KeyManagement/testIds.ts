@@ -38,6 +38,7 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   expandAllButton: "key-management-expand-all-button",
   openRouterWorkspaceSelect: "key-management-openrouter-workspace-select",
   nativeEditor: "key-management-native-editor",
+  nativeEditorFooter: "key-management-native-editor-footer",
   nativeStatusFilter: "key-management-native-status-filter",
   nativeEditorSubmitButton: "key-management-native-editor-submit-button",
   nativeKeyRow: "key-management-native-key-row",

@@ -185,6 +185,11 @@ test("manages an OpenRouter key through its native one-time-secret lifecycle", a
   })
   await createByokSwitch.click()
   await expect(createByokSwitch).toBeChecked()
+  const editorFooter = editor.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.nativeEditorFooter,
+  )
+  await expect(editorFooter).toBeVisible()
+  await expect(editorFooter).toBeInViewport()
   await editor
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton)
     .click()
