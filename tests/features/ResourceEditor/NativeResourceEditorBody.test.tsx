@@ -591,6 +591,10 @@ describe("NativeResourceEditorBody", () => {
 
     expect([...registry.tokenByResourceValue.keys()]).toEqual(["member-199"])
     expect([...registry.resourceValueByToken.values()]).toEqual(["member-199"])
+
+    registry.resourceValueByToken.set("orphan-token", "member-199")
+    reconcileSelectOptionTokenRegistry(registry, ["member-199"])
+    expect(registry.resourceValueByToken.has("orphan-token")).toBe(false)
   })
 
   it("uses the first duplicate option metadata and value", async () => {
@@ -1209,6 +1213,66 @@ describe("NativeResourceEditorBody", () => {
     expect(signals[0]?.aborted).toBe(true)
   })
 
+  it("reloads dynamic options for distinct structured dependency values only", async () => {
+    const onLoadOptions = vi.fn(
+      () => new Promise<readonly { value: string }[]>(() => undefined),
+    )
+    const props = {
+      t,
+      descriptors: [
+        {
+          fieldId: "creator",
+          type: "select" as const,
+          options: [],
+          optionLoader: { dependsOn: ["team"] },
+        },
+      ],
+      policy: defineResourceEditorFieldPolicy({
+        fields: [
+          {
+            fieldId: "creator",
+            section: "basic",
+            order: 1,
+            renderer: "select" as const,
+            resolveLabel: () => "Creator",
+          },
+        ],
+        hiddenFields: [],
+      }),
+      sectionOrder: { basic: 0 },
+      sectionLabelResolvers: { basic: () => "Basic" },
+      onValueChange: () => undefined,
+      onLoadOptions,
+    }
+    const view = render(
+      <NativeResourceEditorBody
+        {...props}
+        values={{ team: Number.NaN, creator: "" }}
+      />,
+    )
+    await waitFor(() => expect(onLoadOptions).toHaveBeenCalledTimes(1))
+
+    const rerenderDependency = async (team: unknown, expectedCalls: number) => {
+      view.rerender(
+        <NativeResourceEditorBody
+          {...props}
+          values={{ team, creator: "" } as any}
+        />,
+      )
+      await waitFor(() =>
+        expect(onLoadOptions).toHaveBeenCalledTimes(expectedCalls),
+      )
+    }
+
+    await rerenderDependency(Number.POSITIVE_INFINITY, 2)
+    await rerenderDependency(Number.NEGATIVE_INFINITY, 3)
+    await rerenderDependency(true, 4)
+    await rerenderDependency(["example", null], 5)
+    await rerenderDependency({ second: false, first: [1, "two"] }, 6)
+    await rerenderDependency({ first: [1, "two"], second: false }, 6)
+    await rerenderDependency(Symbol.for("example-dependency"), 7)
+  })
+
   it("aborts and ignores a late load when its callback is removed", async () => {
     const pending =
       createDeferred<readonly { value: string; displayLabel: string }[]>()
@@ -1461,7 +1525,7 @@ describe("NativeResourceEditorBody", () => {
       }),
       sectionOrder: { basic: 0 },
       sectionLabelResolvers: { basic: () => "Basic" },
-      values: { tags: [] },
+      values: { tags: "invalid-list" },
       onValueChange: vi.fn(),
       onRetryControlledOptions,
     }
@@ -1526,6 +1590,53 @@ describe("NativeResourceEditorBody", () => {
         }}
       />,
     )
-    expect(screen.getByRole("combobox", { name: "Tags" })).not.toBeDisabled()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole("combobox", { name: "Tags" }))
+    await user.click(screen.getByRole("option", { name: "Stable" }))
+    expect(props.onValueChange).toHaveBeenCalledWith("tags", ["stable"])
+  })
+
+  it("uses local fallback copy and retry for descriptor-owned multi-select options", async () => {
+    const onLoadOptions = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("unavailable"))
+      .mockResolvedValueOnce([])
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: "tags",
+            type: "multi-select",
+            options: [],
+            optionLoader: { dependsOn: [] },
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "tags",
+              section: "basic",
+              order: 1,
+              renderer: "multi-select",
+              resolveLabel: () => "Tags",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ tags: [] }}
+        onValueChange={() => undefined}
+        onLoadOptions={onLoadOptions}
+      />,
+    )
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Error")
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Retry Tags" }))
+    expect(await screen.findByText("No options available")).toBeVisible()
+    expect(onLoadOptions).toHaveBeenCalledTimes(2)
   })
 })

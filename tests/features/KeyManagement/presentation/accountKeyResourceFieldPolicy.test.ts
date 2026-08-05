@@ -67,6 +67,32 @@ describe("OpenRouter key resource field policy", () => {
     ).toBe(false)
   })
 
+  it("provides localized fallbacks for unknown options and validation issues", () => {
+    const translate = ((key: string) => key) as never
+    const workspace = getOpenRouterKeyResourceFieldPolicy("create").fields.find(
+      ({ fieldId }) => fieldId === fields.Workspace,
+    )
+
+    expect(workspace?.resolveOptionFallback?.(translate)).toBe(
+      "keyManagement:openRouter.editor.options.workspace.unknown",
+    )
+    expect(workspace?.issueLabelResolvers?.required?.(translate)).toBe(
+      "keyManagement:openRouter.editor.issues.required",
+    )
+    expect(workspace?.issueLabelResolvers?.invalid_value?.(translate)).toBe(
+      "keyManagement:openRouter.editor.issues.invalidValue",
+    )
+    expect(workspace?.issueLabelResolvers?.out_of_range?.(translate)).toBe(
+      "keyManagement:openRouter.editor.issues.outOfRange",
+    )
+    expect(
+      workspace?.issueLabelResolvers?.unsupported_option?.(translate),
+    ).toBe("keyManagement:openRouter.editor.issues.unsupportedOption")
+    expect(
+      workspace?.issueLabelResolvers?.inconsistent_value?.(translate),
+    ).toBe("keyManagement:openRouter.editor.issues.inconsistentValue")
+  })
+
   it("uses edit-specific immutable-field help and keeps USD visible in every supported locale", async () => {
     const editPolicy = getOpenRouterKeyResourceFieldPolicy("edit")
     const translate = ((key: string) => key) as never

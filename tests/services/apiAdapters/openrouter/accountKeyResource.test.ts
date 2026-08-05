@@ -1454,6 +1454,83 @@ describe("openRouterAccountKeyResources", () => {
     })
   })
 
+  it("reports every invalid documented create and edit field before mutation", async () => {
+    const session = await openSession()
+    const createEditor = await session.openCreateEditor("workspace-default-id")
+    const invalidCreate = createEditor.validate({
+      ...createEditor.initialValues,
+      [OPENROUTER_KEY_FIELD_IDS.Name]: " ",
+      [OPENROUTER_KEY_FIELD_IDS.Workspace]: "workspace-unknown",
+      [OPENROUTER_KEY_FIELD_IDS.Creator]: "creator-unknown",
+      [OPENROUTER_KEY_FIELD_IDS.LimitMode]: "provider-unknown",
+      [OPENROUTER_KEY_FIELD_IDS.LimitReset]: "provider-unknown",
+      [OPENROUTER_KEY_FIELD_IDS.ExpiresAt]: "not-a-date",
+      [OPENROUTER_KEY_FIELD_IDS.IncludeByokInLimit]: "yes",
+    })
+
+    expect(invalidCreate).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining(
+        [
+          OPENROUTER_KEY_FIELD_IDS.Name,
+          OPENROUTER_KEY_FIELD_IDS.Workspace,
+          OPENROUTER_KEY_FIELD_IDS.Creator,
+          OPENROUTER_KEY_FIELD_IDS.LimitMode,
+          OPENROUTER_KEY_FIELD_IDS.LimitReset,
+          OPENROUTER_KEY_FIELD_IDS.ExpiresAt,
+          OPENROUTER_KEY_FIELD_IDS.IncludeByokInLimit,
+        ].map((fieldId) => expect.objectContaining({ fieldId })),
+      ),
+    })
+    expect(
+      createEditor.validate({
+        ...createEditor.initialValues,
+        [OPENROUTER_KEY_FIELD_IDS.Name]: "Limited key",
+        [OPENROUTER_KEY_FIELD_IDS.LimitMode]:
+          OPENROUTER_KEY_LIMIT_MODES.Limited,
+        [OPENROUTER_KEY_FIELD_IDS.Limit]: -1,
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({ fieldId: OPENROUTER_KEY_FIELD_IDS.Limit }),
+      ]),
+    })
+
+    fetchOpenRouterKey.mockResolvedValue(key())
+    const collection = await session.openCollection("workspace-default-id")
+    const editEditor = await collection.openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.OPENROUTER,
+      scopeKey: "workspace-default-id",
+      resourceId: "opaque-hash-example",
+    })
+    const invalidEdit = editEditor.validate({
+      ...editEditor.initialValues,
+      [OPENROUTER_KEY_FIELD_IDS.Name]: " ",
+      [OPENROUTER_KEY_FIELD_IDS.LimitMode]: OPENROUTER_KEY_LIMIT_MODES.Limited,
+      [OPENROUTER_KEY_FIELD_IDS.Limit]: -1,
+      [OPENROUTER_KEY_FIELD_IDS.LimitReset]: "provider-unknown",
+      [OPENROUTER_KEY_FIELD_IDS.Disabled]: "no",
+      [OPENROUTER_KEY_FIELD_IDS.IncludeByokInLimit]: "yes",
+    })
+
+    expect(invalidEdit).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining(
+        [
+          OPENROUTER_KEY_FIELD_IDS.Name,
+          OPENROUTER_KEY_FIELD_IDS.Limit,
+          OPENROUTER_KEY_FIELD_IDS.LimitReset,
+          OPENROUTER_KEY_FIELD_IDS.Disabled,
+          OPENROUTER_KEY_FIELD_IDS.IncludeByokInLimit,
+        ].map((fieldId) => expect.objectContaining({ fieldId })),
+      ),
+    })
+    expect(createOpenRouterKey).not.toHaveBeenCalled()
+    expect(updateOpenRouterKey).not.toHaveBeenCalled()
+  })
+
   it("patches only changed documented mutable fields", async () => {
     const session = await openSession()
     const collection = await session.openCollection("workspace-default-id")
@@ -1847,5 +1924,215 @@ describe("openRouterAccountKeyResources", () => {
     expect(JSON.stringify(deleteError)).not.toContain(returnedHash)
     expect(fetchOpenRouterKey).toHaveBeenCalledTimes(1)
     expect(deleteOpenRouterKey).not.toHaveBeenCalled()
+  })
+
+  it("deduplicates equivalent nested provider metadata", async () => {
+    const session = await openSession()
+    const editor = await session.openCreateEditor("workspace-default-id")
+    const nestedMember = {
+      id: "member-nested",
+      user_id: "user-nested",
+      workspace_id: "workspace-default-id",
+      role: "member",
+      created_at: "2026-01-01T00:00:00Z",
+      provider_metadata: [{ regions: ["east", "west"] }],
+    }
+    fetchOpenRouterWorkspaceMembers.mockResolvedValue(
+      memberPage([nestedMember, structuredClone(nestedMember)] as any, 1),
+    )
+
+    await expect(
+      editor.loadOptions?.(
+        OPENROUTER_KEY_FIELD_IDS.Creator,
+        editor.initialValues,
+      ),
+    ).resolves.toHaveLength(1)
+  })
+
+  it("rejects invalid list limits, oversized pages, and foreign member pages", async () => {
+    const session = await openSession()
+    const collection = await session.openCollection("workspace-default-id")
+
+    await expect(collection.list({ limit: 0 })).rejects.toMatchObject({
+      failure: { code: "unexpected" },
+    })
+
+    fetchOpenRouterKeys.mockResolvedValue(
+      Array.from({ length: 10_001 }, (_, index) =>
+        key({ hash: `oversized-${index}` }),
+      ),
+    )
+    await expect(collection.list()).rejects.toMatchObject({
+      failure: { code: "unexpected" },
+    })
+
+    const editor = await session.openCreateEditor("workspace-default-id")
+    fetchOpenRouterWorkspaceMembers.mockResolvedValue(
+      memberPage(
+        [
+          {
+            id: "member-foreign",
+            user_id: "user-foreign",
+            workspace_id: "workspace-foreign",
+            role: "member",
+            created_at: "2026-01-01T00:00:00Z",
+          },
+        ],
+        1,
+      ),
+    )
+    await expect(
+      editor.loadOptions?.(
+        OPENROUTER_KEY_FIELD_IDS.Creator,
+        editor.initialValues,
+      ),
+    ).rejects.toMatchObject({ failure: { code: "unexpected" } })
+  })
+
+  it("short-circuits a no-op edit without dispatching a provider update", async () => {
+    const session = await openSession()
+    const collection = await session.openCollection("workspace-default-id")
+    fetchOpenRouterKey.mockResolvedValue(key())
+    const editor = await collection.openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.OPENROUTER,
+      scopeKey: "workspace-default-id",
+      resourceId: "opaque-hash-example",
+    })
+
+    await expect(editor.submit(editor.initialValues)).resolves.toMatchObject({
+      facts: { displayName: "Example key" },
+    })
+    expect(updateOpenRouterKey).not.toHaveBeenCalled()
+  })
+
+  it("maps deterministic update and delete rejections without reconciliation", async () => {
+    const session = await openSession()
+    const collection = await session.openCollection("workspace-default-id")
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.OPENROUTER,
+      scopeKey: "workspace-default-id",
+      resourceId: "opaque-hash-example",
+    }
+    fetchOpenRouterKey.mockResolvedValue(key())
+    updateOpenRouterKey.mockRejectedValueOnce(new ApiError("invalid", 400))
+    const editor = await collection.openEditEditor(ref)
+
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Rejected" }),
+    ).rejects.toMatchObject({ failure: { code: "upstream_rejected" } })
+
+    deleteOpenRouterKey.mockRejectedValueOnce(new ApiError("forbidden", 403))
+    await expect(collection.delete(ref)).rejects.toMatchObject({
+      failure: { code: "permission_denied" },
+    })
+  })
+
+  it("reconciles every mutable field after an uncertain update", async () => {
+    const session = await openSession()
+    const collection = await session.openCollection("workspace-default-id")
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.OPENROUTER,
+      scopeKey: "workspace-default-id",
+      resourceId: "opaque-hash-example",
+    }
+    const reconciled = key({
+      name: "Reconciled",
+      disabled: true,
+      limit: 25,
+      limit_reset: "monthly",
+      include_byok_in_limit: true,
+    })
+    fetchOpenRouterKey
+      .mockResolvedValueOnce(key())
+      .mockResolvedValueOnce(key())
+      .mockResolvedValueOnce(reconciled)
+    updateOpenRouterKey.mockRejectedValue(new TypeError("fetch failed"))
+    const editor = await collection.openEditEditor(ref)
+
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        [OPENROUTER_KEY_FIELD_IDS.Name]: "Reconciled",
+        [OPENROUTER_KEY_FIELD_IDS.Disabled]: true,
+        [OPENROUTER_KEY_FIELD_IDS.LimitMode]:
+          OPENROUTER_KEY_LIMIT_MODES.Limited,
+        [OPENROUTER_KEY_FIELD_IDS.Limit]: 25,
+        [OPENROUTER_KEY_FIELD_IDS.LimitReset]:
+          OPENROUTER_KEY_LIMIT_RESETS.Monthly,
+        [OPENROUTER_KEY_FIELD_IDS.IncludeByokInLimit]: true,
+      }),
+    ).resolves.toMatchObject({ facts: { displayName: "Reconciled" } })
+  })
+
+  it("keeps a delete uncertain when its reconciliation read fails without 404", async () => {
+    const session = await openSession()
+    const collection = await session.openCollection("workspace-default-id")
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.OPENROUTER,
+      scopeKey: "workspace-default-id",
+      resourceId: "opaque-hash-example",
+    }
+    fetchOpenRouterKey
+      .mockResolvedValueOnce(key())
+      .mockRejectedValueOnce(new ApiError("still unavailable", 500))
+    deleteOpenRouterKey.mockRejectedValue(new TypeError("fetch failed"))
+
+    await expect(collection.delete(ref)).rejects.toMatchObject({
+      failure: { code: "mutation_state_uncertain" },
+    })
+  })
+
+  it("rejects creator loading for a workspace outside the editor inventory", async () => {
+    const session = await openSession()
+    const editor = await session.openCreateEditor("workspace-default-id")
+
+    await expect(
+      editor.loadOptions?.(OPENROUTER_KEY_FIELD_IDS.Creator, {
+        ...editor.initialValues,
+        [OPENROUTER_KEY_FIELD_IDS.Workspace]: "workspace-unknown",
+      }),
+    ).rejects.toMatchObject({ failure: { code: "unexpected" } })
+    expect(fetchOpenRouterWorkspaceMembers).not.toHaveBeenCalled()
+  })
+
+  it("keeps an update uncertain when its reconciliation read itself fails", async () => {
+    const session = await openSession()
+    const collection = await session.openCollection("workspace-default-id")
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.OPENROUTER,
+      scopeKey: "workspace-default-id",
+      resourceId: "opaque-hash-example",
+    }
+    fetchOpenRouterKey
+      .mockResolvedValueOnce(key())
+      .mockResolvedValueOnce(key())
+      .mockRejectedValueOnce(new ApiError("read unavailable", 500))
+    updateOpenRouterKey.mockRejectedValue(new TypeError("fetch failed"))
+    const editor = await collection.openEditEditor(ref)
+
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Unconfirmed" }),
+    ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+  })
+
+  it("reports a deterministic provider delete as applied", async () => {
+    const session = await openSession()
+    const collection = await session.openCollection("workspace-default-id")
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.OPENROUTER,
+      scopeKey: "workspace-default-id",
+      resourceId: "opaque-hash-example",
+    }
+    fetchOpenRouterKey.mockResolvedValue(key())
+    deleteOpenRouterKey.mockResolvedValue(undefined)
+
+    await expect(collection.delete(ref)).resolves.toBeUndefined()
+    expect(deleteOpenRouterKey).toHaveBeenCalledOnce()
   })
 })

@@ -292,6 +292,27 @@ describe("OpenRouter management key API", () => {
     expect(calls).toBe(1)
   })
 
+  it.each(["", "   "])(
+    "rejects blank one-time plaintext without replaying the create",
+    async (plaintextKey) => {
+      let calls = 0
+      server.use(
+        http.post(`${OPENROUTER_API_BASE_URL}/keys`, () => {
+          calls += 1
+          return HttpResponse.json(
+            { data: key, key: plaintextKey },
+            { status: 201 },
+          )
+        }),
+      )
+
+      await expect(
+        createOpenRouterKey(request, { name: "Example key" }),
+      ).rejects.toBeInstanceOf(ApiError)
+      expect(calls).toBe(1)
+    },
+  )
+
   it.each([400, 401, 403, 429, 500])(
     "maps create HTTP %i errors without repeating the mutation",
     async (status) => {

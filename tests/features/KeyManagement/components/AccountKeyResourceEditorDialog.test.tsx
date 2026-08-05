@@ -1091,6 +1091,57 @@ describe("AccountKeyResourceEditorDialog", () => {
     )
   })
 
+  it("maps authentication and uncertain feedback with weekly and monthly reset summaries", () => {
+    const weeklyEditor: AccountKeyResourceEditorDialogState = {
+      ...editor(),
+      feedback: { code: "authentication_failed" },
+      values: {
+        ...editor().values,
+        [field.LimitMode]: OPENROUTER_KEY_LIMIT_MODES.Limited,
+        [field.Limit]: 10,
+        [field.LimitReset]: OPENROUTER_KEY_LIMIT_RESETS.Weekly,
+      },
+    }
+    const { rerender } = render(
+      <AccountKeyResourceEditorDialog
+        editor={weeklyEditor}
+        onClose={() => undefined}
+        onSubmit={() => undefined}
+        onValuesChange={() => undefined}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "keyManagement:openRouter.editor.feedback.authenticationFailed",
+    )
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "keyManagement:openRouter.editor.summaryRules.reset.weekly",
+    )
+
+    rerender(
+      <AccountKeyResourceEditorDialog
+        editor={{
+          ...weeklyEditor,
+          feedback: { code: "mutation_state_uncertain" },
+          values: {
+            ...weeklyEditor.values,
+            [field.LimitReset]: OPENROUTER_KEY_LIMIT_RESETS.Monthly,
+          },
+        }}
+        onClose={() => undefined}
+        onSubmit={() => undefined}
+        onValuesChange={() => undefined}
+      />,
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "keyManagement:openRouter.editor.feedback.uncertain",
+    )
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "keyManagement:openRouter.editor.summaryRules.reset.monthly",
+    )
+  })
+
   it("distinguishes unset limited spending limits from zero USD", () => {
     const { rerender } = render(
       <AccountKeyResourceEditorDialog
@@ -1220,6 +1271,17 @@ describe("AccountKeyResourceEditorDialog", () => {
     expect(
       screen.getByText("keyManagement:openRouter.editor.unsaved.title"),
     ).toBeVisible()
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:openRouter.editor.unsaved.keepEditing",
+      }),
+    )
+    expect(
+      screen.queryByText("keyManagement:openRouter.editor.unsaved.title"),
+    ).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    )
     fireEvent.click(
       screen.getByRole("button", {
         name: "keyManagement:openRouter.editor.unsaved.discard",
