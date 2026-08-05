@@ -517,7 +517,6 @@ export function useAccountKeyResourceController({
     readonly AccountKeyResourceFacts[]
   >([])
   const acceptedRowsRef = useRef(acceptedRows)
-  acceptedRowsRef.current = acceptedRows
   const [failures, setFailures] = useState<Record<string, ResourceFailure>>({})
   const [scopeInventoryFailure, setScopeInventoryFailure] =
     useState<ResourceFailure | null>(null)
