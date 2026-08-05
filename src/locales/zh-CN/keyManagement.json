@@ -132,7 +132,9 @@
     }
   },
   "batchSelection": {
-    "eligibilityNotice": "批量操作仅适用于当前 {{count}} 个可选择的密钥；无法读取完整密钥的项目不会参与。"
+    "accountUnavailableReason": "该账号没有可参与批量操作的密钥。",
+    "eligibilityNotice": "批量操作仅适用于当前 {{count}} 个可选择的密钥；无法读取完整密钥的项目不会参与。",
+    "unavailableReason": "无法读取完整密钥，因此该项目不能参与批量操作。"
   },
   "createFirstKey": "创建第一个密钥",
   "description": "此页面显示所有账号的 API 密钥信息，包括使用情况和过期时间。可以通过右上角的\"添加密钥\"按钮或点击各密钥项目旁的\"+\"按钮为指定账号创建新密钥。请妥善保管您的 API 密钥，避免泄露给他人",

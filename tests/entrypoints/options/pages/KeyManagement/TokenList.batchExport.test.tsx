@@ -69,20 +69,25 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
     token,
     isSelected,
     onSelectionChange,
+    selectionDisabledReason,
     onOpenCCSwitchDialog,
   }: {
     token: { name: string }
     isSelected?: boolean
     onSelectionChange?: (checked: boolean) => void
+    selectionDisabledReason?: string
     onOpenCCSwitchDialog?: () => void
   }) => (
     <div>
-      {onSelectionChange ? (
+      {onSelectionChange || selectionDisabledReason ? (
         <label>
           <input
             type="checkbox"
             checked={isSelected === true}
-            onChange={(event) => onSelectionChange(event.currentTarget.checked)}
+            disabled={!onSelectionChange}
+            onChange={(event) =>
+              onSelectionChange?.(event.currentTarget.checked)
+            }
           />
           {token.name}
         </label>
@@ -320,12 +325,16 @@ describe("TokenList batch export selection", () => {
       await screen.findByRole("checkbox", { name: "Recoverable key" }),
     ).toBeVisible()
     expect(
-      screen.queryByRole("checkbox", { name: "Create-only key" }),
-    ).toBeNull()
+      screen.getByRole("checkbox", { name: "Create-only key" }),
+    ).toBeDisabled()
+    const groupSelections = screen.getAllByRole("checkbox", {
+      name: "keyManagement:batchManagedSiteExport.selection.accountGroup",
+    })
+    expect(groupSelections).toHaveLength(2)
     expect(
-      screen.getAllByRole("checkbox", {
-        name: "keyManagement:batchManagedSiteExport.selection.accountGroup",
-      }),
+      groupSelections.filter(
+        (selection) => selection.getAttribute("aria-disabled") === "true",
+      ),
     ).toHaveLength(1)
     expect(
       screen.getByText(/keyManagement:batchSelection\.eligibilityNotice/),
@@ -361,10 +370,13 @@ describe("TokenList batch export selection", () => {
 
     expect(await screen.findByText("Create-only key")).toBeVisible()
     expect(
-      screen.queryByRole("checkbox", {
+      screen.getByRole("checkbox", {
         name: "keyManagement:batchManagedSiteExport.selection.accountGroup",
       }),
-    ).toBeNull()
+    ).toHaveAttribute("aria-disabled", "true")
+    expect(
+      screen.getByRole("checkbox", { name: "Create-only key" }),
+    ).toBeDisabled()
     expect(
       screen.queryByRole("checkbox", {
         name: "keyManagement:batchManagedSiteExport.selection.visible",

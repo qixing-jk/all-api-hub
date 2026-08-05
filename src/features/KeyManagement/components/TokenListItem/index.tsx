@@ -83,6 +83,8 @@ interface TokenListItemProps {
    * Toggles batch selection for this token.
    */
   onSelectionChange?: (checked: boolean) => void
+  /** Explanation shown when this row is visible but unavailable to batch actions. */
+  selectionDisabledReason?: string
   /**
    * Request key used to temporarily highlight this token's managed-site import action.
    */
@@ -111,6 +113,7 @@ export function TokenListItem(props: TokenListItemProps) {
     onManagedSiteVerificationRetry,
     isSelected = false,
     onSelectionChange,
+    selectionDisabledReason,
     guidedManagedSiteImportRequest,
   } = props
   const { t } = useTranslation("keyManagement")
@@ -145,6 +148,9 @@ export function TokenListItem(props: TokenListItemProps) {
       onDetailsExpandedChange={setIsDetailsExpanded}
       isSelected={selectionChange ? isSelected : undefined}
       onSelectionChange={selectionChange}
+      selectionDisabledReason={
+        selectionChange ? undefined : selectionDisabledReason
+      }
       selectionLabel={t("batchManagedSiteExport.selection.rowLabel", {
         name: token.name,
       })}

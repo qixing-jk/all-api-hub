@@ -132,7 +132,9 @@
     }
   },
   "batchSelection": {
-    "eligibilityNotice_other": "批次操作僅適用於目前 {{count}} 個可選取的金鑰；無法讀取完整金鑰的項目不會參與。"
+    "accountUnavailableReason": "此帳號沒有可參與批次操作的金鑰。",
+    "eligibilityNotice_other": "批次操作僅適用於目前 {{count}} 個可選取的金鑰；無法讀取完整金鑰的項目不會參與。",
+    "unavailableReason": "無法讀取完整金鑰，因此此項目不能參與批次操作。"
   },
   "createFirstKey": "建立第一個金鑰",
   "description": "此頁面顯示所有帳號的 API 金鑰資訊，包括使用情況和過期時間。可以透過右上角的\"新增金鑰\"按鈕或點擊各金鑰專案旁的\"+\"按鈕為指定帳號建立新金鑰。請妥善保管您的 API 金鑰，避免洩露給他人",

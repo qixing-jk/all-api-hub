@@ -24,7 +24,6 @@ import {
   Button,
   Card,
   CardContent,
-  Checkbox,
   Heading6,
   IconButton,
   WorkflowTransitionButton,
@@ -37,6 +36,7 @@ import {
   createExportAccount,
   createExportToken,
 } from "~/features/ApiCredentialProfiles/utils/exportShims"
+import { BatchSelectionControl } from "~/features/KeyManagement/components/BatchSelectionControl"
 import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
@@ -88,6 +88,7 @@ interface ServiceCredentialCardProps {
   isManagedSiteStatusChecking?: boolean
   selectionLabel?: string
   onSelectionChange?: (checked: boolean) => void
+  selectionDisabledReason?: string
   onCopy: (account: DisplaySiteData) => Promise<void>
   onRotate?: (account: DisplaySiteData) => Promise<void>
 }
@@ -104,6 +105,7 @@ export function ServiceCredentialCard({
   isManagedSiteStatusChecking = false,
   selectionLabel,
   onSelectionChange,
+  selectionDisabledReason,
   onCopy,
   onRotate,
 }: ServiceCredentialCardProps) {
@@ -375,15 +377,12 @@ export function ServiceCredentialCard({
           <div className="flex min-w-0 flex-col gap-3">
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                {onSelectionChange ? (
-                  <Checkbox
-                    checked={isSelected === true}
-                    aria-label={selectionLabel ?? credential.label}
-                    onCheckedChange={(checked) =>
-                      onSelectionChange(checked === true)
-                    }
-                  />
-                ) : null}
+                <BatchSelectionControl
+                  checked={isSelected === true}
+                  label={selectionLabel ?? credential.label}
+                  onSelectionChange={onSelectionChange}
+                  disabledReason={selectionDisabledReason}
+                />
                 <KeyIcon className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
                 <Heading6 className="truncate text-sm sm:text-base">
                   {credential.label}

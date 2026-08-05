@@ -142,9 +142,11 @@
     }
   },
   "batchSelection": {
+    "accountUnavailableReason": "Esta cuenta no tiene claves disponibles para acciones por lotes.",
     "eligibilityNotice_one": "Las acciones por lotes solo se aplican a la {{count}} clave seleccionable; se excluyen los elementos cuya clave completa no se puede recuperar.",
     "eligibilityNotice_many": "Las acciones por lotes solo se aplican a las {{count}} claves seleccionables; se excluyen los elementos cuya clave completa no se puede recuperar.",
-    "eligibilityNotice_other": "Las acciones por lotes solo se aplican a las {{count}} claves seleccionables; se excluyen los elementos cuya clave completa no se puede recuperar."
+    "eligibilityNotice_other": "Las acciones por lotes solo se aplican a las {{count}} claves seleccionables; se excluyen los elementos cuya clave completa no se puede recuperar.",
+    "unavailableReason": "No se puede recuperar la clave completa, por lo que este elemento no puede participar en acciones por lotes."
   },
   "createFirstKey": "Crear primera clave",
   "description": "Esta página muestra información de claves API para todas las cuentas, incluido el uso y la fecha de expiración. Puedes crear claves nuevas para cuentas específicas haciendo clic en el botón 'Agregar clave' en la esquina superior derecha o en el botón '+' junto a cada elemento de clave. Mantén tus claves API seguras y evita filtrarlas a otras personas",

@@ -72,6 +72,7 @@ import {
 } from "../utils"
 import { AccountKeyResourceList } from "./AccountKeyResource/AccountKeyResourceList"
 import { BatchCliProxyExportDialog } from "./BatchCliProxyExportDialog"
+import { BatchSelectionControl } from "./BatchSelectionControl"
 import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExportDialog"
 import { ServiceCredentialCard } from "./ServiceCredentialCard"
 import { TokenListItem } from "./TokenListItem"
@@ -620,8 +621,29 @@ export function TokenList(props: TokenListProps) {
     })
   }, [guidedManagedSiteImportAccountId, isAllAccountsMode])
 
-  const groupedEntries = useMemo(() => {
+  const groupedRows = useMemo(() => {
     if (!isAllAccountsMode) return null
+
+    const totalNativeRowsByAccountId = new Map<
+      string,
+      NativeKeyManagementRow[]
+    >()
+    for (const row of nativeUnfilteredRows) {
+      const list = totalNativeRowsByAccountId.get(row.accountId) ?? []
+      list.push(row)
+      totalNativeRowsByAccountId.set(row.accountId, list)
+    }
+
+    const filteredRowsByAccountId = new Map<string, KeyManagementDisplayRow[]>()
+    for (const row of filteredDisplayRows) {
+      const accountId =
+        row.kind === "runtime-key"
+          ? row.entry.runtimeKey.accountId
+          : row.accountId
+      const list = filteredRowsByAccountId.get(accountId) ?? []
+      list.push(row)
+      filteredRowsByAccountId.set(accountId, list)
+    }
 
     const totalTokensByAccountId = new Map<string, AccountToken[]>()
     for (const token of tokens) {
@@ -630,19 +652,23 @@ export function TokenList(props: TokenListProps) {
       totalTokensByAccountId.set(token.accountId, list)
     }
 
-    const entriesByAccountId = new Map<string, KeyManagementEntry[]>()
-    for (const entry of filteredEntries) {
-      const accountId = entry.runtimeKey.accountId
-      const list = entriesByAccountId.get(accountId) ?? []
-      list.push(entry)
-      entriesByAccountId.set(accountId, list)
-    }
-
     return displayData
-      .filter((account) => entriesByAccountId.has(account.id))
+      .filter((account) => filteredRowsByAccountId.has(account.id))
       .map((account) => {
         const total = totalTokensByAccountId.get(account.id) ?? []
-        const filteredAccountEntries = entriesByAccountId.get(account.id) ?? []
+        const totalNativeRows = totalNativeRowsByAccountId.get(account.id) ?? []
+        const filteredAccountRows =
+          filteredRowsByAccountId.get(account.id) ?? []
+        const filteredAccountEntries = filteredAccountRows.flatMap((row) =>
+          row.kind === "runtime-key" ? [row.entry] : [],
+        )
+        const filteredNativeRows = filteredAccountRows.filter(
+          (row): row is NativeKeyManagementRow =>
+            row.kind === "account-key-resource",
+        )
+        const totalEnabledNativeRows = totalNativeRows.filter(
+          (row) => row.facts.status === "enabled",
+        ).length
         const filteredAccountTokens = filteredAccountEntries
           .filter(isAccountTokenEntry)
           .map((entry) => entry.runtimeKey.token)
@@ -651,12 +677,24 @@ export function TokenList(props: TokenListProps) {
           totalTokens: total,
           filteredTokens: filteredAccountTokens,
           filteredEntries: filteredAccountEntries,
-          totalCount: Math.max(total.length, filteredAccountEntries.length),
-          enabledCount: total.filter((item) => item.status === 1).length,
-          showingCount: filteredAccountEntries.length,
+          nativeRows: filteredNativeRows,
+          totalCount: Math.max(
+            total.length + totalNativeRows.length,
+            filteredAccountRows.length,
+          ),
+          enabledCount:
+            total.filter((item) => item.status === 1).length +
+            totalEnabledNativeRows,
+          showingCount: filteredAccountRows.length,
         }
       })
-  }, [displayData, filteredEntries, isAllAccountsMode, tokens])
+  }, [
+    displayData,
+    filteredDisplayRows,
+    isAllAccountsMode,
+    nativeUnfilteredRows,
+    tokens,
+  ])
 
   const eligibleEntries = useMemo(
     () => entries.filter(isBatchSelectableEntry),
@@ -786,11 +824,11 @@ export function TokenList(props: TokenListProps) {
   ])
 
   const collapseAll = useCallback(() => {
-    if (!groupedEntries) return
+    if (!groupedRows) return
     setCollapsedAccountIds(
-      new Set(groupedEntries.map((group) => group.account.id)),
+      new Set(groupedRows.map((group) => group.account.id)),
     )
-  }, [groupedEntries, setCollapsedAccountIds])
+  }, [groupedRows, setCollapsedAccountIds])
 
   const expandAll = useCallback(
     () => setCollapsedAccountIds(new Set()),
@@ -828,6 +866,9 @@ export function TokenList(props: TokenListProps) {
       onSelectionChange: isBatchSelectable
         ? (checked: boolean) => toggleEntrySelection(entryId, checked)
         : undefined,
+      selectionDisabledReason: isBatchSelectable
+        ? undefined
+        : t("keyManagement:batchSelection.unavailableReason"),
     }
   }
 
@@ -976,9 +1017,11 @@ export function TokenList(props: TokenListProps) {
     ) : null
   }
 
-  const nativeResourceList = (
+  const renderNativeResourceList = (
+    rows: readonly NativeKeyManagementRow[],
+  ) => (
     <AccountKeyResourceList
-      rows={nativeRows}
+      rows={rows}
       onOpenDetail={onOpenNativeDetail}
       onEdit={onEditNativeKey ?? (() => undefined)}
       onDelete={onDeleteNativeKey ?? (() => undefined)}
@@ -987,8 +1030,12 @@ export function TokenList(props: TokenListProps) {
       detailFailure={nativeDetailFailure}
       onCloseDetail={onCloseNativeDetail}
       actionsDisabled={nativeActionsDisabled}
+      selectionDisabledReason={t(
+        "keyManagement:batchSelection.unavailableReason",
+      )}
     />
   )
+  const nativeResourceList = renderNativeResourceList(nativeRows)
   if (filteredDisplayRows.length === 0) {
     return (
       <TokenEmptyState
@@ -1010,13 +1057,13 @@ export function TokenList(props: TokenListProps) {
     )
   }
 
-  if (filteredEntries.length === 0) {
+  if (!isAllAccountsMode && filteredEntries.length === 0) {
     return nativeResourceList
   }
 
   return (
     <>
-      {nativeResourceList}
+      {!isAllAccountsMode ? nativeResourceList : null}
       {filteredEligibleEntries.length > 0 ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
           {hasFilteredIneligibleEntries ? (
@@ -1093,7 +1140,7 @@ export function TokenList(props: TokenListProps) {
         </div>
       ) : null}
 
-      {isAllAccountsMode && groupedEntries && groupedEntries.length > 0 ? (
+      {isAllAccountsMode && groupedRows && groupedRows.length > 0 ? (
         <>
           <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
             <Button
@@ -1118,7 +1165,7 @@ export function TokenList(props: TokenListProps) {
           </div>
 
           <div className="space-y-3">
-            {groupedEntries.map((group) => {
+            {groupedRows.map((group) => {
               const { account } = group
               const isCollapsed = collapsedAccountIds.has(account.id)
               const shouldShowShowingCount =
@@ -1141,6 +1188,8 @@ export function TokenList(props: TokenListProps) {
                   key={account.id}
                   variant="outlined"
                   className="overflow-hidden"
+                  role="group"
+                  aria-label={account.name}
                 >
                   <div
                     className={cn(
@@ -1150,18 +1199,29 @@ export function TokenList(props: TokenListProps) {
                         : "dark:border-dark-bg-tertiary border-b border-gray-200",
                     )}
                   >
-                    {groupEligibleEntries.length > 0 ? (
-                      <Checkbox
-                        checked={groupSelectionChecked}
-                        aria-label={t(
-                          "batchManagedSiteExport.selection.accountGroup",
-                          { name: account.name },
-                        )}
-                        onCheckedChange={(checked) =>
-                          toggleGroupSelection(groupEligibleEntries, checked)
-                        }
-                      />
-                    ) : null}
+                    <BatchSelectionControl
+                      checked={groupSelectionChecked}
+                      label={t(
+                        "batchManagedSiteExport.selection.accountGroup",
+                        { name: account.name },
+                      )}
+                      onSelectionChange={
+                        groupEligibleEntries.length > 0
+                          ? (checked) =>
+                              toggleGroupSelection(
+                                groupEligibleEntries,
+                                checked,
+                              )
+                          : undefined
+                      }
+                      disabledReason={
+                        groupEligibleEntries.length === 0
+                          ? t(
+                              "keyManagement:batchSelection.accountUnavailableReason",
+                            )
+                          : undefined
+                      }
+                    />
                     <button
                       type="button"
                       className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
@@ -1259,6 +1319,7 @@ export function TokenList(props: TokenListProps) {
                           />
                         )
                       })}
+                      {renderNativeResourceList(group.nativeRows)}
                     </div>
                   ) : null}
                 </Card>

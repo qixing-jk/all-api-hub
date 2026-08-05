@@ -58,6 +58,7 @@ export function AccountKeyResourceListItem({
   expanded = false,
   onExpandedChange,
   actionsDisabled = false,
+  selectionDisabledReason,
 }: {
   row: NativeKeyManagementRow
   onEdit: NativeKeyManagementRowAction
@@ -68,6 +69,7 @@ export function AccountKeyResourceListItem({
   expanded?: boolean
   onExpandedChange: (expanded: boolean) => void
   actionsDisabled?: boolean
+  selectionDisabledReason?: string
 }) {
   const { t } = useTranslation(["keyManagement", "common"])
   const presentation = buildOpenRouterKeyResourceCardPresentation(row, t)
@@ -142,6 +144,10 @@ export function AccountKeyResourceListItem({
       details={detailState}
       isDetailsExpanded={expanded}
       onDetailsExpandedChange={onExpandedChange}
+      selectionDisabledReason={selectionDisabledReason}
+      selectionLabel={t("batchManagedSiteExport.selection.rowLabel", {
+        name: presentation.title,
+      })}
       testId={KEY_MANAGEMENT_TEST_IDS.nativeKeyRow}
     />
   )

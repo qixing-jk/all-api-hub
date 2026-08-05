@@ -137,8 +137,10 @@
     }
   },
   "batchSelection": {
+    "accountUnavailableReason": "This account has no keys available for batch actions.",
     "eligibilityNotice_one": "Batch actions apply only to the {{count}} selectable key; items whose full key cannot be retrieved are excluded.",
-    "eligibilityNotice_other": "Batch actions apply only to the {{count}} selectable keys; items whose full keys cannot be retrieved are excluded."
+    "eligibilityNotice_other": "Batch actions apply only to the {{count}} selectable keys; items whose full keys cannot be retrieved are excluded.",
+    "unavailableReason": "The full key cannot be retrieved, so this item cannot be included in batch actions."
   },
   "createFirstKey": "Create first key",
   "description": "This page displays API key information for all accounts, including usage and expiration time. You can create new keys for specific accounts by clicking the 'Add Key' button in the upper right corner or the '+' button next to each key item. Please keep your API keys safe and avoid leaking them to others",

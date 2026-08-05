@@ -142,9 +142,11 @@
     }
   },
   "batchSelection": {
+    "accountUnavailableReason": "Esta conta não tem chaves disponíveis para ações em lote.",
     "eligibilityNotice_one": "As ações em lote se aplicam somente à {{count}} chave selecionável; itens cuja chave completa não pode ser recuperada são excluídos.",
     "eligibilityNotice_many": "As ações em lote se aplicam somente às {{count}} chaves selecionáveis; itens cuja chave completa não pode ser recuperada são excluídos.",
-    "eligibilityNotice_other": "As ações em lote se aplicam somente às {{count}} chaves selecionáveis; itens cuja chave completa não pode ser recuperada são excluídos."
+    "eligibilityNotice_other": "As ações em lote se aplicam somente às {{count}} chaves selecionáveis; itens cuja chave completa não pode ser recuperada são excluídos.",
+    "unavailableReason": "A chave completa não pode ser recuperada, portanto este item não pode participar de ações em lote."
   },
   "createFirstKey": "Criar primeira chave",
   "description": "Esta página exibe as informações das chaves de API de todas as contas, incluindo uso e data de expiração. Para criar uma chave para uma conta específica, clique no botão \"Adicionar chave\" no canto superior direito ou no botão \"+\" ao lado de cada item. Mantenha suas chaves de API seguras e não as compartilhe com outras pessoas",

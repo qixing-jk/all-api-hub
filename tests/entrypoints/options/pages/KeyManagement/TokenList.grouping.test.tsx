@@ -5,7 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 import {
   createAccount,
   createToken,
@@ -15,14 +15,26 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
   TokenListItem: ({
     token,
     guidedManagedSiteImportRequest,
+    onSelectionChange,
+    selectionDisabledReason,
   }: {
     token: { name: string }
     guidedManagedSiteImportRequest?: string
+    onSelectionChange?: (checked: boolean) => void
+    selectionDisabledReason?: string
   }) => (
     <div
       data-testid={`token-row-${token.name}`}
       data-guided-import-request={guidedManagedSiteImportRequest}
     >
+      {onSelectionChange || selectionDisabledReason ? (
+        <input
+          type="checkbox"
+          aria-label={token.name}
+          disabled={!onSelectionChange}
+          onChange={(event) => onSelectionChange?.(event.currentTarget.checked)}
+        />
+      ) : null}
       {token.name}
     </div>
   ),
@@ -55,6 +67,11 @@ describe("TokenList grouped all-accounts UX", () => {
   it("keeps mixed native rows out of legacy batch selection and explains the eligible count", async () => {
     const user = userEvent.setup()
     const account = createAccount({ id: "legacy-account", name: "Legacy" })
+    const nativeAccount = createAccount({
+      id: nativeRow.accountId,
+      name: nativeRow.accountName,
+      siteType: SITE_TYPES.OPENROUTER,
+    })
     const token = createToken({
       id: 1,
       name: "Legacy token",
@@ -77,18 +94,36 @@ describe("TokenList grouped all-accounts UX", () => {
         handleEditToken={vi.fn()}
         handleDeleteToken={vi.fn()}
         handleAddToken={vi.fn()}
-        selectedAccount={account.id}
-        displayData={[account] as any}
+        selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
+        displayData={[account, nativeAccount] as any}
       />,
     )
 
     expect(
       await screen.findByText(/batchSelection\.eligibilityNotice/),
     ).toBeVisible()
-    const selection = screen.getByRole("checkbox")
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.expandAll",
+      }),
+    )
+
+    const legacyGroup = screen.getByRole("group", { name: "Legacy" })
+    const nativeGroup = screen.getByRole("group", { name: "Native" })
+    expect(within(legacyGroup).getByText("Legacy token")).toBeVisible()
+    expect(within(nativeGroup).getByText("Native key")).toBeVisible()
+
+    const selection = within(legacyGroup).getByRole("checkbox", {
+      name: "Legacy token",
+    })
     await user.click(selection)
     expect(selection).toBeChecked()
-    expect(screen.getByText("Native key")).toBeVisible()
+    expect(within(nativeGroup).getAllByRole("checkbox")).toSatisfy(
+      (checkboxes: HTMLElement[]) =>
+        checkboxes.every((checkbox) =>
+          checkbox.matches(":disabled, [aria-disabled='true']"),
+        ),
+    )
   })
 
   it("does not show a batch eligibility notice for a native-only inventory", async () => {
@@ -112,16 +147,28 @@ describe("TokenList grouped all-accounts UX", () => {
         handleEditToken={vi.fn()}
         handleDeleteToken={vi.fn()}
         handleAddToken={vi.fn()}
-        selectedAccount={account.id}
+        selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         displayData={[account] as any}
       />,
+    )
+
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.expandAll",
+      }),
     )
 
     expect(await screen.findByText("Native key")).toBeVisible()
     expect(
       screen.queryByText(/batchSelection\.eligibilityNotice/),
     ).not.toBeInTheDocument()
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
+    expect(screen.getAllByRole("checkbox")).toSatisfy(
+      (checkboxes: HTMLElement[]) =>
+        checkboxes.every((checkbox) =>
+          checkbox.matches(":disabled, [aria-disabled='true']"),
+        ),
+    )
   })
 
   it("groups tokens by account and supports collapse/expand all", async () => {

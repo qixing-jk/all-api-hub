@@ -271,6 +271,30 @@ describe("KeyResourceCard", () => {
     expect(screen.queryByRole("checkbox")).toBeNull()
   })
 
+  it("keeps an unavailable batch selection visible with a focusable explanation", async () => {
+    const user = userEvent.setup()
+    renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={presentation}
+        isDetailsExpanded={false}
+        onDetailsExpandedChange={vi.fn()}
+        selectionLabel="Select Example key"
+        selectionDisabledReason="The full key cannot be retrieved."
+      />,
+    )
+
+    const selection = screen.getByRole("checkbox", {
+      name: "Select Example key",
+    })
+    expect(selection).toHaveAttribute("aria-disabled", "true")
+
+    await user.tab()
+    expect(selection).toHaveFocus()
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "The full key cannot be retrieved.",
+    )
+  })
+
   it("renders an explicit empty detail state", () => {
     renderKeyResourceCard(
       <KeyResourceCard

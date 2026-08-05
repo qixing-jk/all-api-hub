@@ -351,6 +351,13 @@ describe("i18n locale validation", () => {
         ),
       )
       const batchSelection = resource.batchSelection as Record<string, unknown>
+      for (const key of ["accountUnavailableReason", "unavailableReason"]) {
+        expect(
+          typeof batchSelection[key] === "string" &&
+            batchSelection[key].trim().length > 0,
+          `${language}:${key}`,
+        ).toBe(true)
+      }
       const values = Object.entries(batchSelection)
         .filter(
           ([key]) =>

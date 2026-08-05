@@ -1072,6 +1072,7 @@ describe("KeyManagement native page integration", () => {
   })
 
   it("publishes settled native accounts incrementally with honest per-account summary counts", async () => {
+    const user = userEvent.setup()
     const loadedAccount = createAccount({
       id: "native-loaded-account",
       name: "Loaded native account",
@@ -1152,6 +1153,9 @@ describe("KeyManagement native page integration", () => {
           ),
         ],
       }),
+    )
+    await user.click(
+      await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.expandAllButton),
     )
     await waitFor(() =>
       expect(
@@ -1676,6 +1680,9 @@ describe("KeyManagement native page integration", () => {
     await user.click(accountSelect)
     await user.click(
       await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.accountScopeAllOption),
+    )
+    await user.click(
+      await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.expandAllButton),
     )
 
     await waitFor(() =>
