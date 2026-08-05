@@ -340,8 +340,8 @@ describe("i18n locale validation", () => {
     }
   })
 
-  it("keeps OpenRouter legacy eligibility copy user-facing in every locale", async () => {
-    const placeholder = "keyManagement:openRouter.list.legacyEligible"
+  it("keeps batch eligibility copy provider-neutral and user-facing in every locale", async () => {
+    const placeholder = "keyManagement:batchSelection.eligibilityNotice"
 
     for (const language of SUPPORTED_UI_LANGUAGES) {
       const resource = JSON.parse(
@@ -350,16 +350,19 @@ describe("i18n locale validation", () => {
           "utf8",
         ),
       )
-      const list = resource.openRouter.list as Record<string, unknown>
-      const values = Object.entries(list)
+      const batchSelection = resource.batchSelection as Record<string, unknown>
+      const values = Object.entries(batchSelection)
         .filter(
           ([key]) =>
-            key === "legacyEligible" || key.startsWith("legacyEligible_"),
+            key === "eligibilityNotice" || key.startsWith("eligibilityNotice_"),
         )
         .map(([, value]) => value)
 
       expect(values.length, language).toBeGreaterThan(0)
       expect(values, language).not.toContain(placeholder)
+      expect(values, language).not.toEqual(
+        expect.arrayContaining([expect.stringMatching(/OpenRouter|AIHubMix/i)]),
+      )
       expect(
         values.every(
           (value) => typeof value === "string" && value.trim().length > 0,

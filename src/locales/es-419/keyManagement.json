@@ -141,6 +141,11 @@
       "modelPrefillFailed": "Falló el prerrelleno de modelos; se usará la mejor lista de modelos disponible."
     }
   },
+  "batchSelection": {
+    "eligibilityNotice_one": "Las acciones por lotes solo se aplican a la {{count}} clave seleccionable; se excluyen los elementos cuya clave completa no se puede recuperar.",
+    "eligibilityNotice_many": "Las acciones por lotes solo se aplican a las {{count}} claves seleccionables; se excluyen los elementos cuya clave completa no se puede recuperar.",
+    "eligibilityNotice_other": "Las acciones por lotes solo se aplican a las {{count}} claves seleccionables; se excluyen los elementos cuya clave completa no se puede recuperar."
+  },
   "createFirstKey": "Crear primera clave",
   "description": "Esta página muestra información de claves API para todas las cuentas, incluido el uso y la fecha de expiración. Puedes crear claves nuevas para cuentas específicas haciendo clic en el botón 'Agregar clave' en la esquina superior derecha o en el botón '+' junto a cada elemento de clave. Mantén tus claves API seguras y evita filtrarlas a otras personas",
   "details": {
@@ -502,9 +507,6 @@
         "workspace": "Espacio de trabajo"
       },
       "heading": "Claves de OpenRouter",
-      "legacyEligible_one": "Solo {{count}} clave heredada admite acciones por lotes; las claves de OpenRouter quedan excluidas.",
-      "legacyEligible_many": "Solo {{count}} claves heredadas admiten acciones por lotes; las claves de OpenRouter quedan excluidas.",
-      "legacyEligible_other": "Solo {{count}} claves heredadas admiten acciones por lotes; las claves de OpenRouter quedan excluidas.",
       "status": {
         "all": "Todas",
         "disabled": "Desactivada",

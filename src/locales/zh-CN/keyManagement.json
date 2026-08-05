@@ -131,6 +131,9 @@
       "modelPrefillFailed": "模型预填失败，将使用当前可用的模型列表。"
     }
   },
+  "batchSelection": {
+    "eligibilityNotice": "批量操作仅适用于当前 {{count}} 个可选择的密钥；无法读取完整密钥的项目不会参与。"
+  },
   "createFirstKey": "创建第一个密钥",
   "description": "此页面显示所有账号的 API 密钥信息，包括使用情况和过期时间。可以通过右上角的\"添加密钥\"按钮或点击各密钥项目旁的\"+\"按钮为指定账号创建新密钥。请妥善保管您的 API 密钥，避免泄露给他人",
   "details": {
@@ -484,7 +487,6 @@
         "workspace": "工作区"
       },
       "heading": "OpenRouter 密钥",
-      "legacyEligible": "可参与批量操作的旧版密钥有 {{count}} 个；OpenRouter 密钥不会参与。",
       "status": {
         "all": "全部",
         "disabled": "已停用",

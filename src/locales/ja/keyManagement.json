@@ -131,6 +131,9 @@
       "modelPrefillFailed": "モデルの事前入力に失敗しました。利用可能なモデルリストを使用します。"
     }
   },
+  "batchSelection": {
+    "eligibilityNotice_other": "一括操作の対象は、現在選択可能な {{count}} 件のキーのみです。完全なキーを取得できない項目は対象外です。"
+  },
   "createFirstKey": "最初のキーを作成",
   "description": "このページでは、すべてのアカウントの API キー情報（利用状況や有効期限を含む）を表示します。右上の「キーを追加」ボタン、または各キー項目の横にある「+」ボタンから、特定アカウント用の新しいキーを作成できます。API キーは安全に保管し、第三者へ漏洩しないようにしてください。",
   "details": {
@@ -484,7 +487,6 @@
         "workspace": "ワークスペース"
       },
       "heading": "OpenRouter キー",
-      "legacyEligible_other": "一括操作の対象となる従来型キーは {{count}} 件です。OpenRouter キーは対象外です。",
       "status": {
         "all": "すべて",
         "disabled": "無効",

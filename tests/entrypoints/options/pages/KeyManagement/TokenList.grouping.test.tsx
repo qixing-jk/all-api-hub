@@ -82,14 +82,16 @@ describe("TokenList grouped all-accounts UX", () => {
       />,
     )
 
-    expect(await screen.findByText(/legacyEligible/)).toBeVisible()
+    expect(
+      await screen.findByText(/batchSelection\.eligibilityNotice/),
+    ).toBeVisible()
     const selection = screen.getByRole("checkbox")
     await user.click(selection)
     expect(selection).toBeChecked()
     expect(screen.getByText("Native key")).toBeVisible()
   })
 
-  it("keeps the legacy eligibility notice visible when no legacy row is eligible", async () => {
+  it("does not show a batch eligibility notice for a native-only inventory", async () => {
     const account = createAccount({
       id: nativeRow.accountId,
       name: nativeRow.accountName,
@@ -115,9 +117,11 @@ describe("TokenList grouped all-accounts UX", () => {
       />,
     )
 
-    expect(await screen.findByText(/legacyEligible/)).toBeVisible()
+    expect(await screen.findByText("Native key")).toBeVisible()
+    expect(
+      screen.queryByText(/batchSelection\.eligibilityNotice/),
+    ).not.toBeInTheDocument()
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
-    expect(screen.getByText("Native key")).toBeVisible()
   })
 
   it("groups tokens by account and supports collapse/expand all", async () => {

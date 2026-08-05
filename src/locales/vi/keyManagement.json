@@ -131,6 +131,9 @@
       "modelPrefillFailed": "Điền sẵn mô hình thất bại, sẽ sử dụng danh sách mô hình khả dụng hiện tại."
     }
   },
+  "batchSelection": {
+    "eligibilityNotice_other": "Thao tác hàng loạt chỉ áp dụng cho {{count}} khóa có thể chọn; các mục không thể truy xuất khóa đầy đủ sẽ không được áp dụng."
+  },
   "createFirstKey": "Tạo khóa đầu tiên",
   "description": "Trang này hiển thị thông tin khóa API của tất cả tài khoản, bao gồm mức sử dụng và thời gian hết hạn. Bạn có thể tạo khóa mới cho một tài khoản cụ thể thông qua nút \"Thêm khóa API\" ở góc trên bên phải hoặc nhấp vào nút \"+\" bên cạnh mỗi mục khóa. Vui lòng bảo quản an toàn khóa API của bạn để tránh rò rỉ cho người khác.",
   "details": {
@@ -484,7 +487,6 @@
         "workspace": "Không gian làm việc"
       },
       "heading": "Khóa OpenRouter",
-      "legacyEligible_other": "Chỉ {{count}} khóa cũ đủ điều kiện cho thao tác hàng loạt; khóa OpenRouter không được áp dụng.",
       "status": {
         "all": "Tất cả",
         "disabled": "Đã tắt",

@@ -141,6 +141,11 @@
       "modelPrefillFailed": "Falha ao preencher os modelos; usando a melhor lista de modelos disponível."
     }
   },
+  "batchSelection": {
+    "eligibilityNotice_one": "As ações em lote se aplicam somente à {{count}} chave selecionável; itens cuja chave completa não pode ser recuperada são excluídos.",
+    "eligibilityNotice_many": "As ações em lote se aplicam somente às {{count}} chaves selecionáveis; itens cuja chave completa não pode ser recuperada são excluídos.",
+    "eligibilityNotice_other": "As ações em lote se aplicam somente às {{count}} chaves selecionáveis; itens cuja chave completa não pode ser recuperada são excluídos."
+  },
   "createFirstKey": "Criar primeira chave",
   "description": "Esta página exibe as informações das chaves de API de todas as contas, incluindo uso e data de expiração. Para criar uma chave para uma conta específica, clique no botão \"Adicionar chave\" no canto superior direito ou no botão \"+\" ao lado de cada item. Mantenha suas chaves de API seguras e não as compartilhe com outras pessoas",
   "details": {
@@ -502,9 +507,6 @@
         "workspace": "Espaço de trabalho"
       },
       "heading": "Chaves do OpenRouter",
-      "legacyEligible_one": "Apenas {{count}} chave legada é qualificada para ações em lote; as chaves do OpenRouter são excluídas.",
-      "legacyEligible_many": "Apenas {{count}} chaves legadas são qualificadas para ações em lote; as chaves do OpenRouter são excluídas.",
-      "legacyEligible_other": "Apenas {{count}} chaves legadas são qualificadas para ações em lote; as chaves do OpenRouter são excluídas.",
       "status": {
         "all": "Todas",
         "disabled": "Desativada",

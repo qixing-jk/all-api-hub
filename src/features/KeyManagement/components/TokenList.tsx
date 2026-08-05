@@ -670,6 +670,9 @@ export function TokenList(props: TokenListProps) {
     () => filteredEntries.filter((entry) => eligibleEntryIds.has(entry.id)),
     [eligibleEntryIds, filteredEntries],
   )
+  const hasFilteredIneligibleEntries =
+    filteredEligibleEntries.length < filteredEntries.length ||
+    nativeRows.length > 0
   const filteredEligibleEntryIds = useMemo(
     () => new Set(filteredEligibleEntries.map((entry) => entry.id)),
     [filteredEligibleEntries],
@@ -986,18 +989,6 @@ export function TokenList(props: TokenListProps) {
       actionsDisabled={nativeActionsDisabled}
     />
   )
-  const legacyEligibilityNotice =
-    nativeRows.length > 0 ? (
-      <p
-        className="text-muted-foreground mb-4 w-full rounded-md border p-3 text-sm"
-        role="status"
-      >
-        {t("keyManagement:openRouter.list.legacyEligible", {
-          count: filteredEntries.length,
-        })}
-      </p>
-    ) : null
-
   if (filteredDisplayRows.length === 0) {
     return (
       <TokenEmptyState
@@ -1020,20 +1011,21 @@ export function TokenList(props: TokenListProps) {
   }
 
   if (filteredEntries.length === 0) {
-    return (
-      <>
-        {nativeResourceList}
-        {legacyEligibilityNotice}
-      </>
-    )
+    return nativeResourceList
   }
 
   return (
     <>
       {nativeResourceList}
-      {legacyEligibilityNotice}
       {filteredEligibleEntries.length > 0 ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
+          {hasFilteredIneligibleEntries ? (
+            <p className="text-muted-foreground w-full text-sm" role="status">
+              {t("keyManagement:batchSelection.eligibilityNotice", {
+                count: filteredEligibleEntries.length,
+              })}
+            </p>
+          ) : null}
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={visibleSelectionChecked}

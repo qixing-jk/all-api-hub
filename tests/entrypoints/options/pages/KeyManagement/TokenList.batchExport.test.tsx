@@ -327,6 +327,9 @@ describe("TokenList batch export selection", () => {
         name: "keyManagement:batchManagedSiteExport.selection.accountGroup",
       }),
     ).toHaveLength(1)
+    expect(
+      screen.getByText(/keyManagement:batchSelection\.eligibilityNotice/),
+    ).toBeVisible()
   })
 
   it("hides the batch toolbar for an AIHubMix-only inventory", async () => {
@@ -371,6 +374,9 @@ describe("TokenList batch export selection", () => {
       screen.queryByRole("button", {
         name: /keyManagement:batchManagedSiteExport.actions.open/,
       }),
+    ).toBeNull()
+    expect(
+      screen.queryByText(/keyManagement:batchSelection\.eligibilityNotice/),
     ).toBeNull()
   })
 
