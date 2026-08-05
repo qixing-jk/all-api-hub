@@ -19,12 +19,13 @@ import {
 import { AuthTypeEnum } from "~/types"
 
 type Detail = { id: string; name: string }
+type CreateCommand = { name: string; destinationScopeKey?: string }
 type Definition = AccountKeyResourceDefinition<
   { scopeKey: string },
   string,
   Detail,
   Detail,
-  { name: string },
+  CreateCommand,
   { name: string },
   "denied"
 >
@@ -578,6 +579,126 @@ describe("defineAccountKeyResourceCapability", () => {
           ref: { resourceId: "created-key" },
         },
       },
+    })
+  })
+
+  it("projects a created resource into its validated destination scope", async () => {
+    const destinationScope = {
+      scopeKey: "workspace-destination",
+      routeKey: "destination",
+      displayName: "Destination workspace",
+      isDefault: false,
+    }
+    const definition = createDefinition({
+      listScopes: vi.fn(async () => [SCOPE, destinationScope]),
+      create: vi.fn<Definition["create"]>(async () => ({
+        certainty: "applied",
+        value: {
+          detail: { id: "created-key", name: "Created" },
+          scopeKey: "workspace-destination",
+          createdSecret: {
+            correlation: {
+              kind: "account-key-resource",
+              ref: {
+                accountId: "account-example",
+                siteType: SITE_TYPES.OPENROUTER,
+                scopeKey: "workspace-destination",
+                resourceId: "created-key",
+              },
+            },
+            displayName: "Created",
+            secret: "created-secret",
+            secretAvailability: "create-response-only",
+            credential: {
+              accountName: "Example",
+              apiType: "openai-compatible",
+              baseUrl: "https://api.example.invalid",
+              tagIds: [],
+            },
+          },
+        },
+      })),
+    })
+    const editor = await (
+      await openSession(definition)
+    ).openCreateEditor("workspace-example")
+
+    await expect(editor.submit({ name: "Created" })).resolves.toMatchObject({
+      facts: {
+        ref: {
+          accountId: "account-example",
+          siteType: SITE_TYPES.OPENROUTER,
+          scopeKey: "workspace-destination",
+          resourceId: "created-key",
+        },
+      },
+      createdSecret: {
+        correlation: {
+          kind: "account-key-resource",
+          ref: {
+            accountId: "account-example",
+            siteType: SITE_TYPES.OPENROUTER,
+            scopeKey: "workspace-destination",
+            resourceId: "created-key",
+          },
+        },
+      },
+    })
+  })
+
+  it("rejects an unvalidated command destination before create dispatch", async () => {
+    const create = vi.fn<Definition["create"]>(async () => ({
+      certainty: "applied",
+      value: { detail: { id: "created-key", name: "Created" } },
+    }))
+    const definition = createDefinition({
+      create,
+      createEditor: vi.fn(async () => ({
+        fields: [],
+        initialValues: {
+          name: "",
+          destinationScopeKey: "workspace-unvalidated",
+        },
+        validate: (): ResourceValidationResult => ({ valid: true }),
+        buildCommand: (values: EditableResourceProjection) => ({
+          name: String(values.name),
+          destinationScopeKey: String(values.destinationScopeKey),
+        }),
+        destinationScopeKey: (command: CreateCommand) =>
+          command.destinationScopeKey!,
+      })),
+    })
+    const editor = await (
+      await openSession(definition)
+    ).openCreateEditor("workspace-example")
+
+    await expect(
+      editor.submit({
+        name: "Created",
+        destinationScopeKey: "workspace-unvalidated",
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    expect(create).not.toHaveBeenCalled()
+  })
+
+  it("rejects a created resource in an unvalidated destination scope", async () => {
+    const definition = createDefinition({
+      create: vi.fn<Definition["create"]>(async () => ({
+        certainty: "applied",
+        value: {
+          detail: { id: "created-key", name: "Created" },
+          scopeKey: "workspace-unvalidated",
+        },
+      })),
+    })
+    const editor = await (
+      await openSession(definition)
+    ).openCreateEditor("workspace-example")
+
+    await expect(editor.submit({ name: "Created" })).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
     })
   })
 

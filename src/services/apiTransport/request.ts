@@ -85,6 +85,7 @@ const logger = createLogger("ApiTransportRequest")
 interface BackendErrorDetails {
   message: string
   isBackendError: boolean
+  upstreamCode?: string
 }
 
 // Throttle log endpoints (`/api/log*`) to reduce burst traffic that can trigger
@@ -102,6 +103,20 @@ const KNOWN_BACKEND_ERROR_TYPES = new Set(["new_api_error"])
 
 const isKnownBackendErrorType = (value: unknown): boolean =>
   typeof value === "string" && KNOWN_BACKEND_ERROR_TYPES.has(value.trim())
+
+const getSafeUpstreamCode = (value: unknown): string | undefined => {
+  if (typeof value !== "string" && typeof value !== "number") return undefined
+  const code = String(value).trim()
+  return code.length <= 64 && /^[A-Za-z0-9_.-]+$/.test(code) ? code : undefined
+}
+
+const isOpenRouterOrigin = (url: string): boolean => {
+  try {
+    return new URL(url).origin === "https://openrouter.ai"
+  } catch {
+    return false
+  }
+}
 
 /**
  * Extracts known backend-shaped JSON errors so they are not treated as
@@ -139,12 +154,20 @@ function extractBackendErrorDetails(body: unknown): BackendErrorDetails | null {
     return null
   }
 
-  return isKnownBackendErrorType((error as { type?: unknown }).type)
-    ? {
-        message,
-        isBackendError: true,
-      }
-    : null
+  const isBackendError = isKnownBackendErrorType(
+    (error as { type?: unknown }).type,
+  )
+  const upstreamCode = getSafeUpstreamCode((error as { code?: unknown }).code)
+
+  // Generic nested errors are only safe to expose when both fields are
+  // bounded scalars. `new_api_error` preserves its existing classification.
+  if (!isBackendError && !upstreamCode) return null
+
+  return {
+    message,
+    isBackendError,
+    upstreamCode,
+  }
 }
 
 /**
@@ -472,6 +495,7 @@ const apiRequest = async <T>(
   if (!response.ok) {
     let errorCode: ApiErrorCode = API_ERROR_CODES.HTTP_OTHER
     let errorMessage = `请求失败: ${response.status}`
+    let backendError: BackendErrorDetails | null = null
 
     if (response.status === 401) {
       errorCode = API_ERROR_CODES.HTTP_401
@@ -509,9 +533,18 @@ const apiRequest = async <T>(
         const responseBody = (await response.clone().json()) as Partial<
           ApiResponse<unknown>
         >
-        const backendError = extractBackendErrorDetails(responseBody)
+        backendError = extractBackendErrorDetails(responseBody)
         if (backendError) {
-          errorMessage = backendError.message
+          // Keep unknown non-OpenRouter 403 bodies on the existing
+          // protection-bypass path. OpenRouter's documented nested error
+          // envelope is safe once extraction has validated both fields.
+          if (
+            backendError.isBackendError ||
+            response.status !== 403 ||
+            isOpenRouterOrigin(url)
+          ) {
+            errorMessage = backendError.message
+          }
           if (backendError.isBackendError && response.status === 403) {
             errorCode = API_ERROR_CODES.BUSINESS_ERROR
           }
@@ -521,7 +554,13 @@ const apiRequest = async <T>(
       }
     }
 
-    throw new ApiError(errorMessage, response.status, endpoint, errorCode)
+    throw new ApiError(
+      errorMessage,
+      response.status,
+      endpoint,
+      errorCode,
+      backendError?.upstreamCode,
+    )
   }
   if (responseType === "json") {
     const contentType = response.headers.get("content-type") || ""

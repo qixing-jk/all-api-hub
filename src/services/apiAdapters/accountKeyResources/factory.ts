@@ -42,11 +42,13 @@ export type AccountKeyResourceEditorDefinition<TCommand> = {
   initialValues: EditableResourceProjection
   validate(values: EditableResourceProjection): ResourceValidationResult
   buildCommand(values: EditableResourceProjection): TCommand
+  destinationScopeKey?: (command: TCommand) => string
   loadOptions?: AccountKeyResourceEditor["loadOptions"]
 }
 
 export type AccountKeyCreateMutation<TDetail> = {
   detail: TDetail
+  scopeKey?: string
   createdSecret?: AccountKeyEditorSubmitResult["createdSecret"]
 }
 
@@ -619,37 +621,57 @@ export function defineAccountKeyResourceCapability<
                 definition.createEditor(config, providerScope, editorOptions),
               mapFailure,
             )
-            const refBoundary = createNativeResourceRefBoundary<
-              AccountKeyResourceRef,
-              TLocator
-            >({
-              scopeKey: canonicalScopeKey,
-              encodeLocator: definition.encodeLocator,
-              decodeLocator: definition.decodeLocator,
-              buildRef: (resourceId) =>
-                Object.freeze({
-                  accountId,
-                  siteType,
-                  scopeKey: canonicalScopeKey,
-                  resourceId,
-                }),
-              matchesRef: (value): value is AccountKeyResourceRef =>
-                isAccountKeyResourceRefFor(value, {
-                  accountId,
-                  siteType,
-                  scopeKey: canonicalScopeKey,
-                }),
-            })
             return createEditor({
               editorDefinition,
-              mutate: (command, submitOptions) =>
-                definition.create(
+              mutate: (command, submitOptions) => {
+                const destinationScopeKey =
+                  editorDefinition.destinationScopeKey?.(command) ??
+                  canonicalScopeKey
+                if (
+                  !isBoundedNonBlankString(destinationScopeKey, 2048) ||
+                  !cachedScopes?.some(
+                    (scope) => scope.scopeKey === destinationScopeKey,
+                  )
+                ) {
+                  throw validationFailure()
+                }
+                return definition.create(
                   config,
                   providerScope,
                   command,
                   submitOptions,
-                ),
+                )
+              },
               projectApplied: (result) => {
+                const appliedScopeKey = result.scopeKey ?? canonicalScopeKey
+                if (
+                  !cachedScopes?.some(
+                    (scope) => scope.scopeKey === appliedScopeKey,
+                  )
+                ) {
+                  throw unexpectedFailure()
+                }
+                const refBoundary = createNativeResourceRefBoundary<
+                  AccountKeyResourceRef,
+                  TLocator
+                >({
+                  scopeKey: appliedScopeKey,
+                  encodeLocator: definition.encodeLocator,
+                  decodeLocator: definition.decodeLocator,
+                  buildRef: (resourceId) =>
+                    Object.freeze({
+                      accountId,
+                      siteType,
+                      scopeKey: appliedScopeKey,
+                      resourceId,
+                    }),
+                  matchesRef: (value): value is AccountKeyResourceRef =>
+                    isAccountKeyResourceRefFor(value, {
+                      accountId,
+                      siteType,
+                      scopeKey: appliedScopeKey,
+                    }),
+                })
                 const ref = refBoundary.createRef(
                   definition.locatorFromDetail(result.detail),
                 )

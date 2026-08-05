@@ -30,6 +30,19 @@ describe("ApiError", () => {
       expect(error.endpoint).toBe("/api/user/self")
     })
 
+    it("keeps a bounded upstream code separate from the transport code", () => {
+      const error = new ApiError(
+        "Bad request",
+        400,
+        "/keys",
+        API_ERROR_CODES.HTTP_OTHER,
+        "invalid_limit",
+      )
+
+      expect(error.code).toBe(API_ERROR_CODES.HTTP_OTHER)
+      expect(error.upstreamCode).toBe("invalid_limit")
+    })
+
     it("should handle empty message", () => {
       const error = new ApiError("")
 

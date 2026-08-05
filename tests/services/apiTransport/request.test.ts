@@ -1676,6 +1676,107 @@ describe("apiTransport request helpers", () => {
     })
   })
 
+  it("keeps a safe nested backend code without retaining error metadata", async () => {
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "invalid_limit",
+              message: "Limit must be non-negative",
+              metadata: { secret: "must-not-be-exposed" },
+            },
+          },
+          { status: 400 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      code: ApiErrorCodes.HTTP_OTHER,
+      upstreamCode: "invalid_limit",
+      message: "Limit must be non-negative",
+    })
+  })
+
+  it.each([undefined, null, {}, [], "bad code!", "x".repeat(65)])(
+    "does not expose nested error details with unsafe code %j",
+    async (code) => {
+      server.use(
+        http.get(API_URL, () =>
+          HttpResponse.json(
+            {
+              error: {
+                code,
+                message: "Private malformed code message",
+              },
+            },
+            { status: 400 },
+          ),
+        ),
+      )
+
+      await expect(
+        fetchApiData(
+          {
+            baseUrl: BASE_URL,
+            auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+          },
+          { endpoint: ENDPOINT },
+        ),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        message: "请求失败: 400",
+        upstreamCode: undefined,
+      })
+    },
+  )
+
+  it("retains valid nested OpenRouter errors for 403 responses", async () => {
+    const openRouterApiUrl = "https://openrouter.ai/api/v1/keys"
+    server.use(
+      http.get(openRouterApiUrl, () =>
+        HttpResponse.json(
+          {
+            error: {
+              code: "key_forbidden",
+              message: "Private management-key detail",
+              metadata: { sensitive: "not-retained" },
+            },
+          },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: "https://openrouter.ai/api/v1",
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        {
+          endpoint: "/keys",
+          tempWindowFallback: { statusCodes: [], codes: [] },
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 403,
+      code: ApiErrorCodes.HTTP_403,
+      upstreamCode: "key_forbidden",
+      message: "Private management-key detail",
+    })
+  })
+
   it("classifies 401 HTML responses as CONTENT_TYPE_MISMATCH for JSON requests", async () => {
     server.use(
       http.get(API_URL, () => {

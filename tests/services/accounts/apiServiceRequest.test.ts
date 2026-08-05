@@ -256,7 +256,12 @@ describe("fetchDisplayAccountTokens", () => {
     expect(context.accountKeyResources).toBe(
       context.capabilities.account?.keyResources,
     )
-    expect(context.keyManagement).toBeUndefined()
+    expect(context).toMatchObject({
+      accountKeyResources,
+      keyManagement: undefined,
+      serviceCredential: undefined,
+      tokenProvisioning: undefined,
+    })
   })
 
   it("returns singleton service credentials as runtime keys when token inventory is unsupported", async () => {

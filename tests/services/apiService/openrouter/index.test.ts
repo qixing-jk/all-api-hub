@@ -13,6 +13,7 @@ import {
 import { UI_CONSTANTS } from "~/constants/ui"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import {
+  createOpenRouterManagementRequest,
   fetchAccountData,
   refreshAccountData,
   validateManagementKey,
@@ -55,6 +56,17 @@ describe("apiService OpenRouter", () => {
   })
   beforeEach(() => server.resetHandlers())
   afterEach(() => vi.restoreAllMocks())
+
+  it("builds canonical management requests without user-id headers", () => {
+    expect(createOpenRouterManagementRequest(baseRequest)).toMatchObject({
+      baseUrl: OPENROUTER_API_BASE_URL,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "management-key-placeholder",
+        userId: undefined,
+      },
+    })
+  })
 
   it("validates management keys against the canonical key endpoint", async () => {
     let capturedRequest: Request | undefined
@@ -132,10 +144,7 @@ describe("apiService OpenRouter", () => {
 
     await expect(
       validateManagementKey({ accessToken: "   " }),
-    ).rejects.toMatchObject({
-      statusCode: 401,
-      code: API_ERROR_CODES.HTTP_401,
-    })
+    ).rejects.toBeInstanceOf(OpenRouterManagementKeyRequiredError)
     expect(requestCount).toBe(0)
   })
 
@@ -334,6 +343,22 @@ describe("apiService OpenRouter", () => {
       success: false,
       healthStatus: { status: SiteHealthStatus.Warning },
     })
+  })
+
+  it("classifies a blank refresh credential as an authentication warning", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+
+    const result = await refreshAccountData({
+      ...baseRequest,
+      auth: { ...baseRequest.auth, accessToken: "   " },
+    })
+
+    expect(result).toMatchObject({
+      success: false,
+      healthStatus: { status: SiteHealthStatus.Warning },
+    })
+    expect(result.healthStatus.message).toContain("401")
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it.each([401, 403, 429])(

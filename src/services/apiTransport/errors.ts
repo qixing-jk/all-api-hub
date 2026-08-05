@@ -51,6 +51,7 @@ export class ApiError extends Error {
     public statusCode?: number,
     public endpoint?: string,
     public code?: ApiErrorCode,
+    public upstreamCode?: string,
   ) {
     super(message)
     this.name = "ApiError"

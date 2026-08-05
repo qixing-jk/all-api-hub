@@ -175,6 +175,9 @@ describe("account key product capabilities", () => {
     expect(getAccountKeyProductCapabilities(account as any)).toMatchObject({
       resourceKeys: { list: true, create: true, update: true, delete: true },
       runtimeKeys: { list: false, resolveSecret: false },
+      apiTokens: { create: false, update: false, delete: false },
+      tokenMetadata: { fetchAvailableModels: false, fetchUserGroups: false },
+      serviceCredential: { fetch: false, rotate: false },
       defaultTokenAutomation: { run: false },
     })
   })

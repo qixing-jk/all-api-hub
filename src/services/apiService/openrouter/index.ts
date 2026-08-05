@@ -7,7 +7,7 @@ import type {
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
-import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum, SiteHealthStatus, type AccountIdentity } from "~/types"
@@ -19,6 +19,11 @@ import {
   OPENROUTER_KEY_ENDPOINT,
 } from "./constants"
 import { OpenRouterManagementKeyRequiredError } from "./errors"
+import { createOpenRouterManagementRequest } from "./request"
+
+export * from "./keyManagement"
+export * from "./keyManagementSchemas"
+export { createOpenRouterManagementRequest } from "./request"
 
 const logger = createLogger("ApiService.OpenRouter")
 
@@ -53,42 +58,19 @@ const createInvalidResponseError = (endpoint: string): ApiError =>
 
 const createCredentialRequest = (
   input: OpenRouterManagementKeyValidationInput,
-): ApiServiceRequest => ({
-  baseUrl: OPENROUTER_API_BASE_URL,
-  auth: {
-    authType: AuthTypeEnum.AccessToken,
-    accessToken:
-      typeof input.accessToken === "string" ? input.accessToken.trim() : "",
-  },
-  abortSignal: input.signal,
-})
-
-const createAccountRequest = <Request extends ApiServiceRequest>(
-  request: Request,
-): Request =>
-  ({
-    ...request,
+): ApiServiceRequest =>
+  createOpenRouterManagementRequest({
     baseUrl: OPENROUTER_API_BASE_URL,
     auth: {
-      ...request.auth,
-      accessToken: request.auth.accessToken?.trim(),
-      userId: undefined,
+      authType: AuthTypeEnum.AccessToken,
+      accessToken:
+        typeof input.accessToken === "string" ? input.accessToken : "",
     },
-  }) as Request
+    abortSignal: input.signal,
+  })
 
-const requireAccessToken = (
-  request: ApiServiceRequest,
-  endpoint: string,
-): void => {
-  if (request.auth.accessToken?.trim()) return
-
-  throw new ApiError(
-    "OpenRouter management key is required",
-    401,
-    endpoint,
-    API_ERROR_CODES.HTTP_401,
-  )
-}
+const createAccountRequest = (request: ApiServiceRequest): ApiServiceRequest =>
+  createOpenRouterManagementRequest(request)
 
 /**
  * Keeps refresh health classification while removing upstream error details.
@@ -116,7 +98,6 @@ export async function validateManagementKey(
   input: OpenRouterManagementKeyValidationInput,
 ): Promise<OpenRouterManagementKeyValidation> {
   const request = createCredentialRequest(input)
-  requireAccessToken(request, OPENROUTER_KEY_ENDPOINT)
 
   const data = await fetchApiData<OpenRouterKeyData>(request, {
     endpoint: OPENROUTER_KEY_ENDPOINT,
@@ -147,7 +128,6 @@ const fetchCredits = async (
   request: ApiServiceAccountRequest,
 ): Promise<OpenRouterCreditsData> => {
   const canonicalRequest = createAccountRequest(request)
-  requireAccessToken(canonicalRequest, OPENROUTER_CREDITS_ENDPOINT)
 
   return await fetchApiData<OpenRouterCreditsData>(canonicalRequest, {
     endpoint: OPENROUTER_CREDITS_ENDPOINT,
