@@ -41,6 +41,11 @@ import * as axonHubNativeResources from "~/services/apiAdapters/managedResources
 import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  MANAGED_SITE_MUTATION_OUTCOMES,
+  type ManagedSiteMutationOutcome,
+  type ManagedSiteMutationResult,
+} from "~/services/managedSites/mutations"
 import type {
   AxonHubChannel,
   AxonHubCreateChannelInput,
@@ -81,6 +86,7 @@ const mocks = vi.hoisted(() => {
     updateChannel: vi.fn(),
     updateStatus: vi.fn(),
     deleteChannel: vi.fn(),
+    mutationSequenceStepCounts: [] as number[],
   }
 })
 
@@ -102,6 +108,28 @@ vi.mock("~/services/apiService/axonHub", () => ({
   updateAxonHubChannelStatus: mocks.updateStatus,
   deleteAxonHubChannel: mocks.deleteChannel,
 }))
+
+vi.mock("~/services/managedSites/mutations", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/managedSites/mutations")>()
+
+  return {
+    ...actual,
+    createManagedSiteMutationSequence: (
+      ...args: Parameters<typeof actual.createManagedSiteMutationSequence>
+    ) => {
+      const sequence = actual.createManagedSiteMutationSequence(...args)
+      const sequenceIndex = mocks.mutationSequenceStepCounts.push(0) - 1
+      return {
+        ...sequence,
+        beginStep() {
+          mocks.mutationSequenceStepCounts[sequenceIndex] += 1
+          return sequence.beginStep()
+        },
+      }
+    },
+  }
+})
 
 const config = {
   baseUrl: "https://api.example.invalid/",
@@ -324,6 +352,43 @@ const expectFailureCode = async (promise: Promise<unknown>, code: string) => {
   expect((error as ManagedResourceError).failure).toEqual({ code })
 }
 
+const expectMutationOutcome = async <T>(
+  promise: Promise<ManagedSiteMutationResult<T>>,
+  outcome: ManagedSiteMutationOutcome,
+) => {
+  const result = await promise
+  expect(result.outcome).toBe(outcome)
+  return result
+}
+
+const expectRejectedMutationCode = async <T>(
+  promise: Promise<ManagedSiteMutationResult<T>>,
+  code: string,
+) => {
+  const result = await expectMutationOutcome(
+    promise,
+    MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+  )
+  if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Rejected) {
+    throw new Error("Expected a rejected mutation result")
+  }
+  expect(result.diagnostic.code).toBe(code)
+  return result
+}
+
+const expectGenericValidationRejection = async <T>(
+  promise: Promise<ManagedSiteMutationResult<T>>,
+) => {
+  const result = await expectMutationOutcome(
+    promise,
+    MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+  )
+  expect(result).toEqual({
+    outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+    diagnostic: { message: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+  })
+}
+
 const openWorkspace = () => axonHubManagedResourceRegistration.open()
 
 const expectEditorMatchesFieldPolicy = (
@@ -376,6 +441,7 @@ describe("AxonHub native managed-resource Adapter", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.mutationSequenceStepCounts.length = 0
     const preferences = { marker: "saved-preferences" }
     mocks.getPreferences.mockResolvedValue(preferences)
     mocks.resolveRuntimeConfig.mockReturnValue({
@@ -509,7 +575,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       )
       const workspace = await openWorkspace()
       const editor = await workspace.openEditEditor(refFor())
-      await expectFailureCode(
+      await expectRejectedMutationCode(
         editor.submit({ ...editor.initialValues, name: "Renamed" }),
         code,
       )
@@ -1001,23 +1067,19 @@ describe("AxonHub native managed-resource Adapter", () => {
           { fieldId: "key", code: "unsupported_option" },
         ]),
       })
-      await expect(
+      await expectGenericValidationRejection(
         specialEditor.submit({
           ...specialEditor.initialValues,
           type: AXON_HUB_CHANNEL_TYPE.OPENAI,
           key: { kind: "replace", value: "replacement-secret" },
         }),
-      ).rejects.toMatchObject({
-        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
-      })
-      await expect(
+      )
+      await expectGenericValidationRejection(
         specialEditor.submit({
           ...specialEditor.initialValues,
           key: { kind: "clear" },
         }),
-      ).rejects.toMatchObject({
-        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
-      })
+      )
     }
     expect(mocks.updateChannel).not.toHaveBeenCalled()
   })
@@ -1118,13 +1180,9 @@ describe("AxonHub native managed-resource Adapter", () => {
           ],
         },
       )
-      await expect(
+      await expectGenericValidationRejection(
         editor.submit({ ...editor.initialValues, key: intent }),
-      ).rejects.toMatchObject({
-        failure: {
-          code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
-        },
-      })
+      )
     }
 
     await editor.submit({ ...editor.initialValues, name: "Renamed" })
@@ -1228,9 +1286,7 @@ describe("AxonHub native managed-resource Adapter", () => {
       ]
 
       for (const projection of craftedProjections) {
-        await expect(editor.submit(projection)).rejects.toMatchObject({
-          failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
-        })
+        await expectGenericValidationRejection(editor.submit(projection))
       }
 
       expect(mocks.updateChannel).not.toHaveBeenCalled()
@@ -1272,9 +1328,7 @@ describe("AxonHub native managed-resource Adapter", () => {
           { fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY, code: "required" },
         ]),
       })
-      await expect(editor.submit(values)).rejects.toMatchObject({
-        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
-      })
+      await expectGenericValidationRejection(editor.submit(values))
       expect(mocks.createChannel).not.toHaveBeenCalled()
     },
   )
@@ -1331,11 +1385,9 @@ describe("AxonHub native managed-resource Adapter", () => {
       { kind: "replace", value: "replacement-secret" },
       { kind: "clear" },
     ] satisfies SecretEditIntent[]) {
-      await expect(
+      await expectGenericValidationRejection(
         editor.submit({ ...editor.initialValues, key: intent }),
-      ).rejects.toMatchObject({
-        failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
-      })
+      )
     }
 
     expect(mocks.updateChannel).not.toHaveBeenCalled()
@@ -1480,15 +1532,14 @@ describe("AxonHub native managed-resource Adapter", () => {
     const workspace = await openWorkspace()
     const editor = await workspace.openEditEditor(refFor(detail))
 
-    await expect(
+    await expectMutationOutcome(
       editor.submit({
         ...editor.initialValues,
         name: "Renamed",
         status: AXON_HUB_CHANNEL_STATUS.ENABLED,
       }),
-    ).rejects.toMatchObject({
-      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain },
-    })
+      MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+    )
 
     expect(mocks.updateChannel).toHaveBeenCalledWith(
       config,
@@ -1864,9 +1915,7 @@ describe("AxonHub native managed-resource Adapter", () => {
         },
       ],
     })
-    await expect(editor.submit(craftedValues)).rejects.toMatchObject({
-      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
-    })
+    await expectGenericValidationRejection(editor.submit(craftedValues))
     expect(mocks.createChannel).not.toHaveBeenCalled()
   })
 
@@ -2189,6 +2238,129 @@ describe("AxonHub native managed-resource Adapter", () => {
     )
   })
 
+  it("uses a distinct attempt for each create write and retains the confirmed create effect", async () => {
+    const created = buildDetailChannel({
+      id: "created-before-status-rejection",
+      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+    })
+    const statusError = new mocks.RequestError(
+      "upstream-rejected",
+      "not-dispatched",
+    )
+    mocks.createChannel.mockResolvedValue(created)
+    mocks.updateStatus.mockRejectedValue(statusError)
+    const operations = await openAxonHubNativeResourceOperations()
+
+    await expect(
+      operations.create(
+        {
+          type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+          name: "Create then enable",
+          credentials: { apiKeys: ["credential-placeholder"] },
+          supportedModels: ["model-a"],
+          manualModels: ["model-a"],
+          defaultTestModel: "model-a",
+          settings: {},
+          orderingWeight: 0,
+        },
+        AXON_HUB_CHANNEL_STATUS.ENABLED,
+      ),
+    ).resolves.toEqual({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+      data: created,
+      confirmedEffects: [
+        {
+          kind: "resource-created",
+          resourceKind: "channel",
+          resourceId: created.id,
+        },
+      ],
+      completion: "rejected",
+      diagnostic: {
+        message: "upstream_rejected",
+        code: "upstream_rejected",
+        raw: statusError,
+      },
+    })
+    expect(mocks.mutationSequenceStepCounts).toEqual([2])
+  })
+
+  it("uses a distinct attempt for each update write and retains the confirmed field effect", async () => {
+    const detail = buildDetailChannel({
+      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+    })
+    const updated = { ...detail, name: "Updated before status loss" }
+    const statusError = new mocks.RequestError("unavailable", "dispatched")
+    mocks.updateChannel.mockResolvedValue(updated)
+    mocks.updateStatus.mockRejectedValue(statusError)
+    const operations = await openAxonHubNativeResourceOperations()
+
+    await expect(
+      operations.update(detail, {
+        name: updated.name,
+        status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      }),
+    ).resolves.toEqual({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+      data: updated,
+      confirmedEffects: [
+        {
+          kind: "resource-updated",
+          resourceKind: "channel",
+          resourceId: detail.id,
+        },
+      ],
+      completion: "uncertain",
+      diagnostic: {
+        message: "unavailable",
+        code: "unavailable",
+        raw: statusError,
+      },
+    })
+    expect(mocks.mutationSequenceStepCounts).toEqual([2])
+  })
+
+  it("opens exactly one attempt for each single-write native mutation", async () => {
+    const detail = buildDetailChannel()
+    const operations = await openAxonHubNativeResourceOperations()
+
+    await operations.create(
+      {
+        type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+        name: "Single create",
+        credentials: { apiKeys: ["credential-placeholder"] },
+        supportedModels: ["model-a"],
+        manualModels: ["model-a"],
+        defaultTestModel: "model-a",
+        settings: {},
+        orderingWeight: 0,
+      },
+      AXON_HUB_CHANNEL_STATUS.DISABLED,
+    )
+    await operations.update(detail, { name: "Single update" })
+    await operations.delete(refFor(detail))
+
+    expect(mocks.mutationSequenceStepCounts).toEqual([1, 1, 1])
+  })
+
+  it("rethrows programming failures from a later native write", async () => {
+    const detail = buildDetailChannel({
+      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+    })
+    const programmingError = new Error("status invariant failed")
+    mocks.updateChannel.mockResolvedValue({ ...detail, name: "Updated" })
+    mocks.updateStatus.mockRejectedValue(programmingError)
+    const operations = await openAxonHubNativeResourceOperations()
+
+    await expect(
+      operations.update(detail, {
+        name: "Updated",
+        status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      }),
+    ).rejects.toBe(programmingError)
+    expect(mocks.mutationSequenceStepCounts).toEqual([2])
+  })
+
   it("maps create rejection and applies the requested enabled status", async () => {
     const workspace = await openWorkspace()
     const editor = await workspace.openCreateEditor()
@@ -2204,7 +2376,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     mocks.createChannel.mockRejectedValueOnce(
       new mocks.RequestError("upstream-rejected", "not-dispatched"),
     )
-    await expectFailureCode(
+    await expectRejectedMutationCode(
       editor.submit(values),
       MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
     )
@@ -2217,8 +2389,11 @@ describe("AxonHub native managed-resource Adapter", () => {
     const result = await editor.submit(values)
 
     expect(result).toMatchObject({
-      status: "enabled",
-      ref: { resourceId: "created-enabled-id" },
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+      data: {
+        status: "enabled",
+        ref: { resourceId: "created-enabled-id" },
+      },
     })
     expect(mocks.updateStatus).toHaveBeenCalledWith(
       config,
@@ -2228,7 +2403,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     )
   })
 
-  it("maps a partial create result to mutation_state_uncertain without replay", async () => {
+  it("preserves a partial create result and uncertain updates without replay", async () => {
     const created = buildDetailChannel({
       id: "created-id",
       status: AXON_HUB_CHANNEL_STATUS.DISABLED,
@@ -2240,7 +2415,7 @@ describe("AxonHub native managed-resource Adapter", () => {
     const workspace = await openWorkspace()
     const editor = await workspace.openCreateEditor()
 
-    await expectFailureCode(
+    await expectMutationOutcome(
       editor.submit({
         ...editor.initialValues,
         name: "Created channel",
@@ -2251,7 +2426,7 @@ describe("AxonHub native managed-resource Adapter", () => {
         defaultTestModel: "model-a",
         status: AXON_HUB_CHANNEL_STATUS.ENABLED,
       }),
-      MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      MANAGED_SITE_MUTATION_OUTCOMES.Partial,
     )
     expect(mocks.createChannel).toHaveBeenCalledOnce()
     expect(mocks.updateStatus).toHaveBeenCalledOnce()
@@ -2268,14 +2443,11 @@ describe("AxonHub native managed-resource Adapter", () => {
       name: "Uncertain rename",
     }
 
-    await expectFailureCode(
+    await expectMutationOutcome(
       updateEditor.submit(changedValues),
-      MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
     )
-    await expectFailureCode(
-      updateEditor.submit(changedValues),
-      MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
-    )
+    await expectGenericValidationRejection(updateEditor.submit(changedValues))
     expect(mocks.updateChannel).toHaveBeenCalledOnce()
   })
 
@@ -2288,13 +2460,12 @@ describe("AxonHub native managed-resource Adapter", () => {
     const workspace = await openWorkspace()
     const editor = await workspace.openEditEditor(refFor(detail))
 
-    await expectFailureCode(
+    await expectMutationOutcome(
       editor.submit({ ...editor.initialValues, name: "Uncertain rename" }),
-      MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
     )
-    await expectFailureCode(
+    await expectGenericValidationRejection(
       editor.submit({ ...editor.initialValues, name: "Uncertain rename" }),
-      MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
     )
     expect(mocks.updateChannel).toHaveBeenCalledOnce()
   })
@@ -2314,14 +2485,10 @@ describe("AxonHub native managed-resource Adapter", () => {
         name: "Uncertain rename",
       })
 
-      expect(nativeResult).toMatchObject({
-        certainty: "possibly-applied",
-        failure: { code, dispatch: "after" },
+      expect(nativeResult).toEqual({
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+        diagnostic: { message: code, code, raw: rawCause },
       })
-      if (nativeResult.certainty !== "possibly-applied") {
-        throw new Error("Expected a possibly-applied native result")
-      }
-      expect(nativeResult.error).toBe(rawCause)
 
       mocks.updateChannel.mockClear()
       mocks.getChannel.mockResolvedValue(detail)
@@ -2332,14 +2499,14 @@ describe("AxonHub native managed-resource Adapter", () => {
         name: "Uncertain rename",
       }
 
-      await expectFailureCode(
+      const publicResult = await expectMutationOutcome(
         editor.submit(changedValues),
-        MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
       )
-      await expectFailureCode(
-        editor.submit(changedValues),
-        MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
-      )
+      expect(publicResult).toMatchObject({
+        diagnostic: { raw: rawCause },
+      })
+      await expectGenericValidationRejection(editor.submit(changedValues))
       expect(mocks.updateChannel).toHaveBeenCalledOnce()
     },
   )
@@ -2349,10 +2516,13 @@ describe("AxonHub native managed-resource Adapter", () => {
     const ref = refFor()
 
     mocks.deleteChannel.mockResolvedValueOnce(true)
-    await expect(workspace.delete(ref)).resolves.toBeUndefined()
+    await expectMutationOutcome(
+      workspace.delete(ref),
+      MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+    )
 
     mocks.deleteChannel.mockResolvedValueOnce(false)
-    await expectFailureCode(
+    await expectRejectedMutationCode(
       workspace.delete(ref),
       MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
     )
@@ -2363,14 +2533,17 @@ describe("AxonHub native managed-resource Adapter", () => {
     mocks.getChannel.mockRejectedValueOnce(
       new mocks.RequestError("not-found", "not-dispatched"),
     )
-    await expect(workspace.delete(ref)).resolves.toBeUndefined()
+    await expectMutationOutcome(
+      workspace.delete(ref),
+      MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+    )
 
     mocks.deleteChannel.mockRejectedValueOnce(
       new mocks.RequestError("unavailable", "dispatched"),
     )
-    await expectFailureCode(
+    await expectMutationOutcome(
       workspace.delete(ref),
-      MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
     )
     expect(mocks.deleteChannel).toHaveBeenCalledTimes(4)
     expect(mocks.getChannel).toHaveBeenCalledTimes(1)
@@ -2912,7 +3085,9 @@ describe("AxonHub native managed-resource Adapter", () => {
     mocks.createChannel.mockResolvedValueOnce(
       buildDetailChannel({ status: AXON_HUB_CHANNEL_STATUS.DISABLED }),
     )
-    mocks.updateStatus.mockRejectedValueOnce(new Error("status lost"))
+    mocks.updateStatus.mockRejectedValueOnce(
+      new mocks.RequestError("unavailable", "dispatched"),
+    )
     await expect(
       axonHubManagedSiteMigrationCapability.target!.create(command),
     ).resolves.toEqual({ status: "uncertain" })

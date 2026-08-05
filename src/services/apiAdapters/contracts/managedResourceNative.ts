@@ -9,6 +9,7 @@ import {
   type ResourceOperationOptions,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/resourceNative"
+import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
 
 export {
   RESOURCE_FAILURE_CODES as MANAGED_RESOURCE_FAILURE_CODES,
@@ -108,7 +109,7 @@ export interface ResourceEditor {
   submit(
     values: EditableResourceProjection,
     options?: ResourceOperationOptions,
-  ): Promise<ResourceDisplayFacts>
+  ): Promise<ManagedSiteMutationResult<ResourceDisplayFacts>>
 }
 
 export interface ManagedResourceWorkspace {
@@ -134,7 +135,7 @@ export interface ManagedResourceWorkspace {
   delete(
     ref: ManagedResourceRef,
     options?: ResourceOperationOptions,
-  ): Promise<void>
+  ): Promise<ManagedSiteMutationResult<void>>
 }
 
 export interface ManagedResourceRegistration {

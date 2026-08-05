@@ -10,9 +10,16 @@ import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type ManagedResourceRegistration,
+  type ManagedResourceWorkspace,
   type ResourceDisplayFacts,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  MANAGED_SITE_MUTATION_COMPLETIONS,
+  MANAGED_SITE_MUTATION_EFFECT_KINDS,
+  MANAGED_SITE_MUTATION_OUTCOMES,
+  type ManagedSiteMutationResult,
+} from "~/services/managedSites/mutations"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -33,6 +40,32 @@ const deferred = <T,>() => {
   const promise = new Promise<T>((done) => (resolve = done))
   return { promise, resolve }
 }
+
+const succeededFacts = (
+  facts = createManagedResourceFacts(),
+): ManagedSiteMutationResult<ResourceDisplayFacts> => ({
+  outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+  data: facts,
+  confirmedEffects: [
+    {
+      kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+      resourceKind: MANAGED_RESOURCE_KINDS.Channel,
+      resourceId: facts.ref.resourceId,
+    },
+  ],
+})
+
+const succeededDelete = (): ManagedSiteMutationResult<void> => ({
+  outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+  data: undefined,
+  confirmedEffects: [
+    {
+      kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceDeleted,
+      resourceKind: MANAGED_RESOURCE_KINDS.Channel,
+      resourceId: EXAMPLE_MANAGED_RESOURCE_REF.resourceId,
+    },
+  ],
+})
 
 const registration = (
   open: ManagedResourceRegistration["open"],
@@ -698,16 +731,23 @@ describe("useManagedResourceListController", () => {
   it.each([
     {
       name: "the mutation fails without refreshing",
-      submit: vi.fn(async () => {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
-        })
-      }),
+      submit: vi.fn(
+        async () =>
+          ({
+            outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+            diagnostic: {
+              message: "permission denied",
+              code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+            },
+          }) as const,
+      ),
       expectRefresh: false,
     },
     {
       name: "the mutation succeeds and its refresh fails",
-      submit: vi.fn(async () => createManagedResourceFacts("saved")),
+      submit: vi.fn(async () =>
+        succeededFacts(createManagedResourceFacts("saved")),
+      ),
       expectRefresh: true,
     },
   ])(
@@ -913,6 +953,179 @@ describe("useManagedResourceListController", () => {
 })
 
 describe("useManagedResourceMutationController", () => {
+  it("keeps a succeeded editor visible until the accepted refresh completes", async () => {
+    const refresh = deferred<boolean>()
+    const saved = createManagedResourceFacts("saved")
+    const editor = createManagedResourceEditor({
+      submit: vi.fn(async () => succeededFacts(saved)),
+    })
+    const workspace = createManagedResourceWorkspace({
+      openCreateEditor: vi.fn(async () => editor),
+    })
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        refresh: () => refresh.promise,
+      }),
+    )
+
+    await act(async () => result.current.openCreate())
+    let submission!: ReturnType<typeof result.current.submit>
+    act(() => {
+      submission = result.current.submit({ name: "saved" })
+    })
+    await waitFor(() => expect(editor.submit).toHaveBeenCalledOnce())
+    expect(result.current.editor).toBe(editor)
+
+    await act(async () => {
+      refresh.resolve(true)
+      await submission
+    })
+
+    expect(result.current.editor).toBeNull()
+    await expect(submission).resolves.toBe(saved)
+  })
+
+  it("keeps provider rejection reusable and stores only a controlled failure", async () => {
+    const providerSecret = "provider-secret-placeholder"
+    const editor = createManagedResourceEditor({
+      fields: [
+        {
+          fieldId: "credential",
+          type: "secret",
+          secretState: "unavailable",
+          canReplace: true,
+          allowClear: false,
+        },
+      ],
+      submit: vi.fn(async () => ({
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+        diagnostic: {
+          message: `permission denied ${providerSecret}`,
+          code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+          raw: { secret: providerSecret },
+        },
+      })),
+    })
+    const workspace = createManagedResourceWorkspace({
+      openCreateEditor: vi.fn(async () => editor),
+    })
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({ workspace }),
+    )
+
+    await act(async () => result.current.openCreate())
+    await act(async () =>
+      result.current.submit({
+        credential: { kind: "replace", value: providerSecret },
+      }),
+    )
+
+    expect(result.current.editor).toBe(editor)
+    expect(result.current.editorFeedback).toEqual({
+      kind: "save-failed",
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied },
+    })
+    expect(JSON.stringify(result.current)).not.toContain(providerSecret)
+  })
+
+  it.each([
+    {
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+      result: {
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+        confirmedEffects: [
+          {
+            kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+            resourceKind: MANAGED_RESOURCE_KINDS.Channel,
+          },
+        ],
+        completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
+        diagnostic: { message: "private partial", raw: "private raw" },
+      },
+    },
+    {
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+      result: {
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+        diagnostic: { message: "private uncertain", raw: "private raw" },
+      },
+    },
+  ] as const)(
+    "closes and reconciles a $outcome submit once without replay",
+    async ({ result: mutationResult }) => {
+      const editor = createManagedResourceEditor({
+        submit: vi.fn(async () => mutationResult),
+      })
+      const refresh = vi.fn(async () => false)
+      const workspace = createManagedResourceWorkspace({
+        openCreateEditor: vi.fn(async () => editor),
+      })
+      const { result } = renderHook(() =>
+        useManagedResourceMutationController({ workspace, refresh }),
+      )
+
+      await act(async () => result.current.openCreate())
+      await act(async () => result.current.submit({ name: "changed" }))
+      await act(async () => result.current.submit({ name: "do not replay" }))
+
+      expect(editor.submit).toHaveBeenCalledOnce()
+      expect(refresh).toHaveBeenCalledOnce()
+      expect(result.current.editor).toBeNull()
+      expect(result.current.deleteState.requiresFreshRead).toBe(true)
+      expect(result.current.editorFeedback).toEqual({
+        kind: "save-uncertain",
+        failure: {
+          code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        },
+      })
+      expect(JSON.stringify(result.current)).not.toContain("private")
+    },
+  )
+
+  it.each(["malformed", "thrown"] as const)(
+    "lets a %s public submit failure escape without projecting or replaying it",
+    async (mode) => {
+      const secret = "submit-secret-placeholder"
+      const thrownError = new Error(`provider throw ${secret}`)
+      const editor = createManagedResourceEditor({
+        submit: vi.fn(async () => {
+          if (mode === "thrown") {
+            throw thrownError
+          }
+          return { malformed: `provider result ${secret}` } as never
+        }),
+      })
+      const refresh = vi.fn(async () => true)
+      const workspace = createManagedResourceWorkspace({
+        openCreateEditor: vi.fn(async () => editor),
+      })
+      const { result } = renderHook(() =>
+        useManagedResourceMutationController({ workspace, refresh }),
+      )
+
+      await act(async () => result.current.openCreate())
+      let caught: unknown
+      await act(async () => {
+        try {
+          await result.current.submit({
+            credential: { kind: "replace", value: secret },
+          })
+        } catch (error) {
+          caught = error
+        }
+      })
+
+      if (mode === "thrown") expect(caught).toBe(thrownError)
+      else expect(caught).toBeInstanceOf(TypeError)
+      expect(editor.submit).toHaveBeenCalledOnce()
+      expect(result.current.editor).toBe(editor)
+      expect(result.current.editorFeedback).toBeNull()
+      expect(refresh).not.toHaveBeenCalled()
+      expect(JSON.stringify(result.current)).not.toContain(secret)
+    },
+  )
+
   it("classifies editor open failures separately from save failures", async () => {
     const workspace = createManagedResourceWorkspace({
       openCreateEditor: vi.fn(async () => {
@@ -958,11 +1171,16 @@ describe("useManagedResourceMutationController", () => {
 
   it("keeps the editor open and classifies confirmed save failures", async () => {
     const editor = createManagedResourceEditor({
-      submit: vi.fn(async () => {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
-        })
-      }),
+      submit: vi.fn(
+        async () =>
+          ({
+            outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+            diagnostic: {
+              message: "unavailable",
+              code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+            },
+          }) as const,
+      ),
     })
     const workspace = createManagedResourceWorkspace({
       openCreateEditor: vi.fn(async () => editor),
@@ -1014,13 +1232,14 @@ describe("useManagedResourceMutationController", () => {
     })
   })
 
-  it("classifies uncertain saves after closing the editor", async () => {
+  it("classifies uncertain save results after closing the editor", async () => {
     const editor = createManagedResourceEditor({
-      submit: vi.fn(async () => {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-        })
-      }),
+      submit: vi.fn(async () => ({
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+        diagnostic: {
+          message: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        },
+      })),
     })
     const workspace = createManagedResourceWorkspace({
       openCreateEditor: vi.fn(async () => editor),
@@ -1273,7 +1492,7 @@ describe("useManagedResourceMutationController", () => {
   })
 
   it("guards every competing mutation session while a coalesced submit is active", async () => {
-    const saved = deferred<ResourceDisplayFacts>()
+    const saved = deferred<ManagedSiteMutationResult<ResourceDisplayFacts>>()
     const editor = createManagedResourceEditor({
       submit: vi.fn(() => saved.promise),
     })
@@ -1315,7 +1534,7 @@ describe("useManagedResourceMutationController", () => {
     expect(workspace.delete).not.toHaveBeenCalled()
 
     await act(async () => {
-      saved.resolve(createManagedResourceFacts("saved"))
+      saved.resolve(succeededFacts(createManagedResourceFacts("saved")))
       await first
     })
   })
@@ -1506,11 +1725,10 @@ describe("useManagedResourceMutationController", () => {
     "keeps the shared mutation lock after an uncertain submit when refresh is %s",
     async (_label, refresh) => {
       const editor = createManagedResourceEditor({
-        submit: vi.fn(async () => {
-          throw new ManagedResourceError({
-            code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-          })
-        }),
+        submit: vi.fn(async () => ({
+          outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+          diagnostic: { message: "mutation state uncertain" },
+        })),
       })
       const workspace = createManagedResourceWorkspace({
         openEditEditor: vi.fn(async () => editor),
@@ -1540,13 +1758,18 @@ describe("useManagedResourceMutationController", () => {
     },
   )
 
-  it("closes a not-found editor and locks after its refresh is rejected", async () => {
+  it("keeps a rejected not-found editor reusable without refreshing", async () => {
     const editor = createManagedResourceEditor({
-      submit: vi.fn(async () => {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.NotFound,
-        })
-      }),
+      submit: vi.fn(
+        async () =>
+          ({
+            outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+            diagnostic: {
+              message: "not found",
+              code: MANAGED_RESOURCE_FAILURE_CODES.NotFound,
+            },
+          }) as const,
+      ),
     })
     const workspace = createManagedResourceWorkspace({
       openEditEditor: vi.fn(async () => editor),
@@ -1565,22 +1788,23 @@ describe("useManagedResourceMutationController", () => {
     await act(async () => result.current.openEdit(rowKey))
     await act(async () => result.current.submit({ name: "changed" }))
 
-    expect(result.current.editor).toBeNull()
+    expect(result.current.editor).toBe(editor)
     expect(result.current.editorFeedback).toEqual({
       kind: "save-failed",
       failure: { code: MANAGED_RESOURCE_FAILURE_CODES.NotFound },
     })
-    expect(result.current.deleteState.requiresFreshRead).toBe(true)
-    expect(refresh).toHaveBeenCalledOnce()
+    expect(result.current.deleteState.requiresFreshRead).toBe(false)
+    expect(refresh).not.toHaveBeenCalled()
   })
 
-  it("closes uncertain mutations, requests one refresh, and does not replay", async () => {
+  it("closes uncertain mutation results, requests one refresh, and does not replay", async () => {
     const editor = createManagedResourceEditor({
-      submit: vi.fn(async () => {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-        })
-      }),
+      submit: vi.fn(async () => ({
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+        diagnostic: {
+          message: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        },
+      })),
     })
     const workspace = createManagedResourceWorkspace({
       openEditEditor: vi.fn(async () => editor),
@@ -1607,7 +1831,7 @@ describe("useManagedResourceMutationController", () => {
   })
 
   it("coalesces submit and emits one controlled update action and result", async () => {
-    const saved = deferred<ResourceDisplayFacts>()
+    const saved = deferred<ManagedSiteMutationResult<ResourceDisplayFacts>>()
     const editor = createManagedResourceEditor({
       submit: vi.fn(() => saved.promise),
     })
@@ -1641,7 +1865,7 @@ describe("useManagedResourceMutationController", () => {
     expect(onMutationStart).toHaveBeenCalledOnce()
 
     await act(async () => {
-      saved.resolve(createManagedResourceFacts("saved"))
+      saved.resolve(succeededFacts(createManagedResourceFacts("saved")))
       await first
     })
 
@@ -1665,7 +1889,7 @@ describe("useManagedResourceMutationController", () => {
   })
 
   it("cancels submit analytics once when a stale workspace aborts the generation", async () => {
-    const saved = deferred<ResourceDisplayFacts>()
+    const saved = deferred<ManagedSiteMutationResult<ResourceDisplayFacts>>()
     const editor = createManagedResourceEditor({
       submit: vi.fn(() => saved.promise),
     })
@@ -1699,7 +1923,7 @@ describe("useManagedResourceMutationController", () => {
     expect(signal?.aborted).toBe(true)
 
     await act(async () => {
-      saved.resolve(createManagedResourceFacts("late"))
+      saved.resolve(succeededFacts(createManagedResourceFacts("late")))
       await submission
     })
 
@@ -1714,6 +1938,134 @@ describe("useManagedResourceMutationController", () => {
       },
     )
   })
+
+  it.each([
+    {
+      label: "succeeded",
+      result: succeededDelete(),
+      expectedStatus: "success" as const,
+    },
+    {
+      label: "rejected",
+      result: {
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+        diagnostic: {
+          message: "private rejected",
+          code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+          raw: "private raw",
+        },
+      } as const,
+      expectedStatus: "failed" as const,
+    },
+    {
+      label: "generic not_found",
+      result: {
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+        diagnostic: {
+          message: "private not found",
+          code: MANAGED_RESOURCE_FAILURE_CODES.NotFound,
+          raw: "private raw",
+        },
+      } as const,
+      expectedStatus: "failed" as const,
+    },
+    {
+      label: "partial",
+      result: {
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+        confirmedEffects: [
+          {
+            kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceDeleted,
+            resourceKind: MANAGED_RESOURCE_KINDS.Channel,
+          },
+        ],
+        completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
+        diagnostic: { message: "private partial", raw: "private raw" },
+      } as const,
+      expectedStatus: "uncertain" as const,
+    },
+    {
+      label: "uncertain",
+      result: {
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+        diagnostic: { message: "private uncertain", raw: "private raw" },
+      } as const,
+      expectedStatus: "uncertain" as const,
+    },
+  ])(
+    "maps a $label delete result without retaining diagnostics",
+    async ({ result: deleteResult, expectedStatus }) => {
+      const workspace = createManagedResourceWorkspace({
+        delete: vi.fn(async () => deleteResult),
+      })
+      const refresh = vi.fn(async () => true)
+      const { result } = renderHook(() =>
+        useManagedResourceMutationController({
+          workspace,
+          refresh,
+          resolveRef: () => EXAMPLE_MANAGED_RESOURCE_REF,
+        }),
+      )
+
+      act(() => {
+        result.current.openDelete("opaque-row")
+      })
+      await act(async () => result.current.confirmDelete())
+
+      expect(result.current.deleteState.results).toEqual([
+        {
+          rowKey: "opaque-row",
+          status: expectedStatus,
+          resultKey: `delete_${expectedStatus}`,
+        },
+      ])
+      expect(refresh).toHaveBeenCalledOnce()
+      expect(JSON.stringify(result.current.deleteState)).not.toContain(
+        "private",
+      )
+    },
+  )
+
+  it.each(["malformed", "thrown"] as const)(
+    "lets a %s public delete failure escape without projecting or replaying it",
+    async (mode) => {
+      const secret = "delete-secret-placeholder"
+      const thrownError = new Error(`provider throw ${secret}`)
+      const workspace = createManagedResourceWorkspace({
+        delete: vi.fn(async () => {
+          if (mode === "thrown") throw thrownError
+          return { malformed: `provider result ${secret}` } as never
+        }),
+      })
+      const refresh = vi.fn(async () => true)
+      const { result } = renderHook(() =>
+        useManagedResourceMutationController({
+          workspace,
+          refresh,
+          resolveRef: () => EXAMPLE_MANAGED_RESOURCE_REF,
+        }),
+      )
+
+      act(() => {
+        result.current.openDelete("opaque-row")
+      })
+      let caught: unknown
+      await act(async () => {
+        try {
+          await result.current.confirmDelete()
+        } catch (error) {
+          caught = error
+        }
+      })
+
+      if (mode === "thrown") expect(caught).toBe(thrownError)
+      else expect(caught).toBeInstanceOf(TypeError)
+      expect(workspace.delete).toHaveBeenCalledOnce()
+      expect(refresh).not.toHaveBeenCalled()
+      expect(result.current.deleteState.results).toEqual([])
+      expect(JSON.stringify(result.current.deleteState)).not.toContain(secret)
+    },
+  )
 
   it("owns single-delete open, cancel, capability, and stale-row guards", async () => {
     let currentRef = EXAMPLE_MANAGED_RESOURCE_REF
@@ -1799,11 +2151,16 @@ describe("useManagedResourceMutationController", () => {
 
   it("requires an accepted fresh read after every unaccepted single-delete refresh", async () => {
     const workspace = createManagedResourceWorkspace({
-      delete: vi.fn(async () => {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
-        })
-      }),
+      delete: vi.fn(
+        async () =>
+          ({
+            outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+            diagnostic: {
+              message: "permission denied",
+              code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+            },
+          }) as const,
+      ),
     })
     const refresh = vi
       .fn<() => Promise<boolean>>()
@@ -1852,22 +2209,31 @@ describe("useManagedResourceMutationController", () => {
 
   it.each([
     {
-      code: MANAGED_RESOURCE_FAILURE_CODES.NotFound,
-      expectedStatus: "success" as const,
-      expectedAnalyticsResult: PRODUCT_ANALYTICS_RESULTS.Success,
+      label: "not-found rejection",
+      deleteResult: {
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+        diagnostic: {
+          message: "not found",
+          code: MANAGED_RESOURCE_FAILURE_CODES.NotFound,
+        },
+      } as const,
+      expectedStatus: "failed" as const,
+      expectedAnalyticsResult: PRODUCT_ANALYTICS_RESULTS.Failure,
     },
     {
-      code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      label: "uncertain result",
+      deleteResult: {
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+        diagnostic: { message: "mutation state uncertain" },
+      } as const,
       expectedStatus: "uncertain" as const,
       expectedAnalyticsResult: PRODUCT_ANALYTICS_RESULTS.Failure,
     },
   ])(
-    "maps single-delete certainty $code and emits one controlled result",
-    async ({ code, expectedStatus, expectedAnalyticsResult }) => {
+    "maps a $label and emits one controlled result",
+    async ({ deleteResult, expectedStatus, expectedAnalyticsResult }) => {
       const workspace = createManagedResourceWorkspace({
-        delete: vi.fn(async () => {
-          throw new ManagedResourceError({ code })
-        }),
+        delete: vi.fn(async () => deleteResult),
       })
       const analytics = createAnalytics()
       const refresh = vi.fn(async () => true)
@@ -1903,18 +2269,18 @@ describe("useManagedResourceMutationController", () => {
       expect(analytics.complete).toHaveBeenCalledOnce()
       expect(analytics.complete).toHaveBeenCalledWith(expectedAnalyticsResult, {
         insights: {
-          failureCount: expectedStatus === "success" ? 0 : 1,
+          failureCount: 1,
           itemCount: 1,
           managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.AxonHub,
           selectedCount: 1,
-          successCount: expectedStatus === "success" ? 1 : 0,
+          successCount: 0,
         },
       })
     },
   )
 
   it("coalesces reentrant single delete and cancels analytics on unmount without late publication", async () => {
-    const pending = deferred<void>()
+    const pending = deferred<ManagedSiteMutationResult<void>>()
     const workspace = createManagedResourceWorkspace({
       delete: vi.fn(() => pending.promise),
     })
@@ -1948,7 +2314,7 @@ describe("useManagedResourceMutationController", () => {
     unmount()
     expect(signal?.aborted).toBe(true)
     await act(async () => {
-      pending.resolve()
+      pending.resolve(succeededDelete())
       await first
     })
 
@@ -2027,8 +2393,70 @@ describe("useManagedResourceMutationController", () => {
     })
   })
 
+  it("cleans up a rejected bulk delete before allowing an explicit later operation", async () => {
+    const privateDetail = "bulk-delete-private-detail"
+    const programmingError = new Error(privateDetail)
+    const deleteResource = vi
+      .fn<ManagedResourceWorkspace["delete"]>()
+      .mockRejectedValueOnce(programmingError)
+      .mockResolvedValueOnce(succeededDelete())
+    const workspace = createManagedResourceWorkspace({
+      delete: deleteResource,
+    })
+    const refresh = vi.fn(async () => true)
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        refresh,
+        resolveRef: () => EXAMPLE_MANAGED_RESOURCE_REF,
+      }),
+    )
+
+    await act(async () => result.current.openBulkDelete(["opaque-row"]))
+    let caught: unknown
+    await act(async () => {
+      try {
+        await result.current.confirmDelete()
+      } catch (error) {
+        caught = error
+      }
+    })
+
+    expect(caught).toBe(programmingError)
+    expect(deleteResource).toHaveBeenCalledOnce()
+    expect(refresh).not.toHaveBeenCalled()
+    expect(result.current.deleteState).toMatchObject({
+      isOpen: false,
+      isExecuting: false,
+      rowKeys: [],
+      results: [],
+      failure: null,
+    })
+    expect(JSON.stringify(result.current.deleteState)).not.toContain(
+      privateDetail,
+    )
+
+    await act(async () => result.current.openBulkDelete(["opaque-row"]))
+    expect(result.current.deleteState).toMatchObject({
+      isOpen: true,
+      isExecuting: false,
+      rowKeys: ["opaque-row"],
+    })
+    await act(async () => result.current.confirmDelete())
+
+    expect(deleteResource).toHaveBeenCalledTimes(2)
+    expect(refresh).toHaveBeenCalledOnce()
+    expect(result.current.deleteState.results).toEqual([
+      {
+        rowKey: "opaque-row",
+        status: "success",
+        resultKey: "delete_success",
+      },
+    ])
+  })
+
   it("coalesces repeated confirmation of one bulk-delete session", async () => {
-    const pending = deferred<void>()
+    const pending = deferred<ManagedSiteMutationResult<void>>()
     const workspace = createManagedResourceWorkspace({
       delete: vi.fn(() => pending.promise),
     })
@@ -2051,7 +2479,7 @@ describe("useManagedResourceMutationController", () => {
     expect(second).toBe(first)
     await waitFor(() => expect(workspace.delete).toHaveBeenCalledOnce())
     await act(async () => {
-      pending.resolve()
+      pending.resolve(succeededDelete())
       await first
     })
   })
@@ -2072,13 +2500,19 @@ describe("useManagedResourceMutationController", () => {
         await gates[index].promise
         active -= 1
         if (index === 1)
-          throw new ManagedResourceError({
-            code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
-          })
+          return {
+            outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+            diagnostic: {
+              message: "permission denied",
+              code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+            },
+          } as const
         if (index === 2)
-          throw new ManagedResourceError({
-            code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-          })
+          return {
+            outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+            diagnostic: { message: "mutation state uncertain" },
+          } as const
+        return succeededDelete()
       }),
     })
     const refresh = vi.fn(async () => false)
@@ -2207,7 +2641,7 @@ describe("useManagedResourceMutationController", () => {
   })
 
   it("aborts and discards bulk-delete results after workspace replacement", async () => {
-    const pending = deferred<void>()
+    const pending = deferred<ManagedSiteMutationResult<void>>()
     const oldWorkspace = createManagedResourceWorkspace({
       delete: vi.fn(() => pending.promise),
     })
@@ -2236,7 +2670,7 @@ describe("useManagedResourceMutationController", () => {
     rerender({ workspace: newWorkspace })
     expect(signal?.aborted).toBe(true)
     await act(async () => {
-      pending.resolve()
+      pending.resolve(succeededDelete())
       await execution
     })
     expect(refresh).not.toHaveBeenCalled()
@@ -2253,8 +2687,8 @@ describe("useManagedResourceMutationController", () => {
   })
 
   it("does not let a stale delete completion release a newer delete session", async () => {
-    const oldDeletion = deferred<void>()
-    const newDeletion = deferred<void>()
+    const oldDeletion = deferred<ManagedSiteMutationResult<void>>()
+    const newDeletion = deferred<ManagedSiteMutationResult<void>>()
     const oldWorkspace = createManagedResourceWorkspace({
       delete: vi.fn(() => oldDeletion.promise),
     })
@@ -2287,7 +2721,7 @@ describe("useManagedResourceMutationController", () => {
     await waitFor(() => expect(newWorkspace.delete).toHaveBeenCalledOnce())
 
     await act(async () => {
-      oldDeletion.resolve()
+      oldDeletion.resolve(succeededDelete())
       await oldExecution
     })
     await act(async () => result.current.openCreate())
@@ -2295,7 +2729,7 @@ describe("useManagedResourceMutationController", () => {
     expect(newWorkspace.openCreateEditor).not.toHaveBeenCalled()
 
     await act(async () => {
-      newDeletion.resolve()
+      newDeletion.resolve(succeededDelete())
       await newExecution
     })
     await act(async () => result.current.openCreate())

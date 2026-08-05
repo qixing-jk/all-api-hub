@@ -4,7 +4,13 @@ import {
   LegacyManagedResourceBulkDeleteController,
   type LegacyManagedResourceDeleteTarget,
 } from "~/features/ManagedSiteChannels/controllers/legacyManagedResourceBulkDeleteController"
-import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import {
+  MANAGED_SITE_MUTATION_COMPLETIONS,
+  MANAGED_SITE_MUTATION_EFFECT_KINDS,
+  MANAGED_SITE_MUTATION_OUTCOMES,
+  type ManagedSiteMutationResult,
+} from "~/services/managedSites/mutations"
 
 const createDeferred = <T>() => {
   let resolve!: (value: T) => void
@@ -25,6 +31,39 @@ const targets: LegacyManagedResourceDeleteTarget[] = [
   { rowKey: "row-zeta", channelId: 6, displayLabel: "Zeta" },
 ]
 
+const deleteSucceeded = (): ManagedSiteMutationResult<void> => ({
+  outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+  data: undefined,
+  confirmedEffects: [
+    {
+      kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceDeleted,
+      resourceKind: MANAGED_RESOURCE_KINDS.Channel,
+    },
+  ],
+})
+
+const deleteRejected = (message = "backend rejected") => ({
+  outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+  diagnostic: { message },
+})
+
+const resolvedDelete = (
+  deleteTarget: (target: LegacyManagedResourceDeleteTarget) => Promise<unknown>,
+  overrides: Partial<{
+    confirmMissing: (
+      target: LegacyManagedResourceDeleteTarget,
+    ) => Promise<boolean>
+    knownSecrets: readonly string[]
+    knownSecretsComplete: boolean
+  }> = {},
+) => ({
+  deleteTarget,
+  confirmMissing: vi.fn(async () => false),
+  knownSecrets: [],
+  knownSecretsComplete: true,
+  ...overrides,
+})
+
 describe("LegacyManagedResourceBulkDeleteController", () => {
   it("snapshots selected rows and preserves their order with a concurrency limit of four", async () => {
     const controller = new LegacyManagedResourceBulkDeleteController()
@@ -36,38 +75,36 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
 
     const deferredById = new Map<
       number,
-      ReturnType<typeof createDeferred<{ success: boolean; message: string }>>
+      ReturnType<typeof createDeferred<ManagedSiteMutationResult<void>>>
     >()
     const started: number[] = []
     let active = 0
     let maxActive = 0
     const executePromise = controller.execute({
-      resolveDelete: async () => async (target) => {
-        started.push(target.channelId)
-        active += 1
-        maxActive = Math.max(maxActive, active)
-        const deferred = createDeferred<{
-          success: boolean
-          message: string
-        }>()
-        deferredById.set(target.channelId, deferred)
-        try {
-          return await deferred.promise
-        } finally {
-          active -= 1
-        }
-      },
+      resolveDelete: async () =>
+        resolvedDelete(async (target) => {
+          started.push(target.channelId)
+          active += 1
+          maxActive = Math.max(maxActive, active)
+          const deferred = createDeferred<ManagedSiteMutationResult<void>>()
+          deferredById.set(target.channelId, deferred)
+          try {
+            return await deferred.promise
+          } finally {
+            active -= 1
+          }
+        }),
       refresh: vi.fn().mockResolvedValue(true),
     })
 
     await vi.waitFor(() => expect(started).toEqual([1, 2, 3, 4]))
-    deferredById.get(4)?.resolve({ success: true, message: "ok" })
+    deferredById.get(4)?.resolve(deleteSucceeded())
     await vi.waitFor(() => expect(started).toEqual([1, 2, 3, 4, 5]))
-    deferredById.get(1)?.resolve({ success: true, message: "ok" })
+    deferredById.get(1)?.resolve(deleteSucceeded())
     await vi.waitFor(() => expect(started).toEqual([1, 2, 3, 4, 5, 6]))
 
     for (const id of [2, 3, 5, 6]) {
-      deferredById.get(id)?.resolve({ success: true, message: "ok" })
+      deferredById.get(id)?.resolve(deleteSucceeded())
     }
 
     const execution = await executePromise
@@ -81,33 +118,42 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
     )
   })
 
-  it("maps confirmed failures to failed and post-dispatch transport loss to uncertain before refreshing once", async () => {
+  it("maps common outcomes and post-invocation failures before refreshing once", async () => {
     const controller = new LegacyManagedResourceBulkDeleteController()
     controller.schedule(targets)
     const refresh = vi.fn().mockResolvedValue(false)
 
     const execution = await controller.execute({
-      resolveDelete: async () => async (target) => {
-        switch (target.channelId) {
-          case 1:
-            return { success: true, message: "ok" }
-          case 2:
-            throw new ApiError(
-              "backend rejected",
-              400,
-              "/api/channel/2",
-              API_ERROR_CODES.BUSINESS_ERROR,
-            )
-          case 3:
-            throw new TypeError("Failed to fetch")
-          case 4:
-            return { success: false, message: "confirmed rejection" }
-          case 5:
-            throw new DOMException("Aborted", "AbortError")
-          default:
-            throw new Error("validation failed")
-        }
-      },
+      resolveDelete: async () =>
+        resolvedDelete(async (target) => {
+          switch (target.channelId) {
+            case 1:
+              return deleteSucceeded()
+            case 2:
+              return deleteRejected()
+            case 3:
+              throw new TypeError("Failed to fetch")
+            case 4:
+              return {
+                outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+                confirmedEffects: [
+                  {
+                    kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceDeleted,
+                    resourceKind: MANAGED_RESOURCE_KINDS.Channel,
+                  },
+                ],
+                completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
+                diagnostic: { message: "partially applied" },
+              }
+            case 5:
+              return { malformed: true }
+            default:
+              return {
+                outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+                diagnostic: { message: "ambiguous" },
+              }
+          }
+        }),
       refresh,
     })
 
@@ -115,30 +161,28 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
       "success",
       "failed",
       "uncertain",
-      "failed",
       "uncertain",
-      "failed",
+      "uncertain",
+      "uncertain",
     ])
     expect(execution?.requiresRefresh).toBe(true)
     expect(refresh).toHaveBeenCalledTimes(1)
   })
 
-  it("honors controlled uncertain certainty returned by the managed-site service", async () => {
+  it("honors controlled partial and uncertain outcomes without retry", async () => {
     const controller = new LegacyManagedResourceBulkDeleteController()
     controller.schedule(targets.slice(0, 2))
 
     const execution = await controller.execute({
-      resolveDelete: async () => async (target) =>
-        target.channelId === 1
-          ? {
-              success: false,
-              message: "transport unavailable",
-              certainty: "uncertain" as const,
-            }
-          : {
-              success: false,
-              message: "backend rejected",
-            },
+      resolveDelete: async () =>
+        resolvedDelete(async (target) =>
+          target.channelId === 1
+            ? {
+                outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+                diagnostic: { message: "transport unavailable" },
+              }
+            : deleteRejected(),
+        ),
       refresh: vi.fn().mockResolvedValue(false),
     })
 
@@ -147,6 +191,58 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
       "failed",
     ])
     expect(execution?.requiresRefresh).toBe(true)
+  })
+
+  it("treats not_found as success only after a fresh read confirms absence", async () => {
+    const controller = new LegacyManagedResourceBulkDeleteController()
+    controller.schedule(targets.slice(0, 2))
+    const confirmMissing = vi.fn(async (target) => target.channelId === 1)
+
+    const execution = await controller.execute({
+      resolveDelete: async () =>
+        resolvedDelete(
+          async () => ({
+            outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+            diagnostic: {
+              message: "not found",
+              code: "not_found",
+            },
+          }),
+          { confirmMissing },
+        ),
+      refresh: vi.fn().mockResolvedValue(true),
+    })
+
+    expect(execution?.results.map((result) => result.status)).toEqual([
+      "success",
+      "failed",
+    ])
+    expect(confirmMissing).toHaveBeenCalledTimes(2)
+  })
+
+  it("sanitizes thrown diagnostics and fails closed when secret collection is incomplete", async () => {
+    const secret = "legacy-delete-secret-placeholder"
+    const run = async (knownSecretsComplete: boolean) => {
+      const controller = new LegacyManagedResourceBulkDeleteController()
+      controller.schedule(targets.slice(0, 1))
+      return controller.execute({
+        resolveDelete: async () =>
+          resolvedDelete(
+            async () => {
+              throw new Error(`provider transport ${secret}`)
+            },
+            { knownSecrets: [secret], knownSecretsComplete },
+          ),
+        refresh: vi.fn().mockResolvedValue(true),
+      })
+    }
+
+    const complete = await run(true)
+    const incomplete = await run(false)
+
+    expect((complete?.failure as Error).message).toContain("provider transport")
+    expect((complete?.failure as Error).message).not.toContain(secret)
+    expect((incomplete?.failure as Error).message).toBe("Delete failed")
   })
 
   it("reports pre-dispatch setup failures as failed without dispatch or refresh", async () => {
@@ -179,7 +275,7 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
       .mockRejectedValue(new TypeError("Network request failed"))
 
     const execution = await controller.execute({
-      resolveDelete: async () => deleteChannel,
+      resolveDelete: async () => resolvedDelete(deleteChannel),
       refresh: vi.fn().mockResolvedValue(false),
     })
 
@@ -187,7 +283,7 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
     expect(controller.schedule(targets.slice(0, 1))).toBe(false)
     expect(
       await controller.execute({
-        resolveDelete: async () => deleteChannel,
+        resolveDelete: async () => resolvedDelete(deleteChannel),
         refresh: vi.fn().mockResolvedValue(false),
       }),
     ).toBeNull()
@@ -200,10 +296,11 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
   it("rejects reentrant scheduling while the current batch is executing", async () => {
     const controller = new LegacyManagedResourceBulkDeleteController()
     controller.schedule(targets.slice(0, 1))
-    const deletion = createDeferred<{ success: boolean; message: string }>()
+    const deletion = createDeferred<ManagedSiteMutationResult<void>>()
 
     const executionPromise = controller.execute({
-      resolveDelete: async () => async () => await deletion.promise,
+      resolveDelete: async () =>
+        resolvedDelete(async () => await deletion.promise),
       refresh: vi.fn().mockResolvedValue(true),
     })
 
@@ -212,16 +309,14 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
     )
     expect(
       await controller.execute({
-        resolveDelete: async () => async () => ({
-          success: true,
-          message: "ok",
-        }),
+        resolveDelete: async () =>
+          resolvedDelete(async () => deleteSucceeded()),
         refresh: vi.fn().mockResolvedValue(true),
       }),
     ).toBeNull()
     expect(controller.schedule(targets.slice(1, 2))).toBe(false)
 
-    deletion.resolve({ success: true, message: "ok" })
+    deletion.resolve(deleteSucceeded())
     await executionPromise
     expect(controller.schedule(targets.slice(1, 2))).toBe(true)
   })
@@ -229,17 +324,18 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
   it("invalidates an active generation before it can refresh or publish results", async () => {
     const controller = new LegacyManagedResourceBulkDeleteController()
     controller.schedule(targets.slice(0, 1))
-    const deletion = createDeferred<{ success: boolean; message: string }>()
+    const deletion = createDeferred<ManagedSiteMutationResult<void>>()
     const refresh = vi.fn().mockResolvedValue(true)
 
     const executionPromise = controller.execute({
-      resolveDelete: async () => async () => await deletion.promise,
+      resolveDelete: async () =>
+        resolvedDelete(async () => await deletion.promise),
       refresh,
     })
 
     await vi.waitFor(() => expect(controller.schedule([])).toBe(false))
     controller.invalidate()
-    deletion.resolve({ success: true, message: "ok" })
+    deletion.resolve(deleteSucceeded())
 
     await expect(executionPromise).resolves.toBeNull()
     expect(refresh).not.toHaveBeenCalled()

@@ -3,7 +3,6 @@ import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/cont
 import {
   isManagedResourceRefFor,
   MANAGED_RESOURCE_FAILURE_CODES,
-  MANAGED_RESOURCE_FIELD_TYPES,
   ManagedResourceError,
   type EditableResourceProjection,
   type ManagedResourceRef,
@@ -25,7 +24,6 @@ import {
 import {
   assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
-  toPrivateManagedSiteMutationOutput,
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
@@ -147,61 +145,27 @@ function assertDefinitionMutationResult<T>(
   result: unknown,
   options: { idempotent: boolean },
 ): asserts result is ManagedSiteMutationResult<T> {
-  try {
-    assertManagedSiteMutationResult<T, ManagedSiteMutationConfirmedEffect>(
-      result,
-      options,
-    )
-  } catch {
-    throw unexpectedDefinitionOutput()
-  }
-}
-
-// Task 10 removes this private compatibility projection when public native
-// resource callers consume ManagedSiteMutationResult directly.
-const toPublicMutation = <T>(
-  result: ManagedSiteMutationResult<T>,
-  mapFailure: (failure: unknown) => ResourceFailure,
-  knownSecrets: readonly string[] = [],
-): T => {
-  if (result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded) {
-    return result.data
-  }
-
-  const output = toPrivateManagedSiteMutationOutput(result, {
-    knownSecrets,
-  })
-  if (result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Rejected) {
-    const failure = mapFailure(result.diagnostic.raw ?? result.diagnostic)
-    throw new ManagedResourceError(
-      failure,
-      output.message ? { privateMessage: output.message } : undefined,
-    )
-  }
-
-  throw new ManagedResourceError(
-    { code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain },
-    output.message ? { privateMessage: output.message } : undefined,
+  assertManagedSiteMutationResult<T, ManagedSiteMutationConfirmedEffect>(
+    result,
+    options,
   )
 }
 
-const collectEditorSecrets = (
-  fields: readonly ResourceFieldDescriptor[],
-  values: EditableResourceProjection,
-) =>
-  fields.flatMap((field) => {
-    if (field.type !== MANAGED_RESOURCE_FIELD_TYPES.Secret) return []
-    const value = values[field.fieldId]
-    if (typeof value === "string") return value ? [value] : []
-    return typeof value === "object" &&
-      value !== null &&
-      "kind" in value &&
-      value.kind === "replace" &&
-      "value" in value &&
-      value.value
-      ? [value.value]
-      : []
-  })
+const uncertainMutationResult = <T>(
+  raw?: unknown,
+): ManagedSiteMutationResult<T> => ({
+  outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+  diagnostic: {
+    message: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+    ...(raw === undefined ? {} : { raw }),
+  },
+})
+
+const rejectedPublicInput = <T>(): ManagedSiteMutationResult<T> => ({
+  outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+  diagnostic: { message: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+})
+
 /** Creates a public managed-resource registration from a correlated native Adapter definition. */
 export function defineNativeResourceKind<
   TConfig,
@@ -300,24 +264,44 @@ export function defineNativeResourceKind<
           return { ref, detail }
         }
 
-        const confirmResourceAbsent = async (
+        const readResourceAbsence = async (
           ref: ManagedResourceRef,
           readOptions?: ResourceOperationOptions,
-          resourcePresentError?: unknown,
-        ) => {
+        ): Promise<
+          | { state: "absent" }
+          | { state: "present" }
+          | { state: "unknown"; raw: unknown }
+        > => {
           try {
             await readDetail(ref, readOptions)
+            return { state: "present" }
           } catch (error) {
             const managedError = toManagedError(error, mapFailure)
             if (
               managedError.failure.code ===
               MANAGED_RESOURCE_FAILURE_CODES.NotFound
             ) {
-              return
+              return { state: "absent" }
             }
-            throw managedError
+            return { state: "unknown", raw: error }
           }
-          throw resourcePresentError ?? unexpectedDefinitionOutput()
+        }
+
+        const isRejectedNotFound = (
+          result: Extract<
+            ManagedSiteMutationResult<void>,
+            { outcome: typeof MANAGED_SITE_MUTATION_OUTCOMES.Rejected }
+          >,
+        ) => {
+          if (
+            result.diagnostic.code === MANAGED_RESOURCE_FAILURE_CODES.NotFound
+          ) {
+            return true
+          }
+          return (
+            mapFailure(result.diagnostic.raw ?? result.diagnostic).code ===
+            MANAGED_RESOURCE_FAILURE_CODES.NotFound
+          )
         }
 
         const projectCreatedDetail = (detail: TDetail) => {
@@ -365,7 +349,9 @@ export function defineNativeResourceKind<
           mutationOptions: { idempotent: boolean },
         ): ResourceEditor => {
           let closed = false
-          let inflight: Promise<ResourceDisplayFacts> | undefined
+          let inflight:
+            | Promise<ManagedSiteMutationResult<ResourceDisplayFacts>>
+            | undefined
           const closeForTerminalFailure = (error: ManagedResourceError) => {
             if (
               error.failure.code === MANAGED_RESOURCE_FAILURE_CODES.NotFound ||
@@ -389,45 +375,64 @@ export function defineNativeResourceKind<
             submitOptions?: ResourceOperationOptions,
           ) => {
             if (inflight !== undefined) return inflight
-            if (closed) return Promise.reject(invalidPublicInput())
+            if (closed)
+              return Promise.resolve(
+                rejectedPublicInput<ResourceDisplayFacts>(),
+              )
 
             const run = (async () => {
               const validation = validate(values)
-              if (!validation.valid) throw invalidPublicInput()
-              const command = editorDefinition.buildCommand(values)
-              let result: ManagedSiteMutationResult<TDetail>
+              if (!validation.valid)
+                return rejectedPublicInput<ResourceDisplayFacts>()
+              let command: TCommand
               try {
-                result = await mutate(command, submitOptions)
+                command = editorDefinition.buildCommand(values)
               } catch (error) {
                 const managedError = toManagedError(error, mapFailure)
                 closeForTerminalFailure(managedError)
                 throw managedError
               }
 
+              let candidate: unknown
               try {
-                assertDefinitionMutationResult<TDetail>(result, mutationOptions)
+                candidate = await mutate(command, submitOptions)
+              } catch (error) {
+                if (error instanceof ManagedResourceError) {
+                  closeForTerminalFailure(error)
+                } else {
+                  closed = true
+                }
+                throw error
+              }
+
+              try {
+                assertDefinitionMutationResult<TDetail>(
+                  candidate,
+                  mutationOptions,
+                )
               } catch (error) {
                 closed = true
                 throw error
               }
+              const result = candidate
               if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Rejected) {
                 closed = true
               }
 
-              let detail: TDetail
-              try {
-                detail = toPublicMutation(
-                  result,
-                  mapFailure,
-                  collectEditorSecrets(editorDefinition.fields, values),
-                )
-              } catch (error) {
-                if (error instanceof ManagedResourceError) {
-                  closeForTerminalFailure(error)
-                }
-                throw error
+              switch (result.outcome) {
+                case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
+                  return { ...result, data: projectResult(result.data) }
+                case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
+                  if (result.data === undefined) {
+                    // No provider detail crosses the public boundary in this
+                    // branch, so the checked envelope is already public-safe.
+                    return result as ManagedSiteMutationResult<ResourceDisplayFacts>
+                  }
+                  return { ...result, data: projectResult(result.data) }
+                case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
+                case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
+                  return result
               }
-              return projectResult(detail)
             })()
 
             const tracked = run.finally(() => {
@@ -523,8 +528,9 @@ export function defineNativeResourceKind<
                   )
                   return createEditor(
                     editorDefinition,
-                    (command, submitOptions) =>
-                      definition.create(config, command, submitOptions),
+                    async (command, submitOptions) => {
+                      return definition.create(config, command, submitOptions)
+                    },
                     projectCreatedDetail,
                     { idempotent: false },
                   )
@@ -548,10 +554,16 @@ export function defineNativeResourceKind<
                   return createEditor(
                     editorDefinition,
                     async (command, submitOptions) => {
-                      const { detail: latestDetail } = await readDetail(
-                        canonicalRef,
-                        submitOptions,
-                      )
+                      let latestDetail: TDetail
+                      try {
+                        latestDetail = (
+                          await readDetail(canonicalRef, submitOptions)
+                        ).detail
+                      } catch (error) {
+                        // This authoritative read occurs before update dispatch,
+                        // so it remains a controlled read/setup error.
+                        throw toManagedError(error, mapFailure)
+                      }
                       return definition.update(
                         config,
                         latestDetail,
@@ -575,58 +587,52 @@ export function defineNativeResourceKind<
                     throw toManagedError(error, mapFailure)
                   }
                   const { ref: canonicalRef, locator } = decodedRef
-                  let result: ManagedSiteMutationResult<void>
-                  try {
-                    result = await definition.delete(
-                      config,
-                      locator,
-                      deleteOptions,
-                    )
-                  } catch (error) {
-                    const managedError = toManagedError(error, mapFailure)
-                    if (
-                      managedError.failure.code !==
-                      MANAGED_RESOURCE_FAILURE_CODES.NotFound
-                    ) {
-                      throw managedError
-                    }
-                    await confirmResourceAbsent(
-                      canonicalRef,
-                      deleteOptions,
-                      managedError,
-                    )
-                    return
-                  }
-
-                  assertDefinitionMutationResult<void>(result, {
+                  const candidate: unknown = await definition.delete(
+                    config,
+                    locator,
+                    deleteOptions,
+                  )
+                  assertDefinitionMutationResult<void>(candidate, {
                     idempotent: true,
                   })
+                  const result = candidate
                   if (
                     result.outcome ===
                       MANAGED_SITE_MUTATION_OUTCOMES.Succeeded &&
                     result.confirmedEffects.length === 0
                   ) {
-                    await confirmResourceAbsent(canonicalRef, deleteOptions)
-                    return
-                  }
-
-                  try {
-                    toPublicMutation(result, mapFailure)
-                  } catch (error) {
-                    if (
-                      !(error instanceof ManagedResourceError) ||
-                      error.failure.code !==
-                        MANAGED_RESOURCE_FAILURE_CODES.NotFound
-                    ) {
-                      throw error
-                    }
-                    await confirmResourceAbsent(
+                    const absence = await readResourceAbsence(
                       canonicalRef,
                       deleteOptions,
-                      error,
                     )
-                    return
+                    if (absence.state === "absent") return result
+                    if (absence.state === "present") {
+                      throw unexpectedDefinitionOutput()
+                    }
+                    return uncertainMutationResult<void>(absence.raw)
                   }
+
+                  if (
+                    result.outcome ===
+                      MANAGED_SITE_MUTATION_OUTCOMES.Rejected &&
+                    isRejectedNotFound(result)
+                  ) {
+                    const absence = await readResourceAbsence(
+                      canonicalRef,
+                      deleteOptions,
+                    )
+                    if (absence.state === "absent") {
+                      return {
+                        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+                        data: undefined,
+                        confirmedEffects: [],
+                      }
+                    }
+                    if (absence.state === "unknown") {
+                      return uncertainMutationResult<void>(absence.raw)
+                    }
+                  }
+                  return result
                 })(),
         }
 
