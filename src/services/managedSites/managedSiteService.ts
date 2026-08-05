@@ -7,13 +7,9 @@ import type {
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { MANAGED_UPSTREAM_RESOURCE_FEATURES } from "~/services/managedSites/managedUpstreamResourceMigration"
 import { resolveManagedUpstreamResourceFeatureCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
-import {
-  MANAGED_SITE_MUTATION_CERTAINTIES,
-  type ManagedSiteChannelDeleteResponse,
-} from "~/services/managedSites/mutationCertainty"
-import {
-  toPrivateManagedSiteMutationOutput,
-  type ManagedSiteMutationResult,
+import type {
+  ManagedSiteMutationResult,
+  ManagedSiteVoidMutationResult,
 } from "~/services/managedSites/mutations"
 import {
   getCurrentManagedSiteRuntimeConfig,
@@ -43,7 +39,6 @@ import {
 } from "../preferences/userPreferences"
 
 export type ManagedSiteConfig = ManagedSiteRuntimeConfigValue
-type LegacyManagedSiteMutationResponse = ManagedSiteChannelDeleteResponse
 
 export interface ManagedSiteService<
   TConfig extends ManagedSiteConfig = ManagedSiteConfig,
@@ -65,17 +60,17 @@ export interface ManagedSiteService<
   createChannel(
     config: TConfig,
     channelData: CreateChannelPayload,
-  ): Promise<LegacyManagedSiteMutationResponse>
+  ): Promise<ManagedSiteMutationResult<unknown>>
 
   updateChannel(
     config: TConfig,
     channelData: UpdateChannelPayload,
-  ): Promise<LegacyManagedSiteMutationResponse>
+  ): Promise<ManagedSiteMutationResult<unknown>>
 
   deleteChannel(
     config: TConfig,
     channelId: number,
-  ): Promise<LegacyManagedSiteMutationResponse>
+  ): Promise<ManagedSiteVoidMutationResult>
 
   checkValidConfig(): Promise<boolean>
   getConfig(): Promise<TConfig | null>
@@ -156,48 +151,6 @@ function requireManagedSiteCapabilities(
     config: managedSites.config,
     queries: managedSites.queries,
     channelDrafts: managedSites.channelDrafts,
-  }
-}
-
-const getManagedSiteConfigSecrets = (config: ManagedSiteConfig) =>
-  typeof config === "object" && config !== null
-    ? Object.entries(config)
-        .filter(
-          ([key, value]) =>
-            typeof value === "string" &&
-            /(?:password|token|secret|apiKey|key)$/i.test(key),
-        )
-        .map(([, value]) => value as string)
-    : []
-
-/** Private temporary compatibility bridge; delete it in Task 9. */
-const toLegacyMutationResponseDuringMigration = (
-  config: ManagedSiteConfig,
-  result: ManagedSiteMutationResult<unknown>,
-  knownSecrets: readonly (string | undefined)[] = [],
-): LegacyManagedSiteMutationResponse => {
-  const output = toPrivateManagedSiteMutationOutput(result, {
-    knownSecrets: [
-      ...getManagedSiteConfigSecrets(config),
-      ...knownSecrets.filter((secret): secret is string => Boolean(secret)),
-    ],
-  })
-
-  if (result.outcome === "succeeded") {
-    return {
-      success: true,
-      data: result.data,
-      message: output.message ?? "success",
-    }
-  }
-
-  return {
-    success: false,
-    data: null,
-    message: output.message ?? "Mutation failed",
-    ...(result.outcome === "partial" || result.outcome === "uncertain"
-      ? { certainty: MANAGED_SITE_MUTATION_CERTAINTIES.Uncertain }
-      : {}),
   }
 }
 
@@ -285,23 +238,9 @@ export function getManagedSiteServiceForType(
 
       return channelList ?? { items: [], total: 0, type_counts: {} }
     },
-    createChannel: async (config, channelData) =>
-      toLegacyMutationResponseDuringMigration(
-        config,
-        await capabilities.channels.create(config, channelData),
-        [channelData.channel.key],
-      ),
-    updateChannel: async (config, channelData) =>
-      toLegacyMutationResponseDuringMigration(
-        config,
-        await capabilities.channels.update(config, channelData),
-        [channelData.key],
-      ),
-    deleteChannel: async (config, channelId) =>
-      toLegacyMutationResponseDuringMigration(
-        config,
-        await capabilities.channels.delete(config, channelId),
-      ),
+    createChannel: capabilities.channels.create,
+    updateChannel: capabilities.channels.update,
+    deleteChannel: capabilities.channels.delete,
     checkValidConfig: capabilities.config.checkValid,
     getConfig: capabilities.config.get,
     fetchSiteUserGroups: capabilities.queries.fetchSiteUserGroups,

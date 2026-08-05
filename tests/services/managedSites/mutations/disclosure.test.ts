@@ -11,6 +11,7 @@ import {
   toManagedSiteExternalMutationSummary,
   toManagedSitePersistedMutationState,
   toPrivateManagedSiteMutationOutput,
+  toPrivateManagedSiteThrownErrorMessage,
   type ManagedSiteExternalMutationSummary,
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationPartial,
@@ -210,6 +211,36 @@ describe("managed site mutation disclosure boundaries", () => {
     expect(diagnostic.statusCode).toBe(502)
     expect(diagnostic.raw).toBe(raw)
     expect(diagnostic.cause).toBe(nestedCause)
+  })
+
+  it("projects thrown errors through known-secret and structural redaction", () => {
+    const secret = "thrown-secret-placeholder"
+    const message = toPrivateManagedSiteThrownErrorMessage(
+      new Error(
+        `Provider failed ${secret} authorization=secondary-private-value`,
+        { cause: new Error(`cause ${secret}`) },
+      ),
+      { knownSecrets: [secret] },
+    )
+
+    expect(message).toContain("Provider failed")
+    expect(message).not.toContain(secret)
+    expect(message).not.toContain("secondary-private-value")
+  })
+
+  it("fails closed when a thrown value cannot be inspected safely", () => {
+    const thrown = new Proxy(
+      {},
+      {
+        has() {
+          throw new Error("inspection unavailable")
+        },
+      },
+    )
+
+    expect(
+      toPrivateManagedSiteThrownErrorMessage(thrown, { knownSecrets: [] }),
+    ).toBeUndefined()
   })
 
   it("redacts exact known secrets from success and failure messages and codes", () => {

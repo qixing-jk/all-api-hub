@@ -48,6 +48,7 @@ const mockDoneHubBuildChannelPayload = vi.fn()
 const mockDoneHubCreateChannel = vi.fn()
 const mockDoneHubFetchChannelSecretKey = vi.fn()
 const mockDoneHubGetConfig = vi.fn()
+const mockDoneHubListChannels = vi.fn()
 const mockVeloeraFetchChannelSecretKey = vi.fn()
 const mockVeloeraGetConfig = vi.fn()
 const mockAxonHubBuildChannelPayload = vi.fn()
@@ -291,8 +292,17 @@ describe("channelMigration", () => {
       },
     }))
     mockDoneHubCreateChannel.mockResolvedValue({
-      success: true,
+      outcome: "succeeded",
+      data: null,
+      confirmedEffects: [
+        { kind: "resource-created", resourceKind: "channel", resourceId: 1 },
+      ],
       message: "ok",
+    })
+    mockDoneHubListChannels.mockResolvedValue({
+      items: [],
+      total: 0,
+      type_counts: {},
     })
     mockDoneHubFetchChannelSecretKey.mockResolvedValue("real-donehub-key")
     mockVeloeraGetConfig.mockResolvedValue({
@@ -321,7 +331,11 @@ describe("channelMigration", () => {
       },
     }))
     mockAxonHubCreateChannel.mockResolvedValue({
-      success: true,
+      outcome: "succeeded",
+      data: null,
+      confirmedEffects: [
+        { kind: "resource-created", resourceKind: "channel", resourceId: 1 },
+      ],
       message: "ok",
     })
     mockClaudeCodeHubGetConfig.mockResolvedValue({
@@ -344,7 +358,11 @@ describe("channelMigration", () => {
       },
     }))
     mockClaudeCodeHubCreateChannel.mockResolvedValue({
-      success: true,
+      outcome: "succeeded",
+      data: null,
+      confirmedEffects: [
+        { kind: "resource-created", resourceKind: "channel", resourceId: 1 },
+      ],
       message: "ok",
     })
     mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
@@ -361,6 +379,7 @@ describe("channelMigration", () => {
           getConfig: mockDoneHubGetConfig,
           buildChannelPayload: mockDoneHubBuildChannelPayload,
           createChannel: mockDoneHubCreateChannel,
+          listChannels: mockDoneHubListChannels,
           fetchChannelSecretKey: mockDoneHubFetchChannelSecretKey,
         }
       }
@@ -376,8 +395,21 @@ describe("channelMigration", () => {
             },
           })),
           createChannel: vi.fn().mockResolvedValue({
-            success: true,
+            outcome: "succeeded",
+            data: null,
+            confirmedEffects: [
+              {
+                kind: "resource-created",
+                resourceKind: "channel",
+                resourceId: 1,
+              },
+            ],
             message: "ok",
+          }),
+          listChannels: vi.fn().mockResolvedValue({
+            items: [],
+            total: 0,
+            type_counts: {},
           }),
           fetchChannelSecretKey: mockVeloeraFetchChannelSecretKey,
         }
@@ -388,6 +420,11 @@ describe("channelMigration", () => {
           getConfig: mockAxonHubGetConfig,
           buildChannelPayload: mockAxonHubBuildChannelPayload,
           createChannel: mockAxonHubCreateChannel,
+          listChannels: vi.fn().mockResolvedValue({
+            items: [],
+            total: 0,
+            type_counts: {},
+          }),
         }
       }
 
@@ -396,6 +433,11 @@ describe("channelMigration", () => {
           getConfig: mockClaudeCodeHubGetConfig,
           buildChannelPayload: mockClaudeCodeHubBuildChannelPayload,
           createChannel: mockClaudeCodeHubCreateChannel,
+          listChannels: vi.fn().mockResolvedValue({
+            items: [],
+            total: 0,
+            type_counts: {},
+          }),
         }
       }
 
@@ -413,8 +455,21 @@ describe("channelMigration", () => {
           },
         })),
         createChannel: vi.fn().mockResolvedValue({
-          success: true,
+          outcome: "succeeded",
+          data: null,
+          confirmedEffects: [
+            {
+              kind: "resource-created",
+              resourceKind: "channel",
+              resourceId: 1,
+            },
+          ],
           message: "ok",
+        }),
+        listChannels: vi.fn().mockResolvedValue({
+          items: [],
+          total: 0,
+          type_counts: {},
         }),
       }
     })
@@ -714,8 +769,22 @@ describe("channelMigration", () => {
         : null,
     )
     mockDoneHubCreateChannel
-      .mockResolvedValueOnce({ success: true, message: "ok" })
-      .mockResolvedValueOnce({ success: false, message: "rejected" })
+      .mockResolvedValueOnce({
+        outcome: "succeeded",
+        data: null,
+        confirmedEffects: [
+          {
+            kind: "resource-created",
+            resourceKind: "channel",
+            resourceId: 1,
+          },
+        ],
+        message: "ok",
+      })
+      .mockResolvedValueOnce({
+        outcome: "rejected",
+        diagnostic: { message: "rejected" },
+      })
 
     const preview = await prepareManagedSiteMigrationPreview({
       sourceSiteType: SITE_TYPES.NEW_API,
@@ -737,6 +806,273 @@ describe("channelMigration", () => {
           failureCode:
             MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.TargetRejected,
         },
+      ],
+    })
+  })
+
+  it.each(["partial", "uncertain"] as const)(
+    "refreshes the ordinary target after a %s create and never replays the write",
+    async (outcome) => {
+      const { executeManagedSiteMigration } = await import(
+        "~/services/managedSites/channelMigration"
+      )
+      mockDoneHubCreateChannel.mockResolvedValue(
+        outcome === "partial"
+          ? {
+              outcome,
+              confirmedEffects: [
+                {
+                  kind: "resource-created",
+                  resourceKind: "channel",
+                  resourceId: 88,
+                },
+              ],
+              completion: "uncertain",
+              diagnostic: { message: "Target state is ambiguous" },
+            }
+          : {
+              outcome,
+              diagnostic: { message: "Target state is ambiguous" },
+            },
+      )
+      mockResolveManagedSiteMigrationCapability.mockImplementation(
+        (siteType) =>
+          siteType === SITE_TYPES.NEW_API
+            ? {
+                source: {
+                  prepare: vi.fn(),
+                  resolveCredential: vi.fn(async () => ({
+                    status: "ready" as const,
+                    credential: "execution-key-placeholder",
+                  })),
+                },
+              }
+            : null,
+      )
+
+      const result = await executeManagedSiteMigration({
+        preview: buildCanonicalPreview([
+          buildMigrationSelection(`ordinary-${outcome}`),
+        ]),
+      })
+
+      expect(mockDoneHubCreateChannel).toHaveBeenCalledOnce()
+      expect(mockDoneHubListChannels).toHaveBeenCalledOnce()
+      expect(result).toMatchObject({
+        createdCount: 0,
+        failedCount: 0,
+        uncertainCount: 1,
+        items: [
+          {
+            selectionId: `ordinary-${outcome}`,
+            status: "uncertain",
+          },
+        ],
+      })
+    },
+  )
+
+  it("classifies a malformed ordinary target result as uncertain without replay", async () => {
+    const { executeManagedSiteMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    mockDoneHubCreateChannel.mockResolvedValue(undefined)
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.NEW_API
+        ? {
+            source: {
+              prepare: vi.fn(),
+              resolveCredential: vi.fn(async () => ({
+                status: "ready" as const,
+                credential: "execution-key-placeholder",
+              })),
+            },
+          }
+        : null,
+    )
+
+    const result = await executeManagedSiteMigration({
+      preview: buildCanonicalPreview([
+        buildMigrationSelection("ordinary-malformed"),
+      ]),
+    })
+
+    expect(mockDoneHubCreateChannel).toHaveBeenCalledOnce()
+    expect(mockDoneHubListChannels).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({
+      createdCount: 0,
+      failedCount: 0,
+      uncertainCount: 1,
+      items: [{ selectionId: "ordinary-malformed", status: "uncertain" }],
+    })
+  })
+
+  it("classifies and sanitizes a thrown ordinary target attempt from its snapshot", async () => {
+    const { executeManagedSiteMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const adminToken = "migration-thrown-admin-placeholder"
+    const password = "migration-thrown-password-placeholder"
+    const totpSecret = "migration-thrown-totp-placeholder"
+    const payloadSecret = "migration-thrown-payload-placeholder"
+    const providerText = "Provider create transport failed"
+    const config = {
+      baseUrl: "https://donehub.example.invalid",
+      adminToken,
+      password,
+      totpSecret,
+      userId: "9",
+    }
+    const payload = {
+      mode: "single" as const,
+      channel: {
+        name: "Thrown",
+        key: payloadSecret,
+        status: 1 as const,
+      },
+    }
+    mockDoneHubGetConfig.mockResolvedValue(config)
+    mockDoneHubBuildChannelPayload.mockReturnValue(payload)
+    mockDoneHubCreateChannel.mockImplementation(async () => {
+      config.adminToken = "mutated-admin-token"
+      config.password = "mutated-password"
+      config.totpSecret = "mutated-totp"
+      payload.channel.key = "mutated-payload-key"
+      throw new Error(
+        `${providerText} ${adminToken} ${password} ${totpSecret} ${payloadSecret}`,
+        { cause: new Error(`cause ${payloadSecret}`) },
+      )
+    })
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.NEW_API
+        ? {
+            source: {
+              prepare: vi.fn(),
+              resolveCredential: vi.fn(async () => ({
+                status: "ready" as const,
+                credential: payloadSecret,
+              })),
+            },
+          }
+        : null,
+    )
+
+    const result = await executeManagedSiteMigration({
+      preview: buildCanonicalPreview([
+        buildMigrationSelection("ordinary-thrown"),
+      ]),
+    })
+
+    expect(mockDoneHubCreateChannel).toHaveBeenCalledOnce()
+    expect(mockDoneHubListChannels).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({
+      failedCount: 0,
+      uncertainCount: 1,
+      items: [{ selectionId: "ordinary-thrown", status: "uncertain" }],
+    })
+    const serializedResult = JSON.stringify(result)
+    expect(serializedResult).not.toContain(providerText)
+    expect(serializedResult).not.toContain(adminToken)
+    expect(serializedResult).not.toContain(password)
+    expect(serializedResult).not.toContain(totpSecret)
+    expect(serializedResult).not.toContain(payloadSecret)
+  })
+
+  it("uses controlled uncertainty when thrown-error secret inspection is incomplete", async () => {
+    const { executeManagedSiteMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const hiddenSecret = "migration-incomplete-secret-placeholder"
+    const providerText = `Provider private throw ${hiddenSecret}`
+    mockDoneHubGetConfig.mockResolvedValue(
+      new Proxy(
+        {
+          baseUrl: "https://donehub.example.invalid",
+          adminToken: "admin-token-placeholder",
+          totpSecret: hiddenSecret,
+          userId: "9",
+        },
+        {
+          ownKeys() {
+            throw new Error("config inspection unavailable")
+          },
+        },
+      ),
+    )
+    mockDoneHubCreateChannel.mockRejectedValue(new Error(providerText))
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.NEW_API
+        ? {
+            source: {
+              prepare: vi.fn(),
+              resolveCredential: vi.fn(async () => ({
+                status: "ready" as const,
+                credential: "execution-key-placeholder",
+              })),
+            },
+          }
+        : null,
+    )
+
+    const result = await executeManagedSiteMigration({
+      preview: buildCanonicalPreview([
+        buildMigrationSelection("ordinary-incomplete-throw"),
+      ]),
+    })
+
+    expect(result).toMatchObject({
+      failedCount: 0,
+      uncertainCount: 1,
+      items: [
+        {
+          selectionId: "ordinary-incomplete-throw",
+          status: "uncertain",
+        },
+      ],
+    })
+    expect(JSON.stringify(result)).not.toContain(providerText)
+    expect(JSON.stringify(result)).not.toContain(hiddenSecret)
+  })
+
+  it("performs one reconciliation after multiple ambiguous ordinary creates settle", async () => {
+    const { executeManagedSiteMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    mockDoneHubCreateChannel.mockResolvedValue({
+      outcome: "uncertain",
+      diagnostic: { message: "Target state is ambiguous" },
+    })
+    mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
+      siteType === SITE_TYPES.NEW_API
+        ? {
+            source: {
+              prepare: vi.fn(),
+              resolveCredential: vi.fn(
+                async (selection: ManagedSiteMigrationSelection) => ({
+                  status: "ready" as const,
+                  credential: `credential-${selection.selectionId}`,
+                }),
+              ),
+            },
+          }
+        : null,
+    )
+
+    const result = await executeManagedSiteMigration({
+      preview: buildCanonicalPreview([
+        buildMigrationSelection("ambiguous-one"),
+        buildMigrationSelection("ambiguous-two"),
+      ]),
+    })
+
+    expect(mockDoneHubCreateChannel).toHaveBeenCalledTimes(2)
+    expect(mockDoneHubListChannels).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({
+      failedCount: 0,
+      uncertainCount: 2,
+      items: [
+        { selectionId: "ambiguous-one", status: "uncertain" },
+        { selectionId: "ambiguous-two", status: "uncertain" },
       ],
     })
   })
@@ -2129,7 +2465,15 @@ describe("channelMigration", () => {
           },
         })),
         createChannel: vi.fn().mockResolvedValue({
-          success: true,
+          outcome: "succeeded",
+          data: null,
+          confirmedEffects: [
+            {
+              kind: "resource-created",
+              resourceKind: "channel",
+              resourceId: 1,
+            },
+          ],
           message: "ok",
         }),
       }
@@ -3117,6 +3461,86 @@ describe("channelMigration", () => {
     expect(result.items[1]).not.toHaveProperty("uncertain")
   })
 
+  it("redacts config and payload secrets snapshotted before ordinary target creation", async () => {
+    const { executeManagedSiteChannelMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const adminToken = "migration-admin-token-placeholder"
+    const password = "migration-password-placeholder"
+    const totpSecret = "migration-totp-secret-placeholder"
+    const payloadSecret = "migration-payload-secret-placeholder"
+    const config = {
+      baseUrl: "https://donehub.example.invalid",
+      adminToken,
+      password,
+      totpSecret,
+      userId: "9",
+    }
+    const payload = {
+      mode: "single" as const,
+      channel: {
+        name: "Rejected",
+        key: payloadSecret,
+        status: 1 as const,
+      },
+    }
+    mockDoneHubGetConfig.mockResolvedValue(config)
+    mockDoneHubBuildChannelPayload.mockReturnValue(payload)
+    mockDoneHubCreateChannel.mockImplementation(async () => {
+      config.adminToken = "mutated-admin-token"
+      config.password = "mutated-password"
+      config.totpSecret = "mutated-totp-secret"
+      payload.channel.key = "mutated-payload-secret"
+      return {
+        outcome: "rejected",
+        diagnostic: {
+          message: `Provider refused ${adminToken} ${password} ${totpSecret} ${payloadSecret}`,
+        },
+      }
+    })
+
+    const result = await executeManagedSiteChannelMigration({
+      preview: {
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.DONE_HUB,
+        generalWarningCodes: [],
+        totalCount: 1,
+        readyCount: 1,
+        blockedCount: 0,
+        items: [
+          {
+            channelId: 41,
+            channelName: "Rejected",
+            sourceChannel: buildManagedSiteChannel({
+              id: 41,
+              name: "Rejected",
+            }),
+            draft: {
+              name: "Rejected",
+              type: ChannelType.OpenAI,
+              key: payloadSecret,
+              base_url: "https://source.example.invalid",
+              models: ["model-example"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            },
+            status: "ready",
+            warningCodes: [],
+          },
+        ],
+      },
+    })
+
+    const serializedResult = JSON.stringify(result)
+    expect(serializedResult).toContain("Provider refused")
+    expect(serializedResult).not.toContain(adminToken)
+    expect(serializedResult).not.toContain(password)
+    expect(serializedResult).not.toContain(totpSecret)
+    expect(serializedResult).not.toContain(payloadSecret)
+  })
+
   it("creates AxonHub targets through the managed-site service and keeps failures per row", async () => {
     const { executeManagedSiteChannelMigration } = await import(
       "~/services/managedSites/channelMigration"
@@ -3124,11 +3548,19 @@ describe("channelMigration", () => {
 
     mockAxonHubCreateChannel
       .mockResolvedValueOnce({
-        success: false,
-        message: "AxonHub rejected channel",
+        outcome: "rejected",
+        diagnostic: { message: "AxonHub rejected channel" },
       })
       .mockResolvedValueOnce({
-        success: true,
+        outcome: "succeeded",
+        data: null,
+        confirmedEffects: [
+          {
+            kind: "resource-created",
+            resourceKind: "channel",
+            resourceId: 1,
+          },
+        ],
         message: "ok",
       })
 
@@ -3764,11 +4196,19 @@ describe("channelMigration", () => {
 
     mockClaudeCodeHubCreateChannel
       .mockResolvedValueOnce({
-        success: false,
-        message: "Claude Code Hub rejected provider",
+        outcome: "rejected",
+        diagnostic: { message: "Claude Code Hub rejected provider" },
       })
       .mockResolvedValueOnce({
-        success: true,
+        outcome: "succeeded",
+        data: null,
+        confirmedEffects: [
+          {
+            kind: "resource-created",
+            resourceKind: "channel",
+            resourceId: 1,
+          },
+        ],
         message: "ok",
       })
 
@@ -3997,8 +4437,8 @@ describe("channelMigration", () => {
     )
 
     mockDoneHubCreateChannel.mockResolvedValue({
-      success: false,
-      message: "",
+      outcome: "rejected",
+      diagnostic: { message: "" },
     })
 
     const result = await executeManagedSiteChannelMigration({
@@ -4049,7 +4489,7 @@ describe("channelMigration", () => {
     ])
   })
 
-  it("reports thrown target creation errors for ready rows", async () => {
+  it("classifies thrown ordinary target creation as non-replayable uncertainty", async () => {
     const { executeManagedSiteChannelMigration } = await import(
       "~/services/managedSites/channelMigration"
     )
@@ -4090,8 +4530,9 @@ describe("channelMigration", () => {
     expect(result).toMatchObject({
       attemptedCount: 1,
       createdCount: 0,
-      failedCount: 1,
+      failedCount: 0,
       skippedCount: 0,
+      uncertainCount: 1,
     })
     expect(result.items).toEqual([
       {
@@ -4099,9 +4540,94 @@ describe("channelMigration", () => {
         channelName: "Ready",
         success: false,
         skipped: false,
-        error: "Create exploded",
+        uncertain: true,
+        error:
+          "Target creation may have succeeded. Verify the target before retrying.",
       },
     ])
+    expect(mockDoneHubListChannels).toHaveBeenCalledOnce()
+    expect(JSON.stringify(result)).not.toContain("Create exploded")
+  })
+
+  it("sanitizes a pre-dispatch target payload builder failure as failed", async () => {
+    const { executeManagedSiteChannelMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+    const adminToken = "migration-builder-admin-placeholder"
+    const password = "migration-builder-password-placeholder"
+    const totpSecret = "migration-builder-totp-placeholder"
+    const draftSecret = "migration-builder-draft-placeholder"
+    const providerText = "Target payload builder failed"
+    const config = {
+      baseUrl: "https://donehub.example.invalid",
+      adminToken,
+      password,
+      totpSecret,
+      userId: "9",
+    }
+    mockDoneHubGetConfig.mockResolvedValue(config)
+    mockDoneHubBuildChannelPayload.mockImplementation(() => {
+      config.adminToken = "mutated-after-snapshot"
+      throw new Error(
+        `${providerText} ${adminToken} ${password} ${totpSecret} ${draftSecret}`,
+        { cause: new Error(`cause ${draftSecret}`) },
+      )
+    })
+
+    const result = await executeManagedSiteChannelMigration({
+      preview: {
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.DONE_HUB,
+        generalWarningCodes: [],
+        totalCount: 1,
+        readyCount: 1,
+        blockedCount: 0,
+        items: [
+          {
+            channelId: 53,
+            channelName: "Builder failure",
+            sourceChannel: buildManagedSiteChannel({
+              id: 53,
+              name: "Builder failure",
+            }),
+            draft: {
+              name: "Builder failure",
+              type: ChannelType.OpenAI,
+              key: draftSecret,
+              base_url: "https://source.example.invalid",
+              models: ["gpt-4o"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            },
+            status: "ready",
+            warningCodes: [],
+          },
+        ],
+      },
+    })
+
+    expect(mockDoneHubCreateChannel).not.toHaveBeenCalled()
+    expect(mockDoneHubListChannels).not.toHaveBeenCalled()
+    expect(result).toMatchObject({
+      failedCount: 1,
+      uncertainCount: 0,
+      items: [
+        {
+          channelId: 53,
+          success: false,
+          skipped: false,
+          error: expect.stringContaining(providerText),
+        },
+      ],
+    })
+    const serializedResult = JSON.stringify(result)
+    expect(serializedResult).not.toContain(adminToken)
+    expect(serializedResult).not.toContain(password)
+    expect(serializedResult).not.toContain(totpSecret)
+    expect(serializedResult).not.toContain(draftSecret)
+    expect(serializedResult).not.toContain("cause")
   })
 
   it("prepares an Axon target through the named capability and keeps the displayed legacy draft equivalent", async () => {

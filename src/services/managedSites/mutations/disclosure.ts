@@ -906,6 +906,23 @@ const redactStructuralSecrets = (value: string) =>
 const sanitizePrivateText = (value: string, knownSecrets: readonly string[]) =>
   redactStructuralSecrets(toSanitizedErrorSummary(value, [...knownSecrets]))
 
+/** Safely projects an arbitrary thrown value for a private user-facing sink. */
+export function toPrivateManagedSiteThrownErrorMessage(
+  error: unknown,
+  options: { knownSecrets: readonly string[] },
+): string | undefined {
+  try {
+    const message = redactStructuralSecrets(
+      toSanitizedErrorSummary(error, [...options.knownSecrets]),
+    )
+    return message
+      ? truncateAtCodePointBoundary(message, PRIVATE_MESSAGE_MAX_LENGTH)
+      : undefined
+  } catch {
+    return undefined
+  }
+}
+
 /** Projects a mutation result into the private, safely redacted sink shape. */
 export function toPrivateManagedSiteMutationOutput<
   TData,

@@ -415,25 +415,28 @@ describe("managedSiteService", () => {
     )
 
     const capabilities = createManagedSiteCapabilities()
-    capabilities.channels.create.mockResolvedValue({
+    const createResult = {
       outcome: "succeeded",
       data: { id: 7 },
       confirmedEffects: [
         { kind: "resource-created", resourceKind: "channel", resourceId: 7 },
       ],
-    })
-    capabilities.channels.update.mockResolvedValue({
+    } as const
+    const updateResult = {
       outcome: "partial",
       confirmedEffects: [
         { kind: "resource-updated", resourceKind: "channel", resourceId: 7 },
       ],
       completion: "rejected",
       diagnostic: { message: "status rejected", raw: { private: true } },
-    })
-    capabilities.channels.delete.mockResolvedValue({
+    } as const
+    const deleteResult = {
       outcome: "uncertain",
       diagnostic: { message: "response lost", raw: { private: true } },
-    })
+    } as const
+    capabilities.channels.create.mockResolvedValue(createResult)
+    capabilities.channels.update.mockResolvedValue(updateResult)
+    capabilities.channels.delete.mockResolvedValue(deleteResult)
     capabilityFnsBySiteType.set(SITE_TYPES.DONE_HUB, capabilities)
 
     const service = getManagedSiteServiceForType(SITE_TYPES.DONE_HUB)
@@ -449,25 +452,13 @@ describe("managedSiteService", () => {
 
     expect(getSiteTypeCapabilities).toHaveBeenCalledWith(SITE_TYPES.DONE_HUB)
     expect(service.searchChannel).toBe(capabilities.channels.search)
-    await expect(service.createChannel(config, createPayload)).resolves.toEqual(
-      {
-        success: true,
-        data: { id: 7 },
-        message: "success",
-      },
+    await expect(service.createChannel(config, createPayload)).resolves.toBe(
+      createResult,
     )
-    await expect(service.updateChannel(config, { id: 7 })).resolves.toEqual({
-      success: false,
-      data: null,
-      message: "status rejected",
-      certainty: "uncertain",
-    })
-    await expect(service.deleteChannel(config, 7)).resolves.toEqual({
-      success: false,
-      data: null,
-      message: "response lost",
-      certainty: "uncertain",
-    })
+    await expect(service.updateChannel(config, { id: 7 })).resolves.toBe(
+      updateResult,
+    )
+    await expect(service.deleteChannel(config, 7)).resolves.toBe(deleteResult)
     expect(capabilities.channels.create).toHaveBeenCalledWith(
       config,
       createPayload,

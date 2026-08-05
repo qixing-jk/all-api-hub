@@ -24,6 +24,11 @@ import {
   type ManagedSiteUpstreamResourcesCapability,
 } from "~/services/managedSites/managedUpstreamResourceService"
 import {
+  invokeManagedSiteMutationAttempt,
+  MANAGED_SITE_MUTATION_ATTEMPT_STATES,
+  MANAGED_SITE_MUTATION_OUTCOMES,
+} from "~/services/managedSites/mutations"
+import {
   createManagedSiteOperationContext,
   type ManagedSiteOperationContext,
 } from "~/services/managedSites/operationContext"
@@ -32,7 +37,7 @@ import {
   searchManagedUpstreamResourceChannelsForDuplicateMatching,
 } from "~/services/managedSites/utils/channelMatching"
 import {
-  collectManagedConfigSecrets,
+  collectManagedResourceSecrets,
   hasUsableManagedSiteChannelKey,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
@@ -58,13 +63,16 @@ import {
   type ManagedSiteTokenBatchExportPreviewItem,
   type ManagedSiteTokenBatchExportWarningCode,
 } from "~/types/managedSiteTokenBatchExport"
-import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ManagedSiteTokenBatchExport")
 
 const TOKEN_BATCH_EXPORT_CONCURRENCY = 4
 const FALLBACK_BLOCKING_MESSAGE = "Failed to prepare this key for batch import"
+const BATCH_MUTATION_FAILURE_CATEGORIES = {
+  Failed: "failed",
+  Uncertain: "uncertain",
+} as const
 
 type TokenBatchExportResourceCapabilities =
   ManagedSiteUpstreamResourcesCapability<
@@ -243,19 +251,29 @@ const getDraftBlockedReason = (
   return null
 }
 
-const isCollectedSecret = (value: string | undefined): value is string =>
-  Boolean(value)
+type ManagedResourceSecretCollection = ReturnType<
+  typeof collectManagedResourceSecrets
+>
 
-const collectSecrets = (
-  input: ManagedSiteTokenBatchExportItemInput,
-  managedConfig: ManagedSiteConfig,
+const mergeSecretCollections = (
+  ...collections: readonly ManagedResourceSecretCollection[]
+): ManagedResourceSecretCollection =>
+  Object.freeze({
+    knownSecrets: Object.freeze(
+      Array.from(
+        new Set(collections.flatMap((collection) => collection.knownSecrets)),
+      ),
+    ),
+    complete: collections.every((collection) => collection.complete),
+  })
+
+const toSafePreviewDiagnostic = (
+  error: unknown,
+  secretCollection: ManagedResourceSecretCollection,
 ) =>
-  [
-    input.runtimeKey.secret,
-    input.account.token,
-    input.account.cookieAuthSessionCookie,
-    ...collectManagedConfigSecrets(managedConfig),
-  ].filter(isCollectedSecret)
+  secretCollection.complete
+    ? toSanitizedErrorSummary(error, [...secretCollection.knownSecrets])
+    : ""
 
 const resolveInputRuntimeKeyForManagedSiteExport = async (
   input: ManagedSiteTokenBatchExportItemInput,
@@ -311,7 +329,7 @@ const preparePreviewItem = async (params: {
   protectionBypassExecution?: ProtectionBypassExecution
 }): Promise<ManagedSiteTokenBatchExportPreviewItem> => {
   const { input, service, managedConfig } = params
-  let secretsToRedact = collectSecrets(input, managedConfig)
+  let secretCollection = collectManagedResourceSecrets(input, managedConfig)
 
   let resolvedToken: AccountToken
 
@@ -320,11 +338,12 @@ const preparePreviewItem = async (params: {
       input,
       params.protectionBypassExecution,
     )
-    secretsToRedact = Array.from(
-      new Set([...secretsToRedact, resolvedToken.key].filter(Boolean)),
+    secretCollection = mergeSecretCollections(
+      secretCollection,
+      collectManagedResourceSecrets(resolvedToken),
     )
   } catch (error) {
-    const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
+    const diagnostic = toSafePreviewDiagnostic(error, secretCollection)
     logger.warn("Managed-site token batch secret resolution failed", {
       accountId: input.account.id,
       runtimeKeyId: input.runtimeKey.id,
@@ -348,6 +367,10 @@ const preparePreviewItem = async (params: {
       {
         operationContext: params.operationContext,
       },
+    )
+    secretCollection = mergeSecretCollections(
+      secretCollection,
+      collectManagedResourceSecrets(draft),
     )
     const blockedReason = getDraftBlockedReason(service, draft)
 
@@ -443,7 +466,7 @@ const preparePreviewItem = async (params: {
       ...(verificationCandidate ? { verificationCandidate } : {}),
     }
   } catch (error) {
-    const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
+    const diagnostic = toSafePreviewDiagnostic(error, secretCollection)
     logger.warn("Managed-site token batch preview item failed", {
       accountId: input.account.id,
       runtimeKeyId: input.runtimeKey.id,
@@ -605,33 +628,88 @@ export async function executeManagedSiteTokenBatchExport(params: {
     executableItems,
     TOKEN_BATCH_EXPORT_CONCURRENCY,
     async (item): Promise<ManagedSiteTokenBatchExportExecutionItem> => {
+      let payload
       try {
-        const payload = service.buildChannelPayload(item.draft)
-        const response = await service.createChannel(managedConfig, payload)
-
-        if (!response.success) {
-          throw new Error(response.message || "Failed to create channel")
-        }
-
-        return {
-          id: item.id,
-          accountName: item.accountName,
-          runtimeKeyName: item.runtimeKeyName,
-          success: true,
-          skipped: false,
-        }
-      } catch (error) {
+        payload = service.buildChannelPayload(item.draft)
+      } catch {
         return {
           id: item.id,
           accountName: item.accountName,
           runtimeKeyName: item.runtimeKeyName,
           success: false,
           skipped: false,
-          error: getErrorMessage(error),
+          error: BATCH_MUTATION_FAILURE_CATEGORIES.Failed,
         }
+      }
+
+      const secretCollection = collectManagedResourceSecrets(
+        managedConfig,
+        item.draft,
+        payload,
+      )
+      const attempt = await invokeManagedSiteMutationAttempt(
+        () => service.createChannel(managedConfig, payload),
+        {
+          idempotent: false,
+          knownSecrets: secretCollection.knownSecrets,
+          knownSecretsComplete: secretCollection.complete,
+          uncertainFallbackMessage: BATCH_MUTATION_FAILURE_CATEGORIES.Uncertain,
+        },
+      )
+      if (attempt.state === MANAGED_SITE_MUTATION_ATTEMPT_STATES.Uncertain) {
+        return {
+          id: item.id,
+          accountName: item.accountName,
+          runtimeKeyName: item.runtimeKeyName,
+          success: false,
+          skipped: false,
+          error: BATCH_MUTATION_FAILURE_CATEGORIES.Uncertain,
+        }
+      }
+
+      switch (attempt.result.outcome) {
+        case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
+          return {
+            id: item.id,
+            accountName: item.accountName,
+            runtimeKeyName: item.runtimeKeyName,
+            success: true,
+            skipped: false,
+          }
+        case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
+          return {
+            id: item.id,
+            accountName: item.accountName,
+            runtimeKeyName: item.runtimeKeyName,
+            success: false,
+            skipped: false,
+            error: BATCH_MUTATION_FAILURE_CATEGORIES.Failed,
+          }
+        case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
+        case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
+          return {
+            id: item.id,
+            accountName: item.accountName,
+            runtimeKeyName: item.runtimeKeyName,
+            success: false,
+            skipped: false,
+            error: BATCH_MUTATION_FAILURE_CATEGORIES.Uncertain,
+          }
       }
     },
   )
+
+  if (
+    executedItems.some(
+      (item) => item.error === BATCH_MUTATION_FAILURE_CATEGORIES.Uncertain,
+    )
+  ) {
+    try {
+      await service.listChannels(managedConfig)
+    } catch {
+      // Reconciliation is best effort; ambiguous creates remain non-replayable.
+    }
+  }
 
   for (const item of executedItems) {
     executionById.set(item.id, item)

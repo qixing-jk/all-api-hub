@@ -140,7 +140,7 @@ describe("managed site service facade", () => {
     expect(search).toHaveBeenCalledWith(config, "")
   })
 
-  it("bridges uncertain delete outcomes without exposing raw diagnostics", async () => {
+  it("returns uncertain delete outcomes without converting the common result", async () => {
     const raw = { token: "must-not-leak" }
     const deleteChannel = vi.fn().mockResolvedValue({
       outcome: "uncertain",
@@ -164,15 +164,16 @@ describe("managed site service facade", () => {
     }
 
     await expect(service.deleteChannel(config, 7)).resolves.toEqual({
-      success: false,
-      data: null,
-      message: "transport unavailable: [REDACTED]",
-      certainty: "uncertain",
+      outcome: "uncertain",
+      diagnostic: {
+        message: "transport unavailable: password",
+        raw,
+      },
     })
     expect(deleteChannel).toHaveBeenCalledWith(config, 7)
   })
 
-  it("bridges partial mutations to the legacy no-replay response", async () => {
+  it("returns partial mutations without converting the common result", async () => {
     const updateChannel = vi.fn().mockResolvedValue({
       outcome: "partial",
       confirmedEffects: [
@@ -203,15 +204,24 @@ describe("managed site service facade", () => {
     }
 
     await expect(service.updateChannel(config, { id: 7 })).resolves.toEqual({
-      success: false,
-      data: null,
-      message: "status rejected",
-      certainty: "uncertain",
+      outcome: "partial",
+      confirmedEffects: [
+        {
+          kind: "resource-updated",
+          resourceKind: "channel",
+          resourceId: 7,
+        },
+      ],
+      completion: "rejected",
+      diagnostic: {
+        message: "status rejected",
+        raw: { provider: "private" },
+      },
     })
   })
 
   it.each([["create"], ["update"]] as const)(
-    "redacts the %s channel key from legacy mutation feedback",
+    "returns the %s rejection as the provider-neutral internal result",
     async (operation) => {
       const opaqueChannelKey = "opaque-reserved-placeholder"
       const mutateChannel = vi.fn().mockResolvedValue({
@@ -250,11 +260,12 @@ describe("managed site service facade", () => {
             })
 
       expect(result).toEqual({
-        success: false,
-        data: null,
-        message: "upstream rejected [REDACTED]",
+        outcome: "rejected",
+        diagnostic: {
+          message: `upstream rejected ${opaqueChannelKey}`,
+          raw: { message: opaqueChannelKey },
+        },
       })
-      expect(JSON.stringify(result)).not.toContain(opaqueChannelKey)
     },
   )
 })

@@ -46,13 +46,23 @@ import {
 import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
+  type ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
 import {
   isManagedSiteFeatureResourceSliceEnabled,
   MANAGED_UPSTREAM_RESOURCE_FEATURES,
 } from "~/services/managedSites/managedUpstreamResourceMigration"
 import { resolveManagedUpstreamResourceCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
+import { MANAGED_SITE_MUTATION_CERTAINTIES } from "~/services/managedSites/mutationCertainty"
 import {
+  invokeManagedSiteMutationAttempt,
+  MANAGED_SITE_MUTATION_ATTEMPT_STATES,
+  MANAGED_SITE_MUTATION_OUTCOMES,
+  toPrivateManagedSiteMutationOutput,
+  type ManagedSiteMutationResult,
+} from "~/services/managedSites/mutations"
+import {
+  collectManagedResourceSecrets,
   getManagedSiteAdminConfigForType,
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
@@ -124,6 +134,49 @@ const channelsToolbarSurface =
 const channelsRowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
 const logger = createLogger("ManagedSiteChannels")
+
+const toLegacyOrdinaryDeleteResponse = async (params: {
+  target: LegacyManagedResourceDeleteTarget
+  mutation: ManagedSiteMutationResult<void>
+  secretCollection: ReturnType<typeof collectManagedResourceSecrets>
+  confirmMissing: () => ReturnType<ManagedSiteService["listChannels"]>
+}) => {
+  const output = params.secretCollection.complete
+    ? toPrivateManagedSiteMutationOutput(params.mutation, {
+        knownSecrets: params.secretCollection.knownSecrets,
+      })
+    : null
+  const failureMessage = output?.message || "Delete failed"
+  switch (params.mutation.outcome) {
+    case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
+      return { success: true }
+    case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
+      if (params.mutation.diagnostic.code === "not_found") {
+        try {
+          const freshChannels = await params.confirmMissing()
+          return freshChannels.items.some(
+            (channel) => channel.id === params.target.channelId,
+          )
+            ? { success: false, message: failureMessage }
+            : { success: true }
+        } catch {
+          return {
+            success: false,
+            message: failureMessage,
+            certainty: MANAGED_SITE_MUTATION_CERTAINTIES.Uncertain,
+          }
+        }
+      }
+      return { success: false, message: failureMessage }
+    case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
+    case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
+      return {
+        success: false,
+        message: failureMessage,
+        certainty: MANAGED_SITE_MUTATION_CERTAINTIES.Uncertain,
+      }
+  }
+}
 
 const MANAGED_SITE_TYPE_OPTIONS: ManagedSiteType[] = [
   SITE_TYPES.NEW_API,
@@ -1082,7 +1135,34 @@ export default function ManagedSiteChannels({
             )
           }
 
-          return (target) => service.deleteChannel(config, target.channelId)
+          const secretCollection = collectManagedResourceSecrets(config)
+
+          return async (target) => {
+            const attempt = await invokeManagedSiteMutationAttempt<void>(
+              () => service.deleteChannel(config, target.channelId),
+              {
+                idempotent: true,
+                knownSecrets: secretCollection.knownSecrets,
+                knownSecretsComplete: secretCollection.complete,
+                uncertainFallbackMessage: "Delete failed",
+              },
+            )
+            if (
+              attempt.state === MANAGED_SITE_MUTATION_ATTEMPT_STATES.Uncertain
+            ) {
+              return {
+                success: false,
+                message: attempt.message,
+                certainty: MANAGED_SITE_MUTATION_CERTAINTIES.Uncertain,
+              }
+            }
+            return toLegacyOrdinaryDeleteResponse({
+              target,
+              mutation: attempt.result,
+              secretCollection,
+              confirmMissing: () => service.listChannels(config),
+            })
+          }
         },
         refresh: () => refreshChannels(),
       })
