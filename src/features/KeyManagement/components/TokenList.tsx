@@ -24,6 +24,11 @@ import {
   isAccountTokenRuntimeKey,
   isServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import type {
+  AccountKeyResourceFacts,
+  AccountKeyResourceRef,
+  ResourceFailure,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -54,7 +59,9 @@ import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 import {
   type ApiCredentialProfileSaveEntry,
   type CliProxyExportEntry,
+  type KeyManagementDisplayRow,
   type KeyManagementEntry,
+  type NativeKeyManagementRow,
   type ServiceCredentialState,
 } from "../types"
 import {
@@ -63,6 +70,7 @@ import {
   buildTokenIdentityKey,
   toLegacyAccountTokenForKeyManagementEntry,
 } from "../utils"
+import { AccountKeyResourceList } from "./AccountKeyResource/AccountKeyResourceList"
 import { BatchCliProxyExportDialog } from "./BatchCliProxyExportDialog"
 import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExportDialog"
 import { ServiceCredentialCard } from "./ServiceCredentialCard"
@@ -118,6 +126,7 @@ interface TokenListProps {
   selectedAccount: string
   displayData: DisplaySiteData[]
   currentAccountLoadError?: string | null
+  nativeInventoryLoadError?: string | null
   currentAccountUnsupportedKeyManagement?: boolean
   onRetryCurrentAccount?: () => void
   managedSiteTokenStatuses?: Record<
@@ -137,6 +146,17 @@ interface TokenListProps {
   onCopyServiceCredential?: (account: DisplaySiteData) => Promise<void>
   onRotateServiceCredential?: (account: DisplaySiteData) => Promise<void>
   guidedManagedSiteImport?: GuidedManagedSiteImportTarget
+  nativeRows?: readonly NativeKeyManagementRow[]
+  nativeUnfilteredRows?: readonly NativeKeyManagementRow[]
+  nativeLoading?: boolean
+  nativeDetail?: AccountKeyResourceFacts | null
+  nativeDetailLoading?: boolean
+  nativeDetailFailure?: ResourceFailure | null
+  onCloseNativeDetail?: () => void
+  nativeActionsDisabled?: boolean
+  onOpenNativeDetail?: (ref: AccountKeyResourceRef) => void
+  onEditNativeKey?: (ref: AccountKeyResourceRef) => void
+  onDeleteNativeKey?: (ref: AccountKeyResourceRef) => void
 }
 
 /**
@@ -384,6 +404,7 @@ export function TokenList(props: TokenListProps) {
     selectedAccount,
     displayData,
     currentAccountLoadError,
+    nativeInventoryLoadError,
     currentAccountUnsupportedKeyManagement,
     onRetryCurrentAccount,
     managedSiteTokenStatuses,
@@ -394,6 +415,17 @@ export function TokenList(props: TokenListProps) {
     onCopyServiceCredential,
     onRotateServiceCredential,
     guidedManagedSiteImport,
+    nativeRows = [],
+    nativeUnfilteredRows = nativeRows,
+    nativeLoading = false,
+    nativeDetail,
+    nativeDetailLoading = false,
+    nativeDetailFailure,
+    onCloseNativeDetail,
+    nativeActionsDisabled = false,
+    onOpenNativeDetail,
+    onEditNativeKey,
+    onDeleteNativeKey,
   } = props
   const { t } = useTranslation(["keyManagement", "settings"])
   const { managedSiteType } = useUserPreferencesContext()
@@ -487,6 +519,30 @@ export function TokenList(props: TokenListProps) {
     serviceCredentials,
   ])
   const filteredEntries = providedFilteredEntries ?? entries
+  const displayRows = useMemo<readonly KeyManagementDisplayRow[]>(
+    () => [
+      ...entries.map(
+        (entry): KeyManagementDisplayRow => ({
+          kind: "runtime-key",
+          entry,
+        }),
+      ),
+      ...nativeUnfilteredRows,
+    ],
+    [entries, nativeUnfilteredRows],
+  )
+  const filteredDisplayRows = useMemo<readonly KeyManagementDisplayRow[]>(
+    () => [
+      ...filteredEntries.map(
+        (entry): KeyManagementDisplayRow => ({
+          kind: "runtime-key",
+          entry,
+        }),
+      ),
+      ...nativeRows,
+    ],
+    [filteredEntries, nativeRows],
+  )
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
   const guidedManagedSiteImportEntryId = useMemo(() => {
     if (!guidedManagedSiteImportAccountId) return null
@@ -892,7 +948,7 @@ export function TokenList(props: TokenListProps) {
     setCCSwitchContext(null)
   }
 
-  if (isLoading && entries.length === 0) {
+  if ((isLoading || nativeLoading) && displayRows.length === 0) {
     return <LoadingSkeleton />
   }
 
@@ -917,15 +973,17 @@ export function TokenList(props: TokenListProps) {
     ) : null
   }
 
-  if (filteredEntries.length === 0) {
+  if (filteredDisplayRows.length === 0) {
     return (
       <TokenEmptyState
         selectedAccount={selectedAccount}
-        tokens={tokens}
+        tokens={[...tokens, ...nativeUnfilteredRows]}
         handleAddToken={handleAddToken}
         canCreateTokens={canCreateTokens}
         displayData={displayData}
-        currentAccountLoadError={currentAccountLoadError}
+        currentAccountLoadError={
+          currentAccountLoadError ?? nativeInventoryLoadError
+        }
         currentAccountUnsupportedKeyManagement={
           currentAccountUnsupportedKeyManagement
         }
@@ -936,10 +994,44 @@ export function TokenList(props: TokenListProps) {
     )
   }
 
+  if (filteredEntries.length === 0) {
+    return (
+      <AccountKeyResourceList
+        rows={nativeRows}
+        onOpenDetail={onOpenNativeDetail}
+        onEdit={onEditNativeKey ?? (() => undefined)}
+        onDelete={onDeleteNativeKey ?? (() => undefined)}
+        detail={nativeDetail}
+        isDetailLoading={nativeDetailLoading}
+        detailFailure={nativeDetailFailure}
+        onCloseDetail={onCloseNativeDetail}
+        actionsDisabled={nativeActionsDisabled}
+      />
+    )
+  }
+
   return (
     <>
+      <AccountKeyResourceList
+        rows={nativeRows}
+        onOpenDetail={onOpenNativeDetail}
+        onEdit={onEditNativeKey ?? (() => undefined)}
+        onDelete={onDeleteNativeKey ?? (() => undefined)}
+        detail={nativeDetail}
+        isDetailLoading={nativeDetailLoading}
+        detailFailure={nativeDetailFailure}
+        onCloseDetail={onCloseNativeDetail}
+        actionsDisabled={nativeActionsDisabled}
+      />
       {filteredEligibleEntries.length > 0 ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
+          {nativeRows.length > 0 ? (
+            <p className="text-muted-foreground w-full text-sm" role="status">
+              {t("keyManagement:openRouter.list.legacyEligible", {
+                count: filteredEntries.length,
+              })}
+            </p>
+          ) : null}
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={visibleSelectionChecked}

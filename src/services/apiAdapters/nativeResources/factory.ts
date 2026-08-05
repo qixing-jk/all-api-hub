@@ -123,7 +123,7 @@ export const assertNativeResourceFacts = <
   return facts
 }
 
-export type NativeResourceMutationResolution<T, TFailure> =
+type NativeResourceMutationResolution<T, TFailure> =
   | { status: "applied"; value: T }
   | { status: "not-applied"; failure: TFailure }
   | { status: "uncertain" }

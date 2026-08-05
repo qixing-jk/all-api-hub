@@ -3,6 +3,10 @@
     "keys_one": "{{count}} clave",
     "keys_many": "{{count}} claves",
     "keys_other": "{{count}} claves",
+    "keysUnavailable": "Cantidad no disponible",
+    "knownKeys_one": "Al menos {{count}} clave",
+    "knownKeys_many": "Al menos {{count}} claves",
+    "knownKeys_other": "Al menos {{count}} claves",
     "loadFailed": "Error al cargar",
     "title": "Resumen de cuentas",
     "unsupported": "no compatible"
@@ -193,6 +197,10 @@
   "enabledCount_one": "{{count}} habilitada",
   "enabledCount_many": "{{count}} habilitadas",
   "enabledCount_other": "{{count}} habilitadas",
+  "enabledCountPartial_one": "Al menos {{count}} habilitada",
+  "enabledCountPartial_many": "Al menos {{count}} habilitadas",
+  "enabledCountPartial_other": "Al menos {{count}} habilitadas",
+  "enabledCountUnavailable": "Cantidad habilitada no disponible",
   "keyDetails": {
     "createResponseOnlySecret": "Este sitio solo proporciona un valor oculto después de la creación, por lo que la clave completa no puede volver a verse.",
     "createTime": "Hora de creación:",
@@ -327,6 +335,19 @@
     "warningTitle": "Esta clave solo se puede ver una vez"
   },
   "openRouter": {
+    "delete": {
+      "confirm": "Eliminar clave",
+      "description": "¿Eliminar {{name}} de OpenRouter permanentemente? Esta eliminación remota no se puede deshacer.",
+      "feedback": {
+        "authenticationFailed": "Vuelve a iniciar sesión y actualiza.",
+        "error": "No se pudo eliminar esta clave. Actualiza e inténtalo de nuevo.",
+        "permissionDenied": "No tienes permiso para eliminar esta clave.",
+        "unavailable": "El servicio no está disponible temporalmente. Actualiza antes de volver a intentarlo.",
+        "uncertain": "El estado remoto puede haber cambiado. Actualiza las claves antes de volver a intentarlo."
+      },
+      "refresh": "Actualizar claves",
+      "title": "¿Eliminar clave API?"
+    },
     "editor": {
       "actions": {
         "cancel": "Cancelar",
@@ -400,6 +421,7 @@
         "creator": {
           "empty": "No hay miembros disponibles para este espacio de trabajo.",
           "none": "Sin creador",
+          "unavailable": "La asignación de miembros no está disponible para el espacio de trabajo seleccionado. Puedes crear la clave sin seleccionar un miembro.",
           "unknown": "Miembro desconocido"
         },
         "limitMode": {
@@ -451,10 +473,64 @@
         "title": "¿Descartar cambios sin guardar?"
       }
     },
+    "list": {
+      "actions": {
+        "delete": "Eliminar clave",
+        "details": "Ver detalles",
+        "edit": "Editar clave",
+        "singleAccountOnly": "Selecciona esta cuenta para editar o eliminar su clave"
+      },
+      "details": {
+        "byokUsage": "Uso BYOK",
+        "byokUsageDaily": "Uso diario de BYOK",
+        "byokUsageMonthly": "Uso mensual de BYOK",
+        "byokUsageWeekly": "Uso semanal de BYOK",
+        "createdAt": "Creada",
+        "creator": "Creador",
+        "disabled": "Desactivada",
+        "expiresAt": "Caduca",
+        "heading": "Detalles de la clave",
+        "includeByokInLimit": "Incluir uso de BYOK",
+        "limit": "Límite",
+        "limitMode": "Modo de límite",
+        "loadFailed": "No se pudieron cargar los detalles de la clave.",
+        "loading": "Cargando detalles de la clave…",
+        "remaining": "Restante",
+        "reset": "Restablecimiento",
+        "retry": "Intentar de nuevo",
+        "updatedAt": "Actualizada",
+        "usage": "Uso",
+        "usageDaily": "Uso diario",
+        "usageMonthly": "Uso mensual",
+        "usageWeekly": "Uso semanal",
+        "workspace": "Espacio de trabajo"
+      },
+      "heading": "Claves de OpenRouter",
+      "legacyEligible_one": "Solo {{count}} clave heredada admite acciones por lotes; las claves de OpenRouter quedan excluidas.",
+      "legacyEligible_many": "Solo {{count}} claves heredadas admiten acciones por lotes; las claves de OpenRouter quedan excluidas.",
+      "legacyEligible_other": "Solo {{count}} claves heredadas admiten acciones por lotes; las claves de OpenRouter quedan excluidas.",
+      "status": {
+        "all": "Todas",
+        "disabled": "Desactivada",
+        "enabled": "Activa",
+        "expired": "Caducada",
+        "unknown": "Desconocida"
+      },
+      "statusFilter": {
+        "label": "Estado de clave"
+      },
+      "values": {
+        "missing": "No disponible",
+        "no": "No",
+        "unlimited": "Sin límite",
+        "yes": "Sí"
+      }
+    },
     "workspace": {
       "empty": "No hay espacios de trabajo disponibles para esta cuenta.",
       "error": "No se pudieron cargar los espacios de trabajo",
       "errorHelp": "Comprueba el acceso de la cuenta e inténtalo de nuevo.",
+      "fallback": "El espacio solicitado no está disponible; se muestra el predeterminado.",
       "heading": "Espacio de trabajo",
       "label": "Espacio de trabajo",
       "loading": "Cargando espacios de trabajo...",
@@ -582,6 +658,10 @@
   "showingCount_one": "Mostrando {{count}}",
   "showingCount_many": "Mostrando {{count}}",
   "showingCount_other": "Mostrando {{count}}",
+  "showingCountPartial_one": "Mostrando al menos {{count}}",
+  "showingCountPartial_many": "Mostrando al menos {{count}}",
+  "showingCountPartial_other": "Mostrando al menos {{count}}",
+  "showingCountUnavailable": "Cantidad mostrada no disponible",
   "title": "Administración de claves",
   "totalKeys_one": "Total {{count}} clave",
   "totalKeys_many": "Total {{count}} claves",
@@ -589,6 +669,10 @@
   "unifiedApiGuidance": {
     "headerBridge": "Cuando quieras que el AI gateway autohospedado reúna varias claves en una AI API unificada, importa claves de cuenta como canales del gateway. La exportación directa a herramientas cliente sigue siendo una ruta independiente."
   },
+  "totalKeysPartial_one": "Total de al menos {{count}} clave",
+  "totalKeysPartial_many": "Total de al menos {{count}} claves",
+  "totalKeysPartial_other": "Total de al menos {{count}} claves",
+  "totalKeysUnavailable": "Total no disponible",
   "unsupportedSource": {
     "description": "El tipo de sitio de esta cuenta se puede guardar, pero la extensión aún no ha adaptado su protocolo de lista de claves. Envía una solicitud de soporte del sitio para ayudarnos a agregar soporte de gestión de claves.",
     "requestSiteSupport": "Solicitar soporte del sitio",

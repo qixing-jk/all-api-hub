@@ -19,7 +19,7 @@ import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 interface HeaderProps {
   selectedAccount: string
   onAddToken: () => void
-  onRepairMissingKeys: () => void
+  onRepairMissingKeys?: () => void
   onRefresh: () => void
   onOpenSelectedAccountModels?: () => void
   onRefreshManagedSiteStatus?: () => void
@@ -128,15 +128,17 @@ export function Header({
               >
                 {t("dialog.addToken")}
               </Button>
-              <Button
-                onClick={onRepairMissingKeys}
-                disabled={isRepairDisabled}
-                size="sm"
-                variant="outline"
-                leftIcon={<Wrench className="h-4 w-4" />}
-              >
-                {t("repairMissingKeys.action")}
-              </Button>
+              {onRepairMissingKeys ? (
+                <Button
+                  onClick={onRepairMissingKeys}
+                  disabled={isRepairDisabled}
+                  size="sm"
+                  variant="outline"
+                  leftIcon={<Wrench className="h-4 w-4" />}
+                >
+                  {t("repairMissingKeys.action")}
+                </Button>
+              ) : null}
               {onRefreshManagedSiteStatus ? (
                 <Button
                   onClick={onRefreshManagedSiteStatus}

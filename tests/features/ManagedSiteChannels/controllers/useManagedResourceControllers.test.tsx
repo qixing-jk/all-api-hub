@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, expectTypeOf, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useManagedResourceListController as useManagedResourceListControllerBase } from "~/features/ManagedSiteChannels/controllers/useManagedResourceListController"
@@ -71,6 +71,13 @@ const createAnalytics = () => {
 }
 
 describe("useManagedResourceListController", () => {
+  it("keeps OpenRouter outside the managed-resource registration boundary", () => {
+    expectTypeOf(SITE_TYPES.OPENROUTER).not.toExtend<
+      ManagedResourceRegistration["siteType"]
+    >()
+    expect(registration(vi.fn()).siteType).toBe(SITE_TYPES.AXON_HUB)
+  })
+
   it("uses the existing Managed Site Channels taxonomy for manual refresh exactly once", async () => {
     const workspace = createManagedResourceWorkspace()
     const value = registration(async () => workspace)

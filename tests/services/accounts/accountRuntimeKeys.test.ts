@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID,
   ACCOUNT_RUNTIME_KEY_SOURCES,
@@ -22,6 +23,10 @@ import {
   isServiceCredentialRuntimeKey,
   sortAccountRuntimeKeysActiveFirst,
 } from "~/services/accounts/accountRuntimeKeys"
+import {
+  canListAccountRuntimeKeys,
+  canResolveAccountRuntimeKeySecret,
+} from "~/services/accounts/keyProductCapabilities"
 import { AuthTypeEnum, type AccountToken, type DisplaySiteData } from "~/types"
 
 const account = {
@@ -64,6 +69,16 @@ const token = {
 } satisfies AccountToken
 
 describe("accountRuntimeKeys", () => {
+  it("keeps OpenRouter native resources out of the legacy runtime-key boundary", () => {
+    const openRouterAccount = {
+      ...account,
+      siteType: SITE_TYPES.OPENROUTER,
+    }
+
+    expect(canListAccountRuntimeKeys(openRouterAccount)).toBe(false)
+    expect(canResolveAccountRuntimeKeySecret(openRouterAccount)).toBe(false)
+  })
+
   it("builds stable account-token runtime keys", () => {
     const runtimeKey = buildAccountTokenRuntimeKey(account, token)
 

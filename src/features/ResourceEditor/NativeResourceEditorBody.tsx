@@ -29,7 +29,7 @@ import type {
   ResourceFieldOption,
   ResourceFieldValue,
   ResourceOperationOptions,
-} from "~/services/apiAdapters/contracts/managedResourceNative"
+} from "~/services/apiAdapters/contracts/resourceNative"
 
 import {
   getResourceFieldOptionLabel,
@@ -81,7 +81,7 @@ export type NativeResourceEditorBodyProps<TSection extends string> = {
 const fieldDomId = (fieldId: string) =>
   `resource-editor-${fieldId.replace(/[^a-zA-Z0-9_-]/g, "-")}`
 
-export type SelectOptionTokenRegistry = {
+type SelectOptionTokenRegistry = {
   nextToken: number
   nullToken: string
   tokenByResourceValue: Map<string, string>
@@ -844,7 +844,15 @@ export function NativeResourceEditorBody<TSection extends string>({
               </p>
             ) : null}
             {optionState?.status === "ready" && optionValues.length === 0 ? (
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p
+                role={
+                  controlledOptionState?.emptyMessage ? "status" : undefined
+                }
+                aria-live={
+                  controlledOptionState?.emptyMessage ? "polite" : undefined
+                }
+                className="text-muted-foreground mt-1 text-xs"
+              >
                 {controlledOptionState?.emptyMessage ??
                   RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.empty(t)}
               </p>

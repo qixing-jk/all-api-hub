@@ -8,7 +8,7 @@ const workspace: AccountKeyScope = {
   scopeKey: "workspace-example-id",
   routeKey: "example-team",
   displayName: "Example team",
-  secondaryLabel: "example-team",
+  secondaryLabel: "Workspace owner",
   isDefault: true,
 }
 
@@ -31,7 +31,7 @@ describe("OpenRouterWorkspaceSelector", () => {
     fireEvent.click(selector)
     expect(
       await screen.findByRole("option", { name: /Example team/ }),
-    ).toHaveTextContent("example-team")
+    ).toHaveTextContent("Workspace owner")
     fireEvent.click(screen.getByRole("option", { name: /Example team/ }))
     expect(onSelectScope).toHaveBeenCalledWith(workspace.scopeKey)
   })

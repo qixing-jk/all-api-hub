@@ -2,15 +2,10 @@ import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent } from "~/components/ui"
 
-interface AccountSummaryItem {
-  accountId: string
-  name: string
-  count: number
-  errorType?: "load-failed" | "unsupported"
-}
+import type { KeyManagementAccountSummaryItem } from "../types"
 
 interface AccountSummaryBarProps {
-  items: AccountSummaryItem[]
+  items: KeyManagementAccountSummaryItem[]
   activeAccountIds?: string[]
   onAccountClick?: (accountId: string) => void
 }
@@ -55,7 +50,13 @@ export function AccountSummaryBar({
                 >
                   <span className="truncate font-medium">{item.name}</span>
                   <span className="dark:text-dark-text-tertiary ml-2 text-gray-500">
-                    {t("accountSummary.keys", { count: item.count })}
+                    {item.count !== null
+                      ? t("accountSummary.keys", { count: item.count })
+                      : item.knownCount
+                        ? t("accountSummary.knownKeys", {
+                            count: item.knownCount,
+                          })
+                        : t("accountSummary.keysUnavailable")}
                   </span>
                   {item.errorType && (
                     <span className="ml-2 text-xs text-red-500 dark:text-red-400">

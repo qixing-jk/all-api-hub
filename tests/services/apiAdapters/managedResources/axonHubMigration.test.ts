@@ -120,6 +120,35 @@ describe("AxonHub migration type boundary", () => {
     expect(getPreferences).toHaveBeenCalledOnce()
   })
 
+  it("rejects OpenRouter native refs before they enter AxonHub migration", async () => {
+    const open = vi.spyOn(
+      axonHubNativeResources,
+      "openAxonHubNativeResourceOperations",
+    )
+    const openRouterSelection = {
+      ...selection,
+      ref: {
+        ...selection.ref,
+        siteType: SITE_TYPES.OPENROUTER,
+      },
+    } as never
+    const context =
+      await axonHubManagedSiteMigrationCapability.source!
+        .createSelectionValidationContext!()
+
+    expect(context.isValid(openRouterSelection)).toBe(false)
+    await expect(
+      axonHubManagedSiteMigrationCapability.source!.prepare(
+        openRouterSelection,
+      ),
+    ).resolves.toEqual({
+      status: "blocked",
+      reasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+    })
+    expect(open).not.toHaveBeenCalled()
+  })
+
   it("blocks an unknown native source type before credential resolution", async () => {
     const get = vi.fn(
       async () =>

@@ -2,6 +2,9 @@
   "accountSummary": {
     "keys_one": "{{count}} key",
     "keys_other": "{{count}} keys",
+    "keysUnavailable": "Count unavailable",
+    "knownKeys_one": "At least {{count}} key",
+    "knownKeys_other": "At least {{count}} keys",
     "loadFailed": "Load failed",
     "title": "Accounts overview",
     "unsupported": "unsupported"
@@ -187,6 +190,9 @@
   },
   "enabledCount_one": "Enabled {{count}}",
   "enabledCount_other": "Enabled {{count}}",
+  "enabledCountPartial_one": "Enabled at least {{count}}",
+  "enabledCountPartial_other": "Enabled at least {{count}}",
+  "enabledCountUnavailable": "Enabled count unavailable",
   "keyDetails": {
     "createResponseOnlySecret": "This site provides only a masked value after creation, so the full key cannot be viewed again.",
     "createTime": "Create Time:",
@@ -320,6 +326,19 @@
     "warningTitle": "This key can only be viewed once"
   },
   "openRouter": {
+    "delete": {
+      "confirm": "Delete key",
+      "description": "Delete {{name}} from OpenRouter permanently? This remote deletion cannot be undone.",
+      "feedback": {
+        "authenticationFailed": "Sign in again, then refresh.",
+        "error": "Could not delete this key. Refresh and try again.",
+        "permissionDenied": "You do not have permission to delete this key.",
+        "unavailable": "The service is temporarily unavailable. Refresh before trying again.",
+        "uncertain": "Remote state may have changed. Refresh keys before trying again."
+      },
+      "refresh": "Refresh keys",
+      "title": "Delete API key?"
+    },
     "editor": {
       "actions": {
         "cancel": "Cancel",
@@ -393,6 +412,7 @@
         "creator": {
           "empty": "No members are available for this workspace.",
           "none": "No creator",
+          "unavailable": "Member assignment isn't available for the selected workspace. You can create the key without selecting a member.",
           "unknown": "Unknown member"
         },
         "limitMode": {
@@ -444,10 +464,63 @@
         "title": "Discard unsaved changes?"
       }
     },
+    "list": {
+      "actions": {
+        "delete": "Delete key",
+        "details": "View details",
+        "edit": "Edit key",
+        "singleAccountOnly": "Select this account to edit or delete its key"
+      },
+      "details": {
+        "byokUsage": "BYOK usage",
+        "byokUsageDaily": "Daily BYOK usage",
+        "byokUsageMonthly": "Monthly BYOK usage",
+        "byokUsageWeekly": "Weekly BYOK usage",
+        "createdAt": "Created",
+        "creator": "Creator",
+        "disabled": "Disabled",
+        "expiresAt": "Expires",
+        "heading": "Key details",
+        "includeByokInLimit": "Include BYOK usage",
+        "limit": "Limit",
+        "limitMode": "Limit mode",
+        "loadFailed": "Could not load key details.",
+        "loading": "Loading key details…",
+        "remaining": "Remaining",
+        "reset": "Reset cadence",
+        "retry": "Try again",
+        "updatedAt": "Updated",
+        "usage": "Usage",
+        "usageDaily": "Daily usage",
+        "usageMonthly": "Monthly usage",
+        "usageWeekly": "Weekly usage",
+        "workspace": "Workspace"
+      },
+      "heading": "OpenRouter keys",
+      "legacyEligible_one": "Only {{count}} legacy key is eligible for batch actions; OpenRouter keys are excluded.",
+      "legacyEligible_other": "Only {{count}} legacy keys are eligible for batch actions; OpenRouter keys are excluded.",
+      "status": {
+        "all": "All",
+        "disabled": "Disabled",
+        "enabled": "Enabled",
+        "expired": "Expired",
+        "unknown": "Unknown"
+      },
+      "statusFilter": {
+        "label": "Key status"
+      },
+      "values": {
+        "missing": "Not available",
+        "no": "No",
+        "unlimited": "Unlimited",
+        "yes": "Yes"
+      }
+    },
     "workspace": {
       "empty": "No workspaces are available for this account.",
       "error": "Could not load workspaces",
       "errorHelp": "Check your account access, then try again.",
+      "fallback": "The requested workspace is unavailable; the default workspace is shown.",
       "heading": "Workspace",
       "label": "Workspace",
       "loading": "Loading workspaces...",
@@ -568,12 +641,18 @@
   },
   "showingCount_one": "Showing {{count}}",
   "showingCount_other": "Showing {{count}}",
+  "showingCountPartial_one": "Showing at least {{count}}",
+  "showingCountPartial_other": "Showing at least {{count}}",
+  "showingCountUnavailable": "Showing count unavailable",
   "title": "Key Management",
   "totalKeys_one": "Total {{count}} key",
   "totalKeys_other": "Total {{count}} keys",
   "unifiedApiGuidance": {
     "headerBridge": "Import account keys into your self-hosted AI gateway so multiple keys can be used through one AI API. Direct client-tool export remains the no-gateway path."
   },
+  "totalKeysPartial_one": "Total at least {{count}} key",
+  "totalKeysPartial_other": "Total at least {{count}} keys",
+  "totalKeysUnavailable": "Total unavailable",
   "unsupportedSource": {
     "description": "This account's site type can be saved, but the extension has not adapted its key-list protocol yet. Submit a site-support request to help us add key-management support.",
     "requestSiteSupport": "Request site support",

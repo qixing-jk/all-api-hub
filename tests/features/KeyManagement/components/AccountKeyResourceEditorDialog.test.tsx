@@ -468,6 +468,7 @@ describe("AccountKeyResourceEditorDialog", () => {
       />,
       { withUserPreferencesProvider: false, withThemeProvider: false },
     )
+    await waitFor(() => expect(retry).toHaveBeenCalledTimes(1))
     expect(
       screen.getByText("common:status.loading").closest("[role=status]"),
     ).toHaveTextContent("common:status.loading")
@@ -494,7 +495,63 @@ describe("AccountKeyResourceEditorDialog", () => {
           values: { ...editor().values, [field.Creator]: null },
           optionsByField: { [field.Creator]: [] },
           optionFailuresByField: {
-            [field.Creator]: { code: "permission_denied" },
+            [field.Creator]: {
+              code: "permission_denied",
+              message: "safe sentinel permission detail",
+              upstreamCode: "safe_sentinel_permission_code",
+            },
+          },
+        }}
+        onClose={() => undefined}
+        onSubmit={submit}
+        onLoadOptions={retry}
+        onValuesChange={() => undefined}
+      />,
+    )
+    const unavailable = screen.getByText(
+      "keyManagement:openRouter.editor.options.creator.unavailable",
+    )
+    expect(unavailable).toBeVisible()
+    expect(unavailable.closest("[role=status]")).toHaveAttribute(
+      "aria-live",
+      "polite",
+    )
+    expect(
+      screen.queryByText(
+        "keyManagement:openRouter.editor.feedback.permissionDenied",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("safe sentinel permission detail"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("safe_sentinel_permission_code"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("combobox", {
+        name: /keyManagement:openRouter\.editor\.fields\.creator\.label/,
+      }),
+    ).toBeDisabled()
+    expect(save).toBeEnabled()
+    expect(
+      screen.queryByRole("button", { name: /common:actions\.retry/ }),
+    ).not.toBeInTheDocument()
+    submit.mockClear()
+    fireEvent.click(save)
+    expect(submit).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ [field.Creator]: null }),
+    )
+    await waitFor(() => expect(save).toBeEnabled())
+
+    rerender(
+      <AccountKeyResourceEditorDialog
+        editor={{
+          ...editor(),
+          values: { ...editor().values, [field.Creator]: null },
+          optionsByField: { [field.Creator]: [] },
+          optionFailuresByField: {
+            [field.Creator]: { code: "unavailable" },
           },
         }}
         onClose={() => undefined}
@@ -504,19 +561,13 @@ describe("AccountKeyResourceEditorDialog", () => {
       />,
     )
     expect(
-      screen.getByText(
-        "keyManagement:openRouter.editor.feedback.permissionDenied",
-      ),
+      screen.getByText("keyManagement:openRouter.editor.feedback.unavailable"),
     ).toHaveAttribute("role", "alert")
-    expect(
-      screen.getByRole("combobox", {
-        name: /keyManagement:openRouter\.editor\.fields\.creator\.label/,
-      }),
-    ).toBeDisabled()
-    expect(save).toBeEnabled()
+    const loadCallCountBeforeRetry = retry.mock.calls.length
     fireEvent.click(
       screen.getByRole("button", { name: /common:actions\.retry/ }),
     )
+    expect(retry).toHaveBeenCalledTimes(loadCallCountBeforeRetry + 1)
     expect(retry).toHaveBeenLastCalledWith(1, field.Creator, expect.any(Object))
 
     rerender(
@@ -582,6 +633,50 @@ describe("AccountKeyResourceEditorDialog", () => {
       1,
       expect.objectContaining({ [field.Creator]: null }),
     )
+  })
+
+  it("keeps a raw creator identifier out of the rendered select state", async () => {
+    const rawCreatorId = "raw-member-id-example"
+    const user = userEvent.setup()
+    render(
+      <AccountKeyResourceEditorDialog
+        editor={{
+          ...editor(),
+          initialValues: {
+            ...editor().initialValues,
+            [field.Creator]: "creator-option-1",
+          },
+          values: {
+            ...editor().values,
+            [field.Creator]: "creator-option-1",
+          },
+          optionsByField: {
+            [field.Creator]: [
+              {
+                value: "creator-option-1",
+                displayLabel: "Unknown member",
+              },
+            ],
+          },
+        }}
+        onClose={() => undefined}
+        onSubmit={() => undefined}
+        onValuesChange={() => undefined}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    await user.click(
+      screen.getByRole("combobox", {
+        name: /keyManagement:openRouter\.editor\.fields\.creator\.label/,
+      }),
+    )
+    expect(
+      screen.getByRole("option", {
+        name: "keyManagement:openRouter.editor.options.creator.unknown",
+      }),
+    ).toBeVisible()
+    expect(document.body.innerHTML).not.toContain(rawCreatorId)
   })
 
   it("keeps focus in the stable dialog when opening controls are replaced", async () => {

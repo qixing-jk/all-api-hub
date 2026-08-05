@@ -31,6 +31,64 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
 const getVisibleTokenKey = (token: { key: string }) => token.key
 
 describe("TokenList grouped all-accounts UX", () => {
+  it("keeps mixed native rows out of legacy batch selection and explains the eligible count", async () => {
+    const user = userEvent.setup()
+    const account = createAccount({ id: "legacy-account", name: "Legacy" })
+    const token = createToken({
+      id: 1,
+      name: "Legacy token",
+      key: "sk-legacy",
+      accountId: account.id,
+      accountName: account.name,
+    })
+
+    render(
+      <TokenList
+        isLoading={false}
+        tokens={[token] as any}
+        filteredTokens={[token] as any}
+        nativeRows={[
+          {
+            kind: "account-key-resource",
+            rowKey: "native-row-1",
+            accountId: "native-account",
+            accountName: "Native",
+            workspaceName: "Workspace",
+            facts: {
+              ref: {
+                accountId: "native-account",
+                siteType: "openrouter",
+                scopeKey: "workspace-example",
+                resourceId: "hash-example",
+              },
+              displayName: "Native key",
+              maskedLabel: "sk-or-v1-••••example",
+              status: "enabled",
+              fields: [],
+              actions: { canUpdate: true, canDelete: true },
+            },
+          },
+        ]}
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={getVisibleTokenKey as any}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={vi.fn()}
+        selectedAccount={account.id}
+        displayData={[account] as any}
+      />,
+    )
+
+    expect(await screen.findByText(/legacyEligible/)).toBeVisible()
+    const selection = screen.getByRole("checkbox")
+    await user.click(selection)
+    expect(selection).toBeChecked()
+    expect(screen.getByText("Native key")).toBeVisible()
+  })
+
   it("groups tokens by account and supports collapse/expand all", async () => {
     const user = userEvent.setup()
 

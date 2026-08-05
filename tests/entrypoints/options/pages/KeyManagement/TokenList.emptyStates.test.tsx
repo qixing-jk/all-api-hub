@@ -278,4 +278,161 @@ describe("TokenList empty states", () => {
 
     expect(await screen.findByText("Existing Token")).toBeInTheDocument()
   })
+
+  it("uses the combined native count instead of showing a legacy empty state", async () => {
+    const account = createAccount({
+      id: "account-example",
+      name: "Example account",
+    })
+    render(
+      <TokenList
+        isLoading={false}
+        tokens={[]}
+        filteredTokens={[]}
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={vi.fn()}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={vi.fn()}
+        selectedAccount={account.id}
+        displayData={[account]}
+        nativeRows={[
+          {
+            kind: "account-key-resource",
+            rowKey: "native-row-1",
+            accountId: account.id,
+            accountName: account.name,
+            workspaceName: "Example workspace",
+            facts: {
+              ref: {
+                accountId: account.id,
+                siteType: "openrouter",
+                scopeKey: "workspace-example",
+                resourceId: "hash-example",
+              },
+              displayName: "Native key",
+              maskedLabel: "sk-or-v1-••••example",
+              status: "enabled",
+              fields: [],
+              actions: { canUpdate: true, canDelete: true },
+            },
+          },
+        ]}
+      />,
+    )
+
+    expect(await screen.findByText("Native key")).toBeInTheDocument()
+    expect(screen.queryByText("keyManagement:noKeys")).toBeNull()
+  })
+
+  it("shows loading for an unresolved native-only inventory instead of a no-keys empty state", () => {
+    const account = createAccount({ id: "account-example", name: "Example" })
+    render(
+      <TokenList
+        isLoading={false}
+        nativeLoading
+        tokens={[]}
+        filteredTokens={[]}
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={vi.fn()}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={vi.fn()}
+        selectedAccount={account.id}
+        displayData={[account]}
+      />,
+    )
+
+    expect(screen.queryByText("keyManagement:noKeys")).toBeNull()
+    expect(screen.queryByText("keyManagement:noMatchingKeys")).toBeNull()
+  })
+
+  it("shows an actionable load failure for an unknown native inventory instead of asserting no keys", async () => {
+    const user = userEvent.setup()
+    const account = createAccount({ id: "account-example", name: "Example" })
+    const retry = vi.fn()
+    render(
+      <TokenList
+        isLoading={false}
+        tokens={[]}
+        filteredTokens={[]}
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={vi.fn()}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={vi.fn()}
+        selectedAccount={account.id}
+        displayData={[account]}
+        nativeInventoryLoadError="keyManagement:messages.loadFailed"
+        onRetryCurrentAccount={retry}
+      />,
+    )
+
+    expect(
+      await screen.findByText("keyManagement:loadError.title"),
+    ).toBeVisible()
+    expect(screen.queryByText("keyManagement:noKeys")).toBeNull()
+    expect(screen.queryByText("keyManagement:createFirstKey")).toBeNull()
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:refreshTokenList" }),
+    )
+    expect(retry).toHaveBeenCalledTimes(1)
+  })
+
+  it("shows no matching keys when a native search/filter hides an otherwise loaded key", async () => {
+    const account = createAccount({ id: "account-example", name: "Example" })
+    const nativeRow = {
+      kind: "account-key-resource" as const,
+      rowKey: "native-row-1",
+      accountId: account.id,
+      accountName: account.name,
+      workspaceName: "Workspace",
+      facts: {
+        ref: {
+          accountId: account.id,
+          siteType: "openrouter" as const,
+          scopeKey: "workspace-example",
+          resourceId: "hash-example",
+        },
+        displayName: "Native key",
+        maskedLabel: "sk-or-v1-••••example",
+        status: "enabled" as const,
+        fields: [],
+        actions: { canUpdate: true, canDelete: true },
+      },
+    }
+    render(
+      <TokenList
+        isLoading={false}
+        tokens={[]}
+        filteredTokens={[]}
+        nativeRows={[]}
+        nativeUnfilteredRows={[nativeRow]}
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={vi.fn()}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={vi.fn()}
+        selectedAccount={account.id}
+        displayData={[account]}
+      />,
+    )
+
+    expect(
+      await screen.findByText("keyManagement:noMatchingKeys"),
+    ).toBeVisible()
+    expect(screen.queryByText("keyManagement:noKeys")).toBeNull()
+  })
 })

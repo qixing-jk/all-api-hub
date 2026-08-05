@@ -44,6 +44,11 @@ export type AccountKeyScope = {
   readonly secondaryLabel?: string
 }
 
+export type AccountKeyScopeInventory = {
+  readonly scopes: readonly AccountKeyScope[]
+  readonly partialFailure?: ResourceFailure
+}
+
 export type AccountKeyResourceFacts = {
   readonly ref: AccountKeyResourceRef
   readonly displayName: string
@@ -116,6 +121,14 @@ export interface AccountKeyResourceSession {
   listScopes(
     options?: ResourceOperationOptions,
   ): Promise<readonly AccountKeyScope[]>
+  /** Returns usable scopes together with any non-blocking inventory failure. */
+  listScopeInventory?(
+    options?: ResourceOperationOptions,
+  ): Promise<AccountKeyScopeInventory>
+  /** Re-runs only the read-only scope inventory operation. */
+  refreshScopeInventory?(
+    options?: ResourceOperationOptions,
+  ): Promise<AccountKeyScopeInventory>
   openCollection(
     scopeKey: string,
     options?: ResourceOperationOptions,

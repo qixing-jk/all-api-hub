@@ -22,7 +22,6 @@ export type {
   ResourceFailure,
   ResourceFieldDescriptor,
   ResourceFieldIssue,
-  ResourceFieldOption,
   ResourceFieldValue,
   ResourceListQuery,
   ResourceOperationOptions,

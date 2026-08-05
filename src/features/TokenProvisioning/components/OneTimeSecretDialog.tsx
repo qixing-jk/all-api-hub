@@ -267,6 +267,7 @@ export function OneTimeSecretDialog({
               type="button"
               onClick={() => void copySecret()}
               loading={isCopying}
+              data-testid={TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCopyButton}
               leftIcon={
                 copied ? (
                   <CheckIcon className="h-4 w-4" />
@@ -297,6 +298,7 @@ export function OneTimeSecretDialog({
             </label>
             <Input
               id={secretInputId}
+              data-testid={TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyInput}
               className="mt-2 font-mono text-xs"
               value={result?.secret ?? ""}
               readOnly

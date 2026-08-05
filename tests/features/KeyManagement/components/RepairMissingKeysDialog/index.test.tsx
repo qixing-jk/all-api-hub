@@ -248,6 +248,53 @@ describe("RepairMissingKeysDialog", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("keeps AIHubMix as an explicit one-time-key repair skip", async () => {
+    const user = userEvent.setup()
+    mockProgress = buildRepairProgress(
+      ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+      {
+        results: [
+          {
+            accountId: "aihubmix-1",
+            accountName: "AIHubMix",
+            siteType: SITE_TYPES.AIHUBMIX,
+            siteUrlOrigin: "https://aihubmix.example.invalid",
+            outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
+            skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
+            finishedAt: 1,
+          },
+        ],
+      },
+    )
+
+    render(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[buildAccount()]}
+        startOnOpen={false}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.previousResult.view",
+      }),
+    )
+
+    expect(screen.getAllByText("AIHubMix")).not.toHaveLength(0)
+    expect(
+      screen.getByText(
+        "keyManagement:repairMissingKeys.skipReasons.aihubmixOneTimeKey",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows historical result details as read-only and can return to check setup", async () => {
     const user = userEvent.setup()
     mockProgress = buildRepairProgress(

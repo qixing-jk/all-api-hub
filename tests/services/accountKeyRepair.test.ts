@@ -87,46 +87,50 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: vi.fn((siteType: string) => ({
     siteType,
     account: {
-      ...(siteType === SITE_TYPES.SHAREDCHAT
+      ...(siteType === SITE_TYPES.OPENROUTER
         ? {
-            serviceCredential: {
-              fetch: async () => ({
-                key: "sharedchat-service-key",
-                label: "SharedChat API key",
-                isAuthenticated: true,
-              }),
-              rotate: async () => ({
-                key: "sharedchat-rotated-service-key",
-                label: "SharedChat API key",
-                isAuthenticated: true,
-              }),
-            },
+            keyResources: { open: vi.fn() },
           }
-        : {
-            keyManagement: {
-              fetchTokens: async () => [],
-              createToken: async () => true,
-              updateToken: async () => true,
-              resolveTokenKey: async ({ token }: any) => token.key,
-              deleteToken: async () => true,
-              fetchAvailableModels: async () => [],
-              userGroups: { fetch: async () => ({}) },
-            },
-            tokenProvisioning:
-              siteType === SITE_TYPES.AIHUBMIX
-                ? {
-                    getRepairPolicy: () => ({
-                      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-                      skipReason:
-                        ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
-                    }),
-                  }
-                : {
-                    getRepairPolicy: () => ({
-                      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-                    }),
-                  },
-          }),
+        : siteType === SITE_TYPES.SHAREDCHAT
+          ? {
+              serviceCredential: {
+                fetch: async () => ({
+                  key: "sharedchat-service-key",
+                  label: "SharedChat API key",
+                  isAuthenticated: true,
+                }),
+                rotate: async () => ({
+                  key: "sharedchat-rotated-service-key",
+                  label: "SharedChat API key",
+                  isAuthenticated: true,
+                }),
+              },
+            }
+          : {
+              keyManagement: {
+                fetchTokens: async () => [],
+                createToken: async () => true,
+                updateToken: async () => true,
+                resolveTokenKey: async ({ token }: any) => token.key,
+                deleteToken: async () => true,
+                fetchAvailableModels: async () => [],
+                userGroups: { fetch: async () => ({}) },
+              },
+              tokenProvisioning:
+                siteType === SITE_TYPES.AIHUBMIX
+                  ? {
+                      getRepairPolicy: () => ({
+                        kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
+                        skipReason:
+                          ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
+                      }),
+                    }
+                  : {
+                      getRepairPolicy: () => ({
+                        kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
+                      }),
+                    },
+            }),
     },
   })),
 }))
@@ -240,6 +244,13 @@ describe("accountKeyRepair", () => {
       authType: AuthTypeEnum.AccessToken,
       disabled: false,
     })
+    const openRouterAccount = buildSiteAccount({
+      id: "openrouter-1",
+      site_type: SITE_TYPES.OPENROUTER,
+      site_url: "https://openrouter.example.invalid",
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+    })
     const validAccount = buildSiteAccount({
       id: "new-api-1",
       site_type: "new-api",
@@ -300,6 +311,7 @@ describe("accountKeyRepair", () => {
     mocks.getAllAccounts.mockResolvedValue([
       sub2apiAccount,
       aihubmixAccount,
+      openRouterAccount,
       validAccount,
       invalidDisplayAccount,
       sharedChatAccount,
@@ -322,6 +334,15 @@ describe("accountKeyRepair", () => {
         authType: AuthTypeEnum.AccessToken,
         userId: "2",
         token: "aihubmix-token",
+      }),
+      buildDisplaySiteData({
+        id: openRouterAccount.id,
+        name: "OpenRouter",
+        baseUrl: openRouterAccount.site_url,
+        siteType: openRouterAccount.site_type,
+        authType: AuthTypeEnum.AccessToken,
+        userId: "",
+        token: "management-key-placeholder",
       }),
       buildDisplaySiteData({
         id: validAccount.id,
@@ -397,7 +418,7 @@ describe("accountKeyRepair", () => {
 
     const progress = await accountKeyRepairRunner.getProgress()
     expect(progress.totals).toMatchObject({
-      enabledAccounts: 5,
+      enabledAccounts: 6,
       eligibleAccounts: 3,
       processedAccounts: 3,
       processedEligibleAccounts: 3,
@@ -405,7 +426,7 @@ describe("accountKeyRepair", () => {
     expect(progress.summary).toEqual({
       created: 3,
       alreadyHad: 0,
-      skipped: 2,
+      skipped: 3,
       failed: 0,
       availableGroups: 2,
       coveredGroups: 2,
@@ -431,6 +452,13 @@ describe("accountKeyRepair", () => {
           outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
           skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
           siteUrlOrigin: "https://aihubmix.com",
+        }),
+        expect.objectContaining({
+          accountId: "openrouter-1",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
+          skipReason:
+            ACCOUNT_KEY_REPAIR_SKIP_REASONS.TokenAutomationUnsupported,
+          siteUrlOrigin: "https://openrouter.example.invalid",
         }),
         expect.objectContaining({
           accountId: "new-api-1",
@@ -459,6 +487,9 @@ describe("accountKeyRepair", () => {
         siteUrlOrigin: "https://sub2api.example.com",
       }),
     )
+    expect(
+      progress.results.find(({ accountId }) => accountId === "openrouter-1"),
+    ).not.toHaveProperty("invalidTokens")
     expect(mocks.sendRuntimeMessage).toHaveBeenCalledWith(
       {
         type: RuntimeMessageTypes.AccountKeyRepairProgress,
@@ -466,6 +497,45 @@ describe("accountKeyRepair", () => {
       },
       { maxAttempts: 1 },
     )
+  })
+
+  it("rejects forged OpenRouter invalid-token deletion before legacy API access", async () => {
+    const openRouterAccount = buildSiteAccount({
+      id: "openrouter-delete-1",
+      site_type: SITE_TYPES.OPENROUTER,
+      site_url: "https://openrouter.example.invalid",
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+    })
+    const displaySiteData = buildDisplaySiteData({
+      id: openRouterAccount.id,
+      name: "OpenRouter",
+      baseUrl: openRouterAccount.site_url,
+      siteType: SITE_TYPES.OPENROUTER,
+      authType: AuthTypeEnum.AccessToken,
+      userId: "",
+      token: "management-key-placeholder",
+    })
+    const actualGroupCoverage = await vi.importActual<
+      typeof import("~/services/accounts/accountKeyAutoProvisioning/groupCoverage")
+    >("~/services/accounts/accountKeyAutoProvisioning/groupCoverage")
+
+    await expect(
+      actualGroupCoverage.deleteInvalidAccountToken({
+        account: openRouterAccount,
+        displaySiteData,
+        token: {
+          accountId: openRouterAccount.id,
+          accountName: displaySiteData.name,
+          siteType: SITE_TYPES.OPENROUTER,
+          siteUrlOrigin: "https://openrouter.example.invalid",
+          tokenId: 42,
+          tokenName: "Legacy-shaped key",
+          group: "default",
+          reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+        },
+      }),
+    ).rejects.toThrow("keyManagement is not implemented for openrouter")
   })
 
   it("records group coverage and invalid keys from the group-aware audit helper", async () => {

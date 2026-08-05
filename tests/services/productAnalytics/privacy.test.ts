@@ -428,6 +428,35 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("keeps only controlled OpenRouter key-action fields", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        site_type: SITE_TYPES.OPENROUTER,
+        duration_ms: 42,
+        account_id: "account-example",
+        workspace_id: "workspace-example",
+        hash: "hash-example",
+        name: "Example key",
+        limit: 20,
+        upstream_message: "private upstream detail",
+      } as never,
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      site_type: SITE_TYPES.OPENROUTER,
+      duration_ms: 42,
+    })
+  })
+
   it.each([
     {
       actionId:

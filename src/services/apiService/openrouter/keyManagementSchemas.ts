@@ -4,7 +4,7 @@ const finiteNumber = z.number().finite()
 const optionalNullableString = z.string().nullable().optional()
 
 // Keep documented fields strict while allowing compatible future response fields.
-// https://openrouter.ai/docs/openapi/openapi.yaml
+// https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml
 export const openRouterKeyInfoSchema = z
   .object({
     hash: z.string().trim().min(1),
@@ -144,28 +144,13 @@ export const openRouterKeyListInputSchema = z
   .strict()
 
 export type OpenRouterKeyInfo = z.infer<typeof openRouterKeyInfoSchema>
-export type OpenRouterKeyListResponse = z.infer<
-  typeof openRouterKeyListResponseSchema
->
-export type OpenRouterKeyResponse = z.infer<typeof openRouterKeyResponseSchema>
-export type OpenRouterCreateKeyResponse = z.infer<
-  typeof openRouterCreateKeyResponseSchema
->
-export type OpenRouterDeleteKeyResponse = z.infer<
-  typeof openRouterDeleteKeyResponseSchema
->
+export type OpenRouterPaginatedResult<T> = {
+  data: T[]
+  totalCount: number
+}
 export type OpenRouterWorkspace = z.infer<typeof openRouterWorkspaceSchema>
 export type OpenRouterWorkspaceMember = z.infer<
   typeof openRouterWorkspaceMemberSchema
->
-export type OpenRouterWorkspaceResponse = z.infer<
-  typeof openRouterWorkspaceResponseSchema
->
-export type OpenRouterWorkspaceListResponse = z.infer<
-  typeof openRouterWorkspaceListResponseSchema
->
-export type OpenRouterWorkspaceMemberListResponse = z.infer<
-  typeof openRouterWorkspaceMemberListResponseSchema
 >
 export type OpenRouterCreateKeyInput = z.infer<
   typeof openRouterCreateKeyInputSchema

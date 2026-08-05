@@ -1,6 +1,8 @@
 {
   "accountSummary": {
     "keys_other": "{{count}} キー",
+    "keysUnavailable": "件数を取得できません",
+    "knownKeys_other": "少なくとも {{count}} キー",
     "loadFailed": "読み込み失敗",
     "title": "アカウント概要",
     "unsupported": "未対応"
@@ -181,6 +183,8 @@
     "warningTitle": "注意事項"
   },
   "enabledCount_other": "{{count}} 件有効",
+  "enabledCountPartial_other": "少なくとも {{count}} 件有効",
+  "enabledCountUnavailable": "有効件数を取得できません",
   "keyDetails": {
     "createResponseOnlySecret": "このサイトでは作成後はマスクされた値のみ提供されるため、完全なキーを再表示できません。",
     "createTime": "作成時刻:",
@@ -313,6 +317,19 @@
     "warningTitle": "このキーは一度だけ表示できます"
   },
   "openRouter": {
+    "delete": {
+      "confirm": "キーを削除",
+      "description": "OpenRouter から {{name}} を完全に削除しますか？このリモート削除は元に戻せません。",
+      "feedback": {
+        "authenticationFailed": "再度サインインしてから更新してください。",
+        "error": "このキーを削除できませんでした。更新してから再試行してください。",
+        "permissionDenied": "このキーを削除する権限がありません。",
+        "unavailable": "サービスは一時的に利用できません。再試行前に更新してください。",
+        "uncertain": "リモートの状態が変わった可能性があります。再試行前にキーを更新してください。"
+      },
+      "refresh": "キーを更新",
+      "title": "API キーを削除しますか？"
+    },
     "editor": {
       "actions": {
         "cancel": "キャンセル",
@@ -386,6 +403,7 @@
         "creator": {
           "empty": "このワークスペースで利用できるメンバーはいません。",
           "none": "作成者なし",
+          "unavailable": "選択したワークスペースではメンバーを割り当てられません。メンバーを選択せずにキーを作成できます。",
           "unknown": "不明なメンバー"
         },
         "limitMode": {
@@ -437,10 +455,62 @@
         "title": "未保存の変更を破棄しますか？"
       }
     },
+    "list": {
+      "actions": {
+        "delete": "キーを削除",
+        "details": "詳細を表示",
+        "edit": "キーを編集",
+        "singleAccountOnly": "このキーを編集または削除するには、このアカウントを選択してください"
+      },
+      "details": {
+        "byokUsage": "BYOK 使用量",
+        "byokUsageDaily": "BYOK 日次使用量",
+        "byokUsageMonthly": "BYOK 月次使用量",
+        "byokUsageWeekly": "BYOK 週次使用量",
+        "createdAt": "作成日時",
+        "creator": "作成者",
+        "disabled": "無効",
+        "expiresAt": "有効期限",
+        "heading": "キーの詳細",
+        "includeByokInLimit": "BYOK 使用量を含める",
+        "limit": "上限",
+        "limitMode": "上限モード",
+        "loadFailed": "キーの詳細を読み込めませんでした。",
+        "loading": "キーの詳細を読み込んでいます…",
+        "remaining": "残り",
+        "reset": "リセット",
+        "retry": "再試行",
+        "updatedAt": "更新日時",
+        "usage": "使用量",
+        "usageDaily": "日次使用量",
+        "usageMonthly": "月次使用量",
+        "usageWeekly": "週次使用量",
+        "workspace": "ワークスペース"
+      },
+      "heading": "OpenRouter キー",
+      "legacyEligible_other": "一括操作の対象となる従来型キーは {{count}} 件です。OpenRouter キーは対象外です。",
+      "status": {
+        "all": "すべて",
+        "disabled": "無効",
+        "enabled": "有効",
+        "expired": "期限切れ",
+        "unknown": "不明"
+      },
+      "statusFilter": {
+        "label": "キーの状態"
+      },
+      "values": {
+        "missing": "利用不可",
+        "no": "いいえ",
+        "unlimited": "無制限",
+        "yes": "はい"
+      }
+    },
     "workspace": {
       "empty": "このアカウントで利用可能なワークスペースはありません。",
       "error": "ワークスペースを読み込めませんでした",
       "errorHelp": "アカウントのアクセス権を確認して、もう一度お試しください。",
+      "fallback": "指定したワークスペースは利用できないため、既定のワークスペースを表示しています。",
       "heading": "ワークスペース",
       "label": "ワークスペース",
       "loading": "ワークスペースを読み込んでいます...",
@@ -554,11 +624,15 @@
     "singleton": "サービスキー"
   },
   "showingCount_other": "{{count}} 件を表示中",
+  "showingCountPartial_other": "少なくとも {{count}} 件を表示中",
+  "showingCountUnavailable": "表示件数を取得できません",
   "title": "キー管理",
   "totalKeys_other": "合計 {{count}} キー",
   "unifiedApiGuidance": {
     "headerBridge": "アカウントキーをセルフホスト AI ゲートウェイへ簡単に取り込むと、複数のキーを 1 つの AI API から利用できます。クライアントツールへの直接エクスポートはゲートウェイを使わない方法です。"
   },
+  "totalKeysPartial_other": "合計少なくとも {{count}} キー",
+  "totalKeysUnavailable": "合計件数を取得できません",
   "unsupportedSource": {
     "description": "このアカウントのサイト種別は保存できますが、拡張機能はこのサイトのキー一覧プロトコルにはまだ対応していません。サイト対応リクエストを送信すると、キー管理機能の追加に役立ちます。",
     "requestSiteSupport": "サイト対応をリクエスト",

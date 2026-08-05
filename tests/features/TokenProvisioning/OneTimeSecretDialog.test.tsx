@@ -7,6 +7,7 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { SITE_TYPES } from "~/constants/siteType"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { createLegacyCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 
 let OneTimeSecretDialog: typeof import("~/features/TokenProvisioning/components/OneTimeSecretDialog").OneTimeSecretDialog
 
@@ -66,7 +67,41 @@ describe("OneTimeSecretDialog", () => {
       ),
     )
 
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledExactlyOnceWith()
+  })
+
+  it("renders a fresh AIHubMix create result through the common secret dialog", () => {
+    const result = createAIHubMixCreatedRuntimeSecret({
+      account: {
+        id: "aihubmix-account-example",
+        name: "AIHubMix",
+        siteType: SITE_TYPES.AIHUBMIX,
+        tagIds: [],
+      },
+      token: {
+        name: "Example key",
+        full_key: "sk-aihubmix-created-secret",
+      },
+    })
+
+    render(
+      <OneTimeSecretDialog
+        isOpen={true}
+        result={result}
+        onClose={vi.fn()}
+        autoCopy={false}
+      />,
+    )
+
+    expect(
+      screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
+    ).toHaveValue("sk-aihubmix-created-secret")
+    expect(
+      screen.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyInput),
+    ).toHaveValue("sk-aihubmix-created-secret")
+    expect(
+      screen.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCopyButton),
+    ).toBeVisible()
   })
 
   it("closes immediately after a successful copy but not a failed copy", async () => {
@@ -89,7 +124,7 @@ describe("OneTimeSecretDialog", () => {
     await user.click(
       screen.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCloseButton),
     )
-    expect(onCopyResult).toHaveBeenCalledWith("success")
+    expect(onCopyResult).toHaveBeenCalledExactlyOnceWith("success")
     expect(onClose).toHaveBeenCalledTimes(1)
 
     Object.defineProperty(navigator, "clipboard", {
@@ -121,6 +156,8 @@ describe("OneTimeSecretDialog", () => {
       )[1]!,
     )
     expect(onCopyResult).toHaveBeenLastCalledWith("failure")
+    expect(onCopyResult.mock.calls).toEqual([["success"], ["failure"]])
+    expect(JSON.stringify(onCopyResult.mock.calls)).not.toContain(RESULT.secret)
     expect(secondClose).not.toHaveBeenCalled()
   })
 
@@ -153,7 +190,7 @@ describe("OneTimeSecretDialog", () => {
     await act(async () => {
       resolveSave?.()
     })
-    expect(onSaveResult).toHaveBeenCalledWith("success")
+    expect(onSaveResult).toHaveBeenCalledExactlyOnceWith("success")
     await user.click(
       screen.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCloseButton),
     )
@@ -178,6 +215,8 @@ describe("OneTimeSecretDialog", () => {
     expect(failedSave).toHaveBeenCalledTimes(1)
     expect(screen.getByDisplayValue("sk-third-secret")).toBeInTheDocument()
     expect(onSaveResult).toHaveBeenLastCalledWith("failure")
+    expect(onSaveResult.mock.calls).toEqual([["success"], ["failure"]])
+    expect(JSON.stringify(onSaveResult.mock.calls)).not.toContain(RESULT.secret)
   })
 
   it("treats successful auto-copy as handled and resets that state for a new result", async () => {

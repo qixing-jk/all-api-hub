@@ -34,9 +34,6 @@ export const OPENROUTER_KEY_LIMIT_RESETS = {
   Monthly: "monthly",
 } as const
 
-export type OpenRouterKeyFieldId =
-  (typeof OPENROUTER_KEY_FIELD_IDS)[keyof typeof OPENROUTER_KEY_FIELD_IDS]
-
 export type OpenRouterKeyLimitMode =
   (typeof OPENROUTER_KEY_LIMIT_MODES)[keyof typeof OPENROUTER_KEY_LIMIT_MODES]
 

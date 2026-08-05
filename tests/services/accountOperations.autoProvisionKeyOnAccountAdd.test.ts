@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import { OPENROUTER_WEB_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { validateAndSaveAccount } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { DefaultTokenLifecyclePolicyBlockedError } from "~/services/accounts/defaultTokenLifecycle"
@@ -23,6 +23,7 @@ const {
   toastCustomMock,
   toastLoadingMock,
   toastDismissMock,
+  validateManagementKeyMock,
 } = vi.hoisted(() => ({
   fetchAccountDataMock: vi.fn(),
   ensureDefaultApiTokenForAccountMock: vi.fn(),
@@ -32,6 +33,7 @@ const {
   toastCustomMock: vi.fn(),
   toastLoadingMock: vi.fn(),
   toastDismissMock: vi.fn(),
+  validateManagementKeyMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -46,6 +48,13 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,
+}))
+
+vi.mock("~/services/apiService/openrouter", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/apiService/openrouter")
+  >()),
+  validateManagementKey: validateManagementKeyMock,
 }))
 
 vi.mock(
@@ -89,6 +98,10 @@ describe("accountOperations auto-provision key on add", () => {
     toastCustomMock.mockReset()
     toastLoadingMock.mockReset()
     toastDismissMock.mockReset()
+    validateManagementKeyMock.mockReset()
+    validateManagementKeyMock.mockResolvedValue({
+      userId: "openrouter:local-identity",
+    })
 
     fetchAccountDataMock.mockResolvedValue({
       quota: 0,
@@ -376,6 +389,38 @@ describe("accountOperations auto-provision key on add", () => {
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("does not route OpenRouter accounts into legacy automatic key creation", async () => {
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: {
+        data: { fetchData: fetchAccountDataMock },
+        keyResources: { open: vi.fn() },
+      },
+    })
+
+    const result = await validateAndSaveAccount(
+      OPENROUTER_WEB_ORIGIN,
+      "OpenRouter",
+      "",
+      "management-key-placeholder",
+      "",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.OPENROUTER,
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result.success).toBe(true)
+
+    await flushPromises()
+    await flushPromises()
+
+    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
   })
 
   it("skips auto-provision for none-auth accounts", async () => {

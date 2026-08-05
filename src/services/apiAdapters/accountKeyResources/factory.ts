@@ -8,6 +8,7 @@ import type {
   AccountKeyResourceOpenInput,
   AccountKeyResourceRef,
   AccountKeyScope,
+  AccountKeyScopeInventory,
   EditableResourceProjection,
   ResourceFailure,
   ResourceFieldIssue,
@@ -70,6 +71,10 @@ export type AccountKeyResourceDefinition<
     config: TConfig,
     options?: ResourceOperationOptions,
   ): Promise<readonly AccountKeyScope[]>
+  listScopeInventory?(
+    config: TConfig,
+    options?: ResourceOperationOptions,
+  ): Promise<AccountKeyScopeInventory>
   defaultScopeKey(config: TConfig, scopes: readonly AccountKeyScope[]): string
   encodeLocator(locator: TLocator): string
   decodeLocator(resourceId: string): TLocator
@@ -225,6 +230,42 @@ const cloneScope = (scope: AccountKeyScope): AccountKeyScope =>
       : { secondaryLabel: scope.secondaryLabel }),
   })
 
+const FAILURE_CODES = new Set<string>(
+  Object.values(ACCOUNT_KEY_RESOURCE_FAILURE_CODES),
+)
+
+const normalizeScopeInventory = (
+  value: AccountKeyScopeInventory,
+): AccountKeyScopeInventory => {
+  if (!isRecord(value)) throw unexpectedFailure()
+  const scopes = normalizeScopes(value.scopes)
+  const partialFailure = value.partialFailure
+  if (partialFailure === undefined) return Object.freeze({ scopes })
+  if (
+    !isRecord(partialFailure) ||
+    typeof partialFailure.code !== "string" ||
+    !FAILURE_CODES.has(partialFailure.code) ||
+    (partialFailure.message !== undefined &&
+      !isBoundedNonBlankString(partialFailure.message, 8192)) ||
+    (partialFailure.upstreamCode !== undefined &&
+      !isBoundedNonBlankString(partialFailure.upstreamCode, 512))
+  ) {
+    throw unexpectedFailure()
+  }
+  return Object.freeze({
+    scopes,
+    partialFailure: Object.freeze({
+      code: partialFailure.code as ResourceFailure["code"],
+      ...(partialFailure.message === undefined
+        ? {}
+        : { message: partialFailure.message }),
+      ...(partialFailure.upstreamCode === undefined
+        ? {}
+        : { upstreamCode: partialFailure.upstreamCode }),
+    }),
+  })
+}
+
 const FIELD_ISSUE_CODES = new Set<string>(
   Object.values(ACCOUNT_KEY_RESOURCE_FIELD_ISSUE_CODES),
 )
@@ -305,21 +346,30 @@ export function defineAccountKeyResourceCapability<
         assertOpenInput(input, siteType)
         const accountId = input.account.id
         const config = await definition.openConfig(input, options)
-        let cachedScopes: readonly AccountKeyScope[] | undefined
-        let sharedScopeLoad: Promise<readonly AccountKeyScope[]> | undefined
-        const loadScopes = (scopeOptions?: ResourceOperationOptions) =>
+        let cachedScopeInventory: AccountKeyScopeInventory | undefined
+        let sharedScopeLoad: Promise<AccountKeyScopeInventory> | undefined
+        const loadScopeInventory = (
+          scopeOptions?: ResourceOperationOptions,
+          replaceCached = false,
+        ) =>
           mapOperation(async () => {
-            const normalized = normalizeScopes(
-              await definition.listScopes(config, scopeOptions),
+            const normalized = normalizeScopeInventory(
+              definition.listScopeInventory
+                ? await definition.listScopeInventory(config, scopeOptions)
+                : {
+                    scopes: await definition.listScopes(config, scopeOptions),
+                  },
             )
-            cachedScopes ??= normalized
-            return cachedScopes
+            if (replaceCached || !cachedScopeInventory) {
+              cachedScopeInventory = normalized
+            }
+            return cachedScopeInventory
           }, mapFailure)
-        const getScopes = (scopeOptions?: ResourceOperationOptions) => {
-          if (cachedScopes) return Promise.resolve(cachedScopes)
-          if (scopeOptions?.signal) return loadScopes(scopeOptions)
+        const getScopeInventory = (scopeOptions?: ResourceOperationOptions) => {
+          if (cachedScopeInventory) return Promise.resolve(cachedScopeInventory)
+          if (scopeOptions?.signal) return loadScopeInventory(scopeOptions)
           if (!sharedScopeLoad) {
-            const run = loadScopes(scopeOptions)
+            const run = loadScopeInventory(scopeOptions)
             const tracked = run.finally(() => {
               if (sharedScopeLoad === tracked) sharedScopeLoad = undefined
             })
@@ -327,6 +377,8 @@ export function defineAccountKeyResourceCapability<
           }
           return sharedScopeLoad
         }
+        const getScopes = async (scopeOptions?: ResourceOperationOptions) =>
+          (await getScopeInventory(scopeOptions)).scopes
         const resolveScope = async (
           scopeKey: string | undefined,
           scopeOptions?: ResourceOperationOptions,
@@ -615,6 +667,9 @@ export function defineAccountKeyResourceCapability<
           resolveDefaultScope: (scopeOptions) =>
             resolveScope(undefined, scopeOptions),
           listScopes: getScopes,
+          listScopeInventory: getScopeInventory,
+          refreshScopeInventory: (scopeOptions) =>
+            loadScopeInventory(scopeOptions, true),
           openCollection,
           openCreateEditor: async (scopeKey: string, editorOptions) => {
             const resolvedScope = await resolveScope(scopeKey, editorOptions)
@@ -638,7 +693,7 @@ export function defineAccountKeyResourceCapability<
                 canonicalScopeKey
               if (
                 !isBoundedNonBlankString(destinationScopeKey, 2048) ||
-                !cachedScopes?.some(
+                !cachedScopeInventory?.scopes.some(
                   (scope) => scope.scopeKey === destinationScopeKey,
                 )
               ) {
@@ -665,7 +720,7 @@ export function defineAccountKeyResourceCapability<
               projectApplied: (result) => {
                 const appliedScopeKey = result.scopeKey ?? canonicalScopeKey
                 if (
-                  !cachedScopes?.some(
+                  !cachedScopeInventory?.scopes.some(
                     (scope) => scope.scopeKey === appliedScopeKey,
                   )
                 ) {

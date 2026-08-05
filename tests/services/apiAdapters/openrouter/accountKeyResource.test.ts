@@ -91,9 +91,24 @@ const key = (overrides = {}) => ({
   ...overrides,
 })
 
+const workspacePage = (
+  data: ReturnType<typeof workspace>[],
+  totalCount = data.length,
+) => ({
+  data,
+  totalCount,
+})
+
+const memberPage = <
+  T extends { id: string; user_id: string; workspace_id: string },
+>(
+  data: T[],
+  totalCount = data.length,
+) => ({ data, totalCount })
+
 const openSession = async () => {
   fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
-  fetchOpenRouterWorkspaces.mockResolvedValue([workspace()])
+  fetchOpenRouterWorkspaces.mockResolvedValue(workspacePage([workspace()]))
   return await openRouterAccountKeyResources.open({
     account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
     request: REQUEST,
@@ -107,7 +122,7 @@ describe("openRouterAccountKeyResources", () => {
 
   it("opens a session with the accepted default workspace locator", async () => {
     fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
-    fetchOpenRouterWorkspaces.mockResolvedValue([workspace()])
+    fetchOpenRouterWorkspaces.mockResolvedValue(workspacePage([workspace()]))
 
     const session = await openRouterAccountKeyResources.open({
       account: {
@@ -141,10 +156,12 @@ describe("openRouterAccountKeyResources", () => {
 
   it("deduplicates paged workspace inventory and sorts the default first", async () => {
     fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
-    fetchOpenRouterWorkspaces.mockResolvedValueOnce([
-      workspace({ id: "workspace-z", name: "Zulu", slug: "zulu" }),
-      workspace(),
-    ])
+    fetchOpenRouterWorkspaces.mockResolvedValueOnce(
+      workspacePage([
+        workspace({ id: "workspace-z", name: "Zulu", slug: "zulu" }),
+        workspace(),
+      ]),
+    )
 
     const session = await openRouterAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
@@ -164,7 +181,7 @@ describe("openRouterAccountKeyResources", () => {
     })
   })
 
-  it("drains paged workspace inventory before deduplicating and sorting it", async () => {
+  it("drains a stable workspace total before deduplicating equivalent identities", async () => {
     fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
     const firstPage = Array.from({ length: 100 }, (_, index) =>
       workspace({
@@ -174,15 +191,20 @@ describe("openRouterAccountKeyResources", () => {
       }),
     )
     fetchOpenRouterWorkspaces
-      .mockResolvedValueOnce(firstPage)
-      .mockResolvedValueOnce([
-        workspace({
-          id: "workspace-99",
-          name: "Duplicate workspace",
-          slug: "duplicate",
-        }),
-        workspace({ id: "workspace-extra", name: "Extra", slug: "extra" }),
-      ])
+      .mockResolvedValueOnce(workspacePage(firstPage, 101))
+      .mockResolvedValueOnce(
+        workspacePage(
+          [
+            firstPage[99],
+            workspace({
+              id: "workspace-extra",
+              name: "Extra",
+              slug: "extra",
+            }),
+          ],
+          101,
+        ),
+      )
     const session = await openRouterAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
       request: REQUEST,
@@ -204,6 +226,91 @@ describe("openRouterAccountKeyResources", () => {
     )
   })
 
+  it.each([
+    ["a premature short page", workspacePage([workspace()], 2)],
+    ["a premature empty page", workspacePage([], 1)],
+  ])("fails workspace inventory closed for %s", async (_name, page) => {
+    fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
+    fetchOpenRouterWorkspaces.mockResolvedValueOnce(page)
+
+    const session = await openRouterAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
+      request: REQUEST,
+    })
+
+    await expect(session.listScopes()).resolves.toEqual([
+      expect.objectContaining({
+        scopeKey: "workspace-default-id",
+      }),
+    ])
+    expect(fetchOpenRouterWorkspaces).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects changing workspace totals across pages", async () => {
+    fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
+    const firstPage = Array.from({ length: 100 }, (_, index) =>
+      workspace({ id: `workspace-${index}`, slug: `workspace-${index}` }),
+    )
+    fetchOpenRouterWorkspaces
+      .mockResolvedValueOnce(workspacePage(firstPage, 101))
+      .mockResolvedValueOnce(
+        workspacePage(
+          [workspace({ id: "workspace-extra", slug: "workspace-extra" })],
+          102,
+        ),
+      )
+
+    const session = await openRouterAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
+      request: REQUEST,
+    })
+
+    await expect(session.listScopes()).resolves.toEqual([
+      expect.objectContaining({
+        scopeKey: "workspace-default-id",
+      }),
+    ])
+  })
+
+  it("rejects conflicting duplicate workspace identities", async () => {
+    fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
+    fetchOpenRouterWorkspaces.mockResolvedValueOnce(
+      workspacePage(
+        [workspace(), workspace({ name: "Conflicting workspace" })],
+        1,
+      ),
+    )
+
+    const session = await openRouterAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
+      request: REQUEST,
+    })
+
+    await expect(session.listScopes()).resolves.toEqual([
+      expect.objectContaining({
+        scopeKey: "workspace-default-id",
+      }),
+    ])
+  })
+
+  it("rejects an inventory workspace that conflicts with the resolved default", async () => {
+    fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
+    fetchOpenRouterWorkspaces.mockResolvedValueOnce(
+      workspacePage([workspace({ name: "Conflicting default" })]),
+    )
+
+    const session = await openRouterAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
+      request: REQUEST,
+    })
+
+    await expect(session.listScopes()).resolves.toEqual([
+      expect.objectContaining({
+        scopeKey: "workspace-default-id",
+      }),
+    ])
+  })
+
   it("keeps the accepted default workspace when inventory loading fails", async () => {
     fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
     fetchOpenRouterWorkspaces.mockRejectedValue(
@@ -214,12 +321,38 @@ describe("openRouterAccountKeyResources", () => {
       request: REQUEST,
     })
 
-    await expect(session.listScopes()).resolves.toEqual([
-      expect.objectContaining({
-        scopeKey: "workspace-default-id",
-        secondaryLabel: "Workspace inventory unavailable",
+    await expect((session as any).listScopeInventory()).resolves.toEqual({
+      scopes: [
+        expect.objectContaining({
+          scopeKey: "workspace-default-id",
+        }),
+      ],
+      partialFailure: expect.objectContaining({
+        code: "unexpected",
       }),
+    })
+    await expect(session.listScopes()).resolves.toEqual([
+      expect.objectContaining({ scopeKey: "workspace-default-id" }),
     ])
+    expect((await session.listScopes())[0]).not.toHaveProperty(
+      "secondaryLabel",
+      "Workspace inventory unavailable",
+    )
+  })
+
+  it("propagates an aborted workspace inventory read instead of returning a partial inventory", async () => {
+    fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
+    fetchOpenRouterWorkspaces.mockRejectedValue(
+      new DOMException("Aborted", "AbortError"),
+    )
+    const session = await openRouterAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
+      request: REQUEST,
+    })
+
+    await expect((session as any).listScopeInventory()).rejects.toMatchObject({
+      failure: { code: "aborted" },
+    })
   })
 
   it("propagates an aborted signal instead of treating it as inventory fallback", async () => {
@@ -243,9 +376,13 @@ describe("openRouterAccountKeyResources", () => {
   it("lists disabled keys with an opaque offset cursor and rejects duplicate hashes", async () => {
     const session = await openSession()
     const collection = await session.openCollection("workspace-default-id")
-    fetchOpenRouterKeys.mockResolvedValue(
-      Array.from({ length: 100 }, (_, index) => key({ hash: `hash-${index}` })),
-    )
+    fetchOpenRouterKeys
+      .mockResolvedValueOnce(
+        Array.from({ length: 101 }, (_, index) =>
+          key({ hash: `hash-${index}`, disabled: index === 0 }),
+        ),
+      )
+      .mockResolvedValueOnce([])
 
     const first = await collection.list()
     expect(fetchOpenRouterKeys).toHaveBeenCalledWith(
@@ -255,6 +392,10 @@ describe("openRouterAccountKeyResources", () => {
     expect(first.nextCursor).toEqual(expect.any(String))
     expect(first.nextCursor).not.toContain("hash-0")
     expect(first.items[0].searchValues).not.toContain("hash-0")
+    expect(first.items[0].searchValues).toContain("disabled")
+    expect(first.items[0].fields.map((field) => field.fieldId)).toContain(
+      OPENROUTER_KEY_FIELD_IDS.Usage,
+    )
 
     fetchOpenRouterKeys.mockResolvedValue([key(), key()])
     await expect(collection.list()).rejects.toMatchObject({
@@ -262,7 +403,7 @@ describe("openRouterAccountKeyResources", () => {
     })
   })
 
-  it("retains a pagination-chain hash identity and indexes the controlled status", async () => {
+  it("rejects duplicate hashes across provider batches", async () => {
     const session = await openSession()
     const collection = await session.openCollection("workspace-default-id")
     fetchOpenRouterKeys
@@ -273,42 +414,43 @@ describe("openRouterAccountKeyResources", () => {
       )
       .mockResolvedValueOnce([key({ hash: "hash-0" })])
 
-    const first = await collection.list()
-    expect(first.items[0].searchValues).toContain("disabled")
-    expect(first.items[0].fields.map((field) => field.fieldId)).toContain(
-      OPENROUTER_KEY_FIELD_IDS.Usage,
-    )
-
-    await expect(
-      collection.list({ cursor: first.nextCursor }),
-    ).rejects.toMatchObject({
+    await expect(collection.list()).rejects.toMatchObject({
       failure: { code: "unexpected" },
     })
   })
 
-  it("continues partial provider pages with distinct forward cursors", async () => {
+  it("drains provider batches by their actual length before public pagination", async () => {
     const session = await openSession()
     const collection = await session.openCollection("workspace-default-id")
-    fetchOpenRouterKeys
-      .mockResolvedValueOnce([
-        key({ hash: "hash-0" }),
-        key({ hash: "hash-1" }),
-        key({ hash: "hash-2" }),
-      ])
-      .mockResolvedValueOnce([key({ hash: "hash-1" }), key({ hash: "hash-2" })])
-      .mockResolvedValueOnce([key({ hash: "hash-2" })])
+    fetchOpenRouterKeys.mockImplementation(
+      async (_request, input: { offset?: number }) => {
+        if (input.offset === 0) {
+          return [key({ hash: "hash-0" }), key({ hash: "hash-1" })]
+        }
+        if (input.offset === 2) {
+          return [key({ hash: "hash-2" }), key({ hash: "hash-3" })]
+        }
+        if (input.offset === 4) return []
+        throw new Error(`unexpected provider offset ${input.offset}`)
+      },
+    )
 
-    const first = await collection.list({ limit: 1 })
-    const second = await collection.list({ limit: 1, cursor: first.nextCursor })
-    const third = await collection.list({ limit: 1, cursor: second.nextCursor })
+    const first = await collection.list({ limit: 3 })
+    const second = await collection.list({
+      limit: 3,
+      cursor: first.nextCursor,
+    })
 
-    expect(first.items.map((item) => item.ref.resourceId)).toEqual(["hash-0"])
-    expect(second.items.map((item) => item.ref.resourceId)).toEqual(["hash-1"])
-    expect(third.items.map((item) => item.ref.resourceId)).toEqual(["hash-2"])
+    expect(first.items).toHaveLength(3)
+    expect(second.items).toHaveLength(1)
+    expect(
+      [first, second].flatMap((page) =>
+        page.items.map((item) => item.ref.resourceId),
+      ),
+    ).toEqual(Array.from({ length: 4 }, (_, index) => `hash-${index}`))
     expect(first.nextCursor).toEqual(expect.any(String))
-    expect(second.nextCursor).toEqual(expect.any(String))
-    expect(second.nextCursor).not.toBe(first.nextCursor)
-    expect(third.nextCursor).toBeUndefined()
+    expect(second.nextCursor).toBeUndefined()
+    expect(fetchOpenRouterKeys).toHaveBeenCalledTimes(3)
     expect(fetchOpenRouterKeys).toHaveBeenNthCalledWith(
       1,
       expect.anything(),
@@ -317,12 +459,12 @@ describe("openRouterAccountKeyResources", () => {
     expect(fetchOpenRouterKeys).toHaveBeenNthCalledWith(
       2,
       expect.anything(),
-      expect.objectContaining({ offset: 1 }),
+      expect.objectContaining({ offset: 2 }),
     )
     expect(fetchOpenRouterKeys).toHaveBeenNthCalledWith(
       3,
       expect.anything(),
-      expect.objectContaining({ offset: 2 }),
+      expect.objectContaining({ offset: 4 }),
     )
   })
 
@@ -343,10 +485,9 @@ describe("openRouterAccountKeyResources", () => {
       slug: "selected",
     })
     fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
-    fetchOpenRouterWorkspaces.mockResolvedValue([
-      workspace(),
-      selectedWorkspace,
-    ])
+    fetchOpenRouterWorkspaces.mockResolvedValue(
+      workspacePage([workspace(), selectedWorkspace]),
+    )
     const session = await openRouterAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
       request: REQUEST,
@@ -359,7 +500,7 @@ describe("openRouterAccountKeyResources", () => {
     )
     fetchOpenRouterKeys
       .mockResolvedValueOnce(
-        Array.from({ length: 100 }, (_, index) =>
+        Array.from({ length: 101 }, (_, index) =>
           key({ hash: `default-hash-${index}` }),
         ),
       )
@@ -371,14 +512,20 @@ describe("openRouterAccountKeyResources", () => {
     ).rejects.toMatchObject({ failure: { code: "unexpected" } })
     await expect(
       defaultCollection.list({ cursor: first.nextCursor }),
-    ).resolves.toEqual({ items: [] })
+    ).resolves.toMatchObject({
+      items: [
+        expect.objectContaining({
+          ref: expect.objectContaining({ resourceId: "default-hash-100" }),
+        }),
+      ],
+    })
     expect(fetchOpenRouterKeys).toHaveBeenCalledTimes(2)
     expect(fetchOpenRouterKeys).toHaveBeenNthCalledWith(
       2,
       expect.anything(),
       expect.objectContaining({
         workspaceId: "workspace-default-id",
-        offset: 100,
+        offset: 101,
       }),
     )
   })
@@ -389,7 +536,7 @@ describe("openRouterAccountKeyResources", () => {
     fetchOpenRouterKeys.mockImplementation(
       async (_request, input: { offset?: number }) =>
         input.offset === 0
-          ? Array.from({ length: 100 }, (_, index) =>
+          ? Array.from({ length: 101 }, (_, index) =>
               key({ hash: `hash-${index}` }),
             )
           : [],
@@ -405,11 +552,15 @@ describe("openRouterAccountKeyResources", () => {
       { failure: { code: "unexpected" } },
     )
     await expect(collection.list({ cursor: cursors.at(-1) })).resolves.toEqual({
-      items: [],
+      items: [
+        expect.objectContaining({
+          ref: expect.objectContaining({ resourceId: "hash-100" }),
+        }),
+      ],
     })
   })
 
-  it("bounds a progressing cursor chain before another provider request", async () => {
+  it("bounds provider draining before accepting an unbounded result", async () => {
     const session = await openSession()
     const collection = await session.openCollection("workspace-default-id")
     fetchOpenRouterKeys.mockImplementation(
@@ -419,14 +570,7 @@ describe("openRouterAccountKeyResources", () => {
         ),
     )
 
-    let cursor: string | undefined
-    for (let pageIndex = 0; pageIndex < 100; pageIndex += 1) {
-      const page = await collection.list({ cursor })
-      cursor = page.nextCursor
-    }
-
-    expect(cursor).toEqual(expect.any(String))
-    await expect(collection.list({ cursor })).rejects.toMatchObject({
+    await expect(collection.list()).rejects.toMatchObject({
       failure: { code: "unexpected" },
     })
     expect(fetchOpenRouterKeys).toHaveBeenCalledTimes(100)
@@ -439,10 +583,9 @@ describe("openRouterAccountKeyResources", () => {
       slug: "selected",
     })
     fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
-    fetchOpenRouterWorkspaces.mockResolvedValue([
-      workspace(),
-      selectedWorkspace,
-    ])
+    fetchOpenRouterWorkspaces.mockResolvedValue(
+      workspacePage([workspace(), selectedWorkspace]),
+    )
     fetchOpenRouterKey.mockResolvedValue(
       key({ workspace_id: "workspace-selected-id" }),
     )
@@ -530,38 +673,141 @@ describe("openRouterAccountKeyResources", () => {
     expect(fetchOpenRouterKeys).not.toHaveBeenCalled()
   })
 
-  it("deduplicates creator options by exact user ID and shows its role", async () => {
+  it("deduplicates members by native membership ID while submitting provider user IDs", async () => {
     const session = await openSession()
     const editor = await session.openCreateEditor("workspace-default-id")
-    fetchOpenRouterWorkspaceMembers.mockResolvedValue([
-      {
-        id: "membership-example",
-        user_id: "member-example",
-        workspace_id: "workspace-default-id",
-        role: "member",
-        created_at: "2026-01-01T00:00:00Z",
-      },
-      {
-        id: "membership-newer-example",
-        user_id: "member-example",
-        workspace_id: "workspace-default-id",
-        role: "admin",
-        created_at: "2026-01-01T00:00:00Z",
-      },
-    ])
+    fetchOpenRouterWorkspaceMembers.mockResolvedValue(
+      memberPage([
+        {
+          id: "membership-example",
+          user_id: "member-example",
+          workspace_id: "workspace-default-id",
+          role: "member",
+          created_at: "2026-01-01T00:00:00Z",
+        },
+        {
+          id: "membership-newer-example",
+          user_id: "member-example",
+          workspace_id: "workspace-default-id",
+          role: "admin",
+          created_at: "2026-01-01T00:00:00Z",
+        },
+      ]),
+    )
 
-    await expect(
-      editor.loadOptions?.(OPENROUTER_KEY_FIELD_IDS.Creator, {
+    const options = await editor.loadOptions?.(
+      OPENROUTER_KEY_FIELD_IDS.Creator,
+      {
         ...editor.initialValues,
         workspace_id: "workspace-default-id",
-      }),
-    ).resolves.toEqual([
+      },
+    )
+    expect(options).toEqual([
       {
-        value: "member-example",
-        displayLabel: "member-example",
+        value: expect.stringMatching(/^creator-option-/),
+        displayLabel: expect.any(String),
+        secondaryLabel: "member",
+      },
+      {
+        value: expect.stringMatching(/^creator-option-/),
+        displayLabel: expect.any(String),
         secondaryLabel: "admin",
       },
     ])
+    expect(JSON.stringify(options)).not.toContain("member-example")
+
+    createOpenRouterKey.mockResolvedValue({
+      key: key({ creator_user_id: "member-example" }),
+      plaintextKey: "sk-or-example",
+    })
+    await editor.submit({
+      ...editor.initialValues,
+      [OPENROUTER_KEY_FIELD_IDS.Name]: "Created key",
+      [OPENROUTER_KEY_FIELD_IDS.Creator]: options?.[0]?.value ?? null,
+    })
+    expect(createOpenRouterKey).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ creatorUserId: "member-example" }),
+    )
+    expect(JSON.stringify(createOpenRouterKey.mock.calls)).not.toContain(
+      "membership-example",
+    )
+  })
+
+  it("rejects incomplete and inconsistent member totals", async () => {
+    const session = await openSession()
+    const editor = await session.openCreateEditor("workspace-default-id")
+    fetchOpenRouterWorkspaceMembers.mockResolvedValueOnce(
+      memberPage(
+        [
+          {
+            id: "membership-example",
+            user_id: "member-example",
+            workspace_id: "workspace-default-id",
+            role: "member",
+            created_at: "2026-01-01T00:00:00Z",
+          },
+        ],
+        2,
+      ),
+    )
+
+    await expect(
+      editor.loadOptions?.(
+        OPENROUTER_KEY_FIELD_IDS.Creator,
+        editor.initialValues,
+      ),
+    ).rejects.toMatchObject({ failure: { code: "unexpected" } })
+
+    const fullPage = Array.from({ length: 100 }, (_, index) => ({
+      id: `membership-${index}`,
+      user_id: `member-${index}`,
+      workspace_id: "workspace-default-id",
+      role: "member" as const,
+      created_at: "2026-01-01T00:00:00Z",
+    }))
+    fetchOpenRouterWorkspaceMembers
+      .mockResolvedValueOnce(memberPage(fullPage, 101))
+      .mockResolvedValueOnce(memberPage([], 102))
+
+    await expect(
+      editor.loadOptions?.(
+        OPENROUTER_KEY_FIELD_IDS.Creator,
+        editor.initialValues,
+      ),
+    ).rejects.toMatchObject({ failure: { code: "unexpected" } })
+  })
+
+  it("tolerates equivalent member duplicates but rejects conflicting native IDs", async () => {
+    const session = await openSession()
+    const editor = await session.openCreateEditor("workspace-default-id")
+    const member = {
+      id: "membership-example",
+      user_id: "member-example",
+      workspace_id: "workspace-default-id",
+      role: "member" as const,
+      created_at: "2026-01-01T00:00:00Z",
+    }
+    fetchOpenRouterWorkspaceMembers.mockResolvedValueOnce(
+      memberPage([member, { ...member }], 1),
+    )
+
+    await expect(
+      editor.loadOptions?.(
+        OPENROUTER_KEY_FIELD_IDS.Creator,
+        editor.initialValues,
+      ),
+    ).resolves.toHaveLength(1)
+
+    fetchOpenRouterWorkspaceMembers.mockResolvedValueOnce(
+      memberPage([member, { ...member, role: "admin" }], 1),
+    )
+    await expect(
+      editor.loadOptions?.(
+        OPENROUTER_KEY_FIELD_IDS.Creator,
+        editor.initialValues,
+      ),
+    ).rejects.toMatchObject({ failure: { code: "unexpected" } })
   })
 
   it("fails creator option loading safely instead of exposing a partial page", async () => {
@@ -569,13 +815,16 @@ describe("openRouterAccountKeyResources", () => {
     const editor = await session.openCreateEditor("workspace-default-id")
     fetchOpenRouterWorkspaceMembers
       .mockResolvedValueOnce(
-        Array.from({ length: 100 }, (_, index) => ({
-          id: `membership-${index}`,
-          user_id: `member-${index}`,
-          workspace_id: "workspace-default-id",
-          role: "member" as const,
-          created_at: "2026-01-01T00:00:00Z",
-        })),
+        memberPage(
+          Array.from({ length: 100 }, (_, index) => ({
+            id: `membership-${index}`,
+            user_id: `member-${index}`,
+            workspace_id: "workspace-default-id",
+            role: "member" as const,
+            created_at: "2026-01-01T00:00:00Z",
+          })),
+          101,
+        ),
       )
       .mockRejectedValueOnce(new ApiError("member page unavailable", 503))
 
@@ -594,10 +843,9 @@ describe("openRouterAccountKeyResources", () => {
       slug: "selected",
     })
     fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
-    fetchOpenRouterWorkspaces.mockResolvedValue([
-      workspace(),
-      selectedWorkspace,
-    ])
+    fetchOpenRouterWorkspaces.mockResolvedValue(
+      workspacePage([workspace(), selectedWorkspace]),
+    )
     const defaultMembers = Array.from({ length: 100 }, (_, index) => ({
       id: `membership-${index}`,
       user_id: `member-${index}`,
@@ -606,17 +854,18 @@ describe("openRouterAccountKeyResources", () => {
       created_at: "2026-01-01T00:00:00Z",
     }))
     fetchOpenRouterWorkspaceMembers
-      .mockResolvedValueOnce(defaultMembers)
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([
-        {
-          id: "membership-selected",
-          user_id: "member-selected",
-          workspace_id: "workspace-selected-id",
-          role: "admin",
-          created_at: "2026-01-01T00:00:00Z",
-        },
-      ])
+      .mockResolvedValueOnce(memberPage(defaultMembers))
+      .mockResolvedValueOnce(
+        memberPage([
+          {
+            id: "membership-selected",
+            user_id: "member-selected",
+            workspace_id: "workspace-selected-id",
+            role: "admin",
+            created_at: "2026-01-01T00:00:00Z",
+          },
+        ]),
+      )
     const session = await openRouterAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
       request: REQUEST,
@@ -629,23 +878,26 @@ describe("openRouterAccountKeyResources", () => {
         editor.initialValues,
       ),
     ).resolves.toHaveLength(100)
-    await expect(
-      editor.loadOptions?.(OPENROUTER_KEY_FIELD_IDS.Creator, {
+    const selectedOptions = await editor.loadOptions?.(
+      OPENROUTER_KEY_FIELD_IDS.Creator,
+      {
         ...editor.initialValues,
         [OPENROUTER_KEY_FIELD_IDS.Workspace]: "workspace-selected-id",
-      }),
-    ).resolves.toEqual([
+      },
+    )
+    expect(selectedOptions).toEqual([
       {
-        value: "member-selected",
-        displayLabel: "member-selected",
+        value: expect.stringMatching(/^creator-option-/),
+        displayLabel: expect.any(String),
         secondaryLabel: "admin",
       },
     ])
+    expect(JSON.stringify(selectedOptions)).not.toContain("member-selected")
     expect(fetchOpenRouterWorkspaceMembers).toHaveBeenNthCalledWith(
       2,
       expect.anything(),
-      "workspace-default-id",
-      { offset: 100, limit: 100 },
+      "workspace-selected-id",
+      { offset: 0, limit: 100 },
     )
   })
 
@@ -687,9 +939,13 @@ describe("openRouterAccountKeyResources", () => {
   it("rejects malformed and previously consumed public cursors", async () => {
     const session = await openSession()
     const collection = await session.openCollection("workspace-default-id")
-    fetchOpenRouterKeys.mockResolvedValue(
-      Array.from({ length: 100 }, (_, index) => key({ hash: `hash-${index}` })),
-    )
+    fetchOpenRouterKeys
+      .mockResolvedValueOnce(
+        Array.from({ length: 101 }, (_, index) =>
+          key({ hash: `hash-${index}` }),
+        ),
+      )
+      .mockResolvedValueOnce([])
     const page = await collection.list()
 
     await expect(
@@ -697,7 +953,6 @@ describe("openRouterAccountKeyResources", () => {
     ).rejects.toMatchObject({
       failure: { code: "unexpected" },
     })
-    fetchOpenRouterKeys.mockResolvedValue([])
     await collection.list({ cursor: page.nextCursor })
     await expect(
       collection.list({ cursor: page.nextCursor }),
@@ -750,10 +1005,9 @@ describe("openRouterAccountKeyResources", () => {
       slug: "selected",
     })
     fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
-    fetchOpenRouterWorkspaces.mockResolvedValue([
-      workspace(),
-      selectedWorkspace,
-    ])
+    fetchOpenRouterWorkspaces.mockResolvedValue(
+      workspacePage([workspace(), selectedWorkspace]),
+    )
     const session = await openRouterAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
       request: REQUEST,
@@ -813,7 +1067,7 @@ describe("openRouterAccountKeyResources", () => {
     fetchOpenRouterDefaultWorkspace.mockResolvedValue(workspace())
     fetchOpenRouterWorkspaces
       .mockRejectedValueOnce(new Error("initial inventory unavailable"))
-      .mockResolvedValueOnce([workspace(), selectedWorkspace])
+      .mockResolvedValueOnce(workspacePage([workspace(), selectedWorkspace]))
     const session = await openRouterAccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.OPENROUTER },
       request: REQUEST,
@@ -879,6 +1133,24 @@ describe("openRouterAccountKeyResources", () => {
     })
 
     const limitedEditor = await session.openCreateEditor("workspace-default-id")
+    fetchOpenRouterWorkspaceMembers.mockResolvedValue(
+      memberPage([
+        {
+          id: "membership-example",
+          user_id: "member-example",
+          workspace_id: "workspace-default-id",
+          role: "member",
+          created_at: "2026-01-01T00:00:00Z",
+        },
+      ]),
+    )
+    const creatorOptions = await limitedEditor.loadOptions?.(
+      OPENROUTER_KEY_FIELD_IDS.Creator,
+      limitedEditor.initialValues,
+    )
+    const creatorOptionValue = creatorOptions?.[0]?.value ?? ""
+    expect(creatorOptionValue).toMatch(/^creator-option-/)
+    expect(JSON.stringify(creatorOptions)).not.toContain("member-example")
     const localExpiry = "2030-01-01T00:00:00"
     await limitedEditor.submit({
       ...limitedEditor.initialValues,
@@ -887,7 +1159,7 @@ describe("openRouterAccountKeyResources", () => {
       [OPENROUTER_KEY_FIELD_IDS.Limit]: 0,
       [OPENROUTER_KEY_FIELD_IDS.LimitReset]: OPENROUTER_KEY_LIMIT_RESETS.Weekly,
       [OPENROUTER_KEY_FIELD_IDS.ExpiresAt]: localExpiry,
-      [OPENROUTER_KEY_FIELD_IDS.Creator]: "member-example",
+      [OPENROUTER_KEY_FIELD_IDS.Creator]: creatorOptionValue,
       [OPENROUTER_KEY_FIELD_IDS.IncludeByokInLimit]: true,
     })
 
@@ -911,34 +1183,35 @@ describe("openRouterAccountKeyResources", () => {
     })
   })
 
-  it("projects every safe fact and distinguishes zero limits from unlimited", async () => {
+  it("projects safe creator display for details and search without exposing the raw member ID", async () => {
     const session = await openSession()
     const collection = await session.openCollection("workspace-default-id")
-    fetchOpenRouterKeys.mockResolvedValue([
-      key({
-        limit: 0,
-        limit_remaining: 0,
-        limit_reset: "daily",
-        include_byok_in_limit: true,
-        usage: 1,
-        usage_daily: 2,
-        usage_weekly: 3,
-        usage_monthly: 4,
-        byok_usage: 5,
-        byok_usage_daily: 6,
-        byok_usage_weekly: 7,
-        byok_usage_monthly: 8,
-        updated_at: "2026-01-02T00:00:00Z",
-        expires_at: "2030-01-01T00:00:00Z",
-        creator_user_id: "member-example",
-      }),
-    ])
+    fetchOpenRouterKeys
+      .mockResolvedValueOnce([
+        key({
+          limit: 0,
+          limit_remaining: 0,
+          limit_reset: "daily",
+          include_byok_in_limit: true,
+          usage: 1,
+          usage_daily: 2,
+          usage_weekly: 3,
+          usage_monthly: 4,
+          byok_usage: 5,
+          byok_usage_daily: 6,
+          byok_usage_weekly: 7,
+          byok_usage_monthly: 8,
+          updated_at: "2026-01-02T00:00:00Z",
+          expires_at: "2030-01-01T00:00:00Z",
+          creator_user_id: "member-example",
+        }),
+      ])
+      .mockResolvedValueOnce([])
 
     const [facts] = (await collection.list()).items
     const fields = new Map(facts.fields.map((field) => [field.fieldId, field]))
-    expect([...fields.keys()]).toEqual(
-      expect.arrayContaining(Object.values(OPENROUTER_KEY_FIELD_IDS)),
-    )
+    const safeFieldIds = Object.values(OPENROUTER_KEY_FIELD_IDS)
+    expect([...fields.keys()]).toEqual(expect.arrayContaining(safeFieldIds))
     expect(fields.get(OPENROUTER_KEY_FIELD_IDS.Limit)).toMatchObject({
       kind: "number",
       value: 0,
@@ -946,10 +1219,15 @@ describe("openRouterAccountKeyResources", () => {
     expect(fields.get(OPENROUTER_KEY_FIELD_IDS.LimitMode)).toMatchObject({
       value: "limited",
     })
-    expect(fields.get(OPENROUTER_KEY_FIELD_IDS.Creator)).toMatchObject({
+    expect(fields.get(OPENROUTER_KEY_FIELD_IDS.Creator)).toEqual({
+      fieldId: OPENROUTER_KEY_FIELD_IDS.Creator,
       kind: "text",
-      value: "member-example",
+      value: "keyManagement:openRouter.editor.options.creator.unknown",
     })
+    expect(JSON.stringify(facts)).not.toContain("member-example")
+    expect(facts.searchValues).toContain(
+      "keyManagement:openRouter.editor.options.creator.unknown",
+    )
     expect(facts.searchValues).toEqual(
       expect.not.arrayContaining([
         "opaque-hash-example",
@@ -964,7 +1242,9 @@ describe("openRouterAccountKeyResources", () => {
     const session = await openSession()
     const collection = await session.openCollection("workspace-default-id")
     const createEditor = await session.openCreateEditor("workspace-default-id")
-    fetchOpenRouterKey.mockResolvedValue(key())
+    fetchOpenRouterKey.mockResolvedValue(
+      key({ creator_user_id: "member-example" }),
+    )
     const editEditor = await collection.openEditEditor({
       accountId: "account-example",
       siteType: SITE_TYPES.OPENROUTER,
@@ -1058,7 +1338,9 @@ describe("openRouterAccountKeyResources", () => {
     })
 
     const collection = await session.openCollection("workspace-default-id")
-    fetchOpenRouterKey.mockResolvedValue(key())
+    fetchOpenRouterKey.mockResolvedValue(
+      key({ creator_user_id: "member-example" }),
+    )
     const editEditor = await collection.openEditEditor({
       accountId: "account-example",
       siteType: SITE_TYPES.OPENROUTER,
@@ -1093,6 +1375,7 @@ describe("openRouterAccountKeyResources", () => {
       nullable: true,
       readOnly: true,
     })
+    expect(JSON.stringify(editEditor)).not.toContain("member-example")
     expect(editFields.get(OPENROUTER_KEY_FIELD_IDS.LimitMode)).toMatchObject({
       type: "select",
       required: true,

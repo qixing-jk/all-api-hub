@@ -1,6 +1,8 @@
 {
   "accountSummary": {
     "keys": "{{count}} 个密钥",
+    "keysUnavailable": "数量暂不可用",
+    "knownKeys": "至少 {{count}} 个密钥",
     "loadFailed": "加载失败",
     "title": "账号概览",
     "unsupported": "不支持"
@@ -181,6 +183,8 @@
     "warningTitle": "注意事项"
   },
   "enabledCount": "启用 {{count}} 个",
+  "enabledCountPartial": "至少启用 {{count}} 个",
+  "enabledCountUnavailable": "启用数量暂不可用",
   "keyDetails": {
     "createResponseOnlySecret": "该站点创建后仅提供密钥掩码，因此无法再次查看完整密钥。",
     "createTime": "创建时间：",
@@ -313,6 +317,19 @@
     "warningTitle": "该密钥只能查看一次"
   },
   "openRouter": {
+    "delete": {
+      "confirm": "删除密钥",
+      "description": "要从 OpenRouter 永久删除 {{name}} 吗？此远程删除无法撤销。",
+      "feedback": {
+        "authenticationFailed": "请重新登录后刷新。",
+        "error": "无法删除此密钥。请刷新后再试。",
+        "permissionDenied": "您没有删除此密钥的权限。",
+        "unavailable": "服务暂时不可用，请刷新后再试。",
+        "uncertain": "远程状态可能已变化。请先刷新密钥，再决定是否重试。"
+      },
+      "refresh": "刷新密钥",
+      "title": "删除 API 密钥？"
+    },
     "editor": {
       "actions": {
         "cancel": "取消",
@@ -386,6 +403,7 @@
         "creator": {
           "empty": "此工作区没有可用成员。",
           "none": "无创建者",
+          "unavailable": "所选工作区无法分配成员。你可以不选择成员直接创建密钥。",
           "unknown": "未知成员"
         },
         "limitMode": {
@@ -437,10 +455,62 @@
         "title": "放弃未保存的更改？"
       }
     },
+    "list": {
+      "actions": {
+        "delete": "删除密钥",
+        "details": "查看详情",
+        "edit": "编辑密钥",
+        "singleAccountOnly": "请选择此账号后再编辑或删除其密钥"
+      },
+      "details": {
+        "byokUsage": "BYOK 用量",
+        "byokUsageDaily": "每日 BYOK 用量",
+        "byokUsageMonthly": "每月 BYOK 用量",
+        "byokUsageWeekly": "每周 BYOK 用量",
+        "createdAt": "创建时间",
+        "creator": "创建者",
+        "disabled": "已禁用",
+        "expiresAt": "过期时间",
+        "heading": "密钥详情",
+        "includeByokInLimit": "计入 BYOK 用量",
+        "limit": "限额",
+        "limitMode": "限额模式",
+        "loadFailed": "无法加载密钥详情。",
+        "loading": "正在加载密钥详情…",
+        "remaining": "剩余",
+        "reset": "重置周期",
+        "retry": "重试",
+        "updatedAt": "更新时间",
+        "usage": "用量",
+        "usageDaily": "日用量",
+        "usageMonthly": "月用量",
+        "usageWeekly": "周用量",
+        "workspace": "工作区"
+      },
+      "heading": "OpenRouter 密钥",
+      "legacyEligible": "可参与批量操作的旧版密钥有 {{count}} 个；OpenRouter 密钥不会参与。",
+      "status": {
+        "all": "全部",
+        "disabled": "已停用",
+        "enabled": "已启用",
+        "expired": "已过期",
+        "unknown": "未知"
+      },
+      "statusFilter": {
+        "label": "密钥状态"
+      },
+      "values": {
+        "missing": "暂无数据",
+        "no": "否",
+        "unlimited": "不限额",
+        "yes": "是"
+      }
+    },
     "workspace": {
       "empty": "此账号没有可用的工作区。",
       "error": "无法加载工作区",
       "errorHelp": "请检查账号访问权限后重试。",
+      "fallback": "请求的工作区不可用，现已显示默认工作区。",
       "heading": "工作区",
       "label": "工作区",
       "loading": "正在加载工作区...",
@@ -554,11 +624,15 @@
     "singleton": "服务密钥"
   },
   "showingCount": "显示 {{count}} 个",
+  "showingCountPartial": "显示至少 {{count}} 个",
+  "showingCountUnavailable": "显示数量暂不可用",
   "title": "密钥管理",
   "totalKeys": "总计 {{count}} 个密钥",
   "unifiedApiGuidance": {
     "headerBridge": "将账号 Key 一键导入自建 AI 网关后，多个 Key 即可通过同一个 AI API 使用；直接导出到客户端工具仍是免网关路径。"
   },
+  "totalKeysPartial": "总计至少 {{count}} 个密钥",
+  "totalKeysUnavailable": "总数暂不可用",
   "unsupportedSource": {
     "description": "当前账号的站点类型已支持保存账号，但插件还没有适配该站点的密钥列表协议。你可以提交站点支持请求，帮助我们补齐密钥管理能力。",
     "requestSiteSupport": "反馈站点支持",

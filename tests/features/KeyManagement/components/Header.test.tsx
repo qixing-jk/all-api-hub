@@ -123,4 +123,24 @@ describe("KeyManagement Header", () => {
     refreshButton.click()
     expect(onRefresh).not.toHaveBeenCalled()
   })
+
+  it("can omit automatic repair controls for a native-key account", () => {
+    render(
+      <Header
+        selectedAccount="account-example"
+        onAddToken={vi.fn()}
+        onRefresh={vi.fn()}
+        isLoading={false}
+        isAddTokenDisabled={false}
+        isRepairDisabled={false}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    ).toBeNull()
+  })
 })

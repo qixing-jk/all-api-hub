@@ -611,17 +611,19 @@ describe("OpenRouter management key API", () => {
     })
     await expect(
       fetchOpenRouterWorkspaces(request, { offset: 10, limit: 20 }),
-    ).resolves.toEqual([
-      expect.objectContaining({ future_workspace_field: "kept" }),
-    ])
+    ).resolves.toEqual({
+      data: [expect.objectContaining({ future_workspace_field: "kept" })],
+      totalCount: 1,
+    })
     await expect(
       fetchOpenRouterWorkspaceMembers(request, "workspace-example", {
         offset: 10,
         limit: 20,
       }),
-    ).resolves.toEqual([
-      expect.objectContaining({ future_member_field: "kept" }),
-    ])
+    ).resolves.toEqual({
+      data: [expect.objectContaining({ future_member_field: "kept" })],
+      totalCount: 1,
+    })
   })
 
   it("maps a missing key to its 404 response", async () => {

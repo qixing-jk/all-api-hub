@@ -108,4 +108,49 @@ describe("KeyManagement AccountSummaryBar", () => {
     expect(badge).not.toHaveClass("cursor-pointer")
     expect(screen.getByText("accountSummary.loadFailed")).toBeInTheDocument()
   })
+
+  it("renders visible combined counts without hiding a native partial failure", () => {
+    render(
+      <AccountSummaryBar
+        items={[
+          {
+            accountId: "native-visible",
+            name: "Visible native account",
+            count: 1,
+          },
+          {
+            accountId: "native-failed",
+            name: "Failed native account",
+            count: null,
+            errorType: "load-failed",
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText("Visible native account")).toBeVisible()
+    expect(screen.getByText("Failed native account")).toBeVisible()
+    expect(screen.getAllByText("accountSummary.keys")).toHaveLength(1)
+    expect(screen.getByText("accountSummary.keysUnavailable")).toBeVisible()
+    expect(screen.getByText("accountSummary.loadFailed")).toBeVisible()
+  })
+
+  it("shows known rows as partial without presenting them as a complete count", () => {
+    render(
+      <AccountSummaryBar
+        items={[
+          {
+            accountId: "partially-known",
+            name: "Partially known account",
+            count: null,
+            knownCount: 2,
+            errorType: "load-failed",
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText("accountSummary.knownKeys")).toBeVisible()
+    expect(screen.queryByText("accountSummary.keys")).toBeNull()
+  })
 })

@@ -1,3 +1,4 @@
+import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -29,6 +30,7 @@ const {
   addTokenDialogPropsSpy,
   accountSummaryBarPropsSpy,
   getSiteTypeCapabilitiesMock,
+  openAccountKeyResourcesMock,
 } = vi.hoisted(() => ({
   sendRuntimeActionMessageMock: vi.fn(),
   tokenListPropsSpy: vi.fn(),
@@ -41,6 +43,7 @@ const {
   addTokenDialogPropsSpy: vi.fn(),
   accountSummaryBarPropsSpy: vi.fn(),
   getSiteTypeCapabilitiesMock: vi.fn(),
+  openAccountKeyResourcesMock: vi.fn(),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -310,24 +313,32 @@ describe("KeyManagement empty-state actions", () => {
     addTokenDialogPropsSpy.mockReset()
     accountSummaryBarPropsSpy.mockReset()
     getSiteTypeCapabilitiesMock.mockReset()
+    openAccountKeyResourcesMock.mockReset()
+    openAccountKeyResourcesMock.mockResolvedValue(null)
     getSiteTypeCapabilitiesMock.mockImplementation((siteType: string) => ({
       siteType,
       account:
-        siteType === SITE_TYPES.SHAREDCHAT
+        siteType === SITE_TYPES.OPENROUTER
           ? {
-              serviceCredential: {
-                fetch: vi.fn(),
+              keyResources: {
+                open: openAccountKeyResourcesMock,
               },
             }
-          : {
-              keyManagement: {
-                fetchTokens: vi.fn(),
-                createToken: vi.fn(),
-                updateToken: vi.fn(),
-                deleteToken: vi.fn(),
-                resolveTokenKey: vi.fn(),
+          : siteType === SITE_TYPES.SHAREDCHAT
+            ? {
+                serviceCredential: {
+                  fetch: vi.fn(),
+                },
+              }
+            : {
+                keyManagement: {
+                  fetchTokens: vi.fn(),
+                  createToken: vi.fn(),
+                  updateToken: vi.fn(),
+                  deleteToken: vi.fn(),
+                  resolveTokenKey: vi.fn(),
+                },
               },
-            },
     }))
     mockedUseUserPreferencesContext.mockReturnValue(
       createKeyManagementContextValue(),
@@ -638,6 +649,51 @@ describe("KeyManagement empty-state actions", () => {
       availableAccounts: [],
       preSelectedAccountId: null,
     })
+  })
+
+  it("enables the empty-state Create first key action for one loaded native account", async () => {
+    const openCreateEditor = vi.fn().mockResolvedValue(null)
+    const scope = {
+      scopeKey: "workspace-example",
+      routeKey: "default",
+      displayName: "Default workspace",
+      isDefault: true,
+    }
+    openAccountKeyResourcesMock.mockResolvedValue({
+      resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+      listScopes: vi.fn().mockResolvedValue([scope]),
+      openCollection: vi.fn().mockResolvedValue({
+        list: vi.fn().mockResolvedValue({ items: [] }),
+      }),
+      openCreateEditor,
+    })
+    const account = createAccount({
+      id: "openrouter-account",
+      name: "OpenRouter account",
+      siteType: SITE_TYPES.OPENROUTER,
+    })
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({
+        displayData: [account],
+        selectedAccount: account.id,
+      }),
+    )
+
+    render(
+      <KeyManagement
+        routeParams={{ accountId: account.id, workspace: scope.routeKey }}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(tokenListPropsSpy.mock.lastCall?.[0]).toMatchObject({
+        canCreateTokens: true,
+      }),
+    )
+    await act(async () => {
+      tokenListPropsSpy.mock.lastCall?.[0].handleAddToken()
+    })
+    await waitFor(() => expect(openCreateEditor).toHaveBeenCalledTimes(1))
   })
 
   it("only offers key-management-capable accounts to the add-token dialog", async () => {

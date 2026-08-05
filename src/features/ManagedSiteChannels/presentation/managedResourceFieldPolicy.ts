@@ -11,7 +11,6 @@ import {
   defineResourceEditorFieldPolicy,
   resolveResourceFieldPolicy,
   type ResourceEditorFieldPolicy,
-  type ResourceFieldHiddenField,
   type ResourceFieldPresentation,
   type ResourceFieldTextResolver,
 } from "~/features/ResourceEditor/resourceFieldPolicy"
@@ -51,7 +50,7 @@ export const MANAGED_RESOURCE_SECTIONS = {
 export type ManagedResourceSection =
   (typeof MANAGED_RESOURCE_SECTIONS)[keyof typeof MANAGED_RESOURCE_SECTIONS]
 
-export const MANAGED_RESOURCE_FIELD_RENDERERS = {
+const MANAGED_RESOURCE_FIELD_RENDERERS = {
   Text: "text",
   Textarea: "textarea",
   Number: "number",
@@ -62,11 +61,9 @@ export const MANAGED_RESOURCE_FIELD_RENDERERS = {
   DateTime: "date-time",
 } as const
 
-export type ManagedResourceFieldRenderer = ResourceFieldDescriptor["type"]
 export type ManagedResourceFieldPresentation =
   ResourceFieldPresentation<ManagedResourceSection>
 export type ManagedResourceTextResolver = ResourceFieldTextResolver
-export type ManagedResourceHiddenField = ResourceFieldHiddenField
 export type ManagedResourceEditorFieldPolicy =
   ResourceEditorFieldPolicy<ManagedResourceSection>
 

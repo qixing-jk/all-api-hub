@@ -12,6 +12,7 @@ import {
   type AccountKeyResourceFacts,
   type AccountKeyResourceOpenInput,
   type AccountKeyScope,
+  type AccountKeyScopeInventory,
   type EditableResourceProjection,
   type ResourceFailure,
   type ResourceFieldIssue,
@@ -55,14 +56,14 @@ import {
 const PAGE_SIZE = 100
 const MAX_PAGES = 100
 const MAX_ACTIVE_CURSORS = 32
-const MAX_CURSOR_OFFSET = PAGE_SIZE * MAX_PAGES
+const MAX_KEY_RESULTS = PAGE_SIZE * MAX_PAGES
 const CURSOR_PREFIX = "or-key:"
-const INVENTORY_UNAVAILABLE_LABEL = "Workspace inventory unavailable"
+const CURRENT_CREATOR_OPTION_VALUE = "creator-current"
 
 // OpenRouter's Management API uses a Management Key for `/keys` and workspace
 // inventory. It documents no later key reveal: plaintext is create-response-only,
 // so post-dispatch mutations are reconciled once and never replayed.
-// https://openrouter.ai/docs/openapi/openapi.yaml
+// https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml
 
 type OpenRouterKeyResourceConfig = {
   readonly account: AccountKeyResourceOpenInput["account"]
@@ -80,7 +81,10 @@ type OpenRouterKeyCursorChain = {
 }
 
 type OpenRouterKeyCursorState = {
+  /** Next provider offset, advanced by each batch's actual returned length. */
   readonly offset: number
+  readonly bufferedKeys: readonly OpenRouterKeyInfo[]
+  readonly providerExhausted: boolean
   readonly chain: OpenRouterKeyCursorChain
 }
 
@@ -141,13 +145,20 @@ const openCursorChain = (
   scopeKey: string,
   cursor: string | undefined,
 ): OpenRouterKeyCursorState => {
-  if (!cursor) return { offset: 0, chain: { scopeKey, seenHashes: new Set() } }
+  if (!cursor) {
+    return {
+      offset: 0,
+      bufferedKeys: [],
+      providerExhausted: false,
+      chain: { scopeKey, seenHashes: new Set() },
+    }
+  }
   if (!/^or-key:\d+:\d+$/.test(cursor)) throw new Error("invalid_cursor")
   const issued = config.issuedCursors.get(cursor)
   if (!issued) throw new Error("repeated_cursor")
   if (issued.chain.scopeKey !== scopeKey) throw new Error("invalid_cursor")
   config.issuedCursors.delete(cursor)
-  if (issued.offset >= MAX_CURSOR_OFFSET) {
+  if (issued.offset >= MAX_KEY_RESULTS && issued.bufferedKeys.length === 0) {
     throw new Error("key_pagination_limit")
   }
   return issued
@@ -155,14 +166,13 @@ const openCursorChain = (
 
 const issueCursor = (
   config: OpenRouterKeyResourceConfig,
-  offset: number,
-  chain: OpenRouterKeyCursorChain,
+  state: OpenRouterKeyCursorState,
 ): string => {
-  if (!Number.isInteger(offset) || offset <= 0) {
+  if (!Number.isInteger(state.offset) || state.offset <= 0) {
     throw new Error("non_progress_offset")
   }
-  const cursor = toCursor(++config.cursorSequence, offset)
-  config.issuedCursors.set(cursor, { offset, chain })
+  const cursor = toCursor(++config.cursorSequence, state.offset)
+  config.issuedCursors.set(cursor, state)
   while (config.issuedCursors.size > MAX_ACTIVE_CURSORS) {
     const oldest = config.issuedCursors.keys().next().value
     if (oldest === undefined) break
@@ -174,17 +184,14 @@ const issueCursor = (
 const workspaceScope = (
   workspace: OpenRouterWorkspace,
   defaultWorkspaceId: string,
-  inventoryUnavailable = false,
 ): AccountKeyScope => ({
   scopeKey: workspace.id,
   routeKey: workspace.slug,
   displayName: getWorkspaceDisplayName(workspace),
   isDefault: workspace.id === defaultWorkspaceId,
-  ...(inventoryUnavailable
-    ? { secondaryLabel: INVENTORY_UNAVAILABLE_LABEL }
-    : workspace.id === defaultWorkspaceId || workspace.slug === workspace.name
-      ? {}
-      : { secondaryLabel: workspace.slug }),
+  ...(workspace.id === defaultWorkspaceId || workspace.slug === workspace.name
+    ? {}
+    : { secondaryLabel: workspace.slug }),
 })
 
 const nativeFailure = (
@@ -325,7 +332,11 @@ const normalizeUtcDateTime = (value: unknown): string | undefined => {
 
 const createValidation = (
   values: EditableResourceProjection,
-  options: { create: boolean; knownWorkspaceIds: ReadonlySet<string> },
+  options: {
+    create: boolean
+    knownWorkspaceIds: ReadonlySet<string>
+    knownCreatorValues?: ReadonlySet<string>
+  },
 ): ResourceValidationResult => {
   const issues: ResourceFieldIssue[] = []
   const field = OPENROUTER_KEY_FIELD_IDS
@@ -351,7 +362,13 @@ const createValidation = (
       code: ACCOUNT_KEY_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
     })
   }
-  if (creator !== null && creator !== undefined && !isNonBlankString(creator)) {
+  if (
+    creator !== null &&
+    creator !== undefined &&
+    (!isNonBlankString(creator) ||
+      (options.knownCreatorValues !== undefined &&
+        !options.knownCreatorValues.has(creator)))
+  ) {
     issues.push({
       fieldId: field.Creator,
       code: ACCOUNT_KEY_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
@@ -407,8 +424,13 @@ const createValidation = (
   return issues.length ? { valid: false, issues } : { valid: true }
 }
 
+// OpenRouter documents only the opaque `creator_user_id` on key responses; it
+// does not provide a human-facing member name there. Project only a localized
+// presence label and keep the identifier confined to the mutation projection.
 const toCreatorDisplay = (creatorUserId: string | null): string =>
-  creatorUserId ?? "No creator"
+  creatorUserId
+    ? t("keyManagement:openRouter.editor.options.creator.unknown")
+    : t("keyManagement:openRouter.editor.options.creator.none")
 
 const toDetail = (
   config: OpenRouterKeyResourceConfig,
@@ -463,7 +485,11 @@ const toFacts = (
         kind: "text",
         value: detail.workspaceDisplay,
       },
-      { fieldId: field.Creator, kind: "text", value: detail.creatorDisplay },
+      {
+        fieldId: field.Creator,
+        kind: "text",
+        value: detail.creatorDisplay,
+      },
       { fieldId: field.LimitMode, kind: "text", value: toLimitMode(key.limit) },
       ...(key.limit === null
         ? []
@@ -542,29 +568,111 @@ const toFacts = (
           ]
         : []),
     ],
-    searchValues: [key.name, key.label, status, detail.workspaceDisplay],
+    searchValues: [
+      key.name,
+      key.label,
+      status,
+      detail.workspaceDisplay,
+      detail.creatorDisplay,
+    ],
     actions: { canUpdate: true, canDelete: true },
   }
+}
+
+const areEquivalentProviderRecords = (
+  left: unknown,
+  right: unknown,
+): boolean => {
+  if (Object.is(left, right)) return true
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) =>
+        areEquivalentProviderRecords(value, right[index]),
+      )
+    )
+  }
+  if (
+    typeof left !== "object" ||
+    left === null ||
+    typeof right !== "object" ||
+    right === null
+  ) {
+    return false
+  }
+  const leftRecord = left as Record<string, unknown>
+  const rightRecord = right as Record<string, unknown>
+  const leftKeys = Object.keys(leftRecord)
+  const rightKeys = Object.keys(rightRecord)
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      (key) =>
+        Object.prototype.hasOwnProperty.call(rightRecord, key) &&
+        areEquivalentProviderRecords(leftRecord[key], rightRecord[key]),
+    )
+  )
+}
+
+const drainCountedPages = async <T extends { id: string }>(
+  readPage: (offset: number) => Promise<{
+    data: readonly T[]
+    totalCount: number
+  }>,
+  validateItem: (item: T) => void,
+  paginationLimitError: string,
+): Promise<readonly T[]> => {
+  const items = new Map<string, T>()
+  let expectedTotal: number | undefined
+
+  for (let offset = 0; offset < PAGE_SIZE * MAX_PAGES; offset += PAGE_SIZE) {
+    const page = await readPage(offset)
+    if (expectedTotal === undefined) expectedTotal = page.totalCount
+    if (page.totalCount !== expectedTotal || page.data.length > PAGE_SIZE) {
+      throw new Error("inconsistent_pagination")
+    }
+    for (const item of page.data) {
+      validateItem(item)
+      const existing = items.get(item.id)
+      if (existing && !areEquivalentProviderRecords(existing, item)) {
+        throw new Error("conflicting_identity")
+      }
+      if (!existing) items.set(item.id, item)
+    }
+    if (items.size > expectedTotal) throw new Error("inconsistent_pagination")
+    if (items.size === expectedTotal) return [...items.values()]
+    if (page.data.length < PAGE_SIZE) {
+      throw new Error("incomplete_pagination")
+    }
+  }
+
+  throw new Error(paginationLimitError)
 }
 
 const drainWorkspaces = async (
   config: OpenRouterKeyResourceConfig,
   options?: ResourceOperationOptions,
 ): Promise<readonly OpenRouterWorkspace[]> => {
-  const workspaces = new Map<string, OpenRouterWorkspace>()
-  for (let offset = 0; offset < PAGE_SIZE * MAX_PAGES; offset += PAGE_SIZE) {
-    const page = await fetchOpenRouterWorkspaces(
-      requestWithOptions(config, options),
-      {
+  const drained = await drainCountedPages(
+    (offset) =>
+      fetchOpenRouterWorkspaces(requestWithOptions(config, options), {
         offset,
         limit: PAGE_SIZE,
-      },
-    )
-    for (const workspace of page) workspaces.set(workspace.id, workspace)
-    if (page.length < PAGE_SIZE) break
-    if (offset + PAGE_SIZE >= PAGE_SIZE * MAX_PAGES) {
-      throw new Error("workspace_pagination_limit")
-    }
+      }),
+    () => undefined,
+    "workspace_pagination_limit",
+  )
+  const workspaces = new Map(
+    drained.map((workspace) => [workspace.id, workspace]),
+  )
+  const inventoriedDefault = workspaces.get(config.defaultWorkspace.id)
+  if (
+    inventoriedDefault &&
+    !areEquivalentProviderRecords(inventoriedDefault, config.defaultWorkspace)
+  ) {
+    throw new Error("conflicting_default_workspace")
   }
   workspaces.set(config.defaultWorkspace.id, config.defaultWorkspace)
   const all = [...workspaces.values()]
@@ -579,27 +687,22 @@ const drainMembers = async (
   workspaceId: string,
   options?: ResourceOperationOptions,
 ): Promise<readonly OpenRouterWorkspaceMember[]> => {
-  const members = new Map<string, OpenRouterWorkspaceMember>()
-  for (let offset = 0; offset < PAGE_SIZE * MAX_PAGES; offset += PAGE_SIZE) {
-    const page = await fetchOpenRouterWorkspaceMembers(
-      requestWithOptions(config, options),
-      workspaceId,
-      {
-        offset,
-        limit: PAGE_SIZE,
-      },
-    )
-    for (const member of page) {
+  return drainCountedPages(
+    (offset) =>
+      fetchOpenRouterWorkspaceMembers(
+        requestWithOptions(config, options),
+        workspaceId,
+        {
+          offset,
+          limit: PAGE_SIZE,
+        },
+      ),
+    (member) => {
       if (member.workspace_id !== workspaceId)
         throw new Error("member_workspace_mismatch")
-      members.set(member.user_id, member)
-    }
-    if (page.length < PAGE_SIZE) break
-    if (offset + PAGE_SIZE >= PAGE_SIZE * MAX_PAGES) {
-      throw new Error("member_pagination_limit")
-    }
-  }
-  return [...members.values()]
+    },
+    "member_pagination_limit",
+  )
 }
 
 const createFields = (scopes: readonly AccountKeyScope[]) => {
@@ -680,7 +783,7 @@ const editFields = (
       options: detail.key.creator_user_id
         ? [
             {
-              value: detail.key.creator_user_id,
+              value: CURRENT_CREATOR_OPTION_VALUE,
               displayLabel: detail.creatorDisplay,
             },
           ]
@@ -727,13 +830,48 @@ const toInitialValues = (
   return {
     [field.Name]: key.name,
     [field.Workspace]: key.workspace_id,
-    [field.Creator]: key.creator_user_id,
+    [field.Creator]: key.creator_user_id ? CURRENT_CREATOR_OPTION_VALUE : null,
     [field.LimitMode]: toLimitMode(key.limit),
     [field.Limit]: key.limit,
     [field.LimitReset]: toLimitReset(key.limit_reset),
     [field.ExpiresAt]: key.expires_at ?? null,
     [field.Disabled]: key.disabled,
     [field.IncludeByokInLimit]: key.include_byok_in_limit,
+  }
+}
+
+const loadWorkspaceScopeInventory = async (
+  config: OpenRouterKeyResourceConfig,
+  options?: ResourceOperationOptions,
+): Promise<AccountKeyScopeInventory> => {
+  try {
+    const workspaces = await read(config, () =>
+      drainWorkspaces(config, options),
+    )
+    return {
+      scopes: workspaces
+        .map((workspace) =>
+          workspaceScope(workspace, config.defaultWorkspace.id),
+        )
+        .sort(
+          (left, right) =>
+            Number(right.isDefault) - Number(left.isDefault) ||
+            left.displayName.localeCompare(right.displayName),
+        ),
+    }
+  } catch (error) {
+    if (
+      error instanceof OpenRouterNativeResourceError &&
+      !isAbortError(error.failure.error, options?.signal)
+    ) {
+      return {
+        scopes: [
+          workspaceScope(config.defaultWorkspace, config.defaultWorkspace.id),
+        ],
+        partialFailure: mapFailure(error),
+      }
+    }
+    throw error
   }
 }
 
@@ -761,8 +899,8 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
         account: input.account,
         request,
         managementKey,
-        // The `/workspaces/default` locator is the explicitly accepted fail-closed
-        // compatibility assumption; never infer a default workspace from inventory.
+        // OpenRouter's hosted API resolves its provider-owned default workspace at
+        // `/workspaces/default`; never guess a replacement from workspace inventory.
         defaultWorkspace,
         workspaceNames: new Map(),
         issuedCursors: new Map(),
@@ -774,36 +912,9 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
       )
       return config
     },
-    listScopes: async (config, options) => {
-      try {
-        const workspaces = await read(config, () =>
-          drainWorkspaces(config, options),
-        )
-        return workspaces
-          .map((workspace) =>
-            workspaceScope(workspace, config.defaultWorkspace.id),
-          )
-          .sort(
-            (left, right) =>
-              Number(right.isDefault) - Number(left.isDefault) ||
-              left.displayName.localeCompare(right.displayName),
-          )
-      } catch (error) {
-        if (
-          error instanceof OpenRouterNativeResourceError &&
-          !isAbortError(error.failure.error, options?.signal)
-        ) {
-          return [
-            workspaceScope(
-              config.defaultWorkspace,
-              config.defaultWorkspace.id,
-              true,
-            ),
-          ]
-        }
-        throw error
-      }
-    },
+    listScopes: async (config, options) =>
+      (await loadWorkspaceScopeInventory(config, options)).scopes,
+    listScopeInventory: loadWorkspaceScopeInventory,
     defaultScopeKey: (config) => config.defaultWorkspace.id,
     encodeLocator: (hash) => hash,
     decodeLocator: (resourceId) => resourceId,
@@ -823,36 +934,63 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
       )
         throw new Error("invalid_limit")
       const cursorState = openCursorChain(config, scope.scopeKey, query?.cursor)
-      const offset = cursorState.offset
-      const page = await read(
-        config,
-        () =>
-          fetchOpenRouterKeys(requestWithOptions(config, options), {
-            workspaceId: scope.scopeKey,
-            includeDisabled: true,
-            offset,
-          }),
-        [scope.scopeKey],
-      )
-      const pageHashes = new Set<string>()
-      for (const key of page) {
-        assertKeyScope(key, scope)
-        if (pageHashes.has(key.hash)) throw new Error("duplicate_hash")
-        pageHashes.add(key.hash)
-      }
-      const itemKeys = page.slice(0, requestedLimit)
-      for (const key of itemKeys) {
-        if (cursorState.chain.seenHashes.has(key.hash)) {
-          throw new Error("duplicate_hash")
+      const availableKeys = [...cursorState.bufferedKeys]
+      let nextProviderOffset = cursorState.offset
+      let providerExhausted = cursorState.providerExhausted
+      let providerPages = 0
+      // `/keys` exposes `offset` without a usable provider page size or total.
+      // Drain by actual batch length before applying the capability's local page.
+      while (!providerExhausted) {
+        if (
+          providerPages >= MAX_PAGES ||
+          nextProviderOffset >= MAX_KEY_RESULTS
+        ) {
+          throw new Error("key_pagination_limit")
         }
+        const providerPage = await read(
+          config,
+          () =>
+            fetchOpenRouterKeys(requestWithOptions(config, options), {
+              workspaceId: scope.scopeKey,
+              includeDisabled: true,
+              offset: nextProviderOffset,
+            }),
+          [scope.scopeKey],
+        )
+        if (providerPage.length === 0) {
+          providerExhausted = true
+          break
+        }
+        if (providerPage.length > MAX_KEY_RESULTS - nextProviderOffset) {
+          throw new Error("key_pagination_limit")
+        }
+        const pageHashes = new Set<string>()
+        for (const key of providerPage) {
+          assertKeyScope(key, scope)
+          if (
+            pageHashes.has(key.hash) ||
+            cursorState.chain.seenHashes.has(key.hash)
+          ) {
+            throw new Error("duplicate_hash")
+          }
+          pageHashes.add(key.hash)
+        }
+        for (const hash of pageHashes) cursorState.chain.seenHashes.add(hash)
+        availableKeys.push(...providerPage)
+        nextProviderOffset += providerPage.length
+        providerPages += 1
       }
-      for (const key of itemKeys) cursorState.chain.seenHashes.add(key.hash)
+      const itemKeys = availableKeys.slice(0, requestedLimit)
+      const bufferedKeys = availableKeys.slice(itemKeys.length)
       const items = itemKeys.map((key) => toDetail(config, key, scope))
-      const nextOffset = offset + items.length
       const nextCursor =
-        (items.length < page.length || page.length === PAGE_SIZE) &&
-        items.length > 0
-          ? issueCursor(config, nextOffset, cursorState.chain)
+        bufferedKeys.length > 0 && items.length > 0
+          ? issueCursor(config, {
+              offset: nextProviderOffset,
+              bufferedKeys,
+              providerExhausted,
+              chain: cursorState.chain,
+            })
           : undefined
       return { items, ...(nextCursor ? { nextCursor } : {}) }
     },
@@ -904,6 +1042,12 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
       const knownWorkspaceIds = new Set(
         scopeEntries.map((entry) => entry.scopeKey),
       )
+      const creatorIdsByOptionValue = new Map<
+        string,
+        { workspaceId: string; providerUserId: string }
+      >()
+      const optionValuesByCreator = new Map<string, string>()
+      let creatorOptionSequence = 0
       const field = OPENROUTER_KEY_FIELD_IDS
       return {
         fields: createFields(scopeEntries),
@@ -918,7 +1062,11 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
           [field.IncludeByokInLimit]: false,
         },
         validate: (values) =>
-          createValidation(values, { create: true, knownWorkspaceIds }),
+          createValidation(values, {
+            create: true,
+            knownWorkspaceIds,
+            knownCreatorValues: new Set(creatorIdsByOptionValue.keys()),
+          }),
         loadOptions: async (fieldId, values, loadOptions) => {
           if (fieldId !== field.Creator) return []
           const workspaceId = values[field.Workspace]
@@ -930,11 +1078,28 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
           const members = await read(config, () =>
             drainMembers(config, workspaceId, loadOptions),
           )
-          return members.map((member) => ({
-            value: member.user_id,
-            displayLabel: member.user_id,
-            secondaryLabel: member.role,
-          }))
+          return members.map((member) => {
+            const creatorKey = `${workspaceId}\u0000${member.id}`
+            let optionValue = optionValuesByCreator.get(creatorKey)
+            if (!optionValue) {
+              optionValue = `creator-option-${++creatorOptionSequence}`
+              optionValuesByCreator.set(creatorKey, optionValue)
+              creatorIdsByOptionValue.set(optionValue, {
+                workspaceId,
+                providerUserId: member.user_id,
+              })
+            }
+            return {
+              value: optionValue,
+              // OpenRouter requires the raw `creator_user_id` on create, but
+              // the editor exposes only session-local values because the member
+              // endpoint provides no safe human-facing identity.
+              displayLabel: t(
+                "keyManagement:openRouter.editor.options.creator.unknown",
+              ),
+              secondaryLabel: member.role,
+            }
+          })
         },
         buildCommand: (values) => {
           const limitMode = normalizeLimitMode(values[field.LimitMode])!
@@ -942,6 +1107,11 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
           const destinationScope = scopeEntries.find(
             (entry) => entry.scopeKey === values[field.Workspace],
           )!
+          const creatorOptionValue = values[field.Creator]
+          const creator =
+            typeof creatorOptionValue === "string"
+              ? creatorIdsByOptionValue.get(creatorOptionValue)
+              : undefined
           return {
             destinationScope,
             input: {
@@ -962,10 +1132,11 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
                   : normalizeUtcDateTime(expiresAt)!,
               workspaceId: values[field.Workspace] as string,
               creatorUserId:
-                values[field.Creator] === null ||
-                values[field.Creator] === undefined
+                creatorOptionValue === null || creatorOptionValue === undefined
                   ? null
-                  : (values[field.Creator] as string),
+                  : creator?.workspaceId === destinationScope.scopeKey
+                    ? creator.providerUserId
+                    : null,
             },
           }
         },
@@ -980,11 +1151,18 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
       const field = OPENROUTER_KEY_FIELD_IDS
       const scopes = [scope]
       const knownWorkspaceIds = new Set([detail.key.workspace_id])
+      const knownCreatorValues = new Set(
+        detail.key.creator_user_id ? [CURRENT_CREATOR_OPTION_VALUE] : [],
+      )
       return {
         fields: editFields(detail, scopes),
         initialValues: toInitialValues(detail),
         validate: (values) =>
-          createValidation(values, { create: false, knownWorkspaceIds }),
+          createValidation(values, {
+            create: false,
+            knownWorkspaceIds,
+            knownCreatorValues,
+          }),
         buildCommand: (values) => {
           const current = detail.key
           const limitMode = normalizeLimitMode(values[field.LimitMode])!

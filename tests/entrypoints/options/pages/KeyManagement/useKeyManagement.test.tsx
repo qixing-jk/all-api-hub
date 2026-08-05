@@ -5399,4 +5399,146 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(result.current.currentAccountUnsupportedKeyManagement).toBe(false)
     expect(openResources).not.toHaveBeenCalled()
   })
+
+  it.each([
+    ["legacy tokens", SITE_TYPES.NEW_API],
+    ["service credentials", SITE_TYPES.SHAREDCHAT],
+  ])(
+    "removes stale %s when the same account becomes native-resource-only",
+    async (_sourceLabel, sourceSiteType) => {
+      const accountId = "capability-transition-account"
+      const legacyToken = createToken({
+        id: 911,
+        key: "sk-capability-transition",
+        name: "Capability transition token",
+        accountId,
+        accountName: "Capability transition account",
+        expired_time: 0,
+      })
+      const sourceAccount = createDisplayAccount({
+        id: accountId,
+        name: "Capability transition account",
+        siteType: sourceSiteType,
+      })
+      const nativeAccount = createDisplayAccount({
+        ...sourceAccount,
+        siteType: SITE_TYPES.OPENROUTER,
+      })
+      const fetchServiceCredential = vi.fn().mockResolvedValue({
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "service-key-capability-transition",
+        isAuthenticated: true,
+        baseUrl: "https://codex.example.invalid",
+      })
+      const openResources = vi.fn()
+
+      vi.mocked(useAccountData).mockReturnValue({
+        enabledDisplayData: [sourceAccount],
+      } as any)
+      vi.mocked(getSiteTypeCapabilities).mockImplementation((siteType) => {
+        if (siteType === SITE_TYPES.OPENROUTER) {
+          return {
+            siteType: SITE_TYPES.OPENROUTER,
+            account: { keyResources: { open: openResources } },
+          } as any
+        }
+        if (siteType === SITE_TYPES.SHAREDCHAT) {
+          return createAdapterWithServiceCredential({
+            fetch: fetchServiceCredential,
+          }) as any
+        }
+        return createAdapterWithKeyManagement({
+          fetchTokens: vi.fn().mockResolvedValue([legacyToken]),
+        }) as any
+      })
+
+      const { result, rerender } = renderHook(() => useKeyManagement(), {
+        wrapper: createWrapper(),
+      })
+      act(() => {
+        result.current.setSelectedAccount(KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE)
+      })
+
+      await waitFor(() => expect(result.current.entries).toHaveLength(1))
+
+      vi.mocked(useAccountData).mockReturnValue({
+        enabledDisplayData: [nativeAccount],
+      } as any)
+      rerender()
+
+      await waitFor(() =>
+        expect(result.current.tokenInventories[accountId]).toMatchObject({
+          status: "loaded",
+          tokens: [],
+        }),
+      )
+      expect(result.current.serviceCredentials[accountId]?.credential).toBe(
+        undefined,
+      )
+      expect(result.current.entries).toEqual([])
+      expect(result.current.filteredEntries).toEqual([])
+      expect(openResources).not.toHaveBeenCalled()
+    },
+  )
+
+  it("leaves all-account progress for native-resource-only accounts to the native controller", async () => {
+    const legacyAccount = createDisplayAccount({
+      id: "legacy-progress-account",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    const nativeAccountA = createDisplayAccount({
+      id: "native-progress-account-a",
+      siteType: SITE_TYPES.OPENROUTER,
+    })
+    const nativeAccountB = createDisplayAccount({
+      id: "native-progress-account-b",
+      siteType: SITE_TYPES.OPENROUTER,
+    })
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [legacyAccount, nativeAccountA, nativeAccountB],
+    } as any)
+
+    let rejectLegacyLoad!: (error: Error) => void
+    const legacyLoad = new Promise<never>((_resolve, reject) => {
+      rejectLegacyLoad = reject
+    })
+    vi.mocked(getSiteTypeCapabilities).mockImplementation((siteType) =>
+      siteType === SITE_TYPES.OPENROUTER
+        ? ({
+            siteType: SITE_TYPES.OPENROUTER,
+            account: { keyResources: { open: vi.fn() } },
+          } as any)
+        : (createAdapterWithKeyManagement({
+            fetchTokens: vi.fn(() => legacyLoad),
+          }) as any),
+    )
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+    act(() => {
+      result.current.setSelectedAccount(KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE)
+    })
+
+    await waitFor(() =>
+      expect(result.current.tokenLoadProgress).toEqual({
+        total: 1,
+        loaded: 0,
+        loading: 1,
+        error: 0,
+      }),
+    )
+
+    rejectLegacyLoad(new Error("legacy load failed"))
+    await waitFor(() =>
+      expect(result.current.tokenLoadProgress).toEqual({
+        total: 1,
+        loaded: 0,
+        loading: 0,
+        error: 1,
+      }),
+    )
+  })
 })

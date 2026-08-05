@@ -47,4 +47,61 @@ describe("KeyManagement AccountSelectorPanel retry failed", () => {
     await user.click(retryButton)
     expect(onRetryFailedAccounts).toHaveBeenCalledTimes(1)
   })
+
+  it("renders known aggregate counts as partial when an included inventory is unknown", async () => {
+    render(
+      <AccountSelectorPanel
+        selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
+        setSelectedAccount={vi.fn()}
+        displayData={[createAccount({ id: "acc-a", name: "Account A" })] as any}
+        tokens={[]}
+        filteredTokens={[]}
+        aggregateCounts={{
+          total: null,
+          enabled: null,
+          showing: null,
+          knownTotal: 2,
+          knownEnabled: 1,
+          knownShowing: 1,
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByText(/keyManagement:totalKeysPartial/),
+    ).toBeVisible()
+    expect(screen.getByText(/keyManagement:enabledCountPartial/)).toBeVisible()
+    expect(screen.getByText(/keyManagement:showingCountPartial/)).toBeVisible()
+    expect(screen.queryByText(/keyManagement:totalKeys$/)).toBeNull()
+  })
+
+  it("renders aggregate counts as unavailable when no rows are known", async () => {
+    render(
+      <AccountSelectorPanel
+        selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
+        setSelectedAccount={vi.fn()}
+        displayData={[createAccount({ id: "acc-a", name: "Account A" })] as any}
+        tokens={[]}
+        filteredTokens={[]}
+        aggregateCounts={{
+          total: null,
+          enabled: null,
+          showing: null,
+          knownTotal: 0,
+          knownEnabled: 0,
+          knownShowing: 0,
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByText(/keyManagement:totalKeysUnavailable/),
+    ).toBeVisible()
+    expect(
+      screen.getByText(/keyManagement:enabledCountUnavailable/),
+    ).toBeVisible()
+    expect(
+      screen.getByText(/keyManagement:showingCountUnavailable/),
+    ).toBeVisible()
+  })
 })

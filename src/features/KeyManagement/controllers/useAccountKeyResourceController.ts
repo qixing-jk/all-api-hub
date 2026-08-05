@@ -15,12 +15,14 @@ import {
   type AccountKeyResourceRef,
   type AccountKeyResourceSession,
   type AccountKeyScope,
+  type AccountKeyScopeInventory,
   type EditableResourceProjection,
   type ResourceFailure,
   type ResourceFieldDescriptor,
   type ResourceFieldOption,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { mapSettledWithConcurrency } from "~/services/apiAdapters/nativeResources/concurrency"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -132,7 +134,7 @@ type Options = {
 export type AccountKeyResourceRouteTransition = Readonly<{ id: string }>
 
 /** Route owners must echo the optional transition in the next controller input. */
-export type AccountKeyResourceRouteReplacer = (
+type AccountKeyResourceRouteReplacer = (
   params: Record<string, string>,
   transition?: AccountKeyResourceRouteTransition,
 ) => void
@@ -372,6 +374,14 @@ const awaitAbortable = <T>(promise: Promise<T>, signal: AbortSignal) =>
     )
   })
 
+const readScopeInventory = async (
+  session: AccountKeyResourceSession,
+  options: { signal: AbortSignal },
+): Promise<AccountKeyScopeInventory> =>
+  session.listScopeInventory
+    ? await session.listScopeInventory(options)
+    : { scopes: await session.listScopes(options) }
+
 const collectAll = async (
   collection: AccountKeyResourceCollection,
   search: string,
@@ -478,12 +488,20 @@ export function useAccountKeyResourceController({
   const [selectedScope, setSelectedScope] = useState<AccountKeyScope | null>(
     null,
   )
+  const selectedScopeRef = useRef(selectedScope)
+  selectedScopeRef.current = selectedScope
   const [loadingResourceBoundary, setLoadingResourceBoundary] =
     useState<ActiveResourceBoundary | null>(null)
   const [acceptedRows, setAcceptedRows] = useState<
     readonly AccountKeyResourceFacts[]
   >([])
   const [failures, setFailures] = useState<Record<string, ResourceFailure>>({})
+  const [scopeInventoryFailure, setScopeInventoryFailure] =
+    useState<ResourceFailure | null>(null)
+  const [isScopeInventoryLoading, setIsScopeInventoryLoading] = useState(false)
+  const [settledAccountIds, setSettledAccountIds] = useState<readonly string[]>(
+    [],
+  )
   const [progress, setProgress] = useState<LoadProgress>({
     total: 0,
     loaded: 0,
@@ -497,6 +515,10 @@ export function useAccountKeyResourceController({
     ACCOUNT_KEY_STATUS_FILTERS.All,
   )
   const [detail, setDetail] = useState<DetailState>(null)
+  const [isDetailLoading, setIsDetailLoading] = useState(false)
+  const [detailFailure, setDetailFailure] = useState<ResourceFailure | null>(
+    null,
+  )
   const [editor, setEditor] = useState<EditorState>(null)
   const editorStateRef = useRef<EditorState>(editor)
   editorStateRef.current = editor
@@ -530,6 +552,11 @@ export function useAccountKeyResourceController({
   const selectedAccountData = accounts.find(
     (account) => account.id === selectedAccount,
   )
+  useEffect(() => {
+    // The status control belongs to one selected native account. Do not carry
+    // its hidden value into another account or the combined all-account view.
+    setStatusFilter(ACCOUNT_KEY_STATUS_FILTERS.All)
+  }, [mode, selectedAccount])
   const currentResourceBoundary =
     selectedScope && selectedAccountData
       ? {
@@ -546,8 +573,10 @@ export function useAccountKeyResourceController({
     )
   const generation = useRef(0)
   const loadAbort = useRef<AbortController | null>(null)
+  const scopeInventoryAbort = useRef<AbortController | null>(null)
   const loadInProgress = useRef(false)
   const actionAbort = useRef<AbortController | null>(null)
+  const detailRequestEpoch = useRef(0)
   const collectionRef = useRef<AccountKeyResourceCollection | null>(null)
   const sessionRef = useRef<AccountKeyResourceSession | null>(null)
   const activeResourceBoundaryRef = useRef<ActiveResourceBoundary | null>(null)
@@ -645,6 +674,8 @@ export function useAccountKeyResourceController({
         status: "idle",
       })
       setDetail(null)
+      setIsDetailLoading(false)
+      setDetailFailure(null)
       transitionEditor(() => null)
       if (!preserveCreatedSecret) {
         transitionTerminalCloseEditor(null)
@@ -710,6 +741,9 @@ export function useAccountKeyResourceController({
     generation.current += 1
     loadAbort.current?.abort()
     loadAbort.current = null
+    scopeInventoryAbort.current?.abort()
+    scopeInventoryAbort.current = null
+    setIsScopeInventoryLoading(false)
     actionAbort.current?.abort()
     actionAbort.current = null
     abortEditorFieldLoads()
@@ -865,6 +899,9 @@ export function useAccountKeyResourceController({
       } = {},
     ) => {
       loadAbort.current?.abort()
+      scopeInventoryAbort.current?.abort()
+      scopeInventoryAbort.current = null
+      setIsScopeInventoryLoading(false)
       if (!options.preserveCreatedSecret)
         deferredSecretContextReload.current = false
       const preservedEditor = options.preserveEditor
@@ -918,6 +955,8 @@ export function useAccountKeyResourceController({
       setLoadingResourceBoundary(null)
       setAcceptedRows([])
       setFailures({})
+      setScopeInventoryFailure(null)
+      setSettledAccountIds([])
       setNotice(null)
       setIsLoading(mode !== "idle")
 
@@ -929,8 +968,12 @@ export function useAccountKeyResourceController({
         return false
       }
 
-      const activeAccounts = accountsRef.current.filter((account) =>
-        mode === "all" ? true : account.id === selectedAccount,
+      const activeAccounts = accountsRef.current.filter(
+        (account) =>
+          (mode === "all" ? true : account.id === selectedAccount) &&
+          Boolean(
+            getSiteTypeCapabilities(account.siteType).account?.keyResources,
+          ),
       )
       setProgress({
         total: activeAccounts.length,
@@ -940,7 +983,7 @@ export function useAccountKeyResourceController({
       })
 
       const acceptProgress = (loaded: boolean) => {
-        if (current !== generation.current) return
+        if (current !== generation.current || controller.signal.aborted) return
         setProgress((previous) => ({
           ...previous,
           loaded: previous.loaded + (loaded ? 1 : 0),
@@ -952,6 +995,41 @@ export function useAccountKeyResourceController({
       try {
         if (mode === "all") {
           clearActiveResourceRefs()
+          const rowsByAccount = new Map<
+            string,
+            readonly AccountKeyResourceFacts[]
+          >()
+          const settledAccounts = new Set<string>()
+          const acceptAccountResult = (
+            account: DisplaySiteData,
+            result: PromiseSettledResult<AccountKeyResourceFacts[]>,
+          ) => {
+            if (current !== generation.current || controller.signal.aborted)
+              return
+            if (result.status === "fulfilled") {
+              rowsByAccount.set(account.id, result.value)
+              setAcceptedRows(
+                activeAccounts.flatMap(
+                  (candidate) => rowsByAccount.get(candidate.id) ?? [],
+                ),
+              )
+              acceptProgress(true)
+            } else {
+              const failure = toFailure(result.reason)
+              if (isAborted(failure)) return
+              setFailures((currentFailures) => ({
+                ...currentFailures,
+                [account.id]: failure,
+              }))
+              acceptProgress(false)
+            }
+            settledAccounts.add(account.id)
+            setSettledAccountIds(
+              activeAccounts
+                .filter((candidate) => settledAccounts.has(candidate.id))
+                .map((candidate) => candidate.id),
+            )
+          }
           const loadAccount = async (account: DisplaySiteData) => {
             const session = await openSession(account, controller.signal)
             if (!session) return [] as AccountKeyResourceFacts[]
@@ -985,45 +1063,22 @@ export function useAccountKeyResourceController({
                 const [result] = await Promise.allSettled([
                   loadAccount(entry.account),
                 ])
-                if (current === generation.current) {
-                  const failure =
-                    result.status === "rejected"
-                      ? toFailure(result.reason)
-                      : null
-                  if (!failure || !isAborted(failure)) {
-                    acceptProgress(result.status === "fulfilled")
-                  }
-                }
+                acceptAccountResult(entry.account, result)
                 results.push({ ...entry, result })
               }
               return results
             },
           )
           if (current !== generation.current) return false
-          const settled = settledGroups
-            .flatMap((groupResult, groupIndex) => {
-              if (groupResult.status === "fulfilled") return groupResult.value
-              return originGroups[groupIndex].map((entry) => ({
-                ...entry,
-                result: {
-                  status: "rejected" as const,
-                  reason: groupResult.reason,
-                },
-              }))
-            })
-            .sort((left, right) => left.index - right.index)
-          const rows: AccountKeyResourceFacts[] = []
-          const nextFailures: Record<string, ResourceFailure> = {}
-          settled.forEach(({ account, result }) => {
-            if (result.status === "fulfilled") {
-              rows.push(...result.value)
-              return
-            }
-            const failure = toFailure(result.reason)
-            if (!isAborted(failure)) nextFailures[account.id] = failure
+          settledGroups.forEach((groupResult, groupIndex) => {
+            if (groupResult.status === "fulfilled") return
+            originGroups[groupIndex].forEach(({ account }) =>
+              acceptAccountResult(account, {
+                status: "rejected",
+                reason: groupResult.reason,
+              }),
+            )
           })
-          setAcceptedRows(rows)
-          setFailures(nextFailures)
           return true
         }
 
@@ -1040,18 +1095,18 @@ export function useAccountKeyResourceController({
             preserveCreatedSecret: options.preserveCreatedSecret,
           })
           acceptProgress(true)
+          setSettledAccountIds([account.id])
           return true
         }
-        const [defaultScope, listedScopes] = await Promise.all([
-          awaitAbortable(
-            session.resolveDefaultScope({ signal: controller.signal }),
-            controller.signal,
-          ),
-          awaitAbortable(
-            session.listScopes({ signal: controller.signal }),
-            controller.signal,
-          ),
-        ])
+        const scopeInventory = await awaitAbortable(
+          readScopeInventory(session, { signal: controller.signal }),
+          controller.signal,
+        )
+        const defaultScope = await awaitAbortable(
+          session.resolveDefaultScope({ signal: controller.signal }),
+          controller.signal,
+        )
+        const listedScopes = scopeInventory.scopes
         if (current !== generation.current) return false
         const availableScopes = listedScopes.some(
           (scope) => scope.scopeKey === defaultScope.scopeKey,
@@ -1189,8 +1244,10 @@ export function useAccountKeyResourceController({
         setLoadingResourceBoundary(null)
         setScopes(availableScopes)
         setSelectedScope(scope)
+        setScopeInventoryFailure(scopeInventory.partialFailure ?? null)
         setAcceptedRows(rows)
         acceptProgress(true)
+        setSettledAccountIds([account.id])
         return true
       } catch (error) {
         const failure = toFailure(error)
@@ -1201,6 +1258,7 @@ export function useAccountKeyResourceController({
           const account = activeAccounts[0]
           if (account) setFailures({ [account.id]: failure })
           acceptProgress(false)
+          if (account) setSettledAccountIds([account.id])
         }
         return false
       } finally {
@@ -1226,6 +1284,71 @@ export function useAccountKeyResourceController({
       transitionEditor,
     ],
   )
+
+  const retryScopeInventory = useCallback(async () => {
+    const session = sessionRef.current
+    const boundary = activeResourceBoundaryRef.current
+    const refreshInventory =
+      session?.refreshScopeInventory ?? session?.listScopeInventory
+    if (mode !== "single" || !session || !boundary || !refreshInventory) {
+      return false
+    }
+
+    scopeInventoryAbort.current?.abort()
+    const controller = new AbortController()
+    scopeInventoryAbort.current = controller
+    const currentGeneration = generation.current
+    setIsScopeInventoryLoading(true)
+    const isCurrentRequest = () =>
+      !controller.signal.aborted &&
+      generation.current === currentGeneration &&
+      sessionRef.current === session &&
+      activeResourceBoundaryRef.current !== null &&
+      boundariesMatch(activeResourceBoundaryRef.current, boundary)
+
+    try {
+      const inventory = await awaitAbortable(
+        refreshInventory.call(session, { signal: controller.signal }),
+        controller.signal,
+      )
+      if (!isCurrentRequest()) return false
+      if (inventory.partialFailure) {
+        setScopeInventoryFailure(inventory.partialFailure)
+        return false
+      }
+
+      const currentScope = selectedScopeRef.current
+      const nextSelectedScope = currentScope
+        ? inventory.scopes.find(
+            (scope) => scope.scopeKey === currentScope.scopeKey,
+          ) ?? currentScope
+        : inventory.scopes.find((scope) => scope.isDefault) ??
+          inventory.scopes[0] ??
+          null
+      const nextScopes =
+        nextSelectedScope &&
+        !inventory.scopes.some(
+          (scope) => scope.scopeKey === nextSelectedScope.scopeKey,
+        )
+          ? [nextSelectedScope, ...inventory.scopes]
+          : inventory.scopes
+      setScopes(nextScopes)
+      setSelectedScope(nextSelectedScope)
+      setScopeInventoryFailure(null)
+      return true
+    } catch (error) {
+      const failure = toFailure(error)
+      if (isCurrentRequest() && !isAborted(failure)) {
+        setScopeInventoryFailure(failure)
+      }
+      return false
+    } finally {
+      if (scopeInventoryAbort.current === controller) {
+        scopeInventoryAbort.current = null
+        setIsScopeInventoryLoading(false)
+      }
+    }
+  }, [mode])
 
   useEffect(() => {
     const routeObservation = JSON.stringify([
@@ -1309,6 +1432,8 @@ export function useAccountKeyResourceController({
     return () => {
       generation.current += 1
       loadAbort.current?.abort()
+      scopeInventoryAbort.current?.abort()
+      scopeInventoryAbort.current = null
     }
   }, [
     accountKey,
@@ -1325,6 +1450,8 @@ export function useAccountKeyResourceController({
     () => () => {
       generation.current += 1
       loadAbort.current?.abort()
+      scopeInventoryAbort.current?.abort()
+      scopeInventoryAbort.current = null
       actionAbort.current?.abort()
       mutationsByBoundary.current.forEach(({ controller }) =>
         controller.abort(),
@@ -1438,20 +1565,39 @@ export function useAccountKeyResourceController({
       const controller = new AbortController()
       actionAbort.current = controller
       const current = generation.current
+      const requestEpoch = ++detailRequestEpoch.current
+      const isCurrentDetailRequest = () =>
+        current === generation.current &&
+        requestEpoch === detailRequestEpoch.current &&
+        actionAbort.current === controller
+      setDetail(null)
+      setDetailFailure(null)
+      setIsDetailLoading(true)
       try {
         const facts = await awaitAbortable(
           collection.get(ref, { signal: controller.signal }),
           controller.signal,
         )
-        if (current === generation.current) setDetail(facts)
-      } catch {
-        // Detail failures are intentionally surfaced through an empty detail state.
+        if (isCurrentDetailRequest()) {
+          setDetail(facts)
+          setDetailFailure(null)
+        }
+      } catch (error) {
+        if (isCurrentDetailRequest()) setDetailFailure(toFailure(error))
+      } finally {
+        if (isCurrentDetailRequest()) setIsDetailLoading(false)
       }
     },
     [isCurrentResourceRef, mode],
   )
 
-  const closeDetail = useCallback(() => setDetail(null), [])
+  const closeDetail = useCallback(() => {
+    detailRequestEpoch.current += 1
+    actionAbort.current?.abort()
+    setDetail(null)
+    setDetailFailure(null)
+    setIsDetailLoading(false)
+  }, [])
 
   const selectScope = useCallback(
     (scopeKey: string) => {
@@ -1977,7 +2123,6 @@ export function useAccountKeyResourceController({
           ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
         ) {
           requireFreshRead(boundary)
-          await refreshAfterMutation()
         }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
@@ -2053,6 +2198,9 @@ export function useAccountKeyResourceController({
     rows,
     allRows: acceptedRows,
     failures,
+    scopeInventoryFailure,
+    isScopeInventoryLoading,
+    settledAccountIds,
     progress,
     isLoading,
     notice,
@@ -2061,6 +2209,8 @@ export function useAccountKeyResourceController({
     statusFilter,
     setStatusFilter,
     detail,
+    isDetailLoading,
+    detailFailure,
     editor,
     terminalCloseEditor,
     editorOpening,
@@ -2069,6 +2219,7 @@ export function useAccountKeyResourceController({
     deleteState,
     freshReadRequired,
     refresh,
+    retryScopeInventory,
     openDetail,
     closeDetail,
     selectScope,

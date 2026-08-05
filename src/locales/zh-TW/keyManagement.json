@@ -1,6 +1,8 @@
 {
   "accountSummary": {
     "keys_other": "{{count}} 個金鑰",
+    "keysUnavailable": "數量暫時無法取得",
+    "knownKeys_other": "至少 {{count}} 個金鑰",
     "loadFailed": "載入失敗",
     "title": "帳號概覽",
     "unsupported": "不支援"
@@ -181,6 +183,8 @@
     "warningTitle": "注意事項"
   },
   "enabledCount_other": "啟用 {{count}} 個",
+  "enabledCountPartial_other": "至少啟用 {{count}} 個",
+  "enabledCountUnavailable": "啟用數量暫時無法取得",
   "keyDetails": {
     "createResponseOnlySecret": "此站點建立後僅提供金鑰遮罩值，因此無法再次查看完整金鑰。",
     "createTime": "建立時間：",
@@ -313,6 +317,19 @@
     "warningTitle": "該金鑰只能查看一次"
   },
   "openRouter": {
+    "delete": {
+      "confirm": "刪除金鑰",
+      "description": "要從 OpenRouter 永久刪除 {{name}} 嗎？此遠端刪除無法復原。",
+      "feedback": {
+        "authenticationFailed": "請重新登入後再重新整理。",
+        "error": "無法刪除此金鑰。請重新整理後再試。",
+        "permissionDenied": "您沒有刪除此金鑰的權限。",
+        "unavailable": "服務暫時無法使用，請先重新整理再試。",
+        "uncertain": "遠端狀態可能已變更。請先重新整理金鑰，再決定是否重試。"
+      },
+      "refresh": "重新整理金鑰",
+      "title": "刪除 API 金鑰？"
+    },
     "editor": {
       "actions": {
         "cancel": "取消",
@@ -386,6 +403,7 @@
         "creator": {
           "empty": "此工作區沒有可用成員。",
           "none": "無建立者",
+          "unavailable": "所選工作區無法指派成員。你可以不選擇成員直接建立金鑰。",
           "unknown": "未知成員"
         },
         "limitMode": {
@@ -437,10 +455,62 @@
         "title": "捨棄未儲存的變更？"
       }
     },
+    "list": {
+      "actions": {
+        "delete": "刪除金鑰",
+        "details": "查看詳細資料",
+        "edit": "編輯金鑰",
+        "singleAccountOnly": "請選取此帳號後再編輯或刪除其金鑰"
+      },
+      "details": {
+        "byokUsage": "BYOK 用量",
+        "byokUsageDaily": "每日 BYOK 用量",
+        "byokUsageMonthly": "每月 BYOK 用量",
+        "byokUsageWeekly": "每週 BYOK 用量",
+        "createdAt": "建立時間",
+        "creator": "建立者",
+        "disabled": "已停用",
+        "expiresAt": "到期時間",
+        "heading": "金鑰詳細資料",
+        "includeByokInLimit": "計入 BYOK 用量",
+        "limit": "限額",
+        "limitMode": "限額模式",
+        "loadFailed": "無法載入金鑰詳細資料。",
+        "loading": "正在載入金鑰詳細資料…",
+        "remaining": "剩餘",
+        "reset": "重設週期",
+        "retry": "重試",
+        "updatedAt": "更新時間",
+        "usage": "用量",
+        "usageDaily": "每日用量",
+        "usageMonthly": "每月用量",
+        "usageWeekly": "每週用量",
+        "workspace": "工作區"
+      },
+      "heading": "OpenRouter 金鑰",
+      "legacyEligible_other": "可參與批次操作的舊版金鑰有 {{count}} 個；OpenRouter 金鑰不會參與。",
+      "status": {
+        "all": "全部",
+        "disabled": "已停用",
+        "enabled": "已啟用",
+        "expired": "已到期",
+        "unknown": "未知"
+      },
+      "statusFilter": {
+        "label": "金鑰狀態"
+      },
+      "values": {
+        "missing": "無可用資料",
+        "no": "否",
+        "unlimited": "不限額",
+        "yes": "是"
+      }
+    },
     "workspace": {
       "empty": "此帳號沒有可用的工作區。",
       "error": "無法載入工作區",
       "errorHelp": "請檢查帳號存取權限後重試。",
+      "fallback": "要求的工作區無法使用，現已顯示預設工作區。",
       "heading": "工作區",
       "label": "工作區",
       "loading": "正在載入工作區...",
@@ -554,11 +624,15 @@
     "singleton": "服務金鑰"
   },
   "showingCount_other": "顯示 {{count}} 個",
+  "showingCountPartial_other": "顯示至少 {{count}} 個",
+  "showingCountUnavailable": "顯示數量暫時無法取得",
   "title": "金鑰管理",
   "totalKeys_other": "總計 {{count}} 個金鑰",
   "unifiedApiGuidance": {
     "headerBridge": "將帳號 Key 一鍵匯入自建 AI 閘道後，多個 Key 即可透過同一個 AI API 使用；直接匯出到客戶端工具仍是免閘道路徑。"
   },
+  "totalKeysPartial_other": "總計至少 {{count}} 個金鑰",
+  "totalKeysUnavailable": "總數暫時無法取得",
   "unsupportedSource": {
     "description": "目前帳號的站點類型已支援儲存帳號，但擴充功能尚未適配此站點的金鑰列表協議。你可以提交站點支援請求，協助我們補齊金鑰管理能力。",
     "requestSiteSupport": "回報站點支援",

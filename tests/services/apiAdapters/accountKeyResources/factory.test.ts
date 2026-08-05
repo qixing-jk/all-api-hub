@@ -337,6 +337,43 @@ describe("defineAccountKeyResourceCapability", () => {
     expect(listScopes).toHaveBeenCalledTimes(2)
   })
 
+  it("keeps a structured partial scope inventory and refreshes only that cached read", async () => {
+    const teamScope = {
+      ...SCOPE,
+      scopeKey: "workspace-team",
+      routeKey: "team",
+      displayName: "Team workspace",
+      isDefault: false,
+    }
+    const listScopeInventory = vi
+      .fn()
+      .mockResolvedValueOnce({
+        scopes: [SCOPE],
+        partialFailure: {
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+        },
+      })
+      .mockResolvedValueOnce({ scopes: [SCOPE, teamScope] })
+    const definition = createDefinition({
+      listScopeInventory,
+    } as never)
+    const session = await openSession(definition)
+
+    await expect((session as any).listScopeInventory()).resolves.toEqual({
+      scopes: [SCOPE],
+      partialFailure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+      },
+    })
+    await expect(session.listScopes()).resolves.toEqual([SCOPE])
+    await expect((session as any).refreshScopeInventory()).resolves.toEqual({
+      scopes: [SCOPE, teamScope],
+    })
+    await expect(session.listScopes()).resolves.toEqual([SCOPE, teamScope])
+    expect(listScopeInventory).toHaveBeenCalledTimes(2)
+    expect(definition.listScopes).not.toHaveBeenCalled()
+  })
+
   it("does not share one caller's abort signal with another scope load", async () => {
     const firstAbort = new AbortController()
     const secondAbort = new AbortController()

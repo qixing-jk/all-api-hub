@@ -4,7 +4,7 @@ import type {
   EditableResourceProjection,
   ResourceFieldDescriptor,
   ResourceFieldIssue,
-} from "~/services/apiAdapters/contracts/managedResourceNative"
+} from "~/services/apiAdapters/contracts/resourceNative"
 
 export type ResourceFieldTextResolver = (t: TFunction) => string
 

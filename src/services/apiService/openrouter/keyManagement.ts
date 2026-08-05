@@ -26,6 +26,7 @@ import {
   type OpenRouterCreateKeyInput,
   type OpenRouterKeyInfo,
   type OpenRouterKeyListInput,
+  type OpenRouterPaginatedResult,
   type OpenRouterUpdateKeyInput,
   type OpenRouterWorkspace,
   type OpenRouterWorkspaceMember,
@@ -216,7 +217,7 @@ export async function fetchOpenRouterKeys(
 /**
  * OpenRouter documents `name`, limits, expiry, workspace, creator, and BYOK-limit fields
  * for creation; its plaintext `key` is returned only by this response.
- * https://openrouter.ai/docs/openapi/openapi.yaml
+ * https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml
  */
 export async function createOpenRouterKey(
   request: ApiServiceRequest,
@@ -283,7 +284,8 @@ export async function fetchOpenRouterKey(
 
 /**
  * OpenRouter's key update accepts mutable name, disabled, limit, limit reset,
- * and BYOK-limit fields. https://openrouter.ai/docs/openapi/openapi.yaml
+ * and BYOK-limit fields.
+ * https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml
  */
 export async function updateOpenRouterKey(
   request: ApiServiceRequest,
@@ -340,10 +342,11 @@ export async function deleteOpenRouterKey(
 }
 
 /**
- * The approved bootstrap plan intentionally treats `default` as a compatibility
- * locator. OpenRouter's current public OpenAPI documents `/workspaces/{id}` but
- * does not guarantee a reserved, mutation-proof `default` alias. If unsupported,
- * this request fails closed; callers must not guess or substitute a workspace.
+ * OpenRouter's hosted Management API resolves its default workspace through the
+ * `default` slug. Its public OpenAPI documents `/workspaces/{id}` accepting IDs or
+ * slugs; if a compatible deployment does not resolve this provider-owned slug,
+ * this request fails closed rather than guessing a workspace from inventory.
+ * https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml
  */
 export async function fetchOpenRouterDefaultWorkspace(
   request: ApiServiceRequest,
@@ -362,13 +365,13 @@ export async function fetchOpenRouterDefaultWorkspace(
 export async function fetchOpenRouterWorkspaces(
   request: ApiServiceRequest,
   input?: OpenRouterWorkspacePaginationInput,
-): Promise<OpenRouterWorkspace[]> {
+): Promise<OpenRouterPaginatedResult<OpenRouterWorkspace>> {
   const params = new URLSearchParams()
   appendPagination(params, input)
   const endpoint = params.size
     ? `${OPENROUTER_WORKSPACES_ENDPOINT}?${params}`
     : OPENROUTER_WORKSPACES_ENDPOINT
-  return parseResponse(
+  const response = parseResponse(
     openRouterWorkspaceListResponseSchema,
     await fetchRaw(
       request,
@@ -377,7 +380,8 @@ export async function fetchOpenRouterWorkspaces(
       { safeEndpoint: OPENROUTER_WORKSPACES_ENDPOINT },
     ),
     OPENROUTER_WORKSPACES_ENDPOINT,
-  ).data
+  )
+  return { data: response.data, totalCount: response.total_count }
 }
 
 /**
@@ -387,7 +391,7 @@ export async function fetchOpenRouterWorkspaceMembers(
   request: ApiServiceRequest,
   workspaceId: string,
   input?: OpenRouterWorkspaceMemberPaginationInput,
-): Promise<OpenRouterWorkspaceMember[]> {
+): Promise<OpenRouterPaginatedResult<OpenRouterWorkspaceMember>> {
   const normalizedWorkspaceId = workspaceId.trim()
   if (!normalizedWorkspaceId)
     throw invalidResponse(WORKSPACE_MEMBER_ENDPOINT_TEMPLATE)
@@ -404,7 +408,7 @@ export async function fetchOpenRouterWorkspaceMembers(
     params.set("limit", String(parsed.data.limit))
   }
   const endpoint = params.size ? `${baseEndpoint}?${params}` : baseEndpoint
-  return parseResponse(
+  const response = parseResponse(
     openRouterWorkspaceMemberListResponseSchema,
     await fetchRaw(
       request,
@@ -416,5 +420,6 @@ export async function fetchOpenRouterWorkspaceMembers(
       },
     ),
     WORKSPACE_MEMBER_ENDPOINT_TEMPLATE,
-  ).data
+  )
+  return { data: response.data, totalCount: response.total_count }
 }

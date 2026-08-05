@@ -12,7 +12,7 @@ import type {
   ResourceFailure,
   ResourceFieldDescriptor,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import type { ResourceFieldValue } from "~/services/apiAdapters/contracts/managedResourceNative"
+import type { ResourceFieldValue } from "~/services/apiAdapters/contracts/resourceNative"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -25,6 +25,7 @@ import {
   OPENROUTER_KEY_EDITOR_SECTION_ORDER,
   type OpenRouterKeyEditorMode,
 } from "../../presentation/accountKeyResourceFieldPolicy"
+import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
 
 export type AccountKeyResourceEditorDialogState = {
   /** Stable for the dialog session; changes only when opening a different editor. */
@@ -303,6 +304,7 @@ export function AccountKeyResourceEditorDialog({
             : null
       }
       focusWorkflowId={focusWorkflowId}
+      panelTestId={KEY_MANAGEMENT_TEST_IDS.nativeEditor}
     >
       {activeEditor && !activeEditor.terminalClose ? (
         <AccountKeyResourceEditorDialogSession
@@ -422,27 +424,42 @@ function AccountKeyResourceEditorDialogSession({
             const isLoading = editor.loadingFieldIds?.includes(
               descriptor.fieldId,
             )
+            // OpenRouter documents creator_user_id as optional and meaningful
+            // only for organization-owned keys:
+            // https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml
+            const isCreatorAssignmentUnavailable =
+              descriptor.fieldId === field.Creator &&
+              descriptor.nullable &&
+              failure?.code === "permission_denied"
             return [
               descriptor.fieldId,
               {
                 status: isLoading
                   ? "loading"
                   : failure
-                    ? "error"
+                    ? isCreatorAssignmentUnavailable
+                      ? "ready"
+                      : "error"
                     : options
                       ? "ready"
                       : "loading",
                 options: options ?? [],
-                ...(failure
+                ...(failure && !isCreatorAssignmentUnavailable
                   ? { errorMessage: feedbackDescription(failure, t) }
                   : {}),
-                ...(options?.length === 0
+                ...(isCreatorAssignmentUnavailable
                   ? {
                       emptyMessage: t(
-                        "keyManagement:openRouter.editor.options.creator.empty",
+                        "keyManagement:openRouter.editor.options.creator.unavailable",
                       ),
                     }
-                  : {}),
+                  : options?.length === 0
+                    ? {
+                        emptyMessage: t(
+                          "keyManagement:openRouter.editor.options.creator.empty",
+                        ),
+                      }
+                    : {}),
               },
             ]
           },
@@ -589,6 +606,7 @@ function AccountKeyResourceEditorDialogSession({
           loading={isSubmitting}
           disabled={hasUnresolvedDependentOptions}
           onClick={() => void submit()}
+          data-testid={KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton}
         >
           {t("keyManagement:openRouter.editor.actions.save")}
         </Button>

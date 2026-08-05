@@ -3,10 +3,13 @@ import { useTranslation } from "react-i18next"
 import { Alert, Button, SearchableSelect } from "~/components/ui"
 import type { AccountKeyScope } from "~/services/apiAdapters/contracts/accountKeyResource"
 
+import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
+
 export type OpenRouterWorkspaceSelectorProps = {
   scopes: readonly AccountKeyScope[]
   selectedScope: AccountKeyScope | null
   isLoading?: boolean
+  isRetrying?: boolean
   isPartial?: boolean
   error?: "unavailable" | "permission_denied" | "authentication_failed"
   onSelectScope: (scopeKey: string) => void
@@ -18,6 +21,7 @@ export function OpenRouterWorkspaceSelector({
   scopes,
   selectedScope,
   isLoading = false,
+  isRetrying = false,
   isPartial = false,
   error,
   onSelectScope,
@@ -27,6 +31,15 @@ export function OpenRouterWorkspaceSelector({
   const options = scopes.map((scope) => ({
     value: scope.scopeKey,
     label: `${scope.displayName} (${scope.routeKey})`,
+    ...(scope.secondaryLabel && scope.secondaryLabel !== scope.routeKey
+      ? {
+          suffix: (
+            <span className="text-muted-foreground ml-2 max-w-1/2 truncate text-xs">
+              {scope.secondaryLabel}
+            </span>
+          ),
+        }
+      : {}),
   }))
 
   return (
@@ -53,6 +66,7 @@ export function OpenRouterWorkspaceSelector({
               size="sm"
               variant="outline"
               onClick={onRetry}
+              disabled={isRetrying}
               aria-label={t("keyManagement:openRouter.workspace.retry")}
             >
               {t("keyManagement:openRouter.workspace.retry")}
@@ -61,6 +75,7 @@ export function OpenRouterWorkspaceSelector({
         </div>
       ) : null}
       <SearchableSelect
+        data-testid={KEY_MANAGEMENT_TEST_IDS.openRouterWorkspaceSelect}
         aria-label={t("keyManagement:openRouter.workspace.label")}
         options={options}
         value={selectedScope?.scopeKey ?? ""}
@@ -92,6 +107,7 @@ export function OpenRouterWorkspaceSelector({
               size="sm"
               variant="outline"
               onClick={onRetry}
+              disabled={isRetrying}
               aria-label={t("keyManagement:openRouter.workspace.retry")}
             >
               {t("keyManagement:openRouter.workspace.retry")}

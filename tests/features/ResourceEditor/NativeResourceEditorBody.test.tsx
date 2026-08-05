@@ -82,6 +82,50 @@ describe("NativeResourceEditorBody", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Permission denied")
   })
 
+  it("politely announces customized controlled empty option guidance", () => {
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: "creator",
+            type: "select",
+            options: [],
+            optionLoader: { dependsOn: [] },
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "creator",
+              section: "basic",
+              order: 1,
+              renderer: "select",
+              resolveLabel: () => "Creator",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ creator: null }}
+        onValueChange={() => undefined}
+        controlledOptionStates={{
+          creator: {
+            status: "ready",
+            options: [],
+            emptyMessage: "Member assignment is unavailable.",
+          },
+        }}
+      />,
+    )
+
+    const guidance = screen.getByRole("status")
+    expect(guidance).toHaveTextContent("Member assignment is unavailable.")
+    expect(guidance).toHaveAttribute("aria-live", "polite")
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+  })
+
   it("renders and selects ready controller-owned options without copying them into descriptors", async () => {
     const onValueChange = vi.fn()
     const user = userEvent.setup()

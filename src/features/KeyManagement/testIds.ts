@@ -36,6 +36,12 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   accountScopeSelect: "key-management-account-scope-select",
   accountScopeAllOption: "key-management-account-scope-all-option",
   expandAllButton: "key-management-expand-all-button",
+  openRouterWorkspaceSelect: "key-management-openrouter-workspace-select",
+  nativeEditor: "key-management-native-editor",
+  nativeStatusFilter: "key-management-native-status-filter",
+  nativeEditorSubmitButton: "key-management-native-editor-submit-button",
+  nativeKeyRow: "key-management-native-key-row",
+  nativeDeleteConfirmButton: "key-management-native-delete-confirm-button",
 } as const
 
 export const KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX =

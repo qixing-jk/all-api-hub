@@ -1,6 +1,8 @@
 {
   "accountSummary": {
     "keys_other": "{{count}} key",
+    "keysUnavailable": "Không thể xác định số lượng",
+    "knownKeys_other": "Ít nhất {{count}} key",
     "loadFailed": "Tải thất bại",
     "title": "Tổng quan tài khoản",
     "unsupported": "chưa hỗ trợ"
@@ -181,6 +183,8 @@
     "warningTitle": "Lưu ý"
   },
   "enabledCount_other": "Đã bật {{count}}",
+  "enabledCountPartial_other": "Đã bật ít nhất {{count}}",
+  "enabledCountUnavailable": "Không thể xác định số lượng đã bật",
   "keyDetails": {
     "createResponseOnlySecret": "Trang web này chỉ cung cấp giá trị đã che sau khi tạo, nên không thể xem lại khóa đầy đủ.",
     "createTime": "Thời gian tạo:",
@@ -313,6 +317,19 @@
     "warningTitle": "Khóa này chỉ có thể được xem một lần"
   },
   "openRouter": {
+    "delete": {
+      "confirm": "Xóa khóa",
+      "description": "Xóa vĩnh viễn {{name}} khỏi OpenRouter? Không thể hoàn tác thao tác xóa từ xa này.",
+      "feedback": {
+        "authenticationFailed": "Đăng nhập lại rồi làm mới.",
+        "error": "Không thể xóa khóa này. Hãy làm mới rồi thử lại.",
+        "permissionDenied": "Bạn không có quyền xóa khóa này.",
+        "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy làm mới trước khi thử lại.",
+        "uncertain": "Trạng thái từ xa có thể đã thay đổi. Hãy làm mới khóa trước khi thử lại."
+      },
+      "refresh": "Làm mới khóa",
+      "title": "Xóa khóa API?"
+    },
     "editor": {
       "actions": {
         "cancel": "Hủy",
@@ -386,6 +403,7 @@
         "creator": {
           "empty": "Không có thành viên cho không gian làm việc này.",
           "none": "Không có người tạo",
+          "unavailable": "Tính năng gán thành viên không khả dụng cho không gian làm việc đã chọn. Bạn có thể tạo khóa mà không cần chọn thành viên.",
           "unknown": "Thành viên không xác định"
         },
         "limitMode": {
@@ -437,10 +455,62 @@
         "title": "Bỏ các thay đổi chưa lưu?"
       }
     },
+    "list": {
+      "actions": {
+        "delete": "Xóa khóa",
+        "details": "Xem chi tiết",
+        "edit": "Sửa khóa",
+        "singleAccountOnly": "Chọn tài khoản này để chỉnh sửa hoặc xóa khóa"
+      },
+      "details": {
+        "byokUsage": "Sử dụng BYOK",
+        "byokUsageDaily": "Sử dụng BYOK hằng ngày",
+        "byokUsageMonthly": "Sử dụng BYOK hằng tháng",
+        "byokUsageWeekly": "Sử dụng BYOK hằng tuần",
+        "createdAt": "Đã tạo",
+        "creator": "Người tạo",
+        "disabled": "Đã tắt",
+        "expiresAt": "Hết hạn",
+        "heading": "Chi tiết khóa",
+        "includeByokInLimit": "Bao gồm sử dụng BYOK",
+        "limit": "Giới hạn",
+        "limitMode": "Chế độ giới hạn",
+        "loadFailed": "Không thể tải chi tiết khóa.",
+        "loading": "Đang tải chi tiết khóa…",
+        "remaining": "Còn lại",
+        "reset": "Chu kỳ đặt lại",
+        "retry": "Thử lại",
+        "updatedAt": "Đã cập nhật",
+        "usage": "Sử dụng",
+        "usageDaily": "Sử dụng hàng ngày",
+        "usageMonthly": "Sử dụng hàng tháng",
+        "usageWeekly": "Sử dụng hàng tuần",
+        "workspace": "Không gian làm việc"
+      },
+      "heading": "Khóa OpenRouter",
+      "legacyEligible_other": "Chỉ {{count}} khóa cũ đủ điều kiện cho thao tác hàng loạt; khóa OpenRouter không được áp dụng.",
+      "status": {
+        "all": "Tất cả",
+        "disabled": "Đã tắt",
+        "enabled": "Đang bật",
+        "expired": "Đã hết hạn",
+        "unknown": "Không rõ"
+      },
+      "statusFilter": {
+        "label": "Trạng thái khóa"
+      },
+      "values": {
+        "missing": "Không khả dụng",
+        "no": "Không",
+        "unlimited": "Không giới hạn",
+        "yes": "Có"
+      }
+    },
     "workspace": {
       "empty": "Không có không gian làm việc nào cho tài khoản này.",
       "error": "Không thể tải không gian làm việc",
       "errorHelp": "Kiểm tra quyền truy cập tài khoản rồi thử lại.",
+      "fallback": "Không có không gian làm việc được yêu cầu; đang hiển thị không gian mặc định.",
       "heading": "Không gian làm việc",
       "label": "Không gian làm việc",
       "loading": "Đang tải không gian làm việc...",
@@ -554,11 +624,15 @@
     "singleton": "Khóa dịch vụ"
   },
   "showingCount_other": "Đang hiển thị {{count}}",
+  "showingCountPartial_other": "Đang hiển thị ít nhất {{count}}",
+  "showingCountUnavailable": "Không thể xác định số lượng đang hiển thị",
   "title": "Quản lý khóa",
   "totalKeys_other": "Tổng cộng {{count}} key",
   "unifiedApiGuidance": {
     "headerBridge": "Khi muốn AI gateway tự triển khai tổng hợp nhiều key thành một AI API thống nhất, hãy nhập key tài khoản làm kênh gateway. Xuất trực tiếp sang công cụ client vẫn là một đường riêng."
   },
+  "totalKeysPartial_other": "Tổng cộng ít nhất {{count}} key",
+  "totalKeysUnavailable": "Không thể xác định tổng số",
   "unsupportedSource": {
     "description": "Loại trang của tài khoản này có thể được lưu, nhưng tiện ích chưa thích ứng giao thức danh sách khóa của trang này. Hãy gửi yêu cầu hỗ trợ trang để giúp chúng tôi bổ sung khả năng quản lý khóa.",
     "requestSiteSupport": "Yêu cầu hỗ trợ trang",

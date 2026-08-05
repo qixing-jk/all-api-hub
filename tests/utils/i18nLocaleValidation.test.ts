@@ -49,6 +49,25 @@ function flattenLocaleKeys(
 }
 
 /**
+ * Flattens nested locale objects while retaining their leaf values.
+ */
+function flattenLocaleEntries(
+  value: Record<string, unknown>,
+  prefix = "",
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(value).flatMap(([key, child]) => {
+      const nextKey = prefix ? `${prefix}.${key}` : key
+      return child && typeof child === "object" && !Array.isArray(child)
+        ? Object.entries(
+            flattenLocaleEntries(child as Record<string, unknown>, nextKey),
+          )
+        : [[nextKey, child]]
+    }),
+  )
+}
+
+/**
  * Loads one language's locale bundles keyed by namespace.
  */
 async function readLocaleMap(language: SupportedUiLanguage) {
@@ -281,6 +300,75 @@ function mayContainStaticTranslationReference(sourceText: string) {
 }
 
 describe("i18n locale validation", () => {
+  it("keeps incomplete key-count copy available in every locale", async () => {
+    const requiredExactKeys = [
+      "accountSummary.keysUnavailable",
+      "totalKeysUnavailable",
+      "enabledCountUnavailable",
+      "showingCountUnavailable",
+    ]
+    const requiredPluralFamilies = [
+      "accountSummary.knownKeys",
+      "totalKeysPartial",
+      "enabledCountPartial",
+      "showingCountPartial",
+    ]
+
+    for (const language of SUPPORTED_UI_LANGUAGES) {
+      const resource = JSON.parse(
+        await fs.readFile(
+          path.join(LOCALES_DIR, language, "keyManagement.json"),
+          "utf8",
+        ),
+      ) as Record<string, unknown>
+      const flat = flattenLocaleEntries(resource)
+
+      for (const key of requiredExactKeys) {
+        expect(flat[key], `${language}:${key}`).toEqual(expect.any(String))
+      }
+      for (const family of requiredPluralFamilies) {
+        expect(
+          Object.entries(flat).some(
+            ([key, value]) =>
+              (key === family || key.startsWith(`${family}_`)) &&
+              typeof value === "string" &&
+              value.trim().length > 0,
+          ),
+          `${language}:${family}`,
+        ).toBe(true)
+      }
+    }
+  })
+
+  it("keeps OpenRouter legacy eligibility copy user-facing in every locale", async () => {
+    const placeholder = "keyManagement:openRouter.list.legacyEligible"
+
+    for (const language of SUPPORTED_UI_LANGUAGES) {
+      const resource = JSON.parse(
+        await fs.readFile(
+          path.join(LOCALES_DIR, language, "keyManagement.json"),
+          "utf8",
+        ),
+      )
+      const list = resource.openRouter.list as Record<string, unknown>
+      const values = Object.entries(list)
+        .filter(
+          ([key]) =>
+            key === "legacyEligible" || key.startsWith("legacyEligible_"),
+        )
+        .map(([, value]) => value)
+
+      expect(values.length, language).toBeGreaterThan(0)
+      expect(values, language).not.toContain(placeholder)
+      expect(
+        values.every(
+          (value) => typeof value === "string" && value.trim().length > 0,
+        ),
+        language,
+      ).toBe(true)
+    }
+  })
+
   it("keeps locale namespaces and normalized key families aligned", async () => {
     const [baseLanguage, ...otherLanguages] = SUPPORTED_UI_LANGUAGES
     const baseLocaleMap = await readLocaleMap(baseLanguage)

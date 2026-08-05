@@ -209,6 +209,157 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.notice?.kind).toBe("workspace-fallback")
   })
 
+  it("keeps default-scope rows usable while retrying a partial workspace inventory", async () => {
+    const defaultScope = {
+      scopeKey: "workspace-default-id",
+      routeKey: "default",
+      displayName: "Default workspace",
+      isDefault: true,
+    }
+    const teamScope = {
+      scopeKey: "workspace-team-id",
+      routeKey: "team",
+      displayName: "Team workspace",
+      secondaryLabel: "team",
+      isDefault: false,
+    }
+    const facts = createFacts(defaultScope.scopeKey, "key-example")
+    const list = vi.fn().mockResolvedValue({ items: [facts] })
+    const session = {
+      resolveDefaultScope: vi.fn().mockResolvedValue(defaultScope),
+      listScopes: vi.fn().mockResolvedValue([defaultScope]),
+      listScopeInventory: vi.fn().mockResolvedValue({
+        scopes: [defaultScope],
+        partialFailure: {
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+          message: "Controlled workspace inventory failure",
+        },
+      }),
+      refreshScopeInventory: vi.fn().mockResolvedValue({
+        scopes: [defaultScope, teamScope],
+      }),
+      openCollection: vi.fn().mockResolvedValue({ list }),
+      openCreateEditor: vi.fn(),
+    }
+    mockNativeResourceSession(vi.fn().mockResolvedValue(session))
+
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: {
+          accountId: "account-example",
+          workspace: defaultScope.routeKey,
+        },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.rows).toEqual([facts]))
+    expect((result.current as any).scopeInventoryFailure).toMatchObject({
+      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+    })
+    expect(result.current.failures).toEqual({})
+    expect(result.current.scopes).toEqual([defaultScope])
+
+    await act(async () => {
+      await (result.current as any).retryScopeInventory()
+    })
+
+    expect(session.refreshScopeInventory).toHaveBeenCalledOnce()
+    expect(result.current.scopes).toEqual([defaultScope, teamScope])
+    expect((result.current as any).scopeInventoryFailure).toBeNull()
+    expect(result.current.rows).toEqual([facts])
+    expect(list).toHaveBeenCalledOnce()
+    expect(session.openCollection).toHaveBeenCalledOnce()
+  })
+
+  it("ignores a late workspace-inventory retry after the account session changes", async () => {
+    const retry = deferred<any>()
+    const firstScope = {
+      scopeKey: "workspace-first-id",
+      routeKey: "first",
+      displayName: "First workspace",
+      isDefault: true,
+    }
+    const secondScope = {
+      scopeKey: "workspace-second-id",
+      routeKey: "second",
+      displayName: "Second workspace",
+      isDefault: true,
+    }
+    const staleScope = {
+      scopeKey: "workspace-stale-id",
+      routeKey: "stale",
+      displayName: "Stale workspace",
+      isDefault: false,
+    }
+    const firstSession = {
+      resolveDefaultScope: vi.fn().mockResolvedValue(firstScope),
+      listScopes: vi.fn().mockResolvedValue([firstScope]),
+      listScopeInventory: vi.fn().mockResolvedValue({
+        scopes: [firstScope],
+        partialFailure: {
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+        },
+      }),
+      refreshScopeInventory: vi.fn(() => retry.promise),
+      openCollection: vi.fn().mockResolvedValue({
+        list: vi.fn().mockResolvedValue({ items: [] }),
+      }),
+      openCreateEditor: vi.fn(),
+    }
+    const secondSession = {
+      resolveDefaultScope: vi.fn().mockResolvedValue(secondScope),
+      listScopes: vi.fn().mockResolvedValue([secondScope]),
+      listScopeInventory: vi.fn().mockResolvedValue({ scopes: [secondScope] }),
+      refreshScopeInventory: vi.fn(),
+      openCollection: vi.fn().mockResolvedValue({
+        list: vi.fn().mockResolvedValue({ items: [] }),
+      }),
+      openCreateEditor: vi.fn(),
+    }
+    mockNativeResourceSession(
+      vi.fn((input: { account: { id: string } }) =>
+        Promise.resolve(
+          input.account.id === "account-one" ? firstSession : secondSession,
+        ),
+      ),
+    )
+    const accounts = [
+      createAccount("account-one"),
+      createAccount("account-two"),
+    ]
+    const { result, rerender } = renderHook(
+      ({ selectedAccount, workspace }) =>
+        useAccountKeyResourceController({
+          accounts,
+          selectedAccount,
+          routeParams: { accountId: selectedAccount, workspace },
+        }),
+      { initialProps: { selectedAccount: "account-one", workspace: "first" } },
+    )
+
+    await waitFor(() =>
+      expect(result.current.selectedScope).toEqual(firstScope),
+    )
+    act(() => {
+      void (result.current as any).retryScopeInventory()
+    })
+    await waitFor(() =>
+      expect(firstSession.refreshScopeInventory).toHaveBeenCalledOnce(),
+    )
+
+    rerender({ selectedAccount: "account-two", workspace: "second" })
+    await waitFor(() =>
+      expect(result.current.selectedScope).toEqual(secondScope),
+    )
+    await act(async () => retry.resolve({ scopes: [firstScope, staleScope] }))
+
+    expect(result.current.selectedScope).toEqual(secondScope)
+    expect(result.current.scopes).toEqual([secondScope])
+    expect((result.current as any).scopeInventoryFailure).toBeNull()
+  })
+
   it("rejects an unauthorized route scope when it names a different account", async () => {
     const openCollection = vi.fn().mockResolvedValue({
       list: vi.fn().mockResolvedValue({ items: [] }),
@@ -1831,16 +1982,16 @@ describe("useAccountKeyResourceController", () => {
     const finalList = deferred<any>()
     const accounts = [
       {
+        ...createAccount("account-pending"),
+        baseUrl: "https://three.example.invalid",
+      },
+      {
         ...createAccount("account-one"),
         baseUrl: "https://one.example.invalid",
       },
       {
         ...createAccount("account-failed"),
         baseUrl: "https://two.example.invalid",
-      },
-      {
-        ...createAccount("account-pending"),
-        baseUrl: "https://three.example.invalid",
       },
     ]
     mockNativeResourceSession(
@@ -1891,10 +2042,29 @@ describe("useAccountKeyResourceController", () => {
         error: 1,
       }),
     )
-    finalList.resolve({ items: [] })
+    expect(result.current.failures).toHaveProperty("account-failed")
+    expect(result.current.rows.map((row) => row.ref.accountId)).toEqual([
+      "account-one",
+    ])
+    expect(result.current.settledAccountIds).toEqual([
+      "account-one",
+      "account-failed",
+    ])
+    finalList.resolve({
+      items: [
+        {
+          ...createFacts("scope-account-pending", "key-pending"),
+          ref: {
+            ...createFacts("scope-account-pending", "key-pending").ref,
+            accountId: "account-pending",
+          },
+        },
+      ],
+    })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
     expect(result.current.failures).toHaveProperty("account-failed")
     expect(result.current.rows.map((row) => row.ref.accountId)).toEqual([
+      "account-pending",
       "account-one",
     ])
     expect(result.current.progress).toEqual({
@@ -1903,6 +2073,11 @@ describe("useAccountKeyResourceController", () => {
       loading: 0,
       error: 1,
     })
+    expect(result.current.settledAccountIds).toEqual([
+      "account-pending",
+      "account-one",
+      "account-failed",
+    ])
   })
 
   it("merges only native default scopes in all-account mode", async () => {
@@ -1973,8 +2148,8 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.failures).toHaveProperty("account-failed")
     expect(result.current.failures).not.toHaveProperty("account-legacy")
     expect(result.current.progress).toEqual({
-      total: 3,
-      loaded: 2,
+      total: 2,
+      loaded: 1,
       loading: 0,
       error: 1,
     })
@@ -2036,6 +2211,55 @@ describe("useAccountKeyResourceController", () => {
     await waitFor(() => expect(list).toHaveBeenCalledTimes(3))
     expect(list.mock.calls[2]?.[0]).toEqual({ search: "does-not-match" })
     expect(result.current.rows).toEqual([])
+  })
+
+  it("resets a hidden single-account status filter when switching to all accounts", async () => {
+    const enabled = createFacts("workspace-default-id", "key-enabled")
+    const disabled = {
+      ...createFacts("workspace-default-id", "key-disabled"),
+      status: "disabled" as const,
+    }
+    const collection = {
+      list: vi.fn().mockResolvedValue({ items: [enabled, disabled] }),
+      get: vi.fn(),
+      openEditEditor: vi.fn(),
+      delete: vi.fn(),
+    }
+    const session = {
+      resolveDefaultScope: vi.fn().mockResolvedValue({
+        scopeKey: "workspace-default-id",
+        routeKey: "team",
+        displayName: "Team",
+        isDefault: true,
+      }),
+      listScopes: vi.fn().mockResolvedValue([]),
+      openCollection: vi.fn().mockResolvedValue(collection),
+      openCreateEditor: vi.fn(),
+    }
+    mockNativeResourceSession(vi.fn().mockResolvedValue(session))
+    const account = createAccount("account-example")
+    const { result, rerender } = renderHook(
+      ({ selectedAccount }) =>
+        useAccountKeyResourceController({
+          accounts: [account],
+          selectedAccount,
+          routeParams: {
+            accountId: selectedAccount,
+            ...(selectedAccount === account.id ? { workspace: "team" } : {}),
+          },
+        }),
+      { initialProps: { selectedAccount: account.id } },
+    )
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(2))
+    act(() => result.current.setStatusFilter("disabled"))
+    expect(result.current.rows).toEqual([disabled])
+
+    rerender({ selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE })
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.statusFilter).toBe("all")
+    expect(result.current.rows).toEqual([enabled, disabled])
   })
 
   it.each([
@@ -2813,6 +3037,13 @@ describe("useAccountKeyResourceController", () => {
     const session = {
       resolveDefaultScope: vi.fn().mockResolvedValue(scopes[0]),
       listScopes: vi.fn().mockResolvedValue(scopes),
+      listScopeInventory: vi.fn().mockResolvedValue({
+        scopes,
+        partialFailure: {
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+        },
+      }),
+      refreshScopeInventory: vi.fn().mockResolvedValue({ scopes }),
       openCollection: vi.fn().mockResolvedValue(collection),
       openCreateEditor: vi.fn().mockResolvedValue(createdEditor),
     }
@@ -2840,6 +3071,13 @@ describe("useAccountKeyResourceController", () => {
     expect(collection.get).not.toHaveBeenCalled()
     expect(collection.delete).not.toHaveBeenCalled()
     expect(result.current.createdSecret).toBe(createdSecret)
+
+    const keyListCallsBeforeScopeRetry = collection.list.mock.calls.length
+    await act(async () => result.current.retryScopeInventory())
+    expect(session.refreshScopeInventory).toHaveBeenCalledOnce()
+    expect(result.current.scopeInventoryFailure).toBeNull()
+    expect(result.current.createdSecret).toBe(createdSecret)
+    expect(collection.list).toHaveBeenCalledTimes(keyListCallsBeforeScopeRetry)
   })
 
   it("fresh-reads the derived create destination after an uncertain result", async () => {
@@ -3453,6 +3691,72 @@ describe("useAccountKeyResourceController", () => {
     })
     await waitFor(() => expect(result.current.freshReadRequired).toBe(true))
     expect(result.current.deleteState.failure).toBeNull()
+  })
+
+  it("ignores an aborted detail request after a replacement detail succeeds", async () => {
+    const firstFacts = createFacts("workspace-default-id", "key-first")
+    const secondFacts = createFacts("workspace-default-id", "key-second")
+    const firstDetail = deferred<any>()
+    const secondDetail = deferred<any>()
+    let firstSignal: AbortSignal | undefined
+    const collection = {
+      list: vi.fn().mockResolvedValue({ items: [firstFacts, secondFacts] }),
+      get: vi.fn((ref: any, options: { signal?: AbortSignal }) => {
+        if (ref.resourceId === firstFacts.ref.resourceId) {
+          firstSignal = options.signal
+          return firstDetail.promise
+        }
+        return secondDetail.promise
+      }),
+      openEditEditor: vi.fn(),
+      delete: vi.fn(),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-default-id",
+          routeKey: "team",
+          displayName: "Team",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue(collection),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [createAccount("account-example")],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example", workspace: "team" },
+      }),
+    )
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(2))
+    let firstRequest!: Promise<void>
+    act(() => {
+      firstRequest = result.current.openDetail(firstFacts.ref)
+    })
+    await waitFor(() => expect(collection.get).toHaveBeenCalledTimes(1))
+
+    let secondRequest!: Promise<void>
+    act(() => {
+      secondRequest = result.current.openDetail(secondFacts.ref)
+    })
+    await waitFor(() => expect(firstSignal?.aborted).toBe(true))
+
+    const expandedSecondFacts = {
+      ...secondFacts,
+      displayName: "Second key details",
+    }
+    await act(async () => {
+      secondDetail.resolve(expandedSecondFacts)
+      await Promise.all([firstRequest, secondRequest])
+    })
+
+    expect(result.current.detail).toBe(expandedSecondFacts)
+    expect(result.current.detailFailure).toBeNull()
+    expect(result.current.isDetailLoading).toBe(false)
   })
 
   it("loads details and serializes delete commands with redacted analytics", async () => {
