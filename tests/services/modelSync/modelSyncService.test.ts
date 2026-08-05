@@ -1118,6 +1118,113 @@ describe("ModelSyncService - channel execution", () => {
     }
   })
 
+  it.each(["thrown", "malformed"] as const)(
+    "propagates a %s write failure without replay",
+    async (failureKind) => {
+      fetchChannelModelsMock.mockResolvedValue(["new-model"])
+      const thrown = new Error("model write invariant failed")
+      if (failureKind === "thrown") {
+        updateChannelModelsMock.mockRejectedValue(thrown)
+      } else {
+        updateChannelModelsMock.mockResolvedValue(undefined)
+      }
+      const service = new ModelSyncService(makeExampleRuntimeConfig())
+
+      const execution = service.runForChannel(
+        makeChannel({ id: 211, models: "old-model" }),
+        2,
+      )
+
+      if (failureKind === "thrown") {
+        await expect(execution).rejects.toBe(thrown)
+      } else {
+        await expect(execution).rejects.toThrow(
+          "Invalid managed site mutation result",
+        )
+      }
+      expect(updateChannelModelsMock).toHaveBeenCalledOnce()
+      expect(fetchChannelModelsMock).toHaveBeenCalledOnce()
+      if (failureKind === "thrown") {
+        expect(loggerMocks.error).not.toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ error: thrown }),
+        )
+      }
+    },
+  )
+
+  it.each([
+    { label: "null", value: null },
+    { label: "undefined", value: undefined },
+    { label: "string", value: "primitive write failure" },
+    { label: "symbol", value: Symbol("primitive write failure") },
+  ])(
+    "propagates a $label write failure without retry or raw logging",
+    async ({ value }) => {
+      vi.useFakeTimers()
+      fetchChannelModelsMock.mockResolvedValue(["new-model"])
+      updateChannelModelsMock.mockRejectedValue(value)
+      const service = new ModelSyncService(makeExampleRuntimeConfig())
+
+      try {
+        const observed = service
+          .runForChannel(makeChannel({ id: 212, models: "old-model" }), 2)
+          .then(
+            () => ({ status: "resolved" as const, error: undefined }),
+            (error: unknown) => ({ status: "rejected" as const, error }),
+          )
+        await vi.runAllTimersAsync()
+
+        await expect(observed).resolves.toEqual({
+          status: "rejected",
+          error: value,
+        })
+        expect(updateChannelModelsMock).toHaveBeenCalledOnce()
+        expect(fetchChannelModelsMock).toHaveBeenCalledOnce()
+        expect(loggerMocks.error).not.toHaveBeenCalledWith(
+          "Unexpected error for channel",
+          expect.objectContaining({ error: value }),
+        )
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it("does not carry write-failure identity into a later read operation", async () => {
+    vi.useFakeTimers()
+    const reused = new Error("reused operation failure")
+    fetchChannelModelsMock
+      .mockResolvedValueOnce(["new-model"])
+      .mockRejectedValueOnce(reused)
+      .mockResolvedValueOnce(["old-model"])
+    updateChannelModelsMock.mockRejectedValueOnce(reused)
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
+
+    try {
+      await expect(
+        service.runForChannel(makeChannel({ id: 213, models: "old-model" }), 0),
+      ).rejects.toBe(reused)
+
+      const laterRead = service
+        .runForChannel(makeChannel({ id: 214, models: "old-model" }), 1)
+        .then(
+          (result) => ({ status: "resolved" as const, result }),
+          (error: unknown) => ({ status: "rejected" as const, error }),
+        )
+      await vi.runAllTimersAsync()
+
+      await expect(laterRead).resolves.toMatchObject({
+        status: "resolved",
+        result: { channelId: 214, ok: true, attempts: 1 },
+      })
+      expect(fetchChannelModelsMock).toHaveBeenCalledTimes(3)
+      expect(updateChannelModelsMock).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it.each(["partial", "uncertain"] as const)(
     "requests a fresh channel read and never replays a %s write",
     async (outcome) => {
@@ -2123,6 +2230,7 @@ describe("ModelSyncService - batching and mapping", () => {
         expect.objectContaining({ id: 10 }),
         2,
         expect.any(AbortSignal),
+        expect.any(Object),
       )
       expect(result.statistics).toMatchObject({
         total: 1,

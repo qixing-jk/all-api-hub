@@ -49,6 +49,10 @@ import {
 } from "./channelModelFilterEvaluator"
 import { runWithChannelProcessingTimeout } from "./channelProcessingTimeout"
 import { RateLimiter } from "./rateLimiter"
+import {
+  createModelSyncWriteFailureBoundary,
+  type ModelSyncWriteFailureBoundary,
+} from "./writeFailureBoundary"
 
 const PROBE_FILTER_TIMEOUT_MS = 30_000
 
@@ -573,7 +577,10 @@ export class ModelSyncService {
         reconcile: () => this.reconcileChannelMutation(abortSignal),
       })
     } catch (error: any) {
-      logger.error("Failed to update channel", { channelId: channel.id, error })
+      logger.error("Failed to update channel", {
+        channelId: channel.id,
+        ...(error instanceof ModelSyncMutationError ? { error } : {}),
+      })
       throw error
     }
   }
@@ -619,7 +626,7 @@ export class ModelSyncService {
     } catch (error) {
       logger.error("Failed to update channel mapping", {
         channelId: channel.id,
-        error,
+        ...(error instanceof ModelSyncMutationError ? { error } : {}),
       })
       throw error
     }
@@ -635,6 +642,7 @@ export class ModelSyncService {
     channel: ManagedSiteChannel,
     maxRetries: number = 2,
     abortSignal?: AbortSignal,
+    writeFailureBoundary: ModelSyncWriteFailureBoundary = createModelSyncWriteFailureBoundary(),
   ): Promise<ExecutionItemResult> {
     let attempts = 0
     let lastError: any = null
@@ -679,11 +687,18 @@ export class ModelSyncService {
 
           if (this.haveModelsChanged(oldModels, channelScopedModels)) {
             // Only push an update when model sets differ to avoid unnecessary writes
-            await this.updateChannelModels(
-              channel,
-              channelScopedModels,
-              abortSignal,
-            )
+            try {
+              await this.updateChannelModels(
+                channel,
+                channelScopedModels,
+                abortSignal,
+              )
+            } catch (error) {
+              if (!(error instanceof ModelSyncMutationError)) {
+                writeFailureBoundary.capture(error)
+              }
+              throw error
+            }
             channel.models = channelScopedModels.join(",")
           }
 
@@ -701,6 +716,7 @@ export class ModelSyncService {
           probeFilterAbort.cleanup()
         }
       } catch (error: any) {
+        if (writeFailureBoundary.matches(error)) throw error
         if (abortSignal?.aborted) {
           throw error
         }
@@ -786,16 +802,23 @@ export class ModelSyncService {
 
         const channel = channels[currentIndex]
         let result: ExecutionItemResult
+        const writeFailureBoundary = createModelSyncWriteFailureBoundary()
 
         try {
           result = await runWithChannelProcessingTimeout(
             (abortSignal) =>
-              this.runForChannel(channel, maxRetries, abortSignal),
+              this.runForChannel(
+                channel,
+                maxRetries,
+                abortSignal,
+                writeFailureBoundary,
+              ),
             channel,
             maxRetries,
             channelProcessingTimeout,
           )
         } catch (error: any) {
+          if (writeFailureBoundary.matches(error)) throw error
           logger.error("Unexpected error for channel", {
             channelId: channel.id,
             error,

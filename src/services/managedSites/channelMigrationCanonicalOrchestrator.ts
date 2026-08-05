@@ -161,7 +161,6 @@ type ExecuteManagedSiteMigrationCoreParams = {
   create: (
     command: ManagedSiteMigrationExecutionCommand,
   ) => Promise<ManagedSiteMigrationCreateResult>
-  isMutationStateUncertain?: (error: unknown) => boolean
 }
 
 /** Executes canonical commands while keeping credentials local to each create. */
@@ -275,21 +274,14 @@ export async function executeManagedSiteMigrationCore(
         credential: credentialResolution.credential,
       })
     } catch (error) {
-      const uncertain = params.isMutationStateUncertain?.(error) ?? false
-      if (uncertain) {
+      if (params.signal?.aborted || isAbortError(error)) {
         append(item, {
           status: "uncertain",
           failureCode: migrationFailures.MutationStateUncertain,
         })
         throwIfExecutionCancelled(index + 1, error)
-        continue
       }
-      throwIfExecutionCancelled(index, error)
-      append(item, {
-        status: "failed",
-        failureCode: migrationFailures.Unexpected,
-      })
-      continue
+      throw error
     }
 
     if (createResult.status === "created") {

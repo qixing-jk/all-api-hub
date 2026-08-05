@@ -12,6 +12,7 @@ import {
   getManagedSiteNoChannelsToSyncMessage,
   getManagedSiteTargetOptions,
   hasUsableManagedSiteChannelKey,
+  mergeManagedResourceSecretCollections,
   needsManagedSiteChannelKeyResolution,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
@@ -19,6 +20,28 @@ import {
 const translate = (key: string) => key
 
 describe("managedSite utils", () => {
+  it("merges secret collections immutably with dedupe and incomplete dominance", () => {
+    const first = Object.freeze({
+      knownSecrets: Object.freeze(["secret-a", "secret-b"]),
+      complete: true,
+    })
+    const second = Object.freeze({
+      knownSecrets: Object.freeze(["secret-b", "secret-c"]),
+      complete: false,
+    })
+
+    const merged = mergeManagedResourceSecretCollections(first, second)
+
+    expect(merged).toEqual({
+      knownSecrets: ["secret-a", "secret-b", "secret-c"],
+      complete: false,
+    })
+    expect(Object.isFrozen(merged)).toBe(true)
+    expect(Object.isFrozen(merged.knownSecrets)).toBe(true)
+    expect(first.knownSecrets).toEqual(["secret-a", "secret-b"])
+    expect(second.knownSecrets).toEqual(["secret-b", "secret-c"])
+  })
+
   it("collects provider secrets from each runtime config shape", () => {
     expect(
       collectManagedConfigSecrets({

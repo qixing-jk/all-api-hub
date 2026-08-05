@@ -1,6 +1,5 @@
 import {
-  invokeManagedSiteMutationAttempt,
-  MANAGED_SITE_MUTATION_ATTEMPT_STATES,
+  assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
   toPrivateManagedSiteMutationOutput,
 } from "~/services/managedSites/mutations"
@@ -50,7 +49,7 @@ type LegacyManagedResourceBulkDeleteDependencies = {
   refresh: () => Promise<boolean>
 }
 
-const DELETE_FAILED_FALLBACK = "Delete failed"
+export const LEGACY_MANAGED_RESOURCE_DELETE_FAILED_FALLBACK = "Delete failed"
 
 const toResult = (
   target: LegacyManagedResourceDeleteTarget,
@@ -84,6 +83,10 @@ export class LegacyManagedResourceBulkDeleteController {
 
   getPendingTargets(): LegacyManagedResourceDeleteTarget[] {
     return this.pendingTargets.map((target) => ({ ...target }))
+  }
+
+  requiresRefresh(): boolean {
+    return this.replayBlocked
   }
 
   markRefreshAccepted(): void {
@@ -144,32 +147,19 @@ export class LegacyManagedResourceBulkDeleteController {
         targets,
         LEGACY_DELETE_CONCURRENCY,
         async (target) => {
-          const attempt = await invokeManagedSiteMutationAttempt<void>(
-            () => deleteContext.deleteTarget(target),
-            {
-              idempotent: true,
-              knownSecrets: deleteContext.knownSecrets,
-              knownSecretsComplete: deleteContext.knownSecretsComplete,
-              uncertainFallbackMessage: DELETE_FAILED_FALLBACK,
-            },
-          )
-          if (
-            attempt.state === MANAGED_SITE_MUTATION_ATTEMPT_STATES.Uncertain
-          ) {
-            return {
-              result: toResult(target, "uncertain"),
-              reason: new Error(attempt.message),
-            }
-          }
-
-          const mutationResult = attempt.result
+          const mutationResult = await deleteContext.deleteTarget(target)
+          assertManagedSiteMutationResult(mutationResult, {
+            idempotent: true,
+          })
           const privateMessage = deleteContext.knownSecretsComplete
             ? toPrivateManagedSiteMutationOutput(mutationResult, {
                 knownSecrets: deleteContext.knownSecrets,
               }).message
             : undefined
           const reason = () =>
-            new Error(privateMessage || DELETE_FAILED_FALLBACK)
+            new Error(
+              privateMessage || LEGACY_MANAGED_RESOURCE_DELETE_FAILED_FALLBACK,
+            )
           switch (mutationResult.outcome) {
             case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
               return { result: toResult(target, "success") }
@@ -195,6 +185,22 @@ export class LegacyManagedResourceBulkDeleteController {
       )
       if (!isCurrentExecution()) return null
 
+      const unexpectedFailure = settled.find(
+        (outcome) => outcome.status === "rejected",
+      )
+      if (unexpectedFailure?.status === "rejected") {
+        let refreshAccepted = false
+        try {
+          refreshAccepted = await dependencies.refresh()
+        } catch {
+          refreshAccepted = false
+        }
+        if (isCurrentExecution()) {
+          this.replayBlocked = !refreshAccepted
+        }
+        throw unexpectedFailure.reason
+      }
+
       const outcomes = settled.map((outcome, index) => {
         const target = targets[index]
         if (outcome.status === "fulfilled") {
@@ -204,7 +210,7 @@ export class LegacyManagedResourceBulkDeleteController {
         return {
           target,
           result: toResult(target, "uncertain"),
-          reason: new Error(DELETE_FAILED_FALLBACK),
+          reason: new Error(LEGACY_MANAGED_RESOURCE_DELETE_FAILED_FALLBACK),
         }
       })
 

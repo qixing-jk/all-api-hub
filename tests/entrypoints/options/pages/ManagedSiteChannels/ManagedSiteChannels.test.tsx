@@ -32,7 +32,10 @@ import {
   getManagedSiteService,
   getManagedSiteServiceForType,
 } from "~/services/managedSites/managedSiteService"
-import type { ManagedSiteVoidMutationResult } from "~/services/managedSites/mutations/contracts"
+import type {
+  ManagedSiteMutationResult,
+  ManagedSiteVoidMutationResult,
+} from "~/services/managedSites/mutations/contracts"
 import {
   ensureNewApiManagedSession,
   fetchNewApiChannelKey,
@@ -243,6 +246,21 @@ const succeededChannelDelete = (
   confirmedEffects: [
     {
       kind: "resource-deleted",
+      resourceKind: "channel",
+      resourceId: channelId,
+    },
+  ],
+})
+
+const succeededChannelUpdate = <TData,>(
+  channelId: number,
+  data: TData,
+): ManagedSiteMutationResult<TData> => ({
+  outcome: "succeeded",
+  data,
+  confirmedEffects: [
+    {
+      kind: "resource-updated",
       resourceKind: "channel",
       resourceId: channelId,
     },
@@ -2287,15 +2305,12 @@ describe("ManagedSiteChannels", () => {
       },
     } as const
     const getDetail = vi.fn().mockResolvedValue(detail)
-    const resourceUpdate = vi.fn().mockResolvedValue({
-      success: true,
-      message: "",
-      data: null,
-    })
-    const updateChannel = vi.fn().mockResolvedValue({
-      success: true,
-      message: "legacy update",
-    })
+    const resourceUpdate = vi
+      .fn()
+      .mockResolvedValue(succeededChannelUpdate(41, null))
+    const updateChannel = vi
+      .fn()
+      .mockResolvedValue(succeededChannelUpdate(41, null))
     const service = mockChannels([row])
     service.updateChannel = updateChannel
     mockResolveManagedUpstreamResourceCapabilities.mockReturnValue({
@@ -2373,6 +2388,11 @@ describe("ManagedSiteChannels", () => {
           name: "Alpha Detail",
           key: "sk-********",
         }),
+      )
+    })
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        "managedSiteChannels:toasts.channelUpdated",
       )
     })
     expect(updateChannel).not.toHaveBeenCalled()
@@ -2609,15 +2629,12 @@ describe("ManagedSiteChannels", () => {
       },
     } as const
     const getDetail = vi.fn().mockResolvedValue(detail)
-    const resourceUpdate = vi.fn().mockResolvedValue({
-      success: true,
-      message: "",
-      data: null,
-    })
-    const updateChannel = vi.fn().mockResolvedValue({
-      success: true,
-      message: "legacy update",
-    })
+    const resourceUpdate = vi
+      .fn()
+      .mockResolvedValue(succeededChannelUpdate(42, null))
+    const updateChannel = vi
+      .fn()
+      .mockResolvedValue(succeededChannelUpdate(42, null))
     const service = mockChannels([row], {
       managedSiteType: SITE_TYPES.VELOERA,
       messagesKey: "veloera",
@@ -2705,6 +2722,11 @@ describe("ManagedSiteChannels", () => {
         }),
       )
     })
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        "managedSiteChannels:toasts.channelUpdated",
+      )
+    })
     expect(updateChannel).not.toHaveBeenCalled()
   })
 
@@ -2719,11 +2741,9 @@ describe("ManagedSiteChannels", () => {
       group: "default",
     })
     const getDetail = vi.fn()
-    const updateChannel = vi.fn().mockResolvedValue({
-      success: true,
-      message: "updated",
-      data: row,
-    })
+    const updateChannel = vi
+      .fn()
+      .mockResolvedValue(succeededChannelUpdate(51, row))
     const service = mockChannels([row], {
       managedSiteType: SITE_TYPES.DONE_HUB,
       messagesKey: "donehub",
@@ -2762,6 +2782,11 @@ describe("ManagedSiteChannels", () => {
           userId: "1",
         },
         expect.objectContaining({ id: 51 }),
+      )
+    })
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        "managedSiteChannels:toasts.channelUpdated",
       )
     })
     expect(getDetail).not.toHaveBeenCalled()

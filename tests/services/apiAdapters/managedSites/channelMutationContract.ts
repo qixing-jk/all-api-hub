@@ -15,7 +15,7 @@ export const CHANNEL_MUTATION_SCENARIOS = {
 export type ChannelMutationScenario =
   (typeof CHANNEL_MUTATION_SCENARIOS)[keyof typeof CHANNEL_MUTATION_SCENARIOS]
 
-export type ChannelMutationContractOperation = {
+type ChannelMutationContractOperation = {
   name: string
   effect: ManagedSiteMutationConfirmedEffect
   successData: unknown

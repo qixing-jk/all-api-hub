@@ -2143,6 +2143,68 @@ describe("AxonHub native managed-resource Adapter", () => {
     })
   })
 
+  it("rejects an already-aborted create before invoking the write", async () => {
+    const operations = await openAxonHubNativeResourceOperations()
+    const controller = new AbortController()
+    const abortError = new DOMException("Cancelled before create", "AbortError")
+    controller.abort(abortError)
+
+    const result = await operations.create(
+      {
+        type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+        name: "Pre-aborted create",
+        credentials: { apiKeys: ["credential-placeholder"] },
+        supportedModels: ["model-a"],
+        manualModels: ["model-a"],
+        defaultTestModel: "model-a",
+        settings: {},
+        orderingWeight: 0,
+      },
+      AXON_HUB_CHANNEL_STATUS.DISABLED,
+      { signal: controller.signal },
+    )
+
+    expect(result).toEqual({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic: {
+        message: "aborted",
+        code: "aborted",
+        raw: abortError,
+      },
+    })
+    expect(mocks.createChannel).not.toHaveBeenCalled()
+  })
+
+  it("treats a bare abort thrown after write invocation as uncertain", async () => {
+    const abortError = new DOMException("Cancelled during create", "AbortError")
+    mocks.createChannel.mockRejectedValue(abortError)
+    const operations = await openAxonHubNativeResourceOperations()
+
+    const result = await operations.create(
+      {
+        type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+        name: "Invoked create",
+        credentials: { apiKeys: ["credential-placeholder"] },
+        supportedModels: ["model-a"],
+        manualModels: ["model-a"],
+        defaultTestModel: "model-a",
+        settings: {},
+        orderingWeight: 0,
+      },
+      AXON_HUB_CHANNEL_STATUS.DISABLED,
+    )
+
+    expect(result).toEqual({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+      diagnostic: {
+        message: "aborted",
+        code: "aborted",
+        raw: abortError,
+      },
+    })
+    expect(mocks.createChannel).toHaveBeenCalledOnce()
+  })
+
   it.each([
     {
       label: "rejected",

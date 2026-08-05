@@ -118,7 +118,7 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
     )
   })
 
-  it("maps common outcomes and post-invocation failures before refreshing once", async () => {
+  it("maps common outcomes before refreshing once", async () => {
     const controller = new LegacyManagedResourceBulkDeleteController()
     controller.schedule(targets)
     const refresh = vi.fn().mockResolvedValue(false)
@@ -132,7 +132,10 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
             case 2:
               return deleteRejected()
             case 3:
-              throw new TypeError("Failed to fetch")
+              return {
+                outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+                diagnostic: { message: "transport unavailable" },
+              }
             case 4:
               return {
                 outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
@@ -146,7 +149,10 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
                 diagnostic: { message: "partially applied" },
               }
             case 5:
-              return { malformed: true }
+              return {
+                outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+                diagnostic: { message: "write state unavailable" },
+              }
             default:
               return {
                 outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
@@ -167,6 +173,30 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
     ])
     expect(execution?.requiresRefresh).toBe(true)
     expect(refresh).toHaveBeenCalledTimes(1)
+  })
+
+  it("refreshes and blocks replay before propagating a thrown delete unchanged", async () => {
+    const controller = new LegacyManagedResourceBulkDeleteController()
+    controller.schedule(targets.slice(0, 1))
+    const thrown = new Error("delete programming failure")
+    const refresh = vi.fn().mockResolvedValue(false)
+
+    await expect(
+      controller.execute({
+        resolveDelete: async () =>
+          resolvedDelete(async () => {
+            throw thrown
+          }),
+        refresh,
+      }),
+    ).rejects.toBe(thrown)
+
+    expect(refresh).toHaveBeenCalledOnce()
+    expect(controller.requiresRefresh()).toBe(true)
+    expect(controller.schedule(targets.slice(1, 2))).toBe(false)
+    controller.markRefreshAccepted()
+    expect(controller.requiresRefresh()).toBe(false)
+    expect(controller.schedule(targets.slice(1, 2))).toBe(true)
   })
 
   it("honors controlled partial and uncertain outcomes without retry", async () => {
@@ -220,29 +250,27 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
     expect(confirmMissing).toHaveBeenCalledTimes(2)
   })
 
-  it("sanitizes thrown diagnostics and fails closed when secret collection is incomplete", async () => {
+  it("does not inspect or translate thrown delete failures", async () => {
     const secret = "legacy-delete-secret-placeholder"
     const run = async (knownSecretsComplete: boolean) => {
       const controller = new LegacyManagedResourceBulkDeleteController()
       controller.schedule(targets.slice(0, 1))
-      return controller.execute({
+      const thrown = new Error(`provider transport ${secret}`)
+      const execution = controller.execute({
         resolveDelete: async () =>
           resolvedDelete(
             async () => {
-              throw new Error(`provider transport ${secret}`)
+              throw thrown
             },
             { knownSecrets: [secret], knownSecretsComplete },
           ),
         refresh: vi.fn().mockResolvedValue(true),
       })
+      await expect(execution).rejects.toBe(thrown)
     }
 
-    const complete = await run(true)
-    const incomplete = await run(false)
-
-    expect((complete?.failure as Error).message).toContain("provider transport")
-    expect((complete?.failure as Error).message).not.toContain(secret)
-    expect((incomplete?.failure as Error).message).toBe("Delete failed")
+    await run(true)
+    await run(false)
   })
 
   it("reports pre-dispatch setup failures as failed without dispatch or refresh", async () => {
@@ -270,9 +298,10 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
   it("blocks replay after an uncertain batch until a fresh read is accepted", async () => {
     const controller = new LegacyManagedResourceBulkDeleteController()
     controller.schedule(targets.slice(0, 1))
-    const deleteChannel = vi
-      .fn()
-      .mockRejectedValue(new TypeError("Network request failed"))
+    const deleteChannel = vi.fn().mockResolvedValue({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+      diagnostic: { message: "Network request failed" },
+    })
 
     const execution = await controller.execute({
       resolveDelete: async () => resolvedDelete(deleteChannel),

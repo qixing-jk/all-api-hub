@@ -25,11 +25,7 @@
     "unexpectedData": "Nhận dạng tự động thất bại, dữ liệu trang web trả về không như mong đợi. Vui lòng nhập thông tin thủ công hoặc đảm bảo đã đăng nhập vào trang web mục tiêu."
   },
   "axonhub": {
-    "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
     "configMissing": "Vui lòng cấu hình địa chỉ AxonHub, email quản trị viên và mật khẩu trong phần Cài đặt trước",
-    "deleteFailed": "Xóa kênh AxonHub thất bại",
-    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
-    "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
     "modelsMissing": "Vui lòng điền ít nhất một mô hình",
     "noChannelsToSync": "Không có kênh nào để đồng bộ",
     "unsupportedModelSync": "Phiên bản hiện tại không hỗ trợ đồng bộ mô hình trạm quản lý AxonHub"
@@ -58,13 +54,10 @@
   },
   "claudecodehub": {
     "configMissing": "Vui lòng cấu hình địa chỉ Claude Code Hub và token quản trị viên trong phần Cài đặt trước",
-    "deleteFailed": "Xóa nhà cung cấp Claude Code Hub thất bại",
-    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
     "modelsMissing": "Vui lòng điền ít nhất một mô hình",
     "noChannelsToSync": "Không có nhà cung cấp nào để đồng bộ",
     "realProviderKeyRequired": "Tạo nhà cung cấp trong Claude Code Hub yêu cầu khóa gốc thực, không thể sử dụng khóa trống hoặc khóa đã bị che để tạo.",
-    "unsupportedModelSync": "Phiên bản hiện tại không hỗ trợ đồng bộ mô hình trạm quản lý Claude Code Hub",
-    "updateFailed": "Cập nhật nhà cung cấp Claude Code Hub thất bại"
+    "unsupportedModelSync": "Phiên bản hiện tại không hỗ trợ đồng bộ mô hình trạm quản lý Claude Code Hub"
   },
   "claudeCodeRouter": {
     "configMissing": "Vui lòng cấu hình URL cơ sở của Claude Code Router trong phần cài đặt trước",
@@ -118,11 +111,7 @@
     }
   },
   "newapi": {
-    "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
-    "channelMatchUnresolved": "Có thể đã tồn tại kênh trùng lặp, nhưng hiện tại cần hoàn thành xác minh New API trước để xác nhận. Vui lòng hoàn thành xác minh trước khi thử nhập lại.",
     "configMissing": "Vui lòng cấu hình địa chỉ New API, token quản trị viên và ID người dùng trong phần Cài đặt trước",
-    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
-    "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
   "octopus": {

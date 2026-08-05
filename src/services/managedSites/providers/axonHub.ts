@@ -1,19 +1,11 @@
 import {
-  AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
   DEFAULT_AXON_HUB_CHANNEL_FIELDS,
 } from "~/constants/axonHub"
-import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import type { ManagedSiteChannelRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import * as axonHubApi from "~/services/apiService/axonHub"
-import type { ApiResponse } from "~/services/apiTransport/type"
-import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import {
-  getManagedSiteDeleteCertainty,
-  type ManagedSiteChannelDeleteResponse,
-} from "~/services/managedSites/mutationCertainty"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
@@ -21,10 +13,7 @@ import {
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
-import type {
-  AxonHubCreateChannelInput,
-  AxonHubUpdateChannelInput,
-} from "~/types/axonHub"
+import type { AxonHubCreateChannelInput } from "~/types/axonHub"
 import type { AxonHubConfig } from "~/types/axonHubConfig"
 import {
   CHANNEL_STATUS,
@@ -32,19 +21,12 @@ import {
   ChannelMode,
   CreateChannelPayload,
   ManagedSiteChannelListData,
-  UpdateChannelPayload,
 } from "~/types/managedSite"
-import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("AxonHubService")
-
-const axonHubImportDuplicateService = {
-  siteType: SITE_TYPES.AXON_HUB,
-  searchChannel,
-}
 
 /**
  * Check whether preferences contain a complete AxonHub admin config.
@@ -54,7 +36,6 @@ function hasValidAxonHubConfig(prefs: UserPreferences | null): boolean {
   const { baseUrl, email, password } = prefs.axonHub
   return Boolean(baseUrl?.trim() && email?.trim() && password?.trim())
 }
-
 /**
  * Validate the saved AxonHub admin config by signing in.
  */
@@ -92,11 +73,6 @@ export async function getAxonHubConfig(): Promise<ManagedSiteConfig | null> {
 const getFinalModels = (formData: ChannelFormData) =>
   normalizeList(formData.models ?? [])
 
-const toAxonHubStatus = (status?: number) =>
-  status === CHANNEL_STATUS.Enable
-    ? AXON_HUB_CHANNEL_STATUS.ENABLED
-    : AXON_HUB_CHANNEL_STATUS.DISABLED
-
 /**
  * Build an AxonHub create-channel input from normalized dialog form data.
  */
@@ -127,37 +103,6 @@ function buildAxonHubInputFromFormData(
 }
 
 /**
- * Build a sparse AxonHub update-channel input from managed-site payload data.
- */
-function buildAxonHubUpdateInputFromPayload(
-  channelData: UpdateChannelPayload,
-): AxonHubUpdateChannelInput {
-  const models = normalizeList(channelData.models?.split(",") ?? [])
-  const input: AxonHubUpdateChannelInput = {}
-
-  if (typeof channelData.type === "string") input.type = channelData.type
-  if (channelData.name !== undefined) input.name = channelData.name.trim()
-  if (channelData.base_url !== undefined) {
-    input.baseURL = channelData.base_url.trim()
-  }
-  if (channelData.key !== undefined) {
-    input.credentials = {
-      apiKeys: [channelData.key.trim()].filter(Boolean),
-    }
-  }
-  if (models.length > 0) {
-    input.supportedModels = models
-    input.manualModels = models
-    input.defaultTestModel = models[0]
-  }
-  if (channelData.weight !== undefined) {
-    input.orderingWeight = channelData.weight
-  }
-
-  return input
-}
-
-/**
  * Search AxonHub channels using the current saved admin credentials.
  */
 export async function searchChannel(
@@ -184,136 +129,6 @@ export async function listChannels(
   } catch (error) {
     logger.error("Failed to list AxonHub channels", error)
     throw error
-  }
-}
-
-/**
- * Create an AxonHub channel through the managed-site service contract.
- */
-export async function createChannel(
-  config: AxonHubConfig,
-  channelData: CreateChannelPayload,
-): Promise<ApiResponse<unknown>> {
-  try {
-    const channel = channelData.channel
-    const input = buildAxonHubInputFromFormData({
-      name: channel.name ?? "",
-      type: channel.type ?? DEFAULT_AXON_HUB_CHANNEL_FIELDS.type,
-      key: channel.key ?? "",
-      base_url: channel.base_url ?? "",
-      models: normalizeList(channel.models?.split(",") ?? []),
-      groups: [],
-      priority: 0,
-      weight: channel.weight ?? 0,
-      status: channel.status,
-    })
-
-    const created = await axonHubApi.createAxonHubChannel(config, input)
-    const finalChannel = { ...created }
-
-    if (channel.status === CHANNEL_STATUS.Enable) {
-      // AxonHub can create channels disabled depending on backend defaults, so
-      // apply the requested final enabled state after creation.
-      await axonHubApi.updateAxonHubChannelStatus(
-        config,
-        created.id,
-        AXON_HUB_CHANNEL_STATUS.ENABLED,
-      )
-      finalChannel.status = AXON_HUB_CHANNEL_STATUS.ENABLED
-    }
-
-    return {
-      success: true,
-      data: axonHubApi.axonHubChannelToManagedSite(finalChannel),
-      message: "success",
-    }
-  } catch (error) {
-    return {
-      success: false,
-      data: null,
-      message: getErrorMessage(error) || t("messages:axonhub.importFailed"),
-    }
-  }
-}
-
-/**
- * Update an AxonHub channel through the managed-site service contract.
- */
-export async function updateChannel(
-  config: AxonHubConfig,
-  channelData: UpdateChannelPayload & { status?: number },
-): Promise<ApiResponse<unknown>> {
-  try {
-    const graphqlId = await axonHubApi.resolveAxonHubGraphqlIdForMutation(
-      config,
-      channelData.id,
-    )
-    const updated = await axonHubApi.updateAxonHubChannel(
-      config,
-      graphqlId,
-      buildAxonHubUpdateInputFromPayload(channelData),
-    )
-    const finalChannel = { ...updated }
-
-    if (channelData.status !== undefined) {
-      const axonHubStatus = toAxonHubStatus(channelData.status)
-      await axonHubApi.updateAxonHubChannelStatus(
-        config,
-        graphqlId,
-        axonHubStatus,
-      )
-      finalChannel.status = axonHubStatus
-    }
-
-    return {
-      success: true,
-      data: axonHubApi.axonHubChannelToManagedSite(finalChannel),
-      message: "success",
-    }
-  } catch (error) {
-    return {
-      success: false,
-      data: null,
-      message: getErrorMessage(error) || "Failed to update AxonHub channel",
-    }
-  }
-}
-
-/**
- * Delete an AxonHub channel through the managed-site service contract.
- */
-export async function deleteChannel(
-  config: AxonHubConfig,
-  channelId: number,
-): Promise<ManagedSiteChannelDeleteResponse> {
-  let graphqlId: string
-  try {
-    graphqlId = await axonHubApi.resolveAxonHubGraphqlIdForMutation(
-      config,
-      channelId,
-    )
-  } catch (error) {
-    return {
-      success: false,
-      data: null,
-      message: getErrorMessage(error) || "Failed to resolve AxonHub channel",
-    }
-  }
-
-  try {
-    const deleted = await axonHubApi.deleteAxonHubChannel(config, graphqlId)
-    return {
-      success: deleted,
-      data: deleted,
-      message: deleted ? "success" : t("messages:axonhub.deleteFailed"),
-    }
-  } catch (error) {
-    return {
-      success: false,
-      data: null,
-      message: getErrorMessage(error) || "Failed to delete AxonHub channel",
-      ...getManagedSiteDeleteCertainty(error),
-    }
   }
 }
 
@@ -391,53 +206,5 @@ export function buildChannelPayload(
       weight: input.orderingWeight ?? 0,
       status: formData.status,
     },
-  }
-}
-
-/**
- * Import a single account token into AxonHub as an OpenAI-compatible channel.
- */
-export async function importToAxonHub(
-  account: DisplaySiteData,
-  token: ApiToken,
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const prefs = await userPreferences.getPreferences()
-    if (!hasValidAxonHubConfig(prefs) || !prefs.axonHub) {
-      return { success: false, message: t("messages:axonhub.configMissing") }
-    }
-    const config = prefs.axonHub
-
-    const formData = await prepareChannelFormData(account, token)
-    const existingChannel = await resolveManagedSiteImportDuplicate({
-      service: axonHubImportDuplicateService,
-      managedConfig: config,
-      formData,
-    })
-
-    if (existingChannel) {
-      return {
-        success: false,
-        message: t("messages:axonhub.channelExists", {
-          channelName: existingChannel.name,
-        }),
-      }
-    }
-
-    const result = await createChannel(config, buildChannelPayload(formData))
-
-    return result.success
-      ? {
-          success: true,
-          message: t("messages:axonhub.importSuccess", {
-            channelName: formData.name,
-          }),
-        }
-      : { success: false, message: result.message }
-  } catch (error) {
-    return {
-      success: false,
-      message: getErrorMessage(error) || t("messages:axonhub.importFailed"),
-    }
   }
 }

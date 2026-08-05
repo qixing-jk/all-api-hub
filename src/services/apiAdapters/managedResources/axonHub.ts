@@ -282,6 +282,7 @@ const isTypedAbort = (error: unknown): error is DOMException =>
 
 const classifyMutationFailure = (
   error: unknown,
+  bareAbortDispatch: AxonHubNativeFailure["dispatch"],
 ): { failure: AxonHubNativeFailure; error: unknown } => {
   if (
     error instanceof AxonHubNativeError &&
@@ -294,7 +295,7 @@ const classifyMutationFailure = (
   }
   if (isTypedAbort(error)) {
     return {
-      failure: createControlledNativeFailure("aborted", "before"),
+      failure: createControlledNativeFailure("aborted", bareAbortDispatch),
       error,
     }
   }
@@ -305,12 +306,24 @@ const runAxonHubNativeMutationStep = async <TData>(input: {
   sequence: ManagedSiteMutationSequence<ManagedSiteMutationConfirmedEffect>
   effect: (data: TData) => ManagedSiteMutationConfirmedEffect
   execute(): Promise<TData>
+  signal?: AbortSignal
   rejectResponse?: (data: TData) => AxonHubNativeError | undefined
   convergeFailure?: (
     failure: AxonHubNativeFailure,
   ) => { data: TData } | undefined
 }): Promise<AxonHubMutationStepResult<TData>> => {
   const attempt = input.sequence.beginStep()
+  if (input.signal?.aborted) {
+    const error =
+      input.signal.reason ??
+      new DOMException("The operation was aborted", "AbortError")
+    const failure = createControlledNativeFailure("aborted", "before")
+    attempt.complete()
+    return {
+      outcome: "rejected",
+      diagnostic: mutationDiagnostic(failure, error),
+    }
+  }
   try {
     const data = await input.execute()
     attempt.markPossiblyDispatched()
@@ -328,7 +341,7 @@ const runAxonHubNativeMutationStep = async <TData>(input: {
     attempt.complete()
     return { outcome: "applied", data }
   } catch (error) {
-    const classified = classifyMutationFailure(error)
+    const classified = classifyMutationFailure(error, "after")
     if (classified.failure.dispatch === "after") {
       attempt.markPossiblyDispatched()
     }
@@ -512,6 +525,7 @@ export async function openAxonHubNativeResourceOperations(
       const sequence = createManagedSiteMutationSequence({ idempotent: false })
       const createStep = await runAxonHubNativeMutationStep({
         sequence,
+        signal: operationOptions?.signal,
         effect: (created) =>
           channelMutationEffect(
             MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
@@ -535,6 +549,7 @@ export async function openAxonHubNativeResourceOperations(
 
       const statusStep = await runAxonHubNativeMutationStep({
         sequence,
+        signal: operationOptions?.signal,
         effect: () =>
           channelMutationEffect(
             MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated,
@@ -579,6 +594,7 @@ export async function openAxonHubNativeResourceOperations(
       if (hasOrdinaryPatch) {
         const updateStep = await runAxonHubNativeMutationStep({
           sequence,
+          signal: operationOptions?.signal,
           effect: () =>
             channelMutationEffect(
               MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
@@ -601,6 +617,7 @@ export async function openAxonHubNativeResourceOperations(
       if (statusChanged) {
         const statusStep = await runAxonHubNativeMutationStep({
           sequence,
+          signal: operationOptions?.signal,
           effect: () =>
             channelMutationEffect(
               MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated,
@@ -633,6 +650,7 @@ export async function openAxonHubNativeResourceOperations(
       const sequence = createManagedSiteMutationSequence({ idempotent: true })
       const deleteStep = await runAxonHubNativeMutationStep({
         sequence,
+        signal: operationOptions?.signal,
         effect: () =>
           channelMutationEffect(
             MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceDeleted,

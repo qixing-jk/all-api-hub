@@ -7,7 +7,7 @@ import {
   type ChannelMutationScenario,
 } from "./channelMutationContract"
 
-export type ResourceMutationContractOperation = {
+type ResourceMutationContractOperation = {
   name: string
   effect: {
     kind: "resource-created" | "resource-updated" | "resource-deleted"

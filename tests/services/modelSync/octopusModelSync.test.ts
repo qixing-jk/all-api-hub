@@ -414,6 +414,105 @@ describe("runOctopusBatch", () => {
     ])
   })
 
+  it.each(["thrown", "malformed"] as const)(
+    "propagates a %s write failure without replay",
+    async (failureKind) => {
+      fetchRemoteModelsMock.mockResolvedValue(["model-b"])
+      const thrown = new Error("octopus write invariant failed")
+      if (failureKind === "thrown") {
+        updateModelsMock.mockRejectedValue(thrown)
+      } else {
+        updateModelsMock.mockResolvedValue(undefined)
+      }
+
+      const execution = runOctopusBatch(config as any, [createChannel()], {
+        concurrency: 1,
+        maxRetries: 2,
+      })
+
+      if (failureKind === "thrown") {
+        await expect(execution).rejects.toBe(thrown)
+      } else {
+        await expect(execution).rejects.toThrow(
+          "Invalid managed site mutation result",
+        )
+      }
+      expect(updateModelsMock).toHaveBeenCalledOnce()
+      expect(fetchRemoteModelsMock).toHaveBeenCalledOnce()
+    },
+  )
+
+  it.each([
+    { label: "null", value: null },
+    { label: "undefined", value: undefined },
+    { label: "string", value: "primitive octopus write failure" },
+    { label: "symbol", value: Symbol("primitive octopus write failure") },
+  ])(
+    "propagates a $label write failure without retry or raw logging",
+    async ({ value }) => {
+      vi.useFakeTimers()
+      fetchRemoteModelsMock.mockResolvedValue(["model-b"])
+      updateModelsMock.mockRejectedValue(value)
+
+      const observed = runOctopusBatch(config as any, [createChannel()], {
+        concurrency: 1,
+        maxRetries: 2,
+      }).then(
+        () => ({ status: "resolved" as const, error: undefined }),
+        (error: unknown) => ({ status: "rejected" as const, error }),
+      )
+      await vi.runAllTimersAsync()
+
+      await expect(observed).resolves.toEqual({
+        status: "rejected",
+        error: value,
+      })
+      expect(updateModelsMock).toHaveBeenCalledOnce()
+      expect(fetchRemoteModelsMock).toHaveBeenCalledOnce()
+      expect(loggerErrorMock).not.toHaveBeenCalledWith(
+        "Unexpected error for channel",
+        expect.objectContaining({ error: value }),
+      )
+    },
+  )
+
+  it("does not carry write-failure identity into a later read operation", async () => {
+    vi.useFakeTimers()
+    const reused = new Error("reused octopus operation failure")
+    fetchRemoteModelsMock
+      .mockResolvedValueOnce(["model-b"])
+      .mockRejectedValueOnce(reused)
+      .mockResolvedValueOnce(["model-a"])
+    updateModelsMock.mockRejectedValueOnce(reused)
+
+    await expect(
+      runOctopusBatch(config as any, [createChannel()], {
+        concurrency: 1,
+        maxRetries: 0,
+      }),
+    ).rejects.toBe(reused)
+
+    const laterRead = runOctopusBatch(config as any, [createChannel()], {
+      concurrency: 1,
+      maxRetries: 1,
+    }).then(
+      (result) => ({ status: "resolved" as const, result }),
+      (error: unknown) => ({ status: "rejected" as const, error }),
+    )
+    await vi.runAllTimersAsync()
+
+    await expect(laterRead).resolves.toMatchObject({
+      status: "resolved",
+      result: {
+        items: [
+          expect.objectContaining({ channelId: 1, ok: true, attempts: 1 }),
+        ],
+      },
+    })
+    expect(fetchRemoteModelsMock).toHaveBeenCalledTimes(3)
+    expect(updateModelsMock).toHaveBeenCalledOnce()
+  })
+
   it.each(["partial", "uncertain"] as const)(
     "reconciles and never replays a %s write",
     async (outcome) => {

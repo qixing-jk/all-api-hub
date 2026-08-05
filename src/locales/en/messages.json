@@ -25,11 +25,7 @@
     "unexpectedData": "Auto-detection failed, site returned unexpected data. Please enter information manually or ensure you are logged in to the target site"
   },
   "axonhub": {
-    "channelExists": "Channel {{channelName}} already exists, no need to import again",
     "configMissing": "Please configure AxonHub address, admin email, and password in basic settings first",
-    "deleteFailed": "Failed to delete AxonHub channel",
-    "importFailed": "Import failed, an unknown error occurred",
-    "importSuccess": "Successfully imported new channel {{channelName}}",
     "modelsMissing": "Please provide at least one model",
     "noChannelsToSync": "No channels to sync",
     "unsupportedModelSync": "AxonHub does not support managed-site model sync in this version"
@@ -58,13 +54,10 @@
   },
   "claudecodehub": {
     "configMissing": "Please configure Claude Code Hub address and admin token in basic settings first",
-    "deleteFailed": "Failed to delete Claude Code Hub provider",
-    "importFailed": "Import failed, an unknown error occurred",
     "modelsMissing": "Please provide at least one model",
     "noChannelsToSync": "No providers to sync",
     "realProviderKeyRequired": "Claude Code Hub requires a real upstream provider key. Empty or masked keys cannot be used for provider creation.",
-    "unsupportedModelSync": "Claude Code Hub does not support managed-site model sync in this version",
-    "updateFailed": "Failed to update Claude Code Hub provider"
+    "unsupportedModelSync": "Claude Code Hub does not support managed-site model sync in this version"
   },
   "claudeCodeRouter": {
     "configMissing": "Please configure Claude Code Router base URL in settings first",
@@ -118,11 +111,7 @@
     }
   },
   "newapi": {
-    "channelExists": "Channel {{channelName}} already exists, no need to import again",
-    "channelMatchUnresolved": "A potential duplicate channel exists, but confirming it requires a New API verification step. Complete verification first, then retry the import.",
     "configMissing": "Please configure New API address, admin token, and user ID in basic settings first",
-    "importFailed": "Import failed, an unknown error occurred",
-    "importSuccess": "Successfully imported new channel {{channelName}}",
     "noChannelsToSync": "No channels to sync"
   },
   "octopus": {

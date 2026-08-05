@@ -27,6 +27,10 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { runWithChannelProcessingTimeout } from "./channelProcessingTimeout"
+import {
+  createModelSyncWriteFailureBoundary,
+  type ModelSyncWriteFailureBoundary,
+} from "./writeFailureBoundary"
 
 const logger = createLogger("OctopusModelSync")
 
@@ -160,6 +164,7 @@ async function runForChannel(
   channel: ManagedSiteChannel,
   maxRetries: number = 2,
   abortSignal?: AbortSignal,
+  writeFailureBoundary: ModelSyncWriteFailureBoundary = createModelSyncWriteFailureBoundary(),
 ): Promise<ExecutionItemResult> {
   let attempts = 0
   let lastError: unknown = null
@@ -185,12 +190,19 @@ async function runForChannel(
       )
 
       if (haveModelsChanged(oldModels, normalizedModels)) {
-        await updateChannelModels(
-          config,
-          channel,
-          normalizedModels,
-          abortSignal,
-        )
+        try {
+          await updateChannelModels(
+            config,
+            channel,
+            normalizedModels,
+            abortSignal,
+          )
+        } catch (error) {
+          if (!(error instanceof OctopusModelSyncMutationError)) {
+            writeFailureBoundary.capture(error)
+          }
+          throw error
+        }
       }
 
       return {
@@ -204,6 +216,7 @@ async function runForChannel(
         message: "Success",
       }
     } catch (error: unknown) {
+      if (writeFailureBoundary.matches(error)) throw error
       if (abortSignal?.aborted) {
         throw error
       }
@@ -272,16 +285,24 @@ export async function runOctopusBatch(
 
       const channel = channels[currentIndex]
       let result: ExecutionItemResult
+      const writeFailureBoundary = createModelSyncWriteFailureBoundary()
 
       try {
         result = await runWithChannelProcessingTimeout(
           (abortSignal) =>
-            runForChannel(config, channel, maxRetries, abortSignal),
+            runForChannel(
+              config,
+              channel,
+              maxRetries,
+              abortSignal,
+              writeFailureBoundary,
+            ),
           channel,
           maxRetries,
           channelProcessingTimeout,
         )
       } catch (error: any) {
+        if (writeFailureBoundary.matches(error)) throw error
         logger.error("Unexpected error for channel", {
           channelId: channel.id,
           error,

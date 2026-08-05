@@ -3,8 +3,6 @@ import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contra
 import {
   isManagedResourceRef,
   isManagedResourceRefFor,
-  MANAGED_RESOURCE_FAILURE_CODES,
-  ManagedResourceError,
   type ManagedResourceRef,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
@@ -30,8 +28,7 @@ import {
   type ManagedSiteUpstreamResourcesCapability,
 } from "~/services/managedSites/managedUpstreamResourceService"
 import {
-  invokeManagedSiteMutationAttempt,
-  MANAGED_SITE_MUTATION_ATTEMPT_STATES,
+  assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
   toPrivateManagedSiteMutationOutput,
   toPrivateManagedSiteThrownErrorMessage,
@@ -42,6 +39,7 @@ import {
 } from "~/services/managedSites/runtimeConfig"
 import {
   collectManagedResourceSecrets,
+  mergeManagedResourceSecretCollections,
   needsManagedSiteChannelKeyResolution,
 } from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
@@ -371,6 +369,7 @@ const createTargetChannelForMigration = async (params: {
   targetConfig: ManagedSiteRuntimeConfigValue
   draft: ChannelFormData
   options?: ResourceOperationOptions
+  onPostInvocationFailure?: () => void
 }): Promise<{
   result: ManagedSiteMigrationCreateResult
   error?: string
@@ -408,34 +407,21 @@ const createTargetChannelForMigration = async (params: {
       params.draft,
       payload,
     )
-    const secretCollection = {
-      knownSecrets: [
-        ...new Set([
-          ...preDispatchSecretCollection.knownSecrets,
-          ...payloadSecretCollection.knownSecrets,
-        ]),
-      ],
-      complete:
-        preDispatchSecretCollection.complete &&
-        payloadSecretCollection.complete,
-    }
-    const attempt = await invokeManagedSiteMutationAttempt(
-      () => params.targetService.createChannel(params.targetConfig, payload),
-      {
-        idempotent: false,
-        knownSecrets: secretCollection.knownSecrets,
-        knownSecretsComplete: secretCollection.complete,
-        uncertainFallbackMessage: migrationUncertaintyWarning,
-      },
+    const secretCollection = mergeManagedResourceSecretCollections(
+      preDispatchSecretCollection,
+      payloadSecretCollection,
     )
-    if (attempt.state === MANAGED_SITE_MUTATION_ATTEMPT_STATES.Uncertain) {
-      return {
-        result: { status: "uncertain" },
-        error: attempt.message,
-        requiresReconciliation: true,
-      }
+    let mutation: unknown
+    try {
+      mutation = await params.targetService.createChannel(
+        params.targetConfig,
+        payload,
+      )
+      assertManagedSiteMutationResult(mutation, { idempotent: false })
+    } catch (error) {
+      params.onPostInvocationFailure?.()
+      throw error
     }
-    const mutation = attempt.result
     const output = secretCollection.complete
       ? toPrivateManagedSiteMutationOutput(mutation, {
           knownSecrets: secretCollection.knownSecrets,
@@ -471,23 +457,17 @@ const createTargetChannelForMigration = async (params: {
     params.targetConfig,
     params.draft,
   )
-  const attempt = await invokeManagedSiteMutationAttempt(
-    () => targetResources.items.create(params.targetConfig, params.draft),
-    {
-      idempotent: false,
-      knownSecrets: secretCollection.knownSecrets,
-      knownSecretsComplete: secretCollection.complete,
-      uncertainFallbackMessage: migrationUncertaintyWarning,
-    },
-  )
-  if (attempt.state === MANAGED_SITE_MUTATION_ATTEMPT_STATES.Uncertain) {
-    return {
-      result: { status: "uncertain" },
-      error: attempt.message,
-      requiresReconciliation: true,
-    }
+  let mutation: unknown
+  try {
+    mutation = await targetResources.items.create(
+      params.targetConfig,
+      params.draft,
+    )
+    assertManagedSiteMutationResult(mutation, { idempotent: false })
+  } catch (error) {
+    params.onPostInvocationFailure?.()
+    throw error
   }
-  const mutation = attempt.result
   const output = secretCollection.complete
     ? toPrivateManagedSiteMutationOutput(mutation, {
         knownSecrets: secretCollection.knownSecrets,
@@ -638,10 +618,6 @@ export async function prepareManagedSiteMigrationPreview(params: {
   })
 }
 
-const isUncertainMigrationError = (error: unknown) =>
-  error instanceof ManagedResourceError &&
-  error.failure.code === MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain
-
 /** Executes canonical migration rows without retaining credentials or commands. */
 export async function executeManagedSiteMigration(params: {
   preview: ManagedSiteMigrationCanonicalPreview
@@ -720,7 +696,6 @@ export async function executeManagedSiteMigration(params: {
       targetAvailable: Boolean(targetCapability || legacyTargetConfig),
       signal: params.options?.signal,
       sourceFailureReasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
-      isMutationStateUncertain: isUncertainMigrationError,
       resolveCredential: (selection) =>
         sourceCapability
           ? sourceCapability.resolveCredential(selection, params.options)
@@ -742,6 +717,9 @@ export async function executeManagedSiteMigration(params: {
             credential: command.credential,
           }),
           options: params.options,
+          onPostInvocationFailure: () => {
+            requiresReconciliation = true
+          },
         })
         requiresReconciliation ||= creation.requiresReconciliation
         return creation.result
@@ -1023,7 +1001,6 @@ export async function executeManagedSiteChannelMigration(
         preview: canonicalPreview,
         targetAvailable: Boolean(targetCapability || targetConfig),
         sourceFailureReasonCode: migrationBlockers.SOURCE_KEY_RESOLUTION_FAILED,
-        isMutationStateUncertain: isUncertainMigrationError,
         resolveCredential: (selection) =>
           sourceCapability
             ? sourceCapability.resolveCredential(selection)
@@ -1058,6 +1035,9 @@ export async function executeManagedSiteChannelMigration(
                 ...executionDraft,
                 ...targetItem.legacy.draft!,
                 key: executionDraft.key,
+              },
+              onPostInvocationFailure: () => {
+                requiresReconciliation = true
               },
             })
             requiresReconciliation ||= creation.requiresReconciliation

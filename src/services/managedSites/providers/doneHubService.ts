@@ -4,12 +4,9 @@ import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/sit
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { createNewApiKeyManagement } from "~/services/apiAdapters/newApi/keyManagement"
 import {
-  createChannel as createDoneHubChannel,
-  deleteChannel as deleteDoneHubChannel,
   fetchChannel as fetchDoneHubChannel,
   fetchSiteUserGroups,
   searchChannel as searchDoneHubChannel,
-  updateChannel as updateDoneHubChannel,
 } from "~/services/apiService/doneHub"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
@@ -33,7 +30,6 @@ import type {
   CreateChannelPayload,
   ManagedSiteChannel,
   ManagedSiteChannelListData,
-  UpdateChannelPayload,
 } from "~/types/managedSite"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -81,33 +77,6 @@ export async function searchChannel(
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
   return await searchDoneHubChannel(toDoneHubRequestConfig(config), keyword)
-}
-
-/**
- * Creates a channel.
- */
-export async function createChannel(
-  config: DoneHubConfig,
-  channelData: CreateChannelPayload,
-) {
-  return await createDoneHubChannel(toDoneHubRequestConfig(config), channelData)
-}
-
-/**
- * Updates a channel.
- */
-export async function updateChannel(
-  config: DoneHubConfig,
-  channelData: UpdateChannelPayload,
-) {
-  return await updateDoneHubChannel(toDoneHubRequestConfig(config), channelData)
-}
-
-/**
- * Deletes a channel.
- */
-export async function deleteChannel(config: DoneHubConfig, channelId: number) {
-  return await deleteDoneHubChannel(toDoneHubRequestConfig(config), channelId)
 }
 
 /**

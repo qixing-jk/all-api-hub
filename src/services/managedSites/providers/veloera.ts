@@ -5,13 +5,7 @@ import {
   fetchAccountAvailableModels,
   fetchSiteUserGroups,
 } from "~/services/apiService/newApiFamily/default/keyManagement"
-import {
-  createChannel as createVeloeraChannel,
-  deleteChannel as deleteVeloeraChannel,
-  fetchChannel as fetchVeloeraChannel,
-  searchChannel as searchVeloeraChannel,
-  updateChannel as updateVeloeraChannel,
-} from "~/services/apiService/veloera"
+import { fetchChannel as fetchVeloeraChannel } from "~/services/apiService/veloera"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -28,8 +22,6 @@ import type {
   ChannelMode,
   CreateChannelPayload,
   ManagedSiteChannel,
-  ManagedSiteChannelListData,
-  UpdateChannelPayload,
 } from "~/types/managedSite"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 import { getErrorMessage } from "~/utils/core/error"
@@ -56,43 +48,6 @@ const toVeloeraRequestConfig = (config: VeloeraConfig) => ({
     userId: config.userId,
   },
 })
-
-/**
- * Searches channels matching the keyword.
- */
-export async function searchChannel(
-  config: VeloeraConfig,
-  keyword: string,
-): Promise<ManagedSiteChannelListData | null> {
-  return await searchVeloeraChannel(toVeloeraRequestConfig(config), keyword)
-}
-
-/**
- * Creates a channel.
- */
-export async function createChannel(
-  config: VeloeraConfig,
-  channelData: CreateChannelPayload,
-) {
-  return await createVeloeraChannel(toVeloeraRequestConfig(config), channelData)
-}
-
-/**
- * Updates a channel.
- */
-export async function updateChannel(
-  config: VeloeraConfig,
-  channelData: UpdateChannelPayload,
-) {
-  return await updateVeloeraChannel(toVeloeraRequestConfig(config), channelData)
-}
-
-/**
- * Deletes a channel.
- */
-export async function deleteChannel(config: VeloeraConfig, channelId: number) {
-  return await deleteVeloeraChannel(toVeloeraRequestConfig(config), channelId)
-}
 
 /**
  * Fetches the full secret key for a Veloera channel from its detail payload.

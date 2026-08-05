@@ -1,20 +1,14 @@
 import {
   CLAUDE_CODE_HUB_PROVIDER_TYPE,
-  DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS,
   isClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
-import type { ApiResponse } from "~/services/apiTransport/type"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import {
-  getManagedSiteDeleteCertainty,
-  type ManagedSiteChannelDeleteResponse,
-} from "~/services/managedSites/mutationCertainty"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
@@ -410,89 +404,6 @@ export async function listChannels(
     ...(options?.signal ? { signal: options.signal } : {}),
   })
   return toManagedSiteChannelListData(providers)
-}
-
-/**
- * Creates a Claude Code Hub channel from managed-site channel input.
- */
-export async function createChannel(
-  config: ClaudeCodeHubConfig,
-  channelData: CreateChannelPayload,
-): Promise<ApiResponse<unknown>> {
-  try {
-    const created = await claudeCodeHubApi.createProvider(
-      config,
-      buildClaudeCodeHubCreatePayloadFromFormData({
-        name: channelData.channel.name ?? "",
-        type:
-          channelData.channel.type ??
-          DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS.type,
-        key: channelData.channel.key ?? "",
-        base_url: channelData.channel.base_url ?? "",
-        models: parseDelimitedList(channelData.channel.models ?? ""),
-        groups:
-          channelData.channel.groups ??
-          parseDelimitedList(channelData.channel.group ?? DEFAULT_GROUP_TAG),
-        priority: channelData.channel.priority ?? 0,
-        weight: channelData.channel.weight ?? 1,
-        status: channelData.channel.status,
-      }),
-    )
-
-    return { success: true, data: created, message: "success" }
-  } catch (error) {
-    return {
-      success: false,
-      data: null,
-      message:
-        getErrorMessage(error) || t("messages:claudecodehub.importFailed"),
-    }
-  }
-}
-
-/**
- * Updates a Claude Code Hub channel from managed-site channel input.
- */
-export async function updateChannel(
-  config: ClaudeCodeHubConfig,
-  channelData: UpdateChannelPayload & { status?: number },
-): Promise<ApiResponse<unknown>> {
-  try {
-    const updated = await claudeCodeHubApi.updateProvider(
-      config,
-      buildClaudeCodeHubUpdatePayloadFromChannelData(channelData),
-    )
-
-    return { success: true, data: updated, message: "success" }
-  } catch (error) {
-    return {
-      success: false,
-      data: null,
-      message:
-        getErrorMessage(error) || t("messages:claudecodehub.updateFailed"),
-    }
-  }
-}
-
-/**
- * Deletes a Claude Code Hub channel by provider id.
- */
-export async function deleteChannel(
-  config: ClaudeCodeHubConfig,
-  channelId: number,
-): Promise<ManagedSiteChannelDeleteResponse> {
-  try {
-    const deleted = await claudeCodeHubApi.deleteProvider(config, channelId)
-    return { success: true, data: deleted, message: "success" }
-  } catch (error) {
-    return {
-      success: false,
-      data: null,
-      message:
-        getErrorMessage(error) || t("messages:claudecodehub.deleteFailed"),
-      ...getManagedSiteDeleteCertainty(error),
-    }
-  }
 }
 
 /**

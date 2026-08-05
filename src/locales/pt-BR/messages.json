@@ -25,11 +25,7 @@
     "unexpectedData": "Detecção automática falhou: o site retornou dados inesperados. Insira as informações manualmente ou certifique-se de estar logado no site de destino"
   },
   "axonhub": {
-    "channelExists": "O canal {{channelName}} já existe, não é necessário importar novamente",
     "configMissing": "Configure o endereço do AxonHub, e-mail do administrador e senha nas configurações básicas primeiro",
-    "deleteFailed": "Falha ao excluir canal do AxonHub",
-    "importFailed": "Falha na importação, ocorreu um erro desconhecido",
-    "importSuccess": "Canal {{channelName}} importado com sucesso",
     "modelsMissing": "Forneça pelo menos um modelo",
     "noChannelsToSync": "Nenhum canal para sincronizar",
     "unsupportedModelSync": "O AxonHub não suporta sincronização de modelos de sites gerenciados nesta versão"
@@ -58,13 +54,10 @@
   },
   "claudecodehub": {
     "configMissing": "Configure o endereço do Claude Code Hub e o token do administrador nas configurações básicas primeiro",
-    "deleteFailed": "Falha ao excluir provedor do Claude Code Hub",
-    "importFailed": "Falha na importação, ocorreu um erro desconhecido",
     "modelsMissing": "Forneça pelo menos um modelo",
     "noChannelsToSync": "Nenhum provedor para sincronizar",
     "realProviderKeyRequired": "O Claude Code Hub requer uma chave real do provedor upstream. Chaves vazias ou mascaradas não podem ser usadas para criação de provedores.",
-    "unsupportedModelSync": "O Claude Code Hub não suporta sincronização de modelos de sites gerenciados nesta versão",
-    "updateFailed": "Falha ao atualizar provedor do Claude Code Hub"
+    "unsupportedModelSync": "O Claude Code Hub não suporta sincronização de modelos de sites gerenciados nesta versão"
   },
   "claudeCodeRouter": {
     "configMissing": "Configure a URL base do Claude Code Router nas configurações primeiro",
@@ -118,11 +111,7 @@
     }
   },
   "newapi": {
-    "channelExists": "O canal {{channelName}} já existe, não é necessário importar novamente",
-    "channelMatchUnresolved": "Existe um canal duplicado em potencial, mas sua confirmação requer uma etapa de verificação do New API. Conclua a verificação primeiro e tente importar novamente.",
     "configMissing": "Configure o endereço do New API, token do administrador e ID do usuário nas configurações básicas primeiro",
-    "importFailed": "Falha na importação, ocorreu um erro desconhecido",
-    "importSuccess": "Canal {{channelName}} importado com sucesso",
     "noChannelsToSync": "Nenhum canal para sincronizar"
   },
   "octopus": {

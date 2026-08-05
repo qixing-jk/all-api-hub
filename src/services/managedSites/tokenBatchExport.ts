@@ -24,8 +24,7 @@ import {
   type ManagedSiteUpstreamResourcesCapability,
 } from "~/services/managedSites/managedUpstreamResourceService"
 import {
-  invokeManagedSiteMutationAttempt,
-  MANAGED_SITE_MUTATION_ATTEMPT_STATES,
+  assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
 } from "~/services/managedSites/mutations"
 import {
@@ -39,6 +38,7 @@ import {
 import {
   collectManagedResourceSecrets,
   hasUsableManagedSiteChannelKey,
+  mergeManagedResourceSecretCollections,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
 import {
@@ -92,11 +92,14 @@ const mapWithConcurrency = async <TItem, TResult>(
 
   const results = new Array<TResult>(items.length)
   let nextIndex = 0
+  let hasFailure = false
+  let firstFailure: unknown
 
   const workers = Array.from(
     { length: Math.min(concurrency, items.length) },
     async () => {
       while (true) {
+        if (hasFailure) return
         const index = nextIndex
         nextIndex += 1
 
@@ -104,12 +107,21 @@ const mapWithConcurrency = async <TItem, TResult>(
           return
         }
 
-        results[index] = await mapper(items[index], index)
+        try {
+          results[index] = await mapper(items[index], index)
+        } catch (error) {
+          if (!hasFailure) {
+            hasFailure = true
+            firstFailure = error
+          }
+          return
+        }
       }
     },
   )
 
   await Promise.all(workers)
+  if (hasFailure) throw firstFailure
 
   return results
 }
@@ -255,18 +267,6 @@ type ManagedResourceSecretCollection = ReturnType<
   typeof collectManagedResourceSecrets
 >
 
-const mergeSecretCollections = (
-  ...collections: readonly ManagedResourceSecretCollection[]
-): ManagedResourceSecretCollection =>
-  Object.freeze({
-    knownSecrets: Object.freeze(
-      Array.from(
-        new Set(collections.flatMap((collection) => collection.knownSecrets)),
-      ),
-    ),
-    complete: collections.every((collection) => collection.complete),
-  })
-
 const toSafePreviewDiagnostic = (
   error: unknown,
   secretCollection: ManagedResourceSecretCollection,
@@ -338,7 +338,7 @@ const preparePreviewItem = async (params: {
       input,
       params.protectionBypassExecution,
     )
-    secretCollection = mergeSecretCollections(
+    secretCollection = mergeManagedResourceSecretCollections(
       secretCollection,
       collectManagedResourceSecrets(resolvedToken),
     )
@@ -368,7 +368,7 @@ const preparePreviewItem = async (params: {
         operationContext: params.operationContext,
       },
     )
-    secretCollection = mergeSecretCollections(
+    secretCollection = mergeManagedResourceSecretCollections(
       secretCollection,
       collectManagedResourceSecrets(draft),
     )
@@ -624,59 +624,16 @@ export async function executeManagedSiteTokenBatchExport(params: {
     string,
     ManagedSiteTokenBatchExportExecutionItem
   >()
-  const executedItems = await mapWithConcurrency(
-    executableItems,
-    TOKEN_BATCH_EXPORT_CONCURRENCY,
-    async (item): Promise<ManagedSiteTokenBatchExportExecutionItem> => {
-      let payload
-      try {
-        payload = service.buildChannelPayload(item.draft)
-      } catch {
-        return {
-          id: item.id,
-          accountName: item.accountName,
-          runtimeKeyName: item.runtimeKeyName,
-          success: false,
-          skipped: false,
-          error: BATCH_MUTATION_FAILURE_CATEGORIES.Failed,
-        }
-      }
-
-      const secretCollection = collectManagedResourceSecrets(
-        managedConfig,
-        item.draft,
-        payload,
-      )
-      const attempt = await invokeManagedSiteMutationAttempt(
-        () => service.createChannel(managedConfig, payload),
-        {
-          idempotent: false,
-          knownSecrets: secretCollection.knownSecrets,
-          knownSecretsComplete: secretCollection.complete,
-          uncertainFallbackMessage: BATCH_MUTATION_FAILURE_CATEGORIES.Uncertain,
-        },
-      )
-      if (attempt.state === MANAGED_SITE_MUTATION_ATTEMPT_STATES.Uncertain) {
-        return {
-          id: item.id,
-          accountName: item.accountName,
-          runtimeKeyName: item.runtimeKeyName,
-          success: false,
-          skipped: false,
-          error: BATCH_MUTATION_FAILURE_CATEGORIES.Uncertain,
-        }
-      }
-
-      switch (attempt.result.outcome) {
-        case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
-          return {
-            id: item.id,
-            accountName: item.accountName,
-            runtimeKeyName: item.runtimeKeyName,
-            success: true,
-            skipped: false,
-          }
-        case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
+  let executedItems: ManagedSiteTokenBatchExportExecutionItem[]
+  try {
+    executedItems = await mapWithConcurrency(
+      executableItems,
+      TOKEN_BATCH_EXPORT_CONCURRENCY,
+      async (item): Promise<ManagedSiteTokenBatchExportExecutionItem> => {
+        let payload
+        try {
+          payload = service.buildChannelPayload(item.draft)
+        } catch {
           return {
             id: item.id,
             accountName: item.accountName,
@@ -685,19 +642,50 @@ export async function executeManagedSiteTokenBatchExport(params: {
             skipped: false,
             error: BATCH_MUTATION_FAILURE_CATEGORIES.Failed,
           }
-        case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
-        case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
-          return {
-            id: item.id,
-            accountName: item.accountName,
-            runtimeKeyName: item.runtimeKeyName,
-            success: false,
-            skipped: false,
-            error: BATCH_MUTATION_FAILURE_CATEGORIES.Uncertain,
-          }
-      }
-    },
-  )
+        }
+
+        const mutation = await service.createChannel(managedConfig, payload)
+        assertManagedSiteMutationResult(mutation, { idempotent: false })
+
+        switch (mutation.outcome) {
+          case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
+            return {
+              id: item.id,
+              accountName: item.accountName,
+              runtimeKeyName: item.runtimeKeyName,
+              success: true,
+              skipped: false,
+            }
+          case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
+            return {
+              id: item.id,
+              accountName: item.accountName,
+              runtimeKeyName: item.runtimeKeyName,
+              success: false,
+              skipped: false,
+              error: BATCH_MUTATION_FAILURE_CATEGORIES.Failed,
+            }
+          case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
+          case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
+            return {
+              id: item.id,
+              accountName: item.accountName,
+              runtimeKeyName: item.runtimeKeyName,
+              success: false,
+              skipped: false,
+              error: BATCH_MUTATION_FAILURE_CATEGORIES.Uncertain,
+            }
+        }
+      },
+    )
+  } catch (error) {
+    try {
+      await service.listChannels(managedConfig)
+    } catch {
+      // Reconciliation is best effort; post-invocation failures stay non-replayable.
+    }
+    throw error
+  }
 
   if (
     executedItems.some(

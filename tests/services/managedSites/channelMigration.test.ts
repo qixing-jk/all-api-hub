@@ -872,7 +872,7 @@ describe("channelMigration", () => {
     },
   )
 
-  it("classifies a malformed ordinary target result as uncertain without replay", async () => {
+  it("reconciles before rejecting a malformed ordinary target result without replay", async () => {
     const { executeManagedSiteMigration } = await import(
       "~/services/managedSites/channelMigration"
     )
@@ -891,23 +891,19 @@ describe("channelMigration", () => {
         : null,
     )
 
-    const result = await executeManagedSiteMigration({
-      preview: buildCanonicalPreview([
-        buildMigrationSelection("ordinary-malformed"),
-      ]),
-    })
+    await expect(
+      executeManagedSiteMigration({
+        preview: buildCanonicalPreview([
+          buildMigrationSelection("ordinary-malformed"),
+        ]),
+      }),
+    ).rejects.toThrow("Invalid managed site mutation result")
 
     expect(mockDoneHubCreateChannel).toHaveBeenCalledOnce()
     expect(mockDoneHubListChannels).toHaveBeenCalledOnce()
-    expect(result).toMatchObject({
-      createdCount: 0,
-      failedCount: 0,
-      uncertainCount: 1,
-      items: [{ selectionId: "ordinary-malformed", status: "uncertain" }],
-    })
   })
 
-  it("classifies and sanitizes a thrown ordinary target attempt from its snapshot", async () => {
+  it("reconciles before propagating a thrown ordinary target create unchanged", async () => {
     const { executeManagedSiteMigration } = await import(
       "~/services/managedSites/channelMigration"
     )
@@ -915,7 +911,6 @@ describe("channelMigration", () => {
     const password = "migration-thrown-password-placeholder"
     const totpSecret = "migration-thrown-totp-placeholder"
     const payloadSecret = "migration-thrown-payload-placeholder"
-    const providerText = "Provider create transport failed"
     const config = {
       baseUrl: "https://donehub.example.invalid",
       adminToken,
@@ -933,15 +928,13 @@ describe("channelMigration", () => {
     }
     mockDoneHubGetConfig.mockResolvedValue(config)
     mockDoneHubBuildChannelPayload.mockReturnValue(payload)
+    const thrown = new Error("ordinary create programming failure")
     mockDoneHubCreateChannel.mockImplementation(async () => {
       config.adminToken = "mutated-admin-token"
       config.password = "mutated-password"
       config.totpSecret = "mutated-totp"
       payload.channel.key = "mutated-payload-key"
-      throw new Error(
-        `${providerText} ${adminToken} ${password} ${totpSecret} ${payloadSecret}`,
-        { cause: new Error(`cause ${payloadSecret}`) },
-      )
+      throw thrown
     })
     mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
       siteType === SITE_TYPES.NEW_API
@@ -957,28 +950,19 @@ describe("channelMigration", () => {
         : null,
     )
 
-    const result = await executeManagedSiteMigration({
-      preview: buildCanonicalPreview([
-        buildMigrationSelection("ordinary-thrown"),
-      ]),
-    })
+    await expect(
+      executeManagedSiteMigration({
+        preview: buildCanonicalPreview([
+          buildMigrationSelection("ordinary-thrown"),
+        ]),
+      }),
+    ).rejects.toBe(thrown)
 
     expect(mockDoneHubCreateChannel).toHaveBeenCalledOnce()
     expect(mockDoneHubListChannels).toHaveBeenCalledOnce()
-    expect(result).toMatchObject({
-      failedCount: 0,
-      uncertainCount: 1,
-      items: [{ selectionId: "ordinary-thrown", status: "uncertain" }],
-    })
-    const serializedResult = JSON.stringify(result)
-    expect(serializedResult).not.toContain(providerText)
-    expect(serializedResult).not.toContain(adminToken)
-    expect(serializedResult).not.toContain(password)
-    expect(serializedResult).not.toContain(totpSecret)
-    expect(serializedResult).not.toContain(payloadSecret)
   })
 
-  it("uses controlled uncertainty when thrown-error secret inspection is incomplete", async () => {
+  it("reconciles before propagating a thrown ordinary target error when secret inspection is incomplete", async () => {
     const { executeManagedSiteMigration } = await import(
       "~/services/managedSites/channelMigration"
     )
@@ -999,7 +983,8 @@ describe("channelMigration", () => {
         },
       ),
     )
-    mockDoneHubCreateChannel.mockRejectedValue(new Error(providerText))
+    const thrown = new Error(providerText)
+    mockDoneHubCreateChannel.mockRejectedValue(thrown)
     mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
       siteType === SITE_TYPES.NEW_API
         ? {
@@ -1014,24 +999,13 @@ describe("channelMigration", () => {
         : null,
     )
 
-    const result = await executeManagedSiteMigration({
-      preview: buildCanonicalPreview([
-        buildMigrationSelection("ordinary-incomplete-throw"),
-      ]),
-    })
-
-    expect(result).toMatchObject({
-      failedCount: 0,
-      uncertainCount: 1,
-      items: [
-        {
-          selectionId: "ordinary-incomplete-throw",
-          status: "uncertain",
-        },
-      ],
-    })
-    expect(JSON.stringify(result)).not.toContain(providerText)
-    expect(JSON.stringify(result)).not.toContain(hiddenSecret)
+    await expect(
+      executeManagedSiteMigration({
+        preview: buildCanonicalPreview([
+          buildMigrationSelection("ordinary-incomplete-throw"),
+        ]),
+      }),
+    ).rejects.toBe(thrown)
   })
 
   it("performs one reconciliation after multiple ambiguous ordinary creates settle", async () => {
@@ -1552,23 +1526,84 @@ describe("channelMigration", () => {
     expectMigrationAbortInvariants(error)
   })
 
-  it("classifies uncertain create errors before honoring cancellation", async () => {
+  it.each([
+    ["primitive", "caller-cancelled"],
+    ["ordinary Error", new Error("Caller cancelled during create")],
+  ])(
+    "structures in-flight caller cancellation with a %s reason and does not replay the attempted row",
+    async (_label, cancellationReason) => {
+      const selections = [
+        buildMigrationSelection("created"),
+        buildMigrationSelection("cancelled-during-create"),
+        buildMigrationSelection("remaining"),
+      ]
+      const controller = new AbortController()
+      const create = vi
+        .fn()
+        .mockResolvedValueOnce({ status: "created" as const })
+        .mockImplementationOnce(async () => {
+          controller.abort(cancellationReason)
+          throw cancellationReason
+        })
+
+      const error = await captureMigrationExecutionAbort(
+        executeManagedSiteMigrationCore({
+          preview: buildCanonicalPreview(selections),
+          targetAvailable: true,
+          signal: controller.signal,
+          sourceFailureReasonCode:
+            MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+          resolveCredential: async () => ({
+            status: "ready",
+            credential: "execution-key",
+          }),
+          create,
+        }),
+      )
+
+      expect(error.cause).toBe(cancellationReason)
+      expect(error.details.partialResult).toEqual({
+        totalSelected: 3,
+        attemptedCount: 2,
+        createdCount: 1,
+        failedCount: 0,
+        skippedCount: 0,
+        uncertainCount: 1,
+        items: [
+          {
+            selectionId: "created",
+            displayName: "Selection created",
+            status: "created",
+          },
+          {
+            selectionId: "cancelled-during-create",
+            displayName: "Selection cancelled-during-create",
+            status: "uncertain",
+            failureCode:
+              MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+          },
+        ],
+      })
+      expect(error.details.remainingSelections).toEqual([selections[2]])
+      expect(create).toHaveBeenCalledTimes(2)
+      expectMigrationAbortInvariants(error)
+    },
+  )
+
+  it("propagates an unexpected create failure unchanged and stops later rows", async () => {
     const selections = [
-      buildMigrationSelection("uncertain-error"),
-      buildMigrationSelection("remaining"),
+      buildMigrationSelection("failing"),
+      buildMigrationSelection("not-attempted"),
     ]
-    const controller = new AbortController()
-    const mutationError = new Error("Mutation state is uncertain")
+    const thrown = new Error("create invariant failed")
     const create = vi.fn(async () => {
-      controller.abort(new Error("Cancelled during uncertain create"))
-      throw mutationError
+      throw thrown
     })
 
-    const error = await captureMigrationExecutionAbort(
+    await expect(
       executeManagedSiteMigrationCore({
         preview: buildCanonicalPreview(selections),
         targetAvailable: true,
-        signal: controller.signal,
         sourceFailureReasonCode:
           MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
         resolveCredential: async () => ({
@@ -1576,24 +1611,65 @@ describe("channelMigration", () => {
           credential: "execution-key",
         }),
         create,
-        isMutationStateUncertain: (error) => error === mutationError,
+      }),
+    ).rejects.toBe(thrown)
+
+    expect(create).toHaveBeenCalledOnce()
+  })
+
+  it("preserves completed progress when a later create throws structured cancellation", async () => {
+    const selections = [
+      buildMigrationSelection("created"),
+      buildMigrationSelection("create-aborted"),
+      buildMigrationSelection("remaining"),
+    ]
+    const abortError = new DOMException("Create cancelled", "AbortError")
+    const create = vi
+      .fn()
+      .mockResolvedValueOnce({ status: "created" as const })
+      .mockRejectedValueOnce(abortError)
+
+    const error = await captureMigrationExecutionAbort(
+      executeManagedSiteMigrationCore({
+        preview: buildCanonicalPreview(selections),
+        targetAvailable: true,
+        sourceFailureReasonCode:
+          MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_RESOLUTION_FAILED,
+        resolveCredential: async () => ({
+          status: "ready",
+          credential: "execution-key",
+        }),
+        create,
       }),
     )
 
-    expect(error.details.partialResult).toMatchObject({
-      attemptedCount: 1,
-      uncertainCount: 1,
-      items: [
-        {
-          selectionId: "uncertain-error",
-          status: "uncertain",
-          failureCode:
-            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
-        },
-      ],
+    expect(error.cause).toBe(abortError)
+    expect(error.details).toEqual({
+      partialResult: {
+        totalSelected: 3,
+        attemptedCount: 2,
+        createdCount: 1,
+        failedCount: 0,
+        skippedCount: 0,
+        uncertainCount: 1,
+        items: [
+          {
+            selectionId: "created",
+            displayName: "Selection created",
+            status: "created",
+          },
+          {
+            selectionId: "create-aborted",
+            displayName: "Selection create-aborted",
+            status: "uncertain",
+            failureCode:
+              MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+          },
+        ],
+      },
+      remainingSelections: selections.slice(2),
     })
-    expect(error.details.remainingSelections).toEqual([selections[1]])
-    expect(create).toHaveBeenCalledOnce()
+    expect(create).toHaveBeenCalledTimes(2)
     expectMigrationAbortInvariants(error)
   })
 
@@ -1642,7 +1718,7 @@ describe("channelMigration", () => {
     expectMigrationAbortInvariants(error)
   })
 
-  it("accounts for every canonical execution outcome and continues after non-abort failures", async () => {
+  it("accounts for every returned canonical execution outcome and continues", async () => {
     const selections = [
       "created",
       "failed",
@@ -1698,7 +1774,13 @@ describe("channelMigration", () => {
           }
         }
         if (selectionId === "uncertain") return { status: "uncertain" }
-        if (selectionId === "thrown") throw new Error("Create failed")
+        if (selectionId === "thrown") {
+          return {
+            status: "failed",
+            failureCode:
+              MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.Unexpected,
+          }
+        }
         return { status: "created" }
       },
     })
@@ -4489,64 +4571,48 @@ describe("channelMigration", () => {
     ])
   })
 
-  it("classifies thrown ordinary target creation as non-replayable uncertainty", async () => {
+  it("propagates thrown ordinary target creation unchanged", async () => {
     const { executeManagedSiteChannelMigration } = await import(
       "~/services/managedSites/channelMigration"
     )
 
-    mockDoneHubCreateChannel.mockRejectedValue(new Error("  Create exploded  "))
+    const thrown = new Error("  Create exploded  ")
+    mockDoneHubCreateChannel.mockRejectedValue(thrown)
 
-    const result = await executeManagedSiteChannelMigration({
-      preview: {
-        sourceSiteType: SITE_TYPES.NEW_API,
-        targetSiteType: SITE_TYPES.DONE_HUB,
-        generalWarningCodes: [],
-        totalCount: 1,
-        readyCount: 1,
-        blockedCount: 0,
-        items: [
-          {
-            channelId: 52,
-            channelName: "Ready",
-            sourceChannel: buildManagedSiteChannel({ id: 52, name: "Ready" }),
-            draft: {
-              name: "Ready",
-              type: ChannelType.OpenAI,
-              key: "ready-key",
-              base_url: "https://source.example.com",
-              models: ["gpt-4o"],
-              groups: ["default"],
-              priority: 0,
-              weight: 0,
-              status: 1,
+    await expect(
+      executeManagedSiteChannelMigration({
+        preview: {
+          sourceSiteType: SITE_TYPES.NEW_API,
+          targetSiteType: SITE_TYPES.DONE_HUB,
+          generalWarningCodes: [],
+          totalCount: 1,
+          readyCount: 1,
+          blockedCount: 0,
+          items: [
+            {
+              channelId: 52,
+              channelName: "Ready",
+              sourceChannel: buildManagedSiteChannel({ id: 52, name: "Ready" }),
+              draft: {
+                name: "Ready",
+                type: ChannelType.OpenAI,
+                key: "ready-key",
+                base_url: "https://source.example.com",
+                models: ["gpt-4o"],
+                groups: ["default"],
+                priority: 0,
+                weight: 0,
+                status: 1,
+              },
+              status: "ready",
+              warningCodes: [],
             },
-            status: "ready",
-            warningCodes: [],
-          },
-        ],
-      },
-    })
+          ],
+        },
+      }),
+    ).rejects.toBe(thrown)
 
-    expect(result).toMatchObject({
-      attemptedCount: 1,
-      createdCount: 0,
-      failedCount: 0,
-      skippedCount: 0,
-      uncertainCount: 1,
-    })
-    expect(result.items).toEqual([
-      {
-        channelId: 52,
-        channelName: "Ready",
-        success: false,
-        skipped: false,
-        uncertain: true,
-        error:
-          "Target creation may have succeeded. Verify the target before retrying.",
-      },
-    ])
     expect(mockDoneHubListChannels).toHaveBeenCalledOnce()
-    expect(JSON.stringify(result)).not.toContain("Create exploded")
   })
 
   it("sanitizes a pre-dispatch target payload builder failure as failed", async () => {
@@ -5155,15 +5221,16 @@ describe("channelMigration", () => {
     expect(result.items[0]).not.toHaveProperty("blockingReasonCode")
   })
 
-  it("reports thrown target uncertainty with verify-before-retry guidance", async () => {
+  it("propagates a thrown named-target create unchanged", async () => {
     const {
       executeManagedSiteChannelMigration,
       prepareManagedSiteChannelMigrationPreview,
     } = await import("~/services/managedSites/channelMigration")
+    const mutationError = new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+    })
     const create = vi.fn(async () => {
-      throw new ManagedResourceError({
-        code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-      })
+      throw mutationError
     })
     mockResolveManagedSiteMigrationCapability.mockImplementation((siteType) =>
       siteType === SITE_TYPES.AXON_HUB
@@ -5184,28 +5251,11 @@ describe("channelMigration", () => {
       channels: [buildManagedSiteChannel({ id: 311_1, key: "source-key" })],
     })
 
-    const result = await executeManagedSiteChannelMigration({ preview })
+    await expect(executeManagedSiteChannelMigration({ preview })).rejects.toBe(
+      mutationError,
+    )
 
     expect(create).toHaveBeenCalledOnce()
-    expect(result).toMatchObject({
-      attemptedCount: 1,
-      createdCount: 0,
-      failedCount: 0,
-      skippedCount: 0,
-      uncertainCount: 1,
-    })
-    expect(result.items).toEqual([
-      {
-        channelId: 311_1,
-        channelName: "Alpha",
-        success: false,
-        skipped: false,
-        uncertain: true,
-        error:
-          "Target creation may have succeeded. Verify the target before retrying.",
-      },
-    ])
-    expect(result.items[0]).not.toHaveProperty("blockingReasonCode")
   })
 
   it("preserves string selection identity and order across native preparation", async () => {
@@ -5309,7 +5359,7 @@ describe("channelMigration", () => {
     })
   })
 
-  it("classifies managed-resource mutation errors as uncertain", async () => {
+  it("propagates managed-resource mutation errors unchanged", async () => {
     const { executeManagedSiteMigration } = await import(
       "~/services/managedSites/channelMigration"
     )
@@ -5337,27 +5387,15 @@ describe("channelMigration", () => {
       return null
     })
 
-    const result = await executeManagedSiteMigration({
-      preview: buildCanonicalPreview([
-        buildMigrationSelection("uncertain-mutation-error"),
-      ]),
-    })
+    await expect(
+      executeManagedSiteMigration({
+        preview: buildCanonicalPreview([
+          buildMigrationSelection("uncertain-mutation-error"),
+        ]),
+      }),
+    ).rejects.toBe(mutationError)
 
     expect(create).toHaveBeenCalledOnce()
-    expect(result).toMatchObject({
-      attemptedCount: 1,
-      createdCount: 0,
-      failedCount: 0,
-      uncertainCount: 1,
-      items: [
-        {
-          selectionId: "uncertain-mutation-error",
-          status: "uncertain",
-          failureCode:
-            MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
-        },
-      ],
-    })
   })
 
   it("revalidates crafted canonical preview refs and executes only valid rows", async () => {
@@ -5546,7 +5584,7 @@ describe("channelMigration", () => {
     expect(create).not.toHaveBeenCalled()
   })
 
-  it("stops canonical Axon creation after an adapter abort and retains secret-free progress", async () => {
+  it("preserves canonical progress for an Axon create abort", async () => {
     const { executeManagedSiteMigration } = await import(
       "~/services/managedSites/channelMigration"
     )
@@ -5600,17 +5638,27 @@ describe("channelMigration", () => {
     )
 
     expect(error.cause).toBe(adapterAbort)
-    expect((error.cause as Error).cause).toBe(nativeAbort)
-    expect(error.details.partialResult).toEqual({
-      totalSelected: 2,
-      attemptedCount: 1,
-      createdCount: 0,
-      failedCount: 0,
-      skippedCount: 0,
-      uncertainCount: 0,
-      items: [],
+    expect(error.details).toEqual({
+      partialResult: {
+        totalSelected: 2,
+        attemptedCount: 1,
+        createdCount: 0,
+        failedCount: 0,
+        skippedCount: 0,
+        uncertainCount: 1,
+        items: [
+          {
+            selectionId: "native-aborted",
+            displayName: "Selection native-aborted",
+            status: "uncertain",
+            failureCode:
+              MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES.MutationStateUncertain,
+          },
+        ],
+      },
+      remainingSelections: [selections[1]],
     })
-    expect(error.details.remainingSelections).toEqual(selections)
+    expect((adapterAbort as Error).cause).toBe(nativeAbort)
     expect(resolveCredential).toHaveBeenCalledOnce()
     expect(createTarget).toHaveBeenCalledOnce()
     expectMigrationAbortInvariants(error)

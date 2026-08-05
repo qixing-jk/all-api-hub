@@ -25,11 +25,7 @@
     "unexpectedData": "自动识别失败，站点返回的数据不符合预期。请手动输入信息，或确保已登录目标站点。"
   },
   "axonhub": {
-    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
     "configMissing": "请先在设置中配置 AxonHub 地址、管理员邮箱和密码",
-    "deleteFailed": "删除 AxonHub 渠道失败",
-    "importFailed": "导入失败，发生未知错误",
-    "importSuccess": "成功导入新渠道 {{channelName}}",
     "modelsMissing": "请至少填写一个模型",
     "noChannelsToSync": "没有可同步的渠道",
     "unsupportedModelSync": "当前版本不支持 AxonHub 管理站点模型同步"
@@ -58,13 +54,10 @@
   },
   "claudecodehub": {
     "configMissing": "请先在设置中配置 Claude Code Hub 地址和管理员令牌",
-    "deleteFailed": "删除 Claude Code Hub 提供商失败",
-    "importFailed": "导入失败，发生未知错误",
     "modelsMissing": "请至少填写一个模型",
     "noChannelsToSync": "没有可同步的提供商",
     "realProviderKeyRequired": "Claude Code Hub 创建提供商需要真实上游密钥，空密钥或脱敏密钥不能用于创建。",
-    "unsupportedModelSync": "当前版本不支持 Claude Code Hub 管理站点模型同步",
-    "updateFailed": "更新 Claude Code Hub 提供商失败"
+    "unsupportedModelSync": "当前版本不支持 Claude Code Hub 管理站点模型同步"
   },
   "claudeCodeRouter": {
     "configMissing": "请先在设置中配置 Claude Code Router 基础 URL",
@@ -118,11 +111,7 @@
     }
   },
   "newapi": {
-    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
-    "channelMatchUnresolved": "可能已经存在重复渠道，但当前需要先完成 New API 验证才能确认。请先完成验证后再重试导入。",
     "configMissing": "请先在设置中配置 New API 地址、管理员令牌和用户 ID",
-    "importFailed": "导入失败，发生未知错误",
-    "importSuccess": "成功导入新渠道 {{channelName}}",
     "noChannelsToSync": "没有可同步的渠道"
   },
   "octopus": {

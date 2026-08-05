@@ -630,7 +630,7 @@ describe("useChannelForm", () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it("fails closed when an ordinary mutation returns a malformed result", async () => {
+  it("reconciles and closes before propagating a malformed ordinary mutation", async () => {
     const onClose = vi.fn()
     const onMutationOutcome = vi.fn()
     const listChannels = vi.fn().mockResolvedValue({
@@ -683,28 +683,25 @@ describe("useChannelForm", () => {
       result.current.updateField("models", ["model-example"])
     })
 
+    let caught: unknown
     await act(async () => {
-      await result.current.handleSubmit({
-        preventDefault: vi.fn(),
-      } as unknown as FormEvent)
+      try {
+        await result.current.handleSubmit({
+          preventDefault: vi.fn(),
+        } as unknown as FormEvent)
+      } catch (error) {
+        caught = error
+      }
+    })
+    expect(caught).toMatchObject({
+      message: "Invalid managed site mutation result",
     })
 
     expect(mockCreateChannel).toHaveBeenCalledOnce()
     expect(listChannels).toHaveBeenCalledOnce()
     expect(onClose).toHaveBeenCalledOnce()
     expect(result.current.formData.name).toBe("")
-    expect(onMutationOutcome).toHaveBeenCalledWith({
-      mode: DIALOG_MODES.ADD,
-      result: CHANNEL_DIALOG_MUTATION_RESULTS.Failure,
-      siteType: SITE_TYPES.NEW_API,
-    })
-    expect(loggerMocks.error).not.toHaveBeenCalledWith(
-      "Save failed",
-      expect.anything(),
-    )
-    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-      "channelDialog:messages.saveFailed",
-    )
+    expect(onMutationOutcome).not.toHaveBeenCalled()
   })
 
   it("sanitizes a pre-dispatch payload builder failure and keeps the form reusable", async () => {
@@ -778,7 +775,7 @@ describe("useChannelForm", () => {
     expect(disclosed).not.toContain("cause")
   })
 
-  it("sanitizes a thrown ordinary mutation and closes the non-replayable form", async () => {
+  it("reconciles and closes before propagating a thrown ordinary mutation unchanged", async () => {
     const adminToken = "thrown-admin-token-placeholder"
     const password = "thrown-password-placeholder"
     const totpSecret = "thrown-totp-placeholder"
@@ -820,15 +817,16 @@ describe("useChannelForm", () => {
     } as any)
     mockGetConfig.mockResolvedValue(config)
     mockBuildChannelPayload.mockReturnValue(payload)
+    const thrown = new Error(
+      `${providerText} ${adminToken} ${password} ${totpSecret} ${payloadSecret}`,
+      { cause: new Error(`cause ${payloadSecret}`) },
+    )
     mockCreateChannel.mockImplementation(async () => {
       config.adminToken = "mutated-admin-token"
       config.password = "mutated-password"
       config.totpSecret = "mutated-totp"
       payload.channel.key = "mutated-payload-secret"
-      throw new Error(
-        `${providerText} ${adminToken} ${password} ${totpSecret} ${payloadSecret}`,
-        { cause: new Error(`cause ${payloadSecret}`) },
-      )
+      throw thrown
     })
     const translationSpy = vi.spyOn(testI18n, "t")
     const onClose = vi.fn()
@@ -847,28 +845,35 @@ describe("useChannelForm", () => {
       result.current.updateField("models", ["model-example"])
     })
 
+    let caught: unknown
     await act(async () => {
-      await result.current.handleSubmit({
-        preventDefault: vi.fn(),
-      } as unknown as FormEvent)
+      try {
+        await result.current.handleSubmit({
+          preventDefault: vi.fn(),
+        } as unknown as FormEvent)
+      } catch (error) {
+        caught = error
+      }
     })
+    expect(caught).toBe(thrown)
 
     expect(mockCreateChannel).toHaveBeenCalledOnce()
     expect(listChannels).toHaveBeenCalledOnce()
     expect(onClose).toHaveBeenCalledOnce()
+    expect(result.current.formData.name).toBe("")
     const disclosed = JSON.stringify([
       translationSpy.mock.calls,
       vi.mocked(toast.error).mock.calls,
       loggerMocks.error.mock.calls,
     ])
-    expect(disclosed).toContain(providerText)
+    expect(disclosed).not.toContain(providerText)
     expect(disclosed).not.toContain(adminToken)
     expect(disclosed).not.toContain(password)
     expect(disclosed).not.toContain(totpSecret)
     expect(disclosed).not.toContain(payloadSecret)
   })
 
-  it("uses fallback-only feedback for a thrown mutation when inspection is incomplete", async () => {
+  it("reconciles before propagating a thrown mutation unchanged when inspection is incomplete", async () => {
     const hiddenSecret = "thrown-incomplete-config-secret-placeholder"
     const providerText = `Provider private throw ${hiddenSecret}`
     const config = new Proxy(
@@ -912,7 +917,8 @@ describe("useChannelForm", () => {
         status: 1,
       },
     })
-    mockCreateChannel.mockRejectedValue(new Error(providerText))
+    const thrown = new Error(providerText)
+    mockCreateChannel.mockRejectedValue(thrown)
     const translationSpy = vi.spyOn(testI18n, "t")
     const onClose = vi.fn()
     const { result } = renderHook(() =>
@@ -930,11 +936,17 @@ describe("useChannelForm", () => {
       result.current.updateField("models", ["model-example"])
     })
 
+    let caught: unknown
     await act(async () => {
-      await result.current.handleSubmit({
-        preventDefault: vi.fn(),
-      } as unknown as FormEvent)
+      try {
+        await result.current.handleSubmit({
+          preventDefault: vi.fn(),
+        } as unknown as FormEvent)
+      } catch (error) {
+        caught = error
+      }
     })
+    expect(caught).toBe(thrown)
 
     expect(mockCreateChannel).toHaveBeenCalledOnce()
     expect(listChannels).toHaveBeenCalledOnce()
@@ -1868,7 +1880,7 @@ describe("useChannelForm", () => {
     expect(loggedError.message).not.toContain(paramOverride)
   })
 
-  it("classifies and sanitizes a thrown resource update from the pre-call snapshot", async () => {
+  it("refreshes a resource edit before propagating a thrown update unchanged", async () => {
     const configSecret = "resource-config-secret"
     const draftSecret = "resource-draft-secret"
     const diagnosticPrefix = "Provider resource transport failed"
@@ -1893,17 +1905,30 @@ describe("useChannelForm", () => {
       },
       native: channel,
     }
-    const getDetail = vi.fn().mockResolvedValue(detail)
+    const reconciledDetail: ManagedUpstreamResourceDetail<ManagedSiteChannel> =
+      {
+        ...detail,
+        summary: {
+          ...detail.summary,
+          displayName: "Fresh resource channel",
+        },
+        native: { ...channel, name: "Fresh resource channel" },
+      }
+    let detailReadCount = 0
+    const getDetail = vi.fn(async () => {
+      detailReadCount += 1
+      return detailReadCount === 1 ? detail : reconciledDetail
+    })
+    const thrown = new Error(
+      `${diagnosticPrefix} ${configSecret} ${draftSecret}`,
+      { cause: new Error(`cause ${draftSecret}`) },
+    )
     const update = vi
       .fn()
       .mockImplementation(async (_config, _detail, draft) => {
         config.adminToken = "mutated-after-snapshot"
         draft.key = "mutated-draft"
-        const error = new Error(
-          `${diagnosticPrefix} ${configSecret} ${draftSecret}`,
-        )
-        error.cause = new Error(`cause ${draftSecret}`)
-        throw error
+        throw thrown
       })
     const resourceEdit: ChannelResourceEditContext = {
       config,
@@ -1911,8 +1936,8 @@ describe("useChannelForm", () => {
       capabilities: {
         items: { getDetail, update },
         drafts: {
-          prepareEditDraft: vi.fn(() => ({
-            name: "Thrown resource channel",
+          prepareEditDraft: vi.fn((loadedDetail) => ({
+            name: (loadedDetail.native as ManagedSiteChannel).name,
             type: ChannelType.OpenAI,
             key: draftSecret,
             base_url: "https://source.example.invalid",
@@ -1938,23 +1963,25 @@ describe("useChannelForm", () => {
     )
 
     await waitFor(() => expect(result.current.isFormValid).toBe(true))
+    let caught: unknown
     await act(async () => {
-      await result.current.handleSubmit({
-        preventDefault: vi.fn(),
-      } as unknown as FormEvent)
+      try {
+        await result.current.handleSubmit({
+          preventDefault: vi.fn(),
+        } as unknown as FormEvent)
+      } catch (error) {
+        caught = error
+      }
     })
 
+    expect(caught).toBe(thrown)
     expect(update).toHaveBeenCalledOnce()
-    expect(getDetail).toHaveBeenCalledTimes(2)
-    const loggedError = loggerMocks.error.mock.calls.at(-1)?.[1] as Error
+    expect(detailReadCount).toBe(2)
     const disclosed = JSON.stringify(vi.mocked(toast.error).mock.calls)
-    expect(loggedError.message).toContain(diagnosticPrefix)
+    expect(disclosed).not.toContain(diagnosticPrefix)
     expect(disclosed).not.toContain(configSecret)
     expect(disclosed).not.toContain(draftSecret)
     expect(disclosed).not.toContain("cause")
-    expect(loggedError.message).not.toContain(configSecret)
-    expect(loggedError.message).not.toContain(draftSecret)
-    expect(loggedError.message).not.toContain("cause")
   })
 
   it("uses only translated fallback feedback when resource secret collection is incomplete", async () => {

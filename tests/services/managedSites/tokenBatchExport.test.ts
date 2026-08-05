@@ -583,13 +583,14 @@ describe("managed-site token batch export", () => {
     },
   )
 
-  it("classifies a thrown create as uncertain without persisting raw diagnostics", async () => {
+  it("reconciles before propagating a thrown create unchanged without replay", async () => {
     const config = {
       baseUrl: "https://target.example.com",
       adminToken: "admin-secret",
       userId: "1",
     }
     const payloadSecret = "payload-secret"
+    const thrown = new Error("write programming failure")
     const service = buildService({
       getConfig: vi.fn().mockResolvedValue(config),
       buildChannelPayload: vi.fn((draft) => ({
@@ -598,11 +599,7 @@ describe("managed-site token batch export", () => {
       })),
       createChannel: vi.fn().mockImplementation(async () => {
         config.adminToken = "mutated-after-snapshot"
-        const error = new Error(
-          `transport error ${config.adminToken} ${payloadSecret}`,
-        )
-        error.cause = new Error(`cause ${payloadSecret}`)
-        throw error
+        throw thrown
       }),
     })
     mockGetManagedSiteService.mockResolvedValue(service)
@@ -617,31 +614,18 @@ describe("managed-site token batch export", () => {
       items: [buildAccountTokenInput()],
     })
 
-    const result = await executeManagedSiteTokenBatchExport({
-      preview,
-      selectedItemIds: [preview.items[0].id],
-    })
+    await expect(
+      executeManagedSiteTokenBatchExport({
+        preview,
+        selectedItemIds: [preview.items[0].id],
+      }),
+    ).rejects.toBe(thrown)
 
     expect(service.createChannel).toHaveBeenCalledTimes(1)
     expect(service.listChannels).toHaveBeenCalledOnce()
-    expect(result).toMatchObject({
-      attemptedCount: 1,
-      createdCount: 0,
-      failedCount: 1,
-    })
-    expect(result.items[0]).toMatchObject({
-      id: preview.items[0].id,
-      success: false,
-      skipped: false,
-      error: "uncertain",
-    })
-    expect(JSON.stringify(result)).not.toContain("transport error")
-    expect(JSON.stringify(result)).not.toContain("admin-secret")
-    expect(JSON.stringify(result)).not.toContain(payloadSecret)
-    expect(JSON.stringify(result)).not.toContain("cause")
   })
 
-  it("classifies a malformed create result as uncertain and reconciles once", async () => {
+  it("reconciles before rejecting a malformed create result without replay", async () => {
     const service = buildService({
       createChannel: vi.fn().mockResolvedValue(undefined),
     })
@@ -656,14 +640,79 @@ describe("managed-site token batch export", () => {
       items: [buildAccountTokenInput()],
     })
 
-    const result = await executeManagedSiteTokenBatchExport({
-      preview,
-      selectedItemIds: [preview.items[0].id],
-    })
+    await expect(
+      executeManagedSiteTokenBatchExport({
+        preview,
+        selectedItemIds: [preview.items[0].id],
+      }),
+    ).rejects.toThrow("Invalid managed site mutation result")
 
     expect(service.createChannel).toHaveBeenCalledOnce()
     expect(service.listChannels).toHaveBeenCalledOnce()
-    expect(result.items[0]).toMatchObject({ error: "uncertain" })
+  })
+
+  it("settles in-flight writes and stops dependent items before propagating a create failure", async () => {
+    const thrown = new Error("batch write invariant failed")
+    let releaseInFlight!: () => void
+    const inFlightCanSettle = new Promise<void>((resolve) => {
+      releaseInFlight = resolve
+    })
+    const createChannel = vi.fn(async () => {
+      if (createChannel.mock.calls.length === 1) throw thrown
+      await inFlightCanSettle
+      return {
+        outcome: "succeeded" as const,
+        data: undefined,
+        confirmedEffects: [
+          {
+            kind: "resource-created" as const,
+            resourceKind: "channel" as const,
+          },
+        ],
+      }
+    })
+    const service = buildService({ createChannel })
+    mockGetManagedSiteService.mockResolvedValue(service)
+    mockGetManagedSiteServiceForType.mockReturnValue(service)
+
+    const {
+      prepareManagedSiteTokenBatchExportPreview,
+      executeManagedSiteTokenBatchExport,
+    } = await import("~/services/managedSites/tokenBatchExport")
+    const inputs = Array.from({ length: 6 }, (_, index) => {
+      const accountId = `account-${index + 1}`
+      return buildAccountTokenInput(
+        buildDisplaySiteData({ id: accountId, name: `Account ${index + 1}` }),
+        buildAccountToken({
+          id: index + 11,
+          name: `Token ${index + 11}`,
+          accountId,
+          accountName: `Account ${index + 1}`,
+        }),
+      )
+    })
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: inputs,
+    })
+
+    const execution = executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: preview.items.map((item) => item.id),
+    }).then(
+      () => ({ status: "resolved" as const, error: undefined }),
+      (error: unknown) => ({ status: "rejected" as const, error }),
+    )
+
+    await vi.waitFor(() => expect(createChannel).toHaveBeenCalledTimes(4))
+    expect(service.listChannels).not.toHaveBeenCalled()
+    releaseInFlight()
+
+    await expect(execution).resolves.toEqual({
+      status: "rejected",
+      error: thrown,
+    })
+    expect(createChannel).toHaveBeenCalledTimes(4)
+    expect(service.listChannels).toHaveBeenCalledOnce()
   })
 
   it("reconciles once after all ambiguous batch writes settle", async () => {

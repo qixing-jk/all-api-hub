@@ -2,8 +2,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   consumeManagedSiteMutationResult,
-  invokeManagedSiteMutationAttempt,
-  MANAGED_SITE_MUTATION_ATTEMPT_STATES,
   MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
@@ -244,100 +242,5 @@ describe("consumeManagedSiteMutationResult", () => {
         }),
       ),
     ).rejects.toBe(factoryFailure)
-  })
-})
-
-describe("invokeManagedSiteMutationAttempt", () => {
-  const createAttemptOptions = (
-    overrides: Partial<
-      Parameters<typeof invokeManagedSiteMutationAttempt>[1]
-    > = {},
-  ) => ({
-    idempotent: false,
-    knownSecrets: [] as readonly string[],
-    knownSecretsComplete: true,
-    uncertainFallbackMessage: "Mutation state requires reconciliation",
-    ...overrides,
-  })
-
-  it("returns a validated provider result without changing its identity", async () => {
-    const result = {
-      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
-      data: { id: 7 },
-      confirmedEffects: [
-        {
-          kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
-          resourceKind: "channel" as const,
-          resourceId: 7,
-        },
-      ],
-    }
-    const invoke = vi.fn().mockResolvedValue(result)
-
-    await expect(
-      invokeManagedSiteMutationAttempt(invoke, createAttemptOptions()),
-    ).resolves.toEqual({
-      state: MANAGED_SITE_MUTATION_ATTEMPT_STATES.Result,
-      result,
-    })
-    expect(invoke).toHaveBeenCalledOnce()
-  })
-
-  it("classifies a malformed post-invocation result as controlled uncertain", async () => {
-    const invoke = vi.fn().mockResolvedValue({ outcome: "invalid" })
-
-    await expect(
-      invokeManagedSiteMutationAttempt(invoke, createAttemptOptions()),
-    ).resolves.toEqual({
-      state: MANAGED_SITE_MUTATION_ATTEMPT_STATES.Uncertain,
-      message: "Mutation state requires reconciliation",
-    })
-    expect(invoke).toHaveBeenCalledOnce()
-  })
-
-  it("sanitizes a thrown post-invocation error from the caller snapshot", async () => {
-    const secret = "attempt-secret-placeholder"
-    const source = { secret }
-    const thrown = new Error(`Provider write failed with ${secret}`, {
-      cause: new Error(`Cause ${secret}`),
-    })
-    const invoke = vi.fn(async () => {
-      source.secret = "mutated-secret"
-      throw thrown
-    })
-
-    const attempt = await invokeManagedSiteMutationAttempt(
-      invoke,
-      createAttemptOptions({ knownSecrets: [secret] }),
-    )
-
-    expect(attempt).toMatchObject({
-      state: MANAGED_SITE_MUTATION_ATTEMPT_STATES.Uncertain,
-      message: expect.stringContaining("Provider write failed"),
-    })
-    expect(JSON.stringify(attempt)).not.toContain(secret)
-    expect(attempt).not.toHaveProperty("error")
-    expect(attempt).not.toHaveProperty("cause")
-    expect(invoke).toHaveBeenCalledOnce()
-  })
-
-  it("uses only the local fallback when secret collection is incomplete", async () => {
-    const providerText = "Provider private post-invocation diagnostic"
-    const secret = "uncollected-attempt-secret-placeholder"
-    const invoke = vi
-      .fn()
-      .mockRejectedValue(new Error(`${providerText} ${secret}`))
-
-    const attempt = await invokeManagedSiteMutationAttempt(
-      invoke,
-      createAttemptOptions({ knownSecretsComplete: false }),
-    )
-
-    expect(attempt).toEqual({
-      state: MANAGED_SITE_MUTATION_ATTEMPT_STATES.Uncertain,
-      message: "Mutation state requires reconciliation",
-    })
-    expect(JSON.stringify(attempt)).not.toContain(providerText)
-    expect(JSON.stringify(attempt)).not.toContain(secret)
   })
 })

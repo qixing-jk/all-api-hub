@@ -16,8 +16,7 @@ import type { ManagedUpstreamResourceDraftsCapability } from "~/services/apiAdap
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import type { ManagedSiteUpstreamResourcesCapability } from "~/services/managedSites/managedUpstreamResourceService"
 import {
-  invokeManagedSiteMutationAttempt,
-  MANAGED_SITE_MUTATION_ATTEMPT_STATES,
+  assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
   toPrivateManagedSiteMutationOutput,
   toPrivateManagedSiteThrownErrorMessage,
@@ -26,6 +25,7 @@ import {
   collectManagedResourceSecrets,
   getManagedSiteConfigMissingMessage,
   hasUsableManagedSiteChannelKey,
+  mergeManagedResourceSecretCollections,
 } from "~/services/managedSites/utils/managedSite"
 import type {
   ChannelFormData,
@@ -518,6 +518,9 @@ export function useChannelForm({
 
     setIsSaving(true)
     let submissionSiteType: string | null = null
+    let unexpectedMutationFailure: unknown
+    let hasUnexpectedMutationFailure = false
+    let reconcileUnexpectedMutation: (() => Promise<void>) | null = null
     const reportMutationFailure = (siteType: string, message?: string) => {
       onMutationOutcome?.({
         mode,
@@ -581,22 +584,7 @@ export function useChannelForm({
             controlledError,
           )
         }
-        const attempt = await invokeManagedSiteMutationAttempt(
-          () =>
-            resourceEdit.capabilities.items.update(
-              resourceEdit.config,
-              resourceDetail,
-              formData,
-            ),
-          {
-            idempotent: false,
-            knownSecrets: resourceSecretCollection.knownSecrets,
-            knownSecretsComplete: resourceSecretCollection.complete,
-            uncertainFallbackMessage: "",
-          },
-        )
-
-        if (attempt.state === MANAGED_SITE_MUTATION_ATTEMPT_STATES.Uncertain) {
+        const reconcileResourceEdit = async () => {
           try {
             const reconciledDetail =
               await resourceEdit.capabilities.items.getDetail(
@@ -607,10 +595,23 @@ export function useChannelForm({
           } catch (error) {
             recordResourceReconciliationFailure(error)
           }
-          throw new Error(attempt.message)
         }
-
-        const mutation = attempt.result
+        reconcileUnexpectedMutation = reconcileResourceEdit
+        const mutation = await (async () => {
+          try {
+            const result = await resourceEdit.capabilities.items.update(
+              resourceEdit.config,
+              resourceDetail,
+              formData,
+            )
+            assertManagedSiteMutationResult(result, { idempotent: false })
+            return result
+          } catch (error) {
+            unexpectedMutationFailure = error
+            hasUnexpectedMutationFailure = true
+            throw error
+          }
+        })()
 
         switch (mutation.outcome) {
           case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
@@ -634,19 +635,7 @@ export function useChannelForm({
           }
           case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
           case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain: {
-            try {
-              const reconciledDetail =
-                await resourceEdit.capabilities.items.getDetail(
-                  resourceEdit.config,
-                  resourceEdit.ref,
-                )
-              applyResourceEditDetail(
-                reconciledDetail,
-                activeResourceEditRefKey!,
-              )
-            } catch (error) {
-              recordResourceReconciliationFailure(error)
-            }
+            await reconcileResourceEdit()
             const message = resourceSecretCollection.complete
               ? toPrivateManagedSiteMutationOutput(mutation, {
                   knownSecrets: resourceSecretCollection.knownSecrets,
@@ -720,38 +709,34 @@ export function useChannelForm({
           formData,
           payload,
         )
-        const secretCollection = {
-          knownSecrets: [
-            ...new Set([
-              ...preDispatchSecretCollection.knownSecrets,
-              ...payloadSecretCollection.knownSecrets,
-            ]),
-          ],
-          complete:
-            preDispatchSecretCollection.complete &&
-            payloadSecretCollection.complete,
-        }
-        const attempt = await invokeManagedSiteMutationAttempt(
-          executeMutation,
-          {
-            idempotent: false,
-            knownSecrets: secretCollection.knownSecrets,
-            knownSecretsComplete: secretCollection.complete,
-            uncertainFallbackMessage: "",
-          },
+        const secretCollection = mergeManagedResourceSecretCollections(
+          preDispatchSecretCollection,
+          payloadSecretCollection,
         )
-        if (attempt.state === MANAGED_SITE_MUTATION_ATTEMPT_STATES.Uncertain) {
+        const reconcileOrdinaryMutation = async () => {
           try {
             await service.listChannels(apiConfig)
           } catch {
             logger.error("Failed to reconcile ambiguous channel mutation")
           }
-          onClose()
-          resetForm()
-          reportMutationFailure(service.siteType, attempt.message)
-          return
+          try {
+            onClose()
+          } finally {
+            resetForm()
+          }
         }
-        const mutation = attempt.result
+        reconcileUnexpectedMutation = reconcileOrdinaryMutation
+        const mutation = await (async () => {
+          try {
+            const result = await executeMutation()
+            assertManagedSiteMutationResult(result, { idempotent: false })
+            return result
+          } catch (error) {
+            unexpectedMutationFailure = error
+            hasUnexpectedMutationFailure = true
+            throw error
+          }
+        })()
 
         const projectMessage = () =>
           secretCollection.complete
@@ -773,13 +758,7 @@ export function useChannelForm({
             return
           case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
           case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
-            try {
-              await service.listChannels(apiConfig)
-            } catch {
-              logger.error("Failed to reconcile ambiguous channel mutation")
-            }
-            onClose()
-            resetForm()
+            await reconcileOrdinaryMutation()
             reportMutationFailure(service.siteType, projectMessage())
             return
         }
@@ -804,6 +783,10 @@ export function useChannelForm({
       onClose()
       resetForm()
     } catch (error: any) {
+      if (hasUnexpectedMutationFailure && error === unexpectedMutationFailure) {
+        await reconcileUnexpectedMutation?.().catch(() => undefined)
+        throw error
+      }
       logger.error("Save failed", error)
       const siteType =
         submissionSiteType ??

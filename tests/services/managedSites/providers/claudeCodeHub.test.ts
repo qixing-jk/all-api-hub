@@ -6,7 +6,6 @@ import {
   DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS,
 } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -16,8 +15,6 @@ import {
   buildClaudeCodeHubCreatePayloadFromFormData,
   buildClaudeCodeHubUpdatePayloadFromChannelData,
   checkValidClaudeCodeHubConfig,
-  createChannel,
-  deleteChannel,
   fetchAvailableModels,
   fetchChannelSecretKey,
   getClaudeCodeHubConfig,
@@ -26,7 +23,6 @@ import {
   prepareChannelFormData,
   providerToManagedSiteChannel,
   searchChannel,
-  updateChannel,
 } from "~/services/managedSites/providers/claudeCodeHub"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 
@@ -404,11 +400,8 @@ describe("Claude Code Hub managed-site provider", () => {
     expect(mockSearchProviders).not.toHaveBeenCalled()
   })
 
-  it("searches, creates, updates, and deletes providers with passed admin config", async () => {
-    mockGetPreferences.mockResolvedValue({
-      claudeCodeHub: storedClaudeCodeHubConfig,
-    })
-    mockSearchProviders.mockResolvedValue([
+  it("searches providers with passed admin config and maps failures to null", async () => {
+    mockSearchProviders.mockResolvedValueOnce([
       {
         id: 21,
         name: "Provider Alpha",
@@ -419,80 +412,23 @@ describe("Claude Code Hub managed-site provider", () => {
         groupTag: "team-a",
       },
     ])
-    mockCreateProvider.mockResolvedValue({ ok: true })
-    mockUpdateProvider.mockResolvedValue({ ok: true })
-    mockDeleteProvider.mockResolvedValue({ ok: true })
 
     await expect(
       searchChannel(passedClaudeCodeHubConfig, "alpha"),
     ).resolves.toMatchObject({
       total: 1,
-      items: [
-        expect.objectContaining({
-          id: 21,
-          name: "Provider Alpha",
-        }),
-      ],
-      type_counts: {
-        codex: 1,
-      },
+      items: [expect.objectContaining({ id: 21, name: "Provider Alpha" })],
+      type_counts: { codex: 1 },
     })
     expect(mockSearchProviders).toHaveBeenCalledWith(
       passedClaudeCodeHubConfig,
       "alpha",
     )
-    expect(mockListProviders).not.toHaveBeenCalled()
 
+    mockSearchProviders.mockRejectedValueOnce(new Error("search failed"))
     await expect(
-      createChannel(passedClaudeCodeHubConfig, {
-        channel: {
-          name: "Created Provider",
-          type: "codex",
-          key: "sk-created-key",
-          base_url: "https://created.example.com",
-          models: "gpt-4o,gpt-4.1",
-          groups: ["team-a"],
-          priority: 2,
-          weight: 3,
-          status: CHANNEL_STATUS.Enable,
-        },
-      } as any),
-    ).resolves.toEqual({
-      success: true,
-      data: { ok: true },
-      message: "success",
-    })
-    expect(mockCreateProvider).toHaveBeenCalledWith(
-      passedClaudeCodeHubConfig,
-      expect.objectContaining({
-        name: "Created Provider",
-        provider_type: "codex",
-        group_tag: "team-a",
-      }),
-    )
-
-    await expect(
-      updateChannel(passedClaudeCodeHubConfig, {
-        id: 21,
-        key: "sk-updated-key",
-        base_url: "https://updated.example.com",
-        models: "gpt-4o",
-        groups: ["team-b"],
-        status: CHANNEL_STATUS.ManuallyDisabled,
-      } as any),
-    ).resolves.toEqual({
-      success: true,
-      data: { ok: true },
-      message: "success",
-    })
-
-    await expect(deleteChannel(passedClaudeCodeHubConfig, 21)).resolves.toEqual(
-      {
-        success: true,
-        data: { ok: true },
-        message: "success",
-      },
-    )
+      searchChannel(passedClaudeCodeHubConfig, "alpha"),
+    ).resolves.toBeNull()
   })
 
   it("fetches real provider keys through the Claude Code Hub provider API", async () => {
@@ -599,69 +535,6 @@ describe("Claude Code Hub managed-site provider", () => {
       reason:
         MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
     })
-  })
-
-  it("surfaces API failures for CRUD-style operations", async () => {
-    mockGetPreferences.mockResolvedValueOnce({})
-
-    mockGetPreferences.mockResolvedValue({
-      claudeCodeHub: storedClaudeCodeHubConfig,
-    })
-    mockCreateProvider.mockRejectedValueOnce(new Error("create failed"))
-    mockUpdateProvider.mockRejectedValueOnce(new Error("update failed"))
-    mockDeleteProvider.mockRejectedValueOnce(new Error("delete failed"))
-    mockSearchProviders.mockRejectedValueOnce(new Error("search failed"))
-
-    await expect(
-      searchChannel(passedClaudeCodeHubConfig, "alpha"),
-    ).resolves.toBeNull()
-    await expect(
-      createChannel(passedClaudeCodeHubConfig, {
-        channel: {
-          name: "Created Provider",
-          key: "sk-created-key",
-          models: "gpt-4o",
-        },
-      } as any),
-    ).resolves.toEqual({
-      success: false,
-      data: null,
-      message: "create failed",
-    })
-    await expect(
-      updateChannel(passedClaudeCodeHubConfig, {
-        id: 21,
-        key: "sk-updated-key",
-      } as any),
-    ).resolves.toEqual({
-      success: false,
-      data: null,
-      message: "update failed",
-    })
-    await expect(deleteChannel(passedClaudeCodeHubConfig, 21)).resolves.toEqual(
-      {
-        success: false,
-        data: null,
-        message: "delete failed",
-      },
-    )
-
-    mockDeleteProvider.mockRejectedValueOnce(
-      new ApiError(
-        "network unavailable",
-        undefined,
-        "/api/provider/21",
-        API_ERROR_CODES.NETWORK_ERROR,
-      ),
-    )
-    await expect(deleteChannel(passedClaudeCodeHubConfig, 21)).resolves.toEqual(
-      {
-        success: false,
-        data: null,
-        message: "network unavailable",
-        certainty: "uncertain",
-      },
-    )
   })
 
   it("builds channel payloads, fetches models, and matches only comparable providers", async () => {

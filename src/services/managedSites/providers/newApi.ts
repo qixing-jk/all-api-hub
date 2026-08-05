@@ -1,16 +1,10 @@
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import type {
   ManagedSiteChannelDraftRequestOptions,
   ManagedSiteChannelSecretReadOptions,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import {
-  createChannel as createNewApiChannel,
-  deleteChannel as deleteNewApiChannel,
-  searchChannel as searchNewApiChannel,
-  updateChannel as updateNewApiChannel,
-} from "~/services/apiService/newApiFamily/channelManagement"
+import { searchChannel as searchNewApiChannel } from "~/services/apiService/newApiFamily/channelManagement"
 import {
   fetchAccountAvailableModels,
   fetchSiteUserGroups,
@@ -19,7 +13,6 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
-import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import {
   fetchNewApiChannelKey,
   NewApiChannelKeyRequirementError,
@@ -37,15 +30,12 @@ import type {
   CreateChannelPayload,
   ManagedSiteChannel,
   ManagedSiteChannelListData,
-  UpdateChannelPayload,
 } from "~/types/managedSite"
 import type { NewApiConfig } from "~/types/newApiConfig"
-import type { ServiceResponse } from "~/types/serviceResponse"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
-import { t } from "~/utils/i18n/core"
 
 import {
   UserPreferences,
@@ -58,13 +48,6 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
  * Unified logger scoped to the New API integration and auto-config flows.
  */
 const logger = createLogger("NewApiService")
-
-const newApiImportDuplicateService = {
-  siteType: SITE_TYPES.NEW_API,
-  searchChannel,
-  hydrateComparableChannelKeys,
-  fetchChannelSecretKey,
-}
 
 const toNewApiRequestConfig = (config: NewApiConfig) => ({
   baseUrl: config.baseUrl,
@@ -89,38 +72,6 @@ export async function searchChannel(
 ): Promise<ManagedSiteChannelListData | null> {
   return await searchNewApiChannel(toNewApiRequestConfig(config), keyword)
 }
-
-/**
- * 创建新渠道
- * @param config New API runtime config
- * @param channelData 渠道数据
- */
-export async function createChannel(
-  config: NewApiConfig,
-  channelData: CreateChannelPayload,
-) {
-  return await createNewApiChannel(toNewApiRequestConfig(config), channelData)
-}
-
-/**
- * 更新新渠道
- * @param config New API runtime config
- * @param channelData 渠道数据
- */
-export async function updateChannel(
-  config: NewApiConfig,
-  channelData: UpdateChannelPayload,
-) {
-  return await updateNewApiChannel(toNewApiRequestConfig(config), channelData)
-}
-
-/**
- * 删除渠道
- */
-export async function deleteChannel(config: NewApiConfig, channelId: number) {
-  return await deleteNewApiChannel(toNewApiRequestConfig(config), channelId)
-}
-
 /**
  * Reads a single managed-site channel key using the New API verification flow.
  */
@@ -406,92 +357,5 @@ export function buildChannelPayload(
       weight: formData.weight,
       status: formData.status,
     },
-  }
-}
-
-/**
- * 将账户导入到 New API 作为渠道。
- * @param account 站点数据。
- * @param token API 令牌，用于访问上游模型与构建渠道。
- */
-export async function importToNewApi(
-  account: DisplaySiteData,
-  token: ApiToken,
-  options?: ManagedSiteChannelSecretReadOptions,
-): Promise<ServiceResponse<void>> {
-  try {
-    const prefs = await userPreferences.getPreferences()
-
-    if (!hasValidNewApiConfig(prefs)) {
-      return {
-        success: false,
-        message: t("messages:newapi.configMissing"),
-      }
-    }
-
-    const { newApi } = prefs
-    const {
-      baseUrl: newApiBaseUrl,
-      adminToken: newApiAdminToken,
-      userId: newApiUserId,
-    } = newApi
-
-    const formData = await prepareChannelFormData(account, token)
-
-    const managedConfig = {
-      baseUrl: newApiBaseUrl!,
-      adminToken: newApiAdminToken!,
-      userId: newApiUserId!,
-    }
-
-    const existingChannel = await resolveManagedSiteImportDuplicate({
-      service: newApiImportDuplicateService,
-      managedConfig,
-      formData,
-      protectionBypassExecution: options?.protectionBypassExecution,
-    })
-
-    if (existingChannel) {
-      return {
-        success: false,
-        message: t("messages:newapi.channelExists", {
-          channelName: existingChannel.name,
-        }),
-      }
-    }
-
-    const payload = buildChannelPayload(formData)
-
-    const createdChannelResponse = await createChannel(managedConfig, payload)
-
-    if (createdChannelResponse.success) {
-      return {
-        success: true,
-        message: t("messages:newapi.importSuccess", {
-          channelName: formData.name,
-        }),
-      }
-    }
-
-    return {
-      success: false,
-      message: createdChannelResponse.message,
-    }
-  } catch (error) {
-    if (
-      error instanceof MatchResolutionUnresolvedError &&
-      error.reason ===
-        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED
-    ) {
-      return {
-        success: false,
-        message: t("messages:newapi.channelMatchUnresolved"),
-      }
-    }
-
-    return {
-      success: false,
-      message: getErrorMessage(error) || t("messages:newapi.importFailed"),
-    }
   }
 }

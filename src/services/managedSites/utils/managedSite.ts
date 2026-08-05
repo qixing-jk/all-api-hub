@@ -97,6 +97,17 @@ export type ManagedResourceSecretCollection = Readonly<{
   complete: boolean
 }>
 
+/** Combines secret snapshots without weakening an incomplete collection. */
+export const mergeManagedResourceSecretCollections = (
+  ...collections: readonly ManagedResourceSecretCollection[]
+): ManagedResourceSecretCollection =>
+  Object.freeze({
+    knownSecrets: Object.freeze([
+      ...new Set(collections.flatMap((collection) => collection.knownSecrets)),
+    ]),
+    complete: collections.every((collection) => collection.complete),
+  })
+
 /**
  * Collects secret values from provider-owned resource details and edit drafts.
  * Callers must ignore provider messages when `complete` is false because a

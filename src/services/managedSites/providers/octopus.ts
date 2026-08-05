@@ -6,13 +6,7 @@ import { ChannelType } from "~/constants"
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as octopusApi from "~/services/apiService/octopus"
-import type { ApiResponse } from "~/services/apiTransport/type"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import {
-  getManagedSiteDeleteCertainty,
-  type ManagedSiteChannelDeleteResponse,
-} from "~/services/managedSites/mutationCertainty"
-import { getNumericChannelType } from "~/services/managedSites/utils/channelType"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
@@ -26,15 +20,10 @@ import type {
   CreateChannelPayload,
   ManagedSiteChannelListData,
   OctopusChannelWithData,
-  UpdateChannelPayload,
 } from "~/types/managedSite"
 import { OctopusOutboundType } from "~/types/octopus"
-import type {
-  OctopusChannel,
-  OctopusCreateChannelRequest,
-} from "~/types/octopus"
+import type { OctopusChannel } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"
-import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
@@ -231,109 +220,6 @@ export async function searchChannel(
   } catch (error) {
     logger.error("Failed to search channels", error)
     return null
-  }
-}
-
-/**
- * 创建渠道
- */
-export async function createChannel(
-  config: OctopusConfig,
-  channelData: CreateChannelPayload,
-): Promise<ApiResponse<unknown>> {
-  try {
-    const channel = channelData.channel
-    const request: OctopusCreateChannelRequest = {
-      name: channel.name || "",
-      // Octopus 表单使用 OctopusTypeSelector，type 已经是 OctopusOutboundType
-      type: mapChannelTypeToOctopusOutboundType(
-        getNumericChannelType(channel.type),
-        true,
-      ),
-      enabled: channel.status === 1,
-      base_urls: [{ url: channel.base_url || "" }],
-      keys: [{ enabled: true, channel_key: channel.key || "" }],
-      model: channel.models,
-      auto_sync: true, // 默认启用自动同步
-      auto_group: 0,
-    }
-
-    const result = await octopusApi.createChannel(config, request)
-    return {
-      success: result.success,
-      data: result.data ? octopusChannelToManagedSite(result.data) : null,
-      message: result.message || "success",
-    }
-  } catch (error) {
-    return {
-      success: false,
-      data: null,
-      message: getErrorMessage(error) || "Failed to create channel",
-    }
-  }
-}
-
-/**
- * 更新渠道
- */
-export async function updateChannel(
-  config: OctopusConfig,
-  channelData: UpdateChannelPayload & { status?: number },
-): Promise<ApiResponse<unknown>> {
-  try {
-    const result = await octopusApi.updateChannel(config, {
-      id: channelData.id,
-      name: channelData.name,
-      // Octopus 表单使用 OctopusTypeSelector，type 已经是 OctopusOutboundType
-      type:
-        channelData.type !== undefined
-          ? mapChannelTypeToOctopusOutboundType(
-              getNumericChannelType(channelData.type),
-              true,
-            )
-          : undefined,
-      enabled: channelData.status === 1,
-      base_urls: channelData.base_url
-        ? [{ url: channelData.base_url }]
-        : undefined,
-      model: channelData.models,
-    })
-
-    return {
-      success: result.success,
-      data: result.data ? octopusChannelToManagedSite(result.data) : null,
-      message: result.message || "success",
-    }
-  } catch (error) {
-    return {
-      success: false,
-      data: null,
-      message: getErrorMessage(error) || "Failed to update channel",
-    }
-  }
-}
-
-/**
- * 删除渠道
- */
-export async function deleteChannel(
-  config: OctopusConfig,
-  channelId: number,
-): Promise<ManagedSiteChannelDeleteResponse> {
-  try {
-    const result = await octopusApi.deleteChannel(config, channelId)
-    return {
-      success: result.success,
-      data: result.data,
-      message: result.message || "success",
-    }
-  } catch (error) {
-    return {
-      success: false,
-      data: null,
-      message: getErrorMessage(error) || "Failed to delete channel",
-      ...getManagedSiteDeleteCertainty(error),
-    }
   }
 }
 

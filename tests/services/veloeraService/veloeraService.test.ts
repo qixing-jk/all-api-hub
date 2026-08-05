@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiToken, DisplaySiteData } from "~/types"
-import type { CreateChannelPayload, UpdateChannelPayload } from "~/types/newApi"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 
 // ============================================================================
@@ -250,98 +249,6 @@ describe("veloeraService", () => {
 
       const result = await getVeloeraConfig()
       expect(result).toBeNull()
-    })
-  })
-
-  describe("searchChannel/createChannel/updateChannel/deleteChannel", () => {
-    it("passes SITE_TYPES.VELOERA site hint to apiService wrappers", async () => {
-      const { searchChannel, createChannel, updateChannel, deleteChannel } =
-        await import("~/services/managedSites/providers/veloera")
-      const config = {
-        baseUrl: "https://veloera.example.com",
-        adminToken: "token",
-        userId: "1",
-      }
-
-      mockSearchChannel.mockResolvedValueOnce(null)
-      await searchChannel(config, "k")
-      expect(mockSearchChannel).toHaveBeenLastCalledWith(
-        {
-          baseUrl: config.baseUrl,
-          auth: {
-            authType: "access_token",
-            accessToken: config.adminToken,
-            userId: config.userId,
-          },
-        },
-        "k",
-      )
-
-      mockCreateChannel.mockResolvedValueOnce({ success: true, message: "ok" })
-      const createPayload: CreateChannelPayload = {
-        mode: "none" as unknown as CreateChannelPayload["mode"],
-        channel: {
-          name: "n",
-          type: 1,
-          key: "k",
-          base_url: "https://upstream.example.com",
-          models: "gpt-4",
-          groups: ["default"],
-          priority: 0,
-          weight: 0,
-          status: 1,
-        },
-      }
-      await createChannel(config, createPayload)
-      expect(mockCreateChannel).toHaveBeenLastCalledWith(
-        {
-          baseUrl: config.baseUrl,
-          auth: {
-            authType: "access_token",
-            accessToken: config.adminToken,
-            userId: config.userId,
-          },
-        },
-        createPayload,
-      )
-
-      mockUpdateChannel.mockResolvedValueOnce({ success: true, message: "ok" })
-      const updatePayload: UpdateChannelPayload = {
-        id: 1,
-        name: "Updated Channel",
-        key: "k",
-        base_url: "https://upstream.example.com",
-        models: "gpt-4",
-        group: "default",
-        groups: ["default"],
-        priority: 0,
-      }
-      await updateChannel(config, updatePayload)
-      expect(mockUpdateChannel).toHaveBeenLastCalledWith(
-        {
-          baseUrl: config.baseUrl,
-          auth: {
-            authType: "access_token",
-            accessToken: config.adminToken,
-            userId: config.userId,
-          },
-        },
-        updatePayload,
-      )
-
-      mockDeleteChannel.mockResolvedValueOnce({ success: true, message: "ok" })
-      await deleteChannel(config, 1)
-      expect(mockDeleteChannel).toHaveBeenLastCalledWith(
-        {
-          baseUrl: config.baseUrl,
-          auth: {
-            authType: "access_token",
-            accessToken: config.adminToken,
-            userId: config.userId,
-          },
-        },
-        1,
-      )
     })
   })
 

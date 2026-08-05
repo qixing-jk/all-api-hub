@@ -398,7 +398,7 @@ describe("ManagedSiteChannels ordinary delete outcomes", () => {
     )
   })
 
-  it("classifies a malformed post-invocation delete as uncertain", async () => {
+  it("surfaces a failed delete reconciliation without fabricating a result", async () => {
     mocks.deleteChannel.mockResolvedValue(undefined)
     mocks.listChannels
       .mockResolvedValueOnce({ items: [channel], total: 1, type_counts: {} })
@@ -412,19 +412,17 @@ describe("ManagedSiteChannels ordinary delete outcomes", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByTestId("delete-results")).toHaveTextContent(
-        "uncertain",
-      )
       expect(screen.getByTestId("delete-requires-refresh")).toHaveTextContent(
         "true",
       )
     })
+    expect(screen.getByTestId("delete-results")).toBeEmptyDOMElement()
     expect(mocks.deleteChannel).toHaveBeenCalledOnce()
     expect(mocks.listChannels).toHaveBeenCalledTimes(2)
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith("Delete failed")
   })
 
-  it("sanitizes a thrown post-invocation delete from the pre-call snapshot", async () => {
+  it("sanitizes a thrown post-invocation delete without fabricating a result", async () => {
     const adminToken = "delete-thrown-admin-placeholder"
     const password = "delete-thrown-password-placeholder"
     const totpSecret = "delete-thrown-totp-placeholder"
@@ -455,10 +453,14 @@ describe("ManagedSiteChannels ordinary delete outcomes", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByTestId("delete-results")).toHaveTextContent(
-        "uncertain",
-      )
+      expect(vi.mocked(toast.error)).toHaveBeenCalled()
     })
+    expect(screen.getByTestId("delete-results")).toBeEmptyDOMElement()
+    expect(screen.getByTestId("delete-requires-refresh")).toHaveTextContent(
+      "false",
+    )
+    expect(mocks.deleteChannel).toHaveBeenCalledOnce()
+    expect(mocks.listChannels).toHaveBeenCalledTimes(2)
     const toastCalls = JSON.stringify(vi.mocked(toast.error).mock.calls)
     expect(toastCalls).toContain(providerText)
     expect(toastCalls).not.toContain(adminToken)
@@ -494,10 +496,14 @@ describe("ManagedSiteChannels ordinary delete outcomes", () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByTestId("delete-results")).toHaveTextContent(
-        "uncertain",
-      )
+      expect(vi.mocked(toast.error)).toHaveBeenCalled()
     })
+    expect(screen.getByTestId("delete-results")).toBeEmptyDOMElement()
+    expect(screen.getByTestId("delete-requires-refresh")).toHaveTextContent(
+      "false",
+    )
+    expect(mocks.deleteChannel).toHaveBeenCalledOnce()
+    expect(mocks.listChannels).toHaveBeenCalledTimes(2)
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith("Delete failed")
     const toastCalls = JSON.stringify(vi.mocked(toast.error).mock.calls)
     expect(toastCalls).not.toContain(providerText)
