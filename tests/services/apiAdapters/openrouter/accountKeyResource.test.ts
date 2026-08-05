@@ -397,7 +397,7 @@ describe("openRouterAccountKeyResources", () => {
       OPENROUTER_KEY_FIELD_IDS.Usage,
     )
 
-    fetchOpenRouterKeys.mockResolvedValue([key(), key()])
+    fetchOpenRouterKeys.mockReset().mockResolvedValue([key(), key()])
     await expect(collection.list()).rejects.toMatchObject({
       failure: { code: "unexpected" },
     })
@@ -466,6 +466,20 @@ describe("openRouterAccountKeyResources", () => {
       expect.anything(),
       expect.objectContaining({ offset: 4 }),
     )
+  })
+
+  it("stops provider pagination once it has enough rows to issue a cursor", async () => {
+    const session = await openSession()
+    const collection = await session.openCollection("workspace-default-id")
+    fetchOpenRouterKeys.mockResolvedValue(
+      Array.from({ length: 4 }, (_, index) => key({ hash: `hash-${index}` })),
+    )
+
+    const page = await collection.list({ limit: 3 })
+
+    expect(page.items).toHaveLength(3)
+    expect(page.nextCursor).toEqual(expect.any(String))
+    expect(fetchOpenRouterKeys).toHaveBeenCalledOnce()
   })
 
   it("rejects a forged non-progress cursor before another provider request", async () => {
@@ -560,7 +574,7 @@ describe("openRouterAccountKeyResources", () => {
     })
   })
 
-  it("bounds provider draining before accepting an unbounded result", async () => {
+  it("bounds each public page when the provider keeps returning full batches", async () => {
     const session = await openSession()
     const collection = await session.openCollection("workspace-default-id")
     fetchOpenRouterKeys.mockImplementation(
@@ -570,10 +584,15 @@ describe("openRouterAccountKeyResources", () => {
         ),
     )
 
-    await expect(collection.list()).rejects.toMatchObject({
-      failure: { code: "unexpected" },
+    await expect(collection.list()).resolves.toMatchObject({
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          ref: expect.objectContaining({ resourceId: "hash-0" }),
+        }),
+      ]),
+      nextCursor: expect.any(String),
     })
-    expect(fetchOpenRouterKeys).toHaveBeenCalledTimes(100)
+    expect(fetchOpenRouterKeys).toHaveBeenCalledTimes(2)
   })
 
   it("uses the selected non-default collection scope in read-only edit workspace options", async () => {
@@ -659,7 +678,7 @@ describe("openRouterAccountKeyResources", () => {
     },
   )
 
-  it("keeps a malformed create success uncertain without searching or replaying", async () => {
+  it("fails closed when a mocked create bypasses the validated service contract", async () => {
     const session = await openSession()
     const editor = await session.openCreateEditor("workspace-default-id")
     createOpenRouterKey.mockResolvedValue({ key: key(), plaintextKey: "" })
@@ -667,7 +686,7 @@ describe("openRouterAccountKeyResources", () => {
     await expect(
       editor.submit({ ...editor.initialValues, name: "Created key" }),
     ).rejects.toMatchObject({
-      failure: { code: "mutation_state_uncertain" },
+      failure: { code: "unexpected" },
     })
     expect(createOpenRouterKey).toHaveBeenCalledTimes(1)
     expect(fetchOpenRouterKeys).not.toHaveBeenCalled()
@@ -1058,7 +1077,7 @@ describe("openRouterAccountKeyResources", () => {
     })
   })
 
-  it("rejects a destination absent from the factory scope snapshot before create", async () => {
+  it("keeps create destinations aligned with the cached partial scope inventory", async () => {
     const selectedWorkspace = workspace({
       id: "workspace-selected-id",
       name: "Selected workspace",
@@ -1086,9 +1105,7 @@ describe("openRouterAccountKeyResources", () => {
     })
 
     expect(workspaceField).toMatchObject({
-      options: expect.arrayContaining([
-        expect.objectContaining({ value: "workspace-selected-id" }),
-      ]),
+      options: [expect.objectContaining({ value: "workspace-default-id" })],
     })
     await expect(
       editor.submit({
@@ -1098,6 +1115,39 @@ describe("openRouterAccountKeyResources", () => {
       }),
     ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
     expect(createOpenRouterKey).not.toHaveBeenCalled()
+  })
+
+  it("preserves the one-time secret when the created key reports another workspace", async () => {
+    const session = await openSession()
+    const editor = await session.openCreateEditor("workspace-default-id")
+    createOpenRouterKey.mockResolvedValue({
+      key: key({
+        hash: "created-in-provider-workspace",
+        name: "Created key",
+        workspace_id: "workspace-provider-result",
+      }),
+      plaintextKey: "sk-or-created-example",
+    })
+
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Created key" }),
+    ).resolves.toMatchObject({
+      facts: {
+        ref: {
+          scopeKey: "workspace-provider-result",
+          resourceId: "created-in-provider-workspace",
+        },
+      },
+      createdSecret: {
+        secret: "sk-or-created-example",
+        correlation: {
+          ref: {
+            scopeKey: "workspace-provider-result",
+            resourceId: "created-in-provider-workspace",
+          },
+        },
+      },
+    })
   })
 
   it("serializes unlimited and limited create payloads exactly", async () => {

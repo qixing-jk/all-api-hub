@@ -7,6 +7,10 @@ import {
 } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
+import {
+  OPENROUTER_KEY_FIELD_IDS,
+  OPENROUTER_KEY_LIMIT_RESETS,
+} from "~/services/apiAdapters/openrouter/keyResourceFields"
 
 const t = ((key: string) => key) as TFunction
 
@@ -120,6 +124,147 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
     expect(facts.map(({ value }) => value)).not.toContain("private")
     expect(facts.map(({ value }) => value)).not.toContain("hash-example")
     expect(facts.map(({ value }) => value)).not.toContain("workspace-example")
+  })
+
+  it("formats every provider detail category without exposing raw secrets", () => {
+    const facts = buildOpenRouterKeyResourceDetailFacts(
+      {
+        ...row.facts,
+        fields: [
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.LimitReset,
+            kind: "text",
+            value: OPENROUTER_KEY_LIMIT_RESETS.Daily,
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.LimitReset,
+            kind: "text",
+            value: OPENROUTER_KEY_LIMIT_RESETS.Weekly,
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.LimitReset,
+            kind: "text",
+            value: OPENROUTER_KEY_LIMIT_RESETS.Monthly,
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.LimitReset,
+            kind: "text",
+            value: OPENROUTER_KEY_LIMIT_RESETS.None,
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.LimitReset,
+            kind: "text",
+            value: "provider-unknown",
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.UsageDaily,
+            kind: "number",
+            value: 1,
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.UsageWeekly,
+            kind: "number",
+            value: 2,
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.UsageMonthly,
+            kind: "number",
+            value: 3,
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.ByokUsageDaily,
+            kind: "number",
+            value: 4,
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.ByokUsageWeekly,
+            kind: "number",
+            value: 5,
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.ByokUsageMonthly,
+            kind: "number",
+            value: 6,
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.Disabled,
+            kind: "boolean",
+            value: false,
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.CreatedAt,
+            kind: "text",
+            value: "2026-08-05T00:00:00.000Z",
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.UpdatedAt,
+            kind: "list",
+            value: ["first", "second"],
+          },
+          {
+            fieldId: OPENROUTER_KEY_FIELD_IDS.ExpiresAt,
+            kind: "secret",
+            state: "unavailable",
+          },
+        ],
+      },
+      t,
+    )
+
+    expect(facts.map(({ label }) => label)).toEqual([
+      "keyManagement:openRouter.list.details.reset",
+      "keyManagement:openRouter.list.details.reset",
+      "keyManagement:openRouter.list.details.reset",
+      "keyManagement:openRouter.list.details.reset",
+      "keyManagement:openRouter.list.details.reset",
+      "keyManagement:openRouter.list.details.usageDaily",
+      "keyManagement:openRouter.list.details.usageWeekly",
+      "keyManagement:openRouter.list.details.usageMonthly",
+      "keyManagement:openRouter.list.details.byokUsageDaily",
+      "keyManagement:openRouter.list.details.byokUsageWeekly",
+      "keyManagement:openRouter.list.details.byokUsageMonthly",
+      "keyManagement:openRouter.list.details.disabled",
+      "keyManagement:openRouter.list.details.createdAt",
+      "keyManagement:openRouter.list.details.updatedAt",
+      "keyManagement:openRouter.list.details.expiresAt",
+    ])
+    expect(facts.map(({ value }) => value)).toEqual([
+      "keyManagement:openRouter.editor.options.limitReset.daily",
+      "keyManagement:openRouter.editor.options.limitReset.weekly",
+      "keyManagement:openRouter.editor.options.limitReset.monthly",
+      "keyManagement:openRouter.editor.options.limitReset.none",
+      "keyManagement:openRouter.list.values.missing",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "keyManagement:openRouter.list.values.no",
+      "2026-08-05T00:00:00.000Z",
+      "first, second",
+      "••••",
+    ])
+  })
+
+  it("maps disabled and unknown provider statuses explicitly", () => {
+    const disabled = buildOpenRouterKeyResourceCardPresentation(
+      { ...row, facts: { ...row.facts, status: "disabled" } },
+      t,
+    )
+    const unknown = buildOpenRouterKeyResourceCardPresentation(
+      { ...row, facts: { ...row.facts, status: "unknown" } },
+      t,
+    )
+
+    expect(disabled).toMatchObject({
+      status: "inactive",
+      statusLabel: "keyManagement:openRouter.list.status.disabled",
+    })
+    expect(unknown).toMatchObject({
+      status: "unknown",
+      statusLabel: "keyManagement:openRouter.list.status.unknown",
+    })
   })
 
   it("distinguishes unlimited, missing finite values, and expired status", () => {

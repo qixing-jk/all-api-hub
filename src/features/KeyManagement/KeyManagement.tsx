@@ -285,9 +285,10 @@ export default function KeyManagement(props: {
     },
   })
 
+  const setNativeSearch = nativeKeys.setSearch
   useEffect(() => {
-    nativeKeys.setSearch(searchTerm)
-  }, [nativeKeys, searchTerm])
+    setNativeSearch(searchTerm)
+  }, [searchTerm, setNativeSearch])
 
   useEffect(() => {
     if (!pendingNativeRoute) return

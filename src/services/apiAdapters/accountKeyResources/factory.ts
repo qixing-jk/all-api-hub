@@ -104,6 +104,7 @@ export type AccountKeyResourceDefinition<
     config: TConfig,
     scope: AccountKeyScope,
     options?: ResourceOperationOptions,
+    scopeInventory?: AccountKeyScopeInventory,
   ): Promise<AccountKeyResourceEditorDefinition<TCreateCommand>>
   editEditor(
     config: TConfig,
@@ -673,6 +674,8 @@ export function defineAccountKeyResourceCapability<
           openCollection,
           openCreateEditor: async (scopeKey: string, editorOptions) => {
             const resolvedScope = await resolveScope(scopeKey, editorOptions)
+            const editorScopeInventory = cachedScopeInventory
+            if (!editorScopeInventory) throw unexpectedFailure()
             const canonicalScopeKey = resolvedScope.scopeKey
             const canonicalRouteKey = resolvedScope.routeKey
             const providerScope = cloneScope({
@@ -682,7 +685,12 @@ export function defineAccountKeyResourceCapability<
             })
             const editorDefinition = await mapOperation(
               () =>
-                definition.createEditor(config, providerScope, editorOptions),
+                definition.createEditor(
+                  config,
+                  providerScope,
+                  editorOptions,
+                  editorScopeInventory,
+                ),
               mapFailure,
             )
             const resolveCreateDestinationScopeKey = (
@@ -693,7 +701,7 @@ export function defineAccountKeyResourceCapability<
                 canonicalScopeKey
               if (
                 !isBoundedNonBlankString(destinationScopeKey, 2048) ||
-                !cachedScopeInventory?.scopes.some(
+                !editorScopeInventory.scopes.some(
                   (scope) => scope.scopeKey === destinationScopeKey,
                 )
               ) {
@@ -719,13 +727,8 @@ export function defineAccountKeyResourceCapability<
               },
               projectApplied: (result) => {
                 const appliedScopeKey = result.scopeKey ?? canonicalScopeKey
-                if (
-                  !cachedScopeInventory?.scopes.some(
-                    (scope) => scope.scopeKey === appliedScopeKey,
-                  )
-                ) {
+                if (!isBoundedNonBlankString(appliedScopeKey, 2048))
                   throw unexpectedFailure()
-                }
                 const refBoundary = createNativeResourceRefBoundary<
                   AccountKeyResourceRef,
                   TLocator

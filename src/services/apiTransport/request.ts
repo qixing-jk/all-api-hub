@@ -166,8 +166,6 @@ function extractBackendErrorDetails(body: unknown): BackendErrorDetails | null {
   const isBackendError = isKnownBackendErrorType(
     (error as { type?: unknown }).type,
   )
-  if (!isBackendError) return null
-
   const upstreamCode = getSafeUpstreamCode((error as { code?: unknown }).code)
 
   return {
@@ -355,10 +353,7 @@ async function fetchViaCurrentTabContent<T>(context: {
   endpoint: string
   fetchOptions: RequestInit
   responseType: TempWindowResponseType
-}): Promise<{
-  response: AcquiredTransportResponse<T>
-  diagnosticError?: string
-}> {
+}): Promise<AcquiredTransportResponse<T>> {
   const response = (await sendTabMessageWithRetry(context.fetchContext.tabId, {
     action: RuntimeActionIds.ContentPerformTempWindowFetch,
     requestId: safeRandomUUID(`current-tab-fetch-${context.url}`),
@@ -387,13 +382,10 @@ async function fetchViaCurrentTabContent<T>(context: {
   }
 
   return {
-    response: {
-      ok: response.success,
-      status,
-      headers: response.headers ?? {},
-      body: response.data as T,
-    },
-    diagnosticError: response.error,
+    ok: response.success,
+    status,
+    headers: response.headers ?? {},
+    body: response.data as T,
   }
 }
 
@@ -427,31 +419,30 @@ async function executeWithCurrentTabContentPreference<T, TResult>(
     { kind: typeof API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB }
   >
 
-  let diagnosticError: string | undefined
+  let response: AcquiredTransportResponse<T>
   try {
-    const result = await fetchViaCurrentTabContent<T>({
+    response = await fetchViaCurrentTabContent<T>({
       fetchContext,
       url: context.url,
       endpoint: context.endpoint,
       fetchOptions: context.fetchOptions,
       responseType: context.responseType,
     })
-    diagnosticError = result.diagnosticError
-    return await mapResponse(result.response)
   } catch (error) {
     logger.debug("Current-tab content fetch failed; falling back", {
       endpoint: context.endpoint,
       url: context.url,
       error: getSafeTransportErrorMessage(
-        diagnosticError ?? error,
+        error,
         context.request.auth.accessToken,
       ),
     })
-    // Keep current-tab fallback behavior aligned with temp-window fallback for
-    // now. If mutating-request replay becomes a real issue, handle it in the
-    // shared transport-fallback layer instead of special-casing this path.
     return await fallback()
   }
+
+  // Mapping happens after transport acquisition so an HTTP/application error
+  // cannot replay a request that the current tab already dispatched.
+  return await mapResponse(response)
 }
 
 /**

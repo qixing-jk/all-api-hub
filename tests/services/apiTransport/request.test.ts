@@ -1105,7 +1105,7 @@ describe("apiTransport request helpers", () => {
     expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
   })
 
-  it("fetchApiData falls back to the normal fetch path when current-tab content fetch fails", async () => {
+  it("does not replay a completed current-tab HTTP response through the fallback transport", async () => {
     mockSendTabMessageWithRetry.mockResolvedValueOnce({
       success: false,
       status: 503,
@@ -1138,18 +1138,16 @@ describe("apiTransport request helpers", () => {
         },
         { endpoint: ENDPOINT },
       ),
-    ).resolves.toEqual({ ok: true })
+    ).rejects.toMatchObject({ statusCode: 503 })
 
     expect(mockSendTabMessageWithRetry).toHaveBeenCalledTimes(1)
   })
 
   it("redacts the request access token from current-tab fallback diagnostics", async () => {
     const dashboardBearer = "dashboard-bearer-sensitive-example"
-    mockSendTabMessageWithRetry.mockResolvedValueOnce({
-      success: false,
-      status: 503,
-      error: `safe diagnostic: Authorization: Bearer ${dashboardBearer}`,
-    })
+    mockSendTabMessageWithRetry.mockRejectedValueOnce(
+      new Error(`safe diagnostic: Authorization: Bearer ${dashboardBearer}`),
+    )
     server.use(
       http.get(API_URL, () =>
         HttpResponse.json({
@@ -1199,11 +1197,9 @@ describe("apiTransport request helpers", () => {
         },
       },
     })
-    mockSendTabMessageWithRetry.mockResolvedValueOnce({
-      success: false,
-      status: 503,
-      error: "content fetch failed",
-    })
+    mockSendTabMessageWithRetry.mockRejectedValueOnce(
+      new Error("content fetch failed"),
+    )
     mockSendRuntimeMessage.mockResolvedValueOnce({
       success: true,
       status: 200,
@@ -1831,7 +1827,7 @@ describe("apiTransport request helpers", () => {
     })
   })
 
-  it("does not interpret generic nested provider errors", async () => {
+  it("preserves a generic nested provider message and safe code", async () => {
     server.use(
       http.get(API_URL, () =>
         HttpResponse.json(
@@ -1858,13 +1854,13 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({
       statusCode: 400,
       code: ApiErrorCodes.HTTP_OTHER,
-      upstreamCode: undefined,
-      message: "请求失败: 400",
+      upstreamCode: "invalid_limit",
+      message: "Limit must be non-negative",
     })
   })
 
   it.each([undefined, null, {}, [], "bad code!", "x".repeat(65)])(
-    "does not expose nested error details with unsafe code %j",
+    "preserves nested messages without exposing unsafe code %j",
     async (code) => {
       server.use(
         http.get(API_URL, () =>
@@ -1890,7 +1886,7 @@ describe("apiTransport request helpers", () => {
         ),
       ).rejects.toMatchObject({
         statusCode: 400,
-        message: "请求失败: 400",
+        message: "Private malformed code message",
         upstreamCode: undefined,
       })
     },
@@ -1927,7 +1923,7 @@ describe("apiTransport request helpers", () => {
     ).rejects.toMatchObject({
       statusCode: 403,
       code: ApiErrorCodes.HTTP_403,
-      upstreamCode: undefined,
+      upstreamCode: "key_forbidden",
       message: "请求失败: 403",
     })
   })

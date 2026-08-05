@@ -1049,9 +1049,9 @@ test("adds an AIHubMix account, preserves its one-time key, and opens managed-si
   await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoConfigButton).click()
 
   await expect(page.getByText("Save the full key now")).toBeVisible()
-  await expect(page.getByLabel("Full key")).toHaveValue(
-    "sk-aihubmix-created-one-time-key",
-  )
+  await expect(
+    page.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyInput),
+  ).toHaveValue("sk-aihubmix-created-one-time-key")
 
   await page
     .getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCloseButton)

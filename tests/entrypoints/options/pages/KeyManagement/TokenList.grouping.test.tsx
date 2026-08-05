@@ -30,6 +30,27 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
 
 const getVisibleTokenKey = (token: { key: string }) => token.key
 
+const nativeRow = {
+  kind: "account-key-resource" as const,
+  rowKey: "native-row-1",
+  accountId: "native-account",
+  accountName: "Native",
+  workspaceName: "Workspace",
+  facts: {
+    ref: {
+      accountId: "native-account",
+      siteType: SITE_TYPES.OPENROUTER,
+      scopeKey: "workspace-example",
+      resourceId: "hash-example",
+    },
+    displayName: "Native key",
+    maskedLabel: "sk-or-v1-••••example",
+    status: "enabled" as const,
+    fields: [],
+    actions: { canUpdate: true, canDelete: true },
+  },
+}
+
 describe("TokenList grouped all-accounts UX", () => {
   it("keeps mixed native rows out of legacy batch selection and explains the eligible count", async () => {
     const user = userEvent.setup()
@@ -47,28 +68,7 @@ describe("TokenList grouped all-accounts UX", () => {
         isLoading={false}
         tokens={[token] as any}
         filteredTokens={[token] as any}
-        nativeRows={[
-          {
-            kind: "account-key-resource",
-            rowKey: "native-row-1",
-            accountId: "native-account",
-            accountName: "Native",
-            workspaceName: "Workspace",
-            facts: {
-              ref: {
-                accountId: "native-account",
-                siteType: "openrouter",
-                scopeKey: "workspace-example",
-                resourceId: "hash-example",
-              },
-              displayName: "Native key",
-              maskedLabel: "sk-or-v1-••••example",
-              status: "enabled",
-              fields: [],
-              actions: { canUpdate: true, canDelete: true },
-            },
-          },
-        ]}
+        nativeRows={[nativeRow]}
         visibleKeys={new Set()}
         resolvingVisibleKeys={new Set()}
         getVisibleTokenKey={getVisibleTokenKey as any}
@@ -86,6 +86,37 @@ describe("TokenList grouped all-accounts UX", () => {
     const selection = screen.getByRole("checkbox")
     await user.click(selection)
     expect(selection).toBeChecked()
+    expect(screen.getByText("Native key")).toBeVisible()
+  })
+
+  it("keeps the legacy eligibility notice visible when no legacy row is eligible", async () => {
+    const account = createAccount({
+      id: nativeRow.accountId,
+      name: nativeRow.accountName,
+      siteType: SITE_TYPES.OPENROUTER,
+    })
+
+    render(
+      <TokenList
+        isLoading={false}
+        tokens={[]}
+        filteredTokens={[]}
+        nativeRows={[nativeRow]}
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={getVisibleTokenKey as any}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={vi.fn()}
+        selectedAccount={account.id}
+        displayData={[account] as any}
+      />,
+    )
+
+    expect(await screen.findByText(/legacyEligible/)).toBeVisible()
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument()
     expect(screen.getByText("Native key")).toBeVisible()
   })
 

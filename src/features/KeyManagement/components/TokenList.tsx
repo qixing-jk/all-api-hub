@@ -973,6 +973,31 @@ export function TokenList(props: TokenListProps) {
     ) : null
   }
 
+  const nativeResourceList = (
+    <AccountKeyResourceList
+      rows={nativeRows}
+      onOpenDetail={onOpenNativeDetail}
+      onEdit={onEditNativeKey ?? (() => undefined)}
+      onDelete={onDeleteNativeKey ?? (() => undefined)}
+      detail={nativeDetail}
+      isDetailLoading={nativeDetailLoading}
+      detailFailure={nativeDetailFailure}
+      onCloseDetail={onCloseNativeDetail}
+      actionsDisabled={nativeActionsDisabled}
+    />
+  )
+  const legacyEligibilityNotice =
+    nativeRows.length > 0 ? (
+      <p
+        className="text-muted-foreground mb-4 w-full rounded-md border p-3 text-sm"
+        role="status"
+      >
+        {t("keyManagement:openRouter.list.legacyEligible", {
+          count: filteredEntries.length,
+        })}
+      </p>
+    ) : null
+
   if (filteredDisplayRows.length === 0) {
     return (
       <TokenEmptyState
@@ -996,42 +1021,19 @@ export function TokenList(props: TokenListProps) {
 
   if (filteredEntries.length === 0) {
     return (
-      <AccountKeyResourceList
-        rows={nativeRows}
-        onOpenDetail={onOpenNativeDetail}
-        onEdit={onEditNativeKey ?? (() => undefined)}
-        onDelete={onDeleteNativeKey ?? (() => undefined)}
-        detail={nativeDetail}
-        isDetailLoading={nativeDetailLoading}
-        detailFailure={nativeDetailFailure}
-        onCloseDetail={onCloseNativeDetail}
-        actionsDisabled={nativeActionsDisabled}
-      />
+      <>
+        {nativeResourceList}
+        {legacyEligibilityNotice}
+      </>
     )
   }
 
   return (
     <>
-      <AccountKeyResourceList
-        rows={nativeRows}
-        onOpenDetail={onOpenNativeDetail}
-        onEdit={onEditNativeKey ?? (() => undefined)}
-        onDelete={onDeleteNativeKey ?? (() => undefined)}
-        detail={nativeDetail}
-        isDetailLoading={nativeDetailLoading}
-        detailFailure={nativeDetailFailure}
-        onCloseDetail={onCloseNativeDetail}
-        actionsDisabled={nativeActionsDisabled}
-      />
+      {nativeResourceList}
+      {legacyEligibilityNotice}
       {filteredEligibleEntries.length > 0 ? (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
-          {nativeRows.length > 0 ? (
-            <p className="text-muted-foreground w-full text-sm" role="status">
-              {t("keyManagement:openRouter.list.legacyEligible", {
-                count: filteredEntries.length,
-              })}
-            </p>
-          ) : null}
           <label className="flex items-center gap-2 text-sm">
             <Checkbox
               checked={visibleSelectionChecked}

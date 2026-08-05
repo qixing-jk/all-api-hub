@@ -979,6 +979,7 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
         availableKeys.push(...providerPage)
         nextProviderOffset += providerPage.length
         providerPages += 1
+        if (availableKeys.length > requestedLimit) break
       }
       const itemKeys = availableKeys.slice(0, requestedLimit)
       const bufferedKeys = availableKeys.slice(itemKeys.length)
@@ -1017,28 +1018,13 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
       config,
       scope,
       options,
+      scopeInventory,
     ): Promise<
       AccountKeyResourceEditorDefinition<OpenRouterKeyCreateCommand>
     > => {
-      const scopes = await read(config, () =>
-        drainWorkspaces(config, options),
-      ).catch((error) => {
-        if (
-          error instanceof OpenRouterNativeResourceError &&
-          isAbortError(error.failure.error, options?.signal)
-        )
-          throw error
-        return [config.defaultWorkspace]
-      })
-      const scopeEntries = scopes
-        .map((workspace) =>
-          workspaceScope(workspace, config.defaultWorkspace.id),
-        )
-        .sort(
-          (left, right) =>
-            Number(right.isDefault) - Number(left.isDefault) ||
-            left.displayName.localeCompare(right.displayName),
-        )
+      const scopeEntries =
+        scopeInventory?.scopes ??
+        (await loadWorkspaceScopeInventory(config, options)).scopes
       const knownWorkspaceIds = new Set(
         scopeEntries.map((entry) => entry.scopeKey),
       )
@@ -1192,44 +1178,54 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
       }
     },
     create: async (config, _scope, command, options) => {
+      let created: Awaited<ReturnType<typeof createOpenRouterKey>>
       try {
         // OpenRouter only returns plaintext `key` in this POST response; do not retry a lost acknowledgement.
-        const created = await createOpenRouterKey(
+        created = await createOpenRouterKey(
           requestWithOptions(config, options),
           command.input,
         )
-        const detail = toDetail(
-          config,
-          assertKeyScope(created.key, command.destinationScope),
-          command.destinationScope,
-        )
-        const ref = {
-          accountId: config.account.id,
-          siteType: SITE_TYPES.OPENROUTER,
-          scopeKey: command.destinationScope.scopeKey,
-          resourceId: created.key.hash,
-        }
-        return {
-          certainty: "applied" as const,
-          value: {
-            detail,
-            scopeKey: command.destinationScope.scopeKey,
-            createdSecret: createAccountKeyResourceCreatedRuntimeSecret({
-              ref,
-              displayName: created.key.name,
-              secret: created.plaintextKey,
-              credential: {
-                accountName: config.account.name ?? "OpenRouter",
-                apiType: API_TYPES.OPENAI_COMPATIBLE,
-                baseUrl: OPENROUTER_API_BASE_URL,
-                siteType: SITE_TYPES.OPENROUTER,
-                tagIds: [],
-              },
-            }),
-          },
-        }
       } catch (error) {
         return mutationFailure(error, config)
+      }
+
+      const appliedScopeKey = created.key.workspace_id
+      const appliedScope: AccountKeyScope =
+        appliedScopeKey === command.destinationScope.scopeKey
+          ? command.destinationScope
+          : {
+              ...command.destinationScope,
+              scopeKey: appliedScopeKey,
+              routeKey: appliedScopeKey,
+              displayName:
+                config.workspaceNames.get(appliedScopeKey) ?? "Workspace",
+              isDefault: appliedScopeKey === config.defaultWorkspace.id,
+            }
+      const detail = toDetail(config, created.key, appliedScope)
+      const ref = {
+        accountId: config.account.id,
+        siteType: SITE_TYPES.OPENROUTER,
+        scopeKey: appliedScopeKey,
+        resourceId: created.key.hash,
+      }
+      return {
+        certainty: "applied" as const,
+        value: {
+          detail,
+          scopeKey: appliedScopeKey,
+          createdSecret: createAccountKeyResourceCreatedRuntimeSecret({
+            ref,
+            displayName: created.key.name,
+            secret: created.plaintextKey,
+            credential: {
+              accountName: config.account.name ?? "OpenRouter",
+              apiType: API_TYPES.OPENAI_COMPATIBLE,
+              baseUrl: OPENROUTER_API_BASE_URL,
+              siteType: SITE_TYPES.OPENROUTER,
+              tagIds: [],
+            },
+          }),
+        },
       }
     },
     update: async (config, scope, detail, command, options) => {

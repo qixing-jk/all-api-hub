@@ -683,6 +683,44 @@ describe("defineAccountKeyResourceCapability", () => {
     })
   })
 
+  it("preserves an applied create after the cached scope inventory drifts", async () => {
+    const replacementScope = {
+      ...SCOPE,
+      scopeKey: "workspace-replacement",
+      routeKey: "replacement",
+      displayName: "Replacement workspace",
+      isDefault: false,
+    }
+    const listScopeInventory = vi
+      .fn()
+      .mockResolvedValueOnce({ scopes: [SCOPE] })
+      .mockResolvedValueOnce({ scopes: [replacementScope] })
+    const definition = createDefinition({
+      listScopeInventory,
+      create: vi.fn<Definition["create"]>(async () => ({
+        certainty: "applied",
+        value: {
+          detail: { id: "created-key", name: "Created" },
+          scopeKey: SCOPE.scopeKey,
+        },
+      })),
+    } as never)
+    const session = await openSession(definition)
+    const editor = await session.openCreateEditor(SCOPE.scopeKey)
+
+    await expect(session.refreshScopeInventory?.()).resolves.toMatchObject({
+      scopes: [replacementScope],
+    })
+    await expect(editor.submit({ name: "Created" })).resolves.toMatchObject({
+      facts: {
+        ref: {
+          scopeKey: SCOPE.scopeKey,
+          resourceId: "created-key",
+        },
+      },
+    })
+  })
+
   it("resolves a validated create destination before dispatch", async () => {
     const destinationScope = {
       scopeKey: "workspace-destination",
@@ -759,7 +797,7 @@ describe("defineAccountKeyResourceCapability", () => {
     expect(create).not.toHaveBeenCalled()
   })
 
-  it("rejects a created resource in an unvalidated destination scope", async () => {
+  it("preserves an applied resource when the provider reports another scope", async () => {
     const definition = createDefinition({
       create: vi.fn<Definition["create"]>(async () => ({
         certainty: "applied",
@@ -773,8 +811,13 @@ describe("defineAccountKeyResourceCapability", () => {
       await openSession(definition)
     ).openCreateEditor("workspace-example")
 
-    await expect(editor.submit({ name: "Created" })).rejects.toMatchObject({
-      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    await expect(editor.submit({ name: "Created" })).resolves.toMatchObject({
+      facts: {
+        ref: {
+          scopeKey: "workspace-unvalidated",
+          resourceId: "created-key",
+        },
+      },
     })
   })
 

@@ -851,8 +851,9 @@ exactly once, and parse exactly one response. Add source comments for create
 fields, PATCH limitations, and one-time plaintext.
 
 Every new OpenRouter endpoint must call
-`fetchApi<RawResponse>(request, options, true)`, never `fetchApiData`. The raw
-top-level body is the endpoint contract here: create must retain both
+`fetchApiResponse<unknown>(request, options)`, never `fetchApiData`. Validate
+the complete raw response body before extracting provider fields. The top-level
+body is the endpoint contract here: create must retain both
 `{ data, key }`, and delete must retain `{ deleted: true }`; neither may be
 collapsed into the shared One API/New API `data` convention before its Zod
 schema parses it.
@@ -1281,6 +1282,7 @@ git commit -m "feat(openrouter): add native key editor"
 - Modify: `src/locales/en/keyManagement.json`
 - Modify: `src/locales/es-419/keyManagement.json`
 - Modify: `src/locales/ja/keyManagement.json`
+- Modify: `src/locales/pt-BR/keyManagement.json`
 - Modify: `src/locales/vi/keyManagement.json`
 - Modify: `src/locales/zh-CN/keyManagement.json`
 - Modify: `src/locales/zh-TW/keyManagement.json`
@@ -1376,7 +1378,7 @@ eligible count when native rows coexist.
 The native delete confirmation includes the visible key name and an irreversible
 remote-deletion warning but not the hash.
 
-- [ ] **Step 6: Add synchronized literal copy in all six locales**
+- [ ] **Step 6: Add synchronized literal copy in all seven locales**
 
 Add one identical key shape under `openRouter` in every `keyManagement.json`:
 workspace selector states, status filter values, row/detail labels, editor
@@ -1402,7 +1404,7 @@ extractor deletion before staging.
 - [ ] **Step 8: Stage, validate, and commit**
 
 ```powershell
-git add -- src/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceList.tsx src/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceListItem.tsx src/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceDetails.tsx src/features/KeyManagement/KeyManagement.tsx src/features/KeyManagement/components/TokenList.tsx src/features/KeyManagement/components/Header.tsx src/features/KeyManagement/components/AccountSelectorPanel.tsx src/features/KeyManagement/types.ts src/features/KeyManagement/testIds.ts src/locales/en/keyManagement.json src/locales/es-419/keyManagement.json src/locales/ja/keyManagement.json src/locales/vi/keyManagement.json src/locales/zh-CN/keyManagement.json src/locales/zh-TW/keyManagement.json tests/features/KeyManagement/components/AccountKeyResourceListItem.test.tsx tests/features/KeyManagement/components/AccountKeyResourceDetails.test.tsx tests/entrypoints/options/pages/KeyManagement/TokenList.grouping.test.tsx tests/entrypoints/options/pages/KeyManagement/TokenList.emptyStates.test.tsx tests/entrypoints/options/pages/KeyManagement/KeyManagement.emptyStateActions.test.tsx tests/features/KeyManagement/components/Header.test.tsx tests/features/KeyManagement/components/AccountSummaryBar.test.tsx tests/utils/i18nLocaleValidation.test.ts
+git add -- src/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceList.tsx src/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceListItem.tsx src/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceDetails.tsx src/features/KeyManagement/KeyManagement.tsx src/features/KeyManagement/components/TokenList.tsx src/features/KeyManagement/components/Header.tsx src/features/KeyManagement/components/AccountSelectorPanel.tsx src/features/KeyManagement/types.ts src/features/KeyManagement/testIds.ts src/locales/en/keyManagement.json src/locales/es-419/keyManagement.json src/locales/ja/keyManagement.json src/locales/pt-BR/keyManagement.json src/locales/vi/keyManagement.json src/locales/zh-CN/keyManagement.json src/locales/zh-TW/keyManagement.json tests/features/KeyManagement/components/AccountKeyResourceListItem.test.tsx tests/features/KeyManagement/components/AccountKeyResourceDetails.test.tsx tests/entrypoints/options/pages/KeyManagement/TokenList.grouping.test.tsx tests/entrypoints/options/pages/KeyManagement/TokenList.emptyStates.test.tsx tests/entrypoints/options/pages/KeyManagement/KeyManagement.emptyStateActions.test.tsx tests/features/KeyManagement/components/Header.test.tsx tests/features/KeyManagement/components/AccountSummaryBar.test.tsx tests/utils/i18nLocaleValidation.test.ts
 git diff --cached --name-status
 pnpm run validate:staged
 git commit -m "feat(openrouter): integrate native key management"

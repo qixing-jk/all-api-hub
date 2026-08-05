@@ -1383,4 +1383,149 @@ describe("NativeResourceEditorBody", () => {
     ).toBeVisible()
     expect(screen.getByRole("button", { name: "Retry Project" })).toBeVisible()
   })
+
+  it("edits multiline and numeric provider fields through their native values", () => {
+    const onValueChange = vi.fn()
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          { fieldId: "description", type: "textarea" },
+          { fieldId: "limit", type: "number", min: 0, step: 1 },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "description",
+              section: "basic",
+              order: 1,
+              renderer: "textarea",
+              rows: 4,
+              resolveLabel: () => "Description",
+            },
+            {
+              fieldId: "limit",
+              section: "basic",
+              order: 2,
+              renderer: "number",
+              resolveLabel: () => "Limit",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ description: "Before", limit: 10 }}
+        onValueChange={onValueChange}
+      />,
+    )
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Description" }), {
+      target: { value: "After\nMore" },
+    })
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Limit" }), {
+      target: { value: "12" },
+    })
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Limit" }), {
+      target: { value: "" },
+    })
+
+    expect(onValueChange).toHaveBeenCalledWith("description", "After\nMore")
+    expect(onValueChange).toHaveBeenCalledWith("limit", 12)
+    expect(onValueChange).toHaveBeenCalledWith("limit", "")
+  })
+
+  it("surfaces controlled multi-select loading, empty, and retry states", async () => {
+    const onRetryControlledOptions = vi.fn()
+    const props = {
+      t,
+      descriptors: [
+        {
+          fieldId: "tags",
+          type: "multi-select" as const,
+          options: [],
+          optionLoader: { dependsOn: [] },
+        },
+      ],
+      policy: defineResourceEditorFieldPolicy({
+        fields: [
+          {
+            fieldId: "tags",
+            section: "basic",
+            order: 1,
+            renderer: "multi-select" as const,
+            resolveLabel: () => "Tags",
+          },
+        ],
+        hiddenFields: [],
+      }),
+      sectionOrder: { basic: 0 },
+      sectionLabelResolvers: { basic: () => "Basic" },
+      values: { tags: [] },
+      onValueChange: vi.fn(),
+      onRetryControlledOptions,
+    }
+    const view = render(
+      <NativeResourceEditorBody
+        {...props}
+        controlledOptionStates={{
+          tags: {
+            status: "error",
+            options: [],
+            errorMessage: "Tags are temporarily unavailable.",
+          },
+        }}
+      />,
+    )
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Tags are temporarily unavailable.",
+    )
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Retry Tags" }))
+    expect(onRetryControlledOptions).toHaveBeenCalledWith("tags")
+
+    view.rerender(
+      <NativeResourceEditorBody
+        {...props}
+        controlledOptionStates={{
+          tags: { status: "loading", options: [] },
+        }}
+      />,
+    )
+    expect(screen.getByRole("status")).toHaveTextContent("Loading...")
+
+    view.rerender(
+      <NativeResourceEditorBody
+        {...props}
+        controlledOptionStates={{
+          tags: {
+            status: "ready",
+            options: [],
+            emptyMessage: "No tags are available for this workspace.",
+          },
+        }}
+      />,
+    )
+    expect(
+      screen.getByText("No tags are available for this workspace."),
+    ).toBeVisible()
+
+    view.rerender(
+      <NativeResourceEditorBody
+        {...props}
+        controlledOptionStates={{
+          tags: {
+            status: "ready",
+            options: [
+              { value: "stable", displayLabel: "Stable" },
+              { value: "raw-value" },
+            ],
+          },
+        }}
+      />,
+    )
+    expect(screen.getByRole("combobox", { name: "Tags" })).not.toBeDisabled()
+  })
 })
