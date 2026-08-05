@@ -295,6 +295,12 @@
   "noMatchingKeys": "沒有找到匹配的金鑰",
   "oneTimeKey": {
     "close": "我已保存，關閉",
+    "closeConfirm": {
+      "cancel": "繼續保留",
+      "confirm": "不儲存就離開",
+      "description": "關閉此對話框後，將無法再次查看完整金鑰。",
+      "title": "不儲存就離開？"
+    },
     "copied": "完整金鑰已複製到剪貼簿",
     "copiedAction": "已複製",
     "copy": "複製完整金鑰",
@@ -303,7 +309,7 @@
     "subtitle": "金鑰 {{name}} 的完整值只會在本次建立後顯示。",
     "subtitleUnnamed": "完整金鑰只會在本次建立後顯示。",
     "title": "立即保存完整金鑰",
-    "warningDescription": "AIHubMix 不支援二次查看完整金鑰。關閉此彈窗後，後續列表或詳情可能只顯示脫敏值。",
+    "warningDescription": "此金鑰僅能在目前完整查看。關閉此彈窗後，後續清單或詳情可能只顯示遮罩值。",
     "warningTitle": "該金鑰只能查看一次"
   },
   "pleaseAddAccount": "請先新增帳號",

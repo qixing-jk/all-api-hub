@@ -15,6 +15,7 @@ import {
   buildAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import { createLegacyCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -105,6 +106,68 @@ describe("buildOneTimeApiKeyProfileSaveAction", () => {
       apiKey: "sk-one-time-full",
       tagIds: [],
     })
+  })
+
+  it("uses the created secret contract and rejects with a detached sanitized error", async () => {
+    const secret = createLegacyCreatedRuntimeSecret({
+      account: {
+        id: "account-example",
+        name: "Example",
+        baseUrl: "https://api.example.invalid",
+        siteType: SITE_TYPES.NEW_API,
+      },
+      token: { name: "Example key", key: "sk-one-time-secret" },
+      apiType: API_TYPES.ANTHROPIC,
+    })
+    const error = Object.assign(
+      new Error("could not save sk-one-time-secret", {
+        cause: new Error("upstream retained sk-one-time-secret"),
+      }),
+      { response: { credential: "sk-one-time-secret" } },
+    )
+    createApiCredentialProfileMock.mockRejectedValueOnce(error)
+    const t = vi.fn((key: string) => key) as unknown as TFunction
+    const logger = { error: vi.fn() }
+
+    const saveAction = buildOneTimeApiKeyProfileSaveAction({
+      result: secret,
+      t,
+      logger,
+      source: "OneTimeSecretDialog",
+    })
+
+    let rejection: unknown
+    try {
+      await saveAction.onSave()
+    } catch (caught) {
+      rejection = caught
+    }
+
+    expect(rejection).toBeInstanceOf(Error)
+    expect(rejection).not.toBe(error)
+    const sanitizedRejection = rejection as Error & { cause?: unknown }
+    expect(sanitizedRejection.message).toBe("could not save [REDACTED]")
+    expect(sanitizedRejection.cause).toBeUndefined()
+    const serializableRejection = JSON.stringify({
+      name: sanitizedRejection.name,
+      message: sanitizedRejection.message,
+      cause: sanitizedRejection.cause,
+      ownProperties: Object.fromEntries(Object.entries(sanitizedRejection)),
+    })
+    expect(
+      `${String(sanitizedRejection)} ${serializableRejection}`,
+    ).not.toContain(secret.secret)
+    expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
+      name: "Example - Example key",
+      apiType: API_TYPES.ANTHROPIC,
+      baseUrl: "https://api.example.invalid",
+      apiKey: "sk-one-time-secret",
+      tagIds: [],
+    })
+    expect(logger.error).toHaveBeenCalledWith(
+      "Failed to save one-time key to API profiles from OneTimeSecretDialog",
+      { message: "could not save [REDACTED]" },
+    )
   })
 
   it("keeps non-AIHubMix account base URLs unchanged", async () => {

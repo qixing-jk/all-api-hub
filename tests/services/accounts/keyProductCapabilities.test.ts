@@ -57,6 +57,12 @@ describe("account key product capabilities", () => {
 
   it("maps full key-management accounts to token CRUD and metadata capabilities", () => {
     expect(getAccountKeyProductCapabilities(ACCOUNT as any)).toEqual({
+      resourceKeys: {
+        list: false,
+        create: false,
+        update: false,
+        delete: false,
+      },
       runtimeKeys: {
         list: true,
         resolveSecret: true,
@@ -120,6 +126,12 @@ describe("account key product capabilities", () => {
     }
 
     expect(getAccountKeyProductCapabilities(account as any)).toEqual({
+      resourceKeys: {
+        list: false,
+        create: false,
+        update: false,
+        delete: false,
+      },
       runtimeKeys: {
         list: true,
         resolveSecret: true,
@@ -146,6 +158,25 @@ describe("account key product capabilities", () => {
     expect(canListAccountRuntimeKeys(account as any)).toBe(true)
     expect(canResolveAccountRuntimeKeySecret(account as any)).toBe(true)
     expect(canRotateAccountServiceCredential(account as any)).toBe(true)
+  })
+
+  it("keeps account-native resources separate from recoverable runtime keys", () => {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: {
+        keyResources: {
+          open: vi.fn(),
+        },
+      },
+    } as any)
+
+    const account = { ...ACCOUNT, siteType: SITE_TYPES.OPENROUTER }
+
+    expect(getAccountKeyProductCapabilities(account as any)).toMatchObject({
+      resourceKeys: { list: true, create: true, update: true, delete: true },
+      runtimeKeys: { list: false, resolveSecret: false },
+      defaultTokenAutomation: { run: false },
+    })
   })
 
   it("projects stored accounts into the same product capability context", () => {
@@ -194,6 +225,12 @@ describe("account key product capabilities", () => {
 
   it("returns no account-key product capabilities for invalid account context", () => {
     expect(getAccountKeyProductCapabilities(null)).toEqual({
+      resourceKeys: {
+        list: false,
+        create: false,
+        update: false,
+        delete: false,
+      },
       runtimeKeys: {
         list: false,
         resolveSecret: false,

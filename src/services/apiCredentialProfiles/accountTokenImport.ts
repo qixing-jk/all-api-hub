@@ -2,6 +2,7 @@ import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/ut
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
 interface CreateProfileFromAccountTokenParams {
@@ -11,6 +12,7 @@ interface CreateProfileFromAccountTokenParams {
   siteType?: DisplaySiteData["siteType"] | string
   tagIds?: string[]
   token: Pick<ApiToken, "key" | "name">
+  apiType?: ApiVerificationApiType
 }
 
 /**
@@ -23,6 +25,7 @@ export async function createProfileFromAccountToken({
   siteType,
   tagIds,
   token,
+  apiType = API_TYPES.OPENAI_COMPATIBLE,
 }: CreateProfileFromAccountTokenParams) {
   return apiCredentialProfilesStorage.createProfile({
     name: buildApiCredentialProfileName({
@@ -30,7 +33,7 @@ export async function createProfileFromAccountToken({
       fallbackAccountName,
       tokenName: token.name ?? "",
     }),
-    apiType: API_TYPES.OPENAI_COMPATIBLE,
+    apiType,
     baseUrl: normalizeAccountSiteUrlForManagedChannel({
       siteType,
       url: baseUrl,

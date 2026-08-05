@@ -17,6 +17,7 @@ import {
 } from "~/services/accounts/keyProductCapabilities"
 import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
+import type { AccountKeyResourceCapability } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { InviteLinkCapability } from "~/services/apiAdapters/contracts/inviteLink"
 import type { KeyManagementCapability } from "~/services/apiAdapters/contracts/keyManagement"
 import type { ServiceCredentialCapability } from "~/services/apiAdapters/contracts/serviceCredential"
@@ -166,6 +167,7 @@ export interface AccountApiContext {
 export interface DisplayAccountApiCapabilityContext extends AccountApiContext {
   capabilities: SiteTypeCapabilities
   inviteLink?: InviteLinkCapability
+  accountKeyResources?: AccountKeyResourceCapability
   keyManagement: KeyManagementCapability | undefined
   serviceCredential: ServiceCredentialCapability | undefined
   tokenProvisioning: TokenProvisioningCapability | undefined
@@ -343,6 +345,7 @@ export const createDisplayAccountApiContext = (
     ...context,
     capabilities,
     inviteLink: accountCapabilities?.inviteLink,
+    accountKeyResources: accountCapabilities?.keyResources,
     keyManagement: accountCapabilities?.keyManagement,
     serviceCredential: accountCapabilities?.serviceCredential,
     tokenProvisioning: accountCapabilities?.tokenProvisioning,

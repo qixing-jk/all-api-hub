@@ -295,6 +295,12 @@
   "noMatchingKeys": "Không tìm thấy khóa khớp",
   "oneTimeKey": {
     "close": "Tôi đã lưu, đóng",
+    "closeConfirm": {
+      "cancel": "Giữ hộp thoại mở",
+      "confirm": "Rời đi mà không lưu",
+      "description": "Bạn sẽ không thể xem lại khóa đầy đủ sau khi đóng hộp thoại này.",
+      "title": "Rời đi mà không lưu?"
+    },
     "copied": "Khóa đầy đủ đã được sao chép vào clipboard",
     "copiedAction": "Đã sao chép",
     "copy": "Sao chép khóa đầy đủ",
@@ -303,7 +309,7 @@
     "subtitle": "Giá trị đầy đủ của khóa {{name}} sẽ chỉ hiển thị sau lần tạo này.",
     "subtitleUnnamed": "Khóa đầy đủ sẽ chỉ hiển thị sau lần tạo này.",
     "title": "Lưu khóa đầy đủ ngay lập tức",
-    "warningDescription": "AIHubMix không hỗ trợ xem lại khóa đầy đủ. Sau khi đóng cửa sổ này, các danh sách hoặc chi tiết sau này có thể chỉ hiển thị giá trị đã che đi.",
+    "warningDescription": "Bạn chỉ có thể xem đầy đủ khóa này ngay lúc này. Sau khi đóng hộp thoại, danh sách hoặc chi tiết có thể chỉ hiển thị giá trị đã che.",
     "warningTitle": "Khóa này chỉ có thể được xem một lần"
   },
   "pleaseAddAccount": "Vui lòng thêm tài khoản trước",

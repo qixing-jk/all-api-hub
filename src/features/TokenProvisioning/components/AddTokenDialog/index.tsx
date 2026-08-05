@@ -4,10 +4,11 @@ import { useTranslation } from "react-i18next"
 
 import { Alert } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
-import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
+import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { normalizeDefaultTokenRequestName } from "~/services/accounts/defaultTokenLifecycle"
 import {
   canCreateAccountApiTokens,
@@ -17,8 +18,8 @@ import {
   createDisplayAccountApiContext,
   requireDisplayAccountKeyManagement,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
+import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -32,7 +33,7 @@ import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
-import { OneTimeApiKeyDialog } from "../OneTimeApiKeyDialog"
+import { OneTimeSecretDialog } from "../OneTimeSecretDialog"
 import { DialogHeader } from "./DialogHeader"
 import { FormActions } from "./FormActions"
 import { useTokenData } from "./hooks/useTokenData"
@@ -111,7 +112,8 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
   const showOneTimeKeyDialog = props.showOneTimeKeyDialog ?? true
   const { t } = useTranslation("keyManagement")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
+  const [oneTimeSecret, setOneTimeSecret] =
+    useState<CreatedRuntimeSecret | null>(null)
 
   const { formData, setFormData, errors, validateForm, isEditMode, resetForm } =
     useTokenForm(props)
@@ -133,27 +135,22 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
   const handleClose = () => {
     resetForm()
     resetData()
-    setOneTimeToken(null)
+    setOneTimeSecret(null)
     onClose()
   }
 
   const handleCloseOneTimeKeyDialog = () => {
-    setOneTimeToken(null)
+    setOneTimeSecret(null)
     handleClose()
   }
-  const oneTimeKeySaveAction =
-    oneTimeToken && currentAccount
-      ? buildOneTimeApiKeyProfileSaveAction({
-          accountName: currentAccount.name,
-          baseUrl: currentAccount.baseUrl,
-          siteType: currentAccount.siteType,
-          tagIds: currentAccount.tagIds ?? [],
-          token: oneTimeToken,
-          t,
-          logger,
-          source: "AddTokenDialog",
-        })
-      : undefined
+  const oneTimeKeySaveAction = oneTimeSecret
+    ? buildOneTimeApiKeyProfileSaveAction({
+        result: oneTimeSecret,
+        t,
+        logger,
+        source: "AddTokenDialog",
+      })
+    : undefined
 
   const handleSubmit = async () => {
     if (
@@ -223,22 +220,24 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
           keyManagement,
         ).createToken(request, tokenData)
         const createdToken = isCreatedApiToken(created) ? created : undefined
-        const displayCreatedToken = createdToken
-          ? formatOptionalSkPrefixSiteToken(
-              createdToken,
-              currentAccount.siteType,
-            )
-          : undefined
-        const shouldShowOneTimeKeyDialog =
-          !!createdToken &&
+        const createdSecret =
+          createdToken &&
           showOneTimeKeyDialog &&
-          shouldShowOneTimeKeyDialogForCreatedToken(
-            currentAccount,
-            createdToken,
-          )
+          currentAccount.siteType === SITE_TYPES.AIHUBMIX
+            ? (() => {
+                try {
+                  return createAIHubMixCreatedRuntimeSecret({
+                    account: currentAccount,
+                    token: createdToken,
+                  })
+                } catch {
+                  return null
+                }
+              })()
+            : null
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-        if (shouldShowOneTimeKeyDialog) {
-          setOneTimeToken(displayCreatedToken ?? createdToken)
+        if (createdSecret) {
+          setOneTimeSecret(createdSecret)
         } else {
           toast.success(t("dialog.createSuccess"))
         }
@@ -250,7 +249,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
           }
         }
 
-        if (shouldShowOneTimeKeyDialog) {
+        if (createdSecret) {
           return
         }
       }
@@ -330,9 +329,9 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
           </div>
         )}
       </Modal>
-      <OneTimeApiKeyDialog
-        isOpen={!!oneTimeToken}
-        token={oneTimeToken}
+      <OneTimeSecretDialog
+        isOpen={!!oneTimeSecret}
+        result={oneTimeSecret}
         onClose={handleCloseOneTimeKeyDialog}
         saveAction={oneTimeKeySaveAction}
       />

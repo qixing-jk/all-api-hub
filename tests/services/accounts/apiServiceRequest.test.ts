@@ -222,11 +222,41 @@ describe("fetchDisplayAccountTokens", () => {
     )
     expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual(
       expect.objectContaining({
+        accountKeyResources: undefined,
+      }),
+    )
+    expect(createDisplayAccountApiContext(ACCOUNT as any)).toMatchObject({
+      accountKeyResources: createDisplayAccountApiContext(ACCOUNT as any)
+        .capabilities.account?.keyResources,
+    })
+    expect(createDisplayAccountApiContext(ACCOUNT as any)).toMatchObject({
+      keyManagement,
+    })
+    expect(createDisplayAccountApiContext(ACCOUNT as any)).toEqual(
+      expect.objectContaining({
         request: expect.not.objectContaining({
           accountAuthStore: expect.anything(),
         }),
       }),
     )
+  })
+
+  it("projects account-native key resources without inventing legacy key management", () => {
+    const accountKeyResources = { open: vi.fn() }
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: { keyResources: accountKeyResources },
+    } as any)
+
+    const context = createDisplayAccountApiContext({
+      ...ACCOUNT,
+      siteType: SITE_TYPES.OPENROUTER,
+    } as any)
+
+    expect(context.accountKeyResources).toBe(
+      context.capabilities.account?.keyResources,
+    )
+    expect(context.keyManagement).toBeUndefined()
   })
 
   it("returns singleton service credentials as runtime keys when token inventory is unsupported", async () => {

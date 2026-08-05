@@ -302,6 +302,12 @@
   "noMatchingKeys": "No matching keys found",
   "oneTimeKey": {
     "close": "I saved it, close",
+    "closeConfirm": {
+      "cancel": "Keep this open",
+      "confirm": "Leave without saving",
+      "description": "The full key will no longer be available after you close this dialog.",
+      "title": "Leave without saving?"
+    },
     "copied": "Full key copied to clipboard",
     "copiedAction": "Copied",
     "copy": "Copy full key",
@@ -310,7 +316,7 @@
     "subtitle": "The full value for key {{name}} is shown only after this creation.",
     "subtitleUnnamed": "The full key is shown only after this creation.",
     "title": "Save the full key now",
-    "warningDescription": "AIHubMix does not support viewing the full key again. After closing this dialog, lists or details may only show a masked value.",
+    "warningDescription": "This key can only be viewed in full now. After closing this dialog, lists or details may only show a masked value.",
     "warningTitle": "This key can only be viewed once"
   },
   "pleaseAddAccount": "Please add an account first",

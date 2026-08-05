@@ -4,6 +4,7 @@ import type { AccountSiteBackendFamily } from "~/services/accountSiteDefinitions
 import type { AccountBootstrapCapability } from "./accountBootstrap"
 import type { AccountCompletionCapability } from "./accountCompletion"
 import type { AccountDataCapability } from "./accountData"
+import type { AccountKeyResourceCapability } from "./accountKeyResource"
 import type { AccountRefreshCapability } from "./accountRefresh"
 import type { InviteLinkCapability } from "./inviteLink"
 import type { KeyManagementCapability } from "./keyManagement"
@@ -43,6 +44,7 @@ export type SiteTypeCapabilities = {
     completion?: AccountCompletionCapability
     inviteLink?: InviteLinkCapability
     keyManagement?: KeyManagementCapability
+    keyResources?: AccountKeyResourceCapability
     serviceCredential?: ServiceCredentialCapability
     tokenProvisioning?: TokenProvisioningCapability
     refresh?: AccountRefreshCapability

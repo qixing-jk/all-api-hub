@@ -7,6 +7,14 @@ import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testId
 
 let OneTimeApiKeyDialog: typeof import("~/features/TokenProvisioning/components/OneTimeApiKeyDialog").OneTimeApiKeyDialog
 
+const createDeferred = () => {
+  let resolve!: () => void
+  const promise = new Promise<void>((nextResolve) => {
+    resolve = nextResolve
+  })
+  return { promise, resolve }
+}
+
 describe("OneTimeApiKeyDialog", () => {
   beforeEach(async () => {
     ;({ OneTimeApiKeyDialog } = await import(
@@ -132,6 +140,70 @@ describe("OneTimeApiKeyDialog", () => {
 
     await act(async () => {
       resolveSave?.()
+    })
+  })
+
+  it("does not repeat pending auto-copy when a parent recreates the token", async () => {
+    const pendingCopy = createDeferred()
+    const writeText = vi.fn(() => pendingCopy.promise)
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+    const token = { key: "sk-one-time", name: "Default API Key" } as any
+    const { rerender } = render(
+      <OneTimeApiKeyDialog isOpen={true} token={token} onClose={vi.fn()} />,
+    )
+    expect(writeText).toHaveBeenCalledOnce()
+
+    rerender(
+      <OneTimeApiKeyDialog
+        isOpen={true}
+        token={{ ...token }}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(writeText).toHaveBeenCalledOnce()
+
+    await act(async () => {
+      pendingCopy.resolve()
+    })
+  })
+
+  it("preserves the pending save guard when a parent recreates the token", async () => {
+    const user = userEvent.setup()
+    const pendingSave = createDeferred()
+    const onSave = vi.fn(() => pendingSave.promise)
+    const token = { key: "sk-one-time", name: "Default API Key" } as any
+    const { rerender } = render(
+      <OneTimeApiKeyDialog
+        isOpen={true}
+        token={token}
+        onClose={vi.fn()}
+        autoCopy={false}
+        saveAction={{ onSave }}
+      />,
+    )
+    await user.click(
+      screen.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeySaveButton),
+    )
+
+    rerender(
+      <OneTimeApiKeyDialog
+        isOpen={true}
+        token={{ ...token }}
+        onClose={vi.fn()}
+        autoCopy={false}
+        saveAction={{ onSave }}
+      />,
+    )
+    await user.click(
+      screen.getByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeySaveButton),
+    )
+    expect(onSave).toHaveBeenCalledOnce()
+
+    await act(async () => {
+      pendingSave.resolve()
     })
   })
 })

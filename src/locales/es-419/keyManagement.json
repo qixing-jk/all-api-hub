@@ -309,6 +309,12 @@
   "noMatchingKeys": "No se encontraron claves coincidentes",
   "oneTimeKey": {
     "close": "Ya la guardé, cerrar",
+    "closeConfirm": {
+      "cancel": "Mantener abierto",
+      "confirm": "Salir sin guardar",
+      "description": "No podrás volver a ver la clave completa después de cerrar este diálogo.",
+      "title": "¿Salir sin guardar?"
+    },
     "copied": "Clave completa copiada al portapapeles",
     "copiedAction": "Copiada",
     "copy": "Copiar clave completa",
@@ -317,7 +323,7 @@
     "subtitle": "El valor completo de la clave {{name}} solo se muestra después de esta creación.",
     "subtitleUnnamed": "La clave completa solo se muestra después de esta creación.",
     "title": "Guarda la clave completa ahora",
-    "warningDescription": "AIHubMix no admite ver la clave completa otra vez. Después de cerrar este diálogo, las listas o detalles pueden mostrar solo un valor enmascarado.",
+    "warningDescription": "Esta es la única vez que puedes ver la clave completa. Después de cerrar este diálogo, las listas o los detalles pueden mostrar solo un valor enmascarado.",
     "warningTitle": "Esta clave solo se puede ver una vez"
   },
   "pleaseAddAccount": "Agrega una cuenta primero",

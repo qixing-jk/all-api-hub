@@ -733,7 +733,9 @@ describe("AddTokenDialog prefill", () => {
     ).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith("clipboard denied")
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "keyManagement:oneTimeKey.copyFailed",
+      )
     })
 
     expect(

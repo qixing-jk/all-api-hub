@@ -6,6 +6,7 @@ import {
   collectAccountRuntimeKeySecrets,
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
@@ -63,13 +64,30 @@ const normalizeBatchSaveItem = async (
   }
 }
 
-interface BuildOneTimeApiKeyProfileSaveActionParams {
+type OneTimeSecretProfileInput = {
   accountName: string
   fallbackAccountName?: string
   baseUrl: string
   siteType?: string
   tagIds?: string[]
   token: Pick<ApiToken, "key" | "name">
+  apiType?: CreatedRuntimeSecret["credential"]["apiType"]
+}
+
+type BuildOneTimeApiKeyProfileSaveActionParams =
+  | (OneTimeSecretProfileInput & {
+      t: TFunction
+      logger: OneTimeKeySaveLogger
+      source: string
+    })
+  | {
+      result: CreatedRuntimeSecret
+      t: TFunction
+      logger: OneTimeKeySaveLogger
+      source: string
+    }
+
+type OneTimeSecretProfileSaveParams = OneTimeSecretProfileInput & {
   t: TFunction
   logger: OneTimeKeySaveLogger
   source: string
@@ -89,26 +107,27 @@ interface SaveAccountRuntimeKeysToApiCredentialProfilesParams {
 /**
  * Builds a dialog save action that persists a one-time key as an API profile.
  */
-export function buildOneTimeApiKeyProfileSaveAction({
-  accountName,
-  fallbackAccountName,
-  baseUrl,
-  siteType,
-  tagIds,
-  token,
-  t,
-  logger,
-  source,
-}: BuildOneTimeApiKeyProfileSaveActionParams): OneTimeApiKeySaveAction {
+export function buildOneTimeApiKeyProfileSaveAction(
+  params: BuildOneTimeApiKeyProfileSaveActionParams,
+): OneTimeApiKeySaveAction {
+  const { t, logger, source } = params
+  const oneTimeResult =
+    "result" in params
+      ? {
+          accountName: params.result.credential.accountName,
+          fallbackAccountName: params.result.credential.fallbackAccountName,
+          baseUrl: params.result.credential.baseUrl,
+          siteType: params.result.credential.siteType,
+          tagIds: [...params.result.credential.tagIds],
+          apiType: params.result.credential.apiType,
+          token: { name: params.result.displayName, key: params.result.secret },
+        }
+      : params
+
   return {
     onSave: async () => {
       const profile = await saveOneTimeApiKeyToProfile({
-        accountName,
-        fallbackAccountName,
-        baseUrl,
-        siteType,
-        tagIds,
-        token,
+        ...oneTimeResult,
         t,
         logger,
         source,
@@ -133,10 +152,11 @@ async function saveOneTimeApiKeyToProfile({
   siteType,
   tagIds,
   token,
+  apiType,
   t,
   logger,
   source,
-}: BuildOneTimeApiKeyProfileSaveActionParams) {
+}: OneTimeSecretProfileSaveParams) {
   try {
     return await createApiCredentialProfileFromToken({
       accountName,
@@ -145,13 +165,15 @@ async function saveOneTimeApiKeyToProfile({
       siteType,
       tagIds,
       token,
+      apiType,
     })
   } catch (error) {
+    const sanitizedMessage = toSanitizedErrorSummary(error, [token.key])
     logger.error(`Failed to save one-time key to API profiles from ${source}`, {
-      message: toSanitizedErrorSummary(error, [token.key]),
+      message: sanitizedMessage,
     })
     toast.error(t("keyManagement:messages.saveToApiProfilesFailed"))
-    throw error
+    throw new Error(sanitizedMessage)
   }
 }
 
@@ -255,7 +277,8 @@ async function createApiCredentialProfileFromToken({
   siteType,
   tagIds,
   token,
-}: Omit<BuildOneTimeApiKeyProfileSaveActionParams, "t" | "logger" | "source">) {
+  apiType,
+}: OneTimeSecretProfileInput) {
   return createProfileFromAccountToken({
     accountName,
     fallbackAccountName,
@@ -263,5 +286,6 @@ async function createApiCredentialProfileFromToken({
     siteType,
     tagIds,
     token,
+    apiType,
   })
 }

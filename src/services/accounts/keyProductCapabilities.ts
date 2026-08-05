@@ -5,6 +5,12 @@ const hasNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0
 
 type AccountKeyProductCapabilities = {
+  resourceKeys: {
+    list: boolean
+    create: boolean
+    update: boolean
+    delete: boolean
+  }
   runtimeKeys: {
     list: boolean
     resolveSecret: boolean
@@ -40,6 +46,12 @@ type AccountKeyProductCapabilityContext = Pick<
 >
 
 const NO_ACCOUNT_KEY_PRODUCT_CAPABILITIES: AccountKeyProductCapabilities = {
+  resourceKeys: {
+    list: false,
+    create: false,
+    update: false,
+    delete: false,
+  },
   runtimeKeys: {
     list: false,
     resolveSecret: false,
@@ -124,12 +136,19 @@ export const getAccountKeyProductCapabilities = (
 
   const accountCapabilities = getSiteTypeCapabilities(account.siteType).account
   const keyManagement = accountCapabilities?.keyManagement
+  const hasKeyResources = Boolean(accountCapabilities?.keyResources)
   const serviceCredential = accountCapabilities?.serviceCredential
   const hasKeyManagement = Boolean(keyManagement)
   const hasServiceCredential = Boolean(serviceCredential)
   const hasTokenProvisioning = Boolean(accountCapabilities?.tokenProvisioning)
 
   return {
+    resourceKeys: {
+      list: hasKeyResources,
+      create: hasKeyResources,
+      update: hasKeyResources,
+      delete: hasKeyResources,
+    },
     runtimeKeys: {
       list: hasKeyManagement || hasServiceCredential,
       resolveSecret: hasKeyManagement || hasServiceCredential,

@@ -71,6 +71,12 @@ const expectKeyManagementCapability = (
   )
 }
 
+const expectNoAccountKeyResourceCapability = (
+  capabilities: ReturnType<typeof getSiteTypeCapabilities>,
+) => {
+  expect(capabilities.account?.keyResources).toBeUndefined()
+}
+
 const expectAccountRefreshCapability = (
   capabilities: ReturnType<typeof getSiteTypeCapabilities>,
 ) => {
@@ -271,6 +277,8 @@ describe("apiAdapters registry", () => {
     expect(capabilities.account).not.toHaveProperty("credential")
     expect(capabilities.account?.data?.fetchData).toBeTypeOf("function")
     expect(capabilities.account?.refresh?.refreshAccount).toBeTypeOf("function")
+    expectNoAccountKeyResourceCapability(capabilities)
+    expect(capabilities.account?.keyManagement).toBeUndefined()
     expect(capabilities.managedSites).toBeUndefined()
   })
 
