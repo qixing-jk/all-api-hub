@@ -289,7 +289,11 @@ export async function installOpenRouterKeyManagementRoutes(
         authenticated,
         workspaceScope: workspaceId,
       })
-      await fulfillJson(route, { data: created, key: CREATED_SECRET_FIXTURE })
+      await fulfillJson(
+        route,
+        { data: created, key: CREATED_SECRET_FIXTURE },
+        201,
+      )
       return
     }
 

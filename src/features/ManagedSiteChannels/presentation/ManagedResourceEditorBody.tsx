@@ -229,14 +229,15 @@ export function ManagedResourceEditorBody({
       onValueChange={onValueChange}
       renderFieldOverride={({ descriptor, presentation, errorMessage }) => {
         const fieldId = descriptor.fieldId
+        const currentValue = readString(values, fieldId)
         const selectOptions =
           descriptor.type === "select"
             ? [
-                ...(readString(values, fieldId) &&
+                ...(currentValue &&
                 !descriptor.options.some(
-                  (option) => option.value === readString(values, fieldId),
+                  (option) => option.value === currentValue,
                 )
-                  ? [{ value: readString(values, fieldId) }]
+                  ? [{ value: currentValue, displayLabel: currentValue }]
                   : []),
                 ...descriptor.options,
               ].map((option) => ({

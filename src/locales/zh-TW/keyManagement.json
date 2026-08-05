@@ -1,7 +1,6 @@
 {
   "accountSummary": {
     "keys_other": "{{count}} 個金鑰",
-    "knownKeys_other": "至少 {{count}} 個金鑰",
     "loadFailed": "載入失敗",
     "title": "帳號概覽",
     "unsupported": "不支援"

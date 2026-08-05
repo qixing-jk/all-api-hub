@@ -301,12 +301,10 @@ function mayContainStaticTranslationReference(sourceText: string) {
 
 describe("i18n locale validation", () => {
   it("keeps partial inventory copy available without partial visible-count copy", async () => {
-    const requiredPluralFamilies = [
-      "accountSummary.knownKeys",
-      "knownTotalKeys",
-    ]
+    const requiredPluralFamilies = ["knownTotalKeys"]
     const removedCountFamilies = [
       "accountSummary.keysUnavailable",
+      "accountSummary.knownKeys",
       "totalKeysPartial",
       "totalKeysUnavailable",
       "enabledCountPartial",

@@ -441,7 +441,7 @@ const toDetail = (
   workspaceDisplay:
     config.workspaceNames.get(key.workspace_id) ??
     scope?.displayName ??
-    "Workspace",
+    t("keyManagement:openRouter.editor.options.workspace.unknown"),
   creatorDisplay: toCreatorDisplay(key.creator_user_id),
 })
 
@@ -1198,7 +1198,8 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
               scopeKey: appliedScopeKey,
               routeKey: appliedScopeKey,
               displayName:
-                config.workspaceNames.get(appliedScopeKey) ?? "Workspace",
+                config.workspaceNames.get(appliedScopeKey) ??
+                t("keyManagement:openRouter.editor.options.workspace.unknown"),
               isDefault: appliedScopeKey === config.defaultWorkspace.id,
             }
       const detail = toDetail(config, created.key, appliedScope)

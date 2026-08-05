@@ -13,6 +13,14 @@ import {
 } from "~/services/apiAdapters/openrouter/keyResourceFields"
 
 const t = ((key: string) => key) as TFunction
+const formatUsd = (value: number) =>
+  new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: "USD",
+    currencyDisplay: "code",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 8,
+  }).format(value)
 
 const row: NativeKeyManagementRow = {
   kind: "account-key-resource",
@@ -87,17 +95,17 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
       {
         id: "limit",
         label: "keyManagement:openRouter.list.details.limit",
-        value: "20",
+        value: formatUsd(20),
       },
       {
         id: "limit_remaining",
         label: "keyManagement:openRouter.list.details.remaining",
-        value: "-2",
+        value: formatUsd(-2),
       },
       {
         id: "usage",
         label: "keyManagement:openRouter.list.details.usage",
-        value: "22",
+        value: formatUsd(22),
       },
     ])
   })
@@ -234,12 +242,12 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
       "keyManagement:openRouter.editor.options.limitReset.monthly",
       "keyManagement:openRouter.editor.options.limitReset.none",
       "keyManagement:openRouter.list.values.missing",
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
+      formatUsd(1),
+      formatUsd(2),
+      formatUsd(3),
+      formatUsd(4),
+      formatUsd(5),
+      formatUsd(6),
       "keyManagement:openRouter.list.values.no",
       "2026-08-05T00:00:00.000Z",
       "first, second",
@@ -291,7 +299,7 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
       "Example workspace",
       "keyManagement:openRouter.list.values.unlimited",
       "keyManagement:openRouter.list.values.unlimited",
-      "4",
+      formatUsd(4),
     ])
 
     const limited = buildOpenRouterKeyResourceCardPresentation(
@@ -312,7 +320,7 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
       "Example workspace",
       "keyManagement:openRouter.list.values.missing",
       "keyManagement:openRouter.list.values.missing",
-      "4",
+      formatUsd(4),
     ])
   })
 })

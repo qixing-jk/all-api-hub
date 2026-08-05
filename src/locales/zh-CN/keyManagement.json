@@ -1,7 +1,6 @@
 {
   "accountSummary": {
     "keys": "{{count}} 个密钥",
-    "knownKeys": "至少 {{count}} 个密钥",
     "loadFailed": "加载失败",
     "title": "账号概览",
     "unsupported": "不支持"

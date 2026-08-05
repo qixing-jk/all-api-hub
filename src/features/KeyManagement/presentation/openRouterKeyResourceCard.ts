@@ -39,6 +39,32 @@ const detailFieldIds = new Set<string>([
   OPENROUTER_KEY_FIELD_IDS.ExpiresAt,
 ])
 
+// OpenRouter defines Management Key limits and usage amounts in USD:
+// https://openrouter.ai/docs/api/api-reference/api-keys/list-api-keys
+const usdAmountFieldIds = new Set<string>([
+  OPENROUTER_KEY_FIELD_IDS.Limit,
+  OPENROUTER_KEY_FIELD_IDS.LimitRemaining,
+  OPENROUTER_KEY_FIELD_IDS.Usage,
+  OPENROUTER_KEY_FIELD_IDS.UsageDaily,
+  OPENROUTER_KEY_FIELD_IDS.UsageWeekly,
+  OPENROUTER_KEY_FIELD_IDS.UsageMonthly,
+  OPENROUTER_KEY_FIELD_IDS.ByokUsage,
+  OPENROUTER_KEY_FIELD_IDS.ByokUsageDaily,
+  OPENROUTER_KEY_FIELD_IDS.ByokUsageWeekly,
+  OPENROUTER_KEY_FIELD_IDS.ByokUsageMonthly,
+])
+
+const usdAmountFormatter = new Intl.NumberFormat(undefined, {
+  style: "currency",
+  currency: "USD",
+  currencyDisplay: "code",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 8,
+})
+
+const formatUsdAmount = (value: number): string =>
+  usdAmountFormatter.format(value)
+
 const findFact = (facts: AccountKeyResourceFacts, fieldId: string) =>
   facts.fields.find((fact) => fact.fieldId === fieldId)
 
@@ -50,6 +76,14 @@ const primitiveFactValue = (
   return fact && (fact.kind === "number" || fact.kind === "text")
     ? String(fact.value)
     : undefined
+}
+
+const usdFactValue = (
+  facts: AccountKeyResourceFacts,
+  fieldId: string,
+): string | undefined => {
+  const fact = findFact(facts, fieldId)
+  return fact?.kind === "number" ? formatUsdAmount(fact.value) : undefined
 }
 
 const fieldLabel = (fieldId: string, t: TFunction) => {
@@ -135,7 +169,9 @@ const displayFactValue = (fact: ResourceDisplayFact, t: TFunction) => {
     case "secret":
       return "••••"
     case "number":
-      return String(fact.value)
+      return usdAmountFieldIds.has(fact.fieldId)
+        ? formatUsdAmount(fact.value)
+        : String(fact.value)
   }
 }
 
@@ -190,12 +226,12 @@ export const buildOpenRouterKeyResourceCardPresentation = (
   const unlimited = limitMode === OPENROUTER_KEY_LIMIT_MODES.Unlimited
   const missing = t("keyManagement:openRouter.list.values.missing")
   const unlimitedLabel = t("keyManagement:openRouter.list.values.unlimited")
-  const limit = primitiveFactValue(row.facts, OPENROUTER_KEY_FIELD_IDS.Limit)
-  const remaining = primitiveFactValue(
+  const limit = usdFactValue(row.facts, OPENROUTER_KEY_FIELD_IDS.Limit)
+  const remaining = usdFactValue(
     row.facts,
     OPENROUTER_KEY_FIELD_IDS.LimitRemaining,
   )
-  const usage = primitiveFactValue(row.facts, OPENROUTER_KEY_FIELD_IDS.Usage)
+  const usage = usdFactValue(row.facts, OPENROUTER_KEY_FIELD_IDS.Usage)
 
   return {
     id: row.rowKey,

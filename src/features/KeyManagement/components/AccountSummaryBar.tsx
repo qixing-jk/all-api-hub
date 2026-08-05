@@ -36,13 +36,15 @@ export function AccountSummaryBar({
             {items.map((item) => {
               const isActive = activeAccountIdSet.has(item.accountId)
               const shouldHideUnknownCount =
-                Boolean(item.errorType) && item.count === 0 && !item.knownCount
+                Boolean(item.errorType) &&
+                item.count === 0 &&
+                item.knownCount === undefined
               const countLabel = shouldHideUnknownCount
                 ? null
                 : item.count !== null
                   ? t("accountSummary.keys", { count: item.count })
-                  : item.knownCount
-                    ? t("accountSummary.knownKeys", {
+                  : item.knownCount !== undefined
+                    ? t("knownTotalKeys", {
                         count: item.knownCount,
                       })
                     : null

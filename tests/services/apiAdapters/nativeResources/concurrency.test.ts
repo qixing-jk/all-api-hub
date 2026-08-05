@@ -13,6 +13,7 @@ describe("mapSettledWithConcurrency", () => {
         active += 1
         maximum = Math.max(maximum, active)
         try {
+          await new Promise((resolve) => setTimeout(resolve, 0))
           if (item === 3) throw new Error("failed")
           return item * 2
         } finally {
@@ -21,7 +22,7 @@ describe("mapSettledWithConcurrency", () => {
       },
     )
 
-    expect(maximum).toBeLessThanOrEqual(2)
+    expect(maximum).toBe(2)
     expect(results).toEqual([
       { status: "fulfilled", value: 2 },
       { status: "fulfilled", value: 4 },

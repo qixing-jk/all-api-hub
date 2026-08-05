@@ -473,6 +473,48 @@ describe("ManagedResourceEditorBody", () => {
     expect(onValueChange).toHaveBeenCalledWith("creator", "member-example")
   })
 
+  it("shows an absent current select value instead of an unknown fallback", async () => {
+    const user = userEvent.setup()
+    const policy = defineResourceEditorFieldPolicy({
+      fields: [
+        {
+          fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
+          section: "basic",
+          order: 10,
+          renderer: "select",
+          resolveLabel: () => "Provider",
+          resolveOptionFallback: () => "Unknown provider",
+        },
+      ],
+      hiddenFields: [],
+    })
+
+    render(
+      <ManagedResourceEditorBody
+        t={t}
+        mode="edit"
+        descriptors={[
+          {
+            fieldId: AXON_HUB_CHANNEL_FIELD_IDS.TYPE,
+            type: "select",
+            options: [{ value: "supported", displayLabel: "Supported" }],
+          },
+        ]}
+        policy={policy as typeof createPolicy}
+        values={{ [AXON_HUB_CHANNEL_FIELD_IDS.TYPE]: "legacy-provider" }}
+        onValueChange={vi.fn()}
+      />,
+    )
+
+    const select = screen.getByRole("combobox", { name: "Type" })
+    expect(select).toHaveTextContent("legacy-provider")
+    await user.click(select)
+    expect(
+      screen.getByRole("option", { name: "legacy-provider" }),
+    ).toBeVisible()
+    expect(screen.queryByText("Unknown provider")).toBeNull()
+  })
+
   it("shows credential create and edit guidance for each editor mode", async () => {
     const { createEditor, editEditor } = await openRealAxonHubEditors()
     const englishT = ((key: string) => {

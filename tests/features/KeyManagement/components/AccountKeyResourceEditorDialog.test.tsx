@@ -644,11 +644,11 @@ describe("AccountKeyResourceEditorDialog", () => {
           ...editor(),
           initialValues: {
             ...editor().initialValues,
-            [field.Creator]: "creator-option-1",
+            [field.Creator]: rawCreatorId,
           },
           values: {
             ...editor().values,
-            [field.Creator]: "creator-option-1",
+            [field.Creator]: rawCreatorId,
           },
           optionsByField: {
             [field.Creator]: [

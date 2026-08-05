@@ -72,10 +72,11 @@ import {
 } from "./controllers/useAccountKeyResourceController"
 import { useKeyManagement } from "./hooks/useKeyManagement"
 import { KEY_MANAGEMENT_TEST_IDS } from "./testIds"
-import type {
-  KeyManagementAccountSummaryItem,
-  KeyManagementAggregateCounts,
-  NativeKeyManagementRow,
+import {
+  KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
+  type KeyManagementAccountSummaryItem,
+  type KeyManagementAggregateCounts,
+  type NativeKeyManagementRow,
 } from "./types"
 
 const logger = createLogger("KeyManagement")
@@ -633,7 +634,7 @@ export default function KeyManagement(props: {
           (fact) => fact.fieldId === OPENROUTER_KEY_FIELD_IDS.Workspace,
         )
         return {
-          kind: "account-key-resource",
+          kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.AccountKeyResource,
           rowKey,
           accountId: facts.ref.accountId,
           accountName:

@@ -54,7 +54,7 @@ describe("AccountKeyResourceListItem", () => {
     expect(screen.getByText("sk-or-v1-••••example")).toBeVisible()
     expect(screen.getByText("Example account")).toBeVisible()
     expect(screen.getByText("Example workspace")).toBeVisible()
-    expect(screen.getByText("-2")).toBeVisible()
+    expect(screen.getByText(/-USD\s*2/)).toBeVisible()
     expect(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay),
     ).toBeVisible()
@@ -75,10 +75,18 @@ describe("AccountKeyResourceListItem", () => {
         name: "keyManagement:openRouter.list.actions.delete",
       }),
     ).toBeVisible()
-    expect(screen.queryByRole("button", { name: /copy key/i })).toBeNull()
-    expect(screen.queryByRole("button", { name: /verify api/i })).toBeNull()
     expect(
-      screen.queryByRole("button", { name: /save to api credentials/i }),
+      screen.queryByRole("button", { name: "common:actions.copyKey" }),
+    ).toBeNull()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:actions.verifyApi",
+      }),
+    ).toBeNull()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:actions.saveToApiProfiles",
+      }),
     ).toBeNull()
 
     await user.click(

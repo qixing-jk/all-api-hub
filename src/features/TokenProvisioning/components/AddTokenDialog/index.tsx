@@ -230,7 +230,10 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
                     account: currentAccount,
                     token: createdToken,
                   })
-                } catch {
+                } catch (error) {
+                  logger.warn("AIHubMix created secret projection failed", {
+                    error: getErrorMessage(error),
+                  })
                   return null
                 }
               })()

@@ -2,6 +2,7 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { describe, expect, it } from "vitest"
 
+import { SUPPORTED_UI_LANGUAGES } from "~/constants/i18n"
 import {
   getOpenRouterKeyResourceFieldPolicy,
   OPENROUTER_KEY_EDITOR_SECTION_ORDER,
@@ -113,7 +114,7 @@ describe("OpenRouter key resource field policy", () => {
         ?.resolveHelp?.(translate),
     ).toBe("keyManagement:openRouter.editor.fields.expiresAt.editHelp")
 
-    for (const locale of ["en", "es-419", "ja", "vi", "zh-CN", "zh-TW"]) {
+    for (const locale of SUPPORTED_UI_LANGUAGES) {
       const resource = JSON.parse(
         await fs.readFile(
           path.join(

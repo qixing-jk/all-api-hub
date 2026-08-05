@@ -24,9 +24,14 @@ export type ApiCredentialProfileSaveEntry = KeyManagementEntry
 
 export type CliProxyExportEntry = ApiCredentialProfileSaveEntry
 
+export const KEY_MANAGEMENT_DISPLAY_ROW_KINDS = {
+  RuntimeKey: "runtime-key",
+  AccountKeyResource: "account-key-resource",
+} as const
+
 /** A display-only native resource row. It deliberately cannot enter legacy exports. */
 export type NativeKeyManagementRow = {
-  kind: "account-key-resource"
+  kind: (typeof KEY_MANAGEMENT_DISPLAY_ROW_KINDS)["AccountKeyResource"]
   /** Local per-load identifier; never derived from a provider resource identifier. */
   rowKey: string
   accountId: string
@@ -36,7 +41,10 @@ export type NativeKeyManagementRow = {
 }
 
 export type KeyManagementDisplayRow =
-  | { kind: "runtime-key"; entry: KeyManagementEntry }
+  | {
+      kind: (typeof KEY_MANAGEMENT_DISPLAY_ROW_KINDS)["RuntimeKey"]
+      entry: KeyManagementEntry
+    }
   | NativeKeyManagementRow
 
 export type NativeKeyManagementRowAction = (ref: AccountKeyResourceRef) => void

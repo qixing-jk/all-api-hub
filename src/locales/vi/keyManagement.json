@@ -1,7 +1,6 @@
 {
   "accountSummary": {
     "keys_other": "{{count}} key",
-    "knownKeys_other": "Ít nhất {{count}} key",
     "loadFailed": "Tải thất bại",
     "title": "Tổng quan tài khoản",
     "unsupported": "chưa hỗ trợ"

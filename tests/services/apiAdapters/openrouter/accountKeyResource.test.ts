@@ -1137,6 +1137,12 @@ describe("openRouterAccountKeyResources", () => {
           scopeKey: "workspace-provider-result",
           resourceId: "created-in-provider-workspace",
         },
+        fields: expect.arrayContaining([
+          expect.objectContaining({
+            fieldId: OPENROUTER_KEY_FIELD_IDS.Workspace,
+            value: "keyManagement:openRouter.editor.options.workspace.unknown",
+          }),
+        ]),
       },
       createdSecret: {
         secret: "sk-or-created-example",
@@ -2016,17 +2022,34 @@ describe("openRouterAccountKeyResources", () => {
       resourceId: "opaque-hash-example",
     }
     fetchOpenRouterKey.mockResolvedValue(key())
-    updateOpenRouterKey.mockRejectedValueOnce(new ApiError("invalid", 400))
+    let readsWhenUpdateWasDispatched = 0
+    updateOpenRouterKey.mockImplementationOnce(async () => {
+      readsWhenUpdateWasDispatched = fetchOpenRouterKey.mock.calls.length
+      throw new ApiError("invalid", 400)
+    })
     const editor = await collection.openEditEditor(ref)
+    const readsAfterEditorOpen = fetchOpenRouterKey.mock.calls.length
 
     await expect(
       editor.submit({ ...editor.initialValues, name: "Rejected" }),
     ).rejects.toMatchObject({ failure: { code: "upstream_rejected" } })
+    expect(readsWhenUpdateWasDispatched).toBe(readsAfterEditorOpen + 1)
+    expect(fetchOpenRouterKey).toHaveBeenCalledTimes(
+      readsWhenUpdateWasDispatched,
+    )
 
-    deleteOpenRouterKey.mockRejectedValueOnce(new ApiError("forbidden", 403))
+    let readsWhenDeleteWasDispatched = 0
+    deleteOpenRouterKey.mockImplementationOnce(async () => {
+      readsWhenDeleteWasDispatched = fetchOpenRouterKey.mock.calls.length
+      throw new ApiError("forbidden", 403)
+    })
     await expect(collection.delete(ref)).rejects.toMatchObject({
       failure: { code: "permission_denied" },
     })
+    expect(readsWhenDeleteWasDispatched).toBe(readsWhenUpdateWasDispatched + 1)
+    expect(fetchOpenRouterKey).toHaveBeenCalledTimes(
+      readsWhenDeleteWasDispatched,
+    )
   })
 
   it("reconciles every mutable field after an uncertain update", async () => {
@@ -2064,7 +2087,34 @@ describe("openRouterAccountKeyResources", () => {
           OPENROUTER_KEY_LIMIT_RESETS.Monthly,
         [OPENROUTER_KEY_FIELD_IDS.IncludeByokInLimit]: true,
       }),
-    ).resolves.toMatchObject({ facts: { displayName: "Reconciled" } })
+    ).resolves.toMatchObject({
+      facts: {
+        displayName: "Reconciled",
+        status: "disabled",
+        fields: expect.arrayContaining([
+          expect.objectContaining({
+            fieldId: OPENROUTER_KEY_FIELD_IDS.LimitMode,
+            value: OPENROUTER_KEY_LIMIT_MODES.Limited,
+          }),
+          expect.objectContaining({
+            fieldId: OPENROUTER_KEY_FIELD_IDS.Limit,
+            value: 25,
+          }),
+          expect.objectContaining({
+            fieldId: OPENROUTER_KEY_FIELD_IDS.LimitReset,
+            value: OPENROUTER_KEY_LIMIT_RESETS.Monthly,
+          }),
+          expect.objectContaining({
+            fieldId: OPENROUTER_KEY_FIELD_IDS.Disabled,
+            value: true,
+          }),
+          expect.objectContaining({
+            fieldId: OPENROUTER_KEY_FIELD_IDS.IncludeByokInLimit,
+            value: true,
+          }),
+        ]),
+      },
+    })
   })
 
   it("keeps a delete uncertain when its reconciliation read fails without 404", async () => {

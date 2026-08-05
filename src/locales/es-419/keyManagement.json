@@ -3,9 +3,6 @@
     "keys_one": "{{count}} clave",
     "keys_many": "{{count}} claves",
     "keys_other": "{{count}} claves",
-    "knownKeys_one": "Al menos {{count}} clave",
-    "knownKeys_many": "Al menos {{count}} claves",
-    "knownKeys_other": "Al menos {{count}} claves",
     "loadFailed": "Error al cargar",
     "title": "Resumen de cuentas",
     "unsupported": "no compatible"

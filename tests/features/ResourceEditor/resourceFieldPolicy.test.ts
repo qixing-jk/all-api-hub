@@ -18,6 +18,7 @@ describe("resource field policy", () => {
 
   it.each([
     {
+      caseName: "a field that is both rendered and hidden",
       descriptors: [{ fieldId: "name", type: "text" as const }],
       policy: {
         fields: [
@@ -33,6 +34,7 @@ describe("resource field policy", () => {
       },
     },
     {
+      caseName: "an unclassified descriptor",
       descriptors: [
         { fieldId: "name", type: "text" as const },
         { fieldId: "extra", type: "text" as const },
@@ -51,6 +53,7 @@ describe("resource field policy", () => {
       },
     },
     {
+      caseName: "a renderer that conflicts with the descriptor type",
       descriptors: [{ fieldId: "name", type: "number" as const }],
       policy: {
         fields: [
@@ -65,14 +68,11 @@ describe("resource field policy", () => {
         hiddenFields: [],
       },
     },
-  ])(
-    "fails closed for every classification mismatch",
-    ({ descriptors, policy }) => {
-      expect(() =>
-        resolveResourceFieldPolicy(descriptors, policy, { basic: 0 }),
-      ).toThrow("resource field policy mismatch")
-    },
-  )
+  ])("fails closed for $caseName", ({ descriptors, policy }) => {
+    expect(() =>
+      resolveResourceFieldPolicy(descriptors, policy, { basic: 0 }),
+    ).toThrow("resource field policy mismatch")
+  })
 
   it("orders classified fields by section and then numeric field order", () => {
     const resolved = resolveResourceFieldPolicy(

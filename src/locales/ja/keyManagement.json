@@ -1,7 +1,6 @@
 {
   "accountSummary": {
     "keys_other": "{{count}} キー",
-    "knownKeys_other": "少なくとも {{count}} キー",
     "loadFailed": "読み込み失敗",
     "title": "アカウント概要",
     "unsupported": "未対応"

@@ -12,14 +12,13 @@ import {
   IconButton,
   Spinner,
 } from "~/components/ui"
+import { BatchSelectionControl } from "~/features/KeyManagement/components/BatchSelectionControl"
 import type {
   KeyResourceCardPresentation,
   KeyResourceDetailState,
   KeyResourceFact,
 } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-
-import { BatchSelectionControl } from "./BatchSelectionControl"
 
 export type KeyResourceCardProps = {
   presentation: KeyResourceCardPresentation

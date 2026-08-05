@@ -57,6 +57,7 @@ import {
 } from "../presentation/legacyKeyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 import {
+  KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
   type ApiCredentialProfileSaveEntry,
   type CliProxyExportEntry,
   type KeyManagementDisplayRow,
@@ -524,7 +525,7 @@ export function TokenList(props: TokenListProps) {
     () => [
       ...entries.map(
         (entry): KeyManagementDisplayRow => ({
-          kind: "runtime-key",
+          kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey,
           entry,
         }),
       ),
@@ -536,7 +537,7 @@ export function TokenList(props: TokenListProps) {
     () => [
       ...filteredEntries.map(
         (entry): KeyManagementDisplayRow => ({
-          kind: "runtime-key",
+          kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey,
           entry,
         }),
       ),
@@ -637,7 +638,7 @@ export function TokenList(props: TokenListProps) {
     const filteredRowsByAccountId = new Map<string, KeyManagementDisplayRow[]>()
     for (const row of filteredDisplayRows) {
       const accountId =
-        row.kind === "runtime-key"
+        row.kind === KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey
           ? row.entry.runtimeKey.accountId
           : row.accountId
       const list = filteredRowsByAccountId.get(accountId) ?? []
@@ -660,11 +661,13 @@ export function TokenList(props: TokenListProps) {
         const filteredAccountRows =
           filteredRowsByAccountId.get(account.id) ?? []
         const filteredAccountEntries = filteredAccountRows.flatMap((row) =>
-          row.kind === "runtime-key" ? [row.entry] : [],
+          row.kind === KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey
+            ? [row.entry]
+            : [],
         )
         const filteredNativeRows = filteredAccountRows.filter(
           (row): row is NativeKeyManagementRow =>
-            row.kind === "account-key-resource",
+            row.kind === KEY_MANAGEMENT_DISPLAY_ROW_KINDS.AccountKeyResource,
         )
         const totalEnabledNativeRows = totalNativeRows.filter(
           (row) => row.facts.status === "enabled",

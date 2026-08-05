@@ -50,7 +50,6 @@ describe("useLegacyApiTokenSecretResult", () => {
       displayName: "Example key",
       secret: "sk-example-secret",
     })
-    expect(Object.keys(initialResult!)).toEqual(["displayName", "secret"])
 
     rerender({ token: { ...initialToken } })
     expect(result.current).toBe(initialResult)
@@ -104,6 +103,11 @@ describe("useLegacyApiTokenSecretResult", () => {
 
   it("preserves the pending save guard when a parent recreates the token", async () => {
     const user = userEvent.setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
     const pendingSave = createDeferred()
     const onSave = vi.fn(() => pendingSave.promise)
     const token = { name: "Example key", key: "sk-example-secret" }

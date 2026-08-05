@@ -489,7 +489,9 @@ describe("defineAccountKeyResourceCapability", () => {
         },
       ],
     })
-    expect(JSON.stringify(submitError)).not.toContain("provider-secret-value")
+    expect(
+      JSON.stringify((submitError as AccountKeyResourceError).failure),
+    ).not.toContain("provider-secret-value")
   })
 
   it("passes canonical scope, commands, details, and options to mutations", async () => {

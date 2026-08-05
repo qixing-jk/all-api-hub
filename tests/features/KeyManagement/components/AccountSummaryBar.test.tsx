@@ -168,7 +168,26 @@ describe("KeyManagement AccountSummaryBar", () => {
       />,
     )
 
-    expect(screen.getByText("accountSummary.knownKeys")).toBeVisible()
+    expect(screen.getByText("knownTotalKeys")).toBeVisible()
     expect(screen.queryByText("accountSummary.keys")).toBeNull()
+  })
+
+  it("preserves a known partial count of zero", () => {
+    render(
+      <AccountSummaryBar
+        items={[
+          {
+            accountId: "empty-partial",
+            name: "Empty partial account",
+            count: null,
+            knownCount: 0,
+            errorType: "load-failed",
+          },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText("knownTotalKeys")).toBeVisible()
+    expect(screen.getByText("accountSummary.loadFailed")).toBeVisible()
   })
 })
