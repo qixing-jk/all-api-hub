@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
+import {
+  NATIVE_RESOURCE_EDITOR_LOADING_REVEALS,
+  type NativeResourceEditorOpeningState,
+} from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import {
   createDisplayAccountApiContext,
@@ -84,10 +88,10 @@ type EditorState = {
   terminalRetainsFocusWorkflow?: boolean
 } | null
 
-type EditorOpeningState =
-  | { attemptId: number; status: "idle" }
-  | { attemptId: number; status: "loading" }
-  | { attemptId: number; status: "failure"; failure: ResourceFailure }
+type EditorOpeningState = NativeResourceEditorOpeningState<
+  EditorMode,
+  ResourceFailure
+>
 
 type EditorOpenRequest = {
   mode: EditorMode
@@ -1758,7 +1762,15 @@ export function useAccountKeyResourceController({
       }
       const attemptId = ++editorOpeningAttemptId.current
       editorOpeningRequestRef.current = { mode: editorMode, ref, boundary }
-      transitionEditorOpening({ attemptId, status: "loading" })
+      transitionEditorOpening({
+        attemptId,
+        status: "loading",
+        mode: editorMode,
+        reveal:
+          retryAttemptId === undefined
+            ? NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Delayed
+            : NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
+      })
       const controller = new AbortController()
       actionAbort.current = controller
       const current = generation.current
@@ -1833,6 +1845,7 @@ export function useAccountKeyResourceController({
         transitionEditorOpening({
           attemptId,
           status: "failure",
+          mode: editorMode,
           failure,
         })
       }

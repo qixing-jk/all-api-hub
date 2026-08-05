@@ -9,6 +9,7 @@ import {
   isAccountKeyResourceRouteTransitionAcknowledged,
   useAccountKeyResourceController,
 } from "~/features/KeyManagement/controllers/useAccountKeyResourceController"
+import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
@@ -4832,6 +4833,7 @@ describe("useAccountKeyResourceController", () => {
 
   it("exposes one failed editor-opening attempt and retries its bound request", async () => {
     const opening = deferred<any>()
+    const retryOpening = deferred<any>()
     const editor = {
       fields: [],
       initialValues: {},
@@ -4842,7 +4844,7 @@ describe("useAccountKeyResourceController", () => {
     const openCreateEditor = vi
       .fn()
       .mockImplementationOnce(() => opening.promise)
-      .mockResolvedValueOnce(editor)
+      .mockImplementationOnce(() => retryOpening.promise)
     mockNativeResourceSession(
       vi.fn().mockResolvedValue({
         resolveDefaultScope: vi.fn().mockResolvedValue({
@@ -4888,6 +4890,7 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.editorOpening).toEqual({
       attemptId: expect.any(Number),
       status: "failure",
+      mode: "create",
       failure: {
         code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
         message: "private provider message",
@@ -4897,6 +4900,13 @@ describe("useAccountKeyResourceController", () => {
     act(() =>
       result.current.retryEditorOpening(result.current.editorOpening.attemptId),
     )
+    expect(result.current.editorOpening).toEqual({
+      attemptId: expect.any(Number),
+      status: "loading",
+      mode: "create",
+      reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
+    })
+    await act(async () => retryOpening.resolve(editor))
     await waitFor(() => expect(result.current.editor).not.toBeNull())
     expect(openCreateEditor).toHaveBeenCalledTimes(2)
     expect(result.current.editorOpening.status).toBe("idle")
@@ -4955,6 +4965,8 @@ describe("useAccountKeyResourceController", () => {
     expect(result.current.editorOpening).toEqual({
       attemptId: secondAttemptId,
       status: "loading",
+      mode: "create",
+      reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Delayed,
     })
 
     await act(async () => secondOpening.resolve(secondEditor))

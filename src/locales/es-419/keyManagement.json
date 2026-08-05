@@ -416,8 +416,7 @@
       "opening": {
         "failed": "No se pudo abrir el editor de claves",
         "loading": "Abriendo el editor de claves...",
-        "retry": "Intentar de nuevo",
-        "title": "Abrir editor de clave API"
+        "retry": "Intentar de nuevo"
       },
       "options": {
         "creator": {

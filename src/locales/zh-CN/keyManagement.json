@@ -398,8 +398,7 @@
       "opening": {
         "failed": "无法打开密钥编辑器",
         "loading": "正在打开密钥编辑器...",
-        "retry": "重试",
-        "title": "打开 API 密钥编辑器"
+        "retry": "重试"
       },
       "options": {
         "creator": {

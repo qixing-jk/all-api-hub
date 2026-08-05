@@ -407,8 +407,7 @@
       "opening": {
         "failed": "Could not open key editor",
         "loading": "Opening key editor...",
-        "retry": "Try again",
-        "title": "Open API Key Editor"
+        "retry": "Try again"
       },
       "options": {
         "creator": {

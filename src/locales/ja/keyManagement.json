@@ -398,8 +398,7 @@
       "opening": {
         "failed": "キーエディターを開けませんでした",
         "loading": "キーエディターを開いています...",
-        "retry": "再試行",
-        "title": "API キーエディターを開く"
+        "retry": "再試行"
       },
       "options": {
         "creator": {

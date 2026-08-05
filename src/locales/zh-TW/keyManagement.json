@@ -398,8 +398,7 @@
       "opening": {
         "failed": "無法開啟金鑰編輯器",
         "loading": "正在開啟金鑰編輯器...",
-        "retry": "重試",
-        "title": "開啟 API 金鑰編輯器"
+        "retry": "重試"
       },
       "options": {
         "creator": {

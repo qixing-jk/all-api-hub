@@ -5,9 +5,11 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   AccountKeyResourceEditorDialog,
+  type AccountKeyResourceEditorDialogProps,
   type AccountKeyResourceEditorDialogState,
 } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import {
   OPENROUTER_KEY_FIELD_IDS,
@@ -96,18 +98,105 @@ const editor = (mode: "create" | "edit" = "create") => ({
 })
 
 describe("AccountKeyResourceEditorDialog", () => {
+  it("delays the initial loading skeleton and uses the final editor frame when it appears", () => {
+    vi.useFakeTimers()
+    try {
+      render(
+        <AccountKeyResourceEditorDialog
+          editor={null}
+          opening={{
+            attemptId: 1,
+            status: "loading",
+            mode: "edit",
+            reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Delayed,
+          }}
+          onCancelOpening={() => undefined}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          onValuesChange={() => undefined}
+        />,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+
+      expect(screen.queryByRole("dialog")).toBeNull()
+      act(() => vi.advanceTimersByTime(149))
+      expect(screen.queryByRole("dialog")).toBeNull()
+      act(() => vi.advanceTimersByTime(1))
+
+      expect(
+        screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor),
+      ).toHaveClass("max-w-2xl")
+      expect(
+        screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorLoading),
+      ).toBeVisible()
+      expect(
+        screen.getAllByText("keyManagement:openRouter.editor.title.edit"),
+      ).not.toHaveLength(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("opens a fast editor directly without flashing the delayed skeleton", () => {
+    vi.useFakeTimers()
+    try {
+      const { rerender } = render(
+        <AccountKeyResourceEditorDialog
+          editor={null}
+          opening={{
+            attemptId: 1,
+            status: "loading",
+            mode: "edit",
+            reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Delayed,
+          }}
+          onCancelOpening={() => undefined}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          onValuesChange={() => undefined}
+        />,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+
+      expect(screen.queryByRole("dialog")).toBeNull()
+      rerender(
+        <AccountKeyResourceEditorDialog
+          editor={editor("edit")}
+          opening={{ attemptId: 1, status: "idle" }}
+          onClose={() => undefined}
+          onSubmit={() => undefined}
+          onValuesChange={() => undefined}
+        />,
+      )
+
+      expect(screen.getByRole("dialog")).toBeVisible()
+      expect(
+        screen.queryByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorLoading),
+      ).toBeNull()
+      act(() => vi.advanceTimersByTime(150))
+      expect(
+        screen.queryByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorLoading),
+      ).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("lets the user dismiss loading and failed launches while preserving retry", async () => {
     const retry = vi.fn()
     const cancel = vi.fn()
-    const openingProps: any = {
+    const openingProps = {
       opening: {
         attemptId: 4,
         status: "failure",
+        mode: "create",
         failure: { code: "unavailable" },
       },
       onRetryOpening: retry,
       onCancelOpening: cancel,
-    }
+    } satisfies Pick<
+      AccountKeyResourceEditorDialogProps,
+      "opening" | "onRetryOpening" | "onCancelOpening"
+    >
     const { rerender } = render(
       <AccountKeyResourceEditorDialog
         editor={null}
@@ -138,13 +227,21 @@ describe("AccountKeyResourceEditorDialog", () => {
     rerender(
       <AccountKeyResourceEditorDialog
         editor={null}
-        opening={{ attemptId: 5, status: "loading" }}
+        opening={{
+          attemptId: 5,
+          status: "loading",
+          mode: "create",
+          reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
+        }}
         onCancelOpening={cancel}
         onClose={() => undefined}
         onSubmit={() => undefined}
         onValuesChange={() => undefined}
       />,
     )
+    expect(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorLoading),
+    ).toBeVisible()
     fireEvent.click(
       screen.getByRole("button", {
         name: "common:actions.cancel",
@@ -155,7 +252,12 @@ describe("AccountKeyResourceEditorDialog", () => {
     rerender(
       <AccountKeyResourceEditorDialog
         editor={null}
-        opening={{ attemptId: 6, status: "loading" }}
+        opening={{
+          attemptId: 6,
+          status: "loading",
+          mode: "create",
+          reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
+        }}
         onCancelOpening={cancel}
         onClose={() => undefined}
         onSubmit={() => undefined}
@@ -171,6 +273,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         opening={{
           attemptId: 7,
           status: "failure",
+          mode: "create",
           failure: { code: "unavailable" },
         }}
         onCancelOpening={cancel}
@@ -695,6 +798,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         opening={{
           attemptId: 1,
           status: "failure",
+          mode: "create",
           failure: { code: "unavailable" },
         }}
         onRetryOpening={() => undefined}
@@ -713,7 +817,12 @@ describe("AccountKeyResourceEditorDialog", () => {
     rerender(
       <AccountKeyResourceEditorDialog
         editor={null}
-        opening={{ attemptId: 1, status: "loading" }}
+        opening={{
+          attemptId: 1,
+          status: "loading",
+          mode: "create",
+          reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
+        }}
         onCancelOpening={cancel}
         onClose={close}
         onSubmit={() => undefined}
@@ -749,6 +858,7 @@ describe("AccountKeyResourceEditorDialog", () => {
         opening={{
           attemptId: 1,
           status: "failure",
+          mode: "edit",
           failure: {
             code: "permission_denied",
             message: "Workspace policy blocks this key.",
@@ -1403,7 +1513,12 @@ describe("AccountKeyResourceEditorDialog", () => {
             editor={phase === "editor" ? { ...editor(), editorId } : null}
             opening={
               phase === "opening"
-                ? { attemptId: 1, status: "loading" }
+                ? {
+                    attemptId: 1,
+                    status: "loading",
+                    mode: "create",
+                    reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
+                  }
                 : { attemptId: 1, status: "idle" }
             }
             onCancelOpening={() => setPhase("idle")}

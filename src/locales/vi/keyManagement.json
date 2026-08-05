@@ -398,8 +398,7 @@
       "opening": {
         "failed": "Không thể mở trình chỉnh sửa khóa",
         "loading": "Đang mở trình chỉnh sửa khóa...",
-        "retry": "Thử lại",
-        "title": "Mở trình chỉnh sửa khóa API"
+        "retry": "Thử lại"
       },
       "options": {
         "creator": {
