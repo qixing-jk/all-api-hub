@@ -385,6 +385,7 @@
       "options": {
         "creator": {
           "empty": "Không có thành viên cho không gian làm việc này.",
+          "none": "Không có người tạo",
           "unknown": "Thành viên không xác định"
         },
         "limitMode": {

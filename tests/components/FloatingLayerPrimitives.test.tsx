@@ -31,7 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 /**
  * Minimal legacy Modal host for select-layer assertions.
@@ -393,6 +393,98 @@ describe("floating layer primitives inside dialogs", () => {
 
     expect(onParentClose).not.toHaveBeenCalled()
     expect(onChildAction).toHaveBeenCalledTimes(1)
+  })
+
+  it("clears every drained workflow restorer before a later workflow reuses an id", async () => {
+    const renderWorkflow = ({
+      outerPresent = false,
+      outerOpen = false,
+      innerPresent = false,
+      innerOpen = false,
+      successorPresent = false,
+      successorOpen = false,
+    }: {
+      outerPresent?: boolean
+      outerOpen?: boolean
+      innerPresent?: boolean
+      innerOpen?: boolean
+      successorPresent?: boolean
+      successorOpen?: boolean
+    }) => (
+      <>
+        <button type="button">Open first workflow</button>
+        <button type="button">Open successor workflow</button>
+        {outerPresent ? (
+          <Modal
+            isOpen={outerOpen}
+            onClose={() => undefined}
+            focusWorkflowId="outer-workflow"
+          >
+            <button type="button">Open nested workflow</button>
+          </Modal>
+        ) : null}
+        {innerPresent ? (
+          <Modal
+            isOpen={innerOpen}
+            onClose={() => undefined}
+            focusWorkflowId="inner-workflow"
+          >
+            <button type="button">Nested workflow control</button>
+          </Modal>
+        ) : null}
+        {successorPresent ? (
+          <Modal
+            isOpen={successorOpen}
+            onClose={() => undefined}
+            focusWorkflowId="outer-workflow"
+          >
+            <button type="button">Successor workflow control</button>
+          </Modal>
+        ) : null}
+      </>
+    )
+    const view = render(renderWorkflow({}))
+
+    const firstTrigger = await screen.findByRole("button", {
+      name: "Open first workflow",
+    })
+    const successorTrigger = screen.getByRole("button", {
+      name: "Open successor workflow",
+    })
+    firstTrigger.focus()
+    view.rerender(renderWorkflow({ outerPresent: true, outerOpen: true }))
+    const nestedTrigger = await screen.findByRole("button", {
+      name: "Open nested workflow",
+    })
+    nestedTrigger.focus()
+    view.rerender(
+      renderWorkflow({
+        outerPresent: true,
+        outerOpen: true,
+        innerPresent: true,
+        innerOpen: true,
+      }),
+    )
+    view.rerender(
+      renderWorkflow({
+        outerPresent: true,
+        innerPresent: true,
+        innerOpen: true,
+      }),
+    )
+    view.rerender(renderWorkflow({ outerPresent: true, innerPresent: true }))
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    await waitFor(() => expect(firstTrigger).toHaveFocus())
+
+    successorTrigger.focus()
+    view.rerender(
+      renderWorkflow({ successorPresent: true, successorOpen: true }),
+    )
+    await screen.findByRole("button", { name: "Successor workflow control" })
+    view.rerender(renderWorkflow({ successorPresent: true }))
+
+    await waitFor(() => expect(successorTrigger).toHaveFocus())
+    expect(firstTrigger).not.toHaveFocus()
   })
 
   it("does not request Modal close when selecting an item from a nested Select", async () => {

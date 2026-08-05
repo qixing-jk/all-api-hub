@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest"
 
-import { resolveResourceFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
+import {
+  defineResourceEditorFieldPolicy,
+  resolveResourceFieldPolicy,
+} from "~/features/ResourceEditor/resourceFieldPolicy"
 
 describe("resource field policy", () => {
   it("fails closed when a descriptor is not classified", () => {
@@ -110,5 +113,53 @@ describe("resource field policy", () => {
     expect(resolved.fields.map(({ descriptor }) => descriptor.fieldId)).toEqual(
       ["basicFirst", "basicLater", "advanced"],
     )
+  })
+
+  it("rejects a nullable option label unless the descriptor is a nullable single select", () => {
+    const policy = defineResourceEditorFieldPolicy({
+      fields: [
+        {
+          fieldId: "creator",
+          section: "basic",
+          order: 10,
+          renderer: "select",
+          resolveLabel: () => "Creator",
+          resolveNullableOptionLabel: () => "No creator",
+        },
+      ],
+      hiddenFields: [],
+    })
+
+    expect(() =>
+      resolveResourceFieldPolicy(
+        [
+          {
+            fieldId: "creator",
+            type: "select",
+            nullable: false,
+            options: [],
+          },
+        ],
+        policy,
+        { basic: 0 },
+      ),
+    ).toThrow("resource field policy mismatch")
+
+    expect(() =>
+      defineResourceEditorFieldPolicy({
+        fields: [
+          {
+            fieldId: "notes",
+            section: "basic",
+            order: 10,
+            renderer: "textarea",
+            resolveLabel: () => "Notes",
+            // Runtime validation protects untyped policy sources too.
+            resolveNullableOptionLabel: (() => "None") as never,
+          },
+        ],
+        hiddenFields: [],
+      }),
+    ).toThrow("invalid resource field policy")
   })
 })

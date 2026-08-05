@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 import {
   Fragment,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -79,6 +80,72 @@ export type NativeResourceEditorBodyProps<TSection extends string> = {
 
 const fieldDomId = (fieldId: string) =>
   `resource-editor-${fieldId.replace(/[^a-zA-Z0-9_-]/g, "-")}`
+
+export type SelectOptionTokenRegistry = {
+  nextToken: number
+  nullToken: string
+  tokenByResourceValue: Map<string, string>
+  resourceValueByToken: Map<string, string>
+}
+
+export const createSelectOptionTokenRegistry =
+  (): SelectOptionTokenRegistry => ({
+    nextToken: 0,
+    nullToken: "resource-editor-select-null",
+    tokenByResourceValue: new Map(),
+    resourceValueByToken: new Map(),
+  })
+
+/** Keeps opaque select tokens alive only for values the current render can select. */
+export const reconcileSelectOptionTokenRegistry = (
+  registry: SelectOptionTokenRegistry,
+  activeResourceValues: readonly string[],
+) => {
+  const activeValues = new Set(activeResourceValues)
+  for (const [resourceValue, token] of registry.tokenByResourceValue) {
+    if (activeValues.has(resourceValue)) continue
+    registry.tokenByResourceValue.delete(resourceValue)
+    registry.resourceValueByToken.delete(token)
+  }
+  for (const [token, resourceValue] of registry.resourceValueByToken) {
+    if (
+      activeValues.has(resourceValue) &&
+      registry.tokenByResourceValue.get(resourceValue) === token
+    )
+      continue
+    registry.resourceValueByToken.delete(token)
+  }
+}
+
+const cloneSelectOptionTokenRegistry = (
+  registry: SelectOptionTokenRegistry | undefined,
+  nextToken = 0,
+): SelectOptionTokenRegistry =>
+  registry
+    ? {
+        nextToken: registry.nextToken,
+        nullToken: registry.nullToken,
+        tokenByResourceValue: new Map(registry.tokenByResourceValue),
+        resourceValueByToken: new Map(registry.resourceValueByToken),
+      }
+    : { ...createSelectOptionTokenRegistry(), nextToken }
+
+/** Issues opaque select tokens without retaining values outside the active snapshot. */
+export const createSelectOptionTokenSnapshot = (
+  registry: SelectOptionTokenRegistry | undefined,
+  resourceValues: readonly string[],
+  nextToken?: number,
+) => {
+  const next = cloneSelectOptionTokenRegistry(registry, nextToken)
+  reconcileSelectOptionTokenRegistry(next, resourceValues)
+  for (const resourceValue of resourceValues) {
+    if (next.tokenByResourceValue.has(resourceValue)) continue
+    const token = `resource-editor-select-option-${next.nextToken++}`
+    next.tokenByResourceValue.set(resourceValue, token)
+    next.resourceValueByToken.set(token, resourceValue)
+  }
+  return next
+}
 
 const readString = (values: EditableResourceProjection, fieldId: string) =>
   typeof values[fieldId] === "string" ? values[fieldId] : ""
@@ -355,10 +422,20 @@ export function NativeResourceEditorBody<TSection extends string>({
     new Map<string, { currentValue: string; nextValue: string }>(),
   )
   const selectOptionSnapshots = useRef(new Map<string, readonly string[]>())
+  const selectOptionTokenRegistries = useRef(
+    new Map<string, SelectOptionTokenRegistry>(),
+  )
+  // Resource mappings are pruned with hidden fields, while the per-field epoch
+  // stays for this component lifetime so a detached option cannot select a
+  // different value after that field becomes visible again.
+  const selectOptionTokenEpochs = useRef(new Map<string, number>())
+  const activeSelectValueByToken = useRef(
+    new Map<string, ReadonlyMap<string, string | null>>(),
+  )
   const selectOptionsByFieldId = useMemo(
     () =>
       new Map(
-        resolvedFields.flatMap(({ descriptor, presentation }) => {
+        fields.flatMap(({ descriptor, presentation }) => {
           if (descriptor.type !== "select") return []
           const controlledOptionState =
             controlledOptionStates?.[descriptor.fieldId]
@@ -384,16 +461,63 @@ export function NativeResourceEditorBody<TSection extends string>({
           return [[descriptor.fieldId, optionValues] as const]
         }),
       ),
-    [
-      controlledOptionStates,
-      onLoadOptions,
-      optionStates,
-      resolvedFields,
-      values,
-    ],
+    [controlledOptionStates, onLoadOptions, optionStates, fields, values],
   )
+  const selectTokenRegistriesByFieldId = useMemo(
+    () =>
+      new Map(
+        fields.flatMap(({ descriptor }) => {
+          if (descriptor.type !== "select") return []
+          const selectedValue = readString(values, descriptor.fieldId)
+          const optionValues =
+            selectOptionsByFieldId.get(descriptor.fieldId) ?? []
+          const resourceValues = [
+            ...(selectedValue && !optionValues.includes(selectedValue)
+              ? [selectedValue]
+              : []),
+            ...optionValues,
+          ]
+          return [
+            [
+              descriptor.fieldId,
+              createSelectOptionTokenSnapshot(
+                selectOptionTokenRegistries.current.get(descriptor.fieldId),
+                resourceValues,
+                selectOptionTokenEpochs.current.get(descriptor.fieldId),
+              ),
+            ] as const,
+          ]
+        }),
+      ),
+    [fields, selectOptionsByFieldId, values],
+  )
+  useLayoutEffect(() => {
+    const activeFieldIds = new Set(selectTokenRegistriesByFieldId.keys())
+    for (const fieldId of selectOptionTokenRegistries.current.keys()) {
+      if (!activeFieldIds.has(fieldId))
+        selectOptionTokenRegistries.current.delete(fieldId)
+    }
+    for (const [fieldId, registry] of selectTokenRegistriesByFieldId) {
+      selectOptionTokenRegistries.current.set(fieldId, registry)
+      selectOptionTokenEpochs.current.set(fieldId, registry.nextToken)
+    }
+    activeSelectValueByToken.current = new Map(
+      fields.flatMap(({ descriptor, presentation }) => {
+        if (descriptor.type !== "select") return []
+        const registry = selectTokenRegistriesByFieldId.get(descriptor.fieldId)
+        if (!registry) return []
+        const activeTokens = new Map<string, string | null>([
+          ...(descriptor.nullable && presentation.resolveNullableOptionLabel
+            ? [[registry.nullToken, null] as const]
+            : []),
+          ...registry.resourceValueByToken,
+        ])
+        return [[descriptor.fieldId, activeTokens] as const]
+      }),
+    )
+  }, [fields, selectTokenRegistriesByFieldId])
   useEffect(() => {
-    for (const { descriptor, presentation } of resolvedFields) {
+    for (const { descriptor, presentation } of fields) {
       if (descriptor.type !== "select" || !presentation.autoSelectFirstOption)
         continue
       const optionValues = selectOptionsByFieldId.get(descriptor.fieldId) ?? []
@@ -429,7 +553,7 @@ export function NativeResourceEditorBody<TSection extends string>({
       })
       onValueChange(descriptor.fieldId, nextValue)
     }
-  }, [onValueChange, resolvedFields, selectOptionsByFieldId, values])
+  }, [fields, onValueChange, selectOptionsByFieldId, values])
 
   const issuesByFieldId = new Map(
     fieldIssues.map((issue) => [issue.fieldId, issue.code]),
@@ -595,27 +719,84 @@ export function NativeResourceEditorBody<TSection extends string>({
         descriptor.type === "select"
           ? selectOptionsByFieldId.get(descriptor.fieldId) ?? []
           : loadedOptions.map((option) => option.value)
-      const optionsByValue = new Map(
-        loadedOptions.map((option) => [option.value, option]),
-      )
+      const optionsByValue = new Map<string, ResourceFieldOption>()
+      // Dynamic providers occasionally repeat an option. Retaining the first
+      // entry gives one deterministic label and selection target for that value.
+      for (const option of loadedOptions) {
+        if (!optionsByValue.has(option.value)) {
+          optionsByValue.set(option.value, option)
+        }
+      }
       if (descriptor.type === "select") {
-        const value = readString(values, descriptor.fieldId)
-        const selectOptions = [
-          ...(value && !optionValues.includes(value) ? [{ value }] : []),
-          ...optionValues.map(
-            (value) => optionsByValue.get(value) ?? { value },
-          ),
+        const resourceValue = values[descriptor.fieldId]
+        const selectedValue =
+          typeof resourceValue === "string" ? resourceValue : null
+        type SelectOption = {
+          uiValue: string
+          resourceValue: string | null
+          displayLabel?: string
+          secondaryLabel?: string
+        }
+        const resourceOptions: Array<
+          Omit<SelectOption, "uiValue" | "resourceValue"> & {
+            resourceValue: string
+          }
+        > = [
+          ...(selectedValue && !optionValues.includes(selectedValue)
+            ? [{ resourceValue: selectedValue }]
+            : []),
+          ...optionValues.map((value) => {
+            const option = optionsByValue.get(value)
+            return {
+              resourceValue: value,
+              displayLabel: option?.displayLabel,
+              secondaryLabel: option?.secondaryLabel,
+            }
+          }),
         ]
+        const tokenRegistry = selectTokenRegistriesByFieldId.get(
+          descriptor.fieldId,
+        )
+        if (!tokenRegistry) return null
+        const selectOptions: SelectOption[] = [
+          ...(descriptor.nullable && presentation.resolveNullableOptionLabel
+            ? [
+                {
+                  uiValue: tokenRegistry.nullToken,
+                  resourceValue: null,
+                  displayLabel: presentation.resolveNullableOptionLabel(t),
+                },
+              ]
+            : []),
+          ...resourceOptions.map((option) => ({
+            ...option,
+            uiValue: tokenRegistry.tokenByResourceValue.get(
+              option.resourceValue,
+            )!,
+          })),
+        ]
+        const selectedUiValue =
+          selectedValue === null
+            ? descriptor.nullable && presentation.resolveNullableOptionLabel
+              ? tokenRegistry.nullToken
+              : undefined
+            : tokenRegistry.tokenByResourceValue.get(selectedValue)
         return (
           <div key={descriptor.fieldId}>
             <Label htmlFor={id} required={descriptor.required}>
               {label}
             </Label>
             <Select
-              value={value}
-              onValueChange={(nextValue) =>
-                onValueChange(descriptor.fieldId, nextValue)
-              }
+              value={selectedUiValue ?? ""}
+              onValueChange={(nextUiValue) => {
+                const currentActiveTokens =
+                  activeSelectValueByToken.current.get(descriptor.fieldId)
+                if (!currentActiveTokens?.has(nextUiValue)) return
+                onValueChange(
+                  descriptor.fieldId,
+                  currentActiveTokens.get(nextUiValue) ?? null,
+                )
+              }}
               disabled={
                 fieldDisabled ||
                 controlledOptionUnavailable ||
@@ -635,12 +816,12 @@ export function NativeResourceEditorBody<TSection extends string>({
               </SelectTrigger>
               <SelectContent>
                 {selectOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem key={option.uiValue} value={option.uiValue}>
                     <span>
                       {option.displayLabel ??
                         getResourceFieldOptionLabel(
                           presentation,
-                          option.value,
+                          option.resourceValue ?? "",
                           t,
                         )}
                     </span>

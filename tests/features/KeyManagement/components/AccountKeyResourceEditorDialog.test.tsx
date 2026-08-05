@@ -1,3 +1,4 @@
+import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { StrictMode, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
@@ -6,6 +7,7 @@ import {
   AccountKeyResourceEditorDialog,
   type AccountKeyResourceEditorDialogState,
 } from "~/features/KeyManagement/components/AccountKeyResource/AccountKeyResourceEditorDialog"
+import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -540,6 +542,48 @@ describe("AccountKeyResourceEditorDialog", () => {
     ).toBeEnabled()
   })
 
+  it("lets a selected optional creator be cleared before submitting", async () => {
+    const submit = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <AccountKeyResourceEditorDialog
+        editor={{
+          ...editor(),
+          optionsByField: {
+            [field.Creator]: [
+              { value: "member-example", displayLabel: "Example member" },
+            ],
+          },
+        }}
+        onClose={() => undefined}
+        onSubmit={submit}
+        onValuesChange={() => undefined}
+        onLoadOptions={() => undefined}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    await user.click(
+      screen.getByRole("combobox", {
+        name: /keyManagement:openRouter\.editor\.fields\.creator\.label/,
+      }),
+    )
+    await user.click(
+      screen.getByRole("option", {
+        name: "keyManagement:openRouter.editor.options.creator.none",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:openRouter.editor.actions.save",
+      }),
+    )
+    expect(submit).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ [field.Creator]: null }),
+    )
+  })
+
   it("keeps focus in the stable dialog when opening controls are replaced", async () => {
     const cancel = vi.fn()
     const close = vi.fn()
@@ -663,6 +707,153 @@ describe("AccountKeyResourceEditorDialog", () => {
     )
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
     expect(trigger).toHaveFocus()
+  })
+
+  it("settles a terminal close while its original submit promise is still pending", async () => {
+    let resolveSubmit!: () => void
+    const pendingSubmit = new Promise<void>((resolve) => {
+      resolveSubmit = resolve
+    })
+    const user = userEvent.setup()
+    const FocusHarness = () => {
+      const [activeEditor, setActiveEditor] =
+        useState<AccountKeyResourceEditorDialogState | null>(null)
+      return (
+        <>
+          <button type="button" onClick={() => setActiveEditor(editor())}>
+            Open deferred terminal editor
+          </button>
+          <AccountKeyResourceEditorDialog
+            editor={activeEditor}
+            onClose={() => setActiveEditor(null)}
+            onSubmit={() => {
+              setActiveEditor((current) =>
+                current ? { ...current, terminalClose: true } : current,
+              )
+              return pendingSubmit
+            }}
+            onValuesChange={() => undefined}
+          />
+        </>
+      )
+    }
+    render(<FocusHarness />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const trigger = screen.getByRole("button", {
+      name: "Open deferred terminal editor",
+    })
+    await user.click(trigger)
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:openRouter.editor.actions.save",
+      }),
+    )
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(trigger).toHaveFocus()
+    resolveSubmit()
+  })
+
+  it("keeps one focus workflow through an editor create into final secret close", async () => {
+    let resolveCreate!: () => void
+    const create = new Promise<void>((resolve) => {
+      resolveCreate = resolve
+    })
+    const user = userEvent.setup()
+    const FocusHarness = () => {
+      const [editorPhase, setEditorPhase] = useState<
+        "idle" | "editor" | "terminal"
+      >("idle")
+      const [hasSecret, setHasSecret] = useState(false)
+      const focusWorkflowId = "editor-secret-workflow"
+      return (
+        <>
+          <button type="button" onClick={() => setEditorPhase("editor")}>
+            Launch native key editor
+          </button>
+          <AccountKeyResourceEditorDialog
+            editor={
+              editorPhase === "idle"
+                ? null
+                : {
+                    ...editor(),
+                    ...(editorPhase === "terminal"
+                      ? { terminalClose: true }
+                      : {}),
+                  }
+            }
+            onClose={() => setEditorPhase("idle")}
+            onSubmit={async () => {
+              await create
+              setEditorPhase("terminal")
+              setHasSecret(true)
+            }}
+            onValuesChange={() => undefined}
+            focusWorkflowId={focusWorkflowId}
+          />
+          <OneTimeSecretDialog
+            isOpen={hasSecret}
+            result={
+              hasSecret
+                ? {
+                    correlation: {
+                      kind: "account-key-resource",
+                      ref: {
+                        accountId: "account-example",
+                        siteType: "openrouter",
+                        scopeKey: "workspace-example",
+                        resourceId: "key-example",
+                      },
+                    },
+                    displayName: "Example key",
+                    secret: "one-time-secret-example",
+                    secretAvailability: "create-response-only",
+                    credential: {
+                      accountName: "Example account",
+                      apiType: "openai-compatible",
+                      baseUrl: "https://example.invalid",
+                      tagIds: [],
+                    },
+                  }
+                : null
+            }
+            onClose={() => {
+              setHasSecret(false)
+              setEditorPhase("idle")
+            }}
+            autoCopy={false}
+            focusWorkflowId={focusWorkflowId}
+          />
+        </>
+      )
+    }
+    render(<FocusHarness />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const launcher = screen.getByRole("button", {
+      name: "Launch native key editor",
+    })
+    await user.click(launcher)
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:openRouter.editor.actions.save",
+      }),
+    )
+    await act(async () => resolveCreate())
+    await screen.findByDisplayValue("one-time-secret-example")
+    await user.click(
+      screen.getByTestId("key-management-one-time-key-close-button"),
+    )
+    await user.click(
+      screen.getByTestId("key-management-one-time-key-confirm-close-button"),
+    )
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(launcher).toHaveFocus()
   })
 
   it("normalizes canonical UTC edit expiry values for datetime-local fields", () => {

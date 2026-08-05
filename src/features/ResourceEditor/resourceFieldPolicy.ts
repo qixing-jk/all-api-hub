@@ -8,7 +8,7 @@ import type {
 
 export type ResourceFieldTextResolver = (t: TFunction) => string
 
-export type ResourceFieldPresentation<TSection extends string = string> = {
+type ResourceFieldPresentationBase<TSection extends string = string> = {
   fieldId: string
   section: TSection
   order: number
@@ -27,6 +27,17 @@ export type ResourceFieldPresentation<TSection extends string = string> = {
   >
   visibleWhen?: (values: EditableResourceProjection) => boolean
 }
+
+export type ResourceFieldPresentation<TSection extends string = string> =
+  | (ResourceFieldPresentationBase<TSection> & {
+      renderer: "select"
+      /** Frontend-owned label for clearing a nullable single-select projection. */
+      resolveNullableOptionLabel?: ResourceFieldTextResolver
+    })
+  | (ResourceFieldPresentationBase<TSection> & {
+      renderer: Exclude<ResourceFieldDescriptor["type"], "select">
+      resolveNullableOptionLabel?: never
+    })
 
 export type ResourceFieldHiddenField = {
   fieldId: string
@@ -66,6 +77,12 @@ const assertPolicy = <TSection extends string>(
       classified.has(field.fieldId) ||
       !rendererValues.has(field.renderer) ||
       !Number.isFinite(field.order)
+    ) {
+      throw new Error("invalid resource field policy")
+    }
+    if (
+      field.resolveNullableOptionLabel !== undefined &&
+      field.renderer !== "select"
     ) {
       throw new Error("invalid resource field policy")
     }
@@ -155,6 +172,8 @@ export function resolveResourceFieldPolicy<TSection extends string>(
       if (
         !descriptor ||
         descriptor.type !== presentation.renderer ||
+        (presentation.resolveNullableOptionLabel !== undefined &&
+          !descriptor.nullable) ||
         sectionOrder[presentation.section] === undefined
       ) {
         throw new Error("resource field policy mismatch")

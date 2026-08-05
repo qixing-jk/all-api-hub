@@ -42,6 +42,7 @@ import {
 
 const MAX_COLLECTION_PAGES = 100
 const ALL_ACCOUNT_CONCURRENCY = 4
+let nextAccountKeyResourceControllerInstanceId = 0
 
 const keyManagementAnalyticsContext = (
   actionId:
@@ -78,6 +79,7 @@ type EditorState = {
   loadingFieldIds: readonly string[]
   feedback: ResourceFailure | null
   terminalClose?: boolean
+  terminalRetainsFocusWorkflow?: boolean
 } | null
 
 type EditorOpeningState =
@@ -121,13 +123,71 @@ type Options = {
   accounts: readonly DisplaySiteData[]
   selectedAccount: string
   routeParams?: Record<string, string>
-  replaceRoute?: (params: Record<string, string>) => void
+  /** Echoed by the route owner only after it applies this controller's replacement. */
+  routeTransition?: AccountKeyResourceRouteTransition
+  replaceRoute?: AccountKeyResourceRouteReplacer
 }
+
+/** Opaque acknowledgement for a controller-owned route replacement. */
+export type AccountKeyResourceRouteTransition = Readonly<{ id: string }>
+
+/** Route owners must echo the optional transition in the next controller input. */
+export type AccountKeyResourceRouteReplacer = (
+  params: Record<string, string>,
+  transition?: AccountKeyResourceRouteTransition,
+) => void
 
 type ActiveResourceBoundary = Pick<
   AccountKeyResourceRef,
   "accountId" | "siteType" | "scopeKey"
 > & { routeKey: string }
+
+type ExpectedRouteTransition = {
+  id: string
+  generation: number
+  selectedAccount: string
+  accountId: string
+  siteType: string
+  scopeKey: string
+  routeKey: string
+}
+
+type AccountContextObservation = {
+  mode: ControllerMode
+  selectedAccount: string
+  routeAccountId: string | undefined
+  routeWorkspace: string | undefined
+  context: AccountContextSnapshot | null
+}
+
+export const isAccountKeyResourceRouteTransitionAcknowledged = ({
+  expected,
+  generation,
+  mode,
+  transitionId,
+  selectedAccount,
+  selectedRouteSiteType,
+  routeAccountId,
+  routeWorkspace,
+}: {
+  expected: ExpectedRouteTransition | null
+  generation: number
+  mode: "idle" | "single" | "all"
+  transitionId: string | undefined
+  selectedAccount: string
+  selectedRouteSiteType: string | undefined
+  routeAccountId: string | undefined
+  routeWorkspace: string | undefined
+}) =>
+  expected !== null &&
+  mode === "single" &&
+  expected.generation === generation &&
+  transitionId === expected.id &&
+  selectedAccount === expected.selectedAccount &&
+  selectedAccount === expected.accountId &&
+  selectedRouteSiteType === expected.siteType &&
+  routeAccountId === expected.accountId &&
+  routeWorkspace === expected.routeKey
 
 type InFlightBoundaryMutation = {
   controller: AbortController
@@ -378,6 +438,7 @@ export function useAccountKeyResourceController({
   accounts,
   selectedAccount,
   routeParams,
+  routeTransition,
   replaceRoute,
 }: Options) {
   const accountsRef = useRef(accounts)
@@ -406,6 +467,7 @@ export function useAccountKeyResourceController({
     .concat(`:${accountContextRevisionRef.current}`)
   const routeAccountId = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]
   const routeWorkspace = routeParams?.[KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]
+  const routeTransitionId = routeTransition?.id
   const mode: ControllerMode = !selectedAccount
     ? "idle"
     : selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
@@ -430,7 +492,7 @@ export function useAccountKeyResourceController({
   })
   const [isLoading, setIsLoading] = useState(false)
   const [notice, setNotice] = useState<ControllerNotice | null>(null)
-  const [search, setSearch] = useState("")
+  const [search, setSearchState] = useState("")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     ACCOUNT_KEY_STATUS_FILTERS.All,
   )
@@ -438,12 +500,24 @@ export function useAccountKeyResourceController({
   const [editor, setEditor] = useState<EditorState>(null)
   const editorStateRef = useRef<EditorState>(editor)
   editorStateRef.current = editor
+  // This is a view-only closing shell. It is deliberately separate from the
+  // active editor contract so refresh cannot rehydrate or erase Modal's focus
+  // settlement between a successful submit and React's next commit.
+  const [terminalCloseEditor, setTerminalCloseEditor] =
+    useState<EditorState>(null)
+  const terminalCloseEditorRef = useRef<EditorState>(terminalCloseEditor)
+  terminalCloseEditorRef.current = terminalCloseEditor
   const [editorOpening, setEditorOpening] = useState<EditorOpeningState>({
     attemptId: 0,
     status: "idle",
   })
   const [createdSecret, setCreatedSecret] =
     useState<CreatedRuntimeSecret | null>(null)
+  const createdSecretRef = useRef<CreatedRuntimeSecret | null>(null)
+  const [routeTransitionInstanceId] = useState(
+    () => ++nextAccountKeyResourceControllerInstanceId,
+  )
+  const [focusWorkflowId, setFocusWorkflowId] = useState<string | null>(null)
   const [deleteState, setDeleteState] = useState<DeleteState>({
     isOpen: false,
     isExecuting: false,
@@ -483,12 +557,27 @@ export function useAccountKeyResourceController({
   const editorGeneration = useRef(0)
   const editorInstanceId = useRef(0)
   const editorOpeningAttemptId = useRef(0)
+  const editorWorkflowSequence = useRef(0)
   const editorOpeningRef = useRef<EditorOpeningState>(editorOpening)
   editorOpeningRef.current = editorOpening
   const editorOpeningRequestRef = useRef<EditorOpenRequest | null>(null)
   const editorFieldAbortControllers = useRef(new Map<string, AbortController>())
   const mutationsByBoundary = useRef(
     new Map<string, InFlightBoundaryMutation>(),
+  )
+  const routeTransitionSequence = useRef(0)
+  const expectedRouteTransition = useRef<ExpectedRouteTransition | null>(null)
+  const lastRouteObservation = useRef<string | null>(null)
+  const lastAccountContextObservation =
+    useRef<AccountContextObservation | null>(null)
+  const deferredSecretContextReload = useRef(false)
+
+  const transitionCreatedSecret = useCallback(
+    (next: CreatedRuntimeSecret | null) => {
+      createdSecretRef.current = next
+      setCreatedSecret(next)
+    },
+    [],
   )
 
   // Async editor work can settle before React commits this render. Keep the
@@ -502,6 +591,11 @@ export function useAccountKeyResourceController({
     },
     [],
   )
+
+  const transitionTerminalCloseEditor = useCallback((next: EditorState) => {
+    terminalCloseEditorRef.current = next
+    setTerminalCloseEditor(next)
+  }, [])
 
   const transitionEditorOpening = useCallback((next: EditorOpeningState) => {
     editorOpeningRef.current = next
@@ -540,23 +634,38 @@ export function useAccountKeyResourceController({
     editorBoundaryRef.current = null
   }, [])
 
-  const clearTerminalResourceState = useCallback(() => {
-    clearActiveResourceRefs()
-    editorOpeningRequestRef.current = null
-    transitionEditorOpening({
-      attemptId: editorOpeningAttemptId.current,
-      status: "idle",
-    })
-    setDetail(null)
-    transitionEditor(() => null)
-    setCreatedSecret(null)
-    setDeleteState({
-      isOpen: false,
-      isExecuting: false,
-      ref: null,
-      failure: null,
-    })
-  }, [clearActiveResourceRefs, transitionEditor, transitionEditorOpening])
+  const clearTerminalResourceState = useCallback(
+    ({
+      preserveCreatedSecret = false,
+    }: { preserveCreatedSecret?: boolean } = {}) => {
+      clearActiveResourceRefs()
+      editorOpeningRequestRef.current = null
+      transitionEditorOpening({
+        attemptId: editorOpeningAttemptId.current,
+        status: "idle",
+      })
+      setDetail(null)
+      transitionEditor(() => null)
+      if (!preserveCreatedSecret) {
+        transitionTerminalCloseEditor(null)
+        transitionCreatedSecret(null)
+        setFocusWorkflowId(null)
+      }
+      setDeleteState({
+        isOpen: false,
+        isExecuting: false,
+        ref: null,
+        failure: null,
+      })
+    },
+    [
+      clearActiveResourceRefs,
+      transitionCreatedSecret,
+      transitionEditor,
+      transitionTerminalCloseEditor,
+      transitionEditorOpening,
+    ],
+  )
 
   const defaultOpenResources = useCallback<OpenAccountResources>(
     async (account, { signal }) => {
@@ -594,6 +703,21 @@ export function useAccountKeyResourceController({
     clearTerminalResourceState()
   }, [abortEditorFieldLoads, clearTerminalResourceState])
 
+  const deferSecretContextReload = useCallback(() => {
+    // One-time plaintext remains available in this component only, but the
+    // request context that produced the existing resource session is no longer
+    // trustworthy. Drop every command owner before the secret can be closed.
+    generation.current += 1
+    loadAbort.current?.abort()
+    loadAbort.current = null
+    actionAbort.current?.abort()
+    actionAbort.current = null
+    abortEditorFieldLoads()
+    clearTerminalResourceState({ preserveCreatedSecret: true })
+    loadInProgress.current = true
+    deferredSecretContextReload.current = true
+  }, [abortEditorFieldLoads, clearTerminalResourceState])
+
   const loadEditorOptions = useCallback(
     async (
       editorId: number,
@@ -604,6 +728,7 @@ export function useAccountKeyResourceController({
       const currentEditorState = editorStateRef.current
       const nativeEditor = editorOverride ?? editorRef.current
       if (
+        createdSecretRef.current !== null ||
         !nativeEditor?.loadOptions ||
         !currentEditorState ||
         currentEditorState.editorId !== editorId
@@ -736,9 +861,12 @@ export function useAccountKeyResourceController({
         preserveCreatedSecret?: boolean
         preserveEditor?: boolean
         targetScopeKey?: string
+        routeTransitionId?: string
       } = {},
     ) => {
       loadAbort.current?.abort()
+      if (!options.preserveCreatedSecret)
+        deferredSecretContextReload.current = false
       const preservedEditor = options.preserveEditor
         ? editorStateRef.current
         : null
@@ -746,18 +874,24 @@ export function useAccountKeyResourceController({
       const preservedEditorBoundary = editorBoundaryRef.current
       const preserveEditor =
         preservedEditor?.mode === "create" &&
+        !preservedEditor.terminalClose &&
         preservedEditorBoundary?.accountId === selectedAccount
       const controller = new AbortController()
       loadAbort.current = controller
       const current = ++generation.current
       loadInProgress.current = mode !== "idle"
       if (options.preserveCreatedSecret) {
+        const terminalEditor =
+          editorStateRef.current ?? terminalCloseEditorRef.current
         actionAbort.current?.abort()
         actionAbort.current = null
         abortEditorFieldLoads()
         editorRef.current = null
         setDetail(null)
         transitionEditor(() => null)
+        if (!terminalEditor?.terminalRetainsFocusWorkflow) {
+          setFocusWorkflowId(null)
+        }
         setDeleteState({
           isOpen: false,
           isExecuting: false,
@@ -769,7 +903,7 @@ export function useAccountKeyResourceController({
         actionAbort.current = null
         abortEditorFieldLoads()
         setDetail(null)
-        setCreatedSecret(null)
+        transitionCreatedSecret(null)
         setDeleteState({
           isOpen: false,
           isExecuting: false,
@@ -895,12 +1029,16 @@ export function useAccountKeyResourceController({
 
         const account = activeAccounts[0]
         if (!account) {
-          clearTerminalResourceState()
+          clearTerminalResourceState({
+            preserveCreatedSecret: options.preserveCreatedSecret,
+          })
           return false
         }
         const session = await openSession(account, controller.signal)
         if (!session) {
-          clearTerminalResourceState()
+          clearTerminalResourceState({
+            preserveCreatedSecret: options.preserveCreatedSecret,
+          })
           acceptProgress(true)
           return true
         }
@@ -958,10 +1096,31 @@ export function useAccountKeyResourceController({
           ) {
             setNotice({ kind: "workspace-fallback" })
           }
-          replaceRouteRef.current?.({
+          const nextRoute = {
             [KEY_MANAGEMENT_ROUTE_PARAMS.AccountId]: account.id,
             [KEY_MANAGEMENT_ROUTE_PARAMS.Workspace]: scope.routeKey,
-          })
+          }
+          if (options.routeTransitionId !== undefined) {
+            expectedRouteTransition.current = {
+              id: options.routeTransitionId,
+              // The route effect cleans up this generation before it receives
+              // the replacement. Acknowledgement is valid only for that next
+              // generation, never for a later same-value route update.
+              generation: current + 1,
+              selectedAccount,
+              accountId: account.id,
+              siteType: account.siteType,
+              scopeKey: scope.scopeKey,
+              routeKey: scope.routeKey,
+            }
+          }
+          if (options.routeTransitionId) {
+            replaceRouteRef.current?.(nextRoute, {
+              id: options.routeTransitionId,
+            })
+          } else {
+            replaceRouteRef.current?.(nextRoute)
+          }
         }
         const activeBoundary: ActiveResourceBoundary = {
           accountId: account.id,
@@ -1036,7 +1195,9 @@ export function useAccountKeyResourceController({
       } catch (error) {
         const failure = toFailure(error)
         if (current === generation.current && !isAborted(failure)) {
-          clearTerminalResourceState()
+          clearTerminalResourceState({
+            preserveCreatedSecret: options.preserveCreatedSecret,
+          })
           const account = activeAccounts[0]
           if (account) setFailures({ [account.id]: failure })
           acceptProgress(false)
@@ -1061,19 +1222,104 @@ export function useAccountKeyResourceController({
       openSession,
       search,
       selectedAccount,
+      transitionCreatedSecret,
       transitionEditor,
     ],
   )
 
   useEffect(() => {
+    const routeObservation = JSON.stringify([
+      selectedAccount,
+      routeAccountId,
+      routeWorkspace,
+      routeTransitionId,
+    ])
+    const routeChanged =
+      lastRouteObservation.current !== null &&
+      lastRouteObservation.current !== routeObservation
+    lastRouteObservation.current = routeObservation
+    const expectedTransition = expectedRouteTransition.current
+    const selectedRouteAccount = accountsRef.current.find(
+      (account) => account.id === selectedAccount,
+    )
+    const selectedAccountContext = selectedRouteAccount
+      ? captureAccountContext(selectedRouteAccount)
+      : null
+    const previousContextObservation = lastAccountContextObservation.current
+    const sameSelectedRoute =
+      previousContextObservation?.mode === "single" &&
+      previousContextObservation.selectedAccount === selectedAccount &&
+      previousContextObservation.routeAccountId === routeAccountId &&
+      previousContextObservation.routeWorkspace === routeWorkspace
+    const accountContextChanged =
+      sameSelectedRoute &&
+      !accountContextsMatch(
+        previousContextObservation.context
+          ? [previousContextObservation.context]
+          : [],
+        selectedAccountContext ? [selectedAccountContext] : [],
+      )
+    lastAccountContextObservation.current = {
+      mode,
+      selectedAccount,
+      routeAccountId,
+      routeWorkspace,
+      context: selectedAccountContext,
+    }
+    const matchesExpectedTransition =
+      isAccountKeyResourceRouteTransitionAcknowledged({
+        expected: expectedTransition,
+        generation: generation.current,
+        mode,
+        transitionId: routeTransitionId,
+        selectedAccount,
+        selectedRouteSiteType: selectedRouteAccount?.siteType,
+        routeAccountId,
+        routeWorkspace,
+      })
+    // Any next route observation consumes the transition. A duplicate ID or a
+    // coincidental value match cannot keep one-time plaintext alive.
+    if (expectedTransition) expectedRouteTransition.current = null
+    if (
+      createdSecretRef.current !== null &&
+      accountContextChanged &&
+      !matchesExpectedTransition &&
+      !routeChanged
+    ) {
+      deferSecretContextReload()
+      return
+    }
+    if (
+      createdSecretRef.current !== null &&
+      !matchesExpectedTransition &&
+      !routeChanged
+    )
+      return
     void load({
-      preserveEditor: mode === "single" && routeAccountId === selectedAccount,
+      preserveCreatedSecret: matchesExpectedTransition,
+      ...(matchesExpectedTransition && expectedTransition
+        ? { targetScopeKey: expectedTransition.scopeKey }
+        : {}),
+      preserveEditor:
+        !matchesExpectedTransition &&
+        mode === "single" &&
+        routeAccountId === selectedAccount &&
+        !editorStateRef.current?.terminalClose,
     })
     return () => {
       generation.current += 1
       loadAbort.current?.abort()
     }
-  }, [accountKey, load, mode, routeAccountId, routeWorkspace, selectedAccount])
+  }, [
+    accountKey,
+    deferSecretContextReload,
+    load,
+    mode,
+    routeAccountId,
+    routeTransitionId,
+    routeWorkspace,
+    selectedAccount,
+  ])
 
   useEffect(
     () => () => {
@@ -1122,8 +1368,11 @@ export function useAccountKeyResourceController({
     })
   }, [acceptedRows, search, statusFilter])
 
-  const refresh = useCallback(
-    async (targetBoundary?: ActiveResourceBoundary) => {
+  const refreshAfterMutation = useCallback(
+    async (
+      targetBoundary?: ActiveResourceBoundary,
+      routeTransitionId?: string,
+    ) => {
       const account = accountsRef.current.find(
         (candidate) => candidate.id === selectedAccount,
       )
@@ -1136,6 +1385,7 @@ export function useAccountKeyResourceController({
       const accepted = await load({
         preserveCreatedSecret: true,
         ...(targetBoundary ? { targetScopeKey: targetBoundary.scopeKey } : {}),
+        ...(routeTransitionId === undefined ? {} : { routeTransitionId }),
       })
       tracker.complete(
         accepted
@@ -1163,11 +1413,22 @@ export function useAccountKeyResourceController({
     [load, mode, selectedAccount],
   )
 
+  const refresh = useCallback(async () => {
+    if (createdSecretRef.current !== null) return false
+    return await refreshAfterMutation()
+  }, [refreshAfterMutation])
+
+  const setSearch = useCallback((nextSearch: string) => {
+    if (createdSecretRef.current !== null) return
+    setSearchState(nextSearch)
+  }, [])
+
   const openDetail = useCallback(
     async (ref: AccountKeyResourceRef) => {
       const collection = collectionRef.current
       if (
         mode !== "single" ||
+        createdSecretRef.current !== null ||
         loadInProgress.current ||
         !collection ||
         !isCurrentResourceRef(ref)
@@ -1194,7 +1455,7 @@ export function useAccountKeyResourceController({
 
   const selectScope = useCallback(
     (scopeKey: string) => {
-      if (mode !== "single") return false
+      if (mode !== "single" || createdSecretRef.current !== null) return false
       const scope = scopes.find((candidate) => candidate.scopeKey === scopeKey)
       if (!scope) return false
       replaceRouteRef.current?.({
@@ -1215,6 +1476,7 @@ export function useAccountKeyResourceController({
       const boundary = activeResourceBoundaryRef.current
       if (
         mode !== "single" ||
+        createdSecretRef.current !== null ||
         loadInProgress.current ||
         freshReadRequired ||
         !boundary
@@ -1243,6 +1505,11 @@ export function useAccountKeyResourceController({
       editorRef.current = null
       editorBoundaryRef.current = null
       transitionEditor(() => null)
+      if (retryAttemptId === undefined) {
+        setFocusWorkflowId(
+          `account-key-resource-editor-${++editorWorkflowSequence.current}`,
+        )
+      }
       const attemptId = ++editorOpeningAttemptId.current
       editorOpeningRequestRef.current = { mode: editorMode, ref, boundary }
       transitionEditorOpening({ attemptId, status: "loading" })
@@ -1343,13 +1610,15 @@ export function useAccountKeyResourceController({
       actionAbort.current = null
       editorOpeningRequestRef.current = null
       transitionEditorOpening({ attemptId: nextAttemptId, status: "idle" })
+      setFocusWorkflowId(null)
     },
     [transitionEditorOpening],
   )
 
   const closeEditor = useCallback(
     (editorId: number) => {
-      if (editorStateRef.current?.editorId !== editorId) return
+      const currentEditor = editorStateRef.current
+      if (currentEditor?.editorId !== editorId) return
       actionAbort.current?.abort()
       abortEditorFieldLoads()
       editorRef.current = null
@@ -1360,8 +1629,17 @@ export function useAccountKeyResourceController({
         status: "idle",
       })
       transitionEditor(() => null)
+      if (!currentEditor.terminalRetainsFocusWorkflow) setFocusWorkflowId(null)
     },
     [abortEditorFieldLoads, transitionEditor, transitionEditorOpening],
+  )
+
+  const settleTerminalClose = useCallback(
+    (editorId: number) => {
+      if (terminalCloseEditorRef.current?.editorId !== editorId) return
+      transitionTerminalCloseEditor(null)
+    },
+    [transitionTerminalCloseEditor],
   )
 
   const setEditorValues = useCallback(
@@ -1382,6 +1660,7 @@ export function useAccountKeyResourceController({
       const editorVersion = editorGeneration.current
       if (
         mode !== "single" ||
+        createdSecretRef.current !== null ||
         loadInProgress.current ||
         !nativeEditor ||
         !currentEditorState ||
@@ -1479,23 +1758,24 @@ export function useAccountKeyResourceController({
                   routeKey: returnedScope.routeKey,
                 }
               : intendedBoundary
-          if (result.createdSecret) setCreatedSecret(result.createdSecret)
+          if (result.createdSecret)
+            transitionCreatedSecret(result.createdSecret)
+          const activeEditor = editorStateRef.current
+          if (activeEditor?.editorId === editorId) {
+            transitionTerminalCloseEditor({
+              ...activeEditor,
+              terminalClose: true,
+              terminalRetainsFocusWorkflow: Boolean(result.createdSecret),
+            })
+          }
           editorRef.current = null
           editorBoundaryRef.current = null
-          transitionEditor((activeEditor) =>
-            activeEditor?.editorId === editorId
-              ? { ...activeEditor, terminalClose: true }
-              : activeEditor,
-          )
-          const accepted = await refresh(returnedBoundary)
-          // Refresh may replace the selected collection and clear the editor.
-          // Re-publish this terminal shell so its Modal can settle the opener.
-          transitionEditor((activeEditor) =>
-            activeEditor === null
-              ? { ...currentEditorState, terminalClose: true }
-              : activeEditor?.editorId === editorId
-                ? { ...activeEditor, terminalClose: true }
-                : activeEditor,
+          transitionEditor(() => null)
+          const accepted = await refreshAfterMutation(
+            returnedBoundary,
+            result.createdSecret
+              ? `account-key-resource-transition-${routeTransitionInstanceId}-${++routeTransitionSequence.current}`
+              : undefined,
           )
           if (!accepted) requireFreshRead(returnedBoundary)
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
@@ -1542,7 +1822,7 @@ export function useAccountKeyResourceController({
             ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
           ) {
             requireFreshRead(intendedBoundary)
-            await refresh(intendedBoundary)
+            await refreshAfterMutation(intendedBoundary)
           }
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
@@ -1571,10 +1851,13 @@ export function useAccountKeyResourceController({
     [
       freshReadRequired,
       mode,
-      refresh,
+      refreshAfterMutation,
       requireFreshRead,
+      routeTransitionInstanceId,
       scopes,
+      transitionCreatedSecret,
       transitionEditor,
+      transitionTerminalCloseEditor,
     ],
   )
 
@@ -1582,6 +1865,7 @@ export function useAccountKeyResourceController({
     (ref: AccountKeyResourceRef) => {
       if (
         mode !== "single" ||
+        createdSecretRef.current !== null ||
         loadInProgress.current ||
         freshReadRequired ||
         !collectionRef.current ||
@@ -1608,6 +1892,7 @@ export function useAccountKeyResourceController({
   const confirmDelete = useCallback(async () => {
     if (
       mode !== "single" ||
+      createdSecretRef.current !== null ||
       loadInProgress.current ||
       !deleteState.ref ||
       !collectionRef.current ||
@@ -1654,7 +1939,7 @@ export function useAccountKeyResourceController({
           ref: null,
           failure: null,
         })
-        const accepted = await refresh()
+        const accepted = await refreshAfterMutation()
         if (!accepted) requireFreshRead(boundary)
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
@@ -1692,7 +1977,7 @@ export function useAccountKeyResourceController({
           ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
         ) {
           requireFreshRead(boundary)
-          await refresh()
+          await refreshAfterMutation()
         }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
@@ -1715,7 +2000,13 @@ export function useAccountKeyResourceController({
       promise: run,
     })
     return run
-  }, [deleteState.ref, isCurrentResourceRef, mode, refresh, requireFreshRead])
+  }, [
+    deleteState.ref,
+    isCurrentResourceRef,
+    mode,
+    refreshAfterMutation,
+    requireFreshRead,
+  ])
 
   const recordCreatedSecretActionResult = useCallback(
     (
@@ -1771,8 +2062,10 @@ export function useAccountKeyResourceController({
     setStatusFilter,
     detail,
     editor,
+    terminalCloseEditor,
     editorOpening,
     createdSecret,
+    focusWorkflowId,
     deleteState,
     freshReadRequired,
     refresh,
@@ -1782,12 +2075,19 @@ export function useAccountKeyResourceController({
     openCreate: () => openEditor("create"),
     openEdit: (ref: AccountKeyResourceRef) => openEditor("edit", ref),
     closeEditor,
+    settleTerminalClose,
     retryEditorOpening,
     cancelEditorOpening,
     setEditorValues,
     loadEditorOptions,
     submitEditor,
-    closeCreatedSecret: () => setCreatedSecret(null),
+    closeCreatedSecret: () => {
+      const replayDeferredContext = deferredSecretContextReload.current
+      deferredSecretContextReload.current = false
+      transitionCreatedSecret(null)
+      setFocusWorkflowId(null)
+      if (replayDeferredContext) void load()
+    },
     recordCreatedSecretCopyResult: (result: "success" | "failure") =>
       recordCreatedSecretActionResult(
         PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKey,

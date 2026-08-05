@@ -392,6 +392,7 @@
       "options": {
         "creator": {
           "empty": "No members are available for this workspace.",
+          "none": "No creator",
           "unknown": "Unknown member"
         },
         "limitMode": {

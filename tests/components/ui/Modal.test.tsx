@@ -424,4 +424,58 @@ describe("Modal", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
     expect(parentTrigger).toHaveFocus()
   })
+
+  it("drains a non-top close requested through the outer Modal itself", async () => {
+    const user = userEvent.setup()
+    const ModalHarness = () => {
+      const [isParentOpen, setIsParentOpen] = useState(false)
+      const [isChildOpen, setIsChildOpen] = useState(false)
+      return (
+        <>
+          <button type="button" onClick={() => setIsParentOpen(true)}>
+            Open parent request-close
+          </button>
+          <Modal
+            isOpen={isParentOpen}
+            onClose={() => setIsParentOpen(false)}
+            title="Parent request-close modal"
+          >
+            <button type="button" onClick={() => setIsChildOpen(true)}>
+              Open child request-close
+            </button>
+          </Modal>
+          <Modal
+            isOpen={isChildOpen}
+            onClose={() => setIsChildOpen(false)}
+            title="Child request-close modal"
+          >
+            <button type="button">Child request-close action</button>
+          </Modal>
+        </>
+      )
+    }
+    render(<ModalHarness />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const parentTrigger = screen.getByRole("button", {
+      name: "Open parent request-close",
+    })
+    await user.click(parentTrigger)
+    await user.click(
+      screen.getByRole("button", { name: "Open child request-close" }),
+    )
+    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(2))
+
+    const closeButtons = screen.getAllByRole("button", {
+      name: "common:actions.close",
+      hidden: true,
+    })
+    fireEvent.click(closeButtons[0]!)
+    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(1))
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(parentTrigger).toHaveFocus()
+  })
 })

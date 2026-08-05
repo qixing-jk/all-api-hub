@@ -385,6 +385,7 @@
       "options": {
         "creator": {
           "empty": "このワークスペースで利用できるメンバーはいません。",
+          "none": "作成者なし",
           "unknown": "不明なメンバー"
         },
         "limitMode": {

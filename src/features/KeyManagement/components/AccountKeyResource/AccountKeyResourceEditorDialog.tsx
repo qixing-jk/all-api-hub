@@ -50,10 +50,13 @@ export type AccountKeyResourceEditorOpeningState =
 
 export type AccountKeyResourceEditorDialogProps = {
   editor: AccountKeyResourceEditorDialogState | null
+  /** View-only closing shell retained while Modal settles its focus workflow. */
+  terminalCloseEditor?: AccountKeyResourceEditorDialogState | null
   opening?: AccountKeyResourceEditorOpeningState
   onRetryOpening?: (attemptId: number) => void
   onCancelOpening?: (attemptId: number) => void
   onClose: (editorId: number) => void
+  onTerminalCloseSettled?: (editorId: number) => void
   onSubmit: (
     editorId: number,
     values: EditableResourceProjection,
@@ -65,6 +68,8 @@ export type AccountKeyResourceEditorDialogProps = {
     fieldId: string,
     values: EditableResourceProjection,
   ) => void
+  /** Kept stable by the controller across editor -> one-time-secret handoff. */
+  focusWorkflowId?: string | number
 }
 
 const field = OPENROUTER_KEY_FIELD_IDS
@@ -179,31 +184,73 @@ const semanticSummary = (
 /** Renders the local OpenRouter projection while delegating all native operations to its controller. */
 export function AccountKeyResourceEditorDialog({
   editor,
+  terminalCloseEditor = null,
   opening = { attemptId: 0, status: "idle" },
   onRetryOpening,
   onCancelOpening,
   onClose,
+  onTerminalCloseSettled,
   onSubmit,
   onValuesChange,
   onLoadOptions,
+  focusWorkflowId,
 }: AccountKeyResourceEditorDialogProps) {
   const { t } = useTranslation()
   const editorCloseRequestRef = useRef<(() => void) | null>(null)
-  const isOpen = editor !== null || opening.status !== "idle"
+  const [committedCloseEditorId, setCommittedCloseEditorId] = useState<
+    number | null
+  >(null)
+  const [committedCloseOpeningAttemptId, setCommittedCloseOpeningAttemptId] =
+    useState<number | null>(null)
+  useEffect(() => {
+    if (
+      committedCloseEditorId !== null &&
+      committedCloseEditorId !== editor?.editorId
+    )
+      setCommittedCloseEditorId(null)
+  }, [committedCloseEditorId, editor?.editorId])
+  useEffect(() => {
+    if (
+      committedCloseOpeningAttemptId !== null &&
+      committedCloseOpeningAttemptId !== opening.attemptId
+    )
+      setCommittedCloseOpeningAttemptId(null)
+  }, [committedCloseOpeningAttemptId, opening.attemptId])
+  const activeEditor = editor ?? terminalCloseEditor
+  const isOpen = activeEditor !== null || opening.status !== "idle"
   if (!isOpen) return null
   const activeOpening = opening.status === "idle" ? null : opening
-  const isOpening = editor === null
+  const isOpening = activeEditor === null
   const title = isOpening
     ? t("keyManagement:openRouter.editor.opening.title")
-    : editor.mode === "create"
+    : activeEditor.mode === "create"
       ? t("keyManagement:openRouter.editor.title.create")
       : t("keyManagement:openRouter.editor.title.edit")
   const requestClose = () => {
-    if (editor) {
+    if (activeEditor) {
+      if (
+        activeEditor.terminalClose ||
+        committedCloseEditorId === activeEditor.editorId
+      ) {
+        if (activeEditor.terminalClose) {
+          if (onTerminalCloseSettled) {
+            onTerminalCloseSettled(activeEditor.editorId)
+          } else {
+            onClose(activeEditor.editorId)
+          }
+        } else {
+          onClose(activeEditor.editorId)
+        }
+        return
+      }
       editorCloseRequestRef.current?.()
       return
     }
-    onCancelOpening?.(opening.attemptId)
+    if (committedCloseOpeningAttemptId === opening.attemptId) {
+      onCancelOpening?.(opening.attemptId)
+    } else {
+      setCommittedCloseOpeningAttemptId(opening.attemptId)
+    }
   }
 
   return (
@@ -219,7 +266,9 @@ export function AccountKeyResourceEditorDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={requestClose}
+              onClick={() =>
+                setCommittedCloseOpeningAttemptId(opening.attemptId)
+              }
               disabled={!onCancelOpening}
             >
               {t(
@@ -241,19 +290,30 @@ export function AccountKeyResourceEditorDialog({
         ) : undefined
       }
       focusFallbackKey={
-        editor ? editor.editorId : `${opening.attemptId}:${opening.status}`
+        activeEditor
+          ? activeEditor.editorId
+          : `${opening.attemptId}:${opening.status}`
       }
-      terminalCloseKey={editor?.terminalClose ? editor.editorId : null}
+      terminalCloseKey={
+        activeEditor?.terminalClose ||
+        committedCloseEditorId === activeEditor?.editorId
+          ? activeEditor?.editorId
+          : committedCloseOpeningAttemptId === opening.attemptId && isOpening
+            ? `opening-${opening.attemptId}`
+            : null
+      }
+      focusWorkflowId={focusWorkflowId}
     >
-      {editor && !editor.terminalClose ? (
+      {activeEditor && !activeEditor.terminalClose ? (
         <AccountKeyResourceEditorDialogSession
-          key={editor.editorId}
-          editor={editor}
+          key={activeEditor.editorId}
+          editor={activeEditor}
           onClose={onClose}
           onSubmit={onSubmit}
           onValuesChange={onValuesChange}
           onLoadOptions={onLoadOptions}
           onRequestCloseRef={editorCloseRequestRef}
+          onCommitClose={(editorId) => setCommittedCloseEditorId(editorId)}
         />
       ) : activeOpening ? (
         <AccountKeyResourceEditorOpeningContent opening={activeOpening} />
@@ -296,16 +356,17 @@ type AccountKeyResourceEditorDialogSessionProps = Omit<
 > & {
   editor: AccountKeyResourceEditorDialogState
   onRequestCloseRef: { current: (() => void) | null }
+  onCommitClose: (editorId: number) => void
 }
 
 /** Owns local UI state for one immutable editor session. */
 function AccountKeyResourceEditorDialogSession({
   editor,
-  onClose,
   onSubmit,
   onValuesChange,
   onLoadOptions,
   onRequestCloseRef,
+  onCommitClose,
 }: AccountKeyResourceEditorDialogSessionProps) {
   const { t, i18n } = useTranslation()
   const [values, setValues] = useState<EditableResourceProjection>(() =>
@@ -412,7 +473,7 @@ function AccountKeyResourceEditorDialogSession({
     onValuesChange(editor.editorId, next)
   }
   const close = () => {
-    onClose(editor.editorId)
+    onCommitClose(editor.editorId)
   }
   const requestClose = () => {
     if (isSubmitting) return

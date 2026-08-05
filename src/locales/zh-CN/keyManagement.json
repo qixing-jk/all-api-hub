@@ -385,6 +385,7 @@
       "options": {
         "creator": {
           "empty": "此工作区没有可用成员。",
+          "none": "无创建者",
           "unknown": "未知成员"
         },
         "limitMode": {

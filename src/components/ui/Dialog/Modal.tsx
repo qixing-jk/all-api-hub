@@ -62,6 +62,8 @@ type FocusSession = {
   settled: boolean
   closeRequested: boolean
   focusWorkflowId?: string | number
+  contentElement?: HTMLElement
+  parentSession?: FocusSession
 }
 
 // Radix may deliver close autofocus after a keyed Modal instance has unmounted.
@@ -69,6 +71,13 @@ type FocusSession = {
 // while still letting a nested child restore focus to its parent dialog.
 const focusLeaseStack: FocusSession[] = []
 const focusWorkflowRestorers = new Map<string | number, HTMLElement | null>()
+
+const discardUnusedFocusWorkflowRestorer = (workflowId: string | number) => {
+  if (
+    !focusLeaseStack.some((session) => session.focusWorkflowId === workflowId)
+  )
+    focusWorkflowRestorers.delete(workflowId)
+}
 
 const discardFocusLease = (session: FocusSession) => {
   session.active = false
@@ -105,6 +114,13 @@ const acquireFocusLease = (session: FocusSession) => {
     session.restoreElement = workflowPredecessor.restoreElement
     workflowPredecessor.active = false
   }
+  session.parentSession = [...focusLeaseStack]
+    .reverse()
+    .find(
+      (candidate) =>
+        candidate.active &&
+        candidate.contentElement?.contains(session.restoreElement) === true,
+    )
   focusLeaseStack.push(session)
 }
 
@@ -112,13 +128,15 @@ const settleFocusLease = (session: FocusSession) => {
   if (!focusLeaseStack.includes(session)) return null
   session.settled = true
   let restoreSession: FocusSession | null = null
+  const drainedWorkflowIds = new Set<string | number>()
   while (focusLeaseStack.at(-1)?.settled) {
     const settledSession = focusLeaseStack.pop()!
     if (settledSession.active) restoreSession = settledSession
     settledSession.active = false
+    if (settledSession.focusWorkflowId !== undefined)
+      drainedWorkflowIds.add(settledSession.focusWorkflowId)
   }
-  if (restoreSession?.focusWorkflowId !== undefined)
-    focusWorkflowRestorers.delete(restoreSession.focusWorkflowId)
+  drainedWorkflowIds.forEach(discardUnusedFocusWorkflowRestorer)
   return restoreSession
 }
 
@@ -127,13 +145,26 @@ const removeFocusLease = (session: FocusSession) => {
   if (index >= 0) focusLeaseStack.splice(index, 1)
   session.active = false
   if (session.focusWorkflowId !== undefined)
-    focusWorkflowRestorers.delete(session.focusWorkflowId)
+    discardUnusedFocusWorkflowRestorer(session.focusWorkflowId)
 }
 
 const settleDeferredFocusLease = (session: FocusSession) => {
-  if (!session.active) return
+  if (!focusLeaseStack.includes(session)) return
+  if (!session.active) {
+    removeFocusLease(session)
+    return
+  }
+  if (
+    focusLeaseStack.at(-1) !== session &&
+    !focusLeaseStack.some(
+      (candidate) => candidate.active && candidate.parentSession === session,
+    )
+  ) {
+    removeFocusLease(session)
+    return
+  }
+  session.settled = true
   if (focusLeaseStack.at(-1) !== session) {
-    discardFocusLease(session)
     return
   }
   const restoreSession = settleFocusLease(session)
@@ -347,6 +378,7 @@ export function Modal({
             onOpenAutoFocus={(event) => {
               const focusSession = activeFocusSessionRef.current
               if (focusSession && event.currentTarget instanceof HTMLElement) {
+                focusSession.contentElement = event.currentTarget
                 focusSessionsByContentRef.current.set(
                   event.currentTarget,
                   focusSession,

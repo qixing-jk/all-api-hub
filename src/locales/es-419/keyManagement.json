@@ -399,6 +399,7 @@
       "options": {
         "creator": {
           "empty": "No hay miembros disponibles para este espacio de trabajo.",
+          "none": "Sin creador",
           "unknown": "Miembro desconocido"
         },
         "limitMode": {

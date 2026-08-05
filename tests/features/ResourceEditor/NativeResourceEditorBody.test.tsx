@@ -1,10 +1,13 @@
-import { act, render, screen, waitFor } from "@testing-library/react"
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  createSelectOptionTokenRegistry,
+  createSelectOptionTokenSnapshot,
   NativeResourceEditorBody,
+  reconcileSelectOptionTokenRegistry,
   type NativeResourceEditorBodyProps,
 } from "~/features/ResourceEditor/NativeResourceEditorBody"
 import { defineResourceEditorFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
@@ -129,6 +132,534 @@ describe("NativeResourceEditorBody", () => {
     expect(screen.getByText("member@example.invalid")).toBeVisible()
     await user.click(screen.getByRole("option", { name: /Example member/ }))
     expect(onValueChange).toHaveBeenCalledWith("creator", "member-example")
+  })
+
+  it("maps the explicit nullable select option to null without exposing it in the projection", async () => {
+    const onValueChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: "creator",
+            type: "select",
+            nullable: true,
+            options: [
+              { value: "member-example", displayLabel: "Example member" },
+            ],
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "creator",
+              section: "basic",
+              order: 1,
+              renderer: "select",
+              resolveLabel: () => "Creator",
+              resolveNullableOptionLabel: () => "No creator",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ creator: "member-example" }}
+        onValueChange={onValueChange}
+      />,
+    )
+
+    await user.click(screen.getByRole("combobox", { name: "Creator" }))
+    await user.click(screen.getByRole("option", { name: "No creator" }))
+    expect(onValueChange).toHaveBeenCalledWith("creator", null)
+  })
+
+  it("keeps a provider option that matches the legacy nullable sentinel distinct from null", async () => {
+    const onValueChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: "creator",
+            type: "select",
+            nullable: true,
+            options: [
+              {
+                value: "__resource_editor_null__",
+                displayLabel: "Sentinel-named member",
+                secondaryLabel: "member@example.invalid",
+              },
+            ],
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "creator",
+              section: "basic",
+              order: 1,
+              renderer: "select",
+              resolveLabel: () => "Creator",
+              resolveNullableOptionLabel: () => "No creator",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ creator: null }}
+        onValueChange={onValueChange}
+      />,
+    )
+
+    await user.click(screen.getByRole("combobox", { name: "Creator" }))
+    const option = screen.getByRole("option", { name: /Sentinel-named member/ })
+    expect(option).toHaveTextContent("member@example.invalid")
+    await user.click(option)
+
+    expect(onValueChange).toHaveBeenCalledWith(
+      "creator",
+      "__resource_editor_null__",
+    )
+  })
+
+  it("keeps the selected provider value and a new selection intact across a live reorder", async () => {
+    const onValueChange = vi.fn()
+    const user = userEvent.setup()
+    const props = {
+      t,
+      policy: defineResourceEditorFieldPolicy({
+        fields: [
+          {
+            fieldId: "creator",
+            section: "basic",
+            order: 1,
+            renderer: "select" as const,
+            resolveLabel: () => "Creator",
+          },
+        ],
+        hiddenFields: [],
+      }),
+      sectionOrder: { basic: 0 },
+      sectionLabelResolvers: { basic: () => "Basic" },
+      values: { creator: "member-first" },
+      onValueChange,
+    }
+    const view = render(
+      <NativeResourceEditorBody
+        {...props}
+        descriptors={[
+          {
+            fieldId: "creator",
+            type: "select",
+            options: [
+              { value: "member-first", displayLabel: "First member" },
+              { value: "member-second", displayLabel: "Second member" },
+            ],
+          },
+        ]}
+      />,
+    )
+
+    await user.click(screen.getByRole("combobox", { name: "Creator" }))
+    expect(
+      screen.getByRole("option", { name: "First member" }),
+    ).toHaveAttribute("aria-selected", "true")
+    await user.keyboard("{Escape}")
+
+    view.rerender(
+      <NativeResourceEditorBody
+        {...props}
+        descriptors={[
+          {
+            fieldId: "creator",
+            type: "select",
+            options: [
+              { value: "member-second", displayLabel: "Second member" },
+              { value: "member-first", displayLabel: "First member" },
+            ],
+          },
+        ]}
+      />,
+    )
+
+    await user.click(screen.getByRole("combobox", { name: "Creator" }))
+    expect(
+      screen.getByRole("option", { name: "First member" }),
+    ).toHaveAttribute("aria-selected", "true")
+    await user.click(screen.getByRole("option", { name: "Second member" }))
+    expect(onValueChange).toHaveBeenLastCalledWith("creator", "member-second")
+  })
+
+  it("ignores a queued selection from an option retired by a rerender", async () => {
+    const onValueChange = vi.fn()
+    const props = {
+      t,
+      policy: defineResourceEditorFieldPolicy({
+        fields: [
+          {
+            fieldId: "creator",
+            section: "basic",
+            order: 1,
+            renderer: "select" as const,
+            resolveLabel: () => "Creator",
+          },
+        ],
+        hiddenFields: [],
+      }),
+      sectionOrder: { basic: 0 },
+      sectionLabelResolvers: { basic: () => "Basic" },
+      values: { creator: "member-current" },
+      onValueChange,
+    }
+    const view = render(
+      <NativeResourceEditorBody
+        {...props}
+        descriptors={[
+          {
+            fieldId: "creator",
+            type: "select",
+            options: [
+              { value: "member-retired", displayLabel: "Retired member" },
+              { value: "member-current", displayLabel: "Current member" },
+            ],
+          },
+        ]}
+      />,
+    )
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("combobox", { name: "Creator" }))
+    const retiredOption = screen.getByRole("option", { name: "Retired member" })
+    view.rerender(
+      <NativeResourceEditorBody
+        {...props}
+        descriptors={[
+          {
+            fieldId: "creator",
+            type: "select",
+            options: [
+              { value: "member-current", displayLabel: "Current member" },
+            ],
+          },
+        ]}
+      />,
+    )
+
+    fireEvent.click(retiredOption)
+    expect(onValueChange).not.toHaveBeenCalled()
+  })
+
+  it("ignores a queued selection after visibleWhen hides the select field", async () => {
+    const onValueChange = vi.fn()
+    const props = {
+      t,
+      policy: defineResourceEditorFieldPolicy({
+        fields: [
+          {
+            fieldId: "showCreator",
+            section: "basic",
+            order: 1,
+            renderer: "boolean" as const,
+            resolveLabel: () => "Show creator",
+          },
+          {
+            fieldId: "creator",
+            section: "basic",
+            order: 2,
+            renderer: "select" as const,
+            resolveLabel: () => "Creator",
+            visibleWhen: (values: Record<string, unknown>) =>
+              values.showCreator === true,
+          },
+        ],
+        hiddenFields: [],
+      }),
+      sectionOrder: { basic: 0 },
+      sectionLabelResolvers: { basic: () => "Basic" },
+      descriptors: [
+        { fieldId: "showCreator", type: "boolean" as const },
+        {
+          fieldId: "creator",
+          type: "select" as const,
+          options: [
+            { value: "member-stale", displayLabel: "Stale member" },
+            { value: "member-current", displayLabel: "Current member" },
+          ],
+        },
+      ],
+      onValueChange,
+    }
+    const view = render(
+      <NativeResourceEditorBody
+        {...props}
+        values={{ showCreator: true, creator: "member-current" }}
+      />,
+    )
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("combobox", { name: "Creator" }))
+    const staleOption = screen.getByRole("option", { name: "Stale member" })
+
+    view.rerender(
+      <NativeResourceEditorBody
+        {...props}
+        values={{ showCreator: false, creator: "member-current" }}
+      />,
+    )
+    fireEvent.click(staleOption)
+    expect(onValueChange).not.toHaveBeenCalled()
+
+    view.rerender(
+      <NativeResourceEditorBody
+        {...props}
+        values={{ showCreator: true, creator: "member-current" }}
+      />,
+    )
+    await userEvent
+      .setup()
+      .click(screen.getByRole("combobox", { name: "Creator" }))
+    await userEvent
+      .setup()
+      .click(screen.getByRole("option", { name: "Stale member" }))
+    expect(onValueChange).toHaveBeenLastCalledWith("creator", "member-stale")
+  })
+
+  it("does not reuse a hidden select token for a different visible option", async () => {
+    const onValueChange = vi.fn()
+    const props = {
+      t,
+      policy: defineResourceEditorFieldPolicy({
+        fields: [
+          {
+            fieldId: "showCreator",
+            section: "basic",
+            order: 1,
+            renderer: "boolean" as const,
+            resolveLabel: () => "Show creator",
+          },
+          {
+            fieldId: "creator",
+            section: "basic",
+            order: 2,
+            renderer: "select" as const,
+            resolveLabel: () => "Creator",
+            visibleWhen: (values: Record<string, unknown>) =>
+              values.showCreator === true,
+          },
+        ],
+        hiddenFields: [],
+      }),
+      sectionOrder: { basic: 0 },
+      sectionLabelResolvers: { basic: () => "Basic" },
+      onValueChange,
+    }
+    const view = render(
+      <NativeResourceEditorBody
+        {...props}
+        descriptors={[
+          { fieldId: "showCreator", type: "boolean" as const },
+          {
+            fieldId: "creator",
+            type: "select" as const,
+            options: [{ value: "member-old", displayLabel: "Old member" }],
+          },
+        ]}
+        values={{ showCreator: true, creator: "" }}
+      />,
+    )
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("combobox", { name: "Creator" }))
+    const detachedOldOption = screen.getByRole("option", {
+      name: "Old member",
+    })
+    const firstRegistry = createSelectOptionTokenSnapshot(undefined, [
+      "member-old",
+    ])
+    const oldToken = firstRegistry.tokenByResourceValue.get("member-old")
+    reconcileSelectOptionTokenRegistry(firstRegistry, [])
+    const restoredRegistry = createSelectOptionTokenSnapshot(
+      undefined,
+      ["member-new"],
+      firstRegistry.nextToken,
+    )
+    expect(restoredRegistry.tokenByResourceValue.get("member-new")).not.toBe(
+      oldToken,
+    )
+
+    view.rerender(
+      <NativeResourceEditorBody
+        {...props}
+        descriptors={[
+          { fieldId: "showCreator", type: "boolean" as const },
+          {
+            fieldId: "creator",
+            type: "select" as const,
+            options: [{ value: "member-old", displayLabel: "Old member" }],
+          },
+        ]}
+        values={{ showCreator: false, creator: "" }}
+      />,
+    )
+    view.rerender(
+      <NativeResourceEditorBody
+        {...props}
+        descriptors={[
+          { fieldId: "showCreator", type: "boolean" as const },
+          {
+            fieldId: "creator",
+            type: "select" as const,
+            options: [{ value: "member-new", displayLabel: "New member" }],
+          },
+        ]}
+        values={{ showCreator: true, creator: "" }}
+      />,
+    )
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("combobox", { name: "Creator" }))
+    const newOption = screen.getByRole("option", { name: "New member" })
+
+    fireEvent.click(detachedOldOption)
+    expect(onValueChange).not.toHaveBeenCalled()
+
+    const user = userEvent.setup()
+    await user.click(newOption)
+    expect(onValueChange).toHaveBeenLastCalledWith("creator", "member-new")
+  })
+
+  it("bounds select token identity to the active options during churn", () => {
+    const registry = createSelectOptionTokenRegistry()
+    for (let index = 0; index < 200; index += 1) {
+      const value = `member-${index}`
+      registry.tokenByResourceValue.set(value, `token-${index}`)
+      registry.resourceValueByToken.set(`token-${index}`, value)
+      reconcileSelectOptionTokenRegistry(registry, [value])
+    }
+
+    expect([...registry.tokenByResourceValue.keys()]).toEqual(["member-199"])
+    expect([...registry.resourceValueByToken.values()]).toEqual(["member-199"])
+  })
+
+  it("uses the first duplicate option metadata and value", async () => {
+    const onValueChange = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: "creator",
+            type: "select",
+            options: [
+              {
+                value: "member-example",
+                displayLabel: "First member",
+                secondaryLabel: "first@example.invalid",
+              },
+              {
+                value: "member-example",
+                displayLabel: "Later member",
+                secondaryLabel: "later@example.invalid",
+              },
+            ],
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "creator",
+              section: "basic",
+              order: 1,
+              renderer: "select",
+              resolveLabel: () => "Creator",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ creator: "" }}
+        onValueChange={onValueChange}
+      />,
+    )
+
+    await user.click(screen.getByRole("combobox", { name: "Creator" }))
+    expect(
+      screen.getByRole("option", { name: /First member/ }),
+    ).toHaveTextContent("first@example.invalid")
+    expect(screen.queryByText("Later member")).toBeNull()
+    await user.click(screen.getByRole("option", { name: /First member/ }))
+    expect(onValueChange).toHaveBeenCalledWith("creator", "member-example")
+  })
+
+  it("renders the nullable label after controlled null and concrete option rerenders", async () => {
+    const onValueChange = vi.fn()
+    const user = userEvent.setup()
+    const props = {
+      t,
+      descriptors: [
+        {
+          fieldId: "creator",
+          type: "select" as const,
+          nullable: true,
+          options: [
+            { value: "member-example", displayLabel: "Example member" },
+          ],
+        },
+      ],
+      policy: defineResourceEditorFieldPolicy({
+        fields: [
+          {
+            fieldId: "creator",
+            section: "basic",
+            order: 1,
+            renderer: "select" as const,
+            resolveLabel: () => "Creator",
+            resolveNullableOptionLabel: () => "No creator",
+          },
+        ],
+        hiddenFields: [],
+      }),
+      sectionOrder: { basic: 0 },
+      sectionLabelResolvers: { basic: () => "Basic" },
+      onValueChange,
+    }
+    const view = render(
+      <NativeResourceEditorBody
+        {...props}
+        values={{ creator: "member-example" }}
+      />,
+    )
+
+    await user.click(screen.getByRole("combobox", { name: "Creator" }))
+    await user.click(screen.getByRole("option", { name: "No creator" }))
+    expect(onValueChange).toHaveBeenCalledWith("creator", null)
+
+    view.rerender(
+      <NativeResourceEditorBody {...props} values={{ creator: null }} />,
+    )
+    expect(screen.getByRole("combobox", { name: "Creator" })).toHaveTextContent(
+      "No creator",
+    )
+
+    view.rerender(
+      <NativeResourceEditorBody
+        {...props}
+        values={{ creator: "member-example" }}
+      />,
+    )
+    expect(screen.getByRole("combobox", { name: "Creator" })).toHaveTextContent(
+      "Example member",
+    )
   })
 
   it("exports its props as the public editor boundary", () => {

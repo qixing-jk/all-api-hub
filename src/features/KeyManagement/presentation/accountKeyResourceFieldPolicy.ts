@@ -96,6 +96,8 @@ const commonFields = [
       t("keyManagement:openRouter.editor.fields.creator.help"),
     resolvePlaceholder: (t: TFunction) =>
       t("keyManagement:openRouter.editor.fields.creator.placeholder"),
+    resolveNullableOptionLabel: (t: TFunction) =>
+      t("keyManagement:openRouter.editor.options.creator.none"),
     resolveOptionFallback: (t: TFunction) =>
       t("keyManagement:openRouter.editor.options.creator.unknown"),
     issueLabelResolvers: optionIssues,
