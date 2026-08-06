@@ -183,7 +183,6 @@
     },
     "collapse": "收起",
     "copyKey": {
-      "apiKey": "API 密钥",
       "copied": "已复制",
       "copy": "复制",
       "copyFailedManual": "复制失败，请手动复制",
@@ -196,7 +195,6 @@
       "defaultGroup": "默认组",
       "disabled": "禁用",
       "enabled": "启用",
-      "expireTime": "过期时间: {{time}}",
       "exportToCCSwitch": "导出到 CC Switch",
       "getFailed": "获取失败",
       "keyCopied": "密钥已复制到剪贴板",
@@ -205,11 +203,9 @@
       "noKeyFoundAfterCreate": "创建成功但未获取到密钥，请重试。",
       "noKeys": "暂无密钥数据",
       "noKeysDescription": "该账号暂无可用密钥，可快速创建默认密钥或自定义创建后再复制。",
-      "remainingQuota": "剩余额度",
       "retry": "重试",
       "title": "密钥列表",
       "totalKeys": "共 {{count}} 个密钥",
-      "usedQuota": "已用额度",
       "useInCherry": "在 Cherry Studio 中使用"
     },
     "dedupeAccounts": {

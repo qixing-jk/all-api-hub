@@ -186,7 +186,6 @@
     },
     "collapse": "折りたたむ",
     "copyKey": {
-      "apiKey": "API キー",
       "copied": "コピー済み",
       "copy": "コピー",
       "copyFailedManual": "コピーに失敗しました。手動でコピーしてください",
@@ -199,7 +198,6 @@
       "defaultGroup": "既定グループ",
       "disabled": "無効",
       "enabled": "有効",
-      "expireTime": "有効期限: {{time}}",
       "exportToCCSwitch": "CC Switch にエクスポート",
       "getFailed": "取得に失敗しました",
       "keyCopied": "キーをクリップボードにコピーしました",
@@ -208,11 +206,9 @@
       "noKeyFoundAfterCreate": "作成後にキーが見つかりませんでした。再試行してください。",
       "noKeys": "まだキーデータがありません",
       "noKeysDescription": "既定キーをすばやく作成するか、詳細設定付きのカスタムキーを作成してください。",
-      "remainingQuota": "残りクォータ",
       "retry": "再試行",
       "title": "キー一覧",
       "totalKeys_other": "合計 {{count}} キー",
-      "usedQuota": "使用済みクォータ",
       "useInCherry": "Cherry Studio で使う"
     },
     "dedupeAccounts": {

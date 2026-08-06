@@ -8,6 +8,7 @@ import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testId
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import * as accountOperations from "~/services/accounts/accountOperations"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
+import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import {
   CREATED_TOKEN_SECRET_DECISION_KINDS,
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
@@ -192,6 +193,10 @@ vi.mock("~/services/apiAdapters/registry", () => ({
           userGroups: {
             fetch: (...args: any[]) => fetchUserGroupsMock(...args),
           },
+          inventorySecretAvailability:
+            siteType === SITE_TYPES.AIHUBMIX
+              ? INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly
+              : INVENTORY_SECRET_AVAILABILITIES.Recoverable,
         },
         tokenProvisioning: createSub2ApiTokenProvisioningMock(),
       },
@@ -509,6 +514,45 @@ describe("CopyKeyDialog", () => {
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
       expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
     })
+  })
+
+  it("keeps AIHubMix saved keys visible without secret-dependent actions", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      {
+        ...TOKEN,
+        key: "sk-created********masked",
+        name: "Saved masked key",
+      },
+    ])
+
+    render(
+      <CopyKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={AIHUBMIX_ACCOUNT}
+      />,
+    )
+
+    expect(await screen.findByText("Saved masked key")).toBeVisible()
+    expect(
+      screen.getByText("keyManagement:keyDetails.createResponseOnlySecret"),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "ui:dialog.copyKey.exportToCCSwitch",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("refreshes instead of showing a one-time key when AIHubMix create returns a masked key", async () => {
@@ -1112,7 +1156,7 @@ describe("CopyKeyDialog", () => {
     expect(screen.queryByText("••••••")).not.toBeInTheDocument()
   })
 
-  it("renders disabled token state and collapses expanded token details", async () => {
+  it("renders disabled token state and toggles shared key details", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([
       {
         ...TOKEN,
@@ -1127,16 +1171,27 @@ describe("CopyKeyDialog", () => {
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
     expect(await screen.findByText("default")).toBeInTheDocument()
-    expect(screen.getByText("ui:dialog.copyKey.disabled")).toBeInTheDocument()
-
-    await user.click(screen.getByRole("button", { name: "ui:dialog.expand" }))
+    expect(screen.getByText("common:status.disabled")).toBeInTheDocument()
     expect(
-      screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
-    ).toBeInTheDocument()
+      screen.queryByText("keyManagement:keyDetails.quotaPolicy"),
+    ).not.toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: "ui:dialog.collapse" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
     expect(
-      screen.queryByRole("button", { name: "ui:dialog.copyKey.copy" }),
+      screen.getByText("keyManagement:keyDetails.quotaPolicy"),
+    ).toBeVisible()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
+    expect(
+      screen.queryByText("keyManagement:keyDetails.quotaPolicy"),
     ).not.toBeInTheDocument()
   })
 

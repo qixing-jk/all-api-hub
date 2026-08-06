@@ -193,7 +193,6 @@
     },
     "collapse": "Contraer",
     "copyKey": {
-      "apiKey": "API Key",
       "copied": "Copiado",
       "copy": "Copiar",
       "copyFailedManual": "Error al copiar, copia manualmente",
@@ -206,7 +205,6 @@
       "defaultGroup": "Grupo predeterminado",
       "disabled": "Deshabilitado",
       "enabled": "Habilitado",
-      "expireTime": "Hora de expiración: {{time}}",
       "exportToCCSwitch": "Exportar a CC Switch",
       "getFailed": "No se pudo obtener",
       "keyCopied": "Clave copiada al portapapeles",
@@ -215,13 +213,11 @@
       "noKeyFoundAfterCreate": "No se encontró ninguna clave después de crear una. Inténtalo de nuevo.",
       "noKeys": "Aún no hay datos de claves",
       "noKeysDescription": "Crea rápidamente una clave predeterminada o crea una clave personalizada con ajustes avanzados.",
-      "remainingQuota": "Cuota restante",
       "retry": "Reintentar",
       "title": "Lista de claves",
       "totalKeys_one": "Total {{count}} clave",
       "totalKeys_many": "Total {{count}} claves",
       "totalKeys_other": "Total {{count}} claves",
-      "usedQuota": "Cuota usada",
       "useInCherry": "Usar en Cherry Studio"
     },
     "dedupeAccounts": {

@@ -188,7 +188,6 @@
     },
     "collapse": "Collapse",
     "copyKey": {
-      "apiKey": "API Key",
       "copied": "Copied",
       "copy": "Copy",
       "copyFailedManual": "Copy failed, please copy manually",
@@ -201,7 +200,6 @@
       "defaultGroup": "Default Group",
       "disabled": "Disabled",
       "enabled": "Enabled",
-      "expireTime": "Expire time: {{time}}",
       "exportToCCSwitch": "Export to CC Switch",
       "getFailed": "Failed to get",
       "keyCopied": "Key copied to clipboard",
@@ -210,12 +208,10 @@
       "noKeyFoundAfterCreate": "No key was found after creating one. Please try again.",
       "noKeys": "No key data yet",
       "noKeysDescription": "Create a default key quickly, or create a custom key with advanced settings.",
-      "remainingQuota": "Remaining Quota",
       "retry": "Retry",
       "title": "Key List",
       "totalKeys_one": "Total {{count}} key",
       "totalKeys_other": "Total {{count}} keys",
-      "usedQuota": "Used Quota",
       "useInCherry": "Use in Cherry Studio"
     },
     "dedupeAccounts": {
