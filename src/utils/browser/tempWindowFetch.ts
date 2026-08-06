@@ -2,9 +2,15 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   API_ERROR_CODES,
   ApiError,
+  isTempWindowUnsupportedErrorCode,
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
-import { observeRemoteFetchLifecycle } from "~/services/apiTransport/remoteLifecycle"
+import {
+  inspectRemoteFetchLifecycleEvidence,
+  isReplaySafeRemoteFetch,
+  observeRemoteFetchLifecycle,
+  type RemoteFetchLifecycleAssessment,
+} from "~/services/apiTransport/remoteLifecycle"
 import {
   extractDataFromApiResponseBody,
   isHttpUrl,
@@ -40,7 +46,10 @@ import {
   type TempWindowTurnstileFetch,
   type TempWindowTurnstileFetchParams,
 } from "~/types/tempWindowFetch"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import {
+  isMessageReceiverUnavailableError,
+  sendRuntimeMessage,
+} from "~/utils/browser/browserApi"
 import { isExtensionBackground } from "~/utils/browser/index"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
@@ -56,6 +65,38 @@ const TEMP_WINDOW_POLICY_BLOCK_CODES = new Set<ApiErrorCode>([
   API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED,
   API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
 ])
+
+/** Recognizes remote failures that structurally prove fetch was never reached. */
+function hasAffirmativeTempWindowPreDispatchEvidence(
+  response: TempWindowFetch,
+  lifecycleAssessment: RemoteFetchLifecycleAssessment,
+): boolean {
+  if (response.success !== false) return false
+  if (lifecycleAssessment.affirmativePreDispatch) return true
+  if (lifecycleAssessment.hasTransportLifecycle) return false
+
+  return Boolean(
+    response.code &&
+      (TEMP_WINDOW_POLICY_BLOCK_CODES.has(response.code) ||
+        isTempWindowUnsupportedErrorCode(response.code)),
+  )
+}
+
+/** Copies the controlled temp-window response fields from an unknown boundary. */
+function snapshotTempWindowFetchResponse(value: unknown): TempWindowFetch {
+  if (!value || typeof value !== "object") {
+    throw new TypeError("Invalid temp-window fetch response")
+  }
+  const response = value as TempWindowFetch
+  return {
+    success: response.success,
+    status: response.status,
+    code: response.code,
+    headers: response.headers,
+    data: response.data,
+    error: response.error,
+  }
+}
 
 /** Sends one canonical protected-task envelope through the active context. */
 export async function executeProtectionBypassTask<
@@ -398,6 +439,9 @@ export async function executeWithTempWindowFallback<TResult>(
   try {
     return await primaryRequest()
   } catch (primaryError) {
+    if (!isReplaySafeRemoteFetch(context.fetchOptions)) {
+      throw primaryError
+    }
     if (!(await shouldUseTempWindowFallback(primaryError, context))) {
       throw primaryError
     }
@@ -552,15 +596,52 @@ async function fetchViaTempWindow<TResult>(
   const lifecycle = context.transportLifecycleObserver
     ? observeRemoteFetchLifecycle(requestId, context.transportLifecycleObserver)
     : null
+  const replaySafe = isReplaySafeRemoteFetch(fetchOptions)
   const abortSignal = fetchOptions.signal
+  let hasAffirmativePreDispatchEvidence = false
   const disposeLifecycle = () => lifecycle?.dispose()
-  abortSignal?.addEventListener("abort", disposeLifecycle, { once: true })
+  const disposeAfterAbort = () => {
+    if (!replaySafe && !hasAffirmativePreDispatchEvidence) {
+      lifecycle?.markPossiblyDispatched()
+    }
+    disposeLifecycle()
+  }
+  abortSignal?.addEventListener("abort", disposeAfterAbort, { once: true })
   let response: TempWindowFetch
   try {
-    response = await tempWindowFetch(payload)
-    lifecycle?.applyResultEvidence(response)
+    let remoteResponse: unknown
+    try {
+      remoteResponse = await tempWindowFetch(payload)
+    } catch (error) {
+      if (!replaySafe && !isMessageReceiverUnavailableError(error)) {
+        lifecycle?.markPossiblyDispatched()
+      }
+      throw error
+    }
+    try {
+      const lifecycleAssessment = lifecycle
+        ? lifecycle.applyResultEvidence(remoteResponse)
+        : inspectRemoteFetchLifecycleEvidence(remoteResponse)
+      hasAffirmativePreDispatchEvidence =
+        lifecycleAssessment.affirmativePreDispatch
+      response = snapshotTempWindowFetchResponse(remoteResponse)
+      if (
+        !replaySafe &&
+        !hasAffirmativeTempWindowPreDispatchEvidence(
+          response,
+          lifecycleAssessment,
+        )
+      ) {
+        lifecycle?.markPossiblyDispatched()
+      }
+    } catch (error) {
+      if (!replaySafe && !hasAffirmativePreDispatchEvidence) {
+        lifecycle?.markPossiblyDispatched()
+      }
+      throw error
+    }
   } finally {
-    abortSignal?.removeEventListener("abort", disposeLifecycle)
+    abortSignal?.removeEventListener("abort", disposeAfterAbort)
     disposeLifecycle()
   }
 

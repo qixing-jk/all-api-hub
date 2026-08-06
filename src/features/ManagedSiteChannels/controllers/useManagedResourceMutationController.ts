@@ -42,28 +42,35 @@ const resourceFailureCodes = new Set<string>(
   Object.values(MANAGED_RESOURCE_FAILURE_CODES),
 )
 
-const rejectedMutationFailure = (
-  result: Extract<
-    ManagedSiteMutationResult<unknown>,
-    { outcome: typeof MANAGED_SITE_MUTATION_OUTCOMES.Rejected }
-  >,
+const projectedMutationFailure = (
+  result: ManagedSiteMutationResult<unknown>,
   secretCollection: ReturnType<typeof collectManagedResourceSecrets>,
+  fallbackCode: ResourceFailure["code"],
 ): ResourceFailure => {
   if (!secretCollection.complete) {
-    return { code: MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected }
+    return { code: fallbackCode }
   }
   const output = toPrivateManagedSiteMutationOutput(result, {
     knownSecrets: secretCollection.knownSecrets,
   })
-  return typeof output.code === "string" &&
-    resourceFailureCodes.has(output.code)
-    ? { code: output.code as ResourceFailure["code"] }
-    : { code: MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected }
+  const controlledCode =
+    typeof output.code === "string" && resourceFailureCodes.has(output.code)
+      ? (output.code as ResourceFailure["code"])
+      : fallbackCode
+  const trimmedMessage = output.message?.trim()
+  const projectedMessage =
+    trimmedMessage && !resourceFailureCodes.has(trimmedMessage)
+      ? trimmedMessage
+      : undefined
+  return {
+    code: controlledCode,
+    ...(projectedMessage === undefined ? {} : { message: projectedMessage }),
+    ...(typeof output.code === "string" &&
+    !resourceFailureCodes.has(output.code)
+      ? { upstreamCode: output.code }
+      : {}),
+  }
 }
-
-const uncertainMutationFailure = (): ResourceFailure => ({
-  code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-})
 
 const refIdentity = (ref: ManagedResourceRef) =>
   JSON.stringify([ref.siteType, ref.kind, ref.scopeKey, ref.resourceId])
@@ -470,9 +477,10 @@ export function useManagedResourceMutationController({
             case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
               setEditorFeedback({
                 kind: "save-failed",
-                failure: rejectedMutationFailure(
+                failure: projectedMutationFailure(
                   mutationResult,
                   secretCollection,
+                  MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
                 ),
               })
               analyticsCompletion?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -481,17 +489,16 @@ export function useManagedResourceMutationController({
               return undefined
             case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
             case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain: {
-              if (secretCollection.complete) {
-                toPrivateManagedSiteMutationOutput(mutationResult, {
-                  knownSecrets: secretCollection.knownSecrets,
-                })
-              }
               closesEditor = true
               setEditor(null)
               setEditorMode(null)
               setEditorFeedback({
                 kind: "save-uncertain",
-                failure: uncertainMutationFailure(),
+                failure: projectedMutationFailure(
+                  mutationResult,
+                  secretCollection,
+                  MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+                ),
               })
               const refreshAccepted = await requestFreshRead()
               if (current !== generation.current) return undefined

@@ -4,6 +4,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   announceRemoteFetchDispatch,
   applyLocalRemoteFetchResultEvidence,
+  hasAffirmativeRemoteFetchPreDispatchEvidence,
   observeRemoteFetchLifecycle,
 } from "~/services/apiTransport/remoteLifecycle"
 
@@ -108,6 +109,117 @@ describe("remote fetch lifecycle", () => {
 
     expect(observer.onDispatch).not.toHaveBeenCalled()
     expect(observer.onResponse).not.toHaveBeenCalled()
+  })
+
+  it("reports affirmative pre-dispatch evidence while applying the result", () => {
+    const lifecycle = observeRemoteFetchLifecycle("request-1", {
+      onDispatch: vi.fn(),
+      onResponse: vi.fn(),
+    })
+
+    expect(
+      lifecycle.applyResultEvidence({
+        transportLifecycle: {
+          upstreamRequestDispatched: false,
+          upstreamResponseReceived: false,
+        },
+      }),
+    ).toMatchObject({ affirmativePreDispatch: true })
+    expect(
+      lifecycle.applyResultEvidence({
+        transportLifecycle: {
+          upstreamRequestDispatched: true,
+          upstreamResponseReceived: false,
+        },
+      }),
+    ).toMatchObject({ affirmativePreDispatch: false })
+  })
+
+  it("snapshots stateful top-level and nested lifecycle getters once", () => {
+    const observer = { onDispatch: vi.fn(), onResponse: vi.fn() }
+    const lifecycle = observeRemoteFetchLifecycle("request-1", observer)
+    let lifecycleReads = 0
+    let dispatchReads = 0
+    let responseReads = 0
+    const result = {
+      get transportLifecycle() {
+        lifecycleReads += 1
+        return {
+          get upstreamRequestDispatched() {
+            dispatchReads += 1
+            return dispatchReads > 1
+          },
+          get upstreamResponseReceived() {
+            responseReads += 1
+            return false
+          },
+        }
+      },
+    }
+
+    const assessment = lifecycle.applyResultEvidence(result)
+
+    expect(assessment).toMatchObject({
+      affirmativePreDispatch: true,
+      hasTransportLifecycle: true,
+    })
+    expect(Object.isFrozen(assessment)).toBe(true)
+    expect(lifecycleReads).toBe(1)
+    expect(dispatchReads).toBe(1)
+    expect(responseReads).toBe(1)
+    expect(observer.onDispatch).not.toHaveBeenCalled()
+    expect(observer.onResponse).not.toHaveBeenCalled()
+  })
+
+  it("reads lifecycle evidence through a stateful proxy without a separate presence probe", () => {
+    const lifecycle = observeRemoteFetchLifecycle("request-1", {
+      onDispatch: vi.fn(),
+      onResponse: vi.fn(),
+    })
+    const accesses: string[] = []
+    const result = new Proxy(
+      {
+        transportLifecycle: {
+          upstreamRequestDispatched: false,
+          upstreamResponseReceived: false,
+        },
+      },
+      {
+        get: (target, property, receiver) => {
+          accesses.push(`get:${String(property)}`)
+          return Reflect.get(target, property, receiver)
+        },
+        has: (target, property) => {
+          accesses.push(`has:${String(property)}`)
+          return Reflect.has(target, property)
+        },
+      },
+    )
+
+    expect(lifecycle.applyResultEvidence(result)).toMatchObject({
+      affirmativePreDispatch: true,
+    })
+    expect(accesses).toEqual(["get:transportLifecycle"])
+  })
+
+  it.each([null, undefined, "malformed", 42, false])(
+    "does not treat non-object result %j as affirmative pre-dispatch evidence",
+    (result) => {
+      expect(hasAffirmativeRemoteFetchPreDispatchEvidence(result)).toBe(false)
+    },
+  )
+
+  it("preserves lifecycle accessor errors for the transport boundary", () => {
+    const evidenceError = new Error("lifecycle getter failed")
+    const result = {
+      get transportLifecycle(): never {
+        throw evidenceError
+      },
+    }
+
+    expect(() => hasAffirmativeRemoteFetchPreDispatchEvidence(result)).toThrow(
+      evidenceError,
+    )
   })
 
   it("contains observer failures while continuing to process later evidence", () => {

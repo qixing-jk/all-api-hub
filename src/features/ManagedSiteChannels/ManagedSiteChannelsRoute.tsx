@@ -547,15 +547,17 @@ function NativeManagedSiteChannels({
         return mutation.editor === null
           ? {
               category: t("managedSiteChannels:alerts.editorSaveError.title"),
-              message: t(
-                "managedSiteChannels:alerts.editorSaveError.description",
-              ),
+              message:
+                mutation.editorFeedback.failure.message ??
+                t("managedSiteChannels:alerts.editorSaveError.description"),
             }
           : null
       case "save-uncertain":
         return {
           category: t("managedSiteChannels:alerts.partialMutation.title"),
-          message: t("managedSiteChannels:alerts.partialMutation.description"),
+          message:
+            mutation.editorFeedback.failure.message ??
+            t("managedSiteChannels:alerts.partialMutation.description"),
         }
       case "saved-refresh-failed":
         return {
@@ -773,7 +775,8 @@ function NativeManagedSiteChannels({
                 {t("managedSiteChannels:alerts.editorSaveError.title")}
               </AlertTitle>
               <AlertDescription>
-                {t("managedSiteChannels:alerts.editorSaveError.description")}
+                {mutation.editorFeedback.failure.message ??
+                  t("managedSiteChannels:alerts.editorSaveError.description")}
               </AlertDescription>
             </Alert>
           ) : null}

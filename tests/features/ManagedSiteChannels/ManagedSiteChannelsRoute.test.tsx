@@ -803,7 +803,10 @@ describe("ManagedSiteChannelsRoute", () => {
         editorMode: "edit",
         editorFeedback: {
           kind: "save-failed",
-          failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable },
+          failure: {
+            code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+            message: "Provider maintenance window",
+          },
         },
       },
     })
@@ -821,7 +824,7 @@ describe("ManagedSiteChannelsRoute", () => {
       "managedSiteChannels:alerts.editorSaveError.title",
     )
     expect(within(dialog).getByRole("alert")).toHaveTextContent(
-      "managedSiteChannels:alerts.editorSaveError.description",
+      "Provider maintenance window",
     )
   })
 
@@ -865,6 +868,7 @@ describe("ManagedSiteChannelsRoute", () => {
           kind: "save-uncertain",
           failure: {
             code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+            message: "Provider response was lost",
           },
         },
       },
@@ -883,7 +887,7 @@ describe("ManagedSiteChannelsRoute", () => {
       "managedSiteChannels:alerts.partialMutation.title",
     )
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "managedSiteChannels:alerts.partialMutation.description",
+      "Provider response was lost",
     )
   })
 

@@ -1,8 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import type {
-  ApiTransportRemoteLifecycleEvidence,
-  ApiTransportRemoteLifecycleObserver,
-} from "~/types/tempWindowFetch"
+import type { ApiTransportRemoteLifecycleObserver } from "~/types/tempWindowFetch"
 import {
   onRuntimeMessage,
   sendRuntimeMessage,
@@ -12,15 +9,37 @@ interface RemoteFetchLifecycleResult {
   transportLifecycle?: unknown
 }
 
+export interface RemoteFetchLifecycleAssessment {
+  readonly hasTransportLifecycle: boolean
+  readonly affirmativePreDispatch: boolean
+  readonly upstreamRequestDispatched?: boolean
+  readonly upstreamResponseReceived?: boolean
+}
+
 type ResultEvidenceConsumer = (
-  result: RemoteFetchLifecycleResult | null,
-) => void
+  assessment: RemoteFetchLifecycleAssessment,
+) => RemoteFetchLifecycleAssessment
 
 const localResultEvidenceConsumers = new Map<
   string,
   Set<ResultEvidenceConsumer>
 >()
 const REMOTE_FETCH_REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/
+const REPLAY_SAFE_FETCH_METHODS = new Set(["GET", "HEAD", "OPTIONS"])
+const ABSENT_REMOTE_LIFECYCLE_ASSESSMENT = Object.freeze({
+  hasTransportLifecycle: false,
+  affirmativePreDispatch: false,
+}) satisfies RemoteFetchLifecycleAssessment
+const INVALID_REMOTE_LIFECYCLE_ASSESSMENT = Object.freeze({
+  hasTransportLifecycle: true,
+  affirmativePreDispatch: false,
+}) satisfies RemoteFetchLifecycleAssessment
+
+/** Returns whether repeating a remotely handed-off request is side-effect safe. */
+export function isReplaySafeRemoteFetch(options?: RequestInit): boolean {
+  const method = options?.method?.trim().toUpperCase() || "GET"
+  return REPLAY_SAFE_FETCH_METHODS.has(method)
+}
 
 /** Validates the opaque identifier carried by the lifecycle side-channel. */
 function isRemoteFetchRequestId(value: unknown): value is string {
@@ -38,20 +57,45 @@ function notifyObserver(callback: () => void): void {
   }
 }
 
-/** Validates the controlled final evidence shape returned by a remote context. */
-function isRemoteLifecycleEvidence(
-  value: unknown,
-): value is ApiTransportRemoteLifecycleEvidence {
-  if (!value || typeof value !== "object") return false
-  const evidence = value as Record<string, unknown>
-  return (
-    typeof evidence.upstreamRequestDispatched === "boolean" &&
-    typeof evidence.upstreamResponseReceived === "boolean" &&
-    !(
-      evidence.upstreamResponseReceived === true &&
-      evidence.upstreamRequestDispatched === false
-    )
-  )
+/** Snapshots each lifecycle field once before validating stateful boundaries. */
+export function inspectRemoteFetchLifecycleEvidence(
+  result: unknown,
+): RemoteFetchLifecycleAssessment {
+  if (!result || typeof result !== "object") {
+    return ABSENT_REMOTE_LIFECYCLE_ASSESSMENT
+  }
+  const evidence = (result as RemoteFetchLifecycleResult).transportLifecycle
+  if (evidence === undefined) {
+    return ABSENT_REMOTE_LIFECYCLE_ASSESSMENT
+  }
+  if (!evidence || typeof evidence !== "object") {
+    return INVALID_REMOTE_LIFECYCLE_ASSESSMENT
+  }
+  const evidenceFields = evidence as Record<string, unknown>
+  const upstreamRequestDispatched = evidenceFields.upstreamRequestDispatched
+  const upstreamResponseReceived = evidenceFields.upstreamResponseReceived
+  if (
+    typeof upstreamRequestDispatched !== "boolean" ||
+    typeof upstreamResponseReceived !== "boolean" ||
+    (upstreamResponseReceived && !upstreamRequestDispatched)
+  ) {
+    return INVALID_REMOTE_LIFECYCLE_ASSESSMENT
+  }
+
+  return Object.freeze({
+    hasTransportLifecycle: true,
+    affirmativePreDispatch:
+      !upstreamRequestDispatched && !upstreamResponseReceived,
+    upstreamRequestDispatched,
+    upstreamResponseReceived,
+  })
+}
+
+/** Returns whether a remote result proves the upstream request never started. */
+export function hasAffirmativeRemoteFetchPreDispatchEvidence(
+  result: unknown,
+): boolean {
+  return inspectRemoteFetchLifecycleEvidence(result).affirmativePreDispatch
 }
 
 /** Broadcasts dispatch from the context that is about to call upstream fetch. */
@@ -72,7 +116,8 @@ export function observeRemoteFetchLifecycle(
   requestId: string,
   observer: ApiTransportRemoteLifecycleObserver,
 ): {
-  applyResultEvidence: (result: RemoteFetchLifecycleResult | null) => void
+  markPossiblyDispatched: () => void
+  applyResultEvidence: (result: unknown) => RemoteFetchLifecycleAssessment
   dispose: () => void
 } {
   let disposed = false
@@ -97,24 +142,27 @@ export function observeRemoteFetchLifecycle(
       notifyDispatch()
     }
   })
-  const applyResultEvidence: ResultEvidenceConsumer = (result) => {
-    if (disposed) return
-    const evidence = result?.transportLifecycle
-    if (!isRemoteLifecycleEvidence(evidence)) return
-    if (evidence.upstreamRequestDispatched) notifyDispatch()
-    if (evidence.upstreamResponseReceived) notifyResponse()
+  const applyAssessment: ResultEvidenceConsumer = (assessment) => {
+    if (disposed) return ABSENT_REMOTE_LIFECYCLE_ASSESSMENT
+    if (assessment.upstreamRequestDispatched) notifyDispatch()
+    if (assessment.upstreamResponseReceived) notifyResponse()
+    return assessment
   }
   const consumers = localResultEvidenceConsumers.get(requestId) ?? new Set()
-  consumers.add(applyResultEvidence)
+  consumers.add(applyAssessment)
   localResultEvidenceConsumers.set(requestId, consumers)
 
   return {
-    applyResultEvidence,
+    markPossiblyDispatched: notifyDispatch,
+    applyResultEvidence: (result) => {
+      if (disposed) return ABSENT_REMOTE_LIFECYCLE_ASSESSMENT
+      return applyAssessment(inspectRemoteFetchLifecycleEvidence(result))
+    },
     dispose: () => {
       if (disposed) return
       disposed = true
       disposeRuntimeListener()
-      consumers.delete(applyResultEvidence)
+      consumers.delete(applyAssessment)
       if (consumers.size === 0) localResultEvidenceConsumers.delete(requestId)
     },
   }
@@ -123,10 +171,12 @@ export function observeRemoteFetchLifecycle(
 /** Applies evidence before an intermediate context inspects the remote result. */
 export function applyLocalRemoteFetchResultEvidence(
   requestId: string,
-  result: RemoteFetchLifecycleResult | null,
+  result: unknown,
 ): void {
-  for (const applyEvidence of localResultEvidenceConsumers.get(requestId) ??
-    []) {
-    applyEvidence(result)
+  const consumers = localResultEvidenceConsumers.get(requestId)
+  if (!consumers?.size) return
+  const assessment = inspectRemoteFetchLifecycleEvidence(result)
+  for (const applyEvidence of consumers) {
+    applyEvidence(assessment)
   }
 }

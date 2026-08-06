@@ -61,6 +61,7 @@ export class ApiError extends Error {
       this.statusCode ??= cause.statusCode
       this.endpoint ??= cause.endpoint
       this.code ??= cause.code
+      this.upstreamCode ??= cause.upstreamCode
     }
   }
 

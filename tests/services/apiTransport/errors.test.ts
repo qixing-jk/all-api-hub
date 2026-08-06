@@ -43,6 +43,50 @@ describe("ApiError", () => {
       expect(error.upstreamCode).toBe("invalid_limit")
     })
 
+    it("inherits an upstream code from an ApiError cause", () => {
+      const cause = new ApiError(
+        "Provider rejected the request",
+        400,
+        "/keys",
+        API_ERROR_CODES.HTTP_OTHER,
+        "workspace_policy",
+      )
+
+      const error = new ApiError(
+        "Key mutation failed",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        cause,
+      )
+
+      expect(error.upstreamCode).toBe("workspace_policy")
+      expect(error.cause).toBe(cause)
+    })
+
+    it("preserves an explicit upstream code over an ApiError cause", () => {
+      const cause = new ApiError(
+        "Provider rejected the request",
+        400,
+        "/keys",
+        API_ERROR_CODES.HTTP_OTHER,
+        "inner_policy",
+      )
+
+      const error = new ApiError(
+        "Key mutation failed",
+        undefined,
+        undefined,
+        undefined,
+        "outer_policy",
+        cause,
+      )
+
+      expect(error.upstreamCode).toBe("outer_policy")
+      expect(error.cause).toBe(cause)
+    })
+
     it("should handle empty message", () => {
       const error = new ApiError("")
 

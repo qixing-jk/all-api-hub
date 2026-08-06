@@ -1024,7 +1024,10 @@ describe("useManagedResourceMutationController", () => {
     expect(result.current.editor).toBe(editor)
     expect(result.current.editorFeedback).toEqual({
       kind: "save-failed",
-      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied },
+      failure: {
+        code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+        message: "permission denied [REDACTED]",
+      },
     })
     expect(JSON.stringify(result.current)).not.toContain(providerSecret)
   })
@@ -1041,19 +1044,27 @@ describe("useManagedResourceMutationController", () => {
           },
         ],
         completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
-        diagnostic: { message: "private partial", raw: "private raw" },
+        diagnostic: {
+          message: "Provider confirmed one step before failing",
+          raw: "provider-raw-partial-placeholder",
+        },
       },
+      expectedMessage: "Provider confirmed one step before failing",
     },
     {
       outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
       result: {
         outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
-        diagnostic: { message: "private uncertain", raw: "private raw" },
+        diagnostic: {
+          message: "  Provider response was lost  ",
+          raw: "provider-raw-uncertain-placeholder",
+        },
       },
+      expectedMessage: "Provider response was lost",
     },
   ] as const)(
     "closes and reconciles a $outcome submit once without replay",
-    async ({ result: mutationResult }) => {
+    async ({ result: mutationResult, expectedMessage }) => {
       const editor = createManagedResourceEditor({
         submit: vi.fn(async () => mutationResult),
       })
@@ -1077,9 +1088,10 @@ describe("useManagedResourceMutationController", () => {
         kind: "save-uncertain",
         failure: {
           code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          message: expectedMessage,
         },
       })
-      expect(JSON.stringify(result.current)).not.toContain("private")
+      expect(JSON.stringify(result.current)).not.toContain("provider-raw")
     },
   )
 
@@ -1169,7 +1181,7 @@ describe("useManagedResourceMutationController", () => {
     })
   })
 
-  it("keeps the editor open and classifies confirmed save failures", async () => {
+  it("keeps the editor open without exposing a controlled rejection token", async () => {
     const editor = createManagedResourceEditor({
       submit: vi.fn(
         async () =>
@@ -1232,12 +1244,12 @@ describe("useManagedResourceMutationController", () => {
     })
   })
 
-  it("classifies uncertain save results after closing the editor", async () => {
+  it("omits a whitespace-padded controlled token from uncertain save feedback", async () => {
     const editor = createManagedResourceEditor({
       submit: vi.fn(async () => ({
         outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
         diagnostic: {
-          message: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          message: `  ${MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain}  `,
         },
       })),
     })
@@ -1791,18 +1803,21 @@ describe("useManagedResourceMutationController", () => {
     expect(result.current.editor).toBe(editor)
     expect(result.current.editorFeedback).toEqual({
       kind: "save-failed",
-      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.NotFound },
+      failure: {
+        code: MANAGED_RESOURCE_FAILURE_CODES.NotFound,
+        message: "not found",
+      },
     })
     expect(result.current.deleteState.requiresFreshRead).toBe(false)
     expect(refresh).not.toHaveBeenCalled()
   })
 
-  it("closes uncertain mutation results, requests one refresh, and does not replay", async () => {
+  it("omits whitespace-only uncertain feedback and does not replay", async () => {
     const editor = createManagedResourceEditor({
       submit: vi.fn(async () => ({
         outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
         diagnostic: {
-          message: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          message: "   ",
         },
       })),
     })

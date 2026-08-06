@@ -11,7 +11,10 @@ import {
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
 import { createMinIntervalLimiter } from "~/services/apiTransport/minIntervalLimiter"
-import { observeRemoteFetchLifecycle } from "~/services/apiTransport/remoteLifecycle"
+import {
+  isReplaySafeRemoteFetch,
+  observeRemoteFetchLifecycle,
+} from "~/services/apiTransport/remoteLifecycle"
 import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"
 import {
   resolveSiteRequestLimitKey,
@@ -34,11 +37,13 @@ import {
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import type {
-  ApiTransportRemoteLifecycleEvidence,
   TempWindowFetch,
   TempWindowResponseType,
 } from "~/types/tempWindowFetch"
-import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
+import {
+  isMessageReceiverUnavailableError,
+  sendTabMessageWithRetry,
+} from "~/utils/browser/browserApi"
 import {
   addAuthMethodHeader,
   addExtensionHeader,
@@ -82,13 +87,28 @@ type MessageResponseMapper<TResult> = (
 ) => TResult | Promise<TResult>
 
 interface ContentFetchResponse<T> {
-  transportLifecycle?: ApiTransportRemoteLifecycleEvidence
   success?: boolean
   status?: number
   headers?: Record<string, string>
   data?: T
   error?: string
   code?: ApiErrorCode
+}
+
+/** Copies the controlled message response fields before lifecycle disposal. */
+function snapshotContentFetchResponse<T>(
+  value: unknown,
+): ContentFetchResponse<T> {
+  if (!value || typeof value !== "object") return {}
+  const response = value as ContentFetchResponse<T>
+  return {
+    success: response.success,
+    status: response.status,
+    headers: response.headers,
+    data: response.data,
+    error: response.error,
+    code: response.code,
+  }
 }
 
 /** Redacts the exact request credential before emitting transport diagnostics. */
@@ -373,57 +393,93 @@ async function fetchViaCurrentTabContent<T>(context: {
   responseType: TempWindowResponseType
   onDispatch: () => void
   onResponse: () => void
+  onResponseInspectionError: () => void
 }): Promise<AcquiredTransportResponse<T>> {
   const requestId = safeRandomUUID("current-tab-fetch")
   const lifecycle = observeRemoteFetchLifecycle(requestId, {
     onDispatch: context.onDispatch,
     onResponse: context.onResponse,
   })
+  const replaySafe = isReplaySafeRemoteFetch(context.fetchOptions)
   const abortSignal = context.fetchOptions.signal
+  let hasAffirmativePreDispatchEvidence = false
   const disposeLifecycle = () => lifecycle.dispose()
-  abortSignal?.addEventListener("abort", disposeLifecycle, { once: true })
+  const disposeAfterAbort = () => {
+    if (!replaySafe && !hasAffirmativePreDispatchEvidence) {
+      lifecycle.markPossiblyDispatched()
+    }
+    disposeLifecycle()
+  }
+  abortSignal?.addEventListener("abort", disposeAfterAbort, { once: true })
 
   try {
-    const response = (await sendTabMessageWithRetry(
-      context.fetchContext.tabId,
-      {
+    let response: unknown
+    try {
+      response = await sendTabMessageWithRetry(context.fetchContext.tabId, {
         action: RuntimeActionIds.ContentPerformTempWindowFetch,
         requestId,
         fetchUrl: context.url,
         fetchOptions: normalizeRequestInitForMessage(context.fetchOptions),
         responseType: context.responseType,
-      },
-    )) as ContentFetchResponse<ApiResponse<T> | T>
-    lifecycle.applyResultEvidence(response)
+      })
+    } catch (error) {
+      if (!replaySafe && !isMessageReceiverUnavailableError(error)) {
+        lifecycle.markPossiblyDispatched()
+      }
+      throw error
+    }
+    let responseSnapshot: ContentFetchResponse<ApiResponse<T> | T>
+    try {
+      hasAffirmativePreDispatchEvidence =
+        lifecycle.applyResultEvidence(response).affirmativePreDispatch
+      responseSnapshot = snapshotContentFetchResponse<ApiResponse<T> | T>(
+        response,
+      )
+      if (
+        !replaySafe &&
+        !(
+          responseSnapshot.success === false &&
+          hasAffirmativePreDispatchEvidence
+        )
+      ) {
+        lifecycle.markPossiblyDispatched()
+      }
+    } catch (error) {
+      if (!replaySafe && !hasAffirmativePreDispatchEvidence) {
+        lifecycle.markPossiblyDispatched()
+      }
+      context.onResponseInspectionError()
+      throw error
+    }
 
-    const success = response?.success
+    const success = responseSnapshot.success
     if (typeof success !== "boolean") {
       throw new ApiError(
-        response?.error || "Current-tab content fetch failed",
-        response?.status,
+        responseSnapshot.error || "Current-tab content fetch failed",
+        responseSnapshot.status,
         context.endpoint,
-        response?.code,
+        responseSnapshot.code,
       )
     }
 
-    const status = response.status ?? (success ? 200 : undefined)
+    const status = responseSnapshot.status ?? (success ? 200 : undefined)
     if (status === undefined) {
       throw new ApiError(
-        response.error || "Current-tab content fetch failed",
+        responseSnapshot.error || "Current-tab content fetch failed",
         undefined,
         context.endpoint,
-        response.code,
+        responseSnapshot.code,
       )
     }
 
     return {
       ok: success,
       status,
-      headers: response.headers ?? {},
-      body: response.data as T,
+      headers: responseSnapshot.headers ?? {},
+      body: responseSnapshot.data as T,
     }
   } finally {
-    abortSignal?.removeEventListener("abort", disposeLifecycle)
+    abortSignal?.removeEventListener("abort", disposeAfterAbort)
     disposeLifecycle()
   }
 }
@@ -441,6 +497,7 @@ async function executeWithCurrentTabContentPreference<T, TResult>(
     options: FetchApiOptions
     onDispatch: () => void
     onResponse: () => void
+    wasDispatched: () => boolean
   },
   mapResponse: TransportResponseMapper<T, TResult>,
   fallback: () => Promise<TResult>,
@@ -461,6 +518,7 @@ async function executeWithCurrentTabContentPreference<T, TResult>(
   >
 
   let response: AcquiredTransportResponse<T>
+  let responseInspectionFailed = false
   try {
     response = await fetchViaCurrentTabContent<T>({
       fetchContext,
@@ -470,16 +528,29 @@ async function executeWithCurrentTabContentPreference<T, TResult>(
       responseType: context.responseType,
       onDispatch: context.onDispatch,
       onResponse: context.onResponse,
+      onResponseInspectionError: () => {
+        responseInspectionFailed = true
+      },
     })
   } catch (error) {
-    logger.debug("Current-tab content fetch failed; falling back", {
-      endpoint: context.endpoint,
-      url: context.url,
-      error: getSafeTransportErrorMessage(
-        error,
-        context.request.auth.accessToken,
-      ),
-    })
+    const replaySafe = isReplaySafeRemoteFetch(context.fetchOptions)
+    const dispatched = context.wasDispatched()
+    const mustNotFallback =
+      responseInspectionFailed || (dispatched && !replaySafe)
+    logger.debug(
+      mustNotFallback
+        ? "Current-tab content fetch failed without a safe fallback"
+        : "Current-tab content fetch failed; falling back",
+      {
+        endpoint: context.endpoint,
+        url: context.url,
+        error: getSafeTransportErrorMessage(
+          error,
+          context.request.auth.accessToken,
+        ),
+      },
+    )
+    if (mustNotFallback) throw error
     return await fallback()
   }
 
@@ -760,79 +831,86 @@ const _fetchApiWithMapper = async <T, TResult>(
   }
 
   const startRequest = () => {
-    return startAbortableTask(
+    let taskFailure: { error: unknown } | undefined
+    const execution = startAbortableTask(
       async (signal) => {
-        request.abortDeadline?.start()
-        let dispatchObserved = false
-        const onDispatch = () => {
-          if (dispatchObserved) return
-          dispatchObserved = true
-          notifyApiTransportObserver(request.observer, "onDispatch")
-        }
-        let responseObserved = false
-        const onResponse = () => {
-          if (responseObserved) return
-          responseObserved = true
-          notifyApiTransportObserver(request.observer, "onResponse")
-        }
-        const dispatchedFetchOptions = { ...fetchOptions, signal }
-        const dispatchedContext = {
-          ...context,
-          fetchOptions: dispatchedFetchOptions,
-        }
-        const primaryRequest = async () => {
-          onDispatch()
-          const response = await apiRequestResponse<T>(
-            url,
-            dispatchedFetchOptions,
-            options.endpoint,
-            responseType,
-            onResponse,
-          )
-          return await mapResponse(response)
-        }
-        const fallback = async () => {
-          const execution = request.protectionBypassExecution
-          if (!execution) {
-            if (dispatchedContext.forceTempWindow) {
-              throw new ApiError(
-                t("messages:background.tempWindowPolicyContextInvalid"),
-                undefined,
-                options.endpoint,
-                API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
-              )
+        try {
+          request.abortDeadline?.start()
+          let dispatchObserved = false
+          const onDispatch = () => {
+            if (dispatchObserved) return
+            dispatchObserved = true
+            notifyApiTransportObserver(request.observer, "onDispatch")
+          }
+          let responseObserved = false
+          const onResponse = () => {
+            if (responseObserved) return
+            responseObserved = true
+            notifyApiTransportObserver(request.observer, "onResponse")
+          }
+          const dispatchedFetchOptions = { ...fetchOptions, signal }
+          const dispatchedContext = {
+            ...context,
+            fetchOptions: dispatchedFetchOptions,
+          }
+          const primaryRequest = async () => {
+            onDispatch()
+            const response = await apiRequestResponse<T>(
+              url,
+              dispatchedFetchOptions,
+              options.endpoint,
+              responseType,
+              onResponse,
+            )
+            return await mapResponse(response)
+          }
+          const fallback = async () => {
+            const execution = request.protectionBypassExecution
+            if (!execution) {
+              if (dispatchedContext.forceTempWindow) {
+                throw new ApiError(
+                  t("messages:background.tempWindowPolicyContextInvalid"),
+                  undefined,
+                  options.endpoint,
+                  API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID,
+                )
+              }
+              return await primaryRequest()
             }
-            return await primaryRequest()
+
+            return await executeWithTempWindowFallback(
+              {
+                ...dispatchedContext,
+                protectionBypassExecution: execution,
+                transportLifecycleObserver: {
+                  onDispatch,
+                  onResponse,
+                },
+              },
+              primaryRequest,
+              mapTempWindowResponse,
+            )
           }
 
-          return await executeWithTempWindowFallback(
+          return await executeWithCurrentTabContentPreference<T, TResult>(
             {
-              ...dispatchedContext,
-              protectionBypassExecution: execution,
-              transportLifecycleObserver: {
-                onDispatch,
-                onResponse,
-              },
+              request,
+              url,
+              endpoint: options.endpoint,
+              fetchOptions: dispatchedFetchOptions,
+              responseType,
+              options,
+              onDispatch,
+              onResponse,
+              wasDispatched: () => dispatchObserved,
             },
-            primaryRequest,
-            mapTempWindowResponse,
+            mapResponse,
+            fallback,
           )
+        } catch (error) {
+          taskFailure = { error }
+          throw error
         }
-
-        return await executeWithCurrentTabContentPreference<T, TResult>(
-          {
-            request,
-            url,
-            endpoint: options.endpoint,
-            fetchOptions: dispatchedFetchOptions,
-            responseType,
-            options,
-            onDispatch,
-            onResponse,
-          },
-          mapResponse,
-          fallback,
-        )
       },
       {
         signals: [
@@ -842,6 +920,15 @@ const _fetchApiWithMapper = async <T, TResult>(
         timeoutMs: request.abortDeadline ? undefined : request.requestTimeoutMs,
       },
     )
+    return {
+      ...execution,
+      result: execution.result.catch((error) => {
+        // A response getter can synchronously abort and then throw a more
+        // specific inspection error before the abort race callback runs.
+        if (taskFailure) throw taskFailure.error
+        throw error
+      }),
+    }
   }
 
   if (request.bypassSiteRequestLimit) {
