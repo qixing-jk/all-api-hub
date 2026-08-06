@@ -186,40 +186,52 @@ export function RuntimeKeyActionControls({
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
 
-    const result = serviceCredentialProfile
-      ? await openWithCredentials(
-          {
-            name: serviceCredentialProfile.name,
-            baseUrl: serviceCredentialProfile.baseUrl,
-            apiKey: serviceCredentialProfile.apiKey,
-          },
-          (channelResult) => {
-            showResultToast(channelResult)
-            if (channelResult?.success) {
-              void markGatewayGuidanceOnboardingCompleted()
-            }
-          },
-          {
-            managedSiteStatus: undefined,
-          },
-        )
-      : await openWithAccount(
-          account,
-          accountRuntimeKeyToLegacyAccountToken(runtimeKey),
-          (channelResult) => {
-            showResultToast(channelResult)
-            if (channelResult?.success) {
-              void markGatewayGuidanceOnboardingCompleted()
-            }
-          },
-        )
+    try {
+      const result = serviceCredentialProfile
+        ? await openWithCredentials(
+            {
+              name: serviceCredentialProfile.name,
+              baseUrl: serviceCredentialProfile.baseUrl,
+              apiKey: serviceCredentialProfile.apiKey,
+            },
+            (channelResult) => {
+              showResultToast(channelResult)
+              if (channelResult?.success) {
+                void markGatewayGuidanceOnboardingCompleted()
+              }
+            },
+            {
+              managedSiteStatus: undefined,
+            },
+          )
+        : await openWithAccount(
+            account,
+            accountRuntimeKeyToLegacyAccountToken(runtimeKey),
+            (channelResult) => {
+              showResultToast(channelResult)
+              if (channelResult?.success) {
+                void markGatewayGuidanceOnboardingCompleted()
+              }
+            },
+          )
 
-    if (result.opened || result.deferred) {
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-      return
+      if (result.opened || result.deferred) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        return
+      }
+
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+    } catch (error) {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+      showResultToast({
+        success: false,
+        message: t("messages:errors.operation.failed", {
+          error: getErrorMessage(error, t("messages:errors.unknown")),
+        }),
+      })
     }
-
-    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
   }
 
   const handleOpenCliProxyDialog = (event: MouseEvent) => {

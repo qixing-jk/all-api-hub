@@ -23,6 +23,7 @@ import {
   getOppositeCurrency,
   getStatusBadgeStyle,
   getTodayMetricPresentation,
+  maskSecretForDisplay,
   normalizeToDate,
   normalizeToMs,
 } from "~/utils/core/formatters"
@@ -30,6 +31,22 @@ import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/account
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 describe("formatters utilities", () => {
+  describe("maskSecretForDisplay", () => {
+    it("fully masks short secrets", () => {
+      expect(maskSecretForDisplay("short-key")).toBe("******")
+    })
+
+    it("preserves the start and end of long secrets", () => {
+      const secret = "sk-1234567890abcdefghijklmnop"
+
+      expect(maskSecretForDisplay(secret)).toBe(
+        `${secret.substring(0, 8)}${"*".repeat(16)}${secret.substring(
+          secret.length - 4,
+        )}`,
+      )
+    })
+  })
+
   describe("getTodayMetricPresentation", () => {
     it("requires refresh for legacy-unclassified account availability", () => {
       expect(

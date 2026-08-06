@@ -46,6 +46,7 @@ export function QuickKeyResourceCard({
 }: QuickKeyResourceCardProps) {
   const { t } = useTranslation("keyManagement")
   const detailsPanelId = useId()
+  const detailsTriggerId = useId()
   const headerFact = presentation.contextFact
   const expandedSummaryFacts = presentation.summaryFacts.filter(
     (fact) => fact.id !== headerFact?.id,
@@ -60,6 +61,7 @@ export function QuickKeyResourceCard({
   return (
     <Card variant="interactive" padding="none" data-testid={testId}>
       <button
+        id={detailsTriggerId}
         type="button"
         className="dark:hover:bg-dark-bg-tertiary flex w-full items-center justify-between gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-50"
         aria-label={t("actions.detailsFor", { name: presentation.title })}
@@ -99,6 +101,7 @@ export function QuickKeyResourceCard({
         <CardContent
           id={detailsPanelId}
           role="region"
+          aria-labelledby={detailsTriggerId}
           padding="sm"
           spacing="sm"
           className="dark:border-dark-bg-tertiary border-t border-gray-200"
@@ -107,7 +110,6 @@ export function QuickKeyResourceCard({
             label={t("keyDetails.key")}
             secret={secret}
             controls={secretControls}
-            message={presentation.secretAvailabilityMessage}
             layout={KEY_RESOURCE_CONTENT_LAYOUTS.Adaptive}
           />
           {expandedSummaryFacts.length > 0 ? (

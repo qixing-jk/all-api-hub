@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
-import { Modal } from "~/components/ui"
+import { Alert, Modal } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
@@ -10,6 +10,7 @@ import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/com
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { useLegacyApiTokenSecretResult } from "~/features/TokenProvisioning/hooks/useLegacyApiTokenSecretResult"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { openKeysPage } from "~/utils/navigation"
@@ -77,6 +78,9 @@ export default function CopyKeyDialog({
         })
       : undefined
   const oneTimeSecretResult = useLegacyApiTokenSecretResult(oneTimeToken)
+  const showCreateResponseOnlyWarning =
+    account !== null &&
+    !supportsRecoverableAccountRuntimeKeySecrets(account.siteType)
 
   const handleOpenAddTokenDialog = () => {
     clearDefaultTokenCreateAllowedGroups()
@@ -186,7 +190,18 @@ export default function CopyKeyDialog({
           />
         }
       >
-        <div className="flex-1 overflow-y-auto">{renderContent()}</div>
+        <div className="flex-1 space-y-3 overflow-y-auto">
+          {showCreateResponseOnlyWarning ? (
+            <Alert
+              compact
+              variant="warning"
+              description={keyManagementT(
+                "keyDetails.createResponseOnlySecret",
+              )}
+            />
+          ) : null}
+          {renderContent()}
+        </div>
       </Modal>
       {ccSwitchContext && (
         <CCSwitchExportDialog

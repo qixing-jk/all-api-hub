@@ -13,6 +13,7 @@ import type {
 } from "~/services/apiAdapters/contracts/serviceCredential"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { AccountToken, DisplaySiteData } from "~/types"
+import { maskSecretForDisplay } from "~/utils/core/formatters"
 import { t } from "~/utils/i18n/core"
 
 import type { KeyManagementEntry, ServiceCredentialState } from "./types"
@@ -146,12 +147,7 @@ export const formatKey = (
   if (visibleKeys.has(tokenIdentityKey)) {
     return key
   }
-  if (key.length < 12) {
-    return "******"
-  }
-  return `${key.substring(0, 8)}${"*".repeat(16)}${key.substring(
-    key.length - 4,
-  )}`
+  return maskSecretForDisplay(key)
 }
 
 // 格式化额度

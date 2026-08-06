@@ -66,7 +66,6 @@ export function RuntimeKeyItem({
     )
   }
 
-  const group = ""
   const isActive = runtimeKey.status === ACCOUNT_RUNTIME_KEY_STATUSES.Active
 
   return (
@@ -87,9 +86,9 @@ export function RuntimeKeyItem({
               <Badge
                 variant="outline"
                 size="sm"
-                className={getGroupBadgeStyle(group || "")}
+                className={getGroupBadgeStyle("")}
               >
-                {group || t("dialog.copyKey.defaultGroup")}
+                {t("dialog.copyKey.defaultGroup")}
               </Badge>
             </div>
           </div>

@@ -1,11 +1,11 @@
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type {
+  AccountRuntimeKey,
+  ServiceCredentialRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { maskSecretForDisplay } from "~/utils/core/formatters"
 
 import { RuntimeKeyActionControls } from "./RuntimeKeyActionControls"
-
-const SECRET_PREVIEW_PREFIX_LENGTH = 16
-const SECRET_PREVIEW_SUFFIX_LENGTH = 6
-const SECRET_PREVIEW_MASK_LENGTH = 6
 
 const SERVICE_CREDENTIAL_ACTION_POLICY = {
   copySecret: true,
@@ -14,34 +14,15 @@ const SERVICE_CREDENTIAL_ACTION_POLICY = {
 
 /** Renders the bounded secret preview shared by quick-list key sources. */
 export function RuntimeKeySecretPreview({ secret }: { secret: string }) {
-  const shouldElide =
-    secret.length > SECRET_PREVIEW_PREFIX_LENGTH + SECRET_PREVIEW_SUFFIX_LENGTH
-  const prefix = shouldElide
-    ? secret.slice(0, SECRET_PREVIEW_PREFIX_LENGTH)
-    : secret
-  const suffix = shouldElide ? secret.slice(-SECRET_PREVIEW_SUFFIX_LENGTH) : ""
-
   return (
     <code className="dark:text-dark-text-secondary text-gray-700">
-      <span className="dark:text-dark-text-primary text-gray-900">
-        {prefix}
-      </span>
-      {suffix ? (
-        <>
-          <span className="text-gray-400 dark:text-gray-600">
-            {"•".repeat(SECRET_PREVIEW_MASK_LENGTH)}
-          </span>
-          <span className="dark:text-dark-text-primary text-gray-900">
-            {suffix}
-          </span>
-        </>
-      ) : null}
+      {maskSecretForDisplay(secret)}
     </code>
   )
 }
 
 interface RuntimeKeyDetailsProps {
-  runtimeKey: AccountRuntimeKey
+  runtimeKey: ServiceCredentialRuntimeKey
   copiedRuntimeKeyId: string | null
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData

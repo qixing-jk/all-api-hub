@@ -22,6 +22,22 @@ const createFacts = (resourceId: string): AccountKeyResourceFacts => ({
 })
 
 describe("collectAccountKeyResourceInventory", () => {
+  it("does not start listing when the request is already aborted", async () => {
+    const controller = new AbortController()
+    const list = vi.fn()
+    const collection = { list } as unknown as AccountKeyResourceCollection
+    controller.abort()
+
+    await expect(
+      collectAccountKeyResourceInventory(collection, {
+        signal: controller.signal,
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: "aborted" },
+    })
+    expect(list).not.toHaveBeenCalled()
+  })
+
   it("collects cursor-paginated native key resources", async () => {
     const first = createFacts("first")
     const second = createFacts("second")

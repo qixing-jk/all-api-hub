@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { RuntimeKeyDetails } from "~/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyDetails"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { TokenHeaderHarness as TokenHeader } from "~~/tests/test-utils/keyManagement/TokenHeaderHarness"
@@ -78,7 +78,14 @@ function createTokenStub(overrides: Record<string, unknown> = {}) {
 }
 
 function createRuntimeKeyStub(account = createAccountStub()) {
-  return buildDisplayAccountTokenRuntimeKey(account, createTokenStub())
+  return buildServiceCredentialRuntimeKey(account, {
+    kind: "singleton_service_key",
+    service: "codex",
+    label: "Codex",
+    key: "sk-service-credential-secret",
+    isAuthenticated: true,
+    baseUrl: "https://api.example.invalid/v1",
+  })
 }
 
 describe("Managed site logo", () => {

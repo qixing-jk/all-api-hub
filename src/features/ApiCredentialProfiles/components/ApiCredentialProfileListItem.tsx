@@ -50,25 +50,14 @@ import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVer
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { formatLocaleDateTime, formatTokenCount } from "~/utils/core/formatters"
+import {
+  formatLocaleDateTime,
+  formatTokenCount,
+  maskSecretForDisplay,
+} from "~/utils/core/formatters"
 import { formatTelemetryMoney } from "~/utils/core/money"
 
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "../testIds"
-
-/**
- * Formats a secret for display (masked by default, revealable per-profile).
- */
-function formatSecret(
-  secret: string,
-  id: string,
-  visibleIds: Set<string>,
-): string {
-  if (visibleIds.has(id)) return secret
-  if (secret.length < 12) return "******"
-  return `${secret.substring(0, 8)}${"*".repeat(16)}${secret.substring(
-    secret.length - 4,
-  )}`
-}
 
 export type ApiCredentialProfileExportAction =
   | "cherryStudio"
@@ -347,7 +336,9 @@ export function ApiCredentialProfileListItem({
                   </span>
                   <div className="flex w-full min-w-0 items-center gap-0.5 sm:flex-1">
                     <code className="dark:bg-dark-bg-tertiary dark:text-dark-text-secondary min-w-0 flex-1 truncate rounded bg-gray-100 px-2 py-1 font-mono text-[10px] text-gray-800 sm:text-xs">
-                      {formatSecret(profile.apiKey, profile.id, visibleKeys)}
+                      {visibleKeys.has(profile.id)
+                        ? profile.apiKey
+                        : maskSecretForDisplay(profile.apiKey)}
                     </code>
                     <IconButton
                       variant="ghost"

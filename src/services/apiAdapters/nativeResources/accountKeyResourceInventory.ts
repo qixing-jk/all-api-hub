@@ -14,29 +14,33 @@ export const accountKeyResourceRefIdentity = (
 ): string =>
   JSON.stringify([ref.accountId, ref.siteType, ref.scopeKey, ref.resourceId])
 
-const awaitAbortablePage = <T>(
-  promise: Promise<T>,
+const createAbortedError = () =>
+  new AccountKeyResourceError({
+    code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Aborted,
+  })
+
+export const awaitAbortableAccountKeyResourceOperation = <T>(
+  operation: () => Promise<T>,
   signal?: AbortSignal,
 ): Promise<T> => {
-  if (!signal) return promise
+  if (!signal) return operation()
 
   return new Promise<T>((resolve, reject) => {
     if (signal.aborted) {
-      reject(
-        new AccountKeyResourceError({
-          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Aborted,
-        }),
-      )
+      reject(createAbortedError())
       return
     }
 
-    const abort = () =>
-      reject(
-        new AccountKeyResourceError({
-          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Aborted,
-        }),
-      )
+    const abort = () => reject(createAbortedError())
     signal.addEventListener("abort", abort, { once: true })
+    let promise: Promise<T>
+    try {
+      promise = operation()
+    } catch (error) {
+      signal.removeEventListener("abort", abort)
+      reject(error)
+      return
+    }
     promise.then(
       (value) => {
         signal.removeEventListener("abort", abort)
@@ -64,14 +68,15 @@ export async function collectAccountKeyResourceInventory(
   let cursor: string | undefined
 
   for (let pageCount = 0; pageCount < MAX_COLLECTION_PAGES; pageCount += 1) {
-    const page = await awaitAbortablePage(
-      collection.list(
-        {
-          ...(options.search ? { search: options.search } : {}),
-          ...(cursor ? { cursor } : {}),
-        },
-        { signal: options.signal },
-      ),
+    const page = await awaitAbortableAccountKeyResourceOperation(
+      () =>
+        collection.list(
+          {
+            ...(options.search ? { search: options.search } : {}),
+            ...(cursor ? { cursor } : {}),
+          },
+          { signal: options.signal },
+        ),
       options.signal,
     )
 

@@ -249,7 +249,7 @@ test("manages an OpenRouter key through its native one-time-secret lifecycle", a
   await expect(lifecycleSummary).toContainText("50")
   await expect(
     lifecycleRow.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay),
-  ).toContainText("full key cannot be viewed again")
+  ).toContainText("full key only when it is created")
   await expect(
     lifecycleRow.getByRole("button", { name: "Copy Key" }),
   ).toHaveCount(0)

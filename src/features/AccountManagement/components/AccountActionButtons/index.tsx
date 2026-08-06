@@ -1017,11 +1017,7 @@ export default function AccountActionButtons({
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyKeyButton}
           title={primaryKeyActionLabel}
         >
-          {canSmartCopyKey ? (
-            <KeyIcon className="h-4 w-4" />
-          ) : (
-            <ListBulletIcon className="h-4 w-4" />
-          )}
+          <KeyIcon className="h-4 w-4" />
         </IconButton>
 
         <IconButton

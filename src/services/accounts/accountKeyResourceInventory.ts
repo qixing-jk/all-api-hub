@@ -6,7 +6,10 @@ import type {
   AccountKeyResourceFacts,
   AccountKeyScope,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { collectAccountKeyResourceInventory } from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
+import {
+  awaitAbortableAccountKeyResourceOperation,
+  collectAccountKeyResourceInventory,
+} from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
 
 type DisplayAccountKeyResourceInventory = {
   scope: AccountKeyScope
@@ -29,21 +32,28 @@ export async function fetchDisplayAccountKeyResourceInventory(
   }
 
   const operationOptions = { signal: options.signal }
-  const session = await accountKeyResources.open(
-    {
-      account: {
-        id: account.id,
-        name: account.name,
-        siteType: account.siteType,
-      },
-      request,
-    },
-    operationOptions,
+  const session = await awaitAbortableAccountKeyResourceOperation(
+    () =>
+      accountKeyResources.open(
+        {
+          account: {
+            id: account.id,
+            name: account.name,
+            siteType: account.siteType,
+          },
+          request,
+        },
+        operationOptions,
+      ),
+    options.signal,
   )
-  const scope = await session.resolveDefaultScope(operationOptions)
-  const collection = await session.openCollection(
-    scope.scopeKey,
-    operationOptions,
+  const scope = await awaitAbortableAccountKeyResourceOperation(
+    () => session.resolveDefaultScope(operationOptions),
+    options.signal,
+  )
+  const collection = await awaitAbortableAccountKeyResourceOperation(
+    () => session.openCollection(scope.scopeKey, operationOptions),
+    options.signal,
   )
   const items = await collectAccountKeyResourceInventory(collection, options)
 

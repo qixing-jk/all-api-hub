@@ -58,6 +58,15 @@ export const formatTokenCount = (count: number): string => {
   return count.toString()
 }
 
+/** Masks a secret consistently while retaining enough context to identify it. */
+export const maskSecretForDisplay = (secret: string): string => {
+  if (secret.length < 12) return "******"
+
+  return `${secret.substring(0, 8)}${"*".repeat(16)}${secret.substring(
+    secret.length - 4,
+  )}`
+}
+
 export function normalizeToMs(input: number | string | Date): number | null
 export function normalizeToMs(input: null | undefined): null
 export function normalizeToMs(

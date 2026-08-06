@@ -621,13 +621,13 @@ describe("CopyKeyDialog", () => {
     )
 
     expect(await screen.findByText("Saved masked key")).toBeVisible()
+    expect(
+      screen.getByText("keyManagement:keyDetails.createResponseOnlySecret"),
+    ).toBeVisible()
     const detailsButton = screen.getByRole("button", {
       name: "keyManagement:actions.detailsFor",
     })
     expect(detailsButton).toHaveAttribute("aria-expanded", "false")
-    expect(
-      screen.queryByText("keyManagement:keyDetails.createResponseOnlySecret"),
-    ).not.toBeInTheDocument()
 
     await user.click(detailsButton)
 
@@ -669,8 +669,8 @@ describe("CopyKeyDialog", () => {
     expect(screen.getByText("Default workspace")).toBeVisible()
     expect(screen.queryByText("sk-or-v1-...example")).not.toBeInTheDocument()
     expect(
-      screen.queryByText("keyManagement:keyDetails.createResponseOnlySecret"),
-    ).not.toBeInTheDocument()
+      screen.getByText("keyManagement:keyDetails.createResponseOnlySecret"),
+    ).toBeVisible()
     expect(fetchAccountTokensMock).not.toHaveBeenCalled()
     expect(
       screen.queryByRole("button", { name: "ui:dialog.copyKey.copy" }),
@@ -715,6 +715,10 @@ describe("CopyKeyDialog", () => {
     const onClose = vi.fn()
 
     render(<CopyKeyDialog isOpen={true} onClose={onClose} account={ACCOUNT} />)
+
+    expect(
+      screen.queryByText("keyManagement:keyDetails.createResponseOnlySecret"),
+    ).not.toBeInTheDocument()
 
     const footer = await screen.findByTestId(
       ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogFooter,
@@ -1337,6 +1341,40 @@ describe("CopyKeyDialog", () => {
     })
   })
 
+  it("tracks managed-site import failure when opening the flow rejects", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+    openWithAccountMock.mockRejectedValueOnce(
+      new Error("managed import unavailable"),
+    )
+
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "messages:errors.operation.failed",
+      )
+    })
+  })
+
   it("resets copied state after showing the copied action label", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
 
@@ -1379,7 +1417,7 @@ describe("CopyKeyDialog", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("does not mask short secrets when the preview would not elide characters", async () => {
+  it("keeps short secrets masked in the expanded preview", async () => {
     const shortSecret = "abcdefghijklmnopqrstuv"
     fetchAccountTokensMock.mockResolvedValueOnce([
       {
@@ -1398,8 +1436,8 @@ describe("CopyKeyDialog", () => {
       }),
     )
 
-    expect(screen.getByText(shortSecret)).toBeInTheDocument()
-    expect(screen.queryByText("••••••")).not.toBeInTheDocument()
+    expect(screen.queryByText(shortSecret)).not.toBeInTheDocument()
+    expect(screen.getByText("abcdefgh****************stuv")).toBeInTheDocument()
   })
 
   it("renders disabled token state and toggles shared key details", async () => {
@@ -1435,6 +1473,11 @@ describe("CopyKeyDialog", () => {
     await user.click(detailsButton)
 
     expect(detailsButton).toHaveAttribute("aria-expanded", "true")
+    expect(
+      screen.getByRole("region", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    ).toBeVisible()
     expect(screen.getByText("keyManagement:keyDetails.usedQuota")).toBeVisible()
     expect(
       screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
@@ -1548,8 +1591,10 @@ describe("CopyKeyDialog", () => {
         name: "keyManagement:actions.exportToKiloCode",
       }),
     ).toBeInTheDocument()
-    expect(screen.getByText("sk-service-crede")).toBeInTheDocument()
-    expect(screen.getByText("secret")).toBeInTheDocument()
+    expect(screen.getByText("sk-servi****************cret")).toBeInTheDocument()
+    expect(
+      screen.queryByText("sk-service-credential-secret"),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText("ui:dialog.copyKey.expireTime"),
     ).not.toBeInTheDocument()
