@@ -1,6 +1,7 @@
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { LoggingPreferences, LogLevel } from "~/types/logging"
 import { getDefaultLoggingPreferences } from "~/types/logging"
+import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
 import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 
 type ExtensionLogContext =
@@ -364,23 +365,6 @@ function sanitizeValue(
 
   activePath.delete(obj)
   return output
-}
-
-/**
- * Redacts sensitive inline values from nested Error text while leaving the
- * legacy top-level Error message/stack behavior unchanged.
- */
-function sanitizeSensitiveErrorText(text: string): string {
-  return text
-    .replace(/https?:\/\/[^\s"'<>]+/gi, (url) => sanitizeUrlForLog(url))
-    .replace(
-      /\b(authorization)\s*[:=]\s*(?:bearer\s+)?[^\s,&;]+/gi,
-      "$1=[REDACTED]",
-    )
-    .replace(
-      /\b(token|access[\s_-]?token|refresh[\s_-]?token|admin[\s_-]?token|api[\s_-]?key|key|password|passwd|secret|client[\s_-]?secret|management[\s_-]?key)\s*[:=]\s*[^\s,&;]+/gi,
-      "$1=[REDACTED]",
-    )
 }
 
 /**
