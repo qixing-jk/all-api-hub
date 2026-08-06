@@ -163,6 +163,7 @@ export const buildLegacyKeyResourceCardPresentation = (
   const modelRestrictions =
     token.model_limits_enabled === true ? token.model_limits : token.models
   const isUnlimitedQuota = token.unlimited_quota || token.remain_quota < 0
+  const contextFact = getGroupFact(runtimeKey, t, keyManagement)
   const detailFacts = [
     createFact(
       "quota-policy",
@@ -213,8 +214,9 @@ export const buildLegacyKeyResourceCardPresentation = (
       secretAvailability,
       t,
     ),
+    contextFact,
     summaryFacts: [
-      getGroupFact(runtimeKey, t, keyManagement),
+      contextFact,
       createFact(
         "used-quota",
         t("keyManagement:keyDetails.usedQuota"),

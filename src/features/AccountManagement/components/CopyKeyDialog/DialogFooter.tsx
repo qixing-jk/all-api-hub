@@ -2,20 +2,26 @@ import { KeyIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
+import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 
 interface DialogFooterProps {
   keyCount: number
   onClose: () => void
+  onOpenKeyManagement?: () => void
 }
 
 /**
  * Footer section for copy key dialog, showing key count summary and close action.
  */
-export function DialogFooter({ keyCount, onClose }: DialogFooterProps) {
-  const { t } = useTranslation(["ui", "common"])
+export function DialogFooter({
+  keyCount,
+  onClose,
+  onOpenKeyManagement,
+}: DialogFooterProps) {
+  const { t } = useTranslation(["ui", "common", "account"])
 
   return (
-    <div className="dark:bg-dark-bg-secondary flex items-center justify-between bg-gray-50/50">
+    <div className="flex items-center justify-between">
       <div className="flex items-center space-x-2">
         {keyCount > 0 && (
           <div className="dark:text-dark-text-secondary flex items-center space-x-1.5 text-xs text-gray-500">
@@ -24,9 +30,23 @@ export function DialogFooter({ keyCount, onClose }: DialogFooterProps) {
           </div>
         )}
       </div>
-      <Button onClick={onClose} variant="secondary" size="sm">
-        {t("common:actions.close")}
-      </Button>
+      <div className="flex items-center gap-2">
+        {onOpenKeyManagement ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onOpenKeyManagement}
+            analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenKeyManagement}
+          >
+            <KeyIcon aria-hidden="true" className="h-4 w-4" />
+            {t("account:actions.keyManagement")}
+          </Button>
+        ) : null}
+        <Button onClick={onClose} variant="secondary" size="sm">
+          {t("common:actions.close")}
+        </Button>
+      </div>
     </div>
   )
 }

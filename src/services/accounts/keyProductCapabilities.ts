@@ -1,3 +1,4 @@
+import type { SiteType } from "~/constants/siteType"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum, type DisplaySiteData, type SiteAccount } from "~/types"
 
@@ -127,6 +128,10 @@ export const createStoredAccountKeyProductContext = (
   disabled: account.disabled,
 })
 
+/** Whether the provider exposes the legacy account API-token creation surface. */
+export const supportsAccountApiTokenCreation = (siteType: SiteType) =>
+  Boolean(getSiteTypeCapabilities(siteType).account?.keyManagement)
+
 export const getAccountKeyProductCapabilities = (
   account: AccountKeyProductCapabilityContext | null | undefined,
 ): AccountKeyProductCapabilities => {
@@ -178,6 +183,13 @@ export const canListAccountRuntimeKeys = <
   account: TAccount | null | undefined,
 ): account is TAccount =>
   getAccountKeyProductCapabilities(account).runtimeKeys.list
+
+export const canListAccountKeyResources = <
+  TAccount extends AccountKeyProductCapabilityContext,
+>(
+  account: TAccount | null | undefined,
+): account is TAccount =>
+  getAccountKeyProductCapabilities(account).resourceKeys.list
 
 export const canResolveAccountRuntimeKeySecret = <
   TAccount extends AccountKeyProductCapabilityContext,

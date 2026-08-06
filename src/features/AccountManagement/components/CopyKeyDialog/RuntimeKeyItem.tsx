@@ -7,7 +7,6 @@ import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
 import { getCopyKeyDialogRuntimeKeyItemTestId } from "~/features/AccountManagement/testIds"
-import { KeyResourceCard } from "~/features/KeyManagement/components/KeyResourceCard"
 import { buildLegacyKeyResourceCardPresentation } from "~/features/KeyManagement/presentation/legacyKeyResourceCard"
 import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
@@ -18,6 +17,7 @@ import {
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { getGroupBadgeStyle } from "~/utils/core/formatters"
 
+import { QuickKeyResourceCard } from "./QuickKeyResourceCard"
 import { RuntimeKeyActionControls } from "./RuntimeKeyActionControls"
 import { RuntimeKeyDetails, RuntimeKeySecretPreview } from "./RuntimeKeyDetails"
 
@@ -151,7 +151,7 @@ function AccountTokenRuntimeKeyItem({
   const presentation = buildLegacyKeyResourceCardPresentation(runtimeKey, t)
 
   return (
-    <KeyResourceCard
+    <QuickKeyResourceCard
       presentation={presentation}
       secret={
         presentation.actions.copySecret ? (
@@ -170,9 +170,8 @@ function AccountTokenRuntimeKeyItem({
           onOpenCCSwitchDialog={onOpenCCSwitchDialog}
         />
       }
-      details={{ status: "ready", facts: presentation.detailFacts }}
-      isDetailsExpanded={isExpanded}
-      onDetailsExpandedChange={() => onToggle()}
+      isExpanded={isExpanded}
+      onExpandedChange={() => onToggle()}
       testId={getCopyKeyDialogRuntimeKeyItemTestId(runtimeKey.id)}
     />
   )

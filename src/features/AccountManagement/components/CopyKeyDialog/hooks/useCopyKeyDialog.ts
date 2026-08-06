@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import {
+  KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
+  type NativeKeyManagementRow,
+} from "~/features/KeyManagement/types"
+import { fetchDisplayAccountKeyResourceInventory } from "~/services/accounts/accountKeyResourceInventory"
 import { resolveDefaultTokenQuickCreateResolution } from "~/services/accounts/accountOperations"
 import {
   appendOrReplaceAccountRuntimeKey,
@@ -11,7 +16,9 @@ import {
 import { shouldShowOneTimeKeyDialogForCreatedToken } from "~/services/accounts/createdTokenSecretHandling"
 import {
   canCreateAccountApiTokens,
+  canListAccountKeyResources,
   canListAccountRuntimeKeys,
+  supportsAccountApiTokenCreation,
 } from "~/services/accounts/keyProductCapabilities"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import {
@@ -51,7 +58,7 @@ const copyKeyAnalyticsContext = {
 }
 
 /**
- * CopyKeyDialog 核心逻辑 hook，负责加载 runtime key、处理复制与展开状态。
+ * CopyKeyDialog 核心逻辑 hook，负责加载密钥清单、处理复制与展开状态。
  * @param isOpen 对话框是否打开
  * @param account 当前账号（可能为空）
  * @returns runtime key 数据、加载状态、错误以及相关操作方法
@@ -62,6 +69,9 @@ export function useCopyKeyDialog(
 ) {
   const { t } = useTranslation(["ui", "messages"])
   const [runtimeKeys, setRuntimeKeys] = useState<AccountRuntimeKey[]>([])
+  const [nativeKeyRows, setNativeKeyRows] = useState<NativeKeyManagementRow[]>(
+    [],
+  )
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
@@ -78,8 +88,9 @@ export function useCopyKeyDialog(
   const copiedRuntimeKeyResetTimeoutRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null)
-  // Incremented to invalidate slower runtime-key inventory requests after account eligibility changes.
+  // Incremented to invalidate slower inventory requests after account eligibility changes.
   const fetchRequestIdRef = useRef(0)
+  const inventoryAbortControllerRef = useRef<AbortController | null>(null)
 
   const canCreateDefaultKey = useMemo(
     () => canCreateAccountApiTokens(account),
@@ -88,6 +99,16 @@ export function useCopyKeyDialog(
 
   const canLoadRuntimeKeys = useMemo(
     () => canListAccountRuntimeKeys(account),
+    [account],
+  )
+
+  const canLoadNativeKeys = useMemo(
+    () => canListAccountKeyResources(account),
+    [account],
+  )
+
+  const supportsApiTokenCreation = useMemo(
+    () => Boolean(account && supportsAccountApiTokenCreation(account.siteType)),
     [account],
   )
 
@@ -102,11 +123,14 @@ export function useCopyKeyDialog(
     setDefaultTokenCreateAllowedGroups(null)
   }, [])
 
-  const fetchRuntimeKeys = useCallback(async () => {
+  const fetchKeyInventory = useCallback(async () => {
     if (!account) return
-    if (!canLoadRuntimeKeys) {
+    inventoryAbortControllerRef.current?.abort()
+
+    if (!canLoadRuntimeKeys && !canLoadNativeKeys) {
       fetchRequestIdRef.current += 1
       setRuntimeKeys([])
+      setNativeKeyRows([])
       setError(null)
       setCreateError(null)
       setOneTimeToken(null)
@@ -118,17 +142,45 @@ export function useCopyKeyDialog(
     }
 
     const requestId = (fetchRequestIdRef.current += 1)
+    const controller = new AbortController()
+    inventoryAbortControllerRef.current = controller
     setIsLoading(true)
     setError(null)
     setCreateError(null)
     clearDefaultTokenCreateAllowedGroups()
 
     try {
+      if (canLoadNativeKeys) {
+        const inventory = await fetchDisplayAccountKeyResourceInventory(
+          account,
+          { signal: controller.signal },
+        )
+        if (fetchRequestIdRef.current !== requestId) return
+        setRuntimeKeys([])
+        setNativeKeyRows(
+          inventory.items.map((facts, index) => ({
+            kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.AccountKeyResource,
+            rowKey: `copy-key-native-${requestId}-${index}`,
+            accountId: account.id,
+            accountName: account.name,
+            workspaceName: inventory.scope.displayName,
+            facts,
+          })),
+        )
+        return
+      }
+
       const loadedRuntimeKeys = await fetchDisplayAccountRuntimeKeys(account)
       if (fetchRequestIdRef.current !== requestId) return
+      setNativeKeyRows([])
       setRuntimeKeys(loadedRuntimeKeys)
     } catch (error) {
-      if (fetchRequestIdRef.current !== requestId) return
+      if (
+        fetchRequestIdRef.current !== requestId ||
+        controller.signal.aborted
+      ) {
+        return
+      }
       logger.error("Failed to load key list", {
         error,
         accountId: account.id,
@@ -142,17 +194,29 @@ export function useCopyKeyDialog(
       setError(t("ui:dialog.copyKey.loadFailed", { error: errorMessage }))
     } finally {
       if (fetchRequestIdRef.current === requestId) {
+        if (inventoryAbortControllerRef.current === controller) {
+          inventoryAbortControllerRef.current = null
+        }
         setIsLoading(false)
       }
     }
-  }, [account, canLoadRuntimeKeys, clearDefaultTokenCreateAllowedGroups, t])
+  }, [
+    account,
+    canLoadNativeKeys,
+    canLoadRuntimeKeys,
+    clearDefaultTokenCreateAllowedGroups,
+    t,
+  ])
 
   useEffect(() => {
     if (isOpen && account) {
-      fetchRuntimeKeys()
+      fetchKeyInventory()
     } else {
+      inventoryAbortControllerRef.current?.abort()
+      inventoryAbortControllerRef.current = null
       clearCopiedRuntimeKeyResetTimeout()
       setRuntimeKeys([])
+      setNativeKeyRows([])
       setError(null)
       setIsCreating(false)
       setCreateError(null)
@@ -165,12 +229,13 @@ export function useCopyKeyDialog(
     account,
     clearCopiedRuntimeKeyResetTimeout,
     clearDefaultTokenCreateAllowedGroups,
-    fetchRuntimeKeys,
+    fetchKeyInventory,
     isOpen,
   ])
 
   useEffect(() => {
     return () => {
+      inventoryAbortControllerRef.current?.abort()
       clearCopiedRuntimeKeyResetTimeout()
     }
   }, [clearCopiedRuntimeKeyResetTimeout])
@@ -368,6 +433,7 @@ export function useCopyKeyDialog(
 
   return {
     runtimeKeys,
+    nativeKeyRows,
     isLoading,
     error,
     isCreating,
@@ -377,7 +443,8 @@ export function useCopyKeyDialog(
     copiedRuntimeKeyId,
     expandedRuntimeKeys,
     canCreateDefaultKey,
-    fetchRuntimeKeys,
+    supportsApiTokenCreation,
+    fetchKeyInventory,
     copyKey,
     createDefaultKey,
     refreshRuntimeKeysAfterCreate,

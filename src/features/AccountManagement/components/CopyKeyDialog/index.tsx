@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { Modal } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
@@ -11,12 +12,13 @@ import { useLegacyApiTokenSecretResult } from "~/features/TokenProvisioning/hook
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
+import { openKeysPage } from "~/utils/navigation"
 
 import { DialogFooter } from "./DialogFooter"
 import { DialogHeader } from "./DialogHeader"
 import { ErrorDisplay } from "./ErrorDisplay"
+import { KeyInventoryList } from "./KeyInventoryList"
 import { LoadingIndicator } from "./LoadingIndicator"
-import { RuntimeKeyList } from "./RuntimeKeyList"
 
 interface CopyKeyDialogProps {
   isOpen: boolean
@@ -42,6 +44,7 @@ export default function CopyKeyDialog({
   } | null>(null)
   const {
     runtimeKeys,
+    nativeKeyRows,
     isLoading,
     error,
     isCreating,
@@ -51,7 +54,8 @@ export default function CopyKeyDialog({
     copiedRuntimeKeyId,
     expandedRuntimeKeys,
     canCreateDefaultKey,
-    fetchRuntimeKeys,
+    supportsApiTokenCreation,
+    fetchKeyInventory,
     copyKey,
     createDefaultKey,
     refreshRuntimeKeysAfterCreate,
@@ -129,19 +133,26 @@ export default function CopyKeyDialog({
 
   const handleCloseCCSwitchDialog = () => setCCSwitchContext(null)
 
+  const handleOpenKeyManagement = () => {
+    if (!account) return
+    onClose()
+    void openKeysPage(account.id)
+  }
+
   const renderContent = () => {
     if (isLoading) {
       return <LoadingIndicator />
     }
     if (error) {
-      return <ErrorDisplay error={error} onRetry={fetchRuntimeKeys} />
+      return <ErrorDisplay error={error} onRetry={fetchKeyInventory} />
     }
     if (!account) {
       return null
     }
     return (
-      <RuntimeKeyList
+      <KeyInventoryList
         runtimeKeys={runtimeKeys}
+        nativeKeyRows={nativeKeyRows}
         expandedRuntimeKeys={expandedRuntimeKeys}
         copiedRuntimeKeyId={copiedRuntimeKeyId}
         onToggleRuntimeKey={toggleRuntimeKeyExpansion}
@@ -153,6 +164,7 @@ export default function CopyKeyDialog({
         createError={createError}
         onCreateDefaultKey={createDefaultKey}
         onOpenAddTokenDialog={handleOpenAddTokenDialog}
+        supportsApiTokenCreation={supportsApiTokenCreation}
       />
     )
   }
@@ -162,10 +174,16 @@ export default function CopyKeyDialog({
       <Modal
         isOpen={isOpen}
         onClose={onClose}
+        size="lg"
         panelClassName="max-h-[85vh] overflow-hidden flex flex-col"
+        footerTestId={ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogFooter}
         header={<DialogHeader account={account} />}
         footer={
-          <DialogFooter keyCount={runtimeKeys.length} onClose={onClose} />
+          <DialogFooter
+            keyCount={runtimeKeys.length + nativeKeyRows.length}
+            onClose={onClose}
+            onOpenKeyManagement={account ? handleOpenKeyManagement : undefined}
+          />
         }
       >
         <div className="flex-1 overflow-y-auto">{renderContent()}</div>

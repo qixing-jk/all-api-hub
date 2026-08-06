@@ -25,6 +25,10 @@ import {
   type ResourceFieldDescriptor,
   type ResourceFieldOption,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  accountKeyResourceRefIdentity,
+  collectAccountKeyResourceInventory,
+} from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
 import { mapSettledWithConcurrency } from "~/services/apiAdapters/nativeResources/concurrency"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -46,7 +50,6 @@ import {
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "../constants"
 
-const MAX_COLLECTION_PAGES = 100
 const ALL_ACCOUNT_CONCURRENCY = 4
 let nextAccountKeyResourceControllerInstanceId = 0
 
@@ -215,8 +218,7 @@ const toFailure = (error: unknown): ResourceFailure =>
     ? error.failure
     : { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected }
 
-const refIdentity = (ref: AccountKeyResourceRef) =>
-  JSON.stringify([ref.accountId, ref.siteType, ref.scopeKey, ref.resourceId])
+const refIdentity = accountKeyResourceRefIdentity
 
 const refMatchesBoundary = (
   ref: AccountKeyResourceRef,
@@ -402,52 +404,6 @@ const readScopeInventory = async (
   session.listScopeInventory
     ? await session.listScopeInventory(options)
     : { scopes: await session.listScopes(options) }
-
-const collectAll = async (
-  collection: AccountKeyResourceCollection,
-  search: string,
-  signal: AbortSignal,
-) => {
-  const rows: AccountKeyResourceFacts[] = []
-  const refs = new Set<string>()
-  const cursors = new Set<string>()
-  let cursor: string | undefined
-
-  for (let pageCount = 0; pageCount < MAX_COLLECTION_PAGES; pageCount += 1) {
-    const page = await awaitAbortable(
-      collection.list(
-        {
-          ...(search ? { search } : {}),
-          ...(cursor ? { cursor } : {}),
-        },
-        { signal },
-      ),
-      signal,
-    )
-    for (const item of page.items) {
-      const identity = refIdentity(item.ref)
-      if (refs.has(identity)) {
-        throw new AccountKeyResourceError({
-          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
-        })
-      }
-      refs.add(identity)
-      rows.push(item)
-    }
-    if (!page.nextCursor) return rows
-    if (cursors.has(page.nextCursor)) {
-      throw new AccountKeyResourceError({
-        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
-      })
-    }
-    cursors.add(page.nextCursor)
-    cursor = page.nextCursor
-  }
-
-  throw new AccountKeyResourceError({
-    code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
-  })
-}
 
 type IndexedAccount = { account: DisplaySiteData; index: number }
 
@@ -1091,11 +1047,10 @@ export function useAccountKeyResourceController({
               }),
               controller.signal,
             )
-            const rows = await collectAll(
-              collection,
-              search.trim(),
-              controller.signal,
-            )
+            const rows = await collectAccountKeyResourceInventory(collection, {
+              search: search.trim(),
+              signal: controller.signal,
+            })
             if (current === generation.current && !controller.signal.aborted) {
               acceptFreshRead({
                 accountId: account.id,
@@ -1245,11 +1200,10 @@ export function useAccountKeyResourceController({
           session.openCollection(scope.scopeKey, { signal: controller.signal }),
           controller.signal,
         )
-        const rows = await collectAll(
-          collection,
-          search.trim(),
-          controller.signal,
-        )
+        const rows = await collectAccountKeyResourceInventory(collection, {
+          search: search.trim(),
+          signal: controller.signal,
+        })
         if (current !== generation.current) return false
         let rehydratedEditor: {
           nativeEditor: AccountKeyResourceEditor

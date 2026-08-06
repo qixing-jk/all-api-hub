@@ -6,13 +6,16 @@ import {
 import { useTranslation } from "react-i18next"
 
 import { Alert, EmptyState } from "~/components/ui"
+import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
+import { OpenRouterKeyResourceItem } from "./OpenRouterKeyResourceItem"
 import { RuntimeKeyItem } from "./RuntimeKeyItem"
 
-interface RuntimeKeyListProps {
+interface KeyInventoryListProps {
   runtimeKeys: AccountRuntimeKey[]
+  nativeKeyRows?: NativeKeyManagementRow[]
   expandedRuntimeKeys: Set<string>
   copiedRuntimeKeyId: string | null
   onToggleRuntimeKey: (id: string) => void
@@ -24,13 +27,15 @@ interface RuntimeKeyListProps {
   createError?: string | null
   onCreateDefaultKey?: () => void
   onOpenAddTokenDialog?: () => void
+  supportsApiTokenCreation?: boolean
 }
 
 /**
- * List view wrapper for RuntimeKeyItem elements, handling empty states and expansion toggles.
+ * Renders legacy runtime keys and provider-native key inventory in one quick list.
  */
-export function RuntimeKeyList({
+export function KeyInventoryList({
   runtimeKeys,
+  nativeKeyRows = [],
   expandedRuntimeKeys,
   copiedRuntimeKeyId,
   onToggleRuntimeKey,
@@ -42,35 +47,41 @@ export function RuntimeKeyList({
   createError,
   onCreateDefaultKey,
   onOpenAddTokenDialog,
-}: RuntimeKeyListProps) {
+  supportsApiTokenCreation = false,
+}: KeyInventoryListProps) {
   const { t } = useTranslation("ui")
 
-  if (!Array.isArray(runtimeKeys) || runtimeKeys.length === 0) {
-    const actions = [
-      ...(onCreateDefaultKey
-        ? [
-            {
-              label: t("dialog.copyKey.createKey"),
-              loadingLabel: t("dialog.copyKey.creatingKey"),
-              onClick: onCreateDefaultKey,
-              icon: <PlusIcon className="h-4 w-4" />,
-              disabled: !canCreateDefaultKey || isCreating,
-              loading: isCreating,
-            },
-          ]
-        : []),
-      ...(onOpenAddTokenDialog
-        ? [
-            {
-              label: t("dialog.copyKey.createCustomKey"),
-              onClick: onOpenAddTokenDialog,
-              icon: <PencilSquareIcon className="h-4 w-4" />,
-              variant: "outline" as const,
-              disabled: !canCreateDefaultKey || isCreating,
-            },
-          ]
-        : []),
-    ]
+  if (
+    (!Array.isArray(runtimeKeys) || runtimeKeys.length === 0) &&
+    nativeKeyRows.length === 0
+  ) {
+    const actions = supportsApiTokenCreation
+      ? [
+          ...(onCreateDefaultKey
+            ? [
+                {
+                  label: t("dialog.copyKey.createKey"),
+                  loadingLabel: t("dialog.copyKey.creatingKey"),
+                  onClick: onCreateDefaultKey,
+                  icon: <PlusIcon className="h-4 w-4" />,
+                  disabled: !canCreateDefaultKey || isCreating,
+                  loading: isCreating,
+                },
+              ]
+            : []),
+          ...(onOpenAddTokenDialog
+            ? [
+                {
+                  label: t("dialog.copyKey.createCustomKey"),
+                  onClick: onOpenAddTokenDialog,
+                  icon: <PencilSquareIcon className="h-4 w-4" />,
+                  variant: "outline" as const,
+                  disabled: !canCreateDefaultKey || isCreating,
+                },
+              ]
+            : []),
+        ]
+      : []
 
     return (
       <div className="space-y-4">
@@ -100,6 +111,9 @@ export function RuntimeKeyList({
           account={account}
           onOpenCCSwitchDialog={onOpenCCSwitchDialog}
         />
+      ))}
+      {nativeKeyRows.map((row) => (
+        <OpenRouterKeyResourceItem key={row.rowKey} row={row} />
       ))}
     </div>
   )

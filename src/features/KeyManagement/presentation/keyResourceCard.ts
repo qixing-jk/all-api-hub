@@ -25,6 +25,8 @@ export type KeyResourceCardPresentation = {
   secretAvailability: InventorySecretAvailability
   maskedLabel?: string
   secretAvailabilityMessage?: string
+  /** Preferred compact-list context, such as a group or workspace. */
+  contextFact?: KeyResourceFact
   summaryFacts: KeyResourceFact[]
   detailFacts: KeyResourceFact[]
   actions: KeyResourceActionPolicy

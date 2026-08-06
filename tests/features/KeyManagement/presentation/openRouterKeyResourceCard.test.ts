@@ -108,6 +108,7 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
         value: formatUsd(22),
       },
     ])
+    expect(presentation.contextFact).toEqual(presentation.summaryFacts[0])
   })
 
   it("keeps every supported safe native fact in shared details", () => {

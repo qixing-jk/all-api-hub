@@ -9,6 +9,7 @@ import {
   canRunAccountDefaultTokenAutomation,
   createStoredAccountKeyProductContext,
   getAccountKeyProductCapabilities,
+  supportsAccountApiTokenCreation,
 } from "~/services/accounts/keyProductCapabilities"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
@@ -88,6 +89,17 @@ describe("account key product capabilities", () => {
     expect(canRunAccountDefaultTokenAutomation(ACCOUNT as any)).toBe(false)
     expect(canListAccountRuntimeKeys(ACCOUNT as any)).toBe(true)
     expect(canResolveAccountRuntimeKeySecret(ACCOUNT as any)).toBe(true)
+  })
+
+  it("reports API-token creation support independently of account readiness", () => {
+    expect(supportsAccountApiTokenCreation(SITE_TYPES.NEW_API)).toBe(true)
+
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: { keyResources: {} },
+    } as any)
+
+    expect(supportsAccountApiTokenCreation(SITE_TYPES.OPENROUTER)).toBe(false)
   })
 
   it("maps default-token automation only when token provisioning is also available", () => {

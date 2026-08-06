@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import * as accountOperations from "~/services/accounts/accountOperations"
@@ -29,7 +30,13 @@ import {
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
-import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const {
   fetchAccountTokensMock,
@@ -51,6 +58,11 @@ const {
   kiloCodeExportDialogMock,
   kiloCodeProfileExportDialogMock,
   openWithCredentialsMock,
+  openAccountKeyResourcesMock,
+  resolveDefaultAccountKeyScopeMock,
+  openAccountKeyCollectionMock,
+  listAccountKeyResourcesMock,
+  openKeysPageMock,
   userPreferencesContextMock,
 } = vi.hoisted(() => ({
   fetchAccountTokensMock: vi.fn(),
@@ -72,6 +84,11 @@ const {
   kiloCodeExportDialogMock: vi.fn(),
   kiloCodeProfileExportDialogMock: vi.fn(),
   openWithCredentialsMock: vi.fn(),
+  openAccountKeyResourcesMock: vi.fn(),
+  resolveDefaultAccountKeyScopeMock: vi.fn(),
+  openAccountKeyCollectionMock: vi.fn(),
+  listAccountKeyResourcesMock: vi.fn(),
+  openKeysPageMock: vi.fn(),
   userPreferencesContextMock: {
     claudeCodeRouterApiKey: "ccr-management-key",
     claudeCodeRouterBaseUrl: "https://router.example.invalid",
@@ -171,6 +188,16 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: (siteType: string) => {
+    if (siteType === SITE_TYPES.OPENROUTER) {
+      return {
+        account: {
+          keyResources: {
+            open: (...args: any[]) => openAccountKeyResourcesMock(...args),
+          },
+        },
+      }
+    }
+
     if (siteType === SITE_TYPES.SHAREDCHAT) {
       return {
         account: {
@@ -203,6 +230,15 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     }
   },
 }))
+
+vi.mock("~/utils/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+
+  return {
+    ...actual,
+    openKeysPage: (...args: unknown[]) => openKeysPageMock(...args),
+  }
+})
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
@@ -309,6 +345,35 @@ const AIHUBMIX_ACCOUNT = {
   baseUrl: "https://aihubmix.com",
 }
 
+const OPENROUTER_ACCOUNT = {
+  ...ACCOUNT,
+  id: "openrouter-account",
+  name: "OpenRouter",
+  siteType: SITE_TYPES.OPENROUTER,
+  baseUrl: "https://openrouter.example.invalid",
+}
+
+const OPENROUTER_SCOPE = {
+  scopeKey: "default-workspace",
+  routeKey: "default-workspace",
+  displayName: "Default workspace",
+  isDefault: true,
+}
+
+const OPENROUTER_KEY_FACTS = {
+  ref: {
+    accountId: OPENROUTER_ACCOUNT.id,
+    siteType: SITE_TYPES.OPENROUTER,
+    scopeKey: OPENROUTER_SCOPE.scopeKey,
+    resourceId: "key-example",
+  },
+  displayName: "Example native key",
+  maskedLabel: "sk-or-v1-...example",
+  status: "enabled" as const,
+  fields: [],
+  actions: { canUpdate: true, canDelete: true },
+}
+
 const TOKEN = {
   id: 1,
   user_id: 1,
@@ -389,6 +454,11 @@ describe("CopyKeyDialog", () => {
     kiloCodeExportDialogMock.mockReset()
     kiloCodeProfileExportDialogMock.mockReset()
     openWithCredentialsMock.mockReset()
+    openAccountKeyResourcesMock.mockReset()
+    resolveDefaultAccountKeyScopeMock.mockReset()
+    openAccountKeyCollectionMock.mockReset()
+    listAccountKeyResourcesMock.mockReset()
+    openKeysPageMock.mockReset()
     resolveApiTokenKeyMock.mockReset()
     openInCherryStudioMock.mockReset()
     openWithAccountMock.mockReset()
@@ -421,6 +491,21 @@ describe("CopyKeyDialog", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     openWithCredentialsMock.mockResolvedValue({ opened: true })
+    resolveDefaultAccountKeyScopeMock.mockResolvedValue(OPENROUTER_SCOPE)
+    listAccountKeyResourcesMock.mockResolvedValue({
+      items: [OPENROUTER_KEY_FACTS],
+    })
+    openAccountKeyCollectionMock.mockResolvedValue({
+      scope: OPENROUTER_SCOPE,
+      list: (...args: unknown[]) => listAccountKeyResourcesMock(...args),
+    })
+    openAccountKeyResourcesMock.mockResolvedValue({
+      resolveDefaultScope: (...args: unknown[]) =>
+        resolveDefaultAccountKeyScopeMock(...args),
+      openCollection: (...args: unknown[]) =>
+        openAccountKeyCollectionMock(...args),
+    })
+    openKeysPageMock.mockResolvedValue(undefined)
     userPreferencesContextMock.claudeCodeRouterApiKey = "ccr-management-key"
     userPreferencesContextMock.claudeCodeRouterBaseUrl =
       "https://router.example.invalid"
@@ -525,6 +610,8 @@ describe("CopyKeyDialog", () => {
       },
     ])
 
+    const user = userEvent.setup()
+
     render(
       <CopyKeyDialog
         isOpen={true}
@@ -534,6 +621,17 @@ describe("CopyKeyDialog", () => {
     )
 
     expect(await screen.findByText("Saved masked key")).toBeVisible()
+    const detailsButton = screen.getByRole("button", {
+      name: "keyManagement:actions.detailsFor",
+    })
+    expect(detailsButton).toHaveAttribute("aria-expanded", "false")
+    expect(
+      screen.queryByText("keyManagement:keyDetails.createResponseOnlySecret"),
+    ).not.toBeInTheDocument()
+
+    await user.click(detailsButton)
+
+    expect(detailsButton).toHaveAttribute("aria-expanded", "true")
     expect(
       screen.getByText("keyManagement:keyDetails.createResponseOnlySecret"),
     ).toBeVisible()
@@ -553,6 +651,134 @@ describe("CopyKeyDialog", () => {
         name: "keyManagement:actions.importToManagedSite",
       }),
     ).not.toBeInTheDocument()
+  })
+
+  it("shows OpenRouter native keys read-only and links to full key management", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+
+    render(
+      <CopyKeyDialog
+        isOpen={true}
+        onClose={onClose}
+        account={OPENROUTER_ACCOUNT}
+      />,
+    )
+
+    expect(await screen.findByText("Example native key")).toBeVisible()
+    expect(screen.getByText("Default workspace")).toBeVisible()
+    expect(screen.queryByText("sk-or-v1-...example")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("keyManagement:keyDetails.createResponseOnlySecret"),
+    ).not.toBeInTheDocument()
+    expect(fetchAccountTokensMock).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:openRouter.list.actions.edit",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:openRouter.list.actions.delete",
+      }),
+    ).not.toBeInTheDocument()
+
+    const detailsButton = screen.getByRole("button", {
+      name: "keyManagement:actions.detailsFor",
+    })
+    expect(detailsButton).toHaveAttribute("aria-expanded", "false")
+    await user.click(detailsButton)
+
+    expect(detailsButton).toHaveAttribute("aria-expanded", "true")
+    expect(screen.getByText("sk-or-v1-...example")).toBeVisible()
+    expect(
+      screen.getByText("keyManagement:keyDetails.createResponseOnlySecret"),
+    ).toBeVisible()
+
+    await user.click(
+      screen.getByRole("button", { name: "account:actions.keyManagement" }),
+    )
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(openKeysPageMock).toHaveBeenCalledWith(OPENROUTER_ACCOUNT.id)
+  })
+
+  it("offers account-level key management from the footer for regular accounts", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+
+    render(<CopyKeyDialog isOpen={true} onClose={onClose} account={ACCOUNT} />)
+
+    const footer = await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogFooter,
+    )
+    await user.click(
+      within(footer).getByRole("button", {
+        name: "account:actions.keyManagement",
+      }),
+    )
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(openKeysPageMock).toHaveBeenCalledWith(ACCOUNT.id)
+  })
+
+  it("offers full key management instead of legacy create actions for an empty OpenRouter inventory", async () => {
+    listAccountKeyResourcesMock.mockResolvedValueOnce({ items: [] })
+
+    render(
+      <CopyKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={OPENROUTER_ACCOUNT}
+      />,
+    )
+
+    expect(await screen.findByText("ui:dialog.copyKey.noKeys")).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "account:actions.keyManagement" }),
+    ).toBeEnabled()
+    expect(
+      screen.queryByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "ui:dialog.copyKey.createCustomKey",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps OpenRouter inventory load failures retryable", async () => {
+    listAccountKeyResourcesMock
+      .mockRejectedValueOnce(new Error("inventory unavailable"))
+      .mockResolvedValueOnce({ items: [OPENROUTER_KEY_FACTS] })
+    const user = userEvent.setup()
+
+    render(
+      <CopyKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={OPENROUTER_ACCOUNT}
+      />,
+    )
+
+    expect(
+      await screen.findByText("ui:dialog.copyKey.loadFailed"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.retry" }),
+    )
+
+    expect(await screen.findByText("Example native key")).toBeVisible()
+    expect(listAccountKeyResourcesMock).toHaveBeenCalledTimes(2)
   })
 
   it("refreshes instead of showing a one-time key when AIHubMix create returns a masked key", async () => {
@@ -1005,7 +1231,11 @@ describe("CopyKeyDialog", () => {
 
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
-    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
     await user.click(
       await screen.findByRole("button", { name: "ui:dialog.copyKey.copy" }),
     )
@@ -1034,7 +1264,11 @@ describe("CopyKeyDialog", () => {
 
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
-    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
     await user.click(
       await screen.findByRole("button", {
         name: "ui:dialog.copyKey.useInCherry",
@@ -1072,7 +1306,11 @@ describe("CopyKeyDialog", () => {
 
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
-    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
     await user.click(
       await screen.findByRole("button", {
         name: "keyManagement:actions.importToManagedSite",
@@ -1109,7 +1347,11 @@ describe("CopyKeyDialog", () => {
 
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
-    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
     await user.click(
       await screen.findByRole("button", { name: "ui:dialog.copyKey.copy" }),
     )
@@ -1150,7 +1392,11 @@ describe("CopyKeyDialog", () => {
 
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
-    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
 
     expect(screen.getByText(shortSecret)).toBeInTheDocument()
     expect(screen.queryByText("••••••")).not.toBeInTheDocument()
@@ -1173,23 +1419,32 @@ describe("CopyKeyDialog", () => {
     expect(await screen.findByText("default")).toBeInTheDocument()
     expect(screen.getByText("common:status.disabled")).toBeInTheDocument()
     expect(
+      screen.queryByText("keyManagement:keyDetails.usedQuota"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    ).not.toBeInTheDocument()
+    expect(
       screen.queryByText("keyManagement:keyDetails.quotaPolicy"),
     ).not.toBeInTheDocument()
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.detailsFor",
-      }),
-    )
+    const detailsButton = screen.getByRole("button", {
+      name: "keyManagement:actions.detailsFor",
+    })
+    expect(detailsButton).toHaveAttribute("aria-expanded", "false")
+    await user.click(detailsButton)
+
+    expect(detailsButton).toHaveAttribute("aria-expanded", "true")
+    expect(screen.getByText("keyManagement:keyDetails.usedQuota")).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    ).toBeVisible()
     expect(
       screen.getByText("keyManagement:keyDetails.quotaPolicy"),
     ).toBeVisible()
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.detailsFor",
-      }),
-    )
+    await user.click(detailsButton)
+    expect(detailsButton).toHaveAttribute("aria-expanded", "false")
     expect(
       screen.queryByText("keyManagement:keyDetails.quotaPolicy"),
     ).not.toBeInTheDocument()
@@ -1202,7 +1457,11 @@ describe("CopyKeyDialog", () => {
 
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
-    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
 
     await user.click(
       screen.getByRole("button", {
@@ -1459,7 +1718,11 @@ describe("CopyKeyDialog", () => {
 
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
-    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
     await user.click(
       await screen.findByRole("button", { name: "ui:dialog.copyKey.copy" }),
     )
@@ -1500,7 +1763,11 @@ describe("CopyKeyDialog", () => {
 
     render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
 
-    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
     await user.click(
       await screen.findByRole("button", { name: "ui:dialog.copyKey.copy" }),
     )

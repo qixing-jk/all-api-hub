@@ -36,6 +36,7 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   rowCopyKeyButton: "account-management-row-copy-key-button",
   copyKeyDialogRuntimeKeyItem:
     "account-management-copy-key-dialog-runtime-key-item",
+  copyKeyDialogFooter: "account-management-copy-key-dialog-footer",
   copyKeyDialogExportToCCSwitchButton:
     "account-management-copy-key-dialog-export-to-cc-switch-button",
   rowEditButton: "account-management-row-edit-button",

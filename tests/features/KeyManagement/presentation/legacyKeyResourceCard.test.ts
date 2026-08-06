@@ -41,6 +41,7 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
       "remaining-quota",
       "expires-at",
     ])
+    expect(presentation.contextFact).toEqual(presentation.summaryFacts[0])
     expect(presentation.detailFacts.map(({ id }) => id)).toEqual([
       "quota-policy",
       "last-used-at",
@@ -95,6 +96,7 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
       "remaining-quota",
       "expires-at",
     ])
+    expect(presentation.contextFact).toBeUndefined()
     expect(presentation.secretAvailabilityMessage).toBe(
       "keyManagement:keyDetails.createResponseOnlySecret",
     )

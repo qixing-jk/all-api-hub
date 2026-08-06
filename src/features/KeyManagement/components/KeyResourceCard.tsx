@@ -19,6 +19,15 @@ import type {
   KeyResourceFact,
 } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { cn } from "~/lib/utils"
+
+export const KEY_RESOURCE_CONTENT_LAYOUTS = {
+  Default: "default",
+  Adaptive: "adaptive",
+} as const
+
+type KeyResourceContentLayout =
+  (typeof KEY_RESOURCE_CONTENT_LAYOUTS)[keyof typeof KEY_RESOURCE_CONTENT_LAYOUTS]
 
 export type KeyResourceCardProps = {
   presentation: KeyResourceCardPresentation
@@ -54,6 +63,7 @@ export type KeyResourceCardHeaderProps = {
 export type KeyResourceFactListProps = {
   facts: KeyResourceFact[]
   testId?: string
+  layout?: KeyResourceContentLayout
 }
 
 export type KeyResourceSecretDisplayProps = {
@@ -61,6 +71,7 @@ export type KeyResourceSecretDisplayProps = {
   secret?: ReactNode
   controls?: ReactNode
   message?: ReactNode
+  layout?: KeyResourceContentLayout
 }
 
 /**
@@ -120,11 +131,17 @@ export function KeyResourceCardHeader({
 export function KeyResourceFactList({
   facts,
   testId,
+  layout = KEY_RESOURCE_CONTENT_LAYOUTS.Default,
 }: KeyResourceFactListProps) {
   return (
     <div
       data-testid={testId}
-      className="xs:grid-cols-2 grid grid-cols-1 gap-2.5 sm:grid-cols-4 sm:gap-3.5"
+      className={cn(
+        "grid",
+        layout === KEY_RESOURCE_CONTENT_LAYOUTS.Adaptive
+          ? "grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-3.5"
+          : "xs:grid-cols-2 grid-cols-1 gap-2.5 sm:grid-cols-4 sm:gap-3.5",
+      )}
     >
       {facts.map((fact) => (
         <div
@@ -151,9 +168,49 @@ export function KeyResourceSecretDisplay({
   secret,
   controls,
   message,
+  layout = KEY_RESOURCE_CONTENT_LAYOUTS.Default,
 }: KeyResourceSecretDisplayProps) {
   if (!secret && !controls && !message) {
     return null
+  }
+
+  const labelContent = label ? (
+    <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
+      {label}
+    </span>
+  ) : null
+  const secretContent = secret ? (
+    <div className="max-w-full min-w-0 font-mono text-xs break-all">
+      {secret}
+    </div>
+  ) : null
+  const controlsContent = controls ? (
+    <div className="flex flex-wrap items-center gap-1.5">{controls}</div>
+  ) : null
+  const messageContent = message ? (
+    <span className="dark:text-dark-text-tertiary min-w-0 text-xs break-words text-gray-500 sm:text-sm">
+      {message}
+    </span>
+  ) : null
+
+  if (layout === KEY_RESOURCE_CONTENT_LAYOUTS.Adaptive) {
+    return (
+      <div
+        data-testid={KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay}
+        className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+      >
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {labelContent}
+          {secretContent}
+        </div>
+        {controlsContent ? (
+          <div className="min-w-0 sm:justify-self-end">{controlsContent}</div>
+        ) : null}
+        {messageContent ? (
+          <div className="min-w-0 sm:col-span-2">{messageContent}</div>
+        ) : null}
+      </div>
+    )
   }
 
   return (
@@ -161,24 +218,10 @@ export function KeyResourceSecretDisplay({
       data-testid={KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay}
       className="flex min-w-0 flex-wrap items-center gap-2"
     >
-      {label ? (
-        <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
-          {label}
-        </span>
-      ) : null}
-      {secret ? (
-        <div className="max-w-full min-w-0 font-mono text-xs break-all">
-          {secret}
-        </div>
-      ) : null}
-      {controls ? (
-        <div className="flex flex-wrap items-center gap-1.5">{controls}</div>
-      ) : null}
-      {message ? (
-        <span className="dark:text-dark-text-tertiary min-w-0 text-xs break-words text-gray-500 sm:text-sm">
-          {message}
-        </span>
-      ) : null}
+      {labelContent}
+      {secretContent}
+      {controlsContent}
+      {messageContent}
     </div>
   )
 }

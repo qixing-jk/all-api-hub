@@ -3,8 +3,11 @@ import { useState, type ReactElement } from "react"
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest"
 
 import {
+  KEY_RESOURCE_CONTENT_LAYOUTS,
   KeyResourceCard,
   KeyResourceCardHeader,
+  KeyResourceFactList,
+  KeyResourceSecretDisplay,
 } from "~/features/KeyManagement/components/KeyResourceCard"
 import type { KeyResourceCardPresentation } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
@@ -219,6 +222,31 @@ describe("KeyResourceCard", () => {
     expect(
       screen.getAllByRole("button", { name: "Copy summary secret" }),
     ).toHaveLength(1)
+  })
+
+  it("supports the adaptive content layout used by quick key cards", () => {
+    renderKeyResourceCard(
+      <>
+        <KeyResourceSecretDisplay
+          label="Key"
+          secret={<code>sk-example</code>}
+          controls={<button type="button">Copy key</button>}
+          layout={KEY_RESOURCE_CONTENT_LAYOUTS.Adaptive}
+        />
+        <KeyResourceFactList
+          facts={presentation.summaryFacts}
+          layout={KEY_RESOURCE_CONTENT_LAYOUTS.Adaptive}
+          testId="adaptive-facts"
+        />
+      </>,
+    )
+
+    expect(
+      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.keyResourceSecretDisplay),
+    ).toHaveClass("grid", "sm:grid-cols-[minmax(0,1fr)_auto]")
+    expect(screen.getByTestId("adaptive-facts")).toHaveClass(
+      "grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]",
+    )
   })
 
   it("announces loading and supports detail retry", async () => {

@@ -232,6 +232,11 @@ export const buildOpenRouterKeyResourceCardPresentation = (
     OPENROUTER_KEY_FIELD_IDS.LimitRemaining,
   )
   const usage = usdFactValue(row.facts, OPENROUTER_KEY_FIELD_IDS.Usage)
+  const contextFact = {
+    id: OPENROUTER_KEY_FIELD_IDS.Workspace,
+    label: fieldLabel(OPENROUTER_KEY_FIELD_IDS.Workspace, t),
+    value: row.workspaceName,
+  }
 
   return {
     id: row.rowKey,
@@ -243,12 +248,9 @@ export const buildOpenRouterKeyResourceCardPresentation = (
     secretAvailabilityMessage: t(
       "keyManagement:keyDetails.createResponseOnlySecret",
     ),
+    contextFact,
     summaryFacts: [
-      {
-        id: OPENROUTER_KEY_FIELD_IDS.Workspace,
-        label: fieldLabel(OPENROUTER_KEY_FIELD_IDS.Workspace, t),
-        value: row.workspaceName,
-      },
+      contextFact,
       {
         id: OPENROUTER_KEY_FIELD_IDS.Limit,
         label: fieldLabel(OPENROUTER_KEY_FIELD_IDS.Limit, t),
@@ -273,6 +275,27 @@ export const buildOpenRouterKeyResourceCardPresentation = (
       exportSecret: false,
       edit: row.facts.actions.canUpdate,
       delete: row.facts.actions.canDelete,
+      batchSelect: false,
+    },
+  }
+}
+
+/** Projects an OpenRouter key into inventory-only actions for compact read views. */
+export const buildReadOnlyOpenRouterKeyResourceCardPresentation = (
+  row: NativeKeyManagementRow,
+  t: TFunction,
+): KeyResourceCardPresentation => {
+  const presentation = buildOpenRouterKeyResourceCardPresentation(row, t)
+
+  return {
+    ...presentation,
+    actions: {
+      copySecret: false,
+      revealSecret: false,
+      verifySecret: false,
+      exportSecret: false,
+      edit: false,
+      delete: false,
       batchSelect: false,
     },
   }
