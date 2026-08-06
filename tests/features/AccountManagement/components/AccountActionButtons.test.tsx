@@ -1274,6 +1274,49 @@ describe("AccountActionButtons", () => {
     )
   })
 
+  it.each([SITE_TYPES.OPENROUTER, SITE_TYPES.AIHUBMIX])(
+    "labels %s as a key list and opens it without probing unavailable secrets",
+    async (siteType) => {
+      const user = userEvent.setup()
+      const onCopyKey = vi.fn()
+
+      render(
+        <AccountActionButtons
+          site={buildDisplaySiteData({
+            id: `${siteType}-non-recoverable-keys`,
+            disabled: false,
+            name: "Non-recoverable keys",
+            siteType,
+          })}
+          onCopyKey={onCopyKey}
+          onDeleteAccount={vi.fn()}
+        />,
+      )
+
+      expect(
+        screen.queryByRole("button", { name: "account:actions.copyKey" }),
+      ).not.toBeInTheDocument()
+      await user.click(
+        screen.getByRole("button", { name: "account:actions.keyList" }),
+      )
+
+      expect(onCopyKey).toHaveBeenCalledWith(
+        expect.objectContaining({ id: `${siteType}-non-recoverable-keys` }),
+      )
+      expect(fetchAccountTokensMock).not.toHaveBeenCalled()
+      expect(toastErrorMock).not.toHaveBeenCalled()
+      expect(clipboardWriteTextMock).not.toHaveBeenCalled()
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenKeyList,
+        }),
+      )
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+    },
+  )
+
   it("copies a single token directly when smart copy finds exactly one key", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-single" }])
 

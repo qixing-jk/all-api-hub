@@ -201,7 +201,7 @@
   "enabledCount_many": "{{count}} habilitadas",
   "enabledCount_other": "{{count}} habilitadas",
   "keyDetails": {
-    "createResponseOnlySecret": "Este sitio solo proporciona un valor oculto después de la creación, por lo que la clave completa no puede volver a verse.",
+    "createResponseOnlySecret": "Este sitio muestra la clave completa solo al crearla. Si no la guardaste, abre Gestión de claves y crea una clave de reemplazo.",
     "createTime": "Hora de creación:",
     "expireTime": "Hora de expiración:",
     "followsAccountGroup": "Usa el grupo de la cuenta",

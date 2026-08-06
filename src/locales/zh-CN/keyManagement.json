@@ -187,7 +187,7 @@
   },
   "enabledCount": "启用 {{count}} 个",
   "keyDetails": {
-    "createResponseOnlySecret": "该站点创建后仅提供密钥掩码，因此无法再次查看完整密钥。",
+    "createResponseOnlySecret": "该站点仅在创建时显示完整密钥。如果当时没有保存，请前往密钥管理创建替代密钥。",
     "createTime": "创建时间：",
     "expireTime": "过期时间：",
     "followsAccountGroup": "跟随账号分组",

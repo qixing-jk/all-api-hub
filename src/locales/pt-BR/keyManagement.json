@@ -201,7 +201,7 @@
   "enabledCount_many": "{{count}} ativas",
   "enabledCount_other": "{{count}} ativas",
   "keyDetails": {
-    "createResponseOnlySecret": "Este site fornece apenas um valor mascarado após a criação, portanto, a chave completa não pode ser vista novamente.",
+    "createResponseOnlySecret": "Este site mostra a chave completa somente na criação. Se você não a salvou, abra o Gerenciamento de Chaves e crie uma chave substituta.",
     "createTime": "Criada em:",
     "expireTime": "Expira em:",
     "followsAccountGroup": "Usa o grupo da conta",

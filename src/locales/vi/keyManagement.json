@@ -187,7 +187,7 @@
   },
   "enabledCount_other": "Đã bật {{count}}",
   "keyDetails": {
-    "createResponseOnlySecret": "Trang web này chỉ cung cấp giá trị đã che sau khi tạo, nên không thể xem lại khóa đầy đủ.",
+    "createResponseOnlySecret": "Trang web này chỉ hiển thị khóa đầy đủ khi tạo. Nếu bạn chưa lưu khóa, hãy mở Quản lý khóa và tạo khóa thay thế.",
     "createTime": "Thời gian tạo:",
     "expireTime": "Thời gian hết hạn:",
     "followsAccountGroup": "Theo nhóm tài khoản",

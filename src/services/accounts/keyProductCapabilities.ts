@@ -1,4 +1,8 @@
 import type { SiteType } from "~/constants/siteType"
+import {
+  getInventorySecretAvailability,
+  INVENTORY_SECRET_AVAILABILITIES,
+} from "~/services/apiAdapters/contracts/keyManagement"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum, type DisplaySiteData, type SiteAccount } from "~/types"
 
@@ -75,6 +79,21 @@ const NO_ACCOUNT_KEY_PRODUCT_CAPABILITIES: AccountKeyProductCapabilities = {
   },
 }
 
+const supportsRecoverableRuntimeKeySecrets = (
+  accountCapabilities: ReturnType<typeof getSiteTypeCapabilities>["account"],
+): boolean => {
+  const keyManagement = accountCapabilities?.keyManagement
+
+  if (keyManagement) {
+    return (
+      getInventorySecretAvailability(keyManagement) ===
+      INVENTORY_SECRET_AVAILABILITIES.Recoverable
+    )
+  }
+
+  return Boolean(accountCapabilities?.serviceCredential)
+}
+
 /**
  * Product-level readiness for account key features. This intentionally covers
  * account/auth completeness only; backend feature support is projected below.
@@ -132,6 +151,14 @@ export const createStoredAccountKeyProductContext = (
 export const supportsAccountApiTokenCreation = (siteType: SiteType) =>
   Boolean(getSiteTypeCapabilities(siteType).account?.keyManagement)
 
+/** Whether existing account runtime keys can yield a usable plaintext secret. */
+export const supportsRecoverableAccountRuntimeKeySecrets = (
+  siteType: SiteType,
+) =>
+  supportsRecoverableRuntimeKeySecrets(
+    getSiteTypeCapabilities(siteType).account,
+  )
+
 export const getAccountKeyProductCapabilities = (
   account: AccountKeyProductCapabilityContext | null | undefined,
 ): AccountKeyProductCapabilities => {
@@ -146,6 +173,8 @@ export const getAccountKeyProductCapabilities = (
   const hasKeyManagement = Boolean(keyManagement)
   const hasServiceCredential = Boolean(serviceCredential)
   const hasTokenProvisioning = Boolean(accountCapabilities?.tokenProvisioning)
+  const canResolveRuntimeSecret =
+    supportsRecoverableRuntimeKeySecrets(accountCapabilities)
 
   return {
     resourceKeys: {
@@ -156,7 +185,7 @@ export const getAccountKeyProductCapabilities = (
     },
     runtimeKeys: {
       list: hasKeyManagement || hasServiceCredential,
-      resolveSecret: hasKeyManagement || hasServiceCredential,
+      resolveSecret: canResolveRuntimeSecret,
     },
     apiTokens: {
       create: hasKeyManagement,

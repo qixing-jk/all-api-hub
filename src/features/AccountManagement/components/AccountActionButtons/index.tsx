@@ -51,6 +51,10 @@ import {
 } from "~/services/accounts/accountRuntimeKeys"
 import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
 import {
+  canResolveAccountRuntimeKeySecret,
+  supportsRecoverableAccountRuntimeKeySecrets,
+} from "~/services/accounts/keyProductCapabilities"
+import {
   canFetchDisplayAccountInviteLink,
   fetchDisplayAccountRuntimeKeys,
   InvalidTokenPayloadError,
@@ -303,6 +307,15 @@ export default function AccountActionButtons({
   const isMountedRef = useRef(true)
 
   const isAccountDisabled = site.disabled === true
+  const supportsSmartCopyKey = supportsRecoverableAccountRuntimeKeySecrets(
+    site.siteType,
+  )
+  const canSmartCopyKey =
+    canResolveAccountRuntimeKeySecret(site) ||
+    (isAccountDisabled && supportsSmartCopyKey)
+  const primaryKeyActionLabel = canSmartCopyKey
+    ? t("actions.copyKey")
+    : t("actions.keyList")
   const canCopyInviteLink = canFetchDisplayAccountInviteLink(site)
   const isQuickCheckinEligible =
     !isAccountDisabled &&
@@ -362,18 +375,27 @@ export default function AccountActionButtons({
     }
   }
 
-  // Smart copy key logic - check runtime-key count before deciding action
-  const handleSmartCopyKey = async (e: React.MouseEvent) => {
+  // Resolve a single recoverable key immediately; otherwise open inventory.
+  const handlePrimaryKeyAction = async (e: React.MouseEvent) => {
     e.stopPropagation()
 
     if (isCheckingTokens) return
 
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey,
+      actionId: canSmartCopyKey
+        ? PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey
+        : PRODUCT_ANALYTICS_ACTION_IDS.OpenKeyList,
       surfaceId: rowActionsSurface,
       entrypoint: optionsEntrypoint,
     })
+
+    if (!canSmartCopyKey) {
+      onCopyKey(site)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      return
+    }
+
     setIsCheckingTokens(true)
     const secretsToRedact = new Set<string>()
     addRedactionSecrets(secretsToRedact, [
@@ -985,17 +1007,21 @@ export default function AccountActionButtons({
         </IconButton>
 
         <IconButton
-          onClick={handleSmartCopyKey}
+          onClick={handlePrimaryKeyAction}
           variant="ghost"
           size="sm"
           className="touch-manipulation"
           loading={isCheckingTokens}
           disabled={isAccountDisabled}
-          aria-label={t("actions.copyKey")}
+          aria-label={primaryKeyActionLabel}
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyKeyButton}
-          title={t("actions.copyKey")}
+          title={primaryKeyActionLabel}
         >
-          <KeyIcon className="h-4 w-4" />
+          {canSmartCopyKey ? (
+            <KeyIcon className="h-4 w-4" />
+          ) : (
+            <ListBulletIcon className="h-4 w-4" />
+          )}
         </IconButton>
 
         <IconButton
