@@ -36,6 +36,10 @@ describe("formatters utilities", () => {
       expect(maskSecretForDisplay("short-key")).toBe("******")
     })
 
+    it("fully masks a 12-character secret", () => {
+      expect(maskSecretForDisplay("123456789012")).toBe("******")
+    })
+
     it("preserves the start and end of long secrets", () => {
       const secret = "sk-1234567890abcdefghijklmnop"
 
