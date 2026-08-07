@@ -112,6 +112,15 @@ OpenRouter's stable documented model fields will be exhaustively classified as a
 - Perform a separate read-only live smoke against the public endpoint. If the user provides or authorizes a real Management Key validation, report it separately from mocked tests and do not persist credentials or response data.
 - Run focused related tests first, followed by locale extraction when copy changes, compile, staged validation, push validation, and the targeted Playwright scenario.
 
+## Delivery Slices
+
+1. Validate the personalized catalog contract and record a definitive evidence-backed decision.
+2. Deliver the public OpenRouter catalog end-to-end through the existing single-account and all-accounts Model List, introducing only the generic presentation seam required by the working provider.
+3. Add the full OpenRouter-native field inventory and rich detail presentation on top of the working public slice.
+4. Add personalized loading, account-isolated caching, public fallback, and retry only when the first slice verified the credential contract.
+
+Each implementation slice must be independently demoable, reviewed against this specification, validated through its affected test layers, and committed before the next dependent slice begins.
+
 ## Out of Scope
 
 - Creating, rotating, revealing, exporting, or otherwise mutating OpenRouter keys as part of model catalog loading.

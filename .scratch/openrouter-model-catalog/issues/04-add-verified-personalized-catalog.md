@@ -2,7 +2,7 @@
 
 Status: ready-for-agent
 
-Blocked by: 01, 03, 05
+Blocked by: 01, 02
 
 ## Objective
 
@@ -15,7 +15,7 @@ Ticket 01 must record a `verified` decision. If it records `not supported` or `u
 ## Scope
 
 - Add a separate authenticated transport and response-envelope schema for the verified personalized contract.
-- Reuse the validated model-row normalization only where public and personalized row contracts are proven equivalent.
+- Reuse validated model-row normalization only where public and personalized row contracts are proven equivalent.
 - Send the Management Key only to the verified personalized endpoint and never to the public fallback endpoint.
 - Keep personalized requests, results, refresh state, and caches isolated by account identity.
 - Prefer personalized data for a selected account; on authorized runtime failures, show the public provider catalog with an explicit scope-change notice and retry action.
@@ -42,6 +42,6 @@ Ticket 01 must record a `verified` decision. If it records `not supported` or `u
 ## Telemetry and E2E Decision
 
 - Add or reuse controlled catalog-scope and fallback-result values only; never record model identities, account identities, URLs, preferences, raw errors, payloads, or credentials.
-- When implemented, own the representative Chromium E2E covering a personalized OpenRouter deep link, rich details, mixed all-accounts mode, unsupported-action absence, visible public fallback, and retry.
+- Own the representative Chromium E2E covering a personalized deep link, rich details, mixed all-accounts mode, unsupported-action absence, visible public fallback, and retry.
 
 ## Comments
