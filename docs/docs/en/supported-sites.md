@@ -17,6 +17,7 @@ The following are the most common and suitable types of sites for unified manage
 | done-hub | This project is a secondary development based on one-hub. | [GitHub](https://github.com/deanxv/done-hub) |
 | AnyRouter | Claude Code intermediate station · Zero threshold · Free $50 | [Documentation](https://docs.anyrouter.top/) / [Official Website](https://anyrouter.top) |
 | AIHubMix | Independent AI API aggregation site. The extension supports its balance, key, and model APIs through a dedicated account type. | [Official Website](https://aihubmix.com/?aff=W3DN) / [API Documentation](https://docs.aihubmix.com/cn/api/Cli) / [Setup Guide](./sponsor-guides/aihubmix.md) |
+| OrcaRouter | OpenAI-compatible model routing gateway for AI agents, routing 150+ models with gateway-level zero-trust security controls. | [Official Website](https://www.orcarouter.ai) / [API Documentation](https://docs.orcarouter.ai) |
 | Super-API | Super-Api brand new AI model interface management and distribution system, for personal learning use only, please do not use for any commercial purposes. This project is based on NewAPI. | [Official Website](https://api.cngov.top/) / [GitHub](https://github.com/SuperAI-Api/Super-API) |
 | v-api | A powerful intermediate platform based on the secondary development of one-api. | No data available |
 | WONG Public Welfare Site | No stable public official description available. | No stable public official link available |

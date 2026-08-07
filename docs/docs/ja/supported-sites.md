@@ -17,6 +17,7 @@
 | done-hub | このプロジェクトは one-hub をベースに二次開発されました。 | [GitHub](https://github.com/deanxv/done-hub) |
 | AnyRouter | Claude Code プロキシ · ゼロしきい値 · 無料 $50 | [ドキュメント](https://docs.anyrouter.top/) / [公式サイト](https://anyrouter.top) |
 | AIHubMix | 独立した AI API 集約サイト。拡張機能では専用のアカウント種別として、残高、キー、モデル API に対応します。 | [公式サイト](https://aihubmix.com/?aff=W3DN) / [API ドキュメント](https://docs.aihubmix.com/cn/api/Cli) / [設定ガイド](./sponsor-guides/aihubmix.md) |
+| OrcaRouter | AI エージェント向けの OpenAI 互換モデルルーティングゲートウェイ。150 以上のモデルをルーティングし、ゲートウェイレベルのゼロトラストセキュリティ制御を提供します。 | [公式サイト](https://www.orcarouter.ai) / [API ドキュメント](https://docs.orcarouter.ai) |
 | Super-API | Super-Api 新しい AI モデルインターフェース管理および配布システム。個人学習目的のみに使用し、商業目的には絶対に使用しないでください。このプロジェクトは NewAPI をベースに開発されています。 | [公式サイト](https://api.cngov.top/) / [GitHub](https://github.com/SuperAI-Api/Super-API) |
 | v-api | one-api をベースにした、高機能なプロキシプラットフォーム。 | 該当なし |
 | WONG公益站 | 安定した公開された公式説明はありません。 | 安定した公開された公式リンクはありません |

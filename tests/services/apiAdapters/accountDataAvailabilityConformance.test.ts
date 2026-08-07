@@ -37,6 +37,7 @@ const collectedRequests = {
   sharedChatUsage: 0,
   voApiV2Stats: 0,
   openRouterCredits: 0,
+  orcarouterBilling: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -265,6 +266,32 @@ const producerFixturesByFamily = {
       expect(collectedRequests.openRouterCredits).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.OrcaRouter]: {
+    baseUrl: "https://mirror.example.invalid",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get(
+        "https://api.orcarouter.ai/v1/dashboard/billing/subscription",
+        () => {
+          collectedRequests.orcarouterBilling += 1
+          return HttpResponse.json({ hard_limit_usd: 10 })
+        },
+      ),
+      http.get("https://api.orcarouter.ai/v1/dashboard/billing/usage", () => {
+        collectedRequests.orcarouterBilling += 1
+        return HttpResponse.json({ total_usage: 2 })
+      }),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.orcarouterBilling).toBe(snapshotCount * 2)
+    },
+  },
 } satisfies Record<ProducerFamily, ProducerFixture>
 
 const getProducerFixture = (siteType: AccountSiteType): ProducerFixture => {
@@ -301,6 +328,7 @@ describe("AccountData availability producer conformance", () => {
       sharedChatUsage: 0,
       voApiV2Stats: 0,
       openRouterCredits: 0,
+      orcarouterBilling: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(

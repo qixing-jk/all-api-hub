@@ -80,6 +80,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.AIHUBMIX
   | typeof SITE_TYPES.SHAREDCHAT
   | typeof SITE_TYPES.OPENROUTER
+  | typeof SITE_TYPES.ORCAROUTER
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
@@ -239,6 +240,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.AIHUBMIX,
       SITE_TYPES.SHAREDCHAT,
       SITE_TYPES.OPENROUTER,
+      SITE_TYPES.ORCAROUTER,
       SITE_TYPES.UNKNOWN,
     ])
   })

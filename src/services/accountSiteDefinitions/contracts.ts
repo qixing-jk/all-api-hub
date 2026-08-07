@@ -24,6 +24,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   Aihubmix: "aihubmix",
   SharedChat: "sharedchat",
   OpenRouter: "openrouter",
+  OrcaRouter: "orcarouter",
   Unsupported: "unsupported",
 } as const
 

@@ -19,6 +19,7 @@ export const SITE_TYPES = {
   AIHUBMIX: "AIHubMix",
   SHAREDCHAT: "sharedchat",
   OPENROUTER: "openrouter",
+  ORCAROUTER: "orcarouter",
   UNKNOWN: "unknown",
 } as const
 
@@ -40,6 +41,14 @@ export const OPENROUTER_HOSTNAMES = ["openrouter.ai"] as const
 export const OPENROUTER_DISPLAY_NAME = "OpenRouter"
 export const OPENROUTER_WEB_ORIGIN = "https://openrouter.ai"
 export const OPENROUTER_API_BASE_URL = `${OPENROUTER_WEB_ORIGIN}/api/v1`
+
+export const ORCAROUTER_HOSTNAMES = [
+  "orcarouter.ai",
+  "www.orcarouter.ai",
+] as const
+export const ORCAROUTER_DISPLAY_NAME = "OrcaRouter"
+export const ORCAROUTER_WEB_ORIGIN = "https://www.orcarouter.ai"
+export const ORCAROUTER_API_BASE_URL = "https://api.orcarouter.ai/v1"
 
 /** Returns whether the supplied URL belongs to the canonical OpenRouter origin. */
 export function isCanonicalOpenRouterUrl(value: string): boolean {
