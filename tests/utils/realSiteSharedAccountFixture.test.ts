@@ -159,4 +159,15 @@ describe("real-site account spec structure", () => {
 
     expect(specsWithoutSharedFixture).toEqual([])
   })
+
+  it("keeps the New API split suite serial and non-retrying after terminal setup failure", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "e2e", "realSite", "newApiAccountAdd.spec.ts"),
+      "utf8",
+    )
+
+    expect(source).toMatch(
+      /test\.describe\.configure\(\{\s*mode:\s*"serial",\s*retries:\s*0,\s*\}\)/u,
+    )
+  })
 })

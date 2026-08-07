@@ -19,6 +19,7 @@ vi.mock("~~/e2e/utils/accountLifecycle", () => ({
 const ORIGIN = "https://panel.example.invalid"
 const AUTH_REFRESH_URL = `${ORIGIN}/api/user/auth/refresh`
 const AUTH_LOGOUT_URL = `${ORIGIN}/api/user/auth/logout`
+const AUTH_SESSION_DELETE_URL = `${ORIGIN}/api/user/sessions/session-id-placeholder`
 const FUTURE_EXPIRY = Math.floor(Date.now() / 1000) + 3_600
 
 const config: CompatibleApiRealSiteConfig = {
@@ -60,7 +61,10 @@ function createAuthBundle(overrides: Record<string, unknown> = {}) {
 
 function createPage(
   post: ReturnType<typeof vi.fn>,
-  options: { storedUser?: Record<string, unknown> } = {},
+  options: {
+    storedUser?: Record<string, unknown>
+    deleteRequest?: ReturnType<typeof vi.fn>
+  } = {},
 ) {
   const evaluate = vi.fn().mockResolvedValue(undefined)
   const waitForFunction = options.storedUser
@@ -78,6 +82,7 @@ function createPage(
       request: {
         post,
         get: vi.fn(),
+        delete: options.deleteRequest ?? vi.fn(),
       },
       close: vi.fn().mockResolvedValue(undefined),
     } as any,
@@ -194,6 +199,37 @@ describe("compatible real-site login", () => {
         "X-Auth-Session": "session-id-placeholder",
       },
     })
+  })
+
+  it("revokes only the fresh owned session when logout detects a cookie mismatch", async () => {
+    const post = vi
+      .fn()
+      .mockResolvedValueOnce(createResponse(401, { code: "AUTH_UNAUTHORIZED" }))
+      .mockResolvedValueOnce(createResponse(200, createAuthBundle()))
+      .mockResolvedValueOnce(
+        createResponse(409, {
+          code: "AUTH_SESSION_MISMATCH",
+          message: "must-not-leak-server-message",
+        }),
+      )
+    const deleteRequest = vi.fn().mockResolvedValue(createResponse(200, {}))
+    const { page } = createPage(post, { deleteRequest })
+
+    const result = await loginToRealNewApiSite(page, config)
+    await result.cleanupOwnedSession?.()
+
+    expect(deleteRequest).toHaveBeenCalledWith(AUTH_SESSION_DELETE_URL, {
+      failOnStatusCode: false,
+      headers: {
+        Origin: ORIGIN,
+        Authorization: "Bearer access-token-placeholder",
+      },
+    })
+    expect(
+      post.mock.calls.some(([url]) =>
+        String(url).includes("/api/user/sessions/revoke-others"),
+      ),
+    ).toBe(false)
   })
 
   it("logs out the fresh owned session once when downstream account saving fails", async () => {

@@ -23,6 +23,13 @@ import {
 } from "~~/e2e/utils/realSite/sharedAccountFixture"
 
 test.describe("real-site E2E: New API account add flow", () => {
+  // All checks share one real account. A terminal session-limit failure must
+  // not restart workers and issue another login against the same account.
+  test.describe.configure({
+    mode: "serial",
+    retries: 0,
+  })
+
   const sharedAccountCache = createSharedRealSiteAccountFixtureCache()
 
   test.beforeEach(async ({ context, page }) => {

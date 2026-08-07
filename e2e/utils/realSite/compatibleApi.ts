@@ -22,6 +22,7 @@ const DEFAULT_LOGIN_API_PATH = "/api/user/login"
 const DEFAULT_LOGIN_2FA_API_PATH = "/api/user/login/2fa"
 const AUTH_REFRESH_PATH = "/api/user/auth/refresh"
 const AUTH_LOGOUT_PATH = "/api/user/auth/logout"
+const AUTH_SESSION_PATH = "/api/user/sessions"
 const SECURITY_VERIFICATION_BODY_PATTERN =
   /verify you are human|performing security verification|cloudflare/iu
 const AUTH_BUNDLE_MARKER_FIELDS = [
@@ -671,6 +672,14 @@ function createOwnedAuthSessionCleanup(
 
     if (!response.ok()) {
       const responseText = await response.text()
+      if (
+        response.status() === 409 &&
+        getSafeAuthErrorCode(responseText) === "AUTH_SESSION_MISMATCH"
+      ) {
+        await revokeOwnedAuthSession(page, config, options, authBundle)
+        return
+      }
+
       throw createAuthSessionStatusError(
         options,
         response.status(),
@@ -678,6 +687,47 @@ function createOwnedAuthSessionCleanup(
         "cleanup",
       )
     }
+  }
+}
+
+async function revokeOwnedAuthSession(
+  page: Page,
+  config: Pick<CompatibleApiRealSiteConfig, "baseUrl">,
+  options: CompatibleApiLoginOptions,
+  authBundle: CompatibleAuthBundle,
+) {
+  // Pinned rc.22 contract: https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/docs/authentication.md
+  // AUTH_SESSION_MISMATCH means the refresh cookie and in-memory SID diverged;
+  // revoke this run's exact SID with its Bearer instead of touching other sessions.
+  const origin = new URL(config.baseUrl).origin
+  let response
+
+  try {
+    response = await page.request.delete(
+      resolveRealSiteUrl(
+        config.baseUrl,
+        `${AUTH_SESSION_PATH}/${encodeURIComponent(authBundle.sessionId)}`,
+      ),
+      {
+        failOnStatusCode: false,
+        headers: {
+          Origin: origin,
+          Authorization: `Bearer ${authBundle.accessToken}`,
+        },
+      },
+    )
+  } catch {
+    throw new Error(`Real ${options.label} auth session cleanup failed.`)
+  }
+
+  if (!response.ok()) {
+    const responseText = await response.text()
+    throw createAuthSessionStatusError(
+      options,
+      response.status(),
+      responseText,
+      "cleanup",
+    )
   }
 }
 
