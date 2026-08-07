@@ -101,7 +101,7 @@
       "syncCompleted": "Synchronisierung abgeschlossen: {{success}}/{{total}} erfolgreich"
     },
     "warning": {
-      "syncCompletedWithFailures": "Synchronisierung abgeschlossen, aber {{failed}} Kanäle sind immer noch fehlgeschlagen ({{success}}/{{total}} erfolgreich). Sie können nur die fehlgeschlagenen Elemente erneut versuchen."
+      "syncCompletedWithFailures": "Synchronisierung abgeschlossen, aber weiterhin fehlgeschlagene Kanäle: {{failed}} ({{success}}/{{total}} erfolgreich). Sie können nur die fehlgeschlagenen Elemente erneut versuchen."
     }
   },
   "optionalGuidance": {

@@ -60,8 +60,8 @@
     "unsupportedTitle": "Ankündigungsendpunkt nicht unterstützt"
   },
   "summary": {
-    "filtered_one": "Zeigt {{count}} von {{total}} Ankündigung",
-    "filtered_other": "Zeigt {{count}} von {{total}} Ankündigungen",
+    "filtered_one": "Ankündigungen: {{count}} von {{total}}",
+    "filtered_other": "Ankündigungen: {{count}} von {{total}}",
     "notified_one": "{{count}} Systembenachrichtigung gesendet",
     "notified_other": "{{count}} Systembenachrichtigungen gesendet",
     "sites": "Websites",

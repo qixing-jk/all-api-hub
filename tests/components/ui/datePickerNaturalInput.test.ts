@@ -55,6 +55,7 @@ describe("parseNaturalDatePickerValue", () => {
     "daqui a 7",
     "in 1 Tagen",
     "in 7 Tag",
+    "in 1000000000 Tagen",
     "in 9007199254740992 Tagen",
     "not a date",
   ])("rejects %s", (input) => {

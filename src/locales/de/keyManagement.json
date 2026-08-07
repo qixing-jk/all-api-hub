@@ -79,10 +79,10 @@
       "secretResolutionFailed": "Das echte Token-Geheimnis konnte nicht aufgelöst werden."
     },
     "confirm": {
-      "description": "Dadurch werden Kanäle für {{selectedCount}} ausgewählte Schlüssel erstellt. Vorhandene exakte Übereinstimmungen und blockierte Zeilen werden nicht erstellt.",
+      "description": "Dadurch werden Kanäle für ausgewählte Schlüssel erstellt (Auswahl: {{selectedCount}}). Vorhandene exakte Übereinstimmungen und blockierte Zeilen werden nicht erstellt.",
       "title": "Ausgewählte Schlüssel importieren"
     },
-    "description": "Überprüfen Sie {{selectedCount}} ausgewählte Schlüssel, bevor Sie Kanäle in {{site}} erstellen.",
+    "description": "Überprüfen Sie die ausgewählten Schlüssel vor der Kanalerstellung in {{site}} (Auswahl: {{selectedCount}}).",
     "fields": {
       "baseUrl": "Basis-URL",
       "editModelsLabel": "Modelle bearbeiten für {{name}}",
@@ -90,7 +90,7 @@
       "models": "Modelle"
     },
     "gatewayDescription": "Dadurch werden Kontoschlüssel als selbstgehostete AI-Gateway-Kanäle importiert. Nach dem Import können mehrere Schlüssel von Clients über eine AI-API verwendet werden.",
-    "loadingDescription": "Vorschau wird für {{selectedCount}} ausgewählte Schlüssel vorbereitet.",
+    "loadingDescription": "Vorschau wird für ausgewählte Schlüssel vorbereitet (Auswahl: {{selectedCount}}).",
     "messages": {
       "completed": "Batch-Import abgeschlossen: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} übersprungen.",
       "duplicate": "Exakte Übereinstimmung existiert bereits: {{channel}}",
@@ -291,7 +291,7 @@
     "accountNotFound": "Kontoinformationen nicht gefunden",
     "batchSavedToApiProfiles": "Ausgewählte Schlüssel in der API-Anmeldeinformationsbibliothek gespeichert",
     "batchSaveToApiProfilesFailed": "Ausgewählte Schlüssel konnten nicht in der API-Anmeldeinformationsbibliothek gespeichert werden",
-    "batchSaveToApiProfilesPartialFailed": "{{savedCount}} von {{totalCount}} ausgewählten Schlüsseln gespeichert. {{failedCount}} konnte nicht gespeichert werden.",
+    "batchSaveToApiProfilesPartialFailed": "Gespeicherte Schlüssel: {{savedCount}}/{{totalCount}}. Nicht gespeicherte Schlüssel: {{failedCount}}.",
     "copyFailed": "Kopieren fehlgeschlagen",
     "deleteConfirm": "Sind Sie sicher, dass Sie den Schlüssel {{name}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden",
     "deleteSuccess": "Schlüssel {{name}} erfolgreich gelöscht",

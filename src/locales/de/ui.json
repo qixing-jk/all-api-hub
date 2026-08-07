@@ -217,7 +217,7 @@
     "dedupeAccounts": {
       "confirm": {
         "confirmDelete": "Löschen",
-        "description": "Dadurch werden {{deleteCount}} Konten aus {{groups}} Duplikatgruppen gelöscht.",
+        "description": "Gelöschte Konten: {{deleteCount}} · Duplikatgruppen: {{groups}}",
         "title": "Doppelte Konten löschen",
         "warningOrder": "Die manuelle Reihenfolge wird angepasst.",
         "warningPinned_one": "{{count}} angeheftetes Konto wird gelöscht.",
@@ -264,7 +264,7 @@
         "keepPinned": "Angeheftet beibehalten (falls vorhanden)"
       },
       "strategyLabel": "Strategie beibehalten",
-      "summary": "{{groups}} Duplikatgruppen · {{deleteCount}} zu löschende Konten",
+      "summary": "Duplikatgruppen: {{groups}} · Zu löschende Konten: {{deleteCount}}",
       "title": "Bereinigung doppelter Konten",
       "unscannableHint_one": "{{count}} Konto konnte nicht gescannt werden und wurde übersprungen.",
       "unscannableHint_other": "{{count}} Konten konnten nicht gescannt werden und wurden übersprungen.",
@@ -345,9 +345,9 @@
         "loadModelsFailed": "Das Laden der Upstream-Modelle für diesen API-Schlüssel ist fehlgeschlagen.",
         "loadTokensFailed": "Das Laden der Token für diese Website ist fehlgeschlagen.",
         "modelIdRequiredDescription_one": "Wählen Sie eine Modell-ID für alle ausgewählten API-Schlüssel aus oder geben Sie eine ein, um den Export zu aktivieren (fehlt: {{count}}).",
-        "modelIdRequiredDescription_other": "Wählen Sie eine Modell-ID für alle ausgewählten API-Schlüssel aus oder geben Sie eine ein, um den Export zu aktivieren (fehlt: {{count}}).",
+        "modelIdRequiredDescription_other": "Wählen Sie eine Modell-ID für alle ausgewählten API-Schlüssel aus oder geben Sie eine ein, um den Export zu aktivieren (fehlen: {{count}}).",
         "modelIdRequiredTitle": "Modell-ID erforderlich",
-        "modelSearchLimited": "Zeigt das erste {{visible}} von {{count}} Modellen. Geben Sie weiter ein, um die Liste einzugrenzen.",
+        "modelSearchLimited": "Zeigt {{visible}} von {{count}} Modellen. Geben Sie weiter ein, um die Liste einzugrenzen.",
         "noModelsDescription": "Für diesen API-Schlüssel wurden keine Upstream-Modelle zurückgegeben. Kilo Code erfordert normalerweise eine Modell-ID – geben Sie diese bitte manuell ein.",
         "noModelsTitle": "Keine Modelle",
         "nothingToExportDescription": "Wählen Sie mindestens ein exportierbares Token oder eine exportierbare Website aus, um das Kopieren/Herunterladen zu ermöglichen.",

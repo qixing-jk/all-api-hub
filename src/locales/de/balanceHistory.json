@@ -97,7 +97,7 @@
         "label": "Gesamteinkommen"
       },
       "outcomeTotal": {
-        "label": "Gesamtergebnis"
+        "label": "Gesamtausgaben"
       },
       "rangeNet": {
         "label": "Netto im Zeitraum"
@@ -125,7 +125,7 @@
       "endBalance": "Endbilanz",
       "estimatedIncomeTotal": "Geschätztes Gesamteinkommen",
       "incomeTotal": "Gesamteinkommen",
-      "outcomeTotal": "Gesamtergebnis",
+      "outcomeTotal": "Gesamtausgaben",
       "rangeNet": "Netto im Zeitraum",
       "snapshotCoverage": "Snapshot-Abdeckung",
       "startBalance": "Startguthaben"
@@ -157,7 +157,7 @@
   "warnings": {
     "cashflowDisabled": {
       "description": "Der Abruf des heutigen Cashflows ist deaktiviert und die Erfassung am Tagesende ist deaktiviert. Aktivieren Sie entweder „Heutigen Cashflow anzeigen“ oder „Erfassung am Tagesende“, um Einnahmen-/Ausgabenwerte aufzuzeichnen.",
-      "title": "Die Einnahmen-/Ergebnishistorie ist leer"
+      "title": "Die Einnahmen-/Ausgabenhistorie ist leer"
     }
   }
 }

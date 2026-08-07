@@ -276,11 +276,11 @@
     },
     "confirm": {
       "confirm": "Migration bestätigen",
-      "description": "Dadurch werden neue Zielkanäle für {{ready}} bereite Kanäle aus {{total}} ausgewählten Kanälen erstellt.",
+      "description": "Dadurch werden neue Zielkanäle erstellt: {{ready}} bereit, {{total}} ausgewählt.",
       "title": "Kanalmigration starten?",
       "warningTitle": "Dieser Flow erstellt nur neue Kanäle. Es erfolgt keine Synchronisierung, Deduplizierung oder Rollback."
     },
-    "description": "Kopieren Sie {{selectedCount}} Kanäle von der aktuell verwalteten Website in eine andere konfigurierte verwaltete Website.",
+    "description": "Kopieren Sie Kanäle von der aktuell verwalteten Website in eine andere konfigurierte verwaltete Website (ausgewählt: {{selectedCount}}).",
     "generalWarnings": {
       "compactSummary": "Nur erstellen. Bewegen Sie den Mauszeiger für Details.",
       "createOnly": "Diese Migration erstellt nur neue Kanäle auf der Zielseite und verändert die Quellkanäle nicht.",
@@ -310,7 +310,7 @@
       },
       "loadFailed": "Migrationsvorschau konnte nicht geladen werden: {{error}}",
       "loading": "Migrationsvorschau wird erstellt...",
-      "selectedCount": "{{selectedCount}} Kanäle ausgewählt",
+      "selectedCount": "Ausgewählte Kanäle: {{selectedCount}}",
       "status": {
         "blocked": "Blockiert",
         "ready": "Bereit"
@@ -374,7 +374,7 @@
     "noEntries": "Keine Einträge",
     "paginationNext": "Nächste Seite",
     "paginationPrev": "Vorherige Seite",
-    "paginationSummary": "{{start}} - {{end}} von {{total}} Kanälen",
+    "paginationSummary": "Kanäle: {{start}} - {{end}} von insgesamt {{total}}",
     "rowActions": {
       "delete": "Löschen",
       "edit": "Bearbeiten",

@@ -173,9 +173,9 @@
     }
   },
   "summary": {
-    "completionTokens": "Ausgabetoken",
+    "completionTokens": "Abschlusstoken",
     "cost": "Kosten",
-    "promptTokens": "Eingabe-Tokens",
+    "promptTokens": "Prompt-Tokens",
     "requests": "Anfragen",
     "totalTokens": "Gesamtzahl der Token"
   },

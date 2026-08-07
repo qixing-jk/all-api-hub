@@ -117,7 +117,7 @@
       "enableDesc": "Wenn aktiviert, werden freigegebene Daten in festgelegten Intervallen mit WebDAV synchronisiert.",
       "interval": "Synchronisierungsintervall (Sekunden)",
       "intervalDesc": "Legen Sie fest, wie oft die automatische Synchronisierung ausgeführt wird",
-      "intervalHint": "Ungefähr {{minutes}} Minuten",
+      "intervalHint": "Ungefähre Dauer: {{minutes}} Min.",
       "lastSync": "Letzte Synchronisierung",
       "saveSettings": "Einstellungen speichern",
       "strategy": "Synchronisierungsstrategie",

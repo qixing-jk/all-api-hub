@@ -92,7 +92,7 @@ export function isEnglishLanguage(language?: string | null): boolean {
  * Return true when the language belongs to the German locale family.
  */
 function isGermanLanguage(language?: string | null): boolean {
-  return isLanguageFamily(normalizeLanguageTag(language), "de")
+  return isLanguageFamily(normalizeLanguageTag(language), GERMAN_LANG)
 }
 
 /**
