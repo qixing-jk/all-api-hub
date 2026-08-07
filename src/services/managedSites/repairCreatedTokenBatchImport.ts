@@ -26,10 +26,10 @@ export const REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS = {
   HISTORICAL: "historical",
 } as const
 
-export type RepairCreatedTokenBatchImportFreshness =
+type RepairCreatedTokenBatchImportFreshness =
   (typeof REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS)[keyof typeof REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS]
 
-export interface ResolveRepairCreatedTokenBatchImportCandidateParams {
+interface ResolveRepairCreatedTokenBatchImportCandidateParams {
   progress: AccountKeyRepairProgress
   accounts: DisplaySiteData[]
   targetFingerprint: string
@@ -37,7 +37,7 @@ export interface ResolveRepairCreatedTokenBatchImportCandidateParams {
   forceCompleteVerification?: boolean
 }
 
-export interface RepairCreatedTokenBatchImportCandidate {
+interface RepairCreatedTokenBatchImportCandidate {
   items: ManagedSiteTokenBatchExportItemInput[]
   intent: Extract<
     ManagedSiteBatchImportIntent,

@@ -20,6 +20,7 @@ import {
   forceExtensionLanguage,
   installExtensionPageGuards,
   seedStoredAccounts,
+  seedUserPreferences,
   stubLlmMetadataIndex,
   stubNewApiSiteRoutes,
 } from "~~/e2e/utils/commonUserFlows"
@@ -54,6 +55,101 @@ function createStubApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
     group: "default",
     ...overrides,
   }
+}
+
+const MANAGED_SITE_IMPORT_TARGET_ORIGIN =
+  "https://managed-target.example.invalid"
+
+async function stubManagedSiteImportTargetRoutes(
+  context: Parameters<typeof stubNewApiSiteRoutes>[0],
+) {
+  const createPayloads: unknown[] = []
+
+  await context.route(
+    `${MANAGED_SITE_IMPORT_TARGET_ORIGIN}/**`,
+    async (route) => {
+      const request = route.request()
+      const url = new URL(request.url())
+      const method = request.method()
+
+      if (
+        method === "GET" &&
+        (url.pathname === "/api/channel/" ||
+          url.pathname === "/api/channel/search")
+      ) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            message: "ok",
+            data: { items: [], total: 0, type_counts: {} },
+          }),
+        })
+        return
+      }
+
+      if (method === "GET" && url.pathname === "/api/group") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            message: "ok",
+            data: ["default"],
+          }),
+        })
+        return
+      }
+
+      if (method === "GET" && url.pathname === "/api/user/self/groups") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            message: "ok",
+            data: { default: { desc: "Default", ratio: 1 } },
+          }),
+        })
+        return
+      }
+
+      if (method === "GET" && url.pathname === "/api/user/models") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: true,
+            message: "ok",
+            data: ["gpt-4o-mini", "gpt-4.1-mini"],
+          }),
+        })
+        return
+      }
+
+      if (method === "POST" && url.pathname === "/api/channel/") {
+        createPayloads.push(request.postDataJSON())
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ success: true, message: "created" }),
+        })
+        return
+      }
+
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: false,
+          message: `Unhandled managed-site import route: ${method} ${url.pathname}`,
+        }),
+      })
+    },
+  )
+
+  return { createPayloads }
 }
 
 async function stubSharedChatServiceCredentialRoutes(
@@ -463,6 +559,7 @@ test("repairs missing account keys and deletes invalid group keys", async ({
   const serviceWorker = await getServiceWorker(context)
   const accountId = "e2e-key-repair-account"
   const baseUrl = "https://key-repair.example.com"
+  const { createPayloads } = await stubManagedSiteImportTargetRoutes(context)
 
   await seedStoredAccounts(serviceWorker, [
     createStoredAccount({
@@ -476,6 +573,17 @@ test("repairs missing account keys and deletes invalid group keys", async ({
       },
     }),
   ])
+  await seedUserPreferences(serviceWorker, {
+    managedSiteType: SITE_TYPES.NEW_API,
+    newApi: {
+      baseUrl: MANAGED_SITE_IMPORT_TARGET_ORIGIN,
+      adminToken: "managed-target-admin-token",
+      userId: "1",
+      username: "",
+      password: "",
+      totpSecret: "",
+    },
+  })
   await stubNewApiSiteRoutes(context, {
     baseUrl,
     accessToken: "repair-token",
@@ -483,6 +591,7 @@ test("repairs missing account keys and deletes invalid group keys", async ({
     groups: {
       default: { desc: "Default", ratio: 1 },
       vip: { desc: "VIP", ratio: 1.5 },
+      alpha: { desc: "Alpha", ratio: 2 },
     },
     initialTokens: [
       createStubApiToken({
@@ -534,17 +643,21 @@ test("repairs missing account keys and deletes invalid group keys", async ({
 
   expect(completedProgress?.summary).toMatchObject({
     created: 1,
-    availableGroups: 2,
-    coveredGroups: 2,
-    createdKeys: 1,
+    availableGroups: 3,
+    coveredGroups: 3,
+    createdKeys: 2,
     invalidKeys: 1,
   })
   expect(completedProgress?.results[0]).toMatchObject({
     accountId,
     accountName: "Key Repair Source",
-    availableGroups: ["default", "vip"],
-    coveredGroups: ["default", "vip"],
-    createdGroups: ["vip"],
+    availableGroups: ["default", "vip", "alpha"],
+    coveredGroups: ["default", "vip", "alpha"],
+    createdGroups: ["vip", "alpha"],
+    createdTokens: [
+      { tokenId: 3, group: "vip" },
+      { tokenId: 4, group: "alpha" },
+    ],
     invalidTokens: [
       expect.objectContaining({
         tokenId: 2,
@@ -554,8 +667,9 @@ test("repairs missing account keys and deletes invalid group keys", async ({
     ],
   })
 
-  await expect(page.getByText("Covered 2/2 groups")).toBeVisible()
+  await expect(page.getByText("Covered 3/3 groups")).toBeVisible()
   await expect(page.getByText("Created: vip")).toBeVisible()
+  await expect(page.getByText("Created: alpha")).toBeVisible()
   await expect(page.getByTestId("repair-missing-keys-result-count")).toHaveText(
     "1/1",
   )
@@ -600,6 +714,73 @@ test("repairs missing account keys and deletes invalid group keys", async ({
     0,
     10_000,
   )
+
+  await page
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton)
+    .click()
+
+  const batchImportDialog = page.getByRole("dialog").filter({
+    has: page.getByText("Batch import to self-hosted AI gateway", {
+      exact: true,
+    }),
+  })
+  const vipRowLabel = "Key Repair Source / vip group (auto)"
+  const alphaRowLabel = "Key Repair Source / alpha group (auto)"
+
+  await expect(batchImportDialog).toBeVisible()
+  await expect(
+    batchImportDialog.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportUseCompleteChecksButton,
+    ),
+  ).toBeVisible()
+  await expect(
+    batchImportDialog.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportRowSelectCheckbox,
+    ),
+  ).toHaveCount(2)
+  await expect(
+    batchImportDialog.getByText(vipRowLabel, { exact: true }),
+  ).toBeVisible()
+  await expect(
+    batchImportDialog.getByText(alphaRowLabel, { exact: true }),
+  ).toBeVisible()
+
+  const alphaRowCheckbox = batchImportDialog.getByRole("checkbox", {
+    name: alphaRowLabel,
+    exact: true,
+  })
+  await expect(alphaRowCheckbox).toBeChecked()
+  await alphaRowCheckbox.click()
+  await expect(alphaRowCheckbox).not.toBeChecked()
+
+  const startImportButton = batchImportDialog.getByTestId(
+    KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportStartButton,
+  )
+  await expect(startImportButton).toBeEnabled()
+  await startImportButton.click()
+
+  await expect(
+    page.getByRole("dialog", { name: "Import selected keys" }),
+  ).toHaveCount(0)
+  await expect.poll(() => createPayloads.length).toBe(1)
+  await expect(
+    batchImportDialog.getByText("Created", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    batchImportDialog.getByText("Not selected", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    batchImportDialog.getByText(vipRowLabel, { exact: true }),
+  ).toBeVisible()
+  await expect(
+    batchImportDialog.getByText(alphaRowLabel, { exact: true }),
+  ).toBeVisible()
+  expect(createPayloads[0]).toMatchObject({
+    channel: {
+      name: "Key Repair Source | vip group (auto)",
+      base_url: baseUrl,
+    },
+  })
 })
 
 test("saves a key to API credential profiles and opens the profiles page", async ({

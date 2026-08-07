@@ -146,6 +146,13 @@ export function useManagedSiteTokenBatchExportDialog({
     useState<ManagedSiteTokenBatchExportPreview | null>(null)
   const [activeIntent, setActiveIntent] =
     useState<ManagedSiteBatchImportIntent>(intent)
+  const [intentWorkflowIsOpen, setIntentWorkflowIsOpen] = useState(isOpen)
+  if (intentWorkflowIsOpen !== isOpen) {
+    setIntentWorkflowIsOpen(isOpen)
+    if (isOpen) {
+      setActiveIntent(intent)
+    }
+  }
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [editedModelsByItemId, setEditedModelsByItemId] = useState<
     Map<string, string[]>

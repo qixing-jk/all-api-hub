@@ -90,7 +90,7 @@ const DEFAULT_BATCH_IMPORT_INTENT: ManagedSiteBatchImportIntent = {
   verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
 }
 
-export class ManagedSiteTokenBatchImportTargetChangedError extends Error {
+class ManagedSiteTokenBatchImportTargetChangedError extends Error {
   readonly code = TARGET_CHANGED_ERROR_CODE
 
   constructor() {
@@ -750,8 +750,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
               id: item.id,
               accountName: item.accountName,
               runtimeKeyName: item.runtimeKeyName,
-              result:
-                MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.CREATED,
+              result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.CREATED,
               success: true,
               skipped: false,
             }

@@ -14,16 +14,10 @@ export const MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES = {
   REPAIR_CREATED: "repair-created",
 } as const
 
-export type ManagedSiteTokenBatchImportSource =
-  (typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES)[keyof typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES]
-
 export const MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS = {
   COMPLETE: "complete",
   TRUSTED_NEW: "trusted-new",
 } as const
-
-export type ManagedSiteTokenBatchImportVerification =
-  (typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS)[keyof typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS]
 
 export type ManagedSiteBatchImportIntent =
   | {

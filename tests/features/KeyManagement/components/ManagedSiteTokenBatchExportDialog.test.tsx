@@ -1,6 +1,11 @@
 import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { StrictMode, type ComponentProps, type ReactNode } from "react"
+import {
+  StrictMode,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -670,6 +675,76 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(mockExecuteBatchExport.mock.calls[0][0].preview.intent).toEqual(
       trustedRepairIntent,
     )
+  })
+
+  it("adopts a trusted repair intent when opening from the closed state", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockImplementation(async ({ intent }) => ({
+      ...preview,
+      intent,
+    }))
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 2,
+      failedCount: 0,
+      uncertainCount: 0,
+      skippedCount: 0,
+      items: [],
+    })
+
+    const BatchedOpenHarness = () => {
+      const [isOpen, setIsOpen] = useState(false)
+      const [intent, setIntent] = useState<typeof trustedRepairIntent>()
+
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setIntent(trustedRepairIntent)
+              setIsOpen(true)
+            }}
+          >
+            Open trusted repair review
+          </button>
+          <ManagedSiteTokenBatchExportDialog
+            isOpen={isOpen}
+            onClose={vi.fn()}
+            items={[{ account, runtimeKey }]}
+            intent={intent}
+          />
+        </>
+      )
+    }
+
+    render(<BatchedOpenHarness />, {
+      withUserPreferencesProvider: false,
+    })
+    await user.click(
+      screen.getByRole("button", { name: "Open trusted repair review" }),
+    )
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    expect(mockPreparePreview).toHaveBeenCalledOnce()
+    expect(mockPreparePreview.mock.calls[0][0].intent).toEqual(
+      trustedRepairIntent,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+
+    expect(
+      screen.queryByRole("dialog", {
+        name: "keyManagement:batchManagedSiteExport.confirm.title",
+      }),
+    ).toBeNull()
+    await waitFor(() => {
+      expect(mockExecuteBatchExport).toHaveBeenCalledOnce()
+    })
   })
 
   it.each([
