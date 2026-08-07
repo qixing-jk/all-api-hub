@@ -13,6 +13,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
 import {
@@ -670,6 +671,77 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       trustedRepairIntent,
     )
   })
+
+  it.each([
+    {
+      label: "manual selection",
+      intent: undefined,
+      source:
+        PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES.ManualSelection,
+    },
+    {
+      label: "repair-created",
+      intent: trustedRepairIntent,
+      source: PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES.RepairCreated,
+    },
+  ])(
+    "records the controlled source for $label batch import completion",
+    async ({ intent, source }) => {
+      const user = userEvent.setup()
+      const effectiveIntent = intent ?? manualPreviewTarget.intent
+      mockPreparePreview.mockResolvedValue({
+        ...preview,
+        intent: effectiveIntent,
+      })
+      mockExecuteBatchExport.mockResolvedValue({
+        totalSelected: 2,
+        attemptedCount: 2,
+        createdCount: 2,
+        failedCount: 0,
+        uncertainCount: 0,
+        skippedCount: 0,
+        items: preview.items.map((item) => ({
+          id: item.id,
+          accountName: item.accountName,
+          runtimeKeyName: item.runtimeKeyName,
+          result: "created",
+          success: true,
+          skipped: false,
+        })),
+      })
+
+      renderDialog({ intent })
+
+      await screen.findByText("Account 1 / Token 1")
+      await user.click(
+        screen.getByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.start",
+        }),
+      )
+
+      if (!intent) {
+        const confirmDialog = screen.getByRole("dialog", {
+          name: "keyManagement:batchManagedSiteExport.confirm.title",
+        })
+        await user.click(
+          within(confirmDialog).getByRole("button", {
+            name: "keyManagement:batchManagedSiteExport.actions.start",
+          }),
+        )
+      }
+
+      await waitFor(() => {
+        expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith(
+          expect.objectContaining({
+            result: PRODUCT_ANALYTICS_RESULTS.Success,
+            insights: expect.objectContaining({
+              managedSiteBatchImportSource: source,
+            }),
+          }),
+        )
+      })
+    },
+  )
 
   it("keeps selection and edited models when repair review switches to complete checks", async () => {
     const user = userEvent.setup()
@@ -2236,6 +2308,8 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       insights: {
+        managedSiteBatchImportSource:
+          PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES.ManualSelection,
         selectedCount: 2,
         itemCount: 2,
         successCount: 1,
@@ -2281,6 +2355,8 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       insights: {
+        managedSiteBatchImportSource:
+          PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES.ManualSelection,
         selectedCount: 1,
         itemCount: 1,
       },
@@ -2362,6 +2438,8 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       insights: {
+        managedSiteBatchImportSource:
+          PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES.ManualSelection,
         selectedCount: 2,
         itemCount: 2,
         successCount: 1,
@@ -2427,6 +2505,8 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       insights: {
+        managedSiteBatchImportSource:
+          PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES.ManualSelection,
         selectedCount: 1,
         itemCount: 1,
       },

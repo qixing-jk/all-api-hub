@@ -58,7 +58,7 @@
       "clearSelection": "清除選取",
       "open": "批次匯入到 {{site}}（{{selectedCount}}）",
       "refreshPreview": "重新整理預覽",
-      "retry": "重試失敗的金鑰",
+      "retry": "重試失敗或需要檢查的金鑰",
       "running": "正在匯入...",
       "selectAll": "已選 {{selected}}/{{total}}",
       "start": "開始匯入",
@@ -90,8 +90,8 @@
     "gatewayDescription": "這會將帳號 Key 匯入為自建 AI 閘道渠道。匯入後，多個 Key 即可透過同一個 AI API 提供給客戶端使用。",
     "loadingDescription": "正在為 {{selectedCount}} 個已選金鑰準備預覽。",
     "messages": {
-      "completed": "批次匯入完成：成功 {{created}} 個，失敗 {{failed}} 個，跳過 {{skipped}} 個。",
-      "duplicate": "已存在精確符合渠道：{{channel}}",
+      "completed": "批次匯入完成：成功 {{created}} 個、失敗 {{failed}} 個、已存在 {{skipped}} 個。",
+      "duplicate": "已存在精確符合渠道：{{channel}}，不會重複建立。",
       "executionFailed": "執行批次匯入失敗：{{error}}",
       "targetChanged": "自建 AI 閘道目標已變更。請重新整理預覽或選擇正確目標後再匯入。",
       "verificationFailed": "New API 驗證失敗：{{error}}"
@@ -100,10 +100,10 @@
       "loadFailed": "載入預覽失敗：{{error}}",
       "loading": "正在準備渠道預覽...",
       "selected_other": "已選擇 {{count}} 個金鑰",
-      "summary": "預覽：可建立 {{ready}} 個，警告 {{warning}} 個，跳過 {{skipped}} 個，阻擋 {{blocked}} 個，共 {{total}} 個。"
+      "summary": "預覽：可建立 {{ready}} 個，警告 {{warning}} 個，已存在 {{skipped}} 個，阻擋 {{blocked}} 個，共 {{total}} 個。"
     },
     "repairTrusted": {
-      "description": "這些 Key 剛剛建立完成，可以使用簡化審核。匯入前仍可切換為完整檢查。",
+      "description": "這些金鑰剛剛建立完成。簡化審核會略過重複檢查與精確 Key 檢查；若要在匯入前再次核對，可以使用完整檢查。",
       "useCompleteChecks": "使用完整檢查"
     },
     "results": {
@@ -111,11 +111,11 @@
       "status": {
         "failed": "失敗",
         "notSelected": "未選擇",
-        "skipped": "已跳過",
+        "skipped": "已存在",
         "success": "已建立",
         "uncertain": "需檢查"
       },
-      "summary": "結果：成功 {{created}} 個，失敗 {{failed}} 個，跳過 {{skipped}} 個，共 {{total}} 個。"
+      "summary": "結果：成功 {{created}} 個，失敗 {{failed}} 個，已存在 {{skipped}} 個，共 {{total}} 個。"
     },
     "selection": {
       "accountGroup": "選擇帳號 {{name}} 目前可見密鑰",
@@ -125,7 +125,7 @@
     "status": {
       "blocked": "已阻擋",
       "ready": "可建立",
-      "skipped": "已跳過",
+      "skipped": "已存在",
       "warning": "需確認"
     },
     "target": {
@@ -136,7 +136,7 @@
     "warnings": {
       "backendSearchFailed": "重複檢查暫時無法連線目標後台。",
       "dedupeUnsupported": "目前自建 AI 閘道無法可靠依 Base URL 檢查重複渠道。",
-      "exactVerificationUnavailable": "可能已有符合渠道，但目前無法完成精確 Key 驗證。",
+      "exactVerificationUnavailable": "可能已有符合渠道，但無法確認精確 Key。建立前請檢查。",
       "matchRequiresConfirmation": "發現相似渠道，請確認後再建立。",
       "modelPrefillFailed": "模型預填失敗，將使用目前可用的模型列表。"
     }

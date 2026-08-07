@@ -61,7 +61,7 @@
       "clearSelection": "Clear selection",
       "open": "Batch import to {{site}} ({{selectedCount}})",
       "refreshPreview": "Refresh preview",
-      "retry": "Retry failed keys",
+      "retry": "Retry failed or uncertain keys",
       "running": "Importing...",
       "selectAll": "{{selected}}/{{total}} selected",
       "start": "Start import",
@@ -93,8 +93,8 @@
     "gatewayDescription": "This imports account keys as self-hosted AI gateway channels. After import, multiple keys can be used by clients through one AI API.",
     "loadingDescription": "Preparing preview for {{selectedCount}} selected keys.",
     "messages": {
-      "completed": "Batch import completed: {{created}} created, {{failed}} failed, {{skipped}} skipped.",
-      "duplicate": "Exact match already exists: {{channel}}",
+      "completed": "Batch import completed: {{created}} created, {{failed}} failed, {{skipped}} already present.",
+      "duplicate": "An exact channel already exists: {{channel}}. It will not be created again.",
       "executionFailed": "Failed to run batch import: {{error}}",
       "targetChanged": "The managed-site target changed. Refresh the preview or choose the intended target before importing.",
       "verificationFailed": "New API verification failed: {{error}}"
@@ -104,10 +104,10 @@
       "loading": "Preparing channel preview...",
       "selected_one": "{{count}} key selected",
       "selected_other": "{{count}} keys selected",
-      "summary": "Preview: {{ready}} ready, {{warning}} warnings, {{skipped}} skipped, {{blocked}} blocked, {{total}} total."
+      "summary": "Preview: {{ready}} ready, {{warning}} warnings, {{skipped}} already present, {{blocked}} blocked, {{total}} total."
     },
     "repairTrusted": {
-      "description": "These keys were just created and are ready for a simplified review. You can still run the complete checks before importing.",
+      "description": "These keys were just created. The simplified review omits duplicate and exact-key checks; use complete checks if you want to verify them before importing.",
       "useCompleteChecks": "Use complete checks"
     },
     "results": {
@@ -115,11 +115,11 @@
       "status": {
         "failed": "Failed",
         "notSelected": "Not selected",
-        "skipped": "Skipped",
+        "skipped": "Already present",
         "success": "Created",
         "uncertain": "Needs review"
       },
-      "summary": "Result: {{created}} created, {{failed}} failed, {{skipped}} skipped, {{total}} total."
+      "summary": "Result: {{created}} created, {{failed}} failed, {{skipped}} already present, {{total}} total."
     },
     "selection": {
       "accountGroup": "Select visible keys for account {{name}}",
@@ -129,7 +129,7 @@
     "status": {
       "blocked": "Blocked",
       "ready": "Ready",
-      "skipped": "Skipped",
+      "skipped": "Already present",
       "warning": "Warning"
     },
     "target": {
@@ -140,7 +140,7 @@
     "warnings": {
       "backendSearchFailed": "Duplicate check could not reach the target backend.",
       "dedupeUnsupported": "The current self-hosted AI gateway cannot reliably check duplicates by Base URL.",
-      "exactVerificationUnavailable": "An existing channel may match, but exact key verification is unavailable.",
+      "exactVerificationUnavailable": "An existing channel may match, but the exact key could not be confirmed. Review before creating.",
       "matchRequiresConfirmation": "A similar channel exists; review before creating.",
       "modelPrefillFailed": "Model prefill failed; using the best available model list."
     }

@@ -32,6 +32,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
 import {
@@ -56,6 +57,7 @@ import {
   isExecutableManagedSiteTokenBatchExportPreviewItem as isExecutablePreviewItem,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
+  MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES,
 } from "~/types/managedSiteTokenBatchExport"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -100,6 +102,13 @@ const getBatchExportAnalyticsContext = () => ({
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportManagedSiteTokenChannels,
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
 })
+
+const getBatchExportAnalyticsSource = (
+  source: ManagedSiteBatchImportIntent["source"],
+) =>
+  source === MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.REPAIR_CREATED
+    ? PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES.RepairCreated
+    : PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES.ManualSelection
 
 const DEFAULT_BATCH_EXPORT_INTENT: ManagedSiteBatchImportIntent = {
   source: "manual-selection",
@@ -689,6 +698,9 @@ export function useManagedSiteTokenBatchExportDialog({
     setExecutionError(null)
     setIsTargetChanged(false)
     const analyticsContext = getBatchExportAnalyticsContext()
+    const managedSiteBatchImportSource = getBatchExportAnalyticsSource(
+      activeIntent.source,
+    )
     void trackProductAnalyticsActionStarted(analyticsContext)
     try {
       const result = await executeManagedSiteTokenBatchExport({
@@ -699,6 +711,7 @@ export function useManagedSiteTokenBatchExportDialog({
         ...analyticsContext,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
         insights: {
+          managedSiteBatchImportSource,
           selectedCount: result.totalSelected,
           itemCount: result.attemptedCount,
           successCount: result.createdCount,
@@ -736,6 +749,7 @@ export function useManagedSiteTokenBatchExportDialog({
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
+          managedSiteBatchImportSource,
           selectedCount: selectedExecutionIds.length,
           itemCount: selectedExecutionIds.length,
         },

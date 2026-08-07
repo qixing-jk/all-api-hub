@@ -1082,6 +1082,14 @@ export const PRODUCT_ANALYTICS_MANAGED_SITE_TYPES = {
 export type ProductAnalyticsManagedSiteType =
   (typeof PRODUCT_ANALYTICS_MANAGED_SITE_TYPES)[keyof typeof PRODUCT_ANALYTICS_MANAGED_SITE_TYPES]
 
+export const PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES = {
+  ManualSelection: "manual_selection",
+  RepairCreated: "repair_created",
+} as const
+
+export type ProductAnalyticsManagedSiteBatchImportSource =
+  (typeof PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES)[keyof typeof PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES]
+
 export const PRODUCT_ANALYTICS_TOOLBAR_ACTION_CLICK_BEHAVIORS = {
   Popup: "popup",
   Sidepanel: "sidepanel",
@@ -1141,6 +1149,7 @@ export type ProductAnalyticsEventPayloadMap = {
     managed_site_type?: ProductAnalyticsManagedSiteType
     source_managed_site_type?: ProductAnalyticsManagedSiteType
     target_managed_site_type?: ProductAnalyticsManagedSiteType
+    managed_site_batch_import_source?: ProductAnalyticsManagedSiteBatchImportSource
     failure_stage?: ProductAnalyticsFailureStage
     failure_reason?: ProductAnalyticsFailureReason
     account_auto_detect_failure_reason?: ProductAnalyticsAccountAutoDetectFailureReason

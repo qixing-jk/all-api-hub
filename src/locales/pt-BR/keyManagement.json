@@ -64,7 +64,7 @@
       "clearSelection": "Limpar seleção",
       "open": "Importar em lote para {{site}} ({{selectedCount}})",
       "refreshPreview": "Atualizar prévia",
-      "retry": "Tentar novamente as chaves com falha",
+      "retry": "Tentar novamente as chaves com falha ou que precisam de revisão",
       "running": "Importando...",
       "selectAll": "Seleção: {{selected}}/{{total}}",
       "start": "Iniciar importação",
@@ -96,8 +96,8 @@
     "gatewayDescription": "Isso importa chaves de contas como canais de um gateway de IA auto-hospedado. Após a importação, os clientes poderão usar várias chaves por meio de uma única API de IA.",
     "loadingDescription": "Preparando a prévia. Chaves selecionadas: {{selectedCount}}.",
     "messages": {
-      "completed": "Importação em lote concluída — criados: {{created}}; falhas: {{failed}}; ignorados: {{skipped}}.",
-      "duplicate": "Já existe uma correspondência exata: {{channel}}",
+      "completed": "Importação em lote concluída — criados: {{created}}; falhas: {{failed}}; já existentes: {{skipped}}.",
+      "duplicate": "Já existe um canal exato: {{channel}}. Ele não será criado novamente.",
       "executionFailed": "Falha ao executar a importação em lote: {{error}}",
       "targetChanged": "O destino do site gerenciado mudou. Atualize a prévia ou escolha o destino correto antes de importar.",
       "verificationFailed": "Falha na verificação do New API: {{error}}"
@@ -108,10 +108,10 @@
       "selected_one": "{{count}} chave selecionada",
       "selected_many": "{{count}} chaves selecionadas",
       "selected_other": "{{count}} chaves selecionadas",
-      "summary": "Prévia — prontos: {{ready}}; avisos: {{warning}}; ignorados: {{skipped}}; bloqueados: {{blocked}}; total: {{total}}."
+      "summary": "Prévia — prontos: {{ready}}; avisos: {{warning}}; já existentes: {{skipped}}; bloqueados: {{blocked}}; total: {{total}}."
     },
     "repairTrusted": {
-      "description": "Estas chaves acabaram de ser criadas e estão prontas para uma revisão simplificada. Você ainda pode executar as verificações completas antes de importar.",
+      "description": "Estas chaves acabaram de ser criadas. A revisão simplificada não verifica duplicatas nem a chave exata; você ainda pode usar as verificações completas antes de importar.",
       "useCompleteChecks": "Usar verificações completas"
     },
     "results": {
@@ -119,11 +119,11 @@
       "status": {
         "failed": "Falhou",
         "notSelected": "Não selecionada",
-        "skipped": "Ignorado",
+        "skipped": "Já existente",
         "success": "Criado",
         "uncertain": "Requer revisão"
       },
-      "summary": "Resultado — criados: {{created}}; falhas: {{failed}}; ignorados: {{skipped}}; total: {{total}}."
+      "summary": "Resultado — criados: {{created}}; falhas: {{failed}}; já existentes: {{skipped}}; total: {{total}}."
     },
     "selection": {
       "accountGroup": "Selecionar as chaves visíveis da conta {{name}}",
@@ -133,7 +133,7 @@
     "status": {
       "blocked": "Bloqueado",
       "ready": "Pronto",
-      "skipped": "Ignorado",
+      "skipped": "Já existente",
       "warning": "Aviso"
     },
     "target": {
@@ -144,7 +144,7 @@
     "warnings": {
       "backendSearchFailed": "A verificação de duplicatas não conseguiu acessar o backend de destino.",
       "dedupeUnsupported": "O gateway de IA auto-hospedado atual não consegue verificar duplicatas com segurança pela URL base.",
-      "exactVerificationUnavailable": "Pode haver um canal correspondente, mas a verificação exata da chave não está disponível.",
+      "exactVerificationUnavailable": "Pode haver um canal correspondente, mas não foi possível confirmar a chave exata. Revise antes de criar.",
       "matchRequiresConfirmation": "Há um canal semelhante; revise-o antes de criar.",
       "modelPrefillFailed": "Falha ao preencher os modelos; usando a melhor lista de modelos disponível."
     }

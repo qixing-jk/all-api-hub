@@ -17,6 +17,7 @@ import {
   type ProductAnalyticsFailureReason,
   type ProductAnalyticsFailureStage,
   type ProductAnalyticsKiloCodeExportTarget,
+  type ProductAnalyticsManagedSiteBatchImportSource,
   type ProductAnalyticsManagedSiteType,
   type ProductAnalyticsModeId,
   type ProductAnalyticsRequestedAuthMode,
@@ -61,6 +62,7 @@ export type ProductAnalyticsActionInsights = {
   managedSiteType?: ProductAnalyticsManagedSiteType
   sourceManagedSiteType?: ProductAnalyticsManagedSiteType
   targetManagedSiteType?: ProductAnalyticsManagedSiteType
+  managedSiteBatchImportSource?: ProductAnalyticsManagedSiteBatchImportSource
   failureStage?: ProductAnalyticsFailureStage
   failureReason?: ProductAnalyticsFailureReason
   accountAutoDetectFailureReason?: ProductAnalyticsAccountAutoDetectFailureReason
@@ -316,6 +318,12 @@ function mapProductAnalyticsActionInsights(
       : {}),
     ...(insights.targetManagedSiteType
       ? { target_managed_site_type: insights.targetManagedSiteType }
+      : {}),
+    ...(insights.managedSiteBatchImportSource
+      ? {
+          managed_site_batch_import_source:
+            insights.managedSiteBatchImportSource,
+        }
       : {}),
     ...(insights.failureStage ? { failure_stage: insights.failureStage } : {}),
     ...(insights.failureReason

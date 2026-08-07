@@ -15,6 +15,7 @@ import {
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_KILO_CODE_EXPORT_TARGETS,
+  PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES,
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_REQUESTED_AUTH_MODES,
@@ -570,6 +571,32 @@ describe("product analytics action helpers", () => {
       },
     )
   })
+
+  it.each(Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES))(
+    "maps managed-site batch import source %s without widening the action contract",
+    async (source) => {
+      const { trackProductAnalyticsActionCompleted } = await import(
+        "~/services/productAnalytics/actions"
+      )
+
+      await trackProductAnalyticsActionCompleted({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportManagedSiteTokenChannels,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: {
+          managedSiteBatchImportSource: source,
+        },
+      })
+
+      expect(trackMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        expect.objectContaining({
+          managed_site_batch_import_source: source,
+        }),
+      )
+    },
+  )
 
   it("flattens structured action diagnostics to outbound completion fields", async () => {
     const { trackProductAnalyticsActionCompleted } = await import(
