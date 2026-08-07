@@ -530,6 +530,37 @@ describe("Model item pricing and description", () => {
       expect(formatPriceCompactMock).not.toHaveBeenCalled()
     })
 
+    it("distinguishes malformed official prices from missing price data", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({
+            price_metadata: {
+              source: MODEL_PRICE_SOURCE_KINDS.PROVIDER_CATALOG,
+              precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+              unavailable_reason:
+                MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_INVALID,
+            },
+          })}
+          calculatedPrice={createCalculatedPrice({
+            priceAvailability: "unavailable",
+          })}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={false}
+          isAvailableForUser={true}
+          groupRatios={{}}
+        />,
+      )
+
+      expect(
+        screen.getByText("unavailablePriceReasons.officialPriceInvalid"),
+      ).toBeInTheDocument()
+      expect(formatPriceCompactMock).not.toHaveBeenCalled()
+    })
+
     it("uses no-usable-group copy without claiming a multiplier is missing", () => {
       isTokenBillingTypeMock.mockReturnValue(true)
 

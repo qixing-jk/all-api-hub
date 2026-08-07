@@ -386,7 +386,8 @@ describe("account site definition registry", () => {
       adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter,
       readiness: {
         modelList: {
-          expectedRoute: ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.Unsupported,
+          expectedRoute:
+            ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.ProviderCatalog,
         },
       },
     })
@@ -690,6 +691,7 @@ describe("account site definition registry", () => {
   it("keeps definition expectation route constants synchronized with runtime routes", () => {
     expect(ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES).toEqual({
       DirectPricing: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing,
+      ProviderCatalog: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog,
       TokenScopedRuntimeCatalog:
         MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog,
       Unsupported: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,

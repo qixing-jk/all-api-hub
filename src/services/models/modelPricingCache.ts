@@ -30,19 +30,22 @@ class ModelPricingCacheService {
     })
   }
 
-  private getAccountKey(accountId: string) {
-    return accountId
+  private getCacheKey(cacheKey: string) {
+    return cacheKey
   }
 
-  async get(accountId: string): Promise<PricingResponse | null> {
+  async get(
+    cacheKey: string,
+    ttlMs: number = MODEL_PRICING_CACHE_TTL_MS,
+  ): Promise<PricingResponse | null> {
     try {
       const cache =
         (await this.storage.get<PricingCacheMap>(STORAGE_KEYS.PRICING_CACHE)) ||
         {}
-      const entry = cache[this.getAccountKey(accountId)]
+      const entry = cache[this.getCacheKey(cacheKey)]
       if (!entry) return null
 
-      if (Date.now() - entry.lastUpdated > MODEL_PRICING_CACHE_TTL_MS) {
+      if (Date.now() - entry.lastUpdated > ttlMs) {
         return null
       }
       return entry.pricing
@@ -52,13 +55,13 @@ class ModelPricingCacheService {
     }
   }
 
-  async set(accountId: string, pricing: PricingResponse): Promise<void> {
+  async set(cacheKey: string, pricing: PricingResponse): Promise<void> {
     try {
       const cache =
         (await this.storage.get<PricingCacheMap>(STORAGE_KEYS.PRICING_CACHE)) ||
         {}
 
-      cache[this.getAccountKey(accountId)] = {
+      cache[this.getCacheKey(cacheKey)] = {
         pricing,
         lastUpdated: Date.now(),
       }
@@ -69,12 +72,12 @@ class ModelPricingCacheService {
     }
   }
 
-  async invalidate(accountId: string): Promise<void> {
+  async invalidate(cacheKey: string): Promise<void> {
     try {
       const cache =
         (await this.storage.get<PricingCacheMap>(STORAGE_KEYS.PRICING_CACHE)) ||
         {}
-      delete cache[this.getAccountKey(accountId)]
+      delete cache[this.getCacheKey(cacheKey)]
       await this.storage.set(STORAGE_KEYS.PRICING_CACHE, cache)
     } catch (error) {
       logger.error("Failed to invalidate cache", error)

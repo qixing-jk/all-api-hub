@@ -10,6 +10,7 @@ import {
   ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
+  ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
@@ -91,6 +92,12 @@ const tokenScopedRuntimeModelListReadiness = {
   modelList: {
     expectedRoute:
       ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.TokenScopedRuntimeCatalog,
+  },
+} as const
+
+const providerCatalogReadiness = {
+  modelList: {
+    expectedRoute: ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES.ProviderCatalog,
   },
 } as const
 
@@ -418,6 +425,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
       },
       modelList: {
         directPricing: ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING.Unsupported,
+        providerCatalog: ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS.Public,
         tokenScopedCatalogFallback:
           ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.None,
         dashboardEstimateLoader:
@@ -433,7 +441,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
         duplicateOrigin: OPENROUTER_WEB_ORIGIN,
       },
     },
-    readiness: unsupportedModelListReadiness,
+    readiness: providerCatalogReadiness,
   },
 ] as const satisfies readonly AccountSiteDefinition[]
 

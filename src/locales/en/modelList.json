@@ -111,6 +111,16 @@
   "currentUsableGroups": "Current usable groups",
   "description": "View and manage available AI models",
   "detailedPricing": "Detailed Pricing",
+  "displayFacts": {
+    "contextLimit": "Context limit",
+    "maximumOutputTokens": "Maximum output tokens",
+    "outputModalities": "Output modalities",
+    "sections": {
+      "specifications": "Specifications"
+    },
+    "tokenCount_one": "{{formattedCount}} token",
+    "tokenCount_other": "{{formattedCount}} tokens"
+  },
   "displayOptions": "Display Options:",
   "endpointType": "Endpoint Type",
   "endpointTypes": "Endpoint Types",
@@ -260,7 +270,8 @@
   },
   "sourceLabels": {
     "profileBadge": "Profile: {{name}} · {{host}}",
-    "profileOption": "API Credential: {{name}} · {{host}}"
+    "profileOption": "API Credential: {{name}} · {{host}}",
+    "providerCatalogBadge": "{{provider}} · Provider Model Catalog"
   },
   "status": {
     "dataLoaded": "Model data loaded successfully",
@@ -310,6 +321,7 @@
     "groupRatioUnavailable": "Prices are unavailable because this usable group has no multiplier.",
     "keyGroupUnknown": "Prices are unavailable because this key's Sub2API group could not be resolved.",
     "modelListOnly": "Models are available for this key. Prices are unavailable.",
+    "officialPriceInvalid": "This model's official price data is invalid.",
     "officialPriceMissing": "This model is not in the price table.",
     "pricingSourceUnavailable": "Price data is unavailable for this source."
   },

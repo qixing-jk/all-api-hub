@@ -6,8 +6,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
-import { createAccountTokenModelListSourceIdentity } from "~/features/ModelList/modelManagementSources"
+import {
+  createAccountTokenModelListSourceIdentity,
+  createProviderCatalogModelListSourceIdentity,
+} from "~/features/ModelList/modelManagementSources"
+import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
+import {
+  MODEL_DISPLAY_FACT_LABELS,
+  MODEL_DISPLAY_FACT_TYPES,
+  MODEL_DISPLAY_SECTION_LABELS,
+} from "~/services/models/modelDisplayFacts"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -70,6 +79,7 @@ vi.mock("react-i18next", async (importOriginal) => {
         }
         return key
       },
+      i18n: { language: "en" },
     }),
   }
 })
@@ -79,6 +89,7 @@ vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
     model,
     resolvedVendor,
     trailingContent,
+    handleCopyModelName,
     onOpenKeyDialog,
     onVerifyApi,
     onVerifyCliSupport,
@@ -87,6 +98,7 @@ vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
     model: { model_name: string }
     resolvedVendor: { state: string; label?: string }
     trailingContent?: React.ReactNode
+    handleCopyModelName: () => void
     onOpenKeyDialog?: () => void
     onVerifyApi?: () => void
     onVerifyCliSupport?: () => void
@@ -98,6 +110,9 @@ vi.mock("~/features/ModelList/components/ModelItem/ModelItemHeader", () => ({
   }) => (
     <div>
       {model.model_name}
+      <button type="button" onClick={handleCopyModelName}>
+        copy-model-name
+      </button>
       <span role="status" aria-label="resolved vendor">
         {resolvedVendor.state === "resolved" ? resolvedVendor.label : "Unknown"}
       </span>
@@ -337,6 +352,111 @@ describe("ModelItem", () => {
         "Account One / VIP runtime key · account.example.invalid",
       ),
     ).toBeInTheDocument()
+  })
+
+  it("renders provider-selected facts and keeps unsupported actions absent during keyboard expansion", async () => {
+    const user = userEvent.setup()
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        model={{
+          ...props.model,
+          presentation: {
+            summaryFacts: [
+              {
+                type: MODEL_DISPLAY_FACT_TYPES.StringList,
+                label: MODEL_DISPLAY_FACT_LABELS.OutputModalities,
+                values: ["text", "image"],
+              },
+            ],
+            sections: [
+              {
+                id: "specifications",
+                label: MODEL_DISPLAY_SECTION_LABELS.Specifications,
+                facts: [
+                  {
+                    type: MODEL_DISPLAY_FACT_TYPES.TokenQuantity,
+                    label: MODEL_DISPLAY_FACT_LABELS.MaximumOutputTokens,
+                    value: 8192,
+                  },
+                ],
+              },
+            ],
+          },
+        }}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.NOT_APPLICABLE,
+          supportedGroups: [],
+          usableGroups: [],
+          priceableGroups: [],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: [],
+          activePriceableGroups: [],
+          actionGroups: [],
+        }}
+        source={{
+          ...props.source,
+          capabilities: {
+            ...props.source.capabilities,
+            supportsRatioDisplay: false,
+            supportsGroupFiltering: false,
+            supportsTokenCompatibility: false,
+            supportsCredentialVerification: false,
+            supportsBatchCredentialVerification: false,
+            supportsCliVerification: false,
+          },
+        }}
+        onOpenModelKeyDialog={vi.fn()}
+        onVerifyModel={vi.fn()}
+        onVerifyCliSupport={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByText("displayFacts.outputModalities"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("text")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "key" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "verify-api" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "verify-cli" })).toBeNull()
+
+    const expandButton = screen.getByTestId("expand-button")
+    expandButton.focus()
+    await user.keyboard("{Enter}")
+
+    expect(screen.getByTestId("model-presentation-details")).toBeInTheDocument()
+    expect(
+      screen.getByText("displayFacts.maximumOutputTokens"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("displayFacts.tokenCount")).toBeInTheDocument()
+  })
+
+  it("copies the exact request model id when a readable display name is present", async () => {
+    const user = userEvent.setup()
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        model={{
+          ...props.model,
+          model_name: "example/request-model-id",
+          display_name: "Readable Model Name",
+        }}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "copy-model-name" }))
+
+    expect(writeText).toHaveBeenCalledWith("example/request-model-id")
   })
 
   it("summarizes model groups in the row header without showing availability status", () => {
@@ -835,6 +955,38 @@ describe("ModelItem", () => {
     )
     expect(writeText).toHaveBeenCalledWith("https://api.example.com")
     expect(toast.error).toHaveBeenCalledWith("messages.copyFailed")
+  })
+
+  it("does not expose representative-account controls for provider-wide catalogs", () => {
+    const onFilterAccount = vi.fn()
+
+    render(
+      <ModelItem
+        {...createDefaultProps()}
+        sourceIdentity={createProviderCatalogModelListSourceIdentity({
+          sourceId: "example-public",
+          provider: SITE_TYPES.OPENROUTER,
+          providerName: "Example Provider",
+        })}
+        onFilterAccount={onFilterAccount}
+      />,
+    )
+
+    expect(
+      screen.getByText("sourceLabels.providerCatalogBadge"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "sourceLabels.providerCatalogBadge",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "actions.copySiteUrl" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "actions.openSite" }),
+    ).not.toBeInTheDocument()
+    expect(onFilterAccount).not.toHaveBeenCalled()
   })
 
   it("treats expansion as controlled only when both props are provided", async () => {

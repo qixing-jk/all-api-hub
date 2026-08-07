@@ -1,6 +1,7 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import {
   ACCOUNT_SITE_MODEL_LIST_DIRECT_PRICING,
+  ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS,
   ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS,
   getAccountSiteModelListProfile,
   type AccountSiteModelListDashboardEstimateLoader,
@@ -10,10 +11,12 @@ import {
 import { canListAccountRuntimeKeys } from "~/services/accounts/keyProductCapabilities"
 import type { ModelCatalogCapability } from "~/services/apiAdapters/contracts/modelCatalog"
 import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/modelPricing"
+import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/contracts/providerModelCatalog"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 
 export const MODEL_LIST_ACCOUNT_SOURCE_ROUTES = {
   DirectPricing: "direct_pricing",
+  ProviderCatalog: "provider_catalog",
   TokenScopedRuntimeCatalog: "token_scoped_runtime_catalog",
   Unsupported: "unsupported",
 } as const
@@ -21,6 +24,8 @@ export const MODEL_LIST_ACCOUNT_SOURCE_ROUTES = {
 export const MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS = {
   MissingModelPricingCapability: "missing_model_pricing_capability",
   MissingModelCatalogCapability: "missing_model_catalog_capability",
+  MissingProviderModelCatalogCapability:
+    "missing_provider_model_catalog_capability",
   NoSupportedRoute: "no_supported_route",
 } as const
 
@@ -42,6 +47,10 @@ type ModelListAccountSourceReadiness =
       modelCatalog: ModelCatalogCapability
       requiresTokenKeyResolution: boolean
       dashboardEstimateLoader: AccountSiteModelListDashboardEstimateLoader
+    })
+  | (ModelListAccountSourceBaseReadiness & {
+      route: typeof MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+      providerModelCatalog: ProviderModelCatalogCapability
     })
   | (ModelListAccountSourceBaseReadiness & {
       route: typeof MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported
@@ -86,6 +95,25 @@ export function resolveModelListAccountSourceReadiness(account: {
         reason:
           MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingModelPricingCapability,
       }
+    }
+  }
+
+  if (
+    profile.providerCatalog === ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS.Public
+  ) {
+    if (accountCapabilities?.providerModelCatalog) {
+      return {
+        ...base,
+        route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog,
+        providerModelCatalog: accountCapabilities.providerModelCatalog,
+      }
+    }
+
+    return {
+      ...base,
+      route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
+      reason:
+        MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingProviderModelCatalogCapability,
     }
   }
 

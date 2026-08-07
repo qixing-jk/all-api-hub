@@ -27,6 +27,16 @@ const modelCatalog = {
   fetchModels: vi.fn(),
 }
 
+const providerModelCatalog = {
+  source: {
+    id: "example-provider-public",
+    provider: SITE_TYPES.OPENROUTER,
+    displayName: "Example Provider",
+    cacheTtlMs: 300000,
+  },
+  fetchPricing: vi.fn(),
+}
+
 const runtimeKeyFallbackAccount = {
   id: "sharedchat-account",
   siteType: SITE_TYPES.SHAREDCHAT,
@@ -103,6 +113,25 @@ describe("resolveModelListAccountSourceReadiness", () => {
       statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Token,
       displayCapabilitiesSource:
         ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
+    })
+  })
+
+  it("returns a provider-wide catalog without requiring account pricing or runtime keys", () => {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: { providerModelCatalog },
+    } as any)
+
+    expect(
+      resolveModelListAccountSourceReadiness({
+        siteType: SITE_TYPES.OPENROUTER,
+      }),
+    ).toEqual({
+      route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog,
+      providerModelCatalog,
+      statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+      displayCapabilitiesSource:
+        ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
     })
   })
 

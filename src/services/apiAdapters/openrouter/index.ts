@@ -4,6 +4,7 @@ import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
 import { openRouterAccountData } from "./accountData"
 import { openRouterAccountKeyResources } from "./accountKeyResource"
 import { openRouterAccountRefresh } from "./accountRefresh"
+import { openRouterProviderModelCatalog } from "./providerModelCatalog"
 
 export const openRouterCapabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.OPENROUTER,
@@ -11,6 +12,7 @@ export const openRouterCapabilities: SiteTypeCapabilities = {
   account: {
     data: openRouterAccountData,
     keyResources: openRouterAccountKeyResources,
+    providerModelCatalog: openRouterProviderModelCatalog,
     refresh: openRouterAccountRefresh,
   },
 }

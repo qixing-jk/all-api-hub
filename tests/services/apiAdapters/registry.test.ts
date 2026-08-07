@@ -265,6 +265,7 @@ describe("apiAdapters registry", () => {
     expect(Object.keys(capabilities.account ?? {}).sort()).toEqual([
       "data",
       "keyResources",
+      "providerModelCatalog",
       "refresh",
     ])
     expect(capabilities.account?.bootstrap).toBeUndefined()
@@ -274,6 +275,12 @@ describe("apiAdapters registry", () => {
     expect(capabilities.account?.refresh?.refreshAccount).toBeTypeOf("function")
     expect(capabilities.account?.keyResources).toEqual({
       open: expect.any(Function),
+    })
+    expect(capabilities.account?.providerModelCatalog).toMatchObject({
+      source: {
+        provider: SITE_TYPES.OPENROUTER,
+      },
+      fetchPricing: expect.any(Function),
     })
     expect(capabilities.account?.keyManagement).toBeUndefined()
     expect(capabilities.managedSites).toBeUndefined()

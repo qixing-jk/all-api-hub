@@ -78,6 +78,7 @@ export const MODEL_LIST_SOURCE_IDENTITY_KINDS = {
   ACCOUNT: "account",
   ACCOUNT_TOKEN: "account-token",
   ACCOUNT_RUNTIME_KEY: "account-runtime-key",
+  PROVIDER_CATALOG: "provider-catalog",
 } as const
 
 export type ModelListSourceIdentity =
@@ -96,6 +97,12 @@ export type ModelListSourceIdentity =
       id: string
       runtimeKeyId: string
       runtimeKeyName?: string
+    }
+  | {
+      kind: typeof MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG
+      id: string
+      provider: NonNullable<ModelListSourceInfo["provider"]>
+      providerName: string
     }
 
 /** Creates the default account-scoped source identity for model-list rows. */
@@ -137,6 +144,20 @@ export function createAccountRuntimeKeyModelListSourceIdentity(params: {
     id: `${params.accountId}:runtime-key:${params.runtimeKeyId}`,
     runtimeKeyId: params.runtimeKeyId,
     ...(runtimeKeyName ? { runtimeKeyName } : {}),
+  }
+}
+
+/** Creates a provider-wide identity shared by every account using one catalog. */
+export function createProviderCatalogModelListSourceIdentity(params: {
+  sourceId: string
+  provider: NonNullable<ModelListSourceInfo["provider"]>
+  providerName: string
+}): ModelListSourceIdentity {
+  return {
+    kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG,
+    id: `provider-catalog:${params.sourceId}`,
+    provider: params.provider,
+    providerName: params.providerName.trim(),
   }
 }
 
@@ -250,7 +271,7 @@ export function deriveModelListSourceCapabilities(params: {
   capabilities: ModelManagementSourceCapabilities
   modelListSource?: Pick<
     ModelListSourceInfo,
-    "supportsRuntimeModelList" | "supportsPricing"
+    "supportsRuntimeModelList" | "supportsPricing" | "actionPolicy"
   >
 }): ModelManagementSourceCapabilities {
   const { capabilities, modelListSource } = params
@@ -261,12 +282,85 @@ export function deriveModelListSourceCapabilities(params: {
     modelListSource.supportsPricing === false
       ? toCatalogOnlyCapabilities(capabilities)
       : capabilities
+  const actionPolicy = modelListSource.actionPolicy
+
+  const applyDowngrade = (current: boolean, override: boolean | undefined) =>
+    typeof override === "boolean" ? current && override : current
 
   return {
     ...pricingCapabilities,
+    supportsRatioDisplay: applyDowngrade(
+      pricingCapabilities.supportsRatioDisplay,
+      actionPolicy?.supportsRatioDisplay,
+    ),
+    supportsGroupFiltering: applyDowngrade(
+      pricingCapabilities.supportsGroupFiltering,
+      actionPolicy?.supportsGroupFiltering,
+    ),
+    supportsAccountSummary: applyDowngrade(
+      pricingCapabilities.supportsAccountSummary,
+      actionPolicy?.supportsAccountSummary,
+    ),
+    supportsTokenCompatibility: applyDowngrade(
+      pricingCapabilities.supportsTokenCompatibility,
+      actionPolicy?.supportsTokenCompatibility,
+    ),
+    supportsCredentialVerification: applyDowngrade(
+      pricingCapabilities.supportsCredentialVerification,
+      actionPolicy?.supportsCredentialVerification,
+    ),
+    supportsBatchCredentialVerification: applyDowngrade(
+      pricingCapabilities.supportsBatchCredentialVerification,
+      actionPolicy?.supportsBatchCredentialVerification,
+    ),
+    supportsCliVerification: applyDowngrade(
+      pricingCapabilities.supportsCliVerification,
+      actionPolicy?.supportsCliVerification,
+    ),
     ...(typeof modelListSource.supportsRuntimeModelList === "boolean"
       ? { supportsRuntimeModelList: modelListSource.supportsRuntimeModelList }
       : {}),
+  }
+}
+
+/**
+ * Projects loaded response policies onto the aggregate all-accounts source.
+ * A control remains available when at least one loaded source can support it;
+ * an empty response keeps the aggregate defaults while data is still loading.
+ */
+export function deriveAllAccountsModelListCapabilities(params: {
+  capabilities: ModelManagementSourceCapabilities
+  modelListSources: readonly Pick<
+    ModelListSourceInfo,
+    "supportsRuntimeModelList" | "supportsPricing" | "actionPolicy"
+  >[]
+}): ModelManagementSourceCapabilities {
+  const { capabilities, modelListSources } = params
+  if (modelListSources.length === 0) return capabilities
+
+  const projectedCapabilities = modelListSources.map((modelListSource) =>
+    deriveModelListSourceCapabilities({
+      capabilities,
+      modelListSource,
+    }),
+  )
+  const supportsAny = (capability: keyof ModelManagementSourceCapabilities) =>
+    projectedCapabilities.some((source) => source[capability] === true)
+
+  return {
+    ...capabilities,
+    supportsPricing: supportsAny("supportsPricing"),
+    supportsRatioDisplay: supportsAny("supportsRatioDisplay"),
+    supportsGroupFiltering: supportsAny("supportsGroupFiltering"),
+    supportsAccountSummary: supportsAny("supportsAccountSummary"),
+    supportsTokenCompatibility: supportsAny("supportsTokenCompatibility"),
+    supportsCredentialVerification: supportsAny(
+      "supportsCredentialVerification",
+    ),
+    supportsBatchCredentialVerification: supportsAny(
+      "supportsBatchCredentialVerification",
+    ),
+    supportsCliVerification: supportsAny("supportsCliVerification"),
   }
 }
 

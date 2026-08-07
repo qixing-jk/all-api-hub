@@ -116,6 +116,32 @@ function renderModelItemHeader(quotaType: number) {
 }
 
 describe("ModelItemHeader", () => {
+  it("shows a readable display name and the exact request model id separately", () => {
+    render(
+      <ModelItemHeader
+        resolvedVendor={{ state: "unknown" }}
+        model={
+          {
+            model_name: "example/request-model-id",
+            display_name: "Readable Model Name",
+            quota_type: 0,
+          } as any
+        }
+        isAvailableForUser={true}
+        handleCopyModelName={vi.fn()}
+        showPricingMetadata={false}
+      />,
+    )
+
+    expect(
+      screen.getByRole("heading", { name: "Readable Model Name" }),
+    ).toBeVisible()
+    expect(screen.getByText("example/request-model-id")).toHaveAttribute(
+      "title",
+      "example/request-model-id",
+    )
+  })
+
   it("uses the supplied resolved vendor instead of reclassifying the model name", () => {
     const resolvedVendor = {
       state: "resolved",
@@ -149,7 +175,9 @@ describe("ModelItemHeader", () => {
       '[data-slot="model-vendor-badge"]',
     )
     expect(badgeSurface).toHaveClass("rounded-full")
-    expect(badgeSurface?.parentElement).toBe(heading.parentElement)
+    expect(badgeSurface?.parentElement).toBe(
+      heading.parentElement?.parentElement,
+    )
     expect(screen.queryAllByRole("img")).toHaveLength(0)
   })
 
@@ -223,7 +251,8 @@ describe("ModelItemHeader", () => {
 
     const modelName = screen.getByText("per-call-model")
     expect(modelName).toHaveClass("min-w-0", "flex-1", "truncate")
-    expect(modelName.parentElement).toHaveClass(
+    expect(modelName.parentElement).toHaveClass("min-w-0", "flex-1")
+    expect(modelName.parentElement?.parentElement).toHaveClass(
       "min-w-0",
       "flex-[1_1_10rem]",
       "items-center",

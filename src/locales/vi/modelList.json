@@ -105,6 +105,15 @@
   "currentUsableGroups": "Nhóm tài khoản hiện tại có thể dùng",
   "description": "Xem và quản lý các mô hình AI khả dụng",
   "detailedPricing": "Định giá chi tiết",
+  "displayFacts": {
+    "contextLimit": "Giới hạn ngữ cảnh",
+    "maximumOutputTokens": "Số token đầu ra tối đa",
+    "outputModalities": "Phương thức đầu ra",
+    "sections": {
+      "specifications": "Thông số kỹ thuật"
+    },
+    "tokenCount_other": "{{formattedCount}} token"
+  },
   "displayOptions": "Tùy chọn hiển thị:",
   "endpointType": "Loại endpoint",
   "endpointTypes": "Loại endpoint",
@@ -253,7 +262,8 @@
   },
   "sourceLabels": {
     "profileBadge": "Thông tin xác thực: {{name}} · {{host}}",
-    "profileOption": "Thông tin xác thực API: {{name}} · {{host}}"
+    "profileOption": "Thông tin xác thực API: {{name}} · {{host}}",
+    "providerCatalogBadge": "{{provider}} · Danh mục mô hình của nhà cung cấp"
   },
   "status": {
     "dataLoaded": "Tải dữ liệu mô hình thành công",
@@ -302,6 +312,7 @@
     "groupRatioUnavailable": "Không thể hiển thị giá vì nhóm dùng được này không có hệ số.",
     "keyGroupUnknown": "Không có giá vì không thể xác định nhóm Sub2API của khóa này.",
     "modelListOnly": "Các mô hình này khả dụng cho khóa này. Không có dữ liệu giá.",
+    "officialPriceInvalid": "Dữ liệu giá chính thức của mô hình này không hợp lệ.",
     "officialPriceMissing": "Mô hình này không có trong bảng giá.",
     "pricingSourceUnavailable": "Dữ liệu giá không khả dụng cho nguồn này."
   },

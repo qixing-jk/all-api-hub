@@ -81,6 +81,8 @@ export function getUnavailablePriceReasonText(
       return t("unavailablePriceReasons.groupRatioUnavailable")
     case MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING:
       return t("unavailablePriceReasons.officialPriceMissing")
+    case MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_INVALID:
+      return t("unavailablePriceReasons.officialPriceInvalid")
     case MODEL_UNAVAILABLE_PRICE_REASONS.PRICING_SOURCE_UNAVAILABLE:
     default:
       return t("unavailablePriceReasons.pricingSourceUnavailable")

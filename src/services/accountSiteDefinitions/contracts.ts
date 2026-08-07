@@ -83,6 +83,7 @@ export interface AccountSiteDefinitionOnboardingMetadata {
 
 export const ACCOUNT_SITE_MODEL_LIST_EXPECTED_ROUTES = {
   DirectPricing: "direct_pricing",
+  ProviderCatalog: "provider_catalog",
   TokenScopedRuntimeCatalog: "token_scoped_runtime_catalog",
   Unsupported: "unsupported",
 } as const

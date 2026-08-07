@@ -15,6 +15,13 @@ type ModelListSourceLabel = {
 
 type FormatModelListSourceLabelOptions = {
   formatProfileLabel: (params: { name: string; host?: string }) => string
+  formatProviderCatalogLabel: (params: {
+    provider: Extract<
+      ModelListSourceIdentity,
+      { kind: typeof MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG }
+    >["provider"]
+    providerName: string
+  }) => string
 }
 
 /** Returns the display-safe name for token- or runtime-key-scoped account rows. */
@@ -42,6 +49,17 @@ export function formatModelListSourceLabel(
   options: FormatModelListSourceLabelOptions,
   sourceIdentity?: ModelListSourceIdentity,
 ): ModelListSourceLabel {
+  if (
+    sourceIdentity?.kind === MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG
+  ) {
+    return {
+      label: options.formatProviderCatalogLabel({
+        provider: sourceIdentity.provider,
+        providerName: sourceIdentity.providerName,
+      }),
+    }
+  }
+
   if (source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
     const baseUrl = source.profile.baseUrl.trim()
     const host = tryParseUrl(baseUrl)?.host || baseUrl || undefined

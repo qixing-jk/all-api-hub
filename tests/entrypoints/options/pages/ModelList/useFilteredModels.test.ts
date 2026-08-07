@@ -16,6 +16,7 @@ import {
   createAccountTokenModelListSourceIdentity,
   createAllAccountsSource,
   createProfileSource,
+  createProviderCatalogModelListSourceIdentity,
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
@@ -400,6 +401,46 @@ describe("useFilteredModels", () => {
       expect.objectContaining({ key: "known:anthropic", count: 1 }),
       expect.objectContaining({ key: "known:google", count: 1 }),
     ])
+  })
+
+  it("searches the provider-neutral display name shown in model rows", async () => {
+    const account = createDisplayAccount({
+      id: "account-provider-display-name",
+      siteType: SITE_TYPES.OPENROUTER,
+    })
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "example/catalog-alpha",
+            display_name: "Visible Catalog Alpha",
+            enable_groups: [],
+          },
+          {
+            model_name: "example/catalog-beta",
+            display_name: "Visible Catalog Beta",
+            enable_groups: [],
+          },
+        ],
+        {
+          group_ratio: {},
+          usable_group: {},
+          model_list_source: {
+            kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
+            provider: SITE_TYPES.OPENROUTER,
+            supportsPricing: true,
+          },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      searchTerm: "catalog alpha",
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(1))
+
+    expect(result.current.filteredModels[0]?.model.model_name).toBe(
+      "example/catalog-alpha",
+    )
   })
 
   it("estimates filtered models and counts from pending filters", async () => {
@@ -2257,6 +2298,115 @@ describe("useFilteredModels", () => {
         ["account-ratio", "default", 2, 6, false],
       ])
     })
+  })
+
+  it("filters and compares provider-catalog prices without inflating account summaries", async () => {
+    const ordinaryAccount = createDisplayAccount({
+      id: "ordinary-comparable",
+      name: "Ordinary Account",
+      siteType: SITE_TYPES.NEW_API,
+      balance: { USD: 10, CNY: 70 },
+    })
+    const providerAccount = createDisplayAccount({
+      id: "provider-comparable",
+      name: "Provider Account",
+      siteType: SITE_TYPES.OPENROUTER,
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: ordinaryAccount,
+          pricing: createPricingResponse([
+            {
+              model_name: "example/shared-model",
+              model_ratio: 1,
+              completion_ratio: 2,
+              enable_groups: ["default"],
+            },
+            { model_name: "example/ordinary-only" },
+          ]),
+        },
+        {
+          account: providerAccount,
+          sourceIdentity: createProviderCatalogModelListSourceIdentity({
+            sourceId: "example-provider-public",
+            provider: SITE_TYPES.OPENROUTER,
+            providerName: "Example Provider",
+          }),
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "example/shared-model",
+                model_ratio: 0,
+                completion_ratio: 1,
+                enable_groups: [],
+                token_price_usd_per_million: {
+                  input: 1,
+                  output: 3,
+                },
+                price_metadata: {
+                  source: MODEL_PRICE_SOURCE_KINDS.PROVIDER_CATALOG,
+                  precision: MODEL_PRICE_PRECISION_KINDS.EXACT,
+                },
+              },
+              { model_name: "example/provider-only", enable_groups: [] },
+            ],
+            {
+              group_ratio: {},
+              usable_group: {},
+              model_list_source: {
+                kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
+                provider: SITE_TYPES.OPENROUTER,
+                supportsRuntimeModelList: false,
+                supportsPricing: true,
+                actionPolicy: {
+                  supportsRatioDisplay: false,
+                  supportsGroupFiltering: false,
+                  supportsAccountSummary: false,
+                  supportsTokenCompatibility: false,
+                  supportsCredentialVerification: false,
+                  supportsBatchCredentialVerification: false,
+                  supportsCliVerification: false,
+                },
+              },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      searchTerm: "shared-model",
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => [
+          item.source.kind === "account" ? item.source.account.id : "profile",
+          item.calculatedPrice.inputUSD,
+          item.isLowestPrice,
+        ]),
+      ).toEqual([
+        ["provider-comparable", 1, true],
+        ["ordinary-comparable", 2, false],
+      ])
+    })
+
+    expect(
+      Array.from(result.current.accountSummaryCountsByAccountId.entries()),
+    ).toEqual([[ordinaryAccount.id, 1]])
+    expect(result.current.filteredModels[0]?.source.capabilities).toMatchObject(
+      {
+        supportsRatioDisplay: false,
+        supportsGroupFiltering: false,
+        supportsAccountSummary: false,
+        supportsTokenCompatibility: false,
+        supportsCredentialVerification: false,
+        supportsBatchCredentialVerification: false,
+        supportsCliVerification: false,
+      },
+    )
   })
 
   it("compares Sub2API estimated token prices against ratio-based accounts in all-accounts mode", async () => {

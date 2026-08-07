@@ -867,6 +867,143 @@ describe("useModelListData", () => {
     })
   })
 
+  it("hides unsupported controls when all loaded accounts use a provider catalog", async () => {
+    const openRouterAccount: DisplaySiteData = {
+      ...ACCOUNT,
+      id: "openrouter-account",
+      siteType: SITE_TYPES.OPENROUTER,
+    }
+
+    mockUseAccountData.mockReturnValue({
+      enabledDisplayData: [openRouterAccount],
+    })
+    mockUseModelData.mockReturnValue({
+      pricingData: null,
+      pricingContexts: [
+        {
+          account: openRouterAccount,
+          pricing: {
+            data: [],
+            group_ratio: {},
+            success: true,
+            usable_group: {},
+            model_list_source: {
+              kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
+              provider: SITE_TYPES.OPENROUTER,
+              supportsPricing: true,
+              actionPolicy: {
+                supportsRatioDisplay: false,
+                supportsGroupFiltering: false,
+                supportsAccountSummary: false,
+                supportsTokenCompatibility: false,
+                supportsCredentialVerification: false,
+                supportsBatchCredentialVerification: false,
+                supportsCliVerification: false,
+              },
+            },
+          },
+        },
+      ],
+      isLoading: false,
+      hasAuthoritativePricingData: false,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
+    })
+
+    expect(result.current.sourceCapabilities).toMatchObject({
+      supportsPricing: true,
+      supportsRatioDisplay: false,
+      supportsGroupFiltering: false,
+      supportsAccountSummary: false,
+      supportsCredentialVerification: false,
+      supportsBatchCredentialVerification: false,
+      supportsCliVerification: false,
+    })
+  })
+
+  it("preserves ordinary account controls beside a provider catalog", async () => {
+    const openRouterAccount: DisplaySiteData = {
+      ...ACCOUNT,
+      id: "openrouter-account",
+      siteType: SITE_TYPES.OPENROUTER,
+    }
+
+    mockUseAccountData.mockReturnValue({
+      enabledDisplayData: [ACCOUNT, openRouterAccount],
+    })
+    mockUseModelData.mockReturnValue({
+      pricingData: null,
+      pricingContexts: [
+        {
+          account: ACCOUNT,
+          pricing: SETTLED_PRICING_DATA,
+        },
+        {
+          account: openRouterAccount,
+          pricing: {
+            ...SETTLED_PRICING_DATA,
+            model_list_source: {
+              kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
+              provider: SITE_TYPES.OPENROUTER,
+              supportsPricing: true,
+              actionPolicy: {
+                supportsRatioDisplay: false,
+                supportsGroupFiltering: false,
+                supportsAccountSummary: false,
+                supportsTokenCompatibility: false,
+                supportsCredentialVerification: false,
+                supportsBatchCredentialVerification: false,
+                supportsCliVerification: false,
+              },
+            },
+          },
+        },
+      ],
+      isLoading: false,
+      hasAuthoritativePricingData: false,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
+    })
+
+    expect(result.current.sourceCapabilities).toMatchObject({
+      supportsPricing: true,
+      supportsRatioDisplay: true,
+      supportsGroupFiltering: true,
+      supportsAccountSummary: true,
+      supportsBatchCredentialVerification: true,
+    })
+  })
+
   it("resets the per-model cheapest sort when leaving the all-accounts view", async () => {
     const { result } = renderHook(() => useModelListData())
 

@@ -60,6 +60,8 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   trailingContent,
 }) => {
   const { t } = useTranslation(["modelList", "aiApiVerification"])
+  const displayName = model.display_name?.trim() || model.model_name
+  const showRequestModelId = displayName !== model.model_name
 
   const getBillingVariant = (quotaType: number) => {
     if (quotaType === 2) return "default"
@@ -72,15 +74,25 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
         <div className="flex min-w-0 flex-[1_1_10rem] items-center gap-2 sm:gap-3">
           <ModelVendorMark vendor={resolvedVendor} variant="badge" />
 
-          <h3
-            className={`min-w-0 flex-1 truncate text-sm font-semibold sm:text-base md:text-lg ${
-              isAvailableForUser
-                ? "dark:text-dark-text-primary text-gray-900"
-                : "dark:text-dark-text-tertiary text-gray-500"
-            }`}
-          >
-            {model.model_name}
-          </h3>
+          <div className="min-w-0 flex-1">
+            <h3
+              className={`min-w-0 flex-1 truncate text-sm font-semibold sm:text-base md:text-lg ${
+                isAvailableForUser
+                  ? "dark:text-dark-text-primary text-gray-900"
+                  : "dark:text-dark-text-tertiary text-gray-500"
+              }`}
+            >
+              {displayName}
+            </h3>
+            {showRequestModelId ? (
+              <p
+                className="dark:text-dark-text-tertiary mt-0.5 truncate font-mono text-[11px] text-gray-500 sm:text-xs"
+                title={model.model_name}
+              >
+                {model.model_name}
+              </p>
+            ) : null}
+          </div>
         </div>
 
         <ProductAnalyticsScope
@@ -125,6 +137,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
                 onClick={onVerifyApi}
                 title={t("modelList:actions.verifyApi")}
                 aria-label={t("modelList:actions.verifyApi")}
+                data-testid={MODEL_LIST_TEST_IDS.verifyApiButton}
                 className="shrink-0"
                 analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.VerifyModelApi}
               >
@@ -139,6 +152,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
                 onClick={onVerifyCliSupport}
                 title={t("modelList:actions.verifyCliSupport")}
                 aria-label={t("modelList:actions.verifyCliSupport")}
+                data-testid={MODEL_LIST_TEST_IDS.verifyCliSupportButton}
                 className="shrink-0"
                 analyticsAction={
                   PRODUCT_ANALYTICS_ACTION_IDS.VerifyModelCliSupport

@@ -111,6 +111,16 @@
   "currentUsableGroups": "Aktuell nutzbare Gruppen",
   "description": "Verfügbare KI-Modelle anzeigen und verwalten",
   "detailedPricing": "Detaillierte Preise",
+  "displayFacts": {
+    "contextLimit": "Kontextlimit",
+    "maximumOutputTokens": "Maximale Ausgabe-Token",
+    "outputModalities": "Ausgabemodalitäten",
+    "sections": {
+      "specifications": "Spezifikationen"
+    },
+    "tokenCount_one": "{{formattedCount}} Token",
+    "tokenCount_other": "{{formattedCount}} Token"
+  },
   "displayOptions": "Anzeigeoptionen:",
   "endpointType": "Endpunkttyp",
   "endpointTypes": "Endpunkttypen",
@@ -260,7 +270,8 @@
   },
   "sourceLabels": {
     "profileBadge": "Profil: {{name}} · {{host}}",
-    "profileOption": "API-Anmeldeinformationen: {{name}} · {{host}}"
+    "profileOption": "API-Anmeldeinformationen: {{name}} · {{host}}",
+    "providerCatalogBadge": "{{provider}} · Modellkatalog des Anbieters"
   },
   "status": {
     "dataLoaded": "Modelldaten erfolgreich geladen",
@@ -310,6 +321,7 @@
     "groupRatioUnavailable": "Preise sind nicht verfügbar, da diese verwendbare Gruppe keinen Multiplikator hat.",
     "keyGroupUnknown": "Preise sind nicht verfügbar, weil die Sub2API-Gruppe dieses Schlüssels nicht ermittelt werden konnte.",
     "modelListOnly": "Modelle sind für diesen Schlüssel verfügbar. Preise sind nicht verfügbar.",
+    "officialPriceInvalid": "Die offiziellen Preisdaten dieses Modells sind ungültig.",
     "officialPriceMissing": "Dieses Modell ist nicht in der Preistabelle enthalten.",
     "pricingSourceUnavailable": "Für diese Quelle sind keine Preisdaten verfügbar."
   },

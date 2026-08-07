@@ -1,4 +1,9 @@
-import { useQueries, useQuery } from "@tanstack/react-query"
+import {
+  useQueries,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query"
 import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
@@ -7,6 +12,7 @@ import { useTranslation } from "react-i18next"
 import {
   createAccountModelListSourceIdentity,
   createAccountRuntimeKeyModelListSourceIdentity,
+  createProviderCatalogModelListSourceIdentity,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelListSourceIdentity,
   type ModelManagementSource,
@@ -27,10 +33,12 @@ import {
   InvalidTokenPayloadError,
 } from "~/services/accounts/utils/apiServiceRequest"
 import type { ModelPricingRequest } from "~/services/apiAdapters/contracts/modelPricing"
+import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/contracts/providerModelCatalog"
 import {
   buildApiCredentialProfilePricingResponse,
   fetchApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
+import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import {
   ACCOUNT_RUNTIME_KEY_FALLBACK_LOAD_FAILED,
   canLoadModelListAccountFallbackRuntimeKeys,
@@ -38,7 +46,11 @@ import {
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   resolveModelListAccountSourceReadiness,
 } from "~/services/modelList/accountSources"
-import type { PricingResponse } from "~/services/modelList/pricingModel"
+import {
+  MODEL_LIST_SOURCE_KINDS,
+  type PricingResponse,
+} from "~/services/modelList/pricingModel"
+import { isValidProviderModelCatalogPricing } from "~/services/modelList/providerCatalogAdmission"
 import {
   MODEL_PRICING_CACHE_TTL_MS,
   modelPricingCache,
@@ -367,13 +379,21 @@ function trackModelDataLoadCompletion(params: {
   })
 }
 
-/** Builds the pricing query key from non-secret account identity fields. */
+/** Builds an account- or provider-scoped pricing query key. */
 function createModelPricingQueryKey(
   account?: Pick<
     DisplaySiteData,
     "id" | "baseUrl" | "userId" | "siteType" | "authType"
   >,
+  providerCatalogSourceId?: string,
 ) {
+  if (account && providerCatalogSourceId) {
+    return createProviderModelCatalogQueryKey(
+      providerCatalogSourceId,
+      MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+    )
+  }
+
   return account
     ? [
         MODEL_LIST_QUERY_KEYS.PRICING,
@@ -384,6 +404,20 @@ function createModelPricingQueryKey(
         account.authType,
       ]
     : [MODEL_LIST_QUERY_KEYS.PRICING, MODEL_LIST_QUERY_SCOPE_VALUES.NONE]
+}
+
+/** Prefix shared by every React Query scope for one provider-wide catalog. */
+function createProviderModelCatalogQueryKeyPrefix(sourceId: string) {
+  return [
+    MODEL_LIST_QUERY_KEYS.PRICING,
+    MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
+    sourceId,
+  ]
+}
+
+/** Keeps provider-catalog result shapes separate by management scope. */
+function createProviderModelCatalogQueryKey(sourceId: string, scope: string) {
+  return [...createProviderModelCatalogQueryKeyPrefix(sourceId), scope]
 }
 
 /** Builds an all-accounts pricing query key without changing persistence cache scope. */
@@ -418,6 +452,125 @@ function createModelPricingCacheKey(
     account.siteType,
     account.authType,
   ].join("|")
+}
+
+type ModelListAccountSourceReadiness = ReturnType<
+  typeof resolveModelListAccountSourceReadiness
+>
+
+interface AllAccountsModelLoadTarget {
+  id: string
+  accounts: DisplaySiteData[]
+  account: DisplaySiteData
+  readiness: ModelListAccountSourceReadiness
+}
+
+/** Collapses provider-wide catalogs while retaining each affected account. */
+function createAllAccountsModelLoadTargets(
+  accounts: DisplaySiteData[],
+): AllAccountsModelLoadTarget[] {
+  const targets = new Map<string, AllAccountsModelLoadTarget>()
+
+  for (const account of accounts) {
+    const readiness = resolveModelListAccountSourceReadiness(account)
+    const id =
+      readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+        ? `provider-catalog:${readiness.providerModelCatalog.source.id}`
+        : `account:${account.id}`
+    const existing = targets.get(id)
+
+    if (existing) {
+      existing.accounts.push(account)
+      continue
+    }
+
+    targets.set(id, {
+      id,
+      accounts: [account],
+      account,
+      readiness,
+    })
+  }
+
+  return Array.from(targets.values())
+}
+
+/** Builds a query key for one account or collapsed provider catalog target. */
+function createAllAccountsModelLoadTargetQueryKey(
+  target: AllAccountsModelLoadTarget,
+) {
+  return target.readiness.route ===
+    MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+    ? createProviderModelCatalogQueryKey(
+        target.readiness.providerModelCatalog.source.id,
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
+    : createAllAccountsModelPricingQueryKey(target.account)
+}
+
+/** Builds the provider-wide cache key independently of any saved account. */
+function createProviderModelCatalogCacheKey(sourceId: string) {
+  return `provider-catalog|${sourceId}`
+}
+
+/** Marks every in-memory provider scope stale after a catalog refresh. */
+async function invalidateProviderModelCatalogCaches(params: {
+  queryClient: QueryClient
+  sourceId: string
+}) {
+  await Promise.all([
+    modelPricingCache.invalidate(
+      createProviderModelCatalogCacheKey(params.sourceId),
+    ),
+    params.queryClient.invalidateQueries({
+      queryKey: createProviderModelCatalogQueryKeyPrefix(params.sourceId),
+      refetchType: "none",
+    }),
+  ])
+}
+
+/** Maps provider schema failures into Model List's stable format classification. */
+function normalizeProviderModelCatalogError(error: unknown) {
+  const code = (error as { code?: string } | null | undefined)?.code
+  return code === API_ERROR_CODES.JSON_PARSE_ERROR
+    ? createInvalidFormatError()
+    : error
+}
+
+/** Loads one provider-wide catalog without persisting incomplete failures. */
+async function loadProviderModelCatalogPricing(params: {
+  capability: ProviderModelCatalogCapability
+  abortSignal?: AbortSignal
+}): Promise<{ pricing: PricingResponse; cacheHit: boolean }> {
+  const { capability, abortSignal } = params
+  const cacheKey = createProviderModelCatalogCacheKey(capability.source.id)
+  const cached = await modelPricingCache.get(
+    cacheKey,
+    capability.source.cacheTtlMs,
+  )
+  if (
+    cached &&
+    isValidProviderModelCatalogPricing(cached, capability.source.provider)
+  ) {
+    return { pricing: cached, cacheHit: true }
+  }
+  if (cached) await modelPricingCache.invalidate(cacheKey)
+
+  let pricing: PricingResponse
+  try {
+    pricing = await capability.fetchPricing({ abortSignal })
+  } catch (error) {
+    throw normalizeProviderModelCatalogError(error)
+  }
+
+  if (
+    !isValidProviderModelCatalogPricing(pricing, capability.source.provider)
+  ) {
+    throw createInvalidFormatError()
+  }
+
+  await modelPricingCache.set(cacheKey, pricing)
+  return { pricing, cacheHit: false }
 }
 
 /** Builds the adapter pricing request from a display account. */
@@ -598,6 +751,7 @@ function useSingleAccountModelData(params: {
   accounts: DisplaySiteData[]
 }): UseModelDataReturn {
   const { selectedSource, accounts } = params
+  const queryClient = useQueryClient()
   const { t } = useTranslation("modelList")
   const [dataFormatError, setDataFormatError] = useState(false)
   const [loadErrorMessage, setLoadErrorMessage] = useState<string | null>(null)
@@ -632,6 +786,13 @@ function useSingleAccountModelData(params: {
         ? safeDisplayData.find((acc) => acc.id === selectedSource.account.id)
         : undefined,
     [safeDisplayData, selectedSource],
+  )
+  const currentReadiness = useMemo(
+    () =>
+      currentAccount
+        ? resolveModelListAccountSourceReadiness(currentAccount)
+        : null,
+    [currentAccount],
   )
   const fallbackCatalogAbortControllerRef = useRef<AbortController | null>(null)
 
@@ -752,8 +913,15 @@ function useSingleAccountModelData(params: {
     scopedFallbackState.fallbackCatalogLoadErrorMessage
 
   const queryKey = useMemo(
-    () => createModelPricingQueryKey(currentAccount),
-    [currentAccount],
+    () =>
+      createModelPricingQueryKey(
+        currentAccount,
+        currentReadiness?.route ===
+          MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+          ? currentReadiness.providerModelCatalog.source.id
+          : undefined,
+      ),
+    [currentAccount, currentReadiness],
   )
   const trackedDirectLoadKeyRef = useRef<string | null>(null)
   const directLoadCacheHitRef = useRef(false)
@@ -761,7 +929,11 @@ function useSingleAccountModelData(params: {
   const query = useQuery<PricingResponse, Error>({
     queryKey,
     enabled: !!currentAccount,
-    staleTime: MODEL_PRICING_CACHE_TTL_MS,
+    staleTime:
+      currentReadiness?.route ===
+      MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+        ? currentReadiness.providerModelCatalog.source.cacheTtlMs
+        : MODEL_PRICING_CACHE_TTL_MS,
     refetchOnWindowFocus: false,
     retry: shouldRetryModelPricingQuery,
     queryFn: async ({ signal }) => {
@@ -770,6 +942,18 @@ function useSingleAccountModelData(params: {
       }
 
       const readiness = resolveModelListAccountSourceReadiness(currentAccount)
+      if (
+        readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+      ) {
+        directLoadCacheHitRef.current = false
+        const { pricing, cacheHit } = await loadProviderModelCatalogPricing({
+          capability: readiness.providerModelCatalog,
+          abortSignal: signal,
+        })
+        directLoadCacheHitRef.current = cacheHit
+        return pricing
+      }
+
       if (readiness.route !== MODEL_LIST_ACCOUNT_SOURCE_ROUTES.DirectPricing) {
         throw createUnsupportedModelPricingError()
       }
@@ -1146,14 +1330,23 @@ function useSingleAccountModelData(params: {
       return
     }
 
-    await modelPricingCache.invalidate(
-      createModelPricingCacheKey(currentAccount),
-    )
+    const readiness = resolveModelListAccountSourceReadiness(currentAccount)
+    if (readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog) {
+      await invalidateProviderModelCatalogCaches({
+        queryClient,
+        sourceId: readiness.providerModelCatalog.source.id,
+      })
+    } else {
+      await modelPricingCache.invalidate(
+        createModelPricingCacheKey(currentAccount),
+      )
+    }
     await query.refetch()
   }, [
     currentAccount,
     loadFallbackCatalog,
     query,
+    queryClient,
     scopedFallbackPricingData,
     selectedFallbackRuntimeKey,
   ])
@@ -1190,12 +1383,24 @@ function useSingleAccountModelData(params: {
                       runtimeKeyId: selectedFallbackRuntimeKey.id,
                       runtimeKeyName: selectedFallbackRuntimeKey.label,
                     })
-                  : createAccountModelListSourceIdentity(currentAccount.id),
+                  : currentReadiness?.route ===
+                      MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+                    ? createProviderCatalogModelListSourceIdentity({
+                        sourceId:
+                          currentReadiness.providerModelCatalog.source.id,
+                        provider:
+                          currentReadiness.providerModelCatalog.source.provider,
+                        providerName:
+                          currentReadiness.providerModelCatalog.source
+                            .displayName,
+                      })
+                    : createAccountModelListSourceIdentity(currentAccount.id),
             },
           ]
         : [],
     [
       currentAccount,
+      currentReadiness,
       isFallbackCatalogActive,
       pricingData,
       selectedFallbackRuntimeKey,
@@ -1271,22 +1476,62 @@ function useAllAccountsModelData(
   enabled: boolean,
 ): UseModelDataReturn {
   const { t } = useTranslation("modelList")
+  const queryClient = useQueryClient()
   const safeDisplayData = useMemo(() => accounts || [], [accounts])
+  const loadTargets = useMemo(
+    () => createAllAccountsModelLoadTargets(safeDisplayData),
+    [safeDisplayData],
+  )
+  const targetIndexByAccountId = useMemo(() => {
+    const indexes = new Map<string, number>()
+    loadTargets.forEach((target, index) => {
+      target.accounts.forEach((account) => indexes.set(account.id, index))
+    })
+    return indexes
+  }, [loadTargets])
 
   const queries = useQueries({
-    queries: safeDisplayData.map((account) => ({
-      queryKey: createAllAccountsModelPricingQueryKey(account),
+    queries: loadTargets.map((target) => ({
+      queryKey: createAllAccountsModelLoadTargetQueryKey(target),
       /**
        * Only load pricing when the UI is explicitly in "all accounts" mode.
        * This avoids triggering expensive background fetches while the user is
        * still selecting a single account.
        */
       enabled: enabled && safeDisplayData.length > 0,
-      staleTime: MODEL_PRICING_CACHE_TTL_MS,
+      staleTime:
+        target.readiness.route ===
+        MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+          ? target.readiness.providerModelCatalog.source.cacheTtlMs
+          : MODEL_PRICING_CACHE_TTL_MS,
       refetchOnWindowFocus: false,
       retry: shouldRetryModelPricingQuery,
       queryFn: async ({ signal }) => {
-        const readiness = resolveModelListAccountSourceReadiness(account)
+        const { account, readiness } = target
+        if (
+          readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+        ) {
+          const source = readiness.providerModelCatalog.source
+          const { pricing } = await loadProviderModelCatalogPricing({
+            capability: readiness.providerModelCatalog,
+            abortSignal: signal,
+          })
+
+          return {
+            contexts: [
+              {
+                account,
+                pricing,
+                sourceIdentity: createProviderCatalogModelListSourceIdentity({
+                  sourceId: source.id,
+                  provider: source.provider,
+                  providerName: source.displayName,
+                }),
+              },
+            ],
+          }
+        }
+
         if (
           readiness.route ===
           MODEL_LIST_ACCOUNT_SOURCE_ROUTES.TokenScopedRuntimeCatalog
@@ -1358,7 +1603,7 @@ function useAllAccountsModelData(
       return
     }
 
-    if (queries.length !== safeDisplayData.length) return
+    if (queries.length !== loadTargets.length) return
     if (queries.some((query) => query.isPending || query.isFetching)) return
     if (!queries.every((query) => query.isSuccess || query.isError)) return
 
@@ -1380,7 +1625,7 @@ function useAllAccountsModelData(
     const trackingKey = queries
       .map((query, index) =>
         [
-          safeDisplayData[index]?.id,
+          loadTargets[index]?.id,
           query.isSuccess ? "success" : "failure",
           query.data?.partialFailureCount ?? 0,
           query.dataUpdatedAt,
@@ -1424,7 +1669,7 @@ function useAllAccountsModelData(
       successCount,
       failureCount,
     })
-  }, [enabled, queries, safeDisplayData])
+  }, [enabled, loadTargets, queries, safeDisplayData])
 
   const pricingContexts: AccountPricingContext[] = useMemo(() => {
     return queries.flatMap((query) => query.data?.contexts ?? [])
@@ -1439,20 +1684,32 @@ function useAllAccountsModelData(
 
   const loadPricingData = useCallback(async () => {
     await Promise.all(
-      safeDisplayData.map(async (account, index) => {
-        await modelPricingCache.invalidate(createModelPricingCacheKey(account))
+      loadTargets.map(async (target, index) => {
+        if (
+          target.readiness.route ===
+          MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+        ) {
+          await invalidateProviderModelCatalogCaches({
+            queryClient,
+            sourceId: target.readiness.providerModelCatalog.source.id,
+          })
+        } else {
+          await modelPricingCache.invalidate(
+            createModelPricingCacheKey(target.account),
+          )
+        }
         const query = queries[index]
         if (query) {
           await query.refetch()
         }
       }),
     )
-  }, [queries, safeDisplayData])
+  }, [loadTargets, queries, queryClient])
 
   const accountQueryStates: AccountQueryState[] = useMemo(
     () =>
       safeDisplayData.map((account, index) => {
-        const query = queries[index]
+        const query = queries[targetIndexByAccountId.get(account.id) ?? index]
         const error = query?.error as { code?: string } | null | undefined
         const partialFailureCount = query?.data?.partialFailureCount ?? 0
         const partialFailureErrors = query?.data?.partialFailureErrors ?? []
@@ -1494,7 +1751,7 @@ function useAllAccountsModelData(
           errorMessage,
         }
       }),
-    [queries, safeDisplayData, t],
+    [queries, safeDisplayData, t, targetIndexByAccountId],
   )
 
   const loadErrorMessage = useMemo(() => {

@@ -951,6 +951,10 @@ export function BatchVerifyModelsDialog({
       {
         formatProfileLabel: ({ name, host }) =>
           t("modelList:sourceLabels.profileBadge", { name, host }),
+        formatProviderCatalogLabel: ({ providerName }) =>
+          t("modelList:sourceLabels.providerCatalogBadge", {
+            provider: providerName,
+          }),
       },
       row.item.sourceIdentity,
     )

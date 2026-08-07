@@ -18,7 +18,10 @@ export default defineConfig({
     functions: ["t", "*.t", "i18next.t"],
     transComponents: ["Trans"],
     useTranslationNames: ["useTranslation"],
-    preservePatterns: ["settings:refresh.shieldAutomaticFeature*"],
+    preservePatterns: [
+      "settings:refresh.shieldAutomaticFeature*",
+      "modelList:displayFacts.*",
+    ],
     primaryLanguage: DEFAULT_LANG,
     secondaryLanguages,
     indentation: 2,

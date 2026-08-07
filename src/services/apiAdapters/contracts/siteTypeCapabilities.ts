@@ -17,6 +17,7 @@ import type {
 import type { ManagedUpstreamResourcesCapability } from "./managedUpstreamResources"
 import type { ModelCatalogCapability } from "./modelCatalog"
 import type { ModelPricingCapability } from "./modelPricing"
+import type { ProviderModelCatalogCapability } from "./providerModelCatalog"
 import type { RedemptionCapability } from "./redemption"
 import type { ServiceCredentialCapability } from "./serviceCredential"
 import type { SiteAnnouncementsCapability } from "./siteAnnouncements"
@@ -38,6 +39,7 @@ export type SiteTypeCapabilities = {
   account?: {
     announcements?: SiteAnnouncementsCapability
     modelCatalog?: ModelCatalogCapability
+    providerModelCatalog?: ProviderModelCatalogCapability
     modelPricing?: ModelPricingCapability
     data?: AccountDataCapability
     bootstrap?: AccountBootstrapCapability

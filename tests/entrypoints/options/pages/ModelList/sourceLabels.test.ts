@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import {
   createAccountModelListSourceIdentity,
   createAccountRuntimeKeyModelListSourceIdentity,
   createAccountSource,
   createAccountTokenModelListSourceIdentity,
   createProfileSource,
+  createProviderCatalogModelListSourceIdentity,
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
 } from "~/features/ModelList/modelManagementSources"
 import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
@@ -38,6 +39,12 @@ const createDisplayAccount = (
 const labelOptions = {
   formatProfileLabel: ({ name, host }: { name: string; host?: string }) =>
     host ? `${name} (${host})` : name,
+  formatProviderCatalogLabel: ({
+    providerName,
+  }: {
+    provider: AccountSiteType
+    providerName: string
+  }) => `${providerName} · Provider Model Catalog`,
 }
 
 describe("formatModelListSourceLabel", () => {
@@ -147,6 +154,29 @@ describe("formatModelListSourceLabel", () => {
     ).toEqual({
       label: "Sub2API Account · sub2api.example.invalid",
       title: "https://sub2api.example.invalid",
+    })
+  })
+
+  it("labels provider-wide catalogs by provider instead of a representative account", () => {
+    const account = createDisplayAccount({
+      id: "provider-account",
+      name: "Saved account alias",
+      baseUrl: "https://console.example.invalid",
+      siteType: SITE_TYPES.OPENROUTER,
+    })
+
+    expect(
+      formatModelListSourceLabel(
+        createAccountSource(account),
+        labelOptions,
+        createProviderCatalogModelListSourceIdentity({
+          sourceId: "example-public",
+          provider: SITE_TYPES.OPENROUTER,
+          providerName: "Example Provider",
+        }),
+      ),
+    ).toEqual({
+      label: "Example Provider · Provider Model Catalog",
     })
   })
 

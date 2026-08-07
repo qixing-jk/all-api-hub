@@ -105,6 +105,15 @@
   "currentUsableGroups": "当前账号可用分组",
   "description": "查看和管理可用的AI模型",
   "detailedPricing": "详细定价",
+  "displayFacts": {
+    "contextLimit": "上下文上限",
+    "maximumOutputTokens": "最大输出 Token 数",
+    "outputModalities": "输出模态",
+    "sections": {
+      "specifications": "规格"
+    },
+    "tokenCount": "{{formattedCount}} Token"
+  },
   "displayOptions": "显示选项:",
   "endpointType": "端点类型",
   "endpointTypes": "端点类型",
@@ -252,7 +261,8 @@
   },
   "sourceLabels": {
     "profileBadge": "凭据：{{name}} · {{host}}",
-    "profileOption": "API 凭据：{{name}} · {{host}}"
+    "profileOption": "API 凭据：{{name}} · {{host}}",
+    "providerCatalogBadge": "{{provider}} · 提供商模型目录"
   },
   "status": {
     "dataLoaded": "模型数据加载成功",
@@ -301,6 +311,7 @@
     "groupRatioUnavailable": "价格不可用，因为当前可用分组没有分组倍率。",
     "keyGroupUnknown": "价格不可用，因为无法解析此密钥的 Sub2API 分组。",
     "modelListOnly": "此密钥可使用这些模型，但价格不可用。",
+    "officialPriceInvalid": "此模型的官方价格数据无效。",
     "officialPriceMissing": "此模型不在价格表中。",
     "pricingSourceUnavailable": "此来源的价格数据不可用。"
   },

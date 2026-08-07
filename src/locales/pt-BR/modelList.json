@@ -117,6 +117,17 @@
   "currentUsableGroups": "Grupos disponíveis no momento",
   "description": "Veja e gerencie os modelos de IA disponíveis",
   "detailedPricing": "Preços detalhados",
+  "displayFacts": {
+    "contextLimit": "Limite de contexto",
+    "maximumOutputTokens": "Máximo de tokens de saída",
+    "outputModalities": "Modalidades de saída",
+    "sections": {
+      "specifications": "Especificações"
+    },
+    "tokenCount_one": "{{formattedCount}} token",
+    "tokenCount_many": "{{formattedCount}} tokens",
+    "tokenCount_other": "{{formattedCount}} tokens"
+  },
   "displayOptions": "Opções de exibição:",
   "endpointType": "Tipo de endpoint",
   "endpointTypes": "Tipos de endpoint",
@@ -268,7 +279,8 @@
   },
   "sourceLabels": {
     "profileBadge": "Perfil: {{name}} · {{host}}",
-    "profileOption": "Credencial de API: {{name}} · {{host}}"
+    "profileOption": "Credencial de API: {{name}} · {{host}}",
+    "providerCatalogBadge": "{{provider}} · Catálogo de modelos do provedor"
   },
   "status": {
     "dataLoaded": "Dados dos modelos carregados com sucesso",
@@ -319,6 +331,7 @@
     "groupRatioUnavailable": "Os preços estão indisponíveis porque este grupo utilizável não tem multiplicador.",
     "keyGroupUnknown": "Os preços estão indisponíveis porque não foi possível identificar o grupo desta chave no Sub2API.",
     "modelListOnly": "Há modelos disponíveis para esta chave. Os preços estão indisponíveis.",
+    "officialPriceInvalid": "Os dados de preço oficiais deste modelo são inválidos.",
     "officialPriceMissing": "Este modelo não está na tabela de preços.",
     "pricingSourceUnavailable": "Os dados de preços estão indisponíveis para esta fonte."
   },

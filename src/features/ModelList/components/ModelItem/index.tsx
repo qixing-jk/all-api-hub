@@ -19,7 +19,10 @@ import type {
   ModelManagementItemSource,
   ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import {
+  MODEL_LIST_SOURCE_IDENTITY_KINDS,
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+} from "~/features/ModelList/modelManagementSources"
 import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
 import {
   isModelPriceUnavailable,
@@ -52,6 +55,10 @@ import { ModelItemDetails } from "./ModelItemDetails"
 import { ModelItemExpandButton } from "./ModelItemExpandButton"
 import { ModelItemHeader } from "./ModelItemHeader"
 import { ModelItemPricing } from "./ModelItemPricing"
+import {
+  ModelPresentationDetails,
+  ModelPresentationSummary,
+} from "./ModelPresentationFacts"
 
 const logger = createLogger("ModelItem")
 
@@ -178,7 +185,9 @@ export default function ModelItem(props: ModelItemProps) {
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
       ? source.account.baseUrl?.trim()
       : source.profile.baseUrl.trim()
-  const canUseSourceUrl = Boolean(sourceBaseUrl)
+  const isProviderCatalogSource =
+    sourceIdentity?.kind === MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG
+  const canUseSourceUrl = !isProviderCatalogSource && Boolean(sourceBaseUrl)
   const parsedSourceUrl = tryParseUrl(sourceBaseUrl)
   const canOpenSourceUrl =
     parsedSourceUrl?.protocol === "http:" ||
@@ -206,11 +215,15 @@ export default function ModelItem(props: ModelItemProps) {
     {
       formatProfileLabel: ({ name, host }) =>
         t("sourceLabels.profileBadge", { name, host }),
+      formatProviderCatalogLabel: ({ providerName }) =>
+        t("sourceLabels.providerCatalogBadge", { provider: providerName }),
     },
     sourceIdentity,
   )
   const handleFilterAccount =
-    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && onFilterAccount
+    !isProviderCatalogSource &&
+    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+    onFilterAccount
       ? () => onFilterAccount(source.account.id)
       : undefined
 
@@ -244,13 +257,18 @@ export default function ModelItem(props: ModelItemProps) {
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
     effectiveCapabilities.supportsGroupFiltering &&
     hasGroupSemantics
+  const hasPresentationDetails = Boolean(
+    model.presentation?.sections?.some((section) => section.facts.length > 0),
+  )
+  const hasLegacyDetails =
+    showGroupDetails ||
+    (showEndpointTypes &&
+      (effectiveCapabilities.supportsPricing ||
+        effectiveCapabilities.supportsGroupFiltering)) ||
+    (showPricing && isTokenBillingType(model.quota_type))
   const canExpand =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
-    (showGroupDetails ||
-      (showEndpointTypes &&
-        (effectiveCapabilities.supportsPricing ||
-          effectiveCapabilities.supportsGroupFiltering)) ||
-      (showPricing && isTokenBillingType(model.quota_type)))
+    (hasLegacyDetails || hasPresentationDetails)
 
   const hasRuntimeDiscoveredPricingGap =
     isModelPriceUnavailable(model) ||
@@ -426,6 +444,7 @@ export default function ModelItem(props: ModelItemProps) {
           model={model}
           isAvailableForUser={isAvailableForUser}
         />
+        <ModelPresentationSummary presentation={model.presentation} />
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1">
             <ModelItemPricing
@@ -455,19 +474,24 @@ export default function ModelItem(props: ModelItemProps) {
           isExpanded &&
           source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && (
             <div className="border-t pt-4 dark:border-gray-700">
-              <ModelItemDetails
-                model={model}
-                calculatedPrice={calculatedPrice}
-                showEndpointTypes={showEndpointTypes}
-                groupRatios={groupRatios}
-                groupContext={groupContext}
-                effectiveGroup={effectiveGroup}
-                showGroupDetails={showGroupDetails}
-                showPricingDetails={showPricing}
-                onGroupClick={
-                  isGroupSelectionInteractive ? onGroupClick : undefined
-                }
-              />
+              <div className="space-y-4">
+                <ModelPresentationDetails presentation={model.presentation} />
+                {hasLegacyDetails && (
+                  <ModelItemDetails
+                    model={model}
+                    calculatedPrice={calculatedPrice}
+                    showEndpointTypes={showEndpointTypes}
+                    groupRatios={groupRatios}
+                    groupContext={groupContext}
+                    effectiveGroup={effectiveGroup}
+                    showGroupDetails={showGroupDetails}
+                    showPricingDetails={showPricing}
+                    onGroupClick={
+                      isGroupSelectionInteractive ? onGroupClick : undefined
+                    }
+                  />
+                )}
+              </div>
             </div>
           )}
 

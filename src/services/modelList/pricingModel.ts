@@ -1,14 +1,17 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ModelVendorEvidence } from "~/services/models/modelDescriptor"
+import type { ModelPresentation } from "~/services/models/modelDisplayFacts"
 
 export type PerCallPrice = number | { input: number; output: number }
 
 // Product-owned Model List pricing shape. Upstream adapters map their native
 // payloads into this shape before Model List consumes it.
-export interface ModelPricing {
+export interface ProductCanonicalModel {
   model_name: string
+  display_name?: string
   vendorEvidence?: ModelVendorEvidence
   model_description?: string
+  presentation?: ModelPresentation
   quota_type: number // 0 = token billing, 1 = per-call billing
   model_ratio: number
   model_price: number | PerCallPrice
@@ -29,10 +32,14 @@ export interface ModelPricing {
   supported_endpoint_types: string[]
 }
 
+/** Historical Model List name retained while callers migrate terminology. */
+export type ModelPricing = ProductCanonicalModel
+
 export const MODEL_LIST_SOURCE_KINDS = {
   USER_SCOPED: "user-scoped",
   CATALOG_FALLBACK: "catalog-fallback",
   SUB2API_RUNTIME_KEY: "sub2api-runtime-key",
+  PROVIDER_CATALOG: "provider-catalog",
 } as const
 
 export type ModelListSourceKind =
@@ -42,6 +49,7 @@ export const MODEL_PRICE_SOURCE_KINDS = {
   NONE: "none",
   OFFICIAL_RATE_ESTIMATE: "official-rate-estimate",
   CHANNEL_PRICING: "channel-pricing",
+  PROVIDER_CATALOG: "provider-catalog",
 } as const
 
 export type ModelPriceSourceKind =
@@ -62,6 +70,7 @@ export const MODEL_UNAVAILABLE_PRICE_REASONS = {
   GROUP_RATIO_UNAVAILABLE: "group-ratio-unavailable",
   KEY_GROUP_UNKNOWN: "key-group-unknown",
   OFFICIAL_PRICE_MISSING: "official-price-missing",
+  OFFICIAL_PRICE_INVALID: "official-price-invalid",
   PRICING_SOURCE_UNAVAILABLE: "pricing-source-unavailable",
 } as const
 
@@ -81,6 +90,18 @@ export interface ModelListSourceInfo {
   provider?: AccountSiteType
   supportsRuntimeModelList?: boolean
   supportsPricing?: boolean
+  actionPolicy?: ModelListSourceActionPolicy
+}
+
+/** Provider-neutral downgrades for actions and account-scoped presentation. */
+export interface ModelListSourceActionPolicy {
+  supportsRatioDisplay?: boolean
+  supportsGroupFiltering?: boolean
+  supportsAccountSummary?: boolean
+  supportsTokenCompatibility?: boolean
+  supportsCredentialVerification?: boolean
+  supportsBatchCredentialVerification?: boolean
+  supportsCliVerification?: boolean
 }
 
 /**

@@ -15,6 +15,7 @@ import {
 } from "../groupSelectionState"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
+  deriveAllAccountsModelListCapabilities,
   deriveModelListSourceCapabilities,
   EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
   isProfileSourceValue,
@@ -255,10 +256,18 @@ export function useModelListData(routeParams?: Record<string, string>) {
       return toAihubmixModelListCapabilities(baseCapabilities)
     }
 
-    const responseDerivedCapabilities = deriveModelListSourceCapabilities({
-      capabilities: baseCapabilities,
-      modelListSource: modelData.pricingData?.model_list_source,
-    })
+    const responseDerivedCapabilities =
+      selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
+        ? deriveAllAccountsModelListCapabilities({
+            capabilities: baseCapabilities,
+            modelListSources: modelData.pricingContexts.map(
+              ({ pricing }) => pricing.model_list_source ?? {},
+            ),
+          })
+        : deriveModelListSourceCapabilities({
+            capabilities: baseCapabilities,
+            modelListSource: modelData.pricingData?.model_list_source,
+          })
 
     // Account-key fallback keeps the same owning account selected, but the
     // rendered catalog is no longer pricing-authoritative.
@@ -273,7 +282,9 @@ export function useModelListData(routeParams?: Record<string, string>) {
     isFallbackCatalogActive,
     isSelectedAccountAihubmixCatalogFallback,
     isSelectedAccountAihubmixModelList,
+    modelData.pricingContexts,
     modelData.pricingData?.model_list_source,
+    selectedSource?.kind,
     selectedSource?.capabilities,
   ])
 

@@ -105,6 +105,15 @@
   "currentUsableGroups": "現在のアカウントで利用可能なグループ",
   "description": "利用可能な AI モデルを確認・管理します",
   "detailedPricing": "詳細料金",
+  "displayFacts": {
+    "contextLimit": "コンテキスト上限",
+    "maximumOutputTokens": "最大出力トークン数",
+    "outputModalities": "出力モダリティ",
+    "sections": {
+      "specifications": "仕様"
+    },
+    "tokenCount_other": "{{formattedCount}} トークン"
+  },
   "displayOptions": "表示オプション:",
   "endpointType": "エンドポイント種別",
   "endpointTypes": "エンドポイント種別",
@@ -253,7 +262,8 @@
   },
   "sourceLabels": {
     "profileBadge": "プロファイル: {{name}} · {{host}}",
-    "profileOption": "API 認証情報: {{name}} · {{host}}"
+    "profileOption": "API 認証情報: {{name}} · {{host}}",
+    "providerCatalogBadge": "{{provider}} · プロバイダーモデルカタログ"
   },
   "status": {
     "dataLoaded": "モデルデータを正常に読み込みました",
@@ -302,6 +312,7 @@
     "groupRatioUnavailable": "利用可能なグループの倍率を取得できないため、価格を表示できません。",
     "keyGroupUnknown": "このキーの Sub2API グループを解決できないため、料金は利用できません。",
     "modelListOnly": "このキーではモデルを利用できますが、料金は利用できません。",
+    "officialPriceInvalid": "このモデルの公式料金データが無効です。",
     "officialPriceMissing": "このモデルは料金表にありません。",
     "pricingSourceUnavailable": "このソースの料金データは利用できません。"
   },

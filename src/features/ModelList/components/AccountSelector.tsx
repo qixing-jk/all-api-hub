@@ -9,6 +9,7 @@ import {
   toAccountSourceValue,
   toProfileSourceValue,
 } from "~/features/ModelList/modelManagementSources"
+import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -122,6 +123,7 @@ export function AccountSelector({
         <div className="min-w-0 flex-1">
           <SearchableSelect
             ref={selectorTriggerRef}
+            data-testid={MODEL_LIST_TEST_IDS.sourceSelector}
             options={[
               ...(accounts.length > 0
                 ? [

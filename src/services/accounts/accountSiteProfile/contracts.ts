@@ -50,6 +50,14 @@ export const ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS = {
 export type AccountSiteModelListTokenScopedCatalogFallback =
   (typeof ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS)[keyof typeof ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS]
 
+export const ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS = {
+  None: "none",
+  Public: "public",
+} as const
+
+export type AccountSiteModelListProviderCatalog =
+  (typeof ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS)[keyof typeof ACCOUNT_SITE_MODEL_LIST_PROVIDER_CATALOGS]
+
 export const ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS = {
   None: "none",
   Sub2Api: "sub2api",
@@ -118,6 +126,7 @@ export type AccountSiteTokenFormProfile = {
 
 export type AccountSiteModelListProfile = {
   directPricing: AccountSiteModelListDirectPricing
+  providerCatalog: AccountSiteModelListProviderCatalog
   tokenScopedCatalogFallback: AccountSiteModelListTokenScopedCatalogFallback
   dashboardEstimateLoader: AccountSiteModelListDashboardEstimateLoader
   statusScope: AccountSiteModelListStatusScope

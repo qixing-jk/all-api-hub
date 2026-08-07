@@ -622,7 +622,7 @@ type FilterOverrides = Partial<
  * @param params.selectedSource Currently selected model-management source.
  * @param params.selectedBillingMode Active billing-mode filter value.
  * @param params.selectedGroups Candidate user groups used for filtering/comparison.
- * @param params.searchTerm Search keyword for model name/description.
+ * @param params.searchTerm Search keyword for request/display name or description.
  * @param params.selectedProvider Provider filter value.
  * @param params.accountFilterAccountIds Optional account id filters in all-accounts mode.
  * @returns Filtered models plus counts and available groups metadata.
@@ -1108,6 +1108,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         filtered = filtered.filter(
           (item) =>
             item.model.model_name.toLowerCase().includes(searchLower) ||
+            item.model.display_name?.toLowerCase().includes(searchLower) ||
             item.model.model_description?.toLowerCase().includes(searchLower) ||
             false,
         )

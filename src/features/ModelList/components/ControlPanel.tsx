@@ -645,6 +645,7 @@ export function ControlPanel({
                   size="sm"
                   onClick={onBatchVerifyModels}
                   disabled={filteredModels.length === 0}
+                  data-testid={MODEL_LIST_TEST_IDS.batchVerifyButton}
                   leftIcon={<BeakerIcon className="h-4 w-4" />}
                   analyticsAction={
                     PRODUCT_ANALYTICS_ACTION_IDS.OpenBatchModelVerifyDialog
