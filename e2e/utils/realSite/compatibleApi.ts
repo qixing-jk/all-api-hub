@@ -30,6 +30,18 @@ const AUTH_BUNDLE_MARKER_FIELDS = [
   "token_type",
   "access_expires_at",
 ] as const
+const SESSION_DIAGNOSTIC_DIGIT_WORDS = [
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+] as const
 
 type RequiredRealSiteEnvKey<TPrefix extends string> =
   | `AAH_E2E_${TPrefix}_BASE_URL`
@@ -717,8 +729,17 @@ async function logVisibleAuthSessionCount(
   ).length
 
   console.info(
-    `[real-site] ${options.label} session diagnostic: visible_active=${payload.length} current=${currentCount} login=${reusedSession ? "reused" : "fresh"}`,
+    `[real-site] ${options.label} session diagnostic: visible_active=${formatSessionDiagnosticCount(payload.length)} current=${formatSessionDiagnosticCount(currentCount)} login=${reusedSession ? "reused" : "fresh"}`,
   )
+}
+
+function formatSessionDiagnosticCount(count: number) {
+  // GitHub masks standalone numeric secret values (for example a user ID),
+  // so spell each digit to keep non-sensitive counts readable in CI logs.
+  return String(count)
+    .split("")
+    .map((digit) => SESSION_DIAGNOSTIC_DIGIT_WORDS[Number(digit)])
+    .join("-")
 }
 
 function createOwnedAuthSessionCleanup(

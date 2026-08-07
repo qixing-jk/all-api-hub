@@ -197,8 +197,8 @@ describe("compatible real-site login", () => {
         },
       }),
     )
-    expect(messages).toContain("visible_active=2")
-    expect(messages).toContain("current=1")
+    expect(messages).toContain("visible_active=two")
+    expect(messages).toContain("current=one")
     expect(messages).not.toContain("must-not-leak")
   })
 
