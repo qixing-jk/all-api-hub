@@ -1,5 +1,10 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { resolveStoredAccountUserIdentity } from "~/services/accounts/accountIdentity"
+import {
+  NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE,
+  NEW_API_DASHBOARD_AUTH_REFRESH_PATH,
+  parseNewApiDashboardAuthBundleResponse,
+} from "~/services/apiService/newApi/dashboardAuth"
 
 import {
   NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
@@ -7,15 +12,7 @@ import {
   type ContentSessionExtractor,
 } from "../contracts"
 
-const NEW_API_AUTH_REFRESH_PATH = "/api/user/auth/refresh"
 const CONTROLLED_ERROR_STATUSES = new Set([401, 409, 429])
-const AUTH_BUNDLE_TOKEN_FIELDS = [
-  "access_token",
-  "token_type",
-  "access_expires_at",
-] as const
-const INVALID_AUTH_BUNDLE_ERROR =
-  "New API dashboard session response is invalid"
 const AUTH_REFRESH_REQUEST_ERROR = "New API session refresh request failed"
 
 type UnknownRecord = Record<string, unknown>
@@ -31,68 +28,6 @@ function getNonBlankString(value: unknown): string | null {
 
   const trimmed = value.trim()
   return trimmed ? trimmed : null
-}
-
-/** Detects whether a successful response attempted the rc.22 AuthBundle shape. */
-function isRecognizableAuthBundleAttempt(body: unknown): boolean {
-  if (!isRecord(body) || !isRecord(body.data)) return false
-
-  const hasTokenMarker = AUTH_BUNDLE_TOKEN_FIELDS.some((field) =>
-    Object.prototype.hasOwnProperty.call(body.data, field),
-  )
-  if (hasTokenMarker) return true
-
-  const session = body.data.session
-  return Boolean(
-    isRecord(session) &&
-      (Object.prototype.hasOwnProperty.call(session, "sid") ||
-        Object.prototype.hasOwnProperty.call(session, "current")),
-  )
-}
-
-/** Validates and normalizes an rc.22 AuthBundle response. */
-function parseAuthBundle(
-  body: unknown,
-  origin: string,
-): ContentSessionExtractionResult | null {
-  if (!isRecord(body) || body.success !== true || !isRecord(body.data)) {
-    return null
-  }
-
-  const data = body.data
-  const token = getNonBlankString(data.access_token)
-  const expiresAt = data.access_expires_at
-  if (
-    data.token_type !== "Bearer" ||
-    !token ||
-    typeof expiresAt !== "number" ||
-    !Number.isFinite(expiresAt) ||
-    expiresAt <= Date.now() / 1000
-  ) {
-    return null
-  }
-
-  const identity = resolveStoredAccountUserIdentity(
-    data.user,
-    SITE_TYPES.NEW_API,
-  )
-  if (!identity || !isRecord(data.session)) return null
-
-  const sessionId = getNonBlankString(data.session.sid)
-  if (!sessionId || data.session.current !== true) return null
-
-  return {
-    userId: identity.userId,
-    user: identity.user,
-    siteTypeHint: SITE_TYPES.NEW_API,
-    transientAuth: {
-      kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
-      token,
-      expiresAt,
-      sessionId,
-      origin,
-    },
-  }
 }
 
 /** Builds a status-only error without exposing the response body. */
@@ -130,7 +65,7 @@ async function extractNewApiAuthBundle(): Promise<ContentSessionExtractionResult
   let response: Response
 
   try {
-    response = await fetch(`${origin}${NEW_API_AUTH_REFRESH_PATH}`, {
+    response = await fetch(`${origin}${NEW_API_DASHBOARD_AUTH_REFRESH_PATH}`, {
       credentials: "include",
       method: "POST",
     })
@@ -150,16 +85,33 @@ async function extractNewApiAuthBundle(): Promise<ContentSessionExtractionResult
   try {
     body = await response.json()
   } catch {
-    throw new Error(INVALID_AUTH_BUNDLE_ERROR)
+    throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
   }
 
-  const result = parseAuthBundle(body, origin)
-  if (result) return result
-  if (isRecognizableAuthBundleAttempt(body)) {
-    throw new Error(INVALID_AUTH_BUNDLE_ERROR)
+  const parsed = parseNewApiDashboardAuthBundleResponse(body)
+  if (parsed.kind === "malformed") {
+    throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
   }
+  if (parsed.kind === "unrelated") return null
 
-  return null
+  const identity = resolveStoredAccountUserIdentity(
+    parsed.bundle.user,
+    SITE_TYPES.NEW_API,
+  )
+  if (!identity) throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+
+  return {
+    userId: identity.userId,
+    user: identity.user,
+    siteTypeHint: SITE_TYPES.NEW_API,
+    transientAuth: {
+      kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+      token: parsed.bundle.token,
+      expiresAt: parsed.bundle.expiresAt,
+      sessionId: parsed.bundle.sessionId,
+      origin,
+    },
+  }
 }
 
 export const newApiAuthBundleContentSessionExtractor: ContentSessionExtractor =
