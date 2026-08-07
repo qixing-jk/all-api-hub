@@ -8,10 +8,16 @@ function runMatrix(...args: string[]) {
     "scripts",
     "github-real-site-e2e-matrix.mjs",
   )
+  const testEnv = { ...process.env }
+
+  // GitHub Actions sets GITHUB_OUTPUT for every step; unset it so this test
+  // exercises the script's stdout CLI contract instead of its workflow output.
+  delete testEnv.GITHUB_OUTPUT
 
   return JSON.parse(
     execFileSync(process.execPath, [scriptPath, ...args], {
       encoding: "utf8",
+      env: testEnv,
       stdio: ["ignore", "pipe", "pipe"],
     }),
   ) as { include: Array<Record<string, unknown>> }
