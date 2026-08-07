@@ -36,6 +36,18 @@ _Avoid_: dedicated override, alias, fallback
 A normalized product-owned shape consumed by features after upstream backend payloads have been adapted.
 _Avoid_: upstream response, New API response
 
+**Provider Model Catalog**:
+A model catalog whose membership and facts apply to an upstream provider as a whole rather than to one saved account.
+_Avoid_: account-available models, account model catalog
+
+**Personalized Model Catalog**:
+A model catalog filtered by an authenticated user's preferences, privacy settings, or access policy.
+_Avoid_: workspace model catalog, provider model catalog
+
+**Model Display Fact**:
+A typed, product-selected, read-only model fact derived from a catalog item for presentation to users.
+_Avoid_: raw upstream field, model response property
+
 **Managed Upstream Resource**:
 An upstream-native administrative resource managed through a Managed Site Type, such as a channel, provider, or outbound route.
 _Avoid_: managed site channel
@@ -66,6 +78,12 @@ _Avoid_: API token, token row
 - A **Product Canonical Model** may retain historical New API field names when
   those fields are now the product contract. Its owner is determined by product
   semantics, not by the upstream backend that originally shaped it.
+- A **Provider Model Catalog** may be shown from an account-oriented entrypoint,
+  but that does not make its contents specific to the selected account.
+- A **Personalized Model Catalog** may fall back to a **Provider Model Catalog**,
+  but the product must disclose the change in scope.
+- A **Model Display Fact** is selected and normalized by the product; upstream
+  payload shape does not determine presentation order, labels, or disclosure.
 - A **Managed Upstream Resource** retains its upstream-native semantics while
   exposing only **Resource Display Facts** and an explicit **Editable Resource
   Projection** to product features.
