@@ -65,6 +65,8 @@ export function parseNewApiDashboardAuthBundleResponse(
   const session = data.session
   const sessionId = isRecord(session) ? trimToNull(session.sid) : null
 
+  // Upstream AuthBundle requires a live Bearer token and a current sid session.
+  // Recognizable markers that fail this contract are malformed, not legacy.
   if (
     data.token_type !== "Bearer" ||
     !token ||

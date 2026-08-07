@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE } from "~/services/apiService/newApi/dashboardAuth"
 import { API_ERROR_CODES, type ApiError } from "~/services/apiTransport/errors"
 import {
   clearNewApiManagedSessionState,
@@ -901,7 +902,7 @@ describe("newApiSession", () => {
     )
 
     await expect(ensureNewApiManagedSession(BASE_CONFIG)).rejects.toThrow(
-      "New API dashboard session response is invalid",
+      NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE,
     )
     expect(loginCalls).toBe(0)
   })
@@ -1265,7 +1266,25 @@ describe("newApiSession", () => {
 
     await expect(
       submitNewApiLoginTwoFactorCode(BASE_CONFIG, "123456"),
-    ).rejects.toThrow("New API dashboard session response is invalid")
+    ).rejects.toThrow(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+  })
+
+  it("uses the stable fallback when login 2FA failure messages are not strings", async () => {
+    server.use(
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login/2fa`, () =>
+        HttpResponse.json({
+          success: false,
+          message: { detail: "unexpected shape" },
+          data: null,
+        }),
+      ),
+    )
+
+    await expect(
+      submitNewApiLoginTwoFactorCode(BASE_CONFIG, "123456"),
+    ).rejects.toMatchObject({
+      message: "messages:errors.api.invalidResponseFormat",
+    } satisfies Pick<ApiError, "message">)
   })
 
   it("uses the stable fallback when login failure messages are not strings", async () => {
