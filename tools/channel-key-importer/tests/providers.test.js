@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  createCustomOpenAIProvider,
   getProvider,
   listPublicProviders,
   resolveProviderBaseUrl,
@@ -45,4 +46,19 @@ test("resolves provider base URL defaults and validates overrides", () => {
     () => resolveProviderBaseUrl(getProvider("custom"), "file:///tmp/key"),
     /HTTP/,
   )
+})
+
+test("builds a named OpenAI-compatible custom provider", () => {
+  const provider = createCustomOpenAIProvider({
+    id: "preset-a",
+    name: "内部 OpenAI",
+    baseUrl: "https://gateway.example.com/v1",
+  })
+
+  assert.equal(provider.id, "custom-openai:preset-a")
+  assert.equal(provider.name, "内部 OpenAI")
+  assert.equal(provider.channelType, 1)
+  assert.equal(provider.baseUrl, "https://gateway.example.com/v1")
+  assert.equal(provider.channelConfig.supportsModelFetch, true)
+  assert.equal(provider.customProvider, true)
 })

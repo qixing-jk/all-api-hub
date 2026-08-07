@@ -206,6 +206,37 @@ const PROVIDERS = Object.freeze(
   ),
 )
 
+export const CUSTOM_OPENAI_PROVIDER_PREFIX = "custom-openai:"
+
+export function createCustomOpenAIProvider(preset) {
+  // New API's OpenAI channel type accepts a custom base_url and forwards the
+  // normal OpenAI request path to it. Presets change only the display name and
+  // base URL; the protocol value remains ChannelTypeOpenAI (1).
+  // https://github.com/QuantumNous/new-api-docs/blob/main/docs/api/fei-channel-management.md
+  const id = String(preset?.id || "")
+  const name = String(preset?.name || "").trim()
+  const baseUrl = String(preset?.baseUrl || "").trim()
+  if (!id || !name || !baseUrl) throw new Error("自定义供应商配置不完整")
+  let host = baseUrl
+  try {
+    host = new URL(baseUrl).host
+  } catch {
+    // The store validates URLs; keep a safe fallback for imported state.
+  }
+  return Object.freeze({
+    ...PROVIDERS.openai,
+    id: `${CUSTOM_OPENAI_PROVIDER_PREFIX}${id}`,
+    name,
+    description: `OpenAI 兼容格式 · ${host}`,
+    baseUrl,
+    category: "OpenAI 兼容",
+    hasIcon: false,
+    requiresBaseUrl: false,
+    customProvider: true,
+    customProviderId: id,
+  })
+}
+
 export function listPublicProviders() {
   return CHANNELS.map(([, id]) => PROVIDERS[id])
 }

@@ -29,6 +29,7 @@ import {
   findProfileForRecord,
   getCredentialAccount,
 } from "./configStore.js"
+import { CustomProviderStore } from "./customProviderStore.js"
 import { ImportStore, keyIdentity } from "./importStore.js"
 import { buildModelPlan, buildProviderPrefixMappings } from "./modelPlan.js"
 import {
@@ -55,6 +56,8 @@ import {
 import { PreviewStore } from "./previewStore.js"
 import { getProviderIconSvg } from "./providerIcons.js"
 import {
+  createCustomOpenAIProvider,
+  CUSTOM_OPENAI_PROVIDER_PREFIX,
   getProvider,
   listPublicProviders,
   resolveProviderBaseUrl,
@@ -97,6 +100,7 @@ const RATE_LIMIT_RECOVERY_BATCH_SIZE = 1
 const SAFE_BULK_CONTINUATION_DELAY_MS = 65_000
 
 const configStore = new ConfigStore()
+const customProviderStore = new CustomProviderStore()
 const balanceStore = new BalanceStore()
 const importStore = new ImportStore()
 const previewStore = new PreviewStore()
@@ -107,6 +111,21 @@ const runChannelOperation = async (operation) => {
   const result = channelOperationQueue.then(operation, operation)
   channelOperationQueue = result.catch(() => {})
   return await result
+}
+
+const listAvailableProviders = async () => [
+  ...(await customProviderStore.list()).map(createCustomOpenAIProvider),
+  ...listPublicProviders(),
+]
+
+async function resolveRequestedProvider(providerId) {
+  const id = String(providerId || "")
+  if (!id.startsWith(CUSTOM_OPENAI_PROVIDER_PREFIX)) return getProvider(id)
+  const preset = await customProviderStore.get(
+    id.slice(CUSTOM_OPENAI_PROVIDER_PREFIX.length),
+  )
+  if (!preset) throw new Error("自定义供应商已不存在，请重新选择")
+  return createCustomOpenAIProvider(preset)
 }
 
 const sendJson = (response, status, payload, headers = {}) => {
@@ -400,7 +419,7 @@ export function deduplicateCredentialEntries(
 }
 
 async function buildCredentialPreview(body) {
-  const provider = getProvider(String(body.providerId || ""))
+  const provider = await resolveRequestedProvider(body.providerId)
   if (!provider.importable) throw new Error(provider.description)
   const configSource = String(body.configSource || "")
   if (!["template", "fetch", "new-api", "manual"].includes(configSource)) {
@@ -1220,7 +1239,8 @@ async function handleApi(
     }
     return sendJson(response, 200, {
       sessionToken: SESSION_TOKEN,
-      providers: listPublicProviders(),
+      providers: await listAvailableProviders(),
+      customProviders: await customProviderStore.list(),
       profiles: profiles.map(({ profileId, name, targetUrl }) => ({
         profileId,
         name,
@@ -1276,9 +1296,37 @@ async function handleApi(
     })
   }
 
+  if (request.method === "POST" && url.pathname === "/api/custom-providers") {
+    const body = await readJsonBody(request)
+    const provider = await customProviderStore.save({
+      id: body.id,
+      name: body.name,
+      baseUrl: body.baseUrl,
+    })
+    return sendJson(response, 200, {
+      provider,
+      customProviders: await customProviderStore.list(),
+      providers: await listAvailableProviders(),
+    })
+  }
+
+  const customProviderDeleteMatch = url.pathname.match(
+    /^\/api\/custom-providers\/([^/]+)$/,
+  )
+  if (request.method === "DELETE" && customProviderDeleteMatch) {
+    await customProviderStore.remove(
+      decodeURIComponent(customProviderDeleteMatch[1]),
+    )
+    return sendJson(response, 200, {
+      success: true,
+      customProviders: await customProviderStore.list(),
+      providers: await listAvailableProviders(),
+    })
+  }
+
   if (request.method === "POST" && url.pathname === "/api/channel-templates") {
     const body = await readJsonBody(request)
-    const provider = getProvider(String(body.providerId || ""))
+    const provider = await resolveRequestedProvider(body.providerId)
     if (!provider.importable) throw new Error(provider.description)
     const templates = await listChannelTemplates(
       await getRuntimeConfig(),

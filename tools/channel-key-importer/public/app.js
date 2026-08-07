@@ -15,6 +15,7 @@ import { APP_VIEWS, normalizeAppView } from "./viewState.js"
 const state = {
   sessionToken: "",
   providers: [],
+  customProviders: [],
   profiles: [],
   records: [],
   schedules: [],
@@ -73,6 +74,17 @@ const elements = {
   providerSearch: $("#provider-search"),
   categoryList: $("#category-list"),
   providerList: $("#provider-list"),
+  openCustomProviders: $("#open-custom-providers"),
+  customProviderDialog: $("#custom-provider-dialog"),
+  closeCustomProviders: $("#close-custom-providers"),
+  customProviderForm: $("#custom-provider-form"),
+  customProviderId: $("#custom-provider-id"),
+  customProviderName: $("#custom-provider-name"),
+  customProviderBaseUrl: $("#custom-provider-base-url"),
+  resetCustomProvider: $("#reset-custom-provider"),
+  saveCustomProvider: $("#save-custom-provider"),
+  customProviderStatus: $("#custom-provider-status"),
+  customProviderList: $("#custom-provider-list"),
   credentialEmpty: $("#credential-empty"),
   credentialForm: $("#credential-form"),
   credentialStatus: $("#credential-status"),
@@ -517,13 +529,22 @@ function renderCategories() {
 
 function filteredProviders() {
   const query = elements.providerSearch.value.trim().toLowerCase()
-  return state.providers.filter((provider) => {
+  const matches = state.providers.filter((provider) => {
     const matchesCategory =
       state.category === "全部" || provider.category === state.category
     const haystack =
-      `${provider.name} ${provider.id} ${provider.description}`.toLowerCase()
+      `${provider.name} ${provider.id} ${provider.baseUrl || ""} ${provider.description}`.toLowerCase()
     return matchesCategory && (!query || haystack.includes(query))
   })
+  const custom = matches
+    .filter((provider) => provider.customProvider)
+    .sort((left, right) =>
+      left.name.localeCompare(right.name, "zh-CN", {
+        numeric: true,
+        sensitivity: "base",
+      }),
+    )
+  return [...custom, ...matches.filter((provider) => !provider.customProvider)]
 }
 
 function renderProviders() {
@@ -562,12 +583,156 @@ function renderProviders() {
     description.textContent = provider.category
     copy.append(name, description)
     const type = document.createElement("span")
-    type.textContent = `#${provider.channelType}`
+    type.textContent = provider.customProvider
+      ? "OPENAI"
+      : `#${provider.channelType}`
     button.append(icon, copy, type)
     button.addEventListener("click", () => selectProvider(provider))
     elements.providerList.append(button)
   }
 }
+
+function resetCustomProviderForm() {
+  elements.customProviderId.value = ""
+  elements.customProviderName.value = ""
+  elements.customProviderBaseUrl.value = ""
+  hideStatus(elements.customProviderStatus)
+  elements.saveCustomProvider.querySelector("span").textContent = "保存并使用"
+}
+
+function renderCustomProviders() {
+  elements.customProviderList.replaceChildren()
+  if (state.customProviders.length === 0) {
+    const empty = document.createElement("div")
+    empty.className = "custom-provider-empty"
+    empty.textContent = "还没有保存 OpenAI 兼容供应商。"
+    elements.customProviderList.append(empty)
+    return
+  }
+  for (const provider of state.customProviders) {
+    const row = document.createElement("article")
+    row.className = "custom-provider-row"
+    const copy = document.createElement("div")
+    const name = document.createElement("strong")
+    name.textContent = provider.name
+    const baseUrl = document.createElement("small")
+    baseUrl.textContent = provider.baseUrl
+    copy.append(name, baseUrl)
+
+    const actions = document.createElement("div")
+    actions.className = "custom-provider-row-actions"
+    const use = document.createElement("button")
+    use.type = "button"
+    use.className = "table-action"
+    use.textContent = "使用"
+    use.addEventListener("click", () => {
+      const selected = state.providers.find(
+        (item) => item.customProviderId === provider.id,
+      )
+      if (!selected) {
+        toast("自定义供应商已不存在，请刷新页面", true)
+        return
+      }
+      selectProvider(selected)
+      elements.customProviderDialog.close()
+    })
+    const edit = document.createElement("button")
+    edit.type = "button"
+    edit.className = "table-action"
+    edit.textContent = "编辑"
+    edit.addEventListener("click", () => {
+      elements.customProviderId.value = provider.id
+      elements.customProviderName.value = provider.name
+      elements.customProviderBaseUrl.value = provider.baseUrl
+      elements.saveCustomProvider.querySelector("span").textContent =
+        "保存修改并使用"
+      hideStatus(elements.customProviderStatus)
+      elements.customProviderName.focus()
+    })
+    const remove = document.createElement("button")
+    remove.type = "button"
+    remove.className = "table-action danger"
+    remove.textContent = "删除"
+    remove.addEventListener("click", async () => {
+      if (!window.confirm(`确认删除自定义供应商“${provider.name}”？`)) return
+      remove.disabled = true
+      try {
+        const result = await api(
+          `/api/custom-providers/${encodeURIComponent(provider.id)}`,
+          { method: "DELETE" },
+        )
+        state.customProviders = result.customProviders || []
+        state.providers = result.providers || []
+        if (state.selectedProvider?.customProviderId === provider.id) {
+          state.selectedProvider = null
+          elements.credentialForm.classList.add("hidden")
+          elements.credentialEmpty.classList.remove("hidden")
+          elements.selectedType.textContent = "等待选择"
+        }
+        renderCategories()
+        renderProviders()
+        renderCustomProviders()
+        resetCustomProviderForm()
+        toast(`已删除“${provider.name}”`)
+      } catch (error) {
+        showStatus(elements.customProviderStatus, error.message, true)
+        remove.disabled = false
+      }
+    })
+    actions.append(use, edit, remove)
+    row.append(copy, actions)
+    elements.customProviderList.append(row)
+  }
+}
+
+elements.openCustomProviders.addEventListener("click", () => {
+  resetCustomProviderForm()
+  renderCustomProviders()
+  elements.customProviderDialog.showModal()
+  elements.customProviderName.focus()
+})
+elements.closeCustomProviders.addEventListener("click", () =>
+  elements.customProviderDialog.close(),
+)
+elements.resetCustomProvider.addEventListener("click", () => {
+  resetCustomProviderForm()
+  elements.customProviderName.focus()
+})
+elements.customProviderDialog.addEventListener("click", (event) => {
+  if (event.target === elements.customProviderDialog) {
+    elements.customProviderDialog.close()
+  }
+})
+elements.customProviderForm.addEventListener("submit", async (event) => {
+  event.preventDefault()
+  hideStatus(elements.customProviderStatus)
+  setLoading(elements.saveCustomProvider, true)
+  try {
+    const result = await api("/api/custom-providers", {
+      method: "POST",
+      body: JSON.stringify({
+        id: elements.customProviderId.value,
+        name: elements.customProviderName.value,
+        baseUrl: elements.customProviderBaseUrl.value,
+      }),
+    })
+    state.customProviders = result.customProviders || []
+    state.providers = result.providers || []
+    renderCategories()
+    renderProviders()
+    const selected = state.providers.find(
+      (provider) => provider.customProviderId === result.provider.id,
+    )
+    if (!selected) throw new Error("供应商已保存，但暂时无法选中")
+    selectProvider(selected)
+    elements.customProviderDialog.close()
+    toast(`已保存并选择“${result.provider.name}”`)
+  } catch (error) {
+    showStatus(elements.customProviderStatus, error.message, true)
+  } finally {
+    setLoading(elements.saveCustomProvider, false)
+  }
+})
 
 function closePreviewDialog() {
   if (elements.previewDialog.open) elements.previewDialog.close()
@@ -2918,6 +3083,7 @@ async function bootstrap() {
     if (!response.ok) throw new Error(payload.error || "初始化失败")
     state.sessionToken = payload.sessionToken
     state.providers = payload.providers
+    state.customProviders = payload.customProviders || []
     state.profiles = payload.profiles || []
     state.activeProfileId = payload.config.profileId || ""
     renderProfiles()

@@ -294,6 +294,15 @@
               </div>
               <span class="count-badge" id="provider-count">—</span>
             </div>
+            <button
+              class="custom-provider-launch"
+              id="open-custom-providers"
+              type="button"
+            >
+              <span aria-hidden="true">＋</span>
+              <strong>OpenAI 兼容自定义供应商</strong>
+              <small>保存名称和 Base URL，按名称排序选择</small>
+            </button>
             <label class="search-box">
               <span aria-hidden="true">⌕</span>
               <input
@@ -842,6 +851,83 @@
           </section>
         </dialog>
 
+        <dialog
+          class="custom-provider-dialog"
+          id="custom-provider-dialog"
+          aria-labelledby="custom-provider-dialog-title"
+        >
+          <section>
+            <header class="custom-provider-dialog-heading">
+              <div>
+                <span class="kicker">OPENAI COMPATIBLE</span>
+                <h2 id="custom-provider-dialog-title">自定义供应商</h2>
+                <p>
+                  保存 OpenAI 格式上游的名称和 Base
+                  URL。列表按名称排序，选择后可以直接批量上 Key。
+                </p>
+              </div>
+              <button
+                class="dialog-close"
+                id="close-custom-providers"
+                type="button"
+                aria-label="关闭自定义供应商"
+              >
+                ×
+              </button>
+            </header>
+            <form id="custom-provider-form" autocomplete="off">
+              <input id="custom-provider-id" type="hidden" />
+              <label class="field">
+                <span>供应商名称</span>
+                <input
+                  id="custom-provider-name"
+                  maxlength="60"
+                  placeholder="例如：内部 OpenAI、供应商 A"
+                  required
+                />
+              </label>
+              <label class="field">
+                <span>OpenAI 兼容 Base URL</span>
+                <input
+                  id="custom-provider-base-url"
+                  type="url"
+                  placeholder="例如：https://api.example.com"
+                  required
+                />
+                <small
+                  >按上游实际地址填写；是否包含 /v1 以该供应商文档为准。</small
+                >
+              </label>
+              <div class="custom-provider-form-actions">
+                <button
+                  class="secondary-button small"
+                  id="reset-custom-provider"
+                  type="button"
+                >
+                  新建另一项
+                </button>
+                <button
+                  class="primary-button compact"
+                  id="save-custom-provider"
+                  type="submit"
+                >
+                  <span>保存并使用</span><i aria-hidden="true">→</i>
+                </button>
+              </div>
+              <div
+                class="inline-status hidden"
+                id="custom-provider-status"
+                role="status"
+              ></div>
+            </form>
+            <div class="custom-provider-list-heading">
+              <strong>已保存供应商</strong>
+              <small>按名称排序</small>
+            </div>
+            <div class="custom-provider-list" id="custom-provider-list"></div>
+          </section>
+        </dialog>
+
         <section
           class="panel schedule-panel view-hidden"
           id="schedules"
@@ -1108,6 +1194,6 @@
     </div>
 
     <div class="toast hidden" id="toast" role="status"></div>
-    <script type="module" src="/app.js?v=20260803-dedup-review"></script>
+    <script type="module" src="/app.js?v=20260807-custom-openai"></script>
   </body>
 </html>
