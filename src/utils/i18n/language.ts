@@ -1,5 +1,6 @@
 import {
   DEFAULT_LANG,
+  GERMAN_LANG,
   JAPANESE_LANG,
   PORTUGUESE_BRAZIL_LANG,
   SPANISH_LATIN_AMERICA_LANG,
@@ -21,6 +22,9 @@ const isLanguageFamily = (
 export const UI_LANGUAGE_OPTIONS = [
   {
     code: ENGLISH_LANG,
+  },
+  {
+    code: GERMAN_LANG,
   },
   {
     code: SPANISH_LATIN_AMERICA_LANG,
@@ -85,6 +89,13 @@ export function isEnglishLanguage(language?: string | null): boolean {
 }
 
 /**
+ * Return true when the language belongs to the German locale family.
+ */
+function isGermanLanguage(language?: string | null): boolean {
+  return isLanguageFamily(normalizeLanguageTag(language), "de")
+}
+
+/**
  * Return true when the language belongs to the Japanese locale family.
  */
 export function isJapaneseLanguage(language?: string | null): boolean {
@@ -119,6 +130,7 @@ export function normalizeAppLanguage(
   language?: string | null,
 ): SupportedUiLanguage | undefined {
   if (isEnglishLanguage(language)) return ENGLISH_LANG
+  if (isGermanLanguage(language)) return GERMAN_LANG
   if (isSpanishLanguage(language)) return SPANISH_LATIN_AMERICA_LANG
   if (isPortugueseLanguage(language)) return PORTUGUESE_BRAZIL_LANG
   if (isJapaneseLanguage(language)) return JAPANESE_LANG

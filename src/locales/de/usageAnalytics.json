@@ -1,0 +1,224 @@
+{
+  "actions": {
+    "applySettings": "Einstellungen übernehmen",
+    "export": "Exportieren",
+    "openAccountUsageSettings": "Nutzungseinstellungen",
+    "refresh": "Aktualisieren",
+    "syncNow": "Jetzt synchronisieren"
+  },
+  "charts": {
+    "accountComparison": {
+      "description": "Vergleichen Sie die Gesamtsummen verschiedener Konten für die aktuelle Auswahl.",
+      "series": {
+        "tokens": "Gesamtzahl der Token"
+      },
+      "title": "Vergleich pro Konto"
+    },
+    "common": {
+      "chartType": {
+        "ariaLabel": "Diagrammtyp",
+        "histogram": "Histogramm",
+        "pie": "Kreisdiagramm"
+      }
+    },
+    "dailyOverview": {
+      "axes": {
+        "requests": "Anfragen",
+        "tokens": "Token / Kontingent"
+      },
+      "description": "Multimetrische Trends mit Tooltip und Zoom.",
+      "series": {
+        "completionTokens": "Abschlusstoken",
+        "promptTokens": "Prompt-Tokens",
+        "quota": "Kontingent",
+        "requests": "Anfragen",
+        "totalTokens": "Gesamtzahl der Token"
+      },
+      "title": "Tagesübersicht"
+    },
+    "latencyHistogram": {
+      "description": "Histogramm der Latenz pro Anfrage (`use_time`) für die aktuelle Auswahl.",
+      "series": {
+        "count": "Anzahl"
+      },
+      "title": "Latenzverteilung"
+    },
+    "latencyTrend": {
+      "axes": {
+        "seconds": "Sekunden",
+        "slowCount": "Anzahl langsamer Anfragen"
+      },
+      "description": "Tägliche durchschnittliche/maximale Latenz und langsame Zählungen.",
+      "series": {
+        "avg": "Durchschnitt",
+        "max": "Max",
+        "slow": "Langsam"
+      },
+      "title": "Latenztrend"
+    },
+    "modelCostDistribution": {
+      "description": "Topmodelle nach Quotenverbrauch (umgerechnet in USD) im ausgewählten Datumsbereich.",
+      "series": {
+        "usd": "Kosten (USD)"
+      },
+      "title": "Modellkostenverteilung"
+    },
+    "modelDistribution": {
+      "description": "Topmodelle nach Gesamtzahl der Token im ausgewählten Datumsbereich.",
+      "series": {
+        "tokens": "Gesamtzahl der Token"
+      },
+      "title": "Modellverteilung"
+    },
+    "modelHeatmap": {
+      "description": "Token-Nutzungsintensität im Zeitverlauf für Topmodelle (klicken Sie auf ein Modell, um es zu fokussieren).",
+      "series": {
+        "tokens": "Gesamtzahl der Token"
+      },
+      "title": "Modell × Tages-Heatmap"
+    },
+    "other": "Andere",
+    "slowModels": {
+      "description": "Modelle mit den langsamsten Anfragen in der aktuellen Auswahl.",
+      "series": {
+        "slowCount": "Anzahl langsamer Anfragen"
+      },
+      "title": "Langsame Modelle"
+    },
+    "slowTokens": {
+      "description": "API-Token mit den langsamsten Anfragen in der aktuellen Auswahl.",
+      "series": {
+        "slowCount": "Anzahl langsamer Anfragen"
+      },
+      "title": "Langsamste Token"
+    },
+    "usageTimeHeatmap": {
+      "description": "Gesamtzahl der Token, aggregiert nach Wochentag und Stunde (Ortszeit).",
+      "series": {
+        "tokens": "Gesamtzahl der Token"
+      },
+      "title": "Nutzungszeit-Heatmap"
+    }
+  },
+  "description": "Synchronisieren und visualisieren Sie den aggregierten Nutzungsverlauf über alle Konten hinweg, mit Exportunterstützung.",
+  "empty": {
+    "description": "Aktivieren Sie die Synchronisierung unter Einstellungen → Kontonutzung und klicken Sie dann auf „Jetzt synchronisieren“, um den aktuellen Nutzungsverlauf abzurufen.",
+    "title": "Noch keine Daten zum Nutzungsverlauf"
+  },
+  "filters": {
+    "accounts": "Konten",
+    "accountsHint": "Wählen Sie eine Teilmenge der Konten aus (eine leere Auswahl bedeutet alle innerhalb ausgewählter Websites).",
+    "allAccounts": "Alle Konten",
+    "allSites": "Alle Websites",
+    "allTokens": "Alle Token",
+    "endDay": "Enddatum",
+    "sites": "Websites",
+    "sitesHint": "Wählen Sie eine Teilmenge der Websites aus (eine leere Auswahl bedeutet alle).",
+    "startDay": "Startdatum",
+    "tokens": "API-Tokens",
+    "tokensHint": "Optionaler Token-Filter, abgeleitet aus Nutzungsverlaufsaggregaten (leere Auswahl bedeutet alle innerhalb ausgewählter Konten).",
+    "unknownToken": "Unbekanntes Token"
+  },
+  "hover": {
+    "account": "Konto",
+    "notes": "Notizen",
+    "owners": "Konten",
+    "site": "Website",
+    "token": "Token",
+    "type": "Typ",
+    "url": "URL"
+  },
+  "messages": {
+    "error": {
+      "exportFailed": "Export fehlgeschlagen: {{error}}",
+      "exportNoData": "Keine zu exportierenden Daten für die aktuelle Auswahl",
+      "settingsSaveFailed": "Einstellungen konnten nicht gespeichert werden: {{error}}",
+      "syncFailed": "Synchronisierung fehlgeschlagen: {{error}}"
+    },
+    "loading": {
+      "syncing": "Nutzungsverlauf wird synchronisiert..."
+    },
+    "success": {
+      "exported": "Exportiert",
+      "settingsSaved": "Einstellungen gespeichert",
+      "syncCompleted": "Synchronisierung abgeschlossen (Erfolg: {{success}}, übersprungen: {{skipped}}, Fehler: {{error}}, nicht unterstützt: {{unsupported}})",
+      "syncCompletedNoSummary": "Synchronisierung abgeschlossen"
+    },
+    "warning": {
+      "scheduleFallback": "Dieser Browser unterstützt keine geplante Synchronisierung, daher wurde er auf „Nach Kontoaktualisierung“ umgestellt: {{warning}}",
+      "syncCompletedWithIssues": "Synchronisierung abgeschlossen; weitere Prüfung erforderlich (Erfolg: {{success}}, übersprungen: {{skipped}}, Fehler: {{error}}, nicht unterstützt: {{unsupported}})"
+    }
+  },
+  "settings": {
+    "alarmUnsupported": "Die Alarm-API wird in diesem Browser nicht unterstützt. Cron-ähnliche Planung ist nicht verfügbar.",
+    "enabled": "Synchronisierung des Nutzungsverlaufs",
+    "enabledHint": "Wenn aktiviert, speichert die Erweiterung begrenzte tägliche Aggregate (keine Rohprotokolle).",
+    "retentionDays": "Aufbewahrung (Tage)",
+    "scheduleMode": "Zeitplan für die automatische Synchronisierung",
+    "scheduleModePlaceholder": "Wählen Sie einen Zeitplanmodus",
+    "scheduleModes": {
+      "afterRefresh": "Nach Kontoaktualisierung",
+      "alarm": "Cron-ähnlich (Alarm-API)",
+      "manual": "Nur manuell"
+    },
+    "syncIntervalHours": "Mindestsynchronisierungsintervall (Stunden)"
+  },
+  "status": {
+    "never": "Nie",
+    "states": {
+      "error": "Fehler",
+      "never": "Nie",
+      "success": "Erfolg",
+      "unsupported": "Nicht unterstützt"
+    }
+  },
+  "summary": {
+    "completionTokens": "Ausgabetoken",
+    "cost": "Kosten",
+    "promptTokens": "Eingabe-Tokens",
+    "requests": "Anfragen",
+    "totalTokens": "Gesamtzahl der Token"
+  },
+  "syncTab": {
+    "actions": {
+      "clearSelection": "Auswahl löschen",
+      "refreshStatus": "Status aktualisieren",
+      "syncAccount": "Konto synchronisieren",
+      "syncing": "Synchronisierung...",
+      "syncSelected": "Ausgewählte synchronisieren",
+      "viewStatus": "Synchronisierungsstatus anzeigen"
+    },
+    "noAccounts": "Keine Konten gefunden.",
+    "searchPlaceholder": "Zum Suchen eingeben…",
+    "settingsDescription": "Konfigurieren Sie, wie der aggregierte Nutzungsverlauf gespeichert und geplant wird.",
+    "settingsTitle": "Synchronisierung des Nutzungsverlaufs",
+    "stateDescription": "Zeigen Sie den Synchronisierungsstatus pro Konto und den Zeitstempel der letzten Synchronisierung an.",
+    "stateTitle": "Synchronisierungsstatus",
+    "table": {
+      "columns": {
+        "account": "Konto",
+        "lastSyncAt": "Letzte Synchronisierung",
+        "message": "Nachricht",
+        "state": "Status"
+      },
+      "empty": "Keine Konten stimmen mit der aktuellen Suche überein.",
+      "loading": "Laden…",
+      "noMessage": "—",
+      "rowActions": "Zeilenaktionen",
+      "selectAll": "Alle Konten auswählen",
+      "selectedCount_one": "Ausgewählt: {{count}}",
+      "selectedCount_other": "Ausgewählt: {{count}}",
+      "selectRow": "Konto auswählen: {{name}}"
+    }
+  },
+  "title": "Nutzungsanalyse",
+  "weekdays": {
+    "fri": "Fr",
+    "mon": "Mo",
+    "sat": "Sa",
+    "sun": "So",
+    "thu": "Do",
+    "tue": "Di",
+    "wed": "Mi"
+  }
+}

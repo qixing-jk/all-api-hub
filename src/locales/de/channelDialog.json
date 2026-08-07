@@ -1,0 +1,111 @@
+{
+  "actions": {
+    "create": "Kanal erstellen",
+    "deselectAll": "Alle abwählen",
+    "hideKey": "Schlüssel ausblenden",
+    "inverse": "Umkehren",
+    "loadingRealKey": "Echter Schlüssel wird geladen...",
+    "loadRealKey": "Echten Schlüssel laden",
+    "selectAll": "Alles auswählen",
+    "showKey": "Schlüssel anzeigen",
+    "update": "Änderungen speichern"
+  },
+  "description": {
+    "add": "Konfigurieren Sie einen neuen Kanal für Ihre verwaltete Website",
+    "edit": "Kanaleinstellungen und Routing-Informationen aktualisieren",
+    "view": "Überprüfen Sie die aktuellen Kanaleinstellungen und Routing-Informationen"
+  },
+  "fields": {
+    "baseUrl": {
+      "label": "Basis-URL",
+      "placeholder": "https://api.example.com"
+    },
+    "groups": {
+      "hint": "Gruppen stammen von Ihrer verwalteten Website",
+      "label": "Kanalgruppen",
+      "loading": "Gruppen werden geladen...",
+      "placeholder": "Gruppen auswählen"
+    },
+    "key": {
+      "label": "API-Schlüssel",
+      "placeholder": "Geben Sie den API-Schlüssel des Upstream-Anbieters ein",
+      "realKeyHint": "Wenn in der Kanalliste der vollständige Schlüssel weggelassen oder maskiert wurde, laden Sie hier den echten Schlüssel. Für einige verwaltete Website-Typen ist möglicherweise eine zusätzliche Überprüfung erforderlich."
+    },
+    "models": {
+      "hint": "Geben Sie zum Suchen ein oder drücken Sie die Eingabetaste, um einen benutzerdefinierten Modellnamen hinzuzufügen",
+      "label": "Verfügbare Modelle",
+      "loading": "Modelle werden geladen...",
+      "placeholder": "Modellnamen auswählen oder eingeben"
+    },
+    "name": {
+      "label": "Kanalname",
+      "placeholder": "Geben Sie einen beschreibenden Kanalnamen ein"
+    },
+    "priority": {
+      "hint": "Kanäle mit größeren Prioritätsnummern werden vor anderen verwendet",
+      "label": "Priorität"
+    },
+    "status": {
+      "disabled": "Deaktiviert",
+      "enabled": "Aktiviert",
+      "label": "Status"
+    },
+    "type": {
+      "hint": "Wählen Sie den Upstream-Anbieter, an den dieser Kanal weiterleitet",
+      "label": "Kanaltyp",
+      "placeholder": "Kanaltyp auswählen"
+    },
+    "weight": {
+      "hint": "Steuert den Lastausgleich innerhalb derselben Priorität (0 = Gleichverteilung)",
+      "label": "Gewicht"
+    }
+  },
+  "messages": {
+    "loadRealKeyFailed": "Der echte Kanalschlüssel konnte nicht geladen werden: {{error}}",
+    "missingChannelId": "Vorhandene Kanal-ID fehlt",
+    "saveFailed": "Kanal konnte nicht gespeichert werden: {{error}}"
+  },
+  "sections": {
+    "advanced": "Erweiterte Einstellungen"
+  },
+  "title": {
+    "add": "Kanal erstellen",
+    "edit": "Kanal bearbeiten",
+    "view": "Kanal ansehen"
+  },
+  "validation": {
+    "baseUrlRequired": "Für diesen Kanaltyp ist eine Basis-URL erforderlich",
+    "keyRequired": "API-Schlüssel ist erforderlich",
+    "modelsRequired": "Mindestens ein Modell ist erforderlich",
+    "nameRequired": "Kanalname ist erforderlich"
+  },
+  "warnings": {
+    "channelExists": {
+      "actions": {
+        "continue": "Weiter"
+      },
+      "description": "Ein Kanal mit dem Namen {{channelName}} ist bereits auf Ihrer verwalteten Website vorhanden. Sie können immer noch einen weiteren Kanal erstellen, es kann jedoch zu doppeltem Routing kommen. Trotzdem weitermachen?",
+      "title": "Kanal existiert bereits",
+      "warningTitle": "Mögliches Duplikat"
+    },
+    "exactDuplicate": {
+      "description": "Ein doppelter Kandidatenkanal {{channelName}} wurde jetzt auf der verwalteten Website bestätigt. Wenn Sie Duplikate vermeiden möchten, passen Sie den Namen, die Modelle oder den Schlüssel vor dem Speichern an. Andernfalls können Sie weiterhin mit der Erstellung des Kanals fortfahren.",
+      "title": "Bestätigter doppelter Kanal"
+    },
+    "modelsPrefillFailed": {
+      "description": "Für diesen API-Schlüssel wurde keine verwendbare Upstream-Modellliste geladen. Sie können den Kanal weiterhin erstellen, die Modelle jedoch vor dem Speichern manuell eingeben und bestätigen.",
+      "title": "Modelle erfordern manuelle Eingabe"
+    },
+    "reviewSuggested": {
+      "description": "Kandidatenkanäle wurden unter derselben Upstream-URL oder demselben Modell-Setup gefunden, ein exaktes Duplikat konnte jedoch nicht automatisch bestätigt werden. Sie können weiterhin mit der Erstellung des Kanals fortfahren, überprüfen Sie jedoch vor dem Speichern den Namen, die Modelle und den Schlüssel.",
+      "title": "Überprüfen Sie mögliche doppelte Kandidaten"
+    },
+    "verificationRequired": {
+      "actions": {
+        "verifyNow": "Jetzt bestätigen"
+      },
+      "description": "Kandidatenkanäle wurden gefunden, aber New API erfordert einen zusätzlichen Überprüfungsschritt, bevor der echte Kanalschlüssel gelesen werden kann, sodass eine genaue Duplikatbestätigung derzeit nicht verfügbar ist. Sie können weiterhin mit der Erstellung des Kanals fortfahren. Führen Sie zunächst eine vollständige Überprüfung durch, wenn Sie eine genaue Deduplizierungsprüfung benötigen.",
+      "title": "Mögliches Duplikat muss überprüft werden"
+    }
+  }
+}

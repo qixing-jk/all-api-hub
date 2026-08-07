@@ -28,6 +28,10 @@
       "currentLanguage": "Ngôn ngữ giao diện hiện tại: {{language}}",
       "groupLabel": "Chọn ngôn ngữ giao diện",
       "options": {
+        "de": {
+          "label": "DE",
+          "name": "Tiếng Đức"
+        },
         "en": {
           "label": "EN",
           "name": "Tiếng Anh"

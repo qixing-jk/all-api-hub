@@ -1,0 +1,72 @@
+{
+  "actions": {
+    "checkNow": "Jetzt prüfen",
+    "collapse": "Reduzieren",
+    "expand": "Erweitern",
+    "markAllRead": "Alles als gelesen markieren",
+    "markRead": "Als gelesen markieren",
+    "pollingSettings": "Abfrageeinstellungen",
+    "viewSource": "Website-Ankündigung anzeigen"
+  },
+  "badges": {
+    "notified": "Benachrichtigt",
+    "unread": "Ungelesen"
+  },
+  "description": {
+    "disabledSummary": "Automatische Abfrage ist deaktiviert; Sie können weiterhin eine manuelle Prüfung auslösen.",
+    "enabledInterval": "Aktuelles Intervall: alle {{intervalMinutes}} Minuten.",
+    "enabledSummary": "Automatische Abfrage ist aktiviert; Überprüfen Sie abgerufene Ankündigungen, verwalten Sie den Status „Ungelesen“ und veranlassen Sie eine manuelle Prüfung.",
+    "pollingSettingsLink": "Automatische Abfrage konfigurieren"
+  },
+  "empty": {
+    "addAccount": "Konto hinzufügen",
+    "description": "Neue Ankündigungen, die bei Hintergrundüberprüfungen entdeckt wurden, werden hier angezeigt.",
+    "descriptionWhenPollingDisabled": "Sie können jetzt manuell prüfen. Den automatischen Abruf können Sie in den Einstellungen verwalten.",
+    "filtered": "Keine Ankündigungen entsprechen den aktuellen Filtern",
+    "noAccounts": "Fügen Sie ein Konto hinzu, bevor Sie Ankündigungen prüfen",
+    "noAccountsDesc": "Ankündigungsprüfungen erfordern mindestens ein aktiviertes Konto, um zu wissen, welche Websites abgefragt werden sollen.",
+    "pollingSettingsLink": "Automatische Abfrage konfigurieren",
+    "title": "Keine Ankündigungsaufzeichnungen"
+  },
+  "filters": {
+    "allReadStates": "Alle Status",
+    "allSites": "Alle Websites",
+    "allSiteTypes": "Alle Typen",
+    "read": "Gelesen",
+    "readState": "Lesestatus",
+    "searchSite": "Websites durchsuchen",
+    "site": "Website",
+    "siteType": "Website-Typ",
+    "unread": "Ungelesen"
+  },
+  "loading": "Ankündigungen werden geladen...",
+  "messages": {
+    "checkCompleted": "Ankündigungsprüfung abgeschlossen",
+    "checkFailed": "Ankündigungsprüfung fehlgeschlagen",
+    "loadFailed": "Ankündigungen konnten nicht geladen werden",
+    "markAllReadFailed": "Ankündigungen konnten nicht als gelesen markiert werden",
+    "markReadFailed": "Ankündigung konnte nicht als gelesen markiert werden"
+  },
+  "notification": {
+    "multipleUnread_one": "{{title}} und {{count}} weitere ungelesene Ankündigung",
+    "multipleUnread_other": "{{title}} und {{count}} weitere ungelesene Ankündigungen",
+    "title": "{{site}} hat neue Ankündigungen"
+  },
+  "status": {
+    "failed": "Die letzte Ankündigungsprüfung ist fehlgeschlagen: {{error}}",
+    "failedTitle": "Prüfung fehlgeschlagen",
+    "lastChecked": "Zuletzt überprüft: {{time}}",
+    "unsupported": "Bei der letzten Überprüfung wurde kein verwendbarer Ankündigungsendpunkt für diese Website gefunden.",
+    "unsupportedTitle": "Ankündigungsendpunkt nicht unterstützt"
+  },
+  "summary": {
+    "filtered_one": "Zeigt {{count}} von {{total}} Ankündigung",
+    "filtered_other": "Zeigt {{count}} von {{total}} Ankündigungen",
+    "notified_one": "{{count}} Systembenachrichtigung gesendet",
+    "notified_other": "{{count}} Systembenachrichtigungen gesendet",
+    "sites": "Websites",
+    "total": "Gesamt",
+    "unread": "Ungelesen"
+  },
+  "title": "Website-Ankündigungen"
+}

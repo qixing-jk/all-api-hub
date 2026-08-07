@@ -1,0 +1,75 @@
+{
+  "bulkClear": {
+    "action": "Modellzuordnungen löschen",
+    "actionDesc": "Setzt die model_mapping ausgewählter Kanäle auf ein leeres Objekt ({}). Dies kann nicht rückgängig gemacht werden.",
+    "actions": {
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "confirm": "Löschen",
+      "continue": "Weiter",
+      "selectAll": "Alles auswählen",
+      "selectNone": "Keine auswählen"
+    },
+    "confirm": {
+      "description_one": "Dadurch werden die Modellumleitungszuordnungen für {{count}} Kanal gelöscht. Dies kann nicht rückgängig gemacht werden.",
+      "description_other": "Dadurch werden die Modellumleitungszuordnungen für {{count}} Kanäle gelöscht. Dies kann nicht rückgängig gemacht werden.",
+      "details_one": "Ausgewählter Kanal: {{count}}",
+      "details_other": "Ausgewählte Kanäle: {{count}}",
+      "title": "Modellzuordnungen löschen?",
+      "warningTitle": "Zerstörerische Aktion"
+    },
+    "messages": {
+      "allSuccess_one": "Modellumleitungszuordnungen für {{count}} Kanal gelöscht.",
+      "allSuccess_other": "Modellumleitungszuordnungen für {{count}} Kanäle gelöscht.",
+      "failed": "Modellumleitungszuordnungen konnten nicht gelöscht werden: {{error}}",
+      "nothingToClear": "Nichts zum Löschen (ausgewählte Kanäle sind bereits leer).",
+      "partialFailure": "{{success}}/{{total}} Kanal(e) gelöscht; {{failed}} fehlgeschlagen.",
+      "successWithSkips": "{{cleared}} Kanal(e) gelöscht; {{skipped}} bereits leer."
+    },
+    "preview": {
+      "channelListLabel": "Kanäle",
+      "description": "Wählen Sie aus, welche Kanäle gelöscht werden sollen. Nicht ausgewählte Kanäle werden nicht geändert.",
+      "mappingCount_one": "Zuordnung: {{count}}",
+      "mappingCount_other": "Zuordnungen: {{count}}",
+      "mappingEmptyInline": "Das aktuelle model_mapping ist leer ({}).",
+      "mappingInvalid": "Das aktuelle model_mapping ist kein gültiges JSON; der Rohtext wird angezeigt.",
+      "mappingInvalidBadge": "Ungültiges JSON",
+      "mappingToggle": "Aktuelles model_mapping anzeigen",
+      "selectedCount": "{{selected}}/{{total}} ausgewählt",
+      "title": "Modellzuordnungen löschen"
+    },
+    "result": {
+      "title": "Fehlgeschlagene Kanäle"
+    },
+    "search": {
+      "filteredCount": "Zeigt {{filtered}}/{{total}}",
+      "label": "Kanäle suchen",
+      "noResults": "Keine passenden Kanäle.",
+      "placeholder": "Kanäle suchen (Name oder ID)..."
+    },
+    "status": {
+      "clearing": "Wird geleert...",
+      "emptySelection": "Wählen Sie mindestens einen Kanal aus, um fortzufahren.",
+      "loadFailed": "Fehler beim Laden der Kanäle: {{error}}",
+      "loading": "Kanäle werden geladen...",
+      "noChannels": "Keine Kanäle gefunden."
+    }
+  },
+  "description": "Automatische Modellumleitungszuordnung, die das Problem löst, dass Modelle aufgrund von Modellnamen nicht einheitlich aufgerufen werden können",
+  "enable": "Modellumleitung aktivieren",
+  "enableDesc": "Aktivieren Sie die Funktion für Modellumleitungszuordnungen. Sie wird während der Modellsynchronisierung automatisch ausgeführt und kann auch manuell gestartet werden.",
+  "messages": {
+    "regenerateFailed": "Modellzuordnung konnte nicht neu generiert werden: {{error}}",
+    "regenerateSuccess": "Modellzuordnung erfolgreich regeneriert",
+    "updateFailed": "Modellumleitungseinstellungen konnten nicht aktualisiert werden",
+    "updateSuccess": "Modellumleitungseinstellungen aktualisiert"
+  },
+  "pruneMissingTargetsOnModelSync": "Ungültige Weiterleitungsziele nach der Synchronisierung entfernen",
+  "pruneMissingTargetsOnModelSyncDesc": "Destruktiv: Löscht nach einer Modellsynchronisierungsaktualisierung vorhandene model_mapping-Einträge, deren Zielmodelle in der aktualisierten Modellliste fehlen",
+  "regenerateButton": "Mapping jetzt neu generieren",
+  "regenerating": "Wird neu generiert...",
+  "standardModels": "Standardmodelle",
+  "standardModelsDesc": "Wählen Sie die Standardmodelle aus, für die Weiterleitungszuordnungen generiert werden sollen.",
+  "standardModelsPlaceholder": "Modelle auswählen...",
+  "title": "Modellumleitung"
+}

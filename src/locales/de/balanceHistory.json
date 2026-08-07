@@ -1,0 +1,163 @@
+{
+  "actions": {
+    "applySettings": "Einstellungen übernehmen",
+    "prune": "Beschneiden",
+    "refreshNow": "Jetzt aktualisieren"
+  },
+  "breakdown": {
+    "chartTypes": {
+      "histogram": "Histogramm",
+      "pie": "Kreisdiagramm"
+    },
+    "controls": {
+      "chartType": "Diagrammtyp",
+      "reference": "Referenz"
+    },
+    "coverage": "{{covered}}/{{total}} Konten mit Daten",
+    "empty": "Für diese Aufschlüsselung können keine Daten angezeigt werden.",
+    "hints": {
+      "pieDisabledForNegative": "Kreisdiagramme sind für negative Werte nicht verfügbar."
+    },
+    "title": "Kontoaufschlüsselung"
+  },
+  "description": "Zeichnen Sie täglich Schnappschüsse von Kontostand und Cashflow auf und visualisieren Sie Trends im Zeitverlauf.",
+  "empty": {
+    "description": "Aktivieren Sie den Kontostandverlauf und aktualisieren Sie ein Konto, um den ersten Schnappschuss aufzuzeichnen.",
+    "title": "Noch keine Schnappschüsse"
+  },
+  "emptyRange": {
+    "description": "Es sind Schnappschüsse vorhanden, aber keiner fällt in den ausgewählten Datumsbereich. Versuchen Sie, den Bereich zu erweitern oder ein Konto zu aktualisieren.",
+    "title": "Keine Schnappschüsse in diesem Bereich"
+  },
+  "filters": {
+    "accounts": "Konten",
+    "accountsHint": "Wählen Sie Konten aus, die in Diagramme einbezogen werden sollen.",
+    "allAccounts": "Alle Konten",
+    "allTags": "Alle Tags",
+    "endDay": "Enddatum",
+    "noDataInRange": "Keine Daten in diesem Bereich",
+    "quickRanges": {
+      "180d": "180 Tage",
+      "30d": "30 Tage",
+      "365d": "1 Jahr",
+      "7d": "7 Tage",
+      "90d": "90 Tage"
+    },
+    "range": "Datumsbereich",
+    "rangeHint": "Begrenzt durch den Aufbewahrungszeitraum ({{days}} Tage).",
+    "startDay": "Startdatum",
+    "tags": "Tags",
+    "tagsHint": "Konten nach Tags filtern."
+  },
+  "hints": {
+    "disabled": {
+      "actions": {
+        "openSettings": "Einstellungen öffnen"
+      },
+      "description": "Aktivieren Sie den Kontostandverlauf in den Einstellungen, um mit der Aufzeichnung von Schnappschüssen zu beginnen.",
+      "title": "Der Kontostandverlauf ist deaktiviert"
+    },
+    "incompleteSelection": {
+      "description": "Die Gesamtsummen werden nach bestem Wissen und Gewissen berechnet, indem Konten summiert werden, die für jeden Tag Daten haben. Bei unvollständiger Deckung (Konten {{minCovered}}–{{maxCovered}}/{{totalAccounts}}) können die Gesamtbeträge unterschätzt werden.",
+      "title": "Die Gesamtsumme ist möglicherweise unvollständig"
+    }
+  },
+  "messages": {
+    "error": {
+      "pruneFailed": "Beschneiden fehlgeschlagen: {{error}}",
+      "refreshFailed": "Aktualisierung fehlgeschlagen: {{error}}",
+      "settingsSaveFailed": "Einstellungen konnten nicht gespeichert werden: {{error}}"
+    },
+    "loading": {
+      "loadingData": "Laden…",
+      "pruning": "Beschneiden…",
+      "refreshing": "Wird aktualisiert…",
+      "savingSettings": "Einstellungen speichern…"
+    },
+    "success": {
+      "pruneCompleted": "Beschneiden abgeschlossen",
+      "refreshCompleted": "Aktualisierung abgeschlossen",
+      "settingsSaved": "Einstellungen gespeichert"
+    }
+  },
+  "metrics": {
+    "balance": "Kontostand",
+    "estimatedIncome": "Geschätztes Einkommen",
+    "income": "Einkommen",
+    "net": "Nettoveränderung",
+    "outcome": "Ausgaben"
+  },
+  "overview": {
+    "kpis": {
+      "coverageAccounts": "{{covered}}/{{total}} Konten",
+      "endBalance": {
+        "label": "Endbilanz"
+      },
+      "incomeTotal": {
+        "label": "Gesamteinkommen"
+      },
+      "outcomeTotal": {
+        "label": "Gesamtergebnis"
+      },
+      "rangeNet": {
+        "label": "Netto im Zeitraum"
+      }
+    },
+    "title": "Übersicht"
+  },
+  "settings": {
+    "alarmUnsupported": "Die Alarm-API ist in diesem Browser nicht verfügbar. Die Erfassung am Tagesende kann nicht aktiviert werden.",
+    "enabled": "Kontostandverlauf aktivieren",
+    "enabledHint": "Wenn deaktiviert, werden keine Schnappschüsse aufgezeichnet und die geplante Erfassung ist deaktiviert.",
+    "endOfDayCapture": "Tagesabschlussaufnahme",
+    "endOfDayCaptureHint": "Die tägliche Erfassung wird möglichst nahe an {{time}} durchgeführt (erfordert die Alarm-API).",
+    "estimatedTodayIncome": "Geschätztes heutiges Einkommen anzeigen",
+    "estimatedTodayIncomeHint": "Verwendet den Kontostandverlauf, um Prämien zu schätzen, die nicht in den Einkommensprotokollen der Website erscheinen. Nicht verfügbar, wenn die Basislinie des Vortages fehlt.",
+    "retentionDays": "Aufbewahrung (Tage)"
+  },
+  "summary": {
+    "coverage": "Tage mit Daten: Saldo {{snapshotAvailableDays}}/{{totalDays}} (vollständig {{snapshotCompleteDays}}/{{totalDays}}), Cashflow {{cashflowAvailableDays}}/{{totalDays}} (vollständig {{cashflowCompleteDays}}/{{totalDays}})."
+  },
+  "table": {
+    "columns": {
+      "account": "Konto",
+      "cashflowCoverage": "Cashflow-Abdeckung",
+      "endBalance": "Endbilanz",
+      "estimatedIncomeTotal": "Geschätztes Gesamteinkommen",
+      "incomeTotal": "Gesamteinkommen",
+      "outcomeTotal": "Gesamtergebnis",
+      "rangeNet": "Netto im Zeitraum",
+      "snapshotCoverage": "Snapshot-Abdeckung",
+      "startBalance": "Startguthaben"
+    },
+    "coverageFormat": "{{covered}}/{{total}}",
+    "empty": "Keine Kontozusammenfassungen zum Anzeigen.",
+    "loading": "Laden…",
+    "title": "Kontoübersicht"
+  },
+  "title": "Kontostandverlauf",
+  "trend": {
+    "chartTypes": {
+      "bar": "Balken",
+      "line": "Linie"
+    },
+    "controls": {
+      "chartType": "Diagrammtyp",
+      "scope": "Ansicht"
+    },
+    "emptyMetric": "Keine {{metric}}-Daten in diesem Bereich.",
+    "scopes": {
+      "accounts": "Nach Konto",
+      "total": "Gesamt"
+    },
+    "subtitle": "Serie pro Konto mit Lücken für fehlende Tage.",
+    "subtitleTotal": "Gesamt (Summe) über ausgewählte Konten; An Tagen mit unvollständiger Abdeckung können die Werte unterschätzt werden.",
+    "title": "Trend"
+  },
+  "warnings": {
+    "cashflowDisabled": {
+      "description": "Der Abruf des heutigen Cashflows ist deaktiviert und die Erfassung am Tagesende ist deaktiviert. Aktivieren Sie entweder „Heutigen Cashflow anzeigen“ oder „Erfassung am Tagesende“, um Einnahmen-/Ausgabenwerte aufzuzeichnen.",
+      "title": "Die Einnahmen-/Ergebnishistorie ist leer"
+    }
+  }
+}

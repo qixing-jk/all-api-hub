@@ -1,0 +1,32 @@
+{
+  "actions": {
+    "close": "Produktankündigungen schließen",
+    "dismiss": "Ausblenden",
+    "dismissFor": "{{title}} ausblenden",
+    "open": "Produktankündigungen",
+    "openWithRiskCount": "Produktankündigungen, {{riskCount}} aktive Risikohinweise",
+    "restore": "Wiederherstellen",
+    "restoreFor": "{{title}} wiederherstellen",
+    "viewAll": "Alle anzeigen"
+  },
+  "empty": {
+    "active": "Keine Produktankündigungen",
+    "dismissed": "Keine ausgeblendeten Ankündigungen"
+  },
+  "filters": {
+    "active": "Aktiv",
+    "dismissed": "Ausgeblendet"
+  },
+  "labels": {
+    "critical": "Kritisch",
+    "info": "Infos",
+    "unread": "Ungelesen",
+    "warning": "Warnung"
+  },
+  "loading": "Produktankündigungen werden geladen...",
+  "summary": {
+    "additional_one": "{{riskCount}} weiterer Risikohinweis",
+    "additional_other": "{{riskCount}} weitere Risikohinweise"
+  },
+  "title": "Produktankündigungen"
+}

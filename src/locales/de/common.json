@@ -1,0 +1,93 @@
+{
+  "actions": {
+    "cancel": "Abbrechen",
+    "clear": "Leeren",
+    "close": "Schließen",
+    "copyKey": "Schlüssel kopieren",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "export": "Exportieren",
+    "goToSettings": "Zu den Einstellungen",
+    "import": "Importieren",
+    "more": "Mehr",
+    "openSidePanel": "In der Seitenleiste öffnen",
+    "refresh": "Aktualisieren",
+    "reset": "Zurücksetzen",
+    "retry": "Wiederholen",
+    "save": "Speichern"
+  },
+  "currency": {
+    "clickToSwitch": "Klicken Sie hier, um zu {{currency}} zu wechseln",
+    "cny": "CNY",
+    "usd": "USD"
+  },
+  "datePicker": {
+    "in1Year": "+1 Jahr",
+    "in30Days": "+30 Tage",
+    "in7Days": "+7 Tage",
+    "in90Days": "+90 Tage",
+    "naturalInput": {
+      "invalid": "Geben Sie ein erkennbares Datum ein, z. B. YYYY-MM-DD oder in 7 Tagen",
+      "label": "Datum eingeben",
+      "openCalendar": "Kalender öffnen",
+      "placeholder": "Versuchen Sie es in 7 Tagen, morgen oder 2026-08-01",
+      "preview": "Wird auf {{date}} gesetzt"
+    },
+    "noExpiration": "Kein Ablauf",
+    "placeholder": "Datum auswählen"
+  },
+  "labels": {
+    "apiKey": "API-Schlüssel",
+    "notAvailable": "N/A",
+    "settings": "Einstellungen",
+    "token": "Token",
+    "unknown": "Unbekannt"
+  },
+  "quota": {
+    "unlimited": "Unbegrenzt"
+  },
+  "rootErrorBoundary": {
+    "genericDescription": "Die Seite konnte nicht korrekt angezeigt werden. Laden Sie sie zunächst neu. Wenn das Problem weiterhin auftritt, melden Sie es, damit wir helfen können.",
+    "reload": "Seite neu laden",
+    "reportIssue": "Problem melden",
+    "requestLanguage": "Sprache anfordern",
+    "title": "Seitenanzeige fehlgeschlagen",
+    "translationDescription": "Wenn Sie die automatische Übersetzung verwenden, schalten Sie sie für diese Seite aus oder wechseln Sie in den Erweiterungseinstellungen zur gewünschten Sprache."
+  },
+  "status": {
+    "applying": "Wird angewendet...",
+    "cancelled": "Abgebrochen",
+    "cancelling": "Wird abgebrochen...",
+    "checking": "Wird geprüft...",
+    "configurationRequired": "Konfiguration erforderlich",
+    "copying": "Wird kopiert...",
+    "creating": "Wird erstellt...",
+    "deleting": "Wird gelöscht...",
+    "disabled": "Deaktiviert",
+    "disabling": "Wird deaktiviert...",
+    "enabled": "Aktiviert",
+    "enabling": "Wird aktiviert...",
+    "error": "Fehler",
+    "exporting": "Wird exportiert...",
+    "failed": "Fehlgeschlagen",
+    "importing": "Wird importiert...",
+    "loading": "Wird geladen...",
+    "opening": "Wird geöffnet...",
+    "processing": "Wird verarbeitet...",
+    "refreshing": "Wird aktualisiert...",
+    "resetting": "Wird zurückgesetzt...",
+    "retrying": "Wird erneut versucht...",
+    "saving": "Wird gespeichert...",
+    "starting": "Wird gestartet...",
+    "success": "Erfolg",
+    "testing": "Wird getestet...",
+    "updating": "Wird aktualisiert...",
+    "uploading": "Wird hochgeladen..."
+  },
+  "time": {
+    "neverExpires": "Läuft nie ab",
+    "seconds": "Sekunden",
+    "updatedAt": "Aktualisiert am {{time}}"
+  },
+  "total": "Gesamt"
+}

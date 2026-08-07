@@ -1,0 +1,20 @@
+{
+  "manifest_name": {
+    "message": "All API Hub – Ihr All-in-One-Manager für KI-Ressourcen"
+  },
+  "manifest_description": {
+    "message": "Kontostand/Nutzung, Auto-Check-ins, Schlüsselexport für Clients, API-Tests auf Webseiten sowie Kanal-/Modellsync und -umleitung"
+  },
+  "manifest_commands_sidebar_action": {
+    "message": "All API Hub in der Seitenleiste öffnen"
+  },
+  "manifest_commands_browser_action": {
+    "message": "All API Hub im Popup öffnen"
+  },
+  "context_menu_redeem_selection": {
+    "message": "Ausgewählten Text mit Redemption Assist einlösen"
+  },
+  "context_menu_ai_api_check": {
+    "message": "Funktion und Verfügbarkeit von KI-APIs schnell testen"
+  }
+}

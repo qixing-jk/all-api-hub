@@ -1,0 +1,22 @@
+{
+  "actions": {
+    "shareAccountSnapshot": "Konto-Snapshot teilen",
+    "shareOverviewSnapshot": "Übersichts-Schnappschuss teilen"
+  },
+  "labels": {
+    "accounts": "Konten",
+    "asOf": "Stand",
+    "balance": "Kontostand",
+    "income": "Einkommen",
+    "net": "Netto",
+    "outcome": "Ausgaben",
+    "overview": "Übersicht",
+    "site": "Website",
+    "today": "Heute",
+    "totalBalance": "Gesamtsaldo"
+  },
+  "toast": {
+    "captionHint": "Beschriftung wurde nicht automatisch kopiert. Durch das Kopieren wird möglicherweise Ihr Zwischenablagebild ersetzt.",
+    "copyCaption": "Beschriftung kopieren"
+  }
+}

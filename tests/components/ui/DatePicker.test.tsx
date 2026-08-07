@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import { ptBR } from "date-fns/locale"
+import { de, ptBR } from "date-fns/locale"
 import dayjs from "dayjs"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
@@ -454,6 +454,11 @@ describe("datePickerValue", () => {
   it("uses Brazilian Portuguese calendar copy for Portuguese locales", () => {
     expect(getDatePickerLocale("pt-BR")).toBe(ptBR)
     expect(getDatePickerLocale("pt-PT")).toBe(ptBR)
+  })
+
+  it("uses German calendar copy for German locale variants", () => {
+    expect(getDatePickerLocale("de")).toBe(de)
+    expect(getDatePickerLocale("de-DE")).toBe(de)
   })
 
   it("returns null for canonical dates with missing month or day parts", () => {

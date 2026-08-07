@@ -28,6 +28,10 @@
       "currentLanguage": "現在の表示言語: {{language}}",
       "groupLabel": "表示言語セレクター",
       "options": {
+        "de": {
+          "label": "DE",
+          "name": "ドイツ語"
+        },
         "en": {
           "label": "EN",
           "name": "英語"

@@ -1,0 +1,115 @@
+{
+  "confirmToast": {
+    "body": "Möchten Sie den KI-API-Testbereich öffnen, um die Verfügbarkeit der KI-API zu prüfen?",
+    "enhancedInfo": "Ausgelöst durch verbesserte automatische Erkennung. Wenn dies falsch aussieht, melden Sie es oder deaktivieren Sie die erweiterte automatische Erkennung in den Einstellungen.",
+    "feedback": "Problem melden",
+    "open": "Öffnen",
+    "settings": "Einstellungen öffnen",
+    "title": "AI-API-URL und API-Schlüssel erkannt"
+  },
+  "messages": {
+    "success": {
+      "settingsSaved": "Die Einstellungen für den AI-API-Check wurden gespeichert."
+    }
+  },
+  "modal": {
+    "actions": {
+      "fetchingModels": "Wird abgerufen…",
+      "fetchModels": "Modelle abrufen",
+      "hideKey": "Schlüssel ausblenden",
+      "openApiProfiles": "API-Anmeldeinformationsbibliothek öffnen",
+      "retry": "Wiederholen",
+      "running": "Testen…",
+      "runOne": "Test",
+      "saveToProfiles": "In API-Anmeldeinformationsbibliothek speichern",
+      "saving": "Speichern…",
+      "showKey": "Schlüssel anzeigen",
+      "stopping": "Stoppt…",
+      "stopTest": "Test stoppen",
+      "test": "Test"
+    },
+    "candidates": {
+      "apiKey": "Kandidatenschlüssel {{index}}"
+    },
+    "errors": {
+      "fetchModelsFailed": "Modelle konnten nicht abgerufen werden.",
+      "missingBaseUrlOrKey": "Bitte geben Sie zuerst die Basis-URL und den API-Schlüssel an.",
+      "runProbeFailed": "Sonde fehlgeschlagen.",
+      "saveToProfilesFailed": "Das Speichern in der API-Anmeldeinformationsbibliothek ist fehlgeschlagen."
+    },
+    "fields": {
+      "apiKey": "API-Schlüssel",
+      "apiType": "API-Typ",
+      "baseUrl": "Basis-URL",
+      "expiresAt": "Ablaufdatum",
+      "modelId": "Modell-ID",
+      "notes": "Notizen",
+      "tags": "Tags"
+    },
+    "hints": {
+      "expiresAt": "Optional. Notieren Sie, wann dieser Schlüssel voraussichtlich ablaufen wird.",
+      "saveWithoutTest": "Tipp: Sie können speichern, sobald Basis-URL und API-Schlüssel angegeben sind. Sie müssen Modelle vorher weder testen noch abrufen. Das Testen ist optional und dient lediglich der Überprüfung der Verfügbarkeit.",
+      "tags": "Optional. Mit den globalen Konto- und Lesezeichen-Tags geteilt."
+    },
+    "history": {
+      "empty": "Noch kein Basis-URL-Verlauf",
+      "label": "Aktuelle Basis-URLs",
+      "remove": "Aus dem Basis-URL-Verlauf entfernen",
+      "trigger": "Wählen Sie aus dem Basis-URL-Verlauf"
+    },
+    "messages": {
+      "savedToProfiles": "{{name}} in der API-Anmeldeinformationsbibliothek gespeichert.",
+      "stoppingTest": "Stoppen des Tests. Die aktuelle Anfrage wird schnellstmöglich unterbrochen.",
+      "testStopped": "Test gestoppt. Abgeschlossene Ergebnisse wurden beibehalten und Elemente, die nicht gestartet wurden, werden nicht fortgesetzt."
+    },
+    "optionalProfileFields": {
+      "hasInput": "Optionale Speicherdetails hinzugefügt",
+      "hint": "Tags, Notizen und Ablaufdatum haben keinen Einfluss auf die Testergebnisse.",
+      "title": "Speicheroptionen (optional)"
+    },
+    "placeholders": {
+      "notes": "Optionale Notizen",
+      "tags": "Tags auswählen"
+    },
+    "privacyHint": "API-Schlüssel werden als vertrauliche Informationen betrachtet: standardmäßig ausgeblendet und nichts wird gespeichert, es sei denn, Sie entscheiden sich für die Speicherung in der API-Anmeldeinformationsbibliothek.",
+    "probes": {
+      "notRunYet": "Noch nicht ausgeführt"
+    },
+    "sourceText": {
+      "label": "Text, aus dem extrahiert werden soll",
+      "placeholder": "Fügen Sie hier eine Basis-URL und einen API-Schlüssel ein oder verwenden Sie das Kontextmenü, um die Auswahl vorab auszufüllen."
+    },
+    "title": "Funktions- und Verfügbarkeitstest für KI-APIs"
+  },
+  "settings": {
+    "autoDetect": {
+      "enable": "Automatische Erkennung aktivieren",
+      "enableDesc": "Wenn diese Option aktiviert ist, erkennt die Erweiterung möglicherweise Anmeldeinformationen aus Kopieraktionen und fragt vor dem Öffnen des Dialogs nach einer Bestätigung.",
+      "enhanced": {
+        "enable": "Erweiterte automatische Erkennung aktivieren",
+        "enableDesc": "Erkennen Sie reine Domains, nicht standardmäßige Schlüsselformate und Schlüssel, die mit ungültigen Zeichen in kopierten Inhalten gemischt sind. Erweiterte Übereinstimmungen zeigen einen Hinweis im Dialog an und können schnell deaktiviert werden."
+      },
+      "whitelist": {
+        "invalidMore": "…und mehr",
+        "invalidTitle": "Ungültige Muster",
+        "patterns": "URL-Whitelist-Muster",
+        "patternsDesc": "Ein JavaScript RegExp-Muster pro Zeile. Es wird eine Übereinstimmung ohne Berücksichtigung der Groß- und Kleinschreibung angewendet. Ungültige Muster werden ignoriert (als nicht übereinstimmend behandelt).",
+        "patternsPlaceholder": "^https://example\\.com/console"
+      }
+    },
+    "contextMenu": {
+      "enable": "Im Kontextmenü des Browsers anzeigen",
+      "enableDesc": "Fügt dem Browser-Kontextmenü ein Element „AI API Check“ hinzu."
+    },
+    "description": "Der manuelle Kontextmenü-Auslöser ist immer verfügbar. Die automatische Erkennung ist optional und wird nur auf Seiten auf der Whitelist ausgeführt. Extrahierte API-Schlüssel werden standardmäßig nicht gespeichert.",
+    "keyCleanup": {
+      "invalidMore": "…und mehr",
+      "invalidTitle": "Ungültige Bereinigungsmuster",
+      "patterns": "Bereinigungsmuster für API-Schlüssel",
+      "patternsDesc": "Verwenden Sie dies, wenn kopierte Schlüssel zusätzliche Beschriftungen, Klammern oder Trennzeichen enthalten. Fügen Sie einen regulären Ausdruck pro Zeile hinzu. Ungültige Regeln werden vor dem Speichern angezeigt.",
+      "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+",
+      "save": "Bereinigungsmuster speichern"
+    },
+    "title": "Funktions- und Verfügbarkeitstest für Web-KI-APIs"
+  }
+}

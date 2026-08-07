@@ -1,0 +1,530 @@
+{
+  "app": {
+    "description": "Verwalten Sie KI-Relays sowie Ihre Konten und Guthaben an einem Ort",
+    "name": "All API Hub"
+  },
+  "billing": {
+    "notProvided": "Nicht bereitgestellt",
+    "perCall": "Abrechnung pro Aufruf",
+    "tokenBased": "Tokenbasierte Abrechnung"
+  },
+  "dialog": {
+    "bookmarkAccountImport": {
+      "actions": {
+        "allowAndScan": "Lesezeichen auswählen und Batch-Import starten",
+        "backToScope": "Zurück zur Lesezeichenauswahl",
+        "clearSearch": "Lesezeichensuche löschen",
+        "clearSelected": "Ausgewählte löschen",
+        "collapseAll": "Alles ausblenden",
+        "collapseFolder": "Ordner einklappen",
+        "expandAll": "Alles erweitern",
+        "expandFolder": "Ordner erweitern",
+        "importSelected_one": "Ausgewählte importieren ({{count}})",
+        "importSelected_other": "Ausgewählte importieren ({{count}})",
+        "invertSelected": "Ausgewählte umkehren",
+        "openAddAccount": "Konto hinzufügen öffnen",
+        "scanSelected": "Ausgewählten Bereich scannen",
+        "selectAll": "Alles auswählen"
+      },
+      "apiUnavailable": "Dieser Browser stellt der Erweiterung keine nativen Lesezeichen zur Verfügung.",
+      "bookmarkCount_one": "{{count}} Lesezeichen",
+      "bookmarkCount_other": "{{count}} Lesezeichen",
+      "description": "Scannen Sie Browser-Lesezeichen-URLs stapelweise und prüfen Sie vor dem Import die Kandidaten für Kontoseiten.",
+      "empty": "Es wurden keine Browser-Lesezeichen zurückgegeben.",
+      "failures": {
+        "detection": "Die automatische Erkennung konnte diese Website nicht lesen.",
+        "save": "Das Konto konnte nicht gespeichert werden.",
+        "unknown": "Der Import ist fehlgeschlagen."
+      },
+      "folderCount_one": "{{count}} Ordner",
+      "folderCount_other": "{{count}} Ordner",
+      "importFailed": "Der Import konnte nicht abgeschlossen werden. Versuchen Sie es erneut.",
+      "importing": "{{completed}} von {{total}} ausgewählten Websites werden importiert...",
+      "includeExisting": "Websites einbeziehen, die bereits über gespeicherte Konten verfügen",
+      "initialSteps": {
+        "chooseScope": "Lesezeichenordner auswählen",
+        "review": "Importkandidaten prüfen",
+        "skipExisting": "Bestehende Konten standardmäßig überspringen"
+      },
+      "initialValue": "Scannen Sie Browser-Lesezeichen stapelweise und verwandeln Sie gespeicherte Relay-Websites in Kontokandidaten. Sie wählen zuerst die Lesezeichenordner aus, überprüfen die Kandidaten vor dem Import und vorhandene Konten werden standardmäßig übersprungen.",
+      "noCandidates": "Es wurden keine importierbaren Web-Lesezeichen-URLs gefunden.",
+      "permissionDenied": "Die Lesezeichenberechtigung wurde nicht erteilt. Sie können es erneut versuchen, ohne dieses Dialogfeld zu schließen.",
+      "permissionNeeded": "Der Zugriff auf Lesezeichen ist optional und wird nur für diesen Batch-Import angefordert.",
+      "readFailed": "Der Browser-Lesezeichenbaum konnte nicht gelesen werden.",
+      "reloadFailed": "Der Import wurde abgeschlossen, aber die Kontodaten konnten nicht neu geladen werden. Aktualisieren Sie die Kontoliste und versuchen Sie es erneut, wenn die neuen Konten nicht sichtbar sind.",
+      "resultSummary": "Importiert {{success}}, fehlgeschlagen {{failed}}, übersprungen {{skipped}}.",
+      "scanning": "Browser-Lesezeichen scannen...",
+      "scopeHelp": "Beim Scannen wird nur eine Vorschau erstellt. Sie können hierher zurückkehren, um die Auswahl vor dem Import anzupassen.",
+      "searchEmpty": "Keine passenden Lesezeichenbereiche",
+      "searchLabel": "Lesezeichenbereiche durchsuchen",
+      "searchPlaceholder": "Lesezeichen durchsuchen...",
+      "selectedBookmarkCount_one": "{{count}} Lesezeichen ausgewählt",
+      "selectedBookmarkCount_other": "{{count}} Lesezeichen ausgewählt",
+      "status": {
+        "duplicate_one": "Standardmäßig übersprungen. Anzahl vorhandener Übereinstimmungen mit gespeicherten Konten: {{count}}",
+        "duplicate_other": "Standardmäßig übersprungen. Anzahl vorhandener Übereinstimmungen mit gespeicherten Konten: {{count}}",
+        "imported": "Importiert",
+        "ready": "Bereit zum Import"
+      },
+      "title": "Konten aus Lesezeichen importieren",
+      "untitledFolder": "Unbenannter Ordner"
+    },
+    "ccswitch": {
+      "actions": {
+        "export": "Exportieren"
+      },
+      "appOptions": {
+        "claude": "Claude",
+        "codex": "Codex",
+        "gemini": "Gemini",
+        "grokbuild": "Grok CLI",
+        "hermes": "Hermes",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode"
+      },
+      "description": "Senden Sie diese Anbieterkonfiguration per Deep Link direkt an CC Switch",
+      "descriptions": {
+        "model": "Wenn verfügbar, werden Modelle zur Auswahl aus /v1/models geladen. Sie können auch eine benutzerdefinierte Modell-ID eingeben."
+      },
+      "fields": {
+        "app": "Ziel-App",
+        "endpoint": "API-Endpunkt",
+        "homepage": "Homepage-URL",
+        "model": "Standardmodell (optional)",
+        "name": "Anbietername",
+        "notes": "Notizen (optional)"
+      },
+      "modelOptions": {
+        "none": "Kein Standardmodell"
+      },
+      "notices": {
+        "hermes": "CC Switch importiert Hermes mithilfe des Chat Completions-Protokolls. Beim Export wird der Anbietername in eine gültige Kennung umgewandelt, die nur Kleinbuchstaben, Zahlen und Bindestriche enthält. Um ein anderes Format zu verwenden, z. B. Anthropic Messages oder Codex Responses, passen Sie es nach dem Import in CC Switch an.",
+        "openclaw": "CC Switch unterstützt derzeit nicht die Konfiguration von OpenClaw AI-Service-API-Formaten durch externen Import. Passen Sie es bei Bedarf nach dem Import in CC Switch an.",
+        "opencode": "CC Switch unterstützt derzeit nicht die Konfiguration von OpenCode AI-Service-API-Formaten durch externen Import. Passen Sie es bei Bedarf nach dem Import in CC Switch an."
+      },
+      "placeholders": {
+        "endpoint": "https://example.com",
+        "homepage": "https://example.com",
+        "model": "z. B. claude-3-opus",
+        "name": "z.B. Acme-Relais",
+        "notes": "Importnotizen hinzufügen"
+      },
+      "title": "In CC Switch exportieren"
+    },
+    "claudeCodeRouter": {
+      "description": "Erstellen oder aktualisieren Sie einen Anbieter im Claude Code Router. Modelle sind erforderlich.",
+      "descriptions": {
+        "models": "Geben Sie ein Modell pro Zeile ein oder trennen Sie es durch Kommas.",
+        "providerApiBaseUrl": "Dies sollte der vollständige /v1/chat/completions-Endpunkt sein.",
+        "restartAfterSave": "Der Router muss möglicherweise neu gestartet werden, damit die Konfigurationsänderungen wirksam werden."
+      },
+      "fields": {
+        "models": "Modelle",
+        "providerApiBaseUrl": "Anbieter-API-Endpunkt",
+        "providerName": "Anbietername",
+        "restartAfterSave": "Neustart nach dem Speichern"
+      },
+      "placeholders": {
+        "modelsPicker": "Geben Sie ein, um Modelle hinzuzufügen",
+        "providerApiBaseUrl": "https://example.com/v1/chat/completions",
+        "providerName": "z.B. Mein Relay"
+      },
+      "title": "Import in Claude Code Router"
+    },
+    "cliproxy": {
+      "actions": {
+        "addModel": "Modell hinzufügen",
+        "removeModel": "Modell entfernen",
+        "reorderModel": "Modell neu anordnen"
+      },
+      "description": "Erstellen oder aktualisieren Sie einen Anbietereintrag in CLIProxyAPI.",
+      "descriptions": {
+        "baseUrlClaudeApiKey": "Normalerweise die Anthropic-API-Stamm-URL ohne /v1/messages.",
+        "baseUrlCodexApiKey": "Normalerweise die Stamm-URL des Anbieters. Ein gängiger Standardwert ist https://api.openai.com.",
+        "baseUrlGeminiApiKey": "Normalerweise die Stamm-URL der Gemini-API ohne /v1/models/....",
+        "baseUrlOpenAICompatibility": "Normalerweise die Upstream-OpenAI-kompatible Basis-URL, die auf /v1 endet.",
+        "models": "Ordnen Sie Upstream-Modellnamen optionalen Aliasen zu (Name -> Alias). Sofern verfügbar, werden Upstream-Modelle zur Auswahl aus /v1/models geladen.",
+        "modelsManual": "Ordnen Sie die Namen der Upstream-Modelle optionalen Aliasen zu (Name -> Alias). Geben Sie in dieser Version manuell Werte für diese Anbieterfamilie ein.",
+        "providerType": "Wählen Sie aus, in welche CLIProxyAPI-Anbieterfamilie importiert werden soll.",
+        "proxyUrl": "Optionale Proxy-URL, die für diesen API-Schlüsseleintrag verwendet wird."
+      },
+      "fields": {
+        "baseUrl": "Basis-URL des Anbieters",
+        "models": "Modellzuordnung (optional)",
+        "name": "Anbietername",
+        "providerType": "Anbietertyp",
+        "proxyUrl": "Proxy-URL (optional)"
+      },
+      "placeholders": {
+        "baseUrlClaudeApiKey": "https://api.anthropic.com",
+        "baseUrlCodexApiKey": "https://api.openai.com",
+        "baseUrlGeminiApiKey": "https://generativelanguage.googleapis.com",
+        "baseUrlOpenAICompatibility": "https://example.com/v1",
+        "modelAlias": "Modellalias (optional)",
+        "modelName": "Modellname, z.B. Claude",
+        "name": "z.B. Acme-Relais",
+        "providerType": "Wählen Sie eine Anbieterfamilie aus",
+        "proxyUrl": "http://localhost:3000"
+      },
+      "providerTypes": {
+        "claudeApiKey": {
+          "description": "Verwenden Sie einen Anbietereintrag im Stil eines Anthropic-Claude-API-Schlüssels.",
+          "label": "Claude API-Schlüssel"
+        },
+        "codexApiKey": {
+          "description": "Verwenden Sie einen Anbietereintrag im Stil eines Codex-/OpenAI-API-Schlüssels.",
+          "label": "Codex API-Schlüssel"
+        },
+        "geminiApiKey": {
+          "description": "Verwenden Sie einen Anbietereintrag im Stil eines Google-Gemini-API-Schlüssels.",
+          "label": "Gemini API-Schlüssel"
+        },
+        "openaiCompatibility": {
+          "description": "Verwenden Sie einen standardmäßigen OpenAI-kompatiblen Anbieter mit einem konfigurierbaren Anbieternamen.",
+          "label": "OpenAI-Kompatibilität"
+        }
+      },
+      "title": "In CLIProxyAPI importieren"
+    },
+    "collapse": "Reduzieren",
+    "copyKey": {
+      "copied": "Kopiert",
+      "copy": "Kopieren",
+      "copyFailedManual": "Kopieren fehlgeschlagen, bitte manuell kopieren",
+      "createCustomKey": "Benutzerdefinierten Schlüssel erstellen",
+      "createFailed": "Schlüssel konnte nicht erstellt werden: {{error}}",
+      "createKey": "Standardschlüssel erstellen",
+      "createNotSupported": "Dieses Konto unterstützt das Erstellen von Schlüsseln über diesen Dialog nicht.",
+      "createSuccess": "Schlüssel erstellt",
+      "creatingKey": "Standardschlüssel wird erstellt...",
+      "defaultGroup": "Standardgruppe",
+      "disabled": "Deaktiviert",
+      "enabled": "Aktiviert",
+      "exportToCCSwitch": "In CC Switch exportieren",
+      "getFailed": "Schlüssel konnten nicht abgerufen werden",
+      "keyCopied": "Schlüssel in Zwischenablage kopiert",
+      "loadFailed": "Schlüsselliste konnte nicht geladen werden: {{error}}",
+      "loading": "Schlüsselliste wird geladen...",
+      "noKeyFoundAfterCreate": "Nach der Erstellung wurde kein Schlüssel gefunden. Bitte versuchen Sie es erneut.",
+      "noKeys": "Noch keine Schlüsseldaten",
+      "noKeysDescription": "Erstellen Sie schnell einen Standardschlüssel oder einen benutzerdefinierten Schlüssel mit erweiterten Einstellungen.",
+      "retry": "Wiederholen",
+      "title": "Schlüsselliste",
+      "totalKeys_one": "Gesamt {{count}} Schlüssel",
+      "totalKeys_other": "Insgesamt {{count}} Schlüssel",
+      "useInCherry": "Verwendung in Cherry Studio"
+    },
+    "dedupeAccounts": {
+      "confirm": {
+        "confirmDelete": "Löschen",
+        "description": "Dadurch werden {{deleteCount}} Konten aus {{groups}} Duplikatgruppen gelöscht.",
+        "title": "Doppelte Konten löschen",
+        "warningOrder": "Die manuelle Reihenfolge wird angepasst.",
+        "warningPinned_one": "{{count}} angeheftetes Konto wird gelöscht.",
+        "warningPinned_other": "{{count}} angeheftete Konten werden gelöscht."
+      },
+      "delete": "Löschen",
+      "deleting": "Doppelte Konten löschen...",
+      "description": "Scannen Sie doppelte Konten nach Herkunft und Benutzer-ID und löschen Sie die Duplikate anschließend nach der Vorschau.",
+      "details": {
+        "accountId": "Konto-ID",
+        "authType": "Authentifizierungstyp",
+        "autoCheckin": "Automatischer Check-in",
+        "checkinDetection": "Check-in-Erkennung",
+        "createdAt": "Erstellt am",
+        "customCheckinUrl": "Benutzerdefinierte Check-in-URL",
+        "excludeFromTotalBalance": "Vom Gesamtsaldo ausschließen",
+        "health": "Gesundheitsstatus",
+        "healthReason": "Grund",
+        "lastSync": "Letzte Synchronisierung",
+        "notes": "Notizen",
+        "quota": "Kontingent",
+        "siteType": "Website-Typ",
+        "todayConsumption": "Heutiger Verbrauch",
+        "todayRequests": "Heutige Anfragen",
+        "todayTokens": "Heutige Token",
+        "updatedAt": "Aktualisiert am",
+        "userId": "Benutzer-ID"
+      },
+      "detailsToggle": {
+        "hide": "Informationen ausblenden",
+        "show": "Mehr Infos"
+      },
+      "duplicateCount_one": "{{count}} Konto",
+      "duplicateCount_other": "{{count}} Konten",
+      "empty": "Keine doppelten Konten gefunden.",
+      "keep": "Beibehalten",
+      "manualPickHint": "Sie können manuell auswählen, welches Konto Sie in jeder Gruppe behalten möchten. Manuelle Entscheidungen haben Vorrang vor der Beibehaltungsstrategie.",
+      "previewDelete": "Vorschau der Löschung",
+      "recommended": "Empfohlen",
+      "sameCredential": "Gleicher Verwaltungsschlüssel",
+      "strategy": {
+        "keepEnabled": "Aktiv bleiben (falls vorhanden)",
+        "keepMostRecentlyUpdated": "Zuletzt aktualisiertes beibehalten",
+        "keepPinned": "Angeheftet beibehalten (falls vorhanden)"
+      },
+      "strategyLabel": "Strategie beibehalten",
+      "summary": "{{groups}} Duplikatgruppen · {{deleteCount}} zu löschende Konten",
+      "title": "Bereinigung doppelter Konten",
+      "unscannableHint_one": "{{count}} Konto konnte nicht gescannt werden und wurde übersprungen.",
+      "unscannableHint_other": "{{count}} Konten konnten nicht gescannt werden und wurden übersprungen.",
+      "userId": "Benutzer-ID: {{userId}}"
+    },
+    "delete": {
+      "confirmDelete": "Löschen bestätigen",
+      "confirmDeletion": "Bestätigung der Löschung",
+      "deleteFailed": "Löschen fehlgeschlagen: {{error}}",
+      "deleteSuccess": "Konto {{name}} erfolgreich gelöscht!",
+      "deleting": "Konto {{name}} wird gelöscht...",
+      "noResponse": "Der Löschvorgang wurde nicht erfolgreich abgeschlossen",
+      "siteName": "Website-Name",
+      "siteUrl": "Website-URL",
+      "title": "Konto löschen",
+      "username": "Benutzername",
+      "warning": "Sie sind dabei, das Konto {{accountName}} zu löschen. Bitte überprüfen Sie dies, bevor Sie die Löschung dieses Kontos bestätigen"
+    },
+    "expand": "Erweitern",
+    "firefox": {
+      "confirm": "Bestätigen",
+      "howOpenSidebar": "So öffnen Sie die Seitenleiste",
+      "limitation": "Firefox Browser-Funktionseinschränkung",
+      "openSidebar": "Seitenleiste öffnen",
+      "popupLimitation": "Diese Funktion kann im Firefox-Popup nicht zuverlässig verwendet werden. Verwenden Sie zum Hinzufügen von Konten bitte die Seitenleiste.",
+      "sidebarInstruction": "Klicken Sie auf das Erweiterungssymbol in der Browser-Symbolleiste und wählen Sie dann die Option „Seitenleiste“, um den Seitenleistenmodus zu öffnen",
+      "warningTitle": "Erinnerung an Funktionseinschränkungen"
+    },
+    "kiloCode": {
+      "actions": {
+        "copyKiloV7Provider": "Anbieterkonfiguration kopieren",
+        "copyLegacyApiConfigs": "Ältere apiConfigs kopieren",
+        "createDefaultToken": "Standard-Token erstellen",
+        "downloadKiloV7Settings": "Kilo 7.x-Einstellungen herunterladen",
+        "downloadLegacySettings": "Ältere Einstellungen herunterladen",
+        "removeManualModel": "Manuelles Modell entfernen",
+        "retryModels": "Modellerkennung erneut versuchen"
+      },
+      "description": "Generieren Sie Kilo Code / Roo Code Anbieterprofile aus Ihren ausgewählten Websites und Token.",
+      "descriptions": {
+        "currentApiConfigName": "Wird als providerProfiles.currentApiConfigName in {{filename}} verwendet.",
+        "modelId": "Empfohlen pro API-Schlüssel (Kilo Code erfordert normalerweise eine Modell-ID). Standardmäßig wird das erste Modell aus der Upstream-Modellliste dieses API-Schlüssels verwendet.",
+        "selectedSites": "Ausgewählte Websites: {{sites}}, ausgewählte Schlüssel: {{keys}}."
+      },
+      "help": {
+        "kiloV7ApiKeyEditorNote": "Nach dem Import zeigt Kilo Code das Provider-API-Schlüsselfeld möglicherweise als leer an. Dies ist eine bekannte Editor-Einschränkung: Importierte Inline-Schlüssel werden getrennt vom Editor-Authentifizierungsstatus gespeichert und bleiben zur Laufzeit verfügbar.",
+        "kiloV7CatalogInstructions": "Jeder ausgewählte API-Schlüssel wird zu einem Anbieter mit einem lesbaren Namen. Dieser enthält alle über die API ermittelten normalisierten Modell-IDs sowie alle für den Anbieter manuell eingegebenen Modell-IDs. Die Aufnahme garantiert nicht, dass jedes Modell in jedem Workflow funktioniert. Wählen Sie das Standardmodell und bei mehreren Anbietern auch den Standardanbieter.",
+        "kiloV7CopyInstructions": "Klicken Sie auf „Anbieterkonfiguration kopieren“, um ein zusammenführbares Fragment der obersten Ebene zu kopieren, das sowohl Anbieter als auch Modell enthält. Führen Sie beide Felder in der JSON-Datei Ihrer Einstellungen zusammen. Das kopierte Fragment ist keine vollständige Importdatei.",
+        "kiloV7DownloadInstructions": "Klicken Sie auf „Kilo 7.x-Einstellungen herunterladen“ und importieren Sie die heruntergeladene Datei kilo-settings.json in Kilo Code unter Einstellungen → Über Kilo Code → Importieren. Überprüfen Sie die importierten Einstellungen und speichern Sie sie.",
+        "legacyCopyInstructions": "Klicken Sie auf „Legacy-APIConfigs kopieren“ und fügen Sie den Inhalt in „providerProfiles.apiConfigs“ in den Roo Code- oder Kilo Code 5.x-Einstellungen ein.",
+        "legacyDownloadInstructions": "Um eine vollständige Einstellungsdatei zu erhalten, klicken Sie auf „Legacy-Einstellungen herunterladen“, um die Datei „kilo-code-settings.json“ herunterzuladen, und importieren Sie sie dann mit der Einstellungsimportfunktion in der entsprechenden Version.",
+        "legacySingleModelInstructions": "Legacy-Exporte Roo Code und Kilo Code 5.x unterstützen ein Modell pro Profil. Wählen Sie vor dem Kopieren oder Herunterladen das zu verwendende Modell aus.",
+        "perSiteDescription": "Wählen Sie Websites aus, um Token automatisch zu laden. Der erste Token ist vorausgewählt und Sie können mehrere Token pro Website auswählen.",
+        "perSiteTitle": "Pro-Website-Export",
+        "usageTitle": "Export verwenden"
+      },
+      "labels": {
+        "currentApiConfigName": "Aktuelles Profil",
+        "defaultModel": "Standardmodell",
+        "defaultProvider": "Standardanbieter",
+        "exportTarget": "Exportziel",
+        "legacyModelId": "Modell-ID",
+        "modelId": "Modell-ID",
+        "providerProtocol": "API-Protokoll",
+        "selectedSites": "Ausgewählte Websites",
+        "selectedTokens": "Ausgewählte Token"
+      },
+      "messages": {
+        "accountNotFound": "Konto nicht gefunden.",
+        "copiedExportConfig": "Exportkonfiguration in Zwischenablage kopiert",
+        "copyFailed": "Kopieren fehlgeschlagen",
+        "createTokenBlockedFallback": "Die Token-Erstellung wurde blockiert. Überprüfen Sie die Website-Richtlinien und versuchen Sie es erneut.",
+        "createTokenFailed": "Fehler beim Erstellen des Tokens.",
+        "downloadedSettings": "Einstellungsdatei heruntergeladen",
+        "downloadFailed": "Fehler beim Herunterladen der Einstellungsdatei",
+        "invalidProfile": "Dieses Profil hat eine ungültige Basis-URL oder einen fehlenden API-Schlüssel. Aktualisieren Sie das Profil vor dem Exportieren.",
+        "loadingTokens": "Token-Liste wird geladen…",
+        "loadModelsFailed": "Das Laden der Upstream-Modelle für diesen API-Schlüssel ist fehlgeschlagen.",
+        "loadTokensFailed": "Das Laden der Token für diese Website ist fehlgeschlagen.",
+        "modelIdRequiredDescription_one": "Wählen Sie eine Modell-ID für alle ausgewählten API-Schlüssel aus oder geben Sie eine ein, um den Export zu aktivieren (fehlt: {{count}}).",
+        "modelIdRequiredDescription_other": "Wählen Sie eine Modell-ID für alle ausgewählten API-Schlüssel aus oder geben Sie eine ein, um den Export zu aktivieren (fehlt: {{count}}).",
+        "modelIdRequiredTitle": "Modell-ID erforderlich",
+        "modelSearchLimited": "Zeigt das erste {{visible}} von {{count}} Modellen. Geben Sie weiter ein, um die Liste einzugrenzen.",
+        "noModelsDescription": "Für diesen API-Schlüssel wurden keine Upstream-Modelle zurückgegeben. Kilo Code erfordert normalerweise eine Modell-ID – geben Sie diese bitte manuell ein.",
+        "noModelsTitle": "Keine Modelle",
+        "nothingToExportDescription": "Wählen Sie mindestens ein exportierbares Token oder eine exportierbare Website aus, um das Kopieren/Herunterladen zu ermöglichen.",
+        "nothingToExportTitle": "Nichts zum Exportieren",
+        "noTokensDescription": "Diese Website wird übersprungen, bis ein Token erstellt wird.",
+        "noTokensTitle": "Keine Token verfügbar",
+        "settingsFileTooLargeMultiple": "Diese Datei ist zu groß für den Kilo Code-Import. Wählen Sie weniger Anbieter aus oder kopieren Sie die Konfiguration und führen Sie sie manuell zusammen.",
+        "settingsFileTooLargeSingle": "Diese Datei ist zu groß für den Kilo Code-Import. Kopieren Sie die Konfiguration und führen Sie sie manuell zusammen.",
+        "tokenCreated": "Token erstellt",
+        "v7ProviderModelsRequired": "Geben Sie eine Modell-ID ein, versuchen Sie die Erkennung erneut oder deaktivieren Sie diesen Anbieter."
+      },
+      "placeholders": {
+        "currentApiConfigName": "Aktuelles Profil auswählen",
+        "modelId": "Modell-ID suchen oder eingeben",
+        "selectSites": "Websites auswählen",
+        "selectTokens": "Token auswählen"
+      },
+      "protocols": {
+        "anthropicMessages": "Anthropic-Nachrichten",
+        "openAICompatible": "OpenAI-kompatibel",
+        "openAIResponses": "OpenAI-Antworten"
+      },
+      "targets": {
+        "kiloV7": "Kilo Code 7.x",
+        "legacy": "Roo Code / Kilo Code 5.x (Legacy)"
+      },
+      "title": "Kilo-Code-JSON exportieren",
+      "warning": {
+        "description": "Das exportierte JSON enthält API-Schlüssel im Klartext. Bewahren Sie es sicher auf und geben Sie es nicht weiter.",
+        "title": "API-Schlüssel im Klartext"
+      }
+    },
+    "tempWindowFallbackReminder": {
+      "actions": {
+        "neverRemind": "Niemals erinnern",
+        "notNow": "Nicht jetzt",
+        "openSettings": "Einstellungen öffnen"
+      },
+      "descriptionDisabledTempWindowOnly": "Automatische Aktualisierung für {{accountName}} hat eine Website-Verifizierung festgestellt, aber automatische Aufgaben können derzeit keine temporären Seiten öffnen. Aktivieren Sie dies unter „Einstellungen“ > „Datenaktualisierung“.",
+      "descriptionDisabledWithCookieInterceptor": "Automatische Aktualisierung für {{accountName}} hat eine Website-Verifizierung festgestellt, aber automatische Aufgaben können derzeit keine temporären Seiten öffnen. Aktivieren Sie dies unter „Einstellungen“ > „Datenaktualisierung“.",
+      "descriptionPermissionTempWindowOnly": "Die automatische Aktualisierung für {{accountName}} muss eine temporäre Seite zur Website-Verifizierung öffnen. Erteilen Sie die erforderliche Berechtigung unter Einstellungen > Berechtigungen.",
+      "descriptionPermissionWithCookieInterceptor": "Die automatische Aktualisierung für {{accountName}} erfordert die Berechtigungen „Cookies“, „Webanfrage“ und „Blockierung von Webanfragen“ zur Website-Verifizierung. Gewähren Sie sie unter Einstellungen > Berechtigungen.",
+      "titleTempWindowOnly": "Automatische Aktualisierung erfordert Website-Überprüfung",
+      "titleWithCookieInterceptor": "Automatische Aktualisierung erfordert Website-Überprüfung"
+    },
+    "updateLog": {
+      "autoOpenSetting": "Automatisches Öffnen des Protokolls aktualisieren",
+      "disableAutoOpen": "Nach Updates nicht anzeigen",
+      "enableAutoOpen": "Nach Updates wieder aktivieren",
+      "loading": "Änderungsprotokoll wird geladen…",
+      "missingSection": "Die Änderungsprotokollvorschau für v{{version}} konnte nicht geladen werden. Sie können das vollständige Änderungsprotokoll öffnen.",
+      "openFullChangelog": "Vollständiges Änderungsprotokoll öffnen",
+      "title": "Was ist neu",
+      "updatedTo": "Aktualisiert auf v{{version}}"
+    }
+  },
+  "feedback": {
+    "bugReport": "Einen Fehler melden",
+    "community": "Community-Gruppen",
+    "discussion": "Starten Sie eine Diskussion",
+    "featureRequest": "Fordern Sie eine Funktion an",
+    "languageRequest": "Fordern Sie eine neue Sprache an",
+    "siteSupportRequest": "Website-Unterstützung anfordern",
+    "trigger": "Feedback",
+    "triggerTooltip": "Feedback-Verknüpfungen öffnen"
+  },
+  "modelListInput": {
+    "actions": {
+      "add": "Modell hinzufügen",
+      "remove": "Modell entfernen",
+      "reorder": "Modell neu anordnen"
+    },
+    "description": "Beispiel: gpt-4o-mini oder moonshotai/kimi-k2:free, kimi-k2",
+    "placeholders": {
+      "alias": "Modellalias (optional)",
+      "name": "Modellname, z.B. Claude"
+    },
+    "title": "Modellliste (ein Eintrag pro Zeile: Name[, Alias]):"
+  },
+  "multiSelect": {
+    "cancelSelected": "Auswahl abbrechen",
+    "chipCopied": "Kopiert: {{value}}",
+    "clearInput": "Eingabe löschen",
+    "clearSelected": "Alle ausgewählten Werte löschen",
+    "copyChipValue": "{{value}} kopieren",
+    "copyError": "Kopieren fehlgeschlagen, bitte versuchen Sie es erneut",
+    "copySelectedValues": "Ausgewählte Werte kopieren",
+    "copySuccess": "Ausgewählte Werte kopiert",
+    "emptyWithQueryAllowCustom": "Drücken Sie die Eingabetaste, um „{{value}}“ hinzuzufügen",
+    "noOptions": "Keine Optionen verfügbar",
+    "noOptionsAllowCustom": "Keine Optionen verfügbar. Geben Sie einen Wert ein, um einen zu erstellen.",
+    "placeholder": "Wählen Sie...",
+    "removeValue": "Entfernen Sie {{value}}",
+    "selectAll": "Alles auswählen",
+    "selected": "Ausgewählt"
+  },
+  "navigation": {
+    "about": "Über",
+    "account": "Kontoverwaltung",
+    "apiCredentialProfiles": "API-Anmeldeinformationsbibliothek",
+    "autoCheckin": "Automatischer Check-in",
+    "autoCheckinRunNow": "Schneller Check-in",
+    "balanceHistory": "Kontostandverlauf",
+    "basic": "Einstellungen",
+    "bookmark": "Lesezeichenverwaltung",
+    "categories": {
+      "api": "API",
+      "automation": "Automatisierung",
+      "general": "Allgemein",
+      "insights": "Einblicke",
+      "siteManagement": "Websiteverwaltung",
+      "system": "System"
+    },
+    "collapseSidebar": "Seitenleiste einklappen",
+    "expandSidebar": "Seitenleiste erweitern",
+    "externalCheckinAll": "Alle externen Check-ins öffnen",
+    "externalCheckinAllHint": "Öffnen Sie ungeprüfte externe Check-ins. Ctrl/Cmd: alle öffnen. Shift: in neuem Fenster öffnen. Ctrl/Cmd+Shift: Alles in neuem Fenster öffnen.",
+    "importExport": "Import/Export",
+    "keys": "Schlüsselverwaltung",
+    "managedSiteChannels": "Kanalverwaltung",
+    "managedSiteModelSync": "Modellsynchronisierung",
+    "meshGradientLab": "Mesh Gradient Lab (Entwickler)",
+    "models": "Modellliste",
+    "overview": "Übersicht",
+    "settings": "Einstellungen",
+    "settingsOptions": "Einstellungsoptionen",
+    "sidebarCollapsedHint": "Seitenleiste minimiert, zeigt nur Symbole an",
+    "siteAnnouncements": "Website-Ankündigungen",
+    "toggleMenu": "Menü umschalten",
+    "unifiedApiGuidancePreview": "Unified API Guidance Preview (Entwickler)",
+    "usageAnalytics": "Nutzungsanalyse"
+  },
+  "optionsSearch": {
+    "dialogDescription": "Seiten, Einstellungsregisterkarten und Einstellungselemente durchsuchen",
+    "dialogTitle": "Einstellungen durchsuchen",
+    "emptyDescription": "Versuchen Sie es mit einem anderen Titel, Schlüsselwort oder technischen Alias.",
+    "emptyTitle": "Keine passenden Einstellungen",
+    "groups": {
+      "control": "Einstellungselemente",
+      "page": "Seiten",
+      "recent": "Kürzlich",
+      "section": "Abschnitte",
+      "tab": "Einstellungsregisterkarten"
+    },
+    "idleDescription": "Geben Sie einen Einstellungsnamen, ein Schlüsselwort oder einen technischen Alias ein, um mit der Suche zu beginnen.",
+    "idleTitle": "In den Einstellungen suchen",
+    "open": "Einstellungssuche öffnen",
+    "placeholder": "Einstellungen durchsuchen..."
+  },
+  "pageTitle": {
+    "app": "All API Hub",
+    "options": "Einstellungen",
+    "popup": "Popup",
+    "sidepanel": "Seitenleiste",
+    "template": "{{page}} | {{app}}"
+  },
+  "popupInterruption": {
+    "actions": {
+      "keepPopup": "Popup geöffnet lassen",
+      "useSidepanel": "Seitenleiste verwenden"
+    },
+    "description": "Das Popup wurde geschlossen, während die automatische Kontoerkennung ausgeführt wurde. Verwenden Sie die Seitenleiste für einen gleichmäßigeren Ablauf beim Hinzufügen von Konten.",
+    "settingName": "Klickverhalten der Symbolleiste",
+    "title": "Die automatische Erkennung wurde möglicherweise unterbrochen"
+  },
+  "repeatableInput": {
+    "actions": {
+      "add": "Hinzufügen",
+      "remove": "Entfernen",
+      "reorder": "Zum Neuanordnen ziehen"
+    }
+  },
+  "searchableSelect": {
+    "empty": "Keine Ergebnisse gefunden",
+    "noOptions": "Keine Optionen verfügbar",
+    "noOptionsAllowCustom": "Keine Optionen verfügbar. Geben Sie einen Wert ein, um einen zu erstellen.",
+    "searchPlaceholder": "Suchen...",
+    "useValue": "Verwenden Sie „{{value}}“"
+  }
+}

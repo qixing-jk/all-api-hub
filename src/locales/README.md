@@ -17,7 +17,15 @@ locales/
 │   ├── importExport.json   # 导入/导出
 │   ├── shareSnapshots.json # 分享快照（图片 + 文案）
 │   └── about.json          # 关于
+├── de/                      # 德文翻译
+│   └── (同上结构)
+├── es-419/                  # 拉丁美洲西班牙文翻译
+│   └── (同上结构)
+├── pt-BR/                   # 巴西葡萄牙文翻译
+│   └── (同上结构)
 ├── ja/                      # 日文翻译
+│   └── (同上结构)
+├── vi/                      # 越南文翻译
 │   └── (同上结构)
 ├── zh-CN/                  # 中文翻译
 │   └── (同上结构)
@@ -87,12 +95,12 @@ function MyComponent() {
 - 查看翻译状态：`pnpm run i18n:status`
 - 只读校验提取结果（适合 CI）：`pnpm run i18n:extract:ci`
 - 手动提取代码中的静态 key：`pnpm run i18n:extract`
-- 以 `zh-CN` 为主语言同步 `en`、`ja`、`zh-TW` 结构：`pnpm run i18n:sync`
+- 以 `zh-CN` 为主语言同步 `en`、`de`、`es-419`、`pt-BR`、`ja`、`vi`、`zh-TW` 结构：`pnpm run i18n:sync`
 
 当前配置刻意保持保守：
 
 - `primaryLanguage` 为 `zh-CN`，对应仓库目录 `src/locales/zh-CN/`
-- `secondaryLanguages` 由 `SUPPORTED_UI_LANGUAGES` 自动推导，当前为 `en`、`ja` 与 `zh-TW`
+- `secondaryLanguages` 由 `SUPPORTED_UI_LANGUAGES` 自动推导，当前为 `en`、`de`、`es-419`、`pt-BR`、`ja`、`vi` 与 `zh-TW`
 - `removeUnusedKeys` 为 `true`
 
 ### Extract 可见性规则

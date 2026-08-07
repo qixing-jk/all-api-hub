@@ -1,0 +1,650 @@
+{
+  "accountSummary": {
+    "keys_one": "{{count}} Schlüssel",
+    "keys_other": "{{count}} Schlüssel",
+    "loadFailed": "Laden fehlgeschlagen",
+    "title": "Kontoübersicht",
+    "unsupported": "nicht unterstützt"
+  },
+  "actions": {
+    "collapseAll": "Alles ausblenden",
+    "deleteKey": "Schlüssel löschen",
+    "details": "Details anzeigen",
+    "detailsFor": "Details für {{name}}",
+    "editKey": "Schlüssel bearbeiten",
+    "expandAll": "Alles erweitern",
+    "exportToCCSwitch": "In CC Switch exportieren",
+    "exportToKiloCode": "Kilo Code Konfiguration exportieren",
+    "hideKey": "Schlüssel ausblenden",
+    "importToClaudeCodeRouter": "Import in Claude Code Router",
+    "importToCliProxy": "In CLIProxyAPI importieren",
+    "importToManagedSite": "In {{site}} importieren",
+    "openApiProfiles": "API-Anmeldeinformationsbibliothek öffnen",
+    "openSelectedAccountModels": "Kontomodelle anzeigen",
+    "retryFailed": "Wiederholung fehlgeschlagen",
+    "saveToApiProfiles": "In API-Anmeldeinformationsbibliothek speichern",
+    "saveToApiProfilesHint": "Speichern Sie diesen Schlüssel in der API-Anmeldeinformationsbibliothek, um ihn schnell kopieren, überprüfen und exportieren zu können.",
+    "showKey": "Schlüssel anzeigen",
+    "useInCherry": "Verwendung in Cherry Studio",
+    "verifyApi": "API überprüfen",
+    "verifyCliSupport": "Überprüfen Sie die CLI-Unterstützung"
+  },
+  "allAccounts": "Alle Konten",
+  "allAccountsFailed_one": "{{count}} Konto konnte nicht geladen werden; Ergebnisse sind unvollständig",
+  "allAccountsFailed_other": "{{count}} Konten konnten nicht geladen werden; Ergebnisse sind unvollständig",
+  "allAccountsLoading_one": "{{count}} wird geladen",
+  "allAccountsLoading_other": "{{count}} wird geladen",
+  "allAccountsProgress": "{{completed}}/{{total}} Konten verarbeitet",
+  "batchApiCredentialProfiles": {
+    "actions": {
+      "open": "Speichern in der API-Anmeldeinformationsbibliothek ({{selectedCount}})"
+    }
+  },
+  "batchCliProxyExport": {
+    "actions": {
+      "open": "Batch-Import in CLIProxyAPI ({{selectedCount}})",
+      "running": "Importieren...",
+      "start": "Import starten"
+    },
+    "description": "Importieren Sie {{selectedCount}} ausgewählte Schlüssel in CLIProxyAPI mit einer Anbieterrichtlinie.",
+    "results": {
+      "failed": "Fehlgeschlagen",
+      "pending": "Ausstehend",
+      "running": "Importieren",
+      "success": "Erfolg"
+    },
+    "summary": "{{total}} insgesamt, {{success}} erfolgreich, {{failed}} fehlgeschlagen.",
+    "title": "Batch-Import in CLIProxyAPI"
+  },
+  "batchManagedSiteExport": {
+    "actions": {
+      "clearSelection": "Auswahl löschen",
+      "open": "Batch-Import in {{site}} ({{selectedCount}})",
+      "refreshPreview": "Vorschau aktualisieren",
+      "running": "Importieren...",
+      "selectAll": "{{selected}}/{{total}} ausgewählt",
+      "start": "Import starten",
+      "verifyAndRefresh": "Vorschau überprüfen und aktualisieren",
+      "verifying": "Verifizierung...",
+      "viewChannels": "Kanäle anzeigen"
+    },
+    "blockedReasons": {
+      "baseUrlRequired": "Die Basis-URL ist für das selbstgehostete Ziel-KI-Gateway erforderlich.",
+      "configMissing": "Die Administratorkonfiguration des selbstgehosteten AI-Gateways fehlt.",
+      "inputPreparationFailed": "Kanaldaten für diesen Schlüssel konnten nicht vorbereitet werden.",
+      "keyRequired": "Der generierte Kanalschlüssel ist leer.",
+      "modelsRequired": "Für diesen Schlüssel wurden keine Modelle aufgelöst.",
+      "nameRequired": "Der generierte Kanalname ist leer.",
+      "realKeyRequired": "Das selbstgehostete Ziel-KI-Gateway erfordert einen echten Anbieterschlüssel.",
+      "secretResolutionFailed": "Das echte Token-Geheimnis konnte nicht aufgelöst werden."
+    },
+    "confirm": {
+      "description": "Dadurch werden Kanäle für {{selectedCount}} ausgewählte Schlüssel erstellt. Vorhandene exakte Übereinstimmungen und blockierte Zeilen werden nicht erstellt.",
+      "title": "Ausgewählte Schlüssel importieren"
+    },
+    "description": "Überprüfen Sie {{selectedCount}} ausgewählte Schlüssel, bevor Sie Kanäle in {{site}} erstellen.",
+    "fields": {
+      "baseUrl": "Basis-URL",
+      "editModelsLabel": "Modelle bearbeiten für {{name}}",
+      "groups": "Gruppen",
+      "models": "Modelle"
+    },
+    "gatewayDescription": "Dadurch werden Kontoschlüssel als selbstgehostete AI-Gateway-Kanäle importiert. Nach dem Import können mehrere Schlüssel von Clients über eine AI-API verwendet werden.",
+    "loadingDescription": "Vorschau wird für {{selectedCount}} ausgewählte Schlüssel vorbereitet.",
+    "messages": {
+      "completed": "Batch-Import abgeschlossen: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} übersprungen.",
+      "duplicate": "Exakte Übereinstimmung existiert bereits: {{channel}}",
+      "executionFailed": "Batch-Import konnte nicht ausgeführt werden: {{error}}",
+      "verificationFailed": "New API Verifizierung fehlgeschlagen: {{error}}"
+    },
+    "preview": {
+      "loadFailed": "Vorschau konnte nicht geladen werden: {{error}}",
+      "loading": "Kanalvorschau wird vorbereitet...",
+      "selected_one": "{{count}} Schlüssel ausgewählt",
+      "selected_other": "{{count}} Schlüssel ausgewählt",
+      "summary": "Vorschau: {{ready}} bereit, {{warning}} Warnungen, {{skipped}} übersprungen, {{blocked}} blockiert, {{total}} insgesamt."
+    },
+    "results": {
+      "channelCreationFailed": "Kanalerstellung fehlgeschlagen.",
+      "status": {
+        "failed": "Fehlgeschlagen",
+        "skipped": "Übersprungen",
+        "success": "Erstellt"
+      },
+      "summary": "Ergebnis: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} übersprungen, {{total}} insgesamt."
+    },
+    "selection": {
+      "accountGroup": "Wählen Sie sichtbare Schlüssel für Konto {{name}}",
+      "rowLabel": "Wählen Sie {{name}} für den Batch-Import",
+      "visible": "{{selected}}/{{total}} sichtbar ausgewählt"
+    },
+    "status": {
+      "blocked": "Blockiert",
+      "ready": "Bereit",
+      "skipped": "Übersprungen",
+      "warning": "Warnung"
+    },
+    "title": "Batch-Import in ein selbstgehostetes KI-Gateway",
+    "warnings": {
+      "backendSearchFailed": "Die Duplikatprüfung konnte das Ziel-Backend nicht erreichen.",
+      "dedupeUnsupported": "Das aktuelle selbstgehostete KI-Gateway kann Duplikate nicht zuverlässig anhand der Basis-URL prüfen.",
+      "exactVerificationUnavailable": "Ein vorhandener Kanal stimmt möglicherweise überein, eine genaue Schlüsselüberprüfung ist jedoch nicht verfügbar.",
+      "matchRequiresConfirmation": "Ein ähnlicher Kanal existiert; Überprüfen Sie es vor der Erstellung.",
+      "modelPrefillFailed": "Modellvorausfüllung fehlgeschlagen; die beste verfügbare Modellliste wird verwendet."
+    }
+  },
+  "batchSelection": {
+    "accountUnavailableReason": "Dieses Konto verfügt über keine Schlüssel, die Batch-Aktionen unterstützen.",
+    "eligibilityNotice_one": "{{count}} Schlüssel unterstützt derzeit Batch-Aktionen; andere Schlüssel werden nicht einbezogen.",
+    "eligibilityNotice_other": "{{count}} Schlüssel unterstützen derzeit Batch-Aktionen; andere Schlüssel werden nicht einbezogen.",
+    "unavailableReason": "Dieser Schlüssel unterstützt keine Batch-Aktionen."
+  },
+  "createFirstKey": "Ersten Schlüssel erstellen",
+  "description": "Auf dieser Seite werden API-Schlüsselinformationen für alle Konten angezeigt, einschließlich Nutzung und Ablaufzeit. Sie können neue Schlüssel für bestimmte Konten erstellen, indem Sie auf die Schaltfläche „Schlüssel hinzufügen“ in der oberen rechten Ecke oder auf die Schaltfläche „+“ neben jedem Schlüsselelement klicken. Bitte bewahren Sie Ihre API-Schlüssel sicher auf und geben Sie sie nicht an andere weiter.",
+  "details": {
+    "empty": "Keine weiteren Details",
+    "loading": "Details werden geladen",
+    "unavailable": "Details nicht verfügbar"
+  },
+  "dialog": {
+    "accountSelect": "Konto auswählen",
+    "addToken": "API-Schlüssel hinzufügen",
+    "advancedSettings": "Erweiterte Einstellungen",
+    "availableModels": "Verfügbare Modelle",
+    "basicInfo": "Grundlegende Informationen",
+    "createFailed": "Fehler beim Erstellen des Schlüssels, bitte versuchen Sie es später erneut",
+    "createNotSupported": "Dieses Konto unterstützt das Erstellen von API-Schlüsseln nicht.",
+    "createSuccess": "Schlüssel erfolgreich erstellt",
+    "createToken": "Schlüssel erstellen",
+    "editModeNoChange": "Konto kann im Bearbeitungsmodus nicht geändert werden",
+    "editToken": "API-Schlüssel bearbeiten",
+    "expiration": "Ablaufzeit",
+    "expirationPlaceholder": "Leer lassen, da es nie abläuft",
+    "groupLabel": "Gruppe",
+    "groupRate": "Multiplikator:",
+    "groupRestrictedNote": "Es können nur Gruppen ausgewählt werden, die mit diesem Modell kompatibel sind.",
+    "ipExample": "Beispiel: 192.168.1.1,10.0.0.1 oder verwenden Sie * für keine Begrenzung",
+    "ipLimits": "IP-Limits",
+    "ipPlaceholder": "Für keine Begrenzung leer lassen, mehrere IPs durch Kommas trennen",
+    "loadDataFailed": "Fehler beim Laden der Daten, bitte versuchen Sie es später erneut",
+    "modelLimits": "Modellgrenzen",
+    "modelSelectHint_one": "{{count}} Modell ausgewählt",
+    "modelSelectHint_other": "{{count}} Modelle ausgewählt",
+    "nameRequired": "Schlüsselname darf nicht leer sein",
+    "quotaPlaceholder": "Bitte geben Sie den Kontingentbetrag (USD) ein",
+    "quotaRate": "1 USD = {{rate}} Kontingentpunkte",
+    "quotaSettings": "Kontingenteinstellungen",
+    "selectAccountError": "Bitte Konto auswählen",
+    "selectModels": "Modelle auswählen",
+    "subnetExample": "Beispiel: 192.168.1.0/24",
+    "subnetLimits": "Subnetzgrenzen",
+    "subnetPlaceholder": "Lassen Sie das Feld leer, um keine Begrenzung zu erhalten, oder geben Sie ein Subnetz oder CIDR ein",
+    "tokenName": "Token-Name",
+    "unlimitedQuota": "Unbegrenztes Kontingent",
+    "updateFailed": "Fehler beim Aktualisieren des Schlüssels, bitte versuchen Sie es später noch einmal",
+    "updateNotSupported": "Dieses Konto unterstützt das Aktualisieren von API-Schlüsseln nicht.",
+    "updateSuccess": "Schlüssel erfolgreich aktualisiert",
+    "updateToken": "Schlüssel aktualisieren",
+    "validExpiration": "Die Ablaufzeit muss größer als die aktuelle Zeit sein",
+    "validIp": "Bitte geben Sie gültige IP-Adressen ein, trennen Sie mehrere IPs durch Kommas",
+    "validQuota": "Bitte geben Sie einen gültigen Kontingentbetrag ein",
+    "warningText": "Bitte bewahren Sie API-Schlüssel sicher auf und vermeiden Sie eine Weitergabe.",
+    "warningTitle": "Notizen"
+  },
+  "enabledCount_one": "Aktiviert {{count}}",
+  "enabledCount_other": "Aktiviert {{count}}",
+  "keyDetails": {
+    "createResponseOnlySecret": "Diese Website zeigt den vollständigen Schlüssel nur an, wenn er erstellt wird. Wenn Sie ihn nicht gespeichert haben, öffnen Sie die Schlüsselverwaltung und erstellen Sie einen Ersatzschlüssel.",
+    "createTime": "Erstellungszeit:",
+    "expireTime": "Ablaufzeit:",
+    "followsAccountGroup": "Folgt der Kontogruppe",
+    "group": "Gruppe:",
+    "ipLimits": "IP-Grenzwerte:",
+    "key": "Schlüssel:",
+    "lastUsedTime": "Zuletzt verwendet:",
+    "limitedQuota": "Begrenztes Kontingent",
+    "models": "Modellbeschränkungen:",
+    "neverExpires": "Läuft nie ab",
+    "note": "Hinweis:",
+    "quotaPolicy": "Quotenrichtlinie:",
+    "remainingQuota": "Verbleibendes Kontingent:",
+    "secretUnavailable": "Der vollständige Schlüssel ist für diesen gespeicherten Schlüssel nicht verfügbar.",
+    "ungrouped": "Nicht gruppiert",
+    "usedQuota": "Verwendetes Kontingent:"
+  },
+  "knownTotalKeys_one": "{{count}} Schlüssel gelesen",
+  "knownTotalKeys_other": "{{count}} Schlüssel gelesen",
+  "loadError": {
+    "description": "Die Erweiterung konnte keine Schlüssel für dieses Konto laden. Möglicherweise ist die Sitzung abgelaufen, die Berechtigungen reichen möglicherweise nicht aus oder die Website ist möglicherweise vorübergehend nicht verfügbar. Melden Sie sich erneut auf der Website an und versuchen Sie es erneut.\n\nFehler: {{error}}",
+    "openSite": "Website öffnen",
+    "title": "Fehler beim Laden der Schlüssel"
+  },
+  "managedSiteSetupRecovery": {
+    "configureManagedSite": "Selbstgehostetes KI-Gateway konfigurieren",
+    "description": "Konfigurieren Sie Ihr selbst gehostetes KI-Gateway, um Kontoschlüssel als Gateway-Kanäle zu importieren und sie in einer einheitlichen KI-API zu kombinieren."
+  },
+  "managedSiteStatus": {
+    "actions": {
+      "configureChecks": "Konfigurieren Sie Prüfungen verwalteter Websites",
+      "refresh": "Status des verwalteten Website-Kanals aktualisieren",
+      "refreshing": "Status des verwalteten Website-Kanals wird aktualisiert",
+      "reviewChannels": "Kanäle überprüfen",
+      "verifyNow": "Jetzt bestätigen"
+    },
+    "badges": {
+      "added": "Hinzugefügt",
+      "checkFailed": "Prüfung fehlgeschlagen",
+      "checking": "Prüfung",
+      "configMissing": "Nicht konfiguriert",
+      "notAdded": "Nicht hinzugefügt",
+      "requiresConfirmation": "Benötigt Bestätigung",
+      "unknown": "Unbekannt",
+      "verificationUnavailable": "Kann nicht vollständig überprüft werden"
+    },
+    "descriptions": {
+      "backendSearchFailed": "Die Prüfungen für die verwaltete Website konnten nicht abgeschlossen werden.",
+      "baseUrlSearchUnsupported": "Diese Funktion wird auf der aktuell verwalteten Website nicht unterstützt, da sie die Basis-URL-Suche für die Kanalsuche nicht unterstützt.",
+      "configMissingOptional": "Optionale Kanalprüfungen für verwaltete Websites sind noch nicht aktiviert. Das Anzeigen, Kopieren und Erstellen von Schlüsseln funktioniert weiterhin.",
+      "inputPreparationFailed": "Die Verifizierung konnte keine vergleichbaren Kanaleingaben vorbereiten.",
+      "newApiRetrieveKeyHint": "Für New API hängt der vollständige Schlüsselvergleich vom Kanalschlüssel ab und die Anzeige dieses Kanalschlüssels selbst erfordert eine 2FA-Verifizierung, sodass ein vollständiger Schlüsselvergleich derzeit nicht verfügbar ist."
+    },
+    "pageUnsupported": "Kanalprüfungen für verwaltete Websites sind auf dieser Seite nicht verfügbar, da die aktuell verwaltete Website die Suche nach Kanälen nach URL derzeit nicht unterstützt.",
+    "recovery": {
+      "configureLogin": "Fügen Sie zuerst in den Einstellungen die Felder für die New-API-Anmeldung und die 2FA-Unterstützung hinzu. Bis dahin kann der Kanalschlüssel nicht gelesen und kein vollständiger Schlüsselvergleich durchgeführt werden.",
+      "verificationRequired": "Der vollständige Schlüsselvergleich erfordert zunächst einen kurzlebigen New API-Verifizierungsschritt, da für die Anzeige eines New API-Kanalschlüssels selbst 2FA erforderlich ist."
+    },
+    "signals": {
+      "key": {
+        "matched": "Schlüssel stimmt überein",
+        "noMatch": "Schlüssel stimmt nicht überein",
+        "notProvided": "Schlüssel fehlt",
+        "tooltipMatched": "Ein Kanal unter demselben normalisierten URL-Bucket stimmte mit diesem Schlüssel überein: {{channelName}}.",
+        "tooltipNoMatch": "Vergleichbare Kanalschlüssel waren verfügbar, aber keiner stimmte mit diesem Schlüssel überein.",
+        "tooltipNotProvided": "Für diesen Token war kein vergleichbarer Schlüssel verfügbar.",
+        "tooltipUnavailable": "Der Schlüsselvergleich konnte nicht abgeschlossen werden, da keine vergleichbaren Kanalschlüssel verfügbar waren.",
+        "unavailable": "Schlüssel nicht verfügbar"
+      },
+      "models": {
+        "contained": "Enthaltene Modelle",
+        "exact": "Modelle genau",
+        "noMatch": "Modelle passen nicht",
+        "notProvided": "Modelle fehlen",
+        "similar": "Modelle ähnlich",
+        "tooltipContained": "Der normalisierte Modellsatz stimmte durch Eindämmung mit Kanal {{channelName}} überein.",
+        "tooltipExact": "Der normalisierte Modellsatz stimmte genau mit Kanal {{channelName}} überein.",
+        "tooltipNoMatch": "Im normalisierten URL-Bucket wurde keine Modellübereinstimmung bestätigt.",
+        "tooltipNotProvided": "Für diesen Token war keine vergleichbare Modellliste verfügbar.",
+        "tooltipSimilar": "Der normalisierte Modellsatz stimmte mit Kanal {{channelName}} nach Ähnlichkeit überein ({{score}} %).",
+        "tooltipUnavailable": "Der Modellvergleich konnte nicht abgeschlossen werden, da kein vergleichbarer URL-Bucket verfügbar war.",
+        "unavailable": "Modelle nicht verfügbar"
+      },
+      "url": {
+        "matched": "URL stimmt überein",
+        "noMatch": "URL nicht gefunden",
+        "tooltipMatched_one": "{{count}} Kandidatenkanal unter demselben normalisierten URL-Bucket gefunden. Beispielkandidat: {{channelName}}.",
+        "tooltipMatched_other": "{{count}} Kandidatenkanäle unter demselben normalisierten URL-Bucket gefunden. Beispielkandidat: {{channelName}}.",
+        "tooltipNoMatch": "Es wurde kein Kanal unter demselben normalisierten URL-Bucket gefunden."
+      }
+    }
+  },
+  "messages": {
+    "accountNotFound": "Kontoinformationen nicht gefunden",
+    "batchSavedToApiProfiles": "Ausgewählte Schlüssel in der API-Anmeldeinformationsbibliothek gespeichert",
+    "batchSaveToApiProfilesFailed": "Ausgewählte Schlüssel konnten nicht in der API-Anmeldeinformationsbibliothek gespeichert werden",
+    "batchSaveToApiProfilesPartialFailed": "{{savedCount}} von {{totalCount}} ausgewählten Schlüsseln gespeichert. {{failedCount}} konnte nicht gespeichert werden.",
+    "copyFailed": "Kopieren fehlgeschlagen",
+    "deleteConfirm": "Sind Sie sicher, dass Sie den Schlüssel {{name}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden",
+    "deleteSuccess": "Schlüssel {{name}} erfolgreich gelöscht",
+    "keyCopied": "Schlüssel {{name}} in Zwischenablage kopiert",
+    "loadFailed": "Schlüsselliste konnte nicht geladen werden",
+    "revealFailed": "Schlüssel konnte nicht angezeigt werden",
+    "savedToApiProfiles": "{{name}} in der API-Anmeldeinformationsbibliothek gespeichert",
+    "saveToApiProfilesFailed": "Speichern in der API-Anmeldeinformationsbibliothek fehlgeschlagen",
+    "serviceCredentialCopied": "Serviceschlüssel in Zwischenablage kopiert",
+    "serviceCredentialRotated": "Serviceschlüssel-Reset",
+    "serviceCredentialRotateFailed": "Dienstschlüssel konnte nicht zurückgesetzt werden",
+    "verifyApiFailed": "Fehler beim Öffnen der API-Verifizierung",
+    "verifyCliSupportFailed": "Fehler beim Öffnen der CLI-Kompatibilitätsüberprüfung"
+  },
+  "noKeys": "Noch keine Schlüsseldaten",
+  "noMatchingKeys": "Keine passenden Schlüssel gefunden",
+  "oneTimeKey": {
+    "close": "Schließen",
+    "closeConfirm": {
+      "cancel": "Zurück zum Schlüssel",
+      "confirm": "Trotzdem schließen",
+      "description": "Wenn Sie ihn nicht kopiert oder gespeichert haben, kehren Sie zuerst zurück und bearbeiten Sie diesen Schlüssel.",
+      "title": "Der vollständige Schlüssel kann nach dem Schließen nicht mehr angezeigt werden"
+    },
+    "copied": "Vollständiger Schlüssel in die Zwischenablage kopiert",
+    "copiedAction": "Kopiert",
+    "copy": "Vollständigen Schlüssel kopieren",
+    "copyFailed": "Fehler beim Kopieren des vollständigen Schlüssels",
+    "keyLabel": "Vollständiger Schlüssel",
+    "subtitle": "Der vollständige Wert für Schlüssel {{name}} wird erst nach dieser Erstellung angezeigt.",
+    "subtitleUnnamed": "Der vollständige Schlüssel wird erst nach dieser Erstellung angezeigt.",
+    "title": "Speichern Sie jetzt den vollständigen Schlüssel",
+    "warningDescription": "Nach dem Schließen dieses Dialogs kann die Erweiterung den vollständigen Schlüssel nicht mehr anzeigen.",
+    "warningTitle": "Dieser Schlüssel kann nur einmal angezeigt werden"
+  },
+  "openRouter": {
+    "delete": {
+      "confirm": "Schlüssel löschen",
+      "description": "{{name}} dauerhaft aus OpenRouter löschen? Es kann nach dem Löschen nicht wiederhergestellt werden.",
+      "feedback": {
+        "authenticationFailed": "Aktualisieren Sie den OpenRouter-Verwaltungsschlüssel dieses Kontos und laden Sie die Seite anschließend neu.",
+        "error": "Dieser Schlüssel konnte nicht gelöscht werden. Aktualisieren Sie und versuchen Sie es erneut.",
+        "permissionDenied": "Sie haben keine Berechtigung zum Löschen dieses Schlüssels.",
+        "unavailable": "Der Dienst ist vorübergehend nicht verfügbar. Aktualisieren Sie die Schlüssel, bevor Sie es erneut versuchen.",
+        "uncertain": "Der Schlüsselstatus hat sich möglicherweise geändert. Aktualisieren Sie die Schlüssel, bevor Sie entscheiden, ob Sie es erneut versuchen möchten."
+      },
+      "refresh": "Schlüssel aktualisieren",
+      "title": "API-Schlüssel löschen?"
+    },
+    "editor": {
+      "actions": {
+        "cancel": "Abbrechen",
+        "save": "Schlüssel speichern"
+      },
+      "feedback": {
+        "authenticationFailed": "Aktualisieren Sie den OpenRouter-Verwaltungsschlüssel dieses Kontos und versuchen Sie es dann erneut.",
+        "error": "Befolgen Sie die Fehlerdetails unten und versuchen Sie es dann erneut.",
+        "permissionDenied": "Sie haben keine Berechtigung zum Verwalten von Schlüsseln in diesem Arbeitsbereich.",
+        "title": "Schlüssel konnte nicht gespeichert werden",
+        "unavailable": "Der Dienst ist vorübergehend nicht verfügbar. Versuchen Sie es in Kürze noch einmal.",
+        "uncertain": "Der Dienst hat diese Änderung möglicherweise übernommen. Aktualisieren Sie die Schlüssel, um den aktuellen Status zu bestätigen, bevor Sie entscheiden, ob Sie es erneut versuchen."
+      },
+      "fields": {
+        "creator": {
+          "editHelp": "Um den Ersteller zu ändern, erstellen Sie einen neuen Schlüssel.",
+          "help": "Weisen Sie diesen Schlüssel optional einem Arbeitsbereichsmitglied zu.",
+          "label": "Ersteller",
+          "placeholder": "Kein Ersteller"
+        },
+        "disabled": {
+          "help": "Deaktivierte Schlüssel können erst verwendet werden, wenn sie wieder aktiviert werden.",
+          "label": "Schlüssel deaktivieren"
+        },
+        "expiresAt": {
+          "editHelp": "Um den Ablauf zu ändern, erstellen Sie einen neuen Schlüssel.",
+          "help": "Datum und Uhrzeit werden lokal eingegeben und als UTC gespeichert.",
+          "label": "Läuft ab am"
+        },
+        "includeByokInLimit": {
+          "help": "Zählen Sie die Nutzung Ihres eigenen Schlüssels auf dieses Limit an.",
+          "label": "BYOK-Nutzung einbeziehen"
+        },
+        "limit": {
+          "help": "Ein Limit von 0 USD verhindert Ausgaben.",
+          "label": "Limit"
+        },
+        "limitMode": {
+          "label": "Ausgabenlimit"
+        },
+        "limitReset": {
+          "help": "Wählen Sie aus, wie oft das Ausgabenlimit zurückgesetzt wird.",
+          "label": "Zurücksetzintervall"
+        },
+        "name": {
+          "help": "Verwenden Sie einen erkennbaren Namen für diesen Schlüssel.",
+          "label": "Schlüsselname",
+          "placeholder": "Produktionsschlüssel"
+        },
+        "workspace": {
+          "editHelp": "Um den Arbeitsbereich zu ändern, erstellen Sie einen neuen Schlüssel.",
+          "help": "Wählen Sie den Arbeitsbereich aus, zu dem dieser Schlüssel gehört.",
+          "label": "Arbeitsbereich",
+          "placeholder": "Wählen Sie einen Arbeitsbereich aus"
+        }
+      },
+      "issues": {
+        "inconsistentValue": "Überprüfen Sie diesen Wert und versuchen Sie es erneut.",
+        "invalidValue": "Geben Sie einen gültigen Wert ein.",
+        "outOfRange": "Geben Sie einen Wert innerhalb des zulässigen Bereichs ein.",
+        "required": "Dieses Feld ist erforderlich.",
+        "unsupportedOption": "Wählen Sie eine verfügbare Option."
+      },
+      "opening": {
+        "failed": "Schlüsseleditor konnte nicht geöffnet werden",
+        "loading": "Schlüsseleditor öffnen...",
+        "retry": "Versuchen Sie es erneut"
+      },
+      "options": {
+        "creator": {
+          "empty": "Für diesen Arbeitsbereich sind keine Mitglieder verfügbar.",
+          "none": "Kein Ersteller",
+          "unavailable": "Die Mitgliederzuweisung ist für den ausgewählten Arbeitsbereich nicht verfügbar. Sie können den Schlüssel erstellen, ohne ein Mitglied auszuwählen.",
+          "unknown": "Unbekanntes Mitglied"
+        },
+        "limitMode": {
+          "limited": "Eingeschränkt",
+          "unlimited": "Unbegrenzt"
+        },
+        "limitReset": {
+          "daily": "Täglich",
+          "monthly": "Monatlich",
+          "none": "Wird nicht zurückgesetzt",
+          "weekly": "Wöchentlich"
+        },
+        "workspace": {
+          "unknown": "Unbekannter Arbeitsbereich"
+        }
+      },
+      "sections": {
+        "advanced": "Erweitert",
+        "basic": "Grundlagen",
+        "lifecycle": "Lebenszyklus",
+        "spending": "Ausgaben"
+      },
+      "summary": "API-Schlüsseleinstellungen",
+      "summaryRules": {
+        "byok": {
+          "excluded": "BYOK-Nutzung ist ausgeschlossen",
+          "included": "BYOK-Nutzung ist inbegriffen"
+        },
+        "expiresAt": "Läuft zur Ortszeit {{expiresAt}} ab und wird als UTC gespeichert.",
+        "limit": "Ausgabenlimit: {{limit}} USD",
+        "limitUnset": "Das Ausgabenlimit ist nicht festgelegt",
+        "neverExpires": "Läuft nicht ab",
+        "reset": {
+          "daily": "Wird täglich zurückgesetzt",
+          "monthly": "Wird monatlich zurückgesetzt",
+          "none": "Wird nicht zurückgesetzt",
+          "weekly": "Wird wöchentlich zurückgesetzt"
+        },
+        "unlimited": "Kein Ausgabenlimit"
+      },
+      "title": {
+        "create": "API-Schlüssel erstellen",
+        "edit": "API-Schlüssel bearbeiten"
+      },
+      "unsaved": {
+        "description": "Ihre Änderungen wurden nicht gespeichert.",
+        "discard": "Änderungen verwerfen",
+        "keepEditing": "Weiter bearbeiten",
+        "title": "Nicht gespeicherte Änderungen verwerfen?"
+      }
+    },
+    "list": {
+      "actions": {
+        "delete": "Schlüssel löschen",
+        "edit": "Schlüssel bearbeiten"
+      },
+      "details": {
+        "byokUsage": "BYOK-Nutzung",
+        "byokUsageDaily": "Tägliche BYOK-Nutzung",
+        "byokUsageMonthly": "Monatliche BYOK-Nutzung",
+        "byokUsageWeekly": "Wöchentliche BYOK-Nutzung",
+        "createdAt": "Erstellt",
+        "creator": "Ersteller",
+        "disabled": "Deaktiviert",
+        "expiresAt": "Läuft ab",
+        "includeByokInLimit": "BYOK-Nutzung einbeziehen",
+        "limit": "Limit",
+        "limitMode": "Begrenzungsmodus",
+        "loadFailed": "Schlüsseldetails konnten nicht geladen werden.",
+        "remaining": "Verbleibend",
+        "reset": "Zurücksetzintervall",
+        "updatedAt": "Aktualisiert",
+        "usage": "Nutzung",
+        "usageDaily": "Tägliche Nutzung",
+        "usageMonthly": "Monatliche Nutzung",
+        "usageWeekly": "Wöchentliche Nutzung",
+        "workspace": "Arbeitsbereich"
+      },
+      "heading": "OpenRouter-Schlüssel",
+      "status": {
+        "all": "Alle",
+        "disabled": "Deaktiviert",
+        "enabled": "Aktiviert",
+        "expired": "Abgelaufen",
+        "unknown": "Unbekannt"
+      },
+      "statusFilter": {
+        "label": "Schlüsselstatus"
+      },
+      "values": {
+        "missing": "Nicht verfügbar",
+        "no": "Nein",
+        "unlimited": "Unbegrenzt",
+        "yes": "Ja"
+      }
+    },
+    "workspace": {
+      "empty": "Für dieses Konto sind keine Arbeitsbereiche verfügbar.",
+      "error": "Arbeitsbereiche konnten nicht geladen werden",
+      "errorHelp": "Überprüfen Sie Ihren Kontozugriff und versuchen Sie es dann erneut.",
+      "fallback": "Der angeforderte Arbeitsbereich ist nicht verfügbar; Der Standardarbeitsbereich wird angezeigt.",
+      "heading": "Arbeitsbereich",
+      "label": "Arbeitsbereich",
+      "loading": "Arbeitsbereiche werden geladen...",
+      "partial": "Einige Arbeitsbereiche konnten nicht geladen werden.",
+      "placeholder": "Wählen Sie einen Arbeitsbereich aus",
+      "retry": "Versuchen Sie erneut, Arbeitsbereiche zu laden"
+    }
+  },
+  "pleaseAddAccount": "Bitte fügen Sie zuerst ein Konto hinzu",
+  "pleaseSelectAccount": "Bitte Konto auswählen",
+  "refreshTokenList": "Schlüsselliste aktualisieren",
+  "repairMissingKeys": {
+    "action": "Schlüsselüberprüfung",
+    "actions": {
+      "cancel": "Prüfung abbrechen",
+      "rerun": "Überprüfen Sie es noch einmal",
+      "start": "Beginnen Sie mit der Überprüfung und füllen Sie Lücken"
+    },
+    "coverage": {
+      "createdGroup": "Erstellt: {{group}}",
+      "groupsCovered": "{{covered}}/{{total}} Gruppen abgedeckt",
+      "missingGroup": "Fehlt: {{group}}"
+    },
+    "deleteConfirm": {
+      "confirm": "Ausgewählte Schlüssel löschen",
+      "description": "Diese Schlüssel werden auch von den entsprechenden Websites gelöscht und können nicht über die Erweiterung wiederhergestellt werden. Bestätigen Sie, dass ihre Gruppen nicht mehr verwendet werden.",
+      "more_one": "Und {{count}} mehr",
+      "more_other": "Und {{count}} mehr",
+      "title_one": "{{count}} ungültigen Schlüssel löschen?",
+      "title_other": "{{count}} ungültige Schlüssel löschen?"
+    },
+    "description": "Überprüfen Sie die verfügbaren Gruppen jedes Kontos, erstellen Sie Standardschlüssel für Gruppen ohne Schlüssel und listen Sie ungewöhnliche Schlüssel auf, deren Gruppen nicht verfügbar sind.",
+    "historyNote": "Dies zeigt das vorherige Prüfergebnis. Derzeit wird kein Job ausgeführt und Sie können die Prüfung erneut ausführen.",
+    "initialNotice": "Nach dem Start werden gespeicherte Konten auf verfügbare Gruppen überprüft und für Gruppen ohne Schlüssel werden Standardschlüssel erstellt.",
+    "invalidKeys": {
+      "badge": "Ungültig",
+      "deleteFailed": "Ungültige Schlüssel konnten nicht gelöscht werden",
+      "deletePartial": "{{deleted}} gelöscht, {{failed}} fehlgeschlagen",
+      "deleteSelected": "Ausgewählte löschen",
+      "deleteSuccess_one": "{{count}} ungültiger Schlüssel gelöscht",
+      "deleteSuccess_other": "{{count}} ungültige Schlüssel gelöscht",
+      "emptyDescription": "Bei dieser Prüfung wurden keine Schlüssel gefunden, deren Gruppen nicht verfügbar sind.",
+      "emptyTitle": "Keine ungültigen Schlüssel",
+      "groupUnavailable": "Gruppe {{group}} ist derzeit nicht verfügbar",
+      "selectAll": "Alle aktuellen Ergebnisse auswählen",
+      "selectedCount_one": "{{count}} ungültiger Schlüssel ausgewählt",
+      "selectedCount_other": "{{count}} ungültige Schlüssel ausgewählt"
+    },
+    "messages": {
+      "cancelFailed": "Reparaturauftrag konnte nicht abgebrochen werden",
+      "loadFailed": "Fehler beim Laden des Reparaturfortschritts",
+      "startFailed": "Reparaturauftrag konnte nicht gestartet werden"
+    },
+    "noMatchingResults": "Keine passenden Ergebnisse",
+    "outcomes": {
+      "alreadyHad": "Hatte bereits Schlüssel",
+      "created": "Erstellt",
+      "failed": "Fehlgeschlagen",
+      "skipped": "Übersprungen"
+    },
+    "previousResult": {
+      "backToSetup": "Zurück zur Überprüfung",
+      "description": "Sie können das vorherige Prüfergebnis einsehen. Neue Prüfungen verwenden die aktuellen Einstellungen.",
+      "title": "Vorheriges Prüfergebnis verfügbar",
+      "view": "Vorheriges Ergebnis anzeigen"
+    },
+    "progressLabel": "Fortschritt",
+    "remoteWriteNotice": "Diese Aktion erstellt möglicherweise neue Schlüssel auf den entsprechenden Websites. Es werden keine Schlüssel automatisch gelöscht.",
+    "renameOption": {
+      "helper": "Gilt nur für Schlüssel, die automatisch von der Erweiterung erstellt werden. Bei der Prüfung folgen ihre Namen der aktuellen Gruppe.",
+      "infoLabel": "Details zur Schlüsselnamenausrichtung anzeigen",
+      "label": "Halten Sie die Schlüsselnamen an den Gruppen ausgerichtet",
+      "tooltip": "Es werden nur Schlüssel mit einem automatisch erstellten Benennungsstil behandelt, z. B. „Benutzergruppe (Auto)“ oder „VIP-Gruppe (Auto)“. Nach der Reparatur folgt der Name der aktuellen Gruppe des Schlüssels. Andere Namen werden nicht geändert."
+    },
+    "renameSummary": {
+      "accountFailed_one": "{{count}} Name nicht synchronisiert",
+      "accountFailed_other": "{{count}} Namen nicht synchronisiert",
+      "accountRenamed_one": "{{count}} Name synchronisiert",
+      "accountRenamed_other": "{{count}} Namen synchronisiert",
+      "failed": "Namen nicht synchronisiert",
+      "renamed": "Namen synchronisiert",
+      "summarySeparator": ", "
+    },
+    "resultsTitle": "Ergebnisse",
+    "runningNote": "Dieser Job läuft im Hintergrund. Sie können dieses Dialogfeld schließen und später überprüfen oder den Vorgang über die Fortschrittskarte abbrechen.",
+    "searchLabel": "Suche",
+    "searchPlaceholder": "Konto, Herkunft oder Website-Typ suchen...",
+    "skipReasons": {
+      "aihubmixOneTimeKey": "AIHubMix Schlüssel können nur einmal angezeigt werden. Erstellen Sie den Schlüssel manuell und speichern Sie den vollständigen Schlüssel sofort.",
+      "noneAuth": "Keine Anmeldeinformationen (Authentifizierungstyp: keine)",
+      "sub2api": "Erfordert die Auswahl einer Sub2API-Gruppe; Erstellen Sie den Schlüssel manuell",
+      "tokenAutomationUnsupported": "Diese Website stellt Dienstanmeldeinformationen anstelle der API-Token-Verwaltung bereit. Die automatische Schlüsselreparatur wird übersprungen."
+    },
+    "title": "Prüfung der Schlüsselabdeckung",
+    "totalsLabels": {
+      "eligibleAccounts": "Berechtigte Konten",
+      "enabledAccounts": "Aktivierte Konten",
+      "processedAccounts": "Verarbeitet"
+    },
+    "views": {
+      "accountCoverage": "Kontoabdeckung",
+      "invalidKeys": "Ungültige Schlüssel",
+      "label": "Ergebnisansicht"
+    }
+  },
+  "searchPlaceholder": "Schlüsselname suchen...",
+  "selectAccount": "Konto auswählen",
+  "selectAccountToContinue": "Wählen Sie oben ein Konto aus, bevor Sie Schlüssel anzeigen oder erstellen.",
+  "serviceCredential": {
+    "authenticated": "Authentifiziert",
+    "baseUrl": "Basis-URL:",
+    "copy": "Kopieren",
+    "notAuthenticated": "Nicht authentifiziert",
+    "rotate": "Zurücksetzen",
+    "rotateUnsupported": "Diese Website unterstützt das Zurücksetzen des Dienstschlüssels nicht",
+    "rotating": "Zurücksetzen...",
+    "singleton": "Serviceschlüssel"
+  },
+  "showingCount_one": "Zeigt {{count}}",
+  "showingCount_other": "Zeigt {{count}}",
+  "title": "Schlüsselverwaltung",
+  "totalKeys_one": "Gesamt {{count}} Schlüssel",
+  "totalKeys_other": "Insgesamt {{count}} Schlüssel",
+  "unifiedApiGuidance": {
+    "headerBridge": "Importieren Sie Kontoschlüssel in Ihr selbst gehostetes KI-Gateway, damit mehrere Schlüssel über eine KI-API verwendet werden können. Der direkte Export in Client-Tools bleibt der Pfad ohne Gateway."
+  },
+  "unsupportedSource": {
+    "description": "Der Website-Typ dieses Kontos kann gespeichert werden, aber die Erweiterung hat ihr Schlüssellistenprotokoll noch nicht angepasst. Senden Sie eine Website-Support-Anfrage, um uns dabei zu helfen, Unterstützung für die Schlüsselverwaltung hinzuzufügen.",
+    "requestSiteSupport": "Website-Unterstützung anfordern",
+    "supportRequestErrorMessage": "Schlüsselverwaltung ist für {{siteType}} nicht implementiert",
+    "title": "Die Schlüsselverwaltung wird für diesen Website-Typ noch nicht unterstützt"
+  }
+}

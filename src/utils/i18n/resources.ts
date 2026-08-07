@@ -19,5 +19,6 @@ for (const path in modules) {
  */
 export function mapToDayjsLocale(lng: string): string {
   const normalized = lng.toLowerCase().replace("_", "-")
+  if (normalized === "de" || normalized.startsWith("de-")) return "de"
   return normalized === SPANISH_LATIN_AMERICA_LANG ? "es" : normalized
 }

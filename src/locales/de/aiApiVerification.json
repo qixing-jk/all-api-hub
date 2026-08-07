@@ -1,0 +1,92 @@
+{
+  "verifyDialog": {
+    "actions": {
+      "close": "Schließen",
+      "manageModelKey": "Modellschlüssel-Setup öffnen",
+      "retry": "Wiederholen",
+      "run": "Ausführen",
+      "running": "Läuft...",
+      "runOne": "Ausführen",
+      "stop": "Stopp",
+      "stopProbe": "{{probe}} stoppen"
+    },
+    "apiTypes": {
+      "anthropic": "Anthropic",
+      "google": "Google/Gemini",
+      "openai": "OpenAI",
+      "openaiCompatible": "OpenAI-kompatibel"
+    },
+    "details": {
+      "input": "Eingabe",
+      "output": "Ausgabe"
+    },
+    "errors": {
+      "unexpected": "Unerwarteter Fehler"
+    },
+    "history": {
+      "clear": "Verlauf löschen",
+      "lastVerified": "Zuletzt überprüft"
+    },
+    "idleHint": "Wählen Sie einen Schlüssel aus, um die Überprüfung zu starten. Für modellabhängige Sonden ist eine Modell-ID erforderlich.",
+    "loadingRuntimeKeysHint": "Schlüssel werden geladen...",
+    "meta": {
+      "apiType": "API-Typ",
+      "apiTypePlaceholder": "API-Typ auswählen",
+      "model": "Modell",
+      "modelPlaceholder": "Geben Sie die Modell-ID ein",
+      "runtimeKey": "Schlüssel",
+      "runtimeKeyIncompatible": "Für dieses Modell nicht verfügbar",
+      "runtimeKeyPlaceholder": "Schlüssel auswählen"
+    },
+    "noCompatibleRuntimeKeyHint": "Für die Gruppe dieses Modells ist kein Schlüssel verfügbar. Erstellen oder wählen Sie einen Schlüssel für eine aktivierte Gruppe in der Schlüsselverwaltung aus.",
+    "notRunYet": "Noch nicht ausgeführt",
+    "probes": {
+      "models": "Modellendpunkt (/v1/models)",
+      "structured-output": "Strukturierte Ausgabe (JSON-Schema)",
+      "text-generation": "Textgenerierung",
+      "tool-calling": "Werkzeug-/Funktionsaufruf",
+      "web-search": "Websuche / Grounding"
+    },
+    "requiresModelId": "Geben Sie eine Modell-ID ein, um diesen Test auszuführen.",
+    "selectedRuntimeKeyIncompatibleHint": "Der ausgewählte Schlüssel ist für die Gruppe dieses Modells nicht verfügbar. Wählen Sie einen kompatiblen Schlüssel, bevor Sie die Überprüfung durchführen.",
+    "status": {
+      "fail": "Fehlgeschlagen",
+      "pass": "Bestanden",
+      "pending": "Ausstehend",
+      "unsupported": "Nicht unterstützt",
+      "unverified": "Nicht bestätigt"
+    },
+    "summaries": {
+      "endpointNotFound": "Endpunkt nicht gefunden (404): Diese API wird möglicherweise nicht unterstützt",
+      "forbidden": "Verboten (403): Zugriff verweigert",
+      "httpError": "HTTP-Fehler ({{status}})",
+      "modelsFetched": "{{count}} Modelle abgerufen.",
+      "modelsFetched_one": "{{count}} Modell abgerufen.",
+      "modelsFetched_other": "{{count}} Modelle abgerufen.",
+      "modelsProbeUnsupportedForApiType": "Die Modellprüfung wird für diesen API-Typ nicht unterstützt.",
+      "noModelAvailableToRunProbes": "Kein Modell zum Ausführen von Sonden verfügbar.",
+      "noModelIdProvided": "Keine Modell-ID angegeben.",
+      "noModelIdProvidedToRunProbe": "Keine Modell-ID zum Ausführen der Sonde angegeben.",
+      "noModelIdProvidedToRunProbes": "Keine Modell-ID zum Ausführen von Sonden angegeben.",
+      "noModelsReturned": "Keine Modelle zurückgegeben.",
+      "noToolCallDetected": "Kein Werkzeugaufruf erkannt (Modell unterstützt möglicherweise keine Werkzeuge).",
+      "stopped": "Vom Benutzer gestoppt.",
+      "structuredOutputInvalid": "Ungültige Ausgabe.",
+      "structuredOutputSucceeded": "Strukturierte Ausgabe erfolgreich.",
+      "textGenerationSucceeded": "Textgenerierung erfolgreich.",
+      "textGenerationUnexpectedResponse": "Unerwarteter Antworttext.",
+      "toolCallSucceeded": "Werkzeugaufruf erfolgreich.",
+      "unauthorized": "Nicht autorisiert (401): ungültiger Schlüssel oder fehlende Authentifizierung",
+      "webSearchGroundingNoResults": "Keine Ergebnisse für Websuche/Grounding.",
+      "webSearchGroundingSucceeded": "Websuche/Grounding erfolgreich.",
+      "webSearchNoResults": "Keine Web-Suchergebnisse.",
+      "webSearchRequiresExplicitSupport": "Die Websuchprüfung erfordert explizite Unterstützung durch den API-Typ.",
+      "webSearchSucceeded": "Websuche erfolgreich.",
+      "webSearchUnsupportedAnthropic": "Die Websuchprüfung wird für Anthropic-Endpunkte nicht unterstützt.",
+      "webSearchUnsupportedForApiType": "Die Websuchprüfung wird für diesen API-Typ nicht unterstützt."
+    },
+    "title": "API-Verifizierung",
+    "unsupportedProbeForApiType": "Die Prüfung „{{probe}}“ wird für diesen API-Typ nicht unterstützt.",
+    "warning": "Wenn Unterstützung erkannt wird, ist es sehr wahrscheinlich, dass es sich um eine echte Unterstützung handelt. Wenn keine Unterstützung erkannt wird, wird sie möglicherweise trotzdem unterstützt. Die Ergebnisse dienen nur als Referenz; Verlassen Sie sich auf die tatsächliche Werkzeugnutzung."
+  }
+}

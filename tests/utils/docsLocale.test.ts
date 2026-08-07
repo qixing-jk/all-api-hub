@@ -116,6 +116,12 @@ describe("docsLocale", () => {
     expect(getDocsLocalePath("pt-BR")).toBe("en/")
   })
 
+  it("falls back to english docs for German", async () => {
+    const { getDocsLocalePath } = await import("~/utils/navigation/docsLocale")
+
+    expect(getDocsLocalePath("de-DE")).toBe("en/")
+  })
+
   it("defaults to english when no language source is available", async () => {
     Object.defineProperty(globalThis, "window", {
       configurable: true,

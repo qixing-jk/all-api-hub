@@ -10,7 +10,7 @@ const SHORT_MONTH_DAY_PATTERN = /^\d{2,4}$/
  * Returns true when natural input explicitly requests an empty expiration date.
  */
 export function isNoExpirationNaturalInput(input: string): boolean {
-  return /^(不过期|不设置|不设|无到期|没有到期|no expiration)$/iu.test(
+  return /^(不过期|不设置|不设|无到期|没有到期|kein Ablauf|ohne Ablauf|unbegrenzt|no expiration)$/iu.test(
     input.trim(),
   )
 }
@@ -65,6 +65,31 @@ function parsePortugueseFallbackDate(
 }
 
 /**
+ * Parses German relative-day phrases while rejecting mismatched singular/plural units.
+ */
+function parseGermanFallbackDate(
+  input: string,
+  referenceDate: Date,
+): string | null | undefined {
+  const normalizedInput = input.trim()
+  if (!/^in \d+ (tag|tagen)$/iu.test(normalizedInput)) return undefined
+
+  const match = /^in (\d+) (tag|tagen)$/iu.exec(normalizedInput)
+  if (!match) return null
+
+  const days = Number(match[1])
+  if (!Number.isSafeInteger(days) || days <= 0) return null
+
+  const unit = match[2].toLocaleLowerCase("de-DE")
+  if (unit !== (days === 1 ? "tag" : "tagen")) return null
+
+  const parsedDate = dayjs(referenceDate).add(days, "day")
+  return parsedDate.isValid()
+    ? formatDatePickerValue(parsedDate.toDate())
+    : null
+}
+
+/**
  * Parses natural-language dates with a Chrono parser and normalizes the result.
  */
 function parseChronoDate(
@@ -72,6 +97,9 @@ function parseChronoDate(
   referenceDate: Date,
   parser: Pick<typeof chrono, "parseDate">,
 ): string | null {
+  // Keep malformed ISO-like input from being reinterpreted as a natural date.
+  if (/^\d{5,}[-/]/u.test(input.trim())) return null
+
   const parsedDate = parser.parseDate(input, referenceDate, {
     forwardDate: true,
   })
@@ -245,6 +273,15 @@ export function parseNaturalDatePickerValue(
     chrono.pt,
   )
   if (portugueseDate) return portugueseDate
+
+  const germanFallbackDate = parseGermanFallbackDate(
+    normalizedInput,
+    referenceDate,
+  )
+  if (germanFallbackDate !== undefined) return germanFallbackDate
+
+  const germanDate = parseChronoDate(normalizedInput, referenceDate, chrono.de)
+  if (germanDate) return germanDate
 
   return parseChronoDate(normalizedInput, referenceDate, chrono)
 }

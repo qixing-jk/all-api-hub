@@ -1,0 +1,57 @@
+{
+  "actions": {
+    "add": "Lesezeichen hinzufügen",
+    "copyUrl": "URL kopieren",
+    "open": "Öffnen",
+    "pin": "Anheften",
+    "unpin": "Lesezeichen nicht mehr anheften"
+  },
+  "addFirstBookmark": "Fügen Sie Ihr erstes Lesezeichen hinzu",
+  "delete": {
+    "description": "Dadurch wird „{{name}}“ dauerhaft gelöscht.",
+    "title": "Lesezeichen löschen?"
+  },
+  "description": "Speichern Sie Schnelllinks (Konsole/Dokumente/Administratorseiten), ohne vollständige Konten zu erstellen.",
+  "dialog": {
+    "currentPageLabel": "Aktuelle Seite",
+    "currentPageUnavailable": "Aktuelle Seite nicht verfügbar",
+    "description": "Lesezeichen können beliebige Links sein, beispielsweise zu einer Website-Konsole, einer Dokumentation oder einer Verwaltungsseite. Dies ist in Situationen nützlich, in denen kein vollständiges Konto erstellt werden kann.",
+    "titleAdd": "Lesezeichen hinzufügen",
+    "titleEdit": "Lesezeichen bearbeiten",
+    "useCurrentPage": "Aktuelle Seite verwenden"
+  },
+  "emptyState": "Noch keine Lesezeichen",
+  "filter": {
+    "tagsAllLabel": "Alle Tags"
+  },
+  "form": {
+    "nameLabel": "Name",
+    "namePlaceholder": "z.B. Admin-Konsole",
+    "notesLabel": "Notizen",
+    "notesPlaceholder": "Optionale Notizen...",
+    "tagsLabel": "Tags",
+    "tagsPlaceholder": "Tags auswählen...",
+    "urlLabel": "URL",
+    "urlPlaceholder": "https://example.com/..."
+  },
+  "list": {
+    "dragHandle": "Lesezeichen neu anordnen"
+  },
+  "search": {
+    "placeholder": "Lesezeichen durchsuchen..."
+  },
+  "stats": {
+    "pinnedBookmarks": "Angepinnt",
+    "totalBookmarks": "Gesamtzahl der Lesezeichen",
+    "usedTags": "Tags"
+  },
+  "switch": {
+    "accounts": "Konten",
+    "bookmarks": "Lesezeichen"
+  },
+  "title": "Lesezeichenverwaltung",
+  "validation": {
+    "nameRequired": "Name darf nicht leer sein",
+    "urlRequired": "URL darf nicht leer sein"
+  }
+}

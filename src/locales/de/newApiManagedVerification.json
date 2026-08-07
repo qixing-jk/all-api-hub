@@ -1,0 +1,48 @@
+{
+  "dialog": {
+    "actions": {
+      "close": "Schließen",
+      "openSite": "Website öffnen",
+      "retry": "Wiederholen",
+      "retryAfterPasskey": "Nach Passkey erneut versuchen",
+      "saveAndRetry": "Speichern und erneut versuchen",
+      "submitLoginCode": "Anmeldecode senden",
+      "submitVerificationCode": "Bestätigungscode senden"
+    },
+    "body": {
+      "credentialsMissing": "Fügen Sie in den Einstellungen einen New API-Login-Benutzernamen und ein Passwort hinzu, bevor die sitzungsgestützte Überprüfung ausgeführt werden kann.",
+      "failure": "Der Verifizierungsablauf New API konnte nicht abgeschlossen werden.",
+      "loggingIn": "Überprüfung der aktuellen New API-Sitzung und Vorbereitung der Überprüfung, falls erforderlich.",
+      "loginTwoFactor": "Der Anmeldeschritt New API erfordert einen Bestätigungscode, bevor die browsergestützte Admin-Sitzung fortgesetzt werden kann.",
+      "passkeyManual": "Dieses Konto stellt derzeit die Passkey-Verifizierung für den sicheren Schritt zur Verfügung. Führen Sie die Passkey-Überprüfung auf der Website durch, kehren Sie dann hierher zurück und versuchen Sie es erneut.",
+      "secureVerification": "Die Admin-Sitzung ist angemeldet, aber New API erfordert immer noch einen sicheren Bestätigungscode, bevor versteckte Kanalschlüssel gelesen werden können.",
+      "successChannel": "Verifizierung für {{label}} erfolgreich. Der echte Kanalschlüssel wurde geladen.",
+      "successSettings": "Der New API-Anmelde- und Verifizierungsvorgang wurde erfolgreich abgeschlossen. Sie können nun mit Aktionen fortfahren, die eine Anmeldung und Verifizierung erfordern.",
+      "successToken": "Die Überprüfung für {{label}} war erfolgreich. Der Status der verwalteten Website wurde aktualisiert."
+    },
+    "fields": {
+      "codeLabel": "Bestätigungscode"
+    },
+    "hints": {
+      "manualFallback": "Die manuelle Codeeingabe bleibt auch dann verfügbar, wenn automatisches TOTP konfiguriert ist.",
+      "openSettingsShortcut": "Hier können Sie die fehlende Konfiguration vervollständigen und sofort mit der Verifizierung fortfahren.",
+      "passkey": "Öffnen Sie die Website, bestätigen Sie dort die Passkey-Aufforderung, kehren Sie anschließend hierher zurück und versuchen Sie es erneut."
+    },
+    "messages": {
+      "completeRequiredConfig": "Füllen Sie zunächst die fehlenden Konfigurationsfelder aus.",
+      "finishing": "New API-Sitzungsprüfung wird abgeschlossen...",
+      "missingBaseUrl": "Fügen Sie die Basis-URL New API hinzu, bevor Sie den Sitzungsablauf testen.",
+      "missingCode": "Geben Sie zuerst den Bestätigungscode ein.",
+      "quickConfigSaveFailed": "Die Schnellkonfiguration konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+      "refreshingChannel": "Laden des echten Kanalschlüssels...",
+      "refreshingToken": "Der Status der verwalteten Website dieses Tokens wird aktualisiert...",
+      "starting": "New API-Verifizierungsablauf wird gestartet...",
+      "submitting": "Bestätigungscode wird übermittelt..."
+    },
+    "title": {
+      "channel": "Überprüfung des New-API-Kanalschlüssels",
+      "settings": "New-API-Sitzungsprüfung",
+      "token": "Erneuter Versuch der New-API-Überprüfung"
+    }
+  }
+}

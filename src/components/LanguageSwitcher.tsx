@@ -18,7 +18,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { DEFAULT_LANG, PORTUGUESE_BRAZIL_LANG } from "~/constants"
+import { DEFAULT_LANG, GERMAN_LANG, PORTUGUESE_BRAZIL_LANG } from "~/constants"
 import type { SupportedUiLanguage } from "~/constants"
 import { cn } from "~/lib/utils"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -41,6 +41,8 @@ function getLanguageOptionLabel(t: TFunction, language: SupportedUiLanguage) {
   switch (language) {
     case "en":
       return t("settings:appearanceLanguage.switcher.options.en.label")
+    case GERMAN_LANG:
+      return t("settings:appearanceLanguage.switcher.options.de.label")
     case "es-419":
       return t("settings:appearanceLanguage.switcher.options.es-419.label")
     case PORTUGUESE_BRAZIL_LANG:
@@ -63,6 +65,8 @@ function getLanguageOptionName(t: TFunction, language: SupportedUiLanguage) {
   switch (language) {
     case "en":
       return t("settings:appearanceLanguage.switcher.options.en.name")
+    case GERMAN_LANG:
+      return t("settings:appearanceLanguage.switcher.options.de.name")
     case "es-419":
       return t("settings:appearanceLanguage.switcher.options.es-419.name")
     case PORTUGUESE_BRAZIL_LANG:

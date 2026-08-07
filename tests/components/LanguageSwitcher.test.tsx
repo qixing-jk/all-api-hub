@@ -309,6 +309,21 @@ describe("LanguageSwitcher", () => {
     })
   })
 
+  it("shows and persists German from the select variant", async () => {
+    render(<LanguageSwitcher variant="select" />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:appearanceLanguage.switcher.options.de.name",
+      }),
+    )
+
+    expect(changeLanguageMock).toHaveBeenCalledWith("de")
+    await waitFor(() => {
+      expect(setLanguageMock).toHaveBeenCalledWith("de")
+    })
+  })
+
   it("renders the icon-dropdown trigger label and changes language from the radio menu", () => {
     render(<LanguageSwitcher variant="icon-dropdown" />)
 

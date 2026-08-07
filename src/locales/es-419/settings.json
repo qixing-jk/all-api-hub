@@ -28,6 +28,10 @@
       "currentLanguage": "Idioma actual de la interfaz: {{language}}",
       "groupLabel": "Selector de idioma de interfaz",
       "options": {
+        "de": {
+          "label": "DE",
+          "name": "Alemán"
+        },
         "en": {
           "label": "EN",
           "name": "Inglés"

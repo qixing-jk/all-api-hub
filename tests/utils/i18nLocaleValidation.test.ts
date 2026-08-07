@@ -715,4 +715,31 @@ describe("i18n locale validation", () => {
     ).toBeLessThanOrEqual(MANIFEST_DESCRIPTION_MAX_LENGTH)
     expect(portugalPortugueseManifest).not.toEqual(brazilianPortugueseManifest)
   })
+
+  it("provides a complete German manifest locale", async () => {
+    const englishManifest = JSON.parse(
+      await fs.readFile(
+        path.join(MANIFEST_LOCALES_DIR, "en", "messages.json"),
+        "utf8",
+      ),
+    ) as Record<string, { message: string }>
+    const germanManifest = JSON.parse(
+      await fs.readFile(
+        path.join(MANIFEST_LOCALES_DIR, "de", "messages.json"),
+        "utf8",
+      ),
+    ) as Record<string, { message: string }>
+
+    expect(Object.keys(germanManifest).sort()).toEqual(
+      Object.keys(englishManifest).sort(),
+    )
+    expect(
+      Object.values(germanManifest).every(
+        ({ message }) => message.trim().length > 0,
+      ),
+    ).toBe(true)
+    expect(
+      germanManifest.manifest_description.message.length,
+    ).toBeLessThanOrEqual(MANIFEST_DESCRIPTION_MAX_LENGTH)
+  })
 })

@@ -1,0 +1,11 @@
+{
+  "titlePrefix": "All API Hub · Schutzumgehung",
+  "toast": {
+    "actions": {
+      "dismiss": "Ablehnen",
+      "openSettings": "Einstellungen für die Schutzumgehung öffnen"
+    },
+    "body": "Diese Seite wurde automatisch von All API Hub geöffnet, um Schutzprüfungen (z. B. Cloudflare-Challenges) zu bestehen und die erforderlichen Cookies bzw. die Sitzung zu erhalten.\n\nDies ist notwendig, damit All API Hub erfolgreiche Anfragen stellen und Daten auf geschützten Websites erkennen kann.\n\nWenn ein Verifizierungsschritt angezeigt wird, führen Sie ihn in diesem Fenster aus. Sobald er bestanden ist, setzt All API Hub den Vorgang fort; das Fenster wird möglicherweise automatisch geschlossen.",
+    "title": "All API Hub – Helfer für Schutzprüfungen (temporäres Fenster)"
+  }
+}

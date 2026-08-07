@@ -1,0 +1,327 @@
+{
+  "accountGroupFilterAllIncluded": "Alle Gruppen für dieses Konto einschließen",
+  "accountGroupFilterClearAll": "Alles löschen",
+  "accountGroupFilterDescription": "Kontospezifische Gruppen vom Preisvergleich ausschließen. Standardmäßig behält jedes Konto alle verfügbaren Gruppen bei.",
+  "accountGroupFilterNoGroups": "Derzeit sind keine Kontogruppen zum Filtern verfügbar.",
+  "accountGroupFilterNoGroupsIncluded": "Für dieses Konto sind keine Gruppen enthalten",
+  "accountGroupFilterResetAll": "Alles zurücksetzen",
+  "accountGroupFilterSelectAll": "Alles auswählen",
+  "accountGroupFilterSelectedSummary": "{{selected}} ausgewählt / {{total}}",
+  "accountGroupFilterTitle": "Kontogruppenfilter",
+  "accountGroupFilterTrigger": "Kontogruppen filtern",
+  "accountGroupFilterTriggerCount_one": "{{count}} Konto gefiltert",
+  "accountGroupFilterTriggerCount_other": "{{count}} Konten gefiltert",
+  "accountSummary": {
+    "failureReasons": {
+      "invalidFormat": "Die Modellliste hat ein nicht unterstütztes Format zurückgegeben.",
+      "unknown": "Unbekannter Fehler",
+      "unsupportedSource": "Die Modellliste wird für diesen Website-Typ noch nicht unterstützt."
+    },
+    "incompatible": "Format inkompatibel",
+    "loadFailed": "Laden fehlgeschlagen",
+    "loading": "wird geladen",
+    "models_one": "{{count}} Modell",
+    "models_other": "{{count}} Modelle",
+    "partialLoadFailed": "teilweise",
+    "partialLoadFailedReason": "Einige Schlüssel konnten nicht geladen werden. Erster Fehler: {{reason}}",
+    "title": "Kontoübersicht",
+    "unsupported": "nicht unterstützt"
+  },
+  "actions": {
+    "copyModelName": "Modellnamen kopieren",
+    "copySiteUrl": "Website-URL kopieren",
+    "keyForModel": "Schlüssel für dieses Modell",
+    "openSelectedAccountKeys": "Kontoschlüssel verwalten",
+    "openSite": "Website öffnen",
+    "verifyApi": "API überprüfen",
+    "verifyCliSupport": "Überprüfen Sie die CLI-Unterstützung"
+  },
+  "aihubmixCatalogFallbackNotice": {
+    "description": "Der tatsächlich verfügbare Modellumfang dieses Kontos konnte nicht bestätigt werden, daher wird der vollständige Modellkatalog von AIHubMix angezeigt. Einige Modelle können mit diesem Konto möglicherweise nicht aufgerufen werden. Maßgeblich sind die Kontoberechtigungen der Website und die tatsächlichen Verifizierungsergebnisse.",
+    "title": "Zurück zum vollständigen Modellkatalog AIHubMix"
+  },
+  "allAccounts": "Alle Konten",
+  "allBillingModes": "Alle Abrechnungsmodi",
+  "allGroups": "Alle Gruppen",
+  "allProviders": "Alle Anbieter",
+  "batchVerify": {
+    "actions": {
+      "open": "Batch-Test",
+      "rerun": "Batch erneut ausführen",
+      "start": "Batch-Test starten",
+      "stop": "Test stoppen"
+    },
+    "apiType": {
+      "auto": "Automatische Erkennung",
+      "label": "API-Typ"
+    },
+    "counts": {
+      "fail": "Fehlgeschlagen {{value}}",
+      "pass": "Bestanden {{value}}",
+      "skipped": "Übersprungen {{value}}",
+      "total": "Gesamt {{value}}"
+    },
+    "idleHint": "Dadurch werden die aktuell gefilterten Modelle mit den ausgewählten Testelementen stapelweise überprüft.",
+    "messages": {
+      "noApplicableProbes": "Keines der ausgewählten Testelemente trifft auf dieses Modell zu.",
+      "noCompatibleRuntimeKey": "Für dieses Modell wurde kein aktivierter kompatibler Schlüssel gefunden.",
+      "notSelected": "Dieses Modell wurde nicht ausgewählt und daher in diesem Batch-Lauf übersprungen.",
+      "pending": "Warten auf Test",
+      "probeSummary_one": "{{count}} Element ausgeführt, {{pass}} bestanden, {{fail}} fehlgeschlagen, {{unsupported}} nicht unterstützt",
+      "probeSummary_other": "{{count}} Elemente ausgeführt, {{pass}} bestanden, {{fail}} fehlgeschlagen, {{unsupported}} nicht unterstützt",
+      "stopped": "Vor Beginn dieses Modelltests gestoppt.",
+      "unexpected": "Test fehlgeschlagen"
+    },
+    "modelSelection": {
+      "clearAll": "Auswahl löschen",
+      "label": "Modelle zum Ausführen",
+      "noneSelected": "Wählen Sie mindestens ein Modell zum Testen aus.",
+      "selectAll": "Alle Modelle auswählen",
+      "selectedSummary_one": "{{selected}} Modell ausgewählt / {{total}}",
+      "selectedSummary_other": "{{selected}} Modelle ausgewählt / {{total}}",
+      "toggle": "Modell auswählen {{model}}"
+    },
+    "probes": {
+      "label": "Testaufgaben",
+      "noneSelected": "Wählen Sie mindestens einen Testgegenstand aus."
+    },
+    "runtimeKeyUsed": "Schlüssel: {{name}}",
+    "status": {
+      "fail": "Fehlgeschlagen",
+      "pass": "Bestanden",
+      "pending": "Ausstehend",
+      "running": "Testen",
+      "skipped": "Übersprungen"
+    },
+    "subtitle_one": "{{count}} gefiltertes Modell",
+    "subtitle_other": "{{count}} gefilterte Modelle",
+    "summary_one": "Modell {{completed}} / {{count}} abgeschlossen, {{pass}} bestanden, {{fail}} nicht bestanden, {{skipped}} übersprungen",
+    "summary_other": "{{completed}} / {{count}} Modelle abgeschlossen, {{pass}} bestanden, {{fail}} nicht bestanden, {{skipped}} übersprungen",
+    "title": "Batch-Testmodelle",
+    "warning": "Beim Stapeltest werden die ausgewählten Elemente entsprechend dem aufgelösten API-Typ jedes Modells ausgeführt. Nicht zutreffende Elemente werden automatisch übersprungen. Die Ergebnisse sind beratend; Verlassen Sie sich zur endgültigen Bestätigung auf echte Toolaufrufe."
+  },
+  "billingMode": "Abrechnungsmodus",
+  "clickSwitchGroup": "Klicken Sie hier, um zur Gruppe {{group}} zu wechseln",
+  "collapseDetails": "Details ausblenden",
+  "comparison": {
+    "cta": "Preise vergleichen",
+    "tooltip": "Löschen Sie aktuelle Filter, wechseln Sie zu allen Konten und sortieren Sie jedes Modell nach dem niedrigsten Preis."
+  },
+  "copyAllNames": "Alle Modellnamen kopieren",
+  "currentUsableGroups": "Aktuell nutzbare Gruppen",
+  "description": "Verfügbare KI-Modelle anzeigen und verwalten",
+  "detailedPricing": "Detaillierte Preise",
+  "displayOptions": "Anzeigeoptionen:",
+  "endpointType": "Endpunkttyp",
+  "endpointTypes": "Endpunkttypen",
+  "estimatedPrice": "Geschätzte",
+  "estimatedPriceTitle": "Geschätzt anhand der offiziellen Preistabelle und dem Gruppenpreis Sub2API dieses Schlüssels.",
+  "expandDetails": "Details erweitern",
+  "fallbackSourceNotice": {
+    "description": "Dieser Katalog wird derzeit über einen Kontoschlüssel-Fallback geladen und unterstützt daher nur die Modellerkennung und -überprüfung. „Daten aktualisieren“ wird die direkte Kontoroute erneut versuchen.",
+    "title": "Kontoschlüssel-Fallback-Katalog"
+  },
+  "groupRatio": "Gruppenverhältnis:",
+  "groupRatioTooltip": "Gruppe {{group}} Verhältnis: {{ratio}}x",
+  "groupRatioUnavailable": "Gruppenmultiplikator nicht verfügbar",
+  "groupSelectionHint": "Lassen Sie dieses Feld leer, um einen Vergleich über alle Gruppen hinweg durchzuführen. Bei der Preissortierung wird der beste Preis innerhalb des ausgewählten Gruppensatzes verwendet",
+  "input": "Eingabe:",
+  "input1MTokens": "Eingabe (1 Mio. Token)",
+  "keyDialog": {
+    "copyFailed": "Kopieren fehlgeschlagen",
+    "createAnotherKey": "Einen weiteren Schlüssel erstellen",
+    "createCustomKey": "Benutzerdefinierten Schlüssel erstellen",
+    "createDisabledTitle": "Schlüsselerstellung nicht verfügbar",
+    "createErrorTitle": "Schlüssel konnte nicht erstellt werden",
+    "createFailed": "Erstellung fehlgeschlagen: {{error}}",
+    "createGroupAutoSelectedHint": "Dieses Modell unterstützt nur diese Gruppe. Es wird automatisch beim Erstellen des Schlüssels verwendet.",
+    "createGroupHint": "Wählen Sie eine Gruppe aus. Es werden nur Gruppen aufgeführt, die dieses Modell unterstützen.",
+    "createGroupLabel": "Gruppe für neuen Schlüssel",
+    "createGroupPlaceholder": "Wählen Sie eine Gruppe aus",
+    "createGroupRequired": "Wählen Sie eine Gruppe aus, um den Schlüssel zu erstellen.",
+    "createKey": "Schnell erstellen",
+    "createNotSupported": "Die Schlüsselerstellung ist für dieses Konto nicht verfügbar.",
+    "createSuccess": "Schlüssel erstellt",
+    "getFailed": "Fehler beim Laden der Schlüssel",
+    "ineligible": {
+      "accountDisabled": "Dieses Konto ist deaktiviert.",
+      "missingAuth": "Für dieses Konto ist keine Authentifizierung konfiguriert.",
+      "missingCredentials": "Diesem Konto fehlen die erforderlichen Anmeldeinformationen.",
+      "readOnlyRuntimeKeys": "Dieses Konto kann vorhandene Schlüssel lesen, aber keine neuen API-Schlüssel erstellen."
+    },
+    "keyCopied": "Schlüssel kopiert",
+    "loadFailed": "Schlüssel konnten nicht geladen werden: {{error}}",
+    "loading": "Schlüssel werden geladen...",
+    "noCompatibleDescription": "Erstellen Sie einen Schlüssel für dieses Modell oder passen Sie die Grenzwerte bestehender Schlüsselmodelle an.",
+    "noCompatibleFoundAfterCreate": "Schlüssel erstellt, aber für {{modelId}} wurde kein kompatibler Schlüssel gefunden.",
+    "noCompatibleTitle": "Keine kompatiblen Schlüssel für {{modelId}}",
+    "openKeyManagement": "Schlüsselverwaltung öffnen für {{accountName}}",
+    "selectHint": "Wählen Sie aus, welchen Schlüssel Sie für dieses Modell verwenden möchten.",
+    "selectLabel": "Kompatibler Schlüssel",
+    "selectPlaceholder": "Schlüssel auswählen",
+    "subtitle": "Konto: {{accountName}} · Modell: {{modelId}}",
+    "title": "Schlüssel für Modell"
+  },
+  "lowestPrice": "Niedrigster Preis",
+  "lowestPriceWithinAccountFilters": "Diese Zeile zeigt den niedrigsten Preis innerhalb der aktuellen Kontofilter bei gleicher Abrechnungsart.",
+  "lowestPriceWithinBillingMode": "Diese Zeile ist der niedrigste Preis innerhalb desselben Abrechnungsmodus.",
+  "messages": {
+    "copyFailed": "Kopieren fehlgeschlagen",
+    "modelNameCopied": "Modellname kopiert",
+    "modelNamesCopied": "Modellnamen kopiert",
+    "siteUrlCopied": "Website-URL kopiert"
+  },
+  "modelCapabilityFilter": {
+    "coverageHint_one": "{{count}} Modell in dieser Liste enthält noch keine Funktionsdetails und wird daher von Funktionsfiltern übersprungen.",
+    "coverageHint_other": "{{count}} Modelle in dieser Liste enthalten noch keine Funktionsdetails und werden daher von Funktionsfiltern übersprungen.",
+    "descriptions": {
+      "attachment": "Unterstützt hochgeladene Anhänge als Eingabekontext.",
+      "audioInput": "Unterstützt Audioeingang.",
+      "audioOutput": "Unterstützt die Audioausgabe.",
+      "imageInput": "Unterstützt hochgeladene Bilder zur Erkennung, Analyse oder zum visuellen Verständnis.",
+      "imageOutput": "Unterstützt die direkte Generierung von Bildern als Modellausgabe.",
+      "pdf": "Unterstützt die Eingabe von PDF-Dokumenten.",
+      "reasoning": "Unterstützt explizite Argumentations- oder Denkschritte.",
+      "structuredOutput": "Unterstützt strukturierte Ausgabe oder JSON-Schema-Einschränkungen.",
+      "toolCall": "Unterstützt den Aufruf von Werkzeugen oder Funktionen.",
+      "videoInput": "Unterstützt Videoeingang.",
+      "videoOutput": "Unterstützt die Videoausgabe."
+    },
+    "groups": {
+      "capabilities": "Fähigkeiten:",
+      "input": "Eingabe:",
+      "output": "Ausgabe:"
+    },
+    "label": "Modellfähigkeiten",
+    "options": {
+      "all": "Alle Funktionen",
+      "attachment": "Anhänge",
+      "audioInput": "Audioeingang",
+      "audioOutput": "Audioausgabe",
+      "imageInput": "Bildeingabe",
+      "imageOutput": "Bilderzeugung",
+      "pdf": "PDF",
+      "reasoning": "Begründung",
+      "structuredOutput": "Strukturierte Ausgabe",
+      "toolCall": "Werkzeugaufruf",
+      "videoInput": "Videoeingang",
+      "videoOutput": "Videoausgabe"
+    },
+    "selectionHint": "Wenn mehrere Funktionen ausgewählt werden, müssen die Modelle allen ausgewählten Funktionen entsprechen."
+  },
+  "modelRatio": "Modellverhältnis:",
+  "noMatchingModels": "Keine passenden Modelle gefunden",
+  "noSourcesDescription": "Fügen Sie ein Website-Konto oder API-Anmeldeinformationen hinzu, bevor Sie die Modellliste anzeigen.",
+  "noSourcesTitle": "Noch keine Modellquellen",
+  "noUsableGroupsForModel": "Dieses Konto hat derzeit keine verwendbare Gruppe für dieses Modell.",
+  "optimalGroup": "Beste Gruppe: {{group}}",
+  "optimalGroupLowestPriceWithinAccountFilters": "Beste Gruppe innerhalb des aktuellen Kontogruppenfilters: {{group}}. Diese Zeile enthält auch den niedrigsten Preis innerhalb desselben Abrechnungsmodus.",
+  "optimalGroupLowestPriceWithinBillingMode": "Beste Gruppe innerhalb der ausgewählten Gruppen: {{group}}. Diese Zeile enthält auch den niedrigsten Preis innerhalb desselben Abrechnungsmodus.",
+  "optimalGroupWithinAccountFilters": "Beste Gruppe innerhalb des aktuellen Kontogruppenfilters: {{group}}",
+  "optimalGroupWithinSelectedGroups": "Beste Gruppe innerhalb der ausgewählten Gruppen: {{group}}",
+  "output": "Ausgabe:",
+  "output1MTokens": "Ausgabe (1 Mio. Token)",
+  "perCall": "Pro Aufruf:",
+  "pleaseSelectFirst": "Bitte wählen Sie zuerst ein Konto oder API-Anmeldeinformationen aus, um die Modellliste anzuzeigen",
+  "pleaseSelectSource": "Bitte wählen Sie eine Quelle aus",
+  "pricingDescription": "Preisinformationen stammen aus der von der Website bereitgestellten API-Schnittstelle, und die tatsächlichen Kosten richten sich nach den von jeder Website veröffentlichten Preisen. Der Preis von Pay-per-Use-Modellen entspricht den Kosten pro 1 Million Token, und Pay-per-Call-Modelle zeigen die Kosten pro Aufruf an.",
+  "pricingNote": "Modellpreishinweis",
+  "profileSourceNotice": {
+    "description": "Gespeicherte API-Anmeldeinformationen ermöglichen nur die Modellerkennung und -überprüfung. Preise, Gruppenfilter, Kontozusammenfassungen und Schlüsselkompatibilität sind für diese Quelle nicht verfügbar.",
+    "title": "Profilgestützter Modellkatalog"
+  },
+  "providerTabs": {
+    "scrollLeft": "Anbieter-Tabs nach links scrollen",
+    "scrollRight": "Anbieter-Tabs nach rechts scrollen",
+    "unclassified": "Nicht klassifiziert",
+    "unclassifiedDescription": "Der Anbieter konnte nicht identifiziert werden; Dies bedeutet nicht, dass das Modell nicht verfügbar ist."
+  },
+  "realAmount": "Echter Aufladebetrag",
+  "refreshData": "Daten aktualisieren",
+  "runtimeKeyFallbackSourceNotice": {
+    "description": "Dieser Katalog wird über einen vorhandenen Schlüssel für dieses Konto geladen und unterstützt daher nur die Modellerkennung und -überprüfung. Dieses Konto kann hier keine neuen API-Schlüssel erstellen; mit „Daten aktualisieren“ wird der direkte Kontozugriff erneut versucht.",
+    "title": "Kontoschlüssel-Modellkatalog"
+  },
+  "searchModels": "Modelle suchen",
+  "searchPlaceholder": "Geben Sie den Modellnamen oder die Beschreibung ein...",
+  "selectSource": "Quelle auswählen",
+  "selectSourceToContinue": "Wählen Sie oben eine Quelle aus, bevor Sie die Modellliste anzeigen.",
+  "showing_one": "Zeigt {{count}} Modell",
+  "showing_other": "Zeigt {{count}} Modelle",
+  "showRatio": "Verhältnis anzeigen",
+  "siteSupportedGroups": "Von der Website unterstützte Gruppen",
+  "sortBy": "Sortieren nach",
+  "sortOptions": {
+    "default": "Standardreihenfolge",
+    "modelCheapestFirst": "Günstigstes zuerst pro Modell",
+    "priceAsc": "Preis: Niedrig bis hoch",
+    "priceDesc": "Preis: Hoch nach Tief",
+    "verificationLatencyAsc": "Testlatenz: Niedrig bis hoch"
+  },
+  "sourceLabels": {
+    "profileBadge": "Profil: {{name}} · {{host}}",
+    "profileOption": "API-Anmeldeinformationen: {{name}} · {{host}}"
+  },
+  "status": {
+    "dataLoaded": "Modelldaten erfolgreich geladen",
+    "fallback": {
+      "catalogLoadFailedTitle": "Modelle konnten mit dem ausgewählten Schlüssel nicht geladen werden",
+      "description": "Wenn der Endpunkt für die Kontopreisgestaltung vorübergehend nicht verfügbar ist, können Sie stattdessen einen Nur-Browse-Katalog mit einem der Schlüssel dieses Kontos laden.",
+      "loadingKeys": "Kontoschlüssel werden geladen...",
+      "loadKeysFailed": "Kontoschlüssel konnten nicht geladen werden: {{errorMessage}}",
+      "loadKeysFailedFallback": "Kontoschlüssel konnten nicht geladen werden. Bitte versuchen Sie es später noch einmal.",
+      "loadModelsFailedFallback": "Modelle konnten mit dem ausgewählten Schlüssel nicht geladen werden. Bitte versuchen Sie es später noch einmal.",
+      "loadWithKey": "Mit ausgewähltem Schlüssel laden",
+      "noKeysDescription": "Für dieses Konto sind derzeit keine aktivierten Schlüssel für das Fallback-Laden verfügbar.",
+      "noKeysTitle": "Keine verfügbaren Schlüssel gefunden",
+      "reloadKeys": "Schlüssel neu laden",
+      "retryLoadWithKey": "Mit ausgewähltem Schlüssel erneut versuchen",
+      "runtimeKeysLoadFailedTitle": "Kontoschlüssel konnten nicht geladen werden",
+      "selectHint": "Dieses Konto verfügt über mehrere berechtigte Schlüssel. Wählen Sie den Schlüssel aus, den Sie zum Laden des Fallback-Katalogs verwenden möchten.",
+      "selectLabel": "Schlüssel für Fallback-Laden",
+      "selectPlaceholder": "Schlüssel auswählen",
+      "title": "Modelle mit einem Kontoschlüssel laden"
+    },
+    "formatNotStandard": "Das Modelldatenformat der aktuellen Website entspricht nicht dem Standard. Bitte überprüfen Sie manuell die Preisseite der Website",
+    "genericLoadFailedTitle": "Modelldaten konnten nicht geladen werden",
+    "goToSitePricing": "Gehen Sie zur Website, um Preisinformationen anzuzeigen",
+    "incompatibleDesc": "Die Modelldatenschnittstelle der aktuellen Website entspricht nicht der Standardspezifikation, möglicherweise aufgrund websitespezifischer Anpassungen. Die Erweiterung kann die Modellpreisinformationen dieser Website derzeit nicht auswerten.",
+    "incompatibleFormat": "Datenformat inkompatibel",
+    "loadFailed": "Modelldaten konnten nicht geladen werden, bitte versuchen Sie es später erneut",
+    "loadFailedWithReason": "Modelldaten konnten nicht geladen werden: {{reason}}",
+    "loading": "Modelldaten werden geladen...",
+    "profileLoadFailed": "Modelle für diese API-Anmeldeinformationen konnten nicht geladen werden: {{errorMessage}}",
+    "profileLoadFailedTitle": "Modelle für diese API-Anmeldeinformationen konnten nicht geladen werden",
+    "requestSiteSupport": "Website-Unterstützung anfordern",
+    "retryLoad": "Laden erneut versuchen",
+    "runtimeKeyScopedCatalogDescription": "Dieses Quellkonto stellt keine Modellliste auf Kontoebene bereit. Die Erweiterung ruft die für dieses Konto verfügbaren Modelle über API-Schlüssel ab.",
+    "runtimeKeyScopedCatalogFallbackDescription": "Wählen Sie einen API-Schlüssel. Wenn nur ein verfügbarer Schlüssel vorhanden ist, verwendet die Erweiterung diesen automatisch.",
+    "runtimeKeyScopedCatalogFallbackTitle": "Modelle über einen Schlüssel abrufen",
+    "runtimeKeyScopedCatalogTitle": "Abrufen der Modellliste über einen API-Schlüssel",
+    "unsupportedSourceDescription": "Der Website-Typ dieses Kontos kann verwaltet werden, aber sein Modelllistenprotokoll wurde noch nicht angepasst. Senden Sie eine Website-Support-Anfrage, um uns beim Hinzufügen dieses Modelllistenpfads zu helfen.",
+    "unsupportedSourceSupportRequestErrorMessage": "Modellliste ist nicht implementiert für {{siteType}}",
+    "unsupportedSourceTitle": "Die Modellliste wird für diesen Website-Typ noch nicht unterstützt"
+  },
+  "title": "Modellliste",
+  "totalModels_one": "Gesamt {{count}} Modell",
+  "totalModels_other": "Insgesamt {{count}} Modelle",
+  "unavailable": "Nicht verfügbar",
+  "unavailablePriceReasons": {
+    "groupRatioUnavailable": "Preise sind nicht verfügbar, da diese verwendbare Gruppe keinen Multiplikator hat.",
+    "keyGroupUnknown": "Preise sind nicht verfügbar, weil die Sub2API-Gruppe dieses Schlüssels nicht ermittelt werden konnte.",
+    "modelListOnly": "Modelle sind für diesen Schlüssel verfügbar. Preise sind nicht verfügbar.",
+    "officialPriceMissing": "Dieses Modell ist nicht in der Preistabelle enthalten.",
+    "pricingSourceUnavailable": "Für diese Quelle sind keine Preisdaten verfügbar."
+  },
+  "userGroup": "Benutzergruppe",
+  "verificationResults": {
+    "all": "Alle Testergebnisse",
+    "filters": {
+      "fail": "Fehlgeschlagen",
+      "pass": "Bestanden",
+      "unverified": "Ungetestet"
+    },
+    "label": "Testergebnis",
+    "none": "Keine Testergebnisse ausgewählt"
+  }
+}

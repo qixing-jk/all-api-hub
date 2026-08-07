@@ -1,0 +1,25 @@
+{
+  "actions": {
+    "shuffleSeed": "Startwert mischen"
+  },
+  "captions": {
+    "layoutIndex": "Layout #{{index}}",
+    "paletteIndex": "#{{index}}"
+  },
+  "labels": {
+    "layout": "Layout",
+    "overlay": "Überlagerung",
+    "palette": "Palette",
+    "seed": "Startwert",
+    "view": "Ansicht"
+  },
+  "summaryLayout_one": "{{count}} Layout",
+  "summaryLayout_other": "{{count}} Layouts",
+  "summaryPalette_one": "{{count}} Palette",
+  "summaryPalette_other": "{{count}} Paletten",
+  "title": "Mesh Gradient Lab (Entwickler)",
+  "view": {
+    "layouts": "Layouts",
+    "palettes": "Paletten"
+  }
+}

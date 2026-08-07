@@ -9,6 +9,10 @@ describe("i18n language helpers", () => {
   it("normalizes browser language variants to supported app locales", () => {
     expect(normalizeAppLanguage("en-US")).toBe("en")
     expect(normalizeAppLanguage("en")).toBe("en")
+    expect(normalizeAppLanguage("de")).toBe("de")
+    expect(normalizeAppLanguage("de-DE")).toBe("de")
+    expect(normalizeAppLanguage("de_AT")).toBe("de")
+    expect(normalizeAppLanguage("de-CH")).toBe("de")
     expect(normalizeAppLanguage("ja")).toBe("ja")
     expect(normalizeAppLanguage("ja-JP")).toBe("ja")
     expect(normalizeAppLanguage("ja_JP")).toBe("ja")
@@ -78,6 +82,14 @@ describe("i18n language helpers", () => {
         detectedLanguage: "ja-JP",
       }),
     ).toBe("ja")
+  })
+
+  it("keeps detected German when no explicit preference exists", () => {
+    expect(
+      resolveInitialAppLanguage({
+        detectedLanguage: "de-DE",
+      }),
+    ).toBe("de")
   })
 
   it("keeps detected vietnamese when no explicit preference exists", () => {

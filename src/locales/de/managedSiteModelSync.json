@@ -1,0 +1,143 @@
+{
+  "description": "Aktualisieren Sie automatisch Modelllisten in Ihrem selbstgehosteten KI-Gateway und reduzieren Sie die manuelle Wartung. Aktivieren Sie die Funktion bei Bedarf, nachdem Kanäle vorhanden sind.",
+  "execution": {
+    "actions": {
+      "refresh": "Ergebnisse aktualisieren",
+      "retryFailed": "Nur fehlgeschlagene erneut versuchen",
+      "retryingFailed": "Fehlgeschlagene werden erneut versucht...",
+      "runAll": "Alle ausführen",
+      "runningAll": "Alle werden ausgeführt...",
+      "runningSelected": "Ausgewählte werden ausgeführt...",
+      "runSelected": "Ausgewählte ausführen"
+    },
+    "empty": {
+      "noData": "Noch kein Ausführungsverlauf",
+      "noDataDesc": "Klicken Sie auf „Alle ausführen“, um mit der Synchronisierung aller Kanäle zu beginnen",
+      "noResults": "Keine passenden Ergebnisse",
+      "noResultsDesc": "Versuchen Sie, Ihre Filter oder Suchabfrage anzupassen"
+    },
+    "errors": {
+      "channelTimeout_one": "Die Kanalverarbeitung hat das Zeitlimit von {{count}} Sekunde überschritten.",
+      "channelTimeout_other": "Die Kanalverarbeitung hat das Zeitlimit von {{count}} Sekunden überschritten."
+    },
+    "filters": {
+      "all": "Alle",
+      "failed": "Fehlgeschlagen",
+      "searchPlaceholder": "Suche nach Kanalname, ID oder Fehlermeldung...",
+      "success": "Erfolg"
+    },
+    "lastExecution": "Letzte Ausführung",
+    "manual": {
+      "description": "Wählen Sie unten die Kanäle aus, um eine einmalige Synchronisierung auszulösen. Auswahlen werden nicht gespeichert.",
+      "empty": {
+        "description": "Aktualisieren Sie die Liste oder passen Sie Ihre Filter an, um Kanäle zu finden.",
+        "title": "Keine Kanäle verfügbar"
+      },
+      "loading": "Lade Kanäle...",
+      "reload": "Kanäle neu laden",
+      "searchPlaceholder": "Kanäle nach Name oder ID suchen..."
+    },
+    "overview": {
+      "autoSync": "Automatische Synchronisierung",
+      "disabled": "Deaktiviert",
+      "disabledHint": "Modelllisten werden nur synchronisiert, wenn Sie sie manuell ausführen. Aktivieren Sie die automatische Synchronisierung, damit die Erweiterung planmäßig ausgeführt wird.",
+      "enableAutoSync": "Automatische Synchronisierung aktivieren",
+      "enabled": "Aktiviert",
+      "everyHours_one": "Alle {{count}}h",
+      "everyHours_other": "Alle {{count}}h",
+      "everyMinutes_one": "Alle {{count}}m",
+      "everyMinutes_other": "Alle {{count}}m",
+      "lastRun": "Letzter Lauf",
+      "never": "Nie"
+    },
+    "progress": {
+      "running": "Synchronisierung... {{completed}}/{{total}}"
+    },
+    "statistics": {
+      "duration": "Dauer",
+      "endTime": "Endzeit",
+      "failed": "Fehlgeschlagen",
+      "nextRun": "Nächster geplanter Lauf",
+      "notScheduled": "Nicht geplant",
+      "startTime": "Startzeit",
+      "success": "Erfolgreich",
+      "total": "Gesamtzahl der Kanäle"
+    },
+    "status": {
+      "failed": "Fehlgeschlagen",
+      "running": "Läuft...",
+      "success": "Erfolg"
+    },
+    "table": {
+      "actions": "Aktionen",
+      "attempts": "Versuche",
+      "channelId": "Kanal-ID",
+      "channelName": "Kanalname",
+      "finishedAt": "Fertiggestellt um",
+      "manageChannel": "Kanal verwalten",
+      "message": "Nachricht",
+      "selectAllChannels": "Alle Kanäle auswählen",
+      "selectChannel": "Kanal auswählen {{name}}",
+      "status": "Status",
+      "syncChannel": "Synchronisieren"
+    },
+    "tabs": {
+      "history": "Ausführungsverlauf",
+      "manual": "Manuelle Ausführung"
+    },
+    "title": "Synchronisierung der Modellliste",
+    "unsupported": {
+      "title": "Die Modellsynchronisierung wird für diese Website nicht unterstützt"
+    }
+  },
+  "messages": {
+    "error": {
+      "loadFailed": "Daten konnten nicht geladen werden: {{error}}",
+      "noSelection": "Bitte wählen Sie mindestens einen Kanal aus",
+      "syncFailed": "Synchronisierung fehlgeschlagen: {{error}}"
+    },
+    "success": {
+      "settingsSaved": "Einstellungen erfolgreich gespeichert",
+      "syncCompleted": "Synchronisierung abgeschlossen: {{success}}/{{total}} erfolgreich"
+    },
+    "warning": {
+      "syncCompletedWithFailures": "Synchronisierung abgeschlossen, aber {{failed}} Kanäle sind immer noch fehlgeschlagen ({{success}}/{{total}} erfolgreich). Sie können nur die fehlgeschlagenen Elemente erneut versuchen."
+    }
+  },
+  "optionalGuidance": {
+    "description": "Die Modellsynchronisierung kann Gateway-Modelllisten, Zuordnungen oder Routen automatisch aktualisieren und so den manuellen Wartungsaufwand verringern. Diese optionale Erweiterung setzt vorhandene Kanäle voraus und beeinträchtigt deren Nutzung als einheitliche KI-API nicht."
+  },
+  "settings": {
+    "allowedModels": "Liste der zulässigen Modelle",
+    "allowedModelsDesc": "Optionale Zulassungsliste. Lassen Sie das Feld leer, um alle Upstream-Modelle zu synchronisieren.",
+    "allowedModelsHint": "Nur die hier aufgeführten Modelle werden während der Synchronisierung auf jeden Kanal geschrieben.",
+    "allowedModelsLoadFailed": "Modellmetadaten konnten nicht geladen werden: {{error}}",
+    "allowedModelsLoading": "Modellmetadaten werden geladen...",
+    "allowedModelsPlaceholder": "Modelle suchen und auswählen oder eingeben, um benutzerdefinierte hinzuzufügen",
+    "burst": "Burst-Kapazität",
+    "burstDesc": "Token-Bucket-Größe: Zulässige Burst-Anfragen vor der Drosselung",
+    "channelProcessingTimeout": "Timeout pro Kanal",
+    "channelProcessingTimeoutDesc": "Markieren Sie einen Kanal als fehlgeschlagen und fahren Sie fort, wenn die Verarbeitung diese Dauer überschreitet. Verwenden Sie 0 für keine Begrenzung.",
+    "channelProcessingTimeoutUnit": "Sekunden",
+    "concurrency": "Parallelität",
+    "concurrencyDesc": "Anzahl der parallel zu verarbeitenden Kanäle (empfohlen 1–3, um Ratenbeschränkungen zu vermeiden)",
+    "enable": "Automatische Synchronisierung aktivieren",
+    "enableDesc": "Modelllisten automatisch in festgelegten Intervallen synchronisieren",
+    "globalChannelModelFilters": "Globale Filter",
+    "globalChannelModelFiltersButton": "Globale Filter bearbeiten",
+    "globalChannelModelFiltersDesc": "Einschluss-/Ausschlussregeln, die vor den kanalspezifischen Filtern auf alle Kanäle angewendet werden.",
+    "globalChannelModelFiltersDialogSubtitle": "Die hier definierten Regeln gelten für jeden Kanal vor seinen eigenen kanalspezifischen Filtern.",
+    "globalChannelModelFiltersDialogTitle": "Globale Modellfilter",
+    "interval": "Synchronisierungsintervall",
+    "intervalDesc": "Zeit zwischen automatischen Synchronisierungen",
+    "intervalUnit": "Stunden",
+    "maxRetries": "Max. Wiederholungen",
+    "maxRetriesDesc": "Maximale automatische Wiederholungsversuche bei Fehler",
+    "requestsPerMinute": "Anfragen pro Minute",
+    "requestsPerMinuteDesc": "Ratenbegrenzung: maximale Anzahl von Anfragen pro Minute (empfohlen 10–30)",
+    "title": "Modelllisten-Synchronisierungseinstellungen",
+    "viewExecution": "Ausführung und Ergebnisse anzeigen",
+    "viewExecutionButton": "Öffnen",
+    "viewExecutionDesc": "Detaillierte Ausführungsergebnisse anzeigen und manuelle Synchronisierungen auslösen"
+  }
+}

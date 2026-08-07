@@ -1,0 +1,424 @@
+{
+  "alerts": {
+    "authenticationFailed": {
+      "description": "Die gespeicherten AxonHub-Anmeldeinformationen wurden abgelehnt. Öffnen Sie die Einstellungen, aktualisieren Sie sie und aktualisieren Sie dann die Kanalliste.",
+      "title": "Melden Sie sich erneut bei AxonHub an"
+    },
+    "editorLoadError": {
+      "description": "Das Kanalformular konnte nicht geladen werden. Aktualisieren Sie die Kanalliste und versuchen Sie es erneut.",
+      "title": "Kanaleditor kann nicht geöffnet werden"
+    },
+    "editorSaveError": {
+      "description": "Ihre Änderungen wurden nicht gespeichert. Versuchen Sie es erneut.",
+      "title": "Kanal kann nicht gespeichert werden"
+    },
+    "loadError": {
+      "description": "{{error}}",
+      "title": "Kanäle können nicht geladen werden"
+    },
+    "partialMutation": {
+      "description": "Einige Felder wurden möglicherweise gespeichert, aber der Status konnte nicht bestätigt werden. Aktualisieren Sie die Kanalliste und überprüfen Sie den Kanal, bevor Sie es erneut versuchen.",
+      "title": "Kanalaktualisierung muss überprüft werden"
+    },
+    "permissionDenied": {
+      "description": "Dieses AxonHub-Konto kann keine Kanäle verwalten. Verwenden Sie ein Administratorkonto oder aktualisieren Sie die Berechtigungen und anschließend die Kanalliste.",
+      "title": "AxonHub Zugriff verweigert"
+    },
+    "savedRefreshError": {
+      "description": "Der Kanal wurde gespeichert, aber die neueste Liste konnte nicht geladen werden. Aktualisieren Sie die Kanalliste, bevor Sie weitere Änderungen vornehmen.",
+      "title": "Kanal gespeichert, Aktualisierung erforderlich"
+    },
+    "unavailable": {
+      "description": "AxonHub konnte nicht erreicht werden. Überprüfen Sie den Server und das Netzwerk und aktualisieren Sie dann die Kanalliste.",
+      "title": "AxonHub ist nicht verfügbar"
+    }
+  },
+  "dialog": {
+    "cancel": "Abbrechen",
+    "confirm": "Löschen",
+    "deleteDescription": "Diese Aktion kann nicht rückgängig gemacht werden. Die ausgewählten Kanäle werden dauerhaft entfernt.",
+    "deleteRefreshAction": "Kanäle aktualisieren",
+    "deleteRefreshRequired": "Einige Löschergebnisse sind unsicher. Aktualisieren Sie die Kanalliste, bevor Sie sie erneut löschen.",
+    "deleteResultStatus": {
+      "failed": "Fehlgeschlagen",
+      "success": "Gelöscht",
+      "uncertain": "Unsicher"
+    },
+    "deleteResultsTitle": "Ergebnisse löschen",
+    "deleteTitle": "Kanal löschen?",
+    "deleteTitlePlural": "Kanäle löschen?"
+  },
+  "editor": {
+    "fields": {
+      "autoSyncModelPattern": {
+        "help": "Nur passende Modelle synchronisieren. Präfix mit (?i), um Groß- und Kleinschreibung zu ignorieren; Lassen Sie das Feld leer, um alle Modelle zu synchronisieren.",
+        "invalid": "Geben Sie ein gültiges Modellfiltermuster ein.",
+        "label": "Modellfiltermuster",
+        "placeholder": "Zum Beispiel (?i)^model-example"
+      },
+      "autoSyncSupportedModels": {
+        "help": "AxonHub aktualisiert aktivierte Kanäle von der Anbieter-API mit der in den AxonHub-Systemeinstellungen konfigurierten Häufigkeit.",
+        "label": "Unterstützte Modelle automatisch synchronisieren"
+      },
+      "defaultTestModel": {
+        "help": "Wird zum Testen dieser Kanalverbindung verwendet. Wählen Sie eines der unterstützten Modelle.",
+        "label": "Standardtestmodell",
+        "placeholder": "Wählen Sie ein konfiguriertes Modell aus"
+      },
+      "extraModelPrefix": {
+        "help": "Konfigurieren Sie zusätzliche Modellpräfixe, um den Zugriff auf diesen Kanal mithilfe vorangestellter Modellnamen zu ermöglichen. Mit dem Präfix „deepseek“ können beispielsweise sowohl „deepseek/deepseek-chat“ als auch „deepseek-chat“ auf diesen Kanal zugreifen.",
+        "label": "Zusätzliches Modellpräfix",
+        "placeholder": "z. B. deepseek"
+      },
+      "orderingWeight": {
+        "help": "Höhere Werte werden bevorzugt, wenn AxonHub einen Kanal auswählt; Gleiche Werte haben die gleiche Sortierpriorität.",
+        "label": "Bestellgewicht"
+      },
+      "remark": {
+        "help": "Fügen Sie als Referenz Notizen oder Bemerkungen zu diesem Kanal hinzu.",
+        "label": "Bemerkung",
+        "placeholder": "Geben Sie eine Notiz oder Bemerkung für diesen Kanal ein..."
+      },
+      "supportedModels": {
+        "help": "Geben Sie Modellnamen ein oder fügen Sie sie ein. Hier hinzugefügte Modelle bleiben während der automatischen Modellsynchronisierung erhalten."
+      },
+      "tags": {
+        "help": "Fügen Sie Tags hinzu, um Kanäle zu kategorisieren und zu filtern. Drücken Sie die Eingabetaste, um ein Tag hinzuzufügen. Sie können auch durch Kommas oder Zeilen getrennte Tags einfügen.",
+        "label": "Tags",
+        "placeholder": "Tags hinzufügen..."
+      }
+    },
+    "options": {
+      "channelType": {
+        "anthropic": "Anthropic",
+        "anthropicAws": "Anthropic auf AWS",
+        "anthropicGcp": "Anthropic auf Google Cloud",
+        "claudeCode": "Claude Code",
+        "deepseek": "DeepSeek",
+        "deepseekAnthropic": "DeepSeek Anthropic",
+        "gemini": "Gemini",
+        "geminiOpenai": "Gemini OpenAI",
+        "geminiVertex": "Gemini Vertex",
+        "githubCopilot": "GitHub Copilot",
+        "nanogpt": "NanoGPT",
+        "ollama": "Ollama",
+        "openai": "OpenAI",
+        "openaiResponses": "OpenAI Responses",
+        "openrouter": "OpenRouter",
+        "siliconflow": "SiliconFlow",
+        "unsupported": "Nicht unterstützter Kanaltyp",
+        "volcengine": "Volcengine",
+        "xai": "xAI"
+      },
+      "status": {
+        "archived": "Archiviert",
+        "disabled": "Deaktiviert",
+        "enabled": "Aktiviert",
+        "unknown": "Unbekannt"
+      },
+      "unknown": "Unbekannte Option"
+    },
+    "secret": {
+      "actions": {
+        "clear": "Gespeicherte Anmeldeinformationen entfernen",
+        "restore": "Gespeicherte Anmeldeinformationen behalten",
+        "retry": "Wiederholen"
+      },
+      "createHint": "Geben Sie einen Berechtigungsnachweis für den neuen Kanal ein.",
+      "keepExistingHint": "Lassen Sie dieses Feld leer, um die gespeicherten Anmeldeinformationen unverändert zu lassen.",
+      "loadError": "Die gespeicherten Anmeldeinformationen konnten nicht geladen werden.",
+      "loading": "Laden der gespeicherten Anmeldeinformationen...",
+      "placeholder": "Geben Sie einen Berechtigungsnachweis ein",
+      "replacementBlocked": {
+        "multipleCredentials": "Dieser Kanal hat mehrere API-Schlüssel. Verwalten Sie seine Schlüssel in AxonHub."
+      },
+      "replacementDisabled": "Dieser Anmeldeinformationstyp kann hier nicht ersetzt werden.",
+      "state": {
+        "available": "Ein gespeicherter Berechtigungsnachweis ist verfügbar.",
+        "masked": "Ein maskierter Berechtigungsnachweis wird gespeichert.",
+        "permissionHidden": "Die gespeicherten Anmeldeinformationen werden durch Berechtigungen ausgeblendet.",
+        "unavailable": "Es sind keine Anmeldeinformationen zur Anzeige verfügbar."
+      }
+    },
+    "sections": {
+      "advanced": "Erweitert",
+      "basic": "Grundlagen",
+      "connection": "Verbindung",
+      "metadata": "Metadaten",
+      "models": "Modelle",
+      "routing": "Routing",
+      "sync": "Modellsynchronisierung"
+    },
+    "validation": {
+      "inconsistentValue": "Dieser Wert steht im Konflikt mit einem anderen Feld.",
+      "invalidValue": "Geben Sie einen gültigen Wert ein.",
+      "outOfRange": "Geben Sie einen Wert im zulässigen Bereich ein.",
+      "required": "Dieses Feld ist erforderlich.",
+      "unsupportedOption": "Diese Option wird nicht unterstützt."
+    }
+  },
+  "filter": {
+    "statusLabel": "Nach Status filtern"
+  },
+  "filters": {
+    "actionOptions": {
+      "exclude": "Passende Modelle ausschließen",
+      "include": "Passende Modelle einbeziehen"
+    },
+    "actions": {
+      "cancel": "Abbrechen",
+      "moveDown": "Filter nach unten verschieben",
+      "moveUp": "Filter nach oben verschieben",
+      "save": "Filter speichern"
+    },
+    "addPatternRule": "Musterregel hinzufügen",
+    "addProbeRule": "Sondenregel hinzufügen",
+    "empty": {
+      "description": "Fügen Sie Einschluss-/Ausschlussregeln mit optionalem Regex hinzu, um synchronisierte Modelle zu steuern.",
+      "title": "Noch keine Filter"
+    },
+    "hints": {
+      "probesAllPass": "Ein Modell erfüllt diese Regel nur, wenn jede ausgewählte Sonde erfolgreich ist. Sonden verwenden die Kanalbasis-URL und den aufgelösten Kanalschlüssel.",
+      "regex": "Regex-Regeln unterstützen den erweiterten Abgleich mit der Syntax JavaScript.",
+      "substring": "Einfache Regeln gleichen die Groß- und Kleinschreibung von Teilzeichenfolgen innerhalb von Modellnamen ab.",
+      "unsupportedChannelType": "Probe-Regeln sind für diesen Kanaltyp nicht verfügbar, da er keiner unterstützten Verifizierungs-API zugeordnet werden kann."
+    },
+    "jsonEditor": {
+      "hint": "Das JSON muss ein Array aus Muster- oder Sondenregelobjekten sein. Musterregeln verwenden kind: \"pattern\", name und pattern. Sondenregeln verwenden kind: \"probe\", name und probeIds. Anmeldeinformationsfelder wie apiKey, key und baseUrl werden ignoriert.",
+      "label": "Erweiterter JSON-Editor",
+      "placeholder": "Fügen Sie hier ein Array von Filterregelobjekten ein oder bearbeiten Sie es, um schnell dieselbe Konfiguration kanalübergreifend wiederzuverwenden."
+    },
+    "labels": {
+      "action": "Aktion",
+      "delete": "Filter löschen",
+      "description": "Beschreibung",
+      "enabled": "Aktiviert",
+      "name": "Filtername",
+      "pattern": "Übereinstimmungsmuster",
+      "probes": "Verifizierungsproben",
+      "regex": "Regex-Modus",
+      "ruleType": "Regeltyp"
+    },
+    "loading": "Kanalfilter werden geladen...",
+    "messages": {
+      "jsonArrayRequired": "JSON muss ein Array von Filterregeln sein.",
+      "jsonInvalid": "Ungültiges Filter-JSON: {{error}}",
+      "jsonItemNotObject": "Filter am Index {{index}} muss ein Objekt sein.",
+      "loadFailed": "Fehler beim Laden der Filter: {{error}}",
+      "saved": "Filter gespeichert",
+      "saveFailed": "Fehler beim Speichern der Filter: {{error}}",
+      "validationName": "Bitte geben Sie für jeden Filter einen Namen an.",
+      "validationPattern": "Filtermuster darf nicht leer sein.",
+      "validationProbeIds": "Wählen Sie für jede Prüfregel mindestens eine Verifizierungsprüfung aus.",
+      "validationRegex": "Ungültiges Regex-Muster: {{error}}"
+    },
+    "placeholders": {
+      "description": "Optionale Hinweise zu dieser Regel",
+      "name": "z.B. Erlaube GPT-4",
+      "pattern": "Exakte Zeichenfolge oder Regex-Muster",
+      "probes": "Sonden auswählen",
+      "probeSearch": "Sonden suchen"
+    },
+    "probes": {
+      "empty": "Keine Sonden gefunden",
+      "options": {
+        "structured-output": "Strukturierte Ausgabe",
+        "text-generation": "Textgenerierung",
+        "tool-calling": "Werkzeugaufruf",
+        "web-search": "Websuche"
+      }
+    },
+    "ruleTypeOptions": {
+      "pattern": "Muster",
+      "probe": "Sonde"
+    },
+    "subtitle": "Filterregeln für {{channel}}",
+    "title": "Kanalfilter",
+    "viewMode": {
+      "json": "JSON bearbeiten",
+      "label": "Bearbeitungsmodus",
+      "visual": "Visuelle Bearbeitung"
+    }
+  },
+  "gatewayGuidance": {
+    "clientHint": "Externe Clients benötigen ebenfalls einen von diesem Gateway ausgegebenen Zugriffsschlüssel.",
+    "empty": {
+      "description": "Dieses selbstgehostete KI-Gateway hat noch keine Kanäle. Importieren Sie zuerst Kontoschlüssel oder API-Schlüssel, dann kann dieses Gateway eine einheitliche KI-API für externe Clients bereitstellen.",
+      "importFromAccountKey": "Kanal aus Kontoschlüssel importieren",
+      "importFromApiKeyLibrary": "Kanal aus der API-Anmeldeinformationsbibliothek importieren",
+      "title": "Noch keine Kanäle im selbst gehosteten KI-Gateway"
+    },
+    "headerDescription": "Verwalten Sie Kanäle in Ihrem selbst gehosteten KI-Gateway und kombinieren Sie mehrere Kontoschlüssel oder API-Schlüssel in einer einheitlichen KI-API.",
+    "openChannelConsole": "Öffnen Sie die Gateway-Kanalverwaltung",
+    "openTokenConsole": "Öffnen Sie die Token-Verwaltung",
+    "unconfiguredValueDescription": "Nach der Konfiguration können Sie verstreute Kontoschlüssel und API-Schlüssel als Gateway-Kanäle importieren und diese dann direkt in All API Hub anzeigen und verwalten."
+  },
+  "migration": {
+    "actions": {
+      "cancel": "Abbrechen",
+      "close": "Schließen",
+      "refreshChannels": "Kanalliste aktualisieren",
+      "refreshPreview": "Vorschau aktualisieren",
+      "running": "Migration...",
+      "start": "Migration starten"
+    },
+    "alerts": {
+      "noTargets": {
+        "description": "Konfigurieren Sie in den Einstellungen eine weitere verwaltete Website als Ziel, bevor Sie die Kanalmigration verwenden."
+      }
+    },
+    "betaBadge": "Beta",
+    "blockedReasons": {
+      "sourceKeyMissing": "Der Quellkanalschlüssel ist nicht verfügbar, daher kann dieser Kanal noch nicht migriert werden.",
+      "sourceKeyResolutionFailed": "Der Quellkanalschlüssel konnte nicht geladen werden. Wenn Sie die Überprüfung gerade abgeschlossen haben, aktualisieren Sie die Vorschau und versuchen Sie es erneut.",
+      "sourceTypeUnsupported": "Dieser Quellkanaltyp wird für die Migration nicht unterstützt. Wählen Sie einen unterstützten Kanal oder migrieren Sie ihn manuell.",
+      "targetDraftPreparationFailed": "Der Zielkanalentwurf konnte nicht vorbereitet werden. Überprüfen Sie die Kanaldetails, aktualisieren Sie die Vorschau und versuchen Sie es erneut."
+    },
+    "confirm": {
+      "confirm": "Migration bestätigen",
+      "description": "Dadurch werden neue Zielkanäle für {{ready}} bereite Kanäle aus {{total}} ausgewählten Kanälen erstellt.",
+      "title": "Kanalmigration starten?",
+      "warningTitle": "Dieser Flow erstellt nur neue Kanäle. Es erfolgt keine Synchronisierung, Deduplizierung oder Rollback."
+    },
+    "description": "Kopieren Sie {{selectedCount}} Kanäle von der aktuell verwalteten Website in eine andere konfigurierte verwaltete Website.",
+    "generalWarnings": {
+      "compactSummary": "Nur erstellen. Bewegen Sie den Mauszeiger für Details.",
+      "createOnly": "Diese Migration erstellt nur neue Kanäle auf der Zielseite und verändert die Quellkanäle nicht.",
+      "noDedupeOrSync": "Diese Migration prüft nicht auf Duplikate, überschreibt keine vorhandenen Zielkanäle und synchronisiert keine vorhandenen Zielkanäle.",
+      "noRollback": "Automatisches Rollback ist in diesem Flow nicht verfügbar. Verwenden Sie die Ergebnisliste, um etwaige manuelle Folgemaßnahmen zu überprüfen.",
+      "title": "Migrationsbeschränkungen"
+    },
+    "itemWarnings": {
+      "dropsAdvancedSettings": "Erweiterte anbieterspezifische Kanaleinstellungen können nicht direkt kopiert werden und werden gelöscht.",
+      "dropsModelMapping": "Modellumleitungszuordnungen werden nicht kopiert.",
+      "dropsMultiKeyState": "Der Multi-Key-Laufzeitstatus wird nicht kopiert.",
+      "dropsStatusCodeMapping": "Statuscode-Zuordnungseinstellungen werden nicht kopiert.",
+      "targetForcesDefaultGroup": "Die Zielsite ersetzt die Quellgruppen durch ihre Standardgruppe.",
+      "targetIgnoresPriority": "Die Zielsite behält den Quellprioritätswert nicht bei.",
+      "targetIgnoresWeight": "Die Zielseite behält den Quellgewichtungswert nicht bei.",
+      "targetNormalizesBaseUrl": "Die Zielseite normalisiert die Basis-URL vor der Erstellung.",
+      "targetRemapsChannelType": "Die Ziel-Website ordnet den Kanaltyp dem nächstgelegenen unterstützten Typ zu.",
+      "targetSimplifiesStatus": "Die Zielseite vereinfacht den Quellstatus auf „Aktiviert“ oder „Deaktiviert“."
+    },
+    "preview": {
+      "badges": {
+        "limitsLabel": "Grenzwerte",
+        "warningsLabel": "Warnungen"
+      },
+      "compare": {
+        "fieldLabel": "Feld"
+      },
+      "loadFailed": "Migrationsvorschau konnte nicht geladen werden: {{error}}",
+      "loading": "Migrationsvorschau wird erstellt...",
+      "selectedCount": "{{selectedCount}} Kanäle ausgewählt",
+      "status": {
+        "blocked": "Blockiert",
+        "ready": "Bereit"
+      },
+      "summary": "Vorschau: {{ready}} bereit, {{blocked}} blockiert, {{total}} ausgewählt."
+    },
+    "results": {
+      "refreshRequired": "Einige Erstellungsergebnisse sind ungewiss. Aktualisieren Sie die Kanalliste vor dem Schließen.",
+      "status": {
+        "failed": "Fehlgeschlagen",
+        "skipped": "Übersprungen",
+        "success": "Erstellt",
+        "uncertain": "Unsicher"
+      },
+      "summary": "Ergebnisse: {{created}}, {{failed}}, {{skipped}}, {{uncertain}}, {{total}}.",
+      "summaryMetrics": {
+        "created_one": "{{count}} erstellt",
+        "created_other": "{{count}} erstellt",
+        "failed_one": "{{count}} fehlgeschlagen",
+        "failed_other": "{{count}} fehlgeschlagen",
+        "skipped_one": "{{count}} übersprungen",
+        "skipped_other": "{{count}} übersprungen",
+        "total_one": "{{count}} gesamt",
+        "total_other": "{{count}} gesamt",
+        "uncertain_one": "{{count}} unsicher",
+        "uncertain_other": "{{count}} unsicher"
+      },
+      "title": "Migrationsergebnisse"
+    },
+    "target": {
+      "destinationLabel": "Zielseite",
+      "label": "Migrationsziel",
+      "placeholder": "Verwaltete Ziel-Website auswählen",
+      "sourceLabel": "Quellseite",
+      "unselected": "Nicht ausgewählt"
+    },
+    "title": "Kanäle migrieren"
+  },
+  "resourceDescription": "Suchen, erstellen, bearbeiten und löschen Sie Kanäle, die mit dieser verwalteten Website verbunden sind.",
+  "statusLabels": {
+    "autoDisabled": "Automatisch deaktiviert",
+    "enabled": "Aktiviert",
+    "manualPause": "Manuelle Pause",
+    "unknown": "Unbekannt"
+  },
+  "table": {
+    "columns": {
+      "actions": "Aktionen",
+      "group": "Verfügbare Gruppen",
+      "id": "ID",
+      "models": "Modelle",
+      "name": "Kanal",
+      "priority": "Priorität",
+      "status": "Status",
+      "type": "Typ",
+      "weight": "Gewicht"
+    },
+    "emptyFiltered": "Keine passenden Kanäle gefunden. Versuchen Sie, Ihre Suche oder Filter anzupassen.",
+    "emptyNoChannels": "Noch keine Kanäle. Fügen Sie einen Kanal hinzu oder aktualisieren Sie die Liste.",
+    "loading": "Kanäle werden geladen...",
+    "noEntries": "Keine Einträge",
+    "paginationNext": "Nächste Seite",
+    "paginationPrev": "Vorherige Seite",
+    "paginationSummary": "{{start}} - {{end}} von {{total}} Kanälen",
+    "rowActions": {
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "filters": "Kanalfilterregeln bearbeiten",
+      "migrate": "Auf eine andere Website migrieren",
+      "openSync": "Modellsynchronisierungsoberfläche öffnen",
+      "sync": "Modellliste sofort synchronisieren",
+      "syncing": "Synchronisierung...",
+      "view": "Kanal ansehen"
+    },
+    "rowsPerPage": "Zeilen pro Seite",
+    "selectAll": "Alle Zeilen auswählen",
+    "selectRow": "Zeile auswählen"
+  },
+  "title": "Kanalverwaltung",
+  "toasts": {
+    "channelDeleted": "Kanal gelöscht",
+    "channelSaved": "Kanal gespeichert",
+    "channelsDeleted_one": "{{count}} Kanal gelöscht",
+    "channelsDeleted_other": "{{count}} Kanäle gelöscht",
+    "channelUpdated": "Kanal aktualisiert",
+    "revealKeyFailed": "Der echte Kanalschlüssel konnte nicht geladen werden: {{error}}",
+    "revealKeyMasked": "Der Kanalschlüssel ist weiterhin maskiert",
+    "revealKeyUnavailable": "Der Kanalschlüssel ist nicht verfügbar",
+    "revealKeyUnsupported": "Diese verwaltete Website unterstützt die Offenlegung von Kanalschlüsseln nicht",
+    "someDeletesFailed_one": "Fehler beim Löschen von {{count}} Kanal: {{error}}",
+    "someDeletesFailed_other": "Fehler beim Löschen von {{count}} Kanälen: {{error}}",
+    "syncCompleted": "Modellsynchronisierung abgeschlossen ({{success}}/{{total}})",
+    "syncFailed": "Modellsynchronisierung fehlgeschlagen: {{error}}"
+  },
+  "toolbar": {
+    "addChannel": "Kanal hinzufügen",
+    "cancelRefresh": "Aktualisierung stoppen",
+    "clearSearch": "Suche löschen",
+    "columns": "Spalten",
+    "deleteSelected": "Ausgewählte löschen",
+    "enterMigrationMode": "Kanalmigration",
+    "exitMigrationMode": "Migrationsmodus verlassen",
+    "migrateFiltered": "Alle gefilterten Kanäle migrieren",
+    "migrateSelected": "Ausgewählte migrieren",
+    "refresh": "Aktualisieren",
+    "searchPlaceholder": "Suche nach Name, URL oder Gruppe",
+    "status": "Status",
+    "syncSelected": "Ausgewählte Kanalmodelle synchronisieren",
+    "toggleColumns": "Spalten umschalten"
+  }
+}

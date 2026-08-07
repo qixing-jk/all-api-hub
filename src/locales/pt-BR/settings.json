@@ -28,6 +28,10 @@
       "currentLanguage": "Idioma da interface atual: {{language}}",
       "groupLabel": "Seletor de idioma da interface",
       "options": {
+        "de": {
+          "label": "DE",
+          "name": "Alemão"
+        },
         "en": {
           "label": "EN",
           "name": "Inglês"

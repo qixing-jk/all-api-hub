@@ -28,6 +28,10 @@
       "currentLanguage": "當前介面語言：{{language}}",
       "groupLabel": "介面語言選擇",
       "options": {
+        "de": {
+          "label": "DE",
+          "name": "德語"
+        },
         "en": {
           "label": "EN",
           "name": "英文"

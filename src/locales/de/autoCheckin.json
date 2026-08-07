@@ -1,0 +1,218 @@
+{
+  "description": "Berechtigte Konten automatisch jeden Tag innerhalb eines konfigurierbaren Zeitfensters einchecken. Die Ergebnisliste unten zeigt abgeschlossene Laufdatensätze und keine ausstehende Warteschlange.",
+  "execution": {
+    "actions": {
+      "devModeHint": "Entwicklungsmodus: Aktionsschaltflächen werden zum Testen immer angezeigt.",
+      "openExternal": "Externer Check-in",
+      "openFailedManual": "Fehlgeschlagene manuelle Check-ins öffnen",
+      "openManual": "Manueller Check-in",
+      "openSite": "Website öffnen",
+      "retryAccount": "Wiederholen"
+    },
+    "debug": {
+      "evaluateUiOpenPretrigger": "Entwickler: Bewerten Sie, ob die Bedingungen „Heutigen Check-in vorab auslösen, wenn die Benutzeroberfläche geöffnet wird“ erfüllt sind",
+      "resetLastDailyRunDay": "Entwickler: Markierung „Täglicher Check-in bereits heute ausgeführt“ löschen",
+      "scheduleDailyAlarmForToday": "Entwickler: Täglichen Check-in-Alarm für heute später planen",
+      "triggerDailyAlarmNow": "Entwickler: Jetzt täglichen Check-in ausführen (alarmischen Rückruf beim täglichen Check-in simulieren)",
+      "triggerRetryAlarmNow": "Entwickler: Führen Sie den erneuten Check-in-Versuch jetzt aus (simulieren Sie den Check-in-Wiederholungs-Alarmrückruf)",
+      "triggerUiOpenPretrigger": "Entwickler: Versuchen Sie sofort „Heutigen Check-in vorab auslösen, wenn die Benutzeroberfläche geöffnet wird“",
+      "uiOpenPretriggerDiagnosticsDesc": "Zeigt an, ob Bedingungen erfüllt sind, und die zur Beurteilung verwendeten Eingabeinformationen.",
+      "uiOpenPretriggerDiagnosticsTitle": "Den heutigen Check-in vorab auslösen, wenn die Benutzeroberfläche geöffnet wird"
+    },
+    "empty": {
+      "addAccount": "Konto hinzufügen",
+      "noAccounts": "Fügen Sie vor dem automatischen Check-in ein Konto hinzu",
+      "noAccountsDesc": "Der automatische Check-in erfordert mindestens ein aktiviertes Konto, bevor er ausgeführt werden kann.",
+      "noDetectionAccounts": "Check-in-Erkennung für ein Konto aktivieren",
+      "noDetectionAccountsDesc": "Vorhandene Konten sind noch nicht für die Check-in-Erkennung konfiguriert. Öffnen Sie die Kontoverwaltung und aktivieren Sie die Check-in-Erkennung für die Konten, die Sie einbeziehen möchten.",
+      "noHistory": "Kein Ausführungsverlauf",
+      "noHistoryDesc": "Es liegen noch keine Check-in-Laufaufzeichnungen vor. Klicken Sie auf „Jetzt ausführen“, um berechtigte Konten zu starten. Sie erscheinen nach Abschluss des Laufs in der Ergebnisliste.",
+      "noResults": "Keine passenden Ergebnisse",
+      "noResultsDesc": "Versuchen Sie, Ihre Filter oder Suchabfrage anzupassen",
+      "openAccounts": "Konten öffnen"
+    },
+    "filters": {
+      "all": "Alle",
+      "failed": "Fehlgeschlagen",
+      "searchPlaceholder": "Suche nach Kontoname oder Nachricht...",
+      "skipped": "Übersprungen",
+      "success": "Erfolg"
+    },
+    "hints": {
+      "invalidAccessToken": "Lösung: Das Zugriffstoken ist möglicherweise abgelaufen. Bitte melden Sie sich erneut auf der Website an und identifizieren/aktualisieren Sie dann unter „Kontoverwaltung → Konto bearbeiten“ automatisch das Zugriffstoken. Wenn dieses Problem nach der automatischen Identifizierung weiterhin auftritt, besorgen Sie sich bitte manuell das Zugriffstoken und ändern Sie es.",
+      "manualVerificationRequired": "Versuchen Sie zunächst, auf „Website öffnen“ zu klicken, und schließen Sie dann die Anmeldung, Turnstile-, PoW- oder eine andere grundlegende Überprüfung auf der Website ab, damit der Browser über eine gültige Sitzung verfügt, bevor Sie den automatischen Check-in erneut versuchen. Wenn der automatische Check-in trotz abgeschlossener Verifizierung wiederholt fehlschlägt, wird diese Website möglicherweise noch nicht unterstützt. Verwenden Sie vorerst den manuellen Check-in.",
+      "noTabWithId": "Tipp: Schließen Sie keine Tabs/Fenster, die von der Erweiterung automatisch geöffnet werden. Die Erweiterung schließt sie nach kurzer Zeit. Wenn Sie sie manuell schließen müssen, warten Sie mindestens 1 Minute, bevor Sie sie schließen.",
+      "openExternalCheckIn": "Öffnen Sie standardmäßig ungeprüfte externe Check-ins. Ctrl/Cmd öffnet alle; mit Shift werden sie in einem neuen Fenster geöffnet.",
+      "openFailedManualNewWindow": "Tipp: Shift-klicken Sie auf „Fehlgeschlagene manuelle Check-ins öffnen“, um sie in einem neuen Fenster zu öffnen.",
+      "siteTypeCheckinUnsupported": "Lösung: Überprüfen Sie unter „Kontoverwaltung → Konto bearbeiten“ zunächst, ob der ausgewählte Website-Typ mit der tatsächlichen Website übereinstimmt. Wenn der Typ zuvor automatisch erkannt wurde, melden Sie sich erneut bei der Ziel-Website an und führen Sie die Erkennung erneut aus. Wenn der Website-Typ korrekt ist, diese Meldung jedoch weiterhin angezeigt wird, unterstützt die Website wahrscheinlich noch kein automatisches Einchecken. Verwenden Sie daher stattdessen „Website öffnen“ oder „Manuelle Check-in-Seite“."
+    },
+    "refresh": "Aktualisieren",
+    "runNow": "Jetzt ausführen",
+    "statistics": {
+      "result": "Ergebnis"
+    },
+    "status": {
+      "alreadyChecked": "Bereits eingecheckt",
+      "failed": "Fehlgeschlagen",
+      "skipped": "Übersprungen",
+      "success": "Erfolg"
+    },
+    "table": {
+      "accountName": "Kontoname",
+      "actions": "Aktionen",
+      "message": "Nachricht",
+      "status": "Status",
+      "time": "Zeit"
+    },
+    "title": "Automatischer Check-in"
+  },
+  "messages": {
+    "error": {
+      "accountDisabled": "Konto ist deaktiviert",
+      "dailyAlarmScheduleForTodayFailed": "Fehler beim Planen des täglichen Alarms für heute: {{error}}",
+      "dailyAlarmTriggerFailed": "Täglicher Alarm konnte nicht ausgelöst werden: {{error}}",
+      "deterministicTimeOutsideWindow": "Die deterministische Zeit muss innerhalb des konfigurierten Fensters liegen.",
+      "invalidDeterministicTime": "Bitte geben Sie eine gültige deterministische Zeit im Format HH:mm an.",
+      "invalidNumber": "Bitte geben Sie eine gültige positive Zahl ein.",
+      "invalidTimeWindow": "Ungültiges Zeitfenster. Anfang und Ende dürfen nicht identisch sein.",
+      "lastDailyRunDayResetFailed": "Letzter Tagesmarker konnte nicht zurückgesetzt werden: {{error}}",
+      "openFailedManualFailed": "Das Öffnen der manuellen Check-in-Seiten für {{failedCount}} fehlgeschlagene Konten ist fehlgeschlagen.",
+      "openFailedManualNone": "Für den manuellen Check-in sind keine fehlgeschlagenen Konten verfügbar.",
+      "openFailedManualPartial": "Die manuellen Check-in-Seiten für {{openedCount}} fehlgeschlagene Konten wurden geöffnet; {{failedCount}} Seiten konnten nicht geöffnet werden.",
+      "openManualFailed": "Manueller Check-in konnte nicht geöffnet werden: {{error}}",
+      "openSiteFailed": "Website-Seite konnte nicht geöffnet werden: {{error}}",
+      "retryAlarmTriggerFailed": "Wiederholungsalarm konnte nicht ausgelöst werden: {{error}}",
+      "retryFailed": "Wiederholung fehlgeschlagen: {{error}}",
+      "runFailed": "Fehler beim Ausführen des automatischen Check-ins: {{error}}",
+      "uiOpenPretriggerDidNotStart": "UI-Open-Pre-Trigger wurde nicht gestartet: {{reason}}",
+      "uiOpenPretriggerEvaluationFailed": "Fehler beim Auswerten des UI-Open-Pre-Triggers: {{error}}",
+      "uiOpenPretriggerIneligible": "UI-Open-Pre-Trigger ist nicht berechtigt: {{reason}}",
+      "uiOpenPretriggerTriggerFailed": "Fehler beim Auslösen des UI-Open-Pre-Triggers: {{error}}"
+    },
+    "loading": {
+      "evaluatingUiOpenPretrigger": "Bewertung des UI-Open-Pre-Triggers...",
+      "openingFailedManual_one": "Die manuelle Check-in-Seite für {{count}} fehlgeschlagenes Konto wird geöffnet...",
+      "openingFailedManual_other": "Die manuellen Check-in-Seiten für {{count}} fehlgeschlagene Konten werden geöffnet...",
+      "resettingLastDailyRunDay": "Letzte Tagesmarkierung zurücksetzen...",
+      "running": "Automatischer Check-in wird ausgeführt...",
+      "schedulingDailyAlarmForToday": "Täglichen Alarm für heute planen...",
+      "triggeringDailyAlarm": "Täglicher Alarm wird ausgelöst...",
+      "triggeringRetryAlarm": "Wiederholungsalarm wird ausgelöst...",
+      "triggeringUiOpenPretrigger": "Auslösen des UI-Open-Pre-Triggers..."
+    },
+    "success": {
+      "dailyAlarmScheduledForToday": "Täglicher Alarm für heute geplant.",
+      "dailyAlarmTriggered": "Tägliche Alarmausführung ausgelöst.",
+      "lastDailyRunDayReset": "Letzter täglicher Marker-Reset.",
+      "openFailedManualCompleted_one": "Die manuelle Check-in-Seite für das fehlgeschlagene Konto {{count}} wurde geöffnet.",
+      "openFailedManualCompleted_other": "Manuelle Check-in-Seiten für {{count}} fehlgeschlagene Konten geöffnet.",
+      "pretriggerStarted": "Der automatische Check-in hat früh begonnen.",
+      "retryAlarmTriggered": "Wiederholungsalarmausführung ausgelöst.",
+      "retryCompleted": "Wiederholung abgeschlossen.",
+      "runCompleted": "Automatischer Check-in abgeschlossen.",
+      "settingsSaved": "Die Einstellungen für den automatischen Check-in wurden gespeichert.",
+      "uiOpenPretriggerEligible": "UI-Open-Pre-Trigger ist berechtigt."
+    }
+  },
+  "providerFallback": {
+    "alreadyCheckedToday": "Heute schon eingecheckt",
+    "checkinFailed": "Check-in fehlgeschlagen",
+    "checkinSuccessful": "Check-in erfolgreich",
+    "endpointNotSupported": "Dieser Check-in-Endpunkt wird nicht unterstützt. Bitte überprüfen Sie, ob der Website-Typ Ihres Kontos mit der tatsächlichen Website übereinstimmt.",
+    "nativePageIdentityMismatch": "Auf der temporären Check-in-Seite ist ein anderes Konto angemeldet. Öffnen Sie die Check-in-Seite mit dem Zielkonto und versuchen Sie es erneut: {{checkInUrl}}",
+    "nativePageIdentityMissing": "Die temporäre Anmeldung auf der Check-in-Seite konnte nicht bestätigt werden. Öffnen Sie die Check-in-Seite, melden Sie sich mit dem Zielkonto an und versuchen Sie es erneut: {{checkInUrl}}",
+    "nativePageStatusUnconfirmed": "Auf die Aktion zum Einchecken der Seite wurde geklickt, der Status des Zielkontos wurde jedoch nicht bestätigt. Bitte öffnen Sie die Check-in-Seite und überprüfen Sie manuell: {{checkInUrl}}",
+    "nativePageTargetNotFound": "Der Check-in-Button konnte auf der Seite nicht gefunden werden. Bitte öffnen Sie die Check-in-Seite und schließen Sie den Check-in manuell ab: {{checkInUrl}}",
+    "nativePageTriggerFailed": "Die Aktion zum Einchecken der Seite konnte nicht ausgelöst werden. Bitte öffnen Sie die Check-in-Seite und schließen Sie den Check-in manuell ab: {{checkInUrl}}",
+    "turnstileIncognitoAccessRequired": "Die Erweiterung muss in Inkognito-/privaten Fenstern ausgeführt werden dürfen, um den Turnstile-Token in einem privaten temporären Fenster abzurufen (Szenario mit mehreren Konten). Bitte aktivieren Sie „Inkognito zulassen“ für diese Erweiterung und versuchen Sie es erneut oder öffnen Sie die Check-in-Seite, um die Überprüfung abzuschließen: {{checkInUrl}}",
+    "turnstileManualRequired": "Eine Cloudflare-Turnstile-Verifizierung ist erforderlich. Bitte öffnen Sie die Check-in-Seite, um die Verifizierung abzuschließen: {{checkInUrl}}",
+    "unknownError": "Ein unbekannter Fehler ist aufgetreten."
+  },
+  "providerWong": {
+    "checkinDisabled": "Die Check-in-Funktion ist deaktiviert"
+  },
+  "settings": {
+    "deterministicTimeDesc": "Wählen Sie den genauen Zeitpunkt (HH:mm), um mit dem Check-in zu beginnen, wenn der deterministische Modus aktiviert ist.",
+    "deterministicTimeTitle": "Deterministische Zeit",
+    "enable": "Automatisches Einchecken aktivieren",
+    "enableDesc": "Schalten Sie die globale automatische Check-in-Funktion um. Wenn diese Option deaktiviert ist, werden keine Check-in-Aufgaben ausgeführt.",
+    "notifyUiOnCompletion": "Aktualisieren Sie Daten und Schnittstelle nach Abschluss des automatischen Check-ins",
+    "notifyUiOnCompletionDesc": "Wenn der automatische Check-in abgeschlossen ist, aktualisieren Sie sofort die Daten des Check-in-Kontos und relevante Schnittstellen.",
+    "pretriggerDailyOnUiOpen": "Täglichen Lauf vorab auslösen, wenn die Benutzeroberfläche geöffnet wird",
+    "pretriggerDailyOnUiOpenDesc": "Wenn Sie die Erweiterungsoberfläche im heutigen Zeitfenster öffnen und der tägliche Lauf noch nicht stattgefunden hat, wird er sofort gestartet.",
+    "retryDesc": "Versuchen Sie fehlgeschlagene Konten mehrmals am selben Tag automatisch erneut.",
+    "retryInterval": "Wiederholungsintervall (Minuten)",
+    "retryIntervalDesc": "Wie lange soll bis zum nächsten Wiederholungsversuch gewartet werden?",
+    "retryMaxAttempts": "Maximale Versuche pro Tag",
+    "retryMaxAttemptsDesc": "Maximale Versuche pro Konto und Tag (anfängliche + Wiederholungsversuche).",
+    "retryTitle": "Wiederholungsstrategie",
+    "scheduleModeDesc": "Wählen Sie, wie die nächste Laufzeit innerhalb des Fensters berechnet wird.",
+    "scheduleModeDeterministic": "Deterministisch",
+    "scheduleModeRandom": "Zufällig",
+    "scheduleModeTitle": "Zeitplanmodus",
+    "title": "Automatischer Check-in",
+    "viewExecution": "Automatischer Check-in-Verlauf",
+    "viewExecutionButton": "Ergebnisse öffnen",
+    "viewExecutionDesc": "Sehen Sie sich die Ergebnisse des abgeschlossenen automatischen Check-ins, die Gründe für das Überspringen und die Kontobereitschaft an. Dies ist keine ausstehende Kontoliste.",
+    "windowEnd": "Zeitfenster Ende",
+    "windowEndDesc": "Die späteste Ortszeit, zu der der tägliche Check-in beginnen kann.",
+    "windowStart": "Zeitfenster Beginn",
+    "windowStartDesc": "Die früheste Ortszeit, zu der der tägliche Check-in beginnen kann."
+  },
+  "skipReasons": {
+    "account_disabled": "Konto ist deaktiviert",
+    "already_checked_today": "Heute bereits eingecheckt",
+    "auto_checkin_disabled": "Automatischer Check-in deaktiviert",
+    "detection_disabled": "Erkennung deaktiviert",
+    "no_provider": "Der Websitetyp des Kontos unterstützt derzeit keinen Check-in",
+    "provider_not_ready": "Die Kontokonfiguration unterstützt derzeit keinen Check-in"
+  },
+  "snapshot": {
+    "badges": {
+      "disabled": "Deaktiviert",
+      "enabled": "Aktiviert",
+      "pending": "Ausstehend",
+      "providerAvailable": "Verfügbar",
+      "providerUnavailable": "Nicht verfügbar"
+    },
+    "description": "Alle für die Erkennung aktivierten Konten und ihre Bereitschaft sind unten aufgeführt. Ausstehende Konten nehmen am Check-in teil, wenn Sie auf „Jetzt ausführen“ klicken oder wenn die geplante Zeit erreicht ist.",
+    "table": {
+      "autoCheckin": "Automatischer Check-in",
+      "detection": "Erkennung",
+      "lastResult": "Letztes Ergebnis",
+      "provider": "Anbieter",
+      "skipReason": "Grund für das Überspringen",
+      "status": "Status"
+    },
+    "title": "Kontobereitschaft"
+  },
+  "status": {
+    "disabled": "Deaktiviert",
+    "lastRun": "Letzter Lauf",
+    "nextDaily": "Nächster täglicher Lauf",
+    "nextRetry": "Nächster Wiederholungslauf",
+    "noPendingRetry": "Keine ausstehenden Wiederholungsversuche",
+    "notScheduled": "Nicht geplant",
+    "pendingRetry": "Wiederholung steht aus",
+    "result": {
+      "failed": "Fehlgeschlagen",
+      "partial": "Teilweise",
+      "success": "Erfolg"
+    },
+    "retryDisabled": "Wiederholung deaktiviert",
+    "summary": {
+      "eligible": "Berechtigt",
+      "executed": "Ausgeführt",
+      "failed": "Fehlgeschlagen",
+      "skipped": "Übersprungen",
+      "success": "Erfolg",
+      "title": "Ausführungszusammenfassung"
+    }
+  },
+  "uiOpenPretrigger": {
+    "close": "Schließen",
+    "dialogDescription": "Der heute geplante tägliche Lauf wurde früh ausgelöst, als die Benutzeroberfläche geöffnet wurde.",
+    "dialogTitle": "Automatischer Check-in abgeschlossen",
+    "viewDetails": "Details anzeigen"
+  }
+}

@@ -1,0 +1,239 @@
+{
+  "actions": {
+    "autoConfigAriaLabel": "Konto speichern und Kanaleinrichtung {{managedSite}} öffnen",
+    "autoConfigRequiresValidAccount": "Füllen Sie zuerst das Kontoformular aus",
+    "autoConfigTitle": "Speichern Sie dieses Konto und öffnen Sie ein vorab ausgefülltes Kanalformular in {{managedSite}}",
+    "configToManagedSite": "Speichern und in {{managedSite}} konfigurieren",
+    "configuring": "Wird konfiguriert...",
+    "confirmAdd": "Hinzufügen bestätigen",
+    "helpDocument": "Anleitung zur Fehlerbehebung",
+    "openApiCredentialProfiles": "API-Anmeldeinformationen öffnen",
+    "reloadCurrentPage": "Aktuelle Seite neu laden",
+    "reloadExtensionAndRetry": "Erweiterung neu laden und erneut versuchen",
+    "reportUnsupportedSite": "Website-Unterstützung anfordern",
+    "saveAccount": "Konto speichern",
+    "saveChanges": "Änderungen speichern",
+    "workflow": {
+      "checkingToken": "API-Schlüssel werden geprüft...",
+      "creatingToken": "Standardschlüssel wird erstellt...",
+      "loadingSavedAccount": "Gespeichertes Konto wird geladen...",
+      "openingManagedSiteDialog": "Kanal-Setup öffnen...",
+      "savingAccount": "Konto wird gespeichert...",
+      "waitingForOneTimeKey": "Speichern Sie zuerst den Einmalschlüssel...",
+      "waitingForSub2ApiGroup": "Wählen Sie eine Sub2API-Gruppe..."
+    }
+  },
+  "aihubmixDefaultKeyPrompt": {
+    "cancel": "Später erstellen",
+    "cancelHint": "Wenn Sie abbrechen, bleibt das gespeicherte Konto unverändert. Später können Sie in der Schlüsselverwaltung manuell einen AIHubMix-API-Schlüssel erstellen.",
+    "confirm": "Jetzt erstellen und ansehen",
+    "creating": "Erstellen...",
+    "description": "{{accountName}} wurde gespeichert. AIHubMix-API-Schlüssel werden nach der Erstellung nur einmal angezeigt. Stellen Sie daher sicher, dass Sie den vollständigen Schlüssel jetzt kopieren und speichern können.",
+    "title": "Einen AIHubMix-Standardschlüssel erstellen?",
+    "warningTitle": "Der vollständige Schlüssel wird nur einmal angezeigt"
+  },
+  "apiCredentialFallback": {
+    "apiCredentials": {
+      "description": "Wenn Sie derzeit nur Schlüssel speichern und API-Aufrufe durchführen müssen, verwenden Sie zuerst den einfacheren Pfad für API-Anmeldeinformationen. Nachdem die Kontounterstützung hinzugefügt wurde, fügen Sie ein Webkonto für Check-ins, Kontostandaktualisierung und Dashboard-Synchronisierung hinzu."
+    },
+    "siteSupport": {
+      "description": "Wenn die Erkennung nach Befolgen der Anleitung zur Fehlerbehebung immer noch fehlschlägt, wird diese Website möglicherweise noch nicht unterstützt oder diese Seite unterstützt möglicherweise keine automatische Erkennung."
+    },
+    "title": "Immer noch nicht erkannt? Probieren Sie diese Alternativen aus"
+  },
+  "bookmarkImportBatch": {
+    "action": "Stapelimport aus Lesezeichen",
+    "prompt": "Mehrere Websites als Browser-Lesezeichen gespeichert?"
+  },
+  "form": {
+    "accessToken": "Zugriffstoken",
+    "autoCheckInEnabled": "Aktivieren Sie den täglichen automatischen Check-in",
+    "autoCheckInEnabledDesc": "Ob dieses Konto am täglichen Check-in teilnimmt, wenn der globale automatische Check-in aktiviert ist",
+    "checkInStatus": "Check-in-Status",
+    "checkInStatusDesc": "Das System prüft und zeigt den heutigen Check-in-Status während der Kontoaktualisierung an. Dies dient nur der Statusanzeige und führt keinen Check-in durch.",
+    "checkInStatusUnsupported": "{{siteType}} unterstützt weder die Anzeige des Check-in-Status noch den automatischen Check-in.",
+    "cookieAuthSessionCookie": "Sitzungscookie",
+    "cookieAuthSessionCookieDesc": "Importieren Sie das Sitzungscookie dieses Kontos von einem angemeldeten Browser-Tab (separater Import für mehrere Konten)",
+    "cookieAuthSessionCookiePlaceholder": "Cookie-Header-Wert einfügen",
+    "cookiePermissionEnableCookieAuth": "Erteilen Sie Berechtigungen für die Cookie-Authentifizierung mehrerer Konten",
+    "cookiePermissionHelpAction": "Berechtigungseinstellungen öffnen",
+    "cookiePermissionRecommendationDesc": "Wird verwendet, um Cookies von der aktuellen Anmeldeseite zu lesen und bei Aktualisierungs-, Check-in- und verwandten Anfragen pro Konto das richtige Cookie anzuhängen, damit mehrere Konten auf derselben Website zuverlässig verwendet werden können.",
+    "customCheckInDesc": "URL der externen Check-in-/Bonus-Seite, auf der Sie den Kontostand abrufen oder Codes einlösen können",
+    "customCheckInUrl": "Externe Check-in-Website-URL (optional)",
+    "customRedeemUrl": "URL der benutzerdefinierten Auflade-/Einlöseseite (optional)",
+    "customRedeemUrlDesc": "URL für die Auflade-/Umtauschseite",
+    "exchangeRate": "Verhältnis des Aufladebetrags (CNY/USD)",
+    "exchangeRateDesc": "Gibt an, wie viel RMB zum Aufladen von 1 USD benötigt wird. Das System wird versuchen, es automatisch abzurufen. Bitte füllen Sie es manuell aus, wenn Sie es nicht erhalten",
+    "exchangeRatePlaceholder": "Bitte geben Sie den Wechselkurs ein",
+    "excludeFromTodayIncome": "Vom heutigen Einkommen ausschließen",
+    "excludeFromTodayIncomeDesc": "Überspringt dieses Konto in den Summen des heutigen Einkommens, ohne die Aktualisierung, das Einchecken oder die Kontoanzeige zu deaktivieren",
+    "excludeFromTotalBalance": "Vom Gesamtsaldo ausschließen",
+    "excludeFromTotalBalanceDesc": "Überspringt dieses Konto im Aggregat „Gesamtsaldo“, ohne die Aktualisierung oder den Check-in zu deaktivieren",
+    "hideAccessToken": "Zugriffstoken ausblenden",
+    "hideRefreshToken": "Aktualisierungstoken ausblenden",
+    "importCookieAuthSessionCookie": "Aus aktueller Anmeldung importieren",
+    "manualBalanceUsd": "Manueller Kontostand (USD)",
+    "manualBalanceUsdDesc": "Verwenden Sie dies, wenn die Website das Guthaben/Kontingent nicht automatisch abrufen kann",
+    "manualBalanceUsdError": "Bitte geben Sie einen gültigen Betrag ein (>= 0)",
+    "manualBalanceUsdPlaceholder": "Leer lassen, um den automatischen Abruf zu ermöglichen",
+    "notes": "Notizen",
+    "notesPlaceholder": "Optional, Notizen eingeben",
+    "openRedeemWithCheckIn": "Öffnen Sie auch die Einlöseseite, wenn Sie den externen Check-in nutzen",
+    "openrouterManagementKey": "OpenRouter-Verwaltungsschlüssel",
+    "openrouterManagementKeyGuidance": "Erstellen Sie einen neuen Verwaltungsschlüssel auf der Seite „Verwaltungsschlüssel“ von OpenRouter, kopieren Sie ihn sofort und fügen Sie ihn dann hier ein. Vorhandene Verwaltungsschlüssel können nicht erneut offengelegt werden.",
+    "openrouterManagementKeyGuidanceTitle": "OpenRouter-Verwaltungsschlüssel verwenden",
+    "showAccessToken": "Zugriffstoken anzeigen",
+    "showRefreshToken": "Aktualisierungstoken anzeigen",
+    "siteName": "Website-Name",
+    "siteType": "Website-Typ",
+    "sub2apiImportRefreshToken": "Import vom aktuell angemeldeten Konto",
+    "sub2apiRefreshToken": "Aktualisierungs-Token",
+    "sub2apiRefreshTokenMode": "Plugin-gehostete Sitzung (Mehrfachkonto)",
+    "sub2apiRefreshTokenModeDesc": "Optional. Speichern Sie das refresh_token der aktuellen Dashboard-Sitzung in der Erweiterung, damit jedes Sub2API-Konto die Authentifizierung unabhängig im Hintergrund aktualisieren und erneuern kann (unterstützt mehrere Konten auf einer Website).",
+    "sub2apiRefreshTokenPlaceholder": "refresh_token-Wert einfügen",
+    "sub2apiRefreshTokenWarningDesc": "Aktualisierungstoken sind langlebige Anmeldeinformationen, die für von Plugins gehostete Sitzungen verwendet werden. Sie werden mit dem Konto gespeichert (z. B. Backups/Exporte). Um Rotationskonflikte zu vermeiden, importieren Sie aus einem Inkognito-/privaten Fenster und schließen Sie es. Vermeiden Sie die parallele Verwendung derselben Dashboard-Sitzung.",
+    "sub2apiRefreshTokenWarningTitle": "Hinweis",
+    "sub2apiTokenExpiresAt": "Zugriffstoken läuft am",
+    "tags": "Tags",
+    "tagsCreate": "Erstellen Sie „{{name}}“",
+    "tagsDelete": "Löschen",
+    "tagsDeleteCancel": "Abbrechen",
+    "tagsDeleteConfirm": "Löschen",
+    "tagsDeleteDescription": "Löschen Sie „{{name}}“ global. Dadurch wird es von allen Konten entfernt.",
+    "tagsDeleteTitle": "Tag löschen",
+    "tagsDescription": "Verwenden Sie Tags, um Konten für eine schnelle Filterung zu kategorisieren",
+    "tagsNoResults": "Keine Tags gefunden",
+    "tagsPlaceholder": "Tags hinzufügen oder auswählen",
+    "tagsRemove": "Entfernen Sie {{name}}",
+    "tagsRename": "Umbenennen",
+    "tagsRenameCancel": "Abbrechen",
+    "tagsRenameSave": "Speichern",
+    "tagsSearchPlaceholder": "Tags suchen...",
+    "tagsSelectedCount_one": "{{count}} Tag ausgewählt",
+    "tagsSelectedCount_other": "{{count}} Tags ausgewählt",
+    "userId": "Benutzer-ID",
+    "username": "Benutzername",
+    "validRateError": "Bitte geben Sie einen gültigen Wechselkurs ein, der größer als 0 ist"
+  },
+  "infoPanel": {
+    "autoDetect": "Automatische Erkennung",
+    "autoDetectInfo": "Bitte melden Sie sich zuerst auf der Zielseite an. Die Erweiterung erkennt und füllt automatisch die zum Hinzufügen des Kontos erforderlichen Informationen aus.",
+    "confirmAddInfo": "Bitte bestätigen Sie, dass die Kontoinformationen korrekt sind, bevor Sie auf die Schaltfläche „Hinzufügen bestätigen“ klicken",
+    "confirmation": "Bestätigung der Kontoinformationen",
+    "editInfo": "Kontoinformationen bearbeiten",
+    "editInfoDesc": "Nach der Änderung der Kontoinformationen führt das System eine erneute Überprüfung durch und ruft die neuesten Kontostanddaten ab",
+    "ldohSiteListHint": "Noch keine Seite? LDOH bietet ein Verzeichnis vieler gemeinnütziger KI-Websites aus der Linux.do-Community.",
+    "manualAdd": "Manuell hinzufügen",
+    "manualInfo": "Geben Sie die Kontoinformationen manuell ein. Das Konto wird sicher im lokalen Speicher gespeichert",
+    "openLdohSiteList": "LDOH-Website-Liste öffnen",
+    "openrouterBootstrap": "OpenRouter-Verwaltungsschlüssel erstellen",
+    "openrouterBootstrapInfo": "Diese Aktion erstellt einen neuen OpenRouter-Verwaltungsschlüssel und verwendet ihn dann zum Erkennen und Ausfüllen der Kontodetails.",
+    "reDetectInfo": "Wenn sich die Website-Informationen ändern, wird empfohlen, auf die Schaltfläche „Erneut erkennen“ zu klicken (Sie müssen sich zuerst selbst bei der Ziel-Website anmelden)"
+  },
+  "messages": {
+    "addSuccess": "Konto {{name}} erfolgreich hinzugefügt!",
+    "autoDetectCookiePermissionReloadHint": "Wenn die erste Erkennung direkt nach der Gewährung von Cookie-Mehrfachkontoberechtigungen weiterhin wartet, laden Sie die Erweiterung neu und versuchen Sie es erneut.",
+    "autoDetectFailed": "Automatische Erkennung fehlgeschlagen: {{error}}",
+    "autoDetectSuccess": "Automatische Erkennung erfolgreich!",
+    "autoDetectTakingTooLong": "Die automatische Erkennung dauert länger als erwartet. Anleitung zur Fehlerbehebung öffnen.",
+    "cookiePermissionGranted": "Berechtigung erteilt",
+    "cookiePermissionGrantFailed": "Berechtigung wurde nicht erteilt",
+    "importCookiesEmpty": "Für diese Website wurden keine Browser-Cookies gefunden. Melden Sie sich zuerst auf dieser Website an und versuchen Sie es dann erneut.",
+    "importCookiesFailed": "Fehler beim Importieren von Cookies: {{error}}",
+    "importCookiesFailedUnknown": "Der Import von Cookies ist aufgrund eines unbekannten Fehlers fehlgeschlagen.",
+    "importCookiesLoading": "Cookies importieren...",
+    "importCookiesPermissionDenied": "Die Erweiterung konnte die Cookies dieser Website nicht lesen. Überprüfen Sie die Cookie-/Website-Berechtigungen des Browsers für diese Website und versuchen Sie es dann erneut.",
+    "importCookiesSuccess": "Cookies importiert",
+    "importSub2apiSessionMissing": "Kein refresh_token gefunden. Bitte melden Sie sich beim Sub2API-Dashboard an und versuchen Sie es erneut.",
+    "importSub2apiSessionSuccess": "Sub2API-Sitzung importiert",
+    "loadFailed": "Kontodaten konnten nicht geladen werden",
+    "newApiConfigFailed": "Automatische Konfiguration auf New API fehlgeschlagen: {{error}}",
+    "operationFailed": "Vorgang fehlgeschlagen: {{error}}",
+    "reloadExtensionConfirm": "Durch das erneute Laden der Erweiterung wird die aktuelle Erweiterungsseite geschlossen. Stellen Sie sicher, dass alle erforderlichen Informationen gespeichert wurden.",
+    "saveAccountFailed": "Konto konnte nicht gespeichert werden",
+    "saveFailed": "Speichern fehlgeschlagen",
+    "updateSuccess": "Konto {{name}} erfolgreich aktualisiert!",
+    "urlRequired": "Bitte geben Sie zuerst eine URL ein"
+  },
+  "mode": {
+    "autoDetect": "Automatische Erkennung",
+    "createOpenRouterManagementKey": "OpenRouter-Verwaltungsschlüssel erstellen und erkennen",
+    "creatingOpenRouterManagementKey": "OpenRouter-Verwaltungsschlüssel wird erstellt...",
+    "detecting": "Wird erkannt...",
+    "manualAdd": "Manuell hinzufügen",
+    "reDetect": "Erneut erkennen"
+  },
+  "openrouterBootstrapRecovery": {
+    "label": "Erkennbare Bezeichnung: {{label}}",
+    "manualReview": "Ein Verwaltungsschlüssel mit dieser Bezeichnung kann in OpenRouter vorhanden sein.",
+    "manualRevocation": "Überprüfen Sie die Verwaltungsschlüssel und löschen Sie den gekennzeichneten Schlüssel manuell, wenn Sie ihn nicht benötigen.",
+    "title": "OpenRouter-Schlüsselerstellung muss geprüft werden"
+  },
+  "sections": {
+    "accountAuth": {
+      "title": "Kontoauthentifizierung"
+    },
+    "balanceAndStats": {
+      "title": "Guthaben und Statistiken"
+    },
+    "checkInConfig": {
+      "title": "Check-in-Einstellungen"
+    },
+    "siteInfo": {
+      "title": "Website-Informationen"
+    },
+    "tagsAndNotes": {
+      "description": "Tags helfen beim Organisieren, Filtern und schnellen Identifizieren von Konten, während Notizen unterstützenden Kontext hinzufügen.",
+      "title": "Tags und Notizen"
+    }
+  },
+  "siteInfo": {
+    "alreadyAdded": "Für diese Website sind bereits Konten vorhanden",
+    "authMethod": "Authentifizierungsmethode",
+    "authMethodPlaceholder": "Authentifizierungsmethode",
+    "authMethodSelectedForSite": "Die Authentifizierungsmethode wurde automatisch basierend auf den {{siteType}}-Anforderungen ausgewählt.",
+    "authType": {
+      "accessToken": "Zugriffstoken-Authentifizierung",
+      "cookieAuth": "Cookie-Authentifizierung"
+    },
+    "cookieWarning": "Bevorzugen Sie Zugriffstoken. Die Cookie-Authentifizierung erfordert den Import eines Sitzungscookies. Das Cookie kann ablaufen oder erneuert werden und dadurch ungültig werden, sodass es erneut importiert werden muss. Importieren Sie für mehrere Konten auf derselben Website jeweils ein Sitzungscookie. Verwenden Sie diese Methode nur bei Bedarf.",
+    "currentLoginAlreadyAdded": "Aktueller Login bereits hinzugefügt",
+    "currentSite": "Aktuelle Seite",
+    "editNow": "Jetzt bearbeiten",
+    "siteUrl": "Website-URL",
+    "sub2apiHint": "Sub2API verwendet kurzfristige JWTs. Wenn sie ablaufen, versucht die Erweiterung automatisch, über ein temporäres Fenster ein neues JWT zu erhalten (erfordert die Anmeldung auf der Website). Wenn „Plugin-gehostete Sitzung“ aktiviert ist, kann jedes Konto die Authentifizierung unabhängig im Hintergrund automatisch aktualisieren und erneuern, wodurch mehrere Konten auf derselben Website unterstützt werden.",
+    "unknown": "Konnte nicht abgerufen werden",
+    "useCurrent": "Aktuelle Website verwenden"
+  },
+  "title": {
+    "add": "Konto hinzufügen",
+    "edit": "Konto bearbeiten"
+  },
+  "warnings": {
+    "duplicateAccount": {
+      "actions": {
+        "continue": "Weiter",
+        "disableAndContinue": "Nicht mehr erinnern und fortfahren"
+      },
+      "description_one": "Sie haben bereits {{count}} Konto für {{siteUrl}}. Durch das Hinzufügen eines weiteren können Duplikate entstehen. Möchten Sie fortfahren?",
+      "description_other": "Sie haben bereits {{count}} Konten für {{siteUrl}}. Durch das Hinzufügen eines weiteren können Duplikate entstehen. Möchten Sie fortfahren?",
+      "descriptionExact": "Ein Konto für {{siteUrl}} mit der Benutzer-ID {{userId}} existiert bereits ({{username}}). Durch das Hinzufügen eines weiteren können Duplikate entstehen. Möchten Sie fortfahren?",
+      "title": "Doppeltes Konto",
+      "warningTitle": "Diese Website hat bereits Konten"
+    },
+    "managedSiteConfig": {
+      "actions": {
+        "later": "Vielleicht später",
+        "openSettings": "Einstellungen öffnen"
+      },
+      "description": "{{message}}",
+      "guide": "Diese Funktion speichert zuerst das aktuelle Konto, bereitet dann einen verwendbaren API-Schlüssel vor und füllt ihn vorab in einen neuen Kanal in {{managedSite}} ein, sodass Sie die Kanalerstellung schneller abschließen können. Die Funktion wird verfügbar, nachdem die Einrichtung der verwalteten Website abgeschlossen ist.",
+      "title": "Konfigurieren Sie zuerst {{managedSite}}",
+      "warningTitle": "{{managedSite}} ist noch nicht konfiguriert"
+    },
+    "reloadExtension": {
+      "title": "Erweiterung neu laden",
+      "warningTitle": "Neuladen der Erweiterung bestätigen?"
+    }
+  }
+}
