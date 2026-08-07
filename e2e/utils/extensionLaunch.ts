@@ -15,6 +15,54 @@ type ChromiumPersistentLaunchOptions = BrowserContextOptions & {
   ignoreDefaultArgs: string[]
 }
 
+type ExtensionContextStartupRetryOptions<
+  TContext extends { close(): Promise<void> },
+> = {
+  launch: (attempt: number) => Promise<TContext>
+  waitForReady: (context: TContext, attempt: number) => Promise<void>
+  onRetry?: (error: unknown, attempt: number) => void
+}
+
+/**
+ * Launch an extension context and retry once when only service-worker startup
+ * readiness fails. Browser launch errors still fail immediately.
+ */
+export async function launchExtensionContextWithStartupRetry<
+  TContext extends { close(): Promise<void> },
+>({
+  launch,
+  onRetry,
+  waitForReady,
+}: ExtensionContextStartupRetryOptions<TContext>): Promise<TContext> {
+  const maxAttempts = 2
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const context = await launch(attempt)
+
+    try {
+      await waitForReady(context, attempt)
+      return context
+    } catch (startupError) {
+      try {
+        await context.close()
+      } catch (closeError) {
+        throw new AggregateError(
+          [startupError, closeError],
+          "Failed to close an extension context after service-worker startup failed",
+        )
+      }
+
+      if (attempt === maxAttempts) {
+        throw startupError
+      }
+
+      onRetry?.(startupError, attempt)
+    }
+  }
+
+  throw new Error("Extension context startup retry exhausted unexpectedly")
+}
+
 /**
  * Build Chromium launch options for MV3 extension E2E.
  *

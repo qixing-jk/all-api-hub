@@ -5,10 +5,32 @@ import type { BrowserContext, Worker } from "@playwright/test"
 import { assertE2eBuildMetadataCurrent } from "~~/e2e/utils/e2eBuildMetadata"
 
 const verifiedExtensionDirs = new Set<string>()
+const verifiedExtensionServiceWorkers = new WeakMap<BrowserContext, Worker>()
 const extensionServiceWorkerProtocols = new Set([
   "chrome-extension:",
   "moz-extension:",
 ])
+
+/** Default time budget for an extension service worker to become ready. */
+export const DEFAULT_EXTENSION_SERVICE_WORKER_TIMEOUT_MS = 25_000
+
+/** Resolve the optional E2E service-worker startup timeout override. */
+export function resolveExtensionServiceWorkerTimeoutMs(
+  configuredValue: string | undefined,
+): number {
+  if (!configuredValue?.trim()) {
+    return DEFAULT_EXTENSION_SERVICE_WORKER_TIMEOUT_MS
+  }
+
+  const timeoutMs = Number(configuredValue)
+  if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) {
+    throw new Error(
+      `AAH_E2E_EXTENSION_STARTUP_TIMEOUT_MS must be a positive integer; received '${configuredValue}'`,
+    )
+  }
+
+  return timeoutMs
+}
 
 type ExtensionServiceWorkerOptions = {
   extensionId?: string
@@ -100,12 +122,33 @@ export async function getExtensionServiceWorker(
   context: BrowserContext,
   options: ExtensionServiceWorkerOptions = {},
 ): Promise<Worker> {
-  const timeoutMs = options.timeoutMs ?? 15_000
+  const timeoutMs =
+    options.timeoutMs ?? DEFAULT_EXTENSION_SERVICE_WORKER_TIMEOUT_MS
   const deadline = Date.now() + timeoutMs
   const observedWorkers = new Map<string, string>()
+  const candidateWorkers = new Set<Worker>()
+
+  const cachedWorker = verifiedExtensionServiceWorkers.get(context)
+  if (cachedWorker) {
+    const readiness = await describeServiceWorkerReadiness(
+      cachedWorker,
+      options.extensionId,
+    )
+    observedWorkers.set(cachedWorker.url(), readiness.reason)
+
+    if (readiness.ready) {
+      return cachedWorker
+    }
+
+    verifiedExtensionServiceWorkers.delete(context)
+  }
 
   while (Date.now() <= deadline) {
     for (const worker of context.serviceWorkers()) {
+      candidateWorkers.add(worker)
+    }
+
+    for (const worker of candidateWorkers) {
       const readiness = await describeServiceWorkerReadiness(
         worker,
         options.extensionId,
@@ -113,6 +156,7 @@ export async function getExtensionServiceWorker(
       observedWorkers.set(worker.url(), readiness.reason)
 
       if (readiness.ready) {
+        verifiedExtensionServiceWorkers.set(context, worker)
         return worker
       }
     }
@@ -122,11 +166,15 @@ export async function getExtensionServiceWorker(
       break
     }
 
-    await context
+    const eventWorker = await context
       .waitForEvent("serviceworker", {
         timeout: Math.min(250, remainingMs),
       })
       .catch(() => undefined)
+
+    if (eventWorker) {
+      candidateWorkers.add(eventWorker)
+    }
   }
 
   const observedSummary =

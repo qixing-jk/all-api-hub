@@ -8,8 +8,13 @@ import { getE2eExtensionDirName } from "~~/e2e/utils/e2eBuildVariants"
 import {
   assertBuiltExtensionExists,
   getExtensionIdFromServiceWorker,
+  getExtensionServiceWorker,
+  resolveExtensionServiceWorkerTimeoutMs,
 } from "~~/e2e/utils/extension"
-import { buildExtensionLaunchOptions } from "~~/e2e/utils/extensionLaunch"
+import {
+  buildExtensionLaunchOptions,
+  launchExtensionContextWithStartupRetry,
+} from "~~/e2e/utils/extensionLaunch"
 
 type ExtensionFixtures = {
   extensionId: string
@@ -42,35 +47,78 @@ export const test = base.extend<ExtensionFixtures>({
     const reusableUserDataDir = process.env.AAH_E2E_USER_DATA_DIR
       ? path.resolve(process.cwd(), process.env.AAH_E2E_USER_DATA_DIR)
       : null
-    const userDataDir =
-      reusableUserDataDir ??
-      (await fs.mkdtemp(
-        path.join(os.tmpdir(), `all-api-hub-e2e-${testInfo.workerIndex}-`),
-      ))
+    const temporaryUserDataDirs: string[] = []
 
     const chromeExecutablePath = process.env.AAH_E2E_CHROME_EXECUTABLE_PATH
       ? path.resolve(process.cwd(), process.env.AAH_E2E_CHROME_EXECUTABLE_PATH)
       : null
+    const extensionServiceWorkerTimeoutMs =
+      resolveExtensionServiceWorkerTimeoutMs(
+        process.env.AAH_E2E_EXTENSION_STARTUP_TIMEOUT_MS,
+      )
     const launchOptions = buildExtensionLaunchOptions({
       extensionDir,
       headless,
       chromeExecutablePath,
     })
+    const originalTestTimeoutMs = testInfo.timeout
+
+    // Preserve the configured test-body budget while allowing one bounded
+    // fresh-context retry during extension startup.
+    testInfo.setTimeout(
+      originalTestTimeoutMs + extensionServiceWorkerTimeoutMs * 2,
+    )
 
     let context:
       | Awaited<ReturnType<typeof chromium.launchPersistentContext>>
       | undefined
 
     try {
-      context = await chromium.launchPersistentContext(userDataDir, {
-        ...contextOptions,
-        ...launchOptions,
-        deviceScaleFactor,
-        locale,
-        timezoneId,
-        viewport,
+      const startupStartedAt = Date.now()
+
+      context = await launchExtensionContextWithStartupRetry({
+        launch: async (attempt) => {
+          const userDataDir =
+            reusableUserDataDir ??
+            (await fs.mkdtemp(
+              path.join(
+                os.tmpdir(),
+                `all-api-hub-e2e-${testInfo.workerIndex}-${attempt}-`,
+              ),
+            ))
+
+          if (!reusableUserDataDir) {
+            temporaryUserDataDirs.push(userDataDir)
+          }
+
+          return await chromium.launchPersistentContext(userDataDir, {
+            ...contextOptions,
+            ...launchOptions,
+            deviceScaleFactor,
+            locale,
+            timezoneId,
+            viewport,
+          })
+        },
+        waitForReady: async (candidateContext) => {
+          await Promise.all([
+            stubSponsorRemoteCatalog(candidateContext),
+            getExtensionServiceWorker(candidateContext, {
+              timeoutMs: extensionServiceWorkerTimeoutMs,
+            }),
+          ])
+        },
+        onRetry: (error, attempt) => {
+          console.warn(
+            `Extension service worker startup failed on attempt ${attempt}; retrying with a fresh context`,
+            error,
+          )
+        },
       })
-      await stubSponsorRemoteCatalog(context)
+
+      testInfo.setTimeout(
+        originalTestTimeoutMs + (Date.now() - startupStartedAt),
+      )
 
       await run(context)
     } finally {
@@ -80,12 +128,12 @@ export const test = base.extend<ExtensionFixtures>({
         console.warn("Failed to close persistent context", error)
       }
 
-      try {
-        if (!reusableUserDataDir) {
+      for (const userDataDir of temporaryUserDataDirs) {
+        try {
           await fs.rm(userDataDir, { recursive: true, force: true })
+        } catch (error) {
+          console.warn(`Failed to remove userDataDir '${userDataDir}'`, error)
         }
-      } catch (error) {
-        console.warn(`Failed to remove userDataDir '${userDataDir}'`, error)
       }
     }
   },
