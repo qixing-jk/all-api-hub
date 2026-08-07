@@ -3837,7 +3837,7 @@ describe("ManagedSiteChannels", () => {
       managedSiteType: currentManagedSiteType,
       withMigrationTarget: true,
     })
-    const deletion = createDeferred<{ success: boolean }>()
+    const deletion = createDeferred<ManagedSiteVoidMutationResult>()
     const oldService = {
       siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
@@ -3921,7 +3921,7 @@ describe("ManagedSiteChannels", () => {
     await waitForRowText("Beta")
 
     await act(async () => {
-      deletion.resolve({ success: true })
+      deletion.resolve(succeededChannelDelete(1))
       await deletion.promise
     })
 
@@ -3937,7 +3937,7 @@ describe("ManagedSiteChannels", () => {
 
   it("does not refresh or publish delete results after unmount", async () => {
     const user = userEvent.setup()
-    const deletion = createDeferred<{ success: boolean }>()
+    const deletion = createDeferred<ManagedSiteVoidMutationResult>()
     const service = mockChannels([
       {
         id: 1,
@@ -3966,7 +3966,7 @@ describe("ManagedSiteChannels", () => {
 
     unmount()
     await act(async () => {
-      deletion.resolve({ success: true })
+      deletion.resolve(succeededChannelDelete(1))
       await deletion.promise
     })
 

@@ -422,6 +422,66 @@ describe("AxonHub migration type boundary", () => {
     },
   )
 
+  it("rejects a succeeded migration result without a confirmed create effect", async () => {
+    const create = vi.fn().mockResolvedValue({
+      outcome: "succeeded",
+      data: { id: "created-without-effect" },
+      confirmedEffects: [],
+    })
+    const list = vi.fn()
+    vi.spyOn(
+      axonHubNativeResources,
+      "openAxonHubNativeResourceOperations",
+    ).mockResolvedValue({ create, list } as never)
+
+    await expect(
+      axonHubManagedSiteMigrationCapability.target!.create(
+        buildCommand(ChannelType.OpenAI),
+      ),
+    ).rejects.toThrow(
+      "AxonHub migration succeeded without a confirmed create effect.",
+    )
+    expect(create).toHaveBeenCalledOnce()
+    expect(list).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      label: "explicit reason",
+      reason: new DOMException("Cancelled migration", "AbortError"),
+    },
+    { label: "default reason", reason: undefined },
+  ])(
+    "throws the $label when the signal aborts before a rejected result is handled",
+    async ({ reason }) => {
+      const signal = { aborted: true, reason } as AbortSignal
+      const create = vi.fn().mockResolvedValue({
+        outcome: "rejected",
+        diagnostic: {
+          message: "provider rejected",
+          code: "upstream_rejected",
+        },
+      })
+      const list = vi.fn()
+      vi.spyOn(
+        axonHubNativeResources,
+        "openAxonHubNativeResourceOperations",
+      ).mockResolvedValue({ create, list } as never)
+
+      const error = await axonHubManagedSiteMigrationCapability
+        .target!.create(buildCommand(ChannelType.OpenAI), { signal })
+        .catch((caught) => caught)
+
+      if (reason) {
+        expect(error).toBe(reason)
+      } else {
+        expect(error).toMatchObject({ name: "AbortError", message: "Aborted" })
+      }
+      expect(create).toHaveBeenCalledOnce()
+      expect(list).not.toHaveBeenCalled()
+    },
+  )
+
   it("does not retain rejected abort raw diagnostics in the outward cause chain", async () => {
     const rawSecret = "raw-abort-secret-placeholder"
     const diagnosticRaw = {

@@ -281,6 +281,22 @@ describe("DoneHub managed-site channel capability", () => {
     },
   ])
 
+  it("preserves response-received DoneHub error identity", async () => {
+    const responseError = new Error("malformed provider response")
+    doneHubApi.createChannel.mockImplementationOnce(async (request) => {
+      request.observer?.onDispatch()
+      request.observer?.onResponse()
+      throw responseError
+    })
+    const { doneHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/doneHub"
+    )
+
+    await expect(
+      doneHubManagedSiteChannels.create(config, createPayload),
+    ).rejects.toBe(responseError)
+  })
+
   const resourceDraft: ChannelFormData = {
     name: "Resource channel",
     type: 1,
@@ -389,7 +405,7 @@ describe("DoneHub managed-site channel capability", () => {
     new DOMException("cancelled", "AbortError"),
     new TypeError("Failed to fetch"),
   ])(
-    "keeps DoneHub model-update preflight failures undispatched",
+    "keeps DoneHub model-update preflight failure %s undispatched",
     async (raw) => {
       doneHubApi.fetchChannelRaw.mockRejectedValue(raw)
       const { doneHubManagedSiteChannels } = await import(

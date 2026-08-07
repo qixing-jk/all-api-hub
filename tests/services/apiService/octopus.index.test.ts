@@ -311,6 +311,33 @@ describe("Octopus API service", () => {
   )
 
   it.each(mutations)(
+    "$name keeps generic HTTP client errors ambiguous after dispatch",
+    async ({ log, invoke }) => {
+      const fetchMock = vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "access denied" }), {
+          status: 403,
+          statusText: "Forbidden",
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      vi.stubGlobal("fetch", fetchMock)
+
+      await expect(invoke()).rejects.toMatchObject({
+        name: "OctopusMutationApiError",
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: false,
+        statusCode: 403,
+        raw: expect.objectContaining({
+          message: "HTTP 403 Forbidden: access denied",
+        }),
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(mockLogger.error).toHaveBeenLastCalledWith(log)
+    },
+  )
+
+  it.each(mutations)(
     "$name keeps network loss after mutation fetch dispatch ambiguous",
     async ({ log, invoke }) => {
       const networkError = new TypeError("Failed to fetch")
@@ -346,6 +373,53 @@ describe("Octopus API service", () => {
       expect(mockLogger.error).toHaveBeenLastCalledWith(log)
     },
   )
+
+  it.each([
+    { code: "AUTH_EXPIRED", expectedCode: "AUTH_EXPIRED" },
+    { code: 41, expectedCode: 41 },
+    { code: 1.5, expectedCode: undefined },
+  ])(
+    "keeps only operational auth error code $code",
+    async ({ code, expectedCode }) => {
+      const raw = { code }
+      mockGetValidToken.mockRejectedValueOnce(raw)
+
+      const failure = await updateChannel(config, { id: 1 }).catch(
+        (error: unknown) => error,
+      )
+
+      expect(failure).toMatchObject({
+        name: "OctopusMutationApiError",
+        message: "Octopus mutation failed",
+        dispatch: "not-dispatched",
+        raw,
+      })
+      expect((failure as OctopusMutationApiError).code).toBe(expectedCode)
+    },
+  )
+
+  it("uses a default AbortError when a pre-dispatch signal has no reason", async () => {
+    const signal = {
+      aborted: true,
+      reason: undefined,
+    } as AbortSignal
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    const failure = await updateChannel(config, { id: 1 }, { signal }).catch(
+      (error: unknown) => error,
+    )
+
+    expect(failure).toMatchObject({
+      name: "OctopusMutationApiError",
+      message: "The operation was aborted",
+      dispatch: "not-dispatched",
+      responseReceived: false,
+      confirmedNonApplication: true,
+      raw: expect.objectContaining({ name: "AbortError" }),
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 
   it("exports a concrete mutation error type for adapter evidence checks", () => {
     expect(OctopusMutationApiError).toBeTypeOf("function")
@@ -397,6 +471,32 @@ describe("Octopus API service", () => {
           raw: envelope,
         },
       })
+    },
+  )
+
+  it.each(managedSiteMutations)(
+    "$name does not replay or reject a generic HTTP client error",
+    async ({ invoke }) => {
+      const fetchMock = vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify({ message: "access denied" }), {
+          status: 403,
+          statusText: "Forbidden",
+          headers: { "Content-Type": "application/json" },
+        }),
+      )
+      vi.stubGlobal("fetch", fetchMock)
+
+      await expect(invoke()).resolves.toEqual({
+        outcome: "uncertain",
+        diagnostic: {
+          message: "HTTP 403 Forbidden: access denied",
+          statusCode: 403,
+          raw: expect.objectContaining({
+            message: "HTTP 403 Forbidden: access denied",
+          }),
+        },
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(1)
     },
   )
 

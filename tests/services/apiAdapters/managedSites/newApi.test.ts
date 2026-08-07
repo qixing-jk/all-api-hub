@@ -271,6 +271,22 @@ describe("newApi managed-site channel capability", () => {
     },
   ])
 
+  it("preserves response-received New API error identity", async () => {
+    const responseError = new Error("malformed provider response")
+    channelManagement.createChannel.mockImplementationOnce(async (request) => {
+      request.observer?.onDispatch()
+      request.observer?.onResponse()
+      throw responseError
+    })
+    const { newApiManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+
+    await expect(
+      newApiManagedSiteChannels.create(config, createPayload),
+    ).rejects.toBe(responseError)
+  })
+
   const resourceDraft = {
     name: "Resource channel",
     type: 1,
@@ -386,6 +402,53 @@ describe("newApi managed-site channel capability", () => {
         expect(channelManagement.deleteChannel.mock.calls.at(-1)?.[1]).toBe(19),
     },
   ])
+
+  it("returns a partial resource update when status rejects after fields apply", async () => {
+    const statusResponse = {
+      success: false,
+      data: null,
+      message: "provider rejected status",
+    }
+    channelManagement.updateChannelFields.mockImplementationOnce(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return { success: true, data: null, message: "success" }
+      },
+    )
+    channelManagement.updateChannelStatus.mockImplementationOnce(
+      async (request) => {
+        request.observer?.onDispatch()
+        request.observer?.onResponse()
+        return statusResponse
+      },
+    )
+    const { newApiManagedSiteCapabilities } = await import(
+      "~/services/apiAdapters/managedSites/newApi"
+    )
+
+    await expect(
+      newApiManagedSiteCapabilities.resources!.items.update(
+        config,
+        resourceDetail,
+        { ...resourceDraft, status: CHANNEL_STATUS.ManuallyDisabled },
+      ),
+    ).resolves.toEqual({
+      outcome: "partial",
+      confirmedEffects: [
+        {
+          kind: "resource-updated",
+          resourceKind: "channel",
+          resourceId: 19,
+        },
+      ],
+      completion: "rejected",
+      diagnostic: {
+        message: "provider rejected status",
+        raw: statusResponse,
+      },
+    })
+  })
 
   it("returns the common mutation result for a confirmed create", async () => {
     channelManagement.createChannel.mockImplementation(async (request) => {

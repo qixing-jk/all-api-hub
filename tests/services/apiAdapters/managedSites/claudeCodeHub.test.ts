@@ -361,6 +361,28 @@ describe("Claude Code Hub managed-site channel capability", () => {
       })
     },
   )
+
+  it("uses the generic Claude Code Hub diagnostic when an API error message is empty", async () => {
+    const error = new claudeCodeHubApi.ClaudeCodeHubApiError("", undefined, {
+      dispatch: "dispatched",
+      responseReceived: false,
+      confirmedNonApplication: false,
+    })
+    claudeCodeHubApi.deleteProvider.mockRejectedValueOnce(error)
+    const { claudeCodeHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/claudeCodeHub"
+    )
+
+    await expect(
+      claudeCodeHubManagedSiteChannels.delete(config, 7),
+    ).resolves.toEqual({
+      outcome: "uncertain",
+      diagnostic: {
+        message: "Claude Code Hub mutation failed",
+        raw: error,
+      },
+    })
+  })
   const provider = {
     id: 7,
     name: "Claude Provider",
@@ -842,6 +864,7 @@ describe("Claude Code Hub managed-site channel capability", () => {
     )
     claudeCodeHubApi.searchProviders.mockResolvedValue([])
     claudeCodeHubApi.createProvider.mockResolvedValue({ id: "not-native" })
+    claudeCodeHubApi.updateProvider.mockResolvedValue({ id: "not-native" })
 
     await expect(
       claudeCodeHubManagedSiteCapabilities.resources.items.search(
@@ -867,6 +890,23 @@ describe("Claude Code Hub managed-site channel capability", () => {
     ).resolves.toEqual({
       outcome: "succeeded",
       confirmedEffects: [{ kind: "resource-created", resourceKind: "channel" }],
+      data: null,
+    })
+    await expect(
+      claudeCodeHubManagedSiteCapabilities.resources.items.update(
+        config,
+        resourceDetail,
+        resourceDraft,
+      ),
+    ).resolves.toEqual({
+      outcome: "succeeded",
+      confirmedEffects: [
+        {
+          kind: "resource-updated",
+          resourceKind: "channel",
+          resourceId: provider.id,
+        },
+      ],
       data: null,
     })
   })

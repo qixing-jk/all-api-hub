@@ -277,6 +277,51 @@ describe("Veloera managed-site channel capability", () => {
     },
   ])
 
+  it("preserves non-Veloera error identity for void mutations", async () => {
+    const responseError = new Error("malformed provider response")
+    veloeraApi.updateChannelModels.mockImplementationOnce(async (request) => {
+      request.observer?.onDispatch()
+      request.observer?.onResponse()
+      throw responseError
+    })
+    const { veloeraManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/veloera"
+    )
+
+    await expect(
+      veloeraManagedSiteChannels.updateModels!(config, 7, models),
+    ).rejects.toBe(responseError)
+  })
+
+  it("keeps response-valued Veloera error identity in the diagnostic", async () => {
+    const responseError = new ApiError(
+      "malformed provider response",
+      502,
+      "/api/channel",
+      "BUSINESS_ERROR",
+    )
+    veloeraApi.createChannel.mockImplementationOnce(async (request) => {
+      request.observer?.onDispatch()
+      request.observer?.onResponse()
+      throw responseError
+    })
+    const { veloeraManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/veloera"
+    )
+
+    await expect(
+      veloeraManagedSiteChannels.create(config, createPayload),
+    ).resolves.toEqual({
+      outcome: "uncertain",
+      diagnostic: {
+        message: "malformed provider response",
+        code: "BUSINESS_ERROR",
+        statusCode: 502,
+        raw: responseError,
+      },
+    })
+  })
+
   const resourceDraft: ChannelFormData = {
     name: "Resource channel",
     type: 1,

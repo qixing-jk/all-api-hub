@@ -233,6 +233,63 @@ describe("Claude Code Hub action API adapter", () => {
     },
   )
 
+  it("exposes raw mutation evidence and validated codes on Claude Code Hub errors", () => {
+    const raw = new Error("provider rejected")
+    const error = new ClaudeCodeHubApiError("provider rejected", 409, {
+      dispatch: "dispatched",
+      responseReceived: true,
+      confirmedNonApplication: true,
+      raw,
+      code: "PROVIDER_REJECTED",
+    })
+
+    expect(error.raw).toBe(raw)
+    expect(error.code).toBe("PROVIDER_REJECTED")
+  })
+
+  it("drops an invalid code from a pre-dispatch abort reason", async () => {
+    const invalidReason = Object.assign(new Error("cancelled"), { code: 1.5 })
+    const any = vi
+      .spyOn(AbortSignal, "any")
+      .mockReturnValue({ aborted: true, reason: invalidReason } as AbortSignal)
+
+    try {
+      const failure = await mutationActions[0]
+        .invoke(new AbortController().signal)
+        .catch((error: unknown) => error)
+
+      expect(failure).toMatchObject({
+        name: "ClaudeCodeHubApiError",
+        dispatch: "not-dispatched",
+        raw: invalidReason,
+      })
+      expect((failure as ClaudeCodeHubApiError).code).toBeUndefined()
+    } finally {
+      any.mockRestore()
+    }
+  })
+
+  it("uses a default AbortError when an action signal has no reason", async () => {
+    const any = vi
+      .spyOn(AbortSignal, "any")
+      .mockReturnValue({ aborted: true, reason: undefined } as AbortSignal)
+
+    try {
+      const failure = await mutationActions[0]
+        .invoke(new AbortController().signal)
+        .catch((error: unknown) => error)
+
+      expect(failure).toMatchObject({
+        name: "ClaudeCodeHubApiError",
+        message: "The operation was aborted",
+        dispatch: "not-dispatched",
+        raw: expect.objectContaining({ name: "AbortError" }),
+      })
+    } finally {
+      any.mockRestore()
+    }
+  })
+
   it("fetches an unmasked provider key from the provider v1 reveal API", async () => {
     let capturedAuthorization: string | null = null
 

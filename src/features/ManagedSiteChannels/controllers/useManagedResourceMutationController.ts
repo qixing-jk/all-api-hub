@@ -601,15 +601,9 @@ export function useManagedResourceMutationController({
               case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
                 return "success" as const
               case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
-                toPrivateManagedSiteMutationOutput(mutationResult, {
-                  knownSecrets: [],
-                })
                 return "failed" as const
               case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
               case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
-                toPrivateManagedSiteMutationOutput(mutationResult, {
-                  knownSecrets: [],
-                })
                 return "uncertain" as const
             }
           } finally {
@@ -618,23 +612,51 @@ export function useManagedResourceMutationController({
         },
       )
         .then(async (settled) => {
-          if (currentGeneration !== deleteGeneration.current) return []
-          for (const outcome of settled) {
-            if (outcome.status === "rejected") throw outcome.reason
+          const results: DeleteResult[] = []
+          let unexpectedFailure:
+            | { readonly found: false }
+            | { readonly found: true; readonly reason: unknown } = {
+            found: false,
           }
-          const results = settled.map((outcome, index) => {
-            if (outcome.status === "fulfilled") {
-              const status = outcome.value
-              return {
-                rowKey: resolvedTargets[index].rowKey,
-                status,
-                resultKey: `delete_${status}`,
-              }
+          for (const [index, outcome] of settled.entries()) {
+            if (outcome.status === "rejected") {
+              unexpectedFailure = { found: true, reason: outcome.reason }
+              break
             }
-            throw outcome.reason
-          })
-          const refreshAccepted =
-            (await refresh?.().catch(() => false)) ?? false
+
+            const status = outcome.value
+            results.push({
+              rowKey: resolvedTargets[index].rowKey,
+              status,
+              resultKey: `delete_${status}`,
+            })
+          }
+
+          if (unexpectedFailure.found) {
+            if (currentGeneration !== deleteGeneration.current) {
+              throw unexpectedFailure.reason
+            }
+            const refreshAccepted = await requestFreshRead()
+            if (currentGeneration === deleteGeneration.current) {
+              setDeleteState({
+                isOpen: false,
+                isExecuting: false,
+                rowKeys: [],
+                results: [],
+                requiresRefresh: !refreshAccepted,
+                requiresFreshRead: !refreshAccepted,
+                failure: refreshAccepted
+                  ? null
+                  : {
+                      code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+                    },
+              })
+            }
+            throw unexpectedFailure.reason
+          }
+
+          if (currentGeneration !== deleteGeneration.current) return []
+          const refreshAccepted = await requestFreshRead()
           if (currentGeneration !== deleteGeneration.current) return []
           const requiresFreshRead = !refreshAccepted
           setDeleteState({
@@ -695,7 +717,13 @@ export function useManagedResourceMutationController({
       deletePromise.current = execution
       return execution
     },
-    [analytics, endMutationSession, onMutationStart, refresh, workspace],
+    [
+      analytics,
+      endMutationSession,
+      onMutationStart,
+      requestFreshRead,
+      workspace,
+    ],
   )
 
   const openBulkDelete = useCallback(

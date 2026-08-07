@@ -74,30 +74,22 @@ const toOctopusMutationResponse = <TData>(
         },
       }
 
-const toOctopusMutationDiagnostic = (error: unknown) => {
-  const diagnosticRaw =
-    error instanceof OctopusMutationApiError ? error.raw : error
-  const record =
-    typeof error === "object" && error !== null
-      ? (error as { message?: unknown; code?: unknown; statusCode?: unknown })
-      : undefined
+const toOctopusMutationDiagnostic = (error: OctopusMutationApiError) => {
+  const diagnosticRaw = error.raw
   const code =
-    typeof record?.code === "string" ||
-    (typeof record?.code === "number" && Number.isSafeInteger(record.code))
-      ? record.code
+    typeof error.code === "string" ||
+    (typeof error.code === "number" && Number.isSafeInteger(error.code))
+      ? error.code
       : undefined
   const statusCode =
-    typeof record?.statusCode === "number" &&
-    Number.isSafeInteger(record.statusCode) &&
-    record.statusCode >= 100 &&
-    record.statusCode <= 599
-      ? record.statusCode
+    typeof error.statusCode === "number" &&
+    Number.isSafeInteger(error.statusCode) &&
+    error.statusCode >= 100 &&
+    error.statusCode <= 599
+      ? error.statusCode
       : undefined
   return {
-    message:
-      typeof record?.message === "string" && record.message
-        ? record.message
-        : "Octopus mutation failed",
+    message: error.message || "Octopus mutation failed",
     ...(code === undefined ? {} : { code }),
     ...(statusCode === undefined ? {} : { statusCode }),
     raw: diagnosticRaw,

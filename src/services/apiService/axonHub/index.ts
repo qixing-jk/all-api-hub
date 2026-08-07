@@ -1147,6 +1147,9 @@ const classifyGraphqlFailure = (
 const getGraphqlErrorCode = (errors: GraphQLErrorPayload[] | undefined) =>
   errors?.find((error) => error.extensions?.code)?.extensions?.code
 
+const isGraphqlMutationDocument = (document: string): boolean =>
+  /^(?:(?:[\s,]+)|(?:#[^\r\n]*(?:\r\n|\r|\n|$)))*mutation\b/.test(document)
+
 const toGraphqlResponseError = (
   kind: AxonHubRequestFailureKind,
   dispatch: "not-dispatched" | "dispatched",
@@ -1173,7 +1176,7 @@ export async function graphqlRequest<T>(
 ): Promise<T> {
   const baseUrl = normalizeBaseUrl(config.baseUrl)
   const retryAuth = options?.retryAuth ?? true
-  const isMutation = /^\s*mutation\b/.test(query)
+  const isMutation = isGraphqlMutationDocument(query)
   let mutationDispatched = false
 
   type GraphqlAttempt = { kind: "data"; data: T } | { kind: "retry-auth" }

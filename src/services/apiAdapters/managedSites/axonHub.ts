@@ -4,6 +4,7 @@ import {
   AxonHubChannelTypeNames,
 } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
@@ -22,7 +23,9 @@ import {
 } from "~/services/apiService/axonHub"
 import {
   createManagedSiteMutationSequence,
+  MANAGED_SITE_MUTATION_EFFECT_KINDS,
   type ManagedSiteMutationConfirmedEffect,
+  type ManagedSiteMutationEffectKind,
   type ManagedSiteMutationSequence,
 } from "~/services/managedSites/mutations"
 import {
@@ -389,11 +392,11 @@ const toAxonHubChannelUpdateInput = (
 }
 
 const axonHubChannelEffect = (
-  kind: ManagedSiteMutationConfirmedEffect["kind"],
+  kind: ManagedSiteMutationEffectKind,
   resourceId?: string | number,
 ): ManagedSiteMutationConfirmedEffect => ({
   kind,
-  resourceKind: "channel",
+  resourceKind: MANAGED_RESOURCE_KINDS.Channel,
   ...(resourceId === undefined ? {} : { resourceId }),
 })
 
@@ -497,7 +500,9 @@ export const axonHubManagedSiteChannels: ManagedSiteChannelsCapability<AxonHubCo
       const sequence = createManagedSiteMutationSequence({ idempotent: false })
       const createStep = await runAxonHubMutationStep({
         sequence,
-        effect: axonHubChannelEffect("resource-created"),
+        effect: axonHubChannelEffect(
+          MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+        ),
         execute: async () =>
           await createAxonHubChannel(
             config,
@@ -512,7 +517,10 @@ export const axonHubManagedSiteChannels: ManagedSiteChannelsCapability<AxonHubCo
       if (channelData.channel.status === CHANNEL_STATUS.Enable) {
         const statusStep = await runAxonHubMutationStep({
           sequence,
-          effect: axonHubChannelEffect("status-updated", createStep.data.id),
+          effect: axonHubChannelEffect(
+            MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated,
+            createStep.data.id,
+          ),
           execute: async () =>
             await updateAxonHubChannelStatus(
               config,
@@ -536,7 +544,10 @@ export const axonHubManagedSiteChannels: ManagedSiteChannelsCapability<AxonHubCo
       let graphqlId: string | undefined
       const updateStep = await runAxonHubMutationStep({
         sequence,
-        effect: axonHubChannelEffect("resource-updated", channelData.id),
+        effect: axonHubChannelEffect(
+          MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+          channelData.id,
+        ),
         execute: async () => {
           graphqlId = await resolveAxonHubGraphqlIdForMutation(
             config,
@@ -558,7 +569,10 @@ export const axonHubManagedSiteChannels: ManagedSiteChannelsCapability<AxonHubCo
         const status = toAxonHubStatus(channelData.status)
         const statusStep = await runAxonHubMutationStep({
           sequence,
-          effect: axonHubChannelEffect("status-updated", channelData.id),
+          effect: axonHubChannelEffect(
+            MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated,
+            channelData.id,
+          ),
           execute: async () =>
             await updateAxonHubChannelStatus(config, graphqlId!, status),
         })
@@ -577,7 +591,10 @@ export const axonHubManagedSiteChannels: ManagedSiteChannelsCapability<AxonHubCo
       const sequence = createManagedSiteMutationSequence({ idempotent: false })
       const step = await runAxonHubMutationStep({
         sequence,
-        effect: axonHubChannelEffect("resource-deleted", channelId),
+        effect: axonHubChannelEffect(
+          MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceDeleted,
+          channelId,
+        ),
         execute: async () =>
           await deleteAxonHubChannel(
             config,
@@ -621,7 +638,9 @@ const axonHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       const sequence = createManagedSiteMutationSequence({ idempotent: false })
       const createStep = await runAxonHubMutationStep({
         sequence,
-        effect: axonHubChannelEffect("resource-created"),
+        effect: axonHubChannelEffect(
+          MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+        ),
         execute: async () =>
           await createAxonHubChannel(config, toAxonHubCreateInput(draft)),
       })
@@ -633,7 +652,10 @@ const axonHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       if (draft.status === CHANNEL_STATUS.Enable) {
         const statusStep = await runAxonHubMutationStep({
           sequence,
-          effect: axonHubChannelEffect("status-updated", createStep.data.id),
+          effect: axonHubChannelEffect(
+            MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated,
+            createStep.data.id,
+          ),
           execute: async () =>
             await updateAxonHubChannelStatus(
               config,
@@ -656,7 +678,10 @@ const axonHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       const sequence = createManagedSiteMutationSequence({ idempotent: false })
       const updateStep = await runAxonHubMutationStep({
         sequence,
-        effect: axonHubChannelEffect("resource-updated", native.id),
+        effect: axonHubChannelEffect(
+          MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+          native.id,
+        ),
         execute: async () =>
           await updateAxonHubChannel(
             config,
@@ -677,7 +702,10 @@ const axonHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       ) {
         const statusStep = await runAxonHubMutationStep({
           sequence,
-          effect: axonHubChannelEffect("status-updated", native.id),
+          effect: axonHubChannelEffect(
+            MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated,
+            native.id,
+          ),
           execute: async () =>
             await updateAxonHubChannelStatus(
               config,
@@ -701,7 +729,10 @@ const axonHubManagedUpstreamResources: ManagedUpstreamResourcesCapability<
       const sequence = createManagedSiteMutationSequence({ idempotent: false })
       const step = await runAxonHubMutationStep({
         sequence,
-        effect: axonHubChannelEffect("resource-deleted", ref.resourceId),
+        effect: axonHubChannelEffect(
+          MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceDeleted,
+          ref.resourceId,
+        ),
         execute: async () => await deleteAxonHubChannel(config, ref.resourceId),
         rejectResponse: (deleted) => !deleted,
       })

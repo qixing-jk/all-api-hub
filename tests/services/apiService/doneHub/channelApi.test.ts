@@ -558,42 +558,42 @@ describe("apiService doneHub channel APIs", () => {
     )
   })
 
-  it("mutation wrappers preserve ApiError details as cause without logging it", async () => {
-    const request = {
-      baseUrl: "https://example.com",
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        accessToken: "token",
-        userId: "1",
-      },
-    }
-    const operations = [
-      {
-        invoke: () =>
-          createChannel(request as any, {
-            mode: "none" as any,
-            channel: { groups: ["default"] } as any,
-          }),
-        message: "创建渠道失败，请检查网络或 Done Hub 配置。",
-      },
-      {
-        invoke: () =>
-          updateChannel(request as any, {
-            id: 1,
-            name: "Updated",
-            groups: ["default"],
-          }),
-        message: "更新渠道失败，请检查网络或 Done Hub 配置。",
-      },
-      {
-        invoke: () => deleteChannel(request as any, 1),
-        message: "删除渠道失败，请检查网络或 Done Hub 配置。",
-      },
-    ]
-
-    for (const operation of operations) {
-      mockFetchApi.mockReset()
-      mockLoggerError.mockClear()
+  it.each([
+    {
+      operation: "create",
+      invoke: (request: any) =>
+        createChannel(request, {
+          mode: "none" as any,
+          channel: { groups: ["default"] } as any,
+        }),
+      message: "创建渠道失败，请检查网络或 Done Hub 配置。",
+    },
+    {
+      operation: "update",
+      invoke: (request: any) =>
+        updateChannel(request, {
+          id: 1,
+          name: "Updated",
+          groups: ["default"],
+        }),
+      message: "更新渠道失败，请检查网络或 Done Hub 配置。",
+    },
+    {
+      operation: "delete",
+      invoke: (request: any) => deleteChannel(request, 1),
+      message: "删除渠道失败，请检查网络或 Done Hub 配置。",
+    },
+  ])(
+    "$operation mutation preserves ApiError details as cause without logging it",
+    async ({ invoke, message }) => {
+      const request = {
+        baseUrl: "https://example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "token",
+          userId: "1",
+        },
+      }
       const cause = new ApiError(
         "upstream denied",
         504,
@@ -602,10 +602,10 @@ describe("apiService doneHub channel APIs", () => {
       )
       mockFetchApi.mockRejectedValueOnce(cause)
 
-      const error = await operation.invoke().catch((caught) => caught)
+      const error = await invoke(request).catch((caught) => caught)
 
       expect(error).toMatchObject({
-        message: operation.message,
+        message,
         statusCode: 504,
         endpoint: "/api/channel/",
         code: API_ERROR_CODES.HTTP_OTHER,
@@ -613,8 +613,8 @@ describe("apiService doneHub channel APIs", () => {
       })
       expect(mockLoggerError).toHaveBeenCalledWith(expect.any(String))
       expect(mockLoggerError.mock.calls.flat()).not.toContain(cause)
-    }
-  })
+    },
+  )
 
   it("fetchChannelModels should call provider_models_list using full channel payload", async () => {
     const request = {

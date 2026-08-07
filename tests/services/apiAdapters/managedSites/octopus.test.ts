@@ -203,6 +203,50 @@ describe("Octopus managed-site channel capability", () => {
     await expect(mutation).rejects.toBe(programmingError)
   })
 
+  it("uses a local fallback for an empty Octopus API error message", async () => {
+    const raw = { code: "UPSTREAM_REJECTED" }
+    octopusApi.createChannel.mockRejectedValueOnce(
+      new octopusApi.OctopusMutationApiError("", {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: true,
+        raw,
+      }),
+    )
+    const { octopusManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+
+    await expect(
+      octopusManagedSiteChannels.create(config, createPayload),
+    ).resolves.toEqual({
+      outcome: "rejected",
+      diagnostic: {
+        message: "Octopus mutation failed",
+        code: "UPSTREAM_REJECTED",
+        raw,
+      },
+    })
+  })
+
+  it("rejects an Octopus success-false response with a local fallback", async () => {
+    const response = { success: false, data: null, message: "" }
+    octopusApi.createChannel.mockResolvedValueOnce(response)
+    const { octopusManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+
+    await expect(
+      octopusManagedSiteChannels.create(config, createPayload),
+    ).resolves.toEqual({
+      outcome: "rejected",
+      diagnostic: {
+        message: "Provider rejected the mutation",
+        raw: response,
+      },
+    })
+  })
+
   testManagedSiteChannelMutationContract([
     {
       name: "create",
@@ -635,6 +679,26 @@ describe("Octopus managed-site channel capability", () => {
       { id: 7, model: "model-a,model-b" },
       { signal: controller.signal },
     )
+  })
+
+  it("updates scheduled model lists without adding empty request options", async () => {
+    octopusApi.updateChannel.mockResolvedValueOnce({
+      success: true,
+      data: { id: 7 },
+      message: "",
+    })
+    const { octopusManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/octopus"
+    )
+
+    await expect(
+      octopusManagedSiteChannels.updateModels?.(config, 7, ["model-a"]),
+    ).resolves.toMatchObject({ outcome: "succeeded", data: undefined })
+
+    expect(octopusApi.updateChannel).toHaveBeenCalledWith(config, {
+      id: 7,
+      model: "model-a",
+    })
   })
 
   it("maps Octopus delete responses and failures", async () => {

@@ -189,8 +189,7 @@ response alone.
 ```ts
 export const MANAGED_SITE_MUTATION_DISPATCH_STATES = {
   NotDispatched: "not-dispatched",
-  PossiblyDispatched: "possibly-dispatched",
-  ResponseReceived: "response-received",
+  Dispatched: "dispatched",
 } as const
 
 export interface ManagedSiteMutationStepEvidence<
@@ -206,6 +205,14 @@ export const MANAGED_SITE_MUTATION_FINAL_STATES = {
   Unconfirmed: "unconfirmed",
 } as const
 ```
+
+This exported dispatch state is intentionally binary. It is the portable public
+evidence carried by typed operational errors and adapter contracts: either the
+transport boundary affirmatively knows the write was not handed off, or the
+write must be treated as dispatched. The sequence composer separately tracks
+the internal monotonic stages `not-dispatched`, `possibly-dispatched`, and
+`response-received`; those stages must not be mistaken for additional public
+`ManagedSiteMutationDispatchState` values.
 
 Only a typed adapter assertion may set `nonApplication: "confirmed"`. A status
 code, GraphQL error envelope, or resolved provider failure does not imply this by
@@ -239,8 +246,8 @@ provider values.
 
 ### Dispatch Ownership
 
-The lowest layer that can reliably observe request dispatch owns the transition
-from `not-dispatched` to `possibly-dispatched`:
+The lowest layer that can reliably observe request dispatch owns the internal
+transition from `not-dispatched` to `possibly-dispatched`:
 
 - validation, configuration loading, request limiting, and queued cancellation
   remain `not-dispatched`;
@@ -250,6 +257,12 @@ from `not-dispatched` to `possibly-dispatched`:
   `response-received` before body parsing, without implying non-application;
 - a typed low-level operational error carries dispatch state and preserves the
   original cause/status/code/message for the capability adapter.
+
+When internal evidence crosses the public typed-error boundary,
+`not-dispatched` maps to the public `NotDispatched` value, while both
+`possibly-dispatched` and `response-received` map to `Dispatched`. Separate
+response-received evidence may still be retained on the typed transport error;
+it does not widen the public dispatch enum.
 
 Existing typed dispatch evidence in native adapters maps into this protocol.
 REST wrappers that currently replace failures must retain the original error as

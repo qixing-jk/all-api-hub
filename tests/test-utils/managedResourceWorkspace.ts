@@ -11,6 +11,7 @@ import type {
 import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
+  type ManagedSiteMutationConfirmedEffect,
 } from "~/services/managedSites/mutations"
 
 export const EXAMPLE_MANAGED_RESOURCE_REF: ManagedResourceRef = {
@@ -38,6 +39,7 @@ export const createManagedResourceFacts = (
 
 export const createManagedResourceEditor = (
   overrides: Partial<ResourceEditor> = {},
+  effectKind: ManagedSiteMutationConfirmedEffect["kind"] = MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
 ): ResourceEditor => ({
   fields: [{ fieldId: "name", type: "text", required: true }],
   initialValues: { name: "Example resource" },
@@ -49,7 +51,7 @@ export const createManagedResourceEditor = (
       data: facts,
       confirmedEffects: [
         {
-          kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+          kind: effectKind,
           resourceKind: MANAGED_RESOURCE_KINDS.Channel,
           resourceId: facts.ref.resourceId,
         },
@@ -70,7 +72,12 @@ export const createManagedResourceWorkspace = (
   },
   list: vi.fn(async () => ({ items: [createManagedResourceFacts()] })),
   get: vi.fn(async () => createManagedResourceFacts()),
-  openCreateEditor: vi.fn(async () => createManagedResourceEditor()),
+  openCreateEditor: vi.fn(async () =>
+    createManagedResourceEditor(
+      {},
+      MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+    ),
+  ),
   openEditEditor: vi.fn(async () => createManagedResourceEditor()),
   delete: vi.fn(async () => ({
     outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,

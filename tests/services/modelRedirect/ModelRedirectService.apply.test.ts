@@ -788,6 +788,148 @@ describe("ModelRedirectService.applyModelRedirect", () => {
     )
   })
 
+  it("preserves per-mutation legacy secrets when a missing resource ref falls back and reconciles", async () => {
+    const originalSecret = "legacy-fallback-secret-placeholder"
+    const mutableConfig = {
+      baseUrl: "https://example.com",
+      adminToken: originalSecret,
+      userId: "1",
+    }
+    mockedHasValidConfig.mockReturnValue(true)
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      managedSiteType: SITE_TYPES.NEW_API,
+      newApi: mutableConfig,
+      modelRedirect: {
+        ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
+        enabled: true,
+        standardModels: ["gpt-4o"],
+      },
+    } as any)
+    const channel = {
+      id: 1,
+      name: "legacy-fallback",
+      models: "vendor/gpt-4o",
+      model_mapping: "{}",
+    }
+    listChannelsMock.mockResolvedValue({ items: [channel] })
+    const resources = {
+      items: {
+        list: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+        getDetail: vi.fn(),
+        update: vi.fn(),
+      },
+      drafts: {
+        prepareEditDraft: vi.fn(),
+      },
+    }
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.NEW_API,
+      feature: "modelRedirect",
+      capabilities: resources,
+    })
+    updateChannelModelMappingMock.mockImplementation(async (config) => {
+      config.adminToken = ""
+      return {
+        outcome: "uncertain",
+        diagnostic: {
+          message: `write uncertain ${originalSecret}`,
+        },
+      }
+    })
+    vi.spyOn(
+      ModelRedirectService,
+      "generateModelMappingForChannel",
+    ).mockReturnValue({ "gpt-4o": "vendor/gpt-4o" })
+
+    const result = await ModelRedirectService.applyModelRedirect()
+
+    expect(result).toMatchObject({ success: false, updatedChannels: 0 })
+    expect(result.errors.join(" ")).toContain("write uncertain")
+    expect(result.errors.join(" ")).not.toContain(originalSecret)
+    expect(mutableConfig.adminToken).toBe("")
+    expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()
+    expect(listChannelsMock).toHaveBeenCalledTimes(2)
+    expect(resources.items.getDetail).not.toHaveBeenCalled()
+  })
+
+  it("reconciles an uncertain resource-backed write through a fresh detail read", async () => {
+    mockedHasValidConfig.mockReturnValue(true)
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      managedSiteType: SITE_TYPES.NEW_API,
+      newApi: {
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      },
+      modelRedirect: {
+        ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
+        enabled: true,
+        standardModels: ["gpt-4o"],
+      },
+    } as any)
+    const channel = {
+      id: 1,
+      name: "resource-backed",
+      models: "vendor/gpt-4o",
+      model_mapping: "{}",
+    }
+    const detail = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://example.com",
+          resourceId: "1",
+        },
+      },
+      native: { ...channel, key: "resource-secret-placeholder" },
+    }
+    listChannelsMock.mockResolvedValue({ items: [channel] })
+    const resources = {
+      items: {
+        list: vi.fn().mockResolvedValue({
+          items: [detail.summary],
+          total: 1,
+        }),
+        getDetail: vi.fn().mockResolvedValue(detail),
+        update: vi.fn().mockResolvedValue({
+          outcome: "uncertain",
+          diagnostic: { message: "resource write uncertain" },
+        }),
+      },
+      drafts: {
+        prepareEditDraft: vi.fn().mockReturnValue({
+          name: channel.name,
+          type: 1,
+          key: "resource-secret-placeholder",
+          base_url: "https://upstream.example.invalid",
+          models: ["vendor/gpt-4o"],
+          groups: [],
+          priority: 0,
+          weight: 1,
+          status: CHANNEL_STATUS.Enable,
+        }),
+      },
+    }
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.NEW_API,
+      feature: "modelRedirect",
+      capabilities: resources,
+    })
+    vi.spyOn(
+      ModelRedirectService,
+      "generateModelMappingForChannel",
+    ).mockReturnValue({ "gpt-4o": "vendor/gpt-4o" })
+
+    const result = await ModelRedirectService.applyModelRedirect()
+
+    expect(result).toMatchObject({ success: false, updatedChannels: 0 })
+    expect(result.errors.join(" ")).toContain("resource write uncertain")
+    expect(resources.items.update).toHaveBeenCalledOnce()
+    expect(resources.items.getDetail).toHaveBeenCalledTimes(2)
+  })
+
   it("uses the local fallback when preserved native secret inspection is incomplete", async () => {
     const draftSecret = "MarbleCobaltFjord927"
     const headerOverrideValue = "WillowAmberQuartz418"

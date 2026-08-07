@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
@@ -23,11 +23,26 @@ vi.mock("~/utils/browser/browserApi", () => ({
   sendRuntimeMessage: mocks.sendRuntimeMessage,
 }))
 
+const activeLifecycles = new Set<
+  ReturnType<typeof observeRemoteFetchLifecycle>
+>()
+
+const observe = (...args: Parameters<typeof observeRemoteFetchLifecycle>) => {
+  const lifecycle = observeRemoteFetchLifecycle(...args)
+  activeLifecycles.add(lifecycle)
+  return lifecycle
+}
+
 describe("remote fetch lifecycle", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.listener = undefined
     mocks.sendRuntimeMessage.mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    for (const lifecycle of activeLifecycles) lifecycle.dispose()
+    activeLifecycles.clear()
   })
 
   it("broadcasts dispatch with only the controlled request identifier", () => {
@@ -41,7 +56,7 @@ describe("remote fetch lifecycle", () => {
 
   it("correlates dispatch by request id and applies final evidence once", () => {
     const observer = { onDispatch: vi.fn(), onResponse: vi.fn() }
-    const lifecycle = observeRemoteFetchLifecycle("request-1", observer)
+    const lifecycle = observe("request-1", observer)
 
     mocks.listener?.({
       action: RuntimeActionIds.ApiTransportRemoteFetchDispatched,
@@ -72,7 +87,7 @@ describe("remote fetch lifecycle", () => {
 
   it("lets an intermediate local context apply evidence before inspecting the result", () => {
     const lifecycleOrder: string[] = []
-    const lifecycle = observeRemoteFetchLifecycle("request-1", {
+    const lifecycle = observe("request-1", {
       onDispatch: () => lifecycleOrder.push("dispatch"),
       onResponse: () => lifecycleOrder.push("response"),
     })
@@ -96,9 +111,11 @@ describe("remote fetch lifecycle", () => {
 
   it("ignores absent, malformed, and internally inconsistent evidence", () => {
     const observer = { onDispatch: vi.fn(), onResponse: vi.fn() }
-    const lifecycle = observeRemoteFetchLifecycle("request-1", observer)
+    const lifecycle = observe("request-1", observer)
 
     lifecycle.applyResultEvidence(null)
+    lifecycle.applyResultEvidence({ transportLifecycle: null })
+    lifecycle.applyResultEvidence({ transportLifecycle: "malformed" })
     lifecycle.applyResultEvidence({ transportLifecycle: { success: true } })
     lifecycle.applyResultEvidence({
       transportLifecycle: {
@@ -112,7 +129,7 @@ describe("remote fetch lifecycle", () => {
   })
 
   it("reports affirmative pre-dispatch evidence while applying the result", () => {
-    const lifecycle = observeRemoteFetchLifecycle("request-1", {
+    const lifecycle = observe("request-1", {
       onDispatch: vi.fn(),
       onResponse: vi.fn(),
     })
@@ -137,7 +154,7 @@ describe("remote fetch lifecycle", () => {
 
   it("snapshots stateful top-level and nested lifecycle getters once", () => {
     const observer = { onDispatch: vi.fn(), onResponse: vi.fn() }
-    const lifecycle = observeRemoteFetchLifecycle("request-1", observer)
+    const lifecycle = observe("request-1", observer)
     let lifecycleReads = 0
     let dispatchReads = 0
     let responseReads = 0
@@ -172,7 +189,7 @@ describe("remote fetch lifecycle", () => {
   })
 
   it("reads lifecycle evidence through a stateful proxy without a separate presence probe", () => {
-    const lifecycle = observeRemoteFetchLifecycle("request-1", {
+    const lifecycle = observe("request-1", {
       onDispatch: vi.fn(),
       onResponse: vi.fn(),
     })
@@ -229,7 +246,7 @@ describe("remote fetch lifecycle", () => {
       }),
       onResponse: vi.fn(),
     }
-    const lifecycle = observeRemoteFetchLifecycle("request-1", observer)
+    const lifecycle = observe("request-1", observer)
 
     expect(() => {
       mocks.listener?.({
@@ -255,9 +272,20 @@ describe("remote fetch lifecycle", () => {
     expect(mocks.sendRuntimeMessage).not.toHaveBeenCalled()
   })
 
+  it("contains a rejected dispatch announcement", async () => {
+    mocks.sendRuntimeMessage.mockRejectedValueOnce(
+      new Error("runtime messaging unavailable"),
+    )
+
+    expect(() => announceRemoteFetchDispatch("request-1")).not.toThrow()
+    await Promise.resolve()
+
+    expect(mocks.sendRuntimeMessage).toHaveBeenCalledOnce()
+  })
+
   it("ignores final evidence after disposal", () => {
     const observer = { onDispatch: vi.fn(), onResponse: vi.fn() }
-    const lifecycle = observeRemoteFetchLifecycle("request-1", observer)
+    const lifecycle = observe("request-1", observer)
 
     lifecycle.dispose()
     lifecycle.applyResultEvidence({

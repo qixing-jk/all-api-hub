@@ -356,6 +356,41 @@ describe("ModelRedirectService managed channel operations", () => {
     },
   )
 
+  it("uses a no-op reconciliation when an injected writer omits the optional hook", async () => {
+    const channel = {
+      id: 1,
+      name: "optional-reconcile",
+      models: "a,b",
+      model_mapping: '{"x":"y"}',
+    }
+    const updateChannelModelMapping = vi.fn().mockResolvedValue({
+      outcome: "uncertain",
+      diagnostic: { message: "clear state uncertain" },
+    })
+    listChannelsMock.mockResolvedValue({ items: [channel] })
+    const writerFactorySpy = vi
+      .spyOn(ModelRedirectService as any, "createModelMappingWriter")
+      .mockReturnValue({
+        knownSecrets: [],
+        knownSecretsComplete: true,
+        updateChannelModelMapping,
+      })
+
+    try {
+      const result = await ModelRedirectService.clearChannelModelMappings([1])
+
+      expect(result).toMatchObject({
+        success: false,
+        clearedChannels: 0,
+        failedChannels: 1,
+      })
+      expect(result.errors.join(" ")).toContain("clear state uncertain")
+      expect(updateChannelModelMapping).toHaveBeenCalledOnce()
+    } finally {
+      writerFactorySpy.mockRestore()
+    }
+  })
+
   it("redacts a config secret cleared by a rejected direct clear adapter", async () => {
     const originalSecret = "WillowAmberQuartz418"
     const mutableConfig = {

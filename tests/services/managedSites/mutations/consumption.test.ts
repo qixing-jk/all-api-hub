@@ -148,6 +148,10 @@ describe("consumeManagedSiteMutationResult", () => {
 
     expect(reconcile).toHaveBeenCalledOnce()
     expect(createError).toHaveBeenCalledOnce()
+    expect(createError).toHaveBeenCalledWith(
+      "Uncertain provider result",
+      MANAGED_SITE_MUTATION_RETRY_DECISIONS.ReconcileRequired,
+    )
   })
 
   it("uses caller fallbacks when the projected diagnostic message is empty", async () => {

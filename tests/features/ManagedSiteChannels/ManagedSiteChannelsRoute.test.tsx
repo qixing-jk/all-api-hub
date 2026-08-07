@@ -828,6 +828,50 @@ describe("ManagedSiteChannelsRoute", () => {
     )
   })
 
+  it("uses localized fallback copy for an open editor failure without a message", () => {
+    installNativeDefinition(SITE_TYPES.AXON_HUB)
+    const editor = createManagedResourceEditor({
+      fields: [{ fieldId: "name", type: "text", required: true }],
+      initialValues: { name: "Native example" } as EditableResourceProjection,
+    })
+    getFieldPolicy.mockReturnValue({
+      fields: [
+        {
+          fieldId: "name",
+          section: "basic",
+          order: 1,
+          resolveLabel: (t: TFunction) => t("channelDialog:fields.name.label"),
+          renderer: "text",
+        },
+      ],
+      hiddenFields: [],
+    })
+    installNativeControllers({
+      mutation: {
+        editor,
+        editorMode: "edit",
+        editorFeedback: {
+          kind: "save-failed",
+          failure: { code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable },
+        },
+      },
+    })
+    configureNativePreferences(SITE_TYPES.AXON_HUB)
+
+    render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.AXON_HUB}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+
+    expect(
+      within(screen.getByRole("dialog")).getByRole("alert"),
+    ).toHaveTextContent(
+      "managedSiteChannels:alerts.editorSaveError.description",
+    )
+  })
+
   it("keeps save failures visible on the page after the editor closes", () => {
     installNativeDefinition(SITE_TYPES.AXON_HUB)
     installNativeControllers({
@@ -888,6 +932,34 @@ describe("ManagedSiteChannelsRoute", () => {
     )
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Provider response was lost",
+    )
+  })
+
+  it("uses localized fallback copy for an uncertain mutation without a message", () => {
+    installNativeDefinition(SITE_TYPES.AXON_HUB)
+    installNativeControllers({
+      mutation: {
+        editor: null,
+        editorMode: null,
+        editorFeedback: {
+          kind: "save-uncertain",
+          failure: {
+            code: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          },
+        },
+      },
+    })
+    configureNativePreferences(SITE_TYPES.AXON_HUB)
+
+    render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.AXON_HUB}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "managedSiteChannels:alerts.partialMutation.description",
     )
   })
 

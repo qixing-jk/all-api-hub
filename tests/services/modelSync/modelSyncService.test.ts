@@ -476,6 +476,37 @@ describe("ModelSyncService - allowed model filtering", () => {
 })
 
 describe("ModelSyncService - siteType routing", () => {
+  it("exposes an immutable complete secret snapshot for the runtime config", () => {
+    const service = new ModelSyncService(
+      makeNewApiRuntimeConfig({ adminToken: "snapshot-secret-placeholder" }),
+    )
+
+    expect(service.knownSecrets).toContain("snapshot-secret-placeholder")
+    expect(Object.isFrozen(service.knownSecrets)).toBe(true)
+    expect(service.knownSecretsComplete).toBe(true)
+  })
+
+  it("reconciles through a throttled fresh channel-list request", async () => {
+    const acquire = vi.fn().mockResolvedValue(undefined)
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
+    ;(service as any).rateLimiter = { acquire }
+    listAllChannelsMock.mockImplementation(async (_config, options) => {
+      await options.beforeRequest()
+      return { items: [], total: 0, type_counts: {} }
+    })
+
+    await service.reconcileChannel()
+
+    expect(acquire).toHaveBeenCalledOnce()
+    expect(listAllChannelsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://example.com" }),
+      expect.objectContaining({
+        beforeRequest: expect.any(Function),
+        bypassSiteRequestLimit: true,
+      }),
+    )
+  })
+
   it("forwards runtime config site type to managed-site channel capabilities", async () => {
     listAllChannelsMock.mockResolvedValue({
       items: [],
@@ -2480,5 +2511,33 @@ describe("ModelSyncService - batching and mapping", () => {
       },
       undefined,
     )
+  })
+
+  it("rate-limits the fresh read used to reconcile an uncertain mapping update", async () => {
+    const acquire = vi.fn().mockResolvedValue(undefined)
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
+    ;(service as any).rateLimiter = { acquire }
+    updateChannelModelMappingMock.mockResolvedValueOnce({
+      outcome: "uncertain",
+      diagnostic: { message: "Mapping outcome is uncertain" },
+    })
+    listAllChannelsMock.mockImplementationOnce(async (_config, options) => {
+      await options.beforeRequest()
+      return { items: [], total: 0, type_counts: {} }
+    })
+
+    await expect(
+      service.updateChannelModelMapping(
+        makeChannel({ id: 3, models: "gpt-4o" }),
+        { "gpt-4o": "gpt-4o" },
+      ),
+    ).rejects.toMatchObject({
+      name: "ModelSyncMutationError",
+      retryDecision: "reconcile-required",
+    })
+
+    expect(updateChannelModelMappingMock).toHaveBeenCalledOnce()
+    expect(listAllChannelsMock).toHaveBeenCalledOnce()
+    expect(acquire).toHaveBeenCalledTimes(2)
   })
 })

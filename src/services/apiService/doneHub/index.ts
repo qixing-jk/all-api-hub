@@ -2,7 +2,10 @@ import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
 import { fetchAllItems } from "~/services/apiTransport/pagination"
 import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
-import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type {
+  ApiResponse,
+  ApiServiceRequest,
+} from "~/services/apiTransport/type"
 import type {
   CreateChannelPayload,
   ManagedSiteChannel,
@@ -511,7 +514,7 @@ export async function updateDoneHubChannelFields(
   request: ApiServiceRequest,
   payload: Record<string, unknown>,
   options?: Pick<RequestInit, "signal">,
-) {
+): Promise<ApiResponse<void>> {
   return await fetchApi<void>(
     request,
     {

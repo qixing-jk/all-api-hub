@@ -133,6 +133,12 @@ describe("managed site mutation disclosure boundaries", () => {
     ).toBeUndefined()
   })
 
+  it("omits an empty thrown message", () => {
+    expect(
+      toPrivateManagedSiteThrownErrorMessage("", { knownSecrets: [] }),
+    ).toBeUndefined()
+  })
+
   it("redacts exact known secrets from success and failure messages and codes", () => {
     const knownSecrets = ["secret-value"]
 
@@ -337,7 +343,7 @@ describe("managed site mutation disclosure boundaries", () => {
       { outcome: "uncertain", category: "uncertain" },
     ],
   ])(
-    "maps controlled categories only from mutation outcome %#",
+    "maps controlled categories only from mutation outcome $0.outcome",
     (result, expected) => {
       expect(toManagedSitePersistedMutationState(result)).toEqual(expected)
       expect(toManagedSiteExternalMutationSummary(result)).toEqual(expected)
@@ -391,7 +397,7 @@ describe("managed site mutation disclosure boundaries", () => {
     { outcome: "partial" },
     { outcome: "partial", completion: "complete" },
     { outcome: "succeeded", completion: "rejected" },
-  ])("rejects an invalid private DTO %#", (value) => {
+  ])("rejects an invalid private DTO %o", (value) => {
     expect(() => parsePrivateManagedSiteMutationOutput(value)).toThrow(
       TypeError,
     )
@@ -407,7 +413,7 @@ describe("managed site mutation disclosure boundaries", () => {
     { outcome: "succeeded", completion: "rejected", category: "succeeded" },
     { outcome: "rejected", completion: "uncertain", category: "rejected" },
     { outcome: "rejected", category: "succeeded" },
-  ])("rejects an invalid persisted or external DTO %#", (value) => {
+  ])("rejects an invalid persisted or external DTO %o", (value) => {
     expect(() => parseManagedSitePersistedMutationState(value)).toThrow(
       TypeError,
     )
@@ -446,6 +452,36 @@ describe("managed site mutation disclosure boundaries", () => {
           outcome: "rejected",
         }),
       ),
+    ).toThrow(TypeError)
+  })
+
+  it.each([null, undefined, "rejected", 42, []])(
+    "rejects a non-record disclosure DTO %o",
+    (value) => {
+      expect(() => parsePrivateManagedSiteMutationOutput(value)).toThrow(
+        TypeError,
+      )
+      expect(() => parseManagedSitePersistedMutationState(value)).toThrow(
+        TypeError,
+      )
+      expect(() => parseManagedSiteExternalMutationSummary(value)).toThrow(
+        TypeError,
+      )
+    },
+  )
+
+  it("fails closed when disclosure record inspection throws", () => {
+    const inspectionFailure = new Proxy(
+      {},
+      {
+        ownKeys: () => {
+          throw new Error("inspection unavailable")
+        },
+      },
+    )
+
+    expect(() =>
+      parsePrivateManagedSiteMutationOutput(inspectionFailure),
     ).toThrow(TypeError)
   })
 

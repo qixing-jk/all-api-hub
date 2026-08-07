@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
+import {
+  AXON_HUB_CHANNEL_STATUS,
+  AXON_HUB_CHANNEL_TYPE,
+} from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { AxonHubChannel } from "~/types/axonHub"
 import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
@@ -134,6 +137,13 @@ describe("AxonHub managed-site channel capability", () => {
       message,
     })),
   ]
+  const resourceTerminalMutationCases = (["create", "update"] as const).flatMap(
+    (operation) =>
+      terminalMutationCases.map((terminalCase) => ({
+        operation,
+        ...terminalCase,
+      })),
+  )
 
   const createNativeRequestError = (input: {
     kind: (typeof dispatchedFailureCases)[number][0]
@@ -290,6 +300,95 @@ describe("AxonHub managed-site channel capability", () => {
     },
   ])
 
+  it("rejects an AxonHub channel create without models before dispatch", async () => {
+    const { axonHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/axonHub"
+    )
+
+    await expect(
+      axonHubManagedSiteChannels.create(config, {
+        ...createPayload,
+        channel: { ...createPayload.channel, models: " , " },
+      }),
+    ).resolves.toEqual({
+      outcome: "rejected",
+      diagnostic: expect.objectContaining({
+        message: "AxonHub channel models are required",
+      }),
+    })
+    expect(axonHubApi.createAxonHubChannel).not.toHaveBeenCalled()
+  })
+
+  it("defaults a blank AxonHub channel type to OpenAI", async () => {
+    axonHubApi.createAxonHubChannel.mockResolvedValue({
+      id: "gid://axonhub/Channel/default-type",
+    })
+    const { axonHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/axonHub"
+    )
+
+    await axonHubManagedSiteChannels.create(config, {
+      ...createPayload,
+      channel: { ...createPayload.channel, type: " " },
+    })
+
+    expect(axonHubApi.createAxonHubChannel).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({ type: AXON_HUB_CHANNEL_TYPE.OPENAI }),
+    )
+  })
+
+  it("forwards every supplied AxonHub channel update field", async () => {
+    axonHubApi.updateAxonHubChannel.mockResolvedValue({
+      id: "gid://axonhub/Channel/1",
+    })
+    const { axonHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/axonHub"
+    )
+
+    await axonHubManagedSiteChannels.update(config, {
+      id: 1,
+      type: "custom",
+      name: " Updated ",
+      base_url: " https://updated.example.invalid/v1 ",
+      key: " key-updated ",
+      models: "model-a, model-b",
+      weight: 7,
+    })
+
+    expect(axonHubApi.updateAxonHubChannel).toHaveBeenCalledWith(
+      config,
+      "gid://axonhub/Channel/1",
+      {
+        type: "custom",
+        name: "Updated",
+        baseURL: "https://updated.example.invalid/v1",
+        credentials: { apiKeys: ["key-updated"] },
+        supportedModels: ["model-a", "model-b"],
+        manualModels: ["model-a", "model-b"],
+        defaultTestModel: "model-a",
+        orderingWeight: 7,
+      },
+    )
+  })
+
+  it("treats a false AxonHub delete response as confirmed non-application", async () => {
+    axonHubApi.deleteAxonHubChannel.mockResolvedValue(false)
+    const { axonHubManagedSiteChannels } = await import(
+      "~/services/apiAdapters/managedSites/axonHub"
+    )
+
+    await expect(axonHubManagedSiteChannels.delete(config, 1)).resolves.toEqual(
+      {
+        outcome: "rejected",
+        diagnostic: {
+          message: "Provider rejected the mutation",
+          raw: false,
+        },
+      },
+    )
+  })
+
   const resourceNative: AxonHubChannel = {
     id: "gid://axonhub/Channel/resource",
     name: "Axon Resource",
@@ -419,93 +518,84 @@ describe("AxonHub managed-site channel capability", () => {
     },
   ])
 
-  it.each(["create", "update"] as const)(
-    "composes AxonHub resource %s plus terminal status evidence",
-    async (operation) => {
-      for (const terminal of terminalMutationCases) {
-        vi.clearAllMocks()
-        const first = {
-          ...resourceNative,
-          status: AXON_HUB_CHANNEL_STATUS.DISABLED,
-        }
-        if (operation === "create") {
-          axonHubApi.createAxonHubChannel.mockResolvedValue(first)
-        } else {
-          axonHubApi.updateAxonHubChannel.mockResolvedValue(first)
-        }
-        const terminalError = terminal.kind
-          ? createNativeRequestError({
-              kind: terminal.kind,
-              dispatch: terminal.dispatch,
-              status: terminal.status,
-              code: terminal.code,
-              message: terminal.message,
+  it.each(resourceTerminalMutationCases)(
+    "composes AxonHub resource $operation plus $terminal status evidence",
+    async ({ operation, terminal, kind, dispatch, status, code, message }) => {
+      const first = {
+        ...resourceNative,
+        status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+      }
+      if (operation === "create") {
+        axonHubApi.createAxonHubChannel.mockResolvedValue(first)
+      } else {
+        axonHubApi.updateAxonHubChannel.mockResolvedValue(first)
+      }
+      const terminalError = kind
+        ? createNativeRequestError({ kind, dispatch, status, code, message })
+        : undefined
+      if (terminalError) {
+        axonHubApi.updateAxonHubChannelStatus.mockRejectedValue(terminalError)
+      } else {
+        axonHubApi.updateAxonHubChannelStatus.mockResolvedValue({
+          ...first,
+          status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+        })
+      }
+      const { axonHubManagedSiteCapabilities } = await import(
+        "~/services/apiAdapters/managedSites/axonHub"
+      )
+      const resources = axonHubManagedSiteCapabilities.resources!
+      const result =
+        operation === "create"
+          ? await resources.items.create(config, {
+              ...resourceDraft,
+              name: resourceNative.name,
+              status: CHANNEL_STATUS.Enable,
             })
-          : undefined
-        if (terminalError) {
-          axonHubApi.updateAxonHubChannelStatus.mockRejectedValue(terminalError)
-        } else {
-          axonHubApi.updateAxonHubChannelStatus.mockResolvedValue({
-            ...first,
-            status: AXON_HUB_CHANNEL_STATUS.ENABLED,
-          })
-        }
-        const { axonHubManagedSiteCapabilities } = await import(
-          "~/services/apiAdapters/managedSites/axonHub"
-        )
-        const resources = axonHubManagedSiteCapabilities.resources!
-        const result =
+          : await resources.items.update(config, resourceDetail, {
+              ...resourceDraft,
+              name: resourceNative.name,
+              status: CHANNEL_STATUS.Enable,
+            })
+      const firstEffect = {
+        kind:
           operation === "create"
-            ? await resources.items.create(config, {
-                ...resourceDraft,
-                name: resourceNative.name,
-                status: CHANNEL_STATUS.Enable,
-              })
-            : await resources.items.update(config, resourceDetail, {
-                ...resourceDraft,
-                name: resourceNative.name,
-                status: CHANNEL_STATUS.Enable,
-              })
-        const firstEffect = {
-          kind:
-            operation === "create"
-              ? ("resource-created" as const)
-              : ("resource-updated" as const),
-          resourceKind: "channel" as const,
-          ...(operation === "update" ? { resourceId: resourceNative.id } : {}),
-        }
+            ? ("resource-created" as const)
+            : ("resource-updated" as const),
+        resourceKind: "channel" as const,
+        ...(operation === "update" ? { resourceId: resourceNative.id } : {}),
+      }
 
-        if (terminal.terminal === "applied") {
-          expect(result).toEqual({
-            outcome: "succeeded",
-            data: expect.objectContaining({
-              status: "enabled",
-              ref: expect.objectContaining({
-                resourceId: resourceNative.id,
-              }),
+      if (terminal === "applied") {
+        expect(result).toEqual({
+          outcome: "succeeded",
+          data: expect.objectContaining({
+            status: "enabled",
+            ref: expect.objectContaining({
+              resourceId: resourceNative.id,
             }),
-            confirmedEffects: [
-              firstEffect,
-              {
-                kind: "status-updated",
-                resourceKind: "channel",
-                resourceId: resourceNative.id,
-              },
-            ],
-          })
-        } else {
-          expect(result).toEqual({
-            outcome: "partial",
-            confirmedEffects: [firstEffect],
-            completion: terminal.terminal,
-            diagnostic: {
-              message: terminal.message,
-              code: terminal.code,
-              statusCode: terminal.status,
-              raw: terminalError,
+          }),
+          confirmedEffects: [
+            firstEffect,
+            {
+              kind: "status-updated",
+              resourceKind: "channel",
+              resourceId: resourceNative.id,
             },
-          })
-        }
+          ],
+        })
+      } else {
+        expect(result).toEqual({
+          outcome: "partial",
+          confirmedEffects: [firstEffect],
+          completion: terminal,
+          diagnostic: {
+            message,
+            code,
+            statusCode: status,
+            raw: terminalError,
+          },
+        })
       }
     },
   )
@@ -669,7 +759,7 @@ describe("AxonHub managed-site channel capability", () => {
   )
 
   it.each(terminalMutationCases)(
-    "composes create plus enable when the status step is %s",
+    "composes create plus enable when the status step is $terminal",
     async ({ terminal, kind, dispatch, status, code, message }) => {
       const id = "gid://axonhub/Channel/created"
       axonHubApi.createAxonHubChannel.mockResolvedValue({
@@ -730,7 +820,7 @@ describe("AxonHub managed-site channel capability", () => {
   )
 
   it.each(terminalMutationCases)(
-    "composes update plus status when the status step is %s",
+    "composes update plus status when the status step is $terminal",
     async ({ terminal, kind, dispatch, status, code, message }) => {
       const id = "gid://axonhub/Channel/1"
       axonHubApi.updateAxonHubChannel.mockResolvedValue({
@@ -1474,13 +1564,26 @@ describe("AxonHub managed-site channel capability", () => {
       resourceId: native.id,
     })
 
-    await resources.items.update(
+    const result = await resources.items.update(
       config,
       detail,
       resources.drafts.prepareEditDraft(detail),
     )
 
     expect(axonHubApi.updateAxonHubChannelStatus).not.toHaveBeenCalled()
+    expect(result).toMatchObject({
+      outcome: "succeeded",
+      data: {
+        status: "unknown",
+      },
+      confirmedEffects: [
+        {
+          kind: "resource-updated",
+          resourceKind: "channel",
+          resourceId: native.id,
+        },
+      ],
+    })
   })
 
   it("updates AxonHub native status when a resource edit changes it", async () => {

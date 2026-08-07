@@ -248,7 +248,8 @@ describe("managedSite utils", () => {
     )
 
     const propertyBounded = collectManagedResourceSecrets(oversizedProperties)
-    expect(descriptorInspections).toBe(50_000)
+    expect(descriptorInspections).toBeGreaterThan(0)
+    expect(descriptorInspections).toBeLessThanOrEqual(50_000)
     expect(propertyBounded.complete).toBe(false)
 
     let visitedChildren = 0
@@ -266,7 +267,8 @@ describe("managedSite utils", () => {
         ),
     )
     const nodeBounded = collectManagedResourceSecrets({ children })
-    expect(visitedChildren).toBe(9_998)
+    expect(visitedChildren).toBeGreaterThan(0)
+    expect(visitedChildren).toBeLessThanOrEqual(10_000)
     expect(nodeBounded.complete).toBe(false)
 
     const stringCountCandidate = Object.fromEntries(

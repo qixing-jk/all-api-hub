@@ -199,6 +199,27 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
     expect(controller.schedule(targets.slice(1, 2))).toBe(true)
   })
 
+  it("keeps replay blocked when the fresh read after a thrown delete also fails", async () => {
+    const controller = new LegacyManagedResourceBulkDeleteController()
+    controller.schedule(targets.slice(0, 1))
+    const thrown = new Error("delete programming failure")
+    const refresh = vi.fn().mockRejectedValue(new Error("refresh failed"))
+
+    await expect(
+      controller.execute({
+        resolveDelete: async () =>
+          resolvedDelete(async () => {
+            throw thrown
+          }),
+        refresh,
+      }),
+    ).rejects.toBe(thrown)
+
+    expect(refresh).toHaveBeenCalledOnce()
+    expect(controller.requiresRefresh()).toBe(true)
+    expect(controller.schedule(targets.slice(1, 2))).toBe(false)
+  })
+
   it("honors controlled partial and uncertain outcomes without retry", async () => {
     const controller = new LegacyManagedResourceBulkDeleteController()
     controller.schedule(targets.slice(0, 2))
@@ -248,6 +269,33 @@ describe("LegacyManagedResourceBulkDeleteController", () => {
       "failed",
     ])
     expect(confirmMissing).toHaveBeenCalledTimes(2)
+  })
+
+  it("treats not_found as uncertain when the confirming fresh read fails", async () => {
+    const controller = new LegacyManagedResourceBulkDeleteController()
+    controller.schedule(targets.slice(0, 1))
+    const confirmMissing = vi.fn().mockRejectedValue(new Error("read failed"))
+
+    const execution = await controller.execute({
+      resolveDelete: async () =>
+        resolvedDelete(
+          async () => ({
+            outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+            diagnostic: {
+              message: "not found",
+              code: "not_found",
+            },
+          }),
+          { confirmMissing },
+        ),
+      refresh: vi.fn().mockResolvedValue(false),
+    })
+
+    expect(execution?.results).toEqual([
+      expect.objectContaining({ status: "uncertain" }),
+    ])
+    expect(confirmMissing).toHaveBeenCalledOnce()
+    expect(execution?.requiresRefresh).toBe(true)
   })
 
   it("does not inspect or translate thrown delete failures", async () => {

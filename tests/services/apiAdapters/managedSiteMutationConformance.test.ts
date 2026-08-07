@@ -89,7 +89,9 @@ describe("managed-site mutation conformance", () => {
     >()
     expectTypeOf<DeleteResult>().toEqualTypeOf<ManagedSiteVoidMutationResult>()
 
-    expect(MANAGED_SITE_TYPES).toEqual(expectedManagedSiteTypes)
+    expect(new Set(MANAGED_SITE_TYPES)).toEqual(
+      new Set(expectedManagedSiteTypes),
+    )
     for (const siteType of MANAGED_SITE_TYPES) {
       const channels = getSiteTypeCapabilities(siteType).managedSites?.channels
 

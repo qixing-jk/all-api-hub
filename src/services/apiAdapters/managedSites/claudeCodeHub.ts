@@ -71,28 +71,21 @@ const claudeCodeHubChannelEffect = (
   ...(resourceId === undefined ? {} : { resourceId }),
 })
 
-const toClaudeCodeHubDiagnostic = (error: unknown) => {
-  const record =
-    typeof error === "object" && error !== null
-      ? (error as { message?: unknown; code?: unknown; status?: unknown })
-      : undefined
+const toClaudeCodeHubDiagnostic = (error: ClaudeCodeHubApiError) => {
   const code =
-    typeof record?.code === "string" ||
-    (typeof record?.code === "number" && Number.isSafeInteger(record.code))
-      ? record.code
+    typeof error.code === "string" ||
+    (typeof error.code === "number" && Number.isSafeInteger(error.code))
+      ? error.code
       : undefined
   const statusCode =
-    typeof record?.status === "number" &&
-    Number.isSafeInteger(record.status) &&
-    record.status >= 100 &&
-    record.status <= 599
-      ? record.status
+    typeof error.status === "number" &&
+    Number.isSafeInteger(error.status) &&
+    error.status >= 100 &&
+    error.status <= 599
+      ? error.status
       : undefined
   return {
-    message:
-      typeof record?.message === "string" && record.message
-        ? record.message
-        : "Claude Code Hub mutation failed",
+    message: error.message || "Claude Code Hub mutation failed",
     ...(code === undefined ? {} : { code }),
     ...(statusCode === undefined ? {} : { statusCode }),
     raw: error,
@@ -146,7 +139,7 @@ export const claudeCodeHubManagedSiteChannels: ManagedSiteChannelsCapability<Cla
     search: searchChannel,
     list: listChannels,
     create: async (config, channelData) =>
-      await runClaudeCodeHubMutation<unknown, void>({
+      await runClaudeCodeHubMutation({
         effect: claudeCodeHubChannelEffect("resource-created"),
         execute: async () =>
           await createProvider(

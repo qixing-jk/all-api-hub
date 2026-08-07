@@ -1089,6 +1089,32 @@ describe("defineNativeResourceKind", () => {
     expect(get).toHaveBeenCalledTimes(1)
   })
 
+  it("uses a rejected diagnostic code to trigger the delete fresh read", async () => {
+    const deleteResource = vi.fn(async () => ({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic: {
+        message: "resource is absent",
+        code: MANAGED_RESOURCE_FAILURE_CODES.NotFound,
+        raw: "opaque-delete-response",
+      },
+    }))
+    const get = vi.fn<TestDefinition["get"]>(async () => {
+      throw "not-found"
+    })
+    const { registration } = createHarness({
+      get,
+      delete: deleteResource,
+    })
+
+    await expect((await registration.open()).delete(toRef())).resolves.toEqual({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+      data: undefined,
+      confirmedEffects: [],
+    })
+    expect(deleteResource).toHaveBeenCalledOnce()
+    expect(get).toHaveBeenCalledOnce()
+  })
+
   it("does not treat delete not_found as success when a fresh read finds the resource", async () => {
     const deleteResource = vi.fn(async () => rejected("not-found"))
     const get = vi.fn<TestDefinition["get"]>(async () => TEST_DETAIL)
@@ -1274,6 +1300,34 @@ describe("defineNativeResourceKind", () => {
       diagnostic: { message: "validation_failed" },
     })
     expect(create).toHaveBeenCalledOnce()
+  })
+
+  it("preserves a terminal buildCommand error and closes the editor", async () => {
+    const buildError = new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.NotFound,
+    })
+    const create = vi.fn<TestDefinition["create"]>()
+    const { registration } = createHarness({
+      create,
+      createEditor: vi.fn(async () => ({
+        fields: [{ fieldId: "name", type: "text" as const }],
+        initialValues: { name: "" },
+        validate: () => ({ valid: true as const }),
+        buildCommand: () => {
+          throw buildError
+        },
+      })),
+    })
+    const editor = await (await registration.open()).openCreateEditor()
+
+    await expect(editor.submit({ name: "Invalid command" })).rejects.toBe(
+      buildError,
+    )
+    await expect(editor.submit({ name: "Do not rebuild" })).resolves.toEqual({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic: { message: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    expect(create).not.toHaveBeenCalled()
   })
 
   it("preserves native diagnostics for the controller disclosure boundary", async () => {

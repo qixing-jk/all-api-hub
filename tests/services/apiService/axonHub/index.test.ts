@@ -1362,6 +1362,54 @@ describe("AxonHub API service", () => {
     })
   })
 
+  it("upgrades typed transport evidence after mutation dispatch", async () => {
+    const raw = new Error("lower transport failure")
+    const typed = new AxonHubRequestError(
+      "unavailable",
+      "not-dispatched",
+      "typed transport failure",
+      {
+        responseReceived: false,
+        statusCode: 503,
+        code: "LOWER_TRANSPORT",
+        raw,
+        cause: raw,
+        safeMessage: "safe transport failure",
+      },
+    )
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) =>
+        url.endsWith("/admin/auth/signin")
+          ? Promise.resolve(
+              new Response(JSON.stringify({ token: "typed-evidence-token" }), {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              }),
+            )
+          : Promise.reject(typed),
+      ),
+    )
+
+    const failure = await graphqlRequest(
+      { ...config, email: "typed-evidence@example.invalid" },
+      "mutation TypedEvidence { updateThing }",
+    ).catch((error: unknown) => error)
+
+    expect(failure).not.toBe(typed)
+    expect(failure).toMatchObject({
+      kind: "unavailable",
+      dispatch: "dispatched",
+      message: "safe transport failure",
+      responseReceived: false,
+      statusCode: 503,
+      code: "LOWER_TRANSPORT",
+      raw,
+      cause: raw,
+      safeMessage: "safe transport failure",
+    })
+  })
+
   it.each([
     [
       "create",
@@ -1420,6 +1468,37 @@ describe("AxonHub API service", () => {
       expect(graphQlHits).toBe(1)
     },
   )
+
+  it("does not retry a comment-prefixed GraphQL mutation after dispatch", async () => {
+    let authHits = 0
+    let graphQlHits = 0
+
+    server.use(
+      http.post(AUTH_URL, () => {
+        authHits += 1
+        return HttpResponse.json({ token: `comment-token-${authHits}` })
+      }),
+      http.post(GRAPHQL_URL, () => {
+        graphQlHits += 1
+        return HttpResponse.json(
+          { errors: [{ message: "expired token" }] },
+          { status: 401 },
+        )
+      }),
+    )
+
+    const failure = await graphqlRequest(
+      config,
+      "# generated operation\nmutation CommentPrefixed { updateThing }",
+    ).catch((error: unknown) => error)
+
+    expect(failure).toMatchObject({
+      kind: "authentication",
+      dispatch: "dispatched",
+    })
+    expect(authHits).toBe(1)
+    expect(graphQlHits).toBe(1)
+  })
 
   it("signs in against the normalized admin endpoint and returns the token", async () => {
     let capturedBody: unknown

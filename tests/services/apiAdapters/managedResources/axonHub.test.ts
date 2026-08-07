@@ -2175,6 +2175,79 @@ describe("AxonHub native managed-resource Adapter", () => {
     expect(mocks.createChannel).not.toHaveBeenCalled()
   })
 
+  it("uses a default AbortError when a pre-aborted signal has no reason", async () => {
+    const operations = await openAxonHubNativeResourceOperations()
+    const signal = { aborted: true, reason: undefined } as AbortSignal
+
+    const result = await operations.create(
+      {
+        type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+        name: "Pre-aborted create without reason",
+        credentials: { apiKeys: ["credential-placeholder"] },
+        supportedModels: ["model-a"],
+        manualModels: ["model-a"],
+        defaultTestModel: "model-a",
+        settings: {},
+        orderingWeight: 0,
+      },
+      AXON_HUB_CHANNEL_STATUS.DISABLED,
+      { signal },
+    )
+
+    expect(result).toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic: {
+        message: "aborted",
+        code: "aborted",
+        raw: { name: "AbortError", message: "The operation was aborted" },
+      },
+    })
+    expect(mocks.createChannel).not.toHaveBeenCalled()
+  })
+
+  it("preserves an AxonHubNativeError failure and raw identity", async () => {
+    const operations = await openAxonHubNativeResourceOperations()
+    mocks.listPage.mockRejectedValueOnce(
+      new mocks.RequestError("permission", "not-dispatched"),
+    )
+    let caught: unknown
+    try {
+      await operations.list()
+    } catch (error) {
+      caught = error
+    }
+    expect(caught).toBeInstanceOf(AxonHubNativeError)
+    const nativeError = caught as AxonHubNativeError
+    mocks.createChannel.mockRejectedValue(nativeError)
+
+    const result = await operations.create(
+      {
+        type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+        name: "Rejected create",
+        credentials: { apiKeys: ["credential-placeholder"] },
+        supportedModels: ["model-a"],
+        manualModels: ["model-a"],
+        defaultTestModel: "model-a",
+        settings: {},
+        orderingWeight: 0,
+      },
+      AXON_HUB_CHANNEL_STATUS.DISABLED,
+    )
+
+    expect(result).toEqual({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic: {
+        message: "permission_denied",
+        code: "permission_denied",
+        raw: nativeError,
+      },
+    })
+    expect(nativeError.failure).toEqual({
+      code: "permission_denied",
+      dispatch: "before",
+    })
+  })
+
   it("treats a bare abort thrown after write invocation as uncertain", async () => {
     const abortError = new DOMException("Cancelled during create", "AbortError")
     mocks.createChannel.mockRejectedValue(abortError)

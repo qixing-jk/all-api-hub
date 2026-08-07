@@ -63,13 +63,20 @@ export function testManagedSiteChannelMutationContract(
       const { rejectionResponse, expectedRejectedDiagnostic } =
         operation.arrange(CHANNEL_MUTATION_SCENARIOS.Rejected)
 
-      await expect(operation.invoke()).resolves.toEqual({
+      const result = await operation.invoke()
+      const expectedDiagnostic = expectedRejectedDiagnostic ?? {
+        message: "provider rejected",
+        raw: rejectionResponse,
+      }
+
+      expect(result).toEqual({
         outcome: "rejected",
-        diagnostic: expectedRejectedDiagnostic ?? {
-          message: "provider rejected",
-          raw: rejectionResponse,
-        },
+        diagnostic: expectedDiagnostic,
       })
+      if (result.outcome !== "rejected") {
+        throw new Error("Expected rejected channel mutation")
+      }
+      expect(result.diagnostic.raw).toBe(expectedDiagnostic.raw)
       operation.assertRequestPayload()
     },
   )
@@ -81,13 +88,20 @@ export function testManagedSiteChannelMutationContract(
         CHANNEL_MUTATION_SCENARIOS.PostDispatchAmbiguity,
       )
 
-      await expect(operation.invoke()).resolves.toEqual({
+      const result = await operation.invoke()
+      const expectedDiagnostic = expectedAmbiguousDiagnostic ?? {
+        message: "Failed to fetch",
+        raw,
+      }
+
+      expect(result).toEqual({
         outcome: "uncertain",
-        diagnostic: expectedAmbiguousDiagnostic ?? {
-          message: "Failed to fetch",
-          raw,
-        },
+        diagnostic: expectedDiagnostic,
       })
+      if (result.outcome !== "uncertain") {
+        throw new Error("Expected uncertain channel mutation")
+      }
+      expect(result.diagnostic.raw).toBe(expectedDiagnostic.raw)
       operation.assertRequestPayload()
     },
   )

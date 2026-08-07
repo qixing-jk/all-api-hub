@@ -379,12 +379,25 @@ describe("managed site mutation contracts", () => {
     ).toThrow(TypeError)
   })
 
+  it("rejects effect arrays with a non-array prototype", () => {
+    const exoticEffects = [effect]
+    Object.setPrototypeOf(exoticEffects, null)
+
+    expect(() =>
+      assertMutationResult({
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+        data: "saved-resource",
+        confirmedEffects: exoticEffects,
+      }),
+    ).toThrow(TypeError)
+  })
+
   it.each([
     { code: Number.NaN },
     { code: Number.POSITIVE_INFINITY },
     { code: 1.5 },
     { code: Number.MAX_SAFE_INTEGER + 1 },
-  ])("rejects invalid numeric diagnostic code %#", ({ code }) => {
+  ])("rejects invalid numeric diagnostic code $code", ({ code }) => {
     expect(() =>
       assertMutationResult({
         outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
@@ -394,7 +407,7 @@ describe("managed site mutation contracts", () => {
   })
 
   it.each([99, 600, 200.5])(
-    "rejects invalid HTTP status code %#",
+    "rejects invalid HTTP status code %s",
     (statusCode) => {
       expect(() =>
         assertMutationResult({
@@ -411,7 +424,7 @@ describe("managed site mutation contracts", () => {
     Number.POSITIVE_INFINITY,
     1.5,
     Number.MAX_SAFE_INTEGER + 1,
-  ])("rejects invalid resource ID %#", (resourceId) => {
+  ])("rejects invalid resource ID %s", (resourceId) => {
     expect(() =>
       assertMutationResult({
         outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,

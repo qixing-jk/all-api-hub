@@ -158,6 +158,48 @@ describe("managed site mutation execution evidence", () => {
     ).toThrow(TypeError)
   })
 
+  it("rejects repeated, malformed, and unsupported terminal evidence", () => {
+    const finished = createManagedSiteMutationSequence({ idempotent: true })
+    finished.finish({ finalState: "confirmed", data: undefined })
+    expect(() =>
+      finished.finish({ finalState: "confirmed", data: undefined }),
+    ).toThrow(TypeError)
+
+    const malformed = createManagedSiteMutationSequence({ idempotent: true })
+    expect(() =>
+      (malformed.finish as (input: unknown) => unknown)(null),
+    ).toThrow(TypeError)
+
+    const unsupported = createManagedSiteMutationSequence({ idempotent: true })
+    expect(() =>
+      unsupported.finish({ finalState: "unknown" } as never),
+    ).toThrow(TypeError)
+  })
+
+  it("rejects an unconfirmed finish while an active step owns an effect", () => {
+    const sequence = createManagedSiteMutationSequence({ idempotent: false })
+    const attempt = sequence.beginStep()
+    attempt.markPossiblyDispatched()
+    attempt.markResponseReceived()
+    attempt.confirmEffect(firstEffect)
+
+    expect(() =>
+      sequence.finish({ finalState: "unconfirmed", diagnostic }),
+    ).toThrow(TypeError)
+  })
+
+  it("defaults a prior confirmed effect without terminal step evidence to partial uncertainty", () => {
+    const sequence = createManagedSiteMutationSequence({ idempotent: false })
+    completeAppliedStep(sequence)
+
+    expect(sequence.finish({ finalState: "unconfirmed", diagnostic })).toEqual({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+      confirmedEffects: [firstEffect],
+      completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
+      diagnostic,
+    })
+  })
+
   it("classifies a prior effect followed by pre-dispatch rejection as partial/rejected", () => {
     const sequence = createManagedSiteMutationSequence({ idempotent: false })
     completeAppliedStep(sequence)
@@ -493,6 +535,47 @@ describe("managed site mutation execution evidence", () => {
       } as never),
     ).toThrow(TypeError)
   })
+
+  it.each([
+    { label: "primitive", value: null },
+    {
+      label: "custom prototype",
+      value: Object.create({ outcome: "applied", data: "created" }),
+    },
+    {
+      label: "accessor property",
+      value: Object.defineProperty({}, "outcome", {
+        enumerable: true,
+        get: () => "applied",
+      }),
+    },
+    {
+      label: "throwing record proxy",
+      value: new Proxy(
+        {},
+        {
+          ownKeys: () => {
+            throw new Error("classifier inspection unavailable")
+          },
+        },
+      ),
+    },
+  ])("rejects $label classifier evidence", async ({ value }) => {
+    const sequence = createManagedSiteMutationSequence({ idempotent: false })
+
+    await expect(
+      runManagedSiteMutationStep({
+        sequence,
+        effect: firstEffect,
+        execute: async (observer) => {
+          observer.onDispatch()
+          observer.onResponse()
+          return "created"
+        },
+        classifyResponse: () => value as never,
+      }),
+    ).rejects.toThrow(TypeError)
+  })
 })
 
 describe("managed site mutation diagnostic normalization", () => {
@@ -678,6 +761,43 @@ describe("managed site mutation diagnostic normalization", () => {
     expect(toManagedSiteMutationDiagnostic(getterCause)).toEqual({
       message: "Request timed out",
       raw: getterCause,
+    })
+  })
+
+  it("contains instanceof prototype traps while preserving the original value", () => {
+    const prototypeTrap = new Proxy(
+      {},
+      {
+        getPrototypeOf: () => {
+          throw new Error("prototype unavailable")
+        },
+      },
+    )
+    let caught: unknown
+
+    try {
+      toManagedSiteMutationDiagnostic(prototypeTrap)
+    } catch (error) {
+      caught = error
+    }
+
+    expect(caught).toBe(prototypeTrap)
+  })
+
+  it("traverses a callable wrapper to its recognized operational cause", () => {
+    const cause = new ApiError(
+      "provider unavailable",
+      503,
+      "/api/resource",
+      API_ERROR_CODES.HTTP_OTHER,
+    )
+    const wrapper = Object.assign(() => undefined, { cause })
+
+    expect(toManagedSiteMutationDiagnostic(wrapper)).toEqual({
+      message: cause.message,
+      code: API_ERROR_CODES.HTTP_OTHER,
+      statusCode: 503,
+      raw: wrapper,
     })
   })
 

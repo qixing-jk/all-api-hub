@@ -156,6 +156,38 @@ describe("useChannelForm", () => {
     expect(result.current.isFormValid).toBe(true)
   })
 
+  it("reports missing managed-site configuration before dispatching", async () => {
+    mockGetConfig.mockResolvedValue(null)
+    const onClose = vi.fn()
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        isOpen: true,
+        onClose,
+      }),
+    )
+    await waitFor(() => expect(result.current.formData.name).toBe(""))
+    await act(async () => {
+      result.current.updateField("name", "Alpha")
+      result.current.updateField("key", "draft-key-placeholder")
+      result.current.updateField("models", ["model-example"])
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+
+    expect(mockCreateChannel).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(loggerMocks.error).toHaveBeenCalledWith(
+      "Save failed",
+      expect.objectContaining({ message: "messages:newapi.configMissing" }),
+    )
+  })
+
   it("falls back to cloned default groups when an existing channel group is empty", async () => {
     const channel = buildManagedSiteChannel({
       group: "",
@@ -775,6 +807,92 @@ describe("useChannelForm", () => {
     expect(disclosed).not.toContain("cause")
   })
 
+  it("uses only the local fallback when payload building fails and config inspection is incomplete", async () => {
+    const providerText = "private builder failure"
+    mockGetConfig.mockResolvedValue(
+      new Proxy(
+        {
+          baseUrl: "https://managed.example.invalid",
+          adminToken: "hidden-admin-token",
+          userId: "1",
+        },
+        {
+          ownKeys() {
+            throw new Error("config inspection unavailable")
+          },
+        },
+      ),
+    )
+    mockBuildChannelPayload.mockImplementation(() => {
+      throw new Error(providerText)
+    })
+    const onClose = vi.fn()
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        isOpen: true,
+        onClose,
+      }),
+    )
+    await waitFor(() => expect(result.current.formData.name).toBe(""))
+    await act(async () => {
+      result.current.updateField("name", "Builder failure")
+      result.current.updateField("key", "draft-key-placeholder")
+      result.current.updateField("models", ["model-example"])
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+
+    expect(mockCreateChannel).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(loggerMocks.error).toHaveBeenCalledWith(
+      "Failed to build channel payload",
+      expect.objectContaining({ message: "channelDialog:messages.saveFailed" }),
+    )
+    expect(JSON.stringify(loggerMocks.error.mock.calls)).not.toContain(
+      providerText,
+    )
+  })
+
+  it("reports a missing channel id before dispatching a legacy edit", async () => {
+    mockGetConfig.mockResolvedValue({
+      baseUrl: "https://managed.example.invalid",
+      adminToken: "admin-token-placeholder",
+      userId: "1",
+    })
+    const onClose = vi.fn()
+    const channel = buildManagedSiteChannel({ id: 0 })
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose,
+      }),
+    )
+    await waitFor(() => expect(result.current.isFormValid).toBe(true))
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+
+    expect(mockUpdateChannel).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+    expect(loggerMocks.error).toHaveBeenCalledWith(
+      "Save failed",
+      expect.objectContaining({
+        message: "channelDialog:messages.missingChannelId",
+      }),
+    )
+  })
+
   it("reconciles and closes before propagating a thrown ordinary mutation unchanged", async () => {
     const adminToken = "thrown-admin-token-placeholder"
     const password = "thrown-password-placeholder"
@@ -1200,6 +1318,69 @@ describe("useChannelForm", () => {
       expect(mockCreateChannel).toHaveBeenCalledOnce()
     },
   )
+
+  it("still closes and resets after ambiguous-write reconciliation fails", async () => {
+    const listChannels = vi.fn().mockRejectedValue(new Error("list failed"))
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: SITE_TYPES.NEW_API,
+      messagesKey: "newapi",
+      checkValidConfig: mockCheckValidConfig,
+      getConfig: mockGetConfig,
+      fetchSiteUserGroups: mockFetchSiteUserGroups,
+      buildChannelPayload: mockBuildChannelPayload,
+      createChannel: mockCreateChannel,
+      updateChannel: mockUpdateChannel,
+      listChannels,
+    } as any)
+    mockGetConfig.mockResolvedValue({
+      baseUrl: "https://managed.example.invalid",
+      adminToken: "admin-token-placeholder",
+      userId: "1",
+    })
+    mockBuildChannelPayload.mockReturnValue({
+      mode: "single",
+      channel: {
+        name: "Alpha",
+        key: "payload-secret-placeholder",
+        models: "model-example",
+        groups: ["default"],
+        group: "default",
+        status: 1,
+      },
+    })
+    mockCreateChannel.mockResolvedValue({
+      outcome: "uncertain",
+      diagnostic: { message: "Creation state is ambiguous" },
+    })
+    const onClose = vi.fn()
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        isOpen: true,
+        onClose,
+      }),
+    )
+    await waitFor(() => expect(result.current.formData.name).toBe(""))
+    await act(async () => {
+      result.current.updateField("name", "Alpha")
+      result.current.updateField("key", "payload-secret-placeholder")
+      result.current.updateField("models", ["model-example"])
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+
+    expect(listChannels).toHaveBeenCalledOnce()
+    expect(loggerMocks.error).toHaveBeenCalledWith(
+      "Failed to reconcile ambiguous channel mutation",
+    )
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(result.current.formData.name).toBe("")
+  })
 
   it("waits for resource detail before allowing a resource-backed update", async () => {
     const onClose = vi.fn()
@@ -1641,6 +1822,80 @@ describe("useChannelForm", () => {
     )
     expect(disclosed).not.toContain(providerText)
     expect(disclosed).not.toContain(hiddenSecret)
+  })
+
+  it("uses the local fallback when a resource reconciliation error has no safe text", async () => {
+    const channel = buildManagedSiteChannel({ id: 43 })
+    const detail: ManagedUpstreamResourceDetail<ManagedSiteChannel> = {
+      summary: {
+        ref: {
+          managedSiteType: SITE_TYPES.NEW_API,
+          scopeKey: "https://managed.example.invalid",
+          resourceId: "43",
+        },
+        displayName: "Empty reconciliation message",
+        nativeKind: "channel",
+        status: "enabled",
+        secretState: "masked",
+        capabilities: { canUpdate: true },
+      },
+      native: channel,
+    }
+    const getDetail = vi
+      .fn()
+      .mockResolvedValueOnce(detail)
+      .mockRejectedValueOnce(new Error(""))
+    const update = vi.fn().mockResolvedValue({
+      outcome: "uncertain",
+      diagnostic: { message: "update state unknown" },
+    })
+    const resourceEdit: ChannelResourceEditContext = {
+      config: {
+        baseUrl: "https://managed.example.invalid",
+        adminToken: "admin-token-placeholder",
+        userId: "1",
+      },
+      ref: detail.summary.ref,
+      capabilities: {
+        items: { getDetail, update },
+        drafts: {
+          prepareEditDraft: vi.fn(() => ({
+            name: "Empty reconciliation message",
+            type: ChannelType.OpenAI,
+            key: "draft-key-placeholder",
+            base_url: "https://source.example.invalid",
+            models: ["gpt-4o"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: DEFAULT_CHANNEL_FIELDS.status,
+          })),
+          describeFields: vi.fn(() => []),
+          validateDraft: vi.fn(() => ({ valid: true, errors: [] })),
+        },
+      },
+    }
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose: vi.fn(),
+        resourceEdit,
+      }),
+    )
+
+    await waitFor(() => expect(result.current.isFormValid).toBe(true))
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault: vi.fn(),
+      } as unknown as FormEvent)
+    })
+
+    expect(getDetail).toHaveBeenCalledTimes(2)
+    expect(result.current.resourceEditLoadError?.message).toBe(
+      "channelDialog:messages.saveFailed",
+    )
   })
 
   it("replaces stale resource detail and draft after ambiguous-write reconciliation", async () => {

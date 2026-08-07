@@ -2210,9 +2210,7 @@ describe("apiTransport request helpers", () => {
     )
   })
 
-  it("keeps the observer local when a forced temp-window route is selected", async () => {
-    const lifecycle: string[] = []
-    let responseObserved = false
+  const forceTempWindowRoute = () => {
     mockGetPreferences.mockResolvedValueOnce({
       tempWindowFallback: {
         enabled: true,
@@ -2221,6 +2219,17 @@ describe("apiTransport request helpers", () => {
         },
       },
     })
+  }
+
+  const createLifecycleObserver = () => ({
+    onDispatch: vi.fn(),
+    onResponse: vi.fn(),
+  })
+
+  it("keeps the observer local when a forced temp-window route is selected", async () => {
+    const lifecycle: string[] = []
+    let responseObserved = false
+    forceTempWindowRoute()
     mockSendRuntimeMessage.mockImplementationOnce(async (message) => {
       lifecycle.push("temp-window")
       expect(message).not.toHaveProperty("observer")
@@ -2281,10 +2290,7 @@ describe("apiTransport request helpers", () => {
 
   it("treats a timed-out temp-window mutation handoff as dispatched and ignores late response evidence", async () => {
     vi.useFakeTimers()
-    const observer = {
-      onDispatch: vi.fn(),
-      onResponse: vi.fn(),
-    }
+    const observer = createLifecycleObserver()
     let resolveLateTempWindowInspection!: () => void
     const lateTempWindowInspected = new Promise<void>((resolve) => {
       resolveLateTempWindowInspection = resolve
@@ -2299,14 +2305,7 @@ describe("apiTransport request helpers", () => {
           data: { success: boolean; data: { ok: boolean } }
         }) => void)
       | undefined
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-        },
-      },
-    })
+    forceTempWindowRoute()
     mockSendRuntimeMessage.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
@@ -2368,18 +2367,8 @@ describe("apiTransport request helpers", () => {
   })
 
   it("keeps a forced temp-window mutation pre-dispatch policy denial undispatched", async () => {
-    const observer = {
-      onDispatch: vi.fn(),
-      onResponse: vi.fn(),
-    }
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-        },
-      },
-    })
+    const observer = createLifecycleObserver()
+    forceTempWindowRoute()
     mockSendRuntimeMessage.mockResolvedValueOnce({
       success: false,
       error: "temporary context policy denied",
@@ -2410,21 +2399,11 @@ describe("apiTransport request helpers", () => {
   })
 
   it("keeps a forced temp-window mutation receiver-unavailable failure undispatched", async () => {
-    const observer = {
-      onDispatch: vi.fn(),
-      onResponse: vi.fn(),
-    }
+    const observer = createLifecycleObserver()
     const receiverUnavailable = new Error(
       "Could not establish connection. Receiving end does not exist.",
     )
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-        },
-      },
-    })
+    forceTempWindowRoute()
     mockSendRuntimeMessage.mockRejectedValueOnce(receiverUnavailable)
 
     await expect(
@@ -2453,18 +2432,8 @@ describe("apiTransport request helpers", () => {
   ])(
     "treats a forced temp-window mutation $label response as possibly dispatched",
     async ({ response }) => {
-      const observer = {
-        onDispatch: vi.fn(),
-        onResponse: vi.fn(),
-      }
-      mockGetPreferences.mockResolvedValueOnce({
-        tempWindowFallback: {
-          enabled: true,
-          automaticFeatureBypass: {
-            ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-          },
-        },
-      })
+      const observer = createLifecycleObserver()
+      forceTempWindowRoute()
       mockSendRuntimeMessage.mockResolvedValueOnce(response)
 
       await expect(
@@ -2489,19 +2458,9 @@ describe("apiTransport request helpers", () => {
   )
 
   it("preserves a forced temp-window lifecycle inspection error", async () => {
-    const observer = {
-      onDispatch: vi.fn(),
-      onResponse: vi.fn(),
-    }
+    const observer = createLifecycleObserver()
     const evidenceError = new Error("temp-window lifecycle getter failed")
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-        },
-      },
-    })
+    forceTempWindowRoute()
     mockSendRuntimeMessage.mockResolvedValueOnce({
       get transportLifecycle(): never {
         throw evidenceError
@@ -2530,19 +2489,9 @@ describe("apiTransport request helpers", () => {
   })
 
   it("preserves a forced temp-window parsing error after explicit pre-dispatch evidence", async () => {
-    const observer = {
-      onDispatch: vi.fn(),
-      onResponse: vi.fn(),
-    }
+    const observer = createLifecycleObserver()
     const parsingError = new Error("temp-window status getter failed")
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-        },
-      },
-    })
+    forceTempWindowRoute()
     mockSendRuntimeMessage.mockResolvedValueOnce({
       transportLifecycle: {
         upstreamRequestDispatched: false,
@@ -2576,21 +2525,11 @@ describe("apiTransport request helpers", () => {
   })
 
   it("keeps forced temp-window pre-dispatch truth when response inspection aborts", async () => {
-    const observer = {
-      onDispatch: vi.fn(),
-      onResponse: vi.fn(),
-    }
+    const observer = createLifecycleObserver()
     const abortController = new AbortController()
     const abortReason = new Error("temp-window caller abort")
     const parsingError = new Error("temp-window status getter aborted")
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-        },
-      },
-    })
+    forceTempWindowRoute()
     mockSendRuntimeMessage.mockResolvedValueOnce({
       transportLifecycle: {
         upstreamRequestDispatched: false,
@@ -2632,21 +2571,11 @@ describe("apiTransport request helpers", () => {
   })
 
   it("treats ambiguous forced temp-window mutation channel loss as dispatched", async () => {
-    const observer = {
-      onDispatch: vi.fn(),
-      onResponse: vi.fn(),
-    }
+    const observer = createLifecycleObserver()
     const channelError = new Error(
       "The message port closed before a response was received",
     )
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-        },
-      },
-    })
+    forceTempWindowRoute()
     mockSendRuntimeMessage.mockRejectedValueOnce(channelError)
 
     await expect(
@@ -2680,14 +2609,7 @@ describe("apiTransport request helpers", () => {
         responseObserved = true
       }),
     }
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-        },
-      },
-    })
+    forceTempWindowRoute()
     mockSendRuntimeMessage.mockImplementationOnce(async () => ({
       get transportLifecycle() {
         lifecycleReads += 1
@@ -2758,18 +2680,8 @@ describe("apiTransport request helpers", () => {
       },
     },
   ])("does not infer forced lifecycle from $label", async ({ response }) => {
-    const observer = {
-      onDispatch: vi.fn(),
-      onResponse: vi.fn(),
-    }
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-        },
-      },
-    })
+    const observer = createLifecycleObserver()
+    forceTempWindowRoute()
     mockSendRuntimeMessage.mockResolvedValueOnce(response)
 
     await expect(
@@ -2793,18 +2705,8 @@ describe("apiTransport request helpers", () => {
   })
 
   it("keeps forced temp-window dispatch evidence after a statusless network failure", async () => {
-    const observer = {
-      onDispatch: vi.fn(),
-      onResponse: vi.fn(),
-    }
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-        },
-      },
-    })
+    const observer = createLifecycleObserver()
+    forceTempWindowRoute()
     mockSendRuntimeMessage.mockImplementationOnce(async (message) => {
       emitRuntimeMessage({
         action: RuntimeActionIds.ApiTransportRemoteFetchDispatched,
@@ -2841,18 +2743,8 @@ describe("apiTransport request helpers", () => {
   })
 
   it("counts a direct allowlisted response and its temp-window fallback only once", async () => {
-    const observer = {
-      onDispatch: vi.fn(),
-      onResponse: vi.fn(),
-    }
-    mockGetPreferences.mockResolvedValueOnce({
-      tempWindowFallback: {
-        enabled: true,
-        automaticFeatureBypass: {
-          ...DEFAULT_AUTOMATIC_FEATURE_BYPASS,
-        },
-      },
-    })
+    const observer = createLifecycleObserver()
+    forceTempWindowRoute()
     server.use(
       http.get(API_URL, () =>
         HttpResponse.json({ message: "blocked" }, { status: 403 }),
