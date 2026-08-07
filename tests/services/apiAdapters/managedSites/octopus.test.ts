@@ -33,6 +33,7 @@ const octopusApi = vi.hoisted(() => {
         responseReceived: boolean
         confirmedNonApplication: boolean
         raw: unknown
+        code?: string | number
       },
     ) {
       super(message)
@@ -55,10 +56,7 @@ const octopusApi = vi.hoisted(() => {
     }
 
     get code() {
-      const raw = this.evidence.raw
-      return typeof raw === "object" && raw !== null && "code" in raw
-        ? raw.code
-        : undefined
+      return this.evidence.code
     }
   }
 
@@ -168,6 +166,7 @@ describe("Octopus managed-site channel capability", () => {
             responseReceived: false,
             confirmedNonApplication: true,
             raw,
+            code: raw instanceof DOMException ? raw.code : undefined,
           })
         }
         if (scenario === CHANNEL_MUTATION_SCENARIOS.PostDispatchAmbiguity) {
@@ -204,13 +203,14 @@ describe("Octopus managed-site channel capability", () => {
   })
 
   it("uses a local fallback for an empty Octopus API error message", async () => {
-    const raw = { code: "UPSTREAM_REJECTED" }
+    const raw = { detail: "provider detail" }
     octopusApi.createChannel.mockRejectedValueOnce(
       new octopusApi.OctopusMutationApiError("", {
         dispatch: "dispatched",
         responseReceived: true,
         confirmedNonApplication: true,
         raw,
+        code: "UPSTREAM_REJECTED",
       }),
     )
     const { octopusManagedSiteChannels } = await import(
