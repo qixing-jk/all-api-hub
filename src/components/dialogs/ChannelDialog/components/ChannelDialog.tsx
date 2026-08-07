@@ -303,14 +303,32 @@ export function ChannelDialog({
     const requestId = requestIdRef.current + 1
     requestIdRef.current = requestId
     let resolvedKey: string | null = null
+    let requestSettled = false
+    let requestFailed = false
+
+    const applyResolvedKey = (key: string) => {
+      resolvedKey = key
+
+      // New API may return from the initial request after opening its
+      // verification dialog. The same setter is then invoked later by the
+      // verification callback, so apply it after either timing.
+      if (
+        requestSettled &&
+        !requestFailed &&
+        requestId === requestIdRef.current
+      ) {
+        updateField("key", key)
+        setShowKey(true)
+      }
+    }
 
     setIsLoadingRealKey(true)
     try {
       await onRequestRealKey({
-        setKey: (key) => {
-          resolvedKey = key
-        },
+        setKey: applyResolvedKey,
       })
+
+      requestSettled = true
 
       if (requestId !== requestIdRef.current || resolvedKey === null) {
         return
@@ -319,6 +337,7 @@ export function ChannelDialog({
       updateField("key", resolvedKey)
       setShowKey(true)
     } catch (error) {
+      requestFailed = true
       toast.error(
         t("channelDialog:messages.loadRealKeyFailed", {
           error: error instanceof Error ? error.message : String(error ?? ""),

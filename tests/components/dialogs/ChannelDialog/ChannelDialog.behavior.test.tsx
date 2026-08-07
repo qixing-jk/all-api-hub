@@ -1,4 +1,9 @@
-import { render as rtlRender, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { MouseEvent, ReactElement, ReactNode } from "react"
 import toast from "react-hot-toast"
@@ -553,6 +558,105 @@ describe("ChannelDialog behavior", () => {
     expect(
       screen.getByPlaceholderText("channelDialog:fields.key.placeholder"),
     ).toHaveAttribute("type", "text")
+  })
+
+  it("updates the key when verification completes after the initial request returns", async () => {
+    const user = userEvent.setup()
+    let setRealKey: ((key: string) => void) | undefined
+    const onRequestRealKey = vi.fn(
+      async ({ setKey }: { setKey: (key: string) => void }) => {
+        setRealKey = setKey
+      },
+    )
+
+    render(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        onRequestRealKey={onRequestRealKey}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "channelDialog:actions.loadRealKey",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(onRequestRealKey).toHaveBeenCalledTimes(1)
+      expect(
+        screen.getByRole("button", {
+          name: "channelDialog:actions.loadRealKey",
+        }),
+      ).toBeEnabled()
+    })
+
+    act(() => {
+      setRealKey?.("sk-real-after-verification")
+    })
+
+    await waitFor(() => {
+      expect(updateFieldMock).toHaveBeenCalledWith(
+        "key",
+        "sk-real-after-verification",
+      )
+      expect(
+        screen.getByPlaceholderText("channelDialog:fields.key.placeholder"),
+      ).toHaveValue("sk-real-after-verification")
+    })
+
+    expect(
+      screen.getByPlaceholderText("channelDialog:fields.key.placeholder"),
+    ).toHaveAttribute("type", "text")
+  })
+
+  it("ignores a late key callback after the request fails", async () => {
+    const user = userEvent.setup()
+    let setRealKey: ((key: string) => void) | undefined
+    const onRequestRealKey = vi.fn(
+      async ({ setKey }: { setKey: (key: string) => void }) => {
+        setRealKey = setKey
+        throw new Error("verification failed")
+      },
+    )
+
+    render(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        onRequestRealKey={onRequestRealKey}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "channelDialog:actions.loadRealKey",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledTimes(1)
+      expect(
+        screen.getByRole("button", {
+          name: "channelDialog:actions.loadRealKey",
+        }),
+      ).toBeEnabled()
+    })
+
+    act(() => {
+      setRealKey?.("sk-late-after-failure")
+    })
+
+    expect(updateFieldMock).not.toHaveBeenCalledWith(
+      "key",
+      "sk-late-after-failure",
+    )
+    expect(
+      screen.getByPlaceholderText("channelDialog:fields.key.placeholder"),
+    ).toHaveValue("sk-masked")
   })
 
   it("keeps the masked key unchanged when the real-key request resolves without data", async () => {
