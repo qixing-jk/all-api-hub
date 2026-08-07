@@ -34,7 +34,8 @@ Determine whether an OpenRouter Management Key can safely and correctly authoriz
 
 ## Out of Scope
 
-- Creating, rotating, revealing, or persisting keys.
+- Implementing product flows for creating, rotating, revealing, or persisting
+  keys.
 - Sending inference requests.
 - Implementing the catalog UI.
 
@@ -45,7 +46,8 @@ Determine whether an OpenRouter Management Key can safely and correctly authoriz
 Decision: `verified`
 
 Validated on 2026-08-07 against the current OpenRouter documentation and live
-read-only endpoints.
+read-only endpoints. A user-authorized reversible browser follow-up completed
+the filtering and cleanup checks on 2026-08-08.
 
 ### Primary-source contract
 
@@ -80,11 +82,13 @@ read-only endpoints.
   `output_modalities=all` also returned `200`.
 - The personalized endpoint returned `401` without Authorization and
   advertised `private, no-store`.
-- One explicitly authorized request using a temporary Management Key as
+- Explicitly authorized requests using temporary Management Keys as
   `Authorization: Bearer <credential>` returned `200` and
-  `private, no-store`. The credential was decrypted only in memory, was never
-  printed or persisted by the validation, and its encrypted temporary file was
-  removed afterward.
+  `private, no-store`. One supplied credential was decrypted only in memory and
+  its encrypted temporary file was removed afterward. The browser follow-up
+  created a separate temporary key, retained its secret only in bridge memory,
+  revoked it after validation, and confirmed that the revoked key then returned
+  `401`. No credential or response body was printed or persisted.
 - A follow-up Playwright extension bridge to an already logged-in Edge session
   showed the generic `Default Workspace` settings context and successful private
   provider-preference/guardrail requests. A same-origin personalized-catalog
@@ -92,20 +96,26 @@ read-only endpoints.
   `private, no-store`; browser session cookies are not a substitute for the
   Management Key contract.
 - The authenticated response used the same top-level envelope and pagination
-  contract as the public response. `total_count` matched the returned row count
-  and `links.next` was absent in this observation.
+  contract as the public response. An unpaginated response returned the full
+  set with no `links.next`. A `limit=1` request returned one row and a canonical
+  same-origin `links.next`; following it returned the next page successfully.
+  `total_count` remained consistent across the full response and both pages.
 - Personalized rows used the public model row contract with optional-field
   variation. The observed personalized row-key union was a strict subset of
   the public row-key union: the public response additionally exposed optional
   `alias_target` and `benchmarks` fields. A later Adapter may reuse a shared
   permissive row schema, but it must not require optional fields merely because
   they appeared in the public response.
-- For this credential, the personalized and default public responses had equal
-  unique model membership. This is compatible with an account whose effective
-  preferences and guardrails do not currently exclude public models; it does
-  not disprove the documented filtering contract and does not demonstrate a
-  particular active exclusion rule. The read-only browser follow-up did not
-  change account settings, so it also did not manufacture a filtering delta.
+- With no allowed-provider or ignored-provider rules configured, the
+  personalized and public endpoints each returned 400 unique models. Adding one
+  temporary ignored-provider rule reduced the personalized response to 342
+  unique models: 58 baseline models were removed and none were added, while the
+  unauthenticated public response remained at 400. This directly verifies that
+  provider preferences filter the personalized catalog without changing the
+  public catalog.
+- After removing the temporary rule, the private preference state again
+  contained no ignored providers and the personalized response returned the
+  exact original 400-model membership with no missing or extra rows.
 - The personalized body and relevant response headers exposed no user,
   workspace, organization, account, or other identity field. The safe identity
   interpretation is therefore the authenticated principal represented by the
