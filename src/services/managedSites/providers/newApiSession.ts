@@ -20,6 +20,8 @@ import { AuthTypeEnum } from "~/types"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
+import { isRecord } from "~/utils/core/object"
+import { trimToNull } from "~/utils/core/string"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
 
@@ -131,11 +133,13 @@ interface NewApiSessionState {
   }
   dashboardAuth?: {
     token: string
+    /** Epoch seconds, matching the upstream AuthBundle `access_expires_at`. */
     expiresAt: number
     sessionId: string
   }
   securityProof?: {
     token: string
+    /** Epoch milliseconds, matching the normalized verified-until timestamp. */
     expiresAt: number
   }
   loginPromise?: Promise<EnsureNewApiLoginResult>
@@ -145,8 +149,6 @@ interface NewApiSessionState {
 }
 
 type NewApiDashboardRefreshResult = "refreshed" | "unavailable"
-
-type UnknownRecord = Record<string, unknown>
 
 const NEW_API_DASHBOARD_REFRESH_CONTROLLED_STATUSES = new Set([409, 429])
 const NEW_API_DASHBOARD_REFRESH_REQUEST_ERROR =
@@ -241,18 +243,6 @@ const createManagedSessionRequest = (
   return dashboardAuth
     ? createDashboardAuthRequest(baseUrl, dashboardAuth)
     : createCookieAuthRequest(baseUrl, userId)
-}
-
-/** Checks that an unknown response value is a plain object record. */
-function isRecord(value: unknown): value is UnknownRecord {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value))
-}
-
-/** Returns a trimmed string only when the value is nonblank. */
-function getNonBlankString(value: unknown): string | null {
-  if (typeof value !== "string") return null
-  const trimmed = value.trim()
-  return trimmed ? trimmed : null
 }
 
 const isUnauthorizedError = (error: unknown) =>
@@ -416,7 +406,8 @@ const markVerified = (
   state.hasLoggedInSession = true
   state.verifiedUntil =
     verifiedUntil ?? Date.now() + NEW_API_VERIFIED_SESSION_WINDOW_MS
-  state.securityProof = securityProof
+  // Successful reads confirm the session but do not issue a replacement proof.
+  if (securityProof) state.securityProof = securityProof
 }
 
 const getActiveSecurityProof = (baseUrl: string) => {
@@ -458,8 +449,8 @@ const createControlledDashboardRefreshError = (
   body: unknown,
   status: number,
 ) => {
-  const code = isRecord(body) ? getNonBlankString(body.code) : null
-  const message = isRecord(body) ? getNonBlankString(body.message) : null
+  const code = isRecord(body) ? trimToNull(body.code) : null
+  const message = isRecord(body) ? trimToNull(body.message) : null
   if (code && message) return new Error(`${code}: ${message}`)
   if (code) return new Error(code)
   if (message) return new Error(message)
@@ -699,7 +690,7 @@ async function readNewApiVerificationMethodsWithRefresh(
     throw new ApiError(
       NEW_API_DASHBOARD_AUTH_UNAUTHORIZED,
       401,
-      "/api/user/auth/refresh",
+      NEW_API_DASHBOARD_AUTH_REFRESH_PATH,
       API_ERROR_CODES.HTTP_401,
     )
   }
@@ -758,7 +749,8 @@ async function postNewApiLogin(
 
   if (response.success === false) {
     throw new ApiError(
-      response.message || t("messages:errors.api.invalidResponseFormat"),
+      trimToNull(response.message) ??
+        t("messages:errors.api.invalidResponseFormat"),
       undefined,
       "/api/user/login",
       API_ERROR_CODES.BUSINESS_ERROR,
@@ -792,7 +784,7 @@ async function postNewApiLogin(
   if (authBundleKind !== "valid" && responseData?.require_2fa) {
     // Modern New API returns a flow token; its absence is the legacy contract.
     // https://github.com/QuantumNous/new-api/commit/31d70fca393ff2e09bbae012af2e3ccefdd389a1
-    const flowToken = getNonBlankString(responseData.flow_token)
+    const flowToken = trimToNull(responseData.flow_token)
     if (flowToken) {
       storePendingLoginFlow(config.baseUrl, flowToken, responseData.expires_at)
     } else {
@@ -881,7 +873,7 @@ async function verifyNewApiSession(
       throw sanitizeNewApiErrorForOrigin(error, config.baseUrl)
     }
 
-    const proofToken = getNonBlankString(response?.proof_token)
+    const proofToken = trimToNull(response?.proof_token)
     const verifiedUntil = toVerifiedUntilTimestamp(response?.expires_at)
     markVerified(
       config.baseUrl,
@@ -1061,10 +1053,20 @@ export async function submitNewApiLoginTwoFactorCode(
     },
   })
 
+  if (!isRecord(response)) {
+    throw new ApiError(
+      t("messages:errors.api.invalidResponseFormat"),
+      undefined,
+      "/api/user/login/2fa",
+      API_ERROR_CODES.JSON_PARSE_ERROR,
+    )
+  }
+
   if (response.success === false) {
     throw new ApiError(
       sanitizeNewApiSessionError(
-        response.message || t("messages:errors.api.invalidResponseFormat"),
+        trimToNull(response.message) ??
+          t("messages:errors.api.invalidResponseFormat"),
         [trimmedCode, ...getTransientSessionSecrets(config.baseUrl)],
       ),
       undefined,

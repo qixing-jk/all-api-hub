@@ -5,6 +5,8 @@ import {
   NEW_API_DASHBOARD_AUTH_REFRESH_PATH,
   parseNewApiDashboardAuthBundleResponse,
 } from "~/services/apiService/newApi/dashboardAuth"
+import { isRecord } from "~/utils/core/object"
+import { trimToNull } from "~/utils/core/string"
 
 import {
   NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
@@ -14,21 +16,6 @@ import {
 
 const CONTROLLED_ERROR_STATUSES = new Set([401, 409, 429])
 const AUTH_REFRESH_REQUEST_ERROR = "New API session refresh request failed"
-
-type UnknownRecord = Record<string, unknown>
-
-/** Checks that an unknown JSON value is a plain object record. */
-function isRecord(value: unknown): value is UnknownRecord {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value))
-}
-
-/** Returns a trimmed string only when the unknown value is nonblank. */
-function getNonBlankString(value: unknown): string | null {
-  if (typeof value !== "string") return null
-
-  const trimmed = value.trim()
-  return trimmed ? trimmed : null
-}
 
 /** Builds a status-only error without exposing the response body. */
 function createRefreshStatusError(status: number): Error {
@@ -46,8 +33,8 @@ async function createControlledRefreshError(
     body = null
   }
 
-  const code = isRecord(body) ? getNonBlankString(body.code) : null
-  const message = isRecord(body) ? getNonBlankString(body.message) : null
+  const code = isRecord(body) ? trimToNull(body.code) : null
+  const message = isRecord(body) ? trimToNull(body.message) : null
   if (code && message) return new Error(`${code}: ${message}`)
   if (code) return new Error(code)
   if (message) return new Error(message)

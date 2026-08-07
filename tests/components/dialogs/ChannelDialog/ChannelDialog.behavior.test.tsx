@@ -612,6 +612,71 @@ describe("ChannelDialog behavior", () => {
     ).toHaveAttribute("type", "text")
   })
 
+  it("ignores a deferred key callback from a superseded request", async () => {
+    const user = userEvent.setup()
+    const setRealKeyCallbacks: Array<(key: string) => void> = []
+    const onRequestRealKey = vi.fn(
+      async ({ setKey }: { setKey: (key: string) => void }) => {
+        setRealKeyCallbacks.push(setKey)
+      },
+    )
+
+    render(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        onRequestRealKey={onRequestRealKey}
+      />,
+    )
+
+    const getLoadButton = () =>
+      screen.getByRole("button", {
+        name: "channelDialog:actions.loadRealKey",
+      })
+
+    await user.click(getLoadButton())
+    await waitFor(() => {
+      expect(onRequestRealKey).toHaveBeenCalledTimes(1)
+      expect(getLoadButton()).toBeEnabled()
+    })
+
+    await user.click(getLoadButton())
+    await waitFor(() => {
+      expect(onRequestRealKey).toHaveBeenCalledTimes(2)
+      expect(getLoadButton()).toBeEnabled()
+    })
+
+    act(() => {
+      setRealKeyCallbacks[0]?.("sk-superseded-real-key")
+    })
+
+    expect(updateFieldMock).not.toHaveBeenCalledWith(
+      "key",
+      "sk-superseded-real-key",
+    )
+    expect(
+      screen.getByPlaceholderText("channelDialog:fields.key.placeholder"),
+    ).toHaveValue("sk-masked")
+    expect(
+      screen.getByPlaceholderText("channelDialog:fields.key.placeholder"),
+    ).toHaveAttribute("type", "password")
+
+    act(() => {
+      setRealKeyCallbacks[1]?.("sk-current-real-key")
+    })
+
+    await waitFor(() => {
+      expect(updateFieldMock).toHaveBeenCalledWith("key", "sk-current-real-key")
+      expect(
+        screen.getByPlaceholderText("channelDialog:fields.key.placeholder"),
+      ).toHaveValue("sk-current-real-key")
+    })
+    expect(
+      screen.getByPlaceholderText("channelDialog:fields.key.placeholder"),
+    ).toHaveAttribute("type", "text")
+  })
+
   it("ignores a late key callback after the request fails", async () => {
     const user = userEvent.setup()
     let setRealKey: ((key: string) => void) | undefined

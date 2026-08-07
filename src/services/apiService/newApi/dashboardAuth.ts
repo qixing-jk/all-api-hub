@@ -1,3 +1,6 @@
+import { isRecord } from "~/utils/core/object"
+import { trimToNull } from "~/utils/core/string"
+
 export const NEW_API_DASHBOARD_AUTH_REFRESH_PATH = "/api/user/auth/refresh"
 
 export const NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE =
@@ -9,32 +12,18 @@ const AUTH_BUNDLE_TOKEN_FIELDS = [
   "access_expires_at",
 ] as const
 
-type UnknownRecord = Record<string, unknown>
-
 export interface NewApiDashboardAuthBundle {
   token: string
+  /** Epoch seconds, matching the upstream AuthBundle `access_expires_at`. */
   expiresAt: number
   sessionId: string
-  user: UnknownRecord
+  user: Record<string, unknown>
 }
 
 type NewApiDashboardAuthBundleParseResult =
   | { kind: "valid"; bundle: NewApiDashboardAuthBundle }
   | { kind: "malformed" }
   | { kind: "unrelated" }
-
-/** Checks that an unknown JSON value is a plain object record. */
-function isRecord(value: unknown): value is UnknownRecord {
-  return Boolean(value && typeof value === "object" && !Array.isArray(value))
-}
-
-/** Returns a trimmed string only when the unknown value is nonblank. */
-function getNonBlankString(value: unknown): string | null {
-  if (typeof value !== "string") return null
-
-  const trimmed = value.trim()
-  return trimmed ? trimmed : null
-}
 
 /** Detects whether a response attempted the modern New API AuthBundle shape. */
 function isRecognizableAuthBundleAttempt(data: unknown): boolean {
@@ -71,10 +60,10 @@ export function parseNewApiDashboardAuthBundleResponse(
     return recognizable ? { kind: "malformed" } : { kind: "unrelated" }
   }
 
-  const token = getNonBlankString(data.access_token)
+  const token = trimToNull(data.access_token)
   const expiresAt = data.access_expires_at
   const session = data.session
-  const sessionId = isRecord(session) ? getNonBlankString(session.sid) : null
+  const sessionId = isRecord(session) ? trimToNull(session.sid) : null
 
   if (
     data.token_type !== "Bearer" ||
