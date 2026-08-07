@@ -73,6 +73,7 @@ type CompatibleApiLoginOptions = {
   label: string
   envPrefix: string
   authBundle?: boolean
+  logSessionDiagnostics?: boolean
 }
 
 type CompatibleAuthBundle = {
@@ -169,7 +170,7 @@ export async function loginToCompatibleApiRealSite(
   if (options.authBundle) {
     const probeResult = await probeCompatibleAuthBundle(page, config, options)
     if (probeResult.kind === "authBundle") {
-      return createAuthBundleLoginResult(
+      return await createAuthBundleLoginResult(
         page,
         config,
         options,
@@ -247,7 +248,7 @@ export async function loginToCompatibleApiRealSite(
   if (options.authBundle) {
     const probeResult = await probeCompatibleAuthBundle(page, config, options)
     if (probeResult.kind === "authBundle") {
-      return createAuthBundleLoginResult(
+      return await createAuthBundleLoginResult(
         page,
         config,
         options,
@@ -349,7 +350,7 @@ async function tryLoginToCompatibleApiRealSiteViaApi(
       const parsedPayload = parseCompatibleLoginPayload(payload, payloadMode)
       if (options.authBundle) {
         if (parsedPayload?.kind === "authBundle") {
-          return createAuthBundleLoginResult(
+          return await createAuthBundleLoginResult(
             page,
             config,
             options,
@@ -621,14 +622,14 @@ async function probeCompatibleAuthBundle(
   return { kind: "legacyFallback" }
 }
 
-function createAuthBundleLoginResult(
+async function createAuthBundleLoginResult(
   page: Page,
   config: Pick<CompatibleApiRealSiteConfig, "baseUrl">,
   options: CompatibleApiLoginOptions,
   authBundle: CompatibleAuthBundle,
   reusedSession: boolean,
-): CompatibleApiRealSiteLoginResult {
-  return {
+): Promise<CompatibleApiRealSiteLoginResult> {
+  const result = {
     reusedSession,
     user: authBundle.user,
     ...(reusedSession
@@ -642,6 +643,82 @@ function createAuthBundleLoginResult(
           ),
         }),
   }
+
+  if (options.logSessionDiagnostics) {
+    await logVisibleAuthSessionCount(
+      page,
+      config,
+      options,
+      authBundle,
+      reusedSession,
+    )
+  }
+
+  return result
+}
+
+async function logVisibleAuthSessionCount(
+  page: Page,
+  config: Pick<CompatibleApiRealSiteConfig, "baseUrl">,
+  options: CompatibleApiLoginOptions,
+  authBundle: CompatibleAuthBundle,
+  reusedSession: boolean,
+) {
+  // New API contract: this Bearer-only endpoint lists current-version active
+  // sessions (up to 100); log counts only because the response contains SIDs,
+  // IPs, and user agents. See https://github.com/QuantumNous/new-api/blob/main/docs/authentication.md.
+  let response
+
+  try {
+    response = await page.request.get(
+      resolveRealSiteUrl(config.baseUrl, AUTH_SESSION_PATH),
+      {
+        failOnStatusCode: false,
+        timeout: 10_000,
+        headers: {
+          Authorization: `Bearer ${authBundle.accessToken}`,
+        },
+      },
+    )
+  } catch {
+    return
+  }
+
+  if (!response) {
+    return
+  }
+
+  if (!response.ok()) {
+    console.info(
+      `[real-site] ${options.label} session diagnostic unavailable: HTTP ${response.status()}`,
+    )
+    return
+  }
+
+  let payload
+  try {
+    payload = extractCompatibleApiPayload(safeParseJson(await response.text()))
+  } catch {
+    console.info(
+      `[real-site] ${options.label} session diagnostic unavailable: malformed response`,
+    )
+    return
+  }
+
+  if (!Array.isArray(payload)) {
+    console.info(
+      `[real-site] ${options.label} session diagnostic unavailable: unexpected response shape`,
+    )
+    return
+  }
+
+  const currentCount = payload.filter(
+    (session) => isRecord(session) && session.current === true,
+  ).length
+
+  console.info(
+    `[real-site] ${options.label} session diagnostic: visible_active=${payload.length} current=${currentCount} login=${reusedSession ? "reused" : "fresh"}`,
+  )
 }
 
 function createOwnedAuthSessionCleanup(

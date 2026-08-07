@@ -63,6 +63,7 @@ function createPage(
   post: ReturnType<typeof vi.fn>,
   options: {
     storedUser?: Record<string, unknown>
+    getRequest?: ReturnType<typeof vi.fn>
     deleteRequest?: ReturnType<typeof vi.fn>
   } = {},
 ) {
@@ -81,7 +82,7 @@ function createPage(
       waitForFunction,
       request: {
         post,
-        get: vi.fn(),
+        get: options.getRequest ?? vi.fn(),
         delete: options.deleteRequest ?? vi.fn(),
       },
       close: vi.fn().mockResolvedValue(undefined),
@@ -160,6 +161,45 @@ describe("compatible real-site login", () => {
     expect(evaluate).not.toHaveBeenCalled()
     expect(waitForFunction).not.toHaveBeenCalled()
     expect(post).toHaveBeenCalledTimes(2)
+  })
+
+  it("logs only the visible New API session counts after login", async () => {
+    const post = vi
+      .fn()
+      .mockResolvedValueOnce(createResponse(401, { code: "AUTH_UNAUTHORIZED" }))
+      .mockResolvedValueOnce(createResponse(200, createAuthBundle()))
+    const getRequest = vi.fn().mockResolvedValue(
+      createResponse(200, {
+        success: true,
+        data: [
+          { sid: "must-not-leak-current-sid", current: true },
+          { sid: "must-not-leak-other-sid", current: false },
+        ],
+      }),
+    )
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
+    const { page } = createPage(post, { getRequest })
+    let messages = ""
+
+    try {
+      await loginToRealNewApiSite(page, config)
+      messages = info.mock.calls.flat().join(" ")
+    } finally {
+      info.mockRestore()
+    }
+
+    expect(getRequest).toHaveBeenCalledWith(
+      `${ORIGIN}/api/user/sessions`,
+      expect.objectContaining({
+        failOnStatusCode: false,
+        headers: {
+          Authorization: "Bearer access-token-placeholder",
+        },
+      }),
+    )
+    expect(messages).toContain("visible_active=2")
+    expect(messages).toContain("current=1")
+    expect(messages).not.toContain("must-not-leak")
   })
 
   it("reuses an existing AuthBundle session without taking cleanup ownership", async () => {

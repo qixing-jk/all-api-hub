@@ -62,5 +62,6 @@ export async function loginToRealNewApiSite(
     label: NEW_API_LABEL,
     envPrefix: NEW_API_ENV_PREFIX,
     authBundle: true,
+    logSessionDiagnostics: true,
   })
 }

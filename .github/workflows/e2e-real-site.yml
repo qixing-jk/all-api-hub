@@ -13,6 +13,11 @@ on:
           - account
           - managed-site
           - webdav
+      target:
+        description: Optional target ID from scripts/real-site-e2e-matrix.mjs (for example new-api-account); all keeps category selection
+        required: false
+        default: all
+        type: string
   schedule:
     - cron: "17 19 * * *"
 
@@ -39,7 +44,8 @@ jobs:
         id: matrix
         env:
           REAL_SITE_CATEGORY: ${{ github.event.inputs.category || 'all' }}
-        run: node scripts/github-real-site-e2e-matrix.mjs "$REAL_SITE_CATEGORY"
+          REAL_SITE_TARGET: ${{ github.event.inputs.target || 'all' }}
+        run: node scripts/github-real-site-e2e-matrix.mjs "$REAL_SITE_CATEGORY" "$REAL_SITE_TARGET"
 
   real-site-e2e:
     name: ${{ matrix.label }}
