@@ -207,6 +207,10 @@ describe("TokenList batch export selection", () => {
     })
     mockPrepareManagedSiteTokenBatchExportPreview.mockImplementation(
       ({ items }) => ({
+        intent: {
+          source: "manual-selection",
+          verification: "complete",
+        },
         siteType: "new-api",
         totalCount: items.length,
         readyCount: items.length,
@@ -472,6 +476,21 @@ describe("TokenList batch export selection", () => {
     expect(
       await screen.findByText("keyManagement:batchManagedSiteExport.title"),
     ).toBeVisible()
+    await waitFor(() =>
+      expect(
+        screen.getByTestId(
+          KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportStartButton,
+        ),
+      ).toBeEnabled(),
+    )
+    expect(mockPrepareManagedSiteTokenBatchExportPreview).toHaveBeenCalledWith(
+      expect.objectContaining({
+        intent: {
+          source: "manual-selection",
+          verification: "complete",
+        },
+      }),
+    )
 
     rerender(
       <TokenList
@@ -553,6 +572,13 @@ describe("TokenList batch export selection", () => {
     expect(
       await screen.findByText("keyManagement:batchManagedSiteExport.title"),
     ).toBeVisible()
+    await waitFor(() =>
+      expect(
+        screen.getByTestId(
+          KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportStartButton,
+        ),
+      ).toBeEnabled(),
+    )
     await user.click(
       screen.getByTestId(
         KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportStartButton,

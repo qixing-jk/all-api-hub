@@ -43,6 +43,9 @@ import {
 import type { AccountToken, DisplaySiteData } from "~/types"
 import {
   isResolvedManagedSiteTokenBatchExportItemInput,
+  MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES,
+  MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
+  type ManagedSiteBatchImportIntent,
   type ManagedSiteTokenBatchExportExecutionResult,
   type ManagedSiteTokenBatchExportItemInput,
 } from "~/types/managedSiteTokenBatchExport"
@@ -80,6 +83,11 @@ import { ServiceCredentialCard } from "./ServiceCredentialCard"
 import { TokenListItem } from "./TokenListItem"
 
 const logger = createLogger("TokenList")
+
+const MANUAL_MANAGED_SITE_BATCH_IMPORT_INTENT = {
+  source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.MANUAL_SELECTION,
+  verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
+} satisfies ManagedSiteBatchImportIntent
 
 const isAccountTokenEntry = (
   entry: KeyManagementEntry,
@@ -1408,6 +1416,7 @@ export function TokenList(props: TokenListProps) {
         isOpen={batchExportOpen && isBatchExportSnapshotEligible}
         onClose={closeBatchExportDialog}
         items={batchExportItems}
+        intent={MANUAL_MANAGED_SITE_BATCH_IMPORT_INTENT}
         onCompleted={handleBatchExportCompleted}
       />
     </>

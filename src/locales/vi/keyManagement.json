@@ -562,6 +562,16 @@
       "selectAll": "Chọn tất cả kết quả hiện tại",
       "selectedCount_other": "Đã chọn {{count}} khóa bất thường"
     },
+    "managedSiteImport": {
+      "action_other": "Nhập {{count}} khóa đã tạo khi sửa chữa",
+      "changeTarget": "Đổi đích",
+      "configMissing": "Hãy cấu hình một trang được quản lý trước khi nhập các khóa đã tạo khi sửa chữa.",
+      "failed": "Không thể chuẩn bị các khóa đã tạo khi sửa chữa để nhập. Hãy thử lại.",
+      "receiptFailed": "Đã nhập xong nhưng không thể cập nhật kết quả sửa chữa. Hãy làm mới kết quả để xác nhận trạng thái hiện tại.",
+      "target_other": "{{count}} khóa đã tạo khi sửa chữa sẵn sàng để nhập vào {{site}}",
+      "title": "Nhập các khóa đã tạo khi sửa chữa",
+      "unavailable": "Các khóa đã tạo khi sửa chữa không còn sẵn sàng để nhập. Hãy làm mới kết quả sửa chữa rồi thử lại."
+    },
     "messages": {
       "cancelFailed": "Hủy tác vụ sửa chữa thất bại",
       "loadFailed": "Tải tiến trình sửa chữa thất bại",

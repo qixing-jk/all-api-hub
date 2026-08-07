@@ -1059,6 +1059,11 @@ export default function KeyManagement(props: {
         onClose={handleCloseRepairMissingKeys}
         accounts={displayData}
         startOnOpen={repairStartOnOpen}
+        onManagedSiteImportSuccess={
+          isManagedSiteChannelStatusSupported
+            ? handleManagedSiteImportSuccess
+            : undefined
+        }
       />
 
       <DestructiveConfirmDialog

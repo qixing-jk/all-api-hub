@@ -562,6 +562,16 @@
       "selectAll": "全选当前结果",
       "selectedCount": "已选择 {{count}} 个异常密钥"
     },
+    "managedSiteImport": {
+      "action": "导入 {{count}} 个修复创建的密钥",
+      "changeTarget": "更改目标",
+      "configMissing": "请先配置管理站点，再导入修复创建的密钥。",
+      "failed": "准备修复创建的密钥导入失败，请重试。",
+      "receiptFailed": "导入已完成，但无法更新修复结果。请刷新结果以确认当前状态。",
+      "target": "{{site}}：有 {{count}} 个修复创建的密钥可导入",
+      "title": "导入修复创建的密钥",
+      "unavailable": "这些修复创建的密钥暂时无法导入。请刷新修复结果后重试。"
+    },
     "messages": {
       "cancelFailed": "取消检查任务失败",
       "loadFailed": "加载修复进度失败",

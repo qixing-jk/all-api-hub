@@ -588,6 +588,20 @@
       "selectedCount_many": "{{count}} claves inválidas seleccionadas",
       "selectedCount_other": "{{count}} claves inválidas seleccionadas"
     },
+    "managedSiteImport": {
+      "action_one": "Importar {{count}} clave reparada",
+      "action_many": "Importar {{count}} claves reparadas",
+      "action_other": "Importar {{count}} claves reparadas",
+      "changeTarget": "Cambiar destino",
+      "configMissing": "Configura un sitio administrado antes de importar las claves reparadas.",
+      "failed": "No se pudieron preparar las claves reparadas para importarlas. Inténtalo de nuevo.",
+      "receiptFailed": "La importación terminó, pero no se pudieron actualizar los resultados de reparación. Actualiza los resultados para confirmar el estado actual.",
+      "target_one": "{{count}} clave reparada lista para {{site}}",
+      "target_many": "{{count}} claves reparadas listas para {{site}}",
+      "target_other": "{{count}} claves reparadas listas para {{site}}",
+      "title": "Importar claves reparadas",
+      "unavailable": "Las claves reparadas ya no están disponibles para importar. Actualiza los resultados de reparación e inténtalo de nuevo."
+    },
     "messages": {
       "cancelFailed": "No se pudo cancelar el trabajo de reparación",
       "loadFailed": "No se pudo cargar el progreso de reparación",

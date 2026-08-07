@@ -575,6 +575,18 @@
       "selectedCount_one": "{{count}} invalid key selected",
       "selectedCount_other": "{{count}} invalid keys selected"
     },
+    "managedSiteImport": {
+      "action_one": "Import {{count}} repaired key",
+      "action_other": "Import {{count}} repaired keys",
+      "changeTarget": "Change target",
+      "configMissing": "Configure a managed site before importing repaired keys.",
+      "failed": "Could not prepare repaired keys for import. Try again.",
+      "receiptFailed": "Import finished, but the repair results could not be updated. Refresh the results to confirm the current state.",
+      "target_one": "{{count}} repaired key ready for {{site}}",
+      "target_other": "{{count}} repaired keys ready for {{site}}",
+      "title": "Import repaired keys",
+      "unavailable": "The repaired keys are no longer available for import. Refresh the repair results and try again."
+    },
     "messages": {
       "cancelFailed": "Failed to cancel repair job",
       "loadFailed": "Failed to load repair progress",

@@ -3,10 +3,15 @@ import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { Alert, Button, Modal } from "~/components/ui"
-import type { DisplaySiteData } from "~/types"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
+import type { AccountToken, DisplaySiteData } from "~/types"
 import type { AccountKeyRepairOutcome } from "~/types/accountKeyAutoProvisioning"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
+import { openSettingsTab } from "~/utils/navigation"
 
+import { ManagedSiteTokenBatchExportDialog } from "../ManagedSiteTokenBatchExportDialog"
 import { RepairInvalidKeysDeleteConfirm } from "./RepairInvalidKeysDeleteConfirm"
 import {
   filterRepairInvalidTokens,
@@ -22,6 +27,7 @@ import { RepairMissingKeysStatusBadge } from "./RepairMissingKeysStatusBadge"
 import { RepairPreviousResultSummary } from "./RepairPreviousResultSummary"
 import { RepairRenameOption } from "./RepairRenameOption"
 import { useInvalidKeyDeletion } from "./useInvalidKeyDeletion"
+import { useRepairCreatedKeyManagedSiteImport } from "./useRepairCreatedKeyManagedSiteImport"
 import { useRepairMissingKeysJob } from "./useRepairMissingKeysJob"
 
 interface RepairMissingKeysDialogProps {
@@ -29,15 +35,18 @@ interface RepairMissingKeysDialogProps {
   onClose: () => void
   accounts: DisplaySiteData[]
   startOnOpen: boolean
+  onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
 }
 
 /**
  * Modal dialog showing the background progress of the "ensure at least one key" job.
  */
 export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
-  const { isOpen, onClose, accounts, startOnOpen } = props
+  const { isOpen, onClose, accounts, startOnOpen, onManagedSiteImportSuccess } =
+    props
   const { t } = useTranslation(["keyManagement", "common"])
   const { openDefaultTokenQuickCreateDialogForAccount } = useChannelDialog()
+  const { managedSiteType } = useUserPreferencesContext()
 
   const [searchTerm, setSearchTerm] = useState("")
   const [outcomeFilter, setOutcomeFilter] =
@@ -168,6 +177,16 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     Boolean(progress) && isPreviousResult && isPreviousResultExpanded
   const statusProgress = shouldShowPreviousResultSummary ? null : progress
 
+  const repairCreatedImport = useRepairCreatedKeyManagedSiteImport({
+    accounts,
+    isOpen,
+    isCurrentSessionResult: !isPreviousResult,
+    progress,
+    setProgress,
+    onManagedSiteImportSuccess,
+    t,
+  })
+
   const handleStartRepair = () => {
     setHasStartedRepairInSession(true)
     setPreviousResultJobId(progress?.jobId ?? null)
@@ -217,117 +236,199 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      size="lg"
-      panelClassName="sm:max-w-3xl"
-      header={
-        <div className="space-y-1 pr-10">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-semibold">
-              {t("repairMissingKeys.title")}
-            </h2>
-            <RepairMissingKeysStatusBadge progress={statusProgress} t={t} />
+    <>
+      <Modal
+        isOpen={isOpen && !repairCreatedImport.isBatchImportOpen}
+        onClose={onClose}
+        size="lg"
+        panelClassName="sm:max-w-3xl"
+        header={
+          <div className="space-y-1 pr-10">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-base font-semibold">
+                {t("repairMissingKeys.title")}
+              </h2>
+              <RepairMissingKeysStatusBadge progress={statusProgress} t={t} />
+            </div>
+            <p className="dark:text-dark-text-secondary text-sm text-gray-500">
+              {t("repairMissingKeys.description")}
+            </p>
           </div>
-          <p className="dark:text-dark-text-secondary text-sm text-gray-500">
-            {t("repairMissingKeys.description")}
-          </p>
-        </div>
-      }
-      footer={
-        shouldShowReadonlyPreviousResult ? (
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleReturnToCheckSetup}
-            >
-              {t("repairMissingKeys.previousResult.backToSetup")}
-            </Button>
-          </div>
-        ) : shouldShowProgressDetails && progress ? (
-          <p className="dark:text-dark-text-secondary text-xs text-gray-500">
-            {progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running
-              ? t("repairMissingKeys.runningNote")
-              : t("repairMissingKeys.historyNote")}
-          </p>
-        ) : null
-      }
-    >
-      {error ? <Alert variant="destructive" description={error} /> : null}
+        }
+        footer={
+          shouldShowReadonlyPreviousResult ? (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleReturnToCheckSetup}
+              >
+                {t("repairMissingKeys.previousResult.backToSetup")}
+              </Button>
+            </div>
+          ) : shouldShowProgressDetails && progress ? (
+            <p className="dark:text-dark-text-secondary text-xs text-gray-500">
+              {progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running
+                ? t("repairMissingKeys.runningNote")
+                : t("repairMissingKeys.historyNote")}
+            </p>
+          ) : null
+        }
+      >
+        {error ? <Alert variant="destructive" description={error} /> : null}
 
-      {shouldShowCheckSetup ? (
-        <RepairMissingKeysSetupCard
-          isStarting={isStarting}
-          previousResultSummary={
-            shouldShowPreviousResultSummary ? (
-              <RepairPreviousResultSummary
-                onViewResult={() => setIsPreviousResultExpanded(true)}
-                t={t}
-              />
-            ) : null
-          }
-          renameOption={renameOption}
-          onStartRepair={handleStartRepair}
+        {shouldShowCheckSetup ? (
+          <RepairMissingKeysSetupCard
+            isStarting={isStarting}
+            previousResultSummary={
+              shouldShowPreviousResultSummary ? (
+                <RepairPreviousResultSummary
+                  onViewResult={() => setIsPreviousResultExpanded(true)}
+                  t={t}
+                />
+              ) : null
+            }
+            renameOption={renameOption}
+            onStartRepair={handleStartRepair}
+            t={t}
+          />
+        ) : null}
+
+        {shouldShowProgressDetails && progress ? (
+          <div className="space-y-4">
+            {progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running &&
+            !shouldShowReadonlyPreviousResult
+              ? renameOption
+              : null}
+
+            <RepairMissingKeysProgressCard
+              progress={progress}
+              isCancelling={isCancelling}
+              isStarting={isStarting}
+              onCancelAudit={() => void handleCancelAudit()}
+              onStartAudit={handleStartRepair}
+              actions={shouldShowReadonlyPreviousResult ? null : undefined}
+              t={t}
+            />
+
+            {repairCreatedImport.recoverableReferenceCount > 0 ? (
+              <div
+                className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/40 space-y-3 rounded-lg border border-gray-200 bg-gray-50/70 p-3"
+                data-testid={
+                  KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportCard
+                }
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <div className="text-sm font-medium">
+                      {t(
+                        "keyManagement:repairMissingKeys.managedSiteImport.title",
+                      )}
+                    </div>
+                    <div className="dark:text-dark-text-secondary text-xs text-gray-500">
+                      {t(
+                        "keyManagement:repairMissingKeys.managedSiteImport.target",
+                        {
+                          count: repairCreatedImport.recoverableReferenceCount,
+                          site: getManagedSiteLabel(t, managedSiteType),
+                        },
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      data-testid={
+                        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportOpenSettingsButton
+                      }
+                      onClick={() =>
+                        void openSettingsTab("managedSite", {
+                          preserveHistory: true,
+                        })
+                      }
+                    >
+                      {t(
+                        "keyManagement:repairMissingKeys.managedSiteImport.changeTarget",
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      loading={repairCreatedImport.isResolving}
+                      data-testid={
+                        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton
+                      }
+                      onClick={() => void repairCreatedImport.openBatchImport()}
+                    >
+                      {repairCreatedImport.isResolving
+                        ? t("common:status.loading")
+                        : t(
+                            "keyManagement:repairMissingKeys.managedSiteImport.action",
+                            {
+                              count:
+                                repairCreatedImport.recoverableReferenceCount,
+                            },
+                          )}
+                    </Button>
+                  </div>
+                </div>
+                {repairCreatedImport.importError ? (
+                  <Alert
+                    variant="destructive"
+                    compact
+                    description={repairCreatedImport.importError}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+
+            <RepairMissingKeysResultsPanel
+              accountIds={accountIds}
+              activeView={activeView}
+              deleteResultMessage={deleteResultMessage}
+              filteredInvalidTokens={filteredInvalidTokens}
+              filteredResults={filteredResults}
+              invalidTokens={invalidTokens}
+              openingSub2ApiAccountId={openingSub2ApiAccountId}
+              outcomeCounts={outcomeCounts}
+              outcomeFilter={outcomeFilter}
+              readOnly={shouldShowReadonlyPreviousResult}
+              searchTerm={searchTerm}
+              selectedInvalidTokenKeys={selectedInvalidTokenKeys}
+              selectedInvalidTokens={selectedInvalidTokens}
+              visibleResults={visibleResults}
+              onActiveViewChange={setActiveView}
+              onOpenDeleteConfirm={() => setIsDeleteConfirmOpen(true)}
+              onOpenSub2ApiTokenDialog={(accountId) =>
+                void handleOpenSub2ApiTokenDialog(accountId)
+              }
+              onOutcomeFilterChange={setOutcomeFilter}
+              onSearchTermChange={setSearchTerm}
+              onSelectedInvalidTokenKeysChange={setSelectedInvalidTokenKeys}
+              t={t}
+            />
+          </div>
+        ) : null}
+
+        <RepairInvalidKeysDeleteConfirm
+          isOpen={isDeleteConfirmOpen}
+          isWorking={isDeletingInvalidKeys}
+          selectedInvalidTokens={selectedInvalidTokens}
+          onClose={() => setIsDeleteConfirmOpen(false)}
+          onConfirm={() => void handleDeleteInvalidKeys()}
           t={t}
         />
-      ) : null}
-
-      {shouldShowProgressDetails && progress ? (
-        <div className="space-y-4">
-          {progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running &&
-          !shouldShowReadonlyPreviousResult
-            ? renameOption
-            : null}
-
-          <RepairMissingKeysProgressCard
-            progress={progress}
-            isCancelling={isCancelling}
-            isStarting={isStarting}
-            onCancelAudit={() => void handleCancelAudit()}
-            onStartAudit={handleStartRepair}
-            actions={shouldShowReadonlyPreviousResult ? null : undefined}
-            t={t}
-          />
-
-          <RepairMissingKeysResultsPanel
-            accountIds={accountIds}
-            activeView={activeView}
-            deleteResultMessage={deleteResultMessage}
-            filteredInvalidTokens={filteredInvalidTokens}
-            filteredResults={filteredResults}
-            invalidTokens={invalidTokens}
-            openingSub2ApiAccountId={openingSub2ApiAccountId}
-            outcomeCounts={outcomeCounts}
-            outcomeFilter={outcomeFilter}
-            readOnly={shouldShowReadonlyPreviousResult}
-            searchTerm={searchTerm}
-            selectedInvalidTokenKeys={selectedInvalidTokenKeys}
-            selectedInvalidTokens={selectedInvalidTokens}
-            visibleResults={visibleResults}
-            onActiveViewChange={setActiveView}
-            onOpenDeleteConfirm={() => setIsDeleteConfirmOpen(true)}
-            onOpenSub2ApiTokenDialog={(accountId) =>
-              void handleOpenSub2ApiTokenDialog(accountId)
-            }
-            onOutcomeFilterChange={setOutcomeFilter}
-            onSearchTermChange={setSearchTerm}
-            onSelectedInvalidTokenKeysChange={setSelectedInvalidTokenKeys}
-            t={t}
-          />
-        </div>
-      ) : null}
-
-      <RepairInvalidKeysDeleteConfirm
-        isOpen={isDeleteConfirmOpen}
-        isWorking={isDeletingInvalidKeys}
-        selectedInvalidTokens={selectedInvalidTokens}
-        onClose={() => setIsDeleteConfirmOpen(false)}
-        onConfirm={() => void handleDeleteInvalidKeys()}
-        t={t}
+      </Modal>
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={isOpen && repairCreatedImport.isBatchImportOpen}
+        onClose={repairCreatedImport.closeBatchImport}
+        items={repairCreatedImport.batchImportItems}
+        intent={repairCreatedImport.batchImportIntent ?? undefined}
+        onCompleted={repairCreatedImport.handleBatchImportCompleted}
       />
-    </Modal>
+    </>
   )
 }

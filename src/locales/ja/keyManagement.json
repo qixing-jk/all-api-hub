@@ -562,6 +562,16 @@
       "selectAll": "現在の結果をすべて選択",
       "selectedCount_other": "{{count}} 件の例外キーを選択中"
     },
+    "managedSiteImport": {
+      "action_other": "{{count}} 件の修復済みキーをインポート",
+      "changeTarget": "対象を変更",
+      "configMissing": "修復済みキーをインポートする前に、管理サイトを設定してください。",
+      "failed": "修復済みキーのインポート準備に失敗しました。もう一度お試しください。",
+      "receiptFailed": "インポートは完了しましたが、修復結果を更新できませんでした。最新の状態を確認するには結果を更新してください。",
+      "target_other": "{{site}} にインポートできる修復済みキー：{{count}} 件",
+      "title": "修復済みキーをインポート",
+      "unavailable": "修復済みキーをインポートできません。修復結果を更新して、もう一度お試しください。"
+    },
     "messages": {
       "cancelFailed": "修復ジョブをキャンセルできませんでした",
       "loadFailed": "修復進捗の読み込みに失敗しました",

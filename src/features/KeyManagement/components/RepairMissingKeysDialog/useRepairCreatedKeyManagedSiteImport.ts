@@ -1,0 +1,320 @@
+import type { TFunction } from "i18next"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+
+import {
+  AccountKeyRepairMessageTypes,
+  sendAccountKeyRepairMessage,
+} from "~/services/accounts/accountKeyAutoProvisioning/messaging"
+import { isAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import {
+  REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS,
+  resolveRepairCreatedTokenBatchImportCandidate,
+} from "~/services/managedSites/repairCreatedTokenBatchImport"
+import { getCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
+import { createManagedSiteTokenBatchImportTarget } from "~/services/managedSites/tokenBatchImportTarget"
+import type { AccountToken, DisplaySiteData } from "~/types"
+import {
+  ACCOUNT_KEY_REPAIR_JOB_STATES,
+  ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES,
+  ACCOUNT_KEY_REPAIR_OUTCOMES,
+  type AccountKeyRepairManagedSiteImportStatus,
+  type AccountKeyRepairProgress,
+} from "~/types/accountKeyAutoProvisioning"
+import {
+  isResolvedManagedSiteTokenBatchExportItemInput,
+  type ManagedSiteBatchImportIntent,
+  type ManagedSiteTokenBatchExportExecutionResult,
+  type ManagedSiteTokenBatchExportItemInput,
+} from "~/types/managedSiteTokenBatchExport"
+
+import type { ManagedSiteTokenBatchExportCompletionContext } from "../ManagedSiteTokenBatchExportDialog/useManagedSiteTokenBatchExportDialog"
+
+interface UseRepairCreatedKeyManagedSiteImportParams {
+  accounts: DisplaySiteData[]
+  isOpen: boolean
+  isCurrentSessionResult: boolean
+  progress: AccountKeyRepairProgress | null
+  setProgress: (progress: AccountKeyRepairProgress) => void
+  onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
+  t: TFunction
+}
+
+const isSafeCreatedReference = (
+  value: unknown,
+): value is {
+  tokenId: number
+  group: string
+} =>
+  typeof value === "object" &&
+  value !== null &&
+  "tokenId" in value &&
+  Number.isSafeInteger(value.tokenId) &&
+  "group" in value &&
+  typeof value.group === "string"
+
+const countRecoverableCreatedReferences = (
+  progress: AccountKeyRepairProgress | null,
+  accounts: DisplaySiteData[],
+) => {
+  if (!progress || progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed) {
+    return 0
+  }
+
+  const activeAccountIds = new Set(
+    accounts
+      .filter((account) => !account.disabled)
+      .map((account) => account.id),
+  )
+  const referenceKeys = new Set<string>()
+  for (const result of progress.results) {
+    if (
+      result.outcome !== ACCOUNT_KEY_REPAIR_OUTCOMES.Created ||
+      !activeAccountIds.has(result.accountId)
+    ) {
+      continue
+    }
+    for (const reference of result.createdTokens ?? []) {
+      if (!isSafeCreatedReference(reference)) continue
+      referenceKeys.add(`${result.accountId}:${reference.tokenId}`)
+    }
+  }
+
+  return referenceKeys.size
+}
+
+const getVisibleProgress = (
+  progress: AccountKeyRepairProgress,
+  accounts: DisplaySiteData[],
+): AccountKeyRepairProgress => {
+  const disabledAccountIds = new Set(
+    accounts.filter((account) => account.disabled).map((account) => account.id),
+  )
+  return {
+    ...progress,
+    results: progress.results.filter(
+      (result) => !disabledAccountIds.has(result.accountId),
+    ),
+  }
+}
+
+const getRepairImportReceiptItems = (params: {
+  candidateItems: ManagedSiteTokenBatchExportItemInput[]
+  result: ManagedSiteTokenBatchExportExecutionResult
+  context?: ManagedSiteTokenBatchExportCompletionContext
+}) => {
+  const inputById = new Map(
+    params.candidateItems
+      .filter(isResolvedManagedSiteTokenBatchExportItemInput)
+      .map((input) => [input.runtimeKey.id, input] as const),
+  )
+  const receiptByKey = new Map<
+    string,
+    {
+      accountId: string
+      tokenId: number
+      status: AccountKeyRepairManagedSiteImportStatus
+    }
+  >()
+
+  const addReceipt = (
+    id: string,
+    status: AccountKeyRepairManagedSiteImportStatus,
+  ) => {
+    const input = inputById.get(id)
+    if (!input || !isAccountTokenRuntimeKey(input.runtimeKey)) return
+    const key = `${input.account.id}:${input.runtimeKey.tokenId}`
+    receiptByKey.set(key, {
+      accountId: input.account.id,
+      tokenId: input.runtimeKey.tokenId,
+      status,
+    })
+  }
+
+  for (const item of params.result.items) {
+    const status =
+      item.result === "created"
+        ? ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created
+        : item.result === "failed"
+          ? ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Failed
+          : ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Uncertain
+    addReceipt(item.id, status)
+  }
+
+  for (const id of params.context?.alreadyPresentItemIds ?? []) {
+    addReceipt(
+      id,
+      ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.AlreadyPresent,
+    )
+  }
+
+  return Array.from(receiptByKey.values())
+}
+
+/**
+ * Owns only repair-entry orchestration; preparation, review, execution, and
+ * retry remain inside the shared managed-site batch dialog.
+ */
+export function useRepairCreatedKeyManagedSiteImport({
+  accounts,
+  isOpen,
+  isCurrentSessionResult,
+  progress,
+  setProgress,
+  onManagedSiteImportSuccess,
+  t,
+}: UseRepairCreatedKeyManagedSiteImportParams) {
+  const [isBatchImportOpen, setIsBatchImportOpen] = useState(false)
+  const [isResolving, setIsResolving] = useState(false)
+  const [batchImportItems, setBatchImportItems] = useState<
+    ManagedSiteTokenBatchExportItemInput[]
+  >([])
+  const [batchImportIntent, setBatchImportIntent] =
+    useState<ManagedSiteBatchImportIntent | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const activeJobIdRef = useRef<string | null>(null)
+  const activeTargetFingerprintRef = useRef<string | null>(null)
+  const activeItemsRef = useRef<ManagedSiteTokenBatchExportItemInput[]>([])
+
+  const recoverableReferenceCount = useMemo(
+    () => countRecoverableCreatedReferences(progress, accounts),
+    [accounts, progress],
+  )
+
+  const closeBatchImport = useCallback(() => {
+    if (isResolving) return
+    setIsBatchImportOpen(false)
+    setBatchImportItems([])
+    setBatchImportIntent(null)
+    activeJobIdRef.current = null
+    activeTargetFingerprintRef.current = null
+    activeItemsRef.current = []
+  }, [isResolving])
+
+  const openBatchImport = useCallback(async () => {
+    if (
+      isResolving ||
+      isBatchImportOpen ||
+      !progress ||
+      progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed
+    ) {
+      return
+    }
+
+    setIsResolving(true)
+    setImportError(null)
+    try {
+      const runtimeConfig = await getCurrentManagedSiteRuntimeConfig()
+      if (!runtimeConfig) {
+        setImportError(
+          t("keyManagement:repairMissingKeys.managedSiteImport.configMissing"),
+        )
+        return
+      }
+
+      const target =
+        await createManagedSiteTokenBatchImportTarget(runtimeConfig)
+      const candidate = await resolveRepairCreatedTokenBatchImportCandidate({
+        progress: getVisibleProgress(progress, accounts),
+        accounts,
+        targetFingerprint: target.targetFingerprint,
+        freshness: isCurrentSessionResult
+          ? REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION
+          : REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.HISTORICAL,
+      })
+      if (!candidate) {
+        setImportError(
+          t("keyManagement:repairMissingKeys.managedSiteImport.unavailable"),
+        )
+        return
+      }
+
+      activeJobIdRef.current = progress.jobId
+      activeTargetFingerprintRef.current = target.targetFingerprint
+      activeItemsRef.current = candidate.items
+      setBatchImportItems(candidate.items)
+      setBatchImportIntent(candidate.intent)
+      setIsBatchImportOpen(true)
+    } catch {
+      setImportError(
+        t("keyManagement:repairMissingKeys.managedSiteImport.failed"),
+      )
+    } finally {
+      setIsResolving(false)
+    }
+  }, [
+    accounts,
+    isBatchImportOpen,
+    isCurrentSessionResult,
+    isResolving,
+    progress,
+    t,
+  ])
+
+  const handleBatchImportCompleted = useCallback(
+    (
+      result: ManagedSiteTokenBatchExportExecutionResult,
+      context?: ManagedSiteTokenBatchExportCompletionContext,
+    ) => {
+      const receiptItems = getRepairImportReceiptItems({
+        candidateItems: activeItemsRef.current,
+        result,
+        context,
+      })
+      const jobId = activeJobIdRef.current
+      const targetFingerprint = activeTargetFingerprintRef.current
+
+      for (const item of result.items) {
+        if (item.result !== "created") continue
+        const input = activeItemsRef.current
+          .filter(isResolvedManagedSiteTokenBatchExportItemInput)
+          .find((candidateItem) => candidateItem.runtimeKey.id === item.id)
+        if (!input) continue
+        if (!isAccountTokenRuntimeKey(input.runtimeKey)) continue
+        void onManagedSiteImportSuccess?.(input.runtimeKey.token)
+      }
+
+      if (!jobId || !targetFingerprint || receiptItems.length === 0) return
+
+      void sendAccountKeyRepairMessage(
+        AccountKeyRepairMessageTypes.RecordManagedSiteImportResults,
+        { jobId, targetFingerprint, items: receiptItems },
+      )
+        .then((response) => {
+          if (response?.success && response.data) {
+            setProgress(response.data)
+          }
+        })
+        .catch(() => {
+          setImportError(
+            t(
+              "keyManagement:repairMissingKeys.managedSiteImport.receiptFailed",
+            ),
+          )
+        })
+    },
+    [onManagedSiteImportSuccess, setProgress, t],
+  )
+
+  useEffect(() => {
+    if (isOpen) return
+    setIsBatchImportOpen(false)
+    setBatchImportItems([])
+    setBatchImportIntent(null)
+    setImportError(null)
+    activeJobIdRef.current = null
+    activeTargetFingerprintRef.current = null
+    activeItemsRef.current = []
+  }, [isOpen])
+
+  return {
+    batchImportIntent,
+    batchImportItems,
+    importError,
+    isBatchImportOpen,
+    isResolving,
+    openBatchImport,
+    closeBatchImport,
+    handleBatchImportCompleted,
+    recoverableReferenceCount,
+  }
+}

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { AccountKeyRepairMessageTypes } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -797,6 +798,74 @@ describe("KeyManagement repair missing keys entry point", () => {
     })
 
     expect(screen.getByText("Another Site")).toBeInTheDocument()
+  })
+
+  it("shows repair-created import only after completed progress has exact references", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
+        return { success: true, data: idleProgress }
+      }
+      if (message === AccountKeyRepairMessageTypes.Start) {
+        return { success: true, data: startProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        AccountKeyRepairMessageTypes.Start,
+        { renameAutoTemplateTokens: true },
+      )
+    })
+    expect(
+      screen.queryByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
+      ),
+    ).not.toBeInTheDocument()
+
+    const completedWithReferences: AccountKeyRepairProgress = {
+      ...startProgress,
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+      finishedAt: 2,
+      totals: {
+        ...startProgress.totals,
+        processedEligibleAccounts: 2,
+      },
+      results: startProgress.results.map((result) =>
+        result.accountId === "account-enabled"
+          ? {
+              ...result,
+              createdTokens: [{ tokenId: 101, group: "default" }],
+            }
+          : result,
+      ),
+    }
+
+    await act(async () => {
+      runtimeMessageState.listener?.({
+        type: RuntimeMessageTypes.AccountKeyRepairProgress,
+        payload: completedWithReferences,
+      })
+    })
+
+    expect(
+      await screen.findByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
+      ),
+    ).toBeVisible()
   })
 
   it("shows history copy instead of running copy for terminal repair progress", async () => {

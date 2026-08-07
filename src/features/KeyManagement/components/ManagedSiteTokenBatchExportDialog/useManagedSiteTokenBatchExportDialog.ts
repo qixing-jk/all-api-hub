@@ -79,7 +79,15 @@ export interface ManagedSiteTokenBatchExportDialogProps {
   onClose: () => void
   items: ManagedSiteTokenBatchExportItemInput[]
   intent?: ManagedSiteBatchImportIntent
-  onCompleted?: (result: ManagedSiteTokenBatchExportExecutionResult) => void
+  onCompleted?: (
+    result: ManagedSiteTokenBatchExportExecutionResult,
+    context: ManagedSiteTokenBatchExportCompletionContext,
+  ) => void
+}
+
+/** Controlled completion facts exposed to entry-point owners without drafts or secrets. */
+export interface ManagedSiteTokenBatchExportCompletionContext {
+  alreadyPresentItemIds: string[]
 }
 
 interface UseManagedSiteTokenBatchExportDialogParams
@@ -705,7 +713,16 @@ export function useManagedSiteTokenBatchExportDialog({
       retryBaselineRef.current = null
       setRetryItemIds(new Set())
       setExecutionResult(cumulativeResult)
-      onCompleted?.(result)
+      onCompleted?.(result, {
+        alreadyPresentItemIds: preview.items
+          .filter(
+            (item) =>
+              item.status ===
+                MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED &&
+              item.matchedChannel,
+          )
+          .map((item) => item.id),
+      })
       toast.success(
         t("keyManagement:batchManagedSiteExport.messages.completed", {
           created: cumulativeResult.createdCount,

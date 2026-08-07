@@ -2676,6 +2676,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(onCompleted).toHaveBeenCalledTimes(1)
     })
+    expect(onCompleted).toHaveBeenCalledWith(expect.anything(), {
+      alreadyPresentItemIds: ["account_token:account-1:3"],
+    })
     expect(
       await screen.findByText(
         "keyManagement:batchManagedSiteExport.results.status.success",
