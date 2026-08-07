@@ -4,10 +4,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
+import { DialogFooter } from "~/features/AccountManagement/components/CopyKeyDialog/DialogFooter"
+import { KeyInventoryList } from "~/features/AccountManagement/components/CopyKeyDialog/KeyInventoryList"
+import { QuickKeyResourceCard } from "~/features/AccountManagement/components/CopyKeyDialog/QuickKeyResourceCard"
+import { RuntimeKeyActionControls } from "~/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import type { KeyResourceCardPresentation } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { generateDefaultTokenRequest } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import * as accountOperations from "~/services/accounts/accountOperations"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/keyManagement"
 import {
@@ -515,6 +521,120 @@ describe("CopyKeyDialog", () => {
     userPreferencesContextMock.managedSiteType = SITE_TYPES.NEW_API
   })
 
+  it("omits optional empty-state and footer actions when callbacks are unavailable", () => {
+    render(
+      <>
+        <KeyInventoryList
+          runtimeKeys={[]}
+          expandedRuntimeKeys={new Set()}
+          copiedRuntimeKeyId={null}
+          onToggleRuntimeKey={() => {}}
+          onCopyKey={() => {}}
+          account={ACCOUNT}
+          supportsApiTokenCreation
+        />
+        <DialogFooter keyCount={0} onClose={() => {}} />
+      </>,
+    )
+
+    expect(screen.getByText("ui:dialog.copyKey.noKeys")).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "ui:dialog.copyKey.createKey" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "ui:dialog.copyKey.createCustomKey",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "account:actions.keyManagement" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    ).toBeEnabled()
+  })
+
+  it("renders unknown quick-key status without duplicating its header fact", () => {
+    const contextFact = {
+      id: "workspace",
+      label: "Workspace",
+      value: "Example workspace",
+    }
+    const quickPresentation: KeyResourceCardPresentation = {
+      id: "quick-key-example",
+      title: "Example quick key",
+      accountLabel: "Example account",
+      status: "unknown",
+      statusLabel: "Unknown",
+      secretAvailability: "unavailable",
+      contextFact,
+      summaryFacts: [contextFact],
+      detailFacts: [],
+      actions: {
+        copySecret: false,
+        revealSecret: false,
+        verifySecret: false,
+        exportSecret: false,
+        edit: false,
+        delete: false,
+        batchSelect: false,
+      },
+    }
+
+    render(
+      <QuickKeyResourceCard
+        presentation={quickPresentation}
+        isExpanded
+        onExpandedChange={() => {}}
+      />,
+    )
+
+    expect(screen.getByText("Unknown")).toBeVisible()
+    expect(screen.getAllByText("Example workspace")).toHaveLength(1)
+    expect(
+      screen.getByRole("region", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    ).toBeVisible()
+  })
+
+  it("keeps copy and export action policies independent", () => {
+    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const { rerender } = render(
+      <RuntimeKeyActionControls
+        runtimeKey={runtimeKey}
+        actionPolicy={{ copySecret: true, exportSecret: false }}
+        copiedRuntimeKeyId={null}
+        onCopyKey={() => {}}
+        account={ACCOUNT}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <RuntimeKeyActionControls
+        runtimeKey={runtimeKey}
+        actionPolicy={{ copySecret: false, exportSecret: true }}
+        copiedRuntimeKeyId={null}
+        onCopyKey={() => {}}
+        account={ACCOUNT}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
+    ).toBeVisible()
+  })
+
   it("creates token then refreshes and auto-copies when exactly one token exists", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
@@ -650,6 +770,39 @@ describe("CopyKeyDialog", () => {
       screen.queryByRole("button", {
         name: "keyManagement:actions.importToManagedSite",
       }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders an AIHubMix key without inventing a masked secret", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      {
+        ...TOKEN,
+        key: "",
+        name: "Saved key without a preview",
+      },
+    ])
+    const user = userEvent.setup()
+
+    render(
+      <CopyKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={AIHUBMIX_ACCOUNT}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
+
+    expect(screen.getByText("Saved key without a preview")).toBeVisible()
+    expect(
+      screen.getByText("keyManagement:keyDetails.createResponseOnlySecret"),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("button", { name: "ui:dialog.copyKey.copy" }),
     ).not.toBeInTheDocument()
   })
 
@@ -1083,6 +1236,29 @@ describe("CopyKeyDialog", () => {
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
 
+  it("ignores rejected token fetches after the request is cancelled", async () => {
+    const pendingTokens = createDeferred<(typeof TOKEN)[]>()
+    fetchAccountTokensMock.mockReturnValueOnce(pendingTokens.promise)
+
+    const { rerender } = render(
+      <CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />,
+    )
+
+    await screen.findByText("ui:dialog.copyKey.loading")
+    rerender(
+      <CopyKeyDialog isOpen={false} onClose={() => {}} account={ACCOUNT} />,
+    )
+
+    await act(async () => {
+      pendingTokens.reject(new Error("cancelled request failed late"))
+      await pendingTokens.promise.catch(() => undefined)
+    })
+
+    expect(
+      screen.queryByText("ui:dialog.copyKey.loadFailed"),
+    ).not.toBeInTheDocument()
+  })
+
   it("opens a generic constrained Add Token dialog when default token policy requires selection", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     resolveDefaultTokenQuickCreateResolutionSpy.mockResolvedValueOnce({
@@ -1297,6 +1473,35 @@ describe("CopyKeyDialog", () => {
     })
   })
 
+  it("reports Cherry Studio export failures without leaving the action pending", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+    openInCherryStudioMock.mockImplementationOnce(() => {
+      throw new Error("Cherry Studio is unavailable")
+    })
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "messages:errors.operation.failed",
+      )
+    })
+  })
+
   it("tracks managed-site single token import when the copied token flow opens", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
     openWithAccountMock.mockImplementationOnce(
@@ -1373,6 +1578,75 @@ describe("CopyKeyDialog", () => {
         "messages:errors.operation.failed",
       )
     })
+  })
+
+  it("marks successful managed-site onboarding even when no flow opens", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+    userPreferencesContextMock.markGatewayGuidanceOnboardingCompleted.mockReset()
+    openWithAccountMock.mockImplementationOnce(
+      async (_account, _token, onResult) => {
+        onResult({ success: true })
+        return { opened: false, deferred: false }
+      },
+    )
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        userPreferencesContextMock.markGatewayGuidanceOnboardingCompleted,
+      ).toHaveBeenCalledTimes(1)
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+      )
+    })
+  })
+
+  it("explains missing external-tool configuration before opening imports", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+    userPreferencesContextMock.cliProxyBaseUrl = ""
+    userPreferencesContextMock.cliProxyManagementKey = ""
+    userPreferencesContextMock.claudeCodeRouterBaseUrl = ""
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToCliProxy",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToClaudeCodeRouter",
+      }),
+    )
+
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "messages:cliproxy.configMissing",
+    )
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "messages:claudeCodeRouter.configMissing",
+    )
+    expect(cliProxyDialogMock).not.toHaveBeenCalled()
+    expect(claudeCodeRouterDialogMock).not.toHaveBeenCalled()
   })
 
   it("resets copied state after showing the copied action label", async () => {

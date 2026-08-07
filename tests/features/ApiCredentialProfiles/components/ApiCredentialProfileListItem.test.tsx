@@ -142,6 +142,8 @@ function renderListItem(
   overrides: {
     isTelemetryRefreshing?: boolean
     onRefreshTelemetry?: (profile: ApiCredentialProfile) => void
+    visibleKeys?: Set<string>
+    toggleKeyVisibility?: (profileId: string) => void
   } = {},
 ) {
   const onRefreshTelemetry = overrides.onRefreshTelemetry ?? vi.fn()
@@ -150,8 +152,8 @@ function renderListItem(
       profile={profile}
       verificationSummary={null}
       tagNames={[]}
-      visibleKeys={new Set()}
-      toggleKeyVisibility={vi.fn()}
+      visibleKeys={overrides.visibleKeys ?? new Set()}
+      toggleKeyVisibility={overrides.toggleKeyVisibility ?? vi.fn()}
       onCopyBaseUrl={vi.fn()}
       onCopyApiKey={vi.fn()}
       onCopyBundle={vi.fn()}
@@ -212,6 +214,22 @@ describe("ApiCredentialProfileListItem", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("shows a full API key only when its visibility is enabled", () => {
+    const profile = buildProfile()
+    const toggleKeyVisibility = vi.fn()
+    renderListItem(profile, {
+      visibleKeys: new Set([profile.id]),
+      toggleKeyVisibility,
+    })
+
+    expect(screen.getByText("sk-newapi")).toBeVisible()
+    const hideButton = screen.getByRole("button", {
+      name: "keyManagement:actions.hideKey",
+    })
+    fireEvent.click(hideButton)
+    expect(toggleKeyVisibility).toHaveBeenCalledWith(profile.id)
   })
 
   it("declares controlled analytics metadata for profile row actions", () => {

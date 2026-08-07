@@ -249,6 +249,20 @@ describe("KeyResourceCard", () => {
     )
   })
 
+  it("renders adaptive availability guidance without requiring a secret label", () => {
+    renderKeyResourceCard(
+      <KeyResourceSecretDisplay
+        message="The saved secret cannot be retrieved."
+        layout={KEY_RESOURCE_CONTENT_LAYOUTS.Adaptive}
+      />,
+    )
+
+    expect(
+      screen.getByText("The saved secret cannot be retrieved."),
+    ).toBeVisible()
+    expect(screen.queryByText("Key")).not.toBeInTheDocument()
+  })
+
   it("announces loading and supports detail retry", async () => {
     const user = userEvent.setup()
     const onRetry = vi.fn()

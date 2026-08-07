@@ -5,7 +5,10 @@ import type {
   AccountKeyResourceCollection,
   AccountKeyResourceFacts,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { collectAccountKeyResourceInventory } from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
+import {
+  awaitAbortableAccountKeyResourceOperation,
+  collectAccountKeyResourceInventory,
+} from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
 
 const createFacts = (resourceId: string): AccountKeyResourceFacts => ({
   ref: {
@@ -22,6 +25,17 @@ const createFacts = (resourceId: string): AccountKeyResourceFacts => ({
 })
 
 describe("collectAccountKeyResourceInventory", () => {
+  it("preserves synchronous provider failures while an abort signal is active", async () => {
+    const controller = new AbortController()
+    const failure = new Error("provider initialization failed")
+
+    await expect(
+      awaitAbortableAccountKeyResourceOperation(() => {
+        throw failure
+      }, controller.signal),
+    ).rejects.toBe(failure)
+  })
+
   it("does not start listing when the request is already aborted", async () => {
     const controller = new AbortController()
     const list = vi.fn()
