@@ -2701,6 +2701,171 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it("retries only failed rows and keeps confirmed successes visible", async () => {
+    const user = userEvent.setup()
+    const firstResult = {
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      uncertainCount: 0,
+      skippedCount: 0,
+      items: [
+        {
+          id: "account_token:account-1:1",
+          accountName: "Account 1",
+          runtimeKeyName: "Token 1",
+          result: "created",
+          success: true,
+          skipped: false,
+        },
+        {
+          id: "account_token:account-1:2",
+          accountName: "Account 1",
+          runtimeKeyName: "Token 2",
+          result: "failed",
+          success: false,
+          skipped: false,
+          error: "first attempt failed",
+        },
+      ],
+    }
+    const retryResult = {
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+      uncertainCount: 0,
+      skippedCount: 0,
+      items: [
+        {
+          id: "account_token:account-1:2",
+          accountName: "Account 1",
+          runtimeKeyName: "Token 2",
+          result: "created",
+          success: true,
+          skipped: false,
+        },
+      ],
+    }
+    mockPreparePreview
+      .mockResolvedValueOnce(preview)
+      .mockResolvedValueOnce(preview)
+    mockExecuteBatchExport
+      .mockResolvedValueOnce(firstResult)
+      .mockResolvedValueOnce(retryResult)
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+
+    expect(
+      await screen.findByTestId(
+        "key-management-managed-site-batch-export-retry-button",
+      ),
+    ).toBeInTheDocument()
+    await user.click(
+      screen.getByTestId(
+        "key-management-managed-site-batch-export-retry-button",
+      ),
+    )
+    await waitFor(() => {
+      expect(mockPreparePreview).toHaveBeenCalledTimes(2)
+    })
+    expect(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 1" }),
+    ).toHaveAttribute("aria-checked", "false")
+    expect(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 2" }),
+    ).toHaveAttribute("aria-checked", "true")
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+    await waitFor(() => {
+      expect(mockExecuteBatchExport).toHaveBeenCalledTimes(2)
+    })
+    expect(mockExecuteBatchExport.mock.calls[1][0].selectedItemIds).toEqual([
+      "account_token:account-1:2",
+    ])
+    expect(
+      screen.getAllByText(
+        "keyManagement:batchManagedSiteExport.results.status.success",
+      ),
+    ).toHaveLength(2)
+    expect(
+      screen.queryByTestId(
+        "key-management-managed-site-batch-export-retry-button",
+      ),
+    ).toBeNull()
+  })
+
+  it("keeps deselected rows visible without inventing an execution result", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(preview)
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+      uncertainCount: 0,
+      skippedCount: 0,
+      items: [
+        {
+          id: "account_token:account-1:1",
+          accountName: "Account 1",
+          runtimeKeyName: "Token 1",
+          result: "created",
+          success: true,
+          skipped: false,
+        },
+      ],
+    })
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 2" }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.results.status.notSelected",
+      ),
+    ).toBeInTheDocument()
+    expect(mockExecuteBatchExport.mock.calls[0][0].selectedItemIds).toEqual([
+      "account_token:account-1:1",
+    ])
+  })
+
   it("shows execution errors without replacing the preview error state", async () => {
     const user = userEvent.setup()
     mockPreparePreview.mockResolvedValue(preview)
@@ -2735,6 +2900,45 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     ).toBeEnabled()
+  })
+
+  it("offers shared target recovery when the prepared target changed", async () => {
+    const user = userEvent.setup()
+    const targetChanged = Object.assign(new Error("stale target"), {
+      code: "managed-site-token-import-target-changed",
+    })
+    mockPreparePreview.mockResolvedValue(preview)
+    mockExecuteBatchExport.mockRejectedValue(targetChanged)
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.messages.targetChanged",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.getByTestId(
+        "key-management-managed-site-batch-export-open-settings-button",
+      ),
+    ).toBeInTheDocument()
   })
 
   it("maps known execution error codes to user-facing text", async () => {

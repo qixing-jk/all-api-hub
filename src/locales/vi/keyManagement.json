@@ -58,6 +58,7 @@
       "clearSelection": "Xóa lựa chọn",
       "open": "Nhập hàng loạt vào {{site}} ({{selectedCount}})",
       "refreshPreview": "Làm mới bản xem trước",
+      "retry": "Thử lại các khóa thất bại",
       "running": "Đang nhập...",
       "selectAll": "Đã chọn {{selected}}/{{total}}",
       "start": "Bắt đầu nhập",
@@ -92,6 +93,7 @@
       "completed": "Nhập hàng loạt hoàn tất: thành công {{created}}, thất bại {{failed}}, bỏ qua {{skipped}}.",
       "duplicate": "Đã tồn tại kênh trùng khớp chính xác: {{channel}}",
       "executionFailed": "Thực thi nhập hàng loạt thất bại: {{error}}",
+      "targetChanged": "Đích site được quản lý đã thay đổi. Hãy làm mới bản xem trước hoặc chọn lại đích trước khi nhập.",
       "verificationFailed": "Xác minh New API thất bại: {{error}}"
     },
     "preview": {
@@ -108,8 +110,10 @@
       "channelCreationFailed": "Tạo kênh thất bại.",
       "status": {
         "failed": "Thất bại",
+        "notSelected": "Chưa chọn",
         "skipped": "Đã bỏ qua",
-        "success": "Đã tạo"
+        "success": "Đã tạo",
+        "uncertain": "Cần xem lại"
       },
       "summary": "Kết quả: Thành công {{created}}, thất bại {{failed}}, bỏ qua {{skipped}}, tổng cộng {{total}}."
     },

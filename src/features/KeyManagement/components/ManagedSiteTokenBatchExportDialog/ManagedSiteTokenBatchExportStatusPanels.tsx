@@ -7,6 +7,7 @@ interface ManagedSiteTokenBatchExportStatusPanelsProps {
   t: TFunction
   previewError: string | null
   executionError: string | null
+  isTargetChanged?: boolean
   isLoadingPreview: boolean
   isManualPreviewRefresh: boolean
   showPreviewLoadingStatus: boolean
@@ -21,6 +22,7 @@ export function ManagedSiteTokenBatchExportStatusPanels({
   t,
   previewError,
   executionError,
+  isTargetChanged = false,
   isLoadingPreview,
   isManualPreviewRefresh,
   showPreviewLoadingStatus,
@@ -56,9 +58,14 @@ export function ManagedSiteTokenBatchExportStatusPanels({
 
       {executionError ? (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
-          {t("keyManagement:batchManagedSiteExport.messages.executionFailed", {
-            error: executionError,
-          })}
+          {isTargetChanged
+            ? t("keyManagement:batchManagedSiteExport.messages.targetChanged")
+            : t(
+                "keyManagement:batchManagedSiteExport.messages.executionFailed",
+                {
+                  error: executionError,
+                },
+              )}
         </div>
       ) : null}
 

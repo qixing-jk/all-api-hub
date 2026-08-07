@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next"
 import { RefreshCcw } from "lucide-react"
-import { useId } from "react"
+import { useId, useMemo } from "react"
 
 import {
   Button,
@@ -13,6 +13,7 @@ import type {
   ManagedSiteTokenBatchExportPreview,
   ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
+import { isExecutableManagedSiteTokenBatchExportPreviewItem as isExecutablePreviewItem } from "~/types/managedSiteTokenBatchExport"
 
 import { ManagedSiteTokenBatchExportPreviewRow } from "./ManagedSiteTokenBatchExportPreviewRow"
 
@@ -70,6 +71,16 @@ export function ManagedSiteTokenBatchExportPreviewList({
   const isVerificationPending =
     isVerificationDialogOpen || Boolean(verifyingItemId)
   const selectAllId = useId()
+  const executionItemById = useMemo(
+    () =>
+      new Map(
+        executionResult?.items.map((resultItem) => [
+          resultItem.id,
+          resultItem,
+        ]) ?? [],
+      ),
+    [executionResult],
+  )
 
   return (
     <>
@@ -115,27 +126,34 @@ export function ManagedSiteTokenBatchExportPreviewList({
       ) : null}
 
       <div className="max-h-[60vh] space-y-3 overflow-y-auto rounded-md border p-3 md:max-h-[min(70vh,48rem)]">
-        {preview.items.map((item) => (
-          <ManagedSiteTokenBatchExportPreviewRow
-            key={item.id}
-            t={t}
-            item={item}
-            siteType={preview.siteType}
-            result={executionResult?.items.find(
-              (resultItem) => resultItem.id === item.id,
-            )}
-            modelOptions={modelOptions}
-            isSelected={selectedIds.has(item.id)}
-            hasExecutionResult={hasExecutionResult}
-            isLoadingPreview={isLoadingPreview}
-            isRunning={isRunning}
-            verifyingItemId={verifyingItemId}
-            isVerificationDialogOpen={isVerificationDialogOpen}
-            onToggleItem={onToggleItem}
-            onItemModelsChange={onItemModelsChange}
-            onVerifyAndRefresh={onVerifyAndRefresh}
-          />
-        ))}
+        {preview.items.map((item) => {
+          const result = executionItemById.get(item.id)
+          return (
+            <ManagedSiteTokenBatchExportPreviewRow
+              key={item.id}
+              t={t}
+              item={item}
+              siteType={preview.siteType}
+              result={result}
+              isNotSelected={Boolean(
+                executionResult &&
+                  !result &&
+                  isExecutablePreviewItem(item) &&
+                  !selectedIds.has(item.id),
+              )}
+              modelOptions={modelOptions}
+              isSelected={selectedIds.has(item.id)}
+              hasExecutionResult={hasExecutionResult}
+              isLoadingPreview={isLoadingPreview}
+              isRunning={isRunning}
+              verifyingItemId={verifyingItemId}
+              isVerificationDialogOpen={isVerificationDialogOpen}
+              onToggleItem={onToggleItem}
+              onItemModelsChange={onItemModelsChange}
+              onVerifyAndRefresh={onVerifyAndRefresh}
+            />
+          )
+        })}
       </div>
     </>
   )

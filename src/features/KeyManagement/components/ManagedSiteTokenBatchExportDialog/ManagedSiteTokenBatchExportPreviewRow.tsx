@@ -36,6 +36,7 @@ interface ManagedSiteTokenBatchExportPreviewRowProps {
   item: ManagedSiteTokenBatchExportPreviewItem
   siteType: ManagedSiteType
   result?: ManagedSiteTokenBatchExportExecutionItem
+  isNotSelected: boolean
   modelOptions: CompactMultiSelectOption[]
   isSelected: boolean
   hasExecutionResult: boolean
@@ -56,17 +57,26 @@ interface ManagedSiteTokenBatchExportPreviewRowProps {
 
 const getExecutionResultVariant = (
   result: ManagedSiteTokenBatchExportExecutionItem,
-) => (result.success ? "success" : result.skipped ? "secondary" : "danger")
+) =>
+  result.result === "uncertain"
+    ? "warning"
+    : result.success
+      ? "success"
+      : result.skipped
+        ? "secondary"
+        : "danger"
 
 const getExecutionResultLabel = (
   t: TFunction,
   result: ManagedSiteTokenBatchExportExecutionItem,
 ) =>
-  result.success
-    ? t("keyManagement:batchManagedSiteExport.results.status.success")
-    : result.skipped
-      ? t("keyManagement:batchManagedSiteExport.results.status.skipped")
-      : t("keyManagement:batchManagedSiteExport.results.status.failed")
+  result.result === "uncertain"
+    ? t("keyManagement:batchManagedSiteExport.results.status.uncertain")
+    : result.success
+      ? t("keyManagement:batchManagedSiteExport.results.status.success")
+      : result.skipped
+        ? t("keyManagement:batchManagedSiteExport.results.status.skipped")
+        : t("keyManagement:batchManagedSiteExport.results.status.failed")
 
 /**
  * Renders a single managed-site token batch export preview row.
@@ -76,6 +86,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
   item,
   siteType,
   result,
+  isNotSelected,
   modelOptions,
   isSelected,
   hasExecutionResult,
@@ -148,6 +159,12 @@ export function ManagedSiteTokenBatchExportPreviewRow({
           {result ? (
             <Badge variant={getExecutionResultVariant(result)} size="sm">
               {getExecutionResultLabel(t, result)}
+            </Badge>
+          ) : isNotSelected ? (
+            <Badge variant="secondary" size="sm">
+              {t(
+                "keyManagement:batchManagedSiteExport.results.status.notSelected",
+              )}
             </Badge>
           ) : (
             <Badge variant={badge.variant} size="sm">

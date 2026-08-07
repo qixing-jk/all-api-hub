@@ -89,8 +89,15 @@ export function ManagedSiteTokenBatchExportDialog({
             isLoadingPreview={dialog.isLoadingPreview}
             isRunning={dialog.isRunning}
             selectedExecutableCount={dialog.executableSelection.selectedCount}
+            canRetry={Boolean(
+              dialog.executionResult?.items.some(
+                (item) =>
+                  item.result === "failed" || item.result === "uncertain",
+              ),
+            )}
             onClose={dialog.actions.close}
             onStart={dialog.actions.openConfirm}
+            onRetry={dialog.actions.retry}
             onViewChannels={handleViewChannels}
           />
         }
@@ -152,6 +159,7 @@ export function ManagedSiteTokenBatchExportDialog({
             t={t}
             previewError={dialog.previewError}
             executionError={dialog.executionError}
+            isTargetChanged={dialog.isTargetChanged}
             isLoadingPreview={dialog.isLoadingPreview}
             isManualPreviewRefresh={dialog.isManualPreviewRefresh}
             showPreviewLoadingStatus={

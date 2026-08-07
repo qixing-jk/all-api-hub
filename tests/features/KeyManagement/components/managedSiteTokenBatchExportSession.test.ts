@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   getManagedSiteTokenBatchExportRetryItemIds,
+  mergeManagedSiteTokenBatchExportExecutionResults,
   reconcileManagedSiteTokenBatchExportPreview,
   shouldConfirmManagedSiteTokenBatchExport,
 } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog/managedSiteTokenBatchExportSession"
@@ -140,5 +141,65 @@ describe("managed-site token batch export session", () => {
       "failed-key",
       "uncertain-key",
     ])
+  })
+
+  it("merges retry outcomes while keeping the latest status for each row", () => {
+    const previous: ManagedSiteTokenBatchExportExecutionResult = {
+      totalSelected: 3,
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      uncertainCount: 0,
+      skippedCount: 1,
+      items: [
+        {
+          id: "created-key",
+          accountName: "Example account",
+          runtimeKeyName: "Created key",
+          result: "created",
+          success: true,
+          skipped: false,
+        },
+        {
+          id: "failed-key",
+          accountName: "Example account",
+          runtimeKeyName: "Failed key",
+          result: "failed",
+          success: false,
+          skipped: false,
+          error: "first attempt",
+        },
+      ],
+    }
+    const retry: ManagedSiteTokenBatchExportExecutionResult = {
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+      uncertainCount: 0,
+      skippedCount: 0,
+      items: [
+        {
+          id: "failed-key",
+          accountName: "Example account",
+          runtimeKeyName: "Failed key",
+          result: "created",
+          success: true,
+          skipped: false,
+        },
+      ],
+    }
+
+    expect(
+      mergeManagedSiteTokenBatchExportExecutionResults(previous, retry),
+    ).toEqual({
+      totalSelected: 3,
+      attemptedCount: 2,
+      createdCount: 2,
+      failedCount: 0,
+      uncertainCount: 0,
+      skippedCount: 1,
+      items: [previous.items[0], retry.items[0]],
+    })
   })
 })

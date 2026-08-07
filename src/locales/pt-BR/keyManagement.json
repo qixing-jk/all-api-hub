@@ -64,6 +64,7 @@
       "clearSelection": "Limpar seleção",
       "open": "Importar em lote para {{site}} ({{selectedCount}})",
       "refreshPreview": "Atualizar prévia",
+      "retry": "Tentar novamente as chaves com falha",
       "running": "Importando...",
       "selectAll": "Seleção: {{selected}}/{{total}}",
       "start": "Iniciar importação",
@@ -98,6 +99,7 @@
       "completed": "Importação em lote concluída — criados: {{created}}; falhas: {{failed}}; ignorados: {{skipped}}.",
       "duplicate": "Já existe uma correspondência exata: {{channel}}",
       "executionFailed": "Falha ao executar a importação em lote: {{error}}",
+      "targetChanged": "O destino do site gerenciado mudou. Atualize a prévia ou escolha o destino correto antes de importar.",
       "verificationFailed": "Falha na verificação do New API: {{error}}"
     },
     "preview": {
@@ -116,8 +118,10 @@
       "channelCreationFailed": "Falha ao criar o canal.",
       "status": {
         "failed": "Falhou",
+        "notSelected": "Não selecionada",
         "skipped": "Ignorado",
-        "success": "Criado"
+        "success": "Criado",
+        "uncertain": "Requer revisão"
       },
       "summary": "Resultado — criados: {{created}}; falhas: {{failed}}; ignorados: {{skipped}}; total: {{total}}."
     },

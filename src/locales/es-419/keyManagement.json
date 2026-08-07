@@ -64,6 +64,7 @@
       "clearSelection": "Limpiar selección",
       "open": "Importar por lote a {{site}} ({{selectedCount}})",
       "refreshPreview": "Actualizar vista previa",
+      "retry": "Reintentar claves fallidas",
       "running": "Importando...",
       "selectAll": "{{selected}}/{{total}} seleccionadas",
       "start": "Iniciar importación",
@@ -98,6 +99,7 @@
       "completed": "Importación por lote completada: {{created}} creados, {{failed}} fallidos, {{skipped}} omitidos.",
       "duplicate": "Ya existe una coincidencia exacta: {{channel}}",
       "executionFailed": "No se pudo ejecutar la importación por lote: {{error}}",
+      "targetChanged": "El destino del sitio administrado cambió. Actualiza la vista previa o elige el destino correcto antes de importar.",
       "verificationFailed": "No se pudo verificar New API: {{error}}"
     },
     "preview": {
@@ -116,8 +118,10 @@
       "channelCreationFailed": "Falló la creación del canal.",
       "status": {
         "failed": "Falló",
+        "notSelected": "No seleccionada",
         "skipped": "Omitido",
-        "success": "Creado"
+        "success": "Creado",
+        "uncertain": "Requiere revisión"
       },
       "summary": "Resultado: {{created}} creados, {{failed}} fallidos, {{skipped}} omitidos, {{total}} en total."
     },

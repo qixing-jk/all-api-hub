@@ -22,6 +22,36 @@ export const getManagedSiteTokenBatchExportRetryItemIds = (
     .filter((item) => item.result === "failed" || item.result === "uncertain")
     .map((item) => item.id)
 
+export const mergeManagedSiteTokenBatchExportExecutionResults = (
+  previous: ManagedSiteTokenBatchExportExecutionResult | null,
+  next: ManagedSiteTokenBatchExportExecutionResult,
+): ManagedSiteTokenBatchExportExecutionResult => {
+  if (!previous) return next
+
+  const itemsById = new Map(previous.items.map((item) => [item.id, item]))
+  for (const item of next.items) {
+    itemsById.set(item.id, item)
+  }
+
+  const items = Array.from(itemsById.values())
+  const createdCount = items.filter((item) => item.result === "created").length
+  const failedCount = items.filter((item) => item.result === "failed").length
+  const uncertainCount = items.filter(
+    (item) => item.result === "uncertain",
+  ).length
+  const skippedCount = previous.skippedCount + next.skippedCount
+
+  return {
+    totalSelected: items.length + skippedCount,
+    attemptedCount: items.length,
+    createdCount,
+    failedCount,
+    uncertainCount,
+    skippedCount,
+    items,
+  }
+}
+
 const shouldSelectNewPreviewItem = (
   preview: ManagedSiteTokenBatchExportPreview,
   item: ManagedSiteTokenBatchExportPreview["items"][number],

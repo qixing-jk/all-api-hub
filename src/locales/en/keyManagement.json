@@ -61,6 +61,7 @@
       "clearSelection": "Clear selection",
       "open": "Batch import to {{site}} ({{selectedCount}})",
       "refreshPreview": "Refresh preview",
+      "retry": "Retry failed keys",
       "running": "Importing...",
       "selectAll": "{{selected}}/{{total}} selected",
       "start": "Start import",
@@ -95,6 +96,7 @@
       "completed": "Batch import completed: {{created}} created, {{failed}} failed, {{skipped}} skipped.",
       "duplicate": "Exact match already exists: {{channel}}",
       "executionFailed": "Failed to run batch import: {{error}}",
+      "targetChanged": "The managed-site target changed. Refresh the preview or choose the intended target before importing.",
       "verificationFailed": "New API verification failed: {{error}}"
     },
     "preview": {
@@ -112,8 +114,10 @@
       "channelCreationFailed": "Channel creation failed.",
       "status": {
         "failed": "Failed",
+        "notSelected": "Not selected",
         "skipped": "Skipped",
-        "success": "Created"
+        "success": "Created",
+        "uncertain": "Needs review"
       },
       "summary": "Result: {{created}} created, {{failed}} failed, {{skipped}} skipped, {{total}} total."
     },

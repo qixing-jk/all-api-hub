@@ -58,6 +58,7 @@
       "clearSelection": "選択をクリア",
       "open": "{{site}} に一括インポート（{{selectedCount}}）",
       "refreshPreview": "プレビューを更新",
+      "retry": "失敗したキーを再試行",
       "running": "インポート中...",
       "selectAll": "{{selected}}/{{total}} 選択中",
       "start": "インポート開始",
@@ -92,6 +93,7 @@
       "completed": "一括インポート完了: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件。",
       "duplicate": "完全一致するチャネルが既に存在します: {{channel}}",
       "executionFailed": "一括インポートの実行に失敗しました: {{error}}",
+      "targetChanged": "管理対象サイトが変更されました。インポート前にプレビューを更新するか、対象を選び直してください。",
       "verificationFailed": "New API の検証に失敗しました: {{error}}"
     },
     "preview": {
@@ -108,8 +110,10 @@
       "channelCreationFailed": "チャネルの作成に失敗しました。",
       "status": {
         "failed": "失敗",
+        "notSelected": "未選択",
         "skipped": "スキップ",
-        "success": "作成済み"
+        "success": "作成済み",
+        "uncertain": "要確認"
       },
       "summary": "結果: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件、合計 {{total}} 件。"
     },

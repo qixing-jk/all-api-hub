@@ -17,8 +17,10 @@ interface ManagedSiteTokenBatchExportFooterProps {
   isLoadingPreview: boolean
   isRunning: boolean
   selectedExecutableCount: number
+  canRetry?: boolean
   onClose: () => void
   onStart: () => void
+  onRetry?: () => void
   onViewChannels: () => void
 }
 
@@ -34,8 +36,10 @@ export function ManagedSiteTokenBatchExportFooter({
   isLoadingPreview,
   isRunning,
   selectedExecutableCount,
+  canRetry = false,
   onClose,
   onStart,
+  onRetry = () => undefined,
   onViewChannels,
 }: ManagedSiteTokenBatchExportFooterProps) {
   if (executionResult) {
@@ -50,6 +54,19 @@ export function ManagedSiteTokenBatchExportFooter({
           })}
         </div>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+          {canRetry ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-auto min-h-9 whitespace-normal"
+              onClick={onRetry}
+              data-testid={
+                KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportRetryButton
+              }
+            >
+              {t("keyManagement:batchManagedSiteExport.actions.retry")}
+            </Button>
+          ) : null}
           {executionResult.createdCount > 0 ? (
             <Button
               type="button"
