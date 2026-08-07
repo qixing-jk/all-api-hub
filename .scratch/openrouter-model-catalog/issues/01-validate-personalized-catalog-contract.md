@@ -85,6 +85,12 @@ read-only endpoints.
   `private, no-store`. The credential was decrypted only in memory, was never
   printed or persisted by the validation, and its encrypted temporary file was
   removed afterward.
+- A follow-up Playwright extension bridge to an already logged-in Edge session
+  showed the generic `Default Workspace` settings context and successful private
+  provider-preference/guardrail requests. A same-origin personalized-catalog
+  request without a Bearer credential still returned `401` and
+  `private, no-store`; browser session cookies are not a substitute for the
+  Management Key contract.
 - The authenticated response used the same top-level envelope and pagination
   contract as the public response. `total_count` matched the returned row count
   and `links.next` was absent in this observation.
@@ -98,7 +104,8 @@ read-only endpoints.
   unique model membership. This is compatible with an account whose effective
   preferences and guardrails do not currently exclude public models; it does
   not disprove the documented filtering contract and does not demonstrate a
-  particular active exclusion rule.
+  particular active exclusion rule. The read-only browser follow-up did not
+  change account settings, so it also did not manufacture a filtering delta.
 - The personalized body and relevant response headers exposed no user,
   workspace, organization, account, or other identity field. The safe identity
   interpretation is therefore the authenticated principal represented by the
