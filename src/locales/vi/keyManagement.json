@@ -100,6 +100,10 @@
       "selected_other": "Đã chọn {{count}} khóa",
       "summary": "Xem trước: Có thể tạo {{ready}}, cảnh báo {{warning}}, bỏ qua {{skipped}}, bị chặn {{blocked}}, tổng cộng {{total}}."
     },
+    "repairTrusted": {
+      "description": "Các key này vừa được tạo và sẵn sàng cho bước xem xét đơn giản. Bạn vẫn có thể chạy kiểm tra đầy đủ trước khi nhập.",
+      "useCompleteChecks": "Dùng kiểm tra đầy đủ"
+    },
     "results": {
       "channelCreationFailed": "Tạo kênh thất bại.",
       "status": {
@@ -119,6 +123,10 @@
       "ready": "Có thể tạo",
       "skipped": "Đã bỏ qua",
       "warning": "Cần xác nhận"
+    },
+    "target": {
+      "change": "Đổi đích",
+      "title": "Đang nhập vào {{site}}"
     },
     "title": "Nhập hàng loạt vào AI gateway tự triển khai",
     "warnings": {

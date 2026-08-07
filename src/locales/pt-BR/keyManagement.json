@@ -108,6 +108,10 @@
       "selected_other": "{{count}} chaves selecionadas",
       "summary": "Prévia — prontos: {{ready}}; avisos: {{warning}}; ignorados: {{skipped}}; bloqueados: {{blocked}}; total: {{total}}."
     },
+    "repairTrusted": {
+      "description": "Estas chaves acabaram de ser criadas e estão prontas para uma revisão simplificada. Você ainda pode executar as verificações completas antes de importar.",
+      "useCompleteChecks": "Usar verificações completas"
+    },
     "results": {
       "channelCreationFailed": "Falha ao criar o canal.",
       "status": {
@@ -127,6 +131,10 @@
       "ready": "Pronto",
       "skipped": "Ignorado",
       "warning": "Aviso"
+    },
+    "target": {
+      "change": "Alterar destino",
+      "title": "Importando para {{site}}"
     },
     "title": "Importação em lote para gateway de IA auto-hospedado",
     "warnings": {

@@ -100,6 +100,10 @@
       "selected": "已选择 {{count}} 个密钥",
       "summary": "预览：可创建 {{ready}} 个，警告 {{warning}} 个，跳过 {{skipped}} 个，阻塞 {{blocked}} 个，共 {{total}} 个。"
     },
+    "repairTrusted": {
+      "description": "这些 Key 刚刚创建完成，可以使用简化审核。导入前仍可切换为完整检查。",
+      "useCompleteChecks": "使用完整检查"
+    },
     "results": {
       "channelCreationFailed": "创建渠道失败。",
       "status": {
@@ -119,6 +123,10 @@
       "ready": "可创建",
       "skipped": "已跳过",
       "warning": "需确认"
+    },
+    "target": {
+      "change": "更换目标",
+      "title": "导入到 {{site}}"
     },
     "title": "批量导入到自建 AI 网关",
     "warnings": {

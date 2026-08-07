@@ -100,6 +100,10 @@
       "selected_other": "已選擇 {{count}} 個金鑰",
       "summary": "預覽：可建立 {{ready}} 個，警告 {{warning}} 個，跳過 {{skipped}} 個，阻擋 {{blocked}} 個，共 {{total}} 個。"
     },
+    "repairTrusted": {
+      "description": "這些 Key 剛剛建立完成，可以使用簡化審核。匯入前仍可切換為完整檢查。",
+      "useCompleteChecks": "使用完整檢查"
+    },
     "results": {
       "channelCreationFailed": "建立渠道失敗。",
       "status": {
@@ -119,6 +123,10 @@
       "ready": "可建立",
       "skipped": "已跳過",
       "warning": "需確認"
+    },
+    "target": {
+      "change": "更換目標",
+      "title": "匯入到 {{site}}"
     },
     "title": "批次匯入到自建 AI 閘道",
     "warnings": {

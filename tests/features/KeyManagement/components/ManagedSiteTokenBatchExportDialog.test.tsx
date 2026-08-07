@@ -49,6 +49,11 @@ const manualPreviewTarget = {
   },
 }
 
+const trustedRepairIntent = {
+  source: "repair-created",
+  verification: "trusted-new",
+} as const
+
 const createDeferred = <T,>() => {
   let resolve!: (value: T) => void
   let reject!: (reason?: unknown) => void
@@ -68,6 +73,7 @@ const {
   mockGetPreviewVerificationTargets,
   mockLoadNewApiChannelKeyWithVerification,
   mockOpenNewApiManagedVerification,
+  mockOpenSettingsTab,
   mockPreparePreview,
   mockPushWithinOptionsPage,
   mockTrackProductAnalyticsActionCompleted,
@@ -84,6 +90,7 @@ const {
   mockGetPreviewVerificationTargets: vi.fn(),
   mockLoadNewApiChannelKeyWithVerification: vi.fn(),
   mockOpenNewApiManagedVerification: vi.fn(),
+  mockOpenSettingsTab: vi.fn(),
   mockPreparePreview: vi.fn(),
   mockPushWithinOptionsPage: vi.fn(),
   mockTrackProductAnalyticsActionCompleted: vi.fn(),
@@ -99,6 +106,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 
   return {
     ...actual,
+    openSettingsTab: mockOpenSettingsTab,
     pushWithinOptionsPage: mockPushWithinOptionsPage,
   }
 })
@@ -565,12 +573,14 @@ const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
 const renderDialog = (props?: {
   onClose?: () => void
   onCompleted?: (result: unknown) => void
+  intent?: typeof manualPreviewTarget.intent | typeof trustedRepairIntent
 }) =>
   render(
     <ManagedSiteTokenBatchExportDialog
       isOpen={true}
       onClose={props?.onClose ?? vi.fn()}
       items={[{ account, runtimeKey }]}
+      intent={props?.intent}
       onCompleted={props?.onCompleted as any}
     />,
   )
@@ -614,6 +624,134 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       await automaticPreview.promise
     })
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+  })
+
+  it("runs a trusted repair review directly without a second confirmation", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue({
+      ...preview,
+      intent: trustedRepairIntent,
+    })
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 2,
+      failedCount: 0,
+      uncertainCount: 0,
+      skippedCount: 0,
+      items: [],
+    })
+
+    renderDialog({ intent: trustedRepairIntent })
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    const startButton = screen.getByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.start",
+    })
+    expect(startButton).toBeEnabled()
+
+    await user.click(startButton)
+
+    expect(
+      screen.queryByRole("dialog", {
+        name: "keyManagement:batchManagedSiteExport.confirm.title",
+      }),
+    ).toBeNull()
+    await waitFor(() => {
+      expect(mockExecuteBatchExport).toHaveBeenCalledOnce()
+    })
+    expect(mockExecuteBatchExport.mock.calls[0][0]).toMatchObject({
+      selectedItemIds: [
+        "account_token:account-1:1",
+        "account_token:account-1:2",
+      ],
+    })
+    expect(mockExecuteBatchExport.mock.calls[0][0].preview.intent).toEqual(
+      trustedRepairIntent,
+    )
+  })
+
+  it("keeps selection and edited models when repair review switches to complete checks", async () => {
+    const user = userEvent.setup()
+    const completeIntent = {
+      source: "repair-created",
+      verification: "complete",
+    } as const
+    const trustedPreview = {
+      ...preview,
+      intent: trustedRepairIntent,
+    }
+    const completePreview = {
+      ...preview,
+      intent: completeIntent,
+      items: preview.items.map((item) => ({
+        ...item,
+        draft: item.draft
+          ? { ...item.draft, models: ["refreshed-model"] }
+          : item.draft,
+      })),
+    }
+    mockPreparePreview
+      .mockResolvedValueOnce(trustedPreview)
+      .mockResolvedValueOnce(completePreview)
+
+    renderDialog({ intent: trustedRepairIntent })
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(screen.getAllByText("Set editable models")[0])
+    await user.click(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 2" }),
+    )
+    await user.click(
+      screen.getByTestId(
+        "key-management-managed-site-batch-export-use-complete-checks-button",
+      ),
+    )
+
+    await waitFor(() => {
+      expect(mockPreparePreview).toHaveBeenCalledTimes(2)
+    })
+    expect(mockPreparePreview.mock.calls[1][0].intent).toEqual(completeIntent)
+    expect(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 1" }),
+    ).toHaveAttribute("aria-checked", "true")
+    expect(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 2" }),
+    ).toHaveAttribute("aria-checked", "false")
+    expect(screen.getByText("gpt-4o-mini,custom-model")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    expect(
+      screen.getByRole("dialog", {
+        name: "keyManagement:batchManagedSiteExport.confirm.title",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("shows the current target and reuses managed-site settings navigation", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    mockPreparePreview.mockResolvedValue(preview)
+
+    renderDialog({ onClose })
+
+    expect(
+      await screen.findByText("https://target.example.invalid"),
+    ).toBeInTheDocument()
+    await user.click(
+      screen.getByTestId(
+        "key-management-managed-site-batch-export-open-settings-button",
+      ),
+    )
+
+    expect(onClose).toHaveBeenCalledOnce()
+    expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite", {
+      preserveHistory: true,
+    })
   })
 
   it("assigns manual preview loading only to the visible refresh control", async () => {

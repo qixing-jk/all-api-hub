@@ -1,10 +1,11 @@
 import { useTranslation } from "react-i18next"
 
-import { DestructiveConfirmDialog, Modal } from "~/components/ui"
+import { Button, DestructiveConfirmDialog, Modal } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 
 import { ManagedSiteTokenBatchExportFooter } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportFooter"
 import { ManagedSiteTokenBatchExportPreviewList } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportPreviewList"
@@ -21,6 +22,7 @@ export function ManagedSiteTokenBatchExportDialog({
   isOpen,
   onClose,
   items,
+  intent,
   onCompleted,
 }: ManagedSiteTokenBatchExportDialogProps) {
   const { t } = useTranslation([
@@ -33,6 +35,7 @@ export function ManagedSiteTokenBatchExportDialog({
     isOpen,
     onClose,
     items,
+    intent,
     onCompleted,
     t,
   })
@@ -41,6 +44,10 @@ export function ManagedSiteTokenBatchExportDialog({
   const handleViewChannels = () => {
     dialog.actions.close()
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.MANAGED_SITE_CHANNELS}`)
+  }
+  const handleOpenManagedSiteSettings = () => {
+    dialog.actions.close()
+    void openSettingsTab("managedSite", { preserveHistory: true })
   }
 
   return (
@@ -89,6 +96,58 @@ export function ManagedSiteTokenBatchExportDialog({
         }
       >
         <div className="space-y-4">
+          {dialog.preview?.targetSummary ? (
+            <div className="flex flex-wrap items-start justify-between gap-3 rounded-md border p-3 text-sm">
+              <div className="min-w-0">
+                <div className="font-medium">
+                  {t("keyManagement:batchManagedSiteExport.target.title", {
+                    site: getManagedSiteLabel(t, dialog.preview.siteType),
+                  })}
+                </div>
+                <div className="text-muted-foreground text-xs break-all">
+                  {dialog.preview.targetSummary.baseUrl}
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                data-testid={
+                  KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportOpenSettingsButton
+                }
+                onClick={handleOpenManagedSiteSettings}
+                disabled={dialog.isRunning}
+              >
+                {t("keyManagement:batchManagedSiteExport.target.change")}
+              </Button>
+            </div>
+          ) : null}
+
+          {dialog.intent.source === "repair-created" &&
+          dialog.intent.verification === "trusted-new" ? (
+            <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50/60 p-3 text-sm dark:border-blue-900/40 dark:bg-blue-950/20">
+              <div>
+                {t(
+                  "keyManagement:batchManagedSiteExport.repairTrusted.description",
+                )}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                data-testid={
+                  KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportUseCompleteChecksButton
+                }
+                onClick={dialog.actions.useCompleteChecks}
+                disabled={dialog.isLoadingPreview || dialog.isRunning}
+              >
+                {t(
+                  "keyManagement:batchManagedSiteExport.repairTrusted.useCompleteChecks",
+                )}
+              </Button>
+            </div>
+          ) : null}
+
           <ManagedSiteTokenBatchExportStatusPanels
             t={t}
             previewError={dialog.previewError}

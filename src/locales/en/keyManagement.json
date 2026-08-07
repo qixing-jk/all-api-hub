@@ -104,6 +104,10 @@
       "selected_other": "{{count}} keys selected",
       "summary": "Preview: {{ready}} ready, {{warning}} warnings, {{skipped}} skipped, {{blocked}} blocked, {{total}} total."
     },
+    "repairTrusted": {
+      "description": "These keys were just created and are ready for a simplified review. You can still run the complete checks before importing.",
+      "useCompleteChecks": "Use complete checks"
+    },
     "results": {
       "channelCreationFailed": "Channel creation failed.",
       "status": {
@@ -123,6 +127,10 @@
       "ready": "Ready",
       "skipped": "Skipped",
       "warning": "Warning"
+    },
+    "target": {
+      "change": "Change target",
+      "title": "Importing to {{site}}"
     },
     "title": "Batch import to self-hosted AI gateway",
     "warnings": {

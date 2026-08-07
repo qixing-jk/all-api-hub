@@ -108,6 +108,10 @@
       "selected_other": "{{count}} claves seleccionadas",
       "summary": "Vista previa: {{ready}} listas, {{warning}} advertencias, {{skipped}} omitidas, {{blocked}} bloqueadas, {{total}} en total."
     },
+    "repairTrusted": {
+      "description": "Estas claves se acaban de crear y están listas para una revisión simplificada. Aún puedes ejecutar las comprobaciones completas antes de importarlas.",
+      "useCompleteChecks": "Usar comprobaciones completas"
+    },
     "results": {
       "channelCreationFailed": "Falló la creación del canal.",
       "status": {
@@ -127,6 +131,10 @@
       "ready": "Listo",
       "skipped": "Omitido",
       "warning": "Advertencia"
+    },
+    "target": {
+      "change": "Cambiar destino",
+      "title": "Importando a {{site}}"
     },
     "title": "Importación por lote al AI gateway autohospedado",
     "warnings": {

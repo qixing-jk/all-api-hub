@@ -45,6 +45,7 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import type {
+  ManagedSiteBatchImportIntent,
   ManagedSiteTokenBatchExportExecutionResult,
   ManagedSiteTokenBatchExportItemInput,
   ManagedSiteTokenBatchExportMatchedChannel,
@@ -64,14 +65,18 @@ import {
   countPreviewItems,
   getPreviewVerificationTargets,
   normalizeModels,
-  shouldSelectPreviewItemByDefault,
   toModelOptions,
 } from "../managedSiteTokenBatchExportPreview"
+import {
+  reconcileManagedSiteTokenBatchExportPreview,
+  shouldConfirmManagedSiteTokenBatchExport,
+} from "./managedSiteTokenBatchExportSession"
 
 export interface ManagedSiteTokenBatchExportDialogProps {
   isOpen: boolean
   onClose: () => void
   items: ManagedSiteTokenBatchExportItemInput[]
+  intent?: ManagedSiteBatchImportIntent
   onCompleted?: (result: ManagedSiteTokenBatchExportExecutionResult) => void
 }
 
@@ -86,6 +91,11 @@ const getBatchExportAnalyticsContext = () => ({
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
 })
 
+const DEFAULT_BATCH_EXPORT_INTENT: ManagedSiteBatchImportIntent = {
+  source: "manual-selection",
+  verification: "complete",
+}
+
 /**
  * Builds the workflow state and view actions for the token batch export dialog.
  */
@@ -93,6 +103,7 @@ export function useManagedSiteTokenBatchExportDialog({
   isOpen,
   onClose,
   items,
+  intent = DEFAULT_BATCH_EXPORT_INTENT,
   onCompleted,
   t,
 }: UseManagedSiteTokenBatchExportDialogParams) {
@@ -108,7 +119,12 @@ export function useManagedSiteTokenBatchExportDialog({
   const closeVerificationDialog = verification.closeDialog
   const [preview, setPreview] =
     useState<ManagedSiteTokenBatchExportPreview | null>(null)
+  const [activeIntent, setActiveIntent] =
+    useState<ManagedSiteBatchImportIntent>(intent)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [editedModelsByItemId, setEditedModelsByItemId] = useState<
+    Map<string, string[]>
+  >(new Map())
   const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const [previewLoadOrigin, setPreviewLoadOrigin] =
     useState<PreviewLoadOrigin>(null)
@@ -126,13 +142,23 @@ export function useManagedSiteTokenBatchExportDialog({
     Record<string, Record<number, string>>
   >({})
   const previewRef = useRef<ManagedSiteTokenBatchExportPreview | null>(null)
+  const selectedIdsRef = useRef<Set<string>>(new Set())
+  const editedModelsByItemIdRef = useRef<Map<string, string[]>>(new Map())
   const latestItemsRef = useRef(items)
   const openedItemsRef = useRef(items)
   const wasOpenRef = useRef(false)
   const pendingPreviewLoadOriginRef = useRef<PreviewLoadOrigin>(null)
 
   previewRef.current = preview
+  selectedIdsRef.current = selectedIds
+  editedModelsByItemIdRef.current = editedModelsByItemId
   latestItemsRef.current = items
+
+  useEffect(() => {
+    if (!isOpen) {
+      setActiveIntent(intent)
+    }
+  }, [intent, isOpen])
 
   useLayoutEffect(() => {
     if (!isOpen) {
@@ -167,6 +193,7 @@ export function useManagedSiteTokenBatchExportDialog({
     if (!isOpen) {
       setPreview(null)
       setSelectedIds(new Set())
+      setEditedModelsByItemId(new Map())
       setIsLoadingPreview(false)
       setPreviewLoadOrigin(null)
       setPreviewError(null)
@@ -195,6 +222,7 @@ export function useManagedSiteTokenBatchExportDialog({
     if (requestOrigin === PREVIEW_LOAD_ORIGINS.AUTOMATIC) {
       setPreview(null)
       setSelectedIds(new Set())
+      setEditedModelsByItemId(new Map())
     }
     setPreviewError(null)
     setExecutionError(null)
@@ -211,6 +239,7 @@ export function useManagedSiteTokenBatchExportDialog({
         ) =>
           prepareManagedSiteTokenBatchExportPreview({
             items: openedItemsRef.current,
+            intent: activeIntent,
             resolvedChannelKeysByItemId: resolvedChannelKeysByItemIdRef.current,
             protectionBypassExecution,
           })
@@ -229,14 +258,14 @@ export function useManagedSiteTokenBatchExportDialog({
                 ),
               )
         if (cancelled || !isCurrentWorkflow(previewWorkflowEpoch)) return
-        setPreview(nextPreview)
-        setSelectedIds(
-          new Set(
-            nextPreview.items
-              .filter(shouldSelectPreviewItemByDefault)
-              .map((item) => item.id),
-          ),
-        )
+        const reconciled = reconcileManagedSiteTokenBatchExportPreview({
+          previousPreview: previewRef.current,
+          nextPreview,
+          selectedIds: selectedIdsRef.current,
+          editedModelsByItemId: editedModelsByItemIdRef.current,
+        })
+        setPreview(reconciled.preview)
+        setSelectedIds(reconciled.selectedIds)
       } catch (error) {
         if (cancelled || !isCurrentWorkflow(previewWorkflowEpoch)) return
         setPreviewError(getErrorMessage(error))
@@ -251,7 +280,7 @@ export function useManagedSiteTokenBatchExportDialog({
     return () => {
       cancelled = true
     }
-  }, [isCurrentWorkflow, isOpen, refreshKey])
+  }, [activeIntent, isCurrentWorkflow, isOpen, refreshKey])
 
   const executableItems = useMemo(
     () => preview?.items.filter(isExecutablePreviewItem) ?? [],
@@ -315,6 +344,29 @@ export function useManagedSiteTokenBatchExportDialog({
       setPreviewError(null)
       setPreview(null)
     }
+  }
+
+  const handleUseCompleteChecks = () => {
+    if (
+      activeIntent.source !== "repair-created" ||
+      activeIntent.verification !== "trusted-new" ||
+      isLoadingPreview ||
+      isRunning ||
+      verifyingItemId ||
+      verification.dialogState.isOpen
+    ) {
+      return
+    }
+
+    pendingPreviewLoadOriginRef.current = PREVIEW_LOAD_ORIGINS.MANUAL
+    setActiveIntent({
+      source: "repair-created",
+      verification: "complete",
+    })
+    setPreviewLoadOrigin(PREVIEW_LOAD_ORIGINS.MANUAL)
+    setExecutionError(null)
+    setIsLoadingPreview(true)
+    setRefreshKey((value) => value + 1)
   }
 
   const mergeResolvedChannelKeyForItem = (
@@ -534,6 +586,12 @@ export function useManagedSiteTokenBatchExportDialog({
 
     const normalizedModels = normalizeModels(models)
 
+    setEditedModelsByItemId((currentEditedModels) => {
+      const nextEditedModels = new Map(currentEditedModels)
+      nextEditedModels.set(item.id, normalizedModels)
+      return nextEditedModels
+    })
+
     setPreview((currentPreview) => {
       if (!currentPreview) return currentPreview
 
@@ -625,8 +683,26 @@ export function useManagedSiteTokenBatchExportDialog({
     }
   }
 
+  const handleStart = () => {
+    if (
+      !isCurrentWorkflow(activeWorkflowEpochRef.current) ||
+      !preview ||
+      selectedExecutionIds.length === 0
+    ) {
+      return
+    }
+
+    if (shouldConfirmManagedSiteTokenBatchExport(activeIntent)) {
+      setIsConfirmOpen(true)
+      return
+    }
+
+    void handleConfirm()
+  }
+
   return {
     preview,
+    intent: activeIntent,
     selectedIds,
     modelOptions,
     previewError,
@@ -651,10 +727,9 @@ export function useManagedSiteTokenBatchExportDialog({
       toggleItem: handleToggleItem,
       changeItemModels: handleItemModelsChange,
       verifyAndRefresh: handleVerifyAndRefresh,
+      useCompleteChecks: handleUseCompleteChecks,
       openConfirm: () => {
-        if (isCurrentWorkflow(activeWorkflowEpochRef.current)) {
-          setIsConfirmOpen(true)
-        }
+        handleStart()
       },
       closeConfirm: () => setIsConfirmOpen(false),
       confirm: handleConfirm,

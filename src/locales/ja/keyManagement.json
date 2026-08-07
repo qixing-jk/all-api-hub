@@ -100,6 +100,10 @@
       "selected_other": "{{count}} 件のキーを選択中",
       "summary": "プレビュー: 作成可能 {{ready}} 件、警告 {{warning}} 件、スキップ {{skipped}} 件、ブロック {{blocked}} 件、合計 {{total}} 件。"
     },
+    "repairTrusted": {
+      "description": "これらのキーは直前に作成されたため、簡易レビューですぐに確認できます。インポート前に完全なチェックへ切り替えることもできます。",
+      "useCompleteChecks": "完全なチェックを使用"
+    },
     "results": {
       "channelCreationFailed": "チャネルの作成に失敗しました。",
       "status": {
@@ -119,6 +123,10 @@
       "ready": "準備完了",
       "skipped": "スキップ",
       "warning": "警告"
+    },
+    "target": {
+      "change": "対象を変更",
+      "title": "{{site}} にインポート"
     },
     "title": "セルフホスト AI ゲートウェイへ一括インポート",
     "warnings": {

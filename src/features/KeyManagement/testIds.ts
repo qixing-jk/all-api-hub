@@ -24,6 +24,12 @@ export const KEY_MANAGEMENT_TEST_IDS = {
     "key-management-managed-site-batch-export-row-select-checkbox",
   managedSiteBatchExportVerifyButton:
     "key-management-managed-site-batch-export-verify-button",
+  managedSiteBatchExportUseCompleteChecksButton:
+    "key-management-managed-site-batch-export-use-complete-checks-button",
+  managedSiteBatchExportOpenSettingsButton:
+    "key-management-managed-site-batch-export-open-settings-button",
+  managedSiteBatchExportRetryButton:
+    "key-management-managed-site-batch-export-retry-button",
   managedSiteChannelLinkButton:
     "key-management-managed-site-channel-link-button",
   managedSiteVerificationRetryButton:
