@@ -589,15 +589,40 @@
                   <small>例如起始 100、每条递减 1，将写入 100、99、98。</small>
                 </label>
               </div>
-              <label class="check-row">
-                <input id="schedule-enabled" type="checkbox" />
-                <span
-                  ><strong>定时自动上 Key</strong
-                  ><small
-                    >先把 Key 加密放进本机队列，到点后按数量自动写入。</small
-                  ></span
-                >
-              </label>
+              <fieldset class="write-mode-options">
+                <legend>上 Key 方式</legend>
+                <label class="check-row write-mode-option">
+                  <input
+                    id="immediate-enabled"
+                    type="radio"
+                    name="key-write-mode"
+                    value="immediate"
+                    checked
+                  />
+                  <span
+                    ><strong>一次性立即上 Key（默认）</strong
+                    ><small
+                      >确认后本次立即逐条写入全部
+                      Key，不创建定时任务；只有实际遇到 429 的失败 Key
+                      才会自动重试。</small
+                    ></span
+                  >
+                </label>
+                <label class="check-row write-mode-option">
+                  <input
+                    id="schedule-enabled"
+                    type="radio"
+                    name="key-write-mode"
+                    value="scheduled"
+                  />
+                  <span
+                    ><strong>定时自动上 Key</strong
+                    ><small
+                      >先把 Key 加密放进本机队列，到点后按数量自动写入。</small
+                    ></span
+                  >
+                </label>
+              </fieldset>
               <div class="schedule-options hidden" id="schedule-options">
                 <label class="field">
                   <span>首次执行时间（精确到秒）</span>
@@ -682,6 +707,10 @@
                 </div>
                 <div>
                   <small>权重</small><strong id="preview-weight">0</strong>
+                </div>
+                <div>
+                  <small>执行方式</small
+                  ><strong id="preview-execution-mode">一次性立即写入</strong>
                 </div>
                 <div class="hidden" id="preview-aws-routing-fact">
                   <small>AWS 推理路由</small
@@ -1178,11 +1207,55 @@
             </button>
           </div>
           <p class="usage-summary-note" id="usage-summary-note"></p>
+          <div class="records-pagination" id="records-pagination">
+            <label>
+              <span>每页 Key 数量</span>
+              <select id="records-page-size">
+                <option value="20">20 条</option>
+                <option value="50" selected>50 条</option>
+                <option value="100">100 条</option>
+                <option value="200">200 条</option>
+              </select>
+            </label>
+            <span id="records-page-summary">共 0 条</span>
+            <div>
+              <button class="table-action" id="records-prev" type="button">
+                上一页
+              </button>
+              <strong id="records-page-number">第 1 / 1 页</strong>
+              <button class="table-action" id="records-next" type="button">
+                下一页
+              </button>
+            </div>
+          </div>
           <div class="records-empty" id="records-empty">
             还没有 Key 填入记录。
           </div>
           <div class="records-table-wrap hidden" id="records-table-wrap">
             <div class="record-batch-list" id="records-body"></div>
+            <div
+              class="records-pagination records-pagination-bottom"
+              id="records-pagination-bottom"
+            >
+              <span id="records-page-summary-bottom">共 0 条</span>
+              <div>
+                <button
+                  class="table-action"
+                  id="records-prev-bottom"
+                  type="button"
+                >
+                  上一页
+                </button>
+                <strong id="records-page-number-bottom">第 1 / 1 页</strong>
+                <button
+                  class="table-action"
+                  id="records-next-bottom"
+                  type="button"
+                >
+                  下一页
+                </button>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1194,6 +1267,9 @@
     </div>
 
     <div class="toast hidden" id="toast" role="status"></div>
-    <script type="module" src="/app.js?v=20260807-custom-openai"></script>
+    <script
+      type="module"
+      src="/app.js?v=20260809-immediate-pagination"
+    ></script>
   </body>
 </html>

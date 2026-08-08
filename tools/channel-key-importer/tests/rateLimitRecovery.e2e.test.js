@@ -24,7 +24,7 @@ const readJson = async (request) => {
   return JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}")
 }
 
-test("paces bulk writes and recovers rate-limited keys through encrypted queues", async () => {
+test("writes an unchecked bulk import immediately and only queues rate-limited keys", async () => {
   const root = await mkdtemp(join(tmpdir(), "dataeyesai-recovery-e2e-"))
   const previousDataDir = process.env.DATAEYESAI_DATA_DIR
   const previousStorage = process.env.DATAEYESAI_STORAGE
@@ -139,7 +139,7 @@ test("paces bulk writes and recovers rate-limited keys through encrypted queues"
       providerModels: "gpt-4o-mini",
       providerModelMappings: "",
     })
-    const paced = await api("/api/create", {
+    const immediate = await api("/api/create", {
       previewId: preview.previewId,
       confirmDuplicates: true,
       existingChannelId: null,
@@ -148,26 +148,10 @@ test("paces bulk writes and recovers rate-limited keys through encrypted queues"
       combineKeys: false,
     })
 
-    assert.equal(paced.successCount, 1)
-    assert.ok(paced.continuationSchedule, JSON.stringify(paced))
-    assert.equal(paced.continuationSchedule.kind, "paced")
-    assert.equal(paced.continuationSchedule.counts.pending, 2)
-    assert.equal(paced.continuationSchedule.batchSize, 1)
-    assert.equal(paced.continuationSchedule.intervalMinutes, 1)
-    assert.equal(mutationAttempts, 1)
-    const pacedSecond = await api(
-      `/api/schedules/${paced.continuationSchedule.id}/run`,
-      {},
-    )
-    assert.equal(pacedSecond.schedule.counts.pending, 1)
-    assert.equal(pacedSecond.schedule.counts.imported, 1)
-    const pacedCompleted = await api(
-      `/api/schedules/${paced.continuationSchedule.id}/run`,
-      {},
-    )
-    assert.equal(pacedCompleted.schedule.counts.pending, 0)
-    assert.equal(pacedCompleted.schedule.counts.imported, 2)
-    assert.equal(pacedCompleted.schedule.status, "completed")
+    assert.equal(immediate.successCount, 3)
+    assert.equal(immediate.failedCount, 0)
+    assert.equal(immediate.continuationSchedule, undefined)
+    assert.equal(immediate.recoverySchedule, undefined)
     assert.equal(mutationAttempts, 3)
     assert.deepEqual(
       channels.map((channel) => channel.name),

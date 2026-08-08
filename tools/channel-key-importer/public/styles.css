@@ -623,6 +623,39 @@ select:focus {
   display: block;
   font-size: 10px;
 }
+.write-mode-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.write-mode-options legend {
+  grid-column: 1 / -1;
+  margin-bottom: 2px;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+}
+.write-mode-option {
+  align-items: flex-start;
+  min-height: 68px;
+  padding: 13px;
+  border: 1px solid #d5e1f0;
+  border-radius: 12px;
+  background: #fbfdff;
+  cursor: pointer;
+}
+.write-mode-option:has(input:checked) {
+  border-color: var(--blue);
+  background: #f0f5ff;
+  box-shadow: 0 0 0 2px rgba(37, 87, 219, 0.08);
+}
+.write-mode-option input {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
 .primary-button,
 .secondary-button {
   display: inline-flex;
@@ -2369,6 +2402,46 @@ body:has(.preview-dialog[open]) {
   min-height: 14px;
   margin: 0 0 10px;
 }
+.records-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #dbe5f1;
+  border-radius: 11px;
+  color: var(--muted);
+  background: #f8fbff;
+  font-size: 9px;
+}
+.records-pagination label,
+.records-pagination > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.records-pagination select {
+  width: auto;
+  min-width: 82px;
+  min-height: 32px;
+  padding: 5px 26px 5px 9px;
+  border: 1px solid #cfdae8;
+  border-radius: 8px;
+  background: white;
+  font-size: 9px;
+}
+.records-pagination strong {
+  min-width: 72px;
+  color: var(--ink);
+  text-align: center;
+}
+.records-pagination .table-action {
+  min-height: 32px;
+}
+.records-pagination-bottom {
+  margin: 13px 0 0;
+}
 .records-empty {
   padding: 28px;
   border: 1px dashed #cbd6e5;
@@ -2728,7 +2801,8 @@ footer p {
 @media (max-width: 760px) {
   .batch-input-grid,
   .routing-options,
-  .schedule-editor {
+  .schedule-editor,
+  .write-mode-options {
     grid-template-columns: 1fr;
   }
   .app-shell {
@@ -2896,6 +2970,13 @@ footer p {
   }
   .records-search-field {
     grid-column: auto;
+  }
+  .records-pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .records-pagination > div {
+    justify-content: space-between;
   }
   .record-batch-card > header {
     align-items: stretch;

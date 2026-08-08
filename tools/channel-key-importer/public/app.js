@@ -6,6 +6,7 @@ import {
   groupUsageDashboardByDay,
   groupUsageDashboardByTarget,
   localDateKey,
+  paginateItems,
   summarizeUsageDashboard,
   summarizeUsageRecords,
   usageState,
@@ -18,6 +19,7 @@ const state = {
   customProviders: [],
   profiles: [],
   records: [],
+  recordsPage: 1,
   schedules: [],
   channelTemplates: [],
   activeProfileId: "",
@@ -131,6 +133,7 @@ const elements = {
   quotaHelp: $("#quota-help"),
   awsGlobalField: $("#aws-global-field"),
   awsGlobalInference: $("#aws-global-inference"),
+  immediateEnabled: $("#immediate-enabled"),
   scheduleEnabled: $("#schedule-enabled"),
   scheduleOptions: $("#schedule-options"),
   scheduleStartAt: $("#schedule-start-at"),
@@ -148,6 +151,7 @@ const elements = {
   previewGroups: $("#preview-groups"),
   previewPriority: $("#preview-priority"),
   previewWeight: $("#preview-weight"),
+  previewExecutionMode: $("#preview-execution-mode"),
   previewAwsRoutingFact: $("#preview-aws-routing-fact"),
   previewAwsRouting: $("#preview-aws-routing"),
   modelCount: $("#model-count"),
@@ -224,6 +228,17 @@ const elements = {
   recordsStatusFilter: $("#records-status-filter"),
   recordsSearch: $("#records-search"),
   resetRecordFilters: $("#reset-record-filters"),
+  recordsPagination: $("#records-pagination"),
+  recordsPageSize: $("#records-page-size"),
+  recordsPageSummary: $("#records-page-summary"),
+  recordsPageNumber: $("#records-page-number"),
+  recordsPrev: $("#records-prev"),
+  recordsNext: $("#records-next"),
+  recordsPaginationBottom: $("#records-pagination-bottom"),
+  recordsPageSummaryBottom: $("#records-page-summary-bottom"),
+  recordsPageNumberBottom: $("#records-page-number-bottom"),
+  recordsPrevBottom: $("#records-prev-bottom"),
+  recordsNextBottom: $("#records-next-bottom"),
   recordsEmpty: $("#records-empty"),
   recordsTableWrap: $("#records-table-wrap"),
   recordsBody: $("#records-body"),
@@ -1066,7 +1081,9 @@ function renderPreview(preview) {
   state.createdChannelId = null
   elements.createChannel.disabled = false
   elements.createChannel.querySelector("span").textContent =
-    state.pendingSchedule === null ? "确认写入 New API" : "确认保存定时任务"
+    state.pendingSchedule === null
+      ? "一次性立即写入全部 Key"
+      : "确认保存定时任务"
   elements.discardPreview.textContent = "返回修改"
   elements.balanceCard.classList.add("hidden")
   elements.previewName.textContent = preview.name
@@ -1078,6 +1095,10 @@ function renderPreview(preview) {
     ? `${preview.priority} → ${preview.priority - preview.prioritySequence.step * Math.max(0, preview.keyCount - 1)}（每条 -${preview.prioritySequence.step}）`
     : String(preview.priority)
   elements.previewWeight.textContent = String(preview.weight)
+  elements.previewExecutionMode.textContent =
+    state.pendingSchedule === null
+      ? `一次性立即写入 ${preview.keyCount} 条`
+      : `定时写入 · 每批 ${state.pendingSchedule.batchSize || 1} 条`
   elements.previewAwsRoutingFact.classList.toggle("hidden", !preview.awsRouting)
   elements.previewAwsRouting.textContent = preview.awsRouting
     ? `${preview.awsRouting.regions.join("、")} · ${
@@ -1175,7 +1196,9 @@ function updateDuplicateAction() {
   if (!channel) {
     elements.duplicateConfirmCopy.textContent = "我确认仍要新增一个渠道"
     elements.createChannel.querySelector("span").textContent =
-      state.pendingSchedule === null ? "确认写入 New API" : "确认保存定时任务"
+      state.pendingSchedule === null
+        ? "一次性立即写入全部 Key"
+        : "确认保存定时任务"
     return
   }
   elements.duplicateConfirmCopy.textContent = channel.isMultiKey
@@ -1775,14 +1798,37 @@ function renderRecords() {
   elements.recordsBody.replaceChildren()
   const records = filterUsageRecords(state.records, currentRecordFilters())
   renderUsageSummary(records)
+  const pagination = paginateItems(
+    records,
+    state.recordsPage,
+    elements.recordsPageSize.value,
+  )
+  state.recordsPage = pagination.page
   const hasRecords = records.length > 0
+  const pageCopy = `第 ${pagination.page} / ${pagination.pageCount} 页`
+  const rangeCopy = hasRecords
+    ? `显示第 ${formatInteger(pagination.startItem)}–${formatInteger(
+        pagination.endItem,
+      )} 条，共 ${formatInteger(pagination.totalItems)} 条`
+    : "共 0 条"
+  elements.recordsPageSummary.textContent = rangeCopy
+  elements.recordsPageSummaryBottom.textContent = rangeCopy
+  elements.recordsPageNumber.textContent = pageCopy
+  elements.recordsPageNumberBottom.textContent = pageCopy
+  for (const button of [elements.recordsPrev, elements.recordsPrevBottom]) {
+    button.disabled = !hasRecords || pagination.page <= 1
+  }
+  for (const button of [elements.recordsNext, elements.recordsNextBottom]) {
+    button.disabled = !hasRecords || pagination.page >= pagination.pageCount
+  }
+  elements.recordsPaginationBottom.classList.toggle("hidden", !hasRecords)
   elements.recordsEmpty.textContent =
     state.records.length > 0
       ? "没有符合当前筛选的记录。"
       : "还没有 Key 填入记录。"
   elements.recordsEmpty.classList.toggle("hidden", hasRecords)
   elements.recordsTableWrap.classList.toggle("hidden", !hasRecords)
-  groupImportRecords(records).forEach(appendRecordBatch)
+  groupImportRecords(pagination.items).forEach(appendRecordBatch)
 }
 
 async function loadRecords() {
@@ -3006,16 +3052,44 @@ for (const filter of [
   elements.recordsProviderFilter,
   elements.recordsStatusFilter,
 ]) {
-  filter.addEventListener("change", renderRecords)
+  filter.addEventListener("change", () => {
+    state.recordsPage = 1
+    renderRecords()
+  })
 }
-elements.recordsSearch.addEventListener("input", renderRecords)
+elements.recordsSearch.addEventListener("input", () => {
+  state.recordsPage = 1
+  renderRecords()
+})
 elements.resetRecordFilters.addEventListener("click", () => {
   elements.recordsTargetFilter.value = ""
   elements.recordsProviderFilter.value = ""
   elements.recordsStatusFilter.value = ""
   elements.recordsSearch.value = ""
+  state.recordsPage = 1
   renderRecords()
 })
+
+elements.recordsPageSize.addEventListener("change", () => {
+  state.recordsPage = 1
+  renderRecords()
+})
+
+function changeRecordsPage(offset) {
+  state.recordsPage += offset
+  renderRecords()
+  elements.recordsPagination.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  })
+}
+
+for (const button of [elements.recordsPrev, elements.recordsPrevBottom]) {
+  button.addEventListener("click", () => changeRecordsPage(-1))
+}
+for (const button of [elements.recordsNext, elements.recordsNextBottom]) {
+  button.addEventListener("click", () => changeRecordsPage(1))
+}
 
 elements.refreshGroups.addEventListener("click", loadGroups)
 elements.refreshSchedules.addEventListener("click", async () => {
@@ -3035,7 +3109,7 @@ function updateScheduleForm() {
   elements.scheduleOptions.classList.toggle("hidden", !enabled)
   elements.previewButton.querySelector("span").textContent = enabled
     ? "识别并预览定时任务"
-    : "识别 Key 并预览"
+    : "识别并预览一次性写入"
   if (enabled && !elements.scheduleStartAt.value) {
     elements.scheduleStartAt.value = formatDateTimeInput(
       new Date(Date.now() + 10 * 60 * 1000),
@@ -3043,6 +3117,7 @@ function updateScheduleForm() {
   }
 }
 
+elements.immediateEnabled.addEventListener("change", updateScheduleForm)
 elements.scheduleEnabled.addEventListener("change", updateScheduleForm)
 
 function updateQuotaModeForm() {

@@ -9,6 +9,7 @@ import {
   groupUsageDashboardByDay,
   groupUsageDashboardByTarget,
   localDateKey,
+  paginateItems,
   summarizeUsageDashboard,
   summarizeUsageRecords,
   usageState,
@@ -95,6 +96,28 @@ test("filters by site, provider, state and searchable record identity", () => {
     }),
     [records[0]],
   )
+})
+
+test("paginates filtered records and clamps an out-of-range page", () => {
+  const items = Array.from({ length: 123 }, (_, index) => index + 1)
+  assert.deepEqual(paginateItems(items, 2, 50), {
+    items: items.slice(50, 100),
+    page: 2,
+    pageSize: 50,
+    pageCount: 3,
+    totalItems: 123,
+    startItem: 51,
+    endItem: 100,
+  })
+  assert.deepEqual(paginateItems(items, 99, 100), {
+    items: items.slice(100),
+    page: 2,
+    pageSize: 100,
+    pageCount: 2,
+    totalItems: 123,
+    startItem: 101,
+    endItem: 123,
+  })
 })
 
 test("filters dashboard records by exact New API address and local import date", () => {

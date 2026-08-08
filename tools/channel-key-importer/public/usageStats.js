@@ -45,6 +45,26 @@ export function filterUsageRecords(records, filters = {}) {
   })
 }
 
+export function paginateItems(items, page = 1, pageSize = 50) {
+  const normalizedPageSize = Math.max(1, Math.floor(Number(pageSize) || 50))
+  const totalItems = items.length
+  const pageCount = Math.max(1, Math.ceil(totalItems / normalizedPageSize))
+  const normalizedPage = Math.min(
+    pageCount,
+    Math.max(1, Math.floor(Number(page) || 1)),
+  )
+  const startIndex = (normalizedPage - 1) * normalizedPageSize
+  return {
+    items: items.slice(startIndex, startIndex + normalizedPageSize),
+    page: normalizedPage,
+    pageSize: normalizedPageSize,
+    pageCount,
+    totalItems,
+    startItem: totalItems === 0 ? 0 : startIndex + 1,
+    endItem: Math.min(totalItems, startIndex + normalizedPageSize),
+  }
+}
+
 export function summarizeUsageRecords(records) {
   const summary = {
     recordCount: records.length,
