@@ -693,6 +693,9 @@ async function logVisibleAuthSessionCount(
       },
     )
   } catch {
+    console.info(
+      `[real-site] ${options.label} session diagnostic unavailable: request failed`,
+    )
     return
   }
 

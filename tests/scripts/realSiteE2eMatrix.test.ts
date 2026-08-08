@@ -23,6 +23,10 @@ function runMatrix(...args: string[]) {
   ) as { include: Array<Record<string, unknown>> }
 }
 
+function selectedIds(matrix: ReturnType<typeof runMatrix>) {
+  return matrix.include.map((entry) => entry.id)
+}
+
 describe("GitHub real-site E2E matrix selection", () => {
   it("selects one concrete target without expanding the account category", () => {
     const matrix = runMatrix("all", "new-api-account")
@@ -37,8 +41,12 @@ describe("GitHub real-site E2E matrix selection", () => {
 
   it("keeps category selection unchanged when target is all", () => {
     const matrix = runMatrix("account", "all")
+    const allTargets = runMatrix()
+    const expectedAccountIds = allTargets.include
+      .filter((entry) => entry.category === "account")
+      .map((entry) => entry.id)
 
-    expect(matrix.include).toHaveLength(5)
+    expect(selectedIds(matrix)).toEqual(expectedAccountIds)
     expect(matrix.include.every((entry) => entry.category === "account")).toBe(
       true,
     )
@@ -46,8 +54,11 @@ describe("GitHub real-site E2E matrix selection", () => {
 
   it("keeps the default all-category matrix unchanged", () => {
     const matrix = runMatrix()
+    const expectedIds = ["account", "managed-site", "webdav"].flatMap(
+      (category) => selectedIds(runMatrix(category, "all")),
+    )
 
-    expect(matrix.include).toHaveLength(13)
+    expect(selectedIds(matrix)).toEqual(expectedIds)
   })
 
   it("rejects a target from a different category", () => {

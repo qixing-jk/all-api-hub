@@ -202,6 +202,31 @@ describe("compatible real-site login", () => {
     expect(messages).not.toContain("must-not-leak")
   })
 
+  it("logs a sanitized status when the session diagnostic request fails", async () => {
+    const post = vi
+      .fn()
+      .mockResolvedValueOnce(createResponse(401, { code: "AUTH_UNAUTHORIZED" }))
+      .mockResolvedValueOnce(createResponse(200, createAuthBundle()))
+    const getRequest = vi
+      .fn()
+      .mockRejectedValue(new Error("must-not-leak-transport-details"))
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined)
+    const { page } = createPage(post, { getRequest })
+    let messages = ""
+
+    try {
+      await loginToRealNewApiSite(page, config)
+      messages = info.mock.calls.flat().join(" ")
+    } finally {
+      info.mockRestore()
+    }
+
+    expect(messages).toContain(
+      "New API session diagnostic unavailable: request failed",
+    )
+    expect(messages).not.toContain("must-not-leak")
+  })
+
   it("reuses an existing AuthBundle session without taking cleanup ownership", async () => {
     const post = vi
       .fn()
