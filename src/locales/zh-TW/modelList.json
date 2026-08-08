@@ -106,9 +106,120 @@
   "description": "檢視和管理可用的AI模型",
   "detailedPricing": "詳細定價",
   "displayFacts": {
+    "benchmarkTable": {
+      "arena": "競技場",
+      "category": "類別",
+      "rank": "排名",
+      "score": "得分",
+      "winRate": "勝率"
+    },
+    "boolean": {
+      "no": "否",
+      "yes": "是"
+    },
     "contextLimit": "上下文上限",
+    "inputModalities": "輸入模態",
     "maximumOutputTokens": "最大輸出 Token 數",
+    "openRouter": {
+      "architecture": {
+        "instructType": "指令格式",
+        "modality": "主要模態",
+        "tokenizer": "分詞器"
+      },
+      "benchmarks": {
+        "agenticIndex": "代理能力指數",
+        "codingIndex": "程式設計指數",
+        "designArena": "Design Arena 排名",
+        "intelligenceIndex": "智慧指數"
+      },
+      "capabilities": {
+        "reasoningDefaultEffort": "預設推理強度",
+        "reasoningDefaultEnabled": "預設啟用推理",
+        "reasoningMandatory": "必須使用推理",
+        "reasoningSupportedEfforts": "支援的推理強度",
+        "reasoningSupportsMaxTokens": "支援推理 Token 上限",
+        "supportedParameters": "支援的參數",
+        "supportedVoices": "支援的語音"
+      },
+      "defaults": {
+        "frequencyPenalty": "預設頻率懲罰",
+        "presencePenalty": "預設存在懲罰",
+        "repetitionPenalty": "預設重複懲罰",
+        "temperature": "預設溫度",
+        "topK": "預設 top-k",
+        "topP": "預設 top-p"
+      },
+      "lifecycle": {
+        "aliasName": "別名目標名稱",
+        "aliasSlug": "別名目標",
+        "canonicalSlug": "規範識別碼",
+        "created": "模型建立日期",
+        "expirationDate": "到期日期",
+        "huggingFaceId": "Hugging Face ID",
+        "knowledgeCutoff": "知識截止日期"
+      },
+      "limits": {
+        "completionTokens": "補全 Token 上限",
+        "promptTokens": "提示詞 Token 上限"
+      },
+      "links": {
+        "openProviderDetails": "開啟服務商詳細資訊",
+        "providerDetails": "服務商詳細資訊"
+      },
+      "prices": {
+        "audioInput": "音訊輸入價格",
+        "audioOutput": "音訊輸出價格",
+        "cachedAudioInput": "快取音訊輸入價格",
+        "cacheRead": "快取讀取價格",
+        "cacheWrite": "快取寫入價格",
+        "cacheWriteOneHour": "一小時快取寫入價格",
+        "conditional": "條件價格",
+        "imageInput": "圖片輸入價格",
+        "imageOutput": "圖片輸出價格",
+        "imageToken": "圖片 Token 價格",
+        "input": "輸入價格",
+        "output": "輸出價格",
+        "reasoning": "推理 Token 價格",
+        "request": "請求價格",
+        "webSearch": "網路搜尋價格"
+      },
+      "routing": {
+        "contextLimit": "路由上下文上限",
+        "moderation": "內容審核"
+      },
+      "sections": {
+        "architecture": "架構",
+        "benchmarks": "基準測試",
+        "capabilities": "能力與預設值",
+        "lifecycle": "生命週期與別名",
+        "links": "連結",
+        "pricing": "價格",
+        "requestLimits": "單次請求限制",
+        "routing": "路由服務商"
+      }
+    },
     "outputModalities": "輸出模態",
+    "priceConditions": {
+      "minimumPromptTokens": "提示詞超過 {{formattedCount}} 個 Token",
+      "minimumPromptTokens_other": "提示詞超過 {{formattedCount}} 個 Token",
+      "utcWindow": "UTC {{start}}–{{end}}"
+    },
+    "priceUnits": {
+      "inputImage": "張輸入圖片",
+      "millionAudioInputTokens": "100 萬音訊輸入 Token",
+      "millionAudioOutputTokens": "100 萬音訊輸出 Token",
+      "millionCachedAudioInputTokens": "100 萬快取音訊輸入 Token",
+      "millionCachedInputTokens": "100 萬快取輸入 Token",
+      "millionCacheWriteOneHourTokens": "100 萬一小時快取寫入 Token",
+      "millionCacheWriteTokens": "100 萬快取寫入 Token",
+      "millionImageTokens": "100 萬圖片 Token",
+      "millionInputTokens": "100 萬輸入 Token",
+      "millionOutputTokens": "100 萬輸出 Token",
+      "millionReasoningTokens": "100 萬推理 Token",
+      "outputImage": "張輸出圖片",
+      "request": "次請求",
+      "webSearch": "次網路搜尋"
+    },
     "sections": {
       "specifications": "規格"
     },

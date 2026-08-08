@@ -112,9 +112,121 @@
   "description": "Verfügbare KI-Modelle anzeigen und verwalten",
   "detailedPricing": "Detaillierte Preise",
   "displayFacts": {
+    "benchmarkTable": {
+      "arena": "Arena",
+      "category": "Kategorie",
+      "rank": "Rang",
+      "score": "Punktzahl",
+      "winRate": "Gewinnrate"
+    },
+    "boolean": {
+      "no": "Nein",
+      "yes": "Ja"
+    },
     "contextLimit": "Kontextlimit",
+    "inputModalities": "Eingabemodalitäten",
     "maximumOutputTokens": "Maximale Ausgabe-Token",
+    "openRouter": {
+      "architecture": {
+        "instructType": "Anweisungsformat",
+        "modality": "Primäre Modalität",
+        "tokenizer": "Tokenizer"
+      },
+      "benchmarks": {
+        "agenticIndex": "Agentenindex",
+        "codingIndex": "Programmierindex",
+        "designArena": "Design-Arena-Ranglisten",
+        "intelligenceIndex": "Intelligenzindex"
+      },
+      "capabilities": {
+        "reasoningDefaultEffort": "Standardmäßiger Denkaufwand",
+        "reasoningDefaultEnabled": "Reasoning standardmäßig aktiviert",
+        "reasoningMandatory": "Reasoning erforderlich",
+        "reasoningSupportedEfforts": "Unterstützte Reasoning-Stufen",
+        "reasoningSupportsMaxTokens": "Reasoning-Tokenlimit unterstützt",
+        "supportedParameters": "Unterstützte Parameter",
+        "supportedVoices": "Unterstützte Stimmen"
+      },
+      "defaults": {
+        "frequencyPenalty": "Standard-Frequenzstrafe",
+        "presencePenalty": "Standard-Anwesenheitsstrafe",
+        "repetitionPenalty": "Standard-Wiederholungsstrafe",
+        "temperature": "Standard-Temperatur",
+        "topK": "Standard-Top-k",
+        "topP": "Standard-Top-p"
+      },
+      "lifecycle": {
+        "aliasName": "Name des Aliasziels",
+        "aliasSlug": "Aliasziel",
+        "canonicalSlug": "Kanonischer Slug",
+        "created": "Modell erstellt",
+        "expirationDate": "Ablaufdatum",
+        "huggingFaceId": "Hugging-Face-ID",
+        "knowledgeCutoff": "Wissensstand"
+      },
+      "limits": {
+        "completionTokens": "Antwort-Tokenlimit",
+        "promptTokens": "Eingabe-Tokenlimit"
+      },
+      "links": {
+        "openProviderDetails": "Anbieterdetails öffnen",
+        "providerDetails": "Anbieterdetails"
+      },
+      "prices": {
+        "audioInput": "Preis für Audioeingabe",
+        "audioOutput": "Preis für Audioausgabe",
+        "cachedAudioInput": "Preis für zwischengespeicherte Audioeingabe",
+        "cacheRead": "Preis für Cache-Lesen",
+        "cacheWrite": "Preis für Cache-Schreiben",
+        "cacheWriteOneHour": "Preis für einstündiges Cache-Schreiben",
+        "conditional": "Bedingte Preise",
+        "imageInput": "Preis für Bildeingabe",
+        "imageOutput": "Preis für Bildausgabe",
+        "imageToken": "Preis für Bild-Token",
+        "input": "Eingabepreis",
+        "output": "Ausgabepreis",
+        "reasoning": "Preis für Reasoning-Token",
+        "request": "Preis pro Anfrage",
+        "webSearch": "Preis für Websuche"
+      },
+      "routing": {
+        "contextLimit": "Routing-Kontextlimit",
+        "moderation": "Inhaltsmoderation"
+      },
+      "sections": {
+        "architecture": "Architektur",
+        "benchmarks": "Benchmarks",
+        "capabilities": "Funktionen und Standardwerte",
+        "lifecycle": "Lebenszyklus und Aliase",
+        "links": "Links",
+        "pricing": "Preise",
+        "requestLimits": "Limits pro Anfrage",
+        "routing": "Routing-Anbieter"
+      }
+    },
     "outputModalities": "Ausgabemodalitäten",
+    "priceConditions": {
+      "minimumPromptTokens": "Mehr als {{formattedCount}} Eingabe-Token",
+      "minimumPromptTokens_one": "Mehr als {{formattedCount}} Eingabe-Token",
+      "minimumPromptTokens_other": "Mehr als {{formattedCount}} Eingabe-Token",
+      "utcWindow": "{{start}}–{{end}} UTC"
+    },
+    "priceUnits": {
+      "inputImage": "Eingabebild",
+      "millionAudioInputTokens": "1 Mio. Audioeingabe-Token",
+      "millionAudioOutputTokens": "1 Mio. Audioausgabe-Token",
+      "millionCachedAudioInputTokens": "1 Mio. zwischengespeicherte Audioeingabe-Token",
+      "millionCachedInputTokens": "1 Mio. zwischengespeicherte Eingabe-Token",
+      "millionCacheWriteOneHourTokens": "1 Mio. einstündige Cache-Schreib-Token",
+      "millionCacheWriteTokens": "1 Mio. Cache-Schreib-Token",
+      "millionImageTokens": "1 Mio. Bild-Token",
+      "millionInputTokens": "1 Mio. Eingabe-Token",
+      "millionOutputTokens": "1 Mio. Ausgabe-Token",
+      "millionReasoningTokens": "1 Mio. Reasoning-Token",
+      "outputImage": "Ausgabebild",
+      "request": "Anfrage",
+      "webSearch": "Websuche"
+    },
     "sections": {
       "specifications": "Spezifikationen"
     },

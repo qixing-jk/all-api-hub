@@ -118,9 +118,122 @@
   "description": "Veja e gerencie os modelos de IA disponíveis",
   "detailedPricing": "Preços detalhados",
   "displayFacts": {
+    "benchmarkTable": {
+      "arena": "Arena",
+      "category": "Categoria",
+      "rank": "Posição",
+      "score": "Pontuação",
+      "winRate": "Taxa de vitória"
+    },
+    "boolean": {
+      "no": "Não",
+      "yes": "Sim"
+    },
     "contextLimit": "Limite de contexto",
+    "inputModalities": "Modalidades de entrada",
     "maximumOutputTokens": "Máximo de tokens de saída",
+    "openRouter": {
+      "architecture": {
+        "instructType": "Formato de instrução",
+        "modality": "Modalidade principal",
+        "tokenizer": "Tokenizador"
+      },
+      "benchmarks": {
+        "agenticIndex": "Índice de agentes",
+        "codingIndex": "Índice de programação",
+        "designArena": "Classificações do Design Arena",
+        "intelligenceIndex": "Índice de inteligência"
+      },
+      "capabilities": {
+        "reasoningDefaultEffort": "Esforço de raciocínio padrão",
+        "reasoningDefaultEnabled": "Raciocínio ativado por padrão",
+        "reasoningMandatory": "Raciocínio obrigatório",
+        "reasoningSupportedEfforts": "Esforços de raciocínio compatíveis",
+        "reasoningSupportsMaxTokens": "Aceita limite de tokens de raciocínio",
+        "supportedParameters": "Parâmetros compatíveis",
+        "supportedVoices": "Vozes compatíveis"
+      },
+      "defaults": {
+        "frequencyPenalty": "Penalidade de frequência padrão",
+        "presencePenalty": "Penalidade de presença padrão",
+        "repetitionPenalty": "Penalidade de repetição padrão",
+        "temperature": "Temperatura padrão",
+        "topK": "Top-k padrão",
+        "topP": "Top-p padrão"
+      },
+      "lifecycle": {
+        "aliasName": "Nome de destino do alias",
+        "aliasSlug": "Destino do alias",
+        "canonicalSlug": "Slug canônico",
+        "created": "Modelo criado",
+        "expirationDate": "Data de expiração",
+        "huggingFaceId": "ID do Hugging Face",
+        "knowledgeCutoff": "Limite de conhecimento"
+      },
+      "limits": {
+        "completionTokens": "Limite de tokens de resposta",
+        "promptTokens": "Limite de tokens de entrada"
+      },
+      "links": {
+        "openProviderDetails": "Abrir detalhes do provedor",
+        "providerDetails": "Detalhes do provedor"
+      },
+      "prices": {
+        "audioInput": "Preço de entrada de áudio",
+        "audioOutput": "Preço de saída de áudio",
+        "cachedAudioInput": "Preço de entrada de áudio em cache",
+        "cacheRead": "Preço de leitura do cache",
+        "cacheWrite": "Preço de gravação no cache",
+        "cacheWriteOneHour": "Preço de gravação no cache por uma hora",
+        "conditional": "Preços condicionais",
+        "imageInput": "Preço de imagem de entrada",
+        "imageOutput": "Preço de imagem de saída",
+        "imageToken": "Preço de token de imagem",
+        "input": "Preço de entrada",
+        "output": "Preço de saída",
+        "reasoning": "Preço de token de raciocínio",
+        "request": "Preço por solicitação",
+        "webSearch": "Preço de busca na web"
+      },
+      "routing": {
+        "contextLimit": "Limite de contexto de roteamento",
+        "moderation": "Moderação de conteúdo"
+      },
+      "sections": {
+        "architecture": "Arquitetura",
+        "benchmarks": "Benchmarks",
+        "capabilities": "Recursos e padrões",
+        "lifecycle": "Ciclo de vida e aliases",
+        "links": "Links",
+        "pricing": "Preços",
+        "requestLimits": "Limites por solicitação",
+        "routing": "Provedor de roteamento"
+      }
+    },
     "outputModalities": "Modalidades de saída",
+    "priceConditions": {
+      "minimumPromptTokens": "Mais de {{formattedCount}} tokens de entrada",
+      "minimumPromptTokens_one": "Mais de {{formattedCount}} token de entrada",
+      "minimumPromptTokens_many": "Mais de {{formattedCount}} tokens de entrada",
+      "minimumPromptTokens_other": "Mais de {{formattedCount}} tokens de entrada",
+      "utcWindow": "{{start}}–{{end}} UTC"
+    },
+    "priceUnits": {
+      "inputImage": "imagem de entrada",
+      "millionAudioInputTokens": "1 milhão de tokens de áudio de entrada",
+      "millionAudioOutputTokens": "1 milhão de tokens de áudio de saída",
+      "millionCachedAudioInputTokens": "1 milhão de tokens de áudio de entrada em cache",
+      "millionCachedInputTokens": "1 milhão de tokens de entrada em cache",
+      "millionCacheWriteOneHourTokens": "1 milhão de tokens de gravação no cache por uma hora",
+      "millionCacheWriteTokens": "1 milhão de tokens de gravação no cache",
+      "millionImageTokens": "1 milhão de tokens de imagem",
+      "millionInputTokens": "1 milhão de tokens de entrada",
+      "millionOutputTokens": "1 milhão de tokens de saída",
+      "millionReasoningTokens": "1 milhão de tokens de raciocínio",
+      "outputImage": "imagem de saída",
+      "request": "solicitação",
+      "webSearch": "busca na web"
+    },
     "sections": {
       "specifications": "Especificações"
     },

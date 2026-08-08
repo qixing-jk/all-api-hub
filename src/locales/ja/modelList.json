@@ -106,9 +106,120 @@
   "description": "利用可能な AI モデルを確認・管理します",
   "detailedPricing": "詳細料金",
   "displayFacts": {
+    "benchmarkTable": {
+      "arena": "アリーナ",
+      "category": "カテゴリ",
+      "rank": "順位",
+      "score": "スコア",
+      "winRate": "勝率"
+    },
+    "boolean": {
+      "no": "いいえ",
+      "yes": "はい"
+    },
     "contextLimit": "コンテキスト上限",
+    "inputModalities": "入力モダリティ",
     "maximumOutputTokens": "最大出力トークン数",
+    "openRouter": {
+      "architecture": {
+        "instructType": "命令形式",
+        "modality": "主モダリティ",
+        "tokenizer": "トークナイザー"
+      },
+      "benchmarks": {
+        "agenticIndex": "エージェント指標",
+        "codingIndex": "コーディング指標",
+        "designArena": "Design Arena ランキング",
+        "intelligenceIndex": "知能指標"
+      },
+      "capabilities": {
+        "reasoningDefaultEffort": "既定の推論レベル",
+        "reasoningDefaultEnabled": "既定で推論を有効化",
+        "reasoningMandatory": "推論が必須",
+        "reasoningSupportedEfforts": "対応する推論レベル",
+        "reasoningSupportsMaxTokens": "推論トークン上限に対応",
+        "supportedParameters": "対応パラメーター",
+        "supportedVoices": "対応音声"
+      },
+      "defaults": {
+        "frequencyPenalty": "既定の頻度ペナルティ",
+        "presencePenalty": "既定の存在ペナルティ",
+        "repetitionPenalty": "既定の反復ペナルティ",
+        "temperature": "既定の Temperature",
+        "topK": "既定の top-k",
+        "topP": "既定の top-p"
+      },
+      "lifecycle": {
+        "aliasName": "エイリアス先の名前",
+        "aliasSlug": "エイリアス先",
+        "canonicalSlug": "正規スラッグ",
+        "created": "モデル作成日",
+        "expirationDate": "有効期限",
+        "huggingFaceId": "Hugging Face ID",
+        "knowledgeCutoff": "知識のカットオフ"
+      },
+      "limits": {
+        "completionTokens": "応答トークン上限",
+        "promptTokens": "入力トークン上限"
+      },
+      "links": {
+        "openProviderDetails": "プロバイダーの詳細を開く",
+        "providerDetails": "プロバイダーの詳細"
+      },
+      "prices": {
+        "audioInput": "音声入力料金",
+        "audioOutput": "音声出力料金",
+        "cachedAudioInput": "キャッシュ済み音声入力料金",
+        "cacheRead": "キャッシュ読み取り料金",
+        "cacheWrite": "キャッシュ書き込み料金",
+        "cacheWriteOneHour": "1 時間キャッシュ書き込み料金",
+        "conditional": "条件付き料金",
+        "imageInput": "画像入力料金",
+        "imageOutput": "画像出力料金",
+        "imageToken": "画像トークン料金",
+        "input": "入力料金",
+        "output": "出力料金",
+        "reasoning": "推論トークン料金",
+        "request": "リクエスト料金",
+        "webSearch": "ウェブ検索料金"
+      },
+      "routing": {
+        "contextLimit": "ルーティング時のコンテキスト上限",
+        "moderation": "コンテンツモデレーション"
+      },
+      "sections": {
+        "architecture": "アーキテクチャ",
+        "benchmarks": "ベンチマーク",
+        "capabilities": "機能と既定値",
+        "lifecycle": "ライフサイクルとエイリアス",
+        "links": "リンク",
+        "pricing": "料金",
+        "requestLimits": "リクエストごとの上限",
+        "routing": "ルーティングプロバイダー"
+      }
+    },
     "outputModalities": "出力モダリティ",
+    "priceConditions": {
+      "minimumPromptTokens": "入力が {{formattedCount}} トークンを超える場合",
+      "minimumPromptTokens_other": "入力が {{formattedCount}} トークンを超える場合",
+      "utcWindow": "{{start}}–{{end}} UTC"
+    },
+    "priceUnits": {
+      "inputImage": "入力画像",
+      "millionAudioInputTokens": "音声入力 100 万トークン",
+      "millionAudioOutputTokens": "音声出力 100 万トークン",
+      "millionCachedAudioInputTokens": "キャッシュ済み音声入力 100 万トークン",
+      "millionCachedInputTokens": "キャッシュ済み入力 100 万トークン",
+      "millionCacheWriteOneHourTokens": "1 時間キャッシュ書き込み 100 万トークン",
+      "millionCacheWriteTokens": "キャッシュ書き込み 100 万トークン",
+      "millionImageTokens": "画像 100 万トークン",
+      "millionInputTokens": "入力 100 万トークン",
+      "millionOutputTokens": "出力 100 万トークン",
+      "millionReasoningTokens": "推論 100 万トークン",
+      "outputImage": "出力画像",
+      "request": "リクエスト",
+      "webSearch": "ウェブ検索"
+    },
     "sections": {
       "specifications": "仕様"
     },

@@ -7,6 +7,7 @@ import {
 import {
   MODEL_DISPLAY_FACT_LABELS,
   MODEL_DISPLAY_FACT_TYPES,
+  MODEL_DISPLAY_PRICE_UNITS,
   MODEL_DISPLAY_SECTION_LABELS,
   type ModelDisplayTranslationKey,
   type ModelPresentation,
@@ -80,6 +81,22 @@ beforeAll(() => {
         maximumOutputTokens: "Maximum output tokens",
         outputModalities: "Output modalities",
         sections: { specifications: "Specifications" },
+        boolean: { no: "No", yes: "Yes" },
+        benchmarkTable: {
+          arena: "Arena",
+          category: "Category",
+          rank: "Rank",
+          score: "Score",
+          winRate: "Win rate",
+        },
+        priceConditions: {
+          minimumPromptTokens: "More than {{formattedCount}} prompt tokens",
+          utcWindow: "{{start}}–{{end}} UTC",
+        },
+        priceUnits: {
+          millionInputTokens: "1M input tokens",
+          request: "request",
+        },
         tokenCount_one: "{{formattedCount}} token",
         tokenCount_other: "{{formattedCount}} tokens",
       },
@@ -219,5 +236,127 @@ describe("generic model presentation facts", () => {
     )
 
     expect(screen.getByRole("term")).toHaveTextContent("Safe label")
+  })
+
+  it("renders typed prices, conditions, dates, booleans, links, and benchmarks accessibly", () => {
+    render(
+      <ModelPresentationDetails
+        presentation={{
+          sections: [
+            {
+              id: "rich-facts",
+              label: { fallback: "Rich facts" },
+              facts: [
+                {
+                  type: MODEL_DISPLAY_FACT_TYPES.CurrencyPrice,
+                  label: { fallback: "Input price" },
+                  amount: 1.5,
+                  currency: "USD",
+                  unit: MODEL_DISPLAY_PRICE_UNITS.MillionInputTokens,
+                },
+                {
+                  type: MODEL_DISPLAY_FACT_TYPES.Boolean,
+                  label: { fallback: "Moderated" },
+                  value: false,
+                },
+                {
+                  type: MODEL_DISPLAY_FACT_TYPES.Number,
+                  label: { fallback: "Default temperature" },
+                  value: 0,
+                },
+                {
+                  type: MODEL_DISPLAY_FACT_TYPES.Date,
+                  label: { fallback: "Added" },
+                  value: "2024-01-02",
+                },
+                {
+                  type: MODEL_DISPLAY_FACT_TYPES.Link,
+                  label: { fallback: "Details" },
+                  href: "https://docs.example.invalid/model",
+                  text: { fallback: "Open model details" },
+                },
+                {
+                  type: MODEL_DISPLAY_FACT_TYPES.PriceOverrides,
+                  label: { fallback: "Conditional prices" },
+                  overrides: [
+                    {
+                      conditions: [
+                        {
+                          type: "minimum-prompt-tokens",
+                          value: 200_000,
+                        },
+                      ],
+                      prices: [
+                        {
+                          label: { fallback: "Input price" },
+                          amount: 3,
+                          currency: "USD",
+                          unit: MODEL_DISPLAY_PRICE_UNITS.MillionInputTokens,
+                        },
+                      ],
+                    },
+                    {
+                      conditions: [
+                        { type: "utc-window", start: 1630, end: 30 },
+                      ],
+                      prices: [
+                        {
+                          label: { fallback: "Request price" },
+                          amount: 0,
+                          currency: "USD",
+                          unit: MODEL_DISPLAY_PRICE_UNITS.Request,
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  type: MODEL_DISPLAY_FACT_TYPES.BenchmarkList,
+                  label: { fallback: "Benchmark rankings" },
+                  entries: [
+                    {
+                      arena: "models",
+                      category: "website",
+                      score: 1385.2,
+                      rank: 5,
+                      winRatePercent: 62.5,
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    expect(screen.getByText("$1.50 / 1M input tokens")).toBeInTheDocument()
+    expect(screen.getByText("No")).toBeInTheDocument()
+    expect(screen.getByText("0")).toBeInTheDocument()
+    expect(screen.getByText("Jan 2, 2024")).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "Open model details" }),
+    ).toHaveAttribute("href", "https://docs.example.invalid/model")
+    expect(
+      screen.getByRole("link", { name: "Open model details" }),
+    ).toHaveAttribute("rel", "noreferrer noopener")
+    expect(
+      screen.getByText("More than 200,000 prompt tokens"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("16:30–00:30 UTC")).toBeInTheDocument()
+    expect(screen.getByText("$3.00 / 1M input tokens")).toBeInTheDocument()
+    expect(screen.getByText("$0.00 / request")).toBeInTheDocument()
+
+    const table = screen.getByRole("table", { name: "Benchmark rankings" })
+    expect(
+      within(table).getByRole("columnheader", { name: "Arena" }),
+    ).toBeInTheDocument()
+    expect(
+      within(table).getByRole("cell", { name: "models" }),
+    ).toBeInTheDocument()
+    expect(
+      within(table).getByRole("cell", { name: "62.5%" }),
+    ).toBeInTheDocument()
   })
 })

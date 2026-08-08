@@ -112,9 +112,121 @@
   "description": "View and manage available AI models",
   "detailedPricing": "Detailed Pricing",
   "displayFacts": {
+    "benchmarkTable": {
+      "arena": "Arena",
+      "category": "Category",
+      "rank": "Rank",
+      "score": "Score",
+      "winRate": "Win rate"
+    },
+    "boolean": {
+      "no": "No",
+      "yes": "Yes"
+    },
     "contextLimit": "Context limit",
+    "inputModalities": "Input modalities",
     "maximumOutputTokens": "Maximum output tokens",
+    "openRouter": {
+      "architecture": {
+        "instructType": "Instruction format",
+        "modality": "Primary modality",
+        "tokenizer": "Tokenizer"
+      },
+      "benchmarks": {
+        "agenticIndex": "Agentic index",
+        "codingIndex": "Coding index",
+        "designArena": "Design Arena rankings",
+        "intelligenceIndex": "Intelligence index"
+      },
+      "capabilities": {
+        "reasoningDefaultEffort": "Default reasoning effort",
+        "reasoningDefaultEnabled": "Reasoning enabled by default",
+        "reasoningMandatory": "Reasoning required",
+        "reasoningSupportedEfforts": "Supported reasoning efforts",
+        "reasoningSupportsMaxTokens": "Reasoning token limit supported",
+        "supportedParameters": "Supported parameters",
+        "supportedVoices": "Supported voices"
+      },
+      "defaults": {
+        "frequencyPenalty": "Default frequency penalty",
+        "presencePenalty": "Default presence penalty",
+        "repetitionPenalty": "Default repetition penalty",
+        "temperature": "Default temperature",
+        "topK": "Default top-k",
+        "topP": "Default top-p"
+      },
+      "lifecycle": {
+        "aliasName": "Alias target name",
+        "aliasSlug": "Alias target",
+        "canonicalSlug": "Canonical slug",
+        "created": "Model created",
+        "expirationDate": "Expiration date",
+        "huggingFaceId": "Hugging Face ID",
+        "knowledgeCutoff": "Knowledge cutoff"
+      },
+      "limits": {
+        "completionTokens": "Completion token limit",
+        "promptTokens": "Prompt token limit"
+      },
+      "links": {
+        "openProviderDetails": "Open provider details",
+        "providerDetails": "Provider details"
+      },
+      "prices": {
+        "audioInput": "Audio input price",
+        "audioOutput": "Audio output price",
+        "cachedAudioInput": "Cached audio input price",
+        "cacheRead": "Cache read price",
+        "cacheWrite": "Cache write price",
+        "cacheWriteOneHour": "One-hour cache write price",
+        "conditional": "Conditional prices",
+        "imageInput": "Image input price",
+        "imageOutput": "Image output price",
+        "imageToken": "Image token price",
+        "input": "Input price",
+        "output": "Output price",
+        "reasoning": "Reasoning token price",
+        "request": "Request price",
+        "webSearch": "Web search price"
+      },
+      "routing": {
+        "contextLimit": "Routing context limit",
+        "moderation": "Content moderation"
+      },
+      "sections": {
+        "architecture": "Architecture",
+        "benchmarks": "Benchmarks",
+        "capabilities": "Capabilities and defaults",
+        "lifecycle": "Lifecycle and aliases",
+        "links": "Links",
+        "pricing": "Pricing",
+        "requestLimits": "Per-request limits",
+        "routing": "Routing provider"
+      }
+    },
     "outputModalities": "Output modalities",
+    "priceConditions": {
+      "minimumPromptTokens": "More than {{formattedCount}} prompt tokens",
+      "minimumPromptTokens_one": "More than {{formattedCount}} prompt token",
+      "minimumPromptTokens_other": "More than {{formattedCount}} prompt tokens",
+      "utcWindow": "{{start}}–{{end}} UTC"
+    },
+    "priceUnits": {
+      "inputImage": "input image",
+      "millionAudioInputTokens": "1M audio input tokens",
+      "millionAudioOutputTokens": "1M audio output tokens",
+      "millionCachedAudioInputTokens": "1M cached audio input tokens",
+      "millionCachedInputTokens": "1M cached input tokens",
+      "millionCacheWriteOneHourTokens": "1M one-hour cache-write tokens",
+      "millionCacheWriteTokens": "1M cache-write tokens",
+      "millionImageTokens": "1M image tokens",
+      "millionInputTokens": "1M input tokens",
+      "millionOutputTokens": "1M output tokens",
+      "millionReasoningTokens": "1M reasoning tokens",
+      "outputImage": "output image",
+      "request": "request",
+      "webSearch": "web search"
+    },
     "sections": {
       "specifications": "Specifications"
     },

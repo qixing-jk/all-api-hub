@@ -16,6 +16,7 @@ import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import {
   isModelDisplayTranslationKey,
   MODEL_DISPLAY_FACT_TYPES,
+  MODEL_DISPLAY_PRICE_UNITS,
 } from "~/services/models/modelDisplayFacts"
 
 /** A provider response must carry every action decision used by the UI. */
@@ -59,6 +60,28 @@ const trimmedNonBlankStringSchema = z
 
 const finiteNonnegativeNumberSchema = z.number().finite().nonnegative()
 
+const safeExternalUrlSchema = z.url().refine((value) => {
+  return new URL(value).protocol === "https:"
+})
+
+const utcClockSchema = z
+  .number()
+  .int()
+  .nonnegative()
+  .max(2359)
+  .refine((value) => value % 100 < 60)
+
+const isoCalendarDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((value) => {
+    const parsed = new Date(`${value}T00:00:00Z`)
+    return (
+      !Number.isNaN(parsed.getTime()) &&
+      parsed.toISOString().slice(0, 10) === value
+    )
+  })
+
 const modelDisplayLabelSchema = z.strictObject({
   translationKey: trimmedNonBlankStringSchema
     .refine(isModelDisplayTranslationKey)
@@ -69,6 +92,32 @@ const modelDisplayLabelSchema = z.strictObject({
 const stringListSchema = z
   .array(trimmedNonBlankStringSchema)
   .refine((values) => new Set(values).size === values.length)
+
+const modelDisplayPriceUnitSchema = z.enum(
+  Object.values(MODEL_DISPLAY_PRICE_UNITS) as [
+    (typeof MODEL_DISPLAY_PRICE_UNITS)[keyof typeof MODEL_DISPLAY_PRICE_UNITS],
+    ...(typeof MODEL_DISPLAY_PRICE_UNITS)[keyof typeof MODEL_DISPLAY_PRICE_UNITS][],
+  ],
+)
+
+const modelDisplayPriceSchema = z.strictObject({
+  label: modelDisplayLabelSchema,
+  amount: finiteNonnegativeNumberSchema,
+  currency: z.literal("USD"),
+  unit: modelDisplayPriceUnitSchema,
+})
+
+const modelDisplayPriceConditionSchema = z.discriminatedUnion("type", [
+  z.strictObject({
+    type: z.literal("minimum-prompt-tokens"),
+    value: z.number().int().nonnegative(),
+  }),
+  z.strictObject({
+    type: z.literal("utc-window"),
+    start: utcClockSchema,
+    end: utcClockSchema,
+  }),
+])
 
 const modelDisplayFactSchema = z.discriminatedUnion("type", [
   z.strictObject({
@@ -85,6 +134,58 @@ const modelDisplayFactSchema = z.discriminatedUnion("type", [
     type: z.literal(MODEL_DISPLAY_FACT_TYPES.StringList),
     label: modelDisplayLabelSchema,
     values: stringListSchema.min(1),
+  }),
+  z.strictObject({
+    type: z.literal(MODEL_DISPLAY_FACT_TYPES.Boolean),
+    label: modelDisplayLabelSchema,
+    value: z.boolean(),
+  }),
+  z.strictObject({
+    type: z.literal(MODEL_DISPLAY_FACT_TYPES.Number),
+    label: modelDisplayLabelSchema,
+    value: z.number().finite(),
+  }),
+  z.strictObject({
+    type: z.literal(MODEL_DISPLAY_FACT_TYPES.Date),
+    label: modelDisplayLabelSchema,
+    value: isoCalendarDateSchema,
+  }),
+  z.strictObject({
+    type: z.literal(MODEL_DISPLAY_FACT_TYPES.Link),
+    label: modelDisplayLabelSchema,
+    href: safeExternalUrlSchema,
+    text: modelDisplayLabelSchema,
+  }),
+  z.strictObject({
+    type: z.literal(MODEL_DISPLAY_FACT_TYPES.CurrencyPrice),
+    ...modelDisplayPriceSchema.shape,
+  }),
+  z.strictObject({
+    type: z.literal(MODEL_DISPLAY_FACT_TYPES.PriceOverrides),
+    label: modelDisplayLabelSchema,
+    overrides: z
+      .array(
+        z.strictObject({
+          conditions: z.array(modelDisplayPriceConditionSchema).min(1),
+          prices: z.array(modelDisplayPriceSchema).min(1),
+        }),
+      )
+      .min(1),
+  }),
+  z.strictObject({
+    type: z.literal(MODEL_DISPLAY_FACT_TYPES.BenchmarkList),
+    label: modelDisplayLabelSchema,
+    entries: z
+      .array(
+        z.strictObject({
+          arena: trimmedNonBlankStringSchema,
+          category: trimmedNonBlankStringSchema,
+          score: finiteNonnegativeNumberSchema,
+          rank: z.number().int().positive(),
+          winRatePercent: finiteNonnegativeNumberSchema.max(100),
+        }),
+      )
+      .min(1),
   }),
 ])
 

@@ -106,9 +106,119 @@
   "description": "查看和管理可用的AI模型",
   "detailedPricing": "详细定价",
   "displayFacts": {
+    "benchmarkTable": {
+      "arena": "竞技场",
+      "category": "类别",
+      "rank": "排名",
+      "score": "得分",
+      "winRate": "胜率"
+    },
+    "boolean": {
+      "no": "否",
+      "yes": "是"
+    },
     "contextLimit": "上下文上限",
+    "inputModalities": "输入模态",
     "maximumOutputTokens": "最大输出 Token 数",
+    "openRouter": {
+      "architecture": {
+        "instructType": "指令格式",
+        "modality": "主要模态",
+        "tokenizer": "分词器"
+      },
+      "benchmarks": {
+        "agenticIndex": "智能体指数",
+        "codingIndex": "编码指数",
+        "designArena": "Design Arena 排名",
+        "intelligenceIndex": "智能指数"
+      },
+      "capabilities": {
+        "reasoningDefaultEffort": "默认推理强度",
+        "reasoningDefaultEnabled": "默认启用推理",
+        "reasoningMandatory": "必须使用推理",
+        "reasoningSupportedEfforts": "支持的推理强度",
+        "reasoningSupportsMaxTokens": "支持推理 Token 上限",
+        "supportedParameters": "支持的参数",
+        "supportedVoices": "支持的语音"
+      },
+      "defaults": {
+        "frequencyPenalty": "默认频率惩罚",
+        "presencePenalty": "默认存在惩罚",
+        "repetitionPenalty": "默认重复惩罚",
+        "temperature": "默认温度",
+        "topK": "默认 top-k",
+        "topP": "默认 top-p"
+      },
+      "lifecycle": {
+        "aliasName": "别名目标名称",
+        "aliasSlug": "别名目标",
+        "canonicalSlug": "规范标识",
+        "created": "模型创建日期",
+        "expirationDate": "到期日期",
+        "huggingFaceId": "Hugging Face ID",
+        "knowledgeCutoff": "知识截止日期"
+      },
+      "limits": {
+        "completionTokens": "补全 Token 上限",
+        "promptTokens": "提示词 Token 上限"
+      },
+      "links": {
+        "openProviderDetails": "打开服务商详情",
+        "providerDetails": "服务商详情"
+      },
+      "prices": {
+        "audioInput": "音频输入价格",
+        "audioOutput": "音频输出价格",
+        "cachedAudioInput": "缓存音频输入价格",
+        "cacheRead": "缓存读取价格",
+        "cacheWrite": "缓存写入价格",
+        "cacheWriteOneHour": "一小时缓存写入价格",
+        "conditional": "条件价格",
+        "imageInput": "图片输入价格",
+        "imageOutput": "图片输出价格",
+        "imageToken": "图片 Token 价格",
+        "input": "输入价格",
+        "output": "输出价格",
+        "reasoning": "推理 Token 价格",
+        "request": "请求价格",
+        "webSearch": "网络搜索价格"
+      },
+      "routing": {
+        "contextLimit": "路由上下文上限",
+        "moderation": "内容审核"
+      },
+      "sections": {
+        "architecture": "架构",
+        "benchmarks": "基准测试",
+        "capabilities": "能力和默认值",
+        "lifecycle": "生命周期和别名",
+        "links": "链接",
+        "pricing": "价格",
+        "requestLimits": "单次请求限制",
+        "routing": "路由服务商"
+      }
+    },
     "outputModalities": "输出模态",
+    "priceConditions": {
+      "minimumPromptTokens": "提示词超过 {{formattedCount}} 个 Token",
+      "utcWindow": "UTC {{start}}–{{end}}"
+    },
+    "priceUnits": {
+      "inputImage": "张输入图片",
+      "millionAudioInputTokens": "100 万音频输入 Token",
+      "millionAudioOutputTokens": "100 万音频输出 Token",
+      "millionCachedAudioInputTokens": "100 万缓存音频输入 Token",
+      "millionCachedInputTokens": "100 万缓存输入 Token",
+      "millionCacheWriteOneHourTokens": "100 万一小时缓存写入 Token",
+      "millionCacheWriteTokens": "100 万缓存写入 Token",
+      "millionImageTokens": "100 万图片 Token",
+      "millionInputTokens": "100 万输入 Token",
+      "millionOutputTokens": "100 万输出 Token",
+      "millionReasoningTokens": "100 万推理 Token",
+      "outputImage": "张输出图片",
+      "request": "次请求",
+      "webSearch": "次网络搜索"
+    },
     "sections": {
       "specifications": "规格"
     },

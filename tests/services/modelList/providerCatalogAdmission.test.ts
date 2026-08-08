@@ -52,6 +52,128 @@ function createProviderResponse(modelOverrides: Record<string, unknown> = {}) {
 }
 
 describe("provider model-catalog admission", () => {
+  it("accepts the extended provider-neutral presentation fact vocabulary", () => {
+    const label = { fallback: "Example fact" }
+    const price = {
+      label,
+      amount: 1.25,
+      currency: "USD",
+      unit: "million-input-tokens",
+    }
+
+    expect(
+      isValidProviderModelCatalogPricing(
+        createProviderResponse({
+          presentation: {
+            summaryFacts: [
+              { type: "boolean", label, value: true },
+              { type: "number", label, value: 42 },
+              { type: "date", label, value: "2026-08-08" },
+              {
+                type: "link",
+                label,
+                href: "https://provider.example.invalid/models/example",
+                text: { fallback: "Open details" },
+              },
+            ],
+            sections: [
+              {
+                id: "pricing",
+                label,
+                facts: [
+                  { type: "currency-price", ...price },
+                  {
+                    type: "price-overrides",
+                    label,
+                    overrides: [
+                      {
+                        conditions: [
+                          { type: "minimum-prompt-tokens", value: 200_000 },
+                        ],
+                        prices: [price],
+                      },
+                    ],
+                  },
+                  {
+                    type: "benchmark-list",
+                    label,
+                    entries: [
+                      {
+                        arena: "models",
+                        category: "example",
+                        score: 1200,
+                        rank: 3,
+                        winRatePercent: 62.5,
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+        SITE_TYPES.OPENROUTER,
+      ),
+    ).toBe(true)
+  })
+
+  it.each([
+    {
+      name: "an unsafe link scheme",
+      fact: {
+        type: "link",
+        label: { fallback: "Provider details" },
+        href: "http://provider.example.invalid/models/example",
+        text: { fallback: "Open details" },
+      },
+    },
+    {
+      name: "an impossible calendar date",
+      fact: {
+        type: "date",
+        label: { fallback: "Expiration date" },
+        value: "2026-02-30",
+      },
+    },
+    {
+      name: "an invalid UTC clock",
+      fact: {
+        type: "price-overrides",
+        label: { fallback: "Conditional prices" },
+        overrides: [
+          {
+            conditions: [{ type: "utc-window", start: 1260, end: 30 }],
+            prices: [
+              {
+                label: { fallback: "Input price" },
+                amount: 1,
+                currency: "USD",
+                unit: "million-input-tokens",
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ])("rejects $name in extended presentation facts", ({ fact }) => {
+    expect(
+      isValidProviderModelCatalogPricing(
+        createProviderResponse({
+          presentation: {
+            sections: [
+              {
+                id: "links",
+                label: { fallback: "Links" },
+                facts: [fact],
+              },
+            ],
+          },
+        }),
+        SITE_TYPES.OPENROUTER,
+      ),
+    ).toBe(false)
+  })
+
   it("accepts cache-only prices when comparable primary pricing is unavailable", () => {
     expect(
       isValidProviderModelCatalogPricing(

@@ -6,6 +6,7 @@ export const MODEL_LIST_TEST_IDS = {
   addApiCredentialProfileButton: "model-list-add-api-credential-profile-button",
   addFirstAccountButton: "model-list-add-first-account-button",
   modelKeyDialogButton: "model-list-model-key-dialog-button",
+  modelExpandButton: "model-list-model-expand-button",
   verifyApiButton: "model-list-verify-api-button",
   verifyCliSupportButton: "model-list-verify-cli-support-button",
   batchVerifyButton: "model-list-batch-verify-button",

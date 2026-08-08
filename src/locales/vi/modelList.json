@@ -106,9 +106,120 @@
   "description": "Xem và quản lý các mô hình AI khả dụng",
   "detailedPricing": "Định giá chi tiết",
   "displayFacts": {
+    "benchmarkTable": {
+      "arena": "Đấu trường",
+      "category": "Danh mục",
+      "rank": "Thứ hạng",
+      "score": "Điểm",
+      "winRate": "Tỷ lệ thắng"
+    },
+    "boolean": {
+      "no": "Không",
+      "yes": "Có"
+    },
     "contextLimit": "Giới hạn ngữ cảnh",
+    "inputModalities": "Phương thức đầu vào",
     "maximumOutputTokens": "Số token đầu ra tối đa",
+    "openRouter": {
+      "architecture": {
+        "instructType": "Định dạng hướng dẫn",
+        "modality": "Phương thức chính",
+        "tokenizer": "Bộ tách token"
+      },
+      "benchmarks": {
+        "agenticIndex": "Chỉ số tác nhân",
+        "codingIndex": "Chỉ số lập trình",
+        "designArena": "Xếp hạng Design Arena",
+        "intelligenceIndex": "Chỉ số trí tuệ"
+      },
+      "capabilities": {
+        "reasoningDefaultEffort": "Mức suy luận mặc định",
+        "reasoningDefaultEnabled": "Bật suy luận theo mặc định",
+        "reasoningMandatory": "Bắt buộc suy luận",
+        "reasoningSupportedEfforts": "Các mức suy luận được hỗ trợ",
+        "reasoningSupportsMaxTokens": "Hỗ trợ giới hạn token suy luận",
+        "supportedParameters": "Tham số được hỗ trợ",
+        "supportedVoices": "Giọng nói được hỗ trợ"
+      },
+      "defaults": {
+        "frequencyPenalty": "Phạt tần suất mặc định",
+        "presencePenalty": "Phạt hiện diện mặc định",
+        "repetitionPenalty": "Phạt lặp lại mặc định",
+        "temperature": "Temperature mặc định",
+        "topK": "Top-k mặc định",
+        "topP": "Top-p mặc định"
+      },
+      "lifecycle": {
+        "aliasName": "Tên đích bí danh",
+        "aliasSlug": "Đích bí danh",
+        "canonicalSlug": "Slug chuẩn",
+        "created": "Ngày tạo mô hình",
+        "expirationDate": "Ngày hết hạn",
+        "huggingFaceId": "ID Hugging Face",
+        "knowledgeCutoff": "Mốc kiến thức"
+      },
+      "limits": {
+        "completionTokens": "Giới hạn token hoàn thành",
+        "promptTokens": "Giới hạn token đầu vào"
+      },
+      "links": {
+        "openProviderDetails": "Mở chi tiết nhà cung cấp",
+        "providerDetails": "Chi tiết nhà cung cấp"
+      },
+      "prices": {
+        "audioInput": "Giá đầu vào âm thanh",
+        "audioOutput": "Giá đầu ra âm thanh",
+        "cachedAudioInput": "Giá đầu vào âm thanh đã lưu đệm",
+        "cacheRead": "Giá đọc bộ nhớ đệm",
+        "cacheWrite": "Giá ghi bộ nhớ đệm",
+        "cacheWriteOneHour": "Giá ghi bộ nhớ đệm một giờ",
+        "conditional": "Giá có điều kiện",
+        "imageInput": "Giá hình ảnh đầu vào",
+        "imageOutput": "Giá hình ảnh đầu ra",
+        "imageToken": "Giá token hình ảnh",
+        "input": "Giá đầu vào",
+        "output": "Giá đầu ra",
+        "reasoning": "Giá token suy luận",
+        "request": "Giá mỗi yêu cầu",
+        "webSearch": "Giá tìm kiếm web"
+      },
+      "routing": {
+        "contextLimit": "Giới hạn ngữ cảnh định tuyến",
+        "moderation": "Kiểm duyệt nội dung"
+      },
+      "sections": {
+        "architecture": "Kiến trúc",
+        "benchmarks": "Điểm chuẩn",
+        "capabilities": "Khả năng và giá trị mặc định",
+        "lifecycle": "Vòng đời và bí danh",
+        "links": "Liên kết",
+        "pricing": "Giá",
+        "requestLimits": "Giới hạn mỗi yêu cầu",
+        "routing": "Nhà cung cấp định tuyến"
+      }
+    },
     "outputModalities": "Phương thức đầu ra",
+    "priceConditions": {
+      "minimumPromptTokens": "Hơn {{formattedCount}} token đầu vào",
+      "minimumPromptTokens_other": "Hơn {{formattedCount}} token đầu vào",
+      "utcWindow": "{{start}}–{{end}} UTC"
+    },
+    "priceUnits": {
+      "inputImage": "hình ảnh đầu vào",
+      "millionAudioInputTokens": "1 triệu token âm thanh đầu vào",
+      "millionAudioOutputTokens": "1 triệu token âm thanh đầu ra",
+      "millionCachedAudioInputTokens": "1 triệu token âm thanh đầu vào đã lưu đệm",
+      "millionCachedInputTokens": "1 triệu token đầu vào đã lưu đệm",
+      "millionCacheWriteOneHourTokens": "1 triệu token ghi bộ nhớ đệm một giờ",
+      "millionCacheWriteTokens": "1 triệu token ghi bộ nhớ đệm",
+      "millionImageTokens": "1 triệu token hình ảnh",
+      "millionInputTokens": "1 triệu token đầu vào",
+      "millionOutputTokens": "1 triệu token đầu ra",
+      "millionReasoningTokens": "1 triệu token suy luận",
+      "outputImage": "hình ảnh đầu ra",
+      "request": "yêu cầu",
+      "webSearch": "lần tìm kiếm web"
+    },
     "sections": {
       "specifications": "Thông số kỹ thuật"
     },

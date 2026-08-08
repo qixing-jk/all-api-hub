@@ -3,6 +3,7 @@ import React from "react"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
+import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnalytics/actionConfig"
 
 interface ModelItemExpandButtonProps {
@@ -25,6 +26,7 @@ export const ModelItemExpandButton: React.FC<ModelItemExpandButtonProps> = ({
       title={isExpanded ? t("collapseDetails") : t("expandDetails")}
       aria-label={isExpanded ? t("collapseDetails") : t("expandDetails")}
       aria-expanded={isExpanded}
+      data-testid={MODEL_LIST_TEST_IDS.modelExpandButton}
       analyticsAction={analyticsAction}
     >
       {isExpanded ? (
