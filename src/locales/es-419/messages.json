@@ -239,6 +239,7 @@
     "safeCommitFailed": "Este servicio WebDAV no pudo guardar la copia de seguridad de forma segura. Se conservó tu copia de seguridad existente en la nube. Inténtalo de nuevo más tarde o usa un servicio WebDAV que admita mover o renombrar archivos.",
     "syncDataSelectionRequired": "Selecciona al menos un dominio de datos para sincronizar",
     "uploadFailed": "La carga falló, código de estado: {{status}}",
+    "uploadStillProcessing": "El servicio en la nube todavía está procesando la copia de seguridad cargada, por lo que la verificación aún no pudo completarse. Tu copia de seguridad existente no fue reemplazada. Inténtalo de nuevo más tarde.",
     "uploadVerificationFailed": "La verificación de la copia de seguridad falló después de la carga. Es posible que el servicio en la nube no haya guardado el archivo por completo. Se conservó tu copia de seguridad existente en la nube."
   }
 }

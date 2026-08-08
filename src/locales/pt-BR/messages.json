@@ -239,6 +239,7 @@
     "safeCommitFailed": "Este serviço WebDAV não pôde salvar o backup com segurança. Seu backup na nuvem existente foi mantido. Tente novamente mais tarde ou use um serviço WebDAV que suporte mover ou renomear arquivos.",
     "syncDataSelectionRequired": "Selecione pelo menos um domínio de dados para sincronizar",
     "uploadFailed": "Falha no envio (upload), código de status: {{status}}",
+    "uploadStillProcessing": "O serviço de nuvem ainda está processando o backup enviado, portanto a verificação ainda não pôde ser concluída. Seu backup existente na nuvem não foi substituído. Tente novamente mais tarde.",
     "uploadVerificationFailed": "A verificação do backup falhou após o envio (upload). O serviço na nuvem pode não ter salvo o arquivo completamente. Seu backup na nuvem existente foi mantido."
   }
 }

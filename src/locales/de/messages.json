@@ -234,6 +234,7 @@
     "safeCommitFailed": "Dieser WebDAV-Dienst konnte das Backup nicht sicher speichern. Ihr vorhandenes Cloud-Backup wurde beibehalten. Versuchen Sie es später erneut oder verwenden Sie einen WebDAV-Dienst, der das Verschieben oder Umbenennen von Dateien unterstützt.",
     "syncDataSelectionRequired": "Wählen Sie mindestens eine Datendomäne zur Synchronisierung aus",
     "uploadFailed": "Upload fehlgeschlagen, Statuscode: {{status}}",
+    "uploadStillProcessing": "Der Cloud-Dienst verarbeitet das hochgeladene Backup noch, daher konnte die Überprüfung noch nicht abgeschlossen werden. Ihr vorhandenes Cloud-Backup wurde nicht ersetzt. Versuchen Sie es später erneut.",
     "uploadVerificationFailed": "Die Überprüfung der Sicherung ist nach dem Hochladen fehlgeschlagen. Der Cloud-Dienst hat die Datei möglicherweise nicht vollständig gespeichert. Ihr vorhandenes Cloud-Backup wurde beibehalten."
   }
 }

@@ -230,6 +230,7 @@
     "safeCommitFailed": "雲端硬碟未能完成安全儲存，原有雲端備份已保留。請稍後重試，或改用支援移動/重新命名檔案的 WebDAV 服務。",
     "syncDataSelectionRequired": "請至少選擇一個要同步的資料型別",
     "uploadFailed": "上傳失敗，狀態碼: {{status}}",
+    "uploadStillProcessing": "雲端硬碟仍在處理剛上傳的備份，暫時無法完成驗證。原有雲端備份未被取代，請稍後再試。",
     "uploadVerificationFailed": "備份上傳後校驗未通過，雲端硬碟可能未完整儲存檔案。原有雲端備份已保留。"
   }
 }

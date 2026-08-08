@@ -230,6 +230,7 @@
     "safeCommitFailed": "Dịch vụ WebDAV này không thể lưu bản sao lưu một cách an toàn. Bản sao lưu đám mây hiện có vẫn được giữ lại. Vui lòng thử lại sau hoặc dùng dịch vụ WebDAV hỗ trợ di chuyển hoặc đổi tên tệp.",
     "syncDataSelectionRequired": "Vui lòng chọn ít nhất một loại dữ liệu để đồng bộ",
     "uploadFailed": "Tải lên thất bại, mã trạng thái: {{status}}",
+    "uploadStillProcessing": "Dịch vụ đám mây vẫn đang xử lý bản sao lưu vừa tải lên nên chưa thể hoàn tất xác minh. Bản sao lưu đám mây hiện có chưa bị thay thế. Vui lòng thử lại sau.",
     "uploadVerificationFailed": "Xác minh bản sao lưu sau khi tải lên thất bại. Dịch vụ đám mây có thể chưa lưu đầy đủ tệp. Bản sao lưu đám mây hiện có vẫn được giữ lại."
   }
 }

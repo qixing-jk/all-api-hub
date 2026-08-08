@@ -1275,6 +1275,72 @@ describe("webdavService", () => {
       ).toBe(false)
     })
 
+    it("retries temp readback when OpenCloud reports asynchronous post-processing", async () => {
+      vi.useFakeTimers()
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({ status: 425 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"opencloud":true}'),
+        })
+        .mockResolvedValueOnce({ status: 201 })
+
+      const uploadPromise = uploadBackup('{"opencloud":true}')
+      await vi.runAllTimersAsync()
+
+      await expect(uploadPromise).resolves.toBe(true)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(6)
+      expect((globalAny.fetch.mock.calls[3][1] as RequestInit).method).toBe(
+        "GET",
+      )
+      expect(globalAny.fetch.mock.calls[4][0]).toBe(
+        globalAny.fetch.mock.calls[3][0],
+      )
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "GET",
+      )
+      expect((globalAny.fetch.mock.calls[5][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
+    })
+
+    it("bounds OpenCloud post-processing retries before cleaning the temp backup", async () => {
+      vi.useFakeTimers()
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValue({ status: 425 })
+
+      const uploadResult = uploadBackup('{"opencloud":true}').catch(
+        (thrown) => thrown,
+      )
+      await vi.runAllTimersAsync()
+
+      const error = await uploadResult
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.uploadStillProcessing")
+      expect(error.statusCode).toBe(425)
+      expect(
+        globalAny.fetch.mock.calls.filter(
+          ([, init]: [unknown, RequestInit]) => init?.method === "GET",
+        ),
+      ).toHaveLength(10)
+      expect(
+        globalAny.fetch.mock.calls.some(
+          ([, init]: [unknown, RequestInit]) => init?.method === "MOVE",
+        ),
+      ).toBe(false)
+      expect(
+        (globalAny.fetch.mock.calls.at(-1)?.[1] as RequestInit).method,
+      ).toBe("DELETE")
+    })
+
     it("throws configIncomplete when credentials missing", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue({
         webdav: { url: "", username: "", password: "" },

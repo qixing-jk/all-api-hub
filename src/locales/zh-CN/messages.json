@@ -229,6 +229,7 @@
     "safeCommitFailed": "云盘未能完成安全保存，原有云端备份已保留。请稍后重试，或改用支持移动/重命名文件的 WebDAV 服务。",
     "syncDataSelectionRequired": "请至少选择一个要同步的数据类型",
     "uploadFailed": "上传失败，状态码: {{status}}",
+    "uploadStillProcessing": "云盘仍在处理刚上传的备份，暂时无法完成校验。原有云端备份未被替换，请稍后重试。",
     "uploadVerificationFailed": "备份上传后校验未通过，云盘可能未完整保存文件。原有云端备份已保留。"
   }
 }

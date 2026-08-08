@@ -31,6 +31,15 @@ const CONFIG_VERSION = "1-0"
 const WEBDAV_ANCESTORS_NOT_FOUND_MARKER = "AncestorsNotFound"
 
 /**
+ * OpenCloud can return 425 while asynchronous upload post-processing is still
+ * running and expects clients to retry later:
+ * https://github.com/opencloud-eu/opencloud/blob/main/tests/acceptance/TestHelpers/HttpRequestHelper.php#L49-L62
+ */
+const WEBDAV_TOO_EARLY_STATUS = 425
+const UPLOAD_READBACK_MAX_ATTEMPTS = 10
+const UPLOAD_READBACK_RETRY_DELAY_MS = 1000
+
+/**
  * Program identifier used in default WebDAV backup paths.
  */
 const PROGRAM_NAME = "all-api-hub"
@@ -395,6 +404,44 @@ async function getWebdavContent(params: {
       t("messages:webdav.downloadFailed", { status: res.status }),
     res.status,
   )
+}
+
+/**
+ * Reads a newly uploaded temporary backup after provider post-processing.
+ */
+async function getUploadedWebdavContent(params: {
+  url: string
+  username: string
+  password: string
+}) {
+  for (let attempt = 1; attempt <= UPLOAD_READBACK_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      return await getWebdavContent({
+        ...params,
+        failureMessage: t("messages:webdav.uploadVerificationFailed"),
+      })
+    } catch (error) {
+      const isStillProcessing =
+        error instanceof WebdavHttpError &&
+        error.statusCode === WEBDAV_TOO_EARLY_STATUS
+      if (!isStillProcessing) {
+        throw error
+      }
+
+      if (attempt === UPLOAD_READBACK_MAX_ATTEMPTS) {
+        throw new WebdavHttpError(
+          t("messages:webdav.uploadStillProcessing"),
+          WEBDAV_TOO_EARLY_STATUS,
+        )
+      }
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, UPLOAD_READBACK_RETRY_DELAY_MS),
+      )
+    }
+  }
+
+  throw new Error(t("messages:webdav.uploadVerificationFailed"))
 }
 
 /**
@@ -849,11 +896,10 @@ export async function uploadBackup(
     })
     tempUploaded = true
 
-    const uploadedContent = await getWebdavContent({
+    const uploadedContent = await getUploadedWebdavContent({
       url: tempUrl,
       username: cfg.username,
       password: cfg.password,
-      failureMessage: t("messages:webdav.uploadVerificationFailed"),
     })
     validateWebdavUploadedBackupContent(uploadedContent, contentToUpload)
 

@@ -234,6 +234,7 @@
     "safeCommitFailed": "This WebDAV service could not safely save the backup. Your existing cloud backup was kept. Try again later or use a WebDAV service that supports moving or renaming files.",
     "syncDataSelectionRequired": "Select at least one data domain to sync",
     "uploadFailed": "Upload failed, status code: {{status}}",
+    "uploadStillProcessing": "The cloud service is still processing the uploaded backup, so verification could not finish yet. Your existing cloud backup was not replaced. Try again later.",
     "uploadVerificationFailed": "Backup verification failed after upload. The cloud service may not have saved the file completely. Your existing cloud backup was kept."
   }
 }
