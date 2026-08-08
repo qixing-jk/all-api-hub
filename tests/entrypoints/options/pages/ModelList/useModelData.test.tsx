@@ -468,69 +468,76 @@ describe("useModelData all-accounts loading", () => {
   })
 
   it("loads a selected provider catalog without passing saved account secrets", async () => {
-    const fetchProviderPricing = vi.fn().mockResolvedValue({
-      data: [createProviderCatalogModel("example/provider-model")],
-      group_ratio: {},
-      success: true,
-      usable_group: {},
-      model_list_source: createProviderCatalogModelListSource(),
-    })
-    const providerModelCatalog = {
-      source: {
-        id: "example-provider-public",
-        provider: SITE_TYPES.OPENROUTER,
-        displayName: "Example Provider",
-        cacheTtlMs: 300000,
-      },
-      fetchPricing: fetchProviderPricing,
-    }
-    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
-      siteType: SITE_TYPES.OPENROUTER,
-      account: { providerModelCatalog },
-    } as any)
-    const account = createDisplayAccount({
-      id: "provider-account",
-      name: "Saved provider account",
-      siteType: SITE_TYPES.OPENROUTER,
-      baseUrl: "https://provider-console.example.invalid",
-      token: "management-secret-placeholder",
-      userId: "provider-user-placeholder",
-    })
+    const cacheKey = "provider-catalog|example-provider-public"
+    await modelPricingCache.invalidate(cacheKey)
 
-    const { result } = renderHook(
-      () =>
-        useModelData({
-          selectedSource: createAccountSource(account),
-          accounts: [account],
-        }),
-      { wrapper: createWrapper() },
-    )
-
-    await waitFor(() => {
-      expect(result.current.pricingData?.data[0]?.model_name).toBe(
-        "example/provider-model",
-      )
-    })
-    expect(fetchProviderPricing).toHaveBeenCalledTimes(1)
-    expect(fetchProviderPricing).toHaveBeenCalledWith({
-      abortSignal: expect.any(AbortSignal),
-    })
-    expect(result.current.pricingContexts).toEqual([
-      {
-        account,
-        pricing: expect.objectContaining({
-          data: [
-            expect.objectContaining({ model_name: "example/provider-model" }),
-          ],
-        }),
-        sourceIdentity: {
-          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG,
-          id: "provider-catalog:example-provider-public",
+    try {
+      const fetchProviderPricing = vi.fn().mockResolvedValue({
+        data: [createProviderCatalogModel("example/provider-model")],
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+        model_list_source: createProviderCatalogModelListSource(),
+      })
+      const providerModelCatalog = {
+        source: {
+          id: "example-provider-public",
           provider: SITE_TYPES.OPENROUTER,
-          providerName: "Example Provider",
+          displayName: "Example Provider",
+          cacheTtlMs: 300000,
         },
-      },
-    ])
+        fetchPricing: fetchProviderPricing,
+      }
+      vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+        siteType: SITE_TYPES.OPENROUTER,
+        account: { providerModelCatalog },
+      } as any)
+      const account = createDisplayAccount({
+        id: "provider-account",
+        name: "Saved provider account",
+        siteType: SITE_TYPES.OPENROUTER,
+        baseUrl: "https://provider-console.example.invalid",
+        token: "management-secret-placeholder",
+        userId: "provider-user-placeholder",
+      })
+
+      const { result } = renderHook(
+        () =>
+          useModelData({
+            selectedSource: createAccountSource(account),
+            accounts: [account],
+          }),
+        { wrapper: createWrapper() },
+      )
+
+      await waitFor(() => {
+        expect(result.current.pricingData?.data[0]?.model_name).toBe(
+          "example/provider-model",
+        )
+      })
+      expect(fetchProviderPricing).toHaveBeenCalledTimes(1)
+      expect(fetchProviderPricing).toHaveBeenCalledWith({
+        abortSignal: expect.any(AbortSignal),
+      })
+      expect(result.current.pricingContexts).toEqual([
+        {
+          account,
+          pricing: expect.objectContaining({
+            data: [
+              expect.objectContaining({ model_name: "example/provider-model" }),
+            ],
+          }),
+          sourceIdentity: {
+            kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG,
+            id: "provider-catalog:example-provider-public",
+            provider: SITE_TYPES.OPENROUTER,
+            providerName: "Example Provider",
+          },
+        },
+      ])
+    } finally {
+      await modelPricingCache.invalidate(cacheKey)
+    }
   })
 
   it("reuses and refreshes one provider catalog across account and aggregate query scopes", async () => {
@@ -1027,6 +1034,24 @@ describe("useModelData all-accounts loading", () => {
         }),
       ),
     )
+
+    const invalidateSpy = vi.spyOn(modelPricingCache, "invalidate")
+    try {
+      await act(async () => {
+        await result.current.loadPricingData()
+      })
+      expect(invalidateSpy).toHaveBeenCalledWith(
+        [
+          ordinaryAccount.id,
+          ordinaryAccount.baseUrl,
+          ordinaryAccount.userId,
+          ordinaryAccount.siteType,
+          ordinaryAccount.authType,
+        ].join("|"),
+      )
+    } finally {
+      invalidateSpy.mockRestore()
+    }
   })
 
   it("keeps ordinary results when one shared provider catalog fails", async () => {

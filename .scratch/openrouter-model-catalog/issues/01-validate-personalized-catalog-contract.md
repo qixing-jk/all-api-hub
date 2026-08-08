@@ -90,8 +90,8 @@ the filtering and cleanup checks on 2026-08-08.
   revoked it after validation, and confirmed that the revoked key then returned
   `401`. No credential or response body was printed or persisted.
 - A follow-up Playwright extension bridge to an already logged-in Edge session
-  showed the generic `Default Workspace` settings context and successful private
-  provider-preference/guardrail requests. A same-origin personalized-catalog
+  showed that a settings context was available and that private
+  provider-preference/guardrail requests succeeded. A same-origin personalized-catalog
   request without a Bearer credential still returned `401` and
   `private, no-store`; browser session cookies are not a substitute for the
   Management Key contract.

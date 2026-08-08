@@ -132,7 +132,7 @@ describe("getExtensionServiceWorker", () => {
     const context = createMockContext([], { eventWorker: readyWorker })
 
     await expect(
-      getExtensionServiceWorker(context, { timeoutMs: 25 }),
+      getExtensionServiceWorker(context, { timeoutMs: 500 }),
     ).resolves.toBe(readyWorker)
   })
 

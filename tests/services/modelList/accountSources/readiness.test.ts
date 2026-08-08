@@ -135,6 +135,22 @@ describe("resolveModelListAccountSourceReadiness", () => {
     })
   })
 
+  it("returns missing provider-catalog capability when the profile has no matching adapter capability", () => {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+    } as any)
+
+    expect(
+      resolveModelListAccountSourceReadiness({
+        siteType: SITE_TYPES.OPENROUTER,
+      }),
+    ).toMatchObject({
+      route: MODEL_LIST_ACCOUNT_SOURCE_ROUTES.Unsupported,
+      reason:
+        MODEL_LIST_ACCOUNT_SOURCE_UNSUPPORTED_REASONS.MissingProviderModelCatalogCapability,
+    })
+  })
+
   it("exposes whether model-list fallback can load account runtime keys", () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.SHAREDCHAT,

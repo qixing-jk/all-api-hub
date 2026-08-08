@@ -244,7 +244,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     isSelectedAccountAihubmixCatalogFallback ||
     isAnyAllAccountsAihubmixCatalogFallback
 
-  const sourceCapabilities = useMemo(() => {
+  const resolvedSourceCapabilities = (() => {
     const baseCapabilities =
       selectedSource?.capabilities ?? EMPTY_MODEL_MANAGEMENT_CAPABILITIES
 
@@ -278,15 +278,45 @@ export function useModelListData(routeParams?: Record<string, string>) {
     return shouldDowngradeFallbackCatalog
       ? toCatalogOnlyCapabilities(responseDerivedCapabilities)
       : responseDerivedCapabilities
-  }, [
-    isFallbackCatalogActive,
-    isSelectedAccountAihubmixCatalogFallback,
-    isSelectedAccountAihubmixModelList,
-    modelData.pricingContexts,
-    modelData.pricingData?.model_list_source,
-    selectedSource?.kind,
-    selectedSource?.capabilities,
-  ])
+  })()
+
+  const {
+    supportsRuntimeModelList,
+    supportsPricing,
+    supportsRatioDisplay,
+    supportsGroupFiltering,
+    supportsAccountSummary,
+    supportsTokenCompatibility,
+    supportsCredentialVerification,
+    supportsBatchCredentialVerification,
+    supportsCliVerification,
+  } = resolvedSourceCapabilities
+  const sourceCapabilities = useMemo(
+    () => ({
+      ...(supportsRuntimeModelList === undefined
+        ? {}
+        : { supportsRuntimeModelList }),
+      supportsPricing,
+      supportsRatioDisplay,
+      supportsGroupFiltering,
+      supportsAccountSummary,
+      supportsTokenCompatibility,
+      supportsCredentialVerification,
+      supportsBatchCredentialVerification,
+      supportsCliVerification,
+    }),
+    [
+      supportsRuntimeModelList,
+      supportsPricing,
+      supportsRatioDisplay,
+      supportsGroupFiltering,
+      supportsAccountSummary,
+      supportsTokenCompatibility,
+      supportsCredentialVerification,
+      supportsBatchCredentialVerification,
+      supportsCliVerification,
+    ],
+  )
 
   useEffect(() => {
     if (!sourceCapabilities.supportsPricing) {

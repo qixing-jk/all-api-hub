@@ -47,6 +47,25 @@ describe("buildExtensionLaunchOptions", () => {
 })
 
 describe("launchExtensionContextWithStartupRetry", () => {
+  it("returns the first ready context without retrying", async () => {
+    const firstContext = { close: vi.fn().mockResolvedValue(undefined) }
+    const launch = vi.fn().mockResolvedValue(firstContext)
+    const waitForReady = vi.fn().mockResolvedValue(undefined)
+    const onRetry = vi.fn()
+
+    await expect(
+      launchExtensionContextWithStartupRetry({
+        launch,
+        onRetry,
+        waitForReady,
+      }),
+    ).resolves.toBe(firstContext)
+
+    expect(launch).toHaveBeenCalledOnce()
+    expect(waitForReady).toHaveBeenCalledWith(firstContext, 1)
+    expect(onRetry).not.toHaveBeenCalled()
+  })
+
   it("does not retry browser launch failures", async () => {
     const launchError = new Error("browser executable is unavailable")
     const launch = vi.fn().mockRejectedValue(launchError)

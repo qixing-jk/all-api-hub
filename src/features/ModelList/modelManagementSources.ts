@@ -153,11 +153,13 @@ export function createProviderCatalogModelListSourceIdentity(params: {
   provider: NonNullable<ModelListSourceInfo["provider"]>
   providerName: string
 }): ModelListSourceIdentity {
+  const providerName = params.providerName.trim() || params.sourceId
+
   return {
     kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG,
     id: `provider-catalog:${params.sourceId}`,
     provider: params.provider,
-    providerName: params.providerName.trim(),
+    providerName,
   }
 }
 

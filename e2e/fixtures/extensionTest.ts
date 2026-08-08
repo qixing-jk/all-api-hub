@@ -63,11 +63,13 @@ export const test = base.extend<ExtensionFixtures>({
     })
     const originalTestTimeoutMs = testInfo.timeout
 
-    // Preserve the configured test-body budget while allowing one bounded
-    // fresh-context retry during extension startup.
-    testInfo.setTimeout(
-      originalTestTimeoutMs + extensionServiceWorkerTimeoutMs * 2,
-    )
+    // Preserve unlimited timeouts while extending finite test-body budgets for
+    // one bounded fresh-context retry during extension startup.
+    if (originalTestTimeoutMs > 0) {
+      testInfo.setTimeout(
+        originalTestTimeoutMs + extensionServiceWorkerTimeoutMs * 2,
+      )
+    }
 
     let context:
       | Awaited<ReturnType<typeof chromium.launchPersistentContext>>
@@ -116,9 +118,11 @@ export const test = base.extend<ExtensionFixtures>({
         },
       })
 
-      testInfo.setTimeout(
-        originalTestTimeoutMs + (Date.now() - startupStartedAt),
-      )
+      if (originalTestTimeoutMs > 0) {
+        testInfo.setTimeout(
+          originalTestTimeoutMs + (Date.now() - startupStartedAt),
+        )
+      }
 
       await run(context)
     } finally {

@@ -1369,43 +1369,45 @@ function useSingleAccountModelData(params: {
         ACCOUNT_SITE_MODEL_LIST_TOKEN_SCOPED_CATALOG_FALLBACKS.RuntimeKey,
   )
 
-  const pricingContexts: AccountPricingContext[] = useMemo(
-    () =>
-      currentAccount && pricingData
-        ? [
-            {
-              account: currentAccount,
-              pricing: pricingData,
-              sourceIdentity:
-                isFallbackCatalogActive && selectedFallbackRuntimeKey
-                  ? createAccountRuntimeKeyModelListSourceIdentity({
-                      accountId: currentAccount.id,
-                      runtimeKeyId: selectedFallbackRuntimeKey.id,
-                      runtimeKeyName: selectedFallbackRuntimeKey.label,
-                    })
-                  : currentReadiness?.route ===
-                      MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
-                    ? createProviderCatalogModelListSourceIdentity({
-                        sourceId:
-                          currentReadiness.providerModelCatalog.source.id,
-                        provider:
-                          currentReadiness.providerModelCatalog.source.provider,
-                        providerName:
-                          currentReadiness.providerModelCatalog.source
-                            .displayName,
-                      })
-                    : createAccountModelListSourceIdentity(currentAccount.id),
-            },
-          ]
-        : [],
-    [
-      currentAccount,
-      currentReadiness,
-      isFallbackCatalogActive,
-      pricingData,
-      selectedFallbackRuntimeKey,
-    ],
-  )
+  const pricingContexts: AccountPricingContext[] = useMemo(() => {
+    if (!currentAccount || !pricingData) return []
+
+    const resolveSourceIdentity = () => {
+      if (isFallbackCatalogActive && selectedFallbackRuntimeKey) {
+        return createAccountRuntimeKeyModelListSourceIdentity({
+          accountId: currentAccount.id,
+          runtimeKeyId: selectedFallbackRuntimeKey.id,
+          runtimeKeyName: selectedFallbackRuntimeKey.label,
+        })
+      }
+      if (
+        currentReadiness?.route ===
+        MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+      ) {
+        return createProviderCatalogModelListSourceIdentity({
+          sourceId: currentReadiness.providerModelCatalog.source.id,
+          provider: currentReadiness.providerModelCatalog.source.provider,
+          providerName:
+            currentReadiness.providerModelCatalog.source.displayName,
+        })
+      }
+      return createAccountModelListSourceIdentity(currentAccount.id)
+    }
+
+    return [
+      {
+        account: currentAccount,
+        pricing: pricingData,
+        sourceIdentity: resolveSourceIdentity(),
+      },
+    ]
+  }, [
+    currentAccount,
+    currentReadiness,
+    isFallbackCatalogActive,
+    pricingData,
+    selectedFallbackRuntimeKey,
+  ])
 
   const accountFallback = useMemo<AccountFallbackControls | null>(() => {
     if (!currentAccount) {

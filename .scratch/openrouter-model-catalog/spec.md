@@ -139,7 +139,7 @@ Each implementation slice must be independently demoable, reviewed against this 
 
 - OpenRouter's public models guide describes the catalog as freely available and edge cached: https://openrouter.ai/docs/guides/overview/models
 - The documented full endpoint is `GET https://openrouter.ai/api/v1/models`: https://openrouter.ai/docs/api/api-reference/models/list-all-models-and-their-properties
-- The personalized endpoint requires Bearer authentication and applies user provider preferences, privacy settings, and guardrails. Management Key compatibility and identity scope remain a required live-validation decision.
+- [Ticket 01](issues/01-validate-personalized-catalog-contract.md) verified the personalized endpoint's Management Key authentication, account-isolated identity semantics, filtering behavior, pagination, and safe failure policy. Product implementation remains scoped to [Ticket 04](issues/04-add-verified-personalized-catalog.md).
 - OpenRouter documents Management Keys as administrative credentials rather than completion credentials: https://openrouter.ai/docs/guides/overview/auth/management-api-keys
 - The public guide and a 2026-08-07 unauthenticated live probe support public loading, while the current OpenAPI global security declaration is less specific. Keep a concise source comment near the transport and preserve a contract test for the chosen behavior.
 - The defining architectural objective is locality: upstream changes should concentrate in the provider Adapter, provider presentation policy, and their tests, while shared model behavior remains stable.

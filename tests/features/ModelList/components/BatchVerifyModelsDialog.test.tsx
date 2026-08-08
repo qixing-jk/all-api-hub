@@ -2053,4 +2053,26 @@ describe("BatchVerifyModelsDialog", () => {
       )
     })
   })
+
+  it("renders a provider-catalog source label from the source identity", async () => {
+    const itemKey = "account:acc-1:provider-catalog:model:example-model"
+    renderDialog([
+      {
+        key: itemKey,
+        modelId: "example-model",
+        enableGroups: [],
+        source: { kind: "account", account },
+        sourceIdentity: {
+          kind: "provider-catalog",
+          id: "provider-catalog:example-public",
+          provider: SITE_TYPES.OPENROUTER,
+          providerName: "Example Provider",
+        },
+      },
+    ])
+
+    expect(
+      await screen.findByTestId(getBatchVerifyRowTestId(itemKey)),
+    ).toHaveTextContent("modelList:sourceLabels.providerCatalogBadge")
+  })
 })

@@ -282,6 +282,9 @@ describe("apiAdapters registry", () => {
       },
       fetchPricing: expect.any(Function),
     })
+    expect(
+      capabilities.account?.providerModelCatalog?.source.cacheTtlMs,
+    ).toBeGreaterThan(0)
     expect(capabilities.account?.keyManagement).toBeUndefined()
     expect(capabilities.managedSites).toBeUndefined()
   })

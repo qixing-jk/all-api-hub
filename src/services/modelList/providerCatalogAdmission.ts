@@ -172,22 +172,37 @@ const priceMetadataSchema = z
     }
   })
 
-const productCanonicalModelSchema = z.strictObject({
-  model_name: trimmedNonBlankStringSchema,
-  display_name: trimmedNonBlankStringSchema.optional(),
-  vendorEvidence: vendorEvidenceSchema.optional(),
-  model_description: trimmedNonBlankStringSchema.optional(),
-  presentation: modelPresentationSchema.optional(),
-  quota_type: z.union([z.literal(0), z.literal(1)]),
-  model_ratio: finiteNonnegativeNumberSchema,
-  model_price: z.union([finiteNonnegativeNumberSchema, perCallPriceSchema]),
-  token_price_usd_per_million: tokenPriceSchema.optional(),
-  price_metadata: priceMetadataSchema,
-  owner_by: trimmedNonBlankStringSchema.optional(),
-  completion_ratio: finiteNonnegativeNumberSchema,
-  enable_groups: stringListSchema,
-  supported_endpoint_types: stringListSchema,
-})
+const productCanonicalModelSchema = z
+  .strictObject({
+    model_name: trimmedNonBlankStringSchema,
+    display_name: trimmedNonBlankStringSchema.optional(),
+    vendorEvidence: vendorEvidenceSchema.optional(),
+    model_description: trimmedNonBlankStringSchema.optional(),
+    presentation: modelPresentationSchema.optional(),
+    quota_type: z.union([z.literal(0), z.literal(1)]),
+    model_ratio: finiteNonnegativeNumberSchema,
+    model_price: z.union([finiteNonnegativeNumberSchema, perCallPriceSchema]),
+    token_price_usd_per_million: tokenPriceSchema.optional(),
+    price_metadata: priceMetadataSchema,
+    owner_by: trimmedNonBlankStringSchema.optional(),
+    completion_ratio: finiteNonnegativeNumberSchema,
+    enable_groups: stringListSchema,
+    supported_endpoint_types: stringListSchema,
+  })
+  .superRefine((model, context) => {
+    if (model.price_metadata.precision !== MODEL_PRICE_PRECISION_KINDS.EXACT) {
+      return
+    }
+
+    const prices = model.token_price_usd_per_million
+    if (prices?.input === undefined || prices.output === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["token_price_usd_per_million"],
+        message: "Exact provider prices require input and output token prices",
+      })
+    }
+  })
 
 const actionPolicySchema = z.strictObject({
   supportsRatioDisplay: z.boolean(),

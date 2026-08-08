@@ -142,6 +142,28 @@ describe("ModelItemHeader", () => {
     )
   })
 
+  it("keeps an unavailable model's readable identity visible", () => {
+    render(
+      <ModelItemHeader
+        resolvedVendor={{ state: "unknown" }}
+        model={
+          {
+            model_name: "example/unavailable-model-id",
+            display_name: "Unavailable Model",
+            quota_type: 0,
+          } as any
+        }
+        isAvailableForUser={false}
+        handleCopyModelName={vi.fn()}
+        showPricingMetadata={false}
+      />,
+    )
+
+    expect(
+      screen.getByRole("heading", { name: "Unavailable Model" }),
+    ).toBeVisible()
+  })
+
   it("uses the supplied resolved vendor instead of reclassifying the model name", () => {
     const resolvedVendor = {
       state: "resolved",

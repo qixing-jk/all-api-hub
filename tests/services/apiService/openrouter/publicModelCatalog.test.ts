@@ -121,6 +121,10 @@ describe("OpenRouter public model catalog transport", () => {
 
   it.each([
     {
+      name: "a malformed next link",
+      next: "not a valid URL",
+    },
+    {
       name: "an external next link",
       next: "https://catalog.example.invalid/models?output_modalities=all&offset=1",
     },
@@ -148,6 +152,24 @@ describe("OpenRouter public model catalog transport", () => {
     })
   })
 
+  it.each([
+    { status: 401, code: API_ERROR_CODES.HTTP_401 },
+    { status: 403, code: API_ERROR_CODES.HTTP_403 },
+    { status: 429, code: API_ERROR_CODES.HTTP_429 },
+    { status: 500, code: API_ERROR_CODES.HTTP_OTHER },
+  ])("classifies HTTP $status failures", async ({ status, code }) => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models`, () =>
+        HttpResponse.json({}, { status }),
+      ),
+    )
+
+    await expect(fetchOpenRouterPublicModelCatalog()).rejects.toMatchObject({
+      statusCode: status,
+      code,
+    })
+  })
+
   it("rejects cyclic pagination", async () => {
     server.use(
       http.get(`${OPENROUTER_API_BASE_URL}/models`, ({ request }) => {
@@ -169,6 +191,50 @@ describe("OpenRouter public model catalog transport", () => {
     await expect(fetchOpenRouterPublicModelCatalog()).rejects.toMatchObject({
       code: API_ERROR_CODES.JSON_PARSE_ERROR,
     })
+  })
+
+  it("rejects pagination cycles that alternate progress markers", async () => {
+    const requestedUrls: string[] = []
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models`, ({ request }) => {
+        requestedUrls.push(request.url)
+        const url = new URL(request.url)
+        const offset = url.searchParams.get("offset")
+        const page = url.searchParams.get("page")
+
+        if (offset === "1") {
+          return HttpResponse.json({
+            data: [{ id: "example/model-beta" }],
+            total_count: 4,
+            links: {
+              next: `${OPENROUTER_API_BASE_URL}/models?output_modalities=all&page=1`,
+            },
+          })
+        }
+        if (page === "1") {
+          return HttpResponse.json({
+            data: [{ id: "example/model-gamma" }],
+            total_count: 4,
+            links: {
+              next: `${OPENROUTER_API_BASE_URL}/models?output_modalities=all&offset=1`,
+            },
+          })
+        }
+
+        return HttpResponse.json({
+          data: [{ id: "example/model-alpha" }],
+          total_count: 4,
+          links: {
+            next: `${OPENROUTER_API_BASE_URL}/models?output_modalities=all&offset=1`,
+          },
+        })
+      }),
+    )
+
+    await expect(fetchOpenRouterPublicModelCatalog()).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+    })
+    expect(requestedUrls).toHaveLength(3)
   })
 
   it("rejects a page that adds no model identities before another page", async () => {

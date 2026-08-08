@@ -5,6 +5,7 @@ import {
   createAccountSource,
   createAllAccountsSource,
   createProfileSource,
+  createProviderCatalogModelListSourceIdentity,
   deriveAllAccountsModelListCapabilities,
   deriveModelListSourceCapabilities,
   MODEL_LIST_GROUP_SEMANTICS,
@@ -145,6 +146,7 @@ describe("modelManagementSources group semantics", () => {
       supportsCliVerification: false,
     })
 
+    // Aggregate sources never enable direct credential or CLI verification.
     expect(
       deriveAllAccountsModelListCapabilities({
         capabilities: baseCapabilities,
@@ -158,6 +160,18 @@ describe("modelManagementSources group semantics", () => {
       supportsCredentialVerification: false,
       supportsBatchCredentialVerification: true,
       supportsCliVerification: false,
+    })
+  })
+
+  it("falls back to the provider source id when its display name is blank", () => {
+    expect(
+      createProviderCatalogModelListSourceIdentity({
+        sourceId: "example-provider-public",
+        provider: SITE_TYPES.OPENROUTER,
+        providerName: "   ",
+      }),
+    ).toMatchObject({
+      providerName: "example-provider-public",
     })
   })
 

@@ -423,7 +423,7 @@ describe("ModelItem", () => {
     expect(screen.queryByRole("button", { name: "verify-api" })).toBeNull()
     expect(screen.queryByRole("button", { name: "verify-cli" })).toBeNull()
 
-    const expandButton = screen.getByTestId("expand-button")
+    const expandButton = screen.getByRole("button", { name: "expand" })
     expandButton.focus()
     await user.keyboard("{Enter}")
 

@@ -299,7 +299,7 @@ test("loads one public OpenRouter catalog and keeps it provider-wide in all-acco
   ).toHaveCount(1)
   await expect(page.getByText(/^Total 2 models$/)).toBeVisible()
   await expect(page.getByText(/^Showing 2 models$/)).toBeVisible()
-  await expect.poll(() => publicCatalogRequests.length).toBe(1)
+  expect(publicCatalogRequests).toHaveLength(1)
 })
 
 test("routes no-source setup CTAs to account and API credential management", async ({

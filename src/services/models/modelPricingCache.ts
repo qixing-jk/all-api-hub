@@ -30,10 +30,6 @@ class ModelPricingCacheService {
     })
   }
 
-  private getCacheKey(cacheKey: string) {
-    return cacheKey
-  }
-
   async get(
     cacheKey: string,
     ttlMs: number = MODEL_PRICING_CACHE_TTL_MS,
@@ -42,7 +38,7 @@ class ModelPricingCacheService {
       const cache =
         (await this.storage.get<PricingCacheMap>(STORAGE_KEYS.PRICING_CACHE)) ||
         {}
-      const entry = cache[this.getCacheKey(cacheKey)]
+      const entry = cache[cacheKey]
       if (!entry) return null
 
       if (Date.now() - entry.lastUpdated > ttlMs) {
@@ -61,7 +57,7 @@ class ModelPricingCacheService {
         (await this.storage.get<PricingCacheMap>(STORAGE_KEYS.PRICING_CACHE)) ||
         {}
 
-      cache[this.getCacheKey(cacheKey)] = {
+      cache[cacheKey] = {
         pricing,
         lastUpdated: Date.now(),
       }
@@ -77,7 +73,7 @@ class ModelPricingCacheService {
       const cache =
         (await this.storage.get<PricingCacheMap>(STORAGE_KEYS.PRICING_CACHE)) ||
         {}
-      delete cache[this.getCacheKey(cacheKey)]
+      delete cache[cacheKey]
       await this.storage.set(STORAGE_KEYS.PRICING_CACHE, cache)
     } catch (error) {
       logger.error("Failed to invalidate cache", error)

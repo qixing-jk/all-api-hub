@@ -867,7 +867,7 @@ describe("useModelListData", () => {
     })
   })
 
-  it("hides unsupported controls when all loaded accounts use a provider catalog", async () => {
+  it("hides unsupported controls and stabilizes capabilities when provider contexts are rebuilt", async () => {
     const openRouterAccount: DisplaySiteData = {
       ...ACCOUNT,
       id: "openrouter-account",
@@ -877,7 +877,7 @@ describe("useModelListData", () => {
     mockUseAccountData.mockReturnValue({
       enabledDisplayData: [openRouterAccount],
     })
-    mockUseModelData.mockReturnValue({
+    mockUseModelData.mockImplementation(() => ({
       pricingData: null,
       pricingContexts: [
         {
@@ -911,9 +911,9 @@ describe("useModelListData", () => {
       loadPricingData: vi.fn(),
       loadErrorMessage: null,
       accountFallback: null,
-    })
+    }))
 
-    const { result } = renderHook(() => useModelListData())
+    const { result, rerender } = renderHook(() => useModelListData())
 
     act(() => {
       result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
@@ -934,6 +934,10 @@ describe("useModelListData", () => {
       supportsBatchCredentialVerification: false,
       supportsCliVerification: false,
     })
+
+    const firstCapabilities = result.current.sourceCapabilities
+    rerender()
+    expect(result.current.sourceCapabilities).toBe(firstCapabilities)
   })
 
   it("preserves ordinary account controls beside a provider catalog", async () => {

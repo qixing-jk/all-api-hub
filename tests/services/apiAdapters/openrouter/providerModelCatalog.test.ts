@@ -176,4 +176,38 @@ describe("OpenRouter provider model catalog Adapter", () => {
     }
     expect(models["example/negative-price"].presentation).toBeUndefined()
   })
+
+  it("preserves cache-only prices without claiming comparable primary pricing", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models`, () =>
+        HttpResponse.json({
+          data: [
+            {
+              id: "example/cache-only-model",
+              pricing: {
+                input_cache_read: "0.00000025",
+                input_cache_write: "0.0000005",
+              },
+            },
+          ],
+          total_count: 1,
+          links: { next: null },
+        }),
+      ),
+    )
+
+    const response = await openRouterProviderModelCatalog.fetchPricing({})
+
+    expect(response.data[0]).toMatchObject({
+      token_price_usd_per_million: {
+        cache_read: 0.25,
+        cache_write: 0.5,
+      },
+      price_metadata: {
+        precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+        unavailable_reason:
+          MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING,
+      },
+    })
+  })
 })
