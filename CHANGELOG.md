@@ -1,5 +1,36 @@
 # Changelog
 
+## [3.55.0](https://github.com/qixing-jk/all-api-hub/compare/v3.54.0...v3.55.0) (2026-08-08)
+
+
+### Features
+
+* **account-keys:** add OpenRouter inventory and capability-aware quick actions ([#1260](https://github.com/qixing-jk/all-api-hub/issues/1260)) ([ad58187](https://github.com/qixing-jk/all-api-hub/commit/ad5818789453fd341a41c9fd62578ce57c22ef15))
+* **guidance:** add unified API onboarding ([#1237](https://github.com/qixing-jk/all-api-hub/issues/1237)) ([8160466](https://github.com/qixing-jk/all-api-hub/commit/8160466f9fd3597693a326831fd905081dab3162))
+* **i18n:** add Brazilian Portuguese locale ([#1240](https://github.com/qixing-jk/all-api-hub/issues/1240)) ([4fec675](https://github.com/qixing-jk/all-api-hub/commit/4fec675ddec96d0eb28382eade96ee90012b813e))
+* **i18n:** add German locale ([#1264](https://github.com/qixing-jk/all-api-hub/issues/1264)) ([7f3f2a3](https://github.com/qixing-jk/all-api-hub/commit/7f3f2a32c511bc8b6962b7e252f380e33cebe093))
+* **keys:** unify saved key resource presentation ([#1253](https://github.com/qixing-jk/all-api-hub/issues/1253)) ([a81376d](https://github.com/qixing-jk/all-api-hub/commit/a81376d1331d361912a4f5e52a9e65b0b52e6169))
+* **model-list:** add OpenRouter public model catalog ([#1266](https://github.com/qixing-jk/all-api-hub/issues/1266)) ([476fc80](https://github.com/qixing-jk/all-api-hub/commit/476fc80523e54c29f7139f4a6551fb1f46b825db))
+* **model-list:** present OpenRouter native model details ([#1269](https://github.com/qixing-jk/all-api-hub/issues/1269)) ([a93e99b](https://github.com/qixing-jk/all-api-hub/commit/a93e99b2932e808a0556387c58eb670a906c4289))
+* **new-api:** manage extension-owned sessions ([#1267](https://github.com/qixing-jk/all-api-hub/issues/1267)) ([64744fb](https://github.com/qixing-jk/all-api-hub/commit/64744fb743f69df9d707de405327a821dc140c04))
+* **onboarding:** streamline account setup guidance ([#1242](https://github.com/qixing-jk/all-api-hub/issues/1242)) ([17e587c](https://github.com/qixing-jk/all-api-hub/commit/17e587c65b7e286eafd9857da3bcd716a626183e))
+* **openrouter:** add native key management ([#1255](https://github.com/qixing-jk/all-api-hub/issues/1255)) ([d4d3cb4](https://github.com/qixing-jk/all-api-hub/commit/d4d3cb4634e5f50efa60184206be4a9c5e25f422))
+* **product-announcements:** support extension CTAs ([#1241](https://github.com/qixing-jk/all-api-hub/issues/1241)) ([3518cb6](https://github.com/qixing-jk/all-api-hub/commit/3518cb6a9c87c1a93c79a58f065241b1f75a7f38))
+* **protection-bypass:** add automatic verification opening mode ([#1243](https://github.com/qixing-jk/all-api-hub/issues/1243)) ([ba8333d](https://github.com/qixing-jk/all-api-hub/commit/ba8333d7ba61f85b4ae00652d2b6a4d6d8c2069f))
+* **protection-bypass:** add development trigger and prefer background tabs ([#1239](https://github.com/qixing-jk/all-api-hub/issues/1239)) ([b12c2dd](https://github.com/qixing-jk/all-api-hub/commit/b12c2ddc0fe1ca0446ac42bcc3ae88dc77a8366b))
+* **sub2api:** repair missing group key coverage ([#1248](https://github.com/qixing-jk/all-api-hub/issues/1248)) ([602c674](https://github.com/qixing-jk/all-api-hub/commit/602c674cb63727d21e6e5e18798973fe09320198))
+
+
+### Bug Fixes
+
+* **ai-api:** fall back to unversioned model endpoint ([#1254](https://github.com/qixing-jk/all-api-hub/issues/1254)) ([688ca3e](https://github.com/qixing-jk/all-api-hub/commit/688ca3e95fb0802d50506db26c896ff01fa2cfc1))
+* **api-credentials:** support custom telemetry endpoints ([#1249](https://github.com/qixing-jk/all-api-hub/issues/1249)) ([2511c10](https://github.com/qixing-jk/all-api-hub/commit/2511c10f797e920ddbbc9ddb86c9b4b9063807ee))
+* **background:** make toolbar sidepanel routing cold-start safe ([#1252](https://github.com/qixing-jk/all-api-hub/issues/1252)) ([c24c226](https://github.com/qixing-jk/all-api-hub/commit/c24c226274aff16f4bb40bf0b66723d93d36e686))
+* **e2e:** prevent repeated New API session-limit logins ([#1265](https://github.com/qixing-jk/all-api-hub/issues/1265)) ([42e6a90](https://github.com/qixing-jk/all-api-hub/commit/42e6a90b97cfbb6f21df61f0c0e7bfffb59c6c88))
+* **key-management:** stabilize native key editor footer and loading ([#1258](https://github.com/qixing-jk/all-api-hub/issues/1258)) ([2ac9daf](https://github.com/qixing-jk/all-api-hub/commit/2ac9dafbbfc80f526ad458e590b4b6825fb9c651))
+* **new-api:** support modern managed-site verification ([#1263](https://github.com/qixing-jk/all-api-hub/issues/1263)) ([ddfd0fd](https://github.com/qixing-jk/all-api-hub/commit/ddfd0fd198a22535f9ed65d6fd1d0d41b5d07758))
+* **webdav:** support asynchronous upload verification ([#1268](https://github.com/qixing-jk/all-api-hub/issues/1268)) ([9edaf21](https://github.com/qixing-jk/all-api-hub/commit/9edaf21c431b965929649e6e9bbfa49c7654e017))
+
 ## [3.54.0](https://github.com/qixing-jk/all-api-hub/compare/v3.53.0...v3.54.0) (2026-07-31)
 
 
