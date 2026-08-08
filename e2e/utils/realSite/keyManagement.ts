@@ -12,6 +12,7 @@ export const REAL_SITE_TEST_TOKEN_NAME_PREFIX = "AAH E2E"
 const MAX_TEST_TOKEN_NAME_LENGTH = 30
 const MAX_TEST_TOKEN_LABEL_LENGTH = 8
 const MAX_TEST_TOKEN_RUN_ID_LENGTH = 12
+const REAL_SITE_TEST_RUN_ID_PATTERN = /^[a-z0-9]{10}$/u
 
 export async function runRealSiteKeyLifecycleFromAccountRow(params: {
   page: Page
@@ -73,6 +74,25 @@ export function buildRealSiteTestTokenName(params: {
     .filter(Boolean)
     .join(" ")
     .slice(0, MAX_TEST_TOKEN_NAME_LENGTH)
+}
+
+export function isRealSiteTestTokenName(params: {
+  tokenName: string
+  label: string
+}) {
+  const label = truncateTokenNamePart(
+    normalizeTokenNameLabel(params.label),
+    MAX_TEST_TOKEN_LABEL_LENGTH,
+  )
+  const expectedPrefix = [REAL_SITE_TEST_TOKEN_NAME_PREFIX, label]
+    .filter(Boolean)
+    .join(" ")
+  const runId = params.tokenName.slice(expectedPrefix.length + 1)
+
+  return (
+    params.tokenName.startsWith(`${expectedPrefix} `) &&
+    REAL_SITE_TEST_RUN_ID_PATTERN.test(runId)
+  )
 }
 
 export function buildRealSiteRunId() {

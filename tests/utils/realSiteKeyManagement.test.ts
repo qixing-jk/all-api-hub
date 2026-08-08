@@ -9,6 +9,7 @@ import {
 } from "~~/e2e/utils/accountLifecycle"
 import {
   buildRealSiteTestTokenName,
+  isRealSiteTestTokenName,
   runRealSiteKeyLifecycleFromAccountRow,
 } from "~~/e2e/utils/realSite/keyManagement"
 
@@ -63,6 +64,27 @@ describe("real-site key management E2E helpers", () => {
 
     expect(name.length).toBeLessThanOrEqual(30)
     expect(name).toBe("AAH E2E VeryLong run-with-a-l")
+  })
+
+  it("recognizes only generated token names for the requested real-site label", () => {
+    expect(
+      isRealSiteTestTokenName({
+        tokenName: "AAH E2E NewAPI abc123def4",
+        label: "New API",
+      }),
+    ).toBe(true)
+    expect(
+      isRealSiteTestTokenName({
+        tokenName: "AAH E2E Personal",
+        label: "New API",
+      }),
+    ).toBe(false)
+    expect(
+      isRealSiteTestTokenName({
+        tokenName: "AAH E2E DoneHub abc123def4",
+        label: "New API",
+      }),
+    ).toBe(false)
   })
 
   it("attempts UI cleanup when token creation fails after submitting a live token name", async () => {

@@ -31,6 +31,7 @@ import {
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { seedMockAccountFixture } from "~~/e2e/utils/mockedSite/accountFixtures"
+import { isRealSiteTestTokenName } from "~~/e2e/utils/realSite/keyManagement"
 
 function createStubApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
   const nowSeconds = Math.floor(Date.now() / 1000)
@@ -155,6 +156,18 @@ test("cleans stale test-owned tokens before creating a new token", async ({
   extensionId,
   page,
 }) => {
+  const tokenMutationResponses: string[] = []
+  context.on("response", (response) => {
+    const request = response.request()
+    if (
+      response
+        .url()
+        .startsWith("https://stale-key-cleanup.example.invalid/api/token/") &&
+      ["DELETE", "POST"].includes(request.method())
+    ) {
+      tokenMutationResponses.push(request.method())
+    }
+  })
   const serviceWorker = await getServiceWorker(context)
   const accountFixture = await seedMockAccountFixture({
     serviceWorker,
@@ -167,8 +180,9 @@ test("cleans stale test-owned tokens before creating a new token", async ({
     baseUrl: "https://stale-key-cleanup.example.invalid",
     initialTokens: [
       createStubApiToken({ id: 1, name: "Personal Key" }),
-      createStubApiToken({ id: 2, name: "AAH E2E Previous stale-one" }),
-      createStubApiToken({ id: 3, name: "AAH E2E Previous stale-two" }),
+      createStubApiToken({ id: 2, name: "AAH E2E Personal" }),
+      createStubApiToken({ id: 3, name: "AAH E2E NewAPI abc123def4" }),
+      createStubApiToken({ id: 4, name: "AAH E2E NewAPI zyx987wvu6" }),
     ],
   })
 
@@ -179,16 +193,30 @@ test("cleans stale test-owned tokens before creating a new token", async ({
     account: accountFixture,
     openFromAccountRow: false,
     cleanupAccountFixture: false,
-    cleanupTokenNamePrefix: "AAH E2E",
-    buildTokenName: () => "AAH E2E Current run",
+    cleanupTokenNameMatcher: (tokenName) =>
+      isRealSiteTestTokenName({ tokenName, label: "New API" }),
+    buildTokenName: () => "AAH E2E NewAPI run123abcd",
   })
 
   await expect(
     page.getByRole("heading", { name: "Personal Key" }),
   ).toBeVisible()
   await expect(
-    page.getByRole("heading", { name: /^AAH E2E(?:\s|$)/ }),
+    page.getByRole("heading", { name: "AAH E2E Personal", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", {
+      name: "AAH E2E NewAPI abc123def4",
+      exact: true,
+    }),
   ).toHaveCount(0)
+  await expect(
+    page.getByRole("heading", {
+      name: "AAH E2E NewAPI zyx987wvu6",
+      exact: true,
+    }),
+  ).toHaveCount(0)
+  expect(tokenMutationResponses).toEqual(["DELETE", "DELETE", "POST", "DELETE"])
 })
 
 test("reports the create response instead of timing out on a missing token row", async ({

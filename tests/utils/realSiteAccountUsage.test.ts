@@ -24,7 +24,6 @@ import {
 import {
   buildRealSiteRunId,
   buildRealSiteTestTokenName,
-  REAL_SITE_TEST_TOKEN_NAME_PREFIX,
 } from "~~/e2e/utils/realSite/keyManagement"
 import { maybeRunRealSiteModelToKeyScenario } from "~~/e2e/utils/realSite/modelToKey"
 
@@ -114,8 +113,12 @@ describe("real-site account usage adapters", () => {
       serviceWorker,
       account,
       cleanupAccountFixture: false,
-      cleanupTokenNamePrefix: REAL_SITE_TEST_TOKEN_NAME_PREFIX,
+      cleanupTokenNameMatcher: expect.any(Function),
     })
+    expect(call.cleanupTokenNameMatcher?.("AAH E2E NewAPI abc123def4")).toBe(
+      true,
+    )
+    expect(call.cleanupTokenNameMatcher?.("AAH E2E Personal")).toBe(false)
     expect(call.buildTokenName()).toBe("New API:run-id")
   })
 

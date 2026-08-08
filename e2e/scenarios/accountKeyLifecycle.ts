@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test"
 import type { AccountFixture } from "~~/e2e/scenarios/accountFixtures"
 import {
   deleteTokenFromKeyManagementPage,
-  deleteTokensByNamePrefixFromKeyManagementPage,
+  deleteTokensMatchingNameFromKeyManagementPage,
   expectTokenCreatedInKeyManagementPage,
   openKeyManagementForAccount,
   submitTokenCreationFromKeyManagementPage,
@@ -64,7 +64,7 @@ type AccountKeyLifecycleEnvironment = {
   ) => Promise<AccountFixture>
   openFromAccountRow?: boolean
   buildTokenName: () => string
-  cleanupTokenNamePrefix?: string
+  cleanupTokenNameMatcher?: (tokenName: string) => boolean
   cleanupAccountFixture?: boolean
   cleanup?: () => Promise<void>
 }
@@ -89,10 +89,10 @@ export async function runAccountKeyLifecycleScenario(
       baseUrl: account.baseUrl,
       openFromAccountRow: env.openFromAccountRow ?? true,
     })
-    if (env.cleanupTokenNamePrefix) {
-      await deleteTokensByNamePrefixFromKeyManagementPage({
+    if (env.cleanupTokenNameMatcher) {
+      await deleteTokensMatchingNameFromKeyManagementPage({
         page: keyManagementPage,
-        namePrefix: env.cleanupTokenNamePrefix,
+        nameMatcher: env.cleanupTokenNameMatcher,
       })
     }
     await submitTokenCreationFromKeyManagementPage({

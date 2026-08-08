@@ -361,30 +361,23 @@ async function expectTokenVisibleInKeyManagementPage(params: {
   return heading.locator("xpath=ancestor::*[@data-testid][1]")
 }
 
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
-export async function deleteTokensByNamePrefixFromKeyManagementPage(params: {
+export async function deleteTokensMatchingNameFromKeyManagementPage(params: {
   page: Page
-  namePrefix: string
+  nameMatcher: (tokenName: string) => boolean
 }) {
-  const namePrefix = params.namePrefix.trim()
-  if (!namePrefix) {
-    throw new Error("A non-empty token name prefix is required for cleanup.")
-  }
-
   await closeTokenCreationDialogsIfPresent(params.page)
   await expect(
     params.page.getByRole("button", { name: "Refresh Key List" }),
   ).toBeEnabled({ timeout: 30_000 })
 
-  const ownedTokenHeadings = params.page.getByRole("heading", {
-    name: new RegExp(`^${escapeRegExp(namePrefix)}(?:\\s|$)`),
-  })
+  const tokenHeadings = params.page.getByRole("heading")
+  let ownedTokenName = (await tokenHeadings.allTextContents()).find(
+    params.nameMatcher,
+  )
 
-  while ((await ownedTokenHeadings.count()) > 0) {
-    const row = ownedTokenHeadings
+  while (ownedTokenName) {
+    const row = params.page
+      .getByRole("heading", { name: ownedTokenName, exact: true })
       .first()
       .locator("xpath=ancestor::*[@data-testid][1]")
     const rowTestId = await row.getAttribute("data-testid")
@@ -396,6 +389,9 @@ export async function deleteTokensByNamePrefixFromKeyManagementPage(params: {
       page: params.page,
       row: params.page.getByTestId(rowTestId),
     })
+    ownedTokenName = (await tokenHeadings.allTextContents()).find(
+      params.nameMatcher,
+    )
   }
 }
 

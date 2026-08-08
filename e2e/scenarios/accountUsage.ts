@@ -145,7 +145,7 @@ async function runAccountTokenUiScenario(
 export async function verifyAccountKeyLifecycleUsage(
   context: AccountUsageScenarioContext & {
     buildTokenName: () => string
-    cleanupTokenNamePrefix?: string
+    cleanupTokenNameMatcher?: (tokenName: string) => boolean
     openFromAccountRow?: boolean
     cleanupAccountFixture?: boolean
   },
@@ -157,7 +157,7 @@ export async function verifyAccountKeyLifecycleUsage(
     resolveAccountFixture: async () => context.account,
     openFromAccountRow: context.openFromAccountRow,
     buildTokenName: context.buildTokenName,
-    cleanupTokenNamePrefix: context.cleanupTokenNamePrefix,
+    cleanupTokenNameMatcher: context.cleanupTokenNameMatcher,
     cleanupAccountFixture: context.cleanupAccountFixture,
   })
 }
