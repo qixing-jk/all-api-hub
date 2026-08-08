@@ -2,6 +2,7 @@ import { autoRefreshService } from "~/services/accounts/autoRefreshService"
 import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduler"
 import { dailyBalanceHistoryScheduler } from "~/services/history/dailyBalanceHistory/scheduler"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
+import { newApiOwnedSessionLifecycle } from "~/services/managedSites/newApiOwnedSession/background"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { modelSyncScheduler } from "~/services/models/modelSync"
 import { initializeTaskNotificationService } from "~/services/notifications/taskNotificationService"
@@ -61,6 +62,7 @@ export async function initializeServices() {
         siteAnnouncementScheduler.initialize(),
         productAnnouncementService.initialize(),
         releaseUpdateService.initialize(),
+        newApiOwnedSessionLifecycle.initialize(),
       ])
       initializeTaskNotificationService()
 

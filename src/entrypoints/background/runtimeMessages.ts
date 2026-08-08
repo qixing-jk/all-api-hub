@@ -14,6 +14,7 @@ import {
 import { setupUsageHistoryMessagingListeners } from "~/services/history/usageHistory/scheduler"
 import { setupLdohSiteLookupMessagingListeners } from "~/services/integrations/ldohSiteLookup/background"
 import { setupChannelConfigMessagingListeners } from "~/services/managedSites/channelConfigStorage"
+import { isNewApiOwnedSessionRequest } from "~/services/managedSites/newApiOwnedSession/contracts"
 import { setupManagedSiteModelSyncMessagingListeners } from "~/services/models/modelSync"
 import { setupTaskNotificationMessagingListeners } from "~/services/notifications/taskNotificationService"
 import { setupPreferencesMessagingListeners } from "~/services/preferences/runtimePreferencesService"
@@ -122,6 +123,19 @@ export function setupRuntimeMessageListeners() {
   // 处理来自 popup 的消息
   onRuntimeMessage((request, sender, sendResponse) => {
     try {
+      if (isNewApiOwnedSessionRequest(request)) {
+        void import("~/services/managedSites/newApiOwnedSession/background")
+          .then(({ handleNewApiOwnedSessionRequest }) =>
+            handleNewApiOwnedSessionRequest(request),
+          )
+          .then(sendResponse)
+          .catch((error) => {
+            logger.warn("New API owned-session command failed", { error })
+            sendResponse({ success: false })
+          })
+        return true
+      }
+
       if (request.action === RuntimeActionIds.PermissionsCheck) {
         void containsPermissions(request.permissions)
           .then((hasPermission) => {

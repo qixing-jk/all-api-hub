@@ -687,6 +687,37 @@ export async function removeLocalStorage(keys: string | string[]) {
 }
 
 /**
+ * Reports whether this browser exposes the memory-only storage.session area.
+ */
+export function hasSessionStorageArea(): boolean {
+  const session = (globalThis as any).browser?.storage?.session
+  return (
+    typeof session?.get === "function" && typeof session?.set === "function"
+  )
+}
+
+/**
+ * Reads keys from browser.storage.session through the guarded browser adapter.
+ */
+export async function getSessionStorageValues(
+  keys?: string | string[] | Record<string, unknown> | null,
+): Promise<Record<string, unknown>> {
+  if (!hasSessionStorageArea()) return {}
+  return await (globalThis as any).browser.storage.session.get(keys)
+}
+
+/**
+ * Writes values to browser.storage.session through the guarded browser adapter.
+ */
+export async function setSessionStorageValues(
+  values: Record<string, unknown>,
+): Promise<boolean> {
+  if (!hasSessionStorageArea()) return false
+  await (globalThis as any).browser.storage.session.set(values)
+  return true
+}
+
+/**
  * 监听标签页激活事件
  * 返回清理函数
  * @param callback 激活信息发生变化时调用的回调函数。

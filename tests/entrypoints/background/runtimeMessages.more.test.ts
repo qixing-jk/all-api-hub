@@ -4,6 +4,7 @@ import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
+import { NEW_API_OWNED_SESSION_ACTIONS } from "~/services/managedSites/newApiOwnedSession/contracts"
 import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
 import { RedemptionAssistMessageTypes } from "~/services/redemption/redemptionAssistMessaging"
 
@@ -63,6 +64,23 @@ const mocks = vi.hoisted(() => ({
   markTempWindowOpenRouterManagementKeyDispatched: vi.fn(),
   openBugReportPage: vi.fn(),
   executeProtectionBypassTask: vi.fn(),
+  cleanupOwnedSession: vi.fn(),
+}))
+
+vi.mock("~/services/managedSites/newApiOwnedSession/background", () => ({
+  handleNewApiOwnedSessionRequest: vi.fn(
+    async (request: { baseUrl: string }) => ({
+      success: true,
+      ...(await mocks.cleanupOwnedSession(request.baseUrl)),
+    }),
+  ),
+  newApiOwnedSessionLifecycle: {
+    capture: vi.fn(),
+    refresh: vi.fn(),
+    touch: vi.fn(),
+    getStatus: vi.fn(),
+    cleanup: mocks.cleanupOwnedSession,
+  },
 }))
 
 vi.mock("~/utils/browser/browserApi", () => ({
@@ -271,6 +289,33 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     )
     return runtimeMessageListener!
   }
+
+  it("routes exact New API owned-session cleanup through the background lifecycle", async () => {
+    await loadListener()
+    mocks.cleanupOwnedSession.mockResolvedValue({ status: "cleaned" })
+    const sendResponse = vi.fn()
+
+    expect(
+      runtimeMessageListener?.(
+        {
+          action: NEW_API_OWNED_SESSION_ACTIONS.Cleanup,
+          baseUrl: "https://managed.example",
+        },
+        {},
+        sendResponse,
+      ),
+    ).toBe(true)
+
+    await vi.waitFor(() => {
+      expect(mocks.cleanupOwnedSession).toHaveBeenCalledWith(
+        "https://managed.example",
+      )
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        status: "cleaned",
+      })
+    })
+  })
 
   async function waitForAsyncResponse() {
     await new Promise((resolve) => setTimeout(resolve, 0))
