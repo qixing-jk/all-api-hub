@@ -150,6 +150,80 @@ test("creates a token from key management and reloads it into the visible list",
   })
 })
 
+test("cleans stale test-owned tokens before creating a new token", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const accountFixture = await seedMockAccountFixture({
+    serviceWorker,
+    account: createStoredAccount({
+      id: "e2e-stale-key-cleanup-account",
+      site_url: "https://stale-key-cleanup.example.invalid",
+    }),
+  })
+  await stubNewApiSiteRoutes(context, {
+    baseUrl: "https://stale-key-cleanup.example.invalid",
+    initialTokens: [
+      createStubApiToken({ id: 1, name: "Personal Key" }),
+      createStubApiToken({ id: 2, name: "AAH E2E Previous stale-one" }),
+      createStubApiToken({ id: 3, name: "AAH E2E Previous stale-two" }),
+    ],
+  })
+
+  await verifyAccountKeyLifecycleUsage({
+    extensionId,
+    page,
+    serviceWorker,
+    account: accountFixture,
+    openFromAccountRow: false,
+    cleanupAccountFixture: false,
+    cleanupTokenNamePrefix: "AAH E2E",
+    buildTokenName: () => "AAH E2E Current run",
+  })
+
+  await expect(
+    page.getByRole("heading", { name: "Personal Key" }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: /^AAH E2E(?:\s|$)/ }),
+  ).toHaveCount(0)
+})
+
+test("reports the create response instead of timing out on a missing token row", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const accountFixture = await seedMockAccountFixture({
+    serviceWorker,
+    account: createStoredAccount({
+      id: "e2e-key-create-error-account",
+      site_url: "https://key-create-error.example.invalid",
+    }),
+  })
+  await stubNewApiSiteRoutes(context, {
+    baseUrl: "https://key-create-error.example.invalid",
+    createTokenError: {
+      status: 200,
+      message: "Fixture token quota reached",
+    },
+  })
+
+  await expect(
+    verifyAccountKeyLifecycleUsage({
+      extensionId,
+      page,
+      serviceWorker,
+      account: accountFixture,
+      openFromAccountRow: false,
+      buildTokenName: () => "E2E Rejected Key",
+    }),
+  ).rejects.toThrow("API key creation failed: Fixture token quota reached")
+})
+
 test("opens the CC Switch model picker for an account API key", async ({
   context,
   extensionId,

@@ -20,6 +20,7 @@ import {
 import {
   deleteApiCredentialProfileFromStorage,
   deleteTokenFromKeyManagementPage,
+  deleteTokensByNamePrefixFromKeyManagementPage,
   expectTokenCreatedInKeyManagementPage,
   openKeyManagementForAccount,
   saveAutoDetectedAccountFromApp,
@@ -31,6 +32,7 @@ const mocks = vi.hoisted(() => ({
   saveAutoDetectedAccountFromApp: vi.fn(),
   deleteApiCredentialProfileFromStorage: vi.fn(),
   deleteTokenFromKeyManagementPage: vi.fn(),
+  deleteTokensByNamePrefixFromKeyManagementPage: vi.fn(),
   expectTokenCreatedInKeyManagementPage: vi.fn(),
   openKeyManagementForAccount: vi.fn(),
   saveTokenToApiCredentialProfilesFromKeyManagementPage: vi.fn(),
@@ -44,6 +46,8 @@ vi.mock("~~/e2e/utils/accountLifecycle", () => ({
   deleteApiCredentialProfileFromStorage:
     mocks.deleteApiCredentialProfileFromStorage,
   deleteTokenFromKeyManagementPage: mocks.deleteTokenFromKeyManagementPage,
+  deleteTokensByNamePrefixFromKeyManagementPage:
+    mocks.deleteTokensByNamePrefixFromKeyManagementPage,
   expectTokenCreatedInKeyManagementPage:
     mocks.expectTokenCreatedInKeyManagementPage,
   openKeyManagementForAccount: mocks.openKeyManagementForAccount,
@@ -64,6 +68,9 @@ describe("account E2E scenarios", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(deleteTokenFromKeyManagementPage).mockResolvedValue(undefined)
+    vi.mocked(deleteTokensByNamePrefixFromKeyManagementPage).mockResolvedValue(
+      undefined,
+    )
   })
 
   it("runs account auto-detect and returns a fixture from the saved account", async () => {
@@ -217,6 +224,7 @@ describe("account E2E scenarios", () => {
       getServiceWorker: vi.fn().mockResolvedValue({} as any),
       resolveAccountFixture: vi.fn().mockResolvedValue(fixture),
       buildTokenName: () => "E2E Created Key",
+      cleanupTokenNamePrefix: "AAH E2E",
       cleanup: environmentCleanup,
     })
 
@@ -229,6 +237,17 @@ describe("account E2E scenarios", () => {
       baseUrl: "https://seeded.example.com",
       openFromAccountRow: true,
     })
+    expect(deleteTokensByNamePrefixFromKeyManagementPage).toHaveBeenCalledWith({
+      page: keyPage,
+      namePrefix: "AAH E2E",
+    })
+    expect(
+      vi.mocked(deleteTokensByNamePrefixFromKeyManagementPage).mock
+        .invocationCallOrder[0],
+    ).toBeLessThan(
+      vi.mocked(submitTokenCreationFromKeyManagementPage).mock
+        .invocationCallOrder[0],
+    )
     expect(submitTokenCreationFromKeyManagementPage).toHaveBeenCalledWith({
       page: keyPage,
       tokenName: "E2E Created Key",

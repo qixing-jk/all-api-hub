@@ -78,6 +78,10 @@ type StubNewApiSiteRoutesOptions = {
   models?: string[]
   pricingModels?: ModelPricing[]
   initialTokens?: ApiToken[]
+  createTokenError?: {
+    status?: number
+    message: string
+  }
   groups?: Record<string, { desc: string; ratio: number }>
   dashboardAuthMode?: "legacy" | "auth-bundle"
 }
@@ -901,6 +905,18 @@ export async function stubNewApiSiteRoutes(
     }
 
     if (method === "POST" && url.pathname === "/api/token/") {
+      if (options.createTokenError) {
+        await route.fulfill({
+          status: options.createTokenError.status ?? 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: false,
+            message: options.createTokenError.message,
+          }),
+        })
+        return
+      }
+
       const payload = request.postDataJSON() as {
         name?: string
         remain_quota?: number

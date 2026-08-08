@@ -8,7 +8,7 @@ import {
   submitTokenCreationFromKeyManagementPage,
 } from "~~/e2e/utils/accountLifecycle"
 
-const TEST_TOKEN_NAME_PREFIX = "AAH E2E"
+export const REAL_SITE_TEST_TOKEN_NAME_PREFIX = "AAH E2E"
 const MAX_TEST_TOKEN_NAME_LENGTH = 30
 const MAX_TEST_TOKEN_LABEL_LENGTH = 8
 const MAX_TEST_TOKEN_RUN_ID_LENGTH = 12
@@ -69,7 +69,7 @@ export function buildRealSiteTestTokenName(params: {
     MAX_TEST_TOKEN_RUN_ID_LENGTH,
   )
 
-  return [TEST_TOKEN_NAME_PREFIX, label, runId]
+  return [REAL_SITE_TEST_TOKEN_NAME_PREFIX, label, runId]
     .filter(Boolean)
     .join(" ")
     .slice(0, MAX_TEST_TOKEN_NAME_LENGTH)
