@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.55.1](https://github.com/qixing-jk/all-api-hub/compare/v3.55.0...v3.55.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* **e2e:** align OpenCloud real-site target ([3f58001](https://github.com/qixing-jk/all-api-hub/commit/3f5800187b7511083b7c630a06d9543da0dbc84f))
+
 ## [3.55.0](https://github.com/qixing-jk/all-api-hub/compare/v3.54.0...v3.55.0) (2026-08-08)
 
 
