@@ -3,9 +3,9 @@ import { createLogger } from "~/utils/core/logger"
 
 import {
   NEW_API_OWNED_SESSION_ACTIONS,
+  type NewApiOwnedSessionBundle,
   type NewApiOwnedSessionResponse,
 } from "./contracts"
-import type { NewApiOwnedSessionBundle } from "./lifecycle"
 
 const logger = createLogger("NewApiOwnedSessionClient")
 

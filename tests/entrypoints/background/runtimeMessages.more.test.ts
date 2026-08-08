@@ -295,13 +295,16 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     const sendResponse = vi.fn()
     const request = {
       action: NEW_API_OWNED_SESSION_ACTIONS.Cleanup,
-      baseUrl: "https://managed.example",
+      baseUrl: " https://managed.example/dashboard/ ",
     }
 
     expect(runtimeMessageListener?.(request, {}, sendResponse)).toBe(true)
 
     await vi.waitFor(() => {
-      expect(mocks.handleOwnedSessionRequest).toHaveBeenCalledWith(request)
+      expect(mocks.handleOwnedSessionRequest).toHaveBeenCalledWith({
+        action: NEW_API_OWNED_SESSION_ACTIONS.Cleanup,
+        baseUrl: "https://managed.example",
+      })
       expect(sendResponse).toHaveBeenCalledWith({
         success: true,
         status: "cleaned",

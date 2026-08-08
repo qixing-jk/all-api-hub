@@ -1,4 +1,8 @@
-import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
+import {
+  normalizeNewApiOwnedSessionBundle,
+  normalizeNewApiOwnedSessionOrigin,
+  type NewApiOwnedSessionBundle,
+} from "./contracts"
 
 export const NEW_API_OWNED_SESSION_ALARM_NAME = "new-api-owned-session-cleanup"
 
@@ -6,14 +10,6 @@ const RECEIPT_VERSION = 1 as const
 const IDLE_CLEANUP_DELAY_MS = 10 * 60 * 1000
 const CLEANUP_EXPIRY_SAFETY_MS = 30 * 1000
 const CLEANUP_RETRY_DELAY_MS = 60 * 1000
-
-export interface NewApiOwnedSessionBundle {
-  baseUrl: string
-  sessionId: string
-  accessToken: string
-  /** Epoch seconds, matching New API's AuthBundle response. */
-  accessExpiresAt: number
-}
 
 export interface NewApiOwnedSessionReceipt {
   version: typeof RECEIPT_VERSION
@@ -43,43 +39,6 @@ export interface NewApiOwnedSessionLifecycleDependencies {
   revokeSession: (
     receipt: NewApiOwnedSessionReceipt,
   ) => Promise<{ status: "cleaned" | "retry" | "unavailable" }>
-}
-
-const normalizeOrigin = (baseUrl: string) => {
-  const normalized = normalizeUrlForOriginKey(baseUrl, {
-    stripTrailingSlashes: true,
-  })
-  if (!normalized) return null
-
-  try {
-    const url = new URL(normalized)
-    return url.protocol === "http:" || url.protocol === "https:"
-      ? url.origin
-      : null
-  } catch {
-    return null
-  }
-}
-
-const normalizeBundle = (bundle: NewApiOwnedSessionBundle) => {
-  const origin = normalizeOrigin(bundle.baseUrl)
-  const sessionId = bundle.sessionId.trim()
-  const accessToken = bundle.accessToken.trim()
-  if (
-    !origin ||
-    !sessionId ||
-    !accessToken ||
-    !Number.isFinite(bundle.accessExpiresAt)
-  ) {
-    return null
-  }
-
-  return {
-    origin,
-    sessionId,
-    accessToken,
-    accessExpiresAt: bundle.accessExpiresAt,
-  }
 }
 
 const getReceiptKey = (origin: string, sessionId: string) =>
@@ -245,16 +204,16 @@ export function createNewApiOwnedSessionLifecycle(
 
     capture(bundle: NewApiOwnedSessionBundle) {
       return exclusively(async () => {
-        const normalized = normalizeBundle(bundle)
+        const normalized = normalizeNewApiOwnedSessionBundle(bundle)
         if (!normalized) return
 
         const now = dependencies.now()
         const stored = await read()
         stored.receipts[
-          getReceiptKey(normalized.origin, normalized.sessionId)
+          getReceiptKey(normalized.baseUrl, normalized.sessionId)
         ] = {
           version: RECEIPT_VERSION,
-          origin: normalized.origin,
+          origin: normalized.baseUrl,
           sessionId: normalized.sessionId,
           accessToken: normalized.accessToken,
           accessExpiresAt: normalized.accessExpiresAt,
@@ -267,12 +226,12 @@ export function createNewApiOwnedSessionLifecycle(
 
     refresh(bundle: NewApiOwnedSessionBundle) {
       return exclusively(async () => {
-        const normalized = normalizeBundle(bundle)
+        const normalized = normalizeNewApiOwnedSessionBundle(bundle)
         if (!normalized) return { owned: false }
 
         const stored = await read()
         const receiptKey = getReceiptKey(
-          normalized.origin,
+          normalized.baseUrl,
           normalized.sessionId,
         )
         const receipt = stored.receipts[receiptKey]
@@ -295,7 +254,7 @@ export function createNewApiOwnedSessionLifecycle(
 
     touch(baseUrl: string, sessionId?: string) {
       return exclusively(async () => {
-        const origin = normalizeOrigin(baseUrl)
+        const origin = normalizeNewApiOwnedSessionOrigin(baseUrl)
         if (!origin) return { owned: false }
         const stored = await read()
         const entries = getReceiptEntriesForOrigin(stored, origin).filter(
@@ -318,7 +277,7 @@ export function createNewApiOwnedSessionLifecycle(
 
     getStatus(baseUrl: string) {
       return exclusively(async () => {
-        const origin = normalizeOrigin(baseUrl)
+        const origin = normalizeNewApiOwnedSessionOrigin(baseUrl)
         if (!origin) return { owned: false }
         const stored = await read()
         return {
@@ -329,7 +288,7 @@ export function createNewApiOwnedSessionLifecycle(
 
     cleanup(baseUrl: string) {
       return exclusively(async () => {
-        const origin = normalizeOrigin(baseUrl)
+        const origin = normalizeNewApiOwnedSessionOrigin(baseUrl)
         if (!origin) return { status: "none" as const }
         const stored = await read()
         const entries = getReceiptEntriesForOrigin(stored, origin)

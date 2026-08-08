@@ -14,7 +14,7 @@ import {
 import { setupUsageHistoryMessagingListeners } from "~/services/history/usageHistory/scheduler"
 import { setupLdohSiteLookupMessagingListeners } from "~/services/integrations/ldohSiteLookup/background"
 import { setupChannelConfigMessagingListeners } from "~/services/managedSites/channelConfigStorage"
-import { isNewApiOwnedSessionRequest } from "~/services/managedSites/newApiOwnedSession/contracts"
+import { parseNewApiOwnedSessionRequest } from "~/services/managedSites/newApiOwnedSession/contracts"
 import { setupManagedSiteModelSyncMessagingListeners } from "~/services/models/modelSync"
 import { setupTaskNotificationMessagingListeners } from "~/services/notifications/taskNotificationService"
 import { setupPreferencesMessagingListeners } from "~/services/preferences/runtimePreferencesService"
@@ -123,10 +123,11 @@ export function setupRuntimeMessageListeners() {
   // 处理来自 popup 的消息
   onRuntimeMessage((request, sender, sendResponse) => {
     try {
-      if (isNewApiOwnedSessionRequest(request)) {
+      const newApiOwnedSessionRequest = parseNewApiOwnedSessionRequest(request)
+      if (newApiOwnedSessionRequest) {
         void import("~/services/managedSites/newApiOwnedSession/background")
           .then(({ handleNewApiOwnedSessionRequest }) =>
-            handleNewApiOwnedSessionRequest(request),
+            handleNewApiOwnedSessionRequest(newApiOwnedSessionRequest),
           )
           .then(sendResponse)
           .catch((error) => {
