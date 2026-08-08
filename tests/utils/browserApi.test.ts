@@ -1,4 +1,12 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
@@ -247,9 +255,16 @@ describe("browserApi alarms helpers", () => {
 })
 
 describe("browserApi session storage helpers", () => {
+  let previousBrowser: unknown
+
   beforeEach(() => {
     vi.restoreAllMocks()
+    previousBrowser = (globalThis as any).browser
     ;(globalThis as any).browser = {}
+  })
+
+  afterEach(() => {
+    ;(globalThis as any).browser = previousBrowser
   })
 
   it("returns compatibility fallbacks when storage.session is unavailable", async () => {
@@ -270,6 +285,15 @@ describe("browserApi session storage helpers", () => {
     await expect(setSessionStorageValues({ key: "next" })).resolves.toBe(true)
     expect(get).toHaveBeenCalledWith("key")
     expect(set).toHaveBeenCalledWith({ key: "next" })
+  })
+
+  it("returns false when storage.session rejects a write", async () => {
+    const set = vi.fn().mockRejectedValue(new Error("session quota exceeded"))
+    ;(globalThis as any).browser = {
+      storage: { session: { get: vi.fn(), set } },
+    }
+
+    await expect(setSessionStorageValues({ key: "next" })).resolves.toBe(false)
   })
 })
 

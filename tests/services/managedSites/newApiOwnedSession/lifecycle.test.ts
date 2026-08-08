@@ -12,9 +12,10 @@ const OWNED_RECEIPT_KEY = `${ORIGIN}\nowned-session-placeholder`
 
 function createHarness() {
   let stored: unknown
+  let currentNow = NOW
   let alarmListener: ((alarm: { name: string }) => void) | undefined
   const dependencies: NewApiOwnedSessionLifecycleDependencies = {
-    now: () => NOW,
+    now: () => currentNow,
     readStoredReceipts: vi.fn(async () => stored),
     writeStoredReceipts: vi.fn(async (value) => {
       stored = value
@@ -32,6 +33,12 @@ function createHarness() {
   return {
     dependencies,
     getStored: () => stored,
+    setNow: (value: number) => {
+      currentNow = value
+    },
+    setStored: (value: unknown) => {
+      stored = value
+    },
     fireAlarm: () =>
       alarmListener?.({ name: NEW_API_OWNED_SESSION_ALARM_NAME }),
   }
@@ -186,6 +193,125 @@ describe("NewApiOwnedSessionLifecycle", () => {
       receipts: {
         [OWNED_RECEIPT_KEY]: expect.objectContaining({
           cleanupAt: NOW + 60_000,
+        }),
+      },
+    })
+  })
+
+  it.each([
+    ["a non-http origin", { baseUrl: "ftp://managed.example" }],
+    ["a malformed origin", { baseUrl: "not a valid URL" }],
+    ["an empty SID", { sessionId: "  " }],
+    ["an empty access token", { accessToken: "  " }],
+    ["a non-finite expiry", { accessExpiresAt: Number.NaN }],
+  ])("ignores %s without mutating storage", async (_label, overrides) => {
+    const harness = createHarness()
+    const lifecycle = createNewApiOwnedSessionLifecycle(harness.dependencies)
+
+    await lifecycle.capture(freshBundle(overrides))
+
+    expect(harness.dependencies.writeStoredReceipts).not.toHaveBeenCalled()
+    expect(harness.getStored()).toBeUndefined()
+  })
+
+  it("normalizes invalid persisted state before scheduling", async () => {
+    const harness = createHarness()
+    harness.setStored({ version: 2, receipts: { stale: {} } })
+    const lifecycle = createNewApiOwnedSessionLifecycle(harness.dependencies)
+
+    await lifecycle.initialize()
+
+    expect(harness.dependencies.clearAlarm).toHaveBeenCalledWith(
+      NEW_API_OWNED_SESSION_ALARM_NAME,
+    )
+    expect(harness.dependencies.createAlarm).not.toHaveBeenCalled()
+  })
+
+  it("touches only the requested owned SID", async () => {
+    const harness = createHarness()
+    const lifecycle = createNewApiOwnedSessionLifecycle(harness.dependencies)
+    await lifecycle.capture(freshBundle())
+
+    await expect(lifecycle.touch("ftp://managed.example")).resolves.toEqual({
+      owned: false,
+    })
+    await expect(
+      lifecycle.touch(ORIGIN, "borrowed-session-placeholder"),
+    ).resolves.toEqual({ owned: false })
+
+    harness.setNow(NOW + 1_000)
+    await expect(
+      lifecycle.touch(ORIGIN, "owned-session-placeholder"),
+    ).resolves.toEqual({ owned: true })
+    expect(harness.getStored()).toEqual({
+      version: 1,
+      receipts: {
+        [OWNED_RECEIPT_KEY]: expect.objectContaining({
+          lastUsedAt: NOW + 1_000,
+          cleanupAt: NOW + 1_000 + 10 * 60_000,
+        }),
+      },
+    })
+  })
+
+  it("deletes a receipt when exact cleanup authentication is unavailable", async () => {
+    const harness = createHarness()
+    vi.mocked(harness.dependencies.revokeSession).mockResolvedValue({
+      status: "unavailable",
+    })
+    const lifecycle = createNewApiOwnedSessionLifecycle(harness.dependencies)
+    await lifecycle.capture(freshBundle())
+
+    await expect(lifecycle.cleanup(ORIGIN)).resolves.toEqual({
+      status: "failed",
+    })
+    expect(harness.getStored()).toEqual({ version: 1, receipts: {} })
+  })
+
+  it("stops retrying when the next cleanup would exceed credential expiry", async () => {
+    const harness = createHarness()
+    vi.mocked(harness.dependencies.revokeSession).mockResolvedValue({
+      status: "retry",
+    })
+    const lifecycle = createNewApiOwnedSessionLifecycle(harness.dependencies)
+    await lifecycle.capture(
+      freshBundle({ accessExpiresAt: Math.floor((NOW + 30_000) / 1000) }),
+    )
+
+    await expect(lifecycle.cleanup(ORIGIN)).resolves.toEqual({
+      status: "failed",
+    })
+    expect(harness.getStored()).toEqual({ version: 1, receipts: {} })
+  })
+
+  it("continues alarm cleanup when one revoke dependency rejects", async () => {
+    const harness = createHarness()
+    const lifecycle = createNewApiOwnedSessionLifecycle(harness.dependencies)
+    await lifecycle.initialize()
+    await lifecycle.capture(freshBundle())
+    await lifecycle.capture(
+      freshBundle({ sessionId: "second-owned-session-placeholder" }),
+    )
+    vi.mocked(harness.dependencies.revokeSession)
+      .mockRejectedValueOnce(new Error("transport escaped adapter"))
+      .mockResolvedValue({ status: "cleaned" })
+    harness.setNow(NOW + 11 * 60_000)
+
+    harness.fireAlarm()
+
+    await vi.waitFor(() => {
+      expect(harness.dependencies.revokeSession).toHaveBeenCalledTimes(2)
+    })
+    await vi.waitFor(() => {
+      expect(harness.dependencies.reportError).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "transport escaped adapter" }),
+      )
+    })
+    expect(harness.getStored()).toEqual({
+      version: 1,
+      receipts: {
+        [OWNED_RECEIPT_KEY]: expect.objectContaining({
+          cleanupAt: NOW + 12 * 60_000,
         }),
       },
     })

@@ -189,7 +189,15 @@ export function createNewApiOwnedSessionLifecycle(
     const receipt = stored.receipts[receiptKey]
     if (!receipt) return "cleaned"
 
-    const result = await dependencies.revokeSession(receipt)
+    let result: Awaited<
+      ReturnType<NewApiOwnedSessionLifecycleDependencies["revokeSession"]>
+    >
+    try {
+      result = await dependencies.revokeSession(receipt)
+    } catch (error) {
+      dependencies.reportError(error)
+      result = { status: "retry" }
+    }
     if (result.status === "cleaned" || result.status === "unavailable") {
       delete stored.receipts[receiptKey]
       return result.status === "cleaned" ? "cleaned" : "failed"

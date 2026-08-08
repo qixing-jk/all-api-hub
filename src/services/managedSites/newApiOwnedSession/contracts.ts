@@ -33,6 +33,19 @@ export type NewApiOwnedSessionResponse =
   | { success: true; owned?: boolean; status?: "cleaned" | "none" | "failed" }
   | { success: false }
 
+const isNewApiOwnedSessionBundle = (
+  value: unknown,
+): value is NewApiOwnedSessionBundle => {
+  if (!value || typeof value !== "object") return false
+  const bundle = value as Record<string, unknown>
+  return (
+    typeof bundle.baseUrl === "string" &&
+    typeof bundle.sessionId === "string" &&
+    typeof bundle.accessToken === "string" &&
+    typeof bundle.accessExpiresAt === "number"
+  )
+}
+
 export const isNewApiOwnedSessionRequest = (
   value: unknown,
 ): value is NewApiOwnedSessionRequest => {
@@ -43,7 +56,7 @@ export const isNewApiOwnedSessionRequest = (
     request.action === NEW_API_OWNED_SESSION_ACTIONS.Capture ||
     request.action === NEW_API_OWNED_SESSION_ACTIONS.Refresh
   ) {
-    return Boolean(request.bundle && typeof request.bundle === "object")
+    return isNewApiOwnedSessionBundle(request.bundle)
   }
 
   if (

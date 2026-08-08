@@ -64,22 +64,18 @@ const mocks = vi.hoisted(() => ({
   markTempWindowOpenRouterManagementKeyDispatched: vi.fn(),
   openBugReportPage: vi.fn(),
   executeProtectionBypassTask: vi.fn(),
-  cleanupOwnedSession: vi.fn(),
+  handleOwnedSessionRequest: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/newApiOwnedSession/background", () => ({
-  handleNewApiOwnedSessionRequest: vi.fn(
-    async (request: { baseUrl: string }) => ({
-      success: true,
-      ...(await mocks.cleanupOwnedSession(request.baseUrl)),
-    }),
-  ),
+  handleNewApiOwnedSessionRequest: (...args: unknown[]) =>
+    mocks.handleOwnedSessionRequest(...args),
   newApiOwnedSessionLifecycle: {
     capture: vi.fn(),
     refresh: vi.fn(),
     touch: vi.fn(),
     getStatus: vi.fn(),
-    cleanup: mocks.cleanupOwnedSession,
+    cleanup: vi.fn(),
   },
 }))
 
@@ -292,13 +288,38 @@ describe("setupRuntimeMessageListeners additional routing", () => {
 
   it("routes exact New API owned-session cleanup through the background lifecycle", async () => {
     await loadListener()
-    mocks.cleanupOwnedSession.mockResolvedValue({ status: "cleaned" })
+    mocks.handleOwnedSessionRequest.mockResolvedValue({
+      success: true,
+      status: "cleaned",
+    })
+    const sendResponse = vi.fn()
+    const request = {
+      action: NEW_API_OWNED_SESSION_ACTIONS.Cleanup,
+      baseUrl: "https://managed.example",
+    }
+
+    expect(runtimeMessageListener?.(request, {}, sendResponse)).toBe(true)
+
+    await vi.waitFor(() => {
+      expect(mocks.handleOwnedSessionRequest).toHaveBeenCalledWith(request)
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        status: "cleaned",
+      })
+    })
+  })
+
+  it("returns a safe response when an owned-session command rejects", async () => {
+    await loadListener()
+    mocks.handleOwnedSessionRequest.mockRejectedValue(
+      new Error("background command failed"),
+    )
     const sendResponse = vi.fn()
 
     expect(
       runtimeMessageListener?.(
         {
-          action: NEW_API_OWNED_SESSION_ACTIONS.Cleanup,
+          action: NEW_API_OWNED_SESSION_ACTIONS.GetStatus,
           baseUrl: "https://managed.example",
         },
         {},
@@ -307,13 +328,7 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     ).toBe(true)
 
     await vi.waitFor(() => {
-      expect(mocks.cleanupOwnedSession).toHaveBeenCalledWith(
-        "https://managed.example",
-      )
-      expect(sendResponse).toHaveBeenCalledWith({
-        success: true,
-        status: "cleaned",
-      })
+      expect(sendResponse).toHaveBeenCalledWith({ success: false })
     })
   })
 

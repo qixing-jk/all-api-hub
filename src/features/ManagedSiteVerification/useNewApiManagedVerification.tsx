@@ -388,8 +388,15 @@ export function useNewApiManagedVerification() {
         ),
         errorMessage: undefined,
       }))
-      const cleanup = await cleanupNewApiOwnedSession(request.config.baseUrl)
-      if (cleanup.status !== "cleaned") {
+      let cleanupSucceeded = false
+      try {
+        cleanupSucceeded =
+          (await cleanupNewApiOwnedSession(request.config.baseUrl)).status ===
+          "cleaned"
+      } catch {
+        // Use the same local recovery state for transport and result failures.
+      }
+      if (!cleanupSucceeded) {
         setState((prev) => ({
           ...prev,
           isBusy: false,

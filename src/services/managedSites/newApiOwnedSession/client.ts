@@ -12,9 +12,13 @@ const logger = createLogger("NewApiOwnedSessionClient")
 /** Sends one non-retrying ownership command without breaking the caller. */
 async function sendBestEffort(message: unknown) {
   try {
-    return await sendRuntimeMessage<NewApiOwnedSessionResponse>(message, {
-      maxAttempts: 1,
-    })
+    const response = await sendRuntimeMessage<NewApiOwnedSessionResponse>(
+      message,
+      {
+        maxAttempts: 1,
+      },
+    )
+    return response ?? ({ success: false } as const)
   } catch (error) {
     logger.warn("New API owned-session background request failed", { error })
     return { success: false } as const

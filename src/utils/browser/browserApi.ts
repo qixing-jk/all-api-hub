@@ -713,8 +713,12 @@ export async function setSessionStorageValues(
   values: Record<string, unknown>,
 ): Promise<boolean> {
   if (!hasSessionStorageArea()) return false
-  await (globalThis as any).browser.storage.session.set(values)
-  return true
+  try {
+    await (globalThis as any).browser.storage.session.set(values)
+    return true
+  } catch {
+    return false
+  }
 }
 
 /**

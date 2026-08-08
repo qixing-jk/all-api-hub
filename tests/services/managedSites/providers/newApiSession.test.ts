@@ -1440,6 +1440,45 @@ describe("newApiSession", () => {
     })
   })
 
+  it("maps an active-session limit returned by login 2FA", async () => {
+    getOwnedSessionStatusMock.mockResolvedValue({ owned: true })
+    server.use(
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login/2fa`, () =>
+        HttpResponse.json(
+          {
+            code: "AUTH_SESSION_LIMIT",
+            message: "too many active sessions",
+          },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    await expect(
+      submitNewApiLoginTwoFactorCode(BASE_CONFIG, "123456"),
+    ).resolves.toEqual({
+      status: NEW_API_MANAGED_SESSION_STATUSES.SESSION_ACTIVE_LIMIT,
+      cleanupAvailable: true,
+    })
+    expect(getOwnedSessionStatusMock).toHaveBeenCalledWith(BASE_CONFIG.baseUrl)
+  })
+
+  it("rethrows a non-limit login 2FA transport error", async () => {
+    server.use(
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login/2fa`, () =>
+        HttpResponse.json(
+          { code: "UPSTREAM_UNAVAILABLE", message: "try later" },
+          { status: 503 },
+        ),
+      ),
+    )
+
+    await expect(
+      submitNewApiLoginTwoFactorCode(BASE_CONFIG, "123456"),
+    ).rejects.toMatchObject({ statusCode: 503 })
+    expect(getOwnedSessionStatusMock).not.toHaveBeenCalled()
+  })
+
   it("rejects a malformed modern AuthBundle returned by login 2FA", async () => {
     server.use(
       http.post(`${BASE_CONFIG.baseUrl}/api/user/login/2fa`, () =>

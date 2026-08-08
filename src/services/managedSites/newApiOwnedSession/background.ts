@@ -64,7 +64,6 @@ export async function revokeNewApiOwnedSession(
         tempWindowFallback: { statusCodes: [], codes: [] },
         options: {
           method: "DELETE",
-          headers: { Origin: receipt.origin },
         },
       },
     )
