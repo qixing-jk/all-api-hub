@@ -12,6 +12,7 @@ import {
   type PricingResponse,
   type ProductCanonicalModel,
 } from "~/services/modelList/pricingModel"
+import { isIsoCalendarDate } from "~/services/models/isoCalendarDate"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import {
   isModelDisplayTranslationKey,
@@ -71,16 +72,7 @@ const utcClockSchema = z
   .max(2359)
   .refine((value) => value % 100 < 60)
 
-const isoCalendarDateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine((value) => {
-    const parsed = new Date(`${value}T00:00:00Z`)
-    return (
-      !Number.isNaN(parsed.getTime()) &&
-      parsed.toISOString().slice(0, 10) === value
-    )
-  })
+const isoCalendarDateSchema = z.string().refine(isIsoCalendarDate)
 
 const modelDisplayLabelSchema = z.strictObject({
   translationKey: trimmedNonBlankStringSchema
@@ -93,12 +85,7 @@ const stringListSchema = z
   .array(trimmedNonBlankStringSchema)
   .refine((values) => new Set(values).size === values.length)
 
-const modelDisplayPriceUnitSchema = z.enum(
-  Object.values(MODEL_DISPLAY_PRICE_UNITS) as [
-    (typeof MODEL_DISPLAY_PRICE_UNITS)[keyof typeof MODEL_DISPLAY_PRICE_UNITS],
-    ...(typeof MODEL_DISPLAY_PRICE_UNITS)[keyof typeof MODEL_DISPLAY_PRICE_UNITS][],
-  ],
-)
+const modelDisplayPriceUnitSchema = z.enum(MODEL_DISPLAY_PRICE_UNITS)
 
 const modelDisplayPriceSchema = z.strictObject({
   label: modelDisplayLabelSchema,

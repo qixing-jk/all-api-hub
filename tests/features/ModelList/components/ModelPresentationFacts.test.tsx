@@ -260,6 +260,11 @@ describe("generic model presentation facts", () => {
                   value: false,
                 },
                 {
+                  type: MODEL_DISPLAY_FACT_TYPES.Boolean,
+                  label: { fallback: "Tool calling" },
+                  value: true,
+                },
+                {
                   type: MODEL_DISPLAY_FACT_TYPES.Number,
                   label: { fallback: "Default temperature" },
                   value: 0,
@@ -333,6 +338,7 @@ describe("generic model presentation facts", () => {
 
     expect(screen.getByText("$1.50 / 1M input tokens")).toBeInTheDocument()
     expect(screen.getByText("No")).toBeInTheDocument()
+    expect(screen.getByText("Yes")).toBeInTheDocument()
     expect(screen.getByText("0")).toBeInTheDocument()
     expect(screen.getByText("Jan 2, 2024")).toBeInTheDocument()
     expect(

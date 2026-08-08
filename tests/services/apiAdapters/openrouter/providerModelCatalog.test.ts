@@ -473,8 +473,9 @@ describe("OpenRouter provider model catalog Adapter", () => {
           data: [
             {
               id: "publisher-example/model-partial",
+              canonical_slug: "invalid publisher/model-partial",
               context_length: 0,
-              created: -1,
+              created: Number.MAX_SAFE_INTEGER,
               knowledge_cutoff: "not-a-date",
               expiration_date: "2026-02-30",
               architecture: {
@@ -515,6 +516,7 @@ describe("OpenRouter provider model catalog Adapter", () => {
                 default_effort: " ",
                 supported_efforts: ["low", 4, " low "],
               },
+              default_parameters: { temperature: "invalid" },
               alias_target: { name: "Stable alias", slug: 4 },
               benchmarks: {
                 design_arena: [
@@ -535,8 +537,7 @@ describe("OpenRouter provider model catalog Adapter", () => {
                 ],
               },
               links: {
-                details:
-                  "https://catalog.example.invalid/api/v1/models/model/endpoints",
+                details: "https://[",
               },
             },
           ],
@@ -591,6 +592,7 @@ describe("OpenRouter provider model catalog Adapter", () => {
     ).toBe(false)
     expect(JSON.stringify(model.presentation)).not.toContain("not-a-date")
     expect(JSON.stringify(model.presentation)).not.toContain("2026-02-30")
+    expect(model.vendorEvidence).toBeUndefined()
   })
 
   it("does not infer publisher evidence from an unscoped model identifier", async () => {

@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { isIsoCalendarDate } from "~/services/models/isoCalendarDate"
 import { createModelDisplayLabel } from "~/services/models/modelDisplayFacts"
 
 export const nonBlankStringSchema = z.string().trim().min(1)
@@ -8,16 +9,7 @@ export const tokenQuantitySchema = z.number().int().nonnegative()
 export const booleanSchema = z.boolean()
 export const unknownArraySchema = z.array(z.unknown())
 export const unknownRecordSchema = z.record(z.string(), z.unknown())
-export const isoDateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine((value) => {
-    const parsed = new Date(`${value}T00:00:00Z`)
-    return (
-      !Number.isNaN(parsed.getTime()) &&
-      parsed.toISOString().slice(0, 10) === value
-    )
-  })
+export const isoDateSchema = z.string().refine(isIsoCalendarDate)
 
 /**
  * OpenRouter's documented model contract supplies per-token USD strings,
@@ -26,108 +18,86 @@ export const isoDateSchema = z
  * https://openrouter.ai/docs/client-sdks/typescript/models/publicpricing
  * https://openrouter.ai/docs/client-sdks/typescript/models/pricingoverride
  */
-export const architectureSchema = z
-  .object({
-    input_modalities: z.unknown().optional(),
-    output_modalities: z.unknown().optional(),
-    modality: z.unknown().optional(),
-    tokenizer: z.unknown().optional(),
-    instruct_type: z.unknown().optional(),
-  })
-  .passthrough()
+export const architectureSchema = z.looseObject({
+  input_modalities: z.unknown().optional(),
+  output_modalities: z.unknown().optional(),
+  modality: z.unknown().optional(),
+  tokenizer: z.unknown().optional(),
+  instruct_type: z.unknown().optional(),
+})
 
-export const pricingSchema = z
-  .object({
-    prompt: z.unknown().optional(),
-    completion: z.unknown().optional(),
-    request: z.unknown().optional(),
-    image: z.unknown().optional(),
-    image_output: z.unknown().optional(),
-    image_token: z.unknown().optional(),
-    audio: z.unknown().optional(),
-    audio_output: z.unknown().optional(),
-    web_search: z.unknown().optional(),
-    internal_reasoning: z.unknown().optional(),
-    input_audio_cache: z.unknown().optional(),
-    input_cache_read: z.unknown().optional(),
-    input_cache_write: z.unknown().optional(),
-    input_cache_write_1h: z.unknown().optional(),
-    discount: z.unknown().optional(),
-    overrides: z.unknown().optional(),
-  })
-  .passthrough()
+export const pricingSchema = z.looseObject({
+  prompt: z.unknown().optional(),
+  completion: z.unknown().optional(),
+  request: z.unknown().optional(),
+  image: z.unknown().optional(),
+  image_output: z.unknown().optional(),
+  image_token: z.unknown().optional(),
+  audio: z.unknown().optional(),
+  audio_output: z.unknown().optional(),
+  web_search: z.unknown().optional(),
+  internal_reasoning: z.unknown().optional(),
+  input_audio_cache: z.unknown().optional(),
+  input_cache_read: z.unknown().optional(),
+  input_cache_write: z.unknown().optional(),
+  input_cache_write_1h: z.unknown().optional(),
+  discount: z.unknown().optional(),
+  overrides: z.unknown().optional(),
+})
 
-export const topProviderSchema = z
-  .object({
-    context_length: z.unknown().optional(),
-    max_completion_tokens: z.unknown().optional(),
-    is_moderated: z.unknown().optional(),
-  })
-  .passthrough()
+export const topProviderSchema = z.looseObject({
+  context_length: z.unknown().optional(),
+  max_completion_tokens: z.unknown().optional(),
+  is_moderated: z.unknown().optional(),
+})
 
-export const perRequestLimitsSchema = z
-  .object({
-    prompt_tokens: z.unknown().optional(),
-    completion_tokens: z.unknown().optional(),
-  })
-  .passthrough()
+export const perRequestLimitsSchema = z.looseObject({
+  prompt_tokens: z.unknown().optional(),
+  completion_tokens: z.unknown().optional(),
+})
 
-export const reasoningSchema = z
-  .object({
-    mandatory: z.unknown().optional(),
-    default_enabled: z.unknown().optional(),
-    default_effort: z.unknown().optional(),
-    supported_efforts: z.unknown().optional(),
-    supports_max_tokens: z.unknown().optional(),
-  })
-  .passthrough()
+export const reasoningSchema = z.looseObject({
+  mandatory: z.unknown().optional(),
+  default_enabled: z.unknown().optional(),
+  default_effort: z.unknown().optional(),
+  supported_efforts: z.unknown().optional(),
+  supports_max_tokens: z.unknown().optional(),
+})
 
-export const aliasTargetSchema = z
-  .object({
-    name: z.unknown().optional(),
-    slug: z.unknown().optional(),
-  })
-  .passthrough()
+export const aliasTargetSchema = z.looseObject({
+  name: z.unknown().optional(),
+  slug: z.unknown().optional(),
+})
 
-export const linksSchema = z
-  .object({ details: z.unknown().optional() })
-  .passthrough()
+export const linksSchema = z.looseObject({ details: z.unknown().optional() })
 
-export const benchmarksSchema = z
-  .object({
-    artificial_analysis: z.unknown().optional(),
-    design_arena: z.unknown().optional(),
-  })
-  .passthrough()
+export const benchmarksSchema = z.looseObject({
+  artificial_analysis: z.unknown().optional(),
+  design_arena: z.unknown().optional(),
+})
 
-export const artificialAnalysisSchema = z
-  .object({
-    intelligence_index: z.unknown().optional(),
-    coding_index: z.unknown().optional(),
-    agentic_index: z.unknown().optional(),
-  })
-  .passthrough()
+export const artificialAnalysisSchema = z.looseObject({
+  intelligence_index: z.unknown().optional(),
+  coding_index: z.unknown().optional(),
+  agentic_index: z.unknown().optional(),
+})
 
-export const designArenaEntrySchema = z
-  .object({
-    arena: z.unknown().optional(),
-    category: z.unknown().optional(),
-    elo: z.unknown().optional(),
-    rank: z.unknown().optional(),
-    win_rate: z.unknown().optional(),
-  })
-  .passthrough()
+export const designArenaEntrySchema = z.looseObject({
+  arena: z.unknown().optional(),
+  category: z.unknown().optional(),
+  elo: z.unknown().optional(),
+  rank: z.unknown().optional(),
+  win_rate: z.unknown().optional(),
+})
 
-export const defaultParametersSchema = z
-  .object({
-    temperature: z.unknown().optional(),
-    top_p: z.unknown().optional(),
-    top_k: z.unknown().optional(),
-    frequency_penalty: z.unknown().optional(),
-    presence_penalty: z.unknown().optional(),
-    repetition_penalty: z.unknown().optional(),
-  })
-  .passthrough()
+export const defaultParametersSchema = z.looseObject({
+  temperature: z.unknown().optional(),
+  top_p: z.unknown().optional(),
+  top_k: z.unknown().optional(),
+  frequency_penalty: z.unknown().optional(),
+  presence_penalty: z.unknown().optional(),
+  repetition_penalty: z.unknown().optional(),
+})
 
 const label = (key: string, fallback: string) =>
   createModelDisplayLabel(

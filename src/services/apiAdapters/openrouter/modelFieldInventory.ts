@@ -1,4 +1,4 @@
-const OPENROUTER_MODEL_FIELD_CATEGORIES = {
+export const OPENROUTER_MODEL_FIELD_CATEGORIES = {
   ProductCanonicalModel: "product-canonical-model",
   NativeSummary: "native-summary",
   NativeDetail: "native-detail",

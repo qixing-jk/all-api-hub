@@ -77,6 +77,12 @@ function useModelDisplayFactText() {
       maximumFractionDigits: 8,
     }).format(value)
 
+  const formatPercent = (value: number) =>
+    new Intl.NumberFormat(i18n.language, {
+      style: "percent",
+      maximumFractionDigits: 2,
+    }).format(value / 100)
+
   const formatCurrency = (price: ModelDisplayPrice) =>
     new Intl.NumberFormat(i18n.language, {
       style: "currency",
@@ -100,6 +106,7 @@ function useModelDisplayFactText() {
     }).format(new Date(`${value}T00:00:00Z`))
 
   const formatClock = (value: number) => {
+    // OpenRouter encodes UTC pricing bounds as base-100 HHMM integers.
     const padded = value.toString().padStart(4, "0")
     return `${padded.slice(0, 2)}:${padded.slice(2)}`
   }
@@ -124,6 +131,7 @@ function useModelDisplayFactText() {
   return {
     formatDate,
     formatNumber,
+    formatPercent,
     formatPrice,
     formatPriceCondition,
     resolveLabel,
@@ -136,6 +144,7 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
   const {
     formatDate,
     formatNumber,
+    formatPercent,
     formatPrice,
     formatPriceCondition,
     resolveLabel,
@@ -280,7 +289,7 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
                     {formatNumber(entry.rank)}
                   </td>
                   <td className="border-t py-1">
-                    {formatNumber(entry.winRatePercent)}%
+                    {formatPercent(entry.winRatePercent)}
                   </td>
                 </tr>
               ))}

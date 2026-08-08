@@ -252,7 +252,7 @@ function createPrice(
       }
 }
 
-/** Checks an HHMM integer used by conditional pricing windows. */
+/** Checks OpenRouter's base-100 HHMM integer for a UTC pricing window. */
 function isValidUtcClock(value: number): boolean {
   const hours = Math.floor(value / 100)
   const minutes = value % 100
@@ -354,24 +354,17 @@ function normalizePricing(value: unknown): {
     })
   }
 
+  const cacheReadPrice = normalizeUsdPerMillionTokens(pricing.input_cache_read)
+  const cacheWritePrice = normalizeUsdPerMillionTokens(
+    pricing.input_cache_write,
+  )
+
   return {
     canonical: {
       ...(inputPrice !== undefined ? { inputPrice } : {}),
       ...(outputPrice !== undefined ? { outputPrice } : {}),
-      ...(normalizeUsdPerMillionTokens(pricing.input_cache_read) !== undefined
-        ? {
-            cacheReadPrice: normalizeUsdPerMillionTokens(
-              pricing.input_cache_read,
-            ),
-          }
-        : {}),
-      ...(normalizeUsdPerMillionTokens(pricing.input_cache_write) !== undefined
-        ? {
-            cacheWritePrice: normalizeUsdPerMillionTokens(
-              pricing.input_cache_write,
-            ),
-          }
-        : {}),
+      ...(cacheReadPrice !== undefined ? { cacheReadPrice } : {}),
+      ...(cacheWritePrice !== undefined ? { cacheWritePrice } : {}),
       hasInvalidPrimaryPrice: primaryStatuses.includes("invalid"),
     },
     facts,
