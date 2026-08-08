@@ -1,6 +1,6 @@
 # OpenRouter Public Catalog End-to-End
 
-Status: ready-for-agent
+Status: ready-for-human
 
 Blocked by: none
 
@@ -42,5 +42,22 @@ Make a saved OpenRouter account usable in the existing Model List and prove the 
 
 - Reuse existing model-load analytics; add only controlled catalog-scope/source-variant values if needed.
 - Keep telemetry free of model IDs, URLs, raw errors, payloads, and credentials.
+
+## Result
+
+Delivered on 2026-08-08 in `d2e3e7703` with the extension service-worker
+startup stabilization in `14226c87d`.
+
+- OpenRouter accounts now load one unauthenticated provider-wide public catalog
+  in both single-account and all-accounts Model List flows.
+- Provider-owned normalization and typed presentation facts keep OpenRouter DTOs
+  and field knowledge out of shared React orchestration.
+- Public catalog requests preserve pagination, cancellation, strict identity
+  validation, zero prices, provider-wide caching, and partial-failure behavior.
+- The source action policy does not treat a Management Key as a runtime model
+  credential.
+- Focused Vitest coverage, `pnpm run validate:push`, and the representative
+  Chromium extension E2E passed on the rebased delivery branch. The full E2E
+  suite and a signed-in live OpenRouter smoke test were not run.
 
 ## Comments
