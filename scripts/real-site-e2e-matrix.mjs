@@ -119,6 +119,17 @@ const REAL_SITE_E2E_MATRIX = [
     provider_account_prefix: "ctfile",
     spec: "e2e/realSite/webdavProviderFlow.spec.ts",
   },
+  {
+    id: "opencloud-webdav",
+    category: REAL_SITE_E2E_CATEGORIES.webdav,
+    label: "WebDAV / OpenCloud",
+    env_prefix: "OPENCLOUD_WEBDAV",
+    kind: "webdav",
+    provider_name: "OpenCloud",
+    provider_account_prefix: "opencloud",
+    simulate_upload_readback_425: true,
+    spec: "e2e/realSite/webdavProviderFlow.spec.ts",
+  },
 ]
 
 export function normalizeRealSiteE2eCategory(category = "all") {

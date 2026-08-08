@@ -22,6 +22,15 @@ const providerAliases = new Map([
       accountPrefix: "ctfile",
     },
   ],
+  [
+    "opencloud",
+    {
+      providerPrefix: "OPENCLOUD_WEBDAV",
+      providerName: "OpenCloud",
+      accountPrefix: "opencloud",
+      simulateUploadReadback425: true,
+    },
+  ],
 ])
 
 const { providerArg, extraPlaywrightArgs } = parseArgs(process.argv.slice(2))
@@ -37,6 +46,9 @@ const env = {
   AAH_E2E_WEBDAV_PROVIDER_PREFIX: provider.providerPrefix,
   AAH_E2E_WEBDAV_PROVIDER_NAME: provider.providerName,
   AAH_E2E_WEBDAV_ACCOUNT_PREFIX: provider.accountPrefix,
+  ...(provider.simulateUploadReadback425
+    ? { AAH_E2E_WEBDAV_SIMULATE_UPLOAD_READBACK_425: "1" }
+    : {}),
 }
 
 runPnpm([
@@ -142,8 +154,10 @@ function printUsage() {
   pnpm e2e:real-site:webdav
   pnpm e2e:real-site:webdav nutstore
   pnpm e2e:real-site:webdav ctfile
+  pnpm e2e:real-site:webdav opencloud
   pnpm e2e:real-site:nutstore
   pnpm e2e:real-site:ctfile
+  pnpm e2e:real-site:opencloud
   pnpm e2e:real-site:webdav CUSTOM_WEBDAV -- --headed
 
 The provider argument selects AAH_E2E_<PROVIDER>_URL, USERNAME, and PASSWORD

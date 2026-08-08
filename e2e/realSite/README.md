@@ -22,7 +22,10 @@ Provider compatibility checks:
   test, upload overwrite, and download/import flow. Nutstore is included as a
   regression target for existing-file `MOVE` compatibility and non-ASCII
   `Destination` header paths. CTFile is included as a regression target for
-  providers that reject hidden temporary upload names.
+  providers that reject hidden temporary upload names. OpenCloud is included
+  for asynchronous upload post-processing: its run deterministically injects
+  one `425 Too Early` temporary-file readback before continuing against the
+  live provider.
 
 For current coverage details, inspect the specs in this directory and the shared
 helpers under `e2e/scenarios/`.
@@ -51,6 +54,7 @@ Run one shared WebDAV provider flow locally:
 ```bash
 pnpm e2e:real-site:nutstore
 pnpm e2e:real-site:ctfile
+pnpm e2e:real-site:opencloud
 pnpm e2e:real-site:webdav-provider
 ```
 
@@ -222,6 +226,21 @@ WebDAV servers that reject hidden `PUT` target names.
 AAH_E2E_CTFILE_WEBDAV_URL=https://dav.ctfile.com/test-space/all-api-hub-e2e/all-api-hub-ctfile.json
 AAH_E2E_CTFILE_WEBDAV_USERNAME=test-user
 AAH_E2E_CTFILE_WEBDAV_PASSWORD=replace-with-ctfile-password
+```
+
+## OpenCloud WebDAV
+
+Use a dedicated low-value OpenCloud account and an explicit test-only JSON file
+URL under an existing writable space. The shared provider flow removes only
+that exact file before and after the run. To cover OpenCloud's asynchronous
+post-processing contract deterministically, the OpenCloud matrix entry replaces
+the first temporary-file readback response with `425 Too Early`; the retry and
+all subsequent requests still use the live provider.
+
+```env
+AAH_E2E_OPENCLOUD_WEBDAV_URL=https://opencloud.example.invalid/dav/spaces/example-space/all-api-hub-e2e/all-api-hub-opencloud.json
+AAH_E2E_OPENCLOUD_WEBDAV_USERNAME=test-user
+AAH_E2E_OPENCLOUD_WEBDAV_PASSWORD=replace-with-opencloud-password
 ```
 
 ## Additional WebDAV Providers

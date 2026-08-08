@@ -94,6 +94,9 @@ function buildEntryEnv(entry, options = {}) {
     env.AAH_E2E_WEBDAV_PROVIDER_PREFIX = entry.env_prefix
     env.AAH_E2E_WEBDAV_PROVIDER_NAME = entry.provider_name
     env.AAH_E2E_WEBDAV_ACCOUNT_PREFIX = entry.provider_account_prefix
+    if (entry.simulate_upload_readback_425) {
+      env.AAH_E2E_WEBDAV_SIMULATE_UPLOAD_READBACK_425 = "1"
+    }
   }
 
   return env

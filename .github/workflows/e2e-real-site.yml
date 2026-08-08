@@ -131,6 +131,7 @@ jobs:
           NEW_API_SOURCE_AGREE_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_AGREE_SELECTOR }}
           WEBDAV_PROVIDER_NAME: ${{ matrix.provider_name }}
           WEBDAV_PROVIDER_ACCOUNT_PREFIX: ${{ matrix.provider_account_prefix }}
+          WEBDAV_SIMULATE_UPLOAD_READBACK_425: ${{ matrix.simulate_upload_readback_425 }}
           WEBDAV_URL: ${{ secrets[format('AAH_E2E_{0}_URL', matrix.env_prefix)] }}
           WEBDAV_USERNAME: ${{ secrets[format('AAH_E2E_{0}_USERNAME', matrix.env_prefix)] }}
           WEBDAV_PASSWORD: ${{ secrets[format('AAH_E2E_{0}_PASSWORD', matrix.env_prefix)] }}
@@ -150,6 +151,7 @@ jobs:
             write_env "AAH_E2E_WEBDAV_PROVIDER_PREFIX" "$prefix"
             write_env "AAH_E2E_WEBDAV_PROVIDER_NAME" "$WEBDAV_PROVIDER_NAME"
             write_env "AAH_E2E_WEBDAV_ACCOUNT_PREFIX" "$WEBDAV_PROVIDER_ACCOUNT_PREFIX"
+            write_env "AAH_E2E_WEBDAV_SIMULATE_UPLOAD_READBACK_425" "$WEBDAV_SIMULATE_UPLOAD_READBACK_425"
             write_env "AAH_E2E_WEBDAV_URL" "$WEBDAV_URL"
             write_env "AAH_E2E_WEBDAV_USERNAME" "$WEBDAV_USERNAME"
             write_env "AAH_E2E_WEBDAV_PASSWORD" "$WEBDAV_PASSWORD"
