@@ -362,6 +362,7 @@ function createModelListData() {
     unsupportedSource: false,
     loadErrorMessage: null,
     accountFallback: null,
+    personalizedCatalogFallback: null,
     isFallbackCatalogActive: false,
     isAihubmixCatalogFallbackActive: false,
     filteredModels: [],
@@ -383,6 +384,24 @@ describe("ModelList", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseModelListData.mockReturnValue(createModelListData())
+  })
+
+  it("renders the personalized catalog fallback notice with model data", () => {
+    mockUseModelListData.mockReturnValue({
+      ...createModelListData(),
+      personalizedCatalogFallback: {
+        affectedAccountCount: 1,
+        failureCategory: "auth",
+        message: "The saved credential needs attention.",
+        retry: vi.fn(),
+      },
+    })
+
+    render(<ModelList />)
+
+    expect(
+      screen.getByText("The saved credential needs attention."),
+    ).toBeInTheDocument()
   })
 
   it("opens key management for the selected account from the title action", async () => {

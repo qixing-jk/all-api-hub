@@ -11,6 +11,7 @@ import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
+  type ModelCatalogScope,
 } from "~/services/modelList/pricingModel"
 import type { ProviderModelCatalogModel } from "~/services/modelList/providerCatalogAdmission"
 
@@ -84,7 +85,7 @@ function adaptOpenRouterModel(
 /** Decorates normalized OpenRouter rows with their catalog visibility scope. */
 function createOpenRouterCatalogPricingResponse(
   models: OpenRouterPublicModel[],
-  catalogScope: (typeof MODEL_CATALOG_SCOPES)[keyof typeof MODEL_CATALOG_SCOPES],
+  catalogScope: ModelCatalogScope,
 ) {
   return {
     data: models.map(adaptOpenRouterModel),

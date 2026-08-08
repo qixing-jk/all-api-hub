@@ -2075,4 +2075,25 @@ describe("BatchVerifyModelsDialog", () => {
       await screen.findByTestId(getBatchVerifyRowTestId(itemKey)),
     ).toHaveTextContent("modelList:sourceLabels.providerCatalogBadge")
   })
+
+  it("renders a personalized-catalog source label from the saved account", async () => {
+    const itemKey = "account:acc-1:personalized-catalog:model:example-model"
+    renderDialog([
+      {
+        key: itemKey,
+        modelId: "example-model",
+        enableGroups: [],
+        source: { kind: "account", account },
+        sourceIdentity: {
+          kind: "personalized-catalog",
+          id: "personalized-catalog:acc-1",
+          accountId: "acc-1",
+        },
+      },
+    ])
+
+    expect(
+      await screen.findByTestId(getBatchVerifyRowTestId(itemKey)),
+    ).toHaveTextContent("modelList:sourceLabels.personalizedCatalogBadge")
+  })
 })

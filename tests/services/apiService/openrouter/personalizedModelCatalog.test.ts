@@ -140,6 +140,126 @@ describe("OpenRouter personalized model catalog transport", () => {
     ).rejects.toMatchObject({ code: API_ERROR_CODES.JSON_PARSE_ERROR })
   })
 
+  it("rejects an invalid next-page URL", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models/user`, () =>
+        HttpResponse.json({
+          data: [{ id: "example/model-alpha" }],
+          total_count: 2,
+          links: { next: "not-a-url" },
+        }),
+      ),
+    )
+
+    await expect(
+      fetchOpenRouterPersonalizedModelCatalog({
+        accountId: "account-example-a",
+        managementKey: "management-key-example",
+      }),
+    ).rejects.toMatchObject({ code: API_ERROR_CODES.JSON_PARSE_ERROR })
+  })
+
+  it("rejects total-count drift between pages", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models/user`, ({ request }) => {
+        const offset = new URL(request.url).searchParams.get("offset")
+        return HttpResponse.json(
+          offset === "1"
+            ? {
+                data: [{ id: "example/model-beta" }],
+                total_count: 3,
+                links: { next: null },
+              }
+            : {
+                data: [{ id: "example/model-alpha" }],
+                total_count: 2,
+                links: {
+                  next: `${OPENROUTER_API_BASE_URL}/models/user?offset=1&limit=1`,
+                },
+              },
+        )
+      }),
+    )
+
+    await expect(
+      fetchOpenRouterPersonalizedModelCatalog({
+        accountId: "account-example-a",
+        managementKey: "management-key-example",
+      }),
+    ).rejects.toMatchObject({ code: API_ERROR_CODES.JSON_PARSE_ERROR })
+  })
+
+  it("rejects pagination that stops adding unique models", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models/user`, ({ request }) => {
+        const offset = new URL(request.url).searchParams.get("offset")
+        return HttpResponse.json({
+          data: [{ id: "example/model-alpha" }],
+          total_count: 3,
+          links: {
+            next:
+              offset === "1"
+                ? `${OPENROUTER_API_BASE_URL}/models/user?offset=2&limit=1`
+                : `${OPENROUTER_API_BASE_URL}/models/user?offset=1&limit=1`,
+          },
+        })
+      }),
+    )
+
+    await expect(
+      fetchOpenRouterPersonalizedModelCatalog({
+        accountId: "account-example-a",
+        managementKey: "management-key-example",
+      }),
+    ).rejects.toMatchObject({ code: API_ERROR_CODES.JSON_PARSE_ERROR })
+  })
+
+  it("rejects a final unique-model count that differs from total_count", async () => {
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models/user`, () =>
+        HttpResponse.json({
+          data: [{ id: "example/model-alpha" }],
+          total_count: 2,
+          links: { next: null },
+        }),
+      ),
+    )
+
+    await expect(
+      fetchOpenRouterPersonalizedModelCatalog({
+        accountId: "account-example-a",
+        managementKey: "management-key-example",
+      }),
+    ).rejects.toMatchObject({ code: API_ERROR_CODES.JSON_PARSE_ERROR })
+  })
+
+  it("bounds authenticated pagination when upstream reports excessive pages", async () => {
+    let requestCount = 0
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models/user`, ({ request }) => {
+        requestCount += 1
+        const offset = Number(
+          new URL(request.url).searchParams.get("offset") ?? 0,
+        )
+        return HttpResponse.json({
+          data: [{ id: `example/model-${offset}` }],
+          total_count: 51,
+          links: {
+            next: `${OPENROUTER_API_BASE_URL}/models/user?offset=${offset + 1}&limit=1`,
+          },
+        })
+      }),
+    )
+
+    await expect(
+      fetchOpenRouterPersonalizedModelCatalog({
+        accountId: "account-example-a",
+        managementKey: "management-key-example",
+      }),
+    ).rejects.toMatchObject({ code: API_ERROR_CODES.JSON_PARSE_ERROR })
+    expect(requestCount).toBe(50)
+  })
+
   it("propagates caller cancellation without starting another request", async () => {
     const abortController = new AbortController()
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementationOnce(

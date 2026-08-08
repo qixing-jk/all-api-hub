@@ -8,6 +8,7 @@ import ModelItem from "~/features/ModelList/components/ModelItem"
 import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
 import {
   createAccountTokenModelListSourceIdentity,
+  createPersonalizedCatalogModelListSourceIdentity,
   createProviderCatalogModelListSourceIdentity,
 } from "~/features/ModelList/modelManagementSources"
 import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
@@ -987,6 +988,21 @@ describe("ModelItem", () => {
       screen.queryByRole("button", { name: "actions.openSite" }),
     ).not.toBeInTheDocument()
     expect(onFilterAccount).not.toHaveBeenCalled()
+  })
+
+  it("labels personalized catalogs with the saved account", () => {
+    render(
+      <ModelItem
+        {...createDefaultProps()}
+        sourceIdentity={createPersonalizedCatalogModelListSourceIdentity(
+          "account-1",
+        )}
+      />,
+    )
+
+    expect(
+      screen.getByText("sourceLabels.personalizedCatalogBadge"),
+    ).toBeInTheDocument()
   })
 
   it("treats expansion as controlled only when both props are provided", async () => {

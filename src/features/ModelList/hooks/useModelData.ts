@@ -147,6 +147,7 @@ export interface AccountFallbackControls {
 
 export interface PersonalizedCatalogFallbackControls {
   affectedAccountCount: number
+  /** In all-account views, this represents the first affected account. */
   failureCategory: ModelCatalogFailureCategory
   message: string
   retry: () => Promise<void>
@@ -659,9 +660,9 @@ interface PersonalizedProviderModelCatalogLoadResult {
   }
 }
 
-const providerCatalogFallbackLoads = new Map<
-  string,
-  Promise<{ pricing: PricingResponse; cacheHit: boolean }>
+const providerCatalogFallbackLoads = new WeakMap<
+  QueryClient,
+  Map<string, Promise<{ pricing: PricingResponse; cacheHit: boolean }>>
 >()
 
 /** Preserves each account query's cancellation boundary around shared loads. */
@@ -673,12 +674,18 @@ function throwIfCatalogLoadAborted(abortSignal?: AbortSignal) {
 
 /** Shares one credential-free provider fallback request across account queries. */
 async function loadSharedProviderModelCatalogFallback(params: {
+  queryClient: QueryClient
   capability: ProviderModelCatalogCapability
   abortSignal?: AbortSignal
 }) {
   throwIfCatalogLoadAborted(params.abortSignal)
   const sourceId = params.capability.source.id
-  let load = providerCatalogFallbackLoads.get(sourceId)
+  let queryClientLoads = providerCatalogFallbackLoads.get(params.queryClient)
+  if (!queryClientLoads) {
+    queryClientLoads = new Map()
+    providerCatalogFallbackLoads.set(params.queryClient, queryClientLoads)
+  }
+  let load = queryClientLoads.get(sourceId)
 
   if (!load) {
     // A caller cancellation must not abort the shared public request for
@@ -686,12 +693,15 @@ async function loadSharedProviderModelCatalogFallback(params: {
     const pendingLoad = loadProviderModelCatalogPricing({
       capability: params.capability,
     }).finally(() => {
-      if (providerCatalogFallbackLoads.get(sourceId) === pendingLoad) {
-        providerCatalogFallbackLoads.delete(sourceId)
+      if (queryClientLoads.get(sourceId) === pendingLoad) {
+        queryClientLoads.delete(sourceId)
+        if (queryClientLoads.size === 0) {
+          providerCatalogFallbackLoads.delete(params.queryClient)
+        }
       }
     })
     load = pendingLoad
-    providerCatalogFallbackLoads.set(sourceId, load)
+    queryClientLoads.set(sourceId, load)
   }
 
   const result = await load
@@ -701,11 +711,20 @@ async function loadSharedProviderModelCatalogFallback(params: {
 
 /** Owns personalized validation, failure classification, and public fallback. */
 async function loadPersonalizedProviderModelCatalogPricing(params: {
+  queryClient: QueryClient
   capability: ProviderModelCatalogCapability
   personalized: NonNullable<ProviderModelCatalogCapability["personalized"]>
   account: DisplaySiteData
   abortSignal?: AbortSignal
 }): Promise<PersonalizedProviderModelCatalogLoadResult> {
+  if (!params.account.token.trim()) {
+    return loadSharedProviderModelCatalogFallback({
+      queryClient: params.queryClient,
+      capability: params.capability,
+      abortSignal: params.abortSignal,
+    })
+  }
+
   try {
     const pricing = await params.personalized.fetchPricing({
       accountId: params.account.id,
@@ -726,6 +745,7 @@ async function loadPersonalizedProviderModelCatalogPricing(params: {
 
     const category = getPersonalizedCatalogFailureCategory(error)
     const { pricing, cacheHit } = await loadSharedProviderModelCatalogFallback({
+      queryClient: params.queryClient,
       capability: params.capability,
       abortSignal: params.abortSignal,
     })
@@ -1128,6 +1148,7 @@ function useSingleAccountModelData(params: {
         if (readiness.providerModelCatalog.personalized) {
           const { pricing, cacheHit } =
             await loadPersonalizedProviderModelCatalogPricing({
+              queryClient,
               capability: readiness.providerModelCatalog,
               personalized: readiness.providerModelCatalog.personalized,
               account: currentAccount,
@@ -1739,6 +1760,7 @@ function useAllAccountsModelData(
           if (readiness.providerModelCatalog.personalized) {
             const { pricing, personalizedFailure } =
               await loadPersonalizedProviderModelCatalogPricing({
+                queryClient,
                 capability: readiness.providerModelCatalog,
                 personalized: readiness.providerModelCatalog.personalized,
                 account,

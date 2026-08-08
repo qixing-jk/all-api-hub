@@ -7,6 +7,7 @@ import { openRouterPersonalizedModelCatalogPageSchema } from "./personalizedMode
 import type { OpenRouterPublicModel } from "./publicModelCatalogSchemas"
 
 const OPENROUTER_PERSONALIZED_MODELS_ENDPOINT = "/models/user"
+const OPENROUTER_PERSONALIZED_CATALOG_MAX_PAGES = 50
 
 const createInvalidPersonalizedCatalogResponseError = () =>
   new ApiError(
@@ -118,7 +119,10 @@ export async function fetchOpenRouterPersonalizedModelCatalog(params: {
   let expectedTotalCount: number | undefined
 
   while (true) {
-    if (visitedEndpoints.has(endpoint)) {
+    if (
+      visitedEndpoints.has(endpoint) ||
+      visitedEndpoints.size >= OPENROUTER_PERSONALIZED_CATALOG_MAX_PAGES
+    ) {
       throw createInvalidPersonalizedCatalogResponseError()
     }
     visitedEndpoints.add(endpoint)
