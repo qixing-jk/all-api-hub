@@ -24,6 +24,7 @@ import {
 import {
   buildRealSiteRunId,
   buildRealSiteTestTokenName,
+  REAL_SITE_TEST_TOKEN_NAME_PREFIX,
 } from "~~/e2e/utils/realSite/keyManagement"
 import { maybeRunRealSiteModelToKeyScenario } from "~~/e2e/utils/realSite/modelToKey"
 
@@ -48,7 +49,10 @@ vi.mock("~~/e2e/scenarios/accountUsage", () => ({
   verifyAccountModelCatalogUsage: mocks.verifyAccountModelCatalogUsage,
 }))
 
-vi.mock("~~/e2e/utils/realSite/keyManagement", () => ({
+vi.mock("~~/e2e/utils/realSite/keyManagement", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~~/e2e/utils/realSite/keyManagement")
+  >()),
   buildRealSiteRunId: mocks.buildRealSiteRunId,
   buildRealSiteTestTokenName: mocks.buildRealSiteTestTokenName,
 }))
@@ -110,6 +114,7 @@ describe("real-site account usage adapters", () => {
       serviceWorker,
       account,
       cleanupAccountFixture: false,
+      cleanupTokenNamePrefix: REAL_SITE_TEST_TOKEN_NAME_PREFIX,
     })
     expect(call.buildTokenName()).toBe("New API:run-id")
   })
