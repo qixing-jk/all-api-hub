@@ -11,6 +11,7 @@ import type {
   ProductAnnouncementState,
   RawProductAnnouncementFeed,
 } from "~/services/productAnnouncements/types"
+import { ProductAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -110,6 +111,23 @@ async function readProductAnnouncementState(
     : null
 }
 
+async function waitForBackgroundProductAnnouncementRefresh(
+  page: Parameters<typeof forceExtensionLanguage>[0],
+) {
+  const response = await page.evaluate(async (type) => {
+    const chromeApi = (globalThis as any).chrome
+    const runtimeResponse = await chromeApi.runtime.sendMessage({
+      id: Date.now(),
+      type,
+      timestamp: Date.now(),
+    })
+
+    return runtimeResponse?.res ?? runtimeResponse
+  }, ProductAnnouncementsMessageTypes.Refresh)
+
+  expect(response).toMatchObject({ success: true })
+}
+
 test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
@@ -129,11 +147,15 @@ test("persists product announcement seen, dismiss, and restore state across opti
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
+  const optionsUrl = `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`
+
+  await page.goto(optionsUrl)
+  // Service startup may already be refreshing before this test installs its route.
+  // Await that shared refresh promise so it cannot overwrite the seeded state.
+  await waitForBackgroundProductAnnouncementRefresh(page)
   await seedProductAnnouncementState(serviceWorker)
 
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
-  )
+  await page.reload()
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
