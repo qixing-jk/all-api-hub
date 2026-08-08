@@ -24,6 +24,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { sendTypedRuntimeMessageFromPage } from "~~/e2e/utils/runtimeMessaging"
 
 const AUTO_CHECKIN_E2E_STATE_KEY = "__aah_auto_checkin_e2e_state__"
 const AUTO_CHECKIN_STATUS_STORAGE_KEY = "autoCheckin_status"
@@ -94,26 +95,6 @@ async function getDailyAlarm(
         }
       : null
   }, AUTO_CHECKIN_DAILY_ALARM_NAME)
-}
-
-async function sendTypedRuntimeMessageFromPage<TResponse>(
-  page: Page,
-  type: string,
-  data?: Record<string, unknown>,
-): Promise<TResponse> {
-  return await page.evaluate(
-    async ({ type, data }) => {
-      const chromeApi = (globalThis as any).chrome
-      const response = await chromeApi.runtime.sendMessage({
-        id: Date.now(),
-        type,
-        data,
-        timestamp: Date.now(),
-      })
-      return response?.res ?? response
-    },
-    { type, data },
-  )
 }
 
 async function openAutoCheckinOptionsPage(page: Page, extensionId: string) {

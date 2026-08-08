@@ -25,6 +25,7 @@ import {
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { sendTypedRuntimeMessageFromPage } from "~~/e2e/utils/runtimeMessaging"
 
 const RISK_ANNOUNCEMENT_ID = "e2e-critical-product-risk"
 const INFO_ANNOUNCEMENT_ID = "e2e-info-product-update"
@@ -114,16 +115,10 @@ async function readProductAnnouncementState(
 async function waitForBackgroundProductAnnouncementRefresh(
   page: Parameters<typeof forceExtensionLanguage>[0],
 ) {
-  const response = await page.evaluate(async (type) => {
-    const chromeApi = (globalThis as any).chrome
-    const runtimeResponse = await chromeApi.runtime.sendMessage({
-      id: Date.now(),
-      type,
-      timestamp: Date.now(),
-    })
-
-    return runtimeResponse?.res ?? runtimeResponse
-  }, ProductAnnouncementsMessageTypes.Refresh)
+  const response = await sendTypedRuntimeMessageFromPage<{
+    success: boolean
+    data?: boolean
+  }>(page, ProductAnnouncementsMessageTypes.Refresh)
 
   expect(response).toMatchObject({ success: true })
 }

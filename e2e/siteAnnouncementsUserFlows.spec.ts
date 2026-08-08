@@ -25,6 +25,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { sendTypedRuntimeMessageFromPage } from "~~/e2e/utils/runtimeMessaging"
 
 const SITE_ANNOUNCEMENTS_URL = (extensionId: string) =>
   `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.SITE_ANNOUNCEMENTS}`
@@ -130,26 +131,6 @@ async function seedPollingAnnouncementScenario(
       },
     }),
   ])
-}
-
-async function sendTypedRuntimeMessageFromPage<TResponse>(
-  page: Parameters<typeof forceExtensionLanguage>[0],
-  type: string,
-  data?: Record<string, unknown>,
-): Promise<TResponse> {
-  return await page.evaluate(
-    async ({ type, data }) => {
-      const chromeApi = (globalThis as any).chrome
-      const response = await chromeApi.runtime.sendMessage({
-        id: Date.now(),
-        type,
-        data,
-        timestamp: Date.now(),
-      })
-      return response?.res ?? response
-    },
-    { type, data },
-  )
 }
 
 function createAnnouncementStore(): SiteAnnouncementStoreState["sites"] {
