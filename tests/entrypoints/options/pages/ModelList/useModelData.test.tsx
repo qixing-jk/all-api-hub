@@ -1299,6 +1299,93 @@ describe("useModelData all-accounts loading", () => {
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
+  it("keeps an obsolete account cancellation isolated while a shared public fallback finishes", async () => {
+    const createPricing = (
+      modelName: string,
+      catalogScope: (typeof MODEL_CATALOG_SCOPES)[keyof typeof MODEL_CATALOG_SCOPES],
+    ) => ({
+      data: [createProviderCatalogModel(modelName)],
+      group_ratio: {},
+      success: true as const,
+      usable_group: {},
+      model_list_source: {
+        ...createProviderCatalogModelListSource(),
+        catalogScope,
+      },
+    })
+    const publicPricing = createPricing(
+      "example/public-model",
+      MODEL_CATALOG_SCOPES.PROVIDER,
+    )
+    const publicLoad = createDeferred<typeof publicPricing>()
+    const fetchPublicPricing = vi.fn(() => publicLoad.promise)
+    const fetchPersonalizedPricing = vi.fn(
+      ({ accountId }: { accountId: string }) =>
+        accountId === "account-fallback-obsolete"
+          ? Promise.reject(new Error("upstream unavailable"))
+          : Promise.resolve(
+              createPricing(
+                "example/current-personalized-model",
+                MODEL_CATALOG_SCOPES.PERSONALIZED,
+              ),
+            ),
+    )
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: {
+        providerModelCatalog: {
+          source: {
+            id: "provider-fallback-cancellation-example",
+            provider: SITE_TYPES.OPENROUTER,
+            displayName: "Example Provider",
+            cacheTtlMs: 300000,
+          },
+          fetchPricing: fetchPublicPricing,
+          personalized: {
+            cacheTtlMs: 0,
+            fetchPricing: fetchPersonalizedPricing,
+          },
+        },
+      },
+    } as any)
+    const obsoleteAccount = createDisplayAccount({
+      id: "account-fallback-obsolete",
+      siteType: SITE_TYPES.OPENROUTER,
+      token: "management-secret-obsolete",
+    })
+    const currentAccount = createDisplayAccount({
+      id: "account-fallback-current",
+      siteType: SITE_TYPES.OPENROUTER,
+      token: "management-secret-current",
+    })
+
+    const { result, rerender } = renderHook(
+      ({ account }) =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [obsoleteAccount, currentAccount],
+        }),
+      { initialProps: { account: obsoleteAccount }, wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(fetchPublicPricing).toHaveBeenCalledTimes(1))
+    rerender({ account: currentAccount })
+    await waitFor(() =>
+      expect(result.current.pricingData?.data[0]?.model_name).toBe(
+        "example/current-personalized-model",
+      ),
+    )
+
+    await act(async () => {
+      publicLoad.resolve(publicPricing)
+      await publicLoad.promise
+    })
+    expect(result.current.pricingData?.data[0]?.model_name).toBe(
+      "example/current-personalized-model",
+    )
+    expect(result.current.personalizedCatalogFallback).toBeNull()
+  })
+
   it("keeps a public fallback usable while retrying the selected account personalized source", async () => {
     const createPricing = (
       modelName: string,
@@ -1322,16 +1409,18 @@ describe("useModelData all-accounts loading", () => {
       MODEL_CATALOG_SCOPES.PERSONALIZED,
     )
     const fetchPublicPricing = vi.fn().mockResolvedValue(publicPricing)
+    const personalizedFailure = Object.assign(
+      new ApiError(
+        "raw-upstream-error-example",
+        401,
+        "/models/user",
+        API_ERROR_CODES.HTTP_401,
+      ),
+      { responseBody: { diagnostic: "raw-upstream-payload-example" } },
+    )
     const fetchPersonalizedPricing = vi
       .fn()
-      .mockRejectedValueOnce(
-        new ApiError(
-          "safe local auth failure",
-          401,
-          "/models/user",
-          API_ERROR_CODES.HTTP_401,
-        ),
-      )
+      .mockRejectedValueOnce(personalizedFailure)
       .mockResolvedValueOnce(personalizedPricing)
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.OPENROUTER,
@@ -1353,6 +1442,8 @@ describe("useModelData all-accounts loading", () => {
     } as any)
     const account = createDisplayAccount({
       id: "account-example-fallback",
+      name: "Private account label",
+      baseUrl: "https://private-account.example.invalid",
       siteType: SITE_TYPES.OPENROUTER,
       token: "management-secret-example",
     })
@@ -1390,9 +1481,22 @@ describe("useModelData all-accounts loading", () => {
     )
     expect(result.current.personalizedCatalogFallback).toBeNull()
     expect(fetchPublicPricing).toHaveBeenCalledTimes(1)
-    expect(
-      JSON.stringify(mockTrackProductAnalyticsActionCompleted.mock.calls),
-    ).not.toContain("management-secret-example")
+    const analyticsPayload = JSON.stringify(
+      mockTrackProductAnalyticsActionCompleted.mock.calls,
+    )
+    for (const privateValue of [
+      "management-secret-example",
+      "account-example-fallback",
+      "Private account label",
+      "https://private-account.example.invalid",
+      "example/public-model",
+      "example/personalized-model",
+      "/models/user",
+      "raw-upstream-error-example",
+      "raw-upstream-payload-example",
+    ]) {
+      expect(analyticsPayload).not.toContain(privateValue)
+    }
   })
 
   it("classifies an invalid personalized adapter result before using the public fallback", async () => {
