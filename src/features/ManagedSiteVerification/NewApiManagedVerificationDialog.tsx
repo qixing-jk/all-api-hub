@@ -52,6 +52,14 @@ const getStepBodyCopy = (
       return t("newApiManagedVerification:dialog.body.secureVerification")
     case NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL:
       return t("newApiManagedVerification:dialog.body.passkeyManual")
+    case NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT:
+      return t("newApiManagedVerification:dialog.body.sessionActiveLimit")
+    case NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT_CLEANUP:
+      return t(
+        "newApiManagedVerification:dialog.body.sessionActiveLimitCleanup",
+      )
+    case NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ISSUANCE_LIMIT:
+      return t("newApiManagedVerification:dialog.body.sessionIssuanceLimit")
     case NEW_API_MANAGED_VERIFICATION_STEPS.SUCCESS:
       return request?.kind === "token"
         ? t("newApiManagedVerification:dialog.body.successToken", {
@@ -135,8 +143,15 @@ export function NewApiManagedVerificationDialog(
     (props.step === NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE &&
       !props.request?.config.baseUrl.trim())
   const shouldShowRetryAction =
-    props.step === NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE &&
-    !shouldShowSettingsAction
+    (props.step === NEW_API_MANAGED_VERIFICATION_STEPS.FAILURE &&
+      !shouldShowSettingsAction) ||
+    props.step ===
+      NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT_CLEANUP
+  const shouldShowLimitOpenSiteAction =
+    props.step === NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT ||
+    props.step ===
+      NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT_CLEANUP ||
+    props.step === NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ISSUANCE_LIMIT
   const shouldShowQuickConfig = shouldShowSettingsAction && !props.isBusy
   const needsBaseUrl = useMemo(
     () =>
@@ -250,8 +265,21 @@ export function NewApiManagedVerificationDialog(
 
       {shouldShowRetryAction ? (
         <Button onClick={props.onRetry} disabled={props.isBusy}>
-          {t("dialog.actions.retry")}
+          {props.step ===
+          NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT_CLEANUP
+            ? t("dialog.actions.cleanupOwnedSessionAndRetry")
+            : t("dialog.actions.retry")}
         </Button>
+      ) : null}
+
+      {shouldShowLimitOpenSiteAction ? (
+        <WorkflowTransitionButton
+          variant="outline"
+          onClick={props.onOpenSite}
+          disabled={props.isBusy}
+        >
+          {t("dialog.actions.openSite")}
+        </WorkflowTransitionButton>
       ) : null}
 
       {isCodeEntryStep ? (

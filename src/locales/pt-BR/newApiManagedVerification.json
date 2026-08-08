@@ -1,6 +1,7 @@
 {
   "dialog": {
     "actions": {
+      "cleanupOwnedSessionAndRetry": "Limpar sessões da extensão e tentar novamente",
       "close": "Fechar",
       "openSite": "Abrir site",
       "retry": "Tentar novamente",
@@ -16,6 +17,9 @@
       "loginTwoFactor": "A etapa de login do New API exige um código de verificação para que a sessão administrativa baseada no navegador possa continuar.",
       "passkeyManual": "No momento, esta conta exige verificação por chave de acesso para a etapa segura. Conclua a verificação da chave de acesso no site, volte aqui e tente novamente.",
       "secureVerification": "A sessão administrativa está conectada, mas o New API ainda exige um código de verificação segura para que as chaves ocultas dos canais possam ser lidas.",
+      "sessionActiveLimit": "A New API atingiu o limite de sessões ativas. A extensão não tem uma sessão própria que possa remover com segurança; revogue uma sessão sem uso no site antes de tentar novamente.",
+      "sessionActiveLimitCleanup": "A New API atingiu o limite de sessões ativas. A extensão pode revogar somente as sessões que criou e então tentar novamente.",
+      "sessionIssuanceLimit": "A New API atingiu o limite de emissão de sessões em 24 horas. Remover sessões ativas não redefine esse limite; aguarde a recuperação da janela de emissão.",
       "successChannel": "Verificação de {{label}} concluída. A chave real do canal foi carregada.",
       "successSettings": "O fluxo de login e verificação do New API foi concluído com sucesso. Agora você pode continuar com as ações que exigem login e verificação.",
       "successToken": "Verificação de {{label}} concluída. O status do site gerenciado foi atualizado."
@@ -29,10 +33,12 @@
       "passkey": "Abra o site, conclua a solicitação da chave de acesso, volte aqui e tente novamente."
     },
     "messages": {
+      "cleaningOwnedSession": "Limpando as sessões da New API criadas pela extensão...",
       "completeRequiredConfig": "Preencha primeiro os campos de configuração obrigatórios.",
       "finishing": "Finalizando a verificação da sessão do New API...",
       "missingBaseUrl": "Adicione a URL base do New API antes de testar o fluxo da sessão.",
       "missingCode": "Insira primeiro o código de verificação.",
+      "ownedSessionCleanupFailed": "Não foi possível remover todas as sessões criadas pela extensão. Abra o gerenciamento de sessões do site e revogue manualmente as sessões sem uso.",
       "quickConfigSaveFailed": "Falha ao salvar a configuração rápida. Tente novamente.",
       "refreshingChannel": "Carregando a chave real do canal...",
       "refreshingToken": "Atualizando o status de site gerenciado deste token...",

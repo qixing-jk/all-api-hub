@@ -1,6 +1,7 @@
 {
   "dialog": {
     "actions": {
+      "cleanupOwnedSessionAndRetry": "Erweiterungssitzungen bereinigen und erneut versuchen",
       "close": "Schließen",
       "openSite": "Website öffnen",
       "retry": "Wiederholen",
@@ -16,6 +17,9 @@
       "loginTwoFactor": "Der Anmeldeschritt New API erfordert einen Bestätigungscode, bevor die browsergestützte Admin-Sitzung fortgesetzt werden kann.",
       "passkeyManual": "Dieses Konto stellt derzeit die Passkey-Verifizierung für den sicheren Schritt zur Verfügung. Führen Sie die Passkey-Überprüfung auf der Website durch, kehren Sie dann hierher zurück und versuchen Sie es erneut.",
       "secureVerification": "Die Admin-Sitzung ist angemeldet, aber New API erfordert immer noch einen sicheren Bestätigungscode, bevor versteckte Kanalschlüssel gelesen werden können.",
+      "sessionActiveLimit": "New API hat das Limit aktiver Sitzungen erreicht. Die Erweiterung kann keine eigene Sitzung sicher entfernen. Widerrufen Sie auf der Website eine nicht mehr verwendete Sitzung.",
+      "sessionActiveLimitCleanup": "New API hat das Limit aktiver Sitzungen erreicht. Die Erweiterung kann gezielt nur die von ihr erstellten Sitzungen widerrufen und den Vorgang erneut versuchen.",
+      "sessionIssuanceLimit": "New API hat das 24-Stunden-Limit für neue Sitzungen erreicht. Das Entfernen aktiver Sitzungen setzt dieses Limit nicht zurück; warten Sie, bis sich das Zeitfenster erholt.",
       "successChannel": "Verifizierung für {{label}} erfolgreich. Der echte Kanalschlüssel wurde geladen.",
       "successSettings": "Der New API-Anmelde- und Verifizierungsvorgang wurde erfolgreich abgeschlossen. Sie können nun mit Aktionen fortfahren, die eine Anmeldung und Verifizierung erfordern.",
       "successToken": "Die Überprüfung für {{label}} war erfolgreich. Der Status der verwalteten Website wurde aktualisiert."
@@ -29,10 +33,12 @@
       "passkey": "Öffnen Sie die Website, bestätigen Sie dort die Passkey-Aufforderung, kehren Sie anschließend hierher zurück und versuchen Sie es erneut."
     },
     "messages": {
+      "cleaningOwnedSession": "Die von der Erweiterung erstellten New API-Sitzungen werden bereinigt...",
       "completeRequiredConfig": "Füllen Sie zunächst die fehlenden Konfigurationsfelder aus.",
       "finishing": "New API-Sitzungsprüfung wird abgeschlossen...",
       "missingBaseUrl": "Fügen Sie die Basis-URL New API hinzu, bevor Sie den Sitzungsablauf testen.",
       "missingCode": "Geben Sie zuerst den Bestätigungscode ein.",
+      "ownedSessionCleanupFailed": "Nicht alle von der Erweiterung erstellten Sitzungen konnten entfernt werden. Öffnen Sie die Sitzungsverwaltung der Website und widerrufen Sie ungenutzte Sitzungen manuell.",
       "quickConfigSaveFailed": "Die Schnellkonfiguration konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
       "refreshingChannel": "Laden des echten Kanalschlüssels...",
       "refreshingToken": "Der Status der verwalteten Website dieses Tokens wird aktualisiert...",

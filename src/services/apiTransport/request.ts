@@ -188,6 +188,7 @@ function extractBackendErrorDetails(body: unknown): BackendErrorDetails | null {
       isBackendError: Boolean(
         (body as { success?: unknown }).success === false || isBusinessEnvelope,
       ),
+      upstreamCode: getSafeUpstreamCode(code),
     }
   }
 

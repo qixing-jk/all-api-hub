@@ -27,12 +27,36 @@ const MANAGE_API_KEYS_EXECUTION = userCommandExecution(
   PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
 )
 
-const { generateNewApiTotpCodeMock, sendRuntimeMessageMock } = vi.hoisted(
-  () => ({
-    generateNewApiTotpCodeMock: vi.fn<(secret: string) => string>(),
-    sendRuntimeMessageMock: vi.fn(),
-  }),
-)
+const {
+  generateNewApiTotpCodeMock,
+  sendRuntimeMessageMock,
+  captureOwnedSessionMock,
+  cleanupOwnedSessionMock,
+  refreshOwnedSessionMock,
+  touchOwnedSessionMock,
+  getOwnedSessionStatusMock,
+} = vi.hoisted(() => ({
+  generateNewApiTotpCodeMock: vi.fn<(secret: string) => string>(),
+  sendRuntimeMessageMock: vi.fn(),
+  captureOwnedSessionMock: vi.fn(),
+  cleanupOwnedSessionMock: vi.fn(),
+  refreshOwnedSessionMock: vi.fn(),
+  touchOwnedSessionMock: vi.fn(),
+  getOwnedSessionStatusMock: vi.fn(),
+}))
+
+vi.mock("~/services/managedSites/newApiOwnedSession/client", () => ({
+  captureNewApiOwnedSession: (...args: unknown[]) =>
+    captureOwnedSessionMock(...args),
+  cleanupNewApiOwnedSession: (...args: unknown[]) =>
+    cleanupOwnedSessionMock(...args),
+  refreshNewApiOwnedSession: (...args: unknown[]) =>
+    refreshOwnedSessionMock(...args),
+  touchNewApiOwnedSession: (...args: unknown[]) =>
+    touchOwnedSessionMock(...args),
+  getNewApiOwnedSessionStatus: (...args: unknown[]) =>
+    getOwnedSessionStatusMock(...args),
+}))
 
 vi.mock(
   "~/services/managedSites/providers/newApiTotp",
@@ -120,6 +144,17 @@ describe("newApiSession", () => {
     clearNewApiManagedSessionState()
     generateNewApiTotpCodeMock.mockReset()
     sendRuntimeMessageMock.mockReset()
+    captureOwnedSessionMock.mockReset().mockResolvedValue({ success: true })
+    cleanupOwnedSessionMock.mockReset().mockResolvedValue({ status: "none" })
+    refreshOwnedSessionMock.mockReset().mockResolvedValue({
+      success: true,
+      owned: false,
+    })
+    touchOwnedSessionMock.mockReset().mockResolvedValue({
+      success: true,
+      owned: false,
+    })
+    getOwnedSessionStatusMock.mockReset().mockResolvedValue({ owned: false })
     vi.useRealTimers()
     server.use(
       http.post(
@@ -127,6 +162,154 @@ describe("newApiSession", () => {
         () => new HttpResponse(null, { status: 404 }),
       ),
     )
+  })
+
+  it("classifies the active-session cap and reports whether owned cleanup is available", async () => {
+    getOwnedSessionStatusMock.mockResolvedValue({ owned: true })
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        unauthorizedResponse(),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        unauthorizedResponse(),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/auth/refresh`, () =>
+        HttpResponse.json(
+          {
+            code: "AUTH_SESSION_LIMIT",
+            message: "too many active sessions",
+          },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    await expect(ensureNewApiManagedSession(BASE_CONFIG)).resolves.toEqual({
+      status: NEW_API_MANAGED_SESSION_STATUSES.SESSION_ACTIVE_LIMIT,
+      cleanupAvailable: true,
+    })
+    expect(getOwnedSessionStatusMock).toHaveBeenCalledWith(BASE_CONFIG.baseUrl)
+  })
+
+  it("propagates the active-session cap through hidden-key recovery", async () => {
+    getOwnedSessionStatusMock.mockResolvedValue({ owned: true })
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        unauthorizedResponse(),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        unauthorizedResponse(),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/auth/refresh`, () =>
+        HttpResponse.json(
+          {
+            code: "AUTH_SESSION_LIMIT",
+            message: "too many active sessions",
+          },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchNewApiChannelKey({ ...BASE_CONFIG, channelId: 12 }),
+    ).rejects.toMatchObject({
+      kind: NEW_API_CHANNEL_KEY_ERROR_KINDS.SESSION_LIMIT,
+      sessionResult: {
+        status: NEW_API_MANAGED_SESSION_STATUSES.SESSION_ACTIVE_LIMIT,
+        cleanupAvailable: true,
+      },
+    } satisfies Pick<
+      NewApiChannelKeyRequirementError,
+      "kind" | "sessionResult"
+    >)
+  })
+
+  it("classifies the daily issuance cap without suggesting session cleanup", async () => {
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        unauthorizedResponse(),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        unauthorizedResponse(),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+        HttpResponse.json(
+          {
+            code: "AUTH_SESSION_ISSUANCE_LIMIT",
+            message: "daily issuance cap reached",
+          },
+          { status: 429 },
+        ),
+      ),
+    )
+
+    await expect(ensureNewApiManagedSession(BASE_CONFIG)).resolves.toEqual({
+      status: NEW_API_MANAGED_SESSION_STATUSES.SESSION_ISSUANCE_LIMIT,
+    })
+    expect(getOwnedSessionStatusMock).not.toHaveBeenCalled()
+  })
+
+  it("captures a modern AuthBundle only when credential login creates it", async () => {
+    const token = "fresh-owned-dashboard-token"
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, ({ request }) =>
+        request.headers.get("authorization") === `Bearer ${token}`
+          ? jsonData({ enabled: false })
+          : unauthorizedResponse(),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, ({ request }) =>
+        request.headers.get("authorization") === `Bearer ${token}`
+          ? jsonData({ enabled: false })
+          : unauthorizedResponse(),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
+        jsonData(createDashboardAuthBundle(token)),
+      ),
+    )
+
+    await ensureNewApiManagedSession(BASE_CONFIG)
+
+    expect(cleanupOwnedSessionMock).toHaveBeenCalledWith(BASE_CONFIG.baseUrl)
+    expect(captureOwnedSessionMock).toHaveBeenCalledWith({
+      baseUrl: BASE_CONFIG.baseUrl,
+      sessionId: "example-session-id",
+      accessToken: token,
+      accessExpiresAt: expect.any(Number),
+    })
+    expect(cleanupOwnedSessionMock.mock.invocationCallOrder[0]).toBeLessThan(
+      captureOwnedSessionMock.mock.invocationCallOrder[0],
+    )
+    expect(refreshOwnedSessionMock).not.toHaveBeenCalled()
+  })
+
+  it("refreshes ownership only through the matching-receipt path", async () => {
+    const token = "refreshed-owned-dashboard-token"
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, ({ request }) =>
+        request.headers.get("authorization") === `Bearer ${token}`
+          ? jsonData({ enabled: false })
+          : unauthorizedResponse(),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, ({ request }) =>
+        request.headers.get("authorization") === `Bearer ${token}`
+          ? jsonData({ enabled: false })
+          : unauthorizedResponse(),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/auth/refresh`, () =>
+        jsonData(createDashboardAuthBundle(token)),
+      ),
+    )
+
+    await ensureNewApiManagedSession(BASE_CONFIG)
+
+    expect(refreshOwnedSessionMock).toHaveBeenCalledWith({
+      baseUrl: BASE_CONFIG.baseUrl,
+      sessionId: "example-session-id",
+      accessToken: token,
+      accessExpiresAt: expect.any(Number),
+    })
+    expect(captureOwnedSessionMock).not.toHaveBeenCalled()
   })
 
   it("automatically completes login 2FA and secure verification when a TOTP secret is configured", async () => {
@@ -1461,6 +1644,10 @@ describe("newApiSession", () => {
       scope: NEW_API_SECURITY_PROOF_SCOPES.CHANNEL_KEY_READ,
     })
     expect(keyProof).toBe(proofToken)
+    expect(touchOwnedSessionMock).toHaveBeenCalledWith(
+      BASE_CONFIG.baseUrl,
+      "example-session-id",
+    )
     expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
   })
 

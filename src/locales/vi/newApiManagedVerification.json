@@ -1,6 +1,7 @@
 {
   "dialog": {
     "actions": {
+      "cleanupOwnedSessionAndRetry": "Dọn phiên của tiện ích và thử lại",
       "close": "Đóng",
       "openSite": "Mở trang web",
       "retry": "Thử lại",
@@ -16,6 +17,9 @@
       "loginTwoFactor": "Bước đăng nhập New API yêu cầu gửi mã xác minh trước khi phiên duyệt web có thể tiếp tục.",
       "passkeyManual": "Tài khoản hiện tại sử dụng xác minh Passkey ở bước này. Vui lòng hoàn thành xác minh Passkey trên trang web trước, sau đó quay lại đây và thử lại.",
       "secureVerification": "Phiên quản trị viên đã đăng nhập, nhưng trước khi đọc khóa kênh ẩn, New API vẫn cần xác minh mã bảo mật một lần.",
+      "sessionActiveLimit": "New API đã đạt giới hạn phiên đang hoạt động. Tiện ích không có phiên riêng có thể xóa an toàn; hãy thu hồi một phiên không còn dùng trên trang web rồi thử lại.",
+      "sessionActiveLimitCleanup": "New API đã đạt giới hạn phiên đang hoạt động. Tiện ích chỉ có thể thu hồi phiên do chính nó tạo rồi thử lại thao tác này.",
+      "sessionIssuanceLimit": "New API đã đạt giới hạn cấp phiên trong 24 giờ. Xóa phiên đang hoạt động không đặt lại giới hạn này; hãy chờ cửa sổ cấp phiên phục hồi.",
       "successChannel": "Xác minh cho {{label}} đã thành công và key kênh thực đã được tải.",
       "successSettings": "Quy trình đăng nhập và xác minh New API đã hoàn tất thành công. Bây giờ bạn có thể tiếp tục thực hiện các thao tác liên quan yêu cầu đăng nhập và xác minh.",
       "successToken": "Xác minh cho {{label}} đã thành công và trạng thái trang web quản lý đã được làm mới."
@@ -29,10 +33,12 @@
       "passkey": "Vui lòng mở trang web, hoàn thành lời nhắc Passkey ở đó, sau đó quay lại đây và thử lại."
     },
     "messages": {
+      "cleaningOwnedSession": "Đang dọn phiên New API do tiện ích tạo...",
       "completeRequiredConfig": "Vui lòng hoàn thành các mục cấu hình còn thiếu trước.",
       "finishing": "Đang hoàn tất quá trình phát hiện phiên New API...",
       "missingBaseUrl": "Vui lòng điền URL cơ sở của New API trước khi kiểm tra quy trình phiên.",
       "missingCode": "Vui lòng nhập mã xác minh trước.",
+      "ownedSessionCleanupFailed": "Không thể xóa phiên do tiện ích tạo. Hãy mở phần quản lý phiên trên trang web và thu hồi thủ công một phiên không còn dùng.",
       "quickConfigSaveFailed": "Lưu cấu hình nhanh không thành công, vui lòng thử lại sau.",
       "refreshingChannel": "Đang tải key kênh thực...",
       "refreshingToken": "Đang làm mới trạng thái trang web quản lý cho khóa này...",

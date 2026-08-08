@@ -3201,6 +3201,36 @@ describe("apiTransport request helpers", () => {
     })
   })
 
+  it("preserves a safe top-level backend code for provider recovery logic", async () => {
+    server.use(
+      http.get(API_URL, () =>
+        HttpResponse.json(
+          {
+            success: false,
+            code: "AUTH_SESSION_LIMIT",
+            message: "Active session limit reached",
+          },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.Cookie },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      code: ApiErrorCodes.HTTP_OTHER,
+      upstreamCode: "AUTH_SESSION_LIMIT",
+      message: "Active session limit reached",
+    })
+  })
+
   it("preserves a generic nested provider message and safe code", async () => {
     server.use(
       http.get(API_URL, () =>

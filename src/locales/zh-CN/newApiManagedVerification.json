@@ -1,6 +1,7 @@
 {
   "dialog": {
     "actions": {
+      "cleanupOwnedSessionAndRetry": "清理扩展会话并重试",
       "close": "关闭",
       "openSite": "打开站点",
       "retry": "重试",
@@ -16,6 +17,9 @@
       "loginTwoFactor": "New API 登录步骤需要先提交一次验证码，浏览器会话才能继续。",
       "passkeyManual": "当前账号在该步骤使用 Passkey 验证。请先在站点上完成 Passkey 校验，然后返回这里重试。",
       "secureVerification": "管理员会话已经登录，但在读取隐藏渠道密钥之前，New API 仍需要一次安全验证码验证。",
+      "sessionActiveLimit": "New API 的活动会话已达上限。当前没有可由扩展安全清理的会话，请在站点的会话管理中撤销不再使用的会话后重试。",
+      "sessionActiveLimitCleanup": "New API 的活动会话已达上限。扩展可以先精确撤销自己创建的会话，再重试当前操作。",
+      "sessionIssuanceLimit": "New API 已达到 24 小时会话签发上限。清理现有会话不会解除此限制，请等待限制窗口恢复。",
       "successChannel": "{{label}} 的验证已成功，真实渠道 key 已加载。",
       "successSettings": "New API 登录与验证流程已成功完成。现在可以继续执行需要登录与验证的相关操作。",
       "successToken": "{{label}} 的验证已成功，管理站点状态已刷新。"
@@ -29,10 +33,12 @@
       "passkey": "请打开站点，在那里完成 Passkey 提示后，再返回这里重试。"
     },
     "messages": {
+      "cleaningOwnedSession": "正在清理扩展创建的 New API 会话...",
       "completeRequiredConfig": "请先补全当前缺失的配置项。",
       "finishing": "正在完成 New API 会话检测...",
       "missingBaseUrl": "请先填写 New API 基础 URL，再测试会话流程。",
       "missingCode": "请先输入验证码。",
+      "ownedSessionCleanupFailed": "未能清理扩展创建的会话。请打开站点的会话管理，手动撤销不再使用的会话。",
       "quickConfigSaveFailed": "保存快捷配置失败，请稍后重试。",
       "refreshingChannel": "正在加载真实渠道 key...",
       "refreshingToken": "正在刷新该密钥的管理站点状态...",

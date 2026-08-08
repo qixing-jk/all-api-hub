@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react"
 import toast from "react-hot-toast"
 
+import { cleanupNewApiOwnedSession } from "~/services/managedSites/newApiOwnedSession/client"
 import {
   ensureNewApiManagedSession,
   NEW_API_MANAGED_SESSION_STATUSES,
@@ -23,6 +24,9 @@ export const NEW_API_MANAGED_VERIFICATION_STEPS = {
   LOGIN_2FA: "login-2fa",
   SECURE_VERIFICATION: "secure-verification",
   PASSKEY_MANUAL: "passkey-manual",
+  SESSION_ACTIVE_LIMIT: "session-active-limit",
+  SESSION_ACTIVE_LIMIT_CLEANUP: "session-active-limit-cleanup",
+  SESSION_ISSUANCE_LIMIT: "session-issuance-limit",
   SUCCESS: "success",
   FAILURE: "failure",
 } as const
@@ -117,6 +121,12 @@ const mapSessionResultToStep = (
       return NEW_API_MANAGED_VERIFICATION_STEPS.SECURE_VERIFICATION
     case NEW_API_MANAGED_SESSION_STATUSES.PASSKEY_MANUAL_REQUIRED:
       return NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL
+    case NEW_API_MANAGED_SESSION_STATUSES.SESSION_ACTIVE_LIMIT:
+      return result.cleanupAvailable
+        ? NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT_CLEANUP
+        : NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT
+    case NEW_API_MANAGED_SESSION_STATUSES.SESSION_ISSUANCE_LIMIT:
+      return NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ISSUANCE_LIMIT
     case NEW_API_MANAGED_SESSION_STATUSES.VERIFIED:
     default:
       return NEW_API_MANAGED_VERIFICATION_STEPS.SUCCESS
@@ -365,8 +375,35 @@ export function useNewApiManagedVerification() {
   const retryVerification = useCallback(async () => {
     const request = requestRef.current ?? state.request
     if (!request) return
+
+    if (
+      state.step ===
+      NEW_API_MANAGED_VERIFICATION_STEPS.SESSION_ACTIVE_LIMIT_CLEANUP
+    ) {
+      setState((prev) => ({
+        ...prev,
+        isBusy: true,
+        busyMessage: t(
+          "newApiManagedVerification:dialog.messages.cleaningOwnedSession",
+        ),
+        errorMessage: undefined,
+      }))
+      const cleanup = await cleanupNewApiOwnedSession(request.config.baseUrl)
+      if (cleanup.status !== "cleaned") {
+        setState((prev) => ({
+          ...prev,
+          isBusy: false,
+          busyMessage: undefined,
+          errorMessage: t(
+            "newApiManagedVerification:dialog.messages.ownedSessionCleanupFailed",
+          ),
+        }))
+        return
+      }
+    }
+
     await runInitialFlow(request)
-  }, [runInitialFlow, state.request])
+  }, [runInitialFlow, state.request, state.step])
 
   const patchRequestConfig = useCallback(
     (updates: NewApiManagedVerificationConfigUpdate) => {

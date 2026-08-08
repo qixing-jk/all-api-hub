@@ -12,6 +12,13 @@ import {
 } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
+  captureNewApiOwnedSession,
+  cleanupNewApiOwnedSession,
+  getNewApiOwnedSessionStatus,
+  refreshNewApiOwnedSession,
+  touchNewApiOwnedSession,
+} from "~/services/managedSites/newApiOwnedSession/client"
+import {
   NEW_API_SESSION_READ_ACTIONS,
   type ProtectionBypassExecution,
 } from "~/services/protectionBypass/contracts"
@@ -45,6 +52,8 @@ export const NEW_API_MANAGED_SESSION_STATUSES = {
   LOGIN_2FA_REQUIRED: "login-2fa-required",
   SECURE_VERIFICATION_REQUIRED: "secure-verification-required",
   PASSKEY_MANUAL_REQUIRED: "passkey-manual-required",
+  SESSION_ACTIVE_LIMIT: "session-active-limit",
+  SESSION_ISSUANCE_LIMIT: "session-issuance-limit",
 } as const
 
 export interface NewApiVerificationMethods {
@@ -76,10 +85,18 @@ export type EnsureNewApiManagedSessionResult =
       status: typeof NEW_API_MANAGED_SESSION_STATUSES.PASSKEY_MANUAL_REQUIRED
       methods: NewApiVerificationMethods
     }
+  | {
+      status: typeof NEW_API_MANAGED_SESSION_STATUSES.SESSION_ACTIVE_LIMIT
+      cleanupAvailable: boolean
+    }
+  | {
+      status: typeof NEW_API_MANAGED_SESSION_STATUSES.SESSION_ISSUANCE_LIMIT
+    }
 
 export const NEW_API_CHANNEL_KEY_ERROR_KINDS = {
   LOGIN_REQUIRED: "login-required",
   SECURE_VERIFICATION_REQUIRED: "secure-verification-required",
+  SESSION_LIMIT: "session-limit",
 } as const
 
 type NewApiChannelKeyErrorKind =
@@ -155,6 +172,10 @@ const NEW_API_DASHBOARD_REFRESH_REQUEST_ERROR =
   "New API session refresh request failed"
 const NEW_API_DASHBOARD_AUTH_UNAUTHORIZED =
   "New API dashboard session could not be authenticated"
+const NEW_API_SESSION_LIMIT_CODES = {
+  ACTIVE: "AUTH_SESSION_LIMIT",
+  ISSUANCE: "AUTH_SESSION_ISSUANCE_LIMIT",
+} as const
 
 type EnsureNewApiLoginResult =
   | {
@@ -451,11 +472,61 @@ const createControlledDashboardRefreshError = (
 ) => {
   const code = isRecord(body) ? trimToNull(body.code) : null
   const message = isRecord(body) ? trimToNull(body.message) : null
-  if (code && message) return new Error(`${code}: ${message}`)
-  if (code) return new Error(code)
-  if (message) return new Error(message)
-  return createDashboardRefreshStatusError(status)
+  const diagnostic =
+    code && message
+      ? `${code}: ${message}`
+      : code || message || `New API session refresh failed (${status})`
+  const error = new Error(diagnostic)
+  Object.defineProperties(error, {
+    statusCode: { value: status },
+    upstreamCode: { value: code ?? undefined },
+  })
+  return error
 }
+
+/** Maps only the two upstream session-limit codes to product recovery states. */
+async function classifyNewApiSessionLimit(
+  error: unknown,
+  baseUrl: string,
+): Promise<EnsureNewApiManagedSessionResult | null> {
+  if (!(error instanceof Error)) return null
+  const structured = error as Error & {
+    statusCode?: number
+    upstreamCode?: string
+  }
+
+  if (
+    structured.statusCode === 409 &&
+    structured.upstreamCode === NEW_API_SESSION_LIMIT_CODES.ACTIVE
+  ) {
+    const { owned } = await getNewApiOwnedSessionStatus(baseUrl)
+    return {
+      status: NEW_API_MANAGED_SESSION_STATUSES.SESSION_ACTIVE_LIMIT,
+      cleanupAvailable: owned,
+    }
+  }
+
+  if (
+    structured.statusCode === 429 &&
+    structured.upstreamCode === NEW_API_SESSION_LIMIT_CODES.ISSUANCE
+  ) {
+    return {
+      status: NEW_API_MANAGED_SESSION_STATUSES.SESSION_ISSUANCE_LIMIT,
+    }
+  }
+
+  return null
+}
+
+const toOwnedSessionBundle = (
+  baseUrl: string,
+  dashboardAuth: NonNullable<NewApiSessionState["dashboardAuth"]>,
+) => ({
+  baseUrl,
+  sessionId: dashboardAuth.sessionId,
+  accessToken: dashboardAuth.token,
+  accessExpiresAt: dashboardAuth.expiresAt,
+})
 
 /**
  * Refreshes only the modern dashboard session. The request rotates auth state,
@@ -505,7 +576,15 @@ async function postNewApiDashboardRefresh(
   const body = parseDashboardRefreshBody(response.body)
   if (body === undefined) return "unavailable"
   const parsedKind = applyDashboardAuthBundleResponse(baseUrl, body)
-  if (parsedKind === "valid") return "refreshed"
+  if (parsedKind === "valid") {
+    const dashboardAuth = getActiveDashboardAuth(baseUrl)
+    if (dashboardAuth) {
+      await refreshNewApiOwnedSession(
+        toOwnedSessionBundle(baseUrl, dashboardAuth),
+      )
+    }
+    return "refreshed"
+  }
   if (parsedKind === "malformed") {
     throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
   }
@@ -572,6 +651,10 @@ const getNewApiChannelKeyRequirementKind = (
       return NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED
     case NEW_API_MANAGED_SESSION_STATUSES.CREDENTIALS_MISSING:
     case NEW_API_MANAGED_SESSION_STATUSES.LOGIN_2FA_REQUIRED:
+      return NEW_API_CHANNEL_KEY_ERROR_KINDS.LOGIN_REQUIRED
+    case NEW_API_MANAGED_SESSION_STATUSES.SESSION_ACTIVE_LIMIT:
+    case NEW_API_MANAGED_SESSION_STATUSES.SESSION_ISSUANCE_LIMIT:
+      return NEW_API_CHANNEL_KEY_ERROR_KINDS.SESSION_LIMIT
     default:
       return NEW_API_CHANNEL_KEY_ERROR_KINDS.LOGIN_REQUIRED
   }
@@ -726,6 +809,11 @@ async function postNewApiLogin(
     }
   }
 
+  // A lost/mismatched refresh cookie must not let this extension accumulate a
+  // second owned session for the same origin. Cleanup remains best-effort so a
+  // stale receipt or transient network failure cannot block legacy login.
+  await cleanupNewApiOwnedSession(config.baseUrl)
+
   const request = createCookieAuthRequest(config.baseUrl, config.userId)
   const response = await fetchApi<NewApiLoginResponse>(request, {
     endpoint: "/api/user/login",
@@ -775,6 +863,14 @@ async function postNewApiLogin(
   )
   if (authBundleKind === "malformed") {
     throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+  }
+  if (authBundleKind === "valid") {
+    const dashboardAuth = getActiveDashboardAuth(config.baseUrl)
+    if (dashboardAuth) {
+      await captureNewApiOwnedSession(
+        toOwnedSessionBundle(config.baseUrl, dashboardAuth),
+      )
+    }
   }
 
   const responseData = isRecord(response.data)
@@ -981,7 +1077,14 @@ export async function ensureNewApiManagedSession(
     "baseUrl" | "userId" | "username" | "password" | "totpSecret"
   >,
 ): Promise<EnsureNewApiManagedSessionResult> {
-  const loginResult = await ensureNewApiLoginSession(config)
+  let loginResult: EnsureNewApiLoginResult
+  try {
+    loginResult = await ensureNewApiLoginSession(config)
+  } catch (error) {
+    const limit = await classifyNewApiSessionLimit(error, config.baseUrl)
+    if (limit) return limit
+    throw error
+  }
 
   if (loginResult.status === "credentials-missing") {
     return {
@@ -1042,16 +1145,23 @@ export async function submitNewApiLoginTwoFactorCode(
   const pendingLoginFlow = getPendingLoginFlowForSubmission(config.baseUrl)
 
   const request = createCookieAuthRequest(config.baseUrl, config.userId)
-  const response = await fetchApi<unknown>(request, {
-    endpoint: "/api/user/login/2fa",
-    options: {
-      method: "POST",
-      body: JSON.stringify({
-        code: trimmedCode,
-        ...(pendingLoginFlow ? { flow_token: pendingLoginFlow.token } : {}),
-      }),
-    },
-  })
+  let response
+  try {
+    response = await fetchApi<unknown>(request, {
+      endpoint: "/api/user/login/2fa",
+      options: {
+        method: "POST",
+        body: JSON.stringify({
+          code: trimmedCode,
+          ...(pendingLoginFlow ? { flow_token: pendingLoginFlow.token } : {}),
+        }),
+      },
+    })
+  } catch (error) {
+    const limit = await classifyNewApiSessionLimit(error, config.baseUrl)
+    if (limit) return limit
+    throw error
+  }
 
   if (!isRecord(response)) {
     throw new ApiError(
@@ -1080,6 +1190,14 @@ export async function submitNewApiLoginTwoFactorCode(
   )
   if (authBundleKind === "malformed") {
     throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+  }
+  if (authBundleKind === "valid") {
+    const dashboardAuth = getActiveDashboardAuth(config.baseUrl)
+    if (dashboardAuth) {
+      await captureNewApiOwnedSession(
+        toOwnedSessionBundle(config.baseUrl, dashboardAuth),
+      )
+    }
   }
 
   if (authBundleKind === "unrelated") {
@@ -1238,6 +1356,10 @@ export async function fetchNewApiChannelKey(params: {
     }
 
     markVerified(params.baseUrl)
+    await touchNewApiOwnedSession(
+      params.baseUrl,
+      getActiveDashboardAuth(params.baseUrl)?.sessionId,
+    )
     return key
   } catch (rawError) {
     const error = sanitizeNewApiErrorForOrigin(rawError, params.baseUrl)
