@@ -35,6 +35,10 @@ const OPENROUTER_MANAGEMENT_KEYS = [
 ] as const
 const OPENROUTER_MODEL_ID = "example/provider-model"
 const OPENROUTER_MODEL_DISPLAY_NAME = "Readable Provider Model"
+const OPENROUTER_PERSONALIZED_MODEL_A_ID = "example/personalized-model-a"
+const OPENROUTER_PERSONALIZED_MODEL_A_NAME = "Personalized Model A"
+const OPENROUTER_PERSONALIZED_MODEL_B_ID = "example/personalized-model-b"
+const OPENROUTER_PERSONALIZED_MODEL_B_NAME = "Personalized Model B"
 
 const PRICING_MODELS: ModelPricing[] = [
   {
@@ -163,8 +167,108 @@ async function seedMixedOpenRouterModelList(context: BrowserContext) {
     headers: Record<string, string>
     postData: string | null
   }> = []
+  const personalizedCatalogRequests: Array<{
+    url: string
+    authorization?: string
+  }> = []
+  let fallbackAccountAttempts = 0
   await context.route(`${OPENROUTER_API_BASE_URL}/models**`, async (route) => {
     const request = route.request()
+    const requestUrl = new URL(request.url())
+    const authorization = request.headers().authorization
+
+    if (requestUrl.pathname.endsWith("/models/user")) {
+      personalizedCatalogRequests.push({
+        url: request.url(),
+        ...(authorization ? { authorization } : {}),
+      })
+
+      if (authorization === `Bearer ${OPENROUTER_MANAGEMENT_KEYS[1]}`) {
+        fallbackAccountAttempts += 1
+        if (fallbackAccountAttempts === 1) {
+          await route.fulfill({
+            status: 403,
+            contentType: "application/json",
+            body: JSON.stringify({ message: "fixture permission failure" }),
+          })
+          return
+        }
+      }
+
+      const isSecondAccount =
+        authorization === `Bearer ${OPENROUTER_MANAGEMENT_KEYS[1]}`
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: [
+            {
+              id: isSecondAccount
+                ? OPENROUTER_PERSONALIZED_MODEL_B_ID
+                : OPENROUTER_PERSONALIZED_MODEL_A_ID,
+              name: isSecondAccount
+                ? OPENROUTER_PERSONALIZED_MODEL_B_NAME
+                : OPENROUTER_PERSONALIZED_MODEL_A_NAME,
+              description: "Personalized example model",
+              context_length: 64_000,
+              pricing: {
+                prompt: "0.000001",
+                completion: "0.000002",
+                request: "0.005",
+                image_output: "0.02",
+                overrides: [
+                  {
+                    min_prompt_tokens: 200_000,
+                    prompt: "0.000003",
+                  },
+                ],
+              },
+              architecture: {
+                input_modalities: ["text", "image"],
+                output_modalities: ["text"],
+                tokenizer: "Example tokenizer",
+              },
+              supported_parameters: ["temperature", "tools"],
+              reasoning: {
+                default_enabled: true,
+                supported_efforts: ["medium", "high"],
+              },
+              top_provider: {
+                context_length: 48_000,
+                max_completion_tokens: 4096,
+                is_moderated: true,
+              },
+              per_request_limits: {
+                prompt_tokens: 32_000,
+                completion_tokens: 2048,
+              },
+              benchmarks: {
+                design_arena: [
+                  {
+                    arena: "models",
+                    category: "website",
+                    elo: 1385.2,
+                    win_rate: 62.5,
+                    rank: 5,
+                  },
+                ],
+              },
+              links: {
+                details: `/api/v1/models/${
+                  isSecondAccount
+                    ? OPENROUTER_PERSONALIZED_MODEL_B_ID
+                    : OPENROUTER_PERSONALIZED_MODEL_A_ID
+                }/endpoints`,
+              },
+            },
+          ],
+          total_count: 1,
+          links: { next: null },
+        }),
+      })
+      return
+    }
+
     publicCatalogRequests.push({
       url: request.url(),
       headers: request.headers(),
@@ -234,11 +338,13 @@ async function seedMixedOpenRouterModelList(context: BrowserContext) {
     })
   })
 
-  return { publicCatalogRequests }
+  return { personalizedCatalogRequests, publicCatalogRequests }
 }
 
 test.beforeEach(async ({ context, page }) => {
-  installExtensionPageGuards(page)
+  installExtensionPageGuards(page, {
+    ignoreConsoleErrorPatterns: [/Failed to load resource: .*status of 403/u],
+  })
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
 })
@@ -262,12 +368,13 @@ test("loads account-backed models from the options route", async ({
   })
 })
 
-test("loads one public OpenRouter catalog and keeps it provider-wide in all-accounts mode", async ({
+test("loads personalized OpenRouter catalogs with visible provider fallback and retry", async ({
   context,
   extensionId,
   page,
 }) => {
-  const { publicCatalogRequests } = await seedMixedOpenRouterModelList(context)
+  const { personalizedCatalogRequests, publicCatalogRequests } =
+    await seedMixedOpenRouterModelList(context)
 
   await verifyAccountModelCatalogUsage({
     page,
@@ -281,15 +388,17 @@ test("loads one public OpenRouter catalog and keeps it provider-wide in all-acco
 
   await expect(
     page.getByRole("heading", {
-      name: OPENROUTER_MODEL_DISPLAY_NAME,
+      name: OPENROUTER_PERSONALIZED_MODEL_A_NAME,
       exact: true,
     }),
   ).toBeVisible()
   await expect(
-    page.getByText(OPENROUTER_MODEL_ID, { exact: true }),
+    page.getByText(OPENROUTER_PERSONALIZED_MODEL_A_ID, { exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByText("OpenRouter · Provider Model Catalog", { exact: true }),
+    page.getByText("Example OpenRouter A · Personalized Model Catalog", {
+      exact: true,
+    }),
   ).toBeVisible()
   await expect(
     page.getByTestId(MODEL_LIST_TEST_IDS.modelKeyDialogButton),
@@ -330,19 +439,15 @@ test("loads one public OpenRouter catalog and keeps it provider-wide in all-acco
     page.getByRole("link", { name: "Open provider details" }),
   ).toHaveAttribute(
     "href",
-    `${OPENROUTER_WEB_ORIGIN}/api/v1/models/${OPENROUTER_MODEL_ID}/endpoints`,
+    `${OPENROUTER_WEB_ORIGIN}/api/v1/models/${OPENROUTER_PERSONALIZED_MODEL_A_ID}/endpoints`,
   )
 
-  await expect.poll(() => publicCatalogRequests.length).toBe(1)
-  const publicRequest = publicCatalogRequests[0]!
-  expect(new URL(publicRequest.url).searchParams.get("output_modalities")).toBe(
-    "all",
-  )
-  expect(publicRequest.headers.authorization).toBeUndefined()
-  expect(publicRequest.postData).toBeNull()
-  for (const managementKey of OPENROUTER_MANAGEMENT_KEYS) {
-    expect(JSON.stringify(publicRequest)).not.toContain(managementKey)
-  }
+  await expect.poll(() => personalizedCatalogRequests.length).toBe(1)
+  expect(personalizedCatalogRequests[0]).toEqual({
+    url: `${OPENROUTER_API_BASE_URL}/models/user`,
+    authorization: `Bearer ${OPENROUTER_MANAGEMENT_KEYS[0]}`,
+  })
+  expect(publicCatalogRequests).toHaveLength(0)
 
   await page.getByTestId(MODEL_LIST_TEST_IDS.sourceSelector).click()
   await page.getByRole("option", { name: "All accounts", exact: true }).click()
@@ -358,16 +463,51 @@ test("loads one public OpenRouter catalog and keeps it provider-wide in all-acco
   ).toBeVisible()
   await expect(
     page.getByRole("heading", {
-      name: OPENROUTER_MODEL_DISPLAY_NAME,
+      name: OPENROUTER_PERSONALIZED_MODEL_A_NAME,
       exact: true,
     }),
   ).toHaveCount(1)
   await expect(
     page.getByText("OpenRouter · Provider Model Catalog", { exact: true }),
   ).toHaveCount(1)
-  await expect(page.getByText(/^Total 2 models$/)).toBeVisible()
-  await expect(page.getByText(/^Showing 2 models$/)).toBeVisible()
+  await expect(page.getByText("Using the provider-wide catalog")).toBeVisible()
+  await expect(page.getByText(/^Total 3 models$/)).toBeVisible()
+  await expect(page.getByText(/^Showing 3 models$/)).toBeVisible()
   expect(publicCatalogRequests).toHaveLength(1)
+
+  const publicRequest = publicCatalogRequests[0]!
+  expect(new URL(publicRequest.url).searchParams.get("output_modalities")).toBe(
+    "all",
+  )
+  expect(publicRequest.headers.authorization).toBeUndefined()
+  expect(publicRequest.postData).toBeNull()
+  for (const managementKey of OPENROUTER_MANAGEMENT_KEYS) {
+    expect(JSON.stringify(publicRequest)).not.toContain(managementKey)
+  }
+
+  await page
+    .getByTestId(MODEL_LIST_TEST_IDS.retryPersonalizedCatalogButton)
+    .click()
+  await expect(
+    page.getByRole("heading", {
+      name: OPENROUTER_PERSONALIZED_MODEL_B_NAME,
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(page.getByText("Using the provider-wide catalog")).toHaveCount(0)
+  await expect(
+    page.getByRole("heading", {
+      name: OPENROUTER_PERSONALIZED_MODEL_A_NAME,
+      exact: true,
+    }),
+  ).toHaveCount(1)
+  await expect(
+    page.getByRole("heading", {
+      name: OPENROUTER_MODEL_DISPLAY_NAME,
+      exact: true,
+    }),
+  ).toHaveCount(0)
+  await expect(page.getByText(/^Total 3 models$/)).toBeVisible()
 })
 
 test("routes no-source setup CTAs to account and API credential management", async ({

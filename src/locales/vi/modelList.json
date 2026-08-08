@@ -336,6 +336,21 @@
   "output": "Đầu ra:",
   "output1MTokens": "Đầu ra (1M tokens)",
   "perCall": "Mỗi lần gọi:",
+  "personalizedCatalogFallback": {
+    "allAccountsDescription": "Một số tài khoản không tải được danh mục mô hình cá nhân hóa. Danh mục chung của nhà cung cấp chỉ hiển thị một lần; các tài khoản tải thành công vẫn được giữ riêng.",
+    "failures": {
+      "auth": "Khóa quản lý đã lưu bị từ chối. Hãy kiểm tra hoặc thay khóa rồi thử lại.",
+      "cancellation": "Yêu cầu danh mục cá nhân hóa đã bị hủy. Hãy thử lại khi bạn sẵn sàng.",
+      "invalidResponse": "Nhà cung cấp trả về phản hồi danh mục cá nhân hóa không mong đợi. Hãy thử lại sau ít phút.",
+      "network": "Không thể kết nối đến danh mục cá nhân hóa. Hãy kiểm tra mạng rồi thử lại.",
+      "permission": "Khóa quản lý đã lưu không có quyền truy cập danh mục cá nhân hóa. Hãy kiểm tra quyền rồi thử lại.",
+      "rateLimit": "Danh mục cá nhân hóa đang tạm thời bị giới hạn tốc độ. Hãy thử lại sau ít phút.",
+      "upstream": "Danh mục cá nhân hóa tạm thời không khả dụng. Hãy thử lại sau ít phút."
+    },
+    "retry": "Thử lại danh mục cá nhân hóa",
+    "retrying": "Đang thử lại danh mục cá nhân hóa...",
+    "title": "Đang dùng danh mục chung của nhà cung cấp"
+  },
   "pleaseSelectFirst": "Vui lòng chọn một tài khoản hoặc thông tin xác thực API trước để xem danh sách mô hình",
   "pleaseSelectSource": "Vui lòng chọn nguồn dữ liệu",
   "pricingDescription": "Thông tin giá được lấy từ API do trang web cung cấp, chi phí thực tế tùy thuộc vào mức giá được công bố bởi mỗi trang web. Giá của mô hình tính phí theo lượng là chi phí cho mỗi 1M tokens, mô hình tính phí theo lần hiển thị chi phí cho mỗi lần gọi",
@@ -372,6 +387,7 @@
     "verificationLatencyAsc": "Độ trễ kiểm thử từ thấp đến cao"
   },
   "sourceLabels": {
+    "personalizedCatalogBadge": "{{account}} · Danh mục mô hình cá nhân hóa",
     "profileBadge": "Thông tin xác thực: {{name}} · {{host}}",
     "profileOption": "Thông tin xác thực API: {{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · Danh mục mô hình của nhà cung cấp"

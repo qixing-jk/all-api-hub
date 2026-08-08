@@ -2,6 +2,8 @@ import { z } from "zod"
 
 import type { AccountSiteType } from "~/constants/siteType"
 import {
+  MODEL_CATALOG_FAILURE_CATEGORIES,
+  MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
@@ -305,6 +307,13 @@ const actionPolicySchema = z.strictObject({
 const providerModelCatalogSourceSchema = z.strictObject({
   kind: z.literal(MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG),
   provider: trimmedNonBlankStringSchema,
+  catalogScope: z.enum(MODEL_CATALOG_SCOPES).optional(),
+  catalogFallback: z
+    .strictObject({
+      from: z.enum(MODEL_CATALOG_SCOPES),
+      failureCategory: z.enum(MODEL_CATALOG_FAILURE_CATEGORIES),
+    })
+    .optional(),
   supportsRuntimeModelList: z.literal(false),
   supportsPricing: z.boolean(),
   actionPolicy: actionPolicySchema,

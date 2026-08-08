@@ -22,6 +22,7 @@ type FormatModelListSourceLabelOptions = {
     >["provider"]
     providerName: string
   }) => string
+  formatPersonalizedCatalogLabel: (params: { accountName: string }) => string
 }
 
 /** Returns the display-safe name for token- or runtime-key-scoped account rows. */
@@ -57,6 +58,20 @@ export function formatModelListSourceLabel(
         provider: sourceIdentity.provider,
         providerName: sourceIdentity.providerName,
       }),
+    }
+  }
+
+  if (
+    sourceIdentity?.kind ===
+      MODEL_LIST_SOURCE_IDENTITY_KINDS.PERSONALIZED_CATALOG &&
+    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+  ) {
+    const baseUrl = source.account.baseUrl?.trim() ?? ""
+    return {
+      label: options.formatPersonalizedCatalogLabel({
+        accountName: source.account.name,
+      }),
+      title: baseUrl || undefined,
     }
   }
 

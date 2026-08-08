@@ -217,6 +217,8 @@ export default function ModelItem(props: ModelItemProps) {
         t("sourceLabels.profileBadge", { name, host }),
       formatProviderCatalogLabel: ({ providerName }) =>
         t("sourceLabels.providerCatalogBadge", { provider: providerName }),
+      formatPersonalizedCatalogLabel: ({ accountName }) =>
+        t("sourceLabels.personalizedCatalogBadge", { account: accountName }),
     },
     sourceIdentity,
   )

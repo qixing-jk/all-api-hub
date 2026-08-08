@@ -17,6 +17,7 @@ import { InvalidTokenPayloadError } from "~/services/accounts/utils/apiServiceRe
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
+  MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,
@@ -1052,6 +1053,520 @@ describe("useModelData all-accounts loading", () => {
     } finally {
       invalidateSpy.mockRestore()
     }
+  })
+
+  it("keeps personalized provider catalogs isolated by saved account identity", async () => {
+    const createPricing = (modelName: string) => ({
+      data: [createProviderCatalogModel(modelName)],
+      group_ratio: {},
+      success: true as const,
+      usable_group: {},
+      model_list_source: createProviderCatalogModelListSource(),
+    })
+    const fetchPublicPricing = vi
+      .fn()
+      .mockResolvedValue(createPricing("example/public-model"))
+    const fetchPersonalizedPricing = vi
+      .fn()
+      .mockImplementation(({ accountId }: { accountId: string }) =>
+        Promise.resolve({
+          ...createPricing(`example/personalized-${accountId}`),
+          model_list_source: {
+            ...createProviderCatalogModelListSource(),
+            catalogScope: MODEL_CATALOG_SCOPES.PERSONALIZED,
+          },
+        }),
+      )
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: {
+        providerModelCatalog: {
+          source: {
+            id: "personalized-provider",
+            provider: SITE_TYPES.OPENROUTER,
+            displayName: "Example Provider",
+            cacheTtlMs: 300000,
+          },
+          fetchPricing: fetchPublicPricing,
+          personalized: {
+            cacheTtlMs: 0,
+            fetchPricing: fetchPersonalizedPricing,
+          },
+        },
+      },
+    } as any)
+    const firstAccount = createDisplayAccount({
+      id: "account-example-a",
+      siteType: SITE_TYPES.OPENROUTER,
+      token: "management-secret-a",
+    })
+    const secondAccount = createDisplayAccount({
+      id: "account-example-b",
+      siteType: SITE_TYPES.OPENROUTER,
+      token: "management-secret-b",
+    })
+
+    const { result, rerender } = renderHook(
+      ({ account }) =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [firstAccount, secondAccount],
+        }),
+      { initialProps: { account: firstAccount }, wrapper: createWrapper() },
+    )
+
+    await waitFor(() =>
+      expect(result.current.pricingData?.data[0]?.model_name).toBe(
+        "example/personalized-account-example-a",
+      ),
+    )
+    rerender({ account: secondAccount })
+    await waitFor(() =>
+      expect(result.current.pricingData?.data[0]?.model_name).toBe(
+        "example/personalized-account-example-b",
+      ),
+    )
+
+    expect(fetchPersonalizedPricing).toHaveBeenCalledWith({
+      accountId: firstAccount.id,
+      credential: firstAccount.token,
+      abortSignal: expect.any(AbortSignal),
+    })
+    expect(fetchPersonalizedPricing).toHaveBeenCalledWith({
+      accountId: secondAccount.id,
+      credential: secondAccount.token,
+      abortSignal: expect.any(AbortSignal),
+    })
+    await act(async () => {
+      await result.current.loadPricingData()
+    })
+    expect(
+      fetchPersonalizedPricing.mock.calls.filter(
+        ([request]) => request.accountId === firstAccount.id,
+      ),
+    ).toHaveLength(1)
+    expect(
+      fetchPersonalizedPricing.mock.calls.filter(
+        ([request]) => request.accountId === secondAccount.id,
+      ),
+    ).toHaveLength(2)
+    await expect(
+      modelPricingCache.get("provider-catalog|personalized-provider", 300000),
+    ).resolves.toBeNull()
+    expect(fetchPublicPricing).not.toHaveBeenCalled()
+  })
+
+  it("cancels an obsolete personalized request without loading the public fallback", async () => {
+    const createPricing = (modelName: string) => ({
+      data: [createProviderCatalogModel(modelName)],
+      group_ratio: {},
+      success: true as const,
+      usable_group: {},
+      model_list_source: {
+        ...createProviderCatalogModelListSource(),
+        catalogScope: MODEL_CATALOG_SCOPES.PERSONALIZED,
+      },
+    })
+    const fetchPublicPricing = vi
+      .fn()
+      .mockResolvedValue(createPricing("example/public-model"))
+    const fetchPersonalizedPricing = vi.fn(
+      ({
+        accountId,
+        abortSignal,
+      }: {
+        accountId: string
+        abortSignal?: AbortSignal
+      }) =>
+        accountId === "account-example-obsolete"
+          ? new Promise((_, reject) => {
+              abortSignal?.addEventListener(
+                "abort",
+                () => reject(new DOMException("Aborted", "AbortError")),
+                { once: true },
+              )
+            })
+          : Promise.resolve(
+              createPricing("example/current-personalized-model"),
+            ),
+    )
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: {
+        providerModelCatalog: {
+          source: {
+            id: "provider-cancellation-example",
+            provider: SITE_TYPES.OPENROUTER,
+            displayName: "Example Provider",
+            cacheTtlMs: 300000,
+          },
+          fetchPricing: fetchPublicPricing,
+          personalized: {
+            cacheTtlMs: 0,
+            fetchPricing: fetchPersonalizedPricing,
+          },
+        },
+      },
+    } as any)
+    const obsoleteAccount = createDisplayAccount({
+      id: "account-example-obsolete",
+      siteType: SITE_TYPES.OPENROUTER,
+      token: "management-secret-obsolete",
+    })
+    const currentAccount = createDisplayAccount({
+      id: "account-example-current",
+      siteType: SITE_TYPES.OPENROUTER,
+      token: "management-secret-current",
+    })
+
+    const { result, rerender } = renderHook(
+      ({ account }) =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [obsoleteAccount, currentAccount],
+        }),
+      { initialProps: { account: obsoleteAccount }, wrapper: createWrapper() },
+    )
+
+    await waitFor(() =>
+      expect(fetchPersonalizedPricing).toHaveBeenCalledTimes(1),
+    )
+    rerender({ account: currentAccount })
+    await waitFor(() =>
+      expect(result.current.pricingData?.data[0]?.model_name).toBe(
+        "example/current-personalized-model",
+      ),
+    )
+
+    expect(fetchPublicPricing).not.toHaveBeenCalled()
+    expect(result.current.personalizedCatalogFallback).toBeNull()
+    expect(toastErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("keeps a public fallback usable while retrying the selected account personalized source", async () => {
+    const createPricing = (
+      modelName: string,
+      catalogScope: (typeof MODEL_CATALOG_SCOPES)[keyof typeof MODEL_CATALOG_SCOPES],
+    ) => ({
+      data: [createProviderCatalogModel(modelName)],
+      group_ratio: {},
+      success: true as const,
+      usable_group: {},
+      model_list_source: {
+        ...createProviderCatalogModelListSource(),
+        catalogScope,
+      },
+    })
+    const publicPricing = createPricing(
+      "example/public-model",
+      MODEL_CATALOG_SCOPES.PROVIDER,
+    )
+    const personalizedPricing = createPricing(
+      "example/personalized-model",
+      MODEL_CATALOG_SCOPES.PERSONALIZED,
+    )
+    const fetchPublicPricing = vi.fn().mockResolvedValue(publicPricing)
+    const fetchPersonalizedPricing = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new ApiError(
+          "safe local auth failure",
+          401,
+          "/models/user",
+          API_ERROR_CODES.HTTP_401,
+        ),
+      )
+      .mockResolvedValueOnce(personalizedPricing)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: {
+        providerModelCatalog: {
+          source: {
+            id: "provider-with-fallback",
+            provider: SITE_TYPES.OPENROUTER,
+            displayName: "Example Provider",
+            cacheTtlMs: 300000,
+          },
+          fetchPricing: fetchPublicPricing,
+          personalized: {
+            cacheTtlMs: 0,
+            fetchPricing: fetchPersonalizedPricing,
+          },
+        },
+      },
+    } as any)
+    const account = createDisplayAccount({
+      id: "account-example-fallback",
+      siteType: SITE_TYPES.OPENROUTER,
+      token: "management-secret-example",
+    })
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() =>
+      expect(result.current.pricingData?.data[0]?.model_name).toBe(
+        "example/public-model",
+      ),
+    )
+    expect(result.current.personalizedCatalogFallback).toEqual(
+      expect.objectContaining({
+        affectedAccountCount: 1,
+        failureCategory: "auth",
+        message: "modelList:personalizedCatalogFallback.failures.auth",
+      }),
+    )
+    expect(fetchPublicPricing).toHaveBeenCalledWith({ abortSignal: undefined })
+
+    await act(async () => {
+      await result.current.personalizedCatalogFallback?.retry()
+    })
+    await waitFor(() =>
+      expect(result.current.pricingData?.data[0]?.model_name).toBe(
+        "example/personalized-model",
+      ),
+    )
+    expect(result.current.personalizedCatalogFallback).toBeNull()
+    expect(fetchPublicPricing).toHaveBeenCalledTimes(1)
+  })
+
+  it("classifies an invalid personalized adapter result before using the public fallback", async () => {
+    const publicPricing = {
+      data: [createProviderCatalogModel("example/public-model")],
+      group_ratio: {},
+      success: true as const,
+      usable_group: {},
+      model_list_source: {
+        ...createProviderCatalogModelListSource(),
+        catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
+      },
+    }
+    const fetchPublicPricing = vi.fn().mockResolvedValue(publicPricing)
+    const fetchPersonalizedPricing = vi.fn().mockResolvedValue({
+      ...publicPricing,
+      model_list_source: {
+        ...publicPricing.model_list_source,
+        provider: SITE_TYPES.NEW_API,
+        catalogScope: MODEL_CATALOG_SCOPES.PERSONALIZED,
+      },
+    })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: {
+        providerModelCatalog: {
+          source: {
+            id: "provider-invalid-personalized-result",
+            provider: SITE_TYPES.OPENROUTER,
+            displayName: "Example Provider",
+            cacheTtlMs: 300000,
+          },
+          fetchPricing: fetchPublicPricing,
+          personalized: {
+            cacheTtlMs: 0,
+            fetchPricing: fetchPersonalizedPricing,
+          },
+        },
+      },
+    } as any)
+    const account = createDisplayAccount({
+      id: "account-example-invalid-personalized-result",
+      siteType: SITE_TYPES.OPENROUTER,
+      token: "management-secret-example",
+    })
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() =>
+      expect(result.current.pricingData?.data[0]?.model_name).toBe(
+        "example/public-model",
+      ),
+    )
+    expect(result.current.personalizedCatalogFallback).toEqual(
+      expect.objectContaining({
+        failureCategory: "invalid-response",
+        message:
+          "modelList:personalizedCatalogFallback.failures.invalidResponse",
+      }),
+    )
+  })
+
+  it("preserves personalized accounts while representing multiple public fallbacks once", async () => {
+    const createPricing = (
+      modelName: string,
+      catalogScope: (typeof MODEL_CATALOG_SCOPES)[keyof typeof MODEL_CATALOG_SCOPES],
+    ) => ({
+      data: [createProviderCatalogModel(modelName)],
+      group_ratio: {},
+      success: true as const,
+      usable_group: {},
+      model_list_source: {
+        ...createProviderCatalogModelListSource(),
+        catalogScope,
+      },
+    })
+    const publicPricing = createPricing(
+      "example/public-model",
+      MODEL_CATALOG_SCOPES.PROVIDER,
+    )
+    const fetchPublicPricing = vi.fn().mockResolvedValue(publicPricing)
+    const fetchPersonalizedPricing = vi
+      .fn()
+      .mockImplementation(({ accountId }: { accountId: string }) => {
+        if (accountId === "personalized-account") {
+          return Promise.resolve(
+            createPricing(
+              "example/personalized-model",
+              MODEL_CATALOG_SCOPES.PERSONALIZED,
+            ),
+          )
+        }
+        if (accountId === "fallback-account-a") {
+          return Promise.reject(
+            new ApiError(
+              "safe local permission failure",
+              403,
+              "/models/user",
+              API_ERROR_CODES.HTTP_403,
+            ),
+          )
+        }
+        return Promise.reject(new TypeError("Failed to fetch"))
+      })
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.OPENROUTER,
+      account: {
+        providerModelCatalog: {
+          source: {
+            id: "mixed-personalized-provider",
+            provider: SITE_TYPES.OPENROUTER,
+            displayName: "Example Provider",
+            cacheTtlMs: 300000,
+          },
+          fetchPricing: fetchPublicPricing,
+          personalized: {
+            cacheTtlMs: 0,
+            fetchPricing: fetchPersonalizedPricing,
+          },
+        },
+      },
+    } as any)
+    const personalizedAccount = createDisplayAccount({
+      id: "personalized-account",
+      siteType: SITE_TYPES.OPENROUTER,
+      token: "management-secret-personalized",
+    })
+    const firstFallbackAccount = createDisplayAccount({
+      id: "fallback-account-a",
+      siteType: SITE_TYPES.OPENROUTER,
+      token: "management-secret-fallback-a",
+    })
+    const secondFallbackAccount = createDisplayAccount({
+      id: "fallback-account-b",
+      siteType: SITE_TYPES.OPENROUTER,
+      token: "management-secret-fallback-b",
+    })
+    const accounts = [
+      personalizedAccount,
+      firstFallbackAccount,
+      secondFallbackAccount,
+    ]
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAllAccountsSource(),
+          accounts,
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+      expect(result.current.pricingContexts).toHaveLength(2)
+    })
+    expect(result.current.pricingContexts).toEqual([
+      expect.objectContaining({
+        account: personalizedAccount,
+        pricing: expect.objectContaining({
+          data: [
+            expect.objectContaining({
+              model_name: "example/personalized-model",
+            }),
+          ],
+        }),
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.PERSONALIZED_CATALOG,
+          id: `personalized-catalog:${personalizedAccount.id}`,
+          accountId: personalizedAccount.id,
+        },
+      }),
+      expect.objectContaining({
+        pricing: expect.objectContaining({
+          data: [
+            expect.objectContaining({ model_name: "example/public-model" }),
+          ],
+        }),
+        sourceIdentity: {
+          kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG,
+          id: "provider-catalog:mixed-personalized-provider",
+          provider: SITE_TYPES.OPENROUTER,
+          providerName: "Example Provider",
+        },
+      }),
+    ])
+    expect(result.current.accountQueryStates).toEqual([
+      expect.objectContaining({
+        account: personalizedAccount,
+        hasData: true,
+        hasError: false,
+      }),
+      expect.objectContaining({
+        account: firstFallbackAccount,
+        hasData: true,
+        hasError: true,
+        errorType: "partial-load-failed",
+        errorMessage:
+          "modelList:personalizedCatalogFallback.failures.permission",
+      }),
+      expect.objectContaining({
+        account: secondFallbackAccount,
+        hasData: true,
+        hasError: true,
+        errorType: "partial-load-failed",
+        errorMessage: "modelList:personalizedCatalogFallback.failures.network",
+      }),
+    ])
+    expect(result.current.personalizedCatalogFallback).toEqual(
+      expect.objectContaining({ affectedAccountCount: 2 }),
+    )
+    await waitFor(() =>
+      expect(
+        mockTrackProductAnalyticsActionCompleted.mock.lastCall?.[0],
+      ).toEqual(
+        expect.objectContaining({
+          diagnostics: expect.objectContaining({
+            execution: expect.objectContaining({
+              fallbackAvailable: true,
+              fallbackUsed: true,
+            }),
+          }),
+        }),
+      ),
+    )
+    expect(fetchPublicPricing).toHaveBeenCalledTimes(1)
   })
 
   it("keeps ordinary results when one shared provider catalog fails", async () => {

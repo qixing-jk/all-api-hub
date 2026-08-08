@@ -1,6 +1,6 @@
 # Add Verified OpenRouter Personalized Catalog and Public Fallback
 
-Status: ready-for-agent
+Status: ready-for-human
 
 Blocked by: 01, 02
 
@@ -45,3 +45,11 @@ Ticket 01 must record a `verified` decision. If it records `not supported` or `u
 - Own the representative Chromium E2E covering a personalized deep link, rich details, mixed all-accounts mode, unsupported-action absence, visible public fallback, and retry.
 
 ## Comments
+
+## Result
+
+Delivered on 2026-08-09.
+
+- Added the verified Management Key transport and independent authenticated envelope validation while reusing only the proven-compatible OpenRouter row schema and presentation adapter.
+- Added account-isolated personalized queries, shared credential-free provider fallback loading, explicit scope disclosure, controlled failure categories, retry recovery, and distinct personalized source identities.
+- Covered request/auth boundaries, schema and pagination failures, cancellation, cache and refresh isolation, concurrent fallback sharing, multi-account aggregation, privacy-safe fallback telemetry, and the representative Chromium workflow.

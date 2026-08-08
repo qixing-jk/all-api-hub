@@ -353,6 +353,21 @@
   "output": "Salida:",
   "output1MTokens": "Salida (1M tokens)",
   "perCall": "Por llamada:",
+  "personalizedCatalogFallback": {
+    "allAccountsDescription": "Algunas cuentas no pudieron cargar su catálogo personalizado. El catálogo general compartido del proveedor se muestra una sola vez; las cuentas personalizadas correctas permanecen separadas.",
+    "failures": {
+      "auth": "La clave de administración guardada fue rechazada. Revísala o reemplázala y vuelve a intentarlo.",
+      "cancellation": "Se canceló la solicitud del catálogo personalizado. Vuelve a intentarlo cuando quieras.",
+      "invalidResponse": "El proveedor devolvió una respuesta inesperada del catálogo personalizado. Inténtalo de nuevo en un momento.",
+      "network": "No se pudo acceder al catálogo personalizado. Revisa tu conexión y vuelve a intentarlo.",
+      "permission": "La clave de administración guardada no puede acceder al catálogo personalizado. Revisa sus permisos y vuelve a intentarlo.",
+      "rateLimit": "El catálogo personalizado tiene un límite temporal de solicitudes. Inténtalo de nuevo en un momento.",
+      "upstream": "El catálogo personalizado no está disponible temporalmente. Inténtalo de nuevo en un momento."
+    },
+    "retry": "Reintentar catálogo personalizado",
+    "retrying": "Reintentando catálogo personalizado...",
+    "title": "Usando el catálogo general del proveedor"
+  },
   "pleaseSelectFirst": "Primero selecciona una cuenta o credencial de API para ver la lista de modelos",
   "pleaseSelectSource": "Selecciona una fuente",
   "pricingDescription": "La información de precios proviene de la interfaz de API proporcionada por el sitio, y el costo real depende de los precios publicados por cada sitio. El precio de los modelos de pago por uso es el costo por 1M tokens, y los modelos de pago por llamada muestran el costo por llamada",
@@ -391,6 +406,7 @@
     "verificationLatencyAsc": "Latencia de prueba: de menor a mayor"
   },
   "sourceLabels": {
+    "personalizedCatalogBadge": "{{account}} · Catálogo de modelos personalizado",
     "profileBadge": "Perfil: {{name}} · {{host}}",
     "profileOption": "Credencial de API: {{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · Catálogo de modelos del proveedor"

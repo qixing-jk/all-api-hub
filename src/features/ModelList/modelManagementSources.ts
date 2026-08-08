@@ -78,6 +78,7 @@ export const MODEL_LIST_SOURCE_IDENTITY_KINDS = {
   ACCOUNT: "account",
   ACCOUNT_TOKEN: "account-token",
   ACCOUNT_RUNTIME_KEY: "account-runtime-key",
+  PERSONALIZED_CATALOG: "personalized-catalog",
   PROVIDER_CATALOG: "provider-catalog",
 } as const
 
@@ -97,6 +98,11 @@ export type ModelListSourceIdentity =
       id: string
       runtimeKeyId: string
       runtimeKeyName?: string
+    }
+  | {
+      kind: typeof MODEL_LIST_SOURCE_IDENTITY_KINDS.PERSONALIZED_CATALOG
+      id: string
+      accountId: string
     }
   | {
       kind: typeof MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG
@@ -160,6 +166,17 @@ export function createProviderCatalogModelListSourceIdentity(params: {
     id: `provider-catalog:${params.sourceId}`,
     provider: params.provider,
     providerName,
+  }
+}
+
+/** Creates an account-isolated identity for a personalized provider catalog. */
+export function createPersonalizedCatalogModelListSourceIdentity(
+  accountId: string,
+): ModelListSourceIdentity {
+  return {
+    kind: MODEL_LIST_SOURCE_IDENTITY_KINDS.PERSONALIZED_CATALOG,
+    id: `personalized-catalog:${accountId}`,
+    accountId,
   }
 }
 

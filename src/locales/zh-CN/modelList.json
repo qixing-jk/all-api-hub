@@ -334,6 +334,21 @@
   "output": "输出:",
   "output1MTokens": "输出(1M tokens)",
   "perCall": "每次调用:",
+  "personalizedCatalogFallback": {
+    "allAccountsDescription": "部分账号未能加载个性化模型目录。它们共用的提供商级目录只展示一次；加载成功的个性化账号仍会分别保留。",
+    "failures": {
+      "auth": "保存的管理密钥已被拒绝。请检查或更换密钥后重试。",
+      "cancellation": "个性化模型目录请求已取消。准备好后可重试。",
+      "invalidResponse": "提供商返回了异常的个性化模型目录响应。请稍后重试。",
+      "network": "无法连接个性化模型目录。请检查网络后重试。",
+      "permission": "保存的管理密钥无权访问个性化模型目录。请检查权限后重试。",
+      "rateLimit": "个性化模型目录暂时受到速率限制。请稍后重试。",
+      "upstream": "个性化模型目录暂时不可用。请稍后重试。"
+    },
+    "retry": "重试个性化目录",
+    "retrying": "正在重试个性化目录...",
+    "title": "当前使用提供商级目录"
+  },
   "pleaseSelectFirst": "请先选择一个账号或 API 凭据查看模型列表",
   "pleaseSelectSource": "请选择数据源",
   "pricingDescription": "价格信息来源于站点提供的 API 接口，实际费用以各站点公布的价格为准。按量计费模型的价格为每 1M tokens 的费用，按次计费模型显示每次调用的费用",
@@ -370,6 +385,7 @@
     "verificationLatencyAsc": "测试延迟从低到高"
   },
   "sourceLabels": {
+    "personalizedCatalogBadge": "{{account}} · 个性化模型目录",
     "profileBadge": "凭据：{{name}} · {{host}}",
     "profileOption": "API 凭据：{{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · 提供商模型目录"

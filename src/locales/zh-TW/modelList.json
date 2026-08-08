@@ -336,6 +336,21 @@
   "output": "輸出:",
   "output1MTokens": "輸出(1M tokens)",
   "perCall": "每次呼叫:",
+  "personalizedCatalogFallback": {
+    "allAccountsDescription": "部分帳號無法載入個人化模型目錄。它們共用的供應商層級目錄只顯示一次；成功載入的個人化帳號仍會分別保留。",
+    "failures": {
+      "auth": "儲存的管理金鑰遭到拒絕。請檢查或更換金鑰後重試。",
+      "cancellation": "個人化模型目錄請求已取消。準備好後可重試。",
+      "invalidResponse": "供應商傳回了非預期的個人化模型目錄回應。請稍後重試。",
+      "network": "無法連線至個人化模型目錄。請檢查網路後重試。",
+      "permission": "儲存的管理金鑰無權存取個人化模型目錄。請檢查權限後重試。",
+      "rateLimit": "個人化模型目錄暫時受到速率限制。請稍後重試。",
+      "upstream": "個人化模型目錄暫時無法使用。請稍後重試。"
+    },
+    "retry": "重試個人化目錄",
+    "retrying": "正在重試個人化目錄...",
+    "title": "目前使用供應商層級目錄"
+  },
   "pleaseSelectFirst": "請先選擇一個帳號或 API 憑據檢視模型列表",
   "pleaseSelectSource": "請選擇資料來源",
   "pricingDescription": "價格資訊來源於站點提供的 API 介面，實際費用以各站點公佈的價格為準。按量計費模型的價格為每 1M tokens 的費用，按次計費模型顯示每次呼叫的費用",
@@ -372,6 +387,7 @@
     "verificationLatencyAsc": "測試延遲由低到高"
   },
   "sourceLabels": {
+    "personalizedCatalogBadge": "{{account}} · 個人化模型目錄",
     "profileBadge": "憑據：{{name}} · {{host}}",
     "profileOption": "API 憑據：{{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · 供應商模型目錄"

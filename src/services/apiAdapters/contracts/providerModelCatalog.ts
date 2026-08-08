@@ -5,6 +5,19 @@ export type ProviderModelCatalogRequest = {
   abortSignal?: AbortSignal
 }
 
+export type PersonalizedProviderModelCatalogRequest = {
+  accountId: string
+  credential: string
+  abortSignal?: AbortSignal
+}
+
+export type PersonalizedProviderModelCatalogCapability = {
+  cacheTtlMs: number
+  fetchPricing(
+    request: PersonalizedProviderModelCatalogRequest,
+  ): Promise<ProviderModelCatalogPricingResponse>
+}
+
 export type ProviderModelCatalogCapability = {
   source: {
     id: string
@@ -15,4 +28,5 @@ export type ProviderModelCatalogCapability = {
   fetchPricing(
     request: ProviderModelCatalogRequest,
   ): Promise<ProviderModelCatalogPricingResponse>
+  personalized?: PersonalizedProviderModelCatalogCapability
 }

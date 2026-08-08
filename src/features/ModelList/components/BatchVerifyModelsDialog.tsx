@@ -955,6 +955,10 @@ export function BatchVerifyModelsDialog({
           t("modelList:sourceLabels.providerCatalogBadge", {
             provider: providerName,
           }),
+        formatPersonalizedCatalogLabel: ({ accountName }) =>
+          t("modelList:sourceLabels.personalizedCatalogBadge", {
+            account: accountName,
+          }),
       },
       row.item.sourceIdentity,
     )

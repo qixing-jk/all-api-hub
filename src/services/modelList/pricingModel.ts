@@ -45,6 +45,27 @@ export const MODEL_LIST_SOURCE_KINDS = {
 export type ModelListSourceKind =
   (typeof MODEL_LIST_SOURCE_KINDS)[keyof typeof MODEL_LIST_SOURCE_KINDS]
 
+export const MODEL_CATALOG_SCOPES = {
+  PERSONALIZED: "personalized",
+  PROVIDER: "provider",
+} as const
+
+export type ModelCatalogScope =
+  (typeof MODEL_CATALOG_SCOPES)[keyof typeof MODEL_CATALOG_SCOPES]
+
+export const MODEL_CATALOG_FAILURE_CATEGORIES = {
+  AUTH: "auth",
+  PERMISSION: "permission",
+  INVALID_RESPONSE: "invalid-response",
+  CANCELLATION: "cancellation",
+  RATE_LIMIT: "rate-limit",
+  NETWORK: "network",
+  UPSTREAM: "upstream",
+} as const
+
+export type ModelCatalogFailureCategory =
+  (typeof MODEL_CATALOG_FAILURE_CATEGORIES)[keyof typeof MODEL_CATALOG_FAILURE_CATEGORIES]
+
 export const MODEL_PRICE_SOURCE_KINDS = {
   NONE: "none",
   OFFICIAL_RATE_ESTIMATE: "official-rate-estimate",
@@ -88,6 +109,11 @@ export interface ModelPriceMetadata {
 export interface ModelListSourceInfo {
   kind: ModelListSourceKind
   provider?: AccountSiteType
+  catalogScope?: ModelCatalogScope
+  catalogFallback?: {
+    from: ModelCatalogScope
+    failureCategory: ModelCatalogFailureCategory
+  }
   supportsRuntimeModelList?: boolean
   supportsPricing?: boolean
   actionPolicy?: ModelListSourceActionPolicy

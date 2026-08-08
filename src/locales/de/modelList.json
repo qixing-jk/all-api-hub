@@ -344,6 +344,21 @@
   "output": "Ausgabe:",
   "output1MTokens": "Ausgabe (1 Mio. Token)",
   "perCall": "Pro Aufruf:",
+  "personalizedCatalogFallback": {
+    "allAccountsDescription": "Einige Konten konnten ihren personalisierten Modellkatalog nicht laden. Der gemeinsame anbieterweite Fallback wird einmal angezeigt; erfolgreiche personalisierte Konten bleiben getrennt.",
+    "failures": {
+      "auth": "Der gespeicherte Verwaltungsschlüssel wurde abgelehnt. Prüfe oder ersetze ihn und versuche es erneut.",
+      "cancellation": "Die Anfrage für den personalisierten Katalog wurde abgebrochen. Versuche es erneut, wenn du bereit bist.",
+      "invalidResponse": "Der Anbieter hat eine unerwartete Antwort für den personalisierten Katalog zurückgegeben. Versuche es später erneut.",
+      "network": "Der personalisierte Katalog konnte nicht erreicht werden. Prüfe die Verbindung und versuche es erneut.",
+      "permission": "Der gespeicherte Verwaltungsschlüssel darf nicht auf den personalisierten Katalog zugreifen. Prüfe die Berechtigungen und versuche es erneut.",
+      "rateLimit": "Der personalisierte Katalog ist vorübergehend ratenbegrenzt. Versuche es später erneut.",
+      "upstream": "Der personalisierte Katalog ist vorübergehend nicht verfügbar. Versuche es später erneut."
+    },
+    "retry": "Personalisierten Katalog erneut laden",
+    "retrying": "Personalisierter Katalog wird erneut geladen...",
+    "title": "Anbieterweiter Katalog wird verwendet"
+  },
   "pleaseSelectFirst": "Bitte wählen Sie zuerst ein Konto oder API-Anmeldeinformationen aus, um die Modellliste anzuzeigen",
   "pleaseSelectSource": "Bitte wählen Sie eine Quelle aus",
   "pricingDescription": "Preisinformationen stammen aus der von der Website bereitgestellten API-Schnittstelle, und die tatsächlichen Kosten richten sich nach den von jeder Website veröffentlichten Preisen. Der Preis von Pay-per-Use-Modellen entspricht den Kosten pro 1 Million Token, und Pay-per-Call-Modelle zeigen die Kosten pro Aufruf an.",
@@ -381,6 +396,7 @@
     "verificationLatencyAsc": "Testlatenz: Niedrig bis hoch"
   },
   "sourceLabels": {
+    "personalizedCatalogBadge": "{{account}} · Personalisierter Modellkatalog",
     "profileBadge": "Profil: {{name}} · {{host}}",
     "profileOption": "API-Anmeldeinformationen: {{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · Modellkatalog des Anbieters"

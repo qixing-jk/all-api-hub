@@ -21,6 +21,7 @@ import {
   createBatchVerifyModelItems,
   type BatchVerifyModelItem,
 } from "~/features/ModelList/batchVerification"
+import { PersonalizedCatalogFallbackNotice } from "~/features/ModelList/components/PersonalizedCatalogFallbackNotice"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   MODEL_MANAGEMENT_SOURCE_KINDS,
@@ -140,6 +141,7 @@ export default function ModelList(props: {
     unsupportedSource,
     loadErrorMessage,
     accountFallback,
+    personalizedCatalogFallback,
     isFallbackCatalogActive,
     isAihubmixCatalogFallbackActive,
 
@@ -621,6 +623,12 @@ export default function ModelList(props: {
 
       {selectedSource && hasModelData && (
         <>
+          {personalizedCatalogFallback && (
+            <PersonalizedCatalogFallbackNotice
+              fallback={personalizedCatalogFallback}
+            />
+          )}
+
           {isFallbackCatalogActive && (
             <Alert
               variant="info"

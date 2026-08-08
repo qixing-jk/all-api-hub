@@ -344,6 +344,21 @@
   "output": "Output:",
   "output1MTokens": "Output (1M tokens)",
   "perCall": "Per call:",
+  "personalizedCatalogFallback": {
+    "allAccountsDescription": "Some accounts could not load their personalized catalog. Their shared provider-wide fallback is shown once; successful personalized accounts remain separate.",
+    "failures": {
+      "auth": "The saved Management Key was rejected. Check or replace it, then retry.",
+      "cancellation": "The personalized catalog request was cancelled. Retry when ready.",
+      "invalidResponse": "The provider returned an unexpected personalized catalog response. Retry in a moment.",
+      "network": "The personalized catalog could not be reached. Check your connection, then retry.",
+      "permission": "The saved Management Key cannot access the personalized catalog. Check its permissions, then retry.",
+      "rateLimit": "The personalized catalog is temporarily rate-limited. Retry in a moment.",
+      "upstream": "The personalized catalog is temporarily unavailable. Retry in a moment."
+    },
+    "retry": "Retry personalized catalog",
+    "retrying": "Retrying personalized catalog...",
+    "title": "Using the provider-wide catalog"
+  },
   "pleaseSelectFirst": "Please select an account or API credential first to view model list",
   "pleaseSelectSource": "Please select a source",
   "pricingDescription": "Price information comes from the API interface provided by the site, and the actual cost is subject to the prices published by each site. The price of pay-per-use models is the cost per 1M tokens, and pay-per-call models display the cost per call",
@@ -381,6 +396,7 @@
     "verificationLatencyAsc": "Test latency: Low to High"
   },
   "sourceLabels": {
+    "personalizedCatalogBadge": "{{account}} · Personalized Model Catalog",
     "profileBadge": "Profile: {{name}} · {{host}}",
     "profileOption": "API Credential: {{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · Provider Model Catalog"

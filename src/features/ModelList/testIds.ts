@@ -14,6 +14,8 @@ export const MODEL_LIST_TEST_IDS = {
   createCustomKeyButton: "model-list-create-custom-key-button",
   openKeyManagementButton: "model-list-open-key-management-button",
   openSelectedAccountKeysButton: "model-list-open-selected-account-keys-button",
+  retryPersonalizedCatalogButton:
+    "model-list-retry-personalized-catalog-button",
   titleActions: "model-list-title-actions",
 } as const
 

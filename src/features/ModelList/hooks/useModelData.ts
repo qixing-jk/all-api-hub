@@ -12,7 +12,9 @@ import { useTranslation } from "react-i18next"
 import {
   createAccountModelListSourceIdentity,
   createAccountRuntimeKeyModelListSourceIdentity,
+  createPersonalizedCatalogModelListSourceIdentity,
   createProviderCatalogModelListSourceIdentity,
+  MODEL_LIST_SOURCE_IDENTITY_KINDS,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelListSourceIdentity,
   type ModelManagementSource,
@@ -47,7 +49,10 @@ import {
   resolveModelListAccountSourceReadiness,
 } from "~/services/modelList/accountSources"
 import {
+  MODEL_CATALOG_FAILURE_CATEGORIES,
+  MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
+  type ModelCatalogFailureCategory,
   type PricingResponse,
 } from "~/services/modelList/pricingModel"
 import { isValidProviderModelCatalogPricing } from "~/services/modelList/providerCatalogAdmission"
@@ -140,6 +145,13 @@ export interface AccountFallbackControls {
   loadCatalog: () => Promise<void>
 }
 
+export interface PersonalizedCatalogFallbackControls {
+  affectedAccountCount: number
+  failureCategory: ModelCatalogFailureCategory
+  message: string
+  retry: () => Promise<void>
+}
+
 interface UseModelDataReturn {
   pricingData: PricingResponse | null
   pricingContexts: AccountPricingContext[]
@@ -151,6 +163,7 @@ interface UseModelDataReturn {
   loadPricingData: () => Promise<void>
   loadErrorMessage: string | null
   accountFallback: AccountFallbackControls | null
+  personalizedCatalogFallback: PersonalizedCatalogFallbackControls | null
 }
 
 /** Creates the normalized invalid-format error used by pricing loaders. */
@@ -385,13 +398,25 @@ function createModelPricingQueryKey(
     DisplaySiteData,
     "id" | "baseUrl" | "userId" | "siteType" | "authType"
   >,
-  providerCatalogSourceId?: string,
+  providerCatalog?: ProviderModelCatalogCapability,
 ) {
-  if (account && providerCatalogSourceId) {
-    return createProviderModelCatalogQueryKey(
-      providerCatalogSourceId,
-      MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
-    )
+  if (account && providerCatalog) {
+    return providerCatalog.personalized
+      ? [
+          ...createProviderModelCatalogQueryKeyPrefix(
+            providerCatalog.source.id,
+          ),
+          MODEL_CATALOG_SCOPES.PERSONALIZED,
+          account.id,
+          account.baseUrl,
+          account.userId,
+          account.siteType,
+          account.authType,
+        ]
+      : createProviderModelCatalogQueryKey(
+          providerCatalog.source.id,
+          MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+        )
   }
 
   return account
@@ -474,7 +499,8 @@ function createAllAccountsModelLoadTargets(
   for (const account of accounts) {
     const readiness = resolveModelListAccountSourceReadiness(account)
     const id =
-      readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+      readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog &&
+      !readiness.providerModelCatalog.personalized
         ? `provider-catalog:${readiness.providerModelCatalog.source.id}`
         : `account:${account.id}`
     const existing = targets.get(id)
@@ -500,7 +526,8 @@ function createAllAccountsModelLoadTargetQueryKey(
   target: AllAccountsModelLoadTarget,
 ) {
   return target.readiness.route ===
-    MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
+    MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog &&
+    !target.readiness.providerModelCatalog.personalized
     ? createProviderModelCatalogQueryKey(
         target.readiness.providerModelCatalog.source.id,
         MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
@@ -537,6 +564,56 @@ function normalizeProviderModelCatalogError(error: unknown) {
     : error
 }
 
+/** Classifies personalized catalog failures for stable user-facing recovery. */
+function getPersonalizedCatalogFailureCategory(
+  error: unknown,
+): ModelCatalogFailureCategory {
+  if (error instanceof TypeError) {
+    return MODEL_CATALOG_FAILURE_CATEGORIES.NETWORK
+  }
+
+  const code = (error as { code?: string } | null | undefined)?.code
+  switch (code) {
+    case API_ERROR_CODES.HTTP_401:
+      return MODEL_CATALOG_FAILURE_CATEGORIES.AUTH
+    case API_ERROR_CODES.HTTP_403:
+      return MODEL_CATALOG_FAILURE_CATEGORIES.PERMISSION
+    case API_ERROR_CODES.JSON_PARSE_ERROR:
+    case API_ERROR_CODES.CONTENT_TYPE_MISMATCH:
+    case MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT:
+      return MODEL_CATALOG_FAILURE_CATEGORIES.INVALID_RESPONSE
+    case API_ERROR_CODES.HTTP_429:
+      return MODEL_CATALOG_FAILURE_CATEGORIES.RATE_LIMIT
+    case API_ERROR_CODES.NETWORK_ERROR:
+      return MODEL_CATALOG_FAILURE_CATEGORIES.NETWORK
+    default:
+      return MODEL_CATALOG_FAILURE_CATEGORIES.UPSTREAM
+  }
+}
+
+/** Resolves localized recovery copy without exposing unstable backend details. */
+function getPersonalizedCatalogFallbackMessage(
+  category: ModelCatalogFailureCategory,
+  t: TFunction<"modelList">,
+) {
+  switch (category) {
+    case MODEL_CATALOG_FAILURE_CATEGORIES.AUTH:
+      return t("personalizedCatalogFallback.failures.auth")
+    case MODEL_CATALOG_FAILURE_CATEGORIES.PERMISSION:
+      return t("personalizedCatalogFallback.failures.permission")
+    case MODEL_CATALOG_FAILURE_CATEGORIES.INVALID_RESPONSE:
+      return t("personalizedCatalogFallback.failures.invalidResponse")
+    case MODEL_CATALOG_FAILURE_CATEGORIES.RATE_LIMIT:
+      return t("personalizedCatalogFallback.failures.rateLimit")
+    case MODEL_CATALOG_FAILURE_CATEGORIES.NETWORK:
+      return t("personalizedCatalogFallback.failures.network")
+    case MODEL_CATALOG_FAILURE_CATEGORIES.CANCELLATION:
+      return t("personalizedCatalogFallback.failures.cancellation")
+    default:
+      return t("personalizedCatalogFallback.failures.upstream")
+  }
+}
+
 /** Loads one provider-wide catalog without persisting incomplete failures. */
 async function loadProviderModelCatalogPricing(params: {
   capability: ProviderModelCatalogCapability
@@ -571,6 +648,107 @@ async function loadProviderModelCatalogPricing(params: {
 
   await modelPricingCache.set(cacheKey, pricing)
   return { pricing, cacheHit: false }
+}
+
+interface PersonalizedProviderModelCatalogLoadResult {
+  pricing: PricingResponse
+  cacheHit: boolean
+  personalizedFailure?: {
+    category: ModelCatalogFailureCategory
+    error: unknown
+  }
+}
+
+const providerCatalogFallbackLoads = new Map<
+  string,
+  Promise<{ pricing: PricingResponse; cacheHit: boolean }>
+>()
+
+/** Preserves each account query's cancellation boundary around shared loads. */
+function throwIfCatalogLoadAborted(abortSignal?: AbortSignal) {
+  if (abortSignal?.aborted) {
+    throw abortSignal.reason ?? new DOMException("Aborted", "AbortError")
+  }
+}
+
+/** Shares one credential-free provider fallback request across account queries. */
+async function loadSharedProviderModelCatalogFallback(params: {
+  capability: ProviderModelCatalogCapability
+  abortSignal?: AbortSignal
+}) {
+  throwIfCatalogLoadAborted(params.abortSignal)
+  const sourceId = params.capability.source.id
+  let load = providerCatalogFallbackLoads.get(sourceId)
+
+  if (!load) {
+    // A caller cancellation must not abort the shared public request for
+    // other accounts; each waiter still observes its own abort signal.
+    const pendingLoad = loadProviderModelCatalogPricing({
+      capability: params.capability,
+    }).finally(() => {
+      if (providerCatalogFallbackLoads.get(sourceId) === pendingLoad) {
+        providerCatalogFallbackLoads.delete(sourceId)
+      }
+    })
+    load = pendingLoad
+    providerCatalogFallbackLoads.set(sourceId, load)
+  }
+
+  const result = await load
+  throwIfCatalogLoadAborted(params.abortSignal)
+  return result
+}
+
+/** Owns personalized validation, failure classification, and public fallback. */
+async function loadPersonalizedProviderModelCatalogPricing(params: {
+  capability: ProviderModelCatalogCapability
+  personalized: NonNullable<ProviderModelCatalogCapability["personalized"]>
+  account: DisplaySiteData
+  abortSignal?: AbortSignal
+}): Promise<PersonalizedProviderModelCatalogLoadResult> {
+  try {
+    const pricing = await params.personalized.fetchPricing({
+      accountId: params.account.id,
+      credential: params.account.token,
+      abortSignal: params.abortSignal,
+    })
+    if (
+      !isValidProviderModelCatalogPricing(
+        pricing,
+        params.capability.source.provider,
+      )
+    ) {
+      throw createInvalidFormatError()
+    }
+    return { pricing, cacheHit: false }
+  } catch (error) {
+    if (isAbortError(error, params.abortSignal)) throw error
+
+    const category = getPersonalizedCatalogFailureCategory(error)
+    const { pricing, cacheHit } = await loadSharedProviderModelCatalogFallback({
+      capability: params.capability,
+      abortSignal: params.abortSignal,
+    })
+    if (!pricing.model_list_source) {
+      throw createInvalidFormatError()
+    }
+
+    return {
+      cacheHit,
+      personalizedFailure: { category, error },
+      pricing: {
+        ...pricing,
+        model_list_source: {
+          ...pricing.model_list_source,
+          catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
+          catalogFallback: {
+            from: MODEL_CATALOG_SCOPES.PERSONALIZED,
+            failureCategory: category,
+          },
+        },
+      },
+    }
+  }
 }
 
 /** Builds the adapter pricing request from a display account. */
@@ -918,7 +1096,7 @@ function useSingleAccountModelData(params: {
         currentAccount,
         currentReadiness?.route ===
           MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
-          ? currentReadiness.providerModelCatalog.source.id
+          ? currentReadiness.providerModelCatalog
           : undefined,
       ),
     [currentAccount, currentReadiness],
@@ -932,7 +1110,8 @@ function useSingleAccountModelData(params: {
     staleTime:
       currentReadiness?.route ===
       MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
-        ? currentReadiness.providerModelCatalog.source.cacheTtlMs
+        ? currentReadiness.providerModelCatalog.personalized?.cacheTtlMs ??
+          currentReadiness.providerModelCatalog.source.cacheTtlMs
         : MODEL_PRICING_CACHE_TTL_MS,
     refetchOnWindowFocus: false,
     retry: shouldRetryModelPricingQuery,
@@ -946,6 +1125,17 @@ function useSingleAccountModelData(params: {
         readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
       ) {
         directLoadCacheHitRef.current = false
+        if (readiness.providerModelCatalog.personalized) {
+          const { pricing, cacheHit } =
+            await loadPersonalizedProviderModelCatalogPricing({
+              capability: readiness.providerModelCatalog,
+              personalized: readiness.providerModelCatalog.personalized,
+              account: currentAccount,
+              abortSignal: signal,
+            })
+          directLoadCacheHitRef.current = cacheHit
+          return pricing
+        }
         const { pricing, cacheHit } = await loadProviderModelCatalogPricing({
           capability: readiness.providerModelCatalog,
           abortSignal: signal,
@@ -1249,6 +1439,9 @@ function useSingleAccountModelData(params: {
           siteType: currentAccount.siteType,
           requestedAuthMode: currentAccount.authType,
           cacheHit: directLoadCacheHitRef.current,
+          ...(query.data.model_list_source?.catalogFallback
+            ? { fallbackAvailable: true, fallbackUsed: true }
+            : {}),
           modelCount: getPricingModelCount(query.data),
         })
       }
@@ -1331,7 +1524,10 @@ function useSingleAccountModelData(params: {
     }
 
     const readiness = resolveModelListAccountSourceReadiness(currentAccount)
-    if (readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog) {
+    if (
+      readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog &&
+      !readiness.providerModelCatalog.personalized
+    ) {
       await invalidateProviderModelCatalogCaches({
         queryClient,
         sourceId: readiness.providerModelCatalog.source.id,
@@ -1379,6 +1575,14 @@ function useSingleAccountModelData(params: {
           runtimeKeyId: selectedFallbackRuntimeKey.id,
           runtimeKeyName: selectedFallbackRuntimeKey.label,
         })
+      }
+      if (
+        pricingData.model_list_source?.catalogScope ===
+        MODEL_CATALOG_SCOPES.PERSONALIZED
+      ) {
+        return createPersonalizedCatalogModelListSourceIdentity(
+          currentAccount.id,
+        )
       }
       if (
         currentReadiness?.route ===
@@ -1453,6 +1657,22 @@ function useSingleAccountModelData(params: {
     loadFallbackCatalog,
   ])
 
+  const personalizedCatalogFallback =
+    useMemo<PersonalizedCatalogFallbackControls | null>(() => {
+      const fallback = pricingData?.model_list_source?.catalogFallback
+      if (!fallback) return null
+
+      return {
+        affectedAccountCount: 1,
+        failureCategory: fallback.failureCategory,
+        message: getPersonalizedCatalogFallbackMessage(
+          fallback.failureCategory,
+          t,
+        ),
+        retry: loadPricingData,
+      }
+    }, [loadPricingData, pricingData, t])
+
   return {
     pricingData,
     pricingContexts,
@@ -1464,6 +1684,7 @@ function useSingleAccountModelData(params: {
     loadPricingData,
     loadErrorMessage,
     accountFallback,
+    personalizedCatalogFallback,
   }
 }
 
@@ -1504,7 +1725,8 @@ function useAllAccountsModelData(
       staleTime:
         target.readiness.route ===
         MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
-          ? target.readiness.providerModelCatalog.source.cacheTtlMs
+          ? target.readiness.providerModelCatalog.personalized?.cacheTtlMs ??
+            target.readiness.providerModelCatalog.source.cacheTtlMs
           : MODEL_PRICING_CACHE_TTL_MS,
       refetchOnWindowFocus: false,
       retry: shouldRetryModelPricingQuery,
@@ -1514,6 +1736,32 @@ function useAllAccountsModelData(
           readiness.route === MODEL_LIST_ACCOUNT_SOURCE_ROUTES.ProviderCatalog
         ) {
           const source = readiness.providerModelCatalog.source
+          if (readiness.providerModelCatalog.personalized) {
+            const { pricing, personalizedFailure } =
+              await loadPersonalizedProviderModelCatalogPricing({
+                capability: readiness.providerModelCatalog,
+                personalized: readiness.providerModelCatalog.personalized,
+                account,
+                abortSignal: signal,
+              })
+            const sourceIdentity = personalizedFailure
+              ? createProviderCatalogModelListSourceIdentity({
+                  sourceId: source.id,
+                  provider: source.provider,
+                  providerName: source.displayName,
+                })
+              : createPersonalizedCatalogModelListSourceIdentity(account.id)
+
+            return {
+              contexts: [{ account, pricing, sourceIdentity }],
+              ...(personalizedFailure
+                ? {
+                    partialFailureCount: 1,
+                    partialFailureErrors: [personalizedFailure.error],
+                  }
+                : {}),
+            }
+          }
           const { pricing } = await loadProviderModelCatalogPricing({
             capability: readiness.providerModelCatalog,
             abortSignal: signal,
@@ -1614,6 +1862,11 @@ function useAllAccountsModelData(
       (query) => query.isError || (query.data?.partialFailureCount ?? 0) > 0,
     )
     const failureCount = failedQueries.length
+    const fallbackCount = queries.filter((query) =>
+      query.data?.contexts.some(
+        (context) => context.pricing.model_list_source?.catalogFallback,
+      ),
+    ).length
     const modelCount = queries.reduce(
       (count, query) =>
         count +
@@ -1667,6 +1920,9 @@ function useAllAccountsModelData(
         ? { failureReason: failureDiagnostics.failureReason }
         : {}),
       ...(failureDiagnostics?.error ? { error: failureDiagnostics.error } : {}),
+      ...(fallbackCount > 0
+        ? { fallbackAvailable: true, fallbackUsed: true }
+        : {}),
       modelCount,
       successCount,
       failureCount,
@@ -1674,7 +1930,23 @@ function useAllAccountsModelData(
   }, [enabled, loadTargets, queries, safeDisplayData])
 
   const pricingContexts: AccountPricingContext[] = useMemo(() => {
-    return queries.flatMap((query) => query.data?.contexts ?? [])
+    const contexts: AccountPricingContext[] = []
+    const representedProviderCatalogs = new Set<string>()
+
+    for (const context of queries.flatMap(
+      (query) => query.data?.contexts ?? [],
+    )) {
+      if (
+        context.sourceIdentity?.kind ===
+        MODEL_LIST_SOURCE_IDENTITY_KINDS.PROVIDER_CATALOG
+      ) {
+        if (representedProviderCatalogs.has(context.sourceIdentity.id)) continue
+        representedProviderCatalogs.add(context.sourceIdentity.id)
+      }
+      contexts.push(context)
+    }
+
+    return contexts
   }, [queries])
 
   const isLoading = queries.some((query) => query.isFetching)
@@ -1715,9 +1987,14 @@ function useAllAccountsModelData(
         const error = query?.error as { code?: string } | null | undefined
         const partialFailureCount = query?.data?.partialFailureCount ?? 0
         const partialFailureErrors = query?.data?.partialFailureErrors ?? []
+        const catalogFallback = query?.data?.contexts.find(
+          (context) => context.account.id === account.id,
+        )?.pricing.model_list_source?.catalogFallback
         const hasData = (query?.data?.contexts.length ?? 0) > 0
-        const hasPartialFailure = hasData && partialFailureCount > 0
-        const hasError = !!query?.error || partialFailureCount > 0
+        const hasPartialFailure =
+          hasData && (partialFailureCount > 0 || Boolean(catalogFallback))
+        const hasError =
+          !!query?.error || partialFailureCount > 0 || Boolean(catalogFallback)
         const isLoading =
           !hasData && Boolean(query?.isPending || query?.isFetching)
 
@@ -1731,12 +2008,17 @@ function useAllAccountsModelData(
           errorMessage = t("accountSummary.failureReasons.unsupportedSource")
         } else if (hasPartialFailure) {
           errorType = MODEL_LIST_ACCOUNT_ERROR_TYPES.PARTIAL_LOAD_FAILED
-          errorMessage = t("accountSummary.partialLoadFailedReason", {
-            reason: getFirstModelDataDisplayErrorReason(
-              partialFailureErrors,
-              t,
-            ),
-          })
+          errorMessage = catalogFallback
+            ? getPersonalizedCatalogFallbackMessage(
+                catalogFallback.failureCategory,
+                t,
+              )
+            : t("accountSummary.partialLoadFailedReason", {
+                reason: getFirstModelDataDisplayErrorReason(
+                  partialFailureErrors,
+                  t,
+                ),
+              })
         } else if (hasError) {
           errorType = MODEL_LIST_ACCOUNT_ERROR_TYPES.LOAD_FAILED
           errorMessage = query?.error
@@ -1767,6 +2049,48 @@ function useAllAccountsModelData(
     })
   }, [queries, t])
 
+  const personalizedFallbackQueryIndexes = useMemo(
+    () =>
+      queries.flatMap((query, index) =>
+        query.data?.contexts.some(
+          (context) => context.pricing.model_list_source?.catalogFallback,
+        )
+          ? [index]
+          : [],
+      ),
+    [queries],
+  )
+  const retryPersonalizedCatalogFallbacks = useCallback(async () => {
+    await Promise.all(
+      personalizedFallbackQueryIndexes.map(async (index) => {
+        await queries[index]?.refetch()
+      }),
+    )
+  }, [personalizedFallbackQueryIndexes, queries])
+  const personalizedCatalogFallback =
+    useMemo<PersonalizedCatalogFallbackControls | null>(() => {
+      if (personalizedFallbackQueryIndexes.length === 0) return null
+
+      const firstFallback = queries[
+        personalizedFallbackQueryIndexes[0]!
+      ]?.data?.contexts.find(
+        (context) => context.pricing.model_list_source?.catalogFallback,
+      )?.pricing.model_list_source?.catalogFallback
+      if (!firstFallback) return null
+
+      return {
+        affectedAccountCount: personalizedFallbackQueryIndexes.length,
+        failureCategory: firstFallback.failureCategory,
+        message: t("personalizedCatalogFallback.allAccountsDescription"),
+        retry: retryPersonalizedCatalogFallbacks,
+      }
+    }, [
+      personalizedFallbackQueryIndexes,
+      queries,
+      retryPersonalizedCatalogFallbacks,
+      t,
+    ])
+
   return {
     pricingData: null,
     pricingContexts,
@@ -1778,6 +2102,7 @@ function useAllAccountsModelData(
     loadPricingData,
     loadErrorMessage,
     accountFallback: null,
+    personalizedCatalogFallback,
   }
 }
 
@@ -1905,6 +2230,7 @@ function useProfileModelData(
     loadPricingData,
     loadErrorMessage,
     accountFallback: null,
+    personalizedCatalogFallback: null,
   }
 }
 

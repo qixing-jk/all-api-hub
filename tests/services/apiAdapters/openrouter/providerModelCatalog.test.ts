@@ -7,6 +7,7 @@ import {
 } from "~/services/accountSiteDefinitions/identifiers"
 import { openRouterProviderModelCatalog } from "~/services/apiAdapters/openrouter/providerModelCatalog"
 import {
+  MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_UNAVAILABLE_PRICE_REASONS,
@@ -44,6 +45,53 @@ function getFact(
 
 describe("OpenRouter provider model catalog Adapter", () => {
   beforeEach(() => server.resetHandlers())
+
+  it("normalizes the verified personalized catalog behind an account-authenticated capability", async () => {
+    let publicRequestCount = 0
+    server.use(
+      http.get(`${OPENROUTER_API_BASE_URL}/models/user`, ({ request }) => {
+        expect(request.headers.get("authorization")).toBe(
+          "Bearer management-key-example",
+        )
+        return HttpResponse.json({
+          data: [
+            {
+              id: "example/personalized-model",
+              name: "Personalized Model",
+              pricing: { prompt: "0", completion: "0" },
+            },
+          ],
+          total_count: 1,
+          links: { next: null },
+        })
+      }),
+      http.get(`${OPENROUTER_API_BASE_URL}/models`, () => {
+        publicRequestCount += 1
+        return HttpResponse.json({
+          data: [],
+          total_count: 0,
+          links: { next: null },
+        })
+      }),
+    )
+
+    const response =
+      await openRouterProviderModelCatalog.personalized!.fetchPricing({
+        accountId: "account-example-a",
+        credential: "management-key-example",
+      })
+
+    expect(response.data).toEqual([
+      expect.objectContaining({
+        model_name: "example/personalized-model",
+        display_name: "Personalized Model",
+      }),
+    ])
+    expect(response.model_list_source.catalogScope).toBe(
+      MODEL_CATALOG_SCOPES.PERSONALIZED,
+    )
+    expect(publicRequestCount).toBe(0)
+  })
 
   it("normalizes primary prices and core display facts into the product model", async () => {
     server.use(
@@ -110,6 +158,7 @@ describe("OpenRouter provider model catalog Adapter", () => {
     expect(response.model_list_source).toEqual({
       kind: MODEL_LIST_SOURCE_KINDS.PROVIDER_CATALOG,
       provider: SITE_TYPES.OPENROUTER,
+      catalogScope: MODEL_CATALOG_SCOPES.PROVIDER,
       supportsRuntimeModelList: false,
       supportsPricing: true,
       actionPolicy: {

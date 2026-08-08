@@ -6,6 +6,7 @@ import {
   createAccountRuntimeKeyModelListSourceIdentity,
   createAccountSource,
   createAccountTokenModelListSourceIdentity,
+  createPersonalizedCatalogModelListSourceIdentity,
   createProfileSource,
   createProviderCatalogModelListSourceIdentity,
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
@@ -45,6 +46,8 @@ const labelOptions = {
     provider: AccountSiteType
     providerName: string
   }) => `${providerName} · Provider Model Catalog`,
+  formatPersonalizedCatalogLabel: ({ accountName }: { accountName: string }) =>
+    `${accountName} · Personalized Model Catalog`,
 }
 
 describe("formatModelListSourceLabel", () => {
@@ -177,6 +180,26 @@ describe("formatModelListSourceLabel", () => {
       ),
     ).toEqual({
       label: "Example Provider · Provider Model Catalog",
+    })
+  })
+
+  it("labels personalized catalogs by their saved account", () => {
+    const account = createDisplayAccount({
+      id: "personalized-account",
+      name: "Saved account alias",
+      baseUrl: "https://console.example.invalid",
+      siteType: SITE_TYPES.OPENROUTER,
+    })
+
+    expect(
+      formatModelListSourceLabel(
+        createAccountSource(account),
+        labelOptions,
+        createPersonalizedCatalogModelListSourceIdentity(account.id),
+      ),
+    ).toEqual({
+      label: "Saved account alias · Personalized Model Catalog",
+      title: "https://console.example.invalid",
     })
   })
 

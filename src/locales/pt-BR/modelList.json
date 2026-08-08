@@ -353,6 +353,21 @@
   "output": "Saída:",
   "output1MTokens": "Saída (1 milhão de tokens)",
   "perCall": "Por chamada:",
+  "personalizedCatalogFallback": {
+    "allAccountsDescription": "Algumas contas não conseguiram carregar o catálogo personalizado. O catálogo geral compartilhado do provedor aparece uma vez; as contas personalizadas bem-sucedidas permanecem separadas.",
+    "failures": {
+      "auth": "A chave de gerenciamento salva foi rejeitada. Verifique ou substitua a chave e tente novamente.",
+      "cancellation": "A solicitação do catálogo personalizado foi cancelada. Tente novamente quando quiser.",
+      "invalidResponse": "O provedor retornou uma resposta inesperada do catálogo personalizado. Tente novamente em instantes.",
+      "network": "Não foi possível acessar o catálogo personalizado. Verifique a conexão e tente novamente.",
+      "permission": "A chave de gerenciamento salva não pode acessar o catálogo personalizado. Verifique as permissões e tente novamente.",
+      "rateLimit": "O catálogo personalizado está temporariamente limitado. Tente novamente em instantes.",
+      "upstream": "O catálogo personalizado está temporariamente indisponível. Tente novamente em instantes."
+    },
+    "retry": "Tentar catálogo personalizado novamente",
+    "retrying": "Tentando catálogo personalizado novamente...",
+    "title": "Usando o catálogo geral do provedor"
+  },
   "pleaseSelectFirst": "Selecione primeiro uma conta ou credencial de API para consultar a lista de modelos",
   "pleaseSelectSource": "Selecione uma fonte",
   "pricingDescription": "As informações de preços vêm da API fornecida pelo site, e o custo real segue os valores publicados em cada site. Para modelos com pagamento por uso, o preço representa o custo por 1 milhão de tokens; para modelos com pagamento por chamada, é exibido o custo por chamada",
@@ -391,6 +406,7 @@
     "verificationLatencyAsc": "Latência do teste: da menor para a maior"
   },
   "sourceLabels": {
+    "personalizedCatalogBadge": "{{account}} · Catálogo de modelos personalizado",
     "profileBadge": "Perfil: {{name}} · {{host}}",
     "profileOption": "Credencial de API: {{name}} · {{host}}",
     "providerCatalogBadge": "{{provider}} · Catálogo de modelos do provedor"
