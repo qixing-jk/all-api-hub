@@ -184,9 +184,48 @@ async function seedMixedOpenRouterModelList(context: BrowserContext) {
             pricing: {
               prompt: "0.000001",
               completion: "0.000002",
+              request: "0.005",
+              image_output: "0.02",
+              overrides: [
+                {
+                  min_prompt_tokens: 200_000,
+                  prompt: "0.000003",
+                },
+              ],
             },
-            architecture: { output_modalities: ["text"] },
-            top_provider: { max_completion_tokens: 4096 },
+            architecture: {
+              input_modalities: ["text", "image"],
+              output_modalities: ["text"],
+              tokenizer: "Example tokenizer",
+            },
+            supported_parameters: ["temperature", "tools"],
+            reasoning: {
+              default_enabled: true,
+              supported_efforts: ["medium", "high"],
+            },
+            top_provider: {
+              context_length: 48_000,
+              max_completion_tokens: 4096,
+              is_moderated: true,
+            },
+            per_request_limits: {
+              prompt_tokens: 32_000,
+              completion_tokens: 2048,
+            },
+            benchmarks: {
+              design_arena: [
+                {
+                  arena: "models",
+                  category: "website",
+                  elo: 1385.2,
+                  win_rate: 62.5,
+                  rank: 5,
+                },
+              ],
+            },
+            links: {
+              details: `/api/v1/models/${OPENROUTER_MODEL_ID}/endpoints`,
+            },
           },
         ],
         total_count: 1,
@@ -264,6 +303,35 @@ test("loads one public OpenRouter catalog and keeps it provider-wide in all-acco
   await expect(
     page.getByTestId(MODEL_LIST_TEST_IDS.batchVerifyButton),
   ).toHaveCount(0)
+
+  await page.getByTestId(MODEL_LIST_TEST_IDS.modelExpandButton).click()
+  await expect(
+    page.getByRole("heading", { name: "Pricing", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByText("Conditional prices", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByText("More than 200,000 prompt tokens", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Routing provider" }),
+  ).toBeVisible()
+  await expect(
+    page.getByText("Content moderation", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByLabel("Routing provider").getByText("Yes", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("heading", { name: "Benchmarks", exact: true }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole("link", { name: "Open provider details" }),
+  ).toHaveAttribute(
+    "href",
+    `${OPENROUTER_WEB_ORIGIN}/api/v1/models/${OPENROUTER_MODEL_ID}/endpoints`,
+  )
 
   await expect.poll(() => publicCatalogRequests.length).toBe(1)
   const publicRequest = publicCatalogRequests[0]!
