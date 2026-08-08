@@ -540,8 +540,16 @@ describe("OpenRouter provider model catalog Adapter", () => {
                 details: "https://[",
               },
             },
+            {
+              id: "publisher-example/model-untrusted-link",
+              pricing: { prompt: "0", completion: "0" },
+              links: {
+                details:
+                  "https://catalog.example.invalid/api/v1/models/model/endpoints",
+              },
+            },
           ],
-          total_count: 1,
+          total_count: 2,
           links: { next: null },
         }),
       ),
@@ -593,6 +601,11 @@ describe("OpenRouter provider model catalog Adapter", () => {
     expect(JSON.stringify(model.presentation)).not.toContain("not-a-date")
     expect(JSON.stringify(model.presentation)).not.toContain("2026-02-30")
     expect(model.vendorEvidence).toBeUndefined()
+    expect(
+      response.data[1]?.presentation?.sections?.some(
+        (section) => section.id === "links",
+      ),
+    ).toBe(false)
   })
 
   it("does not infer publisher evidence from an unscoped model identifier", async () => {
