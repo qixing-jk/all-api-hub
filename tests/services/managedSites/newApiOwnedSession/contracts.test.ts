@@ -89,4 +89,13 @@ describe("isNewApiOwnedSessionRequest", () => {
       }),
     ).toBe(false)
   })
+
+  it("rejects an unknown owned-session action", () => {
+    expect(
+      parseNewApiOwnedSessionRequest({
+        action: "new-api-owned-session:unknown",
+        baseUrl: validBundle.baseUrl,
+      }),
+    ).toBeNull()
+  })
 })
