@@ -72,6 +72,8 @@ const isControlledManagedSiteImportRequest = (
   /^[a-f0-9]{64}$/.test(request.targetFingerprint) &&
   Array.isArray(request.items) &&
   request.items.length > 0 &&
+  request.items.length <=
+    ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT &&
   request.items.every(
     (item) =>
       isRecord(item) &&
@@ -82,7 +84,11 @@ const isControlledManagedSiteImportRequest = (
       managedSiteImportStatuses.has(item.status),
   )
 
-/** Rejects runtime payloads that contain fields outside the receipt protocol. */
+/**
+ * Rejects runtime payloads that contain fields outside the receipt protocol.
+ * In particular, callers cannot supply `updatedAt`; the background owns receipt
+ * ordering so untrusted messages cannot displace newer bounded receipts.
+ */
 function assertControlledManagedSiteImportRequest(
   request: unknown,
 ): asserts request is AccountKeyRepairRecordManagedSiteImportResultsRequest {
@@ -322,16 +328,13 @@ class AccountKeyRepairRunner {
       return progress
     }
 
-    const now = Date.now()
-    const cancelledProgress = {
-      ...progress,
+    this.currentProgress = progress
+    await this.queueProgressUpdate((prev) => ({
+      ...prev,
       state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled,
-      finishedAt: now,
-      updatedAt: now,
-    }
-    this.currentProgress = cancelledProgress
-    await this.persistAndNotify()
-    return cancelledProgress
+      finishedAt: Date.now(),
+    }))
+    return this.currentProgress ?? progress
   }
 
   private async run(
@@ -359,15 +362,13 @@ class AccountKeyRepairRunner {
 
       const eligibleAccounts: SiteAccount[] = []
 
-      this.updateProgress((prev) => ({
+      await this.queueProgressUpdate((prev) => ({
         ...prev,
         totals: {
           ...prev.totals,
           enabledAccounts: enabledAccounts.length,
         },
       }))
-      await this.persistAndNotify()
-
       for (const account of enabledAccounts) {
         if (this.isCurrentJobCancelled(jobId, abortSignal)) {
           return
@@ -391,15 +392,13 @@ class AccountKeyRepairRunner {
         eligibleAccounts.push(account)
       }
 
-      this.updateProgress((prev) => ({
+      await this.queueProgressUpdate((prev) => ({
         ...prev,
         totals: {
           ...prev.totals,
           eligibleAccounts: eligibleAccounts.length,
         },
       }))
-      await this.persistAndNotify()
-
       await runPerKeySequential({
         items: eligibleAccounts,
         getKey: (account) => getOriginKey(account.site_url),
@@ -419,25 +418,23 @@ class AccountKeyRepairRunner {
         return
       }
 
-      this.updateProgress((prev) => ({
+      await this.queueProgressUpdate((prev) => ({
         ...prev,
         state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
         finishedAt: Date.now(),
       }))
-      await this.persistAndNotify()
     } catch (error) {
       if (this.isCurrentJobCancelled(jobId, abortSignal)) {
         return
       }
 
       logger.error("Repair run failed", error)
-      this.updateProgress((prev) => ({
+      await this.queueProgressUpdate((prev) => ({
         ...prev,
         state: ACCOUNT_KEY_REPAIR_JOB_STATES.Failed,
         finishedAt: Date.now(),
         lastError: getErrorMessage(error),
       }))
-      await this.persistAndNotify()
     } finally {
       const current = await this.getProgress()
       if (current.jobId !== jobId) {
@@ -518,16 +515,6 @@ class AccountKeyRepairRunner {
         errorMessage: getErrorMessage(error),
         finishedAt: Date.now(),
       })
-    }
-  }
-
-  private updateProgress(
-    updater: (progress: AccountKeyRepairProgress) => AccountKeyRepairProgress,
-  ) {
-    const base = this.currentProgress ?? createIdleProgress()
-    this.currentProgress = {
-      ...updater(base),
-      updatedAt: Date.now(),
     }
   }
 
@@ -748,8 +735,7 @@ class AccountKeyRepairRunner {
   }
 
   private async persistAndNotify(
-    progress: AccountKeyRepairProgress = this.currentProgress ??
-      createIdleProgress(),
+    progress: AccountKeyRepairProgress,
   ): Promise<void> {
     await this.storage.set(
       ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,

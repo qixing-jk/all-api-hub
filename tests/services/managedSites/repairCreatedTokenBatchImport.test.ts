@@ -21,6 +21,7 @@ import {
 import {
   isBlockedManagedSiteTokenBatchExportItemInput,
   isResolvedManagedSiteTokenBatchExportItemInput,
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS,
   MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
@@ -263,7 +264,8 @@ describe("resolveRepairCreatedTokenBatchImportCandidate", () => {
         }),
         expect.objectContaining({
           id: buildAccountTokenRuntimeKeyId(failingAccount.id, 23),
-          localFallback: expect.not.stringContaining("private upstream error"),
+          blockingDetailCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
         }),
         expect.objectContaining({
           id: buildAccountTokenRuntimeKeyId(mismatchedAccount.id, 33),
@@ -275,6 +277,7 @@ describe("resolveRepairCreatedTokenBatchImportCandidate", () => {
       ]),
     )
     expect(blockedItems).toHaveLength(5)
+    expect(JSON.stringify(blockedItems)).not.toContain("private upstream error")
     expect(
       blockedItems.every(
         ({ blockingReasonCode }) =>
@@ -282,6 +285,59 @@ describe("resolveRepairCreatedTokenBatchImportCandidate", () => {
           MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
       ),
     ).toBe(true)
+  })
+
+  it("blocks unavailable key management and ambiguous exact inventory matches", async () => {
+    const unavailableAccount = buildAccount("unavailable")
+    const ambiguousAccount = buildAccount("ambiguous")
+
+    mocks.createDisplayAccountApiContext.mockImplementation(
+      (account: DisplaySiteData) => {
+        if (account.id === unavailableAccount.id) {
+          return {
+            request: { baseUrl: account.baseUrl },
+            keyManagement: null,
+          } as never
+        }
+        return createApiContext({
+          tokens: [
+            createToken({ id: 44, group: "duplicate" }) as ApiToken,
+            createToken({ id: 44, group: "duplicate" }) as ApiToken,
+          ],
+        }).context
+      },
+    )
+
+    const candidate = await resolveRepairCreatedTokenBatchImportCandidate({
+      progress: buildProgress([
+        buildRepairResult(unavailableAccount.id, {
+          createdGroups: ["alpha"],
+          createdTokens: [{ tokenId: 11, group: "alpha" }],
+        }),
+        buildRepairResult(ambiguousAccount.id, {
+          createdGroups: ["duplicate"],
+          createdTokens: [{ tokenId: 44, group: "duplicate" }],
+        }),
+      ]),
+      accounts: [unavailableAccount, ambiguousAccount],
+      targetFingerprint: TARGET_A,
+      freshness: REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
+    })
+
+    expect(
+      candidate?.items.filter(isBlockedManagedSiteTokenBatchExportItemInput),
+    ).toEqual([
+      expect.objectContaining({
+        id: buildAccountTokenRuntimeKeyId(unavailableAccount.id, 11),
+        blockingDetailCode:
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
+      }),
+      expect.objectContaining({
+        id: buildAccountTokenRuntimeKeyId(ambiguousAccount.id, 44),
+        blockingDetailCode:
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_REFERENCE_AMBIGUOUS,
+      }),
+    ])
   })
 
   it("excludes confirmed same-target receipts while retaining failed and uncertain work with complete verification", async () => {
@@ -311,6 +367,13 @@ describe("resolveRepairCreatedTokenBatchImportCandidate", () => {
               accountId: account.id,
               tokenId: 11,
               status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+              updatedAt: 2,
+            },
+            {
+              targetFingerprint: TARGET_A,
+              accountId: account.id,
+              tokenId: 11,
+              status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Failed,
               updatedAt: 1,
             },
             {
@@ -507,6 +570,34 @@ describe("resolveRepairCreatedTokenBatchImportCandidate", () => {
     ).toBe(
       REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.REFERENCES_UNAVAILABLE,
     )
+    expect(mocks.createDisplayAccountApiContext).not.toHaveBeenCalled()
+  })
+
+  it("returns no launch candidate for a completed job with an empty exact-reference list", async () => {
+    const account = buildAccount("account-1")
+    const progress = buildProgress([
+      buildRepairResult(account.id, {
+        createdGroups: [],
+        createdTokens: [],
+      }),
+    ])
+
+    expect(
+      getRepairCreatedTokenBatchImportAbsenceReason({
+        progress,
+        targetFingerprint: TARGET_A,
+      }),
+    ).toBe(
+      REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.REFERENCES_UNAVAILABLE,
+    )
+    await expect(
+      resolveRepairCreatedTokenBatchImportCandidate({
+        progress,
+        accounts: [account],
+        targetFingerprint: TARGET_A,
+        freshness: REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
+      }),
+    ).resolves.toBeNull()
     expect(mocks.createDisplayAccountApiContext).not.toHaveBeenCalled()
   })
 

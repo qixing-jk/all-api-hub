@@ -66,6 +66,12 @@
       "verifying": "正在驗證...",
       "viewChannels": "檢視渠道"
     },
+    "blockedDetails": {
+      "createdKeyReferenceAmbiguous": "無法安全比對新建立的金鑰。",
+      "createdKeyUnavailable": "新建立的金鑰已無法使用。",
+      "sourceAccountUnavailable": "來源帳號已無法使用。",
+      "sourceKeyInventoryUnavailable": "無法載入來源帳號的金鑰。"
+    },
     "blockedReasons": {
       "baseUrlRequired": "目標自建 AI 閘道需要 Base URL。",
       "configMissing": "缺少自建 AI 閘道管理員設定。",
@@ -81,6 +87,9 @@
       "title": "匯入已選金鑰"
     },
     "description": "建立到 {{site}} 前，先檢查 {{selectedCount}} 個已選金鑰。",
+    "fallbackLabels": {
+      "createdKey": "已建立的金鑰"
+    },
     "fields": {
       "baseUrl": "Base URL",
       "editModelsLabel": "編輯 {{name}} 的模型列表",

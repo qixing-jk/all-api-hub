@@ -72,6 +72,12 @@
       "verifying": "Verificando...",
       "viewChannels": "Ver canais"
     },
+    "blockedDetails": {
+      "createdKeyReferenceAmbiguous": "Não foi possível associar com segurança a chave recém-criada.",
+      "createdKeyUnavailable": "A chave recém-criada não está mais disponível.",
+      "sourceAccountUnavailable": "A conta de origem não está mais disponível.",
+      "sourceKeyInventoryUnavailable": "Não foi possível carregar as chaves da conta de origem."
+    },
     "blockedReasons": {
       "baseUrlRequired": "O gateway de IA auto-hospedado de destino exige uma URL base.",
       "configMissing": "A configuração de administrador do gateway de IA auto-hospedado está ausente.",
@@ -87,6 +93,9 @@
       "title": "Importar chaves selecionadas"
     },
     "description": "Chaves selecionadas para revisão: {{selectedCount}}. Depois, crie os canais em {{site}}.",
+    "fallbackLabels": {
+      "createdKey": "Chave criada"
+    },
     "fields": {
       "baseUrl": "URL base",
       "editModelsLabel": "Editar modelos de {{name}}",

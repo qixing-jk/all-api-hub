@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   getManagedSiteTokenBatchExportRetryItemIds,
   mergeManagedSiteTokenBatchExportExecutionResults,
@@ -7,7 +8,10 @@ import {
   shouldConfirmManagedSiteTokenBatchExport,
 } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog/managedSiteTokenBatchExportSession"
 import {
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
+  MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES,
+  MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
   type ManagedSiteTokenBatchExportExecutionResult,
   type ManagedSiteTokenBatchExportPreview,
   type ManagedSiteTokenBatchExportPreviewItem,
@@ -40,11 +44,14 @@ const buildItem = (
 const buildPreview = (
   items: ManagedSiteTokenBatchExportPreviewItem[],
 ): ManagedSiteTokenBatchExportPreview => ({
-  intent: { source: "repair-created", verification: "complete" },
-  siteType: "new-api",
+  intent: {
+    source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.REPAIR_CREATED,
+    verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
+  },
+  siteType: SITE_TYPES.NEW_API,
   targetFingerprint: "target-fingerprint",
   targetSummary: {
-    siteType: "new-api",
+    siteType: SITE_TYPES.NEW_API,
     baseUrl: "https://target.example.invalid",
     compatibleUserId: "1",
   },
@@ -60,20 +67,20 @@ describe("managed-site token batch export session", () => {
   it("requires confirmation for complete checks but not trusted repair review", () => {
     expect(
       shouldConfirmManagedSiteTokenBatchExport({
-        source: "repair-created",
-        verification: "trusted-new",
+        source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.REPAIR_CREATED,
+        verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW,
       }),
     ).toBe(false)
     expect(
       shouldConfirmManagedSiteTokenBatchExport({
-        source: "repair-created",
-        verification: "complete",
+        source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.REPAIR_CREATED,
+        verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
       }),
     ).toBe(true)
     expect(
       shouldConfirmManagedSiteTokenBatchExport({
-        source: "manual-selection",
-        verification: "complete",
+        source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.MANUAL_SELECTION,
+        verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
       }),
     ).toBe(true)
   })
@@ -114,7 +121,7 @@ describe("managed-site token batch export session", () => {
           id: "created-key",
           accountName: "Example account",
           runtimeKeyName: "Created key",
-          result: "created",
+          result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.CREATED,
           success: true,
           skipped: false,
         },
@@ -122,7 +129,7 @@ describe("managed-site token batch export session", () => {
           id: "failed-key",
           accountName: "Example account",
           runtimeKeyName: "Failed key",
-          result: "failed",
+          result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED,
           success: false,
           skipped: false,
         },
@@ -130,7 +137,7 @@ describe("managed-site token batch export session", () => {
           id: "uncertain-key",
           accountName: "Example account",
           runtimeKeyName: "Uncertain key",
-          result: "uncertain",
+          result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
           success: false,
           skipped: false,
         },
@@ -156,7 +163,7 @@ describe("managed-site token batch export session", () => {
           id: "created-key",
           accountName: "Example account",
           runtimeKeyName: "Created key",
-          result: "created",
+          result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.CREATED,
           success: true,
           skipped: false,
         },
@@ -164,7 +171,7 @@ describe("managed-site token batch export session", () => {
           id: "failed-key",
           accountName: "Example account",
           runtimeKeyName: "Failed key",
-          result: "failed",
+          result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED,
           success: false,
           skipped: false,
           error: "first attempt",
@@ -183,7 +190,7 @@ describe("managed-site token batch export session", () => {
           id: "failed-key",
           accountName: "Example account",
           runtimeKeyName: "Failed key",
-          result: "created",
+          result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.CREATED,
           success: true,
           skipped: false,
         },
@@ -191,7 +198,11 @@ describe("managed-site token batch export session", () => {
     }
 
     expect(
-      mergeManagedSiteTokenBatchExportExecutionResults(previous, retry),
+      mergeManagedSiteTokenBatchExportExecutionResults(
+        previous,
+        retry,
+        new Set(["failed-key"]),
+      ),
     ).toEqual({
       totalSelected: 3,
       attemptedCount: 2,
@@ -200,6 +211,59 @@ describe("managed-site token batch export session", () => {
       uncertainCount: 0,
       skippedCount: 1,
       items: [previous.items[0], retry.items[0]],
+    })
+  })
+
+  it("removes a previous retry failure when refreshed preparation skips it", () => {
+    const createdItem = {
+      id: "created-key",
+      accountName: "Example account",
+      runtimeKeyName: "Created key",
+      result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.CREATED,
+      success: true,
+      skipped: false,
+    }
+    const failedItem = {
+      id: "failed-key",
+      accountName: "Example account",
+      runtimeKeyName: "Failed key",
+      result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED,
+      success: false,
+      skipped: false,
+    }
+    const previous: ManagedSiteTokenBatchExportExecutionResult = {
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      uncertainCount: 0,
+      skippedCount: 0,
+      items: [createdItem, failedItem],
+    }
+    const retry: ManagedSiteTokenBatchExportExecutionResult = {
+      totalSelected: 1,
+      attemptedCount: 0,
+      createdCount: 0,
+      failedCount: 0,
+      uncertainCount: 0,
+      skippedCount: 1,
+      items: [],
+    }
+
+    expect(
+      mergeManagedSiteTokenBatchExportExecutionResults(
+        previous,
+        retry,
+        new Set(["failed-key"]),
+      ),
+    ).toEqual({
+      totalSelected: 2,
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+      uncertainCount: 0,
+      skippedCount: 1,
+      items: [createdItem],
     })
   })
 })

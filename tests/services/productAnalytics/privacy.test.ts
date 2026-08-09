@@ -1574,10 +1574,9 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
-  it("allows only controlled managed-site batch import sources and strips repair identifiers", () => {
-    for (const source of Object.values(
-      PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES,
-    )) {
+  it.each(Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_BATCH_IMPORT_SOURCES))(
+    "allows controlled managed-site batch import source %s and strips repair identifiers",
+    (source) => {
       const sanitized = sanitizeProductAnalyticsEvent(
         PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
         {
@@ -1606,8 +1605,10 @@ describe("product analytics privacy filtering", () => {
         result: PRODUCT_ANALYTICS_RESULTS.Success,
         managed_site_batch_import_source: source,
       })
-    }
+    },
+  )
 
+  it("strips an uncontrolled managed-site batch import source", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
       {

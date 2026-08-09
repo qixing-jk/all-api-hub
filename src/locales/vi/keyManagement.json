@@ -66,6 +66,12 @@
       "verifying": "Đang xác minh...",
       "viewChannels": "Mở quản lý kênh"
     },
+    "blockedDetails": {
+      "createdKeyReferenceAmbiguous": "Không thể đối chiếu an toàn khóa vừa tạo.",
+      "createdKeyUnavailable": "Khóa vừa tạo không còn khả dụng.",
+      "sourceAccountUnavailable": "Tài khoản nguồn không còn khả dụng.",
+      "sourceKeyInventoryUnavailable": "Không thể tải các khóa của tài khoản nguồn."
+    },
     "blockedReasons": {
       "baseUrlRequired": "AI gateway tự triển khai mục tiêu yêu cầu Base URL.",
       "configMissing": "Thiếu cấu hình quản trị viên AI gateway tự triển khai.",
@@ -81,6 +87,9 @@
       "title": "Nhập các khóa đã chọn"
     },
     "description": "Trước khi tạo trên {{site}}, hãy kiểm tra {{selectedCount}} khóa đã chọn trước.",
+    "fallbackLabels": {
+      "createdKey": "Khóa đã tạo"
+    },
     "fields": {
       "baseUrl": "Base URL",
       "editModelsLabel": "Chỉnh sửa danh sách mô hình của {{name}}",

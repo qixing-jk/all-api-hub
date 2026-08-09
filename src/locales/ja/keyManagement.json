@@ -66,6 +66,12 @@
       "verifying": "検証中...",
       "viewChannels": "チャネル管理を開く"
     },
+    "blockedDetails": {
+      "createdKeyReferenceAmbiguous": "新しく作成されたキーを安全に特定できませんでした。",
+      "createdKeyUnavailable": "新しく作成されたキーは利用できなくなりました。",
+      "sourceAccountUnavailable": "元のアカウントは利用できなくなりました。",
+      "sourceKeyInventoryUnavailable": "元のアカウントのキーを読み込めませんでした。"
+    },
     "blockedReasons": {
       "baseUrlRequired": "対象のセルフホスト AI ゲートウェイでは Base URL が必要です。",
       "configMissing": "セルフホスト AI ゲートウェイの管理者設定がありません。",
@@ -81,6 +87,9 @@
       "title": "選択済みキーをインポート"
     },
     "description": "{{site}} に作成する前に、選択済み {{selectedCount}} 件のキーを確認します。",
+    "fallbackLabels": {
+      "createdKey": "作成されたキー"
+    },
     "fields": {
       "baseUrl": "Base URL",
       "editModelsLabel": "{{name}} のモデル一覧を編集",

@@ -236,6 +236,44 @@ describe("accountKeyRepair", () => {
     )
   })
 
+  it("returns the reserved run while another progress snapshot is current", async () => {
+    const currentProgress: AccountKeyRepairProgress = {
+      jobId: "previous-job",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+      totals: {
+        enabledAccounts: 0,
+        eligibleAccounts: 0,
+        processedAccounts: 0,
+        processedEligibleAccounts: 0,
+      },
+      summary: {
+        created: 0,
+        alreadyHad: 0,
+        skipped: 0,
+        failed: 0,
+      },
+      results: [],
+    }
+    const reservedProgress: AccountKeyRepairProgress = {
+      ...currentProgress,
+      jobId: "reserved-job",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
+    }
+    const { accountKeyRepairRunner } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+    const controlledRunner = accountKeyRepairRunner as unknown as {
+      currentProgress: AccountKeyRepairProgress
+      currentRunProgress: AccountKeyRepairProgress
+    }
+    controlledRunner.currentProgress = currentProgress
+    controlledRunner.currentRunProgress = reservedProgress
+
+    await expect(accountKeyRepairRunner.getProgress()).resolves.toBe(
+      reservedProgress,
+    )
+  })
+
   it("merges controlled managed-site import receipts by target, account, and token", async () => {
     const storedProgress: AccountKeyRepairProgress = {
       jobId: "job-receipts",
@@ -413,6 +451,72 @@ describe("accountKeyRepair", () => {
     expect(mocks.sendRuntimeMessage).not.toHaveBeenCalled()
   })
 
+  it("drops a queued receipt update when another job replaces the progress", async () => {
+    const storedProgress: AccountKeyRepairProgress = {
+      jobId: "current-job",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+      updatedAt: 100,
+      totals: {
+        enabledAccounts: 0,
+        eligibleAccounts: 0,
+        processedAccounts: 0,
+        processedEligibleAccounts: 0,
+      },
+      summary: {
+        created: 0,
+        alreadyHad: 0,
+        skipped: 0,
+        failed: 0,
+      },
+      results: [],
+    }
+    const replacementProgress = {
+      ...storedProgress,
+      jobId: "replacement-job",
+    }
+    mocks.storageMap.set("accountKeyRepair_progress", storedProgress)
+
+    const { accountKeyRepairRunner } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+    await accountKeyRepairRunner.getProgress()
+
+    let releaseQueue!: () => void
+    const blockedQueue = new Promise<void>((resolve) => {
+      releaseQueue = resolve
+    })
+    const controlledRunner = accountKeyRepairRunner as unknown as {
+      currentProgress: AccountKeyRepairProgress
+      progressQueue: Promise<void>
+    }
+    controlledRunner.progressQueue = blockedQueue
+
+    const updatePromise =
+      accountKeyRepairRunner.recordManagedSiteImportResultsForCurrentProgress({
+        jobId: "current-job",
+        targetFingerprint: TARGET_FINGERPRINT_A,
+        items: [
+          {
+            accountId: "account-1",
+            tokenId: 11,
+            status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+          },
+        ],
+      })
+
+    await vi.waitFor(() => {
+      expect(controlledRunner.progressQueue).not.toBe(blockedQueue)
+    })
+    controlledRunner.currentProgress = replacementProgress
+    releaseQueue()
+
+    await expect(updatePromise).resolves.toBe(replacementProgress)
+    expect(mocks.storageMap.get("accountKeyRepair_progress")).toBe(
+      storedProgress,
+    )
+    expect(mocks.sendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
   it("bounds managed-site import receipts to the newest 500 entries", async () => {
     const storedProgress: AccountKeyRepairProgress = {
       jobId: "bounded-job",
@@ -441,11 +545,24 @@ describe("accountKeyRepair", () => {
       {
         jobId: "bounded-job",
         targetFingerprint: TARGET_FINGERPRINT_A,
-        items: Array.from({ length: 501 }, (_, tokenId) => ({
+        items: Array.from({ length: 500 }, (_, tokenId) => ({
           accountId: "account-1",
           tokenId,
           status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
         })),
+      },
+    )
+    await accountKeyRepairRunner.recordManagedSiteImportResultsForCurrentProgress(
+      {
+        jobId: "bounded-job",
+        targetFingerprint: TARGET_FINGERPRINT_A,
+        items: [
+          {
+            accountId: "account-1",
+            tokenId: 500,
+            status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+          },
+        ],
       },
     )
 
@@ -569,6 +686,15 @@ describe("accountKeyRepair", () => {
             errorMessage: "must-not-cross-the-message-boundary",
           },
         ],
+      },
+      {
+        jobId: "controlled-job",
+        targetFingerprint: TARGET_FINGERPRINT_A,
+        items: Array.from({ length: 501 }, (_, tokenId) => ({
+          accountId: "account-1",
+          tokenId,
+          status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+        })),
       },
     ]) {
       await expect(
@@ -2304,8 +2430,9 @@ describe("accountKeyRepair", () => {
     await vi.waitFor(() => {
       expect(mocks.pendingStorageSets).toHaveLength(1)
     })
-    await accountKeyRepairRunner.cancel()
+    const cancelPromise = accountKeyRepairRunner.cancel()
     mocks.resolveNextStorageSet()
+    await cancelPromise
 
     await vi.waitFor(async () => {
       await expect(accountKeyRepairRunner.getProgress()).resolves.toMatchObject(
@@ -2669,6 +2796,10 @@ describe("accountKeyRepair", () => {
 
     await vi.waitFor(() => {
       expect(mocks.pendingStorageSets).toHaveLength(1)
+    })
+    await expect(accountKeyRepairRunner.getProgress()).resolves.toMatchObject({
+      jobId: "job-123",
+      state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
     })
     await expect(accountKeyRepairRunner.start()).resolves.toMatchObject({
       jobId: "job-123",
@@ -3057,6 +3188,16 @@ describe("accountKeyRepair", () => {
       data: expect.objectContaining({
         jobId: "job-123",
       }),
+    })
+
+    await vi.waitFor(async () => {
+      await expect(getAccountKeyRepairProgress()).resolves.toEqual({
+        success: true,
+        data: expect.objectContaining({
+          jobId: "job-123",
+          state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
+        }),
+      })
     })
 
     await expect(cancelAccountKeyRepair()).resolves.toEqual({

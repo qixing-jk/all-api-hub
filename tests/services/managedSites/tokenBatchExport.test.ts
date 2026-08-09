@@ -14,7 +14,9 @@ import {
 } from "~/services/protectionBypass/contracts"
 import type { AccountToken } from "~/types"
 import {
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
 } from "~/types/managedSiteTokenBatchExport"
@@ -648,24 +650,37 @@ describe("managed-site token batch export", () => {
     },
   )
 
-  it("reconciles before propagating a thrown create unchanged without replay", async () => {
+  it("records a thrown create as uncertain and preserves successful siblings", async () => {
     const config = {
       baseUrl: "https://target.example.com",
       adminToken: "admin-secret",
       userId: "1",
     }
     const payloadSecret = "payload-secret"
-    const thrown = new Error("write programming failure")
+    const thrown = new Error(`write failed for ${payloadSecret}`)
+    const createChannel = vi
+      .fn()
+      .mockImplementationOnce(async () => {
+        config.adminToken = "mutated-after-snapshot"
+        throw thrown
+      })
+      .mockResolvedValueOnce({
+        outcome: "succeeded",
+        data: undefined,
+        confirmedEffects: [
+          {
+            kind: "resource-created",
+            resourceKind: "channel",
+          },
+        ],
+      })
     const service = buildService({
       getConfig: vi.fn().mockResolvedValue(config),
       buildChannelPayload: vi.fn((draft) => ({
         mode: "single" as const,
         channel: { ...draft, key: payloadSecret },
       })),
-      createChannel: vi.fn().mockImplementation(async () => {
-        config.adminToken = "mutated-after-snapshot"
-        throw thrown
-      }),
+      createChannel,
     })
     mockGetManagedSiteService.mockResolvedValue(service)
     mockGetManagedSiteServiceForType.mockReturnValue(service)
@@ -676,18 +691,133 @@ describe("managed-site token batch export", () => {
     } = await import("~/services/managedSites/tokenBatchExport")
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
-      items: [buildAccountTokenInput()],
+      items: [
+        buildAccountTokenInput(),
+        buildAccountTokenInput(
+          buildDisplaySiteData({ id: "account-2", name: "Account 2" }),
+          buildAccountToken({
+            id: 12,
+            name: "Token 12",
+            accountId: "account-2",
+            accountName: "Account 2",
+          }),
+        ),
+      ],
     })
 
-    await expect(
-      executeManagedSiteTokenBatchExport({
-        preview,
-        selectedItemIds: [preview.items[0].id],
-      }),
-    ).rejects.toBe(thrown)
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: preview.items.map((item) => item.id),
+    })
 
-    expect(service.createChannel).toHaveBeenCalledTimes(1)
+    expect(service.createChannel).toHaveBeenCalledTimes(2)
     expect(service.listChannels).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 0,
+      uncertainCount: 1,
+    })
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        id: preview.items[0].id,
+        result: "uncertain",
+        error: "Failed to create channel: write failed for [REDACTED]",
+      }),
+      expect.objectContaining({
+        id: preview.items[1].id,
+        result: "created",
+      }),
+    ])
+    expect(JSON.stringify(result)).not.toContain(payloadSecret)
+  })
+
+  it("uses only the local fallback when secret inspection is incomplete", async () => {
+    const hiddenSecret = "incomplete-draft-secret"
+    const providerMessage = `write failed for ${hiddenSecret}`
+    const createChannel = vi
+      .fn()
+      .mockRejectedValueOnce(new Error(providerMessage))
+      .mockResolvedValueOnce({
+        outcome: "succeeded",
+        data: undefined,
+        confirmedEffects: [
+          {
+            kind: "resource-created",
+            resourceKind: "channel",
+          },
+        ],
+      })
+    const service = buildService({
+      prepareChannelFormData: vi.fn(
+        async (account, token) =>
+          new Proxy(
+            {
+              name: `${account.name} - ${token.name}`,
+              type: 1,
+              key: hiddenSecret,
+              base_url: account.baseUrl,
+              models: ["model-example"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1 as const,
+            },
+            {
+              ownKeys() {
+                throw new Error("draft inspection unavailable")
+              },
+            },
+          ),
+      ),
+      buildChannelPayload: vi.fn((draft) => ({
+        mode: "single" as const,
+        channel: {
+          name: draft.name,
+          key: draft.key,
+          models: draft.models.join(","),
+          groups: draft.groups,
+          group: draft.groups.join(","),
+          status: draft.status,
+        },
+      })),
+      createChannel,
+    })
+    useManagedSiteService(service)
+
+    const {
+      prepareManagedSiteTokenBatchExportPreview,
+      executeManagedSiteTokenBatchExport,
+    } = await import("~/services/managedSites/tokenBatchExport")
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        buildAccountTokenInput(),
+        buildAccountTokenInput(
+          buildDisplaySiteData({ id: "account-2", name: "Account 2" }),
+          buildAccountToken({
+            id: 12,
+            accountId: "account-2",
+            accountName: "Account 2",
+            name: "Token 12",
+          }),
+        ),
+      ],
+      intent: repairTrustedNewIntent,
+    })
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: preview.items.map((item) => item.id),
+    })
+
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        result: "uncertain",
+        error: "Failed to create channel",
+      }),
+      expect.objectContaining({ result: "created" }),
+    ])
+    expect(JSON.stringify(result)).not.toContain(providerMessage)
+    expect(JSON.stringify(result)).not.toContain(hiddenSecret)
   })
 
   it("reconciles before rejecting a malformed create result without replay", async () => {
@@ -716,7 +846,7 @@ describe("managed-site token batch export", () => {
     expect(service.listChannels).toHaveBeenCalledOnce()
   })
 
-  it("settles in-flight writes and stops dependent items before propagating a create failure", async () => {
+  it("settles all writes and preserves every result after one create throws", async () => {
     const thrown = new Error("batch write invariant failed")
     let releaseInFlight!: () => void
     const inFlightCanSettle = new Promise<void>((resolve) => {
@@ -763,20 +893,19 @@ describe("managed-site token batch export", () => {
     const execution = executeManagedSiteTokenBatchExport({
       preview,
       selectedItemIds: preview.items.map((item) => item.id),
-    }).then(
-      () => ({ status: "resolved" as const, error: undefined }),
-      (error: unknown) => ({ status: "rejected" as const, error }),
-    )
+    })
 
-    await vi.waitFor(() => expect(createChannel).toHaveBeenCalledTimes(4))
+    await vi.waitFor(() => expect(createChannel).toHaveBeenCalledTimes(5))
     expect(service.listChannels).not.toHaveBeenCalled()
     releaseInFlight()
 
-    await expect(execution).resolves.toEqual({
-      status: "rejected",
-      error: thrown,
+    await expect(execution).resolves.toMatchObject({
+      attemptedCount: 6,
+      createdCount: 5,
+      uncertainCount: 1,
+      failedCount: 0,
     })
-    expect(createChannel).toHaveBeenCalledTimes(4)
+    expect(createChannel).toHaveBeenCalledTimes(6)
     expect(service.listChannels).toHaveBeenCalledOnce()
   })
 
@@ -1101,16 +1230,69 @@ describe("managed-site token batch export", () => {
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
-      items: [buildAccountTokenInput()],
+      items: [
+        buildAccountTokenInput(),
+        {
+          kind: MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.BLOCKED_REFERENCE,
+          id: "blocked-reference",
+          accountLabel: "Unavailable account",
+          keyLabel: "Unavailable key",
+          blockingReasonCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
+          blockingDetailCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_UNAVAILABLE,
+        },
+      ],
     })
 
-    expect(preview.blockedCount).toBe(1)
+    expect(preview.blockedCount).toBe(2)
     expect(preview.items[0]).toMatchObject({
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
       blockingReasonCode:
         MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.CONFIG_MISSING,
     })
+    expect(preview.items[1]).toMatchObject({
+      id: "blocked-reference",
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
+      blockingDetailCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_UNAVAILABLE,
+    })
     expect(service.prepareChannelFormData).not.toHaveBeenCalled()
+  })
+
+  it("keeps trusted-new model prefill failures executable with a warning", async () => {
+    const service = buildService({
+      prepareChannelFormData: vi.fn(async (account, token) => ({
+        name: `${account.name} - ${token.name}`,
+        type: 1,
+        key: token.key,
+        base_url: account.baseUrl,
+        models: ["model-example"],
+        groups: ["default"],
+        priority: 0,
+        weight: 0,
+        status: 1 as const,
+        modelPrefillFetchFailed: true,
+      })),
+    })
+    mockGetManagedSiteService.mockResolvedValue(service)
+
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [buildAccountTokenInput()],
+      intent: repairTrustedNewIntent,
+    })
+
+    expect(preview.items[0]).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+      warningCodes: [
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.MODEL_PREFILL_FAILED,
+      ],
+    })
   })
 
   it("keeps dedupe-unsupported targets executable with a warning", async () => {
@@ -1893,7 +2075,8 @@ describe("managed-site token batch export", () => {
           keyLabel: "Recovered group",
           blockingReasonCode:
             MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.SECRET_RESOLUTION_FAILED,
-          localFallback: "The source key could not be resolved",
+          blockingDetailCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_UNAVAILABLE,
         },
       ],
     })
@@ -1907,7 +2090,8 @@ describe("managed-site token batch export", () => {
         status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
         blockingReasonCode:
           MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.SECRET_RESOLUTION_FAILED,
-        blockingMessage: "The source key could not be resolved",
+        blockingDetailCode:
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_UNAVAILABLE,
       }),
     ])
   })

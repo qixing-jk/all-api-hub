@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 
 import type { ManagedSiteTokenBatchExportPreviewItem } from "~/types/managedSiteTokenBatchExport"
 import {
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
@@ -39,6 +40,32 @@ export const getBatchExportWarningText = (t: TFunction, code: string) => {
       return t(
         "keyManagement:batchManagedSiteExport.warnings.dedupeUnsupported",
       )
+  }
+}
+
+export const getBatchExportBlockedDetailText = (
+  t: TFunction,
+  code?: string | null,
+) => {
+  switch (code) {
+    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_ACCOUNT_UNAVAILABLE:
+      return t(
+        "keyManagement:batchManagedSiteExport.blockedDetails.sourceAccountUnavailable",
+      )
+    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE:
+      return t(
+        "keyManagement:batchManagedSiteExport.blockedDetails.sourceKeyInventoryUnavailable",
+      )
+    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_UNAVAILABLE:
+      return t(
+        "keyManagement:batchManagedSiteExport.blockedDetails.createdKeyUnavailable",
+      )
+    case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_REFERENCE_AMBIGUOUS:
+      return t(
+        "keyManagement:batchManagedSiteExport.blockedDetails.createdKeyReferenceAmbiguous",
+      )
+    default:
+      return null
   }
 }
 

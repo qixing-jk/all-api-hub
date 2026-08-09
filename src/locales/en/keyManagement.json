@@ -69,6 +69,12 @@
       "verifying": "Verifying...",
       "viewChannels": "View channels"
     },
+    "blockedDetails": {
+      "createdKeyReferenceAmbiguous": "The newly created key could not be matched safely.",
+      "createdKeyUnavailable": "The newly created key is no longer available.",
+      "sourceAccountUnavailable": "The source account is no longer available.",
+      "sourceKeyInventoryUnavailable": "The source account keys could not be loaded."
+    },
     "blockedReasons": {
       "baseUrlRequired": "Base URL is required by the target self-hosted AI gateway.",
       "configMissing": "Self-hosted AI gateway admin configuration is missing.",
@@ -84,6 +90,9 @@
       "title": "Import selected keys"
     },
     "description": "Review {{selectedCount}} selected keys before creating channels in {{site}}.",
+    "fallbackLabels": {
+      "createdKey": "Created key"
+    },
     "fields": {
       "baseUrl": "Base URL",
       "editModelsLabel": "Edit models for {{name}}",

@@ -82,16 +82,17 @@ const logger = createLogger("ManagedSiteTokenBatchExport")
 const TOKEN_BATCH_EXPORT_CONCURRENCY = 4
 const FALLBACK_BLOCKING_MESSAGE = "Failed to prepare this key for batch import"
 const FALLBACK_EXECUTION_ERROR = "Failed to create channel"
-const TARGET_CHANGED_ERROR_CODE =
+export const MANAGED_SITE_TOKEN_BATCH_IMPORT_TARGET_CHANGED_ERROR_CODE =
   "managed-site-token-import-target-changed" as const
 
-const DEFAULT_BATCH_IMPORT_INTENT: ManagedSiteBatchImportIntent = {
-  source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.MANUAL_SELECTION,
-  verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
-}
+export const DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT: ManagedSiteBatchImportIntent =
+  {
+    source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.MANUAL_SELECTION,
+    verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
+  }
 
-class ManagedSiteTokenBatchImportTargetChangedError extends Error {
-  readonly code = TARGET_CHANGED_ERROR_CODE
+export class ManagedSiteTokenBatchImportTargetChangedError extends Error {
+  readonly code = MANAGED_SITE_TOKEN_BATCH_IMPORT_TARGET_CHANGED_ERROR_CODE
 
   constructor() {
     super("The managed-site target changed. Review the target and try again.")
@@ -223,7 +224,7 @@ const buildExplicitBlockedPreviewItem = (
   status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
   warningCodes: [],
   blockingReasonCode: input.blockingReasonCode,
-  blockingMessage: input.localFallback,
+  blockingDetailCode: input.blockingDetailCode,
 })
 
 const uniqueWarningCodes = (
@@ -600,7 +601,7 @@ export async function prepareManagedSiteTokenBatchExportPreview(params: {
   resolvedChannelKeysByItemId?: Record<string, Record<number, string>>
   protectionBypassExecution?: ProtectionBypassExecution
 }): Promise<ManagedSiteTokenBatchExportPreview> {
-  const intent = params.intent ?? DEFAULT_BATCH_IMPORT_INTENT
+  const intent = params.intent ?? DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT
   const runtimeConfig = await getCurrentManagedSiteRuntimeConfig()
 
   if (!runtimeConfig) {
@@ -715,10 +716,27 @@ export async function executeManagedSiteTokenBatchExport(params: {
           preDispatchSecretCollection,
           collectManagedResourceSecrets(payload),
         )
-        const mutation = await target.service.createChannel(
-          target.config,
-          payload,
-        )
+        let mutation: Awaited<ReturnType<typeof target.service.createChannel>>
+        try {
+          mutation = await target.service.createChannel(target.config, payload)
+        } catch (error) {
+          const message = secretCollection.complete
+            ? toPrivateManagedSiteThrownErrorMessage(error, {
+                knownSecrets: secretCollection.knownSecrets,
+              })
+            : undefined
+          return {
+            id: item.id,
+            accountName: item.accountName,
+            runtimeKeyName: item.runtimeKeyName,
+            result: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
+            success: false,
+            skipped: false,
+            error: message
+              ? `${FALLBACK_EXECUTION_ERROR}: ${message}`
+              : FALLBACK_EXECUTION_ERROR,
+          }
+        }
         assertManagedSiteMutationResult(mutation, { idempotent: false })
         const privateOutput = secretCollection.complete
           ? toPrivateManagedSiteMutationOutput(mutation, {

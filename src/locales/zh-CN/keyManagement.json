@@ -66,6 +66,12 @@
       "verifying": "正在验证...",
       "viewChannels": "查看渠道"
     },
+    "blockedDetails": {
+      "createdKeyReferenceAmbiguous": "无法安全匹配新创建的密钥。",
+      "createdKeyUnavailable": "新创建的密钥已不可用。",
+      "sourceAccountUnavailable": "来源账号已不可用。",
+      "sourceKeyInventoryUnavailable": "无法加载来源账号的密钥。"
+    },
     "blockedReasons": {
       "baseUrlRequired": "目标自建 AI 网关要求填写 Base URL。",
       "configMissing": "缺少自建 AI 网关管理员配置。",
@@ -81,6 +87,9 @@
       "title": "导入已选择密钥"
     },
     "description": "创建到 {{site}} 前，先检查 {{selectedCount}} 个已选择密钥。",
+    "fallbackLabels": {
+      "createdKey": "已创建的密钥"
+    },
     "fields": {
       "baseUrl": "Base URL",
       "editModelsLabel": "编辑 {{name}} 的模型列表",

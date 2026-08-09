@@ -134,6 +134,7 @@ export function DestructiveConfirmDialog({
             className="flex-1"
             loading={isWorking}
             data-testid={confirmButtonTestId}
+            data-variant={confirmVariant}
           >
             {isWorking ? workingLabel ?? confirmLabel : confirmLabel}
           </Button>

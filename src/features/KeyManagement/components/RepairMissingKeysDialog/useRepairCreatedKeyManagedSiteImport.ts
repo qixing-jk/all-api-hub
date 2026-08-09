@@ -27,6 +27,7 @@ import {
 } from "~/types/accountKeyAutoProvisioning"
 import {
   isResolvedManagedSiteTokenBatchExportItemInput,
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS,
   type ManagedSiteBatchImportIntent,
   type ManagedSiteTokenBatchExportExecutionResult,
   type ManagedSiteTokenBatchExportItemInput,
@@ -145,9 +146,10 @@ const getRepairImportReceiptItems = (params: {
 
   for (const item of params.result.items) {
     const status =
-      item.result === "created"
+      item.result === MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.CREATED
         ? ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created
-        : item.result === "failed"
+        : item.result ===
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED
           ? ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Failed
           : ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Uncertain
     addReceipt(item.id, status)
@@ -336,7 +338,12 @@ export function useRepairCreatedKeyManagedSiteImport({
       const targetFingerprint = activeTargetFingerprintRef.current
 
       for (const item of result.items) {
-        if (item.result !== "created") continue
+        if (
+          item.result !==
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.CREATED
+        ) {
+          continue
+        }
         const input = activeItemsRef.current
           .filter(isResolvedManagedSiteTokenBatchExportItemInput)
           .find((candidateItem) => candidateItem.runtimeKey.id === item.id)

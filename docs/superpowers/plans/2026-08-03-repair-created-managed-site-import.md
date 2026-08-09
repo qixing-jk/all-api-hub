@@ -379,6 +379,7 @@ Related design: `docs/superpowers/specs/2026-08-03-repair-created-key-managed-si
 
 **Files:**
 
+- Modify: `src/locales/de/keyManagement.json`
 - Modify: `src/locales/en/keyManagement.json`
 - Modify: `src/locales/es-419/keyManagement.json`
 - Modify: `src/locales/ja/keyManagement.json`
@@ -397,7 +398,7 @@ Related design: `docs/superpowers/specs/2026-08-03-repair-created-key-managed-si
 
 - [ ] Add a dedicated typed field rather than overloading unrelated generic source values. Wire it through the existing action insight mapper and explicit privacy allow-list. Do not add a new per-key analytics action.
 
-- [ ] Add shared locale keys in all seven app locales for current target/change target, created-key simplified review, use complete checks, unavailable exact key, target changed/stale preview, controlled results, not selected, retry, and reconciliation guidance. Use proper `count` plurals for visible counts.
+- [ ] Add shared locale keys in all eight app locales for current target/change target, created-key simplified review, use complete checks, unavailable exact key, target changed/stale preview, controlled results, not selected, retry, and reconciliation guidance. Keep repair-created blocked details and fallback labels as controlled service codes localized at the UI boundary. Use proper `count` plurals for visible counts.
 
 - [ ] Keep copy user-oriented: describe which newly created keys will be imported, which target receives them, what checks are omitted, and how to choose full checks. Do not say “provenance”, “fingerprint”, “receipt”, “resolver”, “trusted/untrusted”, or expose provider implementation details.
 

@@ -17,10 +17,10 @@ interface ManagedSiteTokenBatchExportFooterProps {
   isLoadingPreview: boolean
   isRunning: boolean
   selectedExecutableCount: number
-  canRetry?: boolean
+  canRetry: boolean
   onClose: () => void
   onStart: () => void
-  onRetry?: () => void
+  onRetry: () => void
   onViewChannels: () => void
 }
 
@@ -36,10 +36,10 @@ export function ManagedSiteTokenBatchExportFooter({
   isLoadingPreview,
   isRunning,
   selectedExecutableCount,
-  canRetry = false,
+  canRetry,
   onClose,
   onStart,
-  onRetry = () => undefined,
+  onRetry,
   onViewChannels,
 }: ManagedSiteTokenBatchExportFooterProps) {
   if (executionResult) {

@@ -66,6 +66,16 @@ export const MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES = {
 export type ManagedSiteTokenBatchExportBlockedReasonCode =
   (typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES)[keyof typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES]
 
+export const MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES = {
+  SOURCE_ACCOUNT_UNAVAILABLE: "source-account-unavailable",
+  SOURCE_KEY_INVENTORY_UNAVAILABLE: "source-key-inventory-unavailable",
+  CREATED_KEY_UNAVAILABLE: "created-key-unavailable",
+  CREATED_KEY_REFERENCE_AMBIGUOUS: "created-key-reference-ambiguous",
+} as const
+
+export type ManagedSiteTokenBatchExportBlockedDetailCode =
+  (typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES)[keyof typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES]
+
 export const MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS = {
   RESOLVED: "resolved",
   BLOCKED_REFERENCE: "blocked-reference",
@@ -84,7 +94,7 @@ export interface BlockedManagedSiteTokenBatchExportItemInput {
   accountLabel: string
   keyLabel: string
   blockingReasonCode: ManagedSiteTokenBatchExportBlockedReasonCode
-  localFallback: string
+  blockingDetailCode: ManagedSiteTokenBatchExportBlockedDetailCode
 }
 
 export type ManagedSiteTokenBatchExportItemInput =
@@ -117,6 +127,7 @@ export interface ManagedSiteTokenBatchExportPreviewItem {
   status: ManagedSiteTokenBatchExportPreviewStatus
   warningCodes: ManagedSiteTokenBatchExportWarningCode[]
   blockingReasonCode?: ManagedSiteTokenBatchExportBlockedReasonCode
+  blockingDetailCode?: ManagedSiteTokenBatchExportBlockedDetailCode
   blockingMessage?: string
   matchedChannel?: ManagedSiteTokenBatchExportMatchedChannel
   verificationCandidate?: ManagedSiteTokenBatchExportMatchedChannel

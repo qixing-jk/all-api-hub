@@ -88,8 +88,9 @@ describe("DestructiveConfirmDialog", () => {
     )
 
     expect(await screen.findByTestId("import-icon")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "Import" })).not.toHaveClass(
-      "bg-destructive",
+    expect(screen.getByRole("button", { name: "Import" })).toHaveAttribute(
+      "data-variant",
+      "default",
     )
   })
 })

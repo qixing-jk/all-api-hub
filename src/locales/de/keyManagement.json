@@ -69,6 +69,12 @@
       "verifying": "Verifizierung...",
       "viewChannels": "Kanäle anzeigen"
     },
+    "blockedDetails": {
+      "createdKeyReferenceAmbiguous": "Der neu erstellte Schlüssel konnte nicht eindeutig zugeordnet werden.",
+      "createdKeyUnavailable": "Der neu erstellte Schlüssel ist nicht mehr verfügbar.",
+      "sourceAccountUnavailable": "Das Quellkonto ist nicht mehr verfügbar.",
+      "sourceKeyInventoryUnavailable": "Die Schlüssel des Quellkontos konnten nicht geladen werden."
+    },
     "blockedReasons": {
       "baseUrlRequired": "Die Basis-URL ist für das selbstgehostete Ziel-KI-Gateway erforderlich.",
       "configMissing": "Die Administratorkonfiguration des selbstgehosteten AI-Gateways fehlt.",
@@ -84,6 +90,9 @@
       "title": "Ausgewählte Schlüssel importieren"
     },
     "description": "Überprüfen Sie die ausgewählten Schlüssel vor der Kanalerstellung in {{site}} (Auswahl: {{selectedCount}}).",
+    "fallbackLabels": {
+      "createdKey": "Erstellter Schlüssel"
+    },
     "fields": {
       "baseUrl": "Basis-URL",
       "editModelsLabel": "Modelle bearbeiten für {{name}}",

@@ -29,6 +29,7 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import {
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
@@ -72,6 +73,7 @@ const createDeferred = <T,>() => {
 }
 
 const {
+  mockAllowDisabledBatchActionClicks,
   mockAllowDisabledVerificationButtonClicks,
   mockDestructiveConfirmDialogRender,
   mockExecuteBatchExport,
@@ -88,6 +90,9 @@ const {
   mockUserPreferencesContextValue,
   mockVerificationDialogState,
 } = vi.hoisted(() => ({
+  mockAllowDisabledBatchActionClicks: {
+    current: false,
+  },
   mockAllowDisabledVerificationButtonClicks: {
     current: false,
   },
@@ -146,7 +151,10 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/managedSites/tokenBatchExport", () => ({
+vi.mock("~/services/managedSites/tokenBatchExport", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/managedSites/tokenBatchExport")
+  >()),
   prepareManagedSiteTokenBatchExportPreview: mockPreparePreview,
   executeManagedSiteTokenBatchExport: mockExecuteBatchExport,
 }))
@@ -225,7 +233,13 @@ vi.mock("~/components/ui", async (importOriginal) => {
 
   return {
     ...actual,
-    Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+    Badge: ({
+      children,
+      variant,
+    }: {
+      children: ReactNode
+      variant?: string
+    }) => <span data-variant={variant}>{children}</span>,
     Button: ({
       children,
       disabled,
@@ -240,8 +254,9 @@ vi.mock("~/components/ui", async (importOriginal) => {
         <ActualButton
           {...props}
           disabled={
-            isVerificationButton &&
-            mockAllowDisabledVerificationButtonClicks.current
+            mockAllowDisabledBatchActionClicks.current ||
+            (isVerificationButton &&
+              mockAllowDisabledVerificationButtonClicks.current)
               ? false
               : disabled
           }
@@ -587,16 +602,27 @@ const renderDialog = (props?: {
   onClose?: () => void
   onCompleted?: (result: unknown) => void
   intent?: typeof manualPreviewTarget.intent | typeof trustedRepairIntent
+  items?: ComponentProps<typeof ManagedSiteTokenBatchExportDialog>["items"]
 }) =>
   render(
     <ManagedSiteTokenBatchExportDialog
       isOpen={true}
       onClose={props?.onClose ?? vi.fn()}
-      items={[{ account, runtimeKey }]}
+      items={props?.items ?? [{ account, runtimeKey }]}
       intent={props?.intent}
       onCompleted={props?.onCompleted as any}
     />,
   )
+
+const getBatchImportConfirmDialog = () =>
+  screen.getByRole("dialog", {
+    name: "keyManagement:batchManagedSiteExport.confirm.title",
+  })
+
+const getBatchImportConfirmButton = () =>
+  within(getBatchImportConfirmDialog()).getByRole("button", {
+    name: "keyManagement:batchManagedSiteExport.actions.start",
+  })
 
 describe("ManagedSiteTokenBatchExportDialog", () => {
   beforeEach(() => {
@@ -629,6 +655,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     mockGetPreviewVerificationTargets.mockReset()
     mockLoadNewApiChannelKeyWithVerification.mockReset()
     mockPreparePreview.mockReset()
+    mockAllowDisabledBatchActionClicks.current = false
     mockAllowDisabledVerificationButtonClicks.current = false
     mockVerificationDialogState.isOpen = false
     mockLoadNewApiChannelKeyWithVerification.mockImplementation(
@@ -702,6 +729,51 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(mockExecuteBatchExport.mock.calls[0][0].preview.intent).toEqual(
       trustedRepairIntent,
     )
+  })
+
+  it("renders uncertain execution outcomes as warnings", async () => {
+    const user = userEvent.setup()
+    const singlePreview = {
+      ...preview,
+      totalCount: 1,
+      readyCount: 1,
+      items: [preview.items[0]],
+    }
+    mockPreparePreview.mockResolvedValue(singlePreview)
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 0,
+      uncertainCount: 1,
+      skippedCount: 0,
+      items: [
+        {
+          id: preview.items[0].id,
+          accountName: "Account 1",
+          runtimeKeyName: "Token 1",
+          result: "uncertain",
+          success: false,
+          skipped: false,
+        },
+      ],
+    })
+
+    renderDialog()
+
+    await screen.findByText("Account 1 / Token 1")
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(getBatchImportConfirmButton())
+
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.results.status.uncertain",
+      ),
+    ).toHaveAttribute("data-variant", "warning")
   })
 
   it("adopts a trusted repair intent when opening from the closed state", async () => {
@@ -924,8 +996,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
   it("refreshes the preview when the selected managed site changes", async () => {
     mockPreparePreview.mockResolvedValue(preview)
+    const stableItems = [{ account, runtimeKey }]
 
-    const view = renderDialog()
+    const view = renderDialog({ items: stableItems })
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
 
     mockUserPreferencesContextValue.current = {
@@ -944,13 +1017,18 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       <ManagedSiteTokenBatchExportDialog
         isOpen
         onClose={vi.fn()}
-        items={[{ account, runtimeKey }]}
+        items={stableItems}
       />,
     )
 
     await waitFor(() => {
       expect(mockPreparePreview).toHaveBeenCalledTimes(2)
     })
+    expect(
+      screen.getByTestId(
+        "key-management-managed-site-batch-export-target-switcher",
+      ),
+    ).toHaveTextContent("settings:managedSite.doneHub")
   })
 
   it("assigns manual preview loading only to the visible refresh control", async () => {
@@ -1218,7 +1296,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     )
 
     await user.click(
-      screen.getAllByRole("button", { name: "common:actions.cancel" })[1],
+      within(getBatchImportConfirmDialog()).getByRole("button", {
+        name: "common:actions.cancel",
+      }),
     )
     expect(
       screen.queryByRole("dialog", {
@@ -1450,8 +1530,10 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       isLoadingPreview: false,
       isRunning: false,
       selectedExecutableCount: 0,
+      canRetry: false,
       onClose: vi.fn(),
       onStart: vi.fn(),
+      onRetry: vi.fn(),
       onViewChannels: vi.fn(),
     })
 
@@ -2421,11 +2503,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
     expect(mockTrackProductAnalyticsActionStarted).not.toHaveBeenCalled()
 
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledTimes(1)
@@ -2472,11 +2550,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledTimes(1)
@@ -2685,11 +2759,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledTimes(1)
@@ -2740,11 +2810,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledTimes(1)
@@ -2880,11 +2946,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     await waitFor(() => {
       expect(onCompleted).toHaveBeenCalledTimes(1)
@@ -2979,11 +3041,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     expect(
       await screen.findByTestId(
@@ -3010,11 +3068,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
     await waitFor(() => {
       expect(mockExecuteBatchExport).toHaveBeenCalledTimes(2)
     })
@@ -3031,6 +3085,165 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         "key-management-managed-site-batch-export-retry-button",
       ),
     ).toBeNull()
+  })
+
+  it.each(["verification-dialog", "item-verification"] as const)(
+    "ignores retry while %s is active",
+    async (verificationState) => {
+      const user = userEvent.setup()
+      const recoverablePreview = buildSingleRecoverablePreview()
+      const failedResult: ManagedSiteTokenBatchExportExecutionResult = {
+        totalSelected: 1,
+        attemptedCount: 1,
+        createdCount: 0,
+        failedCount: 1,
+        uncertainCount: 0,
+        skippedCount: 0,
+        items: [
+          {
+            id: recoverablePreview.items[0].id,
+            accountName: "Account 1",
+            runtimeKeyName: "Token 1",
+            result: "failed",
+            success: false,
+            skipped: false,
+          },
+        ],
+      }
+      const pendingVerification = createDeferred<boolean>()
+      mockPreparePreview.mockResolvedValue(recoverablePreview)
+      mockExecuteBatchExport.mockResolvedValue(failedResult)
+      const stableItems = [{ account, runtimeKey }]
+      const view = renderDialog({ items: stableItems })
+
+      expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+      await user.click(
+        screen.getByRole("checkbox", { name: "Account 1 / Token 1" }),
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.start",
+        }),
+      )
+      await user.click(getBatchImportConfirmButton())
+      const retryButton = await screen.findByTestId(
+        "key-management-managed-site-batch-export-retry-button",
+      )
+
+      if (verificationState === "verification-dialog") {
+        mockVerificationDialogState.isOpen = true
+        view.rerender(
+          <ManagedSiteTokenBatchExportDialog
+            isOpen
+            onClose={vi.fn()}
+            items={stableItems}
+          />,
+        )
+      } else {
+        mockAllowDisabledVerificationButtonClicks.current = true
+        mockLoadNewApiChannelKeyWithVerification.mockReturnValueOnce(
+          pendingVerification.promise,
+        )
+        view.rerender(
+          <ManagedSiteTokenBatchExportDialog
+            isOpen
+            onClose={vi.fn()}
+            items={stableItems}
+          />,
+        )
+        await user.click(
+          screen.getByRole("button", {
+            name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+          }),
+        )
+        expect(
+          await screen.findByRole("button", {
+            name: "keyManagement:batchManagedSiteExport.actions.verifying",
+          }),
+        ).toBeInTheDocument()
+      }
+
+      await user.click(retryButton)
+
+      expect(mockPreparePreview).toHaveBeenCalledTimes(1)
+      expect(retryButton).toBeInTheDocument()
+
+      if (verificationState === "item-verification") {
+        await act(async () => {
+          pendingVerification.resolve(false)
+          await pendingVerification.promise
+        })
+      }
+    },
+  )
+
+  it("restores the previous results when retry execution throws", async () => {
+    const user = userEvent.setup()
+    const firstResult: ManagedSiteTokenBatchExportExecutionResult = {
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      uncertainCount: 0,
+      skippedCount: 0,
+      items: [
+        {
+          id: preview.items[0].id,
+          accountName: "Account 1",
+          runtimeKeyName: "Token 1",
+          result: "created",
+          success: true,
+          skipped: false,
+        },
+        {
+          id: preview.items[1].id,
+          accountName: "Account 1",
+          runtimeKeyName: "Token 2",
+          result: "failed",
+          success: false,
+          skipped: false,
+          error: "first attempt failed",
+        },
+      ],
+    }
+    mockPreparePreview.mockResolvedValue(preview)
+    mockExecuteBatchExport
+      .mockResolvedValueOnce(firstResult)
+      .mockRejectedValueOnce(new Error("retry execution failed"))
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(getBatchImportConfirmButton())
+    await user.click(
+      await screen.findByTestId(
+        "key-management-managed-site-batch-export-retry-button",
+      ),
+    )
+    await waitFor(() => expect(mockPreparePreview).toHaveBeenCalledTimes(2))
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(getBatchImportConfirmButton())
+
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.messages.executionFailed",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(
+        "key-management-managed-site-batch-export-retry-button",
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText("first attempt failed")).toBeInTheDocument()
   })
 
   it("keeps deselected rows visible without inventing an execution result", async () => {
@@ -3066,11 +3279,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     expect(
       await screen.findByText(
@@ -3095,11 +3304,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     expect(
       await screen.findByText(
@@ -3134,11 +3339,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     expect(
       await screen.findByText(
@@ -3194,11 +3395,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     expect(
       await screen.findByText(
@@ -3273,17 +3470,97 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     expect(
       await screen.findByText(
         "keyManagement:batchManagedSiteExport.results.channelCreationFailed",
       ),
     ).toBeInTheDocument()
+  })
+
+  it("localizes repair-created blocked details and an empty created-key label", async () => {
+    mockPreparePreview.mockResolvedValue({
+      ...preview,
+      totalCount: 1,
+      readyCount: 0,
+      blockedCount: 1,
+      items: [
+        buildDialogPreviewItem(6, "", {
+          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+          warningCodes: [],
+          blockingReasonCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
+          blockingDetailCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_ACCOUNT_UNAVAILABLE,
+          draft: null,
+        }),
+      ],
+    })
+
+    renderDialog()
+
+    expect(
+      await screen.findByText(
+        "Account 1 / keyManagement:batchManagedSiteExport.fallbackLabels.createdKey",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed: keyManagement:batchManagedSiteExport.blockedDetails.sourceAccountUnavailable",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("ignores a complete-check switch while verification is active", async () => {
+    const user = userEvent.setup()
+    mockAllowDisabledBatchActionClicks.current = true
+    mockVerificationDialogState.isOpen = true
+    mockPreparePreview.mockResolvedValue({
+      ...preview,
+      intent: trustedRepairIntent,
+    })
+
+    renderDialog({ intent: trustedRepairIntent })
+
+    await screen.findByText("Account 1 / Token 1")
+    await user.click(
+      screen.getByTestId(
+        "key-management-managed-site-batch-export-use-complete-checks-button",
+      ),
+    )
+
+    expect(mockPreparePreview).toHaveBeenCalledTimes(1)
+    expect(mockPreparePreview.mock.calls[0][0].intent).toEqual(
+      trustedRepairIntent,
+    )
+  })
+
+  it("ignores a stale start action when no rows are selected", async () => {
+    const user = userEvent.setup()
+    mockAllowDisabledBatchActionClicks.current = true
+    mockPreparePreview.mockResolvedValue(preview)
+
+    renderDialog()
+
+    await screen.findByText("Account 1 / Token 1")
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "keyManagement:batchManagedSiteExport.actions.selectAll",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+
+    expect(
+      screen.queryByRole("dialog", {
+        name: "keyManagement:batchManagedSiteExport.confirm.title",
+      }),
+    ).toBeNull()
+    expect(mockExecuteBatchExport).not.toHaveBeenCalled()
   })
 
   it("renders localized text for every blocked reason code", async () => {

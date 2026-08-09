@@ -7,6 +7,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
+import { MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS } from "~/types/managedSiteTokenBatchExport"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import { ManagedSiteTokenBatchExportFooter } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportFooter"
@@ -89,11 +90,14 @@ export function ManagedSiteTokenBatchExportDialog({
             canRetry={Boolean(
               dialog.executionResult?.items.some(
                 (item) =>
-                  item.result === "failed" || item.result === "uncertain",
+                  item.result ===
+                    MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED ||
+                  item.result ===
+                    MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
               ),
             )}
             onClose={dialog.actions.close}
-            onStart={dialog.actions.openConfirm}
+            onStart={dialog.actions.start}
             onRetry={dialog.actions.retry}
             onViewChannels={handleViewChannels}
           />

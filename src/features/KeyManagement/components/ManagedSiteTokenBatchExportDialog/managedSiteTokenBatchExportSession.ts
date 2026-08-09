@@ -3,7 +3,11 @@ import type {
   ManagedSiteTokenBatchExportExecutionResult,
   ManagedSiteTokenBatchExportPreview,
 } from "~/types/managedSiteTokenBatchExport"
-import { isExecutableManagedSiteTokenBatchExportPreviewItem } from "~/types/managedSiteTokenBatchExport"
+import {
+  isExecutableManagedSiteTokenBatchExportPreviewItem,
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS,
+  MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
+} from "~/types/managedSiteTokenBatchExport"
 
 import {
   applyNormalizedModelsToPreviewItem,
@@ -13,31 +17,50 @@ import {
 
 export const shouldConfirmManagedSiteTokenBatchExport = (
   intent: ManagedSiteBatchImportIntent,
-) => intent.verification === "complete"
+) =>
+  intent.verification === MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE
 
 export const getManagedSiteTokenBatchExportRetryItemIds = (
   result: ManagedSiteTokenBatchExportExecutionResult,
 ) =>
   result.items
-    .filter((item) => item.result === "failed" || item.result === "uncertain")
+    .filter(
+      (item) =>
+        item.result ===
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED ||
+        item.result ===
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
+    )
     .map((item) => item.id)
 
 export const mergeManagedSiteTokenBatchExportExecutionResults = (
   previous: ManagedSiteTokenBatchExportExecutionResult | null,
   next: ManagedSiteTokenBatchExportExecutionResult,
+  retriedItemIds: ReadonlySet<string> = new Set(),
 ): ManagedSiteTokenBatchExportExecutionResult => {
   if (!previous) return next
 
   const itemsById = new Map(previous.items.map((item) => [item.id, item]))
+  for (const retriedItemId of retriedItemIds) {
+    itemsById.delete(retriedItemId)
+  }
   for (const item of next.items) {
     itemsById.set(item.id, item)
   }
 
   const items = Array.from(itemsById.values())
-  const createdCount = items.filter((item) => item.result === "created").length
-  const failedCount = items.filter((item) => item.result === "failed").length
+  const createdCount = items.filter(
+    (item) =>
+      item.result === MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.CREATED,
+  ).length
+  const failedCount = items.filter(
+    (item) =>
+      item.result === MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED,
+  ).length
   const uncertainCount = items.filter(
-    (item) => item.result === "uncertain",
+    (item) =>
+      item.result ===
+      MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
   ).length
   const skippedCount = previous.skippedCount + next.skippedCount
 
@@ -56,7 +79,8 @@ const shouldSelectNewPreviewItem = (
   preview: ManagedSiteTokenBatchExportPreview,
   item: ManagedSiteTokenBatchExportPreview["items"][number],
 ) =>
-  preview.intent.verification === "trusted-new"
+  preview.intent.verification ===
+  MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW
     ? isExecutableManagedSiteTokenBatchExportPreviewItem(item)
     : shouldSelectPreviewItemByDefault(item)
 

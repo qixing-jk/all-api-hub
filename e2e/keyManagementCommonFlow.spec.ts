@@ -2,8 +2,10 @@ import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   getKeyManagementTokenRowTestId,
+  getManagedSiteBatchExportRowSelectTestId,
   KEY_MANAGEMENT_TEST_IDS,
 } from "~/features/KeyManagement/testIds"
+import { buildAccountTokenRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { AuthTypeEnum, type ApiToken } from "~/types"
 import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
@@ -735,9 +737,18 @@ test("repairs missing account keys and deletes invalid group keys", async ({
   ).toBeVisible()
   await expect(
     batchImportDialog.getByTestId(
-      KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportRowSelectCheckbox,
+      getManagedSiteBatchExportRowSelectTestId(
+        buildAccountTokenRuntimeKeyId(accountId, 3),
+      ),
     ),
-  ).toHaveCount(2)
+  ).toBeVisible()
+  await expect(
+    batchImportDialog.getByTestId(
+      getManagedSiteBatchExportRowSelectTestId(
+        buildAccountTokenRuntimeKeyId(accountId, 4),
+      ),
+    ),
+  ).toBeVisible()
   await expect(
     batchImportDialog.getByText(vipRowLabel, { exact: true }),
   ).toBeVisible()
@@ -745,10 +756,11 @@ test("repairs missing account keys and deletes invalid group keys", async ({
     batchImportDialog.getByText(alphaRowLabel, { exact: true }),
   ).toBeVisible()
 
-  const alphaRowCheckbox = batchImportDialog.getByRole("checkbox", {
-    name: alphaRowLabel,
-    exact: true,
-  })
+  const alphaRowCheckbox = batchImportDialog.getByTestId(
+    getManagedSiteBatchExportRowSelectTestId(
+      buildAccountTokenRuntimeKeyId(accountId, 4),
+    ),
+  )
   await expect(alphaRowCheckbox).toBeChecked()
   await alphaRowCheckbox.click()
   await expect(alphaRowCheckbox).not.toBeChecked()
@@ -776,9 +788,11 @@ test("repairs missing account keys and deletes invalid group keys", async ({
     batchImportDialog.getByText(alphaRowLabel, { exact: true }),
   ).toBeVisible()
   expect(createPayloads[0]).toMatchObject({
+    mode: "single",
     channel: {
       name: "Key Repair Source | vip group (auto)",
       base_url: baseUrl,
+      key: "sk-created-3",
     },
   })
 })

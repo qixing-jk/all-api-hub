@@ -1,9 +1,11 @@
+import { renderHook } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { RepairMissingKeysDialog } from "~/features/KeyManagement/components/RepairMissingKeysDialog"
+import { useRepairCreatedKeyManagedSiteImport } from "~/features/KeyManagement/components/RepairMissingKeysDialog/useRepairCreatedKeyManagedSiteImport"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { AccountKeyRepairMessageTypes } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
 import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
@@ -23,10 +25,18 @@ import {
   MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
 } from "~/types/managedSiteTokenBatchExport"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
+import { testI18n } from "~~/tests/test-utils/i18n"
+import {
+  act,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 import { createToken } from "~~/tests/utils/keyManagementFactories"
 
 const {
+  mockHandleCancelAudit,
   mockHandleStartAudit,
   mockUseRepairMissingKeysJob,
   mockSetProgress,
@@ -37,6 +47,7 @@ const {
   mockManagedSiteTokenBatchExportDialog,
   mockOpenSettingsTabInNewTab,
 } = vi.hoisted(() => ({
+  mockHandleCancelAudit: vi.fn(),
   mockHandleStartAudit: vi.fn(),
   mockUseRepairMissingKeysJob: vi.fn(),
   mockSetProgress: vi.fn(),
@@ -80,7 +91,7 @@ vi.mock(
       mockUseRepairMissingKeysJob(options)
       return {
         error: "",
-        handleCancelAudit: vi.fn(),
+        handleCancelAudit: mockHandleCancelAudit,
         handleStartAudit: mockHandleStartAudit,
         isCancelling: false,
         isStarting: mockIsStarting,
@@ -299,6 +310,51 @@ describe("RepairMissingKeysDialog", () => {
       success: true,
       data: mockProgress,
     }))
+  })
+
+  it("ignores a stale import action before repair completion", async () => {
+    const account = buildAccount()
+    const progress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running)
+    const { result } = renderHook(() =>
+      useRepairCreatedKeyManagedSiteImport({
+        accounts: [account],
+        isOpen: true,
+        isCurrentSessionResult: true,
+        managedSiteType: SITE_TYPES.NEW_API,
+        progress,
+        setProgress: vi.fn(),
+        t: testI18n.t,
+      }),
+    )
+
+    await act(async () => {
+      await result.current.openBatchImport()
+    })
+
+    expect(mockGetCurrentManagedSiteRuntimeConfig).not.toHaveBeenCalled()
+    expect(result.current.isBatchImportOpen).toBe(false)
+  })
+
+  it("forwards cancellation from the running progress card", async () => {
+    const user = userEvent.setup()
+    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running)
+
+    render(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[buildAccount()]}
+        startOnOpen={false}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.cancel",
+      }),
+    )
+
+    expect(mockHandleCancelAudit).toHaveBeenCalledOnce()
   })
 
   it("defaults to keeping auto-created key names aligned and explains the scope", async () => {
@@ -621,6 +677,91 @@ describe("RepairMissingKeysDialog", () => {
         name: "keyManagement:repairMissingKeys.progressLabel",
       }),
     ).not.toBeInTheDocument()
+  })
+
+  it("closes the invalid-key deletion confirmation without deleting", async () => {
+    const user = userEvent.setup()
+    const account = buildAccount()
+    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running, {
+      jobId: "repair-job",
+    })
+    const view = render(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[account]}
+        startOnOpen={false}
+      />,
+    )
+    await screen.findByRole("progressbar", {
+      name: "keyManagement:repairMissingKeys.progressLabel",
+    })
+
+    mockProgress = buildCreatedProgress(account, {
+      results: [
+        {
+          accountId: account.id,
+          accountName: account.name,
+          siteType: account.siteType,
+          siteUrlOrigin: account.baseUrl,
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
+          createdGroups: ["alpha"],
+          createdTokens: [{ tokenId: 11, group: "alpha" }],
+          invalidTokens: [
+            {
+              accountId: account.id,
+              accountName: account.name,
+              siteType: account.siteType,
+              siteUrlOrigin: account.baseUrl,
+              tokenId: 12,
+              tokenName: "Invalid key",
+              group: "removed",
+              reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+            },
+          ],
+          finishedAt: 1,
+        },
+      ],
+    })
+    view.rerender(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[account]}
+        startOnOpen={false}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /keyManagement:repairMissingKeys\.views\.invalidKeys/,
+      }),
+    )
+    await user.click(screen.getByRole("checkbox", { name: "Invalid key" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
+      }),
+    )
+
+    const confirmDialog = screen.getByRole("dialog", {
+      name: /keyManagement:repairMissingKeys\.deleteConfirm\.title/,
+    })
+    await user.click(
+      within(confirmDialog).getByRole("button", {
+        name: "common:actions.cancel",
+      }),
+    )
+
+    expect(
+      screen.queryByRole("dialog", {
+        name: /keyManagement:repairMissingKeys\.deleteConfirm\.title/,
+      }),
+    ).toBeNull()
+    expect(mockSendAccountKeyRepairMessage).not.toHaveBeenCalledWith(
+      AccountKeyRepairMessageTypes.DeleteInvalidTokens,
+      expect.anything(),
+    )
   })
 
   it("resolves current-session created keys lazily and opens the shared trusted review", async () => {
@@ -1318,5 +1459,40 @@ describe("RepairMissingKeysDialog", () => {
       expect.objectContaining({ id: 11, accountId: account.id }),
     )
     expect(mockSetProgress).toHaveBeenCalledWith(mockProgress)
+
+    mockSendAccountKeyRepairMessage.mockRejectedValueOnce(
+      new Error("receipt persistence unavailable"),
+    )
+    await act(async () => {
+      batchDialogProps.onCompleted?.({
+        totalSelected: 1,
+        attemptedCount: 1,
+        createdCount: 0,
+        failedCount: 1,
+        uncertainCount: 0,
+        skippedCount: 0,
+        items: [
+          {
+            id: candidate.items[1].runtimeKey.id,
+            accountName: account.name,
+            runtimeKeyName: "Created key 12",
+            result: "failed",
+            success: false,
+            skipped: false,
+          },
+        ],
+      })
+    })
+    await waitFor(() => {
+      expect(mockSendAccountKeyRepairMessage).toHaveBeenCalledTimes(2)
+    })
+    await user.click(
+      screen.getByRole("button", { name: "Close repair import" }),
+    )
+    expect(
+      await screen.findByText(
+        "keyManagement:repairMissingKeys.managedSiteImport.receiptFailed",
+      ),
+    ).toBeVisible()
   })
 })

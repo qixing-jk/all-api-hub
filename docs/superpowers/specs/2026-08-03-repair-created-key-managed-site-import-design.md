@@ -204,7 +204,10 @@ second dialog or service:
 ```ts
 type ManagedSiteBatchImportIntent =
   | { source: "manual-selection"; verification: "complete" }
-  | { source: "repair-created"; verification: "trusted-new" }
+  | {
+      source: "repair-created"
+      verification: "trusted-new" | "complete"
+    }
 ```
 
 The source controls defaults and analytics classification. The verification

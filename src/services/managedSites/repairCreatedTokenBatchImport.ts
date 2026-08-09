@@ -13,11 +13,13 @@ import {
   type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
 import {
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS,
   MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES,
   MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
   type ManagedSiteBatchImportIntent,
+  type ManagedSiteTokenBatchExportBlockedDetailCode,
   type ManagedSiteTokenBatchExportItemInput,
 } from "~/types/managedSiteTokenBatchExport"
 
@@ -94,28 +96,19 @@ const getReceiptKey = (
 const getAccountLabel = (result: AccountKeyRepairAccountResult) =>
   result.accountName.trim() || result.accountId
 
-const getGroupLabel = (group: string) => group || "Created key"
-
-const BLOCKED_MESSAGES = {
-  accountMissing: "The source account is no longer available.",
-  inventoryUnavailable: "The source account keys could not be loaded.",
-  tokenUnavailable: "The newly created key is no longer available.",
-  referenceUnavailable: "The newly created key could not be matched safely.",
-} as const
-
 const buildBlockedReference = (params: {
   id: string
   accountLabel: string
   group: string
-  message: string
+  detailCode: ManagedSiteTokenBatchExportBlockedDetailCode
 }): ManagedSiteTokenBatchExportItemInput => ({
   kind: MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.BLOCKED_REFERENCE,
   id: params.id,
   accountLabel: params.accountLabel,
-  keyLabel: getGroupLabel(params.group),
+  keyLabel: params.group,
   blockingReasonCode:
     MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
-  localFallback: params.message,
+  blockingDetailCode: params.detailCode,
 })
 
 const getCreatedReferenceEntries = (
@@ -384,7 +377,8 @@ export async function resolveRepairCreatedTokenBatchImportCandidate(
           id,
           accountLabel: reference.accountLabel,
           group: reference.group,
-          message: BLOCKED_MESSAGES.accountMissing,
+          detailCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_ACCOUNT_UNAVAILABLE,
         })
       }
 
@@ -396,7 +390,8 @@ export async function resolveRepairCreatedTokenBatchImportCandidate(
           id,
           accountLabel: reference.accountLabel,
           group: reference.group,
-          message: BLOCKED_MESSAGES.inventoryUnavailable,
+          detailCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
         })
       }
 
@@ -410,10 +405,10 @@ export async function resolveRepairCreatedTokenBatchImportCandidate(
           id,
           accountLabel: reference.accountLabel,
           group: reference.group,
-          message:
+          detailCode:
             matches.length === 0
-              ? BLOCKED_MESSAGES.tokenUnavailable
-              : BLOCKED_MESSAGES.referenceUnavailable,
+              ? MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_UNAVAILABLE
+              : MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_REFERENCE_AMBIGUOUS,
         })
       }
 
@@ -440,7 +435,8 @@ export async function resolveRepairCreatedTokenBatchImportCandidate(
         id: `repair-created:${accountId}:${group}`,
         accountLabel,
         group,
-        message: BLOCKED_MESSAGES.referenceUnavailable,
+        detailCode:
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_REFERENCE_AMBIGUOUS,
       }),
     )
 

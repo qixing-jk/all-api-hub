@@ -11,13 +11,19 @@ import {
   type CompactMultiSelectOption,
 } from "~/components/ui"
 import type { ManagedSiteType } from "~/constants/siteType"
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import {
+  getManagedSiteBatchExportRowSelectTestId,
+  KEY_MANAGEMENT_TEST_IDS,
+} from "~/features/KeyManagement/testIds"
 import type {
   ManagedSiteTokenBatchExportExecutionItem,
   ManagedSiteTokenBatchExportMatchedChannel,
   ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
-import { isExecutableManagedSiteTokenBatchExportPreviewItem as isExecutablePreviewItem } from "~/types/managedSiteTokenBatchExport"
+import {
+  isExecutableManagedSiteTokenBatchExportPreviewItem as isExecutablePreviewItem,
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS,
+} from "~/types/managedSiteTokenBatchExport"
 
 import {
   canEditItemModels,
@@ -25,6 +31,7 @@ import {
 } from "../managedSiteTokenBatchExportPreview"
 import {
   formatBatchExportValues,
+  getBatchExportBlockedDetailText,
   getBatchExportBlockedReasonText,
   getBatchExportExecutionErrorText,
   getBatchExportStatusBadge,
@@ -58,7 +65,7 @@ interface ManagedSiteTokenBatchExportPreviewRowProps {
 const getExecutionResultVariant = (
   result: ManagedSiteTokenBatchExportExecutionItem,
 ) =>
-  result.result === "uncertain"
+  result.result === MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN
     ? "warning"
     : result.success
       ? "success"
@@ -70,7 +77,7 @@ const getExecutionResultLabel = (
   t: TFunction,
   result: ManagedSiteTokenBatchExportExecutionItem,
 ) =>
-  result.result === "uncertain"
+  result.result === MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN
     ? t("keyManagement:batchManagedSiteExport.results.status.uncertain")
     : result.success
       ? t("keyManagement:batchManagedSiteExport.results.status.success")
@@ -105,6 +112,13 @@ export function ManagedSiteTokenBatchExportPreviewRow({
     siteType,
   )
   const isCurrentItemVerifying = verifyingItemId === item.id
+  const runtimeKeyName =
+    item.runtimeKeyName ||
+    t("keyManagement:batchManagedSiteExport.fallbackLabels.createdKey")
+  const blockingDetail = getBatchExportBlockedDetailText(
+    t,
+    item.blockingDetailCode,
+  )
 
   const verificationButton = verificationCandidate ? (
     <Button
@@ -137,18 +151,16 @@ export function ManagedSiteTokenBatchExportPreviewRow({
             id={checkboxId}
             className="mt-0.5"
             checked={isSelected}
-            aria-label={`${item.accountName} / ${item.runtimeKeyName}`}
+            aria-label={`${item.accountName} / ${runtimeKeyName}`}
             disabled={
               !isExecutablePreviewItem(item) || hasExecutionResult || isRunning
             }
             onCheckedChange={() => onToggleItem(item)}
-            data-testid={
-              KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportRowSelectCheckbox
-            }
+            data-testid={getManagedSiteBatchExportRowSelectTestId(item.id)}
           />
           <label htmlFor={checkboxId} className="min-w-0">
             <span className="block truncate text-sm font-medium">
-              {item.accountName} / {item.runtimeKeyName}
+              {item.accountName} / {runtimeKeyName}
             </span>
             <span className="text-muted-foreground block truncate text-xs">
               {item.draft?.name ?? "-"}
@@ -205,7 +217,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
                 aria-label={t(
                   "keyManagement:batchManagedSiteExport.fields.editModelsLabel",
                   {
-                    name: `${item.accountName} / ${item.runtimeKeyName}`,
+                    name: `${item.accountName} / ${runtimeKeyName}`,
                   },
                 )}
                 allowCustom
@@ -251,6 +263,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
               "keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed",
             )}
           {item.blockingMessage ? `: ${item.blockingMessage}` : ""}
+          {blockingDetail ? `: ${blockingDetail}` : ""}
         </div>
       ) : null}
 
