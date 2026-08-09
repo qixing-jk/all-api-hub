@@ -146,6 +146,48 @@ describe("ManagedResourceCreateDialog", () => {
     })
   })
 
+  it("shows an import advisory and forwards success without an optional message", async () => {
+    const submit = vi.fn().mockResolvedValue({
+      outcome: "succeeded",
+      data: { displayName: "Imported channel" },
+      confirmedEffects: [
+        {
+          kind: "resource-created",
+          resourceKind: MANAGED_RESOURCE_KINDS.Channel,
+          resourceId: "channel-id",
+        },
+      ],
+    })
+    const onSuccess = vi.fn()
+
+    render(
+      <ManagedResourceCreateDialog
+        isOpen
+        siteType={SITE_TYPES.AXON_HUB}
+        kind={MANAGED_RESOURCE_KINDS.Channel}
+        editor={createEditor(submit)}
+        advisoryWarning={{
+          kind: "review-required",
+          title: "Review imported models",
+          description: "Confirm the provider-owned defaults before creating.",
+        }}
+        onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
+        onSuccess={onSuccess}
+      />,
+    )
+
+    expect(screen.getByText("Review imported models")).toBeVisible()
+    fireEvent.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton))
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledWith({
+        success: true,
+        data: { displayName: "Imported channel" },
+      })
+    })
+  })
+
   it.each([
     {
       label: "partial",
