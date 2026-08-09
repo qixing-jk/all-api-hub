@@ -2072,6 +2072,27 @@ describe("WebDAVSettings", () => {
     })
   })
 
+  it("uses the stable decrypt fallback when a failure has no message", async () => {
+    render(<WebDAVSettings />)
+    await openManualDecryptDialog()
+    fireEvent.change(document.getElementById("decryptPassword")!, {
+      target: { value: "manual-secret" },
+    })
+    mockDecryptWebdavBackupEnvelope.mockRejectedValueOnce(null)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.encryption.decryptAction",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "importExport:webdav.encryption.decryptFailed",
+      )
+    })
+  })
+
   it("shows both import success and stale preference guidance when persisting the decrypt password is rejected by the version guard", async () => {
     mockDownloadBackupRaw.mockResolvedValueOnce("encrypted-payload")
     mockTryParseEncryptedWebdavBackupEnvelope.mockReturnValue(

@@ -63,5 +63,5 @@ export function isProbeChannelModelFilterRule(
 export function isPatternChannelModelFilterRule(
   rule: ChannelModelFilterRule,
 ): rule is ChannelModelPatternFilterRule {
-  return rule.kind !== "probe"
+  return rule.kind === "pattern"
 }

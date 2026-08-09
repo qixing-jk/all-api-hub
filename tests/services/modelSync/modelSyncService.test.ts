@@ -975,7 +975,7 @@ describe("ModelSyncService - global and channel filters", () => {
 
   it("treats an unknown imported rule kind as non-matching", async () => {
     const unknownRule = {
-      ...makeFilterRule({ id: "unknown" }),
+      ...makeFilterRule({ id: "unknown", pattern: "gpt-4o" }),
       kind: "future-kind",
     } as unknown as ChannelModelFilterRule
 
