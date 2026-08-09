@@ -168,6 +168,20 @@ describe("managed resource field policy", () => {
       expect(
         policy.fields.find(
           ({ fieldId }) =>
+            fieldId === SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models,
+        ),
+      ).toMatchObject({ section: "models", renderer: "multi-select" })
+      expect(
+        policy.fields
+          .find(
+            ({ fieldId }) =>
+              fieldId === SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models,
+          )
+          ?.resolveHelp?.(resolveKey),
+      ).toBe("managedSiteChannels:editor.fields.sub2apiModels.help")
+      expect(
+        policy.fields.find(
+          ({ fieldId }) =>
             fieldId === SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority,
         ),
       ).toMatchObject({ section: "routing", renderer: "number" })

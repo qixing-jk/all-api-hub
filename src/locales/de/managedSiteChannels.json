@@ -92,6 +92,10 @@
         "label": "Bemerkung",
         "placeholder": "Geben Sie eine Notiz oder Bemerkung für diesen Kanal ein..."
       },
+      "sub2apiModels": {
+        "help": "Optional. Leer lassen, um alle vom Upstream unterstützten Modelle zuzulassen; nur bei Bedarf Modelle einschränken.",
+        "label": "Modell-Whitelist"
+      },
       "sub2apiPlatform": {
         "help": "Wählen Sie das Upstream-Protokoll. Die Plattform kann nach dem Erstellen des Kontos nicht geändert werden.",
         "label": "Plattform"

@@ -92,6 +92,10 @@
         "label": "Remark",
         "placeholder": "Enter a note or remark for this channel..."
       },
+      "sub2apiModels": {
+        "help": "Optional. Leave empty to allow every model supported by the upstream; add models only when a restriction is needed.",
+        "label": "Model whitelist"
+      },
       "sub2apiPlatform": {
         "help": "Choose the upstream protocol. It cannot be changed after the account is created.",
         "label": "Platform"

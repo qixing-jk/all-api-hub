@@ -30,3 +30,10 @@ Status: resolved
   `platform` remains read-only on edit.
 - 2026-08-10: removed the redundant available-credential sentence from the
   Sub2API key editor while retaining keep-existing guidance and explicit view.
+- 2026-08-10: migrated external imports to the full native create field set and
+  corrected duplicate matching to inventory accounts before URL+key comparison;
+  Sub2API imports no longer depend on the legacy New API editor. They now bind
+  the shared managed-channel import seed to the native resource create editor.
+- 2026-08-10: exposed Sub2API's optional model whitelist in the native editor.
+  Imports leave it empty by default, which preserves Sub2API's all-model
+  behavior; only an explicit selection writes `credentials.model_mapping`.

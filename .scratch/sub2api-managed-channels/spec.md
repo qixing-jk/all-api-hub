@@ -96,7 +96,15 @@ this slice. Edit keeps platform visible but read-only, supports replacing or
 explicitly viewing the saved key, and updates notes plus the other mutable
 fields. The editor omits the redundant available-credential status sentence
 while retaining the keep-existing guidance and explicit view action. The
-existing import entry remains available and shares the same provider-native
-mutation functions with native CRUD.
+existing import entry now uses the shared native managed-channel import seed to
+open the same provider-native create editor and mutation functions as native
+CRUD. The editor exposes name, platform, status, Base URL, key, optional model
+whitelist, concurrency, priority, and notes. It does not discover or select
+models automatically: an empty whitelist preserves Sub2API's default of
+allowing every upstream model, while an explicit selection writes identity
+entries to `credentials.model_mapping`. Before creation, duplicate matching
+inventories API-key accounts, filters normalized Base URLs locally, and reveals
+only the matching candidates needed to compare keys. Exact URL+key matches are
+skipped.
 
 Step-up authentication remains a separately disclosed follow-up.

@@ -2,9 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelType } from "~/constants/managedSite"
 import {
+  buildChannelPayload,
   createSub2ApiApiKeyAccount,
   deleteSub2ApiApiKeyAccount,
   listSub2ApiApiKeyAccounts,
+  prepareChannelFormData,
   revealSub2ApiApiKey,
   searchSub2ApiApiKeyAccounts,
   sub2ApiAccountToManagedSiteChannel,
@@ -157,6 +159,63 @@ describe("Sub2API API-key account managed-site provider", () => {
     })
   })
 
+  it("prepares a provider-native import draft without model discovery", async () => {
+    const draft = await prepareChannelFormData(
+      {
+        id: "source-account",
+        name: "Source account",
+        siteType: "new-api",
+        baseUrl: "https://api.example.invalid/v1/",
+      } as any,
+      {
+        id: 9,
+        name: "Imported key",
+        key: "sk-imported",
+      } as any,
+    )
+
+    expect(mockFetch).not.toHaveBeenCalled()
+    expect(draft).toMatchObject({
+      name: "Source account | Imported key (auto)",
+      key: "sk-imported",
+      base_url: "https://api.example.invalid/v1",
+      models: [],
+      groups: [],
+      priority: 1,
+      weight: 1,
+      status: 1,
+      notes: "",
+    })
+  })
+
+  it("forwards all provider-native import fields into account creation", () => {
+    expect(
+      buildChannelPayload({
+        name: "Imported account",
+        type: ChannelType.OpenAI,
+        key: "sk-imported",
+        base_url: "https://api.example.invalid/v1",
+        models: [],
+        groups: [],
+        priority: 7,
+        weight: 4,
+        status: 1,
+        notes: "Imported from an external credential",
+      } as any),
+    ).toMatchObject({
+      channel: {
+        name: "Imported account",
+        type: ChannelType.OpenAI,
+        key: "sk-imported",
+        base_url: "https://api.example.invalid/v1",
+        priority: 7,
+        weight: 4,
+        status: 1,
+        remark: "Imported from an external credential",
+      },
+    })
+  })
+
   it("reveals a selected account key through raw export under default settings", async () => {
     mockFetch.mockResolvedValueOnce(
       jsonResponse({
@@ -215,6 +274,10 @@ describe("Sub2API API-key account managed-site provider", () => {
       platform: "openai",
       baseUrl: " https://api.example.invalid/v1 ",
       apiKey: " sk-create ",
+      modelMapping: {
+        "model-one": "model-one",
+        "model-two": "provider-model-two",
+      },
       concurrency: 3,
       priority: 8,
       notes: "Provider note",
@@ -231,11 +294,30 @@ describe("Sub2API API-key account managed-site provider", () => {
       credentials: {
         base_url: "https://api.example.invalid/v1",
         api_key: "sk-create",
+        model_mapping: {
+          "model-one": "model-one",
+          "model-two": "provider-model-two",
+        },
       },
       concurrency: 3,
       priority: 8,
       notes: "Provider note",
     })
+  })
+
+  it("omits model_mapping when no whitelist is configured", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ code: 0, data: account }))
+
+    await createSub2ApiApiKeyAccount(config, {
+      name: "Example upstream",
+      platform: "openai",
+      baseUrl: "https://api.example.invalid/v1",
+      apiKey: "sk-create",
+    })
+
+    expect(
+      JSON.parse(String(mockFetch.mock.calls[0][1]?.body)).credentials,
+    ).not.toHaveProperty("model_mapping")
   })
 
   it("preserves an existing key when update omits it and replaces it when supplied", async () => {
@@ -257,6 +339,16 @@ describe("Sub2API API-key account managed-site provider", () => {
     })
     expect(JSON.parse(String(mockFetch.mock.calls[1][1]?.body))).toEqual({
       credentials: { api_key: "sk-next" },
+    })
+  })
+
+  it("sends an empty model mapping when an existing whitelist is cleared", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ code: 0, data: account }))
+
+    await updateSub2ApiApiKeyAccount(config, 17, { modelMapping: {} })
+
+    expect(JSON.parse(String(mockFetch.mock.calls[0][1]?.body))).toEqual({
+      credentials: { model_mapping: {} },
     })
   })
 

@@ -68,6 +68,7 @@ export type Sub2ApiApiKeyAccountCreateInput = {
   platform: Sub2ApiApiKeyAccountPlatform
   baseUrl: string
   apiKey: string
+  modelMapping?: Record<string, string>
   concurrency?: number
   priority?: number
   notes?: string
@@ -77,6 +78,7 @@ export type Sub2ApiApiKeyAccountUpdateInput = {
   name?: string
   baseUrl?: string
   apiKey?: string
+  modelMapping?: Record<string, string>
   concurrency?: number
   priority?: number
   status?: Sub2ApiApiKeyAccountStatus
@@ -368,6 +370,9 @@ export async function createSub2ApiApiKeyAccount(
         credentials: {
           base_url: input.baseUrl.trim(),
           api_key: input.apiKey.trim(),
+          ...(input.modelMapping && Object.keys(input.modelMapping).length > 0
+            ? { model_mapping: input.modelMapping }
+            : {}),
         },
         ...(input.concurrency === undefined
           ? {}
@@ -390,6 +395,9 @@ export async function updateSub2ApiApiKeyAccount(
   const credentials = {
     ...(input.baseUrl === undefined ? {} : { base_url: input.baseUrl.trim() }),
     ...(input.apiKey === undefined ? {} : { api_key: input.apiKey.trim() }),
+    ...(input.modelMapping === undefined
+      ? {}
+      : { model_mapping: input.modelMapping }),
   }
   return await sub2ApiAdminRequest<Sub2ApiAdminApiKeyAccount>(
     config,
@@ -445,10 +453,15 @@ export const sub2ApiPlatformToChannelType = (
 export const sub2ApiChannelTypeToPlatform = (
   channelType: unknown,
 ): Sub2ApiApiKeyAccountPlatform => {
-  if (channelType === ChannelType.Anthropic) return "anthropic"
-  if (channelType === ChannelType.Gemini) return "gemini"
-  if (channelType === ChannelType.Xai) return "grok"
-  if (channelType === ChannelType.Custom) return "antigravity"
+  if (isSub2ApiPlatform(channelType)) return channelType
+  const normalizedChannelType =
+    typeof channelType === "string" && channelType.trim()
+      ? Number(channelType)
+      : channelType
+  if (normalizedChannelType === ChannelType.Anthropic) return "anthropic"
+  if (normalizedChannelType === ChannelType.Gemini) return "gemini"
+  if (normalizedChannelType === ChannelType.Xai) return "grok"
+  if (normalizedChannelType === ChannelType.Custom) return "antigravity"
   return "openai"
 }
 
@@ -547,18 +560,17 @@ export async function prepareChannelFormData(
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
   const upstream = normalizeSub2ApiManagedChannelAccount(account)
-  const { models, fetchFailed } = await fetchTokenScopedModels(upstream, token)
   return {
     name: buildChannelName(account, token as ApiToken),
     type: DEFAULT_CHANNEL_FIELDS.type,
     key: token.key,
     base_url: upstream.baseUrl,
-    models: normalizeList(models),
-    ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
+    models: [],
     groups: [],
-    priority: DEFAULT_CHANNEL_FIELDS.priority,
-    weight: DEFAULT_CHANNEL_FIELDS.weight,
+    priority: 1,
+    weight: 1,
     status: DEFAULT_CHANNEL_FIELDS.status,
+    notes: "",
   }
 }
 
@@ -579,6 +591,7 @@ export function buildChannelPayload(
       priority: formData.priority,
       weight: formData.weight,
       status: formData.status,
+      remark: formData.notes ?? "",
     },
   }
 }

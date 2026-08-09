@@ -55,6 +55,13 @@ const runtimeConfigs: ManagedSiteRuntimeConfig[] = [
       adminToken: "claude-code-hub-admin-token",
     },
   },
+  {
+    siteType: SITE_TYPES.SUB2API,
+    config: {
+      baseUrl: "https://sub2api.example.invalid/",
+      adminToken: "sub2api-admin-token",
+    },
+  },
 ]
 
 const getTarget = async (runtimeConfig: ManagedSiteRuntimeConfig) =>
@@ -77,6 +84,7 @@ const getRawTargetValues = (
         runtimeConfig.config.password,
       ]
     case SITE_TYPES.CLAUDE_CODE_HUB:
+    case SITE_TYPES.SUB2API:
       return [
         runtimeConfig.config.baseUrl,
         "admin",
@@ -112,6 +120,7 @@ const changeCompatibleIdentity = (
         },
       }
     case SITE_TYPES.CLAUDE_CODE_HUB:
+    case SITE_TYPES.SUB2API:
       return null
     default:
       return {
@@ -142,7 +151,9 @@ describe("managed-site token batch import target", () => {
               ? runtimeConfig.config.email
               : runtimeConfig.siteType === SITE_TYPES.CLAUDE_CODE_HUB
                 ? "admin"
-                : runtimeConfig.config.userId,
+                : runtimeConfig.siteType === SITE_TYPES.SUB2API
+                  ? "admin"
+                  : runtimeConfig.config.userId,
       })
       expect(target.targetFingerprint).toMatch(/^[a-f0-9]{64}$/)
     })

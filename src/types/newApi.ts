@@ -77,6 +77,8 @@ export interface ChannelFormData {
   priority: number
   weight: number
   status: ChannelStatus
+  /** Provider-native notes carried by import drafts when supported. */
+  notes?: string
 }
 
 /**

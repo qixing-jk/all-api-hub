@@ -45,6 +45,7 @@ import {
   type ManagedSiteTokenBatchImportTarget,
 } from "~/services/managedSites/tokenBatchImportTarget"
 import {
+  getManagedSiteDuplicateCandidateSource,
   normalizeManagedSiteChannelBaseUrl,
   searchManagedUpstreamResourceChannelsForDuplicateMatching,
 } from "~/services/managedSites/utils/channelMatching"
@@ -290,6 +291,9 @@ const buildTokenBatchExportChannelMatchService = (params: {
       resources,
       config,
       accountBaseUrl: searchParams.accountBaseUrl,
+      candidateSource: getManagedSiteDuplicateCandidateSource(
+        params.service.siteType,
+      ),
     })
 
   return matchService
@@ -324,7 +328,7 @@ const getDraftBlockedReason = (
     return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED
   }
 
-  if (draft.models.length === 0) {
+  if (service.siteType !== SITE_TYPES.SUB2API && draft.models.length === 0) {
     return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED
   }
 
@@ -503,7 +507,10 @@ const preparePreviewItem = async (params: {
       requestCache: params.operationContext?.channelMatch,
       protectionBypassExecution: params.protectionBypassExecution,
     })
-    const exactMatch = getManagedSiteChannelExactMatch(resolution)
+    const exactMatch = getManagedSiteChannelExactMatch(
+      resolution,
+      service.siteType,
+    )
     const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
     const verificationCandidate = getVerificationCandidate(service, resolution)
     const exactVerificationUnavailable =

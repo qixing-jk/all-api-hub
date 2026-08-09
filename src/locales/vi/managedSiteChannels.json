@@ -92,6 +92,10 @@
         "label": "Ghi chú",
         "placeholder": "Nhập ghi chú cho kênh này..."
       },
+      "sub2apiModels": {
+        "help": "Không bắt buộc. Để trống để cho phép mọi mô hình mà thượng nguồn hỗ trợ; chỉ thêm mô hình khi cần giới hạn.",
+        "label": "Danh sách mô hình cho phép"
+      },
       "sub2apiPlatform": {
         "help": "Chọn giao thức thượng nguồn. Không thể thay đổi nền tảng sau khi tạo tài khoản.",
         "label": "Nền tảng"

@@ -598,6 +598,31 @@ const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
   ],
 }
 
+const sub2ApiPreview: ManagedSiteTokenBatchExportPreview = {
+  ...preview,
+  siteType: SITE_TYPES.SUB2API,
+  totalCount: 1,
+  readyCount: 1,
+  items: [
+    buildDialogPreviewItem(1, "Token 1", {
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
+      warningCodes: [],
+      draft: {
+        name: "Imported account",
+        type: 1,
+        key: "test-key",
+        base_url: "https://api.example.invalid/v1",
+        models: [],
+        groups: [],
+        priority: 1,
+        weight: 1,
+        status: 1,
+        notes: "",
+      } as any,
+    }),
+  ],
+}
+
 const renderDialog = (props?: {
   onClose?: () => void
   onCompleted?: (result: unknown) => void
@@ -664,6 +689,65 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         return true
       },
     )
+  })
+
+  it("keeps Sub2API batch previews lightweight with an optional model whitelist", async () => {
+    mockPreparePreview.mockResolvedValue(sub2ApiPreview)
+
+    renderDialog()
+
+    expect(await screen.findByText("Imported account")).toBeVisible()
+    expect(
+      screen.getByText("keyManagement:batchManagedSiteExport.fields.models"),
+    ).toBeVisible()
+    expect(screen.getByText("Set editable models")).toBeVisible()
+    expect(
+      screen.queryByLabelText(
+        /managedSiteChannels:editor.fields.concurrency.label/,
+      ),
+    ).toBeNull()
+  })
+
+  it("passes an explicitly configured Sub2API model whitelist to batch execution", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(sub2ApiPreview)
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+      skippedCount: 0,
+      items: [
+        {
+          id: "account_token:account-1:1",
+          accountName: "Account 1",
+          runtimeKeyName: "Token 1",
+          success: true,
+          skipped: false,
+        },
+      ],
+    })
+    renderDialog()
+
+    expect(await screen.findByText("Imported account")).toBeVisible()
+    await user.click(screen.getByText("Set editable models"))
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+
+    await waitFor(() => expect(mockExecuteBatchExport).toHaveBeenCalledOnce())
+    expect(
+      mockExecuteBatchExport.mock.calls[0][0].preview.items[0].draft,
+    ).toMatchObject({
+      models: ["gpt-4o-mini", "custom-model"],
+    })
   })
 
   it("keeps automatic preview loading off the stable start control", async () => {

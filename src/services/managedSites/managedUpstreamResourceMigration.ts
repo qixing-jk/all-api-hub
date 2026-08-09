@@ -111,6 +111,10 @@ const defaultManagedUpstreamResourceMigrationGates =
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport,
       },
       {
+        siteType: SITE_TYPES.SUB2API,
+        feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport,
+      },
+      {
         siteType: SITE_TYPES.NEW_API,
         feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenChannelStatus,
       },

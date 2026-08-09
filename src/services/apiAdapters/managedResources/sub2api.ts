@@ -7,11 +7,13 @@ import {
 } from "~/constants/sub2api"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
+  MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
   MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   MANAGED_RESOURCE_FIELD_TYPES,
   ManagedResourceError,
   type EditableResourceProjection,
+  type ManagedChannelImportCreateSeed,
   type ManagedResourceRef,
   type ResourceDisplayFact,
   type ResourceDisplayFacts,
@@ -39,6 +41,7 @@ import {
   revealSub2ApiApiKey,
   SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
   Sub2ApiAdminApiError,
+  sub2ApiChannelTypeToPlatform,
   type Sub2ApiApiKeyAccountCreateInput,
   type Sub2ApiApiKeyAccountUpdateInput,
 } from "~/services/managedSites/providers/sub2api"
@@ -71,6 +74,22 @@ const readString = (values: EditableResourceProjection, fieldId: string) =>
 
 const readNumber = (values: EditableResourceProjection, fieldId: string) =>
   typeof values[fieldId] === "number" ? values[fieldId] : Number.NaN
+
+const normalizeList = (values: readonly string[]) => [
+  ...new Set(values.map((value) => value.trim()).filter(Boolean)),
+]
+
+const readList = (values: EditableResourceProjection, fieldId: string) => {
+  const value = values[fieldId]
+  return Array.isArray(value)
+    ? normalizeList(
+        value.filter((item): item is string => typeof item === "string"),
+      )
+    : []
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value && typeof value === "object" && !Array.isArray(value))
 
 const readSecretIntent = (
   values: EditableResourceProjection,
@@ -117,6 +136,25 @@ const getBaseUrl = (account: Sub2ApiAdminApiKeyAccount) =>
     ? account.credentials.base_url
     : ""
 
+const getModelMapping = (account: Sub2ApiAdminApiKeyAccount) => {
+  const mapping = account.credentials?.model_mapping
+  if (!isRecord(mapping)) return {}
+  return Object.fromEntries(
+    Object.entries(mapping).flatMap(([model, target]) => {
+      const normalizedModel = model.trim()
+      return normalizedModel && typeof target === "string" && target.trim()
+        ? [[normalizedModel, target.trim()]]
+        : []
+    }),
+  )
+}
+
+const getModelWhitelist = (account: Sub2ApiAdminApiKeyAccount) =>
+  Object.keys(getModelMapping(account))
+
+const toIdentityModelMapping = (models: readonly string[]) =>
+  Object.fromEntries(normalizeList(models).map((model) => [model, model]))
+
 const hasSavedKey = (account: Sub2ApiAdminApiKeyAccount) =>
   account.credentials_status?.has_api_key === true
 
@@ -127,6 +165,7 @@ const matchesSearch = (account: Sub2ApiAdminApiKeyAccount, search: string) => {
     account.platform,
     SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS[account.platform],
     getBaseUrl(account),
+    ...getModelWhitelist(account),
   ].some((value) => value.toLocaleLowerCase().includes(needle))
 }
 
@@ -177,6 +216,14 @@ const baseFacts = (
       value: account.priority,
     })
   }
+  const models = getModelWhitelist(account)
+  if (models.length > 0) {
+    facts.push({
+      fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models,
+      kind: "list",
+      value: models,
+    })
+  }
   return facts
 }
 
@@ -202,6 +249,7 @@ const toFacts = (
       account.platform,
       SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS[account.platform],
       getBaseUrl(account),
+      ...getModelWhitelist(account),
     ],
     actions: { canUpdate: true, canDelete: true },
   }
@@ -216,8 +264,10 @@ const statusOptions = (detail?: Sub2ApiAdminApiKeyAccount) => [
 ]
 
 // Source: https://github.com/Wei-Shaw/sub2api/blob/48eb3766d2da817b171b45bb3036d42575e42b8f/backend/internal/handler/admin/account_handler.go
+// Model behavior: https://github.com/Wei-Shaw/sub2api/blob/48eb3766d2da817b171b45bb3036d42575e42b8f/frontend/src/components/account/CreateAccountModal.vue
 // API-key create and update accept notes, credentials, concurrency and priority;
-// update omits platform, so only platform stays read-only during edit.
+// credentials.model_mapping is optional, and an omitted/empty mapping permits
+// every upstream model. Update omits platform, so it stays read-only on edit.
 const fieldDescriptors = (
   detail?: Sub2ApiAdminApiKeyAccount,
 ): readonly ResourceFieldDescriptor[] => [
@@ -260,6 +310,14 @@ const fieldDescriptors = (
     allowClear: false,
   },
   {
+    fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models,
+    type: MANAGED_RESOURCE_FIELD_TYPES.MultiSelect,
+    required: false,
+    options: (detail ? getModelWhitelist(detail) : []).map((value) => ({
+      value,
+    })),
+  },
+  {
     fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency,
     type: MANAGED_RESOURCE_FIELD_TYPES.Number,
     required: true,
@@ -287,6 +345,7 @@ const createInitialValues = (): EditableResourceProjection => ({
     SUB2API_MANAGED_RESOURCE_STATUS.Active,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl]: "",
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: { kind: "unchanged" },
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models]: [],
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency]: 1,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority]: 1,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes]: "",
@@ -300,6 +359,7 @@ const editInitialValues = (
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status]: detail.status ?? "",
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl]: getBaseUrl(detail),
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: { kind: "unchanged" },
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models]: getModelWhitelist(detail),
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency]: detail.concurrency ?? 1,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority]: detail.priority ?? 1,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes]: detail.notes ?? "",
@@ -403,6 +463,7 @@ const buildCreateCommand = (
   values: EditableResourceProjection,
 ): Sub2ApiCreateCommand => {
   const secret = readSecretIntent(values)
+  const models = readList(values, SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models)
   return {
     desiredStatus:
       readString(values, SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status) ===
@@ -420,6 +481,11 @@ const buildCreateCommand = (
         SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
       ).trim(),
       apiKey: secret.kind === "replace" ? secret.value.trim() : "",
+      ...(models.length
+        ? {
+            modelMapping: toIdentityModelMapping(models),
+          }
+        : {}),
       concurrency: readNumber(
         values,
         SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency,
@@ -457,6 +523,9 @@ const buildUpdateCommand = (
   ) as Sub2ApiApiKeyAccountStatus
   const secret = readSecretIntent(values)
   const notes = readString(values, SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes)
+  const models = readList(values, SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models)
+  const existingModelMapping = getModelMapping(detail)
+  const existingModels = Object.keys(existingModelMapping)
 
   if (name !== detail.name.trim()) input.name = name
   if (baseUrl !== getBaseUrl(detail).trim()) input.baseUrl = baseUrl
@@ -464,6 +533,11 @@ const buildUpdateCommand = (
   if (priority !== (detail.priority ?? 1)) input.priority = priority
   if (status !== detail.status) input.status = status
   if (secret.kind === "replace") input.apiKey = secret.value.trim()
+  if ([...models].sort().join("\0") !== [...existingModels].sort().join("\0")) {
+    input.modelMapping = Object.fromEntries(
+      models.map((model) => [model, existingModelMapping[model] ?? model]),
+    )
+  }
   if (notes !== (detail.notes ?? "")) input.notes = notes
   return input
 }
@@ -475,6 +549,27 @@ const createEditor =
     validate: (values) => validateValues(values, { create: true }),
     buildCommand: buildCreateCommand,
   })
+
+const createSub2ApiChannelImportProjection = (
+  seed: ManagedChannelImportCreateSeed,
+): EditableResourceProjection => ({
+  ...createInitialValues(),
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name]: seed.name,
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform]: sub2ApiChannelTypeToPlatform(
+    seed.channelType,
+  ),
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status]: seed.enabled
+    ? SUB2API_MANAGED_RESOURCE_STATUS.Active
+    : SUB2API_MANAGED_RESOURCE_STATUS.Inactive,
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl]: seed.baseUrl,
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+    kind: "replace",
+    value: seed.credential,
+  },
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models]: normalizeList(seed.models),
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency]:
+    seed.orderingWeight > 0 ? seed.orderingWeight : 1,
+})
 
 const editEditor = (
   config: Sub2ApiNativeConfig,
@@ -557,6 +652,12 @@ const openConfig = async (): Promise<Sub2ApiNativeConfig> => {
 const sub2ApiNativeDefinition = {
   siteType: SITE_TYPES.SUB2API,
   kind: MANAGED_RESOURCE_KINDS.Channel,
+  createSeedBindings: [
+    {
+      kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      project: createSub2ApiChannelImportProjection,
+    },
+  ],
   capabilities: {
     canSearch: true,
     canCreate: true,

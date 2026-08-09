@@ -227,10 +227,10 @@ export function ManagedSiteTokenBatchExportPreviewRow({
           ) : (
             <span className="ml-2 break-words">
               {formatBatchExportValues(item.draft?.models)}
-            </span>
-          )}
+              </span>
+            )}
+          </div>
         </div>
-      </div>
 
       {item.matchedChannel ? (
         <div className="text-muted-foreground dark:bg-dark-bg-tertiary rounded-md bg-gray-50 p-2 text-xs">

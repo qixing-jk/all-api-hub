@@ -1354,6 +1354,127 @@ describe("managed-site token batch export", () => {
     }
   })
 
+  it("deduplicates Sub2API imports by URL and revealed key without model fields", async () => {
+    vi.resetModules()
+    vi.doUnmock("~/services/managedSites/channelMatchResolver")
+
+    try {
+      const resourceRef = createManagedUpstreamResourceRef({
+        managedSiteType: SITE_TYPES.SUB2API,
+        scopeKey: "https://target.example.com",
+        resourceId: 64,
+      })
+      const summary = {
+        ref: resourceRef,
+        displayName: "Existing API-key account",
+        endpointLabel: "https://upstream.example.com/v1",
+      }
+      const list = vi.fn().mockResolvedValue({ items: [summary], total: 1 })
+      const search = vi.fn()
+      const getDetail = vi.fn().mockResolvedValue({
+        summary,
+        native: {
+          id: 64,
+          name: "Existing API-key account",
+          type: "apikey",
+          platform: "openai",
+          credentials: { base_url: "https://upstream.example.com/v1" },
+          credentials_status: { has_api_key: true },
+        },
+      })
+      mockResolveManagedUpstreamResourceFeatureCapabilities.mockImplementation(
+        (siteType: string, feature: string) =>
+          siteType === SITE_TYPES.SUB2API &&
+          feature === MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenBatchExport
+            ? {
+                supported: true,
+                siteType,
+                feature,
+                capabilities: {
+                  items: {
+                    list,
+                    search,
+                    getDetail,
+                    create: vi.fn(),
+                    update: vi.fn(),
+                    delete: vi.fn(),
+                  },
+                  drafts: {
+                    prepareImportDraft: vi.fn(),
+                    prepareEditDraft: vi.fn(),
+                    describeFields: vi.fn(),
+                    validateDraft: vi.fn(),
+                  },
+                },
+              }
+            : {
+                supported: false,
+                siteType,
+                feature,
+                reason: "feature-slice-disabled",
+              },
+      )
+      const service = buildService({
+        siteType: SITE_TYPES.SUB2API,
+        messagesKey: "sub2api",
+        prepareChannelFormData: vi.fn(async (account, token) => ({
+          name: `${account.name} - ${token.name}`,
+          type: 1,
+          key: token.key,
+          base_url: account.baseUrl,
+          models: [],
+          groups: [],
+          priority: 1,
+          weight: 1,
+          status: 1 as const,
+          notes: "",
+        })),
+        fetchChannelSecretKey: vi.fn().mockResolvedValue("token-secret"),
+      })
+      mockGetManagedSiteService.mockResolvedValue(service)
+
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/tokenBatchExport"
+      )
+      const preview = await prepareManagedSiteTokenBatchExportPreview({
+        items: [
+          buildAccountTokenInput(
+            buildDisplaySiteData({
+              baseUrl: "https://upstream.example.com/v1",
+            }),
+          ),
+        ],
+        protectionBypassExecution: userCommandExecution(
+          PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
+          PROTECTION_BYPASS_SURFACES.Options,
+        ),
+      })
+
+      expect(list).toHaveBeenCalledTimes(1)
+      expect(search).not.toHaveBeenCalled()
+      expect(getDetail).toHaveBeenCalledTimes(1)
+      expect(service.fetchChannelSecretKey).toHaveBeenCalledWith(
+        expect.anything(),
+        64,
+        expect.anything(),
+      )
+      expect(preview.items[0]).toMatchObject({
+        status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
+        matchedChannel: {
+          id: 64,
+          name: "Existing API-key account",
+        },
+      })
+    } finally {
+      vi.doMock("~/services/managedSites/channelMatchResolver", () => ({
+        createManagedSiteChannelMatchRequestCache:
+          buildChannelMatchRequestCache,
+        resolveManagedSiteChannelMatch: mockResolveManagedSiteChannelMatch,
+      }))
+      vi.resetModules()
+    }
+  })
+
   it("falls back to legacy target matching when the token batch export resource feature is unavailable", async () => {
     vi.resetModules()
     vi.doUnmock("~/services/managedSites/channelMatchResolver")

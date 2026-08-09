@@ -386,6 +386,16 @@ const sub2ApiCreateFields = [
     renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Secret,
   },
   {
+    fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models,
+    section: MANAGED_RESOURCE_SECTIONS.Models,
+    order: 10,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.fields.sub2apiModels.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.fields.sub2apiModels.help"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.MultiSelect,
+  },
+  {
     fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency,
     section: MANAGED_RESOURCE_SECTIONS.Routing,
     order: 10,

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
@@ -12,9 +13,11 @@ import {
 } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import {
+  MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { openNativeManagedChannelImportEditor } from "~/services/apiAdapters/managedResources/channelImport"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { sub2ApiManagedResourceRegistration } from "~/services/apiAdapters/managedResources/sub2api"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
@@ -66,7 +69,13 @@ const account = {
   notes: "Read-only operator note",
   platform: "openai" as const,
   type: "apikey" as const,
-  credentials: { base_url: "https://api.example.invalid/v1" },
+  credentials: {
+    base_url: "https://api.example.invalid/v1",
+    model_mapping: {
+      "model-example": "model-example",
+      "model-aliased": "provider-model",
+    },
+  },
   credentials_status: { has_api_key: true },
   concurrency: 3,
   priority: 8,
@@ -149,6 +158,12 @@ describe("Sub2API native managed resource", () => {
         { fieldId: "key", kind: "secret", state: "available" },
       ]),
     })
+
+    await expect(
+      workspace.list({ search: "model-aliased" }),
+    ).resolves.toMatchObject({
+      items: [expect.objectContaining({ displayName: "Primary upstream" })],
+    })
   })
 
   it("exposes the full create projection and creates through the shared mutation seam", async () => {
@@ -161,6 +176,7 @@ describe("Sub2API native managed resource", () => {
       SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status,
       SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
       SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key,
+      SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models,
       SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency,
       SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority,
       SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes,
@@ -176,6 +192,7 @@ describe("Sub2API native managed resource", () => {
       status: "active",
       baseURL: "https://api.example.invalid/v1",
       key: { kind: "replace", value: "create-secret" },
+      supportedModels: [],
       concurrency: 3,
       priority: 8,
       notes: "Created from native editor",
@@ -195,6 +212,41 @@ describe("Sub2API native managed resource", () => {
       },
       expect.any(Object),
     )
+  })
+
+  it("opens imported credentials through the shared native create seed", async () => {
+    expect(sub2ApiManagedResourceRegistration.createSeedKinds).toContain(
+      MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+    )
+
+    const opened = await openNativeManagedChannelImportEditor(
+      SITE_TYPES.SUB2API,
+      {
+        name: "Imported account",
+        type: ChannelType.Anthropic,
+        key: "import-secret",
+        base_url: "https://api.example.invalid/v1",
+        models: [],
+        groups: [],
+        priority: 8,
+        weight: 3,
+        status: 1,
+        notes: "Imported note",
+      },
+    )
+    const editor = opened?.editor
+
+    expect(editor).toBeDefined()
+    expect(editor?.validate(editor.initialValues)).toEqual({ valid: true })
+    expect(editor?.initialValues).toMatchObject({
+      name: "Imported account",
+      platform: "anthropic",
+      status: "active",
+      baseURL: "https://api.example.invalid/v1",
+      key: { kind: "replace", value: "import-secret" },
+      supportedModels: [],
+      concurrency: 3,
+    })
   })
 
   it("keeps platform read-only while editing notes, key, and routing fields", async () => {
@@ -222,6 +274,7 @@ describe("Sub2API native managed resource", () => {
       name: "Renamed upstream",
       baseURL: "https://next.example.invalid/v1",
       key: { kind: "replace", value: "replacement-secret" },
+      supportedModels: ["model-aliased", "model-added"],
       concurrency: 5,
       priority: 2,
       status: "inactive",
@@ -236,6 +289,10 @@ describe("Sub2API native managed resource", () => {
         name: "Renamed upstream",
         baseUrl: "https://next.example.invalid/v1",
         apiKey: "replacement-secret",
+        modelMapping: {
+          "model-aliased": "provider-model",
+          "model-added": "model-added",
+        },
         concurrency: 5,
         priority: 2,
         status: "inactive",

@@ -65,6 +65,11 @@ export function hasManagedSiteRuntimeConfigInputForType(
     return Boolean(config && [config.baseUrl, config.adminToken].some(hasText))
   }
 
+  if (siteType === SITE_TYPES.SUB2API) {
+    const config = preferences.sub2apiManagedSite
+    return Boolean(config && [config.baseUrl, config.adminToken].some(hasText))
+  }
+
   if (
     siteType === SITE_TYPES.DONE_HUB ||
     siteType === SITE_TYPES.VELOERA ||

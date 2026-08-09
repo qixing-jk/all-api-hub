@@ -16,7 +16,10 @@ import {
   type ManagedSiteRuntimeConfigValue,
   type ManagedSiteRuntimeConfigValueForType,
 } from "~/services/managedSites/runtimeConfig"
-import { searchManagedUpstreamResourceChannelsForDuplicateMatching } from "~/services/managedSites/utils/channelMatching"
+import {
+  getManagedSiteDuplicateCandidateSource,
+  searchManagedUpstreamResourceChannelsForDuplicateMatching,
+} from "~/services/managedSites/utils/channelMatching"
 import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
   getManagedSiteAdminConfig,
@@ -260,6 +263,7 @@ export function getManagedSiteServiceForType(
               resources: resourceDuplicateMatching.capabilities,
               config,
               accountBaseUrl: params.accountBaseUrl,
+              candidateSource: getManagedSiteDuplicateCandidateSource(siteType),
             }),
         }
       : {}),

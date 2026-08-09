@@ -37,7 +37,6 @@ import {
   type ManagedSiteService,
 } from "~/services/managedSites/managedSiteService"
 import {
-  MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
@@ -259,45 +258,6 @@ export function useChannelDialog() {
   ): ChannelDialogAdvisoryWarning =>
     buildChannelDialogAdvisoryWarning(t, kind, options)
 
-  const buildAdvisoryWarningFromManagedSiteStatus = (
-    managedSiteStatus?: ManagedSiteTokenChannelStatus,
-  ): ChannelDialogAdvisoryWarning | null => {
-    if (!managedSiteStatus) {
-      return null
-    }
-
-    if (
-      managedSiteStatus.status ===
-        MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN &&
-      managedSiteStatus.reason ===
-        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE &&
-      managedSiteStatus.assessment?.url.matched
-    ) {
-      return buildAdvisoryWarning(
-        CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED,
-        {
-          assessment: managedSiteStatus.assessment,
-        },
-      )
-    }
-
-    if (
-      managedSiteStatus.status ===
-        MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN &&
-      managedSiteStatus.reason ===
-        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION
-    ) {
-      return buildAdvisoryWarning(
-        CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.REVIEW_SUGGESTED,
-        {
-          assessment: managedSiteStatus.assessment,
-        },
-      )
-    }
-
-    return null
-  }
-
   const resolvePrefilledDialogDuplicateState = async (params: {
     service: ManagedSiteService
     managedConfig: ManagedSiteConfig
@@ -306,22 +266,13 @@ export function useChannelDialog() {
     key?: string
     managedSiteStatus?: ManagedSiteTokenChannelStatus
   }): Promise<PrefilledDialogDuplicateState> => {
-    if (params.managedSiteStatus) {
-      if (
-        params.managedSiteStatus.status ===
-        MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
-      ) {
-        return {
-          existingChannelName: params.managedSiteStatus.matchedChannel.name,
-          advisoryWarning: null,
-        }
-      }
-
+    if (
+      params.managedSiteStatus?.status ===
+      MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
+    ) {
       return {
-        existingChannelName: null,
-        advisoryWarning: buildAdvisoryWarningFromManagedSiteStatus(
-          params.managedSiteStatus,
-        ),
+        existingChannelName: params.managedSiteStatus.matchedChannel.name,
+        advisoryWarning: null,
       }
     }
 
@@ -344,7 +295,10 @@ export function useChannelDialog() {
         getCurrentTempWindowRequestSource(),
       ),
     })
-    const exactMatch = getManagedSiteChannelExactMatch(resolution)
+    const exactMatch = getManagedSiteChannelExactMatch(
+      resolution,
+      params.service.siteType,
+    )
 
     if (exactMatch) {
       return {

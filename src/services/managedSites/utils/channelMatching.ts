@@ -1,4 +1,5 @@
 import {
+  SITE_TYPES,
   type AccountSiteType,
   type ManagedSiteType,
 } from "~/constants/siteType"
@@ -60,11 +61,12 @@ interface SearchManagedUpstreamResourceChannelsForDuplicateMatchingParams<
   resources: {
     items: Pick<
       ManagedUpstreamResourceItemsCapability<TConfig>,
-      "search" | "getDetail"
+      "list" | "search" | "getDetail"
     >
   }
   config: TConfig
   accountBaseUrl: string
+  candidateSource?: "search" | "list"
 }
 
 interface InspectManagedSiteChannelKeyMatchParams {
@@ -87,6 +89,18 @@ interface InspectManagedSiteChannelModelsMatchParams {
   models: string[]
   exactChannel?: ManagedSiteChannel | null
 }
+
+export type ManagedSiteDuplicateCandidateSource = "search" | "list"
+
+/**
+ * Sub2API's native account search is name-only, so URL-based duplicate checks
+ * must inventory accounts before filtering the normalized URL bucket locally.
+ * Source: Wei-Shaw/sub2api@48eb376 account_query.go.
+ */
+export const getManagedSiteDuplicateCandidateSource = (
+  siteType: ManagedSiteType,
+): ManagedSiteDuplicateCandidateSource =>
+  siteType === SITE_TYPES.SUB2API ? "list" : "search"
 
 interface RankedManagedSiteChannelCandidate {
   channel: ManagedSiteChannel
@@ -307,10 +321,10 @@ export async function searchManagedUpstreamResourceChannelsForDuplicateMatching<
   const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(
     params.accountBaseUrl,
   )
-  const searchResults = await params.resources.items.search(
-    params.config,
-    searchBaseUrl,
-  )
+  const searchResults =
+    params.candidateSource === "list"
+      ? await params.resources.items.list(params.config)
+      : await params.resources.items.search(params.config, searchBaseUrl)
 
   if (!searchResults) {
     return null

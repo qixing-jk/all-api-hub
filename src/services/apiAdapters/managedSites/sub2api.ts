@@ -112,20 +112,42 @@ const toStatus = (status: number | undefined) =>
 const isUsablePlainKey = (key: unknown): key is string =>
   typeof key === "string" && key.trim().length > 0 && !/^\*+$/.test(key.trim())
 
+const toIdentityModelMapping = (models: unknown) => {
+  if (typeof models !== "string") return undefined
+  const normalized = [
+    ...new Set(
+      models
+        .split(",")
+        .map((model) => model.trim())
+        .filter(Boolean),
+    ),
+  ]
+  return normalized.length
+    ? Object.fromEntries(normalized.map((model) => [model, model]))
+    : undefined
+}
+
 const toCreateInput = (
   channel: Parameters<
     ManagedSiteChannelsCapability<Sub2ApiManagedSiteConfig>["create"]
   >[1]["channel"],
-) => ({
-  name: channel.name?.trim() ?? "",
-  platform: sub2ApiChannelTypeToPlatform(channel.type),
-  baseUrl: channel.base_url?.trim() ?? "",
-  apiKey: channel.key?.trim() ?? "",
-  ...(channel.weight && channel.weight > 0
-    ? { concurrency: channel.weight }
-    : {}),
-  ...(channel.priority ? { priority: channel.priority } : {}),
-})
+) => {
+  const modelMapping = toIdentityModelMapping(channel.models)
+  return {
+    name: channel.name?.trim() ?? "",
+    platform: sub2ApiChannelTypeToPlatform(channel.type),
+    baseUrl: channel.base_url?.trim() ?? "",
+    apiKey: channel.key?.trim() ?? "",
+    ...(modelMapping ? { modelMapping } : {}),
+    ...(channel.weight && channel.weight > 0
+      ? { concurrency: channel.weight }
+      : {}),
+    ...(channel.priority ? { priority: channel.priority } : {}),
+    ...(channel.remark === undefined || channel.remark === null
+      ? {}
+      : { notes: channel.remark }),
+  }
+}
 
 const toUpdateInput = (
   channel: Parameters<

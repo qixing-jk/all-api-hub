@@ -1955,8 +1955,66 @@ describe("useChannelDialog", () => {
     expect(result.current.context.state.isOpen).toBe(false)
   })
 
-  it("opens with a review advisory when the managed-site status requires confirmation", async () => {
-    const searchChannelMock = vi.fn()
+  it("rechecks a non-terminal cached status before opening an import", async () => {
+    const searchChannelMock = vi.fn(async () => ({
+      items: [
+        buildManagedSiteChannel({
+          name: "Existing API-key account",
+          models: "",
+        }),
+      ],
+      total: 1,
+      type_counts: {},
+    }))
+    const mockService = buildManagedSiteServiceMock({
+      siteType: SITE_TYPES.SUB2API,
+      messagesKey: "sub2api",
+      prepareChannelFormData: vi.fn(async () =>
+        buildPreparedFormData({ models: [], groups: [] }),
+      ),
+      searchChannel: searchChannelMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+
+    const managedSiteStatus: ManagedSiteTokenChannelStatus = {
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+      reason:
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.INPUT_PREPARATION_FAILED,
+      diagnostic: "missing-comparable-inputs",
+    }
+    const { result } = await renderChannelDialogHook()
+
+    const openPromise = result.current.dialog.openWithAccount(
+      buildDisplaySiteData(),
+      buildApiToken({ key: "sk-test" }),
+      undefined,
+      { managedSiteStatus },
+    )
+
+    await waitFor(() => {
+      expect(result.current.context.duplicateChannelWarning).toEqual({
+        isOpen: true,
+        existingChannelName: "Existing API-key account",
+      })
+    })
+
+    await act(async () => {
+      result.current.context.resolveDuplicateChannelWarning(false)
+      await openPromise
+    })
+
+    expect(searchChannelMock).toHaveBeenCalledOnce()
+    expect(result.current.context.state.isOpen).toBe(false)
+  })
+
+  it("refreshes a cached review advisory before opening", async () => {
+    const searchChannelMock = vi.fn(async () => ({
+      items: [buildManagedSiteChannel({ key: "different-key" })],
+      total: 1,
+      type_counts: {},
+    }))
     const mockService = buildManagedSiteServiceMock({
       searchChannel: searchChannelMock,
     })
@@ -1982,7 +2040,7 @@ describe("useChannelDialog", () => {
       )
     })
 
-    expect(searchChannelMock).not.toHaveBeenCalled()
+    expect(searchChannelMock).toHaveBeenCalledOnce()
     expect(result.current.context.duplicateChannelWarning.isOpen).toBe(false)
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
@@ -1994,8 +2052,12 @@ describe("useChannelDialog", () => {
     })
   })
 
-  it("opens with a verification advisory when exact comparison is explicitly unavailable", async () => {
-    const searchChannelMock = vi.fn()
+  it("refreshes a cached verification advisory before opening", async () => {
+    const searchChannelMock = vi.fn(async () => ({
+      items: [buildManagedSiteChannel({ key: "" })],
+      total: 1,
+      type_counts: {},
+    }))
     const mockService = buildManagedSiteServiceMock({
       searchChannel: searchChannelMock,
     })
@@ -2027,7 +2089,7 @@ describe("useChannelDialog", () => {
       )
     })
 
-    expect(searchChannelMock).not.toHaveBeenCalled()
+    expect(searchChannelMock).toHaveBeenCalledOnce()
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
       advisoryWarning: {

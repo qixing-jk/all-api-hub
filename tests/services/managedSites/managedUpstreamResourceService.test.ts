@@ -53,7 +53,8 @@ describe("managed upstream resource service", () => {
           siteType === SITE_TYPES.DONE_HUB ||
           siteType === SITE_TYPES.OCTOPUS ||
           siteType === SITE_TYPES.AXON_HUB ||
-          siteType === SITE_TYPES.CLAUDE_CODE_HUB,
+          siteType === SITE_TYPES.CLAUDE_CODE_HUB ||
+          siteType === SITE_TYPES.SUB2API,
       })),
     )
   })
@@ -351,6 +352,7 @@ describe("managed upstream resource service", () => {
       SITE_TYPES.NEW_API,
       SITE_TYPES.VELOERA,
       SITE_TYPES.DONE_HUB,
+      SITE_TYPES.SUB2API,
     ]
 
     expect(

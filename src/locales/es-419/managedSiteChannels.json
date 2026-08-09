@@ -92,6 +92,10 @@
         "label": "Nota",
         "placeholder": "Escribe una nota u observación para este canal..."
       },
+      "sub2apiModels": {
+        "help": "Opcional. Déjalo vacío para permitir todos los modelos compatibles con el upstream; agrega modelos solo si necesitas restringirlos.",
+        "label": "Lista de modelos permitidos"
+      },
       "sub2apiPlatform": {
         "help": "Elige el protocolo ascendente. La plataforma no se puede cambiar después de crear la cuenta.",
         "label": "Plataforma"

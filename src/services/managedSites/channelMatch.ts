@@ -1,3 +1,4 @@
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 
 export const MANAGED_SITE_CHANNEL_MATCH_LEVELS = {
@@ -110,7 +111,14 @@ interface RecoverableManagedSiteChannelAssessment<TChannel> {
 
 export const getManagedSiteChannelExactMatch = (
   inspection: ManagedSiteChannelMatchInspection,
+  siteType?: ManagedSiteType,
 ): ManagedSiteChannel | null => {
+  if (siteType === SITE_TYPES.SUB2API) {
+    return inspection.url.matched && inspection.key.matched
+      ? inspection.key.channel
+      : null
+  }
+
   if (
     !inspection.key.matched ||
     !inspection.models.matched ||

@@ -190,7 +190,6 @@ export function ChannelDialog({
     (isResourceEditLoading ? resourceEditRetryErrorRef.current : null)
   const shouldShowGenericModelsField =
     !isSub2Api && !(isAxonHub && mode === DIALOG_MODES.EDIT && resourceEdit)
-
   const channelTypeOptions = isSub2Api
     ? SUB2API_API_KEY_ACCOUNT_TYPE_OPTIONS
     : isClaudeCodeHub
@@ -392,7 +391,10 @@ export function ChannelDialog({
             getCurrentTempWindowRequestSource(),
           ),
         )
-    const exactMatch = getManagedSiteChannelExactMatch(resolution)
+    const exactMatch = getManagedSiteChannelExactMatch(
+      resolution,
+      service.siteType,
+    )
 
     if (exactMatch) {
       return {

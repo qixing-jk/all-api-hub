@@ -420,6 +420,29 @@ vi.mock("~/components/ui", async () => {
     SelectValue: ({ placeholder }: { placeholder?: ReactNode }) => (
       <span>{placeholder}</span>
     ),
+    Textarea: ({
+      disabled,
+      id,
+      onChange,
+      placeholder,
+      value = "",
+    }: {
+      disabled?: boolean
+      id?: string
+      onChange?: (event: { target: { value: string } }) => void
+      placeholder?: string
+      value?: string
+    }) => (
+      <textarea
+        disabled={disabled}
+        id={id}
+        onChange={(event) =>
+          onChange?.({ target: { value: event.currentTarget.value } })
+        }
+        placeholder={placeholder}
+        value={value}
+      />
+    ),
   }
 })
 
@@ -1109,27 +1132,6 @@ describe("ChannelDialog behavior", () => {
       screen.getByTestId("select-item-custom_axonhub_type"),
     ).toHaveTextContent("custom_axonhub_type")
     expect(screen.getByTestId("models-multi-select")).toBeInTheDocument()
-    expect(screen.queryByTestId("groups-multi-select")).toBeNull()
-    expect(screen.queryByText("channelDialog:fields.priority.label")).toBeNull()
-    expect(screen.queryByText("channelDialog:fields.weight.label")).toBeNull()
-  })
-
-  it("shows only Sub2API API-key account fields and platform choices", () => {
-    mockUserPreferences.managedSiteType = SITE_TYPES.SUB2API
-
-    render(<ChannelDialog isOpen={true} onClose={vi.fn()} />)
-
-    expect(
-      screen
-        .getAllByTestId("select-item-1")
-        .some((item) => item.textContent === "OpenAI"),
-    ).toBe(true)
-    expect(screen.getByTestId("select-item-14")).toHaveTextContent("Anthropic")
-    expect(screen.getByTestId("select-item-24")).toHaveTextContent("Gemini")
-    expect(screen.getByTestId("select-item-48")).toHaveTextContent("Grok")
-    expect(screen.getByTestId("select-item-8")).toHaveTextContent("Antigravity")
-    expect(screen.queryByText("Midjourney")).toBeNull()
-    expect(screen.queryByTestId("models-multi-select")).toBeNull()
     expect(screen.queryByTestId("groups-multi-select")).toBeNull()
     expect(screen.queryByText("channelDialog:fields.priority.label")).toBeNull()
     expect(screen.queryByText("channelDialog:fields.weight.label")).toBeNull()

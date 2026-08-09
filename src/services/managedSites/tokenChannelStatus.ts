@@ -23,6 +23,7 @@ import {
 } from "~/services/managedSites/providers/newApiSession"
 import { hasNewApiTotpSecret } from "~/services/managedSites/providers/newApiTotp"
 import {
+  getManagedSiteDuplicateCandidateSource,
   normalizeManagedSiteChannelBaseUrl,
   searchManagedUpstreamResourceChannelsForDuplicateMatching,
 } from "~/services/managedSites/utils/channelMatching"
@@ -182,6 +183,9 @@ export const buildTokenChannelStatusChannelMatchService = (params: {
       resources,
       config,
       accountBaseUrl: searchParams.accountBaseUrl,
+      candidateSource: getManagedSiteDuplicateCandidateSource(
+        params.service.siteType,
+      ),
     })
 
   return matchService
@@ -363,7 +367,7 @@ export async function getManagedSiteTokenChannelStatus(
     )
     const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(formData.base_url)
 
-    if (!searchBaseUrl || formData.models.length === 0) {
+    if (!searchBaseUrl) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
         reason:
@@ -372,6 +376,8 @@ export async function getManagedSiteTokenChannelStatus(
       }
     }
 
+    // The match module owns which evidence is required for an exact match.
+    // Empty optional dimensions must reach it instead of being rejected here.
     const resolution = await resolveManagedSiteChannelMatch({
       service: buildTokenChannelStatusChannelMatchService({ service }),
       managedConfig,
@@ -384,7 +390,10 @@ export async function getManagedSiteTokenChannelStatus(
       protectionBypassExecution: params.protectionBypassExecution,
     })
     const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
-    const exactMatch = getManagedSiteChannelExactMatch(resolution)
+    const exactMatch = getManagedSiteChannelExactMatch(
+      resolution,
+      service.siteType,
+    )
     const exactVerificationUnavailable =
       isExactVerificationUnavailable(resolution)
     const resolvedChannelKeys =
