@@ -595,6 +595,7 @@
       "changeTarget": "Cambiar destino",
       "configMissing": "Configura un sitio administrado antes de importar las claves reparadas.",
       "failed": "No se pudieron preparar las claves reparadas para importarlas. Inténtalo de nuevo.",
+      "nothingPending": "No hay claves reparadas pendientes de importar en este destino. Es posible que ya se hayan creado o que exista una coincidencia exacta.",
       "receiptFailed": "La importación terminó, pero no se pudieron actualizar los resultados de reparación. Actualiza los resultados para confirmar el estado actual.",
       "target_one": "{{count}} clave reparada lista para {{site}}",
       "target_many": "{{count}} claves reparadas listas para {{site}}",

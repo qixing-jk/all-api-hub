@@ -595,6 +595,7 @@
       "changeTarget": "Alterar destino",
       "configMissing": "Configure um site gerenciado antes de importar as chaves corrigidas.",
       "failed": "Não foi possível preparar as chaves corrigidas para importação. Tente novamente.",
+      "nothingPending": "Não há chaves corrigidas pendentes de importação para este destino. Elas podem já ter sido criadas ou corresponder exatamente a chaves existentes.",
       "receiptFailed": "A importação foi concluída, mas não foi possível atualizar os resultados da correção. Atualize os resultados para confirmar o estado atual.",
       "target_one": "{{count}} chave corrigida pronta para {{site}}",
       "target_many": "{{count}} chaves corrigidas prontas para {{site}}",

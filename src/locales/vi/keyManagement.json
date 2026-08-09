@@ -567,6 +567,7 @@
       "changeTarget": "Đổi đích",
       "configMissing": "Hãy cấu hình một trang được quản lý trước khi nhập các khóa đã tạo khi sửa chữa.",
       "failed": "Không thể chuẩn bị các khóa đã tạo khi sửa chữa để nhập. Hãy thử lại.",
+      "nothingPending": "Không có khóa đã sửa chữa nào đang chờ nhập vào đích này. Có thể các khóa đó đã được tạo hoặc đã tồn tại khớp chính xác.",
       "receiptFailed": "Đã nhập xong nhưng không thể cập nhật kết quả sửa chữa. Hãy làm mới kết quả để xác nhận trạng thái hiện tại.",
       "target_other": "{{count}} khóa đã tạo khi sửa chữa sẵn sàng để nhập vào {{site}}",
       "title": "Nhập các khóa đã tạo khi sửa chữa",

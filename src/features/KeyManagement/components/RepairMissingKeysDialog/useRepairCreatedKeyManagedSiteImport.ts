@@ -7,6 +7,8 @@ import {
 } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
 import { isAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
+  getRepairCreatedTokenBatchImportAbsenceReason,
+  REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS,
   REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS,
   resolveRepairCreatedTokenBatchImportCandidate,
 } from "~/services/managedSites/repairCreatedTokenBatchImport"
@@ -37,6 +39,11 @@ interface UseRepairCreatedKeyManagedSiteImportParams {
   setProgress: (progress: AccountKeyRepairProgress) => void
   onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
   t: TFunction
+}
+
+interface RepairCreatedImportFeedback {
+  description: string
+  variant: "destructive" | "info"
 }
 
 const isSafeCreatedReference = (
@@ -170,7 +177,8 @@ export function useRepairCreatedKeyManagedSiteImport({
   >([])
   const [batchImportIntent, setBatchImportIntent] =
     useState<ManagedSiteBatchImportIntent | null>(null)
-  const [importError, setImportError] = useState<string | null>(null)
+  const [importFeedback, setImportFeedback] =
+    useState<RepairCreatedImportFeedback | null>(null)
   const activeJobIdRef = useRef<string | null>(null)
   const activeTargetFingerprintRef = useRef<string | null>(null)
   const activeItemsRef = useRef<ManagedSiteTokenBatchExportItemInput[]>([])
@@ -201,20 +209,24 @@ export function useRepairCreatedKeyManagedSiteImport({
     }
 
     setIsResolving(true)
-    setImportError(null)
+    setImportFeedback(null)
     try {
       const runtimeConfig = await getCurrentManagedSiteRuntimeConfig()
       if (!runtimeConfig) {
-        setImportError(
-          t("keyManagement:repairMissingKeys.managedSiteImport.configMissing"),
-        )
+        setImportFeedback({
+          description: t(
+            "keyManagement:repairMissingKeys.managedSiteImport.configMissing",
+          ),
+          variant: "destructive",
+        })
         return
       }
 
       const target =
         await createManagedSiteTokenBatchImportTarget(runtimeConfig)
+      const visibleProgress = getVisibleProgress(progress, accounts)
       const candidate = await resolveRepairCreatedTokenBatchImportCandidate({
-        progress: getVisibleProgress(progress, accounts),
+        progress: visibleProgress,
         accounts,
         targetFingerprint: target.targetFingerprint,
         freshness: isCurrentSessionResult
@@ -222,9 +234,21 @@ export function useRepairCreatedKeyManagedSiteImport({
           : REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.HISTORICAL,
       })
       if (!candidate) {
-        setImportError(
-          t("keyManagement:repairMissingKeys.managedSiteImport.unavailable"),
-        )
+        const absenceReason = getRepairCreatedTokenBatchImportAbsenceReason({
+          progress: visibleProgress,
+          targetFingerprint: target.targetFingerprint,
+        })
+        const nothingPending =
+          absenceReason ===
+          REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.NOTHING_PENDING
+        setImportFeedback({
+          description: t(
+            nothingPending
+              ? "keyManagement:repairMissingKeys.managedSiteImport.nothingPending"
+              : "keyManagement:repairMissingKeys.managedSiteImport.unavailable",
+          ),
+          variant: nothingPending ? "info" : "destructive",
+        })
         return
       }
 
@@ -235,9 +259,12 @@ export function useRepairCreatedKeyManagedSiteImport({
       setBatchImportIntent(candidate.intent)
       setIsBatchImportOpen(true)
     } catch {
-      setImportError(
-        t("keyManagement:repairMissingKeys.managedSiteImport.failed"),
-      )
+      setImportFeedback({
+        description: t(
+          "keyManagement:repairMissingKeys.managedSiteImport.failed",
+        ),
+        variant: "destructive",
+      })
     } finally {
       setIsResolving(false)
     }
@@ -285,11 +312,12 @@ export function useRepairCreatedKeyManagedSiteImport({
           }
         })
         .catch(() => {
-          setImportError(
-            t(
+          setImportFeedback({
+            description: t(
               "keyManagement:repairMissingKeys.managedSiteImport.receiptFailed",
             ),
-          )
+            variant: "destructive",
+          })
         })
     },
     [onManagedSiteImportSuccess, setProgress, t],
@@ -300,7 +328,7 @@ export function useRepairCreatedKeyManagedSiteImport({
     setIsBatchImportOpen(false)
     setBatchImportItems([])
     setBatchImportIntent(null)
-    setImportError(null)
+    setImportFeedback(null)
     activeJobIdRef.current = null
     activeTargetFingerprintRef.current = null
     activeItemsRef.current = []
@@ -309,7 +337,7 @@ export function useRepairCreatedKeyManagedSiteImport({
   return {
     batchImportIntent,
     batchImportItems,
-    importError,
+    importFeedback,
     isBatchImportOpen,
     isResolving,
     openBatchImport,

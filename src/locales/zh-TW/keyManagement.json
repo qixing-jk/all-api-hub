@@ -567,6 +567,7 @@
       "changeTarget": "變更目標",
       "configMissing": "請先設定管理網站，再匯入修復建立的金鑰。",
       "failed": "準備匯入修復建立的金鑰失敗，請再試一次。",
+      "nothingPending": "目前目標沒有待匯入的金鑰；它們可能已建立或已精確存在。",
       "receiptFailed": "匯入已完成，但無法更新修復結果。請重新整理結果以確認目前狀態。",
       "target_other": "{{site}}：有 {{count}} 個修復建立的金鑰可匯入",
       "title": "匯入修復建立的金鑰",

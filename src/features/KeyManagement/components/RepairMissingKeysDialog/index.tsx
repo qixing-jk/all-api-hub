@@ -369,11 +369,11 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                     </Button>
                   </div>
                 </div>
-                {repairCreatedImport.importError ? (
+                {repairCreatedImport.importFeedback ? (
                   <Alert
-                    variant="destructive"
+                    variant={repairCreatedImport.importFeedback.variant}
                     compact
-                    description={repairCreatedImport.importError}
+                    description={repairCreatedImport.importFeedback.description}
                   />
                 ) : null}
               </div>

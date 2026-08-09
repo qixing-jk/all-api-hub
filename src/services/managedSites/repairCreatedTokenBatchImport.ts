@@ -26,6 +26,12 @@ export const REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS = {
   HISTORICAL: "historical",
 } as const
 
+export const REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS = {
+  NOT_READY: "not-ready",
+  REFERENCES_UNAVAILABLE: "references-unavailable",
+  NOTHING_PENDING: "nothing-pending",
+} as const
+
 type RepairCreatedTokenBatchImportFreshness =
   (typeof REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS)[keyof typeof REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS]
 
@@ -57,6 +63,19 @@ interface CreatedGroupEntry {
   accountLabel: string
   group: string
 }
+
+type RepairCreatedTokenBatchImportAbsenceReason =
+  (typeof REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS)[keyof typeof REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS]
+
+type CreatedReferenceResolution =
+  | { absenceReason: RepairCreatedTokenBatchImportAbsenceReason }
+  | {
+      absenceReason: null
+      references: CreatedTokenReferenceEntry[]
+      ambiguousGroups: CreatedGroupEntry[]
+      candidateReferences: CreatedTokenReferenceEntry[]
+      targetReceipts: Map<string, AccountKeyRepairManagedSiteImportStatus>
+    }
 
 const normalizeGroup = (value: unknown) =>
   typeof value === "string" ? value.trim() : ""
@@ -230,36 +249,33 @@ const getTargetReceipts = (
   return receipts
 }
 
-/**
- * Resolves exact keys created by a completed repair job into the shared
- * managed-site batch-import input shape. Inventory is loaded only for
- * affected accounts and is never used to guess a nearby replacement key.
- */
-export async function resolveRepairCreatedTokenBatchImportCandidate(
-  params: ResolveRepairCreatedTokenBatchImportCandidateParams,
-): Promise<RepairCreatedTokenBatchImportCandidate | null> {
-  if (params.progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed) {
-    return null
+const resolveCreatedReferenceState = (
+  progress: AccountKeyRepairProgress,
+  targetFingerprint: string,
+): CreatedReferenceResolution => {
+  if (progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed) {
+    return {
+      absenceReason:
+        REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.NOT_READY,
+    }
   }
 
   const { references, ambiguousGroups, hasExplicitReferenceData } =
-    getCreatedReferenceEntries(params.progress)
+    getCreatedReferenceEntries(progress)
 
   // Older progress snapshots have no exact references. Do not infer keys from
   // the human-readable createdGroups list.
-  if (references.length === 0 && !hasExplicitReferenceData) return null
+  if (references.length === 0 && !hasExplicitReferenceData) {
+    return {
+      absenceReason:
+        REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.REFERENCES_UNAVAILABLE,
+    }
+  }
 
-  const targetReceipts = getTargetReceipts(
-    params.progress,
-    params.targetFingerprint,
-  )
+  const targetReceipts = getTargetReceipts(progress, targetFingerprint)
   const candidateReferences = references.filter((reference) => {
     const status = targetReceipts.get(
-      getReceiptKey(
-        params.targetFingerprint,
-        reference.accountId,
-        reference.tokenId,
-      ),
+      getReceiptKey(targetFingerprint, reference.accountId, reference.tokenId),
     )
     return (
       status !== ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created &&
@@ -268,8 +284,45 @@ export async function resolveRepairCreatedTokenBatchImportCandidate(
   })
 
   if (candidateReferences.length === 0 && ambiguousGroups.length === 0) {
-    return null
+    return {
+      absenceReason:
+        references.length > 0
+          ? REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.NOTHING_PENDING
+          : REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.REFERENCES_UNAVAILABLE,
+    }
   }
+
+  return {
+    absenceReason: null,
+    references,
+    ambiguousGroups,
+    candidateReferences,
+    targetReceipts,
+  }
+}
+
+export const getRepairCreatedTokenBatchImportAbsenceReason = (params: {
+  progress: AccountKeyRepairProgress
+  targetFingerprint: string
+}) =>
+  resolveCreatedReferenceState(params.progress, params.targetFingerprint)
+    .absenceReason
+
+/**
+ * Resolves exact keys created by a completed repair job into the shared
+ * managed-site batch-import input shape. Inventory is loaded only for
+ * affected accounts and is never used to guess a nearby replacement key.
+ */
+export async function resolveRepairCreatedTokenBatchImportCandidate(
+  params: ResolveRepairCreatedTokenBatchImportCandidateParams,
+): Promise<RepairCreatedTokenBatchImportCandidate | null> {
+  const resolution = resolveCreatedReferenceState(
+    params.progress,
+    params.targetFingerprint,
+  )
+  if (resolution.absenceReason) return null
+  const { references, ambiguousGroups, candidateReferences, targetReceipts } =
+    resolution
 
   const hasReconciliationReceipt = candidateReferences.some((reference) => {
     const status = targetReceipts.get(

@@ -844,6 +844,63 @@ describe("RepairMissingKeysDialog", () => {
     ).toEqual(expect.objectContaining({ isOpen: false }))
   })
 
+  it("shows a completed notice when the current target has no pending repaired keys", async () => {
+    const user = userEvent.setup()
+    const account = buildAccount()
+    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running, {
+      jobId: "repair-job",
+    })
+
+    const view = render(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[account]}
+        startOnOpen={false}
+      />,
+    )
+    await screen.findByRole("progressbar", {
+      name: "keyManagement:repairMissingKeys.progressLabel",
+    })
+
+    mockProgress = buildCreatedProgress(account, {
+      managedSiteImportReceipts: [
+        {
+          targetFingerprint: "a".repeat(64),
+          accountId: account.id,
+          tokenId: 11,
+          status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+          updatedAt: 1,
+        },
+      ],
+    })
+    view.rerender(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[account]}
+        startOnOpen={false}
+      />,
+    )
+
+    await user.click(
+      await screen.findByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
+      ),
+    )
+
+    expect(
+      await screen.findByText(
+        "keyManagement:repairMissingKeys.managedSiteImport.nothingPending",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.queryByText(
+        "keyManagement:repairMissingKeys.managedSiteImport.unavailable",
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it("records only controlled attempted outcomes and reconciled matches", async () => {
     const user = userEvent.setup()
     const account = buildAccount()

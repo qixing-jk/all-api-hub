@@ -581,6 +581,7 @@
       "changeTarget": "Change target",
       "configMissing": "Configure a managed site before importing repaired keys.",
       "failed": "Could not prepare repaired keys for import. Try again.",
+      "nothingPending": "No repaired keys are pending for this target. They may already have been created or matched exactly.",
       "receiptFailed": "Import finished, but the repair results could not be updated. Refresh the results to confirm the current state.",
       "target_one": "{{count}} repaired key ready for {{site}}",
       "target_other": "{{count}} repaired keys ready for {{site}}",

@@ -5,6 +5,8 @@ import {
   isAccountTokenRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import {
+  getRepairCreatedTokenBatchImportAbsenceReason,
+  REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS,
   REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS,
   resolveRepairCreatedTokenBatchImportCandidate,
 } from "~/services/managedSites/repairCreatedTokenBatchImport"
@@ -362,6 +364,56 @@ describe("resolveRepairCreatedTokenBatchImportCandidate", () => {
     ])
   })
 
+  it("classifies exact references settled for the current target as nothing pending", async () => {
+    const account = buildAccount("account-1")
+    const progress = buildProgress(
+      [
+        buildRepairResult(account.id, {
+          createdGroups: ["alpha", "beta"],
+          createdTokens: [
+            { tokenId: 11, group: "alpha" },
+            { tokenId: 12, group: "beta" },
+          ],
+        }),
+      ],
+      {
+        managedSiteImportReceipts: [
+          {
+            targetFingerprint: TARGET_A,
+            accountId: account.id,
+            tokenId: 11,
+            status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+            updatedAt: 1,
+          },
+          {
+            targetFingerprint: TARGET_A,
+            accountId: account.id,
+            tokenId: 12,
+            status:
+              ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.AlreadyPresent,
+            updatedAt: 1,
+          },
+        ],
+      },
+    )
+
+    expect(
+      getRepairCreatedTokenBatchImportAbsenceReason({
+        progress,
+        targetFingerprint: TARGET_A,
+      }),
+    ).toBe(REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.NOTHING_PENDING)
+    await expect(
+      resolveRepairCreatedTokenBatchImportCandidate({
+        progress,
+        accounts: [account],
+        targetFingerprint: TARGET_A,
+        freshness: REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
+      }),
+    ).resolves.toBeNull()
+    expect(mocks.createDisplayAccountApiContext).not.toHaveBeenCalled()
+  })
+
   it("uses complete verification for historical results or an explicit complete-check request", async () => {
     const account = buildAccount("account-1")
     const progress = buildProgress([
@@ -401,20 +453,29 @@ describe("resolveRepairCreatedTokenBatchImportCandidate", () => {
 
   it("returns no launch candidate for old progress without exact references", async () => {
     const account = buildAccount("account-1")
+    const progress = buildProgress([
+      buildRepairResult(account.id, {
+        createdGroups: ["alpha"],
+        createdTokens: undefined,
+      }),
+    ])
 
     await expect(
       resolveRepairCreatedTokenBatchImportCandidate({
-        progress: buildProgress([
-          buildRepairResult(account.id, {
-            createdGroups: ["alpha"],
-            createdTokens: undefined,
-          }),
-        ]),
+        progress,
         accounts: [account],
         targetFingerprint: TARGET_A,
         freshness: REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.HISTORICAL,
       }),
     ).resolves.toBeNull()
+    expect(
+      getRepairCreatedTokenBatchImportAbsenceReason({
+        progress,
+        targetFingerprint: TARGET_A,
+      }),
+    ).toBe(
+      REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.REFERENCES_UNAVAILABLE,
+    )
     expect(mocks.createDisplayAccountApiContext).not.toHaveBeenCalled()
   })
 
