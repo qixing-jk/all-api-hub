@@ -1,17 +1,56 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedResourceCreateDialog } from "~/features/ManagedSiteChannels/components/ManagedResourceCreateDialog"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-import type { ResourceEditor } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  MANAGED_RESOURCE_FAILURE_CODES,
+  MANAGED_RESOURCE_FIELD_ISSUE_CODES,
+  ManagedResourceError,
+  type ResourceEditor,
+  type ResourceFieldIssue,
+  type ResourceFieldValue,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
+
+const { getManagedResourceFieldPolicyMock } = vi.hoisted(() => ({
+  getManagedResourceFieldPolicyMock: vi.fn(),
+}))
+
+interface EditorBodyHarnessProps {
+  values: ResourceEditor["initialValues"]
+  fieldIssues: readonly ResourceFieldIssue[]
+  disabled: boolean
+  onValueChange: (fieldId: string, value: ResourceFieldValue) => void
+}
 
 vi.mock(
   "~/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody",
   () => ({
-    ManagedResourceEditorBody: () => (
-      <div data-testid="native-resource-editor-body" />
+    ManagedResourceEditorBody: ({
+      values,
+      fieldIssues,
+      disabled,
+      onValueChange,
+    }: EditorBodyHarnessProps) => (
+      <div data-testid="native-resource-editor-body">
+        <span data-testid="native-resource-editor-values">
+          {String(values.name)}
+        </span>
+        <span data-testid="native-resource-editor-issues">
+          {fieldIssues
+            .map(({ fieldId, code }) => `${fieldId}:${code}`)
+            .join(",")}
+        </span>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onValueChange("name", "Updated channel")}
+        >
+          Edit native name
+        </button>
+      </div>
     ),
   }),
 )
@@ -20,21 +59,30 @@ vi.mock(
   "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy",
   () => ({
     MANAGED_RESOURCE_EDITOR_MODES: { Create: "create", Edit: "edit" },
-    getManagedResourceFieldPolicy: () => ({
-      fields: [],
-      hiddenFields: [],
-    }),
+    getManagedResourceFieldPolicy: getManagedResourceFieldPolicyMock,
   }),
 )
 
-const createEditor = (submit: ResourceEditor["submit"]): ResourceEditor => ({
+const createEditor = (
+  submit: ResourceEditor["submit"],
+  overrides: Partial<ResourceEditor> = {},
+): ResourceEditor => ({
   fields: [],
   initialValues: { name: "Imported channel" },
   validate: () => ({ valid: true }),
   submit,
+  ...overrides,
 })
 
 describe("ManagedResourceCreateDialog", () => {
+  beforeEach(() => {
+    getManagedResourceFieldPolicyMock.mockReset()
+    getManagedResourceFieldPolicyMock.mockReturnValue({
+      fields: [],
+      hiddenFields: [],
+    })
+  })
+
   it("submits the native editor and forwards a legacy-compatible success result", async () => {
     let resolveSubmit: ((result: unknown) => void) | undefined
     const submission = new Promise((resolve) => {
@@ -124,5 +172,187 @@ describe("ManagedResourceCreateDialog", () => {
     await waitFor(() => expect(submitButton).toBeDisabled())
     fireEvent.click(submitButton)
     expect(submit).toHaveBeenCalledOnce()
+  })
+
+  it("shows local validation issues without dispatching a create", async () => {
+    const submit = vi.fn()
+    const issue = {
+      fieldId: "name",
+      code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+    } as const
+
+    render(
+      <ManagedResourceCreateDialog
+        isOpen
+        siteType={SITE_TYPES.AXON_HUB}
+        kind={MANAGED_RESOURCE_KINDS.Channel}
+        editor={createEditor(submit, {
+          validate: () => ({ valid: false, issues: [issue] }),
+        })}
+        onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    const form = screen
+      .getByTestId("native-resource-editor-body")
+      .closest("form")
+    expect(form).not.toBeNull()
+    fireEvent.submit(form!)
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("native-resource-editor-issues"),
+      ).toHaveTextContent("name:required")
+    })
+    expect(submit).not.toHaveBeenCalled()
+  })
+
+  it("shows a definite rejection and clears it after the user edits a field", async () => {
+    const submit = vi.fn().mockResolvedValue({
+      outcome: "rejected",
+      diagnostic: { message: "not applied" },
+    })
+
+    render(
+      <ManagedResourceCreateDialog
+        isOpen
+        siteType={SITE_TYPES.AXON_HUB}
+        kind={MANAGED_RESOURCE_KINDS.Channel}
+        editor={createEditor(submit)}
+        onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton))
+    await screen.findByText("managedSiteChannels:alerts.editorSaveError.title")
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit native name" }))
+    await waitFor(() => {
+      expect(
+        screen.queryByText("managedSiteChannels:alerts.editorSaveError.title"),
+      ).toBeNull()
+    })
+    expect(
+      screen.getByTestId("native-resource-editor-values"),
+    ).toHaveTextContent("Updated channel")
+  })
+
+  it("maps provider validation failures back to the native fields", async () => {
+    const submit = vi.fn().mockRejectedValue(
+      new ManagedResourceError({
+        code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+        fieldIssues: [
+          {
+            fieldId: "name",
+            code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
+          },
+        ],
+      }),
+    )
+
+    render(
+      <ManagedResourceCreateDialog
+        isOpen
+        siteType={SITE_TYPES.AXON_HUB}
+        kind={MANAGED_RESOURCE_KINDS.Channel}
+        editor={createEditor(submit)}
+        onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton))
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("native-resource-editor-issues"),
+      ).toHaveTextContent("name:invalid_value")
+    })
+    expect(
+      screen.queryByText("managedSiteChannels:alerts.editorSaveError.title"),
+    ).toBeNull()
+  })
+
+  it("shows a local save failure when the provider throws an unknown error", async () => {
+    const submit = vi.fn().mockRejectedValue(new Error("provider unavailable"))
+
+    render(
+      <ManagedResourceCreateDialog
+        isOpen
+        siteType={SITE_TYPES.AXON_HUB}
+        kind={MANAGED_RESOURCE_KINDS.Channel}
+        editor={createEditor(submit)}
+        onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton))
+
+    expect(
+      await screen.findByText(
+        "managedSiteChannels:alerts.editorSaveError.title",
+      ),
+    ).toBeVisible()
+  })
+
+  it("aborts an in-flight provider create when its dialog is removed", async () => {
+    let submittedSignal: AbortSignal | undefined
+    const submit = vi.fn<ResourceEditor["submit"]>((_values, options) => {
+      submittedSignal = options?.signal
+      return new Promise((_resolve, reject) => {
+        options?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("aborted", "AbortError"))
+        })
+      })
+    })
+    const { unmount } = render(
+      <ManagedResourceCreateDialog
+        isOpen
+        siteType={SITE_TYPES.AXON_HUB}
+        kind={MANAGED_RESOURCE_KINDS.Channel}
+        editor={createEditor(submit)}
+        onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton))
+    await waitFor(() => expect(submittedSignal).toBeDefined())
+
+    unmount()
+
+    expect(submittedSignal?.aborted).toBe(true)
+  })
+
+  it("fails closed when the provider editor policy is unavailable", () => {
+    getManagedResourceFieldPolicyMock.mockReturnValue(null)
+
+    render(
+      <ManagedResourceCreateDialog
+        isOpen
+        siteType={SITE_TYPES.AXON_HUB}
+        kind={MANAGED_RESOURCE_KINDS.Channel}
+        editor={createEditor(vi.fn())}
+        onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
+        onSuccess={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.getByText("managedSiteChannels:alerts.editorLoadError.title"),
+    ).toBeVisible()
+    expect(screen.queryByTestId("native-resource-editor-body")).toBeNull()
+    expect(
+      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
+    ).toBeDisabled()
   })
 })

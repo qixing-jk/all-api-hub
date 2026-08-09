@@ -144,4 +144,46 @@ describe("native managed-channel import", () => {
       seed: expect.objectContaining({ enabled: false }),
     })
   })
+
+  it("submits the provider-owned normalized projection through the same session", async () => {
+    const submit = vi.fn().mockResolvedValue({
+      outcome: "succeeded",
+      data: { displayName: "Imported channel" },
+      confirmedEffects: [],
+    })
+    const initialValues = { providerOwned: "normalized" }
+    const openCreateEditor = vi.fn(async () => ({
+      fields: [],
+      initialValues,
+      validate: vi.fn(() => ({ valid: true as const })),
+      submit,
+    }))
+    vi.spyOn(
+      managedResourceRegistry,
+      "getManagedResourceRegistration",
+    ).mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+      createSeedKinds: [
+        MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      ],
+      open: vi.fn(async () => ({ openCreateEditor })),
+    } as unknown as ManagedResourceRegistration)
+    const controller = new AbortController()
+
+    const session = await openNativeManagedChannelImportSession(
+      SITE_TYPES.NEW_API,
+    )
+    await session?.submit(draft, { signal: controller.signal })
+
+    expect(openCreateEditor).toHaveBeenCalledWith({
+      signal: controller.signal,
+      seed: expect.objectContaining({
+        kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      }),
+    })
+    expect(submit).toHaveBeenCalledWith(initialValues, {
+      signal: controller.signal,
+    })
+  })
 })
