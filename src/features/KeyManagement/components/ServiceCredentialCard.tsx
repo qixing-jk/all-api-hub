@@ -11,12 +11,14 @@ import { useTranslation } from "react-i18next"
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
+import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
+import { CursorPlusIcon } from "~/components/icons/CursorPlusIcon"
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import {
@@ -126,6 +128,7 @@ export function ServiceCredentialCard({
     useState<ApiCredentialProfile | null>(null)
   const [kiloCodeProfile, setKiloCodeProfile] =
     useState<ApiCredentialProfile | null>(null)
+  const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
   const [cliProxyProfile, setCliProxyProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [claudeCodeRouterProfile, setClaudeCodeRouterProfile] =
@@ -171,12 +174,15 @@ export function ServiceCredentialCard({
     credential.service,
     credentialBaseUrl,
   ])
+  const runtimeKey = useMemo(
+    () =>
+      buildServiceCredentialRuntimeKey(account, credential, {
+        canRotate: onRotate !== undefined,
+      }),
+    [account, credential, onRotate],
+  )
 
   const handleSaveToApiCredentialProfiles = async () => {
-    const runtimeKey = buildServiceCredentialRuntimeKey(account, credential, {
-      canRotate: onRotate !== undefined,
-    })
-
     try {
       await saveAccountRuntimeKeysToApiCredentialProfiles({
         items: [
@@ -328,6 +334,14 @@ export function ServiceCredentialCard({
           profile={kiloCodeProfile}
         />
       ) : null}
+      {isCursorPlusDialogOpen ? (
+        <CursorPlusExportDialog
+          isOpen={true}
+          onClose={() => setIsCursorPlusDialogOpen(false)}
+          account={account}
+          runtimeKey={runtimeKey}
+        />
+      ) : null}
       {cliProxyPayload ? (
         <CliProxyExportDialog
           isOpen={true}
@@ -476,6 +490,14 @@ export function ServiceCredentialCard({
                   onClick={handleOpenClaudeCodeRouter}
                 >
                   <ClaudeCodeRouterIcon size="sm" />
+                </IconButton>
+                <IconButton
+                  aria-label={t("actions.exportToCursorPlus")}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setIsCursorPlusDialogOpen(true)}
+                >
+                  <CursorPlusIcon className="dark:text-dark-text-tertiary text-gray-500" />
                 </IconButton>
                 <IconButton
                   aria-label={t("actions.importToManagedSite", {

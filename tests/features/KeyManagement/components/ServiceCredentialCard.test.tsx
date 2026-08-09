@@ -20,6 +20,7 @@ const {
   mockCCSwitchDialog,
   mockClaudeCodeRouterDialog,
   mockCliProxyDialog,
+  mockCursorPlusDialog,
   mockKiloCodeDialog,
   mockOpenInCherryStudio,
   mockOpenSettingsTab,
@@ -33,6 +34,7 @@ const {
   mockCCSwitchDialog: vi.fn(),
   mockClaudeCodeRouterDialog: vi.fn(),
   mockCliProxyDialog: vi.fn(),
+  mockCursorPlusDialog: vi.fn(),
   mockKiloCodeDialog: vi.fn(),
   mockOpenInCherryStudio: vi.fn(),
   mockOpenSettingsTab: vi.fn(),
@@ -69,6 +71,14 @@ vi.mock("~/components/CliProxyExportDialog", () => ({
   CliProxyExportDialog: (props: unknown) => {
     mockCliProxyDialog(props)
     return null
+  },
+}))
+
+vi.mock("~/components/CursorPlusExportDialog", () => ({
+  CursorPlusExportDialog: (props: unknown) => {
+    mockCursorPlusDialog(props)
+    const { isOpen } = props as { isOpen: boolean }
+    return isOpen ? <div role="dialog" aria-label="Cursor++ export" /> : null
   },
 }))
 
@@ -542,6 +552,30 @@ describe("ServiceCredentialCard", () => {
         }),
       )
     })
+
+    const cursorPlusButton = screen.getByRole("button", {
+      name: "keyManagement:actions.exportToCursorPlus",
+    })
+    expect(cursorPlusButton.nextElementSibling).toBe(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    )
+    await user.click(cursorPlusButton)
+    expect(
+      screen.getByRole("dialog", { name: "Cursor++ export" }),
+    ).toBeVisible()
+    expect(mockCursorPlusDialog).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        isOpen: true,
+        account,
+        runtimeKey: expect.objectContaining({
+          baseUrl: "https://sharedchat.example.invalid/v1",
+          secret: "sk-service-credential",
+          service: "codex",
+        }),
+      }),
+    )
 
     await user.click(
       screen.getByRole("button", {

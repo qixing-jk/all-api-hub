@@ -37,6 +37,7 @@ const {
   cliProxyDialogRenderMock,
   claudeCodeRouterDialogRenderMock,
   createProfileMock,
+  cursorPlusDialogRenderMock,
   kiloCodeDialogRenderMock,
   loggerErrorMock,
   markGatewayGuidanceOnboardingCompletedMock,
@@ -53,6 +54,7 @@ const {
   cliProxyDialogRenderMock: vi.fn(),
   claudeCodeRouterDialogRenderMock: vi.fn(),
   createProfileMock: vi.fn(),
+  cursorPlusDialogRenderMock: vi.fn(),
   kiloCodeDialogRenderMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   markGatewayGuidanceOnboardingCompletedMock: vi.fn(),
@@ -79,6 +81,14 @@ vi.mock("~/components/KiloCodeExportDialog", () => ({
   KiloCodeExportDialog: (props: unknown) => {
     kiloCodeDialogRenderMock(props)
     return null
+  },
+}))
+
+vi.mock("~/components/CursorPlusExportDialog", () => ({
+  CursorPlusExportDialog: (props: unknown) => {
+    cursorPlusDialogRenderMock(props)
+    const { isOpen } = props as { isOpen: boolean }
+    return isOpen ? <div role="dialog" aria-label="Cursor++ export" /> : null
   },
 }))
 
@@ -178,6 +188,7 @@ describe("TokenHeader analytics", () => {
     cliProxyDialogRenderMock.mockReset()
     claudeCodeRouterDialogRenderMock.mockReset()
     createProfileMock.mockReset()
+    cursorPlusDialogRenderMock.mockReset()
     kiloCodeDialogRenderMock.mockReset()
     markGatewayGuidanceOnboardingCompletedMock.mockReset()
     openInCherryStudioMock.mockReset()
@@ -226,6 +237,36 @@ describe("TokenHeader analytics", () => {
     ).toBeVisible()
   })
 
+  it("opens Cursor++ export from a recoverable token row", async () => {
+    const user = userEvent.setup()
+    renderTokenHeader()
+
+    const cursorPlusButton = screen.getByRole("button", {
+      name: "keyManagement:actions.exportToCursorPlus",
+    })
+    expect(cursorPlusButton.nextElementSibling).toBe(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    )
+    await user.click(cursorPlusButton)
+
+    expect(
+      screen.getByRole("dialog", { name: "Cursor++ export" }),
+    ).toBeVisible()
+    expect(cursorPlusDialogRenderMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        isOpen: true,
+        account: expect.objectContaining({ id: "acc-1" }),
+        runtimeKey: expect.objectContaining({
+          accountId: "acc-1",
+          secret: "sk-sensitive-original",
+          tokenId: 1,
+        }),
+      }),
+    )
+  })
+
   it("omits secret-dependent actions and dialogs for AIHubMix tokens", () => {
     renderTokenHeader({
       account: createAccount({
@@ -250,6 +291,7 @@ describe("TokenHeader analytics", () => {
       "keyManagement:actions.saveToApiProfiles",
       "keyManagement:actions.useInCherry",
       "keyManagement:actions.exportToCCSwitch",
+      "keyManagement:actions.exportToCursorPlus",
       "keyManagement:actions.exportToKiloCode",
       "keyManagement:actions.importToCliProxy",
       "keyManagement:actions.importToClaudeCodeRouter",
@@ -949,6 +991,11 @@ describe("TokenHeader analytics", () => {
     )
     await user.click(
       screen.getByRole("button", {
+        name: "keyManagement:actions.exportToCursorPlus",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
         name: "keyManagement:actions.importToCliProxy",
       }),
     )
@@ -960,6 +1007,9 @@ describe("TokenHeader analytics", () => {
     expect(kiloCodeDialogRenderMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ isOpen: true }),
     )
+    expect(
+      screen.getByRole("dialog", { name: "Cursor++ export" }),
+    ).toBeVisible()
     expect(cliProxyDialogRenderMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ isOpen: true }),
     )
@@ -976,6 +1026,9 @@ describe("TokenHeader analytics", () => {
     claudeCodeRouterDialogRenderMock.mockClear()
 
     rerenderTokenHeader({ guidedManagedSiteImportRequest: "request-1" })
+    expect(
+      screen.queryByRole("dialog", { name: "Cursor++ export" }),
+    ).not.toBeInTheDocument()
     expect(kiloCodeDialogRenderMock).toHaveBeenLastCalledWith(
       expect.objectContaining({ isOpen: false }),
     )

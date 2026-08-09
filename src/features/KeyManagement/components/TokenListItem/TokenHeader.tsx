@@ -13,12 +13,14 @@ import { useTranslation } from "react-i18next"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
+import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
+import { CursorPlusIcon } from "~/components/icons/CursorPlusIcon"
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
@@ -50,6 +52,7 @@ import {
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { cn } from "~/lib/utils"
+import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { normalizeAccountSiteUrlForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { createProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
@@ -307,6 +310,7 @@ function TokenActionButtons({
 
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
+  const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
   const [isManagedSiteImportHighlighted, setIsManagedSiteImportHighlighted] =
     useState(false)
@@ -351,6 +355,7 @@ function TokenActionButtons({
 
     setIsClaudeCodeRouterOpen(false)
     setIsCliProxyDialogOpen(false)
+    setIsCursorPlusDialogOpen(false)
     setIsKiloCodeDialogOpen(false)
     setIsManagedSiteImportHighlighted(false)
   }, [actionPolicy.exportSecret])
@@ -740,6 +745,14 @@ function TokenActionButtons({
             initialSelectedSiteIds={[account.id]}
             initialSelectedTokenIdsBySite={{ [account.id]: [`${token.id}`] }}
           />
+          {isCursorPlusDialogOpen ? (
+            <CursorPlusExportDialog
+              isOpen={true}
+              onClose={() => setIsCursorPlusDialogOpen(false)}
+              account={account}
+              runtimeKey={buildDisplayAccountTokenRuntimeKey(account, token)}
+            />
+          ) : null}
           <ClaudeCodeRouterImportDialog
             isOpen={isClaudeCodeRouterOpen}
             onClose={() => setIsClaudeCodeRouterOpen(false)}
@@ -862,6 +875,14 @@ function TokenActionButtons({
             onClick={handleOpenClaudeCodeRouter}
           >
             <ClaudeCodeRouterIcon size="sm" />
+          </IconButton>
+          <IconButton
+            aria-label={t("keyManagement:actions.exportToCursorPlus")}
+            size="sm"
+            variant="ghost"
+            onClick={() => setIsCursorPlusDialogOpen(true)}
+          >
+            <CursorPlusIcon className="dark:text-dark-text-tertiary text-gray-500" />
           </IconButton>
           <IconButton
             ref={managedSiteImportButtonRef}
