@@ -146,33 +146,56 @@ describe("ManagedResourceCreateDialog", () => {
     })
   })
 
-  it("keeps an uncertain non-idempotent create from being submitted again", async () => {
-    const submit = vi.fn().mockResolvedValue({
-      outcome: "uncertain",
-      diagnostic: { message: "unknown" },
-    })
+  it.each([
+    {
+      label: "partial",
+      result: {
+        outcome: "partial",
+        confirmedEffects: [
+          {
+            kind: "resource-created",
+            resourceKind: MANAGED_RESOURCE_KINDS.Channel,
+            resourceId: "channel-id",
+          },
+        ],
+        completion: "rejected",
+        diagnostic: { message: "partially applied" },
+      },
+    },
+    {
+      label: "uncertain",
+      result: {
+        outcome: "uncertain",
+        diagnostic: { message: "unknown" },
+      },
+    },
+  ] as const)(
+    "keeps a $label non-idempotent create from being submitted again",
+    async ({ result }) => {
+      const submit = vi.fn().mockResolvedValue(result)
 
-    render(
-      <ManagedResourceCreateDialog
-        isOpen
-        siteType={SITE_TYPES.AXON_HUB}
-        kind={MANAGED_RESOURCE_KINDS.Channel}
-        editor={createEditor(submit)}
-        onClose={vi.fn()}
-        onCloseComplete={vi.fn()}
-        onSuccess={vi.fn()}
-      />,
-    )
+      render(
+        <ManagedResourceCreateDialog
+          isOpen
+          siteType={SITE_TYPES.AXON_HUB}
+          kind={MANAGED_RESOURCE_KINDS.Channel}
+          editor={createEditor(submit)}
+          onClose={vi.fn()}
+          onCloseComplete={vi.fn()}
+          onSuccess={vi.fn()}
+        />,
+      )
 
-    const submitButton = screen.getByTestId(
-      CHANNEL_DIALOG_TEST_IDS.submitButton,
-    )
-    fireEvent.click(submitButton)
+      const submitButton = screen.getByTestId(
+        CHANNEL_DIALOG_TEST_IDS.submitButton,
+      )
+      fireEvent.click(submitButton)
 
-    await waitFor(() => expect(submitButton).toBeDisabled())
-    fireEvent.click(submitButton)
-    expect(submit).toHaveBeenCalledOnce()
-  })
+      await waitFor(() => expect(submitButton).toBeDisabled())
+      fireEvent.click(submitButton)
+      expect(submit).toHaveBeenCalledOnce()
+    },
+  )
 
   it("shows local validation issues without dispatching a create", async () => {
     const submit = vi.fn()
@@ -236,6 +259,7 @@ describe("ManagedResourceCreateDialog", () => {
         screen.queryByText("managedSiteChannels:alerts.editorSaveError.title"),
       ).toBeNull()
     })
+    fireEvent.click(screen.getByRole("button", { name: "Edit native name" }))
     expect(
       screen.getByTestId("native-resource-editor-values"),
     ).toHaveTextContent("Updated channel")
@@ -334,13 +358,14 @@ describe("ManagedResourceCreateDialog", () => {
 
   it("fails closed when the provider editor policy is unavailable", () => {
     getManagedResourceFieldPolicyMock.mockReturnValue(null)
+    const submit = vi.fn()
 
     render(
       <ManagedResourceCreateDialog
         isOpen
         siteType={SITE_TYPES.AXON_HUB}
         kind={MANAGED_RESOURCE_KINDS.Channel}
-        editor={createEditor(vi.fn())}
+        editor={createEditor(submit)}
         onClose={vi.fn()}
         onCloseComplete={vi.fn()}
         onSuccess={vi.fn()}
@@ -354,5 +379,11 @@ describe("ManagedResourceCreateDialog", () => {
     expect(
       screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
     ).toBeDisabled()
+    const formId = screen
+      .getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton)
+      .getAttribute("form")
+    expect(formId).not.toBeNull()
+    fireEvent.submit(document.getElementById(formId!)!)
+    expect(submit).not.toHaveBeenCalled()
   })
 })
