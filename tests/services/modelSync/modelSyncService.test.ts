@@ -938,6 +938,50 @@ describe("ModelSyncService - global and channel filters", () => {
     const result = await callApplyFilters(rules, baseModels)
     expect(result).toEqual([])
   })
+
+  it("rejects unsafe regex filters from legacy or imported storage at runtime", async () => {
+    const rules: ChannelModelFilterRule[] = [
+      makeFilterRule({
+        id: "unsafe",
+        pattern: "(a+)+$",
+        isRegex: true,
+        action: "include",
+      }),
+    ]
+
+    await expect(
+      callApplyFilters(rules, ["a".repeat(40) + "z"]),
+    ).resolves.toEqual([])
+  })
+
+  it("fails closed when a probe rule is evaluated without channel context", async () => {
+    const probeRule = {
+      id: "probe",
+      kind: "probe",
+      name: "Probe",
+      probeIds: ["text-generation"],
+      match: "all",
+      action: "include",
+      enabled: true,
+      createdAt: 100,
+      updatedAt: 100,
+    } as ChannelModelFilterRule
+
+    await expect(
+      callApplyFilters([probeRule], ["gpt-4o"]),
+    ).rejects.toMatchObject({ reason: "provider-unsupported" })
+  })
+
+  it("treats an unknown imported rule kind as non-matching", async () => {
+    const unknownRule = {
+      ...makeFilterRule({ id: "unknown" }),
+      kind: "future-kind",
+    } as unknown as ChannelModelFilterRule
+
+    await expect(callApplyFilters([unknownRule], ["gpt-4o"])).resolves.toEqual(
+      [],
+    )
+  })
 })
 
 describe("ModelSyncService - channel execution", () => {

@@ -14,12 +14,8 @@ import { createDefaultTagStore } from "~/services/tags/tagStoreUtils"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { normalizeWebdavOrderedEntryIds } from "~/services/webdav/webdavSelectiveSync"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
-import type { ChannelConfigSnapshot } from "~/types/channelConfig"
-import {
-  createManagedUpstreamResourceRef,
-  getManagedUpstreamResourceRefKey,
-} from "~/types/managedUpstreamResource"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
+import { channelConfigSnapshot } from "~~/tests/test-utils/channelConfigSnapshot"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
@@ -66,44 +62,6 @@ const preferenceWriteFailure = () => ({
     error: new Error("Failed to import WebDAV preferences"),
   },
 })
-
-function channelConfigSnapshot(
-  entries: Array<{
-    resourceId: string
-    scopeKey?: string
-    channelId?: number
-    updatedAt: number
-  }>,
-): ChannelConfigSnapshot {
-  const configs = Object.fromEntries(
-    entries.map(
-      ({
-        resourceId,
-        scopeKey = "https://admin.example.invalid",
-        channelId,
-        updatedAt,
-      }) => {
-        const resourceRef = createManagedUpstreamResourceRef({
-          managedSiteType: "new-api",
-          scopeKey,
-          resourceId,
-        })
-        return [
-          getManagedUpstreamResourceRefKey(resourceRef),
-          {
-            resourceRef,
-            ...(channelId !== undefined ? { channelId } : {}),
-            modelFilterSettings: { rules: [], updatedAt },
-            createdAt: updatedAt,
-            updatedAt,
-          },
-        ]
-      },
-    ),
-  )
-
-  return { schemaVersion: 1, configs }
-}
 
 vi.mock(
   import("~/services/preferences/userPreferences"),

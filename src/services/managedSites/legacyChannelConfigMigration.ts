@@ -102,11 +102,28 @@ class LegacyChannelConfigMigration {
   private initializationPromise: Promise<LegacyChannelConfigMigrationOutcome> | null =
     null
 
-  initialize(options?: {
+  async initialize(options?: {
     bypassBackoff?: boolean
   }): Promise<LegacyChannelConfigMigrationOutcome> {
+    const bypassBackoff = options?.bypassBackoff ?? false
+    const outcome = await this.start(bypassBackoff)
+    if (
+      bypassBackoff &&
+      outcome.status === "deferred" &&
+      outcome.reason === "backoff-active"
+    ) {
+      // The shared run may have been started by a background caller without
+      // bypass. Retry after it settles so this explicit action honors bypass.
+      return await this.start(true)
+    }
+    return outcome
+  }
+
+  private start(
+    bypassBackoff: boolean,
+  ): Promise<LegacyChannelConfigMigrationOutcome> {
     if (!this.initializationPromise) {
-      const runPromise = this.run(options?.bypassBackoff ?? false)
+      const runPromise = this.run(bypassBackoff)
       this.initializationPromise = runPromise
       void runPromise.then(
         () => this.clearInitializationPromise(runPromise),
@@ -303,15 +320,26 @@ class LegacyChannelConfigMigration {
   }
 }
 
+export type LegacyChannelConfigMigrationDeferredReason = Extract<
+  LegacyChannelConfigMigrationOutcome,
+  { status: "deferred" }
+>["reason"]
+
+/** Typed failure returned to scoped-only consumers when migration must retry. */
+export class LegacyChannelConfigMigrationDeferredError extends Error {
+  constructor(readonly reason: LegacyChannelConfigMigrationDeferredReason) {
+    super(`Legacy channel config migration deferred: ${reason}`)
+    this.name = "LegacyChannelConfigMigrationDeferredError"
+  }
+}
+
 /** Ensures legacy numeric data is resolved before a scoped-only consumer runs. */
 export async function ensureLegacyChannelConfigMigrationReady(options?: {
   bypassBackoff?: boolean
 }): Promise<void> {
   const outcome = await legacyChannelConfigMigration.initialize(options)
   if (outcome.status === "deferred") {
-    throw new Error(
-      `Legacy channel config migration deferred: ${outcome.reason}`,
-    )
+    throw new LegacyChannelConfigMigrationDeferredError(outcome.reason)
   }
 }
 

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { Storage } from "@plasmohq/storage"
+
 import { CHANNEL_CONFIG_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { ChannelConfigMessageTypes } from "~/services/managedSites/channelConfigMessaging"
 import {
@@ -307,7 +309,7 @@ describe("channelConfigStorage", () => {
   })
 
   it("propagates storage read failures instead of returning an empty map", async () => {
-    const storage = (channelConfigStorage as any).storage
+    const storage = Storage.prototype
     vi.spyOn(storage, "get").mockRejectedValueOnce(new Error("read failed"))
 
     await expect(channelConfigStorage.exportConfigs()).rejects.toThrow(
@@ -317,7 +319,7 @@ describe("channelConfigStorage", () => {
 
   it("propagates authoritative write failures", async () => {
     const resourceRef = createRef("https://admin.example.invalid")
-    const storage = (channelConfigStorage as any).storage
+    const storage = Storage.prototype
     vi.spyOn(storage, "set").mockRejectedValueOnce(new Error("write failed"))
 
     await expect(
@@ -361,6 +363,80 @@ describe("channelConfigStorage", () => {
         modelFilterSettings: expect.objectContaining({
           rules: [expect.objectContaining({ id: "numeric-newer" })],
         }),
+      }),
+    )
+  })
+
+  it("keeps newer scoped rules while attaching the resolved legacy channel id", async () => {
+    const resourceRef = createRef("https://admin.example.invalid", 9)
+    const existing = createConfig({
+      scopeKey: resourceRef.scopeKey,
+      resourceId: 9,
+      channelId: 8,
+      ruleId: "resource-newer",
+      updatedAt: 300,
+    })
+    const legacy = createConfig({
+      scopeKey: "https://legacy.example.invalid",
+      channelId: 9,
+      ruleId: "numeric-older",
+      updatedAt: 200,
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: legacy })
+    storageData.set(
+      CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+      snapshotOf(existing).configs,
+    )
+
+    await expect(
+      channelConfigStorage.migrateLegacyNumericConfigs([
+        { channelId: 9, resourceRef },
+      ]),
+    ).resolves.toEqual({ migrated: 1, ambiguous: 0, unmatched: 0 })
+    await expect(channelConfigStorage.getConfig(resourceRef)).resolves.toEqual(
+      expect.objectContaining({
+        channelId: 9,
+        modelFilterSettings: expect.objectContaining({
+          rules: [expect.objectContaining({ id: "resource-newer" })],
+        }),
+      }),
+    )
+  })
+
+  it("sanitizes historical numeric filters with deterministic timestamps", async () => {
+    const resourceRef = createRef("https://admin.example.invalid", 9)
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, {
+      9: {
+        channelId: 9,
+        filters: [
+          {
+            name: "Legacy filter",
+            pattern: "gpt",
+            isRegex: false,
+          },
+        ],
+      },
+    })
+
+    await expect(
+      channelConfigStorage.migrateLegacyNumericConfigs([
+        { channelId: 9, resourceRef },
+      ]),
+    ).resolves.toEqual({ migrated: 1, ambiguous: 0, unmatched: 0 })
+    await expect(channelConfigStorage.getConfig(resourceRef)).resolves.toEqual(
+      expect.objectContaining({
+        createdAt: 1,
+        updatedAt: 1,
+        modelFilterSettings: {
+          updatedAt: 1,
+          rules: [
+            expect.objectContaining({
+              name: "Legacy filter",
+              createdAt: 1,
+              updatedAt: 1,
+            }),
+          ],
+        },
       }),
     )
   })
@@ -473,7 +549,7 @@ describe("channelConfigStorage", () => {
       updatedAt: 300,
     })
     storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: legacy })
-    const storage = (channelConfigStorage as any).storage
+    const storage = Storage.prototype
     vi.spyOn(storage, "set").mockRejectedValueOnce(new Error("write failed"))
 
     await expect(
@@ -495,7 +571,7 @@ describe("channelConfigStorage", () => {
       updatedAt: 300,
     })
     storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: legacy })
-    const storage = (channelConfigStorage as any).storage
+    const storage = Storage.prototype
     vi.spyOn(storage, "remove").mockRejectedValueOnce(
       new Error("cleanup failed"),
     )
@@ -558,7 +634,7 @@ describe("channelConfigStorage", () => {
       ruleId: "site-a",
     })
     storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: siteA })
-    const storage = (channelConfigStorage as any).storage
+    const storage = Storage.prototype
     vi.spyOn(storage, "remove").mockRejectedValueOnce(
       new Error("cleanup failed"),
     )
@@ -588,7 +664,7 @@ describe("channelConfigStorage", () => {
       ruleId: "site-a",
     })
     storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: siteA })
-    const storage = (channelConfigStorage as any).storage
+    const storage = Storage.prototype
     const originalRemove = storage.remove.bind(storage)
     let failedMarkerCleanup = false
     vi.spyOn(storage, "remove").mockImplementation(
@@ -626,26 +702,51 @@ describe("channelConfigStorage", () => {
     )
   })
 
+  it("rejects malformed and incomplete replacement transaction markers", async () => {
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE, {
+      phase: "prepared",
+      snapshot: { schemaVersion: 99, configs: {} },
+    })
+    await expect(channelConfigStorage.exportConfigs()).rejects.toThrow(
+      "replacement state is invalid",
+    )
+
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE, {
+      phase: "prepared",
+      snapshot: { schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION, configs: {} },
+    })
+    await expect(channelConfigStorage.exportConfigs()).rejects.toThrow(
+      "replacement is incomplete",
+    )
+  })
+
   it.each([
-    ["before the resource write", 2],
-    ["before the commit marker", 3],
-  ])("replays a replacement interrupted %s", async (_label, failingSetCall) => {
+    ["before the resource write", "resource"],
+    ["before the commit marker", "commit"],
+  ] as const)("replays a replacement interrupted %s", async (_label, phase) => {
     const siteA = createConfig({
       scopeKey: "https://a.example.invalid",
       channelId: 9,
       ruleId: "site-a",
     })
     storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: siteA })
-    const storage = (channelConfigStorage as any).storage
-    const originalSet = storage.set.bind(storage)
-    let setCallCount = 0
+    const storage = Storage.prototype
+    const originalSet = storage.set
+    let failed = false
     vi.spyOn(storage, "set").mockImplementation(async (...args: unknown[]) => {
       const [key, value] = args as [string, unknown]
-      setCallCount += 1
-      if (setCallCount === failingSetCall) {
+      const shouldFail =
+        phase === "resource"
+          ? key === CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS
+          : key === CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE &&
+            typeof value === "object" &&
+            value !== null &&
+            (value as { phase?: unknown }).phase === "committed"
+      if (!failed && shouldFail) {
+        failed = true
         throw new Error("write failed")
       }
-      await originalSet(key, value)
+      return await originalSet(key, value)
     })
 
     await expect(
@@ -683,6 +784,23 @@ describe("channelConfigStorage", () => {
     await expect(channelConfigStorage.importConfigs(legacy)).rejects.toThrow(
       "snapshot is invalid",
     )
+  })
+
+  it("rejects invalid refs and snapshots at direct storage boundaries", async () => {
+    const invalidRef = {
+      ...createRef("https://admin.example.invalid"),
+      scopeKey: "",
+    }
+
+    await expect(channelConfigStorage.getConfig(invalidRef)).rejects.toThrow(
+      "resourceRef is invalid",
+    )
+    await expect(
+      channelConfigStorage.upsertFilters(invalidRef, []),
+    ).rejects.toThrow("resourceRef is invalid")
+    await expect(
+      channelConfigStorage.mergeConfigs({ configs: {} }),
+    ).rejects.toThrow("snapshot is invalid")
   })
 
   it.each([
@@ -757,6 +875,98 @@ describe("channelConfigStorage", () => {
       "a non-boolean enabled flag",
       (config: any) => {
         config.modelFilterSettings.rules[0].enabled = "yes"
+      },
+    ],
+    [
+      "a non-string description",
+      (config: any) => {
+        config.modelFilterSettings.rules[0].description = 123
+      },
+    ],
+    [
+      "an unknown rule kind",
+      (config: any) => {
+        config.modelFilterSettings.rules[0].kind = "future-kind"
+      },
+    ],
+    [
+      "a blank pattern",
+      (config: any) => {
+        config.modelFilterSettings.rules[0].pattern = " "
+      },
+    ],
+    [
+      "a non-boolean regex flag",
+      (config: any) => {
+        config.modelFilterSettings.rules[0].isRegex = "yes"
+      },
+    ],
+    [
+      "an unsafe regex pattern",
+      (config: any) => {
+        config.modelFilterSettings.rules[0].pattern = "(a+)+$"
+        config.modelFilterSettings.rules[0].isRegex = true
+      },
+    ],
+    [
+      "an empty probe list",
+      (config: any) => {
+        const rule = config.modelFilterSettings.rules[0]
+        Object.assign(rule, { kind: "probe", probeIds: [], match: "all" })
+        delete rule.pattern
+        delete rule.isRegex
+      },
+    ],
+    [
+      "an invalid probe match mode",
+      (config: any) => {
+        const rule = config.modelFilterSettings.rules[0]
+        Object.assign(rule, {
+          kind: "probe",
+          probeIds: ["text-generation"],
+          match: "none",
+        })
+        delete rule.pattern
+        delete rule.isRegex
+      },
+    ],
+    [
+      "duplicate probe identifiers",
+      (config: any) => {
+        const rule = config.modelFilterSettings.rules[0]
+        Object.assign(rule, {
+          kind: "probe",
+          probeIds: ["text-generation", "text-generation"],
+          match: "all",
+        })
+        delete rule.pattern
+        delete rule.isRegex
+      },
+    ],
+    [
+      "an unsupported probe identifier",
+      (config: any) => {
+        const rule = config.modelFilterSettings.rules[0]
+        Object.assign(rule, {
+          kind: "probe",
+          probeIds: ["unknown-probe"],
+          match: "all",
+        })
+        delete rule.pattern
+        delete rule.isRegex
+      },
+    ],
+    [
+      "a non-string probe identifier",
+      (config: any) => {
+        const rule = config.modelFilterSettings.rules[0]
+        Object.assign(rule, {
+          kind: "probe",
+          probeIds: [123],
+          match: "all",
+        })
+        delete rule.pattern
+        delete rule.isRegex
       },
     ],
     [
@@ -970,8 +1180,15 @@ describe("channelConfigStorage", () => {
       }),
     ).resolves.toEqual({
       success: false,
-      error: expect.stringContaining("Invalid regex pattern"),
+      error: "Invalid or unsafe regex pattern",
     })
+
+    await expect(
+      resolveChannelConfigUpsertFiltersMessage({
+        resourceRef: { ...resourceRef, scopeKey: "" },
+        filters: [],
+      }),
+    ).resolves.toEqual({ success: false, error: "resourceRef is invalid" })
   })
 
   it("registers typed channel-config listeners once", () => {

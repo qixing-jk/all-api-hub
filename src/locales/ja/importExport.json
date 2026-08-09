@@ -16,6 +16,7 @@
   },
   "import": {
     "backupTime": "バックアップ時刻",
+    "channelConfigMigrationDeferred": "チャンネル設定の移行を完了できませんでした。管理サイトの設定を確認して、もう一度お試しください。",
     "containsAccountData": "アカウントデータを含む",
     "containsApiCredentialProfiles": "API 認証情報庫を含む",
     "containsChannelConfigs": "チャネル設定を含む",

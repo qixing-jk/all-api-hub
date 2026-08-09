@@ -22,6 +22,14 @@ export type ManagedSiteChannelRequestOptions = {
   requireCompleteInventory?: boolean
 }
 
+export type ManagedSitePaginatedChannelRequestOptions =
+  ManagedSiteChannelRequestOptions & {
+    pageSize?: number
+    beforeRequest?: () => Promise<void>
+    endpoint?: string
+    pageStart?: number
+  }
+
 export type ManagedSiteChannelSecretReadOptions = {
   protectionBypassExecution: ProtectionBypassExecution
 }

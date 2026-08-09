@@ -79,6 +79,7 @@ import { WEBDAV_TARGET_IDS } from "../searchTargets"
 import { IMPORT_EXPORT_TEST_IDS } from "../testIds"
 import {
   BACKUP_VERSION,
+  getImportExportErrorMessage,
   importFromBackupObject,
   type BackupFullV2,
 } from "../utils"
@@ -489,7 +490,9 @@ export default function WebDAVSettings() {
       toast.error(
         e instanceof PersistWebdavConfigError
           ? getPersistWebdavConfigErrorMessage(e, t)
-          : e?.message || t("webdav.uploadFailed"),
+          : getImportExportErrorMessage(e) ||
+              e?.message ||
+              t("webdav.uploadFailed"),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
@@ -652,7 +655,9 @@ export default function WebDAVSettings() {
       toast.error(
         e instanceof PersistWebdavConfigError
           ? getPersistWebdavConfigErrorMessage(e, t)
-          : e?.message || t("importExport:import.downloadImportFailed"),
+          : getImportExportErrorMessage(e) ||
+              e?.message ||
+              t("importExport:import.downloadImportFailed"),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),

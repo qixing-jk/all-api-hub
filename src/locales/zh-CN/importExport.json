@@ -16,6 +16,7 @@
   },
   "import": {
     "backupTime": "备份时间",
+    "channelConfigMigrationDeferred": "渠道配置迁移尚未完成。请检查管理站点配置后重试。",
     "containsAccountData": "包含账号数据",
     "containsApiCredentialProfiles": "包含 API 凭据库",
     "containsChannelConfigs": "包含渠道配置",

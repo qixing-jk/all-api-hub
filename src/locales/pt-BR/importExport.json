@@ -16,6 +16,7 @@
   },
   "import": {
     "backupTime": "Data do backup",
+    "channelConfigMigrationDeferred": "Não foi possível concluir a migração da configuração de canais. Verifique as configurações do site gerenciado e tente novamente.",
     "containsAccountData": "Contém dados de contas",
     "containsApiCredentialProfiles": "Contém a biblioteca de credenciais de API",
     "containsChannelConfigs": "Contém configurações de canais",

@@ -13,21 +13,31 @@ import {
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
-import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
+import {
+  ensureLegacyChannelConfigMigrationReady,
+  LegacyChannelConfigMigrationDeferredError,
+} from "~/services/managedSites/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
-import type { ChannelConfigSnapshot } from "~/types/channelConfig"
-import {
-  createManagedUpstreamResourceRef,
-  getManagedUpstreamResourceRefKey,
-} from "~/types/managedUpstreamResource"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
+import { channelConfigSnapshot } from "~~/tests/test-utils/channelConfigSnapshot"
 
-vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
-  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
-}))
+vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => {
+  class LegacyChannelConfigMigrationDeferredError extends Error {
+    constructor(readonly reason: string) {
+      super(`Legacy channel config migration deferred: ${reason}`)
+    }
+  }
+
+  return {
+    ensureLegacyChannelConfigMigrationReady: vi
+      .fn()
+      .mockResolvedValue(undefined),
+    LegacyChannelConfigMigrationDeferredError,
+  }
+})
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
@@ -143,43 +153,6 @@ const preferenceWriteFailure = () => ({
   reason: { type: "storage-error", error: new Error("import failed") },
 })
 
-function channelConfigSnapshot(
-  entries: Array<{
-    resourceId: string
-    scopeKey?: string
-    channelId?: number
-    updatedAt: number
-  }>,
-): ChannelConfigSnapshot {
-  const configs = Object.fromEntries(
-    entries.map(
-      ({
-        resourceId,
-        scopeKey = "https://admin.example.invalid",
-        channelId,
-        updatedAt,
-      }) => {
-        const resourceRef = createManagedUpstreamResourceRef({
-          managedSiteType: "new-api",
-          scopeKey,
-          resourceId,
-        })
-        return [
-          getManagedUpstreamResourceRefKey(resourceRef),
-          {
-            resourceRef,
-            ...(channelId !== undefined ? { channelId } : {}),
-            modelFilterSettings: { rules: [], updatedAt },
-            createdAt: updatedAt,
-            updatedAt,
-          },
-        ]
-      },
-    ),
-  )
-
-  return { schemaVersion: 1, configs }
-}
 const mockApiCredentialProfilesExportConfig =
   apiCredentialProfilesStorage.exportConfig as unknown as ReturnType<
     typeof vi.fn
@@ -345,6 +318,21 @@ describe("importFromBackupObject", () => {
       channelConfigs: false,
       apiCredentialProfiles: false,
     })
+  })
+
+  it("restores a scoped channel snapshot carried by a legacy V1 envelope", async () => {
+    const channelConfigs = channelConfigSnapshot([
+      { resourceId: "9", channelId: 9, updatedAt: 200 },
+    ])
+
+    const result = await importFromBackupObject({
+      version: "1.0",
+      timestamp: Date.now(),
+      channelConfigs,
+    })
+
+    expect(mockChannelConfigImport).toHaveBeenCalledWith(channelConfigs)
+    expect(result.sections.channelConfigs).toBe(true)
   })
 
   it("imports a full scoped backup including bookmarks + pinned/ordered ids", async () => {
@@ -1218,6 +1206,30 @@ describe("importFromBackupObject", () => {
       "importExport:import.versionNotSupported",
     )
     expect(mockAccountStorageImportData).not.toHaveBeenCalled()
+  })
+
+  it("maps deferred channel-config migration failures to localized copy", async () => {
+    const channelConfigs = channelConfigSnapshot([
+      {
+        scopeKey: "https://admin.example.invalid",
+        resourceId: "9",
+        updatedAt: 200,
+      },
+    ])
+    mockEnsureLegacyChannelConfigMigrationReady.mockRejectedValueOnce(
+      new LegacyChannelConfigMigrationDeferredError("inventory-failed" as any),
+    )
+
+    await expect(
+      importFromBackupObject(
+        {
+          version: BACKUP_VERSION,
+          timestamp: Date.now(),
+          channelConfigs,
+        },
+        { plan: { channelConfigs: "merge" } },
+      ),
+    ).rejects.toThrow("importExport:import.channelConfigMigrationDeferred")
   })
 
   it("respects section plan skips for legacy V1 backups", async () => {

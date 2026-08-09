@@ -338,7 +338,7 @@ test("exports a full backup containing accounts, user preferences, and API crede
     }
   }
 
-  expect(backup.version).toBe("3.0")
+  expect(backup.version).toBe(BACKUP_VERSION)
   expect(backup.accounts?.accounts).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -477,7 +477,7 @@ test("round-trips a full backup through export download and file import", async 
     apiCredentialProfiles?: ApiCredentialProfilesConfig
   }
 
-  expect(exportedBackup.version).toBe("3.0")
+  expect(exportedBackup.version).toBe(BACKUP_VERSION)
   expect(exportedBackup.accounts?.accounts).toEqual([
     expect.objectContaining({
       id: "round-trip-account",

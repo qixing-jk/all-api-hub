@@ -221,6 +221,55 @@ describe("runOctopusBatch", () => {
     })
   })
 
+  it("returns a channel failure when a probe filter cannot resolve a channel key", async () => {
+    fetchRemoteModelsMock.mockResolvedValueOnce(["model-a"])
+    const resourceRef = createManagedUpstreamResourceRef({
+      managedSiteType: "octopus",
+      scopeKey: config.baseUrl,
+      resourceId: 1,
+    })
+    const channelConfigs = {
+      [getManagedUpstreamResourceRefKey(resourceRef)]: {
+        resourceRef,
+        channelId: 1,
+        modelFilterSettings: {
+          rules: [
+            {
+              id: "probe-rule",
+              kind: "probe" as const,
+              name: "Probe model",
+              probeIds: ["text-generation" as const],
+              match: "all" as const,
+              action: "include" as const,
+              enabled: true,
+              createdAt: 100,
+              updatedAt: 100,
+            },
+          ],
+          updatedAt: 100,
+        },
+        createdAt: 100,
+        updatedAt: 100,
+      },
+    }
+
+    const result = await runOctopusBatch(
+      config as any,
+      [createChannel({ models: "legacy-model" })],
+      { concurrency: 1, maxRetries: 0, channelConfigs },
+    )
+
+    expect(updateModelsMock).not.toHaveBeenCalled()
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        channelId: 1,
+        ok: false,
+        attempts: 1,
+        message: "Probe filtering is unsupported for this channel type.",
+      }),
+    ])
+  })
+
   it("skips updates when the normalized model set is unchanged", async () => {
     fetchRemoteModelsMock.mockResolvedValueOnce([" model-b ", "model-a", " "])
 

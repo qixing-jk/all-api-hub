@@ -16,6 +16,7 @@
   },
   "import": {
     "backupTime": "Backup-Zeit",
+    "channelConfigMigrationDeferred": "Die Migration der Kanalkonfiguration konnte nicht abgeschlossen werden. Prüfe die Einstellungen der verwalteten Website und versuche es erneut.",
     "containsAccountData": "Enthält Kontodaten",
     "containsApiCredentialProfiles": "Enthält die API-Anmeldeinformationsbibliothek",
     "containsChannelConfigs": "Enthält die Kanalkonfiguration",

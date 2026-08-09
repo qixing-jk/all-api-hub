@@ -35,6 +35,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import {
+  isSafeChannelModelFilterRegex,
   normalizeChannelFilters,
   sanitizeChannelFilter,
   type IncomingChannelFilter,
@@ -140,9 +141,7 @@ function isCanonicalChannelModelFilterRule(
   }
 
   if (value.isRegex) {
-    try {
-      new RegExp(value.pattern)
-    } catch {
+    if (!isSafeChannelModelFilterRegex(value.pattern)) {
       return false
     }
   }

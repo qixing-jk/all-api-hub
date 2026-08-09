@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { Storage } from "@plasmohq/storage"
+
+import { CHANNEL_CONFIG_STORAGE_KEYS } from "~/services/core/storageKeys"
+
 const storageData = new Map<string, unknown>()
 
 const {
@@ -64,6 +68,7 @@ const loadMigration = async () => {
 describe("legacyChannelConfigMigration", () => {
   beforeEach(() => {
     storageData.clear()
+    vi.restoreAllMocks()
     vi.clearAllMocks()
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-03-28T05:30:00.000Z"))
@@ -85,6 +90,48 @@ describe("legacyChannelConfigMigration", () => {
     })
     expect(getPreferencesStrictMock).not.toHaveBeenCalled()
     expect(getManagedSiteServiceForTypeMock).not.toHaveBeenCalled()
+  })
+
+  it("ignores malformed retry state instead of treating it as active backoff", async () => {
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_MIGRATION_STATE, {
+      attempt: 0,
+      retryAfter: "later",
+    })
+    hasLegacyNumericConfigsMock.mockResolvedValue(true)
+    const { legacyChannelConfigMigration } = await loadMigration()
+
+    await expect(legacyChannelConfigMigration.initialize()).resolves.toEqual({
+      status: "deferred",
+      reason: "no-configured-sites",
+    })
+    expect(
+      storageData.get(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_MIGRATION_STATE),
+    ).toEqual(expect.objectContaining({ attempt: 1 }))
+  })
+
+  it("preserves the migration outcome when backoff persistence fails", async () => {
+    hasLegacyNumericConfigsMock.mockResolvedValue(true)
+    vi.spyOn(Storage.prototype, "set").mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    )
+    const { legacyChannelConfigMigration } = await loadMigration()
+
+    await expect(legacyChannelConfigMigration.initialize()).resolves.toEqual({
+      status: "deferred",
+      reason: "no-configured-sites",
+    })
+  })
+
+  it("does not turn retry-state cleanup failure into a migration failure", async () => {
+    hasLegacyNumericConfigsMock.mockResolvedValue(false)
+    vi.spyOn(Storage.prototype, "remove").mockRejectedValueOnce(
+      new Error("storage unavailable"),
+    )
+    const { legacyChannelConfigMigration } = await loadMigration()
+
+    await expect(legacyChannelConfigMigration.initialize()).resolves.toEqual({
+      status: "not-needed",
+    })
   })
 
   it("discovers all configured sites and migrates only after every list succeeds", async () => {
@@ -371,28 +418,97 @@ describe("legacyChannelConfigMigration", () => {
   it("blocks scoped-only consumers while migration is deferred", async () => {
     hasLegacyNumericConfigsMock.mockResolvedValue(true)
     resolveRuntimeConfigMock.mockReturnValue(null)
-    const { ensureLegacyChannelConfigMigrationReady } = await loadMigration()
+    const {
+      ensureLegacyChannelConfigMigrationReady,
+      LegacyChannelConfigMigrationDeferredError,
+    } = await loadMigration()
 
-    await expect(ensureLegacyChannelConfigMigrationReady()).rejects.toThrow(
-      "Legacy channel config migration deferred: no-configured-sites",
+    const failure = ensureLegacyChannelConfigMigrationReady()
+    await expect(failure).rejects.toBeInstanceOf(
+      LegacyChannelConfigMigrationDeferredError,
     )
+    await expect(failure).rejects.toMatchObject({
+      reason: "no-configured-sites",
+    })
+  })
+
+  it("honors an explicit bypass caller after it joins a backoff-blocked run", async () => {
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_MIGRATION_STATE, {
+      attempt: 1,
+      retryAfter: Date.now() + 60_000,
+    })
+    let resolveFirstLegacyCheck: ((value: boolean) => void) | undefined
+    hasLegacyNumericConfigsMock
+      .mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve) => {
+            resolveFirstLegacyCheck = resolve
+          }),
+      )
+      .mockResolvedValueOnce(true)
+    resolveRuntimeConfigMock.mockImplementation((_preferences, siteType) =>
+      siteType === "new-api"
+        ? {
+            siteType,
+            config: { baseUrl: "https://new-api.example.invalid" },
+          }
+        : null,
+    )
+    getManagedSiteServiceForTypeMock.mockReturnValue({
+      listChannels: vi.fn().mockResolvedValue({
+        items: [{ id: 9, name: "Target" }],
+        total: 1,
+        type_counts: {},
+      }),
+    })
+    migrateLegacyNumericConfigsMock.mockResolvedValue({
+      migrated: 1,
+      ambiguous: 0,
+      unmatched: 0,
+    })
+    const { legacyChannelConfigMigration } = await loadMigration()
+
+    const background = legacyChannelConfigMigration.initialize()
+    const explicit = legacyChannelConfigMigration.initialize({
+      bypassBackoff: true,
+    })
+    await vi.waitFor(() =>
+      expect(resolveFirstLegacyCheck).toBeTypeOf("function"),
+    )
+    resolveFirstLegacyCheck?.(true)
+
+    await expect(background).resolves.toEqual({
+      status: "deferred",
+      reason: "backoff-active",
+    })
+    await expect(explicit).resolves.toEqual({
+      status: "completed",
+      migrated: 1,
+      ambiguous: 0,
+      unmatched: 0,
+    })
+    expect(hasLegacyNumericConfigsMock).toHaveBeenCalledTimes(2)
   })
 
   it("deduplicates concurrent initialization through one shared promise", async () => {
     let resolveLegacyCheck: ((value: boolean) => void) | undefined
+    let markLegacyCheckStarted: (() => void) | undefined
+    const legacyCheckStarted = new Promise<void>((resolve) => {
+      markLegacyCheckStarted = resolve
+    })
     hasLegacyNumericConfigsMock.mockImplementation(
       () =>
         new Promise<boolean>((resolve) => {
           resolveLegacyCheck = resolve
+          markLegacyCheckStarted?.()
         }),
     )
     const { legacyChannelConfigMigration } = await loadMigration()
 
     const first = legacyChannelConfigMigration.initialize()
     const second = legacyChannelConfigMigration.initialize()
-    await Promise.resolve()
-    await Promise.resolve()
-    resolveLegacyCheck?.(false)
+    await legacyCheckStarted
+    resolveLegacyCheck!(false)
 
     await expect(Promise.all([first, second])).resolves.toEqual([
       { status: "not-needed" },

@@ -82,7 +82,9 @@ export async function initializeServices() {
         })
       }
 
-      await legacyChannelConfigMigration.initialize().catch((error) => {
+      // Scoped-only consumers wait on demand; startup must not wait for the
+      // per-site network inventory used by the opportunistic legacy migration.
+      void legacyChannelConfigMigration.initialize().catch((error) => {
         logger.warn("Legacy channel config migration failed", error)
       })
 

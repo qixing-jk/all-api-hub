@@ -20,6 +20,7 @@ import jaImportExport from "~/locales/ja/importExport.json"
 import viImportExport from "~/locales/vi/importExport.json"
 import zhCnImportExport from "~/locales/zh-CN/importExport.json"
 import zhTwImportExport from "~/locales/zh-TW/importExport.json"
+import { ImportExportError } from "~/services/importExport/importExportService"
 import { resolveProductAnalyticsActionContext } from "~/services/productAnalytics/actionConfig"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -40,9 +41,20 @@ import {
   setupMockPreferencePersistence,
 } from "~~/tests/test-utils/mockPreferencePersistence"
 
-vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
-  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
-}))
+vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => {
+  class LegacyChannelConfigMigrationDeferredError extends Error {
+    constructor(readonly reason: string) {
+      super(`Legacy channel config migration deferred: ${reason}`)
+    }
+  }
+
+  return {
+    ensureLegacyChannelConfigMigrationReady: vi
+      .fn()
+      .mockResolvedValue(undefined),
+    LegacyChannelConfigMigrationDeferredError,
+  }
+})
 
 const createStalePreferenceWriteResult = (
   expectedLastUpdated: number,
@@ -813,6 +825,26 @@ describe("WebDAVSettings", () => {
             },
           },
         },
+      )
+    })
+  })
+
+  it("localizes unsupported remote backup versions during WebDAV upload", async () => {
+    mockMergeWebdavBackupPayloadBySelection.mockImplementationOnce(() => {
+      throw new ImportExportError("VERSION_NOT_SUPPORTED")
+    })
+
+    render(<WebDAVSettings />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.uploadBackup",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "importExport:import.versionNotSupported",
       )
     })
   })

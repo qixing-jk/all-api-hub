@@ -17,7 +17,10 @@ import {
   type RawBackupData,
 } from "~/services/importExport/importExportService"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
-import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
+import {
+  ensureLegacyChannelConfigMigrationReady,
+  LegacyChannelConfigMigrationDeferredError,
+} from "~/services/managedSites/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { createLogger } from "~/utils/core/logger"
@@ -36,6 +39,28 @@ export type {
   RawBackupData,
 }
 
+/** Maps owned backup and migration failures to user-facing localized copy. */
+export function getImportExportErrorMessage(error: unknown): string | null {
+  if (error instanceof ImportExportError) {
+    switch (error.code) {
+      case "FORMAT_NOT_CORRECT":
+        return t("importExport:import.formatNotCorrect")
+      case "IMPORT_FAILED":
+        return t("importExport:import.importFailed")
+      case "NO_IMPORTABLE_DATA":
+        return t("importExport:import.noImportableData")
+      case "VERSION_NOT_SUPPORTED":
+        return t("importExport:import.versionNotSupported")
+    }
+  }
+
+  if (error instanceof LegacyChannelConfigMigrationDeferredError) {
+    return t("importExport:import.channelConfigMigrationDeferred")
+  }
+
+  return null
+}
+
 /**
  * Import data from a backup object, which may be a full backup or a partial backup
  */
@@ -46,17 +71,9 @@ export async function importFromBackupObject(
   try {
     return await importFromBackupObjectService(data, options)
   } catch (error) {
-    if (error instanceof ImportExportError) {
-      switch (error.code) {
-        case "FORMAT_NOT_CORRECT":
-          throw new Error(t("importExport:import.formatNotCorrect"))
-        case "IMPORT_FAILED":
-          throw new Error(t("importExport:import.importFailed"))
-        case "NO_IMPORTABLE_DATA":
-          throw new Error(t("importExport:import.noImportableData"))
-        case "VERSION_NOT_SUPPORTED":
-          throw new Error(t("importExport:import.versionNotSupported"))
-      }
+    const message = getImportExportErrorMessage(error)
+    if (message) {
+      throw new Error(message)
     }
 
     throw error

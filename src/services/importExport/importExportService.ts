@@ -1118,5 +1118,7 @@ export async function importFromBackupObject(
     return importV2Backup(data as BackupV2, options)
   }
 
-  throw new ImportExportError("VERSION_NOT_SUPPORTED")
+  // Compile-time exhaustiveness plus a defensive runtime guard for untyped data.
+  const exhaustiveVersion: never = version
+  throw new ImportExportError(exhaustiveVersion)
 }

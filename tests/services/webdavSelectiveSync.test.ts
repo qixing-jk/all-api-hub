@@ -2,12 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
+import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import {
+  buildWebdavImportPayloadBySelection,
   createWebdavImportPayloadBySelection,
   filterWebdavBackupPayloadBySelection,
   mergeWebdavBackupPayloadBySelection,
@@ -18,6 +21,9 @@ import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
   ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
 }))
+
+const ensureLegacyChannelConfigMigrationReadyMock =
+  ensureLegacyChannelConfigMigrationReady as unknown as ReturnType<typeof vi.fn>
 
 describe("filterWebdavBackupPayloadBySelection", () => {
   const baseBackup: any = {
@@ -991,6 +997,29 @@ describe("createWebdavImportPayloadBySelection", () => {
 
     expect(payload.version).toBe("3.0")
     expect(payload.apiCredentialProfiles).toBeUndefined()
+  })
+})
+
+describe("buildWebdavImportPayloadBySelection", () => {
+  it("propagates migration deferral before reading local backup state", async () => {
+    const exportAccounts = vi.spyOn(accountStorage, "exportData")
+    ensureLegacyChannelConfigMigrationReadyMock.mockRejectedValueOnce(
+      new Error("migration deferred"),
+    )
+
+    await expect(
+      buildWebdavImportPayloadBySelection({
+        rawBackup: { version: "3.0", timestamp: 200 },
+        selection: {
+          accounts: true,
+          bookmarks: true,
+          apiCredentialProfiles: true,
+          preferences: true,
+        },
+      }),
+    ).rejects.toThrow("migration deferred")
+    expect(exportAccounts).not.toHaveBeenCalled()
+    exportAccounts.mockRestore()
   })
 })
 

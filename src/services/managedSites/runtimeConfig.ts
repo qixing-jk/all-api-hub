@@ -63,15 +63,25 @@ export function hasManagedSiteRuntimeConfigInputForType(
     return Boolean(config && [config.baseUrl, config.adminToken].some(hasText))
   }
 
-  const config =
-    siteType === SITE_TYPES.DONE_HUB
-      ? preferences.doneHub
-      : siteType === SITE_TYPES.VELOERA
-        ? preferences.veloera
-        : preferences.newApi
-  return Boolean(
-    config && [config.baseUrl, config.adminToken, config.userId].some(hasText),
-  )
+  if (
+    siteType === SITE_TYPES.DONE_HUB ||
+    siteType === SITE_TYPES.VELOERA ||
+    siteType === SITE_TYPES.NEW_API
+  ) {
+    const config =
+      siteType === SITE_TYPES.DONE_HUB
+        ? preferences.doneHub
+        : siteType === SITE_TYPES.VELOERA
+          ? preferences.veloera
+          : preferences.newApi
+    return Boolean(
+      config &&
+        [config.baseUrl, config.adminToken, config.userId].some(hasText),
+    )
+  }
+
+  const exhaustiveSiteType: never = siteType
+  return exhaustiveSiteType
 }
 
 /**

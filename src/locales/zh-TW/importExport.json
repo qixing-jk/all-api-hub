@@ -16,6 +16,7 @@
   },
   "import": {
     "backupTime": "備份時間",
+    "channelConfigMigrationDeferred": "頻道設定移轉尚未完成。請檢查管理站點設定後再試一次。",
     "containsAccountData": "包含帳號資料",
     "containsApiCredentialProfiles": "包含 API 憑據庫",
     "containsChannelConfigs": "包含渠道配置",

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import {
   normalizeChannelFilters,
   sanitizeChannelFilter,
+  sanitizeChannelFiltersForStorage,
 } from "~/services/managedSites/channelModelFilterRules"
 
 vi.mock("~/utils/core/identifier", () => ({
@@ -108,5 +109,20 @@ describe("channelModelFilterRules", () => {
       createdAt: 123,
       updatedAt: 123,
     })
+  })
+
+  it("rejects regex patterns with potentially exponential backtracking", () => {
+    const unsafeFilter = {
+      name: "Unsafe regex",
+      pattern: "(a+)+$",
+      isRegex: true,
+    }
+
+    expect(() => normalizeChannelFilters([unsafeFilter])).toThrow(
+      "Invalid or unsafe regex pattern",
+    )
+    expect(
+      sanitizeChannelFiltersForStorage([unsafeFilter], { now: 123 }),
+    ).toEqual([])
   })
 })

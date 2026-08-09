@@ -16,6 +16,7 @@
   },
   "import": {
     "backupTime": "Backup Time",
+    "channelConfigMigrationDeferred": "Channel configuration migration could not finish. Check your managed-site settings and try again.",
     "containsAccountData": "Contains account data",
     "containsApiCredentialProfiles": "Contains API credential library",
     "containsChannelConfigs": "Contains channel configuration",

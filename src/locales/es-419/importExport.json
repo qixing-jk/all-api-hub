@@ -16,6 +16,7 @@
   },
   "import": {
     "backupTime": "Hora del respaldo",
+    "channelConfigMigrationDeferred": "No se pudo completar la migración de la configuración de canales. Revisa la configuración del sitio administrado e inténtalo de nuevo.",
     "containsAccountData": "Contiene datos de cuenta",
     "containsApiCredentialProfiles": "Contiene biblioteca de credenciales API",
     "containsChannelConfigs": "Contiene configuración de canales",

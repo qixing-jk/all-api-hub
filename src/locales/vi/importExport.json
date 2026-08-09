@@ -16,6 +16,7 @@
   },
   "import": {
     "backupTime": "Thời gian sao lưu",
+    "channelConfigMigrationDeferred": "Không thể hoàn tất quá trình di chuyển cấu hình kênh. Hãy kiểm tra cài đặt trang được quản lý rồi thử lại.",
     "containsAccountData": "Bao gồm dữ liệu tài khoản",
     "containsApiCredentialProfiles": "Bao gồm hồ sơ thông tin xác thực API",
     "containsChannelConfigs": "Bao gồm cấu hình kênh",

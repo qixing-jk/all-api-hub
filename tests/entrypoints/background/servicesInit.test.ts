@@ -192,6 +192,32 @@ describe("initializeServices alarm bootstrap ordering", () => {
     expect(legacyChannelConfigMigrationInitMock).toHaveBeenCalledTimes(1)
   })
 
+  it("does not block service startup on the network-backed legacy migration", async () => {
+    initBackgroundI18nMock.mockResolvedValue(undefined)
+    usageInitMock.mockResolvedValue(undefined)
+    webdavInitMock.mockResolvedValue(undefined)
+    modelSyncInitMock.mockResolvedValue(undefined)
+    autoCheckinInitMock.mockResolvedValue(undefined)
+    dailyBalanceInitMock.mockResolvedValue(undefined)
+    releaseUpdateInitMock.mockResolvedValue(undefined)
+    productAnnouncementInitMock.mockResolvedValue(undefined)
+    newApiOwnedSessionInitMock.mockResolvedValue(undefined)
+    modelMetadataInitMock.mockResolvedValue(undefined)
+    autoRefreshInitMock.mockResolvedValue(undefined)
+    redemptionAssistInitMock.mockResolvedValue(undefined)
+    legacyChannelConfigMigrationInitMock.mockReturnValue(new Promise(() => {}))
+    const { initializeServices } = await import(
+      "~/entrypoints/background/servicesInit"
+    )
+
+    await expect(initializeServices()).resolves.toBeUndefined()
+
+    expect(legacyChannelConfigMigrationInitMock).toHaveBeenCalledTimes(1)
+    expect(modelMetadataInitMock).toHaveBeenCalledTimes(1)
+    expect(autoRefreshInitMock).toHaveBeenCalledTimes(1)
+    expect(redemptionAssistInitMock).toHaveBeenCalledTimes(1)
+  })
+
   it("deduplicates concurrent initialization and skips re-initialization after success", async () => {
     const { initializeServices } = await import(
       "~/entrypoints/background/servicesInit"

@@ -2,6 +2,7 @@ import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
+import { isSafeChannelModelFilterRegex } from "~/services/managedSites/channelModelFilterRules"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
@@ -374,9 +375,13 @@ async function matchesChannelModelFilterRule(
   if (!pattern) return false
 
   try {
-    return rule.isRegex
-      ? new RegExp(pattern, "i").test(model)
-      : model.toLowerCase().includes(pattern.toLowerCase())
+    if (!rule.isRegex) {
+      return model.toLowerCase().includes(pattern.toLowerCase())
+    }
+    if (!isSafeChannelModelFilterRegex(pattern)) {
+      throw new Error("Invalid or unsafe regex pattern")
+    }
+    return new RegExp(pattern, "i").test(model)
   } catch (error) {
     logger.warn("Invalid channel filter pattern for channel rule", {
       ruleId: rule.id,
