@@ -60,6 +60,10 @@
         "help": "AxonHub updates enabled channels from the provider API at the frequency configured in AxonHub system settings.",
         "label": "Automatically sync supported models"
       },
+      "concurrency": {
+        "help": "Maximum simultaneous requests allowed for this account.",
+        "label": "Concurrency"
+      },
       "defaultTestModel": {
         "help": "Used to test this channel connection. Choose one of the supported models.",
         "label": "Default test model",
@@ -70,14 +74,27 @@
         "label": "Extra model prefix",
         "placeholder": "e.g., deepseek"
       },
+      "notes": {
+        "help": "Optional notes about this upstream account.",
+        "label": "Notes",
+        "placeholder": "Add notes about this account..."
+      },
       "orderingWeight": {
         "help": "Higher values are preferred when AxonHub selects a channel; equal values have equal ordering priority.",
         "label": "Ordering weight"
+      },
+      "priority": {
+        "help": "Accounts with lower values are scheduled first.",
+        "label": "Priority"
       },
       "remark": {
         "help": "Add notes or remarks about this channel for reference.",
         "label": "Remark",
         "placeholder": "Enter a note or remark for this channel..."
+      },
+      "sub2apiPlatform": {
+        "help": "Choose the upstream protocol. It cannot be changed after the account is created.",
+        "label": "Platform"
       },
       "supportedModels": {
         "help": "Type or paste model names. Models added here are kept during automatic model sync."
@@ -122,7 +139,8 @@
       "actions": {
         "clear": "Remove saved credential",
         "restore": "Keep saved credential",
-        "retry": "Retry"
+        "retry": "Retry",
+        "view": "View saved credential"
       },
       "createHint": "Enter a credential for the new channel.",
       "keepExistingHint": "Leave this field blank to keep the saved credential unchanged.",

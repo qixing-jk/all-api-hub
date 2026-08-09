@@ -90,6 +90,29 @@ describe("managedResourcePresentation", () => {
     )
   })
 
+  it("shows an approved secret state without adding it to client search", () => {
+    const mapper = createManagedResourcePresentationMapper({
+      resolveLabel,
+      fieldIds: ["key", "concurrency", "priority"],
+    })
+    const row = mapper.map({
+      ...createManagedResourceFacts(),
+      fields: [
+        { fieldId: "key", kind: "secret", state: "available" },
+        { fieldId: "concurrency", kind: "number", value: 3 },
+        { fieldId: "priority", kind: "number", value: 8 },
+      ],
+    })
+
+    expect(row.cells.key).toMatchObject({
+      kind: "text",
+      sortValue: "available",
+    })
+    expect(row.cells.concurrency).toMatchObject({ value: "3", sortValue: 3 })
+    expect(row.cells.priority).toMatchObject({ value: "8", sortValue: 8 })
+    expect(row.searchText).not.toContain("available")
+  })
+
   it("maps approved detail fields while excluding unregistered and secret facts", () => {
     const mapper = createManagedResourcePresentationMapper()
     const row = mapper.map({

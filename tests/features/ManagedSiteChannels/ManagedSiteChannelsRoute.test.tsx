@@ -16,6 +16,7 @@ import {
   AXON_HUB_CHANNEL_TYPE,
 } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import { SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS } from "~/constants/sub2api"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ManagedSiteChannelsRoute } from "~/features/ManagedSiteChannels/ManagedSiteChannelsRoute"
 import type {
@@ -501,7 +502,10 @@ const installNativeControllers = (
 }
 
 const configureNativePreferences = (
-  siteType: typeof SITE_TYPES.AXON_HUB | typeof SITE_TYPES.CLAUDE_CODE_HUB,
+  siteType:
+    | typeof SITE_TYPES.AXON_HUB
+    | typeof SITE_TYPES.CLAUDE_CODE_HUB
+    | typeof SITE_TYPES.SUB2API,
 ) => {
   vi.mocked(useUserPreferencesContext).mockReturnValue({
     preferences: buildUserPreferences({
@@ -513,12 +517,19 @@ const configureNativePreferences = (
               password: "example-credential",
             },
           }
-        : {
-            claudeCodeHub: {
-              baseUrl: "https://console.example.invalid",
-              adminToken: "example-credential",
-            },
-          }),
+        : siteType === SITE_TYPES.CLAUDE_CODE_HUB
+          ? {
+              claudeCodeHub: {
+                baseUrl: "https://console.example.invalid",
+                adminToken: "example-credential",
+              },
+            }
+          : {
+              sub2apiManagedSite: {
+                baseUrl: "https://console.example.invalid",
+                adminToken: "example-credential",
+              },
+            }),
     }),
     managedSiteType: siteType,
     updateManagedSiteType: vi.fn(),
@@ -588,6 +599,29 @@ describe("ManagedSiteChannelsRoute", () => {
     expect(
       screen.getByText("managedSiteChannels:resourceDescription"),
     ).toBeVisible()
+  })
+
+  it("routes the production Sub2API definition through its full native field set", () => {
+    installNativeControllers()
+    configureNativePreferences(SITE_TYPES.SUB2API)
+
+    render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.SUB2API}
+        onReplaceRouteQuery={vi.fn()}
+      />,
+    )
+
+    expect(
+      definitionRegistry.getAccountSiteDefinition(SITE_TYPES.SUB2API)
+        ?.managedResource?.mode,
+    ).toBe(MANAGED_RESOURCE_MODES.NativeResource)
+    expect(legacyRender).not.toHaveBeenCalled()
+    expect(useListController).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fieldIds: SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+      }),
+    )
   })
 
   it.each([

@@ -35,6 +35,7 @@ import {
   sub2ApiPlatformToChannelType,
   toSub2ApiManagedSiteChannelList,
   updateSub2ApiApiKeyAccount,
+  type Sub2ApiApiKeyAccountCreateInput,
   type Sub2ApiApiKeyAccountUpdateInput,
 } from "~/services/managedSites/providers/sub2api"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
@@ -139,6 +140,95 @@ const toUpdateInput = (
   ...(channel.status === undefined ? {} : { status: toStatus(channel.status) }),
 })
 
+type Sub2ApiMutationOptions = Parameters<typeof createSub2ApiApiKeyAccount>[2]
+
+/** Shared provider-native create mutation used by native CRUD and imports. */
+export async function createSub2ApiManagedAccountMutation(
+  config: Sub2ApiManagedSiteConfig,
+  input: Sub2ApiApiKeyAccountCreateInput,
+  desiredStatus: "active" | "inactive",
+  options?: Sub2ApiMutationOptions,
+): Promise<ManagedSiteMutationResult<Sub2ApiAdminApiKeyAccount>> {
+  const sequence = createManagedSiteMutationSequence({ idempotent: false })
+  const createStep = await runSub2ApiMutationStep<Sub2ApiAdminApiKeyAccount>({
+    sequence,
+    effect: createManagedSiteChannelEffect("resource-created"),
+    execute: async (observer) =>
+      await createSub2ApiApiKeyAccount(config, input, {
+        ...options,
+        observer,
+      }),
+  })
+  if (createStep.outcome !== "applied") {
+    return finishManagedSiteMutationStep(sequence, createStep)
+  }
+
+  let account = createStep.data
+  if (desiredStatus === "inactive") {
+    const statusStep = await runSub2ApiMutationStep<Sub2ApiAdminApiKeyAccount>({
+      sequence,
+      effect: createManagedSiteChannelEffect("status-updated", account.id),
+      execute: async (observer) =>
+        await updateSub2ApiApiKeyAccount(
+          config,
+          account.id,
+          { status: "inactive" },
+          { ...options, observer },
+        ),
+    })
+    if (statusStep.outcome !== "applied") {
+      return finishManagedSiteMutationStep(sequence, statusStep)
+    }
+    account = statusStep.data
+  }
+
+  return sequence.finish({ finalState: "confirmed", data: account })
+}
+
+/** Shared provider-native update mutation used by native CRUD and imports. */
+export async function updateSub2ApiManagedAccountMutation(
+  config: Sub2ApiManagedSiteConfig,
+  accountId: number,
+  input: Sub2ApiApiKeyAccountUpdateInput,
+  options?: Sub2ApiMutationOptions,
+): Promise<ManagedSiteMutationResult<Sub2ApiAdminApiKeyAccount>> {
+  const sequence = createManagedSiteMutationSequence({ idempotent: false })
+  const step = await runSub2ApiMutationStep<Sub2ApiAdminApiKeyAccount>({
+    sequence,
+    effect: createManagedSiteChannelEffect("resource-updated", accountId),
+    execute: async (observer) =>
+      await updateSub2ApiApiKeyAccount(config, accountId, input, {
+        ...options,
+        observer,
+      }),
+  })
+  return step.outcome === "applied"
+    ? sequence.finish({ finalState: "confirmed", data: step.data })
+    : finishManagedSiteMutationStep(sequence, step)
+}
+
+/** Shared provider-native delete mutation used by native CRUD and imports. */
+export async function deleteSub2ApiManagedAccountMutation(
+  config: Sub2ApiManagedSiteConfig,
+  accountId: number,
+  options?: Sub2ApiMutationOptions,
+): Promise<ManagedSiteMutationResult<void>> {
+  const sequence = createManagedSiteMutationSequence({ idempotent: false })
+  const step = await runSub2ApiMutationStep<void>({
+    sequence,
+    effect: createManagedSiteChannelEffect("resource-deleted", accountId),
+    execute: async (observer) => {
+      await deleteSub2ApiApiKeyAccount(config, accountId, {
+        ...options,
+        observer,
+      })
+    },
+  })
+  return step.outcome === "applied"
+    ? sequence.finish({ finalState: "confirmed", data: undefined })
+    : finishManagedSiteMutationStep(sequence, step)
+}
+
 export const sub2ApiManagedSiteChannels: ManagedSiteChannelsCapability<Sub2ApiManagedSiteConfig> =
   {
     list: async (config, options) =>
@@ -150,79 +240,41 @@ export const sub2ApiManagedSiteChannels: ManagedSiteChannelsCapability<Sub2ApiMa
         await searchSub2ApiApiKeyAccounts(config, keyword),
       ),
     create: async (config, payload) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const createStep = await runSub2ApiMutationStep({
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-created"),
-        execute: async (observer) =>
-          await createSub2ApiApiKeyAccount(
-            config,
-            toCreateInput(payload.channel),
-            {
-              observer,
-            },
-          ),
-      })
-      if (createStep.outcome !== "applied") {
-        return finishManagedSiteMutationStep(sequence, createStep)
-      }
-
-      let account = createStep.data
-      if (payload.channel.status !== CHANNEL_STATUS.Enable) {
-        const statusStep = await runSub2ApiMutationStep({
-          sequence,
-          effect: createManagedSiteChannelEffect("status-updated", account.id),
-          execute: async (observer) =>
-            await updateSub2ApiApiKeyAccount(
-              config,
-              account.id,
-              { status: "inactive" },
-              { observer },
-            ),
-        })
-        if (statusStep.outcome !== "applied") {
-          return finishManagedSiteMutationStep(sequence, statusStep)
-        }
-        account = statusStep.data
-      }
-
-      return sequence.finish({
-        finalState: "confirmed",
-        data: sub2ApiAccountToManagedSiteChannel(account),
-      })
+      const result = await createSub2ApiManagedAccountMutation(
+        config,
+        toCreateInput(payload.channel),
+        payload.channel.status === CHANNEL_STATUS.Enable
+          ? "active"
+          : "inactive",
+      )
+      return result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded
+        ? {
+            ...result,
+            data: sub2ApiAccountToManagedSiteChannel(result.data),
+          }
+        : result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Partial &&
+            result.data
+          ? {
+              ...result,
+              data: sub2ApiAccountToManagedSiteChannel(result.data),
+            }
+          : result
     },
     update: async (config, channel) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runSub2ApiMutationStep({
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-updated", channel.id),
-        execute: async (observer) =>
-          await updateSub2ApiApiKeyAccount(
-            config,
-            channel.id,
-            toUpdateInput(channel),
-            { observer },
-          ),
-      })
-      return step.outcome === "applied"
-        ? sequence.finish({
-            finalState: "confirmed",
-            data: sub2ApiAccountToManagedSiteChannel(step.data),
-          })
-        : finishManagedSiteMutationStep(sequence, step)
+      const result = await updateSub2ApiManagedAccountMutation(
+        config,
+        channel.id,
+        toUpdateInput(channel),
+      )
+      return result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded
+        ? {
+            ...result,
+            data: sub2ApiAccountToManagedSiteChannel(result.data),
+          }
+        : result
     },
-    delete: async (config, channelId) => {
-      const sequence = createManagedSiteMutationSequence({ idempotent: false })
-      const step = await runSub2ApiMutationStep({
-        sequence,
-        effect: createManagedSiteChannelEffect("resource-deleted", channelId),
-        execute: async (observer) =>
-          await deleteSub2ApiApiKeyAccount(config, channelId, { observer }),
-      })
-      return step.outcome === "applied"
-        ? sequence.finish({ finalState: "confirmed", data: undefined })
-        : finishManagedSiteMutationStep(sequence, step)
-    },
+    delete: async (config, channelId) =>
+      await deleteSub2ApiManagedAccountMutation(config, channelId),
     fetchSecretKey: async (config, channelId) =>
       await revealSub2ApiApiKey(config, channelId),
     hydrateComparableKeys: async (config, candidates) => {

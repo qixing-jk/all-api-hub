@@ -70,6 +70,7 @@ export type Sub2ApiApiKeyAccountCreateInput = {
   apiKey: string
   concurrency?: number
   priority?: number
+  notes?: string
 }
 
 export type Sub2ApiApiKeyAccountUpdateInput = {
@@ -79,6 +80,7 @@ export type Sub2ApiApiKeyAccountUpdateInput = {
   concurrency?: number
   priority?: number
   status?: Sub2ApiApiKeyAccountStatus
+  notes?: string
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -233,24 +235,17 @@ const listPage = async (
     },
   )
 
-/** Validates admin-key access with one bounded read-only account request. */
-export async function validateSub2ApiManagedSiteConfig(
+const listAllPages = async (
   config: Sub2ApiManagedSiteConfig,
-): Promise<void> {
-  await listPage(config, 1, undefined)
-}
-
-/** Lists every Sub2API API-key account, following the upstream pagination. */
-export async function listSub2ApiApiKeyAccounts(
-  config: Sub2ApiManagedSiteConfig,
+  search: string | undefined,
   options?: {
     signal?: AbortSignal
     beforeRequest?: () => Promise<void>
     observer?: ApiTransportRequestObserver
   },
-): Promise<{ items: Sub2ApiAdminApiKeyAccount[]; total: number }> {
+): Promise<{ items: Sub2ApiAdminApiKeyAccount[]; total: number }> => {
   await options?.beforeRequest?.()
-  const first = await listPage(config, 1, undefined, options)
+  const first = await listPage(config, 1, search, options)
   const pages = Math.ceil(
     Math.max(1, first.pages ?? Math.ceil(first.total / PAGE_SIZE)),
   )
@@ -269,20 +264,39 @@ export async function listSub2ApiApiKeyAccounts(
   }
   const items = [...(first.items ?? [])]
   for (let page = 2; page <= pages; page += 1) {
-    const next = await listPage(config, page, undefined, options)
+    const next = await listPage(config, page, search, options)
     items.push(...(next.items ?? []))
   }
   return { items, total: first.total ?? items.length }
+}
+
+/** Validates admin-key access with one bounded read-only account request. */
+export async function validateSub2ApiManagedSiteConfig(
+  config: Sub2ApiManagedSiteConfig,
+): Promise<void> {
+  await listPage(config, 1, undefined)
+}
+
+/** Lists every Sub2API API-key account, following the upstream pagination. */
+export async function listSub2ApiApiKeyAccounts(
+  config: Sub2ApiManagedSiteConfig,
+  options?: {
+    signal?: AbortSignal
+    beforeRequest?: () => Promise<void>
+    observer?: ApiTransportRequestObserver
+  },
+): Promise<{ items: Sub2ApiAdminApiKeyAccount[]; total: number }> {
+  return await listAllPages(config, undefined, options)
 }
 
 /** Uses Sub2API's native name-only search for the channel list. */
 export async function searchSub2ApiApiKeyAccounts(
   config: Sub2ApiManagedSiteConfig,
   keyword: string,
+  options?: { signal?: AbortSignal; observer?: ApiTransportRequestObserver },
 ): Promise<{ items: Sub2ApiAdminApiKeyAccount[]; total: number }> {
   const search = keyword.trim()
-  const first = await listPage(config, 1, search || undefined)
-  return { items: first.items ?? [], total: first.total ?? first.items.length }
+  return await listAllPages(config, search || undefined, options)
 }
 
 /** Loads one redacted account detail. */
@@ -304,11 +318,15 @@ export async function getSub2ApiApiKeyAccount(
 export async function revealSub2ApiApiKey(
   config: Sub2ApiManagedSiteConfig,
   accountId: number,
+  options?: { signal?: AbortSignal },
 ): Promise<string> {
   const payload = await sub2ApiAdminRequest<Sub2ApiAdminDataPayload>(
     config,
     SUB2API_ADMIN_ACCOUNTS_DATA_ENDPOINT,
-    { query: { ids: accountId, include_proxies: false } },
+    {
+      query: { ids: accountId, include_proxies: false },
+      signal: options?.signal,
+    },
   )
   const exported = payload.accounts?.[0]
   const apiKey = exported?.credentials?.api_key
@@ -355,6 +373,7 @@ export async function createSub2ApiApiKeyAccount(
           ? {}
           : { concurrency: input.concurrency }),
         ...(input.priority === undefined ? {} : { priority: input.priority }),
+        ...(input.notes === undefined ? {} : { notes: input.notes }),
       },
       observer: options?.observer,
     },
@@ -385,6 +404,7 @@ export async function updateSub2ApiApiKeyAccount(
           : { concurrency: input.concurrency }),
         ...(input.priority === undefined ? {} : { priority: input.priority }),
         ...(input.status === undefined ? {} : { status: input.status }),
+        ...(input.notes === undefined ? {} : { notes: input.notes }),
       },
       observer: options?.observer,
     },
@@ -396,8 +416,8 @@ export async function deleteSub2ApiApiKeyAccount(
   config: Sub2ApiManagedSiteConfig,
   accountId: number,
   options?: { observer?: ApiTransportRequestObserver },
-) {
-  return await sub2ApiAdminRequest<unknown>(
+): Promise<void> {
+  await sub2ApiAdminRequest<unknown>(
     config,
     `${SUB2API_ADMIN_ACCOUNTS_ENDPOINT}/${accountId}`,
     { method: "DELETE", observer: options?.observer },
@@ -490,12 +510,6 @@ export const toSub2ApiManagedSiteChannelList = (data: {
   total: data.total,
   type_counts: {},
 })
-
-/** Validates a runtime platform value from provider-owned data. */
-export const parseSub2ApiApiKeyPlatform = (
-  value: unknown,
-): Sub2ApiApiKeyAccountPlatform | null =>
-  isSub2ApiPlatform(value) ? value : null
 
 /** Fetches token-scoped models for an imported URL + key draft. */
 export async function fetchAvailableModels(

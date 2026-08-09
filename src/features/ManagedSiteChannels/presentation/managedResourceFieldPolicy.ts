@@ -8,6 +8,11 @@ import {
 } from "~/constants/axonHub"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
+  SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS,
+  SUB2API_MANAGED_RESOURCE_FIELD_IDS,
+  SUB2API_MANAGED_RESOURCE_STATUS,
+} from "~/constants/sub2api"
+import {
   defineResourceEditorFieldPolicy,
   resolveResourceFieldPolicy,
   type ResourceEditorFieldPolicy,
@@ -322,6 +327,112 @@ const axonHubManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
   },
 })
 
+const sub2ApiPlatformOptionLabelResolvers = Object.fromEntries(
+  Object.entries(SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS).map(
+    ([value, label]) => [value, () => label],
+  ),
+) satisfies Readonly<Record<string, ManagedResourceTextResolver>>
+
+const sub2ApiStatusOptionLabelResolvers = {
+  [SUB2API_MANAGED_RESOURCE_STATUS.Active]: (t: TFunction) =>
+    t("common:status.enabled"),
+  [SUB2API_MANAGED_RESOURCE_STATUS.Inactive]: (t: TFunction) =>
+    t("common:status.disabled"),
+  [SUB2API_MANAGED_RESOURCE_STATUS.Error]: (t: TFunction) =>
+    t("managedSiteChannels:statusLabels.autoDisabled"),
+} as const satisfies Readonly<Record<string, ManagedResourceTextResolver>>
+
+const sub2ApiCreateFields = [
+  {
+    fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name,
+    section: MANAGED_RESOURCE_SECTIONS.Basic,
+    order: 10,
+    resolveLabel: (t) => t("channelDialog:fields.name.label"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+  },
+  {
+    fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform,
+    section: MANAGED_RESOURCE_SECTIONS.Basic,
+    order: 20,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.fields.sub2apiPlatform.label"),
+    resolveHelp: (t) =>
+      t("managedSiteChannels:editor.fields.sub2apiPlatform.help"),
+    optionLabelResolvers: sub2ApiPlatformOptionLabelResolvers,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
+  },
+  {
+    fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status,
+    section: MANAGED_RESOURCE_SECTIONS.Basic,
+    order: 30,
+    resolveLabel: (t) => t("channelDialog:fields.status.label"),
+    optionLabelResolvers: sub2ApiStatusOptionLabelResolvers,
+    resolveOptionFallback: MANAGED_RESOURCE_STATUS_FALLBACK_LABEL_RESOLVER,
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Select,
+  },
+  {
+    fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+    section: MANAGED_RESOURCE_SECTIONS.Connection,
+    order: 10,
+    resolveLabel: (t) => t("channelDialog:fields.baseUrl.label"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Text,
+  },
+  {
+    fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key,
+    section: MANAGED_RESOURCE_SECTIONS.Connection,
+    order: 20,
+    resolveLabel: (t) => t("channelDialog:fields.key.label"),
+    resolveHelp: (t) => t("managedSiteChannels:editor.secret.keepExistingHint"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Secret,
+  },
+  {
+    fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency,
+    section: MANAGED_RESOURCE_SECTIONS.Routing,
+    order: 10,
+    resolveLabel: (t) =>
+      t("managedSiteChannels:editor.fields.concurrency.label"),
+    resolveHelp: (t) => t("managedSiteChannels:editor.fields.concurrency.help"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Number,
+  },
+  {
+    fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority,
+    section: MANAGED_RESOURCE_SECTIONS.Routing,
+    order: 20,
+    resolveLabel: (t) => t("managedSiteChannels:editor.fields.priority.label"),
+    resolveHelp: (t) => t("managedSiteChannels:editor.fields.priority.help"),
+    renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Number,
+  },
+] as const satisfies readonly ManagedResourceFieldPresentation[]
+
+const sub2ApiNotesField = {
+  fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes,
+  section: MANAGED_RESOURCE_SECTIONS.Metadata,
+  order: 10,
+  resolveLabel: (t: TFunction) =>
+    t("managedSiteChannels:editor.fields.notes.label"),
+  resolveHelp: (t: TFunction) =>
+    t("managedSiteChannels:editor.fields.notes.help"),
+  resolvePlaceholder: (t: TFunction) =>
+    t("managedSiteChannels:editor.fields.notes.placeholder"),
+  renderer: MANAGED_RESOURCE_FIELD_RENDERERS.Textarea,
+  rows: 3,
+} as const satisfies ManagedResourceFieldPresentation
+
+const sub2ApiManagedResourceFieldPolicy = defineManagedResourceFieldPolicy({
+  siteType: SITE_TYPES.SUB2API,
+  kind: MANAGED_RESOURCE_KINDS.Channel,
+  modes: {
+    create: {
+      fields: [...sub2ApiCreateFields, sub2ApiNotesField],
+      hiddenFields: [],
+    },
+    edit: {
+      fields: [...sub2ApiCreateFields, sub2ApiNotesField],
+      hiddenFields: [],
+    },
+  },
+})
+
 const registryKey = (siteType: ManagedSiteType, kind: ManagedResourceKind) =>
   `${siteType}:${kind}`
 
@@ -352,7 +463,10 @@ export function createManagedResourceFieldPolicyRegistry(
 }
 
 const managedResourceFieldPolicyRegistry =
-  createManagedResourceFieldPolicyRegistry([axonHubManagedResourceFieldPolicy])
+  createManagedResourceFieldPolicyRegistry([
+    axonHubManagedResourceFieldPolicy,
+    sub2ApiManagedResourceFieldPolicy,
+  ])
 
 export const getManagedResourceFieldPolicy = (
   siteType: ManagedSiteType,

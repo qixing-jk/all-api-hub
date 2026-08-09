@@ -25,6 +25,7 @@ const account = {
   credentials_status: { has_api_key: true },
   concurrency: 3,
   priority: 8,
+  notes: "Provider note",
   status: "active" as const,
 }
 
@@ -82,18 +83,45 @@ describe("Sub2API API-key account managed-site provider", () => {
   })
 
   it("uses upstream name search without claiming URL or key search", async () => {
-    mockFetch.mockResolvedValueOnce(
-      jsonResponse({
-        code: 0,
-        data: { items: [account], total: 1, page: 1, page_size: 100, pages: 1 },
-      }),
-    )
+    mockFetch
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          data: {
+            items: [account],
+            total: 2,
+            page: 1,
+            page_size: 100,
+            pages: 2,
+          },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          data: {
+            items: [{ ...account, id: 18, name: "Second match" }],
+            total: 2,
+            page: 2,
+            page_size: 100,
+            pages: 2,
+          },
+        }),
+      )
 
-    await searchSub2ApiApiKeyAccounts(config, " Example ")
+    await expect(
+      searchSub2ApiApiKeyAccounts(config, " Example "),
+    ).resolves.toMatchObject({
+      items: [account, expect.objectContaining({ id: 18 })],
+      total: 2,
+    })
 
     const url = new URL(String(mockFetch.mock.calls[0][0]))
     expect(url.searchParams.get("search")).toBe("Example")
     expect(url.searchParams.get("type")).toBe("apikey")
+    expect(
+      new URL(String(mockFetch.mock.calls[1][0])).searchParams.get("page"),
+    ).toBe("2")
   })
 
   it("rejects an unbounded inventory instead of returning incomplete duplicate data", async () => {
@@ -189,6 +217,7 @@ describe("Sub2API API-key account managed-site provider", () => {
       apiKey: " sk-create ",
       concurrency: 3,
       priority: 8,
+      notes: "Provider note",
     })
 
     const [url, request] = mockFetch.mock.calls[0]
@@ -205,6 +234,7 @@ describe("Sub2API API-key account managed-site provider", () => {
       },
       concurrency: 3,
       priority: 8,
+      notes: "Provider note",
     })
   })
 
@@ -216,12 +246,14 @@ describe("Sub2API API-key account managed-site provider", () => {
     await updateSub2ApiApiKeyAccount(config, 17, {
       name: "Renamed",
       baseUrl: "https://next.example.invalid/v1",
+      notes: "Updated note",
     })
     await updateSub2ApiApiKeyAccount(config, 17, { apiKey: "sk-next" })
 
     expect(JSON.parse(String(mockFetch.mock.calls[0][1]?.body))).toEqual({
       name: "Renamed",
       credentials: { base_url: "https://next.example.invalid/v1" },
+      notes: "Updated note",
     })
     expect(JSON.parse(String(mockFetch.mock.calls[1][1]?.body))).toEqual({
       credentials: { api_key: "sk-next" },

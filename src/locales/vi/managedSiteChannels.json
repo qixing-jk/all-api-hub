@@ -60,6 +60,10 @@
         "help": "AxonHub cập nhật các kênh đang bật từ API của nhà cung cấp theo tần suất được cấu hình trong phần cài đặt hệ thống AxonHub.",
         "label": "Tự động đồng bộ các mô hình được hỗ trợ"
       },
+      "concurrency": {
+        "help": "Số yêu cầu đồng thời tối đa được phép cho tài khoản này.",
+        "label": "Số yêu cầu đồng thời"
+      },
       "defaultTestModel": {
         "help": "Dùng để kiểm thử kết nối của kênh này. Chọn một mô hình được hỗ trợ.",
         "label": "Mô hình kiểm thử mặc định",
@@ -70,14 +74,27 @@
         "label": "Tiền tố mô hình bổ sung",
         "placeholder": "Ví dụ: deepseek"
       },
+      "notes": {
+        "help": "Ghi chú tùy chọn về tài khoản thượng nguồn này.",
+        "label": "Ghi chú",
+        "placeholder": "Thêm ghi chú về tài khoản này..."
+      },
       "orderingWeight": {
         "help": "Giá trị cao hơn được ưu tiên khi AxonHub chọn kênh; các giá trị bằng nhau có cùng mức ưu tiên.",
         "label": "Trọng số thứ tự"
+      },
+      "priority": {
+        "help": "Tài khoản có giá trị thấp hơn sẽ được lên lịch trước.",
+        "label": "Ưu tiên"
       },
       "remark": {
         "help": "Thêm ghi chú về kênh này để tham khảo.",
         "label": "Ghi chú",
         "placeholder": "Nhập ghi chú cho kênh này..."
+      },
+      "sub2apiPlatform": {
+        "help": "Chọn giao thức thượng nguồn. Không thể thay đổi nền tảng sau khi tạo tài khoản.",
+        "label": "Nền tảng"
       },
       "supportedModels": {
         "help": "Nhập hoặc dán tên mô hình. Các mô hình thêm tại đây được giữ lại khi tự động đồng bộ."
@@ -122,7 +139,8 @@
       "actions": {
         "clear": "Xóa thông tin xác thực đã lưu",
         "restore": "Giữ thông tin xác thực đã lưu",
-        "retry": "Thử lại"
+        "retry": "Thử lại",
+        "view": "Xem thông tin xác thực đã lưu"
       },
       "createHint": "Nhập thông tin xác thực cho kênh mới.",
       "keepExistingHint": "Để trống trường này để giữ nguyên thông tin xác thực đã lưu.",

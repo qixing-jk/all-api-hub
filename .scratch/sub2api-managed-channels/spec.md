@@ -23,17 +23,17 @@ fall back to account login or claim that the saved key does not exist.
 ## Verified upstream contract
 
 Verified against `Wei-Shaw/sub2api` commit
-`48eb3766d2da817b171b45bb3036d42575e42b8f` on 2026-08-09.
+`48eb3766d2da817b171b45bb3036d42575e42b8f` on 2026-08-10.
 
 - Managed resource: `/api/v1/admin/accounts` filtered with `type=apikey`.
 - List search: `search` is a case-insensitive substring match on account name;
   URL and key matching must be completed locally from listed/exported data.
 - List/detail responses redact sensitive credentials and expose
   `credentials_status.has_api_key` instead.
-- Create requires `name`, `platform`, `type: "apikey"`, and credentials with
-  `base_url` and `api_key`.
-- Update merges provided credential keys; an omitted `api_key` preserves the
-  existing secret and a supplied value replaces it.
+- Create supports `name`, optional `notes`, `platform`, `type: "apikey"`, and
+  credentials with `base_url` and `api_key`.
+- Update supports `notes` and merges provided credential keys; an omitted
+  `api_key` preserves the existing secret and a supplied value replaces it.
 - Delete uses `/api/v1/admin/accounts/:id`.
 - Selected raw export uses
   `/api/v1/admin/accounts/data?ids=<id>&include_proxies=false` and returns raw
@@ -84,10 +84,19 @@ not be copied.
 ## Implementation outcome
 
 Implemented the default-security slice with a dedicated Sub2API account
-adapter, managed-site settings, legacy channel orchestration, local duplicate
-key hydration, selected-key reveal, settings search, privacy-safe analytics
-dimensions, and synchronized locales. New API model sync and redirect controls
-are hidden for Sub2API.
+adapter, managed-site settings, local duplicate key hydration, selected-key
+reveal, settings search, privacy-safe analytics dimensions, and synchronized
+locales. New API model sync and redirect controls are hidden for Sub2API.
 
-The editor deliberately exposes only the API-key account fields supported by
-this slice. Step-up authentication remains a separately disclosed follow-up.
+Sub2API API-key accounts are registered as provider-native managed resources,
+not flattened into the legacy New API channel editor. The native list/detail
+projection includes name, platform, Base URL, status, concurrency, priority,
+saved-key state, and notes. Create exposes every upstream-supported input in
+this slice. Edit keeps platform visible but read-only, supports replacing or
+explicitly viewing the saved key, and updates notes plus the other mutable
+fields. The editor omits the redundant available-credential status sentence
+while retaining the keep-existing guidance and explicit view action. The
+existing import entry remains available and shares the same provider-native
+mutation functions with native CRUD.
+
+Step-up authentication remains a separately disclosed follow-up.

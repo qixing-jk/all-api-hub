@@ -22,3 +22,11 @@ Status: resolved
   list/search/CRUD, import draft integration, duplicate key hydration, selected
   key reveal, explicit step-up rejection, focused UI, settings search, locale,
   analytics, and protocol coverage.
+- 2026-08-09: replaced the temporary legacy-channel presentation with a native
+  managed-resource registration covering the complete default-security field
+  set; import and native CRUD now share the same provider mutation seam.
+- 2026-08-10: corrected the native notes projection after re-verifying that
+  current upstream create and update requests both accept `notes`; only
+  `platform` remains read-only on edit.
+- 2026-08-10: removed the redundant available-credential sentence from the
+  Sub2API key editor while retaining keep-existing guidance and explicit view.

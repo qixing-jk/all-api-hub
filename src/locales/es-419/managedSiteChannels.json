@@ -60,6 +60,10 @@
         "help": "AxonHub actualiza los canales habilitados desde la API del proveedor con la frecuencia configurada en los ajustes del sistema de AxonHub.",
         "label": "Sincronizar automáticamente los modelos compatibles"
       },
+      "concurrency": {
+        "help": "Cantidad máxima de solicitudes simultáneas permitidas para esta cuenta.",
+        "label": "Concurrencia"
+      },
       "defaultTestModel": {
         "help": "Se usa para probar la conexión de este canal. Selecciona uno de los modelos compatibles.",
         "label": "Modelo de prueba predeterminado",
@@ -70,14 +74,27 @@
         "label": "Prefijo adicional de modelo",
         "placeholder": "p. ej., deepseek"
       },
+      "notes": {
+        "help": "Notas opcionales sobre esta cuenta upstream.",
+        "label": "Notas",
+        "placeholder": "Agregar notas sobre esta cuenta..."
+      },
       "orderingWeight": {
         "help": "Los valores más altos tienen preferencia cuando AxonHub selecciona un canal; los valores iguales tienen la misma prioridad.",
         "label": "Peso de ordenación"
+      },
+      "priority": {
+        "help": "Las cuentas con valores más bajos se programan primero.",
+        "label": "Prioridad"
       },
       "remark": {
         "help": "Añade notas u observaciones sobre este canal como referencia.",
         "label": "Nota",
         "placeholder": "Escribe una nota u observación para este canal..."
+      },
+      "sub2apiPlatform": {
+        "help": "Elige el protocolo ascendente. La plataforma no se puede cambiar después de crear la cuenta.",
+        "label": "Plataforma"
       },
       "supportedModels": {
         "help": "Escribe o pega nombres de modelos. Los modelos añadidos aquí se conservan durante la sincronización automática."
@@ -122,7 +139,8 @@
       "actions": {
         "clear": "Quitar la credencial guardada",
         "restore": "Conservar la credencial guardada",
-        "retry": "Reintentar"
+        "retry": "Reintentar",
+        "view": "Ver credencial guardada"
       },
       "createHint": "Ingresa una credencial para el nuevo canal.",
       "keepExistingHint": "Deja este campo en blanco para conservar sin cambios la credencial guardada.",

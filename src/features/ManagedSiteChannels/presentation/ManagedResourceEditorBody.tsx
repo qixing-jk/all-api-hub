@@ -153,12 +153,6 @@ export function ManagedResourceEditorBody({
   const [isSecretLoading, setIsSecretLoading] = useState(false)
   const [secretLoadFailed, setSecretLoadFailed] = useState(false)
   const secretLoadController = useRef<AbortController | undefined>(undefined)
-  const automaticSecretFieldId = descriptors.find(
-    (descriptor) =>
-      descriptor.type === "secret" &&
-      descriptor.secretState === "available" &&
-      descriptor.canReplace,
-  )?.fieldId
   const cancelSecretLoad = useCallback(() => {
     secretLoadController.current?.abort()
     secretLoadController.current = undefined
@@ -177,7 +171,7 @@ export function ManagedResourceEditorBody({
         .then((value) => {
           if (!controller.signal.aborted) {
             setLoadedSecret({ fieldId, value })
-            setIsSecretRevealed(false)
+            setIsSecretRevealed(true)
           }
         })
         .catch(() => {
@@ -192,17 +186,24 @@ export function ManagedResourceEditorBody({
     },
     [onLoadSecret],
   )
+  const secretFieldSignature = descriptors
+    .filter((descriptor) => descriptor.type === "secret")
+    .map((descriptor) =>
+      descriptor.type === "secret"
+        ? `${descriptor.fieldId}:${descriptor.secretState}:${descriptor.canReplace}`
+        : descriptor.fieldId,
+    )
+    .join("|")
   useEffect(() => {
     setLoadedSecret(undefined)
+    setIsSecretRevealed(false)
     setIsSecretLoading(false)
     setSecretLoadFailed(false)
-    if (!automaticSecretFieldId || !onLoadSecret) return
-    startSecretLoad(automaticSecretFieldId)
     return () => {
       secretLoadController.current?.abort()
       secretLoadController.current = undefined
     }
-  }, [automaticSecretFieldId, onLoadSecret, startSecretLoad])
+  }, [onLoadSecret, secretFieldSignature])
 
   const nativePolicy = useMemo(
     () => ({
@@ -372,6 +373,12 @@ export function ManagedResourceEditorBody({
               : ""
         const stateDescription =
           SECRET_STATE_LABEL_RESOLVERS[descriptor.secretState](t)
+        const canLoadSavedSecret =
+          Boolean(onLoadSecret) &&
+          descriptor.secretState === "available" &&
+          descriptor.canReplace &&
+          intent.kind === "unchanged" &&
+          loadedSecret?.fieldId !== fieldId
         const description = descriptor.replacementBlockReason ? (
           SECRET_REPLACEMENT_BLOCK_LABEL_RESOLVERS[
             descriptor.replacementBlockReason
@@ -384,10 +391,12 @@ export function ManagedResourceEditorBody({
           </span>
         ) : descriptor.canReplace &&
           descriptor.secretState !== "unavailable" ? (
-          <>
-            {stateDescription}{" "}
-            {t("managedSiteChannels:editor.secret.keepExistingHint")}
-          </>
+          presentation.resolveHelp?.(t) ?? (
+            <>
+              {stateDescription}{" "}
+              {t("managedSiteChannels:editor.secret.keepExistingHint")}
+            </>
+          )
         ) : (
           <>
             {stateDescription}
@@ -417,8 +426,23 @@ export function ManagedResourceEditorBody({
             description={description}
             errorMessage={errorMessage}
             actions={
-              descriptor.allowClear || secretLoadFailed ? (
+              descriptor.allowClear ||
+              secretLoadFailed ||
+              (canLoadSavedSecret && !isSecretLoading) ? (
                 <>
+                  {canLoadSavedSecret &&
+                  !isSecretLoading &&
+                  !secretLoadFailed ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={disabled}
+                      onClick={() => startSecretLoad(fieldId)}
+                    >
+                      {t("managedSiteChannels:editor.secret.actions.view")}
+                    </Button>
+                  ) : null}
                   {descriptor.allowClear ? (
                     <Button
                       type="button"

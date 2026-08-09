@@ -12,7 +12,7 @@ import {
   Button,
   Modal,
 } from "~/components/ui"
-import type { ManagedSiteType } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   MANAGED_RESOURCE_MODES,
@@ -121,6 +121,7 @@ const getFailureMessage = (
 
 const createNativeColumns = (
   t: ReturnType<typeof useTranslation>["t"],
+  siteType: ManagedSiteType,
   policy: ManagedResourceProductPolicy,
   visibility: Readonly<Record<string, boolean>>,
 ): ManagedChannelsColumn[] => {
@@ -146,6 +147,76 @@ const createNativeColumns = (
     extension: { kind: "legacy-common" },
     ...options,
   })
+
+  if (siteType === SITE_TYPES.SUB2API) {
+    const fieldPolicy = getManagedResourceFieldPolicy(
+      siteType,
+      policy.primaryKind,
+      MANAGED_RESOURCE_EDITOR_MODES.Edit,
+    )
+    const labels = new Map(
+      fieldPolicy?.fields.map((field) => [
+        field.fieldId,
+        field.resolveLabel(t),
+      ]),
+    )
+    return [
+      {
+        id: "select",
+        label: "",
+        renderer: "select",
+        canHide: false,
+        defaultVisible: true,
+        visible: true,
+        extension: { kind: "legacy-common" },
+      },
+      {
+        id: "name",
+        label: t("managedSiteChannels:table.columns.name"),
+        renderer: "channel",
+        accessor: { kind: "name" },
+        canHide: false,
+        defaultVisible: true,
+        visible: true,
+        sort: {
+          accessor: { kind: "name" },
+          defaultDirection: "asc",
+          missing: "last",
+        },
+        size: 240,
+        extension: { kind: "legacy-common" },
+      },
+      ...policy.tableFieldIds.flatMap((fieldId) => {
+        if (fieldId === "name") return []
+        const options =
+          fieldId === "status"
+            ? { facet: { kind: "status" as const } }
+            : fieldId === "baseURL"
+              ? { size: 260 }
+              : fieldId === "platform"
+                ? { size: 110 }
+                : { size: 120 }
+        return [
+          valueColumn(
+            fieldId,
+            labels.get(fieldId) ?? fieldId,
+            fieldId,
+            options,
+          ),
+        ]
+      }),
+      {
+        id: "actions",
+        label: t("managedSiteChannels:table.columns.actions"),
+        renderer: "actions",
+        canHide: false,
+        defaultVisible: true,
+        visible: true,
+        size: 60,
+        extension: { kind: "legacy-common" },
+      },
+    ] satisfies ManagedChannelsColumn[]
+  }
 
   return [
     {
@@ -418,7 +489,12 @@ function NativeManagedSiteChannels({
     [t],
   )
   const [searchValue, setSearchValue] = useState(routeParams.search ?? "")
-  const [sorting, setSorting] = useState([{ id: "id", desc: true }])
+  const [sorting, setSorting] = useState([
+    {
+      id: siteType === SITE_TYPES.SUB2API ? "name" : "id",
+      desc: true,
+    },
+  ])
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >({})
@@ -448,6 +524,7 @@ function NativeManagedSiteChannels({
     pageSize,
     onUnsupportedSearch,
     resolveLabel,
+    fieldIds: policy.tableFieldIds,
     analytics,
   })
   const mutation = useManagedResourceMutationController({
@@ -510,8 +587,8 @@ function NativeManagedSiteChannels({
     [list.allRows],
   )
   const columns = useMemo(
-    () => createNativeColumns(t, policy, columnVisibility),
-    [columnVisibility, policy, t],
+    () => createNativeColumns(t, siteType, policy, columnVisibility),
+    [columnVisibility, policy, siteType, t],
   )
   const pagination = useMemo(
     () => ({ pageIndex: list.pageIndex, pageSize }),

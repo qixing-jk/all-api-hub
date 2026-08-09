@@ -36,6 +36,16 @@ const BOOLEAN_LABEL_RESOLVERS = {
   false: (t: TFunction) => t("common:status.disabled"),
 } as const satisfies Record<"true" | "false", ManagedResourceTextResolver>
 
+const SECRET_STATE_LABEL_RESOLVERS = {
+  available: (t: TFunction) =>
+    t("managedSiteChannels:editor.secret.state.available"),
+  masked: (t: TFunction) => t("managedSiteChannels:editor.secret.state.masked"),
+  unavailable: (t: TFunction) =>
+    t("managedSiteChannels:editor.secret.state.unavailable"),
+  "permission-hidden": (t: TFunction) =>
+    t("managedSiteChannels:editor.secret.state.permissionHidden"),
+} as const
+
 const safeFieldIds = new Set<string>(AXON_HUB_EDITABLE_FIELD_IDS)
 
 const safeSearchFieldIds = new Set<string>([
@@ -49,8 +59,21 @@ const safeSearchFieldIds = new Set<string>([
 const refIdentity = (ref: ManagedResourceRef) =>
   JSON.stringify([ref.siteType, ref.kind, ref.scopeKey, ref.resourceId])
 
-const safeCell = (fact: ResourceDisplayFact, t: TFunction) => {
-  if (!safeFieldIds.has(fact.fieldId) || fact.kind === "secret") return null
+const safeCell = (
+  fact: ResourceDisplayFact,
+  t: TFunction,
+  allowedFieldIds: ReadonlySet<string>,
+  allowSecretFacts: boolean,
+) => {
+  if (!allowedFieldIds.has(fact.fieldId)) return null
+  if (fact.kind === "secret") {
+    if (!allowSecretFacts) return null
+    return {
+      kind: "text" as const,
+      value: SECRET_STATE_LABEL_RESOLVERS[fact.state](t),
+      sortValue: fact.state,
+    }
+  }
   if (fact.kind === "list") {
     return {
       kind: "groups" as const,
@@ -79,8 +102,11 @@ const safeCell = (fact: ResourceDisplayFact, t: TFunction) => {
   }
 }
 
-const safeSearchValue = (fact: ResourceDisplayFact) => {
-  if (!safeSearchFieldIds.has(fact.fieldId) || fact.kind === "secret")
+const safeSearchValue = (
+  fact: ResourceDisplayFact,
+  allowedSearchFieldIds: ReadonlySet<string>,
+) => {
+  if (!allowedSearchFieldIds.has(fact.fieldId) || fact.kind === "secret")
     return null
   if (fact.kind === "list") return fact.value.join(" ")
   return String(fact.value)
@@ -89,7 +115,11 @@ const safeSearchValue = (fact: ResourceDisplayFact) => {
 /** Maps adapter facts to the finite, display-safe shared table contract. */
 export function createManagedResourcePresentationMapper({
   resolveLabel = identityTranslation,
-}: { resolveLabel?: TFunction } = {}) {
+  fieldIds,
+}: { resolveLabel?: TFunction; fieldIds?: readonly string[] } = {}) {
+  const allowedFieldIds = new Set(fieldIds ?? safeFieldIds)
+  const allowedSearchFieldIds = new Set(fieldIds ?? safeSearchFieldIds)
+  const allowSecretFacts = fieldIds !== undefined
   const identities = new Map<string, { rowKey: string; testToken: string }>()
   const refs = new Map<string, ManagedResourceRef>()
   let sequence = 0
@@ -132,7 +162,12 @@ export function createManagedResourcePresentationMapper({
       }
       for (const fact of facts.fields) {
         if (fact.fieldId === AXON_HUB_CHANNEL_FIELD_IDS.STATUS) continue
-        const cell = safeCell(fact, resolveLabel)
+        const cell = safeCell(
+          fact,
+          resolveLabel,
+          allowedFieldIds,
+          allowSecretFacts,
+        )
         if (cell) cells[fact.fieldId] = cell
       }
       const baseURLFact = facts.fields.find(
@@ -145,7 +180,7 @@ export function createManagedResourcePresentationMapper({
         facts.status,
         ...(facts.searchValues ?? []),
         ...facts.fields
-          .map(safeSearchValue)
+          .map((fact) => safeSearchValue(fact, allowedSearchFieldIds))
           .filter((value): value is string => Boolean(value)),
       ].join(" ")
       return {

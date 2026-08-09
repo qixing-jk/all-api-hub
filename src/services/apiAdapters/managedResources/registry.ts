@@ -3,9 +3,11 @@ import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/cont
 import type { ManagedResourceRegistration } from "~/services/apiAdapters/contracts/managedResourceNative"
 
 import { axonHubManagedResourceRegistration } from "./axonHub"
+import { sub2ApiManagedResourceRegistration } from "./sub2api"
 
 const MANAGED_RESOURCE_REGISTRATIONS = [
   axonHubManagedResourceRegistration,
+  sub2ApiManagedResourceRegistration,
 ] satisfies readonly ManagedResourceRegistration[]
 
 const managedResourceKey = (

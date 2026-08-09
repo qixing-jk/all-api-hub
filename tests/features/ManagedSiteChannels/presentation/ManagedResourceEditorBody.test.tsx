@@ -127,6 +127,7 @@ const labels: Record<string, string> = {
   "managedSiteChannels:editor.secret.actions.clear": "Remove saved credential",
   "managedSiteChannels:editor.secret.actions.restore": "Keep saved credential",
   "managedSiteChannels:editor.secret.actions.retry": "Retry",
+  "managedSiteChannels:editor.secret.actions.view": "View saved credential",
   "managedSiteChannels:editor.secret.createHint":
     "Enter a credential for the new channel.",
   "managedSiteChannels:editor.secret.keepExistingHint":
@@ -1172,6 +1173,50 @@ describe("ManagedResourceEditorBody", () => {
     )
   })
 
+  it("uses field-specific help without repeating an available credential state", () => {
+    const policy = defineResourceEditorFieldPolicy({
+      fields: [
+        {
+          fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+          section: "connection",
+          order: 10,
+          renderer: "secret",
+          resolveLabel: () => "API key",
+          resolveHelp: () =>
+            "Leave this field blank to keep the saved credential unchanged.",
+        },
+      ],
+      hiddenFields: [],
+    })
+
+    render(
+      <ManagedResourceEditorBody
+        t={t}
+        mode="edit"
+        descriptors={[
+          {
+            fieldId: AXON_HUB_CHANNEL_FIELD_IDS.KEY,
+            type: "secret",
+            secretState: "available",
+            canReplace: true,
+            allowClear: false,
+          },
+        ]}
+        policy={policy as typeof createPolicy}
+        values={{
+          [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: { kind: "unchanged" },
+        }}
+        onValueChange={vi.fn()}
+      />,
+    )
+
+    const input = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput)
+    expect(input).toHaveAccessibleDescription(
+      "Leave this field blank to keep the saved credential unchanged.",
+    )
+    expect(screen.queryByText("A saved credential is available.")).toBeNull()
+  })
+
   it("explains and does not load a multi-key credential that cannot be replaced", () => {
     const onLoadSecret = vi.fn().mockResolvedValue("must-not-load")
     render(
@@ -1193,7 +1238,7 @@ describe("ManagedResourceEditorBody", () => {
     expect(onLoadSecret).not.toHaveBeenCalled()
   })
 
-  it("automatically prefills an available saved credential locally without changing its public intent", async () => {
+  it("loads an available saved credential only after an explicit user action", async () => {
     const user = userEvent.setup()
     const onValueChange = vi.fn()
     const onLoadSecret = vi.fn().mockResolvedValue("saved-secret-value")
@@ -1212,22 +1257,17 @@ describe("ManagedResourceEditorBody", () => {
     expect(input).toHaveAttribute("type", "password")
     expect(input).toHaveAttribute("autocomplete", "new-password")
     expect(input).toHaveValue("")
+    expect(onLoadSecret).not.toHaveBeenCalled()
 
+    await user.click(
+      screen.getByRole("button", { name: "View saved credential" }),
+    )
     expect(await screen.findByDisplayValue("saved-secret-value")).toBe(input)
     expect(screen.queryByText("Loading the saved credential...")).toBeNull()
     expect(onLoadSecret).toHaveBeenCalledWith(AXON_HUB_CHANNEL_FIELD_IDS.KEY, {
       signal: expect.any(AbortSignal),
     })
-    expect(input).toHaveAttribute("type", "password")
     expect(onValueChange).not.toHaveBeenCalled()
-    expect(
-      screen.queryByRole("button", { name: /load saved credential/i }),
-    ).toBeNull()
-    expect(
-      screen.queryByRole("button", { name: /cancel credential loading/i }),
-    ).toBeNull()
-
-    await user.click(screen.getByRole("button", { name: "Show key" }))
     expect(input).toHaveAttribute("type", "text")
 
     await user.type(input, "-edited")
@@ -1238,6 +1278,7 @@ describe("ManagedResourceEditorBody", () => {
   })
 
   it("shows loading credential guidance until the pending load resolves", async () => {
+    const user = userEvent.setup()
     const pendingLoad = createDeferred<string>()
     const onLoadSecret = vi.fn(() => pendingLoad.promise)
     render(
@@ -1250,6 +1291,10 @@ describe("ManagedResourceEditorBody", () => {
       />,
     )
 
+    expect(onLoadSecret).not.toHaveBeenCalled()
+    await user.click(
+      screen.getByRole("button", { name: "View saved credential" }),
+    )
     const loading = await screen.findByText("Loading the saved credential...")
     expect(loading).toHaveAttribute("aria-live", "polite")
     expect(
@@ -1283,6 +1328,9 @@ describe("ManagedResourceEditorBody", () => {
       />,
     )
 
+    await user.click(
+      screen.getByRole("button", { name: "View saved credential" }),
+    )
     await waitFor(() => expect(onLoadSecret).toHaveBeenCalledOnce())
     await user.type(
       screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput),
@@ -1315,6 +1363,9 @@ describe("ManagedResourceEditorBody", () => {
     const nameInput = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
     await user.clear(nameInput)
     await user.type(nameInput, "Unsaved rename")
+    await user.click(
+      screen.getByRole("button", { name: "View saved credential" }),
+    )
     await waitFor(() => expect(onLoadSecret).toHaveBeenCalledOnce())
     await user.type(
       screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput),
@@ -1334,6 +1385,7 @@ describe("ManagedResourceEditorBody", () => {
   })
 
   it("aborts an in-flight saved credential load when the editor unmounts", async () => {
+    const user = userEvent.setup()
     let loadSignal: AbortSignal | undefined
     const onLoadSecret = vi.fn(
       (_fieldId: string, options?: { signal?: AbortSignal }) => {
@@ -1350,6 +1402,9 @@ describe("ManagedResourceEditorBody", () => {
         onLoadSecret={onLoadSecret}
       />,
     )
+    await user.click(
+      screen.getByRole("button", { name: "View saved credential" }),
+    )
     await waitFor(() => expect(onLoadSecret).toHaveBeenCalledOnce())
 
     view.unmount()
@@ -1357,7 +1412,7 @@ describe("ManagedResourceEditorBody", () => {
     expect(loadSignal?.aborted).toBe(true)
   })
 
-  it("shows a controlled automatic load failure and retries without changing the secret intent", async () => {
+  it("shows a controlled on-demand load failure and retries without changing the secret intent", async () => {
     const user = userEvent.setup()
     const onValueChange = vi.fn()
     const onLoadSecret = vi
@@ -1375,6 +1430,10 @@ describe("ManagedResourceEditorBody", () => {
       />,
     )
 
+    expect(onLoadSecret).not.toHaveBeenCalled()
+    await user.click(
+      screen.getByRole("button", { name: "View saved credential" }),
+    )
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "The saved credential could not be loaded.",
     )
@@ -1386,7 +1445,7 @@ describe("ManagedResourceEditorBody", () => {
     await user.click(screen.getByRole("button", { name: "Retry" }))
     expect(
       await screen.findByDisplayValue("saved-secret-value"),
-    ).toHaveAttribute("type", "password")
+    ).toHaveAttribute("type", "text")
     expect(onValueChange).not.toHaveBeenCalled()
   })
 

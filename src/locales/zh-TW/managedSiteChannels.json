@@ -60,6 +60,10 @@
         "help": "AxonHub 會依其系統設定的頻率，從供應商 API 更新已啟用渠道的模型清單。",
         "label": "自動同步支援的模型"
       },
+      "concurrency": {
+        "help": "此帳號允許同時處理的最大請求數。",
+        "label": "並發數"
+      },
       "defaultTestModel": {
         "help": "用於測試此渠道的連線，請從支援的模型中選擇。",
         "label": "預設測試模型",
@@ -70,14 +74,27 @@
         "label": "額外模型前綴",
         "placeholder": "例如：deepseek"
       },
+      "notes": {
+        "help": "選填備註，用於記錄此上游帳號的用途或其他說明。",
+        "label": "備註",
+        "placeholder": "新增此帳號的備註..."
+      },
       "orderingWeight": {
         "help": "AxonHub 選擇渠道時會優先使用較大的值；相同值具有相同的排序優先順序。",
         "label": "排序權重"
+      },
+      "priority": {
+        "help": "數值越小的帳號越優先參與排程。",
+        "label": "優先順序"
       },
       "remark": {
         "help": "新增關於此渠道的備註或說明以供參考。",
         "label": "備註",
         "placeholder": "為此渠道輸入備註或說明..."
+      },
+      "sub2apiPlatform": {
+        "help": "選擇上游協定。帳號建立後不能變更平台。",
+        "label": "平台"
       },
       "supportedModels": {
         "help": "輸入或貼上模型名稱。在此新增的模型會在自動同步時保留。"
@@ -122,7 +139,8 @@
       "actions": {
         "clear": "移除已儲存憑據",
         "restore": "保留已儲存憑據",
-        "retry": "重試"
+        "retry": "重試",
+        "view": "檢視已儲存憑據"
       },
       "createHint": "輸入新頻道的憑據。",
       "keepExistingHint": "將此欄位留空可保留已儲存的憑據，不作變更。",

@@ -60,6 +60,10 @@
         "help": "AxonHub aktualisiert aktivierte Kanäle von der Anbieter-API mit der in den AxonHub-Systemeinstellungen konfigurierten Häufigkeit.",
         "label": "Unterstützte Modelle automatisch synchronisieren"
       },
+      "concurrency": {
+        "help": "Maximale Anzahl gleichzeitiger Anfragen für dieses Konto.",
+        "label": "Parallelität"
+      },
       "defaultTestModel": {
         "help": "Wird zum Testen dieser Kanalverbindung verwendet. Wählen Sie eines der unterstützten Modelle.",
         "label": "Standardtestmodell",
@@ -70,14 +74,27 @@
         "label": "Zusätzliches Modellpräfix",
         "placeholder": "z. B. deepseek"
       },
+      "notes": {
+        "help": "Optionale Hinweise zu diesem Upstream-Konto.",
+        "label": "Notizen",
+        "placeholder": "Hinweise zu diesem Konto hinzufügen..."
+      },
       "orderingWeight": {
         "help": "Höhere Werte werden bevorzugt, wenn AxonHub einen Kanal auswählt; Gleiche Werte haben die gleiche Sortierpriorität.",
         "label": "Bestellgewicht"
+      },
+      "priority": {
+        "help": "Konten mit niedrigeren Werten werden zuerst eingeplant.",
+        "label": "Priorität"
       },
       "remark": {
         "help": "Fügen Sie als Referenz Notizen oder Bemerkungen zu diesem Kanal hinzu.",
         "label": "Bemerkung",
         "placeholder": "Geben Sie eine Notiz oder Bemerkung für diesen Kanal ein..."
+      },
+      "sub2apiPlatform": {
+        "help": "Wählen Sie das Upstream-Protokoll. Die Plattform kann nach dem Erstellen des Kontos nicht geändert werden.",
+        "label": "Plattform"
       },
       "supportedModels": {
         "help": "Geben Sie Modellnamen ein oder fügen Sie sie ein. Hier hinzugefügte Modelle bleiben während der automatischen Modellsynchronisierung erhalten."
@@ -122,7 +139,8 @@
       "actions": {
         "clear": "Gespeicherte Anmeldeinformationen entfernen",
         "restore": "Gespeicherte Anmeldeinformationen behalten",
-        "retry": "Wiederholen"
+        "retry": "Wiederholen",
+        "view": "Gespeicherte Anmeldedaten anzeigen"
       },
       "createHint": "Geben Sie einen Berechtigungsnachweis für den neuen Kanal ein.",
       "keepExistingHint": "Lassen Sie dieses Feld leer, um die gespeicherten Anmeldeinformationen unverändert zu lassen.",

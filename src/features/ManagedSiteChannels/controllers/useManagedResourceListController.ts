@@ -99,6 +99,7 @@ type Options = {
   pageSize?: number
   onUnsupportedSearch?: () => void
   resolveLabel?: TFunction
+  fieldIds?: readonly string[]
 }
 
 /** Owns complete native collection and client-side table state without exposing refs. */
@@ -111,10 +112,11 @@ export function useManagedResourceListController({
   pageSize = 20,
   onUnsupportedSearch,
   resolveLabel,
+  fieldIds,
 }: Options) {
   const mapper = useMemo(
-    () => createManagedResourcePresentationMapper({ resolveLabel }),
-    [resolveLabel],
+    () => createManagedResourcePresentationMapper({ resolveLabel, fieldIds }),
+    [fieldIds, resolveLabel],
   )
   const [workspace, setWorkspace] = useState<ManagedResourceWorkspace | null>(
     null,

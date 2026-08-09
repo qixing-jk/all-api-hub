@@ -4,6 +4,10 @@ import {
 } from "~/constants/axonHub"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
+  SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+  SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+} from "~/constants/sub2api"
+import {
   ACCOUNT_SITE_AUTH_SESSION_REFRESH_LOCK_SCOPES,
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   ACCOUNT_SITE_MODEL_LIST_DASHBOARD_ESTIMATE_LOADERS,
@@ -191,7 +195,21 @@ const ACCOUNT_SITE_DEFINITIONS = [
     siteType: SITE_TYPES.SUB2API,
     scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
-    managedResource: { ...LEGACY_MANAGED_CHANNEL_POLICY },
+    managedResource: {
+      ...LEGACY_MANAGED_CHANNEL_POLICY,
+      mode: MANAGED_RESOURCE_MODES.NativeResource,
+      tableFieldIds: SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
+      detailFieldIds: SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
+      actions: [
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.Create,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.DeleteSelected,
+        MANAGED_RESOURCE_PRODUCT_ACTIONS.Migrate,
+      ],
+      settingsTarget: {
+        ...LEGACY_MANAGED_CHANNEL_POLICY.settingsTarget,
+        anchor: SETTINGS_ANCHORS.SUB2API,
+      },
+    },
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.SUB2API)] },
       routes: {
