@@ -259,7 +259,7 @@ export function useRepairCreatedKeyManagedSiteImport({
                 ? "keyManagement:repairMissingKeys.managedSiteImport.nothingPending"
                 : "keyManagement:repairMissingKeys.managedSiteImport.unavailable",
             ),
-            variant: nothingPending ? "info" : "destructive",
+            variant: nothingPending ? "warning" : "destructive",
           })
           return
         }
