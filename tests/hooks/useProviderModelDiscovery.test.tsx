@@ -119,10 +119,10 @@ describe("useProviderModelDiscovery", () => {
     })
   })
 
-  it("clears inventory on close and ignores a late result", async () => {
-    let resolveModels: ((modelIds: string[]) => void) | undefined
-    const models = new Promise<string[]>((resolve) => {
-      resolveModels = resolve
+  it("clears inventory on close and ignores a late failure", async () => {
+    let rejectModels: ((error: Error) => void) | undefined
+    const models = new Promise<string[]>((_resolve, reject) => {
+      rejectModels = reject
     })
     const fetchModelIds = vi.fn().mockReturnValue(models)
     const { result, rerender } = renderHook(
@@ -152,8 +152,8 @@ describe("useProviderModelDiscovery", () => {
     )
 
     await act(async () => {
-      resolveModels?.(["late-model"])
-      await models
+      rejectModels?.(new Error("late failure"))
+      await expect(models).rejects.toThrow("late failure")
     })
     expect(result.current.getInventory("example-selection")).toMatchObject({
       status: "idle",
