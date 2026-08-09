@@ -159,27 +159,29 @@ const removeFocusLease = (session: FocusSession) => {
 }
 
 const settleDeferredFocusLease = (session: FocusSession) => {
-  if (!focusLeaseStack.includes(session)) return
-  if (!session.active) {
-    removeFocusLease(session)
-    return
+  try {
+    if (!focusLeaseStack.includes(session)) return
+    if (!session.active) {
+      removeFocusLease(session)
+      return
+    }
+    if (
+      focusLeaseStack.at(-1) !== session &&
+      !focusLeaseStack.some(
+        (candidate) => candidate.active && candidate.parentSession === session,
+      )
+    ) {
+      removeFocusLease(session)
+      return
+    }
+    session.settled = true
+    if (focusLeaseStack.at(-1) !== session) return
+    const restoreSession = settleFocusLease(session)
+    const restoreFocusElement = restoreSession?.restoreElement
+    if (restoreFocusElement?.isConnected) restoreFocusElement.focus()
+  } finally {
+    notifyCloseComplete(session)
   }
-  if (
-    focusLeaseStack.at(-1) !== session &&
-    !focusLeaseStack.some(
-      (candidate) => candidate.active && candidate.parentSession === session,
-    )
-  ) {
-    removeFocusLease(session)
-    return
-  }
-  session.settled = true
-  if (focusLeaseStack.at(-1) !== session) {
-    return
-  }
-  const restoreSession = settleFocusLease(session)
-  const restoreFocusElement = restoreSession?.restoreElement
-  if (restoreFocusElement?.isConnected) restoreFocusElement.focus()
 }
 
 const scheduleDeferredFocusLeaseSettlement = (session: FocusSession) => {
@@ -267,10 +269,7 @@ export function Modal({
 
   useLayoutEffect(() => {
     const activeSession = activeFocusSessionRef.current
-    if (!isOpen && activeSession) {
-      activeSession.closeRequested = true
-      scheduleDeferredFocusLeaseSettlement(activeSession)
-    }
+    if (!isOpen && activeSession) activeSession.closeRequested = true
   }, [isOpen])
 
   useLayoutEffect(

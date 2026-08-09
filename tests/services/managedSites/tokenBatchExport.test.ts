@@ -453,14 +453,20 @@ describe("managed-site token batch export", () => {
   })
 
   it.each([
-    {
-      label: "known native errors as failed",
-      error: new ManagedResourceError({
-        code: MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
-      }),
+    ...[
+      MANAGED_RESOURCE_FAILURE_CODES.ConfigurationRequired,
+      MANAGED_RESOURCE_FAILURE_CODES.InvalidConfiguration,
+      MANAGED_RESOURCE_FAILURE_CODES.AuthenticationFailed,
+      MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+      MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+      MANAGED_RESOURCE_FAILURE_CODES.NotFound,
+      MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
+    ].map((code) => ({
+      label: `${code} native errors as failed`,
+      error: new ManagedResourceError({ code }),
       expected: MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED,
       expectedCounts: { failedCount: 1, uncertainCount: 0 },
-    },
+    })),
     {
       label: "unknown native errors as uncertain",
       error: new Error("connection interrupted"),

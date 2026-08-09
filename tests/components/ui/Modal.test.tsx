@@ -136,6 +136,52 @@ describe("Modal", () => {
     expect(onCloseComplete).toHaveBeenCalledOnce()
   })
 
+  it("notifies once when a requested close unmounts the Modal shell", async () => {
+    vi.useFakeTimers()
+    const onCloseComplete = vi.fn()
+    const ModalHarness = () => {
+      const [isMounted, setIsMounted] = useState(false)
+      return (
+        <>
+          <button type="button" onClick={() => setIsMounted(true)}>
+            Open unmounting modal
+          </button>
+          {isMounted ? (
+            <Modal
+              isOpen
+              onClose={() => setIsMounted(false)}
+              onCloseComplete={onCloseComplete}
+              title="Unmounting modal"
+            >
+              <button type="button">Unmounting modal content</button>
+            </Modal>
+          ) : null}
+        </>
+      )
+    }
+    try {
+      render(<ModalHarness />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+
+      const trigger = screen.getByRole("button", {
+        name: "Open unmounting modal",
+      })
+      fireEvent.click(trigger)
+      await act(async () => undefined)
+      fireEvent.click(
+        screen.getByRole("button", { name: "common:actions.close" }),
+      )
+      await act(async () => undefined)
+
+      expect(screen.queryByRole("dialog")).toBeNull()
+      expect(onCloseComplete).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("notifies only for the real close lifecycle under StrictMode", async () => {
     const user = userEvent.setup()
     const onCloseComplete = vi.fn()
