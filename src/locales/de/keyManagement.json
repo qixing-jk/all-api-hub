@@ -61,6 +61,7 @@
       "clearSelection": "Auswahl löschen",
       "open": "Batch-Import in {{site}} ({{selectedCount}})",
       "refreshPreview": "Vorschau aktualisieren",
+      "retry": "Fehlgeschlagene oder unklare Schlüssel erneut versuchen",
       "running": "Importieren...",
       "selectAll": "{{selected}}/{{total}} ausgewählt",
       "start": "Import starten",
@@ -92,9 +93,10 @@
     "gatewayDescription": "Dadurch werden Kontoschlüssel als selbstgehostete AI-Gateway-Kanäle importiert. Nach dem Import können mehrere Schlüssel von Clients über eine AI-API verwendet werden.",
     "loadingDescription": "Vorschau wird für ausgewählte Schlüssel vorbereitet (Auswahl: {{selectedCount}}).",
     "messages": {
-      "completed": "Batch-Import abgeschlossen: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} übersprungen.",
-      "duplicate": "Exakte Übereinstimmung existiert bereits: {{channel}}",
+      "completed": "Batch-Import abgeschlossen: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} bereits vorhanden.",
+      "duplicate": "Ein identischer Kanal ist bereits vorhanden: {{channel}}. Er wird nicht erneut erstellt.",
       "executionFailed": "Batch-Import konnte nicht ausgeführt werden: {{error}}",
+      "targetChanged": "Das Ziel der verwalteten Website wurde geändert. Aktualisieren Sie die Vorschau oder wählen Sie vor dem Import das gewünschte Ziel aus.",
       "verificationFailed": "New API Verifizierung fehlgeschlagen: {{error}}"
     },
     "preview": {
@@ -102,16 +104,22 @@
       "loading": "Kanalvorschau wird vorbereitet...",
       "selected_one": "{{count}} Schlüssel ausgewählt",
       "selected_other": "{{count}} Schlüssel ausgewählt",
-      "summary": "Vorschau: {{ready}} bereit, {{warning}} Warnungen, {{skipped}} übersprungen, {{blocked}} blockiert, {{total}} insgesamt."
+      "summary": "Vorschau: {{ready}} bereit, {{warning}} Warnungen, {{skipped}} bereits vorhanden, {{blocked}} blockiert, {{total}} insgesamt."
+    },
+    "repairTrusted": {
+      "description": "Diese Schlüssel wurden gerade erstellt. Bei der vereinfachten Prüfung werden Duplikat- und exakte Schlüsselprüfungen ausgelassen. Verwenden Sie die vollständige Prüfung, wenn Sie sie vor dem Import überprüfen möchten.",
+      "useCompleteChecks": "Vollständige Prüfung verwenden"
     },
     "results": {
       "channelCreationFailed": "Kanalerstellung fehlgeschlagen.",
       "status": {
         "failed": "Fehlgeschlagen",
-        "skipped": "Übersprungen",
-        "success": "Erstellt"
+        "notSelected": "Nicht ausgewählt",
+        "skipped": "Bereits vorhanden",
+        "success": "Erstellt",
+        "uncertain": "Überprüfung erforderlich"
       },
-      "summary": "Ergebnis: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} übersprungen, {{total}} insgesamt."
+      "summary": "Ergebnis: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} bereits vorhanden, {{total}} insgesamt."
     },
     "selection": {
       "accountGroup": "Wählen Sie sichtbare Schlüssel für Konto {{name}}",
@@ -121,14 +129,18 @@
     "status": {
       "blocked": "Blockiert",
       "ready": "Bereit",
-      "skipped": "Übersprungen",
+      "skipped": "Bereits vorhanden",
       "warning": "Warnung"
+    },
+    "target": {
+      "change": "Ziel ändern",
+      "title": "Import nach {{site}}"
     },
     "title": "Batch-Import in ein selbstgehostetes KI-Gateway",
     "warnings": {
       "backendSearchFailed": "Die Duplikatprüfung konnte das Ziel-Backend nicht erreichen.",
       "dedupeUnsupported": "Das aktuelle selbstgehostete KI-Gateway kann Duplikate nicht zuverlässig anhand der Basis-URL prüfen.",
-      "exactVerificationUnavailable": "Ein vorhandener Kanal stimmt möglicherweise überein, eine genaue Schlüsselüberprüfung ist jedoch nicht verfügbar.",
+      "exactVerificationUnavailable": "Ein vorhandener Kanal stimmt möglicherweise überein, der genaue Schlüssel konnte jedoch nicht bestätigt werden. Prüfen Sie dies vor der Erstellung.",
       "matchRequiresConfirmation": "Ein ähnlicher Kanal existiert; Überprüfen Sie es vor der Erstellung.",
       "modelPrefillFailed": "Modellvorausfüllung fehlgeschlagen; die beste verfügbare Modellliste wird verwendet."
     }
@@ -562,6 +574,22 @@
       "selectAll": "Alle aktuellen Ergebnisse auswählen",
       "selectedCount_one": "{{count}} ungültiger Schlüssel ausgewählt",
       "selectedCount_other": "{{count}} ungültige Schlüssel ausgewählt"
+    },
+    "managedSiteImport": {
+      "action_one": "{{count}} reparierten Schlüssel importieren",
+      "action_other": "{{count}} reparierte Schlüssel importieren",
+      "changeTarget": "Ziel ändern",
+      "configMissing": "Die aktuelle verwaltete Website ist nicht konfiguriert. Öffnen Sie ihre Einstellungen, kehren Sie anschließend hierher zurück und importieren Sie erneut.",
+      "configurationOpenFailed": "Die Einstellungen der verwalteten Website konnten nicht geöffnet werden. Öffnen Sie Einstellungen > Verwaltete Website, um sie manuell zu konfigurieren.",
+      "failed": "Die reparierten Schlüssel konnten nicht für den Import vorbereitet werden. Versuchen Sie es erneut.",
+      "nothingPending": "Diese Schlüssel wurden für dieses Ziel bereits verarbeitet: Ihre Kanäle wurden erstellt oder als exakte Übereinstimmungen gefunden. Um sie erneut zu prüfen, verwenden Sie den regulären Import mit vollständiger Verifizierung.",
+      "openConfiguration": "Einstellungen der verwalteten Website öffnen",
+      "receiptFailed": "Der Import wurde abgeschlossen, aber die Reparaturergebnisse konnten nicht aktualisiert werden. Aktualisieren Sie die Ergebnisse, um den aktuellen Status zu bestätigen.",
+      "target_one": "{{count}} reparierter Schlüssel für {{site}} bereit",
+      "target_other": "{{count}} reparierte Schlüssel für {{site}} bereit",
+      "title": "Reparierte Schlüssel importieren",
+      "unavailable": "Die reparierten Schlüssel sind nicht mehr für den Import verfügbar. Aktualisieren Sie die Reparaturergebnisse und versuchen Sie es erneut.",
+      "useRegularImport": "Regulären Import verwenden"
     },
     "messages": {
       "cancelFailed": "Reparaturauftrag konnte nicht abgebrochen werden",
