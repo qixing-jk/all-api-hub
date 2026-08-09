@@ -4,7 +4,7 @@
     "actions": {
       "devModeHint": "Dev mode: action buttons are always shown for testing.",
       "openExternal": "External check-in",
-      "openFailedManual": "Open all failed check-in pages",
+      "openFailedManual": "Open check-in pages for all accounts with failed auto check-ins",
       "openManual": "Manual sign-in",
       "openSite": "Open site",
       "retryAccount": "Retry"

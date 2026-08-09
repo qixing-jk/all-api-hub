@@ -4,7 +4,7 @@
     "actions": {
       "devModeHint": "Entwicklungsmodus: Aktionsschaltflächen werden zum Testen immer angezeigt.",
       "openExternal": "Externer Check-in",
-      "openFailedManual": "Alle fehlgeschlagenen Check-in-Seiten öffnen",
+      "openFailedManual": "Check-in-Seiten für alle Konten mit fehlgeschlagenem automatischem Check-in öffnen",
       "openManual": "Manueller Check-in",
       "openSite": "Website öffnen",
       "retryAccount": "Wiederholen"
