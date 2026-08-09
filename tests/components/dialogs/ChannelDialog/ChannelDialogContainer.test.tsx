@@ -6,15 +6,38 @@ import {
   ChannelDialogProvider,
   useChannelDialogContext,
 } from "~/components/dialogs/ChannelDialog"
+import { SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const addTokenDialogPropsMock = vi.hoisted(() => vi.fn())
+const {
+  addTokenDialogPropsMock,
+  channelDialogPropsMock,
+  nativeDialogPropsMock,
+} = vi.hoisted(() => ({
+  addTokenDialogPropsMock: vi.fn(),
+  channelDialogPropsMock: vi.fn(),
+  nativeDialogPropsMock: vi.fn(),
+}))
 
 vi.mock("~/components/dialogs/ChannelDialog/components/ChannelDialog", () => ({
-  ChannelDialog: () => <div data-testid="mock-channel-dialog" />,
+  ChannelDialog: (props: { isOpen: boolean }) => {
+    channelDialogPropsMock(props)
+    return <div data-testid="mock-channel-dialog" />
+  },
 }))
+
+vi.mock(
+  "~/features/ManagedSiteChannels/components/ManagedResourceCreateDialog",
+  () => ({
+    ManagedResourceCreateDialog: (props: { isOpen: boolean }) => {
+      nativeDialogPropsMock(props)
+      return props.isOpen ? <div data-testid="mock-native-dialog" /> : null
+    },
+  }),
+)
 
 vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   default: (props: {
@@ -70,6 +93,29 @@ function OpenDefaultTokenQuickCreateDialog({
   return null
 }
 
+function OpenNativeCreateDialog() {
+  const { openNativeCreateDialog } = useChannelDialogContext()
+
+  useEffect(() => {
+    openNativeCreateDialog({
+      nativeCreate: {
+        siteType: SITE_TYPES.AXON_HUB,
+        kind: MANAGED_RESOURCE_KINDS.Channel,
+        editor: {
+          fields: [],
+          initialValues: { name: "Imported channel" },
+          validate: () => ({ valid: true }),
+          submit: vi.fn(),
+        },
+        showModelPrefillWarning: true,
+        advisoryWarning: null,
+      },
+    })
+  }, [openNativeCreateDialog])
+
+  return null
+}
+
 describe("ChannelDialogContainer", () => {
   it("renders AddTokenDialog with default-token prefill for non-empty allowed groups", async () => {
     addTokenDialogPropsMock.mockReset()
@@ -116,5 +162,35 @@ describe("ChannelDialogContainer", () => {
     expect(
       screen.queryByTestId("mock-add-token-dialog"),
     ).not.toBeInTheDocument()
+  })
+
+  it("renders a native create dialog instead of opening the legacy channel dialog", async () => {
+    channelDialogPropsMock.mockReset()
+    nativeDialogPropsMock.mockReset()
+
+    render(
+      <ChannelDialogProvider>
+        <OpenNativeCreateDialog />
+        <ChannelDialogContainer />
+      </ChannelDialogProvider>,
+    )
+
+    expect(await screen.findByTestId("mock-native-dialog")).toBeVisible()
+    await waitFor(() => {
+      expect(channelDialogPropsMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ isOpen: false }),
+      )
+      expect(nativeDialogPropsMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          isOpen: true,
+          siteType: SITE_TYPES.AXON_HUB,
+          kind: MANAGED_RESOURCE_KINDS.Channel,
+          editor: expect.objectContaining({
+            initialValues: { name: "Imported channel" },
+          }),
+          showModelPrefillWarning: true,
+        }),
+      )
+    })
   })
 })

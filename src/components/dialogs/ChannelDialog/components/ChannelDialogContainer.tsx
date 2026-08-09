@@ -1,4 +1,5 @@
 import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
+import { ManagedResourceCreateDialog } from "~/features/ManagedSiteChannels/components/ManagedResourceCreateDialog"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 
@@ -26,7 +27,7 @@ export function ChannelDialogContainer() {
   return (
     <>
       <ChannelDialog
-        isOpen={state.isOpen}
+        isOpen={state.isOpen && !state.nativeCreate}
         onClose={closeDialog}
         mode={state.mode}
         channel={state.channel ?? null}
@@ -40,6 +41,18 @@ export function ChannelDialogContainer() {
         onMutationOutcome={state.onMutationOutcome ?? undefined}
         resourceEdit={state.resourceEdit ?? null}
       />
+      {state.nativeCreate ? (
+        <ManagedResourceCreateDialog
+          isOpen={state.isOpen}
+          siteType={state.nativeCreate.siteType}
+          kind={state.nativeCreate.kind}
+          editor={state.nativeCreate.editor}
+          showModelPrefillWarning={state.nativeCreate.showModelPrefillWarning}
+          advisoryWarning={state.nativeCreate.advisoryWarning}
+          onClose={closeDialog}
+          onSuccess={handleSuccess}
+        />
+      ) : null}
       {defaultTokenQuickCreateDialog.account &&
       defaultTokenQuickCreatePrefill ? (
         <AddTokenDialog

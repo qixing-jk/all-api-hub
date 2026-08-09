@@ -23,6 +23,7 @@ import {
   requireDisplayAccountKeyManagement,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { openNativeManagedChannelImportEditor } from "~/services/apiAdapters/managedResources/channelImport"
 import {
   API_CREDENTIAL_PROFILE_SYNTHETIC_ACCOUNT_ID_PREFIX,
   buildApiCredentialProfileSyntheticAccountId,
@@ -110,9 +111,45 @@ export function useChannelDialog() {
   const { t } = useTranslation(["messages", "channelDialog"])
   const {
     openDialog,
+    openNativeCreateDialog,
     openDefaultTokenQuickCreateDialog,
     requestDuplicateChannelWarning,
   } = useChannelDialogContext()
+
+  const openPreparedChannelCreateDialog = async (params: {
+    service: ManagedSiteService
+    formData: Awaited<ReturnType<ManagedSiteService["prepareChannelFormData"]>>
+    advisoryWarning: ChannelDialogAdvisoryWarning | null
+    onSuccess?: (result: any) => void
+  }) => {
+    const nativeCreate = await openNativeManagedChannelImportEditor(
+      params.service.siteType,
+      params.formData,
+    )
+
+    if (nativeCreate) {
+      openNativeCreateDialog({
+        nativeCreate: {
+          ...nativeCreate,
+          showModelPrefillWarning:
+            params.formData.modelPrefillFetchFailed === true,
+          advisoryWarning: params.advisoryWarning,
+        },
+        onSuccess: params.onSuccess,
+      })
+      return
+    }
+
+    openDialog({
+      mode: DIALOG_MODES.ADD,
+      initialValues: params.formData,
+      initialModels: params.formData.models,
+      initialGroups: params.formData.groups,
+      showModelPrefillWarning: params.formData.modelPrefillFetchFailed === true,
+      advisoryWarning: params.advisoryWarning,
+      onSuccess: params.onSuccess,
+    })
+  }
 
   const openDefaultTokenQuickCreateDialogForAccount = async (
     account: DisplaySiteData,
@@ -560,19 +597,11 @@ export function useChannelDialog() {
         return cancelOpen()
       }
 
-      // Open dialog
-      openDialog({
-        mode: DIALOG_MODES.ADD,
-        initialValues: formData,
-        initialModels: formData.models,
-        initialGroups: formData.groups,
-        showModelPrefillWarning: formData.modelPrefillFetchFailed === true,
+      await openPreparedChannelCreateDialog({
+        service,
+        formData,
         advisoryWarning: duplicateState.advisoryWarning,
-        onSuccess: (result) => {
-          if (onSuccess) {
-            onSuccess(result)
-          }
-        },
+        onSuccess,
       })
       return { opened: true }
     } catch (error) {
@@ -657,16 +686,11 @@ export function useChannelDialog() {
         toast.dismiss(toastId)
       }
 
-      openDialog({
-        mode: DIALOG_MODES.ADD,
-        initialValues: formData,
-        initialModels: formData.models,
-        initialGroups: formData.groups,
-        showModelPrefillWarning: formData.modelPrefillFetchFailed === true,
+      await openPreparedChannelCreateDialog({
+        service,
+        formData,
         advisoryWarning: duplicateState.advisoryWarning,
-        onSuccess: (result) => {
-          onSuccess?.(result)
-        },
+        onSuccess,
       })
       return { opened: true }
     } catch (error) {

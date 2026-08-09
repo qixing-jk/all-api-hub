@@ -9,6 +9,9 @@ import React, {
 
 import type { ChannelResourceEditContext } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import type { ManagedSiteType } from "~/constants/siteType"
+import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
+import type { ResourceEditor } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
@@ -34,6 +37,14 @@ export interface ChannelDialogAdvisoryWarning {
   assessment?: ManagedSiteChannelAssessmentSignals | null
 }
 
+export interface NativeChannelCreateDialogState {
+  siteType: ManagedSiteType
+  kind: ManagedResourceKind
+  editor: ResourceEditor
+  showModelPrefillWarning: boolean
+  advisoryWarning: ChannelDialogAdvisoryWarning | null
+}
+
 interface ChannelDialogState {
   isOpen: boolean
   mode: DialogMode
@@ -49,6 +60,7 @@ interface ChannelDialogState {
   onSuccessCallback?: (result: any) => void
   onMutationOutcome?: ChannelDialogMutationOutcomeHandler | null
   resourceEdit?: ChannelResourceEditContext | null
+  nativeCreate?: NativeChannelCreateDialogState | null
 }
 
 interface DuplicateChannelWarningState {
@@ -83,6 +95,10 @@ interface ChannelDialogContextValue {
     onSuccess?: (result: any) => void
     onMutationOutcome?: ChannelDialogMutationOutcomeHandler
     resourceEdit?: ChannelResourceEditContext | null
+  }) => void
+  openNativeCreateDialog: (config: {
+    nativeCreate: NativeChannelCreateDialogState
+    onSuccess?: (result: any) => void
   }) => void
   closeDialog: () => void
   handleSuccess: (result: any) => void
@@ -170,16 +186,39 @@ export function ChannelDialogProvider({
         onSuccessCallback: config.onSuccess,
         onMutationOutcome: config.onMutationOutcome ?? null,
         resourceEdit: config.resourceEdit ?? null,
+        nativeCreate: null,
+      })
+    },
+    [],
+  )
+
+  const openNativeCreateDialog = useCallback(
+    (config: {
+      nativeCreate: NativeChannelCreateDialogState
+      onSuccess?: (result: any) => void
+    }) => {
+      setState({
+        isOpen: true,
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        onSuccessCallback: config.onSuccess,
+        nativeCreate: config.nativeCreate,
       })
     },
     [],
   )
 
   const closeDialog = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      isOpen: false,
-    }))
+    setState((prev) =>
+      prev.nativeCreate
+        ? {
+            isOpen: false,
+            mode: DIALOG_MODES.ADD,
+            channel: null,
+            nativeCreate: null,
+          }
+        : { ...prev, isOpen: false },
+    )
   }, [])
 
   const onSuccessRef = useRef(state.onSuccessCallback)
@@ -308,6 +347,7 @@ export function ChannelDialogProvider({
         duplicateChannelWarning,
         defaultTokenQuickCreateDialog,
         openDialog,
+        openNativeCreateDialog,
         closeDialog,
         handleSuccess,
         openDefaultTokenQuickCreateDialog,

@@ -40,6 +40,7 @@ type ManagedResourceEditorBodyProps = {
   values: EditableResourceProjection
   fieldIssues?: readonly ResourceFieldIssue[]
   disabled?: boolean
+  showModelPrefillWarning?: boolean
   onValueChange: (fieldId: string, value: ResourceFieldValue) => void
   onLoadSecret?: (
     fieldId: string,
@@ -140,6 +141,7 @@ export function ManagedResourceEditorBody({
   values,
   fieldIssues = [],
   disabled = false,
+  showModelPrefillWarning = false,
   onValueChange,
   onLoadSecret,
 }: ManagedResourceEditorBodyProps) {
@@ -350,6 +352,7 @@ export function ManagedResourceEditorBody({
               }}
               disabled={disabled}
               required={descriptor.required}
+              showPrefillWarning={showModelPrefillWarning}
               description={presentation.resolveHelp?.(t)}
               errorMessage={errorMessage}
             />

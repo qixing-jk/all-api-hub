@@ -10,7 +10,10 @@ import { SITE_TYPES } from "~/constants/siteType"
 import * as accountOperations from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { TOKEN_QUICK_CREATE_RESOLUTION_KINDS } from "~/services/accounts/tokenQuickCreateResolution"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import { MANAGED_RESOURCE_CREATE_SEED_KINDS } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { TOKEN_PROVISIONING_BLOCK_REASONS } from "~/services/apiAdapters/contracts/tokenProvisioning"
+import * as nativeResourceRegistry from "~/services/apiAdapters/managedResources/registry"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
@@ -349,6 +352,126 @@ describe("useChannelDialog", () => {
     expect(result.current.context.state.isOpen).toBe(false)
     expect(mockToastError).not.toHaveBeenCalled()
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
+  })
+
+  it("opens AxonHub account imports with the native create editor projection", async () => {
+    const editor = {
+      fields: [],
+      initialValues: {
+        name: "Auto channel",
+        type: "openai",
+        baseURL: "https://upstream.example.com",
+        status: "enabled",
+        key: { kind: "replace" as const, value: "sk-test" },
+        supportedModels: ["gpt-4"],
+        manualModels: ["gpt-4"],
+        defaultTestModel: "gpt-4",
+        orderingWeight: 7,
+      },
+      validate: vi.fn(() => ({ valid: true as const })),
+      submit: vi.fn(),
+    }
+    const openCreateEditor = vi.fn(async () => editor)
+    const openRegistration = vi.fn(async () => ({
+      capabilities: {
+        canSearch: true,
+        canCreate: true,
+        canUpdate: true,
+        canDelete: true,
+      },
+      list: vi.fn(),
+      get: vi.fn(),
+      openCreateEditor,
+      openEditEditor: vi.fn(),
+      delete: vi.fn(),
+    }))
+    const registrationSpy = vi
+      .spyOn(nativeResourceRegistry, "getManagedResourceRegistration")
+      .mockReturnValue({
+        siteType: SITE_TYPES.AXON_HUB,
+        kind: MANAGED_RESOURCE_KINDS.Channel,
+        createSeedKinds: [
+          MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+        ],
+        open: openRegistration,
+      })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      buildManagedSiteServiceMock({
+        siteType: SITE_TYPES.AXON_HUB,
+        messagesKey: "axonhub",
+        prepareChannelFormData: vi.fn(async () =>
+          buildPreparedFormData({
+            type: "openai",
+            weight: 7,
+            status: 1,
+          }),
+        ),
+      }) as ManagedSiteService,
+    )
+
+    const { result } = await renderChannelDialogHook()
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData(),
+        buildApiToken(),
+      )
+    })
+
+    expect(registrationSpy).toHaveBeenCalledWith(
+      SITE_TYPES.AXON_HUB,
+      MANAGED_RESOURCE_KINDS.Channel,
+    )
+    expect(openRegistration).toHaveBeenCalledOnce()
+    expect(openCreateEditor).toHaveBeenCalledWith({
+      seed: {
+        kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+        name: "Auto channel",
+        channelType: "openai",
+        credential: "sk-test",
+        baseUrl: "https://upstream.example.com",
+        enabled: true,
+        models: ["gpt-4"],
+        orderingWeight: 7,
+      },
+    })
+    expect((result.current.context.state as any).nativeCreate).toMatchObject({
+      siteType: SITE_TYPES.AXON_HUB,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+      editor,
+    })
+
+    registrationSpy.mockRestore()
+  })
+
+  it("does not downgrade a native provider when its import registration is missing", async () => {
+    const registrationSpy = vi
+      .spyOn(nativeResourceRegistry, "getManagedResourceRegistration")
+      .mockReturnValue(null)
+    getManagedSiteServiceSpy.mockResolvedValue(
+      buildManagedSiteServiceMock({
+        siteType: SITE_TYPES.AXON_HUB,
+        messagesKey: "axonhub",
+      }) as ManagedSiteService,
+    )
+    const { result } = await renderChannelDialogHook()
+
+    let openResult: Awaited<
+      ReturnType<typeof result.current.dialog.openWithAccount>
+    >
+    await act(async () => {
+      openResult = await result.current.dialog.openWithAccount(
+        buildDisplaySiteData(),
+        buildApiToken(),
+      )
+    })
+
+    expect(openResult!).toEqual({ opened: false })
+    expect(result.current.context.state.isOpen).toBe(false)
+    expect(result.current.context.state.nativeCreate).toBeUndefined()
+    expect(mockToastError).toHaveBeenCalled()
+
+    registrationSpy.mockRestore()
   })
 
   it("shows duplicate channel warning from migrated resource candidates", async () => {
