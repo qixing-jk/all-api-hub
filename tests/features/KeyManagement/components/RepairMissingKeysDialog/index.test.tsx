@@ -949,6 +949,114 @@ describe("RepairMissingKeysDialog", () => {
     )
   })
 
+  it("clears target-specific feedback when the managed site type changes", async () => {
+    const user = userEvent.setup()
+    const account = buildAccount()
+    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running, {
+      jobId: "repair-job",
+    })
+
+    const view = render(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[account]}
+        startOnOpen={false}
+      />,
+    )
+    await screen.findByRole("progressbar", {
+      name: "keyManagement:repairMissingKeys.progressLabel",
+    })
+
+    mockProgress = buildCreatedProgress(account, {
+      managedSiteImportReceipts: [
+        {
+          targetFingerprint: "a".repeat(64),
+          accountId: account.id,
+          tokenId: 11,
+          status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+          updatedAt: 1,
+        },
+      ],
+    })
+    view.rerender(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[account]}
+        startOnOpen={false}
+      />,
+    )
+
+    await user.click(
+      await screen.findByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
+      ),
+    )
+    await screen.findByText(
+      "keyManagement:repairMissingKeys.managedSiteImport.nothingPending",
+    )
+
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "keyManagement:repairMissingKeys.managedSiteImport.changeTarget",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "settings:managedSite.doneHub",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("combobox", {
+          name: "keyManagement:repairMissingKeys.managedSiteImport.changeTarget",
+        }),
+      ).toHaveTextContent("settings:managedSite.doneHub")
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(
+          "keyManagement:repairMissingKeys.managedSiteImport.nothingPending",
+        ),
+      ).not.toBeInTheDocument()
+    })
+
+    mockGetCurrentManagedSiteRuntimeConfig.mockResolvedValueOnce({
+      siteType: SITE_TYPES.DONE_HUB,
+      config: {
+        baseUrl: "https://done-hub.example.invalid",
+        adminToken: "done-hub-token",
+        userId: "2",
+      },
+    })
+    mockCreateManagedSiteTokenBatchImportTarget.mockResolvedValueOnce({
+      targetFingerprint: "b".repeat(64),
+      targetSummary: {
+        siteType: SITE_TYPES.DONE_HUB,
+        baseUrl: "https://done-hub.example.invalid",
+        compatibleUserId: "2",
+      },
+    })
+
+    await user.click(
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
+      ),
+    )
+
+    await waitFor(() => {
+      expect(mockGetCurrentManagedSiteRuntimeConfig).toHaveBeenCalledTimes(2)
+    })
+    expect(
+      mockCreateManagedSiteTokenBatchImportTarget,
+    ).toHaveBeenLastCalledWith(
+      expect.objectContaining({ siteType: SITE_TYPES.DONE_HUB }),
+    )
+  })
+
   it("opens missing managed-site configuration in a new tab and detects it on retry", async () => {
     const user = userEvent.setup()
     const account = buildAccount()

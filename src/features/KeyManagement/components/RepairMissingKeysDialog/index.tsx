@@ -181,6 +181,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     accounts,
     isOpen,
     isCurrentSessionResult: !isPreviousResult,
+    managedSiteType,
     progress,
     setProgress,
     onManagedSiteImportSuccess,

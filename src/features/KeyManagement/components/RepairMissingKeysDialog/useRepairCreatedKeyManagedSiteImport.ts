@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { BASIC_SETTINGS_ANCHOR_TO_TAB } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
+import type { ManagedSiteType } from "~/constants/siteType"
 import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
@@ -38,6 +39,7 @@ interface UseRepairCreatedKeyManagedSiteImportParams {
   accounts: DisplaySiteData[]
   isOpen: boolean
   isCurrentSessionResult: boolean
+  managedSiteType: ManagedSiteType
   progress: AccountKeyRepairProgress | null
   setProgress: (progress: AccountKeyRepairProgress) => void
   onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
@@ -169,6 +171,7 @@ export function useRepairCreatedKeyManagedSiteImport({
   accounts,
   isOpen,
   isCurrentSessionResult,
+  managedSiteType,
   progress,
   setProgress,
   onManagedSiteImportSuccess,
@@ -364,6 +367,10 @@ export function useRepairCreatedKeyManagedSiteImport({
     },
     [onManagedSiteImportSuccess, setProgress, t],
   )
+
+  useEffect(() => {
+    setImportFeedback(null)
+  }, [managedSiteType])
 
   useEffect(() => {
     if (isOpen) return
