@@ -211,6 +211,54 @@
       "totalKeys_other": "合計 {{count}} キー",
       "useInCherry": "Cherry Studio で使う"
     },
+    "cursorPlus": {
+      "actions": {
+        "copy": "プロバイダー設定をコピー",
+        "retry": "モデル検出を再試行"
+      },
+      "description": "この OpenAI 互換キーから Cursor++ プロバイダーを作成し、含めるモデルを選択します。",
+      "guidance": {
+        "description": "Cursor++ でプロバイダー設定を開き、コピーしたオブジェクトを ~/.ccursor/providers.json の providers 配列に追加してください。",
+        "title": "手動設定"
+      },
+      "labels": {
+        "baseUrl": "プロバイダーのベース URL",
+        "baseUrlDescription": "既定ではこのアカウントの OpenAI 互換エンドポイントを使用します。選択したネイティブプロトコルのパスが異なる場合は調整してください。",
+        "models": "モデル",
+        "modelsDescription": "検出されたモデルは既定で選択されます。検索、削除、複数のモデル ID の追加ができます。",
+        "protocol": "API プロトコル",
+        "protocolDescription": "Cursor++ がプロバイダーを呼び出す方式を変更します。モデル検出には引き続きアカウントの OpenAI 互換エンドポイントを使用します。",
+        "providerName": "プロバイダー名"
+      },
+      "messages": {
+        "copyFailed": "プロバイダー設定をコピーできませんでした: {{error}}",
+        "copySuccess": "Cursor++ のプロバイダー設定をコピーしました",
+        "invalidBaseUrl": "有効な HTTP または HTTPS のベース URL を入力してください。"
+      },
+      "placeholders": {
+        "models": "モデル ID を入力",
+        "searchModels": "モデルを検索または追加"
+      },
+      "protocols": {
+        "anthropic": "Anthropic Messages",
+        "gemini": "Gemini",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "status": {
+        "empty": "モデルが返されませんでした",
+        "error": "モデルを読み込めませんでした",
+        "loaded_one": "{{count}} 件のモデルが見つかりました",
+        "loaded_other": "{{count}} 件のモデルが見つかりました",
+        "loading": "利用可能なモデルを読み込み中...",
+        "manualRecovery": "下に 1 つ以上のモデル ID を追加するか、検出を再試行してください。"
+      },
+      "title": "Cursor++ にエクスポート",
+      "warning": {
+        "description": "コピーされる JSON には API キーが平文で含まれます。安全に保管してください。",
+        "title": "機密設定"
+      }
+    },
     "dedupeAccounts": {
       "confirm": {
         "confirmDelete": "削除",

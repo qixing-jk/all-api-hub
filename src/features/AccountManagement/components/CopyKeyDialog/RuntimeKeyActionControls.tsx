@@ -5,11 +5,13 @@ import { useTranslation } from "react-i18next"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
+import { CursorPlusExportDialog } from "~/components/CursorPlusExportDialog"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { CCSwitchIcon } from "~/components/icons/CCSwitchIcon"
 import { CherryIcon } from "~/components/icons/CherryIcon"
 import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
+import { CursorPlusIcon } from "~/components/icons/CursorPlusIcon"
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
@@ -105,6 +107,7 @@ export function RuntimeKeyActionControls({
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
+  const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
 
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
   const accountToken = isAccountTokenRuntimeKey(runtimeKey)
@@ -351,6 +354,14 @@ export function RuntimeKeyActionControls({
   return (
     <>
       {renderKiloCodeExportDialog()}
+      {isCursorPlusDialogOpen ? (
+        <CursorPlusExportDialog
+          isOpen={true}
+          onClose={() => setIsCursorPlusDialogOpen(false)}
+          account={account}
+          runtimeKey={runtimeKey}
+        />
+      ) : null}
       {renderClaudeCodeRouterImportDialog()}
       {renderCliProxyExportDialog()}
       <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
@@ -421,6 +432,20 @@ export function RuntimeKeyActionControls({
               onClick={handleOpenClaudeCodeRouter}
             >
               <ClaudeCodeRouterIcon size="sm" />
+            </IconButton>
+            <IconButton
+              aria-label={t("keyManagement:actions.exportToCursorPlus")}
+              variant="ghost"
+              size="sm"
+              data-testid={
+                ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogExportToCursorPlusButton
+              }
+              onClick={(event) => {
+                event.stopPropagation()
+                setIsCursorPlusDialogOpen(true)
+              }}
+            >
+              <CursorPlusIcon className="dark:text-dark-text-tertiary text-gray-500" />
             </IconButton>
             <IconButton
               aria-label={t("keyManagement:actions.importToManagedSite", {

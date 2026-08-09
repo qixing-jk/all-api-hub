@@ -8,10 +8,32 @@
 |------|----------|----------|
 | Cherry Studio | AI 生产力工作室，提供智能对话、自主代理和 300+ 助手，统一接入前沿大模型。 | [官网](https://www.cherry-ai.com/) / [GitHub](https://github.com/CherryHQ/cherry-studio) |
 | CC Switch | 面向 Claude Code、Codex、Gemini CLI、Grok CLI、Hermes、OpenCode 与 OpenClaw 的跨平台桌面一体化助手。 | [GitHub](https://github.com/farion1231/cc-switch) |
+| Cursor++ | 通过自备 API 密钥在 Cursor 中使用 Anthropic、OpenAI 与 Gemini 等模型。 | [官网](https://ccursor.cometix.dev/) |
 | Kilo Code | Kilo 是一体化的 Agentic Engineering 平台。 | [官网](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode) |
 | Roo Code | Roo Code 让一整支 AI 开发团队直接驻留在你的代码编辑器里。 | [官网](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
 | CLIProxyAPI | 将 Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow 封装为兼容 OpenAI / Gemini / Claude / Codex 的 API 服务。 | [文档](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI) |
 | Claude Code Router | 以 Claude Code 作为编码基础设施，让你在持续获得 Anthropic 更新的同时，自行决定如何与模型交互。 | [官网](https://musistudio.github.io/claude-code-router/) / [GitHub](https://github.com/musistudio/claude-code-router) |
+
+## Cursor++ 导出
+
+在账号密钥的操作区选择“导出 Cursor++ 提供商配置”，All API Hub 会读取 OpenAI 兼容模型列表，并生成 Cursor++ 0.0.13 使用的 `provider` 对象。其中包含稳定的提供商 ID、名称、`baseUrl`、API 密钥认证信息，以及带有 `defaultOn: true` 的模型列表。
+
+导出前可以搜索、移除已发现的模型，也可以输入或粘贴多个模型 ID。默认使用账号现有的 OpenAI 兼容地址；如果所选原生协议使用不同路径，可以直接调整提供商 Base URL。
+
+Cursor++ 当前支持以下协议类型：
+
+- **OpenAI Chat Completions**（默认）：导出 `type: "openai-chat"`。
+- **OpenAI Responses**：导出 `type: "openai-responses"`。
+- **Anthropic Messages**：导出 `type: "anthropic"`。
+- **Gemini**：导出 `type: "gemini"`。
+
+协议选择只改变 Cursor++ 调用提供商的方式。All API Hub 的模型发现仍使用账号现有的 OpenAI 兼容模型接口，不会因为切换协议而自动验证对应的原生协议端点。
+
+复制后，在 Cursor++ 中打开 **Edit Providers Config**，把这个对象加入 `~/.ccursor/providers.json` 的 `providers` 数组。复制内容只是单个 `provider`，不会覆盖或替代完整配置文件。模型发现失败或返回空列表时，可以手动添加一个或多个模型 ID 后继续复制。
+
+::: warning 请保护复制内容
+导出的 JSON 包含明文 API 密钥。请勿粘贴到公开聊天、Issue、日志或版本库中。
+:::
 
 ## Kilo Code / Roo Code 导出
 

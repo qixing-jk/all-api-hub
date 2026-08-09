@@ -63,6 +63,7 @@ const {
   claudeCodeRouterDialogMock,
   kiloCodeExportDialogMock,
   kiloCodeProfileExportDialogMock,
+  cursorPlusExportDialogMock,
   openWithCredentialsMock,
   openAccountKeyResourcesMock,
   resolveDefaultAccountKeyScopeMock,
@@ -89,6 +90,7 @@ const {
   claudeCodeRouterDialogMock: vi.fn(),
   kiloCodeExportDialogMock: vi.fn(),
   kiloCodeProfileExportDialogMock: vi.fn(),
+  cursorPlusExportDialogMock: vi.fn(),
   openWithCredentialsMock: vi.fn(),
   openAccountKeyResourcesMock: vi.fn(),
   resolveDefaultAccountKeyScopeMock: vi.fn(),
@@ -282,6 +284,13 @@ vi.mock("~/components/KiloCodeExportDialog", () => ({
   },
 }))
 
+vi.mock("~/components/CursorPlusExportDialog", () => ({
+  CursorPlusExportDialog: (props: unknown) => {
+    cursorPlusExportDialogMock(props)
+    return null
+  },
+}))
+
 vi.mock(
   "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog",
   () => ({
@@ -459,6 +468,7 @@ describe("CopyKeyDialog", () => {
     claudeCodeRouterDialogMock.mockReset()
     kiloCodeExportDialogMock.mockReset()
     kiloCodeProfileExportDialogMock.mockReset()
+    cursorPlusExportDialogMock.mockReset()
     openWithCredentialsMock.mockReset()
     openAccountKeyResourcesMock.mockReset()
     resolveDefaultAccountKeyScopeMock.mockReset()
@@ -633,6 +643,39 @@ describe("CopyKeyDialog", () => {
     expect(
       screen.getByRole("button", { name: "ui:dialog.copyKey.useInCherry" }),
     ).toBeVisible()
+  })
+
+  it("opens Cursor++ export for an exportable runtime key", async () => {
+    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const user = userEvent.setup()
+
+    render(
+      <RuntimeKeyActionControls
+        runtimeKey={runtimeKey}
+        actionPolicy={{ copySecret: false, exportSecret: true }}
+        copiedRuntimeKeyId={null}
+        onCopyKey={() => {}}
+        account={ACCOUNT}
+      />,
+    )
+
+    const cursorPlusButton = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogExportToCursorPlusButton,
+    )
+    expect(cursorPlusButton.nextElementSibling).toBe(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    )
+    await user.click(cursorPlusButton)
+
+    expect(cursorPlusExportDialogMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isOpen: true,
+        account: ACCOUNT,
+        runtimeKey,
+      }),
+    )
   })
 
   it("creates token then refreshes and auto-copies when exactly one token exists", async () => {

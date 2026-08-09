@@ -13,6 +13,7 @@
     "editKey": "キーを編集",
     "expandAll": "すべて展開",
     "exportToCCSwitch": "CC Switch にエクスポート",
+    "exportToCursorPlus": "Cursor++ プロバイダー設定をエクスポート",
     "exportToKiloCode": "Kilo Code 設定をエクスポート",
     "hideKey": "キーを隠す",
     "importToClaudeCodeRouter": "Claude Code Router にインポート",

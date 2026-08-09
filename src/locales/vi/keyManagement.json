@@ -13,6 +13,7 @@
     "editKey": "Chỉnh sửa khóa",
     "expandAll": "Mở rộng tất cả",
     "exportToCCSwitch": "Xuất sang CC Switch",
+    "exportToCursorPlus": "Xuất cấu hình nhà cung cấp Cursor++",
     "exportToKiloCode": "Xuất cấu hình Kilo Code",
     "hideKey": "Ẩn khóa",
     "importToClaudeCodeRouter": "Nhập vào Claude Code Router",

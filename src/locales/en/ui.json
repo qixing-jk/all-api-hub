@@ -214,6 +214,54 @@
       "totalKeys_other": "Total {{count}} keys",
       "useInCherry": "Use in Cherry Studio"
     },
+    "cursorPlus": {
+      "actions": {
+        "copy": "Copy provider configuration",
+        "retry": "Retry model discovery"
+      },
+      "description": "Build a Cursor++ provider from this OpenAI-compatible key and choose which models to include.",
+      "guidance": {
+        "description": "In Cursor++, open Edit Providers Config and add the copied object to the providers array in ~/.ccursor/providers.json.",
+        "title": "Manual configuration"
+      },
+      "labels": {
+        "baseUrl": "Provider base URL",
+        "baseUrlDescription": "Defaults to this account's OpenAI-compatible endpoint. Adjust it when the selected native protocol uses a different path.",
+        "models": "Models",
+        "modelsDescription": "Discovered models are selected by default. Search, remove, or enter multiple model IDs.",
+        "protocol": "API protocol",
+        "protocolDescription": "This changes how Cursor++ calls the provider. Model discovery still uses the account's OpenAI-compatible endpoint.",
+        "providerName": "Provider name"
+      },
+      "messages": {
+        "copyFailed": "Could not copy the provider configuration: {{error}}",
+        "copySuccess": "Cursor++ provider configuration copied",
+        "invalidBaseUrl": "Enter a valid HTTP or HTTPS base URL."
+      },
+      "placeholders": {
+        "models": "Enter a model ID",
+        "searchModels": "Search or add models"
+      },
+      "protocols": {
+        "anthropic": "Anthropic Messages",
+        "gemini": "Gemini",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "status": {
+        "empty": "No models were returned",
+        "error": "Could not load models",
+        "loaded_one": "{{count}} model found",
+        "loaded_other": "{{count}} models found",
+        "loading": "Loading available models...",
+        "manualRecovery": "Add one or more model IDs below, or retry discovery."
+      },
+      "title": "Export to Cursor++",
+      "warning": {
+        "description": "The copied JSON contains the API key in plain text. Keep it private.",
+        "title": "Sensitive configuration"
+      }
+    },
     "dedupeAccounts": {
       "confirm": {
         "confirmDelete": "Delete",

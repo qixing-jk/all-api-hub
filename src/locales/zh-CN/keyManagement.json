@@ -13,6 +13,7 @@
     "editKey": "编辑密钥",
     "expandAll": "全部展开",
     "exportToCCSwitch": "导出到 CC Switch",
+    "exportToCursorPlus": "导出 Cursor++ 提供商配置",
     "exportToKiloCode": "导出 Kilo Code 配置",
     "hideKey": "隐藏密钥",
     "importToClaudeCodeRouter": "导入到 Claude Code Router",

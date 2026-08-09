@@ -14,6 +14,7 @@
     "editKey": "Schlüssel bearbeiten",
     "expandAll": "Alles erweitern",
     "exportToCCSwitch": "In CC Switch exportieren",
+    "exportToCursorPlus": "Cursor++-Anbieterkonfiguration exportieren",
     "exportToKiloCode": "Kilo Code Konfiguration exportieren",
     "hideKey": "Schlüssel ausblenden",
     "importToClaudeCodeRouter": "Import in Claude Code Router",

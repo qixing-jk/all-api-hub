@@ -208,6 +208,53 @@
       "totalKeys": "共 {{count}} 个密钥",
       "useInCherry": "在 Cherry Studio 中使用"
     },
+    "cursorPlus": {
+      "actions": {
+        "copy": "复制提供商配置",
+        "retry": "重试模型发现"
+      },
+      "description": "使用这个 OpenAI 兼容密钥生成 Cursor++ 提供商，并选择要包含的模型。",
+      "guidance": {
+        "description": "在 Cursor++ 中打开“编辑提供商配置”，将复制的对象加入 ~/.ccursor/providers.json 的 providers 数组。",
+        "title": "手动配置"
+      },
+      "labels": {
+        "baseUrl": "提供商 Base URL",
+        "baseUrlDescription": "默认使用当前账号的 OpenAI 兼容地址；所选原生协议使用不同路径时可以调整。",
+        "models": "模型",
+        "modelsDescription": "默认选中发现的模型。你可以搜索、移除或输入多个模型 ID。",
+        "protocol": "API 协议",
+        "protocolDescription": "此选项决定 Cursor++ 如何调用提供商；模型发现仍使用账号的 OpenAI 兼容接口。",
+        "providerName": "提供商名称"
+      },
+      "messages": {
+        "copyFailed": "无法复制提供商配置：{{error}}",
+        "copySuccess": "已复制 Cursor++ 提供商配置",
+        "invalidBaseUrl": "请输入有效的 HTTP 或 HTTPS Base URL。"
+      },
+      "placeholders": {
+        "models": "输入模型 ID",
+        "searchModels": "搜索或添加模型"
+      },
+      "protocols": {
+        "anthropic": "Anthropic Messages",
+        "gemini": "Gemini",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "status": {
+        "empty": "未返回任何模型",
+        "error": "无法加载模型",
+        "loaded": "已发现 {{count}} 个模型",
+        "loading": "正在加载可用模型...",
+        "manualRecovery": "请在下方添加一个或多个模型 ID，或重试模型发现。"
+      },
+      "title": "导出到 Cursor++",
+      "warning": {
+        "description": "复制的 JSON 包含明文 API 密钥，请妥善保管。",
+        "title": "敏感配置"
+      }
+    },
     "dedupeAccounts": {
       "confirm": {
         "confirmDelete": "确认删除",

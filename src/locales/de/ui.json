@@ -214,6 +214,54 @@
       "totalKeys_other": "Insgesamt {{count}} Schlüssel",
       "useInCherry": "Verwendung in Cherry Studio"
     },
+    "cursorPlus": {
+      "actions": {
+        "copy": "Anbieterkonfiguration kopieren",
+        "retry": "Modellerkennung wiederholen"
+      },
+      "description": "Erstellt aus diesem OpenAI-kompatiblen Schlüssel einen Cursor++-Anbieter und wählt die enthaltenen Modelle aus.",
+      "guidance": {
+        "description": "Öffne in Cursor++ die Anbieter-Konfiguration und füge das kopierte Objekt zum providers-Array in ~/.ccursor/providers.json hinzu.",
+        "title": "Manuelle Konfiguration"
+      },
+      "labels": {
+        "baseUrl": "Basis-URL des Anbieters",
+        "baseUrlDescription": "Standardmäßig wird der OpenAI-kompatible Endpunkt dieses Kontos verwendet. Passe den Pfad für andere native Protokolle bei Bedarf an.",
+        "models": "Modelle",
+        "modelsDescription": "Erkannte Modelle sind vorausgewählt. Suche, entferne oder ergänze mehrere Modell-IDs.",
+        "protocol": "API-Protokoll",
+        "protocolDescription": "Bestimmt, wie Cursor++ den Anbieter aufruft. Die Modellerkennung nutzt weiterhin den OpenAI-kompatiblen Endpunkt des Kontos.",
+        "providerName": "Anbietername"
+      },
+      "messages": {
+        "copyFailed": "Anbieterkonfiguration konnte nicht kopiert werden: {{error}}",
+        "copySuccess": "Cursor++-Anbieterkonfiguration kopiert",
+        "invalidBaseUrl": "Gib eine gültige HTTP- oder HTTPS-Basis-URL ein."
+      },
+      "placeholders": {
+        "models": "Modell-ID eingeben",
+        "searchModels": "Modelle suchen oder hinzufügen"
+      },
+      "protocols": {
+        "anthropic": "Anthropic Messages",
+        "gemini": "Gemini",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "status": {
+        "empty": "Es wurden keine Modelle zurückgegeben",
+        "error": "Modelle konnten nicht geladen werden",
+        "loaded_one": "{{count}} Modell gefunden",
+        "loaded_other": "{{count}} Modelle gefunden",
+        "loading": "Verfügbare Modelle werden geladen...",
+        "manualRecovery": "Füge unten eine oder mehrere Modell-IDs hinzu oder wiederhole die Erkennung."
+      },
+      "title": "Nach Cursor++ exportieren",
+      "warning": {
+        "description": "Das kopierte JSON enthält den API-Schlüssel im Klartext. Bewahre es sicher auf.",
+        "title": "Vertrauliche Konfiguration"
+      }
+    },
     "dedupeAccounts": {
       "confirm": {
         "confirmDelete": "Löschen",

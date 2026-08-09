@@ -500,6 +500,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   CopyApiKey: "copy_api_key",
   CopyBaseUrl: "copy_base_url",
   CopyBookmarkUrl: "copy_bookmark_url",
+  CopyCursorPlusProviderConfig: "copy_cursor_plus_provider_config",
   CopyKiloCodeAccountExportConfig: "copy_kilo_code_account_export_config",
   CopyModelName: "copy_model_name",
   CopySelectedModelKey: "copy_selected_model_key",
@@ -779,6 +780,8 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
     "options_account_dialog_auto_detect_recovery",
   OptionsAccountTokenKiloCodeExportDialog:
     "options_account_token_kilo_code_export_dialog",
+  OptionsAccountRuntimeKeyCursorPlusExportDialog:
+    "options_account_runtime_key_cursor_plus_export_dialog",
   OptionsApiCredentialProfilesDialog: "options_api_credential_profiles_dialog",
   OptionsApiCredentialProfilesEmptyState:
     "options_api_credential_profiles_empty_state",

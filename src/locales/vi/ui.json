@@ -211,6 +211,54 @@
       "totalKeys_other": "Tổng cộng {{count}} API Key",
       "useInCherry": "Sử dụng trong Cherry Studio"
     },
+    "cursorPlus": {
+      "actions": {
+        "copy": "Sao chép cấu hình nhà cung cấp",
+        "retry": "Thử lại khám phá mô hình"
+      },
+      "description": "Tạo nhà cung cấp Cursor++ từ khóa tương thích OpenAI này và chọn các mô hình cần đưa vào.",
+      "guidance": {
+        "description": "Trong Cursor++, mở cấu hình nhà cung cấp và thêm đối tượng đã sao chép vào mảng providers trong ~/.ccursor/providers.json.",
+        "title": "Cấu hình thủ công"
+      },
+      "labels": {
+        "baseUrl": "URL cơ sở của nhà cung cấp",
+        "baseUrlDescription": "Mặc định dùng endpoint tương thích OpenAI của tài khoản này. Hãy điều chỉnh đường dẫn nếu giao thức gốc đã chọn dùng đường dẫn khác.",
+        "models": "Mô hình",
+        "modelsDescription": "Các mô hình được phát hiện sẽ được chọn mặc định. Bạn có thể tìm kiếm, xóa hoặc nhập nhiều ID mô hình.",
+        "protocol": "Giao thức API",
+        "protocolDescription": "Thay đổi cách Cursor++ gọi nhà cung cấp. Khám phá mô hình vẫn dùng endpoint tương thích OpenAI của tài khoản.",
+        "providerName": "Tên nhà cung cấp"
+      },
+      "messages": {
+        "copyFailed": "Không thể sao chép cấu hình nhà cung cấp: {{error}}",
+        "copySuccess": "Đã sao chép cấu hình nhà cung cấp Cursor++",
+        "invalidBaseUrl": "Nhập URL cơ sở HTTP hoặc HTTPS hợp lệ."
+      },
+      "placeholders": {
+        "models": "Nhập ID mô hình",
+        "searchModels": "Tìm kiếm hoặc thêm mô hình"
+      },
+      "protocols": {
+        "anthropic": "Anthropic Messages",
+        "gemini": "Gemini",
+        "openAIChat": "OpenAI Chat Completions",
+        "openAIResponses": "OpenAI Responses"
+      },
+      "status": {
+        "empty": "Không có mô hình nào được trả về",
+        "error": "Không thể tải mô hình",
+        "loaded_one": "Đã tìm thấy {{count}} mô hình",
+        "loaded_other": "Đã tìm thấy {{count}} mô hình",
+        "loading": "Đang tải các mô hình có sẵn...",
+        "manualRecovery": "Thêm một hoặc nhiều ID mô hình bên dưới hoặc thử khám phá lại."
+      },
+      "title": "Xuất sang Cursor++",
+      "warning": {
+        "description": "JSON được sao chép chứa khóa API dưới dạng văn bản thuần. Hãy giữ riêng tư.",
+        "title": "Cấu hình nhạy cảm"
+      }
+    },
     "dedupeAccounts": {
       "confirm": {
         "confirmDelete": "Xác nhận xóa",
