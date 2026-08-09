@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
+import {
+  buildProviderModelDiscoveryCacheKey,
+  PROVIDER_MODEL_DISCOVERY_STATUSES,
+  useProviderModelDiscovery,
+  type ProviderModelDiscoveryInventory,
+} from "~/hooks/useProviderModelDiscovery"
 import { resolveExportTokenForSecret } from "~/services/accounts/utils/exportTokenSecret"
-import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import {
   KILO_CODE_PROVIDER_PROTOCOLS,
   type KiloCodeProviderProtocol,
@@ -11,36 +16,22 @@ import type {
   KiloCodeV7ProviderSelection,
   PreparedKiloCodeV7Catalog,
 } from "~/services/integrations/kiloCodeExport"
-import {
-  normalizeKiloCodeModelIds,
-  prepareKiloCodeV7Catalog,
-} from "~/services/integrations/kiloCodeV7Catalog"
+import { prepareKiloCodeV7Catalog } from "~/services/integrations/kiloCodeV7Catalog"
 import { reconcileKiloCodeV7DefaultSelection } from "~/services/integrations/kiloCodeV7Selection"
-import {
-  coerceBaseUrlToPathSuffix,
-  stripTrailingOpenAIV1,
-} from "~/utils/core/url"
+import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
 import type {
   KiloCodeAccountExportSelection,
   KiloCodeAccountLegacySelection,
 } from "./kiloCodeAccountExport"
 
-export const KILO_CODE_ACCOUNT_MODEL_STATUSES = {
-  Idle: "idle",
-  Loading: "loading",
-  Loaded: "loaded",
-  Error: "error",
-} as const
+export const KILO_CODE_ACCOUNT_MODEL_STATUSES =
+  PROVIDER_MODEL_DISCOVERY_STATUSES
 
 export type KiloCodeAccountModelStatus =
   (typeof KILO_CODE_ACCOUNT_MODEL_STATUSES)[keyof typeof KILO_CODE_ACCOUNT_MODEL_STATUSES]
 
-export interface KiloCodeAccountModelInventory {
-  status: KiloCodeAccountModelStatus
-  modelIds: string[]
-  sourceFingerprint?: string
-}
+export type KiloCodeAccountModelInventory = ProviderModelDiscoveryInventory
 
 interface PreparedAccountCatalog {
   catalog?: PreparedKiloCodeV7Catalog
@@ -71,7 +62,7 @@ function hasInvalidRuntimeKey(selection: KiloCodeAccountExportSelection) {
 function getModelDiscoverySourceFingerprint(
   selection: KiloCodeAccountExportSelection,
 ) {
-  const serialized = JSON.stringify([
+  return buildProviderModelDiscoveryCacheKey([
     selection.runtimeKey.baseUrl,
     selection.site.id,
     selection.site.siteType,
@@ -83,12 +74,6 @@ function getModelDiscoverySourceFingerprint(
     selection.token.id,
     selection.token.key,
   ])
-  let hash = 0x811c9dc5
-  for (const character of serialized) {
-    hash ^= character.charCodeAt(0)
-    hash = Math.imul(hash, 16777619)
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0")
 }
 
 /** Convert incomplete or invalid selections into controlled dialog state. */
@@ -121,11 +106,6 @@ function prepareAccountCatalog(
   }
 }
 
-const EMPTY_MODEL_INVENTORY: KiloCodeAccountModelInventory = {
-  status: KILO_CODE_ACCOUNT_MODEL_STATUSES.Idle,
-  modelIds: [],
-}
-
 /** Own per-token model inventory plus isolated legacy and V7 model state. */
 export function useKiloCodeAccountModelDiscovery({
   isOpen,
@@ -134,9 +114,6 @@ export function useKiloCodeAccountModelDiscovery({
   isOpen: boolean
   selections: KiloCodeAccountExportSelection[]
 }) {
-  const [modelInventories, setModelInventories] = useState<
-    Record<string, KiloCodeAccountModelInventory>
-  >({})
   const [legacyModelIdByToken, setLegacyModelIdByToken] = useState<
     Record<string, string>
   >({})
@@ -149,19 +126,6 @@ export function useKiloCodeAccountModelDiscovery({
   const [v7DefaultModel, setV7DefaultModel] = useState<
     KiloCodeDefaultModelSelection | undefined
   >()
-  const requestIdsRef = useRef(new Map<string, number>())
-  const activeSelectionIdsRef = useRef(new Set<string>())
-  const activeSourceFingerprintsRef = useRef(new Map<string, string>())
-  const isOpenRef = useRef(isOpen)
-  const isMountedRef = useRef(false)
-
-  const selectionById = useMemo(
-    () =>
-      new Map(
-        selections.map((selection) => [selection.selectionId, selection]),
-      ),
-    [selections],
-  )
   const sourceFingerprintById = useMemo(
     () =>
       new Map(
@@ -172,56 +136,29 @@ export function useKiloCodeAccountModelDiscovery({
       ),
     [selections],
   )
-
-  useEffect(() => {
-    const requestIds = requestIdsRef.current
-    const activeSelectionIds = activeSelectionIdsRef.current
-    const activeSourceFingerprints = activeSourceFingerprintsRef.current
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-      isOpenRef.current = false
-      for (const selectionId of requestIds.keys()) {
-        requestIds.set(selectionId, (requestIds.get(selectionId) ?? 0) + 1)
-      }
-      activeSelectionIds.clear()
-      activeSourceFingerprints.clear()
-    }
-  }, [])
-
-  useEffect(() => {
-    isOpenRef.current = isOpen
-  }, [isOpen])
+  const modelDiscoverySources = useMemo(
+    () =>
+      selections
+        .filter((selection) => !hasInvalidRuntimeKey(selection))
+        .map((selection) => ({
+          selectionId: selection.selectionId,
+          cacheKey: sourceFingerprintById.get(selection.selectionId)!,
+          baseUrl: selection.runtimeKey.baseUrl,
+          resolveApiKey: async () =>
+            (await resolveExportTokenForSecret(selection.site, selection.token))
+              .key,
+        })),
+    [selections, sourceFingerprintById],
+  )
+  const { getInventory, loadModels } = useProviderModelDiscovery({
+    isOpen,
+    sources: modelDiscoverySources,
+  })
 
   useEffect(() => {
     const nextIds = new Set(
       selections.map((selection) => selection.selectionId),
     )
-    for (const selectionId of new Set([
-      ...activeSelectionIdsRef.current,
-      ...nextIds,
-    ])) {
-      const previousFingerprint =
-        activeSourceFingerprintsRef.current.get(selectionId)
-      const nextFingerprint = sourceFingerprintById.get(selectionId)
-      if (
-        previousFingerprint !== undefined &&
-        previousFingerprint !== nextFingerprint
-      ) {
-        requestIdsRef.current.set(
-          selectionId,
-          (requestIdsRef.current.get(selectionId) ?? 0) + 1,
-        )
-      }
-    }
-    activeSelectionIdsRef.current.clear()
-    for (const selectionId of nextIds) {
-      activeSelectionIdsRef.current.add(selectionId)
-    }
-    activeSourceFingerprintsRef.current.clear()
-    for (const [selectionId, sourceFingerprint] of sourceFingerprintById) {
-      activeSourceFingerprintsRef.current.set(selectionId, sourceFingerprint)
-    }
 
     const prune = <T>(values: Record<string, T>) => {
       const entries = Object.entries(values).filter(([selectionId]) =>
@@ -231,25 +168,6 @@ export function useKiloCodeAccountModelDiscovery({
         ? values
         : Object.fromEntries(entries)
     }
-    setModelInventories((current) => {
-      let changed = Object.keys(current).length !== nextIds.size
-      const next: Record<string, KiloCodeAccountModelInventory> = {}
-      for (const selectionId of nextIds) {
-        const sourceFingerprint = sourceFingerprintById.get(selectionId)
-        const inventory = current[selectionId]
-        if (inventory && inventory.sourceFingerprint === sourceFingerprint) {
-          next[selectionId] = inventory
-          continue
-        }
-        changed = true
-        next[selectionId] = {
-          status: KILO_CODE_ACCOUNT_MODEL_STATUSES.Idle,
-          modelIds: [],
-          sourceFingerprint,
-        }
-      }
-      return changed ? next : current
-    })
     setLegacyModelIdByToken(prune)
     setV7ManualModelIdByToken(prune)
     setV7ProtocolBySelectionId((current) => {
@@ -265,131 +183,42 @@ export function useKiloCodeAccountModelDiscovery({
         ? current
         : next
     })
-  }, [selections, sourceFingerprintById])
+  }, [selections])
 
   useEffect(() => {
     if (isOpen) return
 
-    for (const selectionId of activeSelectionIdsRef.current) {
-      requestIdsRef.current.set(
-        selectionId,
-        (requestIdsRef.current.get(selectionId) ?? 0) + 1,
-      )
-    }
-    setModelInventories({})
     setLegacyModelIdByToken({})
     setV7ManualModelIdByToken({})
     setV7ProtocolBySelectionId({})
     setV7DefaultModel(undefined)
   }, [isOpen])
 
-  const loadModels = useCallback(
-    async (selectionId: string) => {
-      const selection = selectionById.get(selectionId)
-      if (
-        !selection ||
-        hasInvalidRuntimeKey(selection) ||
-        !isOpenRef.current ||
-        !isMountedRef.current
-      )
-        return
-
-      const sourceFingerprint = getModelDiscoverySourceFingerprint(selection)
-      const requestId = (requestIdsRef.current.get(selectionId) ?? 0) + 1
-      requestIdsRef.current.set(selectionId, requestId)
-      setModelInventories((current) => ({
-        ...current,
-        [selectionId]: {
-          status: KILO_CODE_ACCOUNT_MODEL_STATUSES.Loading,
-          modelIds: current[selectionId]?.modelIds ?? [],
-          sourceFingerprint,
-        },
-      }))
-
-      try {
-        const resolvedToken = await resolveExportTokenForSecret(
-          selection.site,
-          selection.token,
-        )
-        const upstreamModelIds = await fetchOpenAICompatibleModelIds({
-          baseUrl: stripTrailingOpenAIV1(selection.runtimeKey.baseUrl),
-          apiKey: resolvedToken.key,
-        })
-        const modelIds = normalizeKiloCodeModelIds(upstreamModelIds ?? [])
-        if (
-          !isMountedRef.current ||
-          !isOpenRef.current ||
-          !activeSelectionIdsRef.current.has(selectionId) ||
-          activeSourceFingerprintsRef.current.get(selectionId) !==
-            sourceFingerprint ||
-          requestIdsRef.current.get(selectionId) !== requestId
-        ) {
-          return
-        }
-
-        setModelInventories((current) => ({
-          ...current,
-          [selectionId]: {
-            status: KILO_CODE_ACCOUNT_MODEL_STATUSES.Loaded,
-            modelIds,
-            sourceFingerprint,
-          },
-        }))
-        setLegacyModelIdByToken((current) =>
-          current[selectionId]?.trim() || !modelIds[0]
-            ? current
-            : { ...current, [selectionId]: modelIds[0] },
-        )
-      } catch {
-        if (
-          !isMountedRef.current ||
-          !isOpenRef.current ||
-          !activeSelectionIdsRef.current.has(selectionId) ||
-          activeSourceFingerprintsRef.current.get(selectionId) !==
-            sourceFingerprint ||
-          requestIdsRef.current.get(selectionId) !== requestId
-        ) {
-          return
-        }
-        setModelInventories((current) => ({
-          ...current,
-          [selectionId]: {
-            status: KILO_CODE_ACCOUNT_MODEL_STATUSES.Error,
-            modelIds: current[selectionId]?.modelIds ?? [],
-            sourceFingerprint,
-          },
-        }))
-      }
-    },
-    [selectionById],
-  )
-
-  useEffect(() => {
-    if (!isOpen) return
-    for (const selection of selections) {
-      if (hasInvalidRuntimeKey(selection)) continue
-      const inventory = modelInventories[selection.selectionId]
-      const sourceFingerprint = sourceFingerprintById.get(selection.selectionId)
-      if (
-        !inventory ||
-        inventory.sourceFingerprint !== sourceFingerprint ||
-        inventory.status === KILO_CODE_ACCOUNT_MODEL_STATUSES.Idle
-      ) {
-        void loadModels(selection.selectionId)
-      }
-    }
-  }, [isOpen, loadModels, modelInventories, selections, sourceFingerprintById])
-
   const discoveredModelIdsByToken = useMemo(
     () =>
       Object.fromEntries(
-        Object.entries(modelInventories).map(([selectionId, inventory]) => [
-          selectionId,
-          inventory.modelIds,
+        selections.map((selection) => [
+          selection.selectionId,
+          getInventory(selection.selectionId).modelIds,
         ]),
       ),
-    [modelInventories],
+    [getInventory, selections],
   )
+
+  useEffect(() => {
+    setLegacyModelIdByToken((current) => {
+      let next = current
+      for (const selection of selections) {
+        const firstModelId =
+          discoveredModelIdsByToken[selection.selectionId]?.[0]
+        if (current[selection.selectionId]?.trim() || !firstModelId) continue
+        if (next === current) next = { ...current }
+        next[selection.selectionId] = firstModelId
+      }
+      return next
+    })
+  }, [discoveredModelIdsByToken, selections])
+
   const v7Selections = useMemo<KiloCodeV7ProviderSelection[]>(
     () =>
       selections.map((selection) => ({
@@ -526,8 +355,7 @@ export function useKiloCodeAccountModelDiscovery({
   }, [])
 
   return {
-    getModelInventory: (selectionId: string) =>
-      modelInventories[selectionId] ?? EMPTY_MODEL_INVENTORY,
+    getModelInventory: getInventory,
     invalidSelection: preparedV7.invalidSelection,
     legacySelections,
     loadModels,

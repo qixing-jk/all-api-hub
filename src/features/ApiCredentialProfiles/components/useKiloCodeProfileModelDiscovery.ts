@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import {
+  buildProviderModelDiscoveryCacheKey,
+  PROVIDER_MODEL_DISCOVERY_STATUSES,
+  useProviderModelDiscovery,
+} from "~/hooks/useProviderModelDiscovery"
 import type {
   KiloCodeDefaultModelSelection,
   KiloCodeProviderProtocol,
@@ -9,25 +13,11 @@ import type {
   PreparedKiloCodeV7Catalog,
 } from "~/services/integrations/kiloCodeExport"
 import { KILO_CODE_PROVIDER_PROTOCOLS } from "~/services/integrations/kiloCodeExport"
-import {
-  normalizeKiloCodeModelIds,
-  prepareKiloCodeV7Catalog,
-} from "~/services/integrations/kiloCodeV7Catalog"
+import { prepareKiloCodeV7Catalog } from "~/services/integrations/kiloCodeV7Catalog"
 import { reconcileKiloCodeV7DefaultSelection } from "~/services/integrations/kiloCodeV7Selection"
-import { createLogger } from "~/utils/core/logger"
-import {
-  coerceBaseUrlToPathSuffix,
-  stripTrailingOpenAIV1,
-} from "~/utils/core/url"
+import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
-const logger = createLogger("KiloCodeProfileModelDiscovery")
-
-export const KILO_CODE_MODEL_STATUSES = {
-  Idle: "idle",
-  Loading: "loading",
-  Loaded: "loaded",
-  Error: "error",
-} as const
+export const KILO_CODE_MODEL_STATUSES = PROVIDER_MODEL_DISCOVERY_STATUSES
 
 type KiloCodeModelStatus =
   (typeof KILO_CODE_MODEL_STATUSES)[keyof typeof KILO_CODE_MODEL_STATUSES]
@@ -93,16 +83,49 @@ export function useKiloCodeProfileModelDiscovery({
   const [v7Protocol, setV7Protocol] = useState<KiloCodeProviderProtocol>(
     KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible,
   )
-  const [modelIds, setModelIds] = useState<string[]>([])
-  const [modelStatus, setModelStatus] = useState<KiloCodeModelStatus>(
-    KILO_CODE_MODEL_STATUSES.Idle,
-  )
-  const requestIdRef = useRef(0)
   const v7ManualModelIdRef = useRef("")
   const v7ProtocolRef = useRef<KiloCodeProviderProtocol>(
     KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible,
   )
   const invalidRuntimeProfile = hasInvalidRuntimeProfile(runtimeKey)
+  const discoveryCacheKey = useMemo(
+    () =>
+      buildProviderModelDiscoveryCacheKey([
+        runtimeKey.baseUrl,
+        runtimeKey.tokenKey,
+      ]),
+    [runtimeKey.baseUrl, runtimeKey.tokenKey],
+  )
+  const discoverySources = useMemo(
+    () =>
+      invalidRuntimeProfile
+        ? []
+        : [
+            {
+              selectionId,
+              cacheKey: discoveryCacheKey,
+              baseUrl: runtimeKey.baseUrl,
+              resolveApiKey: async () => runtimeKey.tokenKey,
+            },
+          ],
+    [
+      invalidRuntimeProfile,
+      discoveryCacheKey,
+      runtimeKey.baseUrl,
+      runtimeKey.tokenKey,
+      selectionId,
+    ],
+  )
+  const { getInventory, loadModels: loadDiscoveredModels } =
+    useProviderModelDiscovery({
+      isOpen,
+      sources: discoverySources,
+    })
+  const modelInventory = getInventory(selectionId)
+  const modelIds = modelInventory.modelIds
+  const modelStatus: KiloCodeModelStatus = invalidRuntimeProfile
+    ? KILO_CODE_MODEL_STATUSES.Loaded
+    : modelInventory.status
 
   const buildV7Selection = useCallback(
     (
@@ -120,49 +143,37 @@ export function useKiloCodeProfileModelDiscovery({
     [profileName, runtimeKey, selectionId],
   )
 
-  const loadModels = useCallback(async () => {
-    const requestId = ++requestIdRef.current
-    setModelStatus(KILO_CODE_MODEL_STATUSES.Loading)
+  const loadModels = useCallback(
+    () => loadDiscoveredModels(selectionId),
+    [loadDiscoveredModels, selectionId],
+  )
 
-    try {
-      const upstreamModelIds = await fetchOpenAICompatibleModelIds({
-        baseUrl: stripTrailingOpenAIV1(runtimeKey.baseUrl),
-        apiKey: runtimeKey.tokenKey,
-      })
-      const normalized = normalizeKiloCodeModelIds(upstreamModelIds ?? [])
-      if (requestId !== requestIdRef.current) return
+  useEffect(() => {
+    if (modelStatus !== KILO_CODE_MODEL_STATUSES.Loaded) return
 
-      setModelIds(normalized)
-      setLegacyModelId((current) =>
-        current.trim() ? current : normalized[0] ?? "",
+    setLegacyModelId((current) =>
+      current.trim() ? current : modelIds[0] ?? "",
+    )
+    setV7DefaultModelId((current) => {
+      const prepared = prepareSingleProfileCatalog(
+        buildV7Selection(
+          modelIds,
+          v7ManualModelIdRef.current,
+          v7ProtocolRef.current,
+        ),
       )
-      setV7DefaultModelId((current) => {
-        const prepared = prepareSingleProfileCatalog(
-          buildV7Selection(
-            normalized,
-            v7ManualModelIdRef.current,
-            v7ProtocolRef.current,
-          ),
-        )
-        if (!prepared.catalog) return ""
-        return (
-          reconcileKiloCodeV7DefaultSelection(prepared.catalog, {
-            selectionId,
-            modelId: current,
-          })?.modelId ?? ""
-        )
-      })
-      setModelStatus(KILO_CODE_MODEL_STATUSES.Loaded)
-    } catch (error) {
-      logger.warn("Failed to fetch upstream model list", error)
-      if (requestId !== requestIdRef.current) return
-      setModelStatus(KILO_CODE_MODEL_STATUSES.Error)
-    }
-  }, [buildV7Selection, runtimeKey.baseUrl, runtimeKey.tokenKey, selectionId])
+      if (!prepared.catalog) return ""
+      return (
+        reconcileKiloCodeV7DefaultSelection(prepared.catalog, {
+          selectionId,
+          modelId: current,
+        })?.modelId ?? ""
+      )
+    })
+  }, [buildV7Selection, modelIds, modelStatus, selectionId])
 
   useEffect(() => {
     if (!isOpen) {
-      requestIdRef.current += 1
       return
     }
 
@@ -172,20 +183,7 @@ export function useKiloCodeProfileModelDiscovery({
     v7ManualModelIdRef.current = ""
     setV7Protocol(KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible)
     v7ProtocolRef.current = KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible
-    setModelIds([])
-    setModelStatus(KILO_CODE_MODEL_STATUSES.Idle)
-    if (invalidRuntimeProfile) {
-      setModelStatus(KILO_CODE_MODEL_STATUSES.Loaded)
-      return () => {
-        requestIdRef.current += 1
-      }
-    }
-    void loadModels()
-
-    return () => {
-      requestIdRef.current += 1
-    }
-  }, [invalidRuntimeProfile, isOpen, loadModels])
+  }, [discoveryCacheKey, isOpen, profileName, selectionId])
 
   const v7Selection = useMemo<KiloCodeV7ProviderSelection>(
     () => buildV7Selection(modelIds, v7ManualModelId, v7Protocol),

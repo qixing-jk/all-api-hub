@@ -1,4 +1,8 @@
-import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
+import {
+  hashProviderCatalogValue,
+  normalizeProviderCatalogModelIds,
+  prepareProviderCatalogExport,
+} from "./providerCatalogExport"
 
 export const KILO_CODE_PROVIDER_PROTOCOLS = {
   OpenAICompatible: "openai-compatible",
@@ -79,16 +83,6 @@ function slugifyProviderName(value: string) {
   )
 }
 
-/** Produce a deterministic FNV-1a digest for a provider identity. */
-function hashProviderIdentity(value: string) {
-  let hash = 0x811c9dc5
-  for (const character of value) {
-    hash ^= character.charCodeAt(0)
-    hash = Math.imul(hash, 16777619)
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0")
-}
-
 /** Combine a readable label with a stable identity digest. */
 function defaultKiloCodeV7ProviderId(selection: NormalizedKiloCodeV7Selection) {
   const { tuple, baseURL } = selection
@@ -101,50 +95,11 @@ function defaultKiloCodeV7ProviderId(selection: NormalizedKiloCodeV7Selection) {
   const name = slugifyProviderName(
     `${tuple.siteName.trim()}-${tuple.tokenName.trim()}`,
   )
-  return `${name}-${hashProviderIdentity(identity)}`
-}
-
-/** Compare model IDs using deterministic Unicode code-point order. */
-function compareKiloCodeModelIds(left: string, right: string) {
-  if (left === right) return 0
-  const leftCodePoints = Array.from(
-    left,
-    (character) => character.codePointAt(0)!,
-  )
-  const rightCodePoints = Array.from(
-    right,
-    (character) => character.codePointAt(0)!,
-  )
-  const length = Math.min(leftCodePoints.length, rightCodePoints.length)
-  for (let index = 0; index < length; index += 1) {
-    const leftCodePoint = leftCodePoints[index]!
-    const rightCodePoint = rightCodePoints[index]!
-    if (leftCodePoint !== rightCodePoint) {
-      return leftCodePoint < rightCodePoint ? -1 : 1
-    }
-  }
-  return leftCodePoints.length < rightCodePoints.length ? -1 : 1
+  return `${name}-${hashProviderCatalogValue(identity)}`
 }
 
 /** Trim, deduplicate, and sort discovered and manually entered model IDs. */
-export function normalizeKiloCodeModelIds(modelIds: readonly unknown[]) {
-  return Array.from(
-    new Set(
-      modelIds
-        .filter((value): value is string => typeof value === "string")
-        .map((value) => value.trim())
-        .filter(Boolean),
-    ),
-  ).sort(compareKiloCodeModelIds)
-}
-
-/** Normalize the complete discovered and manual catalog for one provider. */
-function normalizeModelIds(selection: KiloCodeV7ProviderSelection) {
-  return normalizeKiloCodeModelIds([
-    ...selection.discoveredModelIds,
-    selection.manualModelId,
-  ])
-}
+export const normalizeKiloCodeModelIds = normalizeProviderCatalogModelIds
 
 /** Resolve a caller-provided provider name or the legacy site/token fallback. */
 function getBaseProviderName(selection: KiloCodeV7ProviderSelection) {
@@ -237,12 +192,22 @@ function normalizeSelection(
 ): NormalizedKiloCodeV7Selection {
   if (!selection.tokenKey.trim()) throw new Error("Runtime key cannot be blank")
 
-  const modelIds = normalizeModelIds(selection)
+  const preparedProvider = prepareProviderCatalogExport([
+    {
+      selectionId: selection.selectionId,
+      name: getBaseProviderName(selection),
+      baseUrl: selection.baseUrl,
+      apiKey: selection.tokenKey,
+      discoveredModelIds: selection.discoveredModelIds,
+      manualModelId: selection.manualModelId,
+    },
+  ]).providers[0]!
+  const modelIds = preparedProvider.modelIds
   if (!modelIds.length) {
     throw new Error("Select at least one model for each provider")
   }
 
-  const baseURL = coerceBaseUrlToPathSuffix(selection.baseUrl, "/v1")
+  const baseURL = preparedProvider.baseUrl
   let parsedUrl: URL
   try {
     parsedUrl = new URL(baseURL)

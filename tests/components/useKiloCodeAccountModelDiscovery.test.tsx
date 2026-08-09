@@ -188,6 +188,7 @@ describe("useKiloCodeAccountModelDiscovery", () => {
         "model-b",
       ])
     })
+    expect(result.current.legacySelections[0]?.legacyModelId).toBe("model-a")
 
     act(() => {
       result.current.selectV7ManualModel(selection.selectionId, "model-b")

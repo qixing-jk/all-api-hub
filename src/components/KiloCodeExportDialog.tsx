@@ -21,6 +21,7 @@ import {
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { buildDefaultTokenCreatePrefill } from "~/features/TokenProvisioning/components/AddTokenDialog/defaultTokenCreatePrefill"
 import { useAccountData } from "~/hooks/useAccountData"
+import { useSafeExportAction } from "~/hooks/useSafeExportAction"
 import {
   ensureAccountApiToken,
   resolveDefaultTokenQuickCreateResolution,
@@ -222,16 +223,9 @@ export function KiloCodeExportDialog({
   const retryButtonRefs = useRef(new Map<string, HTMLButtonElement>())
   const protocolSelectorRefs = useRef(new Map<string, HTMLButtonElement>())
   const modelSelectorRefs = useRef(new Map<string, HTMLButtonElement>())
-  const actionGenerationRef = useRef(0)
-  const actionContextRef = useRef({
-    isOpen,
-    exportTarget,
-    exportActionSignature: "",
-  })
 
   useEffect(() => {
     if (isOpen) return
-    actionGenerationRef.current += 1
     setSelectedSiteIds([])
     setSelectedTokenIdsBySite({})
     setCurrentApiConfigName("")
@@ -247,11 +241,6 @@ export function KiloCodeExportDialog({
     modelSelectorRefs.current.clear()
     initialSelectionAppliedRef.current = false
   }, [isOpen])
-
-  const invalidateAndClose = useCallback(() => {
-    actionGenerationRef.current += 1
-    onClose()
-  }, [onClose])
 
   useEffect(() => {
     if (!isOpen) return
@@ -612,15 +601,6 @@ export function KiloCodeExportDialog({
     secretSourcesBySelectionId,
   )
 
-  useEffect(() => {
-    const previous = previousSecretSourcesBySelectionIdRef.current
-    previousSecretSourcesBySelectionIdRef.current = secretSourcesBySelectionId
-    if (
-      !haveMatchingSecretSourceIdentities(previous, secretSourcesBySelectionId)
-    ) {
-      actionGenerationRef.current += 1
-    }
-  }, [secretSourcesBySelectionId])
   const profileNames = useMemo(
     () => getKiloCodeApiConfigProfileNames({ selections: legacySelections }),
     [legacySelections],
@@ -680,28 +660,37 @@ export function KiloCodeExportDialog({
     ],
   )
 
-  const isCurrentExportAction = useCallback(
-    (generation: number, signature: typeof actionContextRef.current) =>
-      generation === actionGenerationRef.current &&
-      actionContextRef.current.isOpen &&
-      actionContextRef.current.exportTarget === signature.exportTarget &&
-      actionContextRef.current.exportActionSignature ===
-        signature.exportActionSignature,
-    [],
+  const safeExportActionSignature = useMemo(
+    () => JSON.stringify({ exportTarget, exportActionSignature }),
+    [exportActionSignature, exportTarget],
   )
+  const {
+    begin: beginExportAction,
+    invalidate: invalidateExportAction,
+    isRunning: isExporting,
+  } = useSafeExportAction({
+    isOpen,
+    signature: safeExportActionSignature,
+  })
 
-  useEffect(() => {
-    actionContextRef.current = {
-      isOpen,
-      exportTarget,
-      exportActionSignature,
-    }
-  }, [isOpen, exportTarget, exportActionSignature])
+  const invalidateAndClose = useCallback(() => {
+    invalidateExportAction()
+    onClose()
+  }, [invalidateExportAction, onClose])
 
   useEffect(() => {
     setIsDownloadTooLarge(false)
-    actionGenerationRef.current += 1
   }, [exportActionSignature])
+
+  useEffect(() => {
+    const previous = previousSecretSourcesBySelectionIdRef.current
+    previousSecretSourcesBySelectionIdRef.current = secretSourcesBySelectionId
+    if (
+      !haveMatchingSecretSourceIdentities(previous, secretSourcesBySelectionId)
+    ) {
+      invalidateExportAction()
+    }
+  }, [invalidateExportAction, secretSourcesBySelectionId])
   const missingModelIdCount = isKiloV7Export
     ? v7Selections.filter(
         (selection) =>
@@ -837,9 +826,8 @@ export function KiloCodeExportDialog({
 
   const handleCopyApiConfigs = async () => {
     if (!canExport) return
-
-    const generation = ++actionGenerationRef.current
-    const signature = actionContextRef.current
+    const action = beginExportAction()
+    if (!action) return
 
     const tracker = startProductAnalyticsAction({
       ...kiloCodeAccountExportAnalyticsContext,
@@ -853,7 +841,7 @@ export function KiloCodeExportDialog({
       }
 
       const output = await buildCurrentExportOutput()
-      if (!isCurrentExportAction(generation, signature)) {
+      if (!action.isCurrent()) {
         return
       }
       actionInsights = {
@@ -864,7 +852,7 @@ export function KiloCodeExportDialog({
       await navigator.clipboard.writeText(
         JSON.stringify(output.copyPayload, null, 2),
       )
-      if (!isCurrentExportAction(generation, signature)) {
+      if (!action.isCurrent()) {
         return
       }
       toast.success(t("ui:dialog.kiloCode.messages.copiedExportConfig"))
@@ -872,7 +860,7 @@ export function KiloCodeExportDialog({
         insights: actionInsights,
       })
     } catch (error) {
-      if (!isCurrentExportAction(generation, signature)) {
+      if (!action.isCurrent()) {
         return
       }
       toast.error(
@@ -882,14 +870,15 @@ export function KiloCodeExportDialog({
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: actionInsights,
       })
+    } finally {
+      action.finish()
     }
   }
 
   const handleDownloadSettings = async () => {
     if (!canExport) return
-
-    const generation = ++actionGenerationRef.current
-    const signature = actionContextRef.current
+    const action = beginExportAction()
+    if (!action) return
 
     const tracker = startProductAnalyticsAction({
       ...kiloCodeAccountExportAnalyticsContext,
@@ -903,7 +892,7 @@ export function KiloCodeExportDialog({
 
     try {
       const output = await buildCurrentExportOutput()
-      if (!isCurrentExportAction(generation, signature)) {
+      if (!action.isCurrent()) {
         return
       }
       actionInsights = {
@@ -913,7 +902,7 @@ export function KiloCodeExportDialog({
       }
 
       if (output.isDownloadTooLarge) {
-        if (!isCurrentExportAction(generation, signature)) {
+        if (!action.isCurrent()) {
           return
         }
         setIsDownloadTooLarge(true)
@@ -927,7 +916,7 @@ export function KiloCodeExportDialog({
       const blob = new Blob([output.downloadJson], {
         type: "application/json",
       })
-      if (!isCurrentExportAction(generation, signature)) {
+      if (!action.isCurrent()) {
         return
       }
       url = URL.createObjectURL(blob)
@@ -935,12 +924,12 @@ export function KiloCodeExportDialog({
       link.href = url
       link.download = output.filename
       document.body.appendChild(link)
-      if (!isCurrentExportAction(generation, signature)) {
+      if (!action.isCurrent()) {
         return
       }
       link.click()
 
-      if (!isCurrentExportAction(generation, signature)) {
+      if (!action.isCurrent()) {
         return
       }
       toast.success(t("ui:dialog.kiloCode.messages.downloadedSettings"))
@@ -948,7 +937,7 @@ export function KiloCodeExportDialog({
         insights: actionInsights,
       })
     } catch (error) {
-      if (!isCurrentExportAction(generation, signature)) {
+      if (!action.isCurrent()) {
         return
       }
       toast.error(
@@ -965,6 +954,7 @@ export function KiloCodeExportDialog({
       if (url) {
         URL.revokeObjectURL(url)
       }
+      action.finish()
     }
   }
 
@@ -1446,14 +1436,14 @@ export function KiloCodeExportDialog({
               type="button"
               variant="secondary"
               onClick={handleCopyApiConfigs}
-              disabled={!canExport}
+              disabled={!canExport || isExporting}
             >
               {copyActionLabel}
             </Button>
             <Button
               type="button"
               onClick={handleDownloadSettings}
-              disabled={!canExport}
+              disabled={!canExport || isExporting}
             >
               {downloadActionLabel}
             </Button>

@@ -1141,6 +1141,48 @@ describe("KiloCodeProfileExportDialog", () => {
     expect(legacyModel).not.toHaveTextContent("legacy/custom")
   })
 
+  it("resets target-local state when profile identity changes with the same credentials", async () => {
+    const user = userEvent.setup()
+    let resolveNextProfile: (models: string[]) => void = () => {}
+    const nextProfileRequest = new Promise<string[]>((resolve) => {
+      resolveNextProfile = resolve
+    })
+    mockFetchOpenAICompatibleModelIds
+      .mockResolvedValueOnce(["model-a"])
+      .mockReturnValueOnce(nextProfileRequest)
+    const { rerender } = renderDialog()
+
+    await screen.findByText("model-a")
+    await chooseV7Model(user, "manual/v7")
+    await chooseExportTarget(user, "legacy")
+    await chooseLegacyModel(user, "legacy/custom")
+
+    rerender(
+      <KiloCodeProfileExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{ ...PROFILE, id: "profile-2", name: "Next Profile" }}
+      />,
+    )
+    await waitFor(() =>
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(2),
+    )
+
+    expect(
+      screen.getByRole("combobox", {
+        name: "ui:dialog.kiloCode.labels.exportTarget",
+      }),
+    ).toHaveTextContent("ui:dialog.kiloCode.targets.kiloV7")
+    expect(screen.queryAllByText("manual/v7")).toHaveLength(0)
+    expect(screen.queryAllByText("legacy/custom")).toHaveLength(0)
+
+    await act(async () => {
+      resolveNextProfile(["next-model"])
+      await nextProfileRequest
+    })
+    expect(await screen.findByText("next-model")).toBeVisible()
+  })
+
   it("resets target-local values and refetches when the dialog reopens", async () => {
     const user = userEvent.setup()
     mockFetchOpenAICompatibleModelIds
