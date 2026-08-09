@@ -81,7 +81,8 @@ export function hasManagedSiteRuntimeConfigInputForType(
   }
 
   const exhaustiveSiteType: never = siteType
-  return exhaustiveSiteType
+  void exhaustiveSiteType
+  return false
 }
 
 /**

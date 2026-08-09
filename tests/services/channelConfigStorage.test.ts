@@ -1047,6 +1047,76 @@ describe("channelConfigStorage", () => {
     })
   })
 
+  it("discards malformed local entries while retaining valid scoped configs", async () => {
+    const valid = createConfig({
+      scopeKey: "https://valid.example.invalid",
+      ruleId: "valid-rule",
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS, {
+      primitive: "invalid",
+      invalidRef: {
+        ...valid,
+        resourceRef: { ...valid.resourceRef, scopeKey: "" },
+      },
+      invalidRules: {
+        ...valid,
+        resourceRef: createRef("https://invalid-rules.example.invalid"),
+        modelFilterSettings: { rules: "invalid" },
+      },
+      reversedRuleTimestamps: {
+        ...valid,
+        resourceRef: createRef("https://reversed-time.example.invalid"),
+        modelFilterSettings: {
+          rules: [
+            {
+              ...valid.modelFilterSettings.rules[0],
+              createdAt: 300,
+              updatedAt: 200,
+            },
+          ],
+        },
+      },
+      valid,
+    })
+
+    const configs = (await channelConfigStorage.exportConfigs()).configs
+
+    expect(Object.keys(configs)).toHaveLength(3)
+    expect(
+      configs[getManagedUpstreamResourceRefKey(valid.resourceRef)],
+    ).toEqual(valid)
+    expect(
+      configs[
+        getManagedUpstreamResourceRefKey(
+          createRef("https://invalid-rules.example.invalid"),
+        )
+      ].modelFilterSettings.rules,
+    ).toEqual([])
+    expect(
+      configs[
+        getManagedUpstreamResourceRefKey(
+          createRef("https://reversed-time.example.invalid"),
+        )
+      ].modelFilterSettings.rules[0],
+    ).toMatchObject({ createdAt: 200, updatedAt: 200 })
+  })
+
+  it("treats a non-map legacy value as having no migratable configs", async () => {
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, "invalid")
+
+    await expect(channelConfigStorage.hasLegacyNumericConfigs()).resolves.toBe(
+      false,
+    )
+    await expect(
+      channelConfigStorage.migrateLegacyNumericConfigs([
+        {
+          channelId: 9,
+          resourceRef: createRef("https://admin.example.invalid", 9),
+        },
+      ]),
+    ).resolves.toEqual({ migrated: 0, ambiguous: 0, unmatched: 0 })
+  })
+
   it("exports historical rules as a snapshot that the strict interface can restore", async () => {
     const resourceRef = createRef("https://historical.example.invalid")
     const rule = createConfig({

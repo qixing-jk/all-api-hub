@@ -16,7 +16,7 @@
   },
   "import": {
     "backupTime": "バックアップ時刻",
-    "channelConfigMigrationDeferred": "チャンネル設定の移行を完了できませんでした。管理サイトの設定を確認して、もう一度お試しください。",
+    "channelConfigMigrationDeferred": "チャネル設定の移行を完了できませんでした。管理サイトの設定を確認して、もう一度お試しください。",
     "containsAccountData": "アカウントデータを含む",
     "containsApiCredentialProfiles": "API 認証情報庫を含む",
     "containsChannelConfigs": "チャネル設定を含む",
@@ -29,6 +29,7 @@
     "formatError": "データ形式エラーです。JSON 形式を確認してください",
     "formatNotCorrect": "データ形式が正しくありません",
     "importFailed": "インポートに失敗しました: {{error}}",
+    "importOperationFailed": "インポートを完了できませんでした。もう一度お試しください。",
     "importSelectedSuccess": "選択した内容をインポートしました",
     "importSuccess": "データを正常にインポートしました",
     "noImportableData": "インポート可能なデータが見つかりません",

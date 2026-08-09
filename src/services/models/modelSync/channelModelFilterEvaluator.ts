@@ -351,6 +351,43 @@ export async function matchesProbeFilterRule(
     : probeMatches.every(Boolean)
 }
 
+type CachedChannelModelFilterRegex = {
+  pattern: string
+  regex: RegExp | null
+}
+
+const channelModelFilterRegexCache = new WeakMap<
+  ChannelModelFilterRule,
+  CachedChannelModelFilterRegex
+>()
+
+/** Validates and compiles a regex once for each rule and pattern value. */
+function getChannelModelFilterRegex(
+  rule: ChannelModelFilterRule,
+  pattern: string,
+): RegExp | null {
+  const cached = channelModelFilterRegexCache.get(rule)
+  if (cached?.pattern === pattern) {
+    return cached.regex
+  }
+
+  let regex: RegExp | null = null
+  try {
+    if (!isSafeChannelModelFilterRegex(pattern)) {
+      throw new Error("Invalid or unsafe regex pattern")
+    }
+    regex = new RegExp(pattern, "i")
+  } catch (error) {
+    logger.warn("Invalid channel filter pattern for channel rule", {
+      ruleId: rule.id,
+      error,
+    })
+  }
+
+  channelModelFilterRegexCache.set(rule, { pattern, regex })
+  return regex
+}
+
 /** Evaluates one pattern or probe rule against a model name. */
 async function matchesChannelModelFilterRule(
   rule: ChannelModelFilterRule,
@@ -374,21 +411,11 @@ async function matchesChannelModelFilterRule(
   const pattern = rule.pattern?.trim()
   if (!pattern) return false
 
-  try {
-    if (!rule.isRegex) {
-      return model.toLowerCase().includes(pattern.toLowerCase())
-    }
-    if (!isSafeChannelModelFilterRegex(pattern)) {
-      throw new Error("Invalid or unsafe regex pattern")
-    }
-    return new RegExp(pattern, "i").test(model)
-  } catch (error) {
-    logger.warn("Invalid channel filter pattern for channel rule", {
-      ruleId: rule.id,
-      error,
-    })
-    return false
+  if (!rule.isRegex) {
+    return model.toLowerCase().includes(pattern.toLowerCase())
   }
+
+  return getChannelModelFilterRegex(rule, pattern)?.test(model) ?? false
 }
 
 /** Keeps or removes models according to whether any supplied rule matches. */

@@ -46,7 +46,7 @@ export function getImportExportErrorMessage(error: unknown): string | null {
       case "FORMAT_NOT_CORRECT":
         return t("importExport:import.formatNotCorrect")
       case "IMPORT_FAILED":
-        return t("importExport:import.importFailed")
+        return t("importExport:import.importOperationFailed")
       case "NO_IMPORTABLE_DATA":
         return t("importExport:import.noImportableData")
       case "VERSION_NOT_SUPPORTED":

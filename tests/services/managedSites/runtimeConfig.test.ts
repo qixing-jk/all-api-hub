@@ -251,6 +251,15 @@ describe("managed-site runtime config resolver", () => {
     ).toBe("future-managed-site")
   })
 
+  it("treats unknown managed-site types as having no configured input", () => {
+    expect(
+      hasManagedSiteRuntimeConfigInputForType(
+        buildUserPreferences(),
+        "future-managed-site" as any,
+      ),
+    ).toBe(false)
+  })
+
   it("returns null for non-numeric access-token managed-site user IDs", () => {
     const prefs = buildUserPreferences({
       newApi: {

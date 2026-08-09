@@ -16,7 +16,7 @@
   },
   "import": {
     "backupTime": "Backup-Zeit",
-    "channelConfigMigrationDeferred": "Die Migration der Kanalkonfiguration konnte nicht abgeschlossen werden. Prüfe die Einstellungen der verwalteten Website und versuche es erneut.",
+    "channelConfigMigrationDeferred": "Die Migration der Kanalkonfiguration konnte nicht abgeschlossen werden. Prüfen Sie die Einstellungen der verwalteten Website und versuchen Sie es erneut.",
     "containsAccountData": "Enthält Kontodaten",
     "containsApiCredentialProfiles": "Enthält die API-Anmeldeinformationsbibliothek",
     "containsChannelConfigs": "Enthält die Kanalkonfiguration",
@@ -29,6 +29,7 @@
     "formatError": "Datenformatfehler, bitte überprüfen Sie das JSON-Format",
     "formatNotCorrect": "Datenformat nicht korrekt",
     "importFailed": "Import fehlgeschlagen: {{error}}",
+    "importOperationFailed": "Der Import konnte nicht abgeschlossen werden. Versuchen Sie es erneut.",
     "importSelectedSuccess": "Ausgewählter Inhalt erfolgreich importiert",
     "importSuccess": "Daten erfolgreich importiert",
     "noImportableData": "Keine importierbaren Daten gefunden",

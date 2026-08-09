@@ -950,8 +950,9 @@ describe("ModelSyncService - global and channel filters", () => {
     ]
 
     await expect(
-      callApplyFilters(rules, ["a".repeat(40) + "z"]),
+      callApplyFilters(rules, ["a".repeat(40), "a".repeat(30)]),
     ).resolves.toEqual([])
+    expect(loggerMocks.warn).toHaveBeenCalledTimes(1)
   })
 
   it("fails closed when a probe rule is evaluated without channel context", async () => {

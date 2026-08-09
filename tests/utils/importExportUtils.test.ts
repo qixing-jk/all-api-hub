@@ -1307,7 +1307,7 @@ describe("importFromBackupObject", () => {
     }
 
     await expect(importFromBackupObject(payload)).rejects.toThrow(
-      "importExport:import.importFailed",
+      "importExport:import.importOperationFailed",
     )
   })
 

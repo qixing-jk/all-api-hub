@@ -807,7 +807,11 @@ export default function WebDAVSettings() {
       }
     } catch (e: any) {
       logger.error("Failed to decrypt/import WebDAV backup", e)
-      toast.error(e?.message || t("webdav.encryption.decryptFailed"))
+      toast.error(
+        getImportExportErrorMessage(e) ||
+          e?.message ||
+          t("webdav.encryption.decryptFailed"),
+      )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: decryptCompleted
           ? getWebdavAnalyticsErrorCategory(e)

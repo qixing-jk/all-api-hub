@@ -203,15 +203,6 @@ function sanitizeModelFilterSettings(
           }),
         )
         .filter((filter): filter is ChannelModelFilterRule => Boolean(filter))
-        .map((rule) => {
-          const updatedAt = isPositiveTimestamp(rule.updatedAt)
-            ? rule.updatedAt
-            : fallbackTimestamp
-          const createdAt = isPositiveTimestamp(rule.createdAt)
-            ? Math.min(rule.createdAt, updatedAt)
-            : fallbackTimestamp
-          return { ...rule, createdAt, updatedAt }
-        })
     : []
 
   const explicitUpdatedAt = isPositiveTimestamp(rawSettings?.updatedAt)
@@ -558,12 +549,16 @@ class ChannelConfigStorage {
         CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS,
       )
       const legacyConfigs = sanitizeLegacyNumericConfigMap(rawLegacyConfigs)
-      const resourceConfigs = await this.getAllConfigs()
       const result: LegacyChannelConfigMigrationResult = {
         migrated: 0,
         ambiguous: 0,
         unmatched: 0,
       }
+      if (!isRecord(rawLegacyConfigs)) {
+        return result
+      }
+
+      const resourceConfigs = await this.getAllConfigs()
       const migratedChannelIds = new Set<number>()
 
       for (const [channelIdKey, legacyConfig] of Object.entries(
@@ -608,9 +603,7 @@ class ChannelConfigStorage {
           resourceConfigs,
         )
 
-        const remainingLegacyConfigs = isRecord(rawLegacyConfigs)
-          ? { ...rawLegacyConfigs }
-          : {}
+        const remainingLegacyConfigs = { ...rawLegacyConfigs }
         for (const key of Object.keys(remainingLegacyConfigs)) {
           const channelId = toValidChannelId(key)
           if (channelId !== null && migratedChannelIds.has(channelId)) {

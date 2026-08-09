@@ -29,6 +29,7 @@
     "formatError": "Data format error, please check JSON format",
     "formatNotCorrect": "Data format not correct",
     "importFailed": "Import failed: {{error}}",
+    "importOperationFailed": "The import could not be completed. Try again.",
     "importSelectedSuccess": "Selected content imported successfully",
     "importSuccess": "Data imported successfully",
     "noImportableData": "No importable data found",

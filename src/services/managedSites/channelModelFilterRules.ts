@@ -45,11 +45,7 @@ const supportedProbeIds = new Set<ApiVerificationProbeId>(
 
 /** Rejects syntactically invalid or potentially exponential regex patterns. */
 export function isSafeChannelModelFilterRegex(pattern: string): boolean {
-  try {
-    return safeRegex(pattern)
-  } catch {
-    return false
-  }
+  return safeRegex(pattern)
 }
 
 /**
@@ -256,11 +252,15 @@ export function sanitizeChannelFilter(
       idPrefix: options.idPrefix,
       now: options.fallbackTimestamp,
     })
+    const updatedAt = getTimestamp(payload.updatedAt, options.fallbackTimestamp)
 
     return {
       ...normalized,
-      createdAt: getTimestamp(payload.createdAt, options.fallbackTimestamp),
-      updatedAt: getTimestamp(payload.updatedAt, options.fallbackTimestamp),
+      createdAt: Math.min(
+        getTimestamp(payload.createdAt, options.fallbackTimestamp),
+        updatedAt,
+      ),
+      updatedAt,
     }
   } catch {
     return null

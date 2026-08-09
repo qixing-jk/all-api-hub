@@ -16,7 +16,7 @@
   },
   "import": {
     "backupTime": "備份時間",
-    "channelConfigMigrationDeferred": "頻道設定移轉尚未完成。請檢查管理站點設定後再試一次。",
+    "channelConfigMigrationDeferred": "渠道配置移轉尚未完成。請檢查管理站點設定後再試一次。",
     "containsAccountData": "包含帳號資料",
     "containsApiCredentialProfiles": "包含 API 憑據庫",
     "containsChannelConfigs": "包含渠道配置",
@@ -29,6 +29,7 @@
     "formatError": "資料格式錯誤，請檢查JSON格式",
     "formatNotCorrect": "資料格式不正確",
     "importFailed": "匯入失敗: {{error}}",
+    "importOperationFailed": "匯入未能完成，請再試一次。",
     "importSelectedSuccess": "已匯入所選內容",
     "importSuccess": "資料匯入成功",
     "noImportableData": "沒有找到可匯入的資料",

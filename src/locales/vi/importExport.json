@@ -29,6 +29,7 @@
     "formatError": "Lỗi định dạng dữ liệu, vui lòng kiểm tra định dạng JSON",
     "formatNotCorrect": "Định dạng dữ liệu không chính xác",
     "importFailed": "Nhập thất bại: {{error}}",
+    "importOperationFailed": "Không thể hoàn tất quá trình nhập. Hãy thử lại.",
     "importSelectedSuccess": "Đã nhập nội dung đã chọn",
     "importSuccess": "Nhập dữ liệu thành công",
     "noImportableData": "Không tìm thấy dữ liệu có thể nhập",
