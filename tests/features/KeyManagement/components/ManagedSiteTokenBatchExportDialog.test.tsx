@@ -3479,38 +3479,57 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     ).toBeInTheDocument()
   })
 
-  it("localizes repair-created blocked details and an empty created-key label", async () => {
-    mockPreparePreview.mockResolvedValue({
-      ...preview,
-      totalCount: 1,
-      readyCount: 0,
-      blockedCount: 1,
-      items: [
-        buildDialogPreviewItem(6, "", {
-          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
-          warningCodes: [],
-          blockingReasonCode:
-            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
-          blockingDetailCode:
-            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_ACCOUNT_UNAVAILABLE,
-          draft: null,
-        }),
-      ],
-    })
+  it.each([
+    [
+      MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_ACCOUNT_UNAVAILABLE,
+      "sourceAccountUnavailable",
+    ],
+    [
+      MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
+      "sourceKeyInventoryUnavailable",
+    ],
+    [
+      MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_UNAVAILABLE,
+      "createdKeyUnavailable",
+    ],
+    [
+      MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_REFERENCE_AMBIGUOUS,
+      "createdKeyReferenceAmbiguous",
+    ],
+  ])(
+    "localizes repair-created blocked detail %s and an empty created-key label",
+    async (blockingDetailCode, detailTranslationKey) => {
+      mockPreparePreview.mockResolvedValue({
+        ...preview,
+        totalCount: 1,
+        readyCount: 0,
+        blockedCount: 1,
+        items: [
+          buildDialogPreviewItem(6, "", {
+            status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+            warningCodes: [],
+            blockingReasonCode:
+              MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
+            blockingDetailCode,
+            draft: null,
+          }),
+        ],
+      })
 
-    renderDialog()
+      renderDialog()
 
-    expect(
-      await screen.findByText(
-        "Account 1 / keyManagement:batchManagedSiteExport.fallbackLabels.createdKey",
-      ),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        "keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed: keyManagement:batchManagedSiteExport.blockedDetails.sourceAccountUnavailable",
-      ),
-    ).toBeInTheDocument()
-  })
+      expect(
+        await screen.findByText(
+          "Account 1 / keyManagement:batchManagedSiteExport.fallbackLabels.createdKey",
+        ),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          `keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed: keyManagement:batchManagedSiteExport.blockedDetails.${detailTranslationKey}`,
+        ),
+      ).toBeInTheDocument()
+    },
+  )
 
   it("ignores a complete-check switch while verification is active", async () => {
     const user = userEvent.setup()

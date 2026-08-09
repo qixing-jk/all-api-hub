@@ -4,6 +4,7 @@ import {
   buildAccountTokenRuntimeKeyId,
   isAccountTokenRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
+import type { DisplayAccountApiCapabilityContext } from "~/services/accounts/utils/apiServiceRequest"
 import {
   getRepairCreatedTokenBatchImportAbsenceReason,
   REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS,
@@ -297,7 +298,7 @@ describe("resolveRepairCreatedTokenBatchImportCandidate", () => {
           return {
             request: { baseUrl: account.baseUrl },
             keyManagement: null,
-          } as never
+          } as unknown as DisplayAccountApiCapabilityContext
         }
         return createApiContext({
           tokens: [
@@ -324,20 +325,24 @@ describe("resolveRepairCreatedTokenBatchImportCandidate", () => {
       freshness: REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
     })
 
-    expect(
-      candidate?.items.filter(isBlockedManagedSiteTokenBatchExportItemInput),
-    ).toEqual([
-      expect.objectContaining({
-        id: buildAccountTokenRuntimeKeyId(unavailableAccount.id, 11),
-        blockingDetailCode:
-          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
-      }),
-      expect.objectContaining({
-        id: buildAccountTokenRuntimeKeyId(ambiguousAccount.id, 44),
-        blockingDetailCode:
-          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_REFERENCE_AMBIGUOUS,
-      }),
-    ])
+    const blockedItems =
+      candidate?.items.filter(isBlockedManagedSiteTokenBatchExportItemInput) ??
+      []
+    expect(blockedItems).toHaveLength(2)
+    expect(blockedItems).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: buildAccountTokenRuntimeKeyId(unavailableAccount.id, 11),
+          blockingDetailCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
+        }),
+        expect.objectContaining({
+          id: buildAccountTokenRuntimeKeyId(ambiguousAccount.id, 44),
+          blockingDetailCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.CREATED_KEY_REFERENCE_AMBIGUOUS,
+        }),
+      ]),
+    )
   })
 
   it("excludes confirmed same-target receipts while retaining failed and uncertain work with complete verification", async () => {

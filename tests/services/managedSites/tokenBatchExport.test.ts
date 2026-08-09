@@ -661,6 +661,7 @@ describe("managed-site token batch export", () => {
     const createChannel = vi
       .fn()
       .mockImplementationOnce(async () => {
+        // Redaction must use the pre-dispatch secret snapshot, not live config.
         config.adminToken = "mutated-after-snapshot"
         throw thrown
       })
@@ -979,6 +980,61 @@ describe("managed-site token batch export", () => {
       result: "failed",
       error: "Failed to create channel: invalid draft",
     })
+  })
+
+  it("omits provider details when a payload failure follows incomplete secret inspection", async () => {
+    const hiddenSecret = "hidden-payload-secret"
+    const providerMessage = `invalid draft containing ${hiddenSecret}`
+    const service = buildService({
+      prepareChannelFormData: vi.fn(
+        async (account, token) =>
+          new Proxy(
+            {
+              name: `${account.name} - ${token.name}`,
+              type: 1,
+              key: hiddenSecret,
+              base_url: account.baseUrl,
+              models: ["model-example"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1 as const,
+            },
+            {
+              ownKeys() {
+                throw new Error("draft inspection unavailable")
+              },
+            },
+          ),
+      ),
+      buildChannelPayload: vi.fn(() => {
+        throw new Error(providerMessage)
+      }),
+    })
+    useManagedSiteService(service)
+
+    const {
+      prepareManagedSiteTokenBatchExportPreview,
+      executeManagedSiteTokenBatchExport,
+    } = await import("~/services/managedSites/tokenBatchExport")
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [buildAccountTokenInput()],
+      intent: repairTrustedNewIntent,
+    })
+
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: [preview.items[0].id],
+    })
+
+    expect(service.createChannel).not.toHaveBeenCalled()
+    expect(service.listChannels).not.toHaveBeenCalled()
+    expect(result.items[0]).toMatchObject({
+      result: "failed",
+      error: "Failed to create channel",
+    })
+    expect(JSON.stringify(result)).not.toContain(providerMessage)
+    expect(JSON.stringify(result)).not.toContain(hiddenSecret)
   })
 
   it("skips tokens that exactly match an existing managed-site channel", async () => {
