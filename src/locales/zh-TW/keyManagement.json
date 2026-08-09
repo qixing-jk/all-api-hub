@@ -565,13 +565,16 @@
     "managedSiteImport": {
       "action_other": "匯入 {{count}} 個修復建立的金鑰",
       "changeTarget": "變更目標",
-      "configMissing": "請先設定管理網站，再匯入修復建立的金鑰。",
+      "configMissing": "目前管理網站尚未設定。請開啟設定頁，完成後返回此處再次匯入。",
+      "configurationOpenFailed": "無法開啟管理網站設定。請前往「設定 > 管理網站」手動設定。",
       "failed": "準備匯入修復建立的金鑰失敗，請再試一次。",
-      "nothingPending": "目前目標沒有待匯入的金鑰；它們可能已建立或已精確存在。",
+      "nothingPending": "這些金鑰已在目前目標處理完成：對應渠道已建立或已精確存在。如需再次檢查，請使用一般匯入進行完整驗證。",
+      "openConfiguration": "開啟管理網站設定",
       "receiptFailed": "匯入已完成，但無法更新修復結果。請重新整理結果以確認目前狀態。",
       "target_other": "{{site}}：有 {{count}} 個修復建立的金鑰可匯入",
       "title": "匯入修復建立的金鑰",
-      "unavailable": "這些修復建立的金鑰目前無法匯入。請重新整理修復結果後再試。"
+      "unavailable": "這些修復建立的金鑰目前無法匯入。請重新整理修復結果後再試。",
+      "useRegularImport": "使用一般匯入"
     },
     "messages": {
       "cancelFailed": "取消檢查任務失敗",

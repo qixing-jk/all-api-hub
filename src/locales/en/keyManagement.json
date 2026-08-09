@@ -579,14 +579,17 @@
       "action_one": "Import {{count}} repaired key",
       "action_other": "Import {{count}} repaired keys",
       "changeTarget": "Change target",
-      "configMissing": "Configure a managed site before importing repaired keys.",
+      "configMissing": "The current managed site is not configured. Open its settings, then return here and import again.",
+      "configurationOpenFailed": "Could not open managed site settings. Open Settings > Managed Site to configure it manually.",
       "failed": "Could not prepare repaired keys for import. Try again.",
-      "nothingPending": "No repaired keys are pending for this target. They may already have been created or matched exactly.",
+      "nothingPending": "These keys have already been handled for this target: their channels were created or found as exact matches. To check them again, use regular import with full verification.",
+      "openConfiguration": "Open managed site settings",
       "receiptFailed": "Import finished, but the repair results could not be updated. Refresh the results to confirm the current state.",
       "target_one": "{{count}} repaired key ready for {{site}}",
       "target_other": "{{count}} repaired keys ready for {{site}}",
       "title": "Import repaired keys",
-      "unavailable": "The repaired keys are no longer available for import. Refresh the repair results and try again."
+      "unavailable": "The repaired keys are no longer available for import. Refresh the repair results and try again.",
+      "useRegularImport": "Use regular import"
     },
     "messages": {
       "cancelFailed": "Failed to cancel repair job",

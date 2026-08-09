@@ -41,6 +41,8 @@ interface ResolveRepairCreatedTokenBatchImportCandidateParams {
   targetFingerprint: string
   freshness: RepairCreatedTokenBatchImportFreshness
   forceCompleteVerification?: boolean
+  /** Re-check terminal same-target receipts only through the complete verifier. */
+  includeCompletedReferences?: boolean
 }
 
 interface RepairCreatedTokenBatchImportCandidate {
@@ -252,6 +254,7 @@ const getTargetReceipts = (
 const resolveCreatedReferenceState = (
   progress: AccountKeyRepairProgress,
   targetFingerprint: string,
+  includeCompletedReferences = false,
 ): CreatedReferenceResolution => {
   if (progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed) {
     return {
@@ -273,15 +276,22 @@ const resolveCreatedReferenceState = (
   }
 
   const targetReceipts = getTargetReceipts(progress, targetFingerprint)
-  const candidateReferences = references.filter((reference) => {
-    const status = targetReceipts.get(
-      getReceiptKey(targetFingerprint, reference.accountId, reference.tokenId),
-    )
-    return (
-      status !== ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created &&
-      status !== ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.AlreadyPresent
-    )
-  })
+  const candidateReferences = includeCompletedReferences
+    ? references
+    : references.filter((reference) => {
+        const status = targetReceipts.get(
+          getReceiptKey(
+            targetFingerprint,
+            reference.accountId,
+            reference.tokenId,
+          ),
+        )
+        return (
+          status !== ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created &&
+          status !==
+            ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.AlreadyPresent
+        )
+      })
 
   if (candidateReferences.length === 0 && ambiguousGroups.length === 0) {
     return {
@@ -319,6 +329,7 @@ export async function resolveRepairCreatedTokenBatchImportCandidate(
   const resolution = resolveCreatedReferenceState(
     params.progress,
     params.targetFingerprint,
+    params.includeCompletedReferences,
   )
   if (resolution.absenceReason) return null
   const { references, ambiguousGroups, candidateReferences, targetReceipts } =
@@ -434,6 +445,7 @@ export async function resolveRepairCreatedTokenBatchImportCandidate(
     )
 
   const verification =
+    !params.includeCompletedReferences &&
     candidateReferences.length > 0 &&
     params.freshness ===
       REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION &&

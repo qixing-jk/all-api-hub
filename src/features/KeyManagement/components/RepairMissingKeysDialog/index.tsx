@@ -374,7 +374,34 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                     variant={repairCreatedImport.importFeedback.variant}
                     compact
                     description={repairCreatedImport.importFeedback.description}
-                  />
+                  >
+                    {repairCreatedImport.importFeedback.action ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={repairCreatedImport.isResolving}
+                        onClick={() => {
+                          if (
+                            repairCreatedImport.importFeedback?.action ===
+                            "configure-managed-site"
+                          ) {
+                            void repairCreatedImport.openManagedSiteConfiguration()
+                            return
+                          }
+
+                          void repairCreatedImport.openRegularBatchImport()
+                        }}
+                      >
+                        {t(
+                          repairCreatedImport.importFeedback.action ===
+                            "configure-managed-site"
+                            ? "keyManagement:repairMissingKeys.managedSiteImport.openConfiguration"
+                            : "keyManagement:repairMissingKeys.managedSiteImport.useRegularImport",
+                        )}
+                      </Button>
+                    ) : null}
+                  </Alert>
                 ) : null}
               </div>
             ) : null}

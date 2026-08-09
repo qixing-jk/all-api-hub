@@ -565,13 +565,16 @@
     "managedSiteImport": {
       "action_other": "Nhập {{count}} khóa đã tạo khi sửa chữa",
       "changeTarget": "Đổi đích",
-      "configMissing": "Hãy cấu hình một trang được quản lý trước khi nhập các khóa đã tạo khi sửa chữa.",
+      "configMissing": "Trang được quản lý hiện tại chưa được cấu hình. Hãy mở trang cấu hình, sau đó quay lại đây và nhập lại.",
+      "configurationOpenFailed": "Không thể mở cấu hình trang được quản lý. Hãy vào Cài đặt > Trang được quản lý để cấu hình thủ công.",
       "failed": "Không thể chuẩn bị các khóa đã tạo khi sửa chữa để nhập. Hãy thử lại.",
-      "nothingPending": "Không có khóa đã sửa chữa nào đang chờ nhập vào đích này. Có thể các khóa đó đã được tạo hoặc đã tồn tại khớp chính xác.",
+      "nothingPending": "Các khóa này đã được xử lý cho đích hiện tại: kênh tương ứng đã được tạo hoặc đã tồn tại khớp chính xác. Để kiểm tra lại, hãy dùng nhập thông thường với xác minh đầy đủ.",
+      "openConfiguration": "Mở cấu hình trang được quản lý",
       "receiptFailed": "Đã nhập xong nhưng không thể cập nhật kết quả sửa chữa. Hãy làm mới kết quả để xác nhận trạng thái hiện tại.",
       "target_other": "{{count}} khóa đã tạo khi sửa chữa sẵn sàng để nhập vào {{site}}",
       "title": "Nhập các khóa đã tạo khi sửa chữa",
-      "unavailable": "Các khóa đã tạo khi sửa chữa không còn sẵn sàng để nhập. Hãy làm mới kết quả sửa chữa rồi thử lại."
+      "unavailable": "Các khóa đã tạo khi sửa chữa không còn sẵn sàng để nhập. Hãy làm mới kết quả sửa chữa rồi thử lại.",
+      "useRegularImport": "Dùng nhập thông thường"
     },
     "messages": {
       "cancelFailed": "Hủy tác vụ sửa chữa thất bại",

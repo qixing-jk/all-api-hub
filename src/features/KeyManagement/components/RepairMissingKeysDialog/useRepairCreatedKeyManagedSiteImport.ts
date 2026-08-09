@@ -1,6 +1,8 @@
 import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import { BASIC_SETTINGS_ANCHOR_TO_TAB } from "~/constants/basicSettingsTabs"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
@@ -28,6 +30,7 @@ import {
   type ManagedSiteTokenBatchExportExecutionResult,
   type ManagedSiteTokenBatchExportItemInput,
 } from "~/types/managedSiteTokenBatchExport"
+import { openSettingsTabInNewTab } from "~/utils/navigation"
 
 import type { ManagedSiteTokenBatchExportCompletionContext } from "../ManagedSiteTokenBatchExportDialog/useManagedSiteTokenBatchExportDialog"
 
@@ -42,8 +45,9 @@ interface UseRepairCreatedKeyManagedSiteImportParams {
 }
 
 interface RepairCreatedImportFeedback {
+  action?: "configure-managed-site" | "use-regular-import"
   description: string
-  variant: "destructive" | "info"
+  variant: "destructive" | "info" | "warning"
 }
 
 const isSafeCreatedReference = (
@@ -198,84 +202,122 @@ export function useRepairCreatedKeyManagedSiteImport({
     activeItemsRef.current = []
   }, [isResolving])
 
-  const openBatchImport = useCallback(async () => {
-    if (
-      isResolving ||
-      isBatchImportOpen ||
-      !progress ||
-      progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed
-    ) {
-      return
-    }
+  const prepareBatchImport = useCallback(
+    async (includeCompletedReferences = false) => {
+      if (
+        isResolving ||
+        isBatchImportOpen ||
+        !progress ||
+        progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed
+      ) {
+        return
+      }
 
-    setIsResolving(true)
-    setImportFeedback(null)
-    try {
-      const runtimeConfig = await getCurrentManagedSiteRuntimeConfig()
-      if (!runtimeConfig) {
+      setIsResolving(true)
+      setImportFeedback(null)
+      try {
+        const runtimeConfig = await getCurrentManagedSiteRuntimeConfig()
+        if (!runtimeConfig) {
+          setImportFeedback({
+            action: "configure-managed-site",
+            description: t(
+              "keyManagement:repairMissingKeys.managedSiteImport.configMissing",
+            ),
+            variant: "warning",
+          })
+          return
+        }
+
+        const target =
+          await createManagedSiteTokenBatchImportTarget(runtimeConfig)
+        const visibleProgress = getVisibleProgress(progress, accounts)
+        const candidate = await resolveRepairCreatedTokenBatchImportCandidate({
+          progress: visibleProgress,
+          accounts,
+          targetFingerprint: target.targetFingerprint,
+          freshness: isCurrentSessionResult
+            ? REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION
+            : REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.HISTORICAL,
+          forceCompleteVerification: includeCompletedReferences,
+          includeCompletedReferences,
+        })
+        if (!candidate) {
+          const absenceReason = getRepairCreatedTokenBatchImportAbsenceReason({
+            progress: visibleProgress,
+            targetFingerprint: target.targetFingerprint,
+          })
+          const nothingPending =
+            absenceReason ===
+            REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.NOTHING_PENDING
+          setImportFeedback({
+            action:
+              nothingPending && !includeCompletedReferences
+                ? "use-regular-import"
+                : undefined,
+            description: t(
+              nothingPending
+                ? "keyManagement:repairMissingKeys.managedSiteImport.nothingPending"
+                : "keyManagement:repairMissingKeys.managedSiteImport.unavailable",
+            ),
+            variant: nothingPending ? "info" : "destructive",
+          })
+          return
+        }
+
+        activeJobIdRef.current = progress.jobId
+        activeTargetFingerprintRef.current = target.targetFingerprint
+        activeItemsRef.current = candidate.items
+        setBatchImportItems(candidate.items)
+        setBatchImportIntent(candidate.intent)
+        setIsBatchImportOpen(true)
+      } catch {
         setImportFeedback({
           description: t(
-            "keyManagement:repairMissingKeys.managedSiteImport.configMissing",
+            "keyManagement:repairMissingKeys.managedSiteImport.failed",
           ),
           variant: "destructive",
         })
-        return
+      } finally {
+        setIsResolving(false)
       }
+    },
+    [
+      accounts,
+      isBatchImportOpen,
+      isCurrentSessionResult,
+      isResolving,
+      progress,
+      t,
+    ],
+  )
 
-      const target =
-        await createManagedSiteTokenBatchImportTarget(runtimeConfig)
-      const visibleProgress = getVisibleProgress(progress, accounts)
-      const candidate = await resolveRepairCreatedTokenBatchImportCandidate({
-        progress: visibleProgress,
-        accounts,
-        targetFingerprint: target.targetFingerprint,
-        freshness: isCurrentSessionResult
-          ? REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION
-          : REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.HISTORICAL,
-      })
-      if (!candidate) {
-        const absenceReason = getRepairCreatedTokenBatchImportAbsenceReason({
-          progress: visibleProgress,
-          targetFingerprint: target.targetFingerprint,
-        })
-        const nothingPending =
-          absenceReason ===
-          REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.NOTHING_PENDING
-        setImportFeedback({
-          description: t(
-            nothingPending
-              ? "keyManagement:repairMissingKeys.managedSiteImport.nothingPending"
-              : "keyManagement:repairMissingKeys.managedSiteImport.unavailable",
-          ),
-          variant: nothingPending ? "info" : "destructive",
-        })
-        return
-      }
+  const openBatchImport = useCallback(
+    () => prepareBatchImport(),
+    [prepareBatchImport],
+  )
 
-      activeJobIdRef.current = progress.jobId
-      activeTargetFingerprintRef.current = target.targetFingerprint
-      activeItemsRef.current = candidate.items
-      setBatchImportItems(candidate.items)
-      setBatchImportIntent(candidate.intent)
-      setIsBatchImportOpen(true)
+  const openRegularBatchImport = useCallback(
+    () => prepareBatchImport(true),
+    [prepareBatchImport],
+  )
+
+  const openManagedSiteConfiguration = useCallback(async () => {
+    try {
+      await openSettingsTabInNewTab(
+        BASIC_SETTINGS_ANCHOR_TO_TAB[SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR],
+        {
+          anchor: SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR,
+        },
+      )
     } catch {
       setImportFeedback({
         description: t(
-          "keyManagement:repairMissingKeys.managedSiteImport.failed",
+          "keyManagement:repairMissingKeys.managedSiteImport.configurationOpenFailed",
         ),
         variant: "destructive",
       })
-    } finally {
-      setIsResolving(false)
     }
-  }, [
-    accounts,
-    isBatchImportOpen,
-    isCurrentSessionResult,
-    isResolving,
-    progress,
-    t,
-  ])
+  }, [t])
 
   const handleBatchImportCompleted = useCallback(
     (
@@ -341,6 +383,8 @@ export function useRepairCreatedKeyManagedSiteImport({
     isBatchImportOpen,
     isResolving,
     openBatchImport,
+    openManagedSiteConfiguration,
+    openRegularBatchImport,
     closeBatchImport,
     handleBatchImportCompleted,
     recoverableReferenceCount,

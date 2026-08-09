@@ -412,6 +412,37 @@ describe("resolveRepairCreatedTokenBatchImportCandidate", () => {
       }),
     ).resolves.toBeNull()
     expect(mocks.createDisplayAccountApiContext).not.toHaveBeenCalled()
+
+    mocks.createDisplayAccountApiContext.mockReturnValue(
+      createApiContext({
+        tokens: [
+          createToken({ id: 11, group: "alpha" }) as ApiToken,
+          createToken({ id: 12, group: "beta" }) as ApiToken,
+        ],
+      }).context,
+    )
+
+    const regularCandidate =
+      await resolveRepairCreatedTokenBatchImportCandidate({
+        progress,
+        accounts: [account],
+        targetFingerprint: TARGET_A,
+        freshness: REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
+        includeCompletedReferences: true,
+        forceCompleteVerification: true,
+      })
+
+    expect(regularCandidate?.intent.verification).toBe(
+      MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
+    )
+    expect(
+      regularCandidate?.items
+        .filter(isResolvedManagedSiteTokenBatchExportItemInput)
+        .map(({ runtimeKey }) => runtimeKey.id),
+    ).toEqual([
+      buildAccountTokenRuntimeKeyId(account.id, 11),
+      buildAccountTokenRuntimeKeyId(account.id, 12),
+    ])
   })
 
   it("uses complete verification for historical results or an explicit complete-check request", async () => {

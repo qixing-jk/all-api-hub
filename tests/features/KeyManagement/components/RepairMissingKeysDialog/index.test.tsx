@@ -1,6 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { RepairMissingKeysDialog } from "~/features/KeyManagement/components/RepairMissingKeysDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
@@ -34,6 +35,7 @@ const {
   mockCreateManagedSiteTokenBatchImportTarget,
   mockSendAccountKeyRepairMessage,
   mockManagedSiteTokenBatchExportDialog,
+  mockOpenSettingsTabInNewTab,
 } = vi.hoisted(() => ({
   mockHandleStartAudit: vi.fn(),
   mockUseRepairMissingKeysJob: vi.fn(),
@@ -43,6 +45,7 @@ const {
   mockCreateManagedSiteTokenBatchImportTarget: vi.fn(),
   mockSendAccountKeyRepairMessage: vi.fn(),
   mockManagedSiteTokenBatchExportDialog: vi.fn(),
+  mockOpenSettingsTabInNewTab: vi.fn(),
 }))
 let mockProgress: AccountKeyRepairProgress
 let mockIsStarting = false
@@ -87,6 +90,17 @@ vi.mock(
     },
   }),
 )
+
+vi.mock("~/utils/navigation", async () => {
+  const actual =
+    await vi.importActual<typeof import("~/utils/navigation")>(
+      "~/utils/navigation",
+    )
+  return {
+    ...actual,
+    openSettingsTabInNewTab: mockOpenSettingsTabInNewTab,
+  }
+})
 
 vi.mock(
   "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog",
@@ -899,6 +913,162 @@ describe("RepairMissingKeysDialog", () => {
         "keyManagement:repairMissingKeys.managedSiteImport.unavailable",
       ),
     ).not.toBeInTheDocument()
+
+    mockResolveRepairCreatedTokenBatchImportCandidate.mockResolvedValueOnce(
+      buildRepairImportCandidate(
+        account,
+        MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
+      ),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.managedSiteImport.useRegularImport",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        mockResolveRepairCreatedTokenBatchImportCandidate,
+      ).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          includeCompletedReferences: true,
+          forceCompleteVerification: true,
+        }),
+      )
+    })
+    expect(
+      mockManagedSiteTokenBatchExportDialog.mock.calls.at(-1)?.[0],
+    ).toEqual(
+      expect.objectContaining({
+        isOpen: true,
+        intent: {
+          source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.REPAIR_CREATED,
+          verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
+        },
+      }),
+    )
+  })
+
+  it("opens missing managed-site configuration in a new tab and detects it on retry", async () => {
+    const user = userEvent.setup()
+    const account = buildAccount()
+    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running, {
+      jobId: "repair-job",
+    })
+    mockGetCurrentManagedSiteRuntimeConfig.mockResolvedValueOnce(null)
+
+    const view = render(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[account]}
+        startOnOpen={false}
+      />,
+    )
+    await screen.findByRole("progressbar", {
+      name: "keyManagement:repairMissingKeys.progressLabel",
+    })
+    mockProgress = buildCreatedProgress(account)
+    view.rerender(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[account]}
+        startOnOpen={false}
+      />,
+    )
+
+    await user.click(
+      await screen.findByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
+      ),
+    )
+    expect(
+      await screen.findByText(
+        "keyManagement:repairMissingKeys.managedSiteImport.configMissing",
+      ),
+    ).toBeVisible()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.managedSiteImport.openConfiguration",
+      }),
+    )
+    expect(mockOpenSettingsTabInNewTab).toHaveBeenCalledWith("managedSite", {
+      anchor: SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR,
+    })
+
+    mockGetCurrentManagedSiteRuntimeConfig.mockResolvedValueOnce({
+      siteType: SITE_TYPES.NEW_API,
+      config: {
+        baseUrl: "https://target.example.invalid",
+        adminToken: "target-token",
+        userId: "1",
+      },
+    })
+    mockResolveRepairCreatedTokenBatchImportCandidate.mockResolvedValueOnce(
+      buildRepairImportCandidate(account),
+    )
+    await user.click(
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
+      ),
+    )
+
+    expect(mockGetCurrentManagedSiteRuntimeConfig).toHaveBeenCalledTimes(2)
+    expect(
+      await screen.findByTestId("repair-created-batch-dialog"),
+    ).toBeVisible()
+  })
+
+  it("shows manual recovery guidance when the managed-site configuration tab cannot open", async () => {
+    const user = userEvent.setup()
+    const account = buildAccount()
+    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running, {
+      jobId: "repair-job",
+    })
+    mockGetCurrentManagedSiteRuntimeConfig.mockResolvedValueOnce(null)
+    mockOpenSettingsTabInNewTab.mockRejectedValueOnce(
+      new Error("tabs unavailable"),
+    )
+
+    const view = render(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[account]}
+        startOnOpen={false}
+      />,
+    )
+    await screen.findByRole("progressbar", {
+      name: "keyManagement:repairMissingKeys.progressLabel",
+    })
+    mockProgress = buildCreatedProgress(account)
+    view.rerender(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={[account]}
+        startOnOpen={false}
+      />,
+    )
+
+    await user.click(
+      await screen.findByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton,
+      ),
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.managedSiteImport.openConfiguration",
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        "keyManagement:repairMissingKeys.managedSiteImport.configurationOpenFailed",
+      ),
+    ).toBeVisible()
   })
 
   it("records only controlled attempted outcomes and reconciled matches", async () => {

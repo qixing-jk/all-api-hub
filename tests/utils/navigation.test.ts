@@ -42,6 +42,7 @@ import {
   openRedeemPage,
   openSettingsPage,
   openSettingsTab,
+  openSettingsTabInNewTab,
   openSidePanelPage,
   openSidePanelWithFallback,
   openSiteSupportRequestPage,
@@ -964,6 +965,20 @@ describe("navigation utilities", () => {
 
     replaceStateSpy.mockRestore()
     pushStateSpy.mockRestore()
+  })
+
+  it("can always open a settings target in a new tab without replacing the current workflow", async () => {
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#keyManagement`)
+
+    await openSettingsTabInNewTab("managedSite", {
+      anchor: "managed-site-selector",
+    })
+
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${OPTIONS_PAGE_URL}?tab=managedSite&anchor=managed-site-selector#basic`,
+      true,
+    )
+    expect(window.location.href).toBe(`${OPTIONS_PAGE_URL}#keyManagement`)
   })
 
   it("opens permissions onboarding in-place when already on the options page", async () => {

@@ -593,15 +593,18 @@
       "action_many": "Importar {{count}} chaves corrigidas",
       "action_other": "Importar {{count}} chaves corrigidas",
       "changeTarget": "Alterar destino",
-      "configMissing": "Configure um site gerenciado antes de importar as chaves corrigidas.",
+      "configMissing": "O site gerenciado atual não está configurado. Abra a configuração, conclua-a e volte aqui para importar novamente.",
+      "configurationOpenFailed": "Não foi possível abrir a configuração do site gerenciado. Acesse Configurações > Site gerenciado para configurá-lo manualmente.",
       "failed": "Não foi possível preparar as chaves corrigidas para importação. Tente novamente.",
-      "nothingPending": "Não há chaves corrigidas pendentes de importação para este destino. Elas podem já ter sido criadas ou corresponder exatamente a chaves existentes.",
+      "nothingPending": "Estas chaves já foram processadas para o destino atual: os canais foram criados ou encontrados como correspondências exatas. Para verificá-las novamente, use a importação normal com verificação completa.",
+      "openConfiguration": "Abrir configuração do site gerenciado",
       "receiptFailed": "A importação foi concluída, mas não foi possível atualizar os resultados da correção. Atualize os resultados para confirmar o estado atual.",
       "target_one": "{{count}} chave corrigida pronta para {{site}}",
       "target_many": "{{count}} chaves corrigidas prontas para {{site}}",
       "target_other": "{{count}} chaves corrigidas prontas para {{site}}",
       "title": "Importar chaves corrigidas",
-      "unavailable": "As chaves corrigidas não estão mais disponíveis para importação. Atualize os resultados da correção e tente novamente."
+      "unavailable": "As chaves corrigidas não estão mais disponíveis para importação. Atualize os resultados da correção e tente novamente.",
+      "useRegularImport": "Usar importação normal"
     },
     "messages": {
       "cancelFailed": "Falha ao cancelar a tarefa de correção",

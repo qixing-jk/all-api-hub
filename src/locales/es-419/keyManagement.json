@@ -593,15 +593,18 @@
       "action_many": "Importar {{count}} claves reparadas",
       "action_other": "Importar {{count}} claves reparadas",
       "changeTarget": "Cambiar destino",
-      "configMissing": "Configura un sitio administrado antes de importar las claves reparadas.",
+      "configMissing": "El sitio administrado actual no está configurado. Abre su configuración, complétala y vuelve aquí para importar de nuevo.",
+      "configurationOpenFailed": "No se pudo abrir la configuración del sitio administrado. Ve a Configuración > Sitio administrado para configurarlo manualmente.",
       "failed": "No se pudieron preparar las claves reparadas para importarlas. Inténtalo de nuevo.",
-      "nothingPending": "No hay claves reparadas pendientes de importar en este destino. Es posible que ya se hayan creado o que exista una coincidencia exacta.",
+      "nothingPending": "Estas claves ya se procesaron para el destino actual: sus canales se crearon o se encontraron coincidencias exactas. Para revisarlas otra vez, usa la importación normal con verificación completa.",
+      "openConfiguration": "Abrir configuración del sitio administrado",
       "receiptFailed": "La importación terminó, pero no se pudieron actualizar los resultados de reparación. Actualiza los resultados para confirmar el estado actual.",
       "target_one": "{{count}} clave reparada lista para {{site}}",
       "target_many": "{{count}} claves reparadas listas para {{site}}",
       "target_other": "{{count}} claves reparadas listas para {{site}}",
       "title": "Importar claves reparadas",
-      "unavailable": "Las claves reparadas ya no están disponibles para importar. Actualiza los resultados de reparación e inténtalo de nuevo."
+      "unavailable": "Las claves reparadas ya no están disponibles para importar. Actualiza los resultados de reparación e inténtalo de nuevo.",
+      "useRegularImport": "Usar importación normal"
     },
     "messages": {
       "cancelFailed": "No se pudo cancelar el trabajo de reparación",

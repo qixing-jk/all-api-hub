@@ -1,3 +1,4 @@
+import type { BasicSettingsTabId } from "~/constants/basicSettingsTabs"
 import {
   MENU_ITEM_IDS,
   type OptionsMenuItemId,
@@ -492,6 +493,22 @@ const _openSettingsTab = (
 }
 
 /**
+ * Opens a settings target in a fresh tab so the current workflow stays mounted.
+ */
+const _openSettingsTabInNewTab = async (
+  tabId: BasicSettingsTabId,
+  options?: { anchor?: string },
+) => {
+  const searchString = buildSearchString({
+    tab: tabId,
+    anchor: options?.anchor,
+  })
+  await createActiveTab(
+    `${OPTIONS_PAGE_URL}${searchString}${getBasicSettingsHash()}`,
+  )
+}
+
+/**
  * Opens the repository bug report template in a new browser tab.
  */
 const _openAboutPage = () => {
@@ -833,6 +850,7 @@ export const openPermissionsOnboardingPage = withPopupClose(
  * dispatching the navigation request.
  */
 export const openSettingsTab = withPopupClose(_openSettingsTab)
+export const openSettingsTabInNewTab = withPopupClose(_openSettingsTabInNewTab)
 export const openAutoCheckinPage = withPopupClose(
   (searchParams?: Record<string, string | undefined>) =>
     openOrFocusOptionsMenuItem(MENU_ITEM_IDS.AUTO_CHECKIN, searchParams),

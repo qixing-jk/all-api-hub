@@ -565,13 +565,16 @@
     "managedSiteImport": {
       "action": "导入 {{count}} 个修复创建的密钥",
       "changeTarget": "更改目标",
-      "configMissing": "请先配置管理站点，再导入修复创建的密钥。",
+      "configMissing": "当前管理站点尚未配置。请打开配置页，完成后返回此处再次导入。",
+      "configurationOpenFailed": "无法打开管理站点配置。请前往“设置 > 管理站点”手动配置。",
       "failed": "准备修复创建的密钥导入失败，请重试。",
-      "nothingPending": "当前目标没有待导入的密钥；它们可能已创建或已精确存在。",
+      "nothingPending": "这些密钥已在当前目标处理完成：对应渠道已创建或已精确存在。如需再次检查，请使用常规导入进行完整校验。",
+      "openConfiguration": "打开管理站点配置",
       "receiptFailed": "导入已完成，但无法更新修复结果。请刷新结果以确认当前状态。",
       "target": "{{site}}：有 {{count}} 个修复创建的密钥可导入",
       "title": "导入修复创建的密钥",
-      "unavailable": "这些修复创建的密钥暂时无法导入。请刷新修复结果后重试。"
+      "unavailable": "这些修复创建的密钥暂时无法导入。请刷新修复结果后重试。",
+      "useRegularImport": "使用常规导入"
     },
     "messages": {
       "cancelFailed": "取消检查任务失败",
