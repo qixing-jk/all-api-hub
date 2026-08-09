@@ -652,6 +652,11 @@ describe("RepairMissingKeysDialog", () => {
       "keyManagement:repairMissingKeys.managedSiteImport.target",
     )
     expect(
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportTargetSwitcher,
+      ),
+    ).toHaveAttribute("role", "combobox")
+    expect(
       mockResolveRepairCreatedTokenBatchImportCandidate,
     ).not.toHaveBeenCalled()
 

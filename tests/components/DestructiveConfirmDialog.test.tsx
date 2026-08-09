@@ -71,4 +71,25 @@ describe("DestructiveConfirmDialog", () => {
     expect(await screen.findByTestId("delete-confirm")).toBeInTheDocument()
     expect(screen.getByTestId("delete-cancel")).toBeInTheDocument()
   })
+
+  it("allows a non-destructive caller to replace the delete affordance", async () => {
+    render(
+      <DestructiveConfirmDialog
+        isOpen
+        onClose={vi.fn()}
+        title="Import selected keys"
+        description="This creates channels for the selected keys."
+        confirmLabel="Import"
+        cancelLabel="Cancel"
+        onConfirm={vi.fn()}
+        icon={<span data-testid="import-icon">Import</span>}
+        confirmVariant="default"
+      />,
+    )
+
+    expect(await screen.findByTestId("import-icon")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Import" })).not.toHaveClass(
+      "bg-destructive",
+    )
+  })
 })

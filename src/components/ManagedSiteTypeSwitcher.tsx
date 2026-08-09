@@ -30,11 +30,13 @@ const MANAGED_SITE_TYPES: ManagedSiteType[] = [
 interface ManagedSiteTypeSwitcherProps {
   ariaLabel?: string
   configuredOnly?: boolean
+  disabled?: boolean
   hideWhenSingleOption?: boolean
   label?: ReactNode
   labelClassName?: string
   size?: "sm" | "default"
   triggerClassName?: string
+  triggerTestId?: string
   wrapperClassName?: string
 }
 
@@ -45,11 +47,13 @@ interface ManagedSiteTypeSwitcherProps {
 export default function ManagedSiteTypeSwitcher({
   ariaLabel,
   configuredOnly = false,
+  disabled = false,
   hideWhenSingleOption = false,
   label,
   labelClassName,
   size = "default",
   triggerClassName,
+  triggerTestId,
   wrapperClassName,
 }: ManagedSiteTypeSwitcherProps) {
   const { t } = useTranslation("settings")
@@ -104,12 +108,13 @@ export default function ManagedSiteTypeSwitcher({
       <Select
         value={managedSiteType}
         onValueChange={handleManagedSiteTypeChange}
-        disabled={options.length < 2}
+        disabled={disabled || options.length < 2}
       >
         <SelectTrigger
           className={cn("w-full", triggerClassName)}
           size={size}
           aria-label={ariaLabel ?? t("managedSite.siteTypeLabel")}
+          data-testid={triggerTestId}
         >
           <SelectValue placeholder={t("managedSite.siteTypeLabel")} />
         </SelectTrigger>

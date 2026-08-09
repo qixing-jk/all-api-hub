@@ -85,6 +85,7 @@ const {
   mockTrackProductAnalyticsActionCompleted,
   mockTrackProductAnalyticsActionStarted,
   mockToastSuccess,
+  mockUserPreferencesContextValue,
   mockVerificationDialogState,
 } = vi.hoisted(() => ({
   mockAllowDisabledVerificationButtonClicks: {
@@ -102,6 +103,9 @@ const {
   mockTrackProductAnalyticsActionCompleted: vi.fn(),
   mockTrackProductAnalyticsActionStarted: vi.fn(),
   mockToastSuccess: vi.fn(),
+  mockUserPreferencesContextValue: {
+    current: {} as Record<string, unknown>,
+  },
   mockVerificationDialogState: {
     isOpen: false,
   },
@@ -199,13 +203,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 
   return {
     ...actual,
-    useUserPreferencesContext: () => ({
-      newApiBaseUrl: "https://managed.example",
-      newApiUserId: "1",
-      newApiUsername: "admin",
-      newApiPassword: "secret",
-      newApiTotpSecret: "JBSWY3DPEHPK3PXP",
-    }),
+    useUserPreferencesContext: () => mockUserPreferencesContextValue.current,
   }
 })
 
@@ -302,6 +300,8 @@ vi.mock("~/components/ui", async (importOriginal) => {
       confirmLabel,
       cancelLabel,
       isWorking,
+      icon,
+      confirmVariant,
     }: {
       isOpen: boolean
       onClose: () => void
@@ -310,8 +310,15 @@ vi.mock("~/components/ui", async (importOriginal) => {
       confirmLabel: string
       cancelLabel: string
       isWorking?: boolean
+      icon?: ReactNode
+      confirmVariant?: string
     }) => {
-      mockDestructiveConfirmDialogRender({ isOpen, onConfirm })
+      mockDestructiveConfirmDialogRender({
+        isOpen,
+        onConfirm,
+        icon,
+        confirmVariant,
+      })
       return isOpen ? (
         <div role="dialog" aria-label={title}>
           <button type="button" onClick={onClose} disabled={isWorking}>
@@ -594,6 +601,26 @@ const renderDialog = (props?: {
 describe("ManagedSiteTokenBatchExportDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUserPreferencesContextValue.current = {
+      managedSiteType: SITE_TYPES.NEW_API,
+      preferences: {
+        managedSiteType: SITE_TYPES.NEW_API,
+        newApi: {
+          baseUrl: "https://managed.example",
+          adminToken: "admin-token",
+          userId: "1",
+          username: "admin",
+          password: "secret",
+          totpSecret: "JBSWY3DPEHPK3PXP",
+        },
+      },
+      updateManagedSiteType: vi.fn().mockResolvedValue(true),
+      newApiBaseUrl: "https://managed.example",
+      newApiUserId: "1",
+      newApiUsername: "admin",
+      newApiPassword: "secret",
+      newApiTotpSecret: "JBSWY3DPEHPK3PXP",
+    }
     mockExecuteBatchExport.mockReset()
     mockCloseNewApiManagedVerification.mockReset()
     mockCloseNewApiManagedVerification.mockImplementation(() => {
@@ -879,25 +906,50 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     ).toBeInTheDocument()
   })
 
-  it("shows the current target and reuses managed-site settings navigation", async () => {
-    const user = userEvent.setup()
-    const onClose = vi.fn()
+  it("shows the current target with an in-place managed-site switcher", async () => {
     mockPreparePreview.mockResolvedValue(preview)
 
-    renderDialog({ onClose })
+    renderDialog()
 
     expect(
       await screen.findByText("https://target.example.invalid"),
     ).toBeInTheDocument()
-    await user.click(
+    expect(
       screen.getByTestId(
-        "key-management-managed-site-batch-export-open-settings-button",
+        "key-management-managed-site-batch-export-target-switcher",
       ),
+    ).toHaveAttribute("role", "combobox")
+    expect(mockOpenSettingsTab).not.toHaveBeenCalled()
+  })
+
+  it("refreshes the preview when the selected managed site changes", async () => {
+    mockPreparePreview.mockResolvedValue(preview)
+
+    const view = renderDialog()
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+
+    mockUserPreferencesContextValue.current = {
+      managedSiteType: SITE_TYPES.DONE_HUB,
+      preferences: {
+        managedSiteType: SITE_TYPES.DONE_HUB,
+      },
+      updateManagedSiteType: vi.fn().mockResolvedValue(true),
+      newApiBaseUrl: "https://managed.example",
+      newApiUserId: "1",
+      newApiUsername: "admin",
+      newApiPassword: "secret",
+      newApiTotpSecret: "JBSWY3DPEHPK3PXP",
+    }
+    view.rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen
+        onClose={vi.fn()}
+        items={[{ account, runtimeKey }]}
+      />,
     )
 
-    expect(onClose).toHaveBeenCalledOnce()
-    expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite", {
-      preserveHistory: true,
+    await waitFor(() => {
+      expect(mockPreparePreview).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -1158,6 +1210,12 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.confirm.title",
       }),
     ).toBeInTheDocument()
+    expect(mockDestructiveConfirmDialogRender.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        confirmVariant: "default",
+        icon: expect.anything(),
+      }),
+    )
 
     await user.click(
       screen.getAllByRole("button", { name: "common:actions.cancel" })[1],
@@ -3094,9 +3152,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     ).toBeEnabled()
     expect(
       screen.getByTestId(
-        "key-management-managed-site-batch-export-open-settings-button",
+        "key-management-managed-site-batch-export-target-switcher",
       ),
-    ).toBeInTheDocument()
+    ).toBeEnabled()
   })
 
   it("maps known execution error codes to user-facing text", async () => {

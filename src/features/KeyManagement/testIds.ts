@@ -26,16 +26,16 @@ export const KEY_MANAGEMENT_TEST_IDS = {
     "key-management-managed-site-batch-export-verify-button",
   managedSiteBatchExportUseCompleteChecksButton:
     "key-management-managed-site-batch-export-use-complete-checks-button",
-  managedSiteBatchExportOpenSettingsButton:
-    "key-management-managed-site-batch-export-open-settings-button",
+  managedSiteBatchExportTargetSwitcher:
+    "key-management-managed-site-batch-export-target-switcher",
   managedSiteBatchExportRetryButton:
     "key-management-managed-site-batch-export-retry-button",
   repairCreatedManagedSiteImportCard:
     "key-management-repair-created-managed-site-import-card",
   repairCreatedManagedSiteImportButton:
     "key-management-repair-created-managed-site-import-button",
-  repairCreatedManagedSiteImportOpenSettingsButton:
-    "key-management-repair-created-managed-site-import-open-settings-button",
+  repairCreatedManagedSiteImportTargetSwitcher:
+    "key-management-repair-created-managed-site-import-target-switcher",
   managedSiteChannelLinkButton:
     "key-management-managed-site-channel-link-button",
   managedSiteVerificationRetryButton:

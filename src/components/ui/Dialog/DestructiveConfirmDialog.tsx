@@ -1,5 +1,5 @@
 import { TrashIcon } from "@heroicons/react/24/outline"
-import type { ReactNode } from "react"
+import type { ComponentProps, ReactNode } from "react"
 
 import { Button } from "~/components/ui/button"
 import { Modal } from "~/components/ui/Dialog/Modal"
@@ -62,6 +62,14 @@ interface DestructiveConfirmDialogProps {
    * Optional stable selector for the cancel action.
    */
   cancelButtonTestId?: string
+  /**
+   * Optional semantic icon override for non-delete confirmations.
+   */
+  icon?: ReactNode
+  /**
+   * Optional confirm-button style override; destructive remains the default.
+   */
+  confirmVariant?: ComponentProps<typeof Button>["variant"]
 }
 
 /**
@@ -85,6 +93,8 @@ export function DestructiveConfirmDialog({
   size = "sm",
   confirmButtonTestId,
   cancelButtonTestId,
+  icon = <TrashIcon className="h-5 w-5 text-red-600 dark:text-red-400" />,
+  confirmVariant = "destructive",
 }: DestructiveConfirmDialogProps) {
   return (
     <Modal
@@ -98,7 +108,7 @@ export function DestructiveConfirmDialog({
       header={
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <TrashIcon className="h-5 w-5 text-red-600 dark:text-red-400" />
+            {icon}
             <h2 className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
               {title}
             </h2>
@@ -120,7 +130,7 @@ export function DestructiveConfirmDialog({
           <Button
             type="button"
             onClick={onConfirm}
-            variant="destructive"
+            variant={confirmVariant}
             className="flex-1"
             loading={isWorking}
             data-testid={confirmButtonTestId}

@@ -1,11 +1,13 @@
+import { SendToBack } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { Button, DestructiveConfirmDialog, Modal } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
-import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import { ManagedSiteTokenBatchExportFooter } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportFooter"
 import { ManagedSiteTokenBatchExportPreviewList } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportPreviewList"
@@ -45,11 +47,6 @@ export function ManagedSiteTokenBatchExportDialog({
     dialog.actions.close()
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.MANAGED_SITE_CHANNELS}`)
   }
-  const handleOpenManagedSiteSettings = () => {
-    dialog.actions.close()
-    void openSettingsTab("managedSite", { preserveHistory: true })
-  }
-
   return (
     <>
       <Modal
@@ -115,18 +112,17 @@ export function ManagedSiteTokenBatchExportDialog({
                   {dialog.preview.targetSummary.baseUrl}
                 </div>
               </div>
-              <Button
-                type="button"
+              <ManagedSiteTypeSwitcher
+                ariaLabel={t(
+                  "keyManagement:batchManagedSiteExport.target.change",
+                )}
                 size="sm"
-                variant="outline"
-                data-testid={
-                  KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportOpenSettingsButton
+                triggerClassName="w-auto min-w-[172px]"
+                triggerTestId={
+                  KEY_MANAGEMENT_TEST_IDS.managedSiteBatchExportTargetSwitcher
                 }
-                onClick={handleOpenManagedSiteSettings}
-                disabled={dialog.isRunning}
-              >
-                {t("keyManagement:batchManagedSiteExport.target.change")}
-              </Button>
+                disabled={dialog.isLoadingPreview || dialog.isRunning}
+              />
             </div>
           ) : null}
 
@@ -207,6 +203,8 @@ export function ManagedSiteTokenBatchExportDialog({
         workingLabel={t("keyManagement:batchManagedSiteExport.actions.running")}
         cancelLabel={t("common:actions.cancel")}
         isWorking={dialog.isRunning}
+        icon={<SendToBack className="text-primary h-5 w-5" />}
+        confirmVariant="default"
       />
       <NewApiManagedVerificationDialog
         isOpen={isVerificationDialogVisible}

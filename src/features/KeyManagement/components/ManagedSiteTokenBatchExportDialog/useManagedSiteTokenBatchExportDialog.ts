@@ -133,6 +133,7 @@ export function useManagedSiteTokenBatchExportDialog({
   t,
 }: UseManagedSiteTokenBatchExportDialogParams) {
   const {
+    managedSiteType,
     newApiBaseUrl,
     newApiUserId,
     newApiUsername,
@@ -184,6 +185,7 @@ export function useManagedSiteTokenBatchExportDialog({
   const openedItemsRef = useRef(items)
   const wasOpenRef = useRef(false)
   const pendingPreviewLoadOriginRef = useRef<PreviewLoadOrigin>(null)
+  const managedSiteTypeRef = useRef(managedSiteType)
 
   previewRef.current = preview
   selectedIdsRef.current = selectedIds
@@ -195,6 +197,29 @@ export function useManagedSiteTokenBatchExportDialog({
       setActiveIntent(intent)
     }
   }, [intent, isOpen])
+
+  useEffect(() => {
+    if (!isOpen) {
+      managedSiteTypeRef.current = managedSiteType
+      return
+    }
+    if (
+      managedSiteTypeRef.current === managedSiteType ||
+      isRunning ||
+      isLoadingPreview
+    ) {
+      return
+    }
+
+    managedSiteTypeRef.current = managedSiteType
+    pendingPreviewLoadOriginRef.current = PREVIEW_LOAD_ORIGINS.MANUAL
+    setPreviewLoadOrigin(PREVIEW_LOAD_ORIGINS.MANUAL)
+    setPreviewError(null)
+    setExecutionError(null)
+    setIsTargetChanged(false)
+    setIsLoadingPreview(true)
+    setRefreshKey((value) => value + 1)
+  }, [isLoadingPreview, isOpen, isRunning, managedSiteType])
 
   useLayoutEffect(() => {
     if (!isOpen) {

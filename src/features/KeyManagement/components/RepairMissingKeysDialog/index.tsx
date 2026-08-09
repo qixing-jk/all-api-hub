@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { Alert, Button, Modal } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
@@ -9,7 +10,6 @@ import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import type { AccountToken, DisplaySiteData } from "~/types"
 import type { AccountKeyRepairOutcome } from "~/types/accountKeyAutoProvisioning"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
-import { openSettingsTab } from "~/utils/navigation"
 
 import { ManagedSiteTokenBatchExportDialog } from "../ManagedSiteTokenBatchExportDialog"
 import { RepairInvalidKeysDeleteConfirm } from "./RepairInvalidKeysDeleteConfirm"
@@ -337,23 +337,17 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      data-testid={
-                        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportOpenSettingsButton
-                      }
-                      onClick={() =>
-                        void openSettingsTab("managedSite", {
-                          preserveHistory: true,
-                        })
-                      }
-                    >
-                      {t(
+                    <ManagedSiteTypeSwitcher
+                      ariaLabel={t(
                         "keyManagement:repairMissingKeys.managedSiteImport.changeTarget",
                       )}
-                    </Button>
+                      size="sm"
+                      triggerClassName="w-auto min-w-[172px]"
+                      triggerTestId={
+                        KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportTargetSwitcher
+                      }
+                      disabled={repairCreatedImport.isResolving}
+                    />
                     <Button
                       type="button"
                       size="sm"

@@ -191,4 +191,17 @@ describe("ManagedSiteTypeSwitcher", () => {
       SITE_TYPES.CLAUDE_CODE_HUB,
     )
   })
+
+  it("supports a stable selector and a disabled workflow state", async () => {
+    render(
+      <ManagedSiteTypeSwitcher
+        disabled
+        triggerTestId="managed-site-target-switcher"
+      />,
+    )
+
+    const switcher = await screen.findByTestId("managed-site-target-switcher")
+    expect(switcher).toHaveAttribute("role", "combobox")
+    expect(switcher).toBeDisabled()
+  })
 })
