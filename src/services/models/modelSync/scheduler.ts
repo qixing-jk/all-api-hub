@@ -1,5 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import * as octopusApi from "~/services/apiService/octopus"
+import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
   resolveCurrentManagedSiteRuntimeConfig,
@@ -210,6 +211,7 @@ class ModelSyncScheduler {
       userPrefs.managedSiteModelSync ??
       DEFAULT_PREFERENCES.managedSiteModelSync!
 
+    await ensureLegacyChannelConfigMigrationReady()
     const channelConfigs = await channelConfigStorage.getConfigsForScope({
       managedSiteType: managedConfig.siteType,
       scopeKey: managedConfig.config.baseUrl,
@@ -728,6 +730,7 @@ class ModelSyncScheduler {
 
     let result
     try {
+      await ensureLegacyChannelConfigMigrationReady()
       const channelConfigs = await channelConfigStorage.getConfigsForScope({
         managedSiteType: octopusRuntimeConfig.siteType,
         scopeKey: octopusRuntimeConfig.config.baseUrl,

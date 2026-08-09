@@ -15,6 +15,10 @@ import {
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 
+vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
+  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
+}))
+
 describe("filterWebdavBackupPayloadBySelection", () => {
   const baseBackup: any = {
     version: "2.0",

@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 
+vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
+  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
+}))
+
 const mocks = vi.hoisted(() => ({
   clearAlarm: vi.fn(),
   createAlarm: vi.fn(),

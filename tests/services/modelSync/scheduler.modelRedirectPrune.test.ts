@@ -7,6 +7,10 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
+vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
+  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
+}))
+
 const realGenerateModelMappingForChannel =
   ModelRedirectService.generateModelMappingForChannel
 

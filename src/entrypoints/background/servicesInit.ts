@@ -2,6 +2,7 @@ import { autoRefreshService } from "~/services/accounts/autoRefreshService"
 import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduler"
 import { dailyBalanceHistoryScheduler } from "~/services/history/dailyBalanceHistory/scheduler"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
+import { legacyChannelConfigMigration } from "~/services/managedSites/legacyChannelConfigMigration"
 import { newApiOwnedSessionLifecycle } from "~/services/managedSites/newApiOwnedSession/background"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { modelSyncScheduler } from "~/services/models/modelSync"
@@ -80,6 +81,10 @@ export async function initializeServices() {
           rejectedCount: rejected.length,
         })
       }
+
+      await legacyChannelConfigMigration.initialize().catch((error) => {
+        logger.warn("Legacy channel config migration failed", error)
+      })
 
       await modelMetadataService.initialize().catch((error) => {
         logger.warn("Model metadata initialization failed", error)

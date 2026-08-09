@@ -5,6 +5,7 @@ import {
   getCurrentManagedSiteRuntimeConfig,
   getManagedSiteLegacyAdminConfig,
   getManagedSiteRuntimeConfigForType,
+  hasManagedSiteRuntimeConfigInputForType,
   resolveCurrentManagedSiteRuntimeConfig,
   resolveManagedSiteRuntimeConfigForType,
 } from "~/services/managedSites/runtimeConfig"
@@ -154,6 +155,26 @@ describe("managed-site runtime config resolver", () => {
     expect(
       resolveManagedSiteRuntimeConfigForType(prefs, SITE_TYPES.CLAUDE_CODE_HUB),
     ).toBeNull()
+  })
+
+  it("distinguishes incomplete input from an unconfigured managed site", () => {
+    const incomplete = buildUserPreferences({
+      newApi: {
+        baseUrl: "https://new-api.example.com",
+        adminToken: "",
+        userId: "",
+      },
+    })
+    const unconfigured = buildUserPreferences({
+      newApi: { baseUrl: "", adminToken: "", userId: "" },
+    })
+
+    expect(
+      hasManagedSiteRuntimeConfigInputForType(incomplete, SITE_TYPES.NEW_API),
+    ).toBe(true)
+    expect(
+      hasManagedSiteRuntimeConfigInputForType(unconfigured, SITE_TYPES.NEW_API),
+    ).toBe(false)
   })
 
   it("returns unknown managed-site values from the exhaustive fallback", () => {

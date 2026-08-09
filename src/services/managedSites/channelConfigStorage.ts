@@ -49,10 +49,32 @@ type ManagedUpstreamResourceScope = Pick<
   "managedSiteType" | "scopeKey"
 >
 
+type LegacyNumericChannelConfig = Omit<ChannelResourceConfig, "resourceRef">
+type LegacyNumericChannelConfigMap = Record<number, LegacyNumericChannelConfig>
+type LegacyReplacementState =
+  | {
+      phase: "prepared"
+      snapshot: ChannelConfigSnapshot
+    }
+  | {
+      phase: "committed"
+    }
+
+export type LegacyChannelConfigMigrationCandidate = {
+  channelId: number
+  resourceRef: ManagedUpstreamResourceRef
+}
+
+export type LegacyChannelConfigMigrationResult = {
+  migrated: number
+  ambiguous: number
+  unmatched: number
+}
+
 /** Parses an optional positive numeric channel id used only as metadata. */
 function toValidChannelId(value: unknown): number | null {
   const channelId = Number(value)
-  return Number.isFinite(channelId) && channelId > 0 ? channelId : null
+  return Number.isSafeInteger(channelId) && channelId > 0 ? channelId : null
 }
 
 /** Checks for a plain object-shaped storage or snapshot value. */
@@ -253,6 +275,60 @@ function sanitizeResourceConfig(
   }
 }
 
+/** Sanitizes the obsolete numeric shape exclusively for one-time migration. */
+function sanitizeLegacyNumericConfigMap(
+  raw: unknown,
+): LegacyNumericChannelConfigMap {
+  if (!isRecord(raw)) {
+    return {}
+  }
+
+  const configs: LegacyNumericChannelConfigMap = {}
+  for (const [key, value] of Object.entries(raw)) {
+    const channelId = toValidChannelId(key)
+    if (channelId === null || !isRecord(value)) continue
+
+    const payload = value as Partial<LegacyNumericChannelConfig> & {
+      filters?: unknown
+      modelFilterSettings?: Partial<ChannelModelFilterSettings> & {
+        rules?: unknown
+      }
+    }
+    if (
+      !isRecord(payload.modelFilterSettings) &&
+      !Array.isArray(payload.filters)
+    ) {
+      continue
+    }
+    const modelFilterSettings = sanitizeModelFilterSettings(
+      payload.modelFilterSettings,
+      payload.filters,
+      HISTORICAL_CHANNEL_CONFIG_TIMESTAMP,
+    )
+    const updatedAt = Math.max(
+      isPositiveTimestamp(payload.updatedAt)
+        ? payload.updatedAt
+        : HISTORICAL_CHANNEL_CONFIG_TIMESTAMP,
+      modelFilterSettings.updatedAt,
+    )
+    const createdAt = Math.min(
+      isPositiveTimestamp(payload.createdAt)
+        ? payload.createdAt
+        : HISTORICAL_CHANNEL_CONFIG_TIMESTAMP,
+      updatedAt,
+    )
+
+    configs[channelId] = {
+      channelId,
+      modelFilterSettings,
+      createdAt,
+      updatedAt,
+    }
+  }
+
+  return configs
+}
+
 /** Strictly validates one externally supplied snapshot entry. */
 function coerceSnapshotResourceConfig(
   value: unknown,
@@ -376,23 +452,184 @@ class ChannelConfigStorage {
     return withExtensionStorageWriteLock(STORAGE_LOCKS.CHANNEL_CONFIG, work)
   }
 
-  /** Removes the obsolete numeric store without re-enabling it on cleanup failure. */
-  private async discardLegacyNumericConfigs(): Promise<void> {
-    try {
-      await this.storage.remove(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)
-    } catch (error) {
-      // The legacy key is never read again; retry cleanup on the next operation.
-      logger.warn("Failed to discard legacy numeric channel configs", error)
+  private async getLegacyReplacementState(): Promise<LegacyReplacementState | null> {
+    const rawState = await this.storage.get(
+      CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE,
+    )
+    if (rawState === null || rawState === undefined) {
+      return null
     }
+    if (isRecord(rawState) && rawState.phase === "committed") {
+      return { phase: "committed" }
+    }
+    if (isRecord(rawState) && rawState.phase === "prepared") {
+      const snapshot = coerceChannelConfigSnapshot(rawState.snapshot)
+      if (snapshot) {
+        return { phase: "prepared", snapshot }
+      }
+    }
+    throw new Error("Channel config snapshot replacement state is invalid")
+  }
+
+  private async assertNoIncompleteLegacyReplacement(): Promise<void> {
+    if ((await this.getLegacyReplacementState()) !== null) {
+      throw new Error("Channel config snapshot replacement is incomplete")
+    }
+  }
+
+  /** Finalizes cleanup after a scoped replacement has been durably committed. */
+  private async finalizeCommittedLegacyReplacement(): Promise<void> {
+    await this.storage.remove(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)
+    await this.storage.remove(
+      CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE,
+    )
+  }
+
+  /** Replays or finalizes a durable scoped-replacement transaction. */
+  private async recoverLegacyReplacement(
+    state: LegacyReplacementState,
+  ): Promise<void> {
+    if (state.phase === "prepared") {
+      await this.storage.set(
+        CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+        state.snapshot.configs,
+      )
+      await this.storage.set(
+        CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE,
+        { phase: "committed" } satisfies LegacyReplacementState,
+      )
+    }
+    await this.finalizeCommittedLegacyReplacement()
   }
 
   /** Loads every resource-scoped configuration from authoritative storage. */
   private async getAllConfigs(): Promise<ChannelResourceConfigMap> {
-    await this.discardLegacyNumericConfigs()
+    await this.assertNoIncompleteLegacyReplacement()
     const stored = await this.storage.get(
       CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
     )
     return sanitizeResourceConfigMap(stored)
+  }
+
+  /** Returns whether valid legacy numeric data remains available to migrate. */
+  async hasLegacyNumericConfigs(): Promise<boolean> {
+    return await this.withStorageWriteLock(async () => {
+      const replacementState = await this.getLegacyReplacementState()
+      if (replacementState) {
+        await this.recoverLegacyReplacement(replacementState)
+        return false
+      }
+
+      const stored = await this.storage.get(
+        CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS,
+      )
+      return Object.keys(sanitizeLegacyNumericConfigMap(stored)).length > 0
+    })
+  }
+
+  /**
+   * Resolves legacy numeric configs against a complete discovered inventory.
+   *
+   * Callers must supply candidates only after every configured deployment was
+   * enumerated successfully. Zero/multiple candidates are deliberately not
+   * guessed. Uniquely resolved configs are persisted before only their numeric
+   * predecessors are removed; unresolved entries remain retryable.
+   */
+  async migrateLegacyNumericConfigs(
+    candidates: LegacyChannelConfigMigrationCandidate[],
+  ): Promise<LegacyChannelConfigMigrationResult> {
+    const candidatesByChannelId = new Map<
+      number,
+      Map<string, ManagedUpstreamResourceRef>
+    >()
+
+    for (const candidate of candidates) {
+      const channelId = toValidChannelId(candidate.channelId)
+      const resourceRef = normalizeResourceRef(candidate.resourceRef)
+      if (channelId === null || !resourceRef) continue
+
+      const resources = candidatesByChannelId.get(channelId) ?? new Map()
+      resources.set(getManagedUpstreamResourceRefKey(resourceRef), resourceRef)
+      candidatesByChannelId.set(channelId, resources)
+    }
+
+    return this.withStorageWriteLock(async () => {
+      await this.assertNoIncompleteLegacyReplacement()
+      const rawLegacyConfigs = await this.storage.get<unknown>(
+        CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS,
+      )
+      const legacyConfigs = sanitizeLegacyNumericConfigMap(rawLegacyConfigs)
+      const resourceConfigs = await this.getAllConfigs()
+      const result: LegacyChannelConfigMigrationResult = {
+        migrated: 0,
+        ambiguous: 0,
+        unmatched: 0,
+      }
+      const migratedChannelIds = new Set<number>()
+
+      for (const [channelIdKey, legacyConfig] of Object.entries(
+        legacyConfigs,
+      )) {
+        const channelId = Number(channelIdKey)
+        const resources = Array.from(
+          candidatesByChannelId.get(channelId)?.values() ?? [],
+        )
+
+        if (resources.length === 0) {
+          result.unmatched += 1
+          continue
+        }
+        if (resources.length > 1) {
+          result.ambiguous += 1
+          continue
+        }
+
+        const resourceRef = resources[0]
+        const resourceKey = getManagedUpstreamResourceRefKey(resourceRef)
+        const existing = resourceConfigs[resourceKey]
+        if (!existing || legacyConfig.updatedAt > existing.updatedAt) {
+          resourceConfigs[resourceKey] = {
+            ...legacyConfig,
+            resourceRef,
+            channelId,
+            createdAt: existing
+              ? Math.min(existing.createdAt, legacyConfig.createdAt)
+              : legacyConfig.createdAt,
+          }
+        } else if (existing.channelId !== channelId) {
+          resourceConfigs[resourceKey] = { ...existing, channelId }
+        }
+        result.migrated += 1
+        migratedChannelIds.add(channelId)
+      }
+
+      if (result.migrated > 0) {
+        await this.storage.set(
+          CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+          resourceConfigs,
+        )
+
+        const remainingLegacyConfigs = isRecord(rawLegacyConfigs)
+          ? { ...rawLegacyConfigs }
+          : {}
+        for (const key of Object.keys(remainingLegacyConfigs)) {
+          const channelId = toValidChannelId(key)
+          if (channelId !== null && migratedChannelIds.has(channelId)) {
+            delete remainingLegacyConfigs[key]
+          }
+        }
+
+        if (Object.keys(remainingLegacyConfigs).length > 0) {
+          await this.storage.set(
+            CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS,
+            remainingLegacyConfigs,
+          )
+        } else {
+          await this.storage.remove(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)
+        }
+      }
+      return result
+    })
   }
 
   /** Loads configurations belonging to one managed-site type and deployment scope. */
@@ -463,11 +700,41 @@ class ChannelConfigStorage {
     }
 
     await this.withStorageWriteLock(async () => {
+      const replacementState = await this.getLegacyReplacementState()
+      if (replacementState) {
+        await this.recoverLegacyReplacement(replacementState)
+      }
+
+      const legacySource = await this.storage.get(
+        CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS,
+      )
+      const hasLegacySource = isRecord(legacySource)
+        ? Object.keys(legacySource).length > 0
+        : legacySource !== null && legacySource !== undefined
+      const needsLegacyCleanup = hasLegacySource
+
+      if (needsLegacyCleanup) {
+        await this.storage.set(
+          CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE,
+          {
+            phase: "prepared",
+            snapshot,
+          } satisfies LegacyReplacementState,
+        )
+      }
       await this.storage.set(
         CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
         snapshot.configs,
       )
-      await this.discardLegacyNumericConfigs()
+      if (needsLegacyCleanup) {
+        await this.storage.set(
+          CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE,
+          { phase: "committed" } satisfies LegacyReplacementState,
+        )
+        // A committed replacement supersedes the obsolete migration source.
+        // The marker lets a later startup finish cleanup without resurrecting it.
+        await this.finalizeCommittedLegacyReplacement()
+      }
     })
     return Object.keys(snapshot.configs).length
   }
@@ -491,7 +758,6 @@ class ChannelConfigStorage {
         CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
         merged.configs,
       )
-      await this.discardLegacyNumericConfigs()
       return merged
     })
   }

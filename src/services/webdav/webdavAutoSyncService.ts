@@ -63,6 +63,7 @@ import { accountStorage } from "../accounts/accountStorage"
 import { ACCOUNT_STORAGE_KEYS, STORAGE_LOCKS } from "../core/storageKeys"
 import { withExtensionStorageWriteLock } from "../core/storageWriteLock"
 import { channelConfigStorage } from "../managedSites/channelConfigStorage"
+import { ensureLegacyChannelConfigMigrationReady } from "../managedSites/legacyChannelConfigMigration"
 import {
   userPreferences,
   type PreferenceWriteFailure,
@@ -507,6 +508,8 @@ class WebdavAutoSyncService {
     if (isWebdavSyncDataSelectionEmpty(syncDataSelection)) {
       throw new Error(t("messages:webdav.syncDataSelectionRequired"))
     }
+
+    await ensureLegacyChannelConfigMigrationReady()
 
     const [
       localAccountsConfig,

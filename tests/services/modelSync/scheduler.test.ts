@@ -18,11 +18,24 @@ import {
   hasAlarmsAPI,
 } from "~/utils/browser/browserApi"
 
-const { modelSyncListChannelsMock, modelSyncServiceConstructorMock } =
-  vi.hoisted(() => ({
-    modelSyncListChannelsMock: vi.fn(),
-    modelSyncServiceConstructorMock: vi.fn(),
-  }))
+const {
+  ensureLegacyChannelConfigMigrationReadyMock,
+  getConfigsForScopeMock,
+  modelSyncListChannelsMock,
+  modelSyncServiceConstructorMock,
+} = vi.hoisted(() => ({
+  ensureLegacyChannelConfigMigrationReadyMock: vi
+    .fn()
+    .mockResolvedValue(undefined),
+  getConfigsForScopeMock: vi.fn().mockResolvedValue({}),
+  modelSyncListChannelsMock: vi.fn(),
+  modelSyncServiceConstructorMock: vi.fn(),
+}))
+
+vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
+  ensureLegacyChannelConfigMigrationReady:
+    ensureLegacyChannelConfigMigrationReadyMock,
+}))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
@@ -76,7 +89,7 @@ vi.mock("~/services/models/modelSync/modelSyncService", () => ({
 
 vi.mock("~/services/managedSites/channelConfigStorage", () => ({
   channelConfigStorage: {
-    getConfigsForScope: vi.fn().mockResolvedValue({}),
+    getConfigsForScope: getConfigsForScopeMock,
   },
 }))
 
@@ -346,5 +359,9 @@ describe("model sync operation helpers", () => {
       },
     )
     expect(modelSyncListChannelsMock).toHaveBeenCalled()
+    expect(ensureLegacyChannelConfigMigrationReadyMock).toHaveBeenCalledTimes(1)
+    expect(
+      ensureLegacyChannelConfigMigrationReadyMock.mock.invocationCallOrder[0],
+    ).toBeLessThan(getConfigsForScopeMock.mock.invocationCallOrder[0])
   })
 })

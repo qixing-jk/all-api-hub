@@ -27,6 +27,7 @@ import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -395,6 +396,7 @@ export default function WebDAVSettings() {
         options?.forceFullRebuild
           ? DEFAULT_WEBDAV_SYNC_DATA_SELECTION
           : syncDataSelection
+      await ensureLegacyChannelConfigMigrationReady({ bypassBackoff: true })
       const [
         accountData,
         tagStore,

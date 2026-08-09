@@ -38,6 +38,42 @@ export type ManagedSiteRuntimeConfigValueForType<
 const hasText = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0
 
+/** Returns whether preferences contain any required-field input for a type. */
+export function hasManagedSiteRuntimeConfigInputForType(
+  preferences: UserPreferences,
+  siteType: ManagedSiteType,
+): boolean {
+  if (siteType === SITE_TYPES.OCTOPUS) {
+    const config = preferences.octopus
+    return Boolean(
+      config &&
+        [config.baseUrl, config.username, config.password].some(hasText),
+    )
+  }
+
+  if (siteType === SITE_TYPES.AXON_HUB) {
+    const config = preferences.axonHub
+    return Boolean(
+      config && [config.baseUrl, config.email, config.password].some(hasText),
+    )
+  }
+
+  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
+    const config = preferences.claudeCodeHub
+    return Boolean(config && [config.baseUrl, config.adminToken].some(hasText))
+  }
+
+  const config =
+    siteType === SITE_TYPES.DONE_HUB
+      ? preferences.doneHub
+      : siteType === SITE_TYPES.VELOERA
+        ? preferences.veloera
+        : preferences.newApi
+  return Boolean(
+    config && [config.baseUrl, config.adminToken, config.userId].some(hasText),
+  )
+}
+
 /**
  * Returns a complete access-token managed-site config when required fields exist.
  */

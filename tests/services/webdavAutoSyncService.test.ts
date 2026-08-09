@@ -22,6 +22,10 @@ import {
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
+vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
+  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
+}))
+
 // Basic getErrorMessage passthrough to avoid noisy output
 vi.mock("~/utils/core/error", () => ({
   getErrorMessage: (e: unknown) => String(e),

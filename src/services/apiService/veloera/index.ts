@@ -228,6 +228,7 @@ export async function listAllChannels(
     pageSize?: number
     beforeRequest?: () => Promise<void>
     signal?: AbortSignal
+    requireCompleteInventory?: boolean
   },
 ): Promise<ManagedSiteChannelListData> {
   const pageSize = options?.pageSize ?? REQUEST_CONFIG.DEFAULT_PAGE_SIZE
@@ -257,6 +258,7 @@ export async function listAllChannels(
       pageSize,
       startPage: 0,
       maxPages: REQUEST_CONFIG.MAX_PAGES,
+      requireComplete: options?.requireCompleteInventory,
     },
   )
 

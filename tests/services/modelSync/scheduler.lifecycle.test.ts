@@ -13,6 +13,10 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
 } from "~/services/productAnalytics/contracts"
 
+vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
+  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
+}))
+
 const mocks = vi.hoisted(() => ({
   clearAlarm: vi.fn(),
   createAlarm: vi.fn(),

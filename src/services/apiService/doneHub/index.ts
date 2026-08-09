@@ -134,6 +134,7 @@ type ChannelListAllOptions = {
   endpoint?: string
   pageStart?: number
   signal?: AbortSignal
+  requireCompleteInventory?: boolean
 }
 
 /**
@@ -345,6 +346,7 @@ export async function listAllChannels(
       pageSize,
       startPage: pageStart,
       maxPages: REQUEST_CONFIG.MAX_PAGES,
+      requireComplete: options?.requireCompleteInventory,
     },
   )
 

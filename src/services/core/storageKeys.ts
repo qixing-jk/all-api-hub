@@ -31,6 +31,9 @@ export const STORAGE_LOCKS = {
    * managed-site channel configuration.
    */
   CHANNEL_CONFIG: "all-api-hub:channel-config",
+  /** Exclusive lock for cross-context legacy channel inventory discovery. */
+  LEGACY_CHANNEL_CONFIG_MIGRATION:
+    "all-api-hub:legacy-channel-config-migration",
   /**
    * Exclusive lock used for read-modify-write sequences touching persisted API
    * verification result history.
@@ -117,6 +120,8 @@ export const API_CREDENTIAL_PROFILES_STORAGE_KEYS = {
 export const CHANNEL_CONFIG_STORAGE_KEYS = {
   CHANNEL_CONFIGS: "channel_configs",
   CHANNEL_RESOURCE_CONFIGS: "channel_resource_configs",
+  LEGACY_MIGRATION_STATE: "channel_config_legacy_migration_state",
+  LEGACY_REPLACEMENT_STATE: "channel_config_legacy_replacement_state",
 } as const
 
 export const API_VERIFICATION_HISTORY_STORAGE_KEYS = {

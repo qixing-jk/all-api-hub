@@ -8,6 +8,7 @@ import {
   channelConfigStorage,
   coerceChannelConfigSnapshot,
 } from "~/services/managedSites/channelConfigStorage"
+import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
@@ -1095,6 +1096,19 @@ export async function importFromBackupObject(
   }
 
   const version = getSupportedBackupVersion(data)
+
+  const incomingChannelConfigs = readChannelConfigSnapshot(data)
+  const channelConfigStrategy =
+    options?.plan?.channelConfigs ??
+    (options?.mode === IMPORT_SECTION_STRATEGIES.Merge
+      ? IMPORT_SECTION_STRATEGIES.Merge
+      : IMPORT_SECTION_STRATEGIES.Replace)
+  if (
+    incomingChannelConfigs !== null &&
+    channelConfigStrategy === IMPORT_SECTION_STRATEGIES.Merge
+  ) {
+    await ensureLegacyChannelConfigMigrationReady({ bypassBackoff: true })
+  }
 
   if (version === LEGACY_BACKUP_V1_VERSION) {
     return importV1Backup(data, options)

@@ -17,6 +17,7 @@ import {
   type RawBackupData,
 } from "~/services/importExport/importExportService"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { createLogger } from "~/utils/core/logger"
@@ -72,6 +73,7 @@ export const handleExportAll = async (
 ) => {
   try {
     setIsExporting(true)
+    await ensureLegacyChannelConfigMigrationReady({ bypassBackoff: true })
 
     // 获取账号数据、用户偏好设置以及通道配置
     const [

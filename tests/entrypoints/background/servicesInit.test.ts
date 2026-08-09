@@ -14,6 +14,7 @@ const {
   releaseUpdateInitMock,
   productAnnouncementInitMock,
   newApiOwnedSessionInitMock,
+  legacyChannelConfigMigrationInitMock,
   initBackgroundI18nMock,
 } = vi.hoisted(() => ({
   usageInitMock: vi.fn(),
@@ -27,7 +28,14 @@ const {
   releaseUpdateInitMock: vi.fn(),
   productAnnouncementInitMock: vi.fn(),
   newApiOwnedSessionInitMock: vi.fn(),
+  legacyChannelConfigMigrationInitMock: vi.fn(),
   initBackgroundI18nMock: vi.fn(),
+}))
+
+vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
+  legacyChannelConfigMigration: {
+    initialize: legacyChannelConfigMigrationInitMock,
+  },
 }))
 
 vi.mock("~/services/managedSites/newApiOwnedSession/background", () => ({
@@ -134,6 +142,9 @@ describe("initializeServices alarm bootstrap ordering", () => {
     const modelMetadataInit: InitMock = vi.fn(async () => {})
     const autoRefreshInit: InitMock = vi.fn(async () => {})
     const redemptionAssistInit: InitMock = vi.fn(async () => {})
+    legacyChannelConfigMigrationInitMock.mockResolvedValue({
+      status: "not-needed",
+    })
 
     usageInitMock.mockImplementation(usageInit)
     webdavInitMock.mockImplementation(webdavInit)
@@ -178,6 +189,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
     expect(modelMetadataInit).toHaveBeenCalledTimes(1)
     expect(autoRefreshInit).toHaveBeenCalledTimes(1)
     expect(redemptionAssistInit).toHaveBeenCalledTimes(1)
+    expect(legacyChannelConfigMigrationInitMock).toHaveBeenCalledTimes(1)
   })
 
   it("deduplicates concurrent initialization and skips re-initialization after success", async () => {
@@ -204,6 +216,9 @@ describe("initializeServices alarm bootstrap ordering", () => {
     modelMetadataInitMock.mockResolvedValue(undefined)
     autoRefreshInitMock.mockResolvedValue(undefined)
     redemptionAssistInitMock.mockResolvedValue(undefined)
+    legacyChannelConfigMigrationInitMock.mockResolvedValue({
+      status: "not-needed",
+    })
 
     const first = initializeServices()
     const second = initializeServices()
@@ -224,6 +239,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
     expect(modelMetadataInitMock).toHaveBeenCalledTimes(1)
     expect(autoRefreshInitMock).toHaveBeenCalledTimes(1)
     expect(redemptionAssistInitMock).toHaveBeenCalledTimes(1)
+    expect(legacyChannelConfigMigrationInitMock).toHaveBeenCalledTimes(1)
 
     await initializeServices()
 
@@ -239,6 +255,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
     expect(modelMetadataInitMock).toHaveBeenCalledTimes(1)
     expect(autoRefreshInitMock).toHaveBeenCalledTimes(1)
     expect(redemptionAssistInitMock).toHaveBeenCalledTimes(1)
+    expect(legacyChannelConfigMigrationInitMock).toHaveBeenCalledTimes(1)
   })
 
   it("continues initializing non-alarm services when i18n and an alarm scheduler fail", async () => {
@@ -258,6 +275,9 @@ describe("initializeServices alarm bootstrap ordering", () => {
     modelMetadataInitMock.mockResolvedValue(undefined)
     autoRefreshInitMock.mockResolvedValue(undefined)
     redemptionAssistInitMock.mockResolvedValue(undefined)
+    legacyChannelConfigMigrationInitMock.mockRejectedValueOnce(
+      new Error("migration failed"),
+    )
 
     await expect(initializeServices()).resolves.toBeUndefined()
 
@@ -273,5 +293,6 @@ describe("initializeServices alarm bootstrap ordering", () => {
     expect(modelMetadataInitMock).toHaveBeenCalledTimes(1)
     expect(autoRefreshInitMock).toHaveBeenCalledTimes(1)
     expect(redemptionAssistInitMock).toHaveBeenCalledTimes(1)
+    expect(legacyChannelConfigMigrationInitMock).toHaveBeenCalledTimes(1)
   })
 })

@@ -40,6 +40,10 @@ import {
   setupMockPreferencePersistence,
 } from "~~/tests/test-utils/mockPreferencePersistence"
 
+vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
+  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
+}))
+
 const createStalePreferenceWriteResult = (
   expectedLastUpdated: number,
   actualLastUpdated = expectedLastUpdated + 1,

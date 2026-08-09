@@ -12,6 +12,7 @@ import {
   normalizeBackupForMerge,
 } from "~/services/importExport/importExportService"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import {
   userPreferences,
   type UserPreferences,
@@ -962,6 +963,7 @@ export async function buildWebdavImportPayloadBySelection(input: {
   rawBackup: RawBackupData
   selection: WebDAVSyncDataSelection
 }): Promise<RawBackupData> {
+  await ensureLegacyChannelConfigMigrationReady({ bypassBackoff: true })
   const [
     accountsConfig,
     tagStore,

@@ -13,6 +13,7 @@ import {
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
@@ -23,6 +24,10 @@ import {
   getManagedUpstreamResourceRefKey,
 } from "~/types/managedUpstreamResource"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
+
+vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
+  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
+}))
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
@@ -105,6 +110,8 @@ const mockChannelConfigMerge =
   channelConfigStorage.mergeConfigs as unknown as ReturnType<typeof vi.fn>
 const mockChannelConfigExport =
   channelConfigStorage.exportConfigs as unknown as ReturnType<typeof vi.fn>
+const mockEnsureLegacyChannelConfigMigrationReady =
+  ensureLegacyChannelConfigMigrationReady as unknown as ReturnType<typeof vi.fn>
 
 const mockEnsureLegacyMigration =
   tagStorage.ensureLegacyMigration as unknown as ReturnType<typeof vi.fn>
@@ -566,6 +573,37 @@ describe("importFromBackupObject", () => {
         apiCredentialProfiles: true,
       },
     })
+  })
+
+  it("waits for legacy migration before a merge import changes preferences", async () => {
+    const backup = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      preferences: { themeMode: "dark" },
+      channelConfigs: channelConfigSnapshot([
+        { resourceId: "5", channelId: 5, updatedAt: 20 },
+      ]),
+    } as BackupFullV2
+    mockEnsureLegacyChannelConfigMigrationReady.mockRejectedValueOnce(
+      new Error("migration deferred"),
+    )
+
+    await expect(
+      importFromBackupObject(backup, {
+        plan: {
+          accounts: "skip",
+          preferences: "replace",
+          channelConfigs: "merge",
+          apiCredentialProfiles: "skip",
+        },
+      }),
+    ).rejects.toThrow("migration deferred")
+
+    expect(mockEnsureLegacyChannelConfigMigrationReady).toHaveBeenCalledWith({
+      bypassBackoff: true,
+    })
+    expect(mockUserPreferencesImport).not.toHaveBeenCalled()
+    expect(mockChannelConfigMerge).not.toHaveBeenCalled()
   })
 
   it("applies a section import plan with mixed merge, replace, and skip actions", async () => {

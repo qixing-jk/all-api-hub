@@ -11,6 +11,7 @@ interface PaginationOptions {
   pageSize?: number
   maxPages?: number
   startPage?: number
+  requireComplete?: boolean
 }
 
 interface PageData<T> {
@@ -88,6 +89,11 @@ async function fetchAllPaginated<T, R>(
 
     if (pageCount >= maxPages) {
       logger.warn("达到最大分页限制，数据可能不完整", { maxPages })
+      if (options.requireComplete) {
+        throw new Error(
+          "Pagination limit reached before the inventory completed",
+        )
+      }
     }
   }
 

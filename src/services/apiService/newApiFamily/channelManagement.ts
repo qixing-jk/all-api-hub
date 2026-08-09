@@ -240,6 +240,7 @@ type ChannelListAllOptions = {
   endpoint?: string
   pageStart?: number
   signal?: AbortSignal
+  requireCompleteInventory?: boolean
 }
 
 /**
@@ -305,7 +306,11 @@ export async function listAllChannels(
         total: total || 0,
       }
     },
-    { pageSize, startPage: pageStart },
+    {
+      pageSize,
+      startPage: pageStart,
+      requireComplete: options?.requireCompleteInventory,
+    },
   )
 
   return {

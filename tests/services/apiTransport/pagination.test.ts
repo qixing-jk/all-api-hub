@@ -81,4 +81,21 @@ describe("API transport pagination helpers", () => {
       },
     )
   })
+
+  it("fetchAllItems fails closed when a caller requires a complete inventory", async () => {
+    const fetchPage = vi.fn().mockResolvedValue({
+      items: ["keep-going"],
+      hasMore: true,
+    })
+
+    await expect(
+      fetchAllItems(fetchPage, {
+        pageSize: 1,
+        maxPages: 1,
+        requireComplete: true,
+      }),
+    ).rejects.toThrow("Pagination limit reached before the inventory completed")
+
+    expect(fetchPage).toHaveBeenCalledTimes(1)
+  })
 })

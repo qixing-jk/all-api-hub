@@ -8,6 +8,7 @@ import {
   resolveChannelConfigGetMessage,
   resolveChannelConfigUpsertFiltersMessage,
   setupChannelConfigMessagingListeners,
+  type LegacyChannelConfigMigrationCandidate,
 } from "~/services/managedSites/channelConfigStorage"
 import {
   CHANNEL_CONFIG_SNAPSHOT_VERSION,
@@ -118,6 +119,7 @@ const snapshotOf = (
 describe("channelConfigStorage", () => {
   beforeEach(() => {
     storageData.clear()
+    vi.restoreAllMocks()
     vi.clearAllMocks()
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-03-28T05:30:00.000Z"))
@@ -239,7 +241,7 @@ describe("channelConfigStorage", () => {
     })
   })
 
-  it("discards legacy numeric configs without using them as fallback", async () => {
+  it("ignores legacy numeric configs without deleting them before migration", async () => {
     const resourceRef = createRef("https://admin.example.invalid", 9)
     storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, {
       9: createConfig({
@@ -254,6 +256,21 @@ describe("channelConfigStorage", () => {
     expect(config.resourceRef).toEqual(resourceRef)
     expect(config.modelFilterSettings.rules).toEqual([])
     expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      true,
+    )
+  })
+
+  it("ignores non-integer ids and values without a recognizable legacy shape", async () => {
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, {
+      "1.5": {
+        modelFilterSettings: { rules: [], updatedAt: 2 },
+        createdAt: 1,
+        updatedAt: 2,
+      },
+      9: {},
+    })
+
+    await expect(channelConfigStorage.hasLegacyNumericConfigs()).resolves.toBe(
       false,
     )
   })
@@ -308,18 +325,196 @@ describe("channelConfigStorage", () => {
     ).rejects.toThrow("write failed")
   })
 
-  it("keeps authoritative writes successful when legacy cleanup fails", async () => {
-    const resourceRef = createRef("https://admin.example.invalid")
-    const storage = (channelConfigStorage as any).storage
-    vi.spyOn(storage, "remove").mockRejectedValueOnce(
-      new Error("legacy cleanup failed"),
+  it("migrates a uniquely discovered numeric config and keeps its newer rules", async () => {
+    const resourceRef = createRef("https://admin.example.invalid", 9)
+    const existing = createConfig({
+      scopeKey: resourceRef.scopeKey,
+      channelId: 9,
+      ruleId: "resource-older",
+      updatedAt: 200,
+    })
+    const legacy = createConfig({
+      scopeKey: "https://legacy.example.invalid",
+      channelId: 9,
+      ruleId: "numeric-newer",
+      updatedAt: 300,
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: legacy })
+    storageData.set(
+      CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+      snapshotOf(existing).configs,
     )
 
     await expect(
-      channelConfigStorage.upsertFilters(resourceRef, []),
-    ).resolves.toBeUndefined()
+      channelConfigStorage.migrateLegacyNumericConfigs([
+        { channelId: 9, resourceRef },
+      ]),
+    ).resolves.toEqual({ migrated: 1, ambiguous: 0, unmatched: 0 })
+
+    expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      false,
+    )
     await expect(channelConfigStorage.getConfig(resourceRef)).resolves.toEqual(
-      expect.objectContaining({ resourceRef }),
+      expect.objectContaining({
+        resourceRef,
+        channelId: 9,
+        modelFilterSettings: expect.objectContaining({
+          rules: [expect.objectContaining({ id: "numeric-newer" })],
+        }),
+      }),
+    )
+  })
+
+  it("keeps the newer resource config while resolving its numeric predecessor", async () => {
+    const resourceRef = createRef("https://admin.example.invalid", 9)
+    const existing = createConfig({
+      scopeKey: resourceRef.scopeKey,
+      channelId: 9,
+      ruleId: "resource-newer",
+      updatedAt: 400,
+    })
+    const legacy = createConfig({
+      scopeKey: "https://legacy.example.invalid",
+      channelId: 9,
+      ruleId: "numeric-older",
+      updatedAt: 300,
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: legacy })
+    storageData.set(
+      CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+      snapshotOf(existing).configs,
+    )
+
+    await channelConfigStorage.migrateLegacyNumericConfigs([
+      { channelId: 9, resourceRef },
+    ])
+
+    await expect(channelConfigStorage.getConfig(resourceRef)).resolves.toEqual(
+      expect.objectContaining({
+        modelFilterSettings: expect.objectContaining({
+          rules: [expect.objectContaining({ id: "resource-newer" })],
+        }),
+      }),
+    )
+  })
+
+  it("does not guess when complete discovery finds zero or multiple targets", async () => {
+    const legacy9 = createConfig({
+      scopeKey: "https://legacy.example.invalid",
+      channelId: 9,
+      ruleId: "ambiguous",
+      updatedAt: 300,
+    })
+    const legacy10 = createConfig({
+      scopeKey: "https://legacy.example.invalid",
+      channelId: 10,
+      ruleId: "unmatched",
+      updatedAt: 300,
+    })
+    const candidates: LegacyChannelConfigMigrationCandidate[] = [
+      { channelId: 9, resourceRef: createRef("https://a.example.invalid", 9) },
+      { channelId: 9, resourceRef: createRef("https://b.example.invalid", 9) },
+    ]
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, {
+      9: legacy9,
+      10: legacy10,
+    })
+
+    await expect(
+      channelConfigStorage.migrateLegacyNumericConfigs(candidates),
+    ).resolves.toEqual({ migrated: 0, ambiguous: 1, unmatched: 1 })
+    expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      true,
+    )
+    await expect(channelConfigStorage.exportConfigs()).resolves.toEqual({
+      schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+      configs: {},
+    })
+  })
+
+  it("removes only uniquely migrated numeric entries", async () => {
+    const migrated = createConfig({
+      scopeKey: "https://legacy.example.invalid",
+      channelId: 9,
+      ruleId: "migrated",
+      updatedAt: 300,
+    })
+    const unresolved = createConfig({
+      scopeKey: "https://legacy.example.invalid",
+      channelId: 10,
+      ruleId: "unresolved",
+      updatedAt: 300,
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, {
+      9: migrated,
+      10: unresolved,
+    })
+
+    await expect(
+      channelConfigStorage.migrateLegacyNumericConfigs([
+        {
+          channelId: 9,
+          resourceRef: createRef("https://a.example.invalid", 9),
+        },
+      ]),
+    ).resolves.toEqual({ migrated: 1, ambiguous: 0, unmatched: 1 })
+
+    expect(
+      storageData.get(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS),
+    ).toEqual({ 10: unresolved })
+  })
+
+  it("retains numeric data when the authoritative migration write fails", async () => {
+    const resourceRef = createRef("https://admin.example.invalid", 9)
+    const legacy = createConfig({
+      scopeKey: "https://legacy.example.invalid",
+      channelId: 9,
+      ruleId: "legacy",
+      updatedAt: 300,
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: legacy })
+    const storage = (channelConfigStorage as any).storage
+    vi.spyOn(storage, "set").mockRejectedValueOnce(new Error("write failed"))
+
+    await expect(
+      channelConfigStorage.migrateLegacyNumericConfigs([
+        { channelId: 9, resourceRef },
+      ]),
+    ).rejects.toThrow("write failed")
+    expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      true,
+    )
+  })
+
+  it("keeps a retryable numeric source when cleanup fails after the scoped write", async () => {
+    const resourceRef = createRef("https://admin.example.invalid", 9)
+    const legacy = createConfig({
+      scopeKey: "https://legacy.example.invalid",
+      channelId: 9,
+      ruleId: "legacy",
+      updatedAt: 300,
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: legacy })
+    const storage = (channelConfigStorage as any).storage
+    vi.spyOn(storage, "remove").mockRejectedValueOnce(
+      new Error("cleanup failed"),
+    )
+
+    await expect(
+      channelConfigStorage.migrateLegacyNumericConfigs([
+        { channelId: 9, resourceRef },
+      ]),
+    ).rejects.toThrow("cleanup failed")
+
+    expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      true,
+    )
+    await expect(channelConfigStorage.getConfig(resourceRef)).resolves.toEqual(
+      expect.objectContaining({
+        modelFilterSettings: expect.objectContaining({
+          rules: [expect.objectContaining({ id: "legacy" })],
+        }),
+      }),
     )
   })
 
@@ -338,6 +533,9 @@ describe("channelConfigStorage", () => {
       CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
       snapshotOf(siteA).configs,
     )
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, {
+      9: siteA,
+    })
 
     await expect(channelConfigStorage.exportConfigs()).resolves.toEqual(
       snapshotOf(siteA),
@@ -347,6 +545,127 @@ describe("channelConfigStorage", () => {
     ).resolves.toBe(1)
     await expect(channelConfigStorage.exportConfigs()).resolves.toEqual(
       snapshotOf(siteB),
+    )
+    expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      false,
+    )
+  })
+
+  it("reports snapshot replacement failure when numeric cleanup fails", async () => {
+    const siteA = createConfig({
+      scopeKey: "https://a.example.invalid",
+      channelId: 9,
+      ruleId: "site-a",
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: siteA })
+    const storage = (channelConfigStorage as any).storage
+    vi.spyOn(storage, "remove").mockRejectedValueOnce(
+      new Error("cleanup failed"),
+    )
+
+    await expect(
+      channelConfigStorage.importConfigs(snapshotOf(siteA)),
+    ).rejects.toThrow("cleanup failed")
+    expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      true,
+    )
+
+    await expect(channelConfigStorage.hasLegacyNumericConfigs()).resolves.toBe(
+      false,
+    )
+    expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      false,
+    )
+    expect(
+      storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE),
+    ).toBe(false)
+  })
+
+  it("finishes committed replacement cleanup before a direct import retry", async () => {
+    const siteA = createConfig({
+      scopeKey: "https://a.example.invalid",
+      channelId: 9,
+      ruleId: "site-a",
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: siteA })
+    const storage = (channelConfigStorage as any).storage
+    const originalRemove = storage.remove.bind(storage)
+    let failedMarkerCleanup = false
+    vi.spyOn(storage, "remove").mockImplementation(
+      async (...args: unknown[]) => {
+        const [key] = args as [string]
+        if (
+          key === CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE &&
+          !failedMarkerCleanup
+        ) {
+          failedMarkerCleanup = true
+          throw new Error("marker cleanup failed")
+        }
+        await originalRemove(key)
+      },
+    )
+
+    await expect(
+      channelConfigStorage.importConfigs(snapshotOf(siteA)),
+    ).rejects.toThrow("marker cleanup failed")
+    expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      false,
+    )
+    expect(
+      storageData.get(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE),
+    ).toEqual({ phase: "committed" })
+
+    await expect(
+      channelConfigStorage.importConfigs(snapshotOf(siteA)),
+    ).resolves.toBe(1)
+    expect(
+      storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE),
+    ).toBe(false)
+    await expect(channelConfigStorage.exportConfigs()).resolves.toEqual(
+      snapshotOf(siteA),
+    )
+  })
+
+  it.each([
+    ["before the resource write", 2],
+    ["before the commit marker", 3],
+  ])("replays a replacement interrupted %s", async (_label, failingSetCall) => {
+    const siteA = createConfig({
+      scopeKey: "https://a.example.invalid",
+      channelId: 9,
+      ruleId: "site-a",
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: siteA })
+    const storage = (channelConfigStorage as any).storage
+    const originalSet = storage.set.bind(storage)
+    let setCallCount = 0
+    vi.spyOn(storage, "set").mockImplementation(async (...args: unknown[]) => {
+      const [key, value] = args as [string, unknown]
+      setCallCount += 1
+      if (setCallCount === failingSetCall) {
+        throw new Error("write failed")
+      }
+      await originalSet(key, value)
+    })
+
+    await expect(
+      channelConfigStorage.importConfigs(snapshotOf(siteA)),
+    ).rejects.toThrow("write failed")
+    expect(
+      storageData.get(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE),
+    ).toEqual({ phase: "prepared", snapshot: snapshotOf(siteA) })
+
+    await expect(channelConfigStorage.hasLegacyNumericConfigs()).resolves.toBe(
+      false,
+    )
+    expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      false,
+    )
+    expect(
+      storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_REPLACEMENT_STATE),
+    ).toBe(false)
+    await expect(channelConfigStorage.exportConfigs()).resolves.toEqual(
+      snapshotOf(siteA),
     )
   })
 
