@@ -27,6 +27,11 @@ export const STORAGE_LOCKS = {
    */
   API_CREDENTIAL_PROFILES: "all-api-hub:api-credential-profiles",
   /**
+   * Exclusive lock used for read-modify-write sequences touching resource-scoped
+   * managed-site channel configuration.
+   */
+  CHANNEL_CONFIG: "all-api-hub:channel-config",
+  /**
    * Exclusive lock used for read-modify-write sequences touching persisted API
    * verification result history.
    */
@@ -109,6 +114,11 @@ export const API_CREDENTIAL_PROFILES_STORAGE_KEYS = {
   API_CREDENTIAL_PROFILES: "api_credential_profiles",
 } as const
 
+export const CHANNEL_CONFIG_STORAGE_KEYS = {
+  CHANNEL_CONFIGS: "channel_configs",
+  CHANNEL_RESOURCE_CONFIGS: "channel_resource_configs",
+} as const
+
 export const API_VERIFICATION_HISTORY_STORAGE_KEYS = {
   VERIFICATION_RESULT_HISTORY: "api_verification_result_history",
 } as const
@@ -168,6 +178,7 @@ export const STORAGE_KEYS = {
   ...ACCOUNT_STORAGE_KEYS,
   ...TAG_STORAGE_KEYS,
   ...API_CREDENTIAL_PROFILES_STORAGE_KEYS,
+  ...CHANNEL_CONFIG_STORAGE_KEYS,
   ...API_VERIFICATION_HISTORY_STORAGE_KEYS,
   ...WEB_AI_API_CHECK_STORAGE_KEYS,
   ...LDOH_SITE_LOOKUP_STORAGE_KEYS,

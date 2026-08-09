@@ -76,7 +76,7 @@ vi.mock("~/services/models/modelSync/modelSyncService", () => ({
 
 vi.mock("~/services/managedSites/channelConfigStorage", () => ({
   channelConfigStorage: {
-    getAllConfigs: vi.fn().mockResolvedValue({}),
+    getConfigsForScope: vi.fn().mockResolvedValue({}),
   },
 }))
 

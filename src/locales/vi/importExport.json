@@ -92,7 +92,8 @@
     },
     "selectBackupFile": "Chọn tệp sao lưu",
     "selectFileImport": "Vui lòng chọn tệp để nhập hoặc nhập dữ liệu",
-    "title": "Nhập dữ liệu"
+    "title": "Nhập dữ liệu",
+    "versionNotSupported": "Bản sao lưu này được tạo bằng phiên bản mới hơn. Hãy cập nhật ứng dụng trước khi nhập."
   },
   "notice": {
     "importantNotice": "Thông báo quan trọng",

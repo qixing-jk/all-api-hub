@@ -22,7 +22,7 @@ const mocks = vi.hoisted(() => ({
   sendRuntimeMessage: vi.fn(),
   getPreferences: vi.fn(),
   savePreferences: vi.fn(),
-  getAllConfigs: vi.fn(),
+  getConfigsForScope: vi.fn(),
   listChannels: vi.fn(),
   runBatch: vi.fn(),
   octopusListChannels: vi.fn(),
@@ -80,7 +80,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 
 vi.mock("~/services/managedSites/channelConfigStorage", () => ({
   channelConfigStorage: {
-    getAllConfigs: mocks.getAllConfigs,
+    getConfigsForScope: mocks.getConfigsForScope,
   },
 }))
 
@@ -152,7 +152,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
     mocks.hasAlarmsAPI.mockReturnValue(true)
     mocks.onAlarm.mockReturnValue(undefined)
-    mocks.getAllConfigs.mockResolvedValue({})
+    mocks.getConfigsForScope.mockResolvedValue({})
     mocks.saveLastExecution.mockResolvedValue(undefined)
     mocks.saveChannelUpstreamModelOptions.mockResolvedValue(undefined)
     mocks.getLastExecution.mockResolvedValue(null)
@@ -399,7 +399,10 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       type_counts: { shared: 1 },
     })
 
-    expect(mocks.getAllConfigs).toHaveBeenCalledTimes(1)
+    expect(mocks.getConfigsForScope).toHaveBeenCalledWith({
+      managedSiteType: SITE_TYPES.NEW_API,
+      scopeKey: "https://example.com",
+    })
     expect(mocks.listChannels).toHaveBeenCalledTimes(1)
   })
 

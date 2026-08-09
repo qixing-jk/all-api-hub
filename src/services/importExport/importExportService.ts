@@ -1,16 +1,20 @@
+import { BACKUP_VERSION } from "~/constants/importExport"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   apiCredentialProfilesStorage,
   coerceApiCredentialProfilesConfig,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import {
+  channelConfigStorage,
+  coerceChannelConfigSnapshot,
+} from "~/services/managedSites/channelConfigStorage"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { createDefaultTagStore } from "~/services/tags/tagStoreUtils"
 import type { AccountStorageConfig, TagStore } from "~/types"
 import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
-import type { ChannelConfigMap } from "~/types/channelConfig"
+import type { ChannelConfigSnapshot } from "~/types/channelConfig"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 
@@ -23,6 +27,7 @@ type ImportExportErrorCode =
   | "FORMAT_NOT_CORRECT"
   | "IMPORT_FAILED"
   | "NO_IMPORTABLE_DATA"
+  | "VERSION_NOT_SUPPORTED"
 
 export class ImportExportError extends Error {
   readonly code: ImportExportErrorCode
@@ -38,12 +43,36 @@ export class ImportExportError extends Error {
  * Current backup schema version.
  *
  * V1: legacy backups, may use nested structures (e.g. accounts.accounts, data.accounts).
- * V2: flat structure with accounts / preferences / channelConfigs on the root object.
+ * V2: flat structure with numeric channelConfigs on the root object.
+ * V3: keeps the flat structure and replaces channelConfigs with a scoped snapshot.
  *
- * When introducing V3+, prefer adding a dedicated import handler and updating
+ * When introducing V4+, prefer adding a dedicated import handler and updating
  * importFromBackupObject + normalizeBackupForMerge dispatch logic.
  */
-export const BACKUP_VERSION = "2.0"
+export { BACKUP_VERSION }
+const LEGACY_BACKUP_V2_VERSION = "2.0"
+const LEGACY_BACKUP_V1_VERSION = "1.0"
+
+type SupportedBackupVersion =
+  | typeof LEGACY_BACKUP_V1_VERSION
+  | typeof LEGACY_BACKUP_V2_VERSION
+  | typeof BACKUP_VERSION
+
+/** Classifies the backup envelope version for every read/import boundary. */
+function getSupportedBackupVersion(
+  data: RawBackupData,
+): SupportedBackupVersion {
+  const version =
+    data.version === undefined ? LEGACY_BACKUP_V1_VERSION : data.version
+  if (
+    version !== LEGACY_BACKUP_V1_VERSION &&
+    version !== LEGACY_BACKUP_V2_VERSION &&
+    version !== BACKUP_VERSION
+  ) {
+    throw new ImportExportError("VERSION_NOT_SUPPORTED")
+  }
+  return version
+}
 
 interface ParsedBackupSummary {
   valid: boolean
@@ -56,8 +85,8 @@ interface ParsedBackupSummary {
 }
 
 /**
- * V2 full backup payload (used by "export all" and WebDAV sync uploads).
- * This is the primary canonical structure we write from the app.
+ * Current flat backup payload (used by "export all" and WebDAV sync uploads).
+ * The V2 name is retained to avoid a broad public type rename; writers emit V3.
  */
 export interface BackupFullV2 {
   version: string
@@ -71,7 +100,7 @@ export interface BackupFullV2 {
    */
   tagStore?: TagStore
   preferences: UserPreferences
-  channelConfigs: ChannelConfigMap
+  channelConfigs: ChannelConfigSnapshot
   /**
    * Standalone API credential profiles snapshot (contains secrets).
    *
@@ -132,11 +161,56 @@ type LegacyBackupLike = {
  * Raw backup payload as stored in files / WebDAV.
  *
  * We keep this type deliberately tolerant (LegacyBackupLike) so that it can
- * accept both canonical V2 exports (BackupV2) and historical/unknown shapes.
- * The stricter V2 interfaces are still used at export call sites to guarantee
+ * accept both canonical flat exports (historically named BackupV2) and
+ * historical/unknown shapes. The stricter interfaces are used at export call
+ * sites to guarantee
  * that what we write conforms to the latest schema.
  */
 export type RawBackupData = LegacyBackupLike
+
+/** Finds a channel-config section without conflating absence with invalid data. */
+function readRawChannelConfigSection(data: RawBackupData): {
+  present: boolean
+  value: unknown
+} {
+  if (Object.prototype.hasOwnProperty.call(data, "channelConfigs")) {
+    return { present: true, value: data.channelConfigs }
+  }
+
+  const nestedData = data.data
+  if (
+    nestedData &&
+    typeof nestedData === "object" &&
+    Object.prototype.hasOwnProperty.call(nestedData, "channelConfigs")
+  ) {
+    return { present: true, value: nestedData.channelConfigs }
+  }
+
+  return { present: false, value: undefined }
+}
+
+/** Reads and validates the scoped channel-config snapshot from a backup envelope. */
+function readChannelConfigSnapshot(
+  data: RawBackupData,
+): ChannelConfigSnapshot | null {
+  const rawSection = readRawChannelConfigSection(data)
+  if (!rawSection.present) return null
+
+  const snapshot = coerceChannelConfigSnapshot(rawSection.value)
+  if (snapshot) return snapshot
+
+  const raw = rawSection.value
+  const looksLikeScopedSnapshot =
+    Boolean(raw) &&
+    typeof raw === "object" &&
+    ("schemaVersion" in (raw as object) || "configs" in (raw as object))
+  if (data.version === BACKUP_VERSION || looksLikeScopedSnapshot) {
+    throw new ImportExportError("FORMAT_NOT_CORRECT")
+  }
+
+  // V1/V2 numeric maps have no reliable scope identity and are intentionally ignored.
+  return null
+}
 
 export interface ImportResult {
   allImported: boolean
@@ -214,7 +288,7 @@ function toWriteStrategy(strategy: ImportSectionStrategy): ImportWriteStrategy {
 
 /**
  * Parse a raw backup JSON string into a lightweight summary used by the
- * import UI. This is tolerant of both legacy (V1) and V2 payload shapes and
+ * import UI. This is tolerant of legacy and current flat payload shapes and
  * never throws: on invalid JSON it returns `{ valid: false }`.
  */
 export function parseBackupSummary(
@@ -225,14 +299,13 @@ export function parseBackupSummary(
 
   try {
     const data = JSON.parse(importData) as RawBackupData
+    getSupportedBackupVersion(data)
 
     const hasAccounts = Boolean(data.accounts || data.type === "accounts")
     const hasPreferences = Boolean(
       data.preferences || data.type === "preferences",
     )
-    const hasChannelConfigs = Boolean(
-      data.channelConfigs || data.type === "channelConfigs",
-    )
+    const hasChannelConfigs = readChannelConfigSnapshot(data) !== null
     const hasTagStore = Boolean((data as any).tagStore)
     const hasApiCredentialProfiles = Boolean(
       (data as any).apiCredentialProfiles,
@@ -269,9 +342,8 @@ async function importV1Backup(
   const preferencesRequested = Boolean(
     data.preferences || data.type === "preferences",
   )
-  const channelConfigsRequested = Boolean(
-    data.channelConfigs || data.type === "channelConfigs",
-  )
+  const channelConfigSnapshot = readChannelConfigSnapshot(data)
+  const channelConfigsRequested = channelConfigSnapshot !== null
   const plan = options?.plan
 
   // accounts: support both legacy partial exports and older full exports
@@ -325,11 +397,8 @@ async function importV1Backup(
     channelConfigsRequested &&
     shouldImportSection(plan, IMPORT_SECTION_KEYS.ChannelConfigs)
   ) {
-    const channelConfigsData = data.channelConfigs || data.data?.channelConfigs
-    if (channelConfigsData) {
-      await channelConfigStorage.importConfigs(channelConfigsData)
-      channelConfigsImported = true
-    }
+    await channelConfigStorage.importConfigs(channelConfigSnapshot)
+    channelConfigsImported = true
   }
 
   const anyImported =
@@ -356,9 +425,9 @@ async function importV1Backup(
 }
 
 /**
- * Normalize an arbitrary backup payload (V1/V2/unknown) into a canonical
- * structure that `WebdavAutoSyncService` can merge. This is intentionally
- * tolerant so that older backups do not break newer clients.
+ * Normalize a supported backup payload into the structure used by WebDAV merge.
+ * Missing versions remain legacy V1; explicit unknown versions are rejected so
+ * a newer schema cannot be interpreted using older semantics.
  */
 export function normalizeBackupForMerge(
   data: RawBackupData | null,
@@ -371,7 +440,7 @@ export function normalizeBackupForMerge(
   deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   accountsTimestamp: number
   preferences: any | null
-  channelConfigs: ChannelConfigMap | null
+  channelConfigs: ChannelConfigSnapshot | null
   tagStore: TagStore | null
   apiCredentialProfiles: ApiCredentialProfilesConfig | null
 } {
@@ -390,19 +459,19 @@ export function normalizeBackupForMerge(
     }
   }
 
-  const version = data.version ?? "1.0"
+  const version = getSupportedBackupVersion(data)
 
-  if (version === BACKUP_VERSION) {
-    // For V2, we expect the canonical full-backup shape
+  if (version === BACKUP_VERSION || version === LEGACY_BACKUP_V2_VERSION) {
+    // V2 and V3 share the flat backup envelope; V3 changes channelConfigs.
     return normalizeV2BackupForMerge(data as BackupFullV2, localPreferences)
   }
 
-  // V1 and unknown versions: use tolerant legacy-normalization
+  // V1 uses tolerant legacy normalization.
   return normalizeV1BackupForMerge(data, localPreferences)
 }
 
 /**
- * Normalize canonical V2 backups into the shape WebDAV merge expects.
+ * Normalize flat V2/V3 backups into the shape WebDAV merge expects.
  */
 function normalizeV2BackupForMerge(
   data: BackupFullV2,
@@ -415,7 +484,7 @@ function normalizeV2BackupForMerge(
   deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   accountsTimestamp: number
   preferences: any | null
-  channelConfigs: ChannelConfigMap | null
+  channelConfigs: ChannelConfigSnapshot | null
   tagStore: TagStore | null
   apiCredentialProfiles: ApiCredentialProfilesConfig | null
 } {
@@ -445,11 +514,7 @@ function normalizeV2BackupForMerge(
       ? accountsConfig.last_updated
       : (data.timestamp as number) || 0
 
-  const rawChannelConfigs = data.channelConfigs
-  const channelConfigs: ChannelConfigMap | null =
-    rawChannelConfigs && typeof rawChannelConfigs === "object"
-      ? (rawChannelConfigs as ChannelConfigMap)
-      : null
+  const channelConfigs = readChannelConfigSnapshot(data)
 
   return {
     accounts,
@@ -468,7 +533,7 @@ function normalizeV2BackupForMerge(
 }
 
 /**
- * Normalize legacy (V1/unknown) backups into merge-friendly structure.
+ * Normalize legacy V1 backups into merge-friendly structure.
  */
 function normalizeV1BackupForMerge(
   data: RawBackupData,
@@ -481,7 +546,7 @@ function normalizeV1BackupForMerge(
   deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   accountsTimestamp: number
   preferences: any | null
-  channelConfigs: ChannelConfigMap | null
+  channelConfigs: ChannelConfigSnapshot | null
   tagStore: TagStore | null
   apiCredentialProfiles: ApiCredentialProfilesConfig | null
 } {
@@ -525,12 +590,7 @@ function normalizeV1BackupForMerge(
   const preferences =
     data.preferences || (data.data as any)?.preferences || localPreferences
 
-  const rawChannelConfigs =
-    (data as any).channelConfigs || (data.data as any)?.channelConfigs
-  const channelConfigs: ChannelConfigMap | null =
-    rawChannelConfigs && typeof rawChannelConfigs === "object"
-      ? (rawChannelConfigs as ChannelConfigMap)
-      : null
+  const channelConfigs = readChannelConfigSnapshot(data)
 
   return {
     accounts,
@@ -547,7 +607,7 @@ function normalizeV1BackupForMerge(
 }
 
 /**
- * Import a canonical V2 backup (full or partial) into local storage.
+ * Import a canonical flat V2/V3 backup (full or partial) into local storage.
  */
 async function importV2Backup(
   data: BackupV2,
@@ -577,13 +637,13 @@ async function importV2Backup(
 
   const accountsRequested = "accounts" in data
   const preferencesRequested = "preferences" in data
-  const channelConfigsRequested =
-    "channelConfigs" in data && Boolean((data as BackupFullV2).channelConfigs)
+  const channelConfigSnapshot = readChannelConfigSnapshot(data)
+  const channelConfigsRequested = channelConfigSnapshot !== null
   const apiCredentialProfilesRequested =
     "apiCredentialProfiles" in data &&
     Boolean((data as BackupFullV2).apiCredentialProfiles)
 
-  // V2 assumes flat structure: accounts / preferences / channelConfigs directly on root
+  // V2/V3 use a flat structure with sections directly on the root.
 
   if (accountsRequested) {
     await importV2AccountsWithReplace(data)
@@ -605,9 +665,7 @@ async function importV2Backup(
   }
 
   if (channelConfigsRequested) {
-    await channelConfigStorage.importConfigs(
-      (data as BackupFullV2).channelConfigs,
-    )
+    await channelConfigStorage.importConfigs(channelConfigSnapshot)
     channelConfigsImported = true
   }
 
@@ -734,9 +792,9 @@ async function importV2PreferencesWithReplace(
 
 /** Imports V2 channel configuration by replacing current channel configuration. */
 async function importV2ChannelConfigsWithReplace(data: BackupV2) {
-  await channelConfigStorage.importConfigs(
-    (data as BackupFullV2).channelConfigs,
-  )
+  const snapshot = readChannelConfigSnapshot(data)
+  if (!snapshot) return
+  await channelConfigStorage.importConfigs(snapshot)
 }
 
 /** Merges local and backup order lists while dropping ids absent from imported entries. */
@@ -781,36 +839,6 @@ function mergeByLatestUpdatedAt<T extends { id: string; updated_at?: number }>(
   }
 
   return Array.from(merged.values())
-}
-
-/** Merges channel configuration by channel id, preferring the newest updatedAt value. */
-function mergeChannelConfigs(
-  localChannelConfigs: ChannelConfigMap,
-  remoteChannelConfigs: ChannelConfigMap | null,
-) {
-  const merged: ChannelConfigMap = { ...localChannelConfigs }
-
-  if (!remoteChannelConfigs) {
-    return merged
-  }
-
-  for (const [key, value] of Object.entries(remoteChannelConfigs)) {
-    const channelId = Number(key)
-    if (!Number.isFinite(channelId) || channelId <= 0) continue
-
-    const localConfig = merged[channelId]
-    const remoteConfig = value as ChannelConfigMap[number]
-    const localUpdatedAt =
-      typeof localConfig?.updatedAt === "number" ? localConfig.updatedAt : 0
-    const remoteUpdatedAt =
-      typeof remoteConfig?.updatedAt === "number" ? remoteConfig.updatedAt : 0
-
-    if (!localConfig || remoteUpdatedAt > localUpdatedAt) {
-      merged[channelId] = remoteConfig
-    }
-  }
-
-  return merged
 }
 
 /** Merges V2 accounts/bookmarks into the current account storage. */
@@ -875,11 +903,9 @@ async function importV2AccountsWithMerge(
 
 /** Merges V2 channel configuration into current channel configuration. */
 async function importV2ChannelConfigsWithMerge(data: BackupV2) {
-  const localChannelConfigs = await channelConfigStorage.exportConfigs()
   const normalizedRemote = normalizeV2BackupForMerge(data as BackupFullV2, null)
-  await channelConfigStorage.importConfigs(
-    mergeChannelConfigs(localChannelConfigs, normalizedRemote.channelConfigs),
-  )
+  if (!normalizedRemote.channelConfigs) return
+  await channelConfigStorage.mergeConfigs(normalizedRemote.channelConfigs)
 }
 
 /** Imports V2 API credential profiles using either merge or replace semantics. */
@@ -960,8 +986,7 @@ async function importV2BackupWithPlan(
 
   const accountsRequested = "accounts" in data
   const preferencesRequested = "preferences" in data
-  const channelConfigsRequested =
-    "channelConfigs" in data && Boolean((data as BackupFullV2).channelConfigs)
+  const channelConfigsRequested = readChannelConfigSnapshot(data) !== null
   const apiCredentialProfilesRequested =
     "apiCredentialProfiles" in data &&
     Boolean((data as BackupFullV2).apiCredentialProfiles)
@@ -1055,11 +1080,10 @@ async function importV2BackupWithPlan(
  * Dispatches to specific handlers per version:
  * - V1 (or missing version): tolerant of legacy shapes and tries to import
  *   accounts, preferences and channelConfigs when present.
- * - V2 (BACKUP_VERSION): expects a flat structure with accounts / preferences /
- *   channelConfigs at root.
- * - Future versions: currently fall back to the tolerant V1-style import
- *   (importV1Backup). When adding V3+, define an importV3Backup and extend
- *   this dispatcher.
+ * - V2: imports flat account/preference sections and ignores numeric channel configs.
+ * - V3 (BACKUP_VERSION): imports the same flat sections plus scoped channel configs.
+ * - Future or otherwise unknown explicit versions are rejected so their data is
+ *   not interpreted through an older schema.
  */
 export async function importFromBackupObject(
   data: RawBackupData,
@@ -1070,16 +1094,15 @@ export async function importFromBackupObject(
     throw new ImportExportError("FORMAT_NOT_CORRECT")
   }
 
-  const version = data.version ?? "1.0"
+  const version = getSupportedBackupVersion(data)
 
-  if (version === "1.0") {
+  if (version === LEGACY_BACKUP_V1_VERSION) {
     return importV1Backup(data, options)
   }
 
-  if (version === BACKUP_VERSION) {
+  if (version === BACKUP_VERSION || version === LEGACY_BACKUP_V2_VERSION) {
     return importV2Backup(data as BackupV2, options)
   }
 
-  // Unknown future version: fall back to tolerant V1-style import
-  return importV1Backup(data, options)
+  throw new ImportExportError("VERSION_NOT_SUPPORTED")
 }

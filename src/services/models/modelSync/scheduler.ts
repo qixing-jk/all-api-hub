@@ -210,7 +210,10 @@ class ModelSyncScheduler {
       userPrefs.managedSiteModelSync ??
       DEFAULT_PREFERENCES.managedSiteModelSync!
 
-    const channelConfigs = await channelConfigStorage.getAllConfigs()
+    const channelConfigs = await channelConfigStorage.getConfigsForScope({
+      managedSiteType: managedConfig.siteType,
+      scopeKey: managedConfig.config.baseUrl,
+    })
 
     return new ModelSyncService(
       managedConfig,
@@ -725,11 +728,16 @@ class ModelSyncScheduler {
 
     let result
     try {
+      const channelConfigs = await channelConfigStorage.getConfigsForScope({
+        managedSiteType: octopusRuntimeConfig.siteType,
+        scopeKey: octopusRuntimeConfig.config.baseUrl,
+      })
       // Execute batch sync using Octopus-specific implementation
       result = await runOctopusBatch(octopusRuntimeConfig.config, channels, {
         concurrency,
         maxRetries,
         channelProcessingTimeout,
+        channelConfigs,
         onProgress: async (payload) => {
           if (!payload.lastResult.ok) {
             failureCount += 1

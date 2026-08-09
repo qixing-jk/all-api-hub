@@ -92,7 +92,8 @@
     },
     "selectBackupFile": "选择备份文件",
     "selectFileImport": "请选择要导入的文件或输入数据",
-    "title": "导入数据"
+    "title": "导入数据",
+    "versionNotSupported": "此备份由较新版本创建。请先更新应用后再导入。"
   },
   "notice": {
     "importantNotice": "重要提示",

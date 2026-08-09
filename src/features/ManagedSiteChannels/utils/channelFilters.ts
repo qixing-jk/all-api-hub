@@ -14,22 +14,9 @@ import { createLogger } from "~/utils/core/logger"
  */
 const logger = createLogger("ChannelFilters")
 
-export type ChannelFilterStorageIdentity =
-  | number
-  | {
-      channelId: number
-      resourceRef?: ManagedUpstreamResourceRef
-    }
-  | {
-      channelId?: number
-      resourceRef: ManagedUpstreamResourceRef
-    }
-
-/**
- * Normalizes legacy numeric ids and resource-aware identities into requests.
- */
-function toChannelFilterRequest(identity: ChannelFilterStorageIdentity) {
-  return typeof identity === "number" ? { channelId: identity } : identity
+export type ChannelFilterStorageIdentity = {
+  channelId?: number
+  resourceRef: ManagedUpstreamResourceRef
 }
 
 /**
@@ -45,7 +32,7 @@ export async function fetchChannelFilters(
   identity: ChannelFilterStorageIdentity,
 ): Promise<ChannelModelFilterRule[]> {
   let response: Awaited<ReturnType<typeof sendChannelConfigMessage>>
-  const request = toChannelFilterRequest(identity)
+  const request = identity
 
   try {
     response = await sendChannelConfigMessage(ChannelConfigMessageTypes.Get, {
@@ -61,12 +48,7 @@ export async function fetchChannelFilters(
       resourceRef: request.resourceRef,
       error: runtimeError,
     })
-    const config = request.resourceRef
-      ? await channelConfigStorage.getConfigByResourceRef(
-          request.resourceRef,
-          request.channelId,
-        )
-      : await channelConfigStorage.getConfig(request.channelId!)
+    const config = await channelConfigStorage.getConfig(request.resourceRef)
     return config.modelFilterSettings?.rules ?? []
   }
 
@@ -91,7 +73,7 @@ export async function saveChannelFilters(
   filters: ChannelModelFilterRule[],
 ): Promise<void> {
   let response: Awaited<ReturnType<typeof sendChannelConfigMessage>>
-  const request = toChannelFilterRequest(identity)
+  const request = identity
 
   try {
     response = await sendChannelConfigMessage(
@@ -108,16 +90,11 @@ export async function saveChannelFilters(
       resourceRef: request.resourceRef,
       error: runtimeError,
     })
-    const success = request.resourceRef
-      ? await channelConfigStorage.upsertResourceFilters(
-          request.resourceRef,
-          filters,
-          request.channelId,
-        )
-      : await channelConfigStorage.upsertFilters(request.channelId!, filters)
-    if (!success) {
-      throw new Error("Failed to persist filters locally")
-    }
+    await channelConfigStorage.upsertFilters(
+      request.resourceRef,
+      filters,
+      request.channelId,
+    )
     return
   }
 

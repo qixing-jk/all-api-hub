@@ -71,14 +71,14 @@ function moveFilterById(
 function getChannelFilterStorageIdentity(
   channel: ChannelRow,
 ): ChannelFilterStorageIdentity {
-  if (channel.resourceRef) {
-    return {
-      channelId: channel.id,
-      resourceRef: channel.resourceRef,
-    }
+  if (!channel.resourceRef) {
+    throw new Error("Channel resource reference is unavailable")
   }
 
-  return channel.id
+  return {
+    channelId: channel.id,
+    resourceRef: channel.resourceRef,
+  }
 }
 
 /**

@@ -1,10 +1,7 @@
 import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
-import type {
-  ChannelConfig,
-  ChannelResourceConfig,
-} from "~/types/channelConfig"
+import type { ChannelResourceConfig } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { ManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 
@@ -17,18 +14,17 @@ export const ChannelConfigMessageTypes = {
 
 export interface ChannelConfigGetRequest {
   channelId?: number
-  resourceRef?: ManagedUpstreamResourceRef
+  resourceRef: ManagedUpstreamResourceRef
 }
 
 export interface ChannelConfigUpsertFiltersRequest {
   channelId?: number
-  resourceRef?: ManagedUpstreamResourceRef
+  resourceRef: ManagedUpstreamResourceRef
   filters: Array<IncomingChannelFilter | ChannelModelFilterRule>
 }
 
-export type ChannelConfigGetResponse = RuntimeMessageResponse<
-  ChannelConfig | ChannelResourceConfig
->
+export type ChannelConfigGetResponse =
+  RuntimeMessageResponse<ChannelResourceConfig>
 export type ChannelConfigUpsertFiltersResponse = RuntimeMessageResponse<
   ChannelModelFilterRule[]
 >

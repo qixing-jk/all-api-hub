@@ -92,7 +92,8 @@
     },
     "selectBackupFile": "バックアップファイルを選択",
     "selectFileImport": "インポートするファイルを選択するか、データを入力してください",
-    "title": "データをインポート"
+    "title": "データをインポート",
+    "versionNotSupported": "このバックアップは新しいバージョンで作成されています。アプリを更新してからインポートしてください。"
   },
   "notice": {
     "importantNotice": "重要なお知らせ",

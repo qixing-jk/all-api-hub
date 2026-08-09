@@ -19,12 +19,8 @@ import {
   collectManagedResourceSecrets,
 } from "~/services/managedSites/utils/managedSite"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import type { ChannelConfigMap } from "~/types/channelConfig"
+import type { ChannelResourceConfigMap } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import {
-  isPatternChannelModelFilterRule,
-  isProbeChannelModelFilterRule,
-} from "~/types/channelModelFilters"
 import {
   type ChannelFormData,
   type ManagedSiteChannel,
@@ -43,7 +39,8 @@ import type {
 import { createLogger } from "~/utils/core/logger"
 
 import {
-  matchesProbeFilterRule,
+  applyChannelModelFilters,
+  getChannelModelFilterRulesForResource,
   ProbeFilterUnavailableError,
   type ProbeFilterContext,
 } from "./channelModelFilterEvaluator"
@@ -151,7 +148,7 @@ export class ModelSyncService {
   private managedSiteConfig: ManagedSiteRuntimeConfig
   private rateLimiter: RateLimiter | null = null
   private allowedModelSet: Set<string> | null = null
-  private channelConfigs: ChannelConfigMap | null = null
+  private channelConfigs: ChannelResourceConfigMap | null = null
   private globalChannelModelFilters: ChannelModelFilterRule[] | null = null
   private resourceCacheByChannelId = new Map<
     number,
@@ -173,7 +170,7 @@ export class ModelSyncService {
     managedSiteConfig: ManagedSiteRuntimeConfig,
     rateLimitConfig?: { requestsPerMinute: number; burst: number },
     allowedModels?: string[],
-    channelConfigs?: ChannelConfigMap | null,
+    channelConfigs?: ChannelResourceConfigMap | null,
     globalChannelModelFilters?: ChannelModelFilterRule[] | null,
     protectionBypassExecution?: ProtectionBypassExecution,
   ) {
@@ -202,7 +199,7 @@ export class ModelSyncService {
    * Update in-memory channel configs to be used by per-channel filters.
    * @param configs Cached channel configuration map; null clears cache.
    */
-  setChannelConfigs(configs: ChannelConfigMap | null) {
+  setChannelConfigs(configs: ChannelResourceConfigMap | null) {
     this.channelConfigs = configs
   }
 
@@ -673,13 +670,13 @@ export class ModelSyncService {
           protectionBypassExecution: this.protectionBypassExecution,
         }
         try {
-          const globallyScopedModels = await this.applyFilters(
+          const globallyScopedModels = await applyChannelModelFilters(
             this.globalChannelModelFilters,
             allowListedModels,
             probeContext,
           )
           const channelScopedModels = await this.applyChannelFilters(
-            channel.id,
+            channel,
             globallyScopedModels,
             probeContext,
           )
@@ -910,153 +907,26 @@ export class ModelSyncService {
   }
 
   /**
-   * Applies a list of include/exclude rules to the provided model list.
-   *
-   * Steps:
-   * 1. Normalize incoming model names (trim + dedupe).
-   * 2. If no enabled filters exist, return normalized models as-is.
-   * 3. Apply include rules (OR logic). At least one include must match when
-   *    include rules are present; otherwise the model is dropped.
-   * 4. Apply exclude rules (OR logic). Any match removes the model.
-   */
-  private async applyFilters(
-    rules: ChannelModelFilterRule[] | null | undefined,
-    models: string[],
-    probeContext?: ProbeFilterContext,
-  ): Promise<string[]> {
-    const normalized = Array.from(
-      new Set(models.map((model) => model.trim()).filter(Boolean)),
-    )
-    if (!normalized.length) {
-      return normalized
-    }
-
-    const filters = rules?.filter((rule) => rule.enabled)
-    if (!filters || filters.length === 0) {
-      return normalized
-    }
-
-    const includeRules = filters.filter((rule) => rule.action === "include")
-    const excludeRules = filters.filter((rule) => rule.action === "exclude")
-
-    let result = normalized
-
-    if (includeRules.length > 0) {
-      result = await this.filterByRuleMatches(
-        result,
-        includeRules,
-        true,
-        probeContext,
-      )
-    }
-
-    if (result.length === 0) {
-      return result
-    }
-
-    if (excludeRules.length > 0) {
-      result = await this.filterByRuleMatches(
-        result,
-        excludeRules,
-        false,
-        probeContext,
-      )
-    }
-
-    return result
-  }
-
-  /**
    * Applies the per-channel include/exclude filters defined in channel configs
    * to the provided models.
-   * @param channelId Channel id for looking up config rules.
+   * @param channel Channel used to resolve the scoped resource identity.
    * @param models Models after global filtering.
    */
   private applyChannelFilters(
-    channelId: number,
+    channel: ManagedSiteChannel,
     models: string[],
     probeContext: ProbeFilterContext,
   ): Promise<string[]> {
-    const rules =
-      this.channelConfigs?.[channelId]?.modelFilterSettings?.rules ?? []
-    return this.applyFilters(rules, models, probeContext)
-  }
-
-  private async filterByRuleMatches(
-    models: string[],
-    rules: ChannelModelFilterRule[],
-    keepMatchingModels: boolean,
-    probeContext?: ProbeFilterContext,
-  ): Promise<string[]> {
-    const result: string[] = []
-
-    for (const model of models) {
-      const matched = await this.anyRuleMatches(rules, model, probeContext)
-      if (matched === keepMatchingModels) {
-        result.push(model)
-      }
+    const resourceIdentity = this.resourceCacheByChannelId.get(channel.id)
+      ?.summary.ref ?? {
+      managedSiteType: this.managedSiteConfig.siteType,
+      scopeKey: this.managedSiteConfig.config.baseUrl,
+      resourceId: channel.id,
     }
-
-    return result
-  }
-
-  private async anyRuleMatches(
-    rules: ChannelModelFilterRule[],
-    model: string,
-    probeContext?: ProbeFilterContext,
-  ): Promise<boolean> {
-    for (const rule of rules) {
-      if (await this.matchesFilter(rule, model, probeContext)) {
-        return true
-      }
-    }
-
-    return false
-  }
-
-  /**
-   * Evaluates a model name against a filter rule. Regex patterns are compiled
-   * with `new RegExp(pattern, "i")`, enforcing case-insensitive matching and
-   * avoiding custom flags for predictability across browsers.
-   * @param rule Filter rule.
-   * @param model Model name to test.
-   * @returns Whether the model matches the rule.
-   */
-  private async matchesFilter(
-    rule: ChannelModelFilterRule,
-    model: string,
-    probeContext?: ProbeFilterContext,
-  ): Promise<boolean> {
-    if (isProbeChannelModelFilterRule(rule)) {
-      if (!probeContext) {
-        throw new ProbeFilterUnavailableError(
-          "provider-unsupported",
-          "Probe filtering cannot run without a managed-site channel context.",
-        )
-      }
-      return matchesProbeFilterRule(rule, model, probeContext)
-    }
-
-    if (!isPatternChannelModelFilterRule(rule)) {
-      return false
-    }
-
-    const pattern = rule.pattern?.trim()
-    if (!pattern) return false
-
-    try {
-      if (rule.isRegex) {
-        const regex = new RegExp(pattern, "i")
-        return regex.test(model)
-      }
-
-      return model.toLowerCase().includes(pattern.toLowerCase())
-    } catch (error) {
-      logger.warn("Invalid channel filter pattern for channel rule", {
-        ruleId: rule.id,
-        error,
-      })
-      return false
-    }
+    const rules = getChannelModelFilterRulesForResource(
+      this.channelConfigs,
+      resourceIdentity,
+    )
+    return applyChannelModelFilters(rules, models, probeContext)
   }
 }

@@ -92,7 +92,8 @@
     },
     "selectBackupFile": "Sicherungsdatei auswählen",
     "selectFileImport": "Bitte wählen Sie eine Datei aus oder geben Sie die zu importierenden Daten ein.",
-    "title": "Daten importieren"
+    "title": "Daten importieren",
+    "versionNotSupported": "Dieses Backup wurde mit einer neueren Version erstellt. Aktualisieren Sie die App, bevor Sie es importieren."
   },
   "notice": {
     "importantNotice": "Wichtiger Hinweis",

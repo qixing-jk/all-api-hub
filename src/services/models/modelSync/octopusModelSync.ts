@@ -2,6 +2,7 @@
  * Octopus 模型同步服务
  * 实现 Octopus 站点的模型同步功能
  */
+import { SITE_TYPES } from "~/constants/siteType"
 import { octopusManagedSiteChannels } from "~/services/apiAdapters/managedSites/octopus"
 import * as octopusApi from "~/services/apiService/octopus"
 import { ApiError } from "~/services/apiTransport/errors"
@@ -11,6 +12,7 @@ import {
   type ManagedSiteMutationRetryDecision,
 } from "~/services/managedSites/mutations"
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/managedSite"
+import type { ChannelResourceConfigMap } from "~/types/channelConfig"
 import type {
   ManagedSiteChannel,
   OctopusChannelWithData,
@@ -26,6 +28,11 @@ import type { OctopusConfig } from "~/types/octopusConfig"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
+import {
+  applyChannelModelFilters,
+  getChannelModelFilterRulesForResource,
+  ProbeFilterUnavailableError,
+} from "./channelModelFilterEvaluator"
 import { runWithChannelProcessingTimeout } from "./channelProcessingTimeout"
 import {
   createModelSyncWriteFailureBoundary,
@@ -165,6 +172,7 @@ async function runForChannel(
   maxRetries: number = 2,
   abortSignal?: AbortSignal,
   writeFailureBoundary: ModelSyncWriteFailureBoundary = createModelSyncWriteFailureBoundary(),
+  channelConfigs?: ChannelResourceConfigMap,
 ): Promise<ExecutionItemResult> {
   let attempts = 0
   let lastError: unknown = null
@@ -188,13 +196,28 @@ async function runForChannel(
       const normalizedModels = Array.from(
         new Set(fetchedModels.map((model) => model.trim()).filter(Boolean)),
       )
+      const rules = getChannelModelFilterRulesForResource(channelConfigs, {
+        managedSiteType: SITE_TYPES.OCTOPUS,
+        scopeKey: config.baseUrl,
+        resourceId: channel.id,
+      })
+      const channelScopedModels = await applyChannelModelFilters(
+        rules,
+        normalizedModels,
+        {
+          channel,
+          managedConfig: { siteType: SITE_TYPES.OCTOPUS, config },
+          cache: new Map(),
+          abortSignal,
+        },
+      )
 
-      if (haveModelsChanged(oldModels, normalizedModels)) {
+      if (haveModelsChanged(oldModels, channelScopedModels)) {
         try {
           await updateChannelModels(
             config,
             channel,
-            normalizedModels,
+            channelScopedModels,
             abortSignal,
           )
         } catch (error) {
@@ -212,13 +235,25 @@ async function runForChannel(
         attempts,
         finishedAt: Date.now(),
         oldModels,
-        newModels: normalizedModels,
+        newModels: channelScopedModels,
         message: "Success",
       }
     } catch (error: unknown) {
       if (writeFailureBoundary.matches(error)) throw error
       if (abortSignal?.aborted) {
         throw error
+      }
+
+      if (error instanceof ProbeFilterUnavailableError) {
+        return {
+          channelId: channel.id,
+          channelName: channel.name,
+          ok: false,
+          attempts: attempts + 1,
+          finishedAt: Date.now(),
+          oldModels,
+          message: error.message,
+        }
       }
 
       lastError = error
@@ -264,10 +299,17 @@ async function runForChannel(
 export async function runOctopusBatch(
   config: OctopusConfig,
   channels: ManagedSiteChannel[],
-  options: BatchExecutionOptions,
+  options: BatchExecutionOptions & {
+    channelConfigs?: ChannelResourceConfigMap
+  },
 ): Promise<ExecutionResult> {
-  const { concurrency, maxRetries, channelProcessingTimeout, onProgress } =
-    options
+  const {
+    concurrency,
+    maxRetries,
+    channelProcessingTimeout,
+    channelConfigs,
+    onProgress,
+  } = options
   const startedAt = Date.now()
   const total = channels.length
   const results: (ExecutionItemResult | undefined)[] = new Array(total)
@@ -296,6 +338,7 @@ export async function runOctopusBatch(
               maxRetries,
               abortSignal,
               writeFailureBoundary,
+              channelConfigs,
             ),
           channel,
           maxRetries,

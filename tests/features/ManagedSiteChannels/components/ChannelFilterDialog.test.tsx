@@ -204,17 +204,23 @@ const mockedSaveChannelFilters = saveChannelFilters as unknown as ReturnType<
   typeof vi.fn
 >
 
-const sampleChannel = {
-  id: 42,
-  name: "Alpha",
-  type: "midjourney",
-} as any
-
 const sampleResourceRef = createManagedUpstreamResourceRef({
   managedSiteType: "axonhub",
   scopeKey: "https://admin.example.invalid",
   resourceId: "provider/native-id",
 })
+
+const sampleChannel = {
+  id: 42,
+  name: "Alpha",
+  type: "midjourney",
+  resourceRef: sampleResourceRef,
+} as any
+
+const sampleStorageIdentity = {
+  channelId: 42,
+  resourceRef: sampleResourceRef,
+}
 
 describe("ChannelFilterDialog", () => {
   beforeEach(() => {
@@ -251,7 +257,9 @@ describe("ChannelFilterDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockedFetchChannelFilters).toHaveBeenCalledWith(42)
+      expect(mockedFetchChannelFilters).toHaveBeenCalledWith(
+        sampleStorageIdentity,
+      )
     })
 
     await waitFor(() => {
@@ -357,6 +365,26 @@ describe("ChannelFilterDialog", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it("fails closed when a channel row has no resource identity", async () => {
+    const onClose = vi.fn()
+
+    render(
+      <ChannelFilterDialog
+        channel={{ ...sampleChannel, resourceRef: undefined }}
+        open={true}
+        onClose={onClose}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "managedSiteChannels:filters.messages.loadFailed",
+      )
+    })
+    expect(mockedFetchChannelFilters).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it("validates regex filters in visual mode before saving", async () => {
     render(
       <ChannelFilterDialog
@@ -443,20 +471,23 @@ describe("ChannelFilterDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockedSaveChannelFilters).toHaveBeenCalledWith(42, [
-        {
-          id: "generated-filter-id",
-          name: "Allow GPT",
-          description: "keep chat models",
-          kind: "pattern",
-          pattern: "^gpt",
-          isRegex: true,
-          action: "exclude",
-          enabled: false,
-          createdAt: 1_700_000_000_000,
-          updatedAt: 1_700_000_000_000,
-        },
-      ])
+      expect(mockedSaveChannelFilters).toHaveBeenCalledWith(
+        sampleStorageIdentity,
+        [
+          {
+            id: "generated-filter-id",
+            name: "Allow GPT",
+            description: "keep chat models",
+            kind: "pattern",
+            pattern: "^gpt",
+            isRegex: true,
+            action: "exclude",
+            enabled: false,
+            createdAt: 1_700_000_000_000,
+            updatedAt: 1_700_000_000_000,
+          },
+        ],
+      )
     })
 
     expect(toast.success).toHaveBeenCalledWith(
@@ -508,13 +539,16 @@ describe("ChannelFilterDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockedSaveChannelFilters).toHaveBeenCalledWith(42, [
-        expect.objectContaining({
-          kind: "probe",
-          name: "Rule",
-          probeIds: ["text-generation"],
-        }),
-      ])
+      expect(mockedSaveChannelFilters).toHaveBeenCalledWith(
+        sampleStorageIdentity,
+        [
+          expect.objectContaining({
+            kind: "probe",
+            name: "Rule",
+            probeIds: ["text-generation"],
+          }),
+        ],
+      )
     })
 
     expect(toast.success).toHaveBeenCalledWith(
@@ -678,18 +712,21 @@ describe("ChannelFilterDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockedSaveChannelFilters).toHaveBeenCalledWith(42, [
-        expect.objectContaining({
-          id: "rule-2",
-          name: "Second",
-          pattern: "second",
-        }),
-        expect.objectContaining({
-          id: "rule-1",
-          name: "First",
-          pattern: "first",
-        }),
-      ])
+      expect(mockedSaveChannelFilters).toHaveBeenCalledWith(
+        sampleStorageIdentity,
+        [
+          expect.objectContaining({
+            id: "rule-2",
+            name: "Second",
+            pattern: "second",
+          }),
+          expect.objectContaining({
+            id: "rule-1",
+            name: "First",
+            pattern: "first",
+          }),
+        ],
+      )
     })
 
     expect(toast.success).toHaveBeenCalledWith(

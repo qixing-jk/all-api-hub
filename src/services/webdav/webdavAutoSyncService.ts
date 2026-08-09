@@ -30,7 +30,10 @@ import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
   type ApiCredentialProfilesConfig,
 } from "~/types/apiCredentialProfiles"
-import type { ChannelConfigMap } from "~/types/channelConfig"
+import {
+  CHANNEL_CONFIG_SNAPSHOT_VERSION,
+  type ChannelConfigSnapshot,
+} from "~/types/channelConfig"
 import {
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
@@ -538,7 +541,7 @@ class WebdavAutoSyncService {
     deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
     tagStore: TagStore
     preferences: UserPreferences
-    channelConfigs: ChannelConfigMap
+    channelConfigs: ChannelConfigSnapshot
     apiCredentialProfiles: ApiCredentialProfilesConfig
   }): BackupFullV2 {
     return {
@@ -629,7 +632,7 @@ class WebdavAutoSyncService {
    * 流程：
    * 1. 使用当前用户 WebDAV 配置测试连接。
    * 2. 从远程下载备份并通过 normalizeBackupForMerge 按版本规范化
-   *    （兼容 V1 旧结构和当前 V2 扁平结构，未来版本可扩展）。
+   *    （兼容 V1 旧结构和 V2/V3 扁平结构，未来版本可扩展）。
    *    - 如果远程备份是加密封套（envelope），downloadBackup 会尝试用
    *      当前 WebDAV 加密密码自动解密；缺失/错误密码会导致本次同步失败。
    * 3. 根据 syncStrategy 决定合并方式：
@@ -684,6 +687,9 @@ class WebdavAutoSyncService {
     // 决定同步策略
     const strategy =
       preferences.webdav.syncStrategy || WEBDAV_SYNC_STRATEGIES.MERGE
+    const mergeChannelConfigsOnApply =
+      strategy === WEBDAV_SYNC_STRATEGIES.MERGE ||
+      normalizedRemote.channelConfigs === null
 
     const emptyProfiles: ApiCredentialProfilesConfig = {
       version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
@@ -695,7 +701,7 @@ class WebdavAutoSyncService {
     let bookmarksToSave: SiteBookmark[] = localBookmarks
     let tagStoreToSave = localTagStore
     let preferencesToSave: UserPreferences = localPreferences
-    let channelConfigsToSave: ChannelConfigMap = localChannelConfigs
+    let channelConfigsToSave: ChannelConfigSnapshot = localChannelConfigs
     let apiCredentialProfilesToSave: ApiCredentialProfilesConfig =
       localApiCredentialProfiles
     let pinnedAccountIdsToSave: string[] = localPinnedAccountIds
@@ -718,7 +724,6 @@ class WebdavAutoSyncService {
           preferences: localPreferences,
           preferencesTimestamp:
             getSharedPreferencesLastUpdated(localPreferences),
-          channelConfigs: localChannelConfigs,
           apiCredentialProfiles: localApiCredentialProfiles,
         },
         {
@@ -731,7 +736,6 @@ class WebdavAutoSyncService {
           ),
           preferences: remotePreferences,
           preferencesTimestamp: remotePreferencesTimestamp,
-          channelConfigs: normalizedRemote.channelConfigs,
           apiCredentialProfiles:
             (remotePresence.hasApiCredentialProfiles &&
               normalizedRemote.apiCredentialProfiles) ||
@@ -744,7 +748,12 @@ class WebdavAutoSyncService {
       bookmarksToSave = mergeResult.bookmarks
       tagStoreToSave = mergeResult.tagStore
       preferencesToSave = mergeResult.preferences
-      channelConfigsToSave = mergeResult.channelConfigs
+      // Atomic merge must receive only remote incoming data. Including the
+      // startup-time local snapshot could resurrect entries deleted meanwhile.
+      channelConfigsToSave = normalizedRemote.channelConfigs ?? {
+        schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+        configs: {},
+      }
       apiCredentialProfilesToSave = mergeResult.apiCredentialProfiles
       deletedEntryRecordsToSave = mergeResult.deletedEntryRecords
 
@@ -866,8 +875,10 @@ class WebdavAutoSyncService {
           ? remotePreferences
           : localPreferences
 
-      channelConfigsToSave =
-        normalizedRemote.channelConfigs || localChannelConfigs
+      channelConfigsToSave = normalizedRemote.channelConfigs ?? {
+        schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+        configs: {},
+      }
 
       apiCredentialProfilesToSave =
         syncDataSelection.apiCredentialProfiles &&
@@ -973,7 +984,7 @@ class WebdavAutoSyncService {
       Boolean(remoteData) && strategy !== WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY
 
     if (shouldWriteLocal) {
-      await this.applyLocalSyncResult({
+      channelConfigsToSave = await this.applyLocalSyncResult({
         syncDataSelection,
         accountsToSave,
         bookmarksToSave,
@@ -983,11 +994,11 @@ class WebdavAutoSyncService {
         tagStoreToSave,
         preferencesToSave,
         channelConfigsToSave,
+        mergeChannelConfigsOnApply,
         apiCredentialProfilesToSave,
         localAccountsConfig,
         localTagStore,
         localPreferences,
-        localChannelConfigs,
         localApiCredentialProfiles,
       })
     }
@@ -1038,7 +1049,8 @@ class WebdavAutoSyncService {
     orderedAccountIdsToSave: string[]
     tagStoreToSave: TagStore
     preferencesToSave: UserPreferences
-    channelConfigsToSave: ChannelConfigMap
+    channelConfigsToSave: ChannelConfigSnapshot
+    mergeChannelConfigsOnApply: boolean
     apiCredentialProfilesToSave: ApiCredentialProfilesConfig
     localAccountsConfig: {
       accounts: SiteAccount[]
@@ -1049,14 +1061,13 @@ class WebdavAutoSyncService {
     }
     localTagStore: TagStore
     localPreferences: UserPreferences
-    localChannelConfigs: ChannelConfigMap
     localApiCredentialProfiles: ApiCredentialProfilesConfig
   }) {
     const rollbackSteps: Array<() => Promise<void>> = []
 
     this.suppressAccountStorageChangeHandling = true
     try {
-      await withExtensionStorageWriteLock(
+      return await withExtensionStorageWriteLock(
         STORAGE_LOCKS.WEBDAV_SYNC_APPLY,
         async () => {
           try {
@@ -1106,13 +1117,6 @@ class WebdavAutoSyncService {
               })
             }
 
-            await channelConfigStorage.importConfigs(input.channelConfigsToSave)
-            rollbackSteps.push(async () => {
-              await channelConfigStorage.importConfigs(
-                input.localChannelConfigs,
-              )
-            })
-
             if (input.syncDataSelection.apiCredentialProfiles) {
               await apiCredentialProfilesStorage.importConfig(
                 input.apiCredentialProfilesToSave,
@@ -1124,6 +1128,17 @@ class WebdavAutoSyncService {
                 )
               })
             }
+
+            // Apply channel configs last so a failure in another storage domain
+            // never requires replacing concurrent channel edits during rollback.
+            if (input.mergeChannelConfigsOnApply) {
+              return await channelConfigStorage.mergeConfigs(
+                input.channelConfigsToSave,
+              )
+            }
+
+            await channelConfigStorage.importConfigs(input.channelConfigsToSave)
+            return input.channelConfigsToSave
           } catch (error) {
             for (const rollback of rollbackSteps.reverse()) {
               try {
@@ -1147,8 +1162,8 @@ class WebdavAutoSyncService {
 
   /**
    * Merge local and remote data based on timestamps (latest wins).
-   * Also reconciles channel configs and deduplicates pinned ids.
-   * @returns Merged accounts, preferences, and channel configs.
+   * Channel configs are intentionally merged later at their locked storage seam.
+   * @returns Merged accounts, preferences, profiles, tags, and deletion metadata.
    */
   private mergeData(
     local: {
@@ -1159,7 +1174,6 @@ class WebdavAutoSyncService {
       tagStore: TagStore
       preferences: UserPreferences
       preferencesTimestamp: number
-      channelConfigs: ChannelConfigMap
       apiCredentialProfiles: ApiCredentialProfilesConfig
     },
     remote: {
@@ -1170,7 +1184,6 @@ class WebdavAutoSyncService {
       tagStore: TagStore
       preferences: UserPreferences
       preferencesTimestamp: number
-      channelConfigs: ChannelConfigMap | null
       apiCredentialProfiles: ApiCredentialProfilesConfig
     },
     selection: WebDAVSyncDataSelection = resolveWebdavSyncDataSelection(null),
@@ -1179,7 +1192,6 @@ class WebdavAutoSyncService {
     bookmarks: SiteBookmark[]
     tagStore: TagStore
     preferences: UserPreferences
-    channelConfigs: ChannelConfigMap
     apiCredentialProfiles: ApiCredentialProfilesConfig
     deletedEntryRecords: NonNullable<
       AccountStorageConfig["deletedEntryRecords"]
@@ -1374,39 +1386,6 @@ class WebdavAutoSyncService {
         : local.preferences
       : local.preferences
 
-    // 合并通道配置
-    const localChannelConfigs = local.channelConfigs
-    const remoteChannelConfigs = remote.channelConfigs
-    const mergedChannelConfigs: ChannelConfigMap = { ...localChannelConfigs }
-
-    if (remoteChannelConfigs && typeof remoteChannelConfigs === "object") {
-      for (const [key, value] of Object.entries(remoteChannelConfigs)) {
-        const channelId = Number(key)
-        if (!Number.isFinite(channelId) || channelId <= 0) {
-          continue
-        }
-
-        const localConfig = localChannelConfigs[channelId]
-        const remoteConfig = value as ChannelConfigMap[number]
-
-        if (!localConfig) {
-          mergedChannelConfigs[channelId] = remoteConfig
-        } else {
-          const localUpdatedAt =
-            typeof localConfig.updatedAt === "number"
-              ? localConfig.updatedAt
-              : 0
-          const remoteUpdatedAt =
-            typeof remoteConfig.updatedAt === "number"
-              ? remoteConfig.updatedAt
-              : 0
-
-          mergedChannelConfigs[channelId] =
-            remoteUpdatedAt > localUpdatedAt ? remoteConfig : localConfig
-        }
-      }
-    }
-
     logger.info("合并完成", {
       accountCount: mergedAccounts.length,
       preferencesSource:
@@ -1414,7 +1393,6 @@ class WebdavAutoSyncService {
         remote.preferencesTimestamp > local.preferencesTimestamp
           ? "remote"
           : "local",
-      channelConfigCount: Object.keys(mergedChannelConfigs).length,
     })
 
     return {
@@ -1427,7 +1405,6 @@ class WebdavAutoSyncService {
           ? tagMerge.tagStore
           : localTagStore,
       preferences,
-      channelConfigs: mergedChannelConfigs,
       apiCredentialProfiles,
       deletedEntryRecords: deletedEntryRecordsToKeep,
     }

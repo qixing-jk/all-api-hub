@@ -92,7 +92,8 @@
     },
     "selectBackupFile": "Select backup file",
     "selectFileImport": "Please select file or input data to import",
-    "title": "Import Data"
+    "title": "Import Data",
+    "versionNotSupported": "This backup was created by a newer version. Update the app before importing it."
   },
   "notice": {
     "importantNotice": "Important Notice",

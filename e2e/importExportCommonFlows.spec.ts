@@ -6,6 +6,7 @@ import {
   POPUP_PAGE_PATH,
   SIDEPANEL_PAGE_PATH,
 } from "~/constants/extensionPages"
+import { BACKUP_VERSION } from "~/constants/importExport"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { getPopupViewTestId, POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
@@ -22,7 +23,14 @@ import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
   type ApiCredentialProfilesConfig,
 } from "~/types/apiCredentialProfiles"
-import type { ChannelConfigMap } from "~/types/channelConfig"
+import type {
+  ChannelConfigSnapshot,
+  ChannelResourceConfigMap,
+} from "~/types/channelConfig"
+import {
+  createManagedUpstreamResourceRef,
+  getManagedUpstreamResourceRefKey,
+} from "~/types/managedUpstreamResource"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -44,8 +52,6 @@ import {
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
-
-const CHANNEL_CONFIGS_STORAGE_KEY = "channel_configs"
 
 async function chooseFullReplaceImport(page: Page) {
   for (const testId of [
@@ -109,10 +115,10 @@ async function readStoredApiCredentialProfiles(
 
 async function readStoredChannelConfigs(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
-): Promise<ChannelConfigMap> {
+): Promise<ChannelResourceConfigMap> {
   const raw = await getPlasmoStorageRawValue<unknown>(
     serviceWorker,
-    CHANNEL_CONFIGS_STORAGE_KEY,
+    STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
   )
 
   if (typeof raw !== "string") {
@@ -120,7 +126,7 @@ async function readStoredChannelConfigs(
   }
 
   try {
-    return JSON.parse(raw) as ChannelConfigMap
+    return JSON.parse(raw) as ChannelResourceConfigMap
   } catch {
     return {}
   }
@@ -332,7 +338,7 @@ test("exports a full backup containing accounts, user preferences, and API crede
     }
   }
 
-  expect(backup.version).toBe("2.0")
+  expect(backup.version).toBe("3.0")
   expect(backup.accounts?.accounts).toEqual(
     expect.arrayContaining([
       expect.objectContaining({
@@ -388,8 +394,16 @@ test("round-trips a full backup through export download and file import", async 
     createdAt: now,
     updatedAt: now,
   })
-  const roundTripChannelConfigs: ChannelConfigMap = {
-    42: {
+  const roundTripResourceRef = createManagedUpstreamResourceRef({
+    managedSiteType: "new-api",
+    scopeKey: "https://round-trip-admin.example.invalid",
+    resourceId: 42,
+  })
+  const roundTripResourceKey =
+    getManagedUpstreamResourceRefKey(roundTripResourceRef)
+  const roundTripChannelConfigs: ChannelResourceConfigMap = {
+    [roundTripResourceKey]: {
+      resourceRef: roundTripResourceRef,
       channelId: 42,
       modelFilterSettings: {
         rules: [
@@ -435,7 +449,7 @@ test("round-trips a full backup through export download and file import", async 
   })
   await setPlasmoStorageValue(
     serviceWorker,
-    CHANNEL_CONFIGS_STORAGE_KEY,
+    STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
     roundTripChannelConfigs,
   )
   await seedApiCredentialProfiles(serviceWorker, [roundTripProfile])
@@ -456,12 +470,14 @@ test("round-trips a full backup through export download and file import", async 
 
   const exportedBackupBuffer = await fs.readFile(downloadPath)
   const exportedBackup = JSON.parse(exportedBackupBuffer.toString("utf8")) as {
+    version?: string
     accounts?: AccountStorageConfig
     preferences?: Record<string, unknown>
-    channelConfigs?: ChannelConfigMap
+    channelConfigs?: ChannelConfigSnapshot
     apiCredentialProfiles?: ApiCredentialProfilesConfig
   }
 
+  expect(exportedBackup.version).toBe("3.0")
   expect(exportedBackup.accounts?.accounts).toEqual([
     expect.objectContaining({
       id: "round-trip-account",
@@ -480,17 +496,21 @@ test("round-trips a full backup through export download and file import", async 
     themeMode: "dark",
   })
   expect(exportedBackup.channelConfigs).toMatchObject({
-    42: {
-      channelId: 42,
-      modelFilterSettings: {
-        rules: [
-          expect.objectContaining({
-            id: "round-trip-filter",
-            name: "Round Trip Filter",
-            action: "include",
-            pattern: "gpt-4o",
-          }),
-        ],
+    schemaVersion: 1,
+    configs: {
+      [roundTripResourceKey]: {
+        resourceRef: roundTripResourceRef,
+        channelId: 42,
+        modelFilterSettings: {
+          rules: [
+            expect.objectContaining({
+              id: "round-trip-filter",
+              name: "Round Trip Filter",
+              action: "include",
+              pattern: "gpt-4o",
+            }),
+          ],
+        },
       },
     },
   })
@@ -518,17 +538,27 @@ test("round-trips a full backup through export download and file import", async 
     actionClickBehavior: "popup",
     themeMode: "system",
   })
-  await setPlasmoStorageValue(serviceWorker, CHANNEL_CONFIGS_STORAGE_KEY, {
-    43: {
-      channelId: 43,
-      modelFilterSettings: {
-        rules: [],
+  const replacedResourceRef = createManagedUpstreamResourceRef({
+    managedSiteType: "new-api",
+    scopeKey: "https://round-trip-admin.example.invalid",
+    resourceId: 43,
+  })
+  await setPlasmoStorageValue(
+    serviceWorker,
+    STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+    {
+      [getManagedUpstreamResourceRefKey(replacedResourceRef)]: {
+        resourceRef: replacedResourceRef,
+        channelId: 43,
+        modelFilterSettings: {
+          rules: [],
+          updatedAt: now + 1,
+        },
+        createdAt: now + 1,
         updatedAt: now + 1,
       },
-      createdAt: now + 1,
-      updatedAt: now + 1,
-    },
-  } satisfies ChannelConfigMap)
+    } satisfies ChannelResourceConfigMap,
+  )
   await seedApiCredentialProfiles(serviceWorker, [
     createStoredApiCredentialProfile({
       id: "round-trip-old-profile",
@@ -568,9 +598,11 @@ test("round-trips a full backup through export download and file import", async 
         accountIds: accountConfig.accounts.map((account) => account.id),
         bookmarkIds: accountConfig.bookmarks.map((bookmark) => bookmark.id),
         profileIds: profileConfig.profiles.map((profile) => profile.id),
-        channelConfigIds: Object.keys(channelConfigs),
+        channelConfigIds: Object.values(channelConfigs).map(
+          (config) => config.channelId,
+        ),
         channelFilterNames:
-          channelConfigs[42]?.modelFilterSettings.rules.map(
+          channelConfigs[roundTripResourceKey]?.modelFilterSettings.rules.map(
             (rule) => rule.name,
           ) ?? [],
         currencyType: preferences.currencyType,
@@ -582,7 +614,7 @@ test("round-trips a full backup through export download and file import", async 
       accountIds: ["round-trip-account"],
       bookmarkIds: ["round-trip-bookmark"],
       profileIds: ["round-trip-profile"],
-      channelConfigIds: ["42"],
+      channelConfigIds: [42],
       channelFilterNames: ["Round Trip Filter"],
       currencyType: "CNY",
       actionClickBehavior: "sidepanel",
@@ -1325,7 +1357,7 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   await expect.poll(() => uploadedPayloads.length).toBe(1)
   expect(tempDeleteUrls).toEqual([])
   expect(uploadedPayloads[0]).toMatchObject({
-    version: "2.0",
+    version: BACKUP_VERSION,
     accounts: {
       accounts: [
         expect.objectContaining({
@@ -1532,7 +1564,7 @@ test("runs WebDAV auto-sync from settings and uploads the local snapshot", async
   await expect.poll(() => uploadedPayloads.length).toBe(1)
   expect(tempDeleteUrls).toEqual([])
   expect(uploadedPayloads[0]).toMatchObject({
-    version: "2.0",
+    version: BACKUP_VERSION,
     accounts: {
       accounts: [
         expect.objectContaining({

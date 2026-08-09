@@ -840,7 +840,7 @@ describe("createWebdavImportPayloadBySelection", () => {
             },
           },
         },
-        channelConfigs: {},
+        channelConfigs: { schemaVersion: 1, configs: {} },
       } as any,
       selection: {
         accounts: true,
@@ -891,7 +891,7 @@ describe("createWebdavImportPayloadBySelection", () => {
           ],
           lastUpdated: 20,
         },
-        channelConfigs: {},
+        channelConfigs: { schemaVersion: 1, configs: {} },
       } as any,
       selection: {
         accounts: false,
@@ -931,7 +931,7 @@ describe("createWebdavImportPayloadBySelection", () => {
             },
           },
         },
-        channelConfigs: {},
+        channelConfigs: { schemaVersion: 1, configs: {} },
       } as any,
       selection: {
         accounts: false,
@@ -951,7 +951,7 @@ describe("createWebdavImportPayloadBySelection", () => {
     })
   })
 
-  it("always emits a canonical V2 payload even for legacy WebDAV backups", () => {
+  it("always emits a canonical V3 payload even for legacy WebDAV backups", () => {
     const payload = createWebdavImportPayloadBySelection({
       rawBackup: {
         timestamp: 200,
@@ -974,7 +974,7 @@ describe("createWebdavImportPayloadBySelection", () => {
             lastUpdated: 20,
           },
         },
-        channelConfigs: {},
+        channelConfigs: { schemaVersion: 1, configs: {} },
       } as any,
       selection: {
         accounts: false,
@@ -985,7 +985,7 @@ describe("createWebdavImportPayloadBySelection", () => {
       localState: baseLocalState,
     })
 
-    expect(payload.version).toBe("2.0")
+    expect(payload.version).toBe("3.0")
     expect(payload.apiCredentialProfiles).toBeUndefined()
   })
 })
@@ -1022,7 +1022,7 @@ describe("WebDAV preference convergence", () => {
             tempContextMode: "composite",
           },
         },
-        channelConfigs: {},
+        channelConfigs: { schemaVersion: 1, configs: {} },
       } as any,
       selection: {
         accounts: false,
@@ -1040,7 +1040,7 @@ describe("WebDAV preference convergence", () => {
         },
         tagStore: { version: 1, tagsById: {} },
         preferences: DEFAULT_PREFERENCES,
-        channelConfigs: {},
+        channelConfigs: { schemaVersion: 1, configs: {} },
         apiCredentialProfiles: { version: 2, profiles: [], lastUpdated: 0 },
       },
     })
@@ -1133,7 +1133,7 @@ describe("WebDAV preference convergence", () => {
         },
         tagStore: { version: 1, tagsById: {} },
         preferences: DEFAULT_PREFERENCES,
-        channelConfigs: {},
+        channelConfigs: { schemaVersion: 1, configs: {} },
         apiCredentialProfiles: { version: 2, profiles: [], lastUpdated: 0 },
       },
     })

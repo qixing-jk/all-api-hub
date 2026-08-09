@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   sendRuntimeMessage: vi.fn(),
   savePreferences: vi.fn(),
   getPreferences: vi.fn(),
-  channelConfigGetAllConfigs: vi.fn(),
+  channelConfigGetConfigsForScope: vi.fn(),
   listChannels: vi.fn(),
   runBatch: vi.fn(),
   octopusListChannels: vi.fn(),
@@ -61,7 +61,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 
 vi.mock("~/services/managedSites/channelConfigStorage", () => ({
   channelConfigStorage: {
-    getAllConfigs: mocks.channelConfigGetAllConfigs,
+    getConfigsForScope: mocks.channelConfigGetConfigsForScope,
   },
 }))
 
@@ -120,7 +120,7 @@ describe("modelSyncScheduler additional scheduler flows", () => {
         ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
       },
     })
-    mocks.channelConfigGetAllConfigs.mockResolvedValue({})
+    mocks.channelConfigGetConfigsForScope.mockResolvedValue({})
     mocks.getStoredPreferences.mockResolvedValue({ enabled: true })
     mocks.getChannelUpstreamModelOptions.mockResolvedValue(["gpt-4o"])
     mocks.getLastExecution.mockResolvedValue({

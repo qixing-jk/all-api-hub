@@ -47,10 +47,6 @@ import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
-import {
-  isManagedSiteFeatureResourceSliceEnabled,
-  MANAGED_UPSTREAM_RESOURCE_FEATURES,
-} from "~/services/managedSites/managedUpstreamResourceMigration"
 import { resolveManagedUpstreamResourceCapabilities } from "~/services/managedSites/managedUpstreamResourceService"
 import { toPrivateManagedSiteThrownErrorMessage } from "~/services/managedSites/mutations"
 import {
@@ -310,15 +306,6 @@ const attachChannelFilterResourceRefs = (params: {
   baseUrl: string
 }): ChannelRow[] => {
   const { channels, managedSiteType, baseUrl } = params
-  const isEnabled = isManagedSiteFeatureResourceSliceEnabled(
-    managedSiteType,
-    MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelFilters,
-  )
-
-  if (!isEnabled) {
-    return channels
-  }
-
   return channels.map((channel) =>
     attachChannelFilterResourceRef({
       channel,

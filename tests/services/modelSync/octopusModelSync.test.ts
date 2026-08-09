@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { ApiError } from "~/services/apiTransport/errors"
 import { runOctopusBatch } from "~/services/models/modelSync/octopusModelSync"
 import type { OctopusChannelWithData } from "~/types/managedSite"
+import {
+  createManagedUpstreamResourceRef,
+  getManagedUpstreamResourceRefKey,
+} from "~/types/managedUpstreamResource"
 
 const {
   fetchRemoteModelsMock,
@@ -23,12 +27,18 @@ vi.mock("~/services/apiService/octopus", () => ({
   updateChannel: vi.fn((...args) => updateChannelMock(...args)),
 }))
 
-vi.mock("~/services/apiAdapters/managedSites/octopus", () => ({
-  octopusManagedSiteChannels: {
+vi.mock("~/services/apiAdapters/managedSites/octopus", () => {
+  const octopusManagedSiteChannels = {
     updateModels: (...args: unknown[]) => updateModelsMock(...args),
     list: (...args: unknown[]) => listChannelsMock(...args),
-  },
-}))
+  }
+  return {
+    octopusManagedSiteChannels,
+    octopusManagedSiteCapabilities: {
+      channels: octopusManagedSiteChannels,
+    },
+  }
+})
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: vi.fn(() => ({
@@ -154,6 +164,60 @@ describe("runOctopusBatch", () => {
         ok: true,
         newModels: ["beta", "gamma"],
       }),
+    })
+  })
+
+  it("applies the scoped resource filters before updating an Octopus channel", async () => {
+    fetchRemoteModelsMock.mockResolvedValueOnce(["model-a", "model-b"])
+    const resourceRef = createManagedUpstreamResourceRef({
+      managedSiteType: "octopus",
+      scopeKey: config.baseUrl,
+      resourceId: 1,
+    })
+    const channelConfigs = {
+      [getManagedUpstreamResourceRefKey(resourceRef)]: {
+        resourceRef,
+        channelId: 1,
+        modelFilterSettings: {
+          rules: [
+            {
+              id: "exclude-model-b",
+              kind: "pattern" as const,
+              name: "Exclude model-b",
+              pattern: "model-b",
+              isRegex: false,
+              action: "exclude" as const,
+              enabled: true,
+              createdAt: 10,
+              updatedAt: 10,
+            },
+          ],
+          updatedAt: 10,
+        },
+        createdAt: 10,
+        updatedAt: 10,
+      },
+    }
+
+    const result = await runOctopusBatch(
+      config as any,
+      [createChannel({ models: "legacy-model" })],
+      {
+        concurrency: 1,
+        maxRetries: 0,
+        channelConfigs,
+      },
+    )
+
+    expect(updateModelsMock).toHaveBeenCalledWith(
+      config,
+      1,
+      ["model-a"],
+      undefined,
+    )
+    expect(result.items[0]).toMatchObject({
+      ok: true,
+      newModels: ["model-a"],
     })
   })
 

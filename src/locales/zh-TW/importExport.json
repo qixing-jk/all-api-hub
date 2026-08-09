@@ -92,7 +92,8 @@
     },
     "selectBackupFile": "選擇備份檔案",
     "selectFileImport": "請選擇要匯入的檔案或輸入資料",
-    "title": "匯入資料"
+    "title": "匯入資料",
+    "versionNotSupported": "此備份由較新版本建立。請先更新應用程式後再匯入。"
   },
   "notice": {
     "importantNotice": "重要提示",

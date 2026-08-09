@@ -1,6 +1,11 @@
 import { Storage } from "@plasmohq/storage"
 
-import { isManagedSiteType, SITE_TYPES } from "~/constants/siteType"
+import { isManagedSiteType } from "~/constants/siteType"
+import {
+  CHANNEL_CONFIG_STORAGE_KEYS,
+  STORAGE_LOCKS,
+} from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   ChannelConfigMessageTypes,
   onChannelConfigMessage,
@@ -9,23 +14,21 @@ import {
   type ChannelConfigUpsertFiltersRequest,
   type ChannelConfigUpsertFiltersResponse,
 } from "~/services/managedSites/channelConfigMessaging"
-import {
-  isManagedSiteFeatureResourceSliceEnabled,
-  MANAGED_UPSTREAM_RESOURCE_FEATURES,
-} from "~/services/managedSites/managedUpstreamResourceMigration"
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import {
-  createDefaultChannelConfig,
+  CHANNEL_CONFIG_SNAPSHOT_VERSION,
   createDefaultChannelResourceConfig,
-  type ChannelConfig,
-  type ChannelConfigMap,
+  type ChannelConfigSnapshot,
   type ChannelModelFilterSettings,
   type ChannelResourceConfig,
   type ChannelResourceConfigMap,
 } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import { CHANNEL_MODEL_FILTER_PROBE_IDS } from "~/types/channelModelFilters"
 import {
+  createManagedUpstreamResourceRef,
   getManagedUpstreamResourceRefKey,
+  normalizeManagedUpstreamResourceScopeKey,
   type ManagedUpstreamResourceRef,
 } from "~/types/managedUpstreamResource"
 import { getErrorMessage } from "~/utils/core/error"
@@ -39,293 +42,498 @@ import {
 
 const logger = createLogger("ChannelConfigStorage")
 
-const STORAGE_KEYS = {
-  CHANNEL_CONFIGS: "channel_configs",
-  CHANNEL_RESOURCE_CONFIGS: "channel_resource_configs",
-} as const
+const HISTORICAL_CHANNEL_CONFIG_TIMESTAMP = 1
 
-const CHANNEL_CONFIG_MIRROR_RESOURCE_SITE_TYPES = new Set<string>([
-  SITE_TYPES.NEW_API,
-  SITE_TYPES.VELOERA,
-  SITE_TYPES.DONE_HUB,
-])
+type ManagedUpstreamResourceScope = Pick<
+  ManagedUpstreamResourceRef,
+  "managedSiteType" | "scopeKey"
+>
 
-/**
- * Parses a positive numeric channel id from runtime or storage inputs.
- */
+/** Parses an optional positive numeric channel id used only as metadata. */
 function toValidChannelId(value: unknown): number | null {
   const channelId = Number(value)
   return Number.isFinite(channelId) && channelId > 0 ? channelId : null
 }
 
-/**
- * Validates resource refs accepted at the channel-config runtime boundary.
- */
-function isManagedUpstreamResourceRef(
+/** Checks for a plain object-shaped storage or snapshot value. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+}
+
+/** Checks for a finite positive timestamp accepted by the snapshot schema. */
+function isPositiveTimestamp(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+}
+
+const supportedProbeIds = new Set<string>(CHANNEL_MODEL_FILTER_PROBE_IDS)
+
+/** Validates one canonical rule without applying behavior-changing fallbacks. */
+function isCanonicalChannelModelFilterRule(
   value: unknown,
-): value is ManagedUpstreamResourceRef {
-  if (!value || typeof value !== "object") {
+): value is ChannelModelFilterRule {
+  if (!isRecord(value)) return false
+
+  if (
+    typeof value.id !== "string" ||
+    !value.id.trim() ||
+    typeof value.name !== "string" ||
+    !value.name.trim() ||
+    (value.description !== undefined &&
+      typeof value.description !== "string") ||
+    (value.action !== "include" && value.action !== "exclude") ||
+    typeof value.enabled !== "boolean" ||
+    !isPositiveTimestamp(value.createdAt) ||
+    !isPositiveTimestamp(value.updatedAt) ||
+    value.createdAt > value.updatedAt
+  ) {
     return false
   }
 
-  const ref = value as Partial<ManagedUpstreamResourceRef>
-  return (
-    isManagedSiteType(ref.managedSiteType) &&
-    typeof ref.scopeKey === "string" &&
-    ref.scopeKey.trim().length > 0 &&
-    typeof ref.resourceId === "string" &&
-    ref.resourceId.trim().length > 0 &&
-    isManagedSiteFeatureResourceSliceEnabled(
-      ref.managedSiteType,
-      MANAGED_UPSTREAM_RESOURCE_FEATURES.ChannelConfigStorage,
+  if (value.kind === "probe") {
+    if (
+      !Array.isArray(value.probeIds) ||
+      value.probeIds.length === 0 ||
+      (value.match !== "all" && value.match !== "any")
+    ) {
+      return false
+    }
+
+    const probeIds = value.probeIds.filter(
+      (probeId): probeId is string => typeof probeId === "string",
     )
-  )
-}
+    return (
+      probeIds.length === value.probeIds.length &&
+      new Set(probeIds).size === probeIds.length &&
+      probeIds.every((probeId) => supportedProbeIds.has(probeId))
+    )
+  }
 
-/**
- * Keeps channel-shaped resource writes compatible with legacy numeric readers.
- */
-function shouldMirrorResourceConfigToChannelConfig(
-  resourceRef: ManagedUpstreamResourceRef,
-  channelId: number,
-): boolean {
-  return (
-    CHANNEL_CONFIG_MIRROR_RESOURCE_SITE_TYPES.has(
-      resourceRef.managedSiteType,
-    ) && resourceRef.resourceId === String(channelId)
-  )
-}
-
-/**
- * Projects channel-shaped resource configs for legacy numeric readers.
- */
-function toMirroredChannelConfig(
-  config: ChannelResourceConfig,
-): ChannelConfig | null {
-  const channelId = toValidChannelId(config.channelId)
   if (
-    channelId === null ||
-    !shouldMirrorResourceConfigToChannelConfig(config.resourceRef, channelId)
+    value.kind !== "pattern" ||
+    typeof value.pattern !== "string" ||
+    !value.pattern.trim() ||
+    typeof value.isRegex !== "boolean"
+  ) {
+    return false
+  }
+
+  if (value.isRegex) {
+    try {
+      new RegExp(value.pattern)
+    } catch {
+      return false
+    }
+  }
+
+  return true
+}
+
+/** Validates and canonicalizes a managed upstream resource identity. */
+function normalizeResourceRef(
+  value: unknown,
+): ManagedUpstreamResourceRef | null {
+  if (!value || typeof value !== "object") {
+    return null
+  }
+
+  const ref = value as Partial<ManagedUpstreamResourceRef>
+  if (
+    !isManagedSiteType(ref.managedSiteType) ||
+    typeof ref.scopeKey !== "string" ||
+    !ref.scopeKey.trim() ||
+    typeof ref.resourceId !== "string" ||
+    !ref.resourceId.trim()
   ) {
     return null
   }
 
+  return createManagedUpstreamResourceRef({
+    managedSiteType: ref.managedSiteType,
+    scopeKey: ref.scopeKey,
+    resourceId: ref.resourceId,
+  })
+}
+
+/** Checks whether a runtime value contains a valid resource identity. */
+function isManagedUpstreamResourceRef(
+  value: unknown,
+): value is ManagedUpstreamResourceRef {
+  return normalizeResourceRef(value) !== null
+}
+
+/** Sanitizes persisted model-filter settings and historical resource filter fields. */
+function sanitizeModelFilterSettings(
+  rawSettings:
+    | (Partial<ChannelModelFilterSettings> & { rules?: unknown })
+    | undefined,
+  legacyFilters: unknown,
+  fallbackTimestamp: number,
+): ChannelModelFilterSettings {
+  const rawRules =
+    rawSettings && typeof rawSettings === "object"
+      ? rawSettings.rules
+      : legacyFilters
+  const rules = Array.isArray(rawRules)
+    ? rawRules
+        .map((filter) =>
+          sanitizeChannelFilter(filter, {
+            fallbackTimestamp,
+            idPrefix: "channel-filter",
+          }),
+        )
+        .filter((filter): filter is ChannelModelFilterRule => Boolean(filter))
+        .map((rule) => {
+          const updatedAt = isPositiveTimestamp(rule.updatedAt)
+            ? rule.updatedAt
+            : fallbackTimestamp
+          const createdAt = isPositiveTimestamp(rule.createdAt)
+            ? Math.min(rule.createdAt, updatedAt)
+            : fallbackTimestamp
+          return { ...rule, createdAt, updatedAt }
+        })
+    : []
+
+  const explicitUpdatedAt = isPositiveTimestamp(rawSettings?.updatedAt)
+    ? rawSettings.updatedAt
+    : fallbackTimestamp
   return {
-    channelId,
-    modelFilterSettings: config.modelFilterSettings,
-    createdAt: config.createdAt,
-    updatedAt: config.updatedAt,
+    rules,
+    updatedAt: Math.max(
+      explicitUpdatedAt,
+      ...rules.map((rule) => rule.updatedAt),
+    ),
   }
 }
 
+/** Sanitizes one persisted resource-scoped channel configuration. */
+function sanitizeResourceConfig(
+  value: unknown,
+  fallbackTimestamp = HISTORICAL_CHANNEL_CONFIG_TIMESTAMP,
+): ChannelResourceConfig | null {
+  if (!value || typeof value !== "object") {
+    return null
+  }
+
+  const payload = value as Partial<ChannelResourceConfig> & {
+    filters?: unknown
+    modelFilterSettings?: Partial<ChannelModelFilterSettings> & {
+      rules?: unknown
+    }
+  }
+  const resourceRef = normalizeResourceRef(payload.resourceRef)
+  if (!resourceRef) {
+    return null
+  }
+
+  const modelFilterSettings = sanitizeModelFilterSettings(
+    payload.modelFilterSettings,
+    payload.filters,
+    fallbackTimestamp,
+  )
+  const channelId = toValidChannelId(payload.channelId)
+  const updatedAt = Math.max(
+    isPositiveTimestamp(payload.updatedAt)
+      ? payload.updatedAt
+      : fallbackTimestamp,
+    modelFilterSettings.updatedAt,
+  )
+  const createdAt = Math.min(
+    isPositiveTimestamp(payload.createdAt)
+      ? payload.createdAt
+      : fallbackTimestamp,
+    updatedAt,
+  )
+
+  return {
+    resourceRef,
+    ...(channelId !== null ? { channelId } : {}),
+    modelFilterSettings,
+    createdAt,
+    updatedAt,
+  }
+}
+
+/** Strictly validates one externally supplied snapshot entry. */
+function coerceSnapshotResourceConfig(
+  value: unknown,
+): ChannelResourceConfig | null {
+  if (!isRecord(value)) return null
+
+  const payload = value as Partial<ChannelResourceConfig>
+  const settings = payload.modelFilterSettings
+  if (
+    !normalizeResourceRef(payload.resourceRef) ||
+    (payload.channelId !== undefined &&
+      (typeof payload.channelId !== "number" ||
+        toValidChannelId(payload.channelId) === null)) ||
+    !isPositiveTimestamp(payload.createdAt) ||
+    !isPositiveTimestamp(payload.updatedAt) ||
+    payload.createdAt > payload.updatedAt ||
+    !isRecord(settings) ||
+    !isPositiveTimestamp(settings.updatedAt) ||
+    settings.updatedAt > payload.updatedAt ||
+    !Array.isArray(settings.rules) ||
+    settings.rules.some(
+      (rule) =>
+        !isCanonicalChannelModelFilterRule(rule) ||
+        rule.updatedAt > settings.updatedAt,
+    )
+  ) {
+    return null
+  }
+
+  return sanitizeResourceConfig(value, HISTORICAL_CHANNEL_CONFIG_TIMESTAMP)
+}
+
+/** Sanitizes and rekeys persisted configs from their structured resource refs. */
+function sanitizeResourceConfigMap(raw: unknown): ChannelResourceConfigMap {
+  if (!isRecord(raw)) {
+    return {}
+  }
+
+  const configs: ChannelResourceConfigMap = {}
+  for (const value of Object.values(raw as Record<string, unknown>)) {
+    const config = sanitizeResourceConfig(value)
+    if (!config) continue
+    configs[getManagedUpstreamResourceRefKey(config.resourceRef)] = config
+  }
+  return configs
+}
+
+/** Strictly validates and canonically rekeys an external snapshot map. */
+function coerceSnapshotResourceConfigMap(
+  raw: unknown,
+): ChannelResourceConfigMap | null {
+  if (!isRecord(raw)) return null
+
+  const configs: ChannelResourceConfigMap = {}
+  for (const value of Object.values(raw)) {
+    const config = coerceSnapshotResourceConfig(value)
+    if (!config) return null
+
+    const key = getManagedUpstreamResourceRefKey(config.resourceRef)
+    if (configs[key]) return null
+    configs[key] = config
+  }
+  return configs
+}
+
+/** Coerces an unknown backup value into the current scoped snapshot schema. */
+export function coerceChannelConfigSnapshot(
+  raw: unknown,
+): ChannelConfigSnapshot | null {
+  if (!raw || typeof raw !== "object") {
+    return null
+  }
+
+  const snapshot = raw as Partial<ChannelConfigSnapshot>
+  if (
+    snapshot.schemaVersion !== CHANNEL_CONFIG_SNAPSHOT_VERSION ||
+    !snapshot.configs ||
+    typeof snapshot.configs !== "object"
+  ) {
+    return null
+  }
+
+  const configs = coerceSnapshotResourceConfigMap(snapshot.configs)
+  if (!configs) return null
+
+  return {
+    schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+    configs,
+  }
+}
+
+/** Merges snapshots by full resource identity, keeping the newest conflict. */
+function mergeChannelConfigSnapshots(
+  local: ChannelConfigSnapshot,
+  remote: ChannelConfigSnapshot | null,
+): ChannelConfigSnapshot {
+  const configs: ChannelResourceConfigMap = { ...local.configs }
+
+  for (const [key, remoteConfig] of Object.entries(remote?.configs ?? {})) {
+    const localConfig = configs[key]
+    if (!localConfig || remoteConfig.updatedAt > localConfig.updatedAt) {
+      configs[key] = remoteConfig
+    }
+  }
+
+  return {
+    schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+    configs,
+  }
+}
+
+/** Owns the single resource-scoped persistence authority for channel settings. */
 class ChannelConfigStorage {
   private storage: Storage
 
   constructor() {
-    this.storage = new Storage({
-      area: "local",
+    this.storage = new Storage({ area: "local" })
+  }
+
+  private async withStorageWriteLock<T>(work: () => Promise<T>): Promise<T> {
+    return withExtensionStorageWriteLock(STORAGE_LOCKS.CHANNEL_CONFIG, work)
+  }
+
+  /** Removes the obsolete numeric store without re-enabling it on cleanup failure. */
+  private async discardLegacyNumericConfigs(): Promise<void> {
+    try {
+      await this.storage.remove(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)
+    } catch (error) {
+      // The legacy key is never read again; retry cleanup on the next operation.
+      logger.warn("Failed to discard legacy numeric channel configs", error)
+    }
+  }
+
+  /** Loads every resource-scoped configuration from authoritative storage. */
+  private async getAllConfigs(): Promise<ChannelResourceConfigMap> {
+    await this.discardLegacyNumericConfigs()
+    const stored = await this.storage.get(
+      CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+    )
+    return sanitizeResourceConfigMap(stored)
+  }
+
+  /** Loads configurations belonging to one managed-site type and deployment scope. */
+  async getConfigsForScope(
+    scope: ManagedUpstreamResourceScope,
+  ): Promise<ChannelResourceConfigMap> {
+    const configs = await this.getAllConfigs()
+    const normalizedScopeKey = normalizeManagedUpstreamResourceScopeKey(
+      scope.scopeKey,
+    )
+
+    return Object.fromEntries(
+      Object.entries(configs).filter(
+        ([, config]) =>
+          config.resourceRef.managedSiteType === scope.managedSiteType &&
+          config.resourceRef.scopeKey === normalizedScopeKey,
+      ),
+    )
+  }
+
+  /** Loads one resource configuration or returns an unsaved default. */
+  async getConfig(
+    resourceRef: ManagedUpstreamResourceRef,
+  ): Promise<ChannelResourceConfig> {
+    const normalizedRef = normalizeResourceRef(resourceRef)
+    if (!normalizedRef) {
+      throw new Error("resourceRef is invalid")
+    }
+
+    const configs = await this.getAllConfigs()
+    return (
+      configs[getManagedUpstreamResourceRefKey(normalizedRef)] ??
+      createDefaultChannelResourceConfig(normalizedRef)
+    )
+  }
+
+  /** Persists a validated config while the caller owns the storage write lock. */
+  private async saveSanitizedConfig(
+    sanitized: ChannelResourceConfig,
+  ): Promise<void> {
+    const configs = await this.getAllConfigs()
+    const resourceKey = getManagedUpstreamResourceRefKey(sanitized.resourceRef)
+    await this.storage.set(
+      CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+      {
+        ...configs,
+        [resourceKey]: {
+          ...sanitized,
+          updatedAt: Date.now(),
+        },
+      },
+    )
+  }
+
+  /** Exports the complete resource-scoped configuration snapshot. */
+  async exportConfigs(): Promise<ChannelConfigSnapshot> {
+    return {
+      schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+      configs: await this.getAllConfigs(),
+    }
+  }
+
+  /** Replaces authoritative storage with a validated scoped snapshot. */
+  async importConfigs(rawSnapshot: unknown): Promise<number> {
+    const snapshot = coerceChannelConfigSnapshot(rawSnapshot)
+    if (!snapshot) {
+      throw new Error("Channel config snapshot is invalid")
+    }
+
+    await this.withStorageWriteLock(async () => {
+      await this.storage.set(
+        CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+        snapshot.configs,
+      )
+      await this.discardLegacyNumericConfigs()
+    })
+    return Object.keys(snapshot.configs).length
+  }
+
+  /** Atomically merges a validated snapshot with the latest persisted state. */
+  async mergeConfigs(rawSnapshot: unknown): Promise<ChannelConfigSnapshot> {
+    const incoming = coerceChannelConfigSnapshot(rawSnapshot)
+    if (!incoming) {
+      throw new Error("Channel config snapshot is invalid")
+    }
+
+    return this.withStorageWriteLock(async () => {
+      const merged = mergeChannelConfigSnapshots(
+        {
+          schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+          configs: await this.getAllConfigs(),
+        },
+        incoming,
+      )
+      await this.storage.set(
+        CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+        merged.configs,
+      )
+      await this.discardLegacyNumericConfigs()
+      return merged
     })
   }
 
-  async getAllConfigs(): Promise<ChannelConfigMap> {
-    try {
-      const stored = (await this.storage.get(STORAGE_KEYS.CHANNEL_CONFIGS)) as
-        | ChannelConfigMap
-        | undefined
-      const resourceConfigs = await this.getAllResourceConfigs()
-      const merged: ChannelConfigMap = { ...(stored ?? {}) }
-
-      for (const resourceConfig of Object.values(resourceConfigs)) {
-        const mirrored = toMirroredChannelConfig(resourceConfig)
-        if (mirrored) {
-          merged[mirrored.channelId] = mirrored
-        }
-      }
-
-      return merged
-    } catch (error) {
-      logger.error("Failed to load configs", error)
-      return {}
-    }
-  }
-
-  async getAllResourceConfigs(): Promise<ChannelResourceConfigMap> {
-    try {
-      const stored = (await this.storage.get(
-        STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
-      )) as ChannelResourceConfigMap | undefined
-      return stored ?? {}
-    } catch (error) {
-      logger.error("Failed to load resource configs", error)
-      return {}
-    }
-  }
-
-  async getConfig(channelId: number): Promise<ChannelConfig> {
-    const configs = await this.getAllConfigs()
-    return configs[channelId] ?? createDefaultChannelConfig(channelId)
-  }
-
-  async getConfigByResourceRef(
-    resourceRef: ManagedUpstreamResourceRef,
-    fallbackChannelId?: number,
-  ): Promise<ChannelResourceConfig> {
-    const configs = await this.getAllResourceConfigs()
-    const resourceKey = getManagedUpstreamResourceRefKey(resourceRef)
-    const config = configs[resourceKey]
-    if (config) {
-      return config
-    }
-
-    const channelId = toValidChannelId(fallbackChannelId)
-    if (channelId !== null) {
-      const channelConfig = await this.getConfig(channelId)
-      return {
-        ...channelConfig,
-        resourceRef,
-      }
-    }
-
-    return createDefaultChannelResourceConfig(resourceRef)
-  }
-
-  async saveConfig(config: ChannelConfig): Promise<boolean> {
-    try {
-      const configs = await this.getAllConfigs()
-      const next: ChannelConfigMap = {
-        ...configs,
-        [config.channelId]: {
-          ...config,
-          updatedAt: Date.now(),
-        },
-      }
-      await this.storage.set(STORAGE_KEYS.CHANNEL_CONFIGS, next)
-      return true
-    } catch (error) {
-      logger.error("Failed to save config", error)
-      return false
-    }
-  }
-
-  async saveResourceConfig(config: ChannelResourceConfig): Promise<boolean> {
-    try {
-      const configs = await this.getAllResourceConfigs()
-      const resourceKey = getManagedUpstreamResourceRefKey(config.resourceRef)
-      const next: ChannelResourceConfigMap = {
-        ...configs,
-        [resourceKey]: {
-          ...config,
-          updatedAt: Date.now(),
-        },
-      }
-      await this.storage.set(STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS, next)
-      return true
-    } catch (error) {
-      logger.error("Failed to save resource config", error)
-      return false
-    }
-  }
-
-  async exportConfigs(): Promise<ChannelConfigMap> {
-    return this.getAllConfigs()
-  }
-
-  async importConfigs(rawConfigs: unknown): Promise<number> {
-    const sanitized = sanitizeChannelConfigMap(rawConfigs)
-    await this.storage.set(STORAGE_KEYS.CHANNEL_CONFIGS, sanitized)
-    return Object.keys(sanitized).length
-  }
-
+  /** Replaces model filter rules for one resource identity. */
   async upsertFilters(
-    channelId: number,
-    rules: ChannelModelFilterRule[],
-  ): Promise<boolean> {
-    const timestamp = Date.now()
-    const current = await this.getConfig(channelId)
-    const previousSettings =
-      current.modelFilterSettings ??
-      createDefaultChannelConfig(channelId).modelFilterSettings
-
-    const updated: ChannelConfig = {
-      ...current,
-      channelId,
-      modelFilterSettings: {
-        ...previousSettings,
-        rules,
-        updatedAt: timestamp,
-      },
-      updatedAt: timestamp,
-      createdAt: current.createdAt || timestamp,
-    }
-
-    return this.saveConfig(updated)
-  }
-
-  async upsertResourceFilters(
     resourceRef: ManagedUpstreamResourceRef,
     rules: ChannelModelFilterRule[],
-    fallbackChannelId?: number,
-  ): Promise<boolean> {
-    const timestamp = Date.now()
-    const channelId = toValidChannelId(fallbackChannelId)
-    const current = await this.getConfigByResourceRef(
-      resourceRef,
-      channelId ?? undefined,
-    )
-    const previousSettings =
-      current.modelFilterSettings ??
-      createDefaultChannelResourceConfig(resourceRef, channelId ?? undefined)
-        .modelFilterSettings
-
-    const updated: ChannelResourceConfig = {
-      ...current,
-      resourceRef,
-      ...(channelId !== null ? { channelId } : {}),
-      modelFilterSettings: {
-        ...previousSettings,
-        rules,
-        updatedAt: timestamp,
-      },
-      updatedAt: timestamp,
-      createdAt: current.createdAt || timestamp,
+    channelIdInput?: number,
+  ): Promise<void> {
+    const channelId = toValidChannelId(channelIdInput)
+    const normalizedRef = normalizeResourceRef(resourceRef)
+    if (!normalizedRef) {
+      throw new Error("resourceRef is invalid")
     }
 
-    const resourceSaved = await this.saveResourceConfig(updated)
-    if (!resourceSaved) {
-      return false
-    }
-
-    if (
-      channelId === null ||
-      !shouldMirrorResourceConfigToChannelConfig(resourceRef, channelId)
-    ) {
-      return true
-    }
-
-    const mirrorSaved = await this.upsertFilters(channelId, rules)
-    if (!mirrorSaved) {
-      logger.warn(
-        "Failed to mirror resource config to numeric channel config",
-        {
-          channelId,
-          resourceRef,
+    await this.withStorageWriteLock(async () => {
+      const timestamp = Date.now()
+      const current = await this.getConfig(normalizedRef)
+      const updated = sanitizeResourceConfig({
+        ...current,
+        resourceRef: normalizedRef,
+        ...(channelId !== null ? { channelId } : {}),
+        modelFilterSettings: {
+          ...current.modelFilterSettings,
+          rules,
+          updatedAt: timestamp,
         },
-      )
-    }
-
-    return true
+        updatedAt: timestamp,
+        createdAt: current.createdAt || timestamp,
+      })
+      if (!updated) {
+        throw new Error("Channel resource config is invalid")
+      }
+      await this.saveSanitizedConfig(updated)
+    })
   }
 }
 
 export const channelConfigStorage = new ChannelConfigStorage()
 
-/**
- * Normalize inbound filter payloads and ensure required fields are present.
- * Validates names/patterns and fills defaults for IDs and timestamps.
- * @param filters Incoming filter definitions from the UI or message bus.
- * @throws {Error} When required fields are missing or regex is invalid.
- * @returns Sanitized filter rules ready for persistence.
- */
+/** Normalizes filter inputs received through the runtime messaging boundary. */
 function normalizeFilters(
   filters: Array<IncomingChannelFilter | ChannelModelFilterRule>,
 ): ChannelModelFilterRule[] {
@@ -336,9 +544,7 @@ function normalizeFilters(
 
 let channelConfigMessagingCleanup: (() => void)[] | null = null
 
-/**
- * Background listeners for typed channel configuration messaging.
- */
+/** Registers channel-config runtime listeners once per background lifetime. */
 export function setupChannelConfigMessagingListeners() {
   if (channelConfigMessagingCleanup) {
     return
@@ -355,211 +561,43 @@ export function setupChannelConfigMessagingListeners() {
   ]
 }
 
-/**
- * Resolve typed runtime requests that fetch a channel configuration.
- */
+/** Resolves a resource-scoped channel-config read message. */
 export async function resolveChannelConfigGetMessage(
   request: ChannelConfigGetRequest,
 ): Promise<ChannelConfigGetResponse> {
   try {
-    const channelId = toValidChannelId(request.channelId)
-    if (
-      !request.resourceRef &&
-      request.channelId !== undefined &&
-      channelId === null
-    ) {
-      throw new Error("channelId is required")
+    if (!isManagedUpstreamResourceRef(request.resourceRef)) {
+      throw new Error("resourceRef is invalid")
     }
 
-    if (request.resourceRef) {
-      if (!isManagedUpstreamResourceRef(request.resourceRef)) {
-        throw new Error("resourceRef is invalid")
-      }
-
-      const config = await channelConfigStorage.getConfigByResourceRef(
-        request.resourceRef,
-        channelId ?? undefined,
-      )
-      return { success: true, data: config }
+    return {
+      success: true,
+      data: await channelConfigStorage.getConfig(request.resourceRef),
     }
-
-    if (channelId === null) {
-      throw new Error("channelId is required")
-    }
-
-    const config = await channelConfigStorage.getConfig(channelId)
-    return { success: true, data: config }
   } catch (error) {
     logger.error("Message handling failed", error)
     return createRuntimeMessageFailure(getErrorMessage(error))
   }
 }
 
-/**
- * Resolve typed runtime requests that persist channel filter rules.
- */
+/** Resolves a resource-scoped channel-filter write message. */
 export async function resolveChannelConfigUpsertFiltersMessage(
   request: ChannelConfigUpsertFiltersRequest,
 ): Promise<ChannelConfigUpsertFiltersResponse> {
   try {
-    const channelId = toValidChannelId(request.channelId)
-    if (
-      !request.resourceRef &&
-      request.channelId !== undefined &&
-      channelId === null
-    ) {
-      throw new Error("channelId is required")
+    if (!isManagedUpstreamResourceRef(request.resourceRef)) {
+      throw new Error("resourceRef is invalid")
     }
 
     const normalizedFilters = normalizeFilters(request.filters ?? [])
-    const success = request.resourceRef
-      ? isManagedUpstreamResourceRef(request.resourceRef)
-        ? await channelConfigStorage.upsertResourceFilters(
-            request.resourceRef,
-            normalizedFilters,
-            channelId ?? undefined,
-          )
-        : false
-      : channelId !== null
-        ? await channelConfigStorage.upsertFilters(channelId, normalizedFilters)
-        : false
-
-    if (!success) {
-      throw new Error(
-        request.resourceRef &&
-        !isManagedUpstreamResourceRef(request.resourceRef)
-          ? "resourceRef is invalid"
-          : "Failed to save channel filters",
-      )
-    }
-
+    await channelConfigStorage.upsertFilters(
+      request.resourceRef,
+      normalizedFilters,
+      request.channelId,
+    )
     return { success: true, data: normalizedFilters }
   } catch (error) {
     logger.error("Message handling failed", error)
     return createRuntimeMessageFailure(getErrorMessage(error))
   }
-}
-
-/**
- * Sanitize the raw config map received from import or storage.
- * Ensures keys are valid numeric channel IDs and values are cleaned configs.
- * @param rawConfigs Arbitrary raw object to be parsed as channel config map.
- * @returns Clean ChannelConfigMap keyed by channelId.
- */
-function sanitizeChannelConfigMap(rawConfigs: unknown): ChannelConfigMap {
-  if (!rawConfigs || typeof rawConfigs !== "object") {
-    return {}
-  }
-
-  const entries = Object.entries(rawConfigs as Record<string, unknown>)
-  return entries.reduce<ChannelConfigMap>((acc, [key, value]) => {
-    const channelId = Number(key)
-    if (!Number.isFinite(channelId) || channelId <= 0) {
-      return acc
-    }
-
-    acc[channelId] = sanitizeChannelConfig(value, channelId)
-    return acc
-  }, {})
-}
-
-/**
- * Sanitize a single channel config entry into the expected structure.
- * Applies default timestamps and cleans nested filter settings.
- * @param value Raw config object.
- * @param channelId Channel identifier for the config.
- * @returns Sanitized ChannelConfig.
- */
-function sanitizeChannelConfig(
-  value: unknown,
-  channelId: number,
-): ChannelConfig {
-  const timestamp = Date.now()
-  const payload = (value ?? {}) as Partial<ChannelConfig> & {
-    filters?: unknown
-    modelFilterSettings?: Partial<ChannelModelFilterSettings> & {
-      rules?: unknown
-    }
-  }
-
-  const modelFilterSettings = sanitizeModelFilterSettings(
-    payload.modelFilterSettings,
-    payload.filters,
-    timestamp,
-  )
-
-  return {
-    channelId,
-    modelFilterSettings,
-    createdAt:
-      typeof payload.createdAt === "number" && payload.createdAt > 0
-        ? payload.createdAt
-        : timestamp,
-    updatedAt:
-      typeof payload.updatedAt === "number" && payload.updatedAt > 0
-        ? payload.updatedAt
-        : modelFilterSettings.updatedAt,
-  }
-}
-
-/**
- * Sanitize filter settings including legacy filter arrays.
- * Converts raw rule entries into validated ChannelModelFilterRule items.
- * @param rawSettings Current stored settings with potential partial data.
- * @param legacyFilters Legacy filters array to migrate if rules are absent.
- * @param fallbackTimestamp Timestamp used when rule timestamps are missing.
- * @returns Clean ChannelModelFilterSettings with validated rules.
- */
-function sanitizeModelFilterSettings(
-  rawSettings:
-    | (Partial<ChannelModelFilterSettings> & { rules?: unknown })
-    | undefined,
-  legacyFilters: unknown,
-  fallbackTimestamp: number,
-): ChannelModelFilterSettings {
-  if (rawSettings && typeof rawSettings === "object") {
-    const rules = Array.isArray(rawSettings.rules)
-      ? rawSettings.rules
-          .map((filter) => sanitizeFilter(filter, fallbackTimestamp))
-          .filter((filter): filter is ChannelModelFilterRule => Boolean(filter))
-      : []
-
-    const updatedAt =
-      typeof rawSettings.updatedAt === "number" && rawSettings.updatedAt > 0
-        ? rawSettings.updatedAt
-        : fallbackTimestamp
-
-    return {
-      rules,
-      updatedAt,
-    }
-  }
-
-  const legacyRules = Array.isArray(legacyFilters)
-    ? legacyFilters
-        .map((filter) => sanitizeFilter(filter, fallbackTimestamp))
-        .filter((filter): filter is ChannelModelFilterRule => Boolean(filter))
-    : []
-
-  return {
-    rules: legacyRules,
-    updatedAt: fallbackTimestamp,
-  }
-}
-
-/**
- * Sanitize a single filter entry ensuring required fields and defaults.
- * Invalid or incomplete entries return null to be filtered out by callers.
- * @param filter Raw filter object.
- * @param fallbackTimestamp Timestamp used when per-rule timestamps are absent.
- * @returns Valid ChannelModelFilterRule or null when validation fails.
- */
-function sanitizeFilter(
-  filter: unknown,
-  fallbackTimestamp: number,
-): ChannelModelFilterRule | null {
-  return sanitizeChannelFilter(filter, {
-    fallbackTimestamp,
-    idPrefix: "channel-filter",
-  })
 }

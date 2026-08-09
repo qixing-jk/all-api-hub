@@ -11,13 +11,13 @@ const realGenerateModelMappingForChannel =
   ModelRedirectService.generateModelMappingForChannel
 
 const {
-  mockGetAllChannelConfigs,
+  mockGetChannelConfigsForScope,
   mockGetPreferences,
   mockListChannels,
   mockRunBatch,
   mockSaveLastExecution,
 } = vi.hoisted(() => ({
-  mockGetAllChannelConfigs: vi.fn(),
+  mockGetChannelConfigsForScope: vi.fn(),
   mockGetPreferences: vi.fn(),
   mockListChannels: vi.fn(),
   mockRunBatch: vi.fn(),
@@ -26,7 +26,7 @@ const {
 
 vi.mock("~/services/managedSites/channelConfigStorage", () => ({
   channelConfigStorage: {
-    getAllConfigs: mockGetAllChannelConfigs,
+    getConfigsForScope: mockGetChannelConfigsForScope,
   },
 }))
 
@@ -81,7 +81,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    mockGetAllChannelConfigs.mockResolvedValue({})
+    mockGetChannelConfigsForScope.mockResolvedValue({})
     mockSaveLastExecution.mockResolvedValue(undefined)
 
     mockedModelRedirectService.generateModelMappingForChannel = vi.fn(

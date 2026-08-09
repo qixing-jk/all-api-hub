@@ -1,13 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { CHANNEL_CONFIG_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { ChannelConfigMessageTypes } from "~/services/managedSites/channelConfigMessaging"
 import {
   channelConfigStorage,
+  coerceChannelConfigSnapshot,
   resolveChannelConfigGetMessage,
   resolveChannelConfigUpsertFiltersMessage,
   setupChannelConfigMessagingListeners,
 } from "~/services/managedSites/channelConfigStorage"
-import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
+import {
+  CHANNEL_CONFIG_SNAPSHOT_VERSION,
+  type ChannelConfigSnapshot,
+  type ChannelResourceConfig,
+} from "~/types/channelConfig"
+import {
+  createManagedUpstreamResourceRef,
+  getManagedUpstreamResourceRefKey,
+} from "~/types/managedUpstreamResource"
 
 const storageData = new Map<string, any>()
 
@@ -24,6 +34,10 @@ vi.mock("@plasmohq/storage", () => {
 
     async set(key: string, value: any) {
       storageData.set(key, value)
+    }
+
+    async remove(key: string) {
+      storageData.delete(key)
     }
   }
 
@@ -48,6 +62,59 @@ vi.mock(
   },
 )
 
+const createRef = (scopeKey: string, resourceId: string | number = 9) =>
+  createManagedUpstreamResourceRef({
+    managedSiteType: "new-api",
+    scopeKey,
+    resourceId,
+  })
+
+const createConfig = (params: {
+  scopeKey: string
+  resourceId?: string | number
+  channelId?: number
+  ruleId?: string
+  updatedAt?: number
+}): ChannelResourceConfig => {
+  const updatedAt = params.updatedAt ?? 200
+  return {
+    resourceRef: createRef(params.scopeKey, params.resourceId),
+    ...(params.channelId === undefined ? {} : { channelId: params.channelId }),
+    createdAt: 100,
+    updatedAt,
+    modelFilterSettings: {
+      updatedAt,
+      rules: params.ruleId
+        ? [
+            {
+              id: params.ruleId,
+              kind: "pattern",
+              name: params.ruleId,
+              pattern: params.ruleId,
+              isRegex: false,
+              action: "include",
+              enabled: true,
+              createdAt: 100,
+              updatedAt,
+            },
+          ]
+        : [],
+    },
+  }
+}
+
+const snapshotOf = (
+  ...configs: ChannelResourceConfig[]
+): ChannelConfigSnapshot => ({
+  schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+  configs: Object.fromEntries(
+    configs.map((config) => [
+      getManagedUpstreamResourceRefKey(config.resourceRef),
+      config,
+    ]),
+  ),
+})
+
 describe("channelConfigStorage", () => {
   beforeEach(() => {
     storageData.clear()
@@ -56,698 +123,488 @@ describe("channelConfigStorage", () => {
     vi.setSystemTime(new Date("2026-03-28T05:30:00.000Z"))
   })
 
-  it("stores native resource-keyed configs separately without forcing numeric channel conversion", async () => {
-    const resourceRef = createManagedUpstreamResourceRef({
-      managedSiteType: "axonhub",
-      scopeKey: "https://admin.example.invalid",
-      resourceId: "provider/native-id",
-    })
-    storageData.set("channel_configs", {
-      9: {
-        channelId: 9,
-        createdAt: 111,
-        updatedAt: 222,
-        modelFilterSettings: {
-          rules: [],
-          updatedAt: 222,
-        },
-      },
-    })
+  it("keeps equal numeric channel ids isolated by managed-site scope", async () => {
+    const siteARef = createRef("https://a.example.invalid", 9)
+    const siteBRef = createRef("https://b.example.invalid", 9)
 
-    const ok = await channelConfigStorage.upsertResourceFilters(
-      resourceRef,
-      [
-        {
-          id: "resource-rule",
-          name: "Resource Rule",
-          pattern: "gpt",
-          isRegex: false,
-          action: "include",
-          enabled: true,
-          createdAt: 50,
-          updatedAt: 60,
-        },
-      ],
+    await channelConfigStorage.upsertFilters(
+      siteARef,
+      createConfig({
+        scopeKey: siteARef.scopeKey,
+        ruleId: "site-a",
+      }).modelFilterSettings.rules,
       9,
     )
-
-    expect(ok).toBe(true)
-    expect(storageData.get("channel_configs")[9]).toEqual(
-      expect.objectContaining({
-        channelId: 9,
-        createdAt: 111,
-        modelFilterSettings: {
-          rules: [],
-          updatedAt: 222,
-        },
-      }),
+    await channelConfigStorage.upsertFilters(
+      siteBRef,
+      createConfig({
+        scopeKey: siteBRef.scopeKey,
+        ruleId: "site-b",
+      }).modelFilterSettings.rules,
+      9,
     )
-    expect(storageData.get("channel_resource_configs")).toEqual({
-      "axonhub:https%3A%2F%2Fadmin.example.invalid:provider%2Fnative-id":
-        expect.objectContaining({
-          channelId: 9,
-          resourceRef,
-          modelFilterSettings: {
-            updatedAt: Date.now(),
-            rules: [
-              expect.objectContaining({
-                id: "resource-rule",
-                name: "Resource Rule",
-              }),
-            ],
-          },
-        }),
-    })
 
     await expect(
-      channelConfigStorage.getConfigByResourceRef(resourceRef, 9),
-    ).resolves.toEqual(
-      expect.objectContaining({
-        channelId: 9,
-        resourceRef,
-        modelFilterSettings: {
-          updatedAt: Date.now(),
-          rules: [
-            expect.objectContaining({
-              id: "resource-rule",
-            }),
-          ],
-        },
+      channelConfigStorage.getConfigsForScope({
+        managedSiteType: "new-api",
+        scopeKey: "https://a.example.invalid/path",
       }),
-    )
-  })
-
-  it("mirrors channel-shaped resource configs to numeric storage for model sync fallback", async () => {
-    const resourceRef = createManagedUpstreamResourceRef({
-      managedSiteType: "new-api",
-      scopeKey: "https://admin.example.invalid",
-      resourceId: 9,
-    })
-
-    const ok = await channelConfigStorage.upsertResourceFilters(
-      resourceRef,
-      [
-        {
-          id: "channel-shaped-rule",
-          name: "Channel Shaped Rule",
-          pattern: "gpt",
-          isRegex: false,
-          action: "include",
-          enabled: true,
-          createdAt: 50,
-          updatedAt: 60,
-        },
-      ],
-      9,
-    )
-
-    expect(ok).toBe(true)
-    expect(storageData.get("channel_configs")[9]).toEqual(
-      expect.objectContaining({
-        channelId: 9,
-        modelFilterSettings: {
-          updatedAt: Date.now(),
-          rules: [
-            expect.objectContaining({
-              id: "channel-shaped-rule",
-              name: "Channel Shaped Rule",
-            }),
-          ],
-        },
-      }),
-    )
-    expect(storageData.get("channel_resource_configs")).toEqual({
-      "new-api:https%3A%2F%2Fadmin.example.invalid:9": expect.objectContaining({
-        channelId: 9,
-        resourceRef,
-        modelFilterSettings: {
-          updatedAt: Date.now(),
-          rules: [
-            expect.objectContaining({
-              id: "channel-shaped-rule",
-            }),
-          ],
-        },
-      }),
-    })
-  })
-
-  it("keeps a successful resource save when the legacy mirror write fails", async () => {
-    const resourceRef = createManagedUpstreamResourceRef({
-      managedSiteType: "new-api",
-      scopeKey: "https://admin.example.invalid",
-      resourceId: 9,
-    })
-    const upsertSpy = vi
-      .spyOn(channelConfigStorage, "upsertFilters")
-      .mockResolvedValueOnce(false)
-
-    const ok = await channelConfigStorage.upsertResourceFilters(
-      resourceRef,
-      [
-        {
-          id: "resource-primary-rule",
-          name: "Resource Primary Rule",
-          pattern: "gpt",
-          isRegex: false,
-          action: "include",
-          enabled: true,
-          createdAt: 50,
-          updatedAt: 60,
-        },
-      ],
-      9,
-    )
-
-    expect(ok).toBe(true)
-    expect(storageData.get("channel_resource_configs")).toEqual({
-      "new-api:https%3A%2F%2Fadmin.example.invalid:9": expect.objectContaining({
-        channelId: 9,
-        resourceRef,
+    ).resolves.toEqual({
+      [getManagedUpstreamResourceRefKey(siteARef)]: expect.objectContaining({
+        resourceRef: siteARef,
         modelFilterSettings: expect.objectContaining({
-          rules: [
-            expect.objectContaining({
-              id: "resource-primary-rule",
-            }),
-          ],
+          rules: [expect.objectContaining({ id: "site-a" })],
         }),
       }),
     })
-    await expect(channelConfigStorage.getAllConfigs()).resolves.toEqual({
-      9: expect.objectContaining({
-        channelId: 9,
+    await expect(channelConfigStorage.getConfig(siteBRef)).resolves.toEqual(
+      expect.objectContaining({
+        resourceRef: siteBRef,
         modelFilterSettings: expect.objectContaining({
-          rules: [expect.objectContaining({ id: "resource-primary-rule" })],
+          rules: [expect.objectContaining({ id: "site-b" })],
         }),
       }),
-    })
-
-    upsertSpy.mockRestore()
-  })
-
-  it("does not mirror native resource configs to numeric storage even when ids look numeric", async () => {
-    const resourceRef = createManagedUpstreamResourceRef({
-      managedSiteType: "axonhub",
-      scopeKey: "https://admin.example.invalid",
-      resourceId: 9,
-    })
-
-    const ok = await channelConfigStorage.upsertResourceFilters(
-      resourceRef,
-      [
-        {
-          id: "native-numeric-rule",
-          name: "Native Numeric Rule",
-          pattern: "gpt",
-          isRegex: false,
-          action: "include",
-          enabled: true,
-          createdAt: 50,
-          updatedAt: 60,
-        },
-      ],
-      9,
-    )
-
-    expect(ok).toBe(true)
-    expect(storageData.get("channel_configs")).toBeUndefined()
-    expect(storageData.get("channel_resource_configs")).toEqual({
-      "axonhub:https%3A%2F%2Fadmin.example.invalid:9": expect.objectContaining({
-        channelId: 9,
-        resourceRef,
-        modelFilterSettings: {
-          updatedAt: Date.now(),
-          rules: [
-            expect.objectContaining({
-              id: "native-numeric-rule",
-            }),
-          ],
-        },
-      }),
-    })
-  })
-
-  it("falls back to numeric channel config when a resource-keyed config is missing", async () => {
-    const resourceRef = createManagedUpstreamResourceRef({
-      managedSiteType: "new-api",
-      scopeKey: "https://admin.example.invalid",
-      resourceId: 9,
-    })
-    storageData.set("channel_configs", {
-      9: {
-        channelId: 9,
-        createdAt: 111,
-        updatedAt: 222,
-        modelFilterSettings: {
-          updatedAt: 222,
-          rules: [
-            {
-              id: "legacy-rule",
-              name: "Legacy Rule",
-              pattern: "legacy",
-              isRegex: false,
-              action: "include",
-              enabled: true,
-              createdAt: 50,
-              updatedAt: 60,
-            },
-          ],
-        },
-      },
-    })
-
-    await expect(
-      channelConfigStorage.getConfigByResourceRef(resourceRef, 9),
-    ).resolves.toEqual(
-      expect.objectContaining({
-        channelId: 9,
-        resourceRef,
-        modelFilterSettings: {
-          updatedAt: 222,
-          rules: [
-            expect.objectContaining({
-              id: "legacy-rule",
-              name: "Legacy Rule",
-            }),
-          ],
-        },
-      }),
     )
   })
 
-  it("supports resource-keyed configs without numeric channel ids", async () => {
-    const resourceRef = createManagedUpstreamResourceRef({
-      managedSiteType: "axonhub",
-      scopeKey: "https://admin.example.invalid",
-      resourceId: "provider/native-id",
-    })
-
-    const ok = await channelConfigStorage.upsertResourceFilters(resourceRef, [
-      {
-        id: "string-resource-rule",
-        name: "String Resource Rule",
-        pattern: "claude",
-        isRegex: false,
-        action: "exclude",
-        enabled: true,
-        createdAt: 50,
-        updatedAt: 60,
-      },
-    ])
-
-    expect(ok).toBe(true)
-
-    const stored =
-      await channelConfigStorage.getConfigByResourceRef(resourceRef)
-    expect(stored.channelId).toBeUndefined()
-    expect(stored).toEqual(
-      expect.objectContaining({
-        resourceRef,
-        modelFilterSettings: {
-          updatedAt: Date.now(),
-          rules: [
-            expect.objectContaining({
-              id: "string-resource-rule",
-              action: "exclude",
-            }),
-          ],
-        },
-      }),
-    )
-    expect(storageData.get("channel_configs")).toBeUndefined()
-  })
-
-  it("returns a default config when a channel has no stored entry", async () => {
-    const config = await channelConfigStorage.getConfig(42)
-
-    expect(config.channelId).toBe(42)
-    expect(config.modelFilterSettings.rules).toEqual([])
-    expect(config.createdAt).toBe(Date.now())
-    expect(config.updatedAt).toBe(Date.now())
-  })
-
-  it("saves configs with a refreshed updatedAt timestamp", async () => {
-    storageData.set("channel_configs", {
-      7: {
-        channelId: 7,
-        createdAt: 10,
-        updatedAt: 10,
-        modelFilterSettings: {
-          rules: [],
-          updatedAt: 10,
-        },
-      },
-    })
-
-    const ok = await channelConfigStorage.saveConfig({
+  it("preserves different resource entries across concurrent filter updates", async () => {
+    const siteA = createConfig({
+      scopeKey: "https://a.example.invalid",
       channelId: 9,
-      createdAt: 100,
-      updatedAt: 100,
-      modelFilterSettings: {
-        rules: [],
-        updatedAt: 100,
-      },
+      ruleId: "site-a",
+    })
+    const siteB = createConfig({
+      scopeKey: "https://b.example.invalid",
+      channelId: 9,
+      ruleId: "site-b",
     })
 
-    expect(ok).toBe(true)
-    expect(storageData.get("channel_configs")).toEqual({
-      7: expect.objectContaining({ channelId: 7 }),
-      9: expect.objectContaining({
-        channelId: 9,
-        createdAt: 100,
-        updatedAt: Date.now(),
-      }),
+    await Promise.all([
+      channelConfigStorage.upsertFilters(
+        siteA.resourceRef,
+        siteA.modelFilterSettings.rules,
+        siteA.channelId,
+      ),
+      channelConfigStorage.upsertFilters(
+        siteB.resourceRef,
+        siteB.modelFilterSettings.rules,
+        siteB.channelId,
+      ),
+    ])
+
+    const configs = (await channelConfigStorage.exportConfigs()).configs
+    expect(Object.keys(configs)).toHaveLength(2)
+    expect(configs).toMatchObject({
+      [getManagedUpstreamResourceRefKey(siteA.resourceRef)]: {
+        resourceRef: siteA.resourceRef,
+      },
+      [getManagedUpstreamResourceRefKey(siteB.resourceRef)]: {
+        resourceRef: siteB.resourceRef,
+      },
     })
   })
 
-  it("imports configs by sanitizing invalid keys, legacy filters, and malformed rules", async () => {
-    const count = await channelConfigStorage.importConfigs({
-      1: {
-        createdAt: 5,
-        filters: [
-          {
-            name: " Legacy Include ",
-            pattern: "gpt-4o",
-            isRegex: false,
-            action: "include",
-            enabled: true,
-          },
-          null,
-        ],
-      },
-      2: {
-        modelFilterSettings: {
-          updatedAt: 0,
-          rules: [
-            {
-              id: " explicit-id ",
-              name: " Block Legacy ",
-              description: "  trimmed description  ",
-              pattern: "^claude",
-              isRegex: true,
-              action: "exclude",
-              enabled: false,
-              createdAt: 123,
-              updatedAt: 456,
-            },
-            {
-              name: " ",
-              pattern: "ignored",
-            },
-          ],
-        },
-      },
-      broken: {
-        createdAt: 1,
-      },
-      "-3": {
-        createdAt: 1,
-      },
+  it("merges an incoming snapshot atomically with concurrent resource updates", async () => {
+    const local = createConfig({
+      scopeKey: "https://local.example.invalid",
+      channelId: 9,
+      ruleId: "local",
+      updatedAt: 300,
+    })
+    const remote = createConfig({
+      scopeKey: "https://remote.example.invalid",
+      channelId: 9,
+      ruleId: "remote",
+      updatedAt: 200,
     })
 
-    expect(count).toBe(2)
-
-    const imported = await channelConfigStorage.getAllConfigs()
-    expect(Object.keys(imported)).toEqual(["1", "2"])
-    expect(imported[1]).toEqual(
-      expect.objectContaining({
-        channelId: 1,
-        createdAt: 5,
-        updatedAt: Date.now(),
-        modelFilterSettings: {
-          updatedAt: Date.now(),
-          rules: [
-            expect.objectContaining({
-              id: "generated-filter-id",
-              name: "Legacy Include",
-              pattern: "gpt-4o",
-              action: "include",
-              enabled: true,
-            }),
-          ],
-        },
-      }),
-    )
-    expect(imported[2].modelFilterSettings.rules).toEqual([
-      {
-        id: "explicit-id",
-        name: "Block Legacy",
-        description: "trimmed description",
-        kind: "pattern",
-        pattern: "^claude",
-        isRegex: true,
-        action: "exclude",
-        enabled: false,
-        createdAt: 123,
-        updatedAt: 456,
-      },
+    await Promise.all([
+      channelConfigStorage.mergeConfigs(snapshotOf(remote)),
+      channelConfigStorage.upsertFilters(
+        local.resourceRef,
+        local.modelFilterSettings.rules,
+        local.channelId,
+      ),
     ])
+
+    await expect(channelConfigStorage.exportConfigs()).resolves.toMatchObject({
+      configs: {
+        [getManagedUpstreamResourceRefKey(local.resourceRef)]: {
+          resourceRef: local.resourceRef,
+        },
+        [getManagedUpstreamResourceRefKey(remote.resourceRef)]: {
+          resourceRef: remote.resourceRef,
+        },
+      },
+    })
   })
 
-  it("drops non-object imported filter entries instead of crashing import", async () => {
-    const count = await channelConfigStorage.importConfigs({
-      12: {
-        modelFilterSettings: {
-          rules: [
-            {
-              name: "Keep GPT",
-              pattern: "gpt",
-              isRegex: false,
-              action: "include",
-              enabled: true,
-            },
-            42 as any,
-          ],
-        },
-      },
+  it("discards legacy numeric configs without using them as fallback", async () => {
+    const resourceRef = createRef("https://admin.example.invalid", 9)
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, {
+      9: createConfig({
+        scopeKey: "https://legacy.example.invalid",
+        channelId: 9,
+        ruleId: "legacy",
+      }),
     })
 
-    expect(count).toBe(1)
+    const config = await channelConfigStorage.getConfig(resourceRef)
 
-    const imported = await channelConfigStorage.getAllConfigs()
-    expect(imported[12].modelFilterSettings.rules).toEqual([
-      expect.objectContaining({
-        name: "Keep GPT",
-        kind: "pattern",
-      }),
-    ])
-  })
-
-  it("upserts filters while preserving existing createdAt", async () => {
-    storageData.set("channel_configs", {
-      9: {
-        channelId: 9,
-        createdAt: 111,
-        updatedAt: 222,
-        modelFilterSettings: {
-          rules: [],
-          updatedAt: 222,
-        },
-      },
-    })
-
-    const ok = await channelConfigStorage.upsertFilters(9, [
-      {
-        id: "rule-1",
-        name: "Allow GPT",
-        pattern: "gpt",
-        isRegex: false,
-        action: "include",
-        enabled: true,
-        createdAt: 50,
-        updatedAt: 60,
-      },
-    ])
-
-    expect(ok).toBe(true)
-    expect(storageData.get("channel_configs")[9]).toEqual(
-      expect.objectContaining({
-        channelId: 9,
-        createdAt: 111,
-        updatedAt: Date.now(),
-        modelFilterSettings: {
-          updatedAt: Date.now(),
-          rules: [
-            expect.objectContaining({
-              id: "rule-1",
-              name: "Allow GPT",
-            }),
-          ],
-        },
-      }),
+    expect(config.resourceRef).toEqual(resourceRef)
+    expect(config.modelFilterSettings.rules).toEqual([])
+    expect(storageData.has(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS)).toBe(
+      false,
     )
   })
 
-  it("creates missing filter settings and falls back to the current timestamp when createdAt is invalid", async () => {
-    storageData.set("channel_configs", {
-      15: {
-        channelId: 15,
-        createdAt: 0,
-        updatedAt: 0,
-      },
+  it("supports non-numeric native resource ids for every managed-site type", async () => {
+    const resourceRef = createManagedUpstreamResourceRef({
+      managedSiteType: "axonhub",
+      scopeKey: "https://admin.example.invalid",
+      resourceId: "provider/native-id",
     })
 
-    const ok = await channelConfigStorage.upsertFilters(15, [
+    await channelConfigStorage.upsertFilters(resourceRef, [
       {
-        id: "rule-2",
-        name: "Exclude Claude",
+        id: "native-rule",
+        kind: "pattern",
+        name: "Native rule",
         pattern: "claude",
         isRegex: false,
         action: "exclude",
-        enabled: false,
+        enabled: true,
+        createdAt: 10,
+        updatedAt: 20,
+      },
+    ])
+
+    await expect(channelConfigStorage.getConfig(resourceRef)).resolves.toEqual(
+      expect.objectContaining({
+        resourceRef,
+        modelFilterSettings: expect.objectContaining({
+          rules: [expect.objectContaining({ id: "native-rule" })],
+        }),
+      }),
+    )
+  })
+
+  it("propagates storage read failures instead of returning an empty map", async () => {
+    const storage = (channelConfigStorage as any).storage
+    vi.spyOn(storage, "get").mockRejectedValueOnce(new Error("read failed"))
+
+    await expect(channelConfigStorage.exportConfigs()).rejects.toThrow(
+      "read failed",
+    )
+  })
+
+  it("propagates authoritative write failures", async () => {
+    const resourceRef = createRef("https://admin.example.invalid")
+    const storage = (channelConfigStorage as any).storage
+    vi.spyOn(storage, "set").mockRejectedValueOnce(new Error("write failed"))
+
+    await expect(
+      channelConfigStorage.upsertFilters(resourceRef, []),
+    ).rejects.toThrow("write failed")
+  })
+
+  it("keeps authoritative writes successful when legacy cleanup fails", async () => {
+    const resourceRef = createRef("https://admin.example.invalid")
+    const storage = (channelConfigStorage as any).storage
+    vi.spyOn(storage, "remove").mockRejectedValueOnce(
+      new Error("legacy cleanup failed"),
+    )
+
+    await expect(
+      channelConfigStorage.upsertFilters(resourceRef, []),
+    ).resolves.toBeUndefined()
+    await expect(channelConfigStorage.getConfig(resourceRef)).resolves.toEqual(
+      expect.objectContaining({ resourceRef }),
+    )
+  })
+
+  it("exports and replaces complete scoped snapshots", async () => {
+    const siteA = createConfig({
+      scopeKey: "https://a.example.invalid",
+      channelId: 9,
+      ruleId: "site-a",
+    })
+    const siteB = createConfig({
+      scopeKey: "https://b.example.invalid",
+      channelId: 9,
+      ruleId: "site-b",
+    })
+    storageData.set(
+      CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS,
+      snapshotOf(siteA).configs,
+    )
+
+    await expect(channelConfigStorage.exportConfigs()).resolves.toEqual(
+      snapshotOf(siteA),
+    )
+    await expect(
+      channelConfigStorage.importConfigs(snapshotOf(siteB)),
+    ).resolves.toBe(1)
+    await expect(channelConfigStorage.exportConfigs()).resolves.toEqual(
+      snapshotOf(siteB),
+    )
+  })
+
+  it("rejects legacy numeric maps as channel-config snapshots", async () => {
+    const legacy = {
+      9: {
+        channelId: 9,
         createdAt: 1,
         updatedAt: 2,
+        modelFilterSettings: { rules: [], updatedAt: 2 },
       },
-    ])
+    }
 
-    expect(ok).toBe(true)
-    expect(storageData.get("channel_configs")[15]).toEqual({
-      channelId: 15,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      modelFilterSettings: {
-        rules: [
-          expect.objectContaining({
-            id: "rule-2",
-            action: "exclude",
-            enabled: false,
-          }),
-        ],
-        updatedAt: Date.now(),
-      },
-    })
+    expect(coerceChannelConfigSnapshot(legacy)).toBeNull()
+    await expect(channelConfigStorage.importConfigs(legacy)).rejects.toThrow(
+      "snapshot is invalid",
+    )
   })
 
-  it("returns empty configs and false saves when storage operations fail", async () => {
-    const storage = (channelConfigStorage as any).storage
-    const getSpy = vi
-      .spyOn(storage, "get")
-      .mockRejectedValueOnce(new Error("read failed"))
-    const setSpy = vi
-      .spyOn(storage, "set")
-      .mockRejectedValueOnce(new Error("write failed"))
+  it.each([
+    [
+      "entirely malformed",
+      {
+        malformed: {
+          createdAt: 1,
+          updatedAt: 2,
+          modelFilterSettings: { rules: [], updatedAt: 2 },
+        },
+      },
+    ],
+    [
+      "partially malformed",
+      {
+        ...snapshotOf(
+          createConfig({ scopeKey: "https://valid.example.invalid" }),
+        ).configs,
+        malformed: {
+          createdAt: 1,
+          updatedAt: 2,
+          modelFilterSettings: { rules: [], updatedAt: 2 },
+        },
+      },
+    ],
+  ])(
+    "rejects %s non-empty snapshots without replacing authoritative storage",
+    async (_label, configs) => {
+      const existing = createConfig({
+        scopeKey: "https://existing.example.invalid",
+        ruleId: "existing",
+      })
+      await channelConfigStorage.importConfigs(snapshotOf(existing))
 
-    await expect(channelConfigStorage.getAllConfigs()).resolves.toEqual({})
-    await expect(
-      channelConfigStorage.saveConfig({
-        channelId: 99,
-        createdAt: 1,
-        updatedAt: 1,
-        modelFilterSettings: {
-          rules: [],
-          updatedAt: 1,
+      await expect(
+        channelConfigStorage.importConfigs({
+          schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+          configs,
+        }),
+      ).rejects.toThrow("snapshot is invalid")
+      await expect(channelConfigStorage.exportConfigs()).resolves.toEqual(
+        snapshotOf(existing),
+      )
+    },
+  )
+
+  it("rejects snapshots whose conflict timestamps are missing", () => {
+    const resourceRef = createRef("https://admin.example.invalid")
+
+    expect(
+      coerceChannelConfigSnapshot({
+        schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+        configs: {
+          missingTimestamps: {
+            resourceRef,
+            modelFilterSettings: { rules: [] },
+          },
         },
       }),
-    ).resolves.toBe(false)
-
-    getSpy.mockRestore()
-    setSpy.mockRestore()
+    ).toBeNull()
   })
 
-  it("handles typed get and upsert runtime messages", async () => {
-    const getResponse = await resolveChannelConfigGetMessage({
-      channelId: 12,
-    })
-
-    expect(getResponse).toEqual({
-      success: true,
-      data: expect.objectContaining({ channelId: 12 }),
-    })
-
-    const upsertResponse = await resolveChannelConfigUpsertFiltersMessage({
-      channelId: 12,
-      filters: [
-        {
-          name: " Include GPT ",
-          pattern: "gpt",
-          isRegex: false,
-          enabled: true,
-        },
-      ],
-    })
-
-    expect(upsertResponse).toEqual({
-      success: true,
-      data: [
-        expect.objectContaining({
-          id: "generated-filter-id",
-          name: "Include GPT",
-          pattern: "gpt",
-          action: "include",
-          enabled: true,
-        }),
-      ],
-    })
-  })
-
-  it("handles resource-aware typed get and upsert runtime messages", async () => {
-    const resourceRef = createManagedUpstreamResourceRef({
-      managedSiteType: "new-api",
+  it.each([
+    [
+      "an unknown rule action",
+      (config: any) => {
+        config.modelFilterSettings.rules[0].action = "archive"
+      },
+    ],
+    [
+      "a non-boolean enabled flag",
+      (config: any) => {
+        config.modelFilterSettings.rules[0].enabled = "yes"
+      },
+    ],
+    [
+      "a non-finite timestamp",
+      (config: any) => {
+        config.updatedAt = Number.POSITIVE_INFINITY
+      },
+    ],
+    [
+      "filter settings newer than the containing config",
+      (config: any) => {
+        config.updatedAt = config.modelFilterSettings.updatedAt - 1
+      },
+    ],
+    [
+      "a rule created after its last update",
+      (config: any) => {
+        config.modelFilterSettings.rules[0].createdAt =
+          config.modelFilterSettings.rules[0].updatedAt + 1
+      },
+    ],
+  ])("rejects snapshots with %s", (_label, mutate) => {
+    const config = createConfig({
       scopeKey: "https://admin.example.invalid",
-      resourceId: 12,
+      ruleId: "strict-rule",
+    })
+    mutate(config)
+
+    expect(coerceChannelConfigSnapshot(snapshotOf(config))).toBeNull()
+  })
+
+  it("rejects duplicate canonical resource identities", () => {
+    const first = createConfig({
+      scopeKey: "https://admin.example.invalid/path-a",
+      ruleId: "first",
+    })
+    const duplicate = createConfig({
+      scopeKey: "https://admin.example.invalid/path-b",
+      ruleId: "duplicate",
     })
 
-    const upsertResponse = await resolveChannelConfigUpsertFiltersMessage({
-      channelId: 12,
-      resourceRef,
-      filters: [
-        {
-          name: " Include GPT ",
-          pattern: "gpt",
-          isRegex: false,
-          enabled: true,
-        },
-      ],
-    })
+    expect(
+      coerceChannelConfigSnapshot({
+        schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+        configs: { first, duplicate },
+      }),
+    ).toBeNull()
+  })
 
-    expect(upsertResponse).toEqual({
-      success: true,
-      data: [
-        expect.objectContaining({
-          id: "generated-filter-id",
-          name: "Include GPT",
-          pattern: "gpt",
-        }),
-      ],
-    })
-
-    const getResponse = await resolveChannelConfigGetMessage({
-      channelId: 12,
-      resourceRef,
-    })
-
-    expect(getResponse).toEqual({
-      success: true,
-      data: expect.objectContaining({
-        channelId: 12,
+  it("uses deterministic timestamps when sanitizing historical local data", async () => {
+    const resourceRef = createRef("https://admin.example.invalid")
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS, {
+      historical: {
         resourceRef,
-        modelFilterSettings: {
-          updatedAt: Date.now(),
-          rules: [
-            expect.objectContaining({
-              name: "Include GPT",
-            }),
-          ],
-        },
-      }),
+        modelFilterSettings: { rules: [] },
+      },
+    })
+
+    const first = (await channelConfigStorage.exportConfigs()).configs
+    vi.advanceTimersByTime(60_000)
+    const second = (await channelConfigStorage.exportConfigs()).configs
+
+    expect(first).toEqual(second)
+    expect(first[getManagedUpstreamResourceRefKey(resourceRef)]).toMatchObject({
+      createdAt: 1,
+      updatedAt: 1,
+      modelFilterSettings: { updatedAt: 1 },
+    })
+    await expect(channelConfigStorage.exportConfigs()).resolves.toEqual({
+      schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+      configs: first,
+    })
+    expect(
+      coerceChannelConfigSnapshot(await channelConfigStorage.exportConfigs()),
+    ).toEqual({
+      schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+      configs: first,
     })
   })
 
-  it("ignores invalid numeric fallbacks when a valid resource ref is supplied", async () => {
-    const resourceRef = createManagedUpstreamResourceRef({
-      managedSiteType: "new-api",
-      scopeKey: "https://admin.example.invalid",
-      resourceId: 12,
+  it("exports historical rules as a snapshot that the strict interface can restore", async () => {
+    const resourceRef = createRef("https://historical.example.invalid")
+    const rule = createConfig({
+      scopeKey: resourceRef.scopeKey,
+      ruleId: "historical-rule",
+      updatedAt: 200,
+    }).modelFilterSettings.rules[0]
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_RESOURCE_CONFIGS, {
+      historical: {
+        resourceRef,
+        modelFilterSettings: { rules: [rule] },
+      },
     })
+
+    const snapshot = await channelConfigStorage.exportConfigs()
+
+    expect(
+      snapshot.configs[getManagedUpstreamResourceRefKey(resourceRef)],
+    ).toMatchObject({
+      createdAt: 1,
+      updatedAt: 200,
+      modelFilterSettings: {
+        updatedAt: 200,
+        rules: [expect.objectContaining({ updatedAt: 200 })],
+      },
+    })
+    expect(coerceChannelConfigSnapshot(snapshot)).toEqual(snapshot)
+    await expect(channelConfigStorage.importConfigs(snapshot)).resolves.toBe(1)
+  })
+
+  it("rekeys imported entries from their structured resource refs", () => {
+    const config = createConfig({
+      scopeKey: "https://admin.example.invalid/path",
+      ruleId: "normalized",
+    })
+
+    expect(
+      coerceChannelConfigSnapshot({
+        schemaVersion: CHANNEL_CONFIG_SNAPSHOT_VERSION,
+        configs: { "untrusted-key": config },
+      }),
+    ).toEqual(
+      snapshotOf({
+        ...config,
+        resourceRef: createRef("https://admin.example.invalid"),
+      }),
+    )
+  })
+
+  it("merges by complete resource identity and keeps the newest same-resource value", async () => {
+    const localA = createConfig({
+      scopeKey: "https://a.example.invalid",
+      ruleId: "local-a",
+      updatedAt: 200,
+    })
+    const remoteA = createConfig({
+      scopeKey: "https://a.example.invalid",
+      ruleId: "remote-a",
+      updatedAt: 300,
+    })
+    const remoteB = createConfig({
+      scopeKey: "https://b.example.invalid",
+      ruleId: "remote-b",
+      updatedAt: 100,
+    })
+
+    await channelConfigStorage.importConfigs(snapshotOf(localA))
+
+    await expect(
+      channelConfigStorage.mergeConfigs(snapshotOf(remoteA, remoteB)),
+    ).resolves.toEqual(snapshotOf(remoteA, remoteB))
+    await expect(channelConfigStorage.exportConfigs()).resolves.toEqual(
+      snapshotOf(remoteA, remoteB),
+    )
+  })
+
+  it("normalizes and persists resource-aware runtime messages", async () => {
+    const resourceRef = createRef("https://admin.example.invalid", 12)
 
     await expect(
       resolveChannelConfigUpsertFiltersMessage({
-        channelId: 0,
+        channelId: 12,
         resourceRef,
         filters: [
           {
             name: " Include GPT ",
-            pattern: "gpt",
+            pattern: " gpt ",
             isRegex: false,
             enabled: true,
           },
@@ -759,53 +616,46 @@ describe("channelConfigStorage", () => {
         expect.objectContaining({
           id: "generated-filter-id",
           name: "Include GPT",
+          pattern: "gpt",
         }),
       ],
     })
 
     await expect(
-      resolveChannelConfigGetMessage({
-        channelId: 0,
-        resourceRef,
-      }),
+      resolveChannelConfigGetMessage({ channelId: 12, resourceRef }),
     ).resolves.toEqual({
       success: true,
       data: expect.objectContaining({
         resourceRef,
+        channelId: 12,
+        modelFilterSettings: expect.objectContaining({
+          rules: [expect.objectContaining({ name: "Include GPT" })],
+        }),
       }),
     })
   })
 
-  it("rejects resource-aware runtime messages for ungated native resource refs", async () => {
-    const resourceRef = createManagedUpstreamResourceRef({
-      managedSiteType: "axonhub",
-      scopeKey: "https://admin.example.invalid",
-      resourceId: "provider/native-id",
-    })
-
-    await expect(
-      resolveChannelConfigUpsertFiltersMessage({
-        channelId: 12,
-        resourceRef,
-        filters: [],
-      }),
-    ).resolves.toEqual({
-      success: false,
-      error: "resourceRef is invalid",
-    })
+  it("rejects invalid refs and filter payloads through typed messages", async () => {
+    const resourceRef = createRef("https://admin.example.invalid", 12)
 
     await expect(
       resolveChannelConfigGetMessage({
-        channelId: 12,
+        resourceRef: { ...resourceRef, scopeKey: "" },
+      }),
+    ).resolves.toEqual({ success: false, error: "resourceRef is invalid" })
+
+    await expect(
+      resolveChannelConfigUpsertFiltersMessage({
         resourceRef,
+        filters: [{ name: "Broken regex", pattern: "[", isRegex: true }],
       }),
     ).resolves.toEqual({
       success: false,
-      error: "resourceRef is invalid",
+      error: expect.stringContaining("Invalid regex pattern"),
     })
   })
 
-  it("registers typed channel config listeners once", () => {
+  it("registers typed channel-config listeners once", () => {
     setupChannelConfigMessagingListeners()
     setupChannelConfigMessagingListeners()
 
@@ -820,175 +670,5 @@ describe("channelConfigStorage", () => {
       ChannelConfigMessageTypes.UpsertFilters,
       expect.any(Function),
     )
-  })
-
-  it("sanitizes empty imports and preserves explicit rule timestamps when provided", async () => {
-    await expect(channelConfigStorage.importConfigs(null)).resolves.toBe(0)
-    expect(storageData.get("channel_configs")).toEqual({})
-
-    const count = await channelConfigStorage.importConfigs({
-      8: {
-        updatedAt: 999,
-        modelFilterSettings: {
-          updatedAt: 777,
-          rules: [
-            {
-              id: " kept-id ",
-              name: " Keep GPT ",
-              pattern: " gpt ",
-              isRegex: false,
-              action: "unsupported",
-              enabled: undefined,
-              createdAt: 555,
-              updatedAt: 666,
-            },
-          ],
-        },
-      },
-    })
-
-    expect(count).toBe(1)
-    expect(storageData.get("channel_configs")[8]).toEqual({
-      channelId: 8,
-      createdAt: Date.now(),
-      updatedAt: 999,
-      modelFilterSettings: {
-        updatedAt: 777,
-        rules: [
-          {
-            id: "kept-id",
-            name: "Keep GPT",
-            description: undefined,
-            kind: "pattern",
-            pattern: "gpt",
-            isRegex: false,
-            action: "include",
-            enabled: true,
-            createdAt: 555,
-            updatedAt: 666,
-          },
-        ],
-      },
-    })
-  })
-
-  it("rejects invalid message payloads and unknown actions", async () => {
-    await expect(
-      resolveChannelConfigGetMessage({
-        channelId: 0,
-      }),
-    ).resolves.toEqual({
-      success: false,
-      error: "channelId is required",
-    })
-
-    await expect(
-      resolveChannelConfigUpsertFiltersMessage({
-        channelId: 12,
-        filters: [
-          {
-            name: "Broken Regex",
-            pattern: "[",
-            isRegex: true,
-          },
-        ],
-      }),
-    ).resolves.toEqual({
-      success: false,
-      error: expect.stringContaining("Invalid regex pattern"),
-    })
-  })
-
-  it("returns a typed failure when filter persistence is rejected", async () => {
-    const saveSpy = vi
-      .spyOn(channelConfigStorage, "upsertFilters")
-      .mockResolvedValueOnce(false)
-
-    await expect(
-      resolveChannelConfigUpsertFiltersMessage({
-        channelId: 12,
-        filters: [],
-      }),
-    ).resolves.toEqual({
-      success: false,
-      error: "Failed to save channel filters",
-    })
-
-    saveSpy.mockRestore()
-  })
-
-  it("normalizes probe rules and drops imported credential fields", async () => {
-    const count = await channelConfigStorage.importConfigs({
-      3: {
-        modelFilterSettings: {
-          rules: [
-            {
-              id: "probe-id",
-              kind: "probe",
-              name: "Text capable",
-              description: "  requires chat  ",
-              action: "include",
-              enabled: true,
-              probeIds: ["text-generation", "text-generation", "unknown-probe"],
-              match: "all",
-              apiKey: "sk-should-not-persist",
-              key: "sk-channel",
-              baseUrl: "https://manual.example.com",
-              createdAt: 10,
-              updatedAt: 20,
-            },
-            {
-              kind: "probe",
-              name: "Invalid",
-              probeIds: [],
-            },
-          ],
-        },
-      },
-    })
-
-    expect(count).toBe(1)
-    const imported = await channelConfigStorage.getAllConfigs()
-    expect(imported[3].modelFilterSettings.rules).toEqual([
-      {
-        id: "probe-id",
-        kind: "probe",
-        name: "Text capable",
-        description: "requires chat",
-        action: "include",
-        enabled: true,
-        probeIds: ["text-generation"],
-        match: "all",
-        createdAt: 10,
-        updatedAt: 20,
-      },
-    ])
-  })
-
-  it("surfaces non-array and missing-field filter validation errors through the message handler", async () => {
-    await expect(
-      resolveChannelConfigUpsertFiltersMessage({
-        channelId: 12,
-        filters: "not-an-array" as any,
-      }),
-    ).resolves.toEqual({
-      success: false,
-      error: "Filters must be an array",
-    })
-
-    await expect(
-      resolveChannelConfigUpsertFiltersMessage({
-        channelId: 12,
-        filters: [
-          {
-            name: "Missing Pattern",
-            pattern: "   ",
-          },
-        ],
-      }),
-    ).resolves.toEqual({
-      success: false,
-      error: "Filter pattern is required",
-    })
   })
 })

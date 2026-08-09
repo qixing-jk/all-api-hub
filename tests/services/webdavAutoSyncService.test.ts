@@ -14,6 +14,11 @@ import { createDefaultTagStore } from "~/services/tags/tagStoreUtils"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { normalizeWebdavOrderedEntryIds } from "~/services/webdav/webdavSelectiveSync"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+import type { ChannelConfigSnapshot } from "~/types/channelConfig"
+import {
+  createManagedUpstreamResourceRef,
+  getManagedUpstreamResourceRefKey,
+} from "~/types/managedUpstreamResource"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
@@ -58,6 +63,44 @@ const preferenceWriteFailure = () => ({
   },
 })
 
+function channelConfigSnapshot(
+  entries: Array<{
+    resourceId: string
+    scopeKey?: string
+    channelId?: number
+    updatedAt: number
+  }>,
+): ChannelConfigSnapshot {
+  const configs = Object.fromEntries(
+    entries.map(
+      ({
+        resourceId,
+        scopeKey = "https://admin.example.invalid",
+        channelId,
+        updatedAt,
+      }) => {
+        const resourceRef = createManagedUpstreamResourceRef({
+          managedSiteType: "new-api",
+          scopeKey,
+          resourceId,
+        })
+        return [
+          getManagedUpstreamResourceRefKey(resourceRef),
+          {
+            resourceRef,
+            ...(channelId !== undefined ? { channelId } : {}),
+            modelFilterSettings: { rules: [], updatedAt },
+            createdAt: updatedAt,
+            updatedAt,
+          },
+        ]
+      },
+    ),
+  )
+
+  return { schemaVersion: 1, configs }
+}
+
 vi.mock(
   import("~/services/preferences/userPreferences"),
   async (importOriginal) => {
@@ -86,12 +129,21 @@ vi.mock("~/services/accounts/accountStorage", () => ({
 
 const mockChannelConfigExport = vi.fn()
 const mockChannelConfigImport = vi.fn()
-vi.mock("~/services/managedSites/channelConfigStorage", () => ({
-  channelConfigStorage: {
-    exportConfigs: (...args: any[]) => mockChannelConfigExport(...args),
-    importConfigs: (...args: any[]) => mockChannelConfigImport(...args),
+const mockChannelConfigMerge = vi.fn()
+vi.mock(
+  import("~/services/managedSites/channelConfigStorage"),
+  async (importOriginal) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
+      channelConfigStorage: {
+        exportConfigs: (...args: any[]) => mockChannelConfigExport(...args),
+        importConfigs: (...args: any[]) => mockChannelConfigImport(...args),
+        mergeConfigs: (...args: any[]) => mockChannelConfigMerge(...args),
+      } as unknown as typeof actual.channelConfigStorage,
+    }
   },
-}))
+)
 
 const mockApiCredentialProfilesExport = vi.fn()
 const mockApiCredentialProfilesImport = vi.fn()
@@ -165,13 +217,6 @@ describe("WebdavAutoSyncService.mergeData", () => {
     themeMode: "dark",
     preferencesVersion: 2,
   } as any
-
-  const mkChannelConfig = (id: number, updatedAt: number) => ({
-    channelId: id,
-    modelFilterSettings: {},
-    createdAt: 0,
-    updatedAt,
-  })
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -744,52 +789,7 @@ describe("WebdavAutoSyncService.mergeData", () => {
     expect(result.preferences.themeMode).toBe("remote")
   })
 
-  it("merges channel configs by numeric id using latest updatedAt", () => {
-    const localChannels = {
-      1: mkChannelConfig(1, 10),
-      2: mkChannelConfig(2, 5),
-    }
-
-    const remoteChannels = {
-      2: mkChannelConfig(2, 20),
-      3: mkChannelConfig(3, 1),
-    }
-
-    const local: any = {
-      accounts: [],
-      bookmarks: [],
-      accountsTimestamp: 0,
-      tagStore: { version: 1, tagsById: {} },
-      preferences: basePrefsLocal,
-      preferencesTimestamp: 0,
-      channelConfigs: localChannels,
-      apiCredentialProfiles: emptyApiCredentialProfiles,
-    }
-
-    const remote: any = {
-      accounts: [],
-      bookmarks: [],
-      accountsTimestamp: 0,
-      tagStore: { version: 1, tagsById: {} },
-      preferences: basePrefsRemote,
-      preferencesTimestamp: 0,
-      channelConfigs: remoteChannels,
-      apiCredentialProfiles: emptyApiCredentialProfiles,
-    }
-
-    const result = callMerge(local, remote)
-
-    expect(
-      Object.keys(result.channelConfigs)
-        .map((k: any) => Number(k))
-        .sort(),
-    ).toEqual([1, 2, 3])
-
-    // id 2 should come from remote because of newer updatedAt
-    expect(result.channelConfigs[2].updatedAt).toBe(20)
-  })
-
-  it("keeps local-only selections and ignores invalid remote channel config ids", () => {
+  it("keeps local-only selections for the data domains owned by mergeData", () => {
     const local: any = {
       accounts: [{ id: "a1", site_name: "local-1" }],
       bookmarks: [
@@ -803,9 +803,6 @@ describe("WebdavAutoSyncService.mergeData", () => {
       tagStore: undefined,
       preferences: { ...basePrefsLocal, themeMode: "local-only" },
       preferencesTimestamp: 10,
-      channelConfigs: {
-        2: { ...mkChannelConfig(2, 30), label: "local-channel" },
-      },
       apiCredentialProfiles: {
         version: 2,
         profiles: [{ id: "local-profile" }],
@@ -836,12 +833,6 @@ describe("WebdavAutoSyncService.mergeData", () => {
       tagStore: undefined,
       preferences: { ...basePrefsRemote, themeMode: "remote-should-not-win" },
       preferencesTimestamp: 20,
-      channelConfigs: {
-        0: mkChannelConfig(0, 100),
-        "-1": mkChannelConfig(-1, 100),
-        abc: mkChannelConfig(5, 100),
-        2: { ...mkChannelConfig(2, 1), label: "remote-older" },
-      },
       apiCredentialProfiles: {
         version: 2,
         profiles: [{ id: "remote-profile" }],
@@ -861,9 +852,6 @@ describe("WebdavAutoSyncService.mergeData", () => {
     expect(result.preferences).toEqual(local.preferences)
     expect(result.tagStore).toEqual(createDefaultTagStore())
     expect(result.apiCredentialProfiles).toEqual(local.apiCredentialProfiles)
-    expect(result.channelConfigs).toEqual({
-      2: { ...mkChannelConfig(2, 30), label: "local-channel" },
-    })
   })
 })
 
@@ -905,13 +893,14 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
     mockAccountStorageImportData.mockResolvedValue({ migratedCount: 0 })
     mockChannelConfigImport.mockResolvedValue(undefined)
+    mockChannelConfigMerge.mockImplementation(async (snapshot) => snapshot)
     mockApiCredentialProfilesImport.mockResolvedValue(undefined)
     mockTagStoreImport.mockResolvedValue(undefined)
     mockImportPreferences.mockResolvedValue(preferenceWriteSuccess())
 
     mockTagStoreExport.mockResolvedValue({ version: 1, tagsById: {} })
     mockExportPreferences.mockResolvedValue({ lastUpdated: 1 } as any)
-    mockChannelConfigExport.mockResolvedValue({})
+    mockChannelConfigExport.mockResolvedValue({ schemaVersion: 1, configs: {} })
     mockApiCredentialProfilesExport.mockResolvedValue({
       version: 2,
       profiles: [],
@@ -2036,6 +2025,12 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
 
 describe("WebdavAutoSyncService local apply phase", () => {
   const createService = () => new (webdavAutoSyncService as any).constructor()
+  const localChannelConfigs = channelConfigSnapshot([
+    { resourceId: "1", channelId: 1, updatedAt: 100 },
+  ])
+  const remoteChannelConfigs = channelConfigSnapshot([
+    { resourceId: "2", channelId: 2, updatedAt: 200 },
+  ])
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -2046,7 +2041,9 @@ describe("WebdavAutoSyncService local apply phase", () => {
       JSON.parse(content),
     )
 
+    mockAccountStorageImportData.mockResolvedValue({ migratedCount: 0 })
     mockChannelConfigImport.mockResolvedValue(undefined)
+    mockChannelConfigMerge.mockImplementation(async (snapshot) => snapshot)
     mockApiCredentialProfilesImport.mockResolvedValue(undefined)
     mockTagStoreImport.mockResolvedValue(undefined)
     mockImportPreferences.mockResolvedValue(preferenceWriteSuccess())
@@ -2078,7 +2075,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
         },
       },
     } as any)
-    mockChannelConfigExport.mockResolvedValue({ 1: { enabled: true } })
+    mockChannelConfigExport.mockResolvedValue(localChannelConfigs)
     mockApiCredentialProfilesExport.mockResolvedValue({
       version: 2,
       profiles: [
@@ -2111,7 +2108,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
 
     mockDownloadBackup.mockResolvedValue(
       JSON.stringify({
-        version: "2.0",
+        version: "3.0",
         timestamp: 200,
         accounts: {
           accounts: [{ id: "remote-account", created_at: 3, updated_at: 30 }],
@@ -2122,7 +2119,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
         },
         tagStore: { version: 1, tagsById: { remote: { id: "remote-tag" } } },
         preferences: { lastUpdated: 200, themeMode: "light" },
-        channelConfigs: { 2: { enabled: false } },
+        channelConfigs: remoteChannelConfigs,
         apiCredentialProfiles: {
           version: 2,
           profiles: [
@@ -2142,6 +2139,68 @@ describe("WebdavAutoSyncService local apply phase", () => {
         },
       }),
     )
+  })
+
+  it("atomically merges channel configs and returns the applied snapshot", async () => {
+    const service = createService() as any
+    const applied = channelConfigSnapshot([
+      { resourceId: "1", channelId: 1, updatedAt: 100 },
+      { resourceId: "2", channelId: 2, updatedAt: 200 },
+    ])
+    mockChannelConfigMerge.mockResolvedValueOnce(applied)
+
+    const result = await service.applyLocalSyncResult({
+      syncDataSelection: {
+        accounts: false,
+        bookmarks: false,
+        apiCredentialProfiles: false,
+        preferences: false,
+      },
+      accountsToSave: [],
+      bookmarksToSave: [],
+      pinnedAccountIdsToSave: [],
+      orderedAccountIdsToSave: [],
+      tagStoreToSave: createDefaultTagStore(),
+      preferencesToSave: {} as any,
+      channelConfigsToSave: remoteChannelConfigs,
+      mergeChannelConfigsOnApply: true,
+      apiCredentialProfilesToSave: {
+        version: 2,
+        profiles: [],
+        lastUpdated: 0,
+      },
+      localAccountsConfig: { accounts: [] },
+      localTagStore: createDefaultTagStore(),
+      localPreferences: {} as any,
+      localApiCredentialProfiles: {
+        version: 2,
+        profiles: [],
+        lastUpdated: 0,
+      },
+    })
+
+    expect(mockChannelConfigMerge).toHaveBeenCalledWith(remoteChannelConfigs)
+    expect(mockChannelConfigImport).not.toHaveBeenCalled()
+    expect(result).toEqual(applied)
+  })
+
+  it("passes only the remote channel snapshot into atomic merge", async () => {
+    const service = createService()
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "merge",
+        syncData: {
+          accounts: true,
+          bookmarks: true,
+          apiCredentialProfiles: true,
+          preferences: true,
+        },
+      },
+    } as any)
+
+    await service.syncWithWebdav()
+
+    expect(mockChannelConfigMerge).toHaveBeenCalledWith(remoteChannelConfigs)
   })
 
   it("starts each local import only after the previous one completes", async () => {
@@ -2190,8 +2249,8 @@ describe("WebdavAutoSyncService local apply phase", () => {
       "account:done",
       "tag",
       "preferences",
-      "channel",
       "api",
+      "channel",
     ])
   })
 
@@ -2219,11 +2278,11 @@ describe("WebdavAutoSyncService local apply phase", () => {
       pinnedAccountIds: ["local-account"],
       orderedAccountIds: ["local-account", "local-bookmark"],
     })
-    expect(mockApiCredentialProfilesImport).not.toHaveBeenCalled()
+    expect(mockApiCredentialProfilesImport).toHaveBeenCalledTimes(2)
     expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 
-  it("rolls back channel configs when api credential profile import fails", async () => {
+  it("does not write channel configs when api credential profile import fails", async () => {
     const service = createService()
 
     mockAccountStorageImportData.mockResolvedValue({ migratedCount: 0 })
@@ -2238,12 +2297,8 @@ describe("WebdavAutoSyncService local apply phase", () => {
       "profile import failed",
     )
 
-    expect(mockChannelConfigImport).toHaveBeenNthCalledWith(1, {
-      2: { enabled: false },
-    })
-    expect(mockChannelConfigImport).toHaveBeenNthCalledWith(2, {
-      1: { enabled: true },
-    })
+    expect(mockChannelConfigImport).not.toHaveBeenCalled()
+    expect(mockChannelConfigMerge).not.toHaveBeenCalled()
     expect(mockImportPreferences).toHaveBeenCalledTimes(2)
     expect(mockUploadBackup).not.toHaveBeenCalled()
   })

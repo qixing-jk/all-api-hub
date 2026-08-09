@@ -92,7 +92,8 @@
     },
     "selectBackupFile": "Selecionar arquivo de backup",
     "selectFileImport": "Selecione um arquivo ou insira os dados que deseja importar",
-    "title": "Importar dados"
+    "title": "Importar dados",
+    "versionNotSupported": "Este backup foi criado por uma versão mais recente. Atualize o aplicativo antes de importá-lo."
   },
   "notice": {
     "importantNotice": "Aviso importante",

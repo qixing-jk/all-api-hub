@@ -53,6 +53,8 @@ export async function importFromBackupObject(
           throw new Error(t("importExport:import.importFailed"))
         case "NO_IMPORTABLE_DATA":
           throw new Error(t("importExport:import.noImportableData"))
+        case "VERSION_NOT_SUPPORTED":
+          throw new Error(t("importExport:import.versionNotSupported"))
       }
     }
 
