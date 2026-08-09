@@ -21,6 +21,7 @@ import {
 } from "~/services/accountSiteDefinitions/contracts"
 import * as accountSiteDefinitionRegistry from "~/services/accountSiteDefinitions/registry"
 import {
+  MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type EditableResourceProjection,
@@ -437,6 +438,37 @@ describe("AxonHub native managed-resource Adapter", () => {
         Object.values(RESOURCE_FIELD_TYPES).includes(field.type),
       ),
     ).toBe(true)
+  })
+
+  it("owns the managed-channel import seed projection at the registration seam", async () => {
+    const workspace = await axonHubManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor({
+      seed: {
+        kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+        name: "Imported channel",
+        channelType: "openai",
+        credential: "credential-placeholder",
+        baseUrl: "https://upstream.example.invalid",
+        enabled: true,
+        models: [" model-a ", "model-a", "model-b"],
+        orderingWeight: 7,
+      },
+    })
+
+    expect(axonHubManagedResourceRegistration.createSeedKinds).toContain(
+      MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+    )
+    expect(editor.initialValues).toMatchObject({
+      name: "Imported channel",
+      type: "openai",
+      baseURL: "https://upstream.example.invalid",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      key: { kind: "replace", value: "credential-placeholder" },
+      supportedModels: ["model-a", "model-a", "model-b"],
+      manualModels: ["model-a", "model-a", "model-b"],
+      defaultTestModel: "model-a",
+      orderingWeight: 7,
+    })
   })
 
   beforeEach(() => {

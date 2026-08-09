@@ -87,6 +87,31 @@ export type ResourcePage = {
   nextCursor?: string
 }
 
+export const MANAGED_RESOURCE_CREATE_SEED_KINDS = {
+  ManagedChannelImport: "managed-channel-import",
+} as const
+
+export type ManagedResourceCreateSeedKind =
+  (typeof MANAGED_RESOURCE_CREATE_SEED_KINDS)[keyof typeof MANAGED_RESOURCE_CREATE_SEED_KINDS]
+
+/** Provider-neutral source data for creating a managed channel from an import. */
+export type ManagedChannelImportCreateSeed = {
+  kind: typeof MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport
+  name: string
+  channelType: string
+  credential: string
+  baseUrl: string
+  enabled: boolean
+  models: readonly string[]
+  orderingWeight: number
+}
+
+export type ManagedResourceCreateSeed = ManagedChannelImportCreateSeed
+
+export type ResourceCreateEditorOptions = ResourceOperationOptions & {
+  seed?: ManagedResourceCreateSeed
+}
+
 export class ManagedResourceError extends Error {
   constructor(
     readonly failure: ResourceFailure,
@@ -127,7 +152,9 @@ export interface ManagedResourceWorkspace {
     ref: ManagedResourceRef,
     options?: ResourceOperationOptions,
   ): Promise<ResourceDisplayFacts>
-  openCreateEditor(options?: ResourceOperationOptions): Promise<ResourceEditor>
+  openCreateEditor(
+    options?: ResourceCreateEditorOptions,
+  ): Promise<ResourceEditor>
   openEditEditor(
     ref: ManagedResourceRef,
     options?: ResourceOperationOptions,
@@ -141,5 +168,6 @@ export interface ManagedResourceWorkspace {
 export interface ManagedResourceRegistration {
   readonly siteType: ManagedSiteType
   readonly kind: ManagedResourceKind
+  readonly createSeedKinds?: readonly ManagedResourceCreateSeedKind[]
   open(options?: ResourceOperationOptions): Promise<ManagedResourceWorkspace>
 }

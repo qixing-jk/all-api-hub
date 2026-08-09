@@ -11,12 +11,14 @@ import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contra
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
+  MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
   MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   MANAGED_RESOURCE_FIELD_TYPES,
   MANAGED_RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS,
   ManagedResourceError,
   type EditableResourceProjection,
+  type ManagedChannelImportCreateSeed,
   type ManagedResourceRef,
   type ResourceDisplayFact,
   type ResourceDisplayFacts,
@@ -1341,6 +1343,30 @@ const createInitialValues = (): EditableResourceProjection => ({
   [AXON_HUB_CHANNEL_FIELD_IDS.EXTRA_MODEL_PREFIX]: "",
 })
 
+const createAxonHubChannelImportProjection = (
+  seed: ManagedChannelImportCreateSeed,
+): EditableResourceProjection => {
+  const models = normalizeList(seed.models)
+
+  return {
+    ...createInitialValues(),
+    [AXON_HUB_CHANNEL_FIELD_IDS.NAME]: seed.name,
+    [AXON_HUB_CHANNEL_FIELD_IDS.TYPE]: seed.channelType,
+    [AXON_HUB_CHANNEL_FIELD_IDS.BASE_URL]: seed.baseUrl,
+    [AXON_HUB_CHANNEL_FIELD_IDS.STATUS]: seed.enabled
+      ? AXON_HUB_CHANNEL_STATUS.ENABLED
+      : AXON_HUB_CHANNEL_STATUS.DISABLED,
+    [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: {
+      kind: "replace",
+      value: seed.credential,
+    },
+    [AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]: models,
+    [AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS]: models,
+    [AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL]: models[0] ?? "",
+    [AXON_HUB_CHANNEL_FIELD_IDS.ORDERING_WEIGHT]: seed.orderingWeight,
+  }
+}
+
 const editInitialValues = (
   detail: AxonHubChannel,
 ): EditableResourceProjection => ({
@@ -1612,6 +1638,12 @@ const mapFailure = (error: unknown): ResourceFailure => {
 const axonHubNativeDefinition = {
   siteType: SITE_TYPES.AXON_HUB,
   kind: MANAGED_RESOURCE_KINDS.Channel,
+  createSeedBindings: [
+    {
+      kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      project: createAxonHubChannelImportProjection,
+    },
+  ],
   capabilities: {
     canSearch: true,
     canCreate: true,

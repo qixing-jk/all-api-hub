@@ -5,6 +5,8 @@ import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type EditableResourceProjection,
+  type ManagedResourceCreateSeed,
+  type ManagedResourceCreateSeedKind,
   type ManagedResourceRef,
   type ManagedResourceRegistration,
   type ManagedResourceWorkspace,
@@ -45,6 +47,15 @@ export type NativeResourceEditorDefinition<TCommand> = {
   ) => Promise<string>
 }
 
+export type NativeResourceCreateSeedBinding = {
+  [TKind in ManagedResourceCreateSeedKind]: {
+    kind: TKind
+    project(
+      seed: Extract<ManagedResourceCreateSeed, { kind: TKind }>,
+    ): EditableResourceProjection
+  }
+}[ManagedResourceCreateSeedKind]
+
 export type NativeResourceKindDefinition<
   TConfig,
   TLocator,
@@ -56,6 +67,7 @@ export type NativeResourceKindDefinition<
   siteType: ManagedSiteType
   kind: ManagedResourceKind
   capabilities?: Partial<ManagedResourceWorkspace["capabilities"]>
+  createSeedBindings?: readonly NativeResourceCreateSeedBinding[]
   openConfig(options?: ResourceOperationOptions): Promise<TConfig>
   scopeKey(config: TConfig): string
   encodeLocator(locator: TLocator): string
@@ -185,10 +197,13 @@ export function defineNativeResourceKind<
   >,
 ): ManagedResourceRegistration {
   const mapFailure = (error: unknown) => definition.mapFailure(error)
+  const createSeedKinds =
+    definition.createSeedBindings?.map((binding) => binding.kind) ?? []
 
   return {
     siteType: definition.siteType,
     kind: definition.kind,
+    createSeedKinds,
     open: (options) =>
       mapOperationFailure(async () => {
         const config = await definition.openConfig(options)
@@ -522,12 +537,35 @@ export function defineNativeResourceKind<
             !capabilities.canCreate
               ? rejectUnsupported()
               : mapOperationFailure(async () => {
+                  const createSeed = editorOptions?.seed
+                  const createSeedBinding = createSeed
+                    ? definition.createSeedBindings?.find(
+                        (binding) => binding.kind === createSeed.kind,
+                      )
+                    : undefined
+                  if (createSeed && !createSeedBinding) {
+                    throw invalidPublicInput()
+                  }
+                  const seedProjection =
+                    createSeed && createSeedBinding
+                      ? createSeedBinding.project(createSeed)
+                      : undefined
                   const editorDefinition = await definition.createEditor(
                     config,
-                    editorOptions,
+                    editorOptions?.signal
+                      ? { signal: editorOptions.signal }
+                      : undefined,
                   )
                   return createEditor(
-                    editorDefinition,
+                    seedProjection
+                      ? {
+                          ...editorDefinition,
+                          initialValues: {
+                            ...editorDefinition.initialValues,
+                            ...seedProjection,
+                          },
+                        }
+                      : editorDefinition,
                     async (command, submitOptions) => {
                       return definition.create(config, command, submitOptions)
                     },

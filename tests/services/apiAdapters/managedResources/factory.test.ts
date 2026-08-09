@@ -3,6 +3,7 @@ import { describe, expect, expectTypeOf, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
+  MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
   MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   ManagedResourceError,
@@ -286,6 +287,109 @@ describe("defineNativeResourceKind", () => {
     expect(editor.fields).toEqual([
       { fieldId: "name", type: RESOURCE_FIELD_TYPES.Text, required: true },
     ])
+  })
+
+  it("projects provider-neutral create seeds through the registration-owned binding", async () => {
+    const project = vi.fn((seed) => ({ name: `${seed.name} (seeded)` }))
+    const { definition, registration } = createHarness({
+      createSeedBindings: [
+        {
+          kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+          project,
+        },
+      ],
+    })
+
+    expect(registration.createSeedKinds).toEqual([
+      MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+    ])
+
+    const editor = await (
+      await registration.open()
+    ).openCreateEditor({
+      seed: {
+        kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+        name: "Imported channel",
+        channelType: "example",
+        credential: "credential-placeholder",
+        baseUrl: "https://upstream.example.invalid",
+        enabled: true,
+        models: ["model-a"],
+        orderingWeight: 7,
+      },
+    })
+
+    expect(project).toHaveBeenCalledOnce()
+    expect(editor.initialValues).toEqual({ name: "Imported channel (seeded)" })
+    expect(definition.createEditor).toHaveBeenCalledWith(
+      { scope: "scope-a" },
+      undefined,
+    )
+  })
+
+  it("rejects undeclared create seeds before opening the provider editor", async () => {
+    const { definition, registration } = createHarness()
+    const workspace = await registration.open()
+
+    const error = await captureManagedError(
+      workspace.openCreateEditor({
+        seed: {
+          kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+          name: "Imported channel",
+          channelType: "example",
+          credential: "credential-placeholder",
+          baseUrl: "https://upstream.example.invalid",
+          enabled: true,
+          models: [],
+          orderingWeight: 0,
+        },
+      }),
+    )
+
+    expect(error.failure.code).toBe(
+      MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+    )
+    expect(definition.createEditor).not.toHaveBeenCalled()
+  })
+
+  it("forwards only the abort signal beside a credential-bearing create seed", async () => {
+    const project = vi.fn(() => ({ name: "Imported channel" }))
+    const { definition, registration } = createHarness({
+      createSeedBindings: [
+        {
+          kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+          project,
+        },
+      ],
+    })
+    const controller = new AbortController()
+
+    await (
+      await registration.open()
+    ).openCreateEditor({
+      signal: controller.signal,
+      seed: {
+        kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+        name: "Imported channel",
+        channelType: "example",
+        credential: "credential-placeholder",
+        baseUrl: "https://upstream.example.invalid",
+        enabled: true,
+        models: [],
+        orderingWeight: 0,
+      },
+    })
+
+    expect(project).toHaveBeenCalledWith(
+      expect.objectContaining({ credential: "credential-placeholder" }),
+    )
+    expect(definition.createEditor).toHaveBeenCalledWith(
+      { scope: "scope-a" },
+      { signal: controller.signal },
+    )
+    expect(
+      vi.mocked(definition.createEditor).mock.calls[0]?.[1],
+    ).not.toHaveProperty("seed")
   })
 
   it("exposes provider-neutral mutation results from the public workspace contract", async () => {
