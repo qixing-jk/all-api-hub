@@ -35,6 +35,7 @@ const {
   mockGetCurrentManagedSiteRuntimeConfig,
   mockResolveManagedSiteChannelMatch,
   mockResolveManagedUpstreamResourceFeatureCapabilities,
+  mockOpenNativeManagedChannelImportSession,
   buildChannelMatchRequestCache,
 } = vi.hoisted(() => ({
   mockResolveDisplayAccountRuntimeKeySecret: vi.fn(),
@@ -43,6 +44,7 @@ const {
   mockGetCurrentManagedSiteRuntimeConfig: vi.fn(),
   mockResolveManagedSiteChannelMatch: vi.fn(),
   mockResolveManagedUpstreamResourceFeatureCapabilities: vi.fn(),
+  mockOpenNativeManagedChannelImportSession: vi.fn(),
   buildChannelMatchRequestCache: () => ({
     searchResultsByBaseUrl: new Map(),
     channelSecretKeysById: new Map(),
@@ -73,6 +75,11 @@ vi.mock("~/services/managedSites/channelMatchResolver", () => ({
 vi.mock("~/services/managedSites/managedUpstreamResourceService", () => ({
   resolveManagedUpstreamResourceFeatureCapabilities:
     mockResolveManagedUpstreamResourceFeatureCapabilities,
+}))
+
+vi.mock("~/services/apiAdapters/managedResources/channelImport", () => ({
+  openNativeManagedChannelImportSession:
+    mockOpenNativeManagedChannelImportSession,
 }))
 
 const buildAccountToken = (
@@ -265,6 +272,7 @@ describe("managed-site token batch export", () => {
         reason: "feature-slice-disabled",
       }),
     )
+    mockOpenNativeManagedChannelImportSession.mockResolvedValue(null)
   })
 
   it("returns an empty preview when there are no selected tokens", async () => {
@@ -350,6 +358,67 @@ describe("managed-site token batch export", () => {
         }),
       }),
     )
+  })
+
+  it("executes AxonHub batch imports through the native import session", async () => {
+    const service = buildService({
+      siteType: SITE_TYPES.AXON_HUB,
+      messagesKey: "axonhub",
+      prepareChannelFormData: vi.fn(async (account, token) => ({
+        name: `${account.name} - ${token.name}`,
+        type: "openai",
+        key: token.key,
+        base_url: account.baseUrl,
+        models: ["model-example"],
+        groups: [],
+        priority: 0,
+        weight: 3,
+        status: 1 as const,
+      })),
+    })
+    useManagedSiteService(service)
+    const submit = vi.fn().mockResolvedValue({
+      outcome: "succeeded",
+      data: { displayName: "Imported channel" },
+      confirmedEffects: [
+        {
+          kind: "resource-created",
+          resourceKind: "channel",
+          resourceId: "native-channel-id",
+        },
+      ],
+    })
+    mockOpenNativeManagedChannelImportSession.mockResolvedValue({ submit })
+
+    const {
+      prepareManagedSiteTokenBatchExportPreview,
+      executeManagedSiteTokenBatchExport,
+    } = await import("~/services/managedSites/tokenBatchExport")
+    const input = buildAccountTokenInput()
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [input],
+    })
+
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: [preview.items[0].id],
+    })
+
+    expect(mockOpenNativeManagedChannelImportSession).toHaveBeenCalledWith(
+      SITE_TYPES.AXON_HUB,
+    )
+    expect(submit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Test Account - Token 11",
+        type: "openai",
+        key: "token-secret",
+        models: ["model-example"],
+        weight: 3,
+      }),
+    )
+    expect(service.buildChannelPayload).not.toHaveBeenCalled()
+    expect(service.createChannel).not.toHaveBeenCalled()
+    expect(result).toMatchObject({ createdCount: 1, failedCount: 0 })
   })
 
   it("passes previously resolved channel keys into duplicate matching", async () => {
