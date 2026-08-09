@@ -201,6 +201,7 @@ describe("product analytics event enums", () => {
       Octopus: "octopus",
       AxonHub: "axonhub",
       ClaudeCodeHub: "claude-code-hub",
+      Sub2Api: "sub2api",
     })
 
     expect(PRODUCT_ANALYTICS_FAILURE_STAGES).toMatchObject({

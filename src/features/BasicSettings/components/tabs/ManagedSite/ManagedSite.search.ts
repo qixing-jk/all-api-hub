@@ -23,6 +23,10 @@ import {
   managedSiteOctopusSearchSections,
 } from "./ManagedSiteOctopus.search"
 import {
+  managedSiteSub2ApiSearchControls,
+  managedSiteSub2ApiSearchSections,
+} from "./ManagedSiteSub2Api.search"
+import {
   managedSiteVeloeraSearchControls,
   managedSiteVeloeraSearchSections,
 } from "./ManagedSiteVeloera.search"
@@ -35,6 +39,7 @@ export const managedSiteSearchSections = [
   ...managedSiteOctopusSearchSections,
   ...managedSiteAxonHubSearchSections,
   ...managedSiteClaudeCodeHubSearchSections,
+  ...managedSiteSub2ApiSearchSections,
 ]
 
 export const managedSiteSearchControls = [
@@ -45,4 +50,5 @@ export const managedSiteSearchControls = [
   ...managedSiteOctopusSearchControls,
   ...managedSiteAxonHubSearchControls,
   ...managedSiteClaudeCodeHubSearchControls,
+  ...managedSiteSub2ApiSearchControls,
 ]

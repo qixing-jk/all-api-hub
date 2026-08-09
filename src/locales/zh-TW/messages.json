@@ -154,6 +154,7 @@
     "updateFailed": "更新帳號失敗"
   },
   "sub2api": {
+    "configMissing": "請先設定 Sub2API 基礎 URL 和管理員 API Key。",
     "createRequiresAvailableGroup": "目前這個帳號沒有可用於建立金鑰的分組，請先確認帳號分組情況後再試。",
     "groupMissing": "Sub2API 分組“{{group}}”已不可用。請重新整理分組列表後重試。",
     "loginRequired": "請先登入 Sub2API 控制台（外掛會讀取 auth_token/auth_user 用於匯入會話）後再重試。",

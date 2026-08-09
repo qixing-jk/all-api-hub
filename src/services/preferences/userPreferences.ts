@@ -86,6 +86,10 @@ import {
 } from "~/types/siteAnnouncements"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import {
+  DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
+  type Sub2ApiManagedSiteConfig,
+} from "~/types/sub2apiManagedSiteConfig"
+import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
   type TaskNotificationPreferences,
 } from "~/types/taskNotifications"
@@ -360,6 +364,9 @@ export interface UserPreferences {
   // Claude Code Hub 相关配置
   claudeCodeHub?: ClaudeCodeHubConfig
 
+  // Sub2API 管理站点配置（Base URL + Admin API Key）
+  sub2apiManagedSite?: Sub2ApiManagedSiteConfig
+
   // 管理站点类型 (用户可以选择管理 New API / Done Hub / Veloera / Octopus / AxonHub / Claude Code Hub)
   managedSiteType: ManagedSiteType
 
@@ -593,6 +600,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   octopus: DEFAULT_OCTOPUS_CONFIG,
   axonHub: DEFAULT_AXON_HUB_CONFIG,
   claudeCodeHub: DEFAULT_CLAUDE_CODE_HUB_CONFIG,
+  sub2apiManagedSite: DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
   managedSiteType: SITE_TYPES.NEW_API,
   cliProxy: DEFAULT_CLI_PROXY_CONFIG,
   claudeCodeRouter: DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
@@ -1258,6 +1266,13 @@ class UserPreferencesService {
     })
   }
 
+  /** Update Sub2API managed-site Admin API Key config. */
+  async updateSub2ApiManagedSiteConfig(
+    config: Partial<Sub2ApiManagedSiteConfig>,
+  ): Promise<PreferenceWriteResult> {
+    return this.savePreferences({ sub2apiManagedSite: config })
+  }
+
   /**
    * Reset Octopus config.
    */
@@ -1285,6 +1300,13 @@ class UserPreferencesService {
     })
   }
 
+  /** Reset Sub2API managed-site config. */
+  async resetSub2ApiManagedSiteConfig(): Promise<PreferenceWriteResult> {
+    return this.savePreferences({
+      sub2apiManagedSite: DEFAULT_PREFERENCES.sub2apiManagedSite,
+    })
+  }
+
   /**
    * Update managed site type (new-api, veloera, done-hub, or octopus).
    */
@@ -1308,6 +1330,7 @@ class UserPreferencesService {
       | OctopusConfig
       | AxonHubConfig
       | ClaudeCodeHubConfig
+      | Sub2ApiManagedSiteConfig
   }> {
     const prefs = await this.getPreferences()
     const siteType = prefs.managedSiteType || SITE_TYPES.NEW_API
@@ -1318,10 +1341,13 @@ class UserPreferencesService {
       | OctopusConfig
       | AxonHubConfig
       | ClaudeCodeHubConfig
+      | Sub2ApiManagedSiteConfig
     if (siteType === SITE_TYPES.AXON_HUB) {
       config = prefs.axonHub || DEFAULT_AXON_HUB_CONFIG
     } else if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
       config = prefs.claudeCodeHub || DEFAULT_CLAUDE_CODE_HUB_CONFIG
+    } else if (siteType === SITE_TYPES.SUB2API) {
+      config = prefs.sub2apiManagedSite ?? DEFAULT_SUB2API_MANAGED_SITE_CONFIG
     } else if (siteType === SITE_TYPES.OCTOPUS) {
       config = prefs.octopus || DEFAULT_OCTOPUS_CONFIG
     } else if (siteType === SITE_TYPES.VELOERA) {

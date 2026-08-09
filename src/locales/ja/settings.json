@@ -258,6 +258,7 @@
     "octopus": "Octopus",
     "siteTypeDesc": "チャネル管理とモデル同期に使用するプラットフォームを選択します",
     "siteTypeLabel": "ゲートウェイ種別",
+    "sub2api": "Sub2API",
     "title": "セルフホスト AI ゲートウェイ設定",
     "veloera": "Veloera"
   },
@@ -581,6 +582,33 @@
     "title": "並び順の優先設定",
     "unknownSortRule": "不明な並び替えルール",
     "userCustomSort": "ユーザー指定の並び替え"
+  },
+  "sub2apiManagedSite": {
+    "defaultScope": {
+      "description": "初期版では step_up_enabled が false の場合の URL + 管理者 API Key のみをサポートします。管理者ログイン、JWT、TOTP、step-up 解除は未対応です。",
+      "title": "デフォルトのセキュリティ設定のみ"
+    },
+    "description": "管理 API を使用して Sub2API の API Key アカウントを管理します。",
+    "fields": {
+      "adminApiKeyDesc": "x-api-key ヘッダーで送信する管理者 API Key",
+      "adminApiKeyLabel": "管理者 API Key",
+      "adminApiKeyPlaceholder": "管理者 API Key を入力",
+      "baseUrlDesc": "Sub2API サイトのベース URL を設定します",
+      "baseUrlLabel": "ベース URL",
+      "baseUrlPlaceholder": "https://sub2api.example.com",
+      "hideAdminApiKey": "管理者 API Key を非表示",
+      "showAdminApiKey": "管理者 API Key を表示"
+    },
+    "title": "Sub2API 連携設定",
+    "validation": {
+      "description": "管理者 API Key で API Key アカウント一覧を取得できるか確認します",
+      "failed": "Sub2API の検証に失敗しました: {{error}}",
+      "missingFields": "ベース URL と管理者 API Key を入力してください",
+      "success": "Sub2API の設定を検証しました",
+      "title": "設定を検証",
+      "validate": "検証",
+      "validating": "検証中..."
+    }
   },
   "tabs": {
     "accountManagement": "アカウント管理",

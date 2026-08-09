@@ -10,7 +10,8 @@ import { MANAGED_SITE_MODEL_SYNC_CHANNEL_PROCESSING_TIMEOUT_TARGET_ID } from "./
 
 const isStandardManagedSite = (managedSiteType: ManagedSiteType) =>
   managedSiteType !== SITE_TYPES.AXON_HUB &&
-  managedSiteType !== SITE_TYPES.CLAUDE_CODE_HUB
+  managedSiteType !== SITE_TYPES.CLAUDE_CODE_HUB &&
+  managedSiteType !== SITE_TYPES.SUB2API
 
 const isStandardManagedSiteContext = (context: {
   managedSiteType: ManagedSiteType
@@ -85,6 +86,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "octopus",
         "axonhub",
         "claude-code-hub",
+        "sub2api",
         "v-api",
         "voapi",
         "super-api",

@@ -207,6 +207,7 @@ describe("apiAdapters registry", () => {
       fetchModels: expect.any(Function),
     })
     expectInviteLinkCapability(capabilities)
+    expectManagedSiteCapabilities(capabilities)
     expect(capabilities.site?.notice).toBeUndefined()
   })
 

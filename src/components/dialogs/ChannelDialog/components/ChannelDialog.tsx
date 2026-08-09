@@ -27,6 +27,7 @@ import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, ChannelTypeOptions } from "~/constants/managedSite"
 import { OctopusOutboundTypeOptions } from "~/constants/octopus"
 import { SITE_TYPES } from "~/constants/siteType"
+import { SUB2API_API_KEY_ACCOUNT_TYPE_OPTIONS } from "~/constants/sub2api"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ManagedSiteChannelDetailView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteChannelDetailView"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
@@ -144,6 +145,7 @@ export function ChannelDialog({
   const isOctopus = managedSiteType === SITE_TYPES.OCTOPUS
   const isAxonHub = managedSiteType === SITE_TYPES.AXON_HUB
   const isClaudeCodeHub = managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB
+  const isSub2Api = managedSiteType === SITE_TYPES.SUB2API
   const canRunManagedVerification =
     managedSiteType === SITE_TYPES.NEW_API && canRecoverManagedVerification
   const isAddMode = mode === DIALOG_MODES.ADD
@@ -186,19 +188,18 @@ export function ChannelDialog({
   const visibleResourceEditLoadError =
     resourceEditLoadError ??
     (isResourceEditLoading ? resourceEditRetryErrorRef.current : null)
-  const shouldShowGenericModelsField = !(
-    isAxonHub &&
-    mode === DIALOG_MODES.EDIT &&
-    resourceEdit
-  )
+  const shouldShowGenericModelsField =
+    !isSub2Api && !(isAxonHub && mode === DIALOG_MODES.EDIT && resourceEdit)
 
-  const channelTypeOptions = isClaudeCodeHub
-    ? ClaudeCodeHubProviderTypeOptions
-    : isAxonHub
-      ? AxonHubChannelTypeOptions
-      : isOctopus
-        ? OctopusOutboundTypeOptions
-        : ChannelTypeOptions
+  const channelTypeOptions = isSub2Api
+    ? SUB2API_API_KEY_ACCOUNT_TYPE_OPTIONS
+    : isClaudeCodeHub
+      ? ClaudeCodeHubProviderTypeOptions
+      : isAxonHub
+        ? AxonHubChannelTypeOptions
+        : isOctopus
+          ? OctopusOutboundTypeOptions
+          : ChannelTypeOptions
   const shouldShowUnknownStringType =
     (isAxonHub || isClaudeCodeHub) &&
     typeof formData.type === "string" &&
@@ -553,11 +554,15 @@ export function ChannelDialog({
       label: t("channelDialog:fields.baseUrl.label"),
       value: formData.base_url,
     },
-    {
-      label: t("channelDialog:fields.models.label"),
-      value: formData.models.join(", "),
-    },
-    ...(!isOctopus && !isAxonHub
+    ...(!isSub2Api
+      ? [
+          {
+            label: t("channelDialog:fields.models.label"),
+            value: formData.models.join(", "),
+          },
+        ]
+      : []),
+    ...(!isOctopus && !isAxonHub && !isSub2Api
       ? [
           {
             label: t("channelDialog:fields.groups.label"),
@@ -710,8 +715,8 @@ export function ChannelDialog({
           isLoadingGroups={isLoadingGroups}
           showUnknownStringType={Boolean(shouldShowUnknownStringType)}
           showGenericModelsField={shouldShowGenericModelsField}
-          showGroupsField={!isOctopus && !isAxonHub}
-          showPriorityAndWeight={!isOctopus && !isAxonHub}
+          showGroupsField={!isOctopus && !isAxonHub && !isSub2Api}
+          showPriorityAndWeight={!isOctopus && !isAxonHub && !isSub2Api}
           showModelPrefillWarning={showModelPrefillWarning}
           onNameChange={(value) => updateField("name", value)}
           onTypeChange={(value) =>

@@ -258,6 +258,7 @@
     "octopus": "Octopus",
     "siteTypeDesc": "選擇用於渠道管理和模型同步的平台",
     "siteTypeLabel": "閘道型別",
+    "sub2api": "Sub2API",
     "title": "自建 AI 閘道設定",
     "veloera": "Veloera"
   },
@@ -581,6 +582,33 @@
     "title": "排序優先順序設定",
     "unknownSortRule": "未知排序規則",
     "userCustomSort": "使用者自定義排序"
+  },
+  "sub2apiManagedSite": {
+    "defaultScope": {
+      "description": "首版僅支援 step_up_enabled 為 false 時的 URL + 管理員 API Key。暫不支援管理員登入、JWT、TOTP 或 step-up 解鎖。",
+      "title": "僅支援預設安全設定"
+    },
+    "description": "透過管理 API 管理 Sub2API 的 API Key 帳號。",
+    "fields": {
+      "adminApiKeyDesc": "透過 x-api-key 請求標頭傳送的管理員 API Key",
+      "adminApiKeyLabel": "管理員 API Key",
+      "adminApiKeyPlaceholder": "請輸入管理員 API Key",
+      "baseUrlDesc": "設定 Sub2API 站點的基礎 URL",
+      "baseUrlLabel": "基礎 URL",
+      "baseUrlPlaceholder": "https://sub2api.example.com",
+      "hideAdminApiKey": "隱藏管理員 API Key",
+      "showAdminApiKey": "顯示管理員 API Key"
+    },
+    "title": "Sub2API 整合設定",
+    "validation": {
+      "description": "測試管理員 API Key 是否可以讀取 API Key 帳號清單",
+      "failed": "Sub2API 驗證失敗：{{error}}",
+      "missingFields": "請填寫基礎 URL 和管理員 API Key",
+      "success": "Sub2API 設定驗證成功",
+      "title": "驗證設定",
+      "validate": "驗證",
+      "validating": "正在驗證..."
+    }
   },
   "tabs": {
     "accountManagement": "帳號管理",

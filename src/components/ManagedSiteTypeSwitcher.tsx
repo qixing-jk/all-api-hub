@@ -25,6 +25,7 @@ const MANAGED_SITE_TYPES: ManagedSiteType[] = [
   SITE_TYPES.OCTOPUS,
   SITE_TYPES.AXON_HUB,
   SITE_TYPES.CLAUDE_CODE_HUB,
+  SITE_TYPES.SUB2API,
 ]
 
 interface ManagedSiteTypeSwitcherProps {

@@ -16,6 +16,7 @@ export type ManagedSiteLabelKey =
   | "settings:managedSite.octopus"
   | "settings:managedSite.axonHub"
   | "settings:managedSite.claudeCodeHub"
+  | "settings:managedSite.sub2api"
 
 /**
  * Managed site namespace key used under the `messages` i18n namespace.
@@ -27,6 +28,7 @@ export type ManagedSiteMessagesKey =
   | "octopus"
   | "axonhub"
   | "claudecodehub"
+  | "sub2api"
 
 export interface ManagedSiteAdminConfig {
   baseUrl: string
@@ -264,6 +266,9 @@ export function getManagedSiteLabelKey(
   if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     return "settings:managedSite.claudeCodeHub"
   }
+  if (siteType === SITE_TYPES.SUB2API) {
+    return "settings:managedSite.sub2api"
+  }
   if (siteType === SITE_TYPES.DONE_HUB) {
     return "settings:managedSite.doneHub"
   }
@@ -283,6 +288,8 @@ export function getManagedSiteLabel(t: TFunction, siteType: ManagedSiteType) {
       return t("settings:managedSite.axonHub")
     case SITE_TYPES.CLAUDE_CODE_HUB:
       return t("settings:managedSite.claudeCodeHub")
+    case SITE_TYPES.SUB2API:
+      return t("settings:managedSite.sub2api")
     case SITE_TYPES.DONE_HUB:
       return t("settings:managedSite.doneHub")
     case SITE_TYPES.VELOERA:
@@ -307,6 +314,9 @@ export function getManagedSiteMessagesKeyFromSiteType(
   }
   if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     return "claudecodehub"
+  }
+  if (siteType === SITE_TYPES.SUB2API) {
+    return "sub2api"
   }
   if (siteType === SITE_TYPES.DONE_HUB) {
     return "donehub"
@@ -474,6 +484,8 @@ export function getManagedSiteConfigMissingMessage(
       return t("messages:axonhub.configMissing")
     case "claudecodehub":
       return t("messages:claudecodehub.configMissing")
+    case "sub2api":
+      return t("messages:sub2api.configMissing")
     case "newapi":
     default:
       return t("messages:newapi.configMissing")

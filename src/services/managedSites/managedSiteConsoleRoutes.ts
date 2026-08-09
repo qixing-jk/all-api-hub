@@ -32,6 +32,7 @@ const MANAGED_SITE_CONSOLE_ROUTES: Record<
     channels: "/settings/providers",
     tokens: "/dashboard/users",
   },
+  [SITE_TYPES.SUB2API]: { channels: "/admin/accounts", tokens: "/keys" },
 }
 
 const joinConsolePath = (baseUrl: string, path: string): string | null => {

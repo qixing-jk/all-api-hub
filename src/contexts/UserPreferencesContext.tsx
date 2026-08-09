@@ -88,6 +88,10 @@ import {
 } from "~/types/siteAnnouncements"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import {
+  DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
+  type Sub2ApiManagedSiteConfig,
+} from "~/types/sub2apiManagedSiteConfig"
+import {
   normalizeTaskNotificationPreferences,
   type TaskNotificationPreferences,
 } from "~/types/taskNotifications"
@@ -283,6 +287,8 @@ interface UserPreferencesContextType {
   axonHubPassword: string
   claudeCodeHubBaseUrl: string
   claudeCodeHubAdminToken: string
+  sub2ApiManagedSiteBaseUrl: string
+  sub2ApiManagedSiteAdminToken: string
   managedSiteType: ManagedSiteType
   cliProxyBaseUrl: string
   cliProxyManagementKey: string
@@ -414,6 +420,18 @@ interface UserPreferencesContextType {
     updates: Partial<ClaudeCodeHubConfig>,
     options?: PreferenceSaveOptions,
   ) => PreferenceWritePromise
+  updateSub2ApiManagedSiteBaseUrl: (
+    url: string,
+    options?: PreferenceSaveOptions,
+  ) => PreferenceWritePromise
+  updateSub2ApiManagedSiteAdminToken: (
+    token: string,
+    options?: PreferenceSaveOptions,
+  ) => PreferenceWritePromise
+  updateSub2ApiManagedSiteConfig: (
+    updates: Partial<Sub2ApiManagedSiteConfig>,
+    options?: PreferenceSaveOptions,
+  ) => PreferenceWritePromise
   updateManagedSiteType: (siteType: ManagedSiteType) => PreferenceWritePromise
   updateCliProxyBaseUrl: (
     url: string,
@@ -488,6 +506,7 @@ interface UserPreferencesContextType {
   resetOctopusConfig: () => PreferenceWritePromise
   resetAxonHubConfig: () => PreferenceWritePromise
   resetClaudeCodeHubConfig: () => PreferenceWritePromise
+  resetSub2ApiManagedSiteConfig: () => PreferenceWritePromise
   resetNewApiModelSyncConfig: () => PreferenceWritePromise
   resetCliProxyConfig: () => PreferenceWritePromise
   resetClaudeCodeRouterConfig: () => PreferenceWritePromise
@@ -1250,6 +1269,26 @@ export const UserPreferencesProvider = ({
     [persistPreferenceUpdates],
   )
 
+  const updateSub2ApiManagedSiteBaseUrl = useCallback(
+    async (baseUrl: string, options?: PreferenceSaveOptions) =>
+      persistPreferenceUpdates({ sub2apiManagedSite: { baseUrl } }, options),
+    [persistPreferenceUpdates],
+  )
+
+  const updateSub2ApiManagedSiteAdminToken = useCallback(
+    async (adminToken: string, options?: PreferenceSaveOptions) =>
+      persistPreferenceUpdates({ sub2apiManagedSite: { adminToken } }, options),
+    [persistPreferenceUpdates],
+  )
+
+  const updateSub2ApiManagedSiteConfig = useCallback(
+    async (
+      updates: Partial<Sub2ApiManagedSiteConfig>,
+      options?: PreferenceSaveOptions,
+    ) => persistPreferenceUpdates({ sub2apiManagedSite: updates }, options),
+    [persistPreferenceUpdates],
+  )
+
   const updateManagedSiteType = useCallback(
     async (siteType: ManagedSiteType) => {
       const result = await userPreferences.updateManagedSiteType(siteType)
@@ -1703,6 +1742,16 @@ export const UserPreferencesProvider = ({
     return result
   }, [reloadPreferencesAndTrackSnapshots])
 
+  const resetSub2ApiManagedSiteConfig = useCallback(async () => {
+    const result = await userPreferences.resetSub2ApiManagedSiteConfig()
+    if (result.ok) {
+      await reloadPreferencesAndTrackSnapshots({
+        sub2apiManagedSite: DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
+      })
+    }
+    return result
+  }, [reloadPreferencesAndTrackSnapshots])
+
   const resetNewApiModelSyncConfig = useCallback(async () => {
     const result = await userPreferences.resetNewApiModelSyncConfig()
     if (
@@ -1913,6 +1962,12 @@ export const UserPreferencesProvider = ({
     claudeCodeHubAdminToken:
       preferences?.claudeCodeHub?.adminToken ||
       DEFAULT_CLAUDE_CODE_HUB_CONFIG.adminToken,
+    sub2ApiManagedSiteBaseUrl:
+      preferences?.sub2apiManagedSite?.baseUrl ||
+      DEFAULT_SUB2API_MANAGED_SITE_CONFIG.baseUrl,
+    sub2ApiManagedSiteAdminToken:
+      preferences?.sub2apiManagedSite?.adminToken ||
+      DEFAULT_SUB2API_MANAGED_SITE_CONFIG.adminToken,
     managedSiteType: preferences?.managedSiteType || SITE_TYPES.NEW_API,
     cliProxyBaseUrl: preferences?.cliProxy?.baseUrl || "",
     cliProxyManagementKey: preferences?.cliProxy?.managementKey || "",
@@ -1974,6 +2029,9 @@ export const UserPreferencesProvider = ({
     updateClaudeCodeHubBaseUrl,
     updateClaudeCodeHubAdminToken,
     updateClaudeCodeHubConfig,
+    updateSub2ApiManagedSiteBaseUrl,
+    updateSub2ApiManagedSiteAdminToken,
+    updateSub2ApiManagedSiteConfig,
     updateManagedSiteType,
     updateCliProxyBaseUrl,
     updateCliProxyManagementKey,
@@ -2005,6 +2063,7 @@ export const UserPreferencesProvider = ({
     resetOctopusConfig,
     resetAxonHubConfig,
     resetClaudeCodeHubConfig,
+    resetSub2ApiManagedSiteConfig,
     resetNewApiModelSyncConfig,
     resetCliProxyConfig,
     resetClaudeCodeRouterConfig,

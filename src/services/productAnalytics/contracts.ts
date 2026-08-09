@@ -1080,6 +1080,7 @@ export const PRODUCT_ANALYTICS_MANAGED_SITE_TYPES = {
   Octopus: SITE_TYPES.OCTOPUS,
   AxonHub: SITE_TYPES.AXON_HUB,
   ClaudeCodeHub: SITE_TYPES.CLAUDE_CODE_HUB,
+  Sub2Api: SITE_TYPES.SUB2API,
 } as const
 
 export type ProductAnalyticsManagedSiteType =

@@ -13,6 +13,7 @@ import { DEFAULT_AXON_HUB_CONFIG } from "~/types/axonHubConfig"
 import { DEFAULT_CLAUDE_CODE_HUB_CONFIG } from "~/types/claudeCodeHubConfig"
 import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
+import { DEFAULT_SUB2API_MANAGED_SITE_CONFIG } from "~/types/sub2apiManagedSiteConfig"
 
 const expectSuccessfulWrite = async (write: Promise<PreferenceWriteResult>) => {
   await expect(write).resolves.toMatchObject({
@@ -134,6 +135,23 @@ describe("userPreferences managed-site helpers", () => {
       baseUrl: "https://cch.example.com",
       adminToken: "admin-token",
     })
+
+    await expectSuccessfulWrite(
+      userPreferences.updateManagedSiteType(SITE_TYPES.SUB2API),
+    )
+    await expectSuccessfulWrite(
+      userPreferences.updateSub2ApiManagedSiteConfig({
+        baseUrl: "https://sub2api.example.com",
+        adminToken: "sub2api-admin-key",
+      }),
+    )
+
+    managedSite = await userPreferences.getManagedSiteConfig()
+    expect(managedSite.siteType).toBe(SITE_TYPES.SUB2API)
+    expect(managedSite.config).toEqual({
+      baseUrl: "https://sub2api.example.com",
+      adminToken: "sub2api-admin-key",
+    })
   })
 
   it("falls back to default configs when optional managed-site settings are missing", async () => {
@@ -210,6 +228,21 @@ describe("userPreferences managed-site helpers", () => {
     managedSite = await userPreferences.getManagedSiteConfig()
     expect(managedSite.siteType).toBe(SITE_TYPES.CLAUDE_CODE_HUB)
     expect(managedSite.config).toEqual(DEFAULT_CLAUDE_CODE_HUB_CONFIG)
+
+    const missingSub2Api: any = {
+      ...structuredClone(DEFAULT_PREFERENCES),
+      managedSiteType: SITE_TYPES.SUB2API,
+    }
+    delete missingSub2Api.sub2apiManagedSite
+
+    await storage.set(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+      missingSub2Api,
+    )
+
+    managedSite = await userPreferences.getManagedSiteConfig()
+    expect(managedSite.siteType).toBe(SITE_TYPES.SUB2API)
+    expect(managedSite.config).toEqual(DEFAULT_SUB2API_MANAGED_SITE_CONFIG)
   })
 
   it("restores managed-site configs to their defaults with dedicated reset helpers", async () => {
@@ -243,6 +276,10 @@ describe("userPreferences managed-site helpers", () => {
         baseUrl: "https://cch.example.com",
         adminToken: "admin-token",
       },
+      sub2apiManagedSite: {
+        baseUrl: "https://sub2api.example.com",
+        adminToken: "sub2api-admin-key",
+      },
     })
 
     await expectSuccessfulWrite(userPreferences.resetVeloeraConfig())
@@ -250,6 +287,7 @@ describe("userPreferences managed-site helpers", () => {
     await expectSuccessfulWrite(userPreferences.resetOctopusConfig())
     await expectSuccessfulWrite(userPreferences.resetAxonHubConfig())
     await expectSuccessfulWrite(userPreferences.resetClaudeCodeHubConfig())
+    await expectSuccessfulWrite(userPreferences.resetSub2ApiManagedSiteConfig())
 
     const preferences = await userPreferences.getPreferences()
     expect(preferences.veloera).toEqual(DEFAULT_PREFERENCES.veloera)
@@ -257,5 +295,8 @@ describe("userPreferences managed-site helpers", () => {
     expect(preferences.octopus).toEqual(DEFAULT_PREFERENCES.octopus)
     expect(preferences.axonHub).toEqual(DEFAULT_PREFERENCES.axonHub)
     expect(preferences.claudeCodeHub).toEqual(DEFAULT_PREFERENCES.claudeCodeHub)
+    expect(preferences.sub2apiManagedSite).toEqual(
+      DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
+    )
   })
 })

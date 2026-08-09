@@ -137,6 +137,7 @@ export const MANAGED_SITE_TYPE_ORDER = [
   SITE_TYPES.OCTOPUS,
   SITE_TYPES.AXON_HUB,
   SITE_TYPES.CLAUDE_CODE_HUB,
+  SITE_TYPES.SUB2API,
 ] as const
 
 export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
@@ -188,8 +189,9 @@ const ACCOUNT_SITE_DEFINITIONS = [
   },
   {
     siteType: SITE_TYPES.SUB2API,
-    scopes: ACCOUNT_SCOPE,
+    scopes: ACCOUNT_AND_MANAGED_SCOPES,
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
+    managedResource: { ...LEGACY_MANAGED_CHANNEL_POLICY },
     onboarding: {
       detection: { titlePatterns: [makeTitleRegex(SITE_TYPES.SUB2API)] },
       routes: {

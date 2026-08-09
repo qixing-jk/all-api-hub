@@ -15,6 +15,7 @@ import { claudeCodeHubManagedSiteCapabilities } from "./managedSites/claudeCodeH
 import { doneHubManagedSiteCapabilities } from "./managedSites/doneHub"
 import { newApiManagedSiteCapabilities } from "./managedSites/newApi"
 import { octopusManagedSiteCapabilities } from "./managedSites/octopus"
+import { sub2ApiManagedSiteCapabilities } from "./managedSites/sub2api"
 import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
 import { createNewApiCapabilities } from "./newApi"
 import { openRouterCapabilities } from "./openrouter"
@@ -31,6 +32,7 @@ const managedSitesBySiteType = {
   [SITE_TYPES.OCTOPUS]: octopusManagedSiteCapabilities,
   [SITE_TYPES.AXON_HUB]: axonHubManagedSiteCapabilities,
   [SITE_TYPES.CLAUDE_CODE_HUB]: claudeCodeHubManagedSiteCapabilities,
+  [SITE_TYPES.SUB2API]: sub2ApiManagedSiteCapabilities,
 } satisfies Record<ManagedSiteType, ManagedSiteCapabilities>
 
 const withManagedSites = (
@@ -68,7 +70,9 @@ export function getSiteTypeCapabilities(
     getAccountSiteDefinition(siteType as AccountSiteType)?.adapterFamily ??
     ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported
 
-  if (siteType === SITE_TYPES.SUB2API) return sub2ApiCapabilities
+  if (siteType === SITE_TYPES.SUB2API) {
+    return withManagedSites(sub2ApiCapabilities)
+  }
   if (siteType === SITE_TYPES.VO_API_V2) return voApiV2Capabilities
   if (siteType === SITE_TYPES.AIHUBMIX) return aihubmixCapabilities
   if (siteType === SITE_TYPES.SHAREDCHAT) return sharedChatCapabilities

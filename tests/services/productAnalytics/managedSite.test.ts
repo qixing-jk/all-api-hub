@@ -11,6 +11,7 @@ describe("product analytics managed-site helpers", () => {
     [SITE_TYPES.DONE_HUB, PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.DoneHub],
     [SITE_TYPES.OCTOPUS, PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Octopus],
     [SITE_TYPES.AXON_HUB, PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.AxonHub],
+    [SITE_TYPES.SUB2API, PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Sub2Api],
     [
       SITE_TYPES.CLAUDE_CODE_HUB,
       PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.ClaudeCodeHub,
@@ -22,7 +23,6 @@ describe("product analytics managed-site helpers", () => {
   it.each([
     SITE_TYPES.ONE_API,
     SITE_TYPES.ONE_HUB,
-    SITE_TYPES.SUB2API,
     SITE_TYPES.AIHUBMIX,
     SITE_TYPES.UNKNOWN,
     "private-fork",

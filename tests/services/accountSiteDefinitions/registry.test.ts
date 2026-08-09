@@ -89,6 +89,7 @@ type ExpectedManagedSiteType =
   | typeof SITE_TYPES.OCTOPUS
   | typeof SITE_TYPES.AXON_HUB
   | typeof SITE_TYPES.CLAUDE_CODE_HUB
+  | typeof SITE_TYPES.SUB2API
 
 const accountSiteTypeIsExact: ExpectExact<
   AccountSiteType,
@@ -168,7 +169,7 @@ describe("account site definition registry", () => {
     expect(legacy.isAccountSiteType(SITE_TYPES.SHAREDCHAT)).toBe(true)
     expect(legacy.isAccountSiteType(SITE_TYPES.OCTOPUS)).toBe(false)
     expect(legacy.isManagedSiteType(SITE_TYPES.OCTOPUS)).toBe(true)
-    expect(legacy.isManagedSiteType(SITE_TYPES.SUB2API)).toBe(false)
+    expect(legacy.isManagedSiteType(SITE_TYPES.SUB2API)).toBe(true)
   })
 
   it("keeps the public route facade aligned with definition route metadata", () => {
@@ -252,6 +253,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.OCTOPUS,
       SITE_TYPES.AXON_HUB,
       SITE_TYPES.CLAUDE_CODE_HUB,
+      SITE_TYPES.SUB2API,
     ])
   })
 
@@ -290,6 +292,7 @@ describe("account site definition registry", () => {
       [SITE_TYPES.OCTOPUS, MANAGED_RESOURCE_MODES.LegacyChannel],
       [SITE_TYPES.AXON_HUB, MANAGED_RESOURCE_MODES.NativeResource],
       [SITE_TYPES.CLAUDE_CODE_HUB, MANAGED_RESOURCE_MODES.LegacyChannel],
+      [SITE_TYPES.SUB2API, MANAGED_RESOURCE_MODES.LegacyChannel],
     ])
 
     for (const siteType of MANAGED_SITE_TYPES) {

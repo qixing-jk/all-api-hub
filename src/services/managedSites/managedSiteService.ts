@@ -212,6 +212,9 @@ export function getManagedSiteServiceForType(
 export function getManagedSiteServiceForType(
   siteType: typeof SITE_TYPES.NEW_API,
 ): TypedManagedSiteService<typeof SITE_TYPES.NEW_API>
+export function getManagedSiteServiceForType(
+  siteType: typeof SITE_TYPES.SUB2API,
+): TypedManagedSiteService<typeof SITE_TYPES.SUB2API>
 export function getManagedSiteServiceForType<TSiteType extends ManagedSiteType>(
   siteType: TSiteType,
 ): TypedManagedSiteService<TSiteType>

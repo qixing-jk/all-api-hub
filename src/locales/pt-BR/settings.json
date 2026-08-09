@@ -258,6 +258,7 @@
     "octopus": "Octopus",
     "siteTypeDesc": "Escolha a plataforma usada para gerenciamento de canais e sincronização de modelos",
     "siteTypeLabel": "Tipo de gateway",
+    "sub2api": "Sub2API",
     "title": "Configuração de gateway de IA auto-hospedado",
     "veloera": "Veloera"
   },
@@ -583,6 +584,33 @@
     "title": "Configurações de prioridade de classificação",
     "unknownSortRule": "Regra de classificação desconhecida",
     "userCustomSort": "Classificação personalizada do usuário"
+  },
+  "sub2apiManagedSite": {
+    "defaultScope": {
+      "description": "A versão inicial aceita apenas URL + Admin API Key quando step_up_enabled é false. Login de administrador, JWT, TOTP e desbloqueio step-up ainda não são compatíveis.",
+      "title": "Somente configurações de segurança padrão"
+    },
+    "description": "Gerencie contas de API Key do Sub2API pela API administrativa.",
+    "fields": {
+      "adminApiKeyDesc": "Admin API Key enviada no cabeçalho x-api-key",
+      "adminApiKeyLabel": "Admin API Key",
+      "adminApiKeyPlaceholder": "Digite a Admin API Key",
+      "baseUrlDesc": "Defina a URL base do site Sub2API",
+      "baseUrlLabel": "URL base",
+      "baseUrlPlaceholder": "https://sub2api.example.com",
+      "hideAdminApiKey": "Ocultar Admin API Key",
+      "showAdminApiKey": "Mostrar Admin API Key"
+    },
+    "title": "Integração com Sub2API",
+    "validation": {
+      "description": "Verifique se a Admin API Key pode listar contas de API Key",
+      "failed": "Falha na validação do Sub2API: {{error}}",
+      "missingFields": "Preencha a URL base e a Admin API Key",
+      "success": "Configuração do Sub2API validada com sucesso",
+      "title": "Validar configuração",
+      "validate": "Validar",
+      "validating": "Validando..."
+    }
   },
   "tabs": {
     "accountManagement": "Gerenciamento de contas",

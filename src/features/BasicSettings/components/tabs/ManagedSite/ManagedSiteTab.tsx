@@ -23,6 +23,7 @@ import ManagedSiteSelector from "./ManagedSiteSelector"
 import ModelRedirectSettings from "./ModelRedirectSettings"
 import NewApiSettings from "./NewApiSettings"
 import OctopusSettings from "./OctopusSettings"
+import Sub2ApiSettings from "./Sub2ApiSettings"
 import VeloeraSettings from "./VeloeraSettings"
 
 const gatewayActionClassName = "max-w-full"
@@ -91,6 +92,8 @@ export default function ManagedSiteTab() {
         return <AxonHubSettings />
       case SITE_TYPES.CLAUDE_CODE_HUB:
         return <ClaudeCodeHubSettings />
+      case SITE_TYPES.SUB2API:
+        return <Sub2ApiSettings />
       case SITE_TYPES.NEW_API:
       default:
         return <NewApiSettings />
@@ -161,10 +164,10 @@ export default function ManagedSiteTab() {
         }
       />
 
-      {/* AxonHub and Claude Code Hub do not expose New-API-style model sync or
-          redirect controls. */}
+      {/* These providers do not expose New-API-style model sync or redirect controls. */}
       {managedSiteType !== SITE_TYPES.AXON_HUB &&
-        managedSiteType !== SITE_TYPES.CLAUDE_CODE_HUB && (
+        managedSiteType !== SITE_TYPES.CLAUDE_CODE_HUB &&
+        managedSiteType !== SITE_TYPES.SUB2API && (
           <>
             <ManagedSiteModelSyncSettings />
             <ModelRedirectSettings />

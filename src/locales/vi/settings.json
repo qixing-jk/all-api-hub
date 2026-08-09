@@ -258,6 +258,7 @@
     "octopus": "Octopus",
     "siteTypeDesc": "Chọn nền tảng dùng cho quản lý kênh và đồng bộ mô hình",
     "siteTypeLabel": "Loại gateway",
+    "sub2api": "Sub2API",
     "title": "Cấu hình AI gateway tự triển khai",
     "veloera": "Veloera"
   },
@@ -581,6 +582,33 @@
     "title": "Cài đặt ưu tiên sắp xếp",
     "unknownSortRule": "Quy tắc sắp xếp không xác định",
     "userCustomSort": "Sắp xếp tùy chỉnh của người dùng"
+  },
+  "sub2apiManagedSite": {
+    "defaultScope": {
+      "description": "Phiên bản đầu chỉ hỗ trợ URL + Admin API Key khi step_up_enabled là false. Đăng nhập quản trị, JWT, TOTP và mở khóa step-up chưa được hỗ trợ.",
+      "title": "Chỉ hỗ trợ thiết lập bảo mật mặc định"
+    },
+    "description": "Quản lý tài khoản API Key của Sub2API qua API quản trị.",
+    "fields": {
+      "adminApiKeyDesc": "Admin API Key được gửi qua header x-api-key",
+      "adminApiKeyLabel": "Admin API Key",
+      "adminApiKeyPlaceholder": "Nhập Admin API Key",
+      "baseUrlDesc": "Đặt URL gốc của trang Sub2API",
+      "baseUrlLabel": "URL gốc",
+      "baseUrlPlaceholder": "https://sub2api.example.com",
+      "hideAdminApiKey": "Ẩn Admin API Key",
+      "showAdminApiKey": "Hiện Admin API Key"
+    },
+    "title": "Thiết lập tích hợp Sub2API",
+    "validation": {
+      "description": "Kiểm tra Admin API Key có thể liệt kê tài khoản API Key hay không",
+      "failed": "Xác thực Sub2API thất bại: {{error}}",
+      "missingFields": "Vui lòng nhập URL gốc và Admin API Key",
+      "success": "Xác thực cấu hình Sub2API thành công",
+      "title": "Xác thực cấu hình",
+      "validate": "Xác thực",
+      "validating": "Đang xác thực..."
+    }
   },
   "tabs": {
     "accountManagement": "Quản lý tài khoản",
