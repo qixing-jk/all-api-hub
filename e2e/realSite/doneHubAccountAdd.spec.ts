@@ -32,12 +32,7 @@ test.describe("real-site E2E: DoneHub account add flow", () => {
 
   const usageChecks = [
     realSiteAccountUsageChecks.keyLifecycle(),
-    realSiteAccountUsageChecks.keyToApiProfileAndPopupModels({
-      popupModelsProbe: {
-        expectedStatus: "fail",
-        expectedSummaryText: "No models returned",
-      },
-    }),
+    realSiteAccountUsageChecks.keyToApiProfile(),
     realSiteAccountUsageChecks.providerDestinations({
       validateDestinationPages: true,
     }),

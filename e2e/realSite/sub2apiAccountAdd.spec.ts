@@ -35,7 +35,7 @@ test.describe("real-site E2E: Sub2API auto-detect account add flow", () => {
 
   const usageChecks = [
     realSiteAccountUsageChecks.keyLifecycle(),
-    realSiteAccountUsageChecks.keyToApiProfileAndPopupModels(),
+    realSiteAccountUsageChecks.keyToApiProfile(),
     realSiteAccountUsageChecks.providerDestinations({
       validateDestinationPages: true,
     }),

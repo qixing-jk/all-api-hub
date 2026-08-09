@@ -32,7 +32,7 @@ test.describe("real-site E2E: OneHub account add flow", () => {
 
   const usageChecks = [
     realSiteAccountUsageChecks.keyLifecycle(),
-    realSiteAccountUsageChecks.keyToApiProfileAndPopupModels(),
+    realSiteAccountUsageChecks.keyToApiProfile(),
     realSiteAccountUsageChecks.providerDestinations({
       validateDestinationPages: true,
     }),

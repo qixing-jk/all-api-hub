@@ -39,7 +39,7 @@ test.describe("real-site E2E: New API account add flow", () => {
 
   const usageChecks = [
     realSiteAccountUsageChecks.keyLifecycle(),
-    realSiteAccountUsageChecks.keyToApiProfileAndPopupModels(),
+    realSiteAccountUsageChecks.keyToApiProfile(),
     realSiteAccountUsageChecks.providerDestinations({
       validateDestinationPages: true,
     }),

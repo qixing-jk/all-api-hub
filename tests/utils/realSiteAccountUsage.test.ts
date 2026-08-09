@@ -9,10 +9,6 @@ import {
   verifyAccountProviderDestinationUsage,
 } from "~~/e2e/scenarios/accountUsage"
 import {
-  openApiCredentialProfilesPopupScenario,
-  verifyApiCredentialProfileModelsProbeScenario,
-} from "~~/e2e/scenarios/apiCredentialProfileVerification"
-import {
   maybeVerifyRealSiteModelToKeyUsage,
   realSiteAccountUsageChecks,
   runRealSiteAccountFixtureUsageChecks,
@@ -35,8 +31,6 @@ const mocks = vi.hoisted(() => ({
   buildRealSiteRunId: vi.fn(),
   buildRealSiteTestTokenName: vi.fn(),
   maybeRunRealSiteModelToKeyScenario: vi.fn(),
-  openApiCredentialProfilesPopupScenario: vi.fn(),
-  verifyApiCredentialProfileModelsProbeScenario: vi.fn(),
   testStep: vi.fn(),
 }))
 
@@ -58,13 +52,6 @@ vi.mock("~~/e2e/utils/realSite/keyManagement", async (importOriginal) => ({
 
 vi.mock("~~/e2e/utils/realSite/modelToKey", () => ({
   maybeRunRealSiteModelToKeyScenario: mocks.maybeRunRealSiteModelToKeyScenario,
-}))
-
-vi.mock("~~/e2e/scenarios/apiCredentialProfileVerification", () => ({
-  openApiCredentialProfilesPopupScenario:
-    mocks.openApiCredentialProfilesPopupScenario,
-  verifyApiCredentialProfileModelsProbeScenario:
-    mocks.verifyApiCredentialProfileModelsProbeScenario,
 }))
 
 vi.mock("~~/e2e/fixtures/extensionTest", () => ({
@@ -147,6 +134,37 @@ describe("real-site account usage adapters", () => {
       },
     })
     expect(call.buildTokenName()).toBe("New API Profile:run-id")
+  })
+
+  it("saves a real-site key to API profiles without probing models", async () => {
+    vi.mocked(verifyAccountKeyToApiProfileUsage).mockResolvedValue({
+      id: "profile-id",
+    } as any)
+
+    await realSiteAccountUsageChecks
+      .keyToApiProfile({
+        expectedProfile: { name: "Expected profile" },
+      })
+      .run({
+        testInfo: { annotations: [] } as any,
+        page,
+        extensionId: "extension-id",
+        serviceWorker,
+        account,
+        label: "DoneHub",
+      })
+
+    expect(verifyAccountKeyToApiProfileUsage).toHaveBeenCalledOnce()
+    expect(verifyAccountKeyToApiProfileUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        expectedProfile: {
+          baseUrl: "https://new-api.test",
+          name: "Expected profile",
+        },
+      }),
+    )
+    const call = vi.mocked(verifyAccountKeyToApiProfileUsage).mock.calls[0][0]
+    expect(call.afterProfileSaved).toBeUndefined()
   })
 
   it("forwards provider destinations and model catalog as separate scenarios", async () => {
@@ -314,161 +332,5 @@ describe("real-site account usage adapters", () => {
 
     expect(testInfo.setTimeout).toHaveBeenCalledOnce()
     expect(testInfo.setTimeout).toHaveBeenCalledWith(240_000)
-  })
-
-  it("verifies key-to-profile usage from the popup and closes the popup page", async () => {
-    const popupPage = {
-      close: vi.fn().mockResolvedValue(undefined),
-    }
-    const pageWithContext = {
-      context: () => ({
-        newPage: vi.fn().mockResolvedValue(popupPage),
-      }),
-    } as any
-    vi.mocked(openApiCredentialProfilesPopupScenario).mockResolvedValue(
-      popupPage as any,
-    )
-    vi.mocked(verifyApiCredentialProfileModelsProbeScenario).mockResolvedValue(
-      undefined,
-    )
-    vi.mocked(verifyAccountKeyToApiProfileUsage).mockImplementation(
-      async (params) => {
-        await params.afterProfileSaved?.({
-          id: "profile-id",
-          name: "Saved profile",
-        } as any)
-        return { id: "profile-id", name: "Saved profile" } as any
-      },
-    )
-
-    await realSiteAccountUsageChecks
-      .keyToApiProfileAndPopupModels({
-        expectedProfile: { name: "Expected profile" },
-        popupModelsProbe: {
-          expectedStatus: "fail",
-          expectedSummaryText: "No models returned",
-        },
-      })
-      .run({
-        testInfo: { annotations: [] } as any,
-        page: pageWithContext,
-        extensionId: "extension-id",
-        serviceWorker,
-        account,
-        label: "New API",
-      })
-
-    expect(openApiCredentialProfilesPopupScenario).toHaveBeenCalledWith({
-      page: popupPage,
-      extensionId: "extension-id",
-    })
-    expect(verifyApiCredentialProfileModelsProbeScenario).toHaveBeenCalledWith({
-      page: popupPage,
-      profileName: "Saved profile",
-      expectedStatus: "fail",
-      expectedSummaryText: "No models returned",
-    })
-    expect(popupPage.close).toHaveBeenCalledOnce()
-  })
-
-  it("closes the popup page when popup model verification fails", async () => {
-    const error = new Error("models probe failed")
-    const popupPage = {
-      close: vi.fn().mockResolvedValue(undefined),
-    }
-    const pageWithContext = {
-      context: () => ({
-        newPage: vi.fn().mockResolvedValue(popupPage),
-      }),
-    } as any
-    vi.mocked(openApiCredentialProfilesPopupScenario).mockResolvedValue(
-      popupPage as any,
-    )
-    vi.mocked(verifyApiCredentialProfileModelsProbeScenario).mockRejectedValue(
-      error,
-    )
-    vi.mocked(verifyAccountKeyToApiProfileUsage).mockImplementation(
-      async (params) => {
-        await params.afterProfileSaved?.({
-          id: "profile-id",
-          name: "Saved profile",
-        } as any)
-        return { id: "profile-id", name: "Saved profile" } as any
-      },
-    )
-
-    await expect(
-      realSiteAccountUsageChecks.keyToApiProfileAndPopupModels().run({
-        testInfo: { annotations: [] } as any,
-        page: pageWithContext,
-        extensionId: "extension-id",
-        serviceWorker,
-        account,
-        label: "New API",
-      }),
-    ).rejects.toThrow(error)
-
-    expect(popupPage.close).toHaveBeenCalledOnce()
-  })
-
-  it("closes the popup page when popup model opening fails after page creation", async () => {
-    const error = new Error("popup open failed")
-    const popupPage = {
-      close: vi.fn().mockResolvedValue(undefined),
-    }
-    const pageWithContext = {
-      context: () => ({
-        newPage: vi.fn().mockResolvedValue(popupPage),
-      }),
-    } as any
-    vi.mocked(openApiCredentialProfilesPopupScenario).mockRejectedValue(error)
-    vi.mocked(verifyAccountKeyToApiProfileUsage).mockImplementation(
-      async (params) => {
-        await params.afterProfileSaved?.({
-          id: "profile-id",
-          name: "Saved profile",
-        } as any)
-        return { id: "profile-id", name: "Saved profile" } as any
-      },
-    )
-
-    await expect(
-      realSiteAccountUsageChecks.keyToApiProfileAndPopupModels().run({
-        testInfo: { annotations: [] } as any,
-        page: pageWithContext,
-        extensionId: "extension-id",
-        serviceWorker,
-        account,
-        label: "New API",
-      }),
-    ).rejects.toThrow(error)
-
-    expect(openApiCredentialProfilesPopupScenario).toHaveBeenCalledWith({
-      page: popupPage,
-      extensionId: "extension-id",
-    })
-    expect(verifyApiCredentialProfileModelsProbeScenario).not.toHaveBeenCalled()
-    expect(popupPage.close).toHaveBeenCalledOnce()
-  })
-
-  it("fails when key-to-profile usage does not run popup verification", async () => {
-    vi.mocked(verifyAccountKeyToApiProfileUsage).mockResolvedValue({
-      id: "profile-id",
-      name: "Saved profile",
-    } as any)
-
-    await expect(
-      realSiteAccountUsageChecks.keyToApiProfileAndPopupModels().run({
-        testInfo: { annotations: [] } as any,
-        page,
-        extensionId: "extension-id",
-        serviceWorker,
-        account,
-        label: "New API",
-      }),
-    ).rejects.toThrow("Real-site API profile popup verification did not run")
-
-    expect(openApiCredentialProfilesPopupScenario).not.toHaveBeenCalled()
-    expect(verifyApiCredentialProfileModelsProbeScenario).not.toHaveBeenCalled()
   })
 })

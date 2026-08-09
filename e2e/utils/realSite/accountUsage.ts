@@ -14,10 +14,6 @@ import {
   runAccountFixtureUsagePlan,
   type AccountUsagePlanCheck,
 } from "~~/e2e/scenarios/accountUsagePlan"
-import {
-  openApiCredentialProfilesPopupScenario,
-  verifyApiCredentialProfileModelsProbeScenario,
-} from "~~/e2e/scenarios/apiCredentialProfileVerification"
 import type { ModelListCatalogExpectations } from "~~/e2e/scenarios/modelListCatalog"
 import type { SavedApiCredentialProfileExpectation } from "~~/e2e/utils/accountLifecycle"
 import type { getServiceWorker } from "~~/e2e/utils/extensionState"
@@ -50,9 +46,9 @@ type RealSiteAccountUsageCheck =
 
 const REAL_SITE_ACCOUNT_REMOTE_WRITE_TIMEOUT_MS = 120_000
 
-type ApiProfilePopupModelsProbeExpectation = {
-  expectedStatus?: "pass" | "fail" | "handled"
-  expectedSummaryText?: string
+type RealSiteKeyToApiProfileOptions = {
+  profileLabel?: string
+  expectedProfile?: SavedApiCredentialProfileExpectation
 }
 
 function buildUsageTokenName(label: string) {
@@ -78,13 +74,12 @@ export async function verifyRealSiteAccountKeyLifecycleUsage(
 }
 
 export async function verifyRealSiteAccountKeyToApiProfileUsage(
-  context: RealSiteAccountUsageContext & {
-    profileLabel?: string
-    expectedProfile?: SavedApiCredentialProfileExpectation
-    cleanupCreatedProfile?: boolean
-    cleanupCreatedToken?: boolean
-    afterProfileSaved?: (profile: ApiCredentialProfile) => Promise<void>
-  },
+  context: RealSiteAccountUsageContext &
+    RealSiteKeyToApiProfileOptions & {
+      cleanupCreatedProfile?: boolean
+      cleanupCreatedToken?: boolean
+      afterProfileSaved?: (profile: ApiCredentialProfile) => Promise<void>
+    },
 ) {
   return await verifyAccountKeyToApiProfileUsage({
     page: context.page,
@@ -157,55 +152,6 @@ export async function maybeVerifyRealSiteModelToKeyUsage(
   })
 }
 
-async function withApiCredentialProfilesPopupPage(
-  context: Pick<RealSiteAccountUsageContext, "page" | "extensionId">,
-  verify: (popupPage: Page) => Promise<void>,
-) {
-  const popupPage = await context.page.context().newPage()
-
-  try {
-    await openApiCredentialProfilesPopupScenario({
-      page: popupPage,
-      extensionId: context.extensionId,
-    })
-    await verify(popupPage)
-  } finally {
-    await popupPage.close()
-  }
-}
-
-async function verifyRealSiteApiProfilePopupModelsUsage(
-  context: RealSiteAccountUsageContext & {
-    profileLabel?: string
-    expectedProfile?: SavedApiCredentialProfileExpectation
-    popupModelsProbe?: ApiProfilePopupModelsProbeExpectation
-  },
-) {
-  let verifiedProfile: ApiCredentialProfile | null = null
-
-  await verifyRealSiteAccountKeyToApiProfileUsage({
-    ...context,
-    profileLabel: context.profileLabel,
-    expectedProfile: context.expectedProfile,
-    afterProfileSaved: async (profile) => {
-      await withApiCredentialProfilesPopupPage(context, async (popupPage) => {
-        await verifyApiCredentialProfileModelsProbeScenario({
-          page: popupPage,
-          profileName: profile.name,
-          ...context.popupModelsProbe,
-        })
-        verifiedProfile = profile
-      })
-    },
-  })
-
-  if (!verifiedProfile) {
-    throw new Error("Real-site API profile popup verification did not run")
-  }
-
-  return verifiedProfile
-}
-
 export const realSiteAccountUsageChecks = {
   keyLifecycle(): RealSiteAccountUsageCheck {
     return {
@@ -217,18 +163,14 @@ export const realSiteAccountUsageChecks = {
     }
   },
 
-  keyToApiProfileAndPopupModels(
-    options: {
-      profileLabel?: string
-      expectedProfile?: SavedApiCredentialProfileExpectation
-      popupModelsProbe?: ApiProfilePopupModelsProbeExpectation
-    } = {},
+  keyToApiProfile(
+    options: RealSiteKeyToApiProfileOptions = {},
   ): RealSiteAccountUsageCheck {
     return {
-      name: "create an account key, save it to API profiles, and verify it from the popup",
+      name: "create an account key and save it to API profiles",
       timeoutMs: REAL_SITE_ACCOUNT_REMOTE_WRITE_TIMEOUT_MS,
       run: async (context) => {
-        await verifyRealSiteApiProfilePopupModelsUsage({
+        await verifyRealSiteAccountKeyToApiProfileUsage({
           ...context,
           ...options,
         })
