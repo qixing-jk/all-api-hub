@@ -467,6 +467,22 @@ describe("KiloCodeExportDialog", () => {
     })
   })
 
+  it("closes from the cancel action", async () => {
+    const onClose = vi.fn()
+    const user = userEvent.setup()
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [],
+    })
+
+    render(<KiloCodeExportDialog isOpen={true} onClose={onClose} />)
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.cancel" }),
+    )
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it("disables export actions when there is nothing exportable", async () => {
     mockUseAccountData.mockReturnValue({
       enabledAccounts: [],
@@ -1932,6 +1948,7 @@ describe("KiloCodeExportDialog", () => {
 
     await user.click(copyButton)
     await waitFor(() => expect(mockResolveApiTokenKey).toHaveBeenCalledTimes(1))
+    expect(copyButton).toHaveAttribute("aria-busy", "true")
     await user.click(retry)
     await waitFor(() => {
       expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(2)

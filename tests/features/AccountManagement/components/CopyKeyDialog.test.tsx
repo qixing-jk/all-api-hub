@@ -287,7 +287,15 @@ vi.mock("~/components/KiloCodeExportDialog", () => ({
 vi.mock("~/components/CursorPlusExportDialog", () => ({
   CursorPlusExportDialog: (props: unknown) => {
     cursorPlusExportDialogMock(props)
-    return null
+    const { isOpen, onClose } = props as {
+      isOpen: boolean
+      onClose: () => void
+    }
+    return isOpen ? (
+      <button type="button" onClick={onClose}>
+        close Cursor++ export
+      </button>
+    ) : null
   },
 }))
 
@@ -676,6 +684,12 @@ describe("CopyKeyDialog", () => {
         runtimeKey,
       }),
     )
+    await user.click(
+      screen.getByRole("button", { name: "close Cursor++ export" }),
+    )
+    expect(
+      screen.queryByRole("button", { name: "close Cursor++ export" }),
+    ).not.toBeInTheDocument()
   })
 
   it("creates token then refreshes and auto-copies when exactly one token exists", async () => {

@@ -77,8 +77,17 @@ vi.mock("~/components/CliProxyExportDialog", () => ({
 vi.mock("~/components/CursorPlusExportDialog", () => ({
   CursorPlusExportDialog: (props: unknown) => {
     mockCursorPlusDialog(props)
-    const { isOpen } = props as { isOpen: boolean }
-    return isOpen ? <div role="dialog" aria-label="Cursor++ export" /> : null
+    const { isOpen, onClose } = props as {
+      isOpen: boolean
+      onClose: () => void
+    }
+    return isOpen ? (
+      <div role="dialog" aria-label="Cursor++ export">
+        <button type="button" onClick={onClose}>
+          close Cursor++ export
+        </button>
+      </div>
+    ) : null
   },
 }))
 
@@ -576,6 +585,12 @@ describe("ServiceCredentialCard", () => {
         }),
       }),
     )
+    await user.click(
+      screen.getByRole("button", { name: "close Cursor++ export" }),
+    )
+    expect(
+      screen.queryByRole("dialog", { name: "Cursor++ export" }),
+    ).not.toBeInTheDocument()
 
     await user.click(
       screen.getByRole("button", {

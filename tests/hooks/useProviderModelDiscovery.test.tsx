@@ -73,4 +73,91 @@ describe("useProviderModelDiscovery", () => {
       }),
     )
   })
+
+  it("keeps the previous inventory on failure and recovers on retry", async () => {
+    const fetchModelIds = vi
+      .fn()
+      .mockResolvedValueOnce(["model-a"])
+      .mockRejectedValueOnce(new Error("upstream unavailable"))
+      .mockResolvedValueOnce(["model-b"])
+    const { result } = renderHook(() =>
+      useProviderModelDiscovery({
+        isOpen: true,
+        sources: [
+          {
+            selectionId: "example-selection",
+            cacheKey: "example-source",
+            baseUrl: "https://api.example.invalid/v1",
+            resolveApiKey: async () => "example-key",
+          },
+        ],
+        fetchModelIds,
+      }),
+    )
+
+    await waitFor(() =>
+      expect(result.current.getInventory("example-selection")).toMatchObject({
+        status: "loaded",
+        modelIds: ["model-a"],
+      }),
+    )
+
+    await act(async () => {
+      await result.current.loadModels("example-selection")
+    })
+    expect(result.current.getInventory("example-selection")).toMatchObject({
+      status: "error",
+      modelIds: ["model-a"],
+    })
+
+    await act(async () => {
+      await result.current.loadModels("example-selection")
+    })
+    expect(result.current.getInventory("example-selection")).toMatchObject({
+      status: "loaded",
+      modelIds: ["model-b"],
+    })
+  })
+
+  it("clears inventory on close and ignores a late result", async () => {
+    let resolveModels: ((modelIds: string[]) => void) | undefined
+    const models = new Promise<string[]>((resolve) => {
+      resolveModels = resolve
+    })
+    const fetchModelIds = vi.fn().mockReturnValue(models)
+    const { result, rerender } = renderHook(
+      ({ isOpen }) =>
+        useProviderModelDiscovery({
+          isOpen,
+          sources: [
+            {
+              selectionId: "example-selection",
+              cacheKey: "example-source",
+              baseUrl: "https://api.example.invalid/v1",
+              resolveApiKey: async () => "example-key",
+            },
+          ],
+          fetchModelIds,
+        }),
+      { initialProps: { isOpen: true } },
+    )
+
+    await waitFor(() => expect(fetchModelIds).toHaveBeenCalledTimes(1))
+    rerender({ isOpen: false })
+    await waitFor(() =>
+      expect(result.current.getInventory("example-selection")).toMatchObject({
+        status: "idle",
+        modelIds: [],
+      }),
+    )
+
+    await act(async () => {
+      resolveModels?.(["late-model"])
+      await models
+    })
+    expect(result.current.getInventory("example-selection")).toMatchObject({
+      status: "idle",
+      modelIds: [],
+    })
+  })
 })

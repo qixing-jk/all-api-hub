@@ -174,12 +174,13 @@ export function ServiceCredentialCard({
     credential.service,
     credentialBaseUrl,
   ])
+  const canRotate = onRotate !== undefined
   const runtimeKey = useMemo(
     () =>
       buildServiceCredentialRuntimeKey(account, credential, {
-        canRotate: onRotate !== undefined,
+        canRotate,
       }),
-    [account, credential, onRotate],
+    [account, canRotate, credential],
   )
 
   const handleSaveToApiCredentialProfiles = async () => {

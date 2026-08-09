@@ -184,6 +184,64 @@ describe("CursorPlusExportDialog", () => {
     ])
   })
 
+  it("retries an empty discovery result", async () => {
+    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
+      ...key,
+      secret: "resolved-key",
+    }))
+    fetchModelIdsMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(["model-a"])
+    const user = userEvent.setup()
+
+    render(
+      <CursorPlusExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        runtimeKey={runtimeKey}
+      />,
+    )
+
+    expect(
+      await screen.findByText("ui:dialog.cursorPlus.status.empty"),
+    ).toBeVisible()
+    await user.click(
+      screen.getByTestId(CURSOR_PLUS_EXPORT_TEST_IDS.retryButton),
+    )
+
+    expect(await screen.findByText("model-a")).toBeVisible()
+    expect(fetchModelIdsMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("closes from the cancel action", async () => {
+    const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
+    const onClose = vi.fn()
+    resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({
+      ...key,
+      secret: "resolved-key",
+    }))
+    fetchModelIdsMock.mockResolvedValue(["model-a"])
+    const user = userEvent.setup()
+
+    render(
+      <CursorPlusExportDialog
+        isOpen={true}
+        onClose={onClose}
+        account={ACCOUNT}
+        runtimeKey={runtimeKey}
+      />,
+    )
+
+    await screen.findByText("model-a")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.cancel" }),
+    )
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it("copies only the models the user keeps selected", async () => {
     const runtimeKey = buildDisplayAccountTokenRuntimeKey(ACCOUNT, TOKEN)
     resolveRuntimeKeyMock.mockImplementation(async (_account, key) => ({

@@ -149,6 +149,19 @@ export function useKiloCodeProfileModelDiscovery({
   )
 
   useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    setLegacyModelId("")
+    setV7DefaultModelId("")
+    setV7ManualModelId("")
+    v7ManualModelIdRef.current = ""
+    setV7Protocol(KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible)
+    v7ProtocolRef.current = KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible
+  }, [discoveryCacheKey, isOpen, profileName, selectionId])
+
+  useEffect(() => {
     if (modelStatus !== KILO_CODE_MODEL_STATUSES.Loaded) return
 
     setLegacyModelId((current) =>
@@ -171,19 +184,6 @@ export function useKiloCodeProfileModelDiscovery({
       )
     })
   }, [buildV7Selection, modelIds, modelStatus, selectionId])
-
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
-
-    setLegacyModelId("")
-    setV7DefaultModelId("")
-    setV7ManualModelId("")
-    v7ManualModelIdRef.current = ""
-    setV7Protocol(KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible)
-    v7ProtocolRef.current = KILO_CODE_PROVIDER_PROTOCOLS.OpenAICompatible
-  }, [discoveryCacheKey, isOpen, profileName, selectionId])
 
   const v7Selection = useMemo<KiloCodeV7ProviderSelection>(
     () => buildV7Selection(modelIds, v7ManualModelId, v7Protocol),

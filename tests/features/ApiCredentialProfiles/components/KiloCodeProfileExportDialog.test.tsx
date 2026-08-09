@@ -1183,6 +1183,36 @@ describe("KiloCodeProfileExportDialog", () => {
     expect(await screen.findByText("next-model")).toBeVisible()
   })
 
+  it("restores the discovered default when only the profile name changes", async () => {
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue(["model-a"])
+    const { rerender } = renderDialog()
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+        }),
+      ).toBeEnabled(),
+    )
+
+    rerender(
+      <KiloCodeProfileExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{ ...PROFILE, name: "Renamed Profile" }}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", {
+          name: "ui:dialog.kiloCode.actions.copyKiloV7Provider",
+        }),
+      ).toBeEnabled(),
+    )
+    expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(1)
+  })
+
   it("resets target-local values and refetches when the dialog reopens", async () => {
     const user = userEvent.setup()
     mockFetchOpenAICompatibleModelIds

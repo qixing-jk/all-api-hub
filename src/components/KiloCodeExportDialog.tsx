@@ -1437,6 +1437,7 @@ export function KiloCodeExportDialog({
               variant="secondary"
               onClick={handleCopyApiConfigs}
               disabled={!canExport || isExporting}
+              loading={isExporting}
             >
               {copyActionLabel}
             </Button>
@@ -1444,6 +1445,7 @@ export function KiloCodeExportDialog({
               type="button"
               onClick={handleDownloadSettings}
               disabled={!canExport || isExporting}
+              loading={isExporting}
             >
               {downloadActionLabel}
             </Button>

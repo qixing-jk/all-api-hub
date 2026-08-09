@@ -5,7 +5,10 @@ import {
   hashProviderCatalogValue,
   normalizeProviderCatalogModelIds,
 } from "~/services/integrations/providerCatalogExport"
+import { createLogger } from "~/utils/core/logger"
 import { stripTrailingOpenAIV1 } from "~/utils/core/url"
+
+const logger = createLogger("ProviderModelDiscovery")
 
 export const PROVIDER_MODEL_DISCOVERY_STATUSES = {
   Idle: "idle",
@@ -190,7 +193,8 @@ export function useProviderModelDiscovery({
             cacheKey: source.cacheKey,
           },
         }))
-      } catch {
+      } catch (error) {
+        logger.warn("Failed to fetch upstream model list", error)
         if (
           !isMountedRef.current ||
           !isOpenRef.current ||

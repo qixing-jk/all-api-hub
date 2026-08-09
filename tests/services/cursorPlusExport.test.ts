@@ -102,12 +102,29 @@ describe("prepareCursorPlusProvider", () => {
     expect(second.id).toBe(first.id)
   })
 
+  it("uses a stable fallback id prefix for a non-Latin provider name", () => {
+    expect(
+      prepareCursorPlusProvider({
+        selectionId: "selection",
+        name: "示例提供商",
+        baseUrl: "https://api.example.invalid",
+        apiKey: "example-key",
+        discoveredModelIds: ["model-a"],
+      }).id,
+    ).toMatch(/^provider-[a-f0-9]{8}$/)
+  })
+
   it.each([
     ["name", { name: " " }, "Provider name cannot be blank"],
     ["secret", { apiKey: " " }, "Runtime key cannot be blank"],
     [
       "base URL",
       { baseUrl: "file:///tmp/provider" },
+      "Base URL must be a valid HTTP or HTTPS URL",
+    ],
+    [
+      "unparseable base URL",
+      { baseUrl: "not-a-url" },
       "Base URL must be a valid HTTP or HTTPS URL",
     ],
     [
