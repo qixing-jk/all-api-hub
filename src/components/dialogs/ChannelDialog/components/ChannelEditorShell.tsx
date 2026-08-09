@@ -10,6 +10,7 @@ export function ChannelEditorShell({
   description,
   children,
   onClose,
+  onCloseComplete,
   onSubmit,
   submitLabel,
   closeLabel,
@@ -24,6 +25,7 @@ export function ChannelEditorShell({
   description?: string
   children: ReactNode
   onClose: () => void
+  onCloseComplete?: () => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   submitLabel?: string
   closeLabel: string
@@ -77,6 +79,7 @@ export function ChannelEditorShell({
       isOpen={isOpen}
       title={title}
       onClose={handleClose}
+      onCloseComplete={onCloseComplete}
       closeOnBackdropClick={!isSubmitting}
       closeOnEsc={!isSubmitting}
       showCloseButton={!isSubmitting}

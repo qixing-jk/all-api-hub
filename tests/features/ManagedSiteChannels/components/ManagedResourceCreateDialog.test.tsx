@@ -73,6 +73,7 @@ describe("ManagedResourceCreateDialog", () => {
         kind={MANAGED_RESOURCE_KINDS.Channel}
         editor={createEditor(submit)}
         onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
         onSuccess={onSuccess}
       />,
     )
@@ -110,6 +111,7 @@ describe("ManagedResourceCreateDialog", () => {
         kind={MANAGED_RESOURCE_KINDS.Channel}
         editor={createEditor(submit)}
         onClose={vi.fn()}
+        onCloseComplete={vi.fn()}
         onSuccess={vi.fn()}
       />,
     )

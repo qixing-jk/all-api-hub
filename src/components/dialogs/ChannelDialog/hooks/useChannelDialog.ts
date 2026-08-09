@@ -121,11 +121,13 @@ export function useChannelDialog() {
     formData: Awaited<ReturnType<ManagedSiteService["prepareChannelFormData"]>>
     advisoryWarning: ChannelDialogAdvisoryWarning | null
     onSuccess?: (result: any) => void
-  }) => {
+    shouldContinue?: () => boolean
+  }): Promise<boolean> => {
     const nativeCreate = await openNativeManagedChannelImportEditor(
       params.service.siteType,
       params.formData,
     )
+    if (params.shouldContinue && !params.shouldContinue()) return false
 
     if (nativeCreate) {
       openNativeCreateDialog({
@@ -137,7 +139,7 @@ export function useChannelDialog() {
         },
         onSuccess: params.onSuccess,
       })
-      return
+      return true
     }
 
     openDialog({
@@ -149,6 +151,7 @@ export function useChannelDialog() {
       advisoryWarning: params.advisoryWarning,
       onSuccess: params.onSuccess,
     })
+    return true
   }
 
   const openDefaultTokenQuickCreateDialogForAccount = async (
@@ -597,12 +600,14 @@ export function useChannelDialog() {
         return cancelOpen()
       }
 
-      await openPreparedChannelCreateDialog({
+      const opened = await openPreparedChannelCreateDialog({
         service,
         formData,
         advisoryWarning: duplicateState.advisoryWarning,
         onSuccess,
+        shouldContinue,
       })
+      if (!opened) return cancelOpen()
       return { opened: true }
     } catch (error) {
       const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
@@ -686,13 +691,13 @@ export function useChannelDialog() {
         toast.dismiss(toastId)
       }
 
-      await openPreparedChannelCreateDialog({
+      const opened = await openPreparedChannelCreateDialog({
         service,
         formData,
         advisoryWarning: duplicateState.advisoryWarning,
         onSuccess,
       })
-      return { opened: true }
+      return { opened }
     } catch (error) {
       const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
       toast.error(

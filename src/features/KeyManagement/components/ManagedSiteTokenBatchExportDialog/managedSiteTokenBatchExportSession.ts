@@ -27,9 +27,7 @@ export const getManagedSiteTokenBatchExportRetryItemIds = (
     .filter(
       (item) =>
         item.result ===
-          MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED ||
-        item.result ===
-          MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED,
     )
     .map((item) => item.id)
 

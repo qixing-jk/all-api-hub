@@ -58,7 +58,7 @@
       "clearSelection": "清除選取",
       "open": "批次匯入到 {{site}}（{{selectedCount}}）",
       "refreshPreview": "重新整理預覽",
-      "retry": "重試失敗或需要檢查的金鑰",
+      "retry": "重試失敗的金鑰",
       "running": "正在匯入...",
       "selectAll": "已選 {{selected}}/{{total}}",
       "start": "開始匯入",

@@ -6,7 +6,11 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import { ManagedResourceError } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  MANAGED_RESOURCE_FAILURE_CODES,
+  ManagedResourceError,
+  type ResourceFailure,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
 import { openNativeManagedChannelImportSession } from "~/services/apiAdapters/managedResources/channelImport"
 import {
   getManagedSiteChannelExactMatch,
@@ -85,6 +89,21 @@ const logger = createLogger("ManagedSiteTokenBatchExport")
 const TOKEN_BATCH_EXPORT_CONCURRENCY = 4
 const FALLBACK_BLOCKING_MESSAGE = "Failed to prepare this key for batch import"
 const FALLBACK_EXECUTION_ERROR = "Failed to create channel"
+const DEFINITE_NATIVE_IMPORT_FAILURE_CODES: ReadonlySet<
+  ResourceFailure["code"]
+> = new Set([
+  MANAGED_RESOURCE_FAILURE_CODES.ConfigurationRequired,
+  MANAGED_RESOURCE_FAILURE_CODES.InvalidConfiguration,
+  MANAGED_RESOURCE_FAILURE_CODES.AuthenticationFailed,
+  MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
+  MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+  MANAGED_RESOURCE_FAILURE_CODES.NotFound,
+  MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
+])
+
+const isDefiniteNativeImportFailure = (error: unknown) =>
+  error instanceof ManagedResourceError &&
+  DEFINITE_NATIVE_IMPORT_FAILURE_CODES.has(error.failure.code)
 export const MANAGED_SITE_TOKEN_BATCH_IMPORT_TARGET_CHANGED_ERROR_CODE =
   "managed-site-token-import-target-changed" as const
 
@@ -736,10 +755,9 @@ export async function executeManagedSiteTokenBatchExport(params: {
               id: item.id,
               accountName: item.accountName,
               runtimeKeyName: item.runtimeKeyName,
-              result:
-                error instanceof ManagedResourceError
-                  ? MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED
-                  : MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
+              result: isDefiniteNativeImportFailure(error)
+                ? MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED
+                : MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
               success: false,
               skipped: false,
               error: message

@@ -58,7 +58,7 @@
       "clearSelection": "Xóa lựa chọn",
       "open": "Nhập hàng loạt vào {{site}} ({{selectedCount}})",
       "refreshPreview": "Làm mới bản xem trước",
-      "retry": "Thử lại các khóa thất bại hoặc cần xem lại",
+      "retry": "Thử lại các khóa thất bại",
       "running": "Đang nhập...",
       "selectAll": "Đã chọn {{selected}}/{{total}}",
       "start": "Bắt đầu nhập",

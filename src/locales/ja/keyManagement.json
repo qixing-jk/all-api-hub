@@ -58,7 +58,7 @@
       "clearSelection": "選択をクリア",
       "open": "{{site}} に一括インポート（{{selectedCount}}）",
       "refreshPreview": "プレビューを更新",
-      "retry": "失敗または要確認のキーを再試行",
+      "retry": "失敗したキーを再試行",
       "running": "インポート中...",
       "selectAll": "{{selected}}/{{total}} 選択中",
       "start": "インポート開始",

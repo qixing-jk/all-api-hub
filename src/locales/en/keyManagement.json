@@ -61,7 +61,7 @@
       "clearSelection": "Clear selection",
       "open": "Batch import to {{site}} ({{selectedCount}})",
       "refreshPreview": "Refresh preview",
-      "retry": "Retry failed or uncertain keys",
+      "retry": "Retry failed keys",
       "running": "Importing...",
       "selectAll": "{{selected}}/{{total}} selected",
       "start": "Start import",

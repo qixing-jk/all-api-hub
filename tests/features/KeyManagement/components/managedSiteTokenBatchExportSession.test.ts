@@ -108,7 +108,7 @@ describe("managed-site token batch export session", () => {
     expect(reconciled.preview.items[1].draft?.models).toEqual(["refreshed-b"])
   })
 
-  it("selects only failed and uncertain execution rows for retry", () => {
+  it("selects only definitely failed execution rows for retry", () => {
     const result: ManagedSiteTokenBatchExportExecutionResult = {
       totalSelected: 3,
       attemptedCount: 3,
@@ -146,7 +146,6 @@ describe("managed-site token batch export session", () => {
 
     expect(getManagedSiteTokenBatchExportRetryItemIds(result)).toEqual([
       "failed-key",
-      "uncertain-key",
     ])
   })
 

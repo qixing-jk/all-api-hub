@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   useChannelDialog,
@@ -39,6 +39,7 @@ import {
 } from "~/types/accountTodayStats"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { mockToastLoading, mockToastDismiss, mockToastError } = vi.hoisted(
@@ -271,6 +272,8 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 }))
 
 describe("useChannelDialog", () => {
+  let registrationSpy: { mockRestore: () => void } | undefined
+
   beforeEach(() => {
     vi.clearAllMocks()
 
@@ -286,6 +289,11 @@ describe("useChannelDialog", () => {
     mockResolveApiTokenKey.mockImplementation(
       async (_request: unknown, token: { key: string }) => token.key,
     )
+  })
+
+  afterEach(() => {
+    registrationSpy?.mockRestore()
+    registrationSpy = undefined
   })
 
   it("shows warning and cancels when user does not continue", async () => {
@@ -385,7 +393,7 @@ describe("useChannelDialog", () => {
       openEditEditor: vi.fn(),
       delete: vi.fn(),
     }))
-    const registrationSpy = vi
+    registrationSpy = vi
       .spyOn(nativeResourceRegistry, "getManagedResourceRegistration")
       .mockReturnValue({
         siteType: SITE_TYPES.AXON_HUB,
@@ -435,17 +443,76 @@ describe("useChannelDialog", () => {
         orderingWeight: 7,
       },
     })
-    expect((result.current.context.state as any).nativeCreate).toMatchObject({
+    expect(result.current.context.state.nativeCreate).toMatchObject({
       siteType: SITE_TYPES.AXON_HUB,
       kind: MANAGED_RESOURCE_KINDS.Channel,
       editor,
     })
+  })
 
-    registrationSpy.mockRestore()
+  it("does not open a native editor after its caller cancels while the editor loads", async () => {
+    const editor = {
+      fields: [],
+      initialValues: { name: "Imported channel" },
+      validate: vi.fn(() => ({ valid: true as const })),
+      submit: vi.fn(),
+    }
+    const pendingEditor = createDeferred<typeof editor>()
+    const openCreateEditor = vi.fn(() => pendingEditor.promise)
+    registrationSpy = vi
+      .spyOn(nativeResourceRegistry, "getManagedResourceRegistration")
+      .mockReturnValue({
+        siteType: SITE_TYPES.AXON_HUB,
+        kind: MANAGED_RESOURCE_KINDS.Channel,
+        createSeedKinds: [
+          MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+        ],
+        open: vi.fn(async () => ({
+          capabilities: {
+            canSearch: true,
+            canCreate: true,
+            canUpdate: true,
+            canDelete: true,
+          },
+          list: vi.fn(),
+          get: vi.fn(),
+          openCreateEditor,
+          openEditEditor: vi.fn(),
+          delete: vi.fn(),
+        })),
+      })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      buildManagedSiteServiceMock({
+        siteType: SITE_TYPES.AXON_HUB,
+        messagesKey: "axonhub",
+      }) as ManagedSiteService,
+    )
+    let shouldContinue = true
+    const { result } = await renderChannelDialogHook()
+
+    const openPromise = result.current.dialog.openWithAccount(
+      buildDisplaySiteData(),
+      buildApiToken(),
+      undefined,
+      { shouldContinue: () => shouldContinue },
+    )
+    await waitFor(() => expect(openCreateEditor).toHaveBeenCalledOnce())
+
+    shouldContinue = false
+    let openResult: Awaited<typeof openPromise> | undefined
+    await act(async () => {
+      pendingEditor.resolve(editor)
+      openResult = await openPromise
+    })
+
+    expect(openResult).toEqual({ opened: false })
+    expect(result.current.context.state.isOpen).toBe(false)
+    expect(result.current.context.state.nativeCreate).toBeUndefined()
+    expect(mockToastError).not.toHaveBeenCalled()
   })
 
   it("does not downgrade a native provider when its import registration is missing", async () => {
-    const registrationSpy = vi
+    registrationSpy = vi
       .spyOn(nativeResourceRegistry, "getManagedResourceRegistration")
       .mockReturnValue(null)
     getManagedSiteServiceSpy.mockResolvedValue(
@@ -470,8 +537,6 @@ describe("useChannelDialog", () => {
     expect(result.current.context.state.isOpen).toBe(false)
     expect(result.current.context.state.nativeCreate).toBeUndefined()
     expect(mockToastError).toHaveBeenCalled()
-
-    registrationSpy.mockRestore()
   })
 
   it("shows duplicate channel warning from migrated resource candidates", async () => {

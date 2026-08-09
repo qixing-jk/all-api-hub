@@ -3087,6 +3087,108 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     ).toBeNull()
   })
 
+  it("does not offer blind retry for uncertain rows", async () => {
+    const user = userEvent.setup()
+    const uncertainResult: ManagedSiteTokenBatchExportExecutionResult = {
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 0,
+      uncertainCount: 1,
+      skippedCount: 0,
+      items: [
+        {
+          id: "account_token:account-1:1",
+          accountName: "Account 1",
+          runtimeKeyName: "Token 1",
+          result: "uncertain",
+          success: false,
+          skipped: false,
+        },
+      ],
+    }
+    mockPreparePreview.mockResolvedValueOnce(preview)
+    mockExecuteBatchExport.mockResolvedValueOnce(uncertainResult)
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(getBatchImportConfirmButton())
+
+    await screen.findByText(
+      "keyManagement:batchManagedSiteExport.results.status.uncertain",
+    )
+    expect(
+      screen.queryByTestId(
+        "key-management-managed-site-batch-export-retry-button",
+      ),
+    ).toBeNull()
+  })
+
+  it("selects only failed rows when failed and uncertain results are mixed", async () => {
+    const user = userEvent.setup()
+    const mixedResult: ManagedSiteTokenBatchExportExecutionResult = {
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 0,
+      failedCount: 1,
+      uncertainCount: 1,
+      skippedCount: 0,
+      items: [
+        {
+          id: "account_token:account-1:1",
+          accountName: "Account 1",
+          runtimeKeyName: "Token 1",
+          result: "failed",
+          success: false,
+          skipped: false,
+        },
+        {
+          id: "account_token:account-1:2",
+          accountName: "Account 1",
+          runtimeKeyName: "Token 2",
+          result: "uncertain",
+          success: false,
+          skipped: false,
+        },
+      ],
+    }
+    mockPreparePreview
+      .mockResolvedValueOnce(preview)
+      .mockResolvedValueOnce(preview)
+    mockExecuteBatchExport.mockResolvedValueOnce(mixedResult)
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(getBatchImportConfirmButton())
+    await user.click(
+      await screen.findByTestId(
+        "key-management-managed-site-batch-export-retry-button",
+      ),
+    )
+
+    await waitFor(() => {
+      expect(mockPreparePreview).toHaveBeenCalledTimes(2)
+    })
+    expect(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 1" }),
+    ).toHaveAttribute("aria-checked", "true")
+    expect(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 2" }),
+    ).toHaveAttribute("aria-checked", "false")
+  })
+
   it.each(["verification-dialog", "item-verification"] as const)(
     "ignores retry while %s is active",
     async (verificationState) => {

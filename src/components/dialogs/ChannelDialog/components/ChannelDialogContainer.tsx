@@ -13,6 +13,7 @@ export function ChannelDialogContainer() {
     state,
     defaultTokenQuickCreateDialog,
     closeDialog,
+    completeNativeDialogClose,
     closeDefaultTokenQuickCreateDialog,
     handleSuccess,
     handleDefaultTokenQuickCreateSuccess,
@@ -23,11 +24,12 @@ export function ChannelDialogContainer() {
         defaultTokenQuickCreateDialog.allowedGroups,
       )
     : undefined
+  const nativeCreate = state.nativeCreate
 
   return (
     <>
       <ChannelDialog
-        isOpen={state.isOpen && !state.nativeCreate}
+        isOpen={state.isOpen && !nativeCreate}
         onClose={closeDialog}
         mode={state.mode}
         channel={state.channel ?? null}
@@ -41,15 +43,19 @@ export function ChannelDialogContainer() {
         onMutationOutcome={state.onMutationOutcome ?? undefined}
         resourceEdit={state.resourceEdit ?? null}
       />
-      {state.nativeCreate ? (
+      {nativeCreate ? (
         <ManagedResourceCreateDialog
+          key={nativeCreate.sessionId}
           isOpen={state.isOpen}
-          siteType={state.nativeCreate.siteType}
-          kind={state.nativeCreate.kind}
-          editor={state.nativeCreate.editor}
-          showModelPrefillWarning={state.nativeCreate.showModelPrefillWarning}
-          advisoryWarning={state.nativeCreate.advisoryWarning}
+          siteType={nativeCreate.siteType}
+          kind={nativeCreate.kind}
+          editor={nativeCreate.editor}
+          showModelPrefillWarning={nativeCreate.showModelPrefillWarning}
+          advisoryWarning={nativeCreate.advisoryWarning}
           onClose={closeDialog}
+          onCloseComplete={() =>
+            completeNativeDialogClose(nativeCreate.sessionId)
+          }
           onSuccess={handleSuccess}
         />
       ) : null}

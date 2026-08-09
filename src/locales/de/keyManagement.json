@@ -61,7 +61,7 @@
       "clearSelection": "Auswahl löschen",
       "open": "Batch-Import in {{site}} ({{selectedCount}})",
       "refreshPreview": "Vorschau aktualisieren",
-      "retry": "Fehlgeschlagene oder unklare Schlüssel erneut versuchen",
+      "retry": "Fehlgeschlagene Schlüssel erneut versuchen",
       "running": "Importieren...",
       "selectAll": "{{selected}}/{{total}} ausgewählt",
       "start": "Import starten",

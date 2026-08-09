@@ -37,12 +37,17 @@ export interface ChannelDialogAdvisoryWarning {
   assessment?: ManagedSiteChannelAssessmentSignals | null
 }
 
-export interface NativeChannelCreateDialogState {
+export interface NativeChannelCreateDialogConfig {
   siteType: ManagedSiteType
   kind: ManagedResourceKind
   editor: ResourceEditor
   showModelPrefillWarning: boolean
   advisoryWarning: ChannelDialogAdvisoryWarning | null
+}
+
+export interface NativeChannelCreateDialogState
+  extends NativeChannelCreateDialogConfig {
+  sessionId: number
 }
 
 interface ChannelDialogState {
@@ -97,10 +102,11 @@ interface ChannelDialogContextValue {
     resourceEdit?: ChannelResourceEditContext | null
   }) => void
   openNativeCreateDialog: (config: {
-    nativeCreate: NativeChannelCreateDialogState
+    nativeCreate: NativeChannelCreateDialogConfig
     onSuccess?: (result: any) => void
   }) => void
   closeDialog: () => void
+  completeNativeDialogClose: (sessionId: number) => void
   handleSuccess: (result: any) => void
   openDefaultTokenQuickCreateDialog: (config: {
     account: DisplaySiteData
@@ -156,6 +162,7 @@ export function ChannelDialogProvider({
   const defaultTokenQuickCreateOnSuccessRef = useRef(
     defaultTokenQuickCreateDialog.onSuccessCallback,
   )
+  const nativeCreateSessionIdRef = useRef(0)
 
   const openDialog = useCallback(
     (config: {
@@ -194,31 +201,41 @@ export function ChannelDialogProvider({
 
   const openNativeCreateDialog = useCallback(
     (config: {
-      nativeCreate: NativeChannelCreateDialogState
+      nativeCreate: NativeChannelCreateDialogConfig
       onSuccess?: (result: any) => void
     }) => {
+      const sessionId = nativeCreateSessionIdRef.current + 1
+      nativeCreateSessionIdRef.current = sessionId
       setState({
         isOpen: true,
         mode: DIALOG_MODES.ADD,
         channel: null,
         onSuccessCallback: config.onSuccess,
-        nativeCreate: config.nativeCreate,
+        nativeCreate: { ...config.nativeCreate, sessionId },
       })
     },
     [],
   )
 
   const closeDialog = useCallback(() => {
-    setState((prev) =>
-      prev.nativeCreate
-        ? {
-            isOpen: false,
-            mode: DIALOG_MODES.ADD,
-            channel: null,
-            nativeCreate: null,
-          }
-        : { ...prev, isOpen: false },
-    )
+    setState((prev) => ({ ...prev, isOpen: false }))
+  }, [])
+
+  const completeNativeDialogClose = useCallback((sessionId: number) => {
+    setState((prev) => {
+      if (
+        prev.isOpen ||
+        !prev.nativeCreate ||
+        prev.nativeCreate.sessionId !== sessionId
+      )
+        return prev
+      return {
+        isOpen: false,
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        nativeCreate: null,
+      }
+    })
   }, [])
 
   const onSuccessRef = useRef(state.onSuccessCallback)
@@ -349,6 +366,7 @@ export function ChannelDialogProvider({
         openDialog,
         openNativeCreateDialog,
         closeDialog,
+        completeNativeDialogClose,
         handleSuccess,
         openDefaultTokenQuickCreateDialog,
         closeDefaultTokenQuickCreateDialog,

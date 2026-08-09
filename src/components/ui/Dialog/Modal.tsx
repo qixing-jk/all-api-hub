@@ -40,6 +40,8 @@ interface ModalProps {
   terminalCloseKey?: string | number | null
   /** Shares the original opener across an explicit terminal-dialog successor. */
   focusWorkflowId?: string | number
+  /** Runs after Radix finishes close-autofocus handling for this open session. */
+  onCloseComplete?: () => void
 }
 
 const sizeMap: Record<Size, string> = {
@@ -61,9 +63,17 @@ type FocusSession = {
   active: boolean
   settled: boolean
   closeRequested: boolean
+  completionNotified: boolean
+  onCloseComplete?: () => void
   focusWorkflowId?: string | number
   contentElement?: HTMLElement
   parentSession?: FocusSession
+}
+
+const notifyCloseComplete = (session: FocusSession) => {
+  if (!session.closeRequested || session.completionNotified) return
+  session.completionNotified = true
+  session.onCloseComplete?.()
 }
 
 // Radix may deliver close autofocus after a keyed Modal instance has unmounted.
@@ -212,6 +222,7 @@ export function Modal({
   focusFallbackKey,
   terminalCloseKey,
   focusWorkflowId,
+  onCloseComplete,
 }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null)
   const backdropPointerDownTargetRef = useRef<HTMLDivElement | null>(null)
@@ -239,6 +250,8 @@ export function Modal({
         active: true,
         settled: false,
         closeRequested: false,
+        completionNotified: false,
+        onCloseComplete,
         focusWorkflowId,
       }
       if (activeFocusSessionRef.current)
@@ -250,12 +263,14 @@ export function Modal({
       }
     }
     wasOpenRef.current = true
-  }, [focusWorkflowId, isOpen])
+  }, [focusWorkflowId, isOpen, onCloseComplete])
 
   useLayoutEffect(() => {
     const activeSession = activeFocusSessionRef.current
-    if (!isOpen && activeSession?.closeRequested)
+    if (!isOpen && activeSession) {
+      activeSession.closeRequested = true
       scheduleDeferredFocusLeaseSettlement(activeSession)
+    }
   }, [isOpen])
 
   useLayoutEffect(
@@ -390,16 +405,22 @@ export function Modal({
               // unmounts. The shared lease prevents a replaced instance from
               // restoring focus over the currently opened dialog.
               event.preventDefault()
-              if (!(event.currentTarget instanceof HTMLElement)) return
               const focusSession =
-                focusSessionsByContentRef.current.get(event.currentTarget) ??
-                activeFocusSessionRef.current
-              const restoreSession =
-                focusSession && settleFocusLease(focusSession)
-              if (!restoreSession) return
-              const restoreFocusElement = restoreSession.restoreElement
-              if (!restoreFocusElement?.isConnected) return
-              restoreFocusElement.focus()
+                event.currentTarget instanceof HTMLElement
+                  ? focusSessionsByContentRef.current.get(
+                      event.currentTarget,
+                    ) ?? activeFocusSessionRef.current
+                  : null
+              if (!focusSession) return
+              try {
+                const restoreSession = settleFocusLease(focusSession)
+                if (!restoreSession) return
+                const restoreFocusElement = restoreSession.restoreElement
+                if (!restoreFocusElement?.isConnected) return
+                restoreFocusElement.focus()
+              } finally {
+                notifyCloseComplete(focusSession)
+              }
             }}
             onPointerDownOutside={(event) => {
               event.preventDefault()

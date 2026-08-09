@@ -95,6 +95,91 @@ describe("Modal", () => {
     expect(secondTrigger).toHaveFocus()
   })
 
+  it("notifies after a controlled close restores focus", async () => {
+    const user = userEvent.setup()
+    const onCloseComplete = vi.fn()
+    const ModalHarness = () => {
+      const [isOpen, setIsOpen] = useState(false)
+      return (
+        <>
+          <button type="button" onClick={() => setIsOpen(true)}>
+            Open controlled modal
+          </button>
+          <Modal
+            isOpen={isOpen}
+            onClose={() => setIsOpen(false)}
+            onCloseComplete={onCloseComplete}
+            title="Controlled modal"
+          >
+            <button type="button" onClick={() => setIsOpen(false)}>
+              Close controlled modal
+            </button>
+          </Modal>
+        </>
+      )
+    }
+    render(<ModalHarness />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const trigger = screen.getByRole("button", {
+      name: "Open controlled modal",
+    })
+    await user.click(trigger)
+    await user.click(
+      await screen.findByRole("button", { name: "Close controlled modal" }),
+    )
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(trigger).toHaveFocus()
+    expect(onCloseComplete).toHaveBeenCalledOnce()
+  })
+
+  it("notifies only for the real close lifecycle under StrictMode", async () => {
+    const user = userEvent.setup()
+    const onCloseComplete = vi.fn()
+    const ModalHarness = () => {
+      const [isOpen, setIsOpen] = useState(false)
+      return (
+        <>
+          <button type="button" onClick={() => setIsOpen(true)}>
+            Open strict modal
+          </button>
+          <Modal
+            isOpen={isOpen}
+            onClose={() => setIsOpen(false)}
+            onCloseComplete={onCloseComplete}
+            title="Strict modal"
+          >
+            <button type="button">Strict modal content</button>
+          </Modal>
+        </>
+      )
+    }
+
+    render(
+      <StrictMode>
+        <ModalHarness />
+      </StrictMode>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    const trigger = screen.getByRole("button", { name: "Open strict modal" })
+    await user.click(trigger)
+    expect(await screen.findByRole("dialog")).toBeVisible()
+    await act(async () => undefined)
+    expect(onCloseComplete).not.toHaveBeenCalled()
+
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(trigger).toHaveFocus()
+    expect(onCloseComplete).toHaveBeenCalledOnce()
+  })
+
   it("restores the correct trigger through StrictMode and rapid reopen cycles", async () => {
     const user = userEvent.setup()
     const ModalHarness = () => {

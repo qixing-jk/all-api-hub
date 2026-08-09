@@ -64,7 +64,7 @@
       "clearSelection": "Limpiar selección",
       "open": "Importar por lote a {{site}} ({{selectedCount}})",
       "refreshPreview": "Actualizar vista previa",
-      "retry": "Reintentar claves fallidas o que requieren revisión",
+      "retry": "Reintentar claves fallidas",
       "running": "Importando...",
       "selectAll": "{{selected}}/{{total}} seleccionadas",
       "start": "Iniciar importación",

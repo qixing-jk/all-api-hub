@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { useEffect } from "react"
 import { describe, expect, it, vi } from "vitest"
 
@@ -10,7 +11,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   addTokenDialogPropsMock,
@@ -32,7 +33,10 @@ vi.mock("~/components/dialogs/ChannelDialog/components/ChannelDialog", () => ({
 vi.mock(
   "~/features/ManagedSiteChannels/components/ManagedResourceCreateDialog",
   () => ({
-    ManagedResourceCreateDialog: (props: { isOpen: boolean }) => {
+    ManagedResourceCreateDialog: (props: {
+      isOpen: boolean
+      onCloseComplete: () => void
+    }) => {
       nativeDialogPropsMock(props)
       return props.isOpen ? <div data-testid="mock-native-dialog" /> : null
     },
@@ -116,6 +120,45 @@ function OpenNativeCreateDialog() {
   return null
 }
 
+function NativeDialogLifecycleProbe() {
+  const { state, closeDialog, openNativeCreateDialog } =
+    useChannelDialogContext()
+
+  const openReplacementNativeDialog = () => {
+    openNativeCreateDialog({
+      nativeCreate: {
+        siteType: SITE_TYPES.AXON_HUB,
+        kind: MANAGED_RESOURCE_KINDS.Channel,
+        editor: {
+          fields: [],
+          initialValues: { name: "Replacement channel" },
+          validate: () => ({ valid: true }),
+          submit: vi.fn(),
+        },
+        showModelPrefillWarning: false,
+        advisoryWarning: null,
+      },
+    })
+  }
+
+  return (
+    <>
+      <button type="button" onClick={closeDialog}>
+        Close native dialog
+      </button>
+      <button type="button" onClick={openReplacementNativeDialog}>
+        Open replacement native dialog
+      </button>
+      <span data-testid="native-dialog-state">
+        {state.nativeCreate ? "retained" : "cleared"}
+      </span>
+      <span data-testid="native-dialog-name">
+        {String(state.nativeCreate?.editor.initialValues.name ?? "")}
+      </span>
+    </>
+  )
+}
+
 describe("ChannelDialogContainer", () => {
   it("renders AddTokenDialog with default-token prefill for non-empty allowed groups", async () => {
     addTokenDialogPropsMock.mockReset()
@@ -190,6 +233,112 @@ describe("ChannelDialogContainer", () => {
           }),
           showModelPrefillWarning: true,
         }),
+      )
+    })
+  })
+
+  it("clears native editor state only after its close lifecycle completes", async () => {
+    const user = userEvent.setup()
+    nativeDialogPropsMock.mockReset()
+
+    render(
+      <ChannelDialogProvider>
+        <OpenNativeCreateDialog />
+        <NativeDialogLifecycleProbe />
+        <ChannelDialogContainer />
+      </ChannelDialogProvider>,
+    )
+
+    expect(await screen.findByTestId("mock-native-dialog")).toBeVisible()
+    expect(screen.getByTestId("native-dialog-state")).toHaveTextContent(
+      "retained",
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "Close native dialog" }),
+    )
+    await waitFor(() => {
+      expect(nativeDialogPropsMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ isOpen: false }),
+      )
+    })
+    expect(screen.queryByTestId("mock-native-dialog")).toBeNull()
+    expect(screen.getByTestId("native-dialog-state")).toHaveTextContent(
+      "retained",
+    )
+
+    const closedDialogProps = nativeDialogPropsMock.mock.lastCall?.[0] as {
+      onCloseComplete: () => void
+    }
+    act(() => closedDialogProps.onCloseComplete())
+
+    await waitFor(() => {
+      expect(screen.getByTestId("native-dialog-state")).toHaveTextContent(
+        "cleared",
+      )
+    })
+  })
+
+  it("does not let an older close completion clear a newer native editor", async () => {
+    const user = userEvent.setup()
+    nativeDialogPropsMock.mockReset()
+
+    render(
+      <ChannelDialogProvider>
+        <OpenNativeCreateDialog />
+        <NativeDialogLifecycleProbe />
+        <ChannelDialogContainer />
+      </ChannelDialogProvider>,
+    )
+
+    expect(await screen.findByTestId("mock-native-dialog")).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: "Close native dialog" }),
+    )
+    await waitFor(() => {
+      expect(nativeDialogPropsMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ isOpen: false }),
+      )
+    })
+    const firstClosedDialogProps = nativeDialogPropsMock.mock.lastCall?.[0] as {
+      onCloseComplete: () => void
+    }
+
+    await user.click(
+      screen.getByRole("button", { name: "Open replacement native dialog" }),
+    )
+    expect(await screen.findByTestId("mock-native-dialog")).toBeVisible()
+    expect(screen.getByTestId("native-dialog-name")).toHaveTextContent(
+      "Replacement channel",
+    )
+    await user.click(
+      screen.getByRole("button", { name: "Close native dialog" }),
+    )
+    await waitFor(() => {
+      expect(nativeDialogPropsMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          isOpen: false,
+          editor: expect.objectContaining({
+            initialValues: { name: "Replacement channel" },
+          }),
+        }),
+      )
+    })
+    const replacementClosedDialogProps = nativeDialogPropsMock.mock
+      .lastCall?.[0] as { onCloseComplete: () => void }
+
+    act(() => firstClosedDialogProps.onCloseComplete())
+    expect(screen.getByTestId("native-dialog-state")).toHaveTextContent(
+      "retained",
+    )
+    expect(screen.getByTestId("native-dialog-name")).toHaveTextContent(
+      "Replacement channel",
+    )
+
+    act(() => replacementClosedDialogProps.onCloseComplete())
+    await waitFor(() => {
+      expect(screen.getByTestId("native-dialog-state")).toHaveTextContent(
+        "cleared",
       )
     })
   })

@@ -7,6 +7,11 @@ import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/test
 import { ManagedSiteChannelAssessmentSignalsRow } from "~/components/ManagedSiteChannelAssessmentSignals"
 import { Alert } from "~/components/ui"
 import type { ManagedSiteType } from "~/constants/siteType"
+import { ManagedResourceEditorBody } from "~/features/ManagedSiteChannels/presentation/ManagedResourceEditorBody"
+import {
+  getManagedResourceFieldPolicy,
+  MANAGED_RESOURCE_EDITOR_MODES,
+} from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
@@ -19,12 +24,6 @@ import {
   assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
 } from "~/services/managedSites/mutations"
-
-import { ManagedResourceEditorBody } from "../presentation/ManagedResourceEditorBody"
-import {
-  getManagedResourceFieldPolicy,
-  MANAGED_RESOURCE_EDITOR_MODES,
-} from "../presentation/managedResourceFieldPolicy"
 
 type SaveFeedback =
   | { kind: "failed"; fieldIssues?: readonly ResourceFieldIssue[] }
@@ -39,6 +38,7 @@ export interface ManagedResourceCreateDialogProps {
   showModelPrefillWarning?: boolean
   advisoryWarning?: ChannelDialogAdvisoryWarning | null
   onClose: () => void
+  onCloseComplete: () => void
   onSuccess: (result: {
     success: true
     data: unknown
@@ -55,6 +55,7 @@ export function ManagedResourceCreateDialog({
   showModelPrefillWarning = false,
   advisoryWarning,
   onClose,
+  onCloseComplete,
   onSuccess,
 }: ManagedResourceCreateDialogProps) {
   const { t } = useTranslation([
@@ -154,6 +155,7 @@ export function ManagedResourceCreateDialog({
       title={t("channelDialog:title.add")}
       description={t("channelDialog:description.add")}
       onClose={onClose}
+      onCloseComplete={onCloseComplete}
       onSubmit={(event) => {
         event.preventDefault()
         void submit()
