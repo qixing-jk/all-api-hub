@@ -4,7 +4,7 @@
     "actions": {
       "devModeHint": "Chế độ phát triển: Để thuận tiện cho việc kiểm tra, các nút thao tác sẽ luôn hiển thị.",
       "openExternal": "Điểm danh bên ngoài",
-      "openFailedManual": "Mở trang điểm danh thủ công cho tài khoản thất bại",
+      "openFailedManual": "Mở trang điểm danh của tất cả tài khoản thất bại",
       "openManual": "Điểm danh thủ công",
       "openSite": "Mở trang web",
       "retryAccount": "Thử lại"
@@ -43,7 +43,7 @@
       "manualVerificationRequired": "Trước tiên hãy nhấp vào \"Mở trang web\", hoàn tất đăng nhập, Turnstile/PoW hoặc các bước xác minh cơ bản khác trên trang web để trình duyệt có phiên hợp lệ, rồi thử lại điểm danh tự động. Nếu sau khi xác minh vẫn thất bại nhiều lần, quy trình điểm danh tự động hiện tại có thể chưa phù hợp với trang web này, vui lòng tạm thời dùng điểm danh thủ công.",
       "noTabWithId": "Mẹo: Vui lòng không đóng thẻ/cửa sổ do tiện ích mở rộng tự động tạo, tiện ích mở rộng sẽ tự động đóng sau một khoảng thời gian. Nếu bạn cần đóng thủ công, vui lòng đợi ít nhất 1 phút trước khi đóng.",
       "openExternalCheckIn": "Mặc định chỉ mở điểm danh bên ngoài chưa mở hôm nay. Ctrl/Cmd mở tất cả; Shift mở trong cửa sổ mới.",
-      "openFailedManualNewWindow": "Mẹo: Nhấn giữ Shift và nhấp vào \"Mở trang điểm danh thủ công cho tài khoản thất bại\" để mở trong cửa sổ mới.",
+      "openFailedManualNewWindow": "Mở trang điểm danh trên trang web cho mọi tài khoản có lần điểm danh tự động gần nhất thất bại. Nhấn giữ Shift khi nhấp để mở trong cửa sổ mới.",
       "siteTypeCheckinUnsupported": "Giải pháp: Trước tiên hãy kiểm tra xem \"Loại trang web\" trong \"Quản lý tài khoản → Chỉnh sửa tài khoản\" có khớp với trang web thực tế hay không; nếu đây là kết quả của việc nhận diện tự động trước đó, bạn có thể đăng nhập lại vào trang web đích và nhận diện lại. Nếu bạn xác nhận rằng loại trang web là chính xác nhưng hệ thống vẫn báo không hỗ trợ, điều đó có nghĩa là trang web này hiện có thể chưa được điều chỉnh cho điểm danh tự động, vui lòng chuyển sang sử dụng \"Mở trang web\" hoặc \"Điểm danh thủ công\" để xử lý."
     },
     "refresh": "Làm mới",
@@ -76,9 +76,9 @@
       "invalidNumber": "Vui lòng nhập một số dương hợp lệ.",
       "invalidTimeWindow": "Khoảng thời gian không hợp lệ, thời gian bắt đầu và kết thúc không được giống nhau.",
       "lastDailyRunDayResetFailed": "Đặt lại dấu thực hiện hàng ngày thất bại: {{error}}",
-      "openFailedManualFailed": "Không thể mở trang điểm danh thủ công cho {{failedCount}} tài khoản thất bại.",
-      "openFailedManualNone": "Không có tài khoản thất bại nào để mở trang điểm danh thủ công.",
-      "openFailedManualPartial": "Đã mở trang cho {{openedCount}} tài khoản thất bại, {{failedCount}} trang khác mở không thành công.",
+      "openFailedManualFailed": "Không thể mở trang điểm danh trên trang web cho {{failedCount}} tài khoản thất bại.",
+      "openFailedManualNone": "Không có tài khoản điểm danh thất bại nào để mở.",
+      "openFailedManualPartial": "Đã mở trang điểm danh trên trang web cho {{openedCount}} tài khoản thất bại, {{failedCount}} trang khác mở không thành công.",
       "openManualFailed": "Mở trang điểm danh thủ công thất bại: {{error}}",
       "openSiteFailed": "Mở trang web thất bại: {{error}}",
       "retryAlarmTriggerFailed": "Kích hoạt báo thức thử lại thất bại: {{error}}",
@@ -91,7 +91,7 @@
     },
     "loading": {
       "evaluatingUiOpenPretrigger": "Đang đánh giá kích hoạt trước khi mở giao diện...",
-      "openingFailedManual_other": "Đang mở trang điểm danh thủ công cho {{count}} tài khoản thất bại...",
+      "openingFailedManual_other": "Đang mở trang điểm danh trên trang web cho {{count}} tài khoản thất bại...",
       "resettingLastDailyRunDay": "Đang đặt lại dấu thực hiện hàng ngày...",
       "running": "Đang thực hiện điểm danh tự động...",
       "schedulingDailyAlarmForToday": "Đang lên lịch báo thức hàng ngày cho hôm nay...",
@@ -103,7 +103,7 @@
       "dailyAlarmScheduledForToday": "Đã lên lịch báo thức hàng ngày cho hôm nay.",
       "dailyAlarmTriggered": "Đã kích hoạt thực hiện báo thức hàng ngày.",
       "lastDailyRunDayReset": "Đã đặt lại dấu thực hiện hàng ngày.",
-      "openFailedManualCompleted_other": "Đã mở trang điểm danh thủ công cho {{count}} tài khoản thất bại.",
+      "openFailedManualCompleted_other": "Đã mở trang điểm danh trên trang web cho {{count}} tài khoản thất bại.",
       "pretriggerStarted": "Đã kích hoạt điểm danh tự động sớm.",
       "retryAlarmTriggered": "Đã kích hoạt thực hiện báo thức thử lại.",
       "retryCompleted": "Thử lại đã hoàn tất.",
