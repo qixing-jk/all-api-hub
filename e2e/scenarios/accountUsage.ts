@@ -165,6 +165,7 @@ export async function verifyAccountKeyLifecycleUsage(
 export async function verifyAccountKeyToApiProfileUsage(
   context: AccountUsageScenarioContext & {
     buildTokenName: () => string
+    cleanupTokenNameMatcher?: (tokenName: string) => boolean
     expectedProfile?: SavedApiCredentialProfileExpectation
     openProfilesPage?: boolean
     openFromAccountRow?: boolean
@@ -181,6 +182,7 @@ export async function verifyAccountKeyToApiProfileUsage(
     resolveAccountFixture: async () => context.account,
     openFromAccountRow: context.openFromAccountRow,
     buildTokenName: context.buildTokenName,
+    cleanupTokenNameMatcher: context.cleanupTokenNameMatcher,
     expectedProfile: context.expectedProfile,
     openProfilesPage: context.openProfilesPage,
     cleanupAccountFixture: context.cleanupAccountFixture,

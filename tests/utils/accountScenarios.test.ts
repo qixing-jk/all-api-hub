@@ -604,6 +604,8 @@ describe("account E2E scenarios", () => {
     vi.mocked(deleteApiCredentialProfileFromStorage).mockResolvedValue(
       undefined,
     )
+    const cleanupTokenNameMatcher = (tokenName: string) =>
+      tokenName.startsWith("AAH E2E NewAPIPr ")
 
     const profile = await runAccountKeyToApiProfileScenario({
       extensionId: "extension-id",
@@ -616,6 +618,7 @@ describe("account E2E scenarios", () => {
         baseUrl: "https://seeded.example.com",
         apiKey: "sk-created-profile",
       },
+      cleanupTokenNameMatcher,
       cleanup: environmentCleanup,
     })
 
@@ -631,6 +634,17 @@ describe("account E2E scenarios", () => {
       baseUrl: "https://seeded.example.com",
       openFromAccountRow: true,
     })
+    expect(deleteTokensMatchingNameFromKeyManagementPage).toHaveBeenCalledWith({
+      page: keyPage,
+      nameMatcher: cleanupTokenNameMatcher,
+    })
+    expect(
+      vi.mocked(deleteTokensMatchingNameFromKeyManagementPage).mock
+        .invocationCallOrder[0],
+    ).toBeLessThan(
+      vi.mocked(submitTokenCreationFromKeyManagementPage).mock
+        .invocationCallOrder[0],
+    )
     expect(submitTokenCreationFromKeyManagementPage).toHaveBeenCalledWith({
       page: keyPage,
       tokenName: "E2E Profile Key",

@@ -5,6 +5,7 @@ import type { AccountFixture } from "~~/e2e/scenarios/accountFixtures"
 import {
   deleteApiCredentialProfileFromStorage,
   deleteTokenFromKeyManagementPage,
+  deleteTokensMatchingNameFromKeyManagementPage,
   expectTokenCreatedInKeyManagementPage,
   openKeyManagementForAccount,
   saveTokenToApiCredentialProfilesFromKeyManagementPage,
@@ -26,6 +27,7 @@ type AccountKeyToApiProfileEnvironment = {
   ) => Promise<AccountFixture>
   openFromAccountRow?: boolean
   buildTokenName: () => string
+  cleanupTokenNameMatcher?: (tokenName: string) => boolean
   expectedProfile?: SavedApiCredentialProfileExpectation
   openProfilesPage?: boolean
   cleanupAccountFixture?: boolean
@@ -118,6 +120,12 @@ export async function runAccountKeyToApiProfileScenario(
       baseUrl: account.baseUrl,
       openFromAccountRow: env.openFromAccountRow ?? true,
     })
+    if (env.cleanupTokenNameMatcher) {
+      await deleteTokensMatchingNameFromKeyManagementPage({
+        page: keyManagementPage,
+        nameMatcher: env.cleanupTokenNameMatcher,
+      })
+    }
     await submitTokenCreationFromKeyManagementPage({
       page: keyManagementPage,
       tokenName,

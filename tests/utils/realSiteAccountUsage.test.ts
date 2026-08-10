@@ -128,11 +128,18 @@ describe("real-site account usage adapters", () => {
     const call = vi.mocked(verifyAccountKeyToApiProfileUsage).mock.calls[0][0]
     expect(call).toMatchObject({
       cleanupAccountFixture: false,
+      cleanupTokenNameMatcher: expect.any(Function),
       expectedProfile: {
         baseUrl: "https://new-api.test",
         name: "Custom profile",
       },
     })
+    expect(call.cleanupTokenNameMatcher?.("AAH E2E NewAPIPr abc123def4")).toBe(
+      true,
+    )
+    expect(call.cleanupTokenNameMatcher?.("AAH E2E NewAPI abc123def4")).toBe(
+      false,
+    )
     expect(call.buildTokenName()).toBe("New API Profile:run-id")
   })
 

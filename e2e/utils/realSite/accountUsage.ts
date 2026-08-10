@@ -81,6 +81,8 @@ export async function verifyRealSiteAccountKeyToApiProfileUsage(
       afterProfileSaved?: (profile: ApiCredentialProfile) => Promise<void>
     },
 ) {
+  const profileLabel = context.profileLabel ?? `${context.label} Profile`
+
   return await verifyAccountKeyToApiProfileUsage({
     page: context.page,
     extensionId: context.extensionId,
@@ -89,13 +91,14 @@ export async function verifyRealSiteAccountKeyToApiProfileUsage(
     cleanupAccountFixture: false,
     cleanupCreatedProfile: context.cleanupCreatedProfile,
     cleanupCreatedToken: context.cleanupCreatedToken,
+    cleanupTokenNameMatcher: (tokenName) =>
+      isRealSiteTestTokenName({ tokenName, label: profileLabel }),
     afterProfileSaved: context.afterProfileSaved,
     expectedProfile: {
       baseUrl: context.account.baseUrl,
       ...context.expectedProfile,
     },
-    buildTokenName: () =>
-      buildUsageTokenName(context.profileLabel ?? `${context.label} Profile`),
+    buildTokenName: () => buildUsageTokenName(profileLabel),
   })
 }
 

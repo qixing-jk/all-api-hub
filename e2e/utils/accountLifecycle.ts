@@ -42,6 +42,12 @@ type TokenCreationOutcome =
   | { status: "created" }
   | { status: "failed"; message: string }
 
+type TokenDeletionOutcome =
+  | { status: "deleted" }
+  | { status: "failed"; message: string }
+
+const PREEXISTING_STATUS_ATTRIBUTE = "data-aah-e2e-preexisting-status"
+
 export type SavedApiCredentialProfileExpectation = Partial<
   Pick<ApiCredentialProfile, "name" | "baseUrl" | "apiKey" | "tagIds">
 >
@@ -243,11 +249,7 @@ async function submitCreateTokenForm(params: {
   page: Page
   tokenName: string
 }) {
-  await params.page.getByRole("status").evaluateAll((elements) => {
-    for (const element of elements) {
-      element.setAttribute("data-aah-e2e-preexisting-status", "true")
-    }
-  })
+  await markExistingStatusMessages(params.page)
   await params.page.getByRole("button", { name: "Add API Key" }).click()
   await expect(params.page.locator("#tokenName")).toBeVisible({
     timeout: 30_000,
@@ -262,6 +264,7 @@ async function submitCreateTokenForm(params: {
       addTokenDialogTestId,
       addTokenSubmitButtonTestId,
       oneTimeCloseTestId,
+      preexistingStatusAttribute,
     }) => {
       const addTokenDialog = document.querySelector(
         `[data-testid="${addTokenDialogTestId}"]`,
@@ -286,7 +289,7 @@ async function submitCreateTokenForm(params: {
 
       const visibleStatusMessages = Array.from(
         document.querySelectorAll<HTMLElement>(
-          '[role="status"]:not([data-aah-e2e-preexisting-status])',
+          `[role="status"]:not([${preexistingStatusAttribute}])`,
         ),
       ).filter((element) => element.getClientRects().length > 0)
       const message = visibleStatusMessages.at(-1)?.textContent?.trim()
@@ -300,6 +303,7 @@ async function submitCreateTokenForm(params: {
       addTokenSubmitButtonTestId:
         TOKEN_PROVISIONING_TEST_IDS.addTokenSubmitButton,
       oneTimeCloseTestId: TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyCloseButton,
+      preexistingStatusAttribute: PREEXISTING_STATUS_ATTRIBUTE,
     },
     { timeout: 30_000 },
   )
@@ -308,6 +312,47 @@ async function submitCreateTokenForm(params: {
   if (outcome.status === "failed") {
     throw new Error(`API key creation failed: ${outcome.message}`)
   }
+}
+
+async function markExistingStatusMessages(page: Page) {
+  await page.getByRole("status").evaluateAll((elements, attribute) => {
+    for (const element of elements) {
+      element.setAttribute(attribute, "true")
+    }
+  }, PREEXISTING_STATUS_ATTRIBUTE)
+}
+
+async function waitForTokenDeletionOutcome(params: {
+  page: Page
+  rowTestId: string
+}) {
+  const outcomeHandle = await params.page.waitForFunction(
+    ({ rowTestId, preexistingStatusAttribute }) => {
+      const row = document.querySelector(
+        `[data-testid="${CSS.escape(rowTestId)}"]`,
+      )
+      if (!row) {
+        return { status: "deleted" } satisfies TokenDeletionOutcome
+      }
+
+      const visibleStatusMessages = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          `[role="status"]:not([${preexistingStatusAttribute}])`,
+        ),
+      ).filter((element) => element.getClientRects().length > 0)
+      const message = visibleStatusMessages.at(-1)?.textContent?.trim()
+
+      return message
+        ? ({ status: "failed", message } satisfies TokenDeletionOutcome)
+        : null
+    },
+    {
+      rowTestId: params.rowTestId,
+      preexistingStatusAttribute: PREEXISTING_STATUS_ATTRIBUTE,
+    },
+    { timeout: 30_000 },
+  )
+  return (await outcomeHandle.jsonValue()) as TokenDeletionOutcome
 }
 
 async function closeOneTimeKeyDialogIfPresent(page: Page) {
@@ -400,11 +445,26 @@ async function deleteTokenRowFromKeyManagementPage(params: {
   row: Locator
 }) {
   await expect(params.row).toBeVisible({ timeout: 30_000 })
-  await params.row.getByRole("button", { name: "Delete Key" }).click()
+  const rowTestId = await params.row.getAttribute("data-testid")
+  if (!rowTestId) {
+    throw new Error("Unable to identify a token row for deletion.")
+  }
+
+  await markExistingStatusMessages(params.page)
+  await params.row
+    .getByRole("button", { name: "Delete Key", exact: true })
+    .click()
   await params.page
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.deleteTokenConfirmButton)
     .click()
-  await expect(params.row).toHaveCount(0, { timeout: 30_000 })
+  const outcome = await waitForTokenDeletionOutcome({
+    page: params.page,
+    rowTestId,
+  })
+
+  if (outcome.status === "failed") {
+    throw new Error(`API key deletion failed: ${outcome.message}`)
+  }
 }
 
 export async function deleteTokenFromKeyManagementPage(params: {

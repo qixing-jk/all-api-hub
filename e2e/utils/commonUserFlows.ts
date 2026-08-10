@@ -82,6 +82,10 @@ type StubNewApiSiteRoutesOptions = {
     status?: number
     message: string
   }
+  deleteTokenError?: {
+    status?: number
+    message: string
+  }
   groups?: Record<string, { desc: string; ratio: number }>
   dashboardAuthMode?: "legacy" | "auth-bundle"
 }
@@ -1027,6 +1031,18 @@ export async function stubNewApiSiteRoutes(
     }
 
     if (method === "DELETE" && /^\/api\/token\/\d+$/.test(url.pathname)) {
+      if (options.deleteTokenError) {
+        await route.fulfill({
+          status: options.deleteTokenError.status ?? 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: false,
+            message: options.deleteTokenError.message,
+          }),
+        })
+        return
+      }
+
       const tokenId = Number(url.pathname.split("/").pop())
       const tokenIndex = tokens.findIndex((token) => token.id === tokenId)
 

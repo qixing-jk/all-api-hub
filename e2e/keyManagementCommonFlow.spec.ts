@@ -350,6 +350,47 @@ test("reports the create response instead of timing out on a missing token row",
   ).rejects.toThrow("API key creation failed: Fixture token quota reached")
 })
 
+test("reports the delete response instead of timing out on a retained token row", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const accountFixture = await seedMockAccountFixture({
+    serviceWorker,
+    account: createStoredAccount({
+      id: "e2e-key-delete-error-account",
+      site_url: "https://key-delete-error.example.invalid",
+    }),
+  })
+  await stubNewApiSiteRoutes(context, {
+    baseUrl: "https://key-delete-error.example.invalid",
+    deleteTokenError: {
+      status: 200,
+      message: "Fixture delete temporarily unavailable",
+    },
+  })
+
+  await expect(
+    verifyAccountKeyLifecycleUsage({
+      extensionId,
+      page,
+      serviceWorker,
+      account: accountFixture,
+      openFromAccountRow: false,
+      buildTokenName: () => "E2E Rejected Token",
+    }),
+  ).rejects.toThrow(
+    "API key deletion failed: Fixture delete temporarily unavailable",
+  )
+  await expect(
+    page.getByRole("heading", {
+      name: "E2E Rejected Token",
+      exact: true,
+    }),
+  ).toBeVisible()
+})
+
 test("opens the CC Switch model picker for an account API key", async ({
   context,
   extensionId,
