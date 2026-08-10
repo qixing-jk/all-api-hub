@@ -83,6 +83,12 @@ const account = {
   status: "active" as const,
 }
 
+const expectFailureCode = async (promise: Promise<unknown>, code: string) => {
+  const error = await promise.catch((failure) => failure)
+  expect(error).toBeInstanceOf(ManagedResourceError)
+  expect((error as ManagedResourceError).failure.code).toBe(code)
+}
+
 describe("Sub2API native managed resource", () => {
   beforeEach(() => {
     vi.resetAllMocks()
@@ -134,6 +140,71 @@ describe("Sub2API native managed resource", () => {
     expect(SUB2API_MANAGED_RESOURCE_DETAIL_FIELD_IDS).toContain(
       SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key,
     )
+  })
+
+  it("rejects missing and invalid saved configuration before opening", async () => {
+    mocks.getPreferences.mockResolvedValueOnce({})
+    await expectFailureCode(
+      sub2ApiManagedResourceRegistration.open(),
+      MANAGED_RESOURCE_FAILURE_CODES.ConfigurationRequired,
+    )
+
+    mocks.getPreferences.mockResolvedValueOnce({
+      sub2apiManagedSite: { ...config, baseUrl: "not-an-origin" },
+    })
+    await expectFailureCode(
+      sub2ApiManagedResourceRegistration.open(),
+      MANAGED_RESOURCE_FAILURE_CODES.InvalidConfiguration,
+    )
+  })
+
+  it.each([
+    [
+      new Sub2ApiAdminApiError("unauthorized", 401, "AUTH", {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: true,
+      }),
+      MANAGED_RESOURCE_FAILURE_CODES.AuthenticationFailed,
+    ],
+    [
+      new Sub2ApiAdminApiError("missing", 404, undefined, {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: true,
+      }),
+      MANAGED_RESOURCE_FAILURE_CODES.NotFound,
+    ],
+    [
+      new Sub2ApiAdminApiError("offline", undefined, undefined, {
+        dispatch: "not-dispatched",
+        responseReceived: false,
+        confirmedNonApplication: true,
+      }),
+      MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+    ],
+    [
+      new Sub2ApiAdminApiError("rejected", 500, "UPSTREAM", {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: true,
+      }),
+      MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
+    ],
+    [
+      Object.assign(new Error("cancelled"), { name: "AbortError" }),
+      MANAGED_RESOURCE_FAILURE_CODES.Aborted,
+    ],
+    [
+      Object.assign(new Error("timed out"), { name: "TimeoutError" }),
+      MANAGED_RESOURCE_FAILURE_CODES.Unavailable,
+    ],
+    [new Error("unexpected"), MANAGED_RESOURCE_FAILURE_CODES.Unexpected],
+  ])("maps provider failures to %s", async (error, expectedCode) => {
+    mocks.listAccounts.mockRejectedValueOnce(error)
+    const workspace = await sub2ApiManagedResourceRegistration.open()
+
+    await expectFailureCode(workspace.list(), expectedCode)
   })
 
   it("uses native account search for non-empty display queries and shows safe facts", async () => {
@@ -218,6 +289,77 @@ describe("Sub2API native managed resource", () => {
     )
   })
 
+  it("validates provider-native create fields and builds an inactive model mapping", async () => {
+    const workspace = await sub2ApiManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor()
+    const invalidValues = {
+      ...editor.initialValues,
+      name: "Invalid account",
+      platform: "unsupported-platform",
+      status: "error",
+      baseURL: "not a URL",
+      key: { unexpected: true },
+      supportedModels: "not-a-list",
+      concurrency: 1.5,
+      priority: -1,
+    } as unknown as typeof editor.initialValues
+
+    expect(editor.validate(invalidValues)).toEqual({
+      valid: false,
+      issues: expect.arrayContaining([
+        {
+          fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
+        },
+        {
+          fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
+        },
+        {
+          fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
+        },
+        {
+          fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+        },
+        {
+          fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
+        },
+        {
+          fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.OutOfRange,
+        },
+      ]),
+    })
+
+    const result = await editor.submit({
+      ...editor.initialValues,
+      name: "Inactive upstream",
+      platform: "anthropic",
+      status: "inactive",
+      baseURL: "https://api.example.invalid/v1",
+      key: { kind: "replace", value: "create-secret" },
+      supportedModels: ["model-b", " model-a ", "model-b"],
+    })
+
+    expect(result.outcome).toBe(MANAGED_SITE_MUTATION_OUTCOMES.Succeeded)
+    expect(mocks.createAccount).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        modelMapping: { "model-b": "model-b", "model-a": "model-a" },
+      }),
+      expect.any(Object),
+    )
+    expect(mocks.updateAccount).toHaveBeenCalledWith(
+      config,
+      17,
+      { status: "inactive" },
+      expect.any(Object),
+    )
+  })
+
   it("opens imported credentials through the shared native create seed", async () => {
     expect(sub2ApiManagedResourceRegistration.createSeedKinds).toContain(
       MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
@@ -253,6 +395,22 @@ describe("Sub2API native managed resource", () => {
       priority: 8,
       notes: "Imported note",
     })
+
+    const disabled = await openNativeManagedChannelImportEditor(
+      SITE_TYPES.SUB2API,
+      {
+        name: "Disabled import",
+        type: ChannelType.OpenAI,
+        key: "disabled-secret",
+        base_url: "https://disabled.example.invalid/v1",
+        models: [],
+        groups: [],
+        priority: 2,
+        weight: 1,
+        status: 0,
+      },
+    )
+    expect(disabled?.editor.initialValues.status).toBe("inactive")
   })
 
   it("keeps masked imported credentials unavailable for native create validation", async () => {
@@ -301,6 +459,9 @@ describe("Sub2API native managed resource", () => {
       ]),
     )
     expect(mocks.revealKey).not.toHaveBeenCalled()
+    await expect(editor.loadSecret?.("name")).rejects.toMatchObject({
+      failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
     await expect(editor.loadSecret?.("key")).resolves.toBe("saved-secret")
     expect(mocks.revealKey).toHaveBeenCalledWith(config, 17, undefined)
 
@@ -338,6 +499,102 @@ describe("Sub2API native managed resource", () => {
     expect(mocks.updateAccount.mock.calls[0]?.[2]).not.toHaveProperty(
       "platform",
     )
+  })
+
+  it("shows fail-closed facts for an auto-disabled account without a saved key", async () => {
+    const edgeAccount = {
+      ...account,
+      id: 18,
+      name: "",
+      notes: "",
+      credentials: {
+        model_mapping: {
+          " model-example ": " provider-model ",
+          " ": "ignored",
+          "model-without-target": " ",
+        },
+      },
+      credentials_status: { has_api_key: false },
+      concurrency: undefined,
+      priority: undefined,
+      status: "error" as const,
+    }
+    mocks.listAccounts.mockResolvedValueOnce({ items: [edgeAccount], total: 1 })
+    mocks.getAccount.mockResolvedValue(edgeAccount)
+    const workspace = await sub2ApiManagedResourceRegistration.open()
+    const [facts] = (await workspace.list()).items
+
+    expect(facts).toMatchObject({
+      displayName: "Sub2API account 18",
+      status: "auto-disabled",
+      fields: expect.arrayContaining([
+        { fieldId: "key", kind: "secret", state: "unavailable" },
+        {
+          fieldId: "supportedModels",
+          kind: "list",
+          value: ["model-example"],
+        },
+      ]),
+    })
+    expect(facts.fields).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fieldId: "baseURL" }),
+        expect.objectContaining({ fieldId: "concurrency" }),
+        expect.objectContaining({ fieldId: "priority" }),
+      ]),
+    )
+
+    const editor = await workspace.openEditEditor(facts.ref)
+    expect(editor.loadSecret).toBeUndefined()
+    expect(editor.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          fieldId: "status",
+          options: expect.arrayContaining([{ value: "error" }]),
+        }),
+        expect.objectContaining({ fieldId: "key", secretState: "unavailable" }),
+      ]),
+    )
+    const validValues = {
+      ...editor.initialValues,
+      name: "Recovered account",
+      baseURL: "https://recovered.example.invalid/v1",
+    }
+    expect(editor.validate(validValues)).toEqual({ valid: true })
+    expect(editor.validate({ ...validValues, status: "paused" })).toEqual({
+      valid: false,
+      issues: [
+        {
+          fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
+        },
+      ],
+    })
+  })
+
+  it("skips the provider update when editable values are unchanged", async () => {
+    const workspace = await sub2ApiManagedResourceRegistration.open()
+    const [facts] = (await workspace.list()).items
+    const editor = await workspace.openEditEditor(facts.ref)
+
+    const result = await editor.submit(editor.initialValues)
+
+    expect(result).toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+      confirmedEffects: [],
+    })
+    expect(mocks.updateAccount).not.toHaveBeenCalled()
+  })
+
+  it("rejects malformed resource references before provider dispatch", async () => {
+    const workspace = await sub2ApiManagedResourceRegistration.open()
+    const [facts] = (await workspace.list()).items
+
+    await expectFailureCode(
+      workspace.openEditEditor({ ...facts.ref, resourceId: "not-a-number" }),
+      MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+    )
+    expect(mocks.getAccount).not.toHaveBeenCalled()
   })
 
   it("accepts upstream-supported zero concurrency and priority values", async () => {

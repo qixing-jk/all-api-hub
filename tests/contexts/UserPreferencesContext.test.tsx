@@ -30,6 +30,7 @@ import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 import { SortingCriteriaType } from "~/types/sorting"
+import { DEFAULT_SUB2API_MANAGED_SITE_CONFIG } from "~/types/sub2apiManagedSiteConfig"
 import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
 import { deepOverride } from "~/utils"
 import {
@@ -161,6 +162,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       resetOctopusConfig: vi.fn(),
       resetAxonHubConfig: vi.fn(),
       resetClaudeCodeHubConfig: vi.fn(),
+      resetSub2ApiManagedSiteConfig: vi.fn(),
       resetNewApiModelSyncConfig: vi.fn(),
       resetCliProxyConfig: vi.fn(),
       resetClaudeCodeRouterConfig: vi.fn(),
@@ -379,6 +381,12 @@ describe("UserPreferencesContext", () => {
       async () =>
         applyPersistedUpdate({
           claudeCodeHub: DEFAULT_PREFERENCES.claudeCodeHub,
+        }),
+    )
+    mockedUserPreferences.resetSub2ApiManagedSiteConfig.mockImplementation(
+      async () =>
+        applyPersistedUpdate({
+          sub2apiManagedSite: DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
         }),
     )
     mockedUserPreferences.resetNewApiModelSyncConfig.mockImplementation(
@@ -659,6 +667,14 @@ describe("UserPreferencesContext", () => {
         baseUrl: "https://managed-cch.example",
         adminToken: "managed-cch-token",
       })
+      await context.updateSub2ApiManagedSiteBaseUrl(
+        "https://sub2api.example.invalid",
+      )
+      await context.updateSub2ApiManagedSiteAdminToken("sub2api-admin-token")
+      await context.updateSub2ApiManagedSiteConfig({
+        baseUrl: "https://managed-sub2api.example.invalid",
+        adminToken: "managed-sub2api-token",
+      })
       await context.updateManagedSiteType(SITE_TYPES.VELOERA)
       await context.updateThemeMode("dark")
       await context.updateLoggingConsoleEnabled(false)
@@ -779,6 +795,24 @@ describe("UserPreferencesContext", () => {
     expect(
       mockedUserPreferences.savePreferencesWithResult,
     ).toHaveBeenCalledWith({
+      sub2apiManagedSite: { baseUrl: "https://sub2api.example.invalid" },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith({
+      sub2apiManagedSite: { adminToken: "sub2api-admin-token" },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith({
+      sub2apiManagedSite: {
+        baseUrl: "https://managed-sub2api.example.invalid",
+        adminToken: "managed-sub2api-token",
+      },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith({
       managedSiteModelSync: {
         enabled: false,
         allowedModels: ["gpt-4o"],
@@ -812,6 +846,10 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.preferences.claudeCodeHub).toEqual({
       baseUrl: "https://managed-cch.example",
       adminToken: "managed-cch-token",
+    })
+    expect((latestContext as any)?.preferences.sub2apiManagedSite).toEqual({
+      baseUrl: "https://managed-sub2api.example.invalid",
+      adminToken: "managed-sub2api-token",
     })
     expect((latestContext as any)?.preferences.cliProxy.baseUrl).toBe(
       "https://cli.example",
@@ -1253,6 +1291,10 @@ describe("UserPreferencesContext", () => {
       email: "admin@example.com",
       password: "secret-password",
     }
+    preferences.sub2apiManagedSite = {
+      baseUrl: "https://sub2api.example.invalid",
+      adminToken: "sub2api-admin-token",
+    }
     preferences.cliProxy = {
       ...preferences.cliProxy,
       baseUrl: "https://cli.example",
@@ -1308,6 +1350,7 @@ describe("UserPreferencesContext", () => {
       await context.resetOctopusConfig()
       await context.resetAxonHubConfig()
       await context.resetClaudeCodeHubConfig()
+      await context.resetSub2ApiManagedSiteConfig()
       await context.resetNewApiModelSyncConfig()
       await context.resetCliProxyConfig()
       await context.resetClaudeCodeRouterConfig()
@@ -1347,6 +1390,9 @@ describe("UserPreferencesContext", () => {
     )
     expect((latestContext as any)?.preferences.claudeCodeHub).toEqual(
       DEFAULT_PREFERENCES.claudeCodeHub,
+    )
+    expect((latestContext as any)?.preferences.sub2apiManagedSite).toEqual(
+      DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
     )
     expect((latestContext as any)?.preferences.cliProxy).toEqual(
       DEFAULT_PREFERENCES.cliProxy,
@@ -1839,6 +1885,9 @@ describe("UserPreferencesContext", () => {
     mockedUserPreferences.resetClaudeCodeHubConfig.mockResolvedValue(
       preferenceWriteFailure,
     )
+    mockedUserPreferences.resetSub2ApiManagedSiteConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
     mockedUserPreferences.resetNewApiModelSyncConfig.mockResolvedValue(
       preferenceWriteFailure,
     )
@@ -1884,6 +1933,7 @@ describe("UserPreferencesContext", () => {
       expectFailedWrite(await context.resetVeloeraConfig())
       expectFailedWrite(await context.resetOctopusConfig())
       expectFailedWrite(await context.resetClaudeCodeHubConfig())
+      expectFailedWrite(await context.resetSub2ApiManagedSiteConfig())
       expectFailedWrite(await context.resetNewApiModelSyncConfig())
       expectFailedWrite(await context.resetCliProxyConfig())
       expectFailedWrite(await context.resetClaudeCodeRouterConfig())

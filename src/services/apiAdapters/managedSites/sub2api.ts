@@ -576,6 +576,7 @@ const resources: ManagedUpstreamResourcesCapability<
           secret: await revealSub2ApiApiKey(config, accountId),
         }
       } catch (error) {
+        if (isAbortLikeError(error)) throw error
         if (
           error instanceof Sub2ApiAdminApiError &&
           error.code === SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE

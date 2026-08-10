@@ -113,6 +113,31 @@ describe("managedResourcePresentation", () => {
     expect(row.searchText).not.toContain("available")
   })
 
+  it.each([
+    ["masked", "managedSiteChannels:editor.secret.state.masked"],
+    ["unavailable", "managedSiteChannels:editor.secret.state.unavailable"],
+    [
+      "permission-hidden",
+      "managedSiteChannels:editor.secret.state.permissionHidden",
+    ],
+  ] as const)("maps the %s secret state to controlled copy", (state, key) => {
+    const mapper = createManagedResourcePresentationMapper({
+      resolveLabel,
+      fieldIds: ["key"],
+    })
+    const row = mapper.map({
+      ...createManagedResourceFacts(),
+      fields: [{ fieldId: "key", kind: "secret", state }],
+    })
+
+    expect(row.cells.key).toMatchObject({
+      kind: "text",
+      value: `missing:${key}`,
+      sortValue: state,
+    })
+    expect(row.searchText).not.toContain(state)
+  })
+
   it("maps approved detail fields while excluding unregistered and secret facts", () => {
     const mapper = createManagedResourcePresentationMapper()
     const row = mapper.map({

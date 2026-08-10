@@ -1,4 +1,9 @@
 import {
+  managedSiteSub2ApiSearchControls,
+  managedSiteSub2ApiSearchSections,
+} from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteSub2Api.search"
+
+import {
   managedSiteAxonHubSearchControls,
   managedSiteAxonHubSearchSections,
 } from "./ManagedSiteAxonHub.search"
@@ -22,10 +27,6 @@ import {
   managedSiteOctopusSearchControls,
   managedSiteOctopusSearchSections,
 } from "./ManagedSiteOctopus.search"
-import {
-  managedSiteSub2ApiSearchControls,
-  managedSiteSub2ApiSearchSections,
-} from "./ManagedSiteSub2Api.search"
 import {
   managedSiteVeloeraSearchControls,
   managedSiteVeloeraSearchSections,

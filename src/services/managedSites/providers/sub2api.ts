@@ -251,7 +251,7 @@ async function sub2ApiAdminRequest<T>(
         code !== undefined && code !== 0 && code !== "0" && code !== "success"
       const missingRequiredData =
         (options.requireData ?? true) &&
-        (!isRecord(envelope) || !("data" in envelope))
+        (!isRecord(envelope) || !("data" in envelope) || envelope.data == null)
       if (
         !response.ok ||
         businessFailed ||

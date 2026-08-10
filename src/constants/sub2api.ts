@@ -34,7 +34,7 @@ export const SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS: Readonly<
   ) as Record<Sub2ApiApiKeyAccountPlatform, string>,
 )
 
-/** Sub2API API-key account platforms exposed by the upstream admin API. */
+/** Channel-type select options derived from canonical Sub2API platform metadata. */
 export const SUB2API_API_KEY_ACCOUNT_TYPE_OPTIONS = Object.freeze(
   SUB2API_API_KEY_ACCOUNT_PLATFORMS.map((platform) => {
     const metadata = SUB2API_API_KEY_ACCOUNT_PLATFORM_METADATA[platform]

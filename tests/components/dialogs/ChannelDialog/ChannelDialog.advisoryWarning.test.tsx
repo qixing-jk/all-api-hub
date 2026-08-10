@@ -402,10 +402,12 @@ describe("ChannelDialog advisory verification action", () => {
       }),
     )
 
+    expect(fetchChannelSecretKeyMock).not.toHaveBeenCalled()
     await act(async () => {
       await capturedVerificationRequests[0].onVerified()
     })
 
+    expect(fetchChannelSecretKeyMock).toHaveBeenCalledTimes(1)
     expect(
       screen.getByText(
         "channelDialog:warnings.verificationRequired.description",

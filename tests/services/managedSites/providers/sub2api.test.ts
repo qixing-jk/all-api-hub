@@ -20,6 +20,7 @@ import {
   buildChannelPayload,
   createSub2ApiApiKeyAccount,
   deleteSub2ApiApiKeyAccount,
+  fetchAvailableModels,
   getSub2ApiApiKeyAccount,
   InvalidSub2ApiResourceIdError,
   listSub2ApiApiKeyAccounts,
@@ -30,15 +31,21 @@ import {
   sub2ApiAccountToManagedSiteChannel,
   toSub2ApiManagedSiteChannelList,
   updateSub2ApiApiKeyAccount,
+  validateSub2ApiManagedSiteConfig,
 } from "~/services/managedSites/providers/sub2api"
 import {
   getManagedSiteTokenChannelStatus,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
 } from "~/services/managedSites/tokenChannelStatus"
+import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
   buildApiToken,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
+
+vi.mock("~/services/managedSites/utils/fetchTokenScopedModels", () => ({
+  fetchTokenScopedModels: vi.fn(),
+}))
 
 const config = {
   baseUrl: "https://sub2api.example.invalid/",
@@ -70,6 +77,7 @@ describe("Sub2API API-key account managed-site provider", () => {
 
   beforeEach(() => {
     mockFetch.mockReset()
+    vi.mocked(fetchTokenScopedModels).mockReset()
     vi.stubGlobal("fetch", mockFetch)
   })
 
@@ -178,6 +186,116 @@ describe("Sub2API API-key account managed-site provider", () => {
     await expect(result).resolves.toEqual({ items: [account], total: 1 })
     expect(vi.getTimerCount()).toBe(0)
   })
+
+  it.each(["AbortError", "TimeoutError"])(
+    "preserves a direct %s transport failure",
+    async (name) => {
+      const error = Object.assign(new Error("request stopped"), { name })
+      mockFetch.mockRejectedValueOnce(error)
+
+      await expect(validateSub2ApiManagedSiteConfig(config)).rejects.toBe(error)
+    },
+  )
+
+  it("wraps an ordinary network failure with transport evidence", async () => {
+    const error = new Error("offline")
+    mockFetch.mockRejectedValueOnce(error)
+
+    await expect(
+      validateSub2ApiManagedSiteConfig(config),
+    ).rejects.toMatchObject({
+      name: "Sub2ApiAdminApiError",
+      message: "Sub2API admin request failed",
+      evidence: {
+        dispatch: "dispatched",
+        responseReceived: false,
+        confirmedNonApplication: false,
+        raw: error,
+      },
+    })
+  })
+
+  it.each(["AbortError", "TimeoutError"])(
+    "preserves a direct %s response-read failure",
+    async (name) => {
+      const error = Object.assign(new Error("response stopped"), { name })
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: vi.fn().mockRejectedValueOnce(error),
+      } as unknown as Response)
+
+      await expect(validateSub2ApiManagedSiteConfig(config)).rejects.toBe(error)
+    },
+  )
+
+  it("wraps an unreadable response with response evidence", async () => {
+    const error = new Error("body unavailable")
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      text: vi.fn().mockRejectedValueOnce(error),
+    } as unknown as Response)
+
+    await expect(
+      validateSub2ApiManagedSiteConfig(config),
+    ).rejects.toMatchObject({
+      name: "Sub2ApiAdminApiError",
+      message: "Sub2API returned an invalid admin response",
+      status: 502,
+      evidence: {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: true,
+        raw: error,
+      },
+    })
+  })
+
+  it("rejects malformed JSON admin responses", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response("{not-json", {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    )
+
+    await expect(
+      validateSub2ApiManagedSiteConfig(config),
+    ).rejects.toMatchObject({
+      name: "Sub2ApiAdminApiError",
+      message: "Sub2API returned an invalid admin response",
+      status: 200,
+      evidence: {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: false,
+      },
+    })
+  })
+
+  it.each([
+    [
+      { code: "FAILED", message: "provider message", data: {} },
+      "provider message",
+    ],
+    [{ code: "FAILED", error: "provider error", data: {} }, "provider error"],
+    [{ code: "FAILED", data: {} }, "Sub2API admin request failed"],
+  ])(
+    "preserves controlled business failure diagnostics",
+    async (body, message) => {
+      mockFetch.mockResolvedValueOnce(jsonResponse(body))
+
+      await expect(
+        validateSub2ApiManagedSiteConfig(config),
+      ).rejects.toMatchObject({
+        name: "Sub2ApiAdminApiError",
+        code: "FAILED",
+        message,
+        evidence: { confirmedNonApplication: true },
+      })
+    },
+  )
 
   it("lists only API-key accounts with Admin API Key authentication", async () => {
     mockFetch.mockResolvedValueOnce(
@@ -432,6 +550,29 @@ describe("Sub2API API-key account managed-site provider", () => {
     })
   })
 
+  it("fetches and normalizes token-scoped models at the provider boundary", async () => {
+    const sourceAccount = buildDisplaySiteData({
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://api.example.invalid/v1/",
+    })
+    const token = buildApiToken({ key: "sk-models" })
+    vi.mocked(fetchTokenScopedModels).mockResolvedValueOnce({
+      models: [" model-a ", "model-a", "", "model-b"],
+      fetchFailed: false,
+    })
+
+    await expect(fetchAvailableModels(sourceAccount, token)).resolves.toEqual([
+      "model-a",
+      "model-b",
+    ])
+    expect(fetchTokenScopedModels).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://api.example.invalid/v1",
+      }),
+      token,
+    )
+  })
+
   it("forwards all provider-native import fields into account creation", () => {
     expect(
       buildChannelPayload({
@@ -549,28 +690,32 @@ describe("Sub2API API-key account managed-site provider", () => {
     })
   })
 
-  it("does not classify a successful create response without data as a confirmed rejection", async () => {
-    mockFetch.mockResolvedValueOnce(
-      jsonResponse({ code: 0, message: "success" }),
-    )
+  it.each([
+    ["a data property", { code: 0, message: "success" }],
+    ["non-null data", { code: 0, message: "success", data: null }],
+  ])(
+    "does not classify a successful create response without %s as a confirmed rejection",
+    async (_missingData, envelope) => {
+      mockFetch.mockResolvedValueOnce(jsonResponse(envelope))
 
-    await expect(
-      createSub2ApiApiKeyAccount(config, {
-        name: "Example upstream",
-        platform: "openai",
-        baseUrl: "https://api.example.invalid/v1",
-        apiKey: "sk-create",
-      }),
-    ).rejects.toMatchObject({
-      name: "Sub2ApiAdminApiError",
-      message: "Sub2API returned an admin response without required data",
-      evidence: {
-        dispatch: "dispatched",
-        responseReceived: true,
-        confirmedNonApplication: false,
-      },
-    })
-  })
+      await expect(
+        createSub2ApiApiKeyAccount(config, {
+          name: "Example upstream",
+          platform: "openai",
+          baseUrl: "https://api.example.invalid/v1",
+          apiKey: "sk-create",
+        }),
+      ).rejects.toMatchObject({
+        name: "Sub2ApiAdminApiError",
+        message: "Sub2API returned an admin response without required data",
+        evidence: {
+          dispatch: "dispatched",
+          responseReceived: true,
+          confirmedNonApplication: false,
+        },
+      })
+    },
+  )
 
   it("derives platform defaults, labels, options, and mappings from canonical metadata", () => {
     expect(SUB2API_DEFAULT_ACCOUNT_PLATFORM).toBe("openai")

@@ -188,10 +188,9 @@ export function ManagedResourceEditorBody({
   )
   const secretFieldSignature = descriptors
     .filter((descriptor) => descriptor.type === "secret")
-    .map((descriptor) =>
-      descriptor.type === "secret"
-        ? `${descriptor.fieldId}:${descriptor.secretState}:${descriptor.canReplace}`
-        : descriptor.fieldId,
+    .map(
+      (descriptor) =>
+        `${descriptor.fieldId}:${descriptor.secretState}:${descriptor.canReplace}`,
     )
     .join("|")
   useEffect(() => {

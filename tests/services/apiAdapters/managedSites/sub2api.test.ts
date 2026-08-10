@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -7,19 +7,25 @@ import {
   sub2ApiManagedSiteChannels,
 } from "~/services/apiAdapters/managedSites/sub2api"
 import { MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS } from "~/services/managedSites/channelMatch"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import {
   createSub2ApiApiKeyAccount,
   deleteSub2ApiApiKeyAccount,
   getSub2ApiApiKeyAccount,
+  listSub2ApiApiKeyAccounts,
   revealSub2ApiApiKey,
+  searchSub2ApiApiKeyAccounts,
   SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
   Sub2ApiAdminApiError,
   updateSub2ApiApiKeyAccount,
 } from "~/services/managedSites/providers/sub2api"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   createManagedUpstreamResourceRef,
   normalizeManagedUpstreamResourceScopeKey,
 } from "~/types/managedUpstreamResource"
+import { buildUserPreferences } from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/managedSites/providers/sub2api", async (importOriginal) => {
   const actual =
@@ -31,7 +37,9 @@ vi.mock("~/services/managedSites/providers/sub2api", async (importOriginal) => {
     createSub2ApiApiKeyAccount: vi.fn(),
     deleteSub2ApiApiKeyAccount: vi.fn(),
     getSub2ApiApiKeyAccount: vi.fn(),
+    listSub2ApiApiKeyAccounts: vi.fn(),
     revealSub2ApiApiKey: vi.fn(),
+    searchSub2ApiApiKeyAccounts: vi.fn(),
     updateSub2ApiApiKeyAccount: vi.fn(),
   }
 })
@@ -44,6 +52,18 @@ const candidates = [
   { id: 11, name: "First", key: "********" },
   { id: 12, name: "Second", key: "********" },
 ] as any
+const nativeAccount = {
+  id: 17,
+  name: "Existing account",
+  platform: "openai" as const,
+  type: "apikey" as const,
+  credentials: { base_url: "https://api.example.invalid/v1" },
+  credentials_status: { has_api_key: true },
+  concurrency: 3,
+  priority: 8,
+  notes: "Provider note",
+  status: "active" as const,
+}
 
 const resourceRef = (resourceId: string | number) =>
   createManagedUpstreamResourceRef({
@@ -73,6 +93,10 @@ describe("Sub2API managed-site adapter", () => {
     vi.resetAllMocks()
   })
 
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   it("re-reads selected keys for duplicate comparison and normal key viewing", async () => {
     vi.mocked(revealSub2ApiApiKey)
       .mockResolvedValueOnce("sk-first")
@@ -90,6 +114,60 @@ describe("Sub2API managed-site adapter", () => {
     ).resolves.toBe("sk-selected")
   })
 
+  it("delegates list, search, delete, and preserves already usable keys", async () => {
+    vi.mocked(listSub2ApiApiKeyAccounts).mockResolvedValue({
+      items: [nativeAccount],
+      total: 1,
+    })
+    vi.mocked(searchSub2ApiApiKeyAccounts).mockResolvedValue({
+      items: [nativeAccount],
+      total: 1,
+    })
+    vi.mocked(deleteSub2ApiApiKeyAccount).mockImplementationOnce(
+      async (_config, _id, options) => {
+        options?.observer?.onDispatch()
+        options?.observer?.onResponse()
+      },
+    )
+
+    await expect(
+      sub2ApiManagedSiteChannels.list!(config),
+    ).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: 17 })],
+      total: 1,
+    })
+    await expect(
+      sub2ApiManagedSiteChannels.search(config, "Existing"),
+    ).resolves.toMatchObject({
+      items: [expect.objectContaining({ id: 17 })],
+      total: 1,
+    })
+    await expect(
+      sub2ApiManagedSiteCapabilities.resources.items.list(config),
+    ).resolves.toMatchObject({
+      items: [expect.objectContaining({ displayName: "Existing account" })],
+      total: 1,
+    })
+    await expect(
+      sub2ApiManagedSiteCapabilities.resources.items.search(config, "Existing"),
+    ).resolves.toMatchObject({
+      items: [expect.objectContaining({ displayName: "Existing account" })],
+      total: 1,
+    })
+    await expect(
+      sub2ApiManagedSiteChannels.delete(config, 17),
+    ).resolves.toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+    })
+    await expect(
+      sub2ApiManagedSiteChannels.hydrateComparableKeys!(config, [
+        { id: 17, name: "Ready", key: "sk-ready" } as any,
+      ]),
+    ).resolves.toEqual([{ id: 17, name: "Ready", key: "sk-ready" }])
+
+    expect(revealSub2ApiApiKey).not.toHaveBeenCalled()
+  })
+
   it("keeps failed key resolution unknown instead of claiming no duplicate", async () => {
     vi.mocked(revealSub2ApiApiKey).mockRejectedValueOnce(
       new Error("key export unavailable"),
@@ -104,6 +182,7 @@ describe("Sub2API managed-site adapter", () => {
   })
 
   it("hydrates comparable keys with bounded concurrency while preserving input order", async () => {
+    const expectedConcurrencyBound = 4
     const manyCandidates = Array.from({ length: 6 }, (_, index) => ({
       id: index + 1,
       name: `Candidate ${index + 1}`,
@@ -127,7 +206,8 @@ describe("Sub2API managed-site adapter", () => {
         key: `sk-${candidate.id}`,
       })),
     )
-    expect(maxActive).toBe(1)
+    expect(maxActive).toBeGreaterThan(0)
+    expect(maxActive).toBeLessThanOrEqual(expectedConcurrencyBound)
   })
 
   it("preserves reveal abort errors instead of downgrading them to unknown", async () => {
@@ -184,7 +264,7 @@ describe("Sub2API managed-site adapter", () => {
         type: ChannelType.OpenAI,
         key: "import-secret",
         base_url: "https://api.example.invalid/v1",
-        models: "",
+        models: " model-a, model-a, model-b ",
         groups: [],
         priority: 8,
         weight: 3,
@@ -200,10 +280,44 @@ describe("Sub2API managed-site adapter", () => {
         platform: "openai",
         baseUrl: "https://api.example.invalid/v1",
         apiKey: "import-secret",
+        modelMapping: { "model-a": "model-a", "model-b": "model-b" },
         concurrency: 3,
         priority: 8,
         notes: "Imported note",
       }),
+      expect.any(Object),
+    )
+  })
+
+  it("omits provider-native create fields that are absent from the legacy payload", async () => {
+    vi.mocked(createSub2ApiApiKeyAccount).mockImplementationOnce(
+      async (_config, _input, options) => {
+        options?.observer?.onDispatch()
+        options?.observer?.onResponse()
+        return nativeAccount
+      },
+    )
+    const payload = createPayload("sk-create")
+
+    await sub2ApiManagedSiteChannels.create(config, {
+      ...payload,
+      channel: {
+        ...payload.channel,
+        models: undefined as any,
+        priority: 0,
+        weight: 0,
+        remark: undefined,
+      },
+    })
+
+    expect(createSub2ApiApiKeyAccount).toHaveBeenCalledWith(
+      config,
+      {
+        name: "Imported account",
+        platform: "openai",
+        baseUrl: "https://api.example.invalid/v1",
+        apiKey: "sk-create",
+      },
       expect.any(Object),
     )
   })
@@ -271,6 +385,272 @@ describe("Sub2API managed-site adapter", () => {
     )
   })
 
+  it("maps every mutable legacy update field to the provider contract", async () => {
+    vi.mocked(updateSub2ApiApiKeyAccount).mockImplementationOnce(
+      async (_config, _id, _input, options) => {
+        options?.observer?.onDispatch()
+        options?.observer?.onResponse()
+        return nativeAccount
+      },
+    )
+
+    await sub2ApiManagedSiteChannels.update(config, {
+      id: 17,
+      name: "Renamed account",
+      base_url: "https://next.example.invalid/v1",
+      key: " sk-next ",
+      weight: 0,
+      priority: 0,
+      status: CHANNEL_STATUS.Enable,
+    })
+
+    expect(updateSub2ApiApiKeyAccount).toHaveBeenCalledWith(
+      config,
+      17,
+      {
+        name: "Renamed account",
+        baseUrl: "https://next.example.invalid/v1",
+        apiKey: "sk-next",
+        concurrency: 0,
+        priority: 0,
+        status: "active",
+      },
+      expect.any(Object),
+    )
+  })
+
+  it("classifies confirmed provider rejection diagnostics", async () => {
+    const rejection = new Sub2ApiAdminApiError(
+      "provider rejected",
+      409,
+      "DUP",
+      {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: true,
+      },
+    )
+    vi.mocked(createSub2ApiApiKeyAccount).mockImplementationOnce(
+      async (_config, _input, options) => {
+        options?.observer?.onDispatch()
+        options?.observer?.onResponse()
+        throw rejection
+      },
+    )
+
+    await expect(
+      sub2ApiManagedSiteChannels.create(config, createPayload("sk-create")),
+    ).resolves.toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic: {
+        message: "provider rejected",
+        code: "DUP",
+        statusCode: 409,
+        raw: rejection,
+      },
+    })
+  })
+
+  it("rethrows an unconfirmed provider failure", async () => {
+    const error = new Error("connection lost")
+    vi.mocked(createSub2ApiApiKeyAccount).mockImplementationOnce(
+      async (_config, _input, options) => {
+        options?.observer?.onDispatch()
+        throw error
+      },
+    )
+
+    await expect(
+      sub2ApiManagedSiteChannels.create(config, createPayload("sk-create")),
+    ).rejects.toBe(error)
+  })
+
+  it("reports a rejected inactive-status follow-up as partial", async () => {
+    vi.mocked(createSub2ApiApiKeyAccount).mockImplementationOnce(
+      async (_config, _input, options) => {
+        options?.observer?.onDispatch()
+        options?.observer?.onResponse()
+        return nativeAccount
+      },
+    )
+    vi.mocked(updateSub2ApiApiKeyAccount).mockImplementationOnce(
+      async (_config, _id, _input, options) => {
+        options?.observer?.onDispatch()
+        options?.observer?.onResponse()
+        throw new Sub2ApiAdminApiError("status rejected", 400, undefined, {
+          dispatch: "dispatched",
+          responseReceived: true,
+          confirmedNonApplication: true,
+        })
+      },
+    )
+    const payload = createPayload("sk-create")
+
+    await expect(
+      sub2ApiManagedSiteChannels.create(config, {
+        ...payload,
+        channel: {
+          ...payload.channel,
+          status: CHANNEL_STATUS.ManuallyDisabled,
+        },
+      }),
+    ).resolves.toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+      completion: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic: { message: "status rejected", statusCode: 400 },
+    })
+  })
+
+  it("maps legacy resource mutation envelopes without leaking native payloads", async () => {
+    const resources = sub2ApiManagedSiteCapabilities.resources
+    const effect = {
+      kind: "resource-created",
+      resourceKind: "channel",
+    } as const
+    const draft = {
+      name: "Imported account",
+      type: ChannelType.OpenAI,
+      key: "sk-create",
+      base_url: "https://api.example.invalid/v1",
+      models: [],
+      groups: [],
+      priority: 8,
+      weight: 3,
+      status: CHANNEL_STATUS.Enable,
+      notes: "Imported note",
+    } as any
+    const succeeded = {
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+      data: { id: 17 },
+      confirmedEffects: [effect],
+    } as any
+    const partialWithData = {
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+      data: { id: 17 },
+      confirmedEffects: [effect],
+      completion: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic: { message: "follow-up rejected" },
+    } as any
+    const partialWithoutData = {
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+      confirmedEffects: [effect],
+      completion: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+      diagnostic: { message: "follow-up uncertain" },
+    } as any
+    const rejected = {
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic: { message: "create rejected" },
+    } as any
+    const createSpy = vi
+      .spyOn(sub2ApiManagedSiteChannels, "create")
+      .mockResolvedValueOnce(succeeded)
+      .mockResolvedValueOnce(partialWithData)
+      .mockResolvedValueOnce(partialWithoutData)
+      .mockResolvedValueOnce(rejected)
+
+    await expect(resources.items.create(config, draft)).resolves.toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+      data: null,
+    })
+    await expect(resources.items.create(config, draft)).resolves.toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+      data: null,
+    })
+    const partialResult = await resources.items.create(config, draft)
+    expect(partialResult).toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+    })
+    expect(partialResult).not.toHaveProperty("data")
+    await expect(resources.items.create(config, draft)).resolves.toBe(rejected)
+    expect(createSpy).toHaveBeenCalledTimes(4)
+
+    vi.spyOn(sub2ApiManagedSiteChannels, "update").mockResolvedValueOnce(
+      succeeded,
+    )
+    await expect(
+      resources.items.update(config, { native: nativeAccount } as any, draft),
+    ).resolves.toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+      data: null,
+    })
+  })
+
+  it("prepares and validates the complete legacy resource draft surface", async () => {
+    const drafts = sub2ApiManagedSiteCapabilities.resources.drafts
+    const source = createPayload("sk-source").channel as any
+
+    await expect(drafts.prepareImportDraft({ source } as any)).resolves.toBe(
+      source,
+    )
+    await expect(
+      drafts.prepareImportDraft({
+        resource: {
+          displayName: "Imported resource",
+          endpointLabel: "https://fallback.example.invalid/v1",
+        },
+      } as any),
+    ).resolves.toMatchObject({
+      name: "Imported resource",
+      base_url: "https://fallback.example.invalid/v1",
+      key: "",
+      status: CHANNEL_STATUS.Enable,
+    })
+    expect(
+      drafts.prepareEditDraft({ native: nativeAccount } as any),
+    ).toMatchObject({
+      name: "Existing account",
+      key: "********",
+      base_url: "https://api.example.invalid/v1",
+      priority: 8,
+      weight: 3,
+      status: CHANNEL_STATUS.Enable,
+    })
+    expect(drafts.describeFields({ mode: "create" })).toEqual([
+      expect.objectContaining({ name: "name", required: true }),
+      expect.objectContaining({ name: "base_url", required: true }),
+      expect.objectContaining({ name: "key", required: true }),
+    ])
+    expect(
+      drafts.validateDraft({
+        ...source,
+        name: " ",
+        base_url: " ",
+        key: "",
+      }),
+    ).toEqual({
+      valid: false,
+      errors: [
+        { field: "name", message: "Name is required" },
+        { field: "base_url", message: "Base URL is required" },
+        { field: "key", message: "API Key is required" },
+      ],
+    })
+  })
+
+  it("checks persisted Sub2API runtime configuration defensively", async () => {
+    const getPreferences = vi.spyOn(userPreferences, "getPreferences")
+    getPreferences.mockResolvedValueOnce(
+      buildUserPreferences({ sub2apiManagedSite: config }),
+    )
+    await expect(
+      sub2ApiManagedSiteCapabilities.config.checkValid(),
+    ).resolves.toBe(true)
+
+    getPreferences.mockResolvedValueOnce(
+      buildUserPreferences({
+        sub2apiManagedSite: { baseUrl: "", adminToken: "" },
+      }),
+    )
+    await expect(
+      sub2ApiManagedSiteCapabilities.config.checkValid(),
+    ).resolves.toBe(false)
+
+    getPreferences.mockRejectedValueOnce(new Error("storage unavailable"))
+    await expect(
+      sub2ApiManagedSiteCapabilities.config.checkValid(),
+    ).resolves.toBe(false)
+  })
+
   it("rejects invalid resource ids before any provider request", async () => {
     const resources = sub2ApiManagedSiteCapabilities.resources
 
@@ -318,5 +698,33 @@ describe("Sub2API managed-site adapter", () => {
         resourceRef(17),
       ),
     ).resolves.toEqual({ status: "unsupported" })
+  })
+
+  it.each(["AbortError", "TimeoutError"])(
+    "preserves %s errors while revealing resource secrets",
+    async (name) => {
+      const error = Object.assign(new Error("request stopped"), { name })
+      vi.mocked(revealSub2ApiApiKey).mockRejectedValueOnce(error)
+
+      await expect(
+        sub2ApiManagedSiteCapabilities.resources.secrets!.revealSecret(
+          config,
+          resourceRef(17),
+        ),
+      ).rejects.toBe(error)
+    },
+  )
+
+  it("reports ordinary resource secret failures as unavailable", async () => {
+    vi.mocked(revealSub2ApiApiKey).mockRejectedValueOnce(
+      new Error("provider unavailable"),
+    )
+
+    await expect(
+      sub2ApiManagedSiteCapabilities.resources.secrets!.revealSecret(
+        config,
+        resourceRef(17),
+      ),
+    ).resolves.toEqual({ status: "unavailable" })
   })
 })

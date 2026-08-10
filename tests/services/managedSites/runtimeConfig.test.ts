@@ -245,6 +245,18 @@ describe("managed-site runtime config resolver", () => {
         }),
         unconfigured: buildUserPreferences({ claudeCodeHub: undefined }),
       },
+      {
+        siteType: SITE_TYPES.SUB2API,
+        incomplete: buildUserPreferences({
+          sub2apiManagedSite: {
+            baseUrl: "https://sub2api.example.invalid",
+            adminToken: "",
+          },
+        }),
+        unconfigured: buildUserPreferences({
+          sub2apiManagedSite: { baseUrl: " ", adminToken: " " },
+        }),
+      },
     ]
 
     for (const { siteType, incomplete, unconfigured } of cases) {

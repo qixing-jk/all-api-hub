@@ -604,6 +604,12 @@ describe("ManagedSiteChannelsRoute", () => {
   it("routes the production Sub2API definition through its full native field set", () => {
     installNativeControllers()
     configureNativePreferences(SITE_TYPES.SUB2API)
+    getFieldPolicy.mockReturnValue({
+      fields: SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS.map((fieldId) => ({
+        fieldId,
+        resolveLabel: () => `sub2api:${fieldId}`,
+      })),
+    } as any)
 
     render(
       <ManagedSiteChannelsRoute

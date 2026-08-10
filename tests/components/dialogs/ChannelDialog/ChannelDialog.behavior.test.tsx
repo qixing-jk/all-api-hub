@@ -24,6 +24,7 @@ import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { ChannelType } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
+import { SUB2API_API_KEY_ACCOUNT_TYPE_OPTIONS } from "~/constants/sub2api"
 import enChannelDialog from "~/locales/en/channelDialog.json"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
@@ -1112,6 +1113,20 @@ describe("ChannelDialog behavior", () => {
     render(<ChannelDialog isOpen={true} onClose={vi.fn()} />)
 
     expect(screen.getByTestId("models-multi-select")).toBeInTheDocument()
+    expect(screen.queryByTestId("groups-multi-select")).toBeNull()
+    expect(screen.queryByText("channelDialog:fields.priority.label")).toBeNull()
+    expect(screen.queryByText("channelDialog:fields.weight.label")).toBeNull()
+  })
+
+  it("uses Sub2API platform options and hides legacy-only fields", () => {
+    mockUserPreferences.managedSiteType = SITE_TYPES.SUB2API
+
+    render(<ChannelDialog isOpen={true} onClose={vi.fn()} />)
+
+    for (const option of SUB2API_API_KEY_ACCOUNT_TYPE_OPTIONS) {
+      expect(screen.getByText(option.label)).toBeInTheDocument()
+    }
+    expect(screen.queryByTestId("models-multi-select")).toBeNull()
     expect(screen.queryByTestId("groups-multi-select")).toBeNull()
     expect(screen.queryByText("channelDialog:fields.priority.label")).toBeNull()
     expect(screen.queryByText("channelDialog:fields.weight.label")).toBeNull()

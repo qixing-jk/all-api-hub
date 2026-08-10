@@ -64,6 +64,7 @@ describe("Sub2ApiSettings", () => {
   })
 
   it("validates the trimmed URL and Admin API Key before saving them", async () => {
+    const toast = await import("react-hot-toast")
     const context = arrange()
     vi.mocked(validateSub2ApiManagedSiteConfig).mockResolvedValue()
 
@@ -98,6 +99,83 @@ describe("Sub2ApiSettings", () => {
       },
       { expectedLastUpdated: 7 },
     )
+    await waitFor(() => {
+      expect(vi.mocked(toast.default.success)).toHaveBeenCalledWith(
+        "settings:sub2apiManagedSite.validation.success",
+      )
+    })
+  })
+
+  it("saves trimmed field changes on blur and skips unchanged values", async () => {
+    const context = arrange()
+    const baseUrl = screen.getByPlaceholderText(
+      "settings:sub2apiManagedSite.fields.baseUrlPlaceholder",
+    )
+    const adminKey = screen.getByPlaceholderText(
+      "settings:sub2apiManagedSite.fields.adminApiKeyPlaceholder",
+    )
+
+    fireEvent.blur(baseUrl, {
+      target: { value: "https://sub2api.example.com" },
+    })
+    fireEvent.blur(adminKey, { target: { value: "admin-key" } })
+    expect(context.updateSub2ApiManagedSiteBaseUrl).not.toHaveBeenCalled()
+    expect(context.updateSub2ApiManagedSiteAdminToken).not.toHaveBeenCalled()
+
+    fireEvent.blur(baseUrl, {
+      target: { value: "  https://next.example.invalid/  " },
+    })
+    fireEvent.blur(adminKey, { target: { value: "  next-admin-key  " } })
+
+    await waitFor(() => {
+      expect(context.updateSub2ApiManagedSiteBaseUrl).toHaveBeenCalledWith(
+        "https://next.example.invalid/",
+        { expectedLastUpdated: 7 },
+      )
+      expect(context.updateSub2ApiManagedSiteAdminToken).toHaveBeenCalledWith(
+        "next-admin-key",
+        { expectedLastUpdated: 7 },
+      )
+    })
+  })
+
+  it("reports save conflicts and validation errors", async () => {
+    const toast = await import("react-hot-toast")
+    const failedWrite = {
+      ok: false,
+      reason: { type: "stale" as const, currentLastUpdated: 9 },
+    }
+    const context = arrange({
+      updateSub2ApiManagedSiteConfig: vi
+        .fn()
+        .mockResolvedValueOnce(failedWrite),
+    })
+    vi.mocked(validateSub2ApiManagedSiteConfig).mockResolvedValueOnce()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:sub2apiManagedSite.validation.validate",
+      }),
+    )
+    await waitFor(() => {
+      expect(context.updateSub2ApiManagedSiteConfig).toHaveBeenCalled()
+      expect(vi.mocked(toast.default.error)).toHaveBeenCalled()
+    })
+
+    vi.mocked(toast.default.error).mockClear()
+    vi.mocked(validateSub2ApiManagedSiteConfig).mockRejectedValueOnce(
+      new Error("provider unavailable"),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:sub2apiManagedSite.validation.validate",
+      }),
+    )
+    await waitFor(() => {
+      expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
+        "settings:sub2apiManagedSite.validation.failed",
+      )
+    })
   })
 
   it("does not validate blank credentials", async () => {

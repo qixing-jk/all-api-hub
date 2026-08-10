@@ -463,6 +463,39 @@ describe("ManagedSiteTab", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("renders Sub2API settings and hides unsupported model controls", () => {
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        managedSiteType: SITE_TYPES.SUB2API,
+        sub2ApiManagedSiteBaseUrl: "https://sub2api.example.invalid",
+        sub2ApiManagedSiteAdminToken: "admin-key",
+        updateSub2ApiManagedSiteBaseUrl: vi.fn().mockResolvedValue(true),
+        updateSub2ApiManagedSiteAdminToken: vi.fn().mockResolvedValue(true),
+        updateSub2ApiManagedSiteConfig: vi.fn().mockResolvedValue(true),
+        resetSub2ApiManagedSiteConfig: vi.fn().mockResolvedValue(true),
+      }),
+    )
+
+    render(<ManagedSiteTab />)
+
+    expect(
+      screen.getByPlaceholderText(
+        "settings:sub2apiManagedSite.fields.baseUrlPlaceholder",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText(
+        "settings:sub2apiManagedSite.fields.adminApiKeyPlaceholder",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("managed-site-model-sync-settings"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("model-redirect-settings"),
+    ).not.toBeInTheDocument()
+  })
+
   it.each([
     [
       SITE_TYPES.DONE_HUB,
