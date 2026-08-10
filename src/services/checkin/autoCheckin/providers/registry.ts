@@ -17,6 +17,15 @@ export const AUTO_CHECKIN_METHOD_IDS = {
 export type CheckInMethodId =
   (typeof AUTO_CHECKIN_METHOD_IDS)[keyof typeof AUTO_CHECKIN_METHOD_IDS]
 
+const CHECK_IN_METHOD_ID_SET = new Set<string>(
+  Object.values(AUTO_CHECKIN_METHOD_IDS),
+)
+
+/** Returns whether a persisted value names a registered check-in method. */
+export function isCheckInMethodId(value: unknown): value is CheckInMethodId {
+  return typeof value === "string" && CHECK_IN_METHOD_ID_SET.has(value)
+}
+
 // Only these providers may bridge pre-registry behavior without protocol detection.
 const PRE_REGISTRY_AUTO_CHECKIN_METHOD_IDS = [
   AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
@@ -116,9 +125,6 @@ export function createAutoCheckinMethodRegistry(
   registrations: readonly AutoCheckinMethodRegistration[],
   options: AutoCheckinMethodRegistryOptions = {},
 ): AutoCheckinMethodRegistry {
-  const registeredMethodIds = new Set<string>(
-    Object.values(AUTO_CHECKIN_METHOD_IDS),
-  )
   const preRegistryMethodIds = new Set<string>(
     PRE_REGISTRY_AUTO_CHECKIN_METHOD_IDS,
   )
@@ -138,7 +144,7 @@ export function createAutoCheckinMethodRegistry(
         `Legacy and new-account compatibility metadata are reserved for pre-registry methods: ${registrationId}`,
       )
     }
-    if (!registeredMethodIds.has(registrationId)) {
+    if (!isCheckInMethodId(registrationId)) {
       throw new Error(
         `Auto check-in method ID is not declared in AUTO_CHECKIN_METHOD_IDS: ${registrationId}`,
       )

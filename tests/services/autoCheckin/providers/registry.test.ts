@@ -8,6 +8,7 @@ import {
   decodePersistedCheckInMethodId,
   resolveAutoCheckinProvider,
   type AutoCheckinMethodRegistration,
+  type CheckInMethodId,
 } from "~/services/checkin/autoCheckin/providers"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
@@ -15,13 +16,27 @@ import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloer
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
 import type { SiteAccount } from "~/types"
+import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 const accountFor = (siteType: SiteAccount["site_type"]) =>
-  ({
+  buildSiteAccount({
     id: `account-${siteType}`,
     site_url: "https://example.invalid",
     site_type: siteType,
-  }) as SiteAccount
+  })
+
+const registrationFor = (
+  id: CheckInMethodId,
+): AutoCheckinMethodRegistration => {
+  const registration = autoCheckinMethodRegistry.resolveById(id)
+  if (!registration) {
+    throw new Error(`Missing test registration: ${id}`)
+  }
+  return registration
+}
+
+const getAnyrouterRegistration = () =>
+  registrationFor(AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn)
 
 describe("autoCheckinMethodRegistry", () => {
   it("registers stable identities without changing legacy provider resolution", () => {
@@ -103,8 +118,10 @@ describe("autoCheckinMethodRegistry", () => {
   })
 
   it("enumerates every candidate in declaration order and resolves execution by ID", () => {
-    const [anyrouterRegistration, veloeraRegistration] =
-      autoCheckinMethodRegistry.registrations
+    const anyrouterRegistration = getAnyrouterRegistration()
+    const veloeraRegistration = registrationFor(
+      AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
+    )
     const registry = createAutoCheckinMethodRegistry([
       {
         id: anyrouterRegistration.id,
@@ -145,7 +162,7 @@ describe("autoCheckinMethodRegistry", () => {
   })
 
   it("rejects duplicate method IDs deterministically", () => {
-    const [registration] = autoCheckinMethodRegistry.registrations
+    const registration = getAnyrouterRegistration()
 
     expect(() =>
       createAutoCheckinMethodRegistry([registration, registration]),
@@ -155,7 +172,7 @@ describe("autoCheckinMethodRegistry", () => {
   })
 
   it("rejects registrations without candidate Account Site Types", () => {
-    const [registration] = autoCheckinMethodRegistry.registrations
+    const registration = getAnyrouterRegistration()
 
     expect(() =>
       createAutoCheckinMethodRegistry([
@@ -170,7 +187,7 @@ describe("autoCheckinMethodRegistry", () => {
   })
 
   it("rejects incomplete legacy provider coverage", () => {
-    const [registration] = autoCheckinMethodRegistry.registrations
+    const registration = getAnyrouterRegistration()
 
     expect(() =>
       createAutoCheckinMethodRegistry([registration], {
@@ -182,7 +199,7 @@ describe("autoCheckinMethodRegistry", () => {
   })
 
   it("limits new-account compatibility metadata to legacy providers", () => {
-    const [registration] = autoCheckinMethodRegistry.registrations
+    const registration = getAnyrouterRegistration()
 
     expect(() =>
       createAutoCheckinMethodRegistry([
@@ -197,7 +214,7 @@ describe("autoCheckinMethodRegistry", () => {
   })
 
   it("does not admit a new method through compatibility metadata", () => {
-    const [registration] = autoCheckinMethodRegistry.registrations
+    const registration = getAnyrouterRegistration()
 
     expect(() =>
       createAutoCheckinMethodRegistry([
@@ -212,7 +229,7 @@ describe("autoCheckinMethodRegistry", () => {
   })
 
   it("does not let compatibility metadata expand legacy provider behavior", () => {
-    const [registration] = autoCheckinMethodRegistry.registrations
+    const registration = getAnyrouterRegistration()
 
     expect(() =>
       createAutoCheckinMethodRegistry([
@@ -228,7 +245,7 @@ describe("autoCheckinMethodRegistry", () => {
   })
 
   it("requires legacy metadata to refer to declared candidates", () => {
-    const [registration] = autoCheckinMethodRegistry.registrations
+    const registration = getAnyrouterRegistration()
 
     expect(() =>
       createAutoCheckinMethodRegistry([

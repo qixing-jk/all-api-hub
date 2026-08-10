@@ -18,6 +18,7 @@ export {
   AUTO_CHECKIN_METHOD_IDS,
   createAutoCheckinMethodRegistry,
   decodePersistedCheckInMethodId,
+  isCheckInMethodId,
   type AutoCheckinMethodRegistration,
   type AutoCheckinMethodRegistry,
   type CheckInMethodId,
