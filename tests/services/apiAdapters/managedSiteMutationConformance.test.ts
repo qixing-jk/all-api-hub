@@ -44,6 +44,7 @@ const expectedManagedSiteTypes = [
   SITE_TYPES.OCTOPUS,
   SITE_TYPES.AXON_HUB,
   SITE_TYPES.CLAUDE_CODE_HUB,
+  SITE_TYPES.SUB2API,
 ] as const
 
 describe("managed-site mutation conformance", () => {

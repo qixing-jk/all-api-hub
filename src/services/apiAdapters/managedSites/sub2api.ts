@@ -1,4 +1,8 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  SUB2API_DEFAULT_ACCOUNT_PLATFORM,
+  SUB2API_MANAGED_RESOURCE_STATUS,
+} from "~/constants/sub2api"
 import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteChannelsCapability,
@@ -25,6 +29,7 @@ import {
   fetchAvailableModels,
   getSub2ApiApiKeyAccount,
   listSub2ApiApiKeyAccounts,
+  parseSub2ApiResourceId,
   prepareChannelFormData,
   revealSub2ApiApiKey,
   searchSub2ApiApiKeyAccounts,
@@ -39,8 +44,9 @@ import {
   type Sub2ApiApiKeyAccountUpdateInput,
 } from "~/services/managedSites/providers/sub2api"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import type { ChannelFormData } from "~/types/managedSite"
+import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   assertManagedUpstreamResourceRefScope,
@@ -50,6 +56,7 @@ import {
   MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
   MANAGED_UPSTREAM_RESOURCE_STATUSES,
   normalizeManagedUpstreamResourceScopeKey,
+  type ManagedUpstreamResourceDraftValidationIssue,
   type ManagedUpstreamResourceSummary,
 } from "~/types/managedUpstreamResource"
 import type { Sub2ApiAdminApiKeyAccount } from "~/types/sub2apiManagedSite"
@@ -107,10 +114,26 @@ const runSub2ApiMutationStep = async <T>(input: {
   })
 
 const toStatus = (status: number | undefined) =>
-  status === CHANNEL_STATUS.Enable ? "active" : "inactive"
+  status === CHANNEL_STATUS.Enable
+    ? SUB2API_MANAGED_RESOURCE_STATUS.Active
+    : SUB2API_MANAGED_RESOURCE_STATUS.Inactive
 
-const isUsablePlainKey = (key: unknown): key is string =>
-  typeof key === "string" && key.trim().length > 0 && !/^\*+$/.test(key.trim())
+const getUsablePlainKey = (key: string | undefined) => {
+  const trimmed = key?.trim() ?? ""
+  return hasUsableManagedSiteChannelKey(trimmed) ? trimmed : undefined
+}
+
+const requireUsablePlainKey = (key: string | undefined) => {
+  const usableKey = getUsablePlainKey(key)
+  if (!usableKey) {
+    throw new TypeError("Sub2API API key is required")
+  }
+  return usableKey
+}
+
+const isAbortLikeError = (error: unknown): error is Error =>
+  error instanceof Error &&
+  (error.name === "AbortError" || error.name === "TimeoutError")
 
 const toIdentityModelMapping = (models: unknown) => {
   if (typeof models !== "string") return undefined
@@ -137,8 +160,11 @@ const toCreateInput = (
     name: channel.name?.trim() ?? "",
     platform: sub2ApiChannelTypeToPlatform(channel.type),
     baseUrl: channel.base_url?.trim() ?? "",
-    apiKey: channel.key?.trim() ?? "",
+    apiKey: requireUsablePlainKey(channel.key),
     ...(modelMapping ? { modelMapping } : {}),
+    // The legacy channel facade temporarily carries Sub2API concurrency in
+    // `weight` only for this compatibility round trip. Provider-neutral native
+    // imports must not reinterpret generic ordering weight as concurrency.
     ...(channel.weight && channel.weight > 0
       ? { concurrency: channel.weight }
       : {}),
@@ -153,14 +179,19 @@ const toUpdateInput = (
   channel: Parameters<
     ManagedSiteChannelsCapability<Sub2ApiManagedSiteConfig>["update"]
   >[1],
-): Sub2ApiApiKeyAccountUpdateInput => ({
-  ...(channel.name === undefined ? {} : { name: channel.name }),
-  ...(channel.base_url === undefined ? {} : { baseUrl: channel.base_url }),
-  ...(isUsablePlainKey(channel.key) ? { apiKey: channel.key } : {}),
-  ...(channel.weight === undefined ? {} : { concurrency: channel.weight }),
-  ...(channel.priority === undefined ? {} : { priority: channel.priority }),
-  ...(channel.status === undefined ? {} : { status: toStatus(channel.status) }),
-})
+): Sub2ApiApiKeyAccountUpdateInput => {
+  const apiKey = getUsablePlainKey(channel.key)
+  return {
+    ...(channel.name === undefined ? {} : { name: channel.name }),
+    ...(channel.base_url === undefined ? {} : { baseUrl: channel.base_url }),
+    ...(apiKey ? { apiKey } : {}),
+    ...(channel.weight === undefined ? {} : { concurrency: channel.weight }),
+    ...(channel.priority === undefined ? {} : { priority: channel.priority }),
+    ...(channel.status === undefined
+      ? {}
+      : { status: toStatus(channel.status) }),
+  }
+}
 
 type Sub2ApiMutationOptions = Parameters<typeof createSub2ApiApiKeyAccount>[2]
 
@@ -194,7 +225,7 @@ export async function createSub2ApiManagedAccountMutation(
         await updateSub2ApiApiKeyAccount(
           config,
           account.id,
-          { status: "inactive" },
+          { status: SUB2API_MANAGED_RESOURCE_STATUS.Inactive },
           { ...options, observer },
         ),
     })
@@ -300,18 +331,34 @@ export const sub2ApiManagedSiteChannels: ManagedSiteChannelsCapability<Sub2ApiMa
     fetchSecretKey: async (config, channelId) =>
       await revealSub2ApiApiKey(config, channelId),
     hydrateComparableKeys: async (config, candidates) => {
-      try {
-        return await Promise.all(
-          candidates.map(async (candidate) => ({
+      const hydrated: ManagedSiteChannel[] = []
+      for (const candidate of candidates) {
+        if (hasUsableManagedSiteChannelKey(candidate.key)) {
+          hydrated.push(candidate)
+          continue
+        }
+
+        try {
+          hydrated.push({
             ...candidate,
             key: await revealSub2ApiApiKey(config, candidate.id),
-          })),
-        )
-      } catch {
-        throw new MatchResolutionUnresolvedError(
-          MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
-        )
+          })
+        } catch (error) {
+          if (isAbortLikeError(error)) throw error
+          if (
+            error instanceof Sub2ApiAdminApiError &&
+            error.code === SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE
+          ) {
+            throw new MatchResolutionUnresolvedError(
+              MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+            )
+          }
+          throw new MatchResolutionUnresolvedError(
+            MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+          )
+        }
       }
+      return hydrated
     },
   }
 
@@ -351,9 +398,13 @@ const toResourceSummary = (
   displayName: account.name,
   nativeKind: MANAGED_UPSTREAM_RESOURCE_NATIVE_KINDS.Channel,
   status:
-    account.status === "active"
+    account.status === SUB2API_MANAGED_RESOURCE_STATUS.Active
       ? MANAGED_UPSTREAM_RESOURCE_STATUSES.Enabled
-      : MANAGED_UPSTREAM_RESOURCE_STATUSES.Disabled,
+      : account.status === SUB2API_MANAGED_RESOURCE_STATUS.Inactive
+        ? MANAGED_UPSTREAM_RESOURCE_STATUSES.Disabled
+        : account.status === SUB2API_MANAGED_RESOURCE_STATUS.Error
+          ? MANAGED_UPSTREAM_RESOURCE_STATUSES.AutoDisabled
+          : MANAGED_UPSTREAM_RESOURCE_STATUSES.Unknown,
   typeLabel: account.platform,
   endpointLabel:
     typeof account.credentials?.base_url === "string"
@@ -418,7 +469,7 @@ const resources: ManagedUpstreamResourcesCapability<
       assertRef(config, ref)
       const native = await getSub2ApiApiKeyAccount(
         config,
-        Number(ref.resourceId),
+        parseSub2ApiResourceId(ref.resourceId),
       )
       return { summary: toResourceSummary(config, native), native }
     },
@@ -446,7 +497,7 @@ const resources: ManagedUpstreamResourcesCapability<
       assertRef(config, ref)
       return await sub2ApiManagedSiteChannels.delete(
         config,
-        Number(ref.resourceId),
+        parseSub2ApiResourceId(ref.resourceId),
       )
     },
   },
@@ -457,7 +508,7 @@ const resources: ManagedUpstreamResourcesCapability<
       }
       return {
         name: input.resource?.displayName ?? "",
-        type: sub2ApiPlatformToChannelType("openai"),
+        type: sub2ApiPlatformToChannelType(SUB2API_DEFAULT_ACCOUNT_PLATFORM),
         key: "",
         base_url: input.resource?.endpointLabel ?? "",
         models: [],
@@ -468,6 +519,9 @@ const resources: ManagedUpstreamResourcesCapability<
       }
     },
     prepareEditDraft: (detail) => {
+      // This legacy facade intentionally preserves only its historical field
+      // surface. The provider-native registration owns notes/model editing and
+      // replaces this path once the legacy resource facade has no callers.
       const channel = sub2ApiAccountToManagedSiteChannel(detail.native)
       return {
         name: channel.name,
@@ -502,28 +556,31 @@ const resources: ManagedUpstreamResourcesCapability<
       },
     ],
     validateDraft: (draft) => {
-      const errors = []
+      const errors: ManagedUpstreamResourceDraftValidationIssue[] = []
       if (!draft?.name?.trim())
         errors.push({ field: "name", message: "Name is required" })
       if (!draft?.base_url?.trim())
         errors.push({ field: "base_url", message: "Base URL is required" })
+      if (!hasUsableManagedSiteChannelKey(draft?.key))
+        errors.push({ field: "key", message: "API Key is required" })
       return { valid: errors.length === 0, errors }
     },
   },
   secrets: {
     revealSecret: async (config, ref) => {
       assertRef(config, ref)
+      const accountId = parseSub2ApiResourceId(ref.resourceId)
       try {
         return {
           status: "available",
-          secret: await revealSub2ApiApiKey(config, Number(ref.resourceId)),
+          secret: await revealSub2ApiApiKey(config, accountId),
         }
       } catch (error) {
         if (
           error instanceof Sub2ApiAdminApiError &&
           error.code === SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE
         ) {
-          return { status: "unsupported", message: error.message }
+          return { status: "unsupported" }
         }
         return { status: "unavailable" }
       }

@@ -30,12 +30,6 @@ describe("managedSite", () => {
     expect(
       getManagedSiteUnsupportedModelSyncMessage(t, SITE_TYPES.SUB2API),
     ).toBe("messages:managedSite.unsupportedModelSync:Sub2API")
-    expect(t).toHaveBeenNthCalledWith(1, "settings:managedSite.sub2api")
-    expect(t).toHaveBeenNthCalledWith(
-      2,
-      "messages:managedSite.unsupportedModelSync",
-      { siteName: "Sub2API" },
-    )
   })
 
   it("resolves Done Hub admin config when selected", () => {

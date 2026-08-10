@@ -155,7 +155,7 @@
     "updateFailed": "更新账号失败"
   },
   "sub2api": {
-    "configMissing": "请先配置 Sub2API 基础 URL 和管理员 API Key。",
+    "configMissing": "请先在基础设置中配置 Sub2API 基础 URL 和管理员 API Key。",
     "createRequiresAvailableGroup": "当前账号没有可用于创建密钥的分组，请先确认账号分组情况后再试。",
     "groupMissing": "Sub2API 分组“{{group}}”已不可用。请刷新分组列表后重试。",
     "loginRequired": "请先登录 Sub2API 控制台（插件会读取 auth_token/auth_user 用于导入会话）后再重试。",

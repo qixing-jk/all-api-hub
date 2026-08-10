@@ -383,6 +383,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
       name: exactMatch.name,
       baseUrl: exactMatch.base_url,
       models: [],
+      siteType: SITE_TYPES.SUB2API,
     })
     const resources: ManagedUpstreamResourcesCapability = {
       items: {
@@ -1330,14 +1331,16 @@ const buildResourceSummary = ({
   name,
   baseUrl,
   models,
+  siteType = SITE_TYPES.NEW_API,
 }: {
   id: number
   name: string
   baseUrl: string
   models: string[]
+  siteType?: ManagedUpstreamResourceSummary["ref"]["managedSiteType"]
 }): ManagedUpstreamResourceSummary => ({
   ref: {
-    managedSiteType: SITE_TYPES.NEW_API,
+    managedSiteType: siteType,
     scopeKey: "https://managed.example",
     resourceId: String(id),
   },

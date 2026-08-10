@@ -47,6 +47,12 @@ export function shouldEditModelsInManagedSiteCrudScenario(
   return siteType !== SITE_TYPES.AXON_HUB && siteType !== SITE_TYPES.SUB2API
 }
 
+export function shouldSeedModelsInManagedSiteCrudScenario(
+  siteType: ManagedSiteType,
+): boolean {
+  return siteType !== SITE_TYPES.SUB2API
+}
+
 const channelsUrl = (extensionId: string, params?: Record<string, string>) => {
   const url = new URL(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
 
@@ -128,7 +134,7 @@ export async function runManagedSiteChannelsCrudScenario<
       name: channelName,
       key: `sk-${slugify(context.runPrefix)}-crud`,
       baseUrl: "https://upstream.example.invalid/v1",
-      model: shouldEditModelsInManagedSiteCrudScenario(context.siteType)
+      model: shouldSeedModelsInManagedSiteCrudScenario(context.siteType)
         ? CRUD_MODEL
         : undefined,
     })

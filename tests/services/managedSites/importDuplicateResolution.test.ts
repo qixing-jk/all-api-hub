@@ -281,6 +281,63 @@ describe("resolveManagedSiteImportDuplicate", () => {
     ).resolves.toBeNull()
   })
 
+  it("uses Sub2API URL and key identity without requiring models", async () => {
+    const service = createService({
+      siteType: SITE_TYPES.SUB2API,
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 52,
+            name: "Sub2API Duplicate",
+            key: "test-key",
+            base_url: "https://api.example.com",
+            models: "",
+          },
+        ],
+      }),
+    })
+
+    await expect(
+      resolveManagedSiteImportDuplicate({
+        service,
+        managedConfig,
+        formData: { ...formData, models: [] },
+      }),
+    ).resolves.toMatchObject({ id: 52, name: "Sub2API Duplicate" })
+  })
+
+  it("does not merge separate Sub2API URL and key matches into one duplicate", async () => {
+    const service = createService({
+      siteType: SITE_TYPES.SUB2API,
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 53,
+            name: "URL Match",
+            key: "different-key",
+            base_url: "https://api.example.com",
+            models: "",
+          },
+          {
+            id: 54,
+            name: "Key Match",
+            key: "test-key",
+            base_url: "https://other.example.com",
+            models: "",
+          },
+        ],
+      }),
+    })
+
+    await expect(
+      resolveManagedSiteImportDuplicate({
+        service,
+        managedConfig,
+        formData: { ...formData, models: [] },
+      }),
+    ).resolves.toBeNull()
+  })
+
   it("returns exact duplicate channels", async () => {
     const service = createService({
       searchChannel: vi.fn().mockResolvedValue({

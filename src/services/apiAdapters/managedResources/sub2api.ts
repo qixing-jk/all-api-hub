@@ -1,9 +1,13 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   isSub2ApiManagedResourcePlatform,
+  isSub2ApiManagedResourceStatus,
   SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS,
+  SUB2API_API_KEY_ACCOUNT_PLATFORMS,
+  SUB2API_DEFAULT_ACCOUNT_PLATFORM,
   SUB2API_MANAGED_RESOURCE_FIELD_IDS,
   SUB2API_MANAGED_RESOURCE_STATUS,
+  sub2ApiChannelTypeToPlatform,
 } from "~/constants/sub2api"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
@@ -37,21 +41,23 @@ import {
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import {
   getSub2ApiApiKeyAccount,
+  InvalidSub2ApiResourceIdError,
   listSub2ApiApiKeyAccounts,
+  parseSub2ApiResourceId,
   revealSub2ApiApiKey,
+  searchSub2ApiApiKeyAccounts,
   SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
   Sub2ApiAdminApiError,
-  sub2ApiChannelTypeToPlatform,
   type Sub2ApiApiKeyAccountCreateInput,
   type Sub2ApiApiKeyAccountUpdateInput,
 } from "~/services/managedSites/providers/sub2api"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import type {
   Sub2ApiAdminApiKeyAccount,
   Sub2ApiApiKeyAccountPlatform,
-  Sub2ApiApiKeyAccountStatus,
 } from "~/types/sub2apiManagedSite"
 import type { Sub2ApiManagedSiteConfig } from "~/types/sub2apiManagedSiteConfig"
 
@@ -158,19 +164,9 @@ const toIdentityModelMapping = (models: readonly string[]) =>
 const hasSavedKey = (account: Sub2ApiAdminApiKeyAccount) =>
   account.credentials_status?.has_api_key === true
 
-const matchesSearch = (account: Sub2ApiAdminApiKeyAccount, search: string) => {
-  const needle = search.toLocaleLowerCase()
-  return [
-    account.name,
-    account.platform,
-    SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS[account.platform],
-    getBaseUrl(account),
-    ...getModelWhitelist(account),
-  ].some((value) => value.toLocaleLowerCase().includes(needle))
-}
-
 const baseFacts = (
   account: Sub2ApiAdminApiKeyAccount,
+  normalizedStatus: ResourceDisplayFacts["status"],
 ): ResourceDisplayFact[] => {
   const facts: ResourceDisplayFact[] = [
     {
@@ -186,7 +182,7 @@ const baseFacts = (
     {
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status,
       kind: "text",
-      value: statusToDisplay(account.status),
+      value: normalizedStatus,
     },
     {
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key,
@@ -232,7 +228,8 @@ const toFacts = (
   ref: ManagedResourceRef,
   includeNotes: boolean,
 ): ResourceDisplayFacts => {
-  const fields = baseFacts(account)
+  const normalizedStatus = statusToDisplay(account.status)
+  const fields = baseFacts(account, normalizedStatus)
   if (includeNotes && typeof account.notes === "string" && account.notes) {
     fields.push({
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes,
@@ -243,7 +240,7 @@ const toFacts = (
   return {
     ref,
     displayName: account.name || `Sub2API account ${account.id}`,
-    status: statusToDisplay(account.status),
+    status: normalizedStatus,
     fields,
     searchValues: [
       account.platform,
@@ -260,6 +257,9 @@ const statusOptions = (detail?: Sub2ApiAdminApiKeyAccount) => [
   { value: SUB2API_MANAGED_RESOURCE_STATUS.Inactive },
   ...(detail?.status === SUB2API_MANAGED_RESOURCE_STATUS.Error
     ? [{ value: SUB2API_MANAGED_RESOURCE_STATUS.Error }]
+    : []),
+  ...(detail?.status && !isSub2ApiManagedResourceStatus(detail.status)
+    ? [{ value: detail.status }]
     : []),
 ]
 
@@ -281,9 +281,10 @@ const fieldDescriptors = (
     type: MANAGED_RESOURCE_FIELD_TYPES.Select,
     required: true,
     readOnly: detail !== undefined,
-    options: Object.entries(SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS).map(
-      ([value, displayLabel]) => ({ value, displayLabel }),
-    ),
+    options: SUB2API_API_KEY_ACCOUNT_PLATFORMS.map((value) => ({
+      value,
+      displayLabel: SUB2API_API_KEY_ACCOUNT_PLATFORM_LABELS[value],
+    })),
   },
   {
     fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status,
@@ -340,7 +341,8 @@ const fieldDescriptors = (
 
 const createInitialValues = (): EditableResourceProjection => ({
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name]: "",
-  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform]: "openai",
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform]:
+    SUB2API_DEFAULT_ACCOUNT_PLATFORM,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status]:
     SUB2API_MANAGED_RESOURCE_STATUS.Active,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl]: "",
@@ -405,12 +407,14 @@ const validateValues = (
       code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.UnsupportedOption,
     })
   }
-  const allowedStatus =
-    status === SUB2API_MANAGED_RESOURCE_STATUS.Active ||
-    status === SUB2API_MANAGED_RESOURCE_STATUS.Inactive ||
-    (!context.create &&
-      context.detail?.status === SUB2API_MANAGED_RESOURCE_STATUS.Error &&
-      status === SUB2API_MANAGED_RESOURCE_STATUS.Error)
+  const allowedStatus = context.create
+    ? status === SUB2API_MANAGED_RESOURCE_STATUS.Active ||
+      status === SUB2API_MANAGED_RESOURCE_STATUS.Inactive
+    : status === (context.detail?.status ?? "") ||
+      status === SUB2API_MANAGED_RESOURCE_STATUS.Active ||
+      status === SUB2API_MANAGED_RESOURCE_STATUS.Inactive ||
+      (context.detail?.status === SUB2API_MANAGED_RESOURCE_STATUS.Error &&
+        status === SUB2API_MANAGED_RESOURCE_STATUS.Error)
   if (!allowedStatus) {
     issues.push({
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status,
@@ -429,9 +433,11 @@ const validateValues = (
     })
   }
   if (
-    (context.create && (secret.kind !== "replace" || !secret.value.trim())) ||
+    (context.create &&
+      (secret.kind !== "replace" ||
+        !hasUsableManagedSiteChannelKey(secret.value))) ||
     secret.kind === "clear" ||
-    (secret.kind === "replace" && !secret.value.trim())
+    (secret.kind === "replace" && !hasUsableManagedSiteChannelKey(secret.value))
   ) {
     issues.push({
       fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key,
@@ -517,10 +523,7 @@ const buildUpdateCommand = (
     values,
     SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority,
   )
-  const status = readString(
-    values,
-    SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status,
-  ) as Sub2ApiApiKeyAccountStatus
+  const status = readString(values, SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status)
   const secret = readSecretIntent(values)
   const notes = readString(values, SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes)
   const models = readList(values, SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models)
@@ -531,7 +534,9 @@ const buildUpdateCommand = (
   if (baseUrl !== getBaseUrl(detail).trim()) input.baseUrl = baseUrl
   if (concurrency !== (detail.concurrency ?? 1)) input.concurrency = concurrency
   if (priority !== (detail.priority ?? 1)) input.priority = priority
-  if (status !== detail.status) input.status = status
+  if (status !== detail.status && isSub2ApiManagedResourceStatus(status)) {
+    input.status = status
+  }
   if (secret.kind === "replace") input.apiKey = secret.value.trim()
   if ([...models].sort().join("\0") !== [...existingModels].sort().join("\0")) {
     input.modelMapping = Object.fromEntries(
@@ -562,13 +567,15 @@ const createSub2ApiChannelImportProjection = (
     ? SUB2API_MANAGED_RESOURCE_STATUS.Active
     : SUB2API_MANAGED_RESOURCE_STATUS.Inactive,
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl]: seed.baseUrl,
-  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
-    kind: "replace",
-    value: seed.credential,
-  },
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key]: hasUsableManagedSiteChannelKey(
+    seed.credential,
+  )
+    ? { kind: "replace", value: seed.credential.trim() }
+    : { kind: "unchanged" },
   [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Models]: normalizeList(seed.models),
-  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency]:
-    seed.orderingWeight > 0 ? seed.orderingWeight : 1,
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency]: 1,
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority]: seed.priority,
+  [SUB2API_MANAGED_RESOURCE_FIELD_IDS.Notes]: seed.notes,
 })
 
 const editEditor = (
@@ -618,8 +625,11 @@ const mapFailure = (error: unknown): ResourceFailure => {
       ...(upstreamCode ? { upstreamCode } : {}),
     }
   }
-  if (error instanceof DOMException && error.name === "AbortError") {
+  if (error instanceof Error && error.name === "AbortError") {
     return { code: MANAGED_RESOURCE_FAILURE_CODES.Aborted }
+  }
+  if (error instanceof Error && error.name === "TimeoutError") {
+    return { code: MANAGED_RESOURCE_FAILURE_CODES.Unavailable }
   }
   return { code: MANAGED_RESOURCE_FAILURE_CODES.Unexpected }
 }
@@ -668,13 +678,14 @@ const sub2ApiNativeDefinition = {
   scopeKey: (config: Sub2ApiNativeConfig) => config.scopeKey,
   encodeLocator: (locator: number) => String(locator),
   decodeLocator: (resourceId: string) => {
-    const locator = Number(resourceId)
-    if (!Number.isSafeInteger(locator) || locator <= 0) {
+    try {
+      return parseSub2ApiResourceId(resourceId)
+    } catch (error) {
+      if (!(error instanceof InvalidSub2ApiResourceIdError)) throw error
       throw new ManagedResourceError({
         code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
       })
     }
-    return locator
   },
   locatorFromListItem: (item: Sub2ApiAdminApiKeyAccount) => item.id,
   locatorFromDetail: (detail: Sub2ApiAdminApiKeyAccount) => detail.id,
@@ -684,12 +695,18 @@ const sub2ApiNativeDefinition = {
     options?: ResourceOperationOptions,
   ) => {
     const search = query?.search?.trim()
-    const page = await listSub2ApiApiKeyAccounts(nativeConfig.config, {
-      signal: options?.signal,
-    })
-    const items = search
-      ? page.items.filter((item) => matchesSearch(item, search))
-      : page.items
+    const page = search
+      ? await searchSub2ApiApiKeyAccounts(nativeConfig.config, search, {
+          signal: options?.signal,
+        })
+      : await listSub2ApiApiKeyAccounts(nativeConfig.config, {
+          signal: options?.signal,
+        })
+    const items = page.items.filter(
+      (item) =>
+        item.type === "apikey" &&
+        isSub2ApiManagedResourcePlatform(item.platform),
+    )
     return { items, total: items.length }
   },
   get: (
@@ -706,16 +723,22 @@ const sub2ApiNativeDefinition = {
     toFacts(detail, ref, true),
   createEditor: async () => createEditor(),
   editEditor,
-  create: (nativeConfig: Sub2ApiNativeConfig, command: Sub2ApiCreateCommand) =>
+  create: (
+    nativeConfig: Sub2ApiNativeConfig,
+    command: Sub2ApiCreateCommand,
+    options?: ResourceOperationOptions,
+  ) =>
     createSub2ApiManagedAccountMutation(
       nativeConfig.config,
       command.input,
       command.desiredStatus,
+      { signal: options?.signal },
     ),
   update: async (
     nativeConfig: Sub2ApiNativeConfig,
     detail: Sub2ApiAdminApiKeyAccount,
     command: Sub2ApiApiKeyAccountUpdateInput,
+    options?: ResourceOperationOptions,
   ) =>
     Object.keys(command).length === 0
       ? {
@@ -727,9 +750,16 @@ const sub2ApiNativeDefinition = {
           nativeConfig.config,
           detail.id,
           command,
+          { signal: options?.signal },
         ),
-  delete: (nativeConfig: Sub2ApiNativeConfig, locator: number) =>
-    deleteSub2ApiManagedAccountMutation(nativeConfig.config, locator),
+  delete: (
+    nativeConfig: Sub2ApiNativeConfig,
+    locator: number,
+    options?: ResourceOperationOptions,
+  ) =>
+    deleteSub2ApiManagedAccountMutation(nativeConfig.config, locator, {
+      signal: options?.signal,
+    }),
   mapFailure,
 }
 

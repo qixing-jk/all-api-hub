@@ -104,7 +104,7 @@
       "actions": {
         "verifyNow": "Jetzt bestätigen"
       },
-      "description": "Kandidatenkanäle wurden gefunden, aber New API erfordert einen zusätzlichen Überprüfungsschritt, bevor der echte Kanalschlüssel gelesen werden kann, sodass eine genaue Duplikatbestätigung derzeit nicht verfügbar ist. Sie können weiterhin mit der Erstellung des Kanals fortfahren. Führen Sie zunächst eine vollständige Überprüfung durch, wenn Sie eine genaue Deduplizierungsprüfung benötigen.",
+      "description": "Kandidatenkanäle wurden gefunden, aber zum Lesen des echten Kanalschlüssels ist ein zusätzlicher Überprüfungsschritt erforderlich, sodass eine genaue Duplikatbestätigung derzeit nicht verfügbar ist. Sie können weiterhin mit der Erstellung des Kanals fortfahren. Führen Sie zunächst die Überprüfung durch, wenn Sie eine genaue Deduplizierungsprüfung benötigen.",
       "title": "Mögliches Duplikat muss überprüft werden"
     }
   }

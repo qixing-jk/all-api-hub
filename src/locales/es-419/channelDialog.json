@@ -104,7 +104,7 @@
       "actions": {
         "verifyNow": "Verificar ahora"
       },
-      "description": "Se encontraron canales candidatos, pero New API requiere un paso de verificación adicional antes de poder leer la clave real del canal, por lo que la confirmación exacta de duplicados no está disponible actualmente. Aún puedes continuar creando el canal; completa primero la verificación si necesitas una comprobación exacta de deduplicación.",
+      "description": "Se encontraron canales candidatos, pero se requiere un paso de verificación adicional antes de poder leer la clave real del canal, por lo que la confirmación exacta de duplicados no está disponible actualmente. Aún puedes continuar creando el canal; completa primero la verificación si necesitas una comprobación exacta de deduplicación.",
       "title": "El posible duplicado necesita verificación"
     }
   }

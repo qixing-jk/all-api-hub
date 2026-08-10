@@ -736,11 +736,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "keyManagement:batchManagedSiteExport.actions.start",
       }),
     )
-    await user.click(
-      screen.getAllByRole("button", {
-        name: "keyManagement:batchManagedSiteExport.actions.start",
-      })[1],
-    )
+    await user.click(getBatchImportConfirmButton())
 
     await waitFor(() => expect(mockExecuteBatchExport).toHaveBeenCalledOnce())
     expect(

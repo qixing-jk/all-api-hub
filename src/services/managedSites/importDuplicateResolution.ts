@@ -28,7 +28,10 @@ export async function resolveManagedSiteImportDuplicate(params: {
     protectionBypassExecution: params.protectionBypassExecution,
   })
 
-  const exactMatch = getManagedSiteChannelExactMatch(resolution)
+  const exactMatch = getManagedSiteChannelExactMatch(
+    resolution,
+    params.service.siteType,
+  )
   if (exactMatch) {
     return exactMatch
   }

@@ -1,32 +1,26 @@
-export const SUB2API_API_KEY_ACCOUNT_PLATFORMS = [
-  "openai",
-  "anthropic",
-  "gemini",
-  "grok",
-  "antigravity",
-] as const
+import type { Sub2ApiApiKeyAccountPlatform } from "~/constants/sub2api"
 
-export type Sub2ApiApiKeyAccountPlatform =
-  (typeof SUB2API_API_KEY_ACCOUNT_PLATFORMS)[number]
-
-export type Sub2ApiApiKeyAccountStatus = "active" | "inactive" | "error"
+export type {
+  Sub2ApiApiKeyAccountPlatform,
+  Sub2ApiApiKeyAccountStatus,
+} from "~/constants/sub2api"
 
 export interface Sub2ApiAdminApiKeyAccount {
   id: number
   name: string
   notes?: string | null
   platform: Sub2ApiApiKeyAccountPlatform
-  type: "apikey"
+  type: string
   credentials?: Record<string, unknown>
   credentials_status?: Record<string, boolean>
   concurrency?: number
   priority?: number
-  status?: Sub2ApiApiKeyAccountStatus | string
+  status?: string
 }
 
 export interface Sub2ApiAdminAccountListData {
   items: Sub2ApiAdminApiKeyAccount[]
-  total: number
+  total?: number
   page?: number
   page_size?: number
   pages?: number

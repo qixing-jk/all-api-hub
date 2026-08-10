@@ -155,7 +155,7 @@
     "updateFailed": "No se pudo actualizar la cuenta"
   },
   "sub2api": {
-    "configMissing": "Configura primero la URL base y la Admin API Key de Sub2API.",
+    "configMissing": "Configura primero la URL base y la Admin API Key de Sub2API en la configuración básica.",
     "createRequiresAvailableGroup": "Esta cuenta no tiene ningún grupo disponible para crear claves. Revisa los grupos disponibles de la cuenta y vuelve a intentarlo.",
     "groupMissing": "El grupo de Sub2API '{{group}}' ya no está disponible. Actualiza la lista de grupos y vuelve a intentarlo.",
     "loginRequired": "Primero inicia sesión en el panel de Sub2API (para que la extensión pueda leer auth_token/auth_user desde localStorage) y vuelve a intentarlo.",

@@ -624,6 +624,73 @@ describe("ManagedSiteChannelsRoute", () => {
     )
   })
 
+  it("resets native sorting to the default for each site type", () => {
+    const alphaRow = {
+      ...nativeRow,
+      rowKey: "opaque:alpha",
+      testToken: "resource-alpha",
+      displayIdentifier: "2",
+      displayIdentifierSort: 2,
+      name: "Alpha channel",
+    }
+    const zuluRow = {
+      ...nativeRow,
+      rowKey: "opaque:zulu",
+      testToken: "resource-zulu",
+      displayIdentifier: "1",
+      displayIdentifierSort: 1,
+      name: "Zulu channel",
+    }
+    installNativeControllers({
+      list: {
+        rows: [alphaRow, zuluRow],
+        allRows: [alphaRow, zuluRow],
+        totalRows: 2,
+      },
+    })
+    configureNativePreferences(SITE_TYPES.AXON_HUB)
+    const onReplaceRouteQuery = vi.fn()
+    const getRowIndex = (name: string) =>
+      within(screen.getByRole("table"))
+        .getAllByRole("row")
+        .findIndex((row) => within(row).queryByText(name))
+
+    const { rerender } = render(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.AXON_HUB}
+        onReplaceRouteQuery={onReplaceRouteQuery}
+      />,
+    )
+
+    expect(getRowIndex("Alpha channel")).toBeLessThan(
+      getRowIndex("Zulu channel"),
+    )
+
+    configureNativePreferences(SITE_TYPES.SUB2API)
+    rerender(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.SUB2API}
+        onReplaceRouteQuery={onReplaceRouteQuery}
+      />,
+    )
+
+    expect(getRowIndex("Zulu channel")).toBeLessThan(
+      getRowIndex("Alpha channel"),
+    )
+
+    configureNativePreferences(SITE_TYPES.AXON_HUB)
+    rerender(
+      <ManagedSiteChannelsRoute
+        siteType={SITE_TYPES.AXON_HUB}
+        onReplaceRouteQuery={onReplaceRouteQuery}
+      />,
+    )
+
+    expect(getRowIndex("Alpha channel")).toBeLessThan(
+      getRowIndex("Zulu channel"),
+    )
+  })
+
   it.each([
     [
       MANAGED_RESOURCE_FAILURE_CODES.AuthenticationFailed,

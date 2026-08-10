@@ -33,7 +33,10 @@ import { ManagedSiteChannelDetailView } from "~/features/ManagedSiteChannels/pre
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { toManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
-import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
+import {
+  getManagedSiteChannelExactMatch,
+  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
+} from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import {
@@ -405,7 +408,8 @@ export function ChannelDialog({
     }
 
     if (
-      service.messagesKey === "newapi" &&
+      resolution.unresolvedReason ===
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED &&
       resolution.searchCompleted &&
       resolution.url.matched &&
       !resolution.key.comparable

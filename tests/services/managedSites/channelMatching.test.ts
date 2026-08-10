@@ -19,6 +19,7 @@ import {
   inspectManagedSiteChannelKeyValueMatch,
   inspectManagedSiteChannelModelsMatch,
   MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES,
+  MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES,
   searchManagedUpstreamResourceChannelsForDuplicateMatching,
 } from "~/services/managedSites/utils/channelMatching"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
@@ -26,10 +27,10 @@ import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 describe("channelMatching", () => {
   it("inventories Sub2API candidates because its native search is name-only", () => {
     expect(getManagedSiteDuplicateCandidateSource(SITE_TYPES.SUB2API)).toBe(
-      "list",
+      MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.List,
     )
     expect(getManagedSiteDuplicateCandidateSource(SITE_TYPES.NEW_API)).toBe(
-      "search",
+      MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.Search,
     )
   })
 

@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
+  MatchResolutionUnresolvedError,
+} from "~/services/managedSites/channelMatch"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -10,6 +14,7 @@ const {
   fetchChannelSecretKeyMock,
   hasNewApiAuthenticatedBrowserSessionMock,
   handleSubmitMock,
+  managedSiteServiceScenario,
   mockUserPreferences,
   isNewApiVerifiedSessionActiveMock,
   requestDuplicateChannelWarningMock,
@@ -22,6 +27,10 @@ const {
   handleSubmitMock: vi.fn((event?: { preventDefault?: () => void }) =>
     event?.preventDefault?.(),
   ),
+  managedSiteServiceScenario: {
+    siteType: "new-api",
+    messagesKey: "newapi",
+  },
   mockUserPreferences: {
     newApiUsername: "admin",
     newApiPassword: "password",
@@ -166,8 +175,8 @@ vi.mock(
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteService: vi.fn(async () => ({
-    siteType: SITE_TYPES.NEW_API,
-    messagesKey: "newapi",
+    siteType: managedSiteServiceScenario.siteType,
+    messagesKey: managedSiteServiceScenario.messagesKey,
     getConfig: vi.fn(async () => ({
       baseUrl: "https://managed.example.com",
       adminToken: "admin-token",
@@ -219,7 +228,7 @@ vi.mock("~/services/managedSites/managedSiteService", () => ({
     })),
     fetchChannelSecretKey: fetchChannelSecretKeyMock,
     hydrateComparableChannelKeys: vi.fn(
-      async (_baseUrl, _token, _userId, candidates) => candidates,
+      async (_config, candidates) => candidates,
     ),
   })),
 }))
@@ -234,6 +243,8 @@ describe("ChannelDialog advisory verification action", () => {
     mockUserPreferences.newApiUsername = "admin"
     mockUserPreferences.newApiPassword = "password"
     mockUserPreferences.newApiTotpSecret = ""
+    managedSiteServiceScenario.siteType = SITE_TYPES.NEW_API
+    managedSiteServiceScenario.messagesKey = "newapi"
     requestDuplicateChannelWarningMock.mockResolvedValue(false)
   })
 
@@ -336,6 +347,74 @@ describe("ChannelDialog advisory verification action", () => {
     expect(
       screen.getByText("channelDialog:warnings.exactDuplicate.title"),
     ).toBeInTheDocument()
+  })
+
+  it("keeps a Sub2API verification advisory when key recovery still requires verification", async () => {
+    managedSiteServiceScenario.siteType = SITE_TYPES.SUB2API
+    managedSiteServiceScenario.messagesKey = "sub2api"
+    fetchChannelSecretKeyMock.mockRejectedValue(
+      new MatchResolutionUnresolvedError(
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+      ),
+    )
+
+    render(
+      <ChannelDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        advisoryWarning={{
+          kind: "verificationRequired",
+          title: "channelDialog:warnings.verificationRequired.title",
+          description:
+            "channelDialog:warnings.verificationRequired.description",
+          assessment: {
+            url: {
+              matched: true,
+              candidateCount: 1,
+              channel: {
+                id: 7,
+                name: "Existing channel",
+              },
+            },
+            key: {
+              comparable: false,
+              matched: false,
+              reason: "comparison-unavailable",
+            },
+            models: {
+              comparable: true,
+              matched: true,
+              reason: "exact",
+              channel: {
+                id: 7,
+                name: "Existing channel",
+              },
+              similarityScore: 1,
+            },
+          },
+        }}
+      />,
+    )
+
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "channelDialog:warnings.verificationRequired.actions.verifyNow",
+      }),
+    )
+
+    await act(async () => {
+      await capturedVerificationRequests[0].onVerified()
+    })
+
+    expect(
+      screen.getByText(
+        "channelDialog:warnings.verificationRequired.description",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("channelDialog:warnings.reviewSuggested.description"),
+    ).toBeNull()
+    expect(requestDuplicateChannelWarningMock).not.toHaveBeenCalled()
   })
 
   it("hides the verification CTA when recovery is unavailable", async () => {

@@ -155,7 +155,7 @@
     "updateFailed": "Cập nhật tài khoản thất bại"
   },
   "sub2api": {
-    "configMissing": "Hãy cấu hình URL gốc và Admin API Key của Sub2API trước.",
+    "configMissing": "Hãy cấu hình URL gốc và Admin API Key của Sub2API trong phần Cài đặt cơ bản trước.",
     "createRequiresAvailableGroup": "Tài khoản hiện tại không có nhóm khả dụng để tạo khóa, vui lòng kiểm tra tình trạng nhóm của tài khoản trước khi thử lại.",
     "groupMissing": "Nhóm Sub2API \"{{group}}\" không còn khả dụng. Vui lòng làm mới danh sách nhóm rồi thử lại.",
     "loginRequired": "Vui lòng đăng nhập vào bảng điều khiển Sub2API (tiện ích sẽ đọc auth_token/auth_user để nhập phiên) rồi thử lại.",

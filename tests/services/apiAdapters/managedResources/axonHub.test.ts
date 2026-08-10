@@ -452,6 +452,8 @@ describe("AxonHub native managed-resource Adapter", () => {
         enabled: true,
         models: [" model-a ", "model-a", "model-b"],
         orderingWeight: 7,
+        priority: 0,
+        notes: "",
       },
     })
 

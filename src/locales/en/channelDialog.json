@@ -104,7 +104,7 @@
       "actions": {
         "verifyNow": "Verify now"
       },
-      "description": "Candidate channels were found, but New API requires an extra verification step before the real channel key can be read, so exact duplicate confirmation is currently unavailable. You can still continue creating the channel; complete verification first if you need an exact deduplication check.",
+      "description": "Candidate channels were found, but an additional verification step is required before the real channel key can be read, so exact duplicate confirmation is currently unavailable. You can still continue creating the channel; complete verification first if you need an exact deduplication check.",
       "title": "Potential duplicate needs verification"
     }
   }

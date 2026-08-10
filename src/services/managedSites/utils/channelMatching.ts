@@ -30,6 +30,14 @@ import type {
 import { isArraysEqual } from "~/utils"
 import { normalizeList, parseDelimitedList } from "~/utils/core/string"
 
+export const MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES = {
+  Search: "search",
+  List: "list",
+} as const
+
+export type ManagedSiteDuplicateCandidateSource =
+  (typeof MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES)[keyof typeof MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES]
+
 interface FindManagedSiteChannelByComparableInputsParams {
   channels: ManagedSiteChannel[]
   accountBaseUrl: string
@@ -66,7 +74,7 @@ interface SearchManagedUpstreamResourceChannelsForDuplicateMatchingParams<
   }
   config: TConfig
   accountBaseUrl: string
-  candidateSource?: "search" | "list"
+  candidateSource?: ManagedSiteDuplicateCandidateSource
 }
 
 interface InspectManagedSiteChannelKeyMatchParams {
@@ -90,8 +98,6 @@ interface InspectManagedSiteChannelModelsMatchParams {
   exactChannel?: ManagedSiteChannel | null
 }
 
-type ManagedSiteDuplicateCandidateSource = "search" | "list"
-
 /**
  * Sub2API's native account search is name-only, so URL-based duplicate checks
  * must inventory accounts before filtering the normalized URL bucket locally.
@@ -100,7 +106,9 @@ type ManagedSiteDuplicateCandidateSource = "search" | "list"
 export const getManagedSiteDuplicateCandidateSource = (
   siteType: ManagedSiteType,
 ): ManagedSiteDuplicateCandidateSource =>
-  siteType === SITE_TYPES.SUB2API ? "list" : "search"
+  siteType === SITE_TYPES.SUB2API
+    ? MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.List
+    : MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.Search
 
 interface RankedManagedSiteChannelCandidate {
   channel: ManagedSiteChannel
@@ -322,7 +330,7 @@ export async function searchManagedUpstreamResourceChannelsForDuplicateMatching<
     params.accountBaseUrl,
   )
   const searchResults =
-    params.candidateSource === "list"
+    params.candidateSource === MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES.List
       ? await params.resources.items.list(params.config)
       : await params.resources.items.search(params.config, searchBaseUrl)
 

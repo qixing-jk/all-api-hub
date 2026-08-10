@@ -71,6 +71,8 @@ describe("native managed-channel import", () => {
         enabled: true,
         models: ["model-a"],
         orderingWeight: 7,
+        priority: 0,
+        notes: "",
       },
     })
   })

@@ -1,7 +1,16 @@
-import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
+import {
+  isSub2ApiManagedResourceStatus,
+  SUB2API_ADMIN_REQUEST_TIMEOUT_MS,
+  SUB2API_MANAGED_RESOURCE_STATUS,
+  sub2ApiChannelTypeToPlatform,
+  sub2ApiPlatformToChannelType,
+} from "~/constants/sub2api"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import type { ApiTransportRequestObserver } from "~/services/apiTransport/type"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type {
   ChannelFormData,
@@ -12,7 +21,6 @@ import type {
 } from "~/types/managedSite"
 import { CHANNEL_MODE, CHANNEL_STATUS } from "~/types/managedSite"
 import {
-  SUB2API_API_KEY_ACCOUNT_PLATFORMS,
   type Sub2ApiAdminAccountListData,
   type Sub2ApiAdminApiKeyAccount,
   type Sub2ApiAdminDataPayload,
@@ -40,6 +48,7 @@ type Sub2ApiAdminRequestOptions = {
   query?: Record<string, string | number | boolean | undefined>
   signal?: AbortSignal
   observer?: ApiTransportRequestObserver
+  requireData?: boolean
 }
 
 type Sub2ApiAdminErrorEvidence = {
@@ -61,6 +70,28 @@ export class Sub2ApiAdminApiError extends Error {
   ) {
     super(message)
   }
+}
+
+export class InvalidSub2ApiResourceIdError extends TypeError {
+  readonly name = "InvalidSub2ApiResourceIdError"
+
+  constructor(readonly resourceId: unknown) {
+    super("Sub2API resource ID must be a positive safe integer")
+  }
+}
+
+/** Normalizes a resource locator before it can reach an upstream URL. */
+export function parseSub2ApiResourceId(resourceId: unknown): number {
+  const parsed =
+    typeof resourceId === "number"
+      ? resourceId
+      : typeof resourceId === "string" && resourceId.trim()
+        ? Number(resourceId)
+        : Number.NaN
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new InvalidSub2ApiResourceIdError(resourceId)
+  }
+  return parsed
 }
 
 export type Sub2ApiApiKeyAccountCreateInput = {
@@ -88,13 +119,16 @@ export type Sub2ApiApiKeyAccountUpdateInput = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value))
 
-const isSub2ApiPlatform = (
-  value: unknown,
-): value is Sub2ApiApiKeyAccountPlatform =>
-  typeof value === "string" &&
-  SUB2API_API_KEY_ACCOUNT_PLATFORMS.includes(
-    value as Sub2ApiApiKeyAccountPlatform,
+const isAbortOrTimeoutError = (error: unknown): boolean =>
+  isRecord(error) &&
+  (error.name === "AbortError" || error.name === "TimeoutError")
+
+const throwIfAborted = (signal?: AbortSignal) => {
+  if (!signal?.aborted) return
+  throw (
+    signal.reason ?? new DOMException("The operation was aborted", "AbortError")
   )
+}
 
 const buildAdminUrl = (
   config: Sub2ApiManagedSiteConfig,
@@ -141,77 +175,113 @@ async function sub2ApiAdminRequest<T>(
   }
   if (hasBody) headers["Content-Type"] = "application/json"
 
-  const request: RequestInit = {
-    method,
-    headers,
-    ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
-    ...(options.signal ? { signal: options.signal } : {}),
-  }
+  return await runAbortableTask(
+    async (signal) => {
+      const request: RequestInit = {
+        method,
+        headers,
+        ...(hasBody ? { body: JSON.stringify(options.body) } : {}),
+        ...(signal ? { signal } : {}),
+      }
 
-  options.observer?.onDispatch?.()
-  let response: Response
-  try {
-    response = await fetch(
-      buildAdminUrl(config, endpoint, options.query),
-      request,
-    )
-  } catch (error) {
-    throw new Sub2ApiAdminApiError(
-      "Sub2API admin request failed",
-      undefined,
-      undefined,
-      {
-        dispatch: "dispatched",
-        responseReceived: false,
-        confirmedNonApplication: false,
-        raw: error,
-      },
-    )
-  }
-  options.observer?.onResponse?.()
+      options.observer?.onDispatch?.()
+      let response: Response
+      try {
+        response = await fetch(
+          buildAdminUrl(config, endpoint, options.query),
+          request,
+        )
+      } catch (error) {
+        if (signal?.aborted) throw signal.reason ?? error
+        if (isAbortOrTimeoutError(error)) throw error
+        throw new Sub2ApiAdminApiError(
+          "Sub2API admin request failed",
+          undefined,
+          undefined,
+          {
+            dispatch: "dispatched",
+            responseReceived: false,
+            confirmedNonApplication: false,
+            raw: error,
+          },
+        )
+      }
+      options.observer?.onResponse?.()
 
-  let envelope: Sub2ApiAdminEnvelope<T>
-  try {
-    envelope = (await response.json()) as Sub2ApiAdminEnvelope<T>
-  } catch (error) {
-    throw new Sub2ApiAdminApiError(
-      "Sub2API returned an invalid admin response",
-      response.status,
-      undefined,
-      {
-        dispatch: "dispatched",
-        responseReceived: true,
-        confirmedNonApplication: response.status >= 400,
-        raw: error,
-      },
-    )
-  }
+      let responseText: string
+      try {
+        responseText = await response.text()
+      } catch (error) {
+        if (signal?.aborted) throw signal.reason ?? error
+        if (isAbortOrTimeoutError(error)) throw error
+        throw new Sub2ApiAdminApiError(
+          "Sub2API returned an invalid admin response",
+          response.status,
+          undefined,
+          {
+            dispatch: "dispatched",
+            responseReceived: true,
+            confirmedNonApplication: response.status >= 400,
+            raw: error,
+          },
+        )
+      }
 
-  const code = getEnvelopeCode(envelope)
-  const businessFailed =
-    code !== undefined && code !== 0 && code !== "0" && code !== "success"
-  if (
-    !response.ok ||
-    businessFailed ||
-    !isRecord(envelope) ||
-    !("data" in envelope)
-  ) {
-    throw new Sub2ApiAdminApiError(
-      code === SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE
-        ? SUB2API_STEP_UP_UNSUPPORTED_MESSAGE
-        : getEnvelopeMessage(envelope, "Sub2API admin request failed"),
-      response.status,
-      code,
-      {
-        dispatch: "dispatched",
-        responseReceived: true,
-        confirmedNonApplication: true,
-        raw: envelope,
-      },
-    )
-  }
+      let envelope: Sub2ApiAdminEnvelope<T> = {}
+      if (responseText.trim()) {
+        try {
+          envelope = JSON.parse(responseText) as Sub2ApiAdminEnvelope<T>
+        } catch (error) {
+          throw new Sub2ApiAdminApiError(
+            "Sub2API returned an invalid admin response",
+            response.status,
+            undefined,
+            {
+              dispatch: "dispatched",
+              responseReceived: true,
+              confirmedNonApplication: response.status >= 400,
+              raw: error,
+            },
+          )
+        }
+      }
 
-  return envelope.data as T
+      const code = getEnvelopeCode(envelope)
+      const businessFailed =
+        code !== undefined && code !== 0 && code !== "0" && code !== "success"
+      const missingRequiredData =
+        (options.requireData ?? true) &&
+        (!isRecord(envelope) || !("data" in envelope))
+      if (
+        !response.ok ||
+        businessFailed ||
+        !isRecord(envelope) ||
+        missingRequiredData
+      ) {
+        throw new Sub2ApiAdminApiError(
+          code === SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE
+            ? SUB2API_STEP_UP_UNSUPPORTED_MESSAGE
+            : missingRequiredData
+              ? "Sub2API returned an admin response without required data"
+              : getEnvelopeMessage(envelope, "Sub2API admin request failed"),
+          response.status,
+          code,
+          {
+            dispatch: "dispatched",
+            responseReceived: true,
+            confirmedNonApplication: !response.ok || businessFailed,
+            raw: envelope,
+          },
+        )
+      }
+
+      return envelope.data as T
+    },
+    {
+      signals: [options.signal],
+      timeoutMs: SUB2API_ADMIN_REQUEST_TIMEOUT_MS,
+    },
+  )
 }
 
 const listPage = async (
@@ -246,12 +316,20 @@ const listAllPages = async (
     observer?: ApiTransportRequestObserver
   },
 ): Promise<{ items: Sub2ApiAdminApiKeyAccount[]; total: number }> => {
-  await options?.beforeRequest?.()
-  const first = await listPage(config, 1, search, options)
-  const pages = Math.ceil(
-    Math.max(1, first.pages ?? Math.ceil(first.total / PAGE_SIZE)),
-  )
-  if (!Number.isFinite(pages) || pages > MAX_LIST_PAGES) {
+  const loadPage = async (page: number) => {
+    throwIfAborted(options?.signal)
+    await options?.beforeRequest?.()
+    throwIfAborted(options?.signal)
+    return await listPage(config, page, search, options)
+  }
+  const first = await loadPage(1)
+  const reportedPages = Number.isFinite(first.pages)
+    ? Number(first.pages)
+    : Number.isFinite(first.total)
+      ? Math.ceil(Number(first.total) / PAGE_SIZE)
+      : 1
+  const pages = Math.max(1, Math.ceil(reportedPages))
+  if (pages > MAX_LIST_PAGES) {
     throw new Sub2ApiAdminApiError(
       "Sub2API account inventory exceeds the safe pagination limit",
       200,
@@ -266,7 +344,7 @@ const listAllPages = async (
   }
   const items = [...(first.items ?? [])]
   for (let page = 2; page <= pages; page += 1) {
-    const next = await listPage(config, page, search, options)
+    const next = await loadPage(page)
     items.push(...(next.items ?? []))
   }
   return { items, total: first.total ?? items.length }
@@ -295,7 +373,11 @@ export async function listSub2ApiApiKeyAccounts(
 export async function searchSub2ApiApiKeyAccounts(
   config: Sub2ApiManagedSiteConfig,
   keyword: string,
-  options?: { signal?: AbortSignal; observer?: ApiTransportRequestObserver },
+  options?: {
+    signal?: AbortSignal
+    beforeRequest?: () => Promise<void>
+    observer?: ApiTransportRequestObserver
+  },
 ): Promise<{ items: Sub2ApiAdminApiKeyAccount[]; total: number }> {
   const search = keyword.trim()
   return await listAllPages(config, search || undefined, options)
@@ -307,9 +389,10 @@ export async function getSub2ApiApiKeyAccount(
   accountId: number,
   options?: { signal?: AbortSignal },
 ) {
+  const resolvedAccountId = parseSub2ApiResourceId(accountId)
   return await sub2ApiAdminRequest<Sub2ApiAdminApiKeyAccount>(
     config,
-    `${SUB2API_ADMIN_ACCOUNTS_ENDPOINT}/${accountId}`,
+    `${SUB2API_ADMIN_ACCOUNTS_ENDPOINT}/${resolvedAccountId}`,
     options,
   )
 }
@@ -322,11 +405,12 @@ export async function revealSub2ApiApiKey(
   accountId: number,
   options?: { signal?: AbortSignal },
 ): Promise<string> {
+  const resolvedAccountId = parseSub2ApiResourceId(accountId)
   const payload = await sub2ApiAdminRequest<Sub2ApiAdminDataPayload>(
     config,
     SUB2API_ADMIN_ACCOUNTS_DATA_ENDPOINT,
     {
-      query: { ids: accountId, include_proxies: false },
+      query: { ids: resolvedAccountId, include_proxies: false },
       signal: options?.signal,
     },
   )
@@ -335,7 +419,7 @@ export async function revealSub2ApiApiKey(
   if (
     exported?.type !== "apikey" ||
     typeof apiKey !== "string" ||
-    !apiKey.trim()
+    !hasUsableManagedSiteChannelKey(apiKey)
   ) {
     throw new Sub2ApiAdminApiError(
       "Sub2API did not return an API key for the selected account",
@@ -356,7 +440,7 @@ export async function revealSub2ApiApiKey(
 export async function createSub2ApiApiKeyAccount(
   config: Sub2ApiManagedSiteConfig,
   input: Sub2ApiApiKeyAccountCreateInput,
-  options?: { observer?: ApiTransportRequestObserver },
+  options?: { signal?: AbortSignal; observer?: ApiTransportRequestObserver },
 ) {
   return await sub2ApiAdminRequest<Sub2ApiAdminApiKeyAccount>(
     config,
@@ -380,6 +464,7 @@ export async function createSub2ApiApiKeyAccount(
         ...(input.priority === undefined ? {} : { priority: input.priority }),
         ...(input.notes === undefined ? {} : { notes: input.notes }),
       },
+      signal: options?.signal,
       observer: options?.observer,
     },
   )
@@ -390,8 +475,9 @@ export async function updateSub2ApiApiKeyAccount(
   config: Sub2ApiManagedSiteConfig,
   accountId: number,
   input: Sub2ApiApiKeyAccountUpdateInput,
-  options?: { observer?: ApiTransportRequestObserver },
+  options?: { signal?: AbortSignal; observer?: ApiTransportRequestObserver },
 ) {
+  const resolvedAccountId = parseSub2ApiResourceId(accountId)
   const credentials = {
     ...(input.baseUrl === undefined ? {} : { base_url: input.baseUrl.trim() }),
     ...(input.apiKey === undefined ? {} : { api_key: input.apiKey.trim() }),
@@ -401,7 +487,7 @@ export async function updateSub2ApiApiKeyAccount(
   }
   return await sub2ApiAdminRequest<Sub2ApiAdminApiKeyAccount>(
     config,
-    `${SUB2API_ADMIN_ACCOUNTS_ENDPOINT}/${accountId}`,
+    `${SUB2API_ADMIN_ACCOUNTS_ENDPOINT}/${resolvedAccountId}`,
     {
       method: "PUT",
       body: {
@@ -414,6 +500,7 @@ export async function updateSub2ApiApiKeyAccount(
         ...(input.status === undefined ? {} : { status: input.status }),
         ...(input.notes === undefined ? {} : { notes: input.notes }),
       },
+      signal: options?.signal,
       observer: options?.observer,
     },
   )
@@ -423,47 +510,22 @@ export async function updateSub2ApiApiKeyAccount(
 export async function deleteSub2ApiApiKeyAccount(
   config: Sub2ApiManagedSiteConfig,
   accountId: number,
-  options?: { observer?: ApiTransportRequestObserver },
+  options?: { signal?: AbortSignal; observer?: ApiTransportRequestObserver },
 ): Promise<void> {
+  const resolvedAccountId = parseSub2ApiResourceId(accountId)
   await sub2ApiAdminRequest<unknown>(
     config,
-    `${SUB2API_ADMIN_ACCOUNTS_ENDPOINT}/${accountId}`,
-    { method: "DELETE", observer: options?.observer },
+    `${SUB2API_ADMIN_ACCOUNTS_ENDPOINT}/${resolvedAccountId}`,
+    {
+      method: "DELETE",
+      signal: options?.signal,
+      observer: options?.observer,
+      requireData: false,
+    },
   )
 }
 
-export const sub2ApiPlatformToChannelType = (
-  platform: Sub2ApiApiKeyAccountPlatform,
-): ChannelType => {
-  switch (platform) {
-    case "anthropic":
-      return ChannelType.Anthropic
-    case "gemini":
-      return ChannelType.Gemini
-    case "grok":
-      return ChannelType.Xai
-    case "antigravity":
-      return ChannelType.Custom
-    case "openai":
-    default:
-      return ChannelType.OpenAI
-  }
-}
-
-export const sub2ApiChannelTypeToPlatform = (
-  channelType: unknown,
-): Sub2ApiApiKeyAccountPlatform => {
-  if (isSub2ApiPlatform(channelType)) return channelType
-  const normalizedChannelType =
-    typeof channelType === "string" && channelType.trim()
-      ? Number(channelType)
-      : channelType
-  if (normalizedChannelType === ChannelType.Anthropic) return "anthropic"
-  if (normalizedChannelType === ChannelType.Gemini) return "gemini"
-  if (normalizedChannelType === ChannelType.Xai) return "grok"
-  if (normalizedChannelType === ChannelType.Custom) return "antigravity"
-  return "openai"
-}
+export { sub2ApiChannelTypeToPlatform, sub2ApiPlatformToChannelType }
 
 /** Projects a redacted Sub2API account into the legacy channel contract. */
 export function sub2ApiAccountToManagedSiteChannel(
@@ -478,9 +540,12 @@ export function sub2ApiAccountToManagedSiteChannel(
     base_url: typeof baseUrl === "string" ? baseUrl : "",
     models: "",
     status:
-      account.status === "active"
+      isSub2ApiManagedResourceStatus(account.status) &&
+      account.status === SUB2API_MANAGED_RESOURCE_STATUS.Active
         ? CHANNEL_STATUS.Enable
         : CHANNEL_STATUS.ManuallyDisabled,
+    // Legacy compatibility only: shared `weight` round-trips Sub2API
+    // concurrency. Native resources own provider routing semantics.
     weight: account.concurrency ?? DEFAULT_CHANNEL_FIELDS.weight,
     priority: account.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
     openai_organization: null,

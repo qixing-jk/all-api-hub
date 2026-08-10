@@ -29,7 +29,10 @@ import {
   buildApiCredentialProfileSyntheticAccountId,
 } from "~/services/apiCredentialProfiles/syntheticAccount"
 import { toManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
-import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
+import {
+  getManagedSiteChannelExactMatch,
+  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
+} from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
 import {
   getManagedSiteService,
@@ -308,7 +311,8 @@ export function useChannelDialog() {
     }
 
     if (
-      params.service.messagesKey === "newapi" &&
+      resolution.unresolvedReason ===
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED &&
       resolution.searchCompleted &&
       resolution.url.matched &&
       !resolution.key.comparable

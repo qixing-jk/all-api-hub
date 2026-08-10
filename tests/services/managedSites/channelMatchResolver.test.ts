@@ -76,6 +76,42 @@ describe("resolveManagedSiteChannelMatch", () => {
     ).toBeNull()
   })
 
+  it("does not report an exact Sub2API duplicate when URL and key match different accounts", () => {
+    const urlChannel = buildManagedSiteChannel({
+      id: 91,
+      key: "url-channel-key",
+      base_url: "https://api.example.invalid",
+      models: "",
+    })
+    const keyChannel = buildManagedSiteChannel({
+      id: 92,
+      key: "sub2api-key",
+      base_url: "https://other.example.invalid",
+      models: "",
+    })
+    const inspection = {
+      searchBaseUrl: "https://api.example.invalid",
+      searchCompleted: true,
+      url: { matched: true, channel: urlChannel, candidateCount: 1 },
+      key: {
+        comparable: true,
+        matched: true,
+        reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
+        channel: keyChannel,
+      },
+      models: {
+        comparable: false,
+        matched: false,
+        reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MODELS_PROVIDED,
+        channel: null,
+      },
+    }
+
+    expect(
+      getManagedSiteChannelExactMatch(inspection, SITE_TYPES.SUB2API),
+    ).toBeNull()
+  })
+
   it("uses migrated resource duplicate candidates when the feature path is available", async () => {
     const resourceBackedChannel = buildManagedSiteChannel({
       id: 64,

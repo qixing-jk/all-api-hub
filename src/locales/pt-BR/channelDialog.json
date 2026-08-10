@@ -104,7 +104,7 @@
       "actions": {
         "verifyNow": "Verificar agora"
       },
-      "description": "Canais candidatos foram encontrados, mas a New API exige uma etapa de verificação adicional antes que a chave real do canal possa ser lida, portanto a confirmação de duplicata exata está indisponível no momento. Você ainda pode continuar criando o canal; conclua a verificação primeiro se precisar de uma verificação de desduplicação exata.",
+      "description": "Canais candidatos foram encontrados, mas é necessária uma etapa de verificação adicional antes que a chave real do canal possa ser lida, portanto a confirmação de duplicata exata está indisponível no momento. Você ainda pode continuar criando o canal; conclua a verificação primeiro se precisar de uma verificação de desduplicação exata.",
       "title": "Possível duplicata exige verificação"
     }
   }

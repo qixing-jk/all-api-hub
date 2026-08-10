@@ -15,6 +15,7 @@ import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/regi
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
+  MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { openNativeManagedChannelImportEditor } from "~/services/apiAdapters/managedResources/channelImport"
@@ -84,7 +85,7 @@ const account = {
 
 describe("Sub2API native managed resource", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     mocks.getPreferences.mockResolvedValue({ sub2apiManagedSite: config })
     mocks.listAccounts.mockResolvedValue({ items: [account], total: 1 })
     mocks.searchAccounts.mockResolvedValue({ items: [account], total: 1 })
@@ -135,12 +136,16 @@ describe("Sub2API native managed resource", () => {
     )
   })
 
-  it("searches the full safe projection and shows routing plus secret availability facts", async () => {
+  it("uses native account search for non-empty display queries and shows safe facts", async () => {
     const workspace = await sub2ApiManagedResourceRegistration.open()
-    const page = await workspace.list({ search: "api.example.invalid" })
+    const page = await workspace.list({ search: "Primary upstream" })
 
-    expect(mocks.listAccounts).toHaveBeenCalledWith(config, expect.any(Object))
-    expect(mocks.searchAccounts).not.toHaveBeenCalled()
+    expect(mocks.searchAccounts).toHaveBeenCalledWith(
+      config,
+      "Primary upstream",
+      expect.any(Object),
+    )
+    expect(mocks.listAccounts).not.toHaveBeenCalled()
     expect(page.items).toHaveLength(1)
     expect(page.items[0]).toMatchObject({
       displayName: "Primary upstream",
@@ -159,11 +164,10 @@ describe("Sub2API native managed resource", () => {
       ]),
     })
 
-    await expect(
-      workspace.list({ search: "model-aliased" }),
-    ).resolves.toMatchObject({
+    await expect(workspace.list({ search: " " })).resolves.toMatchObject({
       items: [expect.objectContaining({ displayName: "Primary upstream" })],
     })
+    expect(mocks.listAccounts).toHaveBeenCalledWith(config, expect.any(Object))
   })
 
   it("exposes the full create projection and creates through the shared mutation seam", async () => {
@@ -245,7 +249,38 @@ describe("Sub2API native managed resource", () => {
       baseURL: "https://api.example.invalid/v1",
       key: { kind: "replace", value: "import-secret" },
       supportedModels: [],
-      concurrency: 3,
+      concurrency: 1,
+      priority: 8,
+      notes: "Imported note",
+    })
+  })
+
+  it("keeps masked imported credentials unavailable for native create validation", async () => {
+    const opened = await openNativeManagedChannelImportEditor(
+      SITE_TYPES.SUB2API,
+      {
+        name: "Masked import",
+        type: ChannelType.OpenAI,
+        key: "sk-********",
+        base_url: "https://api.example.invalid/v1",
+        models: [],
+        groups: [],
+        priority: 1,
+        weight: 9,
+        status: 1,
+      },
+    )
+    const editor = opened!.editor
+
+    expect(editor.initialValues.key).toEqual({ kind: "unchanged" })
+    expect(editor.validate(editor.initialValues)).toEqual({
+      valid: false,
+      issues: expect.arrayContaining([
+        {
+          fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.Required,
+        },
+      ]),
     })
   })
 
@@ -334,6 +369,84 @@ describe("Sub2API native managed resource", () => {
     )
   })
 
+  it("filters non-api-key wire records and preserves unknown status without writing it back", async () => {
+    const unknownStatusAccount = {
+      ...account,
+      id: 18,
+      status: "paused-by-upstream",
+    }
+    mocks.listAccounts.mockResolvedValueOnce({
+      items: [{ ...account, id: 19, type: "oauth" }, unknownStatusAccount],
+      total: 2,
+    })
+    mocks.getAccount.mockResolvedValue(unknownStatusAccount)
+    const workspace = await sub2ApiManagedResourceRegistration.open()
+    const page = await workspace.list()
+
+    expect(page.items).toHaveLength(1)
+    expect(page.items[0]).toMatchObject({
+      displayName: "Primary upstream",
+      status: "unknown",
+      fields: expect.arrayContaining([
+        { fieldId: "status", kind: "text", value: "unknown" },
+      ]),
+    })
+
+    const editor = await workspace.openEditEditor(page.items[0].ref)
+    const values = { ...editor.initialValues, name: "Renamed unknown status" }
+    expect(editor.validate(values)).toEqual({ valid: true })
+    mocks.updateAccount.mockImplementationOnce(
+      async (_config, _accountId, _input, options) => {
+        options?.observer?.onDispatch()
+        options?.observer?.onResponse()
+        return { ...unknownStatusAccount, name: "Renamed unknown status" }
+      },
+    )
+
+    await editor.submit(values)
+
+    expect(mocks.updateAccount.mock.calls.at(-1)?.[2]).toEqual({
+      name: "Renamed unknown status",
+    })
+  })
+
+  it("forwards operation abort signals through native create, update, and delete", async () => {
+    const controller = new AbortController()
+    const createWorkspace = await sub2ApiManagedResourceRegistration.open()
+    const createEditor = await createWorkspace.openCreateEditor()
+
+    await createEditor.submit(
+      {
+        ...createEditor.initialValues,
+        name: "Signal create",
+        baseURL: "https://api.example.invalid/v1",
+        key: { kind: "replace", value: "signal-secret" },
+      },
+      { signal: controller.signal },
+    )
+    expect(mocks.createAccount.mock.calls.at(-1)?.[2]).toMatchObject({
+      signal: controller.signal,
+    })
+
+    const updateWorkspace = await sub2ApiManagedResourceRegistration.open()
+    const [facts] = (await updateWorkspace.list()).items
+    const updateEditor = await updateWorkspace.openEditEditor(facts.ref)
+    await updateEditor.submit(
+      { ...updateEditor.initialValues, name: "Signal update" },
+      { signal: controller.signal },
+    )
+    expect(mocks.updateAccount.mock.calls.at(-1)?.[3]).toMatchObject({
+      signal: controller.signal,
+    })
+
+    const deleteWorkspace = await sub2ApiManagedResourceRegistration.open()
+    const [deleteFacts] = (await deleteWorkspace.list()).items
+    await deleteWorkspace.delete(deleteFacts.ref, { signal: controller.signal })
+    expect(mocks.deleteAccount.mock.calls.at(-1)?.[2]).toMatchObject({
+      signal: controller.signal,
+    })
+  })
+
   it("maps step-up key reveal rejection to a controlled permission failure", async () => {
     mocks.revealKey.mockRejectedValueOnce(
       new Sub2ApiAdminApiError(
@@ -351,17 +464,14 @@ describe("Sub2API native managed resource", () => {
     const [facts] = (await workspace.list()).items
     const editor = await workspace.openEditEditor(facts.ref)
 
-    try {
-      await editor.loadSecret?.("key")
-      throw new Error("expected reveal to fail")
-    } catch (error) {
-      expect(error).toBeInstanceOf(ManagedResourceError)
-      expect((error as ManagedResourceError).failure).toEqual({
+    await expect(editor.loadSecret?.("key")).rejects.toMatchObject({
+      name: "ManagedResourceError",
+      failure: {
         code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
         message: "step-up required",
         upstreamCode: SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
-      })
-    }
+      },
+    } satisfies Partial<ManagedResourceError>)
   })
 
   it("deletes through the native resource workspace", async () => {

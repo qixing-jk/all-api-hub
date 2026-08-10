@@ -114,9 +114,17 @@ export const getManagedSiteChannelExactMatch = (
   siteType?: ManagedSiteType,
 ): ManagedSiteChannel | null => {
   if (siteType === SITE_TYPES.SUB2API) {
-    return inspection.url.matched && inspection.key.matched
-      ? inspection.key.channel
-      : null
+    if (
+      !inspection.url.matched ||
+      !inspection.key.matched ||
+      inspection.url.channel?.id == null ||
+      inspection.key.channel?.id == null ||
+      inspection.url.channel.id !== inspection.key.channel.id
+    ) {
+      return null
+    }
+
+    return inspection.key.channel
   }
 
   if (

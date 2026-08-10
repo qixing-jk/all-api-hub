@@ -46,6 +46,8 @@ const createManagedChannelImportSeed = (
   enabled: draft.status === CHANNEL_STATUS.Enable,
   models: [...draft.models],
   orderingWeight: draft.weight,
+  priority: draft.priority,
+  notes: draft.notes ?? "",
 })
 
 /** Opens a provider-native create editor when that provider owns import binding. */

@@ -104,6 +104,8 @@ export type ManagedChannelImportCreateSeed = {
   enabled: boolean
   models: readonly string[]
   orderingWeight: number
+  priority: number
+  notes: string
 }
 
 export type ManagedResourceCreateSeed = ManagedChannelImportCreateSeed

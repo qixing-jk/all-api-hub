@@ -13,6 +13,7 @@ import {
   Modal,
 } from "~/components/ui"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { SUB2API_MANAGED_RESOURCE_FIELD_IDS } from "~/constants/sub2api"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   MANAGED_RESOURCE_MODES,
@@ -52,6 +53,7 @@ import type {
   ManagedChannelsColumn,
   ManagedChannelsLabels,
   ManagedChannelsPresentationState,
+  ManagedChannelsSorting,
   ManagedSiteMigrationLabels,
 } from "./presentation/contracts"
 import { ManagedResourceEditorBody } from "./presentation/ManagedResourceEditorBody"
@@ -74,6 +76,18 @@ const resolvePolicy = (
   siteType: ManagedSiteType,
 ): ManagedResourceProductPolicy | undefined =>
   getAccountSiteDefinition(siteType)?.managedResource
+
+const getDefaultNativeSorting = (
+  siteType: ManagedSiteType,
+): ManagedChannelsSorting => [
+  {
+    id:
+      siteType === SITE_TYPES.SUB2API
+        ? SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name
+        : "id",
+    desc: true,
+  },
+]
 
 /** Renders a controlled failure when static native integration is incomplete. */
 function ManagedSiteChannelsIntegrationFailure() {
@@ -171,7 +185,7 @@ const createNativeColumns = (
         extension: { kind: "legacy-common" },
       },
       {
-        id: "name",
+        id: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name,
         label: t("managedSiteChannels:table.columns.name"),
         renderer: "channel",
         accessor: { kind: "name" },
@@ -187,13 +201,13 @@ const createNativeColumns = (
         extension: { kind: "legacy-common" },
       },
       ...policy.tableFieldIds.flatMap((fieldId) => {
-        if (fieldId === "name") return []
+        if (fieldId === SUB2API_MANAGED_RESOURCE_FIELD_IDS.Name) return []
         const options =
-          fieldId === "status"
+          fieldId === SUB2API_MANAGED_RESOURCE_FIELD_IDS.Status
             ? { facet: { kind: "status" as const } }
-            : fieldId === "baseURL"
+            : fieldId === SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl
               ? { size: 260 }
-              : fieldId === "platform"
+              : fieldId === SUB2API_MANAGED_RESOURCE_FIELD_IDS.Platform
                 ? { size: 110 }
                 : { size: 120 }
         return [
@@ -489,12 +503,9 @@ function NativeManagedSiteChannels({
     [t],
   )
   const [searchValue, setSearchValue] = useState(routeParams.search ?? "")
-  const [sorting, setSorting] = useState([
-    {
-      id: siteType === SITE_TYPES.SUB2API ? "name" : "id",
-      desc: true,
-    },
-  ])
+  const [sorting, setSorting] = useState(() =>
+    getDefaultNativeSorting(siteType),
+  )
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >({})
@@ -516,6 +527,7 @@ function NativeManagedSiteChannels({
     () => setSearchValue(routeParams.search ?? ""),
     [routeParams.search],
   )
+  useEffect(() => setSorting(getDefaultNativeSorting(siteType)), [siteType])
   const list = useManagedResourceListController({
     registration,
     scopeKey: config?.baseUrl ?? `${siteType}:configuration-missing`,

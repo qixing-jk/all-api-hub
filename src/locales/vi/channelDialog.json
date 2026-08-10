@@ -104,7 +104,7 @@
       "actions": {
         "verifyNow": "Xác minh ngay"
       },
-      "description": "Đã tìm thấy kênh ứng viên, nhưng New API cần hoàn tất xác minh trước khi có thể đọc khóa thực của kênh, vì vậy tạm thời không thể tự động xác nhận trùng lặp. Bạn vẫn có thể tiếp tục tạo; để loại bỏ trùng lặp chính xác, vui lòng hoàn tất xác minh trước rồi thử lại.",
+      "description": "Đã tìm thấy kênh ứng viên, nhưng cần hoàn tất bước xác minh bổ sung trước khi có thể đọc khóa thực của kênh, vì vậy tạm thời không thể tự động xác nhận trùng lặp. Bạn vẫn có thể tiếp tục tạo; để loại bỏ trùng lặp chính xác, vui lòng hoàn tất xác minh trước rồi thử lại.",
       "title": "Có thể có các kênh trùng lặp, cần xác minh để xác nhận chính xác"
     }
   }
