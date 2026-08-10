@@ -23,6 +23,8 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   createManagedUpstreamResourceRef,
+  MANAGED_UPSTREAM_RESOURCE_SECRET_STATES,
+  MANAGED_UPSTREAM_RESOURCE_STATUSES,
   normalizeManagedUpstreamResourceScopeKey,
 } from "~/types/managedUpstreamResource"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
@@ -166,6 +168,44 @@ describe("Sub2API managed-site adapter", () => {
     ).resolves.toEqual([{ id: 17, name: "Ready", key: "sk-ready" }])
 
     expect(revealSub2ApiApiKey).not.toHaveBeenCalled()
+  })
+
+  it("maps native status, endpoint, and secret variants without inventing facts", async () => {
+    vi.mocked(listSub2ApiApiKeyAccounts).mockResolvedValueOnce({
+      items: [
+        { ...nativeAccount, id: 18, status: "inactive" },
+        {
+          ...nativeAccount,
+          id: 19,
+          status: "error",
+          credentials: {},
+          credentials_status: { has_api_key: false },
+        },
+        {
+          ...nativeAccount,
+          id: 20,
+          status: "future-status",
+        },
+      ] as any,
+      total: 3,
+    })
+
+    const page =
+      await sub2ApiManagedSiteCapabilities.resources.items.list(config)
+
+    expect(page.items[0]).toMatchObject({
+      status: MANAGED_UPSTREAM_RESOURCE_STATUSES.Disabled,
+      endpointLabel: "https://api.example.invalid/v1",
+      secretState: MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Masked,
+    })
+    expect(page.items[1]).toMatchObject({
+      status: MANAGED_UPSTREAM_RESOURCE_STATUSES.AutoDisabled,
+      secretState: MANAGED_UPSTREAM_RESOURCE_SECRET_STATES.Unavailable,
+    })
+    expect(page.items[1].endpointLabel).toBeUndefined()
+    expect(page.items[2].status).toBe(
+      MANAGED_UPSTREAM_RESOURCE_STATUSES.Unknown,
+    )
   })
 
   it("keeps failed key resolution unknown instead of claiming no duplicate", async () => {
@@ -417,6 +457,63 @@ describe("Sub2API managed-site adapter", () => {
       },
       expect.any(Object),
     )
+  })
+
+  it("maps a disabled legacy status to the native inactive status", async () => {
+    vi.mocked(updateSub2ApiApiKeyAccount).mockImplementationOnce(
+      async (_config, _id, _input, options) => {
+        options?.observer?.onDispatch()
+        options?.observer?.onResponse()
+        return { ...nativeAccount, status: "inactive" }
+      },
+    )
+
+    await sub2ApiManagedSiteChannels.update(config, {
+      id: 17,
+      status: CHANNEL_STATUS.ManuallyDisabled,
+    })
+
+    expect(updateSub2ApiApiKeyAccount).toHaveBeenCalledWith(
+      config,
+      17,
+      { status: "inactive" },
+      expect.any(Object),
+    )
+  })
+
+  it("passes through rejected updates without optional status metadata", async () => {
+    const rejection = new Sub2ApiAdminApiError(
+      "update rejected",
+      undefined,
+      "UPSTREAM",
+      {
+        dispatch: "dispatched",
+        responseReceived: true,
+        confirmedNonApplication: true,
+      },
+    )
+    vi.mocked(updateSub2ApiApiKeyAccount).mockImplementationOnce(
+      async (_config, _id, _input, options) => {
+        options?.observer?.onDispatch()
+        options?.observer?.onResponse()
+        throw rejection
+      },
+    )
+
+    const result = await sub2ApiManagedSiteChannels.update(config, { id: 17 })
+
+    expect(result).toMatchObject({
+      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
+      diagnostic: {
+        message: "update rejected",
+        code: "UPSTREAM",
+        raw: rejection,
+      },
+    })
+    if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Rejected) {
+      throw new Error(`Expected rejected outcome, received ${result.outcome}`)
+    }
+    expect(result.diagnostic).not.toHaveProperty("statusCode")
   })
 
   it("classifies confirmed provider rejection diagnostics", async () => {

@@ -424,6 +424,34 @@ describe("Sub2API API-key account managed-site provider", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
+  it("derives pagination from total when the server omits page count", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          data: { items: [account], total: 101 },
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          code: 0,
+          data: {
+            items: [{ ...account, id: 18, name: "Second page" }],
+            total: 101,
+          },
+        }),
+      )
+
+    await expect(listSub2ApiApiKeyAccounts(config)).resolves.toMatchObject({
+      items: [account, expect.objectContaining({ id: 18 })],
+      total: 101,
+    })
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(
+      new URL(String(mockFetch.mock.calls[1][0])).searchParams.get("page"),
+    ).toBe("2")
+  })
+
   it("inventories API-key accounts without sending the imported URL as a name search", async () => {
     mockFetch.mockImplementation(async (input) => {
       const url = new URL(String(input))
@@ -867,6 +895,22 @@ describe("Sub2API API-key account managed-site provider", () => {
     })
     expect(JSON.parse(String(mockFetch.mock.calls[1][1]?.body))).toEqual({
       credentials: { api_key: "sk-next" },
+    })
+  })
+
+  it("forwards zero routing values and status during updates", async () => {
+    mockFetch.mockResolvedValueOnce(jsonResponse({ code: 0, data: account }))
+
+    await updateSub2ApiApiKeyAccount(config, 17, {
+      concurrency: 0,
+      priority: 0,
+      status: "inactive",
+    })
+
+    expect(JSON.parse(String(mockFetch.mock.calls[0][1]?.body))).toEqual({
+      concurrency: 0,
+      priority: 0,
+      status: "inactive",
     })
   })
 

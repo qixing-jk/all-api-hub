@@ -299,7 +299,6 @@ describe("Sub2API native managed resource", () => {
       status: "error",
       baseURL: "not a URL",
       key: { unexpected: true },
-      supportedModels: "not-a-list",
       concurrency: 1.5,
       priority: -1,
     } as unknown as typeof editor.initialValues
@@ -459,6 +458,20 @@ describe("Sub2API native managed resource", () => {
       ]),
     )
     expect(mocks.revealKey).not.toHaveBeenCalled()
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        key: { kind: "clear" },
+      }),
+    ).toEqual({
+      valid: false,
+      issues: [
+        {
+          fieldId: SUB2API_MANAGED_RESOURCE_FIELD_IDS.Key,
+          code: MANAGED_RESOURCE_FIELD_ISSUE_CODES.InvalidValue,
+        },
+      ],
+    })
     await expect(editor.loadSecret?.("name")).rejects.toMatchObject({
       failure: { code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
     })
@@ -536,13 +549,15 @@ describe("Sub2API native managed resource", () => {
         },
       ]),
     })
-    expect(facts.fields).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ fieldId: "baseURL" }),
-        expect.objectContaining({ fieldId: "concurrency" }),
-        expect.objectContaining({ fieldId: "priority" }),
-      ]),
-    )
+    for (const fieldId of [
+      SUB2API_MANAGED_RESOURCE_FIELD_IDS.BaseUrl,
+      SUB2API_MANAGED_RESOURCE_FIELD_IDS.Concurrency,
+      SUB2API_MANAGED_RESOURCE_FIELD_IDS.Priority,
+    ]) {
+      expect(facts.fields).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ fieldId })]),
+      )
+    }
 
     const editor = await workspace.openEditEditor(facts.ref)
     expect(editor.loadSecret).toBeUndefined()

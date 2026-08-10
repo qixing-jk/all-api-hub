@@ -159,7 +159,9 @@ describe("Sub2ApiSettings", () => {
     )
     await waitFor(() => {
       expect(context.updateSub2ApiManagedSiteConfig).toHaveBeenCalled()
-      expect(vi.mocked(toast.default.error)).toHaveBeenCalled()
+      expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
+        "settings:messages.preferencesChangedExternally",
+      )
     })
 
     vi.mocked(toast.default.error).mockClear()
