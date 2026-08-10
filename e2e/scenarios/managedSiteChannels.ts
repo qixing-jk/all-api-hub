@@ -44,7 +44,7 @@ const CRUD_UPDATED_MODEL = "gpt-4.1-mini"
 export function shouldEditModelsInManagedSiteCrudScenario(
   siteType: ManagedSiteType,
 ): boolean {
-  return siteType !== SITE_TYPES.AXON_HUB
+  return siteType !== SITE_TYPES.AXON_HUB && siteType !== SITE_TYPES.SUB2API
 }
 
 const channelsUrl = (extensionId: string, params?: Record<string, string>) => {
@@ -128,7 +128,9 @@ export async function runManagedSiteChannelsCrudScenario<
       name: channelName,
       key: `sk-${slugify(context.runPrefix)}-crud`,
       baseUrl: "https://upstream.example.invalid/v1",
-      model: CRUD_MODEL,
+      model: shouldEditModelsInManagedSiteCrudScenario(context.siteType)
+        ? CRUD_MODEL
+        : undefined,
     })
     await expectManagedSiteChannelVisibleAfterRefresh({
       page: context.page,
@@ -207,6 +209,26 @@ export async function runManagedSiteTokenChannelStatusScenario<
   let keyManagementPage = context.page
   let createdTokenName: string | null = null
   const tokenCleanupPrefix = context.tokenCleanupPrefix ?? context.tokenName
+  const sub2ApiInventoryRequests: string[] = []
+  const sub2ApiKeyExportRequests: string[] = []
+  const observeSub2ApiInventoryRequest = (request: {
+    method(): string
+    url(): string
+  }) => {
+    const url = new URL(request.url())
+    if (
+      request.method() === "GET" &&
+      url.pathname.endsWith("/api/v1/admin/accounts")
+    ) {
+      sub2ApiInventoryRequests.push(url.toString())
+    }
+    if (
+      request.method() === "GET" &&
+      url.pathname.endsWith("/api/v1/admin/accounts/data")
+    ) {
+      sub2ApiKeyExportRequests.push(url.toString())
+    }
+  }
 
   await cleanupManagedSiteChannelsByPrefix({
     page: context.page,
@@ -216,6 +238,9 @@ export async function runManagedSiteTokenChannelStatusScenario<
   })
 
   try {
+    if (context.siteType === SITE_TYPES.SUB2API) {
+      context.page.context().on("request", observeSub2ApiInventoryRequest)
+    }
     keyManagementPage = await openKeyManagementForAccount({
       page: context.page,
       extensionId: context.extensionId,
@@ -237,11 +262,19 @@ export async function runManagedSiteTokenChannelStatusScenario<
       page: keyManagementPage,
       tokenName: context.tokenName,
     })
-    const row = tokenResult.row
+    let row = tokenResult.row
 
     await expect(
       row.getByTestId(KEY_MANAGEMENT_TEST_IDS.managedSiteStatusBadge),
     ).toBeVisible({ timeout: 30_000 })
+    if (context.siteType === SITE_TYPES.SUB2API) {
+      await expect
+        .poll(() => sub2ApiInventoryRequests.length, { timeout: 30_000 })
+        .toBeGreaterThan(0)
+      for (const requestUrl of sub2ApiInventoryRequests) {
+        expect(new URL(requestUrl).searchParams.get("search")).toBeNull()
+      }
+    }
     await openManagedSiteImportDialogFromTokenRow({
       page: keyManagementPage,
       row,
@@ -251,7 +284,35 @@ export async function runManagedSiteTokenChannelStatusScenario<
       .fill(channelName)
     await submitChannelDialogAndWaitForClose(keyManagementPage)
 
-    await expectManagedSiteImportStatusAfterChannelCreate(row)
+    if (context.siteType === SITE_TYPES.SUB2API) {
+      sub2ApiInventoryRequests.length = 0
+      sub2ApiKeyExportRequests.length = 0
+      keyManagementPage = await openKeyManagementForAccount({
+        page: keyManagementPage,
+        extensionId: context.extensionId,
+        accountId: context.sourceAccount.accountId,
+        openFromAccountRow: false,
+      })
+      row = (
+        await expectTokenCreatedInKeyManagementPage({
+          page: keyManagementPage,
+          tokenName: context.tokenName,
+        })
+      ).row
+      await expectManagedSiteImportStatusAfterChannelCreate(row)
+      await expect
+        .poll(() => sub2ApiInventoryRequests.length, { timeout: 30_000 })
+        .toBeGreaterThan(0)
+      await expect
+        .poll(() => sub2ApiKeyExportRequests.length, { timeout: 30_000 })
+        .toBeGreaterThan(0)
+      context.page.context().off("request", observeSub2ApiInventoryRequest)
+      for (const requestUrl of sub2ApiInventoryRequests) {
+        expect(new URL(requestUrl).searchParams.get("search")).toBeNull()
+      }
+    } else {
+      await expectManagedSiteImportStatusAfterChannelCreate(row)
+    }
     await openManagedSiteChannelsAndExpectRow({
       page: keyManagementPage,
       extensionId: context.extensionId,
@@ -261,6 +322,7 @@ export async function runManagedSiteTokenChannelStatusScenario<
 
     return { skipped: false as const }
   } finally {
+    context.page.context().off("request", observeSub2ApiInventoryRequest)
     if (createdTokenName) {
       keyManagementPage = await openKeyManagementForAccount({
         page: keyManagementPage,
@@ -446,7 +508,7 @@ async function createManagedSiteChannelFromUi(
     name: string
     key: string
     baseUrl: string
-    model: string
+    model?: string
   },
 ) {
   await page
@@ -462,7 +524,9 @@ async function createManagedSiteChannelFromUi(
   await page
     .getByTestId(CHANNEL_DIALOG_TEST_IDS.baseUrlInput)
     .fill(params.baseUrl)
-  await fillModelInput(page, params.model)
+  if (params.model) {
+    await fillModelInput(page, params.model)
+  }
   await submitChannelDialogAndWaitForClose(page)
 }
 

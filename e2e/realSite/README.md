@@ -192,6 +192,7 @@ AAH_E2E_CLAUDE_CODE_HUB_ADMIN_TOKEN=replace-with-admin-token
 AAH_E2E_SUB2API_BASE_URL=https://sub2api.example.com
 AAH_E2E_SUB2API_USERNAME=test-user@example.com
 AAH_E2E_SUB2API_PASSWORD=replace-with-test-password
+AAH_E2E_SUB2API_ADMIN_TOKEN=replace-with-admin-api-key
 # AAH_E2E_SUB2API_LOGIN_PATH=/login
 # AAH_E2E_SUB2API_LOGIN_API_PATH=/api/v1/auth/login
 # AAH_E2E_SUB2API_USERNAME_SELECTOR=input#email
@@ -199,6 +200,13 @@ AAH_E2E_SUB2API_PASSWORD=replace-with-test-password
 # AAH_E2E_SUB2API_SUBMIT_SELECTOR=form button[type="submit"]
 # AAH_E2E_SUB2API_AGREE_SELECTOR=input[type="checkbox"]
 ```
+
+The managed-site Sub2API target uses the Admin API Key to create temporary
+`type=apikey` accounts with an `AAH E2E Sub2API` prefix. It verifies that token
+status checks inventory accounts without sending the imported URL through the
+upstream name-search parameter, then reopens Key Management to confirm the
+matching candidate key is read through the raw-data endpoint. Temporary
+accounts are removed afterward.
 
 ## Nutstore WebDAV
 

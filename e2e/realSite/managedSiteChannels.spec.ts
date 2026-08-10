@@ -1,6 +1,7 @@
 import type { BrowserContext, Page } from "@playwright/test"
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import type { UserPreferences } from "~/services/preferences/userPreferences"
 import { test } from "~~/e2e/fixtures/extensionTest"
 import {
   buildManagedSiteE2ePrefix,
@@ -25,6 +26,7 @@ import {
   resolveDoneHubManagedSiteConfig,
   resolveNewApiManagedSiteConfig,
   resolveOctopusManagedSiteConfig,
+  resolveSub2ApiManagedSiteConfig,
   resolveVeloeraManagedSiteConfig,
 } from "~~/e2e/utils/realSite/managedSiteConfig"
 import {
@@ -34,6 +36,13 @@ import {
 import { readEnv } from "~~/e2e/utils/realSite/shared"
 
 type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
+
+type ManagedSiteE2eTarget = {
+  label: string
+  siteType: ManagedSiteType
+  preferenceKey: keyof UserPreferences
+  resolveConfig: () => unknown
+}
 
 const managedSiteTargets = [
   {
@@ -72,7 +81,13 @@ const managedSiteTargets = [
     preferenceKey: "claudeCodeHub",
     resolveConfig: resolveClaudeCodeHubManagedSiteConfig,
   },
-] as const
+  {
+    label: "Sub2API",
+    siteType: SITE_TYPES.SUB2API,
+    preferenceKey: "sub2apiManagedSite",
+    resolveConfig: resolveSub2ApiManagedSiteConfig,
+  },
+] as const satisfies readonly ManagedSiteE2eTarget[]
 
 const selectedManagedSiteTarget = readEnv("AAH_E2E_MANAGED_SITE_TARGET")
 const selectedManagedSiteTargets = managedSiteTargets.filter(
@@ -161,7 +176,8 @@ test.describe("real-site E2E: managed-site channel management", () => {
       page,
     }, testInfo) => {
       test.skip(
-        target.siteType !== SITE_TYPES.NEW_API,
+        target.siteType !== SITE_TYPES.NEW_API &&
+          target.siteType !== SITE_TYPES.SUB2API,
         `${target.label} token channel status is not covered by this real-site E2E`,
       )
 
@@ -254,7 +270,10 @@ async function maybePrepareStatusSourceAccount(params: {
   > | null
   skipReason?: string
 }> {
-  if (params.managedSiteType !== SITE_TYPES.NEW_API) {
+  if (
+    params.managedSiteType !== SITE_TYPES.NEW_API &&
+    params.managedSiteType !== SITE_TYPES.SUB2API
+  ) {
     return {
       sourceAccount: null,
       skipReason: `${params.managedSiteLabel} token channel status is not covered by this real-site E2E`,

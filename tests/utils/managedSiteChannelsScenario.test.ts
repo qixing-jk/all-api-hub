@@ -10,6 +10,12 @@ describe("shouldEditModelsInManagedSiteCrudScenario", () => {
     )
   })
 
+  it("skips generic model edits for the Sub2API native account editor", () => {
+    expect(shouldEditModelsInManagedSiteCrudScenario(SITE_TYPES.SUB2API)).toBe(
+      false,
+    )
+  })
+
   it("keeps model edits for managed-site editors that expose the field", () => {
     expect(shouldEditModelsInManagedSiteCrudScenario(SITE_TYPES.NEW_API)).toBe(
       true,

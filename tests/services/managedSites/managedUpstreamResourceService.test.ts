@@ -404,6 +404,7 @@ describe("managed upstream resource service", () => {
     const migratedBaseUrlSafeSiteTypes = [
       SITE_TYPES.NEW_API,
       SITE_TYPES.DONE_HUB,
+      SITE_TYPES.SUB2API,
     ]
 
     expect(

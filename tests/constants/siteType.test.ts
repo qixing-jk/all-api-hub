@@ -33,7 +33,7 @@ describe("siteType constants", () => {
     expect(isManagedSiteType(SITE_TYPES.OCTOPUS)).toBe(true)
     expect(isManagedSiteType(SITE_TYPES.AXON_HUB)).toBe(true)
     expect(isManagedSiteType(SITE_TYPES.CLAUDE_CODE_HUB)).toBe(true)
-    expect(isManagedSiteType(SITE_TYPES.SUB2API)).toBe(false)
+    expect(isManagedSiteType(SITE_TYPES.SUB2API)).toBe(true)
     expect(isManagedSiteType(SITE_TYPES.AIHUBMIX)).toBe(false)
     expect(isManagedSiteType(SITE_TYPES.SHAREDCHAT)).toBe(false)
     expect(isManagedSiteType(SITE_TYPES.OPENROUTER)).toBe(false)

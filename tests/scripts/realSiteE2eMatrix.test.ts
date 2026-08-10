@@ -66,6 +66,20 @@ describe("GitHub real-site E2E matrix selection", () => {
     expect(matrix.include[0]).not.toHaveProperty("simulate_upload_readback_425")
   })
 
+  it("registers Sub2API as an independently runnable managed-site target", () => {
+    const matrix = runMatrix("managed-site", "sub2api-managed-site")
+
+    expect(matrix.include).toEqual([
+      expect.objectContaining({
+        id: "sub2api-managed-site",
+        label: "Managed Site / Sub2API Accounts",
+        category: "managed-site",
+        env_prefix: "SUB2API",
+        managed_site_target: "sub2api",
+      }),
+    ])
+  })
+
   it("keeps the default all-category matrix unchanged", () => {
     const matrix = runMatrix()
     const expectedIds = ["account", "managed-site", "webdav"].flatMap(

@@ -378,11 +378,45 @@ describe("getManagedSiteTokenChannelStatus", () => {
       models: "",
       key: "test-token-key",
     })
-    const searchChannel = vi.fn().mockResolvedValue({
-      items: [exactMatch],
-      total: 1,
-      type_counts: {},
+    const resourceSummary = buildResourceSummary({
+      id: exactMatch.id,
+      name: exactMatch.name,
+      baseUrl: exactMatch.base_url,
+      models: [],
     })
+    const resources: ManagedUpstreamResourcesCapability = {
+      items: {
+        list: vi.fn().mockResolvedValue({
+          items: [resourceSummary],
+          total: 1,
+        }),
+        search: vi
+          .fn()
+          .mockRejectedValue(new Error("Sub2API name search must not run")),
+        getDetail: vi.fn().mockResolvedValue({
+          summary: resourceSummary,
+          native: exactMatch,
+        }),
+        create: vi.fn(),
+        update: vi.fn(),
+        delete: vi.fn(),
+      },
+      drafts: {
+        prepareImportDraft: vi.fn(),
+        prepareEditDraft: vi.fn(),
+        describeFields: vi.fn(),
+        validateDraft: vi.fn(),
+      },
+    }
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReturnValue({
+      supported: true,
+      siteType: SITE_TYPES.SUB2API,
+      feature: MANAGED_UPSTREAM_RESOURCE_FEATURES.TokenChannelStatus,
+      capabilities: resources,
+    })
+    const searchChannel = vi
+      .fn()
+      .mockRejectedValue(new Error("legacy URL search must not run"))
     const service = createManagedSiteServiceStub({
       siteType: SITE_TYPES.SUB2API,
       messagesKey: "sub2api",
@@ -406,7 +440,9 @@ describe("getManagedSiteTokenChannelStatus", () => {
       service,
     })
 
-    expect(searchChannel).toHaveBeenCalledOnce()
+    expect(searchChannel).not.toHaveBeenCalled()
+    expect(resources.items.list).toHaveBeenCalledOnce()
+    expect(resources.items.search).not.toHaveBeenCalled()
     expect(result).toMatchObject({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
       matchedChannel: {

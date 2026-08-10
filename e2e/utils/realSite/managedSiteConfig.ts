@@ -75,6 +75,28 @@ export function resolveDoneHubManagedSiteConfig(): ManagedSiteConfigResolution<
   return accessTokenManagedSiteEnv("DONE_HUB")
 }
 
+export function resolveSub2ApiManagedSiteConfig(): ManagedSiteConfigResolution<
+  typeof SITE_TYPES.SUB2API
+> {
+  const baseUrlKey = "AAH_E2E_SUB2API_BASE_URL" as const
+  const adminTokenKey = "AAH_E2E_SUB2API_ADMIN_TOKEN" as const
+  const baseUrl = readEnv(baseUrlKey)
+  const adminToken = readEnv(adminTokenKey)
+  const missingEnvKeys = [
+    ...(!baseUrl ? [baseUrlKey] : []),
+    ...(!adminToken ? [adminTokenKey] : []),
+  ] satisfies ManagedSiteEnvKey[]
+
+  if (!baseUrl || !adminToken) {
+    return { config: null, missingEnvKeys }
+  }
+
+  return {
+    config: { baseUrl, adminToken },
+    missingEnvKeys: [],
+  }
+}
+
 export function resolveOctopusManagedSiteConfig(): ManagedSiteConfigResolution<
   typeof SITE_TYPES.OCTOPUS
 > {

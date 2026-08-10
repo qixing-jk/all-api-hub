@@ -204,6 +204,9 @@ jobs:
               CLAUDE_CODE_HUB)
                 [ -z "$MANAGED_SITE_ADMIN_TOKEN" ] && missing+=("AAH_E2E_${prefix}_ADMIN_TOKEN")
                 ;;
+              SUB2API)
+                [ -z "$MANAGED_SITE_ADMIN_TOKEN" ] && missing+=("AAH_E2E_${prefix}_ADMIN_TOKEN")
+                ;;
             esac
           else
             write_env "AAH_E2E_${prefix}_BASE_URL" "$REAL_SITE_BASE_URL"

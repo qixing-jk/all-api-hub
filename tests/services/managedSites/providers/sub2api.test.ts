@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelType } from "~/constants/managedSite"
+import { SITE_TYPES } from "~/constants/siteType"
+import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
   buildChannelPayload,
   createSub2ApiApiKeyAccount,
@@ -12,6 +14,14 @@ import {
   sub2ApiAccountToManagedSiteChannel,
   updateSub2ApiApiKeyAccount,
 } from "~/services/managedSites/providers/sub2api"
+import {
+  getManagedSiteTokenChannelStatus,
+  MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
+} from "~/services/managedSites/tokenChannelStatus"
+import {
+  buildApiToken,
+  buildDisplaySiteData,
+} from "~~/tests/test-utils/factories"
 
 const config = {
   baseUrl: "https://sub2api.example.invalid/",
@@ -124,6 +134,70 @@ describe("Sub2API API-key account managed-site provider", () => {
     expect(
       new URL(String(mockFetch.mock.calls[1][0])).searchParams.get("page"),
     ).toBe("2")
+  })
+
+  it("inventories API-key accounts without sending the imported URL as a name search", async () => {
+    mockFetch.mockImplementation(async (input) => {
+      const url = new URL(String(input))
+
+      if (url.pathname === "/api/v1/admin/accounts") {
+        return jsonResponse({
+          code: 0,
+          data: {
+            items: [account],
+            total: 1,
+            page: 1,
+            page_size: 100,
+            pages: 1,
+          },
+        })
+      }
+
+      if (url.pathname === `/api/v1/admin/accounts/${account.id}`) {
+        return jsonResponse({ code: 0, data: account })
+      }
+
+      if (url.pathname === "/api/v1/admin/accounts/data") {
+        return jsonResponse({
+          code: 0,
+          data: {
+            accounts: [
+              {
+                id: account.id,
+                type: "apikey",
+                credentials: { api_key: "sk-test-token-key" },
+              },
+            ],
+          },
+        })
+      }
+
+      throw new Error(`Unexpected Sub2API request: ${url.toString()}`)
+    })
+
+    const result = await getManagedSiteTokenChannelStatus({
+      account: buildDisplaySiteData({
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: "https://api.example.invalid/v1",
+      }),
+      token: buildApiToken({ key: "sk-test-token-key" }),
+      service: getManagedSiteServiceForType(SITE_TYPES.SUB2API),
+      managedConfig: config,
+      protectionBypassExecution: {
+        version: 2,
+        kind: "automatic",
+        feature: "managed_site_channels",
+        trigger: "background_recovery",
+        surface: "background",
+      },
+    })
+
+    const inventoryUrl = new URL(String(mockFetch.mock.calls[0][0]))
+    expect(inventoryUrl.searchParams.get("search")).toBeNull()
+    expect(result).toMatchObject({
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
+      matchedChannel: { id: account.id, name: account.name },
+    })
   })
 
   it("rejects an unbounded inventory instead of returning incomplete duplicate data", async () => {

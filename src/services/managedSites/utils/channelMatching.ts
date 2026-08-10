@@ -90,7 +90,7 @@ interface InspectManagedSiteChannelModelsMatchParams {
   exactChannel?: ManagedSiteChannel | null
 }
 
-export type ManagedSiteDuplicateCandidateSource = "search" | "list"
+type ManagedSiteDuplicateCandidateSource = "search" | "list"
 
 /**
  * Sub2API's native account search is name-only, so URL-based duplicate checks
