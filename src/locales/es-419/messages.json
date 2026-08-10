@@ -27,8 +27,7 @@
   "axonhub": {
     "configMissing": "Primero configura la dirección de AxonHub, el correo de administrador y la contraseña en la configuración básica",
     "modelsMissing": "Proporciona al menos un modelo",
-    "noChannelsToSync": "No hay canales para sincronizar",
-    "unsupportedModelSync": "AxonHub no admite la sincronización de modelos de sitios administrados en esta versión"
+    "noChannelsToSync": "No hay canales para sincronizar"
   },
   "background": {
     "cannotCreateWindowOrTab": "No se puede crear la ventana ni obtener la pestaña",
@@ -56,8 +55,7 @@
     "configMissing": "Primero configura la dirección de Claude Code Hub y el token de administrador en la configuración básica",
     "modelsMissing": "Proporciona al menos un modelo",
     "noChannelsToSync": "No hay proveedores para sincronizar",
-    "realProviderKeyRequired": "Claude Code Hub requiere una clave real del proveedor upstream. Las claves vacías o enmascaradas no se pueden usar para crear proveedores.",
-    "unsupportedModelSync": "Claude Code Hub no admite la sincronización de modelos de sitios administrados en esta versión"
+    "realProviderKeyRequired": "Claude Code Hub requiere una clave real del proveedor upstream. Las claves vacías o enmascaradas no se pueden usar para crear proveedores."
   },
   "claudeCodeRouter": {
     "configMissing": "Primero configura la URL base de Claude Code Router en la configuración",
@@ -109,6 +107,9 @@
       "urlRequired": "La URL del sitio no puede estar vacía",
       "userIdNumeric": "El ID de usuario debe ser un número"
     }
+  },
+  "managedSite": {
+    "unsupportedModelSync": "{{siteName}} no admite la sincronización de modelos de sitios administrados en esta versión"
   },
   "newapi": {
     "configMissing": "Primero configura la dirección de New API, el token de administrador y el ID de usuario en la configuración básica",

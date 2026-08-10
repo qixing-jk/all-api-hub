@@ -27,8 +27,7 @@
   "axonhub": {
     "configMissing": "先に設定で AxonHub のアドレス、管理者メール、パスワードを設定してください",
     "modelsMissing": "少なくとも 1 つのモデルを指定してください",
-    "noChannelsToSync": "同期するチャネルがありません",
-    "unsupportedModelSync": "このバージョンでは AxonHub の管理サイトモデル同期はサポートされていません"
+    "noChannelsToSync": "同期するチャネルがありません"
   },
   "background": {
     "cannotCreateWindowOrTab": "ウィンドウを作成できないか、タブを取得できません",
@@ -56,8 +55,7 @@
     "configMissing": "先に設定で Claude Code Hub のアドレスと管理者トークンを設定してください",
     "modelsMissing": "少なくとも 1 つのモデルを指定してください",
     "noChannelsToSync": "同期できるプロバイダーがありません",
-    "realProviderKeyRequired": "Claude Code Hub でプロバイダーを作成するには実際の上流キーが必要です。空またはマスク済みのキーは作成に使用できません。",
-    "unsupportedModelSync": "このバージョンでは Claude Code Hub の管理サイトモデル同期はサポートされていません"
+    "realProviderKeyRequired": "Claude Code Hub でプロバイダーを作成するには実際の上流キーが必要です。空またはマスク済みのキーは作成に使用できません。"
   },
   "claudeCodeRouter": {
     "configMissing": "先に設定で Claude Code Router の Base URL を設定してください",
@@ -109,6 +107,9 @@
       "urlRequired": "サイト URL は空にできません",
       "userIdNumeric": "ユーザー ID は数値である必要があります"
     }
+  },
+  "managedSite": {
+    "unsupportedModelSync": "このバージョンでは {{siteName}} の管理サイトモデル同期はサポートされていません"
   },
   "newapi": {
     "configMissing": "先に設定で New API のアドレス、管理者トークン、ユーザー ID を設定してください",

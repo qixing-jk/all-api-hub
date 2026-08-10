@@ -27,8 +27,7 @@
   "axonhub": {
     "configMissing": "Vui lòng cấu hình địa chỉ AxonHub, email quản trị viên và mật khẩu trong phần Cài đặt trước",
     "modelsMissing": "Vui lòng điền ít nhất một mô hình",
-    "noChannelsToSync": "Không có kênh nào để đồng bộ",
-    "unsupportedModelSync": "Phiên bản hiện tại không hỗ trợ đồng bộ mô hình trạm quản lý AxonHub"
+    "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
   "background": {
     "cannotCreateWindowOrTab": "Không thể tạo cửa sổ hoặc lấy thẻ",
@@ -56,8 +55,7 @@
     "configMissing": "Vui lòng cấu hình địa chỉ Claude Code Hub và token quản trị viên trong phần Cài đặt trước",
     "modelsMissing": "Vui lòng điền ít nhất một mô hình",
     "noChannelsToSync": "Không có nhà cung cấp nào để đồng bộ",
-    "realProviderKeyRequired": "Tạo nhà cung cấp trong Claude Code Hub yêu cầu khóa gốc thực, không thể sử dụng khóa trống hoặc khóa đã bị che để tạo.",
-    "unsupportedModelSync": "Phiên bản hiện tại không hỗ trợ đồng bộ mô hình trạm quản lý Claude Code Hub"
+    "realProviderKeyRequired": "Tạo nhà cung cấp trong Claude Code Hub yêu cầu khóa gốc thực, không thể sử dụng khóa trống hoặc khóa đã bị che để tạo."
   },
   "claudeCodeRouter": {
     "configMissing": "Vui lòng cấu hình URL cơ sở của Claude Code Router trong phần cài đặt trước",
@@ -109,6 +107,9 @@
       "urlRequired": "Địa chỉ trang web không được để trống",
       "userIdNumeric": "ID người dùng phải là số"
     }
+  },
+  "managedSite": {
+    "unsupportedModelSync": "Phiên bản hiện tại không hỗ trợ đồng bộ mô hình trạm quản lý {{siteName}}"
   },
   "newapi": {
     "configMissing": "Vui lòng cấu hình địa chỉ New API, token quản trị viên và ID người dùng trong phần Cài đặt trước",

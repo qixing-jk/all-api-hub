@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest"
+import type { TFunction } from "i18next"
+import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -9,6 +10,7 @@ import {
   getManagedSiteLabelKey,
   getManagedSiteMessagesKeyFromSiteType,
   getManagedSiteTargetOptions,
+  getManagedSiteUnsupportedModelSyncMessage,
   hasUsableManagedSiteChannelKey,
   needsManagedSiteChannelKeyResolution,
 } from "~/services/managedSites/utils/managedSite"
@@ -18,6 +20,24 @@ import {
 } from "~/services/preferences/userPreferences"
 
 describe("managedSite", () => {
+  it("renders unsupported model-sync copy from the managed-site label", () => {
+    const t = vi.fn((key: string, options?: { siteName?: string }) =>
+      key === "settings:managedSite.sub2api"
+        ? "Sub2API"
+        : `${key}:${options?.siteName}`,
+    ) as unknown as TFunction
+
+    expect(
+      getManagedSiteUnsupportedModelSyncMessage(t, SITE_TYPES.SUB2API),
+    ).toBe("messages:managedSite.unsupportedModelSync:Sub2API")
+    expect(t).toHaveBeenNthCalledWith(1, "settings:managedSite.sub2api")
+    expect(t).toHaveBeenNthCalledWith(
+      2,
+      "messages:managedSite.unsupportedModelSync",
+      { siteName: "Sub2API" },
+    )
+  })
+
   it("resolves Done Hub admin config when selected", () => {
     const prefs = {
       ...DEFAULT_PREFERENCES,

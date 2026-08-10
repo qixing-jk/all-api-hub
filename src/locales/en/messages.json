@@ -27,8 +27,7 @@
   "axonhub": {
     "configMissing": "Please configure AxonHub address, admin email, and password in basic settings first",
     "modelsMissing": "Please provide at least one model",
-    "noChannelsToSync": "No channels to sync",
-    "unsupportedModelSync": "AxonHub does not support managed-site model sync in this version"
+    "noChannelsToSync": "No channels to sync"
   },
   "background": {
     "cannotCreateWindowOrTab": "Unable to create window or get tab",
@@ -56,8 +55,7 @@
     "configMissing": "Please configure Claude Code Hub address and admin token in basic settings first",
     "modelsMissing": "Please provide at least one model",
     "noChannelsToSync": "No providers to sync",
-    "realProviderKeyRequired": "Claude Code Hub requires a real upstream provider key. Empty or masked keys cannot be used for provider creation.",
-    "unsupportedModelSync": "Claude Code Hub does not support managed-site model sync in this version"
+    "realProviderKeyRequired": "Claude Code Hub requires a real upstream provider key. Empty or masked keys cannot be used for provider creation."
   },
   "claudeCodeRouter": {
     "configMissing": "Please configure Claude Code Router base URL in settings first",
@@ -109,6 +107,9 @@
       "urlRequired": "Site URL cannot be empty",
       "userIdNumeric": "User ID must be a number"
     }
+  },
+  "managedSite": {
+    "unsupportedModelSync": "{{siteName}} does not support managed-site model sync in this version"
   },
   "newapi": {
     "configMissing": "Please configure New API address, admin token, and user ID in basic settings first",

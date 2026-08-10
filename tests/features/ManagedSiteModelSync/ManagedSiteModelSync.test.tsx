@@ -917,7 +917,32 @@ describe("ManagedSiteModelSync page", () => {
       ),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("messages:axonhub.unsupportedModelSync"),
+      screen.getByText("messages:managedSite.unsupportedModelSync"),
+    ).toBeInTheDocument()
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("names Sub2API in the unsupported model-sync empty state", async () => {
+    mockUseUserPreferencesContext.mockReturnValue({
+      preferences: {
+        managedSiteType: "sub2api",
+        sub2apiManagedSite: {
+          baseUrl: "https://sub2api.example.invalid",
+          adminToken: "admin-api-key",
+        },
+      },
+      managedSiteType: "sub2api",
+    })
+
+    render(<ManagedSiteModelSync />)
+
+    expect(
+      await screen.findByText(
+        "managedSiteModelSync:execution.unsupported.title",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("messages:managedSite.unsupportedModelSync"),
     ).toBeInTheDocument()
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
   })

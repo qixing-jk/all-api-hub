@@ -522,12 +522,9 @@ export function getManagedSiteNoChannelsToSyncMessage(
  */
 export function getManagedSiteUnsupportedModelSyncMessage(
   t: TFunction,
-  messagesKey: ManagedSiteMessagesKey,
+  siteType: ManagedSiteType,
 ) {
-  switch (messagesKey) {
-    case "axonhub":
-      return t("messages:axonhub.unsupportedModelSync")
-    default:
-      return t("messages:claudecodehub.unsupportedModelSync")
-  }
+  return t("messages:managedSite.unsupportedModelSync", {
+    siteName: getManagedSiteLabel(t, siteType),
+  })
 }

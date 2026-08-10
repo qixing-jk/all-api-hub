@@ -1506,7 +1506,7 @@ export default function ManagedSiteModelSync({
           title={t("managedSiteModelSync:execution.unsupported.title")}
           description={getManagedSiteUnsupportedModelSyncMessage(
             t,
-            getManagedSiteMessagesKeyFromSiteType(managedSiteType),
+            managedSiteType,
           )}
         />
       ) : isConfigMissing ? (

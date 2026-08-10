@@ -217,7 +217,7 @@ describe("model sync operation helpers", () => {
     })
 
     await expect(modelSyncScheduler.executeSync()).rejects.toThrow(
-      "messages:claudecodehub.unsupportedModelSync",
+      "messages:managedSite.unsupportedModelSync",
     )
   })
 
@@ -235,7 +235,25 @@ describe("model sync operation helpers", () => {
     })
 
     await expect(modelSyncScheduler.executeSync()).rejects.toThrow(
-      "messages:axonhub.unsupportedModelSync",
+      "messages:managedSite.unsupportedModelSync",
+    )
+    expect(mockedModelSyncService).not.toHaveBeenCalled()
+  })
+
+  it("rejects Sub2API model sync with provider-correct copy", async () => {
+    mockedUserPreferences.getPreferences.mockResolvedValueOnce({
+      managedSiteType: SITE_TYPES.SUB2API,
+      sub2apiManagedSite: {
+        baseUrl: "https://sub2api.example.invalid",
+        adminToken: "admin-api-key",
+      },
+      managedSiteModelSync: {
+        ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
+      },
+    })
+
+    await expect(modelSyncScheduler.executeSync()).rejects.toThrow(
+      "messages:managedSite.unsupportedModelSync",
     )
     expect(mockedModelSyncService).not.toHaveBeenCalled()
   })

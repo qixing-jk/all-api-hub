@@ -487,7 +487,7 @@ class ModelSyncScheduler {
     }
 
     if (!supportsManagedSiteModelSync(siteType)) {
-      throw new Error(getManagedSiteUnsupportedModelSyncMessage(t, messagesKey))
+      throw new Error(getManagedSiteUnsupportedModelSyncMessage(t, siteType))
     }
 
     // Initialize service (for non-Octopus sites)
