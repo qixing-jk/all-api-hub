@@ -80,7 +80,7 @@ export const SUB2API_MANAGED_RESOURCE_STATUS = {
 export type Sub2ApiApiKeyAccountStatus =
   (typeof SUB2API_MANAGED_RESOURCE_STATUS)[keyof typeof SUB2API_MANAGED_RESOURCE_STATUS]
 
-export const SUB2API_API_KEY_ACCOUNT_STATUSES: readonly Sub2ApiApiKeyAccountStatus[] =
+const SUB2API_API_KEY_ACCOUNT_STATUSES: readonly Sub2ApiApiKeyAccountStatus[] =
   Object.freeze(Object.values(SUB2API_MANAGED_RESOURCE_STATUS))
 
 export const isSub2ApiManagedResourceStatus = (

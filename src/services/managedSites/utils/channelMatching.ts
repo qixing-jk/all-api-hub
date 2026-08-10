@@ -35,7 +35,7 @@ export const MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES = {
   List: "list",
 } as const
 
-export type ManagedSiteDuplicateCandidateSource =
+type ManagedSiteDuplicateCandidateSource =
   (typeof MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES)[keyof typeof MANAGED_SITE_DUPLICATE_CANDIDATE_SOURCES]
 
 interface FindManagedSiteChannelByComparableInputsParams {
