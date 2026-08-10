@@ -175,6 +175,28 @@ describe("Managed site logo", () => {
     ).toBeInTheDocument()
   })
 
+  it("renders Sub2API logo when managedSiteType is SITE_TYPES.SUB2API", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: SITE_TYPES.SUB2API,
+    })
+
+    render(
+      <TokenHeader
+        token={createTokenStub()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={createAccountStub()}
+      />,
+    )
+
+    await screen.findByText("Token")
+
+    expect(
+      await screen.findByRole("img", { name: "Sub2API logo" }),
+    ).toBeInTheDocument()
+  })
+
   it("renders Veloera logo in CopyKeyDialog token details when managedSiteType is SITE_TYPES.VELOERA", async () => {
     mockedUseUserPreferencesContext.mockReturnValue({
       managedSiteType: SITE_TYPES.VELOERA,

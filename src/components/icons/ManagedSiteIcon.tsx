@@ -5,6 +5,7 @@ import { ClaudeCodeHubIcon } from "~/components/icons/ClaudeCodeHubIcon"
 import { DoneHubIcon } from "~/components/icons/DoneHubIcon"
 import { ICON_SIZE_CLASSNAME, IconSize } from "~/components/icons/iconSizes"
 import { OctopusIcon } from "~/components/icons/OctopusIcon"
+import { Sub2ApiIcon } from "~/components/icons/Sub2ApiIcon"
 import { VeloeraIcon } from "~/components/icons/VeloeraIcon"
 import { ManagedSiteType, SITE_TYPES } from "~/constants/siteType"
 import { cn } from "~/lib/utils"
@@ -39,6 +40,10 @@ export function ManagedSiteIcon({
 
   if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     return <ClaudeCodeHubIcon size={size} />
+  }
+
+  if (siteType === SITE_TYPES.SUB2API) {
+    return <Sub2ApiIcon size={size} />
   }
 
   return <NewAPI.Color className={cn(ICON_SIZE_CLASSNAME[size])} />
