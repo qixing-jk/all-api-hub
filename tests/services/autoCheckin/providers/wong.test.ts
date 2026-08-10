@@ -23,7 +23,11 @@ const mockAccount: SiteAccount = {
   disabled: false,
   excludeFromTotalBalance: false,
   excludeFromTodayIncome: false,
-  checkIn: { enableDetection: true },
+  checkIn: {
+    automaticExecutionEnabled: true,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" as const },
+  },
   health: { status: SiteHealthStatus.Healthy },
   account_info: {
     id: "123",
@@ -66,9 +70,16 @@ describe("wongGongyiProvider", () => {
       expect(wongGongyiProvider.canCheckIn(mockAccount)).toBe(true)
     })
 
-    it("returns false when enableDetection is false", () => {
-      const account = { ...mockAccount, checkIn: { enableDetection: false } }
-      expect(wongGongyiProvider.canCheckIn(account)).toBe(false)
+    it("leaves automatic-execution intent to the Module", () => {
+      const account = {
+        ...mockAccount,
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
+      }
+      expect(wongGongyiProvider.canCheckIn(account)).toBe(true)
     })
 
     it("returns false when authType is token but token is missing", () => {

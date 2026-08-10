@@ -875,6 +875,7 @@ export async function validateAndSaveAccount(
     const freshAccountData = await withTimeout(
       accountDataCapability.fetchData({
         baseUrl: requestBaseUrl,
+        siteType: normalizedSiteType,
         checkIn: checkInConfig,
         accountId: undefined, // New account, no ID yet
         exchangeRate: resolvedExchangeRate,
@@ -1234,7 +1235,6 @@ export async function validateAndUpdateAccount(
       notes: notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
-      checkIn: checkInConfig,
       account_info: {
         id: accountIdentity,
         access_token: normalizedAccessToken,
@@ -1243,9 +1243,14 @@ export async function validateAndUpdateAccount(
       },
     }
 
-    const success = await accountStorage.updateAccount(accountId, updateData, {
-      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
-    })
+    const success = await accountStorage.updateAccountWithCheckInDraft(
+      accountId,
+      updateData,
+      checkInConfig,
+      {
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      },
+    )
 
     if (!success) {
       return {
@@ -1308,6 +1313,7 @@ export async function validateAndUpdateAccount(
     )
     const freshAccountData = await accountData.fetchData({
       baseUrl: requestBaseUrl,
+      siteType: normalizedSiteType,
       checkIn: checkInConfig,
       accountId,
       exchangeRate: resolvedExchangeRate,
@@ -1341,7 +1347,6 @@ export async function validateAndUpdateAccount(
       notes: notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
-      checkIn: freshAccountData.checkIn,
       account_info: {
         id: accountIdentity,
         access_token: normalizedAccessToken,
@@ -1360,9 +1365,15 @@ export async function validateAndUpdateAccount(
       last_sync_time: Date.now(),
     }
 
-    const success = await accountStorage.updateAccount(accountId, updateData, {
-      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
-    })
+    const success = await accountStorage.updateAccountWithCheckInDraft(
+      accountId,
+      updateData,
+      checkInConfig,
+      {
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        refreshed: freshAccountData.checkIn,
+      },
+    )
     if (!success) {
       return {
         success: false,
@@ -1420,7 +1431,6 @@ export async function validateAndUpdateAccount(
       notes: notes,
       manualBalanceUsd: normalizedManualBalanceUsd,
       tagIds: normalizedTagIds,
-      checkIn: checkInConfig,
       health: {
         status: SiteHealthStatus.Warning,
         reason: getAccountHealthFailureReason(normalizedSiteType, error),
@@ -1435,10 +1445,13 @@ export async function validateAndUpdateAccount(
     }
 
     // Try to save partial update
-    const success = await accountStorage.updateAccount(
+    const success = await accountStorage.updateAccountWithCheckInDraft(
       accountId,
       partialUpdateData,
-      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+      checkInConfig,
+      {
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      },
     )
 
     if (!success) {

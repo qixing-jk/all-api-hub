@@ -11,7 +11,7 @@ import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type {
   AutoCheckinProvider,
   AutoCheckinProviderContext,
-} from "~/services/checkin/autoCheckin/providers"
+} from "~/services/checkin/autoCheckin/providers/contracts"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   resolveProviderErrorResult,
@@ -96,10 +96,7 @@ const runCheckIn = async (
 export const voApiV2Provider: AutoCheckinProvider = {
   canCheckIn(account) {
     return Boolean(
-      isVoApiV2Account(account) &&
-        account.checkIn?.enableDetection &&
-        account.checkIn?.autoCheckInEnabled !== false &&
-        account.account_info?.access_token,
+      isVoApiV2Account(account) && account.account_info?.access_token,
     )
   },
   async checkIn(
@@ -110,13 +107,6 @@ export const voApiV2Provider: AutoCheckinProvider = {
       context.tempWindowRequestSource,
     )
     try {
-      if (!this.canCheckIn(account as SiteAccount)) {
-        return {
-          status: CHECKIN_RESULT_STATUS.FAILED,
-          messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.checkinFailed,
-        }
-      }
-
       const siteAccount = account as SiteAccount
       const request = createRequest(
         siteAccount,

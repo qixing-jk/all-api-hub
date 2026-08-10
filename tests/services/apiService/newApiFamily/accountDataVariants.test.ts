@@ -23,7 +23,6 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchCheckInStatus: vi.fn(),
   fetchTodayIncome: mockFetchTodayIncome,
   fetchTodayUsage: mockFetchTodayUsage,
-  resolveCheckInSiteStatus: vi.fn((checkIn) => checkIn.siteStatus ?? {}),
 }))
 
 vi.mock("~/services/apiService/newApiFamily/default/accountDataUtils", () => ({
@@ -38,7 +37,11 @@ const request = {
     accessToken: "access-token",
     userId: "user-1",
   },
-  checkIn: { enableDetection: false },
+  checkIn: {
+    automaticExecutionEnabled: false,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" as const },
+  },
 }
 
 const timestampRange = { start: 111, end: 222 }

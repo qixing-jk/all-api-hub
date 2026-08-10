@@ -926,13 +926,6 @@ const createAccountData = (
   checkIn,
 })
 
-const createDisabledCheckInConfig = (
-  checkIn: CheckInConfig,
-): CheckInConfig => ({
-  ...checkIn,
-  enableDetection: false,
-})
-
 const createLoginRequiredHealthStatus = () => ({
   status: SiteHealthStatus.Warning,
   message: t("messages:sub2api.loginRequired"),
@@ -1319,10 +1312,7 @@ export async function fetchTodayIncome(
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
-  const checkIn: CheckInConfig = {
-    ...(request.checkIn ?? { enableDetection: false }),
-    enableDetection: false,
-  }
+  const checkIn = request.checkIn
 
   const { currentUser, todayUsage } =
     await fetchCurrentUserAndTodayUsage(request)
@@ -1336,9 +1326,7 @@ export async function fetchAccountData(
 export async function refreshAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<RefreshAccountResult> {
-  const checkIn = createDisabledCheckInConfig(
-    request.checkIn ?? { enableDetection: false },
-  )
+  const checkIn = request.checkIn
   let hydratedRequest: HydratedSub2ApiAuth<ApiServiceAccountRequest> | null =
     null
   let effectiveRequest = request

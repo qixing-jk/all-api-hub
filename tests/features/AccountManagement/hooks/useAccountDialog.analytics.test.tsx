@@ -239,7 +239,11 @@ describe("useAccountDialog analytics", () => {
         exchangeRate: 7,
         siteName: "Detected Site",
         siteType: SITE_TYPES.NEW_API,
-        checkIn: { enableDetection: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
         autoDetectContext: {
           strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
           fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
@@ -301,7 +305,11 @@ describe("useAccountDialog analytics", () => {
         exchangeRate: 7,
         siteName: "Detected Site",
         siteType: SITE_TYPES.NEW_API,
-        checkIn: { enableDetection: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
       },
     })
 
@@ -336,7 +344,11 @@ describe("useAccountDialog analytics", () => {
         exchangeRate: 7,
         siteName: "Detected Site",
         siteType: SITE_TYPES.NEW_API,
-        checkIn: { enableDetection: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
       },
     })
 
@@ -743,7 +755,11 @@ describe("useAccountDialog analytics", () => {
         exchangeRate: 7,
         siteName: "Detected Site",
         siteType: SITE_TYPES.NEW_API,
-        checkIn: { enableDetection: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
       },
     })
     const storageGetSpy = vi

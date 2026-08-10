@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   fetchAccountData,
   fetchCheckInStatus,
@@ -7,7 +8,10 @@ import {
   refreshAccountData,
   resolveApiTokenKey,
 } from "~/services/apiService/wong"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+
+import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
 const {
   mockDetermineHealthStatus,
@@ -35,18 +39,6 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchAccountQuota: mockFetchAccountQuota,
   fetchTodayIncome: mockFetchTodayIncome,
   fetchTodayUsage: mockFetchTodayUsage,
-  resolveCheckInSiteStatus: (checkIn: any, canCheckIn: boolean | undefined) =>
-    typeof canCheckIn === "boolean"
-      ? {
-          ...(checkIn.siteStatus ?? {}),
-          isCheckedInToday: !canCheckIn,
-          lastDetectedAt: Date.now(),
-        }
-      : {
-          ...(checkIn.siteStatus ?? {}),
-          isCheckedInToday: checkIn.siteStatus?.isCheckedInToday,
-          lastDetectedAt: checkIn.siteStatus?.lastDetectedAt,
-        },
 }))
 
 vi.mock("~/services/apiTransport/request", () => ({
@@ -66,13 +58,11 @@ describe("apiService wong", () => {
       userId: "1",
       accessToken: "token",
     },
-    checkIn: {
-      enableDetection: true,
-      siteStatus: {
-        isCheckedInToday: false,
-        lastDetectedAt: 111,
-      },
-    },
+    siteType: SITE_TYPES.WONG_GONGYI,
+    checkIn: createCheckInConfig(SITE_TYPES.WONG_GONGYI, {
+      isCheckedInToday: false,
+      observedAt: 111,
+    }),
   } as any
 
   beforeEach(() => {
@@ -199,7 +189,6 @@ describe("apiService wong", () => {
   })
 
   it("preserves the last known check-in state when status is inconclusive", async () => {
-    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000)
     mockFetchApi.mockResolvedValueOnce({
       success: false,
       message: "backend refused to say",
@@ -218,34 +207,30 @@ describe("apiService wong", () => {
       today_prompt_tokens: 20,
       today_completion_tokens: 30,
       today_requests_count: 2,
-      checkIn: {
-        enableDetection: true,
-        siteStatus: {
-          isCheckedInToday: false,
-          lastDetectedAt: 111,
-        },
-      },
+      checkIn: expect.any(Object),
     })
-
-    nowSpy.mockRestore()
+    expect(
+      getSelectedCheckInStatus({
+        config: result.checkIn,
+        siteType: SITE_TYPES.WONG_GONGYI,
+      }),
+    ).toEqual(
+      getSelectedCheckInStatus({
+        config: baseRequest.checkIn,
+        siteType: SITE_TYPES.WONG_GONGYI,
+      }),
+    )
   })
 
-  it("preserves the last known check-in state when detection is disabled", async () => {
+  it("preserves check-in state when no method is selected", async () => {
     const result = await fetchAccountData({
       ...baseRequest,
-      checkIn: {
-        enableDetection: false,
-        siteStatus: {
-          isCheckedInToday: true,
-          lastDetectedAt: 555,
-        },
-      },
+      checkIn: createCheckInConfig(SITE_TYPES.WONG_GONGYI, {
+        matched: false,
+      }),
     })
 
-    expect(result.checkIn.siteStatus).toEqual({
-      isCheckedInToday: true,
-      lastDetectedAt: 555,
-    })
+    expect(result.checkIn.selection).not.toHaveProperty("methodId")
     expect(mockFetchApi).not.toHaveBeenCalled()
   })
 
@@ -265,17 +250,19 @@ describe("apiService wong", () => {
       success: true,
       data: expect.objectContaining({
         quota: 1200,
-        checkIn: expect.objectContaining({
-          siteStatus: expect.objectContaining({
-            isCheckedInToday: false,
-          }),
-        }),
+        checkIn: expect.any(Object),
       }),
       healthStatus: {
         status: SiteHealthStatus.Healthy,
         message: "translated:account:healthStatus.normal",
       },
     })
+    expect(
+      getSelectedCheckInStatus({
+        config: result.data!.checkIn,
+        siteType: SITE_TYPES.WONG_GONGYI,
+      }),
+    ).toMatchObject({ today: "not_checked" })
   })
 
   it("maps refresh failures through determineHealthStatus", async () => {

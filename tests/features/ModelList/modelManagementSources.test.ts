@@ -31,7 +31,11 @@ const createAccountFixture = (siteType: AccountSiteType): DisplaySiteData => ({
   token: "example-token",
   userId: "example-user-id",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: {
+    automaticExecutionEnabled: false,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" as const },
+  },
 })
 
 const PROFILE_FIXTURE: ApiCredentialProfile = {

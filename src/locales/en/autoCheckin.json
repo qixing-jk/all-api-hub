@@ -164,6 +164,7 @@
     "already_checked_today": "Already checked today",
     "auto_checkin_disabled": "Auto check-in disabled",
     "detection_disabled": "Detection disabled",
+    "method_disabled": "This site's check-in method is disabled",
     "no_provider": "The account's site type currently does not support check-in",
     "provider_not_ready": "Account configuration currently does not support check-in"
   },

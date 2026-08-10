@@ -9,6 +9,7 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { PROTECTION_BYPASS_EXECUTION_VERSION } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -126,19 +127,16 @@ describe("useAccountDialog Sub2API constraints", () => {
     await act(async () => {
       result.current.setters.setAuthType(AuthTypeEnum.Cookie)
       result.current.setters.setCookieAuthSessionCookie("session=abc")
-      result.current.setters.setCheckIn({
-        enableDetection: true,
-        autoCheckInEnabled: true,
-        siteStatus: { isCheckedInToday: true },
-      } as any)
+      result.current.setters.setCheckIn(
+        buildCheckInConfig({ automaticExecutionEnabled: true }),
+      )
       result.current.setters.setSiteType(SITE_TYPES.SUB2API)
     })
 
     await waitFor(() => {
       expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
       expect(result.current.state.cookieAuthSessionCookie).toBe("")
-      expect(result.current.state.checkIn.enableDetection).toBe(false)
-      expect(result.current.state.checkIn.autoCheckInEnabled).toBe(false)
+      expect(result.current.state.checkIn.automaticExecutionEnabled).toBe(false)
     })
   })
 
@@ -569,17 +567,15 @@ describe("useAccountDialog Sub2API constraints", () => {
         tagIds: [],
         disabled: false,
         excludeFromTotalBalance: false,
-        checkIn: {
-          enableDetection: false,
-          autoCheckInEnabled: true,
-          siteStatus: { isCheckedInToday: false },
+        checkIn: buildCheckInConfig({
+          automaticExecutionEnabled: true,
           customCheckIn: {
             url: "",
             redeemUrl: "",
             openRedeemWithCheckIn: true,
             isCheckedInToday: false,
           },
-        },
+        }),
         health: { status: "healthy" },
         authType: AuthTypeEnum.AccessToken,
         sub2apiAuth: {
@@ -642,17 +638,15 @@ describe("useAccountDialog Sub2API constraints", () => {
         tagIds: [],
         disabled: false,
         excludeFromTotalBalance: false,
-        checkIn: {
-          enableDetection: true,
-          autoCheckInEnabled: true,
-          siteStatus: { isCheckedInToday: false },
+        checkIn: buildCheckInConfig({
+          automaticExecutionEnabled: true,
           customCheckIn: {
             url: "",
             redeemUrl: "",
             openRedeemWithCheckIn: true,
             isCheckedInToday: false,
           },
-        },
+        }),
         health: { status: "healthy" },
         authType: AuthTypeEnum.AccessToken,
         sub2apiAuth: {
@@ -712,17 +706,15 @@ describe("useAccountDialog Sub2API constraints", () => {
         tagIds: [],
         disabled: false,
         excludeFromTotalBalance: false,
-        checkIn: {
-          enableDetection: false,
-          autoCheckInEnabled: true,
-          siteStatus: { isCheckedInToday: false },
+        checkIn: buildCheckInConfig({
+          automaticExecutionEnabled: true,
           customCheckIn: {
             url: "",
             redeemUrl: "",
             openRedeemWithCheckIn: true,
             isCheckedInToday: false,
           },
-        },
+        }),
         health: { status: "healthy" },
         authType: AuthTypeEnum.Cookie,
         cookieAuth: {

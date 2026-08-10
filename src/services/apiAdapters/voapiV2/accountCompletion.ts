@@ -57,8 +57,8 @@ export const voApiV2AccountCompletion: AccountCompletionCapability = {
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: AuthTypeEnum.AccessToken,
       checkIn: helpers.createInitialCheckInConfig({
-        enableDetection: true,
-        autoCheckInEnabled: true,
+        supported: true,
+        automaticExecutionEnabled: true,
       }),
     }
   },

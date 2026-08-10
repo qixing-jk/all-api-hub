@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { sharedChatAccountRefresh } from "~/services/apiAdapters/sharedchat/accountRefresh"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+
+import { createCheckInConfig } from "../checkInFixtures"
 
 const { mockFetchAccountData } = vi.hoisted(() => ({
   mockFetchAccountData: vi.fn(),
@@ -14,15 +17,14 @@ vi.mock("~/services/apiService/sharedchat", () => ({
 const refreshRequest = {
   baseUrl: "https://new.sharedchat.cc",
   accountId: "sharedchat-account",
+  siteType: SITE_TYPES.SHAREDCHAT,
   auth: {
     authType: AuthTypeEnum.Cookie,
     userId: "sharedchat-user",
     accessToken: "user-token",
     cookie: "session=abc",
   },
-  checkIn: {
-    enableDetection: false,
-  },
+  checkIn: createCheckInConfig(SITE_TYPES.SHAREDCHAT, { matched: false }),
   includeTodayCashflow: true,
 }
 
@@ -45,9 +47,7 @@ describe("sharedChatAccountRefresh", () => {
         totalTokens: 4000,
         totalCost: 12.5,
       },
-      checkIn: {
-        enableDetection: false,
-      },
+      checkIn: createCheckInConfig(SITE_TYPES.SHAREDCHAT, { matched: false }),
     }
     mockFetchAccountData.mockResolvedValueOnce(accountData)
 

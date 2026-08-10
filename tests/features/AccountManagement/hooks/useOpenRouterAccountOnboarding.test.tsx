@@ -11,6 +11,7 @@ import { useOpenRouterAccountOnboarding as useOpenRouterAccountOnboardingProduct
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const testExecution = userCommandExecution(
@@ -104,7 +105,7 @@ describe("useOpenRouterAccountOnboarding", () => {
       exchangeRate: 7.2,
       authType: AuthTypeEnum.AccessToken,
       siteType: SITE_TYPES.OPENROUTER,
-      checkIn: { enableDetection: false, autoCheckInEnabled: false },
+      checkIn: buildCheckInConfig(),
     },
     provisioning: {
       requestId,

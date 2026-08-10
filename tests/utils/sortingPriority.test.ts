@@ -6,12 +6,13 @@ import {
   DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   createDynamicSortComparator,
   DEFAULT_SORTING_PRIORITY_CONFIG,
 } from "~/services/preferences/utils/sortingPriority"
-import type { DisplaySiteData, SiteAccount } from "~/types"
+import type { CheckInConfig, DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
@@ -25,6 +26,50 @@ import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/account
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 describe("createDynamicSortComparator", () => {
+  const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+  const createCheckIn = (input?: {
+    checked?: boolean
+    selected?: boolean
+    customCheckIn?: CheckInConfig["customCheckIn"]
+  }): CheckInConfig => {
+    const selected = input?.selected !== false
+    const hasStatus = typeof input?.checked === "boolean"
+    return {
+      automaticExecutionEnabled: true,
+      methodKnowledge: {
+        methods: selected
+          ? {
+              [methodId]: {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "compatibility_registration" },
+                },
+                ...(hasStatus
+                  ? {
+                      status: {
+                        outcome: "known" as const,
+                        today: input.checked
+                          ? ("checked" as const)
+                          : ("not_checked" as const),
+                        evidence: {
+                          source: "probe" as const,
+                          observedAt: Date.now(),
+                        },
+                      },
+                    }
+                  : {}),
+              },
+            }
+          : {},
+      },
+      selection: {
+        mode: "automatic",
+        ...(selected ? { methodId } : {}),
+      },
+      ...(input?.customCheckIn ? { customCheckIn: input.customCheckIn } : {}),
+    }
+  }
+
   // Helper to create a minimal DisplaySiteData fixture
   const createDisplaySiteData = (
     overrides: Partial<DisplaySiteData> = {},
@@ -39,15 +84,12 @@ describe("createDynamicSortComparator", () => {
     todayTokens: { upload: 0, download: 0 },
     todayStatsAvailability: buildCompleteTodayStatsAvailability(),
     health: { status: SiteHealthStatus.Healthy },
-    siteType: SITE_TYPES.UNKNOWN,
+    siteType: SITE_TYPES.NEW_API,
     baseUrl: "https://test.com",
     token: "test-token",
     userId: "1",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: {
-      enableDetection: false,
-      siteStatus: { isCheckedInToday: false },
-    },
+    checkIn: createCheckIn({ selected: false }),
     ...overrides,
   })
 
@@ -180,7 +222,7 @@ describe("createDynamicSortComparator", () => {
       site_url: "https://detected.com",
       site_type: SITE_TYPES.UNKNOWN,
       exchange_rate: 7.0,
-      checkIn: { enableDetection: false },
+      checkIn: createCheckIn({ selected: false }),
       ...overrides,
     })
 
@@ -441,17 +483,11 @@ describe("createDynamicSortComparator", () => {
     it("should prioritize accounts that need check-in (isCheckedInToday=false)", () => {
       const needsCheckIn = createDisplaySiteData({
         id: "needs-checkin",
-        checkIn: {
-          enableDetection: true,
-          siteStatus: { isCheckedInToday: false },
-        },
+        checkIn: createCheckIn({ checked: false }),
       })
       const alreadyCheckedIn = createDisplaySiteData({
         id: "checked-in",
-        checkIn: {
-          enableDetection: true,
-          siteStatus: { isCheckedInToday: true },
-        },
+        checkIn: createCheckIn({ checked: true }),
       })
 
       const config = {
@@ -481,17 +517,11 @@ describe("createDynamicSortComparator", () => {
     it("should return 0 when both have same check-in status", () => {
       const account1 = createDisplaySiteData({
         id: "account-1",
-        checkIn: {
-          enableDetection: true,
-          siteStatus: { isCheckedInToday: false },
-        },
+        checkIn: createCheckIn({ checked: false }),
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
-        checkIn: {
-          enableDetection: true,
-          siteStatus: { isCheckedInToday: false },
-        },
+        checkIn: createCheckIn({ checked: false }),
       })
 
       const config = {
@@ -519,14 +549,11 @@ describe("createDynamicSortComparator", () => {
     it("should handle accounts with undefined isCheckedInToday", () => {
       const account1 = createDisplaySiteData({
         id: "account-1",
-        checkIn: { enableDetection: true },
+        checkIn: createCheckIn(),
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
-        checkIn: {
-          enableDetection: true,
-          siteStatus: { isCheckedInToday: false },
-        },
+        checkIn: createCheckIn({ checked: false }),
       })
 
       const config = {
@@ -555,17 +582,17 @@ describe("createDynamicSortComparator", () => {
     it("treats a nonblank custom check-in URL without status as needing check-in", () => {
       const customCheckIn = createDisplaySiteData({
         id: "custom-check-in",
-        checkIn: {
-          enableDetection: false,
+        checkIn: createCheckIn({
+          selected: false,
           customCheckIn: { url: " https://checkin.example.invalid " },
-        },
+        }),
       })
       const whitespaceUrl = createDisplaySiteData({
         id: "whitespace-url",
-        checkIn: {
-          enableDetection: false,
+        checkIn: createCheckIn({
+          selected: false,
           customCheckIn: { url: "   " },
-        },
+        }),
       })
       const comparator = createDynamicSortComparator(
         {
@@ -593,16 +620,15 @@ describe("createDynamicSortComparator", () => {
     it("should prioritize accounts with custom check-in URLs", () => {
       const withCustomUrl = createDisplaySiteData({
         id: "with-custom",
-        checkIn: {
-          enableDetection: true,
+        checkIn: createCheckIn({
           customCheckIn: {
             url: "https://custom.com",
           },
-        },
+        }),
       })
       const withoutCustomUrl = createDisplaySiteData({
         id: "without-custom",
-        checkIn: { enableDetection: true },
+        checkIn: createCheckIn(),
       })
 
       const config = {
@@ -631,21 +657,19 @@ describe("createDynamicSortComparator", () => {
     it("should return 0 when both have same custom check-in URL status", () => {
       const account1 = createDisplaySiteData({
         id: "account-1",
-        checkIn: {
-          enableDetection: true,
+        checkIn: createCheckIn({
           customCheckIn: {
             url: "https://custom1.com",
           },
-        },
+        }),
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
-        checkIn: {
-          enableDetection: true,
+        checkIn: createCheckIn({
           customCheckIn: {
             url: "https://custom2.com",
           },
-        },
+        }),
       })
 
       const config = {
@@ -675,16 +699,15 @@ describe("createDynamicSortComparator", () => {
     it("should prioritize accounts with custom redeem URLs", () => {
       const withCustomUrl = createDisplaySiteData({
         id: "with-custom",
-        checkIn: {
-          enableDetection: true,
+        checkIn: createCheckIn({
           customCheckIn: {
             redeemUrl: "https://custom.com",
           },
-        },
+        }),
       })
       const withoutCustomUrl = createDisplaySiteData({
         id: "without-custom",
-        checkIn: { enableDetection: true },
+        checkIn: createCheckIn(),
       })
 
       const config = {
@@ -713,21 +736,19 @@ describe("createDynamicSortComparator", () => {
     it("should return 0 when both have same custom redeem URL status", () => {
       const account1 = createDisplaySiteData({
         id: "account-1",
-        checkIn: {
-          enableDetection: true,
+        checkIn: createCheckIn({
           customCheckIn: {
             redeemUrl: "https://custom1.com",
           },
-        },
+        }),
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
-        checkIn: {
-          enableDetection: true,
+        checkIn: createCheckIn({
           customCheckIn: {
             redeemUrl: "https://custom2.com",
           },
-        },
+        }),
       })
 
       const config = {
@@ -1494,18 +1515,12 @@ describe("createDynamicSortComparator", () => {
       const account1 = createDisplaySiteData({
         id: "account-1",
         name: "Zebra",
-        checkIn: {
-          enableDetection: true,
-          siteStatus: { isCheckedInToday: false },
-        },
+        checkIn: createCheckIn({ checked: false }),
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
         name: "Apple",
-        checkIn: {
-          enableDetection: true,
-          siteStatus: { isCheckedInToday: true },
-        },
+        checkIn: createCheckIn({ checked: true }),
       })
 
       // Priority: check-in (priority 0) > name (priority 1)
@@ -1642,20 +1657,16 @@ describe("createDynamicSortComparator", () => {
         id: "account-1",
         name: "Account1",
         health: { status: SiteHealthStatus.Error },
-        checkIn: {
-          enableDetection: true,
-          siteStatus: { isCheckedInToday: false },
+        checkIn: createCheckIn({
+          checked: false,
           customCheckIn: { url: "https://custom.com" },
-        },
+        }),
       })
       const account2 = createDisplaySiteData({
         id: "account-2",
         name: "Account2",
         health: { status: SiteHealthStatus.Healthy },
-        checkIn: {
-          enableDetection: true,
-          siteStatus: { isCheckedInToday: true },
-        },
+        checkIn: createCheckIn({ checked: true }),
       })
 
       const config = DEFAULT_SORTING_PRIORITY_CONFIG

@@ -181,10 +181,7 @@ export async function fetchAccountData(
     today_requests_count: 0,
     today_income: 0,
     todayStatsAvailability: createUnsupportedTodayStatsAvailability(),
-    checkIn: {
-      ...request.checkIn,
-      enableDetection: false,
-    },
+    checkIn: request.checkIn,
   }
 }
 

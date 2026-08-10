@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configCodec"
 import {
   inspectCheckInMethods,
   mergeCheckInDiscoveryResults,
   setCheckInSelection,
-  type CheckInConfigV7,
-  type CheckInMethodDetection,
 } from "~/services/checkin/autoCheckin/domain"
-import {
-  AUTO_CHECKIN_METHOD_IDS,
-  type CheckInMethodId,
-} from "~/services/checkin/autoCheckin/providers"
+import type {
+  CheckInConfig,
+  CheckInMethodDetection,
+  CheckInMethodId,
+} from "~/types/checkIn"
 
 const NEW_API_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
 const VELOERA_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn
@@ -19,7 +19,7 @@ const ANYROUTER_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn
 
 function createConfig(
   detections: Partial<Record<CheckInMethodId, CheckInMethodDetection>>,
-): CheckInConfigV7 {
+): CheckInConfig {
   return {
     automaticExecutionEnabled: true,
     methodKnowledge: {
@@ -30,7 +30,7 @@ function createConfig(
         ]),
       ),
     },
-    selection: { mode: "automatic" },
+    selection: { mode: "automatic" as const },
   }
 }
 
@@ -243,6 +243,66 @@ describe("inspectCheckInMethods", () => {
     expect(state.rediscoveryRecommended).toBe(true)
   })
 
+  it("does not let migrated display status change legacy scheduler eligibility", () => {
+    const config = createConfig({
+      [NEW_API_METHOD_ID]: {
+        outcome: "matched",
+        evidence: { source: "legacy_migration" },
+      },
+    })
+    config.selection = {
+      mode: "automatic",
+      methodId: NEW_API_METHOD_ID,
+    }
+    config.methodKnowledge.methods[NEW_API_METHOD_ID]!.status = {
+      outcome: "known",
+      today: "checked",
+      evidence: { source: "legacy_migration" },
+    }
+
+    expect(
+      inspectCheckInMethods({
+        config,
+        candidateMethodIds: [NEW_API_METHOD_ID],
+      }).executionEligibility,
+    ).toEqual({ eligible: true, methodId: NEW_API_METHOD_ID })
+  })
+
+  it.each(["probe", "execution"] as const)(
+    "uses %s checked status only on the local day when it was observed",
+    (source) => {
+      const observedAt = Date.parse("2026-08-20T23:30:00.000Z")
+      const config = createConfig({ [NEW_API_METHOD_ID]: matched })
+      config.selection = {
+        mode: "automatic",
+        methodId: NEW_API_METHOD_ID,
+      }
+      config.methodKnowledge.methods[NEW_API_METHOD_ID]!.status = {
+        outcome: "known",
+        today: "checked",
+        evidence: { source, observedAt },
+      }
+
+      expect(
+        inspectCheckInMethods({
+          config,
+          candidateMethodIds: [NEW_API_METHOD_ID],
+          now: Date.parse("2026-08-21T00:30:00.000Z"),
+          timeZone: "Asia/Singapore",
+        }).executionEligibility,
+      ).toEqual({ eligible: false, skipReason: "already_checked" })
+
+      expect(
+        inspectCheckInMethods({
+          config,
+          candidateMethodIds: [NEW_API_METHOD_ID],
+          now: Date.parse("2026-08-21T16:30:00.000Z"),
+          timeZone: "Asia/Singapore",
+        }).executionEligibility,
+      ).toEqual({ eligible: true, methodId: NEW_API_METHOD_ID })
+    },
+  )
+
   it.each([
     {
       name: "account disabled",
@@ -326,6 +386,8 @@ describe("inspectCheckInMethods", () => {
     const state = inspectCheckInMethods({
       config: testCase.config,
       candidateMethodIds: [NEW_API_METHOD_ID],
+      now: 100,
+      timeZone: "UTC",
       ...testCase.input,
     })
 
@@ -356,7 +418,7 @@ describe("setCheckInSelection", () => {
     const automatic = setCheckInSelection({
       config: manual,
       candidateMethodIds: [NEW_API_METHOD_ID, VELOERA_METHOD_ID],
-      selection: { mode: "automatic" },
+      selection: { mode: "automatic" as const },
     })
     expect(automatic.selection).toEqual({
       mode: "automatic",
@@ -377,7 +439,7 @@ describe("setCheckInSelection", () => {
     const automatic = setCheckInSelection({
       config,
       candidateMethodIds: [NEW_API_METHOD_ID, VELOERA_METHOD_ID],
-      selection: { mode: "automatic" },
+      selection: { mode: "automatic" as const },
     })
 
     expect(automatic.selection).toEqual({ mode: "automatic" })
@@ -648,7 +710,7 @@ describe("normalizeCheckInConfigV7", () => {
     ({ turnstilePreTrigger, expected }) => {
       const normalized = normalizeCheckInConfigV7({
         methodKnowledge: { methods: {} },
-        selection: { mode: "automatic" },
+        selection: { mode: "automatic" as const },
         customCheckIn: { turnstilePreTrigger },
       })
 
@@ -663,7 +725,7 @@ describe("normalizeCheckInConfigV7", () => {
   ])("rejects malformed custom Turnstile trigger %#", (turnstilePreTrigger) => {
     const normalized = normalizeCheckInConfigV7({
       methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" },
+      selection: { mode: "automatic" as const },
       customCheckIn: {
         url: "https://checkin.example.invalid",
         turnstilePreTrigger,
@@ -678,7 +740,7 @@ describe("normalizeCheckInConfigV7", () => {
   it("normalizes bounded Turnstile throttle values", () => {
     const normalized = normalizeCheckInConfigV7({
       methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" },
+      selection: { mode: "automatic" as const },
       customCheckIn: {
         turnstilePreTrigger: {
           kind: "clickSelector",
@@ -717,7 +779,7 @@ describe("normalizeCheckInConfigV7", () => {
 
     const normalized = normalizeCheckInConfigV7({
       methodKnowledge: { methods },
-      selection: { mode: "automatic" },
+      selection: { mode: "automatic" as const },
     })
 
     expect(Object.keys(normalized.methodKnowledge.methods)).toHaveLength(0)

@@ -162,6 +162,7 @@
     "already_checked_today": "Hôm nay đã điểm danh",
     "auto_checkin_disabled": "Điểm danh tự động đã tắt",
     "detection_disabled": "Phát hiện đã tắt",
+    "method_disabled": "Tính năng điểm danh của trang web này đã bị tắt",
     "no_provider": "Loại trang web của tài khoản hiện không hỗ trợ điểm danh",
     "provider_not_ready": "Cấu hình tài khoản hiện không hỗ trợ điểm danh"
   },

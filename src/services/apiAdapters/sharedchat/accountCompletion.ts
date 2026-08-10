@@ -40,8 +40,8 @@ export const sharedChatAccountCompletion: AccountCompletionCapability = {
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: AuthTypeEnum.Cookie,
       checkIn: helpers.createInitialCheckInConfig({
-        enableDetection: false,
-        autoCheckInEnabled: false,
+        supported: false,
+        automaticExecutionEnabled: false,
       }),
     }
   },

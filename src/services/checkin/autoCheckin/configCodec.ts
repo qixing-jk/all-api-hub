@@ -1,14 +1,4 @@
 import {
-  decodePersistedCheckInMethodId,
-  isCheckInMethodId,
-} from "~/services/checkin/autoCheckin/providers/registry"
-import {
-  TURNSTILE_PRE_TRIGGER_KINDS,
-  type TurnstilePreTrigger,
-  type TurnstilePreTriggerThrottle,
-} from "~/types/turnstile"
-
-import {
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
@@ -18,13 +8,24 @@ import {
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
   CHECK_IN_METHOD_UNKNOWN_REASONS,
   CHECK_IN_SELECTION_MODES,
-  type CheckInConfigV7,
-  type CheckInMethodDetection,
-  type CheckInMethodSelection,
-  type CheckInMethodStatus,
-  type CheckInMethodUnknownAttempt,
-  type CheckInMethodUnknownReason,
-} from "./domain"
+} from "~/constants/checkIn"
+import {
+  decodePersistedCheckInMethodId,
+  isCheckInMethodId,
+} from "~/services/checkin/autoCheckin/providers/registry"
+import type {
+  CheckInConfig,
+  CheckInMethodDetection,
+  CheckInMethodSelection,
+  CheckInMethodStatus,
+  CheckInMethodUnknownAttempt,
+  CheckInMethodUnknownReason,
+} from "~/types/checkIn"
+import {
+  TURNSTILE_PRE_TRIGGER_KINDS,
+  type TurnstilePreTrigger,
+  type TurnstilePreTriggerThrottle,
+} from "~/types/turnstile"
 
 const UNKNOWN_REASON_SET = new Set<string>(CHECK_IN_METHOD_UNKNOWN_REASONS)
 
@@ -93,17 +94,14 @@ const normalizeTurnstilePreTrigger = (
     return { kind: TURNSTILE_PRE_TRIGGER_KINDS.None }
   }
   if (value.kind === TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton) {
+    const positivePattern = optionalString(value.positivePattern)
+    const negativePattern = optionalString(value.negativePattern)
+    const candidateSelector = optionalString(value.candidateSelector)
     return {
       kind: TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton,
-      ...(optionalString(value.positivePattern) !== undefined
-        ? { positivePattern: optionalString(value.positivePattern) }
-        : {}),
-      ...(optionalString(value.negativePattern) !== undefined
-        ? { negativePattern: optionalString(value.negativePattern) }
-        : {}),
-      ...(optionalString(value.candidateSelector) !== undefined
-        ? { candidateSelector: optionalString(value.candidateSelector) }
-        : {}),
+      ...(positivePattern !== undefined ? { positivePattern } : {}),
+      ...(negativePattern !== undefined ? { negativePattern } : {}),
+      ...(candidateSelector !== undefined ? { candidateSelector } : {}),
       ...(throttle ? { throttle } : {}),
     }
   }
@@ -112,12 +110,11 @@ const normalizeTurnstilePreTrigger = (
     typeof value.selector === "string" &&
     value.selector.length > 0
   ) {
+    const label = optionalString(value.label)
     return {
       kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
       selector: value.selector,
-      ...(optionalString(value.label) !== undefined
-        ? { label: optionalString(value.label) }
-        : {}),
+      ...(label !== undefined ? { label } : {}),
       ...(throttle ? { throttle } : {}),
     }
   }
@@ -126,18 +123,15 @@ const normalizeTurnstilePreTrigger = (
     typeof value.positivePattern === "string" &&
     value.positivePattern.length > 0
   ) {
+    const negativePattern = optionalString(value.negativePattern)
+    const candidateSelector = optionalString(value.candidateSelector)
+    const label = optionalString(value.label)
     return {
       kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickText,
       positivePattern: value.positivePattern,
-      ...(optionalString(value.negativePattern) !== undefined
-        ? { negativePattern: optionalString(value.negativePattern) }
-        : {}),
-      ...(optionalString(value.candidateSelector) !== undefined
-        ? { candidateSelector: optionalString(value.candidateSelector) }
-        : {}),
-      ...(optionalString(value.label) !== undefined
-        ? { label: optionalString(value.label) }
-        : {}),
+      ...(negativePattern !== undefined ? { negativePattern } : {}),
+      ...(candidateSelector !== undefined ? { candidateSelector } : {}),
+      ...(label !== undefined ? { label } : {}),
       ...(throttle ? { throttle } : {}),
     }
   }
@@ -298,7 +292,7 @@ const normalizeStatus = (value: unknown): CheckInMethodStatus | undefined => {
 
 const normalizeCustomCheckIn = (
   value: unknown,
-): CheckInConfigV7["customCheckIn"] => {
+): CheckInConfig["customCheckIn"] => {
   if (!isRecord(value)) return undefined
   const turnstilePreTrigger = normalizeTurnstilePreTrigger(
     value.turnstilePreTrigger,
@@ -324,7 +318,7 @@ const normalizeCustomCheckIn = (
 /**
  * Strictly normalizes persisted V7 check-in state without making any method executable.
  */
-export function normalizeCheckInConfigV7(value: unknown): CheckInConfigV7 {
+export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
   const raw = isRecord(value) ? value : {}
   const rawMethodKnowledge = isRecord(raw.methodKnowledge)
     ? raw.methodKnowledge
@@ -334,7 +328,7 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfigV7 {
     : {}
   const methods = Object.create(
     null,
-  ) as CheckInConfigV7["methodKnowledge"]["methods"]
+  ) as CheckInConfig["methodKnowledge"]["methods"]
 
   for (const [rawMethodId, rawKnowledge] of Object.entries(rawMethods)) {
     const methodId = decodePersistedCheckInMethodId(rawMethodId)

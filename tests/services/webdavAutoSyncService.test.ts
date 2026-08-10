@@ -2206,6 +2206,169 @@ describe("WebdavAutoSyncService local apply phase", () => {
     expect(mockChannelConfigMerge).toHaveBeenCalledWith(remoteChannelConfigs)
   })
 
+  it("migrates a remote-newer V6 account before local persistence and V4 upload", async () => {
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "merge",
+        syncData: {
+          accounts: true,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: false,
+        },
+      },
+    } as any)
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [
+        {
+          id: "same-account",
+          site_name: "local",
+          updated_at: 10,
+          configVersion: 7,
+          checkIn: {
+            automaticExecutionEnabled: true,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          },
+        },
+      ],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: 100,
+    })
+    mockDownloadBackup.mockResolvedValue(
+      JSON.stringify({
+        version: "3.0",
+        timestamp: 200,
+        accounts: {
+          accounts: [
+            {
+              id: "same-account",
+              site_name: "remote-newer",
+              site_type: "new-api",
+              updated_at: 20,
+              configVersion: 6,
+              checkIn: {
+                enableDetection: true,
+                autoCheckInEnabled: false,
+                siteStatus: { isCheckedInToday: true },
+              },
+            },
+          ],
+          last_updated: 200,
+        },
+        channelConfigs: remoteChannelConfigs,
+      }),
+    )
+
+    await createService().syncWithWebdav()
+
+    const importedAccount = mockAccountStorageImportData.mock.calls[0][0]
+      .accounts[0] as any
+    expect(importedAccount).toMatchObject({
+      site_name: "remote-newer",
+      configVersion: 7,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        selection: { methodId: "new-api:daily-checkin" },
+      },
+    })
+    expect(importedAccount.checkIn).not.toHaveProperty("enableDetection")
+
+    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    expect(uploaded.version).toBe("4.0")
+    expect(uploaded.accounts.accounts[0]).toMatchObject({
+      site_name: "remote-newer",
+      configVersion: 7,
+    })
+  })
+
+  it("keeps a local-newer V7 account without losing its check-in data", async () => {
+    const localCheckIn = {
+      automaticExecutionEnabled: true,
+      methodKnowledge: {
+        methods: {
+          "new-api:daily-checkin": {
+            detection: {
+              outcome: "matched",
+              evidence: { source: "compatibility_registration" },
+            },
+            status: {
+              outcome: "known",
+              today: "checked",
+              evidence: { source: "probe", observedAt: 30 },
+            },
+          },
+        },
+      },
+      selection: {
+        mode: "manual",
+        methodId: "new-api:daily-checkin",
+      },
+    }
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "merge",
+        syncData: {
+          accounts: true,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: false,
+        },
+      },
+    } as any)
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [
+        {
+          id: "same-account",
+          site_name: "local-newer",
+          updated_at: 30,
+          configVersion: 7,
+          checkIn: localCheckIn,
+        },
+      ],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: 300,
+    })
+    mockDownloadBackup.mockResolvedValue(
+      JSON.stringify({
+        version: "3.0",
+        timestamp: 200,
+        accounts: {
+          accounts: [
+            {
+              id: "same-account",
+              site_name: "remote-older",
+              site_type: "new-api",
+              updated_at: 20,
+              configVersion: 6,
+              checkIn: {
+                enableDetection: true,
+                autoCheckInEnabled: false,
+              },
+            },
+          ],
+          last_updated: 200,
+        },
+        channelConfigs: remoteChannelConfigs,
+      }),
+    )
+
+    await createService().syncWithWebdav()
+
+    const importedAccount = mockAccountStorageImportData.mock.calls[0][0]
+      .accounts[0] as any
+    expect(importedAccount.site_name).toBe("local-newer")
+    expect(importedAccount.checkIn).toEqual(localCheckIn)
+
+    const uploaded = JSON.parse(mockUploadBackup.mock.calls[0][0])
+    expect(uploaded.version).toBe("4.0")
+    expect(uploaded.accounts.accounts[0].checkIn).toEqual(localCheckIn)
+  })
+
   it("starts each local import only after the previous one completes", async () => {
     const service = createService()
     const accountDeferred = createDeferred<{ migratedCount: number }>()

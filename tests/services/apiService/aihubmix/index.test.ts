@@ -73,7 +73,11 @@ const baseRequest = {
 
 const baseAccountRequest = {
   ...baseRequest,
-  checkIn: { enableDetection: false },
+  checkIn: {
+    automaticExecutionEnabled: false,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" as const },
+  },
 }
 
 const tokenRequest: CreateTokenRequest = {
@@ -1096,12 +1100,8 @@ describe("apiService AIHubMix", () => {
 
     const accountData = await fetchAccountData({
       ...baseRequest,
-      checkIn: {
-        enableDetection: true,
-        siteStatus: {
-          isCheckedInToday: false,
-        },
-      },
+      siteType: SITE_TYPES.AIHUBMIX,
+      checkIn: baseAccountRequest.checkIn,
     })
 
     expect(accountData).toMatchObject({
@@ -1129,9 +1129,7 @@ describe("apiService AIHubMix", () => {
           reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
         },
       },
-      checkIn: {
-        enableDetection: false,
-      },
+      checkIn: baseAccountRequest.checkIn,
     })
   })
 

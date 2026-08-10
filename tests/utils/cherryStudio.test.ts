@@ -28,7 +28,11 @@ const mockAccount: DisplaySiteData = {
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 100, download: 200 },
   todayStatsAvailability: buildCompleteTodayStatsAvailability(),
-  checkIn: { enableDetection: false },
+  checkIn: {
+    automaticExecutionEnabled: false,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" as const },
+  },
   health: { status: SiteHealthStatus.Healthy },
   last_sync_time: Date.now(),
   siteType: "one-api",

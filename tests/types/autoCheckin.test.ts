@@ -24,6 +24,10 @@ describe("autoCheckin translation helpers", () => {
       "autoCheckin:skipReasons.detection_disabled",
     ],
     [
+      AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
+      "autoCheckin:skipReasons.method_disabled",
+    ],
+    [
       AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
       "autoCheckin:skipReasons.auto_checkin_disabled",
     ],

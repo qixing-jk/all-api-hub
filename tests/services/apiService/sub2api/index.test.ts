@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
@@ -57,6 +58,8 @@ import {
   SiteHealthStatus,
 } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
+
+import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
 const { mockGetLatestAuth, mockPersistAuthUpdate } = vi.hoisted(() => ({
   mockGetLatestAuth: vi.fn(),
@@ -657,10 +660,9 @@ describe("apiService sub2api refreshAccountData", () => {
         userId: "1",
         accessToken: "old-jwt",
       },
+      siteType: SITE_TYPES.SUB2API,
       checkIn: {
-        enableDetection: true,
-        autoCheckInEnabled: true,
-        siteStatus: { isCheckedInToday: false },
+        ...createCheckInConfig(SITE_TYPES.SUB2API, { matched: false }),
         customCheckIn: { url: "", redeemUrl: "", openRedeemWithCheckIn: true },
       },
       ...overrides,
@@ -706,7 +708,7 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(result.data?.today_prompt_tokens).toBe(120)
     expect(result.data?.today_completion_tokens).toBe(45)
     expect(result.data?.today_requests_count).toBe(3)
-    expect(result.data?.checkIn.enableDetection).toBe(false)
+    expect(result.data?.checkIn.selection).not.toHaveProperty("methodId")
     expect(result.authUpdate?.userId).toBe("1")
     expect(result.authUpdate?.username).toBe("alice")
     expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
@@ -2105,31 +2107,28 @@ describe("apiService sub2api exported operations", () => {
     ).rejects.toThrow("server exploded")
   })
 
-  it("fetches account data with check-in detection forcibly disabled", async () => {
+  it("fetches account data without reshaping canonical check-in state", async () => {
     vi.mocked(fetchApi).mockResolvedValueOnce({
       code: 0,
       message: "ok",
       data: { id: "7", username: "alice", balance: 1.5 },
     } as any)
 
+    const checkIn = {
+      ...createCheckInConfig(SITE_TYPES.SUB2API, { matched: false }),
+      customCheckIn: { url: "", redeemUrl: "", openRedeemWithCheckIn: true },
+    }
     const result = await fetchAccountData({
       ...baseRequest,
-      checkIn: {
-        enableDetection: true,
-        autoCheckInEnabled: true,
-        siteStatus: { isCheckedInToday: false },
-        customCheckIn: { url: "", redeemUrl: "", openRedeemWithCheckIn: true },
-      },
+      siteType: SITE_TYPES.SUB2API,
+      checkIn,
     } as any)
 
     expect(result).toMatchObject({
       quota: 750000,
       today_quota_consumption: 0,
       today_income: 0,
-      checkIn: expect.objectContaining({
-        enableDetection: false,
-        autoCheckInEnabled: true,
-      }),
+      checkIn,
     })
   })
 

@@ -1,17 +1,25 @@
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { CURRENT_CONFIG_VERSION } from "~/services/accounts/migrations/accountDataMigration"
-import { migrateSiteAccountCheckInToV7 } from "~/services/accounts/migrations/checkInV7Migration"
 import {
-  autoCheckinMethodRegistry,
-  createAutoCheckinMethodRegistry,
-  type CheckInMethodId,
-} from "~/services/checkin/autoCheckin/providers"
+  CURRENT_CONFIG_VERSION,
+  migrateAccountConfig,
+} from "~/services/accounts/migrations/accountDataMigration"
+import {
+  migrateSiteAccountCheckInToV7,
+  type StoredSiteAccountForV7Codec,
+} from "~/services/accounts/migrations/checkInV7Migration"
+import {
+  getLegacyAutoCheckinMethodIds,
+  LEGACY_AUTO_CHECKIN_METHOD_SITE_TYPES,
+} from "~/services/checkin/autoCheckin/providers/registry"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import type { CheckInMethodId } from "~/types/checkIn"
 
-function createSiteAccount(overrides: Partial<SiteAccount> = {}): SiteAccount {
+function createSiteAccount(
+  overrides: Partial<StoredSiteAccountForV7Codec> = {},
+): StoredSiteAccountForV7Codec {
   return {
     id: "account-1",
     site_name: "Example Site",
@@ -46,15 +54,52 @@ function createSiteAccount(overrides: Partial<SiteAccount> = {}): SiteAccount {
   }
 }
 
-const legacyRegistrations = autoCheckinMethodRegistry.registrations.flatMap(
-  (registration) =>
-    (registration.legacy?.siteTypes ?? []).map((siteType) => ({
-      methodId: registration.id,
-      siteType,
-    })),
+const legacyRegistrations = (
+  Object.entries(LEGACY_AUTO_CHECKIN_METHOD_SITE_TYPES) as Array<
+    [CheckInMethodId, readonly SiteAccount["site_type"][]]
+  >
+).flatMap(([methodId, siteTypes]) =>
+  siteTypes.map((siteType) => ({
+    methodId,
+    siteType,
+  })),
 )
 
+const legacyResolver = {
+  getLegacyMethodIds: (siteType: SiteAccount["site_type"]) =>
+    getLegacyAutoCheckinMethodIds(siteType),
+}
+
 describe("migrateSiteAccountCheckInToV7", () => {
+  it("keeps every pre-V7 provider covered by an exact legacy registration", () => {
+    expect(legacyRegistrations).toEqual([
+      {
+        methodId: "anyrouter:daily-checkin",
+        siteType: SITE_TYPES.ANYROUTER,
+      },
+      {
+        methodId: "veloera:daily-checkin",
+        siteType: SITE_TYPES.VELOERA,
+      },
+      {
+        methodId: "wong-gongyi:daily-checkin",
+        siteType: SITE_TYPES.WONG_GONGYI,
+      },
+      {
+        methodId: "new-api:daily-checkin",
+        siteType: SITE_TYPES.NEW_API,
+      },
+      {
+        methodId: "new-api:daily-checkin",
+        siteType: SITE_TYPES.MODELFLARE,
+      },
+      {
+        methodId: "voapi-v2:daily-checkin",
+        siteType: SITE_TYPES.VO_API_V2,
+      },
+    ])
+  })
+
   it.each(legacyRegistrations)(
     "maps $siteType to $methodId through pure legacy registry metadata",
     ({ methodId, siteType }) => {
@@ -64,10 +109,7 @@ describe("migrateSiteAccountCheckInToV7", () => {
         checkIn: { enableDetection: true },
       })
 
-      const migrated = migrateSiteAccountCheckInToV7(
-        account,
-        autoCheckinMethodRegistry,
-      )
+      const migrated = migrateSiteAccountCheckInToV7(account, legacyResolver)
 
       expect(migrated.configVersion).toBe(7)
       expect(migrated.disabled).toBe(true)
@@ -113,10 +155,7 @@ describe("migrateSiteAccountCheckInToV7", () => {
       },
     })
 
-    const migrated = migrateSiteAccountCheckInToV7(
-      account,
-      autoCheckinMethodRegistry,
-    )
+    const migrated = migrateSiteAccountCheckInToV7(account, legacyResolver)
     const methodId = migrated.checkIn.selection.methodId as CheckInMethodId
 
     expect(migrated.checkIn.automaticExecutionEnabled).toBe(false)
@@ -146,10 +185,7 @@ describe("migrateSiteAccountCheckInToV7", () => {
         },
       })
 
-      const migrated = migrateSiteAccountCheckInToV7(
-        account,
-        autoCheckinMethodRegistry,
-      )
+      const migrated = migrateSiteAccountCheckInToV7(account, legacyResolver)
 
       expect(migrated.checkIn.methodKnowledge.methods).toEqual({})
       expect(
@@ -158,22 +194,6 @@ describe("migrateSiteAccountCheckInToV7", () => {
       expect(migrated.checkIn.selection).toEqual({ mode: "automatic" })
     },
   )
-
-  it("does not invent a method ID when legacy metadata has no exact mapping", () => {
-    const account = createSiteAccount({
-      site_type: SITE_TYPES.NEW_API,
-      checkIn: { enableDetection: true },
-    })
-    const registryWithoutLegacyMappings = createAutoCheckinMethodRegistry([])
-
-    const migrated = migrateSiteAccountCheckInToV7(
-      account,
-      registryWithoutLegacyMappings,
-    )
-
-    expect(migrated.checkIn.methodKnowledge.methods).toEqual({})
-    expect(migrated.checkIn.selection).toEqual({ mode: "automatic" })
-  })
 
   it("uses configVersion rather than stray partial V7 fields to identify legacy input", () => {
     const account = createSiteAccount({
@@ -186,10 +206,7 @@ describe("migrateSiteAccountCheckInToV7", () => {
       } as any,
     })
 
-    const migrated = migrateSiteAccountCheckInToV7(
-      account,
-      autoCheckinMethodRegistry,
-    )
+    const migrated = migrateSiteAccountCheckInToV7(account, legacyResolver)
 
     expect(migrated.checkIn.automaticExecutionEnabled).toBe(false)
     expect(migrated.checkIn.selection).toEqual({ mode: "automatic" })
@@ -205,10 +222,7 @@ describe("migrateSiteAccountCheckInToV7", () => {
       },
     })
 
-    const migrated = migrateSiteAccountCheckInToV7(
-      account,
-      autoCheckinMethodRegistry,
-    )
+    const migrated = migrateSiteAccountCheckInToV7(account, legacyResolver)
     const methodId = migrated.checkIn.selection.methodId as CheckInMethodId
 
     expect(migrated.checkIn.methodKnowledge.methods[methodId]?.status).toEqual({
@@ -227,21 +241,55 @@ describe("migrateSiteAccountCheckInToV7", () => {
       },
     })
 
-    const first = migrateSiteAccountCheckInToV7(
-      account,
-      autoCheckinMethodRegistry,
-    )
-    const second = migrateSiteAccountCheckInToV7(
-      account,
-      autoCheckinMethodRegistry,
-    )
-    const repeated = migrateSiteAccountCheckInToV7(
-      first,
-      autoCheckinMethodRegistry,
-    )
+    const first = migrateSiteAccountCheckInToV7(account, legacyResolver)
+    const second = migrateSiteAccountCheckInToV7(account, legacyResolver)
+    const repeated = migrateSiteAccountCheckInToV7(first, legacyResolver)
 
     expect(second).toEqual(first)
     expect(repeated).toEqual(first)
-    expect(CURRENT_CONFIG_VERSION).toBe(6)
+    expect(CURRENT_CONFIG_VERSION).toBe(7)
+  })
+
+  it("removes pre-V1 account flags from V7 normalization", () => {
+    const account = createSiteAccount({
+      configVersion: 7,
+      can_check_in: true,
+      supports_check_in: true,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" },
+      },
+    })
+
+    const normalized = migrateSiteAccountCheckInToV7(account, legacyResolver)
+
+    expect(normalized).not.toHaveProperty("can_check_in")
+    expect(normalized).not.toHaveProperty("supports_check_in")
+  })
+
+  it("activates V7 through the public account migration chain", () => {
+    const migrated = migrateAccountConfig(
+      createSiteAccount({
+        site_type: SITE_TYPES.NEW_API,
+        checkIn: {
+          enableDetection: true,
+          autoCheckInEnabled: false,
+          siteStatus: { isCheckedInToday: true },
+        },
+      }) as unknown as SiteAccount,
+    )
+
+    expect(migrated.configVersion).toBe(7)
+    expect(migrated.checkIn).toMatchObject({
+      automaticExecutionEnabled: false,
+      selection: {
+        mode: "automatic",
+        methodId: "new-api:daily-checkin",
+      },
+    })
+    expect(migrated.checkIn).not.toHaveProperty("enableDetection")
+    expect(migrated.checkIn).not.toHaveProperty("autoCheckInEnabled")
+    expect(migrated.checkIn).not.toHaveProperty("siteStatus")
   })
 })

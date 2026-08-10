@@ -73,7 +73,11 @@ function buildAccount(
     userId: "user-1",
     authType: AuthTypeEnum.AccessToken,
     disabled: false,
-    checkIn: { enableDetection: false },
+    checkIn: {
+      automaticExecutionEnabled: false,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" as const },
+    },
     ...overrides,
   }
 }

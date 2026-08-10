@@ -11,16 +11,11 @@ import { AuthTypeEnum } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
-import type { AutoCheckinProvider, AutoCheckinProviderContext } from "./index"
-
-export type AnyrouterCheckInParams = {
-  id?: string
-  site_url: string
-  cookieAuthSessionCookie?: string
-  account_info: {
-    id: number
-  }
-}
+import type {
+  AnyrouterCheckInParams,
+  AutoCheckinProvider,
+  AutoCheckinProviderContext,
+} from "./contracts"
 
 const isSiteAccount = (
   account: SiteAccount | AnyrouterCheckInParams,
@@ -138,10 +133,6 @@ const checkinAnyRouter = async (
 }
 
 const canCheckIn = (account: SiteAccount): boolean => {
-  if (!account.checkIn?.enableDetection) {
-    return false
-  }
-
   if (!account.account_info?.id) {
     return false
   }

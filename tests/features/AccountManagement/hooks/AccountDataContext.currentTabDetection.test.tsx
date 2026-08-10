@@ -185,7 +185,11 @@ function createAccount({
     notes: "",
     tagIds: [],
     authType: AuthTypeEnum.AccessToken,
-    checkIn: { enableDetection: false },
+    checkIn: {
+      automaticExecutionEnabled: false,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" as const },
+    },
   } as any
 }
 

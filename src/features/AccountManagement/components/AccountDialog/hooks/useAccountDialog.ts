@@ -70,6 +70,7 @@ import {
 } from "~/services/accounts/utils/siteUrlNormalization"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 import { createAIHubMixCreatedRuntimeSecret } from "~/services/apiAdapters/aihubmix/createdSecret"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
@@ -589,6 +590,21 @@ export function useAccountDialog({
         notifyOpenRouterSiteChange(nextSiteType)
       updateDraft((prev) => {
         const previousPolicy = getAccountDialogSitePolicy(prev.siteType)
+        const shouldRebuildCompatibilityConfig =
+          mode === DIALOG_MODES.ADD && prev.siteType !== nextSiteType
+        const shouldApplyDisabledAutomaticExecutionDefault =
+          prev.siteType === SITE_TYPES.UNKNOWN &&
+          !nextPolicy.allowBuiltInCheckInDetection
+        const checkIn = shouldRebuildCompatibilityConfig
+          ? createCompatibilityCheckInConfig({
+              siteType: nextSiteType,
+              supported: nextPolicy.allowBuiltInCheckInDetection,
+              automaticExecutionEnabled:
+                !shouldApplyDisabledAutomaticExecutionDefault &&
+                prev.checkIn.automaticExecutionEnabled,
+              customCheckIn: prev.checkIn.customCheckIn,
+            })
+          : prev.checkIn
         const shouldApplyDefaultName =
           !prev.siteName.trim() ||
           prev.siteName.trim() === (previousPolicy.defaultSiteName ?? "")
@@ -599,6 +615,7 @@ export function useAccountDialog({
           draft: {
             ...prev,
             siteType: nextSiteType,
+            checkIn,
             ...(shouldClearOpenRouterIdentity ? { userId: "" } : {}),
             ...(clearCreatedCredential ? { accessToken: "" } : {}),
             ...(shouldApplyDefaultName
@@ -612,7 +629,7 @@ export function useAccountDialog({
         setDialogUrl(nextPolicy.canonicalSiteUrl)
       }
     },
-    [setDialogUrl, notifyOpenRouterSiteChange, updateDraft],
+    [mode, setDialogUrl, notifyOpenRouterSiteChange, updateDraft],
   )
   const setAuthType = useCallback(
     (value: AuthTypeEnum) => {
@@ -1170,31 +1187,22 @@ export function useAccountDialog({
                 excludeFromTodayIncome:
                   siteAccount.excludeFromTodayIncome === true,
                 checkIn: {
-                  enableDetection:
-                    siteAccount.checkIn?.enableDetection ?? false,
-                  autoCheckInEnabled:
-                    siteAccount.checkIn?.autoCheckInEnabled ?? true,
-                  siteStatus: {
-                    isCheckedInToday:
-                      siteAccount.checkIn?.siteStatus?.isCheckedInToday ??
-                      false,
-                    lastCheckInDate:
-                      siteAccount.checkIn?.siteStatus?.lastCheckInDate,
-                  },
+                  ...siteAccount.checkIn,
                   customCheckIn: {
-                    url: siteAccount.checkIn?.customCheckIn?.url ?? "",
+                    ...siteAccount.checkIn.customCheckIn,
+                    url: siteAccount.checkIn.customCheckIn?.url ?? "",
                     turnstilePreTrigger:
-                      siteAccount.checkIn?.customCheckIn?.turnstilePreTrigger,
+                      siteAccount.checkIn.customCheckIn?.turnstilePreTrigger,
                     redeemUrl:
-                      siteAccount.checkIn?.customCheckIn?.redeemUrl ?? "",
+                      siteAccount.checkIn.customCheckIn?.redeemUrl ?? "",
                     openRedeemWithCheckIn:
-                      siteAccount.checkIn?.customCheckIn
+                      siteAccount.checkIn.customCheckIn
                         ?.openRedeemWithCheckIn ?? true,
                     isCheckedInToday:
-                      siteAccount.checkIn?.customCheckIn?.isCheckedInToday ??
+                      siteAccount.checkIn.customCheckIn?.isCheckedInToday ??
                       false,
                     lastCheckInDate:
-                      siteAccount.checkIn?.customCheckIn?.lastCheckInDate,
+                      siteAccount.checkIn.customCheckIn?.lastCheckInDate,
                   },
                 },
                 siteType: normalizedSiteType,
@@ -3288,12 +3296,6 @@ function resolvePrefillFormSource(
 function normalizeDetectedCheckIn(checkIn: CheckInConfig): CheckInConfig {
   return {
     ...checkIn,
-    enableDetection: checkIn.enableDetection ?? false,
-    autoCheckInEnabled: checkIn.autoCheckInEnabled ?? true,
-    siteStatus: {
-      ...checkIn.siteStatus,
-      isCheckedInToday: checkIn.siteStatus?.isCheckedInToday ?? false,
-    },
     customCheckIn: {
       ...checkIn.customCheckIn,
       url: checkIn.customCheckIn?.url ?? "",
@@ -3327,6 +3329,14 @@ function buildDraftFromAutoDetectResult(params: {
     policy,
   } = params
 
+  const mergedCheckIn = preserveExistingCheckIn
+    ? deepOverride(nextCheckIn, draft.checkIn)
+    : nextCheckIn
+  const shouldApplyDisabledAutomaticExecutionDefault =
+    !preserveExistingCheckIn && !policy.allowBuiltInCheckInDetection
+  const checkIn = shouldApplyDisabledAutomaticExecutionDefault
+    ? { ...mergedCheckIn, automaticExecutionEnabled: false }
+    : mergedCheckIn
   const nextDraft: AccountDialogDraft = {
     ...draft,
     username: resultData.username,
@@ -3345,9 +3355,7 @@ function buildDraftFromAutoDetectResult(params: {
     cookieAuthSessionCookie: policy.allowCookieAuthSession
       ? draft.cookieAuthSessionCookie
       : "",
-    checkIn: preserveExistingCheckIn
-      ? deepOverride(nextCheckIn, draft.checkIn)
-      : nextCheckIn,
+    checkIn,
     sub2apiRefreshToken:
       policy.allowSub2ApiRefreshTokenState && resultData.sub2apiAuth
         ? resultData.sub2apiAuth.refreshToken

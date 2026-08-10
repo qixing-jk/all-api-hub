@@ -7,6 +7,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
@@ -359,13 +360,11 @@ test("automatic native-page fallback is denied while an explicit run is allowed"
           username: "native-page-user",
           access_token: "native-page-token",
         },
-        checkIn: {
-          enableDetection: true,
-          autoCheckInEnabled: true,
-          siteStatus: {
-            isCheckedInToday: false,
-          },
-        },
+        checkIn: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.NEW_API,
+          supported: true,
+          automaticExecutionEnabled: true,
+        }),
       }),
     ])
 

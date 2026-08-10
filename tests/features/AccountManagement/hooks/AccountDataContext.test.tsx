@@ -8,6 +8,10 @@ import {
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_CREATED_AT,
 } from "~/constants"
+import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+} from "~/constants/checkIn"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
@@ -17,6 +21,9 @@ import {
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import { mergeCompatibilityCheckInStatus } from "~/services/checkin/autoCheckin/state"
 import type {
   ProtectionBypassSurface,
   ProtectionBypassUserCommand,
@@ -25,6 +32,7 @@ import type { SearchResult } from "~/services/search/accountSearch"
 import { TAG_STORE_VERSION } from "~/services/tags/tagStoreUtils"
 import type { DisplaySiteData } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
+import type { CheckInConfig } from "~/types/checkIn"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 import { SortingCriteriaType } from "~/types/sorting"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -33,6 +41,26 @@ import {
   userCommandExecution,
 } from "~~/tests/services/protectionBypass/fixtures"
 import { testI18n } from "~~/tests/test-utils/i18n"
+
+function buildCheckInStatus(isCheckedInToday: boolean): CheckInConfig {
+  return mergeCompatibilityCheckInStatus({
+    config: createCompatibilityCheckInConfig({
+      siteType: "new-api",
+      supported: true,
+      automaticExecutionEnabled: true,
+    }),
+    methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+    isCheckedInToday,
+    observedAt: 1,
+  })
+}
+
+function readCheckInToday(config: CheckInConfig | undefined) {
+  if (!config) return undefined
+
+  const status = getSelectedCheckInStatus({ config, siteType: "new-api" })
+  return status?.outcome === "known" ? status.today : undefined
+}
 
 type MockIndexedAccountSearchEntry = {
   __indexed: true
@@ -1016,7 +1044,11 @@ describe("AccountDataContext initial load orchestration", () => {
         balance: { USD: 0, CNY: 0 },
         todayConsumption: { USD: 0, CNY: 0 },
         todayIncome: { USD: 0, CNY: 0 },
-        checkIn: { enableDetection: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
       },
     ])
     mockGetActiveTabs.mockReturnValue(
@@ -1081,7 +1113,11 @@ describe("AccountDataContext initial load orchestration", () => {
         balance: { USD: 0, CNY: 0 },
         todayConsumption: { USD: 0, CNY: 0 },
         todayIncome: { USD: 0, CNY: 0 },
-        checkIn: { enableDetection: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
       },
     ])
     mockGetActiveTabs.mockReturnValue(
@@ -1143,7 +1179,11 @@ describe("AccountDataContext initial load orchestration", () => {
         balance: { USD: 0, CNY: 0 },
         todayConsumption: { USD: 0, CNY: 0 },
         todayIncome: { USD: 0, CNY: 0 },
-        checkIn: { enableDetection: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
       },
     ])
     mockGetActiveTabs.mockRejectedValue(new Error("tabs query failed"))
@@ -1177,7 +1217,11 @@ describe("AccountDataContext initial load orchestration", () => {
         balance: { USD: 0, CNY: 0 },
         todayConsumption: { USD: 0, CNY: 0 },
         todayIncome: { USD: 0, CNY: 0 },
-        checkIn: { enableDetection: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
       },
     ])
     mockGetActiveTabs.mockResolvedValue([])
@@ -2650,11 +2694,11 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
 
     const accountA: any = {
       id: "a",
-      checkIn: { siteStatus: { isCheckedInToday: false } },
+      checkIn: buildCheckInStatus(false),
     }
     const accountB: any = {
       id: "b",
-      checkIn: { siteStatus: { isCheckedInToday: false } },
+      checkIn: buildCheckInStatus(false),
     }
 
     mockGetAllAccounts.mockResolvedValue([accountA, accountB])
@@ -2682,7 +2726,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
 
     const updatedAccountA: any = {
       id: "a",
-      checkIn: { siteStatus: { isCheckedInToday: true } },
+      checkIn: buildCheckInStatus(true),
     }
     mockGetAccountById.mockResolvedValue(updatedAccountA)
 
@@ -2716,8 +2760,12 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       const byId = Object.fromEntries(
         (latestCtx?.displayData ?? []).map((item: any) => [item.id, item]),
       )
-      expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
-      expect(byId.b?.checkIn?.siteStatus?.isCheckedInToday).toBe(false)
+      expect(readCheckInToday(byId.a?.checkIn)).toBe(
+        CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+      )
+      expect(readCheckInToday(byId.b?.checkIn)).toBe(
+        CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      )
     })
 
     expect(mockGetAccountById).toHaveBeenCalledTimes(1)
@@ -2744,7 +2792,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       disabled: false,
       excludeFromTodayIncome: false,
       exchange_rate: 7,
-      checkIn: { siteStatus: { isCheckedInToday: false } },
+      checkIn: buildCheckInStatus(false),
       account_info: { id: 1 },
     }
     const accountB: any = {
@@ -2752,7 +2800,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       disabled: false,
       excludeFromTodayIncome: false,
       exchange_rate: 7,
-      checkIn: { siteStatus: { isCheckedInToday: false } },
+      checkIn: buildCheckInStatus(false),
       account_info: { id: 2 },
     }
 
@@ -2809,7 +2857,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     })
     mockGetAccountById.mockResolvedValue({
       ...accountA,
-      checkIn: { siteStatus: { isCheckedInToday: true } },
+      checkIn: buildCheckInStatus(true),
     })
 
     const getLatestCtx = await renderAccountDataProvider()
@@ -2841,7 +2889,9 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       const byId = Object.fromEntries(
         getLatestCtx().displayData.map((item: any) => [item.id, item]),
       )
-      expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+      expect(readCheckInToday(byId.a?.checkIn)).toBe(
+        CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+      )
       expect(byId.a?.estimatedTodayIncome).toEqual({ USD: 3, CNY: 21 })
       expect(byId.b?.estimatedTodayIncome).toEqual({ USD: 2, CNY: 14 })
       expect(getLatestCtx().todayIncomeEstimateTotals).toMatchObject({
@@ -2887,7 +2937,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
 
     const accountA: any = {
       id: "a",
-      checkIn: { siteStatus: { isCheckedInToday: false } },
+      checkIn: buildCheckInStatus(false),
     }
 
     mockGetAllAccounts.mockResolvedValue([accountA])
@@ -2908,7 +2958,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
 
     mockGetAccountById.mockResolvedValue({
       id: "b",
-      checkIn: { siteStatus: { isCheckedInToday: true } },
+      checkIn: buildCheckInStatus(true),
     })
 
     const getLatestCtx = await renderAccountDataProvider()
@@ -2996,11 +3046,11 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
 
     const accountA: any = {
       id: "a",
-      checkIn: { siteStatus: { isCheckedInToday: false } },
+      checkIn: buildCheckInStatus(false),
     }
     const accountB: any = {
       id: "b",
-      checkIn: { siteStatus: { isCheckedInToday: false } },
+      checkIn: buildCheckInStatus(false),
     }
 
     mockGetAllAccounts.mockResolvedValue([accountA, accountB])
@@ -3086,7 +3136,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     await act(async () => {
       resolveReloadA({
         id: "a",
-        checkIn: { siteStatus: { isCheckedInToday: true } },
+        checkIn: buildCheckInStatus(true),
       })
       await reloadAPromise
     })
@@ -3098,7 +3148,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     await act(async () => {
       resolveReloadB({
         id: "b",
-        checkIn: { siteStatus: { isCheckedInToday: true } },
+        checkIn: buildCheckInStatus(true),
       })
       await reloadBPromise
     })
@@ -3116,8 +3166,12 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       const byId = Object.fromEntries(
         (latestCtx?.displayData ?? []).map((item: any) => [item.id, item]),
       )
-      expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
-      expect(byId.b?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+      expect(readCheckInToday(byId.a?.checkIn)).toBe(
+        CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+      )
+      expect(readCheckInToday(byId.b?.checkIn)).toBe(
+        CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+      )
     })
 
     await act(async () => {
@@ -3129,8 +3183,12 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       const byId = Object.fromEntries(
         (latestCtx?.displayData ?? []).map((item: any) => [item.id, item]),
       )
-      expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
-      expect(byId.b?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+      expect(readCheckInToday(byId.a?.checkIn)).toBe(
+        CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+      )
+      expect(readCheckInToday(byId.b?.checkIn)).toBe(
+        CHECK_IN_METHOD_TODAY_STATUSES.Checked,
+      )
     })
   })
 
@@ -3145,7 +3203,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     mockGetAllAccounts.mockResolvedValue([
       {
         id: "a",
-        checkIn: { siteStatus: { isCheckedInToday: false } },
+        checkIn: buildCheckInStatus(false),
       },
     ])
     mockGetAllBookmarks.mockResolvedValue([])
@@ -3175,7 +3233,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       expect(getLatestCtx().displayData).toEqual([
         expect.objectContaining({
           id: "a",
-          checkIn: { siteStatus: { isCheckedInToday: false } },
+          checkIn: buildCheckInStatus(false),
         }),
       ])
     })
@@ -3201,29 +3259,29 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     await act(async () => {
       newerReload.resolve({
         id: "a",
-        checkIn: { siteStatus: { isCheckedInToday: true } },
+        checkIn: buildCheckInStatus(true),
       })
       await newerReload.promise
     })
 
     await waitFor(() => {
-      expect(getLatestCtx().displayData[0]?.checkIn).toEqual({
-        siteStatus: { isCheckedInToday: true },
-      })
+      expect(getLatestCtx().displayData[0]?.checkIn).toEqual(
+        buildCheckInStatus(true),
+      )
     })
 
     await act(async () => {
       olderReload.resolve({
         id: "a",
-        checkIn: { siteStatus: { isCheckedInToday: false } },
+        checkIn: buildCheckInStatus(false),
       })
       await olderReload.promise
     })
 
     await waitFor(() => {
-      expect(getLatestCtx().displayData[0]?.checkIn).toEqual({
-        siteStatus: { isCheckedInToday: true },
-      })
+      expect(getLatestCtx().displayData[0]?.checkIn).toEqual(
+        buildCheckInStatus(true),
+      )
     })
     expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(1)
   })

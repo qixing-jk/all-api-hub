@@ -132,7 +132,11 @@ function createAccount(overrides: Partial<any> = {}) {
     notes: "",
     tagIds: [],
     excludeFromTotalBalance: false,
-    checkIn: { enableDetection: false },
+    checkIn: {
+      automaticExecutionEnabled: false,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" as const },
+    },
     ...overrides,
   }
 }

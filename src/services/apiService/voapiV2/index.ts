@@ -1,3 +1,5 @@
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -14,6 +16,8 @@ import {
   API_AUTH_TOKEN_MODES,
   type ApiServiceRequest,
 } from "~/services/apiTransport/type"
+import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configCodec"
+import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
 import {
   INVITE_LINK_FAILURE_REASONS,
   InviteLinkError,
@@ -24,7 +28,6 @@ import {
   SiteHealthStatus,
   type AccountTodayMetricAvailability,
   type ApiToken,
-  type CheckInConfig,
 } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { toOptionalFiniteNumber } from "~/utils/core/number"
@@ -60,7 +63,12 @@ const TOKEN_LOOKUP_PAGE_SIZE = 100
 const TOKEN_LOOKUP_MAX_PAGES = 100
 
 type VoApiV2AccountDataRequest = ApiServiceRequest &
-  Partial<Pick<ApiServiceAccountRequest, "checkIn" | "includeTodayCashflow">>
+  Partial<
+    Pick<
+      ApiServiceAccountRequest,
+      "checkIn" | "includeTodayCashflow" | "siteType"
+    >
+  >
 
 type VoApiV2CheckInSubmitResult =
   | VoApiV2CheckInSubmitData
@@ -523,32 +531,13 @@ const fetchVoApiV2CheckedInToday = async (
   }
 }
 
-const resolveVoApiV2CheckInSiteStatus = (
-  checkIn: CheckInConfig,
-  isCheckedInToday: boolean | undefined,
-) => {
-  if (typeof isCheckedInToday !== "boolean") {
-    return {
-      ...(checkIn.siteStatus ?? {}),
-      isCheckedInToday: checkIn.siteStatus?.isCheckedInToday,
-      lastDetectedAt: checkIn.siteStatus?.lastDetectedAt,
-    }
-  }
-
-  return {
-    ...(checkIn.siteStatus ?? {}),
-    isCheckedInToday,
-    lastDetectedAt: Date.now(),
-  }
-}
-
 /**
  * Maps VoAPI v2 balances and current-day statistics into account dashboard data.
  */
 export async function fetchVoApiV2AccountData(
   request: VoApiV2AccountDataRequest,
 ): Promise<AccountData> {
-  const resolvedCheckIn = request.checkIn ?? { enableDetection: false }
+  const resolvedCheckIn = normalizeCheckInConfigV7(request.checkIn)
   const userInfoPromise = fetchVoApiV2UserInfo(request)
   // VoAPI v2 dashboard statistics accept one millisecond date range and return
   // requests plus separate basic/bound usage. Source: https://github.com/VoAPI/VoAPI
@@ -565,14 +554,19 @@ export async function fetchVoApiV2AccountData(
             return { kind: "failed" as const }
           })
       : Promise.resolve({ kind: "skipped" as const })
-  const checkedInTodayPromise = resolvedCheckIn.enableDetection
-    ? fetchVoApiV2CheckedInToday(request)
-    : Promise.resolve<boolean | undefined>(undefined)
+  const checkInPromise = refreshSelectedStatus({
+    config: resolvedCheckIn,
+    siteType: request.siteType ?? SITE_TYPES.VO_API_V2,
+    readStatus: async (methodId) =>
+      methodId === AUTO_CHECKIN_METHOD_IDS.VoApiV2DailyCheckIn
+        ? await fetchVoApiV2CheckedInToday(request)
+        : undefined,
+  })
 
-  const [userInfo, statsResult, isCheckedInToday] = await Promise.all([
+  const [userInfo, statsResult, checkIn] = await Promise.all([
     userInfoPromise,
     statsPromise,
-    checkedInTodayPromise,
+    checkInPromise,
   ])
 
   const quota =
@@ -628,13 +622,7 @@ export async function fetchVoApiV2AccountData(
       tokens: unavailableAvailability(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
       income: unavailableAvailability(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
     },
-    checkIn: {
-      ...resolvedCheckIn,
-      siteStatus: resolveVoApiV2CheckInSiteStatus(
-        resolvedCheckIn,
-        isCheckedInToday,
-      ),
-    },
+    checkIn,
   }
 }
 

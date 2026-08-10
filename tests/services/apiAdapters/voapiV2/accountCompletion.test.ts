@@ -13,6 +13,8 @@ import { fetchVoApiV2UserInfo } from "~/services/apiService/voapiV2"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
+import { createCheckInConfig } from "../checkInFixtures"
+
 vi.mock("~/services/apiService/voapiV2", () => ({
   fetchVoApiV2UserInfo: vi.fn(),
 }))
@@ -51,12 +53,12 @@ const trimString = vi.fn((value: unknown) =>
 )
 
 const createInitialCheckInConfig = vi.fn(
-  ({ enableDetection, autoCheckInEnabled }) => ({
-    enableDetection,
-    autoCheckInEnabled,
-    siteStatus: {
+  ({ supported, automaticExecutionEnabled }) => ({
+    ...createCheckInConfig(SITE_TYPES.VO_API_V2, {
+      matched: supported,
+      automaticExecutionEnabled,
       isCheckedInToday: false,
-    },
+    }),
     customCheckIn: {
       url: "",
       redeemUrl: "",
@@ -117,8 +119,8 @@ describe("voApiV2AccountCompletion", () => {
       },
     })
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
-      enableDetection: true,
-      autoCheckInEnabled: true,
+      supported: true,
+      automaticExecutionEnabled: true,
     })
     expect(result).toEqual({
       username: "dashboard-owner",
@@ -128,11 +130,9 @@ describe("voApiV2AccountCompletion", () => {
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: AuthTypeEnum.AccessToken,
       checkIn: {
-        enableDetection: true,
-        autoCheckInEnabled: true,
-        siteStatus: {
+        ...createCheckInConfig(SITE_TYPES.VO_API_V2, {
           isCheckedInToday: false,
-        },
+        }),
         customCheckIn: {
           url: "",
           redeemUrl: "",

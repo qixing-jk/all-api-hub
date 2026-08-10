@@ -313,7 +313,11 @@ describe("useAccountDialog save and auto-config flows", () => {
       token: "saved-token",
       userId: "12",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: { enableDetection: false },
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
       cookieAuthSessionCookie: "",
       ...overrides,
     }) as DisplaySiteData

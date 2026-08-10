@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   CURRENT_CONFIG_VERSION,
@@ -10,11 +11,18 @@ import {
 } from "~/services/accounts/migrations/accountDataMigration"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 
 describe("accountDataMigration", () => {
   // Helper to create a minimal SiteAccount fixture
+  type StoredAccountOverrides = Partial<Omit<SiteAccount, "checkIn">> & {
+    checkIn?: unknown
+    can_check_in?: boolean
+    supports_check_in?: boolean
+  }
+
   const createSiteAccount = (
-    overrides: Partial<SiteAccount> = {},
+    overrides: StoredAccountOverrides = {},
   ): SiteAccount =>
     ({
       id: "test-account-1",
@@ -92,6 +100,7 @@ describe("accountDataMigration", () => {
     it("migrates account from version 0 to current version", () => {
       const oldAccount = createSiteAccount({
         configVersion: 0,
+        site_type: SITE_TYPES.NEW_API,
         supports_check_in: true,
         can_check_in: false,
       })
@@ -103,8 +112,15 @@ describe("accountDataMigration", () => {
       expect(migrated.excludeFromTotalBalance).toBe(false)
       expect(migrated.excludeFromTodayIncome).toBe(false)
       expect(migrated.checkIn).toBeDefined()
-      expect(migrated.checkIn?.enableDetection).toBe(true)
-      expect(migrated.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+      expect(migrated.checkIn.automaticExecutionEnabled).toBe(true)
+      expect(migrated.checkIn.selection.methodId).toBe(
+        AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      )
+      expect(
+        migrated.checkIn.methodKnowledge.methods[
+          AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+        ]?.status,
+      ).toMatchObject({ outcome: "known", today: "checked" })
       // Legacy fields should be removed
       expect(migrated).not.toHaveProperty("supports_check_in")
       expect(migrated).not.toHaveProperty("can_check_in")
@@ -267,9 +283,10 @@ describe("accountDataMigration", () => {
       expect(migrated.excludeFromTodayIncome).toBe(true)
     })
 
-    it("migrates version 1 site check-in status into checkIn.siteStatus", () => {
+    it("migrates version 1 site check-in status into selected method knowledge", () => {
       const legacyV1Account = createSiteAccount({
         configVersion: 1,
+        site_type: SITE_TYPES.NEW_API,
         checkIn: {
           enableDetection: true,
           isCheckedInToday: false,
@@ -282,10 +299,11 @@ describe("accountDataMigration", () => {
       expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
       expect(migrated.disabled).toBe(false)
       expect(migrated.excludeFromTotalBalance).toBe(false)
-      expect(migrated.checkIn?.siteStatus).toEqual({
-        isCheckedInToday: false,
-        lastCheckInDate: "2000-01-02",
-      })
+      expect(
+        migrated.checkIn.methodKnowledge.methods[
+          AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+        ]?.status,
+      ).toMatchObject({ today: "not_checked" })
       expect((migrated.checkIn as any).isCheckedInToday).toBeUndefined()
       expect((migrated.checkIn as any).lastCheckInDate).toBeUndefined()
     })
@@ -293,10 +311,7 @@ describe("accountDataMigration", () => {
     it("leaves account unchanged when already at current version", () => {
       const currentAccount = createSiteAccount({
         configVersion: CURRENT_CONFIG_VERSION,
-        checkIn: {
-          enableDetection: false,
-          siteStatus: { isCheckedInToday: true },
-        },
+        checkIn: buildCheckInConfig(),
       })
 
       const migrated = migrateAccountConfig(currentAccount)
@@ -308,10 +323,10 @@ describe("accountDataMigration", () => {
     it("handles account with version higher than current version", () => {
       const futureAccount = createSiteAccount({
         configVersion: CURRENT_CONFIG_VERSION + 1,
-        checkIn: {
-          enableDetection: true,
-          customCheckIn: { url: "https://custom.com" },
-        },
+        checkIn: buildCheckInConfig({
+          automaticExecutionEnabled: true,
+          customCheckIn: { url: "https://custom.example.invalid" },
+        }),
       })
 
       const migrated = migrateAccountConfig(futureAccount)
@@ -376,7 +391,7 @@ describe("accountDataMigration", () => {
         createSiteAccount({
           id: "account-3",
           configVersion: CURRENT_CONFIG_VERSION,
-          checkIn: { enableDetection: false },
+          checkIn: buildCheckInConfig(),
         }),
       ]
 
@@ -462,6 +477,7 @@ describe("accountDataMigration", () => {
         createSiteAccount({
           id: "complex-1",
           configVersion: 0,
+          site_type: SITE_TYPES.NEW_API,
           supports_check_in: true,
           can_check_in: false,
           notes: "Already checked in",
@@ -470,6 +486,7 @@ describe("accountDataMigration", () => {
         createSiteAccount({
           id: "complex-2",
           configVersion: 0,
+          site_type: SITE_TYPES.NEW_API,
           supports_check_in: true,
           can_check_in: true,
           notes: "Can check in",
@@ -486,11 +503,10 @@ describe("accountDataMigration", () => {
           id: "already-migrated",
           configVersion: CURRENT_CONFIG_VERSION,
           disabled: false,
-          checkIn: {
-            enableDetection: true,
-            siteStatus: { isCheckedInToday: false },
-            customCheckIn: { url: "https://custom.com/checkin" },
-          },
+          checkIn: buildCheckInConfig({
+            automaticExecutionEnabled: true,
+            customCheckIn: { url: "https://custom.example.invalid/checkin" },
+          }),
           notes: "Modern account",
           site_name: "Site D",
         }),
@@ -506,13 +522,20 @@ describe("accountDataMigration", () => {
       const unchanged = result.accounts.find((a) => a.id === "already-migrated")
 
       // Verify specific migration scenarios
-      expect(migrated1?.checkIn?.enableDetection).toBe(true)
-      expect(migrated1?.checkIn?.siteStatus?.isCheckedInToday).toBe(true) // was can_check_in: false
+      expect(
+        migrated1?.checkIn.methodKnowledge.methods[
+          AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+        ]?.status,
+      ).toMatchObject({ outcome: "known", today: "checked" }) // was can_check_in: false
 
-      expect(migrated2?.checkIn?.enableDetection).toBe(true)
-      expect(migrated2?.checkIn?.siteStatus?.isCheckedInToday).toBe(false) // was can_check_in: true
+      expect(
+        migrated2?.checkIn.methodKnowledge.methods[
+          AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+        ]?.status,
+      ).toMatchObject({ outcome: "known", today: "not_checked" }) // was can_check_in: true
 
-      expect(migrated3?.checkIn).toBeUndefined() // supports_check_in was false, so no checkIn object created
+      expect(migrated3?.checkIn.methodKnowledge.methods).toEqual({})
+      expect(migrated3?.checkIn.selection.methodId).toBeUndefined()
 
       // Ensure all legacy fields are removed from migrated accounts
       expect(migrated1).not.toHaveProperty("supports_check_in")
@@ -523,11 +546,12 @@ describe("accountDataMigration", () => {
       expect(migrated3).not.toHaveProperty("can_check_in")
 
       // Unchanged account should remain the same
-      expect(unchanged?.checkIn).toEqual({
-        enableDetection: true,
-        siteStatus: { isCheckedInToday: false },
-        customCheckIn: { url: "https://custom.com/checkin" },
-      })
+      expect(unchanged?.checkIn).toEqual(
+        buildCheckInConfig({
+          automaticExecutionEnabled: true,
+          customCheckIn: { url: "https://custom.example.invalid/checkin" },
+        }),
+      )
     })
   })
 })

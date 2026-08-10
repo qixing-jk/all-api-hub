@@ -89,9 +89,9 @@ vi.mock(
 )
 
 const CHECK_IN_DISABLED: CheckInConfig = {
-  enableDetection: false,
-  autoCheckInEnabled: true,
-  siteStatus: { isCheckedInToday: false },
+  automaticExecutionEnabled: false,
+  methodKnowledge: { methods: {} },
+  selection: { mode: "automatic" },
   customCheckIn: {
     url: "",
     redeemUrl: "",
@@ -1796,6 +1796,7 @@ describe("accountOperations validateAndSaveAccount", () => {
     })
     expect(fetchAccountDataMock).toHaveBeenCalledWith({
       baseUrl: "https://cookie.example.com/console",
+      siteType: SITE_TYPES.UNKNOWN,
       checkIn: CHECK_IN_DISABLED,
       accountId: undefined,
       exchangeRate: 7,
@@ -2285,7 +2286,7 @@ describe("accountOperations validateAndSaveAccount", () => {
 
   it("returns a stable update failure when deferred account persistence fails", async () => {
     const updateAccountSpy = vi
-      .spyOn(accountStorage, "updateAccount")
+      .spyOn(accountStorage, "updateAccountWithCheckInDraft")
       .mockResolvedValueOnce(false)
 
     const result = await validateAndUpdateAccount(

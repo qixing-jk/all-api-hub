@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   createChannel,
   deleteChannel,
@@ -16,6 +17,8 @@ import {
 } from "~/services/apiService/doneHub"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+
+import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
 const { mockFetchApiData } = vi.hoisted(() => ({
   mockFetchApiData: vi.fn(),
@@ -66,18 +69,6 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchCheckInStatus: mockFetchCheckInStatus,
   fetchTodayIncome: mockFetchTodayIncome,
   fetchTodayUsage: mockFetchTodayUsage,
-  resolveCheckInSiteStatus: (checkIn: any, canCheckIn: boolean | undefined) =>
-    typeof canCheckIn === "boolean"
-      ? {
-          ...(checkIn.siteStatus ?? {}),
-          isCheckedInToday: !canCheckIn,
-          lastDetectedAt: Date.now(),
-        }
-      : {
-          ...(checkIn.siteStatus ?? {}),
-          isCheckedInToday: checkIn.siteStatus?.isCheckedInToday,
-          lastDetectedAt: checkIn.siteStatus?.lastDetectedAt,
-        },
 }))
 
 vi.mock("~/utils/i18n/core", () => ({
@@ -996,10 +987,8 @@ describe("apiService doneHub channel APIs", () => {
         accessToken: "token",
         userId: "1",
       },
-      checkIn: {
-        enableDetection: false,
-        siteStatus: {},
-      },
+      siteType: SITE_TYPES.DONE_HUB,
+      checkIn: createCheckInConfig(SITE_TYPES.DONE_HUB, { matched: false }),
     }
     const timestampRange = { start: 1_700_000_000, end: 1_700_086_399 }
 
@@ -1042,10 +1031,8 @@ describe("apiService doneHub channel APIs", () => {
         accessToken: "token",
         userId: "1",
       },
-      checkIn: {
-        enableDetection: false,
-        siteStatus: {},
-      },
+      siteType: SITE_TYPES.DONE_HUB,
+      checkIn: createCheckInConfig(SITE_TYPES.DONE_HUB, { matched: false }),
     }
     const timestampRange = { start: 1_700_000_000, end: 1_700_086_399 }
 
@@ -1078,10 +1065,8 @@ describe("apiService doneHub channel APIs", () => {
         accessToken: "token",
         userId: "1",
       },
-      checkIn: {
-        enableDetection: false,
-        siteStatus: {},
-      },
+      siteType: SITE_TYPES.DONE_HUB,
+      checkIn: createCheckInConfig(SITE_TYPES.DONE_HUB, { matched: false }),
     }
 
     mockFetchTodayUsage.mockResolvedValueOnce({
@@ -1112,10 +1097,8 @@ describe("apiService doneHub channel APIs", () => {
         accessToken: "token",
         userId: "1",
       },
-      checkIn: {
-        enableDetection: false,
-        siteStatus: {},
-      },
+      siteType: SITE_TYPES.DONE_HUB,
+      checkIn: createCheckInConfig(SITE_TYPES.DONE_HUB, { matched: false }),
     }
 
     const error = new Error("quota unavailable")

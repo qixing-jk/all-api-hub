@@ -15,6 +15,12 @@ import {
   resolveAccountDisplayName,
 } from "~/services/accounts/utils/accountDisplayName"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { isCheckInMethodId } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  markCheckInMethodExecuted,
+  mergeRefreshedCheckInStatus,
+  mergeUserOwnedCheckInDraft,
+} from "~/services/checkin/autoCheckin/state"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,
@@ -54,9 +60,9 @@ import { getAccountSiteType } from "../siteDetection/detectSiteType"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
+  canonicalizeAccountStorageConfig,
   createDefaultAccountStorageConfig,
   createPersistedSiteAccount,
-  normalizeAccountStorageConfigForRead,
   normalizeAccountStorageConfigForWrite,
   normalizeSiteAccount,
 } from "./accountDefaults"
@@ -493,6 +499,118 @@ class AccountStorageService {
         result: true,
         changed: true,
       }))
+    } catch (error) {
+      logger.error(t("messages:storage.updateFailed", { error: "" }), error)
+      return false
+    }
+  }
+
+  /**
+   * Atomically applies ordinary account fields and AccountDialog-owned check-in
+   * fields against the latest locked account snapshot.
+   */
+  async updateAccountWithCheckInDraft(
+    id: string,
+    updates: Omit<DeepPartial<SiteAccount>, "checkIn">,
+    draft: SiteAccount["checkIn"],
+    options: UpdateAccountOptions & {
+      selectionChanged?: boolean
+      refreshed?: SiteAccount["checkIn"]
+    },
+  ): Promise<boolean> {
+    try {
+      return await this.mutateAccountById(id, ({ account }) => {
+        const mergedUserDraft = mergeUserOwnedCheckInDraft({
+          latest: account.checkIn,
+          draft,
+          selectionChanged: options.selectionChanged,
+        })
+        const checkIn = options.refreshed
+          ? mergeRefreshedCheckInStatus({
+              latest: mergedUserDraft,
+              refreshed: options.refreshed,
+            })
+          : mergedUserDraft
+
+        return {
+          nextAccount: applySiteAccountUpdates({
+            account,
+            updates: { ...updates, checkIn },
+            now: Date.now(),
+            userTimestampMode: options.userTimestampMode,
+          }),
+          result: true,
+          changed: true,
+        }
+      })
+    } catch (error) {
+      logger.error(t("messages:storage.updateFailed", { error: "" }), error)
+      return false
+    }
+  }
+
+  /**
+   * Applies AccountDialog-owned check-in fields against the latest locked
+   * account snapshot without replacing discovery or status knowledge.
+   */
+  async updateAccountCheckInDraft(
+    id: string,
+    draft: SiteAccount["checkIn"],
+    options: {
+      selectionChanged?: boolean
+      refreshed?: SiteAccount["checkIn"]
+    } = {},
+  ): Promise<boolean> {
+    return this.updateAccountWithCheckInDraft(id, {}, draft, {
+      ...options,
+      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+    })
+  }
+
+  /** Applies remote refresh data without replacing newer user-owned fields. */
+  private async updateAccountFromRefresh(
+    id: string,
+    updates: DeepPartial<SiteAccount>,
+    refreshedCheckIn?: SiteAccount["checkIn"],
+  ): Promise<boolean> {
+    try {
+      return await this.mutateAccountById(id, ({ account }) => {
+        let checkIn = account.checkIn
+        if (refreshedCheckIn) {
+          checkIn = mergeRefreshedCheckInStatus({
+            latest: checkIn,
+            refreshed: refreshedCheckIn,
+          })
+        }
+
+        const today = new Date().toISOString().split("T")[0]
+        if (
+          refreshedCheckIn &&
+          checkIn.customCheckIn?.url &&
+          checkIn.customCheckIn.lastCheckInDate &&
+          checkIn.customCheckIn.lastCheckInDate !== today
+        ) {
+          checkIn = {
+            ...checkIn,
+            customCheckIn: {
+              ...checkIn.customCheckIn,
+              isCheckedInToday: false,
+              lastCheckInDate: undefined,
+            },
+          }
+        }
+
+        return {
+          nextAccount: applySiteAccountUpdates({
+            account,
+            updates: { ...updates, checkIn },
+            now: Date.now(),
+            userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+          }),
+          result: true,
+          changed: true,
+        }
+      })
     } catch (error) {
       logger.error(t("messages:storage.updateFailed", { error: "" }), error)
       return false
@@ -947,41 +1065,37 @@ class AccountStorageService {
     )
   }
 
-  /**
-   * Mark account as checked-in for today via the site check-in flow
-   * (sets date + flag under checkIn.siteStatus).
-   */
+  /** Mark the selected site method checked using execution evidence. */
   async markAccountAsSiteCheckedIn(id: string): Promise<boolean> {
     try {
-      const account = await this.getAccountById(id)
+      return await this.mutateAccountById(id, ({ account }) => {
+        if (AccountStorageService.isAccountDisabled(account)) {
+          return { nextAccount: account, result: false, changed: false }
+        }
 
-      if (!account) {
-        throw new Error(t("messages:storage.accountNotFound", { id }))
-      }
-      if (AccountStorageService.isAccountDisabled(account)) {
-        return false
-      }
+        const selectedMethodId = account.checkIn.selection.methodId
+        const nextCheckIn = isCheckInMethodId(selectedMethodId)
+          ? markCheckInMethodExecuted({
+              config: account.checkIn,
+              methodId: selectedMethodId,
+              observedAt: Date.now(),
+            })
+          : account.checkIn
+        if (nextCheckIn === account.checkIn) {
+          return { nextAccount: account, result: false, changed: false }
+        }
 
-      const today = new Date()
-      const todayDate = today.toISOString().split("T")[0]
-      const detectedAt = today.getTime()
-      const currentCheckIn = account.checkIn
-
-      return this.updateAccount(
-        id,
-        {
-          checkIn: {
-            ...currentCheckIn,
-            siteStatus: {
-              ...(currentCheckIn.siteStatus ?? {}),
-              isCheckedInToday: true,
-              lastCheckInDate: todayDate,
-              lastDetectedAt: detectedAt,
-            },
-          },
-        },
-        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
-      )
+        return {
+          nextAccount: applySiteAccountUpdates({
+            account,
+            updates: { checkIn: nextCheckIn },
+            now: Date.now(),
+            userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+          }),
+          result: true,
+          changed: true,
+        }
+      })
     } catch (error) {
       logger.error("标记账号为已签到失败", { accountId: id, error })
       return false
@@ -994,38 +1108,35 @@ class AccountStorageService {
    */
   async markAccountAsCustomCheckedIn(id: string): Promise<boolean> {
     try {
-      const account = await this.getAccountById(id)
+      return await this.mutateAccountById(id, ({ account }) => {
+        const customCheckIn = account.checkIn.customCheckIn
+        if (
+          AccountStorageService.isAccountDisabled(account) ||
+          typeof customCheckIn?.url !== "string" ||
+          customCheckIn.url.trim() === ""
+        ) {
+          return { nextAccount: account, result: false, changed: false }
+        }
 
-      if (!account) {
-        throw new Error(t("messages:storage.accountNotFound", { id }))
-      }
-      if (AccountStorageService.isAccountDisabled(account)) {
-        return false
-      }
-
-      const url = account.checkIn?.customCheckIn?.url
-      if (typeof url !== "string" || url.trim() === "") {
-        return false
-      }
-
-      const today = new Date()
-      const todayDate = today.toISOString().split("T")[0]
-      const currentCheckIn = account.checkIn
-
-      return this.updateAccount(
-        id,
-        {
-          checkIn: {
-            ...currentCheckIn,
-            customCheckIn: {
-              ...(currentCheckIn.customCheckIn ?? {}),
-              isCheckedInToday: true,
-              lastCheckInDate: todayDate,
-            },
+        const nextCheckIn = {
+          ...account.checkIn,
+          customCheckIn: {
+            ...customCheckIn,
+            isCheckedInToday: true,
+            lastCheckInDate: new Date().toISOString().split("T")[0],
           },
-        },
-        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
-      )
+        }
+        return {
+          nextAccount: applySiteAccountUpdates({
+            account,
+            updates: { checkIn: nextCheckIn },
+            now: Date.now(),
+            userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+          }),
+          result: true,
+          changed: true,
+        }
+      })
     } catch (error) {
       logger.error("标记账号外部签到为已完成失败", { accountId: id, error })
       return false
@@ -1120,35 +1231,6 @@ class AccountStorageService {
       const tempWindowRequestSource = options?.tempWindowRequestSource
       const protectionBypassExecution = options?.protectionBypassExecution
 
-      // Refresh check-in support status together with account refresh.
-      const currentCheckIn = account.checkIn
-      let checkInForRefresh = { ...currentCheckIn }
-
-      if (accountRefresh?.fetchCheckInSupport) {
-        try {
-          const support = await accountRefresh.fetchCheckInSupport({
-            baseUrl,
-            accountId: account.id,
-            cookieAuthSessionCookie: account.cookieAuth?.sessionCookie,
-            auth,
-            ...(tempWindowRequestSource ? { tempWindowRequestSource } : {}),
-            ...(protectionBypassExecution ? { protectionBypassExecution } : {}),
-          })
-
-          if (typeof support === "boolean") {
-            checkInForRefresh = {
-              ...checkInForRefresh,
-              enableDetection: support,
-            }
-          }
-        } catch (error) {
-          logger.warn("Failed to determine check-in support", {
-            baseUrl,
-            error,
-          })
-        }
-      }
-
       const prefs = await userPreferences.getPreferences()
       const includeTodayCashflow =
         options?.includeTodayCashflow ?? prefs.showTodayCashflow ?? true
@@ -1158,7 +1240,8 @@ class AccountStorageService {
         ? await accountRefresh.refreshAccount({
             baseUrl,
             accountId: account.id,
-            checkIn: checkInForRefresh,
+            checkIn: account.checkIn,
+            siteType: account.site_type,
             exchangeRate: account.exchange_rate,
             auth,
             includeTodayCashflow,
@@ -1186,6 +1269,7 @@ class AccountStorageService {
       const shouldReEnable = Boolean(
         options?.reEnableOnSuccess === true && result.success,
       )
+      let refreshedCheckIn: SiteAccount["checkIn"] | undefined
 
       if (result.success) {
         const manualBalanceUsd = account.manualBalanceUsd?.trim()
@@ -1200,23 +1284,7 @@ class AccountStorageService {
               })()
             : undefined
 
-        // Merge API check-in status (siteStatus) with local custom check-in state.
-        const today = new Date().toISOString().split("T")[0]
-        const nextCheckIn = { ...(result.data.checkIn ?? account.checkIn) }
-
-        if (
-          nextCheckIn.customCheckIn?.url &&
-          nextCheckIn.customCheckIn.lastCheckInDate &&
-          nextCheckIn.customCheckIn.lastCheckInDate !== today
-        ) {
-          nextCheckIn.customCheckIn = {
-            ...nextCheckIn.customCheckIn,
-            isCheckedInToday: false,
-            lastCheckInDate: undefined,
-          }
-        }
-
-        updateData.checkIn = nextCheckIn
+        refreshedCheckIn = result.data.checkIn
 
         updateData.account_info = {
           ...account.account_info,
@@ -1287,9 +1355,11 @@ class AccountStorageService {
       }
 
       // 更新账号信息
-      const didPersist = await this.updateAccount(id, updateData, {
-        userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
-      })
+      const didPersist = await this.updateAccountFromRefresh(
+        id,
+        updateData,
+        refreshedCheckIn,
+      )
       const updatedAccount = didPersist
         ? await this.getAccountById(id)
         : account
@@ -1660,8 +1730,6 @@ class AccountStorageService {
         tags: normalized.tags,
         siteType: normalized.site_type,
         checkIn: normalized.checkIn,
-        can_check_in: normalized.can_check_in,
-        supports_check_in: normalized.supports_check_in,
         authType: normalized.authType,
         cookieAuthSessionCookie: normalized.cookieAuth?.sessionCookie,
       }
@@ -1807,10 +1875,18 @@ class AccountStorageService {
    * closed instead of overwriting the user's data with an empty baseline.
    */
   private async getStorageConfig(): Promise<AccountStorageConfig> {
+    return (await this.getStorageConfigSnapshot()).config
+  }
+
+  /** Reads and decodes the account envelope while retaining migration evidence. */
+  private async getStorageConfigSnapshot(): Promise<{
+    config: AccountStorageConfig
+    migratedCount: number
+  }> {
     const config = (await this.storage.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)) as
       | AccountStorageConfig
       | undefined
-    return normalizeAccountStorageConfigForRead(config)
+    return canonicalizeAccountStorageConfig(config)
   }
 
   /**
@@ -1830,9 +1906,7 @@ class AccountStorageService {
     // `tagIds` and a consistent global tag store.
     await ensureAccountTagsStorageMigrated(this.storage)
 
-    const config = await this.getStorageConfig()
-    const { accounts, migratedCount } = migrateAccountsConfig(config.accounts)
-    const normalizedAccounts = accounts.map(normalizeSiteAccount)
+    const { config, migratedCount } = await this.getStorageConfigSnapshot()
 
     if (migratedCount > 0) {
       logger.info("Accounts migrated; persisting updated accounts", {
@@ -1841,7 +1915,7 @@ class AccountStorageService {
       await this.persistReadMigration()
     }
 
-    return normalizedAccounts
+    return config.accounts
   }
 
   /**
@@ -1851,17 +1925,14 @@ class AccountStorageService {
    * operations with the stale snapshot originally returned to the caller.
    */
   private async persistReadMigration(): Promise<void> {
-    await this.mutateStorageConfig((existingConfig) => {
-      const { accounts, migratedCount } = migrateAccountsConfig(
-        existingConfig.accounts,
+    await this.withStorageWriteLock(async () => {
+      const { config, migratedCount } = await this.getStorageConfigSnapshot()
+      if (migratedCount === 0) return
+
+      await this.storage.set(
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+        normalizeAccountStorageConfigForWrite(config),
       )
-
-      if (migratedCount === 0) {
-        return { result: undefined, changed: false }
-      }
-
-      existingConfig.accounts = accounts.map(normalizeSiteAccount)
-      return { result: undefined, changed: true }
     })
   }
 

@@ -111,7 +111,11 @@ const buildDisplayAccount = (
     token: "access-token",
     userId: "7",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: { enableDetection: false },
+    checkIn: {
+      automaticExecutionEnabled: false,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" as const },
+    },
     cookieAuthSessionCookie: "",
     ...overrides,
   }) as DisplaySiteData

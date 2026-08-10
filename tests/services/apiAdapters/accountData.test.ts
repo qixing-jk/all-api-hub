@@ -8,6 +8,8 @@ import { sub2ApiAccountData } from "~/services/apiAdapters/sub2api/accountData"
 import { voApiV2AccountData } from "~/services/apiAdapters/voapiV2/accountData"
 import { AuthTypeEnum } from "~/types"
 
+import { createCheckInConfig } from "./checkInFixtures"
+
 const {
   mockAihubmixFetchAccountData,
   mockDoneHubFetchAccountData,
@@ -49,13 +51,10 @@ vi.mock("~/services/apiService/voapiV2", () => ({
 const request = {
   baseUrl: "https://api.example.invalid",
   accountId: "account-1",
-  checkIn: {
-    enableDetection: true,
-    autoCheckInEnabled: true,
-    siteStatus: {
-      isCheckedInToday: false,
-    },
-  },
+  siteType: SITE_TYPES.NEW_API,
+  checkIn: createCheckInConfig(SITE_TYPES.NEW_API, {
+    isCheckedInToday: false,
+  }),
   includeTodayCashflow: false,
   auth: {
     authType: AuthTypeEnum.AccessToken,
@@ -81,12 +80,7 @@ const disabledCheckInAccountData: AccountData = {
   today_quota_consumption: 0,
   today_requests_count: 0,
   today_income: 0,
-  checkIn: {
-    enableDetection: false,
-    siteStatus: {
-      isCheckedInToday: undefined,
-    },
-  },
+  checkIn: createCheckInConfig(SITE_TYPES.SUB2API, { matched: false }),
 }
 
 describe("apiAdapter accountData", () => {

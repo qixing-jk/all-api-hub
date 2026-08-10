@@ -1,10 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  anyrouterProvider,
-  type AnyrouterCheckInParams,
-} from "~/services/checkin/autoCheckin/providers/anyrouter"
+import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
+import type { AnyrouterCheckInParams } from "~/services/checkin/autoCheckin/providers/contracts"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -26,7 +24,11 @@ const mockAccount: SiteAccount = {
   disabled: false,
   excludeFromTotalBalance: false,
   excludeFromTodayIncome: false,
-  checkIn: { enableDetection: true },
+  checkIn: {
+    automaticExecutionEnabled: true,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" as const },
+  },
   health: { status: SiteHealthStatus.Healthy },
   account_info: {
     id: "12345",
@@ -65,9 +67,16 @@ describe("anyrouterProvider", () => {
       expect(anyrouterProvider.canCheckIn(mockAccount)).toBe(true)
     })
 
-    it("returns false when enableDetection is false", () => {
-      const account = { ...mockAccount, checkIn: { enableDetection: false } }
-      expect(anyrouterProvider.canCheckIn(account)).toBe(false)
+    it("leaves automatic-execution intent to the Module", () => {
+      const account = {
+        ...mockAccount,
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
+      }
+      expect(anyrouterProvider.canCheckIn(account)).toBe(true)
     })
 
     it("returns false when no user id", () => {

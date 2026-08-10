@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
+} from "~/constants/checkIn"
+import {
   INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
@@ -8,6 +13,7 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 
 const MANUAL_CHECKIN_EXECUTION = userCommandExecution(
   PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
@@ -1811,7 +1817,26 @@ describe("typed runtime messaging setup", () => {
             site_name: "Example",
             site_type: "Veloera",
             account_info: { username: "user" },
-            checkIn: { enableDetection: true, autoCheckInEnabled: true },
+            checkIn: buildCheckInConfig({
+              automaticExecutionEnabled: true,
+              methodKnowledge: {
+                methods: {
+                  [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: {
+                    detection: {
+                      outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched,
+                      evidence: {
+                        source:
+                          CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.CompatibilityRegistration,
+                      },
+                    },
+                  },
+                },
+              },
+              selection: {
+                mode: "automatic",
+                methodId: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
+              },
+            }),
           },
         ]),
         getEnabledAccounts: vi.fn(),
@@ -1862,30 +1887,46 @@ describe("typed runtime messaging setup", () => {
         sendRuntimeMessage: vi.fn().mockResolvedValue(undefined),
       }
     })
-    vi.doMock("~/services/checkin/autoCheckin/providers", () => ({
-      resolveAutoCheckinProvider: vi.fn(() => ({
-        canCheckIn: vi.fn(() => true),
-        checkIn: vi.fn(async (_account, context) => {
-          const { protectionBypassCoordinator } = await import(
-            "~/entrypoints/background/protectionBypassCoordinator"
-          )
-          const response = await protectionBypassCoordinator.execute({
-            task: {
-              kind: "turnstile_fetch",
-              params: {
-                originUrl: "https://example.invalid",
-                pageUrl: "https://example.invalid/checkin",
-                fetchUrl: "https://example.invalid/api/checkin",
-                requestId: "auto-checkin-continuation",
-              },
-            },
-            execution: context.protectionBypassExecution,
-          })
-          return (response as any)?.success
-            ? { status: "success" }
-            : { status: "failed", rawMessage: "Coordinator denied task" }
-        }),
+    vi.doMock("~/services/checkin/autoCheckin/methods", () => ({
+      inspectSelectedCheckInCompatibility: vi.fn(() => ({
+        state: {
+          selectionState: {
+            status: "selected",
+            methodId: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
+          },
+          executionEligibility: {
+            eligible: true,
+            methodId: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
+            status: null,
+          },
+        },
+        providerAvailable: true,
       })),
+      getSelectedCheckInStatus: vi.fn(() => null),
+      executeSelectedCheckIn: vi.fn(async ({ context }) => {
+        const { protectionBypassCoordinator } = await import(
+          "~/entrypoints/background/protectionBypassCoordinator"
+        )
+        const response = await protectionBypassCoordinator.execute({
+          task: {
+            kind: "turnstile_fetch",
+            params: {
+              originUrl: "https://example.invalid",
+              pageUrl: "https://example.invalid/checkin",
+              fetchUrl: "https://example.invalid/api/checkin",
+              requestId: "auto-checkin-continuation",
+            },
+          },
+          execution: context.protectionBypassExecution,
+        })
+        return {
+          kind: "executed",
+          methodId: AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn,
+          result: (response as any)?.success
+            ? { status: "success" }
+            : { status: "failed", rawMessage: "Coordinator denied task" },
+        }
+      }),
     }))
 
     const execution = userCommandExecution(

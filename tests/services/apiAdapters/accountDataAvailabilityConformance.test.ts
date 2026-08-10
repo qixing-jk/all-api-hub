@@ -285,7 +285,11 @@ const createRequest = (siteType: AccountSiteType) => {
       userId: "user-1",
       accessToken: "account-token",
     },
-    checkIn: { enableDetection: false },
+    checkIn: {
+      automaticExecutionEnabled: false,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" as const },
+    },
     includeTodayCashflow: true,
   }
 }
@@ -334,7 +338,11 @@ describe("AccountData availability producer conformance", () => {
           reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
         },
       },
-      checkIn: { enableDetection: false },
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     }
 
     expect(() => expectClassifiedAvailability(invalidData)).toThrow()

@@ -175,7 +175,11 @@ const createDisplayAccount = (
   token: "access-token",
   userId: "1",
   authType: AuthTypeEnum.AccessToken,
-  checkIn: { enableDetection: false },
+  checkIn: {
+    automaticExecutionEnabled: false,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" as const },
+  },
   ...overrides,
 })
 
@@ -190,7 +194,11 @@ const createSiteAccount = (site: DisplaySiteData): SiteAccount => ({
   disabled: false,
   excludeFromTotalBalance: false,
   excludeFromTodayIncome: false,
-  checkIn: { enableDetection: false },
+  checkIn: {
+    automaticExecutionEnabled: false,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" as const },
+  },
   health: { status: SiteHealthStatus.Healthy },
   authType: site.authType,
   account_info: {

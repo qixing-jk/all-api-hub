@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { sub2ApiAccountRefresh } from "~/services/apiAdapters/sub2api/accountRefresh"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+
+import { createCheckInConfig } from "../checkInFixtures"
 
 const { mockFetchSupportCheckIn, mockRefreshAccountData } = vi.hoisted(() => ({
   mockFetchSupportCheckIn: vi.fn(),
@@ -26,12 +29,8 @@ const supportRequest = {
 const refreshRequest = {
   ...supportRequest,
   accountId: "sub2-account",
-  checkIn: {
-    enableDetection: true,
-    siteStatus: {
-      isCheckedInToday: false,
-    },
-  },
+  siteType: SITE_TYPES.SUB2API,
+  checkIn: createCheckInConfig(SITE_TYPES.SUB2API, { matched: false }),
   includeTodayCashflow: true,
 }
 
@@ -50,9 +49,7 @@ describe("sub2ApiAccountRefresh", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: {
-          enableDetection: false,
-        },
+        checkIn: createCheckInConfig(SITE_TYPES.SUB2API, { matched: false }),
       },
       healthStatus: {
         status: SiteHealthStatus.Healthy,

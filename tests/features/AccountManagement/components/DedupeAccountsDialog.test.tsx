@@ -1,8 +1,10 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
 import { scanDuplicateAccounts } from "~/services/accounts/accountDedupe"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -29,11 +31,12 @@ const accounts = [
     updated_at: 200,
     created_at: 200,
     excludeFromTotalBalance: true,
-    checkIn: {
-      enableDetection: true,
-      autoCheckInEnabled: true,
+    checkIn: createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
       customCheckIn: { url: "https://checkin.example.com" },
-    },
+    }),
     account_info: {
       id: "1",
       access_token: "token",
@@ -65,7 +68,11 @@ const accounts = [
     notes: "del notes",
     updated_at: 100,
     created_at: 100,
-    checkIn: { enableDetection: false, autoCheckInEnabled: false },
+    checkIn: createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: false,
+      automaticExecutionEnabled: false,
+    }),
     account_info: {
       id: "1",
       access_token: "token",

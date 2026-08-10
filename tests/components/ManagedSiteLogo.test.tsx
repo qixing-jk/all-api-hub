@@ -54,7 +54,11 @@ function createAccountStub(): DisplaySiteData {
     token: "token",
     userId: "1",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: { enableDetection: false },
+    checkIn: {
+      automaticExecutionEnabled: false,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" as const },
+    },
   }
 }
 

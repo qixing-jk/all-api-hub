@@ -14,6 +14,8 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
+import { createCheckInConfig } from "../checkInFixtures"
+
 const {
   mockCreateNewApiAccountBootstrap,
   mockExtractDefaultExchangeRate,
@@ -72,12 +74,12 @@ const trimString = vi.fn((value: unknown) =>
 )
 
 const createInitialCheckInConfig = vi.fn(
-  ({ enableDetection, autoCheckInEnabled }) => ({
-    enableDetection,
-    autoCheckInEnabled,
-    siteStatus: {
+  ({ supported, automaticExecutionEnabled }) => ({
+    ...createCheckInConfig(SITE_TYPES.NEW_API, {
+      matched: supported,
+      automaticExecutionEnabled,
       isCheckedInToday: false,
-    },
+    }),
     customCheckIn: {
       url: "",
       redeemUrl: "",
@@ -174,8 +176,8 @@ describe("newApiAccountCompletion", () => {
       price: 6.8,
     })
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
-      enableDetection: true,
-      autoCheckInEnabled: true,
+      supported: true,
+      automaticExecutionEnabled: true,
     })
     expect(result).toEqual({
       username: "token-user",
@@ -185,11 +187,9 @@ describe("newApiAccountCompletion", () => {
       exchangeRate: 6.8,
       authType: AuthTypeEnum.AccessToken,
       checkIn: {
-        enableDetection: true,
-        autoCheckInEnabled: true,
-        siteStatus: {
+        ...createCheckInConfig(SITE_TYPES.NEW_API, {
           isCheckedInToday: false,
-        },
+        }),
         customCheckIn: {
           url: "",
           redeemUrl: "",
@@ -539,8 +539,10 @@ describe("newApiAccountCompletion", () => {
       exchangeRate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
       authType: AuthTypeEnum.Cookie,
       checkIn: expect.objectContaining({
-        enableDetection: true,
-        autoCheckInEnabled: true,
+        automaticExecutionEnabled: true,
+        selection: expect.objectContaining({
+          methodId: "new-api:daily-checkin",
+        }),
       }),
     })
   })
@@ -752,9 +754,9 @@ describe("newApiAccountCompletion", () => {
 
     expect(handleCheckInSupportFetchFailure).toHaveBeenCalledWith(supportError)
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
-      enableDetection: false,
-      autoCheckInEnabled: true,
+      supported: false,
+      automaticExecutionEnabled: true,
     })
-    expect(result.checkIn.enableDetection).toBe(false)
+    expect(result.checkIn.selection).not.toHaveProperty("methodId")
   })
 })

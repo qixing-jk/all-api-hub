@@ -6,10 +6,8 @@ import type {
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import {
   fetchAccountQuota,
-  fetchCheckInStatus,
   fetchTodayIncome as fetchTodayIncomeFromNewApiFamily,
   fetchTodayUsage as fetchTodayUsageFromNewApiFamily,
-  resolveCheckInSiteStatus,
 } from "~/services/apiService/newApiFamily/default/accountData"
 import {
   getTodayTimestampRange,
@@ -75,15 +73,10 @@ export async function fetchAccountData(
   const quotaPromise = fetchAccountQuota(request)
   const todayUsagePromise = fetchTodayUsage(request, timestampRange)
   const todayIncomePromise = fetchTodayIncome(request, timestampRange)
-  const checkInPromise = resolvedCheckIn?.enableDetection
-    ? fetchCheckInStatus(request)
-    : Promise.resolve<boolean | undefined>(undefined)
-
-  const [quota, todayUsage, todayIncome, canCheckIn] = await Promise.all([
+  const [quota, todayUsage, todayIncome] = await Promise.all([
     quotaPromise,
     todayUsagePromise,
     todayIncomePromise,
-    checkInPromise,
   ])
 
   return {
@@ -94,10 +87,7 @@ export async function fetchAccountData(
       ...todayUsage.todayStatsAvailability,
       ...todayIncome.todayStatsAvailability,
     },
-    checkIn: {
-      ...resolvedCheckIn,
-      siteStatus: resolveCheckInSiteStatus(resolvedCheckIn, canCheckIn),
-    },
+    checkIn: resolvedCheckIn,
   }
 }
 

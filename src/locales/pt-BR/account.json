@@ -115,6 +115,7 @@
       "not-checked-in": "Não fez check-in",
       "outdated": "Status desatualizado",
       "placeholder": "Status do check-in",
+      "status-unavailable": "Status indisponível",
       "unsupported": "Não suportado"
     },
     "disabled": {
@@ -227,7 +228,7 @@
     "site": {
       "checkedInToday": "Check-in hoje, clique para visualizar",
       "checkInStatusOutdated": "O status do check-in não foi detectado hoje (horário da última verificação: {{time}}). Clique para atualizar",
-      "checkInUnsupported": "O site pode não suportar check-in",
+      "checkInStatusUnavailable": "O check-in é compatível, mas o status de hoje não pode ser consultado automaticamente",
       "currentSite": "Site atual",
       "currentSiteExists": "Mesmo site da guia atual",
       "disabled": "Desativado",

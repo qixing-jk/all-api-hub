@@ -1,5 +1,6 @@
 import { BACKUP_VERSION } from "~/constants/importExport"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { migrateAccountConfig } from "~/services/accounts/migrations/accountDataMigration"
 import {
   apiCredentialProfilesStorage,
   assertSupportedApiCredentialProfilesConfigVersion,
@@ -14,7 +15,7 @@ import type { UserPreferences } from "~/services/preferences/userPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { createDefaultTagStore } from "~/services/tags/tagStoreUtils"
-import type { AccountStorageConfig, TagStore } from "~/types"
+import type { AccountStorageConfig, SiteAccount, TagStore } from "~/types"
 import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigSnapshot } from "~/types/channelConfig"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
@@ -47,17 +48,20 @@ export class ImportExportError extends Error {
  * V1: legacy backups, may use nested structures (e.g. accounts.accounts, data.accounts).
  * V2: flat structure with numeric channelConfigs on the root object.
  * V3: keeps the flat structure and replaces channelConfigs with a scoped snapshot.
+ * V4: keeps the V3 envelope and requires canonical V7 account check-in data.
  *
- * When introducing V4+, prefer adding a dedicated import handler and updating
+ * When introducing V5+, prefer adding a dedicated import handler and updating
  * importFromBackupObject + normalizeBackupForMerge dispatch logic.
  */
 export { BACKUP_VERSION }
+const LEGACY_BACKUP_V3_VERSION = "3.0"
 const LEGACY_BACKUP_V2_VERSION = "2.0"
 const LEGACY_BACKUP_V1_VERSION = "1.0"
 
 type SupportedBackupVersion =
   | typeof LEGACY_BACKUP_V1_VERSION
   | typeof LEGACY_BACKUP_V2_VERSION
+  | typeof LEGACY_BACKUP_V3_VERSION
   | typeof BACKUP_VERSION
 
 /** Classifies the backup envelope version for every read/import boundary. */
@@ -69,6 +73,7 @@ function getSupportedBackupVersion(
   if (
     version !== LEGACY_BACKUP_V1_VERSION &&
     version !== LEGACY_BACKUP_V2_VERSION &&
+    version !== LEGACY_BACKUP_V3_VERSION &&
     version !== BACKUP_VERSION
   ) {
     throw new ImportExportError("VERSION_NOT_SUPPORTED")
@@ -87,8 +92,27 @@ interface ParsedBackupSummary {
 }
 
 /**
+ * V4 activates the V7 account check-in schema for every WebDAV merge path.
+ * Keep already-current accounts byte-for-byte intact while upgrading the only
+ * account schema emitted by the immediately preceding app version.
+ */
+function canonicalizeV6Accounts(accounts: unknown[]): unknown[] {
+  return accounts.map((account) => {
+    if (
+      !account ||
+      typeof account !== "object" ||
+      (account as { configVersion?: unknown }).configVersion !== 6
+    ) {
+      return account
+    }
+
+    return migrateAccountConfig(account as SiteAccount)
+  })
+}
+
+/**
  * Current flat backup payload (used by "export all" and WebDAV sync uploads).
- * The V2 name is retained to avoid a broad public type rename; writers emit V3.
+ * The V2 name is retained to avoid a broad public type rename; writers emit V4.
  */
 export interface BackupFullV2 {
   version: string
@@ -365,7 +389,7 @@ async function importV1Backup(
 
     if (accountsData) {
       await accountStorage.importData({
-        accounts: accountsData,
+        accounts: canonicalizeV6Accounts(accountsData) as SiteAccount[],
       })
       // Ensure legacy imports (string tags) are migrated to tag ids.
       await tagStorage.ensureLegacyMigration()
@@ -467,8 +491,12 @@ export function normalizeBackupForMerge(
 
   const version = getSupportedBackupVersion(data)
 
-  if (version === BACKUP_VERSION || version === LEGACY_BACKUP_V2_VERSION) {
-    // V2 and V3 share the flat backup envelope; V3 changes channelConfigs.
+  if (
+    version === BACKUP_VERSION ||
+    version === LEGACY_BACKUP_V3_VERSION ||
+    version === LEGACY_BACKUP_V2_VERSION
+  ) {
+    // V2-V4 share the flat backup envelope; V3 introduced scoped channelConfigs.
     return normalizeV2BackupForMerge(data as BackupFullV2, localPreferences)
   }
 
@@ -477,7 +505,7 @@ export function normalizeBackupForMerge(
 }
 
 /**
- * Normalize flat V2/V3 backups into the shape WebDAV merge expects.
+ * Normalize flat V2-V4 backups into the shape WebDAV merge expects.
  */
 function normalizeV2BackupForMerge(
   data: BackupFullV2,
@@ -499,7 +527,7 @@ function normalizeV2BackupForMerge(
     ? { accounts: accountsField }
     : accountsField || {}
   const accounts = Array.isArray(accountsConfig.accounts)
-    ? accountsConfig.accounts
+    ? canonicalizeV6Accounts(accountsConfig.accounts)
     : []
   const bookmarks = Array.isArray(accountsConfig.bookmarks)
     ? accountsConfig.bookmarks
@@ -564,9 +592,9 @@ function normalizeV1BackupForMerge(
   const legacyBookmarks = (data.data as any)?.bookmarks
 
   const accounts = Array.isArray(accountsConfig.accounts)
-    ? accountsConfig.accounts
+    ? canonicalizeV6Accounts(accountsConfig.accounts)
     : Array.isArray(legacyAccounts)
-      ? legacyAccounts
+      ? canonicalizeV6Accounts(legacyAccounts)
       : []
 
   const bookmarks = Array.isArray(accountsConfig.bookmarks)
@@ -613,7 +641,7 @@ function normalizeV1BackupForMerge(
 }
 
 /**
- * Import a canonical flat V2/V3 backup (full or partial) into local storage.
+ * Import a canonical flat V2-V4 backup (full or partial) into local storage.
  */
 async function importV2Backup(
   data: BackupV2,
@@ -649,7 +677,7 @@ async function importV2Backup(
     "apiCredentialProfiles" in data &&
     Boolean((data as BackupFullV2).apiCredentialProfiles)
 
-  // V2/V3 use a flat structure with sections directly on the root.
+  // V2-V4 use a flat structure with sections directly on the root.
 
   if (accountsRequested) {
     await importV2AccountsWithReplace(data)
@@ -767,7 +795,7 @@ async function importV2AccountsWithReplace(data: BackupV2) {
       : []
 
   await accountStorage.importData({
-    accounts,
+    accounts: canonicalizeV6Accounts(accounts) as SiteAccount[],
     bookmarks,
     pinnedAccountIds,
     orderedAccountIds,
@@ -1087,7 +1115,8 @@ async function importV2BackupWithPlan(
  * - V1 (or missing version): tolerant of legacy shapes and tries to import
  *   accounts, preferences and channelConfigs when present.
  * - V2: imports flat account/preference sections and ignores numeric channel configs.
- * - V3 (BACKUP_VERSION): imports the same flat sections plus scoped channel configs.
+ * - V3: imports the same flat sections plus scoped channel configs.
+ * - V4 (BACKUP_VERSION): keeps V3's envelope and writes canonical V7 accounts.
  * - Future or otherwise unknown explicit versions are rejected so their data is
  *   not interpreted through an older schema.
  */
@@ -1119,7 +1148,11 @@ export async function importFromBackupObject(
     return importV1Backup(data, options)
   }
 
-  if (version === BACKUP_VERSION || version === LEGACY_BACKUP_V2_VERSION) {
+  if (
+    version === BACKUP_VERSION ||
+    version === LEGACY_BACKUP_V3_VERSION ||
+    version === LEGACY_BACKUP_V2_VERSION
+  ) {
     return importV2Backup(data as BackupV2, options)
   }
 

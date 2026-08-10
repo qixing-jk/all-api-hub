@@ -162,6 +162,7 @@
     "already_checked_today": "今日已簽到",
     "auto_checkin_disabled": "自動簽到已關閉",
     "detection_disabled": "檢測已關閉",
+    "method_disabled": "此站點的簽到功能已停用",
     "no_provider": "帳號所屬站點型別暫不支援簽到",
     "provider_not_ready": "帳號配置暫不支援簽到"
   },

@@ -278,7 +278,11 @@ describe("VerifyCliSupportDialog", () => {
       token: "t1",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      } as any,
       tagIds: [],
     }
     const secondAccount = {
@@ -355,7 +359,11 @@ describe("VerifyCliSupportDialog", () => {
       token: "t1",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      } as any,
       tagIds: [],
     }
     const secondAccount = {
@@ -636,7 +644,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -685,7 +697,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -741,7 +757,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -837,7 +857,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -903,7 +927,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId=""
       />,
@@ -969,7 +997,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId=""
       />,
@@ -1036,7 +1068,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-explicit"
       />,
@@ -1111,7 +1147,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1155,7 +1195,11 @@ describe("VerifyCliSupportDialog", () => {
       token: "t",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      } as any,
       tagIds: [],
     }
     const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
@@ -1246,7 +1290,11 @@ describe("VerifyCliSupportDialog", () => {
       token: "t",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      } as any,
       tagIds: [],
     }
     const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
@@ -1321,7 +1369,11 @@ describe("VerifyCliSupportDialog", () => {
       token: "t",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      } as any,
       tagIds: [],
     }
     const emptyServiceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
@@ -1437,7 +1489,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1615,7 +1671,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1656,7 +1716,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1710,7 +1774,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1780,7 +1848,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1852,7 +1924,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -2167,7 +2243,11 @@ describe("VerifyCliSupportDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,

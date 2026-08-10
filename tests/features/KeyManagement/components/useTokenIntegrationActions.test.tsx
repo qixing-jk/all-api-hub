@@ -10,6 +10,7 @@ import {
   type DisplaySiteData,
 } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 
 const {
   completeActionMock,
@@ -88,7 +89,7 @@ const account = {
   token: "account-token",
   cookieAuthSessionCookie: "",
   tagIds: [],
-  checkIn: { enableDetection: false },
+  checkIn: buildCheckInConfig(),
 } satisfies DisplaySiteData
 
 const token = {

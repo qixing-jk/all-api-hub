@@ -224,7 +224,9 @@ export function createStoredAccount(
     excludeFromTodayIncome: false,
     authType: AuthTypeEnum.AccessToken,
     checkIn: {
-      enableDetection: false,
+      automaticExecutionEnabled: false,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" },
     },
   }
 

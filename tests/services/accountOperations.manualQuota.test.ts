@@ -11,9 +11,9 @@ import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 import { server } from "~~/tests/msw/server"
 
 const CHECK_IN_DISABLED: CheckInConfig = {
-  enableDetection: false,
-  autoCheckInEnabled: true,
-  siteStatus: { isCheckedInToday: false },
+  automaticExecutionEnabled: false,
+  methodKnowledge: { methods: {} },
+  selection: { mode: "automatic" },
   customCheckIn: {
     url: "",
     redeemUrl: "",

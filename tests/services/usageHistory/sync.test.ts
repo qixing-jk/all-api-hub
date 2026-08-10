@@ -77,7 +77,11 @@ async function createTestAccount(baseUrl: string): Promise<string> {
     excludeFromTotalBalance: false,
     excludeFromTodayIncome: false,
     authType: AuthTypeEnum.AccessToken,
-    checkIn: { enableDetection: false },
+    checkIn: {
+      automaticExecutionEnabled: false,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" as const },
+    },
   }
 
   return await accountStorage.addAccount(accountData)

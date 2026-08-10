@@ -13,6 +13,7 @@ import {
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
 import { SiteHealthStatus } from "~/types"
 import { buildAccountStats } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { loggerErrorMock } = vi.hoisted(() => ({
@@ -88,6 +89,7 @@ const account = {
   site_url: "https://relay.example.com",
   site_type: SITE_TYPES.NEW_API,
   disabled: false,
+  checkIn: buildCheckInConfig(),
 } as any
 
 const displayAccount = {

@@ -18,7 +18,10 @@ import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 
-import type { AutoCheckinProvider, AutoCheckinProviderContext } from "./index"
+import type {
+  AutoCheckinProvider,
+  AutoCheckinProviderContext,
+} from "./contracts"
 
 type CheckinResult = AutoCheckinProviderResult
 
@@ -103,10 +106,6 @@ async function checkinVeloera(
  * @returns true if account meets check-in requirements
  */
 function canCheckIn(account: SiteAccount): boolean {
-  if (!account.checkIn?.enableDetection) {
-    return false
-  }
-
   if (!account.account_info?.id) {
     return false
   }

@@ -35,7 +35,11 @@ const baseRequest = {
     accessToken: "  management-key-placeholder  ",
     userId: "should-not-be-sent",
   },
-  checkIn: { enableDetection: true },
+  checkIn: {
+    automaticExecutionEnabled: true,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" as const },
+  },
 }
 
 describe("apiService OpenRouter", () => {
@@ -262,7 +266,7 @@ describe("apiService OpenRouter", () => {
           reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
         },
       },
-      checkIn: { enableDetection: false },
+      checkIn: baseRequest.checkIn,
     })
   })
 

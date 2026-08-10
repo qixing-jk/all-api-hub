@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import * as inviteLinkCopyWorkflow from "~/features/AccountManagement/inviteLinkCopyWorkflow"
 import {
@@ -10,6 +11,8 @@ import {
   getAccountManagementSelectionCheckboxTestId,
 } from "~/features/AccountManagement/testIds"
 import enAccount from "~/locales/en/account.json"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { mergeCompatibilityCheckInStatus } from "~/services/checkin/autoCheckin/state"
 import {
   INVITE_LINK_FAILURE_REASONS,
   InviteLinkError,
@@ -438,6 +441,19 @@ vi.mock(
 function createAccountDataContextValue(
   overrides: Record<string, unknown> = {},
 ) {
+  const checkedInNewApi = (checked: boolean, observedAt: number) => {
+    const config = createCompatibilityCheckInConfig({
+      siteType: "new-api",
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    return mergeCompatibilityCheckInStatus({
+      config,
+      methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+      isCheckedInToday: checked,
+      observedAt,
+    })
+  }
   const enabledAlpha = buildDisplaySiteData({
     id: "enabled-alpha",
     name: "Enabled Alpha",
@@ -447,13 +463,15 @@ function createAccountDataContextValue(
     siteType: "one-api",
     health: { status: SiteHealthStatus.Healthy },
     last_sync_time: 1700000000000,
-    checkIn: {
-      enableDetection: true,
-      siteStatus: {
+    checkIn: createCompatibilityCheckInConfig({
+      siteType: "one-api",
+      supported: false,
+      automaticExecutionEnabled: true,
+      customCheckIn: {
+        url: "https://check-in.example.invalid/alpha",
         isCheckedInToday: true,
-        lastDetectedAt: Date.now(),
       },
-    },
+    }),
     balance: { USD: 12, CNY: 0 },
   })
   const disabledBeta = buildDisplaySiteData({
@@ -465,13 +483,7 @@ function createAccountDataContextValue(
     siteType: "new-api",
     health: { status: SiteHealthStatus.Error },
     last_sync_time: 1700000001000,
-    checkIn: {
-      enableDetection: true,
-      siteStatus: {
-        isCheckedInToday: true,
-        lastDetectedAt: Date.now() - 24 * 60 * 60 * 1000,
-      },
-    },
+    checkIn: checkedInNewApi(true, Date.now() - 24 * 60 * 60 * 1000),
     balance: { USD: 34, CNY: 0 },
   })
   const enabledGamma = buildDisplaySiteData({
@@ -483,13 +495,15 @@ function createAccountDataContextValue(
     siteType: "one-api",
     health: { status: SiteHealthStatus.Warning },
     last_sync_time: 1700000002000,
-    checkIn: {
-      enableDetection: true,
-      siteStatus: {
+    checkIn: createCompatibilityCheckInConfig({
+      siteType: "one-api",
+      supported: false,
+      automaticExecutionEnabled: true,
+      customCheckIn: {
+        url: "https://check-in.example.invalid/gamma",
         isCheckedInToday: false,
-        lastDetectedAt: Date.now(),
       },
-    },
+    }),
     balance: { USD: 56, CNY: 0 },
   })
   const unsyncedDelta = buildDisplaySiteData({
@@ -501,13 +515,15 @@ function createAccountDataContextValue(
     siteType: "sub2api",
     health: { status: SiteHealthStatus.Unknown },
     last_sync_time: undefined,
-    checkIn: {
-      enableDetection: false,
+    checkIn: createCompatibilityCheckInConfig({
+      siteType: "sub2api",
+      supported: false,
+      automaticExecutionEnabled: false,
       customCheckIn: {
         url: "",
         isCheckedInToday: false,
       },
-    },
+    }),
     balance: { USD: 78, CNY: 0 },
   })
 
@@ -1319,6 +1335,16 @@ describe("AccountList", () => {
     expect(screen.getByText("Enabled Gamma")).toBeInTheDocument()
     expect(screen.queryByText("Enabled Alpha")).not.toBeInTheDocument()
     expect(screen.getByText("common:total: 1")).toBeInTheDocument()
+  })
+
+  it("offers a separate filter for check-in methods without readable status", () => {
+    render(<AccountList />)
+
+    expect(
+      screen.getByRole("button", {
+        name: "account:filter.checkIn.status-unavailable",
+      }),
+    ).toBeInTheDocument()
   })
 
   it("updates faceted select counts based on other active filters", async () => {

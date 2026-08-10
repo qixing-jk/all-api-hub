@@ -11,6 +11,8 @@ import { sub2ApiAccountCompletion } from "~/services/apiAdapters/sub2api/account
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
+import { createCheckInConfig } from "../checkInFixtures"
+
 const {
   mockExtractDefaultExchangeRate,
   mockFetchSiteStatus,
@@ -70,12 +72,11 @@ const trimString = vi.fn((value: unknown) =>
 )
 
 const createInitialCheckInConfig = vi.fn(
-  ({ enableDetection, autoCheckInEnabled }) => ({
-    enableDetection,
-    autoCheckInEnabled,
-    siteStatus: {
-      isCheckedInToday: false,
-    },
+  ({ supported, automaticExecutionEnabled }) => ({
+    ...createCheckInConfig(SITE_TYPES.SUB2API, {
+      matched: supported,
+      automaticExecutionEnabled,
+    }),
     customCheckIn: {
       url: "",
       redeemUrl: "",
@@ -148,8 +149,8 @@ describe("sub2ApiAccountCompletion", () => {
       price: 7.2,
     })
     expect(createInitialCheckInConfig).toHaveBeenCalledWith({
-      enableDetection: false,
-      autoCheckInEnabled: false,
+      supported: false,
+      automaticExecutionEnabled: false,
     })
     expect(result).toEqual({
       username: "",
@@ -160,11 +161,10 @@ describe("sub2ApiAccountCompletion", () => {
       authType: AuthTypeEnum.AccessToken,
       sub2apiAuth,
       checkIn: {
-        enableDetection: false,
-        autoCheckInEnabled: false,
-        siteStatus: {
-          isCheckedInToday: false,
-        },
+        ...createCheckInConfig(SITE_TYPES.SUB2API, {
+          matched: false,
+          automaticExecutionEnabled: false,
+        }),
         customCheckIn: {
           url: "",
           redeemUrl: "",

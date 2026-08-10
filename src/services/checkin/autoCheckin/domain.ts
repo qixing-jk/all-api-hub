@@ -1,263 +1,30 @@
+import {
+  CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
+  CHECK_IN_EXECUTION_SKIP_REASONS,
+  CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
+  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
+  CHECK_IN_SELECTION_MODES,
+  CHECK_IN_SELECTION_STALE_REASONS,
+  CHECK_IN_SELECTION_STATUSES,
+} from "~/constants/checkIn"
+import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import type {
+  CheckInAccountState,
+  CheckInConfig,
+  CheckInDiscoveryDecision,
+  CheckInExecutionEligibility,
+  CheckInInspectionInput,
+  CheckInMethodChoice,
+  CheckInMethodDetection,
   CheckInMethodId,
+  CheckInMethodSelection,
+  CheckInSelectionState,
   PersistedCheckInMethodId,
-} from "~/services/checkin/autoCheckin/providers/registry"
-import type { CheckInConfig } from "~/types"
-
-export const CHECK_IN_CONFIG_V7_VERSION = 7 as const
-
-export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {
-  Network: "network",
-  Timeout: "timeout",
-  AuthenticationRequired: "authentication_required",
-  PermissionDenied: "permission_denied",
-  IdentityMismatch: "identity_mismatch",
-  InvalidResponse: "invalid_response",
-  CredentialPersistenceFailed: "credential_persistence_failed",
-} as const
-
-export const CHECK_IN_METHOD_UNKNOWN_REASONS = [
-  CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Network,
-  CHECK_IN_METHOD_UNKNOWN_REASON_CODES.Timeout,
-  CHECK_IN_METHOD_UNKNOWN_REASON_CODES.AuthenticationRequired,
-  CHECK_IN_METHOD_UNKNOWN_REASON_CODES.PermissionDenied,
-  CHECK_IN_METHOD_UNKNOWN_REASON_CODES.IdentityMismatch,
-  CHECK_IN_METHOD_UNKNOWN_REASON_CODES.InvalidResponse,
-  CHECK_IN_METHOD_UNKNOWN_REASON_CODES.CredentialPersistenceFailed,
-] as const
-
-export type CheckInMethodUnknownReason =
-  (typeof CHECK_IN_METHOD_UNKNOWN_REASONS)[number]
-
-export const CHECK_IN_METHOD_DETECTION_OUTCOMES = {
-  Matched: "matched",
-  Unsupported: "unsupported",
-  Unknown: "unknown",
-} as const
-
-export const CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES = {
-  Probe: "probe",
-  LegacyMigration: "legacy_migration",
-  CompatibilityRegistration: "compatibility_registration",
-} as const
-
-export const CHECK_IN_METHOD_STATUS_OUTCOMES = {
-  Known: "known",
-  Unknown: "unknown",
-} as const
-
-export const CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES = {
-  Probe: "probe",
-  Execution: "execution",
-  LegacyMigration: "legacy_migration",
-} as const
-
-export const CHECK_IN_METHOD_AVAILABILITIES = {
-  Enabled: "enabled",
-  Disabled: "disabled",
-} as const
-
-export const CHECK_IN_METHOD_TODAY_STATUSES = {
-  Checked: "checked",
-  NotChecked: "not_checked",
-} as const
-
-export const CHECK_IN_SELECTION_MODES = {
-  Automatic: "automatic",
-  Manual: "manual",
-} as const
-
-export const CHECK_IN_DISCOVERY_DECISION_OUTCOMES = {
-  Resolved: "resolved",
-  Ambiguous: "ambiguous",
-  Unknown: "unknown",
-  Unsupported: "unsupported",
-} as const
-
-export const CHECK_IN_SELECTION_STATUSES = {
-  None: "none",
-  Selected: "selected",
-  Stale: "stale",
-} as const
-
-export const CHECK_IN_SELECTION_STALE_REASONS = {
-  MethodUnavailable: "method_unavailable",
-  MethodNotMatched: "method_not_matched",
-  MethodUnsupported: "method_unsupported",
-} as const
-
-export const CHECK_IN_EXECUTION_SKIP_REASONS = {
-  AccountDisabled: "account_disabled",
-  GlobalAutomaticExecutionDisabled: "global_automatic_execution_disabled",
-  AutomaticExecutionDisabled: "automatic_execution_disabled",
-  NoSelectedMethod: "no_selected_method",
-  MethodUnavailable: CHECK_IN_SELECTION_STALE_REASONS.MethodUnavailable,
-  MethodNotMatched: CHECK_IN_SELECTION_STALE_REASONS.MethodNotMatched,
-  MethodUnsupported: CHECK_IN_SELECTION_STALE_REASONS.MethodUnsupported,
-  MethodDisabled: "method_disabled",
-  AlreadyChecked: "already_checked",
-} as const
-
-export interface CheckInMethodUnknownAttempt {
-  reason: CheckInMethodUnknownReason
-  attemptedAt: number
-}
-
-export type CheckInMethodDetection =
-  | {
-      outcome: typeof CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched
-      evidence:
-        | {
-            source: typeof CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe
-            observedAt: number
-          }
-        | {
-            source: typeof CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.LegacyMigration
-          }
-        | {
-            source: typeof CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.CompatibilityRegistration
-          }
-      lastUnknownAttempt?: CheckInMethodUnknownAttempt
-    }
-  | {
-      outcome: typeof CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported
-      evidence: {
-        source: typeof CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe
-        observedAt: number
-      }
-      lastUnknownAttempt?: CheckInMethodUnknownAttempt
-    }
-  | {
-      outcome: typeof CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown
-      reason: CheckInMethodUnknownReason
-      attemptedAt: number
-    }
-
-export type CheckInMethodStatus =
-  | {
-      outcome: typeof CHECK_IN_METHOD_STATUS_OUTCOMES.Known
-      availability?: (typeof CHECK_IN_METHOD_AVAILABILITIES)[keyof typeof CHECK_IN_METHOD_AVAILABILITIES]
-      today?: (typeof CHECK_IN_METHOD_TODAY_STATUSES)[keyof typeof CHECK_IN_METHOD_TODAY_STATUSES]
-      evidence:
-        | {
-            source: typeof CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe
-            observedAt: number
-          }
-        | {
-            source: typeof CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution
-            observedAt: number
-          }
-        | {
-            source: typeof CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
-            legacyObservedAt?: number
-            legacyDayKey?: string
-          }
-    }
-  | {
-      outcome: typeof CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
-      reason: CheckInMethodUnknownReason
-      attemptedAt: number
-    }
-
-export interface CheckInMethodKnowledge {
-  detection: CheckInMethodDetection
-  status?: CheckInMethodStatus
-}
-
-export type CheckInMethodSelection =
-  | {
-      mode: typeof CHECK_IN_SELECTION_MODES.Automatic
-      methodId?: PersistedCheckInMethodId
-    }
-  | {
-      mode: typeof CHECK_IN_SELECTION_MODES.Manual
-      methodId: PersistedCheckInMethodId
-    }
-
-export interface CheckInConfigV7 {
-  automaticExecutionEnabled: boolean
-  methodKnowledge: {
-    methods: Partial<Record<CheckInMethodId, CheckInMethodKnowledge>>
-    lastFullDiscoveryAt?: number
-  }
-  selection: CheckInMethodSelection
-  customCheckIn?: NonNullable<CheckInConfig["customCheckIn"]>
-}
-
-export type CheckInDiscoveryDecision =
-  | {
-      outcome: typeof CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Resolved
-      methodId: CheckInMethodId
-    }
-  | {
-      outcome: typeof CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous
-      methodIds: CheckInMethodId[]
-    }
-  | {
-      outcome: typeof CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unknown
-      matchedMethodIds: CheckInMethodId[]
-      unknownMethodIds: CheckInMethodId[]
-    }
-  | { outcome: typeof CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported }
-
-export interface CheckInInspectionInput {
-  config: CheckInConfigV7
-  candidateMethodIds: readonly CheckInMethodId[]
-  accountDisabled?: boolean
-  globalAutomaticExecutionEnabled?: boolean
-}
-
-export type CheckInSelectionStaleReason =
-  (typeof CHECK_IN_SELECTION_STALE_REASONS)[keyof typeof CHECK_IN_SELECTION_STALE_REASONS]
-
-export type CheckInSelectionState =
-  | {
-      mode: CheckInMethodSelection["mode"]
-      status: typeof CHECK_IN_SELECTION_STATUSES.None
-    }
-  | {
-      mode: CheckInMethodSelection["mode"]
-      status: typeof CHECK_IN_SELECTION_STATUSES.Selected
-      methodId: PersistedCheckInMethodId
-    }
-  | {
-      mode: CheckInMethodSelection["mode"]
-      status: typeof CHECK_IN_SELECTION_STATUSES.Stale
-      methodId: PersistedCheckInMethodId
-      reason: CheckInSelectionStaleReason
-    }
-
-type DerivedCheckInSelectionState =
-  | Exclude<
-      CheckInSelectionState,
-      { status: typeof CHECK_IN_SELECTION_STATUSES.Selected }
-    >
-  | {
-      mode: CheckInMethodSelection["mode"]
-      status: typeof CHECK_IN_SELECTION_STATUSES.Selected
-      methodId: CheckInMethodId
-    }
-
-export type CheckInExecutionSkipReason =
-  (typeof CHECK_IN_EXECUTION_SKIP_REASONS)[keyof typeof CHECK_IN_EXECUTION_SKIP_REASONS]
-
-export type CheckInExecutionEligibility =
-  | { eligible: true; methodId: CheckInMethodId }
-  | { eligible: false; skipReason: CheckInExecutionSkipReason }
-
-export interface CheckInMethodChoice {
-  methodId: CheckInMethodId
-  detectionOutcome: CheckInMethodDetection["outcome"]
-  selected: boolean
-}
-
-export interface CheckInAccountState {
-  decision: CheckInDiscoveryDecision
-  selectionState: CheckInSelectionState
-  choices: CheckInMethodChoice[]
-  executionEligibility: CheckInExecutionEligibility
-  rediscoveryRecommended: boolean
-}
+} from "~/types/checkIn"
 
 const uniqueCandidateMethodIds = (
   candidateMethodIds: readonly CheckInMethodId[],
@@ -277,7 +44,7 @@ const getEffectiveDetectionOutcome = (
 }
 
 const deriveMethodChoices = (
-  config: CheckInConfigV7,
+  config: CheckInConfig,
   candidateMethodIds: readonly CheckInMethodId[],
 ): CheckInMethodChoice[] =>
   candidateMethodIds.map((methodId) => ({
@@ -333,9 +100,9 @@ const isCandidateMethodId = (
   candidateMethodIds.some((candidateMethodId) => candidateMethodId === methodId)
 
 const deriveSelectionState = (
-  config: CheckInConfigV7,
+  config: CheckInConfig,
   candidateMethodIds: readonly CheckInMethodId[],
-): DerivedCheckInSelectionState => {
+): CheckInSelectionState => {
   const selectedMethodId = config.selection.methodId
   if (!selectedMethodId) {
     return {
@@ -373,7 +140,7 @@ const deriveSelectionState = (
 
 const deriveExecutionEligibility = (
   input: CheckInInspectionInput,
-  selectionState: DerivedCheckInSelectionState,
+  selectionState: CheckInSelectionState,
 ): CheckInExecutionEligibility => {
   if (input.accountDisabled) {
     return {
@@ -409,19 +176,42 @@ const deriveExecutionEligibility = (
 
   const methodId = selectionState.methodId
   const status = input.config.methodKnowledge.methods[methodId]?.status
+  // Legacy accounts never used cached siteStatus as an execution gate. Preserve
+  // that contract until a strict probe or execution supplies current Status.
+  const knownStatus =
+    status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+      ? status
+      : undefined
+  const statusObservedAt =
+    knownStatus &&
+    (knownStatus.evidence.source ===
+      CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe ||
+      knownStatus.evidence.source ===
+        CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution)
+      ? knownStatus.evidence.observedAt
+      : undefined
+  const statusControlsExecution = statusObservedAt !== undefined
+  const checkedStatusIsCurrent =
+    statusControlsExecution &&
+    knownStatus?.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked &&
+    getDayKeyFromUnixSeconds(
+      Math.floor(statusObservedAt / 1000),
+      input.timeZone,
+    ) ===
+      getDayKeyFromUnixSeconds(
+        Math.floor((input.now ?? Date.now()) / 1000),
+        input.timeZone,
+      )
   if (
-    status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
-    status.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled
+    statusControlsExecution &&
+    knownStatus?.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled
   ) {
     return {
       eligible: false,
       skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.MethodDisabled,
     }
   }
-  if (
-    status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
-    status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
-  ) {
+  if (checkedStatusIsCurrent) {
     return {
       eligible: false,
       skipReason: CHECK_IN_EXECUTION_SKIP_REASONS.AlreadyChecked,
@@ -459,7 +249,7 @@ export function inspectCheckInMethods(
   }
 }
 
-export type CheckInSelectionTransition =
+type CheckInSelectionTransition =
   | { mode: typeof CHECK_IN_SELECTION_MODES.Automatic }
   | {
       mode: typeof CHECK_IN_SELECTION_MODES.Manual
@@ -483,10 +273,10 @@ const automaticSelectionFromDecision = (
  * Applies an explicit manual choice or restores automatic selection from current facts.
  */
 export function setCheckInSelection(input: {
-  config: CheckInConfigV7
+  config: CheckInConfig
   candidateMethodIds: readonly CheckInMethodId[]
   selection: CheckInSelectionTransition
-}): CheckInConfigV7 {
+}): CheckInConfig {
   if (input.selection.mode === CHECK_IN_SELECTION_MODES.Manual) {
     return {
       ...input.config,
@@ -544,16 +334,16 @@ const mergeDiscoveryDetection = (
  * Missing candidate results are recorded as bounded invalid-response attempts.
  */
 export function mergeCheckInDiscoveryResults(input: {
-  config: CheckInConfigV7
+  config: CheckInConfig
   candidateMethodIds: readonly CheckInMethodId[]
   detections: Partial<Record<CheckInMethodId, CheckInMethodDetection>>
   completedAt: number
-}): CheckInConfigV7 {
+}): CheckInConfig {
   const candidateMethodIds = uniqueCandidateMethodIds(input.candidateMethodIds)
   const methods = Object.assign(
     Object.create(null),
     input.config.methodKnowledge.methods,
-  ) as CheckInConfigV7["methodKnowledge"]["methods"]
+  ) as CheckInConfig["methodKnowledge"]["methods"]
 
   for (const methodId of candidateMethodIds) {
     const previous = methods[methodId]
@@ -569,7 +359,7 @@ export function mergeCheckInDiscoveryResults(input: {
     }
   }
 
-  const merged: CheckInConfigV7 = {
+  const merged: CheckInConfig = {
     ...input.config,
     methodKnowledge: {
       methods,

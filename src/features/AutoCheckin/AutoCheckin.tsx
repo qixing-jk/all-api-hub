@@ -22,6 +22,7 @@ import DelAccountDialog from "~/features/AccountManagement/components/DelAccount
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import {
   sendAutoCheckinMessage,
   type AutoCheckinBasicResponse,
@@ -187,8 +188,12 @@ async function resolveAutoCheckinAccountSetupState(): Promise<
       return "no_accounts"
     }
 
-    return enabledAccounts.some(
-      (account) => account.checkIn?.enableDetection === true,
+    return enabledAccounts.some((account) =>
+      isAutomaticCheckInConfiguredForAccount({
+        config: account.checkIn,
+        siteType: account.site_type,
+        accountDisabled: account.disabled,
+      }),
     )
       ? "ready"
       : "no_detection_accounts"

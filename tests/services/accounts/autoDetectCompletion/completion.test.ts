@@ -11,6 +11,7 @@ import {
 } from "~/services/accounts/autoDetectCompletion/completion"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
@@ -49,19 +50,17 @@ const completedAccountData = {
   userId: "7",
   exchangeRate: 6.8,
   authType: AuthTypeEnum.AccessToken,
-  checkIn: {
-    enableDetection: true,
-    autoCheckInEnabled: true,
-    siteStatus: {
-      isCheckedInToday: false,
-    },
+  checkIn: createCompatibilityCheckInConfig({
+    siteType: SITE_TYPES.NEW_API,
+    supported: true,
+    automaticExecutionEnabled: true,
     customCheckIn: {
       url: "",
       redeemUrl: "",
       openRedeemWithCheckIn: true,
       isCheckedInToday: false,
     },
-  },
+  }),
 }
 
 describe("auto-detect completion", () => {
@@ -155,8 +154,8 @@ describe("auto-detect completion", () => {
     expect(helpers.trimString("  trimmed  ")).toBe("trimmed")
     expect(
       helpers.createInitialCheckInConfig({
-        enableDetection: true,
-        autoCheckInEnabled: true,
+        supported: true,
+        automaticExecutionEnabled: true,
       }),
     ).toEqual(completedAccountData.checkIn)
     expect(

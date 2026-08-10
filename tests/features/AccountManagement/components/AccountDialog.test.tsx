@@ -88,11 +88,9 @@ const {
       tagIds: [],
       excludeFromTotalBalance: false,
       checkIn: {
-        enableDetection: false,
-        autoCheckInEnabled: true,
-        siteStatus: {
-          isCheckedInToday: false,
-        },
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" },
         customCheckIn: {
           url: "",
           redeemUrl: "",
@@ -108,11 +106,9 @@ const {
       sub2apiTokenExpiresAt: null,
     },
     checkIn: {
-      enableDetection: false,
-      autoCheckInEnabled: true,
-      siteStatus: {
-        isCheckedInToday: false,
-      },
+      automaticExecutionEnabled: true,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" },
       customCheckIn: {
         url: "",
         redeemUrl: "",

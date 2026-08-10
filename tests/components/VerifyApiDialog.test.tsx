@@ -218,7 +218,11 @@ describe("VerifyApiDialog", () => {
             token: "t",
             userId: "1",
             authType: "access_token" as any,
-            checkIn: { enableDetection: false } as any,
+            checkIn: {
+              automaticExecutionEnabled: false,
+              methodKnowledge: { methods: {} },
+              selection: { mode: "automatic" as const },
+            } as any,
           }}
           initialModelId={initialModelId}
         />,
@@ -272,7 +276,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -345,7 +353,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -451,7 +463,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
         modelEnableGroups={["vip"]}
@@ -526,7 +542,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -577,7 +597,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -612,7 +636,11 @@ describe("VerifyApiDialog", () => {
       token: "t",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      } as any,
       tagIds: [],
     }
     const serviceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
@@ -696,7 +724,11 @@ describe("VerifyApiDialog", () => {
       token: "t",
       userId: "1",
       authType: "access_token" as any,
-      checkIn: { enableDetection: false } as any,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      } as any,
       tagIds: [],
     }
     const emptyServiceCredentialRuntimeKey = buildServiceCredentialRuntimeKey(
@@ -777,7 +809,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
         modelEnableGroups={["vip"]}
@@ -862,7 +898,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         modelEnableGroups={["vip"]}
       />,
@@ -934,7 +974,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1018,7 +1062,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1097,7 +1145,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1187,7 +1239,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1300,7 +1356,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1381,7 +1441,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1467,7 +1531,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1545,7 +1613,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId="gpt-test"
       />,
@@ -1613,7 +1685,11 @@ describe("VerifyApiDialog", () => {
           token: "t",
           userId: "1",
           authType: "access_token" as any,
-          checkIn: { enableDetection: false } as any,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+          } as any,
         }}
         initialModelId=""
       />,

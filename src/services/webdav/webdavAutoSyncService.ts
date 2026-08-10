@@ -635,7 +635,7 @@ class WebdavAutoSyncService {
    * 流程：
    * 1. 使用当前用户 WebDAV 配置测试连接。
    * 2. 从远程下载备份并通过 normalizeBackupForMerge 按版本规范化
-   *    （兼容 V1 旧结构和 V2/V3 扁平结构，未来版本可扩展）。
+   *    （兼容 V1 旧结构和 V2/V3/V4 扁平结构，未来版本可扩展）。
    *    - 如果远程备份是加密封套（envelope），downloadBackup 会尝试用
    *      当前 WebDAV 加密密码自动解密；缺失/错误密码会导致本次同步失败。
    * 3. 根据 syncStrategy 决定合并方式：

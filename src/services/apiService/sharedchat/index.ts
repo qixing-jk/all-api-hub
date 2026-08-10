@@ -325,14 +325,7 @@ export async function fetchAccountData(
         }
       : undefined,
     recentUsageRecords: mapRecentRecords(codex.recentRecords),
-    checkIn: {
-      ...(request.checkIn ?? { enableDetection: false }),
-      enableDetection: false,
-      siteStatus: {
-        ...(request.checkIn?.siteStatus ?? {}),
-        isCheckedInToday: undefined,
-      },
-    },
+    checkIn: request.checkIn,
   }
 }
 

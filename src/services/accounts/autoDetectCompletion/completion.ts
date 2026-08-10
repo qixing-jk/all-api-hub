@@ -14,6 +14,7 @@ import type {
   ApiServiceFetchContext,
   ApiServiceRequest,
 } from "~/services/apiTransport/type"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -98,22 +99,21 @@ function trimString(value: unknown): string {
  * Creates the persisted check-in shape used by auto-detected accounts.
  */
 function createInitialCheckInConfig(input: {
-  enableDetection: boolean
-  autoCheckInEnabled: boolean
+  supported: boolean
+  automaticExecutionEnabled: boolean
+  siteType: string
 }) {
-  return {
-    enableDetection: input.enableDetection,
-    autoCheckInEnabled: input.autoCheckInEnabled,
-    siteStatus: {
-      isCheckedInToday: false,
-    },
+  return createCompatibilityCheckInConfig({
+    siteType: input.siteType as AutoDetectCompletionData["siteType"],
+    supported: input.supported,
+    automaticExecutionEnabled: input.automaticExecutionEnabled,
     customCheckIn: {
       url: "",
       redeemUrl: "",
       openRedeemWithCheckIn: true,
       isCheckedInToday: false,
     },
-  }
+  })
 }
 
 const createMissingAccountCompletionCapabilityError = (siteType: string) =>
@@ -145,7 +145,9 @@ const createAccountCompletionHelpers = (params: {
   },
   createCompletionError,
   trimString,
-  createInitialCheckInConfig,
+  createInitialCheckInConfig(input) {
+    return createInitialCheckInConfig({ ...input, siteType: params.siteType })
+  },
   handleCheckInSupportFetchFailure(error: unknown) {
     logger.warn("Auto-detect check-in support probe failed", {
       siteType: params.siteType,

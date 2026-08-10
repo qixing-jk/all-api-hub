@@ -3,7 +3,9 @@ import { Info } from "lucide-react"
 
 import Tooltip from "~/components/Tooltip"
 import { Badge, Button } from "~/components/ui"
+import { CHECK_IN_SELECTION_STATUSES } from "~/constants/checkIn"
 import { resolveAccountTodayStatsAvailability } from "~/services/accounts/accountStorage"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import type { AccountTodayStatsAvailability, SiteAccount } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import { getTodayMetricPresentation } from "~/utils/core/formatters"
@@ -56,7 +58,15 @@ export function DedupeAccountCard({
   const detailsOpen = detailsOpenByAccountId[account.id] === true
   const detailsId = `dedupe-account-details-${encodeURIComponent(account.id)}`
   const healthDisplay = getHealthStatusDisplay(account.health?.status, t)
-  const autoCheckinEnabled = account.checkIn?.autoCheckInEnabled !== false
+  const checkInInspection = inspectAccountCheckIn({
+    config: account.checkIn,
+    siteType: account.site_type,
+    accountDisabled: account.disabled,
+  })
+  const builtInCheckInSelected =
+    checkInInspection.selectionState.status ===
+    CHECK_IN_SELECTION_STATUSES.Selected
+  const autoCheckinEnabled = account.checkIn.automaticExecutionEnabled
   const accountLabel = accountLabelById.get(account.id) ?? account.id
   const todayStatsAvailability = resolveAccountTodayStatsAvailability(account)
 
@@ -357,7 +367,7 @@ export function DedupeAccountCard({
                 {t("ui:dialog.dedupeAccounts.details.checkinDetection")}
               </dt>
               <dd className="dark:text-dark-text-secondary text-gray-800">
-                {account.checkIn?.enableDetection
+                {builtInCheckInSelected
                   ? t("common:status.enabled")
                   : t("common:status.disabled")}
               </dd>

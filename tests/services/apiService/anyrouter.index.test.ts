@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   fetchAccountData,
   fetchCheckInStatus,
   fetchSupportCheckIn,
   refreshAccountData,
 } from "~/services/apiService/anyrouter"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,
@@ -14,6 +16,8 @@ import { SiteHealthStatus } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
+
+import { createCheckInConfig } from "../apiAdapters/checkInFixtures"
 
 const {
   mockDetermineHealthStatus,
@@ -39,18 +43,6 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
   fetchAccountQuota: mockFetchAccountQuota,
   fetchTodayIncome: mockFetchTodayIncome,
   fetchTodayUsage: mockFetchTodayUsage,
-  resolveCheckInSiteStatus: (checkIn: any, canCheckIn: boolean | undefined) =>
-    typeof canCheckIn === "boolean"
-      ? {
-          ...(checkIn.siteStatus ?? {}),
-          isCheckedInToday: !canCheckIn,
-          lastDetectedAt: Date.now(),
-        }
-      : {
-          ...(checkIn.siteStatus ?? {}),
-          isCheckedInToday: checkIn.siteStatus?.isCheckedInToday,
-          lastDetectedAt: checkIn.siteStatus?.lastDetectedAt,
-        },
 }))
 
 vi.mock("~/services/checkin/autoCheckin/providers/anyrouter", () => ({
@@ -79,13 +71,12 @@ describe("AnyRouter API service", () => {
       authType: "cookie",
       userId: "42",
     },
+    siteType: SITE_TYPES.ANYROUTER,
     checkIn: {
-      enableDetection: true,
-      autoCheckInEnabled: true,
-      siteStatus: {
+      ...createCheckInConfig(SITE_TYPES.ANYROUTER, {
         isCheckedInToday: false,
-        lastDetectedAt: 111,
-      },
+        observedAt: 111,
+      }),
       customCheckIn: {
         url: "",
         redeemUrl: "",
@@ -245,8 +236,7 @@ describe("AnyRouter API service", () => {
     await expect(fetchCheckInStatus(baseRequest)).resolves.toBeUndefined()
   })
 
-  it("builds account data with detected check-in status and timestamps", async () => {
-    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000)
+  it("keeps ordinary account refresh read-only for AnyRouter check-in", async () => {
     mockCheckIn.mockResolvedValueOnce({
       status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
     })
@@ -260,47 +250,40 @@ describe("AnyRouter API service", () => {
       today_prompt_tokens: 20,
       today_completion_tokens: 30,
       today_requests_count: 2,
-      checkIn: {
-        enableDetection: true,
-        siteStatus: {
-          isCheckedInToday: true,
-          lastDetectedAt: 1_700_000_000_000,
-        },
-      },
-    })
-
-    nowSpy.mockRestore()
-  })
-
-  it("preserves the last known check-in status when detection is disabled", async () => {
-    const result = await fetchAccountData({
-      ...baseRequest,
-      checkIn: {
-        ...baseRequest.checkIn,
-        enableDetection: false,
-        siteStatus: {
-          isCheckedInToday: true,
-          lastDetectedAt: 555,
-        },
-      },
-    })
-
-    expect(result.checkIn.siteStatus).toEqual({
-      isCheckedInToday: true,
-      lastDetectedAt: 555,
+      checkIn: baseRequest.checkIn,
     })
     expect(mockCheckIn).not.toHaveBeenCalled()
   })
 
-  it("preserves the last known check-in status when the provider cannot determine it", async () => {
+  it("preserves check-in state when no method is selected", async () => {
+    const result = await fetchAccountData({
+      ...baseRequest,
+      checkIn: createCheckInConfig(SITE_TYPES.ANYROUTER, {
+        matched: false,
+      }),
+    })
+
+    expect(result.checkIn.selection).not.toHaveProperty("methodId")
+    expect(mockCheckIn).not.toHaveBeenCalled()
+  })
+
+  it("does not invoke the mutating provider during ordinary refresh", async () => {
     mockCheckIn.mockRejectedValueOnce(new Error("unsupported"))
 
     const result = await fetchAccountData(baseRequest)
 
-    expect(result.checkIn.siteStatus).toEqual({
-      isCheckedInToday: false,
-      lastDetectedAt: 111,
-    })
+    expect(
+      getSelectedCheckInStatus({
+        config: result.checkIn,
+        siteType: SITE_TYPES.ANYROUTER,
+      }),
+    ).toEqual(
+      getSelectedCheckInStatus({
+        config: baseRequest.checkIn,
+        siteType: SITE_TYPES.ANYROUTER,
+      }),
+    )
+    expect(mockCheckIn).not.toHaveBeenCalled()
   })
 
   it("returns a healthy refresh result when account aggregation succeeds", async () => {
@@ -315,7 +298,12 @@ describe("AnyRouter API service", () => {
       status: SiteHealthStatus.Healthy,
       message: "translated:account:healthStatus.normal",
     })
-    expect(result.data?.checkIn.siteStatus?.isCheckedInToday).toBe(false)
+    expect(
+      getSelectedCheckInStatus({
+        config: result.data!.checkIn,
+        siteType: SITE_TYPES.ANYROUTER,
+      }),
+    ).toMatchObject({ today: "not_checked" })
   })
 
   it("maps refresh failures through determineHealthStatus", async () => {

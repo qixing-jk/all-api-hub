@@ -1,3 +1,5 @@
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -12,11 +14,11 @@ import {
   fetchAccountQuota,
   fetchTodayIncome,
   fetchTodayUsage,
-  resolveCheckInSiteStatus,
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import { fetchApi } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -146,11 +148,19 @@ export async function fetchAccountData(
     undefined,
     timestampRange,
   )
-  const checkInPromise = checkIn?.enableDetection
-    ? fetchCheckInStatus(request)
-    : Promise.resolve<boolean | undefined>(undefined)
+  const checkInPromise = refreshSelectedStatus({
+    config: checkIn,
+    siteType: request.siteType ?? SITE_TYPES.WONG_GONGYI,
+    readStatus: async (methodId) => {
+      if (methodId !== AUTO_CHECKIN_METHOD_IDS.WongGongyiDailyCheckIn) {
+        return undefined
+      }
+      const canCheckIn = await fetchCheckInStatus(request)
+      return typeof canCheckIn === "boolean" ? !canCheckIn : undefined
+    },
+  })
 
-  const [quota, todayUsage, todayIncome, canCheckIn] = await Promise.all([
+  const [quota, todayUsage, todayIncome, refreshedCheckIn] = await Promise.all([
     quotaPromise,
     todayUsagePromise,
     todayIncomePromise,
@@ -165,10 +175,7 @@ export async function fetchAccountData(
       ...todayUsage.todayStatsAvailability,
       ...todayIncome.todayStatsAvailability,
     },
-    checkIn: {
-      ...checkIn,
-      siteStatus: resolveCheckInSiteStatus(checkIn, canCheckIn),
-    },
+    checkIn: refreshedCheckIn,
   }
 }
 

@@ -18,6 +18,8 @@ const {
   mockFetchSiteStatus,
   mockgetSiteTypeCapabilities,
   mockUpdateAccount,
+  mockUpdateAccountWithCheckInDraft,
+  mockUpdateAccountCheckInDraft,
   mockGetAllAccountsOrThrow,
   mockValidateManagementKey,
 } = vi.hoisted(() => ({
@@ -25,6 +27,8 @@ const {
   mockFetchSiteStatus: vi.fn(),
   mockgetSiteTypeCapabilities: vi.fn(),
   mockUpdateAccount: vi.fn(),
+  mockUpdateAccountWithCheckInDraft: vi.fn(),
+  mockUpdateAccountCheckInDraft: vi.fn(),
   mockGetAllAccountsOrThrow: vi.fn(),
   mockValidateManagementKey: vi.fn(),
 }))
@@ -47,6 +51,8 @@ vi.mock("~/services/accounts/accountStorage", async (importOriginal) => {
       ...actual.accountStorage,
       getAllAccountsOrThrow: mockGetAllAccountsOrThrow,
       updateAccount: mockUpdateAccount,
+      updateAccountWithCheckInDraft: mockUpdateAccountWithCheckInDraft,
+      updateAccountCheckInDraft: mockUpdateAccountCheckInDraft,
     },
   }
 })
@@ -57,6 +63,10 @@ describe("accountOperations", () => {
     mockFetchSiteStatus.mockReset()
     mockgetSiteTypeCapabilities.mockReset()
     mockUpdateAccount.mockReset()
+    mockUpdateAccountWithCheckInDraft.mockReset()
+    mockUpdateAccountWithCheckInDraft.mockResolvedValue(true)
+    mockUpdateAccountCheckInDraft.mockReset()
+    mockUpdateAccountCheckInDraft.mockResolvedValue(true)
     mockGetAllAccountsOrThrow.mockReset()
     mockValidateManagementKey.mockReset()
     mockValidateManagementKey.mockResolvedValue({})
@@ -72,6 +82,12 @@ describe("accountOperations", () => {
       },
     })
   })
+
+  const checkInDisabled = {
+    automaticExecutionEnabled: false,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" as const },
+  }
 
   describe("validateAndUpdateAccount", () => {
     it("fails closed for an OpenRouter edit when the strict account read fails", async () => {
@@ -90,7 +106,7 @@ describe("accountOperations", () => {
           "7.0",
           "",
           [],
-          { enableDetection: false },
+          checkInDisabled,
           SITE_TYPES.OPENROUTER,
           AuthTypeEnum.AccessToken,
           "",
@@ -106,6 +122,7 @@ describe("accountOperations", () => {
       })
       expect(mockValidateManagementKey).not.toHaveBeenCalled()
       expect(mockUpdateAccount).not.toHaveBeenCalled()
+      expect(mockUpdateAccountWithCheckInDraft).not.toHaveBeenCalled()
     })
 
     it("persists empty tagIds to clear account tags", async () => {
@@ -116,10 +133,12 @@ describe("accountOperations", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: { enableDetection: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
       })
-      mockUpdateAccount.mockResolvedValueOnce(true)
-
       const result = await validateAndUpdateAccount(
         "account-1",
         "https://api.example.com",
@@ -130,7 +149,7 @@ describe("accountOperations", () => {
         "7.0",
         "notes",
         [],
-        { enableDetection: false },
+        checkInDisabled,
         "openai",
         AuthTypeEnum.AccessToken,
         "",
@@ -138,19 +157,23 @@ describe("accountOperations", () => {
 
       expect(result.success).toBe(true)
       expect(result.feedbackLevel).toBe("success")
-      expect(mockUpdateAccount).toHaveBeenCalledWith(
+      expect(mockUpdateAccountWithCheckInDraft).toHaveBeenCalledWith(
         "account-1",
         expect.objectContaining({
           tagIds: [],
         }),
-        { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+        checkInDisabled,
+        {
+          refreshed: checkInDisabled,
+          userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        },
       )
+      expect(mockUpdateAccount).not.toHaveBeenCalled()
+      expect(mockUpdateAccountCheckInDraft).not.toHaveBeenCalled()
     })
 
     it("clears tagIds even when data refresh fails", async () => {
       mockFetchAccountData.mockRejectedValueOnce(new Error("network error"))
-      mockUpdateAccount.mockResolvedValueOnce(true)
-
       const result = await validateAndUpdateAccount(
         "account-1",
         "https://api.example.com",
@@ -161,7 +184,7 @@ describe("accountOperations", () => {
         "7.0",
         "notes",
         [],
-        { enableDetection: false },
+        checkInDisabled,
         "openai",
         AuthTypeEnum.AccessToken,
         "",
@@ -172,11 +195,12 @@ describe("accountOperations", () => {
         message: "messages:warnings.accountUpdatedWithoutDataRefresh",
         feedbackLevel: "warning",
       })
-      expect(mockUpdateAccount).toHaveBeenCalledWith(
+      expect(mockUpdateAccountWithCheckInDraft).toHaveBeenCalledWith(
         "account-1",
         expect.objectContaining({
           tagIds: [],
         }),
+        checkInDisabled,
         { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
       )
     })
@@ -189,9 +213,13 @@ describe("accountOperations", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: { enableDetection: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
       })
-      mockUpdateAccount.mockResolvedValueOnce(false)
+      mockUpdateAccountWithCheckInDraft.mockResolvedValueOnce(false)
 
       const result = await validateAndUpdateAccount(
         "account-1",
@@ -203,7 +231,7 @@ describe("accountOperations", () => {
         "7.0",
         "notes",
         [],
-        { enableDetection: false },
+        checkInDisabled,
         "openai",
         AuthTypeEnum.AccessToken,
         "",
@@ -217,7 +245,7 @@ describe("accountOperations", () => {
 
     it("returns the same stable failure when the config-only fallback update cannot be persisted", async () => {
       mockFetchAccountData.mockRejectedValueOnce(new Error("network error"))
-      mockUpdateAccount.mockResolvedValueOnce(false)
+      mockUpdateAccountWithCheckInDraft.mockResolvedValueOnce(false)
 
       const result = await validateAndUpdateAccount(
         "account-1",
@@ -229,7 +257,7 @@ describe("accountOperations", () => {
         "7.0",
         "notes",
         [],
-        { enableDetection: false },
+        checkInDisabled,
         "openai",
         AuthTypeEnum.AccessToken,
         "",
@@ -249,10 +277,12 @@ describe("accountOperations", () => {
         today_quota_consumption: 0,
         today_requests_count: 0,
         today_income: 0,
-        checkIn: { enableDetection: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" as const },
+        },
       })
-      mockUpdateAccount.mockResolvedValueOnce(true)
-
       const result = await validateAndUpdateAccount(
         "account-1",
         "https://api.example.com",
@@ -263,7 +293,7 @@ describe("accountOperations", () => {
         "7.0",
         "notes",
         [],
-        { enableDetection: false },
+        checkInDisabled,
         "legacy-invalid-site",
         AuthTypeEnum.AccessToken,
         "",
@@ -276,12 +306,16 @@ describe("accountOperations", () => {
       expect(vi.mocked(getSiteTypeCapabilities)).toHaveBeenCalledWith(
         SITE_TYPES.UNKNOWN,
       )
-      expect(mockUpdateAccount).toHaveBeenCalledWith(
+      expect(mockUpdateAccountWithCheckInDraft).toHaveBeenCalledWith(
         "account-1",
         expect.objectContaining({
           site_type: SITE_TYPES.UNKNOWN,
         }),
-        { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+        checkInDisabled,
+        {
+          refreshed: checkInDisabled,
+          userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+        },
       )
     })
   })

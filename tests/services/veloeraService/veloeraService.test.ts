@@ -97,7 +97,11 @@ function createMockDisplaySiteData(
     token: "access-token",
     userId: "1",
     authType: "access_token" as any,
-    checkIn: { enableDetection: false },
+    checkIn: {
+      automaticExecutionEnabled: false,
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" as const },
+    },
     ...overrides,
   }
 }

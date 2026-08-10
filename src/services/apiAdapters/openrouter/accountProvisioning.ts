@@ -9,6 +9,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { OPENROUTER_DISPLAY_NAME } from "~/services/accountSiteDefinitions/identifiers"
 import { validateManagementKey } from "~/services/apiService/openrouter"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
@@ -52,17 +53,18 @@ function createMutationUnconfirmedOutcome(
   }
 }
 
-const createInitialCheckInConfig = () => ({
-  enableDetection: false,
-  autoCheckInEnabled: false,
-  siteStatus: { isCheckedInToday: false },
-  customCheckIn: {
-    url: "",
-    redeemUrl: "",
-    openRedeemWithCheckIn: true,
-    isCheckedInToday: false,
-  },
-})
+const createInitialCheckInConfig = () =>
+  createCompatibilityCheckInConfig({
+    siteType: SITE_TYPES.OPENROUTER,
+    supported: false,
+    automaticExecutionEnabled: false,
+    customCheckIn: {
+      url: "",
+      redeemUrl: "",
+      openRedeemWithCheckIn: true,
+      isCheckedInToday: false,
+    },
+  })
 
 /** Creates and validates one OpenRouter Management Key without retrying mutation. */
 export async function provisionOpenRouterAccount(

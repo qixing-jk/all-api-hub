@@ -11,6 +11,7 @@ import {
   normalizeAccountStorageConfigForWrite,
   normalizeSiteAccount,
 } from "~/services/accounts/accountDefaults"
+import { CURRENT_CONFIG_VERSION } from "~/services/accounts/migrations/accountDataMigration"
 import type { AccountStorageConfig, SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import {
@@ -48,7 +49,11 @@ describe("accountDefaults", () => {
       authType: AuthTypeEnum.AccessToken,
       disabled: false,
       excludeFromTotalBalance: false,
-      checkIn: { enableDetection: false },
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
       tagIds: [],
       ...overrides,
     }) as SiteAccount
@@ -158,6 +163,28 @@ describe("accountDefaults", () => {
   })
 
   describe("normalizeSiteAccount", () => {
+    it("normalizes V7 check-in config without retaining legacy runtime fields", () => {
+      const normalized = normalizeSiteAccount(
+        createSiteAccount({
+          configVersion: 7,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            methodKnowledge: { methods: {} },
+            selection: { mode: "automatic" as const },
+            enableDetection: true,
+            autoCheckInEnabled: true,
+            siteStatus: { isCheckedInToday: true },
+          } as any,
+        }),
+      )
+
+      expect(normalized.checkIn).toEqual({
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      })
+    })
+
     it("drops legacy identity provenance from persisted account info", () => {
       const legacy = createSiteAccount({
         account_info: {
@@ -231,7 +258,11 @@ describe("accountDefaults", () => {
       expect(normalized.tagIds).toEqual([])
       expect(normalized.tags).toBeUndefined()
       expect(normalized.notes).toBe("")
-      expect(normalized.checkIn.enableDetection).toBe(false)
+      expect(normalized.checkIn).toEqual({
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" },
+      })
     })
 
     it("falls back legacy user update timestamp to updated_at", () => {
@@ -253,7 +284,11 @@ describe("accountDefaults", () => {
         excludeFromTodayIncome: true,
         tagIds: ["t1"],
         tags: ["Legacy"],
-        checkIn: { enableDetection: true, autoCheckInEnabled: false },
+        checkIn: {
+          automaticExecutionEnabled: false,
+          methodKnowledge: { methods: {} },
+          selection: { mode: "automatic" },
+        },
         notes: "hello",
         updated_at: 456,
         user_updated_at: 123,
@@ -266,8 +301,8 @@ describe("accountDefaults", () => {
       expect(normalized.excludeFromTodayIncome).toBe(true)
       expect(normalized.tagIds).toEqual(["t1"])
       expect(normalized.tags).toEqual(["Legacy"])
-      expect(normalized.checkIn.enableDetection).toBe(true)
-      expect(normalized.checkIn.autoCheckInEnabled).toBe(false)
+      expect(normalized.checkIn.automaticExecutionEnabled).toBe(false)
+      expect(normalized.checkIn.selection).toEqual({ mode: "automatic" })
       expect(normalized.notes).toBe("hello")
       expect(normalized.updated_at).toBe(456)
       expect(normalized.user_updated_at).toBe(123)
@@ -332,8 +367,8 @@ describe("accountDefaults", () => {
       expect(normalized.health.status).toBe(SiteHealthStatus.Unknown)
       expect(normalized.health.reason).toBeUndefined()
       expect(normalized.health.code).toBe("UNHEALTHY")
-      expect(normalized.checkIn.enableDetection).toBe(false)
-      expect(normalized.checkIn.autoCheckInEnabled).toBe(true)
+      expect(normalized.checkIn.automaticExecutionEnabled).toBe(true)
+      expect(normalized.checkIn.methodKnowledge.methods).toEqual({})
       expect(normalized.checkIn.customCheckIn?.openRedeemWithCheckIn).toBe(true)
       expect(normalized.tagIds).toEqual(["first", "second"])
       expect(normalized.tags).toBeUndefined()
@@ -399,6 +434,7 @@ describe("accountDefaults", () => {
       expect(created.created_at).toBe(777)
       expect(created.updated_at).toBe(777)
       expect(created.user_updated_at).toBe(777)
+      expect(created.configVersion).toBe(CURRENT_CONFIG_VERSION)
       expect(created.notes).toBe("")
       expect(created.tagIds).toEqual(["tag-a"])
       expect(created.checkIn.customCheckIn?.openRedeemWithCheckIn).toBe(true)
@@ -409,27 +445,58 @@ describe("accountDefaults", () => {
     it("deep merges nested updates and preserves sibling fields", () => {
       const current = createSiteAccount({
         checkIn: {
-          enableDetection: true,
-          siteStatus: {
-            isCheckedInToday: false,
-            lastDetectedAt: 123,
+          automaticExecutionEnabled: true,
+          methodKnowledge: {
+            methods: {
+              "new-api:daily-checkin": {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "compatibility_registration" },
+                },
+                status: {
+                  outcome: "known",
+                  today: "not_checked",
+                  evidence: { source: "probe", observedAt: 123 },
+                },
+              },
+            },
           },
-        } as any,
+          selection: {
+            mode: "automatic",
+            methodId: "new-api:daily-checkin",
+          },
+        },
       })
 
       const updated = applySiteAccountUpdates({
         account: current as any,
         updates: {
           checkIn: {
-            siteStatus: { isCheckedInToday: true },
+            methodKnowledge: {
+              methods: {
+                "new-api:daily-checkin": {
+                  status: {
+                    outcome: "known",
+                    today: "checked",
+                    evidence: { source: "probe", observedAt: 123 },
+                  },
+                },
+              },
+            },
           },
-        } as any,
+        },
         now: 999,
         userTimestampMode: AccountUpdateUserTimestampMode.Touch,
       })
 
-      expect(updated.checkIn.siteStatus?.isCheckedInToday).toBe(true)
-      expect(updated.checkIn.siteStatus?.lastDetectedAt).toBe(123)
+      expect(
+        updated.checkIn.methodKnowledge.methods["new-api:daily-checkin"]
+          ?.status,
+      ).toMatchObject({
+        outcome: "known",
+        today: "checked",
+        evidence: { source: "probe", observedAt: 123 },
+      })
     })
 
     it("replaces arrays instead of concatenating", () => {
@@ -494,7 +561,11 @@ describe("accountDefaults", () => {
 
       expect(updated.notes).toBe("updated")
       expect(updated.tagIds).toEqual([])
-      expect(updated.checkIn.enableDetection).toBe(false)
+      expect(updated.checkIn).toEqual({
+        automaticExecutionEnabled: true,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" },
+      })
       expect(updated.user_updated_at).toBe(999)
     })
 

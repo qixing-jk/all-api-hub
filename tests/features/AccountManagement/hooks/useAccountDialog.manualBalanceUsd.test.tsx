@@ -62,7 +62,11 @@ describe("useAccountDialog manual balance", () => {
       notes: "",
       tagIds: [],
       authType: AuthTypeEnum.AccessToken,
-      checkIn: { enableDetection: false } as any,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      } as any,
       manualBalanceUsd,
     } as any)
 

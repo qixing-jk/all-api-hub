@@ -28,6 +28,7 @@ import {
   API_CREDENTIAL_PROFILE_SYNTHETIC_ACCOUNT_ID_PREFIX,
   buildApiCredentialProfileSyntheticAccountId,
 } from "~/services/apiCredentialProfiles/syntheticAccount"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { toManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 import {
   getManagedSiteChannelExactMatch,
@@ -226,9 +227,11 @@ export function useChannelDialog() {
       // Raw credential profiles are synthetic account rows without an upstream user.
       userId: "",
       authType: AuthTypeEnum.None,
-      checkIn: {
-        enableDetection: false,
-      },
+      checkIn: createCompatibilityCheckInConfig({
+        siteType: SITE_TYPES.UNKNOWN,
+        supported: false,
+        automaticExecutionEnabled: false,
+      }),
     }
   }
 

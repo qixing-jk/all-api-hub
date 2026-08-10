@@ -347,6 +347,7 @@ describe("product analytics event enums", () => {
     expect(PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS).toMatchObject({
       AccountDisabled: "account_disabled",
       DetectionDisabled: "detection_disabled",
+      MethodDisabled: "method_disabled",
       AutoCheckinDisabled: "auto_checkin_disabled",
       NoProvider: "no_provider",
       ProviderNotReady: "provider_not_ready",

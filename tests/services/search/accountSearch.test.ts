@@ -9,6 +9,7 @@ import {
 } from "~/services/search/accountSearch"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+import { buildCheckInConfig } from "~~/tests/test-utils/factories"
 
 const mockAccounts: DisplaySiteData[] = [
   {
@@ -27,14 +28,12 @@ const mockAccounts: DisplaySiteData[] = [
     last_sync_time: Date.now(),
     siteType: "one-api",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: {
-      enableDetection: true,
-      siteStatus: { isCheckedInToday: false },
+    checkIn: buildCheckInConfig({
       customCheckIn: {
         url: "https://checkin.openai.com/api",
         redeemUrl: "https://redeem.openai.com/api",
       },
-    },
+    }),
     icon: "",
   },
   {
@@ -53,11 +52,9 @@ const mockAccounts: DisplaySiteData[] = [
     last_sync_time: Date.now(),
     siteType: "one-api",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: {
-      enableDetection: false,
-      siteStatus: { isCheckedInToday: false },
+    checkIn: buildCheckInConfig({
       customCheckIn: { url: "", redeemUrl: "" },
-    },
+    }),
     icon: "",
   },
 ]
@@ -288,11 +285,9 @@ describe("accountSearch", () => {
             name: "Hidden",
             username: "nobody",
             token: "totally-secret",
-            checkIn: {
-              enableDetection: false,
-              siteStatus: { isCheckedInToday: false },
+            checkIn: buildCheckInConfig({
               customCheckIn: { url: "", redeemUrl: "" },
-            },
+            }),
           },
         ],
         "12345",
@@ -312,11 +307,9 @@ describe("accountSearch", () => {
             name: "Hidden",
             username: "nobody",
             token: "secret-token-value",
-            checkIn: {
-              enableDetection: false,
-              siteStatus: { isCheckedInToday: false },
+            checkIn: buildCheckInConfig({
               customCheckIn: { url: "", redeemUrl: "" },
-            },
+            }),
           },
         ],
         "token-value",

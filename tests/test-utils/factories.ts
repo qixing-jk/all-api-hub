@@ -24,6 +24,7 @@ import {
   AuthTypeEnum,
   SiteHealthStatus,
   type ApiToken,
+  type CheckInConfig,
   type DisplaySiteData,
   type SiteAccount,
   type Tag,
@@ -31,6 +32,30 @@ import {
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { CHANNEL_STATUS, type ManagedSiteChannel } from "~/types/managedSite"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
+
+/** Build a canonical persisted check-in fixture with optional V7 overrides. */
+export function buildCheckInConfig(
+  overrides: Partial<CheckInConfig> = {},
+): CheckInConfig {
+  const base: CheckInConfig = {
+    automaticExecutionEnabled: false,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" },
+  }
+
+  return {
+    ...base,
+    ...overrides,
+    methodKnowledge: {
+      ...base.methodKnowledge,
+      ...overrides.methodKnowledge,
+      methods: {
+        ...base.methodKnowledge.methods,
+        ...overrides.methodKnowledge?.methods,
+      },
+    },
+  }
+}
 
 /**
  * Build a dummy API key used by Web AI API Check tests.
@@ -108,7 +133,7 @@ export function buildDisplaySiteData(
     token: "test-token",
     userId: "1",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: { enableDetection: false },
+    checkIn: buildCheckInConfig(),
   }
 
   return {
@@ -161,7 +186,7 @@ export function buildSub2ApiAccount(
     token: "jwt-token",
     userId: "1",
     authType: AuthTypeEnum.AccessToken,
-    checkIn: { enableDetection: false },
+    checkIn: buildCheckInConfig(),
     ...overrides,
   })
 }
@@ -207,7 +232,7 @@ export function buildSiteAccount(
     disabled: false,
     excludeFromTotalBalance: false,
     excludeFromTodayIncome: false,
-    checkIn: { enableDetection: true },
+    checkIn: buildCheckInConfig({ automaticExecutionEnabled: true }),
     health: { status: SiteHealthStatus.Healthy },
     authType: AuthTypeEnum.AccessToken,
     account_info: {

@@ -4,6 +4,8 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { createNewApiAccountData } from "~/services/apiAdapters/newApi/accountData"
 import { AuthTypeEnum } from "~/types"
 
+import { createCheckInConfig } from "../checkInFixtures"
+
 const {
   anyrouterFetchAccountData,
   mockFetchAccountData,
@@ -48,13 +50,10 @@ const request = {
     userId: "user-1",
     accessToken: "access-token",
   },
-  checkIn: {
-    enableDetection: true,
-    autoCheckInEnabled: true,
-    siteStatus: {
-      isCheckedInToday: false,
-    },
-  },
+  siteType: SITE_TYPES.NEW_API,
+  checkIn: createCheckInConfig(SITE_TYPES.NEW_API, {
+    isCheckedInToday: false,
+  }),
   includeTodayCashflow: false,
 }
 

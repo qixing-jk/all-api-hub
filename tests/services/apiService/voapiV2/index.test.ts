@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import {
@@ -22,6 +23,7 @@ import {
   updateVoApiV2Token,
 } from "~/services/apiService/voapiV2"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
@@ -31,6 +33,8 @@ import {
 } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { server } from "~~/tests/msw/server"
+
+import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
 const { mockLoggerWarn, mockResyncVoApiV2AuthToken } = vi.hoisted(() => ({
   mockLoggerWarn: vi.fn(),
@@ -53,14 +57,13 @@ vi.mock("~/utils/core/logger", () => ({
 const createVoApiV2Request = (): ApiServiceAccountRequest => ({
   baseUrl: "https://example.invalid",
   accountId: "account-1",
+  siteType: SITE_TYPES.VO_API_V2,
   auth: {
     authType: AuthTypeEnum.AccessToken,
     accessToken: "example-dashboard-token",
     userId: 7,
   },
-  checkIn: {
-    enableDetection: true,
-  },
+  checkIn: createCheckInConfig(SITE_TYPES.VO_API_V2),
 })
 
 const tokenRequest: CreateTokenRequest = {
@@ -222,9 +225,14 @@ describe("apiService VoAPI v2", () => {
         reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
       },
     })
-    expect(data.checkIn.siteStatus).toMatchObject({
-      isCheckedInToday: true,
-      lastDetectedAt: 1_700_000_000_000,
+    expect(
+      getSelectedCheckInStatus({
+        config: data.checkIn,
+        siteType: SITE_TYPES.VO_API_V2,
+      }),
+    ).toMatchObject({
+      today: "checked",
+      evidence: { source: "probe", observedAt: 1_700_000_000_000 },
     })
   })
 
@@ -275,7 +283,12 @@ describe("apiService VoAPI v2", () => {
         reason: ACCOUNT_TODAY_METRIC_REASONS.Unsupported,
       },
     })
-    expect(data.checkIn.siteStatus?.isCheckedInToday).toBe(false)
+    expect(
+      getSelectedCheckInStatus({
+        config: data.checkIn,
+        siteType: SITE_TYPES.VO_API_V2,
+      }),
+    ).toMatchObject({ today: "not_checked" })
   })
 
   it("validates VoAPI v2 requests and consumption sources independently", async () => {
@@ -412,19 +425,18 @@ describe("apiService VoAPI v2", () => {
 
     const data = await fetchVoApiV2AccountData({
       ...createVoApiV2Request(),
-      checkIn: {
-        enableDetection: true,
-        siteStatus: {
-          isCheckedInToday: true,
-          lastDetectedAt: 123,
-        },
-      },
+      checkIn: createCheckInConfig(SITE_TYPES.VO_API_V2, {
+        isCheckedInToday: true,
+        observedAt: 123,
+      }),
     })
 
-    expect(data.checkIn.siteStatus).toEqual({
-      isCheckedInToday: true,
-      lastDetectedAt: 123,
-    })
+    expect(
+      getSelectedCheckInStatus({
+        config: data.checkIn,
+        siteType: SITE_TYPES.VO_API_V2,
+      }),
+    ).toMatchObject({ today: "checked", evidence: { observedAt: 123 } })
   })
 
   it("refreshes account data and maps expired dashboard JWT failures", async () => {

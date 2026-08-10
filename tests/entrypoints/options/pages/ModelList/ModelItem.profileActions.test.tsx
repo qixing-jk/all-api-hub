@@ -378,7 +378,11 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: { enableDetection: false },
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     })
 
     render(
@@ -437,7 +441,11 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: { enableDetection: false },
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     })
 
     render(
@@ -496,7 +504,11 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: { enableDetection: false },
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     })
 
     render(
@@ -567,7 +579,11 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: { enableDetection: false },
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     })
 
     render(
@@ -639,7 +655,11 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: { enableDetection: false },
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     })
     const catalogFallbackSource = {
       ...accountSource,
@@ -713,7 +733,11 @@ describe("ModelItem profile actions", () => {
       token: "token",
       userId: "1",
       authType: AuthTypeEnum.AccessToken,
-      checkIn: { enableDetection: false },
+      checkIn: {
+        automaticExecutionEnabled: false,
+        methodKnowledge: { methods: {} },
+        selection: { mode: "automatic" as const },
+      },
     })
 
     render(

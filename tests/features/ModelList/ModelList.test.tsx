@@ -252,7 +252,11 @@ const ACCOUNT = {
   token: "account-token",
   userId: "1",
   authType: "access_token",
-  checkIn: { enableDetection: false },
+  checkIn: {
+    automaticExecutionEnabled: false,
+    methodKnowledge: { methods: {} },
+    selection: { mode: "automatic" as const },
+  },
 } as any
 
 const CAPABILITIES = {
