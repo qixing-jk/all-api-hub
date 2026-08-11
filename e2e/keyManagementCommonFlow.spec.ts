@@ -846,7 +846,7 @@ test("repairs missing account keys, deletes invalid resources, and records manag
         accountName: "Key Repair Source",
         siteType: SITE_TYPES.NEW_API,
         siteUrlOrigin: baseUrl,
-        displayLabel: "legacy",
+        displayLabel: "Legacy Group Key",
         reason: "orphaned-placement",
         ref: invalidResourceRef,
       },
@@ -857,6 +857,9 @@ test("repairs missing account keys, deletes invalid resources, and records manag
   const repairAccountResult = page.getByTestId(
     getRepairAccountResultTestId(accountId),
   )
+  await repairAccountResult
+    .getByRole("button", { name: "Details for Key Repair Source" })
+    .press("Enter")
   await expect(
     repairAccountResult.getByText("alpha", { exact: true }),
   ).toBeVisible()
@@ -875,10 +878,12 @@ test("repairs missing account keys, deletes invalid resources, and records manag
     "1/1",
   )
   await expect(
-    page.getByRole("checkbox", { name: "legacy", exact: true }),
+    page.getByRole("checkbox", { name: "Legacy Group Key", exact: true }),
   ).toBeVisible()
 
-  await page.getByRole("checkbox", { name: "legacy", exact: true }).click()
+  await page
+    .getByRole("checkbox", { name: "Legacy Group Key", exact: true })
+    .click()
   await page.getByRole("button", { name: "Delete selected" }).click()
   const confirmDeleteButton = page.getByTestId(
     KEY_MANAGEMENT_TEST_IDS.repairInvalidKeysConfirmDeleteButton,
@@ -889,7 +894,7 @@ test("repairs missing account keys, deletes invalid resources, and records manag
   await expect(page.getByText("Deleted 1 invalid key")).toBeVisible()
   await expect(page.getByText("No invalid keys")).toBeVisible()
   await expect(
-    page.getByRole("checkbox", { name: "legacy", exact: true }),
+    page.getByRole("checkbox", { name: "Legacy Group Key", exact: true }),
   ).toHaveCount(0)
   await expect(page.getByTestId("repair-missing-keys-result-count")).toHaveText(
     "0/0",

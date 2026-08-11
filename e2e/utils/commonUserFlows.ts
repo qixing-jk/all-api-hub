@@ -896,13 +896,16 @@ export async function stubNewApiSiteRoutes(
     }
 
     if (method === "GET" && url.pathname === "/api/token/") {
+      const page = Number(url.searchParams.get("p") ?? "0")
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
           success: true,
           message: "ok",
-          data: tokens,
+          // This legacy array-shaped stub owns completion through an empty
+          // page; object-shaped New API responses use their page metadata.
+          data: page === 0 ? tokens : [],
         }),
       })
       return
