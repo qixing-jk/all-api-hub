@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => {
   const sessionStorage = new Map<string, unknown>()
   return {
     sessionStorage,
+    loggerWarn: vi.fn(),
     getSessionStorageValues: vi.fn(async (key: string) =>
       sessionStorage.has(key) ? { [key]: sessionStorage.get(key) } : {},
     ),
@@ -30,6 +31,12 @@ vi.mock("~/utils/browser/browserApi", () => ({
   setSessionStorageValues: mocks.setSessionStorageValues,
 }))
 
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: vi.fn(() => ({
+    warn: mocks.loggerWarn,
+  })),
+}))
+
 const REF = {
   accountId: "account-example",
   siteType: SITE_TYPES.NEW_API,
@@ -42,6 +49,7 @@ describe("repairCreatedRuntimeSecrets", () => {
     mocks.sessionStorage.clear()
     mocks.getSessionStorageValues.mockClear()
     mocks.setSessionStorageValues.mockClear()
+    mocks.loggerWarn.mockClear()
   })
 
   it("keeps exact repair-created secrets in memory-only session storage", async () => {
@@ -108,6 +116,31 @@ describe("repairCreatedRuntimeSecrets", () => {
     await expect(
       resolveRepairCreatedRuntimeSecret("job-example", REF),
     ).resolves.toBeNull()
+  })
+
+  it("reports rejected writes and invalid reset requests without exposing secrets", async () => {
+    const storageError = new Error("session storage unavailable")
+    mocks.setSessionStorageValues.mockRejectedValueOnce(storageError)
+
+    await expect(resetRepairCreatedRuntimeSecrets("job-example")).resolves.toBe(
+      false,
+    )
+    await expect(resetRepairCreatedRuntimeSecrets("   ")).resolves.toBe(false)
+
+    expect(mocks.loggerWarn).toHaveBeenNthCalledWith(
+      1,
+      "Failed to write repair-created runtime secret cache",
+      storageError,
+    )
+    expect(mocks.loggerWarn).toHaveBeenNthCalledWith(
+      2,
+      "Failed to reset repair-created runtime secret cache",
+    )
+    expect(mocks.loggerWarn).toHaveBeenNthCalledWith(
+      3,
+      "Failed to reset repair-created runtime secret cache",
+    )
+    expect(JSON.stringify(mocks.loggerWarn.mock.calls)).not.toContain("sk-")
   })
 
   it("deduplicates identical refs but rejects conflicting secrets in one capture", async () => {
