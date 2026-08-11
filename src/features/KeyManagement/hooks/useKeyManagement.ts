@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { useAccountData } from "~/hooks/useAccountData"
 import {
   buildDisplayAccountTokenRuntimeKey,
@@ -65,7 +66,6 @@ import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 import { isKeyResourceExportable } from "../presentation/legacyKeyResourceCard"
-import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 import { type KeyManagementEntry, type ServiceCredentialState } from "../types"
 import {
   buildAccountRuntimeKeyEntryIdentityKey,
