@@ -1,10 +1,12 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import { formatOptionalSkPrefixSiteToken } from "~/services/accountTokens/apiTokenKey"
+import type { AccountKeyResourceRef } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 
 export const ACCOUNT_RUNTIME_KEY_SOURCES = {
   AccountToken: "account_token",
+  AccountKeyResource: "account_key_resource",
   ServiceCredential: "service_credential",
 } as const
 
@@ -75,8 +77,14 @@ export type ServiceCredentialRuntimeKey = AccountRuntimeKeyBase & {
   credential: AccountServiceCredential
 }
 
+export type AccountKeyResourceRuntimeKey = AccountRuntimeKeyBase & {
+  source: typeof ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource
+  resourceRef: AccountKeyResourceRef
+}
+
 export type AccountRuntimeKey =
   | AccountTokenRuntimeKey
+  | AccountKeyResourceRuntimeKey
   | ServiceCredentialRuntimeKey
 
 export const ACCOUNT_RUNTIME_KEY_LEGACY_TOKEN_ID = -1
@@ -90,6 +98,22 @@ export const buildServiceCredentialRuntimeKeyId = (
   accountId: string,
   service: AccountServiceCredential["service"],
 ) => `${ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential}:${accountId}:${service}`
+
+const encodeRuntimeKeyIdentityPart = (value: string) =>
+  encodeURIComponent(value)
+
+export const buildAccountKeyResourceRuntimeKeyId = (
+  ref: AccountKeyResourceRef,
+) =>
+  [
+    ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+    ref.accountId,
+    ref.siteType,
+    ref.scopeKey,
+    ref.resourceId,
+  ]
+    .map(encodeRuntimeKeyIdentityPart)
+    .join(":")
 
 export const buildAccountRuntimeKeyAccount = (
   account: AccountRuntimeKeyAccountSource,
@@ -119,6 +143,11 @@ export const isServiceCredentialRuntimeKey = (
   runtimeKey: AccountRuntimeKey,
 ): runtimeKey is ServiceCredentialRuntimeKey =>
   runtimeKey.source === ACCOUNT_RUNTIME_KEY_SOURCES.ServiceCredential
+
+export const isAccountKeyResourceRuntimeKey = (
+  runtimeKey: AccountRuntimeKey,
+): runtimeKey is AccountKeyResourceRuntimeKey =>
+  runtimeKey.source === ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource
 
 export const hasUsableAccountRuntimeKeySecret = (
   runtimeKey: Pick<AccountRuntimeKey, "secret" | "status">,
@@ -256,6 +285,35 @@ export const buildServiceCredentialRuntimeKey = (
   service: credential.service,
   credential,
 })
+
+export const buildAccountKeyResourceRuntimeKey = (
+  account: AccountRuntimeKeyAccountSource,
+  resource: {
+    ref: AccountKeyResourceRef
+    label: string
+    secret: string
+  },
+): AccountKeyResourceRuntimeKey => {
+  const runtimeKeyAccount = buildAccountRuntimeKeyAccount(account)
+  return {
+    ...getAccountRuntimeKeyBase(runtimeKeyAccount, {
+      id: buildAccountKeyResourceRuntimeKeyId(resource.ref),
+      label: resource.label,
+      secret: resource.secret,
+      status: resource.secret.trim()
+        ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
+        : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive,
+      capabilities: {
+        ...ACCOUNT_RUNTIME_KEY_BASE_CAPABILITIES,
+        rotate: false,
+        updateToken: false,
+        deleteToken: false,
+      },
+    }),
+    source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+    resourceRef: resource.ref,
+  }
+}
 
 export const accountRuntimeKeyToLegacyApiToken = (
   runtimeKey: AccountRuntimeKey,

@@ -555,39 +555,66 @@
       "rerun": "Überprüfen Sie es noch einmal",
       "start": "Beginnen Sie mit der Überprüfung und füllen Sie Lücken"
     },
-    "coverage": {
-      "createdGroup": "Erstellt: {{group}}",
-      "groupsCovered": "{{covered}}/{{total}} Gruppen abgedeckt",
-      "missingGroup": "Fehlt: {{group}}"
-    },
     "deleteConfirm": {
       "confirm": "Ausgewählte Schlüssel löschen",
-      "description": "Diese Schlüssel werden auch von den entsprechenden Websites gelöscht und können nicht über die Erweiterung wiederhergestellt werden. Bestätigen Sie, dass ihre Gruppen nicht mehr verwendet werden.",
+      "description": "Diese Schlüssel werden auch von den entsprechenden Websites gelöscht und können nicht über die Erweiterung wiederhergestellt werden. Bestätigen Sie, dass sie nicht mehr benötigt werden.",
       "more_one": "Und {{count}} mehr",
       "more_other": "Und {{count}} mehr",
       "title_one": "{{count}} ungültigen Schlüssel löschen?",
       "title_other": "{{count}} ungültige Schlüssel löschen?"
     },
-    "description": "Überprüfen Sie die verfügbaren Gruppen jedes Kontos, erstellen Sie Standardschlüssel für Gruppen ohne Schlüssel und listen Sie ungewöhnliche Schlüssel auf, deren Gruppen nicht verfügbar sind.",
+    "description": "Prüft, ob gespeicherte Konten verwendbare Schlüssel haben. Fehlende Schlüssel werden nach Möglichkeit automatisch erstellt; andere Probleme erscheinen unten.",
+    "failureGuidance": {
+      "aborted": "Der Vorgang wurde vor Abschluss abgebrochen. Starten Sie die Prüfung erneut, wenn Sie bereit sind.",
+      "authenticationFailed": "Melden Sie sich erneut an oder aktualisieren Sie die Zugangsdaten dieses Kontos und versuchen Sie es erneut.",
+      "configurationRequired": "Schließen Sie die für diese Website erforderliche Einrichtung ab und führen Sie die Schlüsselprüfung erneut aus.",
+      "invalidConfiguration": "Prüfen Sie die für dieses Konto gespeicherten Website-Einstellungen und führen Sie die Schlüsselprüfung erneut aus.",
+      "mutationStateUncertain": "Die Website hat die Änderung möglicherweise übernommen. Aktualisieren Sie die Schlüsselliste, bevor Sie es erneut versuchen.",
+      "notFound": "Der Schlüssel ist nicht mehr vorhanden. Aktualisieren Sie das Konto und führen Sie die Prüfung erneut aus.",
+      "permissionDenied": "Verwenden Sie Zugangsdaten mit Berechtigung zum Anzeigen und Verwalten von Schlüsseln und versuchen Sie es erneut.",
+      "unavailable": "Die Website war nicht erreichbar oder hat keine verwertbare Antwort geliefert. Versuchen Sie es später erneut.",
+      "unexpected": "Führen Sie die Schlüsselprüfung erneut aus. Wenn sie weiterhin fehlschlägt, nutzen Sie die Antwort der Website zur Fehlersuche.",
+      "upstreamRejected": "Die Website hat die Anfrage abgelehnt. Beheben Sie das in der Antwort beschriebene Problem und versuchen Sie es erneut.",
+      "validationFailed": "Prüfen Sie die erforderlichen Schlüsseleinstellungen, korrigieren Sie sie und versuchen Sie es erneut."
+    },
     "historyNote": "Dies zeigt das vorherige Prüfergebnis. Derzeit wird kein Job ausgeführt und Sie können die Prüfung erneut ausführen.",
-    "initialNotice": "Nach dem Start werden gespeicherte Konten auf verfügbare Gruppen überprüft und für Gruppen ohne Schlüssel werden Standardschlüssel erstellt.",
+    "initialNotice": "Gespeicherte Konten werden auf nutzbare Schlüssel geprüft. Fehlt bei einem unterstützten Konto ein Schlüssel, kann die Erweiterung einen neuen erstellen.",
     "invalidKeys": {
       "badge": "Ungültig",
       "deleteFailed": "Ungültige Schlüssel konnten nicht gelöscht werden",
-      "deletePartial": "{{deleted}} gelöscht, {{failed}} fehlgeschlagen",
+      "deleteNeedsAttention": "{{applied}} gelöscht; {{rejected}} abgelehnt und {{uncertain}} müssen geprüft werden",
       "deleteSelected": "Ausgewählte löschen",
       "deleteSuccess_one": "{{count}} ungültiger Schlüssel gelöscht",
       "deleteSuccess_other": "{{count}} ungültige Schlüssel gelöscht",
-      "emptyDescription": "Bei dieser Prüfung wurden keine Schlüssel gefunden, deren Gruppen nicht verfügbar sind.",
+      "emptyDescription": "Bei dieser Prüfung wurden keine ungültigen Schlüssel gefunden.",
       "emptyTitle": "Keine ungültigen Schlüssel",
-      "groupUnavailable": "Gruppe {{group}} ist derzeit nicht verfügbar",
+      "group": "Frühere Gruppe: {{name}}",
+      "reason": "Grund: {{reason}}",
+      "reasons": {
+        "orphanedPlacement": "Grund: Dieser Schlüssel gehört zu einer Gruppe, die nicht mehr verfügbar ist. Löschen Sie ihn, wenn Sie ihn nicht mehr benötigen."
+      },
       "selectAll": "Alle aktuellen Ergebnisse auswählen",
       "selectedCount_one": "{{count}} ungültiger Schlüssel ausgewählt",
-      "selectedCount_other": "{{count}} ungültige Schlüssel ausgewählt"
+      "selectedCount_other": "{{count}} ungültige Schlüssel ausgewählt",
+      "unnamed": "Unbenannter Schlüssel"
+    },
+    "inventoryIssues": {
+      "duplicateResourceRefs_one": "{{count}} doppelter Schlüsseleintrag wurde gefunden; der zugehörige Schlüssel kann nicht sicher bestimmt werden.",
+      "duplicateResourceRefs_other": "{{count}} doppelte Schlüsseleinträge wurden gefunden; die zugehörigen Schlüssel können nicht sicher bestimmt werden.",
+      "inheritedAccountGroupUnavailable_one": "{{count}} Schlüssel übernimmt die Kontogruppe, aber die aktuelle Kontogruppe konnte nicht bestätigt werden.",
+      "inheritedAccountGroupUnavailable_other": "{{count}} Schlüssel übernehmen die Kontogruppe, aber die aktuelle Kontogruppe konnte nicht bestätigt werden.",
+      "invalidRequirementPlacement_one": "{{count}} Schlüssel enthält Gruppendaten, die nicht mit den aktuell verfügbaren Gruppen übereinstimmen.",
+      "invalidRequirementPlacement_other": "{{count}} Schlüssel enthalten Gruppendaten, die nicht mit den aktuell verfügbaren Gruppen übereinstimmen.",
+      "partialFailure": "Nicht alle Schlüssel konnten geladen werden; die automatische Verarbeitung wurde angehalten. Prüfen Sie die Website-Antwort beim Konto und versuchen Sie es erneut.",
+      "refreshFailed": "Das aktuelle Ergebnis konnte nach der Schlüsseländerung nicht bestätigt werden. Aktualisieren Sie die Schlüsselliste und versuchen Sie es erneut.",
+      "unknownCoverage_one": "{{count}} Schlüssel hat einen nicht erkannten Status oder Ablaufwert.",
+      "unknownCoverage_other": "{{count}} Schlüssel haben einen nicht erkannten Status oder Ablaufwert.",
+      "unknownPlacement_one": "Die Gruppe von {{count}} Schlüssel konnte nicht erkannt werden.",
+      "unknownPlacement_other": "Die Gruppen von {{count}} Schlüsseln konnten nicht erkannt werden."
     },
     "managedSiteImport": {
-      "action_one": "{{count}} reparierten Schlüssel importieren",
-      "action_other": "{{count}} reparierte Schlüssel importieren",
+      "action_one": "{{count}} reparierten Schlüssel prüfen",
+      "action_other": "{{count}} reparierte Schlüssel prüfen",
       "changeTarget": "Ziel ändern",
       "configMissing": "Die aktuelle verwaltete Website ist nicht konfiguriert. Öffnen Sie ihre Einstellungen, kehren Sie anschließend hierher zurück und importieren Sie erneut.",
       "configurationOpenFailed": "Die Einstellungen der verwalteten Website konnten nicht geöffnet werden. Öffnen Sie Einstellungen > Verwaltete Website, um sie manuell zu konfigurieren.",
@@ -595,8 +622,8 @@
       "nothingPending": "Diese Schlüssel wurden für dieses Ziel bereits verarbeitet: Ihre Kanäle wurden erstellt oder als exakte Übereinstimmungen gefunden. Um sie erneut zu prüfen, verwenden Sie den regulären Import mit vollständiger Verifizierung.",
       "openConfiguration": "Einstellungen der verwalteten Website öffnen",
       "receiptFailed": "Der Import wurde abgeschlossen, aber die Reparaturergebnisse konnten nicht aktualisiert werden. Aktualisieren Sie die Ergebnisse, um den aktuellen Status zu bestätigen.",
-      "target_one": "{{count}} reparierter Schlüssel für {{site}} bereit",
-      "target_other": "{{count}} reparierte Schlüssel für {{site}} bereit",
+      "target_one": "{{count}} reparierter Schlüssel für {{site}} gefunden; Verfügbarkeit und frühere Importe werden vor der Prüfung kontrolliert.",
+      "target_other": "{{count}} reparierte Schlüssel für {{site}} gefunden; Verfügbarkeit und frühere Importe werden vor der Prüfung kontrolliert.",
       "title": "Reparierte Schlüssel importieren",
       "unavailable": "Die reparierten Schlüssel sind nicht mehr für den Import verfügbar. Aktualisieren Sie die Reparaturergebnisse und versuchen Sie es erneut.",
       "useRegularImport": "Regulären Import verwenden"
@@ -608,9 +635,11 @@
     },
     "noMatchingResults": "Keine passenden Ergebnisse",
     "outcomes": {
-      "alreadyHad": "Hatte bereits Schlüssel",
-      "created": "Erstellt",
+      "blocked": "Blockiert",
+      "covered": "Keine Schlüssel fehlten",
       "failed": "Fehlgeschlagen",
+      "partial": "Teilweise",
+      "repaired": "Fehlende Schlüssel ergänzt",
       "skipped": "Übersprungen"
     },
     "previousResult": {
@@ -619,6 +648,7 @@
       "title": "Vorheriges Prüfergebnis verfügbar",
       "view": "Vorheriges Ergebnis anzeigen"
     },
+    "progressChecked": "Geprüft",
     "progressLabel": "Fortschritt",
     "remoteWriteNotice": "Diese Aktion erstellt möglicherweise neue Schlüssel auf den entsprechenden Websites. Es werden keine Schlüssel automatisch gelöscht.",
     "renameOption": {
@@ -628,32 +658,43 @@
       "tooltip": "Es werden nur Schlüssel mit einem automatisch erstellten Benennungsstil behandelt, z. B. „Benutzergruppe (Auto)“ oder „VIP-Gruppe (Auto)“. Nach der Reparatur folgt der Name der aktuellen Gruppe des Schlüssels. Andere Namen werden nicht geändert."
     },
     "renameSummary": {
-      "accountFailed_one": "{{count}} Name nicht synchronisiert",
-      "accountFailed_other": "{{count}} Namen nicht synchronisiert",
-      "accountRenamed_one": "{{count}} Name synchronisiert",
-      "accountRenamed_other": "{{count}} Namen synchronisiert",
-      "failed": "Namen nicht synchronisiert",
-      "renamed": "Namen synchronisiert",
-      "summarySeparator": ", "
+      "accountApplied_one": "{{count}} Name synchronisiert",
+      "accountApplied_other": "{{count}} Namen synchronisiert",
+      "accountRejected_one": "{{count}} Umbenennung abgelehnt",
+      "accountRejected_other": "{{count}} Umbenennungen abgelehnt",
+      "accountUncertain_one": "{{count}} Umbenennung muss geprüft werden",
+      "accountUncertain_other": "{{count}} Umbenennungen müssen geprüft werden"
+    },
+    "requirements": {
+      "blockedIncompleteInventory": "Schlüssel nicht vollständig geladen",
+      "blockedInputRequired": "Manuelle Einrichtung nötig",
+      "covered": "Nutzbarer Schlüssel vorhanden",
+      "coveredAfterUncertain": "Nach Aktualisierung verfügbar",
+      "created": "Neuer Schlüssel erstellt",
+      "rejected": "Website hat nichts geändert",
+      "uncertain": "Ergebnis vor erneutem Versuch prüfen"
     },
     "resultsTitle": "Ergebnisse",
     "runningNote": "Dieser Job läuft im Hintergrund. Sie können dieses Dialogfeld schließen und später überprüfen oder den Vorgang über die Fortschrittskarte abbrechen.",
     "searchLabel": "Suche",
-    "searchPlaceholder": "Konto, Herkunft oder Website-Typ suchen...",
+    "searchPlaceholder": "Konto, Schlüsselname, Gruppe, Domain oder Website-Typ suchen...",
     "skipReasons": {
       "aihubmixOneTimeKey": "AIHubMix Schlüssel können nur einmal angezeigt werden. Erstellen Sie den Schlüssel manuell und speichern Sie den vollständigen Schlüssel sofort.",
       "noneAuth": "Keine Anmeldeinformationen (Authentifizierungstyp: keine)",
-      "sub2api": "Erfordert die Auswahl einer Sub2API-Gruppe; Erstellen Sie den Schlüssel manuell",
-      "tokenAutomationUnsupported": "Diese Website stellt Dienstanmeldeinformationen anstelle der API-Token-Verwaltung bereit. Die automatische Schlüsselreparatur wird übersprungen."
+      "provisioningUnavailable": "Dieses Konto unterstützt keine automatische Schlüsselerstellung. Erstellen Sie den Schlüssel bei Bedarf auf der Website."
     },
-    "title": "Prüfung der Schlüsselabdeckung",
-    "totalsLabels": {
-      "eligibleAccounts": "Berechtigte Konten",
-      "enabledAccounts": "Aktivierte Konten",
-      "processedAccounts": "Verarbeitet"
+    "status": {
+      "completed": "Abgeschlossen",
+      "needsAttention": "Handlung nötig"
     },
+    "summary": {
+      "completedNeedsAttention": "Prüfung abgeschlossen. Einige Ergebnisse müssen bearbeitet werden. Details finden Sie unten.",
+      "completedWithSkipped": "Prüfung abgeschlossen. Einige Konten konnten nicht automatisch bearbeitet werden. Gründe finden Sie unten.",
+      "healthy": "Prüfung abgeschlossen. Es wurden keine zu bearbeitenden Probleme gefunden."
+    },
+    "title": "Kontoschlüssel prüfen",
     "views": {
-      "accountCoverage": "Kontoabdeckung",
+      "accountCoverage": "Kontoergebnisse",
       "invalidKeys": "Ungültige Schlüssel",
       "label": "Ergebnisansicht"
     }

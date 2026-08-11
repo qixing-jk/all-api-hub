@@ -6,6 +6,7 @@ import {
   type AccountKeyResourceDefinition,
 } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
+  ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RESOURCE_FIELD_ISSUE_CODES,
   AccountKeyResourceError,
@@ -134,6 +135,129 @@ const open = async (definition = createDefinition()) =>
   (await openSession(definition)).openCollection("workspace-example")
 
 describe("defineAccountKeyResourceCapability", () => {
+  it("uses the controlled failure message as the public Error message", () => {
+    const error = new AccountKeyResourceError({
+      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+      message: "Provider inventory is temporarily unavailable",
+    })
+
+    expect(error.message).toBe("Provider inventory is temporarily unavailable")
+    expect(error.failure.code).toBe(
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+    )
+  })
+
+  it("binds an optional provisioning facet to the opened session", async () => {
+    const snapshot = {
+      requirements: [
+        {
+          requirementKey: "opaque:requirement",
+          displayName: "Requirement",
+          provisioning: {
+            kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
+          },
+        },
+      ],
+      items: [],
+    }
+    const provisioning = {
+      inspect: vi.fn(async () => snapshot),
+      provision: vi.fn(async () => ({
+        certainty: "applied" as const,
+        value: { ref: REF },
+      })),
+    }
+    const session = await openSession(
+      createDefinition({ provisioning } as never),
+    )
+
+    await expect(session.provisioning?.inspect()).resolves.toBe(snapshot)
+    await expect(
+      session.provisioning?.provision("opaque:requirement"),
+    ).resolves.toEqual({
+      certainty: "applied",
+      value: { ref: REF },
+    })
+    expect(provisioning.inspect).toHaveBeenCalledWith(
+      { scopeKey: "workspace-example" },
+      undefined,
+    )
+    expect(provisioning.provision).toHaveBeenCalledWith(
+      { scopeKey: "workspace-example" },
+      "opaque:requirement",
+      undefined,
+    )
+  })
+
+  it("rejects invalid applied provisioning provenance at the public seam", async () => {
+    const provisioning = {
+      inspect: vi.fn(async () => ({ requirements: [], items: [] })),
+      provision: vi.fn(async () => ({
+        certainty: "applied" as const,
+        value: { ref: { ...REF, accountId: "other-account" } },
+      })),
+    }
+    const session = await openSession(
+      createDefinition({ provisioning } as never),
+    )
+
+    await expect(
+      session.provisioning?.provision("opaque:requirement"),
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+  })
+
+  it("binds an independent runtime-key resolver to the opened session", async () => {
+    const resolution = {
+      kind: "resolved" as const,
+      secret: "runtime-secret-example",
+    }
+    const runtimeKey = {
+      resolve: vi.fn(async () => resolution),
+    }
+    const session = await openSession(createDefinition({ runtimeKey } as never))
+
+    await expect(session.runtimeKey?.resolve(REF)).resolves.toBe(resolution)
+    expect(runtimeKey.resolve).toHaveBeenCalledWith(
+      { scopeKey: "workspace-example" },
+      REF,
+      undefined,
+    )
+  })
+
+  it("rejects a foreign runtime-key ref before Adapter access", async () => {
+    const runtimeKey = {
+      resolve: vi.fn(async () => ({
+        kind: "unavailable" as const,
+      })),
+    }
+    const session = await openSession(createDefinition({ runtimeKey } as never))
+
+    await expect(
+      session.runtimeKey?.resolve({ ...REF, accountId: "other-account" }),
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    expect(runtimeKey.resolve).not.toHaveBeenCalled()
+  })
+
+  it("rejects an unavailable runtime-key scope before Adapter access", async () => {
+    const runtimeKey = {
+      resolve: vi.fn(async () => ({
+        kind: "unavailable" as const,
+      })),
+    }
+    const session = await openSession(createDefinition({ runtimeKey } as never))
+
+    await expect(
+      session.runtimeKey?.resolve({ ...REF, scopeKey: "other-workspace" }),
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    expect(runtimeKey.resolve).not.toHaveBeenCalled()
+  })
+
   it("rejects wrong-account and wrong-scope refs before adapter access", async () => {
     const definition = createDefinition()
     const collection = await open(definition)
@@ -849,6 +973,7 @@ describe("defineAccountKeyResourceCapability", () => {
 
     const uncertainCreate = vi.fn<Definition["create"]>(async () => ({
       certainty: "possibly-applied",
+      failure: "denied",
     }))
     const uncertainEditor = await (
       await openSession(createDefinition({ create: uncertainCreate }))

@@ -168,7 +168,7 @@ export const getAccountKeyProductCapabilities = (
 
   const accountCapabilities = getSiteTypeCapabilities(account.siteType).account
   const keyManagement = accountCapabilities?.keyManagement
-  const hasKeyResources = Boolean(accountCapabilities?.keyResources)
+  const hasKeyResources = Boolean(accountCapabilities?.keyResourceManagement)
   const serviceCredential = accountCapabilities?.serviceCredential
   const hasKeyManagement = Boolean(keyManagement)
   const hasServiceCredential = Boolean(serviceCredential)

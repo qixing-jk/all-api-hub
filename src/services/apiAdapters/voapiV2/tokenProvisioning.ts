@@ -3,7 +3,6 @@ import {
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   type TokenProvisioningCapability,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 
@@ -68,8 +67,5 @@ export const voApiV2TokenProvisioning: TokenProvisioningCapability = {
   },
   classifyCreatedToken() {
     return { kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch }
-  },
-  getRepairPolicy() {
-    return { kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible }
   },
 }

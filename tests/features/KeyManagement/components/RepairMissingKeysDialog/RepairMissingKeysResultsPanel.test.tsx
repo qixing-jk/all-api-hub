@@ -1,34 +1,27 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { TFunction } from "i18next"
 import { useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { REPAIR_RESULT_VIEWS } from "~/features/KeyManagement/components/RepairMissingKeysDialog/repairMissingKeysDialogHelpers"
+import {
+  getInvalidResourceKey,
+  REPAIR_RESULT_VIEWS,
+} from "~/features/KeyManagement/components/RepairMissingKeysDialog/repairMissingKeysDialogHelpers"
 import { RepairMissingKeysResultsPanel } from "~/features/KeyManagement/components/RepairMissingKeysDialog/RepairMissingKeysResultsPanel"
+import enCommon from "~/locales/en/common.json"
+import enKeyManagement from "~/locales/en/keyManagement.json"
 import type {
   AccountKeyRepairAccountResult,
-  AccountKeyRepairInvalidToken,
+  AccountKeyRepairInvalidResource,
 } from "~/types/accountKeyAutoProvisioning"
-import {
-  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
-  ACCOUNT_KEY_REPAIR_OUTCOMES,
-} from "~/types/accountKeyAutoProvisioning"
+import { ACCOUNT_KEY_REPAIR_OUTCOMES } from "~/types/accountKeyAutoProvisioning"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 
-const t = ((key: string, options?: Record<string, unknown>) => {
-  if (key === "keyManagement:repairMissingKeys.coverage.groupsCovered") {
-    return `${options?.covered}/${options?.total} groups`
-  }
-  if (key === "keyManagement:repairMissingKeys.invalidKeys.selectedCount") {
-    return `${options?.count} selected`
-  }
-  if (key === "keyManagement:repairMissingKeys.invalidKeys.groupUnavailable") {
-    return `group unavailable: ${options?.group}`
-  }
-
-  return key
-}) as TFunction
+const i18n = await createResourceTestI18n({
+  en: { common: enCommon, keyManagement: enKeyManagement },
+})
+const t = i18n.t
 
 function buildResult(
   overrides: Partial<AccountKeyRepairAccountResult> = {},
@@ -38,173 +31,111 @@ function buildResult(
     accountName: "Example Account",
     siteType: SITE_TYPES.NEW_API,
     siteUrlOrigin: "https://account.example.invalid",
-    outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
+    outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
+    requirementResults: [],
+    createdRefs: [],
+    invalidResources: [],
+    renameResults: [],
     finishedAt: 1,
     ...overrides,
   }
 }
 
-function buildToken(
-  overrides: Partial<AccountKeyRepairInvalidToken> = {},
-): AccountKeyRepairInvalidToken {
+function buildResource(): AccountKeyRepairInvalidResource {
   return {
     accountId: "account-1",
     accountName: "Example Account",
     siteType: SITE_TYPES.NEW_API,
     siteUrlOrigin: "https://account.example.invalid",
-    tokenId: 1,
-    tokenName: "Token 1",
-    group: "missing-group",
-    reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
-    ...overrides,
+    ref: {
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "resource-1",
+    },
+    displayLabel: "Key 1",
+    reason: "orphaned-placement",
   }
+}
+
+const outcomeCounts = {
+  covered: 1,
+  repaired: 0,
+  partial: 1,
+  blocked: 1,
+  skipped: 0,
+  failed: 0,
 }
 
 function renderPanel(
   props: Partial<Parameters<typeof RepairMissingKeysResultsPanel>[0]> = {},
 ) {
-  const selectedToken = buildToken()
-
+  const resource = buildResource()
   return render(
     <RepairMissingKeysResultsPanel
-      accountIds={new Set(["account-1"])}
       activeView={REPAIR_RESULT_VIEWS.AccountCoverage}
       deleteResultMessage=""
-      filteredInvalidTokens={[selectedToken]}
+      filteredInvalidResources={[resource]}
       filteredResults={[buildResult()]}
-      invalidTokens={[
-        selectedToken,
-        buildToken({
-          accountId: "account-2",
-          tokenId: 2,
-          tokenName: "Token 2",
-        }),
-      ]}
-      openingSub2ApiAccountId={null}
-      outcomeCounts={{
-        created: 1,
-        alreadyHad: 1,
-        skipped: 0,
-        failed: 0,
-      }}
+      invalidResources={[resource]}
+      outcomeCounts={outcomeCounts}
       outcomeFilter={null}
       searchTerm="Example"
-      selectedInvalidTokenKeys={new Set()}
-      selectedInvalidTokens={[]}
+      selectedInvalidResourceKeys={new Set()}
+      selectedInvalidResources={[]}
       visibleResults={[
         buildResult(),
         buildResult({
           accountId: "account-2",
-          accountName: "Second Account",
-          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad,
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Partial,
           finishedAt: 2,
+        }),
+        buildResult({
+          accountId: "account-3",
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Blocked,
+          finishedAt: 3,
         }),
       ]}
       onActiveViewChange={vi.fn()}
       onOpenDeleteConfirm={vi.fn()}
-      onOpenSub2ApiTokenDialog={vi.fn()}
       onOutcomeFilterChange={vi.fn()}
       onSearchTermChange={vi.fn()}
-      onSelectedInvalidTokenKeysChange={vi.fn()}
+      onSelectedInvalidResourceKeysChange={vi.fn()}
       t={t}
       {...props}
     />,
   )
 }
 
-function renderPanelWithSearchState({
-  onSearchTermChange = vi.fn(),
-  ...props
-}: Partial<Parameters<typeof RepairMissingKeysResultsPanel>[0]> = {}) {
-  function StatefulPanel() {
-    const [searchTerm, setSearchTerm] = useState("Example")
-    const handleSearchTermChange = (value: string) => {
-      setSearchTerm(value)
-      onSearchTermChange(value)
-    }
-
-    return (
-      <RepairMissingKeysResultsPanel
-        accountIds={new Set(["account-1"])}
-        activeView={REPAIR_RESULT_VIEWS.AccountCoverage}
-        deleteResultMessage=""
-        filteredInvalidTokens={[buildToken()]}
-        filteredResults={[buildResult()]}
-        invalidTokens={[buildToken()]}
-        openingSub2ApiAccountId={null}
-        outcomeCounts={{
-          created: 1,
-          alreadyHad: 0,
-          skipped: 0,
-          failed: 0,
-        }}
-        outcomeFilter={null}
-        searchTerm={searchTerm}
-        selectedInvalidTokenKeys={new Set()}
-        selectedInvalidTokens={[]}
-        visibleResults={[buildResult()]}
-        onActiveViewChange={vi.fn()}
-        onOpenDeleteConfirm={vi.fn()}
-        onOpenSub2ApiTokenDialog={vi.fn()}
-        onOutcomeFilterChange={vi.fn()}
-        onSearchTermChange={handleSearchTermChange}
-        onSelectedInvalidTokenKeysChange={vi.fn()}
-        t={t}
-        {...props}
-      />
-    )
-  }
-
-  return render(<StatefulPanel />)
-}
-
 describe("RepairMissingKeysResultsPanel", () => {
-  it("renders account coverage counts, search controls, and outcome filters", async () => {
+  it("renders all current outcome filters and routes selection", async () => {
     const user = userEvent.setup()
-    const onActiveViewChange = vi.fn()
     const onOutcomeFilterChange = vi.fn()
+    renderPanel({ onOutcomeFilterChange })
 
-    renderPanel({
-      onActiveViewChange,
-      onOutcomeFilterChange,
-    })
-
-    expect(
-      screen.getByRole("group", {
-        name: "keyManagement:repairMissingKeys.views.label",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", {
-        name: "keyManagement:repairMissingKeys.views.accountCoverage",
-      }),
-    ).toHaveAttribute("aria-pressed", "true")
-    expect(
-      screen.getByRole("button", {
-        name: /keyManagement:repairMissingKeys\.views\.invalidKeys/,
-      }),
-    ).toHaveAttribute("aria-pressed", "false")
-    expect(
-      screen.getByTestId("repair-missing-keys-result-count"),
-    ).toHaveTextContent("1/2")
-    expect(screen.getByText("Example Account")).toBeInTheDocument()
-
+    for (const outcome of [
+      "covered",
+      "repaired",
+      "partial",
+      "blocked",
+      "skipped",
+      "failed",
+    ]) {
+      expect(
+        screen.getByRole("button", {
+          name: new RegExp(
+            t(`keyManagement:repairMissingKeys.outcomes.${outcome}`),
+          ),
+        }),
+      ).toBeVisible()
+    }
     await user.click(
       screen.getByRole("button", {
-        name: /keyManagement:repairMissingKeys\.views\.invalidKeys/,
-      }),
-    )
-    expect(onActiveViewChange).toHaveBeenCalledWith(
-      REPAIR_RESULT_VIEWS.InvalidKeys,
-    )
-
-    await user.click(
-      screen.getByRole("button", {
-        name: /keyManagement:repairMissingKeys\.outcomes\.created/,
+        name: new RegExp(t("keyManagement:repairMissingKeys.outcomes.partial")),
       }),
     )
     expect(onOutcomeFilterChange).toHaveBeenCalledWith(
-      ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
+      ACCOUNT_KEY_REPAIR_OUTCOMES.Partial,
     )
   })
 
@@ -212,63 +143,74 @@ describe("RepairMissingKeysResultsPanel", () => {
     const user = userEvent.setup()
     const onSearchTermChange = vi.fn()
 
-    renderPanelWithSearchState({ onSearchTermChange })
+    function StatefulPanel() {
+      const [searchTerm, setSearchTerm] = useState("Example")
+      return (
+        <RepairMissingKeysResultsPanel
+          activeView={REPAIR_RESULT_VIEWS.AccountCoverage}
+          deleteResultMessage=""
+          filteredInvalidResources={[]}
+          filteredResults={[buildResult()]}
+          invalidResources={[]}
+          outcomeCounts={outcomeCounts}
+          outcomeFilter={null}
+          searchTerm={searchTerm}
+          selectedInvalidResourceKeys={new Set()}
+          selectedInvalidResources={[]}
+          visibleResults={[buildResult()]}
+          onActiveViewChange={vi.fn()}
+          onOpenDeleteConfirm={vi.fn()}
+          onOutcomeFilterChange={vi.fn()}
+          onSearchTermChange={(value) => {
+            setSearchTerm(value)
+            onSearchTermChange(value)
+          }}
+          onSelectedInvalidResourceKeysChange={vi.fn()}
+          t={t}
+        />
+      )
+    }
+    render(<StatefulPanel />)
 
     const searchInput = screen.getByRole("textbox", {
-      name: "keyManagement:repairMissingKeys.searchLabel",
+      name: t("keyManagement:repairMissingKeys.searchLabel"),
     })
-    expect(searchInput).toHaveValue("Example")
-
     await user.type(searchInput, " 1")
     expect(onSearchTermChange).toHaveBeenLastCalledWith("Example 1")
-
     await user.click(
-      screen.getByRole("button", { name: "common:actions.clear" }),
+      screen.getByRole("button", { name: t("common:actions.clear") }),
     )
-    expect(onSearchTermChange).toHaveBeenLastCalledWith("")
     expect(searchInput).toHaveValue("")
     expect(searchInput).toHaveFocus()
   })
 
-  it("routes invalid-key view selection and delete actions", async () => {
+  it("routes invalid-resource selection and delete actions", async () => {
     const user = userEvent.setup()
-    const selectedToken = buildToken()
+    const resource = buildResource()
+    const key = getInvalidResourceKey(resource)
     const onOpenDeleteConfirm = vi.fn()
-    const onSelectedInvalidTokenKeysChange = vi.fn()
-
+    const onSelectedInvalidResourceKeysChange = vi.fn()
     renderPanel({
       activeView: REPAIR_RESULT_VIEWS.InvalidKeys,
-      deleteResultMessage: "Deleted 1 invalid key",
-      filteredInvalidTokens: [selectedToken],
-      selectedInvalidTokenKeys: new Set(["account-1:1"]),
-      selectedInvalidTokens: [selectedToken],
+      deleteResultMessage: "One resource still needs attention",
+      filteredInvalidResources: [resource],
+      invalidResources: [resource],
+      selectedInvalidResourceKeys: new Set([key]),
+      selectedInvalidResources: [resource],
       onOpenDeleteConfirm,
-      onSelectedInvalidTokenKeysChange,
+      onSelectedInvalidResourceKeysChange,
     })
 
-    expect(
-      screen.getByRole("button", {
-        name: /keyManagement:repairMissingKeys\.views\.invalidKeys/,
-      }),
-    ).toHaveAttribute("aria-pressed", "true")
-    expect(
-      screen.getByTestId("repair-missing-keys-result-count"),
-    ).toHaveTextContent("1/2")
-    expect(screen.getByText("Deleted 1 invalid key")).toBeInTheDocument()
-    expect(screen.getByText("Token 1")).toBeInTheDocument()
-    expect(screen.getByText("1 selected")).toBeInTheDocument()
-
+    expect(screen.getByText("One resource still needs attention")).toBeVisible()
+    expect(screen.getByText("Key 1")).toBeVisible()
     await user.click(
       screen.getByRole("button", {
-        name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
+        name: t("keyManagement:repairMissingKeys.invalidKeys.deleteSelected"),
       }),
     )
     expect(onOpenDeleteConfirm).toHaveBeenCalledTimes(1)
-
-    await user.click(screen.getByRole("checkbox", { name: "Token 1" }))
-
-    const removeUpdater = onSelectedInvalidTokenKeysChange.mock.calls[0]?.[0]
-    expect(removeUpdater).toBeTypeOf("function")
-    expect(removeUpdater(new Set(["account-1:1"]))).toEqual(new Set())
+    await user.click(screen.getByRole("checkbox", { name: "Key 1" }))
+    const removeUpdater = onSelectedInvalidResourceKeysChange.mock.calls[0]?.[0]
+    expect(removeUpdater(new Set([key]))).toEqual(new Set())
   })
 })

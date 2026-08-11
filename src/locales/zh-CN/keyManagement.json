@@ -546,34 +546,56 @@
       "rerun": "重新检查",
       "start": "开始检查并补齐"
     },
-    "coverage": {
-      "createdGroup": "已创建：{{group}}",
-      "groupsCovered": "已覆盖 {{covered}}/{{total}} 个分组",
-      "missingGroup": "未补齐：{{group}}"
-    },
     "deleteConfirm": {
       "confirm": "删除所选密钥",
-      "description": "这些密钥会同时从对应网站删除，无法通过扩展恢复。请确认它们的分组已不再使用。",
+      "description": "这些密钥会同时从对应网站删除，无法通过扩展恢复。请确认它们已不再需要。",
       "more": "以及另外 {{count}} 个",
       "title": "删除 {{count}} 个异常密钥？"
     },
-    "description": "检查每个账号的可用分组，为缺少密钥的分组创建默认密钥，并列出分组不可用的异常密钥。",
+    "description": "检查已保存账号是否有可用密钥；缺少时会尽量自动创建，其他问题会列在下方。",
+    "failureGuidance": {
+      "aborted": "操作在完成前已取消；准备好后可重新检查。",
+      "authenticationFailed": "请重新登录或更新此账号的凭据，然后重试。",
+      "configurationRequired": "请先完成此站点所需的配置，然后重新检查密钥。",
+      "invalidConfiguration": "请检查此账号保存的站点配置，然后重新检查密钥。",
+      "mutationStateUncertain": "站点可能已应用这次更改；请先刷新密钥列表，再决定是否重试。",
+      "notFound": "对应密钥已不存在；请刷新账号后重新检查。",
+      "permissionDenied": "请使用有权查看和管理密钥的凭据，然后重试。",
+      "unavailable": "站点暂时无法访问，或返回了无法处理的响应；请稍后重试。",
+      "unexpected": "请重新检查密钥；如果仍然失败，请根据站点返回的信息排查。",
+      "upstreamRejected": "站点拒绝了请求；请根据站点返回的信息处理后重试。",
+      "validationFailed": "请检查并修正所需的密钥设置，然后重试。"
+    },
     "historyNote": "这里显示上次检查结果；当前没有正在执行的任务，可重新检查。",
-    "initialNotice": "开始后会检查已保存账号的可用分组，并为缺少密钥的分组创建默认密钥。",
+    "initialNotice": "开始后会检查已保存账号是否缺少可用密钥；支持自动补齐的账号可能会创建新密钥。",
     "invalidKeys": {
       "badge": "异常",
       "deleteFailed": "删除异常密钥失败",
-      "deletePartial": "已删除 {{deleted}} 个，{{failed}} 个删除失败",
+      "deleteNeedsAttention": "已删除 {{applied}} 个；{{rejected}} 个被拒绝，{{uncertain}} 个需要核实",
       "deleteSelected": "删除所选",
       "deleteSuccess": "已删除 {{count}} 个异常密钥",
-      "emptyDescription": "本次检查未发现分组不可用的密钥。",
+      "emptyDescription": "本次检查未发现异常密钥。",
       "emptyTitle": "没有异常密钥",
-      "groupUnavailable": "分组 {{group}} 当前不可用",
+      "group": "原分组：{{name}}",
+      "reason": "原因：{{reason}}",
+      "reasons": {
+        "orphanedPlacement": "原因：此密钥所属的分组已不再可用。确认不再需要后，可将其删除。"
+      },
       "selectAll": "全选当前结果",
-      "selectedCount": "已选择 {{count}} 个异常密钥"
+      "selectedCount": "已选择 {{count}} 个异常密钥",
+      "unnamed": "未命名密钥"
+    },
+    "inventoryIssues": {
+      "duplicateResourceRefs": "发现 {{count}} 条重复的密钥记录，无法安全确认对应密钥。",
+      "inheritedAccountGroupUnavailable": "有 {{count}} 个密钥使用账号默认分组，但无法确认账号当前分组。",
+      "invalidRequirementPlacement": "有 {{count}} 个密钥的分组数据与当前可用分组不一致。",
+      "partialFailure": "未能读取全部密钥，自动处理已停止；请根据账号旁的站点返回信息处理后重试。",
+      "refreshFailed": "密钥变更后无法确认最新结果；请刷新密钥列表后重试。",
+      "unknownCoverage": "有 {{count}} 个密钥的状态或有效期无法识别。",
+      "unknownPlacement": "有 {{count}} 个密钥的所属分组无法识别。"
     },
     "managedSiteImport": {
-      "action": "导入 {{count}} 个修复创建的密钥",
+      "action": "查看 {{count}} 个修复创建的密钥",
       "changeTarget": "更改目标",
       "configMissing": "当前管理站点尚未配置。请打开配置页，完成后返回此处再次导入。",
       "configurationOpenFailed": "无法打开管理站点配置。请前往“设置 > 管理站点”手动配置。",
@@ -581,7 +603,7 @@
       "nothingPending": "这些密钥已在当前目标处理完成：对应渠道已创建或已精确存在。如需再次检查，请使用常规导入进行完整校验。",
       "openConfiguration": "打开管理站点配置",
       "receiptFailed": "导入已完成，但无法更新修复结果。请刷新结果以确认当前状态。",
-      "target": "{{site}}：有 {{count}} 个修复创建的密钥可导入",
+      "target": "已找到 {{count}} 个修复创建的密钥，可用于 {{site}}；进入审核前会检查当前可用性和既有导入记录。",
       "title": "导入修复创建的密钥",
       "unavailable": "这些修复创建的密钥暂时无法导入。请刷新修复结果后重试。",
       "useRegularImport": "使用常规导入"
@@ -593,9 +615,11 @@
     },
     "noMatchingResults": "没有匹配的结果",
     "outcomes": {
-      "alreadyHad": "已存在",
-      "created": "已创建",
+      "blocked": "受阻",
+      "covered": "无需补全",
       "failed": "失败",
+      "partial": "部分完成",
+      "repaired": "已补全",
       "skipped": "已跳过"
     },
     "previousResult": {
@@ -604,6 +628,7 @@
       "title": "有上次检查结果",
       "view": "查看上次结果"
     },
+    "progressChecked": "已检查",
     "progressLabel": "进度",
     "remoteWriteNotice": "此操作可能会在对应网站创建新密钥；不会自动删除任何密钥。",
     "renameOption": {
@@ -613,30 +638,40 @@
       "tooltip": "仅处理名称符合自动创建样式的密钥，例如 “user group (auto)” 或 “vip group (auto)”。修复后名称会跟随密钥当前分组；其他名称不会修改。"
     },
     "renameSummary": {
-      "accountFailed": "名称未同步：{{count}}",
-      "accountRenamed": "已同步名称：{{count}}",
-      "failed": "名称未同步",
-      "renamed": "已同步名称",
-      "summarySeparator": "；"
+      "accountApplied": "已同步名称：{{count}}",
+      "accountRejected": "重命名被拒绝：{{count}}",
+      "accountUncertain": "重命名需要核实：{{count}}"
+    },
+    "requirements": {
+      "blockedIncompleteInventory": "密钥未完整加载",
+      "blockedInputRequired": "需手动设置",
+      "covered": "已有可用密钥",
+      "coveredAfterUncertain": "刷新后确认可用",
+      "created": "已创建新密钥",
+      "rejected": "站点未执行",
+      "uncertain": "请先核实结果"
     },
     "resultsTitle": "结果",
     "runningNote": "任务在后台运行；可关闭此对话框稍后查看，或在进度卡片中取消任务。",
     "searchLabel": "搜索",
-    "searchPlaceholder": "搜索账号、域名或站点类型...",
+    "searchPlaceholder": "搜索账号、密钥名称、分组、域名或站点类型...",
     "skipReasons": {
       "aihubmixOneTimeKey": "AIHubMix 密钥仅可查看一次，请手动创建并立即保存完整密钥",
       "noneAuth": "无凭据（认证方式：无）",
-      "sub2api": "需要选择 Sub2API 分组，请手动创建密钥",
-      "tokenAutomationUnsupported": "该站点提供的是服务凭证而非 API Token 管理，已跳过自动修复。"
+      "provisioningUnavailable": "此账号不支持自动创建密钥；如有需要，请前往对应站点手动创建。"
     },
-    "title": "密钥覆盖检查",
-    "totalsLabels": {
-      "eligibleAccounts": "符合条件账号",
-      "enabledAccounts": "已启用账号",
-      "processedAccounts": "已处理"
+    "status": {
+      "completed": "已完成",
+      "needsAttention": "需处理"
     },
+    "summary": {
+      "completedNeedsAttention": "检查完成，但有结果需要处理。请在下方查看具体原因。",
+      "completedWithSkipped": "检查完成，部分账号未自动处理。请在下方查看原因。",
+      "healthy": "检查完成，未发现需要处理的问题。"
+    },
+    "title": "检查账号密钥",
     "views": {
-      "accountCoverage": "账号覆盖",
+      "accountCoverage": "账号结果",
       "invalidKeys": "异常密钥",
       "label": "结果视图"
     }

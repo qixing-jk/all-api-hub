@@ -3,14 +3,25 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   getKeyManagementTokenRowTestId,
   getManagedSiteBatchExportRowSelectTestId,
+  getRepairAccountResultTestId,
   KEY_MANAGEMENT_TEST_IDS,
 } from "~/features/KeyManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
-import { buildAccountTokenRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
+import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
+import {
+  ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
+  type AccountKeyResourceRef,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { AuthTypeEnum, type ApiToken } from "~/types"
-import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
-import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
+import {
+  ACCOUNT_KEY_REPAIR_JOB_STATES,
+  ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES,
+  ACCOUNT_KEY_REPAIR_OUTCOMES,
+  ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
+  type AccountKeyRepairProgress,
+} from "~/types/accountKeyAutoProvisioning"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   verifyAccountKeyLifecycleUsage,
@@ -655,7 +666,7 @@ test("filters keys by search query and shows the no-results state", async ({
   await expect(page.getByRole("heading", { name: "Beta Key" })).toBeVisible()
 })
 
-test("repairs missing account keys and deletes invalid group keys", async ({
+test("repairs missing account keys, deletes invalid resources, and records managed imports", async ({
   context,
   extensionId,
   page,
@@ -663,6 +674,15 @@ test("repairs missing account keys and deletes invalid group keys", async ({
   const serviceWorker = await getServiceWorker(context)
   const accountId = "e2e-key-repair-account"
   const baseUrl = "https://key-repair.example.com"
+  const createResourceRef = (resourceId: string): AccountKeyResourceRef => ({
+    accountId,
+    siteType: SITE_TYPES.NEW_API,
+    scopeKey: "account",
+    resourceId,
+  })
+  const invalidResourceRef = createResourceRef("2")
+  const alphaResourceRef = createResourceRef("3")
+  const vipResourceRef = createResourceRef("4")
   const { createPayloads } = await stubManagedSiteImportTargetRoutes(context)
 
   await seedStoredAccounts(serviceWorker, [
@@ -725,7 +745,7 @@ test("repairs missing account keys and deletes invalid group keys", async ({
 
   await page.getByRole("button", { name: "Key check" }).click()
   await expect(
-    page.getByRole("heading", { name: "Key coverage check" }),
+    page.getByRole("heading", { name: "Check account keys" }),
   ).toBeVisible()
   await page.getByRole("button", { name: "Start check and fill gaps" }).click()
 
@@ -745,35 +765,107 @@ test("repairs missing account keys and deletes invalid group keys", async ({
       ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
     )
 
-  expect(completedProgress?.summary).toMatchObject({
-    created: 1,
-    availableGroups: 3,
-    coveredGroups: 3,
-    createdKeys: 2,
-    invalidKeys: 1,
+  expect(completedProgress?.schemaVersion).toBe(
+    ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
+  )
+  expect(completedProgress?.summary).toEqual({
+    complete: 1,
+    partial: 0,
+    blocked: 0,
+    skipped: 0,
+    failed: 0,
+    requirements: 3,
+    coveredRequirements: 1,
+    createdRequirements: 2,
+    blockedRequirements: 0,
+    rejectedRequirements: 0,
+    uncertainRequirements: 0,
+    invalidResources: 1,
+    renameApplied: 0,
+    renameRejected: 0,
+    renameUncertain: 0,
+    deleteApplied: 0,
+    deleteRejected: 0,
+    deleteUncertain: 0,
   })
+  const completionMessage = page.getByText(
+    "Check complete, but some results need attention. See the details below.",
+    { exact: true },
+  )
+  await expect(completionMessage).toBeVisible()
+  await expect(page.getByRole("progressbar", { name: "Progress" })).toHaveCount(
+    0,
+  )
+  await expect(page.getByText("Result summary", { exact: true })).toHaveCount(0)
+
   expect(completedProgress?.results[0]).toMatchObject({
     accountId,
     accountName: "Key Repair Source",
-    availableGroups: ["default", "vip", "alpha"],
-    coveredGroups: ["default", "vip", "alpha"],
-    createdGroups: ["vip", "alpha"],
-    createdTokens: [
-      { tokenId: 3, group: "vip" },
-      { tokenId: 4, group: "alpha" },
+    siteType: SITE_TYPES.NEW_API,
+    siteUrlOrigin: baseUrl,
+    outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Repaired,
+    inventoryStatus: "complete",
+    requirementResults: [
+      {
+        requirement: {
+          requirementKey: "new-api-family:group:alpha",
+          displayName: "alpha",
+          provisioning: {
+            kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
+          },
+        },
+        outcome: ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created,
+        created: { ref: alphaResourceRef },
+      },
+      {
+        requirement: {
+          requirementKey: "new-api-family:group:default",
+          displayName: "default",
+          provisioning: {
+            kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
+          },
+        },
+        outcome: ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Covered,
+      },
+      {
+        requirement: {
+          requirementKey: "new-api-family:group:vip",
+          displayName: "vip",
+          provisioning: {
+            kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
+          },
+        },
+        outcome: ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created,
+        created: { ref: vipResourceRef },
+      },
     ],
-    invalidTokens: [
-      expect.objectContaining({
-        tokenId: 2,
-        tokenName: "Legacy Group Key",
-        group: "legacy",
-      }),
+    createdRefs: [alphaResourceRef, vipResourceRef],
+    invalidResources: [
+      {
+        accountId,
+        accountName: "Key Repair Source",
+        siteType: SITE_TYPES.NEW_API,
+        siteUrlOrigin: baseUrl,
+        displayLabel: "legacy",
+        reason: "orphaned-placement",
+        ref: invalidResourceRef,
+      },
     ],
+    renameResults: [],
   })
 
-  await expect(page.getByText("Covered 3/3 groups")).toBeVisible()
-  await expect(page.getByText("Created: vip")).toBeVisible()
-  await expect(page.getByText("Created: alpha")).toBeVisible()
+  const repairAccountResult = page.getByTestId(
+    getRepairAccountResultTestId(accountId),
+  )
+  await expect(
+    repairAccountResult.getByText("alpha", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    repairAccountResult.getByText("default", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    repairAccountResult.getByText("vip", { exact: true }),
+  ).toBeVisible()
   await expect(page.getByTestId("repair-missing-keys-result-count")).toHaveText(
     "1/1",
   )
@@ -783,27 +875,21 @@ test("repairs missing account keys and deletes invalid group keys", async ({
     "1/1",
   )
   await expect(
-    page.getByRole("checkbox", { name: "Legacy Group Key", exact: true }),
-  ).toBeVisible()
-  await expect(
-    page.getByText("Group legacy is currently unavailable"),
+    page.getByRole("checkbox", { name: "legacy", exact: true }),
   ).toBeVisible()
 
-  await page
-    .getByRole("checkbox", { name: "Legacy Group Key", exact: true })
-    .click()
+  await page.getByRole("checkbox", { name: "legacy", exact: true }).click()
   await page.getByRole("button", { name: "Delete selected" }).click()
-  await expect(
-    page.getByText(
-      "These keys will also be deleted from the corresponding sites and cannot be restored through the extension.",
-    ),
-  ).toBeVisible()
-  await page.getByTestId("repair-invalid-keys-confirm-delete").click()
+  const confirmDeleteButton = page.getByTestId(
+    "repair-invalid-keys-confirm-delete",
+  )
+  await expect(confirmDeleteButton).toBeEnabled()
+  await confirmDeleteButton.click()
 
   await expect(page.getByText("Deleted 1 invalid key")).toBeVisible()
   await expect(page.getByText("No invalid keys")).toBeVisible()
   await expect(
-    page.getByRole("checkbox", { name: "Legacy Group Key", exact: true }),
+    page.getByRole("checkbox", { name: "legacy", exact: true }),
   ).toHaveCount(0)
   await expect(page.getByTestId("repair-missing-keys-result-count")).toHaveText(
     "0/0",
@@ -814,10 +900,22 @@ test("repairs missing account keys and deletes invalid group keys", async ({
   >(
     serviceWorker,
     ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
-    (progress) => progress?.summary.invalidKeys,
+    (progress) => progress?.summary.invalidResources,
     0,
     10_000,
   )
+  const progressAfterDelete =
+    await getPlasmoStorageJsonValue<AccountKeyRepairProgress>(
+      serviceWorker,
+      ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+    )
+  expect(progressAfterDelete?.summary).toMatchObject({
+    invalidResources: 0,
+    deleteApplied: 1,
+    deleteRejected: 0,
+    deleteUncertain: 0,
+  })
+  expect(progressAfterDelete?.results[0].invalidResources).toEqual([])
 
   await page
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportButton)
@@ -828,8 +926,6 @@ test("repairs missing account keys and deletes invalid group keys", async ({
       exact: true,
     }),
   })
-  const vipRowLabel = "Key Repair Source / vip group (auto)"
-  const alphaRowLabel = "Key Repair Source / alpha group (auto)"
 
   await expect(batchImportDialog).toBeVisible()
   await expect(
@@ -840,27 +936,21 @@ test("repairs missing account keys and deletes invalid group keys", async ({
   await expect(
     batchImportDialog.getByTestId(
       getManagedSiteBatchExportRowSelectTestId(
-        buildAccountTokenRuntimeKeyId(accountId, 3),
+        buildAccountKeyResourceRuntimeKeyId(alphaResourceRef),
       ),
     ),
   ).toBeVisible()
   await expect(
     batchImportDialog.getByTestId(
       getManagedSiteBatchExportRowSelectTestId(
-        buildAccountTokenRuntimeKeyId(accountId, 4),
+        buildAccountKeyResourceRuntimeKeyId(vipResourceRef),
       ),
     ),
-  ).toBeVisible()
-  await expect(
-    batchImportDialog.getByText(vipRowLabel, { exact: true }),
-  ).toBeVisible()
-  await expect(
-    batchImportDialog.getByText(alphaRowLabel, { exact: true }),
   ).toBeVisible()
 
   const alphaRowCheckbox = batchImportDialog.getByTestId(
     getManagedSiteBatchExportRowSelectTestId(
-      buildAccountTokenRuntimeKeyId(accountId, 4),
+      buildAccountKeyResourceRuntimeKeyId(alphaResourceRef),
     ),
   )
   await expect(alphaRowCheckbox).toBeChecked()
@@ -883,20 +973,35 @@ test("repairs missing account keys and deletes invalid group keys", async ({
   await expect(
     batchImportDialog.getByText("Not selected", { exact: true }),
   ).toBeVisible()
-  await expect(
-    batchImportDialog.getByText(vipRowLabel, { exact: true }),
-  ).toBeVisible()
-  await expect(
-    batchImportDialog.getByText(alphaRowLabel, { exact: true }),
-  ).toBeVisible()
   expect(createPayloads[0]).toMatchObject({
     mode: "single",
     channel: {
-      name: "Key Repair Source | vip group (auto)",
+      name: "Key Repair Source | vip (auto)",
       base_url: baseUrl,
-      key: "sk-created-3",
+      key: "sk-created-4",
     },
   })
+
+  await expectPlasmoStorageJsonValueToBecome<AccountKeyRepairProgress, number>(
+    serviceWorker,
+    ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+    (progress) => progress?.managedSiteImportReceipts?.length ?? 0,
+    1,
+    10_000,
+  )
+  const progressAfterManagedImport =
+    await getPlasmoStorageJsonValue<AccountKeyRepairProgress>(
+      serviceWorker,
+      ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS.REPAIR_PROGRESS,
+    )
+  expect(progressAfterManagedImport?.managedSiteImportReceipts).toEqual([
+    {
+      targetFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+      resourceRef: vipResourceRef,
+      status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
+      updatedAt: expect.any(Number),
+    },
+  ])
 })
 
 test("saves a key to API credential profiles and opens the profiles page", async ({

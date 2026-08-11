@@ -142,3 +142,18 @@ export function normalizeApiTokenKey(token: ApiToken): ApiToken {
   if (normalizedKey === token.key) return token
   return { ...token, key: normalizedKey }
 }
+
+/** Validates stable positive identities across a complete token inventory. */
+export function validateApiTokenInventory(tokens: ApiToken[]): ApiToken[] {
+  const tokenIds = new Set<number>()
+
+  for (const token of tokens) {
+    if (!Number.isSafeInteger(token.id) || token.id <= 0) {
+      throw new Error("invalid_token_id")
+    }
+    if (tokenIds.has(token.id)) throw new Error("duplicate_token_id")
+    tokenIds.add(token.id)
+  }
+
+  return tokens
+}

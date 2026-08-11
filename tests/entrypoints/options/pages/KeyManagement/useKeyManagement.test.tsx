@@ -5395,7 +5395,7 @@ describe("useKeyManagement enabled account filtering", () => {
     } as any)
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.OPENROUTER,
-      account: { keyResources: { open: openResources } },
+      account: { keyResourceManagement: { open: openResources } },
     } as any)
 
     const { result } = renderHook(() => useKeyManagement(), {
@@ -5456,7 +5456,7 @@ describe("useKeyManagement enabled account filtering", () => {
         if (siteType === SITE_TYPES.OPENROUTER) {
           return {
             siteType: SITE_TYPES.OPENROUTER,
-            account: { keyResources: { open: openResources } },
+            account: { keyResourceManagement: { open: openResources } },
           } as any
         }
         if (siteType === SITE_TYPES.SHAREDCHAT) {
@@ -5523,7 +5523,7 @@ describe("useKeyManagement enabled account filtering", () => {
       siteType === SITE_TYPES.OPENROUTER
         ? ({
             siteType: SITE_TYPES.OPENROUTER,
-            account: { keyResources: { open: vi.fn() } },
+            account: { keyResourceManagement: { open: vi.fn() } },
           } as any)
         : (createAdapterWithKeyManagement({
             fetchTokens: vi.fn(() => legacyLoad),

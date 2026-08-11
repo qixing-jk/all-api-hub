@@ -46,6 +46,9 @@ export type SiteTypeCapabilities = {
     completion?: AccountCompletionCapability
     inviteLink?: InviteLinkCapability
     keyManagement?: KeyManagementCapability
+    /** Native resource surface wired into the ordinary Key Management UI. */
+    keyResourceManagement?: AccountKeyResourceCapability
+    /** Provider resource capability used by orchestration and native workflows. */
     keyResources?: AccountKeyResourceCapability
     serviceCredential?: ServiceCredentialCapability
     tokenProvisioning?: TokenProvisioningCapability

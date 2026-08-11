@@ -68,6 +68,7 @@ export {
 export { Textarea, textareaVariants } from "./Textarea"
 export { IconButton, iconButtonVariants } from "./IconButton"
 export { Spinner, spinnerVariants } from "./spinner"
+export { Progress, type ProgressProps } from "./progress"
 export { FormField } from "./FormField"
 export { ToggleButton, toggleButtonVariants } from "./ToggleButton"
 export {

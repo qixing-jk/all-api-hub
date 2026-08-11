@@ -170,17 +170,25 @@ describe("native resource factory primitives", () => {
       certainty: "not-applied",
       failure: "denied",
     })
-    const possiblyApplied = resolveNativeResourceMutation<string, "denied">({
+    const possiblyApplied = resolveNativeResourceMutation<string, string>({
       certainty: "possibly-applied",
+      failure: "request timed out",
     })
-    const partiallyApplied = resolveNativeResourceMutation<string, "denied">({
+    const partiallyApplied = resolveNativeResourceMutation<string, string>({
       certainty: "partially-applied",
+      failure: "status update failed",
     })
 
     expect(applied).toEqual({ status: "applied", value: "saved" })
     expect(rejected).toEqual({ status: "not-applied", failure: "denied" })
-    expect(possiblyApplied).toEqual({ status: "uncertain" })
-    expect(partiallyApplied).toEqual({ status: "uncertain" })
+    expect(possiblyApplied).toEqual({
+      status: "uncertain",
+      failure: "request timed out",
+    })
+    expect(partiallyApplied).toEqual({
+      status: "uncertain",
+      failure: "status update failed",
+    })
   })
 
   it("rejects an invalid runtime mutation certainty discriminator", () => {
@@ -221,7 +229,7 @@ describe("native resource factory primitives", () => {
   it("permanently closes an editor after applied or uncertain mutations", async () => {
     for (const result of [
       { certainty: "applied", value: "saved" } as const,
-      { certainty: "possibly-applied" } as const,
+      { certainty: "possibly-applied", failure: "request timed out" } as const,
     ]) {
       const gate = createNativeEditorSubmitGate({
         validate: () => undefined,

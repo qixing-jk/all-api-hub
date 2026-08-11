@@ -6,13 +6,16 @@ import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvision
 import {
   createVoApiV2Token,
   deleteVoApiV2Token,
+  fetchAllVoApiV2RawKeys,
   fetchInviteLink,
   fetchSupportCheckIn,
   fetchVoApiV2AccountData,
   fetchVoApiV2AvailableModels,
+  fetchVoApiV2KeyGroupDescriptors,
   fetchVoApiV2Tokens,
   fetchVoApiV2UserGroups,
   refreshAccountData,
+  renameVoApiV2Key,
   resolveVoApiV2TokenKey,
   setVoApiV2TokenEnabled,
   submitVoApiV2CheckIn,
@@ -725,7 +728,7 @@ describe("apiService VoAPI v2", () => {
           code: 0,
           data: {
             page: 1,
-            size: 10,
+            size: 100,
             total: 2,
             pages: 1,
             records: [
@@ -791,6 +794,154 @@ describe("apiService VoAPI v2", () => {
         expired_time: 4102329600,
       }),
     ])
+  })
+
+  it("fetches every page of the native VoAPI v2 key inventory", async () => {
+    const requestedPages: number[] = []
+    server.use(
+      http.get("https://example.invalid/api/keys", ({ request }) => {
+        const url = new URL(request.url)
+        const page = Number(url.searchParams.get("page"))
+        requestedPages.push(page)
+
+        return HttpResponse.json({
+          code: 0,
+          data: {
+            page,
+            size: 1,
+            total: 2,
+            pages: 2,
+            records: [
+              {
+                id: page === 1 ? 11 : 12,
+                name: `page-${page}`,
+                groups: [2],
+                enable: true,
+              },
+            ],
+          },
+        })
+      }),
+    )
+
+    await expect(
+      fetchAllVoApiV2RawKeys(createVoApiV2Request(), 1),
+    ).resolves.toEqual([
+      expect.objectContaining({ id: 11, name: "page-1" }),
+      expect.objectContaining({ id: 12, name: "page-2" }),
+    ])
+    expect(requestedPages).toEqual([1, 2])
+  })
+
+  it("rejects duplicate native key ids across inventory pages", async () => {
+    server.use(
+      http.get("https://example.invalid/api/keys", ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get("page"))
+        return HttpResponse.json({
+          code: 0,
+          data: {
+            page,
+            size: 1,
+            total: 2,
+            pages: 2,
+            records: [{ id: 11, name: `page-${page}`, groups: [2] }],
+          },
+        })
+      }),
+    )
+
+    await expect(
+      fetchAllVoApiV2RawKeys(createVoApiV2Request(), 1),
+    ).rejects.toThrow("VoAPI v2 key inventory contains duplicate key id")
+  })
+
+  it("rejects malformed native key ids", async () => {
+    server.use(
+      http.get("https://example.invalid/api/keys", () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            page: 1,
+            size: 100,
+            total: 1,
+            pages: 1,
+            records: [{ id: "01", name: "malformed", groups: [2] }],
+          },
+        }),
+      ),
+    )
+
+    await expect(
+      fetchAllVoApiV2RawKeys(createVoApiV2Request()),
+    ).rejects.toThrow("VoAPI v2 key inventory contains invalid key id")
+  })
+
+  it("rejects repeated pagination metadata", async () => {
+    server.use(
+      http.get("https://example.invalid/api/keys", ({ request }) => {
+        const requestedPage = Number(
+          new URL(request.url).searchParams.get("page"),
+        )
+        return HttpResponse.json({
+          code: 0,
+          data: {
+            page: 1,
+            size: 1,
+            total: 2,
+            pages: 2,
+            records: [{ id: requestedPage === 1 ? 11 : 12, groups: [2] }],
+          },
+        })
+      }),
+    )
+
+    await expect(
+      fetchAllVoApiV2RawKeys(createVoApiV2Request(), 1),
+    ).rejects.toThrow("VoAPI v2 key inventory has invalid pagination")
+  })
+
+  it("keeps duplicate group names distinct by canonical native id", async () => {
+    server.use(
+      http.get("https://example.invalid/api/keys/template", () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            groups: [
+              { id: 9, name: "Shared" },
+              { id: "10", name: "Shared" },
+            ],
+          },
+        }),
+      ),
+    )
+
+    await expect(
+      fetchVoApiV2KeyGroupDescriptors(createVoApiV2Request()),
+    ).resolves.toEqual([
+      { id: 9, requirementKey: "9", displayName: "Shared" },
+      { id: 10, requirementKey: "10", displayName: "Shared" },
+    ])
+  })
+
+  it.each([
+    ["malformed", [{ id: "09", name: "Malformed" }]],
+    [
+      "duplicate",
+      [
+        { id: 9, name: "First" },
+        { id: "9", name: "Second" },
+      ],
+    ],
+  ])("rejects %s native group identities", async (_case, groups) => {
+    server.use(
+      http.get("https://example.invalid/api/keys/template", () =>
+        HttpResponse.json({ code: 0, data: { groups } }),
+      ),
+    )
+
+    await expect(
+      fetchVoApiV2KeyGroupDescriptors(createVoApiV2Request()),
+    ).rejects.toThrow("VoAPI v2 key template contains invalid group identity")
   })
 
   it("creates keys with VoAPI v2 amount and group payloads", async () => {
@@ -933,6 +1084,9 @@ describe("apiService VoAPI v2", () => {
     await expect(
       setVoApiV2TokenEnabled(createVoApiV2Request(), 11, false),
     ).resolves.toBe(true)
+    await expect(
+      renameVoApiV2Key(createVoApiV2Request(), 11, "Renamed"),
+    ).resolves.toBe(true)
 
     expect(payloads[0]).toEqual({
       id: 11,
@@ -950,6 +1104,17 @@ describe("apiService VoAPI v2", () => {
       name: "previous",
       groups: [3],
       enable: false,
+      expireTime: -1,
+      boundlessAmount: true,
+      amount: "2",
+      used: "0.25",
+      note: "keep me",
+    })
+    expect(payloads[2]).toEqual({
+      id: 11,
+      name: "Renamed",
+      groups: [3],
+      enable: true,
       expireTime: -1,
       boundlessAmount: true,
       amount: "2",

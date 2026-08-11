@@ -40,6 +40,11 @@ vi.mock(
 
     return {
       ...actual,
+      createApiToken: (...args: any[]) => createApiTokenMock(...args),
+      fetchAccountAvailableModels: (...args: any[]) =>
+        fetchAccountAvailableModelsMock(...args),
+      fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
+      fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
       defaultKeyManagementImplementation: {
         fetchAccountTokens: (...args: any[]) => fetchAccountTokensMock(...args),
         createApiToken: (...args: any[]) => createApiTokenMock(...args),

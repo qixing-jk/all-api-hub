@@ -85,6 +85,12 @@ export type VoApiV2KeyTemplate = {
   ssb?: boolean
 }
 
+export type VoApiV2KeyGroupDescriptor = {
+  id: number
+  requirementKey: string
+  displayName: string
+}
+
 export type VoApiV2CheckInStats = {
   todaySigned?: boolean
   nextAmount?: string | number

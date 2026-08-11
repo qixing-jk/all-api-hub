@@ -21,7 +21,6 @@ import {
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -35,7 +34,6 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
-import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 import {
   act,
   render,
@@ -181,10 +179,6 @@ const createSub2ApiTokenProvisioningMock = () => ({
           reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
         },
   ),
-  getRepairPolicy: vi.fn(() => ({
-    kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-    skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
-  })),
 })
 
 vi.mock("react-hot-toast", () => ({
@@ -197,11 +191,13 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: (siteType: string) => {
     if (siteType === SITE_TYPES.OPENROUTER) {
+      const keyResources = {
+        open: (...args: any[]) => openAccountKeyResourcesMock(...args),
+      }
       return {
         account: {
-          keyResources: {
-            open: (...args: any[]) => openAccountKeyResourcesMock(...args),
-          },
+          keyResourceManagement: keyResources,
+          keyResources,
         },
       }
     }

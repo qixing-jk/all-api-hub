@@ -6,11 +6,6 @@ import type {
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
 
-export type FetchAccountTokensOptions = {
-  page?: number
-  size?: number
-}
-
 export type ResolveTokenSecretRequest<
   TToken extends Pick<ApiToken, "id" | "key"> = Pick<ApiToken, "id" | "key">,
 > = {
@@ -83,11 +78,7 @@ export type InventorySecretAvailability =
   (typeof INVENTORY_SECRET_AVAILABILITIES)[keyof typeof INVENTORY_SECRET_AVAILABILITIES]
 
 export type KeyManagementCapability = {
-  fetchTokens(
-    request: ApiServiceRequest,
-    options?: FetchAccountTokensOptions,
-  ): Promise<ApiToken[]>
-  fetchAllTokens?(request: ApiServiceRequest): Promise<ApiToken[]>
+  fetchTokens(request: ApiServiceRequest): Promise<ApiToken[]>
   createToken(
     request: ApiServiceRequest,
     tokenData: CreateTokenRequest,

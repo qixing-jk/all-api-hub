@@ -5,15 +5,18 @@ import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { AccountKeyRepairMessageTypes } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
+import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
+import { ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_STATUS_KINDS,
 } from "~/services/productAnalytics/contracts"
 import {
-  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
   ACCOUNT_KEY_REPAIR_JOB_STATES,
+  ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES,
   ACCOUNT_KEY_REPAIR_OUTCOMES,
+  ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
   type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
@@ -168,131 +171,161 @@ vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   default: () => null,
 }))
 
+const emptySummary = (): AccountKeyRepairProgress["summary"] => ({
+  complete: 0,
+  partial: 0,
+  blocked: 0,
+  skipped: 0,
+  failed: 0,
+  requirements: 0,
+  coveredRequirements: 0,
+  createdRequirements: 0,
+  blockedRequirements: 0,
+  rejectedRequirements: 0,
+  uncertainRequirements: 0,
+  invalidResources: 0,
+  renameApplied: 0,
+  renameRejected: 0,
+  renameUncertain: 0,
+  deleteApplied: 0,
+  deleteRejected: 0,
+  deleteUncertain: 0,
+})
+
+const buildAccountResult = (
+  overrides: Partial<AccountKeyRepairProgress["results"][number]> = {},
+): AccountKeyRepairProgress["results"][number] => ({
+  accountId: "account-enabled",
+  accountName: "Enabled Site",
+  siteType: "unknown",
+  siteUrlOrigin: "https://enabled.example.com",
+  outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
+  requirementResults: [],
+  createdRefs: [],
+  invalidResources: [],
+  renameResults: [],
+  finishedAt: 1,
+  ...overrides,
+})
+
+const buildRequirement = (
+  requirementKey: string,
+  displayName: string,
+  outcome: (typeof ACCOUNT_KEY_RECONCILIATION_OUTCOMES)[keyof typeof ACCOUNT_KEY_RECONCILIATION_OUTCOMES],
+  resourceId?: string,
+): AccountKeyRepairProgress["results"][number]["requirementResults"][number] => {
+  const base = {
+    requirement: {
+      requirementKey,
+      displayName,
+      provisioning: {
+        kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
+      },
+    },
+    outcome,
+  }
+  return outcome === ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created
+    ? {
+        ...base,
+        outcome,
+        created: {
+          ref: {
+            accountId: "account-enabled",
+            siteType: "unknown",
+            scopeKey: "account",
+            resourceId: resourceId ?? requirementKey,
+          },
+        },
+      }
+    : (base as AccountKeyRepairProgress["results"][number]["requirementResults"][number])
+}
+
 const idleProgress: AccountKeyRepairProgress = {
+  schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   jobId: "idle",
   state: ACCOUNT_KEY_REPAIR_JOB_STATES.Idle,
-  totals: {
-    enabledAccounts: 2,
-    eligibleAccounts: 2,
-    processedAccounts: 0,
-  },
-  summary: {
-    created: 0,
-    alreadyHad: 0,
-    skipped: 0,
-    failed: 0,
-  },
+  totals: { enabledAccounts: 2, eligibleAccounts: 2, processedAccounts: 0 },
+  summary: emptySummary(),
   results: [],
 }
 
 const startProgress: AccountKeyRepairProgress = {
+  schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   jobId: "job-1",
   state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
   startedAt: 1,
   updatedAt: 1,
-  totals: {
-    enabledAccounts: 2,
-    eligibleAccounts: 2,
-    processedAccounts: 2,
-  },
+  totals: { enabledAccounts: 2, eligibleAccounts: 2, processedAccounts: 2 },
   summary: {
-    created: 1,
-    alreadyHad: 0,
+    ...emptySummary(),
+    complete: 1,
     skipped: 1,
-    failed: 0,
+    requirements: 1,
+    createdRequirements: 1,
   },
   results: [
-    {
+    buildAccountResult({
       accountId: "account-disabled",
       accountName: "Disabled Site",
-      siteType: "unknown",
       siteUrlOrigin: "https://disabled.example.com",
       outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
       skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth,
-      finishedAt: 1,
-    },
-    {
-      accountId: "account-enabled",
-      accountName: "Enabled Site",
-      siteType: "unknown",
-      siteUrlOrigin: "https://enabled.example.com",
-      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
-      finishedAt: 1,
-    },
+    }),
+    buildAccountResult({
+      requirementResults: [
+        buildRequirement(
+          "default",
+          "Default",
+          ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created,
+          "101",
+        ),
+      ],
+      createdRefs: [
+        {
+          accountId: "account-enabled",
+          siteType: "unknown",
+          scopeKey: "account",
+          resourceId: "101",
+        },
+      ],
+    }),
   ],
 }
 
 const completedProgress: AccountKeyRepairProgress = {
   ...startProgress,
-  jobId: "job-1",
   state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
   finishedAt: 2,
-  totals: {
-    enabledAccounts: 2,
-    eligibleAccounts: 2,
-    processedAccounts: 2,
-    processedEligibleAccounts: 2,
-  },
-  summary: {
-    created: 2,
-    alreadyHad: 0,
-    skipped: 0,
-    failed: 0,
-  },
+  summary: { ...emptySummary(), complete: 2 },
   results: [
-    {
-      accountId: "account-enabled",
-      accountName: "Enabled Site",
-      siteType: "unknown",
-      siteUrlOrigin: "https://enabled.example.com",
-      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
-      finishedAt: 1,
-    },
-    {
+    buildAccountResult(),
+    buildAccountResult({
       accountId: "account-enabled-2",
       accountName: "Another Site",
-      siteType: "unknown",
       siteUrlOrigin: "https://another.example.com",
-      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
       finishedAt: 2,
-    },
+    }),
   ],
 }
 
 const multiOutcomeProgress: AccountKeyRepairProgress = {
+  schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   jobId: "job-2",
   state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
   startedAt: 1,
   updatedAt: 1,
-  totals: {
-    enabledAccounts: 2,
-    eligibleAccounts: 2,
-    processedAccounts: 2,
-  },
-  summary: {
-    created: 1,
-    alreadyHad: 0,
-    skipped: 0,
-    failed: 1,
-  },
+  totals: { enabledAccounts: 2, eligibleAccounts: 2, processedAccounts: 2 },
+  summary: { ...emptySummary(), complete: 1, failed: 1 },
   results: [
-    {
-      accountId: "account-enabled",
-      accountName: "Enabled Site",
-      siteType: "unknown",
-      siteUrlOrigin: "https://enabled.example.com",
-      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
-      finishedAt: 1,
-    },
-    {
+    buildAccountResult(),
+    buildAccountResult({
       accountId: "account-enabled-2",
       accountName: "Another Site",
-      siteType: "unknown",
       siteUrlOrigin: "https://another.example.com",
       outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Failed,
       errorMessage: "boom",
       finishedAt: 2,
-    },
+    }),
   ],
 }
 
@@ -305,6 +338,7 @@ const failedProgress: AccountKeyRepairProgress = {
 }
 
 const inflatedProgress: AccountKeyRepairProgress = {
+  schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   jobId: "job-3",
   state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
   startedAt: 1,
@@ -312,62 +346,47 @@ const inflatedProgress: AccountKeyRepairProgress = {
   totals: {
     enabledAccounts: 5,
     eligibleAccounts: 3,
-    processedAccounts: 5,
-    processedEligibleAccounts: 3,
+    processedAccounts: 3,
   },
   summary: {
-    created: 2,
-    alreadyHad: 1,
+    ...emptySummary(),
+    complete: 2,
     skipped: 2,
-    failed: 0,
   },
   results: [
-    {
+    buildAccountResult({
       accountId: "account-disabled",
       accountName: "Disabled Site",
-      siteType: "unknown",
       siteUrlOrigin: "https://disabled.example.com",
       outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
       skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.NoneAuth,
-      finishedAt: 1,
-    },
-    {
-      accountId: "account-enabled",
-      accountName: "Enabled Site",
-      siteType: "unknown",
-      siteUrlOrigin: "https://enabled.example.com",
-      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
-      finishedAt: 1,
-    },
-    {
+    }),
+    buildAccountResult(),
+    buildAccountResult({
       accountId: "account-enabled-2",
       accountName: "Another Site",
-      siteType: "unknown",
       siteUrlOrigin: "https://another.example.com",
-      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad,
       finishedAt: 2,
-    },
-    {
+    }),
+    buildAccountResult({
       accountId: "account-disabled-2",
       accountName: "Another Disabled Site",
-      siteType: "unknown",
       siteUrlOrigin: "https://disabled-2.example.com",
       outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
-      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
+      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.ProvisioningUnavailable,
       finishedAt: 2,
-    },
-    {
+    }),
+    buildAccountResult({
       accountId: "account-enabled-3",
       accountName: "Third Site",
-      siteType: "unknown",
       siteUrlOrigin: "https://third.example.com",
-      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
       finishedAt: 3,
-    },
+    }),
   ],
 }
 
-const sub2apiSkippedProgress: AccountKeyRepairProgress = {
+const provisioningUnavailableProgress: AccountKeyRepairProgress = {
+  schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   jobId: "job-4",
   state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
   startedAt: 1,
@@ -376,29 +395,23 @@ const sub2apiSkippedProgress: AccountKeyRepairProgress = {
   totals: {
     enabledAccounts: 2,
     eligibleAccounts: 1,
-    processedAccounts: 2,
-    processedEligibleAccounts: 1,
+    processedAccounts: 1,
   },
-  summary: {
-    created: 0,
-    alreadyHad: 0,
-    skipped: 1,
-    failed: 0,
-  },
+  summary: { ...emptySummary(), skipped: 1 },
   results: [
-    {
+    buildAccountResult({
       accountId: "account-enabled-2",
       accountName: "Another Site",
       siteType: "sub2api",
       siteUrlOrigin: "https://another.example.com",
       outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
-      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
-      finishedAt: 1,
-    },
+      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.ProvisioningUnavailable,
+    }),
   ],
 }
 
 const aihubmixSkippedProgress: AccountKeyRepairProgress = {
+  schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   jobId: "job-5",
   state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
   startedAt: 1,
@@ -408,28 +421,22 @@ const aihubmixSkippedProgress: AccountKeyRepairProgress = {
     enabledAccounts: 2,
     eligibleAccounts: 1,
     processedAccounts: 1,
-    processedEligibleAccounts: 1,
   },
-  summary: {
-    created: 0,
-    alreadyHad: 0,
-    skipped: 1,
-    failed: 0,
-  },
+  summary: { ...emptySummary(), skipped: 1 },
   results: [
-    {
+    buildAccountResult({
       accountId: "account-aihubmix",
       accountName: "AIHubMix",
       siteType: "AIHubMix",
       siteUrlOrigin: "https://aihubmix.com",
       outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
       skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
-      finishedAt: 1,
-    },
+    }),
   ],
 }
 
 const coverageProgress: AccountKeyRepairProgress = {
+  schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   jobId: "job-coverage",
   state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
   startedAt: 1,
@@ -439,43 +446,57 @@ const coverageProgress: AccountKeyRepairProgress = {
     enabledAccounts: 1,
     eligibleAccounts: 1,
     processedAccounts: 1,
-    processedEligibleAccounts: 1,
   },
   summary: {
-    created: 1,
-    alreadyHad: 0,
-    skipped: 0,
-    failed: 0,
-    availableGroups: 2,
-    coveredGroups: 2,
-    createdKeys: 1,
-    invalidKeys: 1,
+    ...emptySummary(),
+    complete: 1,
+    requirements: 2,
+    coveredRequirements: 1,
+    createdRequirements: 1,
+    invalidResources: 1,
   },
   results: [
-    {
-      accountId: "account-enabled",
-      accountName: "Enabled Site",
+    buildAccountResult({
       siteType: "new-api",
-      siteUrlOrigin: "https://enabled.example.com",
-      outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
-      availableGroups: ["default", "vip"],
-      coveredGroups: ["default", "vip"],
-      createdGroups: ["vip"],
-      missingGroups: [],
-      invalidTokens: [
+      requirementResults: [
+        buildRequirement(
+          "group:default",
+          "default",
+          ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Covered,
+        ),
+        buildRequirement(
+          "group:vip",
+          "vip",
+          ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created,
+          "10",
+        ),
+      ],
+      createdRefs: [
+        {
+          accountId: "account-enabled",
+          siteType: "new-api",
+          scopeKey: "account",
+          resourceId: "10",
+        },
+      ],
+      invalidResources: [
         {
           accountId: "account-enabled",
           accountName: "Enabled Site",
           siteType: "new-api",
           siteUrlOrigin: "https://enabled.example.com",
-          tokenId: 9,
-          tokenName: "old group key",
-          group: "old",
-          reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+          ref: {
+            accountId: "account-enabled",
+            siteType: "new-api",
+            scopeKey: "account",
+            resourceId: "9",
+          },
+          displayLabel: "old group key",
+          reason: "orphaned-placement",
         },
       ],
       finishedAt: 2,
-    },
+    }),
   ],
 }
 
@@ -484,22 +505,33 @@ const multiInvalidKeysProgress: AccountKeyRepairProgress = {
   jobId: "job-many-invalid",
   summary: {
     ...coverageProgress.summary,
-    invalidKeys: 6,
+    invalidResources: 6,
   },
   results: [
     {
       ...coverageProgress.results[0],
-      invalidTokens: Array.from({ length: 6 }, (_, index) => ({
+      invalidResources: Array.from({ length: 6 }, (_, index) => ({
         accountId: "account-enabled",
         accountName: "Enabled Site",
         siteType: "new-api",
         siteUrlOrigin: "https://enabled.example.com",
-        tokenId: index + 1,
-        tokenName: `old group key ${index + 1}`,
-        group: `old-${index + 1}`,
-        reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+        ref: {
+          accountId: "account-enabled",
+          siteType: "new-api" as const,
+          scopeKey: "account",
+          resourceId: String(index + 1),
+        },
+        displayLabel: `old group key ${index + 1}`,
+        reason: "orphaned-placement",
       })),
-      missingGroups: ["legacy"],
+      requirementResults: [
+        ...coverageProgress.results[0].requirementResults,
+        buildRequirement(
+          "group:legacy",
+          "legacy",
+          ACCOUNT_KEY_RECONCILIATION_OUTCOMES.BlockedIncompleteInventory,
+        ),
+      ],
     },
   ],
 }
@@ -698,37 +730,6 @@ describe("KeyManagement repair missing keys entry point", () => {
         name: "keyManagement:repairMissingKeys.actions.rerun",
       }),
     ).not.toBeInTheDocument()
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "keyManagement:repairMissingKeys.previousResult.view",
-      }),
-    )
-
-    const progressHeader = screen.getByTestId(
-      "repair-missing-keys-progress-header",
-    )
-    const progressActions = screen.getByTestId(
-      "repair-missing-keys-progress-actions",
-    )
-    expect(progressHeader).toHaveClass(
-      "flex",
-      "flex-wrap",
-      "items-center",
-      "justify-between",
-    )
-    expect(progressHeader).not.toHaveClass("flex-col", "sm:flex-row")
-    expect(progressActions).toHaveClass(
-      "flex-wrap",
-      "items-center",
-      "justify-end",
-    )
-    expect(progressActions).toHaveTextContent("2/2 (100%)")
-    expect(
-      screen.queryByRole("button", {
-        name: "keyManagement:repairMissingKeys.actions.rerun",
-      }),
-    ).not.toBeInTheDocument()
   })
 
   it("opens dialog, subscribes to progress, and hides disabled accounts", async () => {
@@ -776,17 +777,15 @@ describe("KeyManagement repair missing keys entry point", () => {
     const updated: AccountKeyRepairProgress = {
       ...startProgress,
       totals: { ...startProgress.totals, processedAccounts: 3 },
-      summary: { ...startProgress.summary, alreadyHad: 1 },
+      summary: { ...startProgress.summary, complete: 2 },
       results: [
         ...startProgress.results,
-        {
+        buildAccountResult({
           accountId: "account-enabled-2",
           accountName: "Another Site",
-          siteType: "unknown",
           siteUrlOrigin: "https://another.example.com",
-          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad,
           finishedAt: 2,
-        },
+        }),
       ],
     }
 
@@ -840,15 +839,18 @@ describe("KeyManagement repair missing keys entry point", () => {
       ...startProgress,
       state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
       finishedAt: 2,
-      totals: {
-        ...startProgress.totals,
-        processedEligibleAccounts: 2,
-      },
       results: startProgress.results.map((result) =>
         result.accountId === "account-enabled"
           ? {
               ...result,
-              createdTokens: [{ tokenId: 101, group: "default" }],
+              createdRefs: [
+                {
+                  accountId: result.accountId,
+                  siteType: result.siteType,
+                  scopeKey: "account",
+                  resourceId: "101",
+                },
+              ],
             }
           : result,
       ),
@@ -949,7 +951,7 @@ describe("KeyManagement repair missing keys entry point", () => {
       )
     })
 
-    expect(screen.getByText("3/3 (100%)")).toBeInTheDocument()
+    expect(screen.getByText("3 / 3")).toBeInTheDocument()
     expect(screen.queryByText(/5\/3/)).not.toBeInTheDocument()
 
     const progressBar = screen.getByRole("progressbar", {
@@ -1064,13 +1066,13 @@ describe("KeyManagement repair missing keys entry point", () => {
     })
   })
 
-  it("offers a create-key action for skipped Sub2API accounts", async () => {
+  it("shows provisioning-unavailable guidance without a provider-specific action", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
       }
       if (message === AccountKeyRepairMessageTypes.Start) {
-        return { success: true, data: sub2apiSkippedProgress }
+        return { success: true, data: provisioningUnavailableProgress }
       }
       return { success: false }
     })
@@ -1093,23 +1095,19 @@ describe("KeyManagement repair missing keys entry point", () => {
       expect(screen.getByText("Another Site")).toBeInTheDocument()
     })
 
-    fireEvent.click(
-      screen.getByRole("button", {
+    expect(
+      screen.getByText(
+        "keyManagement:repairMissingKeys.skipReasons.provisioningUnavailable",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
         name: "keyManagement:dialog.createToken",
       }),
-    )
-
-    await waitFor(() => {
-      expect(
-        mockOpenDefaultTokenQuickCreateDialogForAccount,
-      ).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: "account-enabled-2",
-          siteType: "sub2api",
-          baseUrl: "https://another.example.com",
-        }),
-      )
-    })
+    ).not.toBeInTheDocument()
+    expect(
+      mockOpenDefaultTokenQuickCreateDialogForAccount,
+    ).not.toHaveBeenCalled()
   })
 
   it("shows the AIHubMix one-time-key skip reason without a direct create action", async () => {
@@ -1195,14 +1193,18 @@ describe("KeyManagement repair missing keys entry point", () => {
     const accountCoverageButton = screen.getByRole("button", {
       name: "keyManagement:repairMissingKeys.views.accountCoverage",
     })
-    expect(accountCoverageButton).toHaveClass("scale-100")
-    expect(accountCoverageButton).not.toHaveClass("scale-105")
     expect(accountCoverageButton).toHaveAttribute("aria-pressed", "true")
     expect(
       screen.getByRole("button", {
         name: "keyManagement:repairMissingKeys.views.invalidKeys",
       }),
     ).toHaveAttribute("aria-pressed", "false")
+    expect(screen.queryByText("vip")).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
     expect(screen.getByText("vip")).toBeInTheDocument()
     expect(screen.queryByText("old group key")).not.toBeInTheDocument()
 
@@ -1213,7 +1215,11 @@ describe("KeyManagement repair missing keys entry point", () => {
     )
 
     expect(screen.getByText("old group key")).toBeInTheDocument()
-    expect(screen.getByText("old")).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:repairMissingKeys.invalidKeys.reasons.orphanedPlacement",
+      ),
+    ).toBeInTheDocument()
   })
 
   it("shows missing groups and bulk-selects invalid keys", async () => {
@@ -1233,6 +1239,12 @@ describe("KeyManagement repair missing keys entry point", () => {
     )
 
     expect(await screen.findByText("Enabled Site")).toBeInTheDocument()
+    expect(screen.queryByText("legacy")).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
     expect(screen.getByText("legacy")).toBeInTheDocument()
 
     fireEvent.click(
@@ -1303,12 +1315,17 @@ describe("KeyManagement repair missing keys entry point", () => {
         if (message === AccountKeyRepairMessageTypes.GetProgress) {
           return { success: true, data: runningCoverageProgress }
         }
-        if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
+        if (message === AccountKeyRepairMessageTypes.DeleteInvalidResources) {
           return {
             success: true,
             data: {
-              deleted: [{ ...data.tokens[0], deletedAt: 123 }],
-              failed: [],
+              results: [
+                {
+                  resource: data.resources[0],
+                  outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied,
+                  finishedAt: 123,
+                },
+              ],
             },
           }
         }
@@ -1350,12 +1367,12 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
-        AccountKeyRepairMessageTypes.DeleteInvalidTokens,
+        AccountKeyRepairMessageTypes.DeleteInvalidResources,
         {
-          tokens: [
+          resources: [
             expect.objectContaining({
-              tokenId: 9,
-              tokenName: "old group key",
+              displayLabel: "old group key",
+              ref: expect.objectContaining({ resourceId: "9" }),
             }),
           ],
         },
@@ -1410,20 +1427,26 @@ describe("KeyManagement repair missing keys entry point", () => {
         if (message === AccountKeyRepairMessageTypes.GetProgress) {
           return { success: true, data: runningCoverageProgress }
         }
-        if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
+        if (message === AccountKeyRepairMessageTypes.DeleteInvalidResources) {
           return {
             success: true,
             data: {
-              deleted: [
-                { ...data.tokens[0], deletedAt: 123 },
+              results: [
                 {
-                  ...data.tokens[0],
-                  tokenId: 99,
-                  tokenName: "already removed",
-                  deletedAt: 124,
+                  resource: data.resources[0],
+                  outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied,
+                  finishedAt: 123,
+                },
+                {
+                  resource: {
+                    ...data.resources[0],
+                    ref: { ...data.resources[0].ref, resourceId: "99" },
+                    displayLabel: "already removed",
+                  },
+                  outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied,
+                  finishedAt: 124,
                 },
               ],
-              failed: [],
             },
           }
         }
@@ -1471,7 +1494,7 @@ describe("KeyManagement repair missing keys entry point", () => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: runningCoverageProgress }
       }
-      if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
+      if (message === AccountKeyRepairMessageTypes.DeleteInvalidResources) {
         return { success: false }
       }
       return { success: false }
@@ -1522,7 +1545,7 @@ describe("KeyManagement repair missing keys entry point", () => {
       if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: runningCoverageProgress }
       }
-      if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
+      if (message === AccountKeyRepairMessageTypes.DeleteInvalidResources) {
         throw new Error("delete request failed")
       }
       return { success: false }
@@ -1619,11 +1642,11 @@ describe("KeyManagement repair missing keys entry point", () => {
           ...runningCoverageProgress,
           summary: {
             ...runningCoverageProgress.summary,
-            invalidKeys: 0,
+            invalidResources: 0,
           },
           results: runningCoverageProgress.results.map((result) => ({
             ...result,
-            invalidTokens: [],
+            invalidResources: [],
           })),
         },
       })
@@ -1644,12 +1667,18 @@ describe("KeyManagement repair missing keys entry point", () => {
         if (message === AccountKeyRepairMessageTypes.GetProgress) {
           return { success: true, data: runningCoverageProgress }
         }
-        if (message === AccountKeyRepairMessageTypes.DeleteInvalidTokens) {
+        if (message === AccountKeyRepairMessageTypes.DeleteInvalidResources) {
           return {
             success: true,
             data: {
-              deleted: [],
-              failed: [{ ...data.tokens[0], errorMessage: "delete failed" }],
+              results: [
+                {
+                  resource: data.resources[0],
+                  outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Rejected,
+                  failure: { code: "unexpected", message: "delete failed" },
+                  finishedAt: 123,
+                },
+              ],
             },
           }
         }
@@ -1684,7 +1713,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     expect(
       await screen.findByText(
-        "keyManagement:repairMissingKeys.invalidKeys.deletePartial",
+        "keyManagement:repairMissingKeys.invalidKeys.deleteNeedsAttention",
       ),
     ).toBeInTheDocument()
 
@@ -1697,7 +1726,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     expect(
       screen.getByText(
-        "keyManagement:repairMissingKeys.invalidKeys.deletePartial",
+        "keyManagement:repairMissingKeys.invalidKeys.deleteNeedsAttention",
       ),
     ).toBeInTheDocument()
   })

@@ -2156,22 +2156,6 @@ describe("apiService sub2api exported operations", () => {
     })
   })
 
-  it("normalizes invalid token pagination arguments back to defaults", async () => {
-    vi.mocked(fetchApi).mockResolvedValueOnce({
-      code: 0,
-      message: "ok",
-      data: [],
-    } as any)
-
-    await expect(
-      fetchAccountTokens(baseRequest as any, -5, Number.NaN),
-    ).resolves.toEqual([])
-
-    expect((vi.mocked(fetchApi).mock.calls[0]?.[1] as any)?.endpoint).toBe(
-      "/api/v1/keys?page=1&page_size=100",
-    )
-  })
-
   it("updates limited tokens by carrying forward already-used quota", async () => {
     vi.mocked(fetchApi)
       .mockResolvedValueOnce({

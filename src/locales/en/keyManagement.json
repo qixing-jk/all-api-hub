@@ -555,39 +555,66 @@
       "rerun": "Check again",
       "start": "Start check and fill gaps"
     },
-    "coverage": {
-      "createdGroup": "Created: {{group}}",
-      "groupsCovered": "Covered {{covered}}/{{total}} groups",
-      "missingGroup": "Missing: {{group}}"
-    },
     "deleteConfirm": {
       "confirm": "Delete selected keys",
-      "description": "These keys will also be deleted from the corresponding sites and cannot be restored through the extension. Confirm their groups are no longer used.",
+      "description": "These keys will also be deleted from their sites and cannot be restored through the extension. Confirm they are no longer needed.",
       "more_one": "And {{count}} more",
       "more_other": "And {{count}} more",
       "title_one": "Delete {{count}} invalid key?",
       "title_other": "Delete {{count}} invalid keys?"
     },
-    "description": "Check each account's available groups, create default keys for groups without keys, and list unusual keys whose groups are unavailable.",
+    "description": "Check whether saved accounts have usable keys. Missing keys are created automatically when possible; other issues appear below.",
+    "failureGuidance": {
+      "aborted": "The operation was cancelled before it completed. Run the check again when ready.",
+      "authenticationFailed": "Sign in again or update this account's credentials, then retry.",
+      "configurationRequired": "Finish the setup required by this site, then run the key check again.",
+      "invalidConfiguration": "Check this account's saved site settings, then run the key check again.",
+      "mutationStateUncertain": "The site may have applied the change. Refresh the key list before retrying.",
+      "notFound": "The key no longer exists. Refresh the account, then run the check again.",
+      "permissionDenied": "Use credentials that can view and manage keys, then retry.",
+      "unavailable": "The site could not be reached or returned an unusable response. Try again later.",
+      "unexpected": "Run the key check again. If it still fails, use the site response to diagnose the problem.",
+      "upstreamRejected": "The site rejected the request. Correct the issue described in its response, then retry.",
+      "validationFailed": "Review the required key settings, correct them, and retry."
+    },
     "historyNote": "This shows the previous check result. No job is currently running, and you can rerun the check.",
-    "initialNotice": "After starting, saved accounts will be checked for available groups, and default keys will be created for groups without keys.",
+    "initialNotice": "Saved accounts will be checked for usable keys. When a supported account is missing one, the extension may create a new key.",
     "invalidKeys": {
       "badge": "Invalid",
       "deleteFailed": "Failed to delete invalid keys",
-      "deletePartial": "Deleted {{deleted}}, {{failed}} failed",
+      "deleteNeedsAttention": "Deleted {{applied}}; {{rejected}} rejected and {{uncertain}} need verification",
       "deleteSelected": "Delete selected",
       "deleteSuccess_one": "Deleted {{count}} invalid key",
       "deleteSuccess_other": "Deleted {{count}} invalid keys",
-      "emptyDescription": "This check did not find any keys whose groups are unavailable.",
+      "emptyDescription": "This check did not find any invalid keys.",
       "emptyTitle": "No invalid keys",
-      "groupUnavailable": "Group {{group}} is currently unavailable",
+      "group": "Previous group: {{name}}",
+      "reason": "Reason: {{reason}}",
+      "reasons": {
+        "orphanedPlacement": "Reason: This key belongs to a group that is no longer available. Delete it if you no longer need it."
+      },
       "selectAll": "Select all current results",
       "selectedCount_one": "{{count}} invalid key selected",
-      "selectedCount_other": "{{count}} invalid keys selected"
+      "selectedCount_other": "{{count}} invalid keys selected",
+      "unnamed": "Unnamed key"
+    },
+    "inventoryIssues": {
+      "duplicateResourceRefs_one": "{{count}} duplicate key record was found, so the matching key cannot be confirmed safely.",
+      "duplicateResourceRefs_other": "{{count}} duplicate key records were found, so the matching keys cannot be confirmed safely.",
+      "inheritedAccountGroupUnavailable_one": "{{count}} key follows the account group, but the account's current group could not be confirmed.",
+      "inheritedAccountGroupUnavailable_other": "{{count}} keys follow the account group, but the account's current group could not be confirmed.",
+      "invalidRequirementPlacement_one": "{{count}} key has group data that does not match the currently available groups.",
+      "invalidRequirementPlacement_other": "{{count}} keys have group data that does not match the currently available groups.",
+      "partialFailure": "Not all keys could be loaded, so automatic processing stopped. Review the site response beside the account, then retry.",
+      "refreshFailed": "The latest result could not be confirmed after a key changed. Refresh the key list, then retry.",
+      "unknownCoverage_one": "{{count}} key has an unrecognized status or expiration value.",
+      "unknownCoverage_other": "{{count}} keys have an unrecognized status or expiration value.",
+      "unknownPlacement_one": "The group for {{count}} key could not be identified.",
+      "unknownPlacement_other": "The groups for {{count}} keys could not be identified."
     },
     "managedSiteImport": {
-      "action_one": "Import {{count}} repaired key",
-      "action_other": "Import {{count}} repaired keys",
+      "action_one": "Review {{count}} repaired key",
+      "action_other": "Review {{count}} repaired keys",
       "changeTarget": "Change target",
       "configMissing": "The current managed site is not configured. Open its settings, then return here and import again.",
       "configurationOpenFailed": "Could not open managed site settings. Open Settings > Managed Site to configure it manually.",
@@ -595,8 +622,8 @@
       "nothingPending": "These keys have already been handled for this target: their channels were created or found as exact matches. To check them again, use regular import with full verification.",
       "openConfiguration": "Open managed site settings",
       "receiptFailed": "Import finished, but the repair results could not be updated. Refresh the results to confirm the current state.",
-      "target_one": "{{count}} repaired key ready for {{site}}",
-      "target_other": "{{count}} repaired keys ready for {{site}}",
+      "target_one": "{{count}} repaired key found for {{site}}; availability and previous imports are checked before review.",
+      "target_other": "{{count}} repaired keys found for {{site}}; availability and previous imports are checked before review.",
       "title": "Import repaired keys",
       "unavailable": "The repaired keys are no longer available for import. Refresh the repair results and try again.",
       "useRegularImport": "Use regular import"
@@ -608,9 +635,11 @@
     },
     "noMatchingResults": "No matching results",
     "outcomes": {
-      "alreadyHad": "Already had keys",
-      "created": "Created",
+      "blocked": "Blocked",
+      "covered": "No missing keys",
       "failed": "Failed",
+      "partial": "Partial",
+      "repaired": "Missing keys added",
       "skipped": "Skipped"
     },
     "previousResult": {
@@ -619,6 +648,7 @@
       "title": "Previous check result available",
       "view": "View previous result"
     },
+    "progressChecked": "Checked",
     "progressLabel": "Progress",
     "remoteWriteNotice": "This action may create new keys on the corresponding sites. It will not automatically delete any keys.",
     "renameOption": {
@@ -628,32 +658,43 @@
       "tooltip": "Only keys with an auto-created naming style are handled, such as “user group (auto)” or “vip group (auto)”. After repair, the name follows the key’s current group. Other names are not changed."
     },
     "renameSummary": {
-      "accountFailed_one": "{{count}} name not synced",
-      "accountFailed_other": "{{count}} names not synced",
-      "accountRenamed_one": "{{count}} name synced",
-      "accountRenamed_other": "{{count}} names synced",
-      "failed": "Names not synced",
-      "renamed": "Names synced",
-      "summarySeparator": ", "
+      "accountApplied_one": "{{count}} name synced",
+      "accountApplied_other": "{{count}} names synced",
+      "accountRejected_one": "{{count}} rename rejected",
+      "accountRejected_other": "{{count}} renames rejected",
+      "accountUncertain_one": "{{count}} rename needs verification",
+      "accountUncertain_other": "{{count}} renames need verification"
+    },
+    "requirements": {
+      "blockedIncompleteInventory": "Keys not fully loaded",
+      "blockedInputRequired": "Manual setup needed",
+      "covered": "Usable key found",
+      "coveredAfterUncertain": "Available after refresh",
+      "created": "New key created",
+      "rejected": "Site made no change",
+      "uncertain": "Check result before retrying"
     },
     "resultsTitle": "Results",
     "runningNote": "This job runs in the background. You can close this dialog and check later, or cancel it from the progress card.",
     "searchLabel": "Search",
-    "searchPlaceholder": "Search account, origin, or site type...",
+    "searchPlaceholder": "Search account, key name, group, domain, or site type...",
     "skipReasons": {
       "aihubmixOneTimeKey": "AIHubMix keys can only be viewed once. Create the key manually and save the full key immediately.",
       "noneAuth": "No credentials (auth type: none)",
-      "sub2api": "Requires selecting a Sub2API group; create the key manually",
-      "tokenAutomationUnsupported": "This site exposes a service credential instead of API-token management; automatic key repair is skipped."
+      "provisioningUnavailable": "This account does not support automatic key creation. Create a key on the site if needed."
     },
-    "title": "Key coverage check",
-    "totalsLabels": {
-      "eligibleAccounts": "Eligible accounts",
-      "enabledAccounts": "Enabled accounts",
-      "processedAccounts": "Processed"
+    "status": {
+      "completed": "Completed",
+      "needsAttention": "Action needed"
     },
+    "summary": {
+      "completedNeedsAttention": "Check complete, but some results need attention. See the details below.",
+      "completedWithSkipped": "Check complete. Some accounts could not be handled automatically; see the reasons below.",
+      "healthy": "Check complete. No issues need attention."
+    },
+    "title": "Check account keys",
     "views": {
-      "accountCoverage": "Account coverage",
+      "accountCoverage": "Account results",
       "invalidKeys": "Invalid keys",
       "label": "Result view"
     }

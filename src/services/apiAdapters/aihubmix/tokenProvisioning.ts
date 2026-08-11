@@ -8,12 +8,10 @@ import {
   isCreatedApiToken,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
   type TokenProvisioningCapability,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import type { ApiToken } from "~/types"
-import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 
 const hasUsableFullTokenSecret = (token: ApiToken): boolean =>
   hasUsableApiTokenKey(token.key) && !isMaskedApiTokenKey(token.key)
@@ -57,8 +55,4 @@ export const aihubmixTokenProvisioning: TokenProvisioningCapability = {
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreatedTokenSecretUnavailable,
     }
   },
-  getRepairPolicy: () => ({
-    kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-    skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
-  }),
 }

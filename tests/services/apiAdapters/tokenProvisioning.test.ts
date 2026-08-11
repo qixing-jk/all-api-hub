@@ -7,7 +7,6 @@ import {
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { createNewApiTokenProvisioning } from "~/services/apiAdapters/newApi/tokenProvisioning"
@@ -17,14 +16,12 @@ import {
 } from "~/services/apiAdapters/sub2api/tokenProvisioning"
 import { voApiV2TokenProvisioning } from "~/services/apiAdapters/voapiV2/tokenProvisioning"
 import type { ApiToken } from "~/types"
-import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 
 const { tokenProvisioningMock } = vi.hoisted(() => ({
   tokenProvisioningMock: {
     isInventoryTokenUsable: vi.fn(),
     resolveDefaultTokenCreation: vi.fn(),
     classifyCreatedToken: vi.fn(),
-    getRepairPolicy: vi.fn(),
   },
 }))
 
@@ -93,10 +90,6 @@ describe("apiAdapter tokenProvisioning", () => {
         oneTimeSecret: false,
       })
     tokenProvisioningMock.isInventoryTokenUsable.mockReturnValueOnce(true)
-    tokenProvisioningMock.getRepairPolicy.mockReturnValueOnce({
-      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-    })
-
     expect(
       provisioning.resolveDefaultTokenCreation({
         workflow: TOKEN_PROVISIONING_WORKFLOWS.BackgroundAutoProvision,
@@ -145,16 +138,12 @@ describe("apiAdapter tokenProvisioning", () => {
         token: maskedToken,
       }),
     ).toBe(true)
-    expect(provisioning.getRepairPolicy()).toEqual({
-      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-    })
     expect(tokenProvisioningMock.resolveDefaultTokenCreation).toHaveBeenCalled()
     expect(tokenProvisioningMock.classifyCreatedToken).toHaveBeenCalled()
     expect(tokenProvisioningMock.isInventoryTokenUsable).toHaveBeenCalledWith({
       workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
       token: maskedToken,
     })
-    expect(tokenProvisioningMock.getRepairPolicy).toHaveBeenCalled()
   })
 
   it("normalizes token provisioning group names", () => {
@@ -169,7 +158,7 @@ describe("apiAdapter tokenProvisioning", () => {
     ).toEqual(["default", "vip"])
   })
 
-  it("keeps implicit Sub2API creation blocked while allowing repair coverage", () => {
+  it("keeps implicit Sub2API creation blocked for shared ensure", () => {
     expect(
       sub2ApiTokenProvisioning.resolveDefaultTokenCreation({
         workflow: TOKEN_PROVISIONING_WORKFLOWS.SharedEnsure,
@@ -231,10 +220,6 @@ describe("apiAdapter tokenProvisioning", () => {
     ).toEqual({
       kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.Blocked,
       reason: TOKEN_PROVISIONING_BLOCK_REASONS.AvailableGroupRequired,
-    })
-
-    expect(sub2ApiTokenProvisioning.getRepairPolicy()).toEqual({
-      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
     })
   })
 
@@ -376,9 +361,6 @@ describe("apiAdapter tokenProvisioning", () => {
     ).toEqual({
       kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
     })
-    expect(voApiV2TokenProvisioning.getRepairPolicy()).toEqual({
-      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-    })
   })
 
   it("requires AIHubMix one-time created secrets", () => {
@@ -444,10 +426,5 @@ describe("apiAdapter tokenProvisioning", () => {
         token: maskedToken,
       }),
     ).toBe(false)
-
-    expect(aihubmixTokenProvisioning.getRepairPolicy()).toEqual({
-      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-      skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
-    })
   })
 })

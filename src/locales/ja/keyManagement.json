@@ -546,34 +546,56 @@
       "rerun": "再チェック",
       "start": "チェックして不足分を補完"
     },
-    "coverage": {
-      "createdGroup": "作成済み：{{group}}",
-      "groupsCovered": "{{covered}}/{{total}} グループをカバー済み",
-      "missingGroup": "未補完：{{group}}"
-    },
     "deleteConfirm": {
       "confirm": "選択したキーを削除",
-      "description": "これらのキーは対応するサイトからも削除され、拡張機能からは復元できません。対象グループがもう使われていないことを確認してください。",
+      "description": "これらのキーは対応するサイトからも削除され、拡張機能からは復元できません。不要であることを確認してください。",
       "more_other": "ほか {{count}} 件",
       "title_other": "{{count}} 件の例外キーを削除しますか？"
     },
-    "description": "各アカウントの利用可能なグループを確認し、キーがないグループには既定キーを作成し、グループを利用できない例外キーを一覧表示します。",
+    "description": "保存済みアカウントに使用可能なキーがあるか確認します。不足している場合は可能な範囲で自動作成し、その他の問題は下に表示します。",
+    "failureGuidance": {
+      "aborted": "完了前に操作がキャンセルされました。準備ができたら、もう一度チェックしてください。",
+      "authenticationFailed": "再度ログインするか、このアカウントの認証情報を更新してから再試行してください。",
+      "configurationRequired": "このサイトに必要な設定を完了してから、キーのチェックをもう一度実行してください。",
+      "invalidConfiguration": "このアカウントに保存されたサイト設定を確認してから、キーのチェックをもう一度実行してください。",
+      "mutationStateUncertain": "サイト側で変更が反映されている可能性があります。再試行する前にキー一覧を更新してください。",
+      "notFound": "キーは存在しなくなっています。アカウントを更新してから、もう一度チェックしてください。",
+      "permissionDenied": "キーを表示・管理できる権限を持つ認証情報を使用して、再試行してください。",
+      "unavailable": "サイトに接続できないか、利用可能な応答が返されませんでした。しばらくしてから再試行してください。",
+      "unexpected": "キーのチェックをもう一度実行してください。再度失敗する場合は、サイトからの応答を確認して原因を調べてください。",
+      "upstreamRejected": "サイトがリクエストを拒否しました。応答に示された問題を修正してから再試行してください。",
+      "validationFailed": "必要なキー設定を確認して修正し、再試行してください。"
+    },
     "historyNote": "前回のチェック結果を表示しています。現在実行中のタスクはありません。再チェックできます。",
-    "initialNotice": "開始すると、保存済みアカウントの利用可能なグループを確認し、キーがないグループには既定キーを作成します。",
+    "initialNotice": "保存済みアカウントに利用可能なキーがあるか確認します。対応しているアカウントでキーが不足している場合、拡張機能が新しいキーを作成することがあります。",
     "invalidKeys": {
       "badge": "例外",
       "deleteFailed": "例外キーの削除に失敗しました",
-      "deletePartial": "{{deleted}} 件を削除、{{failed}} 件は削除失敗",
+      "deleteNeedsAttention": "{{applied}} 件を削除しました。{{rejected}} 件は拒否され、{{uncertain}} 件は確認が必要です",
       "deleteSelected": "選択項目を削除",
       "deleteSuccess_other": "{{count}} 件の例外キーを削除しました",
-      "emptyDescription": "今回のチェックでは、グループを利用できないキーは見つかりませんでした。",
+      "emptyDescription": "今回のチェックでは、無効なキーは見つかりませんでした。",
       "emptyTitle": "例外キーはありません",
-      "groupUnavailable": "グループ {{group}} は現在利用できません",
+      "group": "以前のグループ：{{name}}",
+      "reason": "理由: {{reason}}",
+      "reasons": {
+        "orphanedPlacement": "理由：このキーが属していたグループは現在利用できません。不要であれば削除してください。"
+      },
       "selectAll": "現在の結果をすべて選択",
-      "selectedCount_other": "{{count}} 件の例外キーを選択中"
+      "selectedCount_other": "{{count}} 件の例外キーを選択中",
+      "unnamed": "名前のないキー"
+    },
+    "inventoryIssues": {
+      "duplicateResourceRefs_other": "重複するキー記録が {{count}} 件見つかったため、対応するキーを安全に特定できません。",
+      "inheritedAccountGroupUnavailable_other": "{{count}} 件のキーはアカウントグループを継承していますが、現在のグループを確認できませんでした。",
+      "invalidRequirementPlacement_other": "{{count}} 件のキーのグループ情報が、現在利用可能なグループと一致しません。",
+      "partialFailure": "すべてのキーを読み込めなかったため、自動処理を停止しました。アカウント横のサイト応答を確認してから再試行してください。",
+      "refreshFailed": "キー変更後の最新結果を確認できませんでした。キー一覧を更新してから再試行してください。",
+      "unknownCoverage_other": "{{count}} 件のキーの状態または有効期限を認識できません。",
+      "unknownPlacement_other": "{{count}} 件のキーが属するグループを認識できません。"
     },
     "managedSiteImport": {
-      "action_other": "{{count}} 件の修復済みキーをインポート",
+      "action_other": "{{count}} 件の修復済みキーを確認",
       "changeTarget": "対象を変更",
       "configMissing": "現在の管理サイトが未設定です。設定ページを開き、設定後にここへ戻ってもう一度インポートしてください。",
       "configurationOpenFailed": "管理サイト設定を開けませんでした。「設定 > 管理サイト」から手動で設定してください。",
@@ -581,7 +603,7 @@
       "nothingPending": "これらのキーは現在の対象で処理済みです。対応するチャネルは作成済みか、完全一致で存在しています。再確認する場合は、通常インポートで完全検証してください。",
       "openConfiguration": "管理サイト設定を開く",
       "receiptFailed": "インポートは完了しましたが、修復結果を更新できませんでした。最新の状態を確認するには結果を更新してください。",
-      "target_other": "{{site}} にインポートできる修復済みキー：{{count}} 件",
+      "target_other": "{{site}} 用の修復済みキーが {{count}} 件見つかりました。確認前に現在の利用可否と過去のインポート結果を確認します。",
       "title": "修復済みキーをインポート",
       "unavailable": "修復済みキーをインポートできません。修復結果を更新して、もう一度お試しください。",
       "useRegularImport": "通常インポートを使用"
@@ -593,9 +615,11 @@
     },
     "noMatchingResults": "一致する結果がありません",
     "outcomes": {
-      "alreadyHad": "既にキーあり",
-      "created": "作成済み",
+      "blocked": "ブロック",
+      "covered": "不足キーなし",
       "failed": "失敗",
+      "partial": "一部完了",
+      "repaired": "不足キーを補完済み",
       "skipped": "スキップ"
     },
     "previousResult": {
@@ -604,6 +628,7 @@
       "title": "前回のチェック結果があります",
       "view": "前回の結果を表示"
     },
+    "progressChecked": "確認済み",
     "progressLabel": "進捗",
     "remoteWriteNotice": "この操作により、対応するサイトで新しいキーが作成される場合があります。キーが自動的に削除されることはありません。",
     "renameOption": {
@@ -613,30 +638,40 @@
       "tooltip": "「user group (auto)」や「vip group (auto)」のような自動作成風の名前だけを処理します。修復後、名前はキーの現在のグループに合わせられます。その他の名前は変更されません。"
     },
     "renameSummary": {
-      "accountFailed_other": "{{count}} 件の名前を同期できませんでした",
-      "accountRenamed_other": "{{count}} 件の名前を同期しました",
-      "failed": "名前未同期",
-      "renamed": "名前同期済み",
-      "summarySeparator": "、"
+      "accountApplied_other": "{{count}} 件の名前を同期しました",
+      "accountRejected_other": "{{count}} 件の名前変更が拒否されました",
+      "accountUncertain_other": "{{count}} 件の名前変更は確認が必要です"
+    },
+    "requirements": {
+      "blockedIncompleteInventory": "キーをすべて読み込めませんでした",
+      "blockedInputRequired": "手動設定が必要",
+      "covered": "利用可能なキーあり",
+      "coveredAfterUncertain": "更新後に利用可能と確認",
+      "created": "新しいキーを作成",
+      "rejected": "サイト側の変更なし",
+      "uncertain": "再試行前に結果を確認"
     },
     "resultsTitle": "結果",
     "runningNote": "このジョブはバックグラウンドで実行されます。このダイアログを閉じて後で確認するか、進捗カードからキャンセルできます。",
     "searchLabel": "検索",
-    "searchPlaceholder": "アカウント、origin、またはサイト種別で検索...",
+    "searchPlaceholder": "アカウント、キー名、グループ、ドメイン、サイト種別で検索...",
     "skipReasons": {
       "aihubmixOneTimeKey": "AIHubMix のキーは一度だけ表示できます。手動で作成し、完全なキーをすぐに保存してください。",
       "noneAuth": "認証情報なし（auth type: none）",
-      "sub2api": "Sub2API グループの選択が必要です。手動でキーを作成してください",
-      "tokenAutomationUnsupported": "このサイトは API トークン管理ではなくサービス認証情報を公開するため、自動修復をスキップしました。"
+      "provisioningUnavailable": "このアカウントではキーを自動作成できません。必要な場合はサイトで手動作成してください。"
     },
-    "title": "キー網羅性チェック",
-    "totalsLabels": {
-      "eligibleAccounts": "対象アカウント",
-      "enabledAccounts": "有効アカウント",
-      "processedAccounts": "処理済み"
+    "status": {
+      "completed": "完了",
+      "needsAttention": "対応が必要"
     },
+    "summary": {
+      "completedNeedsAttention": "確認が完了しましたが、対応が必要な結果があります。詳しい理由は下で確認してください。",
+      "completedWithSkipped": "確認が完了しました。一部のアカウントは自動処理されませんでした。理由は下で確認してください。",
+      "healthy": "確認が完了しました。対応が必要な問題は見つかりませんでした。"
+    },
+    "title": "アカウントのキーを確認",
     "views": {
-      "accountCoverage": "アカウント網羅",
+      "accountCoverage": "アカウント別の結果",
       "invalidKeys": "例外キー",
       "label": "結果ビュー"
     }

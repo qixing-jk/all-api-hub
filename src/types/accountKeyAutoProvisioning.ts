@@ -1,4 +1,11 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import type { AccountKeyInventoryReconciliationResult } from "~/services/accounts/accountKeyInventoryReconciliation"
+import type {
+  AccountKeyResourceRef,
+  ResourceFailure,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
+
+export const ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION = 2 as const
 
 export const ACCOUNT_KEY_REPAIR_JOB_STATES = {
   Idle: "idle",
@@ -12,8 +19,10 @@ export type AccountKeyRepairJobState =
   (typeof ACCOUNT_KEY_REPAIR_JOB_STATES)[keyof typeof ACCOUNT_KEY_REPAIR_JOB_STATES]
 
 export const ACCOUNT_KEY_REPAIR_OUTCOMES = {
-  Created: "created",
-  AlreadyHad: "alreadyHad",
+  Covered: "covered",
+  Repaired: "repaired",
+  Partial: "partial",
+  Blocked: "blocked",
   Skipped: "skipped",
   Failed: "failed",
 } as const
@@ -22,10 +31,9 @@ export type AccountKeyRepairOutcome =
   (typeof ACCOUNT_KEY_REPAIR_OUTCOMES)[keyof typeof ACCOUNT_KEY_REPAIR_OUTCOMES]
 
 export const ACCOUNT_KEY_REPAIR_SKIP_REASONS = {
-  Sub2Api: "sub2api",
   AihubmixOneTimeKey: "aihubmixOneTimeKey",
   NoneAuth: "noneAuth",
-  TokenAutomationUnsupported: "tokenAutomationUnsupported",
+  ProvisioningUnavailable: "provisioning-unavailable",
 } as const
 
 export type AccountKeyRepairSkipReason =
@@ -33,63 +41,88 @@ export type AccountKeyRepairSkipReason =
 
 export const ACCOUNT_KEY_REPAIR_ERRORS = {
   AccountNotFound: "account_not_found",
-  DeleteFailed: "delete_failed",
+  InvalidResourceDeleteRequest: "invalid_resource_delete_request",
   InvalidDisplaySiteData: "invalid_display_site_data",
 } as const
 
-export const ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS = {
-  GroupUnavailable: "groupUnavailable",
-} as const
+type ReconciliationRequirementResult =
+  AccountKeyInventoryReconciliationResult["requirementResults"][number]
 
-export type AccountKeyRepairInvalidTokenReason =
-  (typeof ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS)[keyof typeof ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS]
+type ReconciliationCreatedRequirementResult = Extract<
+  ReconciliationRequirementResult,
+  { created: unknown }
+>
 
-export interface AccountKeyRepairInvalidToken {
+/** Secret-free requirement result persisted by the repair runner. */
+export type AccountKeyRepairRequirementResult =
+  | Exclude<ReconciliationRequirementResult, { created: unknown }>
+  | (Omit<ReconciliationCreatedRequirementResult, "created"> & {
+      readonly created: { readonly ref: AccountKeyResourceRef }
+    })
+
+export interface AccountKeyRepairInvalidResource {
   accountId: string
   accountName: string
   siteType: AccountSiteType
   siteUrlOrigin: string
-  tokenId: number
-  tokenName: string
-  group: string
-  reason: AccountKeyRepairInvalidTokenReason
-  errorMessage?: string
+  ref: AccountKeyResourceRef
+  displayLabel?: string
+  groupLabel?: string
+  reason: string
 }
 
-export interface AccountKeyRepairDeletedInvalidToken
-  extends AccountKeyRepairInvalidToken {
-  deletedAt: number
+export const ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES = {
+  Applied: "applied",
+  Rejected: "rejected",
+  Uncertain: "uncertain",
+} as const
+
+export type AccountKeyRepairInvalidResourceMutationResult =
+  | {
+      resource: AccountKeyRepairInvalidResource
+      outcome: typeof ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied
+      finishedAt: number
+    }
+  | {
+      resource: AccountKeyRepairInvalidResource
+      outcome: typeof ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Rejected
+      failure: ResourceFailure
+      finishedAt: number
+    }
+  | {
+      resource: AccountKeyRepairInvalidResource
+      outcome: typeof ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain
+      failure: ResourceFailure
+      finishedAt: number
+    }
+
+export interface AccountKeyRepairDeleteInvalidResourcesRequest {
+  resources: AccountKeyRepairInvalidResource[]
 }
 
-export interface AccountKeyRepairFailedInvalidTokenDelete
-  extends AccountKeyRepairInvalidToken {
-  errorMessage: string
-}
-
-export interface AccountKeyRepairDeleteInvalidTokensRequest {
-  tokens: AccountKeyRepairInvalidToken[]
-}
-
-export interface AccountKeyRepairDeleteInvalidTokensResult {
-  deleted: AccountKeyRepairDeletedInvalidToken[]
-  failed: AccountKeyRepairFailedInvalidTokenDelete[]
+export interface AccountKeyRepairDeleteInvalidResourcesResult {
+  results: AccountKeyRepairInvalidResourceMutationResult[]
 }
 
 export interface AccountKeyRepairStartOptions {
   renameAutoTemplateTokens?: boolean
 }
 
-export interface AccountKeyRepairRenamedToken {
-  tokenId: number
-  group: string
-  previousName: string
-  nextName: string
-}
-
-export interface AccountKeyRepairCreatedTokenReference {
-  tokenId: number
-  group: string
-}
+export type AccountKeyRepairRenameResult =
+  | {
+      ref: AccountKeyResourceRef
+      outcome: typeof ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied
+    }
+  | {
+      ref: AccountKeyResourceRef
+      outcome: typeof ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Rejected
+      failure: ResourceFailure
+    }
+  | {
+      ref: AccountKeyResourceRef
+      outcome: typeof ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain
+      failure: ResourceFailure
+    }
 
 export const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES = {
   Created: "created",
@@ -102,8 +135,7 @@ export type AccountKeyRepairManagedSiteImportStatus =
   (typeof ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES)[keyof typeof ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES]
 
 export interface AccountKeyRepairManagedSiteImportResultItem {
-  accountId: string
-  tokenId: number
+  resourceRef: AccountKeyResourceRef
   status: AccountKeyRepairManagedSiteImportStatus
 }
 
@@ -126,19 +158,22 @@ export interface AccountKeyRepairAccountResult {
   siteUrlOrigin: string
   outcome: AccountKeyRepairOutcome
   skipReason?: AccountKeyRepairSkipReason
+  /** Controlled account-key resource failure retained for repair UI disclosure. */
+  failure?: ResourceFailure
+  /** Fallback for non-resource exceptions. */
   errorMessage?: string
-  availableGroups?: string[]
-  coveredGroups?: string[]
-  createdGroups?: string[]
-  createdTokens?: AccountKeyRepairCreatedTokenReference[]
-  missingGroups?: string[]
-  invalidTokens?: AccountKeyRepairInvalidToken[]
-  renamedTokens?: AccountKeyRepairRenamedToken[]
-  renameFailedTokens?: AccountKeyRepairRenamedToken[]
+  inventoryStatus?: AccountKeyInventoryReconciliationResult["inventoryStatus"]
+  inventoryIssues?: AccountKeyInventoryReconciliationResult["inventoryIssues"]
+  partialFailure?: ResourceFailure
+  requirementResults: AccountKeyRepairRequirementResult[]
+  createdRefs: AccountKeyResourceRef[]
+  invalidResources: AccountKeyRepairInvalidResource[]
+  renameResults: AccountKeyRepairRenameResult[]
   finishedAt: number
 }
 
 export interface AccountKeyRepairProgress {
+  schemaVersion: typeof ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION
   jobId: string
   state: AccountKeyRepairJobState
   startedAt?: number
@@ -148,33 +183,28 @@ export interface AccountKeyRepairProgress {
     enabledAccounts: number
     eligibleAccounts: number
     processedAccounts: number
-    /**
-     * Count of processed eligible accounts (excludes skipped outcomes).
-     *
-     * Optional for backwards-compatibility with older stored progress blobs.
-     */
-    processedEligibleAccounts?: number
   }
   summary: {
-    created: number
-    alreadyHad: number
+    complete: number
+    partial: number
+    blocked: number
     skipped: number
     failed: number
-    availableGroups?: number
-    coveredGroups?: number
-    createdKeys?: number
-    invalidKeys?: number
-    deletedKeys?: number
-    deleteFailed?: number
-    renamedKeys?: number
-    renameFailed?: number
+    requirements: number
+    coveredRequirements: number
+    createdRequirements: number
+    blockedRequirements: number
+    rejectedRequirements: number
+    uncertainRequirements: number
+    invalidResources: number
+    renameApplied: number
+    renameRejected: number
+    renameUncertain: number
+    deleteApplied: number
+    deleteRejected: number
+    deleteUncertain: number
   }
   results: AccountKeyRepairAccountResult[]
-  /**
-   * Bounded retry receipts for the latest job only.
-   *
-   * Optional for backwards-compatibility with older stored progress blobs.
-   */
   managedSiteImportReceipts?: AccountKeyRepairManagedSiteImportReceipt[]
   lastError?: string
 }

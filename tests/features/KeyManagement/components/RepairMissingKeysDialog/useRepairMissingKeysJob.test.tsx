@@ -18,7 +18,10 @@ import {
 import type { DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
-import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
+import {
+  ACCOUNT_KEY_REPAIR_JOB_STATES,
+  ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
+} from "~/types/accountKeyAutoProvisioning"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { renderHook } from "~~/tests/test-utils/render"
@@ -28,7 +31,7 @@ vi.mock("~/services/accounts/accountKeyAutoProvisioning/messaging", () => ({
     Start: "accountKeyRepair:start",
     Cancel: "accountKeyRepair:cancel",
     GetProgress: "accountKeyRepair:getProgress",
-    DeleteInvalidTokens: "accountKeyRepair:deleteInvalidTokens",
+    DeleteInvalidResources: "accountKeyRepair:deleteInvalidResources",
   },
   sendAccountKeyRepairMessage: vi.fn(),
 }))
@@ -79,19 +82,33 @@ function buildProgress(
   overrides: Partial<AccountKeyRepairProgress> = {},
 ): AccountKeyRepairProgress {
   return {
+    schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
     jobId: "job-1",
     state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
     totals: {
       enabledAccounts: 2,
       eligibleAccounts: 2,
       processedAccounts: 1,
-      processedEligibleAccounts: 1,
     },
     summary: {
-      created: 1,
-      alreadyHad: 0,
+      complete: 1,
+      partial: 0,
+      blocked: 0,
       skipped: 0,
       failed: 0,
+      requirements: 1,
+      coveredRequirements: 1,
+      createdRequirements: 0,
+      blockedRequirements: 0,
+      rejectedRequirements: 0,
+      uncertainRequirements: 0,
+      invalidResources: 0,
+      renameApplied: 0,
+      renameRejected: 0,
+      renameUncertain: 0,
+      deleteApplied: 0,
+      deleteRejected: 0,
+      deleteUncertain: 0,
     },
     results: [],
     ...overrides,
@@ -219,12 +236,10 @@ describe("useRepairMissingKeysJob", () => {
             enabledAccounts: 3,
             eligibleAccounts: 3,
             processedAccounts: 3,
-            processedEligibleAccounts: 3,
           },
           summary: {
-            created: 2,
-            alreadyHad: 0,
-            skipped: 0,
+            ...buildProgress().summary,
+            complete: 2,
             failed: 1,
           },
         }),

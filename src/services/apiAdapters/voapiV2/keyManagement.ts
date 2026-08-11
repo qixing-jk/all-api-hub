@@ -14,8 +14,7 @@ import {
 } from "~/services/apiService/voapiV2"
 
 export const voApiV2KeyManagement: KeyManagementCapability = {
-  fetchTokens: (request, options) =>
-    fetchVoApiV2Tokens(request, options?.page, options?.size),
+  fetchTokens: (request) => fetchVoApiV2Tokens(request),
   createToken: (request, tokenData) => createVoApiV2Token(request, tokenData),
   updateToken: ({ request, tokenId, tokenData }) =>
     updateVoApiV2Token(request, tokenId, tokenData),

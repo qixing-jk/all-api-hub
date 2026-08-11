@@ -546,34 +546,56 @@
       "rerun": "Kiểm tra lại",
       "start": "Bắt đầu kiểm tra và bổ sung"
     },
-    "coverage": {
-      "createdGroup": "Đã tạo: {{group}}",
-      "groupsCovered": "Đã phủ {{covered}}/{{total}} nhóm",
-      "missingGroup": "Chưa bổ sung: {{group}}"
-    },
     "deleteConfirm": {
       "confirm": "Xóa khóa đã chọn",
-      "description": "Các khóa này cũng sẽ bị xóa khỏi trang web tương ứng và không thể khôi phục bằng tiện ích. Hãy xác nhận rằng các nhóm của chúng không còn được sử dụng.",
+      "description": "Các khóa này cũng sẽ bị xóa khỏi trang web tương ứng và không thể khôi phục bằng tiện ích. Hãy xác nhận rằng chúng không còn cần thiết.",
       "more_other": "Và {{count}} mục khác",
       "title_other": "Xóa {{count}} khóa bất thường?"
     },
-    "description": "Kiểm tra các nhóm khả dụng của từng tài khoản, tạo khóa mặc định cho nhóm còn thiếu khóa và liệt kê các khóa bất thường có nhóm không khả dụng.",
+    "description": "Kiểm tra xem các tài khoản đã lưu có khóa dùng được hay không. Khóa còn thiếu sẽ được tự động tạo khi có thể; các vấn đề khác sẽ hiển thị bên dưới.",
+    "failureGuidance": {
+      "aborted": "Thao tác đã bị hủy trước khi hoàn tất. Hãy chạy lại kiểm tra khi bạn sẵn sàng.",
+      "authenticationFailed": "Đăng nhập lại hoặc cập nhật thông tin xác thực của tài khoản này, rồi thử lại.",
+      "configurationRequired": "Hoàn tất thiết lập mà trang web này yêu cầu, rồi chạy lại kiểm tra khóa.",
+      "invalidConfiguration": "Kiểm tra cấu hình trang web đã lưu cho tài khoản này, rồi chạy lại kiểm tra khóa.",
+      "mutationStateUncertain": "Trang web có thể đã áp dụng thay đổi. Hãy làm mới danh sách khóa trước khi thử lại.",
+      "notFound": "Khóa không còn tồn tại. Hãy làm mới tài khoản, rồi chạy lại kiểm tra.",
+      "permissionDenied": "Sử dụng thông tin xác thực có quyền xem và quản lý khóa, rồi thử lại.",
+      "unavailable": "Không thể truy cập trang web hoặc phản hồi trả về không sử dụng được. Hãy thử lại sau.",
+      "unexpected": "Chạy lại kiểm tra khóa. Nếu vẫn thất bại, hãy dùng phản hồi từ trang web để tìm nguyên nhân.",
+      "upstreamRejected": "Trang web đã từ chối yêu cầu. Hãy khắc phục vấn đề được nêu trong phản hồi rồi thử lại.",
+      "validationFailed": "Kiểm tra và sửa các thiết lập khóa bắt buộc, rồi thử lại."
+    },
     "historyNote": "Đây là kết quả kiểm tra trước đó. Hiện không có tác vụ nào đang chạy và bạn có thể kiểm tra lại.",
-    "initialNotice": "Sau khi bắt đầu, các nhóm khả dụng của tài khoản đã lưu sẽ được kiểm tra và khóa mặc định sẽ được tạo cho các nhóm còn thiếu khóa.",
+    "initialNotice": "Các tài khoản đã lưu sẽ được kiểm tra xem có khóa dùng được hay không. Nếu tài khoản được hỗ trợ thiếu khóa, tiện ích có thể tạo khóa mới.",
     "invalidKeys": {
       "badge": "Bất thường",
       "deleteFailed": "Xóa khóa bất thường thất bại",
-      "deletePartial": "Đã xóa {{deleted}}, {{failed}} mục xóa thất bại",
+      "deleteNeedsAttention": "Đã xóa {{applied}}; {{rejected}} bị từ chối và {{uncertain}} cần xác minh",
       "deleteSelected": "Xóa mục đã chọn",
       "deleteSuccess_other": "Đã xóa {{count}} khóa bất thường",
-      "emptyDescription": "Lần kiểm tra này không phát hiện khóa nào có nhóm không khả dụng.",
+      "emptyDescription": "Lần kiểm tra này không phát hiện khóa không hợp lệ.",
       "emptyTitle": "Không có khóa bất thường",
-      "groupUnavailable": "Nhóm {{group}} hiện không khả dụng",
+      "group": "Nhóm trước đây: {{name}}",
+      "reason": "Lý do: {{reason}}",
+      "reasons": {
+        "orphanedPlacement": "Lý do: Khóa này thuộc một nhóm không còn khả dụng. Hãy xóa khóa nếu bạn không còn cần đến."
+      },
       "selectAll": "Chọn tất cả kết quả hiện tại",
-      "selectedCount_other": "Đã chọn {{count}} khóa bất thường"
+      "selectedCount_other": "Đã chọn {{count}} khóa bất thường",
+      "unnamed": "Khóa chưa đặt tên"
+    },
+    "inventoryIssues": {
+      "duplicateResourceRefs_other": "Phát hiện {{count}} bản ghi khóa bị trùng nên không thể xác nhận an toàn khóa tương ứng.",
+      "inheritedAccountGroupUnavailable_other": "Có {{count}} khóa dùng nhóm của tài khoản nhưng không thể xác nhận nhóm hiện tại của tài khoản.",
+      "invalidRequirementPlacement_other": "Có {{count}} khóa có dữ liệu nhóm không khớp với các nhóm hiện đang khả dụng.",
+      "partialFailure": "Không thể tải tất cả khóa nên quá trình tự động đã dừng. Hãy xem phản hồi của trang web bên cạnh tài khoản rồi thử lại.",
+      "refreshFailed": "Không thể xác nhận kết quả mới nhất sau khi thay đổi khóa. Hãy làm mới danh sách rồi thử lại.",
+      "unknownCoverage_other": "Có {{count}} khóa có trạng thái hoặc thời hạn không nhận dạng được.",
+      "unknownPlacement_other": "Không thể xác định nhóm của {{count}} khóa."
     },
     "managedSiteImport": {
-      "action_other": "Nhập {{count}} khóa đã tạo khi sửa chữa",
+      "action_other": "Xem lại {{count}} khóa đã tạo khi sửa chữa",
       "changeTarget": "Đổi đích",
       "configMissing": "Trang được quản lý hiện tại chưa được cấu hình. Hãy mở trang cấu hình, sau đó quay lại đây và nhập lại.",
       "configurationOpenFailed": "Không thể mở cấu hình trang được quản lý. Hãy vào Cài đặt > Trang được quản lý để cấu hình thủ công.",
@@ -581,7 +603,7 @@
       "nothingPending": "Các khóa này đã được xử lý cho đích hiện tại: kênh tương ứng đã được tạo hoặc đã tồn tại khớp chính xác. Để kiểm tra lại, hãy dùng nhập thông thường với xác minh đầy đủ.",
       "openConfiguration": "Mở cấu hình trang được quản lý",
       "receiptFailed": "Đã nhập xong nhưng không thể cập nhật kết quả sửa chữa. Hãy làm mới kết quả để xác nhận trạng thái hiện tại.",
-      "target_other": "{{count}} khóa đã tạo khi sửa chữa sẵn sàng để nhập vào {{site}}",
+      "target_other": "Đã tìm thấy {{count}} khóa được tạo khi sửa chữa cho {{site}}; hệ thống sẽ kiểm tra khả dụng và các lần nhập trước trước khi xem lại.",
       "title": "Nhập các khóa đã tạo khi sửa chữa",
       "unavailable": "Các khóa đã tạo khi sửa chữa không còn sẵn sàng để nhập. Hãy làm mới kết quả sửa chữa rồi thử lại.",
       "useRegularImport": "Dùng nhập thông thường"
@@ -593,9 +615,11 @@
     },
     "noMatchingResults": "Không có kết quả khớp",
     "outcomes": {
-      "alreadyHad": "Đã tồn tại",
-      "created": "Đã tạo",
+      "blocked": "Bị chặn",
+      "covered": "Không thiếu khóa",
       "failed": "Thất bại",
+      "partial": "Một phần",
+      "repaired": "Đã bổ sung khóa còn thiếu",
       "skipped": "Đã bỏ qua"
     },
     "previousResult": {
@@ -604,6 +628,7 @@
       "title": "Có kết quả kiểm tra trước đó",
       "view": "Xem kết quả trước đó"
     },
+    "progressChecked": "Đã kiểm tra",
     "progressLabel": "Tiến trình",
     "remoteWriteNotice": "Thao tác này có thể tạo khóa mới trên các trang web tương ứng; sẽ không tự động xóa bất kỳ khóa nào.",
     "renameOption": {
@@ -613,30 +638,40 @@
       "tooltip": "Chỉ xử lý các khóa có kiểu tên tự động tạo, ví dụ “user group (auto)” hoặc “vip group (auto)”. Sau khi sửa, tên sẽ theo nhóm hiện tại của khóa. Các tên khác sẽ không bị thay đổi."
     },
     "renameSummary": {
-      "accountFailed_other": "{{count}} tên chưa đồng bộ",
-      "accountRenamed_other": "{{count}} tên đã đồng bộ",
-      "failed": "Tên chưa đồng bộ",
-      "renamed": "Tên đã đồng bộ",
-      "summarySeparator": ", "
+      "accountApplied_other": "{{count}} tên đã đồng bộ",
+      "accountRejected_other": "{{count}} lần đổi tên bị từ chối",
+      "accountUncertain_other": "{{count}} lần đổi tên cần xác minh"
+    },
+    "requirements": {
+      "blockedIncompleteInventory": "Chưa tải đầy đủ khóa",
+      "blockedInputRequired": "Cần thiết lập thủ công",
+      "covered": "Đã có khóa dùng được",
+      "coveredAfterUncertain": "Dùng được sau khi làm mới",
+      "created": "Đã tạo khóa mới",
+      "rejected": "Trang web không thay đổi",
+      "uncertain": "Kiểm tra kết quả trước khi thử lại"
     },
     "resultsTitle": "Kết quả",
     "runningNote": "Tác vụ đang chạy trong nền. Bạn có thể đóng hộp thoại này để kiểm tra sau hoặc hủy trong thẻ tiến trình.",
     "searchLabel": "Tìm kiếm",
-    "searchPlaceholder": "Tìm kiếm tài khoản, tên miền hoặc loại trang web...",
+    "searchPlaceholder": "Tìm tài khoản, tên khóa, nhóm, tên miền hoặc loại trang web...",
     "skipReasons": {
       "aihubmixOneTimeKey": "Khóa AIHubMix chỉ có thể xem một lần, vui lòng tạo thủ công và lưu ngay khóa đầy đủ",
       "noneAuth": "Không có thông tin xác thực (Phương thức xác thực: Không có)",
-      "sub2api": "Cần chọn nhóm Sub2API; hãy tạo khóa thủ công",
-      "tokenAutomationUnsupported": "Trang web này cung cấp thông tin xác thực dịch vụ thay vì quản lý API token; đã bỏ qua tự động sửa khóa."
+      "provisioningUnavailable": "Tài khoản này không hỗ trợ tự động tạo khóa. Nếu cần, hãy tạo khóa trên trang web."
     },
-    "title": "Kiểm tra phạm vi khóa",
-    "totalsLabels": {
-      "eligibleAccounts": "Tài khoản đủ điều kiện",
-      "enabledAccounts": "Tài khoản đã kích hoạt",
-      "processedAccounts": "Đã xử lý"
+    "status": {
+      "completed": "Đã hoàn tất",
+      "needsAttention": "Cần xử lý"
     },
+    "summary": {
+      "completedNeedsAttention": "Đã kiểm tra xong, nhưng có kết quả cần xử lý. Xem lý do cụ thể bên dưới.",
+      "completedWithSkipped": "Đã kiểm tra xong. Một số tài khoản chưa được xử lý tự động; xem lý do bên dưới.",
+      "healthy": "Đã kiểm tra xong. Không phát hiện vấn đề nào cần xử lý."
+    },
+    "title": "Kiểm tra khóa tài khoản",
     "views": {
-      "accountCoverage": "Phạm vi tài khoản",
+      "accountCoverage": "Kết quả theo tài khoản",
       "invalidKeys": "Khóa bất thường",
       "label": "Chế độ xem kết quả"
     }

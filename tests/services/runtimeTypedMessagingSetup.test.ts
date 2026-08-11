@@ -494,7 +494,7 @@ describe("typed runtime messaging setup", () => {
           Start: "accountKeyRepair:start",
           Cancel: "accountKeyRepair:cancel",
           GetProgress: "accountKeyRepair:getProgress",
-          DeleteInvalidTokens: "accountKeyRepair:deleteInvalidTokens",
+          DeleteInvalidResources: "accountKeyRepair:deleteInvalidResources",
           RecordManagedSiteImportResults:
             "accountKeyRepair:recordManagedSiteImportResults",
         },
@@ -567,9 +567,29 @@ describe("typed runtime messaging setup", () => {
 
     const deleteHandler = getRegisteredHandler(
       onAccountKeyRepairMessage,
-      "accountKeyRepair:deleteInvalidTokens",
+      "accountKeyRepair:deleteInvalidResources",
     )
-    await expect(deleteHandler({ data: { tokens: [] } })).resolves.toEqual({
+    await expect(
+      deleteHandler({
+        data: {
+          resources: [
+            {
+              accountId: "account-1",
+              accountName: "Example Account",
+              siteType: "new-api",
+              siteUrlOrigin: "https://account.example.invalid",
+              ref: {
+                accountId: "account-1",
+                siteType: "new-api",
+                scopeKey: "account",
+                resourceId: "11",
+              },
+              reason: "orphaned-placement",
+            },
+          ],
+        },
+      }),
+    ).resolves.toEqual({
       success: false,
       error: "repair failed",
     })
@@ -581,8 +601,12 @@ describe("typed runtime messaging setup", () => {
           targetFingerprint: "a".repeat(64),
           items: [
             {
-              accountId: "account-1",
-              tokenId: 11,
+              resourceRef: {
+                accountId: "account-1",
+                siteType: "new-api",
+                scopeKey: "account",
+                resourceId: "11",
+              },
               status: "created",
             },
           ],
@@ -592,26 +616,40 @@ describe("typed runtime messaging setup", () => {
       success: false,
       error: "repair failed",
     })
-    expect(getAllAccounts).toHaveBeenCalledTimes(1)
-    expect(convertToDisplayData).toHaveBeenCalledWith([], [])
+    expect(getAllAccounts).not.toHaveBeenCalled()
+    expect(convertToDisplayData).not.toHaveBeenCalled()
   })
 
   it("surfaces managed-site import receipt persistence failures through the typed listener", async () => {
     const onAccountKeyRepairMessage: OnMessageMock = vi.fn(() => vi.fn())
     const storageGet = vi.fn().mockResolvedValue({
+      schemaVersion: 2,
       jobId: "job-123",
       state: "completed",
       totals: {
         enabledAccounts: 0,
         eligibleAccounts: 0,
         processedAccounts: 0,
-        processedEligibleAccounts: 0,
       },
       summary: {
-        created: 0,
-        alreadyHad: 0,
+        complete: 0,
+        partial: 0,
+        blocked: 0,
         skipped: 0,
         failed: 0,
+        requirements: 0,
+        coveredRequirements: 0,
+        createdRequirements: 0,
+        blockedRequirements: 0,
+        rejectedRequirements: 0,
+        uncertainRequirements: 0,
+        invalidResources: 0,
+        renameApplied: 0,
+        renameRejected: 0,
+        renameUncertain: 0,
+        deleteApplied: 0,
+        deleteRejected: 0,
+        deleteUncertain: 0,
       },
       results: [],
     })
@@ -624,7 +662,7 @@ describe("typed runtime messaging setup", () => {
           Start: "accountKeyRepair:start",
           Cancel: "accountKeyRepair:cancel",
           GetProgress: "accountKeyRepair:getProgress",
-          DeleteInvalidTokens: "accountKeyRepair:deleteInvalidTokens",
+          DeleteInvalidResources: "accountKeyRepair:deleteInvalidResources",
           RecordManagedSiteImportResults:
             "accountKeyRepair:recordManagedSiteImportResults",
         },
@@ -654,8 +692,12 @@ describe("typed runtime messaging setup", () => {
           targetFingerprint: "a".repeat(64),
           items: [
             {
-              accountId: "account-1",
-              tokenId: 11,
+              resourceRef: {
+                accountId: "account-1",
+                siteType: "new-api",
+                scopeKey: "account",
+                resourceId: "11",
+              },
               status: "created",
             },
           ],

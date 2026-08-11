@@ -2,46 +2,49 @@ import type { TFunction } from "i18next"
 import { useMemo } from "react"
 
 import { DestructiveConfirmDialog } from "~/components/ui"
-import type { AccountKeyRepairInvalidToken } from "~/types/accountKeyAutoProvisioning"
+import type { AccountKeyRepairInvalidResource } from "~/types/accountKeyAutoProvisioning"
 
-import { getInvalidTokenKey } from "./repairMissingKeysDialogHelpers"
+import { getInvalidResourceKey } from "./repairMissingKeysDialogHelpers"
 
 interface RepairInvalidKeysDeleteConfirmProps {
   isOpen: boolean
   isWorking: boolean
-  selectedInvalidTokens: AccountKeyRepairInvalidToken[]
+  selectedInvalidResources: AccountKeyRepairInvalidResource[]
   onClose: () => void
   onConfirm: () => void
   t: TFunction
 }
 
-/**
- * Shows the destructive confirmation dialog for selected invalid keys.
- */
+/** Shows the destructive confirmation dialog for selected invalid resources. */
 export function RepairInvalidKeysDeleteConfirm({
   isOpen,
   isWorking,
-  selectedInvalidTokens,
+  selectedInvalidResources,
   onClose,
   onConfirm,
   t,
 }: RepairInvalidKeysDeleteConfirmProps) {
   const details = useMemo(() => {
-    const previewTokens = selectedInvalidTokens.slice(0, 5)
-    const hiddenCount = selectedInvalidTokens.length - previewTokens.length
+    const previewResources = selectedInvalidResources.slice(0, 5)
+    const hiddenCount =
+      selectedInvalidResources.length - previewResources.length
 
     return (
       <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/40 rounded-md border border-gray-200 bg-gray-50 p-3">
         <ul className="space-y-2 text-sm">
-          {previewTokens.map((token) => (
+          {previewResources.map((resource) => (
             <li
-              key={getInvalidTokenKey(token)}
+              key={getInvalidResourceKey(resource)}
               className="min-w-0 text-gray-700 dark:text-gray-300"
             >
-              <span className="font-medium">{token.tokenName}</span>
+              <span className="font-medium">
+                {resource.displayLabel?.trim() ||
+                  t("keyManagement:repairMissingKeys.invalidKeys.unnamed")}
+              </span>
               <span className="dark:text-dark-text-secondary text-gray-500">
                 {" "}
-                · {token.accountName}
+                · {resource.accountName}
+                {resource.groupLabel ? ` · ${resource.groupLabel}` : ""}
               </span>
             </li>
           ))}
@@ -55,7 +58,7 @@ export function RepairInvalidKeysDeleteConfirm({
         ) : null}
       </div>
     )
-  }, [selectedInvalidTokens, t])
+  }, [selectedInvalidResources, t])
 
   return (
     <DestructiveConfirmDialog
@@ -63,7 +66,7 @@ export function RepairInvalidKeysDeleteConfirm({
       onClose={onClose}
       onConfirm={onConfirm}
       title={t("keyManagement:repairMissingKeys.deleteConfirm.title", {
-        count: selectedInvalidTokens.length,
+        count: selectedInvalidResources.length,
       })}
       description={t(
         "keyManagement:repairMissingKeys.deleteConfirm.description",

@@ -345,7 +345,7 @@ export const createDisplayAccountApiContext = (
     ...context,
     capabilities,
     inviteLink: accountCapabilities?.inviteLink,
-    accountKeyResources: accountCapabilities?.keyResources,
+    accountKeyResources: accountCapabilities?.keyResourceManagement,
     keyManagement: accountCapabilities?.keyManagement,
     serviceCredential: accountCapabilities?.serviceCredential,
     tokenProvisioning: accountCapabilities?.tokenProvisioning,

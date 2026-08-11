@@ -11,6 +11,7 @@ export const openRouterCapabilities: SiteTypeCapabilities = {
   family: ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter,
   account: {
     data: openRouterAccountData,
+    keyResourceManagement: openRouterAccountKeyResources,
     keyResources: openRouterAccountKeyResources,
     providerModelCatalog: openRouterProviderModelCatalog,
     refresh: openRouterAccountRefresh,

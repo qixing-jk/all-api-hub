@@ -4,7 +4,6 @@ import type {
   UserGroupInfo,
 } from "~/services/accountTokens/tokenProvisioningModel"
 import type { ApiToken } from "~/types"
-import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 
 export const TOKEN_PROVISIONING_WORKFLOWS = {
   BackgroundAutoProvision: "background_auto_provision",
@@ -104,24 +103,6 @@ export type CreatedTokenSecretDecision =
       kind: typeof CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch
     }
 
-export type TokenProvisioningRepairSkipReason =
-  | typeof ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api
-  | typeof ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey
-
-export const TOKEN_PROVISIONING_REPAIR_POLICY_KINDS = {
-  Eligible: "eligible",
-  Skipped: "skipped",
-} as const
-
-export type TokenProvisioningRepairPolicy =
-  | {
-      kind: typeof TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible
-    }
-  | {
-      kind: typeof TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped
-      skipReason: TokenProvisioningRepairSkipReason
-    }
-
 export type TokenProvisioningCapability = {
   isInventoryTokenUsable(params: {
     workflow: TokenProvisioningWorkflow
@@ -134,7 +115,6 @@ export type TokenProvisioningCapability = {
     workflow: TokenProvisioningWorkflow
     result: CreateTokenResult
   }): CreatedTokenSecretDecision
-  getRepairPolicy(): TokenProvisioningRepairPolicy
 }
 
 export const isCreatedApiToken = (value: unknown): value is ApiToken =>

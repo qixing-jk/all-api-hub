@@ -44,6 +44,7 @@ const keyManagement = vi.hoisted(() => ({
     fetchUserGroups: vi.fn(),
     fetchAccountAvailableModels: vi.fn(),
   },
+  fetchAccountTokens: vi.fn(),
   fetchAccountAvailableModels: vi.fn(),
   fetchSiteUserGroups: vi.fn(),
 }))

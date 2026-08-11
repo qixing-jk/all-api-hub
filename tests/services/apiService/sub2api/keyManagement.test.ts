@@ -4,9 +4,10 @@ import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSessio
 import type { CreateTokenRequest } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   createApiToken,
+  createSub2ApiTokenForGroupId,
   fetchAccountAvailableModels,
   fetchAccountTokens,
-  fetchAllAccountTokens,
+  fetchSub2ApiGroupDescriptors,
   fetchSub2ApiGroupRates,
   fetchTokenById,
   fetchUserGroups,
@@ -20,7 +21,7 @@ import {
   translateSub2ApiCreateTokenRequest,
   translateSub2ApiUpdateTokenRequest,
 } from "~/services/apiService/sub2api/parsing"
-import { ApiError } from "~/services/apiTransport/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -225,6 +226,88 @@ describe("apiService sub2api key management service", () => {
     })
   })
 
+  it("exposes native group descriptors without using display names as identity", async () => {
+    fetchApiMock
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: [
+          {
+            id: "9",
+            name: " vip ",
+            description: " VIP plan ",
+          },
+          {
+            id: 10,
+            name: "vip",
+            description: "",
+            rate_multiplier: 3,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { "9": 2.5 },
+      })
+
+    await expect(
+      fetchSub2ApiGroupDescriptors(createRequest()),
+    ).resolves.toEqual([
+      {
+        id: 9,
+        displayName: "vip",
+        description: "VIP plan",
+        ratio: 2.5,
+      },
+      {
+        id: 10,
+        displayName: "vip",
+        description: "vip",
+        ratio: 3,
+      },
+    ])
+  })
+
+  it("rejects malformed native group identities so callers fail closed", async () => {
+    fetchApiMock
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: [{ id: "not-an-id", name: "vip" }],
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {},
+      })
+
+    await expect(
+      fetchSub2ApiGroupDescriptors(createRequest()),
+    ).rejects.toBeInstanceOf(ApiError)
+  })
+
+  it("rejects duplicate native group ids instead of returning ambiguous requirements", async () => {
+    fetchApiMock
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: [
+          { id: 9, name: "vip" },
+          { id: "9", name: "vip duplicate" },
+        ],
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: { "9": 2.5 },
+      })
+
+    await expect(
+      fetchSub2ApiGroupDescriptors(createRequest()),
+    ).rejects.toBeInstanceOf(ApiError)
+  })
+
   it("normalizes raw Sub2API group rates for estimator callers", async () => {
     fetchApiMock.mockResolvedValueOnce({
       code: 0,
@@ -290,7 +373,7 @@ describe("apiService sub2api key management service", () => {
         },
       })
 
-    await expect(fetchAllAccountTokens(createRequest())).resolves.toEqual([
+    await expect(fetchAccountTokens(createRequest())).resolves.toEqual([
       expect.objectContaining({ id: 1, group: "default" }),
       expect.objectContaining({ id: 2, group: "vip" }),
     ])
@@ -299,6 +382,97 @@ describe("apiService sub2api key management service", () => {
       "/api/v1/keys?page=1&page_size=1000",
       "/api/v1/keys?page=2&page_size=1000",
     ])
+  })
+
+  it("rejects duplicate key ids across inventory pages", async () => {
+    fetchApiMock
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          items: [{ id: 1, name: "First page", status: "active" }],
+          page: 1,
+          pages: 2,
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          items: [{ id: 1, name: "Repeated page", status: "active" }],
+          page: 2,
+          pages: 2,
+        },
+      })
+
+    await expect(fetchAccountTokens(createRequest())).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+      endpoint: "/api/v1/keys?page=2&page_size=1000",
+    })
+  })
+
+  it("rejects a key inventory page that does not advance", async () => {
+    fetchApiMock
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          items: [{ id: 1, name: "First page", status: "active" }],
+          page: 1,
+          pages: 2,
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 0,
+        message: "ok",
+        data: {
+          items: [{ id: 2, name: "Repeated first page", status: "active" }],
+          page: 1,
+          pages: 2,
+        },
+      })
+
+    await expect(fetchAccountTokens(createRequest())).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+      endpoint: "/api/v1/keys?page=2&page_size=1000",
+    })
+  })
+
+  it("rejects an unbounded key inventory before requesting another page", async () => {
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        items: [{ id: 1, name: "First page", status: "active" }],
+        page: 1,
+        pages: 1001,
+      },
+    })
+
+    await expect(fetchAccountTokens(createRequest())).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+      endpoint: "/api/v1/keys?page=1&page_size=1000",
+      upstreamCode: "sub2api_key_inventory_page_limit_exceeded",
+    })
+    expect(fetchApiMock).toHaveBeenCalledOnce()
+  })
+
+  it("rejects malformed key inventory pagination metadata", async () => {
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        items: [{ id: 1, name: "First page", status: "active" }],
+        page: 1,
+        pages: "2",
+      },
+    })
+
+    await expect(fetchAccountTokens(createRequest())).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+      endpoint: "/api/v1/keys?page=1&page_size=1000",
+      upstreamCode: "sub2api_key_inventory_invalid_pagination",
+    })
   })
 
   it("keeps key-creation available models empty even with Sub2API form metadata", async () => {
@@ -435,6 +609,43 @@ describe("apiService sub2api key management service", () => {
       group_id: 9,
       quota: 1.5,
       expires_in_days: 2,
+      ip_whitelist: ["1.1.1.1", "2.2.2.2"],
+    })
+  })
+
+  it("creates against an explicit native group id without resolving a display name", async () => {
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        id: 12,
+        user_id: 1,
+        key: "new-key",
+        name: "demo key",
+        status: "active",
+        quota: 1.5,
+        quota_used: 0,
+        created_at: "2026-03-06T00:00:00.000Z",
+        updated_at: "2026-03-06T00:00:00.000Z",
+        expires_at: null,
+        group_id: 10,
+        group: { id: 10, name: "Shared" },
+      },
+    })
+
+    await expect(
+      createSub2ApiTokenForGroupId(createRequest(), createTokenRequest(), 10),
+    ).resolves.toEqual(
+      expect.objectContaining({ id: 12, sub2api_group_id: 10 }),
+    )
+
+    expect(fetchApiMock).toHaveBeenCalledOnce()
+    expect(fetchApiMock.mock.calls[0]?.[1]?.endpoint).toBe("/api/v1/keys")
+    expect(JSON.parse(fetchApiMock.mock.calls[0]?.[1]?.options?.body)).toEqual({
+      name: "demo key",
+      group_id: 10,
+      quota: 1.5,
+      expires_in_days: 0,
       ip_whitelist: ["1.1.1.1", "2.2.2.2"],
     })
   })

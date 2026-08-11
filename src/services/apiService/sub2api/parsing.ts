@@ -20,6 +20,7 @@ import type {
   Sub2ApiCreateKeyPayload,
   Sub2ApiEnvelope,
   Sub2ApiGroupData,
+  Sub2ApiGroupDescriptor,
   Sub2ApiKeyData,
   Sub2ApiKeyListData,
   Sub2ApiKeyWritePayloadBase,
@@ -431,6 +432,23 @@ export const parseSub2ApiGroupRates = (
   )
 }
 
+const toSub2ApiGroupDescriptor = (
+  group: Sub2ApiGroupData,
+  rates: Record<string, number>,
+): Sub2ApiGroupDescriptor | null => {
+  const displayName = toTrimmedString(group.name)
+  const id = toFiniteIntegerOrNull(group.id)
+  if (!displayName || id === null || !Number.isSafeInteger(id)) return null
+
+  return {
+    id,
+    displayName,
+    description: toTrimmedString(group.description) || displayName,
+    ratio:
+      rates[String(id)] || toFiniteNumberOrZero(group.rate_multiplier) || 1,
+  }
+}
+
 export const buildSub2ApiUserGroups = (
   groupsPayload: unknown,
   ratesPayload: unknown,
@@ -447,24 +465,43 @@ export const buildSub2ApiUserGroups = (
 
   return groups.reduce(
     (accumulator, group) => {
-      const groupName = toTrimmedString(group.name)
-      const groupId = toFiniteIntegerOrNull(group.id)
-
-      if (!groupName || groupId === null) {
-        return accumulator
-      }
-
-      accumulator[groupName] = {
-        desc: toTrimmedString(group.description) || groupName,
-        ratio:
-          rates[String(groupId)] ||
-          toFiniteNumberOrZero(group.rate_multiplier) ||
-          1,
+      const descriptor = toSub2ApiGroupDescriptor(group, rates)
+      if (descriptor) {
+        accumulator[descriptor.displayName] = {
+          desc: descriptor.description,
+          ratio: descriptor.ratio,
+        }
       }
       return accumulator
     },
     {} as Record<string, UserGroupInfo>,
   )
+}
+
+export const buildSub2ApiGroupDescriptors = (
+  groupsPayload: unknown,
+  ratesPayload: unknown,
+  endpoints?: { groups?: string; rates?: string },
+): Sub2ApiGroupDescriptor[] => {
+  const groupsEndpoint = endpoints?.groups ?? "/api/v1/groups/available"
+  const groups = parseSub2ApiGroupList(groupsPayload, groupsEndpoint)
+  const rates = parseSub2ApiGroupRates(
+    ratesPayload,
+    endpoints?.rates ?? "/api/v1/groups/rates",
+  )
+  const seenIds = new Set<number>()
+
+  return groups.map((group) => {
+    const descriptor = toSub2ApiGroupDescriptor(group, rates)
+    if (!descriptor) {
+      throw createInvalidResponseError(groupsEndpoint)
+    }
+    if (seenIds.has(descriptor.id)) {
+      throw createInvalidResponseError(groupsEndpoint)
+    }
+    seenIds.add(descriptor.id)
+    return descriptor
+  })
 }
 
 export const resolveSub2ApiGroupId = (

@@ -121,7 +121,6 @@ describe("fetchDisplayAccountTokens", () => {
     isInventoryTokenUsable: ReturnType<typeof vi.fn>
     resolveDefaultTokenCreation: ReturnType<typeof vi.fn>
     classifyCreatedToken: ReturnType<typeof vi.fn>
-    getRepairPolicy: ReturnType<typeof vi.fn>
   }
   let keyManagement: {
     fetchTokens: typeof fetchTokens
@@ -174,7 +173,6 @@ describe("fetchDisplayAccountTokens", () => {
       isInventoryTokenUsable: vi.fn(),
       resolveDefaultTokenCreation: vi.fn(),
       classifyCreatedToken: vi.fn(),
-      getRepairPolicy: vi.fn(),
     }
     capabilities = {
       siteType: "new-api",
@@ -245,7 +243,10 @@ describe("fetchDisplayAccountTokens", () => {
     const accountKeyResources = { open: vi.fn() }
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.OPENROUTER,
-      account: { keyResources: accountKeyResources },
+      account: {
+        keyResources: accountKeyResources,
+        keyResourceManagement: accountKeyResources,
+      },
     } as any)
 
     const context = createDisplayAccountApiContext({
@@ -254,7 +255,7 @@ describe("fetchDisplayAccountTokens", () => {
     } as any)
 
     expect(context.accountKeyResources).toBe(
-      context.capabilities.account?.keyResources,
+      context.capabilities.account?.keyResourceManagement,
     )
     expect(context).toMatchObject({
       accountKeyResources,

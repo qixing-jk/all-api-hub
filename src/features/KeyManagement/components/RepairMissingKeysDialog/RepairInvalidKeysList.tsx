@@ -2,42 +2,40 @@ import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 
 import { Alert, Badge, Button, Checkbox, EmptyState } from "~/components/ui"
-import type { AccountKeyRepairInvalidToken } from "~/types/accountKeyAutoProvisioning"
+import type { AccountKeyRepairInvalidResource } from "~/types/accountKeyAutoProvisioning"
 
 import {
-  getInvalidTokenKey,
-  getInvalidTokenReasonLabel,
+  getInvalidResourceKey,
+  getInvalidResourceReasonLabel,
 } from "./repairMissingKeysDialogHelpers"
 
 interface RepairInvalidKeysListProps {
   deleteResultMessage: string
-  filteredInvalidTokens: AccountKeyRepairInvalidToken[]
-  invalidTokens: AccountKeyRepairInvalidToken[]
+  filteredInvalidResources: AccountKeyRepairInvalidResource[]
+  invalidResources: AccountKeyRepairInvalidResource[]
   readOnly?: boolean
-  selectedInvalidTokenKeys: Set<string>
-  selectedInvalidTokens: AccountKeyRepairInvalidToken[]
+  selectedInvalidResourceKeys: Set<string>
+  selectedInvalidResources: AccountKeyRepairInvalidResource[]
   onOpenDeleteConfirm: () => void
-  onSelectedInvalidTokenKeysChange: (
+  onSelectedInvalidResourceKeysChange: (
     updater: Set<string> | ((previous: Set<string>) => Set<string>),
   ) => void
   t: TFunction
 }
 
-/**
- * Renders invalid keys with selection, empty states, and delete feedback.
- */
+/** Renders invalid native resources with selection and delete feedback. */
 export function RepairInvalidKeysList({
   deleteResultMessage,
-  filteredInvalidTokens,
-  invalidTokens,
+  filteredInvalidResources,
+  invalidResources,
   readOnly = false,
-  selectedInvalidTokenKeys,
-  selectedInvalidTokens,
+  selectedInvalidResourceKeys,
+  selectedInvalidResources,
   onOpenDeleteConfirm,
-  onSelectedInvalidTokenKeysChange,
+  onSelectedInvalidResourceKeysChange,
   t,
 }: RepairInvalidKeysListProps) {
-  if (invalidTokens.length === 0) {
+  if (invalidResources.length === 0) {
     return (
       <div>
         {deleteResultMessage ? (
@@ -57,7 +55,7 @@ export function RepairInvalidKeysList({
     )
   }
 
-  if (filteredInvalidTokens.length === 0) {
+  if (filteredInvalidResources.length === 0) {
     return (
       <div>
         {deleteResultMessage ? (
@@ -88,13 +86,16 @@ export function RepairInvalidKeysList({
             <label className="flex items-center gap-2 text-sm">
               <Checkbox
                 checked={
-                  filteredInvalidTokens.length > 0 &&
-                  selectedInvalidTokens.length === filteredInvalidTokens.length
+                  filteredInvalidResources.length > 0 &&
+                  selectedInvalidResources.length ===
+                    filteredInvalidResources.length
                 }
                 onCheckedChange={(checked) => {
-                  onSelectedInvalidTokenKeysChange(
+                  onSelectedInvalidResourceKeysChange(
                     checked
-                      ? new Set(filteredInvalidTokens.map(getInvalidTokenKey))
+                      ? new Set(
+                          filteredInvalidResources.map(getInvalidResourceKey),
+                        )
                       : new Set(),
                   )
                 }}
@@ -108,16 +109,14 @@ export function RepairInvalidKeysList({
               <span className="text-xs text-gray-500 dark:text-gray-400">
                 {t(
                   "keyManagement:repairMissingKeys.invalidKeys.selectedCount",
-                  {
-                    count: selectedInvalidTokens.length,
-                  },
+                  { count: selectedInvalidResources.length },
                 )}
               </span>
               <Button
                 type="button"
                 size="sm"
                 variant="destructive"
-                disabled={selectedInvalidTokens.length === 0}
+                disabled={selectedInvalidResources.length === 0}
                 onClick={onOpenDeleteConfirm}
               >
                 {t(
@@ -130,38 +129,35 @@ export function RepairInvalidKeysList({
       ) : null}
 
       <ul className="dark:divide-dark-bg-tertiary divide-y">
-        {filteredInvalidTokens.map((token) => {
-          const tokenKey = getInvalidTokenKey(token)
+        {filteredInvalidResources.map((resource) => {
+          const resourceKey = getInvalidResourceKey(resource)
+          const displayLabel =
+            resource.displayLabel?.trim() ||
+            t("keyManagement:repairMissingKeys.invalidKeys.unnamed")
 
           return (
-            <li
-              key={`${token.accountId}-${token.tokenId}-${token.group}`}
-              className="px-4 py-3"
-            >
+            <li key={resourceKey} className="px-4 py-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="flex min-w-0 gap-3">
                   {!readOnly ? (
                     <Checkbox
-                      checked={selectedInvalidTokenKeys.has(tokenKey)}
+                      checked={selectedInvalidResourceKeys.has(resourceKey)}
                       onCheckedChange={(checked) => {
-                        onSelectedInvalidTokenKeysChange((previous) => {
+                        onSelectedInvalidResourceKeysChange((previous) => {
                           const next = new Set(previous)
-                          if (checked) {
-                            next.add(tokenKey)
-                          } else {
-                            next.delete(tokenKey)
-                          }
+                          if (checked) next.add(resourceKey)
+                          else next.delete(resourceKey)
                           return next
                         })
                       }}
-                      aria-label={token.tokenName}
+                      aria-label={displayLabel}
                       className="mt-0.5 shrink-0"
                     />
                   ) : null}
                   <div className="min-w-0 space-y-1">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
                       <div className="truncate text-sm font-medium">
-                        {token.tokenName}
+                        {displayLabel}
                       </div>
                       <Badge
                         variant="warning"
@@ -170,17 +166,22 @@ export function RepairInvalidKeysList({
                       >
                         {t("keyManagement:repairMissingKeys.invalidKeys.badge")}
                       </Badge>
-                      <Badge
-                        variant="outline"
-                        size="sm"
-                        className="dark:border-dark-bg-tertiary shrink-0 border-gray-200 px-2 py-0.5 text-[11px] font-medium"
-                        title={token.group}
-                      >
-                        {token.group}
-                      </Badge>
+                      {resource.groupLabel ? (
+                        <Badge
+                          variant="outline"
+                          size="sm"
+                          className="dark:border-dark-bg-tertiary shrink-0 border-gray-200 px-2 py-0.5 text-[11px] font-medium"
+                          title={resource.groupLabel}
+                        >
+                          {t(
+                            "keyManagement:repairMissingKeys.invalidKeys.group",
+                            { name: resource.groupLabel },
+                          )}
+                        </Badge>
+                      ) : null}
                     </div>
                     <div className="dark:text-dark-text-secondary truncate text-xs text-gray-500">
-                      {token.accountName} · {token.siteUrlOrigin}
+                      {resource.accountName} · {resource.siteUrlOrigin}
                     </div>
                   </div>
                 </div>
@@ -188,13 +189,13 @@ export function RepairInvalidKeysList({
                   variant="outline"
                   size="sm"
                   className="dark:border-dark-bg-tertiary shrink-0 border-gray-200 px-2 py-0.5 text-[11px] font-medium"
-                  title={token.siteType}
+                  title={resource.siteType}
                 >
-                  {token.siteType}
+                  {resource.siteType}
                 </Badge>
               </div>
               <div className="mt-2 text-xs text-amber-700 dark:text-amber-200">
-                {getInvalidTokenReasonLabel(t, token)}
+                {getInvalidResourceReasonLabel(t, resource)}
               </div>
             </li>
           )

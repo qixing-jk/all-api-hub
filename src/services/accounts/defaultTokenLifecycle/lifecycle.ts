@@ -244,23 +244,6 @@ export async function resolveDefaultTokenLifecycleDecision(params: {
 }
 
 /**
- * Resolves default-token creation policy for callers that already own adapter
- * capabilities and request construction.
- */
-export function resolveDefaultTokenLifecycleDecisionFromCapabilities(params: {
-  workflow: TokenProvisioningWorkflow
-  tokenProvisioning: TokenProvisioningCapability
-  defaultTokenData?: ResolveDefaultTokenCreationRequest["defaultTokenData"]
-  explicitGroup?: string
-}): DefaultTokenCreationDecision {
-  return params.tokenProvisioning.resolveDefaultTokenCreation({
-    workflow: params.workflow,
-    defaultTokenData: params.defaultTokenData ?? generateDefaultTokenRequest(),
-    explicitGroup: params.explicitGroup,
-  })
-}
-
-/**
  * Builds a blocked lifecycle result for create-token failures and policy blocks.
  */
 const blockCreatedToken = (params: {

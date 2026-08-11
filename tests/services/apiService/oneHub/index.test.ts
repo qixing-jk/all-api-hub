@@ -105,7 +105,7 @@ describe("OneHub API service", () => {
 
   it("fetchAccountTokens should return array when response is array", async () => {
     const tokens = [{ id: 1 }]
-    mockedFetchApiData.mockResolvedValueOnce(tokens)
+    mockedFetchApiData.mockResolvedValueOnce(tokens).mockResolvedValueOnce([])
 
     const result = await fetchAccountTokens(baseRequest as any)
 
@@ -114,11 +114,13 @@ describe("OneHub API service", () => {
   })
 
   it("fetchAccountTokens should trim token.key without synthesizing an sk- prefix", async () => {
-    mockedFetchApiData.mockResolvedValueOnce([
-      { id: 1, key: "plain" },
-      { id: 2, key: "sk-already" },
-      { id: 3, key: "  sk-trim  " },
-    ])
+    mockedFetchApiData
+      .mockResolvedValueOnce([
+        { id: 1, key: "plain" },
+        { id: 2, key: "sk-already" },
+        { id: 3, key: "  sk-trim  " },
+      ])
+      .mockResolvedValueOnce([])
 
     const result = await fetchAccountTokens(baseRequest as any)
     expect(result.map((token: any) => token.key)).toEqual([
@@ -130,19 +132,21 @@ describe("OneHub API service", () => {
 
   it("fetchAccountTokens should return data field when response is paginated object", async () => {
     const tokens = [{ id: 1 }, { id: 2 }]
-    mockedFetchApiData.mockResolvedValueOnce({ data: tokens })
+    mockedFetchApiData
+      .mockResolvedValueOnce({ data: tokens })
+      .mockResolvedValueOnce({ data: [] })
 
     const result = await fetchAccountTokens(baseRequest as any)
 
     expect(result).toEqual(tokens)
   })
 
-  it("fetchAccountTokens should return empty array for unexpected format", async () => {
+  it("fetchAccountTokens should reject an unexpected format", async () => {
     mockedFetchApiData.mockResolvedValueOnce({ foo: "bar" })
 
-    const result = await fetchAccountTokens(baseRequest as any)
-
-    expect(result).toEqual([])
+    await expect(fetchAccountTokens(baseRequest as any)).rejects.toThrow(
+      "invalid_token_page_payload",
+    )
   })
 
   it("fetchAccountTokens should rethrow errors", async () => {
@@ -152,6 +156,63 @@ describe("OneHub API service", () => {
     await expect(fetchAccountTokens(baseRequest as any)).rejects.toThrow(
       "token error",
     )
+  })
+
+  it("fetchAccountTokens collects OneHub pages without requiring size echo", async () => {
+    const firstPageTokens = [{ id: 1 }, { id: 2 }]
+    mockedFetchApiData
+      .mockResolvedValueOnce({
+        data: firstPageTokens,
+        page: 1,
+        size: 2,
+        total_count: 3,
+      })
+      .mockResolvedValueOnce({
+        data: [{ id: 3 }],
+        page: 2,
+        size: 2,
+        total_count: 3,
+      })
+      .mockResolvedValueOnce({ data: [], page: 3, total_count: 3 })
+
+    await expect(fetchAccountTokens(baseRequest as any)).resolves.toEqual([
+      ...firstPageTokens,
+      { id: 3 },
+    ])
+    expect(mockedFetchApiData).toHaveBeenNthCalledWith(1, baseRequest, {
+      endpoint: "/api/token/?page=1&size=100",
+    })
+    expect(mockedFetchApiData).toHaveBeenNthCalledWith(2, baseRequest, {
+      endpoint: "/api/token/?page=2&size=100",
+    })
+    expect(mockedFetchApiData).toHaveBeenNthCalledWith(3, baseRequest, {
+      endpoint: "/api/token/?page=3&size=100",
+    })
+  })
+
+  it("fetchAccountTokens tolerates stale OneHub page metadata", async () => {
+    mockedFetchApiData
+      .mockResolvedValueOnce({
+        data: [{ id: 1 }],
+        page: 9,
+        size: 1,
+        total_count: 2,
+      })
+      .mockResolvedValueOnce({
+        data: [{ id: 2 }],
+        page: 9,
+        size: 1,
+        total_count: 2,
+      })
+      .mockResolvedValueOnce({ data: [], page: 9, total_count: 0 })
+
+    await expect(fetchAccountTokens(baseRequest as any)).resolves.toEqual([
+      { id: 1 },
+      { id: 2 },
+    ])
+    expect(mockedFetchApiData).toHaveBeenNthCalledWith(2, baseRequest, {
+      endpoint: "/api/token/?page=2&size=100",
+    })
   })
 
   it("fetchUserGroups should transform user group response", async () => {

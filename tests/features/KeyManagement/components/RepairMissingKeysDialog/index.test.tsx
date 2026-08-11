@@ -8,14 +8,16 @@ import { RepairMissingKeysDialog } from "~/features/KeyManagement/components/Rep
 import { useRepairCreatedKeyManagedSiteImport } from "~/features/KeyManagement/components/RepairMissingKeysDialog/useRepairCreatedKeyManagedSiteImport"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { AccountKeyRepairMessageTypes } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
-import { buildDisplayAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import {
-  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
   ACCOUNT_KEY_REPAIR_JOB_STATES,
   ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES,
   ACCOUNT_KEY_REPAIR_OUTCOMES,
+  ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
   type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
@@ -33,14 +35,13 @@ import {
   waitFor,
   within,
 } from "~~/tests/test-utils/render"
-import { createToken } from "~~/tests/utils/keyManagementFactories"
 
 const {
   mockHandleCancelAudit,
   mockHandleStartAudit,
   mockUseRepairMissingKeysJob,
   mockSetProgress,
-  mockResolveRepairCreatedTokenBatchImportCandidate,
+  mockResolveRepairCreatedKeyBatchImportCandidate,
   mockGetCurrentManagedSiteRuntimeConfig,
   mockCreateManagedSiteTokenBatchImportTarget,
   mockSendAccountKeyRepairMessage,
@@ -51,7 +52,7 @@ const {
   mockHandleStartAudit: vi.fn(),
   mockUseRepairMissingKeysJob: vi.fn(),
   mockSetProgress: vi.fn(),
-  mockResolveRepairCreatedTokenBatchImportCandidate: vi.fn(),
+  mockResolveRepairCreatedKeyBatchImportCandidate: vi.fn(),
   mockGetCurrentManagedSiteRuntimeConfig: vi.fn(),
   mockCreateManagedSiteTokenBatchImportTarget: vi.fn(),
   mockSendAccountKeyRepairMessage: vi.fn(),
@@ -66,6 +67,7 @@ function buildRepairProgress(
   overrides: Partial<AccountKeyRepairProgress> = {},
 ): AccountKeyRepairProgress {
   return {
+    schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
     jobId: state,
     state,
     totals: {
@@ -74,10 +76,24 @@ function buildRepairProgress(
       processedAccounts: 0,
     },
     summary: {
-      created: 0,
-      alreadyHad: 0,
+      complete: 0,
+      partial: 0,
+      blocked: 0,
       skipped: 0,
       failed: 0,
+      requirements: 0,
+      coveredRequirements: 0,
+      createdRequirements: 0,
+      blockedRequirements: 0,
+      rejectedRequirements: 0,
+      uncertainRequirements: 0,
+      invalidResources: 0,
+      renameApplied: 0,
+      renameRejected: 0,
+      renameUncertain: 0,
+      deleteApplied: 0,
+      deleteRejected: 0,
+      deleteUncertain: 0,
     },
     results: [],
     ...overrides,
@@ -153,14 +169,14 @@ vi.mock(
   }),
 )
 
-vi.mock("~/services/managedSites/repairCreatedTokenBatchImport", async () => {
+vi.mock("~/services/managedSites/repairCreatedKeyBatchImport", async () => {
   const actual = await vi.importActual<
-    typeof import("~/services/managedSites/repairCreatedTokenBatchImport")
-  >("~/services/managedSites/repairCreatedTokenBatchImport")
+    typeof import("~/services/managedSites/repairCreatedKeyBatchImport")
+  >("~/services/managedSites/repairCreatedKeyBatchImport")
   return {
     ...actual,
-    resolveRepairCreatedTokenBatchImportCandidate:
-      mockResolveRepairCreatedTokenBatchImportCandidate,
+    resolveRepairCreatedKeyBatchImportCandidate:
+      mockResolveRepairCreatedKeyBatchImportCandidate,
   }
 })
 
@@ -219,24 +235,66 @@ function buildAccount(): DisplaySiteData {
   }
 }
 
+function buildAccountResult(
+  overrides: Partial<AccountKeyRepairProgress["results"][number]> = {},
+): AccountKeyRepairProgress["results"][number] {
+  return {
+    accountId: "account-1",
+    accountName: "Account 1",
+    siteType: SITE_TYPES.NEW_API,
+    siteUrlOrigin: "https://one.example.invalid",
+    outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
+    requirementResults: [],
+    createdRefs: [],
+    invalidResources: [],
+    renameResults: [],
+    finishedAt: 1,
+    ...overrides,
+  }
+}
+
+function buildInvalidResource(
+  account: Pick<DisplaySiteData, "id" | "name" | "siteType" | "baseUrl">,
+  resourceId = "12",
+) {
+  return {
+    accountId: account.id,
+    accountName: account.name,
+    siteType: account.siteType,
+    siteUrlOrigin: account.baseUrl,
+    ref: {
+      accountId: account.id,
+      siteType: account.siteType,
+      scopeKey: "account",
+      resourceId,
+    },
+    displayLabel: "Invalid key",
+    reason: "orphaned-placement",
+  }
+}
+
 function buildCreatedProgress(
   account: DisplaySiteData,
   overrides: Partial<AccountKeyRepairProgress> = {},
 ): AccountKeyRepairProgress {
+  const createdRef = {
+    accountId: account.id,
+    siteType: account.siteType,
+    scopeKey: "account",
+    resourceId: "11",
+  } as const
   return buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed, {
     jobId: "repair-job",
     totals: {
       enabledAccounts: 1,
       eligibleAccounts: 1,
       processedAccounts: 1,
-      processedEligibleAccounts: 1,
     },
     summary: {
-      created: 1,
-      alreadyHad: 0,
-      skipped: 0,
-      failed: 0,
-      createdKeys: 1,
+      ...buildRepairProgress().summary,
+      complete: 1,
+      requirements: 1,
+      createdRequirements: 1,
     },
     results: [
       {
@@ -244,9 +302,23 @@ function buildCreatedProgress(
         accountName: account.name,
         siteType: account.siteType,
         siteUrlOrigin: account.baseUrl,
-        outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
-        createdGroups: ["alpha"],
-        createdTokens: [{ tokenId: 11, group: "alpha" }],
+        outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Repaired,
+        requirementResults: [
+          {
+            requirement: {
+              requirementKey: "group:alpha",
+              displayName: "alpha",
+              provisioning: {
+                kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
+              },
+            },
+            outcome: ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created,
+            created: { ref: createdRef },
+          },
+        ],
+        createdRefs: [createdRef],
+        invalidResources: [],
+        renameResults: [],
         finishedAt: 1,
       },
     ],
@@ -260,21 +332,23 @@ function buildRepairImportCandidate(
     | typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW
     | typeof MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE = MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW,
 ) {
+  const ref = {
+    accountId: account.id,
+    siteType: account.siteType,
+    scopeKey: "account",
+    resourceId: "11",
+  } as const
+
   return {
     items: [
       {
         kind: MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.RESOLVED,
         account,
-        runtimeKey: buildDisplayAccountTokenRuntimeKey(
-          account,
-          createToken({
-            id: 11,
-            name: "Created alpha key",
-            group: "alpha",
-            accountId: account.id,
-            accountName: account.name,
-          }),
-        ),
+        runtimeKey: buildAccountKeyResourceRuntimeKey(account, {
+          ref,
+          label: "Created alpha key",
+          secret: "resolved-runtime-secret",
+        }),
       },
     ],
     intent: {
@@ -305,7 +379,7 @@ describe("RepairMissingKeysDialog", () => {
         compatibleUserId: "1",
       },
     })
-    mockResolveRepairCreatedTokenBatchImportCandidate.mockResolvedValue(null)
+    mockResolveRepairCreatedKeyBatchImportCandidate.mockResolvedValue(null)
     mockSendAccountKeyRepairMessage.mockImplementation(async () => ({
       success: true,
       data: mockProgress,
@@ -404,28 +478,12 @@ describe("RepairMissingKeysDialog", () => {
       ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
       {
         results: [
-          {
-            accountId: "account-1",
-            accountName: "Account 1",
+          buildAccountResult({
             siteType: SITE_TYPES.SUB2API,
             siteUrlOrigin: "https://sub2api.example.invalid",
             outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
-            skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
-            invalidTokens: [
-              {
-                accountId: "account-1",
-                accountName: "Account 1",
-                siteType: SITE_TYPES.SUB2API,
-                siteUrlOrigin: "https://sub2api.example.invalid",
-                tokenId: 1,
-                tokenName: "Invalid token",
-                group: "removed",
-                reason:
-                  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
-              },
-            ],
-            finishedAt: 1,
-          },
+            skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.ProvisioningUnavailable,
+          }),
         ],
       },
     )
@@ -521,15 +579,14 @@ describe("RepairMissingKeysDialog", () => {
       ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
       {
         results: [
-          {
+          buildAccountResult({
             accountId: "aihubmix-1",
             accountName: "AIHubMix",
             siteType: SITE_TYPES.AIHUBMIX,
             siteUrlOrigin: "https://aihubmix.example.invalid",
             outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
             skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey,
-            finishedAt: 1,
-          },
+          }),
         ],
       },
     )
@@ -567,29 +624,35 @@ describe("RepairMissingKeysDialog", () => {
     mockProgress = buildRepairProgress(
       ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
       {
+        totals: {
+          enabledAccounts: 1,
+          eligibleAccounts: 1,
+          processedAccounts: 1,
+        },
+        summary: {
+          ...buildRepairProgress().summary,
+          partial: 1,
+          invalidResources: 1,
+        },
         results: [
-          {
+          buildAccountResult({
             accountId: "account-1",
             accountName: "Account 1",
             siteType: SITE_TYPES.SUB2API,
             siteUrlOrigin: "https://sub2api.example.invalid",
-            outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
-            skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
-            invalidTokens: [
-              {
-                accountId: "account-1",
-                accountName: "Account 1",
-                siteType: SITE_TYPES.SUB2API,
-                siteUrlOrigin: "https://sub2api.example.invalid",
-                tokenId: 1,
-                tokenName: "Invalid token",
-                group: "removed",
-                reason:
-                  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
-              },
+            outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Partial,
+            invalidResources: [
+              buildInvalidResource(
+                {
+                  id: "account-1",
+                  name: "Account 1",
+                  siteType: SITE_TYPES.SUB2API,
+                  baseUrl: "https://sub2api.example.invalid",
+                },
+                "1",
+              ),
             ],
-            finishedAt: 1,
-          },
+          }),
         ],
       },
     )
@@ -610,9 +673,14 @@ describe("RepairMissingKeysDialog", () => {
     )
 
     expect(
-      screen.getByRole("progressbar", {
+      screen.queryByRole("progressbar", {
         name: "keyManagement:repairMissingKeys.progressLabel",
       }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:repairMissingKeys.summary.completedNeedsAttention",
+      ),
     ).toBeInTheDocument()
     expect(
       screen.getByText("keyManagement:repairMissingKeys.resultsTitle"),
@@ -632,19 +700,13 @@ describe("RepairMissingKeysDialog", () => {
         name: "keyManagement:dialog.createToken",
       }),
     ).not.toBeInTheDocument()
-    expect(
-      screen.queryByTestId("repair-missing-keys-progress-actions"),
-    ).not.toHaveTextContent(
-      "keyManagement:repairMissingKeys.previousResult.backToSetup",
-    )
-
     await user.click(
       screen.getByRole("button", {
         name: /keyManagement:repairMissingKeys\.views\.invalidKeys/,
       }),
     )
 
-    expect(screen.getByText("Invalid token")).toBeInTheDocument()
+    expect(screen.getByText("Invalid key")).toBeInTheDocument()
     expect(
       screen.queryByRole("checkbox", {
         name: "keyManagement:repairMissingKeys.invalidKeys.selectAll",
@@ -699,28 +761,14 @@ describe("RepairMissingKeysDialog", () => {
 
     mockProgress = buildCreatedProgress(account, {
       results: [
-        {
+        buildAccountResult({
           accountId: account.id,
           accountName: account.name,
           siteType: account.siteType,
           siteUrlOrigin: account.baseUrl,
-          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
-          createdGroups: ["alpha"],
-          createdTokens: [{ tokenId: 11, group: "alpha" }],
-          invalidTokens: [
-            {
-              accountId: account.id,
-              accountName: account.name,
-              siteType: account.siteType,
-              siteUrlOrigin: account.baseUrl,
-              tokenId: 12,
-              tokenName: "Invalid key",
-              group: "removed",
-              reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
-            },
-          ],
-          finishedAt: 1,
-        },
+          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Partial,
+          invalidResources: [buildInvalidResource(account)],
+        }),
       ],
     })
     view.rerender(
@@ -759,7 +807,7 @@ describe("RepairMissingKeysDialog", () => {
       }),
     ).toBeNull()
     expect(mockSendAccountKeyRepairMessage).not.toHaveBeenCalledWith(
-      AccountKeyRepairMessageTypes.DeleteInvalidTokens,
+      AccountKeyRepairMessageTypes.DeleteInvalidResources,
       expect.anything(),
     )
   })
@@ -770,7 +818,7 @@ describe("RepairMissingKeysDialog", () => {
     mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running, {
       jobId: "repair-job",
     })
-    mockResolveRepairCreatedTokenBatchImportCandidate.mockResolvedValue(
+    mockResolveRepairCreatedKeyBatchImportCandidate.mockResolvedValue(
       buildRepairImportCandidate(account),
     )
 
@@ -812,14 +860,14 @@ describe("RepairMissingKeysDialog", () => {
       ),
     ).toHaveAttribute("role", "combobox")
     expect(
-      mockResolveRepairCreatedTokenBatchImportCandidate,
+      mockResolveRepairCreatedKeyBatchImportCandidate,
     ).not.toHaveBeenCalled()
 
     await user.click(openButton)
 
     await waitFor(() => {
       expect(
-        mockResolveRepairCreatedTokenBatchImportCandidate,
+        mockResolveRepairCreatedKeyBatchImportCandidate,
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           progress: mockProgress,
@@ -861,7 +909,7 @@ describe("RepairMissingKeysDialog", () => {
     const user = userEvent.setup()
     const account = buildAccount()
     mockProgress = buildCreatedProgress(account)
-    mockResolveRepairCreatedTokenBatchImportCandidate.mockResolvedValue(
+    mockResolveRepairCreatedKeyBatchImportCandidate.mockResolvedValue(
       buildRepairImportCandidate(
         account,
         MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
@@ -890,7 +938,7 @@ describe("RepairMissingKeysDialog", () => {
 
     await waitFor(() => {
       expect(
-        mockResolveRepairCreatedTokenBatchImportCandidate,
+        mockResolveRepairCreatedKeyBatchImportCandidate,
       ).toHaveBeenCalledWith(
         expect.objectContaining({ freshness: "historical" }),
       )
@@ -907,20 +955,17 @@ describe("RepairMissingKeysDialog", () => {
     )
   })
 
-  it("does not offer managed-site import for legacy results without exact references", async () => {
+  it("does not offer managed-site import without created resource refs", async () => {
     const user = userEvent.setup()
     const account = buildAccount()
     mockProgress = buildCreatedProgress(account, {
       results: [
-        {
+        buildAccountResult({
           accountId: account.id,
           accountName: account.name,
           siteType: account.siteType,
           siteUrlOrigin: account.baseUrl,
-          outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
-          createdGroups: ["alpha"],
-          finishedAt: 1,
-        },
+        }),
       ],
     })
 
@@ -952,7 +997,7 @@ describe("RepairMissingKeysDialog", () => {
     mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running, {
       jobId: "repair-job",
     })
-    mockResolveRepairCreatedTokenBatchImportCandidate.mockRejectedValue(
+    mockResolveRepairCreatedKeyBatchImportCandidate.mockRejectedValue(
       new Error("inventory unavailable"),
     )
 
@@ -1022,8 +1067,12 @@ describe("RepairMissingKeysDialog", () => {
       managedSiteImportReceipts: [
         {
           targetFingerprint: "a".repeat(64),
-          accountId: account.id,
-          tokenId: 11,
+          resourceRef: {
+            accountId: account.id,
+            siteType: account.siteType,
+            scopeKey: "account",
+            resourceId: "11",
+          },
           status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
           updatedAt: 1,
         },
@@ -1055,7 +1104,7 @@ describe("RepairMissingKeysDialog", () => {
       ),
     ).not.toBeInTheDocument()
 
-    mockResolveRepairCreatedTokenBatchImportCandidate.mockResolvedValueOnce(
+    mockResolveRepairCreatedKeyBatchImportCandidate.mockResolvedValueOnce(
       buildRepairImportCandidate(
         account,
         MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
@@ -1069,7 +1118,7 @@ describe("RepairMissingKeysDialog", () => {
 
     await waitFor(() => {
       expect(
-        mockResolveRepairCreatedTokenBatchImportCandidate,
+        mockResolveRepairCreatedKeyBatchImportCandidate,
       ).toHaveBeenLastCalledWith(
         expect.objectContaining({
           includeCompletedReferences: true,
@@ -1113,8 +1162,12 @@ describe("RepairMissingKeysDialog", () => {
       managedSiteImportReceipts: [
         {
           targetFingerprint: "a".repeat(64),
-          accountId: account.id,
-          tokenId: 11,
+          resourceRef: {
+            accountId: account.id,
+            siteType: account.siteType,
+            scopeKey: "account",
+            resourceId: "11",
+          },
           status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
           updatedAt: 1,
         },
@@ -1255,7 +1308,7 @@ describe("RepairMissingKeysDialog", () => {
         userId: "1",
       },
     })
-    mockResolveRepairCreatedTokenBatchImportCandidate.mockResolvedValueOnce(
+    mockResolveRepairCreatedKeyBatchImportCandidate.mockResolvedValueOnce(
       buildRepairImportCandidate(account),
     )
     await user.click(
@@ -1323,29 +1376,26 @@ describe("RepairMissingKeysDialog", () => {
   it("records only controlled attempted outcomes and reconciled matches", async () => {
     const user = userEvent.setup()
     const account = buildAccount()
-    const onManagedSiteImportSuccess = vi.fn()
     mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Running, {
       jobId: "repair-job",
     })
 
     const candidate = buildRepairImportCandidate(account)
-    candidate.items = [11, 12, 13, 14].map((tokenId) => ({
+    candidate.items = [11, 12, 13, 14].map((resourceId) => ({
       kind: MANAGED_SITE_TOKEN_BATCH_EXPORT_INPUT_KINDS.RESOLVED,
       account,
-      runtimeKey: buildDisplayAccountTokenRuntimeKey(
-        account,
-        createToken({
-          id: tokenId,
-          name: `Created key ${tokenId}`,
-          group: `group-${tokenId}`,
+      runtimeKey: buildAccountKeyResourceRuntimeKey(account, {
+        ref: {
           accountId: account.id,
-          accountName: account.name,
-        }),
-      ),
+          siteType: account.siteType,
+          scopeKey: "account",
+          resourceId: String(resourceId),
+        },
+        label: `Created key ${resourceId}`,
+        secret: `resolved-runtime-secret-${resourceId}`,
+      }),
     }))
-    mockResolveRepairCreatedTokenBatchImportCandidate.mockResolvedValue(
-      candidate,
-    )
+    mockResolveRepairCreatedKeyBatchImportCandidate.mockResolvedValue(candidate)
 
     const view = render(
       <RepairMissingKeysDialog
@@ -1353,7 +1403,6 @@ describe("RepairMissingKeysDialog", () => {
         onClose={vi.fn()}
         accounts={[account]}
         startOnOpen={false}
-        onManagedSiteImportSuccess={onManagedSiteImportSuccess}
       />,
     )
 
@@ -1367,7 +1416,6 @@ describe("RepairMissingKeysDialog", () => {
         onClose={vi.fn()}
         accounts={[account]}
         startOnOpen={false}
-        onManagedSiteImportSuccess={onManagedSiteImportSuccess}
       />,
     )
     await user.click(
@@ -1430,23 +1478,39 @@ describe("RepairMissingKeysDialog", () => {
           targetFingerprint: "a".repeat(64),
           items: [
             {
-              accountId: account.id,
-              tokenId: 11,
+              resourceRef: {
+                accountId: account.id,
+                siteType: account.siteType,
+                scopeKey: "account",
+                resourceId: "11",
+              },
               status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Created,
             },
             {
-              accountId: account.id,
-              tokenId: 12,
+              resourceRef: {
+                accountId: account.id,
+                siteType: account.siteType,
+                scopeKey: "account",
+                resourceId: "12",
+              },
               status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Failed,
             },
             {
-              accountId: account.id,
-              tokenId: 13,
+              resourceRef: {
+                accountId: account.id,
+                siteType: account.siteType,
+                scopeKey: "account",
+                resourceId: "13",
+              },
               status: ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.Uncertain,
             },
             {
-              accountId: account.id,
-              tokenId: 14,
+              resourceRef: {
+                accountId: account.id,
+                siteType: account.siteType,
+                scopeKey: "account",
+                resourceId: "14",
+              },
               status:
                 ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES.AlreadyPresent,
             },
@@ -1454,10 +1518,6 @@ describe("RepairMissingKeysDialog", () => {
         },
       )
     })
-    expect(onManagedSiteImportSuccess).toHaveBeenCalledTimes(1)
-    expect(onManagedSiteImportSuccess).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 11, accountId: account.id }),
-    )
     expect(mockSetProgress).toHaveBeenCalledWith(mockProgress)
 
     mockSendAccountKeyRepairMessage.mockRejectedValueOnce(

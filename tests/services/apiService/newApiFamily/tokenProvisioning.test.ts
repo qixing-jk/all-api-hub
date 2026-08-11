@@ -6,7 +6,6 @@ import {
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { defaultTokenProvisioning } from "~/services/apiService/newApiFamily/default/tokenProvisioning"
@@ -97,8 +96,5 @@ describe("newApiFamily tokenProvisioning", () => {
         token: maskedToken,
       }),
     ).toBe(true)
-    expect(provisioning.getRepairPolicy()).toEqual({
-      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-    })
   })
 })

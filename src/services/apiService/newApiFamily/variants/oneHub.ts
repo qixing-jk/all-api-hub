@@ -1,4 +1,7 @@
-import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import {
+  normalizeApiTokenKey,
+  validateApiTokenInventory,
+} from "~/services/accountTokens/apiTokenKey"
 import type { UserGroupInfo } from "~/services/accountTokens/tokenProvisioningModel"
 import {
   transformModelPricing,
@@ -8,13 +11,15 @@ import type {
   OneHubModelPricing,
   OneHubUserGroupMap,
   OneHubUserGroupsResponse,
-  PaginatedTokenDate,
 } from "~/services/apiService/oneHub/type"
+import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
+import { fetchAllItems } from "~/services/apiTransport/pagination"
 import { fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { PricingResponse } from "~/services/modelList/pricingModel"
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
+import { isRecord } from "~/utils/core/object"
 
 const logger = createLogger("NewApiFamily.OneHub")
 
@@ -53,39 +58,47 @@ export const fetchModelPricing = async (
 }
 
 /**
- * Fetch OneHub-compatible account tokens.
+ * Fetch a complete inventory using OneHub's one-based pagination.
+ * Source: https://github.com/MartialBE/one-hub/blob/387f8bf16ed0d601fdede7ade378adb10aa1a35a/model/common.go
+ * Provider-selected sizes and stale metadata are tolerated; an empty page is
+ * the provider-owned completion signal.
  */
 export const fetchAccountTokens = async (
   request: ApiServiceRequest,
-  page: number = 0,
-  size: number = 100,
 ): Promise<ApiToken[]> => {
-  const searchParams = new URLSearchParams({
-    p: page.toString(),
-    size: size.toString(),
-  })
+  const tokens = await fetchAllItems<ApiToken>(
+    async (page) => {
+      const upstreamPage = page + 1
+      const searchParams = new URLSearchParams({
+        page: upstreamPage.toString(),
+        size: REQUEST_CONFIG.DEFAULT_PAGE_SIZE.toString(),
+      })
+      const tokensData = await fetchApiData<unknown>(request, {
+        endpoint: `/api/token/?${searchParams.toString()}`,
+      })
 
-  try {
-    const tokensData = await fetchApiData<PaginatedTokenDate>(request, {
-      endpoint: `/api/token/?${searchParams.toString()}`,
-    })
+      if (Array.isArray(tokensData)) {
+        const items = tokensData.map(normalizeApiTokenKey)
+        return { items, hasMore: items.length > 0 }
+      }
 
-    if (Array.isArray(tokensData)) {
-      return tokensData.map(normalizeApiTokenKey)
-    }
+      if (!isRecord(tokensData) || !Array.isArray(tokensData.data)) {
+        throw new Error("invalid_token_page_payload")
+      }
+      const items = tokensData.data.map(normalizeApiTokenKey)
+      return {
+        items,
+        hasMore: items.length > 0,
+      }
+    },
+    {
+      pageSize: REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
+      startPage: 0,
+      requireComplete: true,
+    },
+  )
 
-    if (tokensData && typeof tokensData === "object" && "data" in tokensData) {
-      return (tokensData.data || []).map(normalizeApiTokenKey)
-    }
-
-    logger.warn("Unexpected token response format", {
-      responseType: tokensData === null ? "null" : typeof tokensData,
-    })
-    return []
-  } catch (error) {
-    logger.error("获取令牌列表失败", error)
-    throw error
-  }
+  return validateApiTokenInventory(tokens)
 }
 
 /**

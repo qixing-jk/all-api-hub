@@ -26,11 +26,12 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type {
-  AccountKeyRepairInvalidToken,
+  AccountKeyRepairInvalidResource,
   AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
+import { ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES } from "~/types/accountKeyAutoProvisioning"
 
-import { getInvalidTokenKey } from "./repairMissingKeysDialogHelpers"
+import { getInvalidResourceKey } from "./repairMissingKeysDialogHelpers"
 
 const deleteInvalidKeysAnalyticsContext = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
@@ -40,73 +41,64 @@ const deleteInvalidKeysAnalyticsContext = {
 }
 
 interface UseInvalidKeyDeletionOptions {
-  invalidTokens: AccountKeyRepairInvalidToken[]
+  invalidResources: AccountKeyRepairInvalidResource[]
   setProgress: Dispatch<SetStateAction<AccountKeyRepairProgress | null>>
   t: TFunction
 }
 
-/**
- * Manages invalid-key selection, deletion, feedback, and delete analytics.
- */
+/** Manages invalid-resource selection, deletion, feedback, and analytics. */
 export function useInvalidKeyDeletion({
-  invalidTokens,
+  invalidResources,
   setProgress,
   t,
 }: UseInvalidKeyDeletionOptions) {
-  const [selectedInvalidTokenKeys, setSelectedInvalidTokenKeys] = useState<
-    Set<string>
-  >(() => new Set())
+  const [selectedInvalidResourceKeys, setSelectedInvalidResourceKeys] =
+    useState<Set<string>>(() => new Set())
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
-  const [isDeletingInvalidKeys, setIsDeletingInvalidKeys] = useState(false)
+  const [isDeletingInvalidResources, setIsDeletingInvalidResources] =
+    useState(false)
   const [deleteResultMessage, setDeleteResultMessage] = useState("")
 
-  const selectedInvalidTokens = useMemo(() => {
-    return invalidTokens.filter((token) =>
-      selectedInvalidTokenKeys.has(getInvalidTokenKey(token)),
-    )
-  }, [invalidTokens, selectedInvalidTokenKeys])
+  const selectedInvalidResources = useMemo(
+    () =>
+      invalidResources.filter((resource) =>
+        selectedInvalidResourceKeys.has(getInvalidResourceKey(resource)),
+      ),
+    [invalidResources, selectedInvalidResourceKeys],
+  )
 
   useEffect(() => {
-    const currentInvalidTokenKeys = new Set(
-      invalidTokens.map(getInvalidTokenKey),
-    )
-    setSelectedInvalidTokenKeys((previous) => {
-      const next = new Set(
-        [...previous].filter((key) => currentInvalidTokenKeys.has(key)),
-      )
+    const currentKeys = new Set(invalidResources.map(getInvalidResourceKey))
+    setSelectedInvalidResourceKeys((previous) => {
+      const next = new Set([...previous].filter((key) => currentKeys.has(key)))
       return next.size === previous.size ? previous : next
     })
-  }, [invalidTokens])
+  }, [invalidResources])
 
   useEffect(() => {
-    if (isDeleteConfirmOpen && selectedInvalidTokens.length === 0) {
+    if (isDeleteConfirmOpen && selectedInvalidResources.length === 0) {
       setIsDeleteConfirmOpen(false)
     }
-  }, [isDeleteConfirmOpen, selectedInvalidTokens.length])
+  }, [isDeleteConfirmOpen, selectedInvalidResources.length])
 
-  const resetInvalidKeyDeletionState = useCallback(() => {
-    setSelectedInvalidTokenKeys(new Set())
+  const resetInvalidResourceDeletionState = useCallback(() => {
+    setSelectedInvalidResourceKeys(new Set())
     setIsDeleteConfirmOpen(false)
     setDeleteResultMessage("")
   }, [])
 
-  const handleDeleteInvalidKeys = useCallback(async () => {
-    if (isDeletingInvalidKeys) {
-      return
-    }
+  const handleDeleteInvalidResources = useCallback(async () => {
+    if (isDeletingInvalidResources) return
+    const resourcesToDelete = selectedInvalidResources
+    if (resourcesToDelete.length === 0) return
 
-    const tokensToDelete = selectedInvalidTokens
-    if (tokensToDelete.length === 0) {
-      return
-    }
-
-    setIsDeletingInvalidKeys(true)
+    setIsDeletingInvalidResources(true)
     setDeleteResultMessage("")
     void trackProductAnalyticsActionStarted(deleteInvalidKeysAnalyticsContext)
     try {
       const response = await sendAccountKeyRepairMessage(
-        AccountKeyRepairMessageTypes.DeleteInvalidTokens,
-        { tokens: tokensToDelete },
+        AccountKeyRepairMessageTypes.DeleteInvalidResources,
+        { resources: resourcesToDelete },
       )
 
       if (!response?.success || !response.data) {
@@ -119,83 +111,100 @@ export function useInvalidKeyDeletion({
           result: PRODUCT_ANALYTICS_RESULTS.Failure,
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
-            itemCount: tokensToDelete.length,
-            selectedCount: tokensToDelete.length,
+            itemCount: resourcesToDelete.length,
+            selectedCount: resourcesToDelete.length,
             successCount: 0,
-            failureCount: tokensToDelete.length,
+            failureCount: resourcesToDelete.length,
             statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
           },
         })
         return
       }
 
-      const deletedKeys = new Set(response.data.deleted.map(getInvalidTokenKey))
-      setSelectedInvalidTokenKeys((previous) => {
+      const appliedResults = response.data.results.filter(
+        ({ outcome }) =>
+          outcome === ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied,
+      )
+      const rejectedCount = response.data.results.filter(
+        ({ outcome }) =>
+          outcome === ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Rejected,
+      ).length
+      const uncertainCount = response.data.results.filter(
+        ({ outcome }) =>
+          outcome === ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain,
+      ).length
+      const appliedKeys = new Set(
+        appliedResults.map(({ resource }) => getInvalidResourceKey(resource)),
+      )
+
+      setSelectedInvalidResourceKeys((previous) => {
         const next = new Set(previous)
-        for (const key of deletedKeys) {
-          next.delete(key)
-        }
+        for (const key of appliedKeys) next.delete(key)
         return next
       })
       setProgress((current) => {
         if (!current) return current
 
-        let removedInvalidTokenCount = 0
+        let removedInvalidResourceCount = 0
         const nextResults = current.results.map((result) => {
-          const nextInvalidTokens = result.invalidTokens?.filter((token) => {
-            const shouldRemove = deletedKeys.has(getInvalidTokenKey(token))
-            if (shouldRemove) {
-              removedInvalidTokenCount += 1
-            }
-            return !shouldRemove
-          })
-
-          return {
-            ...result,
-            invalidTokens: nextInvalidTokens,
-          }
+          const nextInvalidResources = result.invalidResources.filter(
+            (resource) => {
+              const shouldRemove = appliedKeys.has(
+                getInvalidResourceKey(resource),
+              )
+              if (shouldRemove) removedInvalidResourceCount += 1
+              return !shouldRemove
+            },
+          )
+          return { ...result, invalidResources: nextInvalidResources }
         })
 
         return {
           ...current,
           summary: {
             ...current.summary,
-            invalidKeys: Math.max(
+            invalidResources: Math.max(
               0,
-              (current.summary.invalidKeys ?? 0) - removedInvalidTokenCount,
+              current.summary.invalidResources - removedInvalidResourceCount,
             ),
-            deletedKeys:
-              (current.summary.deletedKeys ?? 0) + response.data.deleted.length,
-            deleteFailed:
-              (current.summary.deleteFailed ?? 0) + response.data.failed.length,
+            deleteApplied:
+              current.summary.deleteApplied + appliedResults.length,
+            deleteRejected: current.summary.deleteRejected + rejectedCount,
+            deleteUncertain: current.summary.deleteUncertain + uncertainCount,
           },
           results: nextResults,
         }
       })
+
+      const nonAppliedCount = rejectedCount + uncertainCount
       setDeleteResultMessage(
-        response.data.failed.length > 0
-          ? t("keyManagement:repairMissingKeys.invalidKeys.deletePartial", {
-              deleted: response.data.deleted.length,
-              failed: response.data.failed.length,
-            })
+        nonAppliedCount > 0
+          ? t(
+              "keyManagement:repairMissingKeys.invalidKeys.deleteNeedsAttention",
+              {
+                applied: appliedResults.length,
+                rejected: rejectedCount,
+                uncertain: uncertainCount,
+              },
+            )
           : t("keyManagement:repairMissingKeys.invalidKeys.deleteSuccess", {
-              count: response.data.deleted.length,
+              count: appliedResults.length,
             }),
       )
       setIsDeleteConfirmOpen(false)
       void trackProductAnalyticsActionCompleted({
         ...deleteInvalidKeysAnalyticsContext,
         result:
-          response.data.failed.length > 0
+          nonAppliedCount > 0
             ? PRODUCT_ANALYTICS_RESULTS.Failure
             : PRODUCT_ANALYTICS_RESULTS.Success,
         insights: {
-          itemCount: tokensToDelete.length,
-          selectedCount: tokensToDelete.length,
-          successCount: response.data.deleted.length,
-          failureCount: response.data.failed.length,
+          itemCount: resourcesToDelete.length,
+          selectedCount: resourcesToDelete.length,
+          successCount: appliedResults.length,
+          failureCount: nonAppliedCount,
           statusKind:
-            response.data.failed.length > 0
+            nonAppliedCount > 0
               ? PRODUCT_ANALYTICS_STATUS_KINDS.Warning
               : PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
         },
@@ -210,27 +219,27 @@ export function useInvalidKeyDeletion({
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
-          itemCount: tokensToDelete.length,
-          selectedCount: tokensToDelete.length,
+          itemCount: resourcesToDelete.length,
+          selectedCount: resourcesToDelete.length,
           successCount: 0,
-          failureCount: tokensToDelete.length,
+          failureCount: resourcesToDelete.length,
           statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
         },
       })
     } finally {
-      setIsDeletingInvalidKeys(false)
+      setIsDeletingInvalidResources(false)
     }
-  }, [isDeletingInvalidKeys, selectedInvalidTokens, setProgress, t])
+  }, [isDeletingInvalidResources, selectedInvalidResources, setProgress, t])
 
   return {
     deleteResultMessage,
-    handleDeleteInvalidKeys,
+    handleDeleteInvalidResources,
     isDeleteConfirmOpen,
-    isDeletingInvalidKeys,
-    resetInvalidKeyDeletionState,
-    selectedInvalidTokenKeys,
-    selectedInvalidTokens,
+    isDeletingInvalidResources,
+    resetInvalidResourceDeletionState,
+    selectedInvalidResourceKeys,
+    selectedInvalidResources,
     setIsDeleteConfirmOpen,
-    setSelectedInvalidTokenKeys,
+    setSelectedInvalidResourceKeys,
   }
 }

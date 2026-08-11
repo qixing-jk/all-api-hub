@@ -17,10 +17,3 @@ export interface CreateTokenRequest {
 }
 
 export type CreateTokenResult = boolean | ApiToken
-
-export interface PaginatedTokenResponse {
-  page: number
-  page_size: number
-  total: number
-  items: ApiToken[]
-}

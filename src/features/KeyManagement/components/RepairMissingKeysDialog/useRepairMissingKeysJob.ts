@@ -60,13 +60,15 @@ function getRepairStartFailureInsights(
  * Extracts privacy-safe count metrics from repair progress.
  */
 function getRepairProgressInsightCounts(progress: AccountKeyRepairProgress) {
+  const failureCount =
+    progress.summary.partial +
+    progress.summary.blocked +
+    progress.summary.failed
   return {
     itemCount: progress.totals.eligibleAccounts,
-    selectedCount:
-      progress.totals.processedEligibleAccounts ??
-      progress.totals.processedAccounts,
-    successCount: progress.summary.created,
-    failureCount: progress.summary.failed,
+    selectedCount: progress.totals.processedAccounts,
+    successCount: progress.summary.complete,
+    failureCount,
   }
 }
 
@@ -77,7 +79,11 @@ function getRepairProgressStatusKind(progress: AccountKeyRepairProgress) {
   if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed) {
     return PRODUCT_ANALYTICS_STATUS_KINDS.Error
   }
-  if (progress.summary.failed > 0) {
+  if (
+    progress.summary.partial > 0 ||
+    progress.summary.blocked > 0 ||
+    progress.summary.failed > 0
+  ) {
     return PRODUCT_ANALYTICS_STATUS_KINDS.Warning
   }
   return PRODUCT_ANALYTICS_STATUS_KINDS.Healthy
@@ -93,7 +99,11 @@ function getRepairProgressResult(progress: AccountKeyRepairProgress) {
   if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed) {
     return PRODUCT_ANALYTICS_RESULTS.Failure
   }
-  if (progress.summary.failed > 0) {
+  if (
+    progress.summary.partial > 0 ||
+    progress.summary.blocked > 0 ||
+    progress.summary.failed > 0
+  ) {
     return PRODUCT_ANALYTICS_RESULTS.Failure
   }
   return PRODUCT_ANALYTICS_RESULTS.Success

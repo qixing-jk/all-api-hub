@@ -722,7 +722,8 @@ export default function KeyManagement(props: {
     const settledNativeAccountIds = new Set(nativeKeys.settledAccountIds)
     for (const account of displayData) {
       const isNativeAccount = Boolean(
-        getSiteTypeCapabilities(account.siteType).account?.keyResources,
+        getSiteTypeCapabilities(account.siteType).account
+          ?.keyResourceManagement,
       )
       if (!isNativeAccount) continue
       const nativeCount = nativeCountByAccount.get(account.id) ?? 0
@@ -793,11 +794,15 @@ export default function KeyManagement(props: {
       isIncluded(account.id),
     )
     const hasIncludedNativeAccount = includedAccounts.some((account) =>
-      Boolean(getSiteTypeCapabilities(account.siteType).account?.keyResources),
+      Boolean(
+        getSiteTypeCapabilities(account.siteType).account
+          ?.keyResourceManagement,
+      ),
     )
     const hasIncludedLegacyAccount = includedAccounts.some(
       (account) =>
-        !getSiteTypeCapabilities(account.siteType).account?.keyResources,
+        !getSiteTypeCapabilities(account.siteType).account
+          ?.keyResourceManagement,
     )
     const hasUnknownCount =
       (nativeKeys.isLoading && hasIncludedNativeAccount) ||
@@ -1059,11 +1064,6 @@ export default function KeyManagement(props: {
         onClose={handleCloseRepairMissingKeys}
         accounts={displayData}
         startOnOpen={repairStartOnOpen}
-        onManagedSiteImportSuccess={
-          isManagedSiteChannelStatusSupported
-            ? handleManagedSiteImportSuccess
-            : undefined
-        }
       />
 
       <DestructiveConfirmDialog

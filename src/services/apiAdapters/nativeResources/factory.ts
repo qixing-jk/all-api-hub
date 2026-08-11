@@ -126,7 +126,7 @@ export const assertNativeResourceFacts = <
 type NativeResourceMutationResolution<T, TFailure> =
   | { status: "applied"; value: T }
   | { status: "not-applied"; failure: TFailure }
-  | { status: "uncertain" }
+  | { status: "uncertain"; failure: TFailure }
 
 const snapshotNativeResourceMutation = <T, TFailure>(
   result: unknown,
@@ -171,7 +171,17 @@ const snapshotNativeResourceMutation = <T, TFailure>(
     }
   }
   if (certainty === "possibly-applied" || certainty === "partially-applied") {
-    return { certainty }
+    if (!hasOwn("failure")) {
+      throw new NativeResourceBoundaryError("Invalid native resource mutation")
+    }
+    try {
+      return {
+        certainty,
+        failure: (result as { failure: TFailure }).failure,
+      }
+    } catch {
+      throw new NativeResourceBoundaryError("Invalid native resource mutation")
+    }
   }
   throw new NativeResourceBoundaryError("Invalid native resource mutation")
 }
@@ -186,7 +196,7 @@ export const resolveNativeResourceMutation = <T, TFailure>(
   if (snapshot.certainty === "not-applied") {
     return { status: "not-applied", failure: snapshot.failure }
   }
-  return { status: "uncertain" }
+  return { status: "uncertain", failure: snapshot.failure }
 }
 
 /** Serializes editor mutations and closes only after applied or uncertain work. */

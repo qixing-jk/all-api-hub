@@ -129,7 +129,6 @@ describe("accountOperations auto-provision key on add", () => {
           isInventoryTokenUsable: vi.fn(),
           resolveDefaultTokenCreation: vi.fn(),
           classifyCreatedToken: vi.fn(),
-          getRepairPolicy: vi.fn(),
         },
       },
     })

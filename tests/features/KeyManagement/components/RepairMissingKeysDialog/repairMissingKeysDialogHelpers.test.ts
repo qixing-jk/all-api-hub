@@ -1,27 +1,52 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  filterRepairInvalidTokens,
+  filterRepairInvalidResources,
   filterRepairResults,
+  getInvalidResourceKey,
   getRepairOutcomeCounts,
   getRepairProgressBarColor,
   getRepairProgressTotals,
 } from "~/features/KeyManagement/components/RepairMissingKeysDialog/repairMissingKeysDialogHelpers"
+import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
+import { ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyRepairAccountResult,
-  AccountKeyRepairInvalidToken,
+  AccountKeyRepairInvalidResource,
   AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
 import {
-  ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS,
   ACCOUNT_KEY_REPAIR_JOB_STATES,
   ACCOUNT_KEY_REPAIR_OUTCOMES,
+  ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
 } from "~/types/accountKeyAutoProvisioning"
+
+const emptySummary: AccountKeyRepairProgress["summary"] = {
+  complete: 0,
+  partial: 0,
+  blocked: 0,
+  skipped: 0,
+  failed: 0,
+  requirements: 0,
+  coveredRequirements: 0,
+  createdRequirements: 0,
+  blockedRequirements: 0,
+  rejectedRequirements: 0,
+  uncertainRequirements: 0,
+  invalidResources: 0,
+  renameApplied: 0,
+  renameRejected: 0,
+  renameUncertain: 0,
+  deleteApplied: 0,
+  deleteRejected: 0,
+  deleteUncertain: 0,
+}
 
 function buildProgress(
   overrides: Partial<AccountKeyRepairProgress> = {},
 ): AccountKeyRepairProgress {
   return {
+    schemaVersion: ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
     jobId: "job-1",
     state: ACCOUNT_KEY_REPAIR_JOB_STATES.Running,
     totals: {
@@ -29,12 +54,7 @@ function buildProgress(
       eligibleAccounts: 1,
       processedAccounts: 0,
     },
-    summary: {
-      created: 0,
-      alreadyHad: 0,
-      skipped: 0,
-      failed: 0,
-    },
+    summary: emptySummary,
     results: [],
     ...overrides,
   }
@@ -48,34 +68,49 @@ function buildResult(
     accountName: "Enabled Site",
     siteType: "new-api",
     siteUrlOrigin: "https://enabled.example.invalid",
-    outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
-    availableGroups: ["default"],
-    coveredGroups: ["default"],
-    createdGroups: [],
-    missingGroups: [],
+    outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
+    requirementResults: [
+      {
+        requirement: {
+          requirementKey: "opaque-default",
+          displayName: "Default plan",
+          provisioning: {
+            kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
+          },
+        },
+        outcome: ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Covered,
+      },
+    ],
+    createdRefs: [],
+    invalidResources: [],
+    renameResults: [],
     finishedAt: 1,
     ...overrides,
   }
 }
 
-function buildInvalidToken(
-  overrides: Partial<AccountKeyRepairInvalidToken> = {},
-): AccountKeyRepairInvalidToken {
+function buildInvalidResource(
+  overrides: Partial<AccountKeyRepairInvalidResource> = {},
+): AccountKeyRepairInvalidResource {
   return {
     accountId: "account-1",
     accountName: "Enabled Site",
     siteType: "new-api",
     siteUrlOrigin: "https://enabled.example.invalid",
-    tokenId: 1,
-    tokenName: "old group key",
-    group: "legacy",
-    reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+    ref: {
+      accountId: "account-1",
+      siteType: "new-api",
+      scopeKey: "account",
+      resourceId: "resource-1",
+    },
+    displayLabel: "Old plan key",
+    reason: "orphaned-placement",
     ...overrides,
   }
 }
 
 describe("repairMissingKeysDialogHelpers", () => {
-  it("filters repair results by outcome and searchable account/group fields", () => {
+  it("filters repair results by current outcome and requirement display name", () => {
     const results = [
       buildResult(),
       buildResult({
@@ -83,8 +118,20 @@ describe("repairMissingKeysDialogHelpers", () => {
         accountName: "Another Site",
         siteType: "sub2api",
         siteUrlOrigin: "https://another.example.invalid",
-        outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Failed,
-        missingGroups: ["legacy"],
+        outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Partial,
+        requirementResults: [
+          {
+            requirement: {
+              requirementKey: "opaque-legacy",
+              displayName: "Legacy plan",
+              provisioning: {
+                kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.InputRequired,
+                reasonCode: "example-input-required",
+              },
+            },
+            outcome: ACCOUNT_KEY_RECONCILIATION_OUTCOMES.BlockedInputRequired,
+          },
+        ],
       }),
       buildResult({
         accountId: "account-3",
@@ -95,12 +142,11 @@ describe("repairMissingKeysDialogHelpers", () => {
 
     expect(
       filterRepairResults({
-        outcomeFilter: ACCOUNT_KEY_REPAIR_OUTCOMES.Failed,
+        outcomeFilter: ACCOUNT_KEY_REPAIR_OUTCOMES.Partial,
         results,
         searchTerm: "",
       }),
     ).toEqual([results[1]])
-
     expect(
       filterRepairResults({
         outcomeFilter: null,
@@ -108,50 +154,92 @@ describe("repairMissingKeysDialogHelpers", () => {
         searchTerm: "legacy",
       }),
     ).toEqual([results[1]])
-
     expect(
       filterRepairResults({
-        outcomeFilter: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
+        outcomeFilter: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
         results,
         searchTerm: "another",
       }),
     ).toEqual([])
   })
 
-  it("filters invalid tokens by token, account, origin, site type, and group", () => {
-    const tokens = [
-      buildInvalidToken(),
-      buildInvalidToken({
+  it("filters invalid resources by display label, ref, account, origin, and site type", () => {
+    const resources = [
+      buildInvalidResource(),
+      buildInvalidResource({
         accountId: "account-2",
         accountName: "Other Site",
         siteType: "one-api",
         siteUrlOrigin: "https://other.example.invalid",
-        tokenId: 2,
-        tokenName: "orphaned key",
-        group: "removed",
+        ref: {
+          accountId: "account-2",
+          siteType: "one-api",
+          scopeKey: "account",
+          resourceId: "resource-2",
+        },
+        displayLabel: "Orphaned key",
       }),
     ]
 
-    expect(filterRepairInvalidTokens(tokens, "orphaned")).toEqual([tokens[1]])
-    expect(filterRepairInvalidTokens(tokens, "legacy")).toEqual([tokens[0]])
-    expect(filterRepairInvalidTokens(tokens, "one-api")).toEqual([tokens[1]])
-    expect(filterRepairInvalidTokens(tokens, "missing")).toEqual([])
+    expect(filterRepairInvalidResources(resources, "orphaned key")).toEqual([
+      resources[1],
+    ])
+    expect(filterRepairInvalidResources(resources, "resource-1")).toEqual([
+      resources[0],
+    ])
+    expect(filterRepairInvalidResources(resources, "one-api")).toEqual([
+      resources[1],
+    ])
+    expect(filterRepairInvalidResources(resources, "missing")).toEqual([])
   })
 
-  it("counts outcomes for the visible repair results", () => {
+  it("uses the full resource ref identity for invalid-resource selection", () => {
+    const base = buildInvalidResource()
+    const otherScope = buildInvalidResource({
+      ref: { ...base.ref, scopeKey: "workspace" },
+    })
+
+    expect(getInvalidResourceKey(base)).not.toBe(
+      getInvalidResourceKey(otherScope),
+    )
+  })
+
+  it("counts all six current outcomes for visible repair results", () => {
     expect(
       getRepairOutcomeCounts([
-        buildResult(),
-        buildResult({ outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Created }),
-        buildResult({ outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad }),
+        buildResult({ outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered }),
+        buildResult({ outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Repaired }),
+        buildResult({ outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Partial }),
+        buildResult({ outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Blocked }),
         buildResult({ outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped }),
         buildResult({ outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Failed }),
       ]),
     ).toEqual({
-      created: 2,
-      alreadyHad: 1,
+      covered: 1,
+      repaired: 1,
+      partial: 1,
+      blocked: 1,
       skipped: 1,
       failed: 1,
+    })
+  })
+
+  it("uses only current processedAccounts for progress", () => {
+    expect(
+      getRepairProgressTotals(
+        buildProgress({
+          totals: {
+            enabledAccounts: 3,
+            eligibleAccounts: 2,
+            processedAccounts: 1,
+          },
+        }),
+      ),
+    ).toEqual({
+      eligibleTotal: 2,
+      processedTotal: 1,
+      progressMax: 2,
+      progressPercent: 50,
     })
   })
 
@@ -179,12 +267,7 @@ describe("repairMissingKeysDialogHelpers", () => {
       getRepairProgressBarColor(
         buildProgress({
           state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed,
-          summary: {
-            created: 1,
-            alreadyHad: 0,
-            skipped: 0,
-            failed: 1,
-          },
+          summary: { ...emptySummary, complete: 1, failed: 1 },
         }),
       ),
     ).toBe("bg-amber-600 dark:bg-amber-500")

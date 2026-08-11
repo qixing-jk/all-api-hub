@@ -5,32 +5,46 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { RepairInvalidKeysList } from "~/features/KeyManagement/components/RepairMissingKeysDialog/RepairInvalidKeysList"
-import type { AccountKeyRepairInvalidToken } from "~/types/accountKeyAutoProvisioning"
-import { ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS } from "~/types/accountKeyAutoProvisioning"
+import { getInvalidResourceKey } from "~/features/KeyManagement/components/RepairMissingKeysDialog/repairMissingKeysDialogHelpers"
+import type { AccountKeyRepairInvalidResource } from "~/types/accountKeyAutoProvisioning"
 
 const t = ((key: string, options?: Record<string, unknown>) => {
   if (key === "keyManagement:repairMissingKeys.invalidKeys.selectedCount") {
     return `${options?.count} selected`
   }
-  if (key === "keyManagement:repairMissingKeys.invalidKeys.groupUnavailable") {
-    return `group unavailable: ${options?.group}`
+  if (
+    key ===
+    "keyManagement:repairMissingKeys.invalidKeys.reasons.orphanedPlacement"
+  ) {
+    return "Reason: This key belongs to a group that is no longer available. Delete it if you no longer need it."
   }
-
+  if (key === "keyManagement:repairMissingKeys.invalidKeys.reason") {
+    return `reason: ${options?.reason}`
+  }
+  if (key === "keyManagement:repairMissingKeys.invalidKeys.group") {
+    return `Group: ${options?.name}`
+  }
   return key
 }) as TFunction
 
-function buildToken(
-  overrides: Partial<AccountKeyRepairInvalidToken> = {},
-): AccountKeyRepairInvalidToken {
+function buildResource(
+  resourceId = "resource-1",
+  overrides: Partial<AccountKeyRepairInvalidResource> = {},
+): AccountKeyRepairInvalidResource {
   return {
     accountId: "account-1",
     accountName: "Example Account",
     siteType: SITE_TYPES.NEW_API,
     siteUrlOrigin: "https://account.example.invalid",
-    tokenId: 1,
-    tokenName: "Token 1",
-    group: "missing-group",
-    reason: ACCOUNT_KEY_REPAIR_INVALID_TOKEN_REASONS.GroupUnavailable,
+    ref: {
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId,
+    },
+    displayLabel: `Key ${resourceId}`,
+    groupLabel: "Retired group",
+    reason: "orphaned-placement",
     ...overrides,
   }
 }
@@ -38,17 +52,16 @@ function buildToken(
 function renderList(
   props: Partial<Parameters<typeof RepairInvalidKeysList>[0]> = {},
 ) {
-  const token = buildToken()
-
+  const resource = buildResource()
   return render(
     <RepairInvalidKeysList
       deleteResultMessage=""
-      filteredInvalidTokens={[token]}
-      invalidTokens={[token]}
-      selectedInvalidTokenKeys={new Set()}
-      selectedInvalidTokens={[]}
+      filteredInvalidResources={[resource]}
+      invalidResources={[resource]}
+      selectedInvalidResourceKeys={new Set()}
+      selectedInvalidResources={[]}
       onOpenDeleteConfirm={vi.fn()}
-      onSelectedInvalidTokenKeysChange={vi.fn()}
+      onSelectedInvalidResourceKeysChange={vi.fn()}
       t={t}
       {...props}
     />,
@@ -56,69 +69,60 @@ function renderList(
 }
 
 describe("RepairInvalidKeysList", () => {
-  it("renders the invalid-list empty state and delete result message", () => {
+  it("renders delete feedback with the empty state", () => {
     renderList({
-      deleteResultMessage: "Deleted 2 stale keys",
-      filteredInvalidTokens: [],
-      invalidTokens: [],
+      deleteResultMessage: "Some resources still need attention",
+      filteredInvalidResources: [],
+      invalidResources: [],
     })
 
-    expect(screen.getByText("Deleted 2 stale keys")).toBeInTheDocument()
+    expect(
+      screen.getByText("Some resources still need attention"),
+    ).toBeVisible()
     expect(
       screen.getByText(
         "keyManagement:repairMissingKeys.invalidKeys.emptyTitle",
       ),
-    ).toBeInTheDocument()
+    ).toBeVisible()
+  })
+
+  it("renders the key name and former group without exposing internal identity", () => {
+    renderList()
+
+    expect(screen.getByText("Key resource-1")).toBeVisible()
     expect(
       screen.getByText(
-        "keyManagement:repairMissingKeys.invalidKeys.emptyDescription",
+        "Reason: This key belongs to a group that is no longer available. Delete it if you no longer need it.",
       ),
-    ).toBeInTheDocument()
+    ).toBeVisible()
+    expect(screen.getByText("Group: Retired group")).toBeVisible()
+    expect(screen.queryByText("account")).not.toBeInTheDocument()
+    expect(screen.queryByText("resource-1")).not.toBeInTheDocument()
   })
 
-  it("renders the filtered empty state when invalid keys exist but none match", () => {
+  it("selects all visible resources by full ref identity", async () => {
+    const user = userEvent.setup()
+    const first = buildResource("same", {
+      ref: {
+        accountId: "account-1",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "same",
+      },
+    })
+    const second = buildResource("same", {
+      ref: {
+        accountId: "account-1",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "workspace",
+        resourceId: "same",
+      },
+    })
+    const onSelectedInvalidResourceKeysChange = vi.fn()
     renderList({
-      filteredInvalidTokens: [],
-      invalidTokens: [buildToken()],
-    })
-
-    expect(
-      screen.getByText("keyManagement:repairMissingKeys.noMatchingResults"),
-    ).toBeInTheDocument()
-  })
-
-  it("selects all visible invalid keys and clears selection", async () => {
-    const user = userEvent.setup()
-    const onSelectedInvalidTokenKeysChange = vi.fn()
-
-    const { rerender } = renderList({
-      filteredInvalidTokens: [
-        buildToken({
-          accountId: "account-1",
-          tokenId: 1,
-          tokenName: "Token 1",
-        }),
-        buildToken({
-          accountId: "account-2",
-          tokenId: 2,
-          tokenName: "Token 2",
-        }),
-      ],
-      invalidTokens: [
-        buildToken({
-          accountId: "account-1",
-          tokenId: 1,
-          tokenName: "Token 1",
-        }),
-        buildToken({
-          accountId: "account-2",
-          tokenId: 2,
-          tokenName: "Token 2",
-        }),
-      ],
-      selectedInvalidTokenKeys: new Set(),
-      selectedInvalidTokens: [],
-      onSelectedInvalidTokenKeysChange,
+      filteredInvalidResources: [first, second],
+      invalidResources: [first, second],
+      onSelectedInvalidResourceKeysChange,
     })
 
     await user.click(
@@ -127,100 +131,33 @@ describe("RepairInvalidKeysList", () => {
       }),
     )
 
-    expect(onSelectedInvalidTokenKeysChange).toHaveBeenCalledWith(
-      new Set(["account-1:1", "account-2:2"]),
+    expect(onSelectedInvalidResourceKeysChange).toHaveBeenCalledWith(
+      new Set([getInvalidResourceKey(first), getInvalidResourceKey(second)]),
     )
-
-    const firstToken = buildToken({
-      accountId: "account-1",
-      tokenId: 1,
-      tokenName: "Token 1",
-    })
-    const secondToken = buildToken({
-      accountId: "account-2",
-      tokenId: 2,
-      tokenName: "Token 2",
-    })
-    rerender(
-      <RepairInvalidKeysList
-        deleteResultMessage=""
-        filteredInvalidTokens={[firstToken, secondToken]}
-        invalidTokens={[firstToken, secondToken]}
-        selectedInvalidTokenKeys={new Set(["account-1:1", "account-2:2"])}
-        selectedInvalidTokens={[firstToken, secondToken]}
-        onOpenDeleteConfirm={vi.fn()}
-        onSelectedInvalidTokenKeysChange={onSelectedInvalidTokenKeysChange}
-        t={t}
-      />,
-    )
-
-    await user.click(
-      screen.getByRole("checkbox", {
-        name: "keyManagement:repairMissingKeys.invalidKeys.selectAll",
-      }),
-    )
-
-    expect(onSelectedInvalidTokenKeysChange).toHaveBeenLastCalledWith(new Set())
   })
 
-  it("updates individual token selection", async () => {
+  it("opens delete confirmation only when a resource is selected", async () => {
     const user = userEvent.setup()
-    const onSelectedInvalidTokenKeysChange = vi.fn()
-
-    const { rerender } = renderList({ onSelectedInvalidTokenKeysChange })
-
-    await user.click(screen.getByRole("checkbox", { name: "Token 1" }))
-
-    const updater = onSelectedInvalidTokenKeysChange.mock.calls[0]?.[0]
-    expect(updater).toBeTypeOf("function")
-    expect(updater(new Set())).toEqual(new Set(["account-1:1"]))
-
-    const selectedToken = buildToken()
-    rerender(
-      <RepairInvalidKeysList
-        deleteResultMessage=""
-        filteredInvalidTokens={[selectedToken]}
-        invalidTokens={[selectedToken]}
-        selectedInvalidTokenKeys={new Set(["account-1:1"])}
-        selectedInvalidTokens={[selectedToken]}
-        onOpenDeleteConfirm={vi.fn()}
-        onSelectedInvalidTokenKeysChange={onSelectedInvalidTokenKeysChange}
-        t={t}
-      />,
-    )
-
-    await user.click(screen.getByRole("checkbox", { name: "Token 1" }))
-
-    const removeUpdater = onSelectedInvalidTokenKeysChange.mock.calls[1]?.[0]
-    expect(removeUpdater).toBeTypeOf("function")
-    expect(removeUpdater(new Set(["account-1:1"]))).toEqual(new Set())
-  })
-
-  it("enables delete only when tokens are selected and opens confirmation", async () => {
-    const user = userEvent.setup()
+    const selected = buildResource()
     const onOpenDeleteConfirm = vi.fn()
-    const selectedToken = buildToken()
     const { rerender } = renderList({ onOpenDeleteConfirm })
-
-    expect(
-      screen.getByRole("button", {
-        name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
-      }),
-    ).toBeDisabled()
+    const deleteButton = screen.getByRole("button", {
+      name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",
+    })
+    expect(deleteButton).toBeDisabled()
 
     rerender(
       <RepairInvalidKeysList
         deleteResultMessage=""
-        filteredInvalidTokens={[selectedToken]}
-        invalidTokens={[selectedToken]}
-        selectedInvalidTokenKeys={new Set(["account-1:1"])}
-        selectedInvalidTokens={[selectedToken]}
+        filteredInvalidResources={[selected]}
+        invalidResources={[selected]}
+        selectedInvalidResourceKeys={new Set([getInvalidResourceKey(selected)])}
+        selectedInvalidResources={[selected]}
         onOpenDeleteConfirm={onOpenDeleteConfirm}
-        onSelectedInvalidTokenKeysChange={vi.fn()}
+        onSelectedInvalidResourceKeysChange={vi.fn()}
         t={t}
       />,
     )
-
     await user.click(
       screen.getByRole("button", {
         name: "keyManagement:repairMissingKeys.invalidKeys.deleteSelected",

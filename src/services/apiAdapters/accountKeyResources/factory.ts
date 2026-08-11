@@ -1,6 +1,8 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type {
   AccountKeyEditorSubmitResult,
+  AccountKeyProvisionedResource,
+  AccountKeyProvisioningSnapshot,
   AccountKeyResourceCapability,
   AccountKeyResourceCollection,
   AccountKeyResourceEditor,
@@ -9,6 +11,7 @@ import type {
   AccountKeyResourceRef,
   AccountKeyScope,
   AccountKeyScopeInventory,
+  AccountRuntimeKeyResolution,
   EditableResourceProjection,
   ResourceFailure,
   ResourceFieldIssue,
@@ -30,7 +33,7 @@ import {
   type NativeResourceMutationResult,
 } from "~/services/apiAdapters/nativeResources/factory"
 
-import { isAccountKeyResourceRefFor } from "./ref"
+import { isAccountKeyResourceRef, isAccountKeyResourceRefFor } from "./ref"
 
 export type AccountKeyResourcePage<TItem> = {
   items: readonly TItem[]
@@ -75,6 +78,31 @@ export type AccountKeyResourceDefinition<
     config: TConfig,
     options?: ResourceOperationOptions,
   ): Promise<AccountKeyScopeInventory>
+  provisioning?: {
+    inspect(
+      config: TConfig,
+      options?: ResourceOperationOptions,
+    ): Promise<AccountKeyProvisioningSnapshot>
+    provision(
+      config: TConfig,
+      requirementKey: string,
+      options?: ResourceOperationOptions,
+    ): Promise<
+      NativeResourceMutationResult<AccountKeyProvisionedResource, TFailure>
+    >
+    rename?(
+      config: TConfig,
+      ref: AccountKeyResourceRef,
+      options?: ResourceOperationOptions,
+    ): Promise<NativeResourceMutationResult<void, TFailure>>
+  }
+  runtimeKey?: {
+    resolve(
+      config: TConfig,
+      ref: AccountKeyResourceRef,
+      options?: ResourceOperationOptions,
+    ): Promise<AccountRuntimeKeyResolution>
+  }
   defaultScopeKey(config: TConfig, scopes: readonly AccountKeyScope[]): string
   encodeLocator(locator: TLocator): string
   decodeLocator(resourceId: string): TLocator
@@ -347,6 +375,28 @@ export function defineAccountKeyResourceCapability<
         assertOpenInput(input, siteType)
         const accountId = input.account.id
         const config = await definition.openConfig(input, options)
+        const provisioningDefinition = definition.provisioning
+        const runtimeKeyDefinition = definition.runtimeKey
+        const isSessionRef = (value: unknown): value is AccountKeyResourceRef =>
+          isAccountKeyResourceRef(value) &&
+          value.accountId === accountId &&
+          value.siteType === siteType
+        const assertProvisionedResource = (
+          value: AccountKeyProvisionedResource,
+        ): AccountKeyProvisionedResource => {
+          if (!isSessionRef(value.ref)) throw unexpectedFailure()
+          const createdSecret = value.createdSecret
+          if (
+            createdSecret &&
+            (createdSecret.correlation.kind !== "account-key-resource" ||
+              !isSessionRef(createdSecret.correlation.ref) ||
+              createdSecret.correlation.ref.scopeKey !== value.ref.scopeKey ||
+              createdSecret.correlation.ref.resourceId !== value.ref.resourceId)
+          ) {
+            throw unexpectedFailure()
+          }
+          return value
+        }
         let cachedScopeInventory: AccountKeyScopeInventory | undefined
         let sharedScopeLoad: Promise<AccountKeyScopeInventory> | undefined
         const loadScopeInventory = (
@@ -435,8 +485,13 @@ export function defineAccountKeyResourceCapability<
                   mapFailure(resolution.failure),
                 )
               }
+              const failure = mapFailure(resolution.failure)
               throw new AccountKeyResourceError({
                 code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+                ...(failure.message ? { message: failure.message } : {}),
+                ...(failure.upstreamCode
+                  ? { upstreamCode: failure.upstreamCode }
+                  : {}),
               })
             },
             normalizeError: (error) =>
@@ -656,8 +711,13 @@ export function defineAccountKeyResourceCapability<
                   )
                 }
                 if (resolution.status === "uncertain") {
+                  const failure = mapFailure(resolution.failure)
                   throw new AccountKeyResourceError({
                     code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+                    ...(failure.message ? { message: failure.message } : {}),
+                    ...(failure.upstreamCode
+                      ? { upstreamCode: failure.upstreamCode }
+                      : {}),
                   })
                 }
               }, mapFailure),
@@ -665,6 +725,83 @@ export function defineAccountKeyResourceCapability<
         }
 
         return {
+          ...(provisioningDefinition
+            ? {
+                provisioning: {
+                  inspect: (provisioningOptions?: ResourceOperationOptions) =>
+                    mapOperation(
+                      () =>
+                        provisioningDefinition.inspect(
+                          config,
+                          provisioningOptions,
+                        ),
+                      mapFailure,
+                    ),
+                  provision: (
+                    requirementKey: string,
+                    provisioningOptions?: ResourceOperationOptions,
+                  ) =>
+                    mapOperation(async () => {
+                      const result = await provisioningDefinition.provision(
+                        config,
+                        requirementKey,
+                        provisioningOptions,
+                      )
+                      if (result.certainty === "applied") {
+                        return {
+                          certainty: result.certainty,
+                          value: assertProvisionedResource(result.value),
+                        }
+                      }
+                      return {
+                        certainty: result.certainty,
+                        failure: mapFailure(result.failure),
+                      }
+                    }, mapFailure),
+                  ...(provisioningDefinition.rename
+                    ? {
+                        rename: (
+                          ref: AccountKeyResourceRef,
+                          renameOptions?: ResourceOperationOptions,
+                        ) =>
+                          mapOperation(async () => {
+                            if (!isSessionRef(ref)) throw validationFailure()
+                            const result = await provisioningDefinition.rename!(
+                              config,
+                              ref,
+                              renameOptions,
+                            )
+                            return result.certainty === "applied"
+                              ? result
+                              : {
+                                  certainty: result.certainty,
+                                  failure: mapFailure(result.failure),
+                                }
+                          }, mapFailure),
+                      }
+                    : {}),
+                },
+              }
+            : {}),
+          ...(runtimeKeyDefinition
+            ? {
+                runtimeKey: {
+                  resolve: (
+                    ref: AccountKeyResourceRef,
+                    runtimeKeyOptions?: ResourceOperationOptions,
+                  ) =>
+                    mapOperation(async () => {
+                      if (!isSessionRef(ref)) throw validationFailure()
+                      await resolveScope(ref.scopeKey, runtimeKeyOptions)
+                      return runtimeKeyDefinition.resolve(
+                        config,
+                        ref,
+                        runtimeKeyOptions,
+                      )
+                    }, mapFailure),
+                },
+              }
+            : {}),
           resolveDefaultScope: (scopeOptions) =>
             resolveScope(undefined, scopeOptions),
           listScopes: getScopes,

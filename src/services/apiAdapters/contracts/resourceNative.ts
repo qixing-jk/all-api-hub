@@ -141,5 +141,5 @@ export type ResourceFailure = {
 export type NativeResourceMutationResult<T, TFailure> =
   | { certainty: "applied"; value: T }
   | { certainty: "not-applied"; failure: TFailure }
-  | { certainty: "possibly-applied" }
-  | { certainty: "partially-applied" }
+  | { certainty: "possibly-applied"; failure: TFailure }
+  | { certainty: "partially-applied"; failure: TFailure }

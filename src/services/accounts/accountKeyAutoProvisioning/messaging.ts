@@ -2,8 +2,8 @@ import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionM
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
 import type {
-  AccountKeyRepairDeleteInvalidTokensRequest,
-  AccountKeyRepairDeleteInvalidTokensResult,
+  AccountKeyRepairDeleteInvalidResourcesRequest,
+  AccountKeyRepairDeleteInvalidResourcesResult,
   AccountKeyRepairProgress,
   AccountKeyRepairRecordManagedSiteImportResultsRequest,
   AccountKeyRepairStartOptions,
@@ -13,7 +13,7 @@ export const AccountKeyRepairMessageTypes = {
   Start: "accountKeyRepair:start",
   Cancel: "accountKeyRepair:cancel",
   GetProgress: "accountKeyRepair:getProgress",
-  DeleteInvalidTokens: "accountKeyRepair:deleteInvalidTokens",
+  DeleteInvalidResources: "accountKeyRepair:deleteInvalidResources",
   RecordManagedSiteImportResults:
     "accountKeyRepair:recordManagedSiteImportResults",
 } as const
@@ -24,9 +24,9 @@ interface AccountKeyRepairProtocolMap {
   ): RuntimeMessageResponse<AccountKeyRepairProgress>
   [AccountKeyRepairMessageTypes.Cancel](): RuntimeMessageResponse<AccountKeyRepairProgress>
   [AccountKeyRepairMessageTypes.GetProgress](): RuntimeMessageResponse<AccountKeyRepairProgress>
-  [AccountKeyRepairMessageTypes.DeleteInvalidTokens](
-    request: AccountKeyRepairDeleteInvalidTokensRequest,
-  ): RuntimeMessageResponse<AccountKeyRepairDeleteInvalidTokensResult>
+  [AccountKeyRepairMessageTypes.DeleteInvalidResources](
+    request: AccountKeyRepairDeleteInvalidResourcesRequest,
+  ): RuntimeMessageResponse<AccountKeyRepairDeleteInvalidResourcesResult>
   [AccountKeyRepairMessageTypes.RecordManagedSiteImportResults](
     request: AccountKeyRepairRecordManagedSiteImportResultsRequest,
   ): RuntimeMessageResponse<AccountKeyRepairProgress>

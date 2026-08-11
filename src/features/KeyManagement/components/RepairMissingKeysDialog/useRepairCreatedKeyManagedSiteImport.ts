@@ -8,20 +8,24 @@ import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
 } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
-import { isAccountTokenRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
-  getRepairCreatedTokenBatchImportAbsenceReason,
-  REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS,
-  REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS,
-  resolveRepairCreatedTokenBatchImportCandidate,
-} from "~/services/managedSites/repairCreatedTokenBatchImport"
+  buildAccountKeyResourceRuntimeKeyId,
+  isAccountKeyResourceRuntimeKey,
+} from "~/services/accounts/accountRuntimeKeys"
+import type { AccountKeyResourceRef } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  getRepairCreatedKeyBatchImportAbsenceReason,
+  REPAIR_CREATED_KEY_BATCH_IMPORT_ABSENCE_REASONS,
+  REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS,
+  resolveRepairCreatedKeyBatchImportCandidate,
+} from "~/services/managedSites/repairCreatedKeyBatchImport"
 import { getCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { createManagedSiteTokenBatchImportTarget } from "~/services/managedSites/tokenBatchImportTarget"
-import type { AccountToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_JOB_STATES,
   ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES,
-  ACCOUNT_KEY_REPAIR_OUTCOMES,
+  ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   type AccountKeyRepairManagedSiteImportStatus,
   type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
@@ -43,7 +47,6 @@ interface UseRepairCreatedKeyManagedSiteImportParams {
   managedSiteType: ManagedSiteType
   progress: AccountKeyRepairProgress | null
   setProgress: (progress: AccountKeyRepairProgress) => void
-  onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
   t: TFunction
 }
 
@@ -53,43 +56,38 @@ interface RepairCreatedImportFeedback {
   variant: "destructive" | "info" | "warning"
 }
 
-const isSafeCreatedReference = (
-  value: unknown,
-): value is {
-  tokenId: number
-  group: string
-} =>
-  typeof value === "object" &&
-  value !== null &&
-  "tokenId" in value &&
-  Number.isSafeInteger(value.tokenId) &&
-  "group" in value &&
-  typeof value.group === "string"
-
-const countRecoverableCreatedReferences = (
+const countCreatedReferences = (
   progress: AccountKeyRepairProgress | null,
   accounts: DisplaySiteData[],
 ) => {
-  if (!progress || progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed) {
+  if (
+    !progress ||
+    progress.schemaVersion !== ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION ||
+    progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Completed
+  ) {
     return 0
   }
 
-  const activeAccountIds = new Set(
+  const activeAccountsById = new Map(
     accounts
       .filter((account) => !account.disabled)
-      .map((account) => account.id),
+      .map((account) => [account.id, account] as const),
   )
   const referenceKeys = new Set<string>()
   for (const result of progress.results) {
-    if (
-      result.outcome !== ACCOUNT_KEY_REPAIR_OUTCOMES.Created ||
-      !activeAccountIds.has(result.accountId)
-    ) {
-      continue
-    }
-    for (const reference of result.createdTokens ?? []) {
-      if (!isSafeCreatedReference(reference)) continue
-      referenceKeys.add(`${result.accountId}:${reference.tokenId}`)
+    const account = activeAccountsById.get(result.accountId)
+    if (!account || account.siteType !== result.siteType) continue
+
+    for (const requirementResult of result.requirementResults) {
+      if (!("created" in requirementResult)) continue
+      const ref = requirementResult.created.ref
+      if (
+        ref.accountId !== result.accountId ||
+        ref.siteType !== result.siteType
+      ) {
+        continue
+      }
+      referenceKeys.add(buildAccountKeyResourceRuntimeKeyId(ref))
     }
   }
 
@@ -124,8 +122,7 @@ const getRepairImportReceiptItems = (params: {
   const receiptByKey = new Map<
     string,
     {
-      accountId: string
-      tokenId: number
+      resourceRef: AccountKeyResourceRef
       status: AccountKeyRepairManagedSiteImportStatus
     }
   >()
@@ -135,11 +132,11 @@ const getRepairImportReceiptItems = (params: {
     status: AccountKeyRepairManagedSiteImportStatus,
   ) => {
     const input = inputById.get(id)
-    if (!input || !isAccountTokenRuntimeKey(input.runtimeKey)) return
-    const key = `${input.account.id}:${input.runtimeKey.tokenId}`
+    if (!input || !isAccountKeyResourceRuntimeKey(input.runtimeKey)) return
+    const resourceRef = input.runtimeKey.resourceRef
+    const key = buildAccountKeyResourceRuntimeKeyId(resourceRef)
     receiptByKey.set(key, {
-      accountId: input.account.id,
-      tokenId: input.runtimeKey.tokenId,
+      resourceRef,
       status,
     })
   }
@@ -176,7 +173,6 @@ export function useRepairCreatedKeyManagedSiteImport({
   managedSiteType,
   progress,
   setProgress,
-  onManagedSiteImportSuccess,
   t,
 }: UseRepairCreatedKeyManagedSiteImportParams) {
   const [isBatchImportOpen, setIsBatchImportOpen] = useState(false)
@@ -192,8 +188,8 @@ export function useRepairCreatedKeyManagedSiteImport({
   const activeTargetFingerprintRef = useRef<string | null>(null)
   const activeItemsRef = useRef<ManagedSiteTokenBatchExportItemInput[]>([])
 
-  const recoverableReferenceCount = useMemo(
-    () => countRecoverableCreatedReferences(progress, accounts),
+  const createdReferenceCount = useMemo(
+    () => countCreatedReferences(progress, accounts),
     [accounts, progress],
   )
 
@@ -236,24 +232,24 @@ export function useRepairCreatedKeyManagedSiteImport({
         const target =
           await createManagedSiteTokenBatchImportTarget(runtimeConfig)
         const visibleProgress = getVisibleProgress(progress, accounts)
-        const candidate = await resolveRepairCreatedTokenBatchImportCandidate({
+        const candidate = await resolveRepairCreatedKeyBatchImportCandidate({
           progress: visibleProgress,
           accounts,
           targetFingerprint: target.targetFingerprint,
           freshness: isCurrentSessionResult
-            ? REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION
-            : REPAIR_CREATED_TOKEN_BATCH_IMPORT_FRESHNESS.HISTORICAL,
+            ? REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION
+            : REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS.HISTORICAL,
           forceCompleteVerification: includeCompletedReferences,
           includeCompletedReferences,
         })
         if (!candidate) {
-          const absenceReason = getRepairCreatedTokenBatchImportAbsenceReason({
+          const absenceReason = getRepairCreatedKeyBatchImportAbsenceReason({
             progress: visibleProgress,
             targetFingerprint: target.targetFingerprint,
           })
           const nothingPending =
             absenceReason ===
-            REPAIR_CREATED_TOKEN_BATCH_IMPORT_ABSENCE_REASONS.NOTHING_PENDING
+            REPAIR_CREATED_KEY_BATCH_IMPORT_ABSENCE_REASONS.NOTHING_PENDING
           setImportFeedback({
             action:
               nothingPending && !includeCompletedReferences
@@ -337,21 +333,6 @@ export function useRepairCreatedKeyManagedSiteImport({
       const jobId = activeJobIdRef.current
       const targetFingerprint = activeTargetFingerprintRef.current
 
-      for (const item of result.items) {
-        if (
-          item.result !==
-          MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.CREATED
-        ) {
-          continue
-        }
-        const input = activeItemsRef.current
-          .filter(isResolvedManagedSiteTokenBatchExportItemInput)
-          .find((candidateItem) => candidateItem.runtimeKey.id === item.id)
-        if (!input) continue
-        if (!isAccountTokenRuntimeKey(input.runtimeKey)) continue
-        void onManagedSiteImportSuccess?.(input.runtimeKey.token)
-      }
-
       if (!jobId || !targetFingerprint || receiptItems.length === 0) return
 
       void sendAccountKeyRepairMessage(
@@ -372,7 +353,7 @@ export function useRepairCreatedKeyManagedSiteImport({
           })
         })
     },
-    [onManagedSiteImportSuccess, setProgress, t],
+    [setProgress, t],
   )
 
   useEffect(() => {
@@ -401,6 +382,6 @@ export function useRepairCreatedKeyManagedSiteImport({
     openRegularBatchImport,
     closeBatchImport,
     handleBatchImportCompleted,
-    recoverableReferenceCount,
+    createdReferenceCount,
   }
 }

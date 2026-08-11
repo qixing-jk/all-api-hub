@@ -47,6 +47,7 @@ import {
   type VoApiV2Envelope,
   type VoApiV2InviteInfo,
   type VoApiV2Key,
+  type VoApiV2KeyGroupDescriptor,
   type VoApiV2KeyTemplate,
   type VoApiV2UserInfo,
 } from "./type"
@@ -213,10 +214,48 @@ type VoApiV2KeyListPayload =
   | {
       list?: VoApiV2Key[]
       records?: VoApiV2Key[]
+      page?: number
+      size?: number
+      total?: number
+      pages?: number
     }
 
 const extractKeyList = (payload: VoApiV2KeyListPayload) =>
   Array.isArray(payload) ? payload : payload.records ?? payload.list ?? []
+
+type VoApiV2RawKeyPage = {
+  items: VoApiV2Key[]
+  page?: number
+  size?: number
+  total?: number
+  pages?: number
+}
+
+const extractRawKeyPage = (
+  payload: VoApiV2KeyListPayload,
+): VoApiV2RawKeyPage =>
+  Array.isArray(payload)
+    ? { items: payload }
+    : {
+        items: payload.records ?? payload.list ?? [],
+        page: payload.page,
+        size: payload.size,
+        total: payload.total,
+        pages: payload.pages,
+      }
+
+const fetchVoApiV2RawKeyPage = async (
+  request: ApiServiceRequest,
+  page: number,
+  size: number,
+): Promise<VoApiV2RawKeyPage> =>
+  extractRawKeyPage(
+    await fetchVoApiV2Data<VoApiV2KeyListPayload>(
+      request,
+      buildKeysEndpoint(page, size),
+      { cache: "no-store" },
+    ),
+  )
 
 const fetchVoApiV2RawKeys = async (
   request: ApiServiceRequest,
@@ -230,6 +269,118 @@ const fetchVoApiV2RawKeys = async (
       { cache: "no-store" },
     ),
   )
+
+/**
+ * Reads the complete native key inventory without flattening group identities.
+ * VoAPI v2 exposes pagination metadata and multi-group ids on `/api/keys`.
+ * https://demo.voapi.top/assets/keys-BUkrbzdE.js
+ */
+export async function fetchAllVoApiV2RawKeys(
+  request: ApiServiceRequest,
+  size = TOKEN_LOOKUP_PAGE_SIZE,
+): Promise<VoApiV2Key[]> {
+  const keys: VoApiV2Key[] = []
+  const keyIds = new Set<number>()
+  let expectedPagination:
+    | { size: number; total: number; pages: number }
+    | undefined
+
+  const invalidPagination = () =>
+    new ApiError(
+      "VoAPI v2 key inventory has invalid pagination",
+      undefined,
+      VOAPI_V2_ENDPOINTS.Keys,
+      API_ERROR_CODES.JSON_PARSE_ERROR,
+    )
+
+  for (
+    let page = DEFAULT_KEYS_PAGE;
+    page <= TOKEN_LOOKUP_MAX_PAGES;
+    page += 1
+  ) {
+    const result = await fetchVoApiV2RawKeyPage(request, page, size)
+    const paginationValues = [
+      result.page,
+      result.size,
+      result.total,
+      result.pages,
+    ]
+    const hasPagination = paginationValues.some((value) => value !== undefined)
+    if (hasPagination) {
+      if (
+        !Number.isSafeInteger(result.page) ||
+        result.page !== page ||
+        !Number.isSafeInteger(result.size) ||
+        result.size !== size ||
+        !Number.isSafeInteger(result.total) ||
+        result.total! < 0 ||
+        !Number.isSafeInteger(result.pages) ||
+        result.pages! < 0 ||
+        result.pages !== Math.ceil(result.total! / size) ||
+        result.items.length > size ||
+        (result.pages === 0 ? page !== 1 : page > result.pages)
+      ) {
+        throw invalidPagination()
+      }
+
+      const currentPagination = {
+        size: result.size!,
+        total: result.total!,
+        pages: result.pages!,
+      }
+      if (
+        expectedPagination &&
+        (currentPagination.size !== expectedPagination.size ||
+          currentPagination.total !== expectedPagination.total ||
+          currentPagination.pages !== expectedPagination.pages)
+      ) {
+        throw invalidPagination()
+      }
+      expectedPagination ??= currentPagination
+    } else if (expectedPagination) {
+      throw invalidPagination()
+    }
+
+    for (const key of result.items) {
+      if (!Number.isSafeInteger(key.id) || key.id <= 0) {
+        throw new ApiError(
+          "VoAPI v2 key inventory contains invalid key id",
+          undefined,
+          VOAPI_V2_ENDPOINTS.Keys,
+          API_ERROR_CODES.JSON_PARSE_ERROR,
+        )
+      }
+      if (keyIds.has(key.id)) {
+        throw new ApiError(
+          "VoAPI v2 key inventory contains duplicate key id",
+          undefined,
+          VOAPI_V2_ENDPOINTS.Keys,
+          API_ERROR_CODES.JSON_PARSE_ERROR,
+        )
+      }
+      keyIds.add(key.id)
+    }
+    keys.push(...result.items)
+
+    if (
+      result.pages !== undefined
+        ? page >= result.pages
+        : result.items.length < size
+    ) {
+      if (expectedPagination && keys.length !== expectedPagination.total) {
+        throw invalidPagination()
+      }
+      return keys
+    }
+  }
+
+  throw new ApiError(
+    "VoAPI v2 key inventory exceeds pagination limit",
+    undefined,
+    VOAPI_V2_ENDPOINTS.Keys,
+    API_ERROR_CODES.BUSINESS_ERROR,
+  )
+}
 
 const fetchVoApiV2GroupNameById = async (
   request: ApiServiceRequest,
@@ -586,11 +737,9 @@ export async function refreshAccountData(
  */
 export async function fetchVoApiV2Tokens(
   request: ApiServiceRequest,
-  page = DEFAULT_KEYS_PAGE,
-  size = DEFAULT_KEYS_PAGE_SIZE,
 ): Promise<ApiToken[]> {
   const [keys, groupNameById] = await Promise.all([
-    fetchVoApiV2RawKeys(request, page, size),
+    fetchAllVoApiV2RawKeys(request),
     fetchVoApiV2GroupNameById(request),
   ])
 
@@ -608,6 +757,44 @@ const fetchVoApiV2Template = (request: ApiServiceRequest) =>
     VOAPI_V2_ENDPOINTS.KeyTemplate,
     { cache: "no-store" },
   )
+
+const toCanonicalPositiveInteger = (value: unknown): number | null => {
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) && value > 0 ? value : null
+  }
+  if (typeof value !== "string" || !/^[1-9]\d*$/.test(value)) return null
+  const parsed = Number(value)
+  return Number.isSafeInteger(parsed) && String(parsed) === value
+    ? parsed
+    : null
+}
+
+/** Returns strict native group identities from the VoAPI v2 key template. */
+export async function fetchVoApiV2KeyGroupDescriptors(
+  request: ApiServiceRequest,
+): Promise<VoApiV2KeyGroupDescriptor[]> {
+  const template = await fetchVoApiV2Template(request)
+  const seen = new Set<number>()
+
+  return (template.groups ?? []).map((group) => {
+    const id = toCanonicalPositiveInteger(group.id)
+    if (id === null || seen.has(id)) {
+      throw new ApiError(
+        "VoAPI v2 key template contains invalid group identity",
+        undefined,
+        VOAPI_V2_ENDPOINTS.KeyTemplate,
+        API_ERROR_CODES.JSON_PARSE_ERROR,
+      )
+    }
+    seen.add(id)
+    const requirementKey = String(id)
+    return {
+      id,
+      requirementKey,
+      displayName: group.name?.trim() || requirementKey,
+    }
+  })
+}
 
 /**
  * Finds one VoAPI v2 key by id from the key inventory.
@@ -664,21 +851,29 @@ const extractVoApiV2RevealedToken = (
 }
 
 /**
- * Reveals the full secret for a VoAPI v2 key without falling back to common routes.
+ * Reveals the full secret for an exact VoAPI v2 native key id.
+ * VoAPI v2 exposes this as `POST /api/keys/{id}/token`.
+ * https://demo.voapi.top/assets/keys-BUkrbzdE.js
  */
-export async function resolveVoApiV2TokenKey(
+export async function resolveVoApiV2KeySecretById(
   request: ApiServiceRequest,
-  token: Pick<ApiToken, "id" | "key">,
+  keyId: number,
 ): Promise<string> {
   const revealedToken = await fetchVoApiV2Data<VoApiV2RevealTokenResponse>(
     request,
-    `${VOAPI_V2_ENDPOINTS.Keys}/${token.id}/token`,
+    `${VOAPI_V2_ENDPOINTS.Keys}/${keyId}/token`,
     { method: "POST" },
     { allowTopLevelToken: true },
   )
 
   return extractVoApiV2RevealedToken(revealedToken)
 }
+
+/** Reveals a full secret for the legacy shared token-management projection. */
+export const resolveVoApiV2TokenKey = (
+  request: ApiServiceRequest,
+  token: Pick<ApiToken, "id" | "key">,
+) => resolveVoApiV2KeySecretById(request, token.id)
 
 /**
  * Creates a VoAPI v2 key and relies on inventory refetch for the created secret.
@@ -730,6 +925,38 @@ export async function updateVoApiV2Token(
     { allowNullData: true },
   )
 
+  return true
+}
+
+/**
+ * Renames one native VoAPI v2 key while preserving its current provider fields.
+ * https://demo.voapi.top/assets/keys-BUkrbzdE.js
+ */
+export async function renameVoApiV2Key(
+  request: ApiServiceRequest,
+  keyId: number,
+  name: string,
+): Promise<boolean> {
+  const existing = await fetchVoApiV2TokenById(request, keyId)
+  await fetchVoApiV2Data<null>(
+    request,
+    `${VOAPI_V2_ENDPOINTS.Keys}/${keyId}`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        id: keyId,
+        name,
+        groups: await resolveVoApiV2GroupIds(request, "", existing.groups),
+        enable: existing.enable ?? true,
+        expireTime: existing.expireTime ?? -1,
+        boundlessAmount: existing.boundlessAmount === true,
+        amount: existing.amount ?? "0",
+        used: existing.used ?? "0",
+        note: existing.note ?? "",
+      }),
+    },
+    { allowNullData: true },
+  )
   return true
 }
 

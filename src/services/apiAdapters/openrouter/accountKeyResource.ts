@@ -289,7 +289,7 @@ const mutationFailure = <T>(
   const failure = { error, secrets: [config.managementKey, ...extraSecrets] }
   return isKnownRejection(error)
     ? { certainty: "not-applied", failure }
-    : { certainty: "possibly-applied" }
+    : { certainty: "possibly-applied", failure }
 }
 
 const normalizeLimitMode = (
@@ -1253,7 +1253,7 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
           return mutationFailure(error, config, [detail.key.hash])
         }
         if (isUnreconciledMutationFailure(error)) {
-          return { certainty: "possibly-applied" as const }
+          return mutationFailure(error, config, [detail.key.hash])
         }
         try {
           const current = toDetail(
@@ -1281,9 +1281,9 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
                 command.requested.includeByokInLimit)
           return matches
             ? { certainty: "applied" as const, value: current }
-            : { certainty: "possibly-applied" as const }
+            : mutationFailure(error, config, [detail.key.hash])
         } catch {
-          return { certainty: "possibly-applied" as const }
+          return mutationFailure(error, config, [detail.key.hash])
         }
       }
     },
@@ -1306,15 +1306,15 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
           return mutationFailure(error, config, [hash])
         }
         if (isUnreconciledMutationFailure(error)) {
-          return { certainty: "possibly-applied" as const }
+          return mutationFailure(error, config, [hash])
         }
         try {
           await fetchOpenRouterKey(requestWithOptions(config, options), hash)
-          return { certainty: "possibly-applied" as const }
+          return mutationFailure(error, config, [hash])
         } catch (readError) {
           if (getStructuredStatus(readError) === 404)
             return { certainty: "applied" as const, value: undefined }
-          return { certainty: "possibly-applied" as const }
+          return mutationFailure(error, config, [hash])
         }
       }
     },

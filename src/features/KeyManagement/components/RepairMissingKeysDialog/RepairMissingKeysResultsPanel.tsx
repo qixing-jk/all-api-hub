@@ -16,7 +16,7 @@ import {
 } from "~/components/ui"
 import type {
   AccountKeyRepairAccountResult,
-  AccountKeyRepairInvalidToken,
+  AccountKeyRepairInvalidResource,
   AccountKeyRepairOutcome,
 } from "~/types/accountKeyAutoProvisioning"
 import { ACCOUNT_KEY_REPAIR_OUTCOMES } from "~/types/accountKeyAutoProvisioning"
@@ -30,26 +30,23 @@ import {
 } from "./repairMissingKeysDialogHelpers"
 
 interface RepairMissingKeysResultsPanelProps {
-  accountIds: Set<string>
   activeView: RepairResultView
   deleteResultMessage: string
-  filteredInvalidTokens: AccountKeyRepairInvalidToken[]
+  filteredInvalidResources: AccountKeyRepairInvalidResource[]
   filteredResults: AccountKeyRepairAccountResult[]
-  invalidTokens: AccountKeyRepairInvalidToken[]
-  openingSub2ApiAccountId: string | null
+  invalidResources: AccountKeyRepairInvalidResource[]
   outcomeCounts: Record<AccountKeyRepairOutcome, number>
   outcomeFilter: AccountKeyRepairOutcome | null
   readOnly?: boolean
   searchTerm: string
-  selectedInvalidTokenKeys: Set<string>
-  selectedInvalidTokens: AccountKeyRepairInvalidToken[]
+  selectedInvalidResourceKeys: Set<string>
+  selectedInvalidResources: AccountKeyRepairInvalidResource[]
   visibleResults: AccountKeyRepairAccountResult[]
   onActiveViewChange: (view: RepairResultView) => void
   onOpenDeleteConfirm: () => void
-  onOpenSub2ApiTokenDialog: (accountId: string) => void
   onOutcomeFilterChange: (outcome: AccountKeyRepairOutcome | null) => void
   onSearchTermChange: (value: string) => void
-  onSelectedInvalidTokenKeysChange: Dispatch<SetStateAction<Set<string>>>
+  onSelectedInvalidResourceKeysChange: Dispatch<SetStateAction<Set<string>>>
   t: TFunction
 }
 
@@ -57,26 +54,23 @@ interface RepairMissingKeysResultsPanelProps {
  * Coordinates result view switching, search, filtering, and result lists.
  */
 export function RepairMissingKeysResultsPanel({
-  accountIds,
   activeView,
   deleteResultMessage,
-  filteredInvalidTokens,
+  filteredInvalidResources,
   filteredResults,
-  invalidTokens,
-  openingSub2ApiAccountId,
+  invalidResources,
   outcomeCounts,
   outcomeFilter,
   readOnly = false,
   searchTerm,
-  selectedInvalidTokenKeys,
-  selectedInvalidTokens,
+  selectedInvalidResourceKeys,
+  selectedInvalidResources,
   visibleResults,
   onActiveViewChange,
   onOpenDeleteConfirm,
-  onOpenSub2ApiTokenDialog,
   onOutcomeFilterChange,
   onSearchTermChange,
-  onSelectedInvalidTokenKeysChange,
+  onSelectedInvalidResourceKeysChange,
   t,
 }: RepairMissingKeysResultsPanelProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null)
@@ -109,14 +103,14 @@ export function RepairMissingKeysResultsPanel({
             label: (
               <>
                 {getRepairResultViewLabel(t, REPAIR_RESULT_VIEWS.InvalidKeys)}
-                {invalidTokens.length > 0 ? (
+                {invalidResources.length > 0 ? (
                   <Badge
                     variant="warning"
                     size="sm"
                     className="ml-2"
                     aria-hidden="true"
                   >
-                    {invalidTokens.length}
+                    {invalidResources.length}
                   </Badge>
                 ) : null}
               </>
@@ -155,7 +149,7 @@ export function RepairMissingKeysResultsPanel({
               >
                 {activeView === REPAIR_RESULT_VIEWS.AccountCoverage
                   ? `${filteredResults.length}/${visibleResults.length}`
-                  : `${filteredInvalidTokens.length}/${invalidTokens.length}`}
+                  : `${filteredInvalidResources.length}/${invalidResources.length}`}
               </span>
             </div>
           </div>
@@ -211,20 +205,36 @@ export function RepairMissingKeysResultsPanel({
                 allCount={visibleResults.length}
                 options={[
                   {
-                    value: ACCOUNT_KEY_REPAIR_OUTCOMES.Created,
+                    value: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
                     label: t(
-                      "keyManagement:repairMissingKeys.outcomes.created",
+                      "keyManagement:repairMissingKeys.outcomes.covered",
                     ),
-                    count: outcomeCounts.created,
+                    count: outcomeCounts.covered,
                     variant: "success",
                   },
                   {
-                    value: ACCOUNT_KEY_REPAIR_OUTCOMES.AlreadyHad,
+                    value: ACCOUNT_KEY_REPAIR_OUTCOMES.Repaired,
                     label: t(
-                      "keyManagement:repairMissingKeys.outcomes.alreadyHad",
+                      "keyManagement:repairMissingKeys.outcomes.repaired",
                     ),
-                    count: outcomeCounts.alreadyHad,
-                    variant: "info",
+                    count: outcomeCounts.repaired,
+                    variant: "success",
+                  },
+                  {
+                    value: ACCOUNT_KEY_REPAIR_OUTCOMES.Partial,
+                    label: t(
+                      "keyManagement:repairMissingKeys.outcomes.partial",
+                    ),
+                    count: outcomeCounts.partial,
+                    variant: "warning",
+                  },
+                  {
+                    value: ACCOUNT_KEY_REPAIR_OUTCOMES.Blocked,
+                    label: t(
+                      "keyManagement:repairMissingKeys.outcomes.blocked",
+                    ),
+                    count: outcomeCounts.blocked,
+                    variant: "warning",
                   },
                   {
                     value: ACCOUNT_KEY_REPAIR_OUTCOMES.Skipped,
@@ -251,24 +261,21 @@ export function RepairMissingKeysResultsPanel({
             {activeView === REPAIR_RESULT_VIEWS.InvalidKeys ? (
               <RepairInvalidKeysList
                 deleteResultMessage={deleteResultMessage}
-                filteredInvalidTokens={filteredInvalidTokens}
-                invalidTokens={invalidTokens}
+                filteredInvalidResources={filteredInvalidResources}
+                invalidResources={invalidResources}
                 readOnly={readOnly}
-                selectedInvalidTokenKeys={selectedInvalidTokenKeys}
-                selectedInvalidTokens={selectedInvalidTokens}
+                selectedInvalidResourceKeys={selectedInvalidResourceKeys}
+                selectedInvalidResources={selectedInvalidResources}
                 onOpenDeleteConfirm={onOpenDeleteConfirm}
-                onSelectedInvalidTokenKeysChange={
-                  onSelectedInvalidTokenKeysChange
+                onSelectedInvalidResourceKeysChange={
+                  onSelectedInvalidResourceKeysChange
                 }
                 t={t}
               />
             ) : (
               <RepairAccountCoverageList
-                accountIds={accountIds}
                 filteredResults={filteredResults}
-                openingSub2ApiAccountId={openingSub2ApiAccountId}
-                readOnly={readOnly}
-                onOpenSub2ApiTokenDialog={onOpenSub2ApiTokenDialog}
+                searchTerm={searchTerm}
                 t={t}
               />
             )}

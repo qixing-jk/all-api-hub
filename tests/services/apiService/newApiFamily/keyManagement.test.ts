@@ -6,11 +6,13 @@ import {
   deleteApiToken,
   fetchAccountAvailableModels,
   fetchAccountTokens,
+  fetchCurrentUserGroup,
   fetchSiteUserGroups,
   fetchTokenById,
   fetchUserGroups,
   updateApiToken,
 } from "~/services/apiService/newApiFamily/default/keyManagement"
+import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { AuthTypeEnum, type ApiToken } from "~/types"
 
 const {
@@ -97,48 +99,162 @@ describe("newApiFamily keyManagement", () => {
     mockFetchApiData.mockReset()
   })
 
-  it("fetchAccountTokens normalizes array and paginated responses", async () => {
+  it("fetchAccountTokens reads every New API page until the empty sentinel", async () => {
     mockFetchApiData
-      .mockResolvedValueOnce([
-        { id: 1, key: " plain-key " },
-        { id: 2, key: "sk-already" },
-      ])
       .mockResolvedValueOnce({
-        items: [{ id: 3, key: "  sk-trim  " }],
+        items: [
+          { id: 1, key: " plain-key " },
+          { id: 2, key: "sk-already" },
+        ],
+        page: 1,
+        page_size: 2,
+        total: 3,
+      })
+      .mockResolvedValueOnce({
+        items: [{ id: 3, key: " sk-final " }],
         page: 2,
-        page_size: 10,
-        total: 21,
+        page_size: 2,
+        total: 3,
+      })
+      .mockResolvedValueOnce({
+        items: [],
+        page: 3,
+        page_size: 2,
+        total: 3,
       })
 
-    const arrayResult = await fetchAccountTokens(request)
-    const pageResult = await fetchAccountTokens(request, 2, 10)
-
-    expect(arrayResult.map((item) => item.key)).toEqual([
-      "plain-key",
-      "sk-already",
+    await expect(fetchAccountTokens(request)).resolves.toEqual([
+      { id: 1, key: "plain-key" },
+      { id: 2, key: "sk-already" },
+      { id: 3, key: "sk-final" },
     ])
-    expect(pageResult.map((item) => item.key)).toEqual(["sk-trim"])
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
       endpoint: "/api/token/?p=0&size=100",
     })
     expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
-      endpoint: "/api/token/?p=2&size=10",
+      endpoint: "/api/token/?p=2&size=100",
     })
-    expect(mockSyncResolvedApiTokenKeyCache).toHaveBeenNthCalledWith(
-      1,
-      request,
-      arrayResult,
-    )
-    expect(mockSyncResolvedApiTokenKeyCache).toHaveBeenCalledTimes(1)
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
+      endpoint: "/api/token/?p=3&size=100",
+    })
   })
 
-  it("fetchAccountTokens syncs cache for a complete first paginated inventory", async () => {
-    mockFetchApiData.mockResolvedValueOnce({
-      items: [{ id: 3, key: "  sk-trim  " }],
-      page: 0,
-      page_size: 100,
-      total: 1,
+  it("fetchAccountTokens reads legacy array pages until the empty sentinel", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce([{ id: 1, key: " first " }])
+      .mockResolvedValueOnce([{ id: 2, key: " second " }])
+      .mockResolvedValueOnce([])
+
+    await expect(fetchAccountTokens(request)).resolves.toEqual([
+      { id: 1, key: "first" },
+      { id: 2, key: "second" },
+    ])
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
+      endpoint: "/api/token/?p=0&size=100",
     })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      endpoint: "/api/token/?p=1&size=100",
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(3, request, {
+      endpoint: "/api/token/?p=2&size=100",
+    })
+  })
+
+  it("fetchAccountTokens ignores stale page and total metadata", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        items: [{ id: 1, key: "sk-first" }],
+        page: 1,
+        total: 2,
+      })
+      .mockResolvedValueOnce({
+        items: [{ id: 2, key: "sk-second" }],
+        page: 1,
+        total: 99,
+      })
+      .mockResolvedValueOnce({ items: [], page: 1, total: 0 })
+
+    await expect(fetchAccountTokens(request)).resolves.toHaveLength(2)
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      endpoint: "/api/token/?p=2&size=100",
+    })
+  })
+
+  it("fetchAccountTokens rejects duplicate IDs instead of accepting a stalled inventory", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce([{ id: 1, key: "first" }])
+      .mockResolvedValueOnce([{ id: 1, key: "first" }])
+      .mockResolvedValueOnce([])
+
+    await expect(fetchAccountTokens(request)).rejects.toThrow(
+      "duplicate_token_id",
+    )
+  })
+
+  it.each([-1, Number.NaN, Number.POSITIVE_INFINITY, 1.5])(
+    "fetchAccountTokens ignores invalid pagination totals: %s",
+    async (total) => {
+      mockFetchApiData
+        .mockResolvedValueOnce({
+          items: [{ id: 1, key: "sk-invalid-total" }],
+          page: 1,
+          page_size: 100,
+          total,
+        })
+        .mockResolvedValueOnce({ items: [], page: 2, total })
+
+      await expect(fetchAccountTokens(request)).resolves.toHaveLength(1)
+    },
+  )
+
+  it("fetchAccountTokens ignores totals that change mid-inventory", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        items: [{ id: 1, key: "sk-first" }],
+        page: 1,
+        total: 2,
+      })
+      .mockResolvedValueOnce({
+        items: [{ id: 2, key: "sk-second" }],
+        page: 2,
+        total: 3,
+      })
+      .mockResolvedValueOnce({ items: [], page: 3, total: 0 })
+
+    await expect(fetchAccountTokens(request)).resolves.toHaveLength(2)
+  })
+
+  it("fetchAccountTokens treats an empty page as complete despite a stale total", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        items: [{ id: 1, key: "sk-first" }],
+        page: 1,
+        total: 2,
+      })
+      .mockResolvedValueOnce({ items: [], page: 2, total: 2 })
+
+    await expect(fetchAccountTokens(request)).resolves.toEqual([
+      { id: 1, key: "sk-first" },
+    ])
+  })
+
+  it("fetchAccountTokens rejects unexpected payload shapes", async () => {
+    mockFetchApiData.mockResolvedValueOnce({ unexpected: true })
+
+    await expect(fetchAccountTokens(request)).rejects.toThrow(
+      "invalid_token_page_payload",
+    )
+  })
+
+  it("fetchAccountTokens syncs the complete normalized inventory", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        items: [{ id: 3, key: "  sk-trim  " }],
+        page: 1,
+        page_size: 50,
+        total: 1,
+      })
+      .mockResolvedValueOnce({ items: [], page: 2, total: 1 })
 
     const result = await fetchAccountTokens(request)
 
@@ -147,30 +263,6 @@ describe("newApiFamily keyManagement", () => {
       request,
       result,
     )
-  })
-
-  it("fetchAccountTokens does not sync cache when the paginated metadata does not match the request", async () => {
-    mockFetchApiData.mockResolvedValueOnce({
-      items: [{ id: 3, key: "  sk-trim  " }],
-      page: 0,
-      page_size: 50,
-      total: 1,
-    })
-
-    const result = await fetchAccountTokens(request)
-
-    expect(result.map((item) => item.key)).toEqual(["sk-trim"])
-    expect(mockSyncResolvedApiTokenKeyCache).not.toHaveBeenCalled()
-  })
-
-  it("fetchAccountTokens returns an empty list for unexpected payloads", async () => {
-    mockFetchApiData
-      .mockResolvedValueOnce({ something: "else" })
-      .mockResolvedValueOnce(null)
-
-    await expect(fetchAccountTokens(request)).resolves.toEqual([])
-    await expect(fetchAccountTokens(request)).resolves.toEqual([])
-    expect(mockSyncResolvedApiTokenKeyCache).not.toHaveBeenCalled()
   })
 
   it("fetchAccountTokens and related fetch helpers rethrow upstream failures", async () => {
@@ -222,6 +314,20 @@ describe("newApiFamily keyManagement", () => {
     })
   })
 
+  it("reads and validates the current user group used by empty-group tokens", async () => {
+    mockFetchApiData.mockResolvedValueOnce({ group: " default " })
+
+    await expect(fetchCurrentUserGroup(request)).resolves.toBe("default")
+    expect(mockFetchApiData).toHaveBeenCalledWith(request, {
+      endpoint: "/api/user/self",
+    })
+
+    mockFetchApiData.mockResolvedValueOnce({ group: "" })
+    await expect(fetchCurrentUserGroup(request)).rejects.toThrow(
+      "invalid_current_user_group_payload",
+    )
+  })
+
   it("createApiToken, fetchTokenById, updateApiToken, and deleteApiToken manage token flows", async () => {
     mockFetchApi
       .mockResolvedValueOnce({ success: true })
@@ -239,10 +345,12 @@ describe("newApiFamily keyManagement", () => {
     await expect(updateApiToken(request, 9, tokenData)).resolves.toBe(true)
     await expect(updateApiToken(request, 9, tokenData)).rejects.toMatchObject({
       message: "update failed",
+      code: API_ERROR_CODES.BUSINESS_ERROR,
     })
     await expect(deleteApiToken(request, 9)).resolves.toBe(true)
     await expect(deleteApiToken(request, 9)).rejects.toMatchObject({
       message: "delete failed",
+      code: API_ERROR_CODES.BUSINESS_ERROR,
     })
 
     expect(mockFetchApi).toHaveBeenNthCalledWith(1, request, {
@@ -280,6 +388,7 @@ describe("newApiFamily keyManagement", () => {
 
     await expect(createApiToken(request, tokenData)).rejects.toMatchObject({
       message: "create failed",
+      code: API_ERROR_CODES.BUSINESS_ERROR,
     })
     await expect(createApiToken(request, tokenData)).rejects.toBe(
       transportError,
@@ -291,6 +400,7 @@ describe("newApiFamily keyManagement", () => {
 
     mockFetchApiData
       .mockResolvedValueOnce([token])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce({ default: { desc: "", ratio: 1 } })
       .mockResolvedValueOnce(["gpt-4o"])
     mockFetchApi
@@ -299,9 +409,9 @@ describe("newApiFamily keyManagement", () => {
       .mockResolvedValueOnce({ success: true })
     mockResolveApiTokenKey.mockResolvedValue("sk-resolved")
 
-    await expect(
-      keyManagement.fetchAccountTokens(request, 2, 25),
-    ).resolves.toEqual([token])
+    await expect(keyManagement.fetchAccountTokens(request)).resolves.toEqual([
+      token,
+    ])
     await expect(
       keyManagement.createApiToken(request, tokenData),
     ).resolves.toBe(true)
@@ -322,7 +432,10 @@ describe("newApiFamily keyManagement", () => {
     ).resolves.toEqual(["gpt-4o"])
 
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, request, {
-      endpoint: "/api/token/?p=2&size=25",
+      endpoint: "/api/token/?p=0&size=100",
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, request, {
+      endpoint: "/api/token/?p=1&size=100",
     })
     expect(mockResolveApiTokenKey).toHaveBeenCalledWith(
       request,

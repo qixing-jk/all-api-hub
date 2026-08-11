@@ -16,7 +16,6 @@ const expectTokenProvisioningCapability = (
     resolveDefaultTokenCreation: expect.any(Function),
     classifyCreatedToken: expect.any(Function),
     isInventoryTokenUsable: expect.any(Function),
-    getRepairPolicy: expect.any(Function),
   })
 }
 
@@ -265,6 +264,7 @@ describe("apiAdapters registry", () => {
     })
     expect(Object.keys(capabilities.account ?? {}).sort()).toEqual([
       "data",
+      "keyResourceManagement",
       "keyResources",
       "providerModelCatalog",
       "refresh",
@@ -277,6 +277,9 @@ describe("apiAdapters registry", () => {
     expect(capabilities.account?.keyResources).toEqual({
       open: expect.any(Function),
     })
+    expect(capabilities.account?.keyResourceManagement).toBe(
+      capabilities.account?.keyResources,
+    )
     expect(capabilities.account?.providerModelCatalog).toMatchObject({
       source: {
         provider: SITE_TYPES.OPENROUTER,

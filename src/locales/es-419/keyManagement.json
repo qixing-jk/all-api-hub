@@ -564,14 +564,9 @@
       "rerun": "Comprobar de nuevo",
       "start": "Iniciar comprobación y completar faltantes"
     },
-    "coverage": {
-      "createdGroup": "Creado: {{group}}",
-      "groupsCovered": "Cubiertos {{covered}}/{{total}} grupos",
-      "missingGroup": "Falta: {{group}}"
-    },
     "deleteConfirm": {
       "confirm": "Eliminar claves seleccionadas",
-      "description": "Estas claves también se eliminarán de los sitios correspondientes y no podrán restaurarse desde la extensión. Confirma que sus grupos ya no se usan.",
+      "description": "Estas claves también se eliminarán de los sitios correspondientes y no podrán restaurarse desde la extensión. Confirma que ya no se necesitan.",
       "more_one": "Y {{count}} más",
       "more_many": "Y {{count}} más",
       "more_other": "Y {{count}} más",
@@ -579,29 +574,66 @@
       "title_many": "¿Eliminar {{count}} claves inválidas?",
       "title_other": "¿Eliminar {{count}} claves inválidas?"
     },
-    "description": "Comprueba los grupos disponibles de cada cuenta, crea claves predeterminadas para grupos sin claves y lista claves inusuales cuyos grupos no están disponibles.",
+    "description": "Comprueba si las cuentas guardadas tienen claves utilizables. Cuando sea posible, se crearán las faltantes automáticamente; los demás problemas aparecerán abajo.",
+    "failureGuidance": {
+      "aborted": "La operación se canceló antes de finalizar. Vuelve a ejecutar la comprobación cuando estés listo.",
+      "authenticationFailed": "Vuelve a iniciar sesión o actualiza las credenciales de esta cuenta y vuelve a intentarlo.",
+      "configurationRequired": "Completa la configuración necesaria de este sitio y vuelve a ejecutar la comprobación de claves.",
+      "invalidConfiguration": "Revisa la configuración del sitio guardada para esta cuenta y vuelve a ejecutar la comprobación de claves.",
+      "mutationStateUncertain": "Es posible que el sitio haya aplicado el cambio. Actualiza la lista de claves antes de volver a intentarlo.",
+      "notFound": "La clave ya no existe. Actualiza la cuenta y vuelve a ejecutar la comprobación.",
+      "permissionDenied": "Usa credenciales con permiso para ver y administrar claves y vuelve a intentarlo.",
+      "unavailable": "No se pudo acceder al sitio o devolvió una respuesta no válida. Inténtalo más tarde.",
+      "unexpected": "Vuelve a ejecutar la comprobación de claves. Si vuelve a fallar, usa la respuesta del sitio para encontrar el problema.",
+      "upstreamRejected": "El sitio rechazó la solicitud. Corrige el problema indicado en su respuesta y vuelve a intentarlo.",
+      "validationFailed": "Revisa la configuración requerida de la clave, corrígela y vuelve a intentarlo."
+    },
     "historyNote": "Esto muestra el resultado de la comprobación anterior. No hay ningún trabajo en ejecución y puedes volver a ejecutar la comprobación.",
-    "initialNotice": "Después de iniciar, se comprobarán las cuentas guardadas para buscar grupos disponibles y se crearán claves predeterminadas para grupos sin claves.",
+    "initialNotice": "Se comprobará si las cuentas guardadas tienen claves utilizables. Si falta una en una cuenta compatible, la extensión puede crearla.",
     "invalidKeys": {
       "badge": "Inválida",
       "deleteFailed": "No se pudieron eliminar las claves inválidas",
-      "deletePartial": "Eliminadas {{deleted}}, {{failed}} fallidas",
+      "deleteNeedsAttention": "Se eliminaron {{applied}}; {{rejected}} fueron rechazadas y {{uncertain}} requieren verificación",
       "deleteSelected": "Eliminar seleccionadas",
       "deleteSuccess_one": "Se eliminó {{count}} clave inválida",
       "deleteSuccess_many": "Se eliminaron {{count}} claves inválidas",
       "deleteSuccess_other": "Se eliminaron {{count}} claves inválidas",
-      "emptyDescription": "Esta comprobación no encontró claves cuyos grupos no estén disponibles.",
+      "emptyDescription": "Esta comprobación no encontró claves inválidas.",
       "emptyTitle": "No hay claves inválidas",
-      "groupUnavailable": "El grupo {{group}} no está disponible actualmente",
+      "group": "Grupo anterior: {{name}}",
+      "reason": "Motivo: {{reason}}",
+      "reasons": {
+        "orphanedPlacement": "Motivo: Esta clave pertenece a un grupo que ya no está disponible. Elimínala si ya no la necesitas."
+      },
       "selectAll": "Seleccionar todos los resultados actuales",
       "selectedCount_one": "{{count}} clave inválida seleccionada",
       "selectedCount_many": "{{count}} claves inválidas seleccionadas",
-      "selectedCount_other": "{{count}} claves inválidas seleccionadas"
+      "selectedCount_other": "{{count}} claves inválidas seleccionadas",
+      "unnamed": "Clave sin nombre"
+    },
+    "inventoryIssues": {
+      "duplicateResourceRefs_one": "Se encontró {{count}} registro de clave duplicado, por lo que no se puede confirmar la clave correspondiente de forma segura.",
+      "duplicateResourceRefs_many": "Se encontraron {{count}} registros de clave duplicados, por lo que no se pueden confirmar las claves correspondientes de forma segura.",
+      "duplicateResourceRefs_other": "Se encontraron {{count}} registros de clave duplicados, por lo que no se pueden confirmar las claves correspondientes de forma segura.",
+      "inheritedAccountGroupUnavailable_one": "{{count}} clave hereda el grupo de la cuenta, pero no se pudo confirmar el grupo actual.",
+      "inheritedAccountGroupUnavailable_many": "{{count}} claves heredan el grupo de la cuenta, pero no se pudo confirmar el grupo actual.",
+      "inheritedAccountGroupUnavailable_other": "{{count}} claves heredan el grupo de la cuenta, pero no se pudo confirmar el grupo actual.",
+      "invalidRequirementPlacement_one": "{{count}} clave tiene datos de grupo que no coinciden con los grupos disponibles actualmente.",
+      "invalidRequirementPlacement_many": "{{count}} claves tienen datos de grupo que no coinciden con los grupos disponibles actualmente.",
+      "invalidRequirementPlacement_other": "{{count}} claves tienen datos de grupo que no coinciden con los grupos disponibles actualmente.",
+      "partialFailure": "No se pudieron cargar todas las claves, así que se detuvo el proceso automático. Revisa la respuesta del sitio junto a la cuenta y vuelve a intentarlo.",
+      "refreshFailed": "No se pudo confirmar el resultado más reciente después de cambiar una clave. Actualiza la lista y vuelve a intentarlo.",
+      "unknownCoverage_one": "{{count}} clave tiene un estado o vencimiento no reconocido.",
+      "unknownCoverage_many": "{{count}} claves tienen un estado o vencimiento no reconocido.",
+      "unknownCoverage_other": "{{count}} claves tienen un estado o vencimiento no reconocido.",
+      "unknownPlacement_one": "No se pudo identificar el grupo de {{count}} clave.",
+      "unknownPlacement_many": "No se pudieron identificar los grupos de {{count}} claves.",
+      "unknownPlacement_other": "No se pudieron identificar los grupos de {{count}} claves."
     },
     "managedSiteImport": {
-      "action_one": "Importar {{count}} clave reparada",
-      "action_many": "Importar {{count}} claves reparadas",
-      "action_other": "Importar {{count}} claves reparadas",
+      "action_one": "Revisar {{count}} clave reparada",
+      "action_many": "Revisar {{count}} claves reparadas",
+      "action_other": "Revisar {{count}} claves reparadas",
       "changeTarget": "Cambiar destino",
       "configMissing": "El sitio administrado actual no está configurado. Abre su configuración, complétala y vuelve aquí para importar de nuevo.",
       "configurationOpenFailed": "No se pudo abrir la configuración del sitio administrado. Ve a Configuración > Sitio administrado para configurarlo manualmente.",
@@ -609,9 +641,9 @@
       "nothingPending": "Estas claves ya se procesaron para el destino actual: sus canales se crearon o se encontraron coincidencias exactas. Para revisarlas otra vez, usa la importación normal con verificación completa.",
       "openConfiguration": "Abrir configuración del sitio administrado",
       "receiptFailed": "La importación terminó, pero no se pudieron actualizar los resultados de reparación. Actualiza los resultados para confirmar el estado actual.",
-      "target_one": "{{count}} clave reparada lista para {{site}}",
-      "target_many": "{{count}} claves reparadas listas para {{site}}",
-      "target_other": "{{count}} claves reparadas listas para {{site}}",
+      "target_one": "Se encontró {{count}} clave reparada para {{site}}; su disponibilidad y las importaciones anteriores se comprobarán antes de revisarla.",
+      "target_many": "Se encontraron {{count}} claves reparadas para {{site}}; su disponibilidad y las importaciones anteriores se comprobarán antes de revisarlas.",
+      "target_other": "Se encontraron {{count}} claves reparadas para {{site}}; su disponibilidad y las importaciones anteriores se comprobarán antes de revisarlas.",
       "title": "Importar claves reparadas",
       "unavailable": "Las claves reparadas ya no están disponibles para importar. Actualiza los resultados de reparación e inténtalo de nuevo.",
       "useRegularImport": "Usar importación normal"
@@ -623,9 +655,11 @@
     },
     "noMatchingResults": "No hay resultados coincidentes",
     "outcomes": {
-      "alreadyHad": "Ya tenía claves",
-      "created": "Creado",
+      "blocked": "Bloqueado",
+      "covered": "No faltaban claves",
       "failed": "Falló",
+      "partial": "Parcial",
+      "repaired": "Claves faltantes agregadas",
       "skipped": "Omitido"
     },
     "previousResult": {
@@ -634,6 +668,7 @@
       "title": "Resultado de comprobación anterior disponible",
       "view": "Ver resultado anterior"
     },
+    "progressChecked": "Revisadas",
     "progressLabel": "Progreso",
     "remoteWriteNotice": "Esta acción puede crear claves nuevas en los sitios correspondientes. No eliminará automáticamente ninguna clave.",
     "renameOption": {
@@ -643,34 +678,46 @@
       "tooltip": "Solo se manejan claves con un estilo de nombre creado automáticamente, como “grupo user (auto)” o “grupo vip (auto)”. Después de la reparación, el nombre sigue el grupo actual de la clave. Los demás nombres no cambian."
     },
     "renameSummary": {
-      "accountFailed_one": "{{count}} nombre no sincronizado",
-      "accountFailed_many": "{{count}} nombres no sincronizados",
-      "accountFailed_other": "{{count}} nombres no sincronizados",
-      "accountRenamed_one": "{{count}} nombre sincronizado",
-      "accountRenamed_many": "{{count}} nombres sincronizados",
-      "accountRenamed_other": "{{count}} nombres sincronizados",
-      "failed": "Nombres no sincronizados",
-      "renamed": "Nombres sincronizados",
-      "summarySeparator": ", "
+      "accountApplied_one": "{{count}} nombre sincronizado",
+      "accountApplied_many": "{{count}} nombres sincronizados",
+      "accountApplied_other": "{{count}} nombres sincronizados",
+      "accountRejected_one": "{{count}} cambio de nombre rechazado",
+      "accountRejected_many": "{{count}} cambios de nombre rechazados",
+      "accountRejected_other": "{{count}} cambios de nombre rechazados",
+      "accountUncertain_one": "{{count}} cambio de nombre requiere verificación",
+      "accountUncertain_many": "{{count}} cambios de nombre requieren verificación",
+      "accountUncertain_other": "{{count}} cambios de nombre requieren verificación"
+    },
+    "requirements": {
+      "blockedIncompleteInventory": "No se cargaron todas las claves",
+      "blockedInputRequired": "Requiere configuración manual",
+      "covered": "Hay una clave utilizable",
+      "coveredAfterUncertain": "Disponible tras actualizar",
+      "created": "Se creó una clave nueva",
+      "rejected": "El sitio no hizo cambios",
+      "uncertain": "Comprueba el resultado antes de reintentar"
     },
     "resultsTitle": "Resultados",
     "runningNote": "Este trabajo se ejecuta en segundo plano. Puedes cerrar este diálogo y revisar más tarde, o cancelarlo desde la tarjeta de progreso.",
     "searchLabel": "Buscar",
-    "searchPlaceholder": "Buscar cuenta, origen o tipo de sitio...",
+    "searchPlaceholder": "Buscar cuenta, nombre de clave, grupo, dominio o tipo de sitio...",
     "skipReasons": {
       "aihubmixOneTimeKey": "Las claves de AIHubMix solo se pueden ver una vez. Crea la clave manualmente y guarda la clave completa de inmediato.",
       "noneAuth": "Sin credenciales (tipo de autenticación: none)",
-      "sub2api": "Requiere seleccionar un grupo de Sub2API; crea la clave manualmente",
-      "tokenAutomationUnsupported": "Este sitio expone una credencial de servicio en lugar de administración de tokens API; se omite la reparación automática de claves."
+      "provisioningUnavailable": "Esta cuenta no permite crear claves automáticamente. Si hace falta, crea una en el sitio."
     },
-    "title": "Comprobación de cobertura de claves",
-    "totalsLabels": {
-      "eligibleAccounts": "Cuentas elegibles",
-      "enabledAccounts": "Cuentas habilitadas",
-      "processedAccounts": "Procesadas"
+    "status": {
+      "completed": "Completado",
+      "needsAttention": "Requiere acción"
     },
+    "summary": {
+      "completedNeedsAttention": "La revisión terminó, pero algunos resultados requieren atención. Consulta los detalles abajo.",
+      "completedWithSkipped": "La revisión terminó. Algunas cuentas no se pudieron procesar automáticamente; consulta los motivos abajo.",
+      "healthy": "La revisión terminó. No se encontraron problemas que requieran atención."
+    },
+    "title": "Revisar claves de cuentas",
     "views": {
-      "accountCoverage": "Cobertura de cuentas",
+      "accountCoverage": "Resultados por cuenta",
       "invalidKeys": "Claves inválidas",
       "label": "Vista de resultados"
     }

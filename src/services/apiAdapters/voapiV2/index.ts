@@ -4,6 +4,7 @@ import type { SiteTypeCapabilities } from "~/services/apiAdapters/contracts/site
 import { voApiV2AccountBootstrap } from "./accountBootstrap"
 import { voApiV2AccountCompletion } from "./accountCompletion"
 import { voApiV2AccountData } from "./accountData"
+import { voApiV2AccountKeyResources } from "./accountKeyResource"
 import { voApiV2AccountRefresh } from "./accountRefresh"
 import { voApiV2InviteLink } from "./inviteLink"
 import { voApiV2KeyManagement } from "./keyManagement"
@@ -18,6 +19,7 @@ export const voApiV2Capabilities: SiteTypeCapabilities = {
     completion: voApiV2AccountCompletion,
     inviteLink: voApiV2InviteLink,
     keyManagement: voApiV2KeyManagement,
+    keyResources: voApiV2AccountKeyResources,
     tokenProvisioning: voApiV2TokenProvisioning,
     refresh: voApiV2AccountRefresh,
   },

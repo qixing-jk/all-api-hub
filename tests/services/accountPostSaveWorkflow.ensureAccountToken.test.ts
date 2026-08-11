@@ -22,7 +22,6 @@ import {
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
@@ -35,7 +34,6 @@ const {
   isInventoryTokenUsableMock,
   resolveDefaultTokenCreationMock,
   classifyCreatedTokenMock,
-  getRepairPolicyMock,
   getSiteTypeCapabilitiesMock,
 } = vi.hoisted(() => {
   const fetchAccountTokensMock = vi.fn()
@@ -44,7 +42,6 @@ const {
   const isInventoryTokenUsableMock = vi.fn()
   const resolveDefaultTokenCreationMock = vi.fn()
   const classifyCreatedTokenMock = vi.fn()
-  const getRepairPolicyMock = vi.fn()
 
   return {
     fetchAccountTokensMock,
@@ -53,7 +50,6 @@ const {
     isInventoryTokenUsableMock,
     resolveDefaultTokenCreationMock,
     classifyCreatedTokenMock,
-    getRepairPolicyMock,
     getSiteTypeCapabilitiesMock: vi.fn(() => ({
       account: {
         keyManagement: {
@@ -73,7 +69,6 @@ const {
             resolveDefaultTokenCreationMock(...args),
           classifyCreatedToken: (...args: unknown[]) =>
             classifyCreatedTokenMock(...args),
-          getRepairPolicy: (...args: unknown[]) => getRepairPolicyMock(...args),
         },
       },
     })),
@@ -156,7 +151,6 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     isInventoryTokenUsableMock.mockReset()
     resolveDefaultTokenCreationMock.mockReset()
     classifyCreatedTokenMock.mockReset()
-    getRepairPolicyMock.mockReset()
     getSiteTypeCapabilitiesMock.mockClear()
     isInventoryTokenUsableMock.mockImplementation(({ token }) =>
       Boolean(token.key),
@@ -185,9 +179,6 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
               reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
             },
     )
-    getRepairPolicyMock.mockReturnValue({
-      kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-    })
   })
 
   it("selects the single newly created token by id diff even when it is not the last refetched token", () => {

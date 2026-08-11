@@ -1,6 +1,6 @@
 import type {
   AccountRuntimeKey,
-  ServiceCredentialRuntimeKey,
+  AccountTokenRuntimeKey,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
@@ -22,14 +22,14 @@ export function RuntimeKeySecretPreview({ secret }: { secret: string }) {
 }
 
 interface RuntimeKeyDetailsProps {
-  runtimeKey: ServiceCredentialRuntimeKey
+  runtimeKey: Exclude<AccountRuntimeKey, AccountTokenRuntimeKey>
   copiedRuntimeKeyId: string | null
   onCopyKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
   onOpenCCSwitchDialog?: (token: ApiToken, account: DisplaySiteData) => void
 }
 
-/** Preserves the service-credential detail surface outside account-key migration. */
+/** Renders already-resolved non-token runtime keys without legacy token lookup. */
 export function RuntimeKeyDetails({
   runtimeKey,
   copiedRuntimeKeyId,

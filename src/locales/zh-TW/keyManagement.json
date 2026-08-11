@@ -546,34 +546,56 @@
       "rerun": "重新檢查",
       "start": "開始檢查並補齊"
     },
-    "coverage": {
-      "createdGroup": "已建立：{{group}}",
-      "groupsCovered": "已覆蓋 {{covered}}/{{total}} 個分組",
-      "missingGroup": "未補齊：{{group}}"
-    },
     "deleteConfirm": {
       "confirm": "刪除所選金鑰",
-      "description": "這些金鑰會同時從對應網站刪除，無法透過擴充功能恢復。請確認它們的分組已不再使用。",
+      "description": "這些金鑰會同時從對應網站刪除，無法透過擴充功能恢復。請確認它們已不再需要。",
       "more_other": "以及另外 {{count}} 個",
       "title_other": "刪除 {{count}} 個異常金鑰？"
     },
-    "description": "檢查每個帳號的可用分組，為缺少金鑰的分組建立預設金鑰，並列出分組不可用的異常金鑰。",
+    "description": "檢查已儲存帳號是否有可用金鑰；缺少時會盡量自動建立，其他問題會列在下方。",
+    "failureGuidance": {
+      "aborted": "操作在完成前已取消；準備好後可重新檢查。",
+      "authenticationFailed": "請重新登入或更新此帳號的憑證，然後重試。",
+      "configurationRequired": "請先完成此網站所需的設定，然後重新檢查金鑰。",
+      "invalidConfiguration": "請檢查此帳號儲存的網站設定，然後重新檢查金鑰。",
+      "mutationStateUncertain": "網站可能已套用這次變更；請先重新整理金鑰清單，再決定是否重試。",
+      "notFound": "對應的金鑰已不存在；請重新整理帳號後再次檢查。",
+      "permissionDenied": "請使用有權查看與管理金鑰的憑證，然後重試。",
+      "unavailable": "網站暫時無法存取，或傳回無法處理的回應；請稍後重試。",
+      "unexpected": "請重新檢查金鑰；如果仍然失敗，請依照網站回覆的資訊排查。",
+      "upstreamRejected": "網站拒絕了要求；請依照網站回覆的資訊處理後重試。",
+      "validationFailed": "請檢查並修正所需的金鑰設定，然後重試。"
+    },
     "historyNote": "這裡顯示上次檢查結果；目前沒有正在執行的任務，可重新檢查。",
-    "initialNotice": "開始後會檢查已儲存帳號的可用分組，並為缺少金鑰的分組建立預設金鑰。",
+    "initialNotice": "開始後會檢查已儲存帳號是否缺少可用金鑰；支援自動補齊的帳號可能會建立新金鑰。",
     "invalidKeys": {
       "badge": "異常",
       "deleteFailed": "刪除異常金鑰失敗",
-      "deletePartial": "已刪除 {{deleted}} 個，{{failed}} 個刪除失敗",
+      "deleteNeedsAttention": "已刪除 {{applied}} 個；{{rejected}} 個遭拒絕，{{uncertain}} 個需要核實",
       "deleteSelected": "刪除所選",
       "deleteSuccess_other": "已刪除 {{count}} 個異常金鑰",
-      "emptyDescription": "本次檢查未發現分組不可用的金鑰。",
+      "emptyDescription": "本次檢查未發現異常金鑰。",
       "emptyTitle": "沒有異常金鑰",
-      "groupUnavailable": "分組 {{group}} 目前不可用",
+      "group": "原群組：{{name}}",
+      "reason": "原因：{{reason}}",
+      "reasons": {
+        "orphanedPlacement": "原因：此金鑰所屬的群組已不再可用。確認不再需要後，可將其刪除。"
+      },
       "selectAll": "全選目前結果",
-      "selectedCount_other": "已選擇 {{count}} 個異常金鑰"
+      "selectedCount_other": "已選擇 {{count}} 個異常金鑰",
+      "unnamed": "未命名金鑰"
+    },
+    "inventoryIssues": {
+      "duplicateResourceRefs_other": "發現 {{count}} 筆重複的金鑰紀錄，無法安全確認對應金鑰。",
+      "inheritedAccountGroupUnavailable_other": "有 {{count}} 個金鑰使用帳號預設群組，但無法確認帳號目前的群組。",
+      "invalidRequirementPlacement_other": "有 {{count}} 個金鑰的群組資料與目前可用群組不一致。",
+      "partialFailure": "未能讀取全部金鑰，自動處理已停止；請依照帳號旁的網站回覆資訊處理後重試。",
+      "refreshFailed": "金鑰變更後無法確認最新結果；請重新整理金鑰清單後重試。",
+      "unknownCoverage_other": "有 {{count}} 個金鑰的狀態或有效期限無法辨識。",
+      "unknownPlacement_other": "有 {{count}} 個金鑰所屬的群組無法辨識。"
     },
     "managedSiteImport": {
-      "action_other": "匯入 {{count}} 個修復建立的金鑰",
+      "action_other": "檢視 {{count}} 個修復建立的金鑰",
       "changeTarget": "變更目標",
       "configMissing": "目前管理網站尚未設定。請開啟設定頁，完成後返回此處再次匯入。",
       "configurationOpenFailed": "無法開啟管理網站設定。請前往「設定 > 管理網站」手動設定。",
@@ -581,7 +603,7 @@
       "nothingPending": "這些金鑰已在目前目標處理完成：對應渠道已建立或已精確存在。如需再次檢查，請使用一般匯入進行完整驗證。",
       "openConfiguration": "開啟管理網站設定",
       "receiptFailed": "匯入已完成，但無法更新修復結果。請重新整理結果以確認目前狀態。",
-      "target_other": "{{site}}：有 {{count}} 個修復建立的金鑰可匯入",
+      "target_other": "已找到 {{count}} 個修復建立的金鑰，可供 {{site}} 使用；進入檢視前會檢查目前可用性與既有匯入紀錄。",
       "title": "匯入修復建立的金鑰",
       "unavailable": "這些修復建立的金鑰目前無法匯入。請重新整理修復結果後再試。",
       "useRegularImport": "使用一般匯入"
@@ -593,9 +615,11 @@
     },
     "noMatchingResults": "沒有匹配的結果",
     "outcomes": {
-      "alreadyHad": "已存在",
-      "created": "已建立",
+      "blocked": "受阻",
+      "covered": "無需補齊",
       "failed": "失敗",
+      "partial": "部分完成",
+      "repaired": "已補齊",
       "skipped": "已跳過"
     },
     "previousResult": {
@@ -604,6 +628,7 @@
       "title": "有上次檢查結果",
       "view": "查看上次結果"
     },
+    "progressChecked": "已檢查",
     "progressLabel": "進度",
     "remoteWriteNotice": "此操作可能會在對應網站建立新金鑰；不會自動刪除任何金鑰。",
     "renameOption": {
@@ -613,30 +638,40 @@
       "tooltip": "僅處理名稱符合自動建立樣式的金鑰，例如「user group (auto)」或「vip group (auto)」。修復後名稱會跟隨金鑰目前分組；其他名稱不會修改。"
     },
     "renameSummary": {
-      "accountFailed_other": "名稱未同步：{{count}}",
-      "accountRenamed_other": "已同步名稱：{{count}}",
-      "failed": "名稱未同步",
-      "renamed": "已同步名稱",
-      "summarySeparator": "；"
+      "accountApplied_other": "已同步名稱：{{count}}",
+      "accountRejected_other": "重新命名遭拒絕：{{count}}",
+      "accountUncertain_other": "重新命名需要核實：{{count}}"
+    },
+    "requirements": {
+      "blockedIncompleteInventory": "金鑰未完整載入",
+      "blockedInputRequired": "需手動設定",
+      "covered": "已有可用金鑰",
+      "coveredAfterUncertain": "重新整理後確認可用",
+      "created": "已建立新金鑰",
+      "rejected": "網站未執行",
+      "uncertain": "請先核實結果"
     },
     "resultsTitle": "結果",
     "runningNote": "任務在後台執行；可關閉此對話框稍後查看，或在進度卡片中取消任務。",
     "searchLabel": "搜尋",
-    "searchPlaceholder": "搜尋帳號、域名或站點型別...",
+    "searchPlaceholder": "搜尋帳號、金鑰名稱、群組、網域或網站類型...",
     "skipReasons": {
       "aihubmixOneTimeKey": "AIHubMix 金鑰僅可查看一次，請手動建立並立即保存完整金鑰",
       "noneAuth": "無憑據（認證方式：無）",
-      "sub2api": "需要選擇 Sub2API 分組，請手動建立金鑰",
-      "tokenAutomationUnsupported": "該站點提供的是服務憑證而非 API Token 管理，已跳過自動修復。"
+      "provisioningUnavailable": "此帳號不支援自動建立金鑰；如有需要，請前往對應網站手動建立。"
     },
-    "title": "金鑰覆蓋檢查",
-    "totalsLabels": {
-      "eligibleAccounts": "符合條件帳號",
-      "enabledAccounts": "已啟用帳號",
-      "processedAccounts": "已處理"
+    "status": {
+      "completed": "已完成",
+      "needsAttention": "需處理"
     },
+    "summary": {
+      "completedNeedsAttention": "檢查完成，但有結果需要處理。請在下方查看具體原因。",
+      "completedWithSkipped": "檢查完成，部分帳號未自動處理。請在下方查看原因。",
+      "healthy": "檢查完成，未發現需要處理的問題。"
+    },
+    "title": "檢查帳號金鑰",
     "views": {
-      "accountCoverage": "帳號覆蓋",
+      "accountCoverage": "帳號結果",
       "invalidKeys": "異常金鑰",
       "label": "結果視圖"
     }

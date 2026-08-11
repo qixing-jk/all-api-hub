@@ -137,7 +137,6 @@ describe("account key product capabilities", () => {
           isInventoryTokenUsable: vi.fn(),
           resolveDefaultTokenCreation: vi.fn(),
           classifyCreatedToken: vi.fn(),
-          getRepairPolicy: vi.fn(),
         },
       },
     } as any)
@@ -199,12 +198,12 @@ describe("account key product capabilities", () => {
   })
 
   it("keeps account-native resources separate from recoverable runtime keys", () => {
+    const keyResources = { open: vi.fn() }
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.OPENROUTER,
       account: {
-        keyResources: {
-          open: vi.fn(),
-        },
+        keyResources,
+        keyResourceManagement: keyResources,
       },
     } as any)
 
@@ -217,6 +216,22 @@ describe("account key product capabilities", () => {
       tokenMetadata: { fetchAvailableModels: false, fetchUserGroups: false },
       serviceCredential: { fetch: false, rotate: false },
       defaultTokenAutomation: { run: false },
+    })
+  })
+
+  it("does not route provisioning-only key resources into native management", () => {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.NEW_API,
+      account: { keyResources: { open: vi.fn() } },
+    } as any)
+
+    expect(getAccountKeyProductCapabilities(ACCOUNT as any)).toMatchObject({
+      resourceKeys: {
+        list: false,
+        create: false,
+        update: false,
+        delete: false,
+      },
     })
   })
 

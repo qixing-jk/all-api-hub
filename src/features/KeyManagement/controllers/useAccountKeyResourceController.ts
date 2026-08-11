@@ -970,7 +970,8 @@ export function useAccountKeyResourceController({
         (account) =>
           (mode === "all" ? true : account.id === selectedAccount) &&
           Boolean(
-            getSiteTypeCapabilities(account.siteType).account?.keyResources,
+            getSiteTypeCapabilities(account.siteType).account
+              ?.keyResourceManagement,
           ),
       )
       setProgress({

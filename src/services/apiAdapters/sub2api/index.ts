@@ -4,6 +4,7 @@ import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountB
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
 import { sub2ApiAccountCompletion } from "./accountCompletion"
 import { sub2ApiAccountData } from "./accountData"
+import { sub2ApiAccountKeyResources } from "./accountKeyResource"
 import { sub2ApiAccountRefresh } from "./accountRefresh"
 import { sub2ApiInviteLink } from "./inviteLink"
 import { sub2ApiKeyManagement } from "./keyManagement"
@@ -22,6 +23,7 @@ export const sub2ApiCapabilities: SiteTypeCapabilities = {
     completion: sub2ApiAccountCompletion,
     inviteLink: sub2ApiInviteLink,
     keyManagement: sub2ApiKeyManagement,
+    keyResources: sub2ApiAccountKeyResources,
     tokenProvisioning: sub2ApiTokenProvisioning,
     refresh: sub2ApiAccountRefresh,
   },

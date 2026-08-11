@@ -7,10 +7,8 @@ import {
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
-import { ACCOUNT_KEY_REPAIR_SKIP_REASONS } from "~/types/accountKeyAutoProvisioning"
 import {
   buildSub2ApiAccount,
   buildSub2ApiToken,
@@ -105,10 +103,6 @@ const createSub2ApiTokenProvisioningMock = () => ({
           reason: TOKEN_PROVISIONING_BLOCK_REASONS.CreateFailed,
         },
   ),
-  getRepairPolicy: vi.fn(() => ({
-    kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Skipped,
-    skipReason: ACCOUNT_KEY_REPAIR_SKIP_REASONS.Sub2Api,
-  })),
 })
 
 vi.mock("react-hot-toast", () => ({

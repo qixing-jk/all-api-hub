@@ -64,6 +64,14 @@ export type Sub2ApiGroupData = {
   rate_multiplier?: NumericLike | null
 }
 
+/** Provider-native group identity and safe display metadata. */
+export type Sub2ApiGroupDescriptor = {
+  readonly id: number
+  readonly displayName: string
+  readonly description: string
+  readonly ratio: number
+}
+
 export type Sub2ApiKeyStatus =
   | "active"
   | "inactive"

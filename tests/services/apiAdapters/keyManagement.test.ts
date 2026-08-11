@@ -18,6 +18,7 @@ const {
   mockDeleteApiToken,
   mockFetchAccountAvailableModels,
   mockFetchAccountTokens,
+  mockFetchCurrentUserGroup,
   mockFetchUserGroups,
   mockOneHubFetchAccountAvailableModels,
   mockOneHubFetchAccountTokens,
@@ -26,7 +27,6 @@ const {
   mockSub2ApiCreateApiToken,
   mockSub2ApiDeleteApiToken,
   mockSub2ApiFetchAccountAvailableModels,
-  mockSub2ApiFetchAllAccountTokens,
   mockSub2ApiFetchAccountTokens,
   mockSub2ApiFetchUserGroups,
   mockSub2ApiResolveApiTokenKey,
@@ -51,6 +51,7 @@ const {
   mockDeleteApiToken: vi.fn(),
   mockFetchAccountAvailableModels: vi.fn(),
   mockFetchAccountTokens: vi.fn(),
+  mockFetchCurrentUserGroup: vi.fn(),
   mockFetchUserGroups: vi.fn(),
   mockOneHubFetchAccountAvailableModels: vi.fn(),
   mockOneHubFetchAccountTokens: vi.fn(),
@@ -59,7 +60,6 @@ const {
   mockSub2ApiCreateApiToken: vi.fn(),
   mockSub2ApiDeleteApiToken: vi.fn(),
   mockSub2ApiFetchAccountAvailableModels: vi.fn(),
-  mockSub2ApiFetchAllAccountTokens: vi.fn(),
   mockSub2ApiFetchAccountTokens: vi.fn(),
   mockSub2ApiFetchUserGroups: vi.fn(),
   mockSub2ApiResolveApiTokenKey: vi.fn(),
@@ -81,17 +81,25 @@ vi.mock("~/services/apiService/newApiFamily/default/keyManagement", () => ({
     deleteApiToken: mockDeleteApiToken,
     fetchAccountAvailableModels: mockFetchAccountAvailableModels,
     fetchAccountTokens: mockFetchAccountTokens,
+    fetchCurrentUserGroup: mockFetchCurrentUserGroup,
     fetchUserGroups: mockFetchUserGroups,
     resolveApiTokenKey: mockResolveApiTokenKey,
     updateApiToken: mockUpdateApiToken,
   },
+  createApiToken: mockCreateApiToken,
+  deleteApiToken: mockDeleteApiToken,
+  fetchAccountAvailableModels: mockFetchAccountAvailableModels,
+  fetchAccountTokens: mockFetchAccountTokens,
+  fetchCurrentUserGroup: mockFetchCurrentUserGroup,
+  fetchUserGroups: mockFetchUserGroups,
+  resolveApiTokenKey: mockResolveApiTokenKey,
+  updateApiToken: mockUpdateApiToken,
 }))
 
 vi.mock("~/services/apiService/sub2api", () => ({
   createApiToken: mockSub2ApiCreateApiToken,
   deleteApiToken: mockSub2ApiDeleteApiToken,
   fetchAccountAvailableModels: mockSub2ApiFetchAccountAvailableModels,
-  fetchAllAccountTokens: mockSub2ApiFetchAllAccountTokens,
   fetchAccountTokens: mockSub2ApiFetchAccountTokens,
   fetchUserGroups: mockSub2ApiFetchUserGroups,
   resolveApiTokenKey: mockSub2ApiResolveApiTokenKey,
@@ -169,14 +177,14 @@ describe("apiAdapter keyManagement", () => {
     [SITE_TYPES.VELOERA, "follows-account"],
     [SITE_TYPES.ANYROUTER, "follows-account"],
     [SITE_TYPES.RIX_API, "follows-account"],
-    [SITE_TYPES.ONE_HUB, "unknown"],
-    [SITE_TYPES.DONE_HUB, "unknown"],
-    [SITE_TYPES.V_API, "unknown"],
-    [SITE_TYPES.VO_API, "unknown"],
-    [SITE_TYPES.SUPER_API, "unknown"],
-    [SITE_TYPES.NEO_API, "unknown"],
-    [SITE_TYPES.WONG_GONGYI, "unknown"],
-    [SITE_TYPES.UNKNOWN, "unknown"],
+    [SITE_TYPES.ONE_HUB, "follows-account"],
+    [SITE_TYPES.DONE_HUB, "follows-account"],
+    [SITE_TYPES.V_API, "follows-account"],
+    [SITE_TYPES.VO_API, "follows-account"],
+    [SITE_TYPES.SUPER_API, "follows-account"],
+    [SITE_TYPES.NEO_API, "follows-account"],
+    [SITE_TYPES.WONG_GONGYI, "follows-account"],
+    [SITE_TYPES.UNKNOWN, "follows-account"],
     [SITE_TYPES.ONE_API, "not-applicable"],
   ] as const)(
     "resolves an empty %s inventory group as %s",
@@ -261,9 +269,9 @@ describe("apiAdapter keyManagement", () => {
 
     const keyManagement = createNewApiKeyManagement(SITE_TYPES.NEW_API)
 
-    await expect(
-      keyManagement.fetchTokens(request, { page: 2, size: 25 }),
-    ).resolves.toBe(expectedTokens)
+    await expect(keyManagement.fetchTokens(request)).resolves.toBe(
+      expectedTokens,
+    )
     await expect(keyManagement.createToken(request, tokenData)).resolves.toBe(
       true,
     )
@@ -287,7 +295,7 @@ describe("apiAdapter keyManagement", () => {
       availableModels,
     )
 
-    expect(mockFetchAccountTokens).toHaveBeenCalledWith(request, 2, 25)
+    expect(mockFetchAccountTokens).toHaveBeenCalledWith(request)
     expect(mockCreateApiToken).toHaveBeenCalledWith(request, tokenData)
     expect(mockUpdateApiToken).toHaveBeenCalledWith(
       request,
@@ -308,9 +316,9 @@ describe("apiAdapter keyManagement", () => {
 
     const keyManagement = createNewApiKeyManagement(SITE_TYPES.ONE_HUB)
 
-    await expect(
-      keyManagement.fetchTokens(request, { page: 2, size: 25 }),
-    ).resolves.toBe(expectedTokens)
+    await expect(keyManagement.fetchTokens(request)).resolves.toBe(
+      expectedTokens,
+    )
     await expect(keyManagement.userGroups?.fetch(request)).resolves.toBe(
       userGroups,
     )
@@ -318,7 +326,7 @@ describe("apiAdapter keyManagement", () => {
       availableModels,
     )
 
-    expect(mockOneHubFetchAccountTokens).toHaveBeenCalledWith(request, 2, 25)
+    expect(mockOneHubFetchAccountTokens).toHaveBeenCalledWith(request)
     expect(mockOneHubFetchUserGroups).toHaveBeenCalledWith(request)
     expect(mockOneHubFetchAccountAvailableModels).toHaveBeenCalledWith(request)
     expect(mockFetchAccountTokens).not.toHaveBeenCalled()
@@ -354,7 +362,6 @@ describe("apiAdapter keyManagement", () => {
   it("delegates Sub2API key operations to backend key helpers", async () => {
     const expectedTokens = [token]
     mockSub2ApiFetchAccountTokens.mockResolvedValueOnce(expectedTokens)
-    mockSub2ApiFetchAllAccountTokens.mockResolvedValueOnce(expectedTokens)
     mockSub2ApiCreateApiToken.mockResolvedValueOnce(token)
     mockSub2ApiUpdateApiToken.mockResolvedValueOnce(true)
     mockSub2ApiResolveApiTokenKey.mockResolvedValueOnce("sk-sub2api")
@@ -364,10 +371,7 @@ describe("apiAdapter keyManagement", () => {
       availableModels,
     )
 
-    await expect(
-      sub2ApiKeyManagement.fetchTokens(request, { page: 3, size: 50 }),
-    ).resolves.toBe(expectedTokens)
-    await expect(sub2ApiKeyManagement.fetchAllTokens?.(request)).resolves.toBe(
+    await expect(sub2ApiKeyManagement.fetchTokens(request)).resolves.toBe(
       expectedTokens,
     )
     await expect(
@@ -393,8 +397,7 @@ describe("apiAdapter keyManagement", () => {
       sub2ApiKeyManagement.fetchAvailableModels(request),
     ).resolves.toBe(availableModels)
 
-    expect(mockSub2ApiFetchAccountTokens).toHaveBeenCalledWith(request, 3, 50)
-    expect(mockSub2ApiFetchAllAccountTokens).toHaveBeenCalledWith(request)
+    expect(mockSub2ApiFetchAccountTokens).toHaveBeenCalledWith(request)
     expect(mockSub2ApiCreateApiToken).toHaveBeenCalledWith(request, tokenData)
     expect(mockSub2ApiUpdateApiToken).toHaveBeenCalledWith(
       request,
@@ -417,9 +420,9 @@ describe("apiAdapter keyManagement", () => {
     mockVoApiV2FetchAvailableModels.mockResolvedValueOnce(availableModels)
     mockVoApiV2FetchUserGroups.mockResolvedValueOnce(userGroups)
 
-    await expect(
-      voApiV2KeyManagement.fetchTokens(request, { page: 4, size: 40 }),
-    ).resolves.toBe(expectedTokens)
+    await expect(voApiV2KeyManagement.fetchTokens(request)).resolves.toBe(
+      expectedTokens,
+    )
     await expect(
       voApiV2KeyManagement.createToken(request, tokenData),
     ).resolves.toBe(true)
@@ -443,7 +446,7 @@ describe("apiAdapter keyManagement", () => {
       userGroups,
     )
 
-    expect(mockVoApiV2FetchTokens).toHaveBeenCalledWith(request, 4, 40)
+    expect(mockVoApiV2FetchTokens).toHaveBeenCalledWith(request)
     expect(mockVoApiV2CreateToken).toHaveBeenCalledWith(request, tokenData)
     expect(mockVoApiV2UpdateToken).toHaveBeenCalledWith(
       request,
@@ -466,7 +469,7 @@ describe("apiAdapter keyManagement", () => {
     expect(mockSub2ApiFetchAccountAvailableModels).toHaveBeenCalledWith(request)
   })
 
-  it("delegates AIHubMix key operations while preserving fetch option behavior", async () => {
+  it("delegates AIHubMix key operations", async () => {
     const expectedTokens = [token]
     mockAihubmixFetchAccountTokens.mockResolvedValueOnce(expectedTokens)
     mockAihubmixCreateApiToken.mockResolvedValueOnce(token)
@@ -477,9 +480,9 @@ describe("apiAdapter keyManagement", () => {
       availableModels,
     )
 
-    await expect(
-      aihubmixKeyManagement.fetchTokens(request, { page: 4, size: 10 }),
-    ).resolves.toBe(expectedTokens)
+    await expect(aihubmixKeyManagement.fetchTokens(request)).resolves.toBe(
+      expectedTokens,
+    )
     await expect(
       aihubmixKeyManagement.createToken(request, tokenData),
     ).resolves.toBe(token)

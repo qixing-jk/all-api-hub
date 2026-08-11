@@ -19,7 +19,6 @@ import {
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
   TOKEN_PROVISIONING_ERRORS,
-  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
 } from "~/services/apiAdapters/contracts/tokenProvisioning"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -74,9 +73,6 @@ const {
               resolveDefaultTokenCreationMock(...args),
             classifyCreatedToken: (...args: unknown[]) =>
               classifyCreatedTokenMock(...args),
-            getRepairPolicy: vi.fn(() => ({
-              kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-            })),
           },
         },
       }),
@@ -545,9 +541,6 @@ describe("accountOperations Sub2API token creation guards", () => {
             resolveDefaultTokenCreationMock(...args),
           classifyCreatedToken: (...args: unknown[]) =>
             classifyCreatedTokenMock(...args),
-          getRepairPolicy: vi.fn(() => ({
-            kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-          })),
         },
       },
     })

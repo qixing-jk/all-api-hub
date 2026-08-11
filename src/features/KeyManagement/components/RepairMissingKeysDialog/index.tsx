@@ -1,20 +1,19 @@
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { Alert, Button, Modal } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
-import type { AccountToken, DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import type { AccountKeyRepairOutcome } from "~/types/accountKeyAutoProvisioning"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
 
 import { ManagedSiteTokenBatchExportDialog } from "../ManagedSiteTokenBatchExportDialog"
 import { RepairInvalidKeysDeleteConfirm } from "./RepairInvalidKeysDeleteConfirm"
 import {
-  filterRepairInvalidTokens,
+  filterRepairInvalidResources,
   filterRepairResults,
   getRepairOutcomeCounts,
   REPAIR_RESULT_VIEWS,
@@ -35,17 +34,14 @@ interface RepairMissingKeysDialogProps {
   onClose: () => void
   accounts: DisplaySiteData[]
   startOnOpen: boolean
-  onManagedSiteImportSuccess?: (token: AccountToken) => void | Promise<void>
 }
 
 /**
  * Modal dialog showing the background progress of the "ensure at least one key" job.
  */
 export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
-  const { isOpen, onClose, accounts, startOnOpen, onManagedSiteImportSuccess } =
-    props
+  const { isOpen, onClose, accounts, startOnOpen } = props
   const { t } = useTranslation(["keyManagement", "common"])
-  const { openDefaultTokenQuickCreateDialogForAccount } = useChannelDialog()
   const { managedSiteType } = useUserPreferencesContext()
 
   const [searchTerm, setSearchTerm] = useState("")
@@ -64,9 +60,6 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   )
   const [isPreviousResultExpanded, setIsPreviousResultExpanded] =
     useState(false)
-  const [openingSub2ApiAccountId, setOpeningSub2ApiAccountId] = useState<
-    string | null
-  >(null)
   const {
     error,
     handleCancelAudit,
@@ -89,14 +82,6 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     )
   }, [accounts])
 
-  const accountById = useMemo(() => {
-    return new Map(accounts.map((account) => [account.id, account]))
-  }, [accounts])
-
-  const accountIds = useMemo(() => {
-    return new Set(accounts.map((account) => account.id))
-  }, [accounts])
-
   const visibleResults = useMemo(() => {
     if (!progress) return []
     return progress.results.filter(
@@ -104,8 +89,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     )
   }, [disabledAccountIds, progress])
 
-  const invalidTokens = useMemo(() => {
-    return visibleResults.flatMap((result) => result.invalidTokens ?? [])
+  const invalidResources = useMemo(() => {
+    return visibleResults.flatMap((result) => result.invalidResources)
   }, [visibleResults])
 
   const filteredResults = useMemo(() => {
@@ -116,39 +101,26 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     })
   }, [outcomeFilter, searchTerm, visibleResults])
 
-  const filteredInvalidTokens = useMemo(() => {
-    return filterRepairInvalidTokens(invalidTokens, searchTerm)
-  }, [invalidTokens, searchTerm])
+  const filteredInvalidResources = useMemo(
+    () => filterRepairInvalidResources(invalidResources, searchTerm),
+    [invalidResources, searchTerm],
+  )
 
   const {
     deleteResultMessage,
-    handleDeleteInvalidKeys,
+    handleDeleteInvalidResources,
     isDeleteConfirmOpen,
-    isDeletingInvalidKeys,
-    resetInvalidKeyDeletionState,
-    selectedInvalidTokenKeys,
-    selectedInvalidTokens,
+    isDeletingInvalidResources,
+    resetInvalidResourceDeletionState,
+    selectedInvalidResourceKeys,
+    selectedInvalidResources,
     setIsDeleteConfirmOpen,
-    setSelectedInvalidTokenKeys,
+    setSelectedInvalidResourceKeys,
   } = useInvalidKeyDeletion({
-    invalidTokens,
+    invalidResources,
     setProgress,
     t,
   })
-
-  const handleOpenSub2ApiTokenDialog = async (accountId: string) => {
-    const account = accountById.get(accountId)
-    if (!account) return
-
-    setOpeningSub2ApiAccountId(accountId)
-    try {
-      await openDefaultTokenQuickCreateDialogForAccount(account)
-    } finally {
-      setOpeningSub2ApiAccountId((current) =>
-        current === accountId ? null : current,
-      )
-    }
-  }
 
   const outcomeCounts = useMemo(() => {
     return getRepairOutcomeCounts(visibleResults)
@@ -184,7 +156,6 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     managedSiteType,
     progress,
     setProgress,
-    onManagedSiteImportSuccess,
     t,
   })
 
@@ -204,9 +175,9 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
       setHasSeenRunningRepairInSession(false)
       setPreviousResultJobId(null)
       setIsPreviousResultExpanded(false)
-      resetInvalidKeyDeletionState()
+      resetInvalidResourceDeletionState()
     }
-  }, [isOpen, resetInvalidKeyDeletionState])
+  }, [isOpen, resetInvalidResourceDeletionState])
 
   useEffect(() => {
     if (!isOpen) return
@@ -313,7 +284,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
               t={t}
             />
 
-            {repairCreatedImport.recoverableReferenceCount > 0 ? (
+            {repairCreatedImport.createdReferenceCount > 0 ? (
               <div
                 className="dark:border-dark-bg-tertiary dark:bg-dark-bg-primary/40 space-y-3 rounded-lg border border-gray-200 bg-gray-50/70 p-3"
                 data-testid={
@@ -331,7 +302,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                       {t(
                         "keyManagement:repairMissingKeys.managedSiteImport.target",
                         {
-                          count: repairCreatedImport.recoverableReferenceCount,
+                          count: repairCreatedImport.createdReferenceCount,
                           site: getManagedSiteLabel(t, managedSiteType),
                         },
                       )}
@@ -363,8 +334,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
                         : t(
                             "keyManagement:repairMissingKeys.managedSiteImport.action",
                             {
-                              count:
-                                repairCreatedImport.recoverableReferenceCount,
+                              count: repairCreatedImport.createdReferenceCount,
                             },
                           )}
                     </Button>
@@ -408,28 +378,25 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
             ) : null}
 
             <RepairMissingKeysResultsPanel
-              accountIds={accountIds}
               activeView={activeView}
               deleteResultMessage={deleteResultMessage}
-              filteredInvalidTokens={filteredInvalidTokens}
+              filteredInvalidResources={filteredInvalidResources}
               filteredResults={filteredResults}
-              invalidTokens={invalidTokens}
-              openingSub2ApiAccountId={openingSub2ApiAccountId}
+              invalidResources={invalidResources}
               outcomeCounts={outcomeCounts}
               outcomeFilter={outcomeFilter}
               readOnly={shouldShowReadonlyPreviousResult}
               searchTerm={searchTerm}
-              selectedInvalidTokenKeys={selectedInvalidTokenKeys}
-              selectedInvalidTokens={selectedInvalidTokens}
+              selectedInvalidResourceKeys={selectedInvalidResourceKeys}
+              selectedInvalidResources={selectedInvalidResources}
               visibleResults={visibleResults}
               onActiveViewChange={setActiveView}
               onOpenDeleteConfirm={() => setIsDeleteConfirmOpen(true)}
-              onOpenSub2ApiTokenDialog={(accountId) =>
-                void handleOpenSub2ApiTokenDialog(accountId)
-              }
               onOutcomeFilterChange={setOutcomeFilter}
               onSearchTermChange={setSearchTerm}
-              onSelectedInvalidTokenKeysChange={setSelectedInvalidTokenKeys}
+              onSelectedInvalidResourceKeysChange={
+                setSelectedInvalidResourceKeys
+              }
               t={t}
             />
           </div>
@@ -437,10 +404,10 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
 
         <RepairInvalidKeysDeleteConfirm
           isOpen={isDeleteConfirmOpen}
-          isWorking={isDeletingInvalidKeys}
-          selectedInvalidTokens={selectedInvalidTokens}
+          isWorking={isDeletingInvalidResources}
+          selectedInvalidResources={selectedInvalidResources}
           onClose={() => setIsDeleteConfirmOpen(false)}
-          onConfirm={() => void handleDeleteInvalidKeys()}
+          onConfirm={() => void handleDeleteInvalidResources()}
           t={t}
         />
       </Modal>

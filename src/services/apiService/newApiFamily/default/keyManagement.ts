@@ -1,4 +1,7 @@
-import { normalizeApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import {
+  normalizeApiTokenKey,
+  validateApiTokenInventory,
+} from "~/services/accountTokens/apiTokenKey"
 import {
   invalidateResolvedApiTokenKeyCache,
   resolveApiTokenKey,
@@ -7,23 +10,22 @@ import {
 import type {
   CreateTokenRequest,
   CreateTokenResult,
-  PaginatedTokenResponse,
   UserGroupInfo,
 } from "~/services/accountTokens/tokenProvisioningModel"
-import { ApiError } from "~/services/apiTransport/errors"
+import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { fetchAllItems } from "~/services/apiTransport/pagination"
 import { fetchApi, fetchApiData } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
+import { isRecord } from "~/utils/core/object"
 
 const logger = createLogger("NewApiFamilyKeyManagement")
 
 interface KeyManagementImplementation {
-  fetchAccountTokens: (
-    request: ApiServiceRequest,
-    page?: number,
-    size?: number,
-  ) => Promise<ApiToken[]>
+  fetchAccountTokens: (request: ApiServiceRequest) => Promise<ApiToken[]>
+  fetchCurrentUserGroup: (request: ApiServiceRequest) => Promise<string>
   createApiToken: (
     request: ApiServiceRequest,
     tokenData: CreateTokenRequest,
@@ -47,65 +49,58 @@ interface KeyManagementImplementation {
   fetchAccountAvailableModels: (request: ApiServiceRequest) => Promise<string[]>
 }
 
-const isCompleteFirstTokenPage = (
-  response: PaginatedTokenResponse,
-  page: number,
-  size: number,
-) =>
-  page === 0 &&
-  response.page === page &&
-  response.page_size === size &&
-  response.total <= response.items.length
-
 /**
- * Fetch the API token list for a user and normalize multiple response shapes.
+ * Fetch a complete New API-family token inventory behind provider pagination.
+ * New API normalizes `p=0` to page 1:
+ * https://github.com/QuantumNous/new-api/blob/9c97e78aced572d540f227007a675d7d007666ac/common/page_info.go
+ * One API and Veloera return bare paged arrays, which terminate on an empty page:
+ * https://github.com/songquanpeng/one-api/blob/main/controller/token.go
+ * https://github.com/Veloera/Veloera/blob/main/controller/token.go
  */
 export async function fetchAccountTokens(
   request: ApiServiceRequest,
-  page: number = 0,
-  size: number = 100,
 ): Promise<ApiToken[]> {
-  const searchParams = new URLSearchParams({
-    p: page.toString(),
-    size: size.toString(),
-  })
-
-  try {
-    const tokensData = await fetchApiData<ApiToken[] | PaginatedTokenResponse>(
-      request,
-      {
+  let firstPageWasNormalizedToOne = false
+  const tokens = await fetchAllItems<ApiToken>(
+    async (page) => {
+      const upstreamPage =
+        firstPageWasNormalizedToOne && page > 0 ? page + 1 : page
+      const searchParams = new URLSearchParams({
+        p: upstreamPage.toString(),
+        size: REQUEST_CONFIG.DEFAULT_PAGE_SIZE.toString(),
+      })
+      const tokensData = await fetchApiData<unknown>(request, {
         endpoint: `/api/token/?${searchParams.toString()}`,
-      },
-    )
+      })
 
-    if (Array.isArray(tokensData)) {
-      const normalizedTokens = tokensData.map(normalizeApiTokenKey)
-      syncResolvedApiTokenKeyCache(request, normalizedTokens)
-      return normalizedTokens
-    }
-
-    if (tokensData && typeof tokensData === "object" && "items" in tokensData) {
-      const normalizedTokens = (tokensData.items || []).map(
-        normalizeApiTokenKey,
-      )
-      if (isCompleteFirstTokenPage(tokensData, page, size)) {
-        syncResolvedApiTokenKeyCache(request, normalizedTokens)
+      if (Array.isArray(tokensData)) {
+        const items = tokensData.map(normalizeApiTokenKey)
+        return { items, hasMore: items.length > 0 }
       }
-      return normalizedTokens
-    }
 
-    logger.warn("Unexpected token response format", {
-      receivedType: Array.isArray(tokensData) ? "array" : typeof tokensData,
-      keys:
-        tokensData && typeof tokensData === "object"
-          ? Object.keys(tokensData as any)
-          : null,
-    })
-    return []
-  } catch (error) {
-    logger.error("获取令牌列表失败", error)
-    throw error
-  }
+      if (!isRecord(tokensData) || !Array.isArray(tokensData.items)) {
+        throw new Error("invalid_token_page_payload")
+      }
+
+      if (page === 0 && tokensData.page === 1) {
+        firstPageWasNormalizedToOne = true
+      }
+      const items = tokensData.items.map(normalizeApiTokenKey)
+      return {
+        items,
+        hasMore: items.length > 0,
+      }
+    },
+    {
+      pageSize: REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
+      startPage: 0,
+      requireComplete: true,
+    },
+  )
+
+  const inventory = validateApiTokenInventory(tokens)
+  syncResolvedApiTokenKeyCache(request, inventory)
+  return inventory
 }
 
 /**
@@ -138,6 +133,25 @@ export async function fetchUserGroups(
     logger.error("获取分组信息失败", error)
     throw error
   }
+}
+
+/**
+ * Fetch the account group inherited by tokens whose own group is empty.
+ * New API exposes the authenticated user's group in its self DTO:
+ * https://github.com/QuantumNous/new-api/blob/3d5dc36f1d85ccae8d5cb2864764011795b559b5/controller/user.go
+ */
+export async function fetchCurrentUserGroup(
+  request: ApiServiceRequest,
+): Promise<string> {
+  const userData = await fetchApiData<unknown>(request, {
+    endpoint: "/api/user/self",
+  })
+  if (!isRecord(userData) || typeof userData.group !== "string") {
+    throw new Error("invalid_current_user_group_payload")
+  }
+  const group = userData.group.trim()
+  if (!group) throw new Error("invalid_current_user_group_payload")
+  return group
 }
 
 /**
@@ -177,6 +191,7 @@ export async function createApiToken(
         response.message || "创建令牌失败",
         undefined,
         "/api/token",
+        API_ERROR_CODES.BUSINESS_ERROR,
       )
     }
 
@@ -228,6 +243,7 @@ export async function updateApiToken(
         response.message || "更新令牌失败",
         undefined,
         "/api/token",
+        API_ERROR_CODES.BUSINESS_ERROR,
       )
     }
 
@@ -259,6 +275,7 @@ export async function deleteApiToken(
         response.message || "删除令牌失败",
         undefined,
         `/api/token/${tokenId}`,
+        API_ERROR_CODES.BUSINESS_ERROR,
       )
     }
 
@@ -272,6 +289,7 @@ export async function deleteApiToken(
 
 export const defaultKeyManagementImplementation: KeyManagementImplementation = {
   fetchAccountTokens,
+  fetchCurrentUserGroup,
   createApiToken,
   updateApiToken,
   resolveApiTokenKey,

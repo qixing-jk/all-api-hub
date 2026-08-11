@@ -26,7 +26,6 @@ import {
   DEFAULT_TOKEN_CREATION_DECISION_KINDS,
   TOKEN_CREATION_SECRET_RECOVERY,
   TOKEN_PROVISIONING_BLOCK_REASONS,
-  TOKEN_PROVISIONING_REPAIR_POLICY_KINDS,
   TOKEN_PROVISIONING_WORKFLOWS,
   type DefaultTokenCreationDecision,
   type TokenProvisioningCapability,
@@ -64,9 +63,6 @@ const {
               isInventoryTokenUsableMock(...args),
             resolveDefaultTokenCreation: vi.fn(),
             classifyCreatedToken: vi.fn(),
-            getRepairPolicy: vi.fn(() => ({
-              kind: TOKEN_PROVISIONING_REPAIR_POLICY_KINDS.Eligible,
-            })),
           },
         },
       }),
@@ -321,7 +317,6 @@ describe("defaultTokenLifecycle decision and create helpers", () => {
           isInventoryTokenUsable: vi.fn(),
           resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
           classifyCreatedToken: vi.fn(),
-          getRepairPolicy: vi.fn(),
         },
       }),
     )
@@ -380,7 +375,6 @@ describe("defaultTokenLifecycle decision and create helpers", () => {
           isInventoryTokenUsable: vi.fn(),
           resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
           classifyCreatedToken: vi.fn(),
-          getRepairPolicy: vi.fn(),
         },
       }),
     )
@@ -415,7 +409,6 @@ describe("defaultTokenLifecycle decision and create helpers", () => {
             kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
           })),
           classifyCreatedToken: vi.fn(),
-          getRepairPolicy: vi.fn(),
         },
       }),
     )
@@ -649,7 +642,6 @@ describe("ensureDefaultTokenLifecycle", () => {
             token: createdToken,
             oneTimeSecret: false,
           })),
-          getRepairPolicy: vi.fn(),
         },
       }),
     )
@@ -711,7 +703,6 @@ describe("ensureDefaultTokenLifecycle", () => {
             token: createdToken,
             oneTimeSecret: true,
           })),
-          getRepairPolicy: vi.fn(),
         },
       }),
     )
@@ -770,7 +761,6 @@ describe("ensureDefaultTokenLifecycle", () => {
           isInventoryTokenUsable: vi.fn(),
           resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
           classifyCreatedToken: vi.fn(),
-          getRepairPolicy: vi.fn(),
         },
       }),
     )
@@ -806,7 +796,6 @@ describe("ensureDefaultTokenLifecycle", () => {
             kind: DEFAULT_TOKEN_CREATION_DECISION_KINDS.NeedsUserGroups,
           })),
           classifyCreatedToken: vi.fn(),
-          getRepairPolicy: vi.fn(),
         },
       }),
     )
@@ -848,7 +837,6 @@ describe("ensureDefaultTokenLifecycle", () => {
           isInventoryTokenUsable: vi.fn(),
           resolveDefaultTokenCreation: resolveDefaultTokenCreationMock,
           classifyCreatedToken: vi.fn(),
-          getRepairPolicy: vi.fn(),
         },
       }),
     )
@@ -893,7 +881,6 @@ describe("ensureDefaultTokenLifecycle", () => {
           classifyCreatedToken: vi.fn(() => ({
             kind: CREATED_TOKEN_SECRET_DECISION_KINDS.NeedsInventoryRefetch,
           })),
-          getRepairPolicy: vi.fn(),
         },
       }),
     )

@@ -1,32 +1,22 @@
-import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import {
+  ACCOUNT_SITE_ADAPTER_FAMILIES,
+  SITE_TYPES,
+  type AccountSiteType,
+} from "~/constants/siteType"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import {
   INVENTORY_GROUP_KINDS,
   resolveNamedInventoryGroup,
   type InventoryGroupCapability,
   type KeyManagementCapability,
 } from "~/services/apiAdapters/contracts/keyManagement"
-import * as keyManagement from "~/services/apiService/newApiFamily/default/keyManagement"
-import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
-import * as wong from "~/services/apiService/newApiFamily/variants/wong"
 
-type KeyManagementImplementation =
-  typeof keyManagement.defaultKeyManagementImplementation
+import { resolveNewApiFamilyTokenTransport } from "./tokenTransport"
 
-const oneHubKeyManagementOverrides: Partial<KeyManagementImplementation> = {
-  fetchAccountTokens: oneHub.fetchAccountTokens,
-  fetchUserGroups: oneHub.fetchUserGroups,
-  fetchAccountAvailableModels: oneHub.fetchAccountAvailableModels,
-}
-
-const keyManagementOverrides: Partial<
-  Record<AccountSiteType, Partial<KeyManagementImplementation>>
-> = {
-  [SITE_TYPES.ONE_HUB]: oneHubKeyManagementOverrides,
-  [SITE_TYPES.DONE_HUB]: oneHubKeyManagementOverrides,
-  [SITE_TYPES.WONG_GONGYI]: {
-    resolveApiTokenKey: wong.resolveApiTokenKey,
-  },
-}
+export const tokenGroupFollowsAccount = (siteType: AccountSiteType): boolean =>
+  siteType !== SITE_TYPES.ONE_API &&
+  getAccountSiteDefinition(siteType)?.adapterFamily ===
+    ACCOUNT_SITE_ADAPTER_FAMILIES.NewApiFamily
 
 const getInventoryGroupCapability = (
   siteType: AccountSiteType,
@@ -39,13 +29,10 @@ const getInventoryGroupCapability = (
     }
   }
 
-  if (
-    siteType === SITE_TYPES.NEW_API ||
-    siteType === SITE_TYPES.VELOERA ||
-    siteType === SITE_TYPES.ANYROUTER ||
-    siteType === SITE_TYPES.RIX_API
-  ) {
-    // These token editors treat an empty selection as the account/user group.
+  if (tokenGroupFollowsAccount(siteType)) {
+    // New API-family adapters treat an empty token group as the account/user
+    // group. Individual forks may not expose `/api/user/self`; callers retain
+    // an explicit unresolved-inherited-group result in that case.
     // https://github.com/QuantumNous/new-api/blob/0ab02020603d22e5613bc4cf46bfab06f8567769/relay/common/relay_info.go#L451-L455
     // https://github.com/Veloera/Veloera/blob/6525dfce816beaa270e78f0d8b762e19e54d13b8/web/src/pages/Token/EditToken.js#L520-L537
     // https://anyrouter.top/assets/index-Dultz3N6.js
@@ -68,14 +55,10 @@ const getInventoryGroupCapability = (
 export function createNewApiKeyManagement(
   siteType: AccountSiteType,
 ): KeyManagementCapability {
-  const implementation = {
-    ...keyManagement.defaultKeyManagementImplementation,
-    ...keyManagementOverrides[siteType],
-  }
+  const implementation = resolveNewApiFamilyTokenTransport(siteType)
 
   return {
-    fetchTokens: (request, options) =>
-      implementation.fetchAccountTokens(request, options?.page, options?.size),
+    fetchTokens: (request) => implementation.fetchAccountTokens(request),
     createToken: (request, tokenData) =>
       implementation.createApiToken(request, tokenData),
     updateToken: ({ request, tokenId, tokenData }) =>

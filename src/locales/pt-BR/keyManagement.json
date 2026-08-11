@@ -564,14 +564,9 @@
       "rerun": "Verificar novamente",
       "start": "Iniciar verificação e preencher lacunas"
     },
-    "coverage": {
-      "createdGroup": "Criado: {{group}}",
-      "groupsCovered": "Grupos cobertos: {{covered}}/{{total}}",
-      "missingGroup": "Ausente: {{group}}"
-    },
     "deleteConfirm": {
       "confirm": "Excluir chaves selecionadas",
-      "description": "Essas chaves também serão excluídas dos sites correspondentes e não poderão ser restauradas pela extensão. Confirme se os grupos delas não estão mais em uso.",
+      "description": "Essas chaves também serão excluídas dos sites correspondentes e não poderão ser restauradas pela extensão. Confirme que não são mais necessárias.",
       "more_one": "E mais {{count}}",
       "more_many": "E mais {{count}}",
       "more_other": "E mais {{count}}",
@@ -579,29 +574,66 @@
       "title_many": "Excluir {{count}} chaves inválidas?",
       "title_other": "Excluir {{count}} chaves inválidas?"
     },
-    "description": "Verifique os grupos disponíveis de cada conta, crie chaves padrão para os grupos sem chaves e liste chaves incomuns cujos grupos não estão disponíveis.",
+    "description": "Verifique se as contas salvas têm chaves utilizáveis. Quando possível, as chaves ausentes serão criadas automaticamente; outros problemas aparecerão abaixo.",
+    "failureGuidance": {
+      "aborted": "A operação foi cancelada antes de terminar. Execute a verificação novamente quando estiver pronto.",
+      "authenticationFailed": "Entre novamente ou atualize as credenciais desta conta e tente outra vez.",
+      "configurationRequired": "Conclua a configuração exigida por este site e execute a verificação de chaves novamente.",
+      "invalidConfiguration": "Revise as configurações do site salvas para esta conta e execute a verificação de chaves novamente.",
+      "mutationStateUncertain": "O site pode ter aplicado a alteração. Atualize a lista de chaves antes de tentar novamente.",
+      "notFound": "A chave não existe mais. Atualize a conta e execute a verificação novamente.",
+      "permissionDenied": "Use credenciais com permissão para visualizar e gerenciar chaves e tente novamente.",
+      "unavailable": "Não foi possível acessar o site ou ele retornou uma resposta inutilizável. Tente novamente mais tarde.",
+      "unexpected": "Execute a verificação de chaves novamente. Se ainda falhar, use a resposta do site para identificar o problema.",
+      "upstreamRejected": "O site rejeitou a solicitação. Corrija o problema descrito na resposta e tente novamente.",
+      "validationFailed": "Revise as configurações de chave obrigatórias, corrija-as e tente novamente."
+    },
     "historyNote": "Este é o resultado da verificação anterior. Nenhuma tarefa está em execução no momento, e você pode iniciar a verificação novamente.",
-    "initialNotice": "Após o início, as contas salvas serão verificadas quanto aos grupos disponíveis, e serão criadas chaves padrão para os grupos sem chaves.",
+    "initialNotice": "As contas salvas serão verificadas em busca de chaves utilizáveis. Se faltar uma em uma conta compatível, a extensão poderá criá-la.",
     "invalidKeys": {
       "badge": "Inválida",
       "deleteFailed": "Falha ao excluir as chaves inválidas",
-      "deletePartial": "Exclusões concluídas: {{deleted}}; falhas: {{failed}}",
+      "deleteNeedsAttention": "{{applied}} excluídas; {{rejected}} rejeitadas e {{uncertain}} precisam de verificação",
       "deleteSelected": "Excluir selecionadas",
       "deleteSuccess_one": "{{count}} chave inválida excluída",
       "deleteSuccess_many": "{{count}} chaves inválidas excluídas",
       "deleteSuccess_other": "{{count}} chaves inválidas excluídas",
-      "emptyDescription": "Esta verificação não encontrou chaves cujos grupos estejam indisponíveis.",
+      "emptyDescription": "Esta verificação não encontrou chaves inválidas.",
       "emptyTitle": "Nenhuma chave inválida",
-      "groupUnavailable": "O grupo {{group}} não está disponível no momento",
+      "group": "Grupo anterior: {{name}}",
+      "reason": "Motivo: {{reason}}",
+      "reasons": {
+        "orphanedPlacement": "Motivo: Esta chave pertence a um grupo que não está mais disponível. Exclua-a se não precisar mais dela."
+      },
       "selectAll": "Selecionar todos os resultados atuais",
       "selectedCount_one": "{{count}} chave inválida selecionada",
       "selectedCount_many": "{{count}} chaves inválidas selecionadas",
-      "selectedCount_other": "{{count}} chaves inválidas selecionadas"
+      "selectedCount_other": "{{count}} chaves inválidas selecionadas",
+      "unnamed": "Chave sem nome"
+    },
+    "inventoryIssues": {
+      "duplicateResourceRefs_one": "Foi encontrado {{count}} registro de chave duplicado, então não é possível confirmar a chave correspondente com segurança.",
+      "duplicateResourceRefs_many": "Foram encontrados {{count}} registros de chave duplicados, então não é possível confirmar as chaves correspondentes com segurança.",
+      "duplicateResourceRefs_other": "Foram encontrados {{count}} registros de chave duplicados, então não é possível confirmar as chaves correspondentes com segurança.",
+      "inheritedAccountGroupUnavailable_one": "{{count}} chave herda o grupo da conta, mas não foi possível confirmar o grupo atual.",
+      "inheritedAccountGroupUnavailable_many": "{{count}} chaves herdam o grupo da conta, mas não foi possível confirmar o grupo atual.",
+      "inheritedAccountGroupUnavailable_other": "{{count}} chaves herdam o grupo da conta, mas não foi possível confirmar o grupo atual.",
+      "invalidRequirementPlacement_one": "{{count}} chave tem dados de grupo que não correspondem aos grupos disponíveis no momento.",
+      "invalidRequirementPlacement_many": "{{count}} chaves têm dados de grupo que não correspondem aos grupos disponíveis no momento.",
+      "invalidRequirementPlacement_other": "{{count}} chaves têm dados de grupo que não correspondem aos grupos disponíveis no momento.",
+      "partialFailure": "Nem todas as chaves puderam ser carregadas, então o processamento automático foi interrompido. Revise a resposta do site junto à conta e tente novamente.",
+      "refreshFailed": "Não foi possível confirmar o resultado mais recente após a alteração da chave. Atualize a lista e tente novamente.",
+      "unknownCoverage_one": "{{count}} chave tem um status ou vencimento não reconhecido.",
+      "unknownCoverage_many": "{{count}} chaves têm um status ou vencimento não reconhecido.",
+      "unknownCoverage_other": "{{count}} chaves têm um status ou vencimento não reconhecido.",
+      "unknownPlacement_one": "Não foi possível identificar o grupo de {{count}} chave.",
+      "unknownPlacement_many": "Não foi possível identificar os grupos de {{count}} chaves.",
+      "unknownPlacement_other": "Não foi possível identificar os grupos de {{count}} chaves."
     },
     "managedSiteImport": {
-      "action_one": "Importar {{count}} chave corrigida",
-      "action_many": "Importar {{count}} chaves corrigidas",
-      "action_other": "Importar {{count}} chaves corrigidas",
+      "action_one": "Revisar {{count}} chave corrigida",
+      "action_many": "Revisar {{count}} chaves corrigidas",
+      "action_other": "Revisar {{count}} chaves corrigidas",
       "changeTarget": "Alterar destino",
       "configMissing": "O site gerenciado atual não está configurado. Abra a configuração, conclua-a e volte aqui para importar novamente.",
       "configurationOpenFailed": "Não foi possível abrir a configuração do site gerenciado. Acesse Configurações > Site gerenciado para configurá-lo manualmente.",
@@ -609,9 +641,9 @@
       "nothingPending": "Estas chaves já foram processadas para o destino atual: os canais foram criados ou encontrados como correspondências exatas. Para verificá-las novamente, use a importação normal com verificação completa.",
       "openConfiguration": "Abrir configuração do site gerenciado",
       "receiptFailed": "A importação foi concluída, mas não foi possível atualizar os resultados da correção. Atualize os resultados para confirmar o estado atual.",
-      "target_one": "{{count}} chave corrigida pronta para {{site}}",
-      "target_many": "{{count}} chaves corrigidas prontas para {{site}}",
-      "target_other": "{{count}} chaves corrigidas prontas para {{site}}",
+      "target_one": "Foi encontrada {{count}} chave corrigida para {{site}}; a disponibilidade e as importações anteriores serão verificadas antes da revisão.",
+      "target_many": "Foram encontradas {{count}} chaves corrigidas para {{site}}; a disponibilidade e as importações anteriores serão verificadas antes da revisão.",
+      "target_other": "Foram encontradas {{count}} chaves corrigidas para {{site}}; a disponibilidade e as importações anteriores serão verificadas antes da revisão.",
       "title": "Importar chaves corrigidas",
       "unavailable": "As chaves corrigidas não estão mais disponíveis para importação. Atualize os resultados da correção e tente novamente.",
       "useRegularImport": "Usar importação normal"
@@ -623,9 +655,11 @@
     },
     "noMatchingResults": "Nenhum resultado correspondente",
     "outcomes": {
-      "alreadyHad": "Já tinha chaves",
-      "created": "Criada",
+      "blocked": "Bloqueado",
+      "covered": "Nenhuma chave faltava",
       "failed": "Falhou",
+      "partial": "Parcial",
+      "repaired": "Chaves ausentes adicionadas",
       "skipped": "Ignorada"
     },
     "previousResult": {
@@ -634,6 +668,7 @@
       "title": "Resultado da verificação anterior disponível",
       "view": "Ver resultado anterior"
     },
+    "progressChecked": "Verificadas",
     "progressLabel": "Progresso",
     "remoteWriteNotice": "Esta ação pode criar novas chaves nos sites correspondentes. Nenhuma chave será excluída automaticamente.",
     "renameOption": {
@@ -643,34 +678,46 @@
       "tooltip": "Somente chaves com o padrão de nome criado automaticamente são processadas, como “user group (auto)” ou “vip group (auto)”. Após a correção, o nome acompanhará o grupo atual da chave. Outros nomes não serão alterados."
     },
     "renameSummary": {
-      "accountFailed_one": "{{count}} nome não sincronizado",
-      "accountFailed_many": "{{count}} nomes não sincronizados",
-      "accountFailed_other": "{{count}} nomes não sincronizados",
-      "accountRenamed_one": "{{count}} nome sincronizado",
-      "accountRenamed_many": "{{count}} nomes sincronizados",
-      "accountRenamed_other": "{{count}} nomes sincronizados",
-      "failed": "Nomes não sincronizados",
-      "renamed": "Nomes sincronizados",
-      "summarySeparator": ", "
+      "accountApplied_one": "{{count}} nome sincronizado",
+      "accountApplied_many": "{{count}} nomes sincronizados",
+      "accountApplied_other": "{{count}} nomes sincronizados",
+      "accountRejected_one": "{{count}} renomeação rejeitada",
+      "accountRejected_many": "{{count}} renomeações rejeitadas",
+      "accountRejected_other": "{{count}} renomeações rejeitadas",
+      "accountUncertain_one": "{{count}} renomeação precisa de verificação",
+      "accountUncertain_many": "{{count}} renomeações precisam de verificação",
+      "accountUncertain_other": "{{count}} renomeações precisam de verificação"
+    },
+    "requirements": {
+      "blockedIncompleteInventory": "As chaves não foram totalmente carregadas",
+      "blockedInputRequired": "Requer configuração manual",
+      "covered": "Há uma chave utilizável",
+      "coveredAfterUncertain": "Disponível após atualizar",
+      "created": "Nova chave criada",
+      "rejected": "O site não fez alterações",
+      "uncertain": "Confira o resultado antes de tentar novamente"
     },
     "resultsTitle": "Resultados",
     "runningNote": "Esta tarefa é executada em segundo plano. Você pode fechar esta caixa de diálogo e voltar mais tarde ou cancelá-la no cartão de progresso.",
     "searchLabel": "Pesquisar",
-    "searchPlaceholder": "Pesquisar conta, origem ou tipo de site...",
+    "searchPlaceholder": "Pesquisar conta, nome da chave, grupo, domínio ou tipo de site...",
     "skipReasons": {
       "aihubmixOneTimeKey": "As chaves do AIHubMix só podem ser visualizadas uma vez. Crie a chave manualmente e salve a chave completa imediatamente.",
       "noneAuth": "Sem credenciais (tipo de autenticação: none)",
-      "sub2api": "É necessário selecionar um grupo do Sub2API; crie a chave manualmente",
-      "tokenAutomationUnsupported": "Este site oferece uma credencial de serviço em vez do gerenciamento de tokens de API; a correção automática de chaves será ignorada."
+      "provisioningUnavailable": "Esta conta não permite criar chaves automaticamente. Se necessário, crie uma no site."
     },
-    "title": "Verificação da cobertura de chaves",
-    "totalsLabels": {
-      "eligibleAccounts": "Contas qualificadas",
-      "enabledAccounts": "Contas ativadas",
-      "processedAccounts": "Processadas"
+    "status": {
+      "completed": "Concluído",
+      "needsAttention": "Ação necessária"
     },
+    "summary": {
+      "completedNeedsAttention": "A verificação foi concluída, mas alguns resultados precisam de atenção. Veja os detalhes abaixo.",
+      "completedWithSkipped": "A verificação foi concluída. Algumas contas não puderam ser processadas automaticamente; veja os motivos abaixo.",
+      "healthy": "A verificação foi concluída. Nenhum problema precisa de atenção."
+    },
+    "title": "Verificar chaves das contas",
     "views": {
-      "accountCoverage": "Cobertura das contas",
+      "accountCoverage": "Resultados por conta",
       "invalidKeys": "Chaves inválidas",
       "label": "Visualização dos resultados"
     }

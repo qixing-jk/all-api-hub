@@ -374,7 +374,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       if (
         !capabilities?.keyManagement &&
         !capabilities?.serviceCredential &&
-        capabilities?.keyResources
+        capabilities?.keyResourceManagement
       ) {
         accountIds.add(account.id)
       }

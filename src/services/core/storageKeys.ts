@@ -138,6 +138,7 @@ export const LDOH_SITE_LOOKUP_STORAGE_KEYS = {
 
 export const ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS = {
   REPAIR_PROGRESS: "accountKeyRepair_progress",
+  REPAIR_CREATED_RUNTIME_SECRETS: "accountKeyRepair_createdRuntimeSecrets_v1",
 } as const
 
 export const OPTIONS_SEARCH_STORAGE_KEYS = {

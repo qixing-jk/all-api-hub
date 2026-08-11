@@ -47,6 +47,7 @@ import { t } from "~/utils/i18n/core"
 
 import { getSub2ApiAuthSession, type Sub2ApiAuthSession } from "./authSession"
 import {
+  buildSub2ApiGroupDescriptors,
   buildSub2ApiUserGroups,
   extractSub2ApiKeyItems,
   parseSub2ApiEnvelope,
@@ -78,6 +79,7 @@ import {
   type Sub2ApiAnnouncementListData,
   type Sub2ApiAuthMeData,
   type Sub2ApiAuthMeResponse,
+  type Sub2ApiGroupDescriptor,
   type Sub2ApiKeyData,
   type Sub2ApiKeyListData,
   type Sub2ApiPublicSettingsData,
@@ -91,6 +93,13 @@ const logger = createLogger("ApiService.Sub2API")
 const DEFAULT_KEYS_PAGE = 1
 const DEFAULT_KEYS_PAGE_SIZE = 100
 const FULL_KEYS_PAGE_SIZE = 1000
+const MAX_FULL_KEYS_PAGES = 1000
+const SUB2API_KEY_INVENTORY_FAILURE_CODES = {
+  DuplicateKey: "sub2api_key_inventory_duplicate_key",
+  InvalidPagination: "sub2api_key_inventory_invalid_pagination",
+  PageLimitExceeded: "sub2api_key_inventory_page_limit_exceeded",
+  PageDidNotAdvance: "sub2api_key_inventory_page_did_not_advance",
+} as const
 const SUB2API_RUNTIME_MODELS_ENDPOINT = "/v1/models"
 const sub2ApiAuthMutationLocks = new Map<string, Promise<void>>()
 
@@ -775,6 +784,33 @@ export const fetchSub2ApiAvailableGroups = fetchAvailableGroupsInternal
 
 export const fetchSub2ApiGroupRates = fetchGroupRatesInternal
 
+/**
+ * Source: https://github.com/Wei-Shaw/sub2api
+ * Available groups expose numeric IDs, while group rates are keyed by those
+ * IDs. Display names are disclosure only and are not round-tripped as identity.
+ */
+export async function fetchSub2ApiGroupDescriptors(
+  request: ApiServiceRequest,
+): Promise<Sub2ApiGroupDescriptor[]> {
+  try {
+    const [groups, rates] = await Promise.all([
+      fetchAvailableGroupsInternal(request),
+      fetchGroupRatesInternal(request),
+    ])
+
+    return buildSub2ApiGroupDescriptors(groups, rates, {
+      groups: SUB2API_AVAILABLE_GROUPS_ENDPOINT,
+      rates: SUB2API_GROUP_RATES_ENDPOINT,
+    })
+  } catch (error) {
+    logger.error("Failed to fetch Sub2API group descriptors", {
+      accountId: request.accountId,
+      error: getSafeErrorMessage(error),
+    })
+    throw error
+  }
+}
+
 const normalizePositiveInteger = (value: number, fallback: number): number =>
   Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback
 
@@ -1411,7 +1447,20 @@ export async function refreshAccountData(
 type Sub2ApiKeyPage = {
   tokens: ApiToken[]
   totalPages: number
+  reportedPage?: number
 }
+
+const createSub2ApiKeyInventoryError = (
+  endpoint: string,
+  upstreamCode: (typeof SUB2API_KEY_INVENTORY_FAILURE_CODES)[keyof typeof SUB2API_KEY_INVENTORY_FAILURE_CODES],
+) =>
+  new ApiError(
+    t("messages:errors.api.invalidResponseFormat"),
+    undefined,
+    endpoint,
+    API_ERROR_CODES.JSON_PARSE_ERROR,
+    upstreamCode,
+  )
 
 const fetchAccountTokenPage = async (
   request: ApiServiceRequest,
@@ -1426,6 +1475,26 @@ const fetchAccountTokenPage = async (
         method: "GET",
         cache: "no-store",
       })
+    const reportedPage = Array.isArray(data) ? undefined : data.page
+    const reportedTotalPages = Array.isArray(data) ? undefined : data.pages
+    if (
+      reportedPage !== undefined &&
+      (!Number.isSafeInteger(reportedPage) || reportedPage <= 0)
+    ) {
+      throw createSub2ApiKeyInventoryError(
+        endpoint,
+        SUB2API_KEY_INVENTORY_FAILURE_CODES.PageDidNotAdvance,
+      )
+    }
+    if (
+      reportedTotalPages !== undefined &&
+      (!Number.isSafeInteger(reportedTotalPages) || reportedTotalPages <= 0)
+    ) {
+      throw createSub2ApiKeyInventoryError(
+        endpoint,
+        SUB2API_KEY_INVENTORY_FAILURE_CODES.InvalidPagination,
+      )
+    }
 
     return {
       tokens: extractSub2ApiKeyItems(data).map((item) =>
@@ -1436,7 +1505,8 @@ const fetchAccountTokenPage = async (
       ),
       totalPages: Array.isArray(data)
         ? DEFAULT_KEYS_PAGE
-        : Math.max(page, normalizePositiveInteger(data.pages ?? page, page)),
+        : Math.max(page, reportedTotalPages ?? page),
+      ...(reportedPage === undefined ? {} : { reportedPage }),
     }
   } catch (error) {
     logger.error("Failed to fetch Sub2API keys", {
@@ -1448,24 +1518,12 @@ const fetchAccountTokenPage = async (
   }
 }
 
-/**
- * Fetch the requested API-token inventory page.
- */
+/** Fetch the complete API-token inventory for all key-management consumers. */
 export async function fetchAccountTokens(
-  request: ApiServiceRequest,
-  page: number = DEFAULT_KEYS_PAGE,
-  size: number = DEFAULT_KEYS_PAGE_SIZE,
-): Promise<ApiToken[]> {
-  return (await fetchAccountTokenPage(request, page, size)).tokens
-}
-
-/**
- * Fetch the complete API-token inventory for coverage checks.
- */
-export async function fetchAllAccountTokens(
   request: ApiServiceRequest,
 ): Promise<ApiToken[]> {
   const tokens: ApiToken[] = []
+  const seenTokenIds = new Set<number>()
   let page = DEFAULT_KEYS_PAGE
 
   // Upstream paginates this endpoint and caps page_size at 1000:
@@ -1476,6 +1534,28 @@ export async function fetchAllAccountTokens(
       page,
       FULL_KEYS_PAGE_SIZE,
     )
+    const endpoint = createSub2ApiKeysEndpoint(page, FULL_KEYS_PAGE_SIZE)
+    if (result.totalPages > MAX_FULL_KEYS_PAGES) {
+      throw createSub2ApiKeyInventoryError(
+        endpoint,
+        SUB2API_KEY_INVENTORY_FAILURE_CODES.PageLimitExceeded,
+      )
+    }
+    if (result.reportedPage !== undefined && result.reportedPage !== page) {
+      throw createSub2ApiKeyInventoryError(
+        endpoint,
+        SUB2API_KEY_INVENTORY_FAILURE_CODES.PageDidNotAdvance,
+      )
+    }
+    for (const token of result.tokens) {
+      if (seenTokenIds.has(token.id)) {
+        throw createSub2ApiKeyInventoryError(
+          endpoint,
+          SUB2API_KEY_INVENTORY_FAILURE_CODES.DuplicateKey,
+        )
+      }
+      seenTokenIds.add(token.id)
+    }
     tokens.push(...result.tokens)
 
     if (page >= result.totalPages) {
@@ -1709,33 +1789,79 @@ export async function fetchAccountAvailableModels(
 /**
  * Create a new API token in Sub2API with the specified data, resolving the group name to an ID as needed.
  */
+const createSub2ApiTokenWithGroupId = async (
+  request: ApiServiceRequest,
+  tokenData: CreateTokenRequest,
+  groupId?: number,
+): Promise<CreateTokenResult> => {
+  const payload = translateSub2ApiCreateTokenRequest(tokenData, groupId)
+
+  const { data: created, request: hydratedRequest } =
+    await fetchSub2ApiDataWithRequest<Sub2ApiKeyData | undefined>(
+      request,
+      SUB2API_KEYS_ENDPOINT,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+      { allowMissingData: true },
+    )
+
+  if (!created || typeof created !== "object" || !("id" in created)) {
+    return true
+  }
+
+  return parseSub2ApiKey(created, {
+    defaultUserId: hydratedRequest.auth?.userId,
+    endpoint: SUB2API_KEYS_ENDPOINT,
+  })
+}
+
+/**
+ * Creates a key for an exact provider-owned group identity.
+ *
+ * Source: https://github.com/Wei-Shaw/sub2api
+ * Sub2API's create-key DTO accepts `group_id`; native reconciliation must not
+ * round-trip a display name when distinct groups may share that label.
+ */
+export async function createSub2ApiTokenForGroupId(
+  request: ApiServiceRequest,
+  tokenData: CreateTokenRequest,
+  groupId: number,
+): Promise<CreateTokenResult> {
+  if (!Number.isSafeInteger(groupId) || groupId <= 0) {
+    throw new ApiError(
+      t("messages:errors.api.invalidResponseFormat"),
+      undefined,
+      SUB2API_KEYS_ENDPOINT,
+      API_ERROR_CODES.JSON_PARSE_ERROR,
+      "sub2api_invalid_group_id",
+    )
+  }
+
+  try {
+    return await createSub2ApiTokenWithGroupId(request, tokenData, groupId)
+  } catch (error) {
+    logger.error("Failed to create Sub2API key for native group id", {
+      accountId: request.accountId,
+      endpoint: SUB2API_KEYS_ENDPOINT,
+      error: getSafeErrorMessage(error),
+    })
+    throw error
+  }
+}
+
+/**
+ * Create a new API token in Sub2API with the specified data, resolving the
+ * legacy group name to an ID as needed.
+ */
 export async function createApiToken(
   request: ApiServiceRequest,
   tokenData: CreateTokenRequest,
 ): Promise<CreateTokenResult> {
   try {
     const groupId = await resolveSelectedGroupId(request, tokenData.group)
-    const payload = translateSub2ApiCreateTokenRequest(tokenData, groupId)
-
-    const { data: created, request: hydratedRequest } =
-      await fetchSub2ApiDataWithRequest<Sub2ApiKeyData | undefined>(
-        request,
-        SUB2API_KEYS_ENDPOINT,
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        },
-        { allowMissingData: true },
-      )
-
-    if (!created || typeof created !== "object" || !("id" in created)) {
-      return true
-    }
-
-    return parseSub2ApiKey(created, {
-      defaultUserId: hydratedRequest.auth?.userId,
-      endpoint: SUB2API_KEYS_ENDPOINT,
-    })
+    return await createSub2ApiTokenWithGroupId(request, tokenData, groupId)
   } catch (error) {
     logger.error("Failed to create Sub2API key", {
       accountId: request.accountId,
