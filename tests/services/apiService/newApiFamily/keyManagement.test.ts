@@ -110,6 +110,7 @@ describe("newApiFamily keyManagement", () => {
     expect(mockFetchApiData).toHaveBeenCalledWith(request, {
       endpoint: "/api/token/?p=0&size=100",
     })
+    expect(mockSyncResolvedApiTokenKeyCache).not.toHaveBeenCalled()
   })
 
   it("fetchCompleteAccountTokens reads every New API page until the empty sentinel", async () => {

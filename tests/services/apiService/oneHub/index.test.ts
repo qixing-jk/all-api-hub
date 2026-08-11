@@ -138,6 +138,17 @@ describe("OneHub API service", () => {
     expect(result).toEqual(tokens)
   })
 
+  it("fetchAccountTokens should translate a zero-based page to OneHub pagination", async () => {
+    mockedFetchApiData.mockResolvedValueOnce({ data: [] })
+
+    await expect(
+      fetchAccountTokens(baseRequest as any, 2, 25),
+    ).resolves.toEqual([])
+    expect(mockedFetchApiData).toHaveBeenCalledWith(baseRequest, {
+      endpoint: "/api/token/?page=3&size=25",
+    })
+  })
+
   it("fetchAccountTokens should return an empty array for an unexpected format", async () => {
     mockedFetchApiData.mockResolvedValueOnce({ foo: "bar" })
 

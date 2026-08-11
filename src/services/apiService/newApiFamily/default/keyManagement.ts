@@ -91,7 +91,6 @@ export async function fetchAccountTokens(
 
     if (Array.isArray(tokensData)) {
       const normalizedTokens = tokensData.map(normalizeApiTokenKey)
-      syncResolvedApiTokenKeyCache(request, normalizedTokens)
       return normalizedTokens
     }
 

@@ -64,7 +64,7 @@ export const fetchAccountTokens = async (
   size: number = REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
 ): Promise<ApiToken[]> => {
   const searchParams = new URLSearchParams({
-    p: page.toString(),
+    page: (page + 1).toString(),
     size: size.toString(),
   })
 
