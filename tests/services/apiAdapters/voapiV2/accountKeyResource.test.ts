@@ -629,6 +629,101 @@ describe("VoAPI v2 account key resources", () => {
     })
   })
 
+  it("propagates cancellation and fails closed for unsafe IDs and mixed group placement", async () => {
+    const controller = new AbortController()
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+    const collection = await session.openCollection("account")
+
+    mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([])
+    await collection.list(undefined, { signal: controller.signal })
+    expect(mockFetchAllVoApiV2RawKeys).toHaveBeenLastCalledWith({
+      ...request,
+      abortSignal: controller.signal,
+    })
+
+    await expect(
+      collection.get({
+        accountId: "account-example",
+        siteType: SITE_TYPES.VO_API_V2,
+        scopeKey: "account",
+        resourceId: "9007199254740992",
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+
+    mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValueOnce([
+      { id: 9, requirementKey: "9", displayName: "Known" },
+    ])
+    mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([
+      rawKey({ id: 9, groups: [9, 99] }),
+      rawKey({ id: 10, groups: ["9007199254740992"] }),
+    ])
+    await expect(session.provisioning!.inspect()).resolves.toMatchObject({
+      items: [
+        {
+          placement: { kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Unknown },
+        },
+        {
+          placement: { kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Unknown },
+        },
+      ],
+    })
+
+    mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([rawKey({ id: 0 })])
+    await expect(collection.list()).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+  })
+
+  it.each([
+    { label: "mismatched confirmation", refreshFails: false },
+    { label: "failed confirmation", refreshFails: true },
+  ])(
+    "preserves an ambiguous rename through a $label",
+    async ({ refreshFails }) => {
+      const before = rawKey({ id: 9, name: "user group (auto)", groups: [9] })
+      mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValueOnce([
+        { id: 9, requirementKey: "9", displayName: "Priority" },
+      ])
+      mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([before])
+      if (refreshFails) {
+        mockFetchAllVoApiV2RawKeys.mockRejectedValueOnce(
+          new Error("refresh unavailable"),
+        )
+      } else {
+        mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([before])
+      }
+      mockRenameVoApiV2Key.mockImplementationOnce(async (mutationRequest) => {
+        mutationRequest.observer?.onDispatch()
+        throw new Error("rename timed out")
+      })
+      const session = await voApiV2AccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+        request,
+      })
+
+      await expect(
+        session.provisioning!.rename!({
+          accountId: "account-example",
+          siteType: SITE_TYPES.VO_API_V2,
+          scopeKey: "account",
+          resourceId: "9",
+        }),
+      ).resolves.toEqual({
+        certainty: "possibly-applied",
+        failure: {
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          message: "rename timed out",
+        },
+      })
+      expect(mockRenameVoApiV2Key).toHaveBeenCalledOnce()
+    },
+  )
+
   it("registers native key resources without replacing legacy key management", () => {
     expect(voApiV2Capabilities.account?.keyResources).toBe(
       voApiV2AccountKeyResources,

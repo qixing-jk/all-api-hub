@@ -1284,6 +1284,210 @@ describe("New API account key resources", () => {
     })
   })
 
+  it("prefers the dispatched create failure when post-write inventory also fails", async () => {
+    const before = [token({ id: 1, group: "default" })]
+    mockFetchUserGroups.mockResolvedValue({
+      vip: { desc: "VIP", ratio: 2 },
+    })
+    mockFetchAccountTokens
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(before)
+      .mockRejectedValueOnce(new Error("refresh unavailable"))
+    mockCreateApiToken.mockImplementationOnce(async (mutationRequest) => {
+      mutationRequest.observer?.onDispatch()
+      throw new Error("create timed out")
+    })
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const requirementKey = (await session.provisioning!.inspect())
+      .requirements[0].requirementKey
+
+    await expect(
+      session.provisioning!.provision(requirementKey),
+    ).resolves.toEqual({
+      certainty: "possibly-applied",
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: "create timed out",
+      },
+    })
+  })
+
+  it("keeps an ambiguous create uncertain when the confirming inventory is unchanged", async () => {
+    const before = [token({ id: 1, group: "default" })]
+    mockFetchUserGroups.mockResolvedValue({
+      vip: { desc: "VIP", ratio: 2 },
+    })
+    mockFetchAccountTokens.mockResolvedValue(before)
+    mockCreateApiToken.mockImplementationOnce(async (mutationRequest) => {
+      mutationRequest.observer?.onDispatch()
+      throw new Error("create timed out")
+    })
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const requirementKey = (await session.provisioning!.inspect())
+      .requirements[0].requirementKey
+
+    await expect(
+      session.provisioning!.provision(requirementKey),
+    ).resolves.toEqual({
+      certainty: "possibly-applied",
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: "create timed out",
+      },
+    })
+  })
+
+  it("confirms a One API singleton create by exact inventory diff", async () => {
+    const before = [token({ id: 1, group: "" })]
+    mockFetchAccountTokens
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce([...before, token({ id: 9, group: "" })])
+    mockCreateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.ONE_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.ONE_API },
+      request,
+    })
+    const requirementKey = (await session.provisioning!.inspect())
+      .requirements[0].requirementKey
+
+    await expect(
+      session.provisioning!.provision(requirementKey),
+    ).resolves.toMatchObject({
+      certainty: "applied",
+      value: { ref: { resourceId: "9" } },
+    })
+  })
+
+  it("rejects inherited-template rename when the effective group is unavailable", async () => {
+    const before = token({ id: 9, name: "user group (auto)", group: "" })
+    mockFetchAccountTokens.mockResolvedValueOnce([before])
+    mockFetchCurrentUserGroup.mockRejectedValueOnce(
+      new Error("current group unavailable"),
+    )
+    mockFetchUserGroups.mockResolvedValueOnce({
+      vip: { desc: "VIP", ratio: 2 },
+    })
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+
+    await expect(
+      session.provisioning!.rename!({
+        accountId: "account-1",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "9",
+      }),
+    ).resolves.toEqual({
+      certainty: "not-applied",
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    expect(mockUpdateApiToken).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { label: "applied update", updateThrows: false },
+    { label: "dispatched ambiguous update", updateThrows: true },
+  ])(
+    "keeps a mismatched rename confirmation uncertain after $label",
+    async ({ updateThrows }) => {
+      const before = token({ id: 9, name: "user group (auto)", group: "vip" })
+      mockFetchAccountTokens
+        .mockResolvedValueOnce([before])
+        .mockResolvedValueOnce([before])
+      mockFetchUserGroups.mockResolvedValueOnce({
+        vip: { desc: "VIP", ratio: 2 },
+      })
+      if (updateThrows) {
+        mockUpdateApiToken.mockImplementationOnce(async (mutationRequest) => {
+          mutationRequest.observer?.onDispatch()
+          throw new Error("rename timed out")
+        })
+      } else {
+        mockUpdateApiToken.mockResolvedValueOnce(true)
+      }
+      const session = await createNewApiAccountKeyResources(
+        SITE_TYPES.NEW_API,
+      ).open({
+        account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+        request,
+      })
+
+      await expect(
+        session.provisioning!.rename!({
+          accountId: "account-1",
+          siteType: SITE_TYPES.NEW_API,
+          scopeKey: "account",
+          resourceId: "9",
+        }),
+      ).resolves.toEqual({
+        certainty: "possibly-applied",
+        failure: {
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          ...(updateThrows ? { message: "rename timed out" } : {}),
+        },
+      })
+    },
+  )
+
+  it.each([
+    { label: "applied update", updateThrows: false },
+    { label: "dispatched ambiguous update", updateThrows: true },
+  ])(
+    "keeps a mismatched editor confirmation uncertain after $label",
+    async ({ updateThrows }) => {
+      const current = token({ id: 9, name: "Before", group: "vip" })
+      mockFetchAccountTokens
+        .mockResolvedValueOnce([current])
+        .mockResolvedValueOnce([current])
+        .mockResolvedValueOnce([current])
+      if (updateThrows) {
+        mockUpdateApiToken.mockImplementationOnce(async (mutationRequest) => {
+          mutationRequest.observer?.onDispatch()
+          throw new Error("update timed out")
+        })
+      } else {
+        mockUpdateApiToken.mockResolvedValueOnce(true)
+      }
+      const session = await createNewApiAccountKeyResources(
+        SITE_TYPES.NEW_API,
+      ).open({
+        account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+        request,
+      })
+      const collection = await session.openCollection("account")
+      const editor = await collection.openEditEditor({
+        accountId: "account-1",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "9",
+      })
+
+      await expect(editor.submit({ name: "After" })).rejects.toMatchObject({
+        failure: {
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          ...(updateThrows ? { message: "update timed out" } : {}),
+        },
+      })
+    },
+  )
+
   it("registers repair resources without opting into native Key Management UI", () => {
     const account = createNewApiCapabilities(SITE_TYPES.NEW_API).account
 

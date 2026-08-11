@@ -796,4 +796,161 @@ describe("reconcileAccountKeyInventory", () => {
     })
     expect(provision).not.toHaveBeenCalled()
   })
+
+  it("rejects sessions without a provisioning facet", async () => {
+    const session: AccountKeyResourceSession = {
+      resolveDefaultScope: vi.fn(),
+      listScopes: vi.fn(),
+      openCollection: vi.fn(),
+      openCreateEditor: vi.fn(),
+    }
+
+    await expect(reconcileAccountKeyInventory(session)).rejects.toThrow(
+      "Account key provisioning is not supported",
+    )
+  })
+
+  it("rejects duplicate requirement identities before mutation", async () => {
+    const provision = vi.fn()
+    const requirements = [
+      automaticRequirement("opaque:duplicate", "First"),
+      automaticRequirement("opaque:duplicate", "Second"),
+    ]
+
+    await expect(
+      reconcileAccountKeyInventory(
+        createSession({
+          inspect: vi.fn(async () => ({ requirements, items: [] })),
+          provision,
+        }),
+      ),
+    ).rejects.toThrow("Invalid account key provisioning requirements")
+    expect(provision).not.toHaveBeenCalled()
+  })
+
+  it("reports generic unknown placement without inventing a provider reason", async () => {
+    const requirement = automaticRequirement("opaque:unknown", "Unknown")
+    const provision = vi.fn()
+
+    await expect(
+      reconcileAccountKeyInventory(
+        createSession({
+          inspect: vi.fn(async () => ({
+            requirements: [requirement],
+            items: [
+              {
+                ref: createRef("unknown-placement"),
+                placement: {
+                  kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Unknown,
+                },
+                coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable,
+              },
+            ],
+          })),
+          provision,
+        }),
+      ),
+    ).resolves.toMatchObject({
+      inventoryStatus: "incomplete",
+      inventoryIssues: [{ code: "unknown-placement", count: 1 }],
+      requirementResults: [
+        { requirement, outcome: "blocked-incomplete-inventory" },
+      ],
+    })
+    expect(provision).not.toHaveBeenCalled()
+  })
+
+  it("requires an explicit rename facet before applying suggestions", async () => {
+    const requirement = automaticRequirement("opaque:rename", "Rename")
+    const ref = createRef("rename-target")
+
+    await expect(
+      reconcileAccountKeyInventory(
+        createSession({
+          inspect: vi.fn(async () => ({
+            requirements: [requirement],
+            items: [
+              {
+                ref,
+                placement: {
+                  kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
+                  requirementKeys: [requirement.requirementKey],
+                },
+                coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable,
+                renameSuggestion: { targetDisplayName: "Renamed key" },
+              },
+            ],
+          })),
+          provision: vi.fn(),
+        }),
+        { renameSuggestedResources: true },
+      ),
+    ).rejects.toThrow("Account key provisioning rename is not supported")
+  })
+
+  it("records a definite rename rejection without changing coverage", async () => {
+    const requirement = automaticRequirement("opaque:rename", "Rename")
+    const ref = createRef("rename-target")
+    const failure = {
+      code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
+    } as const
+
+    await expect(
+      reconcileAccountKeyInventory(
+        createSession({
+          inspect: vi.fn(async () => ({
+            requirements: [requirement],
+            items: [
+              {
+                ref,
+                placement: {
+                  kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
+                  requirementKeys: [requirement.requirementKey],
+                },
+                coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable,
+                renameSuggestion: { targetDisplayName: "Renamed key" },
+              },
+            ],
+          })),
+          provision: vi.fn(),
+          rename: vi.fn(async () => ({
+            certainty: "not-applied" as const,
+            failure,
+          })),
+        }),
+        { renameSuggestedResources: true },
+      ),
+    ).resolves.toMatchObject({
+      inventoryStatus: "complete",
+      renameResults: [{ ref, outcome: "rejected", failure }],
+      requirementResults: [{ requirement, outcome: "covered" }],
+    })
+  })
+
+  it("fails closed when an uncertain mutation cannot refresh inventory", async () => {
+    const requirement = automaticRequirement("opaque:uncertain", "Uncertain")
+    const inspect = vi
+      .fn<AccountKeyProvisioningSession["inspect"]>()
+      .mockResolvedValueOnce({ requirements: [requirement], items: [] })
+      .mockRejectedValueOnce(new Error("refresh unavailable"))
+
+    await expect(
+      reconcileAccountKeyInventory(
+        createSession({
+          inspect,
+          provision: vi.fn(async () => ({
+            certainty: "possibly-applied" as const,
+            failure: uncertainFailure,
+          })),
+        }),
+      ),
+    ).resolves.toMatchObject({
+      inventoryStatus: "incomplete",
+      inventoryIssues: [{ code: "refresh-failed", count: 1 }],
+      requirementResults: [
+        { requirement, outcome: "uncertain", failure: uncertainFailure },
+      ],
+    })
+    expect(inspect).toHaveBeenCalledTimes(2)
+  })
 })
