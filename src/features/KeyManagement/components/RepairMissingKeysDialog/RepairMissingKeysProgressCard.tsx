@@ -8,6 +8,7 @@ import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisionin
 import {
   getRepairProgressBarColor,
   getRepairProgressTotals,
+  hasRepairAttentionOutcomes,
 } from "./repairMissingKeysDialogHelpers"
 
 interface RepairMissingKeysProgressCardProps {
@@ -25,11 +26,7 @@ function getRepairCompletionMessage(
   progress: AccountKeyRepairProgress,
   t: TFunction,
 ) {
-  const needsAttention =
-    progress.summary.partial > 0 ||
-    progress.summary.blocked > 0 ||
-    progress.summary.failed > 0 ||
-    progress.summary.invalidResources > 0
+  const needsAttention = hasRepairAttentionOutcomes(progress.summary)
 
   if (needsAttention) {
     return t("keyManagement:repairMissingKeys.summary.completedNeedsAttention")

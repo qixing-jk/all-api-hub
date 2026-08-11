@@ -103,7 +103,9 @@ const tokenStatus = (token: ApiToken): AccountKeyResourceFacts["status"] => {
     }
     if (token.expired_time <= Math.floor(Date.now() / 1000)) return "expired"
   }
-  return token.status === 1 ? "enabled" : "disabled"
+  if (token.status === 1) return "enabled"
+  if (token.status === 2) return "disabled"
+  return "unknown"
 }
 
 const tokenCoverage = (
@@ -131,7 +133,7 @@ const resolveAutoTemplateRenameTarget = (
   token: ApiToken,
   groupDisplayName: string,
 ): string | null => {
-  const currentName = token.name.trim()
+  const currentName = token.name?.trim() || ""
   if (
     currentName !== DEFAULT_AUTO_PROVISION_TOKEN_NAME &&
     !AUTO_GROUP_TOKEN_NAME_PATTERN.test(currentName)

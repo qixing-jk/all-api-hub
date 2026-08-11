@@ -115,6 +115,13 @@ export const buildAccountKeyResourceRuntimeKeyId = (
     .map(encodeRuntimeKeyIdentityPart)
     .join(":")
 
+/** Builds a collision-safe resource identity scoped to one managed-site target. */
+export const buildTargetScopedAccountKeyResourceId = (
+  targetFingerprint: string,
+  ref: AccountKeyResourceRef,
+) =>
+  JSON.stringify([targetFingerprint, buildAccountKeyResourceRuntimeKeyId(ref)])
+
 export const buildAccountRuntimeKeyAccount = (
   account: AccountRuntimeKeyAccountSource,
 ): AccountRuntimeKeyAccount => ({

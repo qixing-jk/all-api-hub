@@ -475,6 +475,23 @@ describe("apiService sub2api key management service", () => {
     })
   })
 
+  it("classifies a malformed reported page as invalid pagination", async () => {
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: {
+        items: [{ id: 1, name: "First page", status: "active" }],
+        page: "1",
+        pages: 1,
+      },
+    })
+
+    await expect(fetchAccountTokens(createRequest())).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+      upstreamCode: "sub2api_key_inventory_invalid_pagination",
+    })
+  })
+
   it("keeps key-creation available models empty even with Sub2API form metadata", async () => {
     await expect(
       fetchAccountAvailableModels(
@@ -648,6 +665,16 @@ describe("apiService sub2api key management service", () => {
       expires_in_days: 0,
       ip_whitelist: ["1.1.1.1", "2.2.2.2"],
     })
+  })
+
+  it("rejects an invalid native group id as a deterministic caller error", async () => {
+    await expect(
+      createSub2ApiTokenForGroupId(createRequest(), createTokenRequest(), 0),
+    ).rejects.toMatchObject({
+      code: API_ERROR_CODES.BUSINESS_ERROR,
+      upstreamCode: "sub2api_invalid_group_id",
+    })
+    expect(fetchApiMock).not.toHaveBeenCalled()
   })
 
   it("uses hydrated auth user id when create returns a key DTO without user_id", async () => {

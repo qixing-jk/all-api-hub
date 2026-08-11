@@ -81,6 +81,7 @@ vi.mock("~/services/apiService/newApiFamily/default/keyManagement", () => ({
     deleteApiToken: mockDeleteApiToken,
     fetchAccountAvailableModels: mockFetchAccountAvailableModels,
     fetchAccountTokens: mockFetchAccountTokens,
+    fetchCompleteAccountTokens: mockFetchAccountTokens,
     fetchCurrentUserGroup: mockFetchCurrentUserGroup,
     fetchUserGroups: mockFetchUserGroups,
     resolveApiTokenKey: mockResolveApiTokenKey,
@@ -90,6 +91,7 @@ vi.mock("~/services/apiService/newApiFamily/default/keyManagement", () => ({
   deleteApiToken: mockDeleteApiToken,
   fetchAccountAvailableModels: mockFetchAccountAvailableModels,
   fetchAccountTokens: mockFetchAccountTokens,
+  fetchCompleteAccountTokens: mockFetchAccountTokens,
   fetchCurrentUserGroup: mockFetchCurrentUserGroup,
   fetchUserGroups: mockFetchUserGroups,
   resolveApiTokenKey: mockResolveApiTokenKey,
@@ -118,6 +120,7 @@ vi.mock("~/services/apiService/aihubmix", () => ({
 vi.mock("~/services/apiService/newApiFamily/variants/oneHub", () => ({
   fetchAccountAvailableModels: mockOneHubFetchAccountAvailableModels,
   fetchAccountTokens: mockOneHubFetchAccountTokens,
+  fetchCompleteAccountTokens: mockOneHubFetchAccountTokens,
   fetchUserGroups: mockOneHubFetchUserGroups,
 }))
 

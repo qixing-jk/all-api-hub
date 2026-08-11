@@ -167,10 +167,6 @@ export function useInvalidKeyDeletion({
               0,
               current.summary.invalidResources - removedInvalidResourceCount,
             ),
-            deleteApplied:
-              current.summary.deleteApplied + appliedResults.length,
-            deleteRejected: current.summary.deleteRejected + rejectedCount,
-            deleteUncertain: current.summary.deleteUncertain + uncertainCount,
           },
           results: nextResults,
         }

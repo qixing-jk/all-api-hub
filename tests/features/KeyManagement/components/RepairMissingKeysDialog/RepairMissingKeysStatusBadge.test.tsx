@@ -54,6 +54,12 @@ describe("RepairMissingKeysStatusBadge", () => {
     ["blocked account", { blocked: 1 }],
     ["failed account", { failed: 1 }],
     ["invalid key", { invalidResources: 1 }],
+    ["rejected requirement", { rejectedRequirements: 1 }],
+    ["uncertain requirement", { uncertainRequirements: 1 }],
+    ["rejected rename", { renameRejected: 1 }],
+    ["uncertain rename", { renameUncertain: 1 }],
+    ["rejected deletion", { deleteRejected: 1 }],
+    ["uncertain deletion", { deleteUncertain: 1 }],
   ])("marks completed results with a %s as needing attention", (_, summary) => {
     render(
       <RepairMissingKeysStatusBadge progress={buildProgress(summary)} t={t} />,

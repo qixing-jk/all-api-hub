@@ -241,10 +241,11 @@ describe("fetchDisplayAccountTokens", () => {
 
   it("projects account-native key resources without inventing legacy key management", () => {
     const accountKeyResources = { open: vi.fn() }
+    const accountKeyProvisioningResources = { open: vi.fn() }
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       siteType: SITE_TYPES.OPENROUTER,
       account: {
-        keyResources: accountKeyResources,
+        keyResources: accountKeyProvisioningResources,
         keyResourceManagement: accountKeyResources,
       },
     } as any)

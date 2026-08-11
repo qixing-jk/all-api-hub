@@ -7,9 +7,11 @@ import {
   getSessionStorageValues,
   setSessionStorageValues,
 } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 
 const CACHE_VERSION = 1 as const
 const CACHE_ENTRY_LIMIT = 500
+const logger = createLogger("RepairCreatedRuntimeSecrets")
 
 interface RepairCreatedRuntimeSecretEntry {
   ref: AccountKeyResourceRef
@@ -80,7 +82,8 @@ const readCache = async (): Promise<RepairCreatedRuntimeSecretCache | null> => {
 const writeCache = async (cache: RepairCreatedRuntimeSecretCache) => {
   try {
     return await setSessionStorageValues({ [storageKey]: cache })
-  } catch {
+  } catch (error) {
+    logger.warn("Failed to write repair-created runtime secret cache", error)
     return false
   }
 }
@@ -99,8 +102,19 @@ const enqueueUpdate = <T>(operation: () => Promise<T>): Promise<T> => {
 /** Replaces any previous browser-session cache when a new repair job starts. */
 export const resetRepairCreatedRuntimeSecrets = (jobId: string) =>
   enqueueUpdate(async () => {
-    if (!isNonBlankJobId(jobId)) return false
-    return writeCache({ version: CACHE_VERSION, jobId, entries: [] })
+    if (!isNonBlankJobId(jobId)) {
+      logger.warn("Failed to reset repair-created runtime secret cache")
+      return false
+    }
+    const reset = await writeCache({
+      version: CACHE_VERSION,
+      jobId,
+      entries: [],
+    })
+    if (!reset) {
+      logger.warn("Failed to reset repair-created runtime secret cache")
+    }
+    return reset
   })
 
 /** Captures exact create-response-only secrets without writing them to local progress. */

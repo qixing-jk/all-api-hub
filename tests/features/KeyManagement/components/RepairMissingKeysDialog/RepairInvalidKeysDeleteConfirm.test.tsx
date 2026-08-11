@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { RepairInvalidKeysDeleteConfirm } from "~/features/KeyManagement/components/RepairMissingKeysDialog/RepairInvalidKeysDeleteConfirm"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type { AccountKeyRepairInvalidResource } from "~/types/accountKeyAutoProvisioning"
 
 const t = ((key: string, options?: Record<string, unknown>) => {
@@ -103,7 +104,22 @@ describe("RepairInvalidKeysDeleteConfirm", () => {
       screen.getByRole("button", { name: "common:actions.cancel" }),
     ).toBeDisabled()
     expect(
-      screen.getByTestId("repair-invalid-keys-confirm-delete"),
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.repairInvalidKeysConfirmDeleteButton,
+      ),
     ).toBeDisabled()
+  })
+
+  it("omits the hidden count when five resources are selected", () => {
+    renderConfirm({
+      selectedInvalidResources: Array.from({ length: 5 }, (_, index) =>
+        buildResource(index + 1),
+      ),
+    })
+
+    expect(screen.getByText("Key 5")).toBeVisible()
+    expect(
+      screen.queryByText(/more invalid keys hidden/),
+    ).not.toBeInTheDocument()
   })
 })

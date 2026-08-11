@@ -141,7 +141,7 @@ const resolveAutoTemplateRenameTarget = (
   group: string,
 ): string | null => {
   if (!group) return null
-  const currentName = token.name.trim()
+  const currentName = token.name?.trim() || ""
   if (
     currentName !== DEFAULT_AUTO_PROVISION_TOKEN_NAME &&
     !AUTO_GROUP_TOKEN_NAME_PATTERN.test(currentName)
@@ -438,7 +438,9 @@ const collectCompleteTokens = async (
   config: NewApiAccountKeyResourceConfig,
   options?: ResourceOperationOptions,
 ): Promise<ApiToken[]> =>
-  config.transport.fetchAccountTokens(requestWithOptions(config, options))
+  config.transport.fetchCompleteAccountTokens(
+    requestWithOptions(config, options),
+  )
 
 const unsupportedCreateEditor =
   (): AccountKeyResourceEditorDefinition<never> => {
@@ -542,7 +544,7 @@ const renameProvisionedResource = async (
     const refreshed = (await collectCompleteTokens(config, options)).find(
       (token) => token.id === tokenId,
     )
-    return refreshed?.name.trim() === targetDisplayName
+    return refreshed?.name?.trim() === targetDisplayName
       ? { certainty: "applied", value: undefined }
       : {
           certainty: "possibly-applied",

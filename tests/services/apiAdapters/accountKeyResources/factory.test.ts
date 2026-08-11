@@ -167,9 +167,7 @@ describe("defineAccountKeyResourceCapability", () => {
         value: { ref: REF },
       })),
     }
-    const session = await openSession(
-      createDefinition({ provisioning } as never),
-    )
+    const session = await openSession(createDefinition({ provisioning }))
 
     await expect(session.provisioning?.inspect()).resolves.toBe(snapshot)
     await expect(
@@ -197,9 +195,7 @@ describe("defineAccountKeyResourceCapability", () => {
         value: { ref: { ...REF, accountId: "other-account" } },
       })),
     }
-    const session = await openSession(
-      createDefinition({ provisioning } as never),
-    )
+    const session = await openSession(createDefinition({ provisioning }))
 
     await expect(
       session.provisioning?.provision("opaque:requirement"),
@@ -216,7 +212,7 @@ describe("defineAccountKeyResourceCapability", () => {
     const runtimeKey = {
       resolve: vi.fn(async () => resolution),
     }
-    const session = await openSession(createDefinition({ runtimeKey } as never))
+    const session = await openSession(createDefinition({ runtimeKey }))
 
     await expect(session.runtimeKey?.resolve(REF)).resolves.toBe(resolution)
     expect(runtimeKey.resolve).toHaveBeenCalledWith(
@@ -232,7 +228,7 @@ describe("defineAccountKeyResourceCapability", () => {
         kind: "unavailable" as const,
       })),
     }
-    const session = await openSession(createDefinition({ runtimeKey } as never))
+    const session = await openSession(createDefinition({ runtimeKey }))
 
     await expect(
       session.runtimeKey?.resolve({ ...REF, accountId: "other-account" }),
@@ -248,7 +244,7 @@ describe("defineAccountKeyResourceCapability", () => {
         kind: "unavailable" as const,
       })),
     }
-    const session = await openSession(createDefinition({ runtimeKey } as never))
+    const session = await openSession(createDefinition({ runtimeKey }))
 
     await expect(
       session.runtimeKey?.resolve({ ...REF, scopeKey: "other-workspace" }),

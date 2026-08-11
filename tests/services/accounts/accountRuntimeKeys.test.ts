@@ -15,6 +15,7 @@ import {
   buildDisplayAccountTokenRuntimeKey,
   buildServiceCredentialRuntimeKey,
   buildServiceCredentialRuntimeKeyId,
+  buildTargetScopedAccountKeyResourceId,
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,
   formatAccountRuntimeKeySecretForSite,
@@ -252,6 +253,16 @@ describe("accountRuntimeKeys", () => {
       }),
     ).toBe(
       "account_key_resource:account%3A1:new-api:workspace%3Aprimary:key%2F42",
+    )
+    expect(
+      buildTargetScopedAccountKeyResourceId("target:one", {
+        accountId: "account:1",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "workspace:primary",
+        resourceId: "key/42",
+      }),
+    ).toBe(
+      '["target:one","account_key_resource:account%3A1:new-api:workspace%3Aprimary:key%2F42"]',
     )
   })
 

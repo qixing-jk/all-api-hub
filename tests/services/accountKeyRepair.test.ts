@@ -22,6 +22,7 @@ import { AuthTypeEnum, type SiteAccount } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_JOB_STATES,
   ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES,
+  ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES,
   ACCOUNT_KEY_REPAIR_OUTCOMES,
   ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
@@ -1042,11 +1043,22 @@ describe("accountKeyRepair", () => {
         (left, right) => left - right,
       ),
     )
-    expect(deleteResource).toHaveBeenNthCalledWith(1, resources[0].ref)
-    expect(deleteResource).toHaveBeenNthCalledWith(2, resources[1].ref)
-    expect(deleteResource).toHaveBeenNthCalledWith(3, resources[2].ref)
+    expect(deleteResource).toHaveBeenNthCalledWith(1, resources[0].ref, {
+      signal: expect.any(AbortSignal),
+    })
+    expect(deleteResource).toHaveBeenNthCalledWith(2, resources[1].ref, {
+      signal: expect.any(AbortSignal),
+    })
+    expect(deleteResource).toHaveBeenNthCalledWith(3, resources[2].ref, {
+      signal: expect.any(AbortSignal),
+    })
     expect(openCollection).toHaveBeenCalledTimes(3)
-    expect(mocks.openKeyResources).toHaveBeenCalledOnce()
+    expect(openCollection).toHaveBeenCalledWith("default", {
+      signal: expect.any(AbortSignal),
+    })
+    expect(mocks.openKeyResources).toHaveBeenCalledWith(expect.any(Object), {
+      signal: expect.any(AbortSignal),
+    })
 
     const progress = mocks.storageMap.get(
       REPAIR_PROGRESS_STORAGE_KEY,
@@ -1058,6 +1070,76 @@ describe("accountKeyRepair", () => {
       deleteRejected: 1,
       deleteUncertain: 1,
     })
+  })
+
+  it("keeps a timed-out invalid-resource deletion visible as uncertain", async () => {
+    vi.useFakeTimers()
+    try {
+      const account = buildRepairAccount("account-1", SITE_TYPES.NEW_API, {
+        site_url: "https://account.example.invalid/path",
+      })
+      const resource = {
+        accountId: "account-1",
+        accountName: "Example Account",
+        siteType: SITE_TYPES.NEW_API,
+        siteUrlOrigin: "https://account.example.invalid",
+        ref: createRef("account-1", "timed-out"),
+        displayLabel: "Timed-out key",
+        groupLabel: "Retired",
+        reason: "orphaned-placement",
+      }
+      const deleteResource = vi.fn(() => new Promise<void>(() => {}))
+      mocks.sessionsByAccountId.set(account.id, {
+        ...createSession(),
+        openCollection: vi.fn(async () => ({ delete: deleteResource })),
+      })
+      mocks.getAllAccounts.mockResolvedValue([account])
+      mocks.storageMap.set(
+        REPAIR_PROGRESS_STORAGE_KEY,
+        createProgress({
+          results: [
+            {
+              accountId: account.id,
+              accountName: "Example Account",
+              siteType: account.site_type,
+              siteUrlOrigin: "https://account.example.invalid",
+              outcome: ACCOUNT_KEY_REPAIR_OUTCOMES.Covered,
+              requirementResults: [],
+              createdRefs: [],
+              invalidResources: [resource],
+              renameResults: [],
+              finishedAt: 1,
+            },
+          ],
+          summary: { ...createEmptySummary(), invalidResources: 1 },
+        }),
+      )
+      const { deleteInvalidAccountKeyResources } = await import(
+        "~/services/accounts/accountKeyAutoProvisioning/repair"
+      )
+
+      const responsePromise = deleteInvalidAccountKeyResources({
+        resources: [resource],
+      })
+      await vi.advanceTimersByTimeAsync(0)
+      expect(deleteResource).toHaveBeenCalledOnce()
+      await vi.advanceTimersByTimeAsync(30_000)
+
+      await expect(responsePromise).resolves.toMatchObject({
+        data: {
+          results: [
+            {
+              outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain,
+              failure: {
+                code: RESOURCE_FAILURE_CODES.MutationStateUncertain,
+              },
+            },
+          ],
+        },
+      })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("rejects duplicate invalid refs before any destructive mutation", async () => {

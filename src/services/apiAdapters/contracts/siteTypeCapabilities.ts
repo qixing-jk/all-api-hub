@@ -48,7 +48,11 @@ export type SiteTypeCapabilities = {
     keyManagement?: KeyManagementCapability
     /** Native resource surface wired into the ordinary Key Management UI. */
     keyResourceManagement?: AccountKeyResourceCapability
-    /** Provider resource capability used by orchestration and native workflows. */
+    /**
+     * Legacy orchestration/native-workflow capability kept separate while some
+     * providers must not opt into the ordinary UI. Remove after every consumer
+     * and provider has migrated to `keyResourceManagement`.
+     */
     keyResources?: AccountKeyResourceCapability
     serviceCredential?: ServiceCredentialCapability
     tokenProvisioning?: TokenProvisioningCapability

@@ -2,6 +2,7 @@ import { resolveRepairCreatedRuntimeSecret } from "~/services/accounts/accountKe
 import {
   buildAccountKeyResourceRuntimeKey,
   buildAccountKeyResourceRuntimeKeyId,
+  buildTargetScopedAccountKeyResourceId,
 } from "~/services/accounts/accountRuntimeKeys"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import {
@@ -9,6 +10,7 @@ import {
   type AccountKeyResourceRef,
   type AccountKeyResourceSession,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { mapSettledWithConcurrency } from "~/services/apiAdapters/nativeResources/concurrency"
 import type { DisplaySiteData } from "~/types"
 import {
   ACCOUNT_KEY_REPAIR_JOB_STATES,
@@ -28,7 +30,13 @@ import {
   type ManagedSiteTokenBatchExportBlockedDetailCode,
   type ManagedSiteTokenBatchExportItemInput,
 } from "~/types/managedSiteTokenBatchExport"
+import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
+import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
+
+const logger = createLogger("RepairCreatedKeyBatchImport")
+const RUNTIME_KEY_RESOLUTION_CONCURRENCY = 4
 
 export const REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS = {
   CURRENT_SESSION: "current-session",
@@ -89,7 +97,7 @@ type CreatedReferenceResolution =
     }
 
 const getReceiptKey = (targetFingerprint: string, ref: AccountKeyResourceRef) =>
-  JSON.stringify([targetFingerprint, buildAccountKeyResourceRuntimeKeyId(ref)])
+  buildTargetScopedAccountKeyResourceId(targetFingerprint, ref)
 
 const getAccountLabel = (accountName: string, accountId: string) =>
   accountName.trim() || accountId
@@ -283,8 +291,10 @@ export async function resolveRepairCreatedKeyBatchImportCandidate(
     sessionsByAccountId.set(account.id, session)
     return session
   }
-  const resolvedItems = await Promise.all(
-    resolution.candidateReferences.map(async (reference) => {
+  const resolutionResults = await mapSettledWithConcurrency(
+    resolution.candidateReferences,
+    RUNTIME_KEY_RESOLUTION_CONCURRENCY,
+    async (reference) => {
       const account = accountsById.get(reference.accountId)
       if (
         !account ||
@@ -354,7 +364,10 @@ export async function resolveRepairCreatedKeyBatchImportCandidate(
           label: reference.label,
           secret: runtimeResolution.secret,
         })
-      } catch {
+      } catch (error) {
+        logger.warn("Failed to resolve a repair-created runtime key", {
+          error: sanitizeSensitiveErrorText(getErrorMessage(error)),
+        })
         return buildBlockedReference({
           ref: reference.ref,
           accountLabel: reference.accountLabel,
@@ -363,8 +376,23 @@ export async function resolveRepairCreatedKeyBatchImportCandidate(
             MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
         })
       }
-    }),
+    },
   )
+  const resolvedItems = resolutionResults.map((result, index) => {
+    if (result.status === "fulfilled") return result.value
+
+    logger.warn("Failed to prepare a repair-created runtime key", {
+      error: sanitizeSensitiveErrorText(getErrorMessage(result.reason)),
+    })
+    const reference = resolution.candidateReferences[index]!
+    return buildBlockedReference({
+      ref: reference.ref,
+      accountLabel: reference.accountLabel,
+      label: reference.label,
+      detailCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
+    })
+  })
 
   const hasReconciliationReceipt = resolution.candidateReferences.some(
     (reference) => {

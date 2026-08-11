@@ -72,13 +72,17 @@ export const ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS = {
   InputRequired: "input-required",
 } as const
 
+export const ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS = {
+  FiniteQuotaRequired: "finite-quota-required",
+} as const
+
 export type AccountKeyRequirementProvisioning =
   | {
       readonly kind: typeof ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic
     }
   | {
       readonly kind: typeof ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.InputRequired
-      readonly reasonCode: string
+      readonly reasonCode: (typeof ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS)[keyof typeof ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS]
     }
 
 export type AccountKeyProvisioningRequirement = {

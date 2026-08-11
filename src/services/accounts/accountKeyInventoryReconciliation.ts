@@ -310,6 +310,14 @@ export async function reconcileAccountKeyInventory(
   let invalidResources = initialAnalysis.invalidResources
   let partialFailure = snapshot.partialFailure
   const renameResults: AccountKeyReconciliationRenameResult[] = []
+  const throwIfAborted = () => {
+    if (options?.signal?.aborted) {
+      throw (
+        options.signal.reason ??
+        new DOMException("The operation was aborted", "AbortError")
+      )
+    }
+  }
 
   if (options?.renameSuggestedResources && !inventoryIncomplete) {
     const renameCandidates = snapshot.items.filter(
@@ -323,6 +331,7 @@ export async function reconcileAccountKeyInventory(
       throw new Error("Account key provisioning rename is not supported")
     }
     for (const item of renameCandidates) {
+      throwIfAborted()
       const renameResult = await provisioning.rename!(
         item.ref,
         operationOptions,
@@ -376,6 +385,7 @@ export async function reconcileAccountKeyInventory(
       continue
     }
 
+    throwIfAborted()
     const result = await provisioning.provision(
       requirement.requirementKey,
       operationOptions,
@@ -407,6 +417,8 @@ export async function reconcileAccountKeyInventory(
           inventoryIncomplete = true
           inventoryIssues = refreshedAnalysis.inventoryIssues
         } else {
+          // Initial issues already block before mutation, so only refreshed
+          // inventory evidence can exist on this reconciliation path.
           inventoryIssues = []
           coveredRequirementKeys = refreshedAnalysis.coveredRequirementKeys
           invalidResources = refreshedAnalysis.invalidResources

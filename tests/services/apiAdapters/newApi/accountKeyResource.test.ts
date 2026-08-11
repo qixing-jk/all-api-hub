@@ -24,6 +24,7 @@ const {
   mockUpdateApiToken,
   mockDeleteApiToken,
   mockResolveApiTokenKey,
+  mockResolveWongApiTokenKey,
 } = vi.hoisted(() => ({
   mockFetchAccountTokens: vi.fn(),
   mockFetchOneHubAccountTokens: vi.fn(),
@@ -33,6 +34,7 @@ const {
   mockUpdateApiToken: vi.fn(),
   mockDeleteApiToken: vi.fn(),
   mockResolveApiTokenKey: vi.fn(),
+  mockResolveWongApiTokenKey: vi.fn(),
 }))
 
 vi.mock(
@@ -49,6 +51,7 @@ vi.mock(
         resolveApiTokenKey: mockResolveApiTokenKey,
       },
       fetchAccountTokens: mockFetchAccountTokens,
+      fetchCompleteAccountTokens: mockFetchAccountTokens,
       fetchCurrentUserGroup: mockFetchCurrentUserGroup,
       fetchUserGroups: mockFetchUserGroups,
       createApiToken: mockCreateApiToken,
@@ -65,6 +68,7 @@ vi.mock(
       typeof import("~/services/apiService/newApiFamily/variants/oneHub")
     >()),
     fetchAccountTokens: mockFetchOneHubAccountTokens,
+    fetchCompleteAccountTokens: mockFetchOneHubAccountTokens,
   }),
 )
 
@@ -74,7 +78,7 @@ vi.mock(
     ...(await importOriginal<
       typeof import("~/services/apiService/newApiFamily/variants/wong")
     >()),
-    resolveApiTokenKey: mockResolveApiTokenKey,
+    resolveApiTokenKey: mockResolveWongApiTokenKey,
   }),
 )
 
@@ -118,6 +122,7 @@ describe("New API account key resources", () => {
     mockUpdateApiToken.mockReset()
     mockDeleteApiToken.mockReset()
     mockResolveApiTokenKey.mockReset()
+    mockResolveWongApiTokenKey.mockReset()
   })
 
   it("lists the complete account token inventory with canonical numeric refs", async () => {
@@ -413,6 +418,27 @@ describe("New API account key resources", () => {
         group: before.group,
       },
     )
+  })
+
+  it("keeps a missing provider token name from aborting inventory inspection", async () => {
+    mockFetchCurrentUserGroup.mockResolvedValueOnce("vip")
+    mockFetchUserGroups.mockResolvedValueOnce({
+      vip: { desc: "VIP", ratio: 2 },
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      token({ id: 9, name: undefined, group: "vip" }),
+    ])
+
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+
+    const snapshot = await session.provisioning!.inspect()
+    expect(snapshot.items).toHaveLength(1)
+    expect(snapshot.items[0].renameSuggestion).toBeUndefined()
   })
 
   it("renames an inherited-group auto template without changing its empty group", async () => {
@@ -752,7 +778,7 @@ describe("New API account key resources", () => {
       token({ id: 8 }),
       token({ id: 9, key: "masked-9" }),
     ])
-    mockResolveApiTokenKey.mockResolvedValueOnce("sk-wong-revealed")
+    mockResolveWongApiTokenKey.mockResolvedValueOnce("sk-wong-revealed")
 
     const capability = createNewApiAccountKeyResources(SITE_TYPES.WONG_GONGYI)
     const session = await capability.open({
@@ -771,10 +797,11 @@ describe("New API account key resources", () => {
       kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
       secret: "sk-wong-revealed",
     })
-    expect(mockResolveApiTokenKey).toHaveBeenCalledWith(
+    expect(mockResolveWongApiTokenKey).toHaveBeenCalledWith(
       request,
       expect.objectContaining({ id: 9, key: "masked-9" }),
     )
+    expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
   })
 
   it("rejects a runtime ref from another scope before token inventory access", async () => {

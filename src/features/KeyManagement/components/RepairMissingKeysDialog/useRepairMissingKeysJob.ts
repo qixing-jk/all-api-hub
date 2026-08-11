@@ -24,6 +24,8 @@ import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisionin
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
 
+import { hasRepairAttentionOutcomes } from "./repairMissingKeysDialogHelpers"
+
 const repairMissingKeysAnalyticsContext = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.RepairMissingAccountKeys,
@@ -79,11 +81,7 @@ function getRepairProgressStatusKind(progress: AccountKeyRepairProgress) {
   if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed) {
     return PRODUCT_ANALYTICS_STATUS_KINDS.Error
   }
-  if (
-    progress.summary.partial > 0 ||
-    progress.summary.blocked > 0 ||
-    progress.summary.failed > 0
-  ) {
+  if (hasRepairAttentionOutcomes(progress.summary)) {
     return PRODUCT_ANALYTICS_STATUS_KINDS.Warning
   }
   return PRODUCT_ANALYTICS_STATUS_KINDS.Healthy
@@ -99,11 +97,7 @@ function getRepairProgressResult(progress: AccountKeyRepairProgress) {
   if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed) {
     return PRODUCT_ANALYTICS_RESULTS.Failure
   }
-  if (
-    progress.summary.partial > 0 ||
-    progress.summary.blocked > 0 ||
-    progress.summary.failed > 0
-  ) {
+  if (hasRepairAttentionOutcomes(progress.summary)) {
     return PRODUCT_ANALYTICS_RESULTS.Failure
   }
   return PRODUCT_ANALYTICS_RESULTS.Success

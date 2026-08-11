@@ -4,6 +4,8 @@ import { Badge, Spinner } from "~/components/ui"
 import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
 
+import { hasRepairAttentionOutcomes } from "./repairMissingKeysDialogHelpers"
+
 interface RepairMissingKeysStatusBadgeProps {
   progress: AccountKeyRepairProgress | null
   t: TFunction
@@ -59,11 +61,7 @@ export function RepairMissingKeysStatusBadge({
   }
 
   if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Completed) {
-    const needsAttention =
-      progress.summary.partial > 0 ||
-      progress.summary.blocked > 0 ||
-      progress.summary.failed > 0 ||
-      progress.summary.invalidResources > 0
+    const needsAttention = hasRepairAttentionOutcomes(progress.summary)
     const variant = needsAttention
       ? "warning"
       : progress.summary.skipped > 0

@@ -22,6 +22,8 @@ const i18n = await createResourceTestI18n({
   en: { common: enCommon, keyManagement: enKeyManagement },
 })
 const t = i18n.t
+const accessibleNameIncludes = (text: string) => (name: string) =>
+  name.includes(text)
 
 function buildResult(
   overrides: Partial<AccountKeyRepairAccountResult> = {},
@@ -123,7 +125,7 @@ describe("RepairMissingKeysResultsPanel", () => {
     ]) {
       expect(
         screen.getByRole("button", {
-          name: new RegExp(
+          name: accessibleNameIncludes(
             t(`keyManagement:repairMissingKeys.outcomes.${outcome}`),
           ),
         }),
@@ -131,7 +133,9 @@ describe("RepairMissingKeysResultsPanel", () => {
     }
     await user.click(
       screen.getByRole("button", {
-        name: new RegExp(t("keyManagement:repairMissingKeys.outcomes.partial")),
+        name: accessibleNameIncludes(
+          t("keyManagement:repairMissingKeys.outcomes.partial"),
+        ),
       }),
     )
     expect(onOutcomeFilterChange).toHaveBeenCalledWith(

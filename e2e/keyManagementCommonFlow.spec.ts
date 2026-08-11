@@ -881,7 +881,7 @@ test("repairs missing account keys, deletes invalid resources, and records manag
   await page.getByRole("checkbox", { name: "legacy", exact: true }).click()
   await page.getByRole("button", { name: "Delete selected" }).click()
   const confirmDeleteButton = page.getByTestId(
-    "repair-invalid-keys-confirm-delete",
+    KEY_MANAGEMENT_TEST_IDS.repairInvalidKeysConfirmDeleteButton,
   )
   await expect(confirmDeleteButton).toBeEnabled()
   await confirmDeleteButton.click()

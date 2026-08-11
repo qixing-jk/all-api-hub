@@ -36,4 +36,16 @@ describe("Progress", () => {
       progress.querySelector('[data-slot="progress-indicator"]'),
     ).toHaveStyle({ transform: "translateX(-0%)" })
   })
+
+  it("normalizes a non-finite value to zero", () => {
+    render(<Progress aria-label="Invalid progress" value={Number.NaN} />)
+
+    const progress = screen.getByRole("progressbar", {
+      name: "Invalid progress",
+    })
+    expect(progress).toHaveAttribute("aria-valuenow", "0")
+    expect(
+      progress.querySelector('[data-slot="progress-indicator"]'),
+    ).toHaveStyle({ transform: "translateX(-100%)" })
+  })
 })

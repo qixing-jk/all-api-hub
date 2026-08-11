@@ -237,7 +237,7 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
     SITE_TYPES.NEO_API,
     SITE_TYPES.WONG_GONGYI,
     SITE_TYPES.UNKNOWN,
-  ])("omits an empty group when %s cannot resolve its meaning", (siteType) => {
+  ])("shows an empty %s group as following the account group", (siteType) => {
     const presentation = buildLegacyKeyResourceCardPresentation(
       buildDisplayAccountTokenRuntimeKey(
         createAccount({ siteType }),
@@ -246,9 +246,9 @@ describe("buildLegacyKeyResourceCardPresentation", () => {
       t,
     )
 
-    expect(presentation.summaryFacts.some(({ id }) => id === "group")).toBe(
-      false,
-    )
+    expect(
+      presentation.summaryFacts.find(({ id }) => id === "group")?.value,
+    ).toBe("keyManagement:keyDetails.followsAccountGroup")
   })
 
   it.each([

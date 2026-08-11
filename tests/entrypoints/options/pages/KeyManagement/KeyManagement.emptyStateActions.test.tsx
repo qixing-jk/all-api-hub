@@ -320,7 +320,7 @@ describe("KeyManagement empty-state actions", () => {
       account:
         siteType === SITE_TYPES.OPENROUTER
           ? {
-              keyResources: {
+              keyResourceManagement: {
                 open: openAccountKeyResourcesMock,
               },
             }

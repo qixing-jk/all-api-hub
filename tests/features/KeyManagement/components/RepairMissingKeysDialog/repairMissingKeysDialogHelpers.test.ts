@@ -9,7 +9,10 @@ import {
   getRepairProgressTotals,
 } from "~/features/KeyManagement/components/RepairMissingKeysDialog/repairMissingKeysDialogHelpers"
 import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
-import { ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
+  ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyRepairAccountResult,
   AccountKeyRepairInvalidResource,
@@ -126,7 +129,8 @@ describe("repairMissingKeysDialogHelpers", () => {
               displayName: "Legacy plan",
               provisioning: {
                 kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.InputRequired,
-                reasonCode: "example-input-required",
+                reasonCode:
+                  ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS.FiniteQuotaRequired,
               },
             },
             outcome: ACCOUNT_KEY_RECONCILIATION_OUTCOMES.BlockedInputRequired,
@@ -190,6 +194,12 @@ describe("repairMissingKeysDialogHelpers", () => {
     expect(filterRepairInvalidResources(resources, "one-api")).toEqual([
       resources[1],
     ])
+    expect(filterRepairInvalidResources(resources, "Other Site")).toEqual([
+      resources[1],
+    ])
+    expect(
+      filterRepairInvalidResources(resources, "other.example.invalid"),
+    ).toEqual([resources[1]])
     expect(filterRepairInvalidResources(resources, "missing")).toEqual([])
   })
 

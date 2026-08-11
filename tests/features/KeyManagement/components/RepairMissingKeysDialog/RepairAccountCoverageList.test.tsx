@@ -8,6 +8,7 @@ import enKeyManagement from "~/locales/en/keyManagement.json"
 import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
 import {
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
+  ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   type AccountKeyProvisioningRequirement,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -32,7 +33,11 @@ const requirement = (
   displayName,
   provisioning:
     provisioning === ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.InputRequired
-      ? { kind: provisioning, reasonCode: "example-input-required" }
+      ? {
+          kind: provisioning,
+          reasonCode:
+            ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS.FiniteQuotaRequired,
+        }
       : { kind: provisioning },
 })
 

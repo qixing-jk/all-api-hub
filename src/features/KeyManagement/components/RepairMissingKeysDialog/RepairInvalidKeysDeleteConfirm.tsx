@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 import { useMemo } from "react"
 
 import { DestructiveConfirmDialog } from "~/components/ui"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type { AccountKeyRepairInvalidResource } from "~/types/accountKeyAutoProvisioning"
 
 import { getInvalidResourceKey } from "./repairMissingKeysDialogHelpers"
@@ -77,7 +78,9 @@ export function RepairInvalidKeysDeleteConfirm({
       details={details}
       isWorking={isWorking}
       size="md"
-      confirmButtonTestId="repair-invalid-keys-confirm-delete"
+      confirmButtonTestId={
+        KEY_MANAGEMENT_TEST_IDS.repairInvalidKeysConfirmDeleteButton
+      }
     />
   )
 }

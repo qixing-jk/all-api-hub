@@ -36,6 +36,7 @@ export const KEY_MANAGEMENT_TEST_IDS = {
     "key-management-repair-created-managed-site-import-button",
   repairCreatedManagedSiteImportTargetSwitcher:
     "key-management-repair-created-managed-site-import-target-switcher",
+  repairInvalidKeysConfirmDeleteButton: "repair-invalid-keys-confirm-delete",
   managedSiteChannelLinkButton:
     "key-management-managed-site-channel-link-button",
   managedSiteVerificationRetryButton:

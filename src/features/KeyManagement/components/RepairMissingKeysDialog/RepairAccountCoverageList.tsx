@@ -184,27 +184,38 @@ function RepairAccountDetails({ result, t }: RepairAccountDetailsProps) {
 
       {result.renameResults.length > 0 ? (
         <div className="flex flex-wrap gap-2 text-xs">
-          {renameCounts.applied > 0 ? (
+          {renameCounts[ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied] > 0 ? (
             <Badge variant="info" size="sm">
               {t(
                 "keyManagement:repairMissingKeys.renameSummary.accountApplied",
-                { count: renameCounts.applied },
+                {
+                  count:
+                    renameCounts[ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied],
+                },
               )}
             </Badge>
           ) : null}
-          {renameCounts.rejected > 0 ? (
+          {renameCounts[ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Rejected] > 0 ? (
             <Badge variant="danger" size="sm">
               {t(
                 "keyManagement:repairMissingKeys.renameSummary.accountRejected",
-                { count: renameCounts.rejected },
+                {
+                  count:
+                    renameCounts[ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Rejected],
+                },
               )}
             </Badge>
           ) : null}
-          {renameCounts.uncertain > 0 ? (
+          {renameCounts[ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain] > 0 ? (
             <Badge variant="warning" size="sm">
               {t(
                 "keyManagement:repairMissingKeys.renameSummary.accountUncertain",
-                { count: renameCounts.uncertain },
+                {
+                  count:
+                    renameCounts[
+                      ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Uncertain
+                    ],
+                },
               )}
             </Badge>
           ) : null}

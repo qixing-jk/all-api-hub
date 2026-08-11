@@ -695,6 +695,43 @@ describe("reconcileAccountKeyInventory", () => {
     expect(maximumActive).toBe(1)
   })
 
+  it("stops before the next mutation when cancellation is requested", async () => {
+    const requirements = [
+      automaticRequirement("opaque:a", "Alpha"),
+      automaticRequirement("opaque:b", "Beta"),
+    ]
+    const refs = [createRef("rename-a"), createRef("rename-b")]
+    const abortController = new AbortController()
+    const rename = vi.fn(async () => {
+      abortController.abort()
+      return { certainty: "applied", value: undefined } as const
+    })
+    const session = createSession({
+      inspect: vi.fn(async () => ({
+        requirements,
+        items: refs.map((ref, index) => ({
+          ref,
+          placement: {
+            kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
+            requirementKeys: [requirements[index]!.requirementKey],
+          },
+          coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable,
+          renameSuggestion: { targetDisplayName: `Key ${index + 1}` },
+        })),
+      })),
+      provision: vi.fn(),
+      rename,
+    })
+
+    await expect(
+      reconcileAccountKeyInventory(session, {
+        renameSuggestedResources: true,
+        signal: abortController.signal,
+      }),
+    ).rejects.toMatchObject({ name: "AbortError" })
+    expect(rename).toHaveBeenCalledOnce()
+  })
+
   it("does not rename when inventory is incomplete", async () => {
     const requirement = automaticRequirement("opaque:a", "Alpha")
     const rename = vi.fn()

@@ -397,6 +397,24 @@ export function getRepairProgressTotals(progress: AccountKeyRepairProgress) {
   }
 }
 
+/** Returns whether a completed repair contains outcomes needing user attention. */
+export function hasRepairAttentionOutcomes(
+  summary: AccountKeyRepairProgress["summary"],
+) {
+  return (
+    summary.partial > 0 ||
+    summary.blocked > 0 ||
+    summary.failed > 0 ||
+    summary.invalidResources > 0 ||
+    summary.rejectedRequirements > 0 ||
+    summary.uncertainRequirements > 0 ||
+    summary.renameRejected > 0 ||
+    summary.renameUncertain > 0 ||
+    summary.deleteRejected > 0 ||
+    summary.deleteUncertain > 0
+  )
+}
+
 /** Returns the progress bar color class for the current repair state. */
 export function getRepairProgressBarColor(progress: AccountKeyRepairProgress) {
   if (progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Failed) {
@@ -407,7 +425,7 @@ export function getRepairProgressBarColor(progress: AccountKeyRepairProgress) {
   }
   if (
     progress.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Completed &&
-    progress.summary.failed > 0
+    hasRepairAttentionOutcomes(progress.summary)
   ) {
     return "bg-amber-600 dark:bg-amber-500"
   }

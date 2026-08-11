@@ -339,7 +339,6 @@ describe("VoAPI v2 account key resources", () => {
       certainty: "not-applied",
       failure: {
         code: "configuration_required",
-        message: "finite-quota-required",
       },
     })
     expect(mockCreateVoApiV2Token).not.toHaveBeenCalled()

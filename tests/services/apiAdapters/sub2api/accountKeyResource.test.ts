@@ -170,6 +170,7 @@ describe("Sub2API account key resources", () => {
       token({ id: 4, sub2api_group_id: undefined, group: "" }),
       token({ id: 5, sub2api_group_id: 99, group: "Retired" }),
       token({ id: 6, sub2api_group_id: undefined, group: "Missing id" }),
+      token({ id: 7, sub2api_group_id: 9, group: "Shared", status: 9 }),
     ])
 
     const session = await sub2ApiAccountKeyResources.open({
@@ -232,6 +233,14 @@ describe("Sub2API account key resources", () => {
         placement: { kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Unknown },
         coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Usable,
       },
+      {
+        ref: expect.objectContaining({ resourceId: "7" }),
+        placement: {
+          kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Requirement,
+          requirementKeys: ["9"],
+        },
+        coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown,
+      },
     ])
   })
 
@@ -258,6 +267,12 @@ describe("Sub2API account key resources", () => {
         sub2api_group_id: 99,
         group: "Premium",
       }),
+      token({
+        id: 4,
+        name: undefined,
+        sub2api_group_id: 9,
+        group: "Premium",
+      }),
     ])
 
     const session = await sub2ApiAccountKeyResources.open({
@@ -271,6 +286,7 @@ describe("Sub2API account key resources", () => {
     })
     expect(snapshot.items[1].renameSuggestion).toBeUndefined()
     expect(snapshot.items[2].renameSuggestion).toBeUndefined()
+    expect(snapshot.items[3].renameSuggestion).toBeUndefined()
   })
 
   it("renames the exact provider-owned template while preserving native token configuration", async () => {
@@ -614,9 +630,7 @@ describe("Sub2API account key resources", () => {
     mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
       { id: 9, displayName: "Shared", description: "First", ratio: 1 },
     ])
-    mockFetchAccountTokens
-      .mockResolvedValueOnce([token({ id: 1 })])
-      .mockRejectedValueOnce(new Error("inventory unavailable"))
+    mockFetchAccountTokens.mockResolvedValueOnce([token({ id: 1 })])
     mockCreateSub2ApiTokenForGroupId.mockResolvedValueOnce(false)
 
     const session = await sub2ApiAccountKeyResources.open({

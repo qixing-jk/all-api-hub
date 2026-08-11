@@ -1483,7 +1483,7 @@ const fetchAccountTokenPage = async (
     ) {
       throw createSub2ApiKeyInventoryError(
         endpoint,
-        SUB2API_KEY_INVENTORY_FAILURE_CODES.PageDidNotAdvance,
+        SUB2API_KEY_INVENTORY_FAILURE_CODES.InvalidPagination,
       )
     }
     if (
@@ -1831,10 +1831,10 @@ export async function createSub2ApiTokenForGroupId(
 ): Promise<CreateTokenResult> {
   if (!Number.isSafeInteger(groupId) || groupId <= 0) {
     throw new ApiError(
-      t("messages:errors.api.invalidResponseFormat"),
+      "Invalid Sub2API group id",
       undefined,
       SUB2API_KEYS_ENDPOINT,
-      API_ERROR_CODES.JSON_PARSE_ERROR,
+      API_ERROR_CODES.BUSINESS_ERROR,
       "sub2api_invalid_group_id",
     )
   }

@@ -15,6 +15,7 @@ import {
   ACCOUNT_KEY_PROVISIONING_COVERAGE,
   ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
+  ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   type AccountKeyProvisionedResource,
@@ -89,6 +90,7 @@ const keyStatus = (key: VoApiV2Key): AccountKeyResourceFacts["status"] => {
     return "unknown"
   }
   if (typeof key.expireTime === "number" && key.expireTime > 0) {
+    // VoAPI v2 deployments may return epoch seconds or milliseconds.
     const now =
       key.expireTime > 1_000_000_000_000
         ? Date.now()
@@ -167,7 +169,8 @@ const inspectProvisioning = async (
       displayName: group.displayName,
       provisioning: {
         kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.InputRequired,
-        reasonCode: "finite-quota-required",
+        reasonCode:
+          ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS.FiniteQuotaRequired,
       },
     })),
     items: keys.map((key) => {
@@ -363,7 +366,6 @@ const rejectProvisionWithoutFiniteQuotaInput = async (): Promise<
   certainty: "not-applied",
   failure: {
     code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ConfigurationRequired,
-    message: "finite-quota-required",
   },
 })
 

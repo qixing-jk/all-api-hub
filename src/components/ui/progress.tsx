@@ -17,7 +17,10 @@ function Progress({
   ...props
 }: ProgressProps) {
   const normalizedMax = Number.isFinite(max) && max > 0 ? max : 100
-  const normalizedValue = Math.min(Math.max(value ?? 0, 0), normalizedMax)
+  const inputValue = value ?? 0
+  const normalizedValue = Number.isFinite(inputValue)
+    ? Math.min(Math.max(inputValue, 0), normalizedMax)
+    : 0
   const percentage = (normalizedValue / normalizedMax) * 100
 
   return (

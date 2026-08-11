@@ -115,7 +115,7 @@ describe("useInvalidKeyDeletion", () => {
     vi.clearAllMocks()
   })
 
-  it("removes only applied resources and preserves rejected or uncertain rows", async () => {
+  it("removes only applied rows without replaying authoritative counters", async () => {
     sendAccountKeyRepairMessageMock.mockResolvedValue({
       success: true,
       data: {
@@ -187,9 +187,9 @@ describe("useInvalidKeyDeletion", () => {
     ])
     expect(progress.summary).toMatchObject({
       invalidResources: 2,
-      deleteApplied: 1,
-      deleteRejected: 1,
-      deleteUncertain: 1,
+      deleteApplied: 0,
+      deleteRejected: 0,
+      deleteUncertain: 0,
     })
     expect(result.current.selectedInvalidResources).toEqual([
       rejectedResource,

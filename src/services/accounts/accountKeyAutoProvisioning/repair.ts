@@ -8,7 +8,10 @@ import {
   reconcileAccountKeyInventory,
   type AccountKeyInventoryReconciliationResult,
 } from "~/services/accounts/accountKeyInventoryReconciliation"
-import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
+import {
+  buildAccountKeyResourceRuntimeKeyId,
+  buildTargetScopedAccountKeyResourceId,
+} from "~/services/accounts/accountRuntimeKeys"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import {
@@ -18,6 +21,7 @@ import {
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
@@ -64,6 +68,8 @@ const logger = createLogger("AccountKeyRepair")
 export const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_RECEIPT_LIMIT = 500
 export const ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_REQUEST_ERROR =
   "invalid_managed_site_import_results_request"
+const ACCOUNT_KEY_REPAIR_INVALID_RESOURCE_DELETE_LIMIT = 500
+const INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS = 30_000
 
 const managedSiteImportStatuses = new Set<string>(
   Object.values(ACCOUNT_KEY_REPAIR_MANAGED_SITE_IMPORT_STATUSES),
@@ -119,7 +125,7 @@ const isControlledInvalidResourceDeleteRequest = (
     !hasOnlyKeys(request, ["resources"]) ||
     !Array.isArray(request.resources) ||
     request.resources.length === 0 ||
-    request.resources.length > 500
+    request.resources.length > ACCOUNT_KEY_REPAIR_INVALID_RESOURCE_DELETE_LIMIT
   ) {
     return false
   }
@@ -179,13 +185,10 @@ const getManagedSiteImportReceiptKey = (
     "targetFingerprint" | "resourceRef"
   >,
 ) =>
-  JSON.stringify([
+  buildTargetScopedAccountKeyResourceId(
     receipt.targetFingerprint,
-    receipt.resourceRef.accountId,
-    receipt.resourceRef.siteType,
-    receipt.resourceRef.scopeKey,
-    receipt.resourceRef.resourceId,
-  ])
+    receipt.resourceRef,
+  )
 
 const accountKeyResourceFailureCodes = new Set<string>(
   Object.values(ACCOUNT_KEY_RESOURCE_FAILURE_CODES),
@@ -203,12 +206,17 @@ const getControlledAccountKeyResourceFailure = (
     : undefined
 
 const mapInvalidDeleteFailure = (error: unknown): ResourceFailure =>
-  getControlledAccountKeyResourceFailure(error) ?? {
-    code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
-    ...(error instanceof Error && error.message
-      ? { message: error.message }
-      : {}),
-  }
+  error instanceof DOMException && error.name === "TimeoutError"
+    ? {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: error.message,
+      }
+    : getControlledAccountKeyResourceFailure(error) ?? {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+        ...(error instanceof Error && error.message
+          ? { message: error.message }
+          : {}),
+      }
 
 const createEmptySummary = (): AccountKeyRepairProgress["summary"] => ({
   complete: 0,
@@ -342,6 +350,8 @@ function getSkipReason(
   }
 
   if (account.site_type === SITE_TYPES.AIHUBMIX) {
+    // AIHubMix create responses expose one-time secrets that background
+    // coverage cannot recover; remove this skip when native recovery exists.
     return ACCOUNT_KEY_REPAIR_SKIP_REASONS.AihubmixOneTimeKey
   }
 
@@ -919,18 +929,36 @@ class AccountKeyRepairRunner {
           createAccountApiRequestFromStoredAccount(account)
         let session = sessionByAccountId.get(account.id)
         if (!session) {
-          session = await accountCapabilities.keyResources.open({
-            account: {
-              id: account.id,
-              name: resource.accountName,
-              siteType: account.site_type,
-            },
-            request: apiRequest,
-          })
+          session = await runAbortableTask(
+            (signal) =>
+              accountCapabilities.keyResources!.open(
+                {
+                  account: {
+                    id: account.id,
+                    name: resource.accountName,
+                    siteType: account.site_type,
+                  },
+                  request: apiRequest,
+                },
+                signal ? { signal } : undefined,
+              ),
+            { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
+          )
           sessionByAccountId.set(account.id, session)
         }
-        const collection = await session.openCollection(resource.ref.scopeKey)
-        await collection.delete(resource.ref)
+        const collection = await runAbortableTask(
+          (signal) =>
+            session.openCollection(
+              resource.ref.scopeKey,
+              signal ? { signal } : undefined,
+            ),
+          { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
+        )
+        await runAbortableTask(
+          (signal) =>
+            collection.delete(resource.ref, signal ? { signal } : undefined),
+          { timeoutMs: INVALID_RESOURCE_DELETE_OPERATION_TIMEOUT_MS },
+        )
         results.push({
           resource,
           outcome: ACCOUNT_KEY_REPAIR_MUTATION_OUTCOMES.Applied,

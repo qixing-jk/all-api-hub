@@ -481,6 +481,60 @@ describe("resolveRepairCreatedKeyBatchImportCandidate", () => {
     )
   })
 
+  it("bounds concurrent provider runtime-key resolution", async () => {
+    const account = createAccount()
+    const refs = Array.from({ length: 6 }, (_, index) =>
+      createRef({ resourceId: `resource-${index + 1}` }),
+    )
+    const progress = createProgress(account, refs[0]!)
+    progress.results[0].requirementResults = refs.map((ref, index) => ({
+      requirement: {
+        requirementKey: `requirement-${index + 1}`,
+        displayName: `Created key ${index + 1}`,
+        provisioning: {
+          kind: ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS.Automatic,
+        },
+      },
+      outcome: ACCOUNT_KEY_RECONCILIATION_OUTCOMES.Created,
+      created: { ref },
+    }))
+    progress.results[0].createdRefs = refs
+
+    let active = 0
+    let maximumActive = 0
+    let release!: () => void
+    const firstWaveStarted = new Promise<void>((resolveFirstWave) => {
+      release = resolveFirstWave
+    })
+    const resolve = vi.fn(async (ref: AccountKeyResourceRef) => {
+      active += 1
+      maximumActive = Math.max(maximumActive, active)
+      if (active === 4) release()
+      await firstWaveStarted
+      active -= 1
+      return {
+        kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Resolved,
+        secret: `secret-${ref.resourceId}`,
+      } as const
+    })
+    const open = vi.fn().mockResolvedValue(createSession(resolve))
+    mocks.createDisplayAccountApiContext.mockReturnValue({
+      request: { baseUrl: account.baseUrl },
+      capabilities: { account: { keyResources: { open } } },
+    })
+
+    const candidate = await resolveRepairCreatedKeyBatchImportCandidate({
+      progress,
+      accounts: [account],
+      targetFingerprint: TARGET_A,
+      freshness: REPAIR_CREATED_KEY_BATCH_IMPORT_FRESHNESS.CURRENT_SESSION,
+    })
+
+    expect(candidate?.items).toHaveLength(6)
+    expect(resolve).toHaveBeenCalledTimes(6)
+    expect(maximumActive).toBe(4)
+  })
+
   it("blocks missing or changed accounts and mismatched result refs before opening a session", async () => {
     const currentAccount = createAccount()
     const missingAccount = createAccount({ id: "missing" })
