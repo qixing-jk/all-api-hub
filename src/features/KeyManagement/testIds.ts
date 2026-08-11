@@ -45,6 +45,7 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   serviceCredentialCard: "key-management-service-credential-card",
   titleActions: "key-management-title-actions",
   deleteTokenConfirmButton: "key-management-delete-token-confirm-button",
+  deleteTokenErrorToast: "key-management-delete-token-error-toast",
   accountScopeSelect: "key-management-account-scope-select",
   accountScopeAllOption: "key-management-account-scope-all-option",
   expandAllButton: "key-management-expand-all-button",

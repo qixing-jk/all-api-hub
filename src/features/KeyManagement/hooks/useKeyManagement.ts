@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  createElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -58,6 +65,7 @@ import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 import { isKeyResourceExportable } from "../presentation/legacyKeyResourceCard"
+import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
 import { type KeyManagementEntry, type ServiceCredentialState } from "../types"
 import {
   buildAccountRuntimeKeyEntryIdentityKey,
@@ -74,6 +82,16 @@ import {
  * Unified logger scoped to the Key Management options page hooks.
  */
 const logger = createLogger("KeyManagementHook")
+
+const showDeleteTokenError = (message: string) => {
+  toast.error(
+    createElement(
+      "span",
+      { "data-testid": KEY_MANAGEMENT_TEST_IDS.deleteTokenErrorToast },
+      message,
+    ),
+  )
+}
 
 const keyManagementAnalyticsContext = (
   actionId:
@@ -2141,7 +2159,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             (acc) => acc.id === token.accountId,
           )
           if (!account) {
-            toast.error(t("keyManagement:messages.accountNotFound"))
+            showDeleteTokenError(t("keyManagement:messages.accountNotFound"))
             tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
               errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
             })
@@ -2191,7 +2209,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     } catch (error) {
       const errorMessage = getErrorMessage(error) || String(error)
       logger.error("删除密钥失败", errorMessage)
-      toast.error(errorMessage)
+      showDeleteTokenError(errorMessage)
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })

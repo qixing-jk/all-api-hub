@@ -327,7 +327,11 @@ async function waitForTokenDeletionOutcome(params: {
   rowTestId: string
 }) {
   const outcomeHandle = await params.page.waitForFunction(
-    ({ rowTestId, preexistingStatusAttribute }) => {
+    ({
+      rowTestId,
+      preexistingStatusAttribute,
+      deleteTokenErrorToastTestId,
+    }) => {
       const row = document.querySelector(
         `[data-testid="${CSS.escape(rowTestId)}"]`,
       )
@@ -339,7 +343,13 @@ async function waitForTokenDeletionOutcome(params: {
         document.querySelectorAll<HTMLElement>(
           `[role="status"]:not([${preexistingStatusAttribute}])`,
         ),
-      ).filter((element) => element.getClientRects().length > 0)
+      ).filter(
+        (element) =>
+          element.getClientRects().length > 0 &&
+          element.querySelector(
+            `[data-testid="${deleteTokenErrorToastTestId}"]`,
+          ),
+      )
       const message = visibleStatusMessages.at(-1)?.textContent?.trim()
 
       return message
@@ -349,6 +359,8 @@ async function waitForTokenDeletionOutcome(params: {
     {
       rowTestId: params.rowTestId,
       preexistingStatusAttribute: PREEXISTING_STATUS_ATTRIBUTE,
+      deleteTokenErrorToastTestId:
+        KEY_MANAGEMENT_TEST_IDS.deleteTokenErrorToast,
     },
     { timeout: 30_000 },
   )

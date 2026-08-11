@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagement"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { buildTokenIdentityKey } from "~/features/KeyManagement/utils"
 import { useAccountData } from "~/hooks/useAccountData"
 import {
@@ -4952,7 +4953,13 @@ describe("useKeyManagement enabled account filtering", () => {
     })
 
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-      "keyManagement:messages.accountNotFound",
+      expect.objectContaining({
+        type: "span",
+        props: expect.objectContaining({
+          "data-testid": KEY_MANAGEMENT_TEST_IDS.deleteTokenErrorToast,
+          children: "keyManagement:messages.accountNotFound",
+        }),
+      }),
     )
 
     confirmSpy.mockRestore()
@@ -5168,7 +5175,15 @@ describe("useKeyManagement enabled account filtering", () => {
       await result.current.handleDeleteToken(token)
     })
 
-    expect(vi.mocked(toast.error)).toHaveBeenCalledWith("delete boom")
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "span",
+        props: expect.objectContaining({
+          "data-testid": KEY_MANAGEMENT_TEST_IDS.deleteTokenErrorToast,
+          children: "delete boom",
+        }),
+      }),
+    )
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
