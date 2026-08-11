@@ -440,6 +440,7 @@ export function Modal({
             >
               <div
                 className={panelBaseClass}
+                data-slot="modal-panel"
                 data-testid={panelTestId}
                 role="presentation"
               >
@@ -465,7 +466,10 @@ export function Modal({
                   </div>
                 )}
 
-                <div className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto p-4 sm:space-y-4 sm:p-6">
+                <div
+                  data-slot="modal-body"
+                  className="flex min-h-0 flex-1 flex-col space-y-3 overflow-y-auto p-4 sm:space-y-4 sm:p-6"
+                >
                   {children}
                 </div>
 

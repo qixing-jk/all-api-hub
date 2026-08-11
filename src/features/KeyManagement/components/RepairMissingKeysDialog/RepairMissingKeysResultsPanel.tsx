@@ -28,6 +28,7 @@ import {
   REPAIR_RESULT_VIEWS,
   type RepairResultView,
 } from "./repairMissingKeysDialogHelpers"
+import { useRepairResultListMaxHeight } from "./useRepairResultListMaxHeight"
 
 interface RepairMissingKeysResultsPanelProps {
   activeView: RepairResultView
@@ -74,6 +75,8 @@ export function RepairMissingKeysResultsPanel({
   t,
 }: RepairMissingKeysResultsPanelProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+  const resultListRef = useRef<HTMLDivElement | null>(null)
+  const resultListMaxHeight = useRepairResultListMaxHeight(resultListRef)
 
   return (
     <>
@@ -257,7 +260,15 @@ export function RepairMissingKeysResultsPanel({
         ) : null}
 
         <CardContent padding="none" spacing="none">
-          <div className="max-h-[60vh] overflow-y-auto md:max-h-[min(70vh,48rem)]">
+          <div
+            ref={resultListRef}
+            className="overflow-y-auto"
+            style={
+              resultListMaxHeight === null
+                ? undefined
+                : { maxHeight: resultListMaxHeight }
+            }
+          >
             {activeView === REPAIR_RESULT_VIEWS.InvalidKeys ? (
               <RepairInvalidKeysList
                 deleteResultMessage={deleteResultMessage}
