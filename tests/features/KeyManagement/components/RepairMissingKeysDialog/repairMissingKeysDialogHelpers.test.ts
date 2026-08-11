@@ -1,17 +1,34 @@
+import type { TFunction } from "i18next"
 import { describe, expect, it } from "vitest"
 
 import {
   filterRepairInvalidResources,
   filterRepairResults,
   getInvalidResourceKey,
+  getInvalidResourceReasonLabel,
+  getInventoryIssueLabel,
+  getLegacyRepairFailure,
+  getRepairFailureMessage,
   getRepairOutcomeCounts,
+  getRepairOutcomeLabel,
   getRepairProgressBarColor,
   getRepairProgressTotals,
+  getRepairResultViewLabel,
+  getRequirementOutcomeLabel,
+  getSkipReasonLabel,
+  hasRepairAttentionOutcomes,
+  isSuccessfulRepairOutcome,
+  REPAIR_RESULT_VIEWS,
 } from "~/features/KeyManagement/components/RepairMissingKeysDialog/repairMissingKeysDialogHelpers"
-import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
+import {
+  ACCOUNT_KEY_RECONCILIATION_INVALID_REASONS,
+  ACCOUNT_KEY_RECONCILIATION_INVENTORY_ISSUES,
+  ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
+} from "~/services/accounts/accountKeyInventoryReconciliation"
 import {
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS,
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyRepairAccountResult,
@@ -22,7 +39,11 @@ import {
   ACCOUNT_KEY_REPAIR_JOB_STATES,
   ACCOUNT_KEY_REPAIR_OUTCOMES,
   ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
+  ACCOUNT_KEY_REPAIR_SKIP_REASONS,
 } from "~/types/accountKeyAutoProvisioning"
+
+const t = ((key: string, options?: Record<string, unknown>) =>
+  options ? `${key}:${JSON.stringify(options)}` : key) as unknown as TFunction
 
 const emptySummary: AccountKeyRepairProgress["summary"] = {
   complete: 0,
@@ -113,6 +134,59 @@ function buildInvalidResource(
 }
 
 describe("repairMissingKeysDialogHelpers", () => {
+  it.each([
+    [
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ConfigurationRequired,
+      "configurationRequired",
+    ],
+    [
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.InvalidConfiguration,
+      "invalidConfiguration",
+    ],
+    [
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.AuthenticationFailed,
+      "authenticationFailed",
+    ],
+    [ACCOUNT_KEY_RESOURCE_FAILURE_CODES.PermissionDenied, "permissionDenied"],
+    [ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed, "validationFailed"],
+    [ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound, "notFound"],
+    [
+      ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      "mutationStateUncertain",
+    ],
+    [ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable, "unavailable"],
+    [ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected, "upstreamRejected"],
+    [ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Aborted, "aborted"],
+    [ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected, "unexpected"],
+  ])("provides local guidance for %s failures", (code, suffix) => {
+    expect(getRepairFailureMessage(t, { code })).toBe(
+      `keyManagement:repairMissingKeys.failureGuidance.${suffix}`,
+    )
+  })
+
+  it("prefers unique provider details and restores only controlled legacy failures", () => {
+    expect(
+      getRepairFailureMessage(t, {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+        message: " provider detail ",
+        upstreamCode: "provider detail",
+      }),
+    ).toBe("provider detail")
+    expect(
+      getRepairFailureMessage(t, {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+        upstreamCode: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+      }),
+    ).toBe("keyManagement:repairMissingKeys.failureGuidance.unexpected")
+    expect(
+      getLegacyRepairFailure(
+        ` ${ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound} `,
+      ),
+    ).toEqual({ code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound })
+    expect(getLegacyRepairFailure("provider detail")).toBeUndefined()
+    expect(getLegacyRepairFailure(undefined)).toBeUndefined()
+  })
+
   it("filters repair results by current outcome and requirement display name", () => {
     const results = [
       buildResult(),
@@ -281,5 +355,115 @@ describe("repairMissingKeysDialogHelpers", () => {
         }),
       ),
     ).toBe("bg-amber-600 dark:bg-amber-500")
+  })
+
+  it("maps every repair, requirement, skip, and view label to its owned key", () => {
+    for (const outcome of Object.values(ACCOUNT_KEY_REPAIR_OUTCOMES)) {
+      expect(getRepairOutcomeLabel(t, outcome)).toContain(
+        "keyManagement:repairMissingKeys.outcomes.",
+      )
+    }
+    for (const outcome of Object.values(ACCOUNT_KEY_RECONCILIATION_OUTCOMES)) {
+      expect(getRequirementOutcomeLabel(t, outcome)).toContain(
+        "keyManagement:repairMissingKeys.requirements.",
+      )
+    }
+    for (const reason of Object.values(ACCOUNT_KEY_REPAIR_SKIP_REASONS)) {
+      expect(getSkipReasonLabel(t, reason)).toContain(
+        "keyManagement:repairMissingKeys.skipReasons.",
+      )
+    }
+    expect(getSkipReasonLabel(t, undefined)).toBe("")
+    expect(
+      getRepairResultViewLabel(t, REPAIR_RESULT_VIEWS.AccountCoverage),
+    ).toBe("keyManagement:repairMissingKeys.views.accountCoverage")
+    expect(getRepairResultViewLabel(t, REPAIR_RESULT_VIEWS.InvalidKeys)).toBe(
+      "keyManagement:repairMissingKeys.views.invalidKeys",
+    )
+    expect(isSuccessfulRepairOutcome(ACCOUNT_KEY_REPAIR_OUTCOMES.Covered)).toBe(
+      true,
+    )
+    expect(
+      isSuccessfulRepairOutcome(ACCOUNT_KEY_REPAIR_OUTCOMES.Repaired),
+    ).toBe(true)
+    expect(isSuccessfulRepairOutcome(ACCOUNT_KEY_REPAIR_OUTCOMES.Partial)).toBe(
+      false,
+    )
+  })
+
+  it("keeps native invalid-resource reasons useful when no translation exists", () => {
+    expect(
+      getInvalidResourceReasonLabel(
+        t,
+        buildInvalidResource({
+          reason: ACCOUNT_KEY_RECONCILIATION_INVALID_REASONS.OrphanedPlacement,
+        }),
+      ),
+    ).toBe(
+      "keyManagement:repairMissingKeys.invalidKeys.reasons.orphanedPlacement",
+    )
+
+    const passthroughT = ((key: string) => key) as unknown as TFunction
+    expect(
+      getInvalidResourceReasonLabel(
+        passthroughT,
+        buildInvalidResource({ reason: "provider-owned-reason" }),
+      ),
+    ).toBe("provider-owned-reason")
+    expect(
+      getInvalidResourceReasonLabel(
+        t,
+        buildInvalidResource({ reason: "provider-owned-reason" }),
+      ),
+    ).toContain('"reason":"provider-owned-reason"')
+  })
+
+  it("maps every controlled inventory issue with its count where applicable", () => {
+    for (const code of Object.values(
+      ACCOUNT_KEY_RECONCILIATION_INVENTORY_ISSUES,
+    )) {
+      expect(getInventoryIssueLabel(t, { code, count: 2 })).toContain(
+        "keyManagement:repairMissingKeys.inventoryIssues.",
+      )
+    }
+  })
+
+  it.each([
+    "partial",
+    "blocked",
+    "failed",
+    "invalidResources",
+    "rejectedRequirements",
+    "uncertainRequirements",
+    "renameRejected",
+    "renameUncertain",
+    "deleteRejected",
+    "deleteUncertain",
+  ] as const)("treats %s as requiring attention", (counter) => {
+    expect(hasRepairAttentionOutcomes({ ...emptySummary, [counter]: 1 })).toBe(
+      true,
+    )
+  })
+
+  it("distinguishes failed, cancelled, successful, and running progress colors", () => {
+    expect(hasRepairAttentionOutcomes(emptySummary)).toBe(false)
+    expect(
+      getRepairProgressBarColor(
+        buildProgress({ state: ACCOUNT_KEY_REPAIR_JOB_STATES.Failed }),
+      ),
+    ).toBe("bg-red-600 dark:bg-red-500")
+    expect(
+      getRepairProgressBarColor(
+        buildProgress({ state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled }),
+      ),
+    ).toBe("bg-amber-600 dark:bg-amber-500")
+    expect(
+      getRepairProgressBarColor(
+        buildProgress({ state: ACCOUNT_KEY_REPAIR_JOB_STATES.Completed }),
+      ),
+    ).toBe("bg-emerald-600 dark:bg-emerald-500")
+    expect(getRepairProgressBarColor(buildProgress())).toBe(
+      "bg-blue-600 dark:bg-blue-500",
+    )
   })
 })

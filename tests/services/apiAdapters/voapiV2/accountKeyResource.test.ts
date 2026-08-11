@@ -329,6 +329,56 @@ describe("VoAPI v2 account key resources", () => {
     })
   })
 
+  it("classifies disabled, expired, and malformed native key states", async () => {
+    mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValueOnce([
+      { id: 9, requirementKey: "9", displayName: "First" },
+    ])
+    mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([
+      rawKey({ id: 1, enable: false }),
+      rawKey({ id: 2, expireTime: Date.now() - 1 }),
+      rawKey({ id: 3, expireTime: Number.NaN }),
+      rawKey({ id: 4, enable: undefined }),
+    ])
+
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+
+    await expect(session.provisioning!.inspect()).resolves.toMatchObject({
+      items: [
+        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable },
+        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable },
+        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown },
+        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown },
+      ],
+    })
+  })
+
+  it("keeps multiple unknown native groups as one explainable orphan placement", async () => {
+    mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValueOnce([])
+    mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([
+      rawKey({ id: 1, groups: [98, 99] }),
+    ])
+
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+
+    await expect(session.provisioning!.inspect()).resolves.toMatchObject({
+      items: [
+        {
+          placement: {
+            kind: ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS.Orphaned,
+            placementKey: '["98","99"]',
+            displayName: "98, 99",
+          },
+        },
+      ],
+    })
+  })
+
   it("does not provision without validated finite-quota input", async () => {
     const session = await voApiV2AccountKeyResources.open({
       account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
@@ -372,6 +422,129 @@ describe("VoAPI v2 account key resources", () => {
     expect(mockResolveVoApiV2KeySecretById).toHaveBeenCalledWith(request, 9)
   })
 
+  it("reports missing and failed native secret lookups as unavailable", async () => {
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.VO_API_V2,
+      scopeKey: "account",
+      resourceId: "9",
+    } as const
+
+    mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([])
+    await expect(session.runtimeKey!.resolve(ref)).resolves.toEqual({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound },
+    })
+
+    mockFetchAllVoApiV2RawKeys.mockRejectedValueOnce(
+      new Error("inventory unavailable"),
+    )
+    await expect(session.runtimeKey!.resolve(ref)).resolves.toEqual({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+        message: "inventory unavailable",
+      },
+    })
+  })
+
+  it.each([
+    {
+      label: "missing ref",
+      groups: [{ id: 9, requirementKey: "9", displayName: "Priority" }],
+      keys: [],
+      failureCode: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound,
+    },
+    {
+      label: "ambiguous group placement",
+      groups: [{ id: 9, requirementKey: "9", displayName: "Priority" }],
+      keys: [rawKey({ id: 9, name: "user group (auto)", groups: [9, 10] })],
+      failureCode: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
+    },
+    {
+      label: "provider-owned custom name",
+      groups: [{ id: 9, requirementKey: "9", displayName: "Priority" }],
+      keys: [rawKey({ id: 9, name: "Custom key", groups: [9] })],
+      failureCode: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
+    },
+  ])(
+    "rejects rename for $label before mutation",
+    async ({ groups, keys, failureCode }) => {
+      mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValueOnce(groups)
+      mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce(keys)
+      const session = await voApiV2AccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+        request,
+      })
+
+      await expect(
+        session.provisioning!.rename!({
+          accountId: "account-example",
+          siteType: SITE_TYPES.VO_API_V2,
+          scopeKey: "account",
+          resourceId: "9",
+        }),
+      ).resolves.toEqual({
+        certainty: "not-applied",
+        failure: { code: failureCode },
+      })
+      expect(mockRenameVoApiV2Key).not.toHaveBeenCalled()
+    },
+  )
+
+  it("preserves false and unconfirmed native rename outcomes without replay", async () => {
+    const before = rawKey({ id: 9, name: "user group (auto)", groups: [9] })
+    const groups = [{ id: 9, requirementKey: "9", displayName: "Priority" }]
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.VO_API_V2,
+      scopeKey: "account",
+      resourceId: "9",
+    } as const
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+
+    mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValueOnce(groups)
+    mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([before])
+    mockRenameVoApiV2Key.mockResolvedValueOnce(false)
+    await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
+      certainty: "not-applied",
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
+    })
+
+    mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValueOnce(groups)
+    mockFetchAllVoApiV2RawKeys
+      .mockResolvedValueOnce([before])
+      .mockResolvedValueOnce([before])
+    mockRenameVoApiV2Key.mockResolvedValueOnce(true)
+    await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
+      certainty: "possibly-applied",
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      },
+    })
+
+    mockFetchVoApiV2KeyGroupDescriptors.mockResolvedValueOnce(groups)
+    mockFetchAllVoApiV2RawKeys
+      .mockResolvedValueOnce([before])
+      .mockRejectedValueOnce(new Error("refresh unavailable"))
+    mockRenameVoApiV2Key.mockResolvedValueOnce(true)
+    await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
+      certainty: "possibly-applied",
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: "refresh unavailable",
+      },
+    })
+    expect(mockRenameVoApiV2Key).toHaveBeenCalledTimes(3)
+  })
+
   it("deletes the exact native ref once", async () => {
     mockDeleteVoApiV2Token.mockResolvedValueOnce(true)
     const session = await voApiV2AccountKeyResources.open({
@@ -392,6 +565,68 @@ describe("VoAPI v2 account key resources", () => {
       expect.objectContaining(request),
       9,
     )
+  })
+
+  it("keeps false and explicit delete rejections definite", async () => {
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.VO_API_V2,
+      scopeKey: "account",
+      resourceId: "9",
+    } as const
+
+    mockDeleteVoApiV2Token.mockResolvedValueOnce(false)
+    await expect(collection.delete(ref)).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
+    })
+
+    mockDeleteVoApiV2Token.mockImplementationOnce(async (mutationRequest) => {
+      mutationRequest.observer?.onDispatch()
+      mutationRequest.observer?.onResponse()
+      throw new ApiError(
+        "Delete rejected",
+        undefined,
+        "/api/keys/9",
+        API_ERROR_CODES.BUSINESS_ERROR,
+      )
+    })
+    await expect(collection.delete(ref)).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
+        message: "Delete rejected",
+      },
+    })
+  })
+
+  it("rejects unsupported editors and missing collection resources", async () => {
+    const session = await voApiV2AccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.VO_API_V2,
+      scopeKey: "account",
+      resourceId: "9",
+    } as const
+
+    await expect(session.openCreateEditor("account")).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+    mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([rawKey({ id: 9 })])
+    await expect(collection.openEditEditor(ref)).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+    mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([])
+    await expect(collection.get(ref)).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
   })
 
   it("registers native key resources without replacing legacy key management", () => {

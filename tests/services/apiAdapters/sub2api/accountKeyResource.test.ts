@@ -730,6 +730,244 @@ describe("Sub2API account key resources", () => {
     )
   })
 
+  it("classifies disabled, expired, and malformed token states", async () => {
+    mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
+      { id: 9, displayName: "Example group" },
+    ])
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      token({ id: 1, status: 2 }),
+      token({ id: 2, expired_time: Math.floor(Date.now() / 1000) - 1 }),
+      token({ id: 3, expired_time: -2 }),
+      token({ id: 4, status: 99 }),
+    ])
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+
+    await expect(session.provisioning!.inspect()).resolves.toMatchObject({
+      items: [
+        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable },
+        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unusable },
+        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown },
+        { coverage: ACCOUNT_KEY_PROVISIONING_COVERAGE.Unknown },
+      ],
+    })
+  })
+
+  it("rejects malformed or duplicate native group requirements", async () => {
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+    mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
+      { id: 9, displayName: "First" },
+      { id: 9, displayName: "Duplicate" },
+    ])
+    await expect(session.provisioning!.inspect()).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+        message: "invalid_group_requirement",
+      },
+    })
+
+    await expect(
+      session.provisioning!.provision("9007199254740992"),
+    ).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+        message: "invalid_group_requirement",
+      },
+    })
+
+    mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
+      { id: 10, displayName: "Other" },
+    ])
+    await expect(session.provisioning!.provision("9")).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+        message: "invalid_group_requirement",
+      },
+    })
+    expect(mockCreateSub2ApiTokenForGroupId).not.toHaveBeenCalled()
+  })
+
+  it("rejects missing or provider-owned rename targets before mutation", async () => {
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.SUB2API,
+      scopeKey: "account",
+      resourceId: "9",
+    } as const
+
+    mockFetchTokenById.mockResolvedValueOnce(token({ id: 8 }))
+    await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
+      certainty: "not-applied",
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound },
+    })
+
+    mockFetchTokenById.mockResolvedValueOnce(
+      token({ id: 9, name: "Custom key", group: "Example group" }),
+    )
+    mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce([
+      { id: 9, displayName: "Example group" },
+    ])
+    await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
+      certainty: "not-applied",
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    expect(mockUpdateApiToken).not.toHaveBeenCalled()
+  })
+
+  it("preserves explicit and unverifiable rename outcomes without replay", async () => {
+    const before = token({
+      id: 9,
+      name: "user group (auto)",
+      group: "Example group",
+    })
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.SUB2API,
+      scopeKey: "account",
+      resourceId: "9",
+    } as const
+    const groups = [{ id: 9, displayName: "Example group" }]
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+
+    mockFetchTokenById.mockResolvedValueOnce(before)
+    mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce(groups)
+    mockUpdateApiToken.mockImplementationOnce(async (mutationRequest) => {
+      mutationRequest.observer?.onDispatch()
+      mutationRequest.observer?.onResponse()
+      throw new ApiError(
+        "Rename rejected",
+        undefined,
+        "/api/token",
+        API_ERROR_CODES.BUSINESS_ERROR,
+      )
+    })
+    await expect(session.provisioning!.rename!(ref)).resolves.toMatchObject({
+      certainty: "not-applied",
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
+    })
+
+    mockFetchTokenById
+      .mockResolvedValueOnce(before)
+      .mockRejectedValueOnce(new Error("refresh unavailable"))
+    mockFetchSub2ApiGroupDescriptors.mockResolvedValueOnce(groups)
+    mockUpdateApiToken.mockResolvedValueOnce(true)
+    await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
+      certainty: "possibly-applied",
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: "refresh unavailable",
+      },
+    })
+    expect(mockUpdateApiToken).toHaveBeenCalledTimes(2)
+  })
+
+  it("reports mismatched and failed runtime detail lookups as unavailable", async () => {
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.SUB2API,
+      scopeKey: "account",
+      resourceId: "9",
+    } as const
+
+    mockFetchTokenById.mockResolvedValueOnce(token({ id: 8 }))
+    await expect(session.runtimeKey!.resolve(ref)).resolves.toEqual({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+
+    mockFetchTokenById.mockRejectedValueOnce(new Error("detail unavailable"))
+    await expect(session.runtimeKey!.resolve(ref)).resolves.toEqual({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+        message: "detail unavailable",
+      },
+    })
+    expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
+  })
+
+  it("propagates list cancellation and rejects invalid or missing locators", async () => {
+    const controller = new AbortController()
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    await collection.list(undefined, { signal: controller.signal })
+    expect(mockFetchAccountTokens).toHaveBeenLastCalledWith({
+      ...request,
+      abortSignal: controller.signal,
+    })
+
+    await expect(
+      collection.get({
+        accountId: "account-example",
+        siteType: SITE_TYPES.SUB2API,
+        scopeKey: "account",
+        resourceId: "0",
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    await expect(
+      collection.get({
+        accountId: "account-example",
+        siteType: SITE_TYPES.SUB2API,
+        scopeKey: "account",
+        resourceId: "9",
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+
+    mockFetchAccountTokens.mockResolvedValueOnce([token({ id: 0 })])
+    await expect(collection.list()).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+  })
+
+  it("rejects unsupported native create and edit editors", async () => {
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const ref = {
+      accountId: "account-example",
+      siteType: SITE_TYPES.SUB2API,
+      scopeKey: "account",
+      resourceId: "9",
+    } as const
+
+    await expect(session.openCreateEditor("account")).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+    mockFetchAccountTokens.mockResolvedValueOnce([token({ id: 9 })])
+    await expect(collection.openEditEditor(ref)).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+  })
+
   it("surfaces a definite delete rejection without replay", async () => {
     mockDeleteApiToken.mockResolvedValueOnce(false)
 

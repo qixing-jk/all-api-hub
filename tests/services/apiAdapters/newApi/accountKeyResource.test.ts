@@ -942,6 +942,348 @@ describe("New API account key resources", () => {
     )
   })
 
+  it("propagates operation cancellation and rejects invalid or missing token locators", async () => {
+    const controller = new AbortController()
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    await expect(session.resolveDefaultScope()).resolves.toMatchObject({
+      scopeKey: "account",
+    })
+    const collection = await session.openCollection("account")
+
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    await collection.list(undefined, { signal: controller.signal })
+    expect(mockFetchAccountTokens).toHaveBeenLastCalledWith({
+      ...request,
+      abortSignal: controller.signal,
+    })
+
+    await expect(
+      collection.get({
+        accountId: "account-1",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "0",
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    await expect(
+      collection.get({
+        accountId: "account-1",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "9",
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+
+    mockFetchAccountTokens.mockResolvedValueOnce([token({ id: 0 })])
+    await expect(collection.list()).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+  })
+
+  it("rejects duplicate normalized group requirements before reconciliation", async () => {
+    mockFetchUserGroups.mockResolvedValueOnce({
+      vip: { desc: "VIP", ratio: 2 },
+      " vip ": { desc: "Duplicate VIP", ratio: 2 },
+    })
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+
+    await expect(session.provisioning!.inspect()).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+        message: "duplicate_group_requirement",
+      },
+    })
+  })
+
+  it("marks a create uncertain when the required post-write inventory fails", async () => {
+    const before = [token({ id: 1, group: "default" })]
+    mockFetchUserGroups.mockResolvedValue({
+      vip: { desc: "VIP", ratio: 2 },
+    })
+    mockFetchAccountTokens
+      .mockResolvedValueOnce(before)
+      .mockResolvedValueOnce(before)
+      .mockRejectedValueOnce(new Error("refresh unavailable"))
+    mockCreateApiToken.mockResolvedValueOnce(true)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const requirementKey = (await session.provisioning!.inspect())
+      .requirements[0].requirementKey
+
+    await expect(
+      session.provisioning!.provision(requirementKey),
+    ).resolves.toEqual({
+      certainty: "possibly-applied",
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: "refresh unavailable",
+      },
+    })
+  })
+
+  it("reports inventory failure before runtime secret reveal", async () => {
+    mockFetchAccountTokens.mockRejectedValueOnce(
+      new Error("inventory unavailable"),
+    )
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+
+    await expect(
+      session.runtimeKey!.resolve({
+        accountId: "account-1",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "9",
+      }),
+    ).resolves.toEqual({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
+        message: "inventory unavailable",
+      },
+    })
+    expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      label: "missing ref",
+      groups: { vip: { desc: "VIP", ratio: 2 } },
+      tokens: [],
+      failureCode: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound,
+    },
+    {
+      label: "orphaned group",
+      groups: { default: { desc: "Default", ratio: 1 } },
+      tokens: [token({ id: 9, name: "user group (auto)", group: "vip" })],
+      failureCode: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
+    },
+    {
+      label: "provider-owned custom name",
+      groups: { vip: { desc: "VIP", ratio: 2 } },
+      tokens: [token({ id: 9, name: "Custom key", group: "vip" })],
+      failureCode: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
+    },
+  ])(
+    "rejects rename for $label before mutation",
+    async ({ groups, tokens, failureCode }) => {
+      mockFetchAccountTokens.mockResolvedValueOnce(tokens)
+      mockFetchUserGroups.mockResolvedValueOnce(groups)
+      const session = await createNewApiAccountKeyResources(
+        SITE_TYPES.NEW_API,
+      ).open({
+        account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+        request,
+      })
+
+      await expect(
+        session.provisioning!.rename!({
+          accountId: "account-1",
+          siteType: SITE_TYPES.NEW_API,
+          scopeKey: "account",
+          resourceId: "9",
+        }),
+      ).resolves.toEqual({
+        certainty: "not-applied",
+        failure: { code: failureCode },
+      })
+      expect(mockUpdateApiToken).not.toHaveBeenCalled()
+    },
+  )
+
+  it("preserves rejected and unverifiable provisioning renames without replay", async () => {
+    const before = token({ id: 9, name: "user group (auto)", group: "vip" })
+    const ref = {
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "9",
+    } as const
+    mockFetchUserGroups.mockResolvedValue({
+      vip: { desc: "VIP", ratio: 2 },
+    })
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+
+    mockFetchAccountTokens.mockResolvedValueOnce([before])
+    mockUpdateApiToken.mockImplementationOnce(async (mutationRequest) => {
+      mutationRequest.observer?.onDispatch()
+      mutationRequest.observer?.onResponse()
+      throw new ApiError(
+        "Rename rejected",
+        undefined,
+        "/api/token",
+        API_ERROR_CODES.BUSINESS_ERROR,
+      )
+    })
+    await expect(session.provisioning!.rename!(ref)).resolves.toMatchObject({
+      certainty: "not-applied",
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
+    })
+
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([before])
+      .mockRejectedValueOnce(new Error("refresh unavailable"))
+    mockUpdateApiToken.mockResolvedValueOnce(true)
+    await expect(session.provisioning!.rename!(ref)).resolves.toEqual({
+      certainty: "possibly-applied",
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: "refresh unavailable",
+      },
+    })
+    expect(mockUpdateApiToken).toHaveBeenCalledTimes(2)
+  })
+
+  it("keeps edit validation and false or failed updates explicit", async () => {
+    const current = token({ id: 9, name: "Before", group: "vip" })
+    const ref = {
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "9",
+    } as const
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+
+    mockFetchAccountTokens.mockResolvedValueOnce([current])
+    const invalidEditor = await collection.openEditEditor(ref)
+    await expect(invalidEditor.submit({ name: "   " })).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([current])
+      .mockResolvedValueOnce([current])
+    const falseEditor = await collection.openEditEditor(ref)
+    mockUpdateApiToken.mockResolvedValueOnce(false)
+    await expect(falseEditor.submit({ name: "After" })).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
+    })
+
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([current])
+      .mockResolvedValueOnce([current])
+    const rejectedEditor = await collection.openEditEditor(ref)
+    mockUpdateApiToken.mockImplementationOnce(async (mutationRequest) => {
+      mutationRequest.observer?.onDispatch()
+      mutationRequest.observer?.onResponse()
+      throw new ApiError(
+        "Update rejected",
+        undefined,
+        "/api/token",
+        API_ERROR_CODES.BUSINESS_ERROR,
+      )
+    })
+    await expect(
+      rejectedEditor.submit({ name: "After" }),
+    ).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
+        message: "Update rejected",
+      },
+    })
+
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([current])
+      .mockResolvedValueOnce([current])
+      .mockRejectedValueOnce(new Error("refresh unavailable"))
+    const uncertainEditor = await collection.openEditEditor(ref)
+    mockUpdateApiToken.mockResolvedValueOnce(true)
+    await expect(
+      uncertainEditor.submit({ name: "After" }),
+    ).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        message: "refresh unavailable",
+      },
+    })
+  })
+
+  it("keeps false and explicit delete rejections definite", async () => {
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const ref = {
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "9",
+    } as const
+
+    mockDeleteApiToken.mockResolvedValueOnce(false)
+    await expect(collection.delete(ref)).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected },
+    })
+
+    mockDeleteApiToken.mockImplementationOnce(async (mutationRequest) => {
+      mutationRequest.observer?.onDispatch()
+      mutationRequest.observer?.onResponse()
+      throw new ApiError(
+        "Delete rejected",
+        undefined,
+        "/api/token",
+        API_ERROR_CODES.BUSINESS_ERROR,
+      )
+    })
+    await expect(collection.delete(ref)).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
+        message: "Delete rejected",
+      },
+    })
+  })
+
+  it("rejects the unsupported native create editor", async () => {
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+
+    await expect(session.openCreateEditor("account")).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+    })
+  })
+
   it("registers repair resources without opting into native Key Management UI", () => {
     const account = createNewApiCapabilities(SITE_TYPES.NEW_API).account
 
