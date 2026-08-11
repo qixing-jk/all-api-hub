@@ -16,7 +16,7 @@ describe("account key resource failure mapping", () => {
       code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
       message: "Invalid field",
       upstreamCode: "INVALID_FIELD",
-      fieldIssues: [{ fieldId: "name", code: "required" }],
+      fieldIssues: [{ fieldId: "name", code: "required" as const }],
     }
 
     expect(mapAccountKeyResourceFailure(failure)).toEqual(failure)
