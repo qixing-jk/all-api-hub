@@ -757,8 +757,13 @@ describe("ApiCredentialProfiles page", () => {
       await screen.findByRole("heading", { name: "OpenAI" }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByRole("heading", { name: "Google" }),
+      await screen.findByRole("combobox", {
+        name: "apiCredentialProfiles:grouping.baseUrlSelector",
+      }),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: "Google" }),
+    ).not.toBeInTheDocument()
 
     const searchInput = screen.getByPlaceholderText(
       "apiCredentialProfiles:controls.searchPlaceholder",
@@ -980,8 +985,13 @@ describe("ApiCredentialProfiles page", () => {
       await screen.findByRole("heading", { name: "OpenAI" }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByRole("heading", { name: "Google" }),
+      await screen.findByRole("combobox", {
+        name: "apiCredentialProfiles:grouping.baseUrlSelector",
+      }),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: "Google" }),
+    ).not.toBeInTheDocument()
 
     await user.click(await screen.findByRole("button", { name: /prod/i }))
 

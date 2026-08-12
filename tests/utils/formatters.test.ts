@@ -12,6 +12,7 @@ import {
   createSortComparator,
   formatFullTime,
   formatKeyTime,
+  formatLocaleDateTime,
   formatQuota,
   formatRelativeTime,
   formatTimestamp,
@@ -31,6 +32,24 @@ import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/account
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 describe("formatters utilities", () => {
+  describe("formatLocaleDateTime", () => {
+    it("accepts locale date-time options without changing invalid-input fallback behavior", () => {
+      const date = new Date(2026, 5, 1, 8, 30, 45)
+      const options: Intl.DateTimeFormatOptions = {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+
+      expect(formatLocaleDateTime(date, "-", options)).toBe(
+        date.toLocaleString(undefined, options),
+      )
+      expect(formatLocaleDateTime(null, "-", options)).toBe("-")
+    })
+  })
+
   describe("maskSecretForDisplay", () => {
     it("fully masks short secrets", () => {
       expect(maskSecretForDisplay("short-key")).toBe("******")

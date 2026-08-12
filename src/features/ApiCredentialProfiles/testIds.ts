@@ -7,6 +7,14 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   deleteConfirmButton: "api-credential-profile-delete-confirm-button",
   deleteTriggerButton: "api-credential-profile-delete-trigger-button",
   editButton: "api-credential-profile-edit-button",
+  endpointNavigation: "api-credential-profile-endpoint-navigation",
+  endpointSelector: "api-credential-profile-endpoint-selector",
+  endpointCopyBaseUrlButton:
+    "api-credential-profile-endpoint-copy-base-url-button",
+  endpointAddCredentialButton:
+    "api-credential-profile-endpoint-add-credential-button",
+  endpointBaseUrl: "api-credential-profile-endpoint-base-url",
+  endpointCredentialCount: "api-credential-profile-endpoint-credential-count",
   exportMenuButton: "api-credential-profile-export-menu-button",
   exportToCCSwitchMenuItem:
     "api-credential-profile-export-to-cc-switch-menu-item",
@@ -20,7 +28,6 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
     "api-credential-profile-open-model-management-button",
   popupView: "api-credential-profiles-popup-view",
   showKeyButton: "api-credential-profile-show-key-button",
-  copyBaseUrlButton: "api-credential-profile-copy-base-url-button",
   copyApiKeyButton: "api-credential-profile-copy-api-key-button",
   copyBundleButton: "api-credential-profile-copy-bundle-button",
   verifyButton: "api-credential-profile-verify-button",
@@ -28,9 +35,12 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   verifyProbeRunButton: "api-credential-profile-verify-probe-run-button",
   verifyModelId: "profile-verify-model-id",
   telemetryBalance: "api-credential-telemetry-balance",
+  telemetryPanel: "api-credential-telemetry-panel",
+  telemetryToggle: "api-credential-telemetry-toggle",
   telemetryTodayUsage: "api-credential-telemetry-today-usage",
   telemetryTodayRequests: "api-credential-telemetry-today-requests",
   telemetryModels: "api-credential-telemetry-models",
+  toolbar: "api-credential-profile-toolbar",
 } as const
 
 const API_CREDENTIAL_PROFILE_VERIFY_PROBE_TEST_ID_PREFIX =

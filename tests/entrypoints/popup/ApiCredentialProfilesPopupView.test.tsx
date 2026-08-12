@@ -119,8 +119,13 @@ describe("ApiCredentialProfiles popup view", () => {
       await screen.findByRole("heading", { name: "OpenAI" }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByRole("heading", { name: "Google" }),
+      await screen.findByRole("combobox", {
+        name: "apiCredentialProfiles:grouping.baseUrlSelector",
+      }),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: "Google" }),
+    ).not.toBeInTheDocument()
 
     await user.type(
       screen.getByPlaceholderText(

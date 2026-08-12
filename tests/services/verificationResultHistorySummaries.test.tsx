@@ -8,15 +8,20 @@ import {
   type ApiVerificationHistorySummary,
   type ApiVerificationHistoryTarget,
 } from "~/services/verification/verificationResultHistory"
-import { useVerificationResultHistorySummaries } from "~/services/verification/verificationResultHistory/useVerificationResultHistorySummaries"
+import {
+  useLatestProfileVerificationSummaries,
+  useVerificationResultHistorySummaries,
+} from "~/services/verification/verificationResultHistory/useVerificationResultHistorySummaries"
 import { requireHistoryTarget } from "~~/tests/test-utils/history"
 
 const {
+  getLatestProfileSummariesMock,
   getLatestSummariesMock,
   subscribeMock,
   unsubscribeMock,
   loggerErrorMock,
 } = vi.hoisted(() => ({
+  getLatestProfileSummariesMock: vi.fn(),
   getLatestSummariesMock: vi.fn(),
   subscribeMock: vi.fn(),
   unsubscribeMock: vi.fn(),
@@ -25,6 +30,8 @@ const {
 
 vi.mock("~/services/verification/verificationResultHistory/storage", () => ({
   verificationResultHistoryStorage: {
+    getLatestProfileSummaries: (...args: unknown[]) =>
+      getLatestProfileSummariesMock(...args),
     getLatestSummaries: (...args: unknown[]) => getLatestSummariesMock(...args),
   },
   subscribeToVerificationResultHistoryChanges: (callback: () => void) => {
@@ -86,10 +93,47 @@ function buildSummary(
 
 describe("useVerificationResultHistorySummaries", () => {
   beforeEach(() => {
+    getLatestProfileSummariesMock.mockReset()
     getLatestSummariesMock.mockReset()
     subscribeMock.mockReset()
     unsubscribeMock.mockReset()
     loggerErrorMock.mockReset()
+  })
+
+  it("deduplicates profile ids and reloads latest profile summaries on storage changes", async () => {
+    const profileTarget = requireHistoryTarget(
+      createProfileVerificationHistoryTarget("profile-a"),
+    )
+    const profileKey = serializeVerificationHistoryTarget(profileTarget)
+    const firstSummary = buildSummary(profileTarget, 1)
+    const secondSummary = buildSummary(profileTarget, 2)
+    getLatestProfileSummariesMock
+      .mockResolvedValueOnce({ [profileKey]: firstSummary })
+      .mockResolvedValueOnce({ [profileKey]: secondSummary })
+
+    const { result } = renderHook(() =>
+      useLatestProfileVerificationSummaries([" profile-a ", "profile-a", ""]),
+    )
+
+    await waitFor(() => {
+      expect(result.current.summariesByKey).toEqual({
+        [profileKey]: firstSummary,
+      })
+    })
+    expect(getLatestProfileSummariesMock).toHaveBeenCalledWith(["profile-a"])
+
+    const callback = subscribeMock.mock.calls[0]?.[0] as
+      | (() => void)
+      | undefined
+    if (!callback) throw new Error("Expected storage listener callback")
+
+    act(() => callback())
+
+    await waitFor(() => {
+      expect(result.current.summariesByKey).toEqual({
+        [profileKey]: secondSummary,
+      })
+    })
   })
 
   it("clears summaries without reloading when targets become empty", async () => {

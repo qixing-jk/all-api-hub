@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import {
   afterAll,
   afterEach,
@@ -67,7 +68,9 @@ vi.mock("~/components/ui", async (importOriginal) => {
 
   return {
     ...actual,
-    Badge: ({ children }: any) => <span>{children}</span>,
+    Badge: ({ children, variant: _variant, size: _size, ...props }: any) => (
+      <span {...props}>{children}</span>
+    ),
     Card: ({ children }: any) => <div>{children}</div>,
     CardContent: ({ children }: any) => <div>{children}</div>,
     Heading6: ({ children }: any) => <h6>{children}</h6>,
@@ -154,7 +157,6 @@ function renderListItem(
       tagNames={[]}
       visibleKeys={overrides.visibleKeys ?? new Set()}
       toggleKeyVisibility={overrides.toggleKeyVisibility ?? vi.fn()}
-      onCopyBaseUrl={vi.fn()}
       onCopyApiKey={vi.fn()}
       onCopyBundle={vi.fn()}
       onOpenModelManagement={vi.fn()}
@@ -216,6 +218,19 @@ describe("ApiCredentialProfileListItem", () => {
     vi.clearAllMocks()
   })
 
+  it("leaves the shared Base URL to the endpoint group header", () => {
+    const profile = buildProfile()
+
+    renderListItem(profile)
+
+    expect(screen.queryByText(profile.baseUrl)).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "apiCredentialProfiles:actions.copyBaseUrl",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows a full API key only when its visibility is enabled", () => {
     const profile = buildProfile()
     const toggleKeyVisibility = vi.fn()
@@ -238,14 +253,6 @@ describe("ApiCredentialProfileListItem", () => {
     const profileAction = (actionId: string) =>
       `${PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles}:${actionId}:${PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions}:${PRODUCT_ANALYTICS_ENTRYPOINTS.Options}`
 
-    expect(
-      screen.getByRole("button", {
-        name: "apiCredentialProfiles:actions.copyBaseUrl",
-      }),
-    ).toHaveAttribute(
-      "data-analytics-action",
-      profileAction(PRODUCT_ANALYTICS_ACTION_IDS.CopyBaseUrl),
-    )
     expect(
       screen.getByRole("button", {
         name: "apiCredentialProfiles:actions.copyApiKey",
@@ -319,7 +326,7 @@ describe("ApiCredentialProfileListItem", () => {
     ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
   })
 
-  it("shows expiration as a status badge and keeps audit timestamps separate", () => {
+  it("shows expiration as a status badge and presents compact audit timestamps with full details", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2026, 6, 30, 12).getTime())
 
@@ -345,12 +352,53 @@ describe("ApiCredentialProfileListItem", () => {
     expect(
       screen.queryByText(/apiCredentialProfiles:list.expiresAt:/),
     ).not.toBeInTheDocument()
+    const createdAtFull = new Date(createdAt).toLocaleString()
+    const updatedAtFull = new Date(updatedAt).toLocaleString()
+    const createdAtBadge = screen.getByTitle(createdAtFull)
+    const updatedAtBadge = screen.getByTitle(updatedAtFull)
+    const verificationSummary = screen.getByTestId("verification-summary")
+    const toolbar = screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.toolbar)
+
     expect(
-      screen.getByText(/apiCredentialProfiles:list.createdAt:/),
-    ).toHaveTextContent(new Date(createdAt).toLocaleDateString())
+      screen.getByLabelText(
+        `apiCredentialProfiles:list.createdAt: ${createdAtFull}`,
+      ),
+    ).toBe(createdAtBadge)
     expect(
-      screen.getByText(/apiCredentialProfiles:list.updatedAt:/),
-    ).toHaveTextContent(new Date(updatedAt).toLocaleDateString())
+      screen.getByLabelText(
+        `apiCredentialProfiles:list.updatedAt: ${updatedAtFull}`,
+      ),
+    ).toBe(updatedAtBadge)
+    expect(createdAtBadge.parentElement).not.toBe(
+      verificationSummary.parentElement,
+    )
+    expect(createdAtBadge.parentElement?.parentElement).toBe(
+      toolbar.parentElement,
+    )
+    expect(updatedAtBadge.parentElement?.parentElement).toBe(
+      toolbar.parentElement,
+    )
+
+    expect(createdAtBadge).toHaveTextContent(
+      new Date(createdAt).toLocaleString(undefined, {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    )
+    expect(updatedAtBadge).toHaveTextContent(
+      new Date(updatedAt).toLocaleString(undefined, {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    )
+    expect(createdAtBadge).not.toHaveTextContent(createdAtFull)
+    expect(updatedAtBadge).not.toHaveTextContent(updatedAtFull)
   })
 
   it("distinguishes expired credentials from credentials without an expiration date", () => {
@@ -376,7 +424,6 @@ describe("ApiCredentialProfileListItem", () => {
         tagNames={[]}
         visibleKeys={new Set()}
         toggleKeyVisibility={vi.fn()}
-        onCopyBaseUrl={vi.fn()}
         onCopyApiKey={vi.fn()}
         onCopyBundle={vi.fn()}
         onOpenModelManagement={vi.fn()}
@@ -416,6 +463,30 @@ describe("ApiCredentialProfileListItem", () => {
     ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
   })
 
+  it("keeps explicit zero telemetry expanded", () => {
+    renderListItem(
+      buildProfile({
+        telemetrySnapshot: {
+          attempts: [],
+          health: { status: SiteHealthStatus.Healthy },
+          lastSyncTime: 1,
+          todayRequests: 0,
+        },
+      }),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.title",
+      }),
+    ).toHaveAttribute("aria-expanded", "true")
+    expect(
+      screen.getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayRequests,
+      ),
+    ).toHaveTextContent("0")
+  })
+
   it("uses not provided fallbacks for model-only refreshed snapshots", () => {
     renderListItem(
       buildProfile({
@@ -447,9 +518,26 @@ describe("ApiCredentialProfileListItem", () => {
     )
   })
 
-  it("renders dash fallbacks when telemetry has never been refreshed", () => {
+  it("collapses missing telemetry by default and lets the user reveal fallbacks", async () => {
+    const user = userEvent.setup()
     renderListItem(buildProfile({ telemetrySnapshot: undefined }))
 
+    const telemetryToggle = screen.getByRole("button", {
+      name: "apiCredentialProfiles:telemetry.title",
+    })
+    expect(telemetryToggle).toHaveAttribute("aria-expanded", "false")
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.actions.refresh",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
+    ).not.toBeInTheDocument()
+
+    await user.click(telemetryToggle)
+
+    expect(telemetryToggle).toHaveAttribute("aria-expanded", "true")
     expect(
       screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
     ).toHaveTextContent("-")
@@ -464,6 +552,56 @@ describe("ApiCredentialProfileListItem", () => {
     expect(
       screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryModels),
     ).toHaveTextContent("-")
+  })
+
+  it("opens telemetry when a refresh adds the first detail value", () => {
+    const { rerender } = renderListItem(
+      buildProfile({ telemetrySnapshot: undefined }),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.title",
+      }),
+    ).toHaveAttribute("aria-expanded", "false")
+
+    rerender(
+      <ApiCredentialProfileListItem
+        profile={buildProfile({
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: SiteHealthStatus.Healthy },
+            lastSyncTime: 2,
+            balanceUsd: 7.5,
+          },
+        })}
+        verificationSummary={null}
+        tagNames={[]}
+        visibleKeys={new Set()}
+        toggleKeyVisibility={vi.fn()}
+        onCopyApiKey={vi.fn()}
+        onCopyBundle={vi.fn()}
+        onOpenModelManagement={vi.fn()}
+        onVerify={vi.fn()}
+        onVerifyCliSupport={vi.fn()}
+        onRefreshTelemetry={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onExport={vi.fn()}
+        isTelemetryRefreshing={false}
+        managedSiteType="new-api"
+        managedSiteLabel="New API"
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:telemetry.title",
+      }),
+    ).toHaveAttribute("aria-expanded", "true")
+    expect(
+      screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
+    ).toBeVisible()
   })
 
   it("exposes localized health status text accessibly", () => {
@@ -509,7 +647,6 @@ describe("ApiCredentialProfileListItem", () => {
         tagNames={[]}
         visibleKeys={new Set()}
         toggleKeyVisibility={vi.fn()}
-        onCopyBaseUrl={vi.fn()}
         onCopyApiKey={vi.fn()}
         onCopyBundle={vi.fn()}
         onOpenModelManagement={vi.fn()}
@@ -563,7 +700,6 @@ describe("ApiCredentialProfileListItem", () => {
         tagNames={[]}
         visibleKeys={new Set()}
         toggleKeyVisibility={vi.fn()}
-        onCopyBaseUrl={vi.fn()}
         onCopyApiKey={vi.fn()}
         onCopyBundle={vi.fn()}
         onOpenModelManagement={vi.fn()}

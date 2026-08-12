@@ -318,6 +318,52 @@ class VerificationResultHistoryStorageService {
     )
   }
 
+  /**
+   * Returns the newest profile- or profile-model-scoped API verification for
+   * each requested profile, keyed by the profile target used by list views.
+   */
+  async getLatestProfileSummaries(
+    profileIds: string[],
+  ): Promise<Record<string, ApiVerificationHistorySummary>> {
+    const profileKeyById = new Map(
+      profileIds.flatMap((profileId) => {
+        const normalizedProfileId = profileId.trim()
+        return normalizedProfileId
+          ? [
+              [
+                normalizedProfileId,
+                serializeVerificationHistoryTarget({
+                  kind: "profile",
+                  profileId: normalizedProfileId,
+                }),
+              ],
+            ]
+          : []
+      }),
+    )
+    if (profileKeyById.size === 0) return {}
+
+    const latestByProfileKey: Record<string, ApiVerificationHistorySummary> = {}
+    for (const summary of await this.listSummaries()) {
+      if (
+        summary.target.kind !== "profile" &&
+        summary.target.kind !== "profile-model"
+      ) {
+        continue
+      }
+
+      const profileKey = profileKeyById.get(summary.target.profileId)
+      if (!profileKey) continue
+
+      const current = latestByProfileKey[profileKey]
+      if (!current || summary.verifiedAt > current.verifiedAt) {
+        latestByProfileKey[profileKey] = summary
+      }
+    }
+
+    return latestByProfileKey
+  }
+
   async upsertLatestSummary(
     summary: ApiVerificationHistorySummary,
   ): Promise<ApiVerificationHistorySummary> {

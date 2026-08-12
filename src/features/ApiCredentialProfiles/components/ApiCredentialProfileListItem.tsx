@@ -1,6 +1,7 @@
 import {
   ArrowPathIcon,
   ArrowUpTrayIcon,
+  ChevronDownIcon,
   CommandLineIcon,
   CpuChipIcon,
   EyeIcon,
@@ -10,8 +11,8 @@ import {
   WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
-import { Copy } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
+import { CalendarPlus, Copy, History, type LucideIcon } from "lucide-react"
+import { useEffect, useId, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
@@ -29,6 +30,11 @@ import {
   Heading6,
   IconButton,
 } from "~/components/ui"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "~/components/ui/collapsible"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,7 +79,6 @@ interface ApiCredentialProfileListItemProps {
   tagNames: string[]
   visibleKeys: Set<string>
   toggleKeyVisibility: (id: string) => void
-  onCopyBaseUrl: (profile: ApiCredentialProfile) => void
   onCopyApiKey: (profile: ApiCredentialProfile) => void
   onCopyBundle: (profile: ApiCredentialProfile) => void
   onOpenModelManagement: (profile: ApiCredentialProfile) => void
@@ -100,6 +105,47 @@ function getHealthIndicatorColor(status: SiteHealthStatus | undefined): string {
   if (status === SiteHealthStatus.Warning) return "bg-yellow-500"
   if (status === SiteHealthStatus.Error) return "bg-red-500"
   return "bg-gray-400"
+}
+
+const COMPACT_AUDIT_TIME_FORMAT: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+}
+
+interface AuditTimeBadgeProps {
+  Icon: LucideIcon
+  label: string
+  timestamp: number | string | Date | null | undefined
+  fallback: string
+}
+
+/** Renders one quiet, responsive audit timestamp with full hover details. */
+function AuditTimeBadge({
+  Icon,
+  label,
+  timestamp,
+  fallback,
+}: AuditTimeBadgeProps) {
+  const fullLabel = formatLocaleDateTime(timestamp, fallback)
+
+  return (
+    <Badge
+      variant="outline"
+      size="sm"
+      className="dark:bg-dark-bg-tertiary/50 dark:text-dark-text-tertiary max-w-full bg-gray-50 font-normal text-gray-500 tabular-nums"
+      title={fullLabel}
+      aria-label={`${label}: ${fullLabel}`}
+    >
+      <Icon aria-hidden="true" />
+      <span className="truncate">
+        {label}{" "}
+        {formatLocaleDateTime(timestamp, fallback, COMPACT_AUDIT_TIME_FORMAT)}
+      </span>
+    </Badge>
+  )
 }
 
 /**
@@ -161,6 +207,24 @@ function formatProfileExpiration(
 }
 
 /**
+ * Checks whether the card has a concrete metric to show in telemetry details.
+ * Explicit zero values are data and must keep the section expanded.
+ */
+function hasTelemetryDetailData(
+  snapshot: ApiCredentialProfile["telemetrySnapshot"],
+): boolean {
+  return Boolean(
+    snapshot &&
+      (snapshot.balanceUsd !== undefined ||
+        snapshot.todayCostUsd !== undefined ||
+        snapshot.todayRequests !== undefined ||
+        snapshot.todayTokens !== undefined ||
+        snapshot.unlimitedQuota === true ||
+        snapshot.models !== undefined),
+  )
+}
+
+/**
  * Converts a timestamp to the start of its local calendar day for expiry checks.
  */
 function getStartOfLocalDay(timestamp: number): number {
@@ -181,7 +245,6 @@ export function ApiCredentialProfileListItem({
   tagNames,
   visibleKeys,
   toggleKeyVisibility,
-  onCopyBaseUrl,
   onCopyApiKey,
   onCopyBundle,
   onOpenModelManagement,
@@ -205,6 +268,10 @@ export function ApiCredentialProfileListItem({
   ])
   const { currencyType } = useUserPreferencesContext()
   const telemetry = profile.telemetrySnapshot
+  const hasTelemetryDetails = hasTelemetryDetailData(telemetry)
+  const [isTelemetryOpen, setIsTelemetryOpen] = useState(hasTelemetryDetails)
+  const previousHasTelemetryDetailsRef = useRef(hasTelemetryDetails)
+  const telemetryContentId = useId()
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false)
   const [isImportEntryHighlighted, setIsImportEntryHighlighted] =
     useState(false)
@@ -263,6 +330,14 @@ export function ApiCredentialProfileListItem({
     return () => window.clearTimeout(timeoutId)
   }, [guidedImportEntryRequest])
 
+  useEffect(() => {
+    const previouslyHadData = previousHasTelemetryDetailsRef.current
+    if (previouslyHadData !== hasTelemetryDetails) {
+      setIsTelemetryOpen(hasTelemetryDetails)
+      previousHasTelemetryDetailsRef.current = hasTelemetryDetails
+    }
+  }, [hasTelemetryDetails])
+
   return (
     <ProductAnalyticsScope
       entrypoint={optionsEntrypoint}
@@ -271,7 +346,7 @@ export function ApiCredentialProfileListItem({
     >
       <Card>
         <CardContent padding="md" spacing="sm">
-          <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-stretch sm:justify-between">
+          <div className="flex min-w-0 flex-col gap-5">
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <Heading6 className="max-w-full min-w-0 truncate">
@@ -304,32 +379,6 @@ export function ApiCredentialProfileListItem({
               </div>
 
               <div className="flex flex-1 flex-col gap-2 text-xs">
-                <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                  <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
-                    {t("apiCredentialProfiles:list.baseUrl")}
-                  </span>
-                  <div className="flex w-full min-w-0 items-center gap-0.5 sm:flex-1">
-                    <code className="dark:bg-dark-bg-tertiary dark:text-dark-text-secondary min-w-0 flex-1 truncate rounded bg-gray-100 px-2 py-1 font-mono text-[10px] text-gray-800 sm:text-xs">
-                      {profile.baseUrl}
-                    </code>
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onCopyBaseUrl(profile)}
-                      data-testid={
-                        API_CREDENTIAL_PROFILES_TEST_IDS.copyBaseUrlButton
-                      }
-                      aria-label={t(
-                        "apiCredentialProfiles:actions.copyBaseUrl",
-                      )}
-                      className="shrink-0"
-                      analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyBaseUrl}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </IconButton>
-                  </div>
-                </div>
-
                 <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                   <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
                     {t("apiCredentialProfiles:list.apiKey")}
@@ -379,51 +428,64 @@ export function ApiCredentialProfileListItem({
                   </div>
                 </div>
 
-                <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
                   <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
                     {t("aiApiVerification:verifyDialog.history.lastVerified")}
                   </span>
                   <VerificationHistorySummary
                     summary={verificationSummary}
-                    className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:gap-2"
+                    className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2"
                   />
                 </div>
 
-                <div className="dark:text-dark-text-tertiary flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
-                  <span>
-                    {t("apiCredentialProfiles:list.createdAt")}:{" "}
-                    {formatLocaleDateTime(profile.createdAt, notAvailableLabel)}
-                  </span>
-                  <span>
-                    {t("apiCredentialProfiles:list.updatedAt")}:{" "}
-                    {formatLocaleDateTime(profile.updatedAt, notAvailableLabel)}
-                  </span>
-                </div>
-
-                <div className="dark:bg-dark-bg-tertiary/60 flex flex-1 flex-col rounded-lg border border-gray-100 bg-gray-50 p-2 sm:p-3 dark:border-gray-800">
-                  <div className="mb-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <span
-                        className={`h-2 w-2 shrink-0 rounded-full ${getHealthIndicatorColor(
-                          health?.status,
-                        )}`}
-                        title={healthTitle}
-                        aria-label={healthTitle}
-                        role="img"
-                      />
-                      <span className="dark:text-dark-text-secondary text-xs font-medium text-gray-700">
-                        {t("apiCredentialProfiles:telemetry.title")}
-                      </span>
-                      {telemetry?.source ? (
-                        <Badge
-                          variant="outline"
-                          size="sm"
-                          className="max-w-full truncate"
-                        >
-                          {getTelemetrySourceLabel(t, telemetry.source)}
-                        </Badge>
-                      ) : null}
-                    </div>
+                <Collapsible
+                  open={isTelemetryOpen}
+                  onOpenChange={setIsTelemetryOpen}
+                  className="dark:bg-dark-bg-tertiary/60 flex flex-col rounded-lg border border-gray-100 bg-gray-50 p-2 sm:p-3 dark:border-gray-800"
+                  data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.telemetryPanel}
+                >
+                  <div className="flex min-w-0 items-center justify-between gap-2">
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="group h-auto min-w-0 flex-1 justify-start gap-2 px-1.5 py-1 text-left"
+                        aria-label={t("apiCredentialProfiles:telemetry.title")}
+                        aria-expanded={isTelemetryOpen}
+                        aria-controls={telemetryContentId}
+                        data-testid={
+                          API_CREDENTIAL_PROFILES_TEST_IDS.telemetryToggle
+                        }
+                      >
+                        <span
+                          className={`h-2 w-2 shrink-0 rounded-full ${getHealthIndicatorColor(
+                            health?.status,
+                          )}`}
+                          title={healthTitle}
+                          aria-label={healthTitle}
+                          role="img"
+                        />
+                        <span className="dark:text-dark-text-secondary min-w-0 truncate text-xs font-medium text-gray-700">
+                          {t("apiCredentialProfiles:telemetry.title")}
+                        </span>
+                        {telemetry?.source ? (
+                          <Badge
+                            variant="outline"
+                            size="sm"
+                            className="max-w-full truncate"
+                          >
+                            {getTelemetrySourceLabel(t, telemetry.source)}
+                          </Badge>
+                        ) : null}
+                        <ChevronDownIcon
+                          className={cn(
+                            "dark:text-dark-text-tertiary ml-auto h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform",
+                            isTelemetryOpen ? "rotate-180" : "rotate-0",
+                          )}
+                          aria-hidden="true"
+                        />
+                      </Button>
+                    </CollapsibleTrigger>
                     <Button
                       type="button"
                       variant="ghost"
@@ -439,104 +501,106 @@ export function ApiCredentialProfileListItem({
                     </Button>
                   </div>
 
-                  <div className="grid flex-1 auto-rows-max grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] content-evenly gap-2 text-xs sm:grid-cols-4">
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <div className="dark:text-dark-text-tertiary text-gray-500">
-                        {t("apiCredentialProfiles:telemetry.balance")}
+                  <CollapsibleContent id={telemetryContentId}>
+                    <div className="grid flex-1 auto-rows-max grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] content-evenly gap-2 pt-2 text-xs sm:grid-cols-4">
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <div className="dark:text-dark-text-tertiary text-gray-500">
+                          {t("apiCredentialProfiles:telemetry.balance")}
+                        </div>
+                        <div
+                          className="dark:text-dark-text-primary font-semibold text-gray-900"
+                          data-testid={
+                            API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance
+                          }
+                        >
+                          {telemetry?.unlimitedQuota
+                            ? t("common:quota.unlimited")
+                            : telemetry?.balanceUsd !== undefined
+                              ? formatTelemetryMoney(
+                                  telemetry.balanceUsd,
+                                  currencyType,
+                                )
+                              : missingTelemetryValue}
+                        </div>
                       </div>
-                      <div
-                        className="dark:text-dark-text-primary font-semibold text-gray-900"
-                        data-testid={
-                          API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance
-                        }
-                      >
-                        {telemetry?.unlimitedQuota
-                          ? t("common:quota.unlimited")
-                          : telemetry?.balanceUsd !== undefined
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <div className="dark:text-dark-text-tertiary text-gray-500">
+                          {t("apiCredentialProfiles:telemetry.todayUsage")}
+                        </div>
+                        <div
+                          className="font-semibold text-emerald-600 dark:text-emerald-400"
+                          data-testid={
+                            API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayUsage
+                          }
+                        >
+                          {telemetry?.todayCostUsd !== undefined
                             ? formatTelemetryMoney(
-                                telemetry.balanceUsd,
+                                telemetry.todayCostUsd,
                                 currencyType,
                               )
                             : missingTelemetryValue}
+                        </div>
+                      </div>
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <div className="dark:text-dark-text-tertiary text-gray-500">
+                          {t("apiCredentialProfiles:telemetry.todayRequests")}
+                        </div>
+                        <div
+                          className="dark:text-dark-text-primary font-semibold text-gray-900"
+                          data-testid={
+                            API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayRequests
+                          }
+                        >
+                          {typeof telemetry?.todayRequests === "number"
+                            ? telemetry.todayRequests.toLocaleString()
+                            : missingTelemetryValue}
+                        </div>
+                      </div>
+                      <div className="flex min-w-0 flex-col gap-1">
+                        <div className="dark:text-dark-text-tertiary text-gray-500">
+                          {t("apiCredentialProfiles:telemetry.models")}
+                        </div>
+                        <div
+                          className="dark:text-dark-text-primary truncate font-semibold text-gray-900"
+                          data-testid={
+                            API_CREDENTIAL_PROFILES_TEST_IDS.telemetryModels
+                          }
+                          title={telemetry?.models?.preview.join(", ")}
+                        >
+                          {telemetry?.models
+                            ? t("apiCredentialProfiles:telemetry.modelCount", {
+                                count: telemetry.models.count,
+                              })
+                            : missingTelemetryValue}
+                        </div>
                       </div>
                     </div>
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <div className="dark:text-dark-text-tertiary text-gray-500">
-                        {t("apiCredentialProfiles:telemetry.todayUsage")}
-                      </div>
-                      <div
-                        className="font-semibold text-emerald-600 dark:text-emerald-400"
-                        data-testid={
-                          API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayUsage
-                        }
-                      >
-                        {telemetry?.todayCostUsd !== undefined
-                          ? formatTelemetryMoney(
-                              telemetry.todayCostUsd,
-                              currencyType,
-                            )
-                          : missingTelemetryValue}
-                      </div>
-                    </div>
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <div className="dark:text-dark-text-tertiary text-gray-500">
-                        {t("apiCredentialProfiles:telemetry.todayRequests")}
-                      </div>
-                      <div
-                        className="dark:text-dark-text-primary font-semibold text-gray-900"
-                        data-testid={
-                          API_CREDENTIAL_PROFILES_TEST_IDS.telemetryTodayRequests
-                        }
-                      >
-                        {typeof telemetry?.todayRequests === "number"
-                          ? telemetry.todayRequests.toLocaleString()
-                          : missingTelemetryValue}
-                      </div>
-                    </div>
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <div className="dark:text-dark-text-tertiary text-gray-500">
-                        {t("apiCredentialProfiles:telemetry.models")}
-                      </div>
-                      <div
-                        className="dark:text-dark-text-primary truncate font-semibold text-gray-900"
-                        data-testid={
-                          API_CREDENTIAL_PROFILES_TEST_IDS.telemetryModels
-                        }
-                        title={telemetry?.models?.preview.join(", ")}
-                      >
-                        {telemetry?.models
-                          ? t("apiCredentialProfiles:telemetry.modelCount", {
-                              count: telemetry.models.count,
-                            })
-                          : missingTelemetryValue}
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="dark:text-dark-text-tertiary mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs text-gray-500">
-                    <span>
-                      {t("apiCredentialProfiles:telemetry.lastSync")}:{" "}
-                      {formatLocaleDateTime(
-                        telemetry?.lastSyncTime,
-                        t("common:labels.notAvailable"),
-                      )}
-                    </span>
-                    {telemetry?.todayTokens ? (
+                    <div className="dark:text-dark-text-tertiary mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs text-gray-500">
                       <span>
-                        {t("apiCredentialProfiles:telemetry.todayTokens")}:{" "}
-                        {formatTokenCount(
-                          telemetry.todayTokens.upload +
-                            telemetry.todayTokens.download,
+                        {t("apiCredentialProfiles:telemetry.lastSync")}:{" "}
+                        {formatLocaleDateTime(
+                          telemetry?.lastSyncTime,
+                          t("common:labels.notAvailable"),
                         )}
                       </span>
-                    ) : null}
-                    {telemetry?.lastError ? (
-                      <span className="text-amber-600 dark:text-amber-300">
-                        {telemetry.lastError}
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
+                      {telemetry?.todayTokens ? (
+                        <span>
+                          {t("apiCredentialProfiles:telemetry.todayTokens")}:{" "}
+                          {formatTokenCount(
+                            telemetry.todayTokens.upload +
+                              telemetry.todayTokens.download,
+                          )}
+                        </span>
+                      ) : null}
+                      {telemetry?.lastError ? (
+                        <span className="text-amber-600 dark:text-amber-300">
+                          {telemetry.lastError}
+                        </span>
+                      ) : null}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
 
               {profile.notes?.trim() ? (
@@ -551,189 +615,213 @@ export function ApiCredentialProfileListItem({
               ) : null}
             </div>
 
-            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:shrink-0 sm:flex-col sm:items-end sm:justify-start">
-              <IconButton
-                aria-label={t("apiCredentialProfiles:actions.copyBundle")}
-                size="sm"
-                variant="ghost"
-                onClick={() => onCopyBundle(profile)}
-                data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.copyBundleButton}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialBundle
-                }
+            <div className="flex w-full min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
+                <AuditTimeBadge
+                  Icon={CalendarPlus}
+                  label={t("apiCredentialProfiles:list.createdAt")}
+                  timestamp={profile.createdAt}
+                  fallback={notAvailableLabel}
+                />
+                <AuditTimeBadge
+                  Icon={History}
+                  label={t("apiCredentialProfiles:list.updatedAt")}
+                  timestamp={profile.updatedAt}
+                  fallback={notAvailableLabel}
+                />
+              </div>
+
+              <div
+                className="ml-auto flex flex-wrap items-center justify-end gap-2"
+                data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.toolbar}
               >
-                <Copy className="h-4 w-4" />
-              </IconButton>
-              <IconButton
-                aria-label={t("common:actions.edit")}
-                size="sm"
-                variant="ghost"
-                onClick={() => onEdit(profile)}
-                data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.editButton}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateApiCredentialProfileDialog
-                }
-              >
-                <PencilIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-              </IconButton>
-              <IconButton
-                aria-label={t("apiCredentialProfiles:actions.verifyApi")}
-                size="sm"
-                variant="ghost"
-                onClick={() => onVerify(profile)}
-                data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredential
-                }
-              >
-                <WrenchScrewdriverIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              </IconButton>
-              <IconButton
-                aria-label={t("apiCredentialProfiles:actions.verifyCliSupport")}
-                size="sm"
-                variant="ghost"
-                onClick={() => onVerifyCliSupport(profile)}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredentialCliSupport
-                }
-              >
-                <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-              </IconButton>
-              <IconButton
-                aria-label={t(
-                  "apiCredentialProfiles:actions.openModelManagement",
-                )}
-                size="sm"
-                variant="ghost"
-                onClick={() => onOpenModelManagement(profile)}
-                data-testid={
-                  API_CREDENTIAL_PROFILES_TEST_IDS.openModelManagementButton
-                }
-                analyticsAction={{
-                  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-                  actionId:
-                    PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialModelManagement,
-                  surfaceId: rowActionsSurface,
-                  entrypoint: optionsEntrypoint,
-                }}
-              >
-                <CpuChipIcon className="h-4 w-4" />
-              </IconButton>
-              <DropdownMenu
-                open={isExportMenuOpen}
-                onOpenChange={setIsExportMenuOpen}
-              >
-                <DropdownMenuTrigger asChild>
-                  <IconButton
-                    ref={exportMenuButtonRef}
-                    aria-label={t("common:actions.export")}
-                    size="sm"
-                    variant="ghost"
-                    className={cn(
-                      isImportEntryHighlighted &&
-                        "ring-2 ring-emerald-500 ring-offset-2 dark:ring-emerald-400",
-                    )}
-                    data-guidance-highlight={
-                      isImportEntryHighlighted ? "true" : undefined
-                    }
-                    data-testid={
-                      API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton
-                    }
-                    analyticsAction={
-                      PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialExportMenu
-                    }
-                  >
-                    <ArrowUpTrayIcon className="h-4 w-4" />
-                  </IconButton>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onSelect={() => onExport(profile, "cherryStudio")}
-                  >
-                    <span aria-hidden="true">
-                      <CherryIcon className="h-4 w-4" />
-                    </span>
-                    {t("keyManagement:actions.useInCherry")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    data-testid={
-                      API_CREDENTIAL_PROFILES_TEST_IDS.exportToCCSwitchMenuItem
-                    }
-                    onSelect={() => onExport(profile, "ccSwitch")}
-                  >
-                    <span aria-hidden="true">
-                      <CCSwitchIcon size="sm" />
-                    </span>
-                    {t("keyManagement:actions.exportToCCSwitch")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    data-testid={
-                      API_CREDENTIAL_PROFILES_TEST_IDS.exportToKiloCodeMenuItem
-                    }
-                    onSelect={() => onExport(profile, "kiloCode")}
-                  >
-                    <span aria-hidden="true">
-                      <KiloCodeIcon size="sm" />
-                    </span>
-                    {t("keyManagement:actions.exportToKiloCode")}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    data-testid={
-                      API_CREDENTIAL_PROFILES_TEST_IDS.exportToCliProxyMenuItem
-                    }
-                    onSelect={() => onExport(profile, "cliProxy")}
-                  >
-                    <span aria-hidden="true">
-                      <CliProxyIcon size="sm" />
-                    </span>
-                    {t("keyManagement:actions.importToCliProxy")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    data-testid={
-                      API_CREDENTIAL_PROFILES_TEST_IDS.exportToClaudeCodeRouterMenuItem
-                    }
-                    onSelect={() => onExport(profile, "claudeCodeRouter")}
-                  >
-                    <span aria-hidden="true">
-                      <ClaudeCodeRouterIcon size="sm" />
-                    </span>
-                    {t("keyManagement:actions.importToClaudeCodeRouter")}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className={cn(
-                      isImportEntryHighlighted &&
-                        "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-500 ring-inset dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-400",
-                    )}
-                    data-guidance-highlight={
-                      isImportEntryHighlighted ? "true" : undefined
-                    }
-                    onSelect={() => onExport(profile, "managedSite")}
-                  >
-                    <span aria-hidden="true">
-                      <ManagedSiteIcon siteType={managedSiteType} size="sm" />
-                    </span>
-                    {t("keyManagement:actions.importToManagedSite", {
-                      site: managedSiteLabel,
-                    })}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <IconButton
-                aria-label={t("common:actions.delete")}
-                size="sm"
-                variant="destructive"
-                onClick={() => onDelete(profile)}
-                data-testid={
-                  API_CREDENTIAL_PROFILES_TEST_IDS.deleteTriggerButton
-                }
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile
-                }
-              >
-                <TrashIcon className="h-4 w-4" />
-              </IconButton>
+                <IconButton
+                  aria-label={t("apiCredentialProfiles:actions.copyBundle")}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onCopyBundle(profile)}
+                  data-testid={
+                    API_CREDENTIAL_PROFILES_TEST_IDS.copyBundleButton
+                  }
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialBundle
+                  }
+                >
+                  <Copy className="h-4 w-4" />
+                </IconButton>
+                <IconButton
+                  aria-label={t("common:actions.edit")}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onEdit(profile)}
+                  data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.editButton}
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateApiCredentialProfileDialog
+                  }
+                >
+                  <PencilIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+                </IconButton>
+                <IconButton
+                  aria-label={t("apiCredentialProfiles:actions.verifyApi")}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onVerify(profile)}
+                  data-testid={API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton}
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredential
+                  }
+                >
+                  <WrenchScrewdriverIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </IconButton>
+                <IconButton
+                  aria-label={t(
+                    "apiCredentialProfiles:actions.verifyCliSupport",
+                  )}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onVerifyCliSupport(profile)}
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredentialCliSupport
+                  }
+                >
+                  <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+                </IconButton>
+                <IconButton
+                  aria-label={t(
+                    "apiCredentialProfiles:actions.openModelManagement",
+                  )}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onOpenModelManagement(profile)}
+                  data-testid={
+                    API_CREDENTIAL_PROFILES_TEST_IDS.openModelManagementButton
+                  }
+                  analyticsAction={{
+                    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+                    actionId:
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialModelManagement,
+                    surfaceId: rowActionsSurface,
+                    entrypoint: optionsEntrypoint,
+                  }}
+                >
+                  <CpuChipIcon className="h-4 w-4" />
+                </IconButton>
+                <DropdownMenu
+                  open={isExportMenuOpen}
+                  onOpenChange={setIsExportMenuOpen}
+                >
+                  <DropdownMenuTrigger asChild>
+                    <IconButton
+                      ref={exportMenuButtonRef}
+                      aria-label={t("common:actions.export")}
+                      size="sm"
+                      variant="ghost"
+                      className={cn(
+                        isImportEntryHighlighted &&
+                          "ring-2 ring-emerald-500 ring-offset-2 dark:ring-emerald-400",
+                      )}
+                      data-guidance-highlight={
+                        isImportEntryHighlighted ? "true" : undefined
+                      }
+                      data-testid={
+                        API_CREDENTIAL_PROFILES_TEST_IDS.exportMenuButton
+                      }
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialExportMenu
+                      }
+                    >
+                      <ArrowUpTrayIcon className="h-4 w-4" />
+                    </IconButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onSelect={() => onExport(profile, "cherryStudio")}
+                    >
+                      <span aria-hidden="true">
+                        <CherryIcon className="h-4 w-4" />
+                      </span>
+                      {t("keyManagement:actions.useInCherry")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-testid={
+                        API_CREDENTIAL_PROFILES_TEST_IDS.exportToCCSwitchMenuItem
+                      }
+                      onSelect={() => onExport(profile, "ccSwitch")}
+                    >
+                      <span aria-hidden="true">
+                        <CCSwitchIcon size="sm" />
+                      </span>
+                      {t("keyManagement:actions.exportToCCSwitch")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-testid={
+                        API_CREDENTIAL_PROFILES_TEST_IDS.exportToKiloCodeMenuItem
+                      }
+                      onSelect={() => onExport(profile, "kiloCode")}
+                    >
+                      <span aria-hidden="true">
+                        <KiloCodeIcon size="sm" />
+                      </span>
+                      {t("keyManagement:actions.exportToKiloCode")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      data-testid={
+                        API_CREDENTIAL_PROFILES_TEST_IDS.exportToCliProxyMenuItem
+                      }
+                      onSelect={() => onExport(profile, "cliProxy")}
+                    >
+                      <span aria-hidden="true">
+                        <CliProxyIcon size="sm" />
+                      </span>
+                      {t("keyManagement:actions.importToCliProxy")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      data-testid={
+                        API_CREDENTIAL_PROFILES_TEST_IDS.exportToClaudeCodeRouterMenuItem
+                      }
+                      onSelect={() => onExport(profile, "claudeCodeRouter")}
+                    >
+                      <span aria-hidden="true">
+                        <ClaudeCodeRouterIcon size="sm" />
+                      </span>
+                      {t("keyManagement:actions.importToClaudeCodeRouter")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className={cn(
+                        isImportEntryHighlighted &&
+                          "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-500 ring-inset dark:bg-emerald-950/40 dark:text-emerald-100 dark:ring-emerald-400",
+                      )}
+                      data-guidance-highlight={
+                        isImportEntryHighlighted ? "true" : undefined
+                      }
+                      onSelect={() => onExport(profile, "managedSite")}
+                    >
+                      <span aria-hidden="true">
+                        <ManagedSiteIcon siteType={managedSiteType} size="sm" />
+                      </span>
+                      {t("keyManagement:actions.importToManagedSite", {
+                        site: managedSiteLabel,
+                      })}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <IconButton
+                  aria-label={t("common:actions.delete")}
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => onDelete(profile)}
+                  data-testid={
+                    API_CREDENTIAL_PROFILES_TEST_IDS.deleteTriggerButton
+                  }
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile
+                  }
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </IconButton>
+              </div>
             </div>
           </div>
         </CardContent>

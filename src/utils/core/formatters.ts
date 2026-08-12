@@ -141,6 +141,7 @@ export function normalizeToDate(
 export const formatLocaleDateTime = (
   input: number | string | Date | null | undefined,
   fallback: string = t("common:labels.notAvailable"),
+  options?: Intl.DateTimeFormatOptions,
 ): string => {
   const date = normalizeToDate(input)
   if (!date || Number.isNaN(date.getTime()) || date.getTime() <= 0) {
@@ -148,7 +149,7 @@ export const formatLocaleDateTime = (
   }
 
   try {
-    return date.toLocaleString()
+    return date.toLocaleString(undefined, options)
   } catch {
     return fallback
   }

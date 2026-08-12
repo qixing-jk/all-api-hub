@@ -40,7 +40,7 @@ import {
 import {
   createProfileVerificationHistoryTarget,
   serializeVerificationHistoryTarget,
-  useVerificationResultHistorySummaries,
+  useLatestProfileVerificationSummaries,
 } from "~/services/verification/verificationResultHistory"
 import type { Tag } from "~/types"
 import { SiteHealthStatus } from "~/types"
@@ -294,16 +294,8 @@ export function useApiCredentialProfilesController() {
 
   const { profiles, isLoading, createProfile, updateProfile, deleteProfile } =
     useApiCredentialProfiles()
-  const profileVerificationTargets = useMemo(
-    () =>
-      profiles.flatMap((profile) => {
-        const target = createProfileVerificationHistoryTarget(profile.id)
-        return target ? [target] : []
-      }),
-    [profiles],
-  )
   const { summariesByKey: verificationSummariesByKey } =
-    useVerificationResultHistorySummaries(profileVerificationTargets)
+    useLatestProfileVerificationSummaries(profiles.map((profile) => profile.id))
 
   const [tags, setTags] = useState<Tag[]>([])
 
@@ -469,9 +461,9 @@ export function useApiCredentialProfilesController() {
   )
 
   const handleCopyBaseUrl = useCallback(
-    (profile: ApiCredentialProfile) => {
+    (baseUrl: string) => {
       void copyToClipboard(
-        profile.baseUrl,
+        baseUrl,
         t("apiCredentialProfiles:messages.baseUrlCopied"),
       )
     },

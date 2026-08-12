@@ -107,7 +107,7 @@ vi.mock("~/services/verification/verificationResultHistory", async () => {
 
   return {
     ...actual,
-    useVerificationResultHistorySummaries: () => ({ summariesByKey: {} }),
+    useLatestProfileVerificationSummaries: () => ({ summariesByKey: {} }),
   }
 })
 

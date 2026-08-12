@@ -20,6 +20,7 @@ import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageRawValue,
   getServiceWorker,
+  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
@@ -190,8 +191,86 @@ test("filters options-page profiles and copies reusable credentials", async ({
       notes: "rarely used",
     }),
   ])
+  await setPlasmoStorageValue(
+    serviceWorker,
+    STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+    {
+      version: 1,
+      lastUpdated: Date.now(),
+      summaries: [
+        {
+          target: {
+            kind: "profile-model",
+            profileId: "profile-primary",
+            modelId: "example-model",
+          },
+          targetKey: "profile:profile-primary:model:example-model",
+          status: "pass",
+          verifiedAt: Date.now(),
+          apiType: "openai-compatible",
+          resolvedModelId: "example-model",
+          probes: [
+            {
+              id: "text-generation",
+              status: "pass",
+              latencyMs: 12,
+              summary: "Generated text",
+            },
+          ],
+        },
+      ],
+    },
+  )
 
   await openProfilesPage(page, extensionId)
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.endpointNavigation)
+    .getByRole("button", { name: /reusable\.example\.com/i })
+    .click()
+
+  await expect(page.getByText("Pass", { exact: true })).toBeVisible()
+  await expect(page.getByText("Unverified", { exact: true })).toHaveCount(0)
+
+  const endpointBaseUrl = page.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.endpointBaseUrl,
+  )
+  const endpointCredentialCount = page.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.endpointCredentialCount,
+  )
+  await expect
+    .poll(async () => {
+      const [baseUrlBox, countBox] = await Promise.all([
+        endpointBaseUrl.boundingBox(),
+        endpointCredentialCount.boundingBox(),
+      ])
+      return Boolean(
+        baseUrlBox &&
+          countBox &&
+          Math.abs(
+            baseUrlBox.y +
+              baseUrlBox.height / 2 -
+              (countBox.y + countBox.height / 2),
+          ) < 1 &&
+          countBox.x - (baseUrlBox.x + baseUrlBox.width) <= 12,
+      )
+    })
+    .toBe(true)
+
+  await page
+    .getByRole("region", {
+      name: "Credentials for https://reusable.example.com",
+    })
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.endpointAddCredentialButton)
+    .click()
+  const addToEndpointDialog = page.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.dialog,
+  )
+  await expect(addToEndpointDialog).toBeVisible()
+  await expect(page.locator("#api-credential-profile-baseUrl")).toHaveValue(
+    "https://reusable.example.com",
+  )
+  await addToEndpointDialog.getByRole("button", { name: "Close" }).click()
+  await expect(addToEndpointDialog).toHaveCount(0)
 
   const searchInput = page.getByPlaceholder(
     "Search by name, base URL, tag, or notes",
@@ -205,11 +284,57 @@ test("filters options-page profiles and copies reusable credentials", async ({
     page.getByRole("heading", { name: "Archive Profile" }),
   ).toHaveCount(0)
 
+  const toolbar = page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.toolbar)
+  const copyBundleButton = page.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.copyBundleButton,
+  )
+  const deleteButton = page.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.deleteTriggerButton,
+  )
+  await expect
+    .poll(async () => {
+      const [toolbarBox, firstButtonBox, lastButtonBox] = await Promise.all([
+        toolbar.boundingBox(),
+        copyBundleButton.boundingBox(),
+        deleteButton.boundingBox(),
+      ])
+      return Boolean(
+        toolbarBox &&
+          firstButtonBox &&
+          lastButtonBox &&
+          toolbarBox.width > 200 &&
+          Math.abs(firstButtonBox.y - lastButtonBox.y) < 1,
+      )
+    })
+    .toBe(true)
+
+  const telemetryToggle = page.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.telemetryToggle,
+  )
+  const telemetryPanel = page.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.telemetryPanel,
+  )
+  await expect(telemetryToggle).toHaveAttribute("aria-expanded", "false")
+  await expect(
+    page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
+  ).toHaveCount(0)
+  await expect
+    .poll(async () => (await telemetryPanel.boundingBox())?.height)
+    .toBeLessThanOrEqual(64)
+  await telemetryToggle.click()
+  await expect(telemetryToggle).toHaveAttribute("aria-expanded", "true")
+  await expect(
+    page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.telemetryBalance),
+  ).toBeVisible()
+  await expect
+    .poll(async () => (await telemetryPanel.boundingBox())?.height)
+    .toBeGreaterThan(64)
+
   await page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.showKeyButton).click()
   await expect(page.getByText("sk-reusable-profile")).toBeVisible()
 
   await page
-    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.copyBaseUrlButton)
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.endpointCopyBaseUrlButton)
     .click()
   await page
     .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.copyApiKeyButton)
