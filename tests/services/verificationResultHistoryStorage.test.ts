@@ -243,6 +243,20 @@ describe("verificationResultHistoryStorage", () => {
           {
             target: {
               kind: "profile",
+              profileId: "   ",
+            },
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            probes: [
+              {
+                id: "models",
+                status: "pass",
+                summary: "invalid blank profile target",
+              },
+            ],
+          },
+          {
+            target: {
+              kind: "profile",
               profileId: "profile-invalid-api",
             },
             apiType: "invalid-api-type",
