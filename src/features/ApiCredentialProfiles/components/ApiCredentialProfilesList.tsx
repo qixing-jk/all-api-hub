@@ -22,7 +22,10 @@ import {
   type ApiCredentialProfilesViewVariant,
 } from "../contracts"
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
-import { API_CREDENTIAL_PROFILES_TEST_IDS } from "../testIds"
+import {
+  API_CREDENTIAL_PROFILES_TEST_IDS,
+  getApiCredentialEndpointOptionTestId,
+} from "../testIds"
 import { ApiCredentialProfileListItem } from "./ApiCredentialProfileListItem"
 
 interface ApiCredentialProfilesListProps {
@@ -273,7 +276,13 @@ function CompactEndpointSelector({
         </SelectTrigger>
         <SelectContent align="start">
           {groups.map((group) => (
-            <SelectItem key={group.baseUrl} value={group.baseUrl}>
+            <SelectItem
+              key={group.baseUrl}
+              value={group.baseUrl}
+              data-testid={getApiCredentialEndpointOptionTestId(
+                group.profiles[0]!.id,
+              )}
+            >
               <span className="min-w-0 truncate">
                 {getEndpointLabel(group.baseUrl)}
               </span>

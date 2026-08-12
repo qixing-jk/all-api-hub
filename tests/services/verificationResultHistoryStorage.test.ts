@@ -442,8 +442,30 @@ describe("verificationResultHistoryStorage", () => {
       await verificationResultHistoryStorage.upsertLatestSummary(summary)
     }
 
+    const accountTarget = createAccountModelVerificationHistoryTarget(
+      "account-1",
+      "account-model",
+    )
+    if (!accountTarget) throw new Error("Expected account history target")
+    const accountSummary = createVerificationHistorySummary({
+      target: accountTarget,
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      verifiedAt: 300,
+      results: [
+        {
+          id: "models",
+          status: "pass",
+          latencyMs: 1,
+          summary: "Account model",
+        },
+      ],
+    })
+    if (!accountSummary) throw new Error("Expected account summary")
+    await verificationResultHistoryStorage.upsertLatestSummary(accountSummary)
+
     await expect(
       verificationResultHistoryStorage.getLatestProfileSummaries([
+        "   ",
         "profile-1",
         "missing-profile",
       ]),
@@ -453,6 +475,12 @@ describe("verificationResultHistoryStorage", () => {
         verifiedAt: 200,
       }),
     })
+  })
+
+  it("returns no latest profile summaries for empty identifiers", async () => {
+    await expect(
+      verificationResultHistoryStorage.getLatestProfileSummaries(["", "   "]),
+    ).resolves.toEqual({})
   })
 
   it("rejects invalid summaries before writing to storage", async () => {

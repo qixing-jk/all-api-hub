@@ -45,6 +45,14 @@ export const API_CREDENTIAL_PROFILES_TEST_IDS = {
   toolbar: "api-credential-profile-toolbar",
 } as const
 
+const API_CREDENTIAL_ENDPOINT_OPTION_TEST_ID_PREFIX =
+  "api-credential-profile-endpoint-option-"
+
+/** Returns the stable test id for the endpoint option containing a profile. */
+export function getApiCredentialEndpointOptionTestId(profileId: string) {
+  return `${API_CREDENTIAL_ENDPOINT_OPTION_TEST_ID_PREFIX}${profileId}`
+}
+
 const API_CREDENTIAL_PROFILE_VERIFY_PROBE_TEST_ID_PREFIX =
   "profile-verify-probe-"
 

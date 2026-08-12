@@ -660,4 +660,38 @@ describe("api credential profile telemetry", () => {
     )
     expect(snapshot.lastError).toBe(customAttempt?.message)
   })
+
+  it("records empty model discovery as unsupported", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Empty Model Catalog",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://empty-models.example.invalid",
+      apiKey: "sk-empty-models",
+      telemetryConfig: { mode: "newApiTokenUsage" },
+    })
+    fetchApiCredentialModelIdsMock.mockResolvedValueOnce([])
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: {
+            total_granted: 10,
+            total_used: 4,
+            total_available: 6,
+          },
+        }),
+      ),
+    )
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot.models).toEqual({ count: 0, preview: [] })
+    expect(snapshot.attempts).toContainEqual(
+      expect.objectContaining({
+        source: "models",
+        status: "unsupported",
+        message: "No models returned",
+      }),
+    )
+  })
 })

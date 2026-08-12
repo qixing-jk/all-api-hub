@@ -319,4 +319,36 @@ describe("ApiCredentialProfilesList endpoint navigation", () => {
       }),
     ).not.toBeInTheDocument()
   })
+
+  it("returns no endpoint content for an empty profile collection", () => {
+    const { container } = render(
+      <ApiCredentialProfilesList
+        profiles={[]}
+        controller={createController()}
+      />,
+    )
+
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it("keeps an invalid Base URL selectable with its original label", async () => {
+    const invalidBaseUrl = "not a valid URL"
+    render(
+      <ApiCredentialProfilesList
+        profiles={[
+          createProfile("invalid", "Invalid endpoint", invalidBaseUrl),
+          createProfile(
+            "valid",
+            "Valid endpoint",
+            "https://valid.example.invalid",
+          ),
+        ]}
+        controller={createController()}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", { name: invalidBaseUrl }),
+    ).toBeVisible()
+  })
 })

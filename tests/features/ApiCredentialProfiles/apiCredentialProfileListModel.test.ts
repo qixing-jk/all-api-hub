@@ -145,6 +145,20 @@ describe("buildApiCredentialProfileListModel", () => {
     expect(
       buildApiCredentialProfileListModel({
         ...baseInput,
+        apiTypeFilter: "openai",
+        searchTerm: "",
+      }).analyticsMode,
+    ).toBe(PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter)
+    expect(
+      buildApiCredentialProfileListModel({
+        ...baseInput,
+        selectedTagIds: ["team"],
+        searchTerm: "",
+      }).analyticsMode,
+    ).toBe(PRODUCT_ANALYTICS_MODE_IDS.GroupFilter)
+    expect(
+      buildApiCredentialProfileListModel({
+        ...baseInput,
         searchTerm: "",
       }).analyticsMode,
     ).toBeNull()
