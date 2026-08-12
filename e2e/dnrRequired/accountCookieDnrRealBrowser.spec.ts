@@ -587,6 +587,7 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
     }
 
     if (method === "GET" && url.pathname === "/api/token/") {
+      const page = Number(url.searchParams.get("p") ?? "0")
       const cookieHeader = request.headers.cookie ?? ""
       const authorizationHeader = request.headers.authorization ?? ""
       const matchedSessionCookie = matchAccountSessionCookie(cookieHeader)
@@ -631,25 +632,28 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
       sendJson(200, {
         success: true,
         message: "ok",
-        data: [
-          {
-            id: account.tokenId,
-            user_id: Number(account.id),
-            key: account.tokenKey,
-            status: 1,
-            name: account.tokenName,
-            created_time: 1_700_000_000,
-            accessed_time: 1_700_000_000,
-            expired_time: -1,
-            remain_quota: -1,
-            unlimited_quota: true,
-            model_limits_enabled: false,
-            model_limits: "",
-            allow_ips: "",
-            used_quota: 0,
-            group: "default",
-          },
-        ],
+        data:
+          page === 0
+            ? [
+                {
+                  id: account.tokenId,
+                  user_id: Number(account.id),
+                  key: account.tokenKey,
+                  status: 1,
+                  name: account.tokenName,
+                  created_time: 1_700_000_000,
+                  accessed_time: 1_700_000_000,
+                  expired_time: -1,
+                  remain_quota: -1,
+                  unlimited_quota: true,
+                  model_limits_enabled: false,
+                  model_limits: "",
+                  allow_ips: "",
+                  used_quota: 0,
+                  group: "default",
+                },
+              ]
+            : [],
       })
       return
     }
