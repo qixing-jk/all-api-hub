@@ -204,6 +204,69 @@ describe("defineAccountKeyResourceCapability", () => {
     })
   })
 
+  it.each([
+    [
+      "kind",
+      {
+        kind: "other-resource",
+        ref: REF,
+      },
+    ],
+    [
+      "account",
+      {
+        kind: "account-key-resource",
+        ref: { ...REF, accountId: "other-account" },
+      },
+    ],
+    [
+      "scope",
+      {
+        kind: "account-key-resource",
+        ref: { ...REF, scopeKey: "other-workspace" },
+      },
+    ],
+    [
+      "resource",
+      {
+        kind: "account-key-resource",
+        ref: { ...REF, resourceId: "other-key" },
+      },
+    ],
+  ])(
+    "rejects a provisioned secret with mismatched %s correlation",
+    async (_, correlation) => {
+      const provisioning = {
+        inspect: vi.fn(async () => ({ requirements: [], items: [] })),
+        provision: vi.fn(async () => ({
+          certainty: "applied" as const,
+          value: {
+            ref: REF,
+            createdSecret: {
+              correlation: correlation as never,
+              displayName: "Created",
+              secret: "created-secret",
+              secretAvailability: "create-response-only" as const,
+              credential: {
+                accountName: "Example",
+                apiType: "openai-compatible" as const,
+                baseUrl: "https://api.example.invalid",
+                tagIds: [],
+              },
+            },
+          },
+        })),
+      }
+      const session = await openSession(createDefinition({ provisioning }))
+
+      await expect(
+        session.provisioning?.provision("opaque:requirement"),
+      ).rejects.toMatchObject({
+        failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
+      })
+    },
+  )
+
   it("binds an independent runtime-key resolver to the opened session", async () => {
     const resolution = {
       kind: "resolved" as const,
